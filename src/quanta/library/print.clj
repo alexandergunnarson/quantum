@@ -10,19 +10,19 @@
     [clojure.pprint             :as pprint]
     [fipp.edn                   :as pr])
   (:gen-class))
-; fipp deps:
-; [org.clojure/data.finger-tree "0.0.2"] (no deps)
-; [transduce "0.1.0"]
+
+(def ^:dynamic *debug?* false)
+(defn debug [& args]
+  (when *debug?*
+    (apply println args)))
 (defalias
   ; "At least 5 times faster than clojure.pprint/pprint
   ;  Prints no later than having consumed the bound amount of memory,
   ;  so you see your first few lines of output instantaneously.
-  ;  https://github.com/brandonbloom/fipp"
+  ;  :attribution: https://github.com/brandonbloom/fipp"
   pprint pr/pprint)
-; (defalias pprint      pprint/pprint)
 (defalias ! pprint)
 (defalias print-table pprint/print-table) 
-; (defalias *print-right-margin* pprint/*print-right-margin*) ; no, because otherwise it won't be dynamically rebindable
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)
 (def  suppress-pr (partial (constantly nil)))
 (defn pprint-xml [xml-str]
@@ -30,7 +30,7 @@
     (->> " "
          (repeat tab)
          (apply str)
-         (call-f*n str xml-ln)
+         (<- str xml-ln)
          println))
   (loop [[elem-n :as elems-n] (whenf xml-str string? xml/split-xml)
          elem-n-1 nil
@@ -56,7 +56,7 @@
                  (conj elems-f [tabs-n+1 elem-n]))))))
 (defn pr-vec-table [vec-0]
   (let [vec-strs (->> vec-0 (map+ (fn->> (map+ str) fold+)) fold+)
-        col-ct (->> vec-0 (map+ count+) fold+ num/greatest)
+        col-ct   (->> vec-0 (map+ count+) fold+ num/greatest)
         col-widths
           (->> vec-strs
                (map+ (fn->> (map+ count+) fold+))

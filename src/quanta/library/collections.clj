@@ -27,12 +27,29 @@
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks)))
 
-(defn reduce-2 [func init coll] ; not actually implementing of CollReduce... so not as fast...
+(defn reduce-2
+  "Like |reduce|, but reduces over two items in a collection at a time.
+
+   Its function @func must take three arguments:
+   1) The accumulated return value of the reduction function
+   2) The                next item in the collection being reduced over
+   3) The item after the next item in the collection being reduced over"
+  ^{:attribution "Alex Gunnarson"}
+  [func init coll] ; not actually implementing of CollReduce... so not as fast...
   (loop [ret init coll-n coll]
     (if (empty? coll-n)
         ret
         (recur (func ret (first coll-n) (second coll-n))
                (-> coll-n rest rest)))))
+
+(defn select
+  "Applies a list of functions, @fns, separately to an object, @coll.
+   A good use case is returning values from an associative structure with keys as @fns.
+   Returns a vector of the results."
+  ^{:attribution "Alex Gunnarson"
+    :usage "(select {:a 1 :b [3]} :a (compr :b 0)) => [1 3]"}
+  [coll & fns]
+  ((apply juxt fns) coll))
 
 ; TODO: http://clojure.org/cheatsheet (go through)
 ; (require '[taoensso.encore :as lib+ :refer
@@ -64,13 +81,14 @@
 ; (pcalls #(fn1 a b) #(fn2 c e) ...) -> (result1 result2 ...)
 ; /pvalues/ - a convienience macro around pcalls
 ; (pvalues (fn1 a b)  (fn2 c e) ...) -> (result1 result2 ...)
-(def coll-if (whenf*n (fn-not coll?) vector))
+(defn coll-if [obj]
+  (whenf obj (fn-not coll?) vector))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         LAZY SEQS        }=====================================================
 ;=================================================={                          }=====================================================
 (defalias lseq lazy-seq)
-(def seq-if
-  (f*n condf
+(defn seq-if [obj]
+  (condf obj
     (fn-or seq? nil?) identity
     coll?             seq
     :else             list))
@@ -85,7 +103,7 @@
 
    Useful when you don't want chunking, for instance,
    (first awesome-website? (map slurp <a-bunch-of-urls>))
-   may slurp up to 31 unneed webpages, wherease
+   may slurp up to 31 unneed webpages, whereas
    (first awesome-website? (map slurp (unchunk <a-bunch-of-urls>)))
    is guaranteed to stop slurping after the first awesome website.
 
@@ -123,7 +141,11 @@
 ;       (derive ::Reducer quanta.library.reducers.Folder)
 ;       (derive ::FoldPreable ::Reducer)
 ;       (derive ::FoldPreable Delay)))
-(defn- nth-red [coll n]  ; twice as slow as nth :(
+(defn- nth-red
+  "|nth| implemented in terms of |reduce+|."
+  ^{:deprecated  true
+    :performance "Twice as slow as |nth|"}
+  [coll n]
   (let [nn (atom 0)]
     (->> coll
          (reduce+
@@ -138,12 +160,16 @@
                    (do (swap! nn inc) ret))))
            []))))
 (defn key+
+  "Like |key| but more robust."
+  ^{:attribution "Alex Gunnarson"}
   ([obj] 
     (try+
       (ifn obj vector? first+ key)
       (catch Object _ (println "Error in key+ with obj:" obj) nil)))
   ([k v] k)) ; For use with kv-reduce
 (defn val+
+  "Like |val| but more robust."
+  ^{:attribution "Alex Gunnarson"}
   ([obj]
     (try+
       (ifn obj vector? second+ key)
@@ -165,25 +191,13 @@
 ; /nthrest/
 ; (nthrest (range 10) 5) => (5 6 7 8 9)
 
-; peekl [o] - like clojure.core/peek but always from left
-; peekr [o] - like clojure.core/peek but always from right
-; peek [o] - clojure.core/peek
-; peekl-unchecked [o] - like peekl but without boundary check
-; peekr-unchecked [o] - like peekr but without boundary check
-; peek-unchecked [o] - like peek but without boundary check
-
-; popl [o] - like clojure.core/pop, but always from left
-; popr [o] - like clojure.core/pop, but always from right
-; popl-unchecked [o] - like popl, but without boundary check
-; popr-unchecked [o] - like popr, but without boundary check
-; pop-unchecked [o] - like pop, but without boundary check
 ; TODO: get-in from clojure, make it better
 (defn get-in+ [coll [iden :as keys-0]] ; implement recursively
   (if (= iden identity)
       coll
       (get-in coll keys-0)))
-(def reverse+ ; what about arrays? some transient loop or something
-  (if*n reversible? rseq reverse))
+(defn reverse+ [coll] ; what about arrays? some transient loop or something
+  (ifn coll reversible? rseq reverse))
 (def single?
   "Does coll have only one element?"
   (fn-and seq (fn-not next)))
@@ -199,45 +213,10 @@
 ;         :else (conj coll elem)))
 ; conjl [o val] - like clojure.core/conj, but always from left
 ; conjr [o val] - like clojure.core/conj, but always from right
-; conj [o val] - clojure.core/conj
-; conjl-arr [o val-arr] - like conjl, but with array of vals
-; conjr-arr [o val-arr] - like conjr, but with array of vals
-; conj-arr [o val-arr] - like conj, but with array of vals
-
-; (defn ffilter
-;   "Returns the first item in `coll` for which `(pred item)` is true."
-;   ([coll] (ffilter identity coll))
-;   ([pred coll] (reduce (fn [_ x] (if (pred x) (reduced x))) nil coll)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defn- positions
-  "Returns indices idx of sequence s where (f (nth s idx))"
-  ^{:attribution "prismatic.plumbing"}
-  [f s]
-  (keep-indexed
-    (fn [n x] (when (f x) n)) s))
-(defn- index-by-fn
-  "Return a map indexed by the value of key-fn applied to each element in data.
-   key-fn can return a collection of multiple keys." ; attributed to who?
-  ([key-fn data]
-     (index-by-fn key-fn identity data))
-  ([key-fn value-fn data]
-    (persistent!
-      (reduce+
-        (fn [ndx elem]
-          (let [key (key-fn elem)]
-            ;; Handle the case where key-fn returns multiple keys
-            (if (coll? key)
-              (reduce+
-                (fn [sndx selem]
-                  (assoc! sndx selem
-                    (conj (sndx selem) (value-fn elem))))
-                ndx key)
-              ;; Handle the case where key-fn returns one key
-              (assoc! ndx key (conj (ndx key) (value-fn elem))))))
-        (transient {})
-        data))))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MERGE          }=====================================================
 ;=================================================={      zipmap, zipvec      }=====================================================
@@ -323,47 +302,12 @@
 ; (do (bench (r/fold n (monoid into hash-set) conj a)) nil) ;; 6859 ms
 ; (do (bench (r/fold   (monoid (fn [r l](clojure.lang.PersistentHashSet/splice r l)) hash-set) conj a)) nil) ;; 3654 ms
 ; (do (bench (r/fold n (monoid (fn [r l](clojure.lang.PersistentHashSet/splice r l)) hash-set) conj a)) nil) ;; 3288 ms
-(defn- cheap-merge-with
-  "Merges two maps-as-functions"
-  ^{:attribution "Christophe Grand - https://gist.github.com/cgrand/4655215"}
-  [f a b]
-  (memoize (fn this 
-             ([k] (this k nil))
-             ([k default]
-               (let [av (a k this)
-                     bv (b k this)]
-                 (if (identical? this av)
-                   (if (identical? this bv)
-                     default
-                     bv)
-                   (if (identical? this bv)
-                     av
-                     (f av bv))))))))
-(defn- merge-in
-  "Merge multiple nested maps."
-  ^{:attribution "flatland.useful.map"}
-  [& args]
-  (defn merge-in* [a b]
-    (if (map? a)
-        (merge-with merge-in* a b) ; a little terrible
-        b))
-  (reduce+ merge-in* nil args))
-; (defn merge-disjoint
-;   "Like merge, but throws with any key overlap between maps"
-;   ^{:attribution "prismatic.plumbing"}
-;   ([] {})
-;   ([m] m)
-;   ([m1 m2]
-;      (doseq [k (keys m1)]
-;        (schema/assert-iae (not (contains? m2 k)) "Duplicate key %s" k)) ; DEPENDENCY: SCHEMA/ASSERT-IAE
-;      (into+ (or m2 {}) m1))
-;   ([m1 m2 & maps]
-;      (reduce+ merge-disjoint m1 (cons m2 maps))))
+
 (defn merge-with+
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
    ^{:attribution  "prismatic.plumbing"
-     :contributors "Alex Gunnarson"}
+     :contributors ["Alex Gunnarson"]}
   [f & maps]
   (when (some identity maps)
     (let [merge-entry
@@ -513,26 +457,11 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={            MAP           }=====================================================
 ;=================================================={                          }=====================================================
-; /mapv/ -> (-> map+ vec+)
-; /pmap/ -> (-> map+ fold+)
-; (defn pcollect
-;   "Like pmap but not lazy and more efficient for less computationally intensive functions
-;    because there is less coordination overhead. The collection is sliced among the
-;    available processors and f is applied to each sub-collection in parallel using map."
-;    ^{:attribution "flatland.useful.parallel"}
-;   ([f coll] 
-;      (pcollect identity f coll))
-;   ([wrap-fn f coll]
-;      (if (<= *pcollect-thread-num* 1) ; ------>> *pcollect-thread-num*
-;        ((wrap-fn #(doall (map f coll))))
-;        (mapcat deref
-;          (map (fn [slice]
-;                 (let [body (wrap-fn #(doall (map f slice)))]
-;                   (future-call body)))  ------>> future-call
-;               (slice *pcollect-thread-num* coll))))))
 (defn map-kv
-  "Maps a function over the keys or values of an associative collection. Modified from the original."
-  ^{:attribution "weavejester.medley"}
+  "Maps a function over the keys or values of an associative collection.
+   Modified from the original."
+  ^{:attribution "weavejester.medley"
+    :contributors ["Alex Gunnarson"]}
   [f coll kv-fn]
   (->> coll empty transient (#(reduce+ kv-fn % coll))) persistent!)
 (defn map-keys [f coll] (map-kv f coll #(assoc! %1 (f %2) %3)))
@@ -598,20 +527,6 @@
 ; partitions with fewer than n items at the end.
 ; (partition-all 4 [0 1 2 3 4 5 6 7 8 9])
 ; => ((0 1 2 3) (4 5 6 7) (8 9))
-(defn- group-by* ; Don't be fooled - clojure.core/group-by is almost the exact same...
-  "Like /group-by/, but accepts a map-fn that is applied to values before
-   collected. 
-   Returns a map of the values  of applying `f` to each item in `coll` to vectors
-   of the associated    results of applying `g` to each item in `coll`."
-  ^{:attribution "parkour.reducers; also featured in prismatic.plumbing"}
-  [key-fn map-fn coll]
-  (persistent!
-    (reduce+
-      (fn [map-f x]
-        (let [k (key-fn x) v (map-fn x)]
-          (assoc! map-f k (-> map-f (get k []) (conj v)))))
-      (transient {})
-      coll)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================
 ;=================================================={     take, drop, split    }=====================================================
@@ -626,21 +541,7 @@
 ; /last/    is a limiting case (1) of take-last
 ; /drop-last/ ; (drop-last 2 [1 2 3 4]) => (1 2)
 ; /butlast/ is a limiting case (1) of drop-last
-(defn- take-upto
-  "Returns a lazy sequence of successive items from coll up to and including
-  the first item for which `(pred item)` returns true."
-  ^{:attribution "weavejester.medley"}
-  [pred coll]
-  (lazy-seq
-   (when-let [s (seq coll)]
-     (let [x (first s)]
-       (cons x (if-not (pred x) (take-upto pred (rest s))))))))
-(defn- drop-upto
-  "Returns a lazy sequence of the items in coll starting *after* the first item
-  for which `(pred item)` returns true."
-  ^{:attribution "weavejester.medley"}
-  [pred coll]
-  (rest (drop-while (complement pred) coll)))
+
 ; splice [o index n val] - fast remove and insert in one go
 ; splice-arr [o index n val-arr] - fast remove and insert in one go
 ; insert-before [o index val] - insert one item inside coll
@@ -668,9 +569,9 @@
 ;=================================================={          ASSOC           }=====================================================
 ;=================================================={ update(-in), assoc(-in)  }=====================================================
 (defn- extend-coll-to
-  "Extends a (for now, only vector) to a given index.
-   USAGE: (extend-coll-to [1 2 3] 5) => [1 2 3 nil nil]"
-  {:attribution "Alex Gunnarson"}
+  "Extends an associative structure (for now, only vector) to a given index."
+  {:attribution "Alex Gunnarson"
+   :usage "USAGE: (extend-coll-to [1 2 3] 5) => [1 2 3 nil nil]"}
   [coll-0 k]
   (if (and (vector? coll-0)
            (number? k)
@@ -701,11 +602,22 @@
                    (let [k-n (first kvs-n)]
                      (-> coll-f (extend-coll-to k-n) (assoc-fn k-n (second kvs-n))))))))))
 (defn update+
-  "Updates a value in an associative data structure with a function."
+  "Updates the value in an associative data structure @coll associated with key @k
+   by applying the function @f to the existing value."
   ^{:attribution "weavejester.medley"
-    :contributor "Alex Gunnarson"}
+    :contributors ["Alex Gunnarson"]}
   ([coll k f]      (assoc+ coll k       (f (get coll k))))
   ([coll k f args] (assoc+ coll k (apply f (get coll k) args))))
+(defn updates+
+  "For each key-function pair in @kfs,
+   updates value in an associative data structure @coll associated with key
+   by applying the function @f to the existing value."
+  ^{:attribution "Alex Gunnarson"}
+  ([coll & kfs]
+    (reduce-2
+      (fn [ret k-n f-n] (update+ ret k-n f-n))
+      coll
+      kfs)))
 (defn update-val+
   ^{:attribution "Alex Gunnarson"}
   ([coll f] (assoc+ coll 1 (f (get coll 1)))))
@@ -724,62 +636,21 @@
           (apply update-in! val ks f args)
           (apply f val args)))))
 ; perhaps make a version of update-in : update :: assoc-in : assoc ?
-(defn- update-in*
-  "Updates a value in a nested associative structure, where ks is a sequence of keys and f is a
-  function that will take the old value and any supplied args and return the new value, and returns
-  a new nested structure. If any levels do not exist, hash-maps will be created. This implementation
-  was adapted from clojure.core, but the behavior is more correct if keys is empty and unchanged
-  values are not re-assoc'd."
-  ^{:attribution "flatland.useful"} ; make transient version
-  [m keys f & args]
-  (if-let [[k & ks] (seq keys)]
-    (let [old-n (get m k)
-          new-n (apply update-in* old-n ks f args)]  ; make a non-stack-consuming version
-      (if (identical? old-n new-n)
-         m
-         (assoc m k new-n)))
-    (apply f m args)))
-(defn- update-in**
-  ^{:attribution "wagjo, https://gist.github.com/wagjo/9813500"}
-  [m [k & ks] f & args]
-  (let [k (if (and (instance? clojure.lang.Indexed m)
-                   (integer? k)
-                   (neg? k))
-            (+ (count m) k)
-            k)]
-    (if ks
-        (assoc m k (apply update-in* (get m k) ks f args))
-      (assoc m k (apply f (get m k) args)))))
-(defn- update-each
-  "Update the values for each of the given keys in a map where f is a function that takes each
-  previous value and the supplied args and returns a new value. Like update-in*, unchanged values
-  are not re-assoc'd."
-  ^{:attribution "flatland.useful"}
-  [m keys f & args]
-  (reduce
-    (fn [m key]
-      (apply update-in* m [key] f args))
-    m keys))
+
 (defn update-in+
-  ; optimize via transients
-  ; allow to use :last on vectors, allow identity function for unity's sake
   "Created so vectors would also automatically be grown like maps,
    given indices not present in the vector."
-  [coll-0 [key-0 & keys-0] val-0]
-  (let [value (get coll-0 key-0 (when (-> keys-0 first number?) []))
-        coll-f
-          (if (and (vector? coll-0)
-                   (number? key-0)
-                   (-> coll-0 count+ (< key-0)))
-              (reduce+
-                (fn [coll-0 _] (conj coll-0 nil)) ; extend-vec part
-                coll-0
-                (range (count+ coll-0) key-0))
-              coll-0)
+  ^{:attribution "Alex Gunnarson"
+    :TODO ["optimize via transients"
+           "allow to use :last on vectors"
+           "allow |identity| function for unity's sake"]}
+  [coll-0 [k0 & keys-0] v0]
+  (let [value (get coll-0 k0 (when (-> keys-0 first number?) []))
+        coll-f (extend-coll-to coll-0 k0)
         val-f (if keys-0
-                  (update-in+ value keys-0 val-0) ; make a non-stack-consuming version
-                  val-0)]
-    (assoc coll-f key-0 (whenf val-f fn? (*fn (get coll-f key-0))))))
+                  (update-in+ value keys-0 v0) ; make a non-stack-consuming version
+                  v0)]
+    (assoc coll-f k0 (whenf val-f fn? (*fn (get coll-f k0))))))
 ;--------------------------------------------------{         ASSOC-IN         }-----------------------------------------------------
 (defn assoc-in+
   [coll ks v]
@@ -792,21 +663,16 @@
   ^{:attribution "flatland.useful"}
   [m ks v]
   (update-in! m ks (constantly v)))
-(defn assocs-in+ [coll-0 & args] ; optimize via reduce+
-  ;(assocs-in ["file0" "file1" "file2"] [0] "file10" [1] "file11" [2] "file12")
-  (loop [[keys-n val-n :as to-assocs-n] args
-         coll-n coll-0]
-    (if (empty? to-assocs-n)
-        coll-n
-        (recur (-> to-assocs-n rest rest)
-               (assoc-in+ coll-n keys-n val-n)))))
-;--------------------------------------------------{     VECTOR-SPECIFIC      }-----------------------------------------------------
-(defn- extend-vec [vec-0 index-f] ; have a vec+ version with catvec (?)
-  (loop [vec-n vec-0
-         index-n (dec (count+ vec-0))]
-    (if (= index-n index-f)
-        vec-n
-        (recur (conj vec-n nil) (inc index-n)))))
+(defn assocs-in+
+  ^{:usage "(assocs-in ['file0' 'file1' 'file2']
+             [0] 'file10'
+             [1] 'file11'
+             [2] 'file12')"}
+  [coll & kvs]
+  (reduce-2
+    (fn [ret k-n v-n] (assoc-in+ ret k-n v-n))
+    coll
+    kvs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================
@@ -823,10 +689,15 @@
       (catch ClassCastException e (dissoc coll key-0)))) ; Probably because of transients...
   ([coll key-0 & keys-0]
     (reduce+ dissoc+ coll (cons key-0 keys-0))))
+(defn dissocs+ [coll & ks]
+  (reduce+
+    (fn [ret k]
+      (dissoc+ ret k))
+    coll
+    ks))
 (defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
-  (ifn coll (fn-> (get k) pred)
-      (f*n dissoc+ k)
-      identity))
+  (whenf coll (fn-> (get k) pred)
+    (f*n dissoc+ k)))
 (defn dissoc-in+ ; make transient
   "Dissociate a value in a nested assocative structure, identified by a sequence
   of keys. Any collections left empty by the operation will be dissociated from
@@ -842,35 +713,25 @@
             (assoc m k new-n)))
       (dissoc m k))
     m))
-(defn- dissoc-in2+ ; make transient
-  "Dissociate this keyseq from m, removing any empty maps created as a result
-   (including at the top-level).
-   Any empty maps that result will not be present in the new structure."
-  ^{:attribution "prismatic.plumbing"}
-  [m [k & ks]]
-  (when m
-    (if-let [res (and ks (dissoc-in+ (m k) ks))] ; this is terrible
-      (assoc m k res)
-      (let [res (dissoc+ m k)]
-        (when-not (empty? res)
-          res)))))
-(defn- dissoc-in3+ [m ks & dissoc-ks]
+(defn- dissoc-in2+ [m ks & dissoc-ks]
   (apply update-in+ m ks dissoc+ dissoc-ks))
-(defn updates-in+ ; make a /reduce/ version
-  [coll-0 & args]
-  (loop [coll-n                   coll-0
-         [keys-n func :as args-n] args]
-    (if (empty? args-n)
-        coll-n
-        (recur (update-in+ coll-n keys-n func)
-               (-> args-n rest rest)))))
-(defn re-assoc [coll k-0 k-f]
+(defn updates-in+
+  [coll & kfs]
+  (reduce-2
+    (fn [ret k-n f-n] (update-in+ ret k-n f-n))
+    coll
+    kfs))
+(defn re-assoc+ [coll k-0 k-f]
   (if (contains? coll k-0)
       (-> coll
          (assoc+  k-f (get coll k-0))
          (dissoc+ k-0))
       coll))
-(defn re-assocs [])
+(defn re-assocs+ [coll & kfs]
+  (reduce-2
+    (fn [ret k-n f-n] (re-assoc+ ret k-n f-n))
+    coll
+    kfs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -924,28 +785,17 @@
         ([a b c] (conj    a b c)))
     (apply zipvec+ args)))
 ; https://groups.google.com/forum/#!topic/clojure/d2lDCG3iE_k - Dubious performance of hash-map
-(defn- pfrequencies
-  "frequencies
-   Perhaps taken from http://grokbase.com/t/gg/clojure/134yc0yc18/iota-reducers-word-counting"
-  ^{:attribution "Christophe Grand - https://gist.github.com/cgrand/5876594"}
-  [coll]
-     (fold+
-       (fn
-         ([] {})
-         ([a b] (merge-with + a b)))
-       (fn [fs x]
-         (assoc fs x (inc (fs x 0))))
-       coll))
-(defn frequencies+ ; 4.048617 ms vs. /frequencies/ 6.341091 ms
+(defn frequencies+
   "Like clojure.core/frequencies, but faster.
    Uses Java's equal/hash, so may produce incorrect results if
    given values that are = but not .equal"
-  ^{:attribution "prismatic.plumbing"}
+  ^{:attribution "prismatic.plumbing"
+    :performance "4.048617 ms vs. |frequencies| 6.341091 ms"}
   [xs]
   (let [res (java.util.HashMap.)]
     (doseq [x xs]
       (.put res x (unchecked-inc (int (or (.get res x) 0)))))
-    (into {} res)))
+    (into+ {} res)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
@@ -1001,7 +851,11 @@
 (defalias walk     walk/walk)
 (defalias prewalk  walk/prewalk)
 (defalias postwalk walk/postwalk)
-(defn tree-filter [pred elem-func tree]
+(defn tree-filter
+  "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
+   only the elements for which @pred is true. Applies function @elem-func on each element."
+  ^{:attribution "Alex Gunnarson"}
+  [pred elem-func tree]
   (let [results (transient [])]
     (postwalk
       #(if (pred %)
@@ -1030,8 +884,8 @@
           coll-n
           (recur (inc n) (conj coll-n (elem-func-f n)))))))
 (defn accumulate
-  ; Usage: (accumulate :decum [1 2 3] :accum () :func #(conj %1 (inc %2)))
-  ; => (4 3 2)
+  ^{:usage "(accumulate :decum [1 2 3] :accum () :func #(conj %1 (inc %2)))
+            => (4 3 2)"}
   [& {:keys [decum accum func]
       :as args}]
   (loop [[list-n-0 & list-r :as list-n] decum
@@ -1040,44 +894,3 @@
         list-f
         (recur list-r
                (func list-f list-n-0)))))
-;___________________________________________________________________________________________________________________________________
-;=================================================={         APPENDIX         }=====================================================
-;=================================================={                          }=====================================================
-
-; (defprotocol ^{:attribution "flatland.useful.utils"} Adjoin ; like merge, or into
-;   (adjoin-onto [left right]
-;     "Merge two data structures by combining the contents. For maps, merge recursively by
-;   adjoining values with the same key. For collections, combine the right and left using
-;   into or conj. If the left value is a set and the right value is a map, the right value
-;   is assumed to be an existence map where the value determines whether the key is in the
-;   merged set. This makes sets unique from other collections because items can be deleted
-;   from them."))
-; (extend-protocol Adjoin
-;   IPersistentMap
-;   (adjoin-onto [this other]
-;     (merge-with adjoin-onto this other))
-;   IPersistentSet
-;   (adjoin-onto [this other]
-;     (into-set this other))
-;   ISeq
-;   (adjoin-onto [this other]
-;     (concat this other))
-;   IPersistentCollection
-;   (adjoin-onto [this other]
-;     (into this other))
-;   Object
-;   (adjoin-onto [this other]
-;     other)
-;   nil
-;   (adjoin-onto [this other]
-;     other))
-; (defn ^{:attribution "flatland.useful.utils"} adjoin
-;   "Merge two data structures by combining the contents.
-;   For maps, merge recursively by adjoining values with the same key.
-;   For collections, combine the right and left using into or conj.
-;   If the left value is a set and the right value is a map, the right value
-;   is assumed to be an existence map where the value determines whether the key is in the
-;   merged set. This makes sets unique from other collections because items can be deleted
-;   from them."
-;   [a b]
-;   (adjoin-onto a b))

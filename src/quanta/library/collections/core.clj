@@ -203,6 +203,7 @@
     nil coll-search-types))
 (extend-coll-search-to-all-types)
 
+(defn third [coll] (-> coll rest+ rest+ first+))
 ; If the array is not sorted:
 ; java.util.Arrays.asList(theArray).indexOf(o)
 ; If the array is sorted, you can make use of a binary search for performance:

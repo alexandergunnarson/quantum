@@ -1,14 +1,14 @@
 (defproject quanta/library "0.1.0"
-  :description  "Library for Quanta."
-  :jvm-opts     []
-  ;:uberjar      {:aot :all}
-  :jar-name     "quanta-lib-dep.jar"
-  :uberjar-name "quanta-lib.jar"
-  :url          "https://www.github.com/alexandergunnarson/quanta-lib"
-  :license      {:name "Eclipse Public License"
-                 :url "http://www.eclipse.org/legal/epl-v10.html"}
-  :plugins      [[lein-release "1.0.5"]] 
-  :dev-dependencies [[lein-git-deps "0.0.1-SNAPSHOT"]]
+  :description      "Library for Quanta."
+  :jvm-opts         []
+  ;:uberjar          {:aot :all}
+  :jar-name         "quanta-lib-dep.jar"
+  :uberjar-name     "quanta-lib.jar"
+  :url              "https://www.github.com/alexandergunnarson/quanta-lib"
+  :license          {:name "Eclipse Public License"
+                     :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :plugins          [] 
+  :dev-dependencies []
   :dependencies
     [; CLOJURE CORE
      [org.clojure/clojure               "1.6.0"]
@@ -59,7 +59,7 @@
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"] ; Creating audio plugin
      ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"] ; Creating audio plugin
      ; DATAGRID + EXCEL
-     [org.apache.poi/poi          "3.9"] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
-     ;[org.apache.poi/poi-ooxml    "3.9"] ; NOT INCLUDED
+     ; [org.apache.poi/poi          "3.9"] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
+     ; [org.apache.poi/poi-ooxml    "3.9"] ; NOT INCLUDED
      ]
   )
