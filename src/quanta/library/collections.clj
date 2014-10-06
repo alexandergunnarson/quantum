@@ -385,75 +385,6 @@
 ; splits the coll each time f returns a new value
 ; (partition-by odd? [1 1 1 2 2 3 3])
 ; => ((1 1 1) (2 2) (3 3)) /lseq/
-; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
-(defn- find-first [pred coll]
-  "Searches a collection and returns the first item for which pred is true, or nil if not found.
-   Like 'some', except it returns the value from the collection (rather than the result of 
-   applying the predicate to the value).
-   It is possible to find and return a nil value if the collection contains nils."
-  ^{:attribution "mikera.cljutils.find"}
-  (if (indexed? coll)
-      (let [c (count+ coll)
-            ^clojure.lang.Indexed icoll coll]
-        (loop [i 0]
-          (if (< i c) 
-            (let [v (.nth icoll i)]
-              (if (pred v) v (recur (inc i))))
-            nil)))
-      (loop [s (seq coll)] 
-        (when s  
-          (let [v (first s)]
-            (if (pred v)
-              v
-              (recur (next s))))))))
-; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
-(defn- find-index
-  "Searches a collection and returns the index of the first item for which pred is true.
-   Returns -1 if not found"
-  ^{:attribution "mikera.cljutils.find"}
-  (^long [pred coll]
-    (if (indexed? coll)
-        (let [c (count+ coll)]
-          (loop [i 0]
-            (if (< i c) 
-                (if (pred (nth coll i)) i (recur (inc i)))
-                -1)))
-        (loop [i 0 s (seq coll)]
-          (if s
-              (if (pred (first s)) i (recur (inc i) (next s))) ; /next/ is probably a little bit bad
-              -1))))) 
-; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
-(defn- find-position
-  "Searches a collection and returns the (long) index of the item's position.
-   Optionally starts counting from i. Returns -1 if not found"
-  ^{:attribution "mikera.cljutils.find"}
-  (^long [item coll] 
-    (find-position item coll 0))
-  (^long [item coll ^long i] 
-    (if-let [[v :as coll] (seq coll)] 
-      (if (= item v)
-          i
-          (recur item (rest coll) (inc i)))
-      -1)))
-; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
-(defn- find-position-in-vector
-  "Searches an indexed data structure for an item and returns the index, or -1 if not found."
-  ^{:attribution "mikera.cljutils.find"}
-  [item vec-0]
-  (let [ct (count+ vec-0)]
-    (loop [n (int 0)]
-      (if (>= n ct)
-          -1
-          (if (= item (get vec-0 n)) n (recur (inc n)))))))
-; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
-(defn- position
-  "Returns a map from item to the position of its first occurence in coll."
-  ^{:attribution "flatland.useful"}
-  [coll]
-  (->> coll
-       (map-indexed+ (fn [idx-n val-n] (map-entry val-n idx-n)))
-       reverse+ ; this is terrible...
-       (into+ {})))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={            MAP           }=====================================================
 ;=================================================={                          }=====================================================
@@ -713,8 +644,6 @@
             (assoc m k new-n)))
       (dissoc m k))
     m))
-(defn- dissoc-in2+ [m ks & dissoc-ks]
-  (apply update-in+ m ks dissoc+ dissoc-ks))
 (defn updates-in+
   [coll & kfs]
   (reduce-2
@@ -747,14 +676,6 @@
          :when (not (.contains s id))]
      (do (.add s id)
          x))))
-(defn- distinct-id
-  "Like distinct but uses reference rather than value identity"
-  ^{:attribution "prismatic.plumbing"}
-  [xs]
-  (let [s (java.util.IdentityHashMap.)]
-    (doseq [x xs]
-      (.put s x true))
-    (iterator-seq (.iterator (.keySet s)))))
 (defn plicates [oper n]
   (fn [coll]
      (-> (fn [elem]
@@ -779,7 +700,7 @@
 ;     (keep seq colls))))
 (defn interleave+ [& args] ; 4.307220 ms vs. 1.424329 ms normal interleave :/ because of zipvec...
   (reduce+
-    (fn ([] [])
+    (fn ([]      [])
         ([a]     (conj [] a))
         ([a b]   (conj    a b)) 
         ([a b c] (conj    a b c)))
@@ -794,7 +715,11 @@
   [xs]
   (let [res (java.util.HashMap.)]
     (doseq [x xs]
-      (.put res x (unchecked-inc (int (or (.get res x) 0)))))
+      (->> (.get res x)
+           (or 0)
+           int
+           unchecked-inc)
+           (.put res x))
     (into+ {} res)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
