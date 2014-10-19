@@ -2,19 +2,21 @@
   (:require [clojure.repl :as repl])
   (:gen-class))
 
+(import '(clojure.lang Keyword Var))
+
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
    in the current namespace.
    USAGE: (resolve-key :my-var)"
   ^{:attribution "Alex Gunnarson"}
-  [k]
+  [^Keyword k]
   (-> k name symbol resolve))
 (defn eval-key
   "Evaluates the provided keyword as a symbol for a var
    in the current namespace.
    USAGE: (eval-key :my-var)"
   ^{:attribution "Alex Gunnarson"}
-  [k]
+  [^Keyword k]
   (-> k name symbol eval))
 
 (defn var-name
@@ -30,7 +32,7 @@
   "Create a var with the supplied name in the current namespace, having the same
   metadata and root-binding as the supplied var."
   ^{:attribution "flatland.useful.ns"}
-  [name ^clojure.lang.Var var]
+  [name ^Var var]
   (apply intern *ns*
     (with-meta name
       (merge
@@ -92,13 +94,22 @@
   (set! *warn-on-reflection* true))
 
 (defn require-all
-  "Loads/imports all the namespaces and functions associated with a given
-  library key.
-  USAGE: (require-all *ns* :lib :grid :fx)"
-  ^{:attribution "Alex Gunnarson"}
-  ([curr-ns lib-key]
+  "Loads/|import|s/|require|s all the namespaces and functions associated with a given
+   library key @lib-key into the current namespace @curr-ns."
+  {:attribution "Alex Gunnarson"
+   :usage "(require-all *ns* :lib :grid :fx)"}
+  ([curr-ns ^Keyword lib-key]
     (binding [*ns* curr-ns]
       (case lib-key
+        :clj
+        (import '(clojure.lang
+                  Keyword
+                  Delay
+                  Atom Var
+                  AFunction
+                  PersistentList
+                  APersistentVector PersistentVector
+                  APersistentMap    PersistentArrayMap PersistentHashMap))
         :lib
         (require
           '[quanta.library.collections :as coll        :refer :all                   ]
@@ -135,17 +146,13 @@
         (require 
           '[quanta.datagrid.core       :as grid]
           '[quanta.datagrid.excel      :as xl  ])
-        :fx
+        :fx-core
         (do (require
               '[quanta.library.ui.init]
               '[quanta.library.ui.jfx :as fx :refer
-                 [fx jdef* jdef jdef! jset! jget jget-prop
-                  do-fx jconj! jdissoc! remove-all-fx!
-                  set-listener! swap-content! jupdate!
-                  arrange-on! center-on! get-size get-pos
-                  fx-node? fx-obj? jgets-map clear!
-                  jconj-all!
-                  setx! sety! getx gety place-at! nudge!]])
+                 [fx do-fx
+                  set-listener! swap-content!
+                  fx-node? fx-obj? remove-all-fx! clear!]])
             (import
               '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
                                       FadeTransition TranslateTransition RotateTransition ScaleTransition
@@ -169,6 +176,16 @@
                  ComboBox ContentDisplay Labeled TableColumn TableRow
                  TableCell ListCell TextArea TextField ContentDisplay
                  TableView TableView$TableViewSelectionModel)))
+        :fx
+        (do (require-all curr-ns :fx-core)
+            (require
+              '[quanta.library.ui.custom-objs :as objs :refer
+                 [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
+                  jconj! jdissoc! jupdate!
+                  arrange-on! center-on! jconj-all!
+                  setx! sety!
+                  getx gety get-size get-pos
+                  place-at! nudge!]]))
         nil)))
   ([curr-ns lib-key-0 & lib-keys]
     (require-all curr-ns lib-key-0)

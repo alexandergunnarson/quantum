@@ -211,6 +211,21 @@
        pr/suppress-pr))
 (defn do-every [millis n func]
   (dotimes [_ n] (func) (Thread/sleep millis)))
+(defn add-all!
+  "Adds, via |.add|, all elements @args to an object @obj.
+   Sometimes |.addAll| doesn't work; thus this function."
+  ([obj arg]
+    (try
+      (.add obj arg)
+      obj
+      (catch ClassCastException _ obj)))
+  ([obj arg & args]
+    (try
+      (add-all! obj arg)
+      (doseq [arg-n args]
+        (add-all! obj arg-n))
+      obj
+      (catch ClassCastException _ obj))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{   DRAGGABLE ITEMS    }=====================================================
 ;======================================================{                      }=====================================================

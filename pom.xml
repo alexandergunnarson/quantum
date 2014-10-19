@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>02415dcf987036fe9aa96c3314b1bdd7279cf26a
+    <tag>ac0ed4e39a78637f39ddb2aa9731d0c14f1aecd1
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -187,11 +187,6 @@
       <groupId>com.damballa</groupId>
       <artifactId>parkour</artifactId>
       <version>0.5.4</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi</artifactId>
-      <version>3.9</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>

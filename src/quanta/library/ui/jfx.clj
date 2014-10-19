@@ -118,41 +118,6 @@ Runs the code on the FX application thread and waits until the return value is d
     (str (str/lower-case (subs c 0 1))
          (subs c 1))))
 ;___________________________________________________________________________________________________________________________________
-;========================================================={ OTHER HELPERS }=========================================================
-;========================================================={               }=========================================================
-;; TODO inefficient.
-(defn j-set-get [method-type obj k args]
-  (let [prefix-table {:get {:is? "is"  :else "get"}
-                      :set {:is? "set" :else "set"}}
-        ends-q-table (if (str/ends-with? (name k) "?")
-                         {:sub-fn butlast+ :type :is?}
-                         {:sub-fn identity :type :else})
-        method       (->> k name ((:sub-fn ends-q-table))
-                          (prepend-and-camel (-> prefix-table method-type (get (:type ends-q-table))))
-                          str symbol)]
-    (apply exec-method obj method args)))
-(defn jget 
-  ([obj-0 k]
-    (let [obj (ifn obj-0 keyword? ns/eval-key identity)]
-      (j-set-get :get obj k nil)))
-  ([obj k & ks]
-    (reduce+ (fn [ret k] (conj ret (jget obj k))) [] (conj ks k))))
-(defn jgets-map [obj & ks]
-  (reduce+ (fn [ret k] (assoc ret k (jget obj k))) (sorted-map+) ks))
-(defn jget-in [obj & ks]
-  (reduce+ (fn [ret k] (jget ret k)) obj ks))
-
-(defn jset!
-  ([obj-0 k args]
-    (let [obj (ifn obj-0 keyword? ns/eval-key identity)]
-      (do-fx (j-set-get :set obj k (coll-if args)))))
-  ([obj k v & kvs]
-    (reduce-2 jset! obj (conj kvs v k))))
-(defmacro jget-prop "fetches a property from a node." [obj prop & args]
-  (if (= \? (subs (name prop) (dec (count (name prop)))))
-      "Error!"
-      `(~(symbol (str "." (prepend-and-camel (name prop) "property"))) ~obj ~@args)))
-;___________________________________________________________________________________________________________________________________
 ;======================================================{ COLLECTION HELPERS }=======================================================
 ;======================================================{                    }=======================================================
 ;; This probably isn't the ideal approach for mutable collections. Check back for better ones.
@@ -383,7 +348,7 @@ The listener gets a preprocessed event map as shown above.
                                          row-constraints stack-pane tile-pane v-box]
                  "javafx.scene.text" '[text font text-flow]
                  "javafx.scene.shape" '[arc arc-to circle close-path cubic-curve cubic-curve-to ellipse
-                                        h-line-to line line-to move-to path polygon polyline quad-curve quad-curve-to
+                                        h-line-to v-line-to line line-to move-to path polygon polyline quad-curve quad-curve-to
                                         rectangle SVG-path box cylinder mesh-view sphere]
                  "javafx.scene.canvas" '[canvas]
                  "javafx.scene.image" '[image-view]
@@ -564,186 +529,10 @@ Special keys:
 (defn parent-key [obj-key]
   (-> (get @objs obj-key) last+))
 
-(defn jdissoc!
-  ([parent elem]
-     (when (fx-exists? elem)
-       (swap-content! (ns/eval-key parent) (partial remove (eq? (ns/eval-key elem))))
-       (swap! tree dissoc-in+
-         (->> (conj (get @objs elem) elem)
-              (interpose :children) ; [:rt :children :sr-day-box]
-              vec+))
-       (swap! objs dissoc+ elem))) ; or should it just be updating the keys to nil?
-  ([parent k elem]
-     (swap-content! (ns/eval-key parent) (f*n update+ k (partial remove (eq? (ns/eval-key elem)))))))
 
-(defn jconj!
-  ([parent elem]
-     (when (fx-exists? elem)
-       (jdissoc! (parent-key elem) elem))
-     (swap! tree assoc-in+
-       (->> (conj (get @objs parent) parent elem)
-            (interpose :children)
-            vec+
-            (<- conj :obj)) ; [:rt] -> [:rt :children :title :obj]
-       (ns/eval-key elem))
-     (swap! objs assoc elem
-       (conj (get @objs parent) parent)) ; [:rt :title]
-     (swap-content!* (ns/eval-key parent) (f*n conj (ns/eval-key elem))))
-  ([parent k elem]
-     (swap-content!* (ns/eval-key parent) (f*n update+ k conj (ns/eval-key elem)))))
 
 
 (defn remove-all-fx!
   ([obj]   (do (swap-content!* obj (constantly [])) obj))
   ([obj k] (do (swap-content!* obj (f*n update+ k (constantly []))) obj)))
 (defn clear! [x] (remove-all-fx! x)) ; because you can't take a value of a macro
-
-
-(def jdef-q (atom (queue))) ; FIFO
-(defn jdef*
-  "Define an object with given properties.
-   Also add it to the scene graph, defaulting at the root node."
-  [obj-key ctrl & props]
-  (intern *ns* (-> obj-key name symbol)
-    (apply fx* (-> ctrl name symbol) props))
-  (if (splice-or obj-key = :rt :scn :stg)
-      (do (swap! objs assoc obj-key [])
-          (swap! tree assoc-in+ [obj-key :obj]
-            (ns/eval-key obj-key)))
-      (do (swap! objs assoc obj-key [:rt])
-          (swap! tree assoc-in+ [:rt :children obj-key :obj]
-            (ns/eval-key obj-key)))))
-(defn jdef
-  "Define an object with given properties and
-   place it on a queue to be added to the root node."
-  [obj-key ctrl & props]
-  (when (fx-exists? obj-key)
-    (println "Redefining object" (str "'" (name obj-key) "'" "..."))
-    (jdissoc! (parent-key obj-key) obj-key))
-  (apply jdef* obj-key ctrl props)
-  (swap! jdef-q conj obj-key) ; place it on the queue
-  (ns/eval-key obj-key))
-(defn jdef!
-  "Same as /jdef/, but immediately /conj/es the obj to the root node."
-  [obj ctrl & props]
-  (apply jdef obj ctrl props)
-  (jconj! :rt obj)
-  (swap! jdef-q pop)
-  (ns/eval-key obj))
-(defn jconj-all!
-  "Conj all objs in queue to root node."
-  []
-  (reduce+ (fn [ret k] (jconj! :rt k)) nil @jdef-q)
-  (reset! jdef-q (queue)))
-;___________________________________________________________________________________________________________________________________
-;======================================================{ VISUAL ARRANGEMENT }=======================================================
-;======================================================{                    }=======================================================
-(defn jupdate! [obj k func]
-  (->> obj (<- jget k) func (jset! obj k)))
-(defmacro fx-try [try-expr else-expr]
-  ; I don't think try catch works here because
-  ; it's operating on another thread...?
-  `(whenf ~try-expr (eq? :error)
-    (constantly ~else-expr)))
-(defn setx! [obj v]
-  (fx-try
-    (jset! obj :x v)
-    (jset! obj :translate-x v)))
-(defn sety! [obj v]
- (fx-try
-    (jset! obj :y v)
-    (jset! obj :translate-y v)))
-(defn getx [obj]
-  (fx-try
-    (jget obj :x)
-    (jget obj :translate-x)))
-(defn gety [obj]
-  ; Rectangles calculate from the top-left; text, from the bottom-left
-  (if (= javafx.scene.text.Text (jget obj :class))
-      (- (jget obj :y)
-         (jget-in obj :layout-bounds :height))
-      (fx-try
-        (jget obj :y)
-        (jget obj :translate-y))))
-(defn get-div [obj-0 n divs & [dim]]
-  (let [obj (ifn obj-0 keyword? ns/eval-key identity)
-        center {:x (+ (getx obj)
-                      (-> obj (#(fx-try (jget-in % :layout-bounds :width)  (jget % :width)))
-                              (/ divs) (* n)))
-                :y (+ (gety obj)
-                      (-> obj (#(fx-try (jget-in % :layout-bounds :height) (jget % :height)))
-                              (/ divs) (* n)))}]
-    (if (keyword? dim) (get center dim) center)))
-(defn get-center [obj-0 & [dim]]
-  (get-div obj-0 1 2 dim))
-(defn get-size [obj-0 & [dim]]
-  (let [obj (ifn obj-0 keyword? ns/eval-key identity)
-        size {:x (jget-in obj :layout-bounds :width)
-              :y (jget-in obj :layout-bounds :height)}]
-    (if (keyword? dim) (get size dim) size)))
-(defn get-pos [obj pos]
-  (case pos
-    :left
-    (getx obj)
-    :right
-    (+ (getx obj) (get-size obj :x))
-    :top
-    (gety obj)
-    :bottom
-    (+ (gety obj) (get-size obj :y))
-    (throw (Exception. "Unknown position requested."))))
-(defn arrange-on! [obj-top obj-bottom n divs & [orientation]]
-  ; default n is 2
-  (let [set-fn (case orientation :x setx! :y sety! nil)]
-    (if (nil? orientation)
-        (do (arrange-on! obj-top obj-bottom n divs :x)
-            (arrange-on! obj-top obj-bottom n divs :y))
-        (when (splice-or orientation = :x :y)
-          (set-fn obj-top
-            (-> obj-bottom
-                (get-div n divs orientation)
-                ((case orientation ; condpc apparently causes strange problems here...
-                   :x
-                   -
-                   :y
-                   (if (= (jget obj-top :bounds-type)
-                          (. javafx.scene.text.TextBoundsType VISUAL))
-                       +
-                       -))
-                 (-> obj-top (get-size orientation) (/ 2)))))))))
-(defn center-on! [obj-top obj-bottom & [orientation]]
-  (arrange-on! obj-top obj-bottom 1 2 orientation))
-
-(defn place-at! [obj at-obj pos]
-  (case pos
-    :middle (center-on! obj at-obj)
-    :left 
-    (do (center-on! obj at-obj :y)
-        (setx! obj
-          (- (get-pos at-obj :left)
-             (get-size obj :x))))
-    :right
-    (do (center-on! obj at-obj :y)
-        (setx! obj (get-pos at-obj :right)))
-    :top
-    (do (center-on! obj at-obj :x)
-        (sety! obj
-          (- (get-pos at-obj :top)
-             (get-size obj :y))))
-    :bottom
-    (do (center-on! obj at-obj :x)
-        (sety! obj (get-pos at-obj :bottom)))
-    (throw+ {:type :unknown-placement
-             :message "Unknown placement requested."})))
-(defn nudge! [obj pos n]
-  (case pos
-    :left  (setx! obj (- (getx obj) n))
-    :right (setx! obj (+ (getx obj) n))
-    :up    (sety! obj (- (gety obj) n))
-    :down  (sety! obj (+ (gety obj) n))))
-
-
-
-
-
-

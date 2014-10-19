@@ -24,6 +24,15 @@
 (alias-ns 'quanta.library.reducers)
 (defalias merge+ map/merge+)
 
+(defn reducei+
+  "Reduce, indexed."
+  [f ret init]
+  (reduce+ 
+    (fn [ret [elem n]]
+      (f ret elem n))
+    ret
+    (zipvec+ init (range 0 (count init)))))
+
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks)))
 

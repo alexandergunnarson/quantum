@@ -24,6 +24,10 @@
 (defalias triml       str/triml)
 (defalias trimr       str/trimr)
 (defalias re-find     clojure.core/re-find)
+(defn ^Boolean blank?
+  "Determines if an object @obj is a blank/empty string."
+  [obj]
+  ((fn-and string? empty?) obj))
 (def  str-nil (whencf*n nil? ""))
 (defn upper-case? [^java.lang.Character c] (Character/isUpperCase c)) ; can't be partialized because of Java interop syntax
 (defn lower-case? [^java.lang.Character c] (Character/isLowerCase c))
