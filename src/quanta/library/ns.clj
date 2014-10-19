@@ -146,21 +146,15 @@
         (require 
           '[quanta.datagrid.core       :as grid]
           '[quanta.datagrid.excel      :as xl  ])
-        :fx-core
-        (do (require
-              '[quanta.library.ui.init]
-              '[quanta.library.ui.jfx :as fx :refer
-                 [fx do-fx
-                  set-listener! swap-content!
-                  fx-node? fx-obj? remove-all-fx! clear!]])
-            (import
+        :java-fx
+         (import
               '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
                                       FadeTransition TranslateTransition RotateTransition ScaleTransition
                                       PathTransition PathTransition$OrientationType)
               '(javafx.collections    ObservableList FXCollections)
               '(javafx.event          ActionEvent EventHandler EventType)
               '(javafx.geometry       Insets Pos)
-              '(javafx.scene          Group Scene)
+              '(javafx.scene          Group Scene Node)
               '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
               '(javafx.scene.image    Image)
               '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
@@ -175,9 +169,16 @@
               '(javafx.scene.control
                  ComboBox ContentDisplay Labeled TableColumn TableRow
                  TableCell ListCell TextArea TextField ContentDisplay
-                 TableView TableView$TableViewSelectionModel)))
+                 TableView TableView$TableViewSelectionModel))
+        :fx-core
+        (do (require
+              '[quanta.library.ui.init]
+              '[quanta.library.ui.jfx :as fx :refer
+                 [fx do-fx
+                  set-listener! swap-content!
+                  fx-node? fx-obj?]]))
         :fx
-        (do (require-all curr-ns :fx-core)
+        (do (require-all curr-ns :fx-core :java-fx)
             (require
               '[quanta.library.ui.custom-objs :as objs :refer
                  [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
@@ -202,6 +203,7 @@
   [curr-ns]
   (binding [*ns* curr-ns]
     (defs-private
+      'curr-ns      curr-ns
       '*exp         'quanta.library.ui.experimental
       '*ui          'clj-qb.ui.core
       '*coll        'quanta.library.collections    

@@ -1,9 +1,6 @@
 (ns quanta.library.ui.aux-fn (:gen-class))
 (require '[quanta.library.ns :as ns])
-(ns/require-all *ns* :lib)
-(ns/require-all *ns* :qb)
-(ns/require-all *ns* :grid)
-(ns/require-all *ns* :fx)
+(ns/require-all *ns* :lib :clj :grid :fx)
 (ns/nss *ns*)
 
 ;___________________________________________________________________________________________________________________________________
@@ -129,39 +126,6 @@
 ;       m))
 ;   (unserialize* m-0))
 
-; {*:rt {:text-title {:class javafx.scene.text.Text,
-;                    :font {:name "MyriadPro-Light", :size 30.0},
-;                    :text "SOC",
-;                    :x 364.0,
-;                    :y 45.0}}}
-; *[:rt {:text-title {:class javafx.scene.text.Text,
-;                    :font {:name "MyriadPro-Light", :size 30.0},
-;                    :text "SOC",
-;                    :x 364.0,
-;                    :y 45.0}}]
-; (conj-fx! :rt *{:text-title {:class javafx.scene.text.Text,
-;                             :font {:name "MyriadPro-Light", :size 30.0},
-;                             :text "SOC",
-;                             :x 364.0,
-;                             :y 45.0}})
-; (conj-fx! :rt {*:text-title {:class javafx.scene.text.Text,
-;                             :font {:name "MyriadPro-Light", :size 30.0},
-;                             :text "SOC",
-;                             :x 364.0,
-;                             :y 45.0}})
-; (conj-fx! :rt {jdef :text-title
-;                 *{:class javafx.scene.text.Text,
-;                  :font {:name "MyriadPro-Light", :size 30.0},
-;                  :text "SOC",
-;                  :x 364.0,
-;                  :y 45.0}})
-; (conj-fx! :rt {jdef :text-title
-;                 *{:class javafx.scene.text.Text,
-;                  :font {:name "MyriadPro-Light", :size 30.0},
-;                  :text "SOC",
-;                  :x 364.0,
-;                  :y 45.0}})
-
 (defn save-stage! []
   (io/write! :directory [:resources] :name "stg" :data (serialize @fx/tree)))
 (defn load-stage! []
@@ -211,21 +175,6 @@
        pr/suppress-pr))
 (defn do-every [millis n func]
   (dotimes [_ n] (func) (Thread/sleep millis)))
-(defn add-all!
-  "Adds, via |.add|, all elements @args to an object @obj.
-   Sometimes |.addAll| doesn't work; thus this function."
-  ([obj arg]
-    (try
-      (.add obj arg)
-      obj
-      (catch ClassCastException _ obj)))
-  ([obj arg & args]
-    (try
-      (add-all! obj arg)
-      (doseq [arg-n args]
-        (add-all! obj arg-n))
-      obj
-      (catch ClassCastException _ obj))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{   DRAGGABLE ITEMS    }=====================================================
 ;======================================================{                      }=====================================================
@@ -238,13 +187,17 @@
      (handle [event]
        (doall (map (*fn event) fns))
        (.consume event))))
-(defmacro handler [& exprs]
+(defmacro wrap-handler
+  ([^Object obj-to-affect ^AFunction handler]
+    `(wrap-handler ~obj-to-affect identity ~handler))
+  ([^Object obj-to-affect ^AFunction pre-handler ^AFunction handler]
   `(let [ns-0# ~*ns*] 
      (proxy [EventHandler] []
        (handle [event#]
          (binding [*ns* ns-0#]
-           (do ~@exprs)
-             (.consume event#))))))
+           (~pre-handler ~obj-to-affect)
+           (~handler ~obj-to-affect)
+           (.consume event#)))))))
 (def last-mouse-event (atom 0))
 (def mouse-inset (atom [0 0])) ; if you try to use the is! and * method, you will overwrite
 ;each thing, because referring to name is calling the original def and resetting it.
@@ -300,9 +253,11 @@
       :fill (. Color RED))
     (jconj! :rt :x-y-meta))
   (jset! obj
-    :on-mouse-released (handler (released-handler obj))
-    :on-mouse-pressed  (handler (pressed-handler  obj))
-    :on-mouse-dragged  (handler (drag-at-handler  obj (when meta? (eval 'x-y-meta))))))
+    :on-mouse-released (wrap-handler obj released-handler)
+    :on-mouse-pressed  (wrap-handler obj pressed-handler)
+    :on-mouse-dragged  (wrap-handler obj drag-at-handler
+                         (fn [obj-to-affect]
+                           (when meta? (eval 'x-y-meta))))))
 (defn set-draggable-f! [obj & [meta?]]
   (jset! obj
     :on-mouse-released nil

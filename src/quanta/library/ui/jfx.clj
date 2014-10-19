@@ -5,8 +5,9 @@
     [clojure.data               :as cljdata]
     [clojure.reflect                         :refer :all])
   (:gen-class))
+(import 'javafx.scene.Node)
 (require '[quanta.library.ns :as ns])
-(ns/require-all *ns* :lib)
+(ns/require-all *ns* :lib :clj)
 (ns/nss *ns*)
 
 (comment
@@ -18,8 +19,19 @@
 
 (def tree (atom {}))
 (def objs (atom {}))
-(def fx-node? (partial instance? javafx.scene.Node))
-(def fx-obj?  (fn-or fx-node? (partial instance? javafx.scene.text.Font)))
+; Look up keyword IDs by object reference
+(def obj-key-pairs (atom {}))
+(defprotocol Lookup
+  (lookup [obj]))
+; Looks up an object by keyword or node
+(extend-protocol Lookup
+  Keyword (lookup [k]   (get @objs k)))
+(extend-protocol-for-all Lookup
+  [Node Object nil]
+    (lookup [obj] (get @objs (get @obj-key-pairs obj))))
+(def fx-node? (partial instance? Node))
+(def fx-obj?
+  (fn-or fx-node? (partial instance? javafx.scene.text.Font)))
 (defn get-tree-key [obj]
   (->> @tree
       (coll/tree-filter
@@ -35,9 +47,6 @@
           (compr first (eq? k)))
         second) ; the val
       first)) ; the first result
-(defn fx-exists? [k]
-  (try (-> k ns/eval-key get-tree-key nnil?)
-    (catch Exception e false)))
 
 ; Preprocess the reflection-powered things. And make them not reflection powered.
 ; For instance:
@@ -525,14 +534,3 @@ Special keys:
     (.setAll (.getSortOrder          obj) (:sort-order           res))
     (.setAll (.getVisibleLeafColumns obj) (:visible-leaf-columns res))))
 
-
-(defn parent-key [obj-key]
-  (-> (get @objs obj-key) last+))
-
-
-
-
-(defn remove-all-fx!
-  ([obj]   (do (swap-content!* obj (constantly [])) obj))
-  ([obj k] (do (swap-content!* obj (f*n update+ k (constantly []))) obj)))
-(defn clear! [x] (remove-all-fx! x)) ; because you can't take a value of a macro
