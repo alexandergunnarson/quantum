@@ -10,21 +10,16 @@
   (apply splice-or obj-key = [:multi-rounded-rectangle]))
 (defn jdissoc!
   ([parent elem]
-    (println "2 ARITY JDISSOC!!")
      (when (fx-exists? elem)
        (fx/swap-content! (ns/eval-key parent)
          (partial remove (eq? (ns/eval-key elem))))
-        (println "SWAP CONTENT DONE")
        (swap! fx/tree dissoc-in+
          (->> (conj (get-in @fx/objs [elem :parents]) elem)
               (interpose :children) ; [:rt :children :sr-day-box]
               vec+))
-       (println "TREE DISSOC IN DONE")
        (swap! fx/objs dissoc+ elem)
-       (println "OBJS DISSOC DONE")
        (swap! fx/obj-key-pairs dissoc
-         (ns/eval-key elem))
-         (println "OBJS KEY PAIRS DISSOC DONE"))) ; or should it just be updating the keys to nil?
+         (ns/eval-key elem)))) ; or should it just be updating the keys to nil?
   ([parent k elem]
     (fx/swap-content! (ns/eval-key parent)
       (f*n update+ k
@@ -32,6 +27,7 @@
 (defn parent-key [^Keyword obj-key]
   (->  @fx/objs (get-in [obj-key :parents]) last+))
 (defn jconj!
+  "Makes @elem-k a child of @parent-k."
   ([parent-k elem-k]
     (let [parent (whenf parent-k keyword? ns/eval-key)
           elem   (whenf elem-k   keyword? ns/eval-key)]
@@ -76,8 +72,6 @@
           (swap! fx/tree assoc-in+ [:rt :children obj-key :obj]
             (ns/eval-key obj-key))))
   (swap! fx/objs assoc-in+ [obj-key :ref] (ns/eval-key obj-key))
-  (println "PROPS:" props)
-  (println "PROPS MAP:" (apply hash-map props))
   (swap! fx/objs assoc-in+ [obj-key :style]
     (get (apply hash-map props) :button-style)) ; FIX THIS!!
   (swap! fx/obj-key-pairs

@@ -49,19 +49,56 @@
   (fn [bin-pred obj]
     ((fn-pred-or (unary bin-pred) elems) obj)))
 (defn coll-and
-  "USAGE: ((and-coll 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"
+  {:usage "((and-coll 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
   [& elems]
   (fn [bin-pred obj]
     ((fn-pred-and (unary bin-pred) elems) obj)))
 (def  empty+? (fn-or nseq? empty?))
-(defn rcompare "Reverse comparator." ^{:attribution "taoensso.encore"} [x y] (compare y x))
-(defn condf [obj & exprs] ; force it to delay like cond
-  (loop [[pred func :as exprs-n] exprs]
-    (if (or (= pred :else) (pred obj) (empty? exprs-n))
-        (func obj)
-        (recur (-> exprs-n rest rest)))))
-(def  condf*n  (partial f*n  condf))
-(def  condf**n (partial f**n condf))
+(defn rcompare
+  "Reverse comparator."
+  {:attribution "taoensso.encore"}
+  [x y]
+  (compare y x))
+(defmacro condf
+  "Like |cond|, with each expr as a function applied to the initial argument, @obj."
+  [obj & clauses]
+  (let [gobj (gensym "obj__")
+        emit (fn emit [obj args]
+               (let [[[a b c :as clause] more]
+                       (split-at 2 args)
+                     n (count clause)]
+                 (cond
+                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
+                   (= 1 n) a
+                   (= 2 n) `(if (or (= ~a :else) 
+                                    (~a ~obj))
+                                (~b ~obj)
+                                ~(emit obj more))
+                   :else   (emit obj more))))]
+  `(let [~gobj ~obj]
+       ~(emit gobj clauses))))
+(defmacro condf*n [& args]
+  `(fn [obj#] (condfn obj# ~@args)))
+(defmacro condf**n [& args]
+  (fn [& inner-args] `(condfn ~@inner-args ~@args)))
+(defmacro condfc
+  "Like |condf|, but each expr is essentially wrapped in a |constantly|."
+  [obj & clauses]
+  (let [gobj (gensym "obj__")
+        emit (fn emit [obj args]
+               (let [[[a b c :as clause] more]
+                       (split-at 2 args)
+                     n (count clause)]
+                 (cond
+                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
+                   (= 1 n) a
+                   (= 2 n) `(if (or (= ~a :else) 
+                                    (~a ~obj))
+                                ~b ; As in, this expression is not used as a function taking @obj as an argument
+                                ~(emit obj more))
+                   :else   (emit obj more))))]
+  `(let [~gobj ~obj]
+       ~(emit gobj clauses))))
 (defmacro ifn [obj pred true-fn false-fn] ; macro to delay
   `(let [obj-f# ~obj] 
      (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#))
@@ -110,7 +147,8 @@
 ;           expr
 ;           (recur (-> exprs-n rest rest)))))
 (defmacro condpc
-  "/condp/ for colls. (condpc = 1 (coll-or 2 3) (println '2 or 3!')"
+  "/condp/ for colls."
+  {:usage "(condpc = 1 (coll-or 2 3) (println '2 or 3!')"}
   [pred expr & clauses]
   (let [gpred (gensym "pred__")
         gexpr (gensym "expr__")
@@ -131,8 +169,7 @@
 
                    :else `(if-let [p# (~pred ~a ~expr)]
                             (~c p#)
-                            ~(emit pred expr more)))))
-        gres (gensym "res__")]
+                            ~(emit pred expr more)))))]
   `(let [~gpred ~pred
          ~gexpr ~expr]
        ~(emit gpred gexpr clauses))))

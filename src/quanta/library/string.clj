@@ -1,5 +1,5 @@
 (ns quanta.library.string
-  (:refer-clojure :exclude [replace contains? val re-find])
+  (:refer-clojure :exclude [replace remove contains? val re-find])
   (:require 
     [quanta.library.ns       :as ns    :refer [defalias]]
     [quanta.library.logic    :as logic :refer :all]
@@ -24,13 +24,13 @@
 (defalias triml       str/triml)
 (defalias trimr       str/trimr)
 (defalias re-find     clojure.core/re-find)
-(defn ^Boolean blank?
+(defn blank?
   "Determines if an object @obj is a blank/empty string."
   [obj]
   ((fn-and string? empty?) obj))
 (def  str-nil (whencf*n nil? ""))
-(defn upper-case? [^java.lang.Character c] (Character/isUpperCase c)) ; can't be partialized because of Java interop syntax
-(defn lower-case? [^java.lang.Character c] (Character/isLowerCase c))
+(defn upper-case? [^Character c] (Character/isUpperCase c)) ; can't be partialized because of Java interop syntax
+(defn lower-case? [^Character c] (Character/isLowerCase c))
 (defn char+ [obj]
   (if ((fn-and string? #(>= 1 (count %))) obj)
       (first obj)
@@ -47,7 +47,17 @@
   Note that `max-len` was chosen over `end-idx` since it's less ambiguous and
   easier to reason about - esp. when accepting negative indexes.
   From taoensso.encore."
-  [s start-idx & [max-len]]
+  {:usage
+    ["(subs+ \"Hello\"  0 5)" "Hello"
+     "(subs+ \"Hello\"  0 9)" "Hello"
+     "(subs+ \"Hello\" -4 5)" "Hello"
+     "(subs+ \"Hello\"  2 2)" "ll"   
+     "(subs+ \"Hello\" -2 2)" "ll"   
+     "(subs+ \"Hello\" -2)  " "llo"  
+     "(subs+ \"Hello\"  2)  " "llo"  
+     "(subs+ \"Hello\"  9 9)" ""     
+     "(subs+ \"Hello\"  0 0)" ""]}
+  [s ^Integer start-idx & [^Integer max-len]]
   {:pre [(or (nil? max-len) (nneg-int? max-len))]}
   (let [;; s       (str   s)
         slen       (count s)
@@ -58,37 +68,25 @@
                      (min (+ start-idx* max-len) slen))]
     ;; (println [start-idx* end-idx*])
     (.substring ^String s start-idx* end-idx*)))
-
-(comment
-  (substr "Hello"  0 5) ; "Hello"
-  (substr "Hello"  0 9) ; "Hello"
-  (substr "Hello" -4 5) ; "Hello"
-  (substr "Hello"  2 2) ; "ll"
-  (substr "Hello" -2 2) ; "ll"
-  (substr "Hello" -2)   ; "llo"
-  (substr "Hello"  2)   ; "llo"
-  (substr "Hello"  9 9) ; ""
-  (substr "Hello"  0 0) ; ""
-  )
-(defn contains? ; overrides clojure.core/contains?
-  "From taoensso.encore."
-  [^String string ^String substr]
-  (.contains string substr))
-(defn substring? [^String substr ^String string] ; the complement of contains?
-  (contains? string substr))
 (defn starts-with?
-  "From taoensso.encore."
+  {:attribution "taoensso.encore"}
   [^String s ^String substr]
   (.startsWith s substr))
 (defn ends-with?
-  "From taoensso.encore."
+  {:attribution "taoensso.encore"}
   [^String s ^String substr]
   (.endsWith s substr))
-(defn remove-all [str-0 to-remove] ; .replaceAll ??
+(defn remove-all [^String str-0 to-remove]
   (reduce #(replace %1 %2 "") str-0 to-remove))
+(defn remove [^String str-0 to-remove]
+  (condfc to-remove
+    string?
+    (.replaceAll str-0 ^String to-remove "")
+    pattern?
+    (replace str-0 to-remove "")))
 (defn join-once
-  "Like /clojure.string/join/ but ensures no double separators.
-   From taoensso.encore."
+  "Like /clojure.string/join/ but ensures no double separators."
+  {:attribution "taoensso.encore"}
   [separator & coll]
   (reduce
     (fn [s1 s2]
@@ -152,10 +150,18 @@
   ^{:attribution "thebusby.bagotricks"}
   (let [[_ & xs] (re-find regex string)]
     xs))
-(defn re-find+ [pat in-str]
-  (try (re-find pat in-str)
+(defn re-find+ [pat ^String in-str]
+  (try (re-find (re-pattern pat) in-str)
     (catch NullPointerException e nil)))
-
+(defn contains?
+  [^String superstr substr]
+  (condfc substr
+    string?
+    (.contains superstr ^String substr)
+    pattern?
+    (nnil? (re-find+ substr superstr))))
+(defn substring? [^String substr ^String string] ; the complement of contains?
+  (contains? string substr))
 (def  conv-regex-specials
   (fn-> (str/replace "\\" "\\\\")
         (str/replace "$" "\\$")
