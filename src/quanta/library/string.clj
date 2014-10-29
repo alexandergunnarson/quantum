@@ -8,6 +8,7 @@
     [quanta.library.reducers :as r     :refer :all]
     [clojure.string          :as str])
   (:gen-class))
+(ns/require-all *ns* :clj)
 
 (set! *warn-on-reflection* true)
 
@@ -35,7 +36,20 @@
   (if ((fn-and string? #(>= 1 (count %))) obj)
       (first obj)
       (char obj)))
-(defn pattern? [obj] (instance? java.util.regex.Pattern obj))
+(defn pattern? [obj] (instance? Pattern obj))
+(defn conv-regex-specials [^String str-0]
+  (-> str-0
+      (str/replace "\\" "\\\\")
+      (str/replace "$" "\\$")
+      (str/replace "^" "\\^")
+      (str/replace "." "\\.")
+      (str/replace "|" "\\|")
+      (str/replace "*" "\\*")
+      (str/replace "+" "\\+")
+      (str/replace "(" "\\(")
+      (str/replace ")" "\\)")
+      (str/replace "[" "\\[")
+      (str/replace "{" "\\{")))
 (defn index-of [^String elem ^String elems] (.indexOf elems elem))
 (defn subs+ ; :from :to, vs. :from :for
   "Gives a consistent, flexible, cross-platform substring API with support for:
@@ -81,7 +95,7 @@
 (defn remove [^String str-0 to-remove]
   (condfc to-remove
     string?
-    (.replaceAll str-0 ^String to-remove "")
+    (.replaceAll str-0 ^Pattern (conv-regex-specials to-remove) "")
     pattern?
     (replace str-0 to-remove "")))
 (defn join-once
@@ -162,18 +176,6 @@
     (nnil? (re-find+ substr superstr))))
 (defn substring? [^String substr ^String string] ; the complement of contains?
   (contains? string substr))
-(def  conv-regex-specials
-  (fn-> (str/replace "\\" "\\\\")
-        (str/replace "$" "\\$")
-        (str/replace "^" "\\^")
-        (str/replace "." "\\.")
-        (str/replace "|" "\\|")
-        (str/replace "*" "\\*")
-        (str/replace "+" "\\+")
-        (str/replace "(" "\\(")
-        (str/replace ")" "\\)")
-        (str/replace "[" "\\[")
-        (str/replace "{" "\\{")))
 
 (def alphabet
   (->> (map+ (fn-> char str) (range+ 65 (inc 90)))

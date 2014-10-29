@@ -102,14 +102,16 @@
     (binding [*ns* curr-ns]
       (case lib-key
         :clj
-        (import '(clojure.lang
-                  Keyword
-                  Delay
-                  Atom Var
-                  AFunction
-                  PersistentList
-                  APersistentVector PersistentVector
-                  APersistentMap    PersistentArrayMap PersistentHashMap))
+        (import
+          '(clojure.lang
+              Keyword
+              Delay
+              Atom Var
+              AFunction
+              PersistentList
+              APersistentVector PersistentVector
+              APersistentMap    PersistentArrayMap PersistentHashMap)
+          'java.util.regex.Pattern)
         :lib
         (require
           '[quanta.library.collections :as coll        :refer :all                   ]

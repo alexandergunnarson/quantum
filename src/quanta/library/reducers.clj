@@ -16,6 +16,8 @@
 (alias 'core 'clojure.core)
 (set! *warn-on-reflection* true)
 
+
+; preduce+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          TODO            }=====================================================
 ;=================================================={                          }=====================================================
@@ -550,11 +552,11 @@
   ([  combinef reducef coll]
     (fold+
       (condf (-> coll fold-pre)
-             (fn-and (fn-not reducer?) counted?)
-             fold-size
-             (compr orig-folder-coll counted?)
-             (compr orig-folder-coll fold-size)
-             :else (constantly 512)) ; Why 512, particularly? 
+        (fn-and (fn-not reducer?) counted?)
+          fold-size
+        (compr orig-folder-coll counted?)
+          (compr orig-folder-coll fold-size)
+        :else (constantly 512)) ; Why 512, particularly? 
       combinef reducef coll))
   ([n combinef reducef coll] (coll-fold (fold-pre coll) n combinef reducef)))
 (defn foldp-max+ [obj]
