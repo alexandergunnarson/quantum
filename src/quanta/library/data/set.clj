@@ -25,6 +25,7 @@
     (and ((:eq funcs) (count set1) (count set2))
          (apply every? ((:fn funcs) set1 set2)))))
 ; probably a way to make this more terse, like a "define-vars" macro with intern or something
+; multimethod or maybe a protocol
 (def subset?          #(xset? :sub          %1 %2))
 (def superset?        #(xset? :super        %1 %2))
 (def proper-subset?   #(xset? :proper-sub   %1 %2))

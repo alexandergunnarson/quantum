@@ -26,6 +26,16 @@
 ;            (whenf*n
 ;              (fn-and vector? (compr count+ (eq? 2)))
 ;                (partial coll/merge+ {}))))))
+(defn add-complement-nodes! [^APersistentSet node-set]
+  (swap! fx/complement-nodes-set conj node-set))
+
+(defn ^APersistentSet complement-nodes
+  [^Node obj]
+  (let [^Keyword obj-key (get @fx/obj-key-pairs obj)]
+    (println "DESELECTING COMPLEMENTS OF:" obj-key)
+    (->> @fx/complement-nodes-set
+         (ffilter (f*n contains? obj-key))
+         (<- set/difference (hash-set obj-key)))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{         FONTS        }=====================================================
 ;======================================================{                      }=====================================================

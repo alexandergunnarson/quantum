@@ -21,6 +21,7 @@
 (def objs (atom {}))
 ; Look up keyword IDs by object reference
 (def obj-key-pairs (atom {}))
+(def complement-nodes-set (atom #{}))
 (defprotocol Lookup
   (lookup [obj]))
 ; Looks up an object by keyword or node

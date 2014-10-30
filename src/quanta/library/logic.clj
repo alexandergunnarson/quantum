@@ -80,7 +80,7 @@
 (defmacro condf*n [& args]
   `(fn [obj#] (condf obj# ~@args)))
 (defmacro condf**n [& args]
-  (fn [& inner-args] `(condf ~@inner-args ~@args)))
+  `(fn [& inner-args#] (condf inner-args# ~@args)))
 (defmacro condfc
   "Like |condf|, but each expr is essentially wrapped in a |constantly|."
   [obj & clauses]

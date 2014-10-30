@@ -26,6 +26,12 @@
 (alias-ns 'quanta.library.reducers)
 (defalias merge+ map/merge+)
 
+(defn ffilter
+  "Returns the first result of a |filter| operation.
+   Uses lazy |filter| so as to do it in the fastest possible way."
+   [^AFunction filter-fn coll]
+   (->> coll (filter filter-fn) first))
+
 (defn reducei+
   "Reduce, indexed."
   [f ret init]

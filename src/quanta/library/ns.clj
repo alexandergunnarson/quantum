@@ -110,7 +110,9 @@
               AFunction
               PersistentList
               APersistentVector PersistentVector
-              APersistentMap    PersistentArrayMap PersistentHashMap)
+              APersistentMap    PersistentArrayMap PersistentHashMap
+              APersistentSet
+              LazySeq)
           'java.util.regex.Pattern)
         :lib
         (require
