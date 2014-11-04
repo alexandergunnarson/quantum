@@ -1,5 +1,7 @@
 (ns quanta.library.data.xml)
-
+(require
+  '[quanta.library.ns          :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
 (require
   '[quanta.library.logic                 :refer :all]
   '[quanta.library.function              :refer :all]

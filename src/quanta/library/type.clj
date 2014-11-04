@@ -1,12 +1,11 @@
-(ns quanta.library.type
-  (:require
-    [quanta.library.ns       :as ns  :refer [defalias]]
-    [quanta.library.logic    :as log :refer :all]
-    [quanta.library.function :as fn  :refer :all])
-  (:import  clojure.lang.PersistentQueue)
-  (:gen-class))
-(ns/require-all *ns* :clj)
+(ns quanta.library.type(:gen-class))
 (set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns :as ns :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[quanta.library.logic     :refer :all]
+  '[quanta.library.function  :refer :all])
 
 ; should include typecasting (/cast/)
 

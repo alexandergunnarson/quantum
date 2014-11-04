@@ -1,13 +1,13 @@
 (ns quanta.library.numeric
-  (:require
-    [quanta.library.ns       :as ns   :refer [defalias]]
-    [quanta.library.logic    :as log  :refer :all]
-    [quanta.library.function :as func :refer :all]
-    [clojure.core.reducers   :as r])
-  (:import java.math.BigDecimal)
   (:gen-class))
-
 (set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+  (require
+    '[quanta.library.logic    :as log  :refer :all]
+    '[quanta.library.function :as func :refer :all]
+    '[clojure.core.reducers   :as r])
 
 ; (require '[taoensso.encore :as lib+ :refer
 ;   [pow ; round

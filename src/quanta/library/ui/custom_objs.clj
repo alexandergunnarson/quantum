@@ -266,7 +266,7 @@
    Sometimes |.addAll| doesn't work; thus this function."
   ([obj arg]
     (try
-      (.add obj arg)
+      (.add obj arg) ; this needs to be reflection-powered
       obj
       (catch ClassCastException _ obj)))
   ([obj arg & args]

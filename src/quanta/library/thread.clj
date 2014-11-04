@@ -1,14 +1,16 @@
-(ns quanta.library.thread
-  (:require
-    [quanta.library.numeric     :as num]
-    [quanta.library.function    :as fn   :refer :all]
-    [quanta.library.logic       :as log  :refer :all]
-    [quanta.library.data.vector :as vec  :refer [catvec]]
-    [quanta.library.collections :as coll :refer :all]
-    [quanta.library.ns          :as ns   :refer [defalias]]
-    [quanta.library.error       :as err  :refer [throw+ try+]]
-    [clojure.core.async :as async :refer [go <! >! alts!]])
-  (:gen-class))
+(ns quanta.library.thread (:gen-class))
+(require
+  '[quanta.library.ns          :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[quanta.library.numeric     :as num]
+  '[quanta.library.function    :as fn   :refer :all]
+  '[quanta.library.logic       :as log  :refer :all]
+  '[quanta.library.data.vector :as vec  :refer [catvec]]
+  '[quanta.library.collections :as coll :refer :all]
+  '[quanta.library.error       :as err  :refer [throw+ try+]]
+  '[clojure.core.async :as async :refer [go <! >! alts!]])
+
 
 ;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
 (def #^{:macro true} go-loop #'async/go-loop)

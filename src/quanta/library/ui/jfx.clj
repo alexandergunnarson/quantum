@@ -1,14 +1,11 @@
-(ns quanta.library.ui.jfx
-  (:require
-    [quanta.library.ui.init]
-    [quanta.library.data.queue  :as q        :refer [queue]]
-    [clojure.data               :as cljdata]
-    [clojure.reflect                         :refer :all])
-  (:gen-class))
-(import 'javafx.scene.Node)
+(ns quanta.library.ui.jfx (:gen-class))
 (require '[quanta.library.ns :as ns])
-(ns/require-all *ns* :lib :clj)
+(ns/require-all *ns* :lib :clj :java-fx)
 (ns/nss *ns*)
+(require
+ '[quanta.library.data.queue  :as q        :refer [queue]]
+ '[clojure.data               :as cljdata]
+ '[clojure.reflect                         :refer :all])
 
 (comment
   "What JavaFX will do, essentially, is

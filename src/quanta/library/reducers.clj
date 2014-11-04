@@ -6,16 +6,20 @@
       :author       "Rich Hickey"
       :contributors "Alan Malloy, Alex Gunnarson"}
   quanta.library.reducers
-  (:require
-    [clojure.walk :as walk]
-    [quanta.library.function         :as fn    :refer :all]
-    [quanta.library.logic            :as log   :refer :all]
-    [quanta.library.data.vector      :as vec   :refer [subvec+ catvec]]
-    [quanta.library.type             :as type  :refer :all]
-    [quanta.library.data.map         :as map   :refer [map-entry sorted-map+ merge+]]
-    [quanta.library.data.set         :as set]))
-(alias 'core 'clojure.core)
+  (:gen-class))
 (set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[clojure.walk :as walk]
+  '[quanta.library.function         :as fn    :refer :all]
+  '[quanta.library.logic            :as log   :refer :all]
+  '[quanta.library.data.vector      :as vec   :refer [subvec+ catvec]]
+  '[quanta.library.type             :as type  :refer :all]
+  '[quanta.library.data.map         :as map   :refer [map-entry sorted-map+ merge+]]
+  '[quanta.library.data.set         :as set])
+(alias 'core 'clojure.core)
 
 
 ; preduce+

@@ -1,11 +1,12 @@
-(ns quanta.library.data.set
-  (:require
-    [clojure.set              :as set]
-    [quanta.library.ns        :as ns :refer [defalias]]
-    [clojure.data.finger-tree :as ftree]
-    [clojure.data.avl         :as avl]
-    [flatland.ordered.set     :as oset])
-  (:gen-class))
+(ns quanta.library.data.set(:gen-class))
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[clojure.set              :as set]
+  '[clojure.data.finger-tree :as ftree]
+  '[clojure.data.avl         :as avl]
+  '[flatland.ordered.set     :as oset])
 ;   (:refer-clojure :exclude [sorted-set sorted-set-by])
 (defalias union          set/union)
 (defalias intersection   set/intersection)

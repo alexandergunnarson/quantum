@@ -1,17 +1,17 @@
-(ns quanta.library.collections.core
-  (:require
-    [quanta.library.function       :refer :all         ]
-    [quanta.library.logic          :refer :all         ]
-    [quanta.library.type           :refer :all         ]
-    [quanta.library.error          :refer [try+ throw+]]
-    [quanta.library.reducers       :refer :all         ]
-    [quanta.library.data.vector    :refer [subvec+]    ]
-    [quanta.library.string :as str                     ]
-    [quanta.library.macros         :refer :all         ])
-  (:import java.util.ArrayList)
-  (:gen-class))
-
+(ns quanta.library.collections.core (:gen-class))
 (set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[quanta.library.function       :refer :all         ]
+  '[quanta.library.logic          :refer :all         ]
+  '[quanta.library.type           :refer :all         ]
+  '[quanta.library.error          :refer [try+ throw+]]
+  '[quanta.library.reducers       :refer :all         ]
+  '[quanta.library.data.vector    :refer [subvec+]    ]
+  '[quanta.library.string :as str                     ]
+  '[quanta.library.macros         :refer :all         ])
 
 ; ; java.util.Collection class to use as part of protocol
 

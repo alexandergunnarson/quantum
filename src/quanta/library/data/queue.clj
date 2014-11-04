@@ -1,10 +1,14 @@
 (ns quanta.library.data.queue
-  (:require [clojure.core.rrb-vector    :as vec+]
-            [quanta.library.collections :as coll :refer :all]
-            [quanta.library.numeric     :as num  :refer [int+]]
-            [quanta.library.type        :as type :refer :all])
-  (:import  clojure.lang.PersistentQueue)
   (:gen-class))
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[clojure.core.rrb-vector    :as vec+]
+  '[quanta.library.collections :as coll :refer :all]
+  '[quanta.library.numeric     :as num  :refer [int+]]
+  '[quanta.library.type        :as type :refer :all])
+
 
 ; QUEUES
 ; https://github.com/michalmarczyk/jumping-queues

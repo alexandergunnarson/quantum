@@ -2,7 +2,7 @@
   (:require [clojure.repl :as repl])
   (:gen-class))
 
-(import '(clojure.lang Keyword Var))
+(import '(clojure.lang Keyword Var Namespace))
 
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
@@ -93,6 +93,112 @@
   []
   (set! *warn-on-reflection* true))
 
+
+(defn require-clj [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (do
+      (ns-unmap (ns-name curr-ns) 'some?)
+      (set! *warn-on-reflection* true)
+      (import
+        '(clojure.lang
+            Namespace
+            Keyword
+            Delay
+            Atom Var
+            AFunction
+            PersistentList
+            APersistentVector PersistentVector
+            MapEntry
+            APersistentMap    PersistentArrayMap PersistentHashMap
+            APersistentSet
+            PersistentQueue
+            LazySeq)
+        'java.util.regex.Pattern
+        '(java.util ArrayList)
+        'org.joda.time.DateTime
+        '(java.math BigDecimal)
+        'clojure.core.rrb_vector.rrbt.Vector))))
+(defn require-lib [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (ns-unmap (ns-name curr-ns) 'some?)
+    (require
+      '[quanta.library.collections :as coll        :refer :all                   ]
+      '[quanta.library.function    :as fn          :refer :all                   ]
+      '[quanta.library.io          :as io          :refer [path]                 ]
+      '[quanta.library.java        :as java                                      ]
+      '[quanta.library.log         :as log                                       ]
+      '[quanta.library.logic       :as logic       :refer :all                   ]
+      '[quanta.library.macros      :as macros      :refer :all                   ]
+      '[quanta.library.ns          :as ns          :refer [defalias source defs] ]
+      '[quanta.library.numeric     :as num                                       ]
+      '[quanta.library.print       :as pr          :refer [! pprint]             ]
+      '[quanta.library.string      :as str         :refer [substring?]           ]
+      '[quanta.library.system      :as sys                                       ]
+      '[quanta.library.thread      :as thread                                    ]  
+      '[quanta.library.type                        :refer :all                   ]
+      '[quanta.library.data.array  :as arr         :refer :all                   ]
+      '[quanta.library.data.ftree  :as ftree                                     ]
+      '[quanta.library.data.map    :as map         :refer [sorted-map+ map-entry]]
+      '[quanta.library.data.queue  :as q                                         ]
+      '[quanta.library.data.set    :as set         :refer [sorted-set+]          ]
+      '[quanta.library.data.vector :as vec         :refer [conjl catvec]         ]
+      '[quanta.library.data.xml    :as xml                                       ]
+      '[quanta.library.time.core   :as time                                      ]
+      '[quanta.library.time.coerce :as time-coerce                               ]
+      '[quanta.library.time.format :as time-form                                 ]
+      '[quanta.library.time.local  :as time-loc                                  ]
+      '[quanta.library.util.bench  :as bench       :refer [bench]                ]
+      '[quanta.library.util.debug  :as debug       :refer [?]                    ]
+      '[quanta.library.util.sh     :as sh]
+      '[quanta.library.data.queue  :as q           :refer [queue]                ]
+      '[quanta.library.thread                      :refer :all                   ]
+      '[quanta.library.error       :as err         :refer :all                   ]
+      '[clojure.core.async         :as async       :refer [go <! >! alts!]       ])))
+(defn require-java-fx [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require '[quanta.library.ui.init])
+    (import
+       '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
+                               FadeTransition TranslateTransition RotateTransition ScaleTransition
+                               PathTransition PathTransition$OrientationType)
+       '(javafx.collections    ObservableList FXCollections)
+       '(javafx.event          ActionEvent EventHandler EventType)
+       '(javafx.geometry       Insets Pos)
+       '(javafx.scene          Group Scene Node)
+       '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
+       '(javafx.scene.image    Image)
+       '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
+       '(javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
+       '(javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
+       '(javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
+       '(javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
+       '(java.util             ArrayList List)
+       '(javafx.util           Duration Callback)
+       '(javafx.beans.property SimpleDoubleProperty)
+       '(javafx.beans.value    ChangeListener ObservableValue)
+       '(javafx.scene.control
+          ComboBox ContentDisplay Labeled TableColumn TableRow
+          TableCell ListCell TextArea TextField ContentDisplay
+          TableView TableView$TableViewSelectionModel))))
+(defn require-fx-core [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require-java-fx curr-ns)
+    (require
+      '[quanta.library.ui.jfx :as fx :refer
+         [fx do-fx
+          set-listener! swap-content!
+          fx-node? fx-obj?]])))
+(defn require-fx [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require-fx-core curr-ns)
+    (require
+      '[quanta.library.ui.custom-objs :as objs :refer
+         [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
+          jconj! jdissoc! jupdate!
+          arrange-on! center-on! jconj-all!
+          setx! sety!
+          getx gety get-size get-pos
+          place-at! nudge!]])))
 (defn require-all
   "Loads/|import|s/|require|s all the namespaces and functions associated with a given
    library key @lib-key into the current namespace @curr-ns."
@@ -102,105 +208,26 @@
     (binding [*ns* curr-ns]
       (case lib-key
         :clj
-        (import
-          '(clojure.lang
-              Namespace
-              Keyword
-              Delay
-              Atom Var
-              AFunction
-              PersistentList
-              APersistentVector PersistentVector
-              MapEntry
-              APersistentMap    PersistentArrayMap PersistentHashMap
-              APersistentSet
-              LazySeq)
-          'java.util.regex.Pattern
-          'org.joda.time.DateTime)
+          (require-clj curr-ns)
         :lib
-        (do ; THIS CHANGES THE REPL TO USE PRETTY PRINTING ALWAYS!
-          (require
-            '[quanta.library.collections :as coll        :refer :all                   ]
-            '[quanta.library.function    :as fn          :refer :all                   ]
-            '[quanta.library.io          :as io          :refer [path]                 ]
-            '[quanta.library.java        :as java                                      ]
-            '[quanta.library.logic       :as log         :refer :all                   ]
-            '[quanta.library.macros      :as macros      :refer :all                   ]
-            '[quanta.library.ns          :as ns          :refer [defalias source defs] ]
-            '[quanta.library.numeric     :as num                                       ]
-            '[quanta.library.print       :as pr          :refer [! pprint]             ]
-            '[quanta.library.string      :as str         :refer [substring?]           ]
-            '[quanta.library.system      :as sys                                       ]
-            '[quanta.library.thread      :as thread                                    ]  
-            '[quanta.library.type                        :refer :all                   ]
-            '[quanta.library.data.array  :as arr         :refer :all                   ]
-            '[quanta.library.data.ftree  :as ftree                                     ]
-            '[quanta.library.data.map    :as map         :refer [sorted-map+ map-entry]]
-            '[quanta.library.data.queue  :as q                                         ]
-            '[quanta.library.data.set    :as set                                       ]
-            '[quanta.library.data.vector :as vec         :refer [conjl catvec]         ]
-            '[quanta.library.data.xml    :as xml                                       ]
-            '[quanta.library.time.core   :as time                                      ]
-            '[quanta.library.time.coerce :as time-coerce                               ]
-            '[quanta.library.time.format :as time-form                                 ]
-            '[quanta.library.time.local  :as time-loc                                  ]
-            '[quanta.library.util.bench  :as bench       :refer [bench]                ]
-            '[quanta.library.util.debug  :as debug       :refer [?]                    ]
-            '[quanta.library.util.sh     :as sh]
-            '[quanta.library.data.queue  :as q           :refer [queue]                ]
-            '[quanta.library.thread                      :refer :all                   ]
-            '[quanta.library.error       :as err         :refer :all                   ]
-            '[clojure.core.async         :as async       :refer [go <! >! alts!]       ]))
+          (require-lib curr-ns)
         :grid
         (require 
           '[quanta.datagrid.core       :as grid]
           '[quanta.datagrid.excel      :as xl  ])
         :java-fx
-         (import
-              '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
-                                      FadeTransition TranslateTransition RotateTransition ScaleTransition
-                                      PathTransition PathTransition$OrientationType)
-              '(javafx.collections    ObservableList FXCollections)
-              '(javafx.event          ActionEvent EventHandler EventType)
-              '(javafx.geometry       Insets Pos)
-              '(javafx.scene          Group Scene Node)
-              '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
-              '(javafx.scene.image    Image)
-              '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
-              '(javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
-              '(javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
-              '(javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
-              '(javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
-              '(java.util             ArrayList List)
-              '(javafx.util           Duration Callback)
-              '(javafx.beans.property SimpleDoubleProperty)
-              '(javafx.beans.value    ChangeListener ObservableValue)
-              '(javafx.scene.control
-                 ComboBox ContentDisplay Labeled TableColumn TableRow
-                 TableCell ListCell TextArea TextField ContentDisplay
-                 TableView TableView$TableViewSelectionModel))
+          (require-java-fx curr-ns)
         :fx-core
-        (do (require
-              '[quanta.library.ui.init]
-              '[quanta.library.ui.jfx :as fx :refer
-                 [fx do-fx
-                  set-listener! swap-content!
-                  fx-node? fx-obj?]]))
+          (require-fx-core curr-ns)
         :fx
-        (do (require-all curr-ns :fx-core :java-fx)
-            (require
-              '[quanta.library.ui.custom-objs :as objs :refer
-                 [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
-                  jconj! jdissoc! jupdate!
-                  arrange-on! center-on! jconj-all!
-                  setx! sety!
-                  getx gety get-size get-pos
-                  place-at! nudge!]]))
+          (require-fx curr-ns)
         nil)))
-  ([curr-ns lib-key-0 & lib-keys]
-    (require-all curr-ns lib-key-0)
-    (doseq [lib-key lib-keys]
-      (require-all curr-ns lib-key))))
+  ([curr-ns lib-key-0 & lib-keys-0]
+    ; Because :clj has to be required first out of them
+    (let [lib-keys (into #{} (conj lib-keys-0 lib-key-0))]
+      (require-all curr-ns :clj)
+      (doseq [lib-key (disj lib-keys :clj)]
+        (require-all curr-ns lib-key)))))
 (defn nss
   "Defines, in the provided namespace, conveniently abbreviated symbols
    for other namespaces.

@@ -8,25 +8,27 @@
     (java.util.zip ZipOutputStream ZipEntry)
     java.util.List
     (org.apache.commons.io FileUtils))
-  (:require
-    [clojure.java.io            :as clj-io]
-    [clojure.data.csv           :as csv]
-    [quanta.library.data.array  :as arr  :refer :all]
-    [quanta.library.string      :as str]
-    [quanta.library.time.core   :as time]
-    [quanta.library.print       :as pr   :refer [! pprint]]
-    [quanta.library.collections :as coll :refer :all]
-    [quanta.library.numeric     :as num  :refer [greatest-or]]
-    [quanta.library.logic                :refer :all]
-    [quanta.library.type                 :refer :all]
-    [quanta.library.function             :refer :all]
-    [quanta.library.system      :as sys]
-    [quanta.library.error       :as err  :refer [try+ throw+]]
-    [quanta.library.ns          :as ns   :refer [defalias]]
-    [taoensso.nippy             :as nippy]
-    [iota                       :as iota])
   (:gen-class))
+(require
+  '[quanta.library.ns          :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
 (ns/nss *ns*)
+(require
+  '[clojure.java.io            :as clj-io]
+  '[clojure.data.csv           :as csv]
+  '[quanta.library.data.array  :as arr  :refer :all]
+  '[quanta.library.string      :as str]
+  '[quanta.library.time.core   :as time]
+  '[quanta.library.print       :as pr   :refer [! pprint]]
+  '[quanta.library.collections :as coll :refer :all]
+  '[quanta.library.numeric     :as num  :refer [greatest-or]]
+  '[quanta.library.logic                :refer :all]
+  '[quanta.library.type                 :refer :all]
+  '[quanta.library.function             :refer :all]
+  '[quanta.library.system      :as sys]
+  '[quanta.library.error       :as err  :refer [try+ throw+]]
+  '[taoensso.nippy             :as nippy]
+  '[iota                       :as iota])
 
 ; http://www.brandonbloom.name/blog/2013/06/26/slurp-and-spit/
 ; But files aren’t “Web Scale”!

@@ -1,12 +1,12 @@
 (ns quanta.library.data.map
   (:refer-clojure :exclude [split-at])
-  (:require
-    [quanta.library.ns    :as ns :refer [defalias]]
-    [clojure.data.avl     :as avl]
-    [flatland.ordered.map :as map])
   (:gen-class))
-
-(set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns    :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[clojure.data.avl     :as avl]
+  '[flatland.ordered.map :as map])
 ; (:refer-clojure :exclude [sorted-map sorted-map-by])
 
 (defn map-entry [key-0 val-0] (clojure.lang.MapEntry. key-0 val-0))

@@ -1,16 +1,17 @@
 (ns quanta.library.string
   (:refer-clojure :exclude [replace remove contains? val re-find])
-  (:require 
-    [quanta.library.ns       :as ns    :refer [defalias]]
-    [quanta.library.logic    :as logic :refer :all]
-    [quanta.library.numeric  :as num   :refer [nneg-int?]]
-    [quanta.library.function :as fn    :refer :all]
-    [quanta.library.reducers :as r     :refer :all]
-    [clojure.string          :as str])
   (:gen-class))
-(ns/require-all *ns* :clj)
-
 (set! *warn-on-reflection* true)
+(require
+  '[quanta.library.ns       :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require 
+  '[quanta.library.logic    :as logic :refer :all]
+  '[quanta.library.numeric  :as num   :refer [nneg-int?]]
+  '[quanta.library.function :as fn    :refer :all]
+  '[quanta.library.reducers :as r     :refer :all]
+  '[clojure.string          :as str])
+
 
 ; http://www.regular-expressions.info
 ;___________________________________________________________________________________________________________________________________
@@ -159,6 +160,13 @@
   (if (nil? str-0)
       (str "'" "nil" "'")
       (str "'" str-0 "'")))
+(defn paren
+  "Wraps a given string in parentheses."
+  {:todo ["Protocolize"]}
+  [str-0]
+  (if (nil? str-0)
+      (str "(" "nil" ")")
+      (str "(" str-0 ")")))
 
 ; REGEX
 

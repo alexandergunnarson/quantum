@@ -1,9 +1,10 @@
-(ns quanta.library.data.vector
-  (:require
-  	[quanta.library.ns       :as ns :refer [defalias]]
-    [clojure.core.rrb-vector :as vec+])
-  (:import clojure.core.rrb_vector.rrbt.Vector)
-  (:gen-class))
+(ns quanta.library.data.vector (:gen-class))
+
+(require
+  '[quanta.library.ns       :as ns    :refer [defalias alias-ns]])
+(ns/require-all *ns* :clj)
+(require
+  '[clojure.core.rrb-vector :as vec+])
 
 ; RRB Vectors: logarithmic time concatenation and slicing ; O(logN)
 

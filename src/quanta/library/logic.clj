@@ -1,10 +1,10 @@
 (ns quanta.library.logic
-  (:refer-clojure :exclude [some?])
   (:require
     [quanta.library.ns       :as ns :refer [defalias]]
     [quanta.library.function :as fn :refer :all])
   (:gen-class))
 (set! *warn-on-reflection* true)
+(ns/require-all *ns* :clj)
 
 ; TODO: ; cond-not, for :pre
 
@@ -22,7 +22,7 @@
       (else-fn const)))
 (def eq?  (unary =))
 (def neq? (unary not=))
-(defn- some? [pred coll] (boolean (some pred coll)))
+(defalias some? some)
 (defn apply-and [arg-list]
   (every? identity arg-list))
 (defn apply-or  [arg-list]

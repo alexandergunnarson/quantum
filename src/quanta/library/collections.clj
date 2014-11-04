@@ -1,23 +1,21 @@
-(ns quanta.library.collections
-  (:require
-    [quanta.library.ns               :as ns    :refer [defalias alias-ns]]
-    [quanta.library.numeric          :as num   :refer [greatest least]]
-    [quanta.library.type             :as type  :refer :all]
-    [quanta.library.data.vector      :as vec   :refer [vector+? subvec+ catvec conjl]]
-    [quanta.library.data.map         :as map   :refer [ordered-map map-entry]]
-    [quanta.library.data.set         :as set   :refer [ordered-set]]
-    [quanta.library.collections.core :as core]
-    [quanta.library.logic            :as log   :refer :all]
-    [quanta.library.string           :as str]
-    [quanta.library.function         :as fn    :refer :all]
-    [quanta.library.error            :as err   :refer [try+ throw+]]
-    [clojure.pprint                            :refer [pprint]]
-    [clojure.walk                    :as walk]
-    [clojure.core.async              :as async :refer [>!! <!! close! chan thread]])
-  (:gen-class))
-(set! *warn-on-reflection* true)
-
+(ns quanta.library.collections (:gen-class))
+(require
+  '[quanta.library.ns               :as ns    :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj)
+(require
+  '[quanta.library.numeric          :as num   :refer [greatest least]]
+  '[quanta.library.type             :as type  :refer :all]
+  '[quanta.library.data.vector      :as vec   :refer [vector+? subvec+ catvec conjl]]
+  '[quanta.library.data.map         :as map   :refer [ordered-map map-entry]]
+  '[quanta.library.data.set         :as set   :refer [ordered-set]]
+  '[quanta.library.collections.core :as core]
+  '[quanta.library.logic            :as log   :refer :all]
+  '[quanta.library.string           :as str]
+  '[quanta.library.function         :as fn    :refer :all]
+  '[quanta.library.error            :as err   :refer [try+ throw+]]
+  '[clojure.pprint                            :refer [pprint]]
+  '[clojure.walk                    :as walk]
+  '[clojure.core.async              :as async :refer [>!! <!! close! chan thread]])
 
 ; TODO
 ; in? :: subset? !:: superset? :: contains?

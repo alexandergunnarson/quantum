@@ -1,36 +1,35 @@
-(ns quanta.ui.core
-  (:require [clojure.string :as str]
-            [clojure.data :as cljdata]
-            [clojure.walk :refer :all]
-            [clojure.reflect :refer :all])
-  (:gen-class))
+(ns quanta.ui.core (:gen-class))
+(require '[quanta.library.ns :as ns])
+(ns/require-all *ns* :lib :clj)
+(ns/nss *ns*)
 
-;(import '(javafx.scene.control Control))
+(require
+  '[clojure.string :as str]
+  '[clojure.data :as cljdata]
+  '[clojure.walk :refer :all]
+  '[clojure.reflect :refer :all])
 
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{ THREADING HELPERS  }=======================================================
 ;======================================================{                    }=======================================================
-(defn run-later*"
-Simple wrapper for Platform/runLater. You should use run-later.
-" [f]
-(javafx.application.Platform/runLater f))
+(defn run-later*
+  "Simple wrapper for Platform/runLater. You should use run-later." [f]
+  (javafx.application.Platform/runLater f))
 
 (defmacro run-later [& body]
   `(run-later* (fn [] ~@body)))
 
-(defn run-now*"
-A modification of run-later waiting for the running method to return. You should use run-now.
-" [f]
-(if (javafx.application.Platform/isFxApplicationThread)
-  (apply f [])
-  (let [result (promise)]
-    (run-later
-     (deliver result (try (f) (catch Throwable e e))))
-    @result)))
+(defn run-now*
+  "A modification of run-later waiting for the running method to return. You should use run-now." [f]
+  (if (javafx.application.Platform/isFxApplicationThread)
+    (apply f [])
+    (let [result (promise)]
+      (run-later
+       (deliver result (try (f) (catch Throwable e e))))
+      @result)))
 
-(defmacro run-now "
-Runs the code on the FX application thread and waits until the return value is delivered.
-" [& body]
+(defmacro run-now
+  "Runs the code on the FX application thread and waits until the return value is delivered." [& body]
   `(run-now* (fn [] ~@body)))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================={ HELPER FUNCTIONS }========================================================
