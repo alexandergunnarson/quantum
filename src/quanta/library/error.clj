@@ -18,6 +18,14 @@
 ;   (for [[exception-n# keys-n#] exception-keys-pairs]
 ;      `(catch exception-n# keys-n# func)))
 
+(defmacro with-throw
+  "Throws an exception with the given message @message if
+   @expr evaluates to false.
+
+   Specifically for use with :pre and :post conditions."
+  [expr ^String message]
+  `(if ~expr ~expr (throw+ ~message)))
+
 ; PUT ERROR TYPES HERE
 (defn unk-dispatch [dispatch]
   {:type :unk-dispatch

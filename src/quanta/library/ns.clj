@@ -104,48 +104,53 @@
         :clj
         (import
           '(clojure.lang
+              Namespace
               Keyword
               Delay
               Atom Var
               AFunction
               PersistentList
               APersistentVector PersistentVector
+              MapEntry
               APersistentMap    PersistentArrayMap PersistentHashMap
               APersistentSet
               LazySeq)
-          'java.util.regex.Pattern)
+          'java.util.regex.Pattern
+          'org.joda.time.DateTime)
         :lib
-        (require
-          '[quanta.library.collections :as coll        :refer :all                   ]
-          '[quanta.library.function    :as fn          :refer :all                   ]
-          '[quanta.library.io          :as io          :refer [path]                 ]
-          '[quanta.library.java        :as java                                      ]
-          '[quanta.library.logic       :as log         :refer :all                   ]
-          '[quanta.library.ns          :as ns          :refer [defalias source defs] ]
-          '[quanta.library.numeric     :as num                                       ]
-          '[quanta.library.print       :as pr          :refer [! pprint]             ]
-          '[quanta.library.string      :as str         :refer [substring?]           ]
-          '[quanta.library.system      :as sys                                       ]
-          '[quanta.library.thread      :as thread                                    ]  
-          '[quanta.library.type                        :refer :all                   ]
-          '[quanta.library.data.array  :as arr         :refer :all                   ]
-          '[quanta.library.data.ftree  :as ftree                                     ]
-          '[quanta.library.data.map    :as map         :refer [sorted-map+ map-entry]]
-          '[quanta.library.data.queue  :as q                                         ]
-          '[quanta.library.data.set    :as set                                       ]
-          '[quanta.library.data.vector :as vec         :refer [conjl catvec]         ]
-          '[quanta.library.data.xml    :as xml                                       ]
-          '[quanta.library.time.core   :as time                                      ]
-          '[quanta.library.time.coerce :as time-coerce                               ]
-          '[quanta.library.time.format :as time-form                               ]
-          '[quanta.library.time.local  :as time-loc                                ]
-          '[quanta.library.util.bench  :as bench       :refer [bench]                ]
-          '[quanta.library.util.debug  :as debug       :refer [?]                    ]
-          '[quanta.library.util.sh     :as sh]
-          '[quanta.library.data.queue  :as q           :refer [queue]                ]
-          '[quanta.library.thread                      :refer :all                   ]
-          '[quanta.library.error       :as err         :refer :all                   ]
-          '[clojure.core.async         :as async       :refer [go <! >! alts!]       ])
+        (do ; THIS CHANGES THE REPL TO USE PRETTY PRINTING ALWAYS!
+          (require
+            '[quanta.library.collections :as coll        :refer :all                   ]
+            '[quanta.library.function    :as fn          :refer :all                   ]
+            '[quanta.library.io          :as io          :refer [path]                 ]
+            '[quanta.library.java        :as java                                      ]
+            '[quanta.library.logic       :as log         :refer :all                   ]
+            '[quanta.library.macros      :as macros      :refer :all                   ]
+            '[quanta.library.ns          :as ns          :refer [defalias source defs] ]
+            '[quanta.library.numeric     :as num                                       ]
+            '[quanta.library.print       :as pr          :refer [! pprint]             ]
+            '[quanta.library.string      :as str         :refer [substring?]           ]
+            '[quanta.library.system      :as sys                                       ]
+            '[quanta.library.thread      :as thread                                    ]  
+            '[quanta.library.type                        :refer :all                   ]
+            '[quanta.library.data.array  :as arr         :refer :all                   ]
+            '[quanta.library.data.ftree  :as ftree                                     ]
+            '[quanta.library.data.map    :as map         :refer [sorted-map+ map-entry]]
+            '[quanta.library.data.queue  :as q                                         ]
+            '[quanta.library.data.set    :as set                                       ]
+            '[quanta.library.data.vector :as vec         :refer [conjl catvec]         ]
+            '[quanta.library.data.xml    :as xml                                       ]
+            '[quanta.library.time.core   :as time                                      ]
+            '[quanta.library.time.coerce :as time-coerce                               ]
+            '[quanta.library.time.format :as time-form                                 ]
+            '[quanta.library.time.local  :as time-loc                                  ]
+            '[quanta.library.util.bench  :as bench       :refer [bench]                ]
+            '[quanta.library.util.debug  :as debug       :refer [?]                    ]
+            '[quanta.library.util.sh     :as sh]
+            '[quanta.library.data.queue  :as q           :refer [queue]                ]
+            '[quanta.library.thread                      :refer :all                   ]
+            '[quanta.library.error       :as err         :refer :all                   ]
+            '[clojure.core.async         :as async       :refer [go <! >! alts!]       ]))
         :grid
         (require 
           '[quanta.datagrid.core       :as grid]

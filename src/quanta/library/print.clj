@@ -22,6 +22,7 @@
   ;  :attribution: https://github.com/brandonbloom/fipp"
   pprint pr/pprint)
 (defalias ! pprint)
+
 (defalias print-table pprint/print-table) 
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)
 (def  suppress-pr (partial (constantly nil)))

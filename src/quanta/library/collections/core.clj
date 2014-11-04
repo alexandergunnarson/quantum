@@ -1,18 +1,21 @@
 (ns quanta.library.collections.core
   (:require
-    [quanta.library.function       :refer :all]
-    [quanta.library.logic          :refer :all]
-    [quanta.library.type           :refer :all]
+    [quanta.library.function       :refer :all         ]
+    [quanta.library.logic          :refer :all         ]
+    [quanta.library.type           :refer :all         ]
     [quanta.library.error          :refer [try+ throw+]]
-    [quanta.library.reducers       :refer :all]
-    [quanta.library.data.vector    :refer [subvec+]]
-    [quanta.library.string :as str])
+    [quanta.library.reducers       :refer :all         ]
+    [quanta.library.data.vector    :refer [subvec+]    ]
+    [quanta.library.string :as str                     ]
+    [quanta.library.macros         :refer :all         ])
   (:import java.util.ArrayList)
   (:gen-class))
 
 (set! *warn-on-reflection* true)
 
 ; ; java.util.Collection class to use as part of protocol
+
+; TODO: Move macros to macro namespace
 
 (def arr-types
   {:short    ShortArray
@@ -25,7 +28,14 @@
    :char     CharArray
    :object   ObjectArray})
 
-(defprotocol CollCount
+(def coll-search-types
+  {:vec    clojure.lang.APersistentVector
+   :rvec   clojure.lang.APersistentVector$RSeq 
+   :list   clojure.lang.PersistentList
+   :string String})
+
+
+(defprotocol+ CollCount
   (count+ [coll]))
 
 (extend-protocol CollCount
@@ -38,10 +48,6 @@
   Object
     (count+ [coll] (count coll)))
 
-; The most general.
-; (defmacro extend-protocol-typed [expr]
-;   (extend-protocol (count+ [% coll] (alength % coll))))
-
 (defmacro extend-coll-count-for-type
   "With helpful hints from:
   http://www.learningclojure.com/2010/09/macros-and-type-hints-metadata-and.html"
@@ -50,17 +56,18 @@
    `(extend-protocol CollCount (get ~arr-types ~type-key)
       (count+ [~coll]
         (alength ~coll)))))
-(defn extend-coll-count-to-all-arr []
+(defn extend-coll-count-to-all-arr! []
   (reduce-kv
     (fn [ret type type-class]
       ;(println type)
       (eval `(extend-coll-count-for-type ~type)))
     nil arr-types))
-(extend-coll-count-to-all-arr)
+
+(extend-coll-count-to-all-arr!)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         RETRIEVAL        }=====================================================
 ;=================================================={     get, first, rest     }=====================================================
-(defprotocol CollRetrieve
+(defprotocol+ CollRetrieve
   (getr+    [coll a] [coll a b] "Get range")
   (get+     [coll n] [coll n if-not-found])
   (first+   [coll])
@@ -68,6 +75,7 @@
   (rest+    [coll])
   (butlast+ [coll])
   (last+    [coll])) 
+
 
 (defmacro extend-coll-retrieve-for-type
   [type-key]
@@ -81,13 +89,14 @@
       (first+  [~coll]  (aget ~coll 0))
       (second+ [~coll]  (aget ~coll 1))
       (last+   [~coll]  (aget ~coll (-> ~coll alength dec))))))
-(defn extend-coll-retrieve-to-all-arr []
+(defn extend-coll-retrieve-to-all-arr! []
   (reduce-kv
     (fn [ret type type-class]
       ;(println type)
       (eval `(extend-coll-retrieve-for-type ~type)))
     nil arr-types))
-(extend-coll-retrieve-to-all-arr)
+
+(extend-coll-retrieve-to-all-arr!)
 
 ; take-up-to (combination of getr and index-of + 1)
 
@@ -105,7 +114,8 @@
 ; first+ with non-collection items (java.util.Collection) will return itself.
 
 (extend-protocol-for-all CollRetrieve
-  [clojure.lang.Delay clojure.core.protocols.CollReduce
+  [clojure.lang.Delay
+   clojure.core.protocols.CollReduce
    quanta.library.reducers.Folder]
     (getr+    [coll a b] (->> coll (take+ b) (drop+ a)))
     (first+   [coll] (take+ 1 coll))
@@ -175,14 +185,9 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        SEARCH/FIND       }=====================================================
 ;=================================================={    index-of, contains?   }=====================================================
-(defprotocol CollSearch
+(defprotocol+ CollSearch
   (index-of+      [coll elem])
   (last-index-of+ [coll elem]))
-(def coll-search-types
-  {:vec    clojure.lang.APersistentVector
-   :rvec   clojure.lang.APersistentVector$RSeq 
-   :list   clojure.lang.PersistentList
-   :string String})
 
 (defmacro extend-coll-search-for-type
   [type-key]
@@ -196,12 +201,13 @@
    `(extend-protocol CollSearch (get ~coll-search-types ~type-key)
       (index-of+      [~coll ~elem] (.indexOf     ~coll ~elem))
       (last-index-of+ [~coll ~elem] (.lastIndexOf ~coll ~elem)))))
-(defn extend-coll-search-to-all-types []
+(defn extend-coll-search-to-all-types! []
   (reduce-kv
     (fn [ret type type-class]
       (eval `(extend-coll-search-for-type ~type)))
     nil coll-search-types))
-(extend-coll-search-to-all-types)
+
+(extend-coll-search-to-all-types!)
 
 (defn third [coll] (-> coll rest+ rest+ first+))
 ; If the array is not sorted:

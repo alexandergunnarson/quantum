@@ -154,7 +154,11 @@
 
 (defn squote
   "Wraps a given string in single quotes."
-  [str-0] (str "'" str-0 "'"))
+  {:todo ["Protocolize"]}
+  [str-0]
+  (if (nil? str-0)
+      (str "'" "nil" "'")
+      (str "'" str-0 "'")))
 
 ; REGEX
 

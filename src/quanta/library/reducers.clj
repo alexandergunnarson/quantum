@@ -12,7 +12,8 @@
     [quanta.library.logic            :as log   :refer :all]
     [quanta.library.data.vector      :as vec   :refer [subvec+ catvec]]
     [quanta.library.type             :as type  :refer :all]
-    [quanta.library.data.map         :as map   :refer [map-entry sorted-map+ merge+]]))
+    [quanta.library.data.map         :as map   :refer [map-entry sorted-map+ merge+]]
+    [quanta.library.data.set         :as set]))
 (alias 'core 'clojure.core)
 (set! *warn-on-reflection* true)
 
@@ -316,6 +317,18 @@
                  (do (println "There was an exception in kv-reduce!")
                      (clojure.stacktrace/print-stack-trace e)))))
          (clojure.core.protocols/coll-reduce coll f init))))
+(defn reducem+
+  "Requires only one argument for preceding functions in its call chain."
+  {:attribution "Alex Gunnarson"
+   :performance "9.94 ms vs. 17.02 ms for 10000 calls to (into+ {}) for small collections ;
+           But this could merely reflect the unoptimized nature of |into+|."}
+  [coll]
+  (->> coll force
+       (reduce+
+         (fn [ret k v]
+           (assoc ret k v))
+         {}))) 
+
 (defn count* ; count implemented in terms of reduce
   ; /count/ is 71.542581 ms, whereas
   ; /count*/ is 36.824665 ms - twice as fast!! :D wow! that's amazing!
@@ -578,6 +591,30 @@
    occurs presumably because of thread overload."
   [obj]
   (->> obj fold+ (into+ {})))
+(defn fold-s+
+  "Fold into hash-set."
+  {:todo ["Speed this up!!"]}
+  [coll]
+  (fold+
+    (fn ([]         (hash-set))
+        ([ret elem]
+          (set/union ret
+            (if (not (set? elem))
+                (hash-set elem)
+                elem))))
+    coll))
+(defn reduce-s+
+  "Reduce into hash-set."
+  {:todo ["Speed this up!!"]}
+  [coll]
+  (->> coll force
+       (reduce+
+         (fn
+           ([ret elem]
+             (conj ret elem))
+           ([ret k v]
+             (conj ret (map-entry k v))))
+         #{})))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    transduce.reducers    }=====================================================
 ;=================================================={                          }=====================================================

@@ -5,10 +5,12 @@
     [quanta.library.function :as fn  :refer :all])
   (:import  clojure.lang.PersistentQueue)
   (:gen-class))
-
+(ns/require-all *ns* :clj)
 (set! *warn-on-reflection* true)
 
 ; should include typecasting (/cast/)
+
+(def  double?      (partial instance? Double))
 
 (def  ShortArray   (type (short-array   0)))
 (def  LongArray    (type (long-array    0)))
@@ -26,10 +28,10 @@
 (def  byte-array?  (partial instance? ByteArray))
 
 (def  array-list?  (f*n splice-or #(instance? %2 %1) java.util.ArrayList java.util.Arrays$ArrayList))
-(def  map-entry?   (partial instance? clojure.lang.MapEntry))
+(def  map-entry?   (partial instance? MapEntry))
 (def  sorted-map?  (partial instance? clojure.lang.PersistentTreeMap))
 (def  queue?       (partial instance? PersistentQueue))
-(def  lseq?        (partial instance? clojure.lang.LazySeq))
+(def  lseq?        (partial instance? LazySeq))
 (def  coll+?       (fn-or coll? array-list?))
 (def  pattern?     (partial instance? java.util.regex.Pattern))
 (def  editable?    (partial instance? clojure.lang.IEditableCollection))

@@ -14,6 +14,8 @@
      [org.clojure/clojure               "1.6.0"]
      ; META (CODE)      
      [repetition-hunter                 "1.0.0"]
+     ; defprotocol+, definterface+, etc.
+     [potemkin                          "0.3.11"]
      ; IO      
      [commons-io/commons-io             "2.4"  ] ; writing byte arrays to file and such
      [com.taoensso/nippy                "2.6.3"] ; data serialization

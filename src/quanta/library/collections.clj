@@ -19,6 +19,9 @@
 
 (ns/require-all *ns* :clj)
 
+; TODO
+; in? :: subset? !:: superset? :: contains?
+
 ; drop-from-back-while
 ;  reverse+ (drop-while+ (eq? [""])) fold+ reverse+ vec+
 
@@ -33,13 +36,14 @@
    (->> coll (filter filter-fn) first))
 
 (defn reducei+
-  "Reduce, indexed."
-  [f ret init]
-  (reduce+ 
-    (fn [ret [elem n]]
-      (f ret elem n))
-    ret
-    (zipvec+ init (range 0 (count init)))))
+  "|reduce|, indexed"
+  [^AFunction f ret coll]
+  (let [n (atom -1)]
+    (reduce+
+      (fn [ret-n elem]
+        (swap! n inc)
+        (f ret-n elem @n))
+      ret coll)))
 
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks)))
@@ -190,7 +194,7 @@
   ([obj]
     (try+
       (ifn obj vector? second+ key)
-      (catch Object _ (println "Error in val+ with obj:" obj) nil)))
+      (catch Object _ nil)))
   ([k v] v)) ; For use with kv-reduce
 
 (defn fkey+ [m]
