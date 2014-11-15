@@ -23,8 +23,8 @@
    @expr evaluates to false.
 
    Specifically for use with :pre and :post conditions."
-  [expr ^String message]
-  `(if ~expr ~expr (throw+ ~message)))
+  [expr throw-content]
+  `(if ~expr ~expr (throw+ ~throw-content)))
 
 ; PUT ERROR TYPES HERE
 (defn unk-dispatch [dispatch]

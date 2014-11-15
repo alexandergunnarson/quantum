@@ -2,19 +2,27 @@
   (:refer-clojure :exclude [split-at])
   (:gen-class))
 (require
-  '[quanta.library.ns    :as ns    :refer [defalias alias-ns]])
+  '[quanta.library.ns    :as ns    :refer [defalias alias-ns]]
+  '[quanta.library.type            :refer :all])
 (ns/require-all *ns* :clj)
 (require
   '[clojure.data.avl     :as avl]
   '[flatland.ordered.map :as map])
+
 ; (:refer-clojure :exclude [sorted-map sorted-map-by])
 
-(defn map-entry [key-0 val-0] (clojure.lang.MapEntry. key-0 val-0))
+(defn map-entry [key-0 val-0] (MapEntry. key-0 val-0))
 (defalias ordered-map map/ordered-map)
-; a better merge?
-; a better merge-with?
+(defalias om map/ordered-map)
+
 (defn merge+ [map-0 & maps] ; 782.922731 ms /merge+/ vs. 1.133217 sec normal /merge/ ; 1.5 times faster! 
-  (persistent! (reduce conj! (transient map-0) maps)))
+  (if (editable? map-0)
+      (->> maps
+           (reduce conj! (transient map-0))
+           persistent!)
+      (apply merge map-0 maps)))
+  
+
 (defn merge-deep-with
   "Like `merge-with` but merges maps recursively, applying the given fn
   only when there's a non-map at a particular level.

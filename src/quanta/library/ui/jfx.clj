@@ -158,8 +158,8 @@ Runs the code on the FX application thread and waits until the return value is d
         prop (str (str/camelcase prop true) "Property")
         property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj prop (to-array [])))
         observable (reify javafx.beans.value.ObservableValue
-                     (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
-                     (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
+                     (^void addListener    [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
+                     (^void addListener    [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
                      (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
                      (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
                      (getValue [this] @at))]
@@ -223,49 +223,56 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
           :scene-coords {:x (.getSceneX e) :y (.getSceneY e)}
           :coords {:x (.getX e) :y (.getY e) :z (.getZ e)}}))
 
-(defmulti preprocess-event (fn [e] (type e))) ; this can be improved with defprotocols
-(defmethod preprocess-event :default [e]
-  (prep-event-map e))
-(defmethod preprocess-event javafx.scene.input.ContextMenuEvent [e]
-  (-> (prep-event-map e
-                     :pickresult (prep-pickresult (.getPickResult e))
-                     :keyboard-trigger? (.isKeyboardTrigger e))
-     (add-coords e)))
-(defmethod preprocess-event javafx.scene.input.InputMethodEvent [e]
-  (prep-event-map e
-                  :caret-position (.getCaretPosition e)
-                  :committed (.getCommitted e)
-                  :composed (.getComposed e)))
-(defmethod preprocess-event javafx.scene.input.KeyEvent [e]
-  (-> (prep-event-map e
-                     :character (.getCharacter e)
-                     :code (prep-key-code (.getCode e))
-                     :text (.getText e))
-     (add-modifiers e)))
-(defmethod preprocess-event javafx.scene.input.MouseEvent [e]
-  (-> (prep-event-map e
-                     :button            (-> (.getButton e) .valueOf str/lower-case keyword)
-                     :click-count       (.getClickCount e)
-                     :pickresult        (prep-pickresult (.getPickResult e))
-                     :drag-detected?    (.isDragDetect          e)
-                     :primary-button?   (.isPrimaryButtonDown   e)
-                     :secondary-button? (.isSecondaryButtonDown e)
-                     :middle-button?    (.isMiddleButtonDown    e)
-                     :popup-trigger?    (.isPopupTrigger        e)
-                     :sill-since-press? (.isStillSincePress     e)
-                     :synthesized?      (.isSynthesized         e))
-     (add-modifiers e)
-     (add-coords e)))
-(defmethod preprocess-event javafx.scene.input.TouchEvent [e]
-  (prep-event-map e
-    :set-id       (.getEventSetId e)
-    :touch-count  (.getTouchCount e)
-    :touch-point  (.getTouchPoint e) ;; TODO Wrapper for TouchPoint
-    :touch-points (.getTouchPoints e)
-    :alt-down? (.isAltDown e)
-    :control-down? (.isControlDown e)
-    :meta-down? (.isMetaDown e)
-    :shift-down? (.isShiftDown e)))
+(defprotocol EventPreProc
+  (preprocess-event [event]))
+(extend-protocol preprocess-event
+  javafx.scene.input.ContextMenuEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :pickresult        (prep-pickresult (.getPickResult e))
+            :keyboard-trigger? (.isKeyboardTrigger e))
+          (add-coords e)))
+  javafx.scene.input.InputMethodEvent
+    (preprocess-event [e]
+      (prep-event-map e
+        :caret-position (.getCaretPosition e)
+        :committed      (.getCommitted     e)
+        :composed       (.getComposed      e)))
+  javafx.scene.input.KeyEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :character (.getCharacter e)
+            :code      (prep-key-code (.getCode e))
+            :text      (.getText e))
+          (add-modifiers e)))
+  javafx.scene.input.MouseEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :button            (-> (.getButton e) .valueOf str/lower-case keyword)
+            :click-count       (.getClickCount         e)
+            :pickresult        (-> (.getPickResult     e) prep-pickresult)
+            :drag-detected?    (.isDragDetect          e)
+            :primary-button?   (.isPrimaryButtonDown   e)
+            :secondary-button? (.isSecondaryButtonDown e)
+            :middle-button?    (.isMiddleButtonDown    e)
+            :popup-trigger?    (.isPopupTrigger        e)
+            :sill-since-press? (.isStillSincePress     e)
+            :synthesized?      (.isSynthesized         e))
+          (add-modifiers e)
+          (add-coords e)))
+  javafx.scene.input.TouchEvent
+    (preprocess-event [e]
+      (prep-event-map e
+        :set-id        (.getEventSetId  e)
+        :touch-count   (.getTouchCount  e)
+        :touch-point   (.getTouchPoint  e) ;; TODO Wrapper for TouchPoint
+        :touch-points  (.getTouchPoints e)
+        :alt-down?     (.isAltDown      e)
+        :control-down? (.isControlDown  e)
+        :meta-down?    (.isMetaDown     e)
+        :shift-down?   (.isShiftDown    e)))
+  Object [e]
+    (prep-event-map e))
 ;___________________________________________________________________________________________________________________________________
 ;============================================================{   API   }============================================================
 ;============================================================{         }============================================================

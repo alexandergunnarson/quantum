@@ -1,6 +1,6 @@
 (ns quanta.library.info)
 
-; Implement: APersistentVector -> Vector (maybe use |deftype| for this?)
+; Implement: Vector -> Vector (maybe use |deftype| for this?)
 ; Implement: Possibly use f*n as a macro...?
 
 ; Interesting information and comparison
@@ -13,7 +13,7 @@
 ; List:       354 ms
 ; Hash-map:  1946 ms
 ; Each data type created once within 100000 |reduce+|s, conj'ed, and apply'ed
-; Vector:     346 ms, probably because of the indices
+; Vector:     346 ms, probably because it's implemented in terms of a map, basically
 ; Map-entry:  293 ms
 ; List:       -
 ; Hash-map:   619 ms

@@ -70,7 +70,7 @@
 ; filename
 ; extension
 
-(def ^:dynamic *os-separator* (-> (File/separatorChar) str))
+(def ^:dynamic *os-separator* (-> (File/separatorChar) str)) ; java.io.File/pathSeparator??
 (def ^:dynamic *os-sep-esc*
   (case sys/*os*
     :windows "\\\\"

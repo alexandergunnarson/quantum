@@ -1,5 +1,7 @@
 (ns quanta.library.ns
-  (:require [clojure.repl :as repl])
+  (:require [clojure.repl :as repl]
+            [clojure.core.rrb-vector]
+            [flatland.ordered.map])
   (:gen-class))
 
 (import '(clojure.lang Keyword Var Namespace))
@@ -93,12 +95,40 @@
   []
   (set! *warn-on-reflection* true))
 
+; Just to be able to synthesize class-name aliases...
+; (defrecord Vec     []) ; Conflicts with clojure.core/->Vec
+(defrecord Map     [])
+; (defrecord List    []);  Conflicts with java.util.List
+(defrecord Set     [])
+(defrecord Queue   [])
+(defrecord LSeq    [])
+(defrecord Fn      [])
+(defrecord Key     [])
+(defrecord Num     [])
+(defrecord Int     [])
+(defrecord Decimal [])
+
+(defn ns-exclude! [^Namespace curr-ns & syms]
+  (binding [*ns* curr-ns]
+    (doseq [sym syms]
+      (ns-unmap (ns-name curr-ns) sym))))
+
 
 (defn require-clj [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (do
       (ns-unmap (ns-name curr-ns) 'some?)
       (set! *warn-on-reflection* true)
+      (require
+        '[clojure.core.rrb-vector]
+        '[flatland.ordered.map])
+      (import
+        '(quanta.library.ns
+            Map Set Queue 
+            LSeq  
+            Key
+            Fn
+            Num Int Decimal))
       (import
         '(clojure.lang
             Namespace
@@ -113,11 +143,13 @@
             APersistentSet
             PersistentQueue
             LazySeq)
+        '(clojure.core Vec)
         'java.util.regex.Pattern
         '(java.util ArrayList)
         'org.joda.time.DateTime
         '(java.math BigDecimal)
-        'clojure.core.rrb_vector.rrbt.Vector))))
+        'clojure.core.rrb_vector.rrbt.Vector
+        'flatland.ordered.map.OrderedMap))))
 (defn require-lib [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (ns-unmap (ns-name curr-ns) 'some?)
@@ -138,7 +170,7 @@
       '[quanta.library.type                        :refer :all                   ]
       '[quanta.library.data.array  :as arr         :refer :all                   ]
       '[quanta.library.data.ftree  :as ftree                                     ]
-      '[quanta.library.data.map    :as map         :refer [sorted-map+ map-entry]]
+      '[quanta.library.data.map    :as map         :refer :all                   :exclude [merge+ split-at]]
       '[quanta.library.data.queue  :as q                                         ]
       '[quanta.library.data.set    :as set         :refer [sorted-set+]          ]
       '[quanta.library.data.vector :as vec         :refer [conjl catvec]         ]

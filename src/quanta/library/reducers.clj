@@ -321,6 +321,16 @@
                  (do (println "There was an exception in kv-reduce!")
                      (clojure.stacktrace/print-stack-trace e)))))
          (clojure.core.protocols/coll-reduce coll f init))))
+(defn reducei+
+  "|reduce|, indexed"
+  {:todo ["Change atom to volatile"]}
+  [^AFunction f ret coll]
+  (let [n (atom -1)]
+    (reduce+
+      (fn [ret-n elem]
+        (swap! n inc)
+        (f ret-n elem @n))
+      ret coll)))
 (defn reducem+
   "Requires only one argument for preceding functions in its call chain."
   {:attribution "Alex Gunnarson"
@@ -578,8 +588,9 @@
   ([n combinef reducef coll] (coll-fold (fold-pre coll) n combinef reducef)))
 (defn foldp-max+ [obj]
   (fold+ 1 (monoid into+ vector) conj obj))
-(defn foldp+ [obj]
-  ; TODO: Detect whether there can be a speed improvement achieved or not
+(defn foldp+
+  {:todo ["Detect whether there can be a speed improvement achieved or not"]}
+  [obj]
   (fold+ (monoid into+ vector) conj obj))
 (defn foldm* [map-fn obj]
   (fold+
@@ -1079,7 +1090,7 @@
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
 (defn distinct-by+ ; 228.936664 ms (pretty much attains java speeds!!!)
-  "Remove adjacent duplicate values of `(f x)` for each `x` in `coll`."
+  "Remove adjacent duplicate values of (@f x) for each x in @coll."
   ^{:attribution "parkour.reducers"}
   [f coll]
   (let [sentinel (Object.)] ; instead of nil, because it's unique

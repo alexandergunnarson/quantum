@@ -4,7 +4,7 @@
 (ns/require-all *ns* :clj)
 
 ; alert, inspect
-(def ^:dynamic *prs* (atom #{:warn}))
+(def ^:dynamic *prs* (atom #{:warn :user}))
 (def log (atom []))
 (defrecord LogEntry
   [^DateTime  time-stamp
@@ -29,8 +29,8 @@
   [pr-type & args]
   `(let [ns-0# ~*ns*] 
     (binding [*ns* ns-0#]
-      (when (quanta.library.collections/in?
-             ~pr-type @quanta.library.log/*prs*)
+      (when (contains?
+             @quanta.library.log/*prs* ~pr-type)
         (println
           (if (= ~pr-type :warn)
               "WARNING:"
@@ -38,5 +38,5 @@
           ~@args)
         (swap! quanta.library.log/log conj
           (LogEntry.
-            (time/now) ~pr-type ns-0# (str ~@args))))
+            (clj-time.core/now) ~pr-type ns-0# (str ~@args))))
       nil)))

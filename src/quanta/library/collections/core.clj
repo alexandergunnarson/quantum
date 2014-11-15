@@ -152,10 +152,17 @@
       ([coll n] (get+ coll n nil))
       ([coll n if-not-found] (nth coll n if-not-found)))
   String
-    (first+   [coll] (str/subs+ coll 0 1))
-    (rest+    [coll] (str/subs+ coll 1))
-    (butlast+ [coll] (str/subs+ coll 0 (-> coll count+ dec)))
-    (last+    [coll] (str/subs+ coll (-> coll count+ dec)))
+    (first+   [coll]
+      (try (subs coll 0 1)
+        (catch StringIndexOutOfBoundsException _ nil)))
+    (second+  [coll]
+      (try (subs coll 1 2)
+        (catch StringIndexOutOfBoundsException _ nil)))
+    (rest+    [coll]
+      (try (subs coll 1 (count+ coll))
+        (catch StringIndexOutOfBoundsException _ nil)))
+    (butlast+ [coll] (subs coll 0 (-> coll count+ dec)))
+    (last+    [coll] (subs coll (-> coll count+ dec)))
     (getr+    [coll a b] (str/subs+ coll a (- b a)))
   Object ; "default"
     (get+
@@ -179,6 +186,8 @@
        persistent!))
 
 (def  pop+  butlast+)
+(def  popr+ butlast+)
+(def  popl+ rest+)
 (def  peek+ last+)
 
 (defn getf+ [n] (f*n get+ n))

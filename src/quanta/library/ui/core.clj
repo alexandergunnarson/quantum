@@ -136,38 +136,45 @@
   (javafx.collections.FXCollections/unmodifiableObservableList s))
 
 (defn map->observable [m]
-  (javafx.collections.FXCollections/unmodifiableObservableMap m))
+  (javafx.collections.FXCollections/unmodifiableObservableMap  m))
 
 (defn set->observable [s]
-  (javafx.collections.FXCollections/unmodifiableObservableSet s))
+  (javafx.collections.FXCollections/unmodifiableObservableSet  s))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{ ARGUMENT WRAPPING  }=======================================================
 ;======================================================{                    }=======================================================
-(defmulti wrap-arg "Autoboxing-like behaviour for arguments for ClojureFX nodes." (fn [arg class] arg))
+(defmulti wrap-arg
+  "Autoboxing-like behaviour for arguments for ClojureFX nodes."
+  (fn [arg class] arg))
 
 (defmethod wrap-arg :default [arg class] arg)
 
 (defmethod wrap-arg :accelerator [arg _]
   (if (string? arg)
-    (javafx.scene.input.KeyCombination/keyCombination arg)
-    arg))
+      (javafx.scene.input.KeyCombination/keyCombination arg)
+      arg))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================={   DATA BINDING   }========================================================
 ;======================================================={                  }========================================================
 (defmulti bidirectional-bind-property! (fn [type obj prop & args] type))
 
-(defmulti bind-property!* (fn [obj prop target] (type target)))
+(defmulti bind-property!*
+  (fn [obj prop target] (type target)))
 
 (defmethod bind-property!* clojure.lang.Atom [obj prop at]
-  (let [listeners (atom [])
+  (let [listeners     (atom [])
         inv-listeners (atom [])
-        prop (str (camel prop true) "Property")
+        prop     (str (camel prop true) "Property")
         property (run-now (clojure.lang.Reflector/invokeInstanceMethod obj prop (to-array [])))
         observable (reify javafx.beans.value.ObservableValue
-                     (^void addListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners conj l))
-                     (^void addListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners conj l))
-                     (^void removeListener [this ^javafx.beans.InvalidationListener l] (swap! inv-listeners #(remove #{l} %)))
-                     (^void removeListener [this ^javafx.beans.value.ChangeListener l] (swap! listeners #(remove #{l} %)))
+                     (^void addListener    [this ^javafx.beans.value.ChangeListener l]
+                       (swap! listeners     conj l))
+                     (^void addListener    [this ^javafx.beans.InvalidationListener l]
+                       (swap! inv-listeners conj l))
+                     (^void removeListener [this ^javafx.beans.InvalidationListener l]
+                       (swap! inv-listeners #(remove #{l} %)))
+                     (^void removeListener [this ^javafx.beans.value.ChangeListener l]
+                       (swap! listeners     #(remove #{l} %)))
                      (getValue [this] @at))]
     (add-watch at (keyword (name prop))
                (fn [_ r oldS newS]
@@ -188,90 +195,98 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
              `(bind-property!* ~obj ~(key entry#) ~(val entry#))))))
 
 (defn- prep-key-code [k]
-  {:keycode k
-   :name (-> (.getName k) str/lower-case keyword)
-   :value (-> (.valueOf k) str/lower-case keyword)
-   :arrow? (.isArrowKey k)
-   :digit? (.isDigitKey k)
-   :function? (.isFunctionKey k)
-   :keypad? (.isKeypadKey k)
-   :media? (.isMediaKey k)
-   :modifier? (.isModifierKey k)
+  {:keycode     k
+   :name        (-> (.getName     k) str/lower-case keyword)
+   :value       (-> (.valueOf     k) str/lower-case keyword)
+   :arrow?      (.isArrowKey      k)
+   :digit?      (.isDigitKey      k)
+   :function?   (.isFunctionKey   k)
+   :keypad?     (.isKeypadKey     k)
+   :media?      (.isMediaKey      k)
+   :modifier?   (.isModifierKey   k)
    :navigation? (.isNavigationKey k)
    :whitespace? (.isWhitespaceKey k)})
 
 (defn- prep-pickresult [p]
   {:pickresult p
-   :distance (.getIntersectedDistance p)
-   :face (.getIntersectedFace p)
-   :node (.getIntersectedNode p)
-   :point (.getIntersectedPoint p)
-   :tex-coord (.getIntersectedTexCoord p)})
+   :distance   (.getIntersectedDistance p)
+   :face       (.getIntersectedFace     p)
+   :node       (.getIntersectedNode     p)
+   :point      (.getIntersectedPoint    p)
+   :tex-coord  (.getIntersectedTexCoord p)})
 
 (defn- prep-event-map [e & {:as m}]
-  (let [prep {:event e
-              :source (.getSource e)
-              :type (.getEventType e)
-              :target (.getTarget e)
-              :consume #(.consume e)
-              :string (.toString e)}]
+  (let [prep {:event   e
+              :source  (.getSource    e)
+              :type    (.getEventType e)
+              :target  (.getTarget    e)
+              :consume #(.consume     e)
+              :string  (.toString     e)}]
     (if (nil? m) prep (merge prep m))))
 (defn- add-modifiers [m e]
   (merge m
-         {:alt-down? (.isAltDown e)
-          :control-down? (.isControlDown e)
-          :meta-down? (.isMetaDown e)
-          :shift-down? (.isShiftDown e)
+         {:alt-down?      (.isAltDown e)
+          :control-down?  (.isControlDown e)
+          :meta-down?     (.isMetaDown e)
+          :shift-down?    (.isShiftDown e)
           :shortcut-down? (.isShortcutDown e)}))
 (defn- add-coords [m e]
-  (merge m
-         {:screen-coords {:x (.getScreenX e) :y (.getScreenY e)}
-          :scene-coords {:x (.getSceneX e) :y (.getSceneY e)}
-          :coords {:x (.getX e) :y (.getY e) :z (.getZ e)}}))
+  (merge+ m
+          {:screen-coords {:x (.getScreenX e) :y (.getScreenY e)}
+           :scene-coords  {:x (.getSceneX  e) :y (.getSceneY  e)}
+           :coords        {:x (.getX       e) :y (.getY       e)
+                           :z (.getZ       e)}}))
 
-(defmulti preprocess-event (fn [e] (type e)))
-(defmethod preprocess-event :default [e]
-  (prep-event-map e))
-(defmethod preprocess-event javafx.scene.input.ContextMenuEvent [e]
-  (-> (prep-event-map e
-                     :pickresult (prep-pickresult (.getPickResult e))
-                     :keyboard-trigger? (.isKeyboardTrigger e))
-     (add-coords e)))
-(defmethod preprocess-event javafx.scene.input.InputMethodEvent [e]
-  (prep-event-map e
-                  :caret-position (.getCaretPosition e)
-                  :committed (.getCommitted e)
-                  :composed (.getComposed e)))
-(defmethod preprocess-event javafx.scene.input.KeyEvent [e]
-  (-> (prep-event-map e
-                     :character (.getCharacter e)
-                     :code (prep-key-code (.getCode e))
-                     :text (.getText e))
-     (add-modifiers e)))
-(defmethod preprocess-event javafx.scene.input.MouseEvent [e]
-  (-> (prep-event-map e
-                     :button (-> (.getButton e) .valueOf str/lower-case keyword)
-                     :click-count (.getClickCount e)
-                     :pickresult (prep-pickresult (.getPickResult e))
-                     :drag-detected? (.isDragDetect e)
-                     :primary-button? (.isPrimaryButtonDown e)
-                     :secondary-button? (.isSecondaryButtonDown e)
-                     :middle-button? (.isMiddleButtonDown e)
-                     :popup-trigger? (.isPopupTrigger e)
-                     :sill-since-press? (.isStillSincePress e)
-                     :synthesized? (.isSynthesized e))
-     (add-modifiers e)
-     (add-coords e)))
-(defmethod preprocess-event javafx.scene.input.TouchEvent [e]
-  (prep-event-map e
-                  :set-id (.getEventSetId e)
-                  :touch-count (.getTouchCount e)
-                  :touch-point (.getTouchPoint e) ;; TODO Wrapper for TouchPoint
-                  :touch-points (.getTouchPoints e)
-                  :alt-down? (.isAltDown e)
-                  :control-down? (.isControlDown e)
-                  :meta-down? (.isMetaDown e)
-                  :shift-down? (.isShiftDown e)))
+(defprotocol EventPreProc
+  (preprocess-event [event]))
+(extend-protocol preprocess-event
+  javafx.scene.input.ContextMenuEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :pickresult        (prep-pickresult (.getPickResult e))
+            :keyboard-trigger? (.isKeyboardTrigger e))
+          (add-coords e)))
+  javafx.scene.input.InputMethodEvent
+    (preprocess-event [e]
+      (prep-event-map e
+        :caret-position (.getCaretPosition e)
+        :committed      (.getCommitted     e)
+        :composed       (.getComposed      e)))
+  javafx.scene.input.KeyEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :character (.getCharacter e)
+            :code      (prep-key-code (.getCode e))
+            :text      (.getText e))
+          (add-modifiers e)))
+  javafx.scene.input.MouseEvent
+    (preprocess-event [e]
+      (-> (prep-event-map e
+            :button            (-> (.getButton e) .valueOf str/lower-case keyword)
+            :click-count       (.getClickCount         e)
+            :pickresult        (-> (.getPickResult     e) prep-pickresult)
+            :drag-detected?    (.isDragDetect          e)
+            :primary-button?   (.isPrimaryButtonDown   e)
+            :secondary-button? (.isSecondaryButtonDown e)
+            :middle-button?    (.isMiddleButtonDown    e)
+            :popup-trigger?    (.isPopupTrigger        e)
+            :sill-since-press? (.isStillSincePress     e)
+            :synthesized?      (.isSynthesized         e))
+          (add-modifiers e)
+          (add-coords e)))
+  javafx.scene.input.TouchEvent
+    (preprocess-event [e]
+      (prep-event-map e
+        :set-id        (.getEventSetId  e)
+        :touch-count   (.getTouchCount  e)
+        :touch-point   (.getTouchPoint  e) ;; TODO Wrapper for TouchPoint
+        :touch-points  (.getTouchPoints e)
+        :alt-down?     (.isAltDown      e)
+        :control-down? (.isControlDown  e)
+        :meta-down?    (.isMetaDown     e)
+        :shift-down?   (.isShiftDown    e)))
+  Object [e]
+    (prep-event-map e))
 ;___________________________________________________________________________________________________________________________________
 ;============================================================{   API   }============================================================
 ;============================================================{         }============================================================
@@ -315,39 +330,42 @@ The listener gets a preprocessed event map as shown above.
 
 (defmacro remove-fx!
   ([obj elem]
-     `(swap-content! ~obj (fn [x#] (remove #(= % ~elem) x#))))
+     `(swap-content! ~obj (fn [x#] (remove (eq? ~elem) x#))))
   ([obj k elem]
-     `(swap-content! ~obj (fn [x#] (update-in x# [~k] (fn [coll#] (remove #(= % ~elem) coll#)))))))
+     `(swap-content! ~obj (fn [x#] (update-in x# [~k] (fn [coll#] (remove (eq? ~elem) coll#)))))))
 
 (defmacro remove-all-fx!
   ([obj]
-     `(do (swap-content!* ~obj (fn [x#] [])) ~obj))
+     `(do
+        (swap-content!* ~obj (constantly [])) ~obj))
   ([obj k]
-     `(do (swap-content!* ~obj (fn [x#] (update-in x# [~k] (fn [x#] [])))) ~obj)))
+     `(do
+        (swap-content!* ~obj
+          (fn [x#] (update-in x# [~k] (constantly [])))) ~obj)))
 
-(def-simple-swapper javafx.scene.layout.Pane .getChildren .setAll)
-(def-simple-swapper javafx.scene.shape.Path .getElements .setAll)
-(def-simple-swapper javafx.scene.Group .getChildren .setAll) ; this is new
-(def-simple-swapper javafx.scene.control.Accordion .getPanes .setAll)
-(def-simple-swapper javafx.scene.control.ChoiceBox .getItems .setAll)
-(def-simple-swapper javafx.scene.control.ColorPicker .getCustomColors .setAll)
-(def-simple-swapper javafx.scene.control.ComboBox .getItems .setAll)
-(def-simple-swapper javafx.scene.control.ContextMenu .getItems .setAll)
-(def-simple-swapper javafx.scene.control.ListView .getItems .setAll)
-(def-simple-swapper javafx.scene.control.Menu .getItems .setAll)
-(def-simple-swapper javafx.scene.control.MenuBar .getMenus .setAll)
-(def-simple-swapper javafx.scene.control.TableColumn .getColumns .setAll)
-(def-simple-swapper javafx.scene.control.TabPane .getTabs .setAll)
-(def-simple-swapper javafx.scene.control.ToggleGroup .getToggles .setAll)
-(def-simple-swapper javafx.scene.control.ToolBar .getItems .setAll)
-(def-simple-swapper javafx.scene.control.TreeItem .getChildren .setAll)
-(def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns .setAll)
+(def-simple-swapper javafx.scene.layout.Pane             .getChildren     .setAll)
+(def-simple-swapper javafx.scene.shape.Path              .getElements     .setAll)
+(def-simple-swapper javafx.scene.Group                   .getChildren     .setAll)
+(def-simple-swapper javafx.scene.control.Accordion       .getPanes        .setAll)
+(def-simple-swapper javafx.scene.control.ChoiceBox       .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.ColorPicker     .getCustomColors .setAll)
+(def-simple-swapper javafx.scene.control.ComboBox        .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.ContextMenu     .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.ListView        .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.Menu            .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.MenuBar         .getMenus        .setAll)
+(def-simple-swapper javafx.scene.control.TableColumn     .getColumns      .setAll)
+(def-simple-swapper javafx.scene.control.TabPane         .getTabs         .setAll)
+(def-simple-swapper javafx.scene.control.ToggleGroup     .getToggles      .setAll)
+(def-simple-swapper javafx.scene.control.ToolBar         .getItems        .setAll)
+(def-simple-swapper javafx.scene.control.TreeItem        .getChildren     .setAll)
+(def-simple-swapper javafx.scene.control.TreeTableColumn .getColumns      .setAll)
 
 (defmethod swap-content!* javafx.scene.control.SplitPane [obj fun]
-  (let [data {:items (into [] (.getItems obj))
+  (let [data {:items    (into [] (.getItems    obj))
               :dividers (into [] (.getDividers obj))}
         res (fun data)]
-    (.setAll (.getItems obj) (:items res))
+    (.setAll (.getItems    obj) (:items    res))
     (.setAll (.getDividers obj) (:dividers res))))
 (defmethod swap-content!* javafx.scene.control.ScrollPane [obj fun]
   (.setContent obj (fun (.getContent obj))))
@@ -401,58 +419,53 @@ The listener gets a preprocessed event map as shown above.
                  "javafx.embed.swing" '[JFX-panel]}))
 
 (def get-qualified "
-An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.<br/>
-Don't use this yourself; See the macros \"fx\" and \"def-fx\" below.
-" (memoize (fn [builder]
+An exhaustive list of every visual JavaFX component. To add entries, modify the pkgs atom.
+Don't use this yourself; See the macros \"fx\" and \"def-fx\" below."
+(memoize (fn [builder]
              (let [builder (symbol builder)]
-               (first (filter (comp not nil?) (for [k (keys @pkgs)]
-                                              (if (not (empty? (filter #(= % builder) (get @pkgs k))))
-                                                (symbol (str k "." (camel (name builder))))))))))))
+               (ffilter nnil?
+                 (for [k (keys @pkgs)]
+                   (if (->> (get @pkgs k) (filter (eq? builder)) nempty?)
+                     (symbol (str k "." (camel (name builder)))))))))))
 
-;(def get-method-calls (memoize (fn [ctrl] ; original
-;                                 (let [full (resolve (get-qualified ctrl))
-;                                       fns (eval `(method-fetcher ~full)) ; get this out
-;                                       ;fnm (eval `(method-fetcher ~full))
-;                                       ;fns (flatten [(:static fnm) (:instance fnm)])
-;                                       calls (atom {})]
-;                                   (doseq [fun fns
-;                                           :when (= "set" (subs (str (:name fun)) 0 3))] ; get this out
-;                                           ;:when (= "set" (subs (str fun) 0 3))]
-;                                     (swap! calls assoc
-;                                            (keyword (uncamelcaseize (subs (name (:name fun)) 3)))  ; get this out
-;                                            (eval `(fn [obj# arg#] (. obj# ~(:name fun) arg#))))) ; get this out
-;                                            ;(keyword (uncamelcaseize (subs (name fun) 3)))
-;                                            ;(eval `(fn [obj# arg#] (. obj# ~fun arg#)))))
-;                                   @calls))))
-
-(def get-method-calls (memoize (fn [ctrl]
-                                 (let [full (resolve (get-qualified ctrl))
-                                       fnm (eval `(method-fetcher ~full))
-                                       fns (flatten [(:static fnm) (:instance fnm)])
-                                       calls (atom {})]
-                                   (doseq [fun fns
-                                           :when (= "set" (subs (str fun) 0 3))]
-                                     (swap! calls assoc
-                                            (keyword (uncamelcaseize (subs (name fun) 3)))
-                                            (eval `(fn [obj# arg#] (. obj# ~fun arg#)))))
-                                   @calls))))
+(def get-method-calls
+  (memoize
+    (fn [ctrl]
+      (let [full (resolve (get-qualified ctrl))
+            fnm (eval `(method-fetcher ~full))
+            fns (flatten [(:static fnm) (:instance fnm)])
+            calls (atom {})]
+        (doseq [fun fns
+                :when (= "set" (subs (str fun) 0 3))]
+          (swap! calls assoc
+                 (keyword (uncamelcaseize (subs (name fun) 3)))
+                 (eval `(fn [obj# arg#] (. obj# ~fun arg#)))))
+        @calls))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================={ CONSTRUCTOR TOOLS }=======================================================
 ;======================================================={                   }=======================================================
 (defn constructor-helper [clazz & args]
-  (run-now (clojure.lang.Reflector/invokeConstructor (resolve clazz) (to-array (remove nil? args)))))
+  (run-now
+    (clojure.lang.Reflector/invokeConstructor
+      (resolve clazz)
+      (to-array (remove nil? args)))))
 
 (defmacro construct [clazz keys]
   `(defmethod construct-node '~clazz [cl# ar#]
-     (apply constructor-helper cl# (for [k# ~keys] (get ar# k#)))))
+     (apply constructor-helper cl#
+       (for [k# ~keys]
+         (get ar# k#)))))
 
-(defmulti construct-node (fn [class args] class))
+(defmulti  construct-node (fn [class args] class))
 (defmethod construct-node :default [class _]
   (run-now (eval `(new ~class))))
 
-(construct javafx.scene.control.ColorPicker [:color])
-(construct javafx.scene.layout.BackgroundImage [:image :repeat-x :repeat-y :position :size])
-(construct javafx.scene.layout.BorderImage [:image :widths :insets :slices :filled :repeat-x :repeat-y]) ;; TODO Wrapper for BorderWidths, BorderRepeat and Insets
+(construct javafx.scene.control.ColorPicker
+  [:color])
+(construct javafx.scene.layout.BackgroundImage
+  [:image :repeat-x :repeat-y :position :size])
+(construct javafx.scene.layout.BorderImage
+  [:image :widths :insets :slices :filled :repeat-x :repeat-y]) ;; TODO Wrapper for BorderWidths, BorderRepeat and Insets
 ;___________________________________________________________________________________________________________________________________
 ;=========================================================={ BUILDER API }==========================================================
 ;=========================================================={             }==========================================================
@@ -465,19 +478,19 @@ Don't use this yourself; See the macros \"fx\" and \"def-fx\" below.
 
 (defn- varwalker [q]
   (if (var? q)
-    (deref q)
-    q))
+      (deref q)
+      q))
 
 (defn fx* [ctrl & args]
   (let [args# (if-not (and (nil? (first args)) (map? (first args))) (apply hash-map args) (first args))
         {:keys [bind listen content children]} args#
-        props# bind
-        listeners# listen
-        content# (-> [] (into content) (into children))
+        props#          bind
+        listeners#      listen
+        content#        (-> [] (into content) (into children))
         qualified-name# (get-qualified ctrl)
-        methods# (get-method-calls ctrl)
-        args# (dissoc args# :bind :listen)
-        obj# (construct-node qualified-name# args#)]
+        methods#        (get-method-calls ctrl)
+        args#           (dissoc args# :bind :listen)
+        obj#            (construct-node qualified-name# args#)]
     (run-now (doseq [arg# args#] ;; Apply arguments
                (if (contains? methods# (key arg#))
                  (((key arg#) methods#) obj# (wrap-arg (val arg#) (type obj#)))))
@@ -489,16 +502,16 @@ Don't use this yourself; See the macros \"fx\" and \"def-fx\" below.
                (swap-content!* obj# (fn [_] content#)))
              obj#)))
 
-(defmacro fx "
-The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
-named arguments for the constructor arguments and object setters.
+(defmacro fx
+  "The central macro of ClojureFX. This takes the name of a node as declared in the pkgs atom and
+   named arguments for the constructor arguments and object setters.
 
-Special keys:
- * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
- * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
- * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!*` would return.
-" [ctrl & args]
-`(fx* '~ctrl ~@args))
+   Special keys:
+    * `bind` takes a map where the key is a property name (e.g. :text or :grid-lines-visible) and the value an atom. This internally calls `bind-property!`.
+    * `listen` takes a map where the key is an event name (e.g. :on-action) and the value a function handling this event.
+    * `content` or `children` (equivalent) must be a datastructure a function given to `swap-content!*` would return."
+  [ctrl & args]
+  `(fx* '~ctrl ~@args))
 
 (defmacro def-fx [name ctrl & props]
   `(def ~name (fx ~ctrl ~@props)))
@@ -507,18 +520,22 @@ Special keys:
 ;============================================================={       }=============================================================
 (construct javafx.stage.Stage [:stage-style])
 
-(defmethod wrap-arg :stage-style [arg class]
-  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle (-> arg name str/upper-case)))
+(defmethod wrap-arg :stage-style
+  [arg class]
+  (clojure.lang.Reflector/getStaticField javafx.stage.StageStyle
+    (-> arg name str/upper-case)))
 
 (defmethod swap-content!* javafx.stage.Stage [obj fun]
   (.setScene obj (fun (.getScene obj))))
 ;___________________________________________________________________________________________________________________________________
 ;============================================================={ SCENE }=============================================================
 ;============================================================={       }=============================================================
-(construct javafx.scene.Scene [:root :width :height :depth-buffer :scene-antialiasing])
+(construct javafx.scene.Scene
+  [:root :width :height :depth-buffer :scene-antialiasing])
 
 (defmethod wrap-arg :scene-antialiasing [arg class]
-  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing (-> arg name str/upper-case)))
+  (clojure.lang.Reflector/getStaticField javafx.scene.SceneAntialiasing
+    (-> arg name str/upper-case)))
 
 (defmethod swap-content!* javafx.scene.Scene [obj fun] ; maybe have to comment out?
   (.setRoot obj (fun (.getRoot obj))))
@@ -527,105 +544,23 @@ Special keys:
 ;============================================================={       }=============================================================
 (defmethod construct-node javafx.scene.image.Image [c {:keys [is requested-width requested-height preserve-ratio smooth url background-loading] :as args}]
   (cond
-   (contains? args :is) (constructor-helper c [is requested-width requested-height preserve-ratio smooth])
-   (and (contains? args :url)
-      (= 2 (count (keys args)))) (constructor-helper c [url background-loading])
-   :else (constructor-helper c [url requested-width requested-height preserve-ratio smooth background-loading])))
+    (contains? args :is)
+      (constructor-helper c
+        [is requested-width requested-height preserve-ratio smooth])
+    (and (contains? args :url)
+         (= 2 (count (keys args))))
+      (constructor-helper c
+        [url background-loading])
+    :else (constructor-helper c
+            [url requested-width requested-height preserve-ratio smooth background-loading])))
 ;___________________________________________________________________________________________________________________________________
 ;========================================================={ LINEAR GRADIENT }=======================================================
 ;========================================================={                 }=======================================================
-(defmethod construct-node javafx.scene.paint.LinearGradient [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
-  (constructor-helper c [start-x start-y end-x end-y proportional cycle-method (into-array javafx.scene.paint.Stop stops)]))
-;___________________________________________________________________________________________________________________________________
-;============================================================{ GRID PANE }==========================================================
-;============================================================{           }==========================================================
-;Not quite ready; doesn't take effect very well
-;(defmethod swap-content!* javafx.scene.layout.GridPane [obj fun]
-;  (run-now
-;   (let [data (map #({:node %
-;                      :column-index (get-fx obj :column-index %)
-;                      :row-index (get-fx obj :row-index %)
-;                      :column-span (get-fx obj :column-span %)
-;                      :row-span (get-fx obj :row-span %)
-;                      :h-alignment (-> (get-fx obj :halignment %) .toString str/lower-case keyword)
-;                      :v-alignment (-> (get-fx obj :valignment %) .toString str/lower-case keyword)
-;                      :h-grow (get-fx obj :hgrow %)
-;                      :v-grow (get-fx obj :vgrow %)
-;                      :margin (get-fx obj :margin %)
-;                      :fill-height? (get-fx obj :fill-height? %)
-;                      :fill-width? (get-fx obj :fill-width? %)}) (.getChildren obj))
-;         res (map #(if (map? %) % {:node %}) (fun data))
-;         children (.getChildren obj)]
-;     (.setAll children (map :node res))
-;     (doseq [child res
-;             :let [n (:node child)]]
-;       (doseq [[k v] child]
-;         (case k
-;           :column-index (set-fx! obj :column-index n v)
-;           :row-index (set-fx! obj :row-index n v)
-;           :column-span (set-fx! obj :column-span n v)
-;           :row-span (set-fx! obj :row-span n v)
-;           :h-alignment (set-fx! obj :halignment n (-> v name str/upper-case javafx.geometry.HPos/valueOf))
-;           :v-alignment (set-fx! obj :valignment n (-> v name str/upper-case javafx.geometry.VPos/valueOf))
-;           :h-grow (set-fx! obj :hgrow n v)
-;           :v-grow (set-fx! obj :vgrow n v)
-;           :margin (set-fx! obj :margin n v)
-;           :fill-height? (set-fx! obj :fill-height? n v)
-;           :fill-width? (set-fx! obj :fill-width? n v)
-;           nil)))))
-;  obj)
-;
-;(defn swap-column-constraints! [obj fun]
-;  (let [data (map #({:column %
-;                     :h-alignment (.getHalignment %)
-;                     :h-grow (.getHgrow %)
-;                     :max-width (.getMaxWidth %)
-;                     :min-width (.getMinWidth %)
-;                     :percent-width (.getPercentWidth %)
-;                     :pref-width (.getPrefWidth %)
-;                     :fill-width? (.isFillWidth %)}) (.getColumnConstraints obj))
-;        res (fun data)]
-;    (.setAll (.getColumnConstraints obj) (to-array []))
-;    (doseq [col res
-;            :let [const (new javafx.scene.layout.ColumnConstraints)]]
-;      (doseq [[k v] col]
-;        (case k
-;          :h-alignment (.setHalignment const v)
-;          :h-grow (.setHgrow const v)
-;          :max-width (.setMaxWidth const v)
-;          :min-width (.setMinWidth const v)
-;          :percent-width (.setPercentWidth const v)
-;          :pref-width (.setPrefWidth const v)
-;          :fill-width? (.setFillWidth const v)
-;          nil))
-;      (.add (.getColumnConstraints obj) const)))
-;  obj)
-;
-;(defn swap-row-constraints! [obj fun]
-;  (let [data (map #({:row %
-;                     :v-alignment (.getValignment %)
-;                     :v-grow (.getVgrow %)
-;                     :max-height (.getMaxHeight %)
-;                     :min-height (.getMinHeight %)
-;                     :percent-height (.getPercentHeight %)
-;                     :pref-height (.getPrefHeight %)
-;                     :fill-height? (.isFillHeight %)}) (.getRowConstraints obj))
-;        res (fun data)]
-;    (.setAll (.getRowConstraints obj) (to-array []))
-;    (doseq [row res
-;            :let [const (new javafx.scene.layout.RowConstraints)]]
-;      (doseq [[k v] row]
-;        (case k
-;          :v-alignment (.setValignment const v)
-;          :v-grow (.setVgrow const v)
-;          :max-height (.setMaxHeight const v)
-;          :min-height (.setMinHeight const v)
-;          :percent-height (.setPercentHeight const v)
-;          :pref-height (.setPrefHeight const v)
-;          :fill-height? (.setFillHeight const v)
-;          nil))
-;      (.add (.getRowConstraints obj) const)))
-;  obj)
+(defmethod construct-node javafx.scene.paint.LinearGradient
+  [c {:keys [start-x start-y end-x end-y proportional cycle-method stops]}]
+  (constructor-helper c
+    [start-x start-y end-x end-y proportional cycle-method
+      (into-array javafx.scene.paint.Stop stops)]))
 ;___________________________________________________________________________________________________________________________________
 ;============================================================{ TABLE VIEW }=========================================================
 ;============================================================{            }=========================================================
@@ -636,23 +571,19 @@ Special keys:
   (seq->observable arg))
 
 (defmethod swap-content!* javafx.scene.control.TableView [obj fun]
-  (let [data {:items (into [] (.getItems obj))
-              :columns (into [] (.getColumns obj))
-              :sort-order (into [] (.getSortOrder obj))
+  (let [data {:items                (into [] (.getItems              obj))
+              :columns              (into [] (.getColumns            obj))
+              :sort-order           (into [] (.getSortOrder          obj))
               :visible-leaf-columns (into [] (.getVisibleLeafColumns obj))}
         res (fun data)]
-    (.setAll (.getItems obj) (:items res))
-    (.setAll (.getColumns obj) (:columns res))
-    (.setAll (.getSortOrder obj) (:sort-order res))
+    (.setAll (.getItems              obj) (:items                res))
+    (.setAll (.getColumns            obj) (:columns              res))
+    (.setAll (.getSortOrder          obj) (:sort-order           res))
     (.setAll (.getVisibleLeafColumns obj) (:visible-leaf-columns res))))
 ;___________________________________________________________________________________________________________________________________
 ;||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ;=========================================================[ MY FUNCTIONS ]=========================================================
 ;||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-
-;(defmacro def-conj-fx! [fx-root ctrl & props]
-;  (def )
-;  (add! fx-root `(def ~name (fx ~ctrl ~@props))))
 
 (defmacro do-fx [& body]
   `(run-now* (fn [] ~@body)))
@@ -664,3 +595,5 @@ Special keys:
   (if (= \? (subs (name prop) (dec (count (name prop)))))
       "Error!"
       `(~(symbol (str "." (prepend-and-camel (name prop) "property"))) ~obj ~@args)))
+
+

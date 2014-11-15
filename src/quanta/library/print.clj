@@ -22,8 +22,10 @@
 
 (defalias print-table pprint/print-table) 
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)
-(def  suppress-pr (partial (constantly nil)))
-(defn pprint-xml [xml-str]
+(def  suppress (partial (constantly nil)))
+(defn pprint-xml
+  {:todo ["Where does this function belong?"]}
+  [xml-str]
   (let [print-tabbed 
           (fn [[tab xml-ln]]
             (->> " "
@@ -54,7 +56,7 @@
                          elem-n
                          (long tabs-n+1)
                          (conj elems-f [tabs-n+1 elem-n])))))]
-    (print-body (whenf xml-str string? xml/split-xml) nil (long 0) [])))
+    (print-body (whenf xml-str string? xml/split) nil (long 0) [])))
 (defn pr-vec-table [vec-0]
   (let [vec-strs (->> vec-0 (map+ (fn->> (map+ str) fold+)) fold+)
         col-ct   (->> vec-0 (map+ count+) fold+ num/greatest)

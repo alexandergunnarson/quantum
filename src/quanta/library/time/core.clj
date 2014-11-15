@@ -9,3 +9,7 @@
   (.format (. java.time.format.DateTimeFormatter ofPattern "MM-dd-yyyy") (. java.time.LocalDateTime now)))
 (defn now-formatted [date-format]
   (.format (. java.time.format.DateTimeFormatter ofPattern date-format) (. java.time.LocalDateTime now)))
+(defn beg-of-day [^long y ^long m ^long d]
+  (date-time y m d 0 0 0 0))
+(defn end-of-day [^long y ^long m ^long d]
+  (date-time y m d 23 59 59 999))

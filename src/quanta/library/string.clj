@@ -167,6 +167,16 @@
   (if (nil? str-0)
       (str "(" "nil" ")")
       (str "(" str-0 ")")))
+(defn sp
+  "Like |str|, but adds spaces between the arguments."
+  [& args]
+  (reducei+
+    (fn [ret elem n]
+      (if (= n (dec (count args)))
+          (str ret elem)
+          (str ret elem " ")))
+    ""
+    args))
 
 ; REGEX
 

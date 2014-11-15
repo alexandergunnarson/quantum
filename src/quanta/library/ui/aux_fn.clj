@@ -182,7 +182,7 @@
        (interpose #(Thread/sleep millis))
        (map+ fold+)
        fold+
-       pr/suppress-pr))
+       pr/suppress))
 (defn do-every [millis n func]
   (dotimes [_ n] (func) (Thread/sleep millis)))
 ;___________________________________________________________________________________________________________________________________

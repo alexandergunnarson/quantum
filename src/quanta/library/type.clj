@@ -1,4 +1,4 @@
-(ns quanta.library.type(:gen-class))
+(ns quanta.library.type (:gen-class))
 (set! *warn-on-reflection* true)
 (require
   '[quanta.library.ns :as ns :refer [defalias alias-ns]])
@@ -41,3 +41,5 @@
     (-> class-str
         (subs (-> class-str (.indexOf " ") inc))
         symbol)))
+
+

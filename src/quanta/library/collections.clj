@@ -26,22 +26,14 @@
 (alias-ns 'quanta.library.collections.core)
 (alias-ns 'quanta.library.reducers)
 (defalias merge+ map/merge+)
+; a better merge?
+; a better merge-with?
 
 (defn ffilter
   "Returns the first result of a |filter| operation.
    Uses lazy |filter| so as to do it in the fastest possible way."
    [^AFunction filter-fn coll]
    (->> coll (filter filter-fn) first))
-
-(defn reducei+
-  "|reduce|, indexed"
-  [^AFunction f ret coll]
-  (let [n (atom -1)]
-    (reduce+
-      (fn [ret-n elem]
-        (swap! n inc)
-        (f ret-n elem @n))
-      ret coll)))
 
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks)))
@@ -326,6 +318,7 @@
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
    ^{:attribution  "prismatic.plumbing"
+     :todo ["Make it not output HashMaps but preserve records"]
      :contributors ["Alex Gunnarson"]}
   [f & maps]
   (when (some identity maps)
