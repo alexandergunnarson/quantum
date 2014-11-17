@@ -1081,7 +1081,8 @@
   ^{:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/12c3k7ztbz/group-by-vs-reducers"}
   [f coll]
   (fold+
-    (partial merge-with concat) ; should these be lazy?
+    (partial merge-with
+      (fn [v1 v2] (-> (concat+ v1 v2) fold+)))
     (fn [groups a]
       (let [k (f a)]
         (assoc groups k (conj (get groups k []) a))))
@@ -1090,7 +1091,8 @@
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
 (defn distinct-by+ ; 228.936664 ms (pretty much attains java speeds!!!)
-  "Remove adjacent duplicate values of (@f x) for each x in @coll."
+  "Remove adjacent duplicate values of (@f x) for each x in @coll.
+   CAVEAT: Requires @coll to be sorted to work correctly."
   ^{:attribution "parkour.reducers"}
   [f coll]
   (let [sentinel (Object.)] ; instead of nil, because it's unique
@@ -1104,7 +1106,8 @@
          (remove+ (partial identical? sentinel)))))
 ; <<<<------ REDUCER ------>>>> ; UNFORTUNATELY REQUIRES FOLDING BEFOREHAND... ; DOES IT?
 (defn distinct+
-  "Remove adjacent duplicate values from `coll`."
+  "Remove adjacent duplicate values from @coll.
+   CAVEAT: Requires @coll to be sorted to work correctly."
   ^{:attribution "parkour.reducers"}
   [coll] (->> coll fold-pre (distinct-by+ identity)))
 ;___________________________________________________________________________________________________________________________________

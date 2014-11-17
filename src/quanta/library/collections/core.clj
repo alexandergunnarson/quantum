@@ -38,15 +38,20 @@
 (defprotocol+ CollCount
   (count+ [coll]))
 
-(extend-protocol CollCount
+(extend-protocol+ CollCount
   clojure.lang.LazySeq
-    (count+ [coll] (count* coll))
-  clojure.lang.IPersistentList
     (count+ [coll] (count* coll))
   clojure.lang.Counted
     (count+ [coll] (count coll))
+  java.lang.CharSequence
+    (count+ [coll] (count coll))
+  java.util.Collection
+  ; TODO: what about Java collections that are counted?
+    (count+ [coll] (count* coll))
+  nil
+    (count+ [coll] 0)
   Object
-    (count+ [coll] (count coll)))
+    (count+ [coll] 1))
 
 (defmacro extend-coll-count-for-type
   "With helpful hints from:

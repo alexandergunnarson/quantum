@@ -55,6 +55,12 @@
   (fn [bin-pred obj]
     ((fn-pred-and (unary bin-pred) elems) obj)))
 (def  empty+? (fn-or nseq? empty?))
+(defn bool [v]
+  (cond
+    (= v 0) false
+    (= v 1) true
+    :else
+      (throw (IllegalArgumentException. (str "Value not booleanizable: " v)))))
 (defn rcompare
   "Reverse comparator."
   {:attribution "taoensso.encore"}
@@ -110,6 +116,8 @@
      (if (~pred obj-f#) ~true-expr ~false-expr)
      ;`(if (~pred ~obj) (~true-fn ~obj) (~false-fn ~obj)) ; don't ask me why this is less optimal
      ))
+(defmacro ifcf*n [pred true-expr false-expr]
+  `(fn [arg#] (ifc arg# ~pred ~true-expr ~false-expr)))
 (defmacro if*n [pred true-fn false-fn]
   `(fn [arg#] (ifn arg# ~pred ~true-fn ~false-fn)))
 (defmacro whenf

@@ -180,22 +180,26 @@
       ([xml-0]
         (parse xml-0 :qbxml))
       ([xml-0 ^Keyword xml-type]
-        (let [^AFunction split-item-if-necessary
+        (let [^Fn split-item-if-necessary
                 (fn-> str
                       (str/replace #"(?<!^)<" "\n<")
                       (str/replace #">(?!$)"  ">\n")
                       (str/split   #"\n"))
-              ^AFunction remove-qbxml-headers-if-requested
+              ^Fn remove-trailing-characters
+                (whenf*n (f*n str/ends-with? "\r")
+                         popr+)
+              ^Fn remove-qbxml-headers-if-requested
                 (if (= xml-type :qbxml)
                     (fn->> popl+
                            popl+ popr+ 
                            popl+ popr+ 
                            popl+ popr+)
                     identity)
-              ^AFunction incorporate-split-items
+              ^Fn incorporate-split-items
                 (fn->> (reduce+ catvec))] ; could probably parallelize this process
           (->> xml-0
                (remove+ nil?) ; to handle multiline descriptions
+               (map+ remove-trailing-characters)
                (map+ split-item-if-necessary)
                ; for foldp+:
                ; No implementation of method "slicev" of protocol
@@ -238,10 +242,10 @@
                  Oldest (|parse-xml|)  25    sec"]}
       ([xml-0] (parse xml-0 :general))
       ([xml-0 ^Keyword xml-type]
-        (let [^Atom      traversal-keys (atom [] )
-              ^Atom      built-up-map   (atom {} )
-              ^Atom      final-result   (atom nil)
-              ^AFunction unique-tag-if-needed ; gensym ensures no re-association
+        (let [^Atom traversal-keys (atom [] )
+              ^Atom built-up-map   (atom {} )
+              ^Atom final-result   (atom nil)
+              ^Fn   unique-tag-if-needed ; gensym ensures no re-association
                 (fn [^Keyword tag-n]
                   (if (contains?
                         (get-in @built-up-map @traversal-keys)
@@ -253,10 +257,10 @@
                               gensym keyword)) 
                       tag-n))] 
           (reduce+
-            (fn [^APersistentVector ret ^XMLElem elem]
-              (let [^Keyword elem-type (:elem-type elem)
-                    ^Keyword tag       (:tag       elem)
-                    ^String  content   (:content   elem)]
+            (fn [^Vec ret ^XMLElem elem]
+              (let [^Key    elem-type (:elem-type elem)
+                    ^Key    tag       (:tag       elem)
+                    ^String content   (:content   elem)]
                 (condp = elem-type
                   :standalone (conj ret {tag content})
                   :open       (do (log/pr :inspect-core "Found open element:" tag)

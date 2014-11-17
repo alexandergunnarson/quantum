@@ -9,7 +9,9 @@
   '[quanta.library.data.map         :as map   :refer [ordered-map map-entry]]
   '[quanta.library.data.set         :as set   :refer [ordered-set]]
   '[quanta.library.collections.core :as core]
-  '[quanta.library.logic            :as log   :refer :all]
+  '[quanta.library.logic                      :refer :all]
+  '[quanta.library.log              :as log]
+  '[clj-time.core]
   '[quanta.library.string           :as str]
   '[quanta.library.function         :as fn    :refer :all]
   '[quanta.library.error            :as err   :refer [try+ throw+]]
@@ -26,6 +28,7 @@
 (alias-ns 'quanta.library.collections.core)
 (alias-ns 'quanta.library.reducers)
 (defalias merge+ map/merge+)
+
 ; a better merge?
 ; a better merge-with?
 
@@ -375,10 +378,27 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FINDING IN COLLECTION   }=====================================================
 ;=================================================={  in?, index-of, find ... }=====================================================
-(defn in? [elem coll]
-  (if (string? coll)
-      (.contains ^String coll ^String elem)
+; "The complement of |contains?|"
+(defprotocol In?
+  (in?* [coll elem]))
+(extend-protocol In?
+  String
+    (in?* [coll elem]
+      (.contains ^String coll ^String elem))
+  clojure.lang.Associative
+    (in?* [coll k]
+      (contains? coll k))
+  Object
+    (in?* [coll elem]
       (some (eq? elem) coll)))
+(defn in? [elem coll] (in?* coll elem))
+(defn ^Delay select-keys+
+  {:todo ["Test performance vs. 'normal' select keys"]}
+  [ks m]
+  (let [ks-set (into+ #{} ks)]
+    (->> m
+         (filter+
+           (compr key+ (f*n in? ks))))))
 ; index-of-from [o val index-from] - index-of, starting at index-from
 (defn contains-or? [coll elems]
   (apply-or (map (partial contains? coll) elems)))
@@ -412,24 +432,41 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
-(defn- filter-kv*
-  "Returns a new associative collection of the items in coll for which
-  `(pred (key item))` (or `(pred (val item))`) returns true.
-  Modified from the original." ; make it a reducer
-  ^{:attribution "weavejester.medley"}
-  [pred coll filter-kw]
-  (let [filter-fn
-         (filter-kw
-           {:keys #(if (pred %2) (assoc! %1 %2 %3) %1)
-            :vals #(if (pred %3) (assoc! %1 %2 %3) %1)})]
-    (persistent!
-      (reduce+ filter-fn
-        (transient (empty coll))
-        coll)))) 
-(defn filter-keys+ [pred coll] (filter-kv* pred              coll :keys))
-(defn remove-keys+ [pred coll] (filter-kv* (complement pred) coll :keys))
-(defn filter-vals+ [pred coll] (filter-kv* pred              coll :vals))
-(defn remove-keys+ [pred coll] (filter-kv* (complement pred) coll :vals))
+; (defprotocol FilterKV
+;   (filter-kv-prot [coll pred filter-kw]))
+; (declare filter-kv-editable)
+; (declare filter-kv-non-editable)
+; (extend-protocol FilterKV
+;   clojure.lang.IEditableCollection
+;     (filter-kv-prot [coll pred filter-kw]
+;       (filter-kv-editable pred coll filter-kw))
+;   Object
+;     (filter-kv-prot [coll pred filter-kw]
+;       (filter-kv-non-editable pred coll filter-kw)))
+; (defn- filter-kv-editable
+;   "Returns a new associative collection of the items in coll for which
+;   `(pred (key item))` (or `(pred (val item))`) returns true.
+;   Modified from the original." ; make it a reducer
+;   ^{:attribution "weavejester.medley"
+;     :contributor "Alex Gunnarson"}
+;   [pred coll filter-kw]
+;   (let [filter-fn
+;          (filter-kw
+;            {:keys #(if (pred %2) (assoc! %1 %2 %3) %1)
+;             :vals #(if (pred %3) (assoc! %1 %2 %3) %1)})]
+;     (persistent!
+;       (reduce+ filter-fn
+;         (transient (empty coll))
+;         coll)))) 
+(defn filter-keys+ [pred coll] (->> coll (filter+ (compr key+ pred))))
+(defn remove-keys+ [pred coll] (->> coll (remove+ (compr key+ pred))))
+(defn filter-vals+ [pred coll] (->> coll (filter+ (compr val+ pred))))
+(defn remove-vals+ [pred coll] (->> coll (remove+ (compr key+ pred))))
+  
+(defn vals+ [m]
+  (->> m (map+ val+) fold+))
+(defn keys+ [m]
+  (->> m (map+ key+) fold+))
 ; !!!!!!!!!!-----NEEDS OPTIMIZATION-----!!!!!!!!!!
 (defn- most?
   "Like 'every?' and 'some' but for 'most' items in coll.
@@ -529,6 +566,8 @@
             (range (count+ coll-0) (inc k)))))
       coll-0))
 (defn assoc+
+  {:todo ["Protocolize"
+          "Probably has performance issues"]}
   ([coll-0 k v]
     (ifn (extend-coll-to coll-0 k) editable?
          (fn-> transient (assoc! k v) persistent!)
@@ -555,15 +594,33 @@
   "For each key-function pair in @kfs,
    updates value in an associative data structure @coll associated with key
    by applying the function @f to the existing value."
-  ^{:attribution "Alex Gunnarson"}
+  ^{:attribution "Alex Gunnarson"
+    :todo ["Probably updates and update are redundant"]}
   ([coll & kfs]
     (reduce-2
       (fn [ret k-n f-n] (update+ ret k-n f-n))
       coll
       kfs)))
+(defn update-key+
+  {:attribution "Alex Gunnarson"
+   :usage "(->> {:a 4 :b 12}
+                (map+ (update-key+ str)))"}
+  ([f]
+    (fn
+      ([kv]
+        (assoc+ kv 0 (f (get kv 0))))
+      ([k v]
+        (map-entry (f k) v)))))
 (defn update-val+
-  ^{:attribution "Alex Gunnarson"}
-  ([coll f] (assoc+ coll 1 (f (get coll 1)))))
+  {:attribution "Alex Gunnarson"
+   :usage "(->> {:a 4 :b 12}
+                (map+ (update-val+ (f*n / 2))))"}
+  ([f]
+    (fn
+      ([kv]
+        (assoc+ kv 1 (f (get kv 1))))
+      ([k v]
+        (map-entry k (f v))))))
 ;--------------------------------------------------{        UPDATE-IN         }-----------------------------------------------------
 (defn update-in!
   "'Updates' a value in a nested associative structure, where ks is a sequence of keys and
@@ -620,6 +677,7 @@
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================
 (defn dissoc+
+  {:todo ["Protocolize"]}
   ([coll key-0]
     (try
       (cond ; probably use tricks to see which subvec is longer to into is less consumptive
@@ -673,6 +731,18 @@
     (fn [ret k-n f-n] (re-assoc+ ret k-n f-n))
     coll
     kfs))
+(defn ^Delay select-as+
+  {:todo ["Possibly name this function more appropriately"]}
+  ([m kvs]
+    (->> (reduce+
+           (fn [ret k f]
+             (assoc+ ret k (f m)))
+           m
+           kvs)
+         (filter-keys+
+           (partial contains? kvs))))
+  ([m k1 v1 & {:as kvs}]
+    (select-as+ m (assoc kvs k1 v1))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -736,6 +806,48 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
+(defn ^Delay group-merge-with+
+  {:todo ["Can probably make the |merge| process parallel."]
+   :in [":a"
+        "(fn [k v1 v2] v1)"
+        "[{:a 1 :b 2} {:a 1 :b 5} {:a 5 :b 65}]"]
+   :out "[{:b 65, :a 5} {:a 1, :b 2}]"}
+  [group-by-f merge-with-f coll]
+  (let [merge-like-elems 
+         (fn [grouped-elems]
+           (if (single? grouped-elems)
+               grouped-elems
+               (reduce+
+                 (fn [ret elem]
+                   (merge-with+ merge-with-f ret elem))
+                 (first+ grouped-elems)
+                 (rest+  grouped-elems))))]
+    (->> coll
+         (group-by+ group-by-f)
+         (map+ val+) ; [[{}] [{}{}{}]]
+         (map+ merge-like-elems)
+         flatten+)))
+(defn merge-left 
+  ([^Key alert-level]
+    (fn [k v1 v2]
+      (when (not= v1 v2)
+        (log/pr alert-level
+          "Values do not match for merge key"
+          (str (str/squote k) ":")
+          (str/squote v1) "|" (str/squote v2)))
+      v1))
+  ([k v1 v2] v1))
+(defn merge-right
+  ([^Key alert-level]
+    (fn [k v1 v2]
+      (when (not= v1 v2)
+        (log/pr alert-level
+          "Values do not match for merge key"
+          (str (str/squote k) ":")
+          (str/squote v1) "|" (str/squote v2)))
+      v1))
+  ([k v1 v2] v2))
+
 (defn group [& {:keys [coll header-pred elem-pred elem-fn header-filter]}] ; probably terrible...
   (let [result
          (loop [[elem :as coll-n] coll
@@ -913,6 +1025,30 @@
            %) ; keep it the same
       tree)
     (persistent! results)))
+
+
+
+(defn- sort-parts
+  "Lazy, tail-recursive, incremental quicksort.  Works against
+   and creates partitions based on the pivot, defined as 'work'."
+  {:attribution "Joy of Clojure"}
+  [work]
+  (lazy-seq
+    (loop [[part & parts] work]
+      (if-let [[pivot & xs] (seq part)]
+        (let [smaller? #(< % pivot)]
+          (recur (list*
+                  (filter smaller? xs)
+                  pivot
+                  (remove smaller? xs)
+                  parts)))
+        (when-let [[x & parts] parts]
+          (cons x (sort-parts parts)))))))
+
+(defn sortl
+  "Lazy quick-sorting"
+  [elems]
+  (sort-parts (list elems))) 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   COLLECTIONS CREATION   }=====================================================
 ;=================================================={                          }=====================================================

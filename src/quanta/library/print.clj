@@ -18,7 +18,16 @@
 ;  so you see your first few lines of output instantaneously.
 ;  :attribution: https://github.com/brandonbloom/fipp"
 (defalias pprint pr/pprint)
-(defalias !      pr/pprint)
+(def ^:dynamic *max-length* 1000)
+(defn ! [obj]
+  (let [ct (count+ obj)]
+    (if (<= ct *max-length*)
+        (pr/pprint obj)
+        (println
+          (str "Object is too long to print ("
+               (str/sp ct "elements")
+               ").")
+          "*max-length* is set at" (str *max-length* ".")))))
 
 (defalias print-table pprint/print-table) 
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)

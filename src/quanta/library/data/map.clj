@@ -2,8 +2,7 @@
   (:refer-clojure :exclude [split-at])
   (:gen-class))
 (require
-  '[quanta.library.ns    :as ns    :refer [defalias alias-ns]]
-  '[quanta.library.type            :refer :all])
+  '[quanta.library.ns    :as ns    :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj)
 (require
   '[clojure.data.avl     :as avl]
@@ -16,7 +15,7 @@
 (defalias om map/ordered-map)
 
 (defn merge+ [map-0 & maps] ; 782.922731 ms /merge+/ vs. 1.133217 sec normal /merge/ ; 1.5 times faster! 
-  (if (editable? map-0)
+  (if (instance? clojure.lang.IEditableCollection map-0)
       (->> maps
            (reduce conj! (transient map-0))
            persistent!)

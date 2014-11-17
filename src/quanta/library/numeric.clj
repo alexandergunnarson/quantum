@@ -15,14 +15,45 @@
 
 
 ; https://github.com/clojure/math.numeric-tower/
-
+(defn sign [n]  (if (neg? n) -1 1))
 (def  nneg?     (complement neg?))
 (def  pos-int?  (fn-and integer? pos?))
 (def  nneg-int? (fn-and integer? nneg?))
 (def  neg       (partial * -1))
 (def  abs       (whenf*n neg? neg))
 (def  int-nil   (whenf*n nil? (constantly 0)))
-(defn safe-add [& args] (->> args (map int-nil) (apply +)))
+
+; TODO reduce repetitiveness here
+(defn safe+
+  ([a b]
+    (+ (int-nil a) (int-nil b)))
+  ([a b c]
+    (+ (int-nil a) (int-nil b) (int-nil c)))
+  ([a b c & args]
+    (->> (conj args c b a) (map int-nil) (apply +))))
+(defn safe*
+  ([a b]
+    (* (int-nil a) (int-nil b)))
+  ([a b c]
+    (* (int-nil a) (int-nil b) (int-nil c)))
+  ([a b c & args]
+    (->> (conj args c b a) (map int-nil) (apply *))))
+(defn safe-
+  ([a b]
+    (- (int-nil a) (int-nil b)))
+  ([a b c]
+    (- (int-nil a) (int-nil b) (int-nil c)))
+  ([a b c & args]
+    (->> (conj args c b a) (map int-nil) (apply -))))
+(defn safediv
+  ([a b]
+    (/ (int-nil a) (int-nil b)))
+  ([a b c]
+    (/ (int-nil a) (int-nil b) (int-nil c)))
+  ([a b c & args]
+    (->> (conj args c b a) (map int-nil) (apply /))))
+
+
 (defn round [num-0 & {:keys [type to] :or {to 0}}]
   (let [round-type
           (if (nil? type)

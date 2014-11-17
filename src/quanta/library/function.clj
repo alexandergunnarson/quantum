@@ -2,10 +2,17 @@
   (:require
     [quanta.library.ns       :as ns     :refer [defalias]]
     [clojure.pprint          :as pprint :refer [pprint]]
-    [quanta.library.data.map :as map    :refer [sorted-map+]])
+    [quanta.library.data.map :as map    :refer [sorted-map+]]
+    [potemkin                :as p])
   (:gen-class))
 (set! *warn-on-reflection* true)
 
+(defalias reify+             p/reify+)
+(defalias defprotocol+       p/defprotocol+)
+(defalias deftype+           p/deftype+)
+(defalias defrecord+         p/defrecord+)
+(defalias definterface+      p/definterface+)
+(defalias extend-protocol+   p/extend-protocol+)
 
 (defn- reduce-2 [func init coll] ; not actually implementing of CollReduce... so not as fast...
   (loop [ret init coll-n coll]

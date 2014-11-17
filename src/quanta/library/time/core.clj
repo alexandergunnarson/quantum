@@ -13,3 +13,9 @@
   (date-time y m d 0 0 0 0))
 (defn end-of-day [^long y ^long m ^long d]
   (date-time y m d 23 59 59 999))
+(defn on?
+  "Determines if date is on day.
+   Inclusive intervals."
+  [date y m d]
+  (within? (interval (beg-of-day y m d) (end-of-day y m d))
+    date))

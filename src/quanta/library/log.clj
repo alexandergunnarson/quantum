@@ -5,7 +5,10 @@
 
 ; alert, inspect
 (def ^:dynamic *prs* (atom #{:warn :user}))
-(def log (atom []))
+(def log  (atom []))
+(def vars (atom {}))
+(defn cache! [k v]
+  (swap! vars assoc k v))
 (defrecord LogEntry
   [^DateTime  time-stamp
    ^Keyword   type

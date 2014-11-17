@@ -5,10 +5,6 @@
   '[potemkin.types      :as t]) ; extend-protocol+ doesn't quite work...
 (ns/require-all *ns* :clj)
 
-(defalias definterface+    t/definterface+)
-(defalias defprotocol+     t/defprotocol+)
-(defalias extend-protocol+ t/extend-protocol+) ; extend-protocol+ doesn't quite work...
-
 (defmacro extend-protocol-type
   [protocol prot-type & methods]
   `(extend-protocol ~protocol ~prot-type ~@methods))

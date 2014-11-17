@@ -121,7 +121,7 @@
                "/")
         drive (case sys/*os*
                 :windows
-                (whenc (getr+ root 0 (whenc (index-of+ "\\" root) (eq? -1) 0))
+                (whenc (getr+ root 0 (whenc (index-of+ root "\\") (eq? -1) 0))
                        empty?
                   "C:\\") ; default drive
                 "/")
@@ -130,7 +130,7 @@
                (constantly (up-dir this-dir))
                identity)
         proj-path-f 
-          (if (= 0 (index-of+ drive proj-path-0))
+          (if (= 0 (index-of+ proj-path-0 drive))
               (path proj-path-0)
               (path drive proj-path-0))
         home    (System/getProperty "user.home")
@@ -157,9 +157,9 @@
 (defn parent [dir]
   (-> dir coll-if parse-dirs-keys up-dir clj-io/as-file))
 (defn siblings [dir]
-  (-> dir coll-if parse-dirs-keys parent file-seq rest))
+  (-> dir coll-if parse-dirs-keys parent file-seq vec+ popl+))
 (defn children [dir]
-  (-> dir coll-if parse-dirs-keys clj-io/as-file file-seq rest))
+  (-> dir coll-if parse-dirs-keys clj-io/as-file file-seq vec+ popl+))
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{ FILES AND I/O  }=========================================================
 ;========================================================{                }==========================================================
