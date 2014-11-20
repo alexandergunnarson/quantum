@@ -1,5 +1,7 @@
 (ns quanta.library.info)
 
+; Mechanical Turk - people test your interface!! For a certain fee per person
+
 ; Each data type created once within 1000000 |reduce+|s
 ; Vector:     268 ms
 ; Map-entry:  211 ms
@@ -38,3 +40,42 @@
 ; 10000000   3.81    |  3.88   | ...         | ...
 ; 100000000 40.0     | 40.8    | 15961       | Didn't even finish...
 ; Pretty much exactly the same for records and maps.
+
+; 11 ms
+(loop [ret [] init (range 0 100000)]
+  (if (empty? init)
+      ret
+      (recur (conj ret (first init)) (rest init))))
+; 8.19 ms
+(reduce+ ; reduction
+  (fn [ret elem]
+    (conj ret elem))
+  []
+  (range 0 100000))
+; 5.5 ms
+; "In the case of concatenating large vectors,
+; the use of transients is ~4.5 times faster than the
+; purely functional approach." - Joy of Clojure
+(persistent!
+  (reduce+ 
+    (fn [ret elem]
+      (conj! ret elem))
+    (transient []) ; transience
+    (range 0 100000)))
+; 3.68 ms
+(persistent!
+  (reduce+ 
+    (fn [ret elem]
+      (conj! ret elem))
+    (transient [])
+    (range+ 0 100000))) ; non-laziness
+; 3.8 ms
+(into+ [] (range+ 0 100000))
+; 5.28 ms
+(let [init (->> (range+ 0 100000) (into+ []))] ; local variable
+  (persistent!
+    (reduce+ 
+      (fn [ret elem]
+        (conj! ret elem))
+      (transient [])
+      init)))

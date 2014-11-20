@@ -85,7 +85,7 @@
        (fold-sectionable coll pool n combinef reducef
                          reduce-mode section count))
     ([coll pool n combinef reducef reduce-mode section count]
-       (let [cnt    (count* coll)
+       (let [cnt    (count coll)
              reduce (reduce-from-mode reduce-mode)
              n (max 1 n)]
          (cond
@@ -136,13 +136,13 @@
       (fold-sectionable coll pool n combinef reducef reduce-mode))
     ISectionable
     (-section [this new-begin new-end]
-      (let [l (count* this)
+      (let [l (count this)
             new-end (prepare-ordered-section new-begin new-end l)]
         (if (and (zero? new-begin) (== new-end l))
           this
           (->FoldableZip (map #(section % new-begin new-end) colls)))))
     ICounted
-    (-count [this] (apply min (map count* colls)))))
+    (-count [this] (apply min (map count colls)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         REDUCERS         }=====================================================
 ;=================================================={     reducer, folder      }=====================================================
@@ -303,7 +303,6 @@
 ; (reduce +    [1 2 3 4]) ; 10 ; (+ (+ (+ 1 2) 3) 4)
 ; (reduce + 15 [1 2 3 4]) ; 25 ; Reduce also takes an optional initial value
 
-; (in-ns 'quanta.library.reducers)
 (defn reduce+
   "Like core/reduce except:
      When init is not provided, (f) is used.
@@ -323,19 +322,18 @@
          (clojure.core.protocols/coll-reduce coll f init))))
 (defn reducei+
   "|reduce|, indexed"
-  {:todo ["Change atom to volatile"]}
   [^AFunction f ret coll]
-  (let [n (atom -1)]
+  (let [n (volatile! -1)]
     (reduce+
       (fn [ret-n elem]
-        (swap! n inc)
+        (vswap! n inc)
         (f ret-n elem @n))
       ret coll)))
 (defn reducem+
   "Requires only one argument for preceding functions in its call chain."
   {:attribution "Alex Gunnarson"
    :performance "9.94 ms vs. 17.02 ms for 10000 calls to (into+ {}) for small collections ;
-           But this could merely reflect the unoptimized nature of |into+|."}
+           This is because the |transient| function deals a performance hit."}
   [coll]
   (->> coll force
        (reduce+
@@ -397,7 +395,7 @@
   anything foldable is sufficient."
   ^{:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
   [halving-fn coll n combinef reducef]
-  (let [size (count* coll)]
+  (let [size (count coll)]
     (cond
       (= 0 size)
       (combinef)
@@ -531,7 +529,7 @@
     delay? (compr force (if*n fn?    call  identity))
     :else identity))
 (def fold-size
-  (fn-> count* dec  
+  (fn-> count dec  
         (quot (.. Runtime getRuntime availableProcessors))
         inc))
 (defn orig-folder-coll [coll-0]
@@ -987,7 +985,7 @@
          (clojure.core.protocols/coll-reduce
            coll
            (fn [^java.util.Deque q x]
-             (when (= (count* q) n)
+             (when (= (count q) n)
                (.pop q))
              (.add q x)
              q) (java.util.ArrayDeque. (int n)))
@@ -1119,7 +1117,7 @@
   {:attribution "Alex Gunnarson"}
   [coll]
   (let [ind-n   (atom 0) ; This probably makes it single-threaded only :/
-        coll-ct (-> coll count* (/ 2) long)]
+        coll-ct (-> coll count (/ 2) long)]
     (folder+ coll
       (fn [f1]
         (rfn [f1 k]
@@ -1131,7 +1129,7 @@
                     (f1 (assoc! ret (dec @ind-n) [(-> ret (get (dec @ind-n)) (get 0)) v]) k nil)))))))))
 (defn zipvec+
   ([vec-0]
-    (->> vec-0 fold-pre zipvec* (take+ (/ (count* vec-0) 2))))
+    (->> vec-0 fold-pre zipvec* (take+ (/ (count vec-0) 2))))
   ([vec-0 & vecs]
     (->> vecs (apply map vector vec-0) fold+)))
 ;___________________________________________________________________________________________________________________________________
@@ -1186,7 +1184,7 @@
                     [kv-args kv-bind] 
                     (if kv-able
                       [(take 2 (concat bind (repeat `_#)))
-                       (if (< 2 (count* bind)) 
+                       (if (< 2 (count bind)) 
                          [(subvec bind 2) nil]
                          [])]
                       `[[k# v#] [~bind (map-entry k# v#)]])

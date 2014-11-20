@@ -65,6 +65,35 @@
   [coll & fns]
   ((apply juxt fns) coll))
 
+(defn comparator-extreme-of
+  "For compare-fns that don't have enough arity to do, say,
+   |(apply time/latest [date1 date2 date3])|.
+
+   Gets the most \"extreme\" element in collection @coll,
+   \"extreme\" being defined on the @compare-fn.
+
+   In the case of |time/latest|, it would return the latest
+   DateTime in a collection.
+
+   In the case of |>| (greater than), it would return the
+   greatest element in the collection:
+
+   (comparator-extreme-of [1 2 3] (fn [a b] (if (> a b) a b)) )
+   :: 3
+
+   |(fn [a b] (if (> a b) a b))| is the same thing as
+   |(choice-comparator >)|."
+  {:todo ["Rename this function."
+          "Possibly belongs in a different namespace"]}
+  [coll ^Fn compare-fn]
+  (reducei+
+    (fn [ret elem n]
+      (if (= n 0)
+          elem
+          (compare-fn ret elem)))
+    nil
+    coll))
+
 ; TODO: http://clojure.org/cheatsheet (go through)
 ; (require '[taoensso.encore :as lib+ :refer
 ;   [swap-in! reset-in!
@@ -160,18 +189,18 @@
   ^{:deprecated  true
     :performance "Twice as slow as |nth|"}
   [coll n]
-  (let [nn (atom 0)]
+  (let [nn (volatile! 0)]
     (->> coll
          (reduce+
            (fn
              ([ret elem]
               (if (= n @nn)
                   (reduced elem)
-                  (do (swap! nn inc) ret)))
+                  (do (vswap! nn inc) ret)))
              ([ret k v]
                (if (= n @nn)
                    (reduced [k v])
-                   (do (swap! nn inc) ret))))
+                   (do (vswap! nn inc) ret))))
            []))))
 (defn key+
   "Like |key| but more robust."
@@ -566,23 +595,26 @@
             (range (count+ coll-0) (inc k)))))
       coll-0))
 (defn assoc+
-  {:todo ["Protocolize"
+  {:todo ["Protocolize on IEditableCollection"
           "Probably has performance issues"]}
   ([coll-0 k v]
-    (ifn (extend-coll-to coll-0 k) editable?
-         (fn-> transient (assoc! k v) persistent!)
-         (f*n  assoc k v)))
+    (assoc (extend-coll-to coll-0 k) k v))
+    ; once probably gives no performance benefit from transience
   ([coll-0 k v & kvs-0]
     (let [edit?    (editable? coll-0)
           trans-fn (if edit? transient   identity)
           pers-fn  (if edit? persistent! identity)
           assoc-fn (if edit? assoc!      assoc)]
-      (loop [kvs-n kvs-0 coll-f (-> coll-0 trans-fn (extend-coll-to k) (assoc-fn k v))]
+      (loop [kvs-n  kvs-0
+             coll-f (-> coll-0 trans-fn
+                        (extend-coll-to k)
+                        (assoc-fn k v))]
         (if (empty? kvs-n)
             (pers-fn coll-f)
             (recur (-> kvs-n rest rest)
                    (let [k-n (first kvs-n)]
-                     (-> coll-f (extend-coll-to k-n) (assoc-fn k-n (second kvs-n))))))))))
+                     (-> coll-f (extend-coll-to k-n)
+                         (assoc-fn k-n (second kvs-n))))))))))
 (defn update+
   "Updates the value in an associative data structure @coll associated with key @k
    by applying the function @f to the existing value."
@@ -621,6 +653,11 @@
         (assoc+ kv 1 (f (get kv 1))))
       ([k v]
         (map-entry k (f v))))))
+(defn mapmux
+  ([kv] kv)
+  ([k v] (map-entry k v)))
+(defn record->map [rec]
+  (into+ {} rec))
 ;--------------------------------------------------{        UPDATE-IN         }-----------------------------------------------------
 (defn update-in!
   "'Updates' a value in a nested associative structure, where ks is a sequence of keys and

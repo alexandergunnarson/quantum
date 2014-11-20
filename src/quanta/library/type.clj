@@ -10,6 +10,7 @@
 ; should include typecasting (/cast/)
 
 (def  double?      (partial instance? Double))
+(def  bigint?	   (partial instance? clojure.lang.BigInt))
 
 (def  ShortArray   (type (short-array   0)))
 (def  LongArray    (type (long-array    0)))

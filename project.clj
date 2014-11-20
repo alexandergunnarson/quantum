@@ -18,7 +18,7 @@
      [potemkin                          "0.3.11"]
      ; IO      
      [commons-io/commons-io             "2.4"  ] ; writing byte arrays to file and such
-     [com.taoensso/nippy                "2.6.3"] ; data serialization
+     [com.taoensso/nippy                "2.7.0"] ; data serialization
      [iota                              "1.1.2"] ; fast/efficient string IO manipulation
      ; UTIL.TRACE      
      [org.clojure/tools.trace           "0.7.6"]

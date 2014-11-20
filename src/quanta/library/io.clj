@@ -84,7 +84,7 @@
   (apply str/join-once *os-separator* parts))
 (defn up-dir [dir & [separator]]
   (let [sep-f (or separator *os-separator*)
-        dir-f (ifn dir (compr last+ (eq? sep-f)) pop+ identity)]
+        dir-f (whenf dir (compr last+ (eq? sep-f)) popr+)]
     (str/subs+ dir-f 0 (inc (last-index-of+ dir-f sep-f)))))
 (defn file-name-from-path [path-0]
   (let [path-f (str path-0)]
@@ -109,7 +109,7 @@
         (count file-name-f)))))
 (defn folder? [^String path-0]
   (-> path-0 file-ext nil?))
-(def dirs
+(def  dirs
   (let [test-dir
           (try+ (-> (clj-io/resource "") url-decode
                    (str/replace #"^file:/" "/")
@@ -242,6 +242,7 @@
             #(write-try (inc n) false file-name-f directory-f
                file-path-f write-method data-formatted file-type)))))
 (defn write! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
+  {:todo ["apparently have problems with using the :directory key... weird"]}
   [& {file-name :name file-path :path
       :keys [data directory file-type
              write-method overwrite formatting-func]
@@ -298,6 +299,8 @@
             (println directory-f)
       (trampoline write-try 1 false
         file-name-f directory-f file-path-f write-method data-formatted file-type))))
+
+
 (defn delete! ; TODO: Implement recycle bin functionality for Windows
   [& {file-name :name file-path :path
       :keys [directory silently?]
@@ -330,10 +333,12 @@
         (println "WARNING: File does not exist. Failed to delete:" file-path-f))))
 (defn read
   [& {file-name :name file-path :path
-      :keys [directory file-type read-method]
+      :keys [directory file-type read-method class-import]
       :or   {directory   :resources
              read-method :unserialize} ; :uncompress is automatic
       :as options}] ; :string??
+  (when (fn? class-import)
+    (class-import))
   (let [directory-f (-> directory coll-if parse-dirs-keys)
         file-path-f
           (or (-> file-path coll-if parse-dirs-keys (whenc empty? nil))

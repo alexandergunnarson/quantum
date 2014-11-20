@@ -130,8 +130,12 @@
 (defn compr [& args]
   (apply comp (reverse args))) ; is reverse wise?
 (defn fn*  [& args]       (apply partial args)) ; apparently defalias causes problems here... or something... ? def, too
-(defn f*n  [func & args] #(apply func %  args))
-(defn f**n [func & args] #(apply func %& args))
+(defn f*n  [func & args]
+  (fn [arg-inner] ; macros to reduce on possible |apply| overhead
+    (apply func arg-inner args)))
+(defn f**n [func & args]
+  (fn [& args-inner]
+    (apply func (concat args-inner args))))
 (defn *fn [& args] (f*n apply args))
 (defn fn-bi [arg] #(arg %1 %2))
 (defn unary [pred] (partial f*n pred))

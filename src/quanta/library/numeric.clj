@@ -7,6 +7,7 @@
   (require
     '[quanta.library.logic    :as log  :refer :all]
     '[quanta.library.function :as func :refer :all]
+    '[quanta.library.type              :refer :all]
     '[clojure.core.reducers   :as r])
 
 ; (require '[taoensso.encore :as lib+ :refer
@@ -23,8 +24,14 @@
 (def  abs       (whenf*n neg? neg))
 (def  int-nil   (whenf*n nil? (constantly 0)))
 
+(defn rationalize+ [n]
+  (-> n rationalize
+      (whenf bigint? long)))
+
 ; TODO reduce repetitiveness here
 (defn safe+
+  ([a]
+    (int-nil a))
   ([a b]
     (+ (int-nil a) (int-nil b)))
   ([a b c]
@@ -32,6 +39,8 @@
   ([a b c & args]
     (->> (conj args c b a) (map int-nil) (apply +))))
 (defn safe*
+  ([a]
+    (int-nil a))
   ([a b]
     (* (int-nil a) (int-nil b)))
   ([a b c]
@@ -39,6 +48,8 @@
   ([a b c & args]
     (->> (conj args c b a) (map int-nil) (apply *))))
 (defn safe-
+  ([a]
+    (neg (int-nil a)))
   ([a b]
     (- (int-nil a) (int-nil b)))
   ([a b c]
@@ -53,8 +64,10 @@
   ([a b c & args]
     (->> (conj args c b a) (map int-nil) (apply /))))
 
-
-(defn round [num-0 & {:keys [type to] :or {to 0}}]
+(defn round
+  "Probably deprecated; use:
+   |(with-precision <decimal-places> (bigdec <number>))|"
+  [num-0 & {:keys [type to] :or {to 0}}]
   (let [round-type
           (if (nil? type)
               (. BigDecimal ROUND_HALF_UP)
@@ -67,7 +80,7 @@
                 :half-down   (. BigDecimal ROUND_HALF_DOWN)
                 :down        (. BigDecimal ROUND_DOWN)
                 :floor       (. BigDecimal ROUND_FLOOR)))]
-    (.setScale ^BigDecimal (bigdec num-0) ^java.lang.Integer to round-type)))
+    (.setScale ^BigDecimal (bigdec num-0) ^Integer to round-type)))
 ; (defn round [num- round-type]
 ;   (if (ratio? num-)
 ;       (if (= round-type :up)

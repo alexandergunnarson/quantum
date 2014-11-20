@@ -9,13 +9,30 @@
   (.format (. java.time.format.DateTimeFormatter ofPattern "MM-dd-yyyy") (. java.time.LocalDateTime now)))
 (defn now-formatted [date-format]
   (.format (. java.time.format.DateTimeFormatter ofPattern date-format) (. java.time.LocalDateTime now)))
-(defn beg-of-day [^long y ^long m ^long d]
-  (date-time y m d 0 0 0 0))
-(defn end-of-day [^long y ^long m ^long d]
-  (date-time y m d 23 59 59 999))
+(defn ymd [date]
+  (vector
+    (year  date)
+    (month date)
+    (day   date)))
+(defn beg-of-day
+  ([date]
+    (apply beg-of-day (ymd date)))
+  ([^long y ^long m ^long d]
+    (date-time y m d 0 0 0 0)))
+(defn end-of-day
+  ([date]
+    (apply end-of-day (ymd date)))
+  ([^long y ^long m ^long d]
+    (date-time y m d 23 59 59 999)))
+(defn whole-day
+  ([date]
+    (apply whole-day (ymd date)))
+  ([^long y ^long m ^long d]
+    (interval (beg-of-day y m d) (end-of-day y m d))))
 (defn on?
   "Determines if date is on day.
-   Inclusive intervals."
-  [date y m d]
-  (within? (interval (beg-of-day y m d) (end-of-day y m d))
-    date))
+   Inclusive of intervals."
+  ([date on-date]
+    (apply on? date (ymd on-date)))
+  ([date y m d]
+    (within? (whole-day y m d)   date)))

@@ -6,6 +6,23 @@
 
 (import '(clojure.lang Keyword Var Namespace))
 
+(defmacro local-context
+  {:attribution "The Joy of Clojure, 2nd ed."}
+  []
+  (let [symbols (keys &env)]
+    (zipmap
+      (map (fn [sym] `(quote ~sym))
+              symbols)
+      symbols)))
+
+(defn contextual-eval
+  "Restricts the use of specific bindings to |eval|."
+  {:attribution "The Joy of Clojure, 2nd ed."}
+  [context expr]
+  (eval
+   `(let [~@(mapcat (fn [[k v]] [k `'~v]) context)]
+      ~expr)))
+
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
    in the current namespace.
@@ -107,6 +124,7 @@
 (defrecord Num     [])
 (defrecord Int     [])
 (defrecord Decimal [])
+(defrecord Bool    [])
 
 (defn ns-exclude! [^Namespace curr-ns & syms]
   (binding [*ns* curr-ns]
@@ -128,7 +146,8 @@
             LSeq  
             Key
             Fn
-            Num Int Decimal))
+            Num Int Decimal
+            Bool))
       (import
         '(clojure.lang
             Namespace
@@ -142,7 +161,8 @@
             APersistentMap    PersistentArrayMap PersistentHashMap
             APersistentSet
             PersistentQueue
-            LazySeq)
+            LazySeq
+            Ratio)
         '(clojure.core Vec)
         'java.util.regex.Pattern
         '(java.util ArrayList)
@@ -180,8 +200,8 @@
       '[quanta.library.time.format :as time-form                                 ]
       '[quanta.library.time.local  :as time-loc                                  ]
       '[quanta.library.util.bench  :as bench       :refer [bench]                ]
-      '[quanta.library.util.debug  :as debug       :refer [?]                    ]
-      '[quanta.library.util.sh     :as sh]
+      '[quanta.library.util.debug  :as debug       :refer [? break]              ]
+      '[quanta.library.util.sh     :as sh                                        ]
       '[quanta.library.data.queue  :as q           :refer [queue]                ]
       '[quanta.library.thread                      :refer :all                   ]
       '[quanta.library.error       :as err         :refer :all                   ]

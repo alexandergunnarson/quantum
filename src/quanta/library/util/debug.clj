@@ -1,14 +1,50 @@
 (ns quanta.library.util.debug
   (:require
-    [quanta.library.print :as pr      :refer [!]]
-    [quanta.library.logic :as log     :refer [nnil?]]
-    [clojure.pprint       :as pprint]
+    [quanta.library.print :as pr      :refer [!]                ]
+    [quanta.library.logic :as log     :refer [nnil?]            ]
+    [clojure.pprint       :as pprint                            ]
     [clojure.stacktrace   :as trace   :refer [print-cause-trace]]
-    [clojure.string       :as clj-str :refer [split-lines trim]])
+    [clojure.string       :as clj-str :refer [split-lines trim] ])
   )
  ; (:import mikera.cljutils.Error)
 ; (require '[taoensso.encore :as lib+ :refer
 ;   [throwable? exception?]])
+
+(defn readr
+  {:attribution "The Joy of Clojure, 2nd ed."}
+  [prompt exit-code]
+  (let [input (clojure.main/repl-read prompt exit-code)]
+    (if (= input :next) ; perhaps non-namespace qualified is a bad idea
+        exit-code
+        input)))
+(defn debug
+  "A debug REPL, courtesy of The Joy of Clojure.
+
+   Type (debug) to start, and :next to go to the next breakpoint.
+   Apparently there is no 'stop execution'..."
+  []
+  (readr #(print "invisible=> ") ::exit)) ; perhaps non-namespace qualified is a bad idea
+
+(defmacro break
+  "Stops execution and starts a debug REPL. When the debug REPL is
+   terminated by the ::exit namespaced-qualified keyword, execution
+   returns to just after the breakpoint."
+  {:attribution  "The Joy of Clojure, 2nd ed."
+   :contributors ["Alex Gunnarson"]}
+  ([]
+    `(clojure.main/repl
+      :prompt #(print "debug=> ")
+      :read readr
+      :eval (partial quanta.library.ns/contextual-eval
+              (quanta.library.ns/local-context))))
+  ([& args]
+    (apply println args)
+    (break)))
+; (defn break->>
+;   "|break| for use with threading macros."
+;   ([threading-macro-object]
+;    (break)
+;    threading-macro-object))
 
 ; (defmacro error
 ;   "Throws an error with the provided message(s). This is a macro in order to try and ensure the 
