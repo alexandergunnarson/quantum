@@ -204,6 +204,7 @@
 (defn with-pr  [obj]      (do (pprint obj)  obj))
 (defn with-msg [msg  obj] (do (println msg) obj))
 (defn with     [expr obj] (do expr          obj))
+(defn withf    [func obj] (do (func obj)    obj))
 
 (defmacro extend-protocol-for-all [prot classes & body]
   `(doseq [class-n# ~classes]

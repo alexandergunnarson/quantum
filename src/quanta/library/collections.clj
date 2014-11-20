@@ -202,13 +202,17 @@
                    (reduced [k v])
                    (do (vswap! nn inc) ret))))
            []))))
+
 (defn key+
   "Like |key| but more robust."
-  ^{:attribution "Alex Gunnarson"}
+  ^{:attribution "Alex Gunnarson"
+    :todo ["Determine which objects are |key| able, 
+            i.e., are associative."]}
   ([obj] 
     (try+
       (ifn obj vector? first+ key)
-      (catch Object _ (println "Error in key+ with obj:" obj) nil)))
+      (catch Object _
+        (println "Error in key+ with obj:" (class obj)) nil)))
   ([k v] k)) ; For use with kv-reduce
 (defn val+
   "Like |val| but more robust."

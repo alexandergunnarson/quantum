@@ -14,8 +14,6 @@
 (defn methods-names [object]
   (sort ; alphabetizes
       (map :name (:members (reflect object)))))
-(defn pr-methods [object]
-  (! (methods-names object)))
 
 ; (def my-method-fetch
 ;   (memoize ; oh, so it's basically a function, but it just memoizes within

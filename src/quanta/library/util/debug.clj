@@ -38,8 +38,8 @@
       :eval (partial quanta.library.ns/contextual-eval
               (quanta.library.ns/local-context))))
   ([& args]
-    (apply println args)
-    (break)))
+    `(do (println ~@args)
+         (break))))
 ; (defn break->>
 ;   "|break| for use with threading macros."
 ;   ([threading-macro-object]

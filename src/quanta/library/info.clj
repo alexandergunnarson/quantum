@@ -1,5 +1,7 @@
 (ns quanta.library.info)
 
+; Check back at the following for more library goodies:
+
 ; Mechanical Turk - people test your interface!! For a certain fee per person
 
 ; Each data type created once within 1000000 |reduce+|s

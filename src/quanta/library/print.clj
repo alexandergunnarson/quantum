@@ -108,3 +108,50 @@
                      (apply str (repeat col-width header-underline))))))]
     (pr-headers) 
     (pr-rows (rest+ indexed-table))))
+
+(defn representative-coll
+  "Gets the first element of every collection, until it returns empty.
+  
+   Useful for printing out representative samples of large collections
+   which would be undesirable to print in whole."
+  [source-0]
+  (if ((fn-or (fn-not coll?) empty?) source-0)
+      source-0
+      (loop [source-n   source-0
+             assoc-keys []
+             ret        nil]
+        (if ((fn-or (fn-not coll?) empty?) source-n)
+            ret
+            (let [ret-n+1-0
+                    (condf source-n
+                      map?    (fn->> first (apply hash-map))
+                      vector? (fn->> first vector))
+                  assoc-key-n+1
+                    (condf ret-n+1-0
+                      map?    fkey+
+                      vector? (constantly 0))
+                  assoc-keys-n+1
+                    (conj assoc-keys assoc-key-n+1)
+                  ret-n+1
+                    (if (nil? ret)
+                        ret-n+1-0
+                        (assoc-in+ ret assoc-keys ret-n+1-0))
+                  source-n+1
+                    (condf ret-n+1-0
+                      map?    fval+
+                      vector? first)]
+              (recur source-n+1
+                     assoc-keys-n+1
+                     ret-n+1))))))  
+
+(defn !* [obj] (-> obj representative-coll !))
+
+(defmacro pr-attrs
+  {:todo ["Protocolize"]}
+  [obj]
+  `(do (println "Expr:"  (quote ~obj))
+       (println "Class:" (class ~obj))
+       (println "Keys:"  (ifn ~obj coll? keys+ (constantly nil)))
+       (println "Object: ") (-> ~obj pr/representative-coll !)
+       (println)))
+

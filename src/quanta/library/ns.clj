@@ -7,7 +7,9 @@
 (import '(clojure.lang Keyword Var Namespace))
 
 (defmacro local-context
-  {:attribution "The Joy of Clojure, 2nd ed."}
+  {:attribution "The Joy of Clojure, 2nd ed."
+   :todo ["'IOException: Pushback buffer overflow' on certain
+            very large data structures"]}
   []
   (let [symbols (keys &env)]
     (zipmap
@@ -17,12 +19,17 @@
 
 (defn contextual-eval
   "Restricts the use of specific bindings to |eval|."
-  {:attribution "The Joy of Clojure, 2nd ed."}
+  {:attribution "The Joy of Clojure, 2nd ed."
+   :todo ["'IOException: Pushback buffer overflow' on certain
+            very large data structures"]}
   [context expr]
   (eval
-   `(let [~@(mapcat (fn [[k v]] [k `'~v]) context)]
+   `(let [~@(mapcat
+              (fn [[k v]]
+                (try [k `'~v]
+                  (catch java.io.IOException _ [k "var too large to show"])))
+              context)]
       ~expr)))
-
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
    in the current namespace.
@@ -183,7 +190,7 @@
       '[quanta.library.macros      :as macros      :refer :all                   ]
       '[quanta.library.ns          :as ns          :refer [defalias source defs] ]
       '[quanta.library.numeric     :as num                                       ]
-      '[quanta.library.print       :as pr          :refer [! pprint]             ]
+      '[quanta.library.print       :as pr          :refer [! pprint pr-attrs !* ]]
       '[quanta.library.string      :as str         :refer [substring?]           ]
       '[quanta.library.system      :as sys                                       ]
       '[quanta.library.thread      :as thread                                    ]  

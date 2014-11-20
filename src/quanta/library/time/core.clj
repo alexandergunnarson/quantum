@@ -36,3 +36,14 @@
     (apply on? date (ymd on-date)))
   ([date y m d]
     (within? (whole-day y m d)   date)))
+
+(defmethod print-dup java.util.Date
+  ^{:attribution "clojuredocs.org, |print-dup|"}
+  [o w]
+  (print-ctor o (fn [o w] (print-dup (.getTime  o) w)) w)) 
+(defmethod print-dup org.joda.time.DateTime
+  ^{:todo ["Fix this... only prints out current date"]}
+  [d stream]
+  (.write stream "#=(list \"A date should go here\" ")
+  (.write stream "")
+  (.write stream ")"))
