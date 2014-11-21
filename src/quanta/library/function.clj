@@ -27,6 +27,15 @@
 ; (count (filter #(.isDirectory %)   files)) => 68
 ; https://github.com/technomancy/robert-hooke ; composable, extensible functions
 (defalias jfn memfn)
+
+(defmacro mfn
+  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
+   Originally named |functionize| by mikera."
+  {:attribution "mikera, http://stackoverflow.com/questions/9273333/in-clojure-how-to-apply-a-macro-to-a-list/9273560#9273560"}
+  [macro]
+  `(fn [& args#]
+     (eval (cons '~macro args#))))
+
 (defn while-recur [obj-0 pred func]
   (loop [obj obj-0]
       (if ((complement pred) obj)
@@ -34,7 +43,7 @@
           (recur (func obj)))))
 (defmacro dos [args]
   `(do ~@args))
-(defmacro ^:private repeatedly-into
+(defmacro repeatedly-into
   [coll n & body]
   `(let [coll# ~coll
          n#    ~n]

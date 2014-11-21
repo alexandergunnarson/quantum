@@ -7,6 +7,7 @@
   '[quanta.library.collections           :refer :all]
   '[quanta.library.function              :refer :all]
   '[quanta.library.logic                 :refer :all]
+  '[quanta.library.type                  :refer :all]
   '[quanta.library.numeric      :as num]
   '[quanta.library.string       :as str]
   '[quanta.library.data.xml     :as xml]
@@ -124,12 +125,19 @@
             ret
             (let [ret-n+1-0
                     (condf source-n
+                      record? (fn [source-n*]
+                                (let [^Fn constructor-fn
+                                        (get-map-constructor source-n*)]
+                                  (->> source-n* first (apply hash-map)
+                                       constructor-fn)))
                       map?    (fn->> first (apply hash-map))
-                      vector? (fn->> first vector))
+                      vector? (fn->> first vector)
+                      lseq?   (fn->> first vector)) ; is this a good decision?
                   assoc-key-n+1
                     (condf ret-n+1-0
                       map?    fkey+
-                      vector? (constantly 0))
+                      vector? (constantly 0)
+                      lseq?   (constantly 0))
                   assoc-keys-n+1
                     (conj assoc-keys assoc-key-n+1)
                   ret-n+1
@@ -139,7 +147,8 @@
                   source-n+1
                     (condf ret-n+1-0
                       map?    fval+
-                      vector? first)]
+                      vector? first
+                      lseq?   first)]
               (recur source-n+1
                      assoc-keys-n+1
                      ret-n+1))))))  
@@ -147,11 +156,18 @@
 (defn !* [obj] (-> obj representative-coll !))
 
 (defmacro pr-attrs
-  {:todo ["Protocolize"]}
+  "Prints the attributes of a given object/expression.
+   These attributes include the object/expression that was evaluated
+   (the text itself), the class, its keys (if applicable), and the
+   representative value of the object/expression.
+
+   Representative value means the recursive first item in a collection.
+   This eliminates, or at least greatly diminishes, massive and
+   tiring pauses spent printing out the result of an object/expression."
   [obj]
-  `(do (println "Expr:"  (quote ~obj))
-       (println "Class:" (class ~obj))
-       (println "Keys:"  (ifn ~obj coll? keys+ (constantly nil)))
-       (println "Object: ") (-> ~obj pr/representative-coll !)
+  `(do (println "Expr:"     (quote ~obj))
+       (println "Class:"    (class ~obj))
+       (println "Keys:"     (ifn   ~obj coll? keys+ (constantly nil)))
+       (println "Repr. object: ") (->    ~obj quanta.library.print/representative-coll !)
        (println)))
 

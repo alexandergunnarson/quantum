@@ -32,6 +32,21 @@
 ; a better merge?
 ; a better merge-with?
 
+(defn get-map-constructor
+  "Gets a record's map-constructor function via its class name."
+  [rec]
+  (let [^String class-name-0
+          (if (class? rec)
+              (-> rec str)
+              (-> rec class str))
+        ^String class-name
+          (getr+ class-name-0
+            (-> class-name-0 (last-index-of+ ".") inc)
+            (-> class-name-0 count+))
+        ^Fn map-constructor-fn
+          (->> class-name (str "map->") symbol eval)]
+    map-constructor-fn))
+
 (defn ffilter
   "Returns the first result of a |filter| operation.
    Uses lazy |filter| so as to do it in the fastest possible way."

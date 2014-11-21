@@ -9,6 +9,10 @@
 (def vars (atom {}))
 (defn cache! [k v]
   (swap! vars assoc k v))
+(def errors (atom []))
+(defn error [throw-context]
+  (swap! errors conj
+    (update throw-context :stack-trace vec)))
 (defrecord LogEntry
   [^DateTime  time-stamp
    ^Keyword   type

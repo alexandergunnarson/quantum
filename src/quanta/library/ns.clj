@@ -132,8 +132,9 @@
 (defrecord Int     [])
 (defrecord Decimal [])
 (defrecord Bool    [])
+(defrecord Record  [])
 
-(defn ns-exclude! [^Namespace curr-ns & syms]
+(defn ns-exclude [^Namespace curr-ns & syms]
   (binding [*ns* curr-ns]
     (doseq [sym syms]
       (ns-unmap (ns-name curr-ns) sym))))

@@ -18,7 +18,7 @@
      [potemkin                          "0.3.11"]
      ; IO      
      [commons-io/commons-io             "2.4"  ] ; writing byte arrays to file and such
-     [com.taoensso/nippy                "2.7.0"] ; data serialization
+     [com.taoensso/nippy                "2.7.0-alpha1"] ; data serialization
      [iota                              "1.1.2"] ; fast/efficient string IO manipulation
      ; UTIL.TRACE      
      [org.clojure/tools.trace           "0.7.6"]
@@ -36,7 +36,7 @@
      [oauth-clj                         "0.1.12"]
      [net.sourceforge.htmlunit/htmlunit "2.15"] ; for some reason, retrieves 2.14....
      ; THREADING, ASYNC, CONCURRENCY
-     [org.clojure/core.async            "0.1.303.0-886421-alpha"]
+     [org.clojure/core.async            "0.1.346.0-17112a-alpha"]
      ; IO
      [iota                              "1.1.2"] ; fast/efficient string IO manipulation
      ; NUMERIC                   

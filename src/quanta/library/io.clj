@@ -28,6 +28,7 @@
   '[quanta.library.system      :as sys]
   '[quanta.library.error       :as err  :refer [try+ throw+]]
   '[taoensso.nippy             :as nippy]
+  '[quanta.library.io.serialization :as io-ser]
   '[iota                       :as iota])
 
 ; http://www.brandonbloom.name/blog/2013/06/26/slurp-and-spit/
@@ -507,3 +508,5 @@
     (println "---Creating zip file")
     (writeZipFile directoryToZip fileList)
     (println "---Done")))
+
+

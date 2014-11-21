@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>20c97da7d704c5cc2398038f02c8bd765247485d
+    <tag>e2175dc84c843a177dc7ccffee2d4e6dd003f751
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -86,7 +86,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>nippy</artifactId>
-      <version>2.7.0</version>
+      <version>2.7.0-alpha1</version>
     </dependency>
     <dependency>
       <groupId>iota</groupId>
@@ -141,7 +141,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
-      <version>0.1.303.0-886421-alpha</version>
+      <version>0.1.346.0-17112a-alpha</version>
     </dependency>
     <dependency>
       <groupId>primitive-math</groupId>

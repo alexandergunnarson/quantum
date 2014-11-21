@@ -2,6 +2,13 @@
 
 ; Check back at the following for more library goodies:
 
+; ==== TRAMPOLINE ====
+; (defn abcde [n]         6)
+; (defn abcd  [n] #(abcde 5))
+; (defn abc   [n] #(abcd  4))
+; (trampoline abc 3) ; => 6
+; ====================
+
 ; Mechanical Turk - people test your interface!! For a certain fee per person
 
 ; Each data type created once within 1000000 |reduce+|s
