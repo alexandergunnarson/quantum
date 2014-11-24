@@ -28,6 +28,21 @@
 (alias-ns 'quanta.library.collections.core)
 (alias-ns 'quanta.library.reducers)
 (defalias merge+ map/merge+)
+; TODO these aliases are just bandaids
+(defalias redm  reducem+)
+(defalias redv  fold+) ; really, only certain arities
+(defalias fold  fold+) ; really, only certain arities
+(defalias foldm foldm+)
+(defalias foldv foldp+)
+
+(defn ^Set abs-difference 
+  "Returns the absolute difference between a and b.
+   That is, (a diff b) union (b diff a)."
+  {:todo "Probably a better name for this."}
+  [a b]
+  (set/union
+    (set/difference a b)
+    (set/difference b a)))
 
 ; a better merge?
 ; a better merge-with?
@@ -368,9 +383,9 @@
 (defn merge-with+
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
-   ^{:attribution  "prismatic.plumbing"
-     :todo ["Make it not output HashMaps but preserve records"]
-     :contributors ["Alex Gunnarson"]}
+   {:attribution  "prismatic.plumbing"
+    :todo ["Make it not output HashMaps but preserve records"]
+    :contributors ["Alex Gunnarson"]}
   [f & maps]
   (when (some identity maps)
     (let [merge-entry
@@ -384,6 +399,35 @@
                 ([m1 m2]
                  (reduce+ merge-entry (or m1 {}) (seq m2))))]
       (reduce+ merge2 maps))))
+
+(defn ^Map merge-vals-left
+  "Merges into the left map all elements of the right map whose
+   keys are found in the left map.
+
+   Combines using @f, a |merge-with| function."
+  {:todo "Make a reducer, not just implement using |reduce| function."
+   :in ["{:a {:aa 1}
+          :b {:aa 3}}
+         {:a {:aa 5}
+          :c {:bb 4}}
+         (fn [k v1 v2] (+ v1 v2))"]
+   :out "{:a {:aa 6}
+          :b {:aa 3}}"}
+  [^Map left ^Map right ^Fn f]
+  (persistent!
+    (reduce+
+      (fn [left-f ^Key k-right ^Map v-right]
+       ;(if ((fn-not contains?) left-f k-right) ; can't check this on a transient, apparently...
+       ;    left-f)
+       (let [^Map v-left
+               (get left k-right)]
+         (if (nil? v-left)
+             left-f
+             (let [^Map merged-vs
+                   (merge-with+ f v-left v-right)]
+               (assoc! left-f k-right merged-vs)))))
+      (transient left)
+      right)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      CONCATENATION       }=====================================================
 ;=================================================={ cat, fold, (map|con)cat  }=====================================================
@@ -440,13 +484,71 @@
     (in?* [coll elem]
       (some (eq? elem) coll)))
 (defn in? [elem coll] (in?* coll elem))
-(defn ^Delay select-keys+
-  {:todo ["Test performance vs. 'normal' select keys"]}
+;-----------------------{       SELECT-KEYS       }-----------------------
+(defn- ^Map select-keys-large
+  "A transient and reducing version of clojure.core's |select-keys|."
+  {:performance
+    "45.3 ms vs. core's 60.29 ms on:
+     (dotimes [_ 100000]
+       (select-keys
+         {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7}
+         [:b :c :e]))).
+     Performs much better on large set of keys."} 
+  [keyseq m]
+    (-> (transient {})
+        (reduce+
+          (fn [ret k]
+            (let [entry (. clojure.lang.RT (find m k))]
+              (if entry
+                  (conj! ret entry)
+                  ret)))
+          (seq keyseq))
+        persistent!
+        (with-meta (meta m))))
+
+(defn- ^Map select-keys-small
+  "A transient version of clojure.core's |select-keys|.
+
+   Note: using a reducer here incurs the overhead of creating a
+   function on the fly (can't extern it because of a closure).
+   This is better for small set of keys."
+  {:performance
+    "39.09 ms vs. core's 60.29 ms on:
+     (dotimes [_ 100000]
+       (select-keys
+         {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7}
+         [:b :c :e])))"} 
+  [keyseq m]
+    (loop [ret (transient {}) keys (seq keyseq)]
+      (if keys
+        (let [entry (. clojure.lang.RT (find m (first keys)))]
+          (recur
+           (if entry
+             (conj! ret entry)
+             ret)
+           (next keys)))
+        (with-meta (persistent! ret) (meta m)))))
+
+(defn- ^Delay select-keys-delay
+  "Not as fast as select-keys with transients."
+  {:todo ["FIX THIS"]}
   [ks m]
   (let [ks-set (into+ #{} ks)]
     (->> m
          (filter+
-           (compr key+ (f*n in? ks))))))
+           (compr key+ (f*n in? ks-set))))))
+
+(defn ^Map select-keys+
+  {:todo
+    ["Determine actual inflection point at which select-keys-large
+      should be used over select-keys-small."]}
+  [m ks]
+  (if (-> ks count+ (> 10))
+      (select-keys-small m ks)
+      (select-keys-large m ks)))
+
+;-----------------------{       CONTAINMENT       }-----------------------
+
 ; index-of-from [o val index-from] - index-of, starting at index-from
 (defn contains-or? [coll elems]
   (apply-or (map (partial contains? coll) elems)))
@@ -677,6 +779,7 @@
   ([k v] (map-entry k v)))
 (defn record->map [rec]
   (into+ {} rec))
+
 ;--------------------------------------------------{        UPDATE-IN         }-----------------------------------------------------
 (defn update-in!
   "'Updates' a value in a nested associative structure, where ks is a sequence of keys and
@@ -787,18 +890,16 @@
     (fn [ret k-n f-n] (re-assoc+ ret k-n f-n))
     coll
     kfs))
-(defn ^Delay select-as+
+(defn ^Map select-as+
   {:todo ["Possibly name this function more appropriately"]}
-  ([m kvs]
+  ([coll kfs]
     (->> (reduce+
            (fn [ret k f]
-             (assoc+ ret k (f m)))
-           m
-           kvs)
-         (filter-keys+
-           (partial contains? kvs))))
-  ([m k1 v1 & {:as kvs}]
-    (select-as+ m (assoc kvs k1 v1))))
+             (assoc+ ret k (f coll)))
+           {}
+           kfs)))
+  ([coll k1 f1 & {:as kfs}]
+    (select-as+ coll (assoc+ kfs k1 f1))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -904,7 +1005,14 @@
       v1))
   ([k v1 v2] v2))
 
-(defn group [& {:keys [coll header-pred elem-pred elem-fn header-filter]}] ; probably terrible...
+(defn ^Delay first-uniques-by+ [k coll]
+  (->> coll
+       (group-by+ k)
+       (map+ (update-val+ first))))
+
+(defn group
+  "Deprecated."
+  [& {:keys [coll header-pred elem-pred elem-fn header-filter]}] ; probably terrible...
   (let [result
          (loop [[elem :as coll-n] coll
                  map-f  {}
@@ -926,6 +1034,7 @@
         headers-no (filter (complement header-filter) headers)]
     (apply dissoc result headers-no)))
 (defn aggregate
+  "Deprecated."
   [coll-0 start-pred take-while-pred merge-pred merge-func & [debug?]]
   (loop [coll-n coll-0
          coll-f []]

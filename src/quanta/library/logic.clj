@@ -28,7 +28,7 @@
   (every? identity arg-list))
 (defn apply-or  [arg-list]
   (some?  identity arg-list))
-(defn dor [& args]
+(defn dor [& args] ; xor
   (and (apply-or args)
        (not (apply-and args))))
 (defn pred-or   [pred obj args]

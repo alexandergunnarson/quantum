@@ -310,16 +310,14 @@
   ^{:attribution "clojure.core.reducers"}
   ([f coll] (reduce+ f (f) coll))
   ([f init coll]
-      (if 
-     ;((fn-and   (partial instance? java.util.Map)
-     ;        (fn-not (partial instance? clojure.data.avl.AVLMap))) coll)
-         (instance? java.util.Map coll)
-         (do ; (println "java.util.Map kv-reduce! class:" (class coll))
-             (try (clojure.core.protocols/kv-reduce   coll f init)
-               (catch Exception e
-                 (do (println "There was an exception in kv-reduce!")
-                     (clojure.stacktrace/print-stack-trace e)))))
-         (clojure.core.protocols/coll-reduce coll f init))))
+    (if (instance? java.util.Map coll)
+        (do ; (println "java.util.Map kv-reduce! class:" (class coll))
+            (try (clojure.core.protocols/kv-reduce   coll f init)
+              (catch Exception e
+                (do (println "There was an exception in kv-reduce!")
+                    (clojure.stacktrace/print-stack-trace e)
+                    (throw (Exception. "Broke out of kv-reduce"))))))
+        (clojure.core.protocols/coll-reduce coll f init))))
 (defn reducei+
   "|reduce|, indexed"
   [^AFunction f ret coll]
@@ -1171,7 +1169,7 @@
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
 ; <<<<---------- REDUCER ---------->>>>
-(defmacro for+ ; 51.454164 ms for vec+ vs. 72.568330 ms for doall with normal for (!)
+(defmacro for+ ; 51.454164 ms vs. 72.568330 ms for doall with normal for (!)
   "Reducer comprehension, behaves like \"for\" but yields a reducible/foldable collection.
    Leverages kv-reduce when destructuring and iterating over a map."
   ^{:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"}

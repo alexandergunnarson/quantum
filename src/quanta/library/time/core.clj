@@ -4,6 +4,8 @@
   (:gen-class))
 ; joda-time via clj-time
 (alias-ns 'clj-time.core)
+(require 'clj-time.periodic
+  '[quanta.library.collections :refer :all])
 
 (defn now-normal []
   (.format (. java.time.format.DateTimeFormatter ofPattern "MM-dd-yyyy") (. java.time.LocalDateTime now)))
@@ -47,3 +49,30 @@
   (.write stream "#=(list \"A date should go here\" ")
   (.write stream "")
   (.write stream ")"))
+
+(defn for-days-between ; Delay
+  [date-a date-b f]
+  (let [difference-in-days
+          (in-days (interval date-a date-b))
+        instants-on-beg-of-days
+          (clj-time.periodic/periodic-seq
+            date-a (days 1))]
+  (for+ [day (take (inc difference-in-days) instants-on-beg-of-days)]
+    (f day))))
+
+; (defmacro loop-days-between
+;   [^DateTime a ^DateTime b ^Fn f ^clojure.lang.Symbol loop-fn]
+;   `(let [^Int difference-in-days#
+;           (time/in-days (time/interval ~a ~b))
+;         ^LSeq instants-on-beg-of-days#
+;           (clj-time.periodic/periodic-seq
+;             ~a (time/days 1))]
+;      ((eval ~loop-fn)
+;        [day# (take (inc difference-in-days#) instants-on-beg-of-days#)]
+;          (~f day#))))
+; (defn doseq-days-between
+;   [^DateTime a ^DateTime b ^Fn f]
+;   (loop-days-between a b f 'doseq))
+; (defn for-days-between
+;   [^DateTime a ^DateTime b ^Fn f]
+;   (loop-days-between a b f 'doseq))

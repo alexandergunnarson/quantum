@@ -1,61 +1,251 @@
 (ns quanta.library.main)
-(require ; just for testing
-  '[quanta.library.collections :as coll]
-  '[quanta.library.reducers              :refer :all]
-  '[quanta.library.function    :as fn    :refer :all]
-  '[quanta.library.io          :as io]
-  '[quanta.library.java        :as java]
-  '[quanta.library.logic       :as log   :refer :all]
-  '[quanta.library.ns          :as ns    :refer [defalias source]]
-  '[quanta.library.numeric     :as num]
-  '[quanta.library.print       :as pr    :refer [!]]
-  '[quanta.library.string      :as str]
-  '[quanta.library.thread      :as thread]
-  '[quanta.library.type                  :refer :all]
-  '[quanta.library.data.ftree  :as ftree]
-  '[quanta.library.data.map    :as map   :refer [sorted-map+]]
-  '[quanta.library.data.queue  :as q]
-  '[quanta.library.data.set    :as set]
-  '[quanta.library.data.vector :as vec   :refer [conjl]]
-  '[quanta.library.data.xml    :as xml]
-  '[quanta.library.time.core   :as time]
-  '[quanta.library.time.coerce :as time-coerce]
-  '[quanta.library.time.format :as time-format]
-  '[quanta.library.time.local  :as time-local]
-  '[quanta.library.util.bench  :as bench :refer [bench]]
-  '[quanta.library.util.debug  :as debug :refer [?]])
 
-(set! *warn-on-reflection* true)
+; Mechanical Turk - people test your interface!! For a certain fee per person
+; Arithmetic shifting is faster than logical shifting
+; Arithmetic automatically does the one operation
+; That's the difference between using ints vs. uints
 
+
+(def interesting-people
+  {"Rich Hickey" 
+   "Zach Tellman"     "https://github.com/ztellman"
+   "Mike Anderson"    "https://github.com/mikera"
+   "Brandon Bloom"    "https://github.com/brandonbloom"
+   "Alan Malloy"      "https://github.com/amalloy"
+   "Michal Marczyk"   "https://github.com/michalmarczyk"
+   "Peter Taoussanis" "https://github.com/ptaoussanis"})
+
+(def interesting-groups
+  #{"Prismatic" "https://github.com/Prismatic"
+    "CircleCI"})
+
+(def general-practices
+  {:general
+    {:page "https://github.com/Prismatic/eng-practices"
+     :desc "Prismatic's Engineering Practices Sessions"}})
+
+(def a
+  {:quanta
+    {:library
+      {:general
+        [{:page "ptaoussanis/encore"
+          :desc ""}
+         {:page "weavejester/medley"
+          :desc ""}
+         {:page "https://github.com/mikera/clojure-utils/"
+          :desc "Clojure utils by mikera"}
+         {:page "https://github.com/ztellman/potemkin"
+          :desc "A collection of facades and workarounds for things
+                 that are more difficult than they should be."}
+         {:page "https://github.com/Prismatic/plumbing"
+          :desc ""}]}
+      {:logging
+        [{:page "https://github.com/ptaoussanis/timbre"
+          :desc ""}]}
+      {:shell
+        {:page "https://github.com/flatland/drip"
+         :desc "Fast JVM launching without the hassle of persistent JVMs.
+                USE IT."}}
+      {:reducers
+        {:page "https://github.com/aphyr/tesser"
+         :desc "Clojure reducers, but for parallel execution on
+                distributed systems.
+
+                Barely started."}}
+      {:thread
+        {:page "https://github.com/ztellman/dirigiste"
+         :desc "In the default JVM thread pools, once a thread is
+                created it will only be retired when it hasn't
+                performed a task in the last minute. In practice,
+                this means that there are as many threads as the
+                peak historical number of concurrent tasks handled
+                by the pool, forever. These thread pools are also
+                poorly instrumented, making it difficult to tune
+                their latency or throughput.
+
+                Dirigiste provides a fast, efficient, richly instrumented
+                version of a java.util.concurrent.ExecutorService"}}
+      {:macro-code
+        [{:page "https://github.com/mynomoto/repetition-hunter"
+          :desc "A tool to find repetitions in clojure code. Really
+                 useful."}
+         {:page "https://github.com/jonase/eastwood"
+          :desc "eastwood - a Clojure lint tool. Alerts you to errors
+                 you wouldn't otherwise have noticed."}
+         {:page "https://github.com/ztellman/riddley"
+          :desc "Code walking without caveats."}]}
+      {:data
+        {:unk
+          {:page "https://github.com/ztellman/cambrian-collections/"
+           :desc "A veritable explosion of data structures."}}
+        {:array
+          {:page "https://github.com/Prismatic/hiphip"
+           :desc "hiphip (array)! simple, performant array manipulation in Clojure"}}
+        {:mutable
+          {:page "https://github.com/ztellman/proteus"
+           :desc "let-mutable gives you variables that can be set
+                  using set! within the scope. Since it's unsynchronized
+                  and doesn't box numbers, it's faster (sometimes
+                  significantly) than any state container in Clojure.
+                  However, these variables cannot escape the local
+                  scope; if passed into a function or closed over,
+                  the current value of the variable will be captured.
+                  This means that even though this is unsynchronized
+                  mutable state, there's no potential for race conditions."}}
+        {:tuple
+          {:page "https://github.com/ztellman/clj-tuple"
+           :desc "Often the lists we create have only a few elements
+                  in them. This library provides a collection type,
+                  tuple, which is optimized for these cases.
+
+                  A tuple behaves exactly like a Clojure vector.
+                  However, compared to lists and vectors, a two element
+                  tuple is ~2-3x faster to create, destructure,
+                  calculate a hash, check for equality, and look
+                  up in a normal Java hash-map. Some of these gains
+                  are amplified at larger sizes; a five element
+                  tuple is ~30x faster to create than an equivalently-
+                  sized vector. Tuples larger than six elements,
+                  however, are auto-promoted to standard vectors."}}
+        {:byte
+          [{:page "https://github.com/ztellman/byte-streams"
+            :desc "Java has a lot of different ways to represent a
+                   stream of bytes.
+ 
+                   This library is a Rosetta stone for all the byte
+                   representations Java has to offer.
+ 
+                   |byte-streams/convert|
+ 
+                   When you need to write bytes to a file, network socket,
+                   or other endpoints, you can use |byte-streams/transfer|."}
+            {:page "ztellman/byte-transforms"
+             :desc "Methods for hashing, compressing, and encoding bytes.
+                    It contains the methods in the standard Java lib,
+                    as well as a curated collection of the best available
+                    methods."}]}
+        {:struct
+          {:page "https://github.com/ztellman/vertigo"
+           :desc "Faster than Java arrays (!) because manipulating the
+                  underlying bits.
+
+                  There are a number of predefined primitive types,
+                  including int8, int16, int32, int64, float32, and
+                  float64.
+
+                  We can either marshal an existing sequence onto a
+                  byte-buffer, or wrap an existing byte source.
+
+                  In our data structure we're guaranteed to have a
+                  fixed layout, so we know exactly where the data is
+                  already. We don't need to fetch all the intermediate
+                  data structures, we simply need to calculate the
+                  location and do a single read (for, e.g., |get-in|).
+
+                  We get a read time that even for moderately nested
+                  structures can be several orders of magnitude faster.
+
+                  Any long-lived data which has a fixed layout can
+                  benefit from Vertigo.
+
+                  However, sequences which contain sub-sequences of
+                  unpredictable length cannot be represented using
+                  Vertigo's structs, and sequences which are discarded
+                  after a single iteration are best left out of Vertigo."}}
+        {:map
+          {:page "https://github.com/achim/multiset"
+           :desc "A simple multiset/bag implementation for Clojure."}
+          {:page "https://github.com/aphyr/merkle"
+           :desc "Clojure Merkle Trees
+                  A Clojure library for computing and comparing hash
+                  trees over sorted kv collections. Allows you to
+                  efficiently find the differing pairs between two
+                  such collections without exchanging the collections
+                  themselves. Useful in the synchronization of
+                  distributed systems."}
+          {:page "https://github.com/ztellman/clj-radix"
+           :desc "a persistent radix tree, for efficient nested maps
+                  Not much description beyond that. Experiment!"}
+          {:page "jordanlewis/data.union-find"
+           :desc "The union-find data structure by Tarjan.
+                  Important somehow. Not sure why yet."}
+          {:page "https://github.com/clojure/data.int-map"
+           :desc "A map optimized for integer keys.
+                  Doubles as a set.
+                  Faster in both updates and lookups than normal Clojure
+                  data structures, and also more memory efficient,
+                  sometimes significantly.
+                  |dense-int-set| behaves the same as |int-set|;
+                  the difference is only in their memory efficiency.
+                  
+                  (def s (range 1e6))
+
+                  (into #{} s)              ; ~100mb
+                  (into (int-set) s)        ; ~1mb
+                  (into (dense-int-set) s)  ; ~150kb
+
+                  The |dense-int-set| allocates larger contiguous chunks,
+                  which is great if the numbers are densely clustered.
+                  However, if the numbers are sparse, the memory is much worse
+                  than normal Clojure structures.
+
+                  Use |dense-int-set| where the elements are densely clustered
+                  (each element has multiple elements within +/- 1000, and
+                  |int-set| for everything else."}}}
+      {:aux
+        {:units-of-measurement
+          [{:page "https://github.com/martintrojer/frinj"
+            :desc "Units of measurement and conversion, etc."}
+           {:page "https://github.com/fogus/minderbinder"
+            :desc "Units of measurement and conversion, etc."}]}}
+      {:pdf
+        {:page "https://github.com/yogthos/clj-pdf"
+         :desc "Library for generating PDFs"}}
+      {:io
+        {:page "https://github.com/Raynes/fs"
+         :desc "File system utilities"}}
+      {:system
+        {:page "https://github.com/hugoduncan/criterium"
+         :desc "Includes forced garbage collection, memory reporting,
+                cache clearing, etc."}}}})
 
 ; TESTING: https://github.com/jakemcc/lein-test-refresh
-; https://github.com/mynomoto/repetition-hunter
 
 ; A BETTER MERGE!!
 
-; clojure.zip traversal is interesting because it is iterative, not recursive,
-; which is a key difference between zipper traversal and the prior clojure.walk
-; implementation.
+; clojure.zip traversal is interesting because it is iterative,
+; not recursive, which is a key difference between zipper
+; traversal and the prior clojure.walk implementation.
 
-; https://github.com/ztellman/immutable-int-map/blob/master/README.md
 ; PROJECTS
 ; Root Latin:   latin-etym
 ; Google Drive:
 
-; TODO: SYNTAX HIGHLIGHTING UPDATES
-; ordered-set
-; c-sorted-set
-; alias-ns (?)
-; some?
+; TODO: SOCIAL/CREDENTIAL-BASED
+; Publish library... this will help, it really will
+
+; TODO: CLEANUP
+; Fix aliases with foldp, foldv, etc...
+; Rewrite core functions with reducers in mind -
+; |some| |every?| etc. using |reduced|
+; catvec + concat + cat, etc.
+
+; TODO: LEARNING
+; learn async
+
+; TODO: OPTIMIZATION
+; union vs. merge+ ? which one is faster?
+; fix distinct+ to work with non-sorted colls
+; enable hash-set folding
 
 ; TODO: NEW FEATURES
-; go blocks with library.thread
-; learn go blocks
+; Should have a transientize macro that speeds things up
+; Should have a protocolize macro that speeds things up
+; Should have an extern-fn that speeds things up and avoids creation of local fns
+; There is something interesting lurking in conversion... something with
+;   combinatorics
 
 ; compression (zip, tar, gzip, etc.... what's the difference?)
-; ;; leave /require/, etc. out of ns decl so we can load with classlojure.io/resource-forms
-; time
-; https://github.com/ztellman/automat
 ; ZIP (?)
 ; https://github.com/akhudek/fast-zip ; as a replacement for clojure.zip
 
@@ -73,39 +263,16 @@
 ;         System.out.println("=> "+ result);
 ;     }
 ; }
-; https://github.com/ztellman/immutable-int-map
 ; Checking https://github.com/clojure/test.check
 ; https://github.com/clojure/test.generative
 ; https://github.com/clojure/data.generators
 ; https://github.com/clojure/jvm.tools.analyzer
 ; https://github.com/clojure/tools.analyzer
-; https://github.com/Raynes/fs
-; This library defines some utilities for working with the file system in Clojure.
-; Mostly, it wants to fill the gap that clojure.java.io leaves and add on (and prettify)
-; what java.io.File provides.
-; https://github.com/clojure/data.finger-tree
-; https://github.com/clojure/data.priority-map
-; https://github.com/clojure/data.avl - really fast sorted sets and sorted maps
-; double-list is a sequential collection that provides constant-time access to both the left and right ends.
-; counted-double-list provides all the features of double-list plus constant-time count and log-n nth.
-; counted-sorted-set is sorted set that also provides log-n nth
-; I've been using Clojure for two years now and I've never needed monads for "real" code.
-; https://github.com/clojure/core.typed/wiki
+; "I've been using Clojure for two years now and I've never needed monads for "real" code."
 ; http://adambard.com/blog/why-clojure-part-2-async-magic/
 ; http://adambard.com/blog/clojure-concurrency-smorgasbord/
-; (require '[clojure.edn :as edn])
 
 
-
-
-; TOP CONTRIBUTORS
-; https://github.com/michalmarczyk
-; https://github.com/taoensso
-; https://github.com/technomancy ; Phil Hagelberg
-; TOP PEOPLE (NON-CONTRIBUTING)
-; https://github.com/Chouser     ; Chris Houser
-
-; should have a transientize macro that speeds things up
 
 ; diff
 ; function
@@ -191,8 +358,7 @@
 ; ; ; $100+ Billion Annual Transacting Volume
 ; ; ; 400,000+ Merchant Customers
 
-; ; Write a macro to do arity à la SOCAccess
-; ; Macro to print vars
+
 
 ; clojure.contrib.accumulators
 ; clojure.contrib.agent-utils
@@ -209,7 +375,6 @@
 ;                                 defvar: as of Clojure 1.3, you can specify a docstring in a def form: (def my-var "This is my docstring" some-value)
 ; clojure.contrib.error-kit       https://github.com/scgilardi/slingshot
 ; clojure.contrib.except
-; clojure.contrib.fcase           replced by condp
 ; clojure.contrib.find-namespaces https://github.com/clojure/tools.namespace/
 ; clojure.contrib.fnmap
 ; clojure.contrib.gen-html-docs
@@ -233,7 +398,6 @@
 ; clojure.contrib.mmap
 ; clojure.contrib.mock
 ; clojure.contrib.monadic-io-streams
-; clojure.contrib.monads          https://github.com/clojure/algo.monads/
 ; clojure.contrib.ns-utils
 ; clojure.contrib.parent
 ; clojure.contrib.priority-map    https://github.com/clojure/data.priority-map/
@@ -251,7 +415,6 @@
 ; clojure.contrib.standalone
 ; clojure.contrib.stream-utils
 ; clojure.contrib.strint          https://github.com/clojure/core.incubator/
-; clojure.contrib.swing-utils
 ; clojure.contrib.trace           https://github.com/clojure/tools.trace/
 ; clojure.contrib.types
 ; clojure.contrib.with-ns
@@ -279,6 +442,3 @@
 ; [ ] clojure.test.generative
 ; [ ] clojure.tools.nrepl
 ; [ ] clojure.tools.reader
-
-
-; mvn install:install-file -Dfile=lib/quanta.library-0.1.jar -DartifactId=library -Dversion=0.1.0 -DgroupId=quanta -Dpackaging=jar -DlocalRepositoryPath=lib/

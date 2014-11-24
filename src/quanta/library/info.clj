@@ -1,6 +1,5 @@
 (ns quanta.library.info)
 
-; Check back at the following for more library goodies:
 
 ; ==== TRAMPOLINE ====
 ; (defn abcde [n]         6)
@@ -9,7 +8,65 @@
 ; (trampoline abc 3) ; => 6
 ; ====================
 
-; Mechanical Turk - people test your interface!! For a certain fee per person
+;  ==================== PERFORMANCE  ====================
+; From amalloy
+; |reify| is strongly preferred for implementing interfaces -
+; |proxy| is heavy-duty, old, and slow, so should be avoided when possible.
+; An implementation would look like:
+; (reify Doer
+;   (doSomethin [this input]
+;     (...whatever...)))
+
+
+; From Jozef Wagner
+; From my experience, you can get 1/1.2 performance (20% slower) with Clojure by following these steps:
+
+; * Choose right clojure idioms
+
+; Never use lazy seqs if you care for java-like performance.
+; For fast looping, use reducers;
+; for fast inserts, use transients. 
+; Postpone the data creation until the last step. Compose functions
+; instead of piping collections containing intermediate results.
+; Know the tradeoffs between similar functions (e.g. rseq and reverse)
+; Use custom datatype with ^:unsynchronized-mutable for performance-critical
+; mutations, instead of atoms or vars.
+
+; * Use domain knowledge to your advantage 
+
+; Collection has a random access? Use it to your advantage. 
+; Is it backed by array? Do a bulk copy instead of one element per iteration.
+; Is memory killing you? Use subcollections which share underlying data
+; with original ones.
+; If shooting for performance, you do not want the most generic solution. 
+  ; Search for more performant solutions which have trade-offs you can
+  ; live with.
+  ; (Or hide the performant version, etc.)
+; Prefer protocols to multimethods.
+
+; * Trade between memory and CPU (and precision)
+
+; Have a CPU intensive pure function? Memoize.
+; Using too much memory? Use lazy seqs, delays, dropping caches.
+; (Do not care for precision? Round, truncate and approximate.
+  ;  Use decayed collections, frugal streaming, ...)
+
+; * Know your host
+
+; Use type hints to get rid of reflection and boxing. Most of time you
+; can eliminate all reflections, but it is very hard to eliminate every
+; automatic boxing/unboxing without dropping down to java.
+
+; Heavy IO use? Build your abstractions around java.nio.Buffer.
+
+; Looping with ints is faster than with longs.
+
+; Any part of your code should be idiomatic and with good design behind.
+; Use heavy optimization 'tricks' only to those parts of the code which
+; bring the most effect. Your time can be spent on more useful things
+; than optimizing some auxiliary functionality.
+
+;  ==================== ==================== ====================
 
 ; Each data type created once within 1000000 |reduce+|s
 ; Vector:     268 ms

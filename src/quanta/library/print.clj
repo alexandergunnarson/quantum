@@ -20,15 +20,23 @@
 ;  :attribution: https://github.com/brandonbloom/fipp"
 (defalias pprint pr/pprint)
 (def ^:dynamic *max-length* 1000)
+(def ^:dynamic *blacklist* (atom #{})) ; a list of classes not to print
 (defn ! [obj]
   (let [ct (count+ obj)]
-    (if (<= ct *max-length*)
-        (pr/pprint obj)
+    (cond
+      (> ct *max-length*)
         (println
           (str "Object is too long to print ("
                (str/sp ct "elements")
                ").")
-          "*max-length* is set at" (str *max-length* ".")))))
+          "*max-length* is set at" (str *max-length* "."))
+      (contains? @*blacklist* (class obj))
+        (println
+          "Object's class"
+          (str/paren (class obj))
+          "is blacklisted for printing.")
+      :else
+        (pr/pprint obj))))
 
 (defalias print-table pprint/print-table) 
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)

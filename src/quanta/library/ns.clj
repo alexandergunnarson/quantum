@@ -121,18 +121,20 @@
 
 ; Just to be able to synthesize class-name aliases...
 ; (defrecord Vec     []) ; Conflicts with clojure.core/->Vec
-(defrecord Map     [])
-; (defrecord List    []);  Conflicts with java.util.List
-(defrecord Set     [])
-(defrecord Queue   [])
-(defrecord LSeq    [])
-(defrecord Fn      [])
-(defrecord Key     [])
-(defrecord Num     [])
-(defrecord Int     [])
-(defrecord Decimal [])
-(defrecord Bool    [])
-(defrecord Record  [])
+(defrecord Map      [])
+; (defrecord List     []);  Conflicts with java.util.List
+(defrecord Set      [])
+(defrecord Queue    [])
+(defrecord LSeq     [])
+(defrecord Fn       [])
+(defrecord Key      [])
+(defrecord Num      [])
+(defrecord ExactNum []) ; same as Ratio
+(defrecord Int      [])
+(defrecord Decimal  [])
+(defrecord Bool     [])
+(defrecord Record   [])
+(defrecord Nil      [])
 
 (defn ns-exclude [^Namespace curr-ns & syms]
   (binding [*ns* curr-ns]
@@ -154,8 +156,9 @@
             LSeq  
             Key
             Fn
-            Num Int Decimal
-            Bool))
+            Num Int Decimal ExactNum
+            Bool
+            Nil))
       (import
         '(clojure.lang
             Namespace
