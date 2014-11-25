@@ -15,7 +15,7 @@ Summary
 -
 Less magically put, this is an all-purpose Clojure library similar to [Prismatic/plumbing](https://github.com/Prismatic/plumbing), [weavejester/medley](https://github.com/weavejester/medley), [mikera/clojure-utils](https://github.com/mikera/clojure-utils), [ptaoussanis/encore](https://github.com/ptaoussanis/encore), [ztellman/potemkin](https://github.com/ztellman/potemkin), and others. It aims to unify and abstract away irrelevant implementation details while providing great performance, often exceeding clojure.core (see benchmarks for more information).
 
-It adapts the best and most useful functions from existing libraries and adds even more of its own.
+It adapts the best and most useful functions from existing libraries and adds much more of its own.
 
 Performance
 -
