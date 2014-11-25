@@ -1,4 +1,4 @@
-quanta-lib
+quantum
 ==========
 
 Use it!
