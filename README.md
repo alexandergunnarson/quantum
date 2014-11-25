@@ -1,6 +1,6 @@
 quantum
 ==========
-![](resources/images/quantum.jpg)
+![](resources/images/quantum.jpeg)
 
 ***"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction."*** — Sidney Coleman
 
