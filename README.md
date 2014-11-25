@@ -24,7 +24,7 @@ It uses clojure.reducers wherever possible to maximize performance but falls bac
 
 Expect a great deal of rustiness (I am one person, after all, and relatively quite inexperienced), but expect some gems as well.
 
-I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback that you may wish to provide.
+I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide.
 
 Copyright and License
 -
