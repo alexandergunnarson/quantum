@@ -26,7 +26,7 @@ It uses clojure.reducers wherever possible to maximize performance but falls bac
 #####Transients and Mutable Locals
 It uses transients and/or mutable local variables wherever a performance boost gan be achieved by such.
 
-Conclusion
+Expectations
 -
 
 Expect a great deal of rustiness (I am one person, after all, and relatively quite inexperienced), but expect some gems as well.
