@@ -14,4 +14,4 @@ To this end, **quantum** was fashioned from the ancience of Lisp: time-tested, b
 -
 *Copyright © 2014 Alexander Gunnarson*
 
-*Distributed under the Creative Commons Attribution Share Alike (CC-SA).*
+*Distributed under the Creative Commons Attribution Share Alike (CC-SA) license.*
