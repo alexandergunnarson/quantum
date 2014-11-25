@@ -20,7 +20,7 @@ It adapts the best and most useful functions from existing libraries and adds ev
 Performance
 -
 
-It uses clojure.reducers wherever possible to maximize performance but falls back on clojure.core when laziness is required or desired, or when the overhead of creating an anonymous function within `reduce` is greater than the overhead eliminated by using `reduce` over `first` and `next` or `rest` within `loop`/`recur`.
+It uses clojure.reducers wherever possible to maximize performance but falls back on clojure.core when laziness is required or desired, or when the overhead of creating an anonymous function within `reduce` is greater than the overhead eliminated by using `reduce` over [`first` and `next` or `rest` within `loop`/`recur`].
 
 Expect a great deal of rustiness (I am one person, after all, and relatively quite inexperienced), but expect some gems as well.
 
