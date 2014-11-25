@@ -1,6 +1,7 @@
 quantum
 ==========
 ![](resources/images/quantum.jpg)
+*(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
 
 ***"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction."*** — Sidney Coleman
 
