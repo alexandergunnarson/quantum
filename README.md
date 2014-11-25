@@ -24,7 +24,7 @@ Performance
 It uses clojure.reducers wherever possible to maximize performance, but falls back on clojure.core collections functions when laziness is required or desired, or when the overhead of creating an anonymous function within `reduce` is greater than the overhead eliminated by using `reduce` instead of [`first` and [`next` or `rest`] within `loop`/`recur`].
 
 #####Transients and Mutable Locals
-It uses transients and/or mutable local variables wherever a performance boost gan be achieved by such.
+It uses transients and/or mutable local variables wherever a performance boost can be achieved by such.
 
 Expectations
 -
