@@ -11,7 +11,10 @@
   :dev-dependencies []
   :dependencies
     [; CLOJURE CORE
-     [org.clojure/clojure               "1.6.0"]
+     [org.clojure/clojure               "1.7.0-alpha4"]
+     ; DATAGIRD
+     [org.apache.poi/poi                "3.9"  ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
+     [org.apache.poi/poi-ooxml          "3.9"  ]
      ; META (CODE)      
      [repetition-hunter                 "1.0.0"]
      ; defprotocol+, definterface+, etc.
