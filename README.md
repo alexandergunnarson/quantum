@@ -1,7 +1,7 @@
 quantum
 ==========
 
-"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction." — Sidney Coleman
+***"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction."*** — Sidney Coleman
 
 In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data in ever-increasing levels of abstraction.
 
