@@ -52,3 +52,5 @@ But:
 * You **have to** say in the attribution that you modified the code if you did
 
 Pretty easy, common-sense, decent stuff! Thanks :)
+
+*For more information, see [tldrlegal](https://tldrlegal.com/license/creative-commons-attribution-share-alike-(cc-sa)).*
