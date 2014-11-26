@@ -19,7 +19,7 @@ To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***From the ancience of Lisp — time-tested, but never time-worn —***
 
-***To this end was `quantum` fashioned***.
+***To this end was fashioned `quantum`***.
 
 Summary
 -
