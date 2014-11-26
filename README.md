@@ -13,7 +13,7 @@ To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***That syntax might fade,***
 
-***That we might swim in the purity***
+***That all might swim in the purity***
 
 ***Of quantified conception, of ideas manifest,***
 
@@ -53,7 +53,7 @@ It uses transients and/or mutable local variables wherever a performance boost c
 Expectations
 -
 
-Expect a great deal of rustiness (I am one person, after all, and relatively quite inexperienced), but expect some gems as well.
+I've been coding in Clojure only for about a year and a half, so I'm relatively quite inexperienced. Expect some rustiness, but expect some gems as well.
 
 I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide.
 
