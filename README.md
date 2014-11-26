@@ -57,7 +57,7 @@ Expectations
 
 I've been coding in Clojure only for about a year and a half, so I'm relatively quite inexperienced. Expect some rustiness, but expect some gems as well.
 
-I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide.
+I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide. This endeavor towards greater efficiency in thought, processing power, and time spent programming should be a joint one.
 
 Copyright and License
 -
