@@ -55,6 +55,8 @@ It uses transients and/or mutable local variables wherever a performance boost c
 Expectations
 -
 
+This is a work in progress and, as such, is currently in no way as polished and rich a library as I hope it to ultimately be. When you find bugs (and you will), please report the issue(s) and/or create a pull request.
+
 I've been coding in Clojure only for about a year and a half, so I'm relatively quite inexperienced. Expect some rustiness, but expect some gems as well.
 
 I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide. This endeavor towards greater efficiency in thought, processing power, and time spent programming should be a joint one.
