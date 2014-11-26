@@ -39,7 +39,7 @@ Copyright and License
 
 *Distributed under the Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license.*
 
-For normal people who don't speak legalese, this means:
+**For normal people who don't speak legalese, this means:**
 
 * You can modify the code
 * You can distribute the code
