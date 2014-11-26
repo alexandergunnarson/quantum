@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?><project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>quanta</groupId>
-  <artifactId>library</artifactId>
+  <groupId>quantum</groupId>
+  <artifactId>core</artifactId>
   <packaging>jar</packaging>
   <version>0.0.99</version>
-  <name>library</name>
+  <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
   <licenses>
