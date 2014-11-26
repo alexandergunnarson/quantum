@@ -81,4 +81,4 @@ But:
 
 Pretty easy, common-sense, decent stuff! Thanks :)
 
-*For more information, see [tldrlegal](https://tldrlegal.com/license/creative-commons-attribution-share-alike-(cc-sa))'s summary of the CC-SA license.*
+*For more information, see [tldrlegal's summary](https://tldrlegal.com/license/creative-commons-attribution-share-alike-(cc-sa)) of the CC-SA license.*
