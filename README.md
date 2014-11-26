@@ -36,8 +36,8 @@ Use
 
 **In namespaces:**
 
-`(require 'quanta.library. ... )`
-where `...` is the name of the sub-library (e.g., `quanta.library.collections`, `quanta.library.io`, etc.).
+`(require 'quantum.core. ... )`
+where `...` is the name of the sub-library (e.g., `quantum.core.collections`, `quantum.core.io`, etc.).
 
 Performance
 -
