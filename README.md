@@ -13,13 +13,15 @@ To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***That syntax might fade,***
 
-***That we might swim in the purity of quantified conception,***
+***That we might swim in the purity***
 
-***Of ideas manifest,***
+***Of quantified conception, of ideas manifest,***
 
 ***From the ancience of Lisp — time-tested, but never time-worn —***
 
-***To this end was fashioned `quantum`***.
+***To this end was fashioned***
+
+`quantum`.
 
 Summary
 -
