@@ -48,7 +48,7 @@ Copyright and License
 But:
 
 * You **have to** give credit / attribute the code to me
-* You **have to** state my name and the title of this project
-* You **have to** ay that you modified it if you did
+* You **have to** state my name and the title of this project in the attribution
+* You **have to** say in the attribution that you modified the code if you did
 
 Pretty easy, common-sense, decent stuff! Thanks :)
