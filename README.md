@@ -17,6 +17,18 @@ Less magically put, this is an all-purpose Clojure library similar to [Prismatic
 
 It adapts the best and most useful functions from existing libraries and adds much more of its own.
 
+Use
+-
+
+**In `project.clj`:**
+
+`[quantum 0.0.1]`
+
+**In namespaces:**
+
+`(require 'quanta.library. ... )`
+where `...` is the name of the sub-library (e.g., `quanta.library.collections`, `quanta.library.io`, etc.).
+
 Performance
 -
 
