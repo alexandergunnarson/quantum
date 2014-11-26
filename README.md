@@ -9,7 +9,7 @@ quantum
 
 In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data (including procedures) in ever-increasing levels of abstraction.
 
-To paraphrase the [poet of xkcd](http://xkcd.com/224/):
+In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***That syntax might fade,***
 
