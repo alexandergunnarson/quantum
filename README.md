@@ -17,9 +17,11 @@ To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***Of quantified conception, of ideas manifest,***
 
-***From the ancience of Lisp — time-tested, but never time-worn —***
+***To this end, From the ancience of Lisp —***
 
-***To this end was fashioned***
+***Time-tested, but never time-worn —***
+
+***Was fashioned***
 
 `quantum`.
 
