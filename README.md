@@ -61,7 +61,7 @@ I welcome any and all contributions, comments, thoughts, suggestions, and/or fee
 
 Copyright and License
 -
-*Copyright © 2014 Alexander Gunnarson*
+*Copyright © 2014 Alex Gunnarson*
 
 *Distributed under the Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license.*
 
@@ -74,7 +74,7 @@ Copyright and License
 But:
 
 * You **have to** give credit / attribute the code to me
-* You **have to** state my name and the title of this project in the attribution
+* You **have to** state the name of the author (Alex Gunnarson) and the title of this project in the attribution
 * You **have to** say in the attribution that you modified the code if you did
 
 Pretty easy, common-sense, decent stuff! Thanks :)
