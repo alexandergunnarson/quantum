@@ -41,14 +41,14 @@ Copyright and License
 
 **For normal people who don't speak legalese, this means:**
 
-* You can modify the code
-* You can distribute the code
-* You can use the code for commercial purposes
+* You **can** modify the code
+* You **can** distribute the code
+* You **can** use the code for commercial purposes
 
 But:
 
-* You have to give credit / attribute the code to me
-* You have to state my name and the title of this project
-* You have to ay that you modified it if you did
+* You **have** to give credit / attribute the code to me
+* You **have** to state my name and the title of this project
+* You **have** to ay that you modified it if you did
 
 Pretty easy, common-sense, decent stuff! Thanks :)
