@@ -22,7 +22,7 @@ Use
 
 **In `project.clj`:**
 
-`[quantum "0.0.1"]`
+![](https://clojars.org/quantum/core/latest-version.svg)
 
 **In namespaces:**
 
