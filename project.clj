@@ -1,12 +1,17 @@
-(defproject quanta/library "0.1.0"
-  :description      "Library for Quanta."
+(defproject quantum/core "0.0.99"
+  :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
-  :jar-name         "quanta-lib-dep.jar"
-  :uberjar-name     "quanta-lib.jar"
-  :url              "https://www.github.com/alexandergunnarson/quanta-lib"
-  :license          {:name "Eclipse Public License"
-                     :url "http://www.eclipse.org/legal/epl-v10.html"}
+  :jar-name         "quantum-dep.jar"
+  :uberjar-name     "quantum.jar"
+  :url              "https://www.github.com/alexandergunnarson/quantum"
+  :scm              {:name "quantum"
+                     :url  "https://www.github.com/alexandergunnarson/quantum"}
+  :license          {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
+                     :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
+  :signing          {:gpg-key "72F3C25A"}
+  :deploy-repositories [["releases" :clojars]
+                        ["clojars" {:creds :gpg}]]
   :plugins          [] 
   :dev-dependencies []
   :dependencies
