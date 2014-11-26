@@ -11,9 +11,9 @@ In like manner, the aim of a computer scientist consists of treating the manipul
 
 To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
-*That syntax may fade,*
+*That syntax might fade,*
 
-*That we may swim in the purity of quantified conception,*
+*That we might swim in the purity of quantified conception,*
 
 *Of ideas manifest,*
 
