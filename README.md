@@ -7,9 +7,19 @@ quantum
 
 -
 
-In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data (which includes procedures) in ever-increasing levels of abstraction.
+In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data (including procedures) in ever-increasing levels of abstraction.
 
-To this end, **quantum** was fashioned from the ancience of Lisp: time-tested, but never time-worn.
+To paraphrase the [poet of xkcd](http://xkcd.com/224/):
+
+*That syntax may fade,*
+
+*That we may swim in the purity of quantified conception,*
+
+*Of ideas manifest,*
+
+*From the ancience of Lisp — time-tested, but never time-worn —*
+
+*To this end was* **quantum** *fashioned*.
 
 Summary
 -
