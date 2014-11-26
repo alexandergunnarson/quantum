@@ -37,4 +37,4 @@ Copyright and License
 -
 *Copyright © 2014 Alexander Gunnarson*
 
-*Distributed under the Creative Commons Attribution Share Alike (CC-SA) license.*
+*Distributed under the Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license.*
