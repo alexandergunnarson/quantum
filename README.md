@@ -22,7 +22,7 @@ Use
 
 **In `project.clj`:**
 
-`[quantum 0.0.1]`
+`[quantum "0.0.1"]`
 
 **In namespaces:**
 
