@@ -17,7 +17,7 @@ In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/22
 
 ***Of quantified conception, of ideas manifest,***
 
-***To this end, From the ancience of Lisp —***
+***To this end, from the ancience of Lisp —***
 
 ***Time-tested, but never time-worn —***
 
