@@ -75,7 +75,7 @@ Copyright and License
 
 But:
 
-* You **have to** give credit / attribute the code to me
+* You **have to** give credit / attribute the code to the author (Alex Gunnarson)
 * You **have to** state the name of the author (Alex Gunnarson) and the title of this project in the attribution
 * You **have to** say in the attribution that you modified the code if you did
 
