@@ -7,7 +7,7 @@ quantum
 
 -
 
-In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data in ever-increasing levels of abstraction.
+In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data (which includes procedures) in ever-increasing levels of abstraction.
 
 To this end, **quantum** was fashioned from the ancience of Lisp: time-tested, but never time-worn.
 
