@@ -32,10 +32,39 @@
 (defn ^APersistentSet complement-nodes
   [^Node obj]
   (let [^Keyword obj-key (get @fx/obj-key-pairs obj)]
-    (println "DESELECTING COMPLEMENTS OF:" obj-key)
     (->> @fx/complement-nodes-set
          (ffilter (f*n contains? obj-key))
          (<- set/difference (hash-set obj-key)))))
+
+(defn deselect!
+  "Visually 'deselects' a JavaFX Node object, @obj."
+  [^Node obj ^Map styles-map]
+  (let [^Key style-key (-> obj fx/lookup :style)
+        ^Fn  deselect-handler
+          (-> styles-map (get style-key) :deselect-handler)]
+    (when (nnil? deselect-handler)
+      (deselect-handler obj)))) 
+
+(defn select!
+  "Visually 'deselects' a JavaFX Node object, @obj."
+  [^Node obj ^Map styles-map]
+  (let [^Key style-key (-> obj fx/lookup :style)
+        ^Fn  press-handler
+          (-> styles-map (get style-key) :press-handler)]
+    (when (nnil? press-handler)
+      (press-handler obj)))) 
+
+(defn ^APersistentVector siblings 
+  {:todo ["Take this function away and incorporate into |jfx/jget|."]}
+  [^Node obj]
+  (->> (jget (jget obj :parent) :children)
+       (remove+ (eq? obj))
+       fold+))
+
+(defn deselect-complements! [^Node obj ^Map styles-map]
+  (let [^Set complement-nodes-set (complement-nodes obj)]
+  (doseq [complement-node complement-nodes-set]
+    (deselect! complement-node styles-map))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{         FONTS        }=====================================================
 ;======================================================{                      }=====================================================

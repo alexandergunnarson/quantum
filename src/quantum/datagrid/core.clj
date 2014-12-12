@@ -1,7 +1,7 @@
-(ns quanta.datagrid.core (:gen-class))
-(require '[quanta.library.ns :as ns])
+(ns quantum.datagrid.core (:gen-class))
+(require '[quantum.core.ns :as ns])
 (ns/require-all *ns* :lib)
-(require '[quanta.datagrid.excel :as xl])
+(require '[quantum.datagrid.excel :as xl])
 (ns/nss *ns*)
 
 ; http://poi.apache.org/apidocs/index.html
@@ -26,7 +26,7 @@
   (-> date
      (time-coerce/from-date)
      (#(time-form/unparse (time-form/formatter "MM/dd/yyyy") %))))
-(defn save-as! ; implement this in quanta.io as a multimethod to a base fn
+(defn save-as! ; implement this in quantum.core.io as a multimethod to a base fn
   [file-name sheet-data
      & {:keys [directory] 
         :or   {directory [:test "Unknowns"]}}]

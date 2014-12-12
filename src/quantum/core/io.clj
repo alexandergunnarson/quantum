@@ -14,8 +14,8 @@
 (ns/require-all *ns* :clj)
 (ns/nss *ns*)
 (require
-  '[clojure.java.io            :as clj-io]
-  '[clojure.data.csv           :as csv]
+  '[clojure.java.io          :as clj-io]
+  '[clojure.data.csv         :as csv]
   '[quantum.core.data.array  :as arr  :refer :all]
   '[quantum.core.string      :as str]
   '[quantum.core.time.core   :as time]
@@ -110,43 +110,50 @@
         (count file-name-f)))))
 (defn folder? [^String path-0]
   (-> path-0 file-ext nil?))
+(def ^:private test-dir
+  (try+
+    (-> (clj-io/resource "") url-decode
+        (str/replace #"^file:/" "/")
+        (str/replace #"/" *os-sep-esc*))
+    (catch Exception _ ""))) ; To handle a weird "MapEntry cannot be cast to Number" error)
+(def ^:private this-dir
+  (try+ (up-dir test-dir)
+    (catch java.lang.StringIndexOutOfBoundsException _ "")))
+(def ^:private root-dir
+  (condp = sys/*os*
+    :windows (-> (System/getenv) (get "SYSTEMROOT") str)
+    "/"))
+(def ^:private drive-dir
+  (condp = sys/*os*
+    :windows
+      (whenc (getr+ root-dir 0
+               (whenc (index-of+ root-dir "\\") (eq? -1) 0))
+             empty?
+        "C:\\") ; default drive
+    "/"))
+(def ^:private home-dir
+  (System/getProperty "user.home"))
+(def ^:private desktop-dir
+  (path home-dir "Desktop"))
 (def  dirs
-  (let [test-dir
-          (try+ (-> (clj-io/resource "") url-decode
-                   (str/replace #"^file:/" "/")
-                   (str/replace #"/" *os-sep-esc*))
-            (catch Exception _ "")) ; To handle a weird "MapEntry cannot be cast to Number" error
-        this-dir (up-dir test-dir)
-        root (case sys/*os*
-               :windows (-> (System/getenv) (get "SYSTEMROOT") str)
-               "/")
-        drive (case sys/*os*
-                :windows
-                (whenc (getr+ root 0 (whenc (index-of+ root "\\") (eq? -1) 0))
-                       empty?
-                  "C:\\") ; default drive
-                "/")
-        proj-path-0
-          (ifn (get (System/getenv) "PROJECTS") nil?
-               (constantly (up-dir this-dir))
-               identity)
+  (let [proj-path-0
+          (whenc (get (System/getenv) "PROJECTS") nil?
+            (up-dir this-dir))
         proj-path-f 
-          (if (= 0 (index-of+ proj-path-0 drive))
+          (if (= 0 (index-of+ proj-path-0 drive-dir))
               (path proj-path-0)
-              (path drive proj-path-0))
-        home    (System/getProperty "user.home")
-        desktop (path home "Desktop")]
-    {:root      root
-     :drive     drive
-     :home      home
-     :desktop   desktop
+              (path drive-dir proj-path-0))]
+    {:test      test-dir
+     :this-dir  this-dir
+     :root      root-dir
+     :drive     drive-dir
+     :home      home-dir
+     :desktop   desktop-dir
      :projects  proj-path-f
      :resources
        (whenc (path this-dir "resources")
               (fn-not exists?)
-              (path proj-path-f "clj-qb" "resources"))
-     :test      test-dir
-     :this-dir  this-dir}))
+              (path proj-path-f "clj-qb" "resources"))}))
 (defn parse-dirs-keys [keys-n]
   (reduce+
     (fn [path-n key-n]

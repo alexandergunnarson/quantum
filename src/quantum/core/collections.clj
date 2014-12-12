@@ -10,7 +10,7 @@
   '[quantum.core.data.set         :as set   :refer [ordered-set]]
   '[quantum.core.collections.core :as core]
   '[quantum.core.logic                      :refer :all]
-  '[quantum.core.log              :as log]
+  ;'[quantum.core.log              :as log]
   '[clj-time.core]
   '[quantum.core.string           :as str]
   '[quantum.core.function         :as fn    :refer :all]
@@ -988,7 +988,7 @@
   ([^Key alert-level]
     (fn [k v1 v2]
       (when (not= v1 v2)
-        (log/pr alert-level
+        (println ;log/pr alert-level
           "Values do not match for merge key"
           (str (str/squote k) ":")
           (str/squote v1) "|" (str/squote v2)))
@@ -998,7 +998,7 @@
   ([^Key alert-level]
     (fn [k v1 v2]
       (when (not= v1 v2)
-        (log/pr alert-level
+        (println ;log/pr alert-level
           "Values do not match for merge key"
           (str (str/squote k) ":")
           (str/squote v1) "|" (str/squote v2)))

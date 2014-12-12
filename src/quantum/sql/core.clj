@@ -1,6 +1,6 @@
-(ns quanta.sql.core)
+(ns quantum.sql.core)
 (require
-  '[quanta.library.ns          :as ns  :refer [defalias alias-ns]])
+  '[quantum.core.ns          :as ns  :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj :lib)
 (ns/ns-exclude *ns* 'distinct 'select 'group-by)
 ; TODO: make SQL operations delayed like reducers for more efficiency
