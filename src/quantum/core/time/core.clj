@@ -4,7 +4,8 @@
   (:gen-class))
 ; joda-time via clj-time
 (alias-ns 'clj-time.core)
-(require 'clj-time.periodic
+(require
+  '[clj-time.periodic]
   '[quantum.core.collections :refer :all])
 
 (defn now-normal []

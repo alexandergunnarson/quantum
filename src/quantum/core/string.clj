@@ -177,6 +177,16 @@
           (str ret elem " ")))
     ""
     args))
+(defn sp-comma
+  "Like |sp|, but adds commas and spaces between the arguments."
+  [& args]
+  (reducei+
+    (fn [ret elem n]
+      (if (= n (dec (count args)))
+          (str ret elem)
+          (str ret elem ", ")))
+    ""
+    args))
 
 ; REGEX
 

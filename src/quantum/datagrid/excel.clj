@@ -1,5 +1,5 @@
-(ns quanta.datagrid.excel (:gen-class))
-(require '[quanta.library.ns :as ns])
+(ns quantum.datagrid.excel (:gen-class))
+(require '[quantum.core.ns :as ns])
 (ns/require-all *ns* :lib :clj)
 (require
   '[clojure.java.io :refer :all])

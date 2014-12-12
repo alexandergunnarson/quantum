@@ -1,6 +1,9 @@
 (ns quantum.core.log
   (:refer-clojure :exclude [pr]))
-(require '[quantum.core.ns :as ns])
+(require
+  '[quantum.core.ns    :as ns]
+  '[quantum.core.time.core]
+  '[clojure.core.async :as async :refer [go <! >! >!! <!! alts! chan]])
 (ns/require-all *ns* :clj)
 
 ; alert, inspect
@@ -9,6 +12,7 @@
 (def vars (atom {}))
 (defn cache! [k v]
   (swap! vars assoc k v))
+(def statuses (atom (chan)))
 (def errors (atom []))
 (defn error [throw-context]
   (swap! errors conj
@@ -47,3 +51,21 @@
           (LogEntry.
             (clj-time.core/now) ~pr-type ns-0# (str ~@args))))
       nil)))
+
+
+
+
+
+
+(defn status
+  "Updates the system status with the provided string @s."
+  [^String s]
+  (pr :user s)
+  (let [statuses-chan @statuses]
+    (go (>! @statuses s))
+    (reset! statuses statuses-chan))
+  nil)
+(defn ^String curr-status
+  "Updates the system status with the provided string @s."
+  [^String s]
+  (go (<! @statuses s)))

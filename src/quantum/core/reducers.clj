@@ -1174,7 +1174,8 @@
    Leverages kv-reduce when destructuring and iterating over a map."
   ^{:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"}
   [seq-exprs body-expr]
-  (letfn [(emit-fn [form] 
+  (identity ; was...delay but defmacro says print-dup not defined
+    (letfn [(emit-fn [form] 
             (fn [sub-expr [bind expr & mod-pairs]]
               (let [foldable (not-any? (comp #{:while} first) mod-pairs)
                     kv-able (and (vector? bind) (not-any? #{:as} bind)
@@ -1202,7 +1203,7 @@
                        ([~ret ~@kv-args] (let ~kv-bind ~body))))))))]
     (emit-comprehension &form
       {:emit-other (emit-fn (partial list `reduce+)) :emit-inner (emit-fn list)}
-      seq-exprs body-expr)))
+      seq-exprs body-expr))))
 ; <<<<------ ALREADY REDUCED ------>>>>
 (defmacro doseq+
   "doseq but based on reducers, leverages kv-reduce when iterating on maps."

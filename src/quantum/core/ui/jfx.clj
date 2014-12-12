@@ -185,47 +185,51 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
   {:keycode k
    :name        (-> (.getName k) str/lower-case keyword)
    :value       (-> (.valueOf k) str/lower-case keyword)
-   :arrow?      (.isArrowKey k)
-   :digit?      (.isDigitKey k)
-   :function?   (.isFunctionKey k)
-   :keypad?     (.isKeypadKey k)
-   :media?      (.isMediaKey k)
-   :modifier?   (.isModifierKey k)
+   :arrow?      (.isArrowKey      k)
+   :digit?      (.isDigitKey      k)
+   :function?   (.isFunctionKey   k)
+   :keypad?     (.isKeypadKey     k)
+   :media?      (.isMediaKey      k)
+   :modifier?   (.isModifierKey   k)
    :navigation? (.isNavigationKey k)
    :whitespace? (.isWhitespaceKey k)})
 
 (defn- prep-pickresult [p]
   {:pickresult p
-   :distance (.getIntersectedDistance p)
-   :face (.getIntersectedFace p)
-   :node (.getIntersectedNode p)
-   :point (.getIntersectedPoint p)
+   :distance  (.getIntersectedDistance p)
+   :face      (.getIntersectedFace     p)
+   :node      (.getIntersectedNode     p)
+   :point     (.getIntersectedPoint    p)
    :tex-coord (.getIntersectedTexCoord p)})
 
 (defn- prep-event-map [e & {:as m}]
   (let [prep {:event e
-              :source (.getSource e)
-              :type (.getEventType e)
-              :target (.getTarget e)
-              :consume #(.consume e)
-              :string (.toString e)}]
+              :source   (.getSource    e)
+              :type     (.getEventType e)
+              :target   (.getTarget    e)
+              :consume #(.consume      e)
+              :string   (.toString     e)}]
     (if (nil? m) prep (merge prep m))))
 (defn- add-modifiers [m e]
   (merge m
-         {:alt-down? (.isAltDown e)
-          :control-down? (.isControlDown e)
-          :meta-down? (.isMetaDown e)
-          :shift-down? (.isShiftDown e)
+         {:alt-down?      (.isAltDown      e)
+          :control-down?  (.isControlDown  e)
+          :meta-down?     (.isMetaDown     e)
+          :shift-down?    (.isShiftDown    e)
           :shortcut-down? (.isShortcutDown e)}))
 (defn- add-coords [m e]
   (merge m
-         {:screen-coords {:x (.getScreenX e) :y (.getScreenY e)}
-          :scene-coords {:x (.getSceneX e) :y (.getSceneY e)}
-          :coords {:x (.getX e) :y (.getY e) :z (.getZ e)}}))
+    {:screen-coords {:x (.getScreenX e)
+                     :y (.getScreenY e)}
+     :scene-coords  {:x (.getSceneX  e)
+                     :y (.getSceneY  e)}
+     :coords        {:x (.getX       e)
+                     :y (.getY       e)
+                     :z (.getZ       e)}}))
 
 (defprotocol EventPreProc
   (preprocess-event [event]))
-(extend-protocol preprocess-event
+(extend-protocol EventPreProc
   javafx.scene.input.ContextMenuEvent
     (preprocess-event [e]
       (-> (prep-event-map e
@@ -242,7 +246,7 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
     (preprocess-event [e]
       (-> (prep-event-map e
             :character (.getCharacter e)
-            :code      (prep-key-code (.getCode e))
+            :code      (-> e (.getCode) prep-key-code)
             :text      (.getText e))
           (add-modifiers e)))
   javafx.scene.input.MouseEvent
@@ -271,8 +275,9 @@ args is a named-argument-list, where the key is the property name (e.g. :text) a
         :control-down? (.isControlDown  e)
         :meta-down?    (.isMetaDown     e)
         :shift-down?   (.isShiftDown    e)))
-  Object [e]
-    (prep-event-map e))
+  Object
+    (preprocess-event [e]
+      (prep-event-map e)))
 ;___________________________________________________________________________________________________________________________________
 ;============================================================{   API   }============================================================
 ;============================================================{         }============================================================

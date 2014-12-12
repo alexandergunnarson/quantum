@@ -4,7 +4,7 @@
             [clojure.data :as cljdata]
             [clojure.walk :refer :all]
             [clojure.reflect :refer :all]
-            [quantum.core.print :refer [print-table !]])
+            [quantum.core.print :refer [!]])
 	(:import java.lang.reflect.Method))
 
 (defn get-by-key [object info-type & args]

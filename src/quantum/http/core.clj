@@ -1,5 +1,5 @@
-(ns quanta.http.core)
-(require '[quanta.library.ns  :as ns :refer :all])
+(ns quantum.http.core)
+(require '[quantum.core.ns  :as ns :refer :all])
 (ns/require-all *ns* :lib :clj)
 (require '[org.httpkit.client :as http])
 

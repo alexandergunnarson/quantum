@@ -216,7 +216,7 @@
       '[quantum.core.data.queue  :as q           :refer [queue]                ]
       '[quantum.core.thread                      :refer :all                   ]
       '[quantum.core.error       :as err         :refer :all                   ]
-      '[clojure.core.async         :as async       :refer [go <! >! alts!]       ])))
+      '[clojure.core.async       :as async       :refer [go <! >! alts!]       ])))
 (defn require-java-fx [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require '[quantum.core.ui.init])
@@ -276,8 +276,8 @@
           (require-lib curr-ns)
         :grid
         (require 
-          '[quanta.datagrid.core       :as grid]
-          '[quanta.datagrid.excel      :as xl  ])
+          '[quantum.datagrid.core       :as grid]
+          '[quantum.datagrid.excel      :as xl  ])
         :java-fx
           (require-java-fx curr-ns)
         :fx-core
@@ -341,8 +341,8 @@
       '*db          'clj-qb.qb-database   
       '*req         'clj-qb.req-gen       
       '*qb          'clj-qb.dispatch          
-      '*grid        'quanta.datagrid.core 
-      '*xl          'quanta.datagrid.excel)))
+      '*grid        'quantum.datagrid.core 
+      '*xl          'quantum.datagrid.excel)))
 
 ; find-doc, doc, and source are incl. in /user/ ns but not in any others
 (defalias source   repl/source)   

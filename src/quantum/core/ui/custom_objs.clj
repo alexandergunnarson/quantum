@@ -73,7 +73,7 @@
             (ns/eval-key obj-key))))
   (swap! fx/objs assoc-in+ [obj-key :ref] (ns/eval-key obj-key))
   (swap! fx/objs assoc-in+ [obj-key :style]
-    (get (apply hash-map props) :button-style)) ; FIX THIS!!
+    (get (apply hash-map props) :fx-style))
   (swap! fx/obj-key-pairs
     assoc (ns/eval-key obj-key) obj-key)
   (ns/eval-key obj-key))
