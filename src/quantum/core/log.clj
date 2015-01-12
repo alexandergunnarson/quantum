@@ -1,9 +1,10 @@
 (ns quantum.core.log
   (:refer-clojure :exclude [pr]))
 (require
-  '[quantum.core.ns    :as ns]
+  '[quantum.core.ns     :as ns]
   '[quantum.core.time.core]
-  '[clojure.core.async :as async :refer [go <! >! >!! <!! alts! chan]])
+  '[clojure.core.async  :as async :refer [go <! >! >!! <!! alts! chan]]
+  '[quantum.core.string :as str])
 (ns/require-all *ns* :clj)
 
 ; alert, inspect
@@ -59,12 +60,14 @@
 
 (defn status
   "Updates the system status with the provided string @s."
-  [^String s]
-  (pr :user s)
-  (let [statuses-chan @statuses]
-    (go (>! @statuses s))
-    (reset! statuses statuses-chan))
-  nil)
+  ([^String s]
+    (pr :user s)
+    (let [statuses-chan @statuses]
+      (go (>! @statuses s))
+      (reset! statuses statuses-chan))
+    nil)
+  ([^String s & strs]
+    (status (apply str/sp s strs))))
 (defn ^String curr-status
   "Updates the system status with the provided string @s."
   [^String s]
