@@ -1,10 +1,13 @@
-(ns quantum.core.data.bytes)
+(ns quantum.core.data.bytes
+  (:refer-clojure :exclude [reverse]))
 
-; (ns mikera.cljutils.bytes
-;   (:refer-clojure :exclude [reverse])
-;   (:import [java.util Arrays])
-;   (:require [mikera.cljutils.hex :as hex])
-;   (:require [clojure.string :as str]))
+; SRC ns mikera.cljutils.bytes
+
+(require
+  '[quantum.core.string           :as str]
+  '[quantum.core.collections.core         :refer :all]
+  '[quantum.core.data.binary      :as bin :refer :all])
+(import  'java.util.Arrays)
 
 (set! *warn-on-reflection* true)
 (set! *unchecked-math* true)
@@ -40,12 +43,12 @@
       (System/arraycopy a (int start) res (int 0) length)
       res)))
 
-(defn to-hex-string 
-  "Converts a byte array to a string representation , with space as a default separator."
-  ([^bytes bs]
-    (to-hex-string bs " "))
-  ([^bytes bs separator]
-    (str/join separator (map #(hex/hex-string-from-byte %) bs))))
+; (defn to-hex-string 
+;   "Converts a byte array to a string representation , with space as a default separator."
+;   ([^bytes bs]
+;     (to-hex-string bs " "))
+;   ([^bytes bs separator]
+;     (str/join separator (map #(hex/hex-string-from-byte %) bs))))
 
 (defn unchecked-byte-array 
   "Like clojure.core/byte-array but performs unchecked casts on sequence values."
@@ -64,3 +67,18 @@
   "Compares two byte arrays for equality."
   ([^bytes a ^bytes b]
     (Arrays/equals a b)))
+
+(defn ^String bytes-to-hex
+  "Convert a byte array to a hex string."
+  [^"[B" digested]
+  (let [^"[C" hex-arr   (.toCharArray "0123456789abcdef")
+        ^"[C" hex-chars (-> digested count (* 2) char-array)]
+    (loop [i 0] 
+      (if (< i (count digested))
+          (let [v           (-> digested (get+ i) (bit-and 0xFF))
+                bit-shifted (-> hex-arr  (get+ (>>>     v 4   )))
+                bit-anded   (-> hex-arr  (get+ (bit-and v 0x0F)))]
+                (aset hex-chars (* i 2)       bit-shifted)
+                (aset hex-chars (+ (* i 2) 1) bit-anded)
+              (recur (inc i)))))
+    (String. hex-chars)))

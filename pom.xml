@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.99</version>
+  <version>0.0.100</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>

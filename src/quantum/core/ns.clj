@@ -22,14 +22,18 @@
   {:attribution "The Joy of Clojure, 2nd ed."
    :todo ["'IOException: Pushback buffer overflow' on certain
             very large data structures"]}
-  [context expr]
-  (eval
-   `(let [~@(mapcat
-              (fn [[k v]]
-                (try [k `'~v]
-                  (catch java.io.IOException _ [k "var too large to show"])))
-              context)]
-      ~expr)))
+  ([context expr]
+    (eval
+     `(let [~@(mapcat
+                (fn [[k v]]
+                  (try [k `'~v]
+                    (catch java.io.IOException _ [k "var too large to show"])))
+                context)]
+        ~expr))))
+
+(defmacro let-eval [expr]
+  `(contextual-eval local-context ~expr))
+
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
    in the current namespace.
@@ -185,38 +189,40 @@
   (binding [*ns* curr-ns]
     (ns-unmap (ns-name curr-ns) 'some?)
     (require
-      '[quantum.core.collections :as coll        :refer :all                   ]
-      '[quantum.core.function    :as fn          :refer :all                   ]
-      '[quantum.core.io          :as io          :refer [path]                 ]
-      '[quantum.core.java        :as java                                      ]
-      '[quantum.core.log         :as log                                       ]
-      '[quantum.core.logic       :as logic       :refer :all                   ]
-      '[quantum.core.macros      :as macros      :refer :all                   ]
-      '[quantum.core.ns          :as ns          :refer [defalias source defs] ]
-      '[quantum.core.numeric     :as num                                       ]
-      '[quantum.core.print       :as pr          :refer [! pprint pr-attrs !* ]]
-      '[quantum.core.string      :as str         :refer [substring?]           ]
-      '[quantum.core.system      :as sys                                       ]
-      '[quantum.core.thread      :as thread                                    ]  
-      '[quantum.core.type                        :refer :all                   ]
-      '[quantum.core.data.array  :as arr         :refer :all                   ]
-      '[quantum.core.data.ftree  :as ftree                                     ]
-      '[quantum.core.data.map    :as map         :refer :all                   :exclude [merge+ split-at]]
-      '[quantum.core.data.queue  :as q                                         ]
-      '[quantum.core.data.set    :as set         :refer [sorted-set+]          ]
-      '[quantum.core.data.vector :as vec         :refer [conjl catvec]         ]
-      '[quantum.core.data.xml    :as xml                                       ]
-      '[quantum.core.time.core   :as time                                      ]
-      '[quantum.core.time.coerce :as time-coerce                               ]
-      '[quantum.core.time.format :as time-form                                 ]
-      '[quantum.core.time.local  :as time-loc                                  ]
-      '[quantum.core.util.bench  :as bench       :refer [bench]                ]
-      '[quantum.core.util.debug  :as debug       :refer [? break]              ]
-      '[quantum.core.util.sh     :as sh                                        ]
-      '[quantum.core.data.queue  :as q           :refer [queue]                ]
-      '[quantum.core.thread                      :refer :all                   ]
-      '[quantum.core.error       :as err         :refer :all                   ]
-      '[clojure.core.async       :as async       :refer [go <! >! alts!]       ])))
+      '[quantum.core.collections  :as coll        :refer :all                   ]
+      '[quantum.core.cryptography :as crypto]
+      '[quantum.core.function     :as fn          :refer :all                   ]
+      '[quantum.core.io           :as io          :refer [path]                 ]
+      '[quantum.core.java         :as java                                      ]
+      '[quantum.core.log          :as log                                       ]
+      '[quantum.core.logic        :as logic       :refer :all                   ]
+      '[quantum.core.macros       :as macros      :refer :all                   ]
+      '[quantum.core.ns           :as ns          :refer [defalias source defs] ]
+      '[quantum.core.numeric      :as num                                       ]
+      '[quantum.core.print        :as pr          :refer [! pprint pr-attrs !* ]]
+      '[quantum.core.string       :as str         :refer [substring?]           ]
+      '[quantum.core.system       :as sys                                       ]
+      '[quantum.core.thread       :as thread                                    ]  
+      '[quantum.core.type                         :refer :all                   ]
+      '[quantum.core.data.array   :as arr         :refer :all                   ]
+      '[quantum.core.data.binary  :as bin         :refer :all                   ]
+      '[quantum.core.data.ftree   :as ftree                                     ]
+      '[quantum.core.data.map     :as map         :refer :all                   :exclude [merge+ split-at]]
+      '[quantum.core.data.queue   :as q                                         ]
+      '[quantum.core.data.set     :as set         :refer [sorted-set+]          ]
+      '[quantum.core.data.vector  :as vec         :refer [conjl catvec]         ]
+      '[quantum.core.data.xml     :as xml                                       ]
+      '[quantum.core.time.core    :as time                                      ]
+      '[quantum.core.time.coerce  :as time-coerce                               ]
+      '[quantum.core.time.format  :as time-form                                 ]
+      '[quantum.core.time.local   :as time-loc                                  ]
+      '[quantum.core.util.bench   :as bench       :refer [bench]                ]
+      '[quantum.core.util.debug   :as debug       :refer [? break]              ]
+      '[quantum.core.util.sh      :as sh                                        ]
+      '[quantum.core.data.queue   :as q           :refer [queue]                ]
+      '[quantum.core.thread                       :refer :all                   ]
+      '[quantum.core.error        :as err         :refer :all                   ]
+      '[clojure.core.async        :as async       :refer [go <! >! alts!]       ])))
 (defn require-java-fx [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require '[quantum.core.ui.init])

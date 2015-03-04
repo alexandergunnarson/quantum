@@ -1,4 +1,4 @@
-(defproject quantum/core "0.0.99"
+(defproject quantum/core "0.0.100"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
@@ -17,9 +17,9 @@
   :dependencies
     [; CLOJURE CORE
      [org.clojure/clojure               "1.7.0-alpha4"]
-     ; DATAGIRD
-     [org.apache.poi/poi                "3.9"  ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
-     [org.apache.poi/poi-ooxml          "3.9"  ]
+     ; DATAGRID
+     [org.apache.poi/poi                "3.9"  ]
+     [org.apache.poi/poi-ooxml          "3.9"  ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
      ; META (CODE)      
      [repetition-hunter                 "1.0.0"]
      ; defprotocol+, definterface+, etc.

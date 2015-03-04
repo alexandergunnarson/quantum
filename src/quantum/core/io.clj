@@ -3,12 +3,14 @@
   (:import
     (java.io File FileNotFoundException PushbackReader
       FileReader DataInputStream DataOutputStream IOException
-      FileOutputStream BufferedOutputStream BufferedInputStream
-      FileInputStream)
+      OutputStream FileOutputStream BufferedOutputStream BufferedInputStream
+      InputStream  FileInputStream
+      PrintWriter)
     (java.util.zip ZipOutputStream ZipEntry)
     java.util.List
     (org.apache.commons.io FileUtils))
   (:gen-class))
+
 (require
   '[quantum.core.ns          :as ns    :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj)
@@ -17,6 +19,7 @@
   '[clojure.java.io          :as clj-io]
   '[clojure.data.csv         :as csv]
   '[quantum.core.data.array  :as arr  :refer :all]
+  '[quantum.core.error       :as err  :refer :all]
   '[quantum.core.string      :as str]
   '[quantum.core.time.core   :as time]
   '[quantum.core.print       :as pr   :refer [! pprint]]
@@ -41,7 +44,6 @@
 
 (set! *warn-on-reflection* true)
 
-(defalias file clj-io/file)
 (defn exists? [^String path-0] (.exists ^File (clj-io/as-file path-0)))
 
 (defn- double-escape [^String x]
@@ -168,6 +170,10 @@
   (-> dir coll-if parse-dirs-keys parent file-seq vec+ popl+))
 (defn children [dir]
   (-> dir coll-if parse-dirs-keys clj-io/as-file file-seq vec+ popl+))
+(defn file [arg]
+  (condf arg
+    vector? (fn-> parse-dirs-keys clj-io/file)
+    string? clj-io/file))
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{ FILES AND I/O  }=========================================================
 ;========================================================{                }==========================================================
@@ -179,6 +185,7 @@
         (try (.mkdir dir-f)
              (println "Directory created:" dir)
           (catch SecurityException e (println "The directory could not be created. A security exception occurred."))))))
+
 (defn num-to-sortable-str [num-0]
   (ifn num-0 (fn-and num/nneg? (f*n < 10))
        (partial str "0")
@@ -202,10 +209,38 @@
            fold+ num/greatest inc num-to-sortable-str)
       (catch Exception _ (num-to-sortable-str 1)))))
 
-(defn write-unserialized! [data path- & {:keys [type] :or {type :string}}]
+
+(defn- write-from-stream!
+  {:todo ["Reflection"]}
+  [^InputStream in-stream ^String out-path]
+  (let [^FileOutputStream out-stream
+          (FileOutputStream. (File. out-path))
+        ^"[B" buffer (byte-array (* 8 1024))]
+    (loop [bytesRead (int (.read in-stream buffer))]
+      (when (not= bytesRead -1)
+        (do (.write out-stream buffer 0 bytesRead)
+            (recur (.read in-stream buffer)))))
+
+    (.close in-stream)
+    (.close out-stream)))
+
+(defn write-unserialized!
+  [data ^String path- & {:keys [type] :or {type :string}}]
+  {:pre [(with-throw
+           (or (and (instance? InputStream data)
+                    (= type :binary))
+               (not (instance? InputStream data)))
+           (str/sp "InputStream canot be written to output type:" type))]}
   (condpc = type
     (coll-or :str :string :txt) 
       (spit path- data)
+    :binary
+      (if (instance? InputStream data)
+          (write-from-stream! data path-)
+          (let [^FileOutputStream out-stream
+                  (FileOutputStream. ^File (file path-))]
+            (.write out-stream data) ; REFLECTION error
+            (.close out-stream)))
     :csv  (with-open [out-file   (clj-io/writer path-)]  ;  :append true... hmm...
             (csv/write-csv out-file data))
     :xls  (with-open [write-file (clj-io/output-stream path-)]
@@ -238,8 +273,9 @@
           (condpc = write-method
             :print  (write-unserialized! data-formatted file-path-f :type :string)
             :pretty (pprint data-formatted (clj-io/writer file-path-f)) ; is there a better way to do this?
-            (coll-or :serialize :compress)
-              (if (splice-or file-type = "csv" "xls" "xlsx" "txt")
+            (coll-or :serialize :compress :binary)
+              (if (or ;(= write-method :binary)
+                      (splice-or file-type = "csv" "xls" "xlsx" "txt" :binary))
                   (write-unserialized! data-formatted file-path-f :type (keyword file-type))
                   (write-serialized!   data-formatted file-path-f write-method))
             (println "Unknown write method requested."))
@@ -347,8 +383,8 @@
       :as options}] ; :string??
   (when (fn? class-import)
     (class-import))
-  (let [directory-f (-> directory coll-if parse-dirs-keys)
-        file-path-f
+  (let [^String directory-f (-> directory coll-if parse-dirs-keys)
+        ^String file-path-f
           (or (-> file-path coll-if parse-dirs-keys (whenc empty? nil))
               (path directory-f file-name))
         extension (or file-type (file-ext file-path-f))]
@@ -358,8 +394,8 @@
       :str-vec   (iota/vec file-path-f)
       :unserialize
         (condpc = extension
-          "txt"
-          (iota/seq file-path-f)
+          (coll-or "txt" "xml")
+          (iota/vec file-path-f) ; default is FileVec
           "xlsx"
           (clj-io/input-stream file-path-f)
           "csv"

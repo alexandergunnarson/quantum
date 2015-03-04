@@ -35,6 +35,8 @@
 (defalias foldm foldm+)
 (defalias foldv foldp+)
 
+(defn lasti [coll] (-> coll count dec))
+
 (defn ^Set abs-difference 
   "Returns the absolute difference between a and b.
    That is, (a diff b) union (b diff a)."
@@ -67,6 +69,95 @@
    Uses lazy |filter| so as to do it in the fastest possible way."
    [^AFunction filter-fn coll]
    (->> coll (filter filter-fn) first))
+
+(defn ffilter+
+  {:todo ["Use a delayed reduction as the base!"]}
+  [^Fn pred coll]
+  (reduce+
+    (fn [ret elem-n]
+      (when (pred elem-n)
+        (reduced elem-n)))
+    nil
+    coll))
+
+(defn ^MapEntry ffilteri+
+  {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
+   :in   ["(f*n = '4')" "['a' 'd' 't' '4' '10']"]
+   :out  "['4' 3]"}
+  [^Fn pred coll]
+  (reducei+
+    (fn [ret elem-n index-n]
+      (if (pred elem-n)
+          (reduced (map-entry index-n elem-n))
+          (if (= index-n (lasti coll)) ; If it's looked through all elements and they don't match,
+              (map-entry -1 nil)
+              (map-entry (inc index-n) nil))))
+    (map-entry 0 nil)
+    coll))
+
+(defn filteri+
+  {:todo ["Use reducers"]}
+  [pred coll]
+  (reducei+
+    (fn [ret elem-n n]
+      (if (pred elem-n)
+          (conj ret (map-entry n elem-n))
+          ret))
+    []
+    coll))
+
+(defn indices-of+
+  {:todo ["Make parallizeable"]}
+  [coll elem-0]
+  (reducei+
+    (fn [ret elem-n n]
+      (if (= elem-0 elem-n)
+          (conj ret n)
+          ret))
+    []
+    coll))
+
+
+(defn take-from+ [obj ^Int n]
+  (getr+ obj n (count obj)))
+(defn take-fromi+
+  {:in  ["asdbsd" "db"]
+   :out "dbsd"}
+  [obj sub-obj]
+  (take-from+ obj (index-of+ obj sub-obj)))
+(defn take-afteri+
+  {:in  ["asdbsd" "db"]
+   :out "dbsd"}
+  [obj sub-obj]
+  (take-from+
+    obj
+    (+ (index-of+ obj sub-obj)
+       (count sub-obj))))
+(defn dropl+ [obj ^Int n]
+  (getr+ obj n (count obj)))
+(defn take-untili+ [obj sub-obj]
+  (getr+ obj 0 (index-of+ obj sub-obj)))
+
+(defn indices-of++
+  {:todo ["Make parallizeable and more efficient using reducers"]}
+  [coll elem]
+  (loop [indices-n []
+         coll-n    coll]
+    (let [index-n (index-of+ coll-n elem)
+          last-index (if (empty? indices-n)
+                         0
+                         (inc (last+ indices-n)))]
+      (println "index-n is" index-n "and" indices-n)
+      (if (= -1 index-n)
+          indices-n
+          (recur (conj indices-n (num/safe+ index-n last-index))
+                 (take-from+ coll-n (inc index-n)))))))
+
+(defn split-remove+
+  {:todo ["Slightly inefficient — two /index-of+/ implicit."]}
+  [coll split-at-obj]
+  [(take-untili+ coll split-at-obj)
+   (take-afteri+ coll split-at-obj)])
 
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks)))

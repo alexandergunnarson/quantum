@@ -13,7 +13,7 @@
 
 (defn methods-names [object]
   (sort ; alphabetizes
-      (map :name (:members (reflect object)))))
+    (map :name (:members (reflect object)))))
 
 ; (def my-method-fetch
 ;   (memoize ; oh, so it's basically a function, but it just memoizes within
