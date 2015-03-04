@@ -1,0 +1,7 @@
+# 1. Make a copy of this file in the same package, filename has to be privateTestData.properties
+# 2. edit your settings in that file.
+# 3. privateTestData.properties is in the ignore list, DO NOT CHECK IN THAT FILE!
+username=username@gmail.com
+password=password
+connectOnStartup=false
+jsonData=

@@ -6,6 +6,7 @@
 (def ^:dynamic *max-tries-http* 3)
 
 (defrecord HTTPLogEntry [^APersistentVector tries])
+(def ^:dynamic *http-log* (atom {}))
 ;___________________________________________________________________________________________________________________________________
 ;================================================={              LOG              }=================================================
 ;================================================={                               }=================================================
@@ -27,13 +28,13 @@
 ;___________________________________________________________________________________________________________________________________
 ;================================================={     PROCESS HTTP REQUEST      }=================================================
 ;================================================={                               }=================================================
-(defn proc-request
+(defn proc-request!
   "'Safe' because it handles various HTTP errors (401, 403, 500, etc.),
    and limits retries at |http-lib/*max-tries-http*| (which defaults at 3)."
    {:todo  ["EOFException SSL peer shut down incorrectly  sun.security.ssl.InputRecord.read
              INFO: I/O exception (java.net.SocketException) caught when connecting to
                    {s}->https://www.googleapis.com: Connection reset"]
-    :usage "(proc-request 0 nil {...} (atom {:tries []}))"}
+    :usage "(proc-request! 0 nil {...} (atom {:tries []}))"}
   [^Integer try-n status-n request-n ^Atom log-entry ^AFunction handle-http-error-fn]
   (if (= try-n *max-tries-http*)
       (throw+ {:message (str "HTTP exception, status " status-n ". Maximum tries (3) exceeded.")})
@@ -45,3 +46,10 @@
         (compr :status (f*n splice-or = 401 403 500))
         #(handle-http-error-fn try-n (:status %) request-n log-entry)
         :else identity)))
+
+(defn proc-request-std!
+  {:todo ["Have temp-log be a global variable"]}
+  [^Map req]
+  (let [^Map req-f (assoc req :as :auto)]
+    (trampoline proc-request! 0 nil
+      req-f *http-log* vector)))

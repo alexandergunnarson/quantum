@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="gvjava" default="deployToConfSharedLib" basedir=".">
+	<tstamp prefix="build-info">
+		<format property="current-date" pattern="d-MMMM-yyyy" locale="en" />
+		<format property="current-time" pattern="hh:mm:ss a z" locale="en" />
+		<format property="year-month-day" pattern="yyyy-MM-dd" locale="en" />
+	</tstamp>
+
+	<property name="target" value="1.6" />
+	<property name="source" value="1.6" />
+
+	<property file="build.properties" />
+	<property name ="gvjava.home.absolute.path" location="${gvjava.home}" />
+	<patternset id="jar.file.pattern" includes="**/*.jar" />
+
+	<property name="dir.src" value="${basedir}/src" />
+	<property name="dir.bin" value="${basedir}/bin" />
+	<property name="dir.lib" value="${basedir}/libs" />
+	<property name="dir.dist" value="${basedir}/dist" />
+
+	<property name="file.jar" value="${gvjava.name}.jar" />
+
+	<path id="compile.path">
+		<fileset dir="${basedir}/libs">
+			<patternset refid="jar.file.pattern" />
+		</fileset>
+
+		<fileset dir="${dir.dist}">
+			<include name="*.jar" />
+		</fileset>
+	</path>
+
+
+	<!-- Clean Build dir -->
+	<target name="clean">		
+		<delete dir="${dir.bin}" />		
+	</target>
+
+	<!-- Init -->
+	<target name="init">
+		<mkdir dir="${dir.bin}" />
+	</target>
+
+	<!-- Compile -->
+	<target name="compile" depends="clean, init">
+		<echo message="compile.path" />
+		<javac debug="true" destdir="${dir.bin}" includeantruntime="false" source="${source}" target="${target}">
+			<src path="${dir.src}" />
+			<classpath refid="compile.path" />
+		</javac>
+	</target>
+	
+
+    <!-- Creates Javadoc -->
+    <target name="docs" depends="compile">
+        <javadoc packagenames="src" sourcepath="${source}" destdir="${javadoc.home}">
+            <!-- Define which files / directory should get included, we include all -->
+            <packageset dir="${dir.src}" defaultexcludes="yes">
+                <include name="**" />
+            </packageset>
+        	<classpath>
+    	        <fileset dir="${basedir}/libs">
+					<patternset refid="jar.file.pattern" />
+				</fileset>
+        	 </classpath>
+        </javadoc>
+    </target>
+
+	<!-- JAR -->
+	<target name="jar" depends="docs">
+		<mkdir dir="${dir.dist}" />
+		<jar basedir="${dir.bin}" destfile="${dir.dist}/${file.jar}">
+			<manifest>
+				<attribute name="Built-By" value="${builder}" />
+				<attribute name="Built-On" value="${build-info.current-date}" />
+				<attribute name="Built-At" value="${build-info.current-time}" />
+				<attribute name="Implementation-Version" value="${gvjava.version-number}" />
+			</manifest>
+			<fileset dir="${dir.src}" includes="**/*.java"/> 
+			<fileset dir="${gvjava.home}" includes="docs/javadoc/"/> 
+		</jar>
+	</target>
+
+
+</project>

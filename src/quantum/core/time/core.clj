@@ -2,6 +2,9 @@
   (:refer-clojure :exclude [extend second])
   (:require [quantum.core.ns :as ns :refer [alias-ns]])
   (:gen-class))
+
+(import 'java.util.Date)
+
 ; joda-time via clj-time
 (alias-ns 'clj-time.core)
 (require
@@ -60,6 +63,9 @@
             date-a (days 1))]
   (for+ [day (take (inc difference-in-days) instants-on-beg-of-days)]
     (f day))))
+
+(defn ^Long long-timestamp []
+  (long (/ (.getTime (Date.)) 1000)))
 
 ; (defmacro loop-days-between
 ;   [^DateTime a ^DateTime b ^Fn f ^clojure.lang.Symbol loop-fn]
