@@ -86,9 +86,12 @@
   [& parts]
   (apply str/join-once *os-separator* parts))
 (defn up-dir [dir & [separator]]
-  (let [sep-f (or separator *os-separator*)
+  {:pre [(string? dir)]}
+  (try
+    (let [sep-f (or separator *os-separator*)
         dir-f (whenf dir (compr last+ (eq? sep-f)) popr+)]
-    (str/subs+ dir-f 0 (inc (last-index-of+ dir-f sep-f)))))
+      (str/subs+ dir-f 0 (inc (last-index-of+ dir-f sep-f))))
+    (catch java.lang.StringIndexOutOfBoundsException _ "")))
 (defn file-name-from-path [path-0]
   (let [path-f (str path-0)]
     (str/subs+ path-f
@@ -119,8 +122,7 @@
         (str/replace #"/" *os-sep-esc*))
     (catch Exception _ ""))) ; To handle a weird "MapEntry cannot be cast to Number" error)
 (def ^:private this-dir
-  (try+ (up-dir test-dir)
-    (catch java.lang.StringIndexOutOfBoundsException _ "")))
+  (up-dir test-dir))
 (def ^:private root-dir
   (condp = sys/*os*
     :windows (-> (System/getenv) (get "SYSTEMROOT") str)
@@ -331,7 +333,8 @@
             (-> file-name-0 path-without-ext
                 (str (or date-spaced
                          (whenf file-num nnil? (partial str " ")))
-                     "." extension))
+                     (when (nempty? extension)
+                       (str "." extension))))
           file-path-f (path directory-f file-name-f)
           data-formatted
             (case file-type
@@ -392,6 +395,7 @@
       :load-file (load-file file-path-f) ; don't do this; validate it first
       :str-seq   (iota/seq file-path-f)
       :str-vec   (iota/vec file-path-f)
+      :str       (slurp file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
       :unserialize
         (condpc = extension
           (coll-or "txt" "xml")

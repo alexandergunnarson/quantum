@@ -1,6 +1,10 @@
 (ns quantum.core.data.array
   (:import java.util.ArrayList)
   (:gen-class))
+
+(require
+  '[quantum.core.ns              :as ns :refer [defalias]]
+  '[quantum.core.collections.core       :refer [doseqi]])
 ; (ns mikera.cljutils.arrays
 ;   (:use mikera.cljutils.loops))
 
@@ -75,6 +79,30 @@
   	      (.add ^ArrayList ret elem)
           ret)
           (ArrayList.) args))
+
+(defalias aset! aset)
+; NEED TO MAKE THESE LESS REPETITIVE  -  MACRO-BASED
+(defn ^"[B"
+  byte-array+
+  "Like /byte-array/ but allows for array initializers a la Java:
+   byte[] arr = byte[]{12, 8, 10}"
+  ([size]
+    (byte-array (long size)))
+  ([size & args]
+    (let [^"[B" arr (byte-array (long size))]
+      (doseqi [arg args n]
+        (aset! arr n (-> arg first byte)))
+      arr)))
+(defn ^"[I" int-array+
+  "Like /int-array/ but allows for array initializers a la Java:
+   int[] arr = int[]{12, 8, 10}"
+  ([size]
+    (int-array (long size)))
+  ([size & args]
+    (let [^"[I" arr (int-array (long size))]
+      (doseqi [arg args n]
+        (aset! arr (long n) (-> arg first int)))
+      arr)))
 
 ; (definline objects
 ;   "Casts to object[]"

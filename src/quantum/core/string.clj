@@ -6,11 +6,11 @@
   '[quantum.core.ns       :as ns    :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj)
 (require 
-  '[quantum.core.logic    :as logic :refer :all]
-  '[quantum.core.numeric  :as num   :refer [nneg-int?]]
-  '[quantum.core.function :as fn    :refer :all]
-  '[quantum.core.reducers :as r     :refer :all]
-  '[clojure.string          :as str])
+  '[quantum.core.logic       :as logic :refer :all]
+  '[quantum.core.numeric     :as num   :refer [nneg-int?]]
+  '[quantum.core.function    :as fn    :refer :all]
+  '[quantum.core.reducers    :as r     :refer :all]
+  '[clojure.string           :as str])
 
 
 ; http://www.regular-expressions.info
@@ -236,3 +236,15 @@
 (def vowels
   ["a" "e" "i" "o" "u"
    "A" "E" "I" "O" "U"])
+
+
+(defprotocol+ String+
+  (str+ [obj] [obj & objs])) 
+(extend-protocol String+
+  java.io.InputStream
+    (str+ [is]
+      (let [^java.util.Scanner s
+              (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
+        (if (.hasNext s) (.next s) "")))
+  Object
+    (str+ [obj] (str obj)))

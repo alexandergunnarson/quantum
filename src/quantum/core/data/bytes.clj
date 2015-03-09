@@ -6,7 +6,9 @@
 (require
   '[quantum.core.string           :as str]
   '[quantum.core.collections.core         :refer :all]
-  '[quantum.core.data.binary      :as bin :refer :all])
+  '[quantum.core.data.binary      :as bin :refer :all]
+  '[quantum.core.logic                    :refer :all]
+  '[quantum.core.data.array       :as arr :refer [byte-array+ aset!]])
 (import  'java.util.Arrays)
 
 (set! *warn-on-reflection* true)
@@ -82,3 +84,15 @@
                 (aset hex-chars (+ (* i 2) 1) bit-anded)
               (recur (inc i)))))
     (String. hex-chars)))
+
+(defn ^"[B" str->cstring [^String s]
+  (when (nnil? s)
+    (let [^"[B" bytes  (.getBytes s)
+          ^"[B" result (byte-array+ (-> bytes count inc))]
+        (System/arraycopy
+          bytes  0
+          result 0
+          (count bytes))
+        (aset! result (-> result count dec) (byte 0))
+        result)))
+

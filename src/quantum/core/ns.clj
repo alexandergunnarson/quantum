@@ -1,15 +1,21 @@
 (ns quantum.core.ns
-  (:require [clojure.repl :as repl]
-            [clojure.core.rrb-vector]
-            [flatland.ordered.map])
+  (:require
+    #+clj [clojure.repl :as repl]
+    [clojure.core.rrb-vector]
+    #+clj [flatland.ordered.map])
+  #+cljs
+  (:import (cljs.core Keyword))
+  #+clj
+  (:import (clojure.lang Keyword Var Namespace))
+  #+clj
   (:gen-class))
 
-(import '(clojure.lang Keyword Var Namespace))
-
+#+clj ; for now
 (defmacro local-context
   {:attribution "The Joy of Clojure, 2nd ed."
    :todo ["'IOException: Pushback buffer overflow' on certain
-            very large data structures"]}
+            very large data structures"
+          "Use reducers"]}
   []
   (let [symbols (keys &env)]
     (zipmap
@@ -17,11 +23,13 @@
               symbols)
       symbols)))
 
+#+clj ; for now
 (defn contextual-eval
   "Restricts the use of specific bindings to |eval|."
   {:attribution "The Joy of Clojure, 2nd ed."
    :todo ["'IOException: Pushback buffer overflow' on certain
-            very large data structures"]}
+            very large data structures"
+          "Use reducers"]}
   ([context expr]
     (eval
      `(let [~@(mapcat
@@ -31,9 +39,11 @@
                 context)]
         ~expr))))
 
+#+clj ; for now
 (defmacro let-eval [expr]
   `(contextual-eval local-context ~expr))
 
+#+clj ; /resolve/ not in cljs
 (defn resolve-key
   "Resolves the provided keyword as a symbol for a var
    in the current namespace.
@@ -41,6 +51,8 @@
   ^{:attribution "Alex Gunnarson"}
   [^Keyword k]
   (-> k name symbol resolve))
+
+#+clj ; for now
 (defn eval-key
   "Evaluates the provided keyword as a symbol for a var
    in the current namespace.
@@ -49,6 +61,7 @@
   [^Keyword k]
   (-> k name symbol eval))
 
+#+clj
 (defn var-name
   "Get the namespace-qualified name of a var."
   ^{:attribution "flatland.useful.ns"}
@@ -58,6 +71,8 @@
       ((juxt (comp ns-name :ns)
              :name)
              (meta v)))))
+
+#+clj
 (defn alias-var
   "Create a var with the supplied name in the current namespace, having the same
   metadata and root-binding as the supplied var."
@@ -71,14 +86,18 @@
         (meta var)
         (meta name)))
     (when (.hasRoot var) [@var])))
+
+#+clj ; cljs use /def/
 (defmacro defalias
   "Defines an alias for a var: a new var with the same root binding (if
   any) and similar metadata. The metadata of the alias is its initial
   metadata (as provided by def) merged into the metadata of the original."
-  ^{:attribution "flatland.useful.ns"}
+  ^{:attribution "flatland.useful.ns"
+    :contributors ["Alex Gunnarson"]}
   [dst src]
   `(alias-var (quote ~dst) (var ~src)))
 
+#+clj
 (defn alias-ns
   "Create vars in the current namespace to alias each of the public vars in
   the supplied namespace.
@@ -89,6 +108,7 @@
   (doseq [[name var] (ns-publics (the-ns ns-name))]
     (alias-var name var)))
 
+#+clj
 (defn defs
   "Defines a provided list of symbol-value pairs as vars in the
    current namespace.
@@ -97,6 +117,8 @@
   [& {:as vars}]
   (doseq [var-n vars]
     (intern *ns* (-> var-n key name symbol) (val var-n))))
+
+#+clj
 (defn defs-private
   "Like /defs/: defines a provided list of symbol-value pairs
    as private vars in the current namespace.
@@ -106,6 +128,8 @@
   (doseq [var-n vars]
     (intern *ns* (-> var-n key name symbol) (val var-n))
     (alter-meta! (eval `(var ~(-> var-n key))) assoc :private true)))
+
+#+clj
 (defn clear-vars
   ^{:attribution "Alex Gunnarson"}
   [& vars]
@@ -113,24 +137,28 @@
     (alter-var-root (-> var-n name symbol resolve) (constantly nil)))
   (println "Vars cleared."))
 
+#+clj
 (defn declare-ns
   ^{:attribution "Alex Gunnarson"}
   [curr-ns]
   (defs-private 'this-ns curr-ns))
 
+#+clj ; cljs doesn't have reflection
 (defn defaults
   ^{:attribution "Alex Gunnarson"}
   []
   (set! *warn-on-reflection* true))
 
 ; Just to be able to synthesize class-name aliases...
-; (defrecord Vec     []) ; Conflicts with clojure.core/->Vec
+#+cljs ; Conflicts with clojure.core/->Vec
+(defrecord Vec      [])
 (defrecord Map      [])
-; (defrecord List     []);  Conflicts with java.util.List
+; (defrecord List    []);  Conflicts with java.util.List and cljs.core/List
 (defrecord Set      [])
 (defrecord Queue    [])
 (defrecord LSeq     [])
-(defrecord Fn       [])
+#+clj
+(defrecord Fn       []) ; Conflicts with "#js {:function true}"
 (defrecord Key      [])
 (defrecord Num      [])
 (defrecord ExactNum []) ; same as Ratio
@@ -140,12 +168,13 @@
 (defrecord Record   [])
 (defrecord Nil      [])
 
+#+clj
 (defn ns-exclude [^Namespace curr-ns & syms]
   (binding [*ns* curr-ns]
     (doseq [sym syms]
       (ns-unmap (ns-name curr-ns) sym))))
 
-
+#+clj
 (defn require-clj [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (do
@@ -185,6 +214,11 @@
         '(java.math BigDecimal)
         'clojure.core.rrb_vector.rrbt.Vector
         'flatland.ordered.map.OrderedMap))))
+
+#+cljs
+(defn require-cljs [])
+
+#+clj ; for now
 (defn require-lib [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (ns-unmap (ns-name curr-ns) 'some?)
@@ -223,6 +257,8 @@
       '[quantum.core.thread                       :refer :all                   ]
       '[quantum.core.error        :as err         :refer :all                   ]
       '[clojure.core.async        :as async       :refer [go <! >! alts!]       ])))
+
+#+clj
 (defn require-java-fx [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require '[quantum.core.ui.init])
@@ -249,6 +285,8 @@
           ComboBox ContentDisplay Labeled TableColumn TableRow
           TableCell ListCell TextArea TextField ContentDisplay
           TableView TableView$TableViewSelectionModel))))
+
+#+clj
 (defn require-fx-core [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require-java-fx curr-ns)
@@ -257,6 +295,8 @@
          [fx do-fx
           set-listener! swap-content!
           fx-node? fx-obj?]])))
+
+#+clj
 (defn require-fx [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require-fx-core curr-ns)
@@ -268,6 +308,8 @@
           setx! sety!
           getx gety get-size get-pos
           place-at! nudge!]])))
+
+#+clj ; for now
 (defn require-all
   "Loads/|import|s/|require|s all the namespaces and functions associated with a given
    library key @lib-key into the current namespace @curr-ns."
@@ -297,6 +339,8 @@
       (require-all curr-ns :clj)
       (doseq [lib-key (disj lib-keys :clj)]
         (require-all curr-ns lib-key)))))
+
+#+clj
 (defn nss
   "Defines, in the provided namespace, conveniently abbreviated symbols
    for other namespaces.
@@ -351,7 +395,7 @@
       '*xl          'quantum.datagrid.excel)))
 
 ; find-doc, doc, and source are incl. in /user/ ns but not in any others
-(defalias source   repl/source)   
-(defalias find-doc repl/find-doc)
-(defalias doc      repl/doc)
+#+clj (defalias source   repl/source)   
+#+clj (defalias find-doc repl/find-doc)
+#+clj (defalias doc      repl/doc)
 
