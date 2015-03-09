@@ -5,6 +5,8 @@
 (require
   '[quantum.core.numeric     :as num]
   '[quantum.core.function    :as fn   :refer :all]
+  '[quantum.core.string      :as str]
+  '[quantum.core.error                :refer :all]
   '[quantum.core.logic       :as log  :refer :all]
   '[quantum.core.data.vector :as vec  :refer [catvec]]
   '[quantum.core.collections :as coll :refer :all]
@@ -47,17 +49,52 @@
 ; Why you want to manage your threads when doing network-related things:
 ; http://eng.climate.com/2014/02/25/claypoole-threadpool-tools-for-clojure/
 (defmacro thread+
-  "Execute exprs in another thread, and return thread"
-  ^{:attribution "thebusby.bagotricks" :contributors "Alex Gunnarson"}
-  [thread-id & exprs]
-  (if true ;(contains? @reg-threads thread-id)
-      ;(throw+ {:type :key-exists
-      ;         :message (str "Thread id '" (name thread-id) "' already exists.")})
-      (do (swap! reg-threads assoc thread-id :open) ; it never closes, then
-          `(-> (let [ns-0# *ns*]
-                (doto (java.lang.Thread.
-                         (fn [] (binding [*ns* ns-0#] (do ~exprs))))
-                      (.start)))))))
+  "Execute exprs in another thread and returns the thread."
+  ^{:attribution "Alex Gunnarson"}
+  [^Keyword thread-id & exprs]
+  `(let [ns-0# *ns*
+         pre#
+           (and
+             (with-throw
+               (keyword? ~thread-id)
+               {:message "Thread-id must be a keyword."})
+             (with-throw
+               ((fn-not contains?) @reg-threads ~thread-id)
+               {:type    :key-exists
+                :message (str "Thread id '" (name ~thread-id) "' already exists.")}))
+         ^Atom result#
+           (atom {:completed false
+                  :result   nil})
+         ^java.lang.Thread thread#
+           (java.lang.Thread.
+             (fn []
+               (try
+                 (swap! reg-threads assoc-in [~thread-id :running?] :open)
+                 (binding [*ns* ns-0#]
+                   (swap! result# assoc :result    (do ~@exprs))
+                   (swap! result# assoc :completed true))
+                 (finally
+                   (swap! reg-threads dissoc ~thread-id)
+                   (println "Thread" ~thread-id "finished running.")))))]
+     (.start thread#)
+     (swap! reg-threads assoc-in [~thread-id :thread] thread#)
+     result#))
+
+(defn close! [^Keyword thread-id]
+  {:pre [(with-throw
+           (contains? @reg-threads thread-id)
+           {:message (str/sp "Thread-id" thread-id "does not exist.")})]}
+  (let [^java.lang.Thread thread
+          (-> @reg-threads (get thread-id) :thread)]
+    (.interrupt thread) ; /join/ after interrupt doesn't work 
+    (if (.isInterrupted thread)
+        (do (.stop thread)
+            (Thread/sleep 100) ; wait a little bit for it to stop
+            (when (.isAlive thread)
+              (throw+ {:message (str/sp "Thread" thread-id "cannot be closed.")})))
+        (throw+
+          {:message (str/sp "Thread" thread-id "cannot be closed.")}))))
+
 
 (defn promise-concur [method max-threads func list-0]
   (let [count- (count list-0)
