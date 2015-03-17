@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.0.101</version>
+  <version>0.2.0.0</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -17,11 +17,14 @@
     <url>https://www.github.com/alexandergunnarson/quantum</url>
   </scm>
   <build>
-    <sourceDirectory>src</sourceDirectory>
-    <testSourceDirectory>test</testSourceDirectory>
+    <sourceDirectory>target/generated/src/clj</sourceDirectory>
+    <testSourceDirectory>target/generated/test/clj</testSourceDirectory>
     <resources>
       <resource>
-        <directory>resources</directory>
+        <directory>target/generated/src/cljs</directory>
+      </resource>
+      <resource>
+        <directory>src/cljs</directory>
       </resource>
     </resources>
     <testResources>
@@ -29,12 +32,47 @@
         <directory>dev-resources</directory>
       </testResource>
       <testResource>
-        <directory>resources</directory>
+        <directory>target/generated/src/cljs</directory>
+      </testResource>
+      <testResource>
+        <directory>src/cljs</directory>
       </testResource>
     </testResources>
     <directory>target</directory>
     <outputDirectory>target/classes</outputDirectory>
-    <plugins/>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
+        <version>1.7</version>
+        <executions>
+          <execution>
+            <id>add-source</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>add-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>src/clj</source>
+              </sources>
+            </configuration>
+          </execution>
+          <execution>
+            <id>add-test-source</id>
+            <phase>generate-test-sources</phase>
+            <goals>
+              <goal>add-test-source</goal>
+            </goals>
+            <configuration>
+              <sources>
+                <source>test</source>
+              </sources>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
   </build>
   <repositories>
     <repository>
@@ -113,6 +151,11 @@
       <groupId>clj-time</groupId>
       <artifactId>clj-time</artifactId>
       <version>0.7.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.andrewmcveigh</groupId>
+      <artifactId>cljs-time</artifactId>
+      <version>0.3.2</version>
     </dependency>
     <dependency>
       <groupId>fipp</groupId>
@@ -200,6 +243,18 @@
       <version>0.5.4</version>
     </dependency>
     <dependency>
+      <groupId>com.cemerick</groupId>
+      <artifactId>clojurescript.test</artifactId>
+      <version>0.3.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojure</artifactId>
+      <version>1.7.0-alpha5</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.nrepl</artifactId>
       <version>0.2.3</version>
@@ -221,6 +276,12 @@
           <artifactId>clojure</artifactId>
         </exclusion>
       </exclusions>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojurescript</artifactId>
+      <version>0.0-2665</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

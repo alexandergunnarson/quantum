@@ -1,0 +1,83 @@
+(ns quantum.core.data.map
+  (:refer-clojure :exclude [split-at])
+  (:require
+    [clojure.data.avl     :as avl]
+    #+clj [flatland.ordered.map :as omap]
+    [quantum.core.ns :as ns :refer
+      #+clj [alias-ns defalias]
+      #+cljs [Exception IllegalArgumentException
+              Nil Bool Num ExactNum Int Decimal Key Vec Set
+              ArrList TreeMap LSeq Regex Editable Transient Queue Map]])
+  #+clj
+  (:import
+    clojure.core.Vec
+    (quantum.core.ns
+      Nil Bool Num ExactNum Int Decimal Key Set
+             ArrList TreeMap LSeq Regex Editable Transient Queue Map))
+  #+clj (:gen-class))
+
+(defn map-entry [k v]
+  #+clj
+  (clojure.lang.MapEntry. k v)
+  #+cljs
+  [k v])
+
+
+
+#+clj (defalias ordered-map omap/ordered-map)
+#+clj (defalias om omap/ordered-map)
+
+(defn merge+ [map-0 & maps] ; 782.922731 ms /merge+/ vs. 1.133217 sec normal /merge/ ; 1.5 times faster! 
+  (if #+clj  (instance?  Editable map-0)
+      #+cljs (satisfies? Editable map-0)
+      (->> maps
+           (reduce conj! (transient map-0))
+           persistent!)
+      (apply merge map-0 maps)))
+
+(defn merge-deep-with
+  "Like `merge-with` but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level.
+
+  (merge-deep-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
+                    {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
+  => {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
+  ^{:attribution "clojure.contrib.map-utils via taoensso.encore"}
+  [f & maps]
+  (apply
+    (fn m [& maps]
+      (if (every? map? maps)
+          (apply merge-with m maps)
+          (apply f maps)))
+    maps))
+
+(def merge-deep (partial merge-deep-with second))
+(comment (merge-deep {:a {:b {:c {:d :D :e :E}}}}
+                     {:a {:b {:g :G :c {:c {:f :F}}}}}))
+
+(def sorted-map+    avl/sorted-map)
+(def sorted-map-by+ avl/sorted-map-by)
+(def split-at       avl/split-at)
+;; find rank of element as primitive long, -1 if not found
+; (doc avl/rank-of)
+; ;; find element closest to the given key and </<=/>=/> according
+; ;; to coll's comparator
+; (doc avl/nearest)
+; ;; split the given collection at the given key returning
+; ;; [left entry? right]
+; (doc avl/split-key)
+; ;; split the given collection at the given index; similar to
+; ;; clojure.core/split-at, but operates on and returns data.avl
+; ;; collections
+; (doc avl/split-at)
+;; return subset/submap of the given collection; accepts arguments
+;; reminiscent of clojure.core/{subseq,rsubseq}
+; (doc avl/subrange)
+
+; SORTED MAPS AND SETS
+; Persistent sorted maps and sets with support for transients and additional O(logN) operations:
+; rank queries, "nearest key" lookups, splits by index or key and subsets/submaps.
+; data.avl maps and sets behave like the core Clojure variants, with the following differences:
+; 1) They have transient counterparts and use transients during construction
+; 2) They are typically noticeably faster during lookups and somewhat slower during non-transient "updates" (assoc, dissoc)
+; 3) They add some memory overhead - a reference and two ints per key (for implementation reasons).
