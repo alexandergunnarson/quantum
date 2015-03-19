@@ -1,4 +1,12 @@
-(ns quantum.core.string
+(ns
+  ^{:doc "Useful string utils. Aliases clojure.string.
+
+          Includes squote (single-quote), sp (spaced),
+          val (reading a number of a string), keyword+
+          (for joining strings and keywords into one
+          keyword), etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.string
   (:refer-clojure :exclude [replace remove contains? val re-find])
   (:require
     [quantum.core.function :as fn :refer
@@ -65,7 +73,7 @@
   #+clj  (Character/isLowerCase ^Character c)
   #+cljs (= c (.toLowerCase c)))
 (defn char+ [obj]
-  (if ((fn-and string? #(fn->> count (>= 1))) obj)
+  (if ((fn-and string? (fn->> count (>= 1))) obj)
       (first obj)
       (char obj)))
 (defn conv-regex-specials [^String str-0]
@@ -136,6 +144,7 @@
 
 (defn remove-all [^String str-0 to-remove]
   (reduce #(replace %1 %2 "") str-0 to-remove))
+
 #+clj
 (defn remove
   {:todo ["Port to cljs"]}
@@ -145,6 +154,7 @@
     (.replaceAll str-0 ^Pattern (conv-regex-specials to-remove) "")
     pattern?
     (replace str-0 to-remove "")))
+
 (defn join-once
   "Like /clojure.string/join/ but ensures no double separators."
   {:attribution "taoensso.encore"}
@@ -239,28 +249,22 @@
 (defn re-get
   [regex ^String string]
   "Return the matched portion of a regex from a string"
-  ^{:attribution "thebusby.bagotricks"}
+  {:attribution "thebusby.bagotricks"}
   (let [[_ & xs] (re-find regex string)]
     xs))
+
 (defn re-find+ [pat ^String in-str]
   (try (re-find (re-pattern pat) in-str)
     (catch #+clj  NullPointerException
            #+cljs js/TypeError _
       nil)))
-(defn contains?
-  [^String super sub]
-  (condfc sub
-    string?
-    #+clj  (.contains super ^String sub)
-    #+cljs (not= -1 (.indexOf super sub))
-    pattern?
-    (nnil? (re-find+ sub super))))
+
 (defn substring? [^String substr ^String string] ; the complement of contains?
   (contains? string substr))
 
 (def alphabet
   (->> (map+ (fn-> char str) (range+ 65 (inc 90)))
-       fold+)) ; this is actually reduce into vector...
+       redv))
 
 (defn ^String rand-str [len] 
   (->> (for+ [n (range 0 len)]

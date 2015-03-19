@@ -1,4 +1,8 @@
-(ns quantum.core.data.queue
+(ns
+  ^{:doc "Incorporates the semi-obscure clojure.lang.PersistentQueue into the
+          quantum library."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.queue
   (:require
     [quantum.core.ns :as ns :refer
       #+clj [alias-ns defalias]
@@ -6,8 +10,8 @@
               Nil Bool Num ExactNum Int Decimal Key Vec Set
               ArrList TreeMap LSeq Regex Editable Transient Queue Map]]
     [quantum.core.collections :as coll :refer [into+]]
-    [quantum.core.numeric :as num  :refer [int+]]
-    [clojure.core.rrb-vector :as vec+]
+    [quantum.core.numeric     :as num  :refer [int+]]
+    [clojure.core.rrb-vector  :as vec+]
     #+cljs [clojure.core.rrb-vector.rrbt])
   #+clj
   (:import

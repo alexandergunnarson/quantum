@@ -1,22 +1,27 @@
-(ns quantum.core.print
+(ns
+  ^{:doc "Printing functions such as fipp.edn (a fast pretty printer),
+          |pr-attrs| (which prints the key attributes of a given object
+          or expression, blacklisted printable objects (so you don't
+          have to wait while you accidentally print out an entire database), 
+          and so on."
+    :attribution "Alex Gunnarson"}
+  quantum.core.print
+  (:require
+    [quantum.core.ns           :as ns   #+clj :refer #+clj [defalias alias-ns]]
+    [quantum.core.collections           #+clj :refer #+clj :all]
+    [quantum.core.function              #+clj :refer #+clj :all]
+    [quantum.core.logic                 #+clj :refer #+clj :all]
+    [quantum.core.type                  #+clj :refer #+clj :all]
+    [quantum.core.numeric      :as num]
+    [quantum.core.string       :as str]
+    [quantum.core.data.xml     :as xml]
+    #+clj [clojure.pprint              :as pprint]
+    #+clj [fipp.edn                    :as pr])
   #+clj (:gen-class))
-#+clj (set! *warn-on-reflection* true)
 
 #+clj
 (do
-(require
-  '[quantum.core.ns           :as ns   :refer [defalias alias-ns]])
 (ns/require-all *ns* :clj)
-(require
-  '[quantum.core.collections           :refer :all]
-  '[quantum.core.function              :refer :all]
-  '[quantum.core.logic                 :refer :all]
-  '[quantum.core.type                  :refer :all]
-  '[quantum.core.numeric      :as num]
-  '[quantum.core.string       :as str]
-  '[quantum.core.data.xml     :as xml]
-  '[clojure.pprint              :as pprint]
-  '[fipp.edn                    :as pr])
 
 ; "At least 5 times faster than clojure.pprint/pprint
 ;  Prints no later than having consumed the bound amount of memory,
@@ -25,6 +30,7 @@
 (defalias pprint pr/pprint)
 (def ^:dynamic *max-length* 1000)
 (def ^:dynamic *blacklist* (atom #{})) ; a list of classes not to print
+
 (defn ! [obj]
   (let [ct (count+ obj)]
     (cond
@@ -43,10 +49,14 @@
         (pr/pprint obj))))
 
 (defalias print-table pprint/print-table) 
+
 (def ^:dynamic *print-right-margin* pprint/*print-right-margin*)
+
 (def  suppress (partial (constantly nil)))
+
 (defn pprint-xml
-  {:todo ["Where does this function belong?"]}
+  {:attribution "Alex Gunnarson"
+   :todo ["A rather large function. Did this a long time ago" "Where does this function belong?"]}
   [xml-str]
   (let [print-tabbed 
           (fn [[tab xml-ln]]
@@ -79,7 +89,11 @@
                          (long tabs-n+1)
                          (conj elems-f [tabs-n+1 elem-n])))))]
     (print-body (whenf xml-str string? xml/split) nil (long 0) [])))
-(defn pr-vec-table [vec-0]
+
+(defn pr-vec-table
+  {:attribution "Alex Gunnarson"
+   :todo ["A rather large function. Did this a long time ago"]}
+  [vec-0]
   (let [vec-strs (->> vec-0 (map+ (fn->> (map+ str) redv)) redv)
         col-ct   (->> vec-0 (map+ count+) redv num/greatest)
         col-widths
@@ -127,6 +141,7 @@
   
    Useful for printing out representative samples of large collections
    which would be undesirable to print in whole."
+  {:attribution "Alex Gunnarson"}
   [source-0]
   (if ((fn-or (fn-not coll?) empty?) source-0)
       source-0
@@ -176,10 +191,11 @@
    Representative value means the recursive first item in a collection.
    This eliminates, or at least greatly diminishes, massive and
    tiring pauses spent printing out the result of an object/expression."
+  {:attribution "Alex Gunnarson"}
   [obj]
   `(do (println "Expr:"     (quote ~obj))
        (println "Class:"    (class ~obj))
        (println "Keys:"     (ifn   ~obj coll? keys+ (constantly nil)))
-       (println "Repr. object: ") (->    ~obj quantum.core.print/representative-coll !)
+       (println "Repr. object: ") (-> ~obj quantum.core.print/representative-coll !)
        (println))))
 

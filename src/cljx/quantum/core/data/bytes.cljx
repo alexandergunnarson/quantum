@@ -1,4 +1,8 @@
-(ns quantum.core.data.bytes
+(ns
+  ^{:doc "Useful operations on byte arrays. Reverse, split, copy,
+          to-hex, to-CString, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
   (:require 
     [quantum.core.string           :as str]
@@ -13,8 +17,6 @@
   (:import java.util.Arrays)
   #+clj (:gen-class))
 
-; SRC ns mikera.cljutils.bytes
-
 #+clj (set! *warn-on-reflection* true)
 #+clj (set! *unchecked-math* true)
 
@@ -23,6 +25,7 @@
 
 #+clj ; because apparently reversed byte-array...
 (defn reverse 
+  {:attribution "mikera.cljutils.bytes"}
   (^bytes [^bytes bs]
     (let [n (alength bs)
           res (byte-array n)]
@@ -33,6 +36,7 @@
 #+clj
 (defn join 
   "Concatenates two byte arrays"
+  {:attribution "mikera.cljutils.bytes"}
   (^bytes [^bytes a ^bytes b]
     (let [al (int (alength a))
           bl (int (alength b))
@@ -45,6 +49,7 @@
 #+clj
 (defn slice
   "Slices a byte array with a given start and length"
+  {:attribution "mikera.cljutils.bytes"}
   (^bytes [a start]
     (slice a start (- (alength ^bytes a) start)))
   (^bytes [a start length]
@@ -63,6 +68,7 @@
 #+clj
 (defn unchecked-byte-array 
   "Like clojure.core/byte-array but performs unchecked casts on sequence values."
+  {:attribution "mikera.cljutils.bytes"}
   (^bytes [size-or-seq] 
     (. clojure.lang.Numbers byte_array 
       (if (number? size-or-seq) 
@@ -77,15 +83,17 @@
 #+clj
 (defn bytes=
   "Compares two byte arrays for equality."
+  {:attribution "mikera.cljutils.bytes"}
   ([^bytes a ^bytes b]
     (Arrays/equals a b)))
 
 #+clj
 (defn ^String bytes-to-hex
   "Convert a byte array to a hex string."
-  [^"[B" digested]
-  (let [^"[C" hex-arr   (.toCharArray "0123456789abcdef")
-        ^"[C" hex-chars (-> digested count (* 2) char-array)]
+  {:attribution "Alex Gunnarson, ported from a Java solution on StackOverflow."}
+  [^bytes digested]
+  (let [^chars hex-arr   (.toCharArray "0123456789abcdef")
+        ^chars hex-chars (-> digested count (* 2) char-array)]
     (loop [i 0] 
       (if (< i (count digested))
           (let [v           (-> digested (get+ i) (bit-and 0xFF))
@@ -97,10 +105,13 @@
     (String. hex-chars)))
 
 #+clj
-(defn ^"[B" str->cstring [^String s]
+(defn ^bytes str->cstring
+  "Convert a Java string to a CString (byte-array)."
+  {:attribution "Alex Gunnarson, ported from a Java solution on StackOverflow."}
+  [^String s]
   (when (nnil? s)
-    (let [^"[B" bytes  (.getBytes s)
-          ^"[B" result (byte-array+ (-> bytes count inc))]
+    (let [^bytes bytes  (.getBytes s)
+          ^bytes result (byte-array+ (-> bytes count inc))]
         (System/arraycopy
           bytes  0
           result 0

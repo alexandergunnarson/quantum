@@ -1,4 +1,11 @@
-(ns quantum.core.thread #+clj (:gen-class))
+(ns
+  ^{:doc "Simple thread management through 'registered threads'.
+          Aliases core.async for convenience.
+
+          A little rough, but some useful functionality."
+    :attribution "Alex Gunnarson"}
+  quantum.core.thread
+  #+clj (:gen-class))
 #+clj (require
   '[quantum.core.ns          :as ns    :refer [defalias alias-ns]])
 #+clj (ns/require-all *ns* :clj)
@@ -26,10 +33,20 @@
 #+clj (defalias alts!!     async/alts!!)
 #+clj (def #^{:macro true} thread #'async/thread)
 
+; ONLY IN CLJS
+(defmacro <? [expr]
+  `(let [expr-result# (cljs.core.async/<! ~expr)]
+     (if ;(quantum.core.type/error? chan-0#)
+         (instance? js/Error expr-result#)
+         (throw expr-result#)
+         expr-result#)))
+
 #+clj (def  reg-threads (atom {})) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
 
 #+clj
-(defn stop-thread! [thread-id]
+(defn stop-thread!
+  {:attribution "Alex Gunnarson"}
+  [thread-id]
   (case (get @reg-threads thread-id)
     nil
     (println (str "Thread '" (name thread-id) "' is not registered."))
@@ -79,7 +96,9 @@
      result#))
 
 #+clj
-(defn close! [^Keyword thread-id]
+(defn close!
+  {:attribution "Alex Gunnarson"}
+  [^Keyword thread-id]
   {:pre [(with-throw
            (contains? @reg-threads thread-id)
            {:message (str/sp "Thread-id" thread-id "does not exist.")})]}
@@ -95,7 +114,9 @@
           {:message (str/sp "Thread" thread-id "cannot be closed.")}))))
 
 #+clj
-(defn promise-concur [method max-threads func list-0]
+(defn promise-concur
+  {:attribution "Alex Gunnarson"}
+  [method max-threads func list-0]
   (let [count- (count list-0)
         chunk-size
           (if (= max-threads :max)
@@ -143,7 +164,9 @@
               [chunk-size-n chan-0])))))))
 
 #+clj
-(defn concur-go [method max-threads func list-0]
+(defn concur-go
+  {:attribution "Alex Gunnarson"}
+  [method max-threads func list-0]
   (let [chans (promise-concur-go method max-threads func list-0)]
     (if (= method :for)
         (->> chans

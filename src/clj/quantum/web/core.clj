@@ -87,4 +87,13 @@
 ; Also, opening and quitting the browser with every authentication is inefficient...
 
 
+(+ 2 (* 2 3))
+(-> 2 (* 3) (+ 2))
 
+(rest [1 2 3]) :: [2 3]
+(rest "abcde") :: (\b \c \d \e)
+(rest+ "abcde") :: "bcde"
+(defn my-func [a b c & args] )
+
+
+(not= (.getAttribute balance-elem "debugid") "leftasdhasdh")

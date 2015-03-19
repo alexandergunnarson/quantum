@@ -19,26 +19,30 @@
 
 (defn fill-login-info!
   {:todo ["Make sure fields have actually been filled in"]}
-  [^RemoteWebElement email-elem ^RemoteWebElement password-elem]
-  (send-keys! email-elem     (:email    (auth/auth-keys :google)))
+  [^RemoteWebElement email-elem ^RemoteWebElement password-elem
+   ^String username ^String password]
+  (send-keys! email-elem    username #_(:email    (auth/auth-keys :google)))
   (log/pr :debug "Logging in as:"  (.getAttribute email-elem    "value"))
-  (send-keys! password-elem  (:password (auth/auth-keys :google)))
+  (send-keys! password-elem password #_(:password (auth/auth-keys :google)))
   (log/pr :debug "With password:"  (.getAttribute password-elem "value"))
   (log/pr :debug "..."))
 
 (defn sign-in!
-  ([^WebDriver driver]
+  ([^WebDriver driver ^String username ^String password]
     (let [email-element      (find-element driver (By/id "Email"))
           password-element   (find-element driver (By/id "Passwd"))
           signin-button      (find-element driver (By/id "signIn"))
-          set-login-info!    (fill-login-info! email-element password-element)
+          set-login-info!
+            (fill-login-info!
+              email-element password-element
+              username      password)
           sign-in-click!     (click! signin-button)]))
-  ([^WebDriver driver ^String auth-url]
+  ([^WebDriver driver ^String auth-url ^String username ^String password]
     (.get driver auth-url)
-    (sign-in! driver)))
+    (sign-in! driver username password)))
 
 (defn begin-sign-in-from-google-home-page!
-  "Sign in from the Google search/home page."
+  "Start to sign in from the Google search/home page."
   [^WebDriver driver]
     (let [navigate!          (.get driver "http://www.google.com")
           ^List sign-in-btns (.findElements driver (By/linkText "Sign in"))

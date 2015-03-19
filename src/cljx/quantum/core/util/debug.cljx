@@ -1,4 +1,7 @@
-(ns quantum.core.util.debug
+(ns
+  ^{:doc "Useful debug utils. Especially |trace|, |break|, |try-times|, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.util.debug
   #+clj
   (:require
     [quantum.core.print :as pr      :refer [!]                ]

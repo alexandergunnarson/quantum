@@ -1,4 +1,9 @@
-(ns quantum.core.time.core
+(ns
+  ^{:doc "An alias of the clj-time.core namespace. Also includes
+          useful functions such as |beg-of-day|, |end-of-day|,
+          |on?|, |for-days-between|, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.time.core
   (:refer-clojure :exclude [extend second])
   (:require
     [quantum.core.ns :as ns #+clj :refer #+clj [alias-ns]]

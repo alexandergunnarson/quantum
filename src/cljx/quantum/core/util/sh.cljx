@@ -1,4 +1,9 @@
-(ns quantum.core.util.sh
+(ns
+  ^{:doc "A very experimental namespace based on using the shell,
+          interacting with it, using common commands, etc., from
+          within a REPL."
+    :attribution "Alex Gunnarson"}
+  quantum.core.util.sh
   #+clj (:gen-class))
 
 

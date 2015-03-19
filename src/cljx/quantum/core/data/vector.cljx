@@ -1,4 +1,8 @@
-(ns quantum.core.data.vector
+(ns
+  ^{:doc "Vector operations. Includes relaxed radix-balanced vectors (RRB vectors)
+          my Michal Marczyk. Also includes |conjl| (for now)."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.vector
   (:require
     [quantum.core.ns :as ns :refer
       #+clj [alias-ns defalias]
@@ -17,16 +21,20 @@
              ArrList TreeMap LSeq Regex Editable Transient Queue Map))
   #+clj (:gen-class))
 
+#+clj (ns/require-all *ns* :clj)
+
 ; slice
 (def catvec  vec+/catvec)
 (def vec+    vec+/vec)
 (def vector+ vec+/vector)
 
-(defn subvec+ [coll a b]
-  ; produces a new vector containing the appropriate subrange of the input vector in logarithmic time
-  ; (in contrast to clojure.core/subvec, which returns a reference to the input vector)
-  ; clojure.core/subvec is a constant-time operation that prevents the underlying vector
-  ; from becoming eligible for garbage collection
+(defn subvec+
+  "Produces a new vector containing the appropriate subrange of the input vector in logarithmic time
+   (in contrast to clojure.core/subvec, which returns a reference to the input vector)
+   clojure.core/subvec is a constant-time operation that prevents the underlying vector
+   from becoming eligible for garbage collection"
+  {:attribution "Alex Gunnarson"}
+  [coll a b]
   (try (vec+/subvec coll a b)
     (catch
       #+clj  IllegalArgumentException
@@ -40,7 +48,9 @@
     #+cljs clojure.core.rrb-vector.rrbt.Vector obj))
 
 (defn conjl
-  {:todo ["Add support for conjl with other data structures."]}
+  {:attribution "Alex Gunnarson"
+   :todo ["Add support for conjl with other data structures."
+          "This shouldn't go in this namespace."]}
   ([vec-0 elem]
     (-> elem vector+ (catvec vec-0)))
   ([vec-0 elem & elems]

@@ -42,6 +42,9 @@
                                
                                  
                                                               ) ; has decimal point
+(def boolean? 
+         (partial instance? Boolean)
+                             )
 
       (def  bigint?    (partial instance+? clojure.lang.BigInt))
 
@@ -59,24 +62,25 @@
       (def  array?       (compr type (jfn isArray))) ; getClass() shouldn't really be a slow call
       (def  byte-array?  (partial instance+? ByteArray))
 
-(def  boolean?     (partial instance+? Bool))
 ; TODO add this in cljs
       (def  indexed?     (partial instance+? clojure.lang.Indexed)) 
 
-(def  array-list?  (f*n splice-or #(instance+? %2 %1)
+(def array-list?  (f*n splice-or #(instance+? %2 %1)
                       ArrList
                              java.util.Arrays$ArrayList))
-(def  map-entry?          (partial instance+? clojure.lang.MapEntry)
+(def map-entry?          (partial instance+? clojure.lang.MapEntry)
                                                              )
 
-(def  sorted-map?  (partial instance+? TreeMap))
-(def  queue?       (partial instance+? Queue))
-(def  lseq?        (partial instance+? LSeq))
-(def  coll+?       (fn-or coll? array-list?))
-(def  pattern?     (partial instance+? Regex))
-(def  regex?       pattern?)
-(def  editable?    (partial instance+? Editable))
-(def  transient?   (partial instance+? Transient))
+(def sorted-map?  (partial instance+? TreeMap))
+(def queue?       (partial instance+? Queue))
+(def lseq?        (partial instance+? LSeq))
+(def coll+?       (fn-or coll? array-list?))
+(def pattern?     (partial instance+? Regex))
+(def regex?       pattern?)
+(def editable?    (partial instance+? Editable))
+(def transient?   (partial instance+? Transient))
+      (def throwable? (partial instance+? java.lang.Throwable))
+(def error?             throwable?                                     )
 
 (defn name-from-class
   [class-0]

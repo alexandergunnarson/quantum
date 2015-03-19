@@ -35,7 +35,8 @@
     [quantum.core.macros
              :refer
                           
-      [extend-protocol-type extend-protocol-types extend-protocol-for-all]])
+      [extend-protocol-type extend-protocol-types extend-protocol-for-all]]
+          [clj-tuple :as tup])
        
   (:import
     clojure.core.Vec
@@ -46,6 +47,10 @@
         (:gen-class))
 
       (set! *warn-on-reflection* true)
+
+; TODO need to somehow incorporate |vector++| and |vector+|
+      (defalias vector++ tup/vector)
+      (defalias hash-map+ tup/hash-map)
 
 ; ; java.util.Collection class to use as part of protocol
 

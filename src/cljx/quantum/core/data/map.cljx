@@ -1,4 +1,7 @@
-(ns quantum.core.data.map
+(ns
+  ^{:doc "Useful map functions. |map-entry|, a better merge (|merge+|), sorted-maps, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.map
   (:refer-clojure :exclude [split-at])
   (:require
     [clojure.data.avl     :as avl]
@@ -16,18 +19,22 @@
              ArrList TreeMap LSeq Regex Editable Transient Queue Map))
   #+clj (:gen-class))
 
-(defn map-entry [k v]
-  #+clj
-  (clojure.lang.MapEntry. k v)
-  #+cljs
-  [k v])
-
-
+(defn map-entry
+  "A performant replacement for creating 2-tuples (vectors), e.g., as return values
+   in a |kv-reduce| function."
+  {:attribution "Alex Gunnarson"}
+  [k v]
+  #+clj  (clojure.lang.MapEntry. k v)
+  #+cljs [k v])
 
 #+clj (defalias ordered-map omap/ordered-map)
 #+clj (defalias om omap/ordered-map)
 
-(defn merge+ [map-0 & maps] ; 782.922731 ms /merge+/ vs. 1.133217 sec normal /merge/ ; 1.5 times faster! 
+(defn merge+
+  "A performant drop-in replacemen for |clojure.core/merge|."
+  {:attribution "Alex Gunnarson"
+   :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge| ; 1.5 times faster!"}
+  [map-0 & maps]
   (if #+clj  (instance?  Editable map-0)
       #+cljs (satisfies? Editable map-0)
       (->> maps
@@ -42,7 +49,8 @@
   (merge-deep-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
                     {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
   => {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
-  ^{:attribution "clojure.contrib.map-utils via taoensso.encore"}
+  {:attribution "clojure.contrib.map-utils via taoensso.encore"
+   :todo ["Replace |merge-with| with a more performant version which uses |merge+|."]}
   [f & maps]
   (apply
     (fn m [& maps]
@@ -57,7 +65,9 @@
 
 (def sorted-map+    avl/sorted-map)
 (def sorted-map-by+ avl/sorted-map-by)
+; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
 (def split-at       avl/split-at)
+
 ;; find rank of element as primitive long, -1 if not found
 ; (doc avl/rank-of)
 ; ;; find element closest to the given key and </<=/>=/> according
@@ -73,11 +83,3 @@
 ;; return subset/submap of the given collection; accepts arguments
 ;; reminiscent of clojure.core/{subseq,rsubseq}
 ; (doc avl/subrange)
-
-; SORTED MAPS AND SETS
-; Persistent sorted maps and sets with support for transients and additional O(logN) operations:
-; rank queries, "nearest key" lookups, splits by index or key and subsets/submaps.
-; data.avl maps and sets behave like the core Clojure variants, with the following differences:
-; 1) They have transient counterparts and use transients during construction
-; 2) They are typically noticeably faster during lookups and somewhat slower during non-transient "updates" (assoc, dissoc)
-; 3) They add some memory overhead - a reference and two ints per key (for implementation reasons).

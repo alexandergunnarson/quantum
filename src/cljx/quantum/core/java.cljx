@@ -1,4 +1,8 @@
-(ns quantum.core.java
+(ns
+  ^{:doc "Useful Java-specific functions. Invoking private or protected methods,
+          getting the methods associated with a particular class, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.java
 	#+clj (:gen-class)
 	#+clj (:require [clojure.string :as str]
             [clojure.data :as cljdata]

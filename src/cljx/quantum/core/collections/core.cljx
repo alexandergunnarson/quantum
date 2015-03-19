@@ -1,4 +1,10 @@
-(ns quantum.core.collections.core
+(ns
+  ^{:doc "Retakes on core collections functions like first, rest,
+          get, nth, last, index-of, etc.
+
+          Also includes innovative functions like getr, etc."}
+  quantum.core.collections.core
+  #+clj (:refer-clojure :exclude [vector hash-map])
   (:require
     [quantum.core.error
       #+clj :refer
@@ -27,15 +33,17 @@
       #+cljs :refer-macros
       #+cljs [for+]]
     [quantum.core.string :as str]
+    [quantum.core.data.set :as set]
     [quantum.core.type :as type :refer
      #+cljs [name-from-class class]
-     #+clj  [name-from-class ShortArray LongArray FloatArray IntArray DoubleArray BooleanArray ByteArray CharArray ObjectArray]]
+     #+clj  [name-from-class arr-types ShortArray LongArray FloatArray IntArray DoubleArray BooleanArray ByteArray CharArray ObjectArray]]
     [quantum.core.data.vector :as vec :refer
       [subvec+ catvec]]
     [quantum.core.macros
       #+clj  :refer
       #+cljs :refer-macros
-      [extend-protocol-type extend-protocol-types extend-protocol-for-all]])
+      [extend-protocol-type extend-protocol-types extend-protocol-for-all]]
+    #+clj [clj-tuple :as tup])
   #+clj
   (:import
     clojure.core.Vec
@@ -47,30 +55,14 @@
 
 #+clj (set! *warn-on-reflection* true)
 
-; ; java.util.Collection class to use as part of protocol
+; TODO need to somehow incorporate |vector++| and |vector+|
+#+clj (defalias vector   tup/vector)
+#+clj (defalias hash-map tup/hash-map)
 
 (defn lasti
   "Last index of a coll."
   [coll]
   (-> coll count dec))
-
-#+clj
-(def arr-types
-  {:short    ShortArray
-   :long     LongArray
-   :float    FloatArray
-   :int      IntArray
-   :double   DoubleArray
-   :boolean  BooleanArray
-   :byte     ByteArray
-   :char     CharArray
-   :object   ObjectArray})
-
-(def coll-search-types
-  {:vec    #+clj clojure.lang.APersistentVector      #+cljs Vec
-   :rvec   #+clj clojure.lang.APersistentVector$RSeq #+cljs cljs.core/RSeq
-   :list   #+clj clojure.lang.PersistentList         #+cljs cljs.core/List
-   #+clj :string #+clj String}) ; because |js/String| doesn't work and |string| doesn't work outside of a protocol
 
 (#+clj  defprotocol
  #+cljs defprotocol
@@ -177,7 +169,7 @@
         #+clj (catch StringIndexOutOfBoundsException _ nil)))
     (second+  [coll]
       (try (subs coll 1 2)
-        #+clj (catch StringIndexOutOfBoundsException _() nil)))
+        #+clj (catch StringIndexOutOfBoundsException _ nil)))
     (rest+    [coll]
       (try (subs coll 1 (count+ coll))
         #+clj (catch StringIndexOutOfBoundsException _ nil)))
@@ -185,46 +177,15 @@
     (last+    [coll] (subs coll   (-> coll count+ dec)))
     (getr+    [coll a b] (str/subs+ coll a (inc (- b a))))) ; now inclusive range with |inc|; this could break lots of things
 
-#+clj
 (extend-protocol-for-all CollRetrieve
-  [clojure.core.protocols.CollReduce
-   ;#+cljs cljs.core/IReduce ; this is why...
-   quantum.core.reducers.Folder]
-    (getr+    [coll a b] (->> coll (take+ b) (drop+ a)))
-    (first+   [coll]     (take+ 1 coll))
-    (rest+    [coll]     (drop+ 1 coll))
-    (butlast+ [coll]     (drop-last+ 1 coll))
-    (last+    [coll]     (take-last+ 1 coll)))
-
-#+clj
-(extend-protocol CollRetrieve
-  clojure.lang.IPersistentVector
-    (getr+    ([coll a b] (subvec+ coll a b))
-              ([coll a]   (subvec+ coll a (-> coll count))))
-    (get+ 
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found)))
-    (first+   [coll] (get coll 0))
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (subvec+ coll 1 (count coll)))
-    (butlast+ [coll] (whenf coll nempty? pop))
-    (last+    [coll] (peek coll))
-  clojure.lang.IPersistentMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found)))
-  clojure.lang.IPersistentCollection
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
+  [#+clj  clojure.core.protocols.CollReduce
+   #+clj  quantum.core.reducers.Folder
+   #+cljs cljs.core/Delay]
+          (getr+    [coll a b] (->> coll (take+ b) (drop+ a)))
+          (first+   [coll]     (take+ 1 coll))
+          (rest+    [coll]     (drop+ 1 coll))
+    #+clj (butlast+ [coll]     (drop-last+ 1 coll))
+    #+clj (last+    [coll]     (take-last+ 1 coll)))
 
 ; ===== REDUCERS =====
 
@@ -233,258 +194,62 @@
   cljs.core/Delay
     (getr+          [coll a b] (->> coll (take+ b) (drop+ a)))
     (first+         [coll]     (take+ 1 coll))
-    (rest+          [coll]     (drop+ 1 coll))
-    ;#+clj (butlast+ [coll]     (drop-last+ 1 coll))
-    ;#+clj (last+    [coll]     (take-last+ 1 coll))
-    )
+    (rest+          [coll]     (drop+ 1 coll)))
 ; _____________________________________________________________________________________
 ; ====================================== VECTOR =======================================
 ; `````````````````````````````````````````````````````````````````````````````````````
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/PersistentVector
-    (getr+    ([coll a b] (subvec+ coll a b))
-              ([coll a]   (subvec+ coll a (-> coll count))))
-    (get+ 
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found)))
-    (first+   [coll] (get coll 0))
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (subvec+ coll 1 (count coll)))
-    (butlast+ [coll] (whenf coll nempty? pop))
-    (last+    [coll] (peek coll)))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/TransientVector
-    (getr+    ([coll a b] (subvec+ coll a b))
-              ([coll a]   (subvec+ coll a (-> coll count))))
-    (get+ 
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found)))
-    (first+   [coll] (get coll 0))
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (subvec+ coll 1 (count coll)))
-    (butlast+ [coll] (whenf coll nempty? pop))
-    (last+    [coll] (peek coll)))
-
+(doseq  [type (:vec type/types)]
+  (extend type CollRetrieve
+    {:getr+
+      (fn ([coll a b] (subvec+ coll a b))
+          ([coll a]   (subvec+ coll a (-> coll count))))
+    :first+   (fn [coll] (get coll 0)) ; perhaps implement in terms of |reduce|?
+    :second+  (fn [coll] (get coll 1))
+    :rest+    (fn [coll] (subvec+ coll 1 (count coll)))
+    :butlast+ (fn [coll] (whenf coll nempty? pop))
+    :last+    (fn [coll] (peek coll))
+    :get+
+      (fn ([coll n]              (get+ coll n nil))
+          ([coll n if-not-found] (get coll n if-not-found)))}))
 ; _____________________________________________________________________________________
 ; ======================================== MAP ========================================
 ; `````````````````````````````````````````````````````````````````````````````````````
-#+cljs
-(extend-protocol CollRetrieve
-  PersistentArrayMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  TransientArrayMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  PersistentHashMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  TransientHashMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  PersistentTreeMap
-    (get+ 
-      ([coll n]              (get+ coll n nil))
-      ([coll n if-not-found] (get coll n if-not-found))))
-
+; TODO make more efficient
+(doseq [type (:map type/types)]
+  (extend type CollRetrieve
+    {:get+
+      (fn
+        ([coll n]              (get+ coll n nil))
+        ([coll n if-not-found] (get coll n if-not-found)))}))
 ; _____________________________________________________________________________________
 ; ==================================== COLLECTION =====================================
 ; `````````````````````````````````````````````````````````````````````````````````````
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/List
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
+(doseq #+clj  [type [clojure.lang.IPersistentCollection]]
+       #+cljs [type (set/union (:iseq type/types) (:set type/types))]
+  (extend type CollRetrieve
+    {:getr+
+      (fn ([coll a]   (->> coll (drop a)))
+          ([coll a b] (->> coll (take b) (drop a))))
+    :first+   (fn [coll] (nth     coll 0) ) ; perhaps implement in terms of |reduce|?
+    :second+  (fn [coll] (get     coll 1))
+    :rest+    (fn [coll] (rest    coll))
+    :butlast+ (fn [coll] (butlast coll))
+    :last+    (fn [coll] (last    coll))
+    :get+
+      (fn ([coll n]              (get+ coll n nil))
+          ([coll n if-not-found] (nth coll n if-not-found)))}))
 
 #+cljs
 (extend-protocol CollRetrieve
   cljs.core/EmptyList
     (first+   [coll] nil))
 
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/PersistentQueue
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/LazySeq
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/KeySeq
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/ValSeq
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/IndexedSeq
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/ChunkedSeq
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/PersistentHashSet
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/TransientHashSet
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/PersistentTreeSet
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
-#+cljs
-(extend-protocol CollRetrieve
-  cljs.core/ArrayList
-    (getr+
-      ([coll a]   (->> coll (drop a)))
-      ([coll a b] (->> coll (take b) (drop a))))
-    (first+   [coll] (nth coll 0)) ; perhaps implement in terms of /reduce/ ; 
-    (second+  [coll] (get coll 1))
-    (rest+    [coll] (rest coll))
-    (butlast+ [coll] (butlast coll))
-    (last+    [coll] (last coll))
-    (get+
-      ([coll n] (get+ coll n nil))
-      ([coll n if-not-found] (nth coll n if-not-found))))
-
 (extend-protocol CollRetrieve
   ; sorted-map or sorted-set getr+ like subseq
   #+clj  Object ; "default"
   #+cljs default
     (get+
-      ([obj n] (get+ obj n nil))
+      ([obj n]              (get+ obj n nil))
       ([obj n if-not-found] (get obj n)))
     (first+   [obj] obj)
     (last+    [obj] obj)
@@ -496,12 +261,16 @@
     (butlast+ [obj]   obj))
 
 (defn gets+ [coll & indices]
-  (->> indices
-       ; determine threshold of transient-persistent efficiency
-       ; based on number of indices to retrieve
-       (reduce (fn [ret ind] (conj! ret (get+ coll ind)))
-         (transient []))
-       persistent!))
+  (if (should-transientize? indices)
+      (persistent!
+        (reduce
+          (fn [ret ind] (conj! ret (get+ coll ind)))
+          (transient [])
+          indices))
+      (reduce
+        (fn [ret ind] (conj ret (get+ coll ind)))
+        []
+        indices)))
 
 (def  pop+  butlast+)
 (def  popr+ butlast+)
@@ -512,69 +281,66 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        SEARCH/FIND       }=====================================================
 ;=================================================={    index-of, contains?   }=====================================================
-(#+clj  defprotocol
- #+cljs defprotocol
-  CollSearch
-    (index-of+      [coll elem])
-    (last-index-of+ [coll elem]))
+(defprotocol CollSearch
+  (index-of+      [coll elem])
+  (last-index-of+ [coll elem]))
 
+; TODO implement more...
 #+clj
-(defmacro extend-coll-search-for-type
-  [type-key]
-  (let [type# (-> coll-search-types (get type-key) name-from-class)
-        coll (with-meta (gensym)
-               {:tag type#})
-        elem (with-meta (gensym)
-               {:tag (if (= type# 'java.lang.String)
-                         'String
-                         'Object)})]
-   `(extend-protocol CollSearch (get ~coll-search-types ~type-key)
-      (index-of+      [~coll ~elem] (.indexOf     ~coll ~elem))
-      (last-index-of+ [~coll ~elem] (.lastIndexOf ~coll ~elem)))))
+(doseq [type (:vec type/types)]
+  (extend type CollSearch
+    {:index-of+      (fn [coll elem] (.indexOf     ^clojure.lang.IPersistentVector coll elem))
+     :last-index-of+ (fn [coll elem] (.lastIndexOf ^clojure.lang.IPersistentVector coll elem))}))
 
-#+clj
-(defn extend-coll-search-to-all-types! []
-  (reduce-kv
-    (fn [ret type type-class]
-      (eval `(extend-coll-search-for-type ~type)))
-    nil coll-search-types))
-
-#+clj (extend-coll-search-to-all-types!)
-
-#+cljs
 (extend-protocol CollSearch
-  cljs.core/PersistentVector
-    (index-of+      [coll elem] (.indexOf     coll elem))
-    (last-index-of+ [coll elem] (.lastIndexOf coll elem))
-  cljs.core/TransientVector
-    (index-of+      [coll elem] (.indexOf     coll elem))
-    (last-index-of+ [coll elem] (.lastIndexOf coll elem))
-  string
-    (index-of+      [coll elem] (.indexOf     coll elem))
-    (last-index-of+ [coll elem] (.lastIndexOf coll elem)))
+  #+clj String #+cljs string
+    (index-of+      [coll elem] (.indexOf     ^String coll elem))
+    (last-index-of+ [coll elem] (.lastIndexOf ^String coll elem)))
 
 (defn third [coll] (-> coll rest+ rest+ first+))
+
+;___________________________________________________________________________________________________________________________________
+;=================================================={           MODIFY         }=====================================================
+;=================================================={    conjl, conjr, etc.    }=====================================================
+
+(defprotocol CollMod
+  (conjl [coll & args])
+  (conjr [coll & args]))
+
+(defn- conjl-list
+  {:todo ["Add var-args"]}
+  (fn ([coll a]           (->> coll (cons a)                                             ))
+      ([coll a b]         (->> coll (cons b) (cons a)                                    ))
+      ([coll a b c]       (->> coll (cons c) (cons b) (cons a)                           ))
+      ([coll a b c d]     (->> coll (cons d) (cons c) (cons b) (cons a)                  ))
+      ([coll a b c d e]   (->> coll (cons e) (cons d) (cons c) (cons b) (cons a)         ))
+      ([coll a b c d e f] (->> coll (cons f) (cons e) (cons d) (cons c) (cons b) (cons a)))))
+
+(doseq [type (:iseq type/types)]
+  (extend type CollMod {:conjl conjl-list}))
+
+(defn- conjl-vec
+  ([coll a]                  (catvec (vector+ a          ) coll))
+  ([coll a b]                (catvec (vector+ a b        ) coll))
+  ([coll a b c]              (catvec (vector+ a b c      ) coll))
+  ([coll a b c d]            (catvec (vector+ a b c d    ) coll))
+  ([coll a b c d e]          (catvec (vector+ a b c d e  ) coll))
+  ([coll a b c d e f]        (catvec (vector+ a b c d e f) coll))
+  ([coll a b c d e f & args] (catvec (apply vector+ args ) coll)))
+
+(doseq [type (:vec type/types)]
+  (extend type CollMod {:conjl conjl-vec}))
+
+(doseq [type (:vec type/types)]
+  (extend type CollMod {:conjr conj}))
+
+
+(def doto! swap!)
+
 ; If the array is not sorted:
 ; java.util.Arrays.asList(theArray).indexOf(o)
 ; If the array is sorted, you can make use of a binary search for performance:
 ; java.util.Arrays.binarySearch(theArray, o)
 
-(defmacro doseqi
-  "Loops over a set of values, binding index-sym to the 0-based index
-   of each value"
-  {:todo ["Implement in terms of |reduce|"]}
-  ([[val-sym values index-sym] & code]
-  `(loop [vals#      (seq ~values) 
-          ~index-sym (long 0)]
-     (if vals#
-         (let [~val-sym (first vals#)]
-               ~@code
-               (recur (next vals#) (inc ~index-sym)))
-         nil))))
 
 
-; (defn conjl [coll elem]
-;   (condf coll
-;     list?   (f*n cons elem)
-;     vector? (partial into+ (vector elem))
-;     coll?   (partial into+ (vector elem))))

@@ -35,7 +35,8 @@
     [quantum.core.macros
                    
              :refer-macros
-      [extend-protocol-type extend-protocol-types extend-protocol-for-all]])
+      [extend-protocol-type extend-protocol-types extend-protocol-for-all]]
+                             )
        
           
                     
@@ -46,6 +47,10 @@
                     )
 
                                       
+
+; TODO need to somehow incorporate |vector++| and |vector+|
+                                    
+                                       
 
 ; ; java.util.Collection class to use as part of protocol
 

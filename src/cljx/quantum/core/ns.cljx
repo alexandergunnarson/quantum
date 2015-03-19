@@ -1,5 +1,10 @@
-(ns quantum.core.ns
-  #+clj (:refer-clojure :exclude [Vec])
+(ns
+  ^{:doc "Useful namespace and var-related functions.
+          
+          Also provides convenience functions for importing |quantum| namespaces.
+          These convenience functions are untested with ClojureScript."
+    :attribution "Alex Gunnarson"}
+  quantum.core.ns
   (:require
     #+clj  [clojure.repl :as repl]
            [clojure.core.rrb-vector]
@@ -9,6 +14,8 @@
   (:import (clojure.lang Keyword Var Namespace))
   #+clj
   (:gen-class))
+
+; ============ VAR MANIPULATION, ETC. ============
 
 (defmacro reset-var!
   "Like |reset!| but for vars."
@@ -92,7 +99,7 @@
  (defn alias-var
    "Create a var with the supplied name in the current namespace, having the same
    metadata and root-binding as the supplied var."
-   ^{:attribution "flatland.useful.ns"}
+   {:attribution "flatland.useful.ns"}
    [sym var-0]
    (apply intern *ns*
      (with-meta sym
@@ -119,7 +126,7 @@
    "Create vars in the current namespace to alias each of the public vars in
    the supplied namespace.
    Takes a symbol."
-   ^{:attribution "flatland.useful.ns"}
+   {:attribution "flatland.useful.ns"}
    [ns-name]
    (require ns-name)
    (doseq [[name var] (ns-publics (the-ns ns-name))]
@@ -128,19 +135,25 @@
 #+clj
 (defn defs
   "Defines a provided list of symbol-value pairs as vars in the
-   current namespace.
-   USAGE: (defs 'a 1 'b 2 'c 3)"
-  ^{:attribution "Alex Gunnarson"}
+   current namespace."
+  {:attribution "Alex Gunnarson"
+   :usage '(defs 'a 1 'b 2 'c 3)}
   [& {:as vars}]
   (doseq [var-n vars]
     (intern *ns* (-> var-n key name symbol) (val var-n))))
 
+(defmacro def-
+  "Like |defn-| but without the function definition implicit."
+  {:attribution "Alex Gunnarson"}
+  [sym v] `(doto (def ~sym ~v) (alter-meta! merge {:private true})))
+
 #+clj
 (defn defs-private
-  "Like /defs/: defines a provided list of symbol-value pairs
-   as private vars in the current namespace.
-   USAGE: (defs-private 'a 1 'b 2 'c 3)"
-  ^{:attribution "Alex Gunnarson"}
+  "Like |defs|: defines a provided list of symbol-value pairs
+   as private vars in the current namespace."
+  {:attribution "Alex Gunnarson"
+   :todo       ["Needs maintenance"]
+   :usage '(defs-private 'a 1 'b 2 'c 3)}
   [& {:as vars}]
   (doseq [var-n vars]
     (intern *ns* (-> var-n key name symbol) (val var-n))
@@ -148,7 +161,7 @@
 
 #+clj
 (defn clear-vars
-  ^{:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"}
   [& vars]
   (doseq [var-n vars]
     (alter-var-root (-> var-n name symbol resolve) (constantly nil)))
@@ -156,38 +169,41 @@
 
 #+clj
 (defn declare-ns
-  ^{:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"}
   [curr-ns]
   (defs-private 'this-ns curr-ns))
 
 #+clj ; cljs doesn't have reflection
 (defn defaults
-  ^{:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"}
   []
   (set! *warn-on-reflection* true))
 
+; ============ CLASS ALIASES ============
+
 ; Just to be able to synthesize class-name aliases...
 
-;(def       Nil       nil)
+(def       ANil       nil)
 ;#+clj (def Fn        clojure.lang.Fn)
-; (def       Key       #+clj clojure.lang.Keyword              #+cljs cljs.core.Keyword             )
-; (def       Num       #+clj java.lang.Number                  #+cljs js/Number                     )
-; (def       ExactNum  #+clj clojure.lang.Ratio                #+cljs js/Number                     )
-; (def       Int       #+clj java.lang.Integer                 #+cljs js/Number                     )
-; (def       Decimal   #+clj java.lang.Double                  #+cljs js/Number                     )
-; (def       Set       #+clj clojure.lang.APersistentSet       #+cljs cljs.core.PersistentHashSet   )
-; (def       Bool      #+clj Boolean                           #+cljs js/Boolean                    )
-; (def       ArrList   #+clj java.util.ArrayList               #+cljs cljs.core.ArrayList           )
-; (def       TreeMap   #+clj clojure.lang.PersistentTreeMap    #+cljs cljs.core.PersistentTreeMap   )
-; (def       LSeq      #+clj clojure.lang.LazySeq              #+cljs cljs.core.LazySeq             )
-; (def       Vec       #+clj clojure.lang.APersistentVector    #+cljs cljs.core.PersistentVector    ) ; Conflicts with clojure.core/->Vec
-; (def       MEntry    #+clj clojure.lang.MapEntry             #+cljs Vec                           )
-; (def       Regex     #+clj java.util.regex.Pattern           #+cljs js/RegExp                     )
-; (def       Editable  #+clj clojure.lang.IEditableCollection  #+cljs cljs.core.IEditableCollection )
-; (def       Transient #+clj clojure.lang.ITransientCollection #+cljs cljs.core.ITransientCollection)
-; (def       Queue     #+clj clojure.lang.PersistentQueue      #+cljs cljs.core.PersistentQueue     )
-; (def       Map       #+clj java.util.Map                     #+cljs cljs.core.IMap                )
-; (def       Seq       #+clj clojure.lang.ISeq                 #+cljs cljs.core.ISeq)
+(def       AKey       #+clj clojure.lang.Keyword              #+cljs cljs.core.Keyword             )
+(def       ANum       #+clj java.lang.Number                  #+cljs js/Number                     )
+(def       AExactNum  #+clj clojure.lang.Ratio                #+cljs js/Number                     )
+(def       AInt       #+clj java.lang.Integer                 #+cljs js/Number                     )
+(def       ADecimal   #+clj java.lang.Double                  #+cljs js/Number                     )
+(def       ASet       #+clj clojure.lang.APersistentSet       #+cljs cljs.core.PersistentHashSet   )
+(def       ABool      #+clj Boolean                           #+cljs js/Boolean                    )
+(def       AArrList   #+clj java.util.ArrayList               #+cljs cljs.core.ArrayList           )
+(def       ATreeMap   #+clj clojure.lang.PersistentTreeMap    #+cljs cljs.core.PersistentTreeMap   )
+(def       ALSeq      #+clj clojure.lang.LazySeq              #+cljs cljs.core.LazySeq             )
+(def       AVec       #+clj clojure.lang.APersistentVector    #+cljs cljs.core.PersistentVector    ) ; Conflicts with clojure.core/->Vec
+(def       AMEntry    #+clj clojure.lang.MapEntry             #+cljs Vec                           )
+(def       ARegex     #+clj java.util.regex.Pattern           #+cljs js/RegExp                     )
+(def       AEditable  #+clj clojure.lang.IEditableCollection  #+cljs cljs.core.IEditableCollection )
+(def       ATransient #+clj clojure.lang.ITransientCollection #+cljs cljs.core.ITransientCollection)
+(def       AQueue     #+clj clojure.lang.PersistentQueue      #+cljs cljs.core.PersistentQueue     )
+(def       AMap       #+clj java.util.Map                     #+cljs cljs.core.IMap                )
+(def       ASeq       #+clj clojure.lang.ISeq                 #+cljs cljs.core.ISeq                )
+(def       AError     #+clj java.lang.Throwable               #+cljs js/Error                      )
 
 (defrecord Nil       [])
 (defrecord Key       [])
@@ -212,6 +228,8 @@
 #+cljs (defrecord JSObj                    [])
 #+cljs (defrecord Exception                [^String msg])
 #+cljs (defrecord IllegalArgumentException [^String msg])
+
+; ============ NAMESPACE-REQUIRE CONVENIENCE FUNCTIONS ============
 
 #+clj
 (defn ns-exclude [^Namespace curr-ns & syms]
@@ -349,7 +367,9 @@
           fx-node? fx-obj?]])))
 
 #+clj
-(defn require-fx [^Namespace curr-ns]
+(defn require-fx
+  {:todo ["This is very outdated. Consider deprecating"]}
+  [^Namespace curr-ns]
   (binding [*ns* curr-ns]
     (require-fx-core curr-ns)
     (require
@@ -366,7 +386,7 @@
   "Loads/|import|s/|require|s all the namespaces and functions associated with a given
    library key @lib-key into the current namespace @curr-ns."
   {:attribution "Alex Gunnarson"
-   :usage "(require-all *ns* :lib :grid :fx)"}
+   :usage '(require-all *ns* :lib :grid :fx)}
   ([curr-ns ^Keyword lib-key]
     (binding [*ns* curr-ns]
       (case lib-key
@@ -397,10 +417,12 @@
   "Defines, in the provided namespace, conveniently abbreviated symbols
    for other namespaces.
    Esp. for use with /in-ns/, where one can switch more
-   quickly between namespaces for testing and coding purposes.
-   USAGE: (nss *ns*)
-   USAGE: (in-ns *exp) instead of (in-ns 'quantum.core.ui.experimental)"
-  ^{:attribution "Alex Gunnarson"}
+   quickly between namespaces for testing and coding purposes."
+  {:attribution "Alex Gunnarson"
+   :usage ['(do (nss *ns*)
+                (in-ns *exp))
+           "instead of"
+           '(in-ns 'quantum.core.ui.experimental)]}
   [curr-ns]
   (binding [*ns* curr-ns]
     (defs-private
@@ -409,7 +431,7 @@
       '*ui          'clj-qb.ui.core
       '*coll        'quantum.core.collections    
       '*func        'quantum.core.function       
-      '*io          'quantum.core.io             
+      '*io          'quantum.core.io.core        
       '*java        'quantum.core.java           
       '*log         'quantum.core.logic          
       '*ns          'quantum.core.ns             
@@ -446,7 +468,8 @@
       '*grid        'quantum.datagrid.core 
       '*xl          'quantum.datagrid.excel)))
 
-; find-doc, doc, and source are incl. in /user/ ns but not in any others
+; find-doc, doc, and source are incl. in /user/ ns but apparently not in any others
+; TODO: Possibly find a way to do this in ClojureScript?
 #+clj (defalias source   repl/source)   
 #+clj (defalias find-doc repl/find-doc)
 #+clj (defalias doc      repl/doc)
