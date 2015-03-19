@@ -1,4 +1,7 @@
-(ns quantum.ui.html
+(ns
+  ^{:doc "This namespace is for HTML-specific things."
+    :attribution "Alex Gunnarson"}
+  quantum.ui.html
   (:require
    [quantum.core.ns          :as ns        :refer [Num Vec Key]        ]
    [quantum.core.data.map    :as map                                   ]
@@ -27,5 +30,3 @@
    [cljs.core.async.macros :refer [go-loop go]]
    [quantum.core.function  :refer [fn->> fn-> <-]]
    [quantum.core.logic     :refer [whenc whenf whenf*n whencf*n condf condf*n]]))
-
-; THIS NAMESPACE IS FOR HTML-SPECIFIC THINGS.

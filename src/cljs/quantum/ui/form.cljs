@@ -1,19 +1,23 @@
-(ns quantum.ui.form
+(ns
+  ^{:doc "Namespace for functions related to the form
+          of the UI — in this case, HTML. Tag domain, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.ui.form
   (:require
    [reagent.core :as re]
-   [quantum.core.ns          :as ns        :refer [Num Vec Key Seq JSObj]        ]
-   [quantum.core.data.map    :as map       :refer [map-entry]          ]
-   [quantum.core.data.vector :as vec                                   ]
-   [quantum.core.function    :as fn        :refer [f*n compr]                ]
-   [quantum.core.logic       :as log       :refer [fn-not fn-and fn-or splice-or nnil?]]
-   [quantum.core.numeric     :as num       :refer [neg]                ]
-   [quantum.core.type        :as type      :refer [instance+? class]   ]
-   [quantum.core.string      :as str                                   ]
-   [clojure.walk                           :refer [postwalk]           ]
-   [figwheel.client          :as fw                                    ]
-   [garden.core              :as css       :refer [css]                ]
-   [garden.stylesheet        :as css-style                             ]
-   [cljs.core.async :refer [<! chan sliding-buffer put! close! timeout]]
+   [quantum.core.ns          :as ns        :refer [Num Vec Key Seq JSObj]]
+   [quantum.core.data.map    :as map       :refer [map-entry]            ]
+   [quantum.core.data.vector :as vec                                     ]
+   [quantum.core.function    :as fn        :refer [f*n compr]            ]
+   [quantum.core.logic       :as log       :refer
+     [fn-not fn-and fn-or splice-or nnil?]]
+   [quantum.core.numeric     :as num       :refer [neg]                  ]
+   [quantum.core.type        :as type      :refer [instance+? class]     ]
+   [quantum.core.string      :as str                                     ]
+   [figwheel.client          :as fw                                      ]
+   [garden.core              :as css       :refer [css]                  ]
+   [garden.stylesheet        :as css-style                               ]
+   [cljs.core.async :refer [<! chan sliding-buffer put! close! timeout]  ]
    [goog.object :as gobject]
    [quantum.core.error     :refer [with-throw]]
    [quantum.core.collections :as coll :refer
@@ -26,7 +30,7 @@
       getr+ interpose+ in?
       map+ filter+ lfilter lremove group-by+
       merge+ key+ val+
-      merge-keep-left]])
+      merge-keep-left postwalk]])
   (:require-macros
    [cljs.core.async.macros :refer [go-loop go]]
    [quantum.core.function  :refer [fn->> fn-> <-]]

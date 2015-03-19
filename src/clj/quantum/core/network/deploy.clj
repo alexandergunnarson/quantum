@@ -1,15 +1,23 @@
-(ns quantum.core.network.deploy)
+(ns
+  ^{:doc "A very experimental deployment-centered namespace.
 
-(require '[quantum.core.ns                 :as ns :refer :all])
+          Focuses on Heroku, Git, and Clojars via the command line."
+    :attribution "Alex Gunnarson"}
+  (:require 
+    [quantum.google.drive.auth :as crawler]
+    [org.httpkit.client        :as http]
+    [oauth.google              :as oauth.google]
+    [oauth.io                  :as oauth.io]
+    [oauth.v2                  :as oauth.v2]
+    [quantum.auth.core         :as auth]
+    [quantum.http.core         :as qhttp]
+    [quantum.core.data.json    :as json]
+    [quantum.core.ns           :as ns :refer :all])
+  (:import quantum.http.core.HTTPLogEntry)
+  quantum.core.network.deploy
+  (:gen-class))
+
 (ns/require-all *ns* :clj :lib)
-(require '[quantum.http.url :as url])
-
-(require '[org.httpkit.client              :as http])
-(require '[quantum.auth.core               :as auth])
-(require '[quantum.http.core               :as qhttp])
-(import 'quantum.http.core.HTTPLogEntry)
-(require '[quantum.core.data.json          :as json]) 
-
 
 (def heroku-help-center
   "https://devcenter.heroku.com/articles/getting-started-with-clojure")

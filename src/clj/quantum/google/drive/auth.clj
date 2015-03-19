@@ -1,6 +1,16 @@
-(ns quantum.google.drive.auth
+(ns
+  ^{:doc "Authorization functions for Google. Possibly Google Drive-specific,
+          but as far as I know, general to all Google authentication/OAuth2
+          processes."
+    :attribution "Alex Gunnarson"}
+  quantum.google.drive.auth
+  (:require 
+    [quantum.auth.core   :as auth           ]
+    [quantum.core.ns     :as ns  :refer :all]
+    [quantum.web.core    :as web :refer
+      [click! find-element write-page! default-capabilities]]
+    [quantum.google.core :as goog])
   (:import
-    (org.openqa.selenium.htmlunit HtmlUnitDriver)
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
      OutputType Dimension)
@@ -8,17 +18,10 @@
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
-    (org.openqa.selenium.firefox FirefoxDriver)
-    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)
-     org.openqa.selenium.chrome.ChromeDriver
-     org.openqa.selenium.safari.SafariDriver)
+    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))
   (:gen-class))
 
-(require '[quantum.auth.core                :as auth])
-(require '[quantum.core.ns :as ns :refer :all])
 (ns/require-all *ns* :clj :lib)
-(require '[quantum.web.core :as web :refer [click! find-element write-page! default-capabilities]])
-(require '[quantum.google.core :as goog])
 
 (defn approve! [^WebDriver driver]
   (let [wait-for-btn-enabled! (Thread/sleep 1500) ; For some reason the button is disabled for a little bit
@@ -26,9 +29,12 @@
           (find-element driver (By/id "submit_approve_access"))
         approve-click! (click! accept-btn)]))
 
-(defn ^String copy-auth-key-and-save! [^Key auth-type ^WebDriver driver]
-  (let [_ (write-page! (.getPageSource driver) "Unknown Drive page")
-        ^RemoteWebElement auth-key-field
+(defn ^String copy-auth-key-and-save!
+  "Copies the auth key from the web page and saves it to a
+   predetermined file."
+  {:attribution "Alex Gunnarson"}
+  [^Key auth-type ^WebDriver driver]
+  (let [^RemoteWebElement auth-key-field
           (find-element driver (By/id "code"))
         ^String auth-key (.getAttribute auth-key-field "value")]
     ; Save key
@@ -39,7 +45,10 @@
         auth-key))
     auth-key))
 
-(defn authentication-key-google [^Key auth-type ^String auth-url]
+(defn authentication-key-google
+  "Retrieves the authentication key programmatically via PhantomJS."
+  {:attribution "Alex Gunnarson"}
+  [^Key auth-type ^String auth-url]
   {:pre [(with-throw
            (or (= auth-type :online) (= auth-type :offline))
            "Authorization type invalid.")]}

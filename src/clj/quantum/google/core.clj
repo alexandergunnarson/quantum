@@ -1,4 +1,16 @@
-(ns quantum.google.core
+(ns
+  ^{:doc "Authorization functions for Google. Sign in from
+          Google homepage, from authorized site portal, 
+          etc., given a username and password.
+
+          May be expanded to other functions sometime."
+    :attribution "Alex Gunnarson"}
+  quantum.google.core
+  (:require
+    [quantum.auth.core :as auth           ]
+    [quantum.core.ns   :as ns  :refer :all]
+    [quantum.web.core  :as web :refer
+      [click! find-element write-page! default-capabilities send-keys!]])
   (:import
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
@@ -10,10 +22,7 @@
     (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))
   (:gen-class))
 
-(require '[quantum.auth.core :as auth])
-(require '[quantum.core.ns   :as ns :refer :all])
 (ns/require-all *ns* :clj :lib)
-(require '[quantum.web.core :as web :refer [click! find-element write-page! default-capabilities send-keys!]])
 
 ; =============== GOOGLE: GENERAL ===============
 

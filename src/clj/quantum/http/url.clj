@@ -1,8 +1,16 @@
-(ns quantum.http.url)
+(ns
+  ^{:doc "URL decoding, encoding, and URL <-> map.
+          
+          Possibly should deprecate this in favor of some other
+          better library."
+    :attribution "Alex Gunnarson"}
+  (:require
+    [quantum.core.ns  :as ns :refer :all]
+    [quantum.http.core :as http])
+  quantum.http.url
+  (:gen-class))
 
-(require '[quantum.core.ns  :as ns :refer :all])
 (ns/require-all *ns* :lib :clj)
-(require '[quantum.http.core :as http])
 
 (def url-percent-codes
   {:common
@@ -101,7 +109,7 @@
            (fn [^String param]
              (->> param
                   (<- split-remove+ "="))))
-         (into+ {}))))
+         redm)))
   
 (defn embedded-url->map
   [^String embedded-url]
