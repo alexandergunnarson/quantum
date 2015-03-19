@@ -1,4 +1,9 @@
-(ns quantum.core.logic
+(ns
+  ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
+          ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
+          and used everywhere in the quantum library."
+    :attribution "Alex Gunnarson"}
+  quantum.core.logic
   (:require
     [quantum.core.ns :as ns :refer
       #+clj [alias-ns defalias]

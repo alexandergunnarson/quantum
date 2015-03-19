@@ -1,4 +1,7 @@
-(ns quantum.core.system
+(ns
+  ^{:doc "System-level (envinroment) vars such as *os*."
+    :attribution "Alex Gunnarson"}
+  quantum.core.system
   (:require [quantum.core.string :as str])
   #+clj (:gen-class))
 

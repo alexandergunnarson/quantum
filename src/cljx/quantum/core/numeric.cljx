@@ -1,4 +1,7 @@
-(ns quantum.core.numeric
+(ns
+  ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.core.numeric
   (:require
     [quantum.core.logic :as log :refer
       #+clj  [splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n condf condf*n]

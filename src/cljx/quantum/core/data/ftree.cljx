@@ -1,4 +1,9 @@
-(ns quantum.core.data.ftree
+(ns
+  ^{:doc "Finger tree data structures, like double lists.
+
+          With the widespread use of vectors, this namespace may not be especially useful."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.ftree
   (:require
     #+clj [quantum.core.ns        :as ns    :refer [defalias]]
     #+clj

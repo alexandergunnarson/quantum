@@ -1,4 +1,20 @@
-(ns quantum.core.io.serialization
+(ns
+  ^{:doc
+      "Serialization for any virtually data structure using taoensso.nippy.
+      
+       Specifically provides support for custom record types, which nippy does
+       not support very well."
+    :attribution "Alex Gunnarson"}
+  quantum.core.io.serialization
+
+  (:refer-clojure :exclude [for doseq repeatedly repeat range merge])
+  (:require 
+    [quantum.core.ns :as ns
+      #+clj :refer #+clj [defalias alias-ns]]
+    [quantum.core.collections :refer :all]
+    #+clj [taoensso.nippy             :as nippy :refer
+            [read-bytes read-utf8 read-biginteger]]
+    #+clj [iota                       :as iota])
   #+clj
   (:import 
     (java.io File FileNotFoundException PushbackReader
@@ -10,34 +26,15 @@
 ; This |do| covers the entire file. For purposes of reader macro
 #+clj
 (do
-(require
-  '[quantum.core.ns          :as ns    :refer [defalias alias-ns]])
+
 (ns/require-all *ns* :clj)
 (ns/nss *ns*)
-(require
-  '[clojure.java.io            :as clj-io                    ]
-  '[quantum.core.log         :as log                       ]
-  '[clojure.data.csv           :as csv                       ]
-  '[quantum.core.data.array  :as arr   :refer :all         ]
-  '[quantum.core.string      :as str                       ] 
-  '[quantum.core.time.core   :as time                      ] 
-  '[quantum.core.print       :as pr    :refer [! pr-attrs] ]
-  '[quantum.core.collections :as coll  :refer :all         ]
-  '[quantum.core.data.map    :as map   :refer [map-entry]  ]
-  '[quantum.core.numeric     :as num   :refer [greatest-or]]
-  '[quantum.core.logic                 :refer :all         ]
-  '[quantum.core.type                  :refer :all         ]
-  '[quantum.core.function              :refer :all         ]
-  '[quantum.core.system      :as sys                       ] 
-  '[quantum.core.error       :as err   :refer [try+ throw+]]
-  '[taoensso.nippy             :as nippy :refer
-     [read-bytes read-utf8 read-biginteger]]
-  '[iota                       :as iota                      ])
 
 ; RECORD SERIALIZATION DOES NOT ALLOW EXTRA KEYS. Sorry
 
 (defn assoc-integral-values!
   "Read in integral values and assign to keys of record"
+  {:attribution "Alex Gunnarson"}
   [data-input integral-keys record-in]
   (reduce+
     (fn [record-n ^Keyword integral-k]
@@ -54,6 +51,7 @@
    DEPRECATED. Does not work; blows the stack for some reason,
    possibly because the un-serializer recognizes it as simultaneously
    a hash-map and a record and gets stuck in an infinite loop."
+  {:attribution "Alex Gunnarson"}
   [data-input record-in]
   (reduce+
     (fn [record-n ^Int iteration]
@@ -70,6 +68,8 @@
     (range+ 0 (-> max-extra-keys (* 2) inc))))
 
 (defmacro extend-serialization-for-record!
+  {:attribution "Alex Gunnarson"
+   :todo ["Likely inefficient"]}
   [^Class record-type & [type-id-0]]
   `(let [;type-id# (keyword (str *ns*) (str ~record-type))
          type-id# ~type-id-0
@@ -111,9 +111,9 @@
 ; 4. assoc-integral-values! and assoc-extra-kvs! should be end anyway
 
 (defn extend-serialization-for-records!
-  {:todo ["Make this work later"]}
+  {:attribution "Alex Gunnarson"
+   :todo ["Make this work later"]}
   [& records]
-  (let [n (volatile! 1)]
-    (doseq [record records]
-      ;(extend-serialization-for-record! record (deref n))
-      (vswap! n inc)))))
+  (dotimes [n (lasti records)]
+      ;(extend-serialization-for-record! record (deref (inc n)))
+    )))

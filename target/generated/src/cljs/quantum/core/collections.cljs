@@ -1,4 +1,5 @@
 (ns quantum.core.collections
+  (:refer-clojure :exclude [for doseq repeatedly repeat range])
   (:require
     [quantum.core.ns :as ns :refer
                                
@@ -52,6 +53,14 @@
 
 (def doto! swap!)
 
+; USE THIS EXAMPLE TO FIX THE BELOW REPETITIVENESS
+; (import-vars
+;   [clojure.walk
+;     prewalk
+;     postwalk]
+;   [clojure.data
+;     diff])
+
 (                      def vec+        red/vec+       )    
 (                      def into+       red/into+      )    
 (                      def reduce+     red/reduce+    )
@@ -69,7 +78,6 @@
 (                      def take+       red/take+      )
 (                      def take-while+ red/take-while+)
 (                      def drop+       red/drop+      )
-(                      def range+      red/range+     )
 (                      def group-by+   red/group-by+  )
                                                        
 
@@ -107,25 +115,110 @@
 
 (                      def merge+ map/merge+)
 
+; TODO this is just intuition. Better to |bench| it
+(def transient-threshold 3)
+; macro because it's heavily used  
+                                     
+                         
+                         
+                                                  
+
+; ===== ASSERTION ====
+
+(def assert-args #'clojure.core/assert-args)
+
+; ===== LOOPS ===== 
+
+(def ^:macro forl                                 #'cljs.core/for) 
+
+               
+                                                         
+                                        
+                                 
+                      
+              
+                                                        
+                                                                          
+          
+                   
+             
+           
+        
+            
+
+             
+                                                       
+                                       
+                                                 
+                                 
+                      
+              
+                                                        
+                                                                          
+                                 
+              
+                         
+                                   
+           
+                
+                   
+                
+                           
+                                      
+                         
+                   
+
                          
                  
                     
                   
-                          
-                                          
-                         
+                                     
+                                            
                            
-                                   
                                
-                        
-                     
-                            
+                                       
+                                   
                                   
-                                  
+                           
+                 
+                                      
+                                      
 
-                     
-                                                                      
-                                              
+(def lrepeatedly clojure.core/repeatedly)
+
+                    
+                                                                                    
+          
+                                             
+                  
+                                            
+
+; ===== RANGE =====
+
+(                      def range+ red/range+)
+
+(def lrange clojure.core/range)
+
+(defn range
+  ([]    (lrange))
+  ([a]   (-> (range+ a)   redv))
+  ([a b] (-> (range+ a b) redv)))
+
+; LARGE-SIZE
+; GC OutOfMemoryError     (->> (range  10000000) redv)
+; GC OutOfMemoryError     (->> (range+ 10000000) redv)
+; MID-SIZE
+; 554 µs  639  µs 931  µs (->> (range  10000) redv)
+; 603 µs  660  µs 880  µs (->> (range+ 10000) redv)
+; SMALL-SIZE
+; 30.0 µs 32.9 µs 42.5 µs (->> (range  10) redv)
+; 2.72 µs 3.02 µs 3.99 µs (->> (range+ 10) redv)
+
+; ===== REPEAT =====
+
+(defn repeat
+  ([obj]   (clojure.core/repeat obj))
+  ([n obj] (for [n (range n)] )))
 
 (defn ^Set abs-difference 
   "Returns the absolute difference between a and b.

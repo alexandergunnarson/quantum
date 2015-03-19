@@ -1,4 +1,7 @@
-(ns quantum.core.util.bench
+(ns
+  ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
+    :attribution "Alex Gunnarson"}
+  quantum.core.util.bench
   (:require
     [quantum.core.ns     :as ns #+clj :refer #+clj [defalias]]
     [quantum.core.string :as str]
@@ -20,6 +23,7 @@
             (repeatedly (fn [] (num-from-timing
                           (with-out-str (time (apply func args)))))))]
   (/ (apply + times-list) to-repeat))) ; average
+
 #+clj (defalias bench bench/quick-bench)
 #+clj (defalias complete-bench bench/bench)
 

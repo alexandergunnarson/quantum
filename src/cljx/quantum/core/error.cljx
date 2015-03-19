@@ -1,4 +1,7 @@
-(ns quantum.core.error
+(ns
+  ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
+    :attribution "Alex Gunnarson"}
+  quantum.core.error
   (:require
     [quantum.core.ns :as ns :refer
       #+clj [alias-ns defalias]
@@ -13,6 +16,8 @@
       Nil Bool Num ExactNum Int Decimal Key Set
              ArrList TreeMap LSeq Regex Editable Transient Queue Map))
   #+clj (:gen-class))
+
+#+clj (ns/require-all *ns* :clj)
 
 #+clj (defalias try+   try-catch/try+)
 #+clj (defalias throw+ try-catch/throw+)
@@ -35,10 +40,24 @@
    @expr evaluates to false.
 
    Specifically for use with :pre and :post conditions."
+  {:attribution "Alex Gunnarson"}
   [expr throw-content]
   `(if ~expr ~expr (throw+ ~throw-content)))
 
+#+clj
+(defmacro try-or 
+  "An exception-handling version of the 'or' macro.
+   Trys expressions in sequence until one produces a result that is neither false nor an exception.
+   Useful for providing a default value in the case of errors."
+  {:attribution "mikera.cljutils.error"}
+  ([exp & alternatives]
+     (if-let [as (seq alternatives)] 
+       `(or (try ~exp (catch Throwable t# (try-or ~@as))))
+       exp)))
+
 ; ====== ERROR TYPES =======
+
+; TODO modify these to be records in order to reduce map-creation overhead.
 
 (defn unk-dispatch [dispatch]
   {:type :unk-dispatch

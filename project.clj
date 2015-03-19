@@ -12,7 +12,7 @@
   ; :signing          {:gpg-key "72F3C25A"}
   ; :deploy-repositories [["releases" :clojars]
   ;                       ["clojars" {:creds :gpg}]]
-  :plugins          [] 
+  :plugins          [[jonase/eastwood "0.2.1"]]
   :dev-dependencies []
   :dependencies
     [; CLOJURE CORE
@@ -50,6 +50,8 @@
      [iota                              "1.1.2"] ; fast/efficient string IO manipulation
      ; NUMERIC                   
      [primitive-math                    "0.1.3"]
+     ; DATA IN GENERAL
+     [clj-tuple 						"0.2.0"]
      ; DATA.VECTOR
      [org.clojure/core.rrb-vector       "0.0.11"]
      ; DATA.MAP; DATA.SET     
@@ -104,10 +106,11 @@
       :1.5 {:dependencies [[org.clojure/clojure "1.5.1"]]}
       :1.6 {:dependencies [[org.clojure/clojure "1.6.0"]]}}
   :aliases {"all" ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy" ["do" "clean," "cljx" "once," "install"] ; , "deploy" "clojars"
+            "deploy-dev"  ["do" "clean," "cljx" "once," "install"]
+            "deploy-prod" ["do" "clean," "cljx" "once," "install," "deploy" "clojars"]
             "test" ["do" "clean," "cljx" "once," "test," "with-profile" "dev" "cljsbuild" "test"]}
-  :lein-release {:deploy-via :shell
-                 :shell ["lein" "deploy"]}
+  ;:lein-release {:deploy-via :shell
+  ;               :shell ["lein" "deploy"]}
   :auto-clean     false ; is this a mistake?
   :source-paths   ["target/generated/src/clj"  "src/clj" ]
   :resource-paths ["target/generated/src/cljs" "src/cljs"]

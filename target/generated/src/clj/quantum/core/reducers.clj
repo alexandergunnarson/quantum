@@ -378,8 +378,8 @@
 
 (def fold-pre
   (condf*n
-    fn?    (compr call  (if*n delay? force identity))
-    delay? (compr force (if*n fn?    call  identity))
+    fn?    (fn-> call  (whenf delay? force))
+    delay? (fn-> force (whenf fn?    call ))
     :else identity))
 
 (defn into+

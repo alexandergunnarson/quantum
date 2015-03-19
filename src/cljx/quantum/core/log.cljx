@@ -1,4 +1,10 @@
-(ns quantum.core.log
+(ns
+  ^{:doc "Simple logging capabilities. Keeps a global log, has a status channel,
+          prints only if the level is enabled, etc.
+
+          By no means a full-fledged logging system, but useful nonetheless."
+    :attribution "Alex Gunnarson"}
+  quantum.core.log
   (:refer-clojure :exclude [pr])
   (:require
     [quantum.core.ns :as ns :refer
@@ -56,6 +62,7 @@
    is in the set of enabled print alert types, |*prs*|.
 
    Logs the printed result to the global log |log|."
+  {:attribution "Alex Gunnarson"}
   [pr-type & args]
   `(let [ns-0# ~*ns*] 
     (binding [*ns* ns-0#]
@@ -74,6 +81,7 @@
 #+clj
 (defn status
   "Updates the system status with the provided string @s."
+  {:attribution "Alex Gunnarson"}
   ([^String s]
     (pr :user s)
     (let [statuses-chan @statuses]

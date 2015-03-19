@@ -1,39 +1,31 @@
-(ns quantum.core.data.xml
+(ns
+  ^{:doc "(Once-)useful XML functions.
+
+          This namespace is very old and poorly written, and will likely be deprecated in favor of perhaps
+          aliasing some more mature and feature-rich library."
+    :attribution "Alex Gunnarson"}
+  quantum.core.data.xml
+  (:require
+    [quantum.core.ns          :as ns
+      #+clj :refer #+clj [defalias alias-ns]]
+    [quantum.core.error                 #+clj :refer #+clj :all]
+    [quantum.core.logic                 #+clj :refer #+clj :all]
+    [quantum.core.function              #+clj :refer #+clj :all]
+    [quantum.core.type                  #+clj :refer #+clj :all]
+    [quantum.core.numeric     :as num   :refer [nneg?]]
+    [quantum.core.collections           :exclude [split] #+clj :refer #+clj :all]
+    [quantum.core.data.vector :as vec   :refer [catvec]]
+    [quantum.core.string      :as str   :refer [subs+]]
+    [quantum.core.log         :as log])
   #+clj (:gen-class))
 
-; LIKELY THIS NAMESPACE WILL BE DEPRECATED IN FAVOR OF SOME OTHER LIBRARY...
-
-#+clj (require
-  '[quantum.core.ns          :as ns    :refer [defalias alias-ns]])
 #+clj (ns/require-all *ns* :clj)
-#+clj (require
-  '[quantum.core.error                 :refer :all]
-  '[quantum.core.logic                 :refer :all]
-  '[quantum.core.function              :refer :all]
-  '[quantum.core.type                  :refer :all]
-  '[quantum.core.numeric     :as num   :refer [nneg?]]
-  '[quantum.core.collections           :exclude [split] :refer :all]
-  '[quantum.core.data.vector :as vec   :refer [catvec]]
-  '[quantum.core.string      :as str   :refer [subs+]]
-  '[quantum.core.log         :as log])
-
-; XML PARSING FROM STRINGS PRE-BROKEN BY NEWLINES VIA THEBUSBY.IOTA
-
-; On creation, an index of the file will be constructed so random access will be O(1),
-; similar to a normal Clojure vector. This is significantly more memory efficient than
-; a vector of Strings.
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
 ;=================================================={                          }=====================================================
 #+clj (def brs-open  #(str "<" % ">"))
 #+clj (def brs-close #(str "</" % ">"))
 
-#+clj
-(defn take-while-not
-  [^String s ^String elem]
-  (getr+ s 0
-    (whenc (index-of+ s elem) (eq? -1)
-      (count+ s))))
 #+clj
 (defn ^String tag-wrap
   "Wraps @body in XML tags specified by @tag."
@@ -231,7 +223,7 @@
                (<- parse xml-type)))))
   String
     (parse
-      ^{:performance ["Is foldp+ wise here?"]}
+      ^{:performance ["Is foldv wise here?"]}
       ([xml-0]
         (parse xml-0 :general))
       ([xml-0 xml-type]
@@ -261,9 +253,9 @@
                  Oldest (|parse-xml|)  25    sec"]}
       ([xml-0] (parse xml-0 :general))
       ([xml-0 ^Keyword xml-type]
-        (let [^Atom traversal-keys (atom [] )
-              ^Atom built-up-map   (atom {} )
-              ^Atom final-result   (atom nil)
+        (let [^Atom traversal-keys (volatile! [] )
+              ^Atom built-up-map   (volatile! {} )
+              ^Atom final-result   (volatile! nil)
               ^Fn   unique-tag-if-needed ; gensym ensures no re-association
                 (fn [^Keyword tag-n]
                   (if (contains?
@@ -283,7 +275,7 @@
                 (condp = elem-type
                   :standalone (conj ret {tag content})
                   :open       (do (log/pr :inspect-core "Found open element:" tag)
-                                  (swap! traversal-keys conj
+                                  (vswap! traversal-keys conj
                                     (unique-tag-if-needed tag))
                                   (log/pr :inspect-core "Conj'ed" (str/squote tag) ";"
                                     "Traversal keys now:" @traversal-keys)
@@ -294,16 +286,16 @@
                                   ret)
                   :close      (do (log/pr :inspect-core "Found close element:" tag)
                                   (if (single? @traversal-keys) ; last level to close out
-                                      (do (reset! traversal-keys [])
-                                          (reset! final-result @built-up-map)
+                                      (do (vreset! traversal-keys [])
+                                          (vreset! final-result @built-up-map)
                                           (log/pr :inspect-core
                                             "About to conj map result:" @final-result)
-                                          (reset! built-up-map   {})
+                                          (vreset! built-up-map   {})
                                           (conj ret @final-result))
-                                      (do (swap! traversal-keys popr+)
+                                      (do (vswap! traversal-keys popr+)
                                           ret)))
                   :body       (do (log/pr :inspect-core "Found body element:" content)
-                                  (swap! built-up-map
+                                  (vswap! built-up-map
                                      assoc-in+
                                      @traversal-keys
                                      (normalize-content content)) ; Possible bottleneck

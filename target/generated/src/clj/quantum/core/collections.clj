@@ -1,4 +1,5 @@
 (ns quantum.core.collections
+  (:refer-clojure :exclude [for doseq repeatedly repeat range])
   (:require
     [quantum.core.ns :as ns :refer
             [alias-ns defalias]
@@ -52,6 +53,14 @@
 
 (def doto! swap!)
 
+; USE THIS EXAMPLE TO FIX THE BELOW REPETITIVENESS
+; (import-vars
+;   [clojure.walk
+;     prewalk
+;     postwalk]
+;   [clojure.data
+;     diff])
+
 (      defalias            vec+        red/vec+       )    
 (      defalias            into+       red/into+      )    
 (      defalias            reduce+     red/reduce+    )
@@ -69,7 +78,6 @@
 (      defalias            take+       red/take+      )
 (      defalias            take-while+ red/take-while+)
 (      defalias            drop+       red/drop+      )
-(      defalias            range+      red/range+     )
 (      defalias            group-by+   red/group-by+  )
       (defalias            for+        red/for+       )
 
@@ -107,25 +115,110 @@
 
 (      defalias            merge+ map/merge+)
 
+; TODO this is just intuition. Better to |bench| it
+(def transient-threshold 3)
+; macro because it's heavily used  
+(defmacro should-transientize? [coll]
+  `(and (editable? ~coll)
+        (counted?  ~coll)
+        (-> ~coll count (> transient-threshold))))
+
+; ===== ASSERTION ====
+
+(def assert-args #'clojure.core/assert-args)
+
+; ===== LOOPS ===== 
+
+(def ^:macro forl       #'clojure.core/for                       ) 
+
+(defmacro doseq
+  "A lighter, eager version of |doseq| based on |reduce|.
+   Optimized for one destructured coll."
+  {:attribution "Alex Gunnarson"}
+  [[elem coll] & body]
+  (assert-args
+    (vector? seq-exprs)       "a vector for its binding"
+    (even? (count seq-exprs)) "an even number of forms in binding vector")
+  `(reduce
+     (fn [_# ~elem]
+       ~@body
+       nil)
+     nil
+     ~coll))
+
+(defmacro for
+  "A lighter, eager version of |for| based on |reduce|.
+   Optimized for one destructured coll.
+   Recognizes persistent vs. transient tradeoff."
+  {:attribution "Alex Gunnarson"}
+  [[elem coll] & body]
+  (assert-args
+    (vector? seq-exprs)       "a vector for its binding"
+    (even? (count seq-exprs)) "an even number of forms in binding vector")
+  (if (should-transientize? coll)
+      `(reduce
+         (fn [ret# ~elem]
+           (conj ret# (do ~@body)))
+         []
+         ~coll))
+      `(persistent!
+         (reduce
+           (fn [ret# ~elem]
+             (conj! ret# (do ~@body)))
+           (transient [])
+           ~coll)))
+
 (defmacro repeatedly-into
   [coll n & body]
   `(let [coll# ~coll
          n#    ~n]
-     (if (editable? coll#)
-       (loop [v# (transient coll#) idx# 0]
-         (if (>= idx# n#)
-           (persistent! v#)
-           (recur (conj! v# ~@body)
-                  (inc idx#))))
-       (loop [v#   coll#
-              idx# 0]
-         (if (>= idx# n#) v#
-           (recur (conj v# ~@body)
-                  (inc idx#)))))))
+     (if (should-transientize? coll#)
+         (loop [v# (transient coll#) idx# 0]
+           (if (>= idx# n#)
+               (persistent! v#)
+               (recur (conj! v# ~@body)
+                      (inc idx#))))
+         (loop [v#   coll# idx# 0]
+           (if (>= idx# n#)
+               v#
+               (recur (conj v# ~@body)
+                      (inc idx#)))))))
 
-(defmacro repeatedly+
-  "Like |repeatedly| but (significantly) faster and returns a vector."
-  [n & body] `(repeatedly-into* [] ~n ~@body))
+(def lrepeatedly clojure.core/repeatedly)
+
+(defmacro repeatedly
+  "Like |clojure.core/.repeatedly| but (significantly) faster and returns a vector."
+  ; ([n f]
+  ;   `(repeatedly-into* [] ~n ~arg1 ~@body))
+  ([n arg1 & body]
+    `(repeatedly-into* [] ~n ~arg1 ~@body)))
+
+; ===== RANGE =====
+
+(      defalias            range+ red/range+)
+
+(def lrange clojure.core/range)
+
+(defn range
+  ([]    (lrange))
+  ([a]   (-> (range+ a)   redv))
+  ([a b] (-> (range+ a b) redv)))
+
+; LARGE-SIZE
+; GC OutOfMemoryError     (->> (range  10000000) redv)
+; GC OutOfMemoryError     (->> (range+ 10000000) redv)
+; MID-SIZE
+; 554 µs  639  µs 931  µs (->> (range  10000) redv)
+; 603 µs  660  µs 880  µs (->> (range+ 10000) redv)
+; SMALL-SIZE
+; 30.0 µs 32.9 µs 42.5 µs (->> (range  10) redv)
+; 2.72 µs 3.02 µs 3.99 µs (->> (range+ 10) redv)
+
+; ===== REPEAT =====
+
+(defn repeat
+  ([obj]   (clojure.core/repeat obj))
+  ([n obj] (for [n (range n)] )))
 
 (defn ^Set abs-difference 
   "Returns the absolute difference between a and b.

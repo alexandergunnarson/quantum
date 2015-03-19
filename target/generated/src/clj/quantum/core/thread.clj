@@ -1,4 +1,5 @@
-(ns quantum.core.thread       (:gen-class))
+(ns quantum.core.thread
+        (:gen-class))
       (require
   '[quantum.core.ns          :as ns    :refer [defalias alias-ns]])
       (ns/require-all *ns* :clj)
@@ -25,6 +26,14 @@
 ;(defalias alts!      async/alts!)
       (defalias alts!!     async/alts!!)
       (def #^{:macro true} thread #'async/thread)
+
+; ONLY IN CLJS
+(defmacro <? [expr]
+  `(let [expr-result# (cljs.core.async/<! ~expr)]
+     (if ;(quantum.core.type/error? chan-0#)
+         (instance? js/Error expr-result#)
+         (throw expr-result#)
+         expr-result#)))
 
       (def  reg-threads (atom {})) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
 

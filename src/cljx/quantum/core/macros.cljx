@@ -1,4 +1,8 @@
-(ns quantum.core.macros
+(ns
+  ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
+          Also some plumbing macros for |for| loops and the like."
+    :attribution "Alex Gunnarson"}
+  quantum.core.macros
   (:require
     [quantum.core.ns :as ns :refer
       #+clj [alias-ns defalias]
@@ -8,10 +12,14 @@
     [quantum.core.type :as type :refer
       #+clj  [name-from-class ShortArray LongArray FloatArray IntArray DoubleArray BooleanArray ByteArray CharArray ObjectArray bigint?
               instance+? array-list? boolean? double? map-entry? sorted-map?
-              queue? lseq? coll+? pattern? regex? editable? transient?]
+              queue? lseq? coll+? pattern? regex? editable? transient?
+              should-transientize?]
       #+cljs [class instance+? array-list? boolean? double? map-entry? sorted-map?
               queue? lseq? coll+? pattern? regex? editable? transient?]]
     #+clj [potemkin.types :as t])
+  #+cljs
+  (:require-macros
+    [quantum.core.type :refer [should-transientize?]])
   #+clj (:gen-class))
 
 (defmacro extend-protocol-for-all [prot classes & body]
@@ -30,24 +38,6 @@
 ; (defmacro extend-protocol-typed [expr]
 ;   (extend-protocol (count+ [% coll] (alength % coll))))
 
-
-; (defprotocol+ QBItemSearch
-;   (qb-item-search-base    [search-token ^AFunction filter-fn ^AFunction comparison-fn]
-;     ([String Pattern]
-;       (->> qb-items*
-;            (filter-fn (compr key+ (comparison-fn search-token))))))
-;   (qb-item-search-compare [search-token ^AFunction filter-fn]
-;     (String
-;       (qb-item-search-base search-token filter-fn eq?))
-;     (Pattern
-;       (qb-item-search-base search-token filter-fn (partial partial str/re-find+))))
-;   (qb-item-search*        [search-token]
-;     ([String Pattern]
-;       (qb-item-search-compare search-token filter+)))
-;   (qb-item-search-first* [search-token]
-;     ([String Pattern]
-;       (qb-item-search-compare search-token ffilter))))
-
 ; (defmacro defprotocol+ [protocol & exprs]
 ;   '(let [methods# ; Just take the functions
 ;           (->> (rest exprs)
@@ -57,34 +47,22 @@
 ;      ;(extend-protocol-types protocol (first exprs) methods#)
 ;      ))
 
-; (let [a# '[[bb] (fn [] cc) (fn [] dd) [ee]]]
-;   (->> (rest a#)
-;        (take-while (fn->> str first+ (not= "[")))
-;        (map (juxt first second))))
-
-
 ; (defmacro quote-exprs [& exprs]
 ;   `~(exprs))
 
-(defmacro ^{:private true :attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"}
-  assert-args [& pairs]
-  `(do (when-not ~(first pairs)
-         (throw (IllegalArgumentException.
-                  (str (first ~'&form) " requires " ~(second pairs) " in " ~'*ns* ":" (:line (meta ~'&form))))))
-     ~(let [more (nnext pairs)]
-        (when more
-          (list* `assert-args more)))))
+(def assert-args #'clojure.core/assert-args)
 
 (defn emit-comprehension
-  ^{:attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"}
+  {:attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"
+   :todo ["Transientize the |reduce|s"]}
   [&form {:keys [emit-other emit-inner]} seq-exprs body-expr]
   (assert-args
      (vector? seq-exprs) "a vector for its binding"
      (even? (count seq-exprs)) "an even number of forms in binding vector")
   (let [groups (reduce (fn [groups [k v]]
                          (if (keyword? k)
-                           (conj (pop groups) (conj (peek groups) [k v]))
-                           (conj groups [k v])))
+                              (conj (pop groups) (conj (peek groups) [k v]))
+                              (conj groups [k v])))
                  [] (partition 2 seq-exprs)) ; /partition/... hmm...
         inner-group (peek groups)
         other-groups (pop groups)]
@@ -100,3 +78,42 @@
           (= k :when)  `(if  ~v ~cont ~skip)
           :else (err "Invalid 'for' keyword " k)))
       cont (reverse mod-pairs)))) ; this is terrible
+
+#+clj
+(defmacro compile-if
+  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
+  `then`.  Else expand to `else`.
+
+  (compile-if (Class/forName \"java.util.concurrent.ForkJoinTask\")
+    (do-cool-stuff-with-fork-join)
+    (fall-back-to-executor-services))"
+  {:attribution "clojure.core.reducers"}
+  [exp then else]
+  (if (try (eval exp)
+           (catch Throwable _ false))
+     `(do ~then)
+     `(do ~else)))
+
+
+
+; EXAMPLES OF META APPLICATION
+; #+clj
+; (defmacro extend-coll-search-for-type
+;   [type-key]
+;   (let [type# (-> coll-search-types (get type-key) name-from-class)
+;         coll (with-meta (gensym)
+;                {:tag type#})
+;         elem (with-meta (gensym)
+;                {:tag (if (= type# 'java.lang.String)
+;                          'String
+;                          'Object)})]
+;    `(extend-protocol CollSearch (get ~coll-search-types ~type-key)
+;       (index-of+      [~coll ~elem] (.indexOf     ~coll ~elem))
+;       (last-index-of+ [~coll ~elem] (.lastIndexOf ~coll ~elem)))))
+
+; #+clj
+; (defn extend-coll-search-to-all-types! []
+;   (reduce-kv
+;     (fn [ret type type-class]
+;       (eval `(extend-coll-search-for-type ~type)))
+;     nil coll-search-types))
