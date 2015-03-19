@@ -257,42 +257,46 @@
 (defn filteri+
   {:todo ["Use reducers"]}
   [pred coll]
-  (reducei
-    (fn [ret elem-n n]
-      (if (pred elem-n)
-          (conj ret (map-entry n elem-n))
-          ret))
-    []
-    coll))
+  (if (should-transientize? coll)
+      (persistent!
+        (reducei
+          (fn [ret elem-n n]
+            (if (pred elem-n)
+                (conj! ret (map-entry n elem-n))
+                ret))
+          (transient [])
+          coll))
+      (reducei
+        (fn [ret elem-n n]
+          (if (pred elem-n)
+              (conj ret (map-entry n elem-n))
+              ret))
+        []
+        coll))
+  
+  )
 
 ; ================================================ INDEX-OF ================================================
 
 (defn indices-of+
   {:todo ["Make parallizeable"]}
   [coll elem-0]
-  (reducei
-    (fn [ret elem-n n]
-      (if (= elem-0 elem-n)
-          (conj ret n)
-          ret))
-    []
-    coll))
-
-; (defn indices-of++
-;   {:todo ["Make parallizeable and more efficient using reducers"]}
-;   [coll elem]
-;   (loop [indices-n []
-;          coll-n    coll]
-;     (let [index-n (index-of coll-n elem)
-;           last-index (if (empty? indices-n)
-;                          0
-;                          (inc (last+ indices-n)))]
-;       (println "index-n is" index-n "and" indices-n)
-;       (if (= -1 index-n)
-;           indices-n
-;           (recur (conj indices-n (num/safe+ index-n last-index))
-;                  (take-from+ coll-n (inc index-n)))))))
-
+  (if (should-transientize? coll)
+      (persistent!
+        (reducei
+          (fn [ret elem-n n]
+            (if (= elem-0 elem-n)
+                (conj! ret n)
+                ret))
+          (transient [])
+          coll))
+      (reducei
+        (fn [ret elem-n n]
+          (if (= elem-0 elem-n)
+              (conj ret n)
+              ret))
+        []
+        coll)))
 
 ; ================================================ TAKE ================================================
 
