@@ -1,9 +1,14 @@
-(ns quantum.core.network.core)
+(ns
+  ^{:doc "A barely-used namespace with one function: to launch a URL in a browser. 
+
+          Not particularly useful."
+    :attribution "Alex Gunnarson"}
+  quantum.core.network.core (:gen-class))
 
 ; clojure.java.browse/browse-url - how is that different?
 (defn launch-url
   "Launch the provided URL in a system browser."
-  ^{:attribution "thebusby.bagotricks"}
+  {:attribution "thebusby.bagotricks"}
   [^String url] ; requires a protocol in front... make sure it can add if it doesn't have it (http, etc.)
   (if (and (java.awt.Desktop/isDesktopSupported)
            (-> (java.awt.Desktop/getDesktop)

@@ -1,20 +1,29 @@
-(ns quantum.http.core (:gen-class))
-(require '[quantum.core.ns  :as ns :refer :all])
+(ns
+  ^{:doc "Some useful HTTP functions. HTTP request processing with
+          error handling, log writing, etc."
+    :attribution "Alex Gunnarson"}
+  quantum.http.core
+  (:require
+    [quantum.core.ns  :as ns :refer :all]
+    [quantum.http.core :refer :all]
+    [org.httpkit.client :as http])
+  (:gen-class))
+
 (ns/require-all *ns* :lib :clj)
-(require '[org.httpkit.client :as http])
-(require '[ quantum.http.core :refer :all])
 
 (def ^:dynamic *max-tries-http* 3)
 
-(defrecord HTTPLogEntry [^APersistentVector tries])
+(defrecord HTTPLogEntry [^Vec tries])
 (defonce http-log (atom {}))
 ;___________________________________________________________________________________________________________________________________
 ;================================================={              LOG              }=================================================
 ;================================================={                               }=================================================
 (defn log-entry-write!
-  ^{:usage "log: {:request  time
+  {:usage "log: {:request  time
                   :tries    [{:response time :status 401}]
-                  :response time}"}
+                  :response time}"
+   :attribution "Alex Gunnarson"
+   :todo ["Likely needs to be rewritten"]}
   [^Atom log log-type ^Number tries & [status]]
   (let [to-conj
           (if (or (and (= tries 0) (= log-type :request)) ; initial request
@@ -34,8 +43,10 @@
    and limits retries at |http-lib/*max-tries-http*| (which defaults at 3)."
    {:todo  ["EOFException SSL peer shut down incorrectly  sun.security.ssl.InputRecord.read
              INFO: I/O exception (java.net.SocketException) caught when connecting to
-                   {s}->https://www.googleapis.com: Connection reset"]
-    :usage "(proc-request! 0 nil {...} (atom {:tries []}))"}
+                   {s}->https://www.googleapis.com: Connection reset"
+            "Probabyl should be rewritten."]
+    :usage '(proc-request! 0 nil {...} (atom {:tries []}))
+    :attribution "Alex Gunnarson"}
   [^Integer try-n status-n request-n ^Atom log-entry ^AFunction handle-http-error-fn]
   (if (= try-n *max-tries-http*)
       (throw+ {:message (str "HTTP exception, status " status-n ". Maximum tries (3) exceeded.")})

@@ -1,4 +1,8 @@
-(ns quantum.web.core
+(ns
+  ^{:doc "A very rough and terribly incomplete mini-library
+          for Selenium, especially PhantomJS."
+    :attribution "Alex Gunnarson"}
+  quantum.web.core
   (:import
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
@@ -16,7 +20,7 @@
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 
-; TODO: make a macro which is with-driver-open
+; TODO: make a macro, |with-driver-launch|
 
 (def default-capabilities
   (doto (DesiredCapabilities/phantomjs)
@@ -27,6 +31,7 @@
 
 ; Possibly defprotocol?
 (defn write-page!
+  {:attribution "Alex Gunnarson"}
   ([^WebDriver driver]
     (write-page! (.getPageSource driver) (str "Page " (time/now) ".html")))
   ([^String page ^String page-name]
@@ -44,7 +49,8 @@
 
 
 (defn wait-for-fn!
-{:todo ["Just a band-aid. Use a timeout channel for this."]}
+{:attribution "Alex Gunnarson"
+ :todo ["Just a band-aid. Use a timeout channel for this."]}
 [^Fn f & fn-args]
 (let [timeout        5000
       timer-interval 100] ; try every 10th of a second
@@ -60,7 +66,9 @@
       :else
         (recur (+ timer timer-interval) (apply f fn-args))))))
 
-(defn stale-elem? [^RemoteWebElement elem]
+(defn stale-elem?
+  {:attribution "Alex Gunnarson"
+  [^RemoteWebElement elem]
   (try
     (.findElementsById elem "bogus_elem")
     false
@@ -73,7 +81,9 @@
   (let []
     (wait-for-fn! stale-elem? elem)))
 
-(defn find-element [^WebDriver driver ^org.openqa.selenium.By elem]
+(defn find-element
+  {:attribution "Alex Gunnarson"
+  [^WebDriver driver ^org.openqa.selenium.By elem]
   (try
     (.findElement driver elem)
     (catch NoSuchElementException _
@@ -85,15 +95,3 @@
 
 ;driver.close() ; to close a single browser window.
 ; Also, opening and quitting the browser with every authentication is inefficient...
-
-
-(+ 2 (* 2 3))
-(-> 2 (* 3) (+ 2))
-
-(rest [1 2 3]) :: [2 3]
-(rest "abcde") :: (\b \c \d \e)
-(rest+ "abcde") :: "bcde"
-(defn my-func [a b c & args] )
-
-
-(not= (.getAttribute balance-elem "debugid") "leftasdhasdh")

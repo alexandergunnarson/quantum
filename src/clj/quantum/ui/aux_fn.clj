@@ -1,4 +1,10 @@
-(ns quantum.ui.aux-fn (:gen-class))
+(ns
+  ^{:doc "Some old auxiliary functions for JavaFX.
+          Many, if not most, of these will be deprecated in favor of
+          aaronc/freactive's reactive UI solution."
+    :attribution "Alex Gunnarson"}
+  quantum.ui.aux-fn
+  (:gen-class))
 (require '[quantum.core.ns :as ns])
 (ns/require-all *ns* :lib :clj :grid :fx)
 (ns/nss *ns*)
@@ -6,65 +12,19 @@
 ;___________________________________________________________________________________________________________________________________
 ;=========================================================={   FUNCTIONS  }=========================================================
 ;=========================================================={              }=========================================================
-; (defn fx-tree [] ; A brute-force tree when something is presumed inaccurate with @tree
-;   (let [get-name (fn-> class str (#(str/subs+ % (inc (coll/last-index-of "." %)))))
-;         get-children
-;           #(vector
-;              (->> % get-name gensym keyword) ; /gensym/ to make unique
-;              (try (->> % .getChildren (into+ []))
-;                   (catch IllegalArgumentException e nil)))
-;         tree-0 (get-children (ns/eval-key :rt))]
-;     (defn fx-tree* [[k v :as tree-loc]]
-;       ; [:rt [obj1 obj2]]
-;       ; [:rt [[:obj1 [obj3 obj4]]
-;       ;       [:obj2 [obj5 obj6]]]]
-;       (if (nil? v)
-;           tree-loc ; End of the line, so to speak        
-;           (->> v (map+ get-children) (map+ fx-tree*) fold+)))
-;     (->> tree-0 fx-tree*
-;          (postwalk
-;            (whenf*n
-;              (fn-and vector? (compr count+ (eq? 2)))
-;                (partial coll/merge+ {}))))))
-(defn add-complement-nodes! [^APersistentSet node-set]
-  (swap! fx/complement-nodes-set conj node-set))
-
-(defn ^APersistentSet complement-nodes
+(defn ^Set complement-nodes
   [^Node obj]
   (let [^Keyword obj-key (get @fx/obj-key-pairs obj)]
     (->> @fx/complement-nodes-set
          (ffilter (f*n contains? obj-key))
          (<- set/difference (hash-set obj-key)))))
 
-(defn deselect!
-  "Visually 'deselects' a JavaFX Node object, @obj."
-  [^Node obj ^Map styles-map]
-  (let [^Key style-key (-> obj fx/lookup :style)
-        ^Fn  deselect-handler
-          (-> styles-map (get style-key) :deselect-handler)]
-    (when (nnil? deselect-handler)
-      (deselect-handler obj)))) 
-
-(defn select!
-  "Visually 'deselects' a JavaFX Node object, @obj."
-  [^Node obj ^Map styles-map]
-  (let [^Key style-key (-> obj fx/lookup :style)
-        ^Fn  press-handler
-          (-> styles-map (get style-key) :press-handler)]
-    (when (nnil? press-handler)
-      (press-handler obj)))) 
-
-(defn ^APersistentVector siblings 
+(defn ^Vec siblings 
   {:todo ["Take this function away and incorporate into |jfx/jget|."]}
   [^Node obj]
   (->> (jget (jget obj :parent) :children)
        (remove+ (eq? obj))
        fold+))
-
-(defn deselect-complements! [^Node obj ^Map styles-map]
-  (let [^Set complement-nodes-set (complement-nodes obj)]
-  (doseq [complement-node complement-nodes-set]
-    (deselect! complement-node styles-map))))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{         FONTS        }=====================================================
 ;======================================================{                      }=====================================================
@@ -202,10 +162,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=========================================================={   FUNCTIONS  }=========================================================
 ;=========================================================={              }=========================================================
-(defn pr-trees []
-  (-> @fx/tree !)
-  (println "============")
-  (-> @fx/objs !))
 (defn do-intervals [millis & args]
   (->> args
        (interpose #(Thread/sleep millis))
@@ -322,8 +278,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{  CAPTURE SYS.OUT  }======================================================
 ;========================================================{                   }======================================================
-(def  temp-rec (atom (queue)))
-
 (defn update-out-str-with! [out-str baos]
     (swap! temp-rec conj baos)
 ; (swap! out-str conj (str baos))

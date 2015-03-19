@@ -1,13 +1,18 @@
-(ns quantum.ui.component
+(ns
+  ^{:doc "Namespace for creating/defining UI components, especially
+          with |defcomponent|."
+    :attribution "Alex Gunnarson"}
+  quantum.ui.component
   (:require
-   [quantum.core.ns          :as ns]
-   [quantum.core.data.map    :as map       :refer [map-entry]          ]
-   [quantum.core.data.vector :as vec                                   ]
-   [quantum.core.function    :as fn        :refer [f*n compr]                ]
-   [quantum.core.logic       :as log       :refer [fn-not fn-and fn-or splice-or nnil?]]
-   [quantum.core.numeric     :as num       :refer [neg]                ]
-   [quantum.core.type        :as type      :refer [instance+? #+cljs class]   ]
-   [quantum.core.string      :as str                                   ]
+   [quantum.core.ns          :as ns                                        ]
+   [quantum.core.data.map    :as map       :refer [map-entry]              ]
+   [quantum.core.data.vector :as vec                                       ]
+   [quantum.core.function    :as fn        :refer [f*n compr]              ]
+   [quantum.core.logic       :as log       :refer
+      [fn-not fn-and fn-or splice-or nnil?]]
+   [quantum.core.numeric     :as num       :refer [neg]                    ]
+   [quantum.core.type        :as type      :refer [instance+? #+cljs class]]
+   [quantum.core.string      :as str                                       ]
    [quantum.core.collections :as coll :refer
      [redv redm into+ reduce+
       rest+ first+ single?
@@ -43,8 +48,12 @@
   (throw (ex-info "Arguments to |defcomponent| must be a vector:" args)))
 
 (defmacro defcomponent
+  "Defines a UI component in @body with the hook |*component-hook*|.
+
+   The *component-hook* initializes to 1) a CSS auto-styling on re-render,
+   and 2) component registration."
   {:attribution "Alex Gunnarson"
-   :todo ["Possibly make less repetitive."]}
+   :todo ["Make less repetitive."]}
   ([name-0 args]
     `(defcomponent ~name-0 ~args nil nil (list)))
   ([name-0 args body]

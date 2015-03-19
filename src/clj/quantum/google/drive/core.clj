@@ -1,18 +1,26 @@
-(ns quantum.google.drive.core (:gen-class))
+(ns
+  ^{:doc "A Clojure API for Google Drive.
+          Has some interesting ideas, but is old and needs re-implementation,
+          or at least a lot of code examining and rewriting.
 
-(require '[quantum.google.drive.auth :as crawler])
-;(require '[clj-http.client    :as http])
-(require '[org.httpkit.client              :as http])
-(require '[oauth.google                    :as oauth.google])
-(require '[oauth.io                        :as oauth.io])
-(require '[oauth.v2                        :as oauth.v2])
-(require '[quantum.auth.core               :as auth])
-(require '[quantum.http.core               :as qhttp])
-(import 'quantum.http.core.HTTPLogEntry)
-(require '[quantum.core.data.json          :as json]) ; 2.888831 ms vs.
-;(require '[clojure.data.json :as json2]) ; 7.036831 ms
+          Has a |drive-map| function which maps in parallel go-blocks
+          the user's Google Drive, like DaisyDisk for Mac.
 
-(require '[quantum.core.ns                 :as ns :refer :all])
+          Other applications pending."
+    :attribution "Alex Gunnarson"}
+  quantum.google.drive.core
+  (:require 
+    [quantum.google.drive.auth :as crawler]
+    [org.httpkit.client        :as http]
+    [oauth.google              :as oauth.google]
+    [oauth.io                  :as oauth.io]
+    [oauth.v2                  :as oauth.v2]
+    [quantum.auth.core         :as auth]
+    [quantum.http.core         :as qhttp]
+    [quantum.core.data.json    :as json]
+    [quantum.core.ns           :as ns :refer :all])
+  (:import quantum.http.core.HTTPLogEntry)
+  (:gen-class))
 (ns/require-all *ns* :clj :lib)
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
@@ -103,7 +111,7 @@
 ;================================================={       AUX REQUEST-MAKING      }=================================================
 ;================================================={                               }=================================================
 (defn method+url-fn
-  {:todo  ["INSERT metadata???"
+  {:todo  ["INSERT metadata?"
            "How to add folder?"]
    :usage "(method+url-fn :query \"root\" nil nil)"
    :out   "[:get \"https://www.googleapis.com/drive/v2/files/\"]"}
@@ -252,7 +260,7 @@
 ;   (println "Items in depth" depth-n ":" (count (first (first @file-lists))))))
 ; ; req/sec is calc'd from the request-count above
 ; ; sec/req is based on thread-count
-; ; or maybe have unlimited threads but just waiting? hmm...
+; ; or maybe have unlimited threads but just waiting?
 ; ; rt 1    |
 ; ; 0  17   | 25.8s through 4
 ; ; 1  35   |
@@ -353,99 +361,13 @@
 
 ; (defn drive-date [date & {:keys [format] :or {format "MM/dd/yyyy"}}]
 ;   (time-form/unparse (time-form/formatter format) (time-form/parse date)))
-;___________________________________________________________________________________________________________________________________
-;======================================================{     CHALLENGE      }=======================================================
-;======================================================{                    }=======================================================
+
 ; Using your newfound filesystem, move some files around.
 ; Try going through some data visualization libraries for Clojure and display the folders in a visually interesting way.
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{  ADDITIONAL INFO   }=======================================================
 ;======================================================{                    }=======================================================
 ; https://console.developers.google.com/
-; URL: uniform resource locator. http://
-; URI: uniform resource identifier. file://, ftp://, ../../../resource.txt, etc.
-; REST: Representational state transfer
-; A software architectural style consisting of a coordinated set of architectural constraints
-; applied to components, connectors, and data elements, within a distributed hypermedia system. 
-
-(def default-file 
-  {:description "A test document. For testing!",
-   :labels
-     {:starred false,
-      :hidden false,
-      :trashed false,
-      :restricted false,
-      :viewed true},
-   :fileSize "2049",
-   :markedViewedByMeDate "2014-06-19T06:50:56.384Z",
-   :lastViewedByMeDate "2014-06-05T13:50:57.000Z",
-   :owners
-     [{:kind "drive#user",
-       :displayName "Alexander Gunnarson",
-       :picture
-       {:url
-        "https://lh3.googleusercontent.com/-LLb4H1vEIwc/AAAAAAAAAAI/AAAAAAAAUxA/RUqyqBpjxic/s64/photo.jpg"},
-       :isAuthenticatedUser true,
-       :permissionId "03213758181610793716",
-       :emailAddress "alexandergunnarson@gmail.com"}],
-   :headRevisionId "0B0tmVWAxHVsQdlkrOENyOVR1K0hhaXVGaXZ3VU5yeHlEOE1nPQ",
-   :editable true,
-   :lastModifyingUserName "Alexander Gunnarson",
-   :copyable true,
-   :userPermission
-     {:kind "drive#permission",
-      :etag "\"AkM7BvofPa_Jxo7Kxgh76A7i7OE/I_zf-IVtDEl8jA4wnl71xgBXrVY\"",
-      :id "me",
-      :selfLink ; A link back to this file.
-      "https://www.googleapis.com/drive/v2/files/0B0tmVWAxHVsQRVRBQkpvLXhVMjQ/permissions/me",
-      :role "owner",
-      :type "user"},
-   :selfLink
-   "https://www.googleapis.com/drive/v2/files/0B0tmVWAxHVsQRVRBQkpvLXhVMjQ",
-   :etag "\"AkM7BvofPa_Jxo7Kxgh76A7i7OE/MTQwMTI5MjA1MTEwNA\"",
-   :iconLink
-   "https://ssl.gstatic.com/docs/doclist/images/icon_10_text_list.png",
-   :title "My Test Document",
-   :lastModifyingUser
-     {:kind "drive#user",
-      :displayName "Alexander Gunnarson",
-      :picture
-      {:url
-       "https://lh3.googleusercontent.com/-LLb4H1vEIwc/AAAAAAAAAAI/AAAAAAAAUxA/RUqyqBpjxic/s64/photo.jpg"},
-      :isAuthenticatedUser true,
-      :permissionId "03213758181610793716",
-      :emailAddress "alexandergunnarson@gmail.com"},
-   :ownerNames ["Alexander Gunnarson"],
-   :fileExtension "",
-   :id "0B0tmVWAxHVsQRVRBQkpvLXhVMjQ",
-   :thumbnailLink
-   "https://lh4.googleusercontent.com/wQtJYwUNROtR8MdqFe7tuhRoqD2Tcgmi_mChJmJTf0H6c4g4XpptqYnNmqgKbJNrvM15Cg=s220",
-   :writersCanShare true,
-   :kind "drive#file",
-   :appDataContents false,
-   :parents
-     [{:kind "drive#parentReference",
-       :id "0AEtmVWAxHVsQUk9PVA",
-       :selfLink
-       "https://www.googleapis.com/drive/v2/files/0B0tmVWAxHVsQRVRBQkpvLXhVMjQ/parents/0AEtmVWAxHVsQUk9PVA",
-       :parentLink
-       "https://www.googleapis.com/drive/v2/files/0AEtmVWAxHVsQUk9PVA",
-       :isRoot true}],
-   :mimeType "text/plain",
-   :alternateLink
-   "https://docs.google.com/file/d/0B0tmVWAxHVsQRVRBQkpvLXhVMjQ/edit?usp=drivesdk",
-   :shared false,
-   :modifiedDate "2014-05-28T15:47:31.104Z",
-   :downloadUrl
-   "https://doc-0o-10-docs.googleusercontent.com/docs/securesc/nk3ndc0qpqk0la0s6uf5371scroaf4ln/37s6i4ag97ekm64bdd19r5jeu24osbfv/1403179200000/03213758181610793716/03213758181610793716/0B0tmVWAxHVsQRVRBQkpvLXhVMjQ?h=16653014193614665626&e=download&gd=true",
-   :md5Checksum "01e53c39d0ed2fcdae5d97c8a5cc73c2",
-   :createdDate "2014-05-28T15:47:31.304Z",
-   :modifiedByMeDate "2014-05-28T15:47:31.104Z",
-   :quotaBytesUsed "2049",
-   :version "667516",
-   :originalFilename "My Test Document",
-   :webContentLink
-   "https://docs.google.com/uc?id=0B0tmVWAxHVsQRVRBQkpvLXhVMjQ&export=download"})
 
 ; (def default-file-template
 ;   {:kind                       "drive#file"  ; The type of file. This is always drive#file.

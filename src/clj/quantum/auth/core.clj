@@ -1,7 +1,12 @@
-(ns quantum.auth.core
+(ns
+  ^{:doc "Auxiliary functions for authorization and key retrieval.
+          Mainly interfaces with persistent storage where keys are
+          stored."
+    :attribution "Alex Gunnarson"}
+  quantum.auth.core
+  (:require [quantum.core.ns :as ns :refer :all])
   (:gen-class))
 
-(require '[quantum.core.ns :as ns :refer :all])
 (ns/require-all *ns* :clj :lib)
 
 ; TODO: /assoc/ for file; /update/ for file; overarching syntax

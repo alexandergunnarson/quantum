@@ -22,7 +22,7 @@
     (map :name (:members (reflect object)))))
 
 ; (def my-method-fetch
-;   (memoize ; oh, so it's basically a function, but it just memoizes within
+;   (memoize
 ;     (fn [class-]
 ;       (let [class-map (reflect class-)
 ;             instance-methods
