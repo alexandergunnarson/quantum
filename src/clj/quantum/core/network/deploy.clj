@@ -3,6 +3,7 @@
 
           Focuses on Heroku, Git, and Clojars via the command line."
     :attribution "Alex Gunnarson"}
+  quantum.core.network.deploy
   (:require 
     [quantum.google.drive.auth :as crawler]
     [org.httpkit.client        :as http]
@@ -14,7 +15,6 @@
     [quantum.core.data.json    :as json]
     [quantum.core.ns           :as ns :refer :all])
   (:import quantum.http.core.HTTPLogEntry)
-  quantum.core.network.deploy
   (:gen-class))
 
 (ns/require-all *ns* :clj :lib)
@@ -39,7 +39,7 @@
     (thread+ :count-dynos
       (sh/exec! [:projects app-name] "heroku" "ps")
       (-> @sh/processes (get "heroku ps")
-          :out last+ first
+          :out last first
           (take-afteri+ "web (")
           (take-untili+ "X):")
           str/val))))

@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-3269
+{:name quantum.core.data.json, :doc "A simple JSON library which aliases cheshire.core.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}

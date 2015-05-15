@@ -25,57 +25,86 @@
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
 ;======================================================{                    }=======================================================
-(comment [:client-id :client-secret :redirect-uri :auth-key-online :auth-key-offline])
 (def oauth-access-token-url-google "https://accounts.google.com/o/oauth2/token")
 (def oauth-auth-url-google         "https://accounts.google.com/o/oauth2/auth")
 (def api-auth-url                  "https://www.googleapis.com/auth/")
-(def files-uri                     "https://www.googleapis.com/drive/v2/files/")
-(def upload-uri                    "https://www.googleapis.com/upload/drive/v2/files/")
-(def scopes-full
+
+(def drive-files-uri               "https://www.googleapis.com/drive/v2/files/")
+(def drive-upload-uri              "https://www.googleapis.com/upload/drive/v2/files/")
+
+(def services #{:drive :contacts})
+
+(def all-scopes
   ; Full list of scopes for the google drive api: https://developers.google.com/drive/scopes.
-  {:drive                    (str api-auth-url "drive") ; Full, permissive scope to access all of a user's files.
-   :drive-file               (str api-auth-url "drive.file") ; Per-file access to files created or opened by the app
-   :drive-read-only          (str api-auth-url "drive.readonly")
-   :drive-read-only-metadata (str api-auth-url "drive.readonly.metadata")
-   :drive-apps-read-only     (str api-auth-url "drive.apps.readonly")
-   :drive-install            (str api-auth-url "drive.install") ; Special scope used to let users approve installation of an app
-   :drive-app-data           (str api-auth-url "drive.appdata") ; Allows access to the Application Data folder
-   :drive-scripts            (str api-auth-url "drive.scripts") ; Allows access to Apps Script files
-   :email                    (str api-auth-url "userinfo.email")
-   :profile                  (str api-auth-url "userinfo.profile")})
-(def  scopes-online  [:drive])
-(def  scopes-offline [:drive :email :profile])
-(defn scopes-string
-  "Gets the scopes string given an authorization type (:online or :offline)."
-  [^Keyword auth-type]
-  (->> (str "scopes-" (name auth-type))
-       symbol eval
-       (apply gets+ scopes-full)
+  {:drive
+    {:drive                    (str api-auth-url "drive") ; Full, permissive scope to access all of a user's files.
+     :drive-file               (str api-auth-url "drive.file") ; Per-file access to files created or opened by the app
+     :drive-read-only          (str api-auth-url "drive.readonly")
+     :drive-read-only-metadata (str api-auth-url "drive.readonly.metadata")
+     :drive-apps-read-only     (str api-auth-url "drive.apps.readonly")
+     :drive-install            (str api-auth-url "drive.install") ; Special scope used to let users approve installation of an app
+     :drive-app-data           (str api-auth-url "drive.appdata") ; Allows access to the Application Data folder
+     :drive-scripts            (str api-auth-url "drive.scripts") ; Allows access to Apps Script files
+     :email                    (str api-auth-url "userinfo.email")
+     :profile                  (str api-auth-url "userinfo.profile")}
+   :contacts
+     {:read-write "https://www.google.com/m8/feeds"
+      :read       "https://www.googleapis.com/auth/contacts.readonly"}})
+
+(def scopes
+  {:drive
+    {:online  #{:drive}
+     :offline #{:drive :email :profile}}
+   :contacts
+    {:default #{:read-write}}})
+
+(defn ^String scopes-string
+  "Gets the scopes string given a service and an authorization type (:online or :offline)."
+  [^Key service ^Key auth-type]
+  (->> (get-in scopes [service auth-type])
+       (apply gets (get all-scopes service))
        (str/join " ")))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{  USING OAUTH-CLJ   }=======================================================
 ;======================================================{                    }=======================================================
-(defn auth-url [^Keyword auth-type]
+(defn auth-url [^Key service ^Key auth-type]
   (oauth.google/oauth-authorization-url
-    (:client-id    (auth/auth-keys :google))
-    (:redirect-uri (auth/auth-keys :google))
-     :scope (scopes-string auth-type)))
-(defn auth-key [^Keyword auth-type]
+    (-> (auth/auth-keys :google) :client-id   )
+    (-> (auth/auth-keys :google) :redirect-uri)
+    :scope (scopes-string service auth-type)))
+
+(defn auth-key
+  "Retrieves the authorization key programmatically via a headless browser."
+  [^Key    service  ^Key    auth-type
+   ^String username ^String password]
   (crawler/authentication-key-google
-    auth-type (auth-url auth-type)))
-(defn ^String access-token! [^Keyword auth-type]
+    auth-type (auth-url service auth-type)
+    username password))
+
+(defn ^String access-token!
+  [^Key    service  ^Key    auth-type
+   ^String username ^String password]
+  {:pre [(with-throw
+           (in? service services)
+           (str "Invalid service:" service))
+         (with-throw
+           (in? auth-type (get all-scopes service))
+           (str "Invalid auth-type:" auth-type))]}
   (let [access-token-retrieved
           (oauth.google/oauth-access-token
-            (:client-id (auth/auth-keys :google))
-            (:client-secret (auth/auth-keys :google))
-            (auth-key auth-type)
-            (:redirect-uri (auth/auth-keys :google)))]
-  (auth/write-auth-keys!
-    :google
-    (assoc (auth/auth-keys :google)
-      (keyword (str "access-token-" auth-type))
-      access-token-retrieved))
-  access-token-retrieved))
+            (-> (auth/auth-keys :google) :client-id)   
+            (-> (auth/auth-keys :google) :client-secret)
+            (auth-key service auth-type username password)
+            (-> (auth/auth-keys :google) :redirect-uri))]
+    (auth/write-auth-keys!
+      :google
+      (assoc-in (auth/auth-keys :google)
+        [service
+         :access-tokens
+         auth-type]
+        access-token-retrieved))
+    access-token-retrieved))
+
 (defn ^String access-token-refresh! []
   (let [^Map    auth-keys (auth/auth-keys :google)
         ^String access-token-retrieved
@@ -118,32 +147,33 @@
   [func id to method]
   (case func
     :add
-    [:post upload-uri]  ; INSERT ; Maximum file size: 1024GB
+    [:post drive-upload-uri]  ; INSERT ; Maximum file size: 1024GB
     :copy
     (case to
-      :in-place [:post (str files-uri id "/copy")] ; COPY
+      :in-place [:post (str drive-files-uri id "/copy")] ; COPY
       ) ; COPY FILE TO SPECIFIED FOLDER ; CATCH NOT_FOLDER EXCEPTIONS
     :meta
-    [:get (str files-uri id)]
+    [:get (str drive-files-uri id)]
     :mod
     (case method
-      :patch    [:patch (str files-uri  id)] ; PATCH ; Don't use UPDATE with metadata or else you'll edit the whole thing
-      :update   [:put   (str upload-uri id)] ; UPDATE
-      (throw+ (:message "Invalid method for function :mod.")))
+      :patch    [:patch (str drive-files-uri  id)] ; PATCH ; Don't use UPDATE with metadata or else you'll edit the whole thing
+      :update   [:put   (str drive-upload-uri id)] ; UPDATE
+      (throw+ {:msg "Invalid method for function :mod."}))
     :move
     (case to
-      :remove   [:delete (str files-uri id         )]   ; DELETE
-      :trash    [:post   (str files-uri id "/trash")]   ; TRASH
-      :untrash  [:post   (str files-uri id "/untrash")] ; UNTRASH
+      :remove   [:delete (str drive-files-uri id         )]   ; DELETE
+      :trash    [:post   (str drive-files-uri id "/trash")]   ; TRASH
+      :untrash  [:post   (str drive-files-uri id "/untrash")] ; UNTRASH
       ) ; MOVE FILE TO SPECIFIED FOLDER ; CATCH NOT_FOLDER EXCEPTIONS
     :query
-    [:get files-uri]
-    (throw+ (:message "Invalid function requested of Drive."))))
+    [:get drive-files-uri]
+    (throw+ {:msg "Invalid function requested of Drive."})))
+
 (defn query-params-fn
   "Normalizes REST (HTTP request) parameters passed.
    This involves converting all parameters to strings and camelcasing keys if necessary."
-  {:in  "{:q \"'root' in parents\", :hidden false, :trashed false}"
-   :out "{\"q\" \"'root' in parents\", \"hidden\" \"false\", \"trashed\" \"false\"}"}
+  {:in  '{:q "'root' in parents", :hidden false, :trashed false}
+   :out '{"q" "'root' in parents", "hidden" "false", "trashed" "false"}}
   [^Map params]
   (->> params
        (map+ (fn [k v]
@@ -151,10 +181,20 @@
                   (fn-> name (str/camelcase :cap-first false)))
                 (str v)]))
        foldm))
+
+(defn access-key
+  {:in [:contact :default]}
+  [^Key service ^Key token-type]
+  (-> (auth/auth-keys :google)
+      (get service)
+      :access-tokens
+      (get token-type)
+      :access-token))
+
 (defn make-request
   "Creates an HTTP request."
   {:usage "(make-request :query \"root\" nil :get {} nil)"}
-  [^Keyword func ^String id to method ^APersistentMap params req]
+  [^Key func ^String id to method ^Map params req]
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
@@ -163,13 +203,74 @@
         request
           {:method       http-method
            :url          url
-           :headers      {"authorization" (str "Bearer " (auth/access-token))}
-           :oauth-token  (auth/access-token)
+           :oauth-token  (access-key :drive :offline)
            :as           :auto
            :query-params query-params
            ;:timeout 1000
            }]
     request))
+
+(require '[clojure.data.xml :as cxml]) ; 162.373815 µs vs. my 4.456752 ms :/ I know, I know...
+
+(defn ^Vec parse-contacts
+  {:out '[{:name "Lynette Bearinger",
+           :image-link "https://www.google.com/m8/feeds/photos/media/alexandergunnarson%40gmail.com/5fd4c0328f27c544",
+           :email "journeypartner67@gmail.com"}
+          ...]}
+  [^String xml-response]
+  (let [^Map parsed-body
+          (->> xml-response
+               (java.io.StringReader.)
+               cxml/parse
+               :content)
+        ^Fn filter-relevant-entries
+          (fn->> :content
+                 (filter+ (fn-> :tag (splice-or = :title :email :link)))
+                 (remove+ (fn-and (fn-> :tag (= :link))
+                                  (fn-> :attrs :rel (not= "http://schemas.google.com/contacts/2008/rel#photo"))))
+                 redv)
+        ^Fn unify-info
+          (fn [elem]
+            (let [^String name-0
+                     (->> elem
+                          (ffilter (fn-> :tag (= :title)))
+                          :content
+                          first)
+                  ^String image-link
+                     (->> elem 
+                          (ffilter (fn-> :tag (= :link)))
+                          :attrs
+                          :href)
+                  ^String email
+                     (->> elem
+                          (ffilter (fn-> :tag (= :email)))
+                          :attrs
+                          :address)]
+              {:name       name-0
+               :image-link image-link
+               :email      email}))]
+    (->> parsed-body
+         (filter+ (fn-> :tag (= :entry)))
+         (map+ filter-relevant-entries)
+         (map+ unify-info)
+         redv)))
+
+(defn ^String retrieve-contacts-xml
+  {:todo ["Handle unreasonably long contacts (> 10000)"]}
+  [^String email]
+  (let [^Map http-response
+         (qhttp/request!
+           {:method       :get
+            :url          (str "https://www.google.com/m8/feeds/contacts/" email "/full")
+            :oauth-token  (access-key :contacts :default)
+            :query-params {"max-results" 10000}})] ; TODO check if 10000 is too many
+    (:body http-response)))
+
+(defn ^Vec contacts
+  [^String email]
+  (->> (retrieve-contacts-xml email)
+       parse-contacts))
+
 ;___________________________________________________________________________________________________________________________________
 ;================================================={         HANDLE ERRORS         }=================================================
 ;================================================={                               }=================================================
@@ -183,17 +284,21 @@
            403 {:message "Too many requests. Trying again..."
                 :processes #(do (Thread/sleep (+ 2000 (rand 2000))))} ; rand to stagger pauses
            500 {:message "Server error. Trying again..."
-                :processes #(do (Thread/sleep (+ 5000 (rand 2000))))} ; a little more b/c server errors can persist...  
-                }
+                :processes #(do (Thread/sleep (+ 5000 (rand 2000))))}} ; a little more b/c server errors can persist...  
+                
         message   (get-in error-map [status :message])
         processes (get-in error-map [status :processes])]
     (println message)
     (qhttp/log-entry-write! log-entry :response try-n status)
     (processes)
-    #(qhttp/proc-request! (inc try-n) status
-       (assoc+ request-n :oauth-token (auth/access-token))
-       log-entry
-       handle-http-error)))
+    #(qhttp/request!
+       (assoc request-n :oauth-token (access-key :drive :offline))
+       :tries (inc try-n)
+       :status status
+       :log log-entry
+       :handler handle-http-error)))
+
+
 ;___________________________________________________________________________________________________________________________________
 ;================================================={     PROCESS HTTP REQUEST      }=================================================
 ;================================================={                               }=================================================
@@ -213,16 +318,14 @@
      :move  - {*:id, *:to  :remove/:trash/:untrash/\"folder-id\"}                DELETE, EMPTYTRASH, TRASH, UNTRASH
      :query - { :id,  :params  {:q :children, :trashed, :hidden,                 LIST+
                                 :max-results, :page-token}}"
-  {:usage "(drive :query
+  {:usage '(drive :query
                   :id     id
-                  :params {:q :children :trashed false :hidden false})"}
+                  :params {:q :children :trashed false :hidden false})}
   [func & {:keys [id to method params req raw?] :as args :or {raw? false}}]
   (let [[http-method url] (method+url-fn func id to method)
         request   (make-request func id to method params req)
         log-entry (atom (HTTPLogEntry. []))
-        raw-response
-          (trampoline qhttp/proc-request 0 nil request log-entry) 
-        write-log-entry! (swap! request-times-log conj @log-entry) ; so there's just one write to do per thread
+        raw-response (qhttp/request! request)
         response
           (-> raw-response :body
               (whenf (constantly (not raw?))
@@ -230,6 +333,7 @@
                       (whenf (constantly (= func :query)) :items))))]
     (reset! last-response response)
     response))
+
 (defn get-children
   "Retrieves the metadata of the children of a folder or file with the supplied ID."
   [^String id]

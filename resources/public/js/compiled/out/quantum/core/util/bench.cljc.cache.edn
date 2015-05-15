@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-3269
+{:name quantum.core.util.bench, :doc "Benchmarking utilities. Criterium is aliased and is especially useful.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {ns quantum.core.ns, quantum.core.ns quantum.core.ns, str quantum.core.string, quantum.core.string quantum.core.string}, :imports nil}
