@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-3269
+{:name quantum.core.thread, :doc "Simple thread management through 'registered threads'.\n          Aliases core.async for convenience.\n\n          A little rough, but some useful functionality.", :excludes #{reduce contains? butlast first peek last rest range doseq repeatedly get into read vec second pop merge for count repeat}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}

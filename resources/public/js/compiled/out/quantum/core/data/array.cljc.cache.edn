@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-3269
+{:name quantum.core.data.array, :doc "Useful array functions. Array creation, joining, reversal, etc.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil, :defs {aset! {:name quantum.core.data.array/aset!, :file "src/cljc/quantum/core/data/array.cljc", :line 20, :column 1, :end-line 20, :end-column 35, :meta {:file "/Users/alexandergunnarson/Development/Source Code Projects/quantum/src/cljc/quantum/core/data/array.cljc", :line 20, :column 30, :end-line 20, :end-column 35}}}}

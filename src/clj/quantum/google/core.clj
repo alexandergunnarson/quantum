@@ -56,7 +56,7 @@
     (let [navigate!          (.get driver "http://www.google.com")
           ^List sign-in-btns (.findElements driver (By/linkText "Sign in"))
           ^RemoteWebElement sign-in-btn
-            (if (-> sign-in-btns count+ (not= 1))
+            (if (-> sign-in-btns count (not= 1))
                 (throw+ {:msg "No one single sign in button detected."
                          :buttons sign-in-btns})
                 (first sign-in-btns))

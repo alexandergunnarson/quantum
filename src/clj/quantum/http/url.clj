@@ -4,10 +4,10 @@
           Possibly should deprecate this in favor of some other
           better library."
     :attribution "Alex Gunnarson"}
+  quantum.http.url
   (:require
     [quantum.core.ns  :as ns :refer :all]
     [quantum.http.core :as http])
-  quantum.http.url
   (:gen-class))
 
 (ns/require-all *ns* :lib :clj)
@@ -89,7 +89,7 @@
                 :url-common   (-> url-percent-codes :common)
                 :url-extended (-> url-percent-codes :extended)
                 :xml          xml-codes)]
-        (reduce+
+        (reduce
           (fn [ret percent-code assoc-char]
             (str/replace ret percent-code assoc-char))
           s

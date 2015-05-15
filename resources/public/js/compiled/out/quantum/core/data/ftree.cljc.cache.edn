@@ -1,0 +1,2 @@
+;; Analyzed by ClojureScript 0.0-3269
+{:name quantum.core.data.ftree, :doc "Finger tree data structures, like double lists.\n\n          With the widespread use of vectors, this namespace may not be especially useful.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}

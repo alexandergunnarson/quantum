@@ -67,7 +67,7 @@
         (recur (+ timer timer-interval) (apply f fn-args))))))
 
 (defn stale-elem?
-  {:attribution "Alex Gunnarson"
+  {:attribution "Alex Gunnarson"}
   [^RemoteWebElement elem]
   (try
     (.findElementsById elem "bogus_elem")
@@ -82,7 +82,7 @@
     (wait-for-fn! stale-elem? elem)))
 
 (defn find-element
-  {:attribution "Alex Gunnarson"
+  {:attribution "Alex Gunnarson"}
   [^WebDriver driver ^org.openqa.selenium.By elem]
   (try
     (.findElement driver elem)

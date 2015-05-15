@@ -29,7 +29,7 @@
           (find-element driver (By/id "submit_approve_access"))
         approve-click! (click! accept-btn)]))
 
-(defn ^String copy-auth-key-and-save!
+(defn ^String copy-auth-key!
   "Copies the auth key from the web page and saves it to a
    predetermined file."
   {:attribution "Alex Gunnarson"}
@@ -38,28 +38,24 @@
           (find-element driver (By/id "code"))
         ^String auth-key (.getAttribute auth-key-field "value")]
     ; Save key
-    (auth/write-auth-keys!
-      :google
-      (assoc (auth/auth-keys :google)
-        (keyword (str "authentication-key-" (name auth-type)))
-        auth-key))
     auth-key))
 
 (defn authentication-key-google
   "Retrieves the authentication key programmatically via PhantomJS."
   {:attribution "Alex Gunnarson"}
-  [^Key auth-type ^String auth-url]
+  [^Key    auth-type ^String auth-url
+   ^String username  ^String password]
   {:pre [(with-throw
            (or (= auth-type :online) (= auth-type :offline))
            "Authorization type invalid.")]}
   (let [^WebDriver driver (PhantomJSDriver. default-capabilities)]
     (try
       (let [^String auth-key
-              (do (goog/sign-in! driver auth-url)
+              (do (goog/sign-in! driver auth-url username password)
                   (log/pr :debug "Sign in complete.")
                   (approve! driver)
                   (log/pr :debug "Approve complete.")
-                  (copy-auth-key-and-save! auth-type driver))]
+                  (copy-auth-key! auth-type driver))]
         (log/pr :debug "The" (name auth-type) "authentication key is: " auth-key)
         auth-key)
       (finally (.quit driver))))) ; ends the entire session.
