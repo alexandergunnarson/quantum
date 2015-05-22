@@ -1,30 +1,14 @@
-#?(:clj (ns quantum.core.function)) ; Namespace quantum.core.function contains a reserved JavaScript keyword; the corresponding Google Closure namespace will be munged to quantum.core.function$
-
 (ns
   ^{:doc "Useful function-related functions (one could say 'metafunctions').
 
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.function
+  (:require-quantum [ns map])
   (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])
-    [quantum.core.data.map :as map    :refer [sorted-map+]]
     [clojure.walk]
-    #?(:clj [potemkin        :as p]))
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])
+    #?(:clj [potemkin        :as p])))
 
 ; extend-protocol+ doesn't quite work...
 
@@ -42,14 +26,7 @@
 ; (count (filter #(.isDirectory %)   files)) => 68
 #?(:clj (defalias jfn memfn))
 
-#?(:clj
-(defmacro mfn
-  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
-   Originally named |functionize| by mikera."
-  {:attribution "mikera, http://stackoverflow.com/questions/9273333/in-clojure-how-to-apply-a-macro-to-a-list/9273560#9273560"}
-  [macro]
-  `(fn [& args#]
-     (clojure.core/eval (cons '~macro args#)))))
+#?(:clj (defalias mfn ns/mfn))
 
 (defn call
   "Call function `f` with additional arguments."
@@ -136,7 +113,8 @@
   [& args]
   (apply comp (reverse args)))
 
-(defn fn*
+; THIS IS BECAUSE STRANGELY fn* IS AN ANONYMOUS FUNCTION MACRO THING
+#_(defn fn*
   "FOR SOME REASON '(fn* + 3)' [and the like] FAILS WITH THE FOLLOWING EXCEPTION:
   'CompilerException java.lang.ClassCastException: java.lang.Long cannot be cast to clojure.lang.ISeq'
 
@@ -172,14 +150,22 @@
   [& body]
   `(fn [x#] (->> x# ~@body))))
 
+; #?(:clj
+; (defmacro with->>
+;   "Applies the function @expr to the expression being last-threaded,
+;    and returns the latter."
+;   {:attribution "Alex Gunnarson"}
+;   [expr & exprs]
+;   `(do (~expr (butlast ~exprs) (last ~exprs))
+;        (last ~exprs))))
+
 #?(:clj
-(defmacro with->>
-  "Applies the function @expr to the expression being last-threaded,
-   and returns the latter."
-  {:attribution "Alex Gunnarson"}
+(defmacro with-do
+  "Same as lisp's |prog1|."
   [expr & exprs]
-  `(do (~expr (butlast ~exprs) (last ~exprs))
-       (last ~exprs))))
+  `(let [result# ~expr]
+     ~@exprs
+     result#)))
 
 
 ; TODO: deprecate these... likely they're not useful
@@ -261,12 +247,14 @@
 ; (defn with-pr  [obj]      (do (#+clj  pprint
 ;                                #+cljs println obj) 
 ;                               obj))
-(defn with-pr  [obj]      (do (println obj) 
-                              obj))
-
-(defn with-msg [msg  obj] (do (println msg) obj))
-(defn with     [expr obj] (do expr          obj))
-(defn withf    [func obj] (do (func obj)    obj))
+(defn with-pr->>  [obj      ] (do (println obj) obj))
+(defn with-msg->> [msg  obj ] (do (println msg) obj))
+(defn with->>     [expr obj ] (do expr          obj))
+(defn withf->>    [f    obj ] (do (f obj)       obj))
+(defn withf       [obj  f   ] (do (f obj)       obj))
+(defn withfs      [obj  & fs]
+  (doseq [f fs] (f obj))
+  obj)
 
 ; ========= REDUCER PLUMBING ==========
 

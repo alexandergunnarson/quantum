@@ -8,54 +8,42 @@
     :attribution "Alex Gunnarson"}
   quantum.core.string
   (:refer-clojure :exclude [replace remove val re-find])
-  (:require
-    [quantum.core.function :as fn :refer
-      #?@(:clj  [[compr f*n fn* unary firsta rfn fn->> fn-> <-]]
-          :cljs [[compr f*n fn* unary firsta]
-                 :refer-macros
-                 [fn->> fn-> <-]])]
-    [quantum.core.logic :as log :refer
-      #?@(:clj  [[splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n
-                  condf condfc condf*n nnil? nempty?]]
-          :cljs [[splice-or fn-and fn-or fn-not nnil? nempty?]
-                 :refer-macros
-                 [ifn if*n whenc whenf whenf*n whencf*n condf condfc condf*n]])]
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.numeric  :as num]
-    [quantum.core.reducers :as r :refer
-      #?@(:clj  [[map+ reduce+ filter+ remove+ take+ take-while+ fold+ range+ for+]]
-          :cljs [[map+ reduce+ filter+ remove+ take+ take-while+ fold+ range+]
-                 :refer-macros [for+]])]
-    [quantum.core.type     :as type :refer
-      [#?(:clj bigint?) #?(:cljs class) instance+? array-list? boolean? double? map-entry?
-       sorted-map? queue? lseq? coll+? pattern? regex? editable?
-       transient? #?(:clj should-transientize?)]
-      #?@(:cljs [:refer-macros [should-transientize?]])]
-    [quantum.core.macros   :as macros]
-    [quantum.core.loops
-      #?@(:clj  [:refer        [reducei]]
-          :cljs [:refer-macros [reducei]])]
-    [clojure.string        :as str]
-    #?(:cljs [cljs.core :refer [Keyword]]))
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+  (:require-quantum [ns fn set macros logic red num type loops])
+  (:require         [clojure.string :as str]))
 
 ; http://www.regular-expressions.info
 ;___________________________________________________________________________________________________________________________________
 ;====================================================={ STRING MANIPULATION }=======================================================
 ;====================================================={                     }=======================================================
-(def replace     str/replace)
+(def num-chars      #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9})
+
+(def upper-chars    #{\A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z})
+(def lower-chars    #{\a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y \z})
+(def alpha-chars    (set/union upper-chars lower-chars))
+
+(def alphanum-chars (set/union alpha-chars num-chars))
+
+(defnt numeric?
+  char?   ([c] (contains? num-chars      c))
+  string? ([s] (every?    numeric?       s)))
+
+(defnt upper?
+  char?   ([c] (contains? upper-chars    c))
+  string? ([s] (every?    upper?         s)))
+
+(defnt lower?
+  char?   ([c] (contains? lower-chars    c))
+  string? ([s] (every?    lower?         s)))
+
+(defnt alphanum?
+  char?   ([c] (contains? alphanum-chars c))
+  string? ([s] (every?    alphanum?      s)))
+
+(defnt replace*
+  string? ([pre post s] (.replace    ^String s pre ^String post))
+  regex?  ([pre post s] (str/replace         s pre         post)))
+
+(definline replace [s pre post] `(replace* ~pre ~post ~s))
 
 (defn replace-with
   "Replace all."
@@ -65,7 +53,7 @@
   [s m]
   (clojure.core/reduce-kv
     (fn [ret old-n new-n]
-      (str/replace ret old-n new-n))
+      (replace ret old-n new-n))
     s
     m))
 
@@ -74,37 +62,34 @@
 (def join        str/join)
 (def upper-case  str/upper-case)
 (def lower-case  str/lower-case)
+(def trim        str/trim)
 (def triml       str/triml)
 (def trimr       str/trimr)
 (def re-find     clojure.core/re-find)
-(defn blank?
-  "Determines if an object @obj is a blank/empty string."
-  [obj]
-  ((fn-and string? empty?) obj))
+
+;"Determines if an object @obj is a blank/empty string."
+(def blank? (fn-and string? empty?))
+
 (def  str-nil (whencf*n nil? ""))
-(defn upper-case? [c]
-  #?(:clj  (Character/isUpperCase ^Character c)
-     :cljs (= c (.toUpperCase c))))
-(defn lower-case? [c]
-  #?(:clj  (Character/isLowerCase ^Character c)
-     :cljs (= c (.toLowerCase c))))
+
 (defn char+ [obj]
   (if ((fn-and string? (fn->> count (>= 1))) obj)
       (first obj)
       (char obj)))
+
 (defn conv-regex-specials [^String str-0]
   (-> str-0
-      (str/replace "\\" "\\\\")
-      (str/replace "$" "\\$")
-      (str/replace "^" "\\^")
-      (str/replace "." "\\.")
-      (str/replace "|" "\\|")
-      (str/replace "*" "\\*")
-      (str/replace "+" "\\+")
-      (str/replace "(" "\\(")
-      (str/replace ")" "\\)")
-      (str/replace "[" "\\[")
-      (str/replace "{" "\\{")))
+      (replace "\\" "\\\\")
+      (replace "$" "\\$")
+      (replace "^" "\\^")
+      (replace "." "\\.")
+      (replace "|" "\\|")
+      (replace "*" "\\*")
+      (replace "+" "\\+")
+      (replace "(" "\\(")
+      (replace ")" "\\)")
+      (replace "[" "\\[")
+      (replace "{" "\\{")))
 
 (defn subs+ ; :from :to, vs. :from :for
   "Gives a consistent, flexible, cross-platform substring API with support for:
@@ -114,8 +99,7 @@
                         (start index inclusive, end index exclusive).
 
   Note that `max-len` was chosen over `end-idx` since it's less ambiguous and
-  easier to reason about - esp. when accepting negative indexes.
-  From taoensso.encore."
+  easier to reason about - esp. when accepting negative indexes."
   {:usage
     ["(subs+ \"Hello\"  0 5)" "Hello"
      "(subs+ \"Hello\"  0 9)" "Hello"
@@ -125,7 +109,8 @@
      "(subs+ \"Hello\" -2)  " "llo"  
      "(subs+ \"Hello\"  2)  " "llo"  
      "(subs+ \"Hello\"  9 9)" ""     
-     "(subs+ \"Hello\"  0 0)" ""]}
+     "(subs+ \"Hello\"  0 0)" ""]
+   :attribution "taoensso.encore"}
   [s start-idx & [max-len]]
   {:pre [(or (nil? max-len) (num/nneg-int? max-len))]}
   (let [;; s       (str   s)
@@ -177,7 +162,7 @@
   "Like /clojure.string/join/ but ensures no double separators."
   {:attribution "taoensso.encore"}
   [separator & coll]
-  (reduce
+  (reduce-
     (fn [s1 s2]
       (let [s1 (str s1) s2 (str s2)]
         (if (ends-with? s1 separator)
@@ -215,21 +200,13 @@
 (defn keywordize [^String kw]
   (-> kw (replace " " "-") lower-case keyword))
 
-(defn camelcase
-  ^{:attribution  "flatland.useful.string"
-    :contributors "Alex Gunnarson"}
-  [str-0 & [method?]]
-  (-> str-0
-      (replace #"[-_](\w)"
-        (compr second upper-case))
-      (#(if (not method?)
-           (apply str (-> % first upper-case) (rest %))
-           %))))
-(defn un-camelcase [sym]
+(defalias camelcase macros/camelcase)
+
+(defn+ un-camelcase [sym]
   (let [str-0 (str sym)
         matches (->> str-0 (re-seq #"[a-z0-1][A-Z]") distinct)]
-    (-> (reduce+ (fn [ret [char1 char2 :as match]]
-                   (replace ret match (str char1 "-" (lower-case char2))))
+    (-> (red/reduce (extern (fn [ret [char1 char2 :as match]]
+                   (replace ret match (str char1 "-" (lower-case char2)))))
           str-0 matches)
         lower-case)))
 
@@ -242,6 +219,15 @@
   (if (nil? str-0)
       (str "'" "nil" "'")
       (str "'" str-0 "'")))
+
+(defn dquote
+  "Wraps a given string in double quotes."
+  {:todo ["Protocolize"]}
+  [str-0]
+  (if (nil? str-0)
+      (str "\"" "nil" "\"")
+      (str "\"" str-0 "\"")))
+
 
 ; (defn dequote
 ;   {:in  "'Abcdef'"
@@ -295,11 +281,6 @@
     (catch #?(:clj  NullPointerException
               :cljs js/TypeError) _
       nil)))
-
-(def alphabet
-  (->> (range+ 65 (inc 90))
-       (map+ (fn-> char str))
-       fold+))
 
 (defn ^String rand-str [len] 
   (->> (for+ [n (range 0 len)]
@@ -356,4 +337,20 @@
              (str ret (name elem)))
            "")
          keyword)))
+
+(def line-terminators
+  #{\newline \return (char 0x2028) (char 0x2029)})
+
+(defnt line-terminator?
+  char? ([c] (contains? line-terminators c)))
+
+(def whitespace-chars
+  (set/union
+    line-terminators
+    #{\space \tab (char 12)
+      (char 11) (char 0xa0)}))
+
+(defnt whitespace?
+  char?   ([c] (contains? whitespace-chars c))
+  string? ([s] (every? #(whitespace? %) s)))
 

@@ -1,9 +1,3 @@
-#?(:clj
-(ns quantum.core.thread
-  (:refer-clojure :exclude
-    [contains? read for doseq reduce repeat repeatedly range merge count vec
-     into first second rest last butlast get pop peek])))
-
 (ns
   ^{:doc "Simple thread management through 'registered threads'.
           Aliases core.async for convenience.
@@ -11,45 +5,26 @@
           A little rough, but some useful functionality."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-  (:refer-clojure :exclude
-    [contains? read for doseq reduce repeat repeatedly range merge count vec
-     into first second rest last butlast get pop peek])
-  #?(:clj (:gen-class)))
-
-#?(:clj (require
-  '[quantum.core.ns          :as ns    :refer [defalias alias-ns]]))
-#?(:clj (ns/require-all *ns* :clj))
-#?(:clj (require
-  '[quantum.core.numeric     :as num]
-  '[quantum.core.function    :as fn   :refer :all]
-  '[quantum.core.string      :as str]
-  '[quantum.core.error                :refer :all]
-  '[quantum.core.logic       :as log  :refer :all]
-  '[quantum.core.data.vector :as vec  :refer [catvec]]
-  '[quantum.core.collections :as coll :refer :all]
-  '[quantum.core.error       :as err  :refer [throw+ try+]]
-  '[clojure.core.async :as async :refer [go <! >! alts!]]))
+  (:require-quantum [ns num fn str err logic vec coll err])
+  (:require [#?(:clj clojure.core.async :cljs cljs.core.async) :as async]))
 
 
 ;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
-#?(:clj (def #^{:macro true} go-loop #'async/go-loop))
-#?(:clj (defalias close!     async/close!))
-;(defalias <!         async/<!)
-#?(:clj (defalias <!!        async/<!!))
-;(defalias >!         async/>!)
-#?(:clj (defalias >!!        async/>!!))
-#?(:clj (defalias chan       async/chan))
-;(defalias alts!      async/alts!)
-#?(:clj (defalias alts!!     async/alts!!))
-#?(:clj (def #^{:macro true} thread #'async/thread))
+#?(:clj (defmalias go      async/go))
+#?(:clj (defmalias go-loop async/go-loop))
 
-#?(:clj
-(defmacro <? [expr]
-  `(let [expr-result# (cljs.core.async/<! ~expr)]
-     (if ;(quantum.core.type/error? chan-0#)
-         (instance? js/Error expr-result#)
-         (throw expr-result#)
-         expr-result#))))
+#?(:clj (defalias <!       async/<!))
+#?(:clj (defalias <!!      async/<!!))
+#?(:clj (defalias >!       async/>!))
+#?(:clj (defalias >!!      async/>!!))
+
+#?(:clj (defalias chan     async/chan))
+#?(:clj (defalias close!   async/close!))
+
+#?(:clj (defalias alts!    async/alts!))
+#?(:clj (defalias alts!!   async/alts!!))
+#?(:clj (defalias thread   async/thread))
+
 
 #?(:clj (def  reg-threads (atom {}))) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
 
@@ -270,6 +245,5 @@
               #(do (Thread/sleep 3000) (println :bar)))
  
   )
-
 
 

@@ -3,7 +3,8 @@
 
           Focuses on Heroku, Git, and Clojars via the command line."
     :attribution "Alex Gunnarson"}
-  quantum.core.network.deploy
+  quantum.network.deploy
+  (:require-quantum [:lib])
   (:require 
     [quantum.google.drive.auth :as crawler]
     [org.httpkit.client        :as http]
@@ -11,18 +12,13 @@
     [oauth.io                  :as oauth.io]
     [oauth.v2                  :as oauth.v2]
     [quantum.auth.core         :as auth]
-    [quantum.http.core         :as qhttp]
-    [quantum.core.data.json    :as json]
-    [quantum.core.ns           :as ns :refer :all])
-  (:import quantum.http.core.HTTPLogEntry)
-  (:gen-class))
-
-(ns/require-all *ns* :clj :lib)
+    [quantum.http.core         :as qhttp])
+  (:import quantum.http.core.HTTPLogEntry))
 
 (def heroku-help-center
   "https://devcenter.heroku.com/articles/getting-started-with-clojure")
 
-(def apps (atom #{"ramsey"}))
+(def apps        (atom #{"ramsey"}))
 (def default-app (atom "ramsey"))
 
 
@@ -40,8 +36,8 @@
       (sh/exec! [:projects app-name] "heroku" "ps")
       (-> @sh/processes (get "heroku ps")
           :out last first
-          (take-afteri+ "web (")
-          (take-untili+ "X):")
+          (take-after "web (")
+          (take-until "X):")
           str/val))))
 
 (defn scale-to!

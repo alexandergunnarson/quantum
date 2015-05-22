@@ -1,28 +1,15 @@
-#?(:clj (ns quantum.core.error))
-
 (ns
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
+  (:require-quantum [ns])
   (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias defmalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    #?(:clj [slingshot.slingshot :as try-catch]))
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+    #?(:clj [slingshot.slingshot :as try-catch])))
 
 ; #?@(:clj
 ;   []) ; splicing in definition doesn't work... ugh
+
+(defrecord Err [type msg objs])
 
 #?(:clj (defmalias try+   try-catch/try+))
 #?(:clj (defmalias throw+ try-catch/throw+))

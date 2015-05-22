@@ -1,40 +1,28 @@
-#?(:clj (ns quantum.core.data.array))
-
 (ns
   ^{:doc "Useful array functions. Array creation, joining, reversal, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.array
-  #?@(:clj
-      [(:import java.util.ArrayList)
-       (:gen-class)]))
+  (:require-quantum [ns loops])
+  #?(:clj (:import java.util.ArrayList)))
 
-#?(:clj
-  (require
-    '[quantum.core.ns          :as ns :refer [defalias]]
-    '[quantum.core.string      :as str                 ]
-    '[quantum.core.data.hex    :as hex                 ]
-    '[quantum.core.loops       :refer [doseqi]  ]))
+(defalias aset! aset)
 
-#?(:clj (ns/require-all *ns* :clj))
-
-(#?(:clj defalias :cljs def) aset! aset)
-
-#?(:clj
-  (defn typed-array
-    "Creates a typed Java array of a collection of objects. Uses the class
-     of the first object to determine the type of the array."
-    {:attribution "mikera.cljutils.arrays"}
-    ([objects]
-      (let [cnt (count objects)
-            cl (.getClass ^Object (first objects))
-            ^objects arr (make-array cl cnt)]
-        (doseqi [o objects i]
-          (aset arr (int i) o))
-        arr))))
+; #?(:clj
+;   (defn typed-array
+;     "Creates a typed Java array of a collection of objects. Uses the class
+;      of the first object to determine the type of the array."
+;     {:attribution "mikera.cljutils.arrays"}
+;     ([objects]
+;       (let [cnt (count objects)
+;             cl (.getClass ^Object (first objects))
+;             ^objects arr (make-array cl cnt)]
+;         (doseqi [o objects i]
+;           (aset arr (int i) o))
+;         arr))))
 
 ; TODO: Use a macro for this
 #?(:clj
-  (defn long-array-of 
+  (defn long-array-of
     "Creates a long array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
     (^longs [] (long-array 0))
@@ -47,17 +35,18 @@
         (aset! arr 0 (long a))
         (aset! arr 1 (long b))
         arr))
-    ([a b & more] 
-      (let [arr (long-array (+ 2 (count more)))]
-        (aset! arr 0 (long a))
-        (aset! arr 1 (long b))
-        (doseqi [x more i] (aset! arr (+ 2 i) (long x))) 
-        arr))))
+    ; ([a b & more] 
+    ;   (let [arr (long-array (+ 2 (count more)))]
+    ;     (aset! arr 0 (long a))
+    ;     (aset! arr 1 (long b))
+    ;     (doseqi [x more i] (aset! arr (+ 2 i) (long x))) 
+    ;     arr))
+    ))
 
 ; TODO: Use a macro for this
 #?(:clj
   (defn object-array-of 
-    "Creates a long array with the specified values."
+    "Creates an object array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
     ([] (object-array 0))
     ([a] 
@@ -69,12 +58,26 @@
         (aset! arr 0 a)
         (aset! arr 1 b)
         arr))
-    ([a b & more] 
-      (let [arr (object-array (+ 2 (count more)))]
+    ([a b c] 
+      (let [arr (object-array 3)]
         (aset! arr 0 a)
         (aset! arr 1 b)
-        (doseqi [x more i] (aset! arr (+ 2 i) x)) 
-        arr))))
+        (aset! arr 2 c)
+        arr))
+    ([a b c d] 
+      (let [arr (object-array 4)]
+        (aset! arr 0 a)
+        (aset! arr 1 b)
+        (aset! arr 2 c)
+        (aset! arr 3 d)
+        arr))
+    ; ([a b & more] 
+    ;   (let [arr (object-array (+ 2 (count more)))]
+    ;     (aset! arr 0 a)
+    ;     (aset! arr 1 b)
+    ;     (doseqi [x more i] (aset! arr (+ 2 i) x)) 
+    ;     arr))
+    ))
 
 #?(:clj
   (defn array-list [& args]
@@ -117,15 +120,6 @@
 ;   [xs] `(. clojure.lang.Numbers objects ~xs))
 
 #?(:clj
-  (defn to-hex-string 
-    "Converts a byte array to a string representation , with space as a default separator."
-    {:attribution "mikera.cljutils.bytes"}
-    ([^"[B" bs]
-      (to-hex-string bs " "))
-    ([^"[B" bs separator]
-      (str/join separator (map #(hex/hex-string-from-byte %) bs)))))
-
-#?(:clj
   (defn areverse 
     {:attribution "mikera.cljutils.bytes"}
     (^"[B" [^"[B" bs]
@@ -146,4 +140,6 @@
             ^"[B" res (byte-array n)]
         (System/arraycopy a (int 0) res (int 0) al)
         (System/arraycopy b (int 0) res (int al) bl)
-        res))))  
+        res))))
+
+

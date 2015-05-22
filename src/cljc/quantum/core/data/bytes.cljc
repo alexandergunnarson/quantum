@@ -1,33 +1,14 @@
-#?(:clj
-(ns quantum.core.data.bytes
-  (:refer-clojure :exclude [reverse])))
-
 (ns
   ^{:doc "Useful operations on byte arrays. Reverse, split, copy,
           to-hex, to-CString, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
-  (:require 
-    [quantum.core.string           :as str]
-    [quantum.core.data.binary      :as bin #?@(:clj [:refer :all])]
-    [quantum.core.ns :as ns]
-    [quantum.core.logic :as logic :refer
-      #?@(:clj  [[splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n
-                  condf condfc condf*n nnil? nempty? fn= fn-eq? any?]]
-          :cljs [[splice-or fn-and fn-or fn-not nnil? nempty? fn= fn-eq? any?]
-                 :refer-macros
-                 [ifn if*n whenc whenf whenf*n whencf*n condf condfc condf*n]])]
-    #?(:clj [quantum.core.data.array       :as arr :refer [byte-array+ aset!]])
-    #?(:clj [quantum.core.collections.core :as core]))
-  #?@(:clj
-      [(:import java.util.Arrays)
-       (:gen-class)]))
+  (:require-quantum [ns str logic bin macros type ccore arr])
+  (:require         [clojure.java.io :as io])
+  #?(:clj (:import java.util.Arrays)))
 
-#?(:clj (ns/require-all *ns* :clj))
 #?(:clj (set! *unchecked-math* true))
-
-#?(:clj (def BYTE-ARRAY-CLASS (Class/forName "[B")))
 
 #?(:clj ; because apparently reversed byte-array...
   (defn reverse 
@@ -99,12 +80,12 @@
     {:attribution "Alex Gunnarson, ported from a Java solution on StackOverflow."}
     [^"[B" digested]
     (let [^chars hex-arr   (.toCharArray "0123456789abcdef")
-          ^chars hex-chars (-> digested core/count (* 2) char-array)]
+          ^chars hex-chars (-> digested count (* 2) char-array)]
       (loop [i 0] 
-        (if (< i (core/count digested))
-            (let [v           (-> digested (core/get i) (bit-and 0xFF))
-                  bit-shifted (-> hex-arr  (core/get (>>>     v 4   )))
-                  bit-anded   (-> hex-arr  (core/get (bit-and v 0x0F)))]
+        (if (< i (count digested))
+            (let [v           (-> digested (get i) (bit-and 0xFF))
+                  bit-shifted (-> hex-arr  (get (>>>     v 4   )))
+                  bit-anded   (-> hex-arr  (get (bit-and v 0x0F)))]
                   (aset hex-chars (* i 2)       bit-shifted)
                   (aset hex-chars (+ (* i 2) 1) bit-anded)
                 (recur (inc i)))))
@@ -117,11 +98,19 @@
     [^String s]
     (when (nnil? s)
       (let [^"[B" bytes  (.getBytes s)
-            ^"[B" result (byte-array+ (-> bytes core/count inc))]
+            ^"[B" result (byte-array+ (-> bytes count inc))]
           (System/arraycopy
             bytes  0
             result 0
-            (core/count bytes))
-          (aset! result (-> result core/count dec) (byte 0))
+            (count bytes))
+          (aset! result (-> result count dec) (byte 0))
           result))))
-  
+
+#?(:clj
+  (defnt slurp-bytes
+    byte-array? ([bytes] bytes)
+    string?     ([s]     (.getBytes s))
+    :default    ([in]
+                  (with-open [out (java.io.ByteArrayOutputStream.)]
+                    (-> in io/input-stream (io/copy out))
+                    (.toByteArray out)))))

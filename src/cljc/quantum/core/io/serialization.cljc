@@ -1,9 +1,3 @@
-(ns quantum.core.io.serialization
-  (:refer-clojure :exclude
-    [contains? read for doseq reduce repeat repeatedly range merge count vec
-     into first second rest last butlast get pop peek]))
-
-#?(:clj
 (ns
   ^{:doc
       "Serialization for any virtually data structure using taoensso.nippy.
@@ -12,30 +6,22 @@
        not support very well."
     :attribution "Alex Gunnarson"}
   quantum.core.io.serialization
-  (:refer-clojure :exclude
-    [contains? read for doseq reduce repeat repeatedly range merge count vec
-     into first second rest last butlast get pop peek])
+  (:refer-clojure :exclude [read])
+  (:require-quantum [ns coll])
   (:require 
-    [quantum.core.ns :as ns
-      #?@(:clj [:refer [defalias alias-ns]])]
-    [quantum.core.collections :refer :all]
     #?(:clj [taoensso.nippy             :as nippy :refer
               [read-bytes read-utf8 read-biginteger]])
     #?(:clj [iota                       :as iota]))
-  #?@(:clj
-     [(:import 
+  #?(:clj
+     (:import 
         (java.io File FileNotFoundException PushbackReader
           FileReader DataInputStream DataOutputStream IOException
           FileOutputStream BufferedOutputStream BufferedInputStream
-          FileInputStream))
-      (:gen-class)])))
+          FileInputStream))))
 
 ; This |do| covers the entire file. For purposes of reader macro
 #?(:clj
 (do
-
-(ns/require-all *ns* :clj)
-(ns/nss *ns*)
 
 ; RECORD SERIALIZATION DOES NOT ALLOW EXTRA KEYS. Sorry
 

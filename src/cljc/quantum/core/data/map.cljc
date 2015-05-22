@@ -1,27 +1,17 @@
 #?(:clj
-(ns quantum.core.data.map
-  (:refer-clojure :exclude [split-at])))
+(do
+  (set! *warn-on-reflection* false)
+  (set! *unchecked-math*     false)))
 
 (ns
   ^{:doc "Useful map functions. |map-entry|, a better merge (|merge+|), sorted-maps, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.map
   (:refer-clojure :exclude [split-at])
+  (:require-quantum [ns])
   (:require
     [clojure.data.avl     :as avl]
-    #?(:clj [flatland.ordered.map :as omap])
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])])
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
+    #?(:clj [flatland.ordered.map :as omap])))
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values

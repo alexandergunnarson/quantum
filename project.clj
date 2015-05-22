@@ -1,20 +1,17 @@
-(defproject quantum/core "0.2.4.1" ; Stable 0.2.4.0
+(defproject quantum/core "0.2.4.2" ; Stable 0.2.4.0 ; 0.2.4.2 is tested on only Clojure
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
   :jar-name         "quantum-dep.jar"
   :uberjar-name     "quantum.jar"
   :url              "https://www.github.com/alexandergunnarson/quantum"
-  :scm              {:name "quantum"
-                     :url  "https://www.github.com/alexandergunnarson/quantum"}
   :license          {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                      :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
   ; :signing          {:gpg-key "72F3C25A"}
-  ; :deploy-repositories [["releases" :clojars]
-  ;                       ["clojars" {:creds :gpg}]]
+  :deploy-repositories [["releases" :clojars]
+                        ["clojars" {:creds :gpg}]]
   :repositories {"sonatype-oss-public"
                "https://oss.sonatype.org/content/groups/public/"}
-  :plugins          []
   :dependencies
     [; ==== CLOJURE ====
      ; CLOJURE CORE
@@ -52,7 +49,7 @@
      [potemkin                          "0.3.11"  ; defprotocol+, definterface+, etc.
        :exclusions [riddley]]
      ; PRINT      
-     [fipp                              "0.4.3"       ]
+     [fipp                              "0.6.2"       ]
      ; ERROR
      [slingshot                         "0.10.3"      ]
      ; NUMERIC                   
@@ -132,8 +129,6 @@
             "deploy-dev"  ["do" "clean," "install"]
             "deploy-prod" ["do" "clean," "install," "deploy" "clojars"]
             "test"        ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
-  ;:lein-release {:deploy-via :shell
-  ;               :shell ["lein" "deploy"]}
   :auto-clean     false ; is this a mistake?
   :source-paths   ["src/clj" "src/cljc"]
   ;:resource-paths ["resources"] ; important for Figwheel
@@ -159,6 +154,6 @@
                    :optimizations :advanced
                    :pretty-print  false}}]}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
-             :server-port 3448
+             :server-port 3449
              :css-dirs ["resources/public/css"]}
 )

@@ -6,21 +6,10 @@
     :attribution "Alex Gunnarson"}
   quantum.core.log
   (:refer-clojure :exclude [pr])
+  (:require-quantum [ns async fn])
   (:require
-    [#?(:clj clojure.core.async :cljs cljs.core.async) :as async :refer
-      #?(:clj  [<! >! alts! close! chan >!! <!! thread go go-loop]
-         :cljs [<! >! alts! close! chan])]
-    [quantum.core.print :as pr]
-    [clj-time.core :as time])
-
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        java.util.ArrayList clojure.lang.Keyword
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
+    #?(:clj  [clj-time.core  :as time]
+       :cljs [cljs-time.core :as time])))
 
   ; #?(:cljs (:require-macros
   ;   [cljs.core.async :refer [go]]))
@@ -59,23 +48,26 @@
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
   [print-fn pr-type & args]
-  `(let [ns-0# ~*ns*] 
-     (binding [*ns* ns-0#]
+  `(let []
        (when (contains?
                @quantum.core.log/*prs* ~pr-type)
-         (~print-fn
-           (if (= ~pr-type :warn)
-               "WARNING:"
-               "") ; This indents slightly so the warnings stand out
-           ~@args)
+         (when (= ~pr-type :warn) (print "WARNING: "))
+         (~print-fn ~@args)
          (swap! quantum.core.log/log conj
            (LogEntry.
              #?(:clj (time/now) :cljs (js/Date.)) ; TODO fix
-             ~pr-type ns-0# (str ~@args))))
-       nil))))
+             ~pr-type *ns* (str ~@args))))
+       nil)))
 
-(defmacro pr  [pr-type & args] `(pr* println ~pr-type ~@args))
-(defmacro ppr [pr-type & args] `(pr* pr/!    ~pr-type ~@args))
+#?(:clj
+(defmacro pr  [pr-type & args] `(pr* println ~pr-type ~@args)))
+#?(:clj
+(defmacro ppr [pr-type & [arg & rest-args]]
+  `(when (contains? @quantum.core.log/*prs* ~pr-type)
+     (if (-> ~arg string?)
+          (do (print ~arg " ")
+              (pr* quantum.core.print/! ~pr-type ~@rest-args))
+          (pr* quantum.core.print/! ~pr-type ~arg ~@rest-args)))))
 
 #?(:clj
 (defn status

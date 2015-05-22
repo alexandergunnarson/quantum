@@ -3,20 +3,17 @@
           error handling, log writing, etc."
     :attribution "Alex Gunnarson"}
   quantum.http.core
+  (:require-quantum [:lib])
   (:require
-    [quantum.core.ns  :as ns :refer :all]
-    [quantum.core.data.json    :as json]
-    [org.httpkit.client :as http])
+    [quantum.core.data.json :as json]
+    [org.httpkit.client     :as http])
   (:import
     org.apache.http.entity.mime.MultipartEntityBuilder
     org.apache.http.entity.ContentType
     org.apache.http.client.methods.HttpPost
     org.apache.http.client.methods.HttpEntityEnclosingRequestBase
     org.apache.http.impl.client.DefaultHttpClient
-    java.io.File)
-  (:gen-class))
-
-(ns/require-all *ns* :lib :clj)
+    java.io.File))
 
 (def ^:dynamic *max-tries-http* 3)
 

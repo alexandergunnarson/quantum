@@ -1,27 +1,14 @@
-#?(:clj (ns quantum.core.cryptography))
-
 (ns
   ^{:doc "Cryptographic/encryption functions like hashing and digests.
 
           Possibly should just alias some better library for this."
     :attribution "Alex Gunnarson"}
-
   quantum.core.cryptography
-
-  (:require
-    [quantum.core.ns  :as ns #?@(:clj [:refer :all])]
-    [quantum.core.data.bytes :as bytes]
-    [quantum.core.logic      #?@(:clj [:refer :all])]
-    [quantum.core.string     :as str])
-  
+  (:require-quantum [ns bytes logic str])
   #?(:clj
     (:import
       (java.security MessageDigest DigestInputStream)
-      (java.io       InputStream   ByteArrayInputStream)))
-
-  #?(:clj (:gen-class)))
-
-#?(:clj (ns/require-all *ns* :clj))
+      (java.io       InputStream   ByteArrayInputStream))))
 
 #?(:clj
   (def ^sun.nio.cs.UTF_8 utf-8

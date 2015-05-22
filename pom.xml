@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.4.1</version>
+  <version>0.2.4.2</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -14,7 +14,11 @@
     </license>
   </licenses>
   <scm>
-    <url>https://www.github.com/alexandergunnarson/quantum</url>
+    <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
+    <tag>aaecb0be70e685b0cf10fe955f67605644faaba4
+</tag>
+    <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
   <build>
     <sourceDirectory>src/clj</sourceDirectory>
@@ -149,7 +153,7 @@
     <dependency>
       <groupId>fipp</groupId>
       <artifactId>fipp</artifactId>
-      <version>0.4.3</version>
+      <version>0.6.2</version>
     </dependency>
     <dependency>
       <groupId>slingshot</groupId>

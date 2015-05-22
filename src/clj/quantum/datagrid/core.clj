@@ -1,8 +1,6 @@
-(ns quantum.datagrid.core (:gen-class))
-(require '[quantum.core.ns :as ns])
-(ns/require-all *ns* :lib)
-(require '[quantum.datagrid.excel :as xl])
-(ns/nss *ns*)
+(ns quantum.datagrid.core
+  (:require-quantum [:lib])
+  (:require [quantum.datagrid.excel :as xl]))
 
 ; http://poi.apache.org/apidocs/index.html
 ; HELPER FUNCTIONS
@@ -12,16 +10,16 @@
 (defn unlettered [^String str-0]
   (-> str-0
       str/upper-case
-      (str/replace (re-pattern (str "[" (apply str str/alphabet) "]")) "")))
+      (str/replace (re-pattern (str "[" (apply str str/upper-chars) "]")) "")))
 ; FIND SOME BETTER WAY TO DO THIS
 (defprotocol Col* (col* [col-0]))
 (extend-protocol Col*
   String
   (col* [^String col-0]
-    (->> col-0 (index-of str/alphabet) inc))
+    (->> col-0 (index-of str/upper-chars) inc))
   Number
   (col* [^Number col-0]
-    (->> col-0 dec str/alphabet)))
+    (->> col-0 dec str/upper-chars)))
 (defn parse-xl-date [date]
   (-> date
      (time-coerce/from-date)

@@ -3,15 +3,12 @@
           getting the methods associated with a particular class, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.java
+  (:require-quantum [:lib])
  #?@(:clj [(:require
-             [quantum.core.ns    :as ns :refer :all]
              [clojure.data       :as cljdata]
              [clojure.reflect    :refer :all]
              [alembic.still])
-           (:import java.lang.reflect.Method)
-           (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj :lib))
+           (:import java.lang.reflect.Method)]))
 
 #?(:clj
   (defn get-by-key [object info-type & args]

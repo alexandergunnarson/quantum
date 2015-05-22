@@ -9,6 +9,7 @@
           Other applications pending."
     :attribution "Alex Gunnarson"}
   quantum.google.drive.core
+  (:require-quantum [:lib])
   (:require 
     [quantum.google.drive.auth :as crawler]
     [org.httpkit.client        :as http]
@@ -17,11 +18,8 @@
     [oauth.v2                  :as oauth.v2]
     [quantum.auth.core         :as auth]
     [quantum.http.core         :as qhttp]
-    [quantum.core.data.json    :as json]
-    [quantum.core.ns           :as ns :refer :all])
-  (:import quantum.http.core.HTTPLogEntry)
-  (:gen-class))
-(ns/require-all *ns* :clj :lib)
+    [quantum.core.data.json    :as json])
+  (:import quantum.http.core.HTTPLogEntry))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
 ;======================================================{                    }=======================================================

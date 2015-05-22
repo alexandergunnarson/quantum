@@ -6,9 +6,9 @@
           May be expanded to other functions sometime."
     :attribution "Alex Gunnarson"}
   quantum.google.core
+  (:require-quantum [:lib])
   (:require
     [quantum.auth.core :as auth           ]
-    [quantum.core.ns   :as ns  :refer :all]
     [quantum.web.core  :as web :refer
       [click! find-element write-page! default-capabilities send-keys!]])
   (:import
@@ -19,10 +19,7 @@
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
-    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))
-  (:gen-class))
-
-(ns/require-all *ns* :clj :lib)
+    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)))
 
 ; =============== GOOGLE: GENERAL ===============
 

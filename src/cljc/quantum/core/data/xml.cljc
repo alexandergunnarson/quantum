@@ -1,10 +1,3 @@
-#?(:clj
-(ns quantum.core.data.xml
-  (:refer-clojure :exclude
-    [contains? for doseq reduce repeat repeatedly
-     range merge count vec into first second rest
-     last butlast get pop peek])))
-
 (ns
   ^{:doc "(Once-)useful XML functions.
 
@@ -12,28 +5,12 @@
           aliasing some more mature and feature-rich library."
     :attribution "Alex Gunnarson"}
   quantum.core.data.xml
-  (:refer-clojure :exclude
-    [contains? for doseq reduce repeat repeatedly
-     range merge count vec into first second rest
-     last butlast get pop peek])
-  (:require
-    [quantum.core.ns          :as ns
-      #?@(:clj [:refer [defalias alias-ns]])]
-    [quantum.core.error                 #?@(:clj [:refer :all])]
-    [quantum.core.logic                 #?@(:clj [:refer :all])]
-    [quantum.core.function              #?@(:clj [:refer :all])]
-    [quantum.core.type                  #?@(:clj [:refer :all])]
-    [quantum.core.numeric     :as num   :refer [nneg?]]
-    [quantum.core.collections           #?@(:clj [:exclude [split] :refer :all])]
-    [quantum.core.data.vector :as vec   :refer [catvec]]
-    [quantum.core.string      :as str   :refer [subs+]]
-    [quantum.core.log         :as log])
-  #?(:clj (:gen-class)))
+  (:refer-clojure :exclude [split])
+  (:require-quantum [ns err logic fn type num coll vec str log coll vec str log]))
 
+(ns-exclude split)
 ; ENTIRE FILE IS CLJ-ONLY (for now)
 #?(:clj (do
-
-(ns/require-all *ns* :clj)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
 ;=================================================={                          }=====================================================

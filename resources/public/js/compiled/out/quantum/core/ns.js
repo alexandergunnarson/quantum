@@ -46,13 +46,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Nil.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19181,else__18671__auto__){
+quantum.core.ns.Nil.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19182,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19183 = k19181;
-switch (G__19183) {
+var G__19184 = k19182;
+switch (G__19184) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19181,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19182,else__18671__auto__);
 
 }
 });
@@ -131,12 +131,12 @@ return (new quantum.core.ns.Nil(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Nil.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19180){
+quantum.core.ns.Nil.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19181){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19184 = cljs.core.keyword_identical_QMARK_;
-var expr__19185 = k__18676__auto__;
-return (new quantum.core.ns.Nil(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19180),null));
+var pred__19185 = cljs.core.keyword_identical_QMARK_;
+var expr__19186 = k__18676__auto__;
+return (new quantum.core.ns.Nil(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19181),null));
 });
 
 quantum.core.ns.Nil.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -145,10 +145,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Nil.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19180){
+quantum.core.ns.Nil.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19181){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Nil(G__19180,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Nil(G__19181,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Nil.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -179,8 +179,8 @@ quantum.core.ns.__GT_Nil = (function quantum$core$ns$__GT_Nil(){
 return (new quantum.core.ns.Nil(null,null,null));
 });
 
-quantum.core.ns.map__GT_Nil = (function quantum$core$ns$map__GT_Nil(G__19182){
-return (new quantum.core.ns.Nil(null,cljs.core.dissoc.call(null,G__19182),null));
+quantum.core.ns.map__GT_Nil = (function quantum$core$ns$map__GT_Nil(G__19183){
+return (new quantum.core.ns.Nil(null,cljs.core.dissoc.call(null,G__19183),null));
 });
 
 
@@ -206,13 +206,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Key.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19189,else__18671__auto__){
+quantum.core.ns.Key.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19190,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19191 = k19189;
-switch (G__19191) {
+var G__19192 = k19190;
+switch (G__19192) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19189,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19190,else__18671__auto__);
 
 }
 });
@@ -291,12 +291,12 @@ return (new quantum.core.ns.Key(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Key.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19188){
+quantum.core.ns.Key.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19189){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19192 = cljs.core.keyword_identical_QMARK_;
-var expr__19193 = k__18676__auto__;
-return (new quantum.core.ns.Key(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19188),null));
+var pred__19193 = cljs.core.keyword_identical_QMARK_;
+var expr__19194 = k__18676__auto__;
+return (new quantum.core.ns.Key(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19189),null));
 });
 
 quantum.core.ns.Key.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -305,10 +305,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Key.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19188){
+quantum.core.ns.Key.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19189){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Key(G__19188,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Key(G__19189,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Key.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -339,8 +339,8 @@ quantum.core.ns.__GT_Key = (function quantum$core$ns$__GT_Key(){
 return (new quantum.core.ns.Key(null,null,null));
 });
 
-quantum.core.ns.map__GT_Key = (function quantum$core$ns$map__GT_Key(G__19190){
-return (new quantum.core.ns.Key(null,cljs.core.dissoc.call(null,G__19190),null));
+quantum.core.ns.map__GT_Key = (function quantum$core$ns$map__GT_Key(G__19191){
+return (new quantum.core.ns.Key(null,cljs.core.dissoc.call(null,G__19191),null));
 });
 
 
@@ -366,13 +366,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Num.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19197,else__18671__auto__){
+quantum.core.ns.Num.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19198,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19199 = k19197;
-switch (G__19199) {
+var G__19200 = k19198;
+switch (G__19200) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19197,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19198,else__18671__auto__);
 
 }
 });
@@ -451,12 +451,12 @@ return (new quantum.core.ns.Num(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Num.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19196){
+quantum.core.ns.Num.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19197){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19200 = cljs.core.keyword_identical_QMARK_;
-var expr__19201 = k__18676__auto__;
-return (new quantum.core.ns.Num(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19196),null));
+var pred__19201 = cljs.core.keyword_identical_QMARK_;
+var expr__19202 = k__18676__auto__;
+return (new quantum.core.ns.Num(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19197),null));
 });
 
 quantum.core.ns.Num.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -465,10 +465,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Num.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19196){
+quantum.core.ns.Num.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19197){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Num(G__19196,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Num(G__19197,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Num.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -499,8 +499,8 @@ quantum.core.ns.__GT_Num = (function quantum$core$ns$__GT_Num(){
 return (new quantum.core.ns.Num(null,null,null));
 });
 
-quantum.core.ns.map__GT_Num = (function quantum$core$ns$map__GT_Num(G__19198){
-return (new quantum.core.ns.Num(null,cljs.core.dissoc.call(null,G__19198),null));
+quantum.core.ns.map__GT_Num = (function quantum$core$ns$map__GT_Num(G__19199){
+return (new quantum.core.ns.Num(null,cljs.core.dissoc.call(null,G__19199),null));
 });
 
 
@@ -526,13 +526,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.ExactNum.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19205,else__18671__auto__){
+quantum.core.ns.ExactNum.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19206,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19207 = k19205;
-switch (G__19207) {
+var G__19208 = k19206;
+switch (G__19208) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19205,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19206,else__18671__auto__);
 
 }
 });
@@ -611,12 +611,12 @@ return (new quantum.core.ns.ExactNum(self__.__meta,cljs.core.not_empty.call(null
 }
 });
 
-quantum.core.ns.ExactNum.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19204){
+quantum.core.ns.ExactNum.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19205){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19208 = cljs.core.keyword_identical_QMARK_;
-var expr__19209 = k__18676__auto__;
-return (new quantum.core.ns.ExactNum(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19204),null));
+var pred__19209 = cljs.core.keyword_identical_QMARK_;
+var expr__19210 = k__18676__auto__;
+return (new quantum.core.ns.ExactNum(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19205),null));
 });
 
 quantum.core.ns.ExactNum.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -625,10 +625,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.ExactNum.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19204){
+quantum.core.ns.ExactNum.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19205){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.ExactNum(G__19204,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.ExactNum(G__19205,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.ExactNum.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -659,8 +659,8 @@ quantum.core.ns.__GT_ExactNum = (function quantum$core$ns$__GT_ExactNum(){
 return (new quantum.core.ns.ExactNum(null,null,null));
 });
 
-quantum.core.ns.map__GT_ExactNum = (function quantum$core$ns$map__GT_ExactNum(G__19206){
-return (new quantum.core.ns.ExactNum(null,cljs.core.dissoc.call(null,G__19206),null));
+quantum.core.ns.map__GT_ExactNum = (function quantum$core$ns$map__GT_ExactNum(G__19207){
+return (new quantum.core.ns.ExactNum(null,cljs.core.dissoc.call(null,G__19207),null));
 });
 
 
@@ -686,13 +686,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Int.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19213,else__18671__auto__){
+quantum.core.ns.Int.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19214,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19215 = k19213;
-switch (G__19215) {
+var G__19216 = k19214;
+switch (G__19216) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19213,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19214,else__18671__auto__);
 
 }
 });
@@ -771,12 +771,12 @@ return (new quantum.core.ns.Int(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Int.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19212){
+quantum.core.ns.Int.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19213){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19216 = cljs.core.keyword_identical_QMARK_;
-var expr__19217 = k__18676__auto__;
-return (new quantum.core.ns.Int(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19212),null));
+var pred__19217 = cljs.core.keyword_identical_QMARK_;
+var expr__19218 = k__18676__auto__;
+return (new quantum.core.ns.Int(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19213),null));
 });
 
 quantum.core.ns.Int.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -785,10 +785,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Int.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19212){
+quantum.core.ns.Int.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19213){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Int(G__19212,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Int(G__19213,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Int.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -819,8 +819,8 @@ quantum.core.ns.__GT_Int = (function quantum$core$ns$__GT_Int(){
 return (new quantum.core.ns.Int(null,null,null));
 });
 
-quantum.core.ns.map__GT_Int = (function quantum$core$ns$map__GT_Int(G__19214){
-return (new quantum.core.ns.Int(null,cljs.core.dissoc.call(null,G__19214),null));
+quantum.core.ns.map__GT_Int = (function quantum$core$ns$map__GT_Int(G__19215){
+return (new quantum.core.ns.Int(null,cljs.core.dissoc.call(null,G__19215),null));
 });
 
 
@@ -846,13 +846,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Decimal.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19221,else__18671__auto__){
+quantum.core.ns.Decimal.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19222,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19223 = k19221;
-switch (G__19223) {
+var G__19224 = k19222;
+switch (G__19224) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19221,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19222,else__18671__auto__);
 
 }
 });
@@ -931,12 +931,12 @@ return (new quantum.core.ns.Decimal(self__.__meta,cljs.core.not_empty.call(null,
 }
 });
 
-quantum.core.ns.Decimal.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19220){
+quantum.core.ns.Decimal.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19221){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19224 = cljs.core.keyword_identical_QMARK_;
-var expr__19225 = k__18676__auto__;
-return (new quantum.core.ns.Decimal(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19220),null));
+var pred__19225 = cljs.core.keyword_identical_QMARK_;
+var expr__19226 = k__18676__auto__;
+return (new quantum.core.ns.Decimal(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19221),null));
 });
 
 quantum.core.ns.Decimal.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -945,10 +945,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Decimal.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19220){
+quantum.core.ns.Decimal.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19221){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Decimal(G__19220,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Decimal(G__19221,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Decimal.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -979,8 +979,8 @@ quantum.core.ns.__GT_Decimal = (function quantum$core$ns$__GT_Decimal(){
 return (new quantum.core.ns.Decimal(null,null,null));
 });
 
-quantum.core.ns.map__GT_Decimal = (function quantum$core$ns$map__GT_Decimal(G__19222){
-return (new quantum.core.ns.Decimal(null,cljs.core.dissoc.call(null,G__19222),null));
+quantum.core.ns.map__GT_Decimal = (function quantum$core$ns$map__GT_Decimal(G__19223){
+return (new quantum.core.ns.Decimal(null,cljs.core.dissoc.call(null,G__19223),null));
 });
 
 
@@ -1006,13 +1006,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Set.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19229,else__18671__auto__){
+quantum.core.ns.Set.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19230,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19231 = k19229;
-switch (G__19231) {
+var G__19232 = k19230;
+switch (G__19232) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19229,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19230,else__18671__auto__);
 
 }
 });
@@ -1091,12 +1091,12 @@ return (new quantum.core.ns.Set(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Set.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19228){
+quantum.core.ns.Set.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19229){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19232 = cljs.core.keyword_identical_QMARK_;
-var expr__19233 = k__18676__auto__;
-return (new quantum.core.ns.Set(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19228),null));
+var pred__19233 = cljs.core.keyword_identical_QMARK_;
+var expr__19234 = k__18676__auto__;
+return (new quantum.core.ns.Set(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19229),null));
 });
 
 quantum.core.ns.Set.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1105,10 +1105,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Set.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19228){
+quantum.core.ns.Set.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19229){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Set(G__19228,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Set(G__19229,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Set.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1139,8 +1139,8 @@ quantum.core.ns.__GT_Set = (function quantum$core$ns$__GT_Set(){
 return (new quantum.core.ns.Set(null,null,null));
 });
 
-quantum.core.ns.map__GT_Set = (function quantum$core$ns$map__GT_Set(G__19230){
-return (new quantum.core.ns.Set(null,cljs.core.dissoc.call(null,G__19230),null));
+quantum.core.ns.map__GT_Set = (function quantum$core$ns$map__GT_Set(G__19231){
+return (new quantum.core.ns.Set(null,cljs.core.dissoc.call(null,G__19231),null));
 });
 
 
@@ -1166,13 +1166,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Bool.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19237,else__18671__auto__){
+quantum.core.ns.Bool.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19238,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19239 = k19237;
-switch (G__19239) {
+var G__19240 = k19238;
+switch (G__19240) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19237,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19238,else__18671__auto__);
 
 }
 });
@@ -1251,12 +1251,12 @@ return (new quantum.core.ns.Bool(self__.__meta,cljs.core.not_empty.call(null,clj
 }
 });
 
-quantum.core.ns.Bool.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19236){
+quantum.core.ns.Bool.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19237){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19240 = cljs.core.keyword_identical_QMARK_;
-var expr__19241 = k__18676__auto__;
-return (new quantum.core.ns.Bool(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19236),null));
+var pred__19241 = cljs.core.keyword_identical_QMARK_;
+var expr__19242 = k__18676__auto__;
+return (new quantum.core.ns.Bool(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19237),null));
 });
 
 quantum.core.ns.Bool.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1265,10 +1265,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Bool.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19236){
+quantum.core.ns.Bool.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19237){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Bool(G__19236,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Bool(G__19237,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Bool.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1299,8 +1299,8 @@ quantum.core.ns.__GT_Bool = (function quantum$core$ns$__GT_Bool(){
 return (new quantum.core.ns.Bool(null,null,null));
 });
 
-quantum.core.ns.map__GT_Bool = (function quantum$core$ns$map__GT_Bool(G__19238){
-return (new quantum.core.ns.Bool(null,cljs.core.dissoc.call(null,G__19238),null));
+quantum.core.ns.map__GT_Bool = (function quantum$core$ns$map__GT_Bool(G__19239){
+return (new quantum.core.ns.Bool(null,cljs.core.dissoc.call(null,G__19239),null));
 });
 
 
@@ -1326,13 +1326,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.ArrList.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19245,else__18671__auto__){
+quantum.core.ns.ArrList.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19246,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19247 = k19245;
-switch (G__19247) {
+var G__19248 = k19246;
+switch (G__19248) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19245,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19246,else__18671__auto__);
 
 }
 });
@@ -1411,12 +1411,12 @@ return (new quantum.core.ns.ArrList(self__.__meta,cljs.core.not_empty.call(null,
 }
 });
 
-quantum.core.ns.ArrList.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19244){
+quantum.core.ns.ArrList.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19245){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19248 = cljs.core.keyword_identical_QMARK_;
-var expr__19249 = k__18676__auto__;
-return (new quantum.core.ns.ArrList(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19244),null));
+var pred__19249 = cljs.core.keyword_identical_QMARK_;
+var expr__19250 = k__18676__auto__;
+return (new quantum.core.ns.ArrList(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19245),null));
 });
 
 quantum.core.ns.ArrList.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1425,10 +1425,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.ArrList.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19244){
+quantum.core.ns.ArrList.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19245){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.ArrList(G__19244,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.ArrList(G__19245,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.ArrList.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1459,8 +1459,8 @@ quantum.core.ns.__GT_ArrList = (function quantum$core$ns$__GT_ArrList(){
 return (new quantum.core.ns.ArrList(null,null,null));
 });
 
-quantum.core.ns.map__GT_ArrList = (function quantum$core$ns$map__GT_ArrList(G__19246){
-return (new quantum.core.ns.ArrList(null,cljs.core.dissoc.call(null,G__19246),null));
+quantum.core.ns.map__GT_ArrList = (function quantum$core$ns$map__GT_ArrList(G__19247){
+return (new quantum.core.ns.ArrList(null,cljs.core.dissoc.call(null,G__19247),null));
 });
 
 
@@ -1486,13 +1486,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.TreeMap.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19253,else__18671__auto__){
+quantum.core.ns.TreeMap.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19254,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19255 = k19253;
-switch (G__19255) {
+var G__19256 = k19254;
+switch (G__19256) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19253,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19254,else__18671__auto__);
 
 }
 });
@@ -1571,12 +1571,12 @@ return (new quantum.core.ns.TreeMap(self__.__meta,cljs.core.not_empty.call(null,
 }
 });
 
-quantum.core.ns.TreeMap.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19252){
+quantum.core.ns.TreeMap.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19253){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19256 = cljs.core.keyword_identical_QMARK_;
-var expr__19257 = k__18676__auto__;
-return (new quantum.core.ns.TreeMap(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19252),null));
+var pred__19257 = cljs.core.keyword_identical_QMARK_;
+var expr__19258 = k__18676__auto__;
+return (new quantum.core.ns.TreeMap(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19253),null));
 });
 
 quantum.core.ns.TreeMap.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1585,10 +1585,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.TreeMap.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19252){
+quantum.core.ns.TreeMap.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19253){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.TreeMap(G__19252,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.TreeMap(G__19253,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.TreeMap.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1619,8 +1619,8 @@ quantum.core.ns.__GT_TreeMap = (function quantum$core$ns$__GT_TreeMap(){
 return (new quantum.core.ns.TreeMap(null,null,null));
 });
 
-quantum.core.ns.map__GT_TreeMap = (function quantum$core$ns$map__GT_TreeMap(G__19254){
-return (new quantum.core.ns.TreeMap(null,cljs.core.dissoc.call(null,G__19254),null));
+quantum.core.ns.map__GT_TreeMap = (function quantum$core$ns$map__GT_TreeMap(G__19255){
+return (new quantum.core.ns.TreeMap(null,cljs.core.dissoc.call(null,G__19255),null));
 });
 
 
@@ -1646,13 +1646,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.LSeq.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19261,else__18671__auto__){
+quantum.core.ns.LSeq.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19262,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19263 = k19261;
-switch (G__19263) {
+var G__19264 = k19262;
+switch (G__19264) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19261,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19262,else__18671__auto__);
 
 }
 });
@@ -1731,12 +1731,12 @@ return (new quantum.core.ns.LSeq(self__.__meta,cljs.core.not_empty.call(null,clj
 }
 });
 
-quantum.core.ns.LSeq.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19260){
+quantum.core.ns.LSeq.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19261){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19264 = cljs.core.keyword_identical_QMARK_;
-var expr__19265 = k__18676__auto__;
-return (new quantum.core.ns.LSeq(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19260),null));
+var pred__19265 = cljs.core.keyword_identical_QMARK_;
+var expr__19266 = k__18676__auto__;
+return (new quantum.core.ns.LSeq(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19261),null));
 });
 
 quantum.core.ns.LSeq.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1745,10 +1745,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.LSeq.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19260){
+quantum.core.ns.LSeq.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19261){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.LSeq(G__19260,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.LSeq(G__19261,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.LSeq.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1779,8 +1779,8 @@ quantum.core.ns.__GT_LSeq = (function quantum$core$ns$__GT_LSeq(){
 return (new quantum.core.ns.LSeq(null,null,null));
 });
 
-quantum.core.ns.map__GT_LSeq = (function quantum$core$ns$map__GT_LSeq(G__19262){
-return (new quantum.core.ns.LSeq(null,cljs.core.dissoc.call(null,G__19262),null));
+quantum.core.ns.map__GT_LSeq = (function quantum$core$ns$map__GT_LSeq(G__19263){
+return (new quantum.core.ns.LSeq(null,cljs.core.dissoc.call(null,G__19263),null));
 });
 
 
@@ -1806,13 +1806,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Vec.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19269,else__18671__auto__){
+quantum.core.ns.Vec.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19270,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19271 = k19269;
-switch (G__19271) {
+var G__19272 = k19270;
+switch (G__19272) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19269,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19270,else__18671__auto__);
 
 }
 });
@@ -1891,12 +1891,12 @@ return (new quantum.core.ns.Vec(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Vec.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19268){
+quantum.core.ns.Vec.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19269){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19272 = cljs.core.keyword_identical_QMARK_;
-var expr__19273 = k__18676__auto__;
-return (new quantum.core.ns.Vec(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19268),null));
+var pred__19273 = cljs.core.keyword_identical_QMARK_;
+var expr__19274 = k__18676__auto__;
+return (new quantum.core.ns.Vec(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19269),null));
 });
 
 quantum.core.ns.Vec.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -1905,10 +1905,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Vec.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19268){
+quantum.core.ns.Vec.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19269){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Vec(G__19268,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Vec(G__19269,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Vec.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -1939,8 +1939,8 @@ quantum.core.ns.__GT_Vec = (function quantum$core$ns$__GT_Vec(){
 return (new quantum.core.ns.Vec(null,null,null));
 });
 
-quantum.core.ns.map__GT_Vec = (function quantum$core$ns$map__GT_Vec(G__19270){
-return (new quantum.core.ns.Vec(null,cljs.core.dissoc.call(null,G__19270),null));
+quantum.core.ns.map__GT_Vec = (function quantum$core$ns$map__GT_Vec(G__19271){
+return (new quantum.core.ns.Vec(null,cljs.core.dissoc.call(null,G__19271),null));
 });
 
 
@@ -1966,13 +1966,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Regex.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19277,else__18671__auto__){
+quantum.core.ns.Regex.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19278,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19279 = k19277;
-switch (G__19279) {
+var G__19280 = k19278;
+switch (G__19280) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19277,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19278,else__18671__auto__);
 
 }
 });
@@ -2051,12 +2051,12 @@ return (new quantum.core.ns.Regex(self__.__meta,cljs.core.not_empty.call(null,cl
 }
 });
 
-quantum.core.ns.Regex.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19276){
+quantum.core.ns.Regex.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19277){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19280 = cljs.core.keyword_identical_QMARK_;
-var expr__19281 = k__18676__auto__;
-return (new quantum.core.ns.Regex(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19276),null));
+var pred__19281 = cljs.core.keyword_identical_QMARK_;
+var expr__19282 = k__18676__auto__;
+return (new quantum.core.ns.Regex(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19277),null));
 });
 
 quantum.core.ns.Regex.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2065,10 +2065,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Regex.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19276){
+quantum.core.ns.Regex.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19277){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Regex(G__19276,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Regex(G__19277,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Regex.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2099,8 +2099,8 @@ quantum.core.ns.__GT_Regex = (function quantum$core$ns$__GT_Regex(){
 return (new quantum.core.ns.Regex(null,null,null));
 });
 
-quantum.core.ns.map__GT_Regex = (function quantum$core$ns$map__GT_Regex(G__19278){
-return (new quantum.core.ns.Regex(null,cljs.core.dissoc.call(null,G__19278),null));
+quantum.core.ns.map__GT_Regex = (function quantum$core$ns$map__GT_Regex(G__19279){
+return (new quantum.core.ns.Regex(null,cljs.core.dissoc.call(null,G__19279),null));
 });
 
 
@@ -2126,13 +2126,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Editable.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19285,else__18671__auto__){
+quantum.core.ns.Editable.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19286,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19287 = k19285;
-switch (G__19287) {
+var G__19288 = k19286;
+switch (G__19288) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19285,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19286,else__18671__auto__);
 
 }
 });
@@ -2211,12 +2211,12 @@ return (new quantum.core.ns.Editable(self__.__meta,cljs.core.not_empty.call(null
 }
 });
 
-quantum.core.ns.Editable.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19284){
+quantum.core.ns.Editable.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19285){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19288 = cljs.core.keyword_identical_QMARK_;
-var expr__19289 = k__18676__auto__;
-return (new quantum.core.ns.Editable(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19284),null));
+var pred__19289 = cljs.core.keyword_identical_QMARK_;
+var expr__19290 = k__18676__auto__;
+return (new quantum.core.ns.Editable(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19285),null));
 });
 
 quantum.core.ns.Editable.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2225,10 +2225,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Editable.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19284){
+quantum.core.ns.Editable.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19285){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Editable(G__19284,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Editable(G__19285,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Editable.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2259,8 +2259,8 @@ quantum.core.ns.__GT_Editable = (function quantum$core$ns$__GT_Editable(){
 return (new quantum.core.ns.Editable(null,null,null));
 });
 
-quantum.core.ns.map__GT_Editable = (function quantum$core$ns$map__GT_Editable(G__19286){
-return (new quantum.core.ns.Editable(null,cljs.core.dissoc.call(null,G__19286),null));
+quantum.core.ns.map__GT_Editable = (function quantum$core$ns$map__GT_Editable(G__19287){
+return (new quantum.core.ns.Editable(null,cljs.core.dissoc.call(null,G__19287),null));
 });
 
 
@@ -2286,13 +2286,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Transient.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19293,else__18671__auto__){
+quantum.core.ns.Transient.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19294,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19295 = k19293;
-switch (G__19295) {
+var G__19296 = k19294;
+switch (G__19296) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19293,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19294,else__18671__auto__);
 
 }
 });
@@ -2371,12 +2371,12 @@ return (new quantum.core.ns.Transient(self__.__meta,cljs.core.not_empty.call(nul
 }
 });
 
-quantum.core.ns.Transient.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19292){
+quantum.core.ns.Transient.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19293){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19296 = cljs.core.keyword_identical_QMARK_;
-var expr__19297 = k__18676__auto__;
-return (new quantum.core.ns.Transient(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19292),null));
+var pred__19297 = cljs.core.keyword_identical_QMARK_;
+var expr__19298 = k__18676__auto__;
+return (new quantum.core.ns.Transient(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19293),null));
 });
 
 quantum.core.ns.Transient.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2385,10 +2385,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Transient.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19292){
+quantum.core.ns.Transient.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19293){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Transient(G__19292,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Transient(G__19293,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Transient.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2419,8 +2419,8 @@ quantum.core.ns.__GT_Transient = (function quantum$core$ns$__GT_Transient(){
 return (new quantum.core.ns.Transient(null,null,null));
 });
 
-quantum.core.ns.map__GT_Transient = (function quantum$core$ns$map__GT_Transient(G__19294){
-return (new quantum.core.ns.Transient(null,cljs.core.dissoc.call(null,G__19294),null));
+quantum.core.ns.map__GT_Transient = (function quantum$core$ns$map__GT_Transient(G__19295){
+return (new quantum.core.ns.Transient(null,cljs.core.dissoc.call(null,G__19295),null));
 });
 
 
@@ -2446,13 +2446,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Queue.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19301,else__18671__auto__){
+quantum.core.ns.Queue.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19302,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19303 = k19301;
-switch (G__19303) {
+var G__19304 = k19302;
+switch (G__19304) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19301,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19302,else__18671__auto__);
 
 }
 });
@@ -2531,12 +2531,12 @@ return (new quantum.core.ns.Queue(self__.__meta,cljs.core.not_empty.call(null,cl
 }
 });
 
-quantum.core.ns.Queue.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19300){
+quantum.core.ns.Queue.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19301){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19304 = cljs.core.keyword_identical_QMARK_;
-var expr__19305 = k__18676__auto__;
-return (new quantum.core.ns.Queue(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19300),null));
+var pred__19305 = cljs.core.keyword_identical_QMARK_;
+var expr__19306 = k__18676__auto__;
+return (new quantum.core.ns.Queue(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19301),null));
 });
 
 quantum.core.ns.Queue.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2545,10 +2545,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Queue.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19300){
+quantum.core.ns.Queue.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19301){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Queue(G__19300,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Queue(G__19301,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Queue.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2579,8 +2579,8 @@ quantum.core.ns.__GT_Queue = (function quantum$core$ns$__GT_Queue(){
 return (new quantum.core.ns.Queue(null,null,null));
 });
 
-quantum.core.ns.map__GT_Queue = (function quantum$core$ns$map__GT_Queue(G__19302){
-return (new quantum.core.ns.Queue(null,cljs.core.dissoc.call(null,G__19302),null));
+quantum.core.ns.map__GT_Queue = (function quantum$core$ns$map__GT_Queue(G__19303){
+return (new quantum.core.ns.Queue(null,cljs.core.dissoc.call(null,G__19303),null));
 });
 
 
@@ -2606,13 +2606,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Map.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19309,else__18671__auto__){
+quantum.core.ns.Map.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19310,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19311 = k19309;
-switch (G__19311) {
+var G__19312 = k19310;
+switch (G__19312) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19309,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19310,else__18671__auto__);
 
 }
 });
@@ -2691,12 +2691,12 @@ return (new quantum.core.ns.Map(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Map.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19308){
+quantum.core.ns.Map.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19309){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19312 = cljs.core.keyword_identical_QMARK_;
-var expr__19313 = k__18676__auto__;
-return (new quantum.core.ns.Map(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19308),null));
+var pred__19313 = cljs.core.keyword_identical_QMARK_;
+var expr__19314 = k__18676__auto__;
+return (new quantum.core.ns.Map(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19309),null));
 });
 
 quantum.core.ns.Map.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2705,10 +2705,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Map.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19308){
+quantum.core.ns.Map.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19309){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Map(G__19308,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Map(G__19309,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Map.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2739,8 +2739,8 @@ quantum.core.ns.__GT_Map = (function quantum$core$ns$__GT_Map(){
 return (new quantum.core.ns.Map(null,null,null));
 });
 
-quantum.core.ns.map__GT_Map = (function quantum$core$ns$map__GT_Map(G__19310){
-return (new quantum.core.ns.Map(null,cljs.core.dissoc.call(null,G__19310),null));
+quantum.core.ns.map__GT_Map = (function quantum$core$ns$map__GT_Map(G__19311){
+return (new quantum.core.ns.Map(null,cljs.core.dissoc.call(null,G__19311),null));
 });
 
 
@@ -2766,13 +2766,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Seq.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19317,else__18671__auto__){
+quantum.core.ns.Seq.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19318,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19319 = k19317;
-switch (G__19319) {
+var G__19320 = k19318;
+switch (G__19320) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19317,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19318,else__18671__auto__);
 
 }
 });
@@ -2851,12 +2851,12 @@ return (new quantum.core.ns.Seq(self__.__meta,cljs.core.not_empty.call(null,cljs
 }
 });
 
-quantum.core.ns.Seq.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19316){
+quantum.core.ns.Seq.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19317){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19320 = cljs.core.keyword_identical_QMARK_;
-var expr__19321 = k__18676__auto__;
-return (new quantum.core.ns.Seq(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19316),null));
+var pred__19321 = cljs.core.keyword_identical_QMARK_;
+var expr__19322 = k__18676__auto__;
+return (new quantum.core.ns.Seq(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19317),null));
 });
 
 quantum.core.ns.Seq.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -2865,10 +2865,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Seq.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19316){
+quantum.core.ns.Seq.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19317){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Seq(G__19316,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Seq(G__19317,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Seq.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -2899,8 +2899,8 @@ quantum.core.ns.__GT_Seq = (function quantum$core$ns$__GT_Seq(){
 return (new quantum.core.ns.Seq(null,null,null));
 });
 
-quantum.core.ns.map__GT_Seq = (function quantum$core$ns$map__GT_Seq(G__19318){
-return (new quantum.core.ns.Seq(null,cljs.core.dissoc.call(null,G__19318),null));
+quantum.core.ns.map__GT_Seq = (function quantum$core$ns$map__GT_Seq(G__19319){
+return (new quantum.core.ns.Seq(null,cljs.core.dissoc.call(null,G__19319),null));
 });
 
 
@@ -2926,13 +2926,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Record.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19325,else__18671__auto__){
+quantum.core.ns.Record.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19326,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19327 = k19325;
-switch (G__19327) {
+var G__19328 = k19326;
+switch (G__19328) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19325,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19326,else__18671__auto__);
 
 }
 });
@@ -3011,12 +3011,12 @@ return (new quantum.core.ns.Record(self__.__meta,cljs.core.not_empty.call(null,c
 }
 });
 
-quantum.core.ns.Record.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19324){
+quantum.core.ns.Record.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19325){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19328 = cljs.core.keyword_identical_QMARK_;
-var expr__19329 = k__18676__auto__;
-return (new quantum.core.ns.Record(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19324),null));
+var pred__19329 = cljs.core.keyword_identical_QMARK_;
+var expr__19330 = k__18676__auto__;
+return (new quantum.core.ns.Record(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19325),null));
 });
 
 quantum.core.ns.Record.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -3025,10 +3025,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.Record.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19324){
+quantum.core.ns.Record.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19325){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Record(G__19324,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Record(G__19325,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Record.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -3059,8 +3059,8 @@ quantum.core.ns.__GT_Record = (function quantum$core$ns$__GT_Record(){
 return (new quantum.core.ns.Record(null,null,null));
 });
 
-quantum.core.ns.map__GT_Record = (function quantum$core$ns$map__GT_Record(G__19326){
-return (new quantum.core.ns.Record(null,cljs.core.dissoc.call(null,G__19326),null));
+quantum.core.ns.map__GT_Record = (function quantum$core$ns$map__GT_Record(G__19327){
+return (new quantum.core.ns.Record(null,cljs.core.dissoc.call(null,G__19327),null));
 });
 
 
@@ -3086,13 +3086,13 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.JSObj.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19333,else__18671__auto__){
+quantum.core.ns.JSObj.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19334,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19335 = k19333;
-switch (G__19335) {
+var G__19336 = k19334;
+switch (G__19336) {
 default:
-return cljs.core.get.call(null,self__.__extmap,k19333,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19334,else__18671__auto__);
 
 }
 });
@@ -3171,12 +3171,12 @@ return (new quantum.core.ns.JSObj(self__.__meta,cljs.core.not_empty.call(null,cl
 }
 });
 
-quantum.core.ns.JSObj.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19332){
+quantum.core.ns.JSObj.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19333){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19336 = cljs.core.keyword_identical_QMARK_;
-var expr__19337 = k__18676__auto__;
-return (new quantum.core.ns.JSObj(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19332),null));
+var pred__19337 = cljs.core.keyword_identical_QMARK_;
+var expr__19338 = k__18676__auto__;
+return (new quantum.core.ns.JSObj(self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19333),null));
 });
 
 quantum.core.ns.JSObj.prototype.cljs$core$ISeqable$_seq$arity$1 = (function (this__18680__auto__){
@@ -3185,10 +3185,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,cljs.core.PersistentVector.EMPTY,self__.__extmap));
 });
 
-quantum.core.ns.JSObj.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19332){
+quantum.core.ns.JSObj.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19333){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.JSObj(G__19332,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.JSObj(G__19333,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.JSObj.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -3219,8 +3219,8 @@ quantum.core.ns.__GT_JSObj = (function quantum$core$ns$__GT_JSObj(){
 return (new quantum.core.ns.JSObj(null,null,null));
 });
 
-quantum.core.ns.map__GT_JSObj = (function quantum$core$ns$map__GT_JSObj(G__19334){
-return (new quantum.core.ns.JSObj(null,cljs.core.dissoc.call(null,G__19334),null));
+quantum.core.ns.map__GT_JSObj = (function quantum$core$ns$map__GT_JSObj(G__19335){
+return (new quantum.core.ns.JSObj(null,cljs.core.dissoc.call(null,G__19335),null));
 });
 
 
@@ -3248,17 +3248,17 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.Exception.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19341,else__18671__auto__){
+quantum.core.ns.Exception.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19342,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19343 = (((k19341 instanceof cljs.core.Keyword))?k19341.fqn:null);
-switch (G__19343) {
+var G__19344 = (((k19342 instanceof cljs.core.Keyword))?k19342.fqn:null);
+switch (G__19344) {
 case "msg":
 return self__.msg;
 
 break;
 default:
-return cljs.core.get.call(null,self__.__extmap,k19341,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19342,else__18671__auto__);
 
 }
 });
@@ -3337,15 +3337,15 @@ return (new quantum.core.ns.Exception(self__.msg,self__.__meta,cljs.core.not_emp
 }
 });
 
-quantum.core.ns.Exception.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19340){
+quantum.core.ns.Exception.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19341){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19344 = cljs.core.keyword_identical_QMARK_;
-var expr__19345 = k__18676__auto__;
-if(cljs.core.truth_(pred__19344.call(null,new cljs.core.Keyword(null,"msg","msg",-1386103444),expr__19345))){
-return (new quantum.core.ns.Exception(G__19340,self__.__meta,self__.__extmap,null));
+var pred__19345 = cljs.core.keyword_identical_QMARK_;
+var expr__19346 = k__18676__auto__;
+if(cljs.core.truth_(pred__19345.call(null,new cljs.core.Keyword(null,"msg","msg",-1386103444),expr__19346))){
+return (new quantum.core.ns.Exception(G__19341,self__.__meta,self__.__extmap,null));
 } else {
-return (new quantum.core.ns.Exception(self__.msg,self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19340),null));
+return (new quantum.core.ns.Exception(self__.msg,self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19341),null));
 }
 });
 
@@ -3355,10 +3355,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [(new cljs.core.PersistentVector(null,2,(5),cljs.core.PersistentVector.EMPTY_NODE,[new cljs.core.Keyword(null,"msg","msg",-1386103444),self__.msg],null))], null),self__.__extmap));
 });
 
-quantum.core.ns.Exception.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19340){
+quantum.core.ns.Exception.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19341){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.Exception(self__.msg,G__19340,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.Exception(self__.msg,G__19341,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.Exception.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -3389,8 +3389,8 @@ quantum.core.ns.__GT_Exception = (function quantum$core$ns$__GT_Exception(msg){
 return (new quantum.core.ns.Exception(msg,null,null,null));
 });
 
-quantum.core.ns.map__GT_Exception = (function quantum$core$ns$map__GT_Exception(G__19342){
-return (new quantum.core.ns.Exception(new cljs.core.Keyword(null,"msg","msg",-1386103444).cljs$core$IFn$_invoke$arity$1(G__19342),null,cljs.core.dissoc.call(null,G__19342,new cljs.core.Keyword(null,"msg","msg",-1386103444)),null));
+quantum.core.ns.map__GT_Exception = (function quantum$core$ns$map__GT_Exception(G__19343){
+return (new quantum.core.ns.Exception(new cljs.core.Keyword(null,"msg","msg",-1386103444).cljs$core$IFn$_invoke$arity$1(G__19343),null,cljs.core.dissoc.call(null,G__19343,new cljs.core.Keyword(null,"msg","msg",-1386103444)),null));
 });
 
 
@@ -3418,17 +3418,17 @@ var this__18668__auto____$1 = this;
 return cljs.core._lookup.call(null,this__18668__auto____$1,k__18669__auto__,null);
 });
 
-quantum.core.ns.IllegalArgumentException.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19349,else__18671__auto__){
+quantum.core.ns.IllegalArgumentException.prototype.cljs$core$ILookup$_lookup$arity$3 = (function (this__18670__auto__,k19350,else__18671__auto__){
 var self__ = this;
 var this__18670__auto____$1 = this;
-var G__19351 = (((k19349 instanceof cljs.core.Keyword))?k19349.fqn:null);
-switch (G__19351) {
+var G__19352 = (((k19350 instanceof cljs.core.Keyword))?k19350.fqn:null);
+switch (G__19352) {
 case "msg":
 return self__.msg;
 
 break;
 default:
-return cljs.core.get.call(null,self__.__extmap,k19349,else__18671__auto__);
+return cljs.core.get.call(null,self__.__extmap,k19350,else__18671__auto__);
 
 }
 });
@@ -3507,15 +3507,15 @@ return (new quantum.core.ns.IllegalArgumentException(self__.msg,self__.__meta,cl
 }
 });
 
-quantum.core.ns.IllegalArgumentException.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19348){
+quantum.core.ns.IllegalArgumentException.prototype.cljs$core$IAssociative$_assoc$arity$3 = (function (this__18675__auto__,k__18676__auto__,G__19349){
 var self__ = this;
 var this__18675__auto____$1 = this;
-var pred__19352 = cljs.core.keyword_identical_QMARK_;
-var expr__19353 = k__18676__auto__;
-if(cljs.core.truth_(pred__19352.call(null,new cljs.core.Keyword(null,"msg","msg",-1386103444),expr__19353))){
-return (new quantum.core.ns.IllegalArgumentException(G__19348,self__.__meta,self__.__extmap,null));
+var pred__19353 = cljs.core.keyword_identical_QMARK_;
+var expr__19354 = k__18676__auto__;
+if(cljs.core.truth_(pred__19353.call(null,new cljs.core.Keyword(null,"msg","msg",-1386103444),expr__19354))){
+return (new quantum.core.ns.IllegalArgumentException(G__19349,self__.__meta,self__.__extmap,null));
 } else {
-return (new quantum.core.ns.IllegalArgumentException(self__.msg,self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19348),null));
+return (new quantum.core.ns.IllegalArgumentException(self__.msg,self__.__meta,cljs.core.assoc.call(null,self__.__extmap,k__18676__auto__,G__19349),null));
 }
 });
 
@@ -3525,10 +3525,10 @@ var this__18680__auto____$1 = this;
 return cljs.core.seq.call(null,cljs.core.concat.call(null,new cljs.core.PersistentVector(null, 1, 5, cljs.core.PersistentVector.EMPTY_NODE, [(new cljs.core.PersistentVector(null,2,(5),cljs.core.PersistentVector.EMPTY_NODE,[new cljs.core.Keyword(null,"msg","msg",-1386103444),self__.msg],null))], null),self__.__extmap));
 });
 
-quantum.core.ns.IllegalArgumentException.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19348){
+quantum.core.ns.IllegalArgumentException.prototype.cljs$core$IWithMeta$_with_meta$arity$2 = (function (this__18667__auto__,G__19349){
 var self__ = this;
 var this__18667__auto____$1 = this;
-return (new quantum.core.ns.IllegalArgumentException(self__.msg,G__19348,self__.__extmap,self__.__hash));
+return (new quantum.core.ns.IllegalArgumentException(self__.msg,G__19349,self__.__extmap,self__.__hash));
 });
 
 quantum.core.ns.IllegalArgumentException.prototype.cljs$core$ICollection$_conj$arity$2 = (function (this__18673__auto__,entry__18674__auto__){
@@ -3559,9 +3559,9 @@ quantum.core.ns.__GT_IllegalArgumentException = (function quantum$core$ns$__GT_I
 return (new quantum.core.ns.IllegalArgumentException(msg,null,null,null));
 });
 
-quantum.core.ns.map__GT_IllegalArgumentException = (function quantum$core$ns$map__GT_IllegalArgumentException(G__19350){
-return (new quantum.core.ns.IllegalArgumentException(new cljs.core.Keyword(null,"msg","msg",-1386103444).cljs$core$IFn$_invoke$arity$1(G__19350),null,cljs.core.dissoc.call(null,G__19350,new cljs.core.Keyword(null,"msg","msg",-1386103444)),null));
+quantum.core.ns.map__GT_IllegalArgumentException = (function quantum$core$ns$map__GT_IllegalArgumentException(G__19351){
+return (new quantum.core.ns.IllegalArgumentException(new cljs.core.Keyword(null,"msg","msg",-1386103444).cljs$core$IFn$_invoke$arity$1(G__19351),null,cljs.core.dissoc.call(null,G__19351,new cljs.core.Keyword(null,"msg","msg",-1386103444)),null));
 });
 
 
-//# sourceMappingURL=ns.js.map?rel=1431625564051
+//# sourceMappingURL=ns.js.map?rel=1431986894194

@@ -6,18 +6,8 @@
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
-  (:require
-    [quantum.core.ns           :as ns   #?@(:clj [:refer [defalias alias-ns]])]
-    [quantum.core.function              #?@(:clj [:refer :all]               )]
-    [quantum.core.logic                 #?@(:clj [:refer :all]               )]
-    [quantum.core.type                  #?@(:clj [:refer :all]               )]
-    #?(:clj [clojure.pprint    :as pprint])
-    #?(:clj [fipp.edn          :as pr]))
-  #?(:clj (:gen-class)))
-
-#?(:clj
-(do
-(ns/require-all *ns* :clj)
+  (:require-quantum [ns fn logic])
+  (:require [fipp.edn :as pr]))
 
 ; "At least 5 times faster than clojure.pprint/pprint
 ;  Prints no later than having consumed the bound amount of memory,
@@ -32,7 +22,7 @@
     (let [ct (long
                (try
                  (count obj)
-                 (catch UnsupportedOperationException _ 1)))]
+                 (catch quantum.core.ns/AError _ 1)))] ; if you don't qualify it in JS it won't like it...
       (cond
         (> ct (long *max-length*))
           (println
@@ -40,20 +30,17 @@
                  (str ct " elements")
                  ").")
             "*max-length* is set at" (str *max-length* "."))
-        (contains? @*blacklist* (class obj))
+        (contains? @*blacklist* (type obj))
           (println
             "Object's class"
-            (str (class obj) "(" ")")
+            (str (type obj) "(" ")")
             "is blacklisted for printing.")
         :else
           (pr/pprint obj))))
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
-
-(defalias print-table pprint/print-table) 
-
-(def ^:dynamic *print-right-margin* pprint/*print-right-margin*)
+;(clojure.main/repl :print !) ; This causes a lot of strange problems... sorry...
 
 (def  suppress (partial (constantly nil)))
 
@@ -95,7 +82,7 @@
 
 (defn representative-coll
   "Gets the first element of every collection, until it returns empty.
-  
+
    Useful for printing out representative samples of large collections
    which would be undesirable to print in whole."
   {:attribution "Alex Gunnarson"}
@@ -116,13 +103,11 @@
                       ;             (->> source-n* first (apply hash-map)
                       ;                  constructor-fn)))
                       map?    (fn->> first (apply hash-map))
-                      vector? (fn->> first vector)
-                      lseq?   (fn->> first vector)) ; is this a good decision?
+                      vector? (fn->> first vector)) 
                   assoc-key-n+1
                     (condf ret-n+1-0
                       map?    (fn-> keys first)
-                      vector? (constantly 0)
-                      lseq?   (constantly 0))
+                      vector? (constantly 0))
                   assoc-keys-n+1
                     (conj assoc-keys assoc-key-n+1)
                   ret-n+1
@@ -132,14 +117,14 @@
                   source-n+1
                     (condf ret-n+1-0
                       map?    (-> vals first)
-                      vector? first
-                      lseq?   first)]
+                      vector? first)]
               (recur source-n+1
                      assoc-keys-n+1
                      ret-n+1))))))  
 
 (defn !* [obj] (-> obj representative-coll !))
 
+#?(:clj
 (defmacro pr-attrs
   "Prints the attributes of a given object/expression.
    These attributes include the object/expression that was evaluated
@@ -155,4 +140,4 @@
        (println "Class:"    (class ~obj))
        (println "Keys:"     (ifn   ~obj coll? keys+ (constantly nil)))
        (println "Repr. object: ") (-> ~obj quantum.core.print/representative-coll !)
-       (println)))))
+       (println))))

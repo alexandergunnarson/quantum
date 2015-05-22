@@ -4,9 +4,9 @@
           processes."
     :attribution "Alex Gunnarson"}
   quantum.google.drive.auth
+  (:require-quantum [:lib])
   (:require 
     [quantum.auth.core   :as auth           ]
-    [quantum.core.ns     :as ns  :refer :all]
     [quantum.web.core    :as web :refer
       [click! find-element write-page! default-capabilities]]
     [quantum.google.core :as goog])
@@ -18,10 +18,7 @@
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
-    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))
-  (:gen-class))
-
-(ns/require-all *ns* :clj :lib)
+    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)))
 
 (defn approve! [^WebDriver driver]
   (let [wait-for-btn-enabled! (Thread/sleep 1500) ; For some reason the button is disabled for a little bit

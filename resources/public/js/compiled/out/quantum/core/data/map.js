@@ -1,8 +1,12 @@
 // Compiled by ClojureScript 0.0-3269 {}
+._STAR_warn_on_reflection_STAR_ = false;
+._STAR_unchecked_math_STAR_ = false;
 goog.provide('quantum.core.data.map');
 goog.require('cljs.core');
 goog.require('clojure.data.avl');
 goog.require('quantum.core.ns');
+quantum.core.data.map._STAR_warn_on_reflection_STAR_ = true;
+quantum.core.data.map._STAR_unchecked_math_STAR_ = new cljs.core.Keyword(null,"warn-on-boxed","warn-on-boxed",506789950);
 /**
  * A performant replacement for creating 2-tuples (vectors), e.g., as return values
  * in a |kv-reduce| function.
@@ -19,26 +23,26 @@ return quantum.core.data.map.merge_PLUS_.cljs$core$IFn$_invoke$arity$variadic((a
 });
 
 quantum.core.data.map.merge_PLUS_.cljs$core$IFn$_invoke$arity$variadic = (function (map_0,maps){
-if((function (){var G__19360 = map_0;
-if(G__19360){
+if((function (){var G__19361 = map_0;
+if(G__19361){
 var bit__18747__auto__ = null;
 if(cljs.core.truth_((function (){var or__18073__auto__ = bit__18747__auto__;
 if(cljs.core.truth_(or__18073__auto__)){
 return or__18073__auto__;
 } else {
-return G__19360.quantum$core$ns$Editable$;
+return G__19361.quantum$core$ns$Editable$;
 }
 })())){
 return true;
 } else {
-if((!G__19360.cljs$lang$protocol_mask$partition$)){
-return cljs.core.native_satisfies_QMARK_.call(null,quantum.core.ns.Editable,G__19360);
+if((!G__19361.cljs$lang$protocol_mask$partition$)){
+return cljs.core.native_satisfies_QMARK_.call(null,quantum.core.ns.Editable,G__19361);
 } else {
 return false;
 }
 }
 } else {
-return cljs.core.native_satisfies_QMARK_.call(null,quantum.core.ns.Editable,G__19360);
+return cljs.core.native_satisfies_QMARK_.call(null,quantum.core.ns.Editable,G__19361);
 }
 })()){
 return cljs.core.persistent_BANG_.call(null,cljs.core.reduce.call(null,cljs.core.conj_BANG_,cljs.core.transient$.call(null,map_0),maps));
@@ -49,10 +53,10 @@ return cljs.core.apply.call(null,cljs.core.merge,map_0,maps);
 
 quantum.core.data.map.merge_PLUS_.cljs$lang$maxFixedArity = (1);
 
-quantum.core.data.map.merge_PLUS_.cljs$lang$applyTo = (function (seq19358){
-var G__19359 = cljs.core.first.call(null,seq19358);
-var seq19358__$1 = cljs.core.next.call(null,seq19358);
-return quantum.core.data.map.merge_PLUS_.cljs$core$IFn$_invoke$arity$variadic(G__19359,seq19358__$1);
+quantum.core.data.map.merge_PLUS_.cljs$lang$applyTo = (function (seq19359){
+var G__19360 = cljs.core.first.call(null,seq19359);
+var seq19359__$1 = cljs.core.next.call(null,seq19359);
+return quantum.core.data.map.merge_PLUS_.cljs$core$IFn$_invoke$arity$variadic(G__19360,seq19359__$1);
 });
 /**
  * Like `merge-with` but merges maps recursively, applying the given fn
@@ -79,14 +83,14 @@ return cljs.core.apply.call(null,f,maps__$1);
 var quantum$core$data$map$m = function (var_args){
 var maps__$1 = null;
 if (arguments.length > 0) {
-var G__19363__i = 0, G__19363__a = new Array(arguments.length -  0);
-while (G__19363__i < G__19363__a.length) {G__19363__a[G__19363__i] = arguments[G__19363__i + 0]; ++G__19363__i;}
-  maps__$1 = new cljs.core.IndexedSeq(G__19363__a,0);
+var G__19364__i = 0, G__19364__a = new Array(arguments.length -  0);
+while (G__19364__i < G__19364__a.length) {G__19364__a[G__19364__i] = arguments[G__19364__i + 0]; ++G__19364__i;}
+  maps__$1 = new cljs.core.IndexedSeq(G__19364__a,0);
 } 
 return quantum$core$data$map$m__delegate.call(this,maps__$1);};
 quantum$core$data$map$m.cljs$lang$maxFixedArity = 0;
-quantum$core$data$map$m.cljs$lang$applyTo = (function (arglist__19364){
-var maps__$1 = cljs.core.seq(arglist__19364);
+quantum$core$data$map$m.cljs$lang$applyTo = (function (arglist__19365){
+var maps__$1 = cljs.core.seq(arglist__19365);
 return quantum$core$data$map$m__delegate(maps__$1);
 });
 quantum$core$data$map$m.cljs$core$IFn$_invoke$arity$variadic = quantum$core$data$map$m__delegate;
@@ -97,14 +101,14 @@ return quantum$core$data$map$m;
 
 quantum.core.data.map.merge_deep_with.cljs$lang$maxFixedArity = (1);
 
-quantum.core.data.map.merge_deep_with.cljs$lang$applyTo = (function (seq19361){
-var G__19362 = cljs.core.first.call(null,seq19361);
-var seq19361__$1 = cljs.core.next.call(null,seq19361);
-return quantum.core.data.map.merge_deep_with.cljs$core$IFn$_invoke$arity$variadic(G__19362,seq19361__$1);
+quantum.core.data.map.merge_deep_with.cljs$lang$applyTo = (function (seq19362){
+var G__19363 = cljs.core.first.call(null,seq19362);
+var seq19362__$1 = cljs.core.next.call(null,seq19362);
+return quantum.core.data.map.merge_deep_with.cljs$core$IFn$_invoke$arity$variadic(G__19363,seq19362__$1);
 });
 quantum.core.data.map.merge_deep = cljs.core.partial.call(null,quantum.core.data.map.merge_deep_with,cljs.core.second);
 quantum.core.data.map.sorted_map_PLUS_ = clojure.data.avl.sorted_map;
 quantum.core.data.map.sorted_map_by_PLUS_ = clojure.data.avl.sorted_map_by;
 quantum.core.data.map.split_at = clojure.data.avl.split_at;
 
-//# sourceMappingURL=map.js.map?rel=1431625564519
+//# sourceMappingURL=map.js.map?rel=1431986895072

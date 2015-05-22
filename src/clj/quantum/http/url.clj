@@ -5,12 +5,9 @@
           better library."
     :attribution "Alex Gunnarson"}
   quantum.http.url
+  (:require-quantum [:lib])
   (:require
-    [quantum.core.ns  :as ns :refer :all]
-    [quantum.http.core :as http])
-  (:gen-class))
-
-(ns/require-all *ns* :lib :clj)
+    [quantum.http.core :as http]))
 
 (def url-percent-codes
   {:common
@@ -108,7 +105,7 @@
          (map+
            (fn [^String param]
              (->> param
-                  (<- split-remove+ "="))))
+                  (<- split-remove "="))))
          redm)))
   
 (defn embedded-url->map
@@ -121,7 +118,7 @@
   (let [^Vec [^String url ^String str-params]
           (->> url
                (decode :all)
-               (<- split-remove+ "?"))
+               (<- split-remove "?"))
         ^Map params
          (-> str-params (url-params->map true))]
     {:url          url

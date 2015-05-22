@@ -1,56 +1,9 @@
-#?(:clj
-(ns quantum.ui.component
-  (:refer-clojure :exclude
-    [for doseq contains? repeat repeatedly range merge count vec reduce into
-     first second rest last butlast get pop peek])))
-
-; (ns
-;   ^{:doc "Namespace for creating/defining UI components, especially
-;           with |defcomponent|."
-;     :attribution "Alex Gunnarson"}
-;   quantum.ui.component
-;   (:refer-clojure :exclude
-;     [for doseq contains? repeat repeatedly range merge count vec reduce into
-;      first second rest last butlast get pop peek])
-;   (:require
-;    [quantum.core.ns          :as ns                                        ]
-;    [quantum.core.data.map    :as map       :refer [map-entry]              ]
-;    [quantum.core.data.vector :as vec                                       ]
-;    [quantum.core.function    :as fn        :refer [f*n compr]              ]
-;    [quantum.core.logic       :as log       :refer
-;       [fn-not fn-and fn-or splice-or nnil?]]
-;    [quantum.core.numeric     :as num       :refer [neg]                    ]
-;    [quantum.core.type     :as type :refer
-;       [#?(:clj bigint?) #?(:cljs class) instance+? array-list? boolean? double? map-entry?
-;        sorted-map? queue? lseq? coll+? pattern? regex? editable?
-;        transient? #?(:clj should-transientize?) name-from-class #?(:clj arr-types)]
-;       #?@(:cljs [:refer-macros [should-transientize?]])]
-;    [quantum.core.string      :as str                                       ]
-;    [quantum.core.collections :as coll :refer
-;      [redv redm into reduce
-;       rest first
-;       lasti takeri+ taker-untili+
-;       split-remove+ ffilter remove+
-;       last-index-of index-of
-;       dropl+ dropr+ takel+
-;       getr interpose+ in?
-;       map+ filter+ lfilter lremove group-by+
-;       merge key+ val+
-;       merge-keep-left]]
-;    #?(:cljs [quantum.ui.css  :as css ])
-;    #?(:cljs [quantum.ui.form :as form]))
-;   #?(:clj (:gen-class)))  
-
 (ns
   ^{:doc "Namespace for creating/defining UI components, especially
           with |defcomponent|."
     :attribution "Alex Gunnarson"}
   quantum.ui.component
-  (:refer-clojure :exclude
-    [for doseq contains? repeat repeatedly range merge count vec reduce into
-     first second rest last butlast get pop peek])
-  
-  #?(:clj (:gen-class)))  
+  (:require-quantum [:lib]))  
 
 (def components (atom #{}))
 

@@ -1,16 +1,10 @@
-#?(:clj (ns quantum.core.data.hex))
-
 (ns
   ^{:doc "A hex string library."
     :attribution "Alex Gunnarson"}
   quantum.core.data.hex
-  (:require
-    [quantum.core.ns :as ns]
-    #?(:clj [clojure.string :as str]))
-  #?(:clj (:gen-class)))
-#?@(:clj
-     [(ns/require-all *ns* :clj)
-      (set! *unchecked-math* true)])
+  (:require-quantum [ns str]))
+
+#?(:clj (set! *unchecked-math* true))
 
 ; #?(:clj
 ;   (defn hex-string 
@@ -62,3 +56,14 @@
           (aset res i (byte (+ (bit-and 0xF0 (bit-shift-left (Character/getNumericValue (char (.charAt s (int (* 2 i))))) 4)) 
                                (bit-and 0x0F (long (Character/getNumericValue (.charAt s (int (+ (* 2 i) 1))))))))))
         res))))
+
+#?(:clj
+  (defn to-hex-string 
+    "Converts a byte array to a string representation , with space as a default separator."
+    {:attribution "mikera.cljutils.bytes"}
+    ([^"[B" bs]
+      (to-hex-string bs " "))
+    ([^"[B" bs separator]
+      (str/join separator (map #(hex-string-from-byte %) bs)))))
+
+#?(:clj (set! *unchecked-math* false))

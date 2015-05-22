@@ -3,7 +3,8 @@
 
           Not particularly useful."
     :attribution "Alex Gunnarson"}
-  quantum.core.network.core (:gen-class))
+  quantum.network.core
+  (:require-quantum [:lib]))
 
 ; clojure.java.browse/browse-url - how is that different?
 (defn launch-url

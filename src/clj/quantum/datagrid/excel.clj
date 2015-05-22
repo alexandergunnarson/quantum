@@ -1,6 +1,6 @@
-(ns quantum.datagrid.excel (:gen-class))
-(require '[quantum.core.ns :as ns])
-(ns/require-all *ns* :lib :clj)
+(ns quantum.datagrid.excel
+  (:require-quantum [:lib]))
+
 (require
   '[clojure.java.io :refer :all])
 (import
@@ -356,7 +356,7 @@
                 (iterate inc 1)
                 vals-n))))
        doall
-       (with-msg "Finished merging these rows!")))
+       (with-msg->> "Finished merging these rows!")))
 
 (defn build-sheet
   "Build sheet from seq of seq (representing cells in row of rows)."

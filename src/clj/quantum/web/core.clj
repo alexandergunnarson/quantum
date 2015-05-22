@@ -3,6 +3,8 @@
           for Selenium, especially PhantomJS."
     :attribution "Alex Gunnarson"}
   quantum.web.core
+  (:require-quantum [:lib])
+  (:require [quantum.auth.core :as auth])
   (:import
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
@@ -11,12 +13,7 @@
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
-    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))
-  (:gen-class))
-
-(require '[quantum.auth.core :as auth])
-(require '[quantum.core.ns   :as ns :refer :all])
-(ns/require-all *ns* :clj :lib)
+    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)))
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 

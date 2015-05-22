@@ -1,10 +1,7 @@
-(ns quantum.ui.fonts (:gen-class))
-
-(require '[garden.core :refer [css]])
-(require '[quantum.core.ns :as ns :refer :all])
-(ns/require-all *ns* :clj :lib)
-
-(import 'javafx.scene.text.Font)
+(ns quantum.ui.fonts
+  (:require-quantum [:lib])
+  (:require [garden.core :refer [css]])
+  (:import javafx.scene.text.Font))
 
 (defn load-font! [path-str]
   (-> (str "file://" (io/path (:resources io/dirs) "Fonts" path-str))

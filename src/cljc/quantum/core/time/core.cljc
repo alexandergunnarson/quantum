@@ -1,7 +1,3 @@
-#?(:clj
-(ns quantum.core.time.core
-  (:refer-clojure :exclude [extend second])))
-
 (ns
   ^{:doc "An alias of the clj-time.core namespace. Also includes
           useful functions such as |beg-of-day|, |end-of-day|,
@@ -9,20 +5,13 @@
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
   (:refer-clojure :exclude [extend second])
+  (:require-quantum [ns red])
   (:require
-    [quantum.core.ns :as ns #?@(:clj [:refer [alias-ns]])]
     #?(:clj  [clj-time.core  :as time]
        :cljs [cljs-time.core :as time])
     #?(:clj  [clj-time.periodic  :as periodic]
-       :cljs [cljs-time.periodic :as periodic])
-    [quantum.core.reducers :as red :refer
-      #?@(:clj  [[map+ reduce+ reducem+ filter+ remove+ take+ take-while+ taker+ dropr+
-                  count* fold+ range+ drop+ for+]]
-          :cljs [[map+ reduce+ reducem+ filter+ remove+ take+ take-while+
-                  fold+ range+ drop+]
-                 :refer-macros [for+]])])
-  #?(:clj (:import java.util.Date clojure.lang.Delay))
-  #?(:clj (:gen-class)))
+       :cljs [cljs-time.periodic :as periodic]))
+  #?(:clj (:import java.util.Date)))
 
 ; joda-time via clj-time
 #?(:clj (alias-ns 'clj-time.core))

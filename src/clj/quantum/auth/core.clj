@@ -4,10 +4,7 @@
           stored."
     :attribution "Alex Gunnarson"}
   quantum.auth.core
-  (:require [quantum.core.ns :as ns :refer :all])
-  (:gen-class))
-
-(ns/require-all *ns* :clj :lib)
+  (:require-quantum [:lib]))
 
 ; TODO: /assoc/ for file; /update/ for file; overarching syntax
 
