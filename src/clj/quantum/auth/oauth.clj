@@ -1,9 +1,6 @@
 (ns quantum.auth.oauth
-  (:require [quantum.auth.core :as auth])
-  (:gen-class))
-
-(require '[quantum.core.ns :as ns :refer :all])
-(ns/require-all *ns* :clj :lib)
+  (:require-quantum [:lib])
+  (:require [quantum.auth.core :as auth]))
 ;(require '[quantum.core.collections.core :refer [conjr]])
 
 (defn client-config

@@ -2,8 +2,7 @@
   ^{:doc "A simple JSON library which aliases cheshire.core."
     :attribution "Alex Gunnarson"}
   quantum.core.data.json
-  #?@(:clj [(:require [quantum.core.ns :as ns :refer [defalias alias-ns]])
-    	 	(:gen-class)]))
+  (:require-quantum [ns]))
 
 #?(:clj (alias-ns 'cheshire.core)) ; for now
 

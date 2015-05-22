@@ -1,29 +1,12 @@
-#?(:clj (ns quantum.core.data.vector))
-
 (ns
   ^{:doc "Vector operations. Includes relaxed radix-balanced vectors (RRB vectors)
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "Alex Gunnarson"}
   quantum.core.data.vector
+  (:require-quantum [ns type])
   (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.type       :as type :refer [instance+?]]
     [clojure.core.rrb-vector :as vec+]
-    #?(:cljs [clojure.core.rrb-vector.rrbt]))
-  #?@(:clj
-       [(:import
-          clojure.core.Vec
-          (clojure.core.rrb_vector.rrbt Vector)
-          (quantum.core.ns
-            Nil Bool Num ExactNum Int Decimal Key Set
-                   ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-        (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+    #?(:cljs [clojure.core.rrb-vector.rrbt])))
 
 ; slice
 (def catvec  vec+/catvec)

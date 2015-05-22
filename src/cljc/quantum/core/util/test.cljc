@@ -1,4 +1,3 @@
-
 (ns quantum.core.util.test
   (:refer-clojure :exclude [merge]))
 

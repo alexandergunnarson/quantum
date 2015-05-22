@@ -1,5 +1,3 @@
-#?(:clj (ns quantum.core.data.binary))
-
 (ns 
   ^{:doc "Useful binary operations."
     :attribution "Alex Gunnarson"}

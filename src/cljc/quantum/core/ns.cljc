@@ -6,8 +6,9 @@
     :attribution "Alex Gunnarson"}
   quantum.core.ns
   (:require
+    [clojure.set :as set]
     #?(:clj  [clojure.repl :as repl])
-           [clojure.core.rrb-vector]
+             [clojure.core.rrb-vector]
     #?(:cljs [cljs.core :refer [Keyword]])
     #?(:clj  [flatland.ordered.map]))
   #?(:clj (:import (clojure.lang Keyword Var Namespace)))
@@ -18,6 +19,8 @@
 #?@(:clj [(set! *unchecked-math*     :warn-on-boxed)
           (set! *warn-on-reflection* true)])
 
+(def ns-debug? (atom false))
+
 ; ============ VAR MANIPULATION, ETC. ============
 ; CLJS compatible
 #?(:clj
@@ -25,6 +28,9 @@
   "Like |reset!| but for vars."
   {:attribution "Alex Gunnarson"}
   [var-0 val-f]
+  ;(.bindRoot #'clojure.core/ns ns+)
+  ;(alter-meta! #'clojure.core/ns merge (meta #'ns+))
+
   `(alter-var-root (var ~var-0) (constantly ~val-f))))
 ; CLJS compatible
 #?(:clj (defmacro swap-var!
@@ -141,7 +147,7 @@
   ([name orig]
      `(do
         (let [orig-var# (var ~orig)]
-          (if #?(:clj (-> orig-var# .hasRoot) :cljs true)
+          (if true ; Can't have different clj-cljs things within macro...  ;#?(:clj (-> orig-var# .hasRoot) :cljs true)
               (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
                   ; for some reason, the :macro metadata doesn't really register unless you do it manually 
                   (when (-> orig-var# meta :macro true?)
@@ -229,10 +235,21 @@
  `(->> (all-ns)
        (map ns-publics)
        (filter
-         (fn->> keys
+         (fn [obj#]
+           (->> obj#
+                keys
                 (map name)
                 (apply str)
-                (re-find (re-pattern (str '~var0))))))))
+                (re-find (re-pattern (str '~var0)))))))))
+
+#?(:clj
+(defmacro mfn
+  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
+   Originally named |functionize| by mikera."
+  {:attribution "mikera, http://stackoverflow.com/questions/9273333/in-clojure-how-to-apply-a-macro-to-a-list/9273560#9273560"}
+  [macro]
+  `(fn [& args#]
+     (clojure.core/eval (cons '~macro args#)))))
 
 ; ============ CLASS ALIASES ============
 
@@ -291,196 +308,62 @@
 ; ============ NAMESPACE-REQUIRE CONVENIENCE FUNCTIONS ============
 
 #?(:clj
-  (defn ns-exclude [^Namespace curr-ns & syms]
-    (binding [*ns* curr-ns]
-      (doseq [sym syms]
-        (ns-unmap (ns-name curr-ns) sym)))))
+(defmacro ns-exclude [& syms]
+  `(doseq [sym# '~syms]
+     (ns-unmap *ns* sym#))))
 
 #?(:clj
-  (defn require-clj [^Namespace curr-ns]
-    (binding [*ns* curr-ns]
-      (do
-        (set! *warn-on-reflection* true)
-        (set! *unchecked-math*     :warn-on-boxed) 
-        (require
-                '[clojure.core.rrb-vector]
-                '[flatland.ordered.map])
-        (import
-          '(quantum.core.ns
-             Map Set Queue 
-             LSeq
-             Key
-             Fn
-             Num Int Decimal ExactNum
-             Bool
-             Nil))
-        (import
-          '(clojure.lang
-              Namespace
-              Keyword
-              Symbol
-              Delay
-              Atom Var
-              AFunction
-              PersistentList
-              APersistentVector PersistentVector
-              MapEntry
-              APersistentMap    PersistentArrayMap PersistentHashMap
-              APersistentSet
-              PersistentQueue
-              LazySeq
-              Ratio)
-          'java.util.regex.Pattern
-          '(java.util ArrayList)
-          'org.joda.time.DateTime
-          'clojure.core.Vec
-          '(java.math BigDecimal)
-          'clojure.core.rrb_vector.rrbt.Vector
-          'flatland.ordered.map.OrderedMap)))))
-
-#?(:clj ; for now
-  (defn require-lib [^Namespace curr-ns]
-    (binding [*ns* curr-ns]
-      (ns-exclude curr-ns
-        'contains?
-        'for
-        'doseq
-        'reduce
-        'repeat
-        'repeatedly
-        'range
-        'merge
-        'count
-        'vec
-        'into
-        'first
-        'second
-        'rest
-        'last
-        'butlast
-        'get
-        'pop
-        'peek
-        'source)
-      (require
-        '[quantum.core.collections  :as coll        :refer :all                   ]
-        '[quantum.core.cryptography :as crypto]
-        '[quantum.core.function     :as fn          :refer :all                   ]
-        '[quantum.core.io.core      :as io          :refer [path]                 ]
-        '[quantum.core.java         :as java                                      ]
-        '[quantum.core.log          :as log                                       ]
-        '[quantum.core.logic        :as logic       :refer :all                   ]
-        '[quantum.core.macros       :as macros      :refer :all                   ]
-        '[quantum.core.ns           :as ns          :refer [defalias source defs] ]
-        '[quantum.core.numeric      :as num                                       ]
-        '[quantum.core.print        :as pr          :refer [! pprint pr-attrs !* ]]
-        '[quantum.core.string       :as str                                       ]
-        '[quantum.core.system       :as sys                                       ]
-        '[quantum.core.thread       :as thread                                    ]  
-        '[quantum.core.type         :as type        :refer :all                   ]
-        '[quantum.core.data.array   :as arr         :refer :all                   ]
-        '[quantum.core.data.binary  :as bin         :refer :all                   ]
-        '[quantum.core.data.ftree   :as ftree                                     ]
-        '[quantum.core.data.map     :as map         :refer :all                   :exclude [merge+ split-at]]
-        '[quantum.core.data.queue   :as q                                         ]
-        '[quantum.core.data.set     :as set         :refer [sorted-set+]          ]
-        '[quantum.core.data.vector  :as vec         :refer [catvec]         ]
-        '[quantum.core.data.xml     :as xml                                       ]
-        '[quantum.core.time.core    :as time                                      ]
-        '[quantum.core.time.coerce  :as time-coerce                               ]
-        '[quantum.core.time.format  :as time-form                                 ]
-        '[quantum.core.time.local   :as time-loc                                  ]
-        '[quantum.core.util.bench   :as bench       :refer [bench]                ]
-        '[quantum.core.util.debug   :as debug       :refer [? break]              ]
-        '[quantum.core.util.sh      :as sh                                        ]
-        '[quantum.core.data.queue   :as q           :refer [queue]                ]
-        '[quantum.core.thread                       :refer :all                   ]
-        '[quantum.core.error        :as err         :refer :all                   ]
-        '[clojure.core.async        :as async       :refer [go <! >! alts!]       ]))))
+(defn require-java-fx [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require '[quantum.ui.init])
+    (import
+       '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
+                               FadeTransition TranslateTransition RotateTransition ScaleTransition
+                               PathTransition PathTransition$OrientationType)
+       '(javafx.collections    ObservableList FXCollections)
+       '(javafx.event          ActionEvent EventHandler EventType)
+       '(javafx.geometry       Insets Pos)
+       '(javafx.scene          Group Scene Node)
+       '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
+       '(javafx.scene.image    Image)
+       '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
+       '(javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
+       '(javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
+       '(javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
+       '(javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
+       '(java.util             ArrayList List)
+       '(javafx.util           Duration Callback)
+       '(javafx.beans.property SimpleDoubleProperty)
+       '(javafx.beans.value    ChangeListener ObservableValue)
+       '(javafx.scene.control
+          ComboBox ContentDisplay Labeled TableColumn TableRow
+          TableCell ListCell TextArea TextField ContentDisplay
+          TableView TableView$TableViewSelectionModel)))))
 
 #?(:clj
-  (defn require-java-fx [^Namespace curr-ns]
-    (binding [*ns* curr-ns]
-      (require '[quantum.ui.init])
-      (import
-         '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
-                                 FadeTransition TranslateTransition RotateTransition ScaleTransition
-                                 PathTransition PathTransition$OrientationType)
-         '(javafx.collections    ObservableList FXCollections)
-         '(javafx.event          ActionEvent EventHandler EventType)
-         '(javafx.geometry       Insets Pos)
-         '(javafx.scene          Group Scene Node)
-         '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
-         '(javafx.scene.image    Image)
-         '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
-         '(javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
-         '(javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
-         '(javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
-         '(javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
-         '(java.util             ArrayList List)
-         '(javafx.util           Duration Callback)
-         '(javafx.beans.property SimpleDoubleProperty)
-         '(javafx.beans.value    ChangeListener ObservableValue)
-         '(javafx.scene.control
-            ComboBox ContentDisplay Labeled TableColumn TableRow
-            TableCell ListCell TextArea TextField ContentDisplay
-            TableView TableView$TableViewSelectionModel)))))
+(defn require-fx-core [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require-java-fx curr-ns)
+    (require
+      '[quantum.ui.jfx :as fx :refer
+         [fx do-fx
+          set-listener! swap-content!
+          fx-node? fx-obj?]]))))
 
 #?(:clj
-  (defn require-fx-core [^Namespace curr-ns]
-    (binding [*ns* curr-ns]
-      (require-java-fx curr-ns)
-      (require
-        '[quantum.ui.jfx :as fx :refer
-           [fx do-fx
-            set-listener! swap-content!
-            fx-node? fx-obj?]]))))
-
-#?(:clj
-  (defn require-fx
-    {:todo ["This is very outdated. Consider deprecating"]}
-    [^Namespace curr-ns]
-    (binding [*ns* curr-ns]
-      (require-fx-core curr-ns)
-      (require
-        '[quantum.ui.custom-objs :as objs :refer
-           [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
-            jconj! jdissoc! jupdate!
-            arrange-on! center-on! jconj-all!
-            setx! sety!
-            getx gety get-size get-pos
-            place-at! nudge!]]))))
-
-#?(:clj ; for now
-  (defn require-all
-    "Loads/|import|s/|require|s all the namespaces and functions associated with a given
-     library key @lib-key into the current namespace @curr-ns."
-    {:attribution "Alex Gunnarson"
-     :usage '(require-all *ns* :lib :grid :fx)}
-    ([curr-ns ^Keyword lib-key]
-      (binding [*ns* curr-ns]
-        (case lib-key
-          :clj
-            (require-clj curr-ns)
-          :lib
-            (require-lib curr-ns)
-          :grid
-          (require 
-            '[quantum.datagrid.core       :as grid]
-            '[quantum.datagrid.excel      :as xl  ])
-          :java-fx
-            (require-java-fx curr-ns)
-          :fx-core
-            (require-fx-core curr-ns)
-          :fx
-            (require-fx curr-ns)
-          nil)))
-    ([curr-ns lib-key-0 & lib-keys-0]
-      ; Because :clj has to be required first out of them
-      (let [lib-keys (into #{} (conj lib-keys-0 lib-key-0))]
-        (require-all curr-ns :clj)
-        (doseq [lib-key (disj lib-keys :clj)]
-          (require-all curr-ns lib-key))))))
+(defn require-fx
+  {:todo ["This is very outdated. Consider deprecating"]}
+  [^Namespace curr-ns]
+  (binding [*ns* curr-ns]
+    (require-fx-core curr-ns)
+    (require
+      '[quantum.ui.custom-objs :as objs :refer
+         [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
+          jconj! jdissoc! jupdate!
+          arrange-on! center-on! jconj-all!
+          setx! sety!
+          getx gety get-size get-pos
+          place-at! nudge!]]))))
 
 #?(:clj
   (defn nss
@@ -498,7 +381,6 @@
       (defs-private
         'curr-ns      curr-ns
         '*exp         'quantum.ui.experimental
-        '*ui          'clj-qb.ui.core
         '*coll        'quantum.core.collections    
         '*func        'quantum.core.function       
         '*io          'quantum.core.io.core        
@@ -526,7 +408,7 @@
         '*time        'quantum.core.time.core      
         '*time-coerce 'quantum.core.time.coerce    
         '*time-form   'quantum.core.time.format    
-        '*time-locala 'quantum.core.time.local           
+        '*time-local  'quantum.core.time.local           
         '*grid        'quantum.datagrid.core 
         '*xl          'quantum.datagrid.excel))))
 
@@ -536,4 +418,362 @@
   [(defalias source   repl/source)   
    (defalias find-doc repl/find-doc)
    (defalias doc      repl/doc)])
+
+(defn set-merge [& colls]
+  (->> colls (apply concat) (into #{})))
+
+(defn get-ns-syms [ns-defs-f k ns-syms]
+  (->> ns-syms
+       (map
+         (fn [ns-sym]
+           (or (get-in ns-defs-f [ns-sym k])
+
+               #_(when (= k :refers)
+                 (or (get ns-defs-f ns-sym)
+                     (throw (Exception. (str "Quantum namespace alias does not exist: " ns-sym)))))
+               )))
+       (remove empty?)
+       (#(cond
+           (= k :core-exclusions)
+             (apply set-merge %)
+           (= k :imports)
+             (apply set-merge %)
+           (= k :requires)
+             (apply merge-with set-merge %)
+           :else
+             (apply merge-with merge %)))))
+
+(def ns-defs
+  (let [ns-defs-0
+        '{; LIB
+          async 
+            {:aliases       {:clj  {async  clojure.core.async}
+                             :cljs {async  cljs.core.async}}
+             :macro-aliases {:cljs {asyncm cljs.core.async.macros}}
+             :refers        {:cljc {async  #{<! >! alts! close! chan}}
+                             :clj  {async  #{go go-loop >!! <!! thread}}
+                             :cljs {asyncm #{go go-loop}}}}
+          coll
+           {:aliases
+               {:cljc {coll quantum.core.collections}}
+             :core-exclusions
+              #{contains? for doseq subseq reduce repeat repeatedly
+                range merge count vec into first second rest
+                last butlast get pop peek empty take take-while} 
+             :refers
+               {:cljc
+                 {coll #{for doseq reduce reduce- reducei reducei-
+                         count lasti
+                         subseq getr gets
+                         repeat repeatedly
+                         range range+
+                         merge merge-keep-left
+                         vec
+                         get first second rest
+                         last butlast
+                         pop popl popr peek
+                         empty
+                         conjl conjr
+                         index-of last-index-of
+                         take ltake take-while ltake-while
+                         take-until take-until-inc
+                         take-from take-after
+                         taker-untili taker-until
+                         dropl dropr dropr-until dropr-after
+                         into redv redm fold foldm
+                         map+
+                         ffilter filter+ remove+
+                         dissoc-in+ assocs-in+ update-in+
+                         split-remove
+                         kmap
+                         contains? in?}}}}
+          ccore  {:aliases {:cljc {ccore  quantum.core.collections.core}}}
+          crypto {:aliases {:cljc {crypto quantum.core.cryptography    }}}
+          err
+            {:aliases   {:cljc {err quantum.core.error}}
+             :refers    {:cljc {err #{throw+ try+ with-throw}}
+                         :cljs {err #{Err}}}
+             :imports   (quantum.core.error.Err)}
+          io 
+            {:aliases {:cljc {io quantum.core.io.core}}
+             :imports 
+              ((java.io File
+                        FileNotFoundException IOException
+                        FileReader PushbackReader
+                        DataInputStream DataOutputStream 
+                        OutputStream FileOutputStream
+                        BufferedOutputStream BufferedInputStream
+                        InputStream  FileInputStream
+                        PrintWriter))}
+          java    {:aliases {:cljc {java quantum.core.java}}}
+          num     {:aliases {:cljc {num  quantum.core.numeric}}
+                   :refers  {:cljc {num #{nneg? int+ long+ greatest least}}}}
+          ns
+            {:requires {:cljc #{clojure.core.rrb-vector}
+                        :clj  #{flatland.ordered.map   }}
+             :aliases  {:cljc {ns   quantum.core.ns  
+                               test quantum.core.test}
+                        :clj  {core clojure.core}
+                        :cljs {core cljs.core}}
+             :refers   {:cljc
+                         {ns   #{defalias defmalias source def- swap-var! reset-var! ns-exclude
+                                 ANil ABool ADouble ANum AExactNum AInt ADecimal AKey AVec ASet
+                                 AArrList ATreeMap ALSeq ARegex AEditable ATransient AQueue AMap AError}
+                          test #{qtest}}
+                        :clj {ns #{alias-ns defs}}
+                        :cljs
+                         {ns #{Exception IllegalArgumentException
+                               Nil Bool Num ExactNum Int Decimal Key Vec Set
+                               ArrList TreeMap LSeq Regex Editable Transient Queue Map}}}
+            :injection
+              {:clj #(do (set! *warn-on-reflection* true)
+                         (set! *unchecked-math* :warn-on-boxed)
+                         (gen-class)
+                         nil)}
+            :imports
+              ((quantum.core.ns
+                  Nil Bool Num ExactNum Int Decimal Key Map Set Queue Fn
+                  ArrList TreeMap LSeq Regex Editable Transient)
+                (clojure.lang
+                  Namespace Symbol
+                  Keyword
+                  Delay
+                  Atom Var
+                  AFunction
+                  PersistentList
+                  APersistentVector PersistentVector
+                  MapEntry
+                  APersistentMap    PersistentArrayMap PersistentHashMap
+                  APersistentSet
+                  PersistentQueue
+                  LazySeq
+                  Ratio)
+                java.util.regex.Pattern
+                (java.util ArrayList)
+                org.joda.time.DateTime
+                clojure.core.Vec
+                (java.math BigDecimal)
+                clojure.core.rrb_vector.rrbt.Vector
+                flatland.ordered.map.OrderedMap)}
+          pr      {:aliases {:cljc {pr     quantum.core.print      }} :refers {:clj {pr     #{! pprint pr-attrs !*}}}}
+          str     {:aliases {:cljc {str    quantum.core.string     }}}    
+          sys     {:aliases {:cljc {sys    quantum.core.system     }}}    
+          thread  {:aliases {:cljc {thread quantum.core.thread     }} :refers {:clj {thread #{thread+             }}}}
+          ; DATA
+          arr     {:aliases {:cljc {arr    quantum.core.data.array }} :refers {:clj  {arr    #{byte-array+ aset!   }}}}
+          bin     {:aliases {:cljc {bin    quantum.core.data.binary}} :refers {:cljc {bin    #{>>>                 }}}}
+          bytes   {:aliases {:cljc {bytes  quantum.core.data.bytes }}}
+          ftree   {:aliases {:cljc {ftree  quantum.core.data.ftree }}}
+          hex     {:aliases {:cljc {hex    quantum.core.data.hex   }}}
+          json    {:aliases {:cljc {json   quantum.core.data.json  }}} 
+          map
+            {:aliases {:cljc {map quantum.core.data.map}}
+             :refers  {:cljc {map #{map-entry merge+ sorted-map+}}
+                       :clj  {map #{ordered-map}}}}
+          queue 
+            {:aliases {:cljc {q   quantum.core.data.queue}}
+             :refers  {:cljc {q   #{queue}}}}
+          set
+            {:aliases {:cljc {set quantum.core.data.set}}
+             :refers  {:cljc {set #{sorted-set+}}
+                       :clj  {set #{ordered-set}}}}
+          vec
+            {:aliases {:cljc {vec quantum.core.data.vector}}
+             :refers  {:cljc {vec #{catvec subvec+ vector+? vector+}}}}
+          xml         {:aliases {:cljc {xml         quantum.core.data.xml   }}}
+          ; TIME
+          time        {:aliases {:cljc {time        quantum.core.time.core  }}}
+          time-coerce {:aliases {:cljc {time-coerce quantum.core.time.coerce}}}
+          time-format {:aliases {:cljc {time-form   quantum.core.time.format}}}
+          time-local  {:aliases {:cljc {time-loc    quantum.core.time.local }}}
+          ; UTIL
+          bench       {:aliases {:cljc {bench       quantum.core.util.bench }} :refers {:clj {bench #{bench}}}}
+          debug       {:aliases {:cljc {debug       quantum.core.util.debug }} :refers {:clj {debug #{? break trace}}}}
+          sh          {:aliases {:cljc {sh          quantum.core.util.sh    }}}
+          ; EXT
+          http        {:aliases {:cljc {http        quantum.http.core       }}}
+          
+         fn
+           {:aliases         {:cljc {fn    quantum.core.function}}
+            :refers          {:cljc {fn    #{compr *fn f*n unary zeroid monoid firsta call
+                                             with->> withf withf->> with-pr->> with-msg->> withfs
+                                             with-do rfn defcurried fn->> fn-> <- }}
+                              :clj  {fn    #{jfn}}}}
+         logic
+           {:aliases         {:cljc {logic quantum.core.logic}}
+            :refers          {:cljc {logic #{splice-or coll-or fn-and fn-or fn-not nnil? nempty? eq? fn= fn-eq? any?
+                                             ifn if*n whenf whenc whenf*n whencf*n condf condfc condf*n condpc}}}}
+         log {:aliases {:cljc {log quantum.core.log}}}
+         loops
+           {:core-exclusions #{for doseq reduce}
+            :aliases         {:cljc {loops quantum.core.loops}}
+            :refers          {:cljc {loops #{for doseq doseqi reduce reduce- reducei reducei-}}}}
+         macros
+           {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
+            :aliases         {:cljc {macros quantum.core.macros}}
+            :refers          {:cljc {macros #{defn+ assert-args compile-if emit-comprehension do-mod}}}}
+         red 
+           {:aliases         {:cljc {red quantum.core.reducers}}
+            :refers          {:cljc {red #{map+ reduce+ filter+ remove+ take+ take-while+ drop+ fold+ range+ for+}}
+                              :clj  {red #{taker+ dropr+ count*}}}}
+         type
+           {;:exclusions
+            ; [seq? vector? set? map? string? associative? keyword? nil? list? coll? char?]
+            :aliases         {:cljc {type quantum.core.type}}
+            :refers          {:cljc {type #{instance+? array-list? boolean? double? map-entry? listy?
+                                            sorted-map? queue? lseq? pattern? regex? editable? transient?
+                                            defnt should-transientize?}}
+                              :clj  {type #{bigint? file? byte-array? name-from-class}}
+                              :cljs {type #{class}}}}}
+       lib-exclusions (set/union '#{red loops ccore} '#{http}) ; Because contained in coll
+       lib-keys (->> ns-defs-0 keys (remove (partial contains? lib-exclusions)))
+       lib
+         {:core-exclusions (->> lib-keys (get-ns-syms ns-defs-0 :core-exclusions) (into #{}))
+          :requires        (->> lib-keys (get-ns-syms ns-defs-0 :requires       ))
+          :refers          (->> lib-keys (get-ns-syms ns-defs-0 :refers         ))
+          :aliases         (->> lib-keys (get-ns-syms ns-defs-0 :aliases        ))
+          :imports         (->> lib-keys (get-ns-syms ns-defs-0 :imports        ))}]
+    (-> ns-defs-0 (assoc :lib lib))))
+
+(defn js-println [& args]
+  (print "\n/* " )
+  (apply println args)
+  (println "*/"))
+
+(def all-macros-in-lib
+ '{quantum.core.log #{pr ppr}
+   quantum.core.logic #{whenf*n condfc ifn whencf*n whenc if*n condf*n condpc whenf condf},
+   quantum.core.test #{qtest},
+   quantum.core.function #{defcurried with-do <- fn-> rfn fn->>},
+   quantum.core.macros #{defn+ compile-if assert-args},
+   quantum.core.ns #{def- defalias reset-var! ns-exclude swap-var! source defmalias},
+   quantum.core.error #{try+ with-throw throw+},
+   quantum.core.collections #{reduce doseq repeatedly kmap reducei for reduce- reducei-},
+   quantum.core.type #{defnt should-transientize?}
+   cljs.core.async.macros #{go go-loop}})
+
+#?(:clj
+(defn require-quantum* [lang ns-syms & [debug? determine-macros?]]
+  (let [_ (when debug? (js-println "Parsing ns-syms" ns-syms))
+        allowed? (fn [[k v]] (contains? #{:cljc lang} k))
+        core-exclusions
+          (->> ns-syms (get-ns-syms ns-defs :core-exclusions)
+               (into [])
+               (conj [:exclude]))
+        core-require-statement
+          (->> core-exclusions
+               (#(if (empty? %)
+                     []
+                     (->> % (into []) (conj [:exclude])))))
+        get-initial
+          (fn [k]
+            (->> ns-syms
+                 (get-ns-syms ns-defs k)
+                 (filter allowed?)
+                 vals))
+        simple-require-statements
+          (->> (get-initial :requires)
+               (apply set-merge)
+               (map vector))
+        _ (when debug? (js-println "simple-require-statements" simple-require-statements))
+        aliases       (->> (get-initial :aliases      )   (apply merge-with merge))
+        alias-require-statements       (->> aliases       (map (fn [[k v]] [v :as k])))
+        macro-aliases (->> (get-initial :macro-aliases)   (apply merge-with merge))
+        macro-alias-require-statements (->> macro-aliases (map (fn [[k v]] [v :as k])))
+        complex-require-statements
+          (->> (get-initial :refers)
+               (#(do (when debug? (js-println "INITIAL REFERS" %)) %))
+               (apply merge-with set-merge)
+               (map
+                 (fn [[alias-n refers]]
+                   (let [ns-sym (or (get aliases       alias-n)
+                                    (get macro-aliases alias-n)
+                                    (throw (Exception. (str "Namespace alias not found: " alias-n))))
+                         refer-template [ns-sym :as alias-n :refer]]
+                     (condp = lang
+                       :clj  {:refer (conj refer-template (into [] refers))}
+                       :cljs
+                         (let [macro?
+                                 (fn [sym]
+                                   (if determine-macros?
+                                       (let [macro-var
+                                               (or (try (ns-resolve (the-ns ns-sym) sym)
+                                                     (catch Exception _ nil)) ; No namespace found
+                                                   (when debug?
+                                                     (js-println (str "Tried to determine whether symbol " sym
+                                                                   " was a macro but could not find in ns " ns-sym "."
+                                                                   " Assuming not a macro."))))
+                                             macro-based-on-meta?
+                                               (when macro-var (-> macro-var meta :macro))]
+                                         (when debug? (println sym "is a macro?" macro-based-on-meta?))
+                                         macro-based-on-meta?)
+                                      (get-in all-macros-in-lib [ns-sym sym])))
+                               macros (->> refers
+                                           (filter macro?)
+                                           (into #{}))
+                               non-macros (set/difference refers macros)]
+                           {:refer        (when-not (empty? non-macros)
+                                            (conj refer-template (into [] non-macros)))
+                            :refer-macros (when-not (empty? macros)
+                                            (conj refer-template (into [] macros)))})))))
+               (apply merge-with
+                 (fn [a b] (->> (if (vector? a) (list a) a) (cons b)))))
+        require-statements-f
+          (into (:refer complex-require-statements)
+            (into alias-require-statements
+               simple-require-statements))
+        final-statements
+          {:require        (->> require-statements-f (remove empty?))
+           :require-macros (->> complex-require-statements
+                                :refer-macros
+                                (remove empty?))
+           :refer-clojure  core-exclusions}
+        _ (when debug?
+            (println "/*")
+            (clojure.pprint/pprint final-statements)
+            (println "*/"))] ; do it no matter what
+  
+  ; Injections
+  (->> (for [ns-sym ns-syms]
+         (get-in ns-defs [ns-sym :injection lang]))
+       (remove nil?)
+       (map (fn [f] ((eval f))))
+       doall)
+
+  (condp = lang
+    :clj
+      (do ; Can't use a macro in the same namespace... hmm  
+        (apply (mfn quantum.core.ns/ns-exclude)
+            (second core-exclusions))
+          (apply require          require-statements-f)
+          (apply (mfn import)     (get-ns-syms ns-defs :imports ns-syms)))
+    :cljs final-statements))))
+
+#?(:clj
+(defn find-macros
+  "Returns a map of the namespaces with their macros."
+  {:usage '(find-macros '[:lib])}
+  [ns-syms]
+  (->> (require-quantum* :cljs ns-syms true true)
+       (map
+         (fn [[s & r]]
+           [s (->> r (apply hash-map) :refer-macros (into #{}))]))
+       (remove (fn [[s macros]] (empty? macros)))
+       (apply merge {}))))
+
+#?(:clj
+(defn require-quantum-cljs [ns-syms]
+  ; Double backslash because it's printing to each .js file too 
+  (js-println "TRANSFORMING CLJS REQUIRE-QUANTUM STATEMENT:" ns-syms)
+  (when (empty? ns-syms)
+    (throw (Exception. "|require-quantum| body cannot be empty.")))
+  (require-quantum* :cljs ns-syms @quantum.core.ns/ns-debug?)))
+
+; EXTEND CLOJURE.CORE'S |NS|
+
+#?(:clj
+(do
+  (in-ns 'clojure.core)
+  (def require-quantum #(quantum.core.ns/require-quantum* :clj % @quantum.core.ns/ns-debug?))
+  (in-ns 'quantum.core.ns)))
 

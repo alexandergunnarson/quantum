@@ -5,8 +5,4 @@
     :attribution  "zilti/clojurefx"
     :contributors #{"Alex Gunnarson"}}
   quantum.ui.core
-  (:gen-class))
-
-(require '[quantum.core.ns :as ns])
-(ns/require-all *ns* :lib :clj :java-fx)
-(ns/nss *ns*)
+  (:require-quantum [:lib]))

@@ -2,29 +2,7 @@
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.numeric
-  (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.logic :as log :refer
-      #?@(:clj  [[splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n condf condf*n]]
-          :cljs [[splice-or fn-and fn-or fn-not]
-                 :refer-macros
-                 [ifn if*n whenc whenf whenf*n whencf*n condf condf*n]])]
-    [quantum.core.type     :as type :refer
-      [#?(:clj bigint?) instance+? array-list? boolean? double? map-entry? sorted-map?
-       queue? lseq? coll+? pattern? regex? editable? transient?]])
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+  (:require-quantum [ns logic type fn macros]))
 
 ; https://github.com/clojure/math.numeric-tower/
 (defn sign [n]  (if (neg? n) -1 1))
@@ -34,6 +12,13 @@
 (def  neg       (partial * -1))
 (def  abs       (whenf*n neg? neg))
 (def  int-nil   (whenf*n nil? (constantly 0)))
+
+(defn exp
+  {:todo "Performance"}
+  [x n]
+  (loop [acc 1 n n]
+    (if (zero? n) acc
+        (recur (*' x acc) (unchecked-dec n)))))
 
 #?(:clj
   (defn rationalize+ [n]
@@ -155,47 +140,21 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       TYPE-CASTING       }=====================================================
 ;=================================================={                          }=====================================================
-; from thebusby.bagotricks
-(defprotocol ToInt 
-  (int+ [i] "A simple function to coerce numbers, and strings, etc; to an int.
-   Note: nil input returns nil."))
-(extend-protocol ToInt
-  #?(:clj  java.lang.Integer
-     :cljs number)
-    (int+ [i] i)
-  #?@(:clj [java.lang.Long
-            (int+ [i] (int i))
-            java.lang.Double
-            (int+ [i] (int i))
-            java.lang.Float
-            (int+ [i] (int i))])
-  nil
-  (int+ [_] nil)
-  #?(:clj  java.lang.String
-     :cljs string)
-  (int+ [i]
-    #?(:clj  (Integer/parseInt i)
-       :cljs (js/parseInt      i))))
+(defnt int+
+  int?    ([n] n      )
+  long?   ([n] (int n))
+  double? ([n] (int n))
+  float?  ([n] (int n))
+  nil?    ([n] nil    )
+  string? (([s] #?(:clj  (Integer/parseInt s)
+                   :cljs (-> s js/parseInt int)))
+           #?(:clj ([s radix] (Integer/parseInt s radix)))))
 
-; from thebusby.bagotricks
-(defprotocol ToLong  
-  (long+ [i] "A simple function to coerce numbers, and strings, etc; to a long.
-   Note: nil input returns nil."))
-
-(extend-protocol ToLong
-  #?(:clj  java.lang.Integer
-     :cljs number)
-    (long+ [l] (long l))
-  #?@(:clj [java.lang.Long
-            (long+ [l] l)
-            java.lang.Double
-            (long+ [l] (long l))
-            java.lang.Float
-            (long+ [l] (long l))])
-  nil
-  (long+ [_] nil)
-  #?(:clj  java.lang.String
-     :cljs string)
-  (long+ [l]
-    #?(:clj  (Long/parseLong l)
-       :cljs (-> l js/parseInt long))))
+(defnt long+
+  long?   ([n] n       )
+  double? ([n] (long n))
+  float?  ([n] (long n))
+  nil?    ([n] nil     )
+  string? (([s] #?(:clj  (Long/parseLong s)
+                   :cljs (-> s js/parseInt long)))
+           #?(:clj ([s radix] (Long/parseLong s radix)))))

@@ -5,168 +5,99 @@
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
   #?(:clj (:refer-clojure :exclude
-    [vector hash-map rest count first second butlast last get pop peek]))
-  (:require
-    [clojure.core :as core]
-    [quantum.core.error
-      #?@(:clj [:refer [try+ throw+]])]
-    [quantum.core.function :as fn :refer
-      #?@(:clj  [[compr f*n fn* unary firsta rfn fn->> fn-> <-]]
-          :cljs [[compr f*n fn* unary firsta]
-                 :refer-macros
-                 [fn->> fn-> <-]])]
-    [quantum.core.logic :as log :refer
-      #?@(:clj  [[splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n
-                  condf condfc condf*n nnil? nempty?]]
-          :cljs [[splice-or fn-and fn-or fn-not nnil? nempty?]
-                 :refer-macros
-                 [ifn if*n whenc whenf whenf*n whencf*n condf condfc condf*n]])]
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.reducers :as red :refer
-      #?@(:clj  [[map+ reduce+ filter+ remove+ take+ take-while+ taker+ dropr+
-                  count* fold+ range+ drop+ for+]]
-          :cljs [[map+ reduce+ filter+ remove+ take+ take-while+
-                  fold+ range+ drop+]
-                 :refer-macros [for+]])]
-    [quantum.core.string :as str]
-    [quantum.core.data.set :as set]
-    [quantum.core.type     :as type :refer
-      [#?(:clj bigint?) #?(:cljs class) instance+? array-list? boolean? double? map-entry?
-       sorted-map? queue? lseq? coll+? pattern? regex? editable?
-       transient? #?(:clj should-transientize?) name-from-class #?(:clj arr-types)]
-      #?@(:cljs [:refer-macros [should-transientize?]])]
-    [quantum.core.data.vector :as vec :refer
-      [subvec+ catvec vector+]]
-    [quantum.core.macros
-      #?(:clj  :refer
-         :cljs :refer-macros)
-      [extend-protocol-type extend-protocol-types extend-protocol-for-all defnt]]
-    #?(:clj [clj-tuple :as tup]))
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        java.util.ArrayList clojure.lang.Keyword
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+    [vector hash-map rest count first second butlast last get pop peek assoc!]))
+  (:require-quantum [ns err fn log logic red str map set macros type vec arr]))
 
 ; TODO Queues need support
 
 ; TODO need to somehow incorporate |vector++| and |vector+|
 ; #+clj (defalias vector   tup/vector)
 ; #+clj (defalias hash-map tup/hash-map)
-
-; #?(:clj 
-;   (defmacro extend-coll-count-for-type
-;     "With helpful hints from:
-;     http://www.learningclojure.com/2010/09/macros-and-type-hints-metadata-and.html"
-;     [type-key]
-;     (let [coll (with-meta (gensym) {:tag (-> type-key name (str "s"))})]
-;      `(extend-protocol CollCount (get ~arr-types ~type-key)
-;         (count+ [~coll]
-;           (alength ~coll))))))
-
-; #?(:clj 
-;   (defmacro extend-coll-count-to-all-arr! []
-;     (reduce-kv
-;       (fn [ret type type-class]
-;         ;(println type)
-;         (eval `(extend-coll-count-for-type ~type)))
-;       nil arr-types)))
-
-; #?(:clj (extend-coll-count-to-all-arr!))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         RETRIEVAL        }=====================================================
 ;=================================================={     get, first, rest     }=====================================================
-; #?(:clj
-;   (defmacro extend-coll-retrieve-for-type
-;     [type-key]
-;     (let [coll (with-meta (gensym) {:tag (-> type-key name (str "s"))})]
-;      `(extend-protocol CollRetrieve (get ~arr-types ~type-key)
-;         (get+
-;           ([~coll n#]  (get+ ~coll n# nil))
-;           ([~coll n# if-not-found#]
-;             (try (aget ~coll n#)
-;               (catch ArrayIndexOutOfBoundsException e# if-not-found#))))
-;         (first+  [~coll]  (aget ~coll 0))
-;         (second+ [~coll]  (aget ~coll 1))
-;         (last+   [~coll]  (aget ~coll (-> ~coll alength dec)))))))
-
-; #?(:clj
-;   (defmacro extend-coll-retrieve-to-all-arr! []
-;     (reduce-kv
-;       (fn [ret type type-class]
-;         ;(println type)
-;         (eval `(extend-coll-retrieve-for-type ~type)))
-;       nil arr-types)))
-
-; #?(:clj
-;   (extend-coll-retrieve-to-all-arr!))
-
-; first+ with non-collection items (java.util.Collection) will return itself.
-
-(def count core/count)
+(defnt count
+  array?   ([arr ] (alength arr))
+  :default ([coll] (core/count coll)))
 
 (defn lasti
   "Last index of a coll."
   [coll]
   (-> coll count dec))
 
+(defnt array-of-type
+  object-array? ([obj n] (object-array n))
+  byte-array?   ([obj n] (byte-array   n))
+  long-array?   ([obj n] (long-array   n)))
+
+(defnt getr
+  ; inclusive range
+  string?     ( [coll a b] (.substring coll a (unchecked-inc (long b))))
+  qreducer?   ( [coll a b] (->> coll (take+ b) (drop+ a)))
+  array-list? ( [coll a b] (.subList coll a b))
+  vec?        (([coll a b] (subvec+ coll a (inc (long b))))
+               ([coll a]   (subvec+ coll a (-> coll count))))
+  array?      ( [coll a b]
+                (let [arr-f (array-of-type coll (inc (- (int b) (int a))))]
+                  (System/arraycopy coll (int a) arr-f (int 0)
+                    (inc (- (int b) (int a))))
+                  arr-f))
+  :default   (([coll a]   (->> coll (drop a)))
+              ([coll a b] (->> coll (take b) (drop a))))) 
+
 ; TODO conflicting types... determine generality   
 (defnt rest
-  keyword?  ([k] (-> k name rest))
-  string?   ([coll]
-              (try (subs coll 1 (count coll))
-                #?(:clj (catch StringIndexOutOfBoundsException _ nil))))
+  keyword?  ([k]    (-> k name rest))
+  symbol?   ([s]    (-> s name rest))
   qreducer? ([coll] (drop+ 1 coll))
-  vec?      ([coll] (subvec+ coll 1 (count coll)))
+  string?   ([coll] (getr coll 1 (lasti coll)))
+  vec?      ([coll] (getr coll 1 (lasti coll)))
+  array?    ([coll] (getr coll 1 (lasti coll)))
   nil?      ([coll] nil)
   :default  ([coll] (core/rest coll))) 
 
 (def popl rest)
 
 (defnt get
-  vec?        (([coll n]              (get coll n nil))
+  vec?        (([coll n]              (core/get coll n nil         ))
                ([coll n if-not-found] (core/get coll n if-not-found)))
-  map?        (([coll n]              (get coll n nil))
+  map?        (([coll n]              (core/get coll n nil         ))
                ([coll n if-not-found] (core/get coll n if-not-found)))
-  string?     ([coll n] (.charAt coll n))
-  array-list? (([coll n] (get coll n nil))
+  string?     ( [coll n]              (.charAt  coll n             ))
+  array-list? (([coll n]              (get      coll n nil         ))
                ([coll n if-not-found]
                  (try (.get coll n)
                    (catch ArrayIndexOutOfBoundsException e# if-not-found))))
-  listy?      (([coll n]              (get coll n nil))
-               ([coll n if-not-found] (nth coll n if-not-found)))
-  :default    (([coll n]              (get coll n nil))
+  array?      ( [coll n]              (aget     coll n             ))
+  listy?      (([coll n]              (nth      coll n nil         ))
+               ([coll n if-not-found] (nth      coll n if-not-found)))
+  :default    (([coll n]              (core/get coll n nil         ))
                ([coll n if-not-found] (core/get coll n if-not-found))))
 
+(defnt assoc!
+  array?     ([coll i val-] (aset!       coll i val-) coll)
+  transient? ([coll i val-] (core/assoc! coll i val-)))
+
+(defnt update!
+  :default ([coll i f] (assoc! coll i (f (get coll i)))))
+
 (defnt first
-  string?     ([coll]
-                (try (subs coll 0 1)
-                  #?(:clj (catch StringIndexOutOfBoundsException _ nil))))
+  string?     ([coll] (get coll 0))
   vec?        ([coll] (get coll 0))
-  integral?   ([coll] coll)
   array-list? ([coll] (get coll 0))
+  array?      ([coll] (get coll 0))
+  integral?   ([coll] coll)
   :default    ([coll] (core/first coll)))
 
 (defnt second
-  string?     ([coll]
-                (try (subs coll 1 2)
-                  #?(:clj (catch StringIndexOutOfBoundsException _ nil))))
+  string?     ([coll] (get coll 1))
   qreducer?   ([coll] (take+ 1 coll))
   array-list? ([coll] (get coll 1))
-  vec?        ([coll] (core/get coll 1))
+  vec?        ([coll] (get coll 1))
   :default    ([coll] (core/second coll)))
 
 (defnt butlast
-  string?   ([coll] (subs coll 0 (-> coll count dec)))
+  string?   ([coll] (getr coll 0 (-> coll lasti dec)))
   qreducer? ([coll] (dropr+ 1 coll))
   vec?      ([coll] (whenf coll nempty? core/pop))
   :default  ([coll] (core/butlast coll)))
@@ -175,34 +106,23 @@
 (def popr butlast)
 
 (defnt last
-  string?     ([coll] (subs coll   (-> coll count dec)))
+  string?     ([coll] (get coll (lasti coll)))
   qreducer?   ([coll] (taker+ 1 coll))
   vec?        ([coll] (core/peek coll))
-  array-list? ([coll] (get coll (-> coll count dec)))
+  array-list? ([coll] (get coll (lasti coll)))
   :default    ([coll] (core/last coll)))
     
 (def peek last)
 
-(defnt getr
-  ; inclusive range
-  string?     ([coll a b] (str/subs+ coll a (inc (- b a))))
-  qreducer?   ([coll a b] (->> coll (dtake+ b) (drop+ a)))
-  array-list? ([coll a b] (.subList coll a b))
-  vec?        (([coll a b] (subvec+ coll a b))
-               ([coll a]   (subvec+ coll a (-> coll count))))
-  :default?   (([coll a]   (->> coll (drop a)))
-               ([coll a b] (->> coll (take b) (drop a))))) 
-
 (defnt index-of 
-  vec?    ([coll elem] (.indexOf     coll elem))
-  string? ([coll elem] (.indexOf     coll elem)))
+  vec?    ([coll elem] (whenc (.indexOf     coll elem) (extern (eq? -1)) nil))
+  string? ([coll elem] (whenc (.indexOf     coll elem) (extern (eq? -1)) nil)))
 
 (defnt last-index-of
-  vec?    ([coll elem] (.lastIndexOf coll elem))
-  string? ([coll elem] (.lastIndexOf coll elem)))
+  vec?    ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil))
+  string? ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil)))
 
-
-(defn gets+ [coll & indices]
+(defn gets [coll & indices]
   (if (should-transientize? indices)
       (persistent!
         (reduce
@@ -216,7 +136,7 @@
 
 (def third (f*n get 2))
 
-(defn getf+ [n] (f*n get n))
+(defn getf [n] (f*n get n))
 
 ;--------------------------------------------------{           CONJL          }-----------------------------------------------------
 

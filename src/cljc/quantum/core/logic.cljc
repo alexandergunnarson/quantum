@@ -1,28 +1,10 @@
-#?(:clj (ns quantum.core.logic))
-
 (ns
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
           ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"}
   quantum.core.logic
-  (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.function :as fn :refer
-     #?(:clj  [compr f*n fn* unary fn->> fn-> <- jfn]
-        :cljs [compr f*n fn* unary])
-     #?@(:cljs [:refer-macros [fn->> fn-> <-]])])
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
+  (:require-quantum [ns fn]))
 
 #?(:clj (set! *warn-on-reflection* true))
 

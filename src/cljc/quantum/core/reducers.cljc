@@ -14,46 +14,8 @@
   quantum.core.reducers
   #?(:clj  (:refer-clojure :exclude [reduce])
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require
-    [quantum.core.function :as fn :refer
-      #?@(:clj  [[compr f*n fn* unary monoid firsta call rfn fn->> fn-> <- defcurried]]
-          :cljs [[compr f*n fn* unary monoid firsta call]
-                 :refer-macros
-                 [fn->> fn-> <- rfn defcurried]])]
-    [quantum.core.logic :as log :refer
-      #?@(:clj  [[splice-or fn-and fn-or fn-not ifn if*n whenc whenf whenf*n whencf*n condf condfc condf*n]]
-          :cljs [[splice-or fn-and fn-or fn-not]
-                 :refer-macros
-                 [ifn if*n whenc whenf whenf*n whencf*n condf condfc condf*n]])]
-    [quantum.core.macros :as macros
-      #?@(:clj  [:refer        [compile-if]]
-          :cljs [:refer-macros [emit-comprehension do-mod]])]
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-    [quantum.core.numeric :as num]
-    [quantum.core.type     :as type :refer
-      [#?(:clj bigint?) #?(:cljs class) instance+? array-list? boolean? double? map-entry?
-       sorted-map? queue? lseq? coll+? pattern? regex? editable?
-       transient? #?(:clj should-transientize?)]
-      #?@(:cljs [:refer-macros [should-transientize?]])]
-    [quantum.core.data.map  :as map :refer
-      [map-entry sorted-map+ merge+]]
-    [quantum.core.data.set    :as set]
-    [quantum.core.data.vector :as vec :refer
-      [subvec+ catvec]]
-    [clojure.walk :as walk])
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
-
-#?(:clj (ns/require-all *ns* :clj))
+  (:require-quantum [ns fn logic macros num type map set vec])
+  (:require         [clojure.walk :as walk]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================

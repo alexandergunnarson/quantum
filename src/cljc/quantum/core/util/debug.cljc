@@ -1,5 +1,3 @@
-#?(:clj (ns quantum.core.util.debug))
-
 (ns
   ^{:doc "Useful debug utils. Especially |trace|, |break|, |try-times|, etc."
     :attribution "Alex Gunnarson"}
@@ -15,7 +13,8 @@
 ; (require '[taoensso.encore :as lib+ :refer
 ;   [throwable? exception?]])
 
-#?(:clj 
+; No matching method clojure.main/repl-read
+#_#?(:clj 
 (defn readr
   {:attribution "The Joy of Clojure, 2nd ed."}
   [prompt exit-code]
@@ -24,7 +23,7 @@
         exit-code
         input))))
 
-#?(:clj 
+#_#?(:clj 
 (defn debug
   "A debug REPL, courtesy of The Joy of Clojure.
 
@@ -41,11 +40,12 @@
   {:attribution  "The Joy of Clojure, 2nd ed."
    :contributors ["Alex Gunnarson"]}
   ([]
-    `(clojure.main/repl
-      :prompt #(print "debug=> ")
-      :read readr
-      :eval (partial quantum.core.ns/contextual-eval
-              (quantum.core.ns/local-context))))
+    ;`(clojure.main/repl
+    ;  :prompt #(print "debug=> ")
+    ;  :read readr
+    ;  :eval (partial quantum.core.ns/contextual-eval
+    ;          (quantum.core.ns/local-context)))
+    )
   ([& args]
     `(do (println ~@args)
          (break)))))

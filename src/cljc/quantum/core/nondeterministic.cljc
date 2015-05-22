@@ -1,11 +1,9 @@
-#?(:clj (ns quantum.core.nondeterministic))
-
 (ns
   ^{:doc "A few functions copied from thebusby.bagotricks.
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  #?(:clj (:gen-class)))
+  (:require-quantum [ns]))
 
 #?(:clj
 (defmacro percent-chance

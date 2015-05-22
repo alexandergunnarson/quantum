@@ -41,7 +41,8 @@
     [quantum.core.collections      :as coll :refer :all         ]
     [quantum.core.numeric          :as num  :refer [greatest-or]]
     [quantum.core.logic                     :refer :all         ]
-    [quantum.core.type                      :refer :all         ]
+    [quantum.core.type                      :refer :all
+      :exclude [seq? vector? set? map? string? associative? keyword? nil? list? coll? char?]         ]
     [quantum.core.function                  :refer :all         ]
     
     [quantum.core.error            :as err

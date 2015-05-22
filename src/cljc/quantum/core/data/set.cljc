@@ -1,28 +1,13 @@
-#?(:clj (ns quantum.core.data.set))
-
 (ns
   ^{:doc "Useful set-related functions. Includes a dispatch function, |xset?|, 
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "Alex Gunnarson"}
   quantum.core.data.set
-  (:require
-    [quantum.core.ns :as ns :refer
-      #?(:clj  [alias-ns defalias]
-         :cljs [Exception IllegalArgumentException
-                Nil Bool Num ExactNum Int Decimal Key Vec Set
-                ArrList TreeMap LSeq Regex Editable Transient Queue Map])]
-          [clojure.set              :as set]
-          [clojure.data.avl         :as avl]
-    #?@(:clj
-      [[clojure.data.finger-tree :as ftree]
-       [flatland.ordered.set     :as oset ]]))
-  #?@(:clj
-      [(:import
-        clojure.core.Vec
-        (quantum.core.ns
-          Nil Bool Num ExactNum Int Decimal Key Set
-                 ArrList TreeMap LSeq Regex Editable Transient Queue Map))
-       (:gen-class)]))
+  (:require-quantum [ns])
+  (:require   [clojure.set              :as set]
+              [clojure.data.avl         :as avl]
+    #?@(:clj [[clojure.data.finger-tree :as ftree]
+              [flatland.ordered.set     :as oset ]])))
 
 (def union          set/union)
 (def intersection   set/intersection)
