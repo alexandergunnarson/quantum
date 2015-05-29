@@ -444,7 +444,7 @@
         meta-f (meta sym-f)]
     (eval prot)
     `(doto (var ~sym)
-       (reset-meta! ~meta-f)))))
+       (alter-meta! merge ~meta-f)))))
 
 (->> types
      (map

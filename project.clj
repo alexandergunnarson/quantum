@@ -16,6 +16,7 @@
     [; ==== CLOJURE ====
      ; CLOJURE CORE
      [org.clojure/clojure       "1.7.0-beta3"  ]
+     [quantum/ns "1.0"]
      ; CORE
      [proteus                           "0.1.4" ]
 
@@ -50,8 +51,6 @@
        :exclusions [riddley]]
      ; PRINT      
      [fipp                              "0.6.2"       ]
-     ; ERROR
-     [slingshot                         "0.10.3"      ]
      ; NUMERIC                   
      ;[primitive-math                    "0.1.3"]
      ; TIME
@@ -87,7 +86,7 @@
      
      ; ; NETWORK.HTTP      
      [clj-http                             "1.1.0"
-       :exclusions [riddley cheshire potemkin slingshot org.json/json
+       :exclusions [riddley cheshire potemkin org.json/json
                     com.fasterxml.jackson.core/jackson-core commons-codec]]
      [http-kit                             "2.1.18"
        :exclusions [org.clojure/clojure]] 
@@ -130,7 +129,9 @@
             "deploy-prod" ["do" "clean," "install," "deploy" "clojars"]
             "test"        ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
   :auto-clean     false ; is this a mistake?
-  :source-paths   ["src/clj" "src/cljc"]
+  :source-paths   ["src/clj" "src/cljc"
+                   "src/cljc_next"
+                   ]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
   ;:prep-tasks   [["cljx" "once"]] 

@@ -66,7 +66,7 @@
                             (dissoc :pdf?))
                         opts)
         args        (->> opts-f
-                         (filter+ (extern (fn-> key+ string?)))
+                         (filter+ (extern (fn-> key string?)))
                          (map+ (fn [[opt v]]
                                  (let [v-f ((extern (if*n (eq? true) (constantly "T") str)) v)]
                                    ["-c" (str opt "=" v-f)])))

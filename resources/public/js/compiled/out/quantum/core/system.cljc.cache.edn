@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 0.0-3269
-{:name quantum.core.system, :doc "System-level (envinroment) vars such as *os*.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {coll quantum.core.collections, quantum.core.collections quantum.core.collections}, :imports nil}

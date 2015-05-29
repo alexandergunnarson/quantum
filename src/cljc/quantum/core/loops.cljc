@@ -70,13 +70,26 @@
 
 #?(:clj
 (defmacro reduce-
-  [f ret coll]
-  `(quantum.core.reducers/reduce ~f ~ret ~coll)))
+  ([f coll]
+   `(quantum.core.reducers/reduce ~f ~coll))
+  ([f ret coll]
+   `(quantum.core.reducers/reduce ~f ~ret ~coll))))
+
 
 #?(:clj
 (defmacro reduce
-  [f ret coll & args]
-  `(quantum.core.reducers/reduce (quantum.core.macros/extern- ~f) ~ret ~coll)))
+  ([f coll]
+   `(reduce ~f (~f) ~coll))
+  ([f ret coll]
+   (let [quoted-f (second `(list ~f))
+         externed
+          (try (quantum.core.macros/extern- quoted-f)
+            (catch Throwable _
+              (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
+              quoted-f))
+         code `(quantum.core.reducers/reduce ~externed ~ret ~coll)]
+     code))))
+
 
 #?(:clj
 (defmacro reducei*
@@ -150,16 +163,27 @@
   "A lighter version of |doseq| based on |reduce|.
    Optimized for one destructured coll."
   {:attribution "Alex Gunnarson"}
-  [should-extern? [elem coll :as bindings] & body]
+  [should-extern? bindings & body]
   (assert-args
-    (vector? bindings)       "a vector for its binding"
-    (even? (count bindings)) "an even number of forms in binding vector")
-  `(~(if should-extern? 'reduce 'reduce-)
-     (fn [_# ~elem]
-       ~@body
-       nil)
-     nil
-     ~coll)))
+    (vector? bindings)       "a vector for its binding")
+  (condp = (count bindings)
+    3
+      (let [[k v coll] bindings]
+        `(reduce
+           (fn [_# ~k ~v]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    2
+      (let [[elem coll] bindings]
+        `(reduce
+           (fn [_# ~elem]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    (throw (Exception. (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
 
 #?(:clj
 (defmacro doseq-
@@ -180,7 +204,7 @@
   (assert-args
     (vector? bindings)     "a vector for its binding"
     (= 3 (count bindings)) "three forms in binding vector")
-  (let [code `(~(if should-extern? 'reduce 'reduce-)
+  (let [code `(reduce
                (fn [_# ~elem ^long ~index-sym]
                  ~@body
                  nil)
