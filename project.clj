@@ -97,6 +97,9 @@
        :exclusions [commons-codec]]
      [org.apache.httpcomponents/httpmime   "4.4"
        :exclusions [commons-codec]]
+
+     [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
+     [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
      
      ; AUDIO
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"] ; Creating audio plugin
