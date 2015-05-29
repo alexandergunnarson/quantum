@@ -43,7 +43,9 @@
   string? ([pre post s] (.replace    ^String s pre ^String post))
   regex?  ([pre post s] (str/replace         s pre         post)))
 
-(definline replace [s pre post] `(replace* ~pre ~post ~s))
+; CompilerException java.lang.RuntimeException: Method code too large!
+; if you do it "definline"...
+(defn replace [s pre post] (replace* pre post s))
 
 (defn replace-with
   "Replace all."
@@ -56,6 +58,9 @@
       (replace ret old-n new-n))
     s
     m))
+
+(def replace-uchars
+  (fn-> (str/replace "\\u0026" "&")))
 
 (def capitalize  str/capitalize)
 (def split       str/split)
@@ -202,11 +207,12 @@
 
 (defalias camelcase macros/camelcase)
 
-(defn+ un-camelcase [sym]
+(defn un-camelcase [sym]
   (let [str-0 (str sym)
         matches (->> str-0 (re-seq #"[a-z0-1][A-Z]") distinct)]
-    (-> (red/reduce (extern (fn [ret [char1 char2 :as match]]
-                   (replace ret match (str char1 "-" (lower-case char2)))))
+    (-> (reduce
+          (fn [ret [char1 char2 :as match]]
+            (replace ret match (str char1 "-" (lower-case char2))))
           str-0 matches)
         lower-case)))
 
@@ -288,7 +294,7 @@
               rand-int
               (+ 65)
               char str))
-       (reduce+ str)))
+       (reduce str)))
 
 (defn val [obj]
   (if (string? obj)

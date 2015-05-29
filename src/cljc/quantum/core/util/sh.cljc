@@ -64,7 +64,7 @@
                      (ProcessBuilder.))
         env-vars-f (merge-keep-left (or env-vars {}) sys/user-env)
         set-env-vars!
-          (doseq [[^String env-var ^String val-] env-vars-f]
+          (doseq [^String env-var ^String val- env-vars-f]
             (-> process (.environment) (.put env-var val-)))
         _ (when dir (.directory process (io/file dir)))
         _ (.redirectError  process java.lang.ProcessBuilder$Redirect/INHERIT)

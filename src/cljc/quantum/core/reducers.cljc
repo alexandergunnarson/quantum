@@ -237,40 +237,6 @@
 ;=================================================={          REDUCE          }=====================================================
 ;=================================================={                          }=====================================================
 ; reduce-reverse [f init o] - like reduce but in reverse order
-(defprotocol
-  ^{:doc
-     "Like |core/reduce| except:
-      When init is not provided, (f) is used.
-      Maps are reduced with |reduce-kv|."
-    :attribution "Alex Gunnarson"}
-  Reduce+
-  (reduce+ [coll f] [coll f init]))
-
-(extend-protocol Reduce+
-  #?@(:cljs
-    [array
-      (reduce+ [arr f init] (array-reduce arr f init))
-     string
-       (reduce+ [^String s f init]
-         (let [last-index (-> s count unchecked-dec long)]
-           (cond
-             (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number MAX_VALUE)))
-               (throw (Exception. "String too large to reduce over (at least, efficiently)."))
-             (= last-index -1)
-               (f init nil)
-             :else
-               (loop [n   (long 0)
-                      ret init]
-                 (if (> n last-index)
-                     ret
-                     (recur (unchecked-inc n)
-                            (f ret (.charAt s n))))))))])
-  nil
-    (reduce+ [obj f init] init)
-  #?@(:cljs
-    [default
-      (reduce+ [coll f init] (-reduce coll f init))]))
-
 #?(:cljs
   (defn- -reduce-seq
     "For some reason |reduce| is not implemented in ClojureScript for certain types.
@@ -285,51 +251,67 @@
           (recur (rest coll-n)
                  (f ret (first coll-n)))))))
 
-(defn- -reduce-kv
-  [coll f init]
-    (try (#?(:clj  clojure.core.protocols/kv-reduce
-             :cljs -kv-reduce)
-            coll f init)
-      (catch #?(:clj Throwable :cljs js/Object) e
-        (do (println "There was an exception in kv-reduce!") ; TODO log this
-            #?(:clj (clojure.stacktrace/print-stack-trace e))
-            (throw (Exception. "Broke out of kv-reduce"))))))
+(defnt reduce+
+  "Like |core/reduce| except:
+      When init is not provided, (f) is used.
+      Maps are reduced with |reduce-kv|."
+  {:attribution "Alex Gunnarson"}
+  array?  ([arr f init]
+            #?(:clj  (loop [i (long 0) ret init]
+                       (if (< i (-> arr count long))
+                           (recur (unchecked-inc i) (f ret (get arr i)))
+                           ret))
+               :cljs (array-reduce arr f init)))
+  string? ([s f init]
+            #?(:clj (clojure.core.protocols/coll-reduce s f init)
+               :cljs
+              (let [last-index (-> s count unchecked-dec long)]
+                (cond
+                  (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number MAX_VALUE)))
+                    (throw (Exception. "String too large to reduce over (at least, efficiently)."))
+                  (= last-index -1)
+                    (f init nil)
+                  :else
+                    (loop [n   (long 0)
+                           ret init]
+                      (if (> n last-index)
+                          ret
+                          (recur (unchecked-inc n)
+                                 (f ret (.charAt s n)))))))))
+  map?     ([coll f init] (#?(:clj  clojure.core.protocols/kv-reduce
+                              :cljs -kv-reduce)
+                           coll f init))
+  set?     ([coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
+                              :cljs -reduce-seq)
+                           coll f init))
+  nil?     ([obj  f init] init)
+  :default ([coll f init]
+             #?(:clj  (clojure.core.protocols/coll-reduce coll f init)
+                :cljs (-reduce coll f init))))
 
-; Extend for Map types
-#?(:clj
-(doseq [type (:map type/types)]
-  (extend type Reduce+
-    {:reduce+ -reduce-kv})))
-
-; #?(:cljs
-; (doseq [type (:map type/types)]
-;   (specify type Reduce+
-;     {:reduce+ -reduce-kv})))
-
-; ; Extend for Set types
-; #?(:cljs
-;   (doseq [type (:set type/types)]
-;     (specify type Reduce+
-;       {:reduce+ -reduce-seq})))
-
-; Reduce indirection with Clojure; would do it with ClojureScript but can't extend "default" (probably)
-#?(:clj
-  (extend Object Reduce+ {:reduce+ clojure.core.protocols/coll-reduce}))
+; (defn- -reduce-kv
+;   [coll f init]
+;     (try (#?(:clj  clojure.core.protocols/kv-reduce
+;              :cljs -kv-reduce)
+;             coll f init)
+;       (catch #?(:clj Throwable :cljs js/Object) e
+;         (do (println "There was an exception in kv-reduce!") ; TODO log this
+;             #?(:clj (clojure.stacktrace/print-stack-trace e))
+;             (throw (Exception. "Broke out of kv-reduce"))))))
       
-; Macro to inline the call
 #?(:clj
 (defmacro reduce
   "Like |core/reduce| except:
    When init is not provided, (f) is used.
    Maps are reduced with reduce-kv.
-
+   
    Entry point for internal reduce (in order to switch the args
    around to dispatch on type)."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"
+   :todo ["definline"]}
   ([f coll]      `(reduce ~f (~f) ~coll))
   ([f init coll] `(quantum.core.reducers/reduce+ ~coll ~f ~init))))
 
-; TODO fix this.
 #?(:cljs
 (defn reduce
   "Like |core/reduce| except:

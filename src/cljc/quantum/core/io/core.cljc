@@ -5,7 +5,7 @@
           for many of these things."}
   quantum.core.io.core
   (:refer-clojure :exclude [read])
-  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err])
+  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log])
   #?(:clj
       (:require
         [clojure.java.io               :as io    ]
@@ -29,11 +29,11 @@
 ;(require '[clojure.data.csv :as csv])
 
 (defnt file-name*
-  string? ([s] (taker-until sys/separator s))
+  string? ([s] (taker-until sys/separator nil s))
   file?   ([f] (-> f str file-name*)))
 
 (defnt extension
-  string? ([s] (taker-until "." s))
+  string? ([s] (taker-until "." nil s))
   file?   ([f] (-> f str extension)))
 
 (def file-ext extension)
@@ -84,13 +84,14 @@
 (defn path-without-ext [path-0]
   (coll/taker-after "." path-0))
 
+#?(:clj
 (def- test-dir
   (try+
     (->> (io/resource "") url-decode
          (<- str/replace "file:/" "/")
          (<- str/replace "/" sys/os-sep-esc)
          (take-until-inc (str sys/os-sep-esc "test" sys/os-sep-esc)))
-    (catch Exception _ ""))) ; To handle a weird "MapEntry cannot be cast to Number" error)
+    (catch Exception _ "")))) ; To handle a weird "MapEntry cannot be cast to Number" error)
 
 (def- this-dir (up-dir-str test-dir))
 
@@ -144,7 +145,9 @@
                       (str sys/separator k-to-add-0)
                       k-to-add-0)]
             (path path-n k-to-add-f)))
-        "" keys-n)))
+        "" keys-n))
+  string?  ([s] s)
+  keyword? ([k] (parse-dir [k])))
 
 (defnt ^File as-file
   vector? ([dir] (-> dir parse-dir as-file))
@@ -337,8 +340,8 @@
              formatting-func identity}
       :as   options}]
   (doseq [file-type-n (coll/coll-if file-type)]
-    (let [file-path-parsed (-> file-path parse-dir)
-          directory-parsed (-> directory parse-dir)
+    (let [file-path-parsed (parse-dir file-path)
+          directory-parsed (parse-dir directory)
           directory-f
             (or (-> file-path-parsed up-dir   (whenc empty? nil))
                 directory-parsed)

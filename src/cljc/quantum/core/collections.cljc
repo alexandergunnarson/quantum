@@ -53,9 +53,9 @@
 
 (defalias vec         red/vec+       )    
 (defalias into        red/into+      )    
-#?(:clj (defalias reduce loops/reduce    ))
-#?(:clj (defalias reduce- loops/reduce-  ))
-#?(:clj (defalias reducei loops/reducei  ))
+#?(:clj (defalias reduce   loops/reduce  ))
+#?(:clj (defalias reduce  loops/reduce ))
+#?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
 (defalias redv        red/fold+      )
 (defalias redm        red/reducem+   )
@@ -279,7 +279,7 @@
 (defn+ ffilter+
   {:todo ["Use a delayed reduction as the base!"]}
   [^Fn pred coll]
-  (reduce-
+  (reduce
     (fn [ret elem-n]
       (when (pred elem-n)
         (reduced elem-n)))
@@ -348,7 +348,7 @@
   [super sub]
   (nnil? (index-of super sub)))
 
-(defn indices-of
+(defn indices-of-elem
   {:todo ["Make parallizeable"]}
   [coll elem-0]
   (if (should-transientize? coll)
@@ -367,6 +367,22 @@
               ret))
         []
         coll)))
+
+(declare drop)
+
+(defn indices-of
+  {:todo ["Make parallizeable" "Maybe make lazy?"]}
+  [coll elem-0]
+  (loop [coll-n coll indices []]
+    (let [i (index-of coll-n elem-0)]
+      (if-not i
+        indices
+        (recur
+          (drop (+ i (count elem-0)) coll-n)
+          (conj indices
+            (+ i (if-let [li (last indices)]
+                   (+ li (count elem-0))
+                   0))))))))
 
 (defn index-of-pred      [coll pred]
   (->> coll (ffilteri pred) key))
@@ -470,23 +486,25 @@
   "Take until index of, starting at the right."
   {:in  ["c" "abcdefg"]
    :out "defg"}
-  [sub super]
-  (let [i (last-index-of super sub)]
-    (if i
-        (taker-untili i super)
-        super)))
+  ([sub super]
+    (taker-until sub super super))
+  ([sub alt super]
+    (let [i (last-index-of super sub)]
+      (if i
+          (taker-untili i super)
+          alt))))
 
 (defn taker-after
   {:in ["." "abcdefg.asd"]
    :out "abcdefg"}
   [sub super]
   (if-let [i (last-index-of super sub)]
-    (subseq 0 (-> i long dec))
+    (subseq super 0 (-> i long dec))
     nil))
 
 ; ================================================ DROP ================================================
 
-(defn dropl [n coll] (subseq coll n (count coll)))
+(defn dropl [n coll] (subseq coll n (lasti coll)))
 
 (def drop dropl)
 
@@ -556,9 +574,9 @@
               
 (defn split-remove
   {:todo ["Slightly inefficient — two /index-of/ implicit."]}
-  [coll split-at-obj]
-  [(take-until coll split-at-obj)
-   (take-after coll split-at-obj)])
+  [split-at-obj coll]
+  [(take-until split-at-obj coll)
+   (take-after split-at-obj coll)])
 
 #?(:clj
 (defmacro kmap [& ks]
@@ -751,7 +769,7 @@
             (fn ([] {})
                 ([m1 m2]
                  (reduce merge-entry (or m1 {}) (seq m2))))]
-      (core/reduce merge2 maps))))
+      (reduce merge2 maps))))
 
 (defn ^Map merge-vals-left
   "Merges into the left map all elements of the right map whose
@@ -787,8 +805,8 @@
 (defn- concat++
   {:todo ["Needs optimization"]}
   ([coll]
-    (try (core/reduce catvec coll)
-      (catch Exception e (core/reduce (zeroid into []) coll))))
+    (try (reduce catvec coll)
+      (catch Exception e (reduce (zeroid into []) coll))))
   ([coll & colls]
     (try (apply catvec coll colls)
       (catch Exception e (into [] coll colls)))))
@@ -810,9 +828,6 @@
   "The inverse of |contains?|"
   {:todo ["|definline| this?"]}
   [elem coll] (contains? coll elem))
-
-(defnt subs?
-  string? ([elem coll] (in? elem coll)))
 
 ; ;-----------------------{       SELECT-KEYS       }-----------------------
 (defn- ^Map select-keys-large
@@ -1383,7 +1398,7 @@
 (defn- walk2-transient [coll f]
   ;; `transient` discards metadata as of Clojure 1.6.0
   (persistent!
-    (reduce-
+    (reduce
       (fn [r x] (conj! r (f x)))
       (transient (empty coll)) coll)))
 

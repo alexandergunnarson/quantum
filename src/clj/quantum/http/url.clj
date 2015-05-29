@@ -93,19 +93,20 @@
           code-map))))
 
 (defn ^Map url-params->map
-  [^String str-params & [decoded?]]
+  [^String str-params & [decode?]]
   (let [^Fn decode-if-necessary
         (fn [^Vec params]
-          (if decoded?
+          (if decode?
               (map+ (partial decode :all) params)
               params))]
     (->> str-params
+         (#(if decode? (decode :xml %) %))
          (<- str/split #"&")
          decode-if-necessary
          (map+
            (fn [^String param]
              (->> param
-                  (<- split-remove "="))))
+                  (split-remove "="))))
          redm)))
   
 (defn embedded-url->map
@@ -118,7 +119,7 @@
   (let [^Vec [^String url ^String str-params]
           (->> url
                (decode :all)
-               (<- split-remove "?"))
+               (split-remove "?"))
         ^Map params
          (-> str-params (url-params->map true))]
     {:url          url

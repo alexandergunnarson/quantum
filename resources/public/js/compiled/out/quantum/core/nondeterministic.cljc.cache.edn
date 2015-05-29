@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 0.0-3269
-{:name quantum.core.nondeterministic, :doc "A few functions copied from thebusby.bagotricks.\n          Not especially used at the moment.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}

@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>aaecb0be70e685b0cf10fe955f67605644faaba4
+    <tag>364e1408107cadccafe1a2bb4cbd21221dc2456b
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -53,6 +53,7 @@
             <configuration>
               <sources>
                 <source>src/cljc</source>
+                <source>src/cljc_next</source>
               </sources>
             </configuration>
           </execution>
@@ -97,6 +98,11 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.7.0-beta3</version>
+    </dependency>
+    <dependency>
+      <groupId>quantum</groupId>
+      <artifactId>ns</artifactId>
+      <version>1.0</version>
     </dependency>
     <dependency>
       <groupId>proteus</groupId>
@@ -154,11 +160,6 @@
       <groupId>fipp</groupId>
       <artifactId>fipp</artifactId>
       <version>0.6.2</version>
-    </dependency>
-    <dependency>
-      <groupId>slingshot</groupId>
-      <artifactId>slingshot</artifactId>
-      <version>0.10.3</version>
     </dependency>
     <dependency>
       <groupId>clj-time</groupId>
@@ -262,10 +263,6 @@
         <exclusion>
           <groupId>potemkin</groupId>
           <artifactId>potemkin</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>slingshot</groupId>
-          <artifactId>slingshot</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.json</groupId>

@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 0.0-3269
-{:name quantum.core.cryptography, :doc "Cryptographic/encryption functions like hashing and digests.\n\n          Possibly should just alias some better library for this.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires {ns quantum.core.ns, quantum.core.ns quantum.core.ns, bytes quantum.core.data.bytes, quantum.core.data.bytes quantum.core.data.bytes, quantum.core.logic quantum.core.logic, str quantum.core.string, quantum.core.string quantum.core.string}, :imports nil}

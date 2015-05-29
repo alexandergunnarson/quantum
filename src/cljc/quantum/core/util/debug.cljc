@@ -142,7 +142,7 @@
   [exception]
   (map trim (split-lines (with-out-str (print-cause-trace exception))))))
 
-#?(:clj (def trace #(! (cause-trace *e))))
+#?(:clj (def trace #(cause-trace *e)))
 ; From flatland.useful.exception
 
 #?(:clj 

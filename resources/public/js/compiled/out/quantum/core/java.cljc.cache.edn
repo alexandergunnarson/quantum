@@ -1,2 +1,0 @@
-;; Analyzed by ClojureScript 0.0-3269
-{:name quantum.core.java, :doc "Useful Java-specific functions. Invoking private or protected methods,\n          getting the methods associated with a particular class, etc.", :excludes #{}, :use-macros nil, :require-macros nil, :uses nil, :requires nil, :imports nil}
