@@ -1,0 +1,301 @@
+Datomic Pro Edition End-User License Agreement
+
+IMPORTANT - READ CAREFULLY: This End-User License Agreement (EULA) is a legal agreement between you
+(either an individual or a single legal entity) (Licensee) and Cognitect, Inc. to use the
+Software. This EULA applies after the Licensee has received the Software from a Reseller or Cognitect,
+Inc. The Licensee agrees to be bound by the terms of this EULA by installing, copying,
+downloading or otherwise using the Software or clicking the "I Accept/ Agree" button if acquiring
+the Software on-line.
+
+Definitions 
+-----------
+
+Accessible Code means source code that is unprotected and accessible.
+
+Cognitect means Cognitect, Inc., a Delaware Corporation.
+
+Embedded Software means any third party software which may contain Accessible Code or Protected Code
+licensed by Cognitect from a third party and embedded in the Software.
+
+Fees mean all fees and expenses payable by the Licensee to Cognitect or Reseller, as
+applicable, in licensing the Software and, as applicable, for Maintenance.
+
+Licensed Process means a computer process which accesses and uses the Software under this License.
+The number of Licensed Processes granted to the Licensee is dependent on the Fees paid by the
+Licensee.
+
+Maintenance means the provision by Cognitect to Licensee, under a separate agreement, of
+Software updates and/or enhancements made generally available to customers from time to time, and
+online technical support (and where applicable, phone support) for the sole purpose of addressing
+technical issues relating to the use of the Software.
+
+OEM Distribution means distribution of the Software as either a bundled add-on to, or embedded
+component of, another application with such application being made available to its users as, but
+not limited to, an on-premises application, a hosted application, a Software-as-a-Service offering
+or a subscription. Any OEM Distribution will be subject to a separate agreement by and between
+Cognitect and the Licensee.
+
+Protected Code means any source code that is protected against access by Cognitect or a
+third party.
+
+Reseller means an entity selling and distributing Cognitect products which is authorized by
+Cognitect to do so.
+
+Software means the Datomic software that is licensed to Licensee subject to the terms and conditions
+of this EULA, which includes computer software, Accessible Code and Protected Code and may include
+associated media, printed materials, "online" or electronic documentation, Internet-based services
+and Embedded Software.
+
+License Grant 
+-------------
+
+Subject to the Licensee's compliance with the terms and conditions of this EULA, Cognitect
+hereby grants to the Licensee a perpetual, non-exclusive, non-transferable, non-sublicensable
+license to install and use the Software only for the Licensee's own internal production use by
+Licensed Processes, subject to the condition that the Licensee must ensure the maximum number of
+processes accessing and using the Software is equal to the number of Licensed Processes for which
+the necessary Fees have been paid, or for Licensee's own internal non-production use for the purpose
+of development or testing on an unlimited number of Licensed Processes. The Licensee is permitted to
+create copies the Software solely for data protection, archiving and backup purposes.
+
+Evaluation 
+----------
+
+Upon the Licensee's request, Cognitect may provide an evaluation mode of the Software which
+may not have full functionality. If the Software is only provided or provisioned for evaluation
+purposes, the rights of the Licensee are limited to this evaluation license which permits the
+Licensee to download, install, use and operate the Software subject to any limitations built into
+the Software for the purpose of evaluation.
+
+Fees 
+----
+
+The Licensee must pay all Fees by their due date. Failure to pay Fees by the due date will result in
+the immediate termination of the licenses granted under this EULA.
+
+Restrictions 
+------------
+
+The Licensee hereby agrees, without the prior written consent of Cognitect, which may be
+withheld or conditioned at Cognitect' sole discretion, it will not: (a) copy or use the
+Software in any manner except as expressly permitted in this EULA; (b) use or deploy the Software on
+any server in excess of the Licensed Processes for which Licensee has paid the applicable Fee; (c)
+transfer, sell, rent, lease, lend, distribute, or sublicense the Software to any third party; (d)
+use the Software for providing time-sharing services, service bureau services or as part of an
+application services provider or as a service offering primarily designed to offer the functionality
+of the Software; (e) reverse engineer, disassemble, or decompile the Software (except to the extent
+such restrictions are prohibited by law); (f) alter, modify, enhance or prepare any derivative work
+from or of the Software; (g) alter or remove any proprietary notices in the Software; (h) make
+available to any third party the functionality of the Software or any license keys used in
+connection with the Software; (i) copy or embed elements of the Accessible Code contained in the
+Software into other applications; (j) publicly display or communicate the results of internal
+performance testing or other benchmarking or performance evaluation of the Software; (k) export the
+Software in violation of U.S. export administration rules, any other export laws or regulations, or
+any other applicable law or regulation; (l) except as otherwise permitted in this EULA, publish,
+use, promote, broadcast, circulate or refer publicly to any Cognitect' name, trade name,
+trademark, service mark or logo; (m) commit any act or omission the likely result of which is that
+Cognitect' or any of its third party suppliers' reputation will be brought into disrepute or
+which act or omission could reasonably be expected to have or does have a material and adverse
+effect on Cognitect' interests; (n) distribute the Software via OEM Distribution without
+entering into a separate OEM Distribution agreement with Cognitect; (o) perform or
+facilitate any act which, directly or indirectly, causes to be transmitted to, uploaded or
+downloaded by, the Cognitect or any end user any software viruses, worms, Trojan horses,
+time bombs, trap doors or any other computer code, files or programs or repetitive requests for
+information designed to interrupt, destroy or limit the functionality of any computer software or
+hardware or telecommunications equipment or to diminish the quality of, interfere with the
+performance of, or impair the functionality of the Software (individually and collectively, a
+"Virus"); (p) use the Software for any immoral, unethical, illegal or otherwise nefarious purpose;
+or (q) use with or distribute the Software to any person located in a United States embargoed
+country, named on the United States Treasury Department's listing of specially designated nationals
+and blocked persons or otherwise blacklisted by any instrumentality of the United States. Any breach
+or suspected breach of any term or condition set forth in this paragraph will result in the
+immediate termination of all licenses granted hereunder.
+
+Protection Mechanisms 
+---------------------
+
+The Software includes license protection mechanisms that are designed to manage and protect the
+intellectual property rights of Cognitect and its third party suppliers. Licensee must not
+modify or alter those features to try to defeat the Software use rules that the license protection
+mechanisms are designed to enforce. Any such attempt by the Licensee will result in the immediate
+termination of any license granted under this EULA.
+
+Proprietary Rights 
+------------------
+
+Cognitect reserves all rights not expressly granted to the Licensee in this EULA. The
+Software and all copies thereof are protected by copyright and other intellectual property laws and
+treaties. Cognitect or relevant third parties, as applicable, own the entire title,
+copyright, and other intellectual property rights and interests in and to the Software and all
+subsequent copies of the Software. The Software is licensed, not sold and the Licensee does not
+acquire any rights of ownership in the Software. The Licensee acknowledges the Software contains
+proprietary information and trade secrets of Cognitect and the Licensee agrees it will not
+take any actions inconsistent with Cognitect's ownership of such information and trade
+secrets. Without limiting the generality of the foregoing, the Licensee agrees it will not directly
+or indirectly access or use the Software in order to build a competitive commercial product or
+service. The Licensee acknowledges the Software contains Embedded Software and that, in addition to
+the obligations of this EULA, additional obligations may apply in relation to any use of Embedded
+Software by the Licensee. In such circumstances the Licensee must consult the relevant third party
+to acquire any necessary licenses and consents in relation to its use of any Embedded Software. Any
+breach or suspected breach of any term or condition set forth in this paragraph will result in the
+immediate termination of all licenses granted hereunder.
+
+Support and Maintenance 
+-----------------------
+
+Any support services and Maintenance provided by Cognitect will be substantially as
+described in a separate agreement provided by Cognitect to the Licensee and may be the
+subject to the payment of additional Fees. The Licensee must be in compliance with the terms of this
+License and have paid all Fees then due hereunder. Cognitect may, at its discretion, modify,
+suspend or terminate support at any time upon notice to Licensee. The terms of this EULA apply to
+updates, supplements, add-on components, or Internet-based services components, of the Software
+(Supplementary Software) that Cognitect may provide to the Licensee or make available to the
+Licensee after the date the Licensee obtains its initial copy of the Software, unless Cognitect
+provides other terms and conditions along with any Supplementary Software.
+
+Records Retention and Audit 
+---------------------------
+
+If Cognitect reasonably suspects the Software has been distributed to or obtained by any
+person or party without Cognitect' prior written consent, that Software is being varied or
+accessed or used independently of the Software or that Licensee is otherwise breaching a term of
+this License, Licensee agrees Cognitect has the right to require the Licensee to provide a
+qualified certificate executed by the Licensee's auditor verifying compliance with the terms of this
+EULA. If such an unqualified certificate is not received by Cognitect within thirty (30)
+calendar days of being required, it will be considered that a breach of this EULA has occurred
+allowing Cognitect to terminate the licenses granted under this EULA.
+
+Representations and Warranties 
+------------------------------
+
+The Licensee represents and warrants to Cognitect that: (a) if an individual, the Licensee
+is at least eighteen (18) years old; (b) if an entity, the Licensee is duly organized and validly
+existing in good standing under the laws of the state in which it was organized; (c) the Licensee
+has the full power and authority to enter into this EULA, which constitutes a legal, valid and
+binding obligation enforceable against the Licensee in accordance with the terms hereof; (d) all
+information the Licensee provides to Cognitect during the term of this EULA, is and will be
+truthful and accurate; (e) the Licensee's use of the Software is and will at all times be in
+accordance with the terms and conditions set forth in this EULA, and all applicable laws, rules and
+regulations, and without infringement or misappropriation of any intellectual property right or
+other right of a third party; (f) the Licensee will not use the Software to store or transmit a
+Virus; and (g) neither the Licensee nor any of the Licensee's officers, directors or personnel is
+located in a United States embargoed country, or is, or has been, named on the United States
+Treasury Department's listing of specially designated nationals and blocked persons or is, or has
+been, otherwise blacklisted by any instrumentality of the United States. Any breach or suspected
+breach of any representation or warranty set forth in this paragraph will result in the immediate
+termination of all licenses granted hereunder.
+
+Disclaimer of Warranty 
+----------------------
+
+THE SOFTWARE AND ANY SERVICES AND MAINTENANCE PROVIDED HEREUNDER ARE PROVIDED "AS IS" WITHOUT
+WARRANTY OF ANY KIND. COGNITECT DOES NOT WARRANT THAT THE SOFTWARE OR THE SERVICES OR
+MAINTENANCE PROVIDED HEREUNDER WILL MEET LICENSEE'S REQUIREMENTS, THAT THE SOFTWARE WILL OPERATE IN
+THE COMBINATIONS LICENSEE MAY SELECT FOR USE, THAT THE OPERATION OF THE SOFTWARE WILL BE ERROR-FREE
+OR UNINTERRUPTED OR THAT ALL SOFTWARE ERRORS WILL BE CORRECTED. COGNITECT HEREBY DISCLAIMS
+ALL WARRANTIES, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, USE, NON-INFRINGEMENT, TITLE, AND ANY
+WARRANTIES ARISING OUT OF COURSE OF DEALING, USAGE OR TRADE.
+
+THE LICENSEE EXPRESSLY ACKNOWLEDGES AND AGREES THE SOFTWARE RELIES UPON THIRD-PARTY SOFTWARE FOR
+CERTAIN FUNCTIONS AND COGNITECT MAKES NO REPRESENTATION, WARRANTY, PROMISE OR GUARANTEE TO
+THE LICENSEE THAT SUCH SOFTWARE WILL BE ERROR FREE, ACCOMPLISH A SPECIFIED PURPOSE OR PERFORM IN
+ACCORDANCE WITH ANY PARTICULAR STANDARD, LEVEL OR METRIC AND COGNITECT WILL NOT BE LIABLE
+FOR ANY FAILURE THEREOF TO THE LICENSEE.
+
+COGNITECT DOES NOT STORE ANY DATA. THE LICENSEE IS SOLELY RESPONSIBLE FOR THE ACCURACY,
+QUALITY, INTEGRITY, LEGALITY, RELIABILITY, SECURITY, MAINTENANCE AND STORAGE OF ALL DATA IN
+ACCORDANCE WITH APPLICABLE LAW. IF THE LICENSEE REQUIRES PERMANENT STORAGE OF ANY DATA USED IN
+CONNECTION WITH THE SOFTWARE, THE LICENSEE IS SOLELY RESPONSIBLE FOR THE CREATION OF ANY AND ALL
+BACKUPS OF SUCH DATA BEFORE USING THE SOFTWARE
+
+Limitation of Liability 
+-----------------------
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT WILL COGNITECT OR ITS
+LICENSORS BE LIABLE TO LICENSEE OR TO ANY THIRD PARTY FOR ANY DAMAGES, INCLUDING DIRECT, INDIRECT,
+SPECIAL, INCIDENTAL, CONSEQUENTIAL OR EXEMPLARY DAMAGES OR FOR THE COST OF PROCURING SUBSTITUTE
+PRODUCTS OR SERVICES ARISING OUT OF OR IN ANY WAY RELATING TO OR IN CONNECTION WITH THIS EULA OR THE
+USE OF OR INABILITY TO USE THE SOFTWARE OR THE SERVICES PROVIDED BY COGNITECT HEREUNDER
+INCLUDING, WITHOUT LIMITATION, DAMAGES OR OTHER LOSSES FOR LOSS OF USE, LOSS OF BUSINESS, LOSS OF
+GOODWILL, WORK STOPPAGE, LOST PROFITS, LOSS OF DATA, COMPUTER FAILURE OR ANY AND ALL OTHER
+COMMERCIAL DAMAGES OR LOSSES EVEN IF ADVISED OF THE POSSIBILITY THEREOF AND REGARDLESS OF THE LEGAL
+OR EQUITABLE THEORY (CONTRACT, INDEMNITY, TORT OR OTHERWISE) UPON WHICH THE CLAIM IS BASED. IN NO
+EVENT WILL COGNITECT'S OR ITS LICENSORS' AGGREGATE LIABILITY TO LICENSEE, FROM ALL CAUSES OF
+ACTION AND UNDER ALL THEORIES OF LIABILITY, EXCEED ONE THOUSAND DOLLARS (US $1,000). The parties
+expressly acknowledge and agree that Cognitect has set its prices and entered into this EULA
+in reliance upon the limitations of liability specified herein, which allocate the risk between
+Cognitect and the Licensee and form a basis of the bargain between the parties. IF THE
+LICENSEE IS LOCATED IN ANY COUNTRY WITHIN THE EUROPEAN UNION ONLY, NOTHING SET FORTH IN THIS EULA
+SHALL EXCLUDE OR LIMIT LIABILITY TO A GREATER EXTENT THAN IS PERMITTED BY APPLICABLE LAW OR SHALL
+EXCLUDE OR LIMIT LIABILITY FOR FRAUD, FRAUDULENT MISREPRESENTATION OR FOR DEATH OR PERSONAL INJURY
+CAUSED BY NEGLIGENCE.
+
+Publicity 
+---------
+
+Neither party will, without the other party's prior written consent, make any news release, public
+announcement, denial or confirmation of this EULA, its value, or its terms and conditions, or in any
+manner advertise or publish the fact of this EULA. Notwithstanding the above, Cognitect may
+use the Licensee's name and logo, consistent with Licensee's trademark policies, on customer lists
+so long as such use in no way promotes either endorsement or approval of Cognitect or any
+Cognitect products or services.
+
+Assignment 
+----------
+
+Licensee may assign this License to: succeeding parties in the case of a merger, acquisition or
+change of control; or (ii) if Licensee is a supplier, to a government agency; provided, however,
+that in each case, (a) Cognitect is notified in writing within ninety (90) days of such
+assignment, (b) the assignee agrees to be bound by the terms and conditions contained in this
+License and (c) upon such assignment, the Licensee makes no further use of the Software. Cognitect
+may assign its rights and obligation under this License without the consent of the
+Licensee. Any assignment in contravention of this paragraph shall be void and of no force or effect
+and will result in the immediate termination of the licenses granted hereunder.
+
+Entire Agreement; Severability 
+------------------------------
+
+This EULA (including any addendum or amendment to this EULA which is included with the Software) is
+the entire agreement between the Licensee and Cognitect relating to the Software and
+supersedes all prior or contemporaneous oral or written communications, proposals and
+representations with respect to the Software or any other subject matter covered by this EULA. If
+any provision of this License is held to be void, invalid, unenforceable or illegal, the other
+provisions shall continue in full force and effect.
+
+Notification 
+------------
+
+Cognitect may provide the Licensee with general notice by electronic mail to the Licensee's
+e-mail address of record. The Licensee must give notice to Cognitect (such notice shall be
+deemed given when received by Cognitect) by emailing Cognitect at billing@datomic.com. 
+
+Jurisdiction
+------------
+
+This EULA shall be governed by the laws of the State of New York, U.S.A., excluding its conflicts of
+law rules. The parties expressly agree that the U.N. Convention on Contracts for the International
+Sale of Goods (CISG) will not apply. Any legal action or proceeding arising under this EULA will be
+brought exclusively in the federal or state courts located in the State of New York and the parties
+hereby irrevocably consent to the personal jurisdiction and venue therein. Any amendment or
+modification to the EULA must be in writing signed by both parties.
+
+Licensee's Use 
+--------------
+
+The Licensee hereby agrees to defend and hold harmless Cognitect and its affiliates,
+subsidiaries, officers, directors, shareholders, employees, representatives, agents, successors and
+assigns (collectively, the Indemnitees) in any action or claim, and to indemnify Cognitect
+and its Indemnitees from and against any and all losses, liabilities, sums of money, damages,
+expenses, and costs (including, but not limited to, reasonable attorneys' fees) arising from such
+action or claim and related to: (a) the Licensee's breach of any term, condition, representation or
+warranty set forth in this EULA; (b) the Licensee's breach of any term or condition set forth in an
+agreement governing any Embedded Software; and/or (c) the Licensee's violation of any applicable
+law.
+
+Permitted Fixes 
+---------------
+
+Notwithstanding anything else in this EULA but subject to the terms and conditions contained herein,
+the Licensee is permitted to modify the Accessible Code in the Software to develop bug fixes,
+customizations or additional features solely for their internal purposes of using the Software.
