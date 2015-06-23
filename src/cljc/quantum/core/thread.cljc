@@ -113,35 +113,39 @@
   [Thread]  ([x] (not (.isAlive x)))
   [Process] ([x] (try (.exitValue x) true
                    (catch IllegalThreadStateException _ false)))
-  [Future]  ([x] (or (.isCancelled x) (.isDone x)))))
+  [Future]  ([x] (or (.isCancelled x) (.isDone x)))
+  nil?      ([x] true)))
+
+#?(:clj (def open? (fn-not closed?)))
 
 #?(:clj
-(defn interrupt!* [thread thread-id interrupted]
-  (interrupt! thread)
-  (if ((fn-or interrupted? closed?) thread)
+(defn interrupt!* [thread thread-id interrupted gracefully?]
+  (if gracefully?
       ((or interrupted fn-nil) thread)
-      (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))
+      (do (interrupt! thread)
+          (if ((fn-or interrupted? closed?) thread)
+              ((or interrupted fn-nil) thread)
+              (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
 
 #?(:clj
-(defn close!* [thread thread-id closed close-reqs]
+(defn close!* [thread thread-id close-reqs gracefully?]
   (let [max-tries 3]
     (when close-reqs
-      (qasync/put! close-reqs :req)
-      (Thread/sleep 200)) ; wait for graceful shutdown
-    (close-impl! thread) ; force shutdown
-    (loop [tries 0]
-      (if (or (closed? thread) (>= tries max-tries))
-          (do ((or closed fn-nil) thread)
-              (when (closed? thread)
-                (swap! reg-threads dissoc thread-id)))
-          (do (log/pr :debug {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be closed.")})
-              (Thread/sleep 100) ; wait a little bit for it to stop)
-              (recur (inc tries))))))))
+      (qasync/put! close-reqs :req)) ; it calls its own close-request handler
+    (when-not gracefully?
+      (close-impl! thread) ; force shutdown
+      (loop [tries 0]
+        (log/pr :debug "Trying to close thread" thread-id)
+        (when (and (open? thread) (<= tries max-tries))
+          (log/pr :debug {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be closed.")})
+          (Thread/sleep 100) ; wait a little bit for it to stop
+          (recur (inc tries)))))))))
 
 #?(:clj
-  (defn close!
-    {:attribution "Alex Gunnarson"}
-    [^Keyword thread-id]
+(defn close!
+  {:attribution "Alex Gunnarson"}
+  ([^Keyword thread-id] (close! thread-id false))
+  ([^Keyword thread-id gracefully?]
     {:pre [(with-throw
              (contains? @reg-threads thread-id)
              {:type :nonexistent-thread :msg (str/sp "Thread-id" thread-id "does not exist.")})]}
@@ -149,23 +153,118 @@
            {:keys [closed interrupted]} :handlers}
             (get @reg-threads thread-id)]
       (doseq [child children]
-        (close! child)) ; close children before parent
-      (when (instance? Thread thread)
-        (interrupt!* thread thread-id interrupted))
-      (close!* thread thread-id closed close-reqs))))
-
-#?(:clj
-(defn close-gracefully! [id]
-  (when-let [c (-> @reg-threads id :close-reqs)]
-    (put! c :req))))
+        (close! child gracefully?)) ; close children before parent
+      (interrupt!* thread thread-id interrupted gracefully?)
+      (close!*     thread thread-id close-reqs gracefully?))))) ; closed handler is called by the thread reaper when it's actually closed
 
 #?(:clj
 (defn add-child-proc! [parent-id child-id]
-  (if (contains? @reg-threads parent-id)
-      (if (-> @reg-threads parent-id (contains? :children))
-          (swap! reg-threads update-in [parent-id :children] conj child-id)
-          (swap! reg-threads assoc-in  [parent-id :children] #{child-id}))
-      (throw+ {:message (str/sp "Parent thread" parent-id "does not exist.")}))))
+  {:pre [(with-throw
+           (contains? @reg-threads parent-id)
+           {:message (str/sp "Parent thread" parent-id "does not exist.")})]}
+  (if (-> @reg-threads parent-id (contains? :children))
+      (swap! reg-threads update-in [parent-id :children] conj child-id)
+      (swap! reg-threads assoc-in  [parent-id :children] #{child-id}))))
+
+
+#?(:clj
+(defn close-all!
+  {:todo ["Make dependency graph" "Incorporate into thread-reaper"]}
+  ([] (close-all! false))
+  ([gracefully?]
+    (while ((fn-and map? nempty?) @reg-threads)
+      (doseq [thread (keys @reg-threads)]
+        (try+ (close! thread gracefully?)
+          (catch [:type :nonexistent-thread] {:keys [type]}
+            (when-not (= type :nonexistent-thread) (throw+)))))))))
+
+#?(:clj
+(defonce add-thread-shutdown-hooks!
+  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. close-all!)))))
+ 
+; ASYNC
+
+#?(:clj
+(defn closeably-execute [^Runnable r {:keys [cleanup parent id] :as opts}]
+  (let [^Future future-obj
+         (.submit ^ExecutorService async-threadpool/the-executor r)]
+    (when cleanup (res/with-cleanup future-obj cleanup))
+    (register-thread! (merge opts {:thread future-obj}))
+    (when parent
+      (log/pr :debug "Adding child proc" id "to parent" parent)
+      (add-child-proc! parent id)))))
+
+#?(:clj
+(defn threadpool-run
+  "Runs Runnable @r in a threadpool thread"
+  [^Runnable r opts]
+  (closeably-execute r opts)))
+
+#?(:clj
+(defmacro lt-thread
+  "Creates a closeable 'light thread' on a go block."
+  [{:keys [id parent] :as opts} & body]
+  `(let [c# (chan 1)
+         name# (:name ~opts)
+         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)
+         proc-id# (if ~id ~id
+                      (keyword
+                        (gensym
+                          (cond
+                            (and ~parent name#)
+                              (str (name ~parent) "$" (name name#) ".")
+                            name#
+                              (str "$" (name name#) ".")
+                            ~parent
+                              (str (name ~parent) "$")
+                            :else
+                              ""))))]
+     (threadpool-run
+       (fn []
+         (let [f# ~(ioc/state-machine
+                     `(do (swap! reg-threads assoc-in [proc-id# :state] :running)
+                          ~@body 
+                          (swap! reg-threads assoc-in [proc-id# :state] :closed))
+                     1 (keys &env) ioc/async-custom-terminators)
+               state# (-> (f#)
+                          (ioc/aset-all! ioc/USER-START-IDX c#
+                                         ioc/BINDINGS-IDX captured-bindings#))]
+           (ioc/run-state-machine-wrapped state#)))
+       (assoc ~opts :id proc-id#))
+     c#)))
+
+#?(:clj
+(defmacro lt-thread-loop
+  [{{close-req} :handlers :keys [id parent close-reqs] :as opts} bindings & body]
+ `(let [close-reqs# (or ~close-reqs (LinkedBlockingQueue.))]
+    (lt-thread (assoc ~opts :close-reqs close-reqs#)
+      (loop ~bindings
+        (if (nempty? close-reqs#)
+            (do ((or ~close-req fn-nil)))
+            (do ~@body)))))))
+
+(defn reap-threads! []
+  (doseq [id thread-meta @reg-threads]
+    (when (or (-> thread-meta :thread closed?)
+              (-> thread-meta :state  (= :closed)))
+      ((or (-> thread-meta :handlers :closed) fn-nil)) ; calls the closed handler
+      (swap! reg-threads dissoc id))))
+
+(defonce thread-reaper
+  (let [id :thread-reaper]
+    (lt-thread-loop
+      {:id id
+       :handlers {:close-req #(swap! reg-threads dissoc id)} ; remove itself
+                  :closed    #(log/pr :debug "Thread" id "has been closed.")} 
+      []
+      (reap-threads!)
+      (Thread/sleep 2000)
+      (recur))))
+
+
+
+; ===============================================================
+; ============ TO BE INVESTIGATED AT SOME LATER DATE ============
 
 #?(:clj
   (defn promise-concur
@@ -231,66 +330,6 @@
                redv
                (apply catvec))
           (doseq [chan-n chans] chan-n)))))
-
-
-#?(:clj
-(defn close-all! []
-  (while ((fn-and map? nempty?) @reg-threads)
-    (doseq [thread (keys @reg-threads)]
-      (try+ (close! thread)
-        (catch [:type :nonexistent-thread] {:keys [type]}
-          (when-not (= type :nonexistent-thread) (throw+))))))))
-
-#?(:clj
-(defonce add-thread-shutdown-hooks!
-  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. close-all!)))))
- 
-; ASYNC
-
-#?(:clj
-(defn closeably-execute [^Runnable r {:keys [cleanup parent id] :as opts}]
-  (let [^Future future-obj
-         (.submit ^ExecutorService async-threadpool/the-executor r)]
-    (when cleanup (res/with-cleanup future-obj cleanup))
-    (register-thread! (merge opts {:thread future-obj}))
-    (when parent
-      (log/pr :debug "Adding child proc" id "to parent" parent)
-      (add-child-proc! parent id)))))
-
-#?(:clj
-(defn threadpool-run
-  "Runs Runnable @r in a threadpool thread"
-  [^Runnable r opts]
-  (closeably-execute r opts)))
-
-#?(:clj
-(defmacro lt-thread
-  "Creates a closeable 'light thread' on a go block."
-  [{:keys [cleanup id parent] :as opts} & body]
-  `(let [c# (chan 1)
-         name# (:name ~opts)
-         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)
-         proc-id# (if ~id ~id
-                      (keyword
-                        (gensym
-                          (cond
-                            (and ~parent name#)
-                              (str (name ~parent) "$" (name name#) ".")
-                            name#
-                              (str "$" (name name#) ".")
-                            ~parent
-                              (str (name ~parent) "$")
-                            :else
-                              ""))))]
-     (threadpool-run
-       (fn []
-         (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
-               state# (-> (f#)
-                          (ioc/aset-all! ioc/USER-START-IDX c#
-                                         ioc/BINDINGS-IDX captured-bindings#))]
-           (ioc/run-state-machine-wrapped state#)))
-       (assoc ~opts :id proc-id#))
-     c#)))
 
 #?(:clj
   (defn- thread-or
