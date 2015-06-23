@@ -1,8 +1,6 @@
 (ns
-  ^{:doc "Simple thread management through 'registered threads'.
-          Aliases core.async for convenience.
-
-          A little rough, but some useful functionality."
+  ^{:doc "Complex thread management made simple.
+          Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
   (:require-quantum [ns num fn str err macros logic vec coll log res qasync])
@@ -11,7 +9,7 @@
     #?@(:clj [[clojure.core.async.impl.ioc-macros :as ioc]
               [clojure.core.async.impl.exec.threadpool :as async-threadpool]]))
   #?(:clj (:import (java.lang Thread Process)
-            (java.util.concurrent Future Executor ExecutorService))))
+            (java.util.concurrent Future Executor ExecutorService LinkedBlockingQueue))))
 
 ;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
 #?(:clj (defmalias go      async/go))
@@ -49,10 +47,8 @@
       nil)))
 
 #?(:clj
-(defn register-thread! [{:keys [id thread handlers]}]
-  (swap! reg-threads coll/assocs-in+
-    [id :thread  ] thread
-    [id :handlers] handlers)))
+(defn register-thread! [{:keys [id thread handlers] :as opts}]
+  (swap! reg-threads assoc id (dissoc opts :id))))
 
 #?(:clj (def ^{:dynamic true} *thread-num* (.. Runtime getRuntime availableProcessors)))
 ; Why you want to manage your threads when doing network-related things:
@@ -180,7 +176,7 @@
 
 #?(:clj
 (defonce add-thread-shutdown-hooks!
-  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. close-all!)))))
+  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. (close-all! true))))))
  
 ; ASYNC
 
@@ -188,7 +184,7 @@
 (defn closeably-execute [^Runnable r {:keys [cleanup parent id] :as opts}]
   (let [^Future future-obj
          (.submit ^ExecutorService async-threadpool/the-executor r)]
-    (when cleanup (res/with-cleanup future-obj cleanup))
+    ;(when cleanup (res/with-cleanup future-obj cleanup))
     (register-thread! (merge opts {:thread future-obj}))
     (when parent
       (log/pr :debug "Adding child proc" id "to parent" parent)
@@ -201,41 +197,47 @@
   (closeably-execute r opts)))
 
 #?(:clj
-(defmacro lt-thread
-  "Creates a closeable 'light thread' on a go block."
-  [{:keys [id parent] :as opts} & body]
+(defmacro lt-thread*
+  [opts & body]
   `(let [c# (chan 1)
-         name# (:name ~opts)
-         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)
-         proc-id# (if ~id ~id
-                      (keyword
-                        (gensym
-                          (cond
-                            (and ~parent name#)
-                              (str (name ~parent) "$" (name name#) ".")
-                            name#
-                              (str "$" (name name#) ".")
-                            ~parent
-                              (str (name ~parent) "$")
-                            :else
-                              ""))))]
+         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)]
      (threadpool-run
        (fn []
-         (let [f# ~(ioc/state-machine
-                     `(do (swap! reg-threads assoc-in [proc-id# :state] :running)
-                          ~@body 
-                          (swap! reg-threads assoc-in [proc-id# :state] :closed))
-                     1 (keys &env) ioc/async-custom-terminators)
+         (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
                state# (-> (f#)
                           (ioc/aset-all! ioc/USER-START-IDX c#
                                          ioc/BINDINGS-IDX captured-bindings#))]
            (ioc/run-state-machine-wrapped state#)))
-       (assoc ~opts :id proc-id#))
+       ~opts)
      c#)))
+
+(defn gen-proc-id [id parent name-]
+  (if id id
+    (keyword
+      (gensym
+        (cond
+          (and parent name-)
+            (str (name parent) "$" (name name-) ".")
+          name-
+            (str "$" (name name-) ".")
+          parent
+            (str (name parent) "$")
+          :else
+            "")))))
+
+#?(:clj
+(defmacro lt-thread
+  "Creates a closeable 'light thread' on a go block."
+  [{:keys [id parent name] :as opts} & body]
+ `(let [proc-id# (gen-proc-id ~id ~parent ~name)]
+    (lt-thread* (assoc ~opts :id proc-id#)
+      (swap! reg-threads assoc-in [proc-id# :state] :running)
+      ~@body 
+      (swap! reg-threads assoc-in [proc-id# :state] :closed)))))
 
 #?(:clj
 (defmacro lt-thread-loop
-  [{{close-req} :handlers :keys [id parent close-reqs] :as opts} bindings & body]
+  [{{:keys [close-req]} :handlers :keys [id parent close-reqs] :as opts} bindings & body]
  `(let [close-reqs# (or ~close-reqs (LinkedBlockingQueue.))]
     (lt-thread (assoc ~opts :close-reqs close-reqs#)
       (loop ~bindings
