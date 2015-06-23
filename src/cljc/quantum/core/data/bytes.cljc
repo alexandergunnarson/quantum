@@ -5,8 +5,9 @@
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
   (:require-quantum [ns str logic bin macros type ccore arr])
-  (:require         [clojure.java.io :as io])
-  #?(:clj (:import java.util.Arrays)))
+  #?@(:clj
+    [(:require [clojure.java.io :as io])
+     (:import  java.util.Arrays)]))
 
 #?(:clj (set! *unchecked-math* true))
 

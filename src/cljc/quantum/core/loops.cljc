@@ -6,18 +6,19 @@
   (:refer-clojure :exclude [doseq for reduce])
   (:require-quantum [ns fn logic log map macros type red])
   (:require
-    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])
     #?(:clj [proteus :refer [let-mutable]])))
-
+  
 #?(:clj (set! *unchecked-math* true))
 
-(definline unchecked-inc-long [n] `(unchecked-inc (long ~n)))
+#?(:clj
+(defmacro unchecked-inc-long [n]
+  `(unchecked-inc (long ~n))))
 
 #?(:clj
 (defmacro until [pred-expr & body]
  `(while (not ~pred-expr) ~@body)))
 
-(defn aprint [arr]
+#_(defn aprint [arr]
   (core/doseq [elem arr]
     (pr elem) (.append *out* \space))
   (.append *out* \newline)
@@ -75,21 +76,25 @@
   ([f ret coll]
    `(quantum.core.reducers/reduce ~f ~ret ~coll))))
 
-
 #?(:clj
-(defmacro reduce
-  ([f coll]
-   `(reduce ~f (~f) ~coll))
-  ([f ret coll]
+(defmacro reduce*
+  ([lang f coll]
+   `(reduce* ~lang ~f (~f) ~coll))
+  ([lang f ret coll]
    (let [quoted-f (second `(list ~f))
          externed
-          (try (quantum.core.macros/extern- quoted-f)
-            (catch Throwable _
-              (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
-              quoted-f))
+          (condp = lang
+            :clj  (try (quantum.core.macros/extern- quoted-f)
+                    (catch Throwable _
+                      (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
+                      quoted-f))
+            :cljs quoted-f)
          code `(quantum.core.reducers/reduce ~externed ~ret ~coll)]
      code))))
 
+#?(:clj
+(defmacro reduce [& args]
+  `(reduce* :clj ~@args)))
 
 #?(:clj
 (defmacro reducei*
@@ -204,11 +209,13 @@
   (assert-args
     (vector? bindings)     "a vector for its binding"
     (= 3 (count bindings)) "three forms in binding vector")
-  (let [code `(reduce
-               (fn [_# ~elem ^long ~index-sym]
-                 ~@body
-                 nil)
-               nil ~coll)
+  (let [code `(let [i# (volatile! 0)]
+                (reduce
+                  (fn [_# ~elem]
+                    (let [~index-sym @i#] ~@body)
+                    (vswap! i# inc)
+                    nil)
+                  nil ~coll))
         _ (log/ppr :macro-expand "DOSEQI CODE IS" code)]
     code)))
 

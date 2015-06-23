@@ -14,23 +14,23 @@
 ;   [throwable? exception?]])
 
 ; No matching method clojure.main/repl-read
-#_#?(:clj 
-(defn readr
-  {:attribution "The Joy of Clojure, 2nd ed."}
-  [prompt exit-code]
-  (let [input (clojure.main/repl-read prompt exit-code)]
-    (if (= input :next) ; perhaps non-namespace qualified is a bad idea
-        exit-code
-        input))))
-
-#_#?(:clj 
-(defn debug
-  "A debug REPL, courtesy of The Joy of Clojure.
-
-   Type (debug) to start, and :next to go to the next breakpoint.
-   Apparently there is no 'stop execution'..."
-  []
-  (readr #(print "invisible=> ") ::exit))) ; perhaps non-namespace qualified is a bad idea
+;#?(:clj 
+;(defn readr
+;  {:attribution "The Joy of Clojure, 2nd ed."}
+;  [prompt exit-code]
+;  (let [input (clojure.main/repl-read prompt exit-code)]
+;    (if (= input :next) ; perhaps non-namespace qualified is a bad idea
+;        exit-code
+;        input))))
+;
+;#?(:clj 
+;(defn debug
+;  "A debug REPL, courtesy of The Joy of Clojure.
+;
+;   Type (debug) to start, and :next to go to the next breakpoint.
+;   Apparently there is no 'stop execution'..."
+;  []
+;  (readr #(print "invisible=> ") ::exit))) ; perhaps non-namespace qualified is a bad idea
 
 #?(:clj 
 (defmacro break
@@ -154,19 +154,6 @@
    :message (.getMessage exception)
    :trace   (cause-trace exception)}))
 
-#?(:clj 
-(defn try-times-naive [max-tries try-expr-0 catch-expr-0]
-  (loop [tries-n 0 try-expr-f nil]
-    (if (or (and (nnil? try-expr-f) ; not the initial value of nil
-                 (not= try-expr-f catch-expr-0)) ; if the exception is worked out
-            (> tries-n max-tries))
-        try-expr-f
-        (let [try-expr-n 
-               (try (try-expr-0)
-                    (catch Exception e
-                      (doseq [expr catch-expr-0]
-                        (expr e))))]
-          (recur (inc tries-n) try-expr-n))))))
 ; The following requires flatland.useful.fn:
 ; ; From flatland.useful.utils
 ; (defn fail
@@ -181,3 +168,17 @@
 ;   [test & args]
 ;   `(when-not ~test
 ;      (fail ~@args)))
+
+#?(:clj 
+(defn try-times-naive [max-tries try-expr-0 catch-expr-0]
+  (loop [tries-n 0 try-expr-f nil]
+    (if (or (and (nnil? try-expr-f) ; not the initial value of nil
+                 (not= try-expr-f catch-expr-0)) ; if the exception is worked out
+            (> tries-n max-tries))
+        try-expr-f
+        (let [try-expr-n 
+               (try (try-expr-0)
+                    (catch Exception e
+                      (doseq [expr catch-expr-0]
+                        (expr e))))]
+          (recur (inc tries-n) try-expr-n))))))

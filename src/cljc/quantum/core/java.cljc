@@ -3,7 +3,7 @@
           getting the methods associated with a particular class, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.java
-  (:require-quantum [:lib])
+  (:require-quantum [ns str])
  #?@(:clj [(:require
              [clojure.data       :as cljdata]
              [clojure.reflect    :refer :all]
@@ -67,9 +67,14 @@
             result))))))
 
 #?(:clj
-  (defmacro invoke [instance method & params]
-    "(-> (WebClient.) .getTopLevelWindows first (invoke isJavaScriptInitializationNeeded))"
-    `(invoke* ~(-> method name str) ~instance ~@params)))
+(defmacro invoke
+  {:usage '(-> (WebClient.) .getTopLevelWindows first (invoke isJavaScriptInitializationNeeded))}
+  [instance method & params]
+  `(invoke* ~(-> method name str) ~instance ~@params)))
 
-
+#?(:clj
+(defmacro field [instance field]
+  `(-> (doto (.getDeclaredField (class ~instance) ~(str field))
+             (.setAccessible true))
+       (.get  ~instance))))
 

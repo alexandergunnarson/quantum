@@ -1,23 +1,21 @@
 (ns ring.util.servlet
   "Compatibility functions for turning a ring handler into a Java servlet."
-  (:require [clojure.java.io :as io]
-            [clojure.string :as string])
-  (:import [java.io File InputStream FileInputStream]
-           [java.util Locale]
-           [javax.servlet.http HttpServlet
-                               HttpServletRequest
-                               HttpServletResponse]))
+  (:require-quantum [:lib])
+  (:import
+    [java.util Locale]
+    [javax.servlet.http
+      HttpServlet HttpServletRequest HttpServletResponse]))
 
 (defn- get-headers
   "Creates a name/value map of all the request headers."
   [^HttpServletRequest request]
   (reduce
-    (fn [headers, ^String name]
+    (fn [headers ^String name]
       (assoc headers
         (.toLowerCase name Locale/ENGLISH)
         (->> (.getHeaders request name)
              (enumeration-seq)
-             (string/join ","))))
+             (str/join ","))))
     {}
     (enumeration-seq (.getHeaderNames request))))
 
@@ -25,37 +23,42 @@
   "Returns the content length, or nil if there is no content."
   [^HttpServletRequest request]
   (let [length (.getContentLength request)]
-    (if (>= length 0) length)))
+    (when (>= length 0) length)))
 
 (defn- get-client-cert
   "Returns the SSL client certificate of the request, if one exists."
   [^HttpServletRequest request]
-  (first (.getAttribute request "javax.servlet.request.X509Certificate")))
+  (-> request
+      (.getAttribute "javax.servlet.request.X509Certificate")
+      first))
 
 (defn build-request-map
   "Create the request map from the HttpServletRequest object."
   [^HttpServletRequest request]
-  {:server-port        (.getServerPort request)
-   :server-name        (.getServerName request)
-   :remote-addr        (.getRemoteAddr request)
-   :uri                (.getRequestURI request)
-   :query-string       (.getQueryString request)
-   :scheme             (keyword (.getScheme request))
-   :request-method     (keyword (.toLowerCase (.getMethod request) Locale/ENGLISH))
-   :protocol           (.getProtocol request)
-   :headers            (get-headers request)
-   :content-type       (.getContentType request)
-   :content-length     (get-content-length request)
-   :character-encoding (.getCharacterEncoding request)
-   :ssl-client-cert    (get-client-cert request)
-   :body               (.getInputStream request)})
+  {:server-port        (-> request .getServerPort       )
+   :server-name        (-> request .getServerName       )
+   :remote-addr        (-> request .getRemoteAddr       )
+   :uri                (-> request .getRequestURI       )
+   :query-string       (-> request .getQueryString      )
+   :scheme             (-> request .getScheme 
+                           keyword)
+   :request-method     (-> request .getMethod          
+                           (.toLowerCase Locale/ENGLISH)
+                           keyword)
+   :protocol           (-> request .getProtocol         )
+   :headers            (-> request get-headers          )
+   :content-type       (-> request .getContentType      )
+   :content-length     (-> request get-content-length   )
+   :character-encoding (-> request .getCharacterEncoding)
+   :ssl-client-cert    (-> request get-client-cert      )
+   :body               (-> request .getInputStream      )})
 
 (defn merge-servlet-keys
   "Associate servlet-specific keys with the request map for use with legacy
   systems."
   [request-map
-   ^HttpServlet servlet
-   ^HttpServletRequest request
+   ^HttpServlet         servlet
+   ^HttpServletRequest  request
    ^HttpServletResponse response]
   (merge request-map
          {:servlet              servlet
@@ -71,12 +74,16 @@
 
 (defn- set-headers
   "Update a HttpServletResponse with a map of headers."
-  [^HttpServletResponse response, headers]
-  (doseq [[key val-or-vals] headers]
-    (if (string? val-or-vals)
-      (.setHeader response key val-or-vals)
-      (doseq [val val-or-vals]
-        (.addHeader response key val))))
+  [^HttpServletResponse response headers]
+  (core/doseq [[k val-or-vals] headers]
+    (cond
+      (string? val-or-vals)
+        (.setHeader response k val-or-vals)
+      (coll?   val-or-vals)
+        (doseq [v val-or-vals]
+          (.addHeader response k v))
+      :else
+        (->> val-or-vals str (.setHeader response k))))
   ; Some headers must be set through specific methods
   (when-let [content-type (get headers "Content-Type")]
     (.setContentType response content-type)))
@@ -94,7 +101,7 @@
           (.print writer (str chunk))))
     (instance? InputStream body)
       (with-open [^InputStream b body]
-        (io/copy b (.getOutputStream response)))
+        (io/copy! b (.getOutputStream response)))
     (instance? File body)
       (let [^File f body]
         (with-open [stream (FileInputStream. f)]

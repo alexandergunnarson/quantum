@@ -2,19 +2,30 @@
 (ns ring.adapter.jetty
   "A Ring adapter that uses the Jetty 9 embedded web server.
   Adapters are used to convert Ring handlers into running web servers."
+  (:require-quantum [:lib])
   (:require [ring.util.servlet :as servlet])
-  (:import [org.eclipse.jetty.server Server Request ServerConnector
-             HttpConfiguration HttpConnectionFactory ConnectionFactory]
-           [org.eclipse.jetty.server.handler AbstractHandler]
-           [org.eclipse.jetty.util.thread QueuedThreadPool]
-           [org.eclipse.jetty.util.ssl SslContextFactory]
-           [javax.servlet.http HttpServletRequest HttpServletResponse]))
+  (:import  [org.eclipse.jetty.server Server Request ServerConnector
+              HttpConfiguration HttpConnectionFactory ConnectionFactory]
+            [org.eclipse.jetty.server.handler AbstractHandler]
+            [org.eclipse.jetty.util.thread    QueuedThreadPool]
+            [org.eclipse.jetty.util.ssl       SslContextFactory]
+            [javax.servlet.http HttpServletRequest HttpServletResponse]))
 
 (set! *warn-on-reflection* true)
+
+(defonce last-resp (atom nil))
+(defonce last-resp-parsed (atom nil))
 
 (defn- proxy-handler
   "Returns an Jetty Handler implementation for the given Ring handler."
   [handler]
+  ;(reify Handler
+  ;  (handle [this _ base-request request response]
+  ;    (let [request-map  (servlet/build-request-map request)
+  ;          response-map (handler request-map)]
+  ;      (when response-map
+  ;        (servlet/update-servlet-response response response-map)
+  ;        (.setHandled ^Request base-request true)))))
   (proxy [AbstractHandler] []
     (handle [_ ^Request base-request request response]
       (let [request-map  (servlet/build-request-map request)

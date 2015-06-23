@@ -7,7 +7,8 @@
     :attribution "Alex Gunnarson"}
   quantum.core.print
   (:require-quantum [ns fn logic])
-  (:require [fipp.edn :as pr]))
+  (:require [fipp.edn :as pr]
+            #?(:cljs [cljs.core :refer [StringBufferWriter]])))
 
 ; "At least 5 times faster than clojure.pprint/pprint
 ;  Prints no later than having consumed the bound amount of memory,
@@ -43,7 +44,7 @@
       (! obj-n))))
 ;(clojure.main/repl :print !) ; This causes a lot of strange problems... sorry...
 
-(def  suppress (partial (constantly nil)))
+(def suppress (partial (constantly nil)))
 
 ; (defn pprint-xml
 ;   {:attribution "Alex Gunnarson"
@@ -142,3 +143,26 @@
        (println "Keys:"     (ifn   ~obj coll? keys+ (constantly nil)))
        (println "Repr. object: ") (-> ~obj quantum.core.print/representative-coll !)
        (println))))
+
+#_(:clj
+(defmacro with-print-str* [platform & body] ; I reimplemented |with-out-str|
+  ;(println "\n/*" "PRINT PLATFORM IS" platform "*/\n")
+  (let [code
+         (condp = platform
+           :clj
+             `(with-open [s# (java.io.StringWriter.)]
+                (binding [*out* s#]
+                  ~@body
+                  (str *out*)))
+           :cljs
+             `(let [sb#     (goog.string.StringBuffer.)
+                    writer# (cljs.core.StringBufferWriter. sb#)] ; THIS NEEDS TO WORK. Apparently it doesn't...
+                (binding [cljs.core/*print-fn*
+                           (fn [& objs]
+                             (cljs.core/pr-seq-writer objs writer#
+                               (assoc (cljs.core/pr-opts) :readably false)))]
+                  ~@body
+                  (cljs.core/-flush writer#)
+                  (str sb#)))
+           (throw (Exception. (str "Unrecognized platform: " platform))))]
+    code)))

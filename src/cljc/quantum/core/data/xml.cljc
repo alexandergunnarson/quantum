@@ -1,14 +1,17 @@
 (ns
-  ^{:doc "(Once-)useful XML functions.
-
-          This namespace is very old and poorly written, and will likely be deprecated in favor of perhaps
-          aliasing some more mature and feature-rich library."
+  ^{:doc "Useful XML functions."
     :attribution "Alex Gunnarson"}
   quantum.core.data.xml
   (:refer-clojure :exclude [split])
-  (:require-quantum [ns err logic fn type num coll vec str log coll vec str log]))
+  (:require-quantum [ns err logic fn type num coll vec str log])
+  #?(:clj (:require [clojure.data.xml :as cxml]))
+  #?(:clj (:import (javax.xml.stream XMLInputFactory XMLEventReader)
+                   (javax.xml.stream.events XMLEvent Attribute
+                     StartElement EndElement Characters)
+                   (javax.xml.namespace QName)
+                   java.io.StringReader
+                   java.util.Iterator)))
 
-(ns-exclude split)
 ; ENTIRE FILE IS CLJ-ONLY (for now)
 #?(:clj (do
 ;___________________________________________________________________________________________________________________________________
@@ -107,208 +110,128 @@
                        (str/squote elem)
                        " not recognized."))))
 
-; (defn ^Keyword tag
-;   "Retrieves the tag of a raw XML-string element @elem."
-;   {:in  ["<abc ?eht/>"]
-;    :out :abc}
-;   [^String elem]
-;   (let [^Keyword ktype (elem-type elem)]
-;     (if (= :body ktype)
-;         nil
-;         (let [^String un-bracketed (-> elem popl popr)
-;               ^AFunction get-tag-from-out-of-properties
-;                 (fn [^String elem-n]
-;                   (take-while-not elem-n " "))
-;               ^String tag-str
-;                 (condp = ktype
-;                   :open       (-> un-bracketed       get-tag-from-out-of-properties)
-;                   :close      (-> un-bracketed popl)
-;                   :standalone (-> un-bracketed popr get-tag-from-out-of-properties))]
-;           (keyword tag-str)))))
+; NEW
 
-; (defn ^String content
-;   "Retrieves the content of a raw XML-string element @elem."
-;   {:in  ["<abc ?eht/>"]
-;    :out "?eht"}
-;   [^String elem]
-;   (let [^Keyword elem-type (elem-type elem)]
-;     (condp = elem-type
-;       :body       elem
-;       :standalone
-;         (let [^String un-bracketed (-> elem popl popr popr)]
-;           (getr un-bracketed
-;             (inc (index-of un-bracketed  " "))
-;             (count un-bracketed)))
-;       nil)))
 
-; (defn ^String normalize-content
-;   [^String content]
-;   (-> content
-;       (str/replace "&amp;" "&")
-;       (str/replace "&apos;" "'")
-;       (str/replace "&quot;" "'")
-;       (str/replace "&#146;" "'")
-;       str/remove-extra-whitespace))
+(defrecord XMLAttr [name val])
+(defrecord XMLElem [name attrs val children])
 
-; (defn label-elem
-;   {:in  "<myTag>"
-;    :out "{:type :open :tag :my-tag :content nil}"}
-;   [^String elem] 
-;   (XMLElem.
-;     (elem-type elem)
-;     (tag       elem)
-;     (content   elem)))
+(defn xml-attr-vec [^Iterator iter]
+  (when (.hasNext iter)
+    (let [vec-f (transient [])]
+      (while (.hasNext iter)
+        (let [^Attribute attr-n (.next iter)]
+          (conj! vec-f (XMLAttr. (.getLocalPart ^QName (.getName attr-n))
+                                 (-> attr-n .getValue)))))
+      (persistent! vec-f))))
 
-; (defprotocol XMLParse
-;   (parse 
-;     ^{:doc  "Single-threadedly goes through the XML and associates
-;              each tag accordingly."
-;       :todo ["Optimize for transients only to fall back on if it is determined
-;               that parallel processing doesn't work well"
-;              "Could probably do parallel proc by splitting it up into a given number
-;               of threads, based on the threadpool and the file size, and doing it
-;               accordingly. Then match up the 'loose ends.'"]}
-;     [xml]
-;     [xml-type xml]))
+(defn xml-attr-map [^Iterator iter keywordize?]
+  (when (.hasNext iter)
+    (let [map-f (transient {})]
+      (while (.hasNext iter)
+        (let [^Attribute attr-n (.next iter)
+              k (.getLocalPart ^QName (.getName attr-n))
+              v (.getValue attr-n)]
+          (assoc! map-f
+            (if keywordize?
+                (keyword k)
+                k)
+            (if (and keywordize? (= k "type"))
+                (keyword v)
+                v))))
+      (persistent! map-f))))
 
-; (extend-protocol XMLParse
-;   Keyword
-;     (parse
-;       [xml-type xml-0] (parse xml-0 xml-type))
-;   iota.FileVector
-;     (parse
-;       ([xml-0]
-;         (parse xml-0 :qbxml))
-;       ([xml-0 ^Keyword xml-type]
-;         (let [^Fn split-item-if-necessary
-;                 (fn-> str
-;                       (str/replace #"(?<!^)<" "\n<")
-;                       (str/replace #">(?!$)"  ">\n")
-;                       (str/split   #"\n"))
-;               ^Fn remove-trailing-characters
-;                 (whenf*n (f*n str/ends-with? "\r")
-;                          popr)
-;               ^Fn remove-qbxml-headers-if-requested
-;                 (if (= xml-type :qbxml)
-;                     (fn->> popl
-;                            popl popr 
-;                            popl popr 
-;                            popl popr)
-;                     identity)
-;               ^Fn incorporate-split-items
-;                 (fn->> (reduce catvec))] ; could probably parallelize this process
-;           (->> xml-0
-;                (remove+ nil?) ; to handle multiline descriptions
-;                (map+ remove-trailing-characters)
-;                (map+ split-item-if-necessary)
-;                ; for foldp+:
-;                ; No implementation of method "slicev" of protocol
-;                ; found for iota.FileVector
-;                redv
-;                remove-qbxml-headers-if-requested
-;                incorporate-split-items
-;                (map+ label-elem)
-;                foldv
-;                (<- parse xml-type)))))
-;   String
-;     (parse
-;       ^{:performance ["Is foldv wise here?"]}
-;       ([xml-0]
-;         (parse xml-0 :general))
-;       ([xml-0 xml-type]
-;         (->> xml-0 split
-;              (map+ label-elem)
-;              foldv
-;              (<- parse xml-type))))
-;   APersistentVector
-;     (parse
-;       ([xml-0]
-;         (parse xml-0 :general))
-;       ([xml-0 ^Keyword xml-type]
-;         (->> xml-0 vec/vector+ (<- parse xml-type))))
-;   clojure.core.rrb_vector.rrbt.Vector
-;     (parse
-;       ^{:performance ["|normalize-content| is a possible bottleneck"]
-;         :todo  ["Use volatiles instead of atoms"]
-;         :bench ["Test case: QB items list
-;                  Starts from raw file vector:
-;                    (->> (io/read :read-method :str-vec
-;                                  :directory [:test \"Responses\"
-;                                             \"response 00.txt\"])
-;                         xml/parse)
-;                  Current               ~5.8  sec
-;                  Uniques-only (bad)    5.07  sec
-;                  Old    (|parse-xml+|) 12.86 sec
-;                  Oldest (|parse-xml|)  25    sec"]}
-;       ([xml-0] (parse xml-0 :general))
-;       ([xml-0 ^Keyword xml-type]
-;         (let [^Atom traversal-keys (volatile! [] )
-;               ^Atom built-up-map   (volatile! {} )
-;               ^Atom final-result   (volatile! nil)
-;               ^Fn   unique-tag-if-needed ; gensym ensures no re-association
-;                 (fn [^Keyword tag-n]
-;                   (if (contains?
-;                         (get-in @built-up-map @traversal-keys)
-;                         tag-n)
-;                       (do (log/pr :alert-core
-;                             "Tag" (str/squote tag-n) "exists." "Creating new tag")
-;                           (-> tag-n (str "##")
-;                               rest ; to remove colon
-;                               gensym keyword)) 
-;                       tag-n))] 
-;           (reduce
-;             (fn [^Vec ret ^XMLElem elem]
-;               (let [^Key    elem-type (:elem-type elem)
-;                     ^Key    tag       (:tag       elem)
-;                     ^String content   (:content   elem)]
-;                 (condp = elem-type
-;                   :standalone (conj ret {tag content})
-;                   :open       (do (log/pr :inspect-core "Found open element:" tag)
-;                                   (vswap! traversal-keys conj
-;                                     (unique-tag-if-needed tag))
-;                                   (log/pr :inspect-core "Conj'ed" (str/squote tag) ";"
-;                                     "Traversal keys now:" @traversal-keys)
-;                                   (swap! built-up-map
-;                                     assoc-in+
-;                                     @traversal-keys
-;                                     {}) ; there's gotta be a better way
-;                                   ret)
-;                   :close      (do (log/pr :inspect-core "Found close element:" tag)
-;                                   (if (single? @traversal-keys) ; last level to close out
-;                                       (do (vreset! traversal-keys [])
-;                                           (vreset! final-result @built-up-map)
-;                                           (log/pr :inspect-core
-;                                             "About to conj map result:" @final-result)
-;                                           (vreset! built-up-map   {})
-;                                           (conj ret @final-result))
-;                                       (do (vswap! traversal-keys popr)
-;                                           ret)))
-;                   :body       (do (log/pr :inspect-core "Found body element:" content)
-;                                   (vswap! built-up-map
-;                                      assoc-in+
-;                                      @traversal-keys
-;                                      (normalize-content content)) ; Possible bottleneck
-;                                   ret)
-;                   (throw+
-;                     (str "Unknown XML element type:" " "
-;                          (str/squote elem-type)      " "
-;                          (str/paren (str "requested for tag" " " tag ", "
-;                                     "content" " " content)))))))
-;             []
-;             xml-0)))))
+(defn transient-copy
+  {:todo ["Move to different ns"]}
+  [t]
+  (let [copy (transient [])]
+    (dotimes [n (count t)]
+      (conj! copy (get t n)))
+    (persistent! copy)))
 
-; (defn wrap [string body]
-;   (if (nil? body)
-;       []
-;       [(brs-open  string)
-;        body
-;        (brs-close string)]))
+(defn tpeek
+  {:todo ["Move to different ns"]}
+  [t]
+  (get t (lasti t)))
+(def down (fn-> first :children))
 
-; (defn wrap-body [tag & body]
-;   (if (every? empty? body)
-;       []
-;       (catvec
-;         [(brs-open  tag)]
-;         (apply catvec body)
-;         [(brs-close tag)])))
+(defn start-elem-handler
+  [^StartElement obj start-elem e-ct stack xml-f
+   aggregate-props? keywordize-attrs? keywordize-names?]
+  ((or start-elem :null) obj)
+  (vreset! e-ct (long 0))
+  (conj! stack (XMLElem. (if keywordize-names?
+                             (-> (.getLocalPart ^QName (.getName obj)) keyword)
+                             (-> (.getLocalPart ^QName (.getName obj))))
+                         (if aggregate-props?
+                             (-> obj .getAttributes (xml-attr-map keywordize-attrs?))
+                             (-> obj .getAttributes xml-attr-vec))
+                         nil
+                         nil)))
+
+(defn chars-handler [^Characters obj chars e-ct stack xml-f]
+  ((or chars :null) obj)
+  (assoc! stack (lasti stack)
+    (assoc (tpeek stack) :val (.getData obj))))
+
+(defn end-elem-handler [^EndElement obj end-elem e-ct stack xml-f]
+  ((or end-elem :null) obj)
+  (vreset! e-ct (unchecked-inc (long @e-ct)))
+  (if (> (long @e-ct) 1) ; going up a level
+      (do (assoc! stack (lasti stack)
+            (assoc (tpeek stack) :children (persistent! @xml-f)))
+          (vreset! xml-f (transient [])) ; new container
+          (conj! @xml-f (tpeek stack))
+          (pop! stack))
+      (do (conj! @xml-f (tpeek stack)) ; Add curr to temp elem-container
+          (pop! stack))))
+
+(def default-handler (fn [obj]))
+
+(defn parse
+  {:performance "360 µs vs. clojure.data.xml's 865 µs! :D
+                 268 µs vs. 402 µs
+                 Some tests shows them to be the same,
+                 but most show this to be better! Yay eagerness!"}
+  ([s] (parse s nil))
+  ([s
+    {:keys [start-doc start-elem chars end-elem end-doc unk-elem
+            aggregate-props? keywordize-attrs? keywordize-names?]
+     :as opts}]
+    (let [stack (transient [])
+          xml-f (volatile! (transient []))
+          e-ct  (volatile! (long 0))
+          start-doc-handler  (or start-doc default-handler)
+          end-doc-handler    (or end-elem  default-handler)
+          unk-elem-handler   (or unk-elem  default-handler)
+          ^XMLInputFactory xif (XMLInputFactory/newInstance)
+          ^XMLEventReader  xer (.createXMLEventReader xif (StringReader. s))]
+            (loop [^XMLEvent xml-event (.nextEvent xer)]
+              (if-not (.hasNext xer)
+                  (persistent! @xml-f)
+                  (cond
+                    (.isStartDocument xml-event)
+                      (do (start-doc-handler  xml-event)
+                          (recur (.nextEvent xer)))
+                    (.isStartElement xml-event)
+                      (do (start-elem-handler (.asStartElement xml-event)
+                            start-elem e-ct stack xml-f
+                            aggregate-props? keywordize-attrs? keywordize-names?)
+                          (recur (.nextEvent xer)))
+                    (.isCharacters   xml-event)
+                      (do (chars-handler      (.asCharacters   xml-event)
+                            chars e-ct stack xml-f)
+                          (recur (.nextEvent xer)))
+                    (.isEndElement   xml-event)
+                      (do (end-elem-handler   (.asEndElement   xml-event)
+                            end-elem e-ct stack xml-f)
+                          (recur (.nextEvent xer)))
+                    (.isEndDocument  xml-event)
+                      (do (end-doc-handler    xml-event)
+                          (recur (.nextEvent xer)))
+                    :else
+                      (do (unk-elem-handler   xml-event))))))))
+
+(def lparse cxml/parse)
+
 ))

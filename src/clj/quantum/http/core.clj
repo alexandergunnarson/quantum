@@ -130,6 +130,12 @@
                  "not a valid HTTP request type.")))
       @(http/request req))) ; |deref| because it's a |promise|
 
+(defn default-handler [response tries status req log]
+  (merge response
+    {:tries tries
+     :req   req
+     :log   log}))
+
 (defn request!
   "'Safe' because it handles various HTTP errors (401, 403, 500, etc.),
    and limits retries at |http-lib/*max-tries-http*| (which defaults at 3)."
@@ -160,7 +166,7 @@
    {:keys [^Int tries ^Atom log ^Fn handler status]
     :or {tries   0
          log     http-log
-         handler vector}}]
+         handler default-handler}}]
   (if (= tries *max-tries-http*)
       (throw+ {:type :http
                :msg (str "HTTP exception, status " status ". Maximum tries (3) exceeded.")})
@@ -169,7 +175,7 @@
             response-write! (log-entry-write! log :response tries "OK")]  ; this is not executed if an exception happens
         (condf response
           (compr :status (f*n splice-or = 401 403 500))
-            #(handler tries (:status %) req log)
+            #(handler response tries (:status %) req log)
           :else
             identity))))
 

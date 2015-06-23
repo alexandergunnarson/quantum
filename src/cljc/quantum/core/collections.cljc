@@ -26,26 +26,39 @@
      merge into
      count
      vec empty
-     first second rest last butlast get pop peek])
+     first second rest last butlast get pop peek
+     assoc! conj!])
   (:require-quantum [ns logic type macros num map vec set log err macros fn str async time])
   (:require
-    [quantum.core.collections.core :as coll]
-    [quantum.core.reducers :as red]
-    [quantum.core.loops    :as loops]
-    #?(:clj [clojure.pprint :refer [pprint]])
-    [clojure.walk :as walk]))
+            [quantum.core.collections.core :as coll]
+            [quantum.core.reducers         :as red]
+            [clojure.walk                  :as walk]
+    #?(:clj [quantum.core.loops            :as loops])
+    #?(:clj [clojure.pprint :refer [pprint]]))
+  #?(:cljs
+    (:require-macros
+      [quantum.core.reducers   :as red]
+      [quantum.core.cljs.loops :as loops])))
 
-(defnt key
-  "Like |key| but more robust."
-  map-entry?
-    (([obj] (core/key obj))
-     ([k v] k))) ; For use with kv-reduce
+#?(:clj
+    (defnt key
+      "Like |key| but more robust."
+      map-entry?
+        (([obj] (core/key obj)) 
+         ([k v] k))) ; For use with kv-reduce
+   :cljs (defalias key core/key)) 
 
-(defnt val
-  "Like |key| but more robust."
-  map-entry?
-    (([obj] (core/val obj))
-     ([k v] v))) ; For use with kv-reduce
+#?(:clj
+    (defnt val
+      "Like |val| but more robust."
+      map-entry?
+        (([obj] (core/val obj)) 
+         ([k v] v))) ; For use with kv-reduce
+   :cljs (defalias val core/val)) 
+
+(defn genkeyword
+  ([]    (keyword (gensym)))
+  ([arg] (keyword (gensym arg))))
 
 (defnt empty
   string?  ([obj] "")
@@ -54,7 +67,7 @@
 (defalias vec         red/vec+       )    
 (defalias into        red/into+      )    
 #?(:clj (defalias reduce   loops/reduce  ))
-#?(:clj (defalias reduce  loops/reduce ))
+#?(:clj (defalias reduce-  loops/reduce- ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
 (defalias redv        red/fold+      )
@@ -140,6 +153,9 @@
 (defalias lrest         core/rest         )
 (def      butlast       coll/butlast      )
 (def      last          coll/last         )
+(def      assoc!        coll/assoc!       )
+(def      conj!         coll/conj!        )
+(def      update!       coll/update!      )
 
 (defalias merge map/merge+)
 
@@ -220,7 +236,7 @@
 
 (defn repeat
   ([obj]   (core/repeat obj))
-  ([n obj] (for [i (range n)] obj)))
+  ([n obj] (loops/for [i (range n)] obj)))
 
 ; ===== ....
 
@@ -279,7 +295,7 @@
 (defn+ ffilter+
   {:todo ["Use a delayed reduction as the base!"]}
   [^Fn pred coll]
-  (reduce
+  (loops/reduce
     (fn [ret elem-n]
       (when (pred elem-n)
         (reduced elem-n)))
@@ -291,7 +307,7 @@
    :in   '[(fn-eq? "4") ["a" "d" "t" "4" "10"]]
    :out  [3 "4"]}
   [^Fn pred coll]
-  (reducei-
+  (loops/reducei
     (fn [ret elem-n index-n]
       (if (pred elem-n)
           (reduced (map-entry index-n elem-n))
@@ -304,14 +320,14 @@
   [pred coll]
   (if (should-transientize? coll)
       (persistent!
-        (reducei-
+        (loops/reducei
           (fn [ret elem-n n]
             (if (pred elem-n)
                 (conj! ret (map-entry n elem-n))
                 ret))
           (transient [])
           coll))
-      (reducei-
+      (loops/reducei
         (fn [ret elem-n n]
           (if (pred elem-n)
               (conj ret (map-entry n elem-n))
@@ -329,7 +345,7 @@
            (<- update 0 (partial - (lasti coll)))))
   :default
     ([coll pred]
-      (reducei-
+      (loops/reducei
         (fn [ret elem-n index-n]
           (if (pred elem-n)
               (map-entry index-n elem-n)
@@ -337,7 +353,8 @@
         (map-entry nil nil)
         coll)))
 
-(definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
+#?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
+   :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
 
 ; ================================================ INDEX-OF ================================================
 (defn seq-contains?
@@ -353,14 +370,14 @@
   [coll elem-0]
   (if (should-transientize? coll)
       (persistent!
-        (reducei
+        (loops/reducei
           (fn [ret elem-n n]
             (if (= elem-0 elem-n)
                 (conj! ret n)
                 ret))
           (transient [])
           coll))
-      (reducei
+      (loops/reducei
         (fn [ret elem-n n]
           (if (= elem-0 elem-n)
               (conj ret n)
@@ -514,12 +531,12 @@
   {:in  [3 "abcdefg"]
    :out "abcd"}
   [n coll]
-  (subseq coll 0 (-> coll lasti long (- (long n)) inc)))
+  (subseq coll 0 (-> coll lasti long (- (long n)))))
 
 (defn ldropr
   {:attribution "Alex Gunnarson"}
   [n coll]
-  (lsubseq coll 0 (-> coll lasti long (- (long n)) inc)))
+  (lsubseq coll 0 (-> coll lasti long (- (long n)))))
 
 (defn dropr-while [pred super]
   (subseq super 0
@@ -555,14 +572,6 @@
 ;     (inc (last-index-of super sub))
 ;     (-> super lasti))
 
-(defn dropr-while [pred coll]
-  (let [drop-index
-         (loop [n (lasti coll)]
-           (if (or (-> coll (get n) pred) (= n 0))
-               n
-               (recur (dec n))))]
-    (getr coll 0 drop-index)))
-
 ; ================================================ MERGE ================================================
 
 (defn index-with [coll f]
@@ -570,7 +579,8 @@
        (map+ #(map-entry (f %) %))
        redm))
 
-(defn merge-keep-left [a b] (merge b a))
+(defn merge-keep-left  [a b] (merge b a))
+(defn merge-keep-right [a b] (merge a b))
               
 (defn split-remove
   {:todo ["Slightly inefficient — two /index-of/ implicit."]}
@@ -613,7 +623,7 @@
           "HOW DOES THIS HAVE ANY RELEVANCE?"
           "Possibly belongs in a different namespace"]}
   [coll ^Fn compare-fn]
-  (reducei
+  (loops/reducei
     (fn [ret elem n]
       (if (= n 0)
           elem
@@ -656,7 +666,7 @@
   [s]
   (when (seq s)
     (cons (first s)
-          (lseq (s rest unchunk)))))
+          (lazy-seq (s rest unchunk)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  POSITION IN COLLECTION  }=====================================================
 ;=================================================={ first, rest, nth, get ...}=====================================================
@@ -697,7 +707,7 @@
 
 #?(:cljs
   (defn rename-keys [m-0 rename-m]
-    (reduce
+    (loops/reduce
       (fn [ret k-0 k-f]
         (-> ret
             (assoc  k-f (get ret k-0))
@@ -768,8 +778,8 @@
           merge2
             (fn ([] {})
                 ([m1 m2]
-                 (reduce merge-entry (or m1 {}) (seq m2))))]
-      (reduce merge2 maps))))
+                 (loops/reduce merge-entry (or m1 {}) (seq m2))))]
+      (loops/reduce merge2 maps))))
 
 (defn ^Map merge-vals-left
   "Merges into the left map all elements of the right map whose
@@ -786,7 +796,7 @@
           :b {:aa 3}}}
   [^Map left ^Map right ^Fn f]
   (persistent!
-    (reduce
+    (loops/reduce
       (fn [left-f ^Key k-right ^Map v-right]
        ;(if ((fn-not contains?) left-f k-right) ; can't call |contains?| on a transient, apparently...
        ;    left-f)
@@ -805,8 +815,8 @@
 (defn- concat++
   {:todo ["Needs optimization"]}
   ([coll]
-    (try (reduce catvec coll)
-      (catch Exception e (reduce (zeroid into []) coll))))
+    (try (loops/reduce catvec coll)
+      (catch Exception e (loops/reduce (zeroid into []) coll))))
   ([coll & colls]
     (try (apply catvec coll colls)
       (catch Exception e (into [] coll colls)))))
@@ -841,7 +851,7 @@
      Performs much better on large set of keys."} 
   [keyseq m]
     (-> (transient {})
-        (reduce
+        (loops/reduce
           (fn [ret k]
             (let [entry (. clojure.lang.RT (find m k))]
               (if entry
@@ -901,7 +911,7 @@
   {:attribution "Alex Gunnarson"}
   [m obj]
   (persistent!
-    (reduce
+    (loops/reduce
       (fn [ret k v]
         (if (identical? obj v)
             (conj! ret k)
@@ -954,7 +964,7 @@
       (let [size (num/ceil (/ (count items) n-n))]
         (recur (dec n-n)
                (conj slices (subvec+ items 0 size))
-               (subvec+ items size))))))
+               (subvec+ items size (lasti items)))))))
 ; /partition/
 ; (partition 4 (range 20))
 ; => ((0 1 2 3) (4 5 6 7) (8 9 10 11) (12 13 14 15) (16 17 18 19))
@@ -1018,7 +1028,7 @@
             trans-fn (if trans? identity transient)
             pers-fn  (if trans? identity persistent!)]
         (pers-fn
-          (reduce
+          (loops/reduce
             (fn [coll-n _] (conj! coll-n nil)) ; extend-vec part
             (trans-fn coll-0)
             (range (count coll-0) (inc k)))))
@@ -1161,13 +1171,12 @@
         (editable? coll)
           (-> coll transient (dissoc! coll key-0) persistent!)
         :else
-          (dissoc coll key-0))
-      (catch ClassCastException e (dissoc coll key-0)))) ; Probably because of transients...
+          (dissoc coll key-0))))
   ([coll key-0 & keys-0]
-    (reduce dissoc+ coll (cons key-0 keys-0))))
+    (loops/reduce dissoc+ coll (cons key-0 keys-0))))
 
 (defn dissocs+ [coll & ks]
-  (reduce
+  (loops/reduce
     (fn [ret k]
       (dissoc+ ret k))
     coll
@@ -1176,6 +1185,12 @@
 (defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
   (whenf coll (fn-> (get k) pred)
     (f*n dissoc+ k)))
+
+(defn dissoc++ [coll obj]
+  (cond (map? coll)
+      (dissoc coll obj)
+      (set? coll)
+      (disj coll obj)))
 
 (defn dissoc-in+
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -1218,7 +1233,7 @@
   {:todo ["Name this function more appropriately"]
    :attribution "Alex Gunnarson"}
   ([coll kfs]
-    (->> (reduce
+    (->> (loops/reduce
            (fn [ret k f]
              (assoc+ ret k (f coll)))
            {}
@@ -1321,7 +1336,7 @@
          (fn [grouped-elems]
            (if (single? grouped-elems)
                grouped-elems
-               (reduce
+               (loops/reduce
                  (fn [ret elem]
                    (merge-with+ merge-with-f ret elem))
                  (first grouped-elems)
@@ -1362,56 +1377,36 @@
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================
 ; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
-
-(defprotocol ^{:added "1.6"} Walkable
-  (^{:added "1.6"
-     :attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-     walk2 [coll f]
-    "If coll is a collection, applies f to each element of the collection
-     and returns a collection of the results, of the same type and order
-     as coll. If coll is not a collection, returns it unchanged. \"Same
-     type\" means a type with the same behavior. For example, a hash-map
-     may be returned as an array-map, but a a sorted-map will be returned
-     as a sorted-map with the same comparator."))
-
-#?(:clj
-  (extend-protocol Walkable
-    nil
-      (walk2 [coll f] nil)
-    java.lang.Object  ; default: not a collection
-      (walk2 [x f] x)
-    clojure.lang.IMapEntry
-      (walk2 [coll f]
-        (clojure.lang.MapEntry. (f (.key coll)) (f (.val coll))))
-    clojure.lang.ISeq  ; generic sequence fallback
-      (walk2 [coll f]
-        (map f coll))
-    clojure.lang.PersistentList  ; special case to preserve type
-      (walk2 [coll f]
-        (apply list (map f coll)))
-    clojure.lang.PersistentList$EmptyList  ; special case to preserve type
-      (walk2 [coll f] '())
-    clojure.lang.IRecord  ; any defrecord
-      (walk2 [coll f]
-        (reduce (fn [r x] (conj r (f x))) coll coll))))
-
-(defn- walk2-transient [coll f]
-  ;; `transient` discards metadata as of Clojure 1.6.0
-  (persistent!
-    (reduce
-      (fn [r x] (conj! r (f x)))
-      (transient (empty coll)) coll)))
-
-;; Persistent collections that support transients
-#?(:clj
-  (doseq [type [clojure.lang.PersistentArrayMap
-                clojure.lang.PersistentHashMap
-                clojure.lang.PersistentHashSet
-                clojure.lang.PersistentVector]]
-    (extend type Walkable {:walk2 walk2-transient})))
+(defnt walk2
+  "If coll is a collection, applies f to each element of the collection
+   and returns a collection of the results, of the same type and order
+   as coll. If coll is not a collection, returns it unchanged. \"Same
+   type\" means a type with the same behavior. For example, a hash-map
+   may be returned as an array-map, but a a sorted-map will be returned
+   as a sorted-map with the same comparator."
+  ; clojure.lang.PersistentList$EmptyList : '()
+  ; special case to preserve type
+  list?            ([coll f] (apply list (map f coll)))
+  ; generic sequence fallback
+  seq?             ([coll f] (map f coll))
+  ; |transient| discards metadata as of Clojure 1.6.0
+  transientizable? ([coll f]
+                     (persistent!
+                       (core/reduce
+                         (fn [r x] (conj! r (f x)))
+                         (transient (empty coll)) coll)))
+#?@(:clj
+      [map-entry?  ([coll f] (map-entry (f (key coll)) (f (val coll))))
+       record?     ([coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll))
+       :default    ([x    f] x)]
+    :cljs
+      [:default    ([obj  f]
+                     (if (coll? obj)
+                         (into (empty obj) (map f obj))
+                         obj))]))
 
 (defn- walk2-default [coll f]
-  (reduce
+  (core/reduce
     (fn [r x] (conj r (f x)))
     (empty coll) coll))
 
@@ -1421,7 +1416,7 @@
                 clojure.lang.PersistentStructMap
                 clojure.lang.PersistentTreeMap
                 clojure.lang.PersistentTreeSet]]
-    (extend type Walkable {:walk2 walk2-default})))
+    (extend type Walk2Protocol {:walk2 walk2-default})))
 
 (defn walk
   "Traverses form, an arbitrary data structure.  inner and outer are
@@ -1452,14 +1447,14 @@
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"
    :contributors #{"Alex Gunnarson"}}
   [^Map m]
-  (let [stringify-key
+  (let [keywordify-key
          (fn [[k v]]
            (if (string? k)
-               (map-entry (keyword? k) v)
+               (map-entry (keyword k) v)
                (map-entry k v)))]
     ; only apply to maps
     (postwalk
-      (whenf*n map? (fn->> (map+ stringify-key) redm))
+      (whenf*n map? (fn->> (map+ keywordify-key) redm))
       m)))
 
 ; COMBINE THESE TWO
@@ -1502,7 +1497,7 @@
   (let [results (transient [])]
     (postwalk
       (whenf*n pred
-        (fn->> (with->> conj! results))) ; keep it the same
+        (fn->> (withf->> #(conj! results %)))) ; keep it the same
       tree)
     (persistent! results)))
 
@@ -1531,32 +1526,9 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   COLLECTIONS CREATION   }=====================================================
 ;=================================================={                          }=====================================================
-; ; DEPRECATED; Created while learning Scheme, in which a loop-recur kind of form is the norm 
-; (defn coll-struct
-;   "Usage:
-;   (lib/coll-struct :size 5 :in [] :element {})
-;   => [{} {} {} {} {}]
-;   (lib/coll-struct :size 5 :in {} :elem-func #(hash-map (keyword (str %)) %))
-;   => {:4 4, :3 3, :2 2, :1 1, :0 0}"
-;   [& {:keys [in size element elem-func]
-;       :or   [elem-func identity]
-;       :as   args}]
-;   (let [elem-func-f
-;          (cond (nnil? element)   (fn [n] element)
-;                (nnil? elem-func) elem-func)]
-;     (loop [n 0 coll-n in]
-;       (if (= n size)
-;           coll-n
-;           (recur (inc n) (conj coll-n (elem-func-f n)))))))
-; ; DEPRECATED; Created while learning Scheme, in which a loop-recur kind of form is the norm 
-; (defn accumulate
-;   ^{:usage "(accumulate :decum [1 2 3] :accum () :func #(conj %1 (inc %2)))
-;             => (4 3 2)"}
-;   [& {:keys [decum accum func]
-;       :as args}]
-;   (loop [[list-n-0 & list-r :as list-n] decum
-;          list-f accum]
-;     (if (empty? list-n)
-;         list-f
-;         (recur list-r
-;                (func list-f list-n-0)))))
+
+; TODO fix
+(def map->record hash-map)
+
+(defn reverse-kv [m]
+  (zipmap (vals m) (keys m)))

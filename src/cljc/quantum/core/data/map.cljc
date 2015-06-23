@@ -21,9 +21,8 @@
   #?(:clj  (clojure.lang.MapEntry. k v)
      :cljs [k v]))
 
-#?(:clj
-  [(defalias ordered-map omap/ordered-map)
-   (defalias om omap/ordered-map)])
+(defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
+(defalias om          #?(:clj omap/ordered-map :cljs array-map))
 
 (defn merge+
   "A performant drop-in replacement for |clojure.core/merge|."

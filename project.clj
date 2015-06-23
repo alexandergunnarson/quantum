@@ -1,4 +1,4 @@
-(defproject quantum/core "0.2.4.2" ; Stable 0.2.4.0 ; 0.2.4.2 is tested on only Clojure
+(defproject quantum/core "0.2.4.3" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
@@ -15,7 +15,7 @@
   :dependencies
     [; ==== CLOJURE ====
      ; CLOJURE CORE
-     [org.clojure/clojure       "1.7.0-beta3"  ]
+     [org.clojure/clojure       "1.7.0-RC1"  ]
      [quantum/ns "1.0"]
      ; CORE
      [proteus                           "0.1.4" ]
@@ -47,7 +47,7 @@
      ; DATA.JSON
      [cheshire                          "5.3.1"] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
      ; MACROS
-     [potemkin                          "0.3.11"  ; defprotocol+, definterface+, etc.
+     #_[potemkin                          "0.3.11"  ; defprotocol+, definterface+, etc.
        :exclusions [riddley]]
      ; PRINT      
      [fipp                              "0.6.2"       ]
@@ -66,6 +66,9 @@
      [com.taoensso/nippy                "2.7.0-alpha1"
        :exclusions [org.clojure/tools.reader org.clojure/clojure org.json/json]] ; data serialization
      [iota                              "1.1.2"       ]  ; fast/efficient string IO manipulation
+     [com.cognitect/transit-clj    "0.8.271"
+       :exclusions [com.fasterxml.jackson.core/jackson-core]]
+         
 
      ; THREADING, ASYNC, CONCURRENCY
      [org.clojure/core.async    "0.1.346.0-17112a-alpha"]
@@ -85,8 +88,8 @@
      ;[repetition-hunter                 "1.0.0"       ]
      
      ; ; NETWORK.HTTP      
-     [clj-http                             "1.1.0"
-       :exclusions [riddley cheshire potemkin org.json/json
+     [clj-http                             "1.1.2"
+       :exclusions [riddley cheshire org.json/json
                     com.fasterxml.jackson.core/jackson-core commons-codec]]
      [http-kit                             "2.1.18"
        :exclusions [org.clojure/clojure]] 
@@ -134,7 +137,7 @@
   :auto-clean     false ; is this a mistake?
   :source-paths   ["src/clj" "src/cljc"
                    "src/cljc_next"
-                   ]
+                   "src/cljs"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
   ;:prep-tasks   [["cljx" "once"]] 
@@ -159,5 +162,4 @@
                    :pretty-print  false}}]}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3449
-             :css-dirs ["resources/public/css"]}
-)
+             :css-dirs ["resources/public/css"]})

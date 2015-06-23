@@ -5,42 +5,25 @@
           components to use 'virtual' CSS instead of generating
           an external stylesheet."
     :attribution "Alex Gunnarson"}
-  quantum.ui.css
+  quantum.ui.react
+  (:require-quantum [:lib])
   (:require
-   [quantum.core.ns          :as ns        :refer [Num Vec Key]        ]
-   [quantum.core.data.map    :as map       :refer [map-entry]          ]
-   [quantum.core.data.vector :as vec                                   ]
-   [quantum.core.function    :as fn        :refer [f*n]                ]
-   [quantum.core.logic       :as log       :refer [fn-not fn-and fn-or splice-or]]
-   [quantum.core.numeric     :as num       :refer [neg]                ]
-   [quantum.core.type        :as type      :refer [instance+? class]   ]
-   [quantum.core.string      :as str                                   ]
-   [quantum.ui.form          :as form                                  ]
-   [clojure.walk                           :refer [postwalk]           ]
-   [figwheel.client          :as fw                                    ]
-   [cljs.core.async :refer [<! chan sliding-buffer put! close! timeout]]
-   [quantum.core.collections :as coll :refer
-     [redv redm into+ reduce+
-      rest+ first+
-      lasti takeri+ taker-untili+
-      split-remove+
-      last-index-of+ index-of+
-      count+ takel+ dropl+ dropr+
-      getr+ vec+
-      map+ filter+ group-by+
-      merge+ key+
-      merge-keep-left]]
    [goog.style :as gstyle]
-   [quantum.ui.form :as form])
-  (:require-macros
-   [cljs.core.async.macros :refer [go-loop go]]
-   [quantum.core.function  :refer [fn->> fn-> <-]]
-   [quantum.core.logic     :refer [whenc whenf whenf*n whencf*n condf condf*n]]))
-
-(def styles          (atom {}))
-(def styles-template (atom {})) ; This needs to be initialized 
+   [quantum.ui.form :as form]))
 
 ; ======== HELPER FUNCTIONS ========
+
+; TODO Darkening and lightening functions
+
+; 100
+; 200
+; 300
+; 400 400 is the same as normal, 
+; 500
+; 600
+; 700 700 is the same as bold
+; 800
+; 900 
 
 (defn ^String px [n] (str n "px"))
 
@@ -72,9 +55,27 @@
   (->> (whenf css-block (fn-not map?)
          (fn->> (array-map :a) (vector :a)))
        (css {:pretty-print? false})
-       (<- dropl+ 2)   ; drops "a{"
-       (<- dropr+ 1)   ; drops "}"
-       (<- dropl+ 2))) ; drops "a:"  
+       (<- dropl 2)   ; drops "a{"
+       (<- dropr 1)   ; drops "}"
+       (<- dropl 2))) ; drops "a:"  
+
+(def styles          (atom {}))
+(def themes          (atom {}))
+(def styles-template (atom {})) ; This needs to be initialized 
+
+(defn theme
+  {:todo ["More arity"]}
+  ([k sub-k]      (get-in @themes [k sub-k]))
+  ([k sub-k & ks] (get-in @themes (apply vector k sub-k ks))))
+
+
+(def colors
+  (atom
+    {:dark-brown (rgb 84  56  71 )
+     :light-gray (rgb 208 213 217)
+     :white      (rgb 255 255 255)}))
+(defn color [k] (get @colors k))
+
 
 ; ======== REACT-SPECIFIC ========
 
@@ -101,7 +102,7 @@
           :background-position   :left}}
   [^Map css-block]
   (->> css-block 
-       (reduce+
+       (reduce
          (fn [^Map ret ^Key prop-k prop-v]
            (let [^Map normalized-props
                   (condf prop-v
@@ -141,10 +142,10 @@
                        (merge-keep-left ; gives precedence to subclasses
                          class-props-n
                          (get @styles-template (keyword class-n)))
-                       (dropr+ tag-n (count class-n))))))
+                       (dropr tag-n (count class-n))))))
              (let [^Keyword tag-f
                      (if (-> tag (str/starts-with? "#"))
-                         (rest+ tag) ; TODO: handle # differently ; should determine it the other way around, by HTML not by CSS
+                         (rest tag) ; TODO: handle # differently ; should determine it the other way around, by HTML not by CSS
                          tag)]
                (-> @styles-template (get tag-f))))
          ^Map style-react
@@ -155,7 +156,7 @@
   {:attribution "Alex Gunnarson"}
   [^Map ret ^Vec domain-for-freq]
   (->> domain-for-freq
-       (reduce+
+       (reduce
          #(each-class %1 %2)
          {})
        (merge+ ret)))
@@ -163,7 +164,7 @@
 (defn ^Map each-frequency
   {:attribution "Alex Gunnarson"}
   [^Map domain-frequencies ^Vec frequencies-sorted]
-  (reduce+
+  (reduce
     (fn [^Map ret ^Number frequency]
       (let [^Vec domain-for-freq
               (get domain-frequencies frequency)]
@@ -199,7 +200,7 @@
                  (fn->> name (filter+ (fn-> str (= "."))) redv count)))
         ^Vec frequencies-sorted
           (->> domain-period-frequencies
-               (map key+)
+               (map key)
                sort ; test performance of this sort (is it qsort?)
                vec+)
         ^Map frequencies-taken-care-of
@@ -250,7 +251,7 @@
        (postwalk
          (whenf*n form/ui-element?
            (fn [^Vec elem]
-             (let [^Key tag       (first+ elem)
+             (let [^Key tag       (first elem)
                    ct             (count elem)
                    ^Map style-n+1 (get @styles tag)
                    ^Vec elem-n+1

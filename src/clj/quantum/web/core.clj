@@ -4,7 +4,9 @@
     :attribution "Alex Gunnarson"}
   quantum.web.core
   (:require-quantum [:lib])
-  (:require [quantum.auth.core :as auth])
+  (:require
+    [quantum.auth.core :as auth]
+    [com.stuartsierra.component :as component  ])
   (:import
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
@@ -13,7 +15,25 @@
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
-    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)))
+    (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)
+    org.apache.commons.io.FileUtils))
+
+(defrecord QuantumWebDriver []
+  component/Lifecycle
+  (start [component]
+    (log/pr :user "Starting PhantomJS WebDriver")
+    (assoc component
+      :web-driver (PhantomJSDriver.)))
+
+  (stop [component]
+    (when (:web-driver component)
+      (log/pr :user "Stopping PhantomJS WebDriver")
+      (.quit ^PhantomJSDriver (:web-driver component)))
+    (assoc component :web-driver nil)))
+
+(defn make-component []
+  (map->QuantumWebDriver {}))
+
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 
@@ -22,9 +42,9 @@
 (def default-capabilities
   (doto (DesiredCapabilities/phantomjs)
         (.setJavascriptEnabled true)
-        (.setCapability
-          "phantomjs.page.settings.userAgent"
-          user-agent-string)))
+        (.setCapability "phantomjs.page.settings.userAgent"  user-agent-string)
+        (.setCapability "phantomjs.page.settings.loadImages" false)
+        ))
 
 ; Possibly defprotocol?
 (defn write-page!
@@ -89,6 +109,44 @@
                :elem        elem
                :on-page     (.getCurrentUrl driver)
                :page-source (.getPageSource driver)}))))
+
+(defn ins [^WebElement elem]
+  {:tag-name (.getTagName elem)
+   :id       (.getId      elem)
+   :enabled? (.isEnabled elem)
+   :text     (.getText elem)
+   :location (-> elem .getLocation str)})
+
+(defn screenshot! [^WebDriver driver ^String file-name]
+  (let [^java.io.File scrFile (.getScreenshotAs driver (. OutputType FILE))]
+    (->> [:resources "Screens" (str file-name ".png")]
+         io/file
+         (FileUtils/copyFile scrFile))))
+
+(def select-all-str (Keys/chord (into-array [(str (. Keys CONTROL)) "a"])))
+(def backspace (str (. Keys BACK_SPACE)))
+(def kdelete   (str (. Keys DELETE)))
+(def kenter    (str (. Keys ENTER)))
+
+(defn clear! [elem]
+  (let [text-length 
+          (-> elem .getText count)
+        kdeletes (->> (repeat text-length kdelete) (apply str))]
+    (send-keys! elem kdeletes)))
+
+(defn record-page! [^WebDriver driver ^String page-name]
+  (let [^String name-dashed (-> page-name str/keywordize name)
+        ^Fn record!
+          #(do (write-page!
+                 (.getPageSource driver)
+                 (str name-dashed ".html"))
+               (screenshot! driver name-dashed))]
+  (log/pr :debug "Screenshot of" page-name (record!))))
+
+(defn get-error-json [^Throwable err]
+  (-> err .getMessage
+      (json/parse-string keyword)
+      :errorMessage))
 
 ;driver.close() ; to close a single browser window.
 ; Also, opening and quitting the browser with every authentication is inefficient...

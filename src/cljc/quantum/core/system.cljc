@@ -3,13 +3,15 @@
     :attribution "Alex Gunnarson"}
   quantum.core.system
   (:require-quantum [str coll])
-  #?(:clj (:import java.io.File)))
+  #?(:clj (:import java.io.File java.lang.management.ManagementFactory)))
 
 #?(:clj
 (def os ; TODO: make less naive
   (if (contains? (System/getProperty "os.name") "Windows")
       :windows
       :unix)))
+
+#?(:clj (defn this-pid [] (->> (ManagementFactory/getRuntimeMXBean) (.getName))))
 
 #?(:clj (def separator (str (File/separatorChar)))) ; string because it's useful in certain functions that way
 #?(:clj

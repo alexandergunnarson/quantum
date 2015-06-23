@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.4.2</version>
+  <version>0.2.4.3</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>364e1408107cadccafe1a2bb4cbd21221dc2456b
+    <tag>dbba38cc88e2c4494a06182fa8a9b973855000dd
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -54,6 +54,7 @@
               <sources>
                 <source>src/cljc</source>
                 <source>src/cljc_next</source>
+                <source>src/cljs</source>
               </sources>
             </configuration>
           </execution>
@@ -97,7 +98,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
-      <version>1.7.0-beta3</version>
+      <version>1.7.0-RC1</version>
     </dependency>
     <dependency>
       <groupId>quantum</groupId>
@@ -144,17 +145,6 @@
       <groupId>cheshire</groupId>
       <artifactId>cheshire</artifactId>
       <version>5.3.1</version>
-    </dependency>
-    <dependency>
-      <groupId>potemkin</groupId>
-      <artifactId>potemkin</artifactId>
-      <version>0.3.11</version>
-      <exclusions>
-        <exclusion>
-          <groupId>riddley</groupId>
-          <artifactId>riddley</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <dependency>
       <groupId>fipp</groupId>
@@ -212,6 +202,17 @@
       <version>1.1.2</version>
     </dependency>
     <dependency>
+      <groupId>com.cognitect</groupId>
+      <artifactId>transit-clj</artifactId>
+      <version>0.8.271</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.fasterxml.jackson.core</groupId>
+          <artifactId>jackson-core</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>core.async</artifactId>
       <version>0.1.346.0-17112a-alpha</version>
@@ -250,7 +251,7 @@
     <dependency>
       <groupId>clj-http</groupId>
       <artifactId>clj-http</artifactId>
-      <version>1.1.0</version>
+      <version>1.1.2</version>
       <exclusions>
         <exclusion>
           <groupId>riddley</groupId>
@@ -259,10 +260,6 @@
         <exclusion>
           <groupId>cheshire</groupId>
           <artifactId>cheshire</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>potemkin</groupId>
-          <artifactId>potemkin</artifactId>
         </exclusion>
         <exclusion>
           <groupId>org.json</groupId>
@@ -338,6 +335,11 @@
           <artifactId>commons-codec</artifactId>
         </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.jetty</groupId>
+      <artifactId>jetty-server</artifactId>
+      <version>9.2.10.v20150310</version>
     </dependency>
     <dependency>
       <groupId>com.github.detro.ghostdriver</groupId>

@@ -92,6 +92,16 @@
           s
           code-map))))
 
+(defn encode [s]
+  (let [encoding-map
+         (merge (coll/reverse-kv (:common   url-percent-codes))
+                (coll/reverse-kv (:extended url-percent-codes)))]
+    (reduce
+      (fn [ret char-n percent-code]
+        (str/replace ret char-n percent-code))
+      s
+      encoding-map)))
+
 (defn ^Map url-params->map
   [^String str-params & [decode?]]
   (let [^Fn decode-if-necessary

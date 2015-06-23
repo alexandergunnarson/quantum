@@ -1,14 +1,10 @@
-#?(:clj (ns quantum.core.util.bench))
-
 (ns
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
     :attribution "Alex Gunnarson"}
   quantum.core.util.bench
+  (:require-quantum [ns str])
   (:require
-    [quantum.core.ns     :as ns #?@(:clj [:refer [defalias]])]
-    [quantum.core.string :as str]
-    #?(:clj [criterium.core :as bench]))
-  #?(:clj (:gen-class)))
+    #?(:clj [criterium.core :as bench])))
 
 #?(:clj 
   (defn num-from-timing [time-str]

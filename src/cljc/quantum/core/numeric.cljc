@@ -16,9 +16,16 @@
 (defn exp
   {:todo "Performance"}
   [x n]
+#?(:clj  (java.lang.Math/pow x n)
+   :cljs (.pow js/Math       x n)))
+
+#?(:clj
+(defn exp'
+  {:todo "Performance"}
+  [x n]
   (loop [acc 1 n n]
     (if (zero? n) acc
-        (recur (*' x acc) (unchecked-dec n)))))
+        (recur (*' x acc) (unchecked-dec n))))))
 
 #?(:clj
   (defn rationalize+ [n]
@@ -92,29 +99,33 @@
 
 (defn rcompare
   "Reverse comparator."
-  ^{:attribution "taoensso.encore, possibly via weavejester.medley"}
+  {:attribution "taoensso.encore, possibly via weavejester.medley"}
   [x y] (compare y x))
 
 (defn greatest
   "Returns the 'greatest' element in coll in O(n) time."
-  ^{:attribution "taoensso.encore, possibly via weavejester.medley"}
+  {:attribution "taoensso.encore, possibly via weavejester.medley"}
   [coll & [?comparator]]
   (let [comparator (or ?comparator rcompare)]
     (reduce #(if (pos? (comparator %1 %2)) %2 %1) coll))) ; almost certainly can implement this with /fold+/
+
 (defn least
   "Returns the 'least' element in coll in O(n) time."
   ^{:attribution "taoensso.encore, possibly via weavejester.medley"}
   [coll & [?comparator]]
   (let [comparator (or ?comparator rcompare)]
     (reduce #(if (neg? (comparator %1 %2)) %2 %1) coll)))
+
 (defn greatest-or [a b else]
   (cond (> a b) a
         (> b a) b
         :else else))
+
 (defn least-or [a b else]
   (cond (< a b) a
         (< b a) b
         :else else))
+
 (defn approx? [tolerance a b]
   (-> (- (int-nil a) (int-nil b)) abs (< tolerance)))
 
@@ -141,19 +152,21 @@
 ;=================================================={       TYPE-CASTING       }=====================================================
 ;=================================================={                          }=====================================================
 (defnt int+
-  int?    ([n] n      )
+  #?@(:clj
+ [int?    ([n] n      )
   long?   ([n] (int n))
   double? ([n] (int n))
-  float?  ([n] (int n))
+  float?  ([n] (int n))])
   nil?    ([n] nil    )
   string? (([s] #?(:clj  (Integer/parseInt s)
                    :cljs (-> s js/parseInt int)))
            #?(:clj ([s radix] (Integer/parseInt s radix)))))
 
 (defnt long+
-  long?   ([n] n       )
+  #?@(:clj
+ [long?   ([n] n       )
   double? ([n] (long n))
-  float?  ([n] (long n))
+  float?  ([n] (long n))])
   nil?    ([n] nil     )
   string? (([s] #?(:clj  (Long/parseLong s)
                    :cljs (-> s js/parseInt long)))

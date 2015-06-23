@@ -32,7 +32,7 @@
   [^Key auth-source map-f]
   (io/write!
     :path      [:resources "Keys"
-                (get auth-source-table auth-source)]
+                (str (get auth-source-table auth-source) ".cljx")]
     :overwrite false
     :data      map-f))
 

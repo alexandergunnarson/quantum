@@ -8,16 +8,19 @@
   quantum.core.io.serialization
   (:refer-clojure :exclude [read])
   (:require-quantum [ns coll])
-  (:require 
-    #?(:clj [taoensso.nippy             :as nippy :refer
-              [read-bytes read-utf8 read-biginteger]])
-    #?(:clj [iota                       :as iota]))
+  #?(:clj
+    (:require 
+      [taoensso.nippy             :as nippy :refer
+        [read-bytes read-utf8 read-biginteger]]
+      [iota                       :as iota]
+      [cognitect.transit :as t]))
   #?(:clj
      (:import 
         (java.io File FileNotFoundException PushbackReader
           FileReader DataInputStream DataOutputStream IOException
           FileOutputStream BufferedOutputStream BufferedInputStream
-          FileInputStream))))
+          FileInputStream
+          ByteArrayOutputStream))))
 
 ; This |do| covers the entire file. For purposes of reader macro
 #?(:clj
@@ -109,4 +112,13 @@
   [& records]
   (dotimes [n (lasti records)]
       ;(extend-serialization-for-record! record (deref (inc n)))
-    ))))
+    ))
+
+(defn ^String transit-encode [^Map m]
+  (let [baos (ByteArrayOutputStream.)]
+    (->> m (t/write (t/writer baos :json)))
+    (.close baos)
+    (.toString baos)))
+
+
+))

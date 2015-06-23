@@ -1,25 +1,11 @@
 (ns
   ^{:doc "Asynchronous things."
     :attribution "Alex Gunnarson"}
-  quantum.core.thread
-  (:refer-clojure :exclude
-    [contains? read for doseq reduce repeat repeatedly range merge count vec
-     into first second rest last butlast get pop peek])
-  #?(:clj (:gen-class)))
-
-#?(:clj (require
-  '[quantum.core.ns          :as ns    :refer [defalias alias-ns]]))
-#?(:clj (ns/require-all *ns* :clj))
-#?(:clj (require
-  '[quantum.core.numeric     :as num]
-  '[quantum.core.function    :as fn   :refer :all]
-  '[quantum.core.string      :as str]
-  '[quantum.core.error                :refer :all]
-  '[quantum.core.logic       :as log  :refer :all]
-  '[quantum.core.data.vector :as vec  :refer [catvec]]
-  '[quantum.core.collections :as coll :refer :all]
-  '[quantum.core.error       :as err  :refer [throw+ try+]]
-  '[clojure.core.async :as async :refer [go <! >! alts!]]))
+  quantum.core.thread.async
+  (:require-quantum
+    [ns num fn str err logic vec err async macros])
+  #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
+                   (java.util.concurrent LinkedBlockingQueue TimeUnit))))
 
 #?(:clj
 (defmacro <? [expr]
@@ -35,11 +21,44 @@
 ;      (when (instance? js/Error e#) (throw e#))
 ;      e#)))
 
+#?(:clj
 (defmacro try-go
   {:attribution "pepa.async"}
   [& body]
-  `(cljs.core.async.macros/go
-     (try
+  `(macros/go
+     (try+
        ~@body
-       (catch js/Error e#
-         e#))))
+       (catch :default e#
+         e#)))))
+
+(defrecord QueueCloseRequest [])
+
+(defnt take-with-timeout!
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q n]
+      (if (instance? QueueCloseRequest (.peek q))
+          (throw (InterruptedException. "Queue closed."))
+          (.poll q n (. TimeUnit MILLISECONDS))))]
+  [ManyToManyChannel]
+    ([c n] (async/alts! [(async/timeout n) c]))))
+
+(defnt take!
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q] (if (instance? QueueCloseRequest (.peek q))
+             (throw (InterruptedException. "Queue closed."))
+             (.take q)))])
+  [ManyToManyChannel]
+    ([c] (async/take! c)))
+
+(defnt put! 
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q obj]
+      (if (instance? QueueCloseRequest (.peek q))
+          (throw (InterruptedException. "Queue closed."))
+          (.put  q obj)))])
+  [ManyToManyChannel]
+    ([c obj] (async/put! c obj)))
+

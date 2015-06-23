@@ -4,8 +4,8 @@
 
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
-  #?(:clj (:refer-clojure :exclude
-    [vector hash-map rest count first second butlast last get pop peek assoc!]))
+  (:refer-clojure :exclude
+    [vector hash-map rest count first second butlast last get pop peek assoc!])
   (:require-quantum [ns err fn log logic red str map set macros type vec arr]))
 
 ; TODO Queues need support
@@ -25,10 +25,11 @@
   [coll]
   (-> coll count dec))
 
+#?(:clj
 (defnt array-of-type
   object-array? ([obj n] (object-array n))
   byte-array?   ([obj n] (byte-array   n))
-  long-array?   ([obj n] (long-array   n)))
+  long-array?   ([obj n] (long-array   n))))
 
 (defnt getr
   ; inclusive range
@@ -37,11 +38,12 @@
   array-list? ( [coll a b] (.subList coll a b))
   vec?        (([coll a b] (subvec+ coll a (inc (long b))))
                ([coll a]   (subvec+ coll a (-> coll count))))
-  array?      ( [coll a b]
+  #?@(:clj
+ [array?      ( [coll a b]
                 (let [arr-f (array-of-type coll (inc (- (int b) (int a))))]
                   (System/arraycopy coll (int a) arr-f (int 0)
                     (inc (- (int b) (int a))))
-                  arr-f))
+                  arr-f))])
   :default   (([coll a]   (->> coll (drop a)))
               ([coll a b] (->> coll (take b) (drop a))))) 
 
@@ -75,8 +77,13 @@
                ([coll n if-not-found] (core/get coll n if-not-found))))
 
 (defnt assoc!
-  array?     ([coll i val-] (aset!       coll i val-) coll)
-  transient? ([coll i val-] (core/assoc! coll i val-)))
+  array?               ([coll i v] (aset!       coll i v) coll)
+  transient?           ([coll k v] (core/assoc! coll k v))
+  [clojure.lang.IAtom] ([coll k v] (swap! coll assoc k v)))
+
+(defnt conj!
+  transient?           ([coll obj] (core/conj! coll obj))
+  [clojure.lang.IAtom] ([coll obj] (swap! coll conj obj)))
 
 (defnt update!
   :default ([coll i f] (assoc! coll i (f (get coll i)))))
@@ -98,7 +105,8 @@
 
 (defnt butlast
   string?   ([coll] (getr coll 0 (-> coll lasti dec)))
-  qreducer? ([coll] (dropr+ 1 coll))
+  #?@(:clj
+ [qreducer? ([coll] (dropr+ 1 coll))])
   vec?      ([coll] (whenf coll nempty? core/pop))
   :default  ([coll] (core/butlast coll)))
 
@@ -107,7 +115,8 @@
 
 (defnt last
   string?     ([coll] (get coll (lasti coll)))
-  qreducer?   ([coll] (taker+ 1 coll))
+  #?@(:clj
+ [qreducer?   ([coll] (taker+ 1 coll))])
   vec?        ([coll] (core/peek coll))
   array-list? ([coll] (get coll (lasti coll)))
   :default    ([coll] (core/last coll)))
@@ -122,17 +131,8 @@
   vec?    ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil))
   string? ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil)))
 
-(defn gets [coll & indices]
-  (if (should-transientize? indices)
-      (persistent!
-        (reduce
-          (fn [ret ind] (conj! ret (get coll ind)))
-          (transient [])
-          indices))
-      (reduce
-        (fn [ret ind] (conj ret (get coll ind)))
-        []
-        indices)))
+(defn gets [coll indices]
+  (->> indices (red/map+ (partial get coll)) red/fold+))
 
 (def third (f*n get 2))
 

@@ -29,6 +29,5 @@
   (->> ns-sym
        ns-publics
        vals
-       (map
-         (fn [var-] (qtest var-)))
+       (map (fn [var-] (qtest var-)))
        doall)))

@@ -24,20 +24,24 @@
 (def alphanum-chars (set/union alpha-chars num-chars))
 
 (defnt numeric?
-  char?   ([c] (contains? num-chars      c))
-  string? ([s] (every?    numeric?       s)))
+  #?@(:clj
+ [char?   ([c] (contains? num-chars c))])
+  string? ([s] (every? (extern (partial contains? num-chars)) s)))
 
 (defnt upper?
-  char?   ([c] (contains? upper-chars    c))
-  string? ([s] (every?    upper?         s)))
+  #?@(:clj
+ [char?   ([c] (contains? upper-chars c))])
+  string? ([s] (every? (extern (partial contains? upper-chars)) s)))
 
 (defnt lower?
-  char?   ([c] (contains? lower-chars    c))
-  string? ([s] (every?    lower?         s)))
+  #?@(:clj
+ [char?   ([c] (contains? lower-chars c))])
+  string? ([s] (every? (extern (partial contains? lower-chars)) s)))
 
 (defnt alphanum?
-  char?   ([c] (contains? alphanum-chars c))
-  string? ([s] (every?    alphanum?      s)))
+  #?@(:clj
+ [char?   ([c] (contains? alphanum-chars c))])
+  string? ([s] (every? (extern (partial contains? alphanum-chars)) s)))
 
 (defnt replace*
   string? ([pre post s] (.replace    ^String s pre ^String post))
@@ -53,7 +57,7 @@
    :out "abcnd"
    :todo "FIX reduce-kv to just normal reduce..."}
   [s m]
-  (clojure.core/reduce-kv
+  (core/reduce-kv
     (fn [ret old-n new-n]
       (replace ret old-n new-n))
     s
@@ -150,7 +154,7 @@
     (keyword? super)
       (ends-with? (name super) sub)))
 
-(defn remove-all [^String str-0 to-remove]
+(defn remove-all [str-0 to-remove]
   (reduce #(replace %1 %2 "") str-0 to-remove))
 
 #?(:clj
@@ -250,8 +254,11 @@
   {:todo ["Protocolize"]}
   [str-0]
   (if (nil? str-0)
-      (str "(" "nil" ")")
-      (str "(" str-0 ")")))
+      (str \( "nil" \))
+      (str \( str-0 \))))
+
+(defn bracket [s] (str \[ s \]))
+
 (defn sp
   "Like |str|, but adds spaces between the arguments."
   [& args]
@@ -259,7 +266,8 @@
     (fn [ret elem n]
       (if (= n (dec (count args)))
           (str ret elem)
-          (str ret elem " ")))
+          (str ret elem \space
+            )))
     ""
     args))
 (defn sp-comma
@@ -316,19 +324,20 @@
   ["a" "e" "i" "o" "u"
    "A" "E" "I" "O" "U"])
 
-#?@(:clj
-  [(defprotocol
-     String+
-     (str+ [obj] [obj & objs]))
+#?(:clj
+(defprotocol
+  String+
+  (str+ [obj] [obj & objs])))
    
-   (extend-protocol String+
-     java.io.InputStream
-       (str+ [is]
-         (let [^java.util.Scanner s
-                 (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
-           (if (.hasNext s) (.next s) "")))
-     Object
-       (str+ [obj] (str obj)))])
+#?(:clj
+(extend-protocol String+
+  java.io.InputStream
+    (str+ [is]
+      (let [^java.util.Scanner s
+              (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
+        (if (.hasNext s) (.next s) "")))
+  Object
+    (str+ [obj] (str obj))))
    
 (defn keyword+
   "Like |str| but for keywords."
@@ -338,25 +347,69 @@
       (string?  obj) (keyword obj)))
   ([obj & objs]
     (->> (cons obj objs)
-         (reduce+
+         (reduce
            (fn [ret elem] ; elem might be string or keyword
              (str ret (name elem)))
            "")
          keyword)))
 
-(def line-terminators
+(defn char->hex-code [c]
+  (rest (Integer/toHexString (bit-or (int c) 0x10000))))
+
+(defn char->unicode    [c] (str "\\u" (char->hex-code c)))
+(defn char->regex-code [c] (str "\\x" (char->hex-code c)))
+
+(def line-terminator-chars
   #{\newline \return (char 0x2028) (char 0x2029)})
 
+(def line-terminator-chars-regex
+  (->> line-terminator-chars (map char->regex-code) join bracket))
+
 (defnt line-terminator?
-  char? ([c] (contains? line-terminators c)))
+  #?@(:clj
+ [char?   ([c] (contains? line-terminator-chars c))])
+  string? ([s] (every? (extern (partial contains? line-terminator-chars)) s)))
 
 (def whitespace-chars
   (set/union
-    line-terminators
+    line-terminator-chars
     #{\space \tab (char 12)
       (char 11) (char 0xa0)}))
 
 (defnt whitespace?
-  char?   ([c] (contains? whitespace-chars c))
-  string? ([s] (every? #(whitespace? %) s)))
+  #?@(:clj
+ [char?   ([c] (contains? whitespace-chars c))])
+  string? ([s] (every? (extern (partial contains? whitespace-chars)) s)))
 
+(defn re-index
+  "Indexed matches."
+  {:todo ["Use bounded regex searches for MUCH greater efficiency."]
+   :out '{4   "div"
+          10  "divb"
+          22  "divh"
+          25  "div0a"
+          212 "divg"}}
+  [reg s]
+  (loop
+    [#?@(:clj  [^String s-n s]
+         :cljs [        s-n s])
+     matches (re-seq reg s)
+     indexed (sorted-map)]
+    (if (empty? matches)
+        indexed
+        (let [match-n    (first matches)
+              i-relative (.indexOf s-n match-n)
+              i-absolute
+                (if (empty? indexed)
+                    i-relative
+                    (+ i-relative (-> indexed last first)
+                                  (-> indexed last second count)))]
+          (recur (.substring s-n (+ i-relative (count match-n))
+                           (-> s-n count dec))
+                 (rest matches)
+                 (assoc indexed i-absolute match-n))))))
+
+(defn re-preview [reg ^String s & [preview-ct]]
+  (->> (re-index reg s)
+       (map (fn [[i v]]
+              (.substring s i (+ i (or preview-ct 20)))))))

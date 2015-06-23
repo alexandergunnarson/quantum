@@ -28,6 +28,8 @@
 
 ;(require '[clojure.data.csv :as csv])
 
+#?(:clj (do
+
 (defnt file-name*
   string? ([s] (taker-until sys/separator nil s))
   file?   ([f] (-> f str file-name*)))
@@ -147,7 +149,8 @@
             (path path-n k-to-add-f)))
         "" keys-n))
   string?  ([s] s)
-  keyword? ([k] (parse-dir [k])))
+  keyword? ([k] (parse-dir [k]))
+  nil?     ([obj] ""))
 
 (defnt ^File as-file
   vector? ([dir] (-> dir parse-dir as-file))
@@ -470,3 +473,7 @@
 ; Placed here to avoid shadowing within this ns
 (defalias file       as-file)
 (defalias file-name file-name*)
+
+(def create-file! (fn-> as-file (.createNewFile)))
+
+))

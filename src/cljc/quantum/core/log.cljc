@@ -19,7 +19,9 @@
 
 
 (defonce ^:dynamic *prs*
-  (-> {:warn true :user true} map->LoggingLevels atom)) ; alert, inspect, debug
+  (-> {:warn              true
+       :user              true}
+      map->LoggingLevels atom)) ; alert, inspect, debug
 (def log  (atom []))
 (def vars (atom {}))
 (defn cache! [k v]
@@ -47,7 +49,7 @@
     (swap! *prs* assoc pr-type true))
   ([^Keyword pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
-      (enable! pr-type-n))))
+      (enable! pr-type-n)))) 
 
 (def env-type #?(:clj :clj :cljs :cljs))
 
@@ -58,28 +60,33 @@
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
   [pretty? print-fn pr-type args]
-  (when (get @*prs* pr-type)
+  (when (or (get @*prs* pr-type)
+            #?(:cljs (= pr-type :macro-expand)))
     (let [curr-fn (ns/this-fn-name :prev)
           args-f @args
           env-type-str
             (when (get @*prs* :env)
-              (str (name env-type) " » "))]
-      #?(:cljs (print "\n/* "))
-      (print (str "[" env-type-str
-                      curr-fn " » "
-                      (-> pr-type name) "] "))
-      (if (and pretty? (-> args-f first string?))
-          (do (print (first args-f) " ")
-              (apply print-fn (rest args-f)))
-          (apply print-fn args-f))
-      #?(:cljs (print " */\n"))
-  
+              (str (name env-type) " »"))
+          out-str
+            (with-out-str
+              (when (= pr-type :macro-expand) (print "\n/* "))
+              (print (str "[" env-type-str)
+                     curr-fn "»"
+                     (str (-> pr-type name) "] "))
+              (if (and pretty? (-> args-f first string?))
+                  (do (print (first args-f) " ")
+                      (println)
+                      (apply print-fn (rest args-f)))
+                  (do (when pretty? (println))
+                      (apply print-fn args-f)))
+              (when (= pr-type :macro-expand) (print " */\n")))]
+      (print out-str)
       (swap! quantum.core.log/log conj
         (LogEntry.
           (time/now)
           pr-type
           curr-fn
-          (apply str args-f)))
+          out-str))
       nil)))
 
 #?(:clj

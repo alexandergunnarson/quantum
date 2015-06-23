@@ -97,7 +97,7 @@
       (byte-array (long size)))
     ([size & args]
       (let [^"[B" arr (byte-array (long size))]
-        (loops/doseqi- [arg args n]
+        (doseqi [arg args n]
           (aset! arr n (-> arg first byte)))
         arr))))
 
@@ -110,7 +110,7 @@
       (int-array (long size)))
     ([size & args]
       (let [^ints arr (int-array (long size))]
-        (loops/doseqi- [arg args n]
+        (doseqi [arg args n]
           (aset! arr (long n) (-> arg first int)))
         arr))))
 

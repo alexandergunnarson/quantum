@@ -14,7 +14,7 @@
   quantum.core.reducers
   #?(:clj  (:refer-clojure :exclude [reduce])
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require-quantum [ns fn logic macros num type map set vec])
+  (:require-quantum [ns fn logic macros num type map set vec log])
   (:require         [clojure.walk :as walk]))
 
 ;___________________________________________________________________________________________________________________________________
@@ -267,7 +267,7 @@
                :cljs
               (let [last-index (-> s count unchecked-dec long)]
                 (cond
-                  (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number MAX_VALUE)))
+                  (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number -MAX_VALUE)))
                     (throw (Exception. "String too large to reduce over (at least, efficiently)."))
                   (= last-index -1)
                     (f init nil)
@@ -341,7 +341,7 @@
   ([to from & froms]
     (reduce into+ (into+ to (fold-pre from)) froms)))
 
-(defn reducem+
+(defn+ reducem+
   "Requires only one argument for preceding functions in its call chain."
   {:attribution "Alex Gunnarson"
    :performance "9.94 ms vs. 17.02 ms for 10000 calls to (into+ {}) for small collections ;
@@ -350,8 +350,8 @@
   #?(:clj
     (->> coll force
          (reduce
-           (fn [ret k v]
-             (assoc! ret k v))
+           (extern (fn ([ret k v]   (assoc! ret k v))
+                       ([ret [k v]] (assoc! ret k v))))
            (transient {}))
          persistent!)
     :cljs
@@ -494,9 +494,9 @@
        (reify
          cljs.core/IReduce
          (-reduce [_ f1]
-           (-reduce coll (xf f1) (f1)))
+           (reduce+ coll (xf f1) (f1)))
          (-reduce [_ f1 init]
-           (-reduce coll (xf f1) init))
+           (reduce+ coll (xf f1) init))
  
          CollFold
          (coll-fold [_ n combinef reducef]
@@ -673,16 +673,16 @@
   #?(:clj  clojure.core.protocols/CollReduce
      :cljs cljs.core/IReduce)
     (#?(:clj coll-reduce :cljs -reduce) [this f1]
-      (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
+      (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce+) this f1 (f1)))
     (#?(:clj coll-reduce :cljs -reduce) [_  f1 init]
-      (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce)
+      (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce+)
        right f1
-       (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) left f1 init)))
+       (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce+) left f1 init)))
 
   CollFold
     (coll-fold
      [#?(:clj _ :cljs this) n combinef reducef]
-      #?(:cljs (-reduce this reducef) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
+      #?(:cljs (reduce+ this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
          :clj
          (fjinvoke
            (fn []

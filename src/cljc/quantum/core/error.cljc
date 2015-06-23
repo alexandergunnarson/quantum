@@ -4,7 +4,8 @@
   quantum.core.error
   (:require-quantum [ns log])
   (:require [clojure.string :as str])
-  #?(:cljs (:require-macros [quantum.core.cljs.log :as log])))
+
+  #?(:cljs (:require-macros [quantum.core.log :as log])))
 
 ; Doesn't work: "Use of undeclared Var ___" if at runtime
 ;#?(:clj (defmacro try-eval [obj] (eval obj)))

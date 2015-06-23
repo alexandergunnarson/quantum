@@ -7,12 +7,13 @@
   (:require-quantum [ns map])
   (:require
     [clojure.walk]
-    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])
-    #?(:clj [potemkin        :as p])))
+    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])))
 
 #?(:clj (defalias jfn memfn))
 
 #?(:clj (defalias mfn ns/mfn))
+
+(def fn-nil (constantly nil))
 
 (defn call
   "Call function `f` with additional arguments."

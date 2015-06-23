@@ -23,7 +23,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
 ;======================================================{                    }=======================================================
-(def oauth-access-token-url-google "https://accounts.google.com/o/oauth2/token")
+(def oauth-access-token-url-google "https://www.googleapis.com/oauth2/v3/token")
 (def oauth-auth-url-google         "https://accounts.google.com/o/oauth2/auth")
 (def api-auth-url                  "https://www.googleapis.com/auth/")
 
@@ -60,7 +60,7 @@
   "Gets the scopes string given a service and an authorization type (:online or :offline)."
   [^Key service ^Key auth-type]
   (->> (get-in scopes [service auth-type])
-       (apply gets (get all-scopes service))
+       (gets (get all-scopes service))
        (str/join " ")))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{  USING OAUTH-CLJ   }=======================================================
@@ -88,12 +88,17 @@
          (with-throw
            (in? auth-type (get all-scopes service))
            (str "Invalid auth-type:" auth-type))]}
-  (let [access-token-retrieved
-          (oauth.google/oauth-access-token
-            (-> (auth/auth-keys :google) :client-id)   
-            (-> (auth/auth-keys :google) :client-secret)
-            (auth-key service auth-type username password)
-            (-> (auth/auth-keys :google) :redirect-uri))]
+  (let [auth-keys (auth/auth-keys :google)
+        access-token-retrieved
+          (qhttp/request!
+           {:method :post
+            :url oauth-access-token-url-google
+            :form-params
+             {:code (auth-key :drive :offline (:username auth-keys) (:password auth-keys))
+              "client_id"     (:client-id     auth-keys)
+              "client_secret" (:client-secret auth-keys)
+              "redirect_uri"  (:redirect-uri  auth-keys)
+              "grant_type" "authorization_code"}})]
     (auth/write-auth-keys!
       :google
       (assoc-in (auth/auth-keys :google)
@@ -106,20 +111,20 @@
 (defn ^String access-token-refresh! []
   (let [^Map    auth-keys (auth/auth-keys :google)
         ^String access-token-retrieved
-          (oauth.io/request
+          (qhttp/request! ;oauth.io/request
             {:method :post
              :url    oauth-access-token-url-google
              :form-params
              {"client_id"     (:client-id auth-keys)
               "client_secret" (:client-secret auth-keys)
-              "refresh_token" (:refresh-token (:access-token-offline auth-keys))
+              "refresh_token" (-> auth-keys :drive :access-tokens :offline :refresh-token)
               "grant_type"    "refresh_token"}})]
     (auth/write-auth-keys!
       :google
-      (assoc auth-keys
-        (keyword "access-token-current")
+      (assoc-in auth-keys [:drive :access-tokens :current]
         access-token-retrieved))
   access-token-retrieved))
+
 ;___________________________________________________________________________________________________________________________________
 ;================================================={      USING ONLY CLJ-HTTP      }=================================================
 ;================================================={                               }=================================================
@@ -143,22 +148,22 @@
    :usage "(method+url-fn :query \"root\" nil nil)"
    :out   "[:get \"https://www.googleapis.com/drive/v2/files/\"]"}
   [func id to method]
-  (case func
+  (condp = func
     :add
     [:post drive-upload-uri]  ; INSERT ; Maximum file size: 1024GB
     :copy
-    (case to
+    (condp = to
       :in-place [:post (str drive-files-uri id "/copy")] ; COPY
       ) ; COPY FILE TO SPECIFIED FOLDER ; CATCH NOT_FOLDER EXCEPTIONS
     :meta
     [:get (str drive-files-uri id)]
     :mod
-    (case method
+    (condp = method
       :patch    [:patch (str drive-files-uri  id)] ; PATCH ; Don't use UPDATE with metadata or else you'll edit the whole thing
       :update   [:put   (str drive-upload-uri id)] ; UPDATE
       (throw+ {:msg "Invalid method for function :mod."}))
     :move
-    (case to
+    (condp = to
       :remove   [:delete (str drive-files-uri id         )]   ; DELETE
       :trash    [:post   (str drive-files-uri id "/trash")]   ; TRASH
       :untrash  [:post   (str drive-files-uri id "/untrash")] ; UNTRASH
@@ -204,7 +209,6 @@
            :oauth-token  (access-key :drive :offline)
            :as           :auto
            :query-params query-params
-           ;:timeout 1000
            }]
     request))
 

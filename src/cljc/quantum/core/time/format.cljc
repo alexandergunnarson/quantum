@@ -1,5 +1,3 @@
-#?(:clj (ns quantum.core.time.format))
-
 (ns
   ^{:doc "An alias of the clj-time.format namespace."
     :attribution "Alex Gunnarson"}
