@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
-    <tag>606721d80137dac3fd3dff38a65efad6030f0c5f
+    <tag>7dd8ead2df2d84e4d255e5e4a0f96cbbe811f381
 </tag>
     <url>https://github.com/alexandergunnarson/quantum</url>
   </scm>

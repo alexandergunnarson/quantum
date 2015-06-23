@@ -48,6 +48,7 @@
 
 #?(:clj
 (defn register-thread! [{:keys [id thread handlers] :as opts}]
+  (log/pr :user "REGISTERING" opts)
   (swap! reg-threads assoc id (dissoc opts :id))))
 
 #?(:clj (def ^{:dynamic true} *thread-num* (.. Runtime getRuntime availableProcessors)))
@@ -75,7 +76,7 @@
              (Thread.
                (fn []
                  (try
-                   (swap! reg-threads assoc-in [~id :running?] :open)
+                   (swap! reg-threads assoc-in [~id :state] :open)
                    (binding [*ns* ns-0#]
                      (swap! result# assoc :result
                        (do ~expr ~@exprs))
@@ -135,7 +136,7 @@
         (when (and (open? thread) (<= tries max-tries))
           (log/pr :debug {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be closed.")})
           (Thread/sleep 100) ; wait a little bit for it to stop
-          (recur (inc tries)))))))))
+          (recur (inc tries))))))))
 
 #?(:clj
 (defn close!
@@ -229,21 +230,23 @@
 (defmacro lt-thread
   "Creates a closeable 'light thread' on a go block."
   [{:keys [id parent name] :as opts} & body]
- `(let [proc-id# (gen-proc-id ~id ~parent ~name)]
-    (lt-thread* (assoc ~opts :id proc-id#)
-      (swap! reg-threads assoc-in [proc-id# :state] :running)
-      ~@body 
-      (swap! reg-threads assoc-in [proc-id# :state] :closed)))))
+  (let [proc-id (gensym)]
+   `(let [~proc-id (gen-proc-id ~id ~parent ~name)]
+      (lt-thread* ~(assoc opts :id proc-id)
+        (swap! reg-threads assoc-in [~proc-id :state] :running)
+        ~@body 
+        (swap! reg-threads assoc-in [~proc-id :state] :closed))))))
 
 #?(:clj
 (defmacro lt-thread-loop
   [{{:keys [close-req]} :handlers :keys [id parent close-reqs] :as opts} bindings & body]
- `(let [close-reqs# (or ~close-reqs (LinkedBlockingQueue.))]
-    (lt-thread (assoc ~opts :close-reqs close-reqs#)
-      (loop ~bindings
-        (if (nempty? close-reqs#)
-            (do ((or ~close-req fn-nil)))
-            (do ~@body)))))))
+  (let [close-reqs-f (gensym)]
+   `(let [~close-reqs-f (or ~close-reqs (LinkedBlockingQueue.))]
+      (lt-thread ~(assoc opts :close-reqs close-reqs-f)
+        (loop ~bindings
+          (if (nempty? ~close-reqs-f)
+              (do ((or ~(get-in opts [:handlers :close-req]) fn-nil)))
+              (do ~@body))))))))
 
 (defn reap-threads! []
   (doseq [id thread-meta @reg-threads]
