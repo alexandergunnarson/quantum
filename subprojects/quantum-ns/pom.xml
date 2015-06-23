@@ -14,7 +14,7 @@
     </license>
   </licenses>
   <build>
-    <sourceDirectory>src/cljc</sourceDirectory>
+    <sourceDirectory>src\cljc</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
@@ -30,13 +30,13 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <outputDirectory>target/classes</outputDirectory>
+    <outputDirectory>target\classes</outputDirectory>
     <plugins/>
   </build>
   <repositories>
     <repository>
       <id>central</id>
-      <url>http://repo1.maven.org/maven2/</url>
+      <url>https://repo1.maven.org/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -64,7 +64,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.nrepl</artifactId>
-      <version>0.2.3</version>
+      <version>0.2.6</version>
       <exclusions>
         <exclusion>
           <groupId>org.clojure</groupId>

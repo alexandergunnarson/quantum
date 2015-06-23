@@ -19,7 +19,7 @@
 
 (defonce uri (atom "datomic:sql://datomic?jdbc:postgresql://localhost:5431/datomic?user=datomic&password=datomic"))
 ;(Peer/createDatabase @uri) ; only once ever 
-(defonce conn (atom (d/connect @uri)))
+(defonce conn (atom (try (d/connect @uri) (catch java.util.concurrent.ExecutionException _ nil))))
 (defonce last-trans (atom nil))
 
 

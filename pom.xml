@@ -14,14 +14,14 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>f249d594a009ea84046d65d8c4d7bf63666792b2
+    <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
+    <tag>606721d80137dac3fd3dff38a65efad6030f0c5f
 </tag>
-    <url>https://github.com/alexandergunnarson/quanta-lib</url>
+    <url>https://github.com/alexandergunnarson/quantum</url>
   </scm>
   <build>
-    <sourceDirectory>src/clj</sourceDirectory>
+    <sourceDirectory>src\clj</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
@@ -37,7 +37,7 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <outputDirectory>target/classes</outputDirectory>
+    <outputDirectory>target\classes</outputDirectory>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -52,9 +52,9 @@
             </goals>
             <configuration>
               <sources>
-                <source>src/cljc</source>
-                <source>src/cljc_next</source>
-                <source>src/cljs</source>
+                <source>src\cljc</source>
+                <source>src\cljc_next</source>
+                <source>src\cljs</source>
               </sources>
             </configuration>
           </execution>
@@ -65,7 +65,7 @@
   <repositories>
     <repository>
       <id>central</id>
-      <url>http://repo1.maven.org/maven2/</url>
+      <url>https://repo1.maven.org/maven2/</url>
       <snapshots>
         <enabled>false</enabled>
       </snapshots>
@@ -95,6 +95,12 @@
     </repository>
   </repositories>
   <dependencies>
+    <dependency>
+      <groupId>com.cemerick</groupId>
+      <artifactId>clojurescript.test</artifactId>
+      <version>0.3.1</version>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
@@ -362,15 +368,9 @@
       <version>1.2.5</version>
     </dependency>
     <dependency>
-      <groupId>com.cemerick</groupId>
-      <artifactId>clojurescript.test</artifactId>
-      <version>0.3.1</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.nrepl</artifactId>
-      <version>0.2.3</version>
+      <version>0.2.6</version>
       <exclusions>
         <exclusion>
           <groupId>org.clojure</groupId>
