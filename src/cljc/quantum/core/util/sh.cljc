@@ -25,10 +25,10 @@
           (.append line-temp c)
           (if (or (str/line-terminator? c) (nil? c))
               (put! line-stream (str line-temp))
-              (recur (inc chars-read)))))
-    (.setLength  line-temp 0)
-    (.trimToSize line-temp)
-    (.ensureCapacity line-temp line-capacity)))
+              (recur (inc chars-read))))))
+  (.setLength  line-temp 0)
+  (.trimToSize line-temp)
+  (.ensureCapacity line-temp line-capacity))
 
 (defn line-exporter-fn [line-stream ^StringBuffer buffer line-handler]
   (let [line (take! line-stream)]

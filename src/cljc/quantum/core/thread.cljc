@@ -130,7 +130,7 @@
       (Thread/sleep 200)) ; wait for graceful shutdown
     (close-impl! thread) ; force shutdown
     (loop [tries 0]
-      (if (or (closed? thread) (> tries max-tries))
+      (if (or (closed? thread) (>= tries max-tries))
           (do ((or closed fn-nil) thread)
               (when (closed? thread)
                 (swap! reg-threads dissoc thread-id)))
@@ -254,6 +254,7 @@
     (when cleanup (res/with-cleanup future-obj cleanup))
     (register-thread! (merge opts {:thread future-obj}))
     (when parent
+      (log/pr :debug "Adding child proc" id "to parent" parent)
       (add-child-proc! parent id)))))
 
 #?(:clj
