@@ -110,15 +110,16 @@
 
 (defn ^String access-token-refresh! []
   (let [^Map    auth-keys (auth/auth-keys :google)
-        ^String access-token-retrieved
-          (qhttp/request! ;oauth.io/request
-            {:method :post
-             :url    oauth-access-token-url-google
-             :form-params
-             {"client_id"     (:client-id auth-keys)
-              "client_secret" (:client-secret auth-keys)
-              "refresh_token" (-> auth-keys :drive :access-tokens :offline :refresh-token)
-              "grant_type"    "refresh_token"}})]
+        resp (qhttp/request! ;oauth.io/request
+               {:method :post
+                :url    oauth-access-token-url-google
+                :form-params
+                {"client_id"     (:client-id auth-keys)
+                 "client_secret" (:client-secret auth-keys)
+                 "refresh_token" (-> auth-keys :drive :access-tokens :offline :refresh-token)
+                 "grant_type"    "refresh_token"}})
+        ^Map access-token-retrieved
+          (-> resp :body (json/parse-string keyword))]
     (auth/write-auth-keys!
       :google
       (assoc-in auth-keys [:drive :access-tokens :current]
@@ -206,7 +207,7 @@
         request
           {:method       http-method
            :url          url
-           :oauth-token  (access-key :drive :offline)
+           :oauth-token  (access-key :drive :current)
            :as           :auto
            :query-params query-params
            }]
@@ -294,7 +295,7 @@
     (qhttp/log-entry-write! log-entry :response try-n status)
     (processes)
     #(qhttp/request!
-       (assoc request-n :oauth-token (access-key :drive :offline))
+       (assoc request-n :oauth-token (access-key :drive :current))
        :tries (inc try-n)
        :status status
        :log log-entry
@@ -329,10 +330,11 @@
         log-entry (atom (HTTPLogEntry. []))
         raw-response (qhttp/request! request)
         response
-          (-> raw-response :body
-              (whenf (constantly (not raw?))
-                (fn-> (json/parse-string keyword)
-                      (whenf (constantly (= func :query)) :items))))]
+          (if raw?
+              raw-response
+              (-> raw-response :body
+                  (json/parse-string str/keywordize)
+                  (whenf (constantly (= func :query)) :items)))]
     (reset! last-response response)
     response))
 

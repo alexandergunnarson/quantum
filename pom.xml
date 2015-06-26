@@ -14,14 +14,14 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
-    <tag>7dd8ead2df2d84e4d255e5e4a0f96cbbe811f381
+    <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
+    <tag>8cdfd2c064f8c49a69259c7c868c0116d77f9f5c
 </tag>
-    <url>https://github.com/alexandergunnarson/quantum</url>
+    <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
   <build>
-    <sourceDirectory>src\clj</sourceDirectory>
+    <sourceDirectory>src/clj</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
@@ -37,7 +37,7 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <outputDirectory>target\classes</outputDirectory>
+    <outputDirectory>target/classes</outputDirectory>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -52,9 +52,9 @@
             </goals>
             <configuration>
               <sources>
-                <source>src\cljc</source>
-                <source>src\cljc_next</source>
-                <source>src\cljs</source>
+                <source>src/cljc</source>
+                <source>src/cljc_next</source>
+                <source>src/cljs</source>
               </sources>
             </configuration>
           </execution>

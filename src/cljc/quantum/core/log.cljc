@@ -59,7 +59,7 @@
 
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
-  [pretty? print-fn pr-type args]
+  [trace? pretty? print-fn pr-type args]
   (when (or (get @*prs* pr-type)
             #?(:cljs (= pr-type :macro-expand)))
     (let [curr-fn (ns/this-fn-name :prev)
@@ -70,9 +70,10 @@
           out-str
             (with-out-str
               (when (= pr-type :macro-expand) (print "\n/* "))
-              (print (str "[" env-type-str)
-                     curr-fn "»"
-                     (str (-> pr-type name) "] "))
+              (when trace?
+                (print (str "[" env-type-str)
+                       curr-fn "»"
+                       (str (-> pr-type name) "] ")))
               (if (and pretty? (-> args-f first string?))
                   (do (print (first args-f) " ")
                       (println)
@@ -91,11 +92,15 @@
 
 #?(:clj
 (defmacro pr [pr-type & args]
-  `(pr* false println ~pr-type (delay (list ~@args)))))
+  `(pr* true false println ~pr-type (delay (list ~@args)))))
+
+#?(:clj
+(defmacro pr-no-trace [pr-type & args]
+  `(pr* false false println ~pr-type (delay (list ~@args)))))
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(pr* true  !       ~pr-type (delay (list ~@args)))))
+  `(pr* true true  !       ~pr-type (delay (list ~@args)))))
 
 #?(:clj
 (defn status

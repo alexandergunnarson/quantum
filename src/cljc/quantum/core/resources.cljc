@@ -1,11 +1,10 @@
 (ns quantum.core.resources
   (:require-quantum [ns num fn str err macros logic vec coll log async qasync])
-  #?(:clj (:import quantum.core.thread.async.QueueCloseRequest
-                   (java.lang ProcessBuilder Process StringBuffer)
-                   (java.io InputStream InputStreamReader BufferedReader
-                     OutputStreamWriter BufferedWriter
+  #?(:clj (:import (java.lang ProcessBuilder Process StringBuffer)
+                   (java.io InputStream Reader Writer
                      IOException)
-                   (java.util.concurrent LinkedBlockingQueue TimeUnit)
+                   (java.util.concurrent TimeUnit)
+                   quantum.core.data.queue.LinkedBlockingQueue
                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
 #?(:clj
@@ -13,16 +12,15 @@
   [InputStream] ([stream]
                   (try (.available stream) true
                     (catch IOException _ false)))
-  [LinkedBlockingQueue] ([obj] (not (instance? QueueCloseRequest (.peek obj))))))
+  [LinkedBlockingQueue] ([obj] (qasync/closed? obj))))
 
 #?(:clj (def closed? (fn-not open?)))
 
 (defnt close!
   #?@(:clj
- [[BufferedWriter InputStreamReader]
-                        ([obj] (.close obj))
+ [[Writer Reader]       ([obj] (.close obj))
   [ManyToManyChannel]   ([obj] (async/close! obj))
-  [LinkedBlockingQueue] ([obj] (put! obj (QueueCloseRequest.)))])
+  [LinkedBlockingQueue] ([obj] (qasync/close! obj))])
   ;[clojure.lang.IAtom]  ([obj] (reset! obj nil)) ; make the queue disappear
   nil?                  ([obj] nil)
   :default              ([obj] (throw+ "Not yet implemented.")))

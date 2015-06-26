@@ -15,8 +15,8 @@
 ;  so you see your first few lines of output instantaneously.
 ;  :attribution: https://github.com/brandonbloom/fipp"
 (defalias pprint pr/pprint)
-(def ^:dynamic *max-length* 1000)
-(def ^:dynamic *blacklist* (atom #{})) ; a list of classes not to print
+(defonce max-length (atom 1000))
+(defonce blacklist  (atom #{})) ; a list of classes not to print
 
 (defn !
   ([obj]
@@ -25,13 +25,13 @@
                  (count obj)
                  (catch #?(:clj Throwable :cljs js/Error) _ 1)))] ; if you don't qualify it in JS it won't like it...
       (cond
-        (> ct (long *max-length*))
+        (> ct (long @max-length))
           (println
             (str "Object is too long to print ("
                  (str ct " elements")
                  ").")
-            "*max-length* is set at" (str *max-length* "."))
-        (contains? @*blacklist* (type obj))
+            "*max-length* is set at" (str @max-length "."))
+        (contains? @blacklist (type obj))
           (println
             "Object's class"
             (str (type obj) "(" ")")

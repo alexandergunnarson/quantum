@@ -64,12 +64,15 @@
   string?  ([obj] "")
   :default ([obj] (core/empty obj)))
 
-(defalias vec         red/vec+       )    
-(defalias into        red/into+      )    
+(defn wrap-delay [f]
+  (if (delay? f) f (delay ((or f fn-nil)))))
+
 #?(:clj (defalias reduce   loops/reduce  ))
 #?(:clj (defalias reduce-  loops/reduce- ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
+(defalias vec         red/vec+       )    
+(defalias into        red/into+      )    
 (defalias redv        red/fold+      )
 (defalias redm        red/reducem+   )
 (defalias fold        red/fold+      ) ; only certain arities
@@ -101,15 +104,15 @@
 ;(def cljs-lfor (var clojure.core/for))
 ;(defalias lfor   #?(:clj clojure.core/for :cljs cljs-lfor))
 ;#?(:clj (defalias lfor clojure.core/for))
-#?(:clj (defmacro lfor [& args] `(clojure.core/for ~@args)))
+#?(:clj (defmacro lfor   [& args] `(clojure.core/for ~@args)))
 
 ;(def cljs-doseq (var loops/doseq))
 ;(defalias doseq  #?(:clj loops/doseq      :cljs cljs-doseq))
-#?(:clj (defmacro doseq [& args] `(loops/doseq ~@args)))
+#?(:clj (defmacro doseq  [& args] `(loops/doseq      ~@args)))
 
 ;(def cljs-doseqi (var loops/doseqi))
 ;(defalias doseqi #?(:clj loops/doseqi     :cljs cljs-doseqi))
-#?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
+#?(:clj (defmacro doseqi [& args] `(loops/doseqi     ~@args)))
 
 #?(:cljs
   (defn kv+
@@ -1186,11 +1189,12 @@
   (whenf coll (fn-> (get k) pred)
     (f*n dissoc+ k)))
 
-(defn dissoc++ [coll obj]
-  (cond (map? coll)
-      (dissoc coll obj)
-      (set? coll)
-      (disj coll obj)))
+(defnt dissoc++
+  {:todo ["Move to collections.core"
+          "Implement for vector"]}
+  map? ([coll obj] (dissoc coll obj))
+  set? ([coll obj] (disj   coll obj))
+  nil? ([coll obj] nil))
 
 (defn dissoc-in+
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -1201,12 +1205,12 @@
    :todo ["Transientize"]}
   [m ks]
   (if-let [[k & ks] (seq ks)]
-    (if (seq ks)
-      (let [new-n (dissoc-in+ (get m k) ks)] ; this is terrible
-        (if (empty? new-n) ; dissoc's empty ones
-            (dissoc m k)
-            (assoc m k new-n)))
-      (dissoc m k))
+    (if (empty? ks)
+        (dissoc++ m k)
+        (let [new-n (dissoc-in+ (get m k) ks)] ; this is terrible
+          (if (empty? new-n) ; dissoc's empty ones
+              (dissoc++ m k)
+              (assoc m k new-n))))
     m))
 
 (defn updates-in+

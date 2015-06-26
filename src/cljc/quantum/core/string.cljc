@@ -207,7 +207,10 @@
   (fn-> (ifn nil? str-nil name) (replace #"\-" " ") capitalize-each-word))
 
 (defn keywordize [^String kw]
-  (-> kw (replace " " "-") lower-case keyword))
+  (-> kw
+      (replace " " "-")
+      (replace "_" "-")
+      lower-case keyword))
 
 (defalias camelcase macros/camelcase)
 

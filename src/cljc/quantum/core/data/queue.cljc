@@ -24,20 +24,3 @@
     (print-method '<- w)
     (print-method (seq q) w)
     (print-method '-< w)))
-
-#?(:clj
-  (defn linked-b-queue
-    "Generates a java.util.concurrent.LinkedBlockingQueue
-    and returns two functions for 'put' and 'take'"
-    {:attribution "thebusby.bagotricks"
-     :todo ["Likely inefficient to generate fns like this."]}
-    ([]
-       (let [bq   (java.util.concurrent.LinkedBlockingQueue.)
-             put  #(.put bq %)
-             take #(.take bq)]
-         [put take]))
-    ([col]
-       (let [bq   (java.util.concurrent.LinkedBlockingQueue. ^Int (int+ col))
-             put  #(.put bq %)
-             take #(.take bq)]
-         [put take]))))  

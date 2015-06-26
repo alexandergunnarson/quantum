@@ -21,6 +21,14 @@
   #?(:clj  (clojure.lang.MapEntry. k v)
      :cljs [k v]))
 
+(defn map-entry-seq [args]
+  (loop [[k v :as args-n] args
+         accum []]
+    (if (empty? args-n)
+        accum
+        (recur (-> args-n rest rest)
+               (conj accum (map-entry k v))))))
+
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          #?(:clj omap/ordered-map :cljs array-map))
 

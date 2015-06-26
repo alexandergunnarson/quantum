@@ -123,16 +123,17 @@
 #?(:clj
 (defmacro ifn [obj pred true-fn false-fn] ; macro to delay
   `(let [obj-f# ~obj] 
-     (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#))
-     ;`(if (~pred ~obj) (~true-fn ~obj) (~false-fn ~obj)) ; don't ask me why this is less optimal
-     )))
+     (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#)))))
 
 #?(:clj
 (defmacro ifc [obj pred true-expr false-expr] ; macro to delay
   `(let [obj-f# ~obj] 
-     (if (~pred obj-f#) ~true-expr ~false-expr)
-     ;`(if (~pred ~obj) (~true-fn ~obj) (~false-fn ~obj)) ; don't ask me why this is less optimal
-     )))
+     (if (~pred obj-f#) ~true-expr ~false-expr))))
+
+#?(:clj
+(defmacro ifp [obj pred true-fn false-fn] ; macro to delay
+  `(let [obj-f# ~obj] 
+     (if ~pred (~true-fn obj-f#) (~false-fn obj-f#)))))
 
 #?(:clj
 (defmacro ifcf*n [pred true-expr false-expr]
@@ -155,9 +156,15 @@
 (defmacro whenc
   "Analogous to whenf, but evaluates the result instead of
    using it as a function."
-  [obj pred true-obj]
+  [obj pred true-expr]
   `(let [obj-f# ~obj] 
-     (if (~pred obj-f#) ~true-obj obj-f#))))
+     (if (~pred obj-f#) ~true-expr obj-f#))))
+
+#?(:clj
+(defmacro whenp
+  [obj pred true-fn]
+  `(let [obj-f# ~obj] 
+     (if ~pred (~true-fn obj-f#) obj-f#))))
 
 #?(:clj
 (defmacro whenf*n 

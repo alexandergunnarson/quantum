@@ -2,7 +2,7 @@
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.numeric
-  (:require-quantum [ns logic type fn macros]))
+  (:require-quantum [ns logic type fn macros])) ; loops?
 
 ; https://github.com/clojure/math.numeric-tower/
 (defn sign [n]  (if (neg? n) -1 1))
@@ -107,14 +107,18 @@
   {:attribution "taoensso.encore, possibly via weavejester.medley"}
   [coll & [?comparator]]
   (let [comparator (or ?comparator rcompare)]
-    (reduce #(if (pos? (comparator %1 %2)) %2 %1) coll))) ; almost certainly can implement this with /fold+/
+    (reduce
+      (fn ([] nil) ([a b] (if (pos? (comparator a b)) b a)))
+      coll))) ; almost certainly can implement this with /fold+/
 
 (defn least
   "Returns the 'least' element in coll in O(n) time."
   ^{:attribution "taoensso.encore, possibly via weavejester.medley"}
   [coll & [?comparator]]
   (let [comparator (or ?comparator rcompare)]
-    (reduce #(if (neg? (comparator %1 %2)) %2 %1) coll)))
+    (reduce
+      (fn ([] nil) ([a b] (if (neg? (comparator a b)) b a)))
+      coll)))
 
 (defn greatest-or [a b else]
   (cond (> a b) a

@@ -5,7 +5,8 @@
   (:require-quantum
     [ns num fn str err logic vec err async macros])
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
-                   (java.util.concurrent LinkedBlockingQueue TimeUnit))))
+                   (java.util.concurrent TimeUnit)
+                   quantum.core.data.queue.LinkedBlockingQueue)))
 
 #?(:clj
 (defmacro <? [expr]
@@ -32,33 +33,57 @@
          e#)))))
 
 (defrecord QueueCloseRequest [])
+(defrecord TerminationRequest [])
 
 (defnt take-with-timeout!
   #?@(:clj
  [[LinkedBlockingQueue]
     ([q n]
-      (if (instance? QueueCloseRequest (.peek q))
-          (throw (InterruptedException. "Queue closed."))
-          (.poll q n (. TimeUnit MILLISECONDS))))]
+      (.poll q n (. TimeUnit MILLISECONDS)))]
   [ManyToManyChannel]
     ([c n] (async/alts! [(async/timeout n) c]))))
 
 (defnt take!
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q] (if (instance? QueueCloseRequest (.peek q))
-             (throw (InterruptedException. "Queue closed."))
-             (.take q)))])
+    ([q] (.take q))])
   [ManyToManyChannel]
     ([c] (async/take! c)))
+
+(defnt empty!
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q] (.clear q))]))
 
 (defnt put! 
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q obj]
-      (if (instance? QueueCloseRequest (.peek q))
-          (throw (InterruptedException. "Queue closed."))
-          (.put  q obj)))])
+    ([q obj] (.put  q obj))])
   [ManyToManyChannel]
     ([c obj] (async/put! c obj)))
+
+(defnt close!
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q] (.close q))]))
+
+(defnt closed?
+  #?@(:clj
+ [[LinkedBlockingQueue]
+    ([q] (.isClosed q))]))
+
+(defnt message?
+  [QueueCloseRequest]  ([obj] false)
+  [TerminationRequest] ([obj] false)
+  nil?                 ([obj] false)
+  :default             ([obj] true ))
+
+(def close-req? (partial instance? QueueCloseRequest))
+
+(defnt peek!
+  "Blocking peek."
+  #?@(:clj
+ [[LinkedBlockingQueue]
+   (([q]        (.blockingPeek q))
+   ([q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS))))]))
 

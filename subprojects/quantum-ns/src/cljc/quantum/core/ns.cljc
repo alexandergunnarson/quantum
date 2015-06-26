@@ -457,7 +457,7 @@
                              :cljs {asyncm #{go go-loop}}}}
           qasync
             {:aliases {:cljc {qasync quantum.core.thread.async}}
-             :refers  {:cljc {qasync #{put! take! take-with-timeout!}}}}
+             :refers  {:cljc {qasync #{put! take! take-with-timeout! empty! peek!}}}}
           res
             {:aliases {:cljc {res quantum.core.resources}}
              :refers  {:cljc {res #{with-cleanup}}}}
@@ -506,7 +506,7 @@
           err
             {:aliases   {:cljc {err      quantum.core.error}
                          :cljs {err-cljs quantum.core.cljs.error}}
-             :refers    {:cljc {err      #{throw+ with-throw}}
+             :refers    {:cljc {err      #{throw+ with-throw with-throws}}
                          :clj  {err      #{try+}}
                          :cljs {err      #{Err}
                                 err-cljs #{try+}}}
@@ -581,7 +581,7 @@
           pr      {:aliases {:cljc {pr     quantum.core.print      }} :refers {:cljc {pr     #{! pprint pr-attrs !*}}}}
           str     {:aliases {:cljc {str    quantum.core.string     }}}    
           sys     {:aliases {:cljc {sys    quantum.core.system     }}}    
-          thread  {:aliases {:cljc {thread quantum.core.thread     }} :refers {:clj  {thread #{thread+ lt-thread   }}}}
+          thread  {:aliases {:cljc {thread quantum.core.thread     }} :refers {:clj  {thread #{thread+ lt-thread lt-thread-loop}}}}
           ; DATA
           arr     {:aliases {:cljc {arr    quantum.core.data.array }} :refers {:cljc {arr    #{aset!               }}
                                                                                :clj  {arr    #{byte-array+         }}}}
@@ -626,7 +626,7 @@
           logic
             {:aliases         {:cljc {logic quantum.core.logic}}
              :refers          {:cljc {logic #{splice-or coll-or fn-and fn-or fn-not nnil? nempty? eq? fn= fn-eq? any?
-                                              ifn if*n whenf whenc whenf*n whencf*n condf condfc condf*n condpc}}}}
+                                              ifn if*n ifp whenf whenc whenp whenf*n whencf*n condf condfc condf*n condpc}}}}
           loops
             {:core-exclusions #{for doseq reduce}
              :aliases         {:cljc {loops      quantum.core.loops}
@@ -670,10 +670,10 @@
    quantum.core.cljs.macros #{defnt}
    quantum.core.cljs.loops  #{reduce reducei for doseq doseqi}
    quantum.core.collections #{reduce reduce- reducei reducei- doseq doseqi for repeatedly kmap map->record}
-   quantum.core.error       #{try+ with-throw throw+},
+   quantum.core.error       #{try+ with-throw with-throws throw+},
    quantum.core.function    #{defcurried with-do <- fn-> rfn fn->>}
    quantum.core.log         #{pr ppr}
-   quantum.core.logic       #{whenf*n condfc ifn whencf*n whenc if*n condf*n condpc whenf condf},
+   quantum.core.logic       #{whenf*n condfc ifn ifp whencf*n whenc if*n condf*n condpc whenf whenp condf},
    quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei
                               dos lfor doseq- doseq doseqi- doseqi for}
    quantum.core.macros      #{defn+ defnt compile-if assert-args}
