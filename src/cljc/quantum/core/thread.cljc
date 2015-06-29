@@ -145,22 +145,27 @@
 #?(:clj (def open? (fn-not closed?)))
 
 #?(:clj
-(defn interrupt!* [thread thread-id interrupted gracefully?]
-  (if gracefully?
-      ((or interrupted fn-nil) thread)
-      (do (interrupt! thread)
-          (if ((fn-or interrupted? closed?) thread)
-              ((or interrupted fn-nil) thread)
-              (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
+(defn ^:private interrupt!* [thread thread-id interrupted force?]
+  (if-not force?
+    (do (log/pr ::debug "Before interrupt handler for id" thread-id)
+        ((or interrupted fn-nil) thread)
+        (log/pr ::debug "After interrupt handler for id" thread-id))
+    (do (interrupt! thread)
+        (if ((fn-or interrupted? closed?) thread)
+            ((or interrupted fn-nil) thread)
+            (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
 
 #?(:clj
-(defn ^:private close!* [thread thread-id close-reqs cleanup gracefully?]
+(defn ^:private close!* [thread thread-id close-reqs cleanup force?]
   (let [max-tries 3]
+    (log/pr ::debug "Before close request for id" thread-id)
     (when close-reqs
       (qasync/put! close-reqs :req)) ; it calls its own close-request handler
+    (log/pr ::debug "After close request for id" thread-id)
     (force cleanup) ; closes message queues, releases other resources
                     ; that can/should be released before full termination
-    (when-not gracefully?
+    (log/pr ::debug "After cleanup for id" thread-id)
+    (when force?
       (close-impl! thread) ; force shutdown
       (loop [tries 0]
         (log/pr :debug "Trying to close thread" thread-id)
@@ -173,8 +178,8 @@
 (defn close!
   "Closes a thread or lt-thread, possibly gracefully."
   {:attribution "Alex Gunnarson"}
-  ([^Keyword thread-id] (close! thread-id nil))
-  ([^Keyword thread-id {:keys [gracefully?] :as opts}]
+  ([^Keyword thread-id] (close! thread-id nil)) ; don't force
+  ([^Keyword thread-id {:keys [force?] :as opts}]
     (if-not (contains? @reg-threads thread-id)
       (log/pr ::warn (str/sp "Thread-id" thread-id "does not exist; attempted to be closed."))
       (let [{:keys [thread children close-reqs]
@@ -182,19 +187,19 @@
               (get @reg-threads thread-id)]
         (doseq [child children]
           (close! child opts)) ; close children before parent
-        (interrupt!* thread thread-id interrupted gracefully?)
-        (close!*     thread thread-id close-reqs cleanup gracefully?)))))) ; closed handler is called by the thread reaper when it's actually close
+        (interrupt!* thread thread-id interrupted force?)
+        (close!*     thread thread-id close-reqs cleanup force?)))))) ; closed handler is called by the thread reaper when it's actually close
 
 #?(:clj
 (defn close-all!
   {:todo ["Make dependency graph" "Incorporate into thread-reaper"]}
   ([] (close-all! false))
-  ([gracefully?]
+  ([force?]
     #_(identity ;while ((fn-and map? nempty?) @reg-threads-tree)
       (postwalk
         (fn [id]
           (let [traversal-keys (get-in @reg-threads [id :parents])]
-            (try+ (close! id {:gracefully? gracefully?})
+            (try+ (close! id {:force? force?})
               (catch [:type :nonexistent-thread] {:keys [type]}
                 (when-not (= type :nonexistent-thread) (throw+))))
             (if traversal-keys
@@ -203,7 +208,7 @@
           ))
         @reg-threads-tree))
     (doseq [thread-id thread-meta @reg-threads]
-      (close! thread-id #{:gracefully?})))))
+      (close! thread-id {:force? force?})))))
 
 #?(:clj
 (defonce add-thread-shutdown-hooks!
@@ -306,7 +311,7 @@
                     (doseq [f# @cleanup-seq#]
                       (try+ (f#) 
                         (catch Object e#
-                          (log/pr :quantum.core.thread/warn "Exception in cleanup:" e#)))))))
+                          (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
           ~close-req-call (wrap-delay close-req#)
           ~close-reqs (or (:close-reqs ~opts-f) (LinkedBlockingQueue.))
           ~proc-id   (gen-proc-id id# parent# name#)
@@ -318,11 +323,15 @@
       (lt-thread* ~opts-f
         (.setName (Thread/currentThread) (name ~proc-id))
         (swap! reg-threads assoc-in [~proc-id :state] :running)
-        (try ~@body
+        (try+ ~@body
+          (catch Object e#
+            ((or (-> ~opts-f :handlers :err/any.pre ) fn-nil))
+            (log/pr-opts :warn #{:thread?} "Exited with exception" e#)
+            ((or (-> ~opts-f :handlers :err/any.post) fn-nil)))
           (finally 
-            (log/pr :quantum.core.thread/debug ~proc-id "COMPLETED.")
+            (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
             (when (get @reg-threads ~proc-id)
-              (log/pr :quantum.core.thread/debug "CLEANING UP" ~proc-id)
+              (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" ~proc-id)
               (doseq [child-id# (get-in @reg-threads [~proc-id :children])]
                 (close! child-id# #{:gracefully?}))
               (force ~cleanup-f) ; Performed only once
@@ -363,6 +372,9 @@
           (if*n delay? force call))
         (deregister-thread! id)))))
 
+(defonce thread-reaper-pause-requests  (LinkedBlockingQueue.))
+(defonce thread-reaper-resume-requests (LinkedBlockingQueue.))
+
 (defonce thread-reaper
   (let [id :thread-reaper]
     (lt-thread-loop
@@ -370,9 +382,21 @@
        :handlers {:close-req #(swap! reg-threads dissoc id) ; remove itself
                   :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
       []
-      (reap-threads!)
-      (Thread/sleep 2000)
-      (recur))))
+      (if (nempty? thread-reaper-pause-requests)
+          (do (qasync/empty! thread-reaper-pause-requests)
+              (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
+              (swap! reg-threads assoc-in [id :state] :paused)
+              (take! thread-reaper-resume-requests) ; blocking take
+              (qasync/empty! thread-reaper-resume-requests)
+              (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
+              (swap! reg-threads assoc-in [id :state] :running)
+              (recur))
+          (do (reap-threads!)
+              (Thread/sleep 2000)
+              (recur))))))
+
+(defn pause-thread-reaper!  [] (put! thread-reaper-pause-requests true))
+(defn resume-thread-reaper! [] (put! thread-reaper-resume-requests true))
 
 #_(defonce gc-worker
   (lt-thread {:id :gc-collector}

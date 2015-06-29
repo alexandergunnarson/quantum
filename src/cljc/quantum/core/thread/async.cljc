@@ -43,12 +43,16 @@
   [ManyToManyChannel]
     ([c n] (async/alts! [(async/timeout n) c]))))
 
+; TODO FIX THIS
 (defnt take!
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q] (.take q))])
+   (([q]   (.take q))
+    ([q n] (.poll q n (. TimeUnit MILLISECONDS))))])
   [ManyToManyChannel]
-    ([c] (async/take! c)))
+   (([c]   (async/take! c identity))
+    ([c n] (async/alts! [(async/timeout n) c]))))
+
 
 (defnt empty!
   #?@(:clj

@@ -5,7 +5,8 @@
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
   (:refer-clojure :exclude
-    [vector hash-map rest count first second butlast last get pop peek assoc!])
+    [vector hash-map rest count first second butlast last get pop peek
+     conj! assoc! dissoc!])
   (:require-quantum [ns err fn log logic red str map set macros type vec arr]))
 
 ; TODO Queues need support
@@ -80,6 +81,10 @@
   array?               ([coll i v] (aset!       coll i v) coll)
   transient?           ([coll k v] (core/assoc! coll k v))
   [clojure.lang.IAtom] ([coll k v] (swap! coll assoc k v)))
+
+(defnt dissoc!
+  transient?           ([coll k] (core/dissoc! coll k))
+  [clojure.lang.IAtom] ([coll k] (swap! coll dissoc k)))
 
 (defnt conj!
   transient?           ([coll obj] (core/conj! coll obj))

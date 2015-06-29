@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>8cdfd2c064f8c49a69259c7c868c0116d77f9f5c
+    <tag>f6f9805ddc1f3e22476e325484d6c1d94c1c2337
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -29,6 +29,9 @@
       </resource>
     </resources>
     <testResources>
+      <testResource>
+        <directory>dev-resources</directory>
+      </testResource>
       <testResource>
         <directory>dev-resources</directory>
       </testResource>
@@ -55,6 +58,7 @@
                 <source>src/cljc</source>
                 <source>src/cljc_next</source>
                 <source>src/cljs</source>
+                <source>src/java</source>
               </sources>
             </configuration>
           </execution>
@@ -369,6 +373,11 @@
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
+      <artifactId>tools.namespace</artifactId>
+      <version>0.2.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
       <artifactId>tools.nrepl</artifactId>
       <version>0.2.6</version>
       <exclusions>
@@ -389,12 +398,6 @@
           <artifactId>clojure</artifactId>
         </exclusion>
       </exclusions>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>tools.namespace</artifactId>
-      <version>0.2.11-SNAPSHOT</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

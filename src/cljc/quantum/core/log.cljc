@@ -59,48 +59,68 @@
 
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
-  [trace? pretty? print-fn pr-type args]
-  (when (or (get @*prs* pr-type)
-            #?(:cljs (= pr-type :macro-expand)))
-    (let [curr-fn (ns/this-fn-name :prev)
-          args-f @args
-          env-type-str
-            (when (get @*prs* :env)
-              (str (name env-type) " »"))
-          out-str
-            (with-out-str
-              (when (= pr-type :macro-expand) (print "\n/* "))
-              (when trace?
-                (print (str "[" env-type-str)
-                       curr-fn "»"
-                       (str (-> pr-type name) "] ")))
-              (if (and pretty? (-> args-f first string?))
-                  (do (print (first args-f) " ")
-                      (println)
-                      (apply print-fn (rest args-f)))
-                  (do (when pretty? (println))
-                      (apply print-fn args-f)))
-              (when (= pr-type :macro-expand) (print " */\n")))]
-      (print out-str)
-      (swap! quantum.core.log/log conj
-        (LogEntry.
-          (time/now)
-          pr-type
-          curr-fn
-          out-str))
-      nil)))
+  [trace? pretty? print-fn pr-type args opts]
+    (when (or (get @*prs* pr-type)
+              #?(:cljs (= pr-type :macro-expand)))
+      (let [trace?     (or (:trace?  opts) trace? )
+            pretty?    (or (:pretty? opts) pretty?)
+            timestamp? (:timestamp? opts)
+            thread?    (:thread? opts)
+            curr-fn (when trace? (ns/this-fn-name :prev))
+            args-f @args
+            env-type-str
+              (when (get @*prs* :env)
+                (str (name env-type) " »"))
+            out-str
+              (with-out-str
+                (when (= pr-type :macro-expand) (print "\n/* "))
+                #?(:clj
+                  (when timestamp?
+                    (let [timestamp
+                           (.format
+                             (java.time.format.DateTimeFormatter/ofPattern
+                                "MM-dd-yyyy HH:mm::ss")
+                             (java.time.LocalDateTime/now))]
+                      (print (str "[" timestamp "] ")))))
+                #?(:clj
+                  (when thread?
+                    (print (str "[:" (.getName (Thread/currentThread)) 
+                                 " » " (name pr-type) "] "))))
+                (when trace?
+                  (print (str "[" env-type-str)
+                         curr-fn "»"
+                         (str (-> pr-type name) "] ")))
+                (if (and pretty? (-> args-f first string?))
+                    (do (print (first args-f) " ")
+                        (println)
+                        (apply print-fn (rest args-f)))
+                    (do (when pretty? (println))
+                        (apply print-fn args-f)))
+                (when (= pr-type :macro-expand) (print " */\n")))]
+        (print out-str)
+        (swap! quantum.core.log/log conj
+          (LogEntry.
+            (time/now)
+            pr-type
+            curr-fn
+            out-str))
+        nil)))
 
 #?(:clj
 (defmacro pr [pr-type & args]
-  `(pr* true false println ~pr-type (delay (list ~@args)))))
+  `(pr* true false println ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defmacro pr-no-trace [pr-type & args]
-  `(pr* false false println ~pr-type (delay (list ~@args)))))
+  `(pr* false false println ~pr-type (delay (list ~@args)) nil)))
+
+#?(:clj
+(defmacro pr-opts [pr-type opts & args]
+  `(pr* false false println ~pr-type (delay (list ~@args)) ~opts)))
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(pr* true true  !       ~pr-type (delay (list ~@args)))))
+  `(pr* true true  !       ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defn status

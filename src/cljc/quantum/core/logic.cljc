@@ -203,7 +203,7 @@
                        (split-at (if (= :>> (second args)) 3 2) args)
                        n (count clause)]
                  (cond
-                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
+                   (= 0 n) nil ; No matching clause `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
                    (= 1 n) a
                    (= 2 n) `(if (if (fn? ~a)
                                     (~a ~pred ~expr)

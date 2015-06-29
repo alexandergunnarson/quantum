@@ -2,7 +2,7 @@
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
-  (:require-quantum [ns log map])
+  (:require-quantum [ns log map fn])
   (:require [clojure.string :as str])
 
   #?(:cljs (:require-macros [quantum.core.log :as log])))
@@ -302,6 +302,8 @@
                   ~@args)))
   ([]
    `(rethrow))))
+
+#?(:clj (def throwf+ (mfn throw+)))
 
 #?(:clj
 (defmacro try+*

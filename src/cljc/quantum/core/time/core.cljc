@@ -22,8 +22,10 @@
              (. java.time.LocalDateTime now))))
 #?(:clj
   (defn now-formatted [date-format]
-    (.format (. java.time.format.DateTimeFormatter ofPattern date-format)
-             (. java.time.LocalDateTime now))))
+    (.format (java.time.format.DateTimeFormatter/ofPattern date-format)
+             (java.time.LocalDateTime/now))))
+
+#?(:clj (defn timestamp [] (now-formatted "MM-dd-yyyy HH:mm::ss")))
 
 (defn ymd [date]
   (vector
@@ -70,7 +72,7 @@
     [d stream]
     (.write stream "#=(list \"A date should go here\" ")
     (.write stream "")
-    (.write stream ")")))
+    (.write stream ")"))) 
 
 (defn ^Delay for-days-between
   [date-a date-b f]

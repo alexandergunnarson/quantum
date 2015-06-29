@@ -9,15 +9,13 @@
           Other applications pending."
     :attribution "Alex Gunnarson"}
   quantum.google.drive.core
-  (:require-quantum [:lib])
+  (:require-quantum [:lib http])
   (:require 
     [quantum.google.drive.auth :as crawler]
-    [org.httpkit.client        :as http]
     [oauth.google              :as oauth.google]
     [oauth.io                  :as oauth.io]
     [oauth.v2                  :as oauth.v2]
     [quantum.auth.core         :as auth]
-    [quantum.http.core         :as qhttp]
     [quantum.core.data.json    :as json])
   (:import quantum.http.core.HTTPLogEntry))
 ;___________________________________________________________________________________________________________________________________
@@ -90,7 +88,7 @@
            (str "Invalid auth-type:" auth-type))]}
   (let [auth-keys (auth/auth-keys :google)
         access-token-retrieved
-          (qhttp/request!
+          (http/request!
            {:method :post
             :url oauth-access-token-url-google
             :form-params
@@ -110,7 +108,7 @@
 
 (defn ^String access-token-refresh! []
   (let [^Map    auth-keys (auth/auth-keys :google)
-        resp (qhttp/request! ;oauth.io/request
+        resp (http/request! ;oauth.io/request
                {:method :post
                 :url    oauth-access-token-url-google
                 :form-params
@@ -119,7 +117,7 @@
                  "refresh_token" (-> auth-keys :drive :access-tokens :offline :refresh-token)
                  "grant_type"    "refresh_token"}})
         ^Map access-token-retrieved
-          (-> resp :body (json/parse-string keyword))]
+          (-> resp :body (json/parse-string str/keywordize))]
     (auth/write-auth-keys!
       :google
       (assoc-in auth-keys [:drive :access-tokens :current]
@@ -199,6 +197,7 @@
   "Creates an HTTP request."
   {:usage "(make-request :query \"root\" nil :get {} nil)"}
   [^Key func ^String id to method ^Map params req]
+
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
@@ -210,7 +209,19 @@
            :oauth-token  (access-key :drive :current)
            :as           :auto
            :query-params query-params
-           }]
+           :handlers
+             {401 (fn [req resp]
+                    (log/pr ::warn "Unauthorized. Trying again...")
+                    (access-token-refresh!)
+                    (http/request! (assoc req :oauth-token (access-key :drive :current))))
+              403 (fn [req resp]
+                    (log/pr ::warn "Too many requests. Trying again...")
+                    (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
+                    (http/request! req))
+              500 (fn [req resp]
+                    (log/pr ::warn "Server error. Trying again...")
+                    (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
+                    (http/request! req))}}]
     request))
 
 (require '[clojure.data.xml :as cxml]) ; 162.373815 µs vs. my 4.456752 ms :/ I know, I know...
@@ -262,7 +273,7 @@
   {:todo ["Handle unreasonably long contacts (> 10000)"]}
   [^String email]
   (let [^Map http-response
-         (qhttp/request!
+         (http/request!
            {:method       :get
             :url          (str "https://www.google.com/m8/feeds/contacts/" email "/full")
             :oauth-token  (access-key :contacts :default)
@@ -273,35 +284,6 @@
   [^String email]
   (->> (retrieve-contacts-xml email)
        parse-contacts))
-
-;___________________________________________________________________________________________________________________________________
-;================================================={         HANDLE ERRORS         }=================================================
-;================================================={                               }=================================================
-(defn handle-http-error
-  "Handles an HTTP error.
-   Outputs a function to be used with |trampoline| (so as to conserve stack size)."
-  [try-n status request-n log-entry]
-  (let [error-map
-          {401 {:message "Unauthorized. Trying again..."
-                :processes #(do (access-token-refresh!))}
-           403 {:message "Too many requests. Trying again..."
-                :processes #(do (Thread/sleep (+ 2000 (rand 2000))))} ; rand to stagger pauses
-           500 {:message "Server error. Trying again..."
-                :processes #(do (Thread/sleep (+ 5000 (rand 2000))))}} ; a little more b/c server errors can persist...  
-                
-        message   (get-in error-map [status :message])
-        processes (get-in error-map [status :processes])]
-    (println message)
-    (qhttp/log-entry-write! log-entry :response try-n status)
-    (processes)
-    #(qhttp/request!
-       (assoc request-n :oauth-token (access-key :drive :current))
-       :tries (inc try-n)
-       :status status
-       :log log-entry
-       :handler handle-http-error)))
-
-
 ;___________________________________________________________________________________________________________________________________
 ;================================================={     PROCESS HTTP REQUEST      }=================================================
 ;================================================={                               }=================================================
@@ -328,12 +310,12 @@
   (let [[http-method url] (method+url-fn func id to method)
         request   (make-request func id to method params req)
         log-entry (atom (HTTPLogEntry. []))
-        raw-response (qhttp/request! request)
+        raw-response (http/request! request)
         response
           (if raw?
               raw-response
               (-> raw-response :body
-                  (json/parse-string str/keywordize)
+                  (json/parse-string keyword)
                   (whenf (constantly (= func :query)) :items)))]
     (reset! last-response response)
     response))

@@ -4,7 +4,7 @@
           Perhaps it would be better to use, say, org.apache.commons.io.FileUtils
           for many of these things."}
   quantum.core.io.core
-  (:refer-clojure :exclude [read])
+  (:refer-clojure :exclude [read descendants])
   (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log])
   #?(:clj
       (:require
@@ -30,9 +30,11 @@
 
 #?(:clj (do
 
-(defnt file-name*
-  string? ([s] (taker-until sys/separator nil s))
-  file?   ([f] (-> f str file-name*)))
+(defnt ^String path->file-name
+  file?   ([f] (.getName f))
+  string? ([s] (taker-until sys/separator nil s)))
+
+(def file-name* path->file-name)
 
 (defnt extension
   string? ([s] (taker-until "." nil s))
@@ -115,8 +117,8 @@
 
 (def  dirs
   (let [proj-path-0
-          (whenc (get (System/getenv) "PROJECTS") nil?
-            (up-dir-str this-dir))
+          (or (get (System/getenv) "PROJECTS")
+              (up-dir-str this-dir))
         proj-path-f 
           (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
                path
@@ -154,7 +156,8 @@
 
 (defnt ^File as-file
   vector? ([dir] (-> dir parse-dir as-file))
-  string? ([dir] (-> dir io/file)))
+  string? ([dir] (-> dir io/file))
+  file?   ([dir] dir))
 
 (def file-str (fn-> as-file str))
 
@@ -180,14 +183,27 @@
 ; FILE RELATIONS
 
 (defnt ^String up-dir
-  string?
-    ([dir] (-> dir up-dir-str))
-  vec?
-    ([dir] (-> dir parse-dir up-dir)))
+  string? ([dir ] (-> dir up-dir-str))
+  vec?    ([dir ] (-> dir parse-dir up-dir))
+  file?   ([file] (.getParent file)))
 
-(def parent   (fn-> up-dir as-file))
-(def siblings (fn-> parse-dir parent  file-seq vec popl))
-(def children (fn-> parse-dir as-file file-seq vec popl))
+(defn parent [f]
+  (.getParentFile ^File (as-file f)))
+
+(defn children [f]
+  (let [^File file (as-file f)]
+    (when (directory? file)
+      (->> file (.listFiles) seq))))
+
+(defn siblings [f]
+  (let [^File file (as-file f)]
+    (->> file parent children
+         (remove (fn-> str (= (str file)))))))
+
+(def descendants       (fn->> as-file file-seq))
+(def descendant-leaves (fn->> as-file file-seq (remove directory?)))
+(def internal-nodes    (fn->> as-file file-seq (filter directory?)))
+(def descendant-dirs internal-nodes)
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{ FILES AND I/O  }=========================================================
 ;========================================================{                }==========================================================
@@ -230,7 +246,7 @@
        str))
 (defn next-file-copy-num [path-0]
   (let [extension (file-ext path-0)
-        file-name (-> path-0 file-name* path-without-ext)]
+        file-name (-> path-0 path->file-name)]
     (try
       (->> path-0
            siblings

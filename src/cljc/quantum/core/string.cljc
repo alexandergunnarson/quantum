@@ -357,7 +357,8 @@
          keyword)))
 
 (defn char->hex-code [c]
-  (rest (Integer/toHexString (bit-or (int c) 0x10000))))
+  (let [^String hex (Integer/toHexString (bit-or (int c) 0x10000))]
+    (.substring hex 0 (-> hex count dec))))
 
 (defn char->unicode    [c] (str "\\u" (char->hex-code c)))
 (defn char->regex-code [c] (str "\\x" (char->hex-code c)))

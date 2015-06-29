@@ -2,6 +2,7 @@
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
+  :java-source-paths ["src/java"]
   :jar-name         "quantum-dep.jar"
   :uberjar-name     "quantum.jar"
   :url              "https://www.github.com/alexandergunnarson/quantum"
@@ -116,15 +117,17 @@
 
      ; CSS
      [garden                    "1.2.5"         ]
+     [org.clojure/tools.namespace "0.2.11"]
      ]
    :profiles
-     {:dev {:injections []
+   {:dev {:injections []
               ; [(do (ns quanta.main (:gen-class))
               ;      (require '[quantum.core.ns :as ns])
               ;      (ns/require-all *ns* :clj :lib)
               ;      (clojure.main/repl :print !))]
+            :resource-paths ["dev-resources"]
             :dependencies
-              [[org.clojure/tools.namespace "0.2.11-SNAPSHOT"]]
+              [#_[org.clojure/tools.namespace "0.2.11-SNAPSHOT"]]
             :plugins [;[codox "0.8.8"]
                       [lein-cljsbuild                  "1.0.5"]
                       [com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]

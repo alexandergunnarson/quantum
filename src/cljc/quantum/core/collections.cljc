@@ -27,7 +27,7 @@
      count
      vec empty
      first second rest last butlast get pop peek
-     assoc! conj!])
+     conj! assoc! dissoc!])
   (:require-quantum [ns logic type macros num map vec set log err macros fn str async time])
   (:require
             [quantum.core.collections.core :as coll]
@@ -157,6 +157,7 @@
 (def      butlast       coll/butlast      )
 (def      last          coll/last         )
 (def      assoc!        coll/assoc!       )
+(def      dissoc!       coll/dissoc!      )
 (def      conj!         coll/conj!        )
 (def      update!       coll/update!      )
 
@@ -1397,8 +1398,18 @@
   transientizable? ([coll f]
                      (persistent!
                        (core/reduce
-                         (fn [r x] (conj! r (f x)))
+                         (fn [r x] (core/conj! r (f x)))
                          (transient (empty coll)) coll)))
+  ; Persistent collections that don't support transients
+#?@(:clj
+    [[clojure.lang.PersistentQueue
+      clojure.lang.PersistentStructMap
+      clojure.lang.PersistentTreeMap
+      clojure.lang.PersistentTreeSet]
+       ([coll f]
+         (core/reduce
+           (fn [r x] (conj r (f x)))
+           (empty coll) coll))])
 #?@(:clj
       [map-entry?  ([coll f] (map-entry (f (key coll)) (f (val coll))))
        record?     ([coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll))
@@ -1408,19 +1419,6 @@
                      (if (coll? obj)
                          (into (empty obj) (map f obj))
                          obj))]))
-
-(defn- walk2-default [coll f]
-  (core/reduce
-    (fn [r x] (conj r (f x)))
-    (empty coll) coll))
-
-;; Persistent collections that don't support transients
-#?(:clj
-  (doseq [type [clojure.lang.PersistentQueue
-                clojure.lang.PersistentStructMap
-                clojure.lang.PersistentTreeMap
-                clojure.lang.PersistentTreeSet]]
-    (extend type Walk2Protocol {:walk2 walk2-default})))
 
 (defn walk
   "Traverses form, an arbitrary data structure.  inner and outer are

@@ -10,7 +10,9 @@
                [clojure.pprint :as pprint])
         :cljs ([cljs.core :as core :refer [Keyword]])))
   #?(:clj (:import (clojure.lang Keyword Var Namespace)))
-  #?(:clj (:gen-class)))
+  
+  )
+; #?(:clj (:gen-class))
 
 #?(:clj (set! *unchecked-math*     :warn-on-boxed))
 #?(:clj (set! *warn-on-reflection* true))
@@ -457,7 +459,7 @@
                              :cljs {asyncm #{go go-loop}}}}
           qasync
             {:aliases {:cljc {qasync quantum.core.thread.async}}
-             :refers  {:cljc {qasync #{put! take! take-with-timeout! empty! peek!}}}}
+             :refers  {:cljc {qasync #{put! take! empty! peek!}}}}
           res
             {:aliases {:cljc {res quantum.core.resources}}
              :refers  {:cljc {res #{with-cleanup}}}}
@@ -468,7 +470,7 @@
               #{contains? for doseq subseq reduce repeat repeatedly
                 range merge count vec into first second rest
                 last butlast get pop peek empty take take-while
-                key val conj! assoc!} 
+                key val conj! assoc! dissoc!} 
              :refers
                {:cljc
                  {coll #{for doseq doseqi reduce reducei reducei-
@@ -499,7 +501,7 @@
                          key val
                          contains? in?
                          postwalk prewalk walk
-                         conj! assoc! update!
+                         conj! assoc! dissoc! update!
                          genkeyword}}}}
           ccore  {:aliases {:cljc {ccore  quantum.core.collections.core}}}
           crypto {:aliases {:cljc {crypto quantum.core.cryptography    }}}
@@ -550,7 +552,7 @@
             :injection
               {:clj #(do (set! *warn-on-reflection* true)
                          (set! *unchecked-math* :warn-on-boxed)
-                         (gen-class)
+                         #_(gen-class) ; not needed unless for interop, apparently
                          nil)}
             :imports
               ((quantum.core.ns
@@ -622,10 +624,10 @@
              :refers          {:cljc {fn    #{compr *fn f*n unary zeroid monoid firsta call
                                               with->> withf withf->> with-pr->> with-msg->> withfs
                                               with-do rfn defcurried fn->> fn-> <- fn-nil}}
-                               :clj  {fn    #{jfn}}}}
+                               :clj  {fn    #{jfn mfn}}}}
           logic
             {:aliases         {:cljc {logic quantum.core.logic}}
-             :refers          {:cljc {logic #{splice-or coll-or fn-and fn-or fn-not nnil? nempty? eq? fn= fn-eq? any?
+             :refers          {:cljc {logic #{splice-or coll-or coll-and fn-and fn-or fn-not nnil? nempty? eq? fn= fn-eq? any?
                                               ifn if*n ifp whenf whenc whenp whenf*n whencf*n condf condfc condf*n condpc}}}}
           loops
             {:core-exclusions #{for doseq reduce}
@@ -671,7 +673,7 @@
    quantum.core.cljs.loops  #{reduce reducei for doseq doseqi}
    quantum.core.collections #{reduce reduce- reducei reducei- doseq doseqi for repeatedly kmap map->record}
    quantum.core.error       #{try+ with-throw with-throws throw+},
-   quantum.core.function    #{defcurried with-do <- fn-> rfn fn->>}
+   quantum.core.function    #{defcurried with-do <- fn-> rfn fn->> mfn}
    quantum.core.log         #{pr ppr}
    quantum.core.logic       #{whenf*n condfc ifn ifp whencf*n whenc if*n condf*n condpc whenf whenp condf},
    quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei

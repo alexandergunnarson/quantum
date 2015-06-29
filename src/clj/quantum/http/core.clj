@@ -15,8 +15,6 @@
     org.apache.http.impl.client.DefaultHttpClient
     java.io.File))
 
-(def ^:dynamic *max-tries-http* 3)
-
 (defrecord HTTPLogEntry [^Vec tries])
 ; TODO don't use a global log...
 (defonce http-log (atom {}))
@@ -130,25 +128,27 @@
                  "not a valid HTTP request type.")))
       @(http/request req))) ; |deref| because it's a |promise|
 
-(defn default-handler [response tries status req log]
-  (merge response
-    {:tries tries
-     :req   req
-     :log   log}))
+#_(def http-response-map
+  {401 :unauthorized
+   403 :too-many-requests
+   500 :server-error})
 
 (defn request!
   "'Safe' because it handles various HTTP errors (401, 403, 500, etc.),
-   and limits retries at |http-lib/*max-tries-http*| (which defaults at 3)."
+   and limits retries at @max-tries (which defaults at 3)."
    {:todo  ["EOFException SSL peer shut down incorrectly  sun.security.ssl.InputRecord.read
              INFO: I/O exception (java.net.SocketException) caught when connecting to
-                   {s}->https://www.googleapis.com: Connection reset"
-            "Probably should be rewritten."]
-    :usage-0 '(proc-request! 0 nil {:req ...} (atom {:tries []}))
+                   {s}->https://www.googleapis.com: Connection reset"]
     :usage
      '(request!
         {:method :post
          :url         "https://www.googleapis.com/upload/drive/v2/files"
          :oauth-token (access-key :drive :offline)
+         :handlers {:default (fn [req resp] (throw+ (str/sp "Error:" (:status response))))
+                    404      (fn [req resp] (throw+ "404 exception"))
+                    401      (fn [req resp]
+                               (refresh-access!)
+                               (http/request! (assoc req :new-access-key 123)))}
          :multipart
            [{:name "file"
              :mime-type :json
@@ -161,26 +161,39 @@
                  [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])}]})
     :attribution "Alex Gunnarson"}
   [{:as req
-    :or {as :auto}}
-   &
-   {:keys [^Int tries ^Atom log ^Fn handler status]
-    :or {tries   0
-         log     http-log
-         handler default-handler}}]
-  (if (= tries *max-tries-http*)
-      (throw+ {:type :http
-               :msg (str "HTTP exception, status " status ". Maximum tries (3) exceeded.")})
-      (let [request-write!  (log-entry-write! log :request  tries)
-            response        (trampoline request!* req) ; is |trampoline| wise here?
-            response-write! (log-entry-write! log :response tries "OK")]  ; this is not executed if an exception happens
-        (condf response
-          (compr :status (f*n splice-or = 401 403 500))
-            #(handler response tries (:status %) req log)
-          :else
-            identity))))
+    :keys [handlers log? log tries max-tries]
+    :or {as :auto
+         max-tries 3
+         tries     0}}]
+  (if (= tries max-tries)
+      (throw+ (Err. :error/http
+                (str "HTTP exception, status " (:status req) ". Maximum tries (3) exceeded.")
+                (:status req)))
+      (let [request-write!  (when log? (log-entry-write! (or log ) :request tries))
+            response        (request!* (dissoc req :status :log))
+            status          (:status response)]
+        (if (= status 200)
+            response
+            (let [status-handler
+                   (or (get handlers status)
+                       (get handlers :default)
+                       (constantly (log/pr :warn "unhandled HTTP status:" status)))
+                  req-n+1
+                    (assoc req
+                      :tries (inc tries)
+                      :max-tries max-tries) ]
+              (status-handler req-n+1 response))))))
 
+(defnt ping!
+  string? ([url] (with-open [socket (java.net.Socket. url 80)] socket)))
 
-
-
+(defn network-connected? []
+  (try (ping! "www.google.com")
+       true
+    (catch java.net.SocketException e
+      (if (-> e .getMessage (= "Network is unreachable"))
+          false
+          :unknown))
+    (catch java.net.UnknownHostException _ false)))
 
 

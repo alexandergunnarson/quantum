@@ -4,22 +4,48 @@
           Focuses on Heroku, Git, and Clojars via the command line."
     :attribution "Alex Gunnarson"}
   quantum.network.deploy
-  (:require-quantum [:lib])
-  (:require 
-    [quantum.google.drive.auth :as crawler]
-    [org.httpkit.client        :as http]
-    [oauth.google              :as oauth.google]
-    [oauth.io                  :as oauth.io]
-    [oauth.v2                  :as oauth.v2]
-    [quantum.auth.core         :as auth]
-    [quantum.http.core         :as qhttp])
-  (:import quantum.http.core.HTTPLogEntry))
+  (:require-quantum [:lib http auth]))
 
 (def heroku-help-center
   "https://devcenter.heroku.com/articles/getting-started-with-clojure")
 
-(def apps        (atom #{"ramsey"}))
-(def default-app (atom "ramsey"))
+(def apps        (atom #{"quanta"}))
+(def default-app (atom "quanta"))
+
+(defn install-dep-to-local-repo!
+  {:usage '(install-dep-to-local-repo!
+             '[quantum/ns "1.0"]
+             [:projects "quanta" "quanta"])}
+  ([dep-vec local-repo-path] (install-dep-to-local-repo! dep-vec local-repo-path nil))
+  ([[dep-name version] local-repo-path opts]
+    (let [maven-repo (io/file-str
+                       (or (get (System/getenv) "MAVEN_REPO")
+                           [:home ".m2" "repository"]))
+          namespace-pathed
+            (->> dep-name namespace (<- str/split #"\.") (apply io/path))
+          dep-folder (io/path maven-repo namespace-pathed (name dep-name) version)
+          dep-path   (->> dep-folder io/children
+                          (ffilter (fn-> io/extension (= "jar")))
+                          str)
+          _ (with-throw (nempty? dep-path) "No .jar found in folder")
+          local-repo-path-str (-> local-repo-path io/file-str (io/path "repo"))
+          args
+            ["org.apache.maven.plugins:maven-install-plugin:2.5.1:install-file" ; this might be changed
+             (str "-Dfile="                dep-path) ; no need to str/dquote
+             (str "-DgroupId="             (namespace dep-name))
+             (str "-DartifactId="          (name dep-name))
+             (str "-Dversion="             version)
+             "-Dpackaging=jar"        
+             (str "-DlocalRepositoryPath=" local-repo-path-str)]]
+      (log/pr ::debug "ARGS ARE" args)
+      (sh/proc "mvn"
+        args
+        (merge-keep-left opts
+          {:dir (io/up-dir local-repo-path-str)
+           :handlers {:output-line (fn [line] (println line))}
+           :name :install-jar-to-local-repo
+           :read-streams? true
+           :thread?       true})))))
 
 
 (defn create!
@@ -64,13 +90,13 @@
   ([]
     (deploy! @default-app))
   ([^String app-name]
-    (thread+ {:id :heroku-git}
-      (sh/exec! [:projects app-name] "git" "push"   "heroku" "master")))
+    (lt-thread {:name :heroku-git}
+      (sh/exec! "git" ["push"   "heroku" "master"]                 {:dir [:projects app-name]})))
   ([^String app-name ^String commit-desc]
-    (thread+ {:id :heroku-git}
-      (sh/exec! [:projects app-name] "git" "add"    ".")
-      (sh/exec! [:projects app-name] "git" "commit" "-am" (str "\"" commit-desc "\""))
-      (sh/exec! [:projects app-name] "git" "push"   "heroku" "master"))))
+    (lt-thread {:name :heroku-git}
+      (sh/exec! "git" ["add"    "."]                               {:dir [:projects app-name]})
+      (sh/exec! "git" ["commit" "-am" (str "\"" commit-desc "\"")] {:dir [:projects app-name]})
+      (sh/exec! "git" ["push"   "heroku" "master"]                 {:dir [:projects app-name]}))))
 
 (defn visit
   ([]
@@ -116,31 +142,7 @@
     (thread+ {:id thread-id}
       (sh/exec! [:projects repo-name] "lein" "uberjar"))))
 
-; (require '[cljs.repl :as repl])
-; (require '[cljs.repl.browser :as browser])  ;; require the browser implementation of IJavaScriptEnv
-; (require '[cemerick.piggieback])
-; (require '[weasel.repl.websocket])
-
-; (defn launch-buggy-cljs-browser
-;   ; Forgets vars somehow and doesn't completely evaluate the rest
-;   []
-;   (def env (browser/repl-env)) ;; create a new environment
-;   (repl/repl env))  
 
 
-; (defn launch-cljs-browser
-;   ; IllegalStateException
-;   ; Can't change/establish root binding of:
-;   ; *cljs-repl-options* with set  clojure.lang.Var.set (Var.java:221)
-;   []
-;   (cemerick.piggieback/cljs-repl
-;     :repl-env
-;       (weasel.repl.websocket/repl-env
-;         :ip "0.0.0.0" :port 9001)))
 
-; TEST CLJS
-; cd /Users/alexandergunnarson/Development/Source\ Code\ Projects/flappy-bird-demo && lein figwheel
-; Delete cached folder in /public
-; Can't use macros within that same file if your use with cljs...
 
-; Task with cljx-conversion:  lein deploy
