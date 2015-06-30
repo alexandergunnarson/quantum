@@ -241,22 +241,21 @@
                  , where 'v' is a vectorized (range 1000000).
 
                  22.5% faster!"}
-  [[elem coll :as bindings] & body]
+  [bindings & body]
   (assert-args
-    (vector? bindings)       "a vector for its binding"
-    (even? (count bindings)) "an even number of forms in binding vector")
-  (if (should-transientize? coll)
-      `(persistent!
+    (vector? bindings)       "a vector for its binding")
+  `(if (should-transientize? ~(last bindings))
+       (persistent!
          (reduce
-           (fn [ret# ~elem]
+           (fn [ret# ~@(butlast bindings)]
              (conj! ret# (do ~@body)))
            (transient [])
-           ~coll))
-      `(reduce
-         (fn [ret# ~elem]
+           ~(last bindings)))
+       (reduce
+         (fn [ret# ~@(butlast bindings)]
            (conj ret# (do ~@body)))
          []
-         ~coll))))
+         ~(last bindings)))))
 
 ; 2.284878 ms... strangely not faster than transient |for|
 ; (defmacro for-internally-mutable

@@ -20,12 +20,12 @@
 
 #?(:clj
 (defn read-streams
-  [{:keys [process id input-streams output-stream writer buffers output-line
+  [{:keys [process id input-streams output-stream stream-names writer buffers output-line state
            cleanup-seq close-reqs line-timeout output-timeout output-timeout-handler]
     :or {output-line fn-nil
          line-timeout 500
          output-timeout 5000}}] ; for some reason this isn't happening
-  (log/pr ::debug "READING STREAMS FOR PID" id)
+  (log/pr ::debug "READING STREAMS FOR PID" id "WITH STATE" state)
   (let [input-stream-worker
           (lt-thread-loop
             {:name :input-stream :parent id :close-reqs close-reqs}
@@ -42,6 +42,7 @@
                       (with-cleanup cleanup-seq)))]
     (doseqi [^BufferedReader reader readers n]
       (let [^StringBuffer buffer (get buffers n)
+            stream-source (get stream-names n)
             buffer-writer
               (lt-thread-loop
                 {:name :buffer-writer :parent id :close-reqs close-reqs}
@@ -55,20 +56,21 @@
             line-reader
               (lt-thread-loop
                 {:name :line-reader :parent id :close-reqs close-reqs
-                 :handlers {:error/any.post #(thread/close! id)}}
+                 :handlers {:error/any.post (fn [state-] (thread/close! id))}}
+                 ; atom because sleep-time isn't getting updated... weird...
                 [i (long 0) slept? false sleep-time 0]
-                (when (>= sleep-time 5000) ((or output-timeout-handler fn-nil)))
+                (when (>= sleep-time 5000) ((or output-timeout-handler fn-nil) state sleep-time stream-source))
                 (let [indices (for [c str/line-terminator-chars]
                                 (.indexOf ^StringBuffer buffer (str c) i))
                       i-n (->> indices (remove neg?) num/least)]
                   (if (or (nil? i-n) (neg? i-n))
                       (if (and slept? (> (lasti buffer) i)) ; unoutputted chars in buffer 
-                          (do (output-line (.subSequence ^StringBuffer buffer i (lasti buffer)))
+                          (do (output-line state (.subSequence ^StringBuffer buffer i (lasti buffer)) stream-source)
                               (recur (lasti buffer) false 0))
                           (do (Thread/sleep line-timeout)
                               (recur i true (+ sleep-time line-timeout)))) 
-                      (do (output-line (.subSequence ^StringBuffer buffer i i-n))
-                          (recur (inc (long i-n)) false 0)))))])))))
+                      (do  (output-line state (.subSequence ^StringBuffer buffer i i-n) stream-source)
+                           (recur (inc (long i-n)) false 0)))))])))))
 
 #?(:clj
 (def ^{:help "http://www.tldp.org/LDP/abs/html/exitcodes.html"}
@@ -85,7 +87,7 @@
 
 #?(:clj
 (defn exit-code-handler
-  [exit-code process process-id early-termination-handlers]
+  [state exit-code process process-id early-termination-handlers]
   (with-throw (number? exit-code)
     (Err. ::exit-code-not-a-number
           "Exit code is not a number"
@@ -106,7 +108,8 @@
     (catch Object e
       ((or (get early-termination-handlers (:type e))
            (get early-termination-handlers :default )
-           err/throwf+)
+           (throw+))
+        state
         e)))))
 
 #?(:clj
@@ -115,7 +118,7 @@
    If there is no line terminator, it is never called.
    Hopefully most command line programs will not output that way."
   [command args & [{{:keys [output-line closed]} :handlers
-                    :keys [ex-data env-vars dir timeout id parent
+                    :keys [ex-data env-vars dir timeout id parent state
                            print-streams? read-streams? close-reqs
                            handlers output-timeout thread? pr-to-out?
                            cleanup-seq]
@@ -184,10 +187,12 @@
                         :output-stream          output-stream
                         :input-streams          [std-stream err-stream]
                         :buffers                [std-buffer err-buffer]
+                        :stream-names           [:std :err]
                         :output-line            output-line
                         :cleanup-seq            cleanup-seq
                         :close-reqs             close-reqs
                         :output-timeout         output-timeout
+                        :state                  state
                         :output-timeout-handler (:output-timeout handlers)}))
                  children (get-in @thread/reg-threads [id :children])
                  _ (swap! cleanup-seq conj #(thread/close-impl! process))
@@ -203,7 +208,7 @@
                (thread/close! child-id))
              ; The process thread is closed; the helper threads may still be being cleaned up
              (swap! thread/reg-threads assoc-in [process-id :state] :closed)
-             (exit-code-handler exit-code process process-id (:early-termination handlers))))]
+             (exit-code-handler state exit-code process process-id (:early-termination handlers))))]
     (if thread?
         (thread/lt-thread {:id parent} (entire-process))
         (entire-process)))))

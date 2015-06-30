@@ -4,28 +4,26 @@
           |on?|, |for-days-between|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
-  (:refer-clojure :exclude [extend second])
-  (:require-quantum [ns red])
+  (:refer-clojure :exclude [extend second - + > <])
+  (:require-quantum [ns red macros type])
   (:require
-    #?(:clj  [clj-time.core  :as time]
-       :cljs [cljs-time.core :as time])
+    #?(:clj  [clj-time.core      :as time]
+       :cljs [cljs-time.core     :as time])
     #?(:clj  [clj-time.periodic  :as periodic]
-       :cljs [cljs-time.periodic :as periodic]))
-  #?(:clj (:import java.util.Date)))
+       :cljs [cljs-time.periodic :as periodic])
+    #?(:clj  [clj-time.coerce    :as coerce]
+       :cljs [cljs-time.coerce   :as coerce]))
+  #?(:clj (:import java.util.Date
+            (java.time Period Instant LocalDateTime))))
 
-; joda-time via clj-time
-#?(:clj (alias-ns 'clj-time.core))
+(defn now       [] (Instant/now))
+(defn now-local [] (LocalDateTime/now))
 
-#?(:clj
-  (defn now-normal []
-    (.format (. java.time.format.DateTimeFormatter ofPattern "MM-dd-yyyy")
-             (. java.time.LocalDateTime now))))
-#?(:clj
-  (defn now-formatted [date-format]
-    (.format (java.time.format.DateTimeFormatter/ofPattern date-format)
-             (java.time.LocalDateTime/now))))
+(defn now-formatted [date-format]
+  (.format (java.time.format.DateTimeFormatter/ofPattern date-format) (now-local)))
 
-#?(:clj (defn timestamp [] (now-formatted "MM-dd-yyyy HH:mm::ss")))
+(defn str-now [] (now-formatted "MM-dd-yyyy HH:mm::ss"))
+(def timestamp str-now)
 
 (defn ymd [date]
   (vector
@@ -87,3 +85,19 @@
 #?(:clj
   (defn long-timestamp []
     (long (/ (.getTime (Date.)) 1000))))
+
+(defnt -
+  [org.joda.time.Hours] ([x] (.negated x))
+  :default
+    ([date1 date2]
+      (time/interval date2 date1)))
+
+(defn between [a b] (Period/between a b))
+
+(def interval between)
+
+(defn > [a b]
+  )
+
+(defn since [date]
+  (between date (now)))

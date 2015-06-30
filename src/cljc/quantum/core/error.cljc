@@ -303,7 +303,7 @@
   ([]
    `(rethrow))))
 
-#?(:clj (def throwf+ (mfn throw+)))
+#?(:clj (defn throwf+ [obj] (throw+ obj)))
 
 #?(:clj
 (defmacro try+*
