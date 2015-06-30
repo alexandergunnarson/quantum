@@ -89,20 +89,15 @@
   (coll/taker-after "." path-0))
 
 #?(:clj
-(def- test-dir
-  (try+
-    (->> (io/resource "") url-decode
-         (<- str/replace "file:/" "/")
-         (<- str/replace "/" sys/os-sep-esc)
-         (take-until-inc (str sys/os-sep-esc "test" sys/os-sep-esc)))
-    (catch Exception _ "")))) ; To handle a weird "MapEntry cannot be cast to Number" error)
+(def- test-dir (path (System/getProperty "user.dir") "test")))
 
-(def- this-dir (up-dir-str test-dir))
+(def- this-dir (System/getProperty "user.dir"))
 
 (def- root-dir
   (condp = sys/os
     :windows (-> (System/getenv) (get "SYSTEMROOT") str)
     "/"))
+
 (def- drive-dir
   (condp = sys/os
     :windows
