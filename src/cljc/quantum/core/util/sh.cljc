@@ -45,7 +45,7 @@
             stream-source (get stream-names n)
             buffer-writer
               (lt-thread-loop
-                {:name :buffer-writer :parent id :close-reqs close-reqs}
+                {:name (str/keyword+ :buffer-writer- stream-source) :parent id :close-reqs close-reqs}
                 []
                 (let [i (int (.read ^BufferedReader reader))] ; doesn't actually block... actually pretty stupid
                   (if (= i (int -1))
@@ -55,7 +55,7 @@
                   (recur)))
             line-reader
               (lt-thread-loop
-                {:name :line-reader :parent id :close-reqs close-reqs
+                {:name (str/keyword+ :line-reader- stream-source) :parent id :close-reqs close-reqs
                  :handlers {:error/any.post (fn [state-] (thread/close! id))}}
                  ; atom because sleep-time isn't getting updated... weird...
                 [i (long 0) slept? false sleep-time 0]
