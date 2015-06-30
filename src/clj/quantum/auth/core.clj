@@ -12,7 +12,8 @@
   {:google   "Google"
    :facebook "Facebook"
    :fb       "Facebook"
-   :snapchat "Snapchat"})
+   :snapchat "Snapchat"
+   :amazon   "Amazon"})
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
