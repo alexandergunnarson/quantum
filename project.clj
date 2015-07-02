@@ -66,7 +66,8 @@
      ;[commons-io/commons-io             "2.4"         ] ; writing byte arrays to file and such
      [com.taoensso/nippy                "2.7.0-alpha1"
        :exclusions [org.clojure/tools.reader org.clojure/clojure org.json/json]] ; data serialization
-     [iota                              "1.1.2"       ]  ; fast/efficient string IO manipulation
+     [iota                              "1.1.2"       
+       :exclusions [org.codehaus.jsr166-mirror/jsr166y org.clojure/clojure]]  ; fast/efficient string IO manipulation
      [com.cognitect/transit-clj    "0.8.271"
        :exclusions [com.fasterxml.jackson.core/jackson-core]]
          
