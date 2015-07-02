@@ -44,6 +44,9 @@
         (.setJavascriptEnabled true)
         (.setCapability "phantomjs.page.settings.userAgent"  user-agent-string)
         (.setCapability "phantomjs.page.settings.loadImages" false)
+        (.setCapability "phantomjs.cli.args"
+          (into-array ["--ssl-protocol=any" "--ignore-ssl-errors=yes"
+                       "--webdriver-loglevel=ERROR"])) ; possibly don't need to do into-array
         ))
 
 ; Possibly defprotocol?
@@ -147,6 +150,3 @@
   (-> err .getMessage
       (json/parse-string keyword)
       :errorMessage))
-
-;driver.close() ; to close a single browser window.
-; Also, opening and quitting the browser with every authentication is inefficient...

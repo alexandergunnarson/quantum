@@ -1,4 +1,4 @@
-(defproject quantum/core "0.2.4.3" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
+(defproject quantum/core "0.2.4.4" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
@@ -94,8 +94,6 @@
                     com.fasterxml.jackson.core/jackson-core commons-codec]]
      [http-kit                             "2.1.18"
        :exclusions [org.clojure/clojure]] 
-     [oauth-clj                            "0.1.12"
-       :exclusions [riddley org.clojure/clojure org.json/json commons-codec]]
      [org.apache.httpcomponents/httpcore   "4.4.1"]
      [org.apache.httpcomponents/httpclient "4.4" 
        :exclusions [commons-codec]]
@@ -111,8 +109,8 @@
      ; DATAGRID + EXCEL
      ; [org.apache.poi/poi          "3.9"] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
      ; [org.apache.poi/poi-ooxml    "3.9"] ; NOT INCLUDED
-     ; WEB
-     [com.github.detro.ghostdriver/phantomjsdriver "1.1.0"
+     ; WEBsel
+     [com.github.detro/phantomjsdriver "1.2.0"
        :exclusions [xml-apis commons-codec]]
 
      ; CSS

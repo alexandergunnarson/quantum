@@ -22,11 +22,12 @@
 (defn read-streams
   [{:keys [process id input-streams output-stream stream-names writer buffers output-line state
            cleanup-seq close-reqs line-timeout output-timeout output-timeout-handler]
-    :or {output-line fn-nil
-         line-timeout 500
+    :or {line-timeout 500
          output-timeout 5000}}] ; for some reason this isn't happening
   (log/pr ::debug "READING STREAMS FOR PID" id "WITH STATE" state)
-  (let [input-stream-worker
+  (let [output-line            (or output-line            fn-nil)
+        output-timeout-handler (or output-timeout-handler fn-nil)
+        input-stream-worker
           (lt-thread-loop
             {:name :input-stream :parent id :close-reqs close-reqs}
             []
@@ -59,7 +60,8 @@
                  :handlers {:error/any.post (fn [state-] (thread/close! id))}}
                  ; atom because sleep-time isn't getting updated... weird...
                 [i (long 0) slept? false sleep-time 0]
-                (when (>= sleep-time 5000) ((or output-timeout-handler fn-nil) state sleep-time stream-source))
+                (when (>= sleep-time 5000)
+                  (output-timeout-handler state sleep-time stream-source))
                 (let [indices (for [c str/line-terminator-chars]
                                 (.indexOf ^StringBuffer buffer (str c) i))
                       i-n (->> indices (remove neg?) num/least)]
@@ -69,8 +71,7 @@
                               (recur (lasti buffer) false 0))
                           (do (Thread/sleep line-timeout)
                               (recur i true (+ sleep-time line-timeout)))) 
-                      (do  (output-line state (.subSequence ^StringBuffer buffer i i-n) stream-source)
-                           (recur (inc (long i-n)) false 0)))))])))))
+                      (do (recur (inc (long i-n)) false 0)))))])))))
 
 #?(:clj
 (def ^{:help "http://www.tldp.org/LDP/abs/html/exitcodes.html"}
@@ -112,6 +113,11 @@
         state
         e)))))
 
+(defn flush-stream! [^InputStream is ^StringBuffer buffer]
+  (let [reader (-> is (InputStreamReader.) (BufferedReader.))]
+    (while (.ready reader)
+      (->> reader .read int char (.append buffer)))))
+
 #?(:clj
 (defn run-process!
   "@output-handler is called on line terminator.
@@ -119,7 +125,8 @@
    Hopefully most command line programs will not output that way."
   [command args & [{{:keys [output-line closed]} :handlers
                     :keys [ex-data env-vars dir timeout id parent state
-                           print-streams? read-streams? close-reqs
+                           print-streams? read-streams? write-streams? close-reqs
+                           std-buffer err-buffer ; for recording input
                            handlers output-timeout thread? pr-to-out?
                            cleanup-seq]
                     :or   {ex-data     {}
@@ -148,8 +155,8 @@
                  process-id (or id (genkeyword command))
                  _ (log/pr ::debug "STARTING PROCESS"
                      (str/paren (str/sp "process-id" process-id)) command args)
-                 std-buffer    (StringBuffer. 400)
-                 err-buffer    (StringBuffer. 400)
+                 std-buffer    (or std-buffer (StringBuffer. 400))
+                 err-buffer    (or err-buffer (StringBuffer. 400))
                  cleanup       (delay (doseq [f @cleanup-seq]
                                         (try+ (f) (catch Object e (log/pr :warn "Exception in cleanup:" e)))))
                  output-stream (with-cleanup (LinkedBlockingQueue.) cleanup-seq)
@@ -161,7 +168,7 @@
                       :err-output    err-buffer 
                       :close-reqs    close-reqs
                       :output-stream output-stream
-                      :state         :running
+                      :status        :running
                       :handlers
                         {:closed      (thread/wrap-delay closed)
                          :output-line output-line
@@ -177,7 +184,7 @@
                                 (OutputStreamWriter.)
                                 (BufferedWriter.)
                                 (with-cleanup cleanup-seq))
-                _ (log/pr ::debug "BEFORE WORKER THREADS" )
+                _ (log/pr ::debug "BEFORE WORKER THREADS")
                  worker-threads
                    (when (or read-streams? print-streams?)
                      (read-streams
@@ -202,6 +209,9 @@
                    (when (and (empty? close-reqs)
                               (or read-streams? print-streams?))
                      (Thread/sleep 1000))]
+             (when (and (empty? close-reqs) write-streams?)
+                (flush-stream! std-stream std-buffer)
+                (flush-stream! err-stream err-buffer))
              ; the close operation asynchronously/indirectly
              ; invokes the close-listener if it has not already been done
              (doseq [child-id children]

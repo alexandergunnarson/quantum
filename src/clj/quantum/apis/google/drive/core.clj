@@ -8,109 +8,38 @@
 
           Other applications pending."
     :attribution "Alex Gunnarson"}
-  quantum.google.drive.core
-  (:require-quantum [:lib http])
+  quantum.apis.google.drive.core
+  (:require-quantum [:lib http auth])
   (:require 
-    [quantum.google.drive.auth :as crawler]
-    [oauth.google              :as oauth.google]
-    [oauth.io                  :as oauth.io]
-    [oauth.v2                  :as oauth.v2]
-    [quantum.auth.core         :as auth]
-    [quantum.core.data.json    :as json])
-  (:import quantum.http.core.HTTPLogEntry))
+    [quantum.apis.google.auth :as gauth]))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
 ;======================================================{                    }=======================================================
-(def oauth-access-token-url-google "https://www.googleapis.com/oauth2/v3/token")
-(def oauth-auth-url-google         "https://accounts.google.com/o/oauth2/auth")
-(def api-auth-url                  "https://www.googleapis.com/auth/")
+(def drive-files-uri  "https://www.googleapis.com/drive/v2/files/")
+(def drive-upload-uri "https://www.googleapis.com/upload/drive/v2/files/")
+(def api-auth (:api-auth gauth/urls))
 
-(def drive-files-uri               "https://www.googleapis.com/drive/v2/files/")
-(def drive-upload-uri              "https://www.googleapis.com/upload/drive/v2/files/")
-
-(def services #{:drive :contacts})
-
-(def all-scopes
-  ; Full list of scopes for the google drive api: https://developers.google.com/drive/scopes.
-  {:drive
-    {:drive                    (str api-auth-url "drive") ; Full, permissive scope to access all of a user's files.
-     :drive-file               (str api-auth-url "drive.file") ; Per-file access to files created or opened by the app
-     :drive-read-only          (str api-auth-url "drive.readonly")
-     :drive-read-only-metadata (str api-auth-url "drive.readonly.metadata")
-     :drive-apps-read-only     (str api-auth-url "drive.apps.readonly")
-     :drive-install            (str api-auth-url "drive.install") ; Special scope used to let users approve installation of an app
-     :drive-app-data           (str api-auth-url "drive.appdata") ; Allows access to the Application Data folder
-     :drive-scripts            (str api-auth-url "drive.scripts") ; Allows access to Apps Script files
-     :email                    (str api-auth-url "userinfo.email")
-     :profile                  (str api-auth-url "userinfo.profile")}
-   :contacts
-     {:read-write "https://www.google.com/m8/feeds"
-      :read       "https://www.googleapis.com/auth/contacts.readonly"}})
-
-(def scopes
-  {:drive
-    {:online  #{:drive}
-     :offline #{:drive :email :profile}}
-   :contacts
-    {:default #{:read-write}}})
-
-(defn ^String scopes-string
-  "Gets the scopes string given a service and an authorization type (:online or :offline)."
-  [^Key service ^Key auth-type]
-  (->> (get-in scopes [service auth-type])
-       (gets (get all-scopes service))
-       (str/join " ")))
-;___________________________________________________________________________________________________________________________________
-;======================================================{  USING OAUTH-CLJ   }=======================================================
-;======================================================{                    }=======================================================
-(defn auth-url [^Key service ^Key auth-type]
-  (oauth.google/oauth-authorization-url
-    (-> (auth/auth-keys :google) :client-id   )
-    (-> (auth/auth-keys :google) :redirect-uri)
-    :scope (scopes-string service auth-type)))
-
-(defn auth-key
-  "Retrieves the authorization key programmatically via a headless browser."
-  [^Key    service  ^Key    auth-type
-   ^String username ^String password]
-  (crawler/authentication-key-google
-    auth-type (auth-url service auth-type)
-    username password))
-
-(defn ^String access-token!
-  [^Key    service  ^Key    auth-type
-   ^String username ^String password]
-  {:pre [(with-throw
-           (in? service services)
-           (str "Invalid service:" service))
-         (with-throw
-           (in? auth-type (get all-scopes service))
-           (str "Invalid auth-type:" auth-type))]}
-  (let [auth-keys (auth/auth-keys :google)
-        access-token-retrieved
-          (http/request!
-           {:method :post
-            :url oauth-access-token-url-google
-            :form-params
-             {:code (auth-key :drive :offline (:username auth-keys) (:password auth-keys))
-              "client_id"     (:client-id     auth-keys)
-              "client_secret" (:client-secret auth-keys)
-              "redirect_uri"  (:redirect-uri  auth-keys)
-              "grant_type" "authorization_code"}})]
-    (auth/write-auth-keys!
-      :google
-      (assoc-in (auth/auth-keys :google)
-        [service
-         :access-tokens
-         auth-type]
-        access-token-retrieved))
-    access-token-retrieved))
+; Full list of scopes for the google drive api: https://developers.google.com/drive/scopes.
+(assoc! gauth/scopes :drive
+  {; Full, permissive scope to access all of a user's files.
+   :all                (io/path api-auth "drive")
+   ; Per-file access to files created or opened by the app
+   :file               (io/path api-auth "drive.file")
+   :read-only          (io/path api-auth "drive.readonly")
+   :read-only-metadata (io/path api-auth "drive.readonly.metadata")
+   :apps-read-only     (io/path api-auth "drive.apps.readonly")
+    ; Special scope used to let users approve installation of an app
+   :install            (io/path api-auth "drive.install")
+   ; Allows access to the Application Data folder
+   :app-data           (io/path api-auth "drive.appdata") 
+   ; Allows access to Apps Script files
+   :scripts            (io/path api-auth "drive.scripts")})
 
 (defn ^String access-token-refresh! []
   (let [^Map    auth-keys (auth/auth-keys :google)
-        resp (http/request! ;oauth.io/request
+        resp (http/request! 
                {:method :post
-                :url    oauth-access-token-url-google
+                :url    (:oauth-access-token gauth/urls)
                 :form-params
                 {"client_id"     (:client-id auth-keys)
                  "client_secret" (:client-secret auth-keys)

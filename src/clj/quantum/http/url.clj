@@ -28,25 +28,6 @@
       "%7C" "|"
       "%7D" "}"
       "%7E" "~"}
-   :extended
-     {"%2521" "!" 
-      "%2523" "#" 
-      "%2524" "$"
-      "%2526" "&"
-      "%2527" "'"
-      "%2528" "("
-      "%2529" ")"
-      "%252A" "*"
-      "%252B" "+"
-      "%252C" ","
-      "%252F" "/"
-      "%253A" ":"
-      "%253B" ";"
-      "%253D" "="
-      "%253F" "?"
-      "%2540" "@"
-      "%255B" "["
-      "%255D" "]"}
    :reserved
      {"%21" "!" 
       "%23" "#" 
@@ -73,10 +54,11 @@
   {"&amp;"   "&"
    "\\u0026" "&"})
 
-(defn decode [^Keyword code-map-key ^String s]
+(defn decode
+  {:todo ["Determine whether it's been double-encoded"]}
+  [^Keyword code-map-key ^String s]
   (if (= code-map-key :all)
       (->> s
-           (decode :url-extended)
            (decode :url-reserved)
            (decode :url-common)
            (decode :xml))
@@ -84,7 +66,6 @@
               (condp = code-map-key
                 :url-reserved (-> url-percent-codes :reserved)
                 :url-common   (-> url-percent-codes :common)
-                :url-extended (-> url-percent-codes :extended)
                 :xml          xml-codes)]
         (reduce
           (fn [ret percent-code assoc-char]
@@ -94,12 +75,14 @@
 
 (defn encode [s]
   (let [encoding-map
-         (merge (coll/reverse-kv (:common   url-percent-codes))
-                (coll/reverse-kv (:extended url-percent-codes)))]
+         (-> (merge-keep-left
+               (coll/reverse-kv (:common   url-percent-codes))
+               (coll/reverse-kv (:reserved url-percent-codes)))
+             (dissoc "." "-" "%"))]
     (reduce
       (fn [ret char-n percent-code]
         (str/replace ret char-n percent-code))
-      s
+      (str/replace s "%" "%25") ; pre-replace all %
       encoding-map)))
 
 (defn ^Map url-params->map
@@ -135,3 +118,18 @@
     {:url          url
      :query-params params}))
 
+(defnt normalize-param
+  keyword? ([x] (-> x name normalize-param))
+  string?  ([x] (-> x encode))
+  number?  ([x] (-> x str normalize-param)))
+
+(defn map->str [^Map m]
+  (reducei
+    (fn [s k v n]
+      (let [ampersand* (when (> n 0) "&")]
+        (str s ampersand* (name k) "=" (normalize-param v))))
+    ""
+    m))
+
+(defn map->url [url ^Map m]
+  (str url "?" (map->str m)))

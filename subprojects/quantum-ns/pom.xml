@@ -14,7 +14,7 @@
     </license>
   </licenses>
   <build>
-    <sourceDirectory>src\cljc</sourceDirectory>
+    <sourceDirectory>src/cljc</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
@@ -30,7 +30,7 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <outputDirectory>target\classes</outputDirectory>
+    <outputDirectory>target/classes</outputDirectory>
     <plugins/>
   </build>
   <repositories>

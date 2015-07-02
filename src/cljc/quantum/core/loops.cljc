@@ -104,9 +104,12 @@
                 'quantum.core.macros/extern+
                 'quantum.core.macros/identity*) 
            (let [i# (volatile! (long -1))]
-             (fn [ret# elem#]
-               (vswap! i# unchecked-inc-long)
-               (quantum.core.macros/inline-replace (~f ret# elem# @i#)))))
+             (fn ([ret# elem#]
+                   (vswap! i# unchecked-inc-long)
+                   (quantum.core.macros/inline-replace (~f ret# elem# @i#)))
+                 ([ret# k# v#]
+                   (vswap! i# unchecked-inc-long)
+                   (quantum.core.macros/inline-replace (~f ret# k# v# @i#))))))
         _ (log/ppr :macro-expand "F FINAL EXTERNED" f-final)
         code `(quantum.core.reducers/reduce ~f-final ~ret-i ~coll) 
         _ (log/ppr :macro-expand "REDUCEI CODE" code)]

@@ -159,7 +159,7 @@
 (defn ^:private close!* [thread thread-id close-reqs cleanup force?]
   (let [max-tries 3]
     (log/pr ::debug "Before close request for id" thread-id)
-    (when close-reqs
+    (when (and close-reqs (not (qasync/closed? close-reqs)))
       (qasync/put! close-reqs :req)) ; it calls its own close-request handler
     (log/pr ::debug "After close request for id" thread-id)
     (force cleanup) ; closes message queues, releases other resources
@@ -187,6 +187,7 @@
               (get @reg-threads thread-id)]
         (doseq [child children]
           (close! child opts)) ; close children before parent
+        (log/pr ::debug "After closing children" children "of" thread-id)
         (interrupt!* thread thread-id interrupted force?)
         (close!*     thread thread-id close-reqs cleanup force?)))))) ; closed handler is called by the thread reaper when it's actually close
 
@@ -333,7 +334,9 @@
             (when (get @reg-threads ~proc-id)
               (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" ~proc-id)
               (doseq [child-id# (get-in @reg-threads [~proc-id :children])]
-                (close! child-id# #{:gracefully?}))
+                (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD")
+                (close! child-id#)
+                (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD"))
               (force ~cleanup-f) ; Performed only once
               (swap! reg-threads assoc-in [~proc-id :state] :closed)
               (deregister-thread! ~proc-id)))))))))

@@ -615,10 +615,6 @@
           bench       {:aliases {:cljc {bench       quantum.core.util.bench }} :refers {:clj {bench #{bench}}}}
           debug       {:aliases {:cljc {debug       quantum.core.util.debug }} :refers {:clj {debug #{? break trace}}}}
           sh          {:aliases {:cljc {sh          quantum.core.util.sh    }}}
-          ; EXT
-          http        {:aliases {:clj  {http        quantum.http.core       }
-                                 :cljs {http        quantum.cljs.http.core  }}}
-          
           fn
             {:aliases         {:cljc {fn    quantum.core.function}}
              :refers          {:cljc {fn    #{compr *fn f*n unary zeroid monoid firsta call
@@ -655,8 +651,24 @@
                                              sorted-map? queue? lseq? pattern? regex? editable? transient?
                                              should-transientize?}}
                                :clj  {type #{bigint? file? byte-array? name-from-class}}
-                               :cljs {type #{class}}}}}
-       lib-exclusions (set/union '#{red loops ccore} '#{http}) ; Because contained in coll
+                               :cljs {type #{class}}}}
+         ; EXT
+          http        {:aliases {:clj  {http        quantum.http.core       }
+                                 :cljs {http        quantum.cljs.http.core  }}
+                       :imports (quantum.http.core.HTTPLogEntry)}
+          web 
+            {:aliases {:clj  {web         quantum.web.core}}
+             :imports ((org.openqa.selenium WebDriver WebElement TakesScreenshot
+                         StaleElementReferenceException NoSuchElementException
+                         OutputType Dimension)
+                       (org.openqa.selenium Keys By Capabilities
+                         By$ByClassName By$ByCssSelector By$ById By$ByLinkText
+                         By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
+                       (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
+                       (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))}
+          auth {:aliases {:clj {auth quantum.auth.core}}}
+          url  {:aliases {:clj {url quantum.http.url}}}}
+       lib-exclusions (set/union '#{red loops ccore} '#{http web auth url}) ; Because contained in coll
        lib-keys (->> ns-defs-0 keys (remove (partial contains? lib-exclusions)))
        lib
          {:core-exclusions (->> lib-keys (get-ns-syms ns-defs-0 :core-exclusions) (into #{}))

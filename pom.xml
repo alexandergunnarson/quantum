@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.4.3</version>
+  <version>0.2.4.4</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -14,14 +14,14 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
-    <tag>183ce37bec9fbc93d2e5d8ea77fdc7f5a14fef1f
+    <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
+    <tag>1b5308fb65874210a755db366ed719920ab1e9d2
 </tag>
-    <url>https://github.com/alexandergunnarson/quantum</url>
+    <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
   <build>
-    <sourceDirectory>src\clj</sourceDirectory>
+    <sourceDirectory>src/clj</sourceDirectory>
     <testSourceDirectory>test</testSourceDirectory>
     <resources>
       <resource>
@@ -40,7 +40,7 @@
       </testResource>
     </testResources>
     <directory>target</directory>
-    <outputDirectory>target\classes</outputDirectory>
+    <outputDirectory>target/classes</outputDirectory>
     <plugins>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -55,10 +55,10 @@
             </goals>
             <configuration>
               <sources>
-                <source>src\cljc</source>
-                <source>src\cljc_next</source>
-                <source>src\cljs</source>
-                <source>src\java</source>
+                <source>src/cljc</source>
+                <source>src/cljc_next</source>
+                <source>src/cljs</source>
+                <source>src/java</source>
               </sources>
             </configuration>
           </execution>
@@ -297,29 +297,6 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>oauth-clj</groupId>
-      <artifactId>oauth-clj</artifactId>
-      <version>0.1.12</version>
-      <exclusions>
-        <exclusion>
-          <groupId>riddley</groupId>
-          <artifactId>riddley</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.clojure</groupId>
-          <artifactId>clojure</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.json</groupId>
-          <artifactId>json</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>commons-codec</groupId>
-          <artifactId>commons-codec</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
       <version>4.4.1</version>
@@ -352,9 +329,9 @@
       <version>9.2.10.v20150310</version>
     </dependency>
     <dependency>
-      <groupId>com.github.detro.ghostdriver</groupId>
+      <groupId>com.github.detro</groupId>
       <artifactId>phantomjsdriver</artifactId>
-      <version>1.1.0</version>
+      <version>1.2.0</version>
       <exclusions>
         <exclusion>
           <groupId>xml-apis</groupId>

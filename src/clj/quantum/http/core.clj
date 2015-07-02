@@ -177,7 +177,8 @@
             (let [status-handler
                    (or (get handlers status)
                        (get handlers :default)
-                       (constantly (log/pr :warn "unhandled HTTP status:" status)))
+                       (constantly
+                         (do (log/pr :warn "unhandled HTTP status:" status) response)))
                   req-n+1
                     (assoc req
                       :tries (inc tries)
@@ -197,3 +198,10 @@
     (catch java.net.UnknownHostException _ false)))
 
 
+
+
+
+ ; Success (2xx)  
+ ; Redirection (3xx)  
+ ; Server errors (5xx)
+ ; Client errors (4xx)
