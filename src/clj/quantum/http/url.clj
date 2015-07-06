@@ -2,7 +2,9 @@
   ^{:doc "URL decoding, encoding, and URL <-> map.
           
           Possibly should deprecate this in favor of some other
-          better library."
+          better library.
+
+          Call this quantum.http.transcode"
     :attribution "Alex Gunnarson"}
   quantum.http.url
   (:require-quantum [:lib])
@@ -52,7 +54,9 @@
 ; TODO extend this
 (def xml-codes
   {"&amp;"   "&"
-   "\\u0026" "&"})
+   "\\u0026" "&"
+   "&lt;"    "<"
+   "&gt;"    ">"})
 
 (defn decode
   {:todo ["Determine whether it's been double-encoded"]}

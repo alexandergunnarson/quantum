@@ -7,13 +7,16 @@
   (:require-quantum [:lib]))
 
 ; TODO: /assoc/ for file; /update/ for file; overarching syntax
+; https://developer.mozilla.org/docs/Security/Weak_Signature_Algorithm
+; "This site makes use of a SHA-1 Certificate; it's recommended you use certificates with signature algorithms that use hash functions stronger than SHA-1."
 
 (def auth-source-table
   {:google   "Google"
    :facebook "Facebook"
    :fb       "Facebook"
    :snapchat "Snapchat"
-   :amazon   "Amazon"})
+   :amazon   "Amazon"
+   :intuit   "Intuit"})
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."

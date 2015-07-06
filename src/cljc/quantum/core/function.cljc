@@ -187,16 +187,17 @@
       (throw (IllegalArgumentException.
               "juxtm requires an even number of arguments"))))
 
-; (defn juxtc*
-;   [map-type args]
-;   (if (-> args count even?)
-;       (fn [arg]
-;         (->> arg
-;              (reduce-2 (fn [ret a b] (conj ret (constantly a) b)) [])
-;              ((apply juxt args))
-;              (apply map-type)))
-;       (throw (IllegalArgumentException.
-;               "juxtc requires an even number of arguments"))))
+(defn juxtk*
+  [map-type args]
+  (when-not (-> args count even?)
+    (throw (IllegalArgumentException. "juxtk requires an even number of arguments")))
+  (let [m (apply map-type args)]
+    (fn [arg]
+      (reduce-kv
+        (fn [ret k f]
+          (assoc ret k (f arg)))
+        m
+        m))))
 
 (defn juxtm
   "Like /juxt/, but applies a hash-map instead of a vector.
@@ -208,16 +209,17 @@
    Requires an even number of arguments."
   [& args]
   (juxtm* sorted-map+ args))
-; (defn juxtc-m
-;   "Like /juxtm/, but each key is wrapped in a /constantly/.
-;    Basically like /select-keys/."
-;   [& args]
-;   (juxtc* hash-map    args))
-; (defn juxtc-sm
-;   "Like /juxt-sm/, but each key is wrapped in a /constantly/.
-;    Basically like /select-keys/."
-;   [& args]
-;   (juxtc* sorted-map+ args))
+
+(defn juxtk
+  "Like /juxtm/, but each key is constant.
+   Basically like /select-keys/."
+  [& args]
+  (juxtk* hash-map    args))
+
+(defn juxt-kv
+  [kf vf]
+  (fn ([[k v]] (map-entry (kf k) (vf v)))
+      ( [k v]  (map-entry (kf k) (vf v)))))
 
 ; ======== WITH =========
 

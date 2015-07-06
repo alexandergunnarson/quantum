@@ -126,7 +126,6 @@
   "Creates an HTTP request."
   {:usage "(make-request :query \"root\" nil :get {} nil)"}
   [^Key func ^String id to method ^Map params req]
-
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
@@ -153,8 +152,6 @@
                     (http/request! req))}}]
     request))
 
-(require '[clojure.data.xml :as cxml]) ; 162.373815 µs vs. my 4.456752 ms :/ I know, I know...
-
 (defn ^Vec parse-contacts
   {:out '[{:name "Lynette Bearinger",
            :image-link "https://www.google.com/m8/feeds/photos/media/alexandergunnarson%40gmail.com/5fd4c0328f27c544",
@@ -164,7 +161,7 @@
   (let [^Map parsed-body
           (->> xml-response
                (java.io.StringReader.)
-               cxml/parse
+               xml/parse
                :content)
         ^Fn filter-relevant-entries
           (fn->> :content
@@ -495,10 +492,4 @@
 ;       :maxApertureValue         <float>      ; The smallest f-number of the lens at the focal length used to create the photo (APEX value).
 ;       :subjectDistance          <integer>    ; The distance to the subject of the photo, in meters.
 ;       :lens                    "<string>"}}) ; The lens used to create the photo.
-
-
-
-
-
-
 

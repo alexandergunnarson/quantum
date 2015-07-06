@@ -11,7 +11,7 @@
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
      OutputType Dimension)
-    (org.openqa.selenium Keys By Capabilities
+    (org.openqa.selenium Cookie Keys By Capabilities
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
@@ -34,6 +34,12 @@
 (defn make-component []
   (map->QuantumWebDriver {}))
 
+(defn not-found-error [^WebDriver driver elem]
+  {:msg         "Selenium element not found."
+   :type        :not-found
+   :elem        elem
+   :on-page     (.getCurrentUrl driver)
+   :page-source (.getPageSource driver)})
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 
@@ -94,12 +100,17 @@
     false
     (catch StaleElementReferenceException _ (println "Caught StaleElementReferenceException!") true)))
 
-(defn click!
+(defn click-load!
   {:attribution "http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html"}
   [^RemoteWebElement elem]
   (.click elem)
   (let []
     (wait-for-fn! stale-elem? elem)))
+
+(defn click!
+  {:attribution "http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html"}
+  [^RemoteWebElement elem]
+  (.click elem))
 
 (defn find-element
   {:attribution "Alex Gunnarson"}
@@ -107,11 +118,15 @@
   (try
     (.findElement driver elem)
     (catch NoSuchElementException _
-      (throw+ {:msg         "Selenium element not found."
-               :type        :not-found
-               :elem        elem
-               :on-page     (.getCurrentUrl driver)
-               :page-source (.getPageSource driver)}))))
+      (throw+ (not-found-error driver elem)))))
+
+(defn find-elements
+  {:attribution "Alex Gunnarson"}
+  [^WebDriver driver ^org.openqa.selenium.By elem]
+  (.findElements driver elem))
+
+(defn parent [^RemoteWebElement elem]
+  (.findElement elem (By/xpath "..")))
 
 (defn ins [^WebElement elem]
   {:tag-name (.getTagName elem)
@@ -138,15 +153,31 @@
     (send-keys! elem kdeletes)))
 
 (defn record-page! [^WebDriver driver ^String page-name]
-  (let [^String name-dashed (-> page-name str/keywordize name)
-        ^Fn record!
-          #(do (write-page!
-                 (.getPageSource driver)
-                 (str name-dashed ".html"))
-               (screenshot! driver name-dashed))]
-  (log/pr :debug "Screenshot of" page-name (record!))))
+  (let [^String name-dashed (-> page-name str/keywordize name)]
+    (do (write-page!
+          (.getPageSource driver)
+          (str name-dashed ".html"))
+        (screenshot! driver name-dashed))
+    (log/pr :debug "Screenshot of" page-name)))
 
 (defn get-error-json [^Throwable err]
   (-> err .getMessage
       (json/parse-string keyword)
       :errorMessage))
+
+(defrecord QCookie [domain expires path value])
+
+(defn get-cookies
+  {:todo ["Avoid reflection"]}
+  [^WebDriver driver]
+  (->> driver
+       (.manage)
+       (.getCookies)
+       (map+ (juxt #(.getName   ^Cookie %)
+               (fn/juxtk :domain  #(.getDomain ^Cookie %)
+                         :expires #(.getExpiry ^Cookie %)
+                         :path    #(.getPath   ^Cookie %)
+                         :value   #(.getValue  ^Cookie %)
+                         :secure  #(.isSecure  ^Cookie %))))
+       (map+ (juxt first (fn-> second map->QCookie)))
+       redm))

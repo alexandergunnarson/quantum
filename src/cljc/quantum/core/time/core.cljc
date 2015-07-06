@@ -4,7 +4,7 @@
           |on?|, |for-days-between|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
-  (:refer-clojure :exclude [extend second - + > <])
+  (:refer-clojure :exclude [extend second - + > < format])
   (:require-quantum [ns red macros type])
   (:require
     #?(:clj  [clj-time.core      :as time]
@@ -14,13 +14,19 @@
     #?(:clj  [clj-time.coerce    :as coerce]
        :cljs [cljs-time.coerce   :as coerce]))
   #?(:clj (:import java.util.Date
-            (java.time Period Instant LocalDateTime))))
+            (java.time Period Instant LocalDateTime LocalDate)
+            (java.time.format DateTimeFormatter))))
 
 (defn now       [] (Instant/now))
 (defn now-local [] (LocalDateTime/now))
 
 (defn now-formatted [date-format]
-  (.format (java.time.format.DateTimeFormatter/ofPattern date-format) (now-local)))
+  (.format (DateTimeFormatter/ofPattern date-format) (now-local)))
+
+(defnt format
+  [java.time.LocalDate] ([date formatting] (.format date (DateTimeFormatter/ofPattern formatting)))
+  #_[date formatter]
+  #_(.format (DateTimeFormatter/ofPattern formatter) date))
 
 (defn str-now [] (now-formatted "MM-dd-yyyy HH:mm::ss"))
 (def timestamp str-now)
@@ -101,3 +107,6 @@
 
 (defn since [date]
   (between date (now)))
+
+(defn parse [text formatter]
+  (LocalDate/parse text (DateTimeFormatter/ofPattern formatter)))

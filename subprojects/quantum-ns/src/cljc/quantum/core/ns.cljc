@@ -489,6 +489,7 @@
                          take ltake take-while ltake-while
                          take-until take-until-inc
                          take-from take-after
+                         takel takel-from takel-after
                          taker-untili taker-until
                          dropl dropr dropr-until dropr-after
                          into redv redm fold foldm
@@ -589,6 +590,7 @@
                                                                                :clj  {arr    #{byte-array+         }}}}
           bin     {:aliases {:cljc {bin    quantum.core.data.binary}} :refers {:cljc {bin    #{>>>                 }}}}
           bytes   {:aliases {:cljc {bytes  quantum.core.data.bytes }}}
+          csv     {:aliases {:cljc {csv    quantum.core.data.csv   }}}
           ftree   {:aliases {:cljc {ftree  quantum.core.data.ftree }}}
           hex     {:aliases {:cljc {hex    quantum.core.data.hex   }}}
           json    {:aliases {:cljc {json   quantum.core.data.json  }}} 
@@ -617,7 +619,7 @@
           sh          {:aliases {:cljc {sh          quantum.core.util.sh    }}}
           fn
             {:aliases         {:cljc {fn    quantum.core.function}}
-             :refers          {:cljc {fn    #{compr *fn f*n unary zeroid monoid firsta call
+             :refers          {:cljc {fn    #{compr *fn f*n unary zeroid monoid firsta call juxtm juxt-kv
                                               with->> withf withf->> with-pr->> with-msg->> withfs
                                               with-do rfn defcurried fn->> fn-> <- fn-nil}}
                                :clj  {fn    #{jfn mfn}}}}
@@ -636,7 +638,7 @@
             {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
              :aliases         {:cljc {macros      quantum.core.macros     }
                                :cljs {macros-cljs quantum.core.cljs.macros}}
-             :refers          {:cljc {macros      #{defn+ assert-args compile-if emit-comprehension do-mod}}
+             :refers          {:cljc {macros      #{quote+ defn+ assert-args compile-if emit-comprehension do-mod}}
                                :clj  {macros      #{defnt}}
                                :cljs {macros-cljs #{defnt}}}}
           red 
@@ -656,6 +658,7 @@
           http        {:aliases {:clj  {http        quantum.http.core       }
                                  :cljs {http        quantum.cljs.http.core  }}
                        :imports (quantum.http.core.HTTPLogEntry)}
+          conv        {:aliases {:cljc {conv        quantum.measure.convert }}}
           web 
             {:aliases {:clj  {web         quantum.web.core}}
              :imports ((org.openqa.selenium WebDriver WebElement TakesScreenshot
@@ -668,7 +671,7 @@
                        (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))}
           auth {:aliases {:clj {auth quantum.auth.core}}}
           url  {:aliases {:clj {url quantum.http.url}}}}
-       lib-exclusions (set/union '#{red loops ccore} '#{http web auth url}) ; Because contained in coll
+       lib-exclusions (set/union '#{red loops ccore} '#{http web auth url conv}) ; Because contained in coll
        lib-keys (->> ns-defs-0 keys (remove (partial contains? lib-exclusions)))
        lib
          {:core-exclusions (->> lib-keys (get-ns-syms ns-defs-0 :core-exclusions) (into #{}))

@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>1b5308fb65874210a755db366ed719920ab1e9d2
+    <tag>dd06fe3d1aee1e58f058b2628bdd781e24798f6d
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -142,6 +142,11 @@
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
+      <artifactId>data.csv</artifactId>
+      <version>0.1.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
       <artifactId>data.xml</artifactId>
       <version>0.0.8</version>
       <exclusions>
@@ -155,6 +160,11 @@
       <groupId>cheshire</groupId>
       <artifactId>cheshire</artifactId>
       <version>5.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>aysylu</groupId>
+      <artifactId>loom</artifactId>
+      <version>0.5.0</version>
     </dependency>
     <dependency>
       <groupId>fipp</groupId>
@@ -210,6 +220,16 @@
       <groupId>iota</groupId>
       <artifactId>iota</artifactId>
       <version>1.1.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.codehaus.jsr166-mirror</groupId>
+          <artifactId>jsr166y</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.clojure</groupId>
+          <artifactId>clojure</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>com.cognitect</groupId>

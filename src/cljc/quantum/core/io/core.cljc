@@ -32,12 +32,12 @@
 
 (defnt ^String path->file-name
   file?   ([f] (.getName f))
-  string? ([s] (taker-until sys/separator nil s)))
+  string? ([s] (coll/taker-until-workaround sys/separator nil s)))
 
 (def file-name* path->file-name)
 
 (defnt extension
-  string? ([s] (taker-until "." nil s))
+  string? ([s] (coll/taker-until-workaround "." nil s))
   file?   ([f] (-> f str extension)))
 
 (def file-ext extension)
@@ -455,9 +455,9 @@
       :unserialize
         (condpc = extension
           (coll-or "txt" "xml")
-          (iota/vec file-path-f) ; default is FileVec
+            (iota/vec file-path-f) ; default is FileVec
           "xlsx"
-          (input-stream file-path-f)
+            (input-stream file-path-f)
           ;"csv"
           ;(-> file-path-f io/reader csv/read-csv)
           (whenf (with-open [read-file (input-stream file-path-f)] ; Clojure object

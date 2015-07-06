@@ -453,8 +453,9 @@
    :out "efg"}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw+ (Err. :out-of-bounds nil [super sub])))]
-    (takel-afteri i super)))
+              (throw+ (Err. :out-of-bounds nil [super sub])))
+        i-f (+ i (lasti sub))]
+    (takel-afteri i-f super)))
 
 (def take-after takel-after)
 
@@ -489,6 +490,10 @@
 (def take-until-inc takel-until-inc)
 
 ; ============ TAKE-RIGHT ============
+(defn taker 
+  [i super]
+  (subseq super (- (count super) i) (lasti super)))
+
 (defn takeri
   "Take up to and including index, starting at the right."
   {:in  [2 "abcdefg"]
@@ -503,17 +508,32 @@
   [i super]
   (subseq super (-> i long inc) (lasti super)))
 
-(defn taker-until
+(defn taker-while
+  {:todo ["Use rreduce (reversed reduce) instead of reverse. Possibly reversed-last-index-of"]}
+  [pred super]
+  (let [rindex
+          (reduce
+            (fn [i elem]
+              (if (pred elem) (dec i) (reduced i)))
+            (count super)
+            (reverse super))]
+    (subseq super rindex (lasti super))))
+
+(defn taker-until-workaround
+  ([sub super]
+      (taker-until-workaround sub super super))
+    ([sub alt super]
+      (let [i (last-index-of super sub)]
+        (if i
+            (taker-untili i super)
+            alt))))
+
+(defnt taker-until
   "Take until index of, starting at the right."
   {:in  ["c" "abcdefg"]
    :out "defg"}
-  ([sub super]
-    (taker-until sub super super))
-  ([sub alt super]
-    (let [i (last-index-of super sub)]
-      (if i
-          (taker-untili i super)
-          alt))))
+  fn? ([pred super] (taker-while (fn-not pred) super))
+  :default ([arg1 arg2 & args] (apply taker-until-workaround arg1 arg2 args)))
 
 (defn taker-after
   {:in ["." "abcdefg.asd"]
@@ -709,15 +729,14 @@
     (get m k)
     (-> m (dissoc k))))
 
-#?(:cljs
-  (defn rename-keys [m-0 rename-m]
-    (loops/reduce
-      (fn [ret k-0 k-f]
-        (-> ret
-            (assoc  k-f (get ret k-0))
-            (dissoc k-0)))
-      m-0
-      rename-m)))
+(defn rename-keys [m-0 rename-m]
+  (loops/reduce
+    (fn [ret k-0 k-f]
+      (-> ret
+          (assoc  k-f (get ret k-0))
+          (dissoc k-0)))
+    m-0
+    rename-m))
 
 ; ; for /subseq/, the coll must be a sorted collection (e.g., not a [], but rather a sorted-map or sorted-set)
 ; ; test(s) one of <, <=, > or >=
@@ -936,6 +955,10 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
+(defn map-keys+ [f coll] (->> coll (map+ (juxt-kv f identity))))
+(defn map-vals+ [f coll] (->> coll (map+ (juxt-kv identity f))))
+
+
 (defn filter-keys+ [pred coll] (->> coll (filter+ (compr key pred))))
 (defn remove-keys+ [pred coll] (->> coll (remove+ (compr key pred))))
 (defn filter-vals+ [pred coll] (->> coll (filter+ (compr val pred))))

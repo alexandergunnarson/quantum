@@ -330,8 +330,8 @@
 #?(:clj
 (defprotocol
   String+
-  (str+ [obj] [obj & objs])))
-   
+  (str+ [obj] [obj1 obj2])))
+
 #?(:clj
 (extend-protocol String+
   java.io.InputStream
@@ -339,6 +339,12 @@
       (let [^java.util.Scanner s
               (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
         (if (.hasNext s) (.next s) "")))
+  Keyword
+    (str+ ([k] (str+ k "/"))
+          ([k joiner]
+            (->> [(namespace k) (name k)]
+                 (core/remove empty?)
+                 (join joiner))))
   Object
     (str+ [obj] (str obj))))
    

@@ -150,7 +150,7 @@
 (defmacro extern-
   "Dashed so as to encourage only internal use within macros."
   [obj]
-  `(do (println "\n/*" "EXTERNING" "*/\n")
+  `(do (log/pr :macro-expand "\n/*" "EXTERNING" "*/\n")
        (extern* *ns* ['extern ~obj]))))
 
 #?(:clj

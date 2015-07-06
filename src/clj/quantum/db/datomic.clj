@@ -4,6 +4,12 @@
   (:require [datomic.api :as d])
   (:import datomic.Peer [datomic.peer LocalConnection Connection]))
 
+(doseq [logger (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
+                    (.getContextSelector)
+                    (.getLoggerContext)
+                    (.getLoggerList))]
+  (.setLevel logger (. ch.qos.logback.classic.Level WARN)))
+
 ; With help from http://docs.datomic.com/getting-started.html
 
 ; SETUP
@@ -15,7 +21,7 @@
 ;(def memuri "datomic:mem://hello")
 ;(def memconn (Peer/connect local-uri))
 
-(swap! pr/*blacklist* conj datomic.db.Db)
+(swap! pr/blacklist conj datomic.db.Db)
 
 (defonce uri (atom "datomic:sql://datomic?jdbc:postgresql://localhost:5431/datomic?user=datomic&password=datomic"))
 ;(Peer/createDatabase @uri) ; only once ever 
@@ -112,11 +118,7 @@
     (let [datom (into {:db/id (d/tempid (or part :test))} props)]
       (transact! [datom]))))
 
-(defn list-partitions []
-  (query '[:find ?x
-           :where
-             [:db.part/db :db.install/partition ?p]
-             [?p :db/ident ?x]]))
+d
 
 (defn+ entity-query [q]
   (->> (query q)

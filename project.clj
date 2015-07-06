@@ -42,11 +42,13 @@
      [org.flatland/ordered              "1.5.2" ]
      [org.clojure/data.avl              "0.0.12"]
      ; DATA.CSV             
-     ;[org.clojure/data.csv              "0.1.2"]
+     [org.clojure/data.csv              "0.1.2"]
      ; DATA.XML
      [org.clojure/data.xml              "0.0.8" :exclusions [org.clojure/clojure]]
      ; DATA.JSON
      [cheshire                          "5.3.1"] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
+     ; GRAPHS
+     [aysylu/loom "0.5.0"]
      ; MACROS
      #_[potemkin                          "0.3.11"  ; defprotocol+, definterface+, etc.
        :exclusions [riddley]]

@@ -252,6 +252,6 @@
                       `(zipmap [~@(->   primitive-type-map (get  lang) keys)]
                                   (-> '~primitive-type-map (get ~lang) vals)))
                     ~(list 'def 'arr-types (get array-types lang)))]
-         (log/enable! :macro-expand)
-    (log/ppr :macro-expand "DEF-TYPES CODE" code)  (log/disable! :macro-expand)
+         #_(log/enable! :macro-expand)
+    #_(log/ppr :macro-expand "DEF-TYPES CODE" code)  #_(log/disable! :macro-expand)
     code)))
