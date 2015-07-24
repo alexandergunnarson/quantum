@@ -6,8 +6,8 @@
   quantum.core.data.ftree
   (:require-quantum [ns])
   (:require
-    #?(:clj [clojure.data.finger-tree :as ftree :refer [double-list counted-double-list]])))
+    #?(:clj [clojure.data.finger-tree :as ftree])))
 ; a sequential collection that provides constant-time access to both the left and right ends.
-#?(:clj (defalias dlist   double-list))
+#?(:clj (defalias u-dlist ftree/double-list))
 ; all the features of double-list plus constant-time count and log-n nth
-#?(:clj (defalias c-dlist counted-double-list))
+#?(:clj (defalias dlist ftree/counted-double-list))

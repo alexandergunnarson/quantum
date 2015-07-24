@@ -35,24 +35,6 @@
    ; Allows access to Apps Script files
    :scripts            (io/path api-auth "drive.scripts")})
 
-(defn ^String access-token-refresh! []
-  (let [^Map    auth-keys (auth/auth-keys :google)
-        resp (http/request! 
-               {:method :post
-                :url    (:oauth-access-token gauth/urls)
-                :form-params
-                {"client_id"     (:client-id auth-keys)
-                 "client_secret" (:client-secret auth-keys)
-                 "refresh_token" (-> auth-keys :drive :access-tokens :offline :refresh-token)
-                 "grant_type"    "refresh_token"}})
-        ^Map access-token-retrieved
-          (-> resp :body (json/parse-string str/keywordize))]
-    (auth/write-auth-keys!
-      :google
-      (assoc-in auth-keys [:drive :access-tokens :current]
-        access-token-retrieved))
-  access-token-retrieved))
-
 ;___________________________________________________________________________________________________________________________________
 ;================================================={      USING ONLY CLJ-HTTP      }=================================================
 ;================================================={                               }=================================================
@@ -140,7 +122,7 @@
            :handlers
              {401 (fn [req resp]
                     (log/pr ::warn "Unauthorized. Trying again...")
-                    (access-token-refresh!)
+                    (gauth/access-token-refresh! :drive)
                     (http/request! (assoc req :oauth-token (access-key :drive :current))))
               403 (fn [req resp]
                     (log/pr ::warn "Too many requests. Trying again...")
@@ -251,7 +233,22 @@
   [^String id]
   (drive :query :id id :params {:q :children :trashed false :hidden false}))
 
-
+(defn eval-drive-page []
+  (let [str-code
+         (->> (http/request!
+                {:query-params {"alt""media"}
+                 :url (->> (drive :query
+                             :id           "root"
+                             :params       {:q :children :trashed false :hidden false})
+                           (ffilter (fn-> :title (= "to-eval.clj")))
+                           :selfLink)
+                 :method :get
+                 :oauth-token  (access-key :drive :current)})
+                 :body bytes/->bytes (String.))
+        ns-0 *ns*]
+    (try (-> str-code read-string eval) ; TODO read string is dangerous
+      (finally (in-ns (ns-name ns-0))))))
+            
 ; the go block threads are "hogged" by the long running IO operations.
 ; The situation can be improved by switching the go blocks to normal threads.
 

@@ -90,7 +90,7 @@
   :computer/points [[1/12   :computer/picas]])
 
 (swap!
- quantum.measure.core/reg-units
+ quantum.measure.reg/reg-units
  (fn
   [u]
   (apply
@@ -182,7 +182,7 @@
       (map-entry
        node
        (if
-        (get quantum.measure.core/reg-units node)
+        (get quantum.measure.reg/reg-units node)
         (f*n conj :length)
         (constantly #{:length})))))
     (apply concat)

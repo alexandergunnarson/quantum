@@ -1,6 +1,7 @@
 (ns quantum.measure.convert
   (:require-quantum [:lib])
   (:require
+    [quantum.measure.reg        :as reg ]
     [quantum.measure.core       :as meas]
     [quantum.measure.angle      ]
     [quantum.measure.information]
@@ -19,8 +20,8 @@
     (with-throw (-> unit-types count (= 1)) (Err. nil "Ambiguous units found." unit-types))))
 
 (defmacro convert [n from to]
-  (let [from-types (get @meas/reg-units from)
-        to-types   (get @meas/reg-units to)
+  (let [from-types (get @reg/reg-units from)
+        to-types   (get @reg/reg-units to)
         _ (assert-types [from from-types] [to to-types])
         from-type (first from-types)
         to-type   (first to-types)

@@ -192,7 +192,8 @@
   {:performance "360 µs vs. clojure.data.xml's 865 µs! :D
                  268 µs vs. 402 µs
                  Some tests shows them to be the same,
-                 but most show this to be better! Yay eagerness!"}
+                 but most show this to be better! Yay eagerness!"
+   :todo ["Apparently is broken sometimes... FIX THIS"]}
   ([s] (parse s nil))
   ([s
     {:keys [start-doc start-elem chars end-elem end-doc unk-elem

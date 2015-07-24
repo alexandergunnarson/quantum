@@ -3,10 +3,9 @@
           for Selenium, especially PhantomJS."
     :attribution "Alex Gunnarson"}
   quantum.web.core
-  (:require-quantum [:lib])
+  (:require-quantum [:lib res])
   (:require
-    [quantum.auth.core :as auth]
-    [com.stuartsierra.component :as component  ])
+    [quantum.auth.core :as auth])
   (:import
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
@@ -18,21 +17,18 @@
     (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)
     org.apache.commons.io.FileUtils))
 
-(defrecord QuantumWebDriver []
-  component/Lifecycle
-  (start [component]
+; How do I clear the phantomjs cache on a mac?
+; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
+(res/register-component!
+  (fn [component]
     (log/pr :user "Starting PhantomJS WebDriver")
     (assoc component
       :web-driver (PhantomJSDriver.)))
-
-  (stop [component]
+  (fn [component]
     (when (:web-driver component)
       (log/pr :user "Stopping PhantomJS WebDriver")
-      (.quit ^PhantomJSDriver (:web-driver component)))
+      (-> component :web-driver res/cleanup!))
     (assoc component :web-driver nil)))
-
-(defn make-component []
-  (map->QuantumWebDriver {}))
 
 (defn not-found-error [^WebDriver driver elem]
   {:msg         "Selenium element not found."
@@ -159,6 +155,23 @@
           (str name-dashed ".html"))
         (screenshot! driver name-dashed))
     (log/pr :debug "Screenshot of" page-name)))
+
+(defn inspect-elem [^WebElement elem]
+  (when (instance? WebElement elem)
+    {:id    (.getAttribute elem "id")
+     :class (.getAttribute elem "class")
+     :tag   (.getTagName   elem)
+     :href  (.getAttribute elem "href")
+     :inner-html  (.getAttribute elem "innerHTML")}))
+
+(defn hover! [^WebDriver driver ^WebElement elem]
+  (-> driver (org.openqa.selenium.interactions.Actions.)
+      (.moveToElement elem)
+      (.perform)))
+
+(defn children [^WebElement elem]
+  (when (instance? WebElement elem)
+    (.findElementsByXPath elem "child::*")))
 
 (defn get-error-json [^Throwable err]
   (-> err .getMessage

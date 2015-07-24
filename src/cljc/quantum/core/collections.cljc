@@ -27,8 +27,9 @@
      count
      vec empty
      first second rest last butlast get pop peek
-     conj! assoc! dissoc!])
-  (:require-quantum [ns logic type macros num map vec set log err macros fn str async time])
+     conj! assoc! dissoc! disj!])
+  (:require-quantum [ns logic type macros num map vec set ftree
+                     log err macros fn str async time])
   (:require
             [quantum.core.collections.core :as coll]
             [quantum.core.reducers         :as red]
@@ -40,7 +41,7 @@
       [quantum.core.reducers   :as red]
       [quantum.core.cljs.loops :as loops])))
 
-#?(:clj
+#_(:clj
     (defnt key
       "Like |key| but more robust."
       map-entry?
@@ -48,13 +49,21 @@
          ([k v] k))) ; For use with kv-reduce
    :cljs (defalias key core/key)) 
 
-#?(:clj
+(defn key
+  ([kv] (if (nil? kv) nil (core/key kv)))
+  ([k v] k))
+
+#_(:clj
     (defnt val
       "Like |val| but more robust."
       map-entry?
         (([obj] (core/val obj)) 
          ([k v] v))) ; For use with kv-reduce
    :cljs (defalias val core/val)) 
+
+(defn val
+  ([kv] (if (nil? kv) nil (core/val kv)))
+  ([k v] v))
 
 (defn genkeyword
   ([]    (keyword (gensym)))
@@ -159,6 +168,7 @@
 (def      assoc!        coll/assoc!       )
 (def      dissoc!       coll/dissoc!      )
 (def      conj!         coll/conj!        )
+(def      disj!         coll/disj!        )
 (def      update!       coll/update!      )
 
 (defalias merge map/merge+)
@@ -603,8 +613,10 @@
        (map+ #(map-entry (f %) %))
        redm))
 
-(defn merge-keep-left  [a b] (merge b a))
-(defn merge-keep-right [a b] (merge a b))
+(defn mergel  [a b] (merge b a))
+(defalias merge-keep-left mergel)
+(defn merger [a b] (merge a b))
+(defalias merge-keep-right merger)
               
 (defn split-remove
   {:todo ["Slightly inefficient — two /index-of/ implicit."]}
@@ -1325,6 +1337,16 @@
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
+; (defn partition-all*
+;   "Groups the elements of @coll into groups of @n."
+;   {:attribution "Alex Gunnarson"
+;    :todo "Compare performance to |partition-all|"}
+;   [coll n]
+;   (loop [coll-n coll]
+;     (if (-> coll-n count (< n))
+;         coll-n
+;         (recur (ltake n coll)))))
+
 ; (defn interleave+ [& args] ; 4.307220 ms vs. 1.424329 ms normal interleave :/ because of zipvec...
 ;   (reduce
 ;     (fn ([]      [])
@@ -1414,7 +1436,8 @@
    as a sorted-map with the same comparator."
   ; clojure.lang.PersistentList$EmptyList : '()
   ; special case to preserve type
-  list?            ([coll f] (apply list (map f coll)))
+  list?            ([coll f] (apply list  (map f coll)))
+  dlist?           ([coll f] (apply dlist (map f coll)))
   ; generic sequence fallback
   seq?             ([coll f] (map f coll))
   ; |transient| discards metadata as of Clojure 1.6.0
@@ -1557,3 +1580,21 @@
 
 (defn reverse-kv [m]
   (zipmap (vals m) (keys m)))
+
+
+(defn- update-nth-list*
+  [x n f]
+  (if (= n 0)
+      (conjl (rest x) (f (first x)))
+      (concat (ltake n x) (list (f (get x n))) (nthnext x (inc n)))))
+
+(defnt update-nth
+  vector? ([x n f] (update x n f))
+  [clojure.data.finger_tree.CountedDoubleList]
+          ([x n f] (if (= n (lasti x))
+                       (conj (.pop x) (f (last x)))
+                       (update-nth-list* x n f)))
+  listy?  ([x n f] (update-nth-list* x n f)))
+
+(defn update-first [x f] (update-nth x 0         f))
+(defn update-last  [x f] (update-nth x (lasti x) f))

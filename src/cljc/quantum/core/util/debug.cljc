@@ -2,10 +2,9 @@
   ^{:doc "Useful debug utils. Especially |trace|, |break|, |try-times|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.util.debug
+  (:require-quantum [ns err log logic fn pr])
   #?(:clj
     (:require
-      [quantum.core.print :as pr      #?@(:clj [:refer [!]])    ]
-      [quantum.core.logic :as log     :refer [nnil?]            ]
       [clojure.pprint     :as pprint                            ]
       [clojure.stacktrace :as trace   :refer [print-cause-trace]]
       [clojure.string     :as clj-str :refer [split-lines trim] ])))
@@ -14,23 +13,31 @@
 ;   [throwable? exception?]])
 
 ; No matching method clojure.main/repl-read
-;#?(:clj 
-;(defn readr
-;  {:attribution "The Joy of Clojure, 2nd ed."}
-;  [prompt exit-code]
-;  (let [input (clojure.main/repl-read prompt exit-code)]
-;    (if (= input :next) ; perhaps non-namespace qualified is a bad idea
-;        exit-code
-;        input))))
-;
-;#?(:clj 
-;(defn debug
-;  "A debug REPL, courtesy of The Joy of Clojure.
-;
-;   Type (debug) to start, and :next to go to the next breakpoint.
-;   Apparently there is no 'stop execution'..."
-;  []
-;  (readr #(print "invisible=> ") ::exit))) ; perhaps non-namespace qualified is a bad idea
+#?(:clj 
+(defn readr
+  {:attribution "The Joy of Clojure, 2nd ed."}
+  [prompt exit-code]
+  (let [input (clojure.main/repl-read prompt exit-code)]
+    (if (= input :next) ; perhaps non-namespace qualified is a bad idea
+        exit-code
+        input))))
+
+#?(:clj 
+(defn debug
+  "A debug REPL, courtesy of The Joy of Clojure.
+
+   Type (debug) to start, and :next to go to the next breakpoint.
+   Apparently there is no 'stop execution'..."
+  []
+  (readr #(print "invisible=> ") ::exit))) ; perhaps non-namespace qualified is a bad idea
+
+#?(:clj
+(defmacro report [source- & args]
+  `(try+ ~@args
+     (catch Object e#
+       (log/pr-opts :debug #{:thread?}
+         "FROM SOURCE" ~source- "THIS IS EXCEPTION" e#)
+       (throw+)))))
 
 #?(:clj 
 (defmacro break
@@ -40,12 +47,11 @@
   {:attribution  "The Joy of Clojure, 2nd ed."
    :contributors ["Alex Gunnarson"]}
   ([]
-    ;`(clojure.main/repl
-    ;  :prompt #(print "debug=> ")
-    ;  :read readr
-    ;  :eval (partial quantum.core.ns/contextual-eval
-    ;          (quantum.core.ns/local-context)))
-    )
+    `(clojure.main/repl
+      :prompt #(print "debug=> ")
+      :read readr
+      :eval (partial quantum.core.ns/c-eval
+              (quantum.core.ns/context))))
   ([& args]
     `(do (println ~@args)
          (break)))))

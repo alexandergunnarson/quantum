@@ -356,6 +356,13 @@
   [expr throw-content]
   `(if ~expr ~expr (throw+ ~throw-content))))
 
+#?(:clj (defalias throw-unless with-throw))
+
+#?(:clj
+(defmacro throw-when
+  [expr throw-content]
+  `(if-not ~expr ~expr (throw+ ~throw-content))))
+
 #?(:clj
 (defmacro with-throws
   "Doesn't quite work yet..."
@@ -380,3 +387,29 @@
        (if-let [as (seq alternatives)] 
          `(or (try ~exp (catch Throwable t# (try-or ~@as))))
          exp))))
+
+(defmacro suppress
+  "Suppresses any errors thrown in the body.
+  (suppress (error \"Error\")) => nil
+  (suppress (error \"Error\") :error) => :error
+  (suppress (error \"Error\")
+            (fn [e]
+              (.getMessage e))) => \"Error\""
+  {:source "https://github.com/zcaudate/hara/blob/master/src/hara/common/error.clj"}
+  ([body]
+     `(try ~body (catch Throwable ~'t)))
+  ([body catch-val]
+     `(try ~body (catch Throwable ~'t
+                   (cond (fn? ~catch-val)
+                         (~catch-val ~'t)
+                         :else ~catch-val)))))
+
+#?(:clj
+(defmacro assertf-> [f arg throw-obj]
+  `(do (throw-unless (~f ~arg) (Err. nil ~throw-obj ['~f ~arg]))
+       ~arg)))
+
+#?(:clj
+(defmacro assertf->> [f throw-obj arg]
+  `(do (throw-unless (~f ~arg) (Err. nil ~throw-obj ['~f ~arg]))
+       ~arg)))

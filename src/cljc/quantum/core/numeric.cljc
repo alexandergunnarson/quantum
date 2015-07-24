@@ -13,6 +13,25 @@
 (def  abs       (whenf*n neg? neg))
 (def  int-nil   (whenf*n nil? (constantly 0)))
 
+; For units
+(def ^:const ten              (long   10))
+(def ^:const hundred          (long   100))
+(def ^:const thousand         (long   1000))
+(def ^:const ten-thousand     (long   10000))
+(def ^:const hundred-thousand (long   100000))
+(def ^:const million          (long   1E6))
+(def ^:const billion          (long   1E9))
+(def ^:const trillion         (long   1E12))
+(def ^:const quadrillion      (long   1E15))
+(def ^:const quintillion      (long   1E18)) ; + exa | - atto
+(def ^:const sextillion       (bigint 1E21))
+(def ^:const septillion       (bigint 1E24))
+(def ^:const octillion        (bigint 1E27))
+(def ^:const nonillion        (bigint 1E30))
+(def ^:const decillion        (bigint 1E33))
+
+(defn evenly-divisible-by? [a b] (= 0 (rem a b)))
+
 (defn exp
   {:todo "Performance"}
   [x n]
@@ -138,7 +157,8 @@
      :cljs (.sin js/Math       n)))
 
 (defnt exactly
-  integer? ([n] (bigint n))
+  #?@(:clj
+ [integer? ([n] (bigint n))])
   :default ([n] (rationalize n)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   TAKE BOXED MATH AWAY   }=====================================================
@@ -178,3 +198,28 @@
   string? (([s] #?(:clj  (Long/parseLong s)
                    :cljs (-> s js/parseInt long)))
            #?(:clj ([s radix] (Long/parseLong s radix)))))
+
+; (/ x 4) = (& x 3)
+(defalias +*   unchecked-add       )
+(defalias -*   unchecked-subtract  )
+(defalias **   unchecked-multiply  )
+(defalias dec* unchecked-dec       )
+(defalias inc* unchecked-inc       )
+; What about the other unchecked?
+; unchecked-byte
+; unchecked-char
+; unchecked-double
+; unchecked-float
+; unchecked-int
+; unchecked-long
+; unchecked-short
+; unchecked-negate
+; unchecked-divide-int
+; unchecked-add-int
+; unchecked-dec-int
+; unchecked-divide-int
+; unchecked-inc-int
+; unchecked-multiply-int
+; unchecked-negate-int
+; unchecked-remainder-int
+; unchecked-subtract-int

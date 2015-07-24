@@ -6,7 +6,7 @@
   quantum.core.collections.core
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last get pop peek
-     conj! assoc! dissoc!])
+     conj! assoc! dissoc! disj!])
   (:require-quantum [ns err fn log logic red str map set macros type vec arr]))
 
 ; TODO Queues need support
@@ -14,6 +14,15 @@
 ; TODO need to somehow incorporate |vector++| and |vector+|
 ; #+clj (defalias vector   tup/vector)
 ; #+clj (defalias hash-map tup/hash-map)
+(definterface IMutable
+  (get [])
+  (set [x]))
+
+(deftype MutableContainer [^:unsynchronized-mutable val]
+  IMutable
+  (get [this] val)
+  (set [this x]
+    (set! val x)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         RETRIEVAL        }=====================================================
 ;=================================================={     get, first, rest     }=====================================================
@@ -78,17 +87,21 @@
                ([coll n if-not-found] (core/get coll n if-not-found))))
 
 (defnt assoc!
-  array?               ([coll i v] (aset!       coll i v) coll)
-  transient?           ([coll k v] (core/assoc! coll k v))
-  [clojure.lang.IAtom] ([coll k v] (swap! coll assoc k v)))
+  array?     ([coll i v] (aset!       coll i v) coll)
+  transient? ([coll k v] (core/assoc! coll k v))
+  atom?      ([coll k v] (swap! coll assoc k v)))
 
 (defnt dissoc!
-  transient?           ([coll k] (core/dissoc! coll k))
-  [clojure.lang.IAtom] ([coll k] (swap! coll dissoc k)))
+  transient? ([coll k] (core/dissoc! coll k))
+  atom?      ([coll k] (swap! coll dissoc k)))
 
 (defnt conj!
-  transient?           ([coll obj] (core/conj! coll obj))
-  [clojure.lang.IAtom] ([coll obj] (swap! coll conj obj)))
+  transient? ([coll obj] (core/conj! coll obj))
+  atom?      ([coll obj] (swap! coll conj obj)))
+
+(defnt disj!
+  transient? ([coll obj] (core/disj! coll obj))
+  atom?      ([coll obj] (swap! coll disj obj)))
 
 (defnt update!
   :default ([coll i f] (assoc! coll i (f (get coll i)))))
@@ -128,13 +141,34 @@
     
 (def peek last)
 
+(def neg-1? (eq? -1))
+
 (defnt index-of 
-  vec?    ([coll elem] (whenc (.indexOf     coll elem) (extern (eq? -1)) nil))
-  string? ([coll elem] (whenc (.indexOf     coll elem) (extern (eq? -1)) nil)))
+  vec?    ([coll elem] (whenc (.indexOf     coll elem) neg-1? nil))
+  string? ([coll elem] (whenc (.indexOf     coll elem) neg-1? nil)))
+
+; Spent too much time on this...
+; (defn nth-index-of [super sub n]
+;   (reducei
+;     (fn [[sub-matched i-found indices-found :as state] elem i]
+;       (let-alias [sub-match?      (= elem (get super i))
+;                   match-complete? (= (inc sub-matched) (count sub))
+;                   nth-index?      (= (inc indices-found) n)]
+;         (if sub-match?
+;             (let [[sub-matched-n+1 i-found-n+1 indices-found-n+1 :as state]
+;                    []])
+;             (if match-complete?
+;                   (if nth-index?
+;                       i-found))
+;             (if (= n (lasti super))
+;                 nil
+;                 state))))
+;     [0 0 nil]
+;     super))
 
 (defnt last-index-of
-  vec?    ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil))
-  string? ([coll elem] (whenc (.lastIndexOf coll elem) (extern (eq? -1)) nil)))
+  vec?    ([coll elem] (whenc (.lastIndexOf coll elem) neg-1? nil))
+  string? ([coll elem] (whenc (.lastIndexOf coll elem) neg-1? nil)))
 
 (defn gets [coll indices]
   (->> indices (red/map+ (partial get coll)) red/fold+))

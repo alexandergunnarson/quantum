@@ -4,7 +4,7 @@
   (:require [datomic.api :as d])
   (:import datomic.Peer [datomic.peer LocalConnection Connection]))
 
-(doseq [logger (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
+#_(doseq [logger (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
                     (.getContextSelector)
                     (.getLoggerContext)
                     (.getLoggerList))]
@@ -22,11 +22,10 @@
 ;(def memconn (Peer/connect local-uri))
 
 (swap! pr/blacklist conj datomic.db.Db)
-
-(defonce uri (atom "datomic:sql://datomic?jdbc:postgresql://localhost:5431/datomic?user=datomic&password=datomic"))
+(def connect d/connect)
+(defonce uri  (atom nil))
 ;(Peer/createDatabase @uri) ; only once ever 
-(defonce conn (atom (try (d/connect @uri) (catch java.util.concurrent.ExecutionException _ nil))))
-(defonce last-trans (atom nil))
+(defonce conn (atom nil))
 
 
 ; datom = ["add fact" "about a new entity with this temporary id"
@@ -40,14 +39,17 @@
 ;["an entity" "has the attribute db/doc" "with value hello world"]]
 
 (defn db*       [ ] (d/db @conn))
-(defn raw-query [q] (d/q q (db*)))
-(defn query     [q] (->> q raw-query (into #{})))
+(defn query
+  ([q] (query q false))
+  ([q raw?]
+  (if raw?
+      (d/q q (db*))
+      (->> (d/q q (db*)) (into #{})))))
 
 (defnt transact!
   vec?
     ([trans]
-      (reset! last-trans (d/transact @conn trans))
-      (deref @last-trans))
+      @(d/transact @conn trans))
   string?
     ([str-path]
       (->> str-path (io/read :read-method :str :path)
@@ -58,32 +60,45 @@
 
 (def entity? (partial instance? datomic.query.EntityMap))
 
-(defn ^datomic.query.EntityMap raw-entity
+(defn ^datomic.query.EntityMap entity
   "Retrieves the data associated with a (long) @id."
   [id]
   (d/entity (db*) id))
 
-(def entity (fn->> raw-entity
-                   (coll/prewalk
-                     (whenf*n entity? (partial into {})))))
+(def allowed-types
+ #{:keyword
+   :string 
+   :boolean
+   :long
+   :bigint 
+   :float
+   :double 
+   :bigdec 
+   :ref
+   :instant
+   :uuid
+   :uri
+   :bytes})
 
-      ; because it starts off as a java.util.HashSet
+(defmacro call! [f & args]
+  `(transact! [[f ~@args]]))
 
 (defn schema
   {:usage '(schema :string :person.name/family-name :one {:doc "nodoc"})}
   ([val-type ident cardinality]
     (schema val-type ident cardinality {}))
   ([val-type ident cardinality opts]
+    (with-throw (in? val-type allowed-types) (Err. nil "Val-type not recognized." val-type))
     (let [cardinality-f
             (condp = cardinality
               :one  :db.cardinality/one
               :many :db.cardinality/many
-              (throw+ {:msg (str/sp "Cardinality not recognized:" cardinality)}))
+              (throw+ (Err. nil "Cardinality not recognized:" cardinality)))
           part-f
             (or (:part opts) :db.part/db)]
       (->> {:db/id                 (d/tempid part-f)
             :db/ident              ident
-            :db/valueType          (->> val-type name (str "db.type/") keyword)
+            :db/valueType          (keyword "db.type" (name val-type))
             :db/cardinality        cardinality-f
             :db/doc                (:doc        opts)
             :db/fulltext           (:full-text? opts)
@@ -101,16 +116,37 @@
 
 (defn add-partition! [part-name]
   (transact! [{:db/id                 (d/tempid :db.part/db)
-                  :db/ident              part-name
-                  :db.install/_partition :db.part/db}]))
+               :db/ident              part-name
+               :db.install/partition :db.part/db}]))
 
 (defn add-schema! [& args] (transact! [(apply schema args)]))
+
+(defn schemas []
+  (query '[:find [?ident ...]
+           :where [_ :db/ident ?ident]]))
+
+(defn attributes []
+  (query '[:find [?ident ...]
+           :where
+           [?e :db/ident ?ident]
+           [_ :db.install/attribute ?e]]))
 
 (ns-unmap 'quantum.db.datomic 'assoc!)
 
 (defn assoc! [id & kvs]
-  (let [datom (into [:db/add id] kvs)]
-    (transact! [datom])))
+  (let [q (into [:db/add id] kvs)]
+    (transact! [q])))
+
+(ns-unmap 'quantum.db.datomic 'dissoc!)
+
+(defn dissoc! [id & kvs]
+  (let [q (into [:db/retract id] kvs)]
+    (transact! [q])))
+
+(ns-unmap 'quantum.db.datomic 'update!)
+
+(defn update! [id f-key & args]
+  (transact! (apply vector (keyword "fn" (name f-key)) id args)))
 
 (defn create-entity!
   ([props] (create-entity! nil props))
@@ -118,13 +154,29 @@
     (let [datom (into {:db/id (d/tempid (or part :test))} props)]
       (transact! [datom]))))
 
-d
+(defmacro defn!
+  {:usage '(defn! :part/quanta inc [n] (inc n))}
+  [part sym-key arglist & args]
+  `(create-entity! ~part
+     {:db/ident (keyword "fn" (name '~sym-key))
+      :db/fn    
+        (datomic.api/function
+          '{:lang     "clojure"
+            :params   ~arglist
+            :code     (do ~@args)})}))
 
 (defn+ entity-query [q]
   (->> (query q)
        (map+ first)
        (map+ (extern (fn [id] (map-entry id (entity id)))))
        redm))
+
+(defn partitions []
+  (->> (query '[:find ?ident
+           :where [:db.part/db :db.install/partition ?p]
+                  [?p :db/ident ?ident]])
+       (map+ first)
+       force (into #{})))
 
 #_(do
   (query '[:find   ?entity

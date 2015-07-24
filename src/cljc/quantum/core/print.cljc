@@ -30,7 +30,7 @@
             (str "Object is too long to print ("
                  (str ct " elements")
                  ").")
-            "*max-length* is set at" (str @max-length "."))
+            "|max-length| is set at" (str @max-length "."))
         (contains? @blacklist (type obj))
           (println
             "Object's class"

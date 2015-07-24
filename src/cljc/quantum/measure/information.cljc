@@ -25,7 +25,7 @@
   :Gbits  [[1000 :Mbits] #{:gigabits   :gibibits  :gibits  }])
 
 (swap!
- quantum.measure.core/reg-units
+ quantum.measure.reg/reg-units
  (fn
   [u]
   (apply
@@ -89,7 +89,7 @@
       (map-entry
        node
        (if
-        (get quantum.measure.core/reg-units node)
+        (get quantum.measure.reg/reg-units node)
         (f*n conj :information)
         (constantly #{:information})))))
     (apply concat)

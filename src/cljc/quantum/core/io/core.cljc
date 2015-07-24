@@ -77,6 +77,7 @@
        (<- whenc empty?
          (throw+ {:msg (str/sp "Directory does not have a parent directory:" dir)}))))
 
+; (java.nio.file.Paths/get "asd/" (into-array ["/asdd/"]))
 (defn path
   "Joins string paths (URLs, file paths, etc.)
   ensuring correct separator interposition."

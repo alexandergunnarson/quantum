@@ -1,11 +1,7 @@
 (ns
   ^{:attribution "Alex Gunnarson"
     :doc
-      "Byte compression. Perhaps this would better go in quantum.core.data.bytes.compression?
-
-       Currently supports .zip; it may be a slow solution.
-
-       Perhaps it would be better simply to alias from, say, org.apache.commons.io.FileUtils?"
+      "Compression."
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
   quantum.core.io.compress
   (:require-quantum [ns arr err str time coll num logic type fn])
@@ -22,96 +18,156 @@
           OutputStream FileOutputStream BufferedOutputStream BufferedInputStream
           InputStream  FileInputStream
           PrintWriter)
-        (java.util.zip ZipOutputStream ZipEntry)
+        (java.util.zip ZipOutputStream ZipEntry ZipFile GZIPInputStream)
+        #_(org.apache.commons.compress.archivers.tar
+          TarArchiveInputStream TarArchiveEntry)
+        #_(org.apache.commons.compress.compressors
+          bzip2.BZip2CompressorInputStream xz.XZCompressorInputStream)
         java.util.List
-        org.apache.commons.io.FileUtils)))
+        org.apache.commons.io.FileUtils
+        (java.nio.charset Charset CharsetEncoder CharacterCodingException)
+        (java.nio CharBuffer ByteBuffer)
+        (quanta Packed12 ClassIntrospector))))
 
-#?(:clj
-  (defn fast-file-zip
-    {:attribution "Alex Gunnarson, ported from Java from an unknown site"
-     :todo ["See if this is actually is fast... there are likely quite faster methods available."]}
-    [^String in ^String out]
-    (let [^ZipOutputStream zos
-           (->> (FileOutputStream. ^String out)
-                (BufferedOutputStream.)
-                (ZipOutputStream.))]
-      (try
-        (doseq [^File file-n (-> in (File.) file-seq rest)] ; for all the files/folders in the folder,
-          (let [file-path (.getAbsolutePath file-n)
-                bis (->> file-path
-                         (FileInputStream.)
-                         (BufferedInputStream.))]
-            (try
-              (let [data-to-write (byte-array 1024)
-                    length (.read bis data-to-write)]
-                (.putNextEntry zos (ZipEntry. file-path))
-                (while (length > 0)
-                  (.write zos data-to-write 0 length)))
-             (finally
-               (.closeEntry zos)
-               (.close      bis)))))
-        (finally
-          (.finish zos)
-          (.close  zos))))))
+; COMPRESSION SPEED: lz4 is by far the fastest
+; https://github.com/jpountz/lz4-java
+; COMPRESSION SIZE: zpac
+; http://mattmahoney.net/dc/10gb.html 10 GB compressed.
+; Bytes size    Sec comp Sec de.    Version          Command Line Args
+; 2720359988    43888*   45359*  1  zpaq 6.41        -m 611 -th 1
+; 3594933877    10003      519   1  7zip 4.47b       -mx
+; 3701584921      187*      67*  1  zpaq 6.40        -m 2 -
 
-; #?(:clj
-;   (defn get-all-files
-;     {:attribution "Ported from http://www.avajava.com/tutorials/lessons/how-do-i-zip-a-directory-and-all-its-contents.html"
-;      :todo "The efficiency of this solution is untested."}
-;     [dir fileList]
-;     (doseq [^File file (.listFiles ^File dir)]
-;       (.add ^List fileList file)
-;       (if (.isDirectory file)
-;           (get-all-files file fileList)))))
+(def supported-formats
+  #{:zip :gzip :7zip :tar :rar
+    :lz4 :zpac})
+(def supported-preferences
+  #{:fastest :smallest
+    :speed :size})
 
-; #?(:clj
-;   (defn addToZip
-;     {:todo "The efficiency of this solution is untested."}
-;     [^File directoryToZip ^File file ^ZipOutputStream zos]
-;     ; we want the zipEntry's path to be a relative path that is relative
-;     ; to the directory being zipped, so chop off the rest of the path
-;     (let [^FileInputStream fis (FileInputStream. file)
-;           ^String zipFilePath
-;            (-> file .getCanonicalPath
-;                (.substring
-;                  (-> directoryToZip .getCanonicalPath .length inc)
-;                  (-> file .getCanonicalPath .length)))]
-;     ;(println (str "Writing '" zipFilePath  "' to zip file"))
-;     (.putNextEntry zos (ZipEntry. zipFilePath))
-  
-;     (let [bytes-0 (byte-array 1024)]
-;       (loop [length (.read fis bytes-0)]
-;         (when (>= length 0)
-;           (.write zos bytes-0 0 length)
-;           (recur (.read fis bytes-0)))))
-;     (.closeEntry zos)
-;     (.close fis))))
+(defn ^:private compress* [^bytes data format]
+  (throw+ :not-implemented)
+  #_(condp = format
+    ))
 
-; #?(:clj
-;   (defn writeZipFile
-;     {:todo "The efficiency of this solution is untested."}
-;     [^File directoryToZip ^List fileList]
-;     (println "========")
-;     (println "Writing .zip to: " (str (.getAbsolutePath directoryToZip) ".zip"))
-;     (println "========")
-;     (let [^FileOutputStream fos (FileOutputStream. (str (.getName directoryToZip) ".zip"))
-;           ^ZipOutputStream  zos (ZipOutputStream. fos)]
-;           (doseq [^File file fileList]
-;             (when (not (.isDirectory file))  ; we only zip files, not directories
-;               (addToZip directoryToZip file zos)))
-;           (.close zos)
-;           (.close fos))))
+(defn ^bytes compress
+  ([data] (compress data {:format :lz4}))
+  ([data {:keys [format prefer]}]
+    (throw-when (and format prefer)
+      "Cannot prefer and choose a format.")
+    (throw-when (and prefer (not (in? format supported-formats)))
+      "Format not supported.")
+    (throw-when (and format (not (in? prefer supported-preferences)))
+      "Preference not recognized.")
+    (let [format-f
+           (if format format
+               (condpc = prefer
+                 (coll-or :fastest :speed) :lz4
+                 (coll-or :smallest :size) :zpac))]
+      (-> data convert/->bytes (compress* format-f)))))
 
-; #?(:clj
-;   (defn zip
-;     {:todo "The efficiency of this solution is untested."}
-;     [^File directoryToZip]
-;     (let [fileList (array-list)]
-;       (println "---Getting references to all files in:"
-;         (.getCanonicalPath directoryToZip))
-;       (getAllFiles directoryToZip fileList)
-;       (println "---Creating zip file")
-;       (writeZipFile directoryToZip fileList)
-;       (println "---Done"))))
+; TODO THIS IS FROM RAYNES... GOOD STUFF WORTH INCORPORATING
+
+; (defn make-zip-stream
+;   "Create zip file(s) stream. You must provide a vector of the
+;   following form: 
+;   ```[[filename1 content1][filename2 content2]...]```.
+;   You can provide either strings or byte-arrays as content.
+;   The piped streams are used to create content on the fly, which means
+;   this can be used to make compressed files without even writing them
+;   to disk."
+;   {:source "me.raynes/fs"}
+;   [& filename-content-pairs]
+;   (let [file
+;         (let [pipe-in (java.io.PipedInputStream.)
+;               pipe-out (java.io.PipedOutputStream. pipe-in)]
+;           (future
+;             (with-open [zip (java.util.zip.ZipOutputStream. pipe-out)]
+;               (add-zip-entry zip (flatten filename-content-pairs))))
+;           pipe-in)]
+;     (io/input-stream file)))
+
+; (defn zip
+;   "Create zip file(s) on the fly. You must provide a vector of the
+;   following form: 
+;   ```[[filename1 content1][filename2 content2]...]```.
+;   You can provide either strings or byte-arrays as content."
+;   {:source "me.raynes/fs"}
+;   [filename & filename-content-pairs]
+;   (io/copy (make-zip-stream filename-content-pairs)
+;            (fs/file filename)))
+
+; (defn- tar-entries
+;   "Get a lazy-seq of entries in a tarfile."
+;   {:source "me.raynes/fs"}
+;   [^TarArchiveInputStream tin]
+;   (when-let [entry (.getNextTarEntry tin)]
+;     (cons entry (lazy-seq (tar-entries tin)))))
+
+; (defn untar
+;   "Takes a tarfile `source` and untars it to `target`."
+;   {:source "me.raynes/fs"}
+;   ([source] (untar source (name source)))
+;   ([source target]
+;      (with-open [tin (TarArchiveInputStream. (io/input-stream (fs/file source)))]
+;        (doseq [^TarArchiveEntry entry (tar-entries tin) :when (not (.isDirectory entry))
+;                :let [output-file (fs/file target (.getName entry))]]
+;          (fs/mkdirs (fs/parent output-file))
+;          (io/copy tin output-file)))))
+
+; (defn gunzip
+;   "Takes a path to a gzip file `source` and unzips it."
+;   {:source "me.raynes/fs"}
+;   ([source] (gunzip source (name source)))
+;   ([source target]
+;      (io/copy (-> source fs/file io/input-stream GZIPInputStream.)
+;               (fs/file target))))
+
+; (defn bunzip2
+;   "Takes a path to a bzip2 file `source` and uncompresses it."
+;   {:source "me.raynes/fs"}
+;   ([source] (bunzip2 source (name source)))
+;   ([source target]
+;      (io/copy (-> source fs/file io/input-stream BZip2CompressorInputStream.)
+;               (fs/file target))))
+
+; (defn unxz
+;   "Takes a path to a xz file `source` and uncompresses it."
+;   {:source "me.raynes/fs"}
+;   ([source] (unxz source (name source)))
+;   ([source target]
+;     (io/copy (-> source fs/file io/input-stream XZCompressorInputStream.)
+;              (fs/file target))))
 
 
+
+; ; Compressing strings
+; ; http://java-performance.info/string-packing-converting-characters-to-bytes/
+; ; String, no compression 722.48 Mb
+; ; String, -XX:+UseCompressedStrings 645.47 Mb 
+; ; packed strings 268.46 Mb
+
+; (def ^Charset US_ASCII (Charset/forName "US-ASCII"))
+
+; (defn convert
+;   "Optimizing a string object in terms of memory"
+;   {:source "http://java-performance.info/string-packing-converting-characters-to-bytes/"}
+;   [^String s] 
+;   ; discard empty or too long strings as well as sings with '\0'
+;   (if (or (nil? s) (empty? s) (-> s count (> 12))
+;           (not= (.indexOf s (str (char 0))) -1))
+;       s
+;       ; encoder may be stored in ThreadLocal
+;       (let [^CharsetEncoder enc (.newEncoder US_ASCII)
+;             ^CharBuffer charBuffer (CharBuffer/wrap s)]
+;         (try
+;           (let [^ByteBuffer byteBuffer (.encode enc charBuffer )
+;                 ^bytes      byteArray  (.array byteBuffer)]
+;             (if (<= (count byteArray) 12)
+;                 (Packed12. ^"[B" byteArray)
+;                 ; add cases for longer strings here
+;                 s))
+;         (catch CharacterCodingException e
+;           ; there are some chars not fitting to our encoding
+;           s)))))
+;  

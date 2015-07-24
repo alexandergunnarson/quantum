@@ -366,6 +366,7 @@
   [universal-opts thread-chain-template]
   (throw+ {:msg "Unimplemented"}))
 
+#?(:clj
 (defn reap-threads! []
   (doseq [id thread-meta @reg-threads]
     (let [{:keys [thread state handlers]} thread-meta]
@@ -373,11 +374,12 @@
                 (= state :closed))
         (whenf (:closed handlers) nnil?
           (if*n delay? force call))
-        (deregister-thread! id)))))
+        (deregister-thread! id))))))
 
-(defonce thread-reaper-pause-requests  (LinkedBlockingQueue.))
-(defonce thread-reaper-resume-requests (LinkedBlockingQueue.))
+#?(:clj (defonce thread-reaper-pause-requests  (LinkedBlockingQueue.)))
+#?(:clj (defonce thread-reaper-resume-requests (LinkedBlockingQueue.)))
 
+#?(:clj
 (defonce thread-reaper
   (let [id :thread-reaper]
     (lt-thread-loop
@@ -396,10 +398,10 @@
               (recur))
           (do (reap-threads!)
               (Thread/sleep 2000)
-              (recur))))))
+              (recur)))))))
 
-(defn pause-thread-reaper!  [] (put! thread-reaper-pause-requests true))
-(defn resume-thread-reaper! [] (put! thread-reaper-resume-requests true))
+#?(:clj (defn pause-thread-reaper!  [] (put! thread-reaper-pause-requests true)))
+#?(:clj (defn resume-thread-reaper! [] (put! thread-reaper-resume-requests true)))
 
 #_(defonce gc-worker
   (lt-thread {:id :gc-collector}
@@ -558,4 +560,35 @@
   )
 
 
+; (defn do-intervals [millis & args]
+;   (->> args
+;        (interpose #(Thread/sleep millis))
+;        (map+ fold+)
+;        fold+
+;        pr/suppress))
+; (defn do-every [millis n func]
+;   (dotimes [_ n] (func) (Thread/sleep millis)))
 
+; ;___________________________________________________________________________________________________________________________________
+; ;========================================================{  CAPTURE SYS.OUT  }======================================================
+; ;========================================================{                   }======================================================
+; (defn update-out-str-with! [out-str baos]
+;     (swap! temp-rec conj baos)
+; ; (swap! out-str conj (str baos))
+;   (let [baos-str-0 (str baos)]
+;     (if (empty? baos-str-0)
+;         nil
+;         (let [baos-str-f (getr+ baos-str-0 0 (-> baos-str-0 count+ dec dec))]
+;         (swap! out-str conj
+;           (str/subs+ baos-str-f
+;                (whenf (+ 2 (last-index-of+ "\r\n" baos-str-f))
+;                  (eq? 1) (constantly 0)))))))) ; if it's the same, keep it
+; (defmacro with-capture-sys-out [expr out-str & [millis n-times]]
+;   `(let [baos# (java.io.ByteArrayOutputStream.)
+;          ps#   (java.io.OutputStreamWriter. baos#)]
+;     (binding [*out* ps#]
+;       (deref (future ~expr)) ; will process in background
+;       (do-every
+;         (whenf ~millis  nil? (constantly 500))
+;         (whenf ~n-times nil? (constantly 6))
+;         #(update-out-str-with! ~out-str baos#)))))

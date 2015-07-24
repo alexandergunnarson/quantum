@@ -1,44 +1,48 @@
 (ns quantum.measure.time
-  (:require-quantum [:lib])
-  (:require [quantum.measure.core :refer [defunits-of emit-defunits-code]]))
+  (:require-quantum [ns fn map logic])
+  (:require quantum.measure.reg)
+  #_(:require [quantum.measure.core :refer [defunits-of emit-defunits-code]]))
 
 #?(:clj (set! *unchecked-math* false))
+
+(def ^:const planck-time-constant (rationalize 5.39106E-44))
 
 #_(defunits-of time [:seconds #{:sec :s}]
   ; A second is a duration of 9192631770 periods of the radiation
   ; corresponding to the transition between the two hyperfine
   ; levels of the ground state of the cesium-133 atom
   ; Microscopic
-  :yoctos       [[1/1000 :zeptos] nil #{:ys  :yoctoseconds}]
-  :zeptos       [[1/1000 :attos ] nil #{:zs  :zeptoseconds}]
-  :attos        [[1/1000 :femtos] nil #{:as  :attoseconds}]
-  :femtos       [[1/1000 :picos ] nil #{:fs  :femtoseconds}]
-  :picos        [[1/1000 :nanos ] nil #{:ps  :picoseconds}]
-  :nanos        [[1/1000 :micros] nil #{:ns  :nanoseconds}]
-  :micros       [[1/1000 :millis] nil #{:mcs :microseconds :µs}]
-  :millis       [[1/1000 :sec   ] nil #{:ms  :milliseconds}]
-  ; Macroscopic
-  :min          [[60     :sec   ] #{:minutes} #{ :m}]
-  :hrs          [[60     :min   ] #{:hours}]
-  :days         [[24     :hrs   ] nil #{:d :julian-days}]
-  :weeks        [[7      :days  ] #{:wks} #{:sennights}]
-  :months       [[1/12   :years ] #{:mos}]
-  :fortnights   [[14     :days  ]]
-  :common-years [[365    :days  ]]
-  :years        [[365.25 :days  ] #{:yrs} #{:julian-years}]
-  :leap-years   [[366    :days  ]]
-  :decades      [[10     :years ]]
-  :centuries    [[100    :years ]]
-  :millennia    [[1000   :years ]])
+  :planck-quanta [[planck-time-constant :sec   ]]
+  :yoctos        [[1/1000               :zeptos] nil #{:ys  :yoctoseconds}]
+  :zeptos        [[1/1000               :attos ] nil #{:zs  :zeptoseconds}]
+  :attos         [[1/1000               :femtos] nil #{:as  :attoseconds}]
+  :femtos        [[1/1000               :picos ] nil #{:fs  :femtoseconds}]
+  :picos         [[1/1000               :nanos ] nil #{:ps  :picoseconds}]
+  :nanos         [[1/1000               :micros] nil #{:ns  :nanoseconds}]
+  :micros        [[1/1000               :millis] nil #{:mcs :microseconds :µs}]
+  :millis        [[1/1000               :sec   ] nil #{:ms  :milliseconds}]
+  ; Macroscopic               
+  :min           [[60                   :sec   ] #{:minutes} #{ :m}]
+  :hrs           [[60                   :min   ] #{:hours}]
+  :days          [[24                   :hrs   ] nil #{:d :julian-days}]
+  :weeks         [[7                    :days  ] #{:wks} #{:sennights}]
+  :months        [[1/12                 :years ] #{:mos}]
+  :fortnights    [[14                   :days  ]]
+  :common-years  [[365                  :days  ]]
+  :years         [[365.25               :days  ] #{:yrs} #{:julian-years}]
+  :leap-years    [[366                  :days  ]]
+  :decades       [[10                   :years ]]
+  :centuries     [[100                  :years ]]
+  :millennia     [[1000                 :years ] nil #{:megayears}])
 
 ; PRECOMPILED DUE TO COMPILER LIMITATIONS ("Method code too large!" error)
 
 (swap!
- quantum.measure.core/reg-units
+ quantum.measure.reg/reg-units
  (fn
   [u]
-  (apply
-   coll/updates+
+  (reduce
+   (fn [ret [k f]] (update ret k f))
    u
    (->>
     #{:attos
@@ -60,6 +64,7 @@
       :mos
       :nanos
       :picos
+      :planck-quanta
       :sec
       :weeks
       :wks
@@ -73,11 +78,10 @@
       (map-entry
        node
        (if
-        (get quantum.measure.core/reg-units node)
+        (get quantum.measure.reg/reg-units node)
         (f*n conj :time)
-        (constantly #{:time})))))
-    (apply concat)
-    (into [])))))
+        (constantly #{:time})))))))))
+
 (defn attos->centuries [n] (* n 1/3155760000000000000000000000))
 (defn attos->common-years [n] (* n 1/31536000000000000000000000))
 (defn attos->days [n] (* n 1/86400000000000000000000))
@@ -96,6 +100,7 @@
 (defn attos->mos [n] (* n 1/2629800000000000000000000))
 (defn attos->nanos [n] (* n 1/1000000000))
 (defn attos->picos [n] (* n 1/1000000))
+(defn attos->planck-quanta [n] (* n 5000000000000000000000000000000/269553))
 (defn attos->sec [n] (* n 1/1000000000000000000))
 (defn attos->weeks [n] (* n 1/604800000000000000000000))
 (defn attos->wks [n] (* n 1/604800000000000000000000))
@@ -121,6 +126,7 @@
 (defn centuries->mos [n] (* n 1200N))
 (defn centuries->nanos [n] (* n 3155760000000000000N))
 (defn centuries->picos [n] (* n 3155760000000000000000N))
+(defn centuries->planck-quanta [n] (* n 5259600000000000000000000000000000000000000000000000000000/89851))
 (defn centuries->sec [n] (* n 3155760000N))
 (defn centuries->weeks [n] (* n 36525/7))
 (defn centuries->wks [n] (* n 36525/7))
@@ -146,6 +152,7 @@
 (defn common-years->mos [n] (* n 5840/487))
 (defn common-years->nanos [n] (* n 31536000000000000N))
 (defn common-years->picos [n] (* n 31536000000000000000N))
+(defn common-years->planck-quanta [n] (* n 52560000000000000000000000000000000000000000000000000000/89851))
 (defn common-years->sec [n] (* n 31536000N))
 (defn common-years->weeks [n] (* n 365/7))
 (defn common-years->wks [n] (* n 365/7))
@@ -171,6 +178,7 @@
 (defn days->mos [n] (* n 16/487))
 (defn days->nanos [n] (* n 86400000000000N))
 (defn days->picos [n] (* n 86400000000000000N))
+(defn days->planck-quanta [n] (* n 144000000000000000000000000000000000000000000000000000/89851))
 (defn days->sec [n] (* n 86400N))
 (defn days->weeks [n] (* n 1/7))
 (defn days->wks [n] (* n 1/7))
@@ -196,6 +204,7 @@
 (defn decades->mos [n] (* n 120N))
 (defn decades->nanos [n] (* n 315576000000000000N))
 (defn decades->picos [n] (* n 315576000000000000000N))
+(defn decades->planck-quanta [n] (* n 525960000000000000000000000000000000000000000000000000000/89851))
 (defn decades->sec [n] (* n 315576000N))
 (defn decades->weeks [n] (* n 7305/14))
 (defn decades->wks [n] (* n 7305/14))
@@ -221,6 +230,7 @@
 (defn femtos->mos [n] (* n 1/2629800000000000000000))
 (defn femtos->nanos [n] (* n 1/1000000))
 (defn femtos->picos [n] (* n 1/1000))
+(defn femtos->planck-quanta [n] (* n 5000000000000000000000000000000000/269553))
 (defn femtos->sec [n] (* n 1/1000000000000000))
 (defn femtos->weeks [n] (* n 1/604800000000000000000))
 (defn femtos->wks [n] (* n 1/604800000000000000000))
@@ -246,6 +256,7 @@
 (defn fortnights->mos [n] (* n 224/487))
 (defn fortnights->nanos [n] (* n 1209600000000000N))
 (defn fortnights->picos [n] (* n 1209600000000000000N))
+(defn fortnights->planck-quanta [n] (* n 2016000000000000000000000000000000000000000000000000000/89851))
 (defn fortnights->sec [n] (* n 1209600N))
 (defn fortnights->weeks [n] (* n 2N))
 (defn fortnights->wks [n] (* n 2N))
@@ -271,6 +282,7 @@
 (defn hours->mos [n] (* n 2/1461))
 (defn hours->nanos [n] (* n 3600000000000N))
 (defn hours->picos [n] (* n 3600000000000000N))
+(defn hours->planck-quanta [n] (* n 6000000000000000000000000000000000000000000000000000/89851))
 (defn hours->sec [n] (* n 3600N))
 (defn hours->weeks [n] (* n 1/168))
 (defn hours->wks [n] (* n 1/168))
@@ -296,6 +308,7 @@
 (defn hrs->mos [n] (* n 2/1461))
 (defn hrs->nanos [n] (* n 3600000000000N))
 (defn hrs->picos [n] (* n 3600000000000000N))
+(defn hrs->planck-quanta [n] (* n 6000000000000000000000000000000000000000000000000000/89851))
 (defn hrs->sec [n] (* n 3600N))
 (defn hrs->weeks [n] (* n 1/168))
 (defn hrs->wks [n] (* n 1/168))
@@ -321,6 +334,7 @@
 (defn leap-years->mos [n] (* n 5856/487))
 (defn leap-years->nanos [n] (* n 31622400000000000N))
 (defn leap-years->picos [n] (* n 31622400000000000000N))
+(defn leap-years->planck-quanta [n] (* n 52704000000000000000000000000000000000000000000000000000/89851))
 (defn leap-years->sec [n] (* n 31622400N))
 (defn leap-years->weeks [n] (* n 366/7))
 (defn leap-years->wks [n] (* n 366/7))
@@ -346,6 +360,7 @@
 (defn micros->mos [n] (* n 1/2629800000000))
 (defn micros->nanos [n] (* n 1000N))
 (defn micros->picos [n] (* n 1000000N))
+(defn micros->planck-quanta [n] (* n 5000000000000000000000000000000000000000000/269553))
 (defn micros->sec [n] (* n 1/1000000))
 (defn micros->weeks [n] (* n 1/604800000000))
 (defn micros->wks [n] (* n 1/604800000000))
@@ -371,6 +386,7 @@
 (defn millennia->mos [n] (* n 12000N))
 (defn millennia->nanos [n] (* n 31557600000000000000N))
 (defn millennia->picos [n] (* n 31557600000000000000000N))
+(defn millennia->planck-quanta [n] (* n 52596000000000000000000000000000000000000000000000000000000/89851))
 (defn millennia->sec [n] (* n 31557600000N))
 (defn millennia->weeks [n] (* n 365250/7))
 (defn millennia->wks [n] (* n 365250/7))
@@ -396,6 +412,7 @@
 (defn millis->mos [n] (* n 1/2629800000))
 (defn millis->nanos [n] (* n 1000000N))
 (defn millis->picos [n] (* n 1000000000N))
+(defn millis->planck-quanta [n] (* n 5000000000000000000000000000000000000000000000/269553))
 (defn millis->sec [n] (* n 1/1000))
 (defn millis->weeks [n] (* n 1/604800000))
 (defn millis->wks [n] (* n 1/604800000))
@@ -421,6 +438,7 @@
 (defn min->mos [n] (* n 1/43830))
 (defn min->nanos [n] (* n 60000000000N))
 (defn min->picos [n] (* n 60000000000000N))
+(defn min->planck-quanta [n] (* n 100000000000000000000000000000000000000000000000000/89851))
 (defn min->sec [n] (* n 60N))
 (defn min->weeks [n] (* n 1/10080))
 (defn min->wks [n] (* n 1/10080))
@@ -446,6 +464,7 @@
 (defn minutes->mos [n] (* n 1/43830))
 (defn minutes->nanos [n] (* n 60000000000N))
 (defn minutes->picos [n] (* n 60000000000000N))
+(defn minutes->planck-quanta [n] (* n 100000000000000000000000000000000000000000000000000/89851))
 (defn minutes->sec [n] (* n 60N))
 (defn minutes->weeks [n] (* n 1/10080))
 (defn minutes->wks [n] (* n 1/10080))
@@ -471,6 +490,7 @@
 (defn months->mos [n] n)
 (defn months->nanos [n] (* n 2629800000000000N))
 (defn months->picos [n] (* n 2629800000000000000N))
+(defn months->planck-quanta [n] (* n 4383000000000000000000000000000000000000000000000000000/89851))
 (defn months->sec [n] (* n 2629800N))
 (defn months->weeks [n] (* n 487/112))
 (defn months->wks [n] (* n 487/112))
@@ -496,6 +516,7 @@
 (defn mos->months [n] n)
 (defn mos->nanos [n] (* n 2629800000000000N))
 (defn mos->picos [n] (* n 2629800000000000000N))
+(defn mos->planck-quanta [n] (* n 4383000000000000000000000000000000000000000000000000000/89851))
 (defn mos->sec [n] (* n 2629800N))
 (defn mos->weeks [n] (* n 487/112))
 (defn mos->wks [n] (* n 487/112))
@@ -521,13 +542,13 @@
 (defn nanos->months [n] (* n 1/2629800000000000))
 (defn nanos->mos [n] (* n 1/2629800000000000))
 (defn nanos->picos [n] (* n 1000N))
+(defn nanos->planck-quanta [n] (* n 5000000000000000000000000000000000000000/269553))
 (defn nanos->sec [n] (* n 1/1000000000))
 (defn nanos->weeks [n] (* n 1/604800000000000))
 (defn nanos->wks [n] (* n 1/604800000000000))
 (defn nanos->years [n] (* n 1/31557600000000000))
 (defn nanos->yoctos [n] (* n 1000000000000000N))
-(defn nanos->yrs [n] (* n 1/3155760000
-0000000))
+(defn nanos->yrs [n] (* n 1/31557600000000000))
 (defn nanos->zeptos [n] (* n 1000000000000N))
 (defn picos->attos [n] (* n 1000000N))
 (defn picos->centuries [n] (* n 1/3155760000000000000000))
@@ -547,6 +568,7 @@
 (defn picos->months [n] (* n 1/2629800000000000000))
 (defn picos->mos [n] (* n 1/2629800000000000000))
 (defn picos->nanos [n] (* n 1/1000))
+(defn picos->planck-quanta [n] (* n 5000000000000000000000000000000000000/269553))
 (defn picos->sec [n] (* n 1/1000000000000))
 (defn picos->weeks [n] (* n 1/604800000000000000))
 (defn picos->wks [n] (* n 1/604800000000000000))
@@ -554,6 +576,32 @@
 (defn picos->yoctos [n] (* n 1000000000000N))
 (defn picos->yrs [n] (* n 1/31557600000000000000))
 (defn picos->zeptos [n] (* n 1000000000N))
+(defn planck-quanta->attos [n] (* n 269553/5000000000000000000000000000000))
+(defn planck-quanta->centuries [n] (* n 89851/5259600000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->common-years [n] (* n 89851/52560000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->days [n] (* n 89851/144000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->decades [n] (* n 89851/525960000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->femtos [n] (* n 269553/5000000000000000000000000000000000))
+(defn planck-quanta->fortnights [n] (* n 89851/2016000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->hours [n] (* n 89851/6000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->hrs [n] (* n 89851/6000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->leap-years [n] (* n 89851/52704000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->micros [n] (* n 269553/5000000000000000000000000000000000000000000))
+(defn planck-quanta->millennia [n] (* n 89851/52596000000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->millis [n] (* n 269553/5000000000000000000000000000000000000000000000))
+(defn planck-quanta->min [n] (* n 89851/100000000000000000000000000000000000000000000000000))
+(defn planck-quanta->minutes [n] (* n 89851/100000000000000000000000000000000000000000000000000))
+(defn planck-quanta->months [n] (* n 89851/4383000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->mos [n] (* n 89851/4383000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->nanos [n] (* n 269553/5000000000000000000000000000000000000000))
+(defn planck-quanta->picos [n] (* n 269553/5000000000000000000000000000000000000))
+(defn planck-quanta->sec [n] (* n 269553/5000000000000000000000000000000000000000000000000))
+(defn planck-quanta->weeks [n] (* n 89851/1008000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->wks [n] (* n 89851/1008000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->years [n] (* n 89851/52596000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->yoctos [n] (* n 269553/5000000000000000000000000))
+(defn planck-quanta->yrs [n] (* n 89851/52596000000000000000000000000000000000000000000000000000))
+(defn planck-quanta->zeptos [n] (* n 269553/5000000000000000000000000000))
 (defn sec->attos [n] (* n 1000000000000000000N))
 (defn sec->centuries [n] (* n 1/3155760000))
 (defn sec->common-years [n] (* n 1/31536000))
@@ -573,6 +621,7 @@
 (defn sec->mos [n] (* n 1/2629800))
 (defn sec->nanos [n] (* n 1000000000N))
 (defn sec->picos [n] (* n 1000000000000N))
+(defn sec->planck-quanta [n] (* n 5000000000000000000000000000000000000000000000000/269553))
 (defn sec->weeks [n] (* n 1/604800))
 (defn sec->wks [n] (* n 1/604800))
 (defn sec->years [n] (* n 1/31557600))
@@ -598,6 +647,7 @@
 (defn weeks->mos [n] (* n 112/487))
 (defn weeks->nanos [n] (* n 604800000000000N))
 (defn weeks->picos [n] (* n 604800000000000000N))
+(defn weeks->planck-quanta [n] (* n 1008000000000000000000000000000000000000000000000000000/89851))
 (defn weeks->sec [n] (* n 604800N))
 (defn weeks->wks [n] n)
 (defn weeks->years [n] (* n 28/1461))
@@ -623,6 +673,7 @@
 (defn wks->mos [n] (* n 112/487))
 (defn wks->nanos [n] (* n 604800000000000N))
 (defn wks->picos [n] (* n 604800000000000000N))
+(defn wks->planck-quanta [n] (* n 1008000000000000000000000000000000000000000000000000000/89851))
 (defn wks->sec [n] (* n 604800N))
 (defn wks->weeks [n] n)
 (defn wks->years [n] (* n 28/1461))
@@ -648,6 +699,7 @@
 (defn years->mos [n] (* n 12N))
 (defn years->nanos [n] (* n 31557600000000000N))
 (defn years->picos [n] (* n 31557600000000000000N))
+(defn years->planck-quanta [n] (* n 52596000000000000000000000000000000000000000000000000000/89851))
 (defn years->sec [n] (* n 31557600N))
 (defn years->weeks [n] (* n 1461/28))
 (defn years->wks [n] (* n 1461/28))
@@ -673,6 +725,7 @@
 (defn yoctos->mos [n] (* n 1/2629800000000000000000000000000))
 (defn yoctos->nanos [n] (* n 1/1000000000000000))
 (defn yoctos->picos [n] (* n 1/1000000000000))
+(defn yoctos->planck-quanta [n] (* n 5000000000000000000000000/269553))
 (defn yoctos->sec [n] (* n 1/1000000000000000000000000))
 (defn yoctos->weeks [n] (* n 1/604800000000000000000000000000))
 (defn yoctos->wks [n] (* n 1/604800000000000000000000000000))
@@ -698,6 +751,7 @@
 (defn yrs->mos [n] (* n 12N))
 (defn yrs->nanos [n] (* n 31557600000000000N))
 (defn yrs->picos [n] (* n 31557600000000000000N))
+(defn yrs->planck-quanta [n] (* n 52596000000000000000000000000000000000000000000000000000/89851))
 (defn yrs->sec [n] (* n 31557600N))
 (defn yrs->weeks [n] (* n 1461/28))
 (defn yrs->wks [n] (* n 1461/28))
@@ -723,6 +777,7 @@
 (defn zeptos->mos [n] (* n 1/2629800000000000000000000000))
 (defn zeptos->nanos [n] (* n 1/1000000000000))
 (defn zeptos->picos [n] (* n 1/1000000000))
+(defn zeptos->planck-quanta [n] (* n 5000000000000000000000000000/269553))
 (defn zeptos->sec [n] (* n 1/1000000000000000000000))
 (defn zeptos->weeks [n] (* n 1/604800000000000000000000000))
 (defn zeptos->wks [n] (* n 1/604800000000000000000000000))

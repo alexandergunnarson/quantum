@@ -1,4 +1,5 @@
 (ns quantum.core.test
+  (:require-quantum [ns err])
   #?(:clj (:gen-class)))
 
 #?(:clj
@@ -21,6 +22,11 @@
                  (Exception.
                    (str "Test failed for |" var-f# "|. "
                         "Expected " out-evaled# "; got " ret# ".")))))))))
+
+#?(:clj
+(defn qtests [sym]
+  (for [test result (->  sym resolve meta :tests)]
+    [test (try+ (apply (eval sym) (eval test)) (catch Object e e)) (eval result)])))
 
 #?(:clj
 (defn test-ns

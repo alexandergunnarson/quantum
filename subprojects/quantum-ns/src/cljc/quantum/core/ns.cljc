@@ -7,6 +7,7 @@
   (:require
     [clojure.set :as set]
     #?@(:clj  ([clojure.repl   :as repl  ]
+               [clojure.java.javadoc]
                [clojure.pprint :as pprint])
         :cljs ([cljs.core :as core :refer [Keyword]])))
   #?(:clj (:import (clojure.lang Keyword Var Namespace)))
@@ -18,6 +19,7 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 (def ns-debug? (atom false))
+(def externs? (atom true))
 
 (defn js-println [& args]
   (print "\n/* " )
@@ -318,59 +320,6 @@
      (ns-unmap *ns* sym#))))
 
 #?(:clj
-(defn require-java-fx [^Namespace curr-ns]
-  (binding [*ns* curr-ns]
-    (require '[quantum.ui.init])
-    (import
-       '(javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
-                               FadeTransition TranslateTransition RotateTransition ScaleTransition
-                               PathTransition PathTransition$OrientationType)
-       '(javafx.collections    ObservableList FXCollections)
-       '(javafx.event          ActionEvent EventHandler EventType)
-       '(javafx.geometry       Insets Pos)
-       '(javafx.scene          Group Scene Node)
-       '(javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
-       '(javafx.scene.image    Image)
-       '(javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
-       '(javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
-       '(javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
-       '(javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
-       '(javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
-       '(java.util             ArrayList List)
-       '(javafx.util           Duration Callback)
-       '(javafx.beans.property SimpleDoubleProperty)
-       '(javafx.beans.value    ChangeListener ObservableValue)
-       '(javafx.scene.control
-          ComboBox ContentDisplay Labeled TableColumn TableRow
-          TableCell ListCell TextArea TextField ContentDisplay
-          TableView TableView$TableViewSelectionModel)))))
-
-#?(:clj
-(defn require-fx-core [^Namespace curr-ns]
-  (binding [*ns* curr-ns]
-    (require-java-fx curr-ns)
-    (require
-      '[quantum.ui.jfx :as fx :refer
-         [fx do-fx
-          set-listener! swap-content!
-          fx-node? fx-obj?]]))))
-
-#?(:clj
-(defn require-fx
-  {:todo ["This is very outdated. Consider deprecating"]}
-  [^Namespace curr-ns]
-  (binding [*ns* curr-ns]
-    (require-fx-core curr-ns)
-    (require
-      '[quantum.ui.custom-objs :as objs :refer
-         [jnew jdef* jdef jdef! jset! jget jget-prop jgets-map 
-          jconj! jdissoc! jupdate!
-          arrange-on! center-on! jconj-all!
-          setx! sety!
-          getx gety get-size get-pos
-          place-at! nudge!]]))))
-
-#?(:clj
   (defn nss
     "Defines, in the provided namespace, conveniently abbreviated symbols
      for other namespaces.
@@ -420,8 +369,9 @@
 ; ; find-doc, doc, and source are incl. in /user/ ns but apparently not in any others
 ; ; TODO: Possibly find a way to do this in ClojureScript?
 #?(:clj (defalias source   repl/source  ))
-#?(:clj (defalias find-doc repl/find-doc))
+#?(:clj (defalias find-doc repl/find-doc)) ; searches in clojure function names and docstrings!
 #?(:clj (defalias doc      repl/doc     ))
+#?(:clj (defalias javadoc  clojure.java.javadoc/javadoc))
 
 (defn set-merge [& colls]
   (->> colls (apply concat) (into #{})))
@@ -461,8 +411,9 @@
             {:aliases {:cljc {qasync quantum.core.thread.async}}
              :refers  {:cljc {qasync #{put! take! empty! peek!}}}}
           res
-            {:aliases {:cljc {res quantum.core.resources}}
-             :refers  {:cljc {res #{with-cleanup}}}}
+            {:aliases {:cljc {res       quantum.core.resources}
+                       :clj  {component com.stuartsierra.component}}
+             :refers  {:cljc {res #{with-cleanup with-resources}}}}
           coll
            {:aliases
                {:cljc {coll quantum.core.collections}}
@@ -470,7 +421,7 @@
               #{contains? for doseq subseq reduce repeat repeatedly
                 range merge count vec into first second rest
                 last butlast get pop peek empty take take-while
-                key val conj! assoc! dissoc!} 
+                key val conj! assoc! dissoc! disj!} 
              :refers
                {:cljc
                  {coll #{for doseq doseqi reduce reducei reducei-
@@ -478,7 +429,7 @@
                          subseq getr gets
                          repeat repeatedly
                          range range+
-                         merge merge-keep-left
+                         merge merge-keep-left mergel merger
                          vec
                          get first second rest
                          last butlast
@@ -502,14 +453,16 @@
                          key val
                          contains? in?
                          postwalk prewalk walk
-                         conj! assoc! dissoc! update!
+                         conj! disj! assoc! dissoc! update!
+                         update-nth update-first update-last
                          genkeyword}}}}
-          ccore  {:aliases {:cljc {ccore  quantum.core.collections.core}}}
+          ccore  {:aliases {:cljc {ccore  quantum.core.collections.core}}
+                  :imports (quantum.core.collections.core.MutableContainer)}
           crypto {:aliases {:cljc {crypto quantum.core.cryptography    }}}
           err
             {:aliases   {:cljc {err      quantum.core.error}
                          :cljs {err-cljs quantum.core.cljs.error}}
-             :refers    {:cljc {err      #{throw+ with-throw with-throws}}
+             :refers    {:cljc {err      #{throw+ with-throw with-throws throw-unless assertf-> assertf->>}}
                          :clj  {err      #{try+}}
                          :cljs {err      #{Err}
                                 err-cljs #{try+}}}
@@ -530,22 +483,26 @@
           java    {:aliases       {:cljc {java quantum.core.java   }}}
           log     {:aliases       {:cljc {log  quantum.core.log    }}}
           num     {:aliases       {:cljc {num  quantum.core.numeric}}
-                   :refers        {:cljc {num #{nneg? int+ long+ greatest least}}}}
+                   :refers        {:cljc {num #{nneg? int+ long+ greatest least +* -* ** dec* inc*}}}}
           ns
             {:requires {:cljc #{clojure.core.rrb-vector}
                         :clj  #{flatland.ordered.map   }}
              :aliases  {:cljc {ns      quantum.core.ns  
-                               test    quantum.core.test}
+                               ;test    quantum.core.test
+                             }
                         :clj  {core    clojure.core
-                               refresh clojure.tools.namespace.repl}
+                               refresh clojure.tools.namespace.repl
+                               proteus proteus}
                         :cljs {core cljs.core}}
              :refers   {:cljc
-                         {ns   #{defalias defmalias source def- swap-var! reset-var! ns-exclude js-println
+                         {ns   #{defalias defmalias source javadoc def- swap-var! reset-var! ns-exclude js-println
                                  ANil ABool ADouble ANum AExactNum AInt ADecimal AKey AVec ASet
                                  AArrList ATreeMap ALSeq ARegex AEditable ATransient AQueue AMap AError}
-                          test #{qtest}}
+                          ;test #{qtest}
+                        }
                         :clj {ns      #{alias-ns defs}
-                              refresh #{refresh refresh-all}}
+                              refresh #{refresh refresh-all}
+                              proteus #{let-mutable}}
                         :cljs
                          {ns #{Exception IllegalArgumentException
                                Nil Bool Num ExactNum Int Decimal Key Vec Set
@@ -558,7 +515,7 @@
             :imports
               ((quantum.core.ns
                   Nil Bool Num ExactNum Int Decimal Key Map Set Queue Fn
-                  ArrList TreeMap LSeq Regex Editable Transient)
+                  ArrList TreeMap LSeq Regex #_Editable Transient)
                clojure.lang.Compiler$CompilerException
                (clojure.lang
                  Namespace Symbol
@@ -588,10 +545,12 @@
           ; DATA
           arr     {:aliases {:cljc {arr    quantum.core.data.array }} :refers {:cljc {arr    #{aset!               }}
                                                                                :clj  {arr    #{byte-array+         }}}}
-          bin     {:aliases {:cljc {bin    quantum.core.data.binary}} :refers {:cljc {bin    #{>>>                 }}}}
+          bin     {:aliases {:cljc {bin    quantum.core.data.binary}} :refers {:cljc {bin    #{>>> >> <<           }}}}
           bytes   {:aliases {:cljc {bytes  quantum.core.data.bytes }}}
           csv     {:aliases {:cljc {csv    quantum.core.data.csv   }}}
-          ftree   {:aliases {:cljc {ftree  quantum.core.data.ftree }}}
+          ftree   {:aliases {:cljc {ftree  quantum.core.data.ftree }}
+                   :refers  {:cljc {ftree  #{dlist}}}
+                   :imports (clojure.data.finger_tree.CountedDoubleList)}
           hex     {:aliases {:cljc {hex    quantum.core.data.hex   }}}
           json    {:aliases {:cljc {json   quantum.core.data.json  }}} 
           map
@@ -638,7 +597,7 @@
             {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
              :aliases         {:cljc {macros      quantum.core.macros     }
                                :cljs {macros-cljs quantum.core.cljs.macros}}
-             :refers          {:cljc {macros      #{quote+ defn+ assert-args compile-if emit-comprehension do-mod}}
+             :refers          {:cljc {macros      #{quote+ defn+ let-alias assert-args compile-if emit-comprehension do-mod}}
                                :clj  {macros      #{defnt}}
                                :cljs {macros-cljs #{defnt}}}}
           red 
@@ -670,8 +629,35 @@
                        (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
                        (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities))}
           auth {:aliases {:clj {auth quantum.auth.core}}}
-          url  {:aliases {:clj {url quantum.http.url}}}}
-       lib-exclusions (set/union '#{red loops ccore} '#{http web auth url conv}) ; Because contained in coll
+          url  {:aliases {:clj {url  quantum.http.url }}}
+          ui   {:aliases {:clj {ui   quantum.ui.core  }}
+                :imports ((javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
+                                                 FadeTransition TranslateTransition RotateTransition ScaleTransition
+                                                 PathTransition PathTransition$OrientationType)
+                          (javafx.collections    ObservableList FXCollections ListChangeListener
+                                                 ListChangeListener$Change)
+                          (javafx.event          ActionEvent EventHandler EventType)
+                          (javafx.geometry       Insets Pos HPos)
+                          (javafx.scene          Group Scene Node Parent)
+                          (javafx.scene.effect   BoxBlur BlendMode Lighting Bloom)
+                          (javafx.scene.image    Image)
+                          (javafx.scene.input    DragEvent KeyEvent KeyCode MouseEvent)
+                          (javafx.scene.media    MediaPlayer Media MediaView)
+                          (javafx.scene.paint    Stop CycleMethod LinearGradient RadialGradient Color)
+                          (javafx.scene.text     Font FontPosture FontWeight Text TextBoundsType TextAlignment)
+                          (javafx.scene.layout   GridPane StackPane Pane Priority HBox VBox)
+                          (javafx.scene.shape    Circle Rectangle StrokeType Path PathElement MoveTo CubicCurveTo)
+                          (java.util             ArrayList List)
+                          (javafx.util           Duration Callback)
+                          (javafx.beans          InvalidationListener)
+                          (javafx.beans.property SimpleDoubleProperty)
+                          (javafx.beans.value    ChangeListener ObservableValue)
+                          (javafx.scene.control  ComboBox ContentDisplay Labeled TableColumn TableRow
+                                                 TableCell ListCell ListView Label Tooltip
+                                                 TextArea TextField ContentDisplay
+                                                 TableView TableView$TableViewSelectionModel)
+                          (javafx.scene.control.cell PropertyValueFactory))}}
+       lib-exclusions (set/union '#{red loops ccore} '#{http web auth url conv ui}) ; Because contained in coll
        lib-keys (->> ns-defs-0 keys (remove (partial contains? lib-exclusions)))
        lib
          {:core-exclusions (->> lib-keys (get-ns-syms ns-defs-0 :core-exclusions) (into #{}))
@@ -687,13 +673,13 @@
    quantum.core.cljs.macros #{defnt}
    quantum.core.cljs.loops  #{reduce reducei for doseq doseqi}
    quantum.core.collections #{reduce reduce- reducei reducei- doseq doseqi for repeatedly kmap map->record}
-   quantum.core.error       #{try+ with-throw with-throws throw+},
+   quantum.core.error       #{try+ with-throw with-throws throw-unless throw+ assertf-> assertf->>},
    quantum.core.function    #{defcurried with-do <- fn-> rfn fn->> mfn}
    quantum.core.log         #{pr ppr}
-   quantum.core.logic       #{whenf*n condfc ifn ifp whencf*n whenc if*n condf*n condpc whenf whenp condf},
+   quantum.core.logic       #{whenf*n condfc ifn ifp whencf*n whenc if*n condf*n condpc whenf whenp condf if-let},
    quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei
                               dos lfor doseq- doseq doseqi- doseqi for}
-   quantum.core.macros      #{defn+ defnt compile-if assert-args}
+   quantum.core.macros      #{quote+ defn+ defnt compile-if assert-args let-alias}
    quantum.core.ns          #{def- defalias reset-var! ns-exclude swap-var! source defmalias},
    quantum.core.print       #{pr-attrs with-print-str*}
    quantum.core.reducers    #{for+ doseq+}

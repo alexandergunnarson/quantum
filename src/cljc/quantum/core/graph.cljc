@@ -29,12 +29,13 @@
       (throw+ (Err. :undefined "Base not defined for function" f))))
 
 ; alg.generic
-(in-ns 'loom.alg-generic)
+#?(:clj (in-ns 'loom.alg-generic))
 
 ; {:modified "Changed to use an fn for each weight-aggregation operation.
 ;               Weights won't always be simply added - they might be multiplied, for instance."
 ;  :contributor "Alex Gunnarson"}
 
+#?(:clj 
 (defn dijkstra-traverse
   "Returns a lazy-seq of [current-node state] where state is a map in the
   format {node [distance predecessor]}. When f is provided, returns
@@ -69,8 +70,9 @@
               ;; 2) Have to include hash codes for non-Comparable items
               ;; 3) O(logn) operations
               ;; Tried clojure.contrib.priority-map but it wasn't any faster
-              (sorted-set [(quantum.core.graph/base waf) (hash start) start])]))))
+              (sorted-set [(quantum.core.graph/base waf) (hash start) start])])))))
 
+#?(:clj
 (defn dijkstra-span
   "Finds all shortest distances from start, where successors and dist
   are functions called as (successors node) and (dist node1 node2).
@@ -83,10 +85,11 @@
          (assoc-in span [p n] d)
          span))
      {}
-     (second (last (dijkstra-traverse successors dist start vector waf))))))
+     (second (last (dijkstra-traverse successors dist start vector waf)))))))
 
-(in-ns 'loom.alg)
+#?(:clj (in-ns 'loom.alg))
 
+#?(:clj
 (defn dijkstra-traverse
   "Returns a lazy-seq of [current-node state] where state is a map in
   the format {node [distance predecessor]}. When f is provided,
@@ -95,8 +98,9 @@
                      (first (nodes g))))
   ([g start      ] (gen/dijkstra-traverse (graph/successors g) (graph/weight g) start))
   ([g start f    ] (gen/dijkstra-traverse (graph/successors g) (graph/weight g) start f))
-  ([g start f waf] (gen/dijkstra-traverse (graph/successors g) (graph/weight g) start f waf)))
+  ([g start f waf] (gen/dijkstra-traverse (graph/successors g) (graph/weight g) start f waf))))
 
+#?(:clj
 (defn- can-relax-edge?
   "Tests for whether we can improve the shortest path to v found so far
    by going through u."
@@ -104,8 +108,9 @@
   (let [vd (get costs v)
         ud (get costs u)
         aggregated (waf ud weight)] ; used fn here
-    (> vd aggregated)))
+    (> vd aggregated))))
 
+#?(:clj
 (defn- relax-edge
   "If there's a shorter path from s to v via u,
     update our map of estimated path costs and
@@ -115,16 +120,18 @@
         aggregated (waf ud weight)]
     (if (can-relax-edge? edge weight costs waf)
       [(assoc costs v aggregated) (assoc paths v u)]
-      estimates)))
+      estimates))))
 
+#?(:clj
 (defn- relax-edges
   "Performs edge relaxation on all edges in weighted directed graph"
   [g start estimates waf]
   (->> (edges g)
        (reduce (fn [estimates [u v :as edge]]
                  (relax-edge edge (graph/weight g u v) estimates waf))
-               estimates)))
+               estimates))))
 
+#?(:clj 
 (defn bellman-ford
   "Given a weighted, directed graph G = (V, E) with source start,
    the Bellman-Ford algorithm produces map of single source shortest
@@ -159,8 +166,9 @@
                           (if node
                             (recur (get paths node) (cons node path))
                             path))))
-               {}))]))))
+               {}))])))))
 
+#?(:clj 
 (defn- bellman-ford-transform
   "Helper function for Johnson's algorithm. Uses Bellman-Ford to remove negative weights."
   ([wg] (bellman-ford-transform +))
@@ -178,8 +186,9 @@
                                                        (dist-q v)))))
                           (graph/edges wg))]
           (graph/add-edges* wg new-es))
-        false))))
+        false)))))
 
+#?(:clj
 (defn johnson
   "Finds all-pairs shortest paths using Bellman-Ford to remove any negative edges before
   using Dijkstra's algorithm to find the shortest paths from each vertex to every other.
@@ -201,17 +210,19 @@
           (reduce (fn [acc node]
                     (assoc acc node (gen/dijkstra-span (successors g) dist node waf)))
                   {}
-                  (nodes g)))))))
+                  (nodes g))))))))
 
 ; I don't know why this is necessary
+#?(:clj
 (defn bf-all-pairs-shortest-paths
   "Uses bf-span on each node in the graph."
   [g]
   (reduce (fn [spans node]
             (assoc spans node (bf-span g node)))
           {}
-          (nodes g)))
+          (nodes g))))
 
+#?(:clj
 (defn all-pairs-shortest-paths
   "Finds all-pairs shortest paths in a graph. Uses Johnson's algorithm for weighted graphs
   which is efficient for sparse graphs. Breadth-first spans are used for unweighted graphs."
@@ -219,19 +230,19 @@
   ([g waf]
     (if (weighted? g)
       (johnson g waf)
-      (bf-all-pairs-shortest-paths g waf))))
+      (bf-all-pairs-shortest-paths g waf)))))
 
-(in-ns 'quantum.core.graph)
+#?(:clj (in-ns 'quantum.core.graph))
 
-(defalias graph            g.graph/graph)
-(defalias undirected-graph graph)
-(defalias digraph          g.graph/digraph)
-(defalias directed-graph   digraph)
-(defalias weighted-digraph g.graph/weighted-digraph)
-(defalias nodes            g.graph/nodes)
-(defalias edges            g.graph/edges)
+#?(:clj (defalias graph            g.graph/graph))
+#?(:clj (defalias undirected-graph graph))
+#?(:clj (defalias digraph          g.graph/digraph))
+#?(:clj (defalias directed-graph   digraph))
+#?(:clj (defalias weighted-digraph g.graph/weighted-digraph))
+#?(:clj (defalias nodes            g.graph/nodes))
+#?(:clj (defalias edges            g.graph/edges))
 
-(defalias all-pairs-shortest-paths g.alg/all-pairs-shortest-paths)
+#?(:clj (defalias all-pairs-shortest-paths g.alg/all-pairs-shortest-paths))
 
 (defn root-node-paths* [m depv]
   (->> (for [k sub m]

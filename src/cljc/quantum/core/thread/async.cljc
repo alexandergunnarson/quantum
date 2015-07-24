@@ -39,9 +39,9 @@
   #?@(:clj
  [[LinkedBlockingQueue]
     ([q n]
-      (.poll q n (. TimeUnit MILLISECONDS)))]
+      (.poll q n (. TimeUnit MILLISECONDS)))])
   [ManyToManyChannel]
-    ([c n] (async/alts! [(async/timeout n) c]))))
+    ([c n] (async/alts! [(async/timeout n) c])))
 
 ; TODO FIX THIS
 (defnt take!
@@ -57,7 +57,9 @@
 (defnt empty!
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q] (.clear q))]))
+    ([q] (.clear q))])
+  [ManyToManyChannel]
+    ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 
 (defnt put! 
   #?@(:clj
@@ -69,12 +71,14 @@
 (defnt close!
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q] (.close q))]))
+    ([q] (.close q))])
+  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 
 (defnt closed?
   #?@(:clj
  [[LinkedBlockingQueue]
-    ([q] (.isClosed q))]))
+    ([q] (.isClosed q))])
+  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 
 (defnt message?
   [QueueCloseRequest]  ([obj] false)
@@ -89,5 +93,6 @@
   #?@(:clj
  [[LinkedBlockingQueue]
    (([q]        (.blockingPeek q))
-   ([q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS))))]))
+   ([q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS))))])
+  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 

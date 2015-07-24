@@ -1,7 +1,8 @@
 (ns quantum.core.data.csv
   (:require-quantum [ns coll str err])
-  (:require [clojure.data.csv :as csv]))
+  #?(:clj (:require [clojure.data.csv :as csv])))
 
+#?(:clj
 (defn parse
   ([text] (parse text #{:as-vector?}))
   ([text {:as opts :keys [as-vector? as-map? as-lseq? reducer? headers]}]
@@ -21,4 +22,4 @@
                       {} row)))
                reducer-fn)
         :else 
-          (throw+ (Err. :invalid-option nil opts))))))
+          (throw+ (Err. :invalid-option nil opts)))))))

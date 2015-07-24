@@ -65,6 +65,24 @@
 #?(:clj  (def throwable? (partial instance+? java.lang.Throwable )))
          (def error?     (partial instance+? AError              ))
 
+#?(:clj
+(defn interface?
+  [^java.lang.Class class-]
+  (.isInterface class-)))
+
+#?(:clj
+(defn abstract?
+  [^java.lang.Class class-]
+  (-> class- (.getModifiers) java.lang.reflect.Modifier/isAbstract)))
+
+#?(:clj
+(defn protocol?
+  [obj]
+  (and (array-map? obj)
+       (every? (partial contains? obj) #{:on :on-interface :var})
+       (-> obj :on str Class/forName class?)
+       (-> obj :on-interface class?))))
+
 ; ; Unable to resolve symbol: isArray in this context
 ; ; http://stackoverflow.com/questions/2725533/how-to-see-if-an-object-is-an-array-without-using-reflection
 ; ; http://stackoverflow.com/questions/219881/java-array-reflection-isarray-vs-instanceof
@@ -82,3 +100,16 @@
   `(and (editable? ~coll)
         (counted?  ~coll)
         (-> ~coll count (> transient-threshold)))))
+
+
+; (make-array Boolean/TYPE 1)
+; Types are defined in clojure/genclass.clj:
+;    Boolean/TYPE
+;    Character/TYPE
+;    Byte/TYPE
+;    Short/TYPE
+;    Integer/TYPE
+;    Long/TYPE
+;    Float/TYPE
+;    Double/TYPE
+;    Void/TYPE

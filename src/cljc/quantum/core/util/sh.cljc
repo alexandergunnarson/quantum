@@ -16,8 +16,6 @@
                    quantum.core.data.queue.LinkedBlockingQueue
                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
-(defmacro report [source- & args] `(try+ ~@args (catch Object e# (log/pr-opts :debug #{:thread?} "FROM SOURCE" ~source- "THIS IS EXCEPTION" e#) (throw+))))
-
 #?(:clj
 (defn read-streams
   [{:keys [process id input-streams output-stream stream-names writer buffers output-line state
@@ -113,10 +111,11 @@
         state
         e)))))
 
+#?(:clj
 (defn flush-stream! [^InputStream is ^StringBuffer buffer]
   (let [reader (-> is (InputStreamReader.) (BufferedReader.))]
     (while (.ready reader)
-      (->> reader .read int char (.append buffer)))))
+      (->> reader .read int char (.append buffer))))))
 
 #?(:clj
 (defn run-process!

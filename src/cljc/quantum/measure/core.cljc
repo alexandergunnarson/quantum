@@ -1,6 +1,7 @@
 (ns quantum.measure.core
   (:require-quantum [:lib])
   (:require
+    [quantum.measure.reg]
     [quantum.core.graph :as g
       :refer [graph digraph weighted-digraph]]
       [loom.alg         :as g.alg]
@@ -10,12 +11,10 @@
 ; TODO Include frinj stuff
 ; https://github.com/martintrojer/frinj/blob/master/src/frinj/feeds.clj
 
-(def reg-units (atom {}))
-
 (defn defunits-of* [unit-type std-unit unit-pairs]
   (let [units-graph
-             (->> (for [unit [[rate conv-unit] & [aliases]] unit-pairs]
-                    (->> (for [alias aliases]
+             (->> (core/for [[unit [[rate conv-unit] & [aliases]]] unit-pairs]
+                    (->> (core/for [alias aliases]
                            [[alias conv-unit (/ 1 (num/exactly rate))]
                             [conv-unit alias (num/exactly rate)]])
                          (apply concat)
@@ -31,30 +30,20 @@
        (concat 
          ; Incorporate the new units in
          (quote+
-           [(swap! quantum.measure.core/reg-units
+           [(swap! quantum.measure.reg/reg-units
               (fn [u]
-                (apply coll/updates+ u
-                  (->> ~nodes
-                       (map (fn [node] (map-entry node
-                                          (if (get quantum.measure.core/reg-units node)
-                                              (f*n conj ~unit-type-k)
-                                              (constantly #{~unit-type-k})))))
-                       (apply concat)
-                       (into [])))))])
-         (for [[from to] multiplier fn-chart]
+                (reduce
+          (fn [ret k f] (update ret k f))
+          u
+          (zipmap ~nodes
+                    (repeat (fn [node] (map-entry node
+                                       (if (get quantum.measure.reg/reg-units node)
+                                           (f*n conj ~unit-type-k)
+                                           (constantly #{~unit-type-k})))))))))])
+         (core/for [[[from to] multiplier] fn-chart]
            (let [multiplier (/ 1 multiplier)
                  fn-name (symbol (str (str/str+ from "-") "->" (str/str+ to "-")))]
              (if (= multiplier 1) ; Identical
                  (quote+ (defn ~fn-name [n] n))
                  (quote+ (defn ~fn-name [n] (* n ~multiplier)))))))))
 
-(defmacro defunits-of-code [unit-type std-unit & {:as unit-pairs}]
-  `(defunits-of* '~unit-type ~std-unit ~unit-pairs))
-
-(defmacro emit-defunits-code [& args]
-  `(let [[swap-fn# & defns#] (defunits-of-code ~@args)]
-     (! swap-fn#)
-     (println (str/join "\n" defns#))))
-
-(defmacro defunits-of [unit-type std-unit & {:as unit-pairs}]
-  (defunits-of* unit-type std-unit unit-pairs))

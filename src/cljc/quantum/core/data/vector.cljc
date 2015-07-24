@@ -3,7 +3,7 @@
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "Alex Gunnarson"}
   quantum.core.data.vector
-  (:require-quantum [ns type])
+  (:require-quantum [ns])
   (:require
     [clojure.core.rrb-vector :as vec+]
     #?(:cljs [clojure.core.rrb-vector.rrbt])))
@@ -28,7 +28,7 @@
       (subvec coll a b))))
 
 (defn vector+? [obj]
-  (instance+?
+  (instance?
     #?(:clj  clojure.core.rrb_vector.rrbt.Vector
       :cljs clojure.core.rrb-vector.rrbt.Vector) obj))
 

@@ -3,6 +3,8 @@
   (:require [quantum.apis.google.auth :as gauth]))
 
 (def api-auth (:api-auth gauth/urls))
+(defn access-token []
+  (->> (auth/auth-keys :google) :youtube :access-tokens :current :access-token))
 
 ; https://developers.google.com/youtube/v3/guides/auth/server-side-web-apps
 (assoc! gauth/scopes :youtube
@@ -27,9 +29,33 @@
 (defn list-channels []
   (-> (http/request!
         {:url "https://www.googleapis.com/youtube/v3/channels"
+         :handlers {401 
+                    (fn [req resp]
+                      (gauth/access-token-refresh! :youtube)
+                      (http/request!
+                        (assoc req :oauth-token (access-token))))}
          :query-params {"part" "id" "mine" true}
-         :oauth-token (->> (auth/auth-keys :google) :youtube :access-tokens :offline :access-token)})
+         :oauth-token (access-token)})
       :body (json/parse-string str/keywordize)))
+
+(defn delete-playlist! [id]
+  (-> (http/request!
+        {:method :delete
+         :url          "https://www.googleapis.com/youtube/v3/playlists"
+         :query-params {"id" id}
+         :oauth-token  (access-token)})))
+
+
+
+; (defn playlist-items [playlist-id]
+;   (let [req {:url          "https://www.googleapis.com/youtube/v3/playlistItems"
+;              :query-params {"part" "snippet" "playlistId" playlist-id "maxResults" 50}
+;              :oauth-token  (access-token)}]
+;     (->> (http/request! req)
+;          :body
+;          (<- json/parse-string str/keywordize)
+;          (get-all-pages req))))
+
 
 ; (defn list-videos []
 ;   (-> (http/request!

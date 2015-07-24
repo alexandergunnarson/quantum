@@ -4,6 +4,7 @@
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"}
   quantum.core.logic
+  (:refer-clojure :exclude [if-let])
   (:require-quantum [ns fn]))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -210,7 +211,7 @@
                                     (~pred ~expr ~a))
                                 ~b
                                 ~(emit pred expr more))
-                   :else `(if-let [p# (~pred ~a ~expr)]
+                   :else `(clojure.core/if-let [p# (~pred ~a ~expr)]
                             (~c p#)
                             ~(emit pred expr more)))))]
   `(let [~gpred ~pred
@@ -234,31 +235,19 @@
     (when-let [[test expr & more] clauses]
       (if (= test :else)
         expr
-        `(if-let [~binding ~test]
+        `(clojure.core/if-let [~binding ~test]
            ~expr
            (cond-let ~bindings ~@more)))))))
 
-; (defmacro ^{:private true} if-lets*
-;    {:attribution "thebusby.bagotricks"}
-;   [bindings then else]
-;   (let [form (subvec bindings 0 2)
-;         more (subvec bindings 2)]
-;     (if (empty? more)
-;       `(if-let ~form
-;          ~then
-;          ~else)
-;       `(if-let ~form
-;          (if-lets* ~more ~then ~else)
-;          ~else))))
-
-; (defmacro if-lets
-  ;    {:attribution "thebusby.bagotricks"}
-;   "Like if-let, but accepts multiple bindings and evaluates them sequentally.
-;    binding evaluation halts on first falsey value, and 'else' clause activates."
-;   ([bindings then]
-;      `(if-lets ~bindings ~then nil))
-;   ([bindings then else]
-;      (cond
-;       (not (even? (count bindings))) (throw (IllegalArgumentException. "if-lets requires an even number of bindings"))
-;       (not (vector? bindings))       (throw (IllegalArgumentException. "if-lets requires a vector for its binding"))
-;       :else `(if-lets* ~bindings ~then ~else))))
+#?(:clj
+(defmacro if-let
+ "An alternative to if-let where more bindings can be added"
+ {:source "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
+  ([bindings then]
+    `(if-let ~bindings ~then nil))
+  ([[bnd expr & more] then else]
+    `(clojure.core/if-let [~bnd ~expr]
+        ~(if more
+            `(if-let [~@more] ~then ~else)
+            then)
+         ~else))))

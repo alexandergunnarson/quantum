@@ -15,6 +15,8 @@
     org.apache.http.impl.client.DefaultHttpClient
     java.io.File))
 
+; http://www.december.com/html/spec/httpstat.html
+
 (defrecord HTTPLogEntry [^Vec tries])
 ; TODO don't use a global log...
 (defonce http-log (atom {}))
@@ -172,7 +174,7 @@
       (let [request-write!  (when log? (log-entry-write! (or log ) :request tries))
             response        (request!* (dissoc req :status :log))
             status          (:status response)]
-        (if (= status 200)
+        (if (or (= status 200) (= status 201))
             response
             (let [status-handler
                    (or (get handlers status)
@@ -196,10 +198,6 @@
           false
           :unknown))
     (catch java.net.UnknownHostException _ false)))
-
-
-
-
 
  ; Success (2xx)  
  ; Redirection (3xx)  

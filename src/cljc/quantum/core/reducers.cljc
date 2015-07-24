@@ -251,6 +251,7 @@
           (recur (rest coll-n)
                  (f ret (first coll-n)))))))
 
+; TODO add fast-zip with loop-recur and zip-right
 (defnt reduce+
   "Like |core/reduce| except:
       When init is not provided, (f) is used.
@@ -278,6 +279,8 @@
                           ret
                           (recur (unchecked-inc n)
                                  (f ret (.charAt s n)))))))))
+#?@(:clj
+ [record?  ([coll f init] (clojure.core.protocols/coll-reduce coll f init))])
   map?     ([coll f init] (#?(:clj  clojure.core.protocols/kv-reduce
                               :cljs -kv-reduce)
                            coll f init))
@@ -350,8 +353,9 @@
   #?(:clj
     (->> coll force
          (reduce
-           (extern (fn ([ret k v]   (assoc! ret k v))
-                       ([ret [k v]] (assoc! ret k v))))
+           (extern
+             (fn ([ret [k v]] (assoc! ret k v))
+                 ([ret  k v]  (assoc! ret k v))))
            (transient {}))
          persistent!)
     :cljs
@@ -469,9 +473,9 @@
   (extend-type Folder
     clojure.core.protocols/CollReduce
       (coll-reduce [fldr f1]
-        (clojure.core.protocols/coll-reduce (:coll fldr) ((:xf fldr) f1) (f1)))
+        (reduce+ (:coll fldr) ((:xf fldr) f1) (f1)))
       (coll-reduce [fldr f1 init]
-        (clojure.core.protocols/coll-reduce (:coll fldr) ((:xf fldr) f1) init))
+        (reduce+ (:coll fldr) ((:xf fldr) f1) init))
     CollFold
       (coll-fold [fldr n combinef reducef]
         (coll-fold (:coll fldr) n combinef ((:xf fldr) reducef)))))

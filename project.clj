@@ -1,4 +1,4 @@
-(defproject quantum/core "0.2.4.4" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
+(defproject quantum/core "0.2.4.6" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
@@ -9,10 +9,16 @@
   :license          {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                      :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
   ; :signing          {:gpg-key "72F3C25A"}
-  :deploy-repositories [["releases" :clojars]
-                        ["clojars" {:creds :gpg}]]
+  #_:deploy-repositories #_[;["releases" :clojars]
+                        ["clojars" {:creds :gpg}]
+                        []]
   :repositories {"sonatype-oss-public"
-               "https://oss.sonatype.org/content/groups/public/"}
+                 "https://oss.sonatype.org/content/groups/public/"
+                 #_"aws-releases" #_{:url "s3p://quanta-cloud/releases/" 
+                                 ;:username :env
+                                 ;:passphrase :env
+                                 :creds :gpg}}
+  :plugins [#_[s3-wagon-private                "1.1.2"]]
   :dependencies
     [; ==== CLOJURE ====
      ; CLOJURE CORE
@@ -21,7 +27,6 @@
      ; CORE
      [proteus                           "0.1.4" ]
 
-     ; [fast-zip "0.6.1"]
      ; [com.github.detro.ghostdriver/phantomjsdriver "1.1.0"]
      ; [fx-clj                    "0.2.0-alpha1"  ]
      ; [freactive.core            "0.2.0-alpha1"  ]
@@ -34,7 +39,9 @@
      ;[quantum/core              "0.2.3.0"       ] ; "0.2.0.0" stable // 0.2.2.0 cljx // 0.2.3.0 latest
      ; DATA IN GENERAL
      ;[clj-tuple                        "0.2.0"]
-     
+     [fast-zip "0.6.1"]
+     [org.clojure/math.combinatorics "0.1.1"]
+     [com.carrotsearch/hppc "0.7.1"] ; High performance primitive collections for Java
      ; DATA.VECTOR
      [org.clojure/core.rrb-vector       "0.0.11"]
      [org.clojure/data.finger-tree      "0.0.2" ]
@@ -57,7 +64,7 @@
      ; NUMERIC                   
      ;[primitive-math                    "0.1.3"]
      ; TIME
-     [clj-time                          "0.7.0"       ] ; similar to JODA time
+     #_[clj-time                          "0.7.0"       ] ; similar to JODA time
      [com.andrewmcveigh/cljs-time       "0.3.2"
        :exclusions [org.json/json]]
      ; JAVA (CLASSPATH, ETC.)
@@ -103,6 +110,9 @@
      [org.apache.httpcomponents/httpmime   "4.4"
        :exclusions [commons-codec]]
 
+     [com.carrotsearch/java-sizeof "0.0.5"] ; Get size of Java Objects
+     [com.github.javaparser/javaparser-core "2.1.0"] ; Parse Java
+
      [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
      [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
      
@@ -119,12 +129,14 @@
      ; CSS
      [garden                    "1.2.5"         ]
      [org.clojure/tools.namespace "0.2.11"]
+     [com.stuartsierra/component  "0.2.3"      ]
+     ; COMPRESS
+     [net.jpountz.lz4/lz4 "1.3.0"]
      ]
    :profiles
    {:dev {:injections []
               ; [(do (ns quanta.main (:gen-class))
               ;      (require '[quantum.core.ns :as ns])
-              ;      (ns/require-all *ns* :clj :lib)
               ;      (clojure.main/repl :print !))]
             :resource-paths ["dev-resources"]
             :dependencies
@@ -133,7 +145,8 @@
                       [lein-cljsbuild                  "1.0.5"]
                       [com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
                       [lein-figwheel                   "0.3.1"]
-                      [jonase/eastwood                 "0.2.1"]]}}
+                      [jonase/eastwood                 "0.2.1"]
+                      ]}}
   :aliases {"all" ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"  ["do" "clean," "install"]
             "deploy-prod" ["do" "clean," "install," "deploy" "clojars"]
@@ -145,6 +158,7 @@
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
   ;:prep-tasks   [["cljx" "once"]] 
+  :global-vars {*warn-on-reflection* true}
   :cljsbuild
     {:builds
       [{:id "dev"

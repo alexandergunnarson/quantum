@@ -3,8 +3,8 @@
     :attribution "Alex Gunnarson"}
   quantum.core.util.bench
   (:require-quantum [ns str])
-  (:require
-    #?(:clj [criterium.core :as bench])))
+  #?(:clj (:require [criterium.core :as bench]))
+  #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator quanta.ClassIntrospector)))
 
 #?(:clj 
   (defn num-from-timing [time-str]
@@ -24,6 +24,13 @@
 
 #?(:clj (defalias bench bench/quick-bench))
 #?(:clj (defalias complete-bench bench/bench))
+
+(defn byte-size [obj] (RamUsageEstimator/sizeOf obj))
+
+(defn byte-size-alt [obj]
+  (-> (ClassIntrospector.)
+      (.introspect obj)
+      (.getDeepSize)))
 
 ; (defn shoddy-benchmark1 [to-repeat func & args]
 ;   (let [results (transient [])]

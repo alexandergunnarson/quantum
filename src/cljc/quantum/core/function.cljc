@@ -227,6 +227,12 @@
 ; (defn with-pr  [obj]      (do (#+clj  pprint
 ;                                #+cljs println obj) 
 ;                               obj))
+(defmacro doto->>
+  {:usage '(->> 1 inc (doto->> println "ABC"))}
+  [f & args]
+  (let [obj (last args)]
+    `(do (~f ~@(butlast args) ~obj)
+         ~obj)))
 (defn with-pr->>  [obj      ] (do (println obj) obj))
 (defn with-msg->> [msg  obj ] (do (println msg) obj))
 (defn with->>     [expr obj ] (do expr          obj))

@@ -137,10 +137,8 @@
   [super sub]
   (cond
     (string? super)
-      #?(:clj  (.startsWith ^String super ^String sub)
-         ; .startsWith is not implemented everywhere
-         ; #+cljs (.startsWith         super         sub)
-         :cljs (zero? (.indexOf super sub)))
+      #?(:clj  (.startsWith ^String super ^String sub)         
+         :cljs (zero? (.indexOf super sub))) ; .startsWith is not implemented everywhere
     (keyword? super)
       (starts-with? (name super) sub)))
 
@@ -150,7 +148,7 @@
   (cond
     (string? super)
       #?(:clj  (.endsWith ^String super ^String sub)
-         :cljs (.endsWith         super         sub))
+         :cljs (.endsWith         super         sub)) ; .endsWith is not implemented everywhere
     (keyword? super)
       (ends-with? (name super) sub)))
 
@@ -214,7 +212,9 @@
 
 (defalias camelcase macros/camelcase)
 
-(defn un-camelcase [sym]
+(defn un-camelcase
+  {:todo ["Find more efficient algorithm"]}
+  [sym]
   (let [str-0 (str sym)
         matches (->> str-0 (re-seq #"[a-z0-1][A-Z]") distinct)]
     (-> (reduce
@@ -240,7 +240,6 @@
   (if (nil? str-0)
       (str "\"" "nil" "\"")
       (str "\"" str-0 "\"")))
-
 
 ; (defn dequote
 ;   {:in  "'Abcdef'"
@@ -423,3 +422,13 @@
   (->> (re-index reg s)
        (map (fn [[i v]]
               (.substring s i (+ i (or preview-ct 20)))))))
+
+#?(:clj
+(defn ->str [^java.io.ByteArrayInputStream in-stream]
+  (let [n (.available in-stream)
+        ^bytes arr (byte-array n)
+        _ (println "ARR IS" arr)]
+    (.read in-stream arr, 0 n)
+    (String. arr java.nio.charset.StandardCharsets/UTF_8))))
+
+; http://stackoverflow.com/questions/327513/fuzzy-string-search-in-java

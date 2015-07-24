@@ -12,6 +12,22 @@
 (def apps        (atom #{"quanta"}))
 (def default-app (atom "quanta"))
 
+; cd to Heroku folder
+; heroku config
+; heroku config:set AWS_ACCESS_KEY_ID=XXX
+; heroku config:set AWS_SECRET_KEY=XXX
+; heroku config:set DATOMIC_EMAIL=XXX
+; heroku config:set DATOMIC_EMAIL=XXX
+; heroku config:set DATOMIC_KEY=XXX
+
+(defn encrypt-gpg-creds! []
+  (sh/proc "gpg"
+    ["--default-recipient-self"
+     "-e" "~/.lein/credentials.clj" ">" "~/.lein/credentials.clj.gpg"]
+    {:name :encrypt-gpg-creds
+     :read-streams? true
+     :thread?       true}))
+
 (defn install-dep-to-local-repo!
   {:usage '(install-dep-to-local-repo!
              '[quantum/ns "1.0"]

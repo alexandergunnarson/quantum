@@ -49,7 +49,7 @@
             hash-map-types 
             array-map-types
             tree-map-types
-            '{:clj #{clojure.lang.IPersistentMap
+            #_'{:clj #{clojure.lang.IPersistentMap ; For records
                      java.util.Map}})
         array-list-types
          '{:clj  #{java.util.ArrayList java.util.Arrays$ArrayList}
@@ -84,6 +84,8 @@
                    clojure.lang.PersistentList
                    clojure.lang.PersistentList$EmptyList}
            :cljs #{cljs.core/List cljs.core/EmptyList}}
+        dlist-types
+          '{:clj #{clojure.data.finger_tree.CountedDoubleList}}
         map-entry-types '{:clj  #{clojure.lang.MapEntry            }}
         queue-types     '{:clj  #{clojure.lang.PersistentQueue     }
                           :cljs #{cljs.core.PersistentQueue        }}
@@ -105,6 +107,7 @@
         seq-types            (cond-union
                                cons-types
                                list-types
+                               dlist-types
                                queue-types
                                lseq-types
                                '{:clj  #{clojure.lang.APersistentMap$ValSeq
@@ -148,8 +151,11 @@
         string-types          '{:clj #{String} :cljs #{(class "")}}
         primitive-types       (cond-union integral-types '{:cljs #{(class "")}})
         fn-types              '{:clj #{clojure.lang.Fn} :cljs #{(class inc)}}
+        multimethod-types     '{:clj #{clojure.lang.MultiFn}}
         coll-types            (cond-union seq-types associative-types
                                 array-list-types)
+        atom-types            '{:clj  #{clojure.lang.IAtom}
+                                :cljs #{cljs.core/Atom}}
         types-0
           {'char?            char-types
            'boolean?         bool-types
@@ -159,11 +165,13 @@
            'tree-map?        tree-map-types
            'sorted-map?      tree-map-types
            'map?             map-types
+           'array-map?       array-map-types
            'map-entry?       map-entry-types
            'set?             set-types
            'vec?             vec-types
            'vector?          vec-types
            'list?            list-types
+           'dlist?           dlist-types
            'listy?           listy-types
            'cons?            cons-types
            'associative?     associative-types
@@ -173,6 +181,7 @@
            'coll?            coll-types
            'indexed?         indexed-types
            'fn?              fn-types
+           'multimethod?     multimethod-types
            'nil?             '{:cljc #{nil}}
            'string?          string-types
            'symbol?          '{:cljc #{Symbol}}
@@ -210,6 +219,7 @@
            'long-array?      {:clj #{(-> array-types :clj :long  )}}
            'keyword?         '{:clj  #{clojure.lang.Keyword}
                                :cljs #{cljs.core/Keyword}}
+           'atom?            atom-types
            :default          '{:clj  #{Object nil}
                                :cljs #{(quote default)}}}
          unevaled-fn
@@ -251,7 +261,7 @@
                     ~(list 'def 'primitive-types 
                       `(zipmap [~@(->   primitive-type-map (get  lang) keys)]
                                   (-> '~primitive-type-map (get ~lang) vals)))
-                    ~(list 'def 'arr-types (get array-types lang)))]
+                    ~(list 'def 'arr-types (get array-types lang)))]    
          #_(log/enable! :macro-expand)
     #_(log/ppr :macro-expand "DEF-TYPES CODE" code)  #_(log/disable! :macro-expand)
     code)))

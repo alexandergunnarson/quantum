@@ -84,10 +84,12 @@
    (let [quoted-f (second `(list ~f))
          externed
           (condp = lang
-            :clj  (try (quantum.core.macros/extern- quoted-f)
-                    (catch Throwable _
-                      (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
-                      quoted-f))
+            :clj  (if @ns/externs? 
+                      (try (quantum.core.macros/extern- quoted-f)
+                        (catch Throwable _
+                          (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
+                          quoted-f))
+                      quoted-f)
             :cljs quoted-f)
          code `(quantum.core.reducers/reduce ~externed ~ret ~coll)]
      code))))
@@ -100,7 +102,7 @@
 (defmacro reducei*
   [should-extern? f ret-i coll & args]
   (let [f-final
-         `(~(if should-extern?
+         `(~(if (and should-extern? @ns/externs?)
                 'quantum.core.macros/extern+
                 'quantum.core.macros/identity*) 
            (let [i# (volatile! (long -1))]

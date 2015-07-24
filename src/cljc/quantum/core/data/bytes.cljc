@@ -108,7 +108,7 @@
           result))))
 
 #?(:clj
-  (defnt slurp-bytes
+  (defnt ->bytes
     byte-array? ([bytes] bytes)
     string?     ([s]     (.getBytes s))
     :default    ([in]

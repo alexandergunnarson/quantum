@@ -17,11 +17,11 @@
 (defrecord LoggingLevels
   [warn user macro-expand debug trace env])
 
-
 (defonce ^:dynamic *prs*
   (-> {:warn              true
        :user              true}
       map->LoggingLevels atom)) ; alert, inspect, debug
+
 (def log  (atom []))
 (def vars (atom {}))
 (defn cache! [k v]
@@ -31,6 +31,7 @@
 (defn error [throw-context]
   (swap! errors conj
     (update throw-context :stack-trace vec)))
+
 (defrecord LogEntry
   [time-stamp ; ^DateTime  
    type       ; ^Keyword   

@@ -4,15 +4,32 @@
           Possibly should just alias some better library for this."
     :attribution "Alex Gunnarson"}
   quantum.core.cryptography
-  (:require-quantum [ns bytes logic str])
+  (:require-quantum [ns bytes logic str type macros])
   #?(:clj
     (:import
       (java.security MessageDigest DigestInputStream)
-      (java.io       InputStream   ByteArrayInputStream))))
+      (java.io       InputStream   ByteArrayInputStream)
+      javax.crypto.Mac
+      javax.crypto.spec.SecretKeySpec
+      org.apache.commons.codec.binary.Base64)))
 
 #?(:clj
   (def ^sun.nio.cs.UTF_8 utf-8
     (java.nio.charset.Charset/forName "UTF-8")))
+
+#?(:clj (defn ^bytes base-64-decode [^String s] (Base64/decodeBase64 s)))
+#?(:clj (defn ^bytes base-64-encode [^String s] (Base64/encodeBase64 s)))
+
+#?(:clj
+(defn sha-256-hmac-base-64 [^String message secret]
+  (let [^bytes secret-bytes (if (byte-array? secret) secret (.getBytes secret))
+        ^bytes message-bytes (.getBytes message utf-8)
+        ^Mac algo-instance (Mac/getInstance "HmacSHA256")
+        ^SecretKey secret-key (SecretKeySpec. secret-bytes, "HmacSHA256")]
+    (.init algo-instance secret-key)
+    (-> algo-instance
+        (.doFinal message-bytes)
+        (Base64/encodeBase64String)))))
 
 #?(:clj
   (defn ^bytes digest
@@ -47,7 +64,6 @@
     (->> s
          (digest md-type)
          bytes/bytes-to-hex)))
-
 
 ; (import '(java.io FileInputStream FileOutputStream OutputStream))
 ; (import '(java.security KeyStore KeyFactory))

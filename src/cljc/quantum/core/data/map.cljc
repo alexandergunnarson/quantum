@@ -37,8 +37,8 @@
   {:attribution "Alex Gunnarson"
    :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge| ; 1.5 times faster!"}
   [map-0 & maps]
-  (if #?(:clj  (instance?  Editable map-0)
-         :cljs (satisfies? Editable map-0))
+  (if #?(:clj  (instance?  AEditable map-0)
+         :cljs (satisfies? AEditable map-0))
       (->> maps
            (reduce conj! (transient map-0))
            persistent!)

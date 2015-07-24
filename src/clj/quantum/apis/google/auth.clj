@@ -194,3 +194,50 @@
            auth-type]
           access-token-retrieved))
       access-token-retrieved)))
+
+(defn ^String access-token-refresh! [service]
+  (let [^Map    auth-keys (auth/auth-keys :google)
+        resp (http/request! 
+               {:method :post
+                :url    (:oauth-access-token urls)
+                :form-params
+                {"client_id"     (:client-id auth-keys)
+                 "client_secret" (:client-secret auth-keys)
+                 "refresh_token" (-> auth-keys service :access-tokens :offline :refresh-token)
+                 "grant_type"    "refresh_token"}})
+        ^Map access-token-retrieved
+          (-> resp :body (json/parse-string str/keywordize))]
+    (auth/write-auth-keys!
+      :google
+      (assoc-in auth-keys [service :access-tokens :current]
+        access-token-retrieved))
+  access-token-retrieved))
+
+
+
+; (defn credential-fn
+;   [token]
+;   (println "TOKEN IS" token) 
+;   ;;lookup token in DB or whatever to fetch appropriate :roles
+;   {:identity token :roles #{::user}})
+
+; (require
+;   '[quantum.auth.core          :as auth  ]
+;   '(cemerick.friend [workflows   :as workflows]
+;                     [credentials :as creds]))
+
+; ; The server only stores the hashed, bcrypted version of the passwords
+; ; Just to compare
+; (def users
+;   {"root"
+;     {:username "root"
+;      :password (creds/hash-bcrypt "admin_password")
+;      :roles #{::admin}
+;      :services
+;        {:facebook (auth/datum :facebook)
+;         :google   (auth/datum :google)
+;         :snapchat (auth/datum :snapchat)}}
+;    "Alex"
+;      {:username "alexandergunnarson"
+;       :password (creds/hash-bcrypt "alexs_password123")
+;       :roles #{::user}}})

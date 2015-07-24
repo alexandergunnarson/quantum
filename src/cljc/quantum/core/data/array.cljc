@@ -143,3 +143,6 @@
         res))))
 
 
+; TODO Compress
+; Compresses a PersistentVector into a typed array to fit as closely together as possible
+
