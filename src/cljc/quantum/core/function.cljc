@@ -9,6 +9,9 @@
     [clojure.walk]
     #?(:clj [clojure.pprint  :as pprint :refer [pprint]])))
 
+; To signal that it's a multi-return 
+(deftype MultiRet [val])
+
 #?(:clj (defalias jfn memfn))
 
 #?(:clj (defalias mfn ns/mfn))
@@ -109,9 +112,13 @@
   [& args]
   (apply partial args))
 
-(defn f*n  [func & args]
-  (fn [arg-inner] ; macros to reduce on possible |apply| overhead
-    (apply func arg-inner args)))
+#?(:clj
+(defmacro f*n  [func & args]
+  `(fn [arg-inner#]
+     (~func arg-inner# ~@args))))
+
+; MWA: "Macro WorkAround"
+#?(:clj (defmacro MWA ([f] `(f*n ~f)) ([n f] `(mfn ~n ~f))))
 
 (defn f**n [func & args]
   (fn [& args-inner]
@@ -120,8 +127,10 @@
 (defn *fn [& args] (f*n apply args))
 
 (defn fn-bi [arg] #(arg %1 %2))
-
-(defn unary [pred] (partial f*n pred))
+(defn unary [pred]
+  (fn ([a    ] (f*n pred a))
+      ([a b  ] (f*n pred a b))
+      ([a b c] (f*n pred a b c))))
 
 #?(:clj
 (defmacro fn->
@@ -147,8 +156,6 @@
 
 
 ; TODO: deprecate these... likely they're not useful
-(defn call-fn* [& args]          ((apply partial (butlast args)) (last args)))
-(defn call-f*n [& args]          ((apply f*n     (butlast args)) (last args)))
 (defn call->   [arg & [func & args]] ((apply func args) arg))
 (defn call->>  [& [func & args]] ((apply func    (butlast args)) (last args)))
 
@@ -208,7 +215,7 @@
   "Like /juxt/, but applies a sorted-map+ instead of a vector.
    Requires an even number of arguments."
   [& args]
-  (juxtm* sorted-map+ args))
+  (juxtm* map/sorted-map args))
 
 (defn juxtk
   "Like /juxtm/, but each key is constant.
@@ -218,8 +225,8 @@
 
 (defn juxt-kv
   [kf vf]
-  (fn ([[k v]] (map-entry (kf k) (vf v)))
-      ( [k v]  (map-entry (kf k) (vf v)))))
+  (fn ([[k v]] [(kf k) (vf v)])
+      ( [k v]  [(kf k) (vf v)])))
 
 ; ======== WITH =========
 

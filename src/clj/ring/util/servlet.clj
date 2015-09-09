@@ -4,7 +4,11 @@
   (:import
     [java.util Locale]
     [javax.servlet.http
-      HttpServlet HttpServletRequest HttpServletResponse]))
+      HttpServlet HttpServletRequest HttpServletResponse]
+    [javax.servlet WriteListener AsyncContext ServletOutputStream]
+    [java.nio ByteBuffer]
+    [java.nio.channels WritableByteChannel
+      ReadableByteChannel]))
 
 (defn- get-headers
   "Creates a name/value map of all the request headers."
@@ -90,7 +94,9 @@
 
 (defn- set-body
   "Update a HttpServletResponse body with a String, ISeq, File or InputStream."
-  [^HttpServletResponse response, body]
+  [^HttpServletResponse response
+   ^HttpServletRequest  request
+   body]
   (cond
     (string? body)
       (with-open [writer (.getWriter response)]
@@ -100,8 +106,39 @@
         (doseq [chunk body]
           (.print writer (str chunk))))
     (instance? InputStream body)
-      (with-open [^InputStream b body]
+    ; TODO Stream InputStream continuously instead of just
+    ; copying the whole thing and blocking
+      #_(with-open [^InputStream b body]
+        ; Very inefficient for huge InputStreams
         (io/copy! b (.getOutputStream response)))
+      ; https://webtide.com/servlet-3-1-async-io-and-jetty/
+      ; TODO: test for long streams
+      ; TODO: it downloads it ALL and only then does it unblock the outputstream
+      (let [^ServletOutputStream out-stream (.getOutputStream response)
+            ^AsyncContext        async  (.startAsync      request)
+            ^ReadableByteChannel in     (convert/->byte-channel ^InputStream body)
+            ^WritableByteChannel out    (convert/->byte-channel out-stream)
+            ^ByteBuffer          buffer (ByteBuffer/allocateDirect (* 16 1024))]
+        #_(.setContentLength response (.available ^InputStream body))
+        (.setWriteListener out-stream
+          (proxy [WriteListener] []
+            (onWritePossible []
+              (println "beginning stream write")
+              (while (and (.isReady out-stream) 
+                          (not= -1 (.read in buffer)))
+                (.flip buffer)
+                (.write out buffer)
+                (.compact buffer))
+              (.flip buffer)
+              (while (and (.isReady out-stream) 
+                          (.hasRemaining buffer))
+                (.write out buffer))
+              (println "completing async")
+              (.complete async))
+              ; TODO close channels?
+            (onError [^Throwable t]
+              (log/pr :warn "Error in inputStream" t)
+              (.complete async)))))
     (instance? File body)
       (let [^File f body]
         (with-open [stream (FileInputStream. f)]
@@ -114,27 +151,29 @@
 (defn update-servlet-response
   "Update the HttpServletResponse using a response map."
   {:arglists '([response response-map])}
-  [^HttpServletResponse response, {:keys [status headers body]}]
+  [^HttpServletRequest  request
+   ^HttpServletResponse response
+   {:keys [status headers body]}]
   (when-not response
     (throw (Exception. "Null response given.")))
   (when status
     (set-status response status))
   (doto response
     (set-headers headers)
-    (set-body body)))
+    (set-body request body)))
 
 (defn make-service-method
   "Turns a handler into a function that takes the same arguments and has the
   same return value as the service method in the HttpServlet class."
   [handler]
-  (fn [^HttpServlet servlet
-      ^HttpServletRequest request
-      ^HttpServletResponse response]
+  (fn [^HttpServlet         servlet
+       ^HttpServletRequest  request
+       ^HttpServletResponse response]
     (let [request-map (-> request
                           (build-request-map)
                           (merge-servlet-keys servlet request response))]
       (if-let [response-map (handler request-map)]
-        (update-servlet-response response response-map)
+        (update-servlet-response request response response-map)
         (throw (NullPointerException. "Handler returned nil"))))))
 
 (defn servlet

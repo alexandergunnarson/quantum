@@ -1,5 +1,5 @@
 (ns quantum.apis.google.places.core
-  (:require-quantum [:lib conv]))
+  (:require-quantum [:lib conv http auth]))
 
 (def search-url "https://maps.googleapis.com/maps/api/place/nearbysearch/json")
 
@@ -15,7 +15,7 @@
 
   (http/request! search-url
     {"key" (:client-id (auth/auth-keys :google))
-     "location" (str/join "," ((juxt :lat :long) (GeoCoordinate. lat long)))
+     "location" (str/join "," ((juxt :lat :long) (GeoCoordinate. 0 0 #_lat #_long)))
      ; Defines the distance (in meters) within which to return place results. 
      "radius" radius}) )
 

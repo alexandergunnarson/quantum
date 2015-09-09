@@ -12,7 +12,7 @@
      :callback ; TODO some of this functionality will be rendered unnecesssary
        {:domain (whenf domain   (f*n str/ends-with? "/")
                   popr)
-        :path   (whenf endpoint (f*n (fn-not str/starts-with?) "/")
+        :path   (whenf endpoint (f*n (fn-not (MWA 2 str/starts-with?)) "/")
                   (f*n conjl "/"))}}))
 
 (defn insert-client-id-and-secret

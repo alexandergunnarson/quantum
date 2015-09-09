@@ -15,21 +15,21 @@
              :clj  (retrieve :clj  sets)
              :cljs (retrieve :cljs sets)})
         primitive-type-map
-           {:clj   {'(class (short-array   0)      ) (symbol "[S")
-                    '(class (long-array    0)      ) (symbol "[J")
-                    '(class (float-array   0)      ) (symbol "[F")
-                    '(class (int-array     0)      ) (symbol "[I")
-                    '(class (double-array  0.0)    ) (symbol "[D")
-                    '(class (boolean-array [false])) (symbol "[Z")
-                    '(class (byte-array    0)      ) (symbol "[B")
-                    '(class (char-array    "")     ) (symbol "[C")
-                    '(class (object-array  [])     ) (symbol "[Ljava.lang.Object;")}
-            :cljs '{ (class ""                     ) string
-                     (class 123                    ) number
-                     (class (clj->js {})           ) object
-                     (class true                   ) boolean
-                     (class (array)                ) array
-                     (class inc                    ) function}}
+           {:clj {'(class (boolean-array [false])) (symbol "[Z")
+                  '(class (byte-array    0)      ) (symbol "[B")
+                  '(class (char-array    "")     ) (symbol "[C")
+                  '(class (short-array   0)      ) (symbol "[S")
+                  '(class (long-array    0)      ) (symbol "[J")
+                  '(class (float-array   0)      ) (symbol "[F")
+                  '(class (int-array     0)      ) (symbol "[I")
+                  '(class (double-array  0.0)    ) (symbol "[D")
+                  '(class (object-array  [])     ) (symbol "[Ljava.lang.Object;")}
+            :cljs '{(class ""                     ) string
+                    (class 123                    ) number
+                    (class (clj->js {})           ) object
+                    (class true                   ) boolean
+                    (class (array)                ) array
+                    (class inc                    ) function}}
 
         hash-map-types
          '{:clj  #{clojure.lang.PersistentHashMap
@@ -49,8 +49,9 @@
             hash-map-types 
             array-map-types
             tree-map-types
+            '{:clj #{flatland.ordered.map.OrderedMap}}
             #_'{:clj #{clojure.lang.IPersistentMap ; For records
-                     java.util.Map}})
+                       java.util.Map}})
         array-list-types
          '{:clj  #{java.util.ArrayList java.util.Arrays$ArrayList}
            :cljs #{cljs.core.ArrayList                           }}
@@ -73,18 +74,31 @@
            :cljs #{cljs.core/PersistentHashSet
                    cljs.core/TransientHashSet
                    cljs.core/PersistentTreeSet}}
+        tuple-types
+          '{:clj #{clojure.lang.Tuple$T0
+                   clojure.lang.Tuple$T1
+                   clojure.lang.Tuple$T2
+                   clojure.lang.Tuple$T3
+                   clojure.lang.Tuple$T4
+                   clojure.lang.Tuple$T5
+                   clojure.lang.Tuple$T6}}
         vec-types
-         '{:clj  #{clojure.lang.APersistentVector
-                   clojure.lang.PersistentVector
-                   clojure.lang.APersistentVector$RSeq}
-           :cljs #{cljs.core/PersistentVector
-                   cljs.core/TransientVector}}
+         (cond-union tuple-types
+            '{:clj  #{clojure.lang.APersistentVector
+                      clojure.lang.PersistentVector
+                      clojure.lang.APersistentVector$RSeq
+                      clojure.core.rrb_vector.rrbt.Vector}
+              :cljs #{cljs.core/PersistentVector
+                      cljs.core/TransientVector
+                      clojure.core.rrb_vector.rrbt.Vector}})
         list-types
          '{:clj  #{;java.util.List ; Because otherwise vectors get handled that same way
                    clojure.lang.PersistentList
                    clojure.lang.PersistentList$EmptyList}
            :cljs #{cljs.core/List cljs.core/EmptyList}}
         dlist-types
+          '{:clj #{clojure.data.finger_tree.CountedDoubleList}}
+        cdlist-types
           '{:clj #{clojure.data.finger_tree.CountedDoubleList}}
         map-entry-types '{:clj  #{clojure.lang.MapEntry            }}
         queue-types     '{:clj  #{clojure.lang.PersistentQueue     }
@@ -120,28 +134,38 @@
                                          cljs.core/ChunkedSeq}})
         listy-types           seq-types
         indexed-types         vec-types
-        bool-types            '{:clj  #{java.lang.Boolean}
+        prim-bool-types       '{:clj  #{boolean}}
+        bool-types            '{:clj  #{boolean java.lang.Boolean}
                                 :cljs #{(class true)}}
-        char-types            '{:clj  #{java.lang.Character}}
-        short-types           '{:clj  #{java.lang.Short     }}
-        int-types             '{:clj  #{java.lang.Integer   }}
-        long-types            '{:clj  #{java.lang.Long      }}
+        prim-byte-types       '{:clj  #{byte}}
+        byte-types            '{:clj  #{byte  java.lang.Byte}}
+        prim-char-types       '{:clj  #{char}}
+        char-types            '{:clj  #{char  java.lang.Character}}
+        prim-short-types      '{:clj  #{short}}
+        short-types           '{:clj  #{short java.lang.Short     }}
+        prim-int-types        '{:clj  #{int}}
+        int-types             '{:clj  #{int   java.lang.Integer   }}
+        prim-long-types       '{:clj  #{long}}
+        long-types            '{:clj  #{long  java.lang.Long      }}
         bigint-types          '{:clj  #{clojure.lang.BigInt java.math.BigInteger}}
         integer-types         (cond-union short-types int-types
                                 long-types bigint-types)
-        float-types           '{:clj #{java.lang.Float     }}
-        double-types          '{:clj #{java.lang.Double    }}
+        prim-float-types      '{:clj #{float}}
+        float-types           '{:clj #{float  java.lang.Float }}
+        prim-double-types     '{:clj #{double}}
+        double-types          '{:clj #{double java.lang.Double}}
         bigdec-types          '{:clj #{java.math.BigDecimal}}
-        transientizable-types '{:clj
-                                  #{clojure.lang.PersistentArrayMap
-                                    clojure.lang.PersistentHashMap
-                                    clojure.lang.PersistentHashSet
-                                    clojure.lang.PersistentVector}
-                                :cljs
-                                  #{cljs.core/PersistentArrayMap
-                                    cljs.core/PersistentHashMap
-                                    cljs.core/PersistentHashSet
-                                    cljs.core/PersistentVector}}
+        transientizable-types (cond-union tuple-types
+                                '{:clj
+                                    #{clojure.lang.PersistentArrayMap
+                                      clojure.lang.PersistentHashMap
+                                      clojure.lang.PersistentHashSet
+                                      clojure.lang.PersistentVector}
+                                  :cljs
+                                    #{cljs.core/PersistentArrayMap
+                                      cljs.core/PersistentHashMap
+                                      cljs.core/PersistentHashSet
+                                      cljs.core/PersistentVector}})
         decimal-types         (cond-union
                                 float-types double-types bigdec-types)
         number-types          (cond-union integer-types decimal-types
@@ -149,7 +173,10 @@
                                   :cljs #{(class 123)     }})
         integral-types        (cond-union bool-types char-types number-types)
         string-types          '{:clj #{String} :cljs #{(class "")}}
-        primitive-types       (cond-union integral-types '{:cljs #{(class "")}})
+        primitive-types       (cond-union prim-bool-types prim-byte-types prim-char-types
+                                prim-short-types prim-int-types prim-long-types
+                                prim-float-types prim-double-types
+                                '{:cljs #{(class "")}})
         fn-types              '{:clj #{clojure.lang.Fn} :cljs #{(class inc)}}
         multimethod-types     '{:clj #{clojure.lang.MultiFn}}
         coll-types            (cond-union seq-types associative-types
@@ -157,10 +184,7 @@
         atom-types            '{:clj  #{clojure.lang.IAtom}
                                 :cljs #{cljs.core/Atom}}
         types-0
-          {'char?            char-types
-           'boolean?         bool-types
-           'bool?            bool-types
-           'number?          number-types
+          {'number?          number-types
            'num?             number-types
            'tree-map?        tree-map-types
            'sorted-map?      tree-map-types
@@ -172,6 +196,7 @@
            'vector?          vec-types
            'list?            list-types
            'dlist?           dlist-types
+           'cdlist?          cdlist-types
            'listy?           listy-types
            'cons?            cons-types
            'associative?     associative-types
@@ -184,14 +209,20 @@
            'multimethod?     multimethod-types
            'nil?             '{:cljc #{nil}}
            'string?          string-types
-           'symbol?          '{:cljc #{Symbol}}
+           'symbol?          '{:clj  #{clojure.lang.Symbol}
+                               :cljs #{cljs.core.Symbol}}
            'record?          '{:clj  #{clojure.lang.IRecord}
                                :cljs #{cljs.core.IRecord}}
+           'char?            char-types
+           'boolean?         bool-types
+           'bool?            bool-types
+           'byte?            byte-types
            'short?           short-types
            'int?             int-types
+           'integer?         integer-types
+           'pinteger?        '{:clj #{long}} 
            'long?            long-types
            'bigint?          bigint-types
-           'integer?         integer-types
            'float?           float-types
            'double?          double-types
            'decimal?         decimal-types
@@ -214,14 +245,32 @@
            'array-list?      array-list-types
            'array?           {:clj  (->> array-types :clj vals (into #{}))
                               :cljs (->> array-types :cljs)}
+           'boolean-array?   {:clj #{(-> array-types :clj :boolean)}}
+           'byte-array?      {:clj #{(-> array-types :clj :byte)}}
+           'char-array?      {:clj #{(-> array-types :clj :char)}}
+           'short-array?     {:clj #{(-> array-types :clj :short)}}
+           'int-array?       {:clj #{(-> array-types :clj :int)}}
+           'long-array?      {:clj #{(-> array-types :clj :long)}}
+           'float-array?     {:clj #{(-> array-types :clj :float)}}
+           'double-array?    {:clj #{(-> array-types :clj :double)}}
            'object-array?    {:clj #{(-> array-types :clj :object)}}
-           'byte-array?      {:clj #{(-> array-types :clj :byte  )}}
-           'long-array?      {:clj #{(-> array-types :clj :long  )}}
+           
+           'booleans?        {:clj #{(-> array-types :clj :boolean)}}
+           'bytes?           {:clj #{(-> array-types :clj :byte)}}
+           'chars?           {:clj #{(-> array-types :clj :char)}}
+           'shorts?          {:clj #{(-> array-types :clj :short)}}
+           'ints?            {:clj #{(-> array-types :clj :int)}}
+           'longs?           {:clj #{(-> array-types :clj :long)}}
+           'floats?          {:clj #{(-> array-types :clj :float)}}
+           'doubles?         {:clj #{(-> array-types :clj :double)}}
+           'objects?         {:clj #{(-> array-types :clj :object)}}
+
+
            'keyword?         '{:clj  #{clojure.lang.Keyword}
                                :cljs #{cljs.core/Keyword}}
            'atom?            atom-types
-           :default          '{:clj  #{Object nil}
-                               :cljs #{(quote default)}}}
+           :any              {:clj  (set/union (:clj primitive-types) #{'Object})
+                              :cljs '#{(quote default)}}}
          unevaled-fn
            (fn [lang-n]
              (->> types-0

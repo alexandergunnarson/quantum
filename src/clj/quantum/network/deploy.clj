@@ -69,7 +69,7 @@
   (thread+ {:id :heroku-write}
     (sh/exec! [:projects app-name] "heroku" "create")))
 
-(defn ^Int count-dynos
+#_(defn ^Int count-dynos
   "Count the number of dynos running on the given app."
   ([]
     (count-dynos @default-app))
@@ -82,7 +82,7 @@
           (take-until "X):")
           str/val))))
 
-(defn scale-to!
+#_(defn scale-to!
   "Scaling the application may require account verification.
    For each application, Heroku provides 750 free dyno-hours."
   {:threaded true}
@@ -93,7 +93,7 @@
       (sh/exec! [:projects app-name]
         "heroku" "ps:scale" (str "web=" dynos)))))
 
-(defn launch-instance!
+#_(defn launch-instance!
   {:threaded true}
   ([]
     (launch-instance! @default-app))
@@ -101,7 +101,7 @@
     (when (< (count-dynos) 1)
       (scale-to! app-name 1))))
 
-(defn deploy!
+#_(defn deploy!
   {:threaded true}
   ([]
     (deploy! @default-app))
@@ -114,19 +114,19 @@
       (sh/exec! "git" ["commit" "-am" (str "\"" commit-desc "\"")] {:dir [:projects app-name]})
       (sh/exec! "git" ["push"   "heroku" "master"]                 {:dir [:projects app-name]}))))
 
-(defn visit
+#_(defn visit
   ([]
     (visit @default-app))
   ([^String app-name]
     (sh/exec! [:projects app-name] "heroku" "open")))
 
-(defn dep-deploy! [^String repo-name]
+#_(defn dep-deploy! [^String repo-name]
   (let [^Key thread-id
           (keyword (str "lein-install-" (-> repo-name str/keywordize name)))]
     (thread+ {:id thread-id}
       (sh/exec! [:projects repo-name] "lein" "install"))))
 
-(defn dep-release!
+#_(defn dep-release!
   {:todo "CAN'T USE YET. Lein deploy clojars requires input"}
   [^String repo-name]
   (dep-deploy! repo-name)
@@ -135,16 +135,16 @@
     (thread+ {:id thread-id}
       (sh/exec! [:projects repo-name] "lein" "deploy" "clojars"))))
 
-(defn logs [^String repo-name]
+#_(defn logs [^String repo-name]
   (thread+ {:id :heroku-logs}
     (sh/exec! [:projects repo-name] "heroku" "logs")))
 
-(defn logs-streaming [^String repo-name]
+#_(defn logs-streaming [^String repo-name]
   ; requires CTRL-C to end stream
   (thread+ {:id :heroku-logs-streaming} ; asynchronous because it's a log stream
     (sh/exec! [:projects repo-name] "heroku" "logs" "--tail")))
 
-(defn create-proc-file! [^String repo-name ^String jar-name]
+#_(defn create-proc-file! [^String repo-name ^String jar-name]
   (io/write!
     :path         [:projects repo-name "Procfile"]
     :write-method :print
@@ -152,7 +152,7 @@
     :data (str "web: java $JVM_OPTS -cp target/" jar-name ".jar"
                " clojure.main -m " repo-name ".web")))
 
-(defn create-uberjar! [^String repo-name]
+#_(defn create-uberjar! [^String repo-name]
   (let [^Key thread-id
           (keyword (str "lein-uberjar-" (-> repo-name str/keywordize name)))]
     (thread+ {:id thread-id}

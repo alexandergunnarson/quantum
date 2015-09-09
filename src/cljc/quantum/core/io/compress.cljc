@@ -8,11 +8,14 @@
   #?(:clj
       (:require
         [clojure.java.io               :as clj-io                   ]
+        [quantum.core.convert          :as convert]
         [taoensso.nippy                :as nippy                    ]
         [quantum.core.io.serialization :as io-ser                   ]
-        [iota                          :as iota                     ]))
+        [iota                          :as iota                     ]
+        [byte-transforms               :as bt                       ]))
   #?(:clj
       (:import
+        (net.jpountz.lz4 LZ4Factory LZ4Compressor)
         (java.io File FileNotFoundException PushbackReader
           FileReader DataInputStream DataOutputStream IOException
           OutputStream FileOutputStream BufferedOutputStream BufferedInputStream
@@ -29,42 +32,71 @@
         (java.nio CharBuffer ByteBuffer)
         (quanta Packed12 ClassIntrospector))))
 
-; COMPRESSION SPEED: lz4 is by far the fastest
-; https://github.com/jpountz/lz4-java
-; COMPRESSION SIZE: zpac
-; http://mattmahoney.net/dc/10gb.html 10 GB compressed.
-; Bytes size    Sec comp Sec de.    Version          Command Line Args
-; 2720359988    43888*   45359*  1  zpaq 6.41        -m 611 -th 1
-; 3594933877    10003      519   1  7zip 4.47b       -mx
-; 3701584921      187*      67*  1  zpaq 6.40        -m 2 -
+(defrecord CompressionCodec
+   [name    extension algorithm speed      compression implemented? doc                                                        ])
+
+#?(:clj
+(def raw-compressors-table
+  [[:gzip   :gz       :gzip     nil        nil         true         nil                                                        ]
+   [:bzip2  :bz2      nil       nil        nil         true         nil                                                        ]
+   [:zip    :zip      nil       nil        nil         false        nil                                                        ]
+   [:7zip   :7z       nil       nil        nil         false        nil                                                        ]
+   [:tar    :tar      nil       nil        nil         false        nil                                                        ]
+   [:rar    :tar      nil       nil        nil         false        nil                                                        ]
+   ; Bytes size    Sec comp Sec de.    Version          Command Line Args
+   ; 2720359988    43888*   45359*  1  zpaq 6.41        -m 611 -th 1
+   ; 3594933877    10003      519   1  7zip 4.47b       -mx
+   ; 3701584921      187*      67*  1  zpaq 6.40        -m 2 -
+   [:zpaq   nil       nil       nil        :highest    false        ["http://mattmahoney.net/dc/10gb.html 10 GB compressed."   ]]
+   [:snappy :snappy   :snappy   :very-high :medium     true         nil                                                        ]
+   [:lz4    :lz4      :lz4      :highest   :high        true         ["by far the fastest: https://github.com/jpountz/lz4-java" ]]]))
+
+(def- compressors-set
+  (->> raw-compressors-table
+       (map (fn [args] (apply construct CompressionCodec args)))))
+
+; TODO make a |key-by| macro for all this
+(def- supported-compressors
+  (->> compressors-set (filter :implemented?) (into #{})))
+
+(def supported-extensions
+  (->> supported-compressors (map :extension) (into #{})))
 
 (def supported-formats
-  #{:zip :gzip :7zip :tar :rar
-    :lz4 :zpac})
+  (->> supported-compressors (map :name) (into #{})))
+
+(def supported-algorithms 
+  (set/union (->> supported-compressors (map :algorithm) (into #{}))
+    (into #{} bt/available-compressors)))
+
 (def supported-preferences
   #{:fastest :smallest
     :speed :size})
 
-(defn ^:private compress* [^bytes data format]
-  (throw+ :not-implemented)
-  #_(condp = format
-    ))
-
-(defn ^bytes compress
+(defn ^"[B" compress
   ([data] (compress data {:format :lz4}))
-  ([data {:keys [format prefer]}]
+  ([data {:keys [format prefer] :as options}]
     (throw-when (and format prefer)
       "Cannot prefer and choose a format.")
-    (throw-when (and prefer (not (in? format supported-formats)))
-      "Format not supported.")
-    (throw-when (and format (not (in? prefer supported-preferences)))
+    (throw-when (and prefer (not (in-k? prefer supported-preferences)))
       "Preference not recognized.")
+    (throw-when (and format (not (in-k? format supported-algorithms)))
+      "Format not supported.")
     (let [format-f
            (if format format
                (condpc = prefer
                  (coll-or :fastest :speed) :lz4
-                 (coll-or :smallest :size) :zpac))]
-      (-> data convert/->bytes (compress* format-f)))))
+                 (coll-or :smallest :size) :zpaq))]
+      (-> data convert/->bytes (bt/compress format-f options)))))
+
+#?(:clj
+(defn decompress 
+  {:todo "Do automatically by type"}
+  ([x]           (decompress x :lz4))
+  ([x algorithm] (decompress x algorithm nil))
+  ([x algorithm options]
+    ; His lz4 is net.jpountz.lz4, which is the best
+    (bt/decompress x algorithm options)))
 
 ; TODO THIS IS FROM RAYNES... GOOD STUFF WORTH INCORPORATING
 

@@ -1,7 +1,12 @@
-(defproject quantum/core "0.2.4.6" ; Stable 0.2.4.2 ; 0.2.4.3 is tested on only Clojure
+(defproject quantum/core "0.2.4.9-beta"
+  :version-history
+    {"0.2.4.6" #{:stable :clj :cljs}
+     "0.2.4.7" #{:abandoned}
+     "0.2.4.8" #{:lib}}
+  :todos ["Eliminate boxed math and reflection warnings"]
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
-  ;:uberjar          {:aot :all}
+  ;:aot :all ;[quantum.core.macros] ; "^:skip-aot" doesn't work; same with regexes
   :java-source-paths ["src/java"]
   :jar-name         "quantum-dep.jar"
   :uberjar-name     "quantum.jar"
@@ -22,21 +27,36 @@
   :dependencies
     [; ==== CLOJURE ====
      ; CLOJURE CORE
-     [org.clojure/clojure       "1.7.0-RC1"  ]
+     [org.clojure/clojure       #_"1.7.0" "1.8.0-alpha2"] ; July 16th
      [quantum/ns "1.0"]
      ; CORE
      [proteus                           "0.1.4" ]
 
      ; [com.github.detro.ghostdriver/phantomjsdriver "1.1.0"]
-     ; [fx-clj                    "0.2.0-alpha1"  ]
-     ; [freactive.core            "0.2.0-alpha1"  ]
      ; ; ==== SERVER ====
      ; [compojure                 "1.1.8"         ]
      ; [ring/ring-jetty-adapter   "1.2.2"         ]
      ; [environ                   "0.5.0"         ]
      
-     ; ==== QUANTUM ====
-     ;[quantum/core              "0.2.3.0"       ] ; "0.2.0.0" stable // 0.2.2.0 cljx // 0.2.3.0 latest
+     ; ==== DB ====
+     ; DATOMIC
+        [com.datomic/datomic-pro "0.9.5173" :exclusions [joda-time]]
+     ; ==== CORE ====
+       ; ==== COLLECTIONS ====
+         ; CORE
+         [seqspert "1.7.0-alpha6.1.0"]
+         [it.unimi.dsi/fastutil "7.0.7"]
+       ; ==== UTIL ====
+         ; DEBUG
+         [clj-stacktrace "0.2.8"]
+       ; ==== STRING ====
+         ; REGEX
+         [frak "0.1.6"]
+       ; MACROS
+       [riddley "0.1.10"]
+       
+     ; ==== UI ====
+     [fx-clj "0.2.0-alpha1" :exclusions [potemkin]] ; 0.2.0-SNAPSHOT
      ; DATA IN GENERAL
      ;[clj-tuple                        "0.2.0"]
      [fast-zip "0.6.1"]
@@ -56,6 +76,9 @@
      [cheshire                          "5.3.1"] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
      ; GRAPHS
      [aysylu/loom "0.5.0"]
+     ; CONVERT
+     [byte-streams "0.2.0"]
+     #_[gloss "0.2.5"] 
      ; MACROS
      #_[potemkin                          "0.3.11"  ; defprotocol+, definterface+, etc.
        :exclusions [riddley]]
@@ -122,7 +145,9 @@
      ; DATAGRID + EXCEL
      ; [org.apache.poi/poi          "3.9"] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
      ; [org.apache.poi/poi-ooxml    "3.9"] ; NOT INCLUDED
-     ; WEBsel
+     ; CLASS
+     [org.reflections/reflections "0.9.10"]
+     ; WEB
      [com.github.detro/phantomjsdriver "1.2.0"
        :exclusions [xml-apis commons-codec]]
 
@@ -130,14 +155,26 @@
      [garden                    "1.2.5"         ]
      [org.clojure/tools.namespace "0.2.11"]
      [com.stuartsierra/component  "0.2.3"      ]
-     ; COMPRESS
-     [net.jpountz.lz4/lz4 "1.3.0"]
+     ; ===== MULTIPLE =====
+     ; COMPRESSION, HASHING...
+     [byte-transforms "0.1.3"]
+
+     ; METADATA EXTRACTION/PARSING
+     [org.apache.tika/tika-parsers "1.9"]
      ]
+   :injections [(require '[quantum.core.ns :as ns])
+                (reset! ns/externs? false)
+                (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
+                                       'print-cause-trace)
+                      newv (ns-resolve (doto 'clj-stacktrace.repl require)
+                                      'pst)]
+                  (alter-var-root oldv (constantly (deref newv))))] ; for :aot
    :profiles
    {:dev {:injections []
               ; [(do (ns quanta.main (:gen-class))
               ;      (require '[quantum.core.ns :as ns])
-              ;      (clojure.main/repl :print !))]
+              ;      (clojure.main/repl :print quantum.core.print/!)
+              ; )]
             :resource-paths ["dev-resources"]
             :dependencies
               [#_[org.clojure/tools.namespace "0.2.11-SNAPSHOT"]]

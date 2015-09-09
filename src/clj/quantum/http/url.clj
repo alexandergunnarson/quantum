@@ -123,15 +123,17 @@
      :query-params params}))
 
 (defnt normalize-param
-  keyword? ([x] (-> x name normalize-param))
-  string?  ([x] (-> x encode))
-  number?  ([x] (-> x str normalize-param)))
+  ([^keyword? x] (-> x name normalize-param))
+  ([^string?  x] (-> x encode))
+  ([^number?  x] (-> x str normalize-param)))
 
 (defn map->str [^Map m]
   (reducei
-    (fn [s k v n]
-      (let [ampersand* (when (> n 0) "&")]
-        (str s ampersand* (name k) "=" (normalize-param v))))
+    (fn internal
+      ([s [k v] n] (internal s k v n))
+      ([s k v n]
+        (let [ampersand* (when (> n 0) "&")]
+          (str s ampersand* (name k) "=" (normalize-param v)))))
     ""
     m))
 

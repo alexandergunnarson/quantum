@@ -1,11 +1,115 @@
 (ns
   ^{:doc "Useful array functions. Array creation, joining, reversal, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :todo ["Incorporate amap, areduce, aset-char, aset-boolean, etc."]}
   quantum.core.data.array
-  (:require-quantum [ns loops])
-  #?(:clj (:import java.util.ArrayList)))
+  (:refer-clojure :exclude
+    [== reverse boolean-array byte-array char-array short-array
+     int-array long-array float-array double-array])
+  (:require-quantum [ns loops macros log logic fn num])
+  (:require [quantum.core.type.core        :as tcore])
+  #?(:clj (:import [java.io ByteArrayOutputStream]
+                   [java.nio ByteBuffer]
+                   java.util.ArrayList)))
+
+; TODO look at http://fastutil.di.unimi.it to complete this namespace
+
+(def package-class-map
+  '{boolean Boolean
+    byte    Byte
+    char    Char
+    short   Short
+    int     Int
+    long    Long
+    float   Float
+    double  Double})
+
+(defmacro create-fns []
+  (for [[package class] package-class-map]
+    (let [arr-sym (symbol (str (name package) "-array"))
+          fn-sym (-> arr-sym (macros/hint-meta (get tcore/type-casts-map arr-sym)))
+          core-sym (symbol "clojure.core" (name fn-sym))
+          n-sym (-> 'n gensym (macros/hint-meta 'pinteger?))]
+      `(defnt ~fn-sym ([~n-sym] (core-sym ~n-sym))))))
+
+(defn boolean-array [n]
+  (if (> n Integer/MAX_VALUE)
+      (it.unimi.dsi.fastutil.booleans.BooleanBigArrays/newBigArray 1)
+      (core/int-array n)))
+
+(defmacro array [type n]
+  (condp = type
+    'boolean `(boolean-array ~n)
+    'byte    `(byte-array    ~n)
+    'char    `(char-array    ~n)
+    'short   `(short-array   ~n)
+    'int     `(int-array     ~n)
+    'long    `(long-array    ~n)
+    'float   `(float-array   ~n)
+    'double  `(double-array  ~n)
+    'object  `(object-array  ~n)
+    'Object  `(object-array  ~n)
+    `(make-array ~type ~n)))
+
+#?(:clj  (defalias byte-array core/byte-array)
+   :cljs (defn byte-array [length] (js/Int8Array. length))) ; why not UInt8Array?
+
+(def name+ (whenf*n nnil? name))
+
+(defnt ^"[B" ->bytes
+  {:attribution ["ztellman/byte-streams" "funcool/octet" "gloss.data.primitives"]
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^bytes? x] x)
+  ; "gloss.data.primitives"
+  (           [^long?  x] (-> (ByteBuffer/allocate 8) (.putLong x) .array))
+  (^{:cost 2} [^String s         ] (->bytes s nil))
+  (^{:cost 2} [^String s encoding]
+    #?(:clj (let [^String encoding-f (whenc encoding (fn-> name+ nil?) "UTF-8")]
+              (.getBytes s encoding-f))
+       ; funcool/octet.spec.string
+       :cljs (let [buff (js/ArrayBuffer. (count s))
+                   view (js/Uint8Array. buff)]
+               (dotimes [i (count s)]
+                 (aset view i (.charCodeAt value i)))
+               (js/Int8Array. buff))))
+  (^{:cost 1} [^java.nio.ByteBuffer buf]
+    (if (.hasArray buf)
+        (if (num/== (alength (.array buf)) (.remaining buf))
+            (.array buf)
+            (let [ary (byte-array (.remaining buf))]
+              (doto buf
+                .mark
+                (.get ary 0 (.remaining buf))
+                .reset)
+              ary))
+        (let [^bytes ary (byte-array (.remaining buf))]
+          (doto buf .mark (.get ary) .reset)
+          ary)))
+  (^{:cost 1.5} [^java.io.InputStream in options]
+    (let [out (ByteArrayOutputStream. (num/max 64 (.available in)))
+          buf (byte-array 16384)]
+      (loop []
+        (let [len (.read in buf 0 16384)]
+          (when-not (neg? len)
+            (.write out buf 0 len)
+            (recur))))
+      (.toByteArray out))) 
+  #_(^{:cost 2} [#'proto/ByteSource src options]
+    (let [os (ByteArrayOutputStream.)]
+      (transfer src os)
+      (.toByteArray os))))
+
 
 (defalias aset! aset)
+
+(defnt' copy
+  ([^bytes? input ^bytes? output ^pinteger? length]
+    #?(:clj  (System/arraycopy input 0 output 0 length)
+       :cljs (reduce ; TODO implement with |dotimes|
+               (fn [_ i]
+                 (aset output i (aget input i)))
+               nil
+               (range (.-length input))))))
 
 ; #?(:clj
 ;   (defn typed-array
@@ -25,13 +129,13 @@
   (defn long-array-of
     "Creates a long array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
-    (^longs [] (long-array 0))
+    (^longs [] (core/long-array 0))
     (^longs [a] 
-      (let [arr (long-array 1)]
+      (let [arr (core/long-array 1)]
         (aset! arr 0 (long a))
         arr))
     ([a b] 
-      (let [arr (long-array 2)]
+      (let [arr (core/long-array 2)]
         (aset! arr 0 (long a))
         (aset! arr 1 (long b))
         arr))
@@ -48,24 +152,24 @@
   (defn object-array-of 
     "Creates an object array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
-    ([] (object-array 0))
+    ([] (core/object-array 0))
     ([a] 
-      (let [arr (object-array 1)]
+      (let [arr (core/object-array 1)]
         (aset! arr 0 a)
         arr))
     ([a b] 
-      (let [arr (object-array 2)]
+      (let [arr (core/object-array 2)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         arr))
     ([a b c] 
-      (let [arr (object-array 3)]
+      (let [arr (core/object-array 3)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
         arr))
     ([a b c d] 
-      (let [arr (object-array 4)]
+      (let [arr (core/object-array 4)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
@@ -94,9 +198,9 @@
      byte[] arr = byte[]{12, 8, 10}"
     {:attribution "Alex Gunnarson"}
     ([size]
-      (byte-array (long size)))
+      (core/byte-array (long size)))
     ([size & args]
-      (let [^"[B" arr (byte-array (long size))]
+      (let [^"[B" arr (core/byte-array (long size))]
         (doseqi [arg args n]
           (aset! arr n (-> arg first byte)))
         arr))))
@@ -107,40 +211,67 @@
      int[] arr = int[]{12, 8, 10}"
     {:attribution "Alex Gunnarson"}
     ([size]
-      (int-array (long size)))
+      (core/int-array (long size)))
     ([size & args]
-      (let [^ints arr (int-array (long size))]
+      (let [^ints arr (core/int-array (long size))]
         (doseqi [arg args n]
           (aset! arr (long n) (-> arg first int)))
         arr))))
 
-; (definline objects
-;   "Casts to object[]"
-;   {:contributor "Alex Gunnarson"}
-;   [xs] `(. clojure.lang.Numbers objects ~xs))
-
 #?(:clj
-  (defn areverse 
+  (defn reverse 
     {:attribution "mikera.cljutils.bytes"}
     (^"[B" [^"[B" bs]
       (let [n (alength bs)
-            res (byte-array n)]
+            res (core/byte-array n)]
         (dotimes [i n]
           (aset! res i (aget bs (- n (inc i)))))
         res))))
 
+; CANDIDATE 0
 #?(:clj
-  (defn ajoin 
-    "Concatenates two byte arrays"
-    {:attribution "mikera.cljutils.bytes"}
-    (^"[B" [^"[B" a ^"[B" b]
-      (let [al (int (alength a))
-            bl (int (alength b))
-            n (int (+ al bl))
-            ^"[B" res (byte-array n)]
-        (System/arraycopy a (int 0) res (int 0) al)
-        (System/arraycopy b (int 0) res (int al) bl)
-        res))))
+(defn ^"[B" aconcat  ; join
+  {:attribution "mikera.cljutils.bytes"}
+  ([^"[B" a ^"[B" b]
+    (let [al (int (alength a))
+          bl (int (alength b))
+          n  (int (+ al bl))
+          ^"[B" res (core/byte-array n)]
+      (System/arraycopy a (int 0) res (int 0) al)
+      (System/arraycopy b (int 0) res (int al) bl)
+      res))))
+
+; CANDIDATE 1
+#_(:clj
+(defn- aconcat
+  "Concatenates arrays of given type."
+  [type & xs]
+  (let [target (make-array type (apply + (map count xs)))]
+    (loop [i 0 idx 0]
+      (when-let [a (nth xs i nil)]
+        (System/arraycopy a 0 target idx (count a))
+        (recur (inc i) (+ idx (count a)))))
+    target)))
+
+#?(:clj
+(defn slice
+  "Slices a byte array with a given start and length"
+  {:attribution "mikera.cljutils.bytes"}
+  (^"[B" [a start]
+    (slice a start (- (alength ^"[B" a) start)))
+  (^"[B" [a start length]
+    (let [al (int (alength ^"[B" a))
+          ^"[B" res (core/byte-array length)]
+      (System/arraycopy a (int start) res (int 0) length)
+      res))))
+
+#?(:clj
+(defnt' ^boolean ==
+  "Compares two byte arrays for equality."
+  {:attribution "mikera.cljutils.bytes"}
+  ([^array? a :first b]
+    (java.util.Arrays/equals a b))))
+
 
 
 ; TODO Compress

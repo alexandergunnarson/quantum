@@ -1,4 +1,4 @@
-(ns quantum.google.wallet.core
+(ns quantum.apis.google.wallet.core
   (:require-quantum [:lib])
   (:import
     (org.openqa.selenium.htmlunit HtmlUnitDriver)
@@ -16,7 +16,8 @@
 
 (require '[quantum.auth.core                :as auth])
 (require '[quantum.web.core :as web :refer [click! send-keys! find-element write-page! default-capabilities]])
-(require '[quantum.google.core :as goog])
+(require '[quantum.apis.google.core :as goog])
+(require '[quantum.apis.google.auth :as gauth])
 
 ; TODO make each WebDriver within a go-block to allow multiple simultaneous ones
 ; TODO use |trampoline|
@@ -35,7 +36,7 @@
 
 (declare get-balance-from-page!)
 
-(defn handle-sms-user-pin [^WebDriver driver ^Key prev-state]
+#_(defn handle-sms-user-pin [^WebDriver driver ^Key prev-state]
   (try+
     (let [pin-field      (find-element driver (By/id "smsUserPin"))
           fill-field!    (send-keys! pin-field "942790") ; TODO fix this
@@ -46,14 +47,14 @@
       (get-balance-from-page! driver :pin))
     ))
 
-(defn ^Num get-balance-from-page!
+#_(defn ^Num get-balance-from-page!
   [^WebDriver driver ^Key prev-state]
   (try+
     (let [^RemoteWebElement balance-elem
             (find-element driver (By/id "gwt-debug-leftNavWalletBalanceWidget-balanceSpan"))
         validate-elem
           (when (or (-> balance-elem (.getAttribute "debugid"  ) (not= "leftNavWalletBalanceWidget-balanceSpan"))
-                    (-> balance-elem (.getAttribute "innerHTML") ((fn-not contains?) "$")))
+                    (-> balance-elem (.getAttribute "innerHTML") ((fn-not containsv?) "$")))
             (throw+ {:msg "Google Wallet balance element not found."}))
         ^Num balance
           (-> balance-elem (.getAttribute "innerHTML")
@@ -74,7 +75,7 @@
   [^String username ^String password]
   (let [^WebDriver driver (PhantomJSDriver. default-capabilities)]
     (try (write-page!  driver)
-      (goog/sign-in! driver "http://wallet.google.com/" username password)
+      (gauth/sign-in! driver "http://wallet.google.com/" username password)
       (write-page! driver)
       (get-balance-from-page! driver :init)
       (finally (.quit driver)))))

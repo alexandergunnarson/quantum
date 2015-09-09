@@ -5,8 +5,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
   (:refer-clojure :exclude [extend second - + > < format])
-  (:require-quantum [ns macros type num fn logic bin err])
-  (:require [quantum.measure.time :as time])
+  (:require-quantum [ns macros type num fn logic bin err log uconv])
   #?(:clj (:import java.util.Date
             (java.time LocalDate)
             (java.time.format DateTimeFormatter)
@@ -20,7 +19,8 @@
 
 (defn binary-search
   "Finds earliest occurrence of @x in @xs (a (sorted) List) using binary search."
-  {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"}
+  {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"
+   :todo ["Move ns"]}
   ([xs x] (binary-search xs x 0 (dec* (count xs)) false))
   ([xs x a b between?]
     (loop [l (long a) h (long b)]
@@ -38,7 +38,9 @@
                 (recur (long l)        (long m))))))))
 
 (defmacro ifor
-  {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}
+  "Imperative |for| loop."
+  {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))
+   :todo ["Move ns"]}
   [[sym val-0 pred val-n+1] & body]
   `(loop [~sym ~val-0]
     (when ~pred ~@body (recur ~val-n+1))))
@@ -53,7 +55,7 @@
   ; 13.798 ± 0.037 billion years ago. (Wikipedia)
   (-> (rationalize 13.798)
       (* num/billion)  ; years
-      (quantum.measure.time/years->nanos))) 
+      (convert :years :nanos))) 
 
 ; 1 nanoday = 1.44 minutes
 
@@ -67,19 +69,18 @@
   "Using Gregorian calendar 3 criteria."
   {:source "Wikipedia"
    :todo ["Implement Julian calendar, etc."]}
-  integer?
-    ([y]
-      ; 46 BC is 708 AUC
-      (if (= y 0)
-          (throw (Exception. "Year does not exist."))
-          (or (contains? strange-leap-years y)
-              (and (core/> y first-normal-leap-year)
-                   (num/evenly-divisible-by? y 4)
-                   (if (core/> y gregorian-calendar-decree-year)
-                       (if (num/evenly-divisible-by? y 100)
-                           (num/evenly-divisible-by? y 400)
-                           true)
-                       true))))))
+  ([^integer? y]
+    ; 46 BC is 708 AUC
+    (if (= y 0)
+        (throw (Exception. "Year does not exist."))
+        (or (contains? strange-leap-years y)
+            (and (core/> y first-normal-leap-year)
+                 (num/evenly-divisible-by? y 4)
+                 (if (core/> y gregorian-calendar-decree-year)
+                     (if (num/evenly-divisible-by? y 100)
+                         (num/evenly-divisible-by? y 400)
+                         true)
+                     true))))))
 
 ; ~48 MB
 ; Indices are the year
@@ -90,18 +91,19 @@
   (make-array clojure.lang.BigInt 14000))
 
 (defnt nanos-arr-index->year
-  long? ([n] (if (= n 10000) nil (core/- n 10000))))
+  ([^long? n] (if (= n 10000) nil (core/- n 10000))))
 
 (defnt year->nanos-arr-index
-  long? ([n] (whenc (if (= n 0) nil (core/+ n 10000))
-               (fn-or nil? (f*n core/< 0) (f*n >= (alength nanos-at-beg-of-year)))
-               nil)))
+  ([^long? n]
+    (whenc (if (= n 0) nil (core/+ n 10000))
+      (fn-or nil? (f*n core/< 0) (f*n >= (alength nanos-at-beg-of-year)))
+      nil)))
 
 ; Initialize nanos-at-beg-of-year
 (do (aset nanos-at-beg-of-year 0 beg-of-time-to-calendar-begin)
     (ifor [n 1 (core/< n (alength nanos-at-beg-of-year)) (inc n)]
       (when-let [year (nanos-arr-index->year n)]
-        (let [year-nanos (time/days->nanos (if (leap-year? year) 366 365))
+        (let [year-nanos (convert (if (leap-year? year) 366 365) :days :nanos)
               prev-i (if (= n 10001) 9999 (dec n))
               nanos-f (core/+ year-nanos (aget nanos-at-beg-of-year prev-i))]
           (aset nanos-at-beg-of-year n nanos-f)))))
@@ -118,9 +120,9 @@
 ; Nanoseconds since the Big Bang
 ; (Optimally would have done Planck quanta since the Big Bang)
 ; Nanosecond: 1E-9 seconds
-(defrecord Instant  [nanos])
+(defrecord Instant  [^long nanos])
 (defrecord StandardInstant [year month day minute second nanos])
-(defrecord Duration [nanos])
+(defrecord Duration [^long nanos])
 
 (defn year->nanos
   [y]
@@ -130,21 +132,23 @@
       (let [last-i (-> nanos-at-beg-of-year alength dec)
             last-year (nanos-arr-index->year last-i)]
         (core/+ (aget nanos-at-beg-of-year last-i)
-          (->> (range (inc last-year) y) (filter leap-year?) count (* 366) time/days->nanos)
-          (->> (range (inc last-year) y) (remove leap-year?) count (* 365) time/days->nanos))))))
+          (->> (range (inc last-year) y) (filter (mfn leap-year?)) count (* 366) (<- convert :days :nanos))
+          (->> (range (inc last-year) y) (remove (mfn leap-year?)) count (* 365) (<- convert :days :nanos)))))))
 
 (defn nanos->instant [n] (Instant. n))
 
 ; Sum of time from beginning of Big Bang through 1969, in nanoseconds
 (def ^:const unix-epoch (-> 1970 year->nanos nanos->instant))
 
-(defn unix-millis->nanos        [         n] (-> n time/millis->nanos (core/+ (:nanos unix-epoch))))
+(defn unix-millis->nanos        [         n] (-> n (convert :millis :nanos) (core/+ (:nanos unix-epoch))))
 (defn unix-millis->instant      [         n] (-> n unix-millis->nanos nanos->instant))
+
 (defn instant->nanos            [         n] (-> n :nanos))
-(defn instant->unix-millis      [         n] (-> n instant->nanos     (core/- (:nanos unix-epoch)) time/nanos->millis))
+(defn instant->unix-millis      [         n] (-> n instant->nanos     (core/- (:nanos unix-epoch)) (convert :nanos :millis)))
 (defn nanos->standard-instant   [         n])
 (defn instant->standard-instant [^Instant n] (-> n instant->nanos nanos->standard-instant))
 
+(defn now-unix    [] (System/currentTimeMillis))
 (defn now-nanos   [] (-> (System/currentTimeMillis) unix-millis->nanos))
 (defn now-instant [] (-> (System/currentTimeMillis) unix-millis->instant))
 (defn now         [] (-> (now-instant) instant->standard-instant))
@@ -156,7 +160,7 @@
           (core/- (now-nanos) (year->nanos gregorian-calendar-decree-year))
         gregorian? (core/>= 0 gregorian-difference)]
     (if gregorian?
-        (-> n time/nanos->days (/ 365.2425) num/floor
+        (-> n (convert :nanos :days) (/ 365.2425) num/floor
               (core/+ gregorian-calendar-decree-year)))
     #_(-> (whenf (binary-search nanos-at-beg-of-year n true)
           vector? first)
@@ -169,6 +173,42 @@
 
 (defn + [^Instant a ^Duration b]
   (Instant. (core/+ (:nanos a) (:nanos b))))
+
+(defnt ->duration
+  ([^java.time.LocalTime x] (-> x (.toNanoOfDay) (Duration.))))
+
+(defnt ->unix-millis
+  ([^java.time.Instant       x] (-> x (.toEpochMilli)))
+  ([^java.util.Date          x] (-> x (.getTime)     ))
+  ([^org.joda.time.DateTime  x] (-> x (.getMillis)   )))
+
+(defnt ->instant
+  ([^java.time.LocalDate     x] (-> x (.toEpochDay) (convert :days :millis) unix-millis->instant))
+  ([^java.time.LocalDateTime x] (+ (-> x (.toLocalDate) ->instant)
+                                   (-> x (.toLocalTime) ->duration)))
+  ([^java.time.Year          x] (-> x (.getValue) year->nanos nanos->instant))
+  ([#{java.time.Instant
+      java.util.Date
+      org.joda.time.DateTime} x]
+    (-> x ->unix-millis unix-millis->instant))
+  #_([^java.time.ZonedDateTime x])
+  #_([^java.time.YearMonth     x])
+  #_([^java.util.Date$ZonedDateTime x]))
+
+(defnt ^java.time.Instant ->jinstant
+  ([^quantum.core.time.core.Instant x]
+    (-> x instant->unix-millis (java.time.Instant/ofEpochMilli))))
+
+(defnt ^java.util.Date ->jdate
+  ([^java.time.Instant i]
+    (Date/from i)))
+
+(defnt parse
+  ([^String s k]
+    (condp = k
+      :http
+        (.parse (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss zzz") s)
+      (throw+ (Err. nil "Unrecognized key" k)))))
 
 ; #?(:clj
 ; (defn now-formatted [date-format]
@@ -183,13 +223,15 @@
 
 #?(:clj 
 (defnt format*
-  string?             ([formatting date] (.format (DateTimeFormatter/ofPattern formatting) ^TemporalAccessor date))
-  [DateTimeFormatter] ([formatting date] (.format formatting ^TemporalAccessor date))
-  keyword?            ([formatting date]    
-                        (let [^DateTimeFormatter formatter
-                                (or (get formatting-map formatting)
-                                    (throw (Exception. "Formatter not found")))]
-                          (.format formatter ^TemporalAccessor date)))))
+  ([^string?           formatting date]
+    (.format (DateTimeFormatter/ofPattern formatting) ^TemporalAccessor date))
+  ([^java.time.format.DateTimeFormatter formatting date]
+    (.format formatting ^TemporalAccessor date))
+  ([^keyword?          formatting date]    
+            (let [^DateTimeFormatter formatter
+                    (or (get formatting-map formatting)
+                        (throw (Exception. "Formatter not found")))]
+              (.format formatter ^TemporalAccessor date)))))
 
 #?(:clj
 (defn format [date formatting]
@@ -296,3 +338,9 @@
 #?(:clj
 (defn parse [text formatter]
   (LocalDate/parse text (DateTimeFormatter/ofPattern formatter))))
+
+(defn system-timezone []
+  (.getID (java.util.TimeZone/getDefault)))
+
+(def date-format-json
+  (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss'Z'"))

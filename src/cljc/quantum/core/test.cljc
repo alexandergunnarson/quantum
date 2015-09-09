@@ -2,6 +2,9 @@
   (:require-quantum [ns err])
   #?(:clj (:gen-class)))
 
+; USE CIRCLECI
+; https://circleci.com/add-projects
+
 #?(:clj
 (defmacro qtest
   {:attribution "Alex Gunnarson"}

@@ -47,14 +47,12 @@
       (->> (d/q q (db*)) (into #{})))))
 
 (defnt transact!
-  vec?
-    ([trans]
-      @(d/transact @conn trans))
-  string?
-    ([str-path]
-      (->> str-path (io/read :read-method :str :path)
-           read-string
-           transact!)))
+  ([^vector? trans]
+    @(d/transact @conn trans))
+  ([^string? str-path]
+    (->> str-path (io/read :read-method :str :path)
+         read-string
+         transact!)))
 
 (defn read-transact! [path] (-> path io/file-str transact!))
 
@@ -167,15 +165,15 @@
 
 (defn+ entity-query [q]
   (->> (query q)
-       (map+ first)
-       (map+ (extern (fn [id] (map-entry id (entity id)))))
+       (map+ (f*n first))
+       (map+ (extern (fn [id] [id (entity id)])))
        redm))
 
 (defn partitions []
   (->> (query '[:find ?ident
            :where [:db.part/db :db.install/partition ?p]
                   [?p :db/ident ?ident]])
-       (map+ first)
+       (map+ (f*n first))
        force (into #{})))
 
 #_(do

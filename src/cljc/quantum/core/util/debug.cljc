@@ -7,6 +7,7 @@
     (:require
       [clojure.pprint     :as pprint                            ]
       [clojure.stacktrace :as trace   :refer [print-cause-trace]]
+      [clj-stacktrace.repl]
       [clojure.string     :as clj-str :refer [split-lines trim] ])))
  ; (:import mikera.cljutils.Error)
 ; (require '[taoensso.encore :as lib+ :refer
@@ -148,7 +149,7 @@
   [exception]
   (map trim (split-lines (with-out-str (print-cause-trace exception))))))
 
-#?(:clj (def trace #(cause-trace *e)))
+#?(:clj (defalias trace clj-stacktrace.repl/pst))
 ; From flatland.useful.exception
 
 #?(:clj 

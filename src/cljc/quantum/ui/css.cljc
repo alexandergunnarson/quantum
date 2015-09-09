@@ -308,10 +308,11 @@
       :border-top  :border-bottom
       :border-left :border-right})
 
+#?(:cljs
 (defn flex-test [elem flex-name]
   (-> elem .-style .-display (set! ""))
   (-> elem .-style .-display (set! flex-name))
-  (-> elem .-style .-display (not= "")))
+  (-> elem .-style .-display (not= ""))))
 
 (defn feature-test []
   #?(:clj {:chrome true}
@@ -381,10 +382,10 @@
       (color/as-hex c)))
 
 (defnt normalize-prop-v
-  keyword? ([v k] (name v))
-  number?  ([v k] (if (contains? px-props k) (px v) (str v)))
-  vector?  ([v k] (postwalk (f*n normalize-prop-v k) v))
-  :default ([v k] (whenf v css-color? render-color)))
+  ([^keyword? v k] (name v))
+  ([^number?  v k] (if (contains? px-props k) (px v) (str v)))
+  ([^vector?  v k] (postwalk (f*n normalize-prop-v k) v))
+  ([:else     v k] (whenf v css-color? render-color)))
 
 (defn ^Vec compatibilize [style-map]
   (->> style-map
@@ -443,7 +444,7 @@
                       (fn->> (<- normalize-prop-v prop-k)
                              css-prop-str
                              (map-entry prop-k)))]
-             (merge+ ret normalized-props)))
+             (merge ret normalized-props)))
          {})
        compatibilize))
 

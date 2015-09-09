@@ -4,7 +4,7 @@
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"}
   quantum.core.logic
-  (:refer-clojure :exclude [if-let])
+  (:refer-clojure :exclude [if-let when-let])
   (:require-quantum [ns fn]))
 
 #?(:clj (set! *warn-on-reflection* true))
@@ -23,11 +23,14 @@
   (if (pred const)
       const
       (else-fn const)))
-(def eq?     (unary =))
-(def fn=     eq?)
-(def fn-eq?  eq?)
-(def neq?    (unary not=))
-(def fn-neq? neq?)
+; Otherwise ExceptionInInitializerError if not macro
+#?(:clj (defmacro eq?  [x] `(fn-> (=    ~x))))
+
+#?(:clj (defalias fn=     eq?))
+#?(:clj (defalias fn-eq?  eq?))
+
+#?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
+#?(:clj (defalias fn-eq?  neq?))
 (def any?    some)
 (defn apply-and [arg-list]
   (every? identity arg-list))
@@ -40,32 +43,56 @@
   (apply-or  (map (pred obj) args)))
 (defn pred-and  [pred obj args]
   (apply-and (map (pred obj) args)))
-(def fn-and every-pred)
-(def fn-or  some-fn)
-(def fn-not complement)
+
+#?(:clj
+(defmacro fn-logic-base
+  "Auto-externs its fn arguments via a compile-time |eval|. Convenient!"
+  [oper & preds]
+  (let [arg (gensym)]
+   `(fn [~arg]
+      (~oper ~@(for [pred preds]
+               (if (seq? pred)
+                   ; Tries to extern it
+                   `(~(try (eval pred)
+                        (catch java.lang.Throwable _ pred)) ~arg)
+                   `(~pred ~arg))))))))
+
+#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base or  ~@preds)))
+#?(:clj (defmacro fn-and [& preds] `(fn-logic-base and ~@preds)))
+#?(:clj (defmacro fn-not [pred]    `(fn-logic-base not ~pred)))
+
 (defn splice-or  [obj compare-fn & coll]
   (any?   (partial compare-fn obj) coll))
 (defn splice-and [obj compare-fn & coll]
   (every? (partial compare-fn obj) coll))
-(defn fn-pred-or  [pred-fn args]
-  (apply fn-or  (map pred-fn args)))
-(defn fn-pred-and [pred-fn args]
-  (apply fn-and (map pred-fn args)))
-(defn coll-or [& elems]
-  (fn [bin-pred obj]
-    ((fn-pred-or (unary bin-pred) elems) obj)))
-(defn coll-and
+
+(defmacro coll-base [logical-oper & elems]
+  (let [bin-pred (gensym)
+        obj      (gensym)]
+   `(fn [~bin-pred ~obj]
+      (~logical-oper
+        ~@(for [elem elems]
+            `(~bin-pred ~obj ~elem))))))
+
+(defmacro coll-or [& elems]
+  `(coll-base or ~@elems))
+
+(defmacro coll-and
   {:usage "((and-coll 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
   [& elems]
-  (fn [bin-pred obj]
-    ((fn-pred-and (unary bin-pred) elems) obj)))
-(def  empty+? (fn-or nseq? empty?))
-(defn bool [v]
+  `(coll-base and ~@elems))
+
+(def ^{:todo ["Deprecate or incorporate"]} empty+? (fn-or nseq? empty?))
+
+(defn bool
+  {:todo ["Deprecate or incorporate"]}
+  [v]
   (cond
     (= v 0) false
     (= v 1) true
     :else
       (throw (IllegalArgumentException. (str "Value not booleanizable: " v)))))
+
 (defn rcompare
   "Reverse comparator."
   {:attribution "taoensso.encore"}
@@ -85,7 +112,7 @@
                  (cond
                    (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
                    (= 1 n) a
-                   (= 2 n) `(if (or (= ~a :else) 
+                   (= 2 n) `(if (or ~(= a :else) 
                                     (~a ~obj))
                                 (~b ~obj)
                                 ~(emit obj more))
@@ -113,7 +140,7 @@
                  (cond
                    (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
                    (= 1 n) a
-                   (= 2 n) `(if (or (= ~a :else) 
+                   (= 2 n) `(if (or ~(= a :else) 
                                     (~a ~obj))
                                 ~b ; As in, this expression is not used as a function taking @obj as an argument
                                 ~(emit obj more))
@@ -181,17 +208,6 @@
 
 (def is? #(%1 %2)) ; for use with condp
 
-; (defn condpc ; force it to delay like cond
-;   "/condp/ for colls."
-;   [pred const & exprs]
-;   (loop [[pred-coll expr :as exprs-n] exprs]
-;       (if (or (= pred-coll :else)
-;               (ifn pred-coll fn?
-;                 (*fn pred const)
-;                 (partial pred const))
-;               (empty? exprs-n))
-;           expr
-;           (recur (-> exprs-n rest rest)))))
 #?(:clj
 (defmacro condpc
   "/condp/ for colls."
@@ -218,6 +234,31 @@
          ~gexpr ~expr]
        ~(emit gpred gexpr clauses)))))
 
+; ======== CONDITIONAL LET BINDINGS ========
+
+#?(:clj
+(defmacro if-let
+ "An alternative to if-let where more bindings can be added"
+ {:source "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
+  ([bindings then]
+    `(if-let ~bindings ~then nil))
+  ([[bnd expr & more] then else]
+    `(clojure.core/if-let [~bnd ~expr]
+        ~(if more
+            `(if-let [~@more] ~then ~else)
+            then)
+         ~else))))
+
+#?(:clj
+(defmacro when-let
+ "An alternative to when-let where more bindings can be added"
+ {:attribution "Alex Gunnarson"}
+  ([[var- expr & more] & body]
+    `(clojure.core/when-let [~var- ~expr]
+      ~@(if more
+            (list `(when-let [~@more] ~@body))
+            body)))))
+
 #?(:clj
 (defmacro cond-let
   "Takes a binding-form and a set of test/expr pairs. Evaluates each test
@@ -232,22 +273,9 @@
    :source "clojure.contrib.cond"}
   [bindings & clauses]
   (let [binding (first bindings)]
-    (when-let [[test expr & more] clauses]
+    (clojure.core/when-let [[test expr & more] clauses]
       (if (= test :else)
         expr
         `(clojure.core/if-let [~binding ~test]
            ~expr
            (cond-let ~bindings ~@more)))))))
-
-#?(:clj
-(defmacro if-let
- "An alternative to if-let where more bindings can be added"
- {:source "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
-  ([bindings then]
-    `(if-let ~bindings ~then nil))
-  ([[bnd expr & more] then else]
-    `(clojure.core/if-let [~bnd ~expr]
-        ~(if more
-            `(if-let [~@more] ~then ~else)
-            then)
-         ~else))))

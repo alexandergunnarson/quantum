@@ -3,7 +3,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.thread.async
   (:require-quantum
-    [ns num fn str err logic vec err async macros])
+    [ns num fn str err logic vec err async macros log])
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
                    quantum.core.data.queue.LinkedBlockingQueue)))
@@ -15,12 +15,6 @@
          (instance? js/Error expr-result#)
          (throw expr-result#)
          expr-result#))))
-
-; #?(:clj
-; (defmacro <? [ch]
-;   `(let [e# (<! ~ch)]
-;      (when (instance? js/Error e#) (throw e#))
-;      e#)))
 
 #?(:clj
 (defmacro try-go
@@ -36,63 +30,52 @@
 (defrecord TerminationRequest [])
 
 (defnt take-with-timeout!
-  #?@(:clj
- [[LinkedBlockingQueue]
-    ([q n]
-      (.poll q n (. TimeUnit MILLISECONDS)))])
-  [ManyToManyChannel]
-    ([c n] (async/alts! [(async/timeout n) c])))
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue q n]
+    (.poll q n (. TimeUnit MILLISECONDS))))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c n]
+    (async/alts! [(async/timeout n) c])))
 
 ; TODO FIX THIS
 (defnt take!
-  #?@(:clj
- [[LinkedBlockingQueue]
-   (([q]   (.take q))
-    ([q n] (.poll q n (. TimeUnit MILLISECONDS))))])
-  [ManyToManyChannel]
-   (([c]   (async/take! c identity))
-    ([c n] (async/alts! [(async/timeout n) c]))))
+#?@(:clj
+ [([^quantum.core.data.queue.LinkedBlockingQueue q]   (.take q))
+  ([^quantum.core.data.queue.LinkedBlockingQueue q n] (.poll q n (. TimeUnit MILLISECONDS)))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c]   (async/take! c identity))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c n] (async/alts! [(async/timeout n) c])))
 
 
 (defnt empty!
-  #?@(:clj
- [[LinkedBlockingQueue]
-    ([q] (.clear q))])
-  [ManyToManyChannel]
-    ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue q] (.clear q)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw+ :unimplemented)))
 
 (defnt put! 
-  #?@(:clj
- [[LinkedBlockingQueue]
-    ([q obj] (.put  q obj))])
-  [ManyToManyChannel]
-    ([c obj] (async/put! c obj)))
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue q obj] (.put  q obj)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c obj] (async/put! c obj)))
 
 (defnt close!
-  #?@(:clj
- [[LinkedBlockingQueue]
-    ([q] (.close q))])
-  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue q] (.close q)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw+ :unimplemented)))
 
 (defnt closed?
-  #?@(:clj
- [[LinkedBlockingQueue]
-    ([q] (.isClosed q))])
-  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue q] (.isClosed q)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 
 (defnt message?
-  [QueueCloseRequest]  ([obj] false)
-  [TerminationRequest] ([obj] false)
-  nil?                 ([obj] false)
-  :default             ([obj] true ))
+  ([^quantum.core.thread.async.QueueCloseRequest  obj] false)
+  ([^quantum.core.thread.async.TerminationRequest obj] false)
+  ([                    obj] (when (nnil? obj) true)))
 
 (def close-req? (partial instance? QueueCloseRequest))
 
 (defnt peek!
   "Blocking peek."
-  #?@(:clj
- [[LinkedBlockingQueue]
-   (([q]        (.blockingPeek q))
-   ([q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS))))])
-  [ManyToManyChannel] ([c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
+#?@(:clj
+ [([^quantum.core.data.queue.LinkedBlockingQueue q]         (.blockingPeek q))
+  ([^quantum.core.data.queue.LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
 

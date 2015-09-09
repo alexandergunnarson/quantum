@@ -5,8 +5,7 @@
 (defn login! [driver]
   (let [creds (auth/auth-keys :intuit)
         _ (.get driver "https://wwws.mint.com/login.event?task=L")
-        _ (Thread/sleep 2000) ; Make less hacky
-        username-elem (web/find-element driver (By/id "form-login-username"))
+        username-elem (web/find-element driver (By/id "form-login-username") 4 1000)
         password-elem (web/find-element driver (By/id "form-login-password"))
         login-btn     (web/find-element driver (By/id "submit"))]
     (web/send-keys! username-elem (:username creds))
@@ -29,6 +28,11 @@
         csv)
       (finally (.quit driver)))))
 
+(def debit-credit->num
+  (fn-> (whenf (fn-> :transaction-type (= :debit))
+            (f*n update :amount core/-))
+          (dissoc :transaction-type)))
+
 (defn parse-transactions
   ([csv] (parse-transactions csv nil))
   ([csv {:as opts :keys [account-remap]}]
@@ -43,8 +47,6 @@
            (map+ (f*n update :transaction-type keyword))
            (map+ (f*n update :date   (f*n time/parse "M/dd/yyyy")))
            (map+ (f*n update :original-description (fn->> (url/decode :xml))))
-           (map+ (fn-> (whenf (fn-> :transaction-type (= :debit))
-                         (f*n update :amount num/neg))
-                       (dissoc :transaction-type)))
+           (map+ debit-credit->num)
            account-remapper))))
   

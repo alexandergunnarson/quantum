@@ -5,4 +5,4 @@
   (:require [quantum.core.ns :as ns #?@(:clj [:refer [alias-ns]])])
   #?(:clj (:gen-class)))
 
-#?(:clj (alias-ns 'clj-time.coerce))
+#_(:clj (alias-ns 'clj-time.coerce))

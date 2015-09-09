@@ -1,5 +1,5 @@
 (ns quantum.core.graph
-  (:require-quantum [ns fn logic map type macros coll err log])
+  (:require-quantum [ns fn logic type macros coll err log])
   #?(:clj
     (:require [clojure.java.io :as io]
       [loom.alg         :as g.alg]
@@ -251,7 +251,7 @@
              [[(conj depv k) sub]]))
        (apply concat)))
 
-(defn root-node-paths
+(defn+ root-node-paths
   "Outputs paths from the root nodes to all their respective
    leaf nodes. Keeps only the root node and the leaf node,
    as well as the immediate parent of the leaf node.
@@ -283,5 +283,5 @@
          [:zs           :ys        ] 1/1000}}
   [m]
   (->> (root-node-paths* m [])
-       (map (juxt (compr first (juxt first last)) second))
-       (into (sorted-map+))))
+       (map (juxt (compr (extern (mfn 1 first)) (juxt (extern (mfn 1 first)) (extern (mfn 1 last)))) (extern (mfn 1 second))))
+       (into (sorted-map))))

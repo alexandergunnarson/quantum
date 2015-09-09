@@ -5,7 +5,7 @@
           for many of these things."}
   quantum.core.io.core
   (:refer-clojure :exclude [read descendants])
-  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log])
+  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log vec])
   #?(:clj
       (:require
         [clojure.java.io               :as io    ]
@@ -31,16 +31,16 @@
 #?(:clj (do
 
 (defnt ^String path->file-name
-  file?   ([f] (.getName f))
-  string? ([s] (coll/taker-until-workaround sys/separator nil s)))
+  ([^file?   f] (.getName f))
+  ([^string? s] (coll/taker-until-workaround sys/separator nil s)))
 
-(def file-name* path->file-name)
+(defalias file-name* path->file-name)
 
 (defnt extension
-  string? ([s] (coll/taker-until-workaround "." nil s))
-  file?   ([f] (-> f str extension)))
+  ([^string? s] (coll/taker-until-workaround "." nil s))
+  ([^file?   f] (-> f str extension)))
 
-(def file-ext extension)
+(defalias file-ext extension)
 (def ext-index (f*n last-index-of "."))
 
 (defn- double-escape [^String x]
@@ -131,41 +131,40 @@
               (fn-> io/as-file .exists not)
               (path proj-path-f (up-dir-str this-dir) "resources"))}))
 
-(defnt parse-dir
-  vector?
-    ([keys-n]
-      (reducei
-        (fn [path-n key-n n]
-          (let [first-key-not-root?
-                 (and (= n 0) (string? key-n)
-                      ((fn-not str/starts-with?) key-n sys/separator))
-                k-to-add-0 (or (get dirs key-n) key-n)
-                k-to-add-f
-                  (if first-key-not-root?
-                      (str sys/separator k-to-add-0)
-                      k-to-add-0)]
-            (path path-n k-to-add-f)))
-        "" keys-n))
-  string?  ([s] s)
-  keyword? ([k] (parse-dir [k]))
-  nil?     ([obj] ""))
+(defnt ^String parse-dir
+  ([^vector? keys-n]
+    (reducei
+      (fn [path-n key-n n]
+        (let [first-key-not-root?
+               (and (= n 0) (string? key-n)
+                    ((fn-not (MWA 2 str/starts-with?)) key-n sys/separator))
+              k-to-add-0 (or (get dirs key-n) key-n)
+              k-to-add-f
+                (if first-key-not-root?
+                    (str sys/separator k-to-add-0)
+                    k-to-add-0)]
+          (path path-n k-to-add-f)))
+      "" keys-n))
+  ([^string?  s] s)
+  ([^keyword? k] (parse-dir [k]))
+  ([          obj] (if (nil? obj) "" (throw+ (Err. :unimplemented nil {:obj obj :class (class obj)})))))
 
-(defnt ^File as-file
-  vector? ([dir] (-> dir parse-dir as-file))
-  string? ([dir] (-> dir io/file))
-  file?   ([dir] dir))
+(defnt ^java.io.File as-file
+  ([^vector? dir] (-> dir parse-dir as-file))
+  ([^string? dir] (-> dir io/file))
+  ([^file?   dir] dir))
 
 (def file-str (fn-> as-file str))
 
 (defnt exists?
-  string? ([s] (-> s as-file exists?))
-  file?   ([f] (.exists f)))
+  ([^string? s] (-> s as-file exists?))
+  ([^file?   f] (.exists f)))
 
 (defnt directory?
-  string? ([s] (-> s as-file directory?))
-  file?   ([f] (and (exists? f) (.isDirectory f))))
+  ([^string? s] (-> s as-file directory?))
+  ([^file?   f] (and (exists? f) (.isDirectory f))))
 
-(def folder? directory?)
+(defalias folder? directory?)
 
 (ns-unmap 'quantum.core.io.core 'file?)
 (def file? (fn-not directory?))
@@ -174,14 +173,14 @@
 
 (def clj-file?
   (fn-and file?
-    (fn->> extension keyword (contains? clj-extensions))))
+    (fn->> extension keyword (containsv? clj-extensions))))
 
 ; FILE RELATIONS
 
 (defnt ^String up-dir
-  string? ([dir ] (-> dir up-dir-str))
-  vec?    ([dir ] (-> dir parse-dir up-dir))
-  file?   ([file] (.getParent file)))
+  ([^string? dir ] (-> dir up-dir-str))
+  ([^vec?    dir ] (-> dir parse-dir up-dir))
+  ([^file?   file] (.getParent file)))
 
 (defn parent [f]
   (.getParentFile ^File (as-file f)))
@@ -196,27 +195,28 @@
     (->> file parent children
          (remove (fn-> str (= (str file)))))))
 
+(def directory-? (mfn 1 directory?))
 (def descendants       (fn->> as-file file-seq))
-(def descendant-leaves (fn->> as-file file-seq (remove directory?)))
-(def internal-nodes    (fn->> as-file file-seq (filter directory?)))
+(def descendant-leaves (fn->> as-file file-seq (remove directory-?)))
+(def internal-nodes    (fn->> as-file file-seq (filter directory-?)))
 (def descendant-dirs internal-nodes)
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{ FILES AND I/O  }=========================================================
 ;========================================================{                }==========================================================
 (defnt readable?
-  string? ([dir]
+  ([^string? dir]
     (try (->> dir (.checkRead (SecurityManager.)))
          true
       (catch SecurityException _ false)))
-  file?   ([dir] (->> dir str       readable?))
-  vec?    ([dir] (->> dir parse-dir readable?)))
+  ([^file?   dir] (->> dir str       readable?))
+  ([^vec?    dir] (->> dir parse-dir readable?)))
 
 (defnt writable?
-  string? ([dir]
+  ([^string? dir]
     (try (->> dir (.checkWrite (SecurityManager.)))
          true
       (catch SecurityException _ false)))
-  file?   ([dir] (->> dir str writable?)))
+  ([^file?   dir] (->> dir str writable?)))
 
 (defalias input-stream  io/input-stream )
 (defalias resource      io/resource     )
@@ -250,8 +250,8 @@
            (filter+
              (partial
                (fn-and
-                 (compr file-name* (f*n str/starts-with? file-name))
-                 (compr file-ext (eq? extension)))))
+                 (fn-> file-name* (str/starts-with? file-name))
+                 (fn-> file-ext (= extension)))))
            (map+ (fn-> file-name*
                        (str/replace (str file-name " ") "") 
                        path-without-ext str/val))
@@ -299,13 +299,24 @@
             (.write data write-file))))
 
 (defn write-serialized! ; can encrypt :encrypt-with :....
-  [data path-0 write-method]
+  [data path-0 write-method & [unfreezable-caught?]]
   (with-open [write-file (output-stream path-0)]
-    (nippy/freeze-to-out!
-      (DataOutputStream. write-file)
-      (case write-method
-        :serialize data
-        :compress  (nippy/freeze data))))) ; byte-code
+    (let [data-f (whenf data vector+? ; Because "unfreezable type: rrbt Vector"
+                   (partial core/into []))]
+      (try+ (nippy/freeze-to-out!
+              (DataOutputStream. write-file)
+              (case write-method
+                :serialize data-f
+                :compress  (nippy/freeze data-f)))
+            (catch Object e
+              (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
+                       (not unfreezable-caught?))
+                  (->> data
+                       (postwalk (whenf*n vector+?
+                                   (partial core/into []))) 
+                       (<- write-serialized! path-0 write-method true))
+                  (throw+))
+              ))))); byte-code
 
 (def- ill-chars-table
   {"\\" "-", "/" "-", ":" "-", "*" "!", "?" "!"
@@ -340,7 +351,7 @@
             (create-dir! directory-f)
             #(write-try (inc n) false file-name-f directory-f
                file-path-f write-method data-formatted file-type)))))
-(defn write! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
+(defn+ write! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
   {:todo ["Apparently has problems with using the :directory key"
           "Decomplicate"]}
   [& {file-name :name file-path :path
@@ -378,7 +389,7 @@
           file-num
             (cond
               (and (splice-or overwrite = :num :num-0)
-                   (some exists? [file-path-0 (path directory-f file-name-00)]))
+                   (some (extern (mfn 1 exists?)) [file-path-0 (path directory-f file-name-00)]))
               (next-file-copy-num file-path-0)
               (and (= overwrite :num-0) ((fn-not exists?) file-path-0))
               "00"

@@ -114,7 +114,7 @@
       ;(extend-serialization-for-record! record (deref (inc n)))
     ))
 
-(defn ^String transit-encode [^Map m]
+(defn ^String ->transit [^Map m]
   (let [baos (ByteArrayOutputStream.)]
     (->> m (t/write (t/writer baos :json)))
     (.close baos)

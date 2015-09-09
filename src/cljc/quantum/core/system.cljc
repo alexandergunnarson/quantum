@@ -7,7 +7,7 @@
 
 #?(:clj
 (def os ; TODO: make less naive
-  (if (contains? (System/getProperty "os.name") "Windows")
+  (if (containsv? (System/getProperty "os.name") "Windows")
       :windows
       :unix)))
 
@@ -42,9 +42,3 @@
      :total (mb (.totalMemory r))
      :used  (mb (- (.totalMemory r) (.freeMemory r)))
      :free  (mb (.freeMemory r))})))
-
-#?(:clj
-(def user-env
-  {"MAGICK_HOME"       (str/join separator ["usr" "local" "Cellar" "imagemagick"])
-   "DYLD_LIBRARY_PATH" (str/join separator ["usr" "local" "Cellar" "imagemagick" "lib"])}))
-

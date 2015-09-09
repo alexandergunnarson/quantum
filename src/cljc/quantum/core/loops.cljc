@@ -10,9 +10,7 @@
   
 #?(:clj (set! *unchecked-math* true))
 
-#?(:clj
-(defmacro unchecked-inc-long [n]
-  `(unchecked-inc (long ~n))))
+(def unchecked-inc-long (fn [^long x] (unchecked-inc x)))
 
 #?(:clj
 (defmacro until [pred-expr & body]
@@ -40,14 +38,14 @@
           (if index?
               `(quantum.core.data.array/object-array-of ~ret ~(quantum.core.macros/extern- f) (atom 0) ~@args)
               `(quantum.core.data.array/object-array-of ~ret ~(quantum.core.macros/extern- f) ~@args))
-        _ (log/pr :macro-expand "EXTERNING TO NAMESPACE" (ns-name *ns*))
-        extra-args-sym (with-meta (gensym 'extra-args) {:tag "objects"})
-        args-n-sym     (with-meta (gensym 'args-n    ) {:tag "objects"})
+        _ (log/pr ::macro-expand "EXTERNING TO NAMESPACE" (ns-name *ns*))
+        extra-args-sym (with-meta (gensym 'extra-args) {:tag "[Ljava.lang.Object"})
+        args-n-sym     (with-meta (gensym 'args-n    ) {:tag "[Ljava.lang.Object"})
         f-0
          `(fn [~args-n-sym elem#]
             ; A possibly faster alternative to destructuring
-            (let [ret-0#     (aget ~args-n-sym (int 0))
-                  f-0#       (aget ~args-n-sym (int 1))
+            (let [ret-0#     (aget ~args-n-sym 0)
+                  f-0#       (aget ~args-n-sym 1)
                   ~extra-args-sym
                     (-> (quantum.core.collections.core/getr ~args-n-sym
                           2 (quantum.core.collections.core/lasti ~args-n-sym)))
@@ -58,7 +56,7 @@
               ~(when index? `(swap! (aget ~args-n-sym (int 2)) inc))
               (aset! ~args-n-sym (int 0) ret-f#)
               ~args-n-sym))
-        _ (log/ppr :macro-expand "F IS" f-0)
+        _ (log/ppr ::macro-expand "F IS" f-0)
         f-evaled (eval f-0)
         code-f
           `(->> (quantum.core.reducers/reduce
@@ -66,7 +64,7 @@
                   ~args-f
                   ~coll)
                 first)]
-          (log/ppr :macro-expand "CODE IS" code-f)
+          (log/ppr ::macro-expand "CODE IS" code-f)
     code-f)))
 
 #?(:clj
@@ -81,22 +79,23 @@
   ([lang f coll]
    `(reduce* ~lang ~f (~f) ~coll))
   ([lang f ret coll]
-   (let [quoted-f (second `(list ~f))
-         externed
+   (let [externed
           (condp = lang
             :clj  (if @ns/externs? 
-                      (try (quantum.core.macros/extern- quoted-f)
+                      (try (quantum.core.macros/extern- f)
                         (catch Throwable _
-                          (log/pr :macro-expand "COULD NOT EXTERN" quoted-f)
-                          quoted-f))
-                      quoted-f)
-            :cljs quoted-f)
+                          (log/pr ::macro-expand "COULD NOT EXTERN" f)
+                          f))
+                      f)
+            :cljs f)
          code `(quantum.core.reducers/reduce ~externed ~ret ~coll)]
      code))))
 
 #?(:clj
 (defmacro reduce [& args]
   `(reduce* :clj ~@args)))
+
+
 
 #?(:clj
 (defmacro reducei*
@@ -112,9 +111,9 @@
                  ([ret# k# v#]
                    (vswap! i# unchecked-inc-long)
                    (quantum.core.macros/inline-replace (~f ret# k# v# @i#))))))
-        _ (log/ppr :macro-expand "F FINAL EXTERNED" f-final)
+        _ (log/ppr ::macro-expand "F FINAL EXTERNED" f-final)
         code `(quantum.core.reducers/reduce ~f-final ~ret-i ~coll) 
-        _ (log/ppr :macro-expand "REDUCEI CODE" code)]
+        _ (log/ppr ::macro-expand "REDUCEI CODE" code)]
  code))) 
 
 #?(:clj
@@ -218,10 +217,10 @@
                 (reduce
                   (fn [_# ~elem]
                     (let [~index-sym @i#] ~@body)
-                    (vswap! i# inc)
+                    (vswap! i# unchecked-inc-long)
                     nil)
                   nil ~coll))
-        _ (log/ppr :macro-expand "DOSEQI CODE IS" code)]
+        _ (log/ppr ::macro-expand "DOSEQI CODE IS" code)]
     code)))
 
 #?(:clj
@@ -261,6 +260,37 @@
            (conj ret# (do ~@body)))
          []
          ~(last bindings)))))
+
+#?(:clj
+(defmacro fori
+  "fori:for::reducei:reduce"
+  {:attribution "Alex Gunnarson"}
+  [bindings & body]
+  (let [n-sym (last bindings)]
+  `(let [n# (volatile! 0)]
+     (for ~(vec (butlast bindings))
+       (let [~n-sym (deref n#)
+             res# (do ~@body)]
+         (vswap! n# quantum.core.loops/unchecked-inc-long)
+         res#))))))
+
+(defmacro seq-loop
+  [bindings & exprs]
+  (condp = (count bindings)
+    4 (let [[elem-sym coll
+             ret-sym init] bindings]
+       `(reduce
+          (fn [~ret-sym ~elem-sym]
+            ~@exprs)
+          ~init
+          ~coll))
+    5 (let [[k-sym v-sym coll
+             ret-sym init] bindings]
+       `(reduce
+          (fn [~ret-sym ~k-sym ~v-sym]
+            ~@exprs)
+          ~init
+          ~coll))))
 
 ; 2.284878 ms... strangely not faster than transient |for|
 ; (defmacro for-internally-mutable

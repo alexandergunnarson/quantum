@@ -1,5 +1,7 @@
 (ns quantum.compile.java
   (:require-quantum [:lib])
+  (:require [quantum.core.analyze.clojure.predicates :as pred :refer :all]
+     [quantum.core.analyze.clojure.core :as ana])
   (:import
     com.github.javaparser.JavaParser
     (com.github.javaparser.ast CompilationUnit)
@@ -12,6 +14,7 @@
       VariableDeclarator VariableDeclaratorId)
     (com.github.javaparser.ast.comments JavadocComment)
     (com.github.javaparser.ast.stmt
+      ExplicitConstructorInvocationStmt
       BlockStmt Statement ExpressionStmt
       TryStmt ThrowStmt CatchClause
       BreakStmt
@@ -20,9 +23,11 @@
       ReturnStmt IfStmt)
     (com.github.javaparser.ast.expr
       ObjectCreationExpr NameExpr VariableDeclarationExpr
+      SuperExpr
       ArrayAccessExpr ArrayCreationExpr
       ConditionalExpr
       CastExpr
+      LambdaExpr
       NullLiteralExpr AssignExpr MethodCallExpr
       ClassExpr ThisExpr
       FieldAccessExpr
@@ -50,7 +55,7 @@
 (defn clean-javadoc [s]
   (-> s (clojure.string/replace #"\n*\s*\*\s" "\n")))
 
-(defn type-hint [x] (->> x (str "^") symbol))
+(defn type-hint* [x] (->> x (str "^") symbol))
 
 (defn do-each [x] (apply list 'do (->> x (map parse*))))
 
@@ -77,6 +82,7 @@
    "plus"          '+
    "minus"         '-
    "divide"        '/
+   "times"         '*
    "greater"       '>
    "less"          '<
    "remainder"     'rem
@@ -116,12 +122,12 @@
       (apply list 'when pred then))))
 
 (defnt get-inner
-  [MethodDeclaration]      ([x] (.getBody x))
-  [ConstructorDeclaration] ([x] (.getBlock x)))
+  ([^com.github.javaparser.ast.body.MethodDeclaration      x] (.getBody x))
+  ([^com.github.javaparser.ast.body.ConstructorDeclaration x] (.getBlock x)))
 
 
 
-(defnt parse
+(macros/defntp parse
   "Java to Clojure."
   [java.io.File]
     ([x] (-> x JavaParser/parse parse*))
@@ -136,8 +142,8 @@
   [ClassOrInterfaceType]
     ([x] ;.getScope
          (-> x .getName
-               (whenf (f*n contains? "<") ; Parameterized class
-                 (partial take-until "<"))
+               (whenf (f*n containsv? "<") ; Parameterized class
+                 (fn->> (take-until "<")))
                symbol))
   ; BODY
   [ClassOrInterfaceDeclaration]
@@ -145,7 +151,7 @@
   [FieldDeclaration]
     ([x] (cons 'do
            (coll/lfor [v (.getVariables x)]
-             (apply list 'def (-> x .getModifiers parse-modifiers) (-> x .getType type-hint)
+             (apply list 'def (-> x .getModifiers parse-modifiers) (-> x .getType type-hint*)
                (-> v parse*)))))
   [InitializerDeclaration]
     ([x] (-> x .getBlock parse*))
@@ -161,16 +167,17 @@
                             (into [])
                             list)
                pres (->> [(:modifier pre) (:constructor? pre) (:sym pre) (:doc pre)]
-                         (remove (fn-or nil? (fn-and string? empty?))))]
+                         (remove (fn-or nil? (fn-and string? empty?))))
+               body (when-let [inner (get-inner x)]
+                       (->> inner parse* implicit-do))]
            (concat (list 'defn) pres
-                arglist
-                (->> x get-inner parse* implicit-do))))
+                arglist body)))
   [VariableDeclarator]
     ([x] [(-> x .getId parse*) (when-let [init (.getInit x)] (parse* init))])
   [VariableDeclaratorId]
     ([x] (-> x str symbol))
   [Parameter]
-    ([x] [(-> x .getType type-hint)
+    ([x] [(-> x .getType type-hint*)
           (-> x .getId parse*)])
   [MultiTypeParameter]
     ([x] (concat (->> x .getTypes (map parse*))
@@ -217,6 +224,8 @@
     ([x] (apply list 'doseq
            (conj (-> x .getVariable parse* second popr) (-> x .getIterable parse*))
            (-> x .getBody parse* implicit-do)))
+  [ExplicitConstructorInvocationStmt]
+    ([x] ["EXPLICIT CONSTRUCTOR" (str x)])
   ; EXPRESSIONS     
   [NameExpr]
     ([x] (-> x .getName symbol))
@@ -232,6 +241,8 @@
                 doall)))
   [ThisExpr]
     ([x] 'this)
+  [SuperExpr]
+    ([x] ["SUPER" (str x)])
   [EnclosedExpr] ; Parenthesis-enclosed
     ([x] (list 'do (-> x .getInner parse*)))
   [NullLiteralExpr]
@@ -261,6 +272,8 @@
                (apply list
                  (->> x (.getName) symbol)
                  args))))
+  [LambdaExpr]
+    ([x] ["LAMBDA" (str x)])
   [UnaryExpr]
     ([x] (list (-> x .getOperator parse*) (-> x .getExpr parse*)))
   [UnaryExpr$Operator]
@@ -284,7 +297,7 @@
   [BinaryExpr$Operator]
     ([x] (parse-operator x))
   [VariableDeclarationExpr]
-    ([x] (let [t (-> x .getType type-hint)]
+    ([x] (let [t (-> x .getType type-hint*)]
            (list 'let (->> (.getVars x)
                            (map parse*)
                            (map (partial into [t]))
@@ -304,9 +317,9 @@
   (->> x
        (postwalk ; Start from bottom. Essential for granular things 
          (condf*n
-           (fn-and listy+?
+           (fn-and listy?
              (fn-> first (= '.println))
-             (fn-> second listy+?)
+             (fn-> second listy?)
              (fn-> second second (= 'System)))
            (fn->> rest rest (cons 'println))
 
@@ -317,38 +330,40 @@
        (prewalk ; Start from the top, not the bottom. Essential for cond-folding 
          (condf*n
            cond-foldable?
-           cond-fold
+           identity #_cond-fold
 
            :else identity))
        (postwalk
          (compr
            (condf*n
              (fn-and conditional-statement?
-               (fn->> conditional-branches (every? return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements   
-             (fn [x] (list 'return (->> x (map-conditional-branches second))))
+               (fn->> ana/conditional-branches (every? return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements   
+             (fn [x] (list 'return (->> x (ana/map-conditional-branches (f*n second)))))
        
              :else identity)
-           join-lets))
-       (prewalk (fn-> enclose-lets str-fold))
+           #_join-lets))
+       ;(prewalk (fn-> enclose-lets str-fold))
        (postwalk
          (condf*n
            (fn-and function-statement?
-             (compr last return-statement?))
-           (f*n update-last second)
+             (fn-> last return-statement?))
+           (f*n update-last (f*n second))
 
            (fn-and do-statement? (fn-> count (= 2)))
-           second
+           (f*n second)
 
            :else identity))
        first
-       (map (if*n (fn-and listy+? (fn-> first (= 'do))) rest list))
+       (map (if*n (fn-and listy? (fn-> first (= 'do))) rest list))
        (apply concat)))
 
 (do (def file-loc "/Users/alexandergunnarson/Development/Source Code Projects/quanta-test/test/temp.java")
-    (-> (java.io.File. file-loc) parse clean ((fn [x] (with-out-str (pprint x))))))
+    (-> (java.io.File. file-loc) parse clean
+        ((fn [x] (with-out-str (pprint x))))
+        println))
 
 
 
 
-(defn format-code [c]
-  (condp ))
+; (defn format-code [c]
+;   (condp ))

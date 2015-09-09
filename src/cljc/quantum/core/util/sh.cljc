@@ -8,6 +8,7 @@
   (:require-quantum [ns coll str io fn sys log logic macros thread async qasync
                      err res time num])
   (:require [quantum.core.resources    :as res    :refer [closed?   ]]
+            [quantum.core.paths        :as paths]
             [quantum.core.thread.async :as qasync :refer [close-req? message?]])
   #?(:clj (:import (java.lang ProcessBuilder Process StringBuffer)
                    (java.io InputStreamReader BufferedReader
@@ -141,7 +142,7 @@
                          (map str)
                          into-array
                          (ProcessBuilder.))
-                 env-vars-f (merge-keep-left (or env-vars {}) sys/user-env)
+                 env-vars-f (merge-keep-left (or env-vars {}) paths/user-env)
                  set-env-vars!
                    (doseq [^String env-var ^String val- env-vars-f]
                      (-> pb (.environment) (.put env-var val-)))
@@ -202,7 +203,9 @@
                         :output-timeout-handler (:output-timeout handlers)}))
                  children (get-in @thread/reg-threads [id :children])
                  _ (swap! cleanup-seq conj #(thread/close-impl! process))
+                 _ (log/pr ::debug "Now waiting for process.")
                  exit-code (.waitFor process)
+                 _ (log/pr ::debug "Finished waiting for process.")
                  ; In order to have the print output catch up
                  print-delay
                    (when (and (empty? close-reqs)
@@ -215,6 +218,7 @@
              ; invokes the close-listener if it has not already been done
              (doseq [child-id children]
                (thread/close! child-id))
+             _ (log/pr ::debug "Child processes closed.")
              ; The process thread is closed; the helper threads may still be being cleaned up
              (swap! thread/reg-threads assoc-in [process-id :state] :closed)
              (exit-code-handler state exit-code process process-id (:early-termination handlers))))]

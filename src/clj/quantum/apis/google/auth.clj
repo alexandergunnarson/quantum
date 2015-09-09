@@ -37,7 +37,7 @@
 (defn oauth-params [{:keys [scopes access-type]}]
   (let [auth-keys (auth/auth-keys :google)
         access-type (or access-type :offline)]
-    (when-not (contains? access-types access-type)
+    (when-not (containsk? access-types access-type)
       (throw+ (Err. :access-type-invalid nil access-type)))
     (map/om ; must be in this order
       "access_type"   (name access-type) ; must be string, not keyword for some reason
@@ -92,7 +92,7 @@
   "Start to sign in from the Google search/home page."
   [^WebDriver driver]
     (let [navigate!          (.get driver "http://www.google.com")
-          ^List sign-in-btns (.findElements driver (By/linkText "Sign in"))
+          ^java.util.List sign-in-btns (.findElements driver (By/linkText "Sign in"))
           ^RemoteWebElement sign-in-btn
             (if (-> sign-in-btns count (not= 1))
                 (throw+ {:msg "No one single sign in button detected."
@@ -141,13 +141,13 @@
   {:pre [(with-throw
            (or (= access-type :online) (= access-type :offline))
            "Authorization type invalid.")]}
-  (let [^WebDriver driver (PhantomJSDriver. default-capabilities)]
+  (with-resources [^WebDriver driver (PhantomJSDriver. default-capabilities)]
     (try
       (let [_ (sign-in! driver auth-url username password)
             _ (log/pr :debug "Sign in complete.")
             account-select-div
-             (try (find-element driver (By/id "account-list"))
-               (catch NoSuchElementException _ nil))
+             (try+ (find-element driver (By/id "account-list"))
+               (catch [:type :not-found] _ nil))
             _ (when account-select-div
                 (select-account! driver (or account-select "Alexander Gunnarson"))) ; TODO FIX
             ^String auth-key
@@ -155,8 +155,7 @@
                   (log/pr :debug "Approve complete.")
                   (copy-auth-key! driver))]
         (log/pr :debug "The" (name access-type) "authentication key is: " auth-key)
-        auth-key)
-      (finally (.quit driver)))))) ; ends the entire session.
+        auth-key))))) ; ends the entire session.
 
 (defn oauth-key
   "Retrieves the authorization key programmatically via a headless browser."
@@ -171,8 +170,9 @@
         opts))))
 
 (defn ^String access-token!
+  {:usage '(gauth/access-token! #{:contacts/read-write} :offline)}
   ([scopes auth-type] (access-token! scopes auth-type nil))
-  ([^Key scopes ^Key auth-type {:as opts :keys [code]}]
+  ([scopes ^Key auth-type {:as opts :keys [code]}]
     (let [auth-keys (auth/auth-keys :google)
           service (-> scopes first namespace keyword)
           access-token-retrieved
@@ -241,3 +241,29 @@
 ;      {:username "alexandergunnarson"
 ;       :password (creds/hash-bcrypt "alexs_password123")
 ;       :roles #{::user}}})
+
+(defn access-key
+  {:in [:contacts :default]}
+  [^Key service ^Key token-type]
+  (-> (auth/auth-keys :google)
+      (get service)
+      :access-tokens
+      (get token-type)
+      :access-token))
+
+(defn handled-request! [service opts]
+  (http/request!
+    (update opts :handlers
+      (f*n mergel
+        {401 (fn [req resp]
+               (log/pr ::warn "Unauthorized. Trying again...")
+               (access-token-refresh! service)
+               (http/request! (assoc req :oauth-token (access-key service :current))))
+         403 (fn [req resp]
+               (log/pr ::warn "Too many requests. Trying again...")
+               (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
+               (http/request! req))
+         500 (fn [req resp]
+               (log/pr ::warn "Server error. Trying again...")
+               (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
+               (http/request! req))}))))  

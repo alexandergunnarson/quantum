@@ -38,7 +38,7 @@
 #?(:clj
 (defn add-child-proc! [parent id] ; really should lock reg-threads and reg
   {:pre [(with-throw
-           (contains? @reg-threads parent)
+           (containsk? @reg-threads parent)
            {:message (str/sp "Parent thread" parent "does not exist.")})]}
   (log/pr ::debug "Adding child proc" id "to parent" parent)
   ; Add to tree
@@ -53,13 +53,13 @@
     (swap! reg-threads-tree assoc-in (conjr traversal-keys id) {})
     (swap! reg-threads      assoc-in [id :parents] traversal-keys))
   ; Add to flat
-  (if (-> @reg-threads parent (contains? :children))
+  (if (-> @reg-threads parent (containsk? :children))
       (swap! reg-threads update-in [parent :children] conj id)
       (swap! reg-threads assoc-in  [parent :children] #{id}))))
 
 #?(:clj
 (defn register-thread! [{:keys [id thread handlers parent] :as opts}]
-  (if (contains? @reg-threads id)
+  (if (containsk? @reg-threads id)
       (log/pr ::warn "Attempted to register existing thread:" id)
       (do (log/pr ::debug "REGISTERING THREAD" id)
           (swap! reg-threads assoc id (dissoc opts :id))
@@ -67,7 +67,7 @@
 
 #?(:clj
 (defn deregister-thread! [id]
-  (if (contains? @reg-threads id)
+  (if (containsk? @reg-threads id)
       (let [{:keys [parent parents] :as opts} id]
         (log/pr ::debug "DEREGISTERING THREAD" id)
         (swap! reg-threads
@@ -91,7 +91,7 @@
                  (keyword? ~id)
                  {:message "Thread-id must be a keyword."})
                (with-throw
-                 ((fn-not contains?) @reg-threads ~id)
+                 ((fn-not core/contains?) @reg-threads ~id)
                  {:type    :key-exists
                   :message (str "Thread id '" (name ~id) "' already exists.")}))
            ^Atom result#
@@ -117,30 +117,28 @@
 
 #?(:clj
 (defnt interrupt!
-  [Thread]  ([x] (.interrupt x)) ; /join/ after interrupt doesn't work
-  [Process] ([x] nil) 
-  [Future]  ([x] nil))) ; .cancel? 
+  ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
+  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
 
 #?(:clj
 (defnt interrupted?
-  [Thread]  ([x] (.isInterrupted x))
-  [Process] ([x] :unk)
-  [Future]  ([x] :unk)))
+  ([#{Thread}         x] (.isInterrupted x))
+  ([#{Process java.util.concurrent.Future} x] :unk)))
 
 #?(:clj
 (defnt close-impl!
-  [Thread]  ([x] (.stop    x))
-  [Process] ([x] (.destroy x))
-  [Future]  ([x] (.cancel  x true))
-  nil?      ([x] nil)))
+  ([^Thread  x] (.stop    x))
+  ([^Process x] (.destroy x))
+  ([^java.util.concurrent.Future  x] (.cancel  x true))
+  ([         x] (if (nil? x) true (throw :not-implemented)))))
 
 #?(:clj
 (defnt closed?
-  [Thread]  ([x] (not (.isAlive x)))
-  [Process] ([x] (try (.exitValue x) true
+  ([^Thread x] (not (.isAlive x)))
+  ([^Process x] (try (.exitValue x) true
                    (catch IllegalThreadStateException _ false)))
-  [Future]  ([x] (or (.isCancelled x) (.isDone x)))
-  nil?      ([x] true)))
+  ([^java.util.concurrent.Future x] (or (.isCancelled x) (.isDone x)))
+  ([x] (if (nil? x) true (throw :not-implemented)))))
 
 #?(:clj (def open? (fn-not closed?)))
 
@@ -180,7 +178,7 @@
   {:attribution "Alex Gunnarson"}
   ([^Keyword thread-id] (close! thread-id nil)) ; don't force
   ([^Keyword thread-id {:keys [force?] :as opts}]
-    (if-not (contains? @reg-threads thread-id)
+    (if-not (containsk? @reg-threads thread-id)
       (log/pr ::warn (str/sp "Thread-id" thread-id "does not exist; attempted to be closed."))
       (let [{:keys [thread children close-reqs]
              {:keys [interrupted cleanup]} :handlers} ; close-req is another, but it's called asynchronously 
@@ -210,6 +208,15 @@
         @reg-threads-tree))
     (doseq [thread-id thread-meta @reg-threads]
       (close! thread-id {:force? force?})))))
+
+(defn close-all-alt!
+  "An alternative version of |close-all|. Test both."
+  []
+  (doseq [k v (->> @reg-threads (remove+ (compr key (eq? :thread-reaper))) redm)]
+    (when-let [close-reqs (:close-reqs v)]
+      (put! close-reqs :req))
+    (when-let [thread- (:thread v)]
+      (close-impl! thread-))))
 
 #?(:clj
 (defonce add-thread-shutdown-hooks!
@@ -381,29 +388,32 @@
 
 #?(:clj
 (defonce thread-reaper
-  (let [id :thread-reaper]
-    (lt-thread-loop
-      {:id id
-       :handlers {:close-req #(swap! reg-threads dissoc id) ; remove itself
-                  :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
-      []
-      (if (nempty? thread-reaper-pause-requests)
-          (do (qasync/empty! thread-reaper-pause-requests)
-              (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
-              (swap! reg-threads assoc-in [id :state] :paused)
-              (take! thread-reaper-resume-requests) ; blocking take
-              (qasync/empty! thread-reaper-resume-requests)
-              (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
-              (swap! reg-threads assoc-in [id :state] :running)
-              (recur))
-          (do (reap-threads!)
-              (Thread/sleep 2000)
-              (recur)))))))
+  (do (log/enable! :macro-expand)
+      (with-do
+        (let [id :thread-reaper]
+          (lt-thread-loop
+            {:id id
+             :handlers {:close-req #(swap! reg-threads dissoc id) ; remove itself
+                        :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
+            []
+            (if (nempty? thread-reaper-pause-requests)
+                (do (qasync/empty! thread-reaper-pause-requests)
+                    (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
+                    (swap! reg-threads assoc-in [id :state] :paused)
+                    (take! thread-reaper-resume-requests) ; blocking take
+                    (qasync/empty! thread-reaper-resume-requests)
+                    (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
+                    (swap! reg-threads assoc-in [id :state] :running)
+                    (recur))
+                (do (reap-threads!)
+                    (Thread/sleep 2000)
+                    (recur)))))
+        (log/disable! :macro-expand)))))
 
 #?(:clj (defn pause-thread-reaper!  [] (put! thread-reaper-pause-requests true)))
 #?(:clj (defn resume-thread-reaper! [] (put! thread-reaper-resume-requests true)))
 
-#_(defonce gc-worker
+(defonce gc-worker
   (lt-thread {:id :gc-collector}
     (loop [] (System/gc) (Thread/sleep 60000))))
 
@@ -476,7 +486,7 @@
           (doseq [chan-n chans] chan-n)))))
 
 #?(:clj
-  (defn- thread-or
+  (defn+ thread-or
     "Call each of the fs on a separate thread. Return logical
     disjunction of the results. Short-circuit (and cancel the calls to
     remaining fs) on first truthy value returned."
@@ -493,7 +503,7 @@
                                  (deliver p true)
                                  (if v
                                    (deliver ret v)
-                                   (when (every? realized? (map peek @fps))
+                                   (when (every? realized? (map (extern (mfn 1 peek)) @fps))
                                      (deliver ret nil))))))
                            p]))))
       (let [result @ret]
@@ -515,7 +525,7 @@
  
   )
 #?(:clj
-  (defn- thread-and
+  (defn+ thread-and
     "Computes logical conjunction of return values of fs, each of which
     is called in a future. Short-circuits (cancelling the remaining
     futures) on first falsey value."
@@ -531,7 +541,7 @@
                                    (deliver done true))
                                  (locking fps
                                    (deliver p true)
-                                   (when (every? realized? (map peek @fps))
+                                   (when (every? realized? (map (extern (mfn 1 peek)) @fps))
                                      (deliver done true))))
                                p]))))
       @done
@@ -592,3 +602,18 @@
 ;         (whenf ~millis  nil? (constantly 500))
 ;         (whenf ~n-times nil? (constantly 6))
 ;         #(update-out-str-with! ~out-str baos#)))))
+
+
+
+
+; SHUT DOWN ALL FUTURES
+; ; DOESN'T ACTUALLY WORK
+; (import 'clojure.lang.Agent)
+; (import 'java.util.concurrent.Executors) 
+; (defn close-all-futures! []
+;   (shutdown-agents)
+;   (.shutdownNow Agent/soloExecutor)
+;   (set! Agent/soloExecutor (Executors/newCachedThreadPool)))
+
+; INVESTIGATE AGENTS...
+

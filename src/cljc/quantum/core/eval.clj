@@ -1,7 +1,7 @@
 (ns ^{:doc "A parser for. Note that it is a compiler and not an interpreter."}
   quantum.core.eval
   (:refer-clojure :exclude [eval])
-  (:require-quantum [ns macros type]))
+  (:require-quantum [ns macros type log err]))
 
 
 (comment
@@ -48,12 +48,27 @@
 ; Memoize it all, so you don't have to create the same objects every time.
 (def lookup-lexical identity)
 (defnt eval
-  list?     ([x] (let [f    (get symbols (first x))
-  		    		     args (rest x)]
-  		    	     (fn [] (apply f args))))
-  fn?       ([x] (x)) ; This was a genned function
-  symbol?   ([x] (lookup-lexical x)))
+  ([^list? x] (let [f    (get symbols (first x))
+  	     args (rest x)]
+       (fn [] (apply f args))))
+  ([^fn?     x] (x)) ; This was a genned function
+  ([^symbol? x] (lookup-lexical x)))
 
 ; => (def my-sym-table {'+ +}) ((get my-sym-table '+) 1 2)
 ; => RESULT ((fn [] (apply ((fn [] (get my-sym-table '+))) 1 2)))
 ; => (eval '(+ 1 2)) => #my_fn_genned => (eval ) => 3
+
+#?(:clj
+(defn resolve-ns
+  "resolves the namespace or else returns nil if it does not exist
+  (resolve-ns 'clojure.core) => 'clojure.core
+  (resolve-ns 'clojure.core/some) => 'clojure.core
+  (resolve-ns 'clojure.hello) => nil"
+  [^clojure.lang.Symbol sym]
+  (let [nsp  (.getNamespace sym)
+        nsym (or  (and nsp
+                       (symbol nsp))
+                  sym)]
+    (if nsym
+      (err/suppress (do (require nsym) nsym))))))
+

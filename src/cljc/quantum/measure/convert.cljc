@@ -1,16 +1,16 @@
 (ns quantum.measure.convert
-  (:require-quantum [:lib])
+  (:require-quantum [ns fn logic num set err macros pr log str])
   (:require
     [quantum.measure.reg        :as reg ]
     [quantum.measure.core       :as meas]
     [quantum.measure.angle      ]
-    [quantum.measure.information]
-    [quantum.measure.length     ]
+    [quantum.measure.information] ; Not too large
+    #_[quantum.measure.length     ] ; Too large
     [quantum.measure.luminosity ]
     [quantum.measure.solid-angle]
     [quantum.measure.substance  ]
     [quantum.measure.temperature]
-    [quantum.measure.time       ]
+    [quantum.measure.time       ] ; Not too large
     [quantum.measure.volume     ]
     [quantum.measure.weight     ]))
 
@@ -26,7 +26,12 @@
         from-type (first from-types)
         to-type   (first to-types)
         _ (with-throw (= from-type to-type) (Err. nil "Incompatible types." [from-type to-type]))
-        conversion-fn-sym
-          (symbol (str "quantum.measure." (name from-type))
-                  (str (str/str+ from "-") "->" (str/str+ to "-")))]
-    `(~conversion-fn-sym ~n)))
+        ;conversion-fn-sym
+        ;  (symbol (str "quantum.measure." (name from-type))
+        ;          (str (str/str+ from "-") "->" (str/str+ to "-")))
+        ;conversion-code `(~conversion-fn-sym ~n)
+        conversion-map-sym (symbol (str "quantum.measure." (name from-type)) "conversion-map")
+        conversion-map-var (resolve conversion-map-sym)]
+
+    (when-not conversion-map-var (throw+ (Err. nil "Conversion map does not exist:" conversion-map-sym)))
+    `(* ~n ~(get-in @conversion-map-var [from to]))))

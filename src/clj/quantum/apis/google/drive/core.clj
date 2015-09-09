@@ -95,15 +95,6 @@
                 (str v)]))
        foldm))
 
-(defn access-key
-  {:in [:contact :default]}
-  [^Key service ^Key token-type]
-  (-> (auth/auth-keys :google)
-      (get service)
-      :access-tokens
-      (get token-type)
-      :access-token))
-
 (defn make-request
   "Creates an HTTP request."
   {:usage "(make-request :query \"root\" nil :get {} nil)"}
@@ -118,80 +109,9 @@
            :url          url
            :oauth-token  (access-key :drive :current)
            :as           :auto
-           :query-params query-params
-           :handlers
-             {401 (fn [req resp]
-                    (log/pr ::warn "Unauthorized. Trying again...")
-                    (gauth/access-token-refresh! :drive)
-                    (http/request! (assoc req :oauth-token (access-key :drive :current))))
-              403 (fn [req resp]
-                    (log/pr ::warn "Too many requests. Trying again...")
-                    (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
-                    (http/request! req))
-              500 (fn [req resp]
-                    (log/pr ::warn "Server error. Trying again...")
-                    (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
-                    (http/request! req))}}]
+           :query-params query-params}]
     request))
 
-(defn ^Vec parse-contacts
-  {:out '[{:name "Lynette Bearinger",
-           :image-link "https://www.google.com/m8/feeds/photos/media/alexandergunnarson%40gmail.com/5fd4c0328f27c544",
-           :email "journeypartner67@gmail.com"}
-          ...]}
-  [^String xml-response]
-  (let [^Map parsed-body
-          (->> xml-response
-               (java.io.StringReader.)
-               xml/parse
-               :content)
-        ^Fn filter-relevant-entries
-          (fn->> :content
-                 (filter+ (fn-> :tag (splice-or = :title :email :link)))
-                 (remove+ (fn-and (fn-> :tag (= :link))
-                                  (fn-> :attrs :rel (not= "http://schemas.google.com/contacts/2008/rel#photo"))))
-                 redv)
-        ^Fn unify-info
-          (fn [elem]
-            (let [^String name-0
-                     (->> elem
-                          (ffilter (fn-> :tag (= :title)))
-                          :content
-                          first)
-                  ^String image-link
-                     (->> elem 
-                          (ffilter (fn-> :tag (= :link)))
-                          :attrs
-                          :href)
-                  ^String email
-                     (->> elem
-                          (ffilter (fn-> :tag (= :email)))
-                          :attrs
-                          :address)]
-              {:name       name-0
-               :image-link image-link
-               :email      email}))]
-    (->> parsed-body
-         (filter+ (fn-> :tag (= :entry)))
-         (map+ filter-relevant-entries)
-         (map+ unify-info)
-         redv)))
-
-(defn ^String retrieve-contacts-xml
-  {:todo ["Handle unreasonably long contacts (> 10000)"]}
-  [^String email]
-  (let [^Map http-response
-         (http/request!
-           {:method       :get
-            :url          (str "https://www.google.com/m8/feeds/contacts/" email "/full")
-            :oauth-token  (access-key :contacts :default)
-            :query-params {"max-results" 10000}})] ; TODO check if 10000 is too many
-    (:body http-response)))
-
-(defn ^Vec contacts
-  [^String email]
-  (->> (retrieve-contacts-xml email)
-       parse-contacts))
 ;___________________________________________________________________________________________________________________________________
 ;================================================={     PROCESS HTTP REQUEST      }=================================================
 ;================================================={                               }=================================================
@@ -218,7 +138,7 @@
   (let [[http-method url] (method+url-fn func id to method)
         request   (make-request func id to method params req)
         log-entry (atom (HTTPLogEntry. []))
-        raw-response (http/request! request)
+        raw-response (gauth/handled-request! request)
         response
           (if raw?
               raw-response

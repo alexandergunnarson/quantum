@@ -1,4 +1,4 @@
-(ns quantum.apis.microsoft.azure
+(ns quantum.apis.microsoft.azure.core
   (:require-quantum [:lib http]))
 
 (defn url->account-name [url]
@@ -53,7 +53,7 @@
        (canonicalize-url url query-params)])))
 
 (defn required-headers []
-  {"x-ms-date"    (time/format (time/gmt-now) :windows)
+  {"x-ms-date"    nil #_(time/format (time/gmt-now) :windows)
    "x-ms-version" "2014-02-14"})
 
 (defn gen-headers
@@ -107,7 +107,7 @@
     (throw-unless (str/lower? container-name)
       "Container name must be lower case.")
     (when public-access-type
-      (throw-unless (in? public-access-type #{:blob :container})
+      (throw-unless (in-k? public-access-type #{:blob :container})
         "Invalid public access type."))
     (let [opts-f (->> {:x-ms-blob-public-access public-access-type}
                       (remove+ (fn-> val nil?))

@@ -7,6 +7,7 @@
   (:require-quantum [ns])
   (:require
     #?(:clj [clojure.data.finger-tree :as ftree])))
+
 ; a sequential collection that provides constant-time access to both the left and right ends.
 #?(:clj (defalias u-dlist ftree/double-list))
 ; all the features of double-list plus constant-time count and log-n nth

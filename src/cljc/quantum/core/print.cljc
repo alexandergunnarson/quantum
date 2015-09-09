@@ -166,3 +166,31 @@
                   (str sb#)))
            (throw (Exception. (str "Unrecognized platform: " platform))))]
     code)))
+
+(defn- pprint-symbol [x]
+  (when-let [has-hint? (-> x meta (contains? :tag))]
+    (print "^")
+    (print (-> x meta :tag))
+    (print " "))
+  (when-let [ns- (namespace x)]
+    (print ns-)
+    (print "/"))
+  (print (name x)))
+
+(defonce pprint-vector-0
+  (.getMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector))
+
+(defn- pprint-vector [x]
+  (when-let [has-hint? (-> x meta (contains? :tag))]
+    (print "^")
+    (print (-> x meta :tag))
+    (print " "))
+  (pprint-vector-0 x))
+
+#?(:clj (.addMethod clojure.pprint/simple-dispatch Symbol pprint-symbol))
+#?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
+#?(:clj
+(defn pprint-hints [x]
+  (clojure.pprint/with-pprint-dispatch clojure.pprint/simple-dispatch  ;;Make the dispatch to your print function
+    (clojure.pprint/pprint x))))
+

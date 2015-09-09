@@ -109,9 +109,8 @@
                     map?
                       (fn->> (map+
                                (fn [[sub-prop-k sub-prop-v]]
-                                 (map-entry
-                                   (str/keyword+ prop-k "-" sub-prop-k)
-                                   (css-prop-str sub-prop-v))))
+                                 [(str/keyword+ prop-k "-" sub-prop-k)
+                                  (css-prop-str sub-prop-v)]))
                              redm)
                     vector?
                       (fn->> css-prop-str

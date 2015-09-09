@@ -31,7 +31,7 @@
       (let [request-map  (servlet/build-request-map request)
             response-map (handler request-map)]
         (when response-map
-          (servlet/update-servlet-response response response-map)
+          (servlet/update-servlet-response request response response-map)
           (.setHandled base-request true))))))
 
 (defn- ssl-context-factory

@@ -4,47 +4,12 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
-  (:require-quantum [ns str logic bin macros type ccore arr])
+  (:require-quantum [ns str logic bin macros type ccore arr log])
   #?@(:clj
     [(:require [clojure.java.io :as io])
      (:import  java.util.Arrays)]))
 
 #?(:clj (set! *unchecked-math* true))
-
-#?(:clj ; because apparently reversed byte-array...
-  (defn reverse 
-    {:attribution "mikera.cljutils.bytes"}
-    (^"[B" [^"[B" bs]
-      (let [n (alength bs)
-            res (byte-array n)]
-        (dotimes [i n]
-          (aset res i (aget bs (- n (inc i)))))
-        res))))
-
-#?(:clj
-  (defn join 
-    "Concatenates two byte arrays"
-    {:attribution "mikera.cljutils.bytes"}
-    (^"[B" [^"[B" a ^"[B" b]
-      (let [al (int (alength a))
-            bl (int (alength b))
-            n (int (+ al bl))
-            ^"[B" res (byte-array n)]
-        (System/arraycopy a (int 0) res (int 0) al)
-        (System/arraycopy b (int 0) res (int al) bl)
-        res))))
-
-#?(:clj
-  (defn slice
-    "Slices a byte array with a given start and length"
-    {:attribution "mikera.cljutils.bytes"}
-    (^"[B" [a start]
-      (slice a start (- (alength ^"[B" a) start)))
-    (^"[B" [a start length]
-      (let [al (int (alength ^"[B" a))
-            ^"[B" res (byte-array length)]
-        (System/arraycopy a (int start) res (int 0) length)
-        res))))
 
 ; (defn to-hex-string 
 ;   "Converts a byte array to a string representation , with space as a default separator."
@@ -67,13 +32,6 @@
         (if (sequential? init-val-or-seq) 
           (map unchecked-byte init-val-or-seq )
           init-val-or-seq)))))
-
-#?(:clj
-  (defn bytes=
-    "Compares two byte arrays for equality."
-    {:attribution "mikera.cljutils.bytes"}
-    ([^"[B" a ^"[B" b]
-      (Arrays/equals a b))))
 
 #?(:clj
   (defn ^String bytes-to-hex
@@ -106,12 +64,3 @@
             (count bytes))
           (aset! result (-> result count dec) (byte 0))
           result))))
-
-#?(:clj
-  (defnt ->bytes
-    byte-array? ([bytes] bytes)
-    string?     ([s]     (.getBytes s))
-    :default    ([in]
-                  (with-open [out (java.io.ByteArrayOutputStream.)]
-                    (-> in io/input-stream (io/copy out))
-                    (.toByteArray out)))))

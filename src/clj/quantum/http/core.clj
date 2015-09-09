@@ -5,7 +5,6 @@
   quantum.http.core
   (:require-quantum [:lib])
   (:require
-    [quantum.core.data.json :as json]
     [org.httpkit.client     :as http])
   (:import
     org.apache.http.entity.mime.MultipartEntityBuilder
@@ -35,11 +34,11 @@
   (let [to-conj
           (if (or (and (= tries 0) (= log-type :request)) ; initial request
                   (= status "OK"))                        ; or final response 
-              [[log-type] (time-loc/local-now)]
+              [[log-type] (time/now) #_(time-loc/local-now)]
               (concat (when (= tries 0)
                         [[:tries tries :request]
                         (:request @log)])
-                [[:tries tries log-type] (time-loc/local-now)
+                [[:tries tries log-type] (time/now) #_(time-loc/local-now)
                  [:tries tries :status]  status]))]
     (reset! log (apply assocs-in+ @log to-conj))))
 ;___________________________________________________________________________________________________________________________________
@@ -146,6 +145,7 @@
         {:method :post
          :url         "https://www.googleapis.com/upload/drive/v2/files"
          :oauth-token (access-key :drive :offline)
+         :parse?   true
          :handlers {:default (fn [req resp] (throw+ (str/sp "Error:" (:status response))))
                     404      (fn [req resp] (throw+ "404 exception"))
                     401      (fn [req resp]
@@ -163,7 +163,7 @@
                  [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])}]})
     :attribution "Alex Gunnarson"}
   [{:as req
-    :keys [handlers log? log tries max-tries]
+    :keys [handlers log? log tries max-tries parse?]
     :or {as :auto
          max-tries 3
          tries     0}}]
@@ -174,21 +174,24 @@
       (let [request-write!  (when log? (log-entry-write! (or log ) :request tries))
             response        (request!* (dissoc req :status :log))
             status          (:status response)]
-        (if (or (= status 200) (= status 201))
-            response
-            (let [status-handler
-                   (or (get handlers status)
-                       (get handlers :default)
-                       (constantly
-                         (do (log/pr :warn "unhandled HTTP status:" status) response)))
-                  req-n+1
-                    (assoc req
-                      :tries (inc tries)
-                      :max-tries max-tries) ]
-              (status-handler req-n+1 response))))))
+        (-> (if (or (= status 200) (= status 201))
+              response
+              (let [status-handler
+                     (or (get handlers status)
+                         (get handlers :default)
+                         (constantly
+                           (do (log/pr :warn "unhandled HTTP status:" status) response)))
+                    req-n+1
+                      (assoc req
+                        :tries (inc tries)
+                        :max-tries max-tries) ]
+                (status-handler req-n+1 response)))
+            (whenf (fn-and (constantly parse?)
+                           (fn-> :headers :content-type (containsv? "application/json")))
+              (fn-> :body (json/parse-string str/keywordize)))))))
 
 (defnt ping!
-  string? ([url] (with-open [socket (java.net.Socket. url 80)] socket)))
+  ([^string? url] (with-open [socket (java.net.Socket. url 80)] socket)))
 
 (defn network-connected? []
   (try (ping! "www.google.com")
@@ -203,3 +206,21 @@
  ; Redirection (3xx)  
  ; Server errors (5xx)
  ; Client errors (4xx)
+
+(defn download
+  {:todo ["Show progress" "Get size of download beforehand"]}
+  [{:keys [file-str out req]}]
+  (let [^org.httpkit.BytesInputStream is
+          (->> (request! req)
+               :body)
+        _ (assert (instance? org.httpkit.BytesInputStream is))
+        ^OutputStream os
+          (or out (FileOutputStream. ^File (io/file file-str)))
+        buffer (byte-array 1024000)] ; ~1 MB buffer
+    (let-mutable [len (int 0)]
+      (set! len (.read is buffer)) 
+      (while (not= len (unchecked-int -1))
+        (.write os buffer 0 len)
+        (set! len (.read is buffer))))
+    (.close os)
+    (.close is)))

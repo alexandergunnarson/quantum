@@ -3,7 +3,51 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:require-quantum [ns]))
+  (:require-quantum [ns coll]))
+
+(def ^java.util.Random random-generator (java.util.Random.))
+
+(defn rand-int-between [a b]
+  (+ a (.nextInt random-generator (inc (- b a)))))
+
+(defn rand-char-between [a b]
+  (char (rand-int-between a b)))
+
+(defn ^String rand-chars-between [n a b]
+  (let [sb (StringBuilder.)]
+    (dotimes [m n]
+      (.append sb (rand-char-between a b)))
+    (str sb)))
+
+(defn ^String rand-numeric
+  ([]  (rand-char-between    48 57 ))
+  ([n] (rand-chars-between n 48 57 )))
+(defn ^String rand-upper  
+  ([]  (rand-char-between    65 90 ))
+  ([n] (rand-chars-between n 65 90 )))
+(defn ^String rand-lower  
+  ([]  (rand-char-between    97 122))
+  ([n] (rand-chars-between n 97 122)))
+
+(def generators
+  {:numeric rand-numeric
+   :upper   rand-upper
+   :lower   rand-lower})
+
+(defn ^String rand-string
+  ([n]
+    (rand-chars-between n
+      (core/int Character/MIN_VALUE)
+      (core/int Character/MAX_VALUE)))
+  ([n opts]
+    (let [opts-indexed (zipmap (coll/lrange) opts)
+          sb (StringBuilder.)]
+      (dotimes [i n]
+        (let [generator-k (get opts-indexed (rand-int-between 0 (-> opts count dec)))
+              generator (get generators generator-k)]
+          (.append sb (generator))))
+      (str sb))))
+
 
 #?(:clj
 (defmacro percent-chance

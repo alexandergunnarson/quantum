@@ -1,0 +1,155 @@
+(ns
+  ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
+          Also some plumbing macros for |for| loops and the like."
+    :attribution "Alex Gunnarson"}
+  quantum.core.classes
+  (:refer-clojure :exclude [name])
+  (:require-quantum [ns log pr err map set vec logic fn ftree cbase])
+  (:require
+    [quantum.core.collections.base :as cbase :refer
+      [name default-zipper camelcase ns-qualify zip-reduce comparators ensure-set]]
+    [quantum.core.classes.reg :as class-reg]
+  #_[backtick :refer [syntax-quote]]
+    [clojure.string             :as str  ]
+    [clojure.math.combinatorics :as combo]
+    [clojure.walk :refer [postwalk prewalk]]))
+
+; PACKAGE RESOLUTION
+; clojure (class @clojure.lang.Compiler/LOADER)
+; java (ClassLoader/getSystemClassLoader)
+
+; (ClassLoader/getSystemClassLoader)
+(defalias clojure-classes-unevaled class-reg/clojure-classes-unevaled)
+(defalias java-classes-unevaled class-reg/java-classes-unevaled)
+
+(defn class->symbol [^Class c] (-> c .getName symbol))
+
+(defn supers-symbols [class-sym]
+  (->> class-sym eval supers (map class->symbol) (into #{})))
+
+(defn classes->children [classes]
+  (->> (reduce (fn [ret [child supers-n]]
+         (reduce
+            (fn [ret-n s]
+              (update ret-n s (fn-> ensure-set (conj child))))
+            ret supers-n))
+         {}
+         (->> classes
+              (map (juxt identity
+                         supers-symbols))
+              (into {})))
+       (map (fn [[k v]] [k (disj v nil)]))
+       (into (map/sorted-map))))
+
+#?(:clj
+(defn package-resolve [class-name]
+  (reduce 
+    (fn [ret ^Package p]
+      (let [pack    (.getName p)
+          tentative (str pack "." class-name)]
+        (try (reduced (conj ret (Class/forName tentative)))
+          (catch ClassNotFoundException e ret))))
+    #{}
+    (Package/getPackages))))
+
+(def class-children-unevaled
+  (classes->children (set/union java-classes-unevaled clojure-classes-unevaled)))
+
+(defn common-limiting-superclass
+  "Akin to greatest common factor (GCF) for classes.
+   Used in reducing code size for |defnt|."
+  {:todo "Implement highest limiting superclass."}
+  [classes]
+  (let [common-direct-superclasses
+         (->> classes (map supers-symbols)
+              (apply set/intersection))]
+    (reduce
+      (fn [ret superclass]
+        (let [unaccounted-for-classes
+               (set/difference (get class-children-unevaled superclass) classes)]
+          (when (empty? unaccounted-for-classes)
+            (reduced superclass))))
+      nil
+      common-direct-superclasses)))
+
+(defn all-implementing-classes* [subs visited leaves]
+  (if (empty? subs)
+      [visited leaves]
+      (let [sub (first subs)]
+        (let [children (get class-children-unevaled sub)
+              [visited-n+1 leaves-n+1]
+                 (cond
+                   (contains? visited sub)
+                     [nil nil]
+                   (empty? children)
+                     [#{sub} #{sub}]
+                   :else (all-implementing-classes* children visited leaves))]
+           (recur (rest subs)
+                  (set/union visited (conj visited-n+1 sub))
+                  (set/union leaves  leaves-n+1))))))
+
+(def- all-implementing-leaf-classes-entry
+  ; Each time it's called, it remembers what the result was
+  (memoize
+    (fn [class-sym]
+      (all-implementing-classes*
+        (get class-children-unevaled class-sym)
+        #{} #{}))))
+
+(defn all-implementing-leaf-classes
+  "Subclass leaf nodes for class sym."
+  [class-sym]
+  (-> class-sym all-implementing-leaf-classes-entry second))
+
+(defn all-implementing-descendant-classes
+  "Subclass descendant nodes for class sym."
+  [class-sym]
+  (-> class-sym all-implementing-leaf-classes-entry first))
+
+(defn ancestor-list
+  "Lists the direct ancestors of a class
+  (ancestor-list clojure.lang.PersistentHashMap)
+  => [clojure.lang.PersistentHashMap
+      clojure.lang.APersistentMap
+      clojure.lang.AFn
+      java.lang.Object]"
+  {:source "zcaudate/hara.class.inheritance"}
+  ([cls] (ancestor-list cls []))
+  ([^java.lang.Class cls output]
+     (if (nil? cls)
+       output
+       (recur (.getSuperclass cls) (conj output cls)))))
+
+(defn ancestor-tree
+  "Lists the hierarchy of bases and interfaces of a class.
+  (ancestor-tree Class)
+  => [[java.lang.Object #{java.io.Serializable
+                          java.lang.reflect.Type
+                          java.lang.reflect.AnnotatedElement
+                          java.lang.reflect.GenericDeclaration}]]
+  "
+  {:source "zcaudate/hara.class.inheritance"}
+  ([cls] (ancestor-tree cls []))
+  ([^Class cls output]
+     (let [base (.getSuperclass cls)]
+       (if-not base output
+               (recur base
+                      (conj output [base (-> (.getInterfaces cls) seq set)]))))))
+
+
+(defn best-match
+  "finds the best matching interface or class from a list of candidates
+  (best-match #{Object} Long) => Object
+  (best-match #{String} Long) => nil
+  (best-match #{Object Number} Long) => Number"
+  {:source "zcaudate/hara.class.inheritance"}
+  [candidates ^Class cls]
+  (or (get candidates cls)
+      (->> (apply concat (ancestor-tree cls))
+           (map (fn [v]
+                  (if (set? v)
+                    (first (set/intersection v candidates))
+                    (get candidates v))))
+           (filter identity)
+           first)))
+

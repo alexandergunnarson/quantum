@@ -14,7 +14,7 @@
   quantum.core.reducers
   #?(:clj  (:refer-clojure :exclude [reduce])
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require-quantum [ns fn logic macros num type map set vec log])
+  (:require-quantum [ns fn logic macros num type map set vec log cbase])
   (:require         [clojure.walk :as walk]))
 
 ;___________________________________________________________________________________________________________________________________
@@ -191,7 +191,7 @@
 ;=================================================={        FORK/JOIN         }=====================================================
 ;=================================================={                          }=====================================================
 #?(:clj
-  (compile-if
+  (macros/compile-if
    (Class/forName "java.util.concurrent.ForkJoinTask")
    ; Running a JDK >= 7
    (do
@@ -251,46 +251,49 @@
           (recur (rest coll-n)
                  (f ret (first coll-n)))))))
 
-; TODO add fast-zip with loop-recur and zip-right
 (defnt reduce+
   "Like |core/reduce| except:
       When init is not provided, (f) is used.
       Maps are reduced with |reduce-kv|."
   {:attribution "Alex Gunnarson"}
-  array?  ([arr f init]
-            #?(:clj  (loop [i (long 0) ret init]
-                       (if (< i (-> arr count long))
-                           (recur (unchecked-inc i) (f ret (get arr i)))
-                           ret))
-               :cljs (array-reduce arr f init)))
-  string? ([s f init]
-            #?(:clj (clojure.core.protocols/coll-reduce s f init)
-               :cljs
-              (let [last-index (-> s count unchecked-dec long)]
-                (cond
-                  (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number -MAX_VALUE)))
-                    (throw (Exception. "String too large to reduce over (at least, efficiently)."))
-                  (= last-index -1)
-                    (f init nil)
-                  :else
-                    (loop [n   (long 0)
-                           ret init]
-                      (if (> n last-index)
-                          ret
-                          (recur (unchecked-inc n)
-                                 (f ret (.charAt s n)))))))))
-#?@(:clj
- [record?  ([coll f init] (clojure.core.protocols/coll-reduce coll f init))])
-  map?     ([coll f init] (#?(:clj  clojure.core.protocols/kv-reduce
-                              :cljs -kv-reduce)
-                           coll f init))
-  set?     ([coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
-                              :cljs -reduce-seq)
-                           coll f init))
-  nil?     ([obj  f init] init)
-  :default ([coll f init]
-             #?(:clj  (clojure.core.protocols/coll-reduce coll f init)
-                :cljs (-reduce coll f init))))
+  ([^fast_zip.core.ZipperLocation z f init]
+    (cbase/zip-reduce f init z))
+  ([^array? arr f init]
+    #?(:clj  (loop [i (long 0) ret init]
+               (if (< i (-> arr count long))
+                   (recur (unchecked-inc i) (f ret (get arr i)))
+                   ret))
+       :cljs (array-reduce arr f init)))
+  ([^string? s f init]
+    #?(:clj (clojure.core.protocols/coll-reduce s f init)
+       :cljs
+      (let [last-index (-> s count unchecked-dec long)]
+        (cond
+          (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number -MAX_VALUE)))
+            (throw (Exception. "String too large to reduce over (at least, efficiently)."))
+          (= last-index -1)
+            (f init nil)
+          :else
+            (loop [n   (long 0)
+                   ret init]
+              (if (> n last-index)
+                  ret
+                  (recur (unchecked-inc n)
+                         (f ret (.charAt s n)))))))))
+#?(:clj
+  ([^record? coll f init] (clojure.core.protocols/coll-reduce coll f init)))
+  ([^map? coll f init]
+    (#?(:clj  clojure.core.protocols/kv-reduce
+        :cljs -kv-reduce)
+     coll f init))
+  ([^set? coll f init]
+    (#?(:clj  clojure.core.protocols/coll-reduce
+        :cljs -reduce-seq)
+     coll f init))
+  ([:else coll f init]
+    (when (nnil? coll)
+      #?(:clj  (clojure.core.protocols/coll-reduce coll f init)
+         :cljs (-reduce coll f init)))))
 
 ; (defn- -reduce-kv
 ;   [coll f init]
@@ -366,7 +369,7 @@
    :performance "On non-counted collections, |count| is 71.542581 ms, whereas
                  |count*| is 36.824665 ms - twice as fast!!"}
   [coll]
-  (reduce (comp inc firsta) 0 coll))
+  (reduce (compr firsta (MWA inc)) 0 coll))
 
 (defn reducer+
   "Given a reducible collection, and a transformation function xf,
@@ -594,12 +597,12 @@
 (defn foldm* [map-fn obj]
   (fold+
     (fn ([]        (map-fn))
-        ([ret m]   (merge+ ret m))
+        ([ret m]   (map/merge ret m))
         ([ret k v] (assoc ret k v))) ; assoc+, but it's foldp...
     obj))
 (defn foldm+   [obj] (foldm* hash-map  obj))
 (defn fold-am+ [obj] (foldm* array-map obj))
-(defn fold-sm+ [obj] (foldm* sorted-map+ obj))
+(defn fold-sm+ [obj] (foldm* map/sorted-map obj))
 (defn foldm-s+
   "Single-threaded to get around a weird 'ClassCastException' which
    occurs presumably because of thread overload."
@@ -629,7 +632,7 @@
            ([ret elem]
              (conj ret elem))
            ([ret k v]
-             (conj ret (map-entry k v))))
+             (conj ret [k v])))
          #{})))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    transduce.reducers    }=====================================================
@@ -944,7 +947,7 @@
   (exclusive), by step, where start defaults to 0, step to 1, and end
   to infinity."
   {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  ([              ] (iterate+ inc 0))
+  ([              ] (iterate+ (MWA inc) 0))
   ([      end     ] (quantum.core.reducers/Range. 0     end 1))
   ([start end     ] (quantum.core.reducers/Range. start end 1))
   ([start end step] (quantum.core.reducers/Range. start end step)))
@@ -962,7 +965,7 @@
       (let [cnt (atom n)]
         (rfn [f1 k]
           ([ret k v]
-             (swap! cnt dec)
+             (swap! cnt (MWA dec))
              (if (neg? @cnt)
                (reduced ret)
                (f1 ret k v))))))))
@@ -1021,7 +1024,7 @@
       (let [cnt (atom n)]
         (rfn [f1 k]
           ([ret k v]
-             (swap! cnt dec)
+             (swap! cnt (MWA dec))
              (if (neg? @cnt)
                (f1 ret k v)
                ret)))))))
@@ -1151,7 +1154,7 @@
             (if (< (count ret) coll-ct)
                 (do (f1 ret k [v nil]))
                 (do  ; This part is problematic
-                    (swap! ind-n inc)
+                    (swap! ind-n (MWA inc))
                     (f1 (assoc! ret (dec @ind-n) [(-> ret (get (dec @ind-n)) (get 0)) v]) k nil)))))))))
 (defn zipvec+
   ([vec-0]
@@ -1180,7 +1183,7 @@
                        (if (< 2 (count bind)) 
                          [(subvec bind 2) nil]
                          [])]
-                      `[[k# v#] [~bind (map-entry k# v#)]])
+                      `[[k# v#] [~bind [k# v#]]])
                     combiner (if kv-able
                                (if foldable `folder+ `reducer+)
                                (if foldable `folder+ `reducer+)) ; (if foldable `r/folder `r/reducer)

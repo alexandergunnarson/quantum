@@ -4,18 +4,39 @@
   (set! *unchecked-math*     false)))
 
 (ns
-  ^{:doc "Useful map functions. |map-entry|, a better merge (|merge+|), sorted-maps, etc."
+  ^{:doc "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.map
-  (:refer-clojure :exclude [split-at])
+  (:refer-clojure :exclude [split-at merge sorted-map sorted-map-by])
   (:require-quantum [ns])
   (:require
     [clojure.data.avl     :as avl]
-    #?(:clj [flatland.ordered.map :as omap])))
+    #?@(:clj [[flatland.ordered.map :as omap]
+              [seqspert.hash-map]])))
+
+(defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
+(defalias om          #?(:clj omap/ordered-map :cljs array-map))
+
+(def sorted-map    avl/sorted-map)
+(def sorted-map-by avl/sorted-map-by)
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
-   in a |kv-reduce| function."
+   in a |kv-reduce| function.
+
+   Now overshadowed by ztellman's unrolled vectors in 1.8.0.
+
+   Time to create 100000000 2-tuples:
+   new tuple-vector 55.816415 ms
+   map-entry        37.542442 ms
+
+   However, insertion into maps is faster with map-entry:
+
+   (def vs [[1 2] [3 4]])
+   (def ms [(map-entry 1 2) (map-entry 3 4)])
+   (def m0 {})
+   508.122831 ms (dotimes [n 1000000] (into m0 vs))
+   310.335998 ms (dotimes [n 1000000] (into m0 ms))"
   {:attribution "Alex Gunnarson"}
   [k v]
   #?(:clj  (clojure.lang.MapEntry. k v)
@@ -29,59 +50,41 @@
         (recur (-> args-n rest rest)
                (conj accum (map-entry k v))))))
 
-(defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
-(defalias om          #?(:clj omap/ordered-map :cljs array-map))
+#?(:clj (def hash-map? (partial instance? clojure.lang.PersistentHashMap)))
 
-(defn merge+
-  "A performant drop-in replacement for |clojure.core/merge|."
+(defn merge
+ "A performant drop-in replacement for |clojure.core/merge|.
+
+  398.815137 msecs (core/merge m1 m2)
+  188.270844 msecs (seqspert.hash-map/sequential-splice-hash-maps m1 m2)
+  25.401196  msecs (seqspert.hash-map/parallel-splice-hash-maps   m1 m2)))"
   {:attribution "Alex Gunnarson"
-   :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge| ; 1.5 times faster!"}
-  [map-0 & maps]
-  (if #?(:clj  (instance?  AEditable map-0)
-         :cljs (satisfies? AEditable map-0))
-      (->> maps
-           (reduce conj! (transient map-0))
-           persistent!)
-      (apply merge map-0 maps)))
+   :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge|
+                 on the CLJS version; 1.5 times faster!"}
+  ([] nil)
+  ([m0] m0)
+  ([m0 m1]
+    ; To avoid NullPointerException
+    #?(:clj  (cond (nil? m0) m1
+                   (nil? m1) m0
+                   (and (hash-map? m0) (hash-map? m1))
+                      (seqspert.hash-map/sequential-splice-hash-maps m0 m1)
+                     :else (core/merge m0 m1))
+       :cljs (core/merge m0 m1)))
+  ([m0 m1 & ms]
+  #?(:clj  (reduce merge (merge m0 m1) ms)
+     :cljs (if (satisfies? AEditable m0)
+               (->> maps
+                    (reduce conj! (transient m0))
+                    persistent!)
+               (apply core/merge m0 ms)))))
 
-(defn merge-deep-with
-  "Like `merge-with` but merges maps recursively, applying the given fn
-  only when there's a non-map at a particular level.
+#(:clj
+(defn pmerge
+  ([m0 m1] (seqspert.hash-map/parallel-splice-hash-maps m0 m1))
+  ([m0 m1 & ms]
+    (reduce seqspert.hash-map/parallel-splice-hash-maps
+      (pmerge m0 m1) ms))))
 
-  (merge-deep-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
-                    {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
-  => {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
-  {:attribution "clojure.contrib.map-utils via taoensso.encore"
-   :todo ["Replace |merge-with| with a more performant version which uses |merge+|."]}
-  [f & maps]
-  (apply
-    (fn m [& maps]
-      (if (every? map? maps)
-          (apply merge-with m maps)
-          (apply f maps)))
-    maps))
-
-(def merge-deep (partial merge-deep-with second))
-(comment (merge-deep {:a {:b {:c {:d :D :e :E}}}}
-                     {:a {:b {:g :G :c {:c {:f :F}}}}}))
-
-(def sorted-map+    avl/sorted-map)
-(def sorted-map-by+ avl/sorted-map-by)
-; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
-(def split-at       avl/split-at)
-
-;; find rank of element as primitive long, -1 if not found
-; (doc avl/rank-of)
-; ;; find element closest to the given key and </<=/>=/> according
-; ;; to coll's comparator
-; (doc avl/nearest)
-; ;; split the given collection at the given key returning
-; ;; [left entry? right]
-; (doc avl/split-key)
-; ;; split the given collection at the given index; similar to
-; ;; clojure.core/split-at, but operates on and returns data.avl
-; ;; collections
-; (doc avl/split-at)
-;; return subset/submap of the given collection; accepts arguments
-;; reminiscent of clojure.core/{subseq,rsubseq}
-; (doc avl/subrange)
+; Required for |reducers|
+(defalias split-at clojure.data.avl/split-at)

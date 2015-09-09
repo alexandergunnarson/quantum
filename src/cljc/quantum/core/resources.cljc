@@ -14,28 +14,31 @@
                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
 (defnt open?
-  #?@(:clj
- [[InputStream] ([stream]
-                  (try (.available stream) true
-                    (catch IOException _ false)))
-  [LinkedBlockingQueue] ([obj] (qasync/closed? obj))])
-  [ManyToManyChannel] ([obj] (throw+ "Not yet implemented.")))
+#?(:clj
+  ([^java.io.InputStream stream]
+    (try (.available stream) true
+      (catch IOException _ false)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (qasync/closed? obj)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw+ :not-implemented)))
 
 (def closed? (fn-not open?))
 
 (defnt close!
   #?@(:clj
- [[Writer Reader]       ([obj] (.close obj))
-  [LinkedBlockingQueue] ([obj] (qasync/close! obj))])
-  [ManyToManyChannel]   ([obj] (async/close! obj))
-  nil?                  ([obj] nil)
-  :default              ([obj] (throw+ "Not yet implemented.")))
+ [([#{Writer Reader}     obj] (.close obj))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (qasync/close! obj))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (async/close! obj))
+  ([                     obj]
+    (when (nnil? obj) (throw+ :not-implemented))))
+
+(defnt closeable?
+  ([^java.io.Closeable x] true)
+  ([x] false))
 
 (defnt cleanup!
   #?@(:clj
- [[WebDriver]         ([obj] (.quit obj))
-  [java.io.Closeable] ([obj] (.close obj))])
-  )
+ [([^org.openqa.selenium.WebDriver obj] (.quit  obj))
+  ([^java.io.Closeable             obj] (.close obj))]))
 
 (defn with-cleanup [obj cleanup-seq]
   (conj! cleanup-seq #(close! obj))
@@ -50,7 +53,10 @@
          (doseq [resource# ~(->> bindings (apply array-map) keys vec)]
            (cleanup! resource#))))))
 
-(defonce system-map (atom {}))
+; ======= SYSTEM ========
+
+
+(defonce system-factory (atom {}))
 
 (defn make-system []
   (apply component/system-map
@@ -58,7 +64,7 @@
       (fn [ret k f]
         (conj ret k (f)))
       []
-      @system-map)))
+      @system-factory)))
 
 (defonce system nil)
 
@@ -106,7 +112,7 @@
 (defn force-refresh! []
   (->> (all-ns)
        (map ns-name)
-       (filter (fn-> name (contains? "quantum")))
+       (filter (fn-> name (containsv? "quantum")))
        (map remove-ns)))
 
 #?(:clj
@@ -118,5 +124,5 @@
                     (stop  [component#] (~stop-fn  component#))))
          ~(quote+ (defn ~sym []
                     (map->NsComponent {})))
-         (swap! quantum.core.resources/system-map assoc
+         (swap! quantum.core.resources/system-factory assoc
            (-> ~*ns* ns-name name keyword) ~sym)))))

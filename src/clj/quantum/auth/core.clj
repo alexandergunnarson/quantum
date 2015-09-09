@@ -16,7 +16,8 @@
    :fb       "Facebook"
    :snapchat "Snapchat"
    :amazon   "Amazon"
-   :intuit   "Intuit"})
+   :intuit   "Intuit"
+   :twitter  "Twitter"})
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
@@ -26,7 +27,7 @@
            (str (get auth-source-table auth-source) ".cljx")]))
 
 (defn datum
-  {:usage '(datum [:google :password])
+  {:usage '(datum :google :password)
    :out   "__my-password__"}
   [auth-source & ks]
   (get-in (auth-keys auth-source) ks))
@@ -50,7 +51,7 @@
 
 (defn access-token
   "Retrieves the current access token for @auth-source."
-  [^Key auth-source]
-  (-> (auth-keys auth-source) :access-token-current :access-token))
+  [^Key auth-source service]
+  (-> (auth-keys auth-source) (get service) :access-tokens :current :access-token))
 
 

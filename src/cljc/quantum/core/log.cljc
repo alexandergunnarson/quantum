@@ -7,7 +7,7 @@
   quantum.core.log
   (:refer-clojure :exclude [pr])
   (:require-quantum [ns async fn pr])
-  (:require
+  #_(:require
     #?(:clj  [clj-time.core  :as time]
        :cljs [cljs-time.core :as time])))
 
@@ -101,7 +101,7 @@
         (print out-str)
         (swap! quantum.core.log/log conj
           (LogEntry.
-            (time/now)
+            "TIMESTAMP" #_(time/now)
             pr-type
             curr-fn
             out-str))
@@ -122,6 +122,10 @@
 #?(:clj
 (defmacro ppr [pr-type & args]
   `(pr* true true  !       ~pr-type (delay (list ~@args)) nil)))
+
+#?(:clj
+(defmacro ppr-hints [pr-type & args]
+  `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defn status

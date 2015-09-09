@@ -23,14 +23,17 @@
      drop  drop-while
      subseq
      key val
-     merge into
+     merge sorted-map sorted-map-by
+     into
      count
      vec empty
+     split-at
      first second rest last butlast get pop peek
      conj! assoc! dissoc! disj!])
-  (:require-quantum [ns logic type macros num map vec set ftree
-                     log err macros fn str async time])
+  (:require-quantum [ns logic type macros num vec set ftree
+                     log err macros fn str async])
   (:require
+            [quantum.core.data.map         :as map]
             [quantum.core.collections.core :as coll]
             [quantum.core.reducers         :as red]
             [clojure.walk                  :as walk]
@@ -44,9 +47,8 @@
 #_(:clj
     (defnt key
       "Like |key| but more robust."
-      map-entry?
-        (([obj] (core/key obj)) 
-         ([k v] k))) ; For use with kv-reduce
+        ([^map-entry? obj] (core/key obj)) 
+        ([k v] k)) ; For use with kv-reduce
    :cljs (defalias key core/key)) 
 
 (defn key
@@ -56,9 +58,8 @@
 #_(:clj
     (defnt val
       "Like |val| but more robust."
-      map-entry?
-        (([obj] (core/val obj)) 
-         ([k v] v))) ; For use with kv-reduce
+      ([^map-entry? obj] (core/val obj)) 
+      ([k v] v)) ; For use with kv-reduce
    :cljs (defalias val core/val)) 
 
 (defn val
@@ -70,8 +71,8 @@
   ([arg] (keyword (gensym arg))))
 
 (defnt empty
-  string?  ([obj] "")
-  :default ([obj] (core/empty obj)))
+  ([^string? obj] "")
+  ([         obj] (core/empty obj)))
 
 (defn wrap-delay [f]
   (if (delay? f) f (delay ((or f fn-nil)))))
@@ -80,8 +81,13 @@
 #?(:clj (defalias reduce-  loops/reduce- ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
+#?(:clj (defalias seq-loop loops/seq-loop))
+
+(defalias break reduced)
+
 (defalias vec         red/vec+       )    
-(defalias into        red/into+      )    
+(defalias into        red/into+      ) 
+
 (defalias redv        red/fold+      )
 (defalias redm        red/reducem+   )
 (defalias fold        red/fold+      ) ; only certain arities
@@ -140,43 +146,58 @@
 ; #?(:cljs (defn remove+ [f coll] (red/remove+ (compr kv+ f) coll)))
 
 
-(def      lasti         coll/lasti        )
-(def      index-of      coll/index-of     )
-(def      last-index-of coll/last-index-of)
-(def      count         coll/count        )
-(def      getr          coll/getr         )
-(def      subseq        getr              )
-(def      lsubseq       core/subseq       )
-(def      get           coll/get          )
-(def      gets          coll/gets         )
-(def      getf          coll/getf         )
+(defalias lasti         coll/lasti        )
+(defalias index-of      coll/index-of     )
+(defalias last-index-of coll/last-index-of)
+(defalias count         coll/count        )
+(defalias getr          coll/getr         )
+(defalias subseq        getr              )
+(defalias lsubseq       core/subseq       )
+(defalias get           coll/get          )
+(defalias gets          coll/gets         )
+(defalias getf          coll/getf         )
 
 ; If not |defalias|ed, "ArityException Wrong number of args (2) passed to: core/eval36441/fn--36457/G--36432--36466"
 (defalias conjl         coll/conjl        )
 (defalias conjr         coll/conjr        )
-(def      pop           coll/pop          )
-(def      popr          coll/popr         )
-(def      popl          coll/popl         )
-(def      peek          coll/peek         )
-(def      first         coll/first        )
-(def      second        coll/second       )
-(def      third         coll/third        )
-(def      rest          coll/rest         )
+(defalias pop           coll/pop          )
+(defalias popr          coll/popr         )
+(defalias popl          coll/popl         )
+(defalias peek          coll/peek         )
+(defalias first         coll/first        )
+(defalias second        coll/second       )
+(defalias third         coll/third        )
+(defalias rest          coll/rest         )
 (defalias lrest         core/rest         )
-(def      butlast       coll/butlast      )
-(def      last          coll/last         )
-(def      assoc!        coll/assoc!       )
-(def      dissoc!       coll/dissoc!      )
-(def      conj!         coll/conj!        )
-(def      disj!         coll/disj!        )
-(def      update!       coll/update!      )
+(defalias butlast       coll/butlast      )
+(defalias last          coll/last         )
+(defalias assoc!        coll/assoc!       )
+(defalias dissoc!       coll/dissoc!      )
+(defalias conj!         coll/conj!        )
+(defalias disj!         coll/disj!        )
+(defalias update!       coll/update!      )
+(defalias contains?     coll/contains?    )
+(defalias containsk?    coll/containsk?    )
+(defalias containsv?    coll/containsv?    )
 
-(defalias merge map/merge+)
+(defmacro map-entry [a b] `[~a ~b])
+
+(defalias merge map/merge)
+(defalias sorted-map map/sorted-map)
+(defalias sorted-map-by map/sorted-map-by)
+
+(def ^{:doc "split the given collection at the given index; similar to
+             clojure.core/split-at, but operates on and returns data.avl
+             collections"}
+  split-at clojure.data.avl/split-at)
 
 (defn merge-meta [sym-0 sym-f]
   (with-meta sym-0 (meta sym-f)))
 
 (def frest (fn-> rest first))
+
+(defnt into! [^transient? x coll]
+  (doseq [elem coll] (conj! x elem)) x)
 
 ; ===== REPEATEDLY =====
 
@@ -217,10 +238,10 @@
   "Lazy reverse range."
   {:usage '(lrrange 0 5)
    :out   '(5 4 3 2 1)}
-  ([]    (iterate dec 0))
-  ([a]   (iterate dec a))
+  ([]    (iterate core/dec 0))
+  ([a]   (iterate core/dec a))
   ([a b]
-    (->> (iterate unchecked-dec b) (core/take (- b (dec a))))))
+    (->> (iterate core/dec b) (core/take (- b (core/dec a))))))
 
 (defn lrange
   ([]  (core/range))
@@ -349,23 +370,21 @@
         []
         coll)))
 
-(defnt ^MapEntry last-filteri*
+(defnt ^clojure.lang.MapEntry last-filteri*
   {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
    :in   '[["a" "d" "t" "4" "4" "10"] (fn-eq? "4")]
    :out  [4 "4"]}
-  indexed?
-    ([coll pred]
-      (->> coll rseq (ffilteri pred)
-           (<- update 0 (partial - (lasti coll)))))
-  :default
-    ([coll pred]
-      (loops/reducei
-        (fn [ret elem-n index-n]
-          (if (pred elem-n)
-              (map-entry index-n elem-n)
-              ret))
-        (map-entry nil nil)
-        coll)))
+  ([^indexed? coll pred]
+    (->> coll rseq (ffilteri pred)
+         (<- update 0 (partial - (lasti coll)))))
+  ([coll pred]
+    (loops/reducei
+      (fn [ret elem-n index-n]
+        (if (pred elem-n)
+            (map-entry index-n elem-n)
+            ret))
+      (map-entry nil nil)
+      coll)))
 
 #?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
    :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
@@ -400,6 +419,18 @@
         coll)))
 
 (declare drop)
+
+(defn lindices-of
+  "Lazy |indices-of|.
+
+   Originally |positions|."
+  {:source "zcaudate/hara.data.seq"}
+  [pred coll]
+  (keep-indexed
+    (fn [idx x]
+      (when (pred x)
+        idx))
+    coll))
 
 (defn indices-of
   {:todo ["Make parallizeable" "Maybe make lazy?"]}
@@ -470,7 +501,7 @@
 (def take-after takel-after)
 
 (defn takel-while
-  {:in '[(f*n in? str/alphanum-chars) "abcdef123&^$sd"]
+  {:in '[(f*n in-v? str/alphanum-chars) "abcdef123&^$sd"]
    :out "abcdef123"}
   [pred super]
   (subseq super 0 (index-of-pred super pred)))
@@ -483,21 +514,21 @@
 (def take-untili  take-untili)
 
 (defnt takel-until
-  fn?      ([pred super] (takel-while super (fn-not pred)))
-  :default ([sub  super]
+  ([^fn? pred super] (takel-while super (fn-not pred)))
+  ([     sub  super]
     (if-let [i (index-of super sub)]
       (takel-untili i super)
       super)))
 
-(def take-until takel-until)
+(defalias take-until takel-until)
 
 (defnt takel-until-inc
-  :default ([sub super]
+  ([sub super]
     (if-let [i (index-of super sub)]
       (takel-untili (+ i (count sub)) super)
       super)))
 
-(def take-until-inc takel-until-inc)
+(defalias take-until-inc takel-until-inc)
 
 ; ============ TAKE-RIGHT ============
 (defn taker 
@@ -538,12 +569,18 @@
             (taker-untili i super)
             alt))))
 
-(defnt taker-until
+(defnt taker-until*
   "Take until index of, starting at the right."
   {:in  ["c" "abcdefg"]
    :out "defg"}
-  fn? ([pred super] (taker-while (fn-not pred) super))
-  :default ([arg1 arg2 & args] (apply taker-until-workaround arg1 arg2 args)))
+  ([^fn? pred super] (taker-while (fn-not pred) super)))
+
+; This is how to handle variadic protocols 
+(defmacro taker-until
+  [& args]
+  (if (-> args count (= 2))
+      `(taker-until* ~@args)
+      `(taker-until-workaround ~@args)))
 
 (defn taker-after
   {:in ["." "abcdefg.asd"]
@@ -582,12 +619,11 @@
   {:todo "Combine code with /takeri/"
    :in  ["cd" "abcdefg"]
    :out "abcd"}
-  fn? ([pred super] (dropr-while super (fn-not pred)))
-  :default
-    ([sub super]
-      (if-let [i (last-index-of super sub)]
-        (subseq super 0 (+ i (lasti sub)))
-        super)))
+  ([^fn? pred super] (dropr-while super (fn-not pred)))
+  ([sub super]
+    (if-let [i (last-index-of super sub)]
+      (subseq super 0 (+ i (lasti sub)))
+      super)))
 
 (defn dropr-after
   "Until right index of."
@@ -702,7 +738,7 @@
   [s]
   (when (seq s)
     (cons (first s)
-          (lazy-seq (s rest unchunk)))))
+          (lazy-seq (s lrest unchunk)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  POSITION IN COLLECTION  }=====================================================
 ;=================================================={ first, rest, nth, get ...}=====================================================
@@ -794,8 +830,6 @@
 ;        (map+ (getf+ n) colls))
 ;      (range 0 (inc 2)))))
 
-(declare contains?)
-
 (defn merge-with+
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
@@ -807,7 +841,7 @@
     (let [merge-entry
            (fn [m e]
              (let [k (key e) v (val e)]
-               (if (contains? m k)
+               (if (containsk? m k)
                  (assoc m k (f k (get m k) v))
                  (assoc m k v))))
           merge2
@@ -832,11 +866,11 @@
   [^Map left ^Map right ^Fn f]
   (persistent!
     (loops/reduce
-      (fn [left-f ^Key k-right ^Map v-right]
+      (fn [left-f ^Keyword k-right ^Map v-right]
        ;(if ((fn-not contains?) left-f k-right) ; can't call |contains?| on a transient, apparently...
        ;    left-f)
        (let [^Map v-left
-               (get left k-right)]
+               (core/get left k-right)]
          (if (nil? v-left)
              left-f
              (let [^Map merged-vs
@@ -859,20 +893,18 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FINDING IN COLLECTION   }=====================================================
 ;=================================================={  in?, index-of, find ... }=====================================================
-(defnt contains?
-  string?  ([coll elem]
-             #?(:clj  (.contains coll ^String elem)
-                :cljs (index-of coll elem)))
-  pattern? ([coll elem]
-             (nnil? (str/re-find+ elem coll)))
-  map?     ([coll k] (clojure.core/contains? coll k))
-  :default ([coll elem]
-             (any? (fn-eq? elem) coll)))
-
 (defn in?
   "The inverse of |contains?|"
   {:todo ["|definline| this?"]}
   [elem coll] (contains? coll elem))
+
+(defn in-k?
+  {:todo ["|definline| this?"]}
+  [elem coll] (containsk? coll elem))
+
+(defn in-v?
+  {:todo ["|definline| this?"]}
+  [elem coll] (containsv? coll elem))
 
 ; ;-----------------------{       SELECT-KEYS       }-----------------------
 (defn- ^Map select-keys-large
@@ -926,7 +958,7 @@
   (let [ks-set (into #{} ks)]
     (->> m
          (filter+
-           (compr key (f*n in? ks-set))))))
+           (compr key (f*n in-k? ks-set))))))
 
 (defn ^Map select-keys+
   {:todo
@@ -1072,9 +1104,10 @@
             (trans-fn coll-0)
             (range (count coll-0) (inc k)))))
       coll-0))
-(defn assoc+
+(defn+ assoc+
   {:todo ["Protocolize on IEditableCollection"
-          "Probably has performance issues"]}
+          "Probably has performance issues"
+          "Stop the assoc things"]}
   ([coll-0 k v]
     (assoc (extend-coll-to coll-0 k) k v))
     ; once probably gives no performance benefit from transience
@@ -1082,7 +1115,7 @@
     (let [edit?    (editable? coll-0)
           trans-fn (if edit? transient   identity)
           pers-fn  (if edit? persistent! identity)
-          assoc-fn (if edit? assoc!      assoc)]
+          assoc-fn (if edit? (extern (mfn 3 assoc!)) (extern (mfn 3 assoc)))]
       (loop [kvs-n  kvs-0
              coll-f (-> coll-0 trans-fn
                         (extend-coll-to k)
@@ -1100,6 +1133,13 @@
     :contributors ["Alex Gunnarson"]}
   ([coll k f]      (assoc+ coll k       (f (get coll k))))
   ([coll k f args] (assoc+ coll k (apply f (get coll k) args))))
+
+(defn update-when
+  "Updates only if @pred is true for @k in @m."
+  [m k pred f]
+  (if (-> m k pred)
+      (update m k f)
+      m))
 
 (defn updates+
   "For each key-function pair in @kfs,
@@ -1142,14 +1182,14 @@
   (into {} rec))
 
 ;--------------------------------------------------{        UPDATE-IN         }-----------------------------------------------------
-(defn update-in!
+(defn+ update-in!
   "'Updates' a value in a nested associative structure, where ks is a sequence of keys and
   f is a function that will take the old value and any supplied args and return the new
   value, and returns a new nested structure. The associative structure can have transients
   in it, but if any levels do not exist, non-transient hash-maps will be created."
   {:attribution "flatland.useful"}
   [m [k & ks] f & args]
-  (let [assoc-fn (if (transient? m) assoc! assoc)
+  (let [assoc-fn (if (transient? m) (extern (mfn 3 assoc!)) (extern (mfn 3 assoc)))
         val (get m k)]
     (assoc-fn m k
       (if ks
@@ -1208,7 +1248,7 @@
           (catvec (subvec+ coll 0 key-0)
                   (subvec+ coll (inc key-0) (count coll)))
         (editable? coll)
-          (-> coll transient (dissoc! coll key-0) persistent!)
+          (-> coll transient (core/dissoc! coll key-0) persistent!)
         :else
           (dissoc coll key-0))))
   ([coll key-0 & keys-0]
@@ -1228,9 +1268,8 @@
 (defnt dissoc++
   {:todo ["Move to collections.core"
           "Implement for vector"]}
-  map? ([coll obj] (dissoc coll obj))
-  set? ([coll obj] (disj   coll obj))
-  nil? ([coll obj] nil))
+  ([#{map? Object} coll obj] (dissoc coll obj))
+  ([^set?          coll obj] (disj   coll obj)))
 
 (defn dissoc-in+
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -1257,7 +1296,7 @@
     kfs))
 
 (defn re-assoc+ [coll k-0 k-f]
-  (if (contains? coll k-0)
+  (if (containsk? coll k-0)
       (-> coll
          (assoc+  k-f (get coll k-0))
          (dissoc+ k-0))
@@ -1310,30 +1349,25 @@
 ;          distinct+
 ;          redv)))
 
-(defprotocol Interpose
-  (interpose+- [coll elem]))
-
 ; TODO: make a reducers version of coll/elem
-(extend-protocol Interpose
-  #?(:clj String :cljs string)
-    (interpose+- [coll elem]
-      (str/join elem coll))
-  #?(:clj Object :cljs default)
-    (interpose+- [coll elem]
-      (interpose elem coll)))
+(defnt interpose+-
+  ([^string? coll elem]
+    (str/join elem coll))
+  ([coll elem]
+    (interpose elem coll)))
 
 (defn interpose+
   {:todo ["|definline| this"]}
   [elem coll] (interpose+- coll elem))
 
-(defn linterleave-all
+(defn+ linterleave-all
   "Analogy: partition:partition-all :: interleave:interleave-all"
   {:attribution "prismatic/plumbing"}
   [& colls]
   (lazy-seq
    ((fn helper [seqs]
       (when (seq seqs)
-        (concat (map first seqs)
+        (concat (map (extern (mfn 1 first)) seqs)
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
@@ -1419,10 +1453,10 @@
       v1))
   ([k v1 v2] v2))
 
-(defn ^Delay first-uniques-by+ [k coll]
+(defn+ ^Delay first-uniques-by+ [k coll]
   (->> coll
        (group-by+ k)
-       (map+ (update-val+ first))))
+       (map+ (update-val+ (extern (mfn 1 first))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================
@@ -1434,37 +1468,38 @@
    type\" means a type with the same behavior. For example, a hash-map
    may be returned as an array-map, but a a sorted-map will be returned
    as a sorted-map with the same comparator."
+  {:todo ["Fix class overlap" "Preserve metadata"]}
   ; clojure.lang.PersistentList$EmptyList : '()
   ; special case to preserve type
-  list?            ([coll f] (apply list  (map f coll)))
-  dlist?           ([coll f] (apply dlist (map f coll)))
+  ([^list?  coll f] (apply list  (map f coll)))
+  ([^dlist? coll f] (apply dlist (map f coll))) 
+  ([^transientizable? coll f]
+     (persistent!
+       (core/reduce
+         (fn [r x] (core/conj! r (f x)))
+         (transient (core/empty coll)) coll)))
   ; generic sequence fallback
-  seq?             ([coll f] (map f coll))
+  ; TODO add any seq in general
+  ([#{lseq? #_(- seq? list?)} coll f] (map f coll))
   ; |transient| discards metadata as of Clojure 1.6.0
-  transientizable? ([coll f]
-                     (persistent!
-                       (core/reduce
-                         (fn [r x] (core/conj! r (f x)))
-                         (transient (empty coll)) coll)))
+ 
   ; Persistent collections that don't support transients
 #?@(:clj
-    [[clojure.lang.PersistentQueue
-      clojure.lang.PersistentStructMap
-      clojure.lang.PersistentTreeMap
-      clojure.lang.PersistentTreeSet]
-       ([coll f]
-         (core/reduce
-           (fn [r x] (conj r (f x)))
-           (empty coll) coll))])
-#?@(:clj
-      [map-entry?  ([coll f] (map-entry (f (key coll)) (f (val coll))))
-       record?     ([coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll))
-       :default    ([x    f] x)]
+     [([#{clojure.lang.PersistentQueue
+          clojure.lang.PersistentStructMap
+          clojure.lang.PersistentTreeMap
+          clojure.lang.PersistentTreeSet} coll f]
+        (core/reduce
+          (fn [r x] (conj r (f x)))
+          (empty coll) coll))
+      ([^map-entry? coll f] (map-entry (f (key coll)) (f (val coll))))
+      ([^record?    coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll))
+      ([:else       x    f] x)]
     :cljs
-      [:default    ([obj  f]
-                     (if (coll? obj)
-                         (into (empty obj) (map f obj))
-                         obj))]))
+     [([obj  f]
+        (if (coll? obj)
+            (into (empty obj) (map f obj))
+            obj))]))
 
 (defn walk
   "Traverses form, an arbitrary data structure.  inner and outer are
@@ -1521,13 +1556,28 @@
       (whenf*n map? (fn->> (map+ stringify-key) redm))
       m)))
 
+(defn properize-key [k v]
+  (let [k-0 (str/keywordize k)
+        k-f (if (boolean? v)
+                (str/keyword+ k-0 "?")
+                k-0)]
+    k-f))
+
+(defn properize-keys-1
+  "Properizes keys for @m.
+   Only one level deep."
+  [m]
+  (->> m
+       (map+ (fn [k v] (map-entry (properize-key k v) v)))
+       redm))
+
 (defn prewalk-replace
   "Recursively transforms form by replacing keys in smap with their
   values.  Like clojure/replace but works on any data structure.  Does
   replacement at the root of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (prewalk (whenf*n (f*n in? smap) smap) form))
+  (prewalk (whenf*n (f*n in-k? smap) smap) form))
 
 (defn postwalk-replace
   "Recursively transforms form by replacing keys in smap with their
@@ -1535,7 +1585,7 @@
   replacement at the leaves of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (postwalk (whenf*n (f*n in? smap) smap) form))
+  (postwalk (whenf*n (f*n in-k? smap) smap) form))
 
 (defn tree-filter
   "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
@@ -1581,7 +1631,6 @@
 (defn reverse-kv [m]
   (zipmap (vals m) (keys m)))
 
-
 (defn- update-nth-list*
   [x n f]
   (if (= n 0)
@@ -1589,12 +1638,267 @@
       (concat (ltake n x) (list (f (get x n))) (nthnext x (inc n)))))
 
 (defnt update-nth
-  vector? ([x n f] (update x n f))
-  [clojure.data.finger_tree.CountedDoubleList]
-          ([x n f] (if (= n (lasti x))
-                       (conj (.pop x) (f (last x)))
-                       (update-nth-list* x n f)))
-  listy?  ([x n f] (update-nth-list* x n f)))
+  {:todo ["Fix class overlap"]}
+  ([^vector? x n f] (update x n f))
+  ([^cdlist? x n f] (if (= n (lasti x))
+                        (conj (.pop x) (f (last x)))
+                        (update-nth-list* x n f)))
+  ([^clojure.lang.Seqable #_listy?  x n f] (update-nth-list* x n f)))
 
 (defn update-first [x f] (update-nth x 0         f))
 (defn update-last  [x f] (update-nth x (lasti x) f))
+
+
+
+(defn index-with-ids
+  "Adds unique ids to each entry."
+  [vec-0]
+  (let [ids (->> vec-0
+                 (map+ :id)
+                 (remove+ nil?)
+                 (into (sorted-set-by (fn [a b] (> a b))))
+                 atom)]
+    (reducei
+      (fn [vec-n entry n]
+        (if (or (contains? entry :id)
+                (empty?    entry))
+            vec-n
+            (let [id (-> ids deref first (ifn nil? (constantly 1) inc))]
+              (conj! ids id)
+              (assoc vec-n n (assoc entry :id id)))))
+      vec-0
+      vec-0)))
+
+(defn ^java.util.function.Predicate ->predicate [f]
+  (reify java.util.function.Predicate
+    (^boolean test [this ^Object elem]
+      (f elem))))
+
+(defnt filter!
+  ([^javafx.collections.ObservableList coll pred]
+    (doseqi [elem coll n]
+      (when-not (pred elem)
+        (.remove coll (int n) (int n)))))
+  ([^javafx.collections.transformation.FilteredList coll pred]
+    (.setPredicate coll (->predicate pred))))
+
+(defnt remove!
+  ([^javafx.collections.ObservableList coll pred]
+    (doseqi [elem coll n]
+      (when (pred elem)
+        (.remove coll (int n) (int n)))))
+  ([^javafx.collections.transformation.FilteredList coll pred]
+    (.setPredicate coll (->predicate (fn-not pred)))))
+
+; REQUIRES hara.string.PATH/JOIN
+#_(defn flatten-keys
+  "takes map `m` and flattens the first nested layer onto the root layer.
+  (flatten-keys {:a {:b 2 :c 3} :e 4})
+  => {:a/b 2 :a/c 3 :e 4}
+  (flatten-keys {:a {:b {:c 3 :d 4}
+                     :e {:f 5 :g 6}}
+                 :h {:i 7}
+                 :j 8})
+  => {:a/b {:c 3 :d 4} :a/e {:f 5 :g 6} :h/i 7 :j 8}"
+  {:source "zcaudate/hara.data.path"}
+  ([m]
+   (reduce-kv (fn [m k v]
+                (if (map/hash-map? v)
+                    (reduce-kv (fn [m sk sv]
+                                 (assoc m (path/join [k sk]) sv))
+                               m
+                               v)
+                    (assoc m k v)))
+              {}
+              m)))
+
+(defn- pathify-keys-nested
+  {:source "zcaudate/hara.data.path"}
+  ([m] (pathify-keys-nested m -1 false []))
+  ([m max] (pathify-keys-nested m max false []))
+  ([m max keep-empty] (pathify-keys-nested m max keep-empty []))
+  ([m max keep-empty arr]
+   (reduce-kv (fn [m k v]
+                (if (or (and (not (> 0 max))
+                             (<= max 1))
+                        (not (map/hash-map? v))
+                        (and keep-empty
+                             (empty? v)))
+                  (assoc m (conj arr k) v)
+                  (merge m (pathify-keys-nested v (dec max) keep-empty (conj arr k)))))
+              {}
+              m)))
+
+; REQUIRES hara.string.PATH/JOIN
+#_(defn flatten-keys-nested
+  "Returns a single associative map with all of the nested
+   keys of `m` flattened. If `keep` is added, it preserves all the
+   empty sets
+  (flatten-keys-nested {\"a\" {\"b\" {\"c\" 3 \"d\" 4}
+                               \"e\" {\"f\" 5 \"g\" 6}}
+                          \"h\" {\"i\" {}}})
+  => {\"a/b/c\" 3 \"a/b/d\" 4 \"a/e/f\" 5 \"a/e/g\" 6}
+  (flatten-keys-nested {\"a\" {\"b\" {\"c\" 3 \"d\" 4}
+                               \"e\" {\"f\" 5 \"g\" 6}}
+                          \"h\" {\"i\" {}}}
+                       -1 true)
+  => {\"a/b/c\" 3 \"a/b/d\" 4 \"a/e/f\" 5 \"a/e/g\" 6 \"h/i\" {}}"
+  {:source "zcaudate/hara.data.path"}
+  ([m] (flatten-keys-nested m -1 false))
+  ([m max keep-empty]
+   (-> (pathify-keys-nested m max keep-empty)
+       (nested/update-keys-in [] path/join))))
+
+; REQUIRES hara.string.PATH/SPLIT
+#_(defn treeify-keys
+  "Returns a nested map, expanding out the first
+   level of keys into additional hash-maps.
+  (treeify-keys {:a/b 2 :a/c 3})
+  => {:a {:b 2 :c 3}}
+  (treeify-keys {:a/b {:e/f 1} :a/c {:g/h 1}})
+  => {:a {:b {:e/f 1}
+          :c {:g/h 1}}}"
+  {:source "zcaudate/hara.data.path"}
+  [m]
+  (reduce-kv (fn [m k v]
+               (assoc-in m (path/split k) v))
+             {}
+             m))
+
+; REQUIRES hara.string.PATH/SPLIT
+#_(defn treeify-keys-nested
+  "Returns a nested map, expanding out all
+ levels of keys into additional hash-maps.
+  (treeify-keys-nested {:a/b 2 :a/c 3})
+  => {:a {:b 2 :c 3}}
+  (treeify-keys-nested {:a/b {:e/f 1} :a/c {:g/h 1}})
+  => {:a {:b {:e {:f 1}}
+          :c {:g {:h 1}}}}"
+  {:source "zcaudate/hara.data.path"}
+  [m]
+  (reduce-kv (fn [m k v]
+               (if (and (map/hash-map? v) (not (empty? v)))
+                 (update-in m (path/split k) nested/merge-nested (treeify-keys-nested v))
+                 (assoc-in m (path/split k) v)))
+             {}
+             m))
+
+(defn remove-repeats
+  "Returns a vector of the items in `coll` for which `(f item)` is unique
+   for sequential `item`'s in `coll`.
+    (remove-repeats [1 1 2 2 3 3 4 5 6])
+    ;=> [1 2 3 4 5 6]
+    (remove-repeats even? [2 4 6 1 3 5])
+    ;=> [2 1]
+
+    h/remove-repeats [1 1 2 2 3 3 4 5 6])
+    => [1 2 3 4 5 6]
+    (h/remove-repeats :n [{:n 1} {:n 1} {:n 1} {:n 2} {:n 2}])
+    => [{:n 1} {:n 2}]
+    (h/remove-repeats even? [2 4 6 1 3 5])
+    => [2 1])"
+  {:source "zcaudate/hara"
+   :todo "merge with something else"}
+  ([coll] (remove-repeats identity coll))
+  ([f coll] (remove-repeats f coll [] nil))
+  ([f coll output last]
+     (if-let [v (first coll)]
+       (cond (and last (= (f last) (f v)))
+             (recur f (next coll) output last)
+             :else (recur f (next coll) (conj output v) v))
+       output)))
+
+
+(defn transient-copy
+  {:attribution ["Alex Gunnarson"]}
+  [t]
+  (let [copy (transient [])]
+    (dotimes [n (count t)]
+      (conj! copy (get t n)))
+    (persistent! copy)))
+
+
+(defn merge-deep-with
+  "Like `merge-with` but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level.
+
+  (merge-deep-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
+                    {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
+  => {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
+  {:attribution "clojure.contrib.map-utils via taoensso.encore"
+   :todo ["Replace |merge-with| with a more performant version which uses |map/merge|."]}
+  [f & maps]
+  (apply
+    (fn m [& maps]
+      (if (every? map? maps)
+          (apply merge-with m maps)
+          (apply f maps)))
+    maps))
+
+(def merge-deep (partial merge-deep-with (MWA second)))
+; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
+
+
+(defn seq-ldifference
+  "Like |set/difference| but for seqs.
+   Returns what is in @l but not in @r
+   based on the results the application of @selectors returns."
+  {:in [[{:n 1 :a 3}
+         {:n 2 :a 3}]
+        [{:n 4 :b 5}
+         {:n 2 :a 3 :b 10}]
+        #{:n :a}]
+   :out [[{:n 2 :a 3}]]}
+  ([l r]
+    (set/difference
+      (->> l (into #{}))
+      (->> r (into #{}))))
+  ([l r selectors]
+    (let [l-grouped (->> l (group-by (apply juxt selectors)))
+          r-grouped (->> r (group-by (apply juxt selectors)))]
+      (->> (set/difference
+             (->> l-grouped keys (into #{}))
+             (->> r-grouped keys (into #{})))
+           (map+ (fn->> (get l-grouped))) force
+           (reduce into #{})))))
+
+
+(defn+ extreme-comparator [comparator-n]
+  (get (extern {> num/greatest
+                < num/least   })
+    comparator-n))
+
+;; find rank of element as primitive long, -1 if not found
+; (doc avl/rank-of)
+; ;; find element closest to the given key and </<=/>=/> according
+; ;; to coll's comparator
+; (doc avl/nearest)
+; ;; split the given collection at the given key returning
+; ;; [left entry? right]
+; (doc avl/split-key)
+;; return subset/submap of the given collection; accepts arguments
+;; reminiscent of clojure.core/{subseq,rsubseq}
+; (doc avl/subrange)
+
+
+(defmacro deficlass
+  "Define an immutable class.
+   Based on the limitations of |defrecord|, multi-arity
+   functions are declared separately."
+  [name- fields constructor & fns]
+  (let [constructor-sym (->> name- name str/un-camelcase (str "->") symbol)
+        protocol-sym    (-> name- name (str "Functions") symbol)
+        fns-signatures  (->> fns
+                             (map (compr (juxt (MWA first)
+                                               (MWA second))))
+                             (group-by (MWA first))
+                             (map-vals+ (fn->> (map (fn-> rest)) flatten-1))
+                             (map+ (fn [x] (cons (first x) (second x))))
+                             redv) ]
+    (log/pr :macro-expand "FNS-SIGNATURES" fns-signatures)
+   `(do (defprotocol ~protocol-sym ~@fns-signatures)
+        (declare ~constructor-sym)
+        (defrecord ~name- ~fields ~protocol-sym
+          ~@fns)
+        ~(concat (list 'defn constructor-sym)
+                 constructor))))

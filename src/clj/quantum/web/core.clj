@@ -10,32 +10,13 @@
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
      OutputType Dimension)
+    org.openqa.selenium.support.ui.Select
     (org.openqa.selenium Cookie Keys By Capabilities
       By$ByClassName By$ByCssSelector By$ById By$ByLinkText
       By$ByName By$ByPartialLinkText By$ByTagName By$ByXPath)
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
     (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)
     org.apache.commons.io.FileUtils))
-
-; How do I clear the phantomjs cache on a mac?
-; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
-(res/register-component!
-  (fn [component]
-    (log/pr :user "Starting PhantomJS WebDriver")
-    (assoc component
-      :web-driver (PhantomJSDriver.)))
-  (fn [component]
-    (when (:web-driver component)
-      (log/pr :user "Stopping PhantomJS WebDriver")
-      (-> component :web-driver res/cleanup!))
-    (assoc component :web-driver nil)))
-
-(defn not-found-error [^WebDriver driver elem]
-  {:msg         "Selenium element not found."
-   :type        :not-found
-   :elem        elem
-   :on-page     (.getCurrentUrl driver)
-   :page-source (.getPageSource driver)})
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 
@@ -50,6 +31,32 @@
           (into-array ["--ssl-protocol=any" "--ignore-ssl-errors=yes"
                        "--webdriver-loglevel=ERROR"])) ; possibly don't need to do into-array
         ))
+
+(defn default-driver []
+   (PhantomJSDriver. default-capabilities))
+
+; How do I clear the phantomjs cache on a mac?
+; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
+(res/register-component!
+  (fn [component]
+    (log/pr :user "Starting PhantomJS WebDriver")
+    (assoc component
+      :web-driver (default-driver)))
+  (fn [component]
+    (when (:web-driver component)
+      (log/pr :user "Stopping PhantomJS WebDriver")
+      (-> component :web-driver res/cleanup!))
+    (assoc component :web-driver nil)))
+
+(defn driver []
+  (-> res/system :quantum.web.core :web-driver))
+
+(defn not-found-error [^WebDriver driver elem]
+  {:msg         "Selenium element not found."
+   :type        :not-found
+   :elem        elem
+   :on-page     (.getCurrentUrl driver)
+   :page-source (.getPageSource driver)})
 
 ; Possibly defprotocol?
 (defn write-page!
@@ -110,11 +117,16 @@
 
 (defn find-element
   {:attribution "Alex Gunnarson"}
-  [^WebDriver driver ^org.openqa.selenium.By elem]
-  (try
-    (.findElement driver elem)
-    (catch NoSuchElementException _
-      (throw+ (not-found-error driver elem)))))
+  ([driver elem] (find-element driver elem 1 0))
+  ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms]
+    ((fn looper [n]
+      (if (>= n times)
+          (throw+ (not-found-error driver elem))
+          (try
+            (.findElement driver elem)
+            (catch NoSuchElementException _
+              (Thread/sleep interval-ms)
+              (looper (inc n)))))) 0)))
 
 (defn find-elements
   {:attribution "Alex Gunnarson"}
@@ -192,5 +204,5 @@
                          :path    #(.getPath   ^Cookie %)
                          :value   #(.getValue  ^Cookie %)
                          :secure  #(.isSecure  ^Cookie %))))
-       (map+ (juxt first (fn-> second map->QCookie)))
+       (map+ (juxt (fn-> first) (fn-> second map->QCookie)))
        redm))

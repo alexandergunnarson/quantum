@@ -13,7 +13,7 @@
 (defrecord Err [type msg objs])
 
 (defn throw-arg [& args]
-  (log/pr :macro-expand "THROW-ARG WITH ARGS" args)
+  (log/pr ::macro-expand "THROW-ARG WITH ARGS" args)
   (throw #?(:clj (Exception. (apply str args))
             :cljs (js/Error. (apply str args)))))
 
@@ -26,7 +26,7 @@
   {:source "slingshot"
    :contributors ["Alex Gunnarson"]}
   [x coll]
-  (log/pr :macro-expand "APPEARS-WITHIN")
+  (log/pr ::macro-expand "APPEARS-WITHIN")
   (let [result (atom false)]
     (try
       (clojure.walk/postwalk
@@ -43,7 +43,7 @@
 (defn make-context
   "Makes a throw context from a throwable or explicit arguments"
   ([t] ; ^Throwable in Clojure
-   (log/pr :macro-expand "MAKE-CONTEXT")
+   (log/pr ::macro-expand "MAKE-CONTEXT")
    (make-context t
      (#?(:clj .getMessage    :cljs .-message) t)
       #?(:clj (.getCause t)  :cljs "") ; if you do nil, CLJS says it's only 3 args... weird
@@ -63,7 +63,7 @@
 (defn wrap
   "Returns a context wrapper given a context"
   [{:keys [object message cause stack-trace]}]
-  (log/pr :macro-expand "WRAP")
+  (log/pr ::macro-expand "WRAP")
   (let [data (if (map? object) object ^::wrapper? {:object object})]
     (doto (ex-info message data cause)
           #?(:clj  (.setStackTrace ^Throwable stack-trace)
@@ -74,7 +74,7 @@
   corresponding context with t assoc'd as the value for :wrapper, else
   returns nil"
   [t]
-  (log/pr :macro-expand "UNWRAP")
+  (log/pr ::macro-expand "UNWRAP")
   (if-let [data (ex-data t)]
     (assoc (make-context t)
       :object (if (::wrapper? (meta data)) (:object data) data)
@@ -86,7 +86,7 @@
   context with the wrapper assoc'd as the value for :wrapper, else
   returns nil."
   [t]
-  (log/pr :macro-expand "UNWRAP-ALL")
+  (log/pr ::macro-expand "UNWRAP-ALL")
   (or (unwrap t)
       #?(:clj
           (if-let [cause (.getCause ^Throwable t)]
@@ -97,7 +97,7 @@
   a Throwable, else a Throwable context wrapper"
   {:macro-dependency? true}
   [{object :object :as context}]
-  (log/pr :macro-expand "IN GET-THROWABLE WITH" object)
+  (log/pr ::macro-expand "IN GET-THROWABLE WITH" object)
   (if (instance? AError object) ; can't use "AError..."
       object
       (wrap context)))
@@ -154,7 +154,7 @@
              (if (#?(:clj class? :cljs fn?) resolved)
                  resolved))))
        (cond-test [selector]
-         (log/pr :macro-expand "COND-TEST SELECTOR:" selector)
+         (log/pr ::macro-expand "COND-TEST SELECTOR:" selector)
          (letfn
              [(key-values []
                 (and (vector? selector)
@@ -176,8 +176,8 @@
             ~@expressions))
        (transform [[_ selector binding-form & expressions]]
          (let [class-selector (class-selector? selector)
-                  _ (log/pr :macro-expand "CLASS-SELECTOR IS" class-selector)
-                  _ (log/pr :macro-expand "(cond-test selector) IS" (cond-test selector))]
+                  _ (log/pr ::macro-expand "CLASS-SELECTOR IS" class-selector)
+                  _ (log/pr ::macro-expand "(cond-test selector) IS" (cond-test selector))]
            (if class-selector
                [`(instance? ~class-selector (:object ~'&throw-context))
                 (cond-expression (with-meta binding-form {:tag selector}) expressions)]
@@ -200,7 +200,7 @@
            ~@(mapcat transform catch-clauses) ; ~@
            :else
            (~throw-sym)))))
-        _ (log/pr :macro-expand "CODE" code)]
+        _ (log/pr ::macro-expand "CODE" code)]
       `(quote ~code)))))
 
 (defn gen-finally
@@ -208,7 +208,7 @@
   form based on the parsed else and/or finally clause from a try+
   form"
   [else-clause finally-clause threw?-sym]
-  (log/pr :macro-expand "IN GEN-FINALLY")
+  (log/pr ::macro-expand "IN GEN-FINALLY")
   (cond else-clause
         (list
          `(finally
@@ -227,13 +227,13 @@
   "Expands to sym if it names a local in the current environment or
   nil otherwise"
   [sym]
-  (log/pr :macro-expand "RESOLVE-LOCAL")
+  (log/pr ::macro-expand "RESOLVE-LOCAL")
   (if (contains? &env sym) sym)))
 
 (defn stack-trace
   "Returns the current stack trace beginning at the caller's frame"
   []
-  (log/pr :macro-expand "STACK-TRACE")
+  (log/pr ::macro-expand "STACK-TRACE")
   #?(:clj
       (let [trace (.getStackTrace (Thread/currentThread))]
         ;(java.util.Arrays/copyOfRange trace 2 (alength trace)) ; To get around weird cljs error
@@ -245,7 +245,7 @@
   "Returns a vector containing the message and cause that result from
   processing the arguments to throw+"
   [object cause & args]
-  (log/pr :macro-expand "IN PARSE-THROW")
+  (log/pr ::macro-expand "IN PARSE-THROW")
   (let [[cause & args] (if (or (empty? args) (string? (first args)))
                            (cons cause args)
                            args)
@@ -260,11 +260,11 @@
     [message cause]))
 
 (defn default-throw-hook [context]
-  (log/pr :macro-expand "IN DEFAULT THROW-HOOK")
+  (log/pr ::macro-expand "IN DEFAULT THROW-HOOK")
   (let [throwable-obj (get-throwable context)
-        _ (log/pr :macro-expand "THROWABLE OBJ" throwable-obj "META" (meta throwable-obj) "CLASS" throwable-obj)]
+        _ (log/pr ::macro-expand "THROWABLE OBJ" throwable-obj "META" (meta throwable-obj) "CLASS" throwable-obj)]
     (throw throwable-obj)
-    (log/pr :macro-expand "AFTER THROW")))
+    (log/pr ::macro-expand "AFTER THROW")))
 
 (def ^{:dynamic true
        :doc "Hook to allow overriding the behavior of throw+. Must be
@@ -276,11 +276,11 @@
   "Helper to throw a context based on arguments and &env from throw+"
   [object {cause :throwable} stack-trace & args]
   (let [[message cause] (apply parse-throw+ object cause args)
-        _ (log/pr :macro-expand "AFTER PARSE-THROW IN THROW-FN")
+        _ (log/pr ::macro-expand "AFTER PARSE-THROW IN THROW-FN")
         context (make-context object message cause stack-trace)
-        _ (log/pr :macro-expand "AFTER MAKE-CONTEXT IN THROW-FN")]
+        _ (log/pr ::macro-expand "AFTER MAKE-CONTEXT IN THROW-FN")]
     (doto (*throw-hook* context)
-      (log/pr :macro-expand "IS THE THROW HOOK"))))
+      (log/pr ::macro-expand "IS THE THROW HOOK"))))
 
 #?(:clj
 (defmacro rethrow
@@ -294,7 +294,7 @@
   {:source   "https://github.com/scgilardi/slingshot/"
    :arglists '([] [object cause? message-or-fmt? & fmt-args])}
   ([object & args]
-    (log/pr :macro-expand "IN THROW+")
+    (log/pr ::macro-expand "IN THROW+")
    `(let [~'% ~object]
       (throw-fn ~'%
                   (resolve-local ~'&throw-context)
@@ -312,10 +312,10 @@
    :out 123}
   [lang & body]
   (let [[expressions catches else finally] (parse-try+ body)
-        _      (log/pr :macro-expand "AFTER PARSE TRY")
+        _      (log/pr ::macro-expand "AFTER PARSE TRY")
         threw? (gensym "threw?")
         code   (eval `(gen-catch ~lang ~catches throw+ ~threw?))
-        _      (log/pr :macro-expand "AFTER GEN-CATCH")]
+        _      (log/pr ::macro-expand "AFTER GEN-CATCH")]
     `(let [~threw? (atom false)]
        (try
          ~@expressions
@@ -378,6 +378,12 @@
      (catch Error e# (~handler e#)))))
 
 #?(:clj
+(defmacro with-assert [expr pred err]
+  `(if (~pred ~expr)
+       ~expr
+       (throw+ ~err))))
+
+#?(:clj
   (defmacro try-or 
     "An exception-handling version of the 'or' macro.
      Trys expressions in sequence until one produces a result that is neither false nor an exception.
@@ -395,7 +401,7 @@
   (suppress (error \"Error\")
             (fn [e]
               (.getMessage e))) => \"Error\""
-  {:source "https://github.com/zcaudate/hara/blob/master/src/hara/common/error.clj"}
+  {:source "zcaudate/hara.common.error"}
   ([body]
      `(try ~body (catch Throwable ~'t)))
   ([body catch-val]
@@ -413,3 +419,20 @@
 (defmacro assertf->> [f throw-obj arg]
   `(do (throw-unless (~f ~arg) (Err. nil ~throw-obj ['~f ~arg]))
        ~arg)))
+
+
+
+
+
+; Probably something like this but with error catching/gates
+; (defn comp
+;   "Same as `clojure.core/comp` except that the functions will shortcircuit on nil.
+;   ((comp inc inc) 1) => 3
+;   ((comp inc inc) nil) => nil"
+;   [& fs]
+;   (fn comp-fn
+;     ([i] (comp-fn i fs))
+;     ([i [f & more]]
+;        (cond (nil? i) nil
+;              (nil? f) i
+;              :else (recur (f i) more)))))
