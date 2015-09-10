@@ -208,7 +208,7 @@
  ; Client errors (4xx)
 
 (defn download
-  {:todo ["Show progress" "Get size of download beforehand"]}
+  {:todo ["Show progress" "Get size of download beforehand" "Maybe use ->file"]}
   [{:keys [file-str out req]}]
   (let [^org.httpkit.BytesInputStream is
           (->> (request! req)
@@ -224,3 +224,6 @@
         (set! len (.read is buffer))))
     (.close os)
     (.close is)))
+
+(defn parse-json [resp]
+  (-> resp :body (json/parse-string str/keywordize)))

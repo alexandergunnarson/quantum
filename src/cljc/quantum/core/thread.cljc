@@ -9,7 +9,7 @@
     #?@(:clj [[clojure.core.async.impl.ioc-macros :as ioc]
               [clojure.core.async.impl.exec.threadpool :as async-threadpool]]))
   #?(:clj (:import (java.lang Thread Process)
-            (java.util.concurrent Future Executor ExecutorService)
+            (java.util.concurrent Future Executor ExecutorService ThreadPoolExecutor)
             quantum.core.data.queue.LinkedBlockingQueue)))
 
 ;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
@@ -224,10 +224,21 @@
  
 ; ASYNC
 
+(def rejected-execution-handler
+  (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f))))
+
+; (count (.getQueue thread/threadpool))
+(def threadpool clojure.core.async.impl.exec.threadpool/the-executor)
+
+(.setRejectedExecutionHandler threadpool
+  (reify java.util.concurrent.RejectedExecutionHandler
+    (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
+      (@rejected-execution-handler f))))
+
 #?(:clj
 (defn ^:internal closeably-execute [^Runnable r opts]
   (let [^Future future-obj
-         (.submit ^ExecutorService async-threadpool/the-executor r)]
+         (.submit ^ExecutorService threadpool r)]
     (register-thread! (merge opts {:thread future-obj})))))
 
 #?(:clj

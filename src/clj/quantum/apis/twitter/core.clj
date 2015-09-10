@@ -13,7 +13,7 @@
           (-> (str http-method-caps
                 "&" (url/encode url)
                 "&" (-> params-string url/encode))
-              (str/replace "%5F" "_")) ; Don't replace "_" with %5F. Possibly this is for param keys only.
+              (str/replace "%5F" "_")) ; Don't replace "_" with %5F. This is for both param keys and values.
         _ (log/pr ::debug "Base string is:" signature-base-string)
         ; Note that there are some flows, such as when obtaining a request token,
         ; where the token secret is not yet known.
@@ -45,16 +45,39 @@
              (.append ^StringBuilder ret (url/encode (val kv)))
              (.append ^StringBuilder ret "\","))
         auth-str (-> sb (.deleteCharAt (lasti sb)) str)]
-        (log/ppr :user "AUTH-STR" auth-str)
     (http/request!
       (-> request
           (assoc-in [:headers "Authorization"]
             auth-str)))))
 
-#_(def resp
+(def tweets->hashtags
+  (fn->> (map+ (fn-> :entities :hashtags))
+         (remove+ empty?)
+         (map+ (fn->> (map (fn-> :text keyword))))
+         flatten+
+         (into #{})))
+
+(defn tweets [user-id]
+  (request!
+    {:url    "https://api.twitter.com/1.1/statuses/user_timeline.json"
+     :method :get
+     :query-params
+       {"user_id" user-id
+        "count"   "200"}
+     :parse? true}))
+
+(defn followers [user-id & [parse? cursor]]
   (request!
     {:url    "https://api.twitter.com/1.1/followers/list.json"
      :method :get
      :query-params
-       {"screen_name" "argunnarson"
-        "count"       "200"}}))
+       {"user_id" user-id
+        "count"   "200"
+        "cursor"  (or cursor "-1")} ; -1 is the start cursor
+     :parse? parse?}))
+
+(defn rate-limits []
+  (request!
+    {:url "https://api.twitter.com/1.1/application/rate_limit_status.json"
+     :method :get
+     :parse? true}))

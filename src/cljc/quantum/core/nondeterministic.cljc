@@ -3,7 +3,7 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:require-quantum [ns coll]))
+  (:require-quantum [ns coll fn logic]))
 
 (def ^java.util.Random random-generator (java.util.Random.))
 
@@ -64,7 +64,7 @@
   [random-percent & clauses]
   (let [cond-details (->> clauses
                           (partition 2 2 nil)
-                          (sort-by first >)
+                          (sort-by (MWA first) >)
                           (reduce (fn [[agg total] [percent clause]]
                                     (if (not (and percent clause))
                                       (throw (IllegalArgumentException. "cond-percent requires an even number of forms"))
@@ -107,7 +107,7 @@
   (let [random-percent (* (clojure.core/rand)
                           100)
         cdf (->> distribution
-                 (sort-by second >)
+                 (sort-by (MWA second) >)
                  (reduce (fn [[agg total] [elem dist]]
                            (let [nval (+ total dist)]
                              [(conj agg [elem nval]) nval]))

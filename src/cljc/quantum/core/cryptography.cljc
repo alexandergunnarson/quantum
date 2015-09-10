@@ -90,6 +90,15 @@
     (.init    algo-instance secret-key)
     (.doFinal algo-instance (arr/->bytes message)))))
 
+#?(:clj
+(defn sha-1-hmac ^"[B" [message secret]
+  (throw-unless (and message secret)
+    (Err. nil "Neither message nor secret can be nil" (kmap message secret)))
+  (let [^Mac algo-instance (Mac/getInstance "HmacSHA1")
+        ^SecretKey secret-key (SecretKeySpec. (arr/->bytes secret) "HmacSHA1")]
+    (.init    algo-instance secret-key)
+    (.doFinal algo-instance (arr/->bytes message)))))
+
 (defn hash
   ([bytes         ] (hash bytes :murmur64 nil))
   ([bytes function] (hash bytes function  nil))

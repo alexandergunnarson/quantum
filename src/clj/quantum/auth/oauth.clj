@@ -1,9 +1,9 @@
 (ns quantum.auth.oauth
-  (:require-quantum [:lib])
-  (:require [quantum.auth.core :as auth]))
+  #_(:require-quantum [:lib])
+  #_(:require [quantum.auth.core :as auth]))
 ;(require '[quantum.core.collections.core :refer [conjr]])
 
-(defn client-config
+#_(defn client-config
   {:in ["http://localhost:5000/" :facebook :dev]}
   [^String domain & [service & service-ks]]
   (let [^String endpoint (str "/" (name service) ".callback")]
@@ -15,11 +15,11 @@
         :path   (whenf endpoint (f*n (fn-not (MWA 2 str/starts-with?)) "/")
                   (f*n conjl "/"))}}))
 
-(defn insert-client-id-and-secret
+#_(defn insert-client-id-and-secret
   {:todo ["Use |assocs-in+| when it's ready..."] }
   [^Map base ^String domain service-ks]
-  (let [^Map {:as service-config :keys [client-id client-secret]
-              {:keys [domain path]} :callback}
+  (let [{:as service-config :keys [client-id client-secret]
+         {:keys [domain path]} :callback}
           (apply client-config domain service-ks)
         ^String config-uri (io/path domain path)]
     (-> base
@@ -29,7 +29,7 @@
         (assoc-in [:access-token-uri   :query :client_secret] client-secret)
         (assoc-in [:access-token-uri   :query :redirect_uri ] config-uri   ))))
 
-(def uri-config-bases
+#_(def uri-config-bases
   {:facebook
     {:authentication-uri
        {:url   "https://www.facebook.com/dialog/oauth"
@@ -45,7 +45,7 @@
         {:url "https://accounts.google.com/o/oauth2/token"
          :query {:grant_type "authorization_code"}}}})
 
-(defn uri-config
+#_(defn uri-config
   {:usage ['(config "http://localhost:5000/" :facebook :dev)
            '(config "http://localhost:5000/" :google       )]}
   [^String domain & service-ks]

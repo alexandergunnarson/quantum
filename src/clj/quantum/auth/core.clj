@@ -17,7 +17,8 @@
    :snapchat "Snapchat"
    :amazon   "Amazon"
    :intuit   "Intuit"
-   :twitter  "Twitter"})
+   :twitter  "Twitter"
+   :quip     "Quip"})
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."

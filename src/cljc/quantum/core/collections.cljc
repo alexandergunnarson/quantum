@@ -1902,3 +1902,6 @@
           ~@fns)
         ~(concat (list 'defn constructor-sym)
                  constructor))))
+
+(defn into-map-by [m k ms]
+  (reduce (fn [ret elem] (assoc ret (k elem) elem)) m ms))
