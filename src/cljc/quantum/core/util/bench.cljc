@@ -2,7 +2,7 @@
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
     :attribution "Alex Gunnarson"}
   quantum.core.util.bench
-  (:require-quantum [ns str fn logic])
+  (:require-quantum [ns str fn logic num])
   #?(:clj (:require [criterium.core :as bench]))
   #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator quanta.ClassIntrospector)))
 
@@ -36,13 +36,20 @@
 
 ; BYTE SIZE
 
-#?(:clj (defn byte-size [obj] (RamUsageEstimator/sizeOf obj)))
+#?(:clj (defn byte-size-alt-1 [obj] (RamUsageEstimator/sizeOf obj)))
 
 #?(:clj
-(defn byte-size-alt [obj]
+(defn byte-size-alt-2 [obj]
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))
+
+#?(:clj
+(defn byte-size [obj]
+  (let [result-1 (byte-size-alt-1 obj)
+        result-2 (byte-size-alt-2 obj)]
+    [(num/min result-1 result-2)
+     (num/max result-1 result-2)])))
 
 #?(:clj
 (defn calc-byte-size-of-all-vars

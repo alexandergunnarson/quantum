@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>5740142e6378e1d6f9c13c8ae44bfc5156e990e0
+    <tag>8712c7f4b6a479def10a4a76ba5898f0b92e0d34
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -201,6 +201,11 @@
       <groupId>org.clojure</groupId>
       <artifactId>data.avl</artifactId>
       <version>0.0.12</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>data.int-map</artifactId>
+      <version>0.2.1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>

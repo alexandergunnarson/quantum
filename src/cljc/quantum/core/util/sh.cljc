@@ -5,7 +5,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.util.sh
   (:refer-clojure :exclude [assoc! conj!])
-  (:require-quantum [ns coll str io fn sys log logic macros thread async qasync
+  (:require-quantum [ns coll str io fn sys log logic macros thread async
                      err res time num])
   (:require [quantum.core.resources    :as res    :refer [closed?   ]]
             [quantum.core.paths        :as paths]
@@ -19,23 +19,28 @@
 
 #?(:clj
 (defn read-streams
-  [{:keys [process id input-streams output-stream stream-names writer buffers output-line state
+  "@output-streams are 'output' relative to the process.
+   They are, of course, 'input' streams relative to the consumers of these streams."
+  [{:keys [process id stream-names
+           output-streams buffers output-chans
+           input-chan  std-in-writer output-line state
            cleanup-seq close-reqs line-timeout output-timeout output-timeout-handler]
     :or {line-timeout 500
          output-timeout 5000}}] ; for some reason this isn't happening
   (log/pr ::debug "READING STREAMS FOR PID" id "WITH STATE" state)
   (let [output-line            (or output-line            fn-nil)
         output-timeout-handler (or output-timeout-handler fn-nil)
-        input-stream-worker
+        input-chan-worker
           (lt-thread-loop
-            {:name :input-stream :parent id :close-reqs close-reqs}
+            {:name :input-chan :parent id :close-reqs close-reqs}
             []
-            (let [input-str (qasync/take-with-timeout! output-stream 2000)] ; so it can make sure to close afterward
+            (log/pr ::inspect "Input stream doing its job")
+            (let [input-str (async/take-with-timeout! input-chan 2000)] ; so it can make sure to close afterward
               (when (string? input-str)
-                (.write ^BufferedWriter writer ^String input-str)
-                (.flush ^BufferedWriter writer))
+                (.write ^BufferedWriter std-in-writer ^String input-str)
+                (.flush ^BufferedWriter std-in-writer))
               (recur)))
-        readers (for [stream input-streams]
+        readers (for [stream output-streams]
                   (-> stream
                       (InputStreamReader.)
                       (BufferedReader.)
@@ -43,6 +48,7 @@
     (doseqi [^BufferedReader reader readers n]
       (let [^StringBuffer buffer (get buffers n)
             stream-source (get stream-names n)
+            output-chan (get output-chans n)
             buffer-writer
               (lt-thread-loop
                 {:name (str/keyword+ :buffer-writer- stream-source) :parent id :close-reqs close-reqs}
@@ -61,16 +67,25 @@
                 [i (long 0) slept? false sleep-time 0]
                 (when (>= sleep-time 5000)
                   (output-timeout-handler state sleep-time stream-source))
-                (let [indices (for [c str/line-terminator-chars]
+                (let [; first index of any line terminator after i
+                      indices (for [c str/line-terminator-chars]
                                 (.indexOf ^StringBuffer buffer (str c) i))
                       i-n (->> indices (remove neg?) num/least)]
-                  (if (or (nil? i-n) (neg? i-n))
+                  (if (nil? i-n)
                       (if (and slept? (> (lasti buffer) i)) ; unoutputted chars in buffer 
-                          (do (output-line state (.subSequence ^StringBuffer buffer i (lasti buffer)) stream-source)
+                          ; Output all of the remaning ones
+                          (do (let [rest-line (.subSequence ^StringBuffer buffer i (lasti buffer))]
+                                (when-not (str/whitespace? rest-line)
+                                  (>!! output-chan rest-line))
+                                (output-line state rest-line stream-source))
                               (recur (lasti buffer) false 0))
                           (do (Thread/sleep line-timeout)
                               (recur i true (+ sleep-time line-timeout)))) 
-                      (do (recur (inc (long i-n)) false 0)))))])))))
+                      (do (let [line (.subSequence ^StringBuffer buffer i (inc (long i-n)))]
+                            (when-not (str/whitespace? line)
+                               (>!! output-chan line))
+                            (output-line state line stream-source))
+                          (recur (inc (long i-n)) false 0)))))])))))
 
 #?(:clj
 (def ^{:help "http://www.tldp.org/LDP/abs/html/exitcodes.html"}
@@ -125,9 +140,17 @@
    Hopefully most command line programs will not output that way."
   [command args & [{{:keys [output-line closed]} :handlers
                     :keys [ex-data env-vars dir timeout id parent state
-                           print-streams? read-streams? write-streams? close-reqs
-                           std-buffer err-buffer ; for recording input
-                           handlers output-timeout thread? pr-to-out?
+                           print-streams? ; Overrides @output-line handler; TODO handle this
+                           pr-to-out? ; Overrides other options; TODO handle this
+                           read-streams? 
+                           write-streams? ; Currently doesn't do much
+                           close-reqs
+                           std-buffer err-buffer ; for recording the process's output
+                           input-chan      ; chan for std-in
+                           err-output-chan ; chan for std-err
+                           std-output-chan ; chan for std-out
+                           handlers output-timeout
+                           thread? ; whether the process should be run asynchronously
                            cleanup-seq]
                     :or   {ex-data     {}
                            cleanup-seq (atom [])
@@ -142,7 +165,7 @@
                          (map str)
                          into-array
                          (ProcessBuilder.))
-                 env-vars-f (merge-keep-left (or env-vars {}) paths/user-env)
+                 env-vars-f (merge-keep-left (or env-vars {}) @paths/user-env)
                  set-env-vars!
                    (doseq [^String env-var ^String val- env-vars-f]
                      (-> pb (.environment) (.put env-var val-)))
@@ -155,47 +178,56 @@
                  process-id (or id (genkeyword command))
                  _ (log/pr ::debug "STARTING PROCESS"
                      (str/paren (str/sp "process-id" process-id)) command args)
-                 std-buffer    (or std-buffer (StringBuffer. 400))
-                 err-buffer    (or err-buffer (StringBuffer. 400))
+                 std-out-buffer    (or std-buffer (StringBuffer. 400))
+                 err-out-buffer    (or err-buffer (StringBuffer. 400))
                  cleanup       (delay (doseq [f @cleanup-seq]
                                         (try+ (f) (catch Object e (log/pr :warn "Exception in cleanup:" e)))))
-                 output-stream (with-cleanup (LinkedBlockingQueue.) cleanup-seq)
+                 input-chan      (or input-chan      (with-cleanup (chan) cleanup-seq))
+                 err-output-chan (or err-output-chan (with-cleanup (chan) cleanup-seq))
+                 std-output-chan (or std-output-chan (with-cleanup (chan) cleanup-seq))
+                 output-line-handler (if print-streams? (fn [_ line _] (print line)) output-line)
                  _ (log/pr ::debug "BEFORE REG THREAD" )
                  _ (thread/register-thread!
-                     {:id            process-id
-                      :parent        parent
-                      :std-output    std-buffer 
-                      :err-output    err-buffer 
-                      :close-reqs    close-reqs
-                      :output-stream output-stream
-                      :status        :running
+                     {:id              process-id
+                      :parent          parent
+                      :std-output      std-out-buffer 
+                      :err-output      err-out-buffer
+                      :err-output-chan err-output-chan
+                      :std-output-chan std-output-chan
+                      :close-reqs      close-reqs
+                      :input-chan      input-chan
+                      :status          :running
                       :handlers
                         {:closed      (thread/wrap-delay closed)
-                         :output-line output-line
+                         :output-line output-line-handler
                          :cleanup     cleanup}})
                  _ (log/pr ::debug "AFTER REG THREAD" )
                  ^Process process (.start pb)
                  _ (log/pr ::debug "AFTER PROCESS START" )
                  _ (swap! thread/reg-threads assoc-in
                      [process-id :thread] process)
-                 std-stream       (.getInputStream process)
-                 err-stream       (.getErrorStream process)
-                 writer     (-> process (.getOutputStream)
-                                (OutputStreamWriter.)
-                                (BufferedWriter.)
-                                (with-cleanup cleanup-seq))
+                 std-out-stream       (.getInputStream process)
+                 err-out-stream       (.getErrorStream process)
+                 std-in-writer  (-> process
+                                    ; only "output" because the thread writes to it to
+                                    ; communicate with the underlying process
+                                    (.getOutputStream)
+                                    (OutputStreamWriter.)
+                                    (BufferedWriter.)
+                                    (with-cleanup cleanup-seq))
                 _ (log/pr ::debug "BEFORE WORKER THREADS")
                  worker-threads
                    (when (or read-streams? print-streams?)
                      (read-streams
                        {:process                process
                         :id                     process-id
-                        :writer                 writer
-                        :output-stream          output-stream
-                        :input-streams          [std-stream err-stream]
-                        :buffers                [std-buffer err-buffer]
+                        :std-in-writer          std-in-writer
+                        :output-streams         [std-out-stream  err-out-stream]
+                        :buffers                [std-out-buffer  err-out-buffer]
+                        :output-chans           [std-output-chan err-output-chan]
                         :stream-names           [:std :err]
-                        :output-line            output-line
+                        :output-line            output-line-handler
+                        :input-chan             input-chan
                         :cleanup-seq            cleanup-seq
                         :close-reqs             close-reqs
                         :output-timeout         output-timeout
@@ -212,8 +244,8 @@
                               (or read-streams? print-streams?))
                      (Thread/sleep 1000))]
              (when (and (empty? close-reqs) write-streams?)
-                (flush-stream! std-stream std-buffer)
-                (flush-stream! err-stream err-buffer))
+                (flush-stream! std-out-stream std-out-buffer)
+                (flush-stream! err-out-stream err-out-buffer))
              ; the close operation asynchronously/indirectly
              ; invokes the close-listener if it has not already been done
              (doseq [child-id children]
@@ -231,6 +263,6 @@
 
 #?(:clj
 (defn input! [id s]
-  (when-let [in-stream (get-in @thread/reg-threads [id :input-stream])]
-    (put! in-stream s))))
+  (when-let [in-stream (get-in @thread/reg-threads [id :input-chan])]
+    (>!! in-stream s))))
 

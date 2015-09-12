@@ -1,5 +1,21 @@
 (ns quantum.core.reflect
-  (:require-quantum [ns logic fn map]))
+  (:require-quantum [ns logic fn map java coll str log macros]))
+
+(def object-class=>record-class (atom {}))
+
+(defn obj->map
+  {:todo "Implement |object->record| for more memory efficiency"}
+  [obj]
+  (let [field-names
+          (->> obj clojure.reflect/reflect :members
+               (filter+ (partial instance? clojure.reflect.Field))
+               (map+ :name)
+               redv)]
+    (for-m [name-n field-names]
+      [(-> name-n str/un-camelcase keyword)
+       (java/field obj (name name-n))])))
+
+
 
 #?(:clj
 (defn var-args?
@@ -21,15 +37,15 @@
   "Counts the number of non-varidic argument types"
   {:tests '{(fn [x])            [1]
             (fn [x & xs])       []
-            (fn ([x]) ([x y]))  [1 2]}}
-  {:adapted "https://github.com/zcaudate/hara/blob/master/src/hara/function/args.clj"}
+            (fn ([x]) ([x y]))  [1 2]}
+   :adapted "https://github.com/zcaudate/hara/blob/master/src/hara/function/args.clj"}
   [f]
   (let [ms (filter (fn [^java.lang.reflect.Method mthd]
                      (= "invoke" (.getName mthd)))
                    (.getDeclaredMethods (class f)))
         ps (map (fn [^java.lang.reflect.Method m]
                   (.getParameterTypes m)) ms)]
-    (map count ps)))
+    (map (MWA count) ps)))
 
 #?(:clj
 (defn invoke [obj method & args]
@@ -66,13 +82,13 @@
    
 
 
-(defn enum-values
+#_(defn enum-values
   {:source "zcaudate/hara.object.enum"}
   [type]
   (let [vf (reflect/query-class type ["$VALUES" :#])]
     (->> (vf type) (seq))))
 
-(defn max-inputs
+#_(defn max-inputs
   "finds the maximum number of inputs that a function can take
   
   (max-inputs (fn ([a]) ([a b])) 4)
@@ -93,7 +109,7 @@
         (apply max carr)))))
 
 (defnt qualified-name 
-  {:todo ["Different ns"]
+  {:todo ["Different ns"]}
   ([^clojure.lang.Var x]
     (str (-> x meta :ns ns-name name) "/"
          (-> x meta :name name)))

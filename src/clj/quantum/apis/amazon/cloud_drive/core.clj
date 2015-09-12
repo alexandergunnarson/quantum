@@ -1,4 +1,5 @@
 (ns quantum.apis.amazon.cloud-drive.core
+  (:refer-clojure :exclude [meta])
   (:require-quantum [:lib http auth web uconv url])
   (:require
     [quantum.apis.amazon.cloud-drive.auth :as amz-auth])
@@ -58,8 +59,8 @@
 
 ; https://forums.developer.amazon.com/forums/message.jspa?messageID=15671
 ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API. 
-(defn trash!    [id] (request! :trash :meta    {:method :post :append id}))
-(defn untrash!  [id] (request! :trash :meta    {:method :post :append (io/path id "restore")}))
+(defn trash!    [id] (request! :trash :meta {:method :post :append id}))
+(defn untrash!  [id] (request! :trash :meta {:method :post :append (io/path id "restore")}))
 
 (defn root-folder []
   (-> (request! :nodes :meta
@@ -74,8 +75,6 @@
   (-> (request! :nodes :meta {:append (io/path id "children")})
       :data))
 
-#_(http/request! {:url "https://drive.amazonaws.com/drive/v1/nodes/xuOTgp9CRJOAFRi-5_z1hg/?tempLink=true" :oauth-token (auth/access-token :amazon :cloud-drive) :parse? true})
-
 #_(-> (http/request!
       {:oauth-token (auth/access-token :amazon :cloud-drive)
        :url (io/path "https://content-na.drive.amazonaws.com/cdproxy/nodes" "9zfx3GtgSEOUbI9SC7qvPw" "content")})
@@ -83,8 +82,19 @@
 
 #_(->> (root-folder) :id children (map (juxt :id :name)))
 
+(defn meta [id]
+  (request! :nodes :meta
+    {:append id
+     :method :get
+     :query-params {"tempLink" "true"}}))
 
 
 ; The ice-cast stream doesn't include a Content-Length header
 ; (because you know, it's a stream), so this was causing libfxplugins
 ; to crash as in my previous post on the subject.
+(defn cd
+  "|cd| as in Unix."
+  [id]
+  (->> id children
+       (map (juxt :id :name))
+       (sort-by (MWA second))))

@@ -70,11 +70,11 @@
 (defmacro invoke
   {:usage '(-> (WebClient.) .getTopLevelWindows first (invoke isJavaScriptInitializationNeeded))}
   [instance method & params]
-  `(invoke* ~(-> method name str) ~instance ~@params)))
+  `(invoke* ~method ~instance ~@params)))
 
 #?(:clj
 (defmacro field [instance field]
-  `(-> (doto (.getDeclaredField (class ~instance) ~(str field))
+  `(-> (doto (.getDeclaredField (class ~instance) ~field)
              (.setAccessible true))
        (.get  ~instance))))
 

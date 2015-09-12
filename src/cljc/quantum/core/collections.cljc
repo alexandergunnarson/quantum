@@ -29,9 +29,10 @@
      vec empty
      split-at
      first second rest last butlast get pop peek
+     zipmap
      conj! assoc! dissoc! disj!])
   (:require-quantum [ns logic type macros num vec set ftree
-                     log err macros fn str async])
+                     log err macros fn str])
   (:require
             [quantum.core.data.map         :as map]
             [quantum.core.collections.core :as coll]
@@ -82,6 +83,8 @@
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
 #?(:clj (defalias seq-loop loops/seq-loop))
+; Loop via |reduce|  
+#?(:clj (defalias loopr    loops/seq-loop))
 
 (defalias break reduced)
 
@@ -113,7 +116,10 @@
 
 ; (def cljs-for (var loops/for)) ; doesn't work because not a var
 ; (def cljs-for (mfn loops/for)) ; doesn't work because no |eval|
-#?(:clj (defalias for loops/for))
+#?(:clj (defalias for   loops/for  ))
+#?(:clj (defalias fori  loops/fori ))
+#?(:clj (defalias for-m loops/for-m))
+#?(:clj (defalias until loops/until))
 #?(:clj (alter-meta! (var for) assoc :macro true))
 
 ;(def cljs-lfor (var clojure.core/for))
@@ -659,6 +665,18 @@
   [split-at-obj coll]
   [(take-until split-at-obj coll)
    (take-after split-at-obj coll)])
+
+(defn zipmap
+  ([ks vs] (zipmap hash-map ks vs))
+  ([map-gen-fn ks-0 vs-0]
+    (loop [map (map-gen-fn)
+           ks (seq ks-0)
+           vs (seq vs-0)]
+      (if (and ks vs)
+        (recur (assoc map (first ks) (first vs))
+               (next ks)
+               (next vs))
+        map))))
 
 #?(:clj
 (defmacro kmap [& ks]
@@ -1835,7 +1853,10 @@
           (apply f maps)))
     maps))
 
-(def merge-deep (partial merge-deep-with (MWA second)))
+(def merge-deep
+  (partial merge-deep-with
+    (fn ([x]   (second x))
+        ([x y] y))))
 ; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
 
 
@@ -1905,3 +1926,25 @@
 
 (defn into-map-by [m k ms]
   (reduce (fn [ret elem] (assoc ret (k elem) elem)) m ms))
+
+(defn pivot
+  "Pivot a table à la Excel.
+   Defaults to right pivot."
+  {:in '[[1 4 7 a]
+         [2 5 8 b]
+         [3 6 9 c]]
+   :out '[[1 2 3]
+          [4 5 6]
+          [7 8 9]
+          [a b c]]
+   :todo ["Make cleaner/ more parallelizable."]}
+  [table-0]
+  (let [height-f (count (first table-0))
+        width-f  (count table-0)
+        table-f  (seq-loop [row-i   (range height-f)
+                            table-n (transient [])]
+                   (let [row-f (seq-loop [col-i (range width-f)
+                                          row   (transient [])]
+                                 (conj! row (-> table-0 (get col-i) (get row-i))))]
+                     (conj! table-n (persistent! row-f))))]
+    (persistent! table-f)))

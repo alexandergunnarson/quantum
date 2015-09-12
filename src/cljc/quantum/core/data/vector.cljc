@@ -45,10 +45,33 @@
   clojure.lang.Tuple$T6 (splicev [v1 v2] (splicev (into (vector) v1) v2)))
 
 
-; slice
-(def catvec  vec+/catvec)
 (def vec+    vec+/vec)
 (def vector+ vec+/vector)
+
+; slice
+(defn catvec
+  "|empty| checks to get around StackOverflowErrors inherent in |catvec|
+   (At least in Clojure version)"
+  {:attribution "Alex Gunnarson"}
+  ([a] a)
+  ([a b]
+    (if (empty? a)
+        (if (empty? b)
+            (vector+)
+            (vec+ b))
+        (if (empty? b)
+            (vec+ a)
+            (vec+/catvec a b))))
+  ([a b c]
+    (catvec (catvec a b) c))
+  ([a b c d]
+    (catvec (catvec a b c) d))
+  ([a b c d e]
+    (catvec (catvec a b c d) e))
+  ([a b c d e f]
+    (catvec (catvec a b c d e) f))
+  ([a b c d e f & more]
+    (reduce catvec (catvec a b c d e f) more)))
 
 (defn subvec+
   "Produces a new vector containing the appropriate subrange of the input vector in logarithmic time

@@ -408,16 +408,16 @@
 (def ns-defs
   (let [ns-defs-0
         '{; LIB
-          async 
-            {:aliases       {:clj  {async  clojure.core.async}
-                             :cljs {async  cljs.core.async}}
+          core-async 
+            {:aliases       {:clj  {core-async  clojure.core.async}
+                             :cljs {core-async  cljs.core.async}}
              :macro-aliases {:cljs {asyncm cljs.core.async.macros}}
-             :refers        {:cljc {async  #{<! >! alts! chan}}
-                             :clj  {async  #{go go-loop >!! <!! thread}}
+             :refers        {:cljc {core-async  #{<! >! alts!}}
+                             :clj  {core-async  #{go go-loop thread}}
                              :cljs {asyncm #{go go-loop}}}}
-          qasync
-            {:aliases {:cljc {qasync quantum.core.thread.async}}
-             :refers  {:cljc {qasync #{put! take! empty! peek!}}}}
+          async
+            {:aliases {:cljc {async quantum.core.thread.async}}
+             :refers  {:cljc {async #{put!! >!! take!! <!! empty! peek!! alts!! chan wait-until}}}}
           res
             {:aliases {:cljc {res       quantum.core.resources}
                        :clj  {component com.stuartsierra.component}}
@@ -434,7 +434,7 @@
                 key val conj! assoc! dissoc! disj!} 
              :refers
                {:cljc
-                 {coll #{for doseq doseqi reduce reducei reducei-
+                 {coll #{for fori for-m until doseq doseqi reduce reducei reducei-
                          count lasti
                          subseq getr gets
                          repeat repeatedly
@@ -470,7 +470,7 @@
                          genkeyword
                          break
                          deficlass
-                         seq-loop}}}
+                         seq-loop loopr}}}
              :imports (quantum.core.collections.core.MutableContainer)}
           diff   {:aliases {:cljc {diff   quantum.core.collections.diff}}}
           ccore  {:aliases {:cljc {ccore  quantum.core.collections.core}}
@@ -487,6 +487,8 @@
                          :cljs {err      #{Err}
                                 err-cljs #{try+}}}
              :imports   (quantum.core.error.Err)}
+          graph
+            {:aliases {:cljc {graph quantum.core.graph}}}
           io 
             {:aliases {:cljc {io quantum.core.io.core}}
              :imports 
@@ -606,13 +608,13 @@
           map
             {:core-exclusions #{merge sorted-map sorted-map-by}
              :aliases {:cljc {map quantum.core.data.map}}
-             :refers  {:cljc {map #{map-entry ordered-map}}}}
+             :refers  {:cljc {map #{map-entry ordered-map int-map imerge}}}}
           queue 
             {:aliases {:cljc {q   quantum.core.data.queue}}
              :refers  {:cljc {q   #{queue}}}}
           set
             {:aliases {:cljc {set quantum.core.data.set}}
-             :refers  {:cljc {set #{sorted-set+}}
+             :refers  {:cljc {set #{sorted-set+ int-set dense-int-set}}
                        :clj  {set #{ordered-set}}}}
           vec
             {:aliases {:cljc {vec quantum.core.data.vector}}

@@ -8,7 +8,8 @@
               [clojure.data.avl         :as avl]
     #?@(:clj [[clojure.data.finger-tree :as ftree]
               [flatland.ordered.set     :as oset ]
-              [seqspert.hash-set]])))
+              [seqspert.hash-set]
+              [clojure.data.int-map     :as imap]])))
 
 ; ============ STRUCTURES ============
 
@@ -16,6 +17,9 @@
 #?(:clj (def c-sorted-set ftree/counted-sorted-set)) ; sorted set that provides log-n nth
 (def sorted-set+    avl/sorted-set)
 (def sorted-set-by+ avl/sorted-set-by)
+
+(def int-set       imap/int-set)
+(def dense-int-set imap/dense-int-set)
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 

@@ -845,7 +845,7 @@
   {:added "1.5"
    :attribution "clojure.core.reducers"}
   [pred coll]
-  (filter+ (fn-not pred) coll))
+  (filter+ (complement pred) coll))
 
 (defn remove+ [func coll] (->> coll fold-pre (remove* func)))
 

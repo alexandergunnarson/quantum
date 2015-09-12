@@ -4,7 +4,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce])
-  (:require-quantum [ns fn logic log map macros type red])
+  (:require-quantum [ns fn logic log map macros type red err])
   (:require
     #?(:clj [proteus :refer [let-mutable]])))
   
@@ -273,6 +273,26 @@
              res# (do ~@body)]
          (vswap! n# quantum.core.loops/unchecked-inc-long)
          res#))))))
+
+(defmacro for-m
+  "for:for-m::reduce:reducem"
+  [arglist & body]
+  (condp = (count arglist)
+    3 (let [[k v m] arglist]
+       `(persistent!
+          (reduce
+            (fn [ret# ~k ~v]
+              (conj! ret# (do ~@body)))
+            (transient {})
+            ~m)))
+    2 (let [[elem coll] arglist]
+       `(persistent!
+          (reduce
+            (fn [ret# ~elem]
+              (conj! ret# (do ~@body)))
+            (transient {})
+            ~coll)))
+    (throw+ (Err. :illegal-argument "Incorrect number of arguments to |for-m|" (count arglist)))))
 
 (defmacro seq-loop
   [bindings & exprs]

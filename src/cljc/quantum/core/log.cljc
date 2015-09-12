@@ -6,7 +6,10 @@
     :attribution "Alex Gunnarson"}
   quantum.core.log
   (:refer-clojure :exclude [pr])
-  (:require-quantum [ns async fn pr])
+  (:require-quantum [ns fn pr])
+  (:require
+    #?(:clj  [clojure.core.async :as async]
+       :cljs [cljs.core.async    :as async]))
   #_(:require
     #?(:clj  [clj-time.core  :as time]
        :cljs [cljs-time.core :as time])))
@@ -26,7 +29,7 @@
 (def vars (atom {}))
 (defn cache! [k v]
   (swap! vars assoc k v))
-(def statuses (atom (chan)))
+(def statuses (atom (async/chan)))
 (def errors (atom []))
 (defn error [throw-context]
   (swap! errors conj
@@ -66,7 +69,6 @@
       (let [trace?     (or (:trace?  opts) trace? )
             pretty?    (or (:pretty? opts) pretty?)
             timestamp? (:timestamp? opts)
-            thread?    (:thread? opts)
             curr-fn (when trace? (ns/this-fn-name :prev))
             args-f @args
             env-type-str
@@ -83,12 +85,10 @@
                                 "MM-dd-yyyy HH:mm::ss")
                              (java.time.LocalDateTime/now))]
                       (print (str "[" timestamp "] ")))))
-                #?(:clj
-                  (when thread?
-                    (print (str "[:" (.getName (Thread/currentThread)) 
-                                 " » " (name pr-type) "] "))))
                 (when trace?
-                  (print (str "[" env-type-str)
+                  (print "[")
+                  (print #?(:clj (.getName (Thread/currentThread)))
+                         ":"
                          curr-fn "»"
                          (str (-> pr-type name) "] ")))
                 (if (and pretty? (-> args-f first string?))
@@ -134,7 +134,7 @@
   ([s]
     (pr :user s)
     (let [statuses-chan @statuses]
-      (go (>! @statuses s))
+      (async/go (async/>! @statuses s))
       (reset! statuses statuses-chan))
     nil)
   ([s & strs]
@@ -144,4 +144,4 @@
 (defn curr-status
   "Updates the system status with the provided string @s."
   [s]
-  (go (<! @statuses s))))
+  (async/go (async/<! @statuses s))))

@@ -11,6 +11,7 @@
   (:require-quantum [ns])
   (:require
     [clojure.data.avl     :as avl]
+    [clojure.data.int-map :as imap]
     #?@(:clj [[flatland.ordered.map :as omap]
               [seqspert.hash-map]])))
 
@@ -19,6 +20,10 @@
 
 (def sorted-map    avl/sorted-map)
 (def sorted-map-by avl/sorted-map-by)
+
+(def int-map       imap/int-map)
+; (fold i/merge conj ...)
+(def imerge imap/merge)
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values

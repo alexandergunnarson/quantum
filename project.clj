@@ -68,6 +68,7 @@
      ; DATA.MAP; DATA.SET     
      [org.flatland/ordered              "1.5.2" ]
      [org.clojure/data.avl              "0.0.12"]
+     [org.clojure/data.int-map          "0.2.1" ]
      ; DATA.CSV             
      [org.clojure/data.csv              "0.1.2"]
      ; DATA.XML

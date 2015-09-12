@@ -739,16 +739,6 @@
                      (str (clojure.core/name suffix) "-" name))]
      (camel-case nname))))
 
-; ===== NONDETERMINISTIC =====
-
-(defn ^String rand-str [len] 
-  (->> (for+ [n (range 0 len)]
-         (->> (- (inc 90) 65)
-              rand-int
-              (+ 65)
-              char str))
-       (reduce str)))
-
 ; ===== MISCELLANEOUS =====
 
 (defn reverse

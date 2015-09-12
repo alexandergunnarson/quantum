@@ -3,9 +3,8 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-  (:require-quantum [ns num fn str err macros logic vec coll log res qasync])
+  (:require-quantum [ns num fn str err macros logic vec coll log res core-async async])
   (:require
-    [#?(:clj clojure.core.async :cljs cljs.core.async) :as async]
     #?@(:clj [[clojure.core.async.impl.ioc-macros :as ioc]
               [clojure.core.async.impl.exec.threadpool :as async-threadpool]]))
   #?(:clj (:import (java.lang Thread Process)
@@ -13,20 +12,20 @@
             quantum.core.data.queue.LinkedBlockingQueue)))
 
 ;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
-#?(:clj (defmalias go      async/go))
-#?(:clj (defmalias go-loop async/go-loop))
+; #?(:clj (defmalias go      core-async/go))
+; #?(:clj (defmalias go-loop core-async/go-loop))
 
-#?(:clj (defalias <!       async/<!))
-#?(:clj (defalias <!!      async/<!!))
-#?(:clj (defalias >!       async/>!))
-#?(:clj (defalias >!!      async/>!!))
+; #?(:clj (defalias <!       core-async/<!))
+; #?(:clj (defalias <!!      core-async/<!!))
+; #?(:clj (defalias >!       core-async/>!))
+; #?(:clj (defalias >!!      core-async/>!!))
 
-#?(:clj (defalias chan     async/chan))
-;#?(:clj (defalias close!   async/close!))
+; #?(:clj (defalias chan     core-async/chan))
+; ;#?(:clj (defalias close!   async/close!))
 
-#?(:clj (defalias alts!    async/alts!))
-#?(:clj (defalias alts!!   async/alts!!))
-#?(:clj (defalias thread   async/thread))
+; #?(:clj (defalias alts!    core-async/alts!))
+; #?(:clj (defalias alts!!   core-async/alts!!))
+; #?(:clj (defalias thread   core-async/thread))
 
 
 #?(:clj (defonce reg-threads (atom {}))) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
@@ -63,7 +62,8 @@
       (log/pr ::warn "Attempted to register existing thread:" id)
       (do (log/pr ::debug "REGISTERING THREAD" id)
           (swap! reg-threads assoc id (dissoc opts :id))
-          (when parent (add-child-proc! parent id))))))
+          (when parent (add-child-proc! parent id))
+          opts))))
 
 #?(:clj
 (defn deregister-thread! [id]
@@ -138,6 +138,7 @@
   ([^Process x] (try (.exitValue x) true
                    (catch IllegalThreadStateException _ false)))
   ([^java.util.concurrent.Future x] (or (.isCancelled x) (.isDone x)))
+  ([^boolean? x] x)
   ([x] (if (nil? x) true (throw :not-implemented)))))
 
 #?(:clj (def open? (fn-not closed?)))
@@ -157,8 +158,8 @@
 (defn ^:private close!* [thread thread-id close-reqs cleanup force?]
   (let [max-tries 3]
     (log/pr ::debug "Before close request for id" thread-id)
-    (when (and close-reqs (not (qasync/closed? close-reqs)))
-      (qasync/put! close-reqs :req)) ; it calls its own close-request handler
+    (when (and close-reqs (not (async/closed? close-reqs)))
+      (async/put!! close-reqs :req)) ; it calls its own close-request handler
     (log/pr ::debug "After close request for id" thread-id)
     (force cleanup) ; closes message queues, releases other resources
                     ; that can/should be released before full termination
@@ -189,6 +190,14 @@
         (interrupt!* thread thread-id interrupted force?)
         (close!*     thread thread-id close-reqs cleanup force?)))))) ; closed handler is called by the thread reaper when it's actually close
 
+(defn close-threads! [pred]
+  (->> @reg-threads
+       (coll/filter-keys+ pred)
+       redm
+       vals
+       (map :thread)
+       (map #(.cancel % true))))
+
 #?(:clj
 (defn close-all!
   {:todo ["Make dependency graph" "Incorporate into thread-reaper"]}
@@ -214,9 +223,18 @@
   []
   (doseq [k v (->> @reg-threads (remove+ (compr key (eq? :thread-reaper))) redm)]
     (when-let [close-reqs (:close-reqs v)]
-      (put! close-reqs :req))
+      (put!! close-reqs :req))
     (when-let [thread- (:thread v)]
       (close-impl! thread-))))
+
+(declare reg-threads)
+(defn close-all-forcibly!
+  "A working version of |close-all|."
+  []
+  (->> @reg-threads
+       (<- dissoc :thread-reaper)
+       (map (fn-> val :thread (.cancel true)))
+       dorun))
 
 #?(:clj
 (defonce add-thread-shutdown-hooks!
@@ -235,24 +253,44 @@
     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
       (@rejected-execution-handler f))))
 
+(defnt set-max-threads!
+  [^java.util.concurrent.ThreadPoolExecutor threadpool-n n]
+  (doto threadpool-n
+    (.setCorePoolSize    n)
+    (.setMaximumPoolSize n)))
+
+(defn gen-threadpool [num-threads]
+  (set-max-threads! 
+    (java.util.concurrent.Executors/newFixedThreadPool num-threads)
+    num-threads))
+
+(defn clear-work-queue! [^ThreadPoolExecutor threadpool-n]
+  (->> threadpool-n .getQueue (map #(.cancel ^Future % true)) dorun)
+  (->> threadpool-n .purge))
+
 #?(:clj
-(defn ^:internal closeably-execute [^Runnable r opts]
-  (let [^Future future-obj
-         (.submit ^ExecutorService threadpool r)]
-    (register-thread! (merge opts {:thread future-obj})))))
+(defn ^:internal closeably-execute [threadpool-n ^Runnable r {:keys [id] :as opts}]
+  (when (register-thread! (merge opts {:thread true}))
+    (try
+      (let [^Future future-obj
+             (.submit ^ExecutorService threadpool-n r)]
+        (swap! reg-threads assoc-in [id :thread future-obj]))
+      (catch Throwable e ; what exception?
+        (deregister-thread! id))))))
 
 #?(:clj
 (defn ^:internal threadpool-run
   "Runs Runnable @r in a threadpool thread"
-  [^Runnable r opts]
-  (closeably-execute r opts)))
+  [threadpool-n ^Runnable r opts]
+  (closeably-execute threadpool-n r opts)))
 
 #?(:clj
-(defmacro ^:internal lt-thread*  
+(defmacro ^:internal lt-go-thread*  
   [opts & body]
   `(let [c# (chan 1)
          captured-bindings# (clojure.lang.Var/getThreadBindingFrame)]
      (threadpool-run
+       (or (:threadpool ~opts) threadpool)
        (fn []
          (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
                state# (-> (f#)
@@ -261,6 +299,14 @@
            (ioc/run-state-machine-wrapped state#)))
        ~opts)
      c#)))
+
+#?(:clj
+(defmacro ^:internal lt-thread*  
+  [opts & body]
+  `(threadpool-run
+     (or (:threadpool ~opts) threadpool)
+     (fn [] ~@body)
+     ~opts)))
 
 (defn gen-proc-id [id parent name-]
   (if id id
@@ -408,11 +454,11 @@
                         :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
             []
             (if (nempty? thread-reaper-pause-requests)
-                (do (qasync/empty! thread-reaper-pause-requests)
+                (do (async/empty! thread-reaper-pause-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
                     (swap! reg-threads assoc-in [id :state] :paused)
-                    (take! thread-reaper-resume-requests) ; blocking take
-                    (qasync/empty! thread-reaper-resume-requests)
+                    (take!! thread-reaper-resume-requests) ; blocking take
+                    (async/empty! thread-reaper-resume-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
                     (swap! reg-threads assoc-in [id :state] :running)
                     (recur))
@@ -421,8 +467,8 @@
                     (recur)))))
         (log/disable! :macro-expand)))))
 
-#?(:clj (defn pause-thread-reaper!  [] (put! thread-reaper-pause-requests true)))
-#?(:clj (defn resume-thread-reaper! [] (put! thread-reaper-resume-requests true)))
+#?(:clj (defn pause-thread-reaper!  [] (put!! thread-reaper-pause-requests true)))
+#?(:clj (defn resume-thread-reaper! [] (put!! thread-reaper-resume-requests true)))
 
 (defonce gc-worker
   (lt-thread {:id :gc-collector}

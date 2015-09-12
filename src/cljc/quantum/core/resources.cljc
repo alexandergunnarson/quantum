@@ -1,6 +1,6 @@
 (ns quantum.core.resources
   (:require-quantum
-    [ns num fn str err macros logic vec coll log async qasync])
+    [ns num fn str err macros logic vec coll log core-async async])
   #?(:clj (:require
             [com.stuartsierra.component :as component]
             [clojure.tools.namespace.repl :refer
@@ -18,7 +18,7 @@
   ([^java.io.InputStream stream]
     (try (.available stream) true
       (catch IOException _ false)))
-  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (qasync/closed? obj)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/closed? obj)))
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw+ :not-implemented)))
 
 (def closed? (fn-not open?))
@@ -26,8 +26,8 @@
 (defnt close!
   #?@(:clj
  [([#{Writer Reader}     obj] (.close obj))
-  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (qasync/close! obj))])
-  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (async/close! obj))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (core-async/close! obj))
   ([                     obj]
     (when (nnil? obj) (throw+ :not-implemented))))
 

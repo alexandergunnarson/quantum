@@ -1,14 +1,18 @@
 (ns quantum.apis.twitter.core
   (:require-quantum [:lib auth http url]))
 
-(defn gen-oauth-signature [{:keys [method url query-params]} auth-params]
+(def default-username #(auth/datum :twitter :default-username))
+(def default-app #(auth/datum :twitter :default-app))
+
+(defn gen-oauth-signature
+  [username app {:keys [method url query-params]} auth-params]
   (let [http-method-caps (-> method name str/upper-case)
         ; The OAuth spec says to sort lexigraphically/alphabetically.
         auth-params-sorted auth-params ; (sort-by auth-params key)
         params-string    (url/map->str (into (into (sorted-map) query-params)
                                             auth-params-sorted))
-        consumer-secret (auth/datum :twitter :api-secret  )
-        oauth-secret    (auth/datum :twitter :oauth-secret)
+        consumer-secret (auth/datum :twitter username :apps app :api-secret  )
+        oauth-secret    (auth/datum :twitter username :apps app :oauth-secret)
         signature-base-string
           (-> (str http-method-caps
                 "&" (url/encode url)
@@ -26,29 +30,34 @@
                       (String.))]
     signature))
 
-(defn request! [{:as request :keys [url method query-params timestamp]}]
-  (let [auth-params
-          (sorted-map
-            "oauth_consumer_key"     (auth/datum :twitter :api-key)
-            "oauth_nonce"            (rand/rand-string 32 #{:numeric :upper :lower})
-            "oauth_signature_method" "HMAC-SHA1"
-            "oauth_timestamp"        (-> (time/now-unix) (uconv/convert :millis :sec) core/int str)
-            "oauth_token"            (auth/datum :twitter :oauth-token)
-            "oauth_version"          "1.0")
-        oauth-signature (gen-oauth-signature request auth-params)
-        auth-params-f (assoc auth-params "oauth_signature" oauth-signature)
-        sb (seq-loop [kv auth-params-f
-                      ret (StringBuilder. "OAuth ")]
-             (.append ^StringBuilder ret (key kv))
-             (.append ^StringBuilder ret "=")
-             (.append ^StringBuilder ret "\"")
-             (.append ^StringBuilder ret (url/encode (val kv)))
-             (.append ^StringBuilder ret "\","))
-        auth-str (-> sb (.deleteCharAt (lasti sb)) str)]
-    (http/request!
-      (-> request
-          (assoc-in [:headers "Authorization"]
-            auth-str)))))
+(defn request!
+  ([req]
+    (request! (default-username) (default-app) req))
+  ([username-0 app-0 {:as request :keys [url method query-params timestamp]}]
+    (let [username (or username-0 (default-username))
+          app      (or app-0      (default-app     ))
+          auth-params
+            (sorted-map
+              "oauth_consumer_key"     (auth/datum :twitter username :apps app :api-key)
+              "oauth_nonce"            (rand/rand-string 32 #{:numeric :upper :lower})
+              "oauth_signature_method" "HMAC-SHA1"
+              "oauth_timestamp"        (-> (time/now-unix) (uconv/convert :millis :sec) core/int str)
+              "oauth_token"            (auth/datum :twitter username :apps app :oauth-token)
+              "oauth_version"          "1.0")
+          oauth-signature (gen-oauth-signature username app request auth-params)
+          auth-params-f (assoc auth-params "oauth_signature" oauth-signature)
+          sb (seq-loop [kv auth-params-f
+                        ret (StringBuilder. "OAuth ")]
+               (.append ^StringBuilder ret (key kv))
+               (.append ^StringBuilder ret "=")
+               (.append ^StringBuilder ret "\"")
+               (.append ^StringBuilder ret (url/encode (val kv)))
+               (.append ^StringBuilder ret "\","))
+          auth-str (-> sb (.deleteCharAt (lasti sb)) str)]
+      (http/request!
+        (-> request
+            (assoc-in [:headers "Authorization"]
+              auth-str))))))
 
 (def tweets->hashtags
   (fn->> (map+ (fn-> :entities :hashtags))
@@ -57,8 +66,8 @@
          flatten+
          (into #{})))
 
-(defn tweets [user-id]
-  (request!
+(defn tweets [user-id & [opts username app]]
+  (request! username app
     {:url    "https://api.twitter.com/1.1/statuses/user_timeline.json"
      :method :get
      :query-params
@@ -66,18 +75,26 @@
         "count"   "200"}
      :parse? true}))
 
-(defn followers [user-id & [parse? cursor]]
-  (request!
+(defn followers [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+  (request! username app
     {:url    "https://api.twitter.com/1.1/followers/list.json"
      :method :get
      :query-params
        {"user_id" user-id
         "count"   "200"
         "cursor"  (or cursor "-1")} ; -1 is the start cursor
-     :parse? parse?}))
+     :parse? parse?
+     :handlers handlers}))
 
-(defn rate-limits []
-  (request!
+(defn rate-limits [& [{:keys [parse? handlers] :as opts} username app]]
+  (request! username app
     {:url "https://api.twitter.com/1.1/application/rate_limit_status.json"
      :method :get
-     :parse? true}))
+     :handlers handlers
+     :parse? (whenc parse? nil? true)}))
+
+(defn lookup [user-id]
+  (request!
+    {:url "https://api.twitter.com/1.1/users/lookup.json"
+     :method :get
+     :query-params {"user_id" user-id}}))
