@@ -64,6 +64,11 @@
            (reset! output-chan (-> @thread/reg-threads :server-terminal :std-output-chan))
            true))))
 
+(defn reset-terminal! []
+  (.destroy @terminal)
+  (reset! terminal nil)
+  (launch-terminal!))
+
 (defn with-terminal
   {:todo ["Has the potential to get stuck in an infinite loop.
            use |try-times| instead of |recur|."
@@ -138,3 +143,9 @@
       (wait-until-prompt 5000 "Password for")
       (command (auth/datum :github :password))
       (wait-until-prompt (convert 2 :min :millis) (prompt)))))
+
+(defn update-repo
+  "If there's an error, the SSH will have to be relaunched"
+  [repo]
+  (command (str/sp "cd" (str "~/"repo) "&& git pull origin master")))
+
