@@ -5,10 +5,10 @@
 (defn remove-global-stylesheet! [url]
   (let [^java.util.ArrayList stylesheets
           (-> (StyleManager/getInstance)
-              (quantum.core.java/field platformUserAgentStylesheetContainers)) ; was |userAgentStylesheets| before a certain revision
+              (quantum.core.java/field "platformUserAgentStylesheetContainers")) ; was |userAgentStylesheets| before a certain revision
         stylesheet-index
           (-> (StyleManager/getInstance)
-              (quantum.core.java/invoke getIndex (str url)))]
+              (quantum.core.java/invoke "getIndex" (str url)))]
     (.remove stylesheets stylesheet-index) ; This apparently doesn't work
     (.clear stylesheets)))
 (in-ns 'quantum.ui.css.javafx)
@@ -18,7 +18,7 @@
   #_(let [file-str (io/file-str file)]
     (fx/run! (javafx.application.Application/setUserAgentStylesheet nil)
      #_(-> (StyleManager/getInstance)
-         (java/field platformUserAgentStylesheetContainers)  ; was |userAgentStylesheets| before a certain revision
+         (java/field "platformUserAgentStylesheetContainers")  ; was |userAgentStylesheets| before a certain revision
          (.clear))
      (.setDefaultUserAgentStylesheet
        (StyleManager/getInstance) file-str)

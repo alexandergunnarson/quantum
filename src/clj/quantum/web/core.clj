@@ -51,6 +51,11 @@
 (defn driver []
   (-> res/system :quantum.web.core :web-driver))
 
+(defn reset-driver! [driver-f]
+  (when-let [driver-n (get-in res/system [:quantum.web.core :web-driver])]
+    (res/cleanup! driver-n))
+  (swap-var! res/system assoc-in [:quantum.web.core :web-driver] driver-f))
+
 (defn not-found-error [^WebDriver driver elem]
   {:msg         "Selenium element not found."
    :type        :not-found
@@ -116,7 +121,9 @@
   (.click elem))
 
 (defn find-element
-  {:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"
+   :todo ["Use the forthcoming |try-times| function"]}
+  ([elem]         (find-element (driver) elem))
   ([driver elem] (find-element driver elem 1 0))
   ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms]
     ((fn looper [n]

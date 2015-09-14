@@ -50,11 +50,21 @@
 
 (defnt transact!
   ([^vector? trans]
-    @(d/transact @conn trans))
+    (let [txn @(d/transact @conn trans)]
+      [true (delay txn)]))
   ([^string? str-path]
     (->> str-path (io/read :read-method :str :path)
          read-string
          transact!)))
+
+(defnt transact-async!
+  ([^vector? trans]
+    (let [txn @(d/transact-async @conn trans)]
+      [true (delay txn)]))
+  ([^string? str-path]
+    (->> str-path (io/read :read-method :str :path)
+         read-string
+         transact-async!)))
 
 (defn read-transact! [path] (-> path io/file-str transact!))
 
@@ -151,7 +161,7 @@
 (defn create-entity!
   ([props] (create-entity! nil props))
   ([part props]
-    (let [datom (into {:db/id (d/tempid (or part :test))} props)]
+    (let [datom (merge {:db/id (d/tempid (or part :db.part/test))} props)]
       (transact! [datom]))))
 
 (defmacro defn!
@@ -191,3 +201,12 @@
     (transact! [datom])
     nil)
 )
+
+; If an attributes points to another entity through a cardinality-many attribute, get will return a Set of entity instances. The following example returns all the entities that Jane likes:
+
+; // empty, given the example data
+; peopleJaneLikes = jane.get(":person/likes")
+; If you precede an attribute's local name with an underscore (_), get will navigate backwards, returning the Set of entities that point to the current entity. The following example returns all the entities who like Jane:
+; 
+; // returns set containing John
+; peopleWhoLikeJane = jane.get(":person/_likes")

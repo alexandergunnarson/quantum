@@ -1,5 +1,5 @@
 (ns quantum.apis.twitter.core
-  (:require-quantum [:lib auth http url]))
+  (:require-quantum [:lib auth http url web]))
 
 (def default-username #(auth/datum :twitter :default-username))
 (def default-app #(auth/datum :twitter :default-app))
@@ -98,3 +98,44 @@
     {:url "https://api.twitter.com/1.1/users/lookup.json"
      :method :get
      :query-params {"user_id" user-id}}))
+
+(defn sign-in!
+  {:in [:argunnarson]}
+  [username]
+  (.get (web/driver) "http://www.twitter.com/")
+  (web/click! (web/find-element (By/xpath "//button[.='Log In']")))
+  (let [username-field (web/find-element (By/id "signin-email"))
+        password-field (web/find-element (By/id "signin-password"))
+        ;login-button (web/find-element (By/xpath "//input[@type='submit' and @value='Log in']"))
+        ]
+    ; Sign in
+    (web/send-keys! username-field (name username))
+    (web/send-keys! password-field (auth/datum :twitter username :password))
+    (web/send-keys! password-field "\n") ; to sign in
+    (Thread/sleep 2000) ; Doesn't really check if you logged in, but oh well
+    ;(web/click-load! login-button)
+    ))
+
+(defn create-app!
+  {:in [:argunnarson]}
+  [{:keys [username app-name description website callback-url]}]
+  (sign-in! username)
+  (.get (web/driver) "https://apps.twitter.com/app/new")
+
+  (let [app-name-field     (web/find-element (By/id "edit-name"         ))
+        description-field  (web/find-element (By/id "edit-description"  ))
+        website-field      (web/find-element (By/id "edit-url"          ))
+        callback-url-field (web/find-element (By/id "edit-callback-url" ))
+        agree-checkbox     (web/find-element (By/id "edit-tos-agreement"))
+        create-app-button  (web/find-element (By/id "edit-submit"       ))]
+    (web/send-keys! app-name-field     app-name)
+    (web/send-keys! description-field  description)
+    (web/send-keys! website-field      website)
+    (web/send-keys! callback-url-field callback-url)
+    (web/click! agree-checkbox)
+    (web/click-load! create-app-button)))
+
+
+
+
+

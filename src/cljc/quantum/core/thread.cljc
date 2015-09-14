@@ -270,12 +270,13 @@
 
 #?(:clj
 (defn ^:internal closeably-execute [threadpool-n ^Runnable r {:keys [id] :as opts}]
-  (when (register-thread! (merge opts {:thread true}))
+  (when (register-thread! (merge opts {:thread false}))
     (try
       (let [^Future future-obj
              (.submit ^ExecutorService threadpool-n r)]
-        (swap! reg-threads assoc-in [id :thread future-obj]))
+        (swap! reg-threads assoc-in [id :thread] future-obj))
       (catch Throwable e ; what exception?
+        (log/pr :warn "Error in submitting to threadpool" e)
         (deregister-thread! id))))))
 
 #?(:clj

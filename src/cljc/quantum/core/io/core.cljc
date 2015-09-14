@@ -1,30 +1,5 @@
-(ns
-  ^{:doc "I/O operations. Path parsing, read/write, serialization, etc.
 
-          Perhaps it would be better to use, say, org.apache.commons.io.FileUtils
-          for many of these things."}
-  quantum.core.io.core
-  (:refer-clojure :exclude [read descendants])
-  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log vec])
-  #?(:clj
-      (:require
-        [clojure.java.io               :as io    ]
-        [taoensso.nippy                :as nippy ]
-        [quantum.core.io.serialization :as io-ser]
-        [iota                          :as iota  ]))
-  #?(:clj
-      (:import
-        (java.io File
-                 FileNotFoundException IOException
-                 FileReader PushbackReader
-                 DataInputStream DataOutputStream 
-                 OutputStream FileOutputStream
-                 BufferedOutputStream BufferedInputStream
-                 InputStream  FileInputStream
-                 PrintWriter)
-        (java.util.zip ZipOutputStream ZipEntry)
-        java.util.List
-        org.apache.commons.io.FileUtils)))
+
 
 ;(require '[clojure.data.csv :as csv])
 
@@ -82,7 +57,8 @@
   "Joins string paths (URLs, file paths, etc.)
   ensuring correct separator interposition."
   {:attribution "taoensso.encore"
-   :usage '(path "foo/" "/bar" "baz/" "/qux/")}
+   :usage '
+ }
   [& parts]
   (apply str/join-once sys/separator parts))
 
@@ -137,7 +113,7 @@
       (fn [path-n key-n n]
         (let [first-key-not-root?
                (and (= n 0) (string? key-n)
-                    ((fn-not (MWA 2 str/starts-with?)) key-n sys/separator))
+                    ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
               k-to-add-0 (or (get dirs key-n) key-n)
               k-to-add-f
                 (if first-key-not-root?
