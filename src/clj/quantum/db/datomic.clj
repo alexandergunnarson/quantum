@@ -1,7 +1,8 @@
 (ns quantum.db.datomic
   (:refer-clojure :exclude [assoc!])
   (:require-quantum [:lib])
-  (:require [datomic.api :as d])
+  (:require [datomic.api :as d]
+    [quantum.deploy.amazon :as amz])
   (:import datomic.Peer [datomic.peer LocalConnection Connection]))
 
 #_(doseq [logger (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
@@ -12,21 +13,22 @@
 
 ; With help from http://docs.datomic.com/getting-started.html
 
-; SETUP
-; createuser -U alexandergunnarson -s -r -E postgres
-; pg_ctl start -D  "/Users/alexandergunnarson/Development/Source Code Projects/quanta/resources/Database/postgres/" -o "-p 5431"
-; ~/Downloads/datomic/bin/transactor "/Users/alexandergunnarson/Development/Source Code Projects/quanta/resources/Database/datomic/sql-transactor-template.properties" 
-; END SETUP
-
-;(def memuri "datomic:mem://hello")
-;(def memconn (Peer/connect local-uri))
-
 (swap! pr/blacklist conj datomic.db.Db)
-(def connect d/connect)
-(defonce uri  (atom nil))
+
+(defn db-uri [db-name table-name]
+  (str "datomic:ddb://" @amz/server-region
+       "/" db-name
+       "/" table-name
+       "?aws_access_key_id=" @amz/aws-id
+       "&aws_secret_key="    @amz/aws-secret))
 ;(Peer/createDatabase @uri) ; only once ever 
 (defonce conn (atom nil))
 
+(defn connect!
+  ;(def memuri "datomic:mem://hello")
+  ;(def memconn (Peer/connect local-uri))
+  [db-name table-name]
+  (reset! conn (d/connect (db-uri db-name table-name))))
 
 ; datom = ["add fact" "about a new entity with this temporary id"
 ;          "assert that the attribute db/doc" "has the value hello world"]
@@ -115,7 +117,7 @@
 (defn add-partition! [part-name]
   (transact! [{:db/id                 (d/tempid :db.part/db)
                :db/ident              part-name
-               :db.install/partition :db.part/db}]))
+               :db.install/_partition :db.part/db}]))
 
 (defn add-schema! [& args] (transact! [(apply schema args)]))
 
@@ -174,7 +176,7 @@
            :where [:db.part/db :db.install/partition ?p]
                   [?p :db/ident ?ident]])
        (map+ (f*n first))
-       force (into #{})))
+       (into #{})))
 
 #_(do
   (query '[:find   ?entity

@@ -34,13 +34,17 @@
 
      ; [com.github.detro.ghostdriver/phantomjsdriver "1.1.0"]
      ; ; ==== SERVER ====
-     ; [compojure                 "1.1.8"         ]
+     [compojure "1.3.3"
+       :exclusions [org.eclipse.jetty/jetty-server
+                    org.eclipse.jetty/jetty-servlet
+                    javax.servlet/servlet-api
+                    clj-http]]
      ; [ring/ring-jetty-adapter   "1.2.2"         ]
      ; [environ                   "0.5.0"         ]
      
      ; ==== DB ====
      ; DATOMIC
-        [com.datomic/datomic-pro "0.9.5173" :exclusions [joda-time]]
+        [com.datomic/datomic-pro "0.9.5206" :exclusions [joda-time]]
      ; ==== CORE ====
        ; ==== COLLECTIONS ====
          ; CORE

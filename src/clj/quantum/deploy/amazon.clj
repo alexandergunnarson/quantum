@@ -30,6 +30,10 @@
 (def user             (atom (get-user)))
 (defn prompt [] (str "@ip-" (public-ip-dashed) ":"))
 
+(def aws-id     (atom (auth/datum :amazon :ec2 @instance-name :access-key :id)))
+(def aws-secret (atom (auth/datum :amazon :ec2 @instance-name :access-key :secret)))
+
+
 (defn get-ssh-keys-path []
   (-> (auth/datum :amazon :ec2 @instance-name :ssh-keys-path) io/file-str))
 (def ssh-keys-path (atom (get-ssh-keys-path)))
@@ -64,7 +68,7 @@
            (reset! output-chan (-> @thread/reg-threads :server-terminal :std-output-chan))
            true))))
 
-(defn reset-terminal! []
+(defn restart-terminal! []
   (.destroy @terminal)
   (reset! terminal nil)
   (launch-terminal!))
@@ -118,10 +122,12 @@
   )
 
 (defn install-leiningen! []
-  (command "sudo apt-get install leiningen")
-  (wait-until-prompt 5000 "Do you want to continue?")
-  (command "Y")
-  (wait-until-prompt 50000 (prompt)))
+  ; (command "sudo apt-get install leiningen") ; NO: gets Leiningen 1.7
+  ; (wait-until-prompt 5000 "Do you want to continue?")
+  ; (command "Y")
+  ; TODO: RUN LEININGEN SCRIPT
+  (wait-until-prompt 50000 (prompt))
+  )
 
 (defn install-git! []
   (command "sudo apt-get install git")
@@ -134,18 +140,90 @@
   (install-maven!)
   (install-leiningen!))
 
+(defn auth-repo! [repo-name]
+  (when (auth/datum :github repo-name :private?)
+    (wait-until-prompt 5000 "Username for")
+    (command (auth/datum :github :username))
+    (wait-until-prompt 5000 "Password for")
+    (command (auth/datum :github :password))))
+
 (defn clone-repos! [repos]
   (doseq [repo-name repos]
     (command (str "git clone https://www.github.com/" (auth/datum :github :username) "/" repo-name))
-    (when (auth/datum :github repo-name :private?)
-      (wait-until-prompt 5000 "Username for")
-      (command (auth/datum :github :username))
-      (wait-until-prompt 5000 "Password for")
-      (command (auth/datum :github :password))
-      (wait-until-prompt (convert 2 :min :millis) (prompt)))))
+    (auth-repo! repo-name)
+    (wait-until-prompt (convert 2 :min :millis) (prompt))))
 
-(defn update-repo
-  "If there's an error, the SSH will have to be relaunched"
+(defn update-repo!
   [repo]
-  (command (str/sp "cd" (str "~/"repo) "&& git pull origin master")))
+  (command (str/sp "cd" (str "~/"repo) "&& git pull origin master"))
+  (auth-repo! repo)
+  (wait-until-prompt (convert 2 :min :millis) (prompt)))
 
+; With lein install 
+; "If there's an error, the SSH will have to be relaunched"
+; (command  "mvn install:install-file -DgroupId=seqspert -DartifactId=seqspert -Dversion=1.7.0-alpha6.1.0 -Dpackaging=jar -Dfile=~/quantum/lib/seqspert-1.7.0-alpha6.1.0.jar")
+; ((command  "mvn install:install-file -DgroupId=com.datomic -DartifactId=datomic-pro -Dversion=0.9.5173 -Dpackaging=jar -Dfile=~/quantum/lib/datomic/datomic-pro-0.9.5173"))
+; (command "cd ~/quantum && lein install")
+; ["lein.bat", "trampoline", "run", "-m", "clojure.main"]
+; sudo wget -P /bin https://raw.github.com/technomancy/leiningen/stable/bin/lein
+; sudo chmod 755 /bin/lein  
+; cd ~/socialytic && /bin/lein trampoline run -m clojure.main
+
+; http://unix.stackexchange.com/questions/4034/how-can-i-disown-a-running-process-and-associate-it-to-a-new-screen-shell
+; When you first login: |screen -D -R|; run your command
+; either disconnect or suspend it with CTRL-Z and then disconnect from screen by pressing CTRL-A then D.
+; When you login to the machine again, reconnect by running screen -D -R.
+; You will be in the same shell as before.
+; You can run jobs to see the suspended process if you did so,
+; and run %1 (or the respective job #) to foreground it again.
+
+
+(defn add-gui-user! []
+  ; sudo useradd -m awsgui
+  ; sudo passwd awsgui
+  ; ... (type password twice)
+  ; sudo usermod -aG admin awsgui (|sudo groupadd admin| if necessary)
+  ; sudo vim /etc/ssh/sshd_config (edit line "PasswordAuthentication" to yes)
+  ; sudo /etc/init.d/sshd restart
+  )
+(defn init-gui!
+  {:sources ["https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-vnc-on-ubuntu-14-04"
+             "http://www.realvnc.com/download/viewer/"]}
+  []
+  (add-gui-user!))
+
+(defn init-server! []
+  ; APPLICATIONS
+    ; BROWSER
+    ; sudo apt-get install chromium-browser
+  )
+
+(defn restart! []
+  ; sudo reboot
+  ; takes about 30 seconds
+  ; Then try to connect again
+  )
+
+
+(defn vnc-viewer-path
+  {:todo ["Make more programmatic"]}
+  []
+  "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer")
+
+(defn launch-gui! []
+  
+  ; SERVER-SIDE
+  ; sudo service vncserver start
+
+  ; CLIENT-SIDE
+  ; The ssh tunneler required for security purposes
+  (sh/run-process! "ssh"
+    ["-L" "5901:localhost:5901" "-i" @ssh-keys-path (ssh-address) "-N"]
+    {:id :ssh-vnc-tunnel :thread? true})
+  ; Launch VNC Viewer
+  (sh/run-process! vnc-viewer-path
+    []
+    {:id :vnc-viewer :thread? true})
+  ; Open VNC viewer and navigate to localhost:5901
+  ; It says the connection is not secure, but it is! 
+)
