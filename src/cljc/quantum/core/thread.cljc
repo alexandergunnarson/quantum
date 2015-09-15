@@ -274,10 +274,12 @@
     (try
       (let [^Future future-obj
              (.submit ^ExecutorService threadpool-n r)]
-        (swap! reg-threads assoc-in [id :thread] future-obj))
+        (swap! reg-threads assoc-in [id :thread] future-obj)
+        true)
       (catch Throwable e ; what exception?
         (log/pr :warn "Error in submitting to threadpool" e)
-        (deregister-thread! id))))))
+        (deregister-thread! id)
+        false)))))
 
 #?(:clj
 (defn ^:internal threadpool-run

@@ -1,5 +1,30 @@
+(ns
+  ^{:doc "I/O operations. Path parsing, read/write, serialization, etc.
 
-
+          Perhaps it would be better to use, say, org.apache.commons.io.FileUtils
+          for many of these things."}
+  quantum.core.io.core
+  (:refer-clojure :exclude [read descendants])
+  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log vec])
+  #?(:clj
+      (:require
+        [clojure.java.io               :as io    ]
+        [taoensso.nippy                :as nippy ]
+        [quantum.core.io.serialization :as io-ser]
+        [iota                          :as iota  ]))
+  #?(:clj
+      (:import
+        (java.io File
+                 FileNotFoundException IOException
+                 FileReader PushbackReader
+                 DataInputStream DataOutputStream 
+                 OutputStream FileOutputStream
+                 BufferedOutputStream BufferedInputStream
+                 InputStream  FileInputStream
+                 PrintWriter)
+        (java.util.zip ZipOutputStream ZipEntry)
+        java.util.List
+        org.apache.commons.io.FileUtils)))
 
 ;(require '[clojure.data.csv :as csv])
 
@@ -57,8 +82,7 @@
   "Joins string paths (URLs, file paths, etc.)
   ensuring correct separator interposition."
   {:attribution "taoensso.encore"
-   :usage '
- }
+   :usage '(path "foo/" "/bar" "baz/" "/qux/")}
   [& parts]
   (apply str/join-once sys/separator parts))
 

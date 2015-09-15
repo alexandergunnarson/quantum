@@ -304,3 +304,6 @@
       (->> n display-num (str "$"))
     ;:accounting
     (throw+ (Err. nil "Unrecognized format" type))))
+
+(defn percentage-of [of total-n]
+  (-> of (/ total-n) (* 100) display-num (str "%")))

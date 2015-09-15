@@ -202,6 +202,92 @@
     nil)
 )
 
+; http://docs.datomic.com/best-practices.html#pipeline-transactions
+(def ^:const recommended-txn-ct 100)
+
+(defn batch-transact!
+  {:todo ["Handle errors better"]}
+  [data-0 ->entity-fn post-fn]
+  (when-let [data data-0]
+    (do (doseq [entities (->> data
+                              (partition recommended-txn-ct)
+                              (map (fn->> (map+ ->entity-fn)
+                                          (remove+ nil?)
+                                          redv)))]
+          (try+ (transact-async! entities)
+                (post-fn entities) ; If it's async, how can there be an error?
+            (catch Object e
+              (if ((fn-and map? (fn-> :db/error (= :db.error/unique-conflict)))
+                    e)
+                  (post-fn entities)
+                  (throw+ (Err. nil "Cache failed for transaction"
+                                {:exception e :txn-entities entities})))))))))
+
+; pk = primary-key
+; sk = secondary-key
+(defn primary-key-in-db? [pk-schema pk-val]
+  (nempty? (query [:find '?entity
+                   :where ['?entity pk-schema pk-val]]
+                  true)))
+
+(defn secondary-key-in-db?
+  {:usage '(secondary-key-in-db? :twitter/id user-id :twitter/name)}
+  [pk-schema pk-val sk-schema]
+  (nempty?
+    (query [:find '(count ?entity)
+            :where ['?entity pk-schema pk-val]
+                   ['?entity sk-schema '?prop]]
+           true)))
+
+(defn add-entity-if*
+  ; Primary key only
+  ([[pk-schema pk-val :as pk]           db-partition properties cache]
+    (let [[pk-schema pk-val] pk]
+      (cond 
+        (and (type/atom? cache) (contains? @cache pk-val))
+          nil
+        (primary-key-in-db? pk-schema pk-val)
+          (when (type/atom? cache)
+            (conj! cache pk-val)
+            (when (nempty? properties)
+              (merge {:db/id pk} properties)))
+        :else
+          (merge
+            {:db/id (datomic.api/tempid db-partition)
+             pk-schema pk-val}
+            properties))))
+  ; Secondary key as well
+  ([[pk-schema pk-val :as pk] sk-schema db-partition properties cache]
+    (let [[pk-schema pk-val] pk]
+      (if (primary-key-in-db? pk-schema pk-val)
+          (cond 
+            (and (type/atom? cache) (contains? @cache pk-val))
+              nil
+            (secondary-key-in-db? pk-schema pk-val sk-schema)
+              (when (type/atom? cache)
+                (conj! cache pk-val)
+                nil)
+            :else
+              (merge {:db/id pk} properties))
+          (merge
+            {:db/id (datomic.api/tempid db-partition)
+             pk-schema pk-val}
+            properties)))))
+
+(defnt add-entity-if
+  "Adds the entity if it doesn't exist in the database via a primary key lookup"
+  {:usage '(add-entity-if [:twitter/id user-id] {:twitter/followers followers})}
+  ([^vector? pk sk-schema db-partition cache properties]
+    (add-entity-if* pk sk-schema db-partition
+      (merge {(first pk) (second pk)} properties)
+      cache))
+  ([^integer? pk sk-schema db-partition cache properties]
+    (add-entity-if* [:db/id pk] sk-schema db-partition properties cache)))
+
+
+; You can transact multiple values for a :db.cardinality/many attribute at one time using a set.
+
+
 ; If an attributes points to another entity through a cardinality-many attribute, get will return a Set of entity instances. The following example returns all the entities that Jane likes:
 
 ; // empty, given the example data
