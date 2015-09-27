@@ -1,5 +1,7 @@
 quantum
 ==========
+[![Stack Share](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic)
+
 ![](resources/images/quantum.jpg)
 *(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
 
@@ -24,8 +26,6 @@ In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/22
 ***Was fashioned***
 
 `quantum`.
-
-[![Stack Share](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic)
 
 Summary
 -
