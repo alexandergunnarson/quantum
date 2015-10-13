@@ -5,11 +5,11 @@
   (:refer-clojure :exclude [name])
   (:require-quantum [ns log pr err map set vec logic fn ftree])
   (:require
-    [quantum.core.type.core     :as tcore]
-    [fast-zip.core              :as zip  ]
-    [clojure.string             :as str  ]
-    [clojure.math.combinatorics :as combo]
-    [clojure.walk :refer [postwalk prewalk]]))
+            [quantum.core.type.core     :as tcore]
+            [fast-zip.core              :as zip  ]
+            [clojure.string             :as str  ]
+            [clojure.walk :refer [postwalk prewalk]]
+    #?(:clj [clojure.math.combinatorics :as combo])))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 

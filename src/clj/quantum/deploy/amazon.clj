@@ -8,16 +8,18 @@
 (def terminal     (atom nil))
 (def output-chan  (atom nil))
 (def line-handler (atom fn-nil))
+(defn default-account []
+  (auth/datum :amazon :default))
 (defn default-instance-name []
-  (auth/datum :amazon :ec2 :default))
+  (auth/datum :amazon (default-account) :ec2 :default))
 (defn default-user []
-  (auth/datum :amazon :ec2 (default-instance-name) :users :default))
+  (auth/datum :amazon (default-account) :ec2 (default-instance-name) :users :default))
 (defn get-instance-id [& [instance-name]]
-  (auth/datum :amazon :ec2 (or instance-name (default-instance-name)) :id))
+  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :id))
 (defn get-server-region [& [instance-name]]
-  (auth/datum :amazon :ec2 (or instance-name (default-instance-name)) :region))
+  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :region))
 (defn get-public-ip [& [instance-name]]
-  (auth/datum :amazon :ec2 (or instance-name (default-instance-name)) :public-ip))
+  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :public-ip))
 (defn get-user [& [user]]
   (or user (default-user)))
 
@@ -30,12 +32,12 @@
 (def user             (atom (get-user)))
 (defn prompt [] (str "@ip-" (public-ip-dashed) ":"))
 
-(def aws-id     (atom (auth/datum :amazon :ec2 @instance-name :access-key :id)))
-(def aws-secret (atom (auth/datum :amazon :ec2 @instance-name :access-key :secret)))
+(def aws-id     (atom (auth/datum :amazon (default-account) :ec2 @instance-name :access-key :id)))
+(def aws-secret (atom (auth/datum :amazon (default-account) :ec2 @instance-name :access-key :secret)))
 
 
 (defn get-ssh-keys-path []
-  (-> (auth/datum :amazon :ec2 @instance-name :ssh-keys-path) io/file-str))
+  (-> (auth/datum :amazon (default-account) :ec2 @instance-name :ssh-keys-path) io/file-str))
 (def ssh-keys-path (atom (get-ssh-keys-path)))
 
 ; |chmod 400 @ssh-keys-path| is necessary
@@ -85,6 +87,8 @@
     (sh/input! :server-terminal command)))
 
 (defn command
+  "Often it is best to this on a non-main thread so you can still see
+   the output by pressing enter."
   ([]          (with-terminal "\n"))
   ([command-n] (with-terminal (str command-n "\n")))
   ([command-n handler]
@@ -103,13 +107,11 @@
   (wait-until-prompt 5000 "Press [ENTER] to continue")
   (with-terminal "\n")
   (wait-until-prompt 5000 (prompt))
-  (command "sudo add-apt-repository ppa:webupd8team/java")
-  (wait-until-prompt 5000 "Press [ENTER] to continue")
-  (with-terminal "\n")
   (command "sudo apt-get update")
   (wait-until-prompt 10000 (prompt))
   (command "sudo apt-get install oracle-java8-installer")
-  ; (wait-until-prompt 5000 "Press [ENTER] to continue")
+  (wait-until-prompt 5000 "Do you want to continue?")
+  (command "Y")
   (wait-until-prompt 5000 "Do you accept the Oracle Binary Code license terms?")
   (command "Y"))
 
@@ -125,7 +127,11 @@
   ; (command "sudo apt-get install leiningen") ; NO: gets Leiningen 1.7
   ; (wait-until-prompt 5000 "Do you want to continue?")
   ; (command "Y")
-  ; TODO: RUN LEININGEN SCRIPT
+  
+  (command "mkdir ./bin")
+  (command "curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ./bin/lein")
+  (command "chmod a+x ./bin/lein")
+  (command "./bin/lein") ; TODO install so that lein is an available command 
   (wait-until-prompt 50000 (prompt))
   )
 
@@ -133,7 +139,7 @@
   (command "sudo apt-get install git")
   (wait-until-prompt 5000 "Do you want to continue?")
   (command "Y")
-  (wait-until-prompt 50000 (prompt)))
+  (wait-until-prompt 60000 (prompt)))
 
 (defn install-all! []
   (install-java!)
@@ -155,19 +161,10 @@
 
 (defn update-repo!
   [repo]
-  (command (str/sp "cd" (str "~/"repo) "&& git pull origin master"))
+  (command (str/sp "cd" (str "~/" repo) "&& git pull origin master"))
   (auth-repo! repo)
   (wait-until-prompt (convert 2 :min :millis) (prompt)))
 
-; With lein install 
-; "If there's an error, the SSH will have to be relaunched"
-; (command  "mvn install:install-file -DgroupId=seqspert -DartifactId=seqspert -Dversion=1.7.0-alpha6.1.0 -Dpackaging=jar -Dfile=~/quantum/lib/seqspert-1.7.0-alpha6.1.0.jar")
-; ((command  "mvn install:install-file -DgroupId=com.datomic -DartifactId=datomic-pro -Dversion=0.9.5173 -Dpackaging=jar -Dfile=~/quantum/lib/datomic/datomic-pro-0.9.5173"))
-; (command "cd ~/quantum && lein install")
-; ["lein.bat", "trampoline", "run", "-m", "clojure.main"]
-; sudo wget -P /bin https://raw.github.com/technomancy/leiningen/stable/bin/lein
-; sudo chmod 755 /bin/lein  
-; cd ~/socialytic && /bin/lein trampoline run -m clojure.main
 
 ; http://unix.stackexchange.com/questions/4034/how-can-i-disown-a-running-process-and-associate-it-to-a-new-screen-shell
 ; When you first login: |screen -D -R|; run your command

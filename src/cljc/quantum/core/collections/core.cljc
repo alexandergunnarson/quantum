@@ -132,7 +132,7 @@
 ;=================================================={     get, first, rest     }=====================================================
 #_(defnt ^"Object[]" ->array
   {:source "clojure.lang.RT.toArray"}
-  ([^"Object[]" x] x)()
+  ([^"Object[]" x] x)
   ([^Collection x] (.toArray x))
   ([^Iterable   x]
     (let [ret (ArrayList. x)]
@@ -159,6 +159,8 @@
     (if (nil? x)
         clojure.lang.RT/EMPTY_ARRAY
         (throw (Util/runtimeException (str "Unable to convert: " (.getClass x) " to Object[]"))))))
+
+(declare array)
 
 (defnt ^long count
   ([^array? arr ] (alength arr))
@@ -385,6 +387,10 @@
     
 (defalias peek last)
 (defalias firstr last)
+
+(defn array
+  {:todo ["Consider efficiency here"]}
+  [& args] (into-array (-> args first class) args))
 
 
 (defn gets [coll indices]

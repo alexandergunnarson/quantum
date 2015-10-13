@@ -6,21 +6,23 @@
 
 ; SYMBOLS
 
-#?(:clj 
 (defn type-hint
   "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
   {:source "ztellman/riddley.compiler"}
   [x]
   (when-let [tag (-> x meta :tag)]
     (let [sym (symbol
-                (if (instance? Class tag)
-                  (.getName ^Class tag)
-                  (name tag)))]
-      (when-not (= 'java.lang.Object sym)
-        sym)))))
+                (if #?@(:clj  [(instance? Class tag)
+                               (.getName ^Class tag)]
+                        :cljs [true])
+                    (name tag)))]
+      (when-not #?(:clj  (= 'java.lang.Object sym)
+                   :cljs false)
+        sym))))
 
+; TODO abstract platform-dependent member calls 
 (defn symbol-eq? [s1 s2] (= (name s1) (name s2)))
-(defn metaclass    [sym] (whenc (type-hint sym) (fn-> name empty?) nil))
+#?(:clj (defn metaclass    [sym] (whenc (type-hint sym) (fn-> name empty?) nil)))
 (defn qualified?   [sym] (-> sym str (.indexOf "/") (not= -1)))
 (defn unqualify    [sym] (-> sym name symbol))
 (defn auto-genned? [sym] (-> sym name (.endsWith "__auto__")))
@@ -28,7 +30,7 @@
 (def possible-type-predicate?
   (fn-or keyword? (fn-and symbol? (fn-> name (.contains "?")))))
 
-(def hinted-literal? (fn-or char? number? string? vector? map? nil? keyword?))
+(def hinted-literal? (fn-or #?(:clj char?) number? string? vector? map? nil? keyword?))
 
 ; SCOPE
 
@@ -74,10 +76,14 @@
 
 ; STATEMENTS
 (def sym-call? (fn-and seq? (fn-> first symbol?)))
-(def primitive-cast? (fn-and sym-call? (fn-> first name symbol tcore/primitive?)) )
+
+#?(:clj (def primitive-cast? (fn-and sym-call? (fn-> first name symbol tcore/primitive?))))
+
+#?(:clj
 (defn type-cast? [obj lang]
   (or (primitive-cast? obj)
-      (and (sym-call? obj) (get-in tcore/type-casts-map [lang (-> obj first name symbol)]))))
+      (and (sym-call? obj) (get-in tcore/type-casts-map [lang (-> obj first name symbol)])))))
+
 (def constructor? (fn-and sym-call? (fn-> first name (.endsWith "."))))
 
 (def return-statement?      (form-and-begins-with? 'return))

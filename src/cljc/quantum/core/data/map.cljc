@@ -11,8 +11,8 @@
   (:require-quantum [ns])
   (:require
     [clojure.data.avl     :as avl]
-    [clojure.data.int-map :as imap]
-    #?@(:clj [[flatland.ordered.map :as omap]
+    #?@(:clj [[clojure.data.int-map :as imap]
+              [flatland.ordered.map :as omap]
               [seqspert.hash-map]])))
 
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
@@ -21,9 +21,9 @@
 (def sorted-map    avl/sorted-map)
 (def sorted-map-by avl/sorted-map-by)
 
-(def int-map       imap/int-map)
+#?(:clj (def int-map       imap/int-map))
 ; (fold i/merge conj ...)
-(def imerge imap/merge)
+#?(:clj (def imerge imap/merge))
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
@@ -79,12 +79,12 @@
   ([m0 m1 & ms]
   #?(:clj  (reduce merge (merge m0 m1) ms)
      :cljs (if (satisfies? AEditable m0)
-               (->> maps
+               (->> ms
                     (reduce conj! (transient m0))
                     persistent!)
                (apply core/merge m0 ms)))))
 
-#(:clj
+#?(:clj
 (defn pmerge
   ([m0 m1] (seqspert.hash-map/parallel-splice-hash-maps m0 m1))
   ([m0 m1 & ms]

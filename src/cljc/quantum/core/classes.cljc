@@ -6,27 +6,30 @@
   (:refer-clojure :exclude [name])
   (:require-quantum [ns log pr err map set vec logic fn ftree cbase])
   (:require
-    [quantum.core.collections.base :as cbase :refer
-      [name default-zipper camelcase ns-qualify zip-reduce comparators ensure-set]]
-    [quantum.core.classes.reg :as class-reg]
-  #_[backtick :refer [syntax-quote]]
-    [clojure.string             :as str  ]
-    [clojure.math.combinatorics :as combo]
-    [clojure.walk :refer [postwalk prewalk]]))
+            [quantum.core.collections.base :as cbase :refer
+              [name default-zipper camelcase ns-qualify zip-reduce
+               comparators ensure-set]]
+            [quantum.core.classes.reg :as class-reg]
+            [clojure.string           :as str  ]
+            [clojure.walk :refer [postwalk prewalk]]
+          #_[backtick     :refer [syntax-quote]]
+    #?(:clj [clojure.math.combinatorics :as combo])))
 
 ; PACKAGE RESOLUTION
 ; clojure (class @clojure.lang.Compiler/LOADER)
 ; java (ClassLoader/getSystemClassLoader)
 
 ; (ClassLoader/getSystemClassLoader)
-(defalias clojure-classes-unevaled class-reg/clojure-classes-unevaled)
-(defalias java-classes-unevaled class-reg/java-classes-unevaled)
+#?(:clj (defalias clojure-classes-unevaled class-reg/clojure-classes-unevaled))
+#?(:clj (defalias java-classes-unevaled class-reg/java-classes-unevaled))
 
-(defn class->symbol [^Class c] (-> c .getName symbol))
+#?(:clj (defn class->symbol [^Class c] (-> c .getName symbol)))
 
+#?(:clj
 (defn supers-symbols [class-sym]
-  (->> class-sym eval supers (map class->symbol) (into #{})))
+  (->> class-sym eval supers (map class->symbol) (into #{}))))
 
+#?(:clj
 (defn classes->children [classes]
   (->> (reduce (fn [ret [child supers-n]]
          (reduce
@@ -39,7 +42,7 @@
                          supers-symbols))
               (into {})))
        (map (fn [[k v]] [k (disj v nil)]))
-       (into (map/sorted-map))))
+       (into (map/sorted-map)))))
 
 #?(:clj
 (defn package-resolve [class-name]
@@ -52,9 +55,11 @@
     #{}
     (Package/getPackages))))
 
+#?(:clj
 (def class-children-unevaled
-  (classes->children (set/union java-classes-unevaled clojure-classes-unevaled)))
+  (classes->children (set/union java-classes-unevaled clojure-classes-unevaled))))
 
+#?(:clj
 (defn common-limiting-superclass
   "Akin to greatest common factor (GCF) for classes.
    Used in reducing code size for |defnt|."
@@ -70,8 +75,9 @@
           (when (empty? unaccounted-for-classes)
             (reduced superclass))))
       nil
-      common-direct-superclasses)))
+      common-direct-superclasses))))
 
+#?(:clj
 (defn all-implementing-classes* [subs visited leaves]
   (if (empty? subs)
       [visited leaves]
@@ -86,26 +92,29 @@
                    :else (all-implementing-classes* children visited leaves))]
            (recur (rest subs)
                   (set/union visited (conj visited-n+1 sub))
-                  (set/union leaves  leaves-n+1))))))
+                  (set/union leaves  leaves-n+1)))))))
 
+#?(:clj
 (def- all-implementing-leaf-classes-entry
-  ; Each time it's called, it remembers what the result was
   (memoize
     (fn [class-sym]
       (all-implementing-classes*
         (get class-children-unevaled class-sym)
-        #{} #{}))))
+        #{} #{})))))
 
+#?(:clj
 (defn all-implementing-leaf-classes
   "Subclass leaf nodes for class sym."
   [class-sym]
-  (-> class-sym all-implementing-leaf-classes-entry second))
+  (-> class-sym all-implementing-leaf-classes-entry second)))
 
+#?(:clj
 (defn all-implementing-descendant-classes
   "Subclass descendant nodes for class sym."
   [class-sym]
-  (-> class-sym all-implementing-leaf-classes-entry first))
+  (-> class-sym all-implementing-leaf-classes-entry first)))
 
+#?(:clj
 (defn ancestor-list
   "Lists the direct ancestors of a class
   (ancestor-list clojure.lang.PersistentHashMap)
@@ -118,8 +127,9 @@
   ([^java.lang.Class cls output]
      (if (nil? cls)
        output
-       (recur (.getSuperclass cls) (conj output cls)))))
+       (recur (.getSuperclass cls) (conj output cls))))))
 
+#?(:clj
 (defn ancestor-tree
   "Lists the hierarchy of bases and interfaces of a class.
   (ancestor-tree Class)
@@ -134,9 +144,10 @@
      (let [base (.getSuperclass cls)]
        (if-not base output
                (recur base
-                      (conj output [base (-> (.getInterfaces cls) seq set)]))))))
+                      (conj output [base (-> (.getInterfaces cls) seq set)])))))))
 
 
+#?(:clj
 (defn best-match
   "finds the best matching interface or class from a list of candidates
   (best-match #{Object} Long) => Object
@@ -151,5 +162,5 @@
                     (first (set/intersection v candidates))
                     (get candidates v))))
            (filter identity)
-           first)))
+           first))))
 

@@ -4,7 +4,7 @@
   (:import javafx.scene.text.Font))
 
 (defn load-font! [path-str]
-  (-> (str "file://" (io/path (:resources io/dirs) "Fonts" path-str))
+  (-> (str "file://" (io/path (:resources @io/dirs) "Fonts" path-str))
       (Font/loadFont 12.0)))
 
 (defn font-loaded? [^String font-name]
@@ -18,11 +18,11 @@
 (defonce fonts
   (do (log/pr :user
         (str "Loading fonts from "
-          (io/path (:resources io/dirs) "Fonts") "..."))
-      (load-font! "Myriad Pro/Light.otf")
-      (load-font! "Myriad Pro/Regular.otf")
-      (load-font! "Myriad Pro/Semibold.otf")
-      (load-font! "Myriad Pro/LightSemiExt.otf")
+          (io/path (:resources @io/dirs) "Fonts") "..."))
+      (load-font! "Myriad Pro/Light.ttf")
+      (load-font! "Myriad Pro/Regular.ttf")
+      (load-font! "Myriad Pro/Semibold.ttf")
+      (load-font! "Myriad Pro/LightSemiExt.ttf")
       (load-font! "Arno Pro/Regular.otf") 
       (load-font! "Arno Pro/Bold.otf")
       (load-font! "Arno Pro/Italic.otf")

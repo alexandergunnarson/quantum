@@ -30,13 +30,13 @@
 #?(:clj (defalias fn-eq?  eq?))
 
 #?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
-#?(:clj (defalias fn-eq?  neq?))
+#?(:clj (defalias fn-neq?  neq?))
 (def any?    some)
 (defn apply-and [arg-list]
   (every? identity arg-list))
 (defn apply-or  [arg-list]
   (any?   identity arg-list))
-(defn dor [& args] ; xor
+(defn dor [& args] ; xor ; why "dor"?
   (and (apply-or args)
        (not (apply-and args))))
 (defn pred-or   [pred obj args]
@@ -47,42 +47,43 @@
 #?(:clj
 (defmacro fn-logic-base
   "Auto-externs its fn arguments via a compile-time |eval|. Convenient!"
-  [oper & preds]
+  [lang oper & preds]
   (let [arg (gensym)]
    `(fn [~arg]
       (~oper ~@(for [pred preds]
-               (if (seq? pred)
-                   ; Tries to extern it
-                   `(~(try (eval pred)
-                        (catch java.lang.Throwable _ pred)) ~arg)
-                   `(~pred ~arg))))))))
+                 (if (and (= lang :clj) (seq? pred))
+                     ; Tries to extern it
+                     `(~(try (eval pred)
+                          (catch java.lang.Throwable _ pred)) ~arg)
+                     `(~pred ~arg))))))))
 
-#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base or  ~@preds)))
-#?(:clj (defmacro fn-and [& preds] `(fn-logic-base and ~@preds)))
-#?(:clj (defmacro fn-not [pred]    `(fn-logic-base not ~pred)))
+#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base :clj or  ~@preds)))
+#?(:clj (defmacro fn-and [& preds] `(fn-logic-base :clj and ~@preds)))
+#?(:clj (defmacro fn-not [pred]    `(fn-logic-base :clj not ~pred)))
 
 (defn splice-or  [obj compare-fn & coll]
   (any?   (partial compare-fn obj) coll))
 (defn splice-and [obj compare-fn & coll]
   (every? (partial compare-fn obj) coll))
 
+#?(:clj
 (defmacro coll-base [logical-oper & elems]
   (let [bin-pred (gensym)
         obj      (gensym)]
    `(fn [~bin-pred ~obj]
       (~logical-oper
         ~@(for [elem elems]
-            `(~bin-pred ~obj ~elem))))))
+            `(~bin-pred ~obj ~elem)))))))
 
+#?(:clj
 (defmacro coll-or [& elems]
-  `(coll-base or ~@elems))
+  `(coll-base or ~@elems)))
 
+#?(:clj
 (defmacro coll-and
   {:usage "((and-coll 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
   [& elems]
-  `(coll-base and ~@elems))
-
-(def ^{:todo ["Deprecate or incorporate"]} empty+? (fn-or nseq? empty?))
+  `(coll-base and ~@elems)))
 
 (defn bool
   {:todo ["Deprecate or incorporate"]}
@@ -91,7 +92,9 @@
     (= v 0) false
     (= v 1) true
     :else
-      (throw (IllegalArgumentException. (str "Value not booleanizable: " v)))))
+      (throw (#?(:clj  IllegalArgumentException.
+                 :cljs js/Error.)
+               (str "Value not booleanizable: " v)))))
 
 (defn rcompare
   "Reverse comparator."

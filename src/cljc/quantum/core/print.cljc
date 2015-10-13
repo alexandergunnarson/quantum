@@ -6,7 +6,7 @@
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
-  (:require-quantum [ns fn logic])
+  (:require-quantum [ns fn logic vec]) ; |vec| To work around CLJS non-spliceability of Tuples
   (:require [fipp.edn :as pr]
             #?(:cljs [cljs.core :refer [StringBufferWriter]])))
 
@@ -177,20 +177,25 @@
     (print "/"))
   (print (name x)))
 
+#?(:clj
 (defonce pprint-vector-0
-  (.getMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector))
+  (.getMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector)))
 
+#?(:clj
 (defn- pprint-vector [x]
   (when-let [has-hint? (-> x meta (contains? :tag))]
     (print "^")
     (print (-> x meta :tag))
     (print " "))
-  (pprint-vector-0 x))
+  (pprint-vector-0 x)))
 
 #?(:clj (.addMethod clojure.pprint/simple-dispatch Symbol pprint-symbol))
 #?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
-#?(:clj
+
 (defn pprint-hints [x]
-  (clojure.pprint/with-pprint-dispatch clojure.pprint/simple-dispatch  ;;Make the dispatch to your print function
-    (clojure.pprint/pprint x))))
+  #?(:clj
+      (clojure.pprint/with-pprint-dispatch clojure.pprint/simple-dispatch  ;;Make the dispatch to your print function
+        (clojure.pprint/pprint x))
+     :cljs
+      (! x)))
 

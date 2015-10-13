@@ -11,22 +11,26 @@
 ; "This site makes use of a SHA-1 Certificate; it's recommended you use certificates with signature algorithms that use hash functions stronger than SHA-1."
 
 (def auth-source-table
-  (atom {:google   "Google"
-         :facebook "Facebook"
-         :fb       "Facebook"
-         :snapchat "Snapchat"
-         :amazon   "Amazon"
-         :amz      "Amazon"
-         :intuit   "Intuit"
-         :twitter  "Twitter"
-         :quip     "Quip"
-         :github   "GitHub"}))
+  (atom {:google    "Google"
+         :facebook  "Facebook"
+         :fb        "Facebook"
+         :snapchat  "Snapchat"
+         :amazon    "Amazon"
+         :amz       "Amazon"
+         :intuit    "Intuit"
+         :twitter   "Twitter"
+         :quip      "Quip"
+         :github    "GitHub"
+         :financial "Financial"
+         :bank      "Financial"
+         :fin       "Financial"
+         :plaid     "Plaid"}))
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
   [^Keyword auth-source]
   (io/read
-    :path [:resources "Keys"
+    :path [:keys
            (str (get @auth-source-table auth-source) ".cljx")]))
 
 (defn datum
@@ -39,7 +43,7 @@
   "Writes the given authorization keys to a file."
   [^Key auth-source map-f]
   (io/write!
-    :path      [:resources "Keys"
+    :path      [:keys
                 (str (get @auth-source-table auth-source) ".cljx")]
     :overwrite false
     :data      map-f))

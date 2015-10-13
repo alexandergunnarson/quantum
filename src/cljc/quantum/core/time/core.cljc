@@ -4,7 +4,7 @@
           |on?|, |for-days-between|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
-  (:refer-clojure :exclude [extend second - + > < format])
+  (:refer-clojure :exclude [extend second - + < <= > >= format])
   (:require-quantum [ns macros type num fn logic bin err log uconv])
   #?(:clj (:import java.util.Date
             (java.time LocalDate)
@@ -96,7 +96,7 @@
 (defnt year->nanos-arr-index
   ([^long? n]
     (whenc (if (= n 0) nil (core/+ n 10000))
-      (fn-or nil? (f*n core/< 0) (f*n >= (alength nanos-at-beg-of-year)))
+      (fn-or nil? (f*n core/< 0) (f*n core/>= (alength nanos-at-beg-of-year)))
       nil)))
 
 ; Initialize nanos-at-beg-of-year
@@ -182,7 +182,8 @@
   ([^java.util.Date          x] (-> x (.getTime)     ))
   ([^org.joda.time.DateTime  x] (-> x (.getMillis)   )))
 
-(defnt ->instant
+(defnt ^quantum.core.time.core.Instant ->instant
+  ([^quantum.core.time.core.Instant x] x)
   ([^java.time.LocalDate     x] (-> x (.toEpochDay) (convert :days :millis) unix-millis->instant))
   ([^java.time.LocalDateTime x] (+ (-> x (.toLocalDate) ->instant)
                                    (-> x (.toLocalTime) ->duration)))
@@ -191,6 +192,12 @@
       java.util.Date
       org.joda.time.DateTime} x]
     (-> x ->unix-millis unix-millis->instant))
+  ([^String s k]
+    (->instant
+      (condp = k
+        :http
+          (.parse (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss zzz") s)
+        (.parse (java.text.SimpleDateFormat. k) s))))
   #_([^java.time.ZonedDateTime x])
   #_([^java.time.YearMonth     x])
   #_([^java.util.Date$ZonedDateTime x]))
@@ -200,15 +207,23 @@
     (-> x instant->unix-millis (java.time.Instant/ofEpochMilli))))
 
 (defnt ^java.util.Date ->jdate
-  ([^java.time.Instant i]
-    (Date/from i)))
+  ([^java.time.Instant t]
+    (Date/from t))
+  ([^quantum.core.time.core.Instant t]
+    (-> t ->jinstant ->jdate)))
 
-(defnt parse
-  ([^String s k]
-    (condp = k
-      :http
-        (.parse (java.text.SimpleDateFormat. "EEE, dd MMM yyyy HH:mm:ss zzz") s)
-      (throw+ (Err. nil "Unrecognized key" k)))))
+(defn ->local-date-time [t-0]
+  (let [^java.time.Instant t (-> t-0 ->jinstant) ]
+    (-> t
+        (.atZone (java.time.ZoneId/of "UTC"))
+        (java.time.LocalDateTime/from))))
+
+(defn <  ([a b] (core/<  (-> a ->instant :nanos) (-> b ->instant :nanos))))
+(defalias before? <)
+(defn >  ([a b] (core/>  (-> a ->instant :nanos) (-> b ->instant :nanos))))
+(defalias after? >)
+(defn <= ([a b] (core/<= (-> a ->instant :nanos) (-> b ->instant :nanos))))
+(defn >= ([a b] (core/>= (-> a ->instant :nanos) (-> b ->instant :nanos))))
 
 ; #?(:clj
 ; (defn now-formatted [date-format]
@@ -222,35 +237,23 @@
    :windows (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")}))
 
 #?(:clj 
-(defnt format*
+(defnt ->string*
   ([^string?           formatting date]
-    (.format (DateTimeFormatter/ofPattern formatting) ^TemporalAccessor date))
+    (.format (DateTimeFormatter/ofPattern formatting) ^java.time.LocalDateTime (->local-date-time date)))
   ([^java.time.format.DateTimeFormatter formatting date]
-    (.format formatting ^TemporalAccessor date))
+    (.format formatting ^java.time.LocalDateTime (->local-date-time date)))
   ([^keyword?          formatting date]    
             (let [^DateTimeFormatter formatter
                     (or (get formatting-map formatting)
                         (throw (Exception. "Formatter not found")))]
-              (.format formatter ^TemporalAccessor date)))))
+              (.format formatter ^java.time.LocalDateTime (->local-date-time date))))))
 
 #?(:clj
-(defn format [date formatting]
-  (format* formatting date)))
+(defn ->string [date formatting]
+  (->string* formatting date)))
 
 ; #?(:clj (defn str-now [] (now-formatted "MM-dd-yyyy HH:mm::ss")))
 ; #?(:clj (def timestamp str-now))
-
-#?(:clj
-(defn before? [^Instant a ^Instant b])
-  (core/< (:nanos a) (:nanos b)))
-
-#?(:clj (def < before?))
-
-#?(:clj
-(defn after? [^Instant a ^Instant b])
-  (core/> (:nanos a) (:nanos b)))
-
-#?(:clj (def > after?))
 
 ; #?(:clj
 ; (defn day [y m d] (LocalDate/of y m d)))

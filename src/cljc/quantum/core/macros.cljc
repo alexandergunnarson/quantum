@@ -10,12 +10,12 @@
       [name default-zipper camelcase ns-qualify zip-reduce ensure-set update-first update-val]]
     [quantum.core.type.core        :as tcore]
     [quantum.core.analyze.clojure.predicates :as anap :refer 
-      [type-hint unqualify]]
+      [#?(:clj type-hint) unqualify]]
   #_[backtick :refer [syntax-quote]]
-    #?(:clj [riddley.walk])
     [clojure.string             :as str  ]
-    [clojure.math.combinatorics :as combo]
-    [clojure.walk :refer [postwalk prewalk]]))
+    [clojure.walk :refer [postwalk prewalk]]
+    #?@(:clj [[riddley.walk]
+              [clojure.math.combinatorics :as combo]])))
 ; the arguments to definline and defmacro are potentially subject to
 ; double evaluation if they are used more than once in the body
 ; user=> (definline bad-sqr [x] `(* ~x ~x))
@@ -63,7 +63,8 @@
 ; Mikera: 
 ; http://stackoverflow.com/questions/15914094/can-any-clojure-implementation-start-fast
 ; Although the JVM is often (unjustly) blamed,
-; the JVM is largely irrelevant here: modern JVMs have a startup time of about 0.1secs.
+; the JVM is largely irrelevant here:
+; modern JVMs have a startup time of about 0.1secs.
 
 ; If you use (sorted-set+) in macro code you get "can't resolve type hint: IPersistentMap"
 ; (class/all-implementing-leaf-classes 'clojure.lang.ILookup)
@@ -107,6 +108,7 @@
            (into []))
     :else [pred])))
 
+#?(:clj
 (defn hint-body-with-arglist
   ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
   ([body arglist lang body-type]
@@ -132,11 +134,14 @@
           (if (= body-type :protocol)
               body-hinted ; TODO? add (let [x (long x)] ...) unboxing
               body-hinted)]
-    body-unboxed)))
+    body-unboxed))))
 
 (def default-hint (f*n hint-meta 'Object))
 
-(defn default-hint-if-needed [x]
+#?(:clj
+(defn default-hint-if-needed
+  {:todo ["Eliminate |eval| via |resolve|"]}
+  [x]
   (condf x
     (fn-or anap/hinted-literal?
            (fn-and seq?
@@ -148,15 +153,16 @@
     keyword?        default-hint
     set?            default-hint
     map?            default-hint
-    :else           (constantly (throw+ (Err. nil "Don't know how to make hint from" x)))))
+    :else           (constantly (throw+ (Err. nil "Don't know how to make hint from" x))))))
 
+#?(:clj
 (def protocol-type-hint-map
   '{boolean java.lang.Boolean
     byte    long
     char    java.lang.Character
     short   long
     int     long
-    float   double})
+    float   double}))
 
 (def qualified-class-name-map
   (->> tcore/primitive-types
@@ -324,7 +330,8 @@
                     body-n
                       (if first-variadic-n?
                           body-n
-                          (hint-body-with-arglist body-n [arg-hinted] lang))]
+                          #?(:clj  (hint-body-with-arglist body-n [arg-hinted] lang)
+                             :cljs body-n))]
                      (log/ppr :macro-expand "arglist-hinted" arglist-hinted)
                 (cons arglist-hinted body-n))))
        doall))
@@ -561,20 +568,23 @@
           (list 'defprotocol protocol-name protocol-def-body)]
     protocol-def))
 
+#?(:clj
 (defn ensure-protocol-appropriate-type-hint [i hint]
   (when-not (and (> i 0) (= hint 'Object)) ; The extra object hints mess things up
     (if-let [protocol-appropriate-type-hint (get protocol-type-hint-map hint)]
       protocol-appropriate-type-hint
-      hint)))
+      hint))))
 
+#?(:clj
 (defn ensure-protocol-appropriate-arglist [arglist-0]
   (->> arglist-0
        (map-indexed
          (fn [i arg]
            (hint-meta arg
              (ensure-protocol-appropriate-type-hint i (type-hint arg)))))
-       (into [])))
+       (into []))))
 
+#?(:clj 
 (defn gen-extend-protocol-from-interface
   ; Original Interface:         ([#{number?} x #{number?} y #{char? Object} z] ~@body)
   ; Expanded Interface Arity 1: ([^long      x ^int       y ^char           z] ~@body)
@@ -628,7 +638,7 @@
         _ (log/ppr-hints :macro-expand-protocol "BODY GROUPED" body-grouped)
         extend-protocol-def
          (apply concat (list 'extend-protocol protocol-name) body-grouped)]
-    extend-protocol-def))
+    extend-protocol-def)))
   
 (defn protocol-verify-arglists
   {:in '[[[int  string?   ] int   ]
@@ -646,6 +656,7 @@
           (Err. nil "Only |pinteger?|, singleton primitives, and non-predicate classes supported in protocols"
                     {:arg1 arg1 :arg-set arg-set :pinteger? (= arg1 'pinteger?)}))))))
 
+#?(:clj
 (defn any-hint-unresolved?
   ([args lang] (any-hint-unresolved? args lang nil))
   ([args lang env]
@@ -659,7 +670,7 @@
                              (log/pr  :macro-expand "SYM" sym "IN ENV?" (contains? env sym))
                              (log/pr  :macro-expand "ENV TYPE HINT" (-> env (find sym) first type-hint)))
                            (-> env (find sym) first type-hint))))
-          args)))
+          args))))
 
 (defn protocol-verify-unique-first-hint
   "Not allowed same arity and same first hint
@@ -710,20 +721,22 @@
               (fn-> first seq?   ) (fn->> (mapv first))
               (fn [form] (throw+ (Err. nil "Unexpected form when trying to parse arglists." form))))
           _ (log/ppr-hints :macro-expand "ARGLISTS:" arglists)
-          genned-method-name
+      #?@(:clj
+         [genned-method-name
             (-> sym name camelcase munge symbol)
           genned-interface-name 
             (-> sym name camelcase (str "Interface") munge symbol)
           ns-qualified-interface-name
-            (ns-qualify genned-interface-name (namespace-munge *ns*))
+            (ns-qualify genned-interface-name (namespace-munge *ns*))])
           genned-protocol-name
             (when-not strict? (-> sym name camelcase (str "Protocol") munge symbol))
           genned-protocol-method-name
             (when-not strict? (-> sym name (str "-protocol") symbol))
           genned-protocol-method-name-qualified
             (when-not strict? (symbol (name (ns-name *ns*)) (name genned-protocol-method-name)))
-          gen-interface-code-header
-            (dlist 'gen-interface :name ns-qualified-interface-name :methods)
+      #?@(:clj
+          [gen-interface-code-header
+            (dlist 'gen-interface :name ns-qualified-interface-name :methods)])
           extract-all-type-hints-from-arglist
             (fn [arglist]
               (let [return-type-0 (or (type-hint arglist) (type-hint sym) 'Object)]
@@ -792,7 +805,8 @@
               (if (= hint :elem)
                   inner-type-n
                   hint))
-          gen-interface-code-body-expanded
+        #?@(:clj
+          [gen-interface-code-body-expanded
             (->> gen-interface-code-body-unexpanded
                  (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]
                          (let [expanded-hints-list (->> hints replace-else (apply combo/cartesian-product))
@@ -838,7 +852,7 @@
           _ (when (nempty? duplicate-methods)
               (log/pr        :user "Duplicate methods for" sym ":")
               (log/ppr-hints :user duplicate-methods)
-              (throw+ "Duplicate methods."))
+              (throw+ "Duplicate methods."))])
           protocol-def        (when-not strict? (gen-protocol-from-interface gen-interface-code-body-expanded
                                                   genned-protocol-name
                                                   genned-protocol-method-name))
@@ -851,15 +865,16 @@
                 genned-protocol-method-name
                 (get types-for-arg-positions 0)))
           _ (log/ppr-hints :macro-expand "EXTEND PROTOCOL DEF" extend-protocol-def)
-          reified-sym (-> sym name
+      #?@(:clj
+          [reified-sym (-> sym name
                           (str "-reified")
                           symbol)
           reified-sym-qualified
             (-> (symbol (name (ns-name *ns*)) (name reified-sym))
                 (hint-meta ns-qualified-interface-name))
-          sym-with-meta (with-meta sym (map/merge {:doc doc-} meta-))
           reify-def
-            (list 'def reified-sym reify-body)
+            (list 'def reified-sym reify-body)])
+          sym-with-meta (with-meta sym (map/merge {:doc doc-} meta-))
           defnt-auto-unboxable? (-> sym type-hint tcore/auto-unboxable?)
           auto-unbox-fn (type-hint sym) ; unbox-fn (long, int, etc.) is same as type hint
           ; TODO auto-unbox according to arguments when no defnt-wide type hint is given 
@@ -961,7 +976,7 @@
   (let-alias* (apply hash-map bindings) body)))
 
 
-(def macroexpand-1! (fn-> macroexpand-1 pr/pprint-hints))
+#?(:clj (def macroexpand-1! (fn-> macroexpand-1 pr/pprint-hints)))
 
 #?(:clj (defalias macroexpand     riddley.walk/macroexpand))
 #?(:clj (defalias macroexpand-all riddley.walk/macroexpand-all))
@@ -1082,6 +1097,7 @@
 ; Clojure does not support separate compilation
 
 
+#?(:clj
 (defmacro variadic-proxy
   "Creates left-associative variadic forms for any operator."
   {:attribution "ztellman/primitive-math"}
@@ -1098,8 +1114,9 @@
           ([x# y#]
              (list '~fn x# y#))
           ([x# y# ~'& rest#]
-             (list* '~name (list '~name x# y#) rest#))))))
+             (list* '~name (list '~name x# y#) rest#)))))))
 
+#?(:clj
 (defmacro variadic-predicate-proxy
   "Turns variadic predicates into multiple pair-wise comparisons."
   {:attribution "ztellman/primitive-math"}
@@ -1116,4 +1133,4 @@
           ([x# y#]
              (list '~fn x# y#))
           ([x# y# ~'& rest#]
-             (list 'quantum.core.Numeric/and (list '~name x# y#) (list* '~name y# rest#)))))))
+             (list 'quantum.core.Numeric/and (list '~name x# y#) (list* '~name y# rest#))))))))

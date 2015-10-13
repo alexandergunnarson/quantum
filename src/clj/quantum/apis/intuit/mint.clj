@@ -1,6 +1,7 @@
 (ns quantum.apis.intuit.mint
   (:require-quantum [:lib web http auth url])
-  (:require [clj-http.cookies :as cook]))
+  (:require [clj-http.cookies :as cook]
+            [quantum.financial.core :as fin]))
 
 (defn login! [driver]
   (let [creds (auth/auth-keys :intuit)
@@ -28,11 +29,6 @@
         csv)
       (finally (.quit driver)))))
 
-(def debit-credit->num
-  (fn-> (whenf (fn-> :transaction-type (= :debit))
-            (f*n update :amount core/-))
-          (dissoc :transaction-type)))
-
 (defn parse-transactions
   ([csv] (parse-transactions csv nil))
   ([csv {:as opts :keys [account-remap]}]
@@ -45,8 +41,8 @@
            (<- csv/parse #{:as-map? :reducer?})
            (map+ (f*n update :amount (fn-> str/val rationalize)))
            (map+ (f*n update :transaction-type keyword))
-           (map+ (f*n update :date   (f*n time/parse "M/dd/yyyy")))
+           (map+ (f*n update :date   (fn-> (time/parse "M/dd/yyyy") time/->instant)))
            (map+ (f*n update :original-description (fn->> (url/decode :xml))))
-           (map+ debit-credit->num)
+           (map+ fin/debit-credit->num)
            account-remapper))))
   

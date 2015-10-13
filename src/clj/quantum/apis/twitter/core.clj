@@ -93,11 +93,37 @@
      :handlers handlers
      :parse? (whenc parse? nil? true)}))
 
-(defn lookup [user-id]
+(defn user [user-id]
+  (request!
+    {:url "https://api.twitter.com/1.1/users/show.json"
+     :method :get
+     :query-params {"user_id" user-id}}))
+
+(defn users [user-id]
   (request!
     {:url "https://api.twitter.com/1.1/users/lookup.json"
      :method :get
      :query-params {"user_id" user-id}}))
+
+#_(defn tweets-by-id [tweet-ids]
+  )
+
+(defn tweets-by-user
+  ([user-id] (tweets-by-user false))
+  ([user-id include-user?]
+    (request!
+      {:url "https://api.twitter.com/1.1/statuses/user_timeline.json"
+       :method :get
+       :query-params {"user_id" user-id
+                      "count" 200
+                      "trim_user" (not include-user?)
+                      "exclude_replies" true}})))
+
+(defn tweets-and-user [user-id]
+  (tweets-by-user user-id true))
+
+
+; HEADLESS BROWSER AUTOMATION
 
 (defn sign-in!
   {:in [:argunnarson]}

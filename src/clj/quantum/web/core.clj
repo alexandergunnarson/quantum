@@ -7,6 +7,8 @@
   (:require
     [quantum.auth.core :as auth])
   (:import
+    ;(com.teamdev.jxbrowser.chromium.javafx BrowserView)
+    ;(com.teamdev.jxbrowser.chromium Browser)
     (org.openqa.selenium WebDriver WebElement TakesScreenshot
      StaleElementReferenceException NoSuchElementException
      OutputType Dimension)
@@ -17,6 +19,24 @@
     (org.openqa.selenium.phantomjs PhantomJSDriver PhantomJSDriverService PhantomJSDriverService$Builder )
     (org.openqa.selenium.remote RemoteWebDriver RemoteWebElement DesiredCapabilities)
     org.apache.commons.io.FileUtils))
+
+; INSTALLATION PROCEDURE
+; sudo mvn deploy:deploy-file  -DgroupId=local -DartifactId=jxbrowser \
+; -Dversion=5.4.3 -Dpackaging=jar -Dfile=./lib/jxbrowser-5.4.3.jar \
+; -Durl=file:lib
+; sudo mvn deploy:deploy-file  -DgroupId=local -DartifactId=jxbrowser-mac \
+; -Dversion=5.4.3 -Dpackaging=jar -Dfile=./lib/jxbrowser-mac-5.4.3.jar \
+; -Durl=file:lib
+; sudo mvn deploy:deploy-file  -DgroupId=local -DartifactId=jxbrowser-license-dev \
+; -Dversion=1.0 -Dpackaging=jar -Dfile="./lib/development.jar" \
+; -Durl=file:lib
+; sudo mvn deploy:deploy-file  -DgroupId=local -DartifactId=jxbrowser-license-runtime \
+; -Dversion=1.0 -Dpackaging=jar -Dfile="./lib/runtime.jar" \
+; -Durl=file:lib
+; Copy to .m2/local
+; new com.teamdev.jxbrowser.chromium.Browser();
+; BrowserView browserView = new BrowserView(browser);
+; Add to stackpane
 
 (def user-agent-string "Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.0")
 
@@ -33,7 +53,7 @@
         ))
 
 (defn default-driver []
-   (PhantomJSDriver. default-capabilities))
+  (PhantomJSDriver. default-capabilities))
 
 ; How do I clear the phantomjs cache on a mac?
 ; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
@@ -62,6 +82,10 @@
    :elem        elem
    :on-page     (.getCurrentUrl driver)
    :page-source (.getPageSource driver)})
+
+(defn navigate!
+  ([address] (navigate! (driver) address))
+  ([^WebDriver driver-f address] (.get driver-f address)))
 
 ; Possibly defprotocol?
 (defn write-page!
@@ -106,7 +130,7 @@
   (try
     (.findElementsById elem "bogus_elem")
     false
-    (catch StaleElementReferenceException _ (println "Caught StaleElementReferenceException!") true)))
+    (catch StaleElementReferenceException _ (log/pr ::debug "Caught StaleElementReferenceException!") true)))
 
 (defn click-load!
   {:attribution "http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html"}
@@ -116,7 +140,6 @@
     (wait-for-fn! stale-elem? elem)))
 
 (defn click!
-  {:attribution "http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html"}
   [^RemoteWebElement elem]
   (.click elem))
 
@@ -213,3 +236,30 @@
                          :secure  #(.isSecure  ^Cookie %))))
        (map+ (juxt (fn-> first) (fn-> second map->QCookie)))
        redm))
+
+
+#_(defn switch-window! [driver]
+  (let [popup-handle
+          (->> (.getWindowHandles driver)
+               (remove (eq? (.getWindowHandle driver))) first)]
+    (-> driver .switchTo (.window popup-handle))))
+
+(defn switch-window! [driver handle]
+  (.window (.switchTo driver) handle))
+
+(defn js-exec!
+  {:usage '(js-exec! true
+            "var id = \"ctl00_ContentPlaceHolder_tcBackTitleSearch_dgBTagent_cell0_7_lblLoan\";
+             var link = document.getElementById(id);
+             return link.href;\"")}
+  [driver page? thread? s]
+  (let [code (if page? 
+                 (str "var page = this;
+                       return page.evaluate(function() {"
+                       s
+                       "});")
+                 s)
+        f #(.executePhantomJS driver code (object-array 0))]
+    (if thread?
+        (future (f))
+        (f))))

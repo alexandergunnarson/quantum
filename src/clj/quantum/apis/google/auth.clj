@@ -20,6 +20,9 @@
           {:email   (io/path (:api-auth urls) "userinfo.email")
            :profile (io/path (:api-auth urls) "userinfo.profile")}}))
 
+(defn assert-email [auth-keys email]
+  (throw-unless (in? email auth-keys) (Err. nil "Email not found in auth keys" email)))
+
 (def access-types #{:online :offline})
 
 (defn scopes-string [^Set scopes-]
@@ -34,15 +37,16 @@
     ""
     scopes-))
 
-(defn oauth-params [{:keys [scopes access-type]}]
+(defn oauth-params [{:keys [email scopes access-type]}]
   (let [auth-keys (auth/auth-keys :google)
+        _ (assert-email auth-keys email)
         access-type (or access-type :offline)]
     (when-not (containsk? access-types access-type)
       (throw+ (Err. :access-type-invalid nil access-type)))
     (map/om ; must be in this order
       "access_type"   (name access-type) ; must be string, not keyword for some reason
-      "client_id"     (:client-id    auth-keys)
-      "redirect_uri"  (:redirect-uri auth-keys)
+      "client_id"     (-> auth-keys (get email) :client-id   )
+      "redirect_uri"  (-> auth-keys (get email) :redirect-uri)
       "response_type" "code"
       "scope"         (scopes-string scopes))))
 
@@ -85,7 +89,7 @@
           sign-in-click!     (click-load! signin-button)]))
   ([^WebDriver driver ^String auth-url ^String username ^String password]
     (.get driver auth-url)
-    (web/screenshot! driver "screen1")
+    #_(web/screenshot! driver "screen1")
     (sign-in! driver username password)))
 
 (defn begin-sign-in-from-google-home-page!
@@ -159,57 +163,61 @@
 
 (defn oauth-key
   "Retrieves the authorization key programmatically via a headless browser."
-  ([scopes- access-type] (oauth-key scopes- access-type nil))
-  ([^Set scopes- ^Key access-type opts]
-    (let [auth-keys (auth/auth-keys :google)]
+  ([email scopes- access-type] (oauth-key email scopes- access-type nil))
+  ([email ^Set scopes- ^Key access-type opts]
+    (let [auth-keys (auth/auth-keys :google)
+          _ (assert-email auth-keys email)]
       (authentication-key
         access-type
-        (oauth-url {:scopes scopes- :access-type access-type})
-        (:username auth-keys)
-        (:password auth-keys)
+        (oauth-url {:scopes scopes- :access-type access-type :email email})
+        email
+        (-> auth-keys (get email) :password)
         opts))))
 
 (defn ^String access-token!
-  {:usage '(gauth/access-token! #{:contacts/read-write} :offline)}
-  ([scopes auth-type] (access-token! scopes auth-type nil))
-  ([scopes ^Key auth-type {:as opts :keys [code]}]
+  "Only works for native ('other') apps."
+  {:usage '(access-token! "me@gmail.com" #{:contacts/read-write} :offline)}
+  ([email scopes auth-type] (access-token! email scopes auth-type nil))
+  ([email scopes ^Key auth-type {:as opts :keys [code]}]
     (let [auth-keys (auth/auth-keys :google)
+          _ (throw-unless (in? email auth-keys) (Err. nil "Email not found in auth keys" email))
           service (-> scopes first namespace keyword)
           access-token-retrieved
             (-> (http/request!
                   {:method :post
                    :url (:oauth-access-token urls)
                    :form-params
-                    {:code (or code (oauth-key scopes auth-type opts))
-                     "client_id"     (:client-id     auth-keys)
-                     "client_secret" (:client-secret auth-keys)
-                     "redirect_uri"  (:redirect-uri  auth-keys)
+                    {:code (or code (oauth-key email scopes auth-type opts))
+                     "client_id"     (-> auth-keys (get email) :client-id    )
+                     "client_secret" (-> auth-keys (get email) :client-secret)
+                     "redirect_uri"  (-> auth-keys (get email) :redirect-uri )
                      "grant_type"    "authorization_code"}})
                 :body (json/parse-string str/keywordize))]
       (auth/write-auth-keys!
         :google
         (assoc-in (auth/auth-keys :google)
-          [service
+          [email
+           service
            :access-tokens
            auth-type]
           access-token-retrieved))
       access-token-retrieved)))
 
-(defn ^String access-token-refresh! [service]
+(defn ^String access-token-refresh! [email service]
   (let [^Map    auth-keys (auth/auth-keys :google)
         resp (http/request! 
                {:method :post
                 :url    (:oauth-access-token urls)
                 :form-params
-                {"client_id"     (:client-id auth-keys)
-                 "client_secret" (:client-secret auth-keys)
-                 "refresh_token" (-> auth-keys service :access-tokens :offline :refresh-token)
+                {"client_id"     (-> auth-keys (get email) :client-id)
+                 "client_secret" (-> auth-keys (get email) :client-secret)
+                 "refresh_token" (-> auth-keys (get email) service :access-tokens :offline :refresh-token)
                  "grant_type"    "refresh_token"}})
         ^Map access-token-retrieved
           (-> resp :body (json/parse-string str/keywordize))]
     (auth/write-auth-keys!
       :google
-      (assoc-in auth-keys [service :access-tokens :current]
+      (assoc-in auth-keys [email service :access-tokens :current]
         access-token-retrieved))
   access-token-retrieved))
 
@@ -244,26 +252,30 @@
 
 (defn access-key
   {:in [:contacts :default]}
-  [^Key service ^Key token-type]
+  [email ^Key service ^Key token-type]
   (-> (auth/auth-keys :google)
+      (get email)
       (get service)
       :access-tokens
       (get token-type)
       :access-token))
 
-(defn handled-request! [service opts]
+(defn handled-request! [email service opts]
   (http/request!
-    (update opts :handlers
-      (f*n mergel
-        {401 (fn [req resp]
-               (log/pr ::warn "Unauthorized. Trying again...")
-               (access-token-refresh! service)
-               (http/request! (assoc req :oauth-token (access-key service :current))))
-         403 (fn [req resp]
-               (log/pr ::warn "Too many requests. Trying again...")
-               (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
-               (http/request! req))
-         500 (fn [req resp]
-               (log/pr ::warn "Server error. Trying again...")
-               (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
-               (http/request! req))}))))  
+    (-> opts
+        (assoc :oauth-token (access-key email service :current))
+        (update
+          :handlers
+          (f*n mergel
+            {401 (fn [req resp]
+                   (log/pr ::warn "Unauthorized. Trying again...")
+                   (access-token-refresh! email service)
+                   (http/request! (assoc req :oauth-token (access-key email service :current))))
+             403 (fn [req resp]
+                   (log/pr ::warn "Too many requests. Trying again...")
+                   (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
+                   (http/request! req))
+             500 (fn [req resp]
+                   (log/pr ::warn "Server error. Trying again...")
+                   (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
+                   (http/request! req))})))))

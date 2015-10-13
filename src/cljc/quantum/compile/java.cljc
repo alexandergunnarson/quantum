@@ -4,24 +4,24 @@
      [quantum.core.analyze.clojure.core :as ana])
   (:import
     com.github.javaparser.JavaParser
-    (com.github.javaparser.ast CompilationUnit)
-    (com.github.javaparser.ast.body
+    [com.github.javaparser.ast CompilationUnit]
+    [com.github.javaparser.ast.body
       ClassOrInterfaceDeclaration InitializerDeclaration
       ConstructorDeclaration
       MethodDeclaration FieldDeclaration FieldDeclaration
       ModifierSet
       Parameter MultiTypeParameter
-      VariableDeclarator VariableDeclaratorId)
-    (com.github.javaparser.ast.comments JavadocComment)
-    (com.github.javaparser.ast.stmt
+      VariableDeclarator VariableDeclaratorId]
+    [com.github.javaparser.ast.comments JavadocComment]
+    [com.github.javaparser.ast.stmt
       ExplicitConstructorInvocationStmt
       BlockStmt Statement ExpressionStmt
       TryStmt ThrowStmt CatchClause
       BreakStmt
       WhileStmt
       ForeachStmt ForStmt
-      ReturnStmt IfStmt)
-    (com.github.javaparser.ast.expr
+      ReturnStmt IfStmt]
+    [com.github.javaparser.ast.expr
       ObjectCreationExpr NameExpr VariableDeclarationExpr
       SuperExpr
       ArrayAccessExpr ArrayCreationExpr
@@ -34,10 +34,10 @@
       EnclosedExpr
       UnaryExpr UnaryExpr$Operator
       BinaryExpr BinaryExpr$Operator
-      BooleanLiteralExpr StringLiteralExpr IntegerLiteralExpr)
-    (com.github.javaparser.ast.type
+      BooleanLiteralExpr StringLiteralExpr IntegerLiteralExpr]
+    [com.github.javaparser.ast.type
       ReferenceType ClassOrInterfaceType
-      PrimitiveType PrimitiveType$Primitive)))
+      PrimitiveType PrimitiveType$Primitive]))
 
 ; TODO fix double escaping
 ; http://javaparser.github.io/javaparser/javadoc-current/japa/parser/ast/expr/ConditionalExpr.html

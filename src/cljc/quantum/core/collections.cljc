@@ -89,6 +89,7 @@
 (defalias break reduced)
 
 (defalias vec         red/vec+       )    
+(defalias array       coll/array     )
 (defalias into        red/into+      ) 
 
 (defalias redv        red/fold+      )

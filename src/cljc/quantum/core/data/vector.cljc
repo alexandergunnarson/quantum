@@ -5,16 +5,18 @@
   quantum.core.data.vector
   (:require-quantum [ns])
   (:require
-    [clojure.core.rrb-vector :as vec+]
-    [clojure.core.rrb-vector.protocols :refer
-      [PSliceableVector slicev
-      PSpliceableVector splicev]]
-    [clojure.core.rrb-vector.rrbt :refer [AsRRBT as-rrbt]]))
+         [clojure.core.rrb-vector :as vec+]
+    #?@(:clj
+         [[clojure.core.rrb-vector.protocols :refer
+            [PSliceableVector  slicev
+             PSpliceableVector splicev]]
+          [clojure.core.rrb-vector.rrbt :refer [AsRRBT as-rrbt]]])))
 
 ; To fix "No implementation of method: :as-rrbt of protocol ___"
 ; TODO inefficient
 
 
+#?(:clj
 (extend-protocol AsRRBT
   clojure.lang.Tuple$T0 (as-rrbt [v] (as-rrbt       (vector)   ))
   clojure.lang.Tuple$T1 (as-rrbt [v] (as-rrbt (into (vector) v)))
@@ -22,9 +24,10 @@
   clojure.lang.Tuple$T3 (as-rrbt [v] (as-rrbt (into (vector) v)))
   clojure.lang.Tuple$T4 (as-rrbt [v] (as-rrbt (into (vector) v)))
   clojure.lang.Tuple$T5 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T6 (as-rrbt [v] (as-rrbt (into (vector) v))))
+  clojure.lang.Tuple$T6 (as-rrbt [v] (as-rrbt (into (vector) v)))))
 
 ; TODO inefficient
+#?(:clj
 (extend-protocol PSliceableVector
   clojure.lang.Tuple$T0 (slicev  [v a b] (slicev        (vector)    a b))
   clojure.lang.Tuple$T1 (slicev  [v a b] (slicev  (into (vector) v) a b))
@@ -32,9 +35,10 @@
   clojure.lang.Tuple$T3 (slicev  [v a b] (slicev  (into (vector) v) a b))
   clojure.lang.Tuple$T4 (slicev  [v a b] (slicev  (into (vector) v) a b))
   clojure.lang.Tuple$T5 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T6 (slicev  [v a b] (slicev  (into (vector) v) a b)))
+  clojure.lang.Tuple$T6 (slicev  [v a b] (slicev  (into (vector) v) a b))))
 
 ; TODO inefficient
+#?(:clj
 (extend-protocol PSpliceableVector
   clojure.lang.Tuple$T0 (splicev [v1 v2] (splicev       (vector)    v2))
   clojure.lang.Tuple$T1 (splicev [v1 v2] (splicev (into (vector) v1) v2))
@@ -42,7 +46,7 @@
   clojure.lang.Tuple$T3 (splicev [v1 v2] (splicev (into (vector) v1) v2))
   clojure.lang.Tuple$T4 (splicev [v1 v2] (splicev (into (vector) v1) v2))
   clojure.lang.Tuple$T5 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T6 (splicev [v1 v2] (splicev (into (vector) v1) v2)))
+  clojure.lang.Tuple$T6 (splicev [v1 v2] (splicev (into (vector) v1) v2))))
 
 
 (def vec+    vec+/vec)

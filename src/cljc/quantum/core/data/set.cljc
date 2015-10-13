@@ -18,8 +18,8 @@
 (def sorted-set+    avl/sorted-set)
 (def sorted-set-by+ avl/sorted-set-by)
 
-(def int-set       imap/int-set)
-(def dense-int-set imap/dense-int-set)
+#?(:clj (def int-set       imap/int-set))
+#?(:clj (def dense-int-set imap/dense-int-set))
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 

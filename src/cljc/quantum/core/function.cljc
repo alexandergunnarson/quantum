@@ -7,13 +7,13 @@
   (:require-quantum [ns map])
   (:require
     [clojure.walk]
-    #?(:clj [clojure.pprint  :as pprint :refer [pprint]])))
+    [quantum.core.cljs.deps.function :as dep]
+    #?(:clj [clojure.pprint :as pprint :refer [pprint]])))
 
 ; To signal that it's a multi-return 
 (deftype MultiRet [val])
 
 #?(:clj (defalias jfn memfn))
-
 #?(:clj (defalias mfn ns/mfn))
 
 (def fn-nil (constantly nil))
@@ -112,25 +112,22 @@
   [& args]
   (apply partial args))
 
-#?(:clj
-(defmacro f*n  [func & args]
-  `(fn [arg-inner#]
-     (~func arg-inner# ~@args))))
+#?(:clj (defalias f*n dep/f*n))
 
 ; MWA: "Macro WorkAround"
-#?(:clj (defmacro MWA ([f] `(f*n ~f)) ([n f] `(mfn ~n ~f))))
+#?(:clj (defmacro MWA ([f] `(dep/f*n ~f)) ([n f] `(mfn ~n ~f))))
 
 (defn f**n [func & args]
   (fn [& args-inner]
     (apply func (concat args-inner args))))
 
-(defn *fn [& args] (f*n apply args))
+(defn *fn [& args] (dep/f*n apply args))
 
 (defn fn-bi [arg] #(arg %1 %2))
 (defn unary [pred]
-  (fn ([a    ] (f*n pred a))
-      ([a b  ] (f*n pred a b))
-      ([a b c] (f*n pred a b c))))
+  (fn ([a    ] (dep/f*n pred a))
+      ([a b  ] (dep/f*n pred a b))
+      ([a b c] (dep/f*n pred a b c))))
 
 #?(:clj
 (defmacro fn->
@@ -234,12 +231,13 @@
 ; (defn with-pr  [obj]      (do (#+clj  pprint
 ;                                #+cljs println obj) 
 ;                               obj))
+#?(:clj
 (defmacro doto->>
   {:usage '(->> 1 inc (doto->> println "ABC"))}
   [f & args]
   (let [obj (last args)]
     `(do (~f ~@(butlast args) ~obj)
-         ~obj)))
+         ~obj))))
 (defn with-pr->>  [obj      ] (do (println obj) obj))
 (defn with-msg->> [msg  obj ] (do (println msg) obj))
 (defn with->>     [expr obj ] (do expr          obj))

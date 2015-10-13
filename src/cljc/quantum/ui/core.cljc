@@ -56,38 +56,43 @@
 ; Implement a version of DaisyDisk.
 
 (def pseudo-properties
-  {:grid-pane/column-index (fn [^Node node val-] (GridPane/setColumnIndex node (int val-)))
-   :grid-pane/row-index    (fn [^Node node val-] (GridPane/setRowIndex    node (int val-)))
-   :grid-pane/fill-width?  (fn [^Node node val-] (GridPane/setFillWidth   node      val-))
-   :grid-pane/fill-height? (fn [^Node node val-] (GridPane/setFillHeight  node      val-))
-   :grid-pane/h-alignment  (fn [^Node node val-] (GridPane/setHalignment  node      val-))
-   :grid-pane/column-span  (fn [^Node node val-] (GridPane/setColumnSpan  node (int val-)))
-   
-   :h-box/h-grow           (fn [^Node node val-] (HBox/setHgrow           node ^Priority val-))
-   :h-box/margin           (fn [^Node node val-] (HBox/setMargin          node ^Insets   val-))
-   ; SELECTION MODEL
-   :selected-item-listener (fn [^TableView node val-] (println "NODE" node)
-                               (-> node
-                                   (.getSelectionModel)
-                                   (.selectedItemProperty)
-                                   (doto
+  (atom
+    {:grid-pane/column-index (fn [^Node node val-] (GridPane/setColumnIndex node (int val-)))
+     :grid-pane/row-index    (fn [^Node node val-] (GridPane/setRowIndex    node (int val-)))
+     :grid-pane/fill-width?  (fn [^Node node val-] (GridPane/setFillWidth   node      val-))
+     :grid-pane/fill-height? (fn [^Node node val-] (GridPane/setFillHeight  node      val-))
+     :grid-pane/h-alignment  (fn [^Node node val-] (GridPane/setHalignment  node      val-))
+     :grid-pane/column-span  (fn [^Node node val-] (GridPane/setColumnSpan  node (int val-)))
+     :grid-pane/margin       (fn [^Node node val-] (GridPane/setMargin      node ^Insets   val-))
+     ;:grid-pane/pref-size    (fn [^Node node [x y]] (GridPane/setPrefSize   node (double x) (double y)))
+     
+     :h-box/h-grow           (fn [^Node node val-] (HBox/setHgrow           node ^Priority val-))
+     :h-box/margin           (fn [^Node node val-] (HBox/setMargin          node ^Insets   val-))
+     :v-box/v-grow           (fn [^Node node val-] (VBox/setVgrow           node ^Priority val-))
+     :v-box/margin           (fn [^Node node val-] (VBox/setMargin          node ^Insets   val-))
+     ; SELECTION MODEL
+     :selected-item-listener (fn [^TableView node val-] (println "NODE" node)
+                                 (-> node
+                                     (.getSelectionModel)
+                                     (.selectedItemProperty)
+                                     (doto
+                                       (.addListener
+                                        
+                                         (proxy [ChangeListener] []
+                                           (changed [^ObservableValue observable, oldValue, newValue]
+                                             (val- observable, oldValue, newValue))))
+                                       #_(.addListener
+                                         (proxy [InvalidationListener] []
+                                           (changed [^ObservableValue observable, oldValue, newValue]
+                                             (val- observable, oldValue, newValue))))))
+                                 #_(-> node
+                                     (.getSelectionModel)
+                                     (.getSelectedItems)
                                      (.addListener
-                                      
-                                       (proxy [ChangeListener] []
-                                         (changed [^ObservableValue observable, oldValue, newValue]
-                                           (val- observable, oldValue, newValue))))
-                                     #_(.addListener
-                                       (proxy [InvalidationListener] []
-                                         (changed [^ObservableValue observable, oldValue, newValue]
-                                           (val- observable, oldValue, newValue))))))
-                               #_(-> node
-                                   (.getSelectionModel)
-                                   (.getSelectedItems)
-                                   (.addListener
-                                          (proxy [ListChangeListener] []
-                                            (onChanged [^ListChangeListener$Change change]
-                                              (.next change) ; Apparently necessary...
-                                              (-> change (.getAddedSubList) first val-))))))})
+                                            (proxy [ListChangeListener] []
+                                              (onChanged [^ListChangeListener$Change change]
+                                                (.next change) ; Apparently necessary...
+                                                (-> change (.getAddedSubList) first val-))))))}))
 
 (def pseudo-tags
   (atom
@@ -108,8 +113,8 @@
                   props-f
                     (reduce
                       (fn [ret prop-k prop-v]
-                        (if (containsk? pseudo-properties prop-k)
-                            (do (assoc! doto-list (get pseudo-properties prop-k) prop-v)
+                        (if (containsk? @pseudo-properties prop-k)
+                            (do (assoc! doto-list (get @pseudo-properties prop-k) prop-v)
                                 ret)
                             (assoc! ret prop-k prop-v)))
                       (transient {})

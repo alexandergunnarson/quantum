@@ -201,25 +201,26 @@
   :test-paths     ["test"]
   ;:prep-tasks   [["cljx" "once"]] 
   :global-vars {*warn-on-reflection* true}
-  :cljsbuild
-    {:builds
-      [{:id "dev"
-        :figwheel true
-        :source-paths ["src/cljs" "src/cljc" "test/cljs"]
-        :compiler {:output-to            "resources/public/js/compiled/quantum.js"
-                   :output-dir           "resources/public/js/compiled/out"
-                   :optimizations        :none
-                   :main                 quantum.cljs_test
-                   :asset-path           "js/compiled/out"
-                   :source-map           true
-                   :source-map-timestamp true
-                   :cache-analysis       true}}
-       {:id "min"
-        :source-paths ["src/cljs" "src/cljc"]
-        :compiler {:output-to     "resources/public/js/compiled/quantum.js"
-                   :main          quantum.cljs_test                     
-                   :optimizations :advanced
-                   :pretty-print  false}}]}
-  :figwheel {:http-server-root "public" ;; default and assumes "resources" 
-             :server-port 3449
-             :css-dirs ["resources/public/css"]})
+  ; :cljsbuild
+  ;   {:builds
+  ;     [{:id "dev"
+  ;       :figwheel true
+  ;       :source-paths ["src/cljs" "src/cljc" "test/cljs"]
+  ;       :compiler {:output-to            "resources/public/js/compiled/quantum.js"
+  ;                  :output-dir           "resources/public/js/compiled/out"
+  ;                  :optimizations        :none
+  ;                  :main                 quantum.cljs_test
+  ;                  :asset-path           "js/compiled/out"
+  ;                  :source-map           true
+  ;                  :source-map-timestamp true
+  ;                  :cache-analysis       true}}
+  ;      {:id "min"
+  ;       :source-paths ["src/cljs" "src/cljc"]
+  ;       :compiler {:output-to     "resources/public/js/compiled/quantum.js"
+  ;                  :main          quantum.cljs_test                     
+  ;                  :optimizations :advanced
+  ;                  :pretty-print  false}}]}
+  ; :figwheel {:http-server-root "public" ;; default and assumes "resources" 
+  ;            :server-port 3449
+  ;            :css-dirs ["resources/public/css"]}
+  )

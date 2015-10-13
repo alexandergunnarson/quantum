@@ -32,13 +32,14 @@
          :text               text
          :cell-value-factory (column-factory (compr getter transformer))}])))
 
+
 (defn gen-columns [data data-k fields states width-map
                    validators transformers not-editable?
                    uneditable-map]
-  (coll/for [field fields]
+  (for [field fields]
     (let [width (or (get width-map field) 80)]
       (default-column states data width
-         (str/unkeywordize field) field
+         (-> field str/unkeywordize str/upper-case) field
          validators transformers
          not-editable? {:editable? (not (get-in uneditable-map [data-k field]))}))))
 

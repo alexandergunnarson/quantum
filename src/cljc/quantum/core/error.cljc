@@ -262,7 +262,10 @@
 (defn default-throw-hook [context]
   (log/pr ::macro-expand "IN DEFAULT THROW-HOOK")
   (let [throwable-obj (get-throwable context)
-        _ (log/pr ::macro-expand "THROWABLE OBJ" throwable-obj "META" (meta throwable-obj) "CLASS" throwable-obj)]
+        _ (log/pr ::macro-expand
+            "THROWABLE OBJ" throwable-obj
+            "META"          (meta throwable-obj)
+            "CLASS"         throwable-obj)]
     (throw throwable-obj)
     (log/pr ::macro-expand "AFTER THROW")))
 
@@ -356,19 +359,19 @@
   [expr throw-content]
   `(if ~expr ~expr (throw+ ~throw-content))))
 
-#?(:clj (defalias throw-unless with-throw))
-
-#?(:clj
-(defmacro throw-when
-  [expr throw-content]
-  `(if-not ~expr ~expr (throw+ ~throw-content))))
-
 #?(:clj
 (defmacro with-throws
   "Doesn't quite work yet..."
   [& exprs]
   `(core/doseq [[expr# throw-content#] (map/map-entry-seq ~exprs)]
      (with-throw expr# throw-content#))))
+
+#?(:clj (defalias throw-unless with-throw))
+
+#?(:clj
+(defmacro throw-when
+  [expr throw-content]
+  `(if-not ~expr ~expr (throw+ ~throw-content))))
 
 #?(:clj
 (defmacro with-catch
@@ -394,6 +397,7 @@
          `(or (try ~exp (catch Throwable t# (try-or ~@as))))
          exp))))
 
+#?(:clj
 (defmacro suppress
   "Suppresses any errors thrown in the body.
   (suppress (error \"Error\")) => nil
@@ -408,7 +412,7 @@
      `(try ~body (catch Throwable ~'t
                    (cond (fn? ~catch-val)
                          (~catch-val ~'t)
-                         :else ~catch-val)))))
+                         :else ~catch-val))))))
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]

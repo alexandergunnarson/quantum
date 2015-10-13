@@ -12,4 +12,4 @@
 
 #?(:clj 
 (defmacro defnt [& args]
-  `(quantum.core.macros/defnt* :cljs ~@args)))
+  `(quantum.core.macros/defnt*-helper :cljs ~@args)))

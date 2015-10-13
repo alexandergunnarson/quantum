@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>7e9195012d5dd0c3bd922460ed83cc423ea17110
+    <tag>d0f2d76808e9b3d82a2878bbbb8bd70035089e10
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>

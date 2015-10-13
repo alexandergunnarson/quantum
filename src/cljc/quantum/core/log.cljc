@@ -109,7 +109,7 @@
 
 #?(:clj
 (defmacro pr [pr-type & args]
-  `(pr* true false println ~pr-type (delay (list ~@args)) nil)))
+  `(pr* true  false println ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defmacro pr-no-trace [pr-type & args]
@@ -121,7 +121,7 @@
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(pr* true true  !       ~pr-type (delay (list ~@args)) nil)))
+  `(pr* true  true  !       ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defmacro ppr-hints [pr-type & args]

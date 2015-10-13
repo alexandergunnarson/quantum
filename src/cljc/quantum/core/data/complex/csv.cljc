@@ -11,6 +11,8 @@
           rows (if headers block (rest block))
           reducer-fn (if reducer? identity redv)]
       (cond
+        as-vector?
+          (->> block (into []))
         as-lseq? 
           block
         as-map?

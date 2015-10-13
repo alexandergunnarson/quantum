@@ -8,7 +8,7 @@
     (swap! states coll/updates-in+
       [:last-modified :instant] (constantly (time/now))
       [:last-modified :item   ] (constantly x)
-      [x :index ] (MWA inc)
+      [x :index ] (whenf*n nil? (constantly 0) (MWA inc))
       [x :states] (f*n conj (-> x :immutable deref)))))
 
 (defn commit! [states x] (commit!* x states))

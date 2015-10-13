@@ -4,15 +4,13 @@
   (:require
     [byte-streams :as streams]
     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1) 
-    ; [gloss.core.formats :as gformats]
-    [manifold
-      [stream   :as s]
-      [deferred :as d]]
-    [byte-streams
-      [graph :as g]
-      [protocols :as proto]
-      [pushback-stream :as ps]
-      [char-sequence :as cs]])
+    ; [gloss.core.formats         :as gformats]
+    [manifold.stream              :as s    ]
+    [manifold.deferred            :as d    ]
+    [byte-streams.graph           :as g    ]
+    [byte-streams.protocols       :as proto]
+    [byte-streams.pushback-stream :as ps   ]
+    [byte-streams.char-sequence   :as cs   ])
 #?(:clj
   (:import
     [quantum.core.data.streams    ByteBufferInputStream]

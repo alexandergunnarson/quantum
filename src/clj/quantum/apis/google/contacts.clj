@@ -54,10 +54,11 @@
   {:todo ["Handle unreasonably long contacts (> 10000)"]}
   [^String email]
   (let [^Map http-response
-         (gauth/handled-request! :contacts
+         (gauth/handled-request! email :contacts
            {:method       :get
             :url          (str "https://www.google.com/m8/feeds/contacts/" email "/full")
-            :oauth-token  (gauth/access-key :contacts :current)
+            :oauth-token  (gauth/access-key email :contacts :offline)
+            :headers      {"GData-Version" "3.0"}
             :query-params {"max-results" 10000}})] ; TODO check if 10000 is too many
     (:body http-response)))
 
@@ -65,3 +66,48 @@
   [^String email]
   (->> (retrieve-contacts-xml email)
        parse-contacts))
+
+(defn ^Vec update-contacts
+  [^String email f]
+  (->> (retrieve-contacts-xml email)
+       xml/lparse :content 
+       (filter (fn-> :tag (= :entry)))
+       (postwalk (if*n (fn-and keyword? (fn-> namespace nnil?))
+                       (fn [k] (str (namespace k) ":" (name k))) ; If you don't do this, XML emission messes up: http://dev.clojure.org/jira/browse/DXML-15
+                       f))))
+
+(defn contact-id [contact]
+  (->> contact :content
+       (ffilter (fn-> :tag (= :id)))
+       :content first
+       (coll/taker-until (eq? \/))))
+
+#_(defn update-contact!
+  {:todo ["Some etag troubles"]}
+  [contact]
+  (let [etag (-> contact :attrs (get "gd:etag")) ; assumes keyword namespaces have been taken care of
+        contact-id* contact-id]
+    (gauth/handled-request! email :contacts
+      {:method :put
+       :url (str "https://www.google.com/m8/feeds/contacts/" email "/full/" contact-id*)
+       :headers      {"GData-Version" "3.0"
+                      "If-Match"      etag
+                      "Content-Type"  "application/atom+xml"}
+       :body (-> contact clojure.data.xml/emit-str)})))
+
+
+(defn delete! [email contact-id & [etag]]
+  (gauth/handled-request! email :contacts
+    {:method :delete
+     :url (str "https://www.google.com/m8/feeds/contacts/" email "/full/" contact-id)
+     :headers {"If-Match" (or etag "*")}})) ; If "*", then it's overwritten no matter what
+
+(defn create! [email contact]
+  (if (string? contact)
+      (gauth/handled-request! email :contacts
+        {:method :post
+         :url (str "https://www.google.com/m8/feeds/contacts/" email "/full")
+         :headers {"GData-Version" "3.0"
+                   "Content-Type"  "application/atom+xml"}
+         :body contact})
+      (throw+ (Err. nil "Non-XML contact creation not yet supported" nil))))

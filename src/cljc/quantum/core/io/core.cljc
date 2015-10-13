@@ -119,17 +119,21 @@
           (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
                path
               (partial path drive-dir))]
-    {:test      test-dir
-     :this-dir  this-dir
-     :root      root-dir
-     :drive     drive-dir
-     :home      home-dir
-     :desktop   desktop-dir
-     :projects  proj-path-f
-     :resources
-       (whenc (path this-dir "resources")
-              (fn-> io/as-file .exists not)
-              (path proj-path-f (up-dir-str this-dir) "resources"))}))
+    (atom {:test      test-dir
+           :this-dir  this-dir
+           :root      root-dir
+           :drive     drive-dir
+           :home      home-dir
+           :desktop   desktop-dir
+           :projects  proj-path-f
+           :keys      (if (= "local" (System/getProperty "quantum.core.io:paths:keys"))
+                          (path this-dir "dev-resources" "Keys")
+                          (path home-dir "Quanta" "Keys"))
+           :dev-resources (path this-dir "dev-resources")
+           :resources
+             (whenc (path this-dir "resources")
+                    (fn-> io/as-file .exists not)
+                    (path proj-path-f (up-dir-str this-dir) "resources"))})))
 
 (defnt ^String parse-dir
   ([^vector? keys-n]
@@ -138,7 +142,7 @@
         (let [first-key-not-root?
                (and (= n 0) (string? key-n)
                     ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
-              k-to-add-0 (or (get dirs key-n) key-n)
+              k-to-add-0 (or (get @dirs key-n) key-n)
               k-to-add-f
                 (if first-key-not-root?
                     (str sys/separator k-to-add-0)
