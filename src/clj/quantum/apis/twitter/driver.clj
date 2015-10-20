@@ -7,9 +7,9 @@
 (defn login! [driver username password]
   (.get driver login-url)
   (let [username-field
-          ((web/find-element driver
+          (web/find-element driver
             (By/xpath "//input[@name='session[username_or_email]'
-                               and contains(@class, 'js-username-field')]")))
+                               and contains(@class, 'js-username-field')]"))
         _ (web/send-keys! username-field username)
         password-field
           (web/find-element driver

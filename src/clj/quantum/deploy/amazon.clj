@@ -14,11 +14,11 @@
   (auth/datum :amazon (default-account) :ec2 :default))
 (defn default-user []
   (auth/datum :amazon (default-account) :ec2 (default-instance-name) :users :default))
-(defn get-instance-id [& [instance-name]]
+(defn get-instance-id   [& [instance-name]]
   (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :id))
 (defn get-server-region [& [instance-name]]
   (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :region))
-(defn get-public-ip [& [instance-name]]
+(defn get-public-ip     [& [instance-name]]
   (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :public-ip))
 (defn get-user [& [user]]
   (or user (default-user)))
@@ -165,6 +165,8 @@
   (auth-repo! repo)
   (wait-until-prompt (convert 2 :min :millis) (prompt)))
 
+(defn discard-changes! [repo]
+  (command (str/sp "cd" (str "~/" repo) "&& git stash save --keep-index && git stash drop")))
 
 ; http://unix.stackexchange.com/questions/4034/how-can-i-disown-a-running-process-and-associate-it-to-a-new-screen-shell
 ; When you first login: |screen -D -R|; run your command

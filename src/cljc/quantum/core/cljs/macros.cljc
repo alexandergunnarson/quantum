@@ -5,9 +5,6 @@
   quantum.core.cljs.macros
   (:require-quantum [ns log pr err map set logic fn])
   (:require
-    [quantum.core.type.core :as tcore]
-    [clojure.string         :as str  ]
-    [clojure.walk :refer [postwalk]]
     [quantum.core.macros]))
 
 #?(:clj 

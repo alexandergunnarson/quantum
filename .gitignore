@@ -2,3 +2,4 @@
 /dev-resources/
 /target/
 /fonts/
+subprojects/quantum-ns/target/quantum-ns-dep.jar

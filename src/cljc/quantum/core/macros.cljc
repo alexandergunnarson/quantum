@@ -9,6 +9,7 @@
     [quantum.core.collections.base :as cbase :refer
       [name default-zipper camelcase ns-qualify zip-reduce ensure-set update-first update-val]]
     [quantum.core.type.core        :as tcore]
+    [quantum.core.cljs.deps.macros :as deps]
     [quantum.core.analyze.clojure.predicates :as anap :refer 
       [#?(:clj type-hint) unqualify]]
   #_[backtick :refer [syntax-quote]]
@@ -71,7 +72,7 @@
 
 ; ===== TYPE PREDICATES =====
 
-(defn hint-meta [sym hint] (with-meta sym {:tag hint}))
+(defalias hint-meta deps/hint-meta)
 
 (def inner-types
   {(symbol "[Z") 'boolean
@@ -108,33 +109,7 @@
            (into []))
     :else [pred])))
 
-#?(:clj
-(defn hint-body-with-arglist
-  ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
-  ([body arglist lang body-type]
-  (let [arglist-set (into #{} arglist)
-        body-hinted 
-          (postwalk 
-            (condf*n
-              symbol?
-                (fn [sym]
-                  (if-let [arg (get arglist-set sym)]
-                    (if (tcore/primitive? (type-hint arg)) ; Because "Can't type hint a primitive local"
-                        sym
-                        arg)
-                    sym)) ; replace it
-              anap/new-scope?
-                (fn [scope]
-                  (if-let [sym (->> arglist-set (filter (partial anap/shadows-var? (second scope))) first)]
-                    (throw+ (Err. :unsupported "Arglist in |let| shadows hinted arg." sym))
-                    scope))
-              :else identity)
-            body)
-        body-unboxed
-          (if (= body-type :protocol)
-              body-hinted ; TODO? add (let [x (long x)] ...) unboxing
-              body-hinted)]
-    body-unboxed))))
+#?(:clj (defalias hint-body-with-arglist deps/hint-body-with-arglist))
 
 (def default-hint (f*n hint-meta 'Object))
 
@@ -196,32 +171,7 @@
       ;nil?    (constantly #{'Object})
      (constantly (throw+ (Err. nil "Not a type hint." x))))))
 
-#?(:clj
-(defmacro unquote-replacement
-  "Replaces all duple-lists: (clojure.core/unquote ___) with the unquoted version of the inner content."
-  [sym-map quoted-form]
-  `(prewalk
-     (fn [obj#]
-       (if (and (seq? obj#)
-                (-> obj# count   (= 2))
-                (-> obj# (nth 0) (= 'clojure.core/unquote)))
-           (if (->> obj# (<- nth 1) (contains? ~sym-map))
-               (get ~sym-map (-> obj# (nth 1)))
-               (throw+ {:msg ("Symbol does not evaluate to anything: " (-> obj# (nth 1)))}))
-           obj#))
-     ~quoted-form)))
-
-#?(:clj
-(defmacro quote+
-  "Normal quoting with unquoting that works as in |syntax-quote|."
-  {:in '[(let [a 1]
-           (for [b 2] (inc ~a)))]
-   :out '(for [a 1] (inc 1))}
-  [form]
- `(let [sym-map# (ns/context)]
-    (unquote-replacement sym-map# '~form))))
-
-(def extern? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "extern"))))
+(defalias extern? deps/extern?)
 
 #?(:clj
 (defn extern* [ns- [spec-sym quoted-obj & extra-args]]
@@ -242,131 +192,6 @@
                     (unqualify genned)))))
       quoted-obj)))
 
-#?(:clj
-(defmacro extern-
-  "Dashed so as to encourage only internal use within macros."
-  [obj]
-  `(do (extern* *ns* ['extern ~obj]))))
-
-#?(:clj
-(defmacro inline-replace
-  "TODO IMPLEMENT
-   Can use it like so:
-   (quantum.core.macros/inline-replace (~f ret# elem# @i#)).
-   Must be given a function definition. Will replace the arguments
-   accordingly.
-   Currently just yields identity."
-  [obj] obj))
-
-#?(:clj
-(defmacro identity*
-  "For use in macros where you don't want to have the extra fn call."
-  [obj] obj))
-
-#?(:clj
-(defmacro defn+*
-  ([sym doc- meta- arglist body [unk & rest-unk]]
-    (if unk
-        (cond
-          (string? unk)
-            `(defn+* ~sym ~unk  ~meta- ~arglist ~body                 ~rest-unk)
-          (map?    unk)     
-            `(defn+* ~sym ~doc- ~unk   ~arglist ~body                 ~rest-unk)
-          (vector? unk)
-            `(defn+* ~sym ~doc- ~meta- ~unk     ~rest-unk             nil      )
-          (list?   unk)
-            `(defn+* ~sym ~doc- ~meta- nil      ~(cons unk rest-unk) nil      )
-          :else
-            `(throw+ (str "Invalid arguments to |defn+|. " ~unk)))
-        (let [_        (log/ppr :macro-expand "ORIG BODY:" body)
-              ret-type (->> sym meta :tag)
-              ret-type-quoted (list 'quote ret-type)
-              pre-args (->> (list doc- meta-) (remove nil?))
-              sym-f    (hint-meta sym ret-type-quoted)
-              externs  (atom [])
-              body-f   (if arglist (list (cons arglist body)) body)
-              body-f   (->> body-f
-                            (clojure.walk/postwalk
-                              (whenf*n extern?
-                                (fn [[extern-sym obj]]
-                                  (let [sym (gensym "externed")]
-                                    (log/pr :macro-expand "EXTERNED" sym "IN DEFN+")
-                                    (swap! externs conj (list 'def sym obj))
-                                    sym)))))
-              _        (log/ppr :macro-expand "OPTIMIZED BODY:" body-f)
-              args-f
-                (concat pre-args
-                  (for [[arglist-n & body-n] body-f]
-                    (list arglist-n
-                      (list 'let
-                        [`pre#  (list 'log/pr :trace (str "IN "             sym-f))
-                         'ret_genned123  (cons 'do body-n)
-                         `post# (list 'log/pr :trace (str "RETURNING FROM " sym-f))]
-                        'ret_genned123))))
-              _ (log/ppr :macro-expand "FINAL ARGS TO |defn|:" args-f)]
-           `(do ~@(deref externs)
-                (defn ~sym-f ~@args-f)) ; avoids eval-list stuff
-           )))))
-
-
-#?(:clj
-(defmacro defn+ [sym & body]
-  `(defn+* ~sym nil nil nil nil ~body)))
-
-(defn protocol-extension-arities [arities class-sym-n lang]
-  (->> (list arities)
-       (map (fn [[arglist-n & body-n]]
-              (log/ppr :macro-expand "[arglist-n & body-n]" [arglist-n body-n])
-              (let [; apparently arglist-hinting isn't enough... 
-                    first-variadic-n? (anap/first-variadic? arglist-n)
-                    arg-hinted
-                      (-> arglist-n first
-                          (hint-meta
-                            (str class-sym-n)))
-                    _ (log/ppr :macro-expand "arg-hinted-meta" (meta arg-hinted))
-                    arglist-hinted
-                      (whenf arglist-n (fn-not anap/first-variadic?)
-                        (f*n assoc 0 arg-hinted))
-                    body-n
-                      (if first-variadic-n?
-                          body-n
-                          #?(:clj  (hint-body-with-arglist body-n [arg-hinted] lang)
-                             :cljs body-n))]
-                     (log/ppr :macro-expand "arglist-hinted" arglist-hinted)
-                (cons arglist-hinted body-n))))
-       doall))
-
-#?(:clj 
-(defmacro extend-protocol-for-all
-  {:usage
-    '(extend-protocol-for-xrall
-       AbcdeProtocol
-       [java.util.List clojure.lang.PersistentList]
-       (abcde ([a] (println a))))}
-  [prot & body]
-  (loop [code-n '(do) body-n body loop-ct 0]
-    (log/ppr :macro-expand "BODY-N" body-n)
-    (if (empty? body-n)
-        code-n
-        (let [classes   (first body-n)
-              fns       (->> body-n rest (take-while (fn-not core/vector?)))
-              rest-body (->> body-n rest (drop (count fns)))
-              extensions-n
-                (for [class-n classes]
-                  (let [fns-hinted
-                         (->> fns
-                              (map (fn [[f-sym arities]]
-                                     (log/ppr :macro-expand "f-sym|arities" f-sym arities)
-                                     (let [arities-hinted (protocol-extension-arities arities class-n :clj)]
-                                       (log/ppr :macro-expand "arities-hinted"
-                                         (cons f-sym arities-hinted))
-                                       (cons f-sym arities-hinted))))
-                              doall) 
-                        extension-n
-                          (apply list 'extend-protocol prot class-n fns-hinted)
-                        _# (log/ppr :macro-expand "EXTENDING PROTOCOL:" extension-n)]
-                    extension-n))]
-          (recur (concat code-n extensions-n) rest-body (inc loop-ct)))))))
 
 (defn defn-variant-organizer
   "Organizes the arguments for use for a |defn| variant.
@@ -478,21 +303,8 @@
       {:prot  final-protocol-def
        :sym-f (with-meta sym (map/merge {:doc doc-} meta-))}))))
 
-#?(:clj
-(defmacro defntp* [lang sym & body]
-  (let [{:keys [sym-f prot]}
-         (defntp*-helper nil lang *ns* sym nil nil nil body)
-        meta-f (meta sym-f)
-        code `(do ~prot
-                (doto (var ~sym)
-                  (alter-meta! map/merge ~meta-f)))]
-        (log/ppr-hints :macro-expand "DEFNTP CODE" code)
-    code)))
+; defn, typed, using protocols
 
-#?(:clj 
-(defmacro defntp [& args] `(defntp* :clj ~@args))) ; defn, typed, using protocols
-
-; DEFNT: |DEFN| WITH |GEN-INTERFACE| AND |REIFY|
 
 (defn hint-arglist-with [arglist hints]
   (loop [n 0 
@@ -694,6 +506,12 @@
                 (if (contains? hints-set-ensured first-hint)
                     (throw+ (Err. nil "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
+
+#?(:clj (defalias quote+ deps/quote+))
+#?(:clj (defalias extern- deps/extern-))
+#?(:clj (defalias identity* deps/identity*))
+#?(:clj (defalias inline-replace deps/inline-replace))
+
 
 (defn defnt*-helper
   {:todo ["Add support for nil"
@@ -906,7 +724,7 @@
                                         (list '~genned-method-name)
                                         ~args-hinted-sym))))))
                   (var ~sym-with-meta)))
-            (quote+
+            (deps/quote+
               (defmacro ~sym-with-meta [& ~args-sym]
                 (let [~args-hinted-sym (quantum.core.macros/try-hint-args ~args-sym ~lang &env)]
                   ;(log/ppr :macro-expand (str "HELPER MACRO " '~sym-with-meta " ARGS HINTED:") ~args-hinted-sym)
@@ -921,7 +739,7 @@
             (-> sym-with-meta name (str "'") symbol
                 (with-meta (meta sym-with-meta)))
           helper-macro-interface-def
-            (quote+
+            (deps/quote+
               (defmacro ~interface-macro-sym-with-meta [& ~args-sym]
                 (let [~args-hinted-sym (quantum.core.macros/try-hint-args ~args-sym ~lang &env)]
                   (log/ppr :macro-expand (str "HELPER MACRO " '~sym-with-meta " ARGS HINTED:") ~args-hinted-sym)
@@ -942,6 +760,8 @@
                protocol-def extend-protocol-def])]
       final-defnt-def)))
 
+; DEFNT: |DEFN| WITH |GEN-INTERFACE| AND |REIFY|
+
 #?(:clj
 (defmacro defnt
   "From the Joy of Clojure:
@@ -951,30 +771,12 @@
   on an object that implements it via an extend form.
   (This is probably because there's no protocol lookup — it's direct as
     an interface type hint would be)."
-  [sym & body] (defnt*-helper nil :clj *ns* sym nil nil nil body)))
+  [sym & body] (quantum.core.macros/defnt*-helper nil :cljs *ns* sym nil nil nil body)))
 
 #?(:clj
 (defmacro defnt'
   "'Strict' |defnt|. I.e., generates only an interface and no protocol."
-  [sym & body] (defnt*-helper {:strict? true} :clj *ns* sym nil nil nil body)))
-
-#?(:clj (defmacro maptemplate
-  [template-fn coll]
-  `(do ~@(map `~#((eval template-fn) %) coll))))
-
-(defn let-alias* [bindings body]
-  (cons 'do
-    (postwalk
-      (whenf*n (fn-and symbol? (partial contains? bindings))
-        (partial get bindings))
-      body)))
-
-#?(:clj
-(defmacro let-alias
-  {:todo ["Deal with closures"]}
-  [bindings & body]
-  (let-alias* (apply hash-map bindings) body)))
-
+  [sym & body] (quantum.core.macros/defnt*-helper {:strict? true} :clj *ns* sym nil nil nil body)))
 
 #?(:clj (def macroexpand-1! (fn-> macroexpand-1 pr/pprint-hints)))
 
@@ -985,6 +787,7 @@
 
 #?(:clj (def assert-args #'clojure.core/assert-args))
 
+#?(:clj
 (defn emit-comprehension
   {:attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"
    :todo ["Transientize the |reduce|s"]}
@@ -999,10 +802,11 @@
                  [] (partition 2 seq-exprs)) ; /partition/... hmm...
         inner-group (peek groups)
         other-groups (pop groups)]
-    (reduce emit-other (emit-inner body-expr inner-group) other-groups)))
+    (reduce emit-other (emit-inner body-expr inner-group) other-groups))))
 
 (defn do-mod [mod-pairs cont & {:keys [skip stop]}]
-  (let [err (fn [& msg] (throw (IllegalArgumentException. ^String (apply str msg))))]
+  (let [err (fn [& msg] (throw #?(:clj  (IllegalArgumentException. ^String (apply str msg))
+                                  :cljs (js/Error.                         (apply str msg)))))]
     (reduce 
       (fn [cont [k v]]
         (cond 
@@ -1012,24 +816,20 @@
           :else (err "Invalid 'for' keyword " k)))
       cont (reverse mod-pairs)))) ; this is terrible
 
-#?(:clj
-(defmacro compile-if
-  "Evaluate `exp` and if it returns logical true and doesn't error, expand to
-  `then`.  Else expand to `else`.
-
-  (compile-if (Class/forName \"java.util.concurrent.ForkJoinTask\")
-    (do-cool-stuff-with-fork-join)
-    (fall-back-to-executor-services))"
-  {:attribution "clojure.core.reducers"}
-  [exp then else]
-  (if (try (eval exp)
-           (catch Throwable _ false))
-     `(do ~then)
-     `(do ~else))))
-
 (defn log!   [] (log/enable! :macro-expand))
 (defn unlog! [] (log/disable! :macro-expand))
 
+
+#?(:clj (defalias defn+                    deps/defn+))
+#?(:clj (defalias extend-protocol-for-all  deps/extend-protocol-for-all))
+#?(:clj (defalias defntp                   deps/defntp))
+;#?(:clj (defalias defnt                    deps/defnt))
+;#?(:clj (defalias defnt'                   deps/defnt'))
+#?(:clj (defalias let-alias                deps/let-alias ))
+#?(:clj (defalias maptemplate              deps/maptemplate))
+#?(:clj (defalias compile-if               deps/compile-if))
+#?(:clj (defalias variadic-proxy           deps/variadic-proxy))
+#?(:clj (defalias variadic-predicate-proxy deps/variadic-predicate-proxy))
 
 ; VerifyError (class: quantum/core/collections/core$eval97981$reify__97982, method: Getr signature: ([Ljava/lang/Object;JJ)[Ljava/lang/Object;) Incompatible object argument for function call  quantum.core.collections.core/eval97981 (form-init2072781766827208197.clj:54252)
 ; (^"[Ljava.lang.Object;" Getr
@@ -1095,42 +895,3 @@
 
 ; AOT-compilation is transitive?
 ; Clojure does not support separate compilation
-
-
-#?(:clj
-(defmacro variadic-proxy
-  "Creates left-associative variadic forms for any operator."
-  {:attribution "ztellman/primitive-math"}
-  ([name fn]
-     `(variadic-proxy ~name ~fn ~(str "A primitive macro version of `" name "`")))
-  ([name fn doc]
-     `(variadic-proxy ~name ~fn ~doc identity))
-  ([name fn doc single-arg-form]
-     (let [x-sym (gensym "x")]
-       `(defmacro ~name
-          ~doc
-          ([~x-sym]
-             ~((eval single-arg-form) x-sym))
-          ([x# y#]
-             (list '~fn x# y#))
-          ([x# y# ~'& rest#]
-             (list* '~name (list '~name x# y#) rest#)))))))
-
-#?(:clj
-(defmacro variadic-predicate-proxy
-  "Turns variadic predicates into multiple pair-wise comparisons."
-  {:attribution "ztellman/primitive-math"}
-  ([name fn]
-     `(variadic-predicate-proxy ~name ~fn ~(str "A primitive macro version of |" name "|")))
-  ([name fn doc]
-     `(variadic-predicate-proxy ~name ~fn ~doc (constantly true)))
-  ([name fn doc single-arg-form]
-     (let [x-sym (gensym "x")]
-       `(defmacro ~name
-          ~doc
-          ([~x-sym]
-             ~((eval single-arg-form) x-sym))
-          ([x# y#]
-             (list '~fn x# y#))
-          ([x# y# ~'& rest#]
-             (list 'quantum.core.Numeric/and (list '~name x# y#) (list* '~name y# rest#))))))))

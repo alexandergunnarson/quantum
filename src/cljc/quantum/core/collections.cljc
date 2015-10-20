@@ -583,11 +583,12 @@
   ([^fn? pred super] (taker-while (fn-not pred) super)))
 
 ; This is how to handle variadic protocols 
+#?(:clj
 (defmacro taker-until
   [& args]
   (if (-> args count (= 2))
       `(taker-until* ~@args)
-      `(taker-until-workaround ~@args)))
+      `(taker-until-workaround ~@args))))
 
 (defn taker-after
   {:in ["." "abcdefg.asd"]
