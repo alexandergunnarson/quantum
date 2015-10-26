@@ -38,11 +38,15 @@
 (defalias -* unchecked-subtract)
 (defalias ** unchecked-multiply)
 
-#_(defnt ^BigInteger ->bigint
-  ([^BigInteger x] x)
-  ([^BigInt     x] (.toBigInteger x))
-  ([#{(- number? BigInteger BigInt)} x]
+(defnt ^java.math.BigInteger ->big-integer
+  ([^java.math.BigInteger x] x)
+  ([^clojure.lang.BigInt     x] (.toBigInteger x))
+  ([;#{(- number? BigInteger BigInt)} x
+    #{short int long Short Integer Long
+      float double Float Double} x] ; TODO BigDecimal
     (-> x ->long (BigInteger/valueOf))))
+
+; TODO clojure.lang.BigInt
 
 #_(defalias bigint ->bigint)
 
@@ -198,6 +202,8 @@
   #?(:clj  (java.lang.Math/ceil x)
      :cljs (.ceil js/Math       x)))
 
+(defalias ceiling ceil)
+
 ; TODO macro to reduce repetitiveness here
 (defn safe+
   ([a    ] (int-nil a))
@@ -292,7 +298,14 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       TYPE-CASTING       }=====================================================
 ;=================================================={                          }=====================================================
+#?(:clj (defmacro += [x a] `(set! ~x (+ ~x ~a))))
+#?(:clj (defmacro -= [x a] `(set! ~x (- ~x ~a))))
 
+#?(:clj (defmacro ++ [x] `(+= ~x 1)))
+(defalias inc! ++)
+
+#?(:clj (defmacro -- [x] `(-= ~x 1)))
+(defalias dec! --)
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         DISPLAY          }=====================================================

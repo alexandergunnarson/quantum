@@ -93,3 +93,17 @@
   (^short  [^short  x] (Numeric/reverseShort x))
   (^int    [^int    x] (Numeric/reverseInt x))
   (^long   [^long   x] (Numeric/reverseLong x))))
+
+#?(:clj
+(defnt' make-long
+  "Combines byte values into a long value."
+  [^byte b7 ^byte b6 ^byte b5 ^byte b4
+   ^byte b3 ^byte b2 ^byte b1 ^byte b0]
+     (bit-or (<<          (long b7)       56)
+             (<< (bit-and (long b6) 0xff) 48)
+             (<< (bit-and (long b5) 0xff) 40)
+             (<< (bit-and (long b4) 0xff) 32)
+             (<< (bit-and (long b3) 0xff) 24)
+             (<< (bit-and (long b2) 0xff) 16)
+             (<< (bit-and (long b1) 0xff)  8)
+                 (bit-and (long b0) 0xff))))

@@ -5,7 +5,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
   (:refer-clojure :exclude [extend second - + < <= > >= format])
-  (:require-quantum [ns macros type num fn logic bin err log uconv])
+  (:require-quantum [ns macros type num fn logic bin err log uconv loops])
   #?(:clj (:import java.util.Date
             (java.time LocalDate)
             (java.time.format DateTimeFormatter)
@@ -37,13 +37,6 @@
                 (recur (long (inc* m)) (long h))
                 (recur (long l)        (long m))))))))
 
-(defmacro ifor
-  "Imperative |for| loop."
-  {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))
-   :todo ["Move ns"]}
-  [[sym val-0 pred val-n+1] & body]
-  `(loop [~sym ~val-0]
-    (when ~pred ~@body (recur ~val-n+1))))
 
 ; (if a b true) => (or (not a) b)
 

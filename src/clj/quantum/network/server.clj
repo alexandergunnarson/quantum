@@ -33,6 +33,7 @@
             (merge-keep-left (:headers resp) cors-headers)
             (:headers resp))))))
 
+; They go backwards
 (def wrap-standard
   (fn-> wrap-keywordify
         wrap-params

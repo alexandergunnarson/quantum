@@ -64,20 +64,28 @@
        (var ~var-0)))))
 
 
-#?(:clj ; for now
-  (defmacro context
-    "Originally 'local-context'."
-    {:attribution "The Joy of Clojure, 2nd ed."
-     :todo ["'IOException: Pushback buffer overflow' on certain
-              very large data structures"
-            "Use reducers"]}
-    []
-    (let [symbols (keys &env)]
-      (zipmap
-        (map (fn [sym] `(quote ~sym))
-                symbols)
-        symbols))))
-
+#?(:clj
+(defmacro context
+  {:contributors ["The Joy of Clojure, 2nd ed." "Alex Gunnarson"]
+   :todo ["'IOException: Pushback buffer overflow' on certain
+            very large data structures"
+          "Use reducers"]}
+  ([] (context :clj))
+  ([lang]
+    (condp = lang
+      :clj 
+        (let [symbols (keys &env)]
+          (zipmap
+            (map (fn [sym] `(quote ~sym))
+                    symbols)
+            symbols))
+      :cljs
+        ; #{:ns :context :locals :fn-scope :js-globals :line :column}
+        `(->> '~&env
+              :locals
+              (map (fn [[sym# meta#]]
+                     [sym# (-> meta# :init :form)]))
+              (into {}))))))
 
 #?(:clj ; for now
   (defn c-eval
@@ -98,7 +106,7 @@
  
 #?(:clj ; for now
   (defmacro let-eval [expr]
-    `(contextual-eval local-context ~expr)))
+    `(c-eval context ~expr)))
 
 #?(:clj ; /resolve/ not in cljs
   (defn resolve-key
@@ -511,7 +519,9 @@
                    :core-exclusions #{dec inc}
                    :refers        {:cljc {num #{nneg? greatest least +* -* **
                                                 dec dec*
-                                                inc inc*}}}}
+                                                inc inc*
+                                                += -=
+                                                ++ --}}}}
           ns
             {:requires {:cljc #{clojure.core.rrb-vector}
                         :clj  #{flatland.ordered.map   }}
@@ -570,17 +580,18 @@
           cache    {:core-exclusions #{memoize}
                     :aliases {:cljc {cache    quantum.core.cache}}
                     :refers  {:cljc {cache #{memoize}}}}
-          convert  {:aliases {:cljc {convert quantum.core.convert}}}
-          pconvert {:aliases {:cljc {pconvert quantum.core.convert.primitive}}
+          convert  {:aliases {:cljc {conv quantum.core.convert}}
+                    :refers  {:cljc {conv #{->str ->bytes}}}}
+          pconvert {:aliases {:cljc {pconv quantum.core.convert.primitive}}
                     :core-exclusions #{boolean byte char short int long float double}
-                    :refers  {:cljc {pconvert #{boolean ->boolean
-                                                byte    ->byte   ->byte*
-                                                char    ->char   ->char*
-                                                short   ->short  ->short*
-                                                int     ->int    ->int*
-                                                long    ->long   ->long*
-                                                float   ->float  ->float*
-                                                double  ->double ->double*}}}}
+                    :refers  {:cljc {pconv #{boolean ->boolean
+                                             byte    ->byte   ->byte*
+                                             char    ->char   ->char*
+                                             short   ->short  ->short*
+                                             int     ->int    ->int*
+                                             long    ->long   ->long*
+                                             float   ->float  ->float*
+                                             double  ->double ->double*}}}}
           pr       {:aliases {:cljc {pr       quantum.core.print            }}
                     :refers  {:cljc {pr     #{! pprint pr-attrs !*}}}}
           str      {:core-exclusions #{re-find}
@@ -595,12 +606,12 @@
           bin     {:core-exclusions #{bit-or bit-and bit-xor bit-not
                                       bit-shift-left bit-shift-right
                                       unsigned-bit-shift-right
-                                      true? false? nil?}
+                                      true? false? #_nil?}
                    :aliases {:cljc    {bin    quantum.core.data.binary}}
                    :refers  {:cljc {bin #{>>> >> << bit-or bit-and bit-xor bit-not
                                           bit-shift-left bit-shift-right
                                           unsigned-bit-shift-right}}
-                             :clj  {bin #{true? false? nil?}}}}
+                             :clj  {bin #{true? false? #_nil?}}}}
           bytes   {:aliases {:cljc {bytes  quantum.core.data.bytes }}}
           csv     {:aliases {:cljc {csv    quantum.core.data.complex.csv   }}}
           ftree   {:aliases {:cljc {ftree  quantum.core.data.ftree }}
@@ -655,8 +666,8 @@
              :aliases         {:cljc {loops      quantum.core.loops}
                                :cljs {loops-cljs quantum.core.cljs.loops}}
              :refers          {:cljc {loops      #{reduce- reducei-}}
-                               :clj  {loops      #{reduce reducei for fori doseq doseqi}}
-                               :cljs {loops-cljs #{reduce reducei for fori doseq doseqi}}}}
+                               :clj  {loops      #{reduce reducei for fori doseq doseqi ifor}}
+                               :cljs {loops-cljs #{reduce reducei for fori doseq doseqi ifor}}}}
           macros
             {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
              :aliases         {:cljc {macros      quantum.core.macros     }
@@ -782,6 +793,8 @@
                               dos lfor doseq- doseq doseqi- doseqi for}
    quantum.core.macros      #{quote+ defn+ defnt compile-if assert-args let-alias}
    quantum.core.ns          #{def- defalias reset-var! ns-exclude swap-var! source defmalias},
+   quantum.core.numeric     #{+= -=
+                              ++ --}
    quantum.core.print       #{pr-attrs with-print-str*}
    quantum.core.reducers    #{for+ doseq+}
    quantum.core.test        #{qtest}

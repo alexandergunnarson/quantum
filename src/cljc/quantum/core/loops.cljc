@@ -312,6 +312,13 @@
           ~init
           ~coll))))
 
+(defmacro ifor
+  "Imperative |for| loop."
+  {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}
+  [[sym val-0 pred val-n+1] & body]
+  `(loop [~sym ~val-0]
+    (when ~pred ~@body (recur ~val-n+1))))
+
 ; 2.284878 ms... strangely not faster than transient |for|
 ; (defmacro for-internally-mutable
 ;   "A lighter, eager version of |for| based on |reduce|.

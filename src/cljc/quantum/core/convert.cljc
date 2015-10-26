@@ -460,6 +460,8 @@
   [a b]
   (num/== 0 (compare-bytes a b)))
 
+(defalias ->bytes      arr/->bytes)
+(defalias bytes->longs arr/bytes->longs)
 
 ; CLJS
 ; (defn mime-type

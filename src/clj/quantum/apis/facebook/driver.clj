@@ -1,7 +1,7 @@
 (ns quantum.apis.facebook.driver
   (:require-quantum [:lib auth http url web]))
 
-(def home-url  "http://www.facebook.com")
+(def home-url  "https://www.facebook.com")
 (def login-url home-url)
 
 (defn login! [driver username password]
@@ -12,3 +12,8 @@
         _ (web/send-keys! password-field password)
         login-button (web/find-element driver (By/id "loginbutton"))]
     (web/click-load! login-button)))
+
+(defn profile [id]
+  (http/request!
+    {:url (io/path home-url "profile.php")
+     :query-params {:id id}}))

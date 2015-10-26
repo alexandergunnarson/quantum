@@ -120,13 +120,19 @@
      [figwheel "0.3.1"]
 
 
-     ;; DATAGRID
+     ; DATAGRID
      [org.apache.poi/poi                "3.9"         ]
      [org.apache.poi/poi-ooxml          "3.9"         ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
-     ;; META (CODE)      
+     ; META (CODE)      
      ;[repetition-hunter                 "1.0.0"       ]
      
-     ; ; NETWORK.HTTP      
+     ; CRYPTOGRAPHY
+     [com.lambdaworks/scrypt "1.4.0"]
+     [org.mindrot/jbcrypt    "0.3m"]
+     [commons-codec/commons-codec "1.10"]
+     [org.bouncycastle/bcprov-jdk15on "1.53"]
+
+     ; NETWORK.HTTP      
      [clj-http                             "1.1.2"
        :exclusions [riddley cheshire org.json/json
                     com.fasterxml.jackson.core/jackson-core commons-codec]]
@@ -163,6 +169,7 @@
      ; ===== MULTIPLE =====
      ; COMPRESSION, HASHING...
      [byte-transforms "0.1.3"]
+
 
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers "1.9"]

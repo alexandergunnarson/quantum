@@ -232,6 +232,8 @@
 
 (defnt ^String ->str
 #?(:clj
+  ([^bytes? b       ] (String. b       ))
+  ([^bytes? b format] (String. b format))
   ; CANDIDATE 0
   ([^java.io.InputStream in]
     (->str in (.name (java.nio.charset.Charset/defaultCharset))))

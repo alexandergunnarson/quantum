@@ -1,6 +1,7 @@
 (ns
   ^{:doc "Useful Java-specific functions. Invoking private or protected methods,
           getting the methods associated with a particular class, etc."
+    :todo ["Rename ns and move functions"]
     :attribution "Alex Gunnarson"}
   quantum.core.java
   (:require-quantum [ns str])

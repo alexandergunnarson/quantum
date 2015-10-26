@@ -1551,7 +1551,7 @@
    :contributors #{"Alex Gunnarson"}}
   [^Map m]
   (let [keywordify-key
-         (fn [[k v]]
+         (fn [k v]
            (if (string? k)
                (map-entry (keyword k) v)
                (map-entry k v)))]

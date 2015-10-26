@@ -228,65 +228,79 @@
                                 {:exception e :txn-entities entities})))))))))
 
 ; pk = primary-key
-; sk = secondary-key
-(defn primary-key-in-db? [pk-schema pk-val]
-  (nempty? (query [:find '?entity
-                   :where ['?entity pk-schema pk-val]]
-                  true)))
+; fk = fullness-key
+(defn primary-key-in-db?
+  "Determines whether, e.g.,
+   :twitter/user.id 8573181 exists in the database."
+  [pk-schema pk-val]
+  (nempty?
+    (query [:find '?entity
+            :where ['?entity pk-schema pk-val]]
+           true)))
 
-(defn secondary-key-in-db?
-  {:usage '(secondary-key-in-db? :twitter/id user-id :twitter/name)}
-  [pk-schema pk-val sk-schema]
+(defn fullness-key-in-db?
+  "Fullness key is used in determining whether
+   the data for an entity is 'full'.
+
+   For instance, sometimes a placeholder will be inserted
+   into the database — e.g. :twitter/user.id 8573181 without
+   any corresponding information. The entity in this case is not
+   'full'. If it had a fullness-key, e.g., :twitter/user.name,
+   it would be considered 'full'."
+  {:usage '(fullness-key-in-db? :twitter/user.id user-id :twitter/user.name)}
+  [pk-schema pk-val fk-schema]
   (nempty?
     (query [:find '(count ?entity)
             :where ['?entity pk-schema pk-val]
-                   ['?entity sk-schema '?prop]]
+                   ['?entity fk-schema '?prop]]
            true)))
 
-(defn add-entity-if*
-  ; Primary key only
-  ([[pk-schema pk-val :as pk]           db-partition properties cache]
-    (let [[pk-schema pk-val] pk]
-      (cond 
-        (and (type/atom? cache) (contains? @cache pk-val))
-          nil
-        (primary-key-in-db? pk-schema pk-val)
-          (when (type/atom? cache)
-            (conj! cache pk-val)
-            (when (nempty? properties)
-              (merge {:db/id pk} properties)))
-        :else
-          (merge
-            {:db/id (datomic.api/tempid db-partition)
-             pk-schema pk-val}
-            properties))))
-  ; Secondary key as well
-  ([[pk-schema pk-val :as pk] sk-schema db-partition properties cache]
-    (let [[pk-schema pk-val] pk]
-      (if (primary-key-in-db? pk-schema pk-val)
-          (cond 
-            (and (type/atom? cache) (contains? @cache pk-val))
-              nil
-            (secondary-key-in-db? pk-schema pk-val sk-schema)
-              (when (type/atom? cache)
-                (conj! cache pk-val)
-                nil)
-            :else
-              (merge {:db/id pk} properties))
-          (merge
-            {:db/id (datomic.api/tempid db-partition)
-             pk-schema pk-val}
-            properties)))))
+
+(let-alias [A (merge
+                {:db/id (datomic.api/tempid db-partition)
+                 pk-schema pk-val}
+                properties)
+            B (merge {:db/id pk} properties)
+            C (and (type/atom? cache) (contains? @cache pk-val))
+            D (primary-key-in-db? pk-schema pk-val)]
+  (defn add-entity-if*
+    ; Primary key only
+    ([[pk-schema pk-val :as pk]           db-partition properties cache]
+      (let [[pk-schema pk-val] pk]
+        (cond 
+          C
+            nil
+          D
+            (when (type/atom? cache)
+              (conj! cache pk-val)
+              (when (nempty? properties)
+                B))
+          :else
+            A)))
+    ; Fullness key as well
+    ([[pk-schema pk-val :as pk] fk-schema db-partition properties cache]
+      (let [[pk-schema pk-val] pk]
+        (cond 
+          (not D)
+            A
+          C
+            nil
+          (fullness-key-in-db? pk-schema pk-val fk-schema)
+            (when (type/atom? cache)
+              (conj! cache pk-val)
+              nil)
+          :else
+            B)))))
 
 (defnt add-entity-if
   "Adds the entity if it doesn't exist in the database via a primary key lookup"
   {:usage '(add-entity-if [:twitter/id user-id] {:twitter/followers followers})}
-  ([^vector? pk sk-schema db-partition cache properties]
-    (add-entity-if* pk sk-schema db-partition
+  ([^vector? pk fk-schema db-partition cache properties]
+    (add-entity-if* pk fk-schema db-partition
       (merge {(first pk) (second pk)} properties)
       cache))
-  ([^integer? pk sk-schema db-partition cache properties]
-    (add-entity-if* [:db/id pk] sk-schema db-partition properties cache)))
+  ([^integer? pk fk-schema db-partition cache properties]
+    (add-entity-if* [:db/id pk] fk-schema db-partition properties cache)))
 
 
 (defn ->entity
@@ -296,14 +310,14 @@
              :twitter/user.name
              db-partition
              user-meta
-             scache/user-ids:metas-in-db
+             scache/user-ids:metadata-in-db
              twitter-key=>datomic-key
              {})}
-  [pk-schema pk-val sk-schema db-partition data cache translation-table handlers]
+  [pk-schema pk-val fk-schema db-partition data cache translation-table handlers]
   (seq-loop [k v data
              entity-n (add-entity-if
                         [pk-schema pk-val]
-                        sk-schema
+                        fk-schema
                         db-partition
                         cache
                         {})]
@@ -345,11 +359,10 @@
 ; When new peers connect, a fair bit of data needs to be transferred to them.
 ; If you don't use memcached this data needs to be queried from the store and will slow down the 'peer connect time' (among other things).
 
-; Give your peers nodes plenty of heap
-; To fully benefit from Datomic you want to have plenty of heap for the peers to cache data.
+; Give your peers nodes plenty of heap space
 
 ; Datomic was designed with AWS/Dynamo in mind, use it
-; It will perform best with this backend, its also the most used (and thus most polished).
+; It will perform best with this backend.
 
 ; Prefer dropping databases to excising data
 ; If you want to keep logs, or other data with short lifespan in Datomic,
@@ -371,10 +384,135 @@
 ; If your strings are bigger than 1kb put them somewhere else (and keep a link to them in Datomic).
 ; Datomic's storage model is optimized for small datoms, so if you put big stuff in there perf will drop dramatically.
 
-; Don't load huge datasets into Datomic
-; It will take forever, with plenty transactor GCs.
-; If you are using Dynamo, keep an eye on the write throughput since it might bankrupt you.
+; Don't load huge datasets into Datomic. It will take forever, with plenty transactor GCs.
+; Keep an eye on the DynamoDB write throughput since it might bankrupt you.
 ; Also, there is a limit to the number of datoms Datomic can handle.
 
 ; Don't use Datomic for stuff it wasn't intended to do
 ; Don't run your geospatial queries or query-with-aggregations in Datomic, it's OK to have multiple datastores in your system.
+
+(defn gen-cacher [thread-id cache-fn-var]
+  (lt-thread-loop {:id thread-id}
+    []
+    (try+ (@cache-fn-var)
+      (catch Err e
+        ;(log/pr :warn e)
+        (if (-> e :objs :exception :db/error (= :db.error/transactor-unavailable))
+            (do #_(init-transactor!)
+                (Thread/sleep 10000))
+            (throw+))))
+    ; Just in case there's nothing to cache
+    (Thread/sleep 1000)
+    (recur)))
+
+(defmacro defmemoized
+  {:todo ["Make extensible"]}
+  [memo-type opts name- & fn-args]
+  (let [cache-sym (symbol (str (name name-) "-cache*"))]
+   `(let [opts# ~opts ; So it doesn't get copied in repetitively
+          f-0#  (fn ~name- ~@fn-args)]
+      (condp = ~memo-type
+        :default (def ~name- (memoize f-0#))
+        :map
+          (let [memoized# (cache/memoize* f-0# (atom {}))]
+            (def ~cache-sym (:m memoized#))
+            (def ~name-     (:f memoized#)))
+        :datomic 
+         ~(let [cache-fn-sym  (symbol (str "cache-" (name name-) "!"          ))
+                cacher-sym    (symbol (str          (name name-) "-cacher"    ))
+                entity-if-sym (symbol (str          (name name-) "->entity-if"))
+                txn-if-sym    (symbol (str          (name name-) "->txn-if"   ))
+                pk-adder-sym  (symbol (str          (name name-) ":add-pk!"   ))]
+            `(let [opts#               ~opts
+                   memo-subtype#       (:type               opts#) ; :many or :one 
+                   _# (throw-unless (in? memo-subtype# #{:one :many})
+                        (Err. nil "Memoization subtype not recognized."))
+                   db-partition#       (:db-partition       opts#)
+                   from-key#           (:from-key           opts#) ; e.g. email addresses
+                   in-db-cache-pk#     (:in-db-cache-pk     opts#) ; e.g. :twitter/user.id entities in database
+                   pk#                 (:pk                 opts#) ; e.g. :twitter/user.id
+                   in-db-cache-to-key# (:in-db-cache-to-key opts#) ; e.g. follower-ids in database
+                   to-key#             (:to-key             opts#) ; e.g. follower ids
+                   key-map#            (:key-map            opts#) ; key translation map
+                   in-db-cache-full#   (:in-db-cache-full   opts#)
+                   fk#                 (:fk                 opts#) ; e.g. :twitter/user.name
+                   ]
+             (do (defonce ~cache-sym (atom {}))
+
+                 (def ~name- (memoize f-0# ~cache-sym))
+                 (defn ~pk-adder-sym
+                    "Add primary (+ unique) keys to database,
+                     e.g. :twitter/user.id entities"
+                    [pk-vals#]
+                   (swap! in-db-cache-pk# set/union @in-db-cache-full#)
+                   (quantum.db.datomic/batch-transact!
+                     pk-vals#
+                     (fn [pk-val#]
+                       (if (contains? @in-db-cache-full# pk-val#)
+                           (do (conj! in-db-cache-pk# pk-val#)
+                               nil)
+                           (quantum.db.datomic/add-entity-if*
+                             [pk# pk-val#]
+                             db-partition#
+                             nil
+                             in-db-cache-pk#)))
+                     (fn [entities#]
+                       (swap! in-db-cache-pk# into (map pk# entities#)))))
+
+                 (if (= :many memo-subtype#)
+                     (defn ~entity-if-sym
+                       "Used to create an entity if not already present."
+                       [[pk-val# to-val#]] ; to-val <-> entity-data
+                       (when (nempty? to-val#)
+                         (quantum.db.datomic/->entity
+                           pk#
+                           pk-val#
+                           fk# ; TODO get rid of full-key
+                           db-partition#
+                           to-val#
+                           in-db-cache-to-key#
+                           key-map#
+                           {})))
+                     (defn ~txn-if-sym
+                       "Used to create a database transaction
+                        to add the entity if not present,
+                        with supplied properties/schemas.
+                        
+                        If entity is present, simply updates the 
+                        entity's @to-key property with @to."
+                       [[pk-val# to-val#]]
+                       (when (nempty? to-val#)
+                         ; Add followers' ids to database because they'll be used as refs
+                         (@(var ~pk-adder-sym) to-val#)
+                         
+                         (quantum.db.datomic/add-entity-if
+                           [pk# pk-val#]
+                           to-key#
+                           db-partition#
+                           in-db-cache-to-key#
+                           {to-key# to-val#}))))
+
+                 (defn ~cache-fn-sym
+                   "Efficiently transfers from in-memory cache to 
+                    database via |batch-transact!|."
+                   []
+                   (quantum.db.datomic/batch-transact!
+                     @in-db-cache-to-key#
+                     (if (= :many memo-subtype#) ~entity-if-sym ~txn-if-sym)
+                     (fn [entities#]
+                       ; :db/error :db.error/entity-missing-db-id
+                       ; Record that they're in the db 
+                       (swap! in-db-cache-to-key# into (map pk# entities#))
+                       ; TODO Empty unnecessary cache
+                       ; clear users=>metadata if we're on a small system, but we can fit this!
+                     ))
+                   (log/pr ::debug "Completed caching."))
+                 (defonce
+                   ^{:doc "Spawns cacher thread."}
+                   ~cacher-sym
+                   (quantum.db.datomic/gen-cacher
+                     (keyword (name (ns-name ~*ns*))
+                              (name '~cacher-sym))
+                     (var ~cache-fn-sym))))))
+        (throw+ (Err. nil "Memoization type not recognized." ~memo-type))))))
+

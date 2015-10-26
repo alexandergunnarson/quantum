@@ -23,9 +23,6 @@
     </resources>
     <testResources>
       <testResource>
-        <directory>dev-resources</directory>
-      </testResource>
-      <testResource>
         <directory>resources</directory>
       </testResource>
     </testResources>
@@ -60,30 +57,6 @@
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.7.0-beta3</version>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>tools.nrepl</artifactId>
-      <version>0.2.6</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.clojure</groupId>
-          <artifactId>clojure</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>clojure-complete</groupId>
-      <artifactId>clojure-complete</artifactId>
-      <version>0.2.3</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.clojure</groupId>
-          <artifactId>clojure</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>

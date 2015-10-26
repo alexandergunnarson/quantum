@@ -99,6 +99,17 @@
       (transfer src os)
       (.toByteArray os))))
 
+(defnt ^longs bytes->longs
+  ([^bytes? b]
+    (let [longs-ct (-> b count (/ 8) num/ceil int)
+          longs-f  (core/long-array longs-ct)
+          ; Empty bytes are put at end
+          buffer   (doto (ByteBuffer/allocate (* 8 longs-ct))
+                         (.put b))]
+      (doseq [i (range (count longs-f))] 
+        (aset longs-f i (.getLong buffer (* i 8))))
+      longs-f)))
+
 
 (defalias aset! aset)
 

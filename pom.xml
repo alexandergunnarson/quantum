@@ -16,8 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>a28459f009ca452ca64941a77ed9e99c7f99da53
-</tag>
+    <tag>dac759a76590dbaff2f17d093b7ecbbaa5586679</tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
   <build>
@@ -29,9 +28,6 @@
       </resource>
     </resources>
     <testResources>
-      <testResource>
-        <directory>dev-resources</directory>
-      </testResource>
       <testResource>
         <directory>dev-resources</directory>
       </testResource>
@@ -369,6 +365,26 @@
       <version>3.9</version>
     </dependency>
     <dependency>
+      <groupId>com.lambdaworks</groupId>
+      <artifactId>scrypt</artifactId>
+      <version>1.4.0</version>
+    </dependency>
+    <dependency>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.3m</version>
+    </dependency>
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.53</version>
+    </dependency>
+    <dependency>
       <groupId>clj-http</groupId>
       <artifactId>clj-http</artifactId>
       <version>1.1.2</version>
@@ -492,30 +508,6 @@
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parsers</artifactId>
       <version>1.9</version>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>tools.nrepl</artifactId>
-      <version>0.2.6</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.clojure</groupId>
-          <artifactId>clojure</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>clojure-complete</groupId>
-      <artifactId>clojure-complete</artifactId>
-      <version>0.2.3</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.clojure</groupId>
-          <artifactId>clojure</artifactId>
-        </exclusion>
-      </exclusions>
-      <scope>test</scope>
     </dependency>
   </dependencies>
 </project>
