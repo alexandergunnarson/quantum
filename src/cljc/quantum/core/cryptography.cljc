@@ -200,6 +200,7 @@
   ([obj] (hash :murmur64 obj))
   ([algorithm obj & [opts]]
     (condp = algorithm
+      :clojure      (core/hash obj)
       :sha-1-hmac   (sha-hmac "HmacSHA1"   obj (:secret opts))
       :sha-256-hmac (sha-hmac "HmacSHA256" obj (:secret opts))
       :pbkdf2 (pbkdf2 obj (:salt        opts)

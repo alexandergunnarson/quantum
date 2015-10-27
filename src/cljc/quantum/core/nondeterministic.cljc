@@ -134,7 +134,7 @@
             (let [generator-k (get opts-indexed
                                 (rand-int-between (:secure? opts) 0 (-> opts count dec)))
                   generator (get generators generator-k)]
-              (.append sb (generator (:secure? opts)))))
+              (.append sb (generator (whenc (:secure? opts) nil? false)))))
           (str sb))))))
 
 #?(:clj

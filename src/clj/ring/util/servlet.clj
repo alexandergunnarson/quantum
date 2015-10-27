@@ -116,8 +116,8 @@
       ; TODO: it downloads it ALL and only then does it unblock the outputstream
       (let [^ServletOutputStream out-stream (.getOutputStream response)
             ^AsyncContext        async  (.startAsync      request)
-            ^ReadableByteChannel in     (convert/->byte-channel ^InputStream body)
-            ^WritableByteChannel out    (convert/->byte-channel out-stream)
+            ^ReadableByteChannel in     (conv/->byte-channel ^InputStream body)
+            ^WritableByteChannel out    (conv/->byte-channel out-stream)
             ^ByteBuffer          buffer (ByteBuffer/allocateDirect (* 16 1024))]
         #_(.setContentLength response (.available ^InputStream body))
         (.setWriteListener out-stream

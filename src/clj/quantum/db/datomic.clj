@@ -3,7 +3,8 @@
   (:require-quantum [:lib])
   (:require [datomic.api :as d]
     [quantum.deploy.amazon :as amz])
-  (:import datomic.Peer [datomic.peer LocalConnection Connection]))
+  (:import datomic.Peer [datomic.peer LocalConnection Connection]
+    java.util.concurrent.ConcurrentHashMap))
 
 #_(doseq [logger (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
                     (.getContextSelector)
@@ -210,25 +211,28 @@
 (def ^:const recommended-txn-ct 100)
 
 (defn batch-transact!
+  "Submits transactions synchronously to the Datomic transactor
+   in asynchronous batches of |recommended-txn-ct|."
   {:todo ["Handle errors better"]}
   [data-0 ->entity-fn post-fn]
   (when-let [data data-0]
-    (do (doseq [entities (->> data
-                              (partition-all recommended-txn-ct)
-                              (map (fn->> (map+ ->entity-fn)
-                                          (remove+ nil?)
-                                          redv)))]
-          (try+ (transact-async! entities)
-                (post-fn entities) ; If it's async, how can there be an error?
-            (catch Object e
-              (if ((fn-and map? (fn-> :db/error (= :db.error/unique-conflict)))
-                    e)
-                  (post-fn entities)
-                  (throw+ (Err. nil "Cache failed for transaction"
-                                {:exception e :txn-entities entities})))))))))
+    (let [threads 
+           (for [entities (->> data
+                               (partition-all recommended-txn-ct)
+                               (map (fn->> (map+ ->entity-fn)
+                                           (remove+ nil?)
+                                           redv)))]
+             (go (try+ (transact! entities)
+                       (post-fn entities)
+                   (catch Object e
+                     (if ((fn-and map? (fn-> :db/error (= :db.error/unique-conflict)))
+                           e)
+                         (post-fn entities)
+                         (throw+ (Err. nil "Cache failed for transaction"
+                                       {:exception e :txn-entities entities})))))))]
+      (->> threads (map (MWA clojure.core.async/<!!)) doall))))
 
 ; pk = primary-key
-; fk = fullness-key
 (defn primary-key-in-db?
   "Determines whether, e.g.,
    :twitter/user.id 8573181 exists in the database."
@@ -238,70 +242,19 @@
             :where ['?entity pk-schema pk-val]]
            true)))
 
-(defn fullness-key-in-db?
-  "Fullness key is used in determining whether
-   the data for an entity is 'full'.
+(defn ->entity*
+  "Adds the entity if it its primary (unique) key is not present in the database.
 
-   For instance, sometimes a placeholder will be inserted
-   into the database — e.g. :twitter/user.id 8573181 without
-   any corresponding information. The entity in this case is not
-   'full'. If it had a fullness-key, e.g., :twitter/user.name,
-   it would be considered 'full'."
-  {:usage '(fullness-key-in-db? :twitter/user.id user-id :twitter/user.name)}
-  [pk-schema pk-val fk-schema]
-  (nempty?
-    (query [:find '(count ?entity)
-            :where ['?entity pk-schema pk-val]
-                   ['?entity fk-schema '?prop]]
-           true)))
-
-
-(let-alias [A (merge
-                {:db/id (datomic.api/tempid db-partition)
-                 pk-schema pk-val}
-                properties)
-            B (merge {:db/id pk} properties)
-            C (and (type/atom? cache) (contains? @cache pk-val))
-            D (primary-key-in-db? pk-schema pk-val)]
-  (defn add-entity-if*
-    ; Primary key only
-    ([[pk-schema pk-val :as pk]           db-partition properties cache]
-      (let [[pk-schema pk-val] pk]
-        (cond 
-          C
-            nil
-          D
-            (when (type/atom? cache)
-              (conj! cache pk-val)
-              (when (nempty? properties)
-                B))
-          :else
-            A)))
-    ; Fullness key as well
-    ([[pk-schema pk-val :as pk] fk-schema db-partition properties cache]
-      (let [[pk-schema pk-val] pk]
-        (cond 
-          (not D)
-            A
-          C
-            nil
-          (fullness-key-in-db? pk-schema pk-val fk-schema)
-            (when (type/atom? cache)
-              (conj! cache pk-val)
-              nil)
-          :else
-            B)))))
-
-(defnt add-entity-if
-  "Adds the entity if it doesn't exist in the database via a primary key lookup"
-  {:usage '(add-entity-if [:twitter/id user-id] {:twitter/followers followers})}
-  ([^vector? pk fk-schema db-partition cache properties]
-    (add-entity-if* pk fk-schema db-partition
-      (merge {(first pk) (second pk)} properties)
-      cache))
-  ([^integer? pk fk-schema db-partition cache properties]
-    (add-entity-if* [:db/id pk] fk-schema db-partition properties cache)))
-
+   No longer implements caching because of possible sync inconsistencies
+   and because it fails to provide a significant performance improvement."
+  ; Primary key only
+  ([pk-schema pk-val db-partition properties]
+    (let [entity-id (ffirst (query [:find  '?eid
+                                    :where ['?eid pk-schema pk-val]]))]
+      (mergel
+        {:db/id (or entity-id (datomic.api/tempid db-partition))
+         pk-schema pk-val}
+        properties))))
 
 (defn ->entity
   {:usage '(->entity
@@ -311,19 +264,14 @@
              db-partition
              user-meta
              scache/user-ids:metadata-in-db
-             twitter-key=>datomic-key
-             {})}
-  [pk-schema pk-val fk-schema db-partition data cache translation-table handlers]
+             twitter-key=>datomic-key)}
+  [pk-schema pk-val db-partition data translation-table & [handlers]]
   (seq-loop [k v data
-             entity-n (add-entity-if
-                        [pk-schema pk-val]
-                        fk-schema
+             entity-n (->entity*
+                        pk-schema pk-val
                         db-partition
-                        cache
                         {})]
     (cond
-      (nil? entity-n)
-        (break nil)
       (nil? v)
         entity-n
       (get handlers k)
@@ -405,108 +353,122 @@
     (Thread/sleep 1000)
     (recur)))
 
+
 (defmacro defmemoized
   {:todo ["Make extensible"]}
   [memo-type opts name- & fn-args]
-  (let [cache-sym (symbol (str (name name-) "-cache*"))]
+  (let [cache-sym (with-meta (symbol (str (name name-) "-cache*"))
+                    {:tag "java.util.concurrent.ConcurrentHashMap"})
+        f-0 (gensym)]
    `(let [opts# ~opts ; So it doesn't get copied in repetitively
-          f-0#  (fn ~name- ~@fn-args)]
+          ~f-0  (fn ~name- ~@fn-args)]
       (condp = ~memo-type
-        :default (def ~name- (memoize f-0#))
+        :default (def ~name- (memoize ~f-0))
         :map
-          (let [memoized# (cache/memoize* f-0# (atom {}))]
+          (let [memoized# (cache/memoize* ~f-0 (atom {}))]
             (def ~cache-sym (:m memoized#))
             (def ~name-     (:f memoized#)))
-        :datomic 
-         ~(let [cache-fn-sym  (symbol (str "cache-" (name name-) "!"          ))
-                cacher-sym    (symbol (str          (name name-) "-cacher"    ))
-                entity-if-sym (symbol (str          (name name-) "->entity-if"))
-                txn-if-sym    (symbol (str          (name name-) "->txn-if"   ))
-                pk-adder-sym  (symbol (str          (name name-) ":add-pk!"   ))]
+        :datomic ; TODO ensure function has exactly 1 arg
+         ~(let [cache-fn-sym             (symbol (str "cache-" (name name-) "!"          ))
+                cacher-sym               (symbol (str          (name name-) "-cacher"    ))
+                entity-if-sym            (symbol (str          (name name-) "->entity-if"))
+                pk-adder-sym             (symbol (str          (name name-) ":add-pk!"   ))]
             `(let [opts#               ~opts
                    memo-subtype#       (:type               opts#) ; :many or :one 
                    _# (throw-unless (in? memo-subtype# #{:one :many})
-                        (Err. nil "Memoization subtype not recognized."))
+                        (Err. nil "Memoization subtype not recognized." memo-subtype#))
                    db-partition#       (:db-partition       opts#)
-                   from-key#           (:from-key           opts#) ; e.g. email addresses
-                   in-db-cache-pk#     (:in-db-cache-pk     opts#) ; e.g. :twitter/user.id entities in database
+                   from-key#           (:from-key           opts#) ; e.g. :twitter/user.email. Must be unique
+                   _# (throw-when (nil? from-key#) (Err. nil ":from-key required." opts#))
                    pk#                 (:pk                 opts#) ; e.g. :twitter/user.id
-                   in-db-cache-to-key# (:in-db-cache-to-key opts#) ; e.g. follower-ids in database
+                   _# (throw-when (nil? pk#) (Err. nil ":pk (primary key) required." opts#))
+                   in-db-cache-to-key# (:in-db-cache-to-key opts#) ; e.g. follower-ids in database. Used to speed up creation of entities
                    to-key#             (:to-key             opts#) ; e.g. follower ids
                    key-map#            (:key-map            opts#) ; key translation map
-                   in-db-cache-full#   (:in-db-cache-full   opts#)
                    fk#                 (:fk                 opts#) ; e.g. :twitter/user.name
                    ]
-             (do (defonce ~cache-sym (atom {}))
+             (do ; The ".putIfAbsent" feature, to my knowledge, is not present in Clojure STM
+                 ; Thus the ConcurrentHashMap
+                 ; from-key-state-cache-sym
+                 (defonce ~cache-sym (java.util.concurrent.ConcurrentHashMap.))
 
-                 (def ~name- (memoize f-0# ~cache-sym))
+                 (defn ~name- 
+                   "@from-val: E.g. email
+                     to-val:   E.g. user metadata"
+                   [from-val#]
+                   (let [get-from-val-state# #(.get ^ConcurrentHashMap ~cache-sym from-val#)
+                         from-val-state-0#   (get-from-val-state#)]
+                     (cond
+                       (not (.containsKey ^ConcurrentHashMap ~cache-sym from-val#))
+                         (let [; Multiple threads get the same result from the same delayed function
+                               f# (delay (~f-0 from-val#))]
+                            (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
+                                  from-val# f#)
+                                @(get-from-val-state#)))
+                       (delay? from-val-state-0#)
+                         @from-val-state-0#
+                       (= from-val-state-0# :db)
+                         (-> [:find '?e :where ['?e from-key# from-val#]]
+                             db/query first first db/entity)
+                       :else
+                         (throw+ (Err. nil "Unhandled exception in cache." from-val-state-0#)))))
+                
                  (defn ~pk-adder-sym
-                    "Add primary (+ unique) keys to database,
-                     e.g. :twitter/user.id entities"
+                   "Add primary (+ unique) keys to database,
+                    e.g. :twitter/user.id entities.
+                    Basically an analogue of ensuring value exists before |update|."
+                    {:todo ["Redundant and likely unnecessary"]}
                     [pk-vals#]
-                   (swap! in-db-cache-pk# set/union @in-db-cache-full#)
-                   (quantum.db.datomic/batch-transact!
+                   ;(swap! in-db-cache-pk# set/union @in-db-cache-full#)
+                   
+                   (batch-transact!
                      pk-vals#
                      (fn [pk-val#]
-                       (if (contains? @in-db-cache-full# pk-val#)
-                           (do (conj! in-db-cache-pk# pk-val#)
-                               nil)
-                           (quantum.db.datomic/add-entity-if*
-                             [pk# pk-val#]
-                             db-partition#
-                             nil
-                             in-db-cache-pk#)))
+                       (quantum.db.datomic/->entity*
+                          pk# pk-val#
+                          db-partition#
+                          nil))
                      (fn [entities#]
-                       (swap! in-db-cache-pk# into (map pk# entities#)))))
+                       #_(swap! in-db-cache-pk# into (map pk# entities#)))))
 
-                 (if (= :many memo-subtype#)
-                     (defn ~entity-if-sym
-                       "Used to create an entity if not already present."
-                       [[pk-val# to-val#]] ; to-val <-> entity-data
-                       (when (nempty? to-val#)
-                         (quantum.db.datomic/->entity
-                           pk#
-                           pk-val#
-                           fk# ; TODO get rid of full-key
-                           db-partition#
-                           to-val#
-                           in-db-cache-to-key#
-                           key-map#
-                           {})))
-                     (defn ~txn-if-sym
-                       "Used to create a database transaction
-                        to add the entity if not present,
-                        with supplied properties/schemas.
-                        
-                        If entity is present, simply updates the 
-                        entity's @to-key property with @to."
-                       [[pk-val# to-val#]]
-                       (when (nempty? to-val#)
-                         ; Add followers' ids to database because they'll be used as refs
-                         (@(var ~pk-adder-sym) to-val#)
-                         
-                         (quantum.db.datomic/add-entity-if
-                           [pk# pk-val#]
-                           to-key#
-                           db-partition#
-                           in-db-cache-to-key#
-                           {to-key# to-val#}))))
+                 (defn ~entity-if-sym
+                   "Used to create a database transaction
+                    to add the entity if not present,
+                    with supplied properties/schemas."
+                   ([[pk-val# to-val#]] ; to-val <-> entity-data
+                    (~entity-if-sym pk-val# to-val#))
+                   ([pk-val# to-val#]
+                     (when (nempty? to-val#)
+                       (quantum.db.datomic/->entity
+                         pk#
+                         pk-val#
+                         db-partition#
+                         to-val#
+                         key-map#))))
 
                  (defn ~cache-fn-sym
                    "Efficiently transfers from in-memory cache to 
                     database via |batch-transact!|."
                    []
-                   (quantum.db.datomic/batch-transact!
-                     @in-db-cache-to-key#
-                     (if (= :many memo-subtype#) ~entity-if-sym ~txn-if-sym)
-                     (fn [entities#]
-                       ; :db/error :db.error/entity-missing-db-id
-                       ; Record that they're in the db 
-                       (swap! in-db-cache-to-key# into (map pk# entities#))
-                       ; TODO Empty unnecessary cache
-                       ; clear users=>metadata if we're on a small system, but we can fit this!
-                     ))
-                   (log/pr ::debug "Completed caching."))
+                   (let [realizeds# (->> ~cache-sym
+                                         (coll/filter-vals+ (fn-and delay? realized?))
+                                         (coll/map-vals+    deref)
+                                         (coll/filter-vals+ nnil?)
+                                         redm)]
+                     (batch-transact!
+                       realizeds#
+                       ~entity-if-sym
+                       (fn [entities#]
+                         ; :db/error :db.error/entity-missing-db-id
+                         ; Record that they're in the db 
+                         ; TODO: Is this even necessary?
+                         ;(swap! in-db-cache-to-key# into (map pk# entities#))
+                         ;(swap! in-db-cache-pk# set/union @in-db-cache-to-key#)
+                         ))
+                     ; Cache offloading/purging
+                     (doseq [from-val# to-val# realizeds#]
+                       (.put ^ConcurrentHashMap ~cache-sym from-val# :db)))
+                   (log/pr (keyword (-> ~*ns* ns-name name) "debug") "Completed caching."))
                  (defonce
                    ^{:doc "Spawns cacher thread."}
                    ~cacher-sym

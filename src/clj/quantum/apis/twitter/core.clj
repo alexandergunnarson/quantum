@@ -25,9 +25,9 @@
         ; consumer secret followed by an ampersand character ‘&’.
         signing-key (str (url/encode consumer-secret) "&"
                          (url/encode oauth-secret))
-        signature (-> (crypto/sha-1-hmac signature-base-string signing-key)
-                      (crypto/encode :base64)
-                      (String.))]
+        signature (->> (crypto/hash :sha-1-hmac signature-base-string {:secret signing-key})
+                       (crypto/encode :base64)
+                       (String.))]
     signature))
 
 (defn request!

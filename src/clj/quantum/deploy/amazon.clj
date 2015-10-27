@@ -226,3 +226,6 @@
   ; Open VNC viewer and navigate to localhost:5901
   ; It says the connection is not secure, but it is! 
 )
+
+(defn cleanse! []
+  "rm -rf ~/.m2/repository")

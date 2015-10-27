@@ -70,7 +70,7 @@
    :todo ["'IOException: Pushback buffer overflow' on certain
             very large data structures"
           "Use reducers"]}
-  ([] (context :clj))
+  ([] `(context :clj))
   ([lang]
     (condp = lang
       :clj 
