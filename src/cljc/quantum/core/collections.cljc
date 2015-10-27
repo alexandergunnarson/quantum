@@ -464,7 +464,7 @@
   {:in  [2 "abcdefg"]
    :out "ab"}
   [i super]
-  (subseq super 0 (-> i long dec)))
+  (subseq super 0 (-> i long)))
 
 (def take takel)
 (def ltake core/take)
@@ -1026,7 +1026,7 @@
 (defn filter-keys+ [pred coll] (->> coll (filter+ (compr key pred))))
 (defn remove-keys+ [pred coll] (->> coll (remove+ (compr key pred))))
 (defn filter-vals+ [pred coll] (->> coll (filter+ (compr val pred))))
-(defn remove-vals+ [pred coll] (->> coll (remove+ (compr key pred))))
+(defn remove-vals+ [pred coll] (->> coll (remove+ (compr val pred))))
 
 (defn vals+
   {:attribution "Alex Gunnarson"

@@ -395,7 +395,7 @@
                  (defn ~name- 
                    "@from-val: E.g. email
                      to-val:   E.g. user metadata"
-                   [from-val#]
+                   [from-val# & [ignore-db-retrieve?#]]
                    (let [get-from-val-state# #(.get ^ConcurrentHashMap ~cache-sym from-val#)
                          from-val-state-0#   (get-from-val-state#)]
                      (cond
@@ -408,8 +408,10 @@
                        (delay? from-val-state-0#)
                          @from-val-state-0#
                        (= from-val-state-0# :db)
-                         (-> [:find '?e :where ['?e from-key# from-val#]]
-                             db/query first first db/entity)
+                         (if ignore-db-retrieve?#
+                             :db
+                             (-> [:find '?e :where ['?e from-key# from-val#]]
+                                db/query first first db/entity))
                        :else
                          (throw+ (Err. nil "Unhandled exception in cache." from-val-state-0#)))))
                 
@@ -450,10 +452,14 @@
                    "Efficiently transfers from in-memory cache to 
                     database via |batch-transact!|."
                    []
-                   (let [realizeds# (->> ~cache-sym
-                                         (coll/filter-vals+ (fn-and delay? realized?))
-                                         (coll/map-vals+    deref)
-                                         (coll/filter-vals+ nnil?)
+                   (let [filter-delays#  (fn->> (coll/filter-vals+ (fn-and delay? realized?))
+                                                (coll/map-vals+    (fn [x#] (try+ (deref x#)
+                                                                              (catch Object e# e#)))))
+                         failed?# (fn-or (fn [x#] (instance? Err x#))
+                                         (fn [x#] (instance? Throwable x#)))
+                         realizeds# (->> ~cache-sym
+                                         filter-delays#
+                                         (coll/remove-vals+ (fn-or nil? failed?#))
                                          redm)]
                      (batch-transact!
                        realizeds#
@@ -465,9 +471,13 @@
                          ;(swap! in-db-cache-to-key# into (map pk# entities#))
                          ;(swap! in-db-cache-pk# set/union @in-db-cache-to-key#)
                          ))
+
                      ; Cache offloading/purging
                      (doseq [from-val# to-val# realizeds#]
-                       (.put ^ConcurrentHashMap ~cache-sym from-val# :db)))
+                       (.put ^ConcurrentHashMap ~cache-sym from-val# :db))
+                     (let [failed# (->> ~cache-sym filter-delays# (coll/filter-vals+ failed?#) redm)]
+                       (doseq [from-val# to-val# failed#]
+                         (.remove ^ConcurrentHashMap ~cache-sym from-val#))))
                    (log/pr (keyword (-> ~*ns* ns-name name) "debug") "Completed caching."))
                  (defonce
                    ^{:doc "Spawns cacher thread."}
