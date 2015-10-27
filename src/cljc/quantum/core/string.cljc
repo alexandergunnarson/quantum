@@ -601,6 +601,17 @@
               :cljs js/TypeError) _
       nil)))
 
+(defn re-find-all
+  "Returns a lazy sequence of successive matches of pattern in string,
+  using java.util.regex.Matcher.find().
+
+  TODO: Document how this differs from |re-find|."
+  [re s]
+  (let [m (re-matcher (->pattern re) s)]
+    ((fn step []
+       (when (. m (find))
+         (cons (.group m 0) (lazy-seq (step))))))))
+
 (def ^{:doc "Special characters in various regular expression implementations."}
   regex-metacharacters
   {:default #{\\ \^ \$ \* \+ \? \. \| \( \) \{ \} \[ \]}

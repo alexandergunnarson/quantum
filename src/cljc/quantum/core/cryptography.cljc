@@ -281,9 +281,9 @@
       :encrypt {:encrypted out :key key- :tweak tweak}
       :decrypt out)))
 
-(defn encrypt [algo obj]
+(defn encrypt [algo obj & [opts]]
   (condp = algo
-    :threefish (threefish :encrypt obj)))
+    :threefish (threefish :encrypt obj (:key opts) (:tweak opts))))
 
 (defn decrypt [algo obj & [opts]]
   (condp = algo

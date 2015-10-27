@@ -125,6 +125,12 @@
   [{:db/id    old
     :db/ident new-}])
 
+(defn excise! [id partition attrs]
+  (transact!
+    [{:db/id (d/tempid partition)
+      :db/excise id
+      :db.excise/attrs attrs}]))
+
 (defn rename-schemas [mapping]
   (for [oldv newv mapping]
     {:db/id oldv :db/ident newv}))
@@ -385,8 +391,7 @@
                    in-db-cache-to-key# (:in-db-cache-to-key opts#) ; e.g. follower-ids in database. Used to speed up creation of entities
                    to-key#             (:to-key             opts#) ; e.g. follower ids
                    key-map#            (:key-map            opts#) ; key translation map
-                   fk#                 (:fk                 opts#) ; e.g. :twitter/user.name
-                   ]
+                   skip-keys#          (:skip-keys          opts#)]
              (do ; The ".putIfAbsent" feature, to my knowledge, is not present in Clojure STM
                  ; Thus the ConcurrentHashMap
                  ; from-key-state-cache-sym
@@ -400,11 +405,22 @@
                          from-val-state-0#   (get-from-val-state#)]
                      (cond
                        (not (.containsKey ^ConcurrentHashMap ~cache-sym from-val#))
-                         (let [; Multiple threads get the same result from the same delayed function
-                               f# (delay (~f-0 from-val#))]
-                            (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
-                                  from-val# f#)
-                                @(get-from-val-state#)))
+                         (if #_(and (set? skip-keys#)
+                                  (let [eids# (query
+                                                (into [:find (list '~'count '~'?e) :where]
+                                                  (conj [['~'?e pk#] ['~'?e from-key# from-val#]]
+                                                    (list '~'or
+                                                      (for [skip-key# skip-keys#] ; different symbols = OR
+                                                        ['~'?e skip-key#])))))]
+                                    (nempty? eids#)))
+                             #_(do (.putIfAbsent ^ConcurrentHashMap ~cache-sym from-val# :db)
+                                 :db)
+                             true
+                             (let [; Multiple threads get the same result from the same delayed function
+                                   f# (delay (~f-0 from-val#))]
+                                (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
+                                      from-val# f#)
+                                    @(get-from-val-state#))))
                        (delay? from-val-state-0#)
                          @from-val-state-0#
                        (= from-val-state-0# :db)

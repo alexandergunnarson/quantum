@@ -229,3 +229,13 @@
 
 (defn cleanse! []
   "rm -rf ~/.m2/repository")
+
+(defn tools []
+  "sudo apt-get install atop"
+  "sudo apt-get install ifstat"
+  )
+
+; Install unlimited jurisdiction AES encryption file
+"export JAVA_HOME=$(readlink -f /usr/bin/javac | sed \"s:/bin/javac::")"
+"sudo cp ~/socialytic/lib/UnlimitedJCEPolicyJDK8/local_policy.jar /usr/lib/jvm/java-8-oracle/jre/lib/security/local_policy.jar"
+"sudo cp ~/socialytic/lib/UnlimitedJCEPolicyJDK8/US_export_policy.jar /usr/lib/jvm/java-8-oracle/jre/lib/security/US_export_policy.jar"

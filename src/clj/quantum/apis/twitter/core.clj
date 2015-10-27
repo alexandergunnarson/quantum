@@ -1,6 +1,8 @@
 (ns quantum.apis.twitter.core
   (:require-quantum [:lib auth http url web]))
 
+; TODO turn api calls into less repetitive ones  
+
 (def default-username #(auth/datum :twitter :default-username))
 (def default-app #(auth/datum :twitter :default-app))
 
@@ -75,7 +77,7 @@
         "count"   "200"}
      :parse? true}))
 
-(defn followers [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn followers:list [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/followers/list.json"
      :method :get
@@ -85,6 +87,29 @@
         "cursor"  (or cursor "-1")} ; -1 is the start cursor
      :parse? parse?
      :handlers handlers}))
+
+(defn followees:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+  (request! username app
+    {:url    "https://api.twitter.com/1.1/friends/ids.json"
+     :method :get
+     :query-params
+       {"user_id" user-id
+        "count"   "5000"
+        "cursor"  (or cursor "-1")} ; -1 is the start cursor
+     :parse? parse?
+     :handlers handlers}))
+
+(defn followers:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+  (request! username app
+    {:url    "https://api.twitter.com/1.1/followers/ids.json"
+     :method :get
+     :query-params
+       {"user_id" user-id
+        "count"   "5000"
+        "cursor"  (or cursor "-1")} ; -1 is the start cursor
+     :parse? parse?
+     :handlers handlers}))
+
 
 (defn rate-limits [& [{:keys [parse? handlers] :as opts} username app]]
   (request! username app
