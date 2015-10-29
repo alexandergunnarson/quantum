@@ -75,12 +75,7 @@
 
 (defalias ->predicate coll/->predicate)
 
-(defalias ->str     str/->str)
 #_(defalias ->keyword str/->keyword)
-
-(defnt ->symbol
-  ([^string? x] (symbol x))
-  ([:else x] (-> x ->str ->symbol)))
 
 (defnt ^java.io.InputStream ->input-stream
   {:attribution "ztellman/byte-streams"
@@ -135,6 +130,8 @@
    :contributors {"Alex Gunnarson" "defnt-ed"}}
   (^{:cost 0} [^java.nio.channels.WritableByteChannel channel]
     (Channels/newOutputStream channel)))
+
+(declare ->str)
 
 (defnt ^java.nio.ByteBuffer ->byte-buffer
   {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
@@ -302,11 +299,16 @@
   ([^java.nio.CharBuffer x] x)
   ([            x] (when x (-> x ->char-seq CharBuffer/wrap))))
 
+
 (defnt ^String ->str
-  {:attribution ["ztellman/byte-streams" "funcool/octet"]
-   :contributors {"Alex Gunnarson" "defnt-ed"}}
-  ([^String x options] x)
-  ([^bytes? x options]
+  {:contributors {"Alex Gunnarson"        "defnt-ed"
+                  "ztellman/byte-streams" nil
+                  "funcool/octet"         nil}
+   :todo ["Test these against ->bytes"]}
+  ([^string? x        ] x)
+  ([^string? x options] x)
+  ([^bytes?  x        ] (->str x nil))
+  ([^bytes?  x options]
     #?(:clj
          (let [encoding (get options :encoding "UTF-8")]
            (String. x ^String (name encoding)))
@@ -314,15 +316,44 @@
          (let [view     (js/Uint8Array. (.subarray input 0 (lasti x))) ; TODO maybe just copy it?
                encoding (.-fromCharCode js/String)]
            (.apply encoding nil view))))
+  ([^keyword? k] (->str k "/"))
+  ([^keyword? k joiner]
+    (->> [(namespace k) (name k)]
+         (core/remove empty?)
+         (str/join joiner)))
+#?(:clj
   (^{:cost 1} [^CharSequence char-sequence]
-    (.toString char-sequence))
-  #_(^{:cost 1} [(vector-of String) strings]
+    (.toString char-sequence)))
+#_(^{:cost 1} [(vector-of String) strings]
     (let [sb (StringBuilder.)]
       (doseq [s strings]
         (.append sb s))
       (.toString sb)))
+#?(:clj
+  ; CANDIDATE 0
+  ([^java.io.InputStream in]
+    (->str in (.name (java.nio.charset.Charset/defaultCharset))))
+  ([^java.io.InputStream in enc]
+    (with-open [bout (StringWriter.)]
+      (io/copy in bout :encoding enc)
+      (.toString bout)))
+  ; CANDIDATE 1
+  #_([^java.io.InputStream is]
+    (let [^java.util.Scanner s
+            (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
+      (if (.hasNext s) (.next s) "")))
+  ([^java.io.ByteArrayInputStream in-stream]
+    (let [n   (.available in-stream)
+          arr (byte-array n)]
+      (.read in-stream arr, 0 n)
+      (String. arr java.nio.charset.StandardCharsets/UTF_8))))
   ; Port this
-  #_([x options] (streams/convert x String options)))
+#_([x options] (streams/convert x String options))
+  ([:else x] (str x)))
+
+(defnt ->symbol
+  ([^string? x] (symbol x))
+  ([:else x] (-> x ->str ->symbol)))
 
 (defn ->reader [is opts])
 #_(defnt ^Reader ->reader

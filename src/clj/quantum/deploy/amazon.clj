@@ -8,54 +8,39 @@
 (def terminal     (atom nil))
 (def output-chan  (atom nil))
 (def line-handler (atom fn-nil))
+(def curr-instance-name (atom nil))
 (defn default-account []
   (auth/datum :amazon :default))
-(defn default-instance-name []
-  (auth/datum :amazon (default-account) :ec2 :default))
-(defn default-user []
-  (auth/datum :amazon (default-account) :ec2 (default-instance-name) :users :default))
-(defn get-instance-id   [& [instance-name]]
-  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :id))
-(defn get-server-region [& [instance-name]]
-  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :region))
-(defn get-public-ip     [& [instance-name]]
-  (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :public-ip))
-(defn get-user [& [user]]
-  (or user (default-user)))
+(defn default-instance-name  [                 ]     (auth/datum :amazon (default-account) :ec2 :default))
+(defn default-user           [                 ]     (auth/datum :amazon (default-account) :ec2                   (default-instance-name)  :users :default))
+(defn get-instance-id        [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :id       ))
+(defn get-server-region      [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :region   ))
+(defn get-public-ip          [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :public-ip))
+(defn get-private-ip         [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :private-ip))
+(defn get-aws-id             [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :access-key :id    ))
+(defn get-aws-secret         [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :access-key :secret))
+(defn get-ssh-keys-path      [& [instance-name]] (-> (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :ssh-keys-path) io/file-str))
+(defn get-user               [& [instance-name]]     (auth/datum :amazon (default-account) :ec2 (or instance-name (default-instance-name)) :users :default))
+(defn get-public-ip-dashed   [& [instance-name]] (str/replace (get-public-ip  instance-name) "." "-"))
+(defn get-private-ip-dashed  [& [instance-name]] (str/replace (get-private-ip instance-name) "." "-"))
+(defn get-ssh-address        [& [instance-name]] (str (get-user instance-name) "@ec2-" (get-public-ip-dashed instance-name) "." (get-server-region instance-name) ".compute.amazonaws.com"))
 
-(def instance-name    (atom (default-instance-name)))
-(def instance-id      (atom (get-instance-id)))
-(def server-region    (atom (get-server-region)))
-(def public-ip        (atom (get-public-ip)))
-(defn public-ip-dashed []
-  (str/replace @public-ip "." "-"))
-(def user             (atom (get-user)))
-(defn prompt [] (str "@ip-" (public-ip-dashed) ":"))
-
-(def aws-id     (atom (auth/datum :amazon (default-account) :ec2 @instance-name :access-key :id)))
-(def aws-secret (atom (auth/datum :amazon (default-account) :ec2 @instance-name :access-key :secret)))
-
-
-(defn get-ssh-keys-path []
-  (-> (auth/datum :amazon (default-account) :ec2 @instance-name :ssh-keys-path) io/file-str))
-(def ssh-keys-path (atom (get-ssh-keys-path)))
+(defn prompt                 [& [instance-name]] (str "@ip-" (get-private-ip-dashed (or instance-name @curr-instance-name)) ":"))
 
 ; |chmod 400 @ssh-keys-path| is necessary
-
-(defn ssh-address []
-  (str @user "@ec2-" (public-ip-dashed) "." @server-region ".compute.amazonaws.com"))
 
 (defn launch-terminal!
   {:todo ["Make more configurable, to be a general SSH beyond just Amazon AWS"
           "This only is tested/works with Ubuntu. Make configurable/coverall"]}
-  ([] (launch-terminal! true))
-  ([print-streams?]
+  ([]              (launch-terminal! (default-instance-name)))
+  ([instance-name] (launch-terminal! instance-name true))
+  ([instance-name print-streams?]
     (if (and @terminal (not (-> @terminal obj->map :has-exited)))
         (do (log/pr :warn "Terminal already running.")
             false)
         (do (sh/run-process! "ssh"
-             ["-i" @ssh-keys-path
-              (ssh-address)
+             ["-i" (get-ssh-keys-path instance-name)
+              (get-ssh-address instance-name)
               "-t" "-t"] ; Gets around error 'Pseudo-terminal will not be allocated because stdin is not a terminal.'
              {:id :server-terminal
               :thread? true
@@ -68,6 +53,7 @@
            (wait-until 10000   (-> @thread/reg-threads :server-terminal :thread))
            (reset! terminal    (-> @thread/reg-threads :server-terminal :thread))
            (reset! output-chan (-> @thread/reg-threads :server-terminal :std-output-chan))
+           (reset! curr-instance-name instance-name)
            true))))
 
 (defn restart-terminal! []
@@ -109,16 +95,16 @@
   (wait-until-prompt 5000 (prompt))
   (command "sudo apt-get update")
   (wait-until-prompt 10000 (prompt))
-  (command "sudo apt-get install oracle-java8-installer")
-  (wait-until-prompt 5000 "Do you want to continue?")
-  (command "Y")
+  (command "sudo apt-get -y install oracle-java8-installer")
+  ;(wait-until-prompt 5000 "Do you want to continue?")
+  ;(command "Y")
   (wait-until-prompt 5000 "Do you accept the Oracle Binary Code license terms?")
-  (command "Y"))
+  (command "Y")
+  (wait-until-prompt 10000 (prompt))
+  (command "export JAVA_HOME=$(readlink -f /usr/bin/javac | sed \"s:/bin/javac::\")"))
 
 (defn install-maven! []
-  (command "sudo apt-get install maven")
-  (wait-until-prompt 5000 "Do you want to continue?")
-  (command "Y")
+  (command "sudo apt-get -y install maven")
   (wait-until-prompt 50000 (prompt))
   ; (command "mvn --version") ; run this as a test to make sure
   )
@@ -128,26 +114,18 @@
   ; (wait-until-prompt 5000 "Do you want to continue?")
   ; (command "Y")
   
-  (command "mkdir ./bin")
-  (command "curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ./bin/lein")
+  (command "mkdir ~/bin")
+  (command "curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ~/bin/lein")
   (command "chmod a+x ./bin/lein")
-  (command "./bin/lein") ; TODO install so that lein is an available command 
-  (wait-until-prompt 50000 (prompt))
-  )
+  (command "sudo cp ~/bin/lein /bin/lein") ; Install globally 
+  (wait-until-prompt 50000 (prompt)))
 
 (defn install-git! []
-  (command "sudo apt-get install git")
-  (wait-until-prompt 5000 "Do you want to continue?")
-  (command "Y")
-  (wait-until-prompt 60000 (prompt)))
-
-(defn install-all! []
-  (install-java!)
-  (install-maven!)
-  (install-leiningen!))
+  (command "sudo apt-get -y install git")
+  (wait-until-prompt 10000 (prompt)))
 
 (defn auth-repo! [repo-name]
-  (when (auth/datum :github repo-name :private?)
+  (when (auth/datum :github repo-name :https-private?)
     (wait-until-prompt 5000 "Username for")
     (command (auth/datum :github :username))
     (wait-until-prompt 5000 "Password for")
@@ -177,6 +155,60 @@
 ; and run %1 (or the respective job #) to foreground it again.
 
 
+(defn init-server! []
+  ; APPLICATIONS
+    ; BROWSER
+    ; sudo apt-get install chromium-browser
+  )
+
+(defn restart! []
+  ; sudo reboot
+  ; takes about 30 seconds
+  ; Then try to connect again
+  )
+
+(defn cleanse! []
+  "rm -rf ~/.m2/repository")
+
+(defn install-tools! []
+  (command "sudo apt-get -y install atop")
+  (command "sudo apt-get -y install ifstat")
+  (wait-until-prompt 1000 (prompt)))
+
+
+(defn install-all! []
+  (install-java!)
+  (install-maven!)
+  (install-leiningen!)
+  (install-git!)
+  (install-tools!))
+
+
+(defn vnc-viewer-path
+  {:todo ["Make more programmatic"]}
+  []
+  "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer")
+
+(defn launch-gui! [& [instance-name]]
+  
+  ; SERVER-SIDE
+  ; sudo service vncserver start
+
+  ; CLIENT-SIDE
+  ; The ssh tunneler required for security purposes
+  (sh/run-process! "ssh"
+    ["-L" "5901:localhost:5901" "-i"
+     (get-ssh-keys-path instance-name)
+     (get-ssh-address instance-name) "-N"]
+    {:id :ssh-vnc-tunnel :thread? true})
+  ; Launch VNC Viewer
+  (sh/run-process! vnc-viewer-path
+    []
+    {:id :vnc-viewer :thread? true})
+  ; Open VNC viewer and navigate to localhost:5901
+  ; It says the connection is not secure, but it is! 
+)
+
 (defn add-gui-user! []
   ; sudo useradd -m awsgui
   ; sudo passwd awsgui
@@ -190,52 +222,3 @@
              "http://www.realvnc.com/download/viewer/"]}
   []
   (add-gui-user!))
-
-(defn init-server! []
-  ; APPLICATIONS
-    ; BROWSER
-    ; sudo apt-get install chromium-browser
-  )
-
-(defn restart! []
-  ; sudo reboot
-  ; takes about 30 seconds
-  ; Then try to connect again
-  )
-
-
-(defn vnc-viewer-path
-  {:todo ["Make more programmatic"]}
-  []
-  "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer")
-
-(defn launch-gui! []
-  
-  ; SERVER-SIDE
-  ; sudo service vncserver start
-
-  ; CLIENT-SIDE
-  ; The ssh tunneler required for security purposes
-  (sh/run-process! "ssh"
-    ["-L" "5901:localhost:5901" "-i" @ssh-keys-path (ssh-address) "-N"]
-    {:id :ssh-vnc-tunnel :thread? true})
-  ; Launch VNC Viewer
-  (sh/run-process! vnc-viewer-path
-    []
-    {:id :vnc-viewer :thread? true})
-  ; Open VNC viewer and navigate to localhost:5901
-  ; It says the connection is not secure, but it is! 
-)
-
-(defn cleanse! []
-  "rm -rf ~/.m2/repository")
-
-(defn tools []
-  "sudo apt-get install atop"
-  "sudo apt-get install ifstat"
-  )
-
-; Install unlimited jurisdiction AES encryption file
-"export JAVA_HOME=$(readlink -f /usr/bin/javac | sed \"s:/bin/javac::")"
-"sudo cp ~/socialytic/lib/UnlimitedJCEPolicyJDK8/local_policy.jar /usr/lib/jvm/java-8-oracle/jre/lib/security/local_policy.jar"
-"sudo cp ~/socialytic/lib/UnlimitedJCEPolicyJDK8/US_export_policy.jar /usr/lib/jvm/java-8-oracle/jre/lib/security/US_export_policy.jar"

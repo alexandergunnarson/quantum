@@ -98,7 +98,7 @@
 (defn make-request
   "Creates an HTTP request."
   {:usage "(make-request :query \"root\" nil :get {} nil)"}
-  [^Key func ^String id to method ^Map params req]
+  [email ^Key func ^String id to method ^Map params req]
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
@@ -107,7 +107,7 @@
         request
           {:method       http-method
            :url          url
-           :oauth-token  (access-key :drive :current)
+           :oauth-token  (gauth/access-key email :drive :current)
            :as           :auto
            :query-params query-params}]
     request))
@@ -153,7 +153,7 @@
   [^String id]
   (drive :query :id id :params {:q :children :trashed false :hidden false}))
 
-(defn eval-drive-page []
+#_(defn eval-drive-page [email]
   (let [str-code
          (->> (http/request!
                 {:query-params {"alt""media"}
@@ -163,8 +163,8 @@
                            (ffilter (fn-> :title (= "to-eval.clj")))
                            :selfLink)
                  :method :get
-                 :oauth-token  (access-key :drive :current)})
-                 :body bytes/->bytes (String.))
+                 :oauth-token  (gauth/access-key email :drive :current)})
+                 :body ("s" ->bytes (conv/->str)))
         ns-0 *ns*]
     (try (-> str-code read-string eval) ; TODO read string is dangerous
       (finally (in-ns (ns-name ns-0))))))

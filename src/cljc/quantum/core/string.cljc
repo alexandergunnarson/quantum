@@ -230,35 +230,6 @@
 
 ; ===== COERCION =====
 
-(defnt ^String ->str
-#?(:clj
-  ([^bytes? b       ] (String. b       ))
-  ([^bytes? b format] (String. b format))
-  ; CANDIDATE 0
-  ([^java.io.InputStream in]
-    (->str in (.name (java.nio.charset.Charset/defaultCharset))))
-  ([^java.io.InputStream in enc]
-    (with-open [bout (StringWriter.)]
-      (io/copy in bout :encoding enc)
-      (.toString bout)))
-  ; CANDIDATE 1
-  #_([^java.io.InputStream is]
-    (let [^java.util.Scanner s
-            (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
-      (if (.hasNext s) (.next s) ""))))
-  ([^java.io.ByteArrayInputStream in-stream]
-    (let [n   (.available in-stream)
-          arr (byte-array n)]
-      (.read in-stream arr, 0 n)
-      (String. arr java.nio.charset.StandardCharsets/UTF_8)))
-  ([^string?  s] s)
-  ([^keyword? k] (->str k "/"))
-  ([^keyword? k joiner]
-    (->> [(namespace k) (name k)]
-         (core/remove empty?)
-         (join joiner)))
-  ([:else x] (str x)))
-
 (defalias
   ^{:doc "Transforms collections of strings into regexes for matching those strings. 
           (frak/pattern [\"foo\" \"bar\" \"baz\" \"quux\"])

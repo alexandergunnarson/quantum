@@ -17,8 +17,8 @@
            v# (~get-fn ~m ~k)]
        (if (nil? v#)
            (let [v-delay# (delay ~(if varargs?  ; Delay: laziness
-                                `(apply ~f ~k)
-                                `(~f ~@args)))]
+                                     `(apply ~f ~k)
+                                     `(~f ~@args)))]
              @(do (~assoc-fn ~m ~k v-delay#) v-delay#))
            (if (delay? v#) @v# v#))))))
 
@@ -27,17 +27,18 @@
   "A faster, customizable version of |core/memoize|."
   {:attribution ["Alex Gunnarson"]
    :todo ["Take out repetitiveness via macro"]}
-  ([f] (memoize* f (ConcurrentHashMap.)))
-  ([f m & [memoize-only-first-arg? get-fn-0 assoc-fn-0]]
-    (let [first? memoize-only-first-arg?
+  ([f] (memoize* f nil))
+  ([f m-0 & [memoize-only-first-arg? get-fn-0 assoc-fn-0]]
+    (let [m (or m-0 (ConcurrentHashMap.))
+          first? memoize-only-first-arg?
           {:keys [get-fn assoc-fn]}
             (cond
               (instance? clojure.lang.IDeref m)
-                {:get-fn   (fn [m1 k1   ] (get @m1 k1))
-                 :assoc-fn (fn [m1 k1 v1] (swap! m1 assoc k1 @v1))} ; undelays it because usually that's what is wanted
+                {:get-fn   (or get-fn-0   (fn [m1 k1   ] (get @m1 k1)))
+                 :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (swap! m1 assoc k1 @v1)))} ; undelays it because usually that's what is wanted
               (instance? ConcurrentHashMap   m)
-                {:get-fn   (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   ))
-                 :assoc-fn (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1))}
+                {:get-fn   (or get-fn-0   (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   )))
+                 :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1)))}
               :else
                 (throw+ (Err. nil "No get-fn or assoc-fn defined for" m)))]
       {:m m

@@ -45,7 +45,7 @@
 ;================================================={     PROCESS HTTP REQUEST      }=================================================
 ;================================================={                               }=================================================
 (defn ^String normalize-mime-type [mime-type]
-  (whenc mime-type (fn-not (fn-or string? nil?))
+  (whenc mime-type (complement (fn-or string? nil?)) ; |fn-not| gives an ExceptionInInitializer error
     (condp = mime-type
       :json "application/json"
       :jpeg "image/jpeg"
@@ -98,12 +98,12 @@
 (defn add-headers!
   {:todo ["Add support for all headers"]}
   [^HttpEntityEnclosingRequestBase req ^Map headers]
-  (doseq [header headers]
+  (core/doseq [header headers]
     (add-header! req header)))
 
 (defn post-multipart!
   {:todo ["Integrate this with the rest of clj-http"]}
-  [{:keys [^String url ^Map multipart
+  [{:keys [^String url ^Vec multipart ; vector of maps
            ^String oauth-token
            ^Map    headers]}]
   (let [^DefaultHttpClient client (DefaultHttpClient.)

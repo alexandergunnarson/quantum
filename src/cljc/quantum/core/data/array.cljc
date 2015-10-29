@@ -115,7 +115,7 @@
 
 (defnt' copy
   ([^bytes? input ^bytes? output ^pinteger? length]
-    #?(:clj  (System/arraycopy input 0 output 0 length)
+    #?(:clj  (do (System/arraycopy input 0 output 0 length) output)
        :cljs (reduce ; TODO implement with |dotimes|
                (fn [_ i]
                  (aset output i (aget input i)))

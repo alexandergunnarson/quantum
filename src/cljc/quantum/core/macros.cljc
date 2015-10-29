@@ -514,7 +514,8 @@
 
 
 (defn defnt*-helper
-  {:todo ["Add support for nil"
+  {:todo ["Make so Object gets protocol if reflection"
+          "Add support for nil"
           "Make it so you don't have to qualify non java.lang.* classes:
            ([#{clojure.lang.Associative java.util.Map} coll k] (.containsKey coll k))"]}
   ([opts lang ns- sym doc- meta- body [unk & rest-unk]]

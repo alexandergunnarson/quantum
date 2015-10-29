@@ -176,7 +176,8 @@
 
 (defn ^String access-token!
   "Only works for native ('other') apps."
-  {:usage '(access-token! "me@gmail.com" #{:contacts/read-write} :offline)}
+  {:usage '[(access-token! "me@gmail.com" #{:contacts/read-write} :offline)
+            (quantum.apis.google.auth/access-token! "worker1@socialytics.ai" #{:drive/all} :offline)]}
   ([email scopes auth-type] (access-token! email scopes auth-type nil))
   ([email scopes ^Key auth-type {:as opts :keys [code]}]
     (let [auth-keys (auth/auth-keys :google)

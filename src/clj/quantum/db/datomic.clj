@@ -16,20 +16,20 @@
 
 (swap! pr/blacklist conj datomic.db.Db)
 
-(defn db-uri [db-name table-name]
-  (str "datomic:ddb://" @amz/server-region
+(defn db-uri [db-name table-name instance-name]
+  (str "datomic:ddb://" (amz/get-server-region instance-name)
        "/" db-name
        "/" table-name
-       "?aws_access_key_id=" @amz/aws-id
-       "&aws_secret_key="    @amz/aws-secret))
+       "?aws_access_key_id=" (amz/get-aws-id     instance-name)
+       "&aws_secret_key="    (amz/get-aws-secret instance-name)))
 ;(Peer/createDatabase @uri) ; only once ever 
 (defonce conn (atom nil))
 
 (defn connect!
   ;(def memuri "datomic:mem://hello")
   ;(def memconn (Peer/connect local-uri))
-  [db-name table-name]
-  (reset! conn (d/connect (db-uri db-name table-name))))
+  [db-name table-name instance-name]
+  (reset! conn (d/connect (db-uri db-name table-name instance-name))))
 
 ; datom = ["add fact" "about a new entity with this temporary id"
 ;          "assert that the attribute db/doc" "has the value hello world"]
@@ -288,6 +288,41 @@
           (assoc entity-n datomic-key v)
           entity-n))))
 
+(defn ->encrypted
+  {:performance "Takes ~160 ms per encryption. Slowwww..."}
+  ([schema val-] (->encrypted schema val- true))
+  ([schema val- entity?]
+    (let [schema-ns   (namespace schema)
+          schema-name (name      schema)
+          result (crypto/encrypt :aes val-
+                   {:password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
+      (if entity?
+          (let [{:keys [encrypted salt key]} result]
+            {schema             (->> encrypted (crypto/encode :base64))
+             (keyword schema-ns (str schema-name ".k1")) key
+             (keyword schema-ns (str schema-name ".k2")) salt})
+          result))))
+
+(defn ->decrypted
+  {:performance "Probably slow"}
+  ([schema val-] (->decrypted schema val- true))
+  ([schema encrypted entity?]
+    (let [schema-ns   (namespace schema)
+          schema-name (name      schema)
+          ;schema-key
+          key- (if entity?
+                   (get encrypted (keyword schema-ns (str schema-name ".k1")))
+                   (:key encrypted))
+          salt (if entity?
+                   (get encrypted (keyword schema-ns (str schema-name ".k2")))
+                   (:salt encrypted))
+          result
+            (crypto/decrypt :aes (get encrypted schema)
+              {:key  key-
+               :salt salt
+               :password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
+      result)))
+
 ; You can transact multiple values for a :db.cardinality/many attribute at one time using a set.
 
 
@@ -367,11 +402,19 @@
                     {:tag "java.util.concurrent.ConcurrentHashMap"})
         f-0 (gensym)]
    `(let [opts# ~opts ; So it doesn't get copied in repetitively
+          first-arg# (:first-arg-only? opts#)
+          get-fn#   (or (:get-fn   opts#)
+                        (when (:hashed? opts#)
+                          (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   ))))
+          assoc-fn# (or (:assoc-fn opts#)
+                        (when (:hashed? opts#)
+                          (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1))))
           ~f-0  (fn ~name- ~@fn-args)]
       (condp = ~memo-type
-        :default (def ~name- (memoize ~f-0))
+        :default (def ~name-
+                   (memoize ~f-0 nil first-arg# get-fn# assoc-fn#))
         :map
-          (let [memoized# (cache/memoize* ~f-0 (atom {}))]
+          (let [memoized# (cache/memoize* ~f-0 (atom {}) first-arg# get-fn# assoc-fn#)]
             (def ~cache-sym (:m memoized#))
             (def ~name-     (:f memoized#)))
         :datomic ; TODO ensure function has exactly 1 arg

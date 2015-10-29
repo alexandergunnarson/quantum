@@ -10,17 +10,21 @@
   (:require [byte-transforms :as bt])
 #?(:clj
   (:import
-    [java.security     MessageDigest DigestInputStream SecureRandom]
+    [java.security     MessageDigest DigestInputStream SecureRandom AlgorithmParameters]
     [java.io           InputStream   ByteArrayInputStream]
     java.nio.ByteBuffer
-    [javax.crypto      Mac SecretKeyFactory]
-    [javax.crypto.spec SecretKeySpec PBEKeySpec]
+    [javax.crypto      Mac SecretKeyFactory SecretKey Cipher]
+    [javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec]
     [org.apache.commons.codec.binary Base32 Base64]
     org.mindrot.jbcrypt.BCrypt
     com.lambdaworks.crypto.SCryptUtil
     org.bouncycastle.crypto.engines.ThreefishEngine
     org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
     [org.bouncycastle.crypto BlockCipher BufferedBlockCipher])))
+
+; Nested |let-mutable| :
+    ; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
+
 
 #?(:clj
   (def ^sun.nio.cs.UTF_8 utf-8
@@ -36,18 +40,17 @@
 ; (:clj (defalias decode bt/decode))
 
 (defnt ^"[B" encode32
-  {:todo ["Reflection"]}
-  ([^integer? i]
-    (throw+ (Err. :not-implemented "Encode32 not implemented for |integer|" i)))
-  ([obj]
-    (.encode (Base32.) (->bytes obj))))
+  ([^integer? x]
+    (throw+ (Err. :not-implemented "Encode32 not implemented for |integer|" x)))
+  ([^bytes? x] (.encode (Base32.) x))
+  ([x] (encode32 (arr/->bytes-protocol x))))
 
 (defnt ^"[B" encode64
-  {:todo ["Reflection"]}
-  ([^integer? i]
-    (Base64/encodeInteger (num/->big-integer i)))
-  ([obj]
-    (.encode (java.util.Base64/getEncoder) (->bytes obj))))
+  ([^integer? x]
+    (Base64/encodeInteger (num/->big-integer x)))
+  ([^bytes? x] (.encode (java.util.Base64/getEncoder) x))
+  ; TODO make so Object gets protocol if reflection
+  ([x] (encode64 (arr/->bytes-protocol x))))
 
 (defn ^"[B" encode [k obj]
   (condp = k
@@ -55,28 +58,21 @@
     :base64 (encode64 obj)
     (throw+ (Err. nil "Unrecognized codec" k))))
 
-
-; Nested |let-mutable| :
-    ; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
-
-
 ; ===== DECODE =====
 
 (defnt ^"[B" decode32
-  {:todo ["Reflection"]}
-  ([^integer? i]
-    (throw+ (Err. :not-implemented "Decode32 not implemented for |integer|" i)))
-  ([obj]
-    (.decode (Base32.) (->bytes obj))))
+  ([^integer? x]
+    (throw+ (Err. :not-implemented "Decode32 not implemented for |integer|" x)))
+  ([^bytes? x] (.decode (Base32.) x))
+  ([x] (decode32 (arr/->bytes-protocol x))))
 
 (defnt ^"[B" decode64
-  {:todo ["Reflection"]}
-  ([obj]
-    (.decode (java.util.Base64/getDecoder) (->bytes obj))))
+  ([^bytes? x] (.decode (java.util.Base64/getDecoder) x))
+  ([x] (decode64 (arr/->bytes-protocol x))))
 
-(defn ^"[B" decode64-int
-  [obj]
-  (int (Base64/decodeInteger (->bytes obj))))
+(defnt ^Integer decode64-int
+  ([^bytes? x] (int (Base64/decodeInteger x)))
+  ([x] (decode64-int (arr/->bytes-protocol x))))
 
 (defn ^"[B" decode [k obj]
   (condp = k
@@ -243,6 +239,60 @@
 
 ; ===== SYMMETRIC ENCRYPTION =====
 
+(defn encrypt-param*
+  ([type key-] (encrypt-param* type key- true))
+  ([type key- tweak]
+    (let [encrypt-param
+            (condp = type
+              :encrypt true
+              :decrypt false
+              (throw+ (Err. nil "Invalid encryption param" type)))
+          _ (when (= type :decrypt)
+              (throw-unless (and key- tweak)
+                (Err. nil "Missing required parameters:" (kmap key- tweak))))]
+      encrypt-param)))
+
+(defn aes
+  "With help from http://stackoverflow.com/questions/992019/java-256-bit-aes-password-based-encryption"
+  {:tests '[(let [pass "password"
+                  e (aes :encrypt "Hey! This is a secret message." pass)]
+              (String.
+                (aes :decrypt
+                  (:encrypted e) pass
+                  (:key e) (:salt e))))]}
+  [type in ^String password & [key salt]]
+  ;[{:keys [encrypted ^"[B" tweak]}]
+  (let [encrypt? (encrypt-param* type password)
+        ^SecretKeyFactory factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")
+                          salt    (or salt (rand/rand-bytes true 8))
+        ^KeySpec          spec    (PBEKeySpec. (.toCharArray password)
+                                    salt
+                                    (num/exp 2 16)
+                                    (num/exp 2 8))
+        ^SecretKey        secret  (-> factory 
+                                      (.generateSecret spec)
+                                      (.getEncoded)
+                                      (SecretKeySpec. "AES"))]
+    (if encrypt?
+        (let [;  Encrypt the message.
+              ^Cipher           cipher  (doto (Cipher/getInstance "AES/CBC/PKCS5Padding")
+                                              (.init Cipher/ENCRYPT_MODE secret))
+              ^AlgorithmParameters params  (.getParameters cipher)
+              ; to avoid reflection
+              ^IvParameterSpec     iv-spec (-> params (.getParameterSpec IvParameterSpec))
+              ^"[B" iv          (.getIV iv-spec)
+              ^"[B" encrypted   (-> cipher (.doFinal (->bytes in "UTF-8")))]
+          {:key iv :encrypted encrypted :salt salt}) ; The salt doesn't need to be kept secret
+       ; Decrypt the message, given derived key and initialization vector.
+       ; Encrypted should be bytes
+       (-> (Cipher/getInstance "AES/CBC/PKCS5Padding")
+           (doto (.init Cipher/DECRYPT_MODE secret (IvParameterSpec. key)))
+           (.doFinal in)))))
+
+; On decryption, the SecretKey is regenerated in exactly the same way,
+;using using the password with the same salt and iteration parameters.
+;Initialize the cipher with this key and the initialization vector stored with the message:
+
 (defn threefish
   {:todo  ["Truncate decrypted text — reverse search for NUL char in last block and truncate from there"]
    :tests '[(let [e (threefish :encrypt "Hey! This is a secret message.")]
@@ -251,22 +301,14 @@
                   (:encrypted e)
                   (:key e) (:tweak e))))]}
   [type in & [key- tweak bits]]
-  (let [encrypt-param
-          (condp = type
-
-            :encrypt true
-            :decrypt false
-            (throw+ (Err. nil "Invalid encryption param" type)))
-        _ (when (= type :decrypt)
-            (throw-unless (and key- tweak)
-              (Err. nil "Missing required parameters:" (kmap key- tweak))))
+  (let [encrypt?   (encrypt-param* type key- tweak)
         bits       (or bits 512)
         block-size (/ bits 8)
         key-  (or key-  (rand/rand-longs (-> bits (/ 8) (/ 8))))
         tweak (or tweak (rand/rand-longs 2))
         engine (-> (ThreefishEngine. bits)
                    (doto
-                     (.init encrypt-param key- tweak))
+                     (.init encrypt? key- tweak))
                    (BufferedBlockCipher.))
         in-bytes (->bytes in)
         in-f (byte-array (-> in-bytes count (/ block-size)
@@ -281,13 +323,19 @@
       :encrypt {:encrypted out :key key- :tweak tweak}
       :decrypt out)))
 
-(defn encrypt [algo obj & [opts]]
+(defn encrypt
+  {:tests '[(let [opts {:password "Alex"}
+                  e (encrypt :aes "Hey! A message!" opts)]
+              (decrypt :aes (:encrypted e) (merge opts e)))]}
+  [algo obj & [{:keys [key tweak salt password]}]]
   (condp = algo
-    :threefish (threefish :encrypt obj (:key opts) (:tweak opts))))
+    :aes       (aes       :encrypt obj password key salt)
+    :threefish (threefish :encrypt obj key tweak)))
 
-(defn decrypt [algo obj & [opts]]
+(defn decrypt [algo obj & [{:keys [key tweak salt password]}]]
   (condp = algo
-    :threefish (threefish :decrypt obj (:key opts) (:tweak opts))))
+    :aes       (aes       :decrypt obj password key salt)
+    :threefish (threefish :decrypt obj key tweak)))
 
 ; (import '(java.io FileInputStream FileOutputStream OutputStream))
 ; (import '(java.security KeyStore KeyFactory))
