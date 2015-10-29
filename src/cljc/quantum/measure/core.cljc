@@ -8,6 +8,12 @@
       [loom.graph       :as g.graph]
       [loom.alg-generic :as g.gen-alg]))
 
+(defn ->str
+  ([k joiner]
+    (->> [(namespace k) (name k)]
+         (core/remove empty?)
+         (str/join joiner))))
+
 ; TODO Include frinj stuff
 ; https://github.com/martintrojer/frinj/blob/master/src/frinj/feeds.clj
 ; {:metric-cables #{:length} ...}
@@ -54,7 +60,7 @@
            :code
              (core/for [[[from to] multiplier] fn-chart]
                (let [multiplier (/ 1 multiplier)
-                     fn-name (symbol (str (str/->str from "-") "->" (str/->str to "-")))]
+                     fn-name (symbol (str (->str from "-") "->" (->str to "-")))]
                  (if (= multiplier 1) ; Identical
                      (quote+ (defn ~fn-name [n] n))
                      (quote+ (defn ~fn-name [n] (* n ~multiplier))))))))))

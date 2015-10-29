@@ -405,10 +405,10 @@
           first-arg# (:first-arg-only? opts#)
           get-fn#   (or (:get-fn   opts#)
                         (when (:hashed? opts#)
-                          (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   ))))
+                          (fn [m1# k1#    ] (.get         ^ConcurrentHashMap m1# k1#   ))))
           assoc-fn# (or (:assoc-fn opts#)
                         (when (:hashed? opts#)
-                          (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1))))
+                          (fn [m1# k1# v1#] (.putIfAbsent ^ConcurrentHashMap m1# k1# v1#))))
           ~f-0  (fn ~name- ~@fn-args)]
       (condp = ~memo-type
         :default (def ~name-
