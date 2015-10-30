@@ -118,13 +118,16 @@
      :handlers handlers
      :parse? (whenc parse? nil? true)}))
 
-(defn user [user-id]
-  (request!
-    {:url "https://api.twitter.com/1.1/users/show.json"
+(defn id->meta [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+  (request! username app
+    {:url    "https://api.twitter.com/1.1/users/show.json"
      :method :get
-     :query-params {"user_id" user-id}}))
+     :query-params
+       {"user_id" user-id}
+     :parse? parse?
+     :handlers handlers}))
 
-(defn users [user-id]
+(defn ids->metas [user-id]
   (request!
     {:url "https://api.twitter.com/1.1/users/lookup.json"
      :method :get
