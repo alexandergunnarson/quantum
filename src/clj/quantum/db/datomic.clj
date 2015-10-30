@@ -289,6 +289,7 @@
           entity-n))))
 
 (defn ->encrypted
+  ; TODO can't cache without system property set so throw error
   {:performance "Takes ~160 ms per encryption. Slowwww..."}
   ([schema val-] (->encrypted schema val- true))
   ([schema val- entity?]
@@ -298,15 +299,15 @@
                    {:password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
       (if entity?
           (let [{:keys [encrypted salt key]} result]
-            {schema             (->> encrypted (crypto/encode :base64))
+            {schema             (->> encrypted (crypto/encode :base64-string))
              (keyword schema-ns (str schema-name ".k1")) key
              (keyword schema-ns (str schema-name ".k2")) salt})
           result))))
 
 (defn ->decrypted
   {:performance "Probably slow"}
-  ([schema val-] (->decrypted schema val- true))
-  ([schema encrypted entity?]
+  ([schema val-] (->decrypted schema val- true false))
+  ([schema encrypted entity? string-decode?]
     (let [schema-ns   (namespace schema)
           schema-name (name      schema)
           ;schema-key
@@ -316,12 +317,17 @@
           salt (if entity?
                    (get encrypted (keyword schema-ns (str schema-name ".k2")))
                    (:salt encrypted))
-          result
-            (crypto/decrypt :aes (get encrypted schema)
+          ^"[B" result
+            (crypto/decrypt :aes
+              (->> encrypted
+                   (<- get schema)
+                   (crypto/decode :base64))
               {:key  key-
                :salt salt
                :password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
-      result)))
+      (if string-decode?
+          (String. result java.nio.charset.StandardCharsets/ISO_8859_1)
+          result))))
 
 ; You can transact multiple values for a :db.cardinality/many attribute at one time using a set.
 
@@ -434,7 +440,10 @@
                    in-db-cache-to-key# (:in-db-cache-to-key opts#) ; e.g. follower-ids in database. Used to speed up creation of entities
                    to-key#             (:to-key             opts#) ; e.g. follower ids
                    key-map#            (:key-map            opts#) ; key translation map
-                   skip-keys#          (:skip-keys          opts#)]
+                   skip-keys#          (:skip-keys          opts#)
+                   cache-errors?#      (if (contains? opts# :cache-errors?)
+                                           (:cache-errors? opts#)
+                                           true)]
              (do ; The ".putIfAbsent" feature, to my knowledge, is not present in Clojure STM
                  ; Thus the ConcurrentHashMap
                  ; from-key-state-cache-sym
@@ -463,7 +472,11 @@
                                    f# (delay (~f-0 from-val#))]
                                 (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
                                       from-val# f#)
-                                    @(get-from-val-state#))))
+                                    (try+ @(get-from-val-state#)
+                                      (catch Object e#
+                                        (when-not cache-errors?#
+                                          (.remove ^ConcurrentHashMap ~cache-sym from-val#))
+                                        (throw+))))))
                        (delay? from-val-state-0#)
                          @from-val-state-0#
                        (= from-val-state-0# :db)

@@ -94,8 +94,28 @@
 
 (defn- set-body
   "Update a HttpServletResponse body with a String, ISeq, File or InputStream."
-  [^HttpServletResponse response
-   ^HttpServletRequest  request
+  ([^HttpServletResponse response, body]
+  (cond
+    (string? body)
+      (with-open [writer (.getWriter response)]
+        (.print writer body))
+    (seq? body)
+      (with-open [writer (.getWriter response)]
+        (doseq [chunk body]
+          (.print writer (str chunk))))
+    (instance? InputStream body)
+      (with-open [^InputStream b body]
+        (io/copy! b (.getOutputStream response)))
+    (instance? File body)
+      (let [^File f body]
+        (with-open [stream (FileInputStream. f)]
+          (set-body response stream)))
+    (nil? body)
+      nil
+    :else
+      (throw (Exception. ^String (format "Unrecognized body: %s" body)))))
+  ([^HttpServletResponse response
+   ^HttpServletRequest request
    body]
   (cond
     (string? body)
@@ -108,13 +128,13 @@
     (instance? InputStream body)
     ; TODO Stream InputStream continuously instead of just
     ; copying the whole thing and blocking
-      #_(with-open [^InputStream b body]
+      (with-open [^InputStream b body]
         ; Very inefficient for huge InputStreams
         (io/copy! b (.getOutputStream response)))
       ; https://webtide.com/servlet-3-1-async-io-and-jetty/
       ; TODO: test for long streams
       ; TODO: it downloads it ALL and only then does it unblock the outputstream
-      (let [^ServletOutputStream out-stream (.getOutputStream response)
+      #_(let [^ServletOutputStream out-stream (.getOutputStream response)
             ^AsyncContext        async  (.startAsync      request)
             ^ReadableByteChannel in     (conv/->byte-channel ^InputStream body)
             ^WritableByteChannel out    (conv/->byte-channel out-stream)
@@ -146,7 +166,7 @@
     (nil? body)
       nil
     :else
-      (throw (Exception. ^String (format "Unrecognized body: %s" body)))))
+      (throw (Exception. ^String (format "Unrecognized body: %s" body))))))
 
 (defn update-servlet-response
   "Update the HttpServletResponse using a response map."

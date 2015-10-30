@@ -12,10 +12,11 @@
   (:import
     [java.security     MessageDigest DigestInputStream SecureRandom AlgorithmParameters]
     [java.io           InputStream   ByteArrayInputStream]
-    java.nio.ByteBuffer
+    [java.nio          ByteBuffer]
+    [java.nio.charset  Charset StandardCharsets]
     [javax.crypto      Mac SecretKeyFactory SecretKey Cipher]
     [javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec]
-    [org.apache.commons.codec.binary Base32 Base64]
+    [org.apache.commons.codec.binary Base32 Base64] ; Unnecessary
     org.mindrot.jbcrypt.BCrypt
     com.lambdaworks.crypto.SCryptUtil
     org.bouncycastle.crypto.engines.ThreefishEngine
@@ -28,7 +29,7 @@
 
 #?(:clj
   (def ^sun.nio.cs.UTF_8 utf-8
-    (java.nio.charset.Charset/forName "UTF-8")))
+    (Charset/forName "UTF-8")))
 
 ; ===== ENCODE =====
 
@@ -52,10 +53,13 @@
   ; TODO make so Object gets protocol if reflection
   ([x] (encode64 (arr/->bytes-protocol x))))
 
-(defn ^"[B" encode [k obj]
+(defn encode [k obj]
   (condp = k
     :base32 (encode32 obj)
     :base64 (encode64 obj)
+    :base64-string
+      (let [^"[B" encoded (encode64 obj)]
+        (String. encoded StandardCharsets/ISO_8859_1))
     (throw+ (Err. nil "Unrecognized codec" k))))
 
 ; ===== DECODE =====
@@ -67,8 +71,9 @@
   ([x] (decode32 (arr/->bytes-protocol x))))
 
 (defnt ^"[B" decode64
-  ([^bytes? x] (.decode (java.util.Base64/getDecoder) x))
-  ([x] (decode64 (arr/->bytes-protocol x))))
+  ([^bytes?  x] (.decode (java.util.Base64/getDecoder) x))
+  ([^string? x] (-> x (.getBytes StandardCharsets/ISO_8859_1) decode64))
+  ([         x] (-> x arr/->bytes-protocol decode64)))
 
 (defnt ^Integer decode64-int
   ([^bytes? x] (int (Base64/decodeInteger x)))
@@ -76,8 +81,10 @@
 
 (defn ^"[B" decode [k obj]
   (condp = k
-    :base32 (decode32 obj)
-    :base64 (decode64 obj)
+    :base32        (decode32 obj)
+    :base64        (decode64 obj)
+    :base64-string (let [^"[B" decoded (decode64 obj)]
+                     (String. decoded StandardCharsets/ISO_8859_1))
     (throw+ (Err. nil "Unrecognized codec" k))))
 
 (defn ^"[B" decode-int [k obj]
