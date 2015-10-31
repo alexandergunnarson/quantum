@@ -30,7 +30,8 @@
      split-at
      first second rest last butlast get pop peek
      zipmap
-     conj! assoc! dissoc! disj!])
+     conj! assoc! dissoc! disj!
+     partition-all])
   (:require-quantum [ns logic type macros num vec set ftree
                      log err macros fn str])
   (:require
@@ -1066,6 +1067,13 @@
 ; partitions with fewer than n items at the end.
 ; (partition-all 4 [0 1 2 3 4 5 6 7 8 9])
 ; => ((0 1 2 3) (4 5 6 7) (8 9))
+
+(defn partition-all
+  ([n] (core/partition-all n))
+  ([n coll]
+    (if (= n 0) (list) (core/partition-all n coll)))
+  ([n step coll]
+    (core/partition-all n step coll)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================
 ;=================================================={     take, drop, split    }=====================================================

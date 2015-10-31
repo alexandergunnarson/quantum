@@ -269,7 +269,6 @@
              :twitter/user.name
              db-partition
              user-meta
-             scache/user-ids:metadata-in-db
              twitter-key=>datomic-key)}
   [pk-schema pk-val db-partition data translation-table & [handlers]]
   (seq-loop [k v data

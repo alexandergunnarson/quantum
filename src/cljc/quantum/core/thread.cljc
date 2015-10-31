@@ -677,3 +677,21 @@
 
 ; INVESTIGATE AGENTS...
 
+
+
+(defn chunk-doseq
+  "Like |fold| but for |doseq|.
+   Also configurable by thread names and threadpool, etc."
+  [coll {:keys [total thread-count chunk-size threadpool thread-name chunk-fn]} f]
+  (let [total-f (or total (count coll))
+        chunks (coll/partition-all (or chunk-size
+                                       (/ total-f
+                                          (min total-f (or thread-count 10))))
+                 (if total (take total coll) coll))]
+    (doseqi [chunk chunks i]
+      (let [thread-id (keyword (str thread-name "-" i))]
+        (lt-thread {:id         thread-id
+                    :threadpool threadpool}
+          ((or chunk-fn fn-nil) chunk i)
+          (doseqi [piece chunk n]
+            (f piece n chunk i chunks)))))))
