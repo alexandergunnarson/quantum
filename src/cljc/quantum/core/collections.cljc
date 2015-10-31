@@ -1217,7 +1217,9 @@
   in it, but if any levels do not exist, non-transient hash-maps will be created."
   {:attribution "flatland.useful"}
   [m [k & ks] f & args]
-  (let [assoc-fn (if (transient? m) (extern (mfn 3 assoc!)) (extern (mfn 3 assoc)))
+  (let [assoc-fn (if ((fn-or transient?) m)
+                     (extern (mfn 3 assoc!))
+                     (extern (mfn 3 assoc)))
         val (get m k)]
     (assoc-fn m k
       (if ks

@@ -399,13 +399,28 @@
     (Thread/sleep 1000)
     (recur)))
 
+(defn db-count [& clauses]
+  (-> (query (into [:find '(count ?entity)
+                       :where] clauses)
+                true)
+      flatten first))
+
+(def filter-realized-delays+
+  (fn->> (coll/filter-vals+ (fn-and delay? realized?))
+         (coll/map-vals+    (fn [x] (try+ (deref x)
+                                       (catch Object e e))))))
+
+; TODO MOVE
+(def error?  (fn-or (fn [x] (instance? Err       x)) ; fn-or with |partial| might have problems?
+                    (fn [x] (instance? Throwable x))))
 
 (defmacro defmemoized
   {:todo ["Make extensible"]}
   [memo-type opts name- & fn-args]
   (let [cache-sym (with-meta (symbol (str (name name-) "-cache*"))
                     {:tag "java.util.concurrent.ConcurrentHashMap"})
-        f-0 (gensym)]
+        f-0 (gensym)
+        register-cache! (gensym)]
    `(let [opts# ~opts ; So it doesn't get copied in repetitively
           first-arg# (:first-arg-only? opts#)
           get-fn#   (or (:get-fn   opts#)
@@ -414,6 +429,9 @@
           assoc-fn# (or (:assoc-fn opts#)
                         (when (:hashed? opts#)
                           (fn [m1# k1# v1#] (.putIfAbsent ^ConcurrentHashMap m1# k1# v1#))))
+          registered-caches# (:cache-register opts#)
+          ~register-cache! (fn [] (when registered-caches#
+                                    (coll/assoc! registered-caches# '~name- (var ~cache-sym))))
           ~f-0  (fn ~name- ~@fn-args)]
       (condp = ~memo-type
         :default (def ~name-
@@ -421,6 +439,7 @@
         :map
           (let [memoized# (cache/memoize* ~f-0 (atom {}) first-arg# get-fn# assoc-fn#)]
             (def ~cache-sym (:m memoized#))
+            (~register-cache!)
             (def ~name-     (:f memoized#)))
         :datomic ; TODO ensure function has exactly 1 arg
          ~(let [cache-fn-sym             (symbol (str "cache-" (name name-) "!"          ))
@@ -447,6 +466,7 @@
                  ; Thus the ConcurrentHashMap
                  ; from-key-state-cache-sym
                  (defonce ~cache-sym (java.util.concurrent.ConcurrentHashMap.))
+                 (~register-cache!)
 
                  (defn ~name- 
                    "@from-val: E.g. email
@@ -523,14 +543,9 @@
                    "Efficiently transfers from in-memory cache to 
                     database via |batch-transact!|."
                    []
-                   (let [filter-delays#  (fn->> (coll/filter-vals+ (fn-and delay? realized?))
-                                                (coll/map-vals+    (fn [x#] (try+ (deref x#)
-                                                                              (catch Object e# e#)))))
-                         failed?# (fn-or (fn [x#] (instance? Err x#))
-                                         (fn [x#] (instance? Throwable x#)))
-                         realizeds# (->> ~cache-sym
-                                         filter-delays#
-                                         (coll/remove-vals+ (fn-or nil? failed?#))
+                   (let [realizeds# (->> ~cache-sym
+                                         filter-realized-delays+
+                                         (coll/remove-vals+ (fn-or nil? error?))
                                          redm)]
                      (batch-transact!
                        realizeds#
@@ -546,7 +561,7 @@
                      ; Cache offloading/purging
                      (doseq [from-val# to-val# realizeds#]
                        (.put ^ConcurrentHashMap ~cache-sym from-val# :db))
-                     (let [failed# (->> ~cache-sym filter-delays# (coll/filter-vals+ failed?#) redm)]
+                     (let [failed# (->> ~cache-sym filter-realized-delays+ (coll/filter-vals+ error?) redm)]
                        (doseq [from-val# to-val# failed#]
                          (.remove ^ConcurrentHashMap ~cache-sym from-val#))))
                    (log/pr (keyword (-> ~*ns* ns-name name) "debug") "Completed caching."))
