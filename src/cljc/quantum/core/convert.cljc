@@ -36,17 +36,6 @@
     [java.nio.file Path          Paths]
     [javafx.collections          FXCollections])))
 
-(defnt ^java.io.File ->file
-  {:todo "Eliminate reflection"}
-  ([^java.nio.file.Path x] (.toFile x))
-  ([      x] (io/file x)))
-
-(defnt ^java.net.URI ->uri
-  ([^java.nio.file.Path x] (.toUri x))
-  ([^java.io.File       x] (.toURI x))
-  ([^string?            x] (java.net.URI/create x))
-  ([                    x] (-> x ->file ->uri)))
-
 (defnt ->uuid*
   ([^string? id] (java.util.UUID/fromString        id))
   ([^bytes?  id] (java.util.UUID/nameUUIDFromBytes id))
@@ -62,12 +51,37 @@
       `(java.util.UUID/randomUUID)
       `(->uuid* ~@args))))
 
-(defnt ->url
-  ([^java.net.URI  x] (.toURL x)))
+(defnt ^java.io.File ->file
+  {:todo "Eliminate reflection"}
+  ([^java.io.File           x] x          )
+  ([^java.nio.file.Path     x] (.toFile x))
+  ([#{string? java.net.URI} x] (File.   x))
+  ([^java.net.URL])
+  ([                        x] (io/file x)))
+
+(defnt ^java.net.URI ->uri
+  ([^java.net.URI                x] x)
+  ([^java.nio.file.Path          x] (.toUri x))
+  ([#{java.io.File java.net.URL} x] (.toURI x))
+  ([^string?                     x] (java.net.URI/create x))
+  ([                             x] (-> x ->file ->uri)))
+
+(defnt ^java.net.URL ->url
+  ([^java.net.URL x] x)
+  ([^java.net.URI x] (.toURL x))
+  ([              x] (-> x ->uri ->url)))
 
 (defnt ^java.nio.file.Path ->path
   ([^java.nio.file.Path x] x)
-  ([      x] (Paths/get ^URI (->uri x))))
+  ([                    x] (Paths/get ^URI (->uri x))))
+  ; TODO have a smart mechanism which adds arity based on
+  ; unaccounted-for arities from ->uri
+
+(defnt ->buffered
+  ([^java.io.BufferedInputStream  x] x)
+  ([^java.io.BufferedOutputStream x] x)
+  ([^java.io.InputStream          x] (BufferedInputStream.  x))
+  ([^java.io.OutputStream         x] (BufferedOutputStream. x)))
 
 (defnt ->observable ; O(1)
   ([^vector? v] (FXCollections/observableArrayList v))
@@ -79,7 +93,7 @@
 
 (defnt ^java.io.InputStream ->input-stream
   {:attribution "ztellman/byte-streams"
-   :contributors {"Alex Gunnarson" "defnt-ed"}}
+   :contributors {"Alex Gunnarson" "defnt-ed and added to"}}
   (^{:cost 0} [^bytes? ary]
     (ByteArrayInputStream. ary))
   ([^String x]
@@ -88,6 +102,7 @@
     (ByteBufferInputStream. (.duplicate buf))) ; in a different function, .duplicate is not used.
   (^{:cost 0} [^java.nio.channels.ReadableByteChannel channel]
     (Channels/newInputStream channel))
+  (^{:cost 0} [^java.io.File x] (FileInputStream. x))
   #_(^{:cost 0} [(stream-of bytes) s options]
     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
       (s/consume
@@ -362,17 +377,21 @@
   (^{:cost 1.5} [^java.io.InputStream is {:keys [encoding] :or {encoding "UTF-8"}}]
     (BufferedReader. (InputStreamReader. is ^String encoding))))
 
-(defnt ^java.nio.channels.ReadableByteChannel ->readable-channel
+(defnt ->read-channel
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed"}}
-  (^{:cost 0} [^java.io.File file]
-    (.getChannel (FileInputStream. file))))
+  (^{:cost 0} [^java.io.File x]
+    (.getChannel (->input-stream x))))
 
-(defnt ^java.nio.channels.WritableByteChannel ->writable-channel
+(defnt ->write-channel
   #_(^{:cost 0} [^File file {:keys [append?] :or {append? true}}]
     (.getChannel (FileOutputStream. file (boolean append?))))
   (^{:cost 0} [^java.io.OutputStream output-stream]
     (Channels/newChannel output-stream)))
+
+(defnt ->channel
+  "Writable or readable."
+  (^{:cost 0} [^java.io.File x] (->read-channel x)))
 
 (defn ->line-seq
   "Converts the object to a lazy sequence of newline-delimited strings."

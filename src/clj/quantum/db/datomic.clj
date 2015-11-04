@@ -416,8 +416,8 @@
 
 (defmacro defmemoized
   {:todo ["Make extensible"]}
-  [memo-type opts name- & fn-args]
-  (let [cache-sym (with-meta (symbol (str (name name-) "-cache*"))
+  [memo-type opts cache-sym-0 name- & fn-args]
+  (let [cache-sym (with-meta (or cache-sym-0 (symbol (str (name name-) "-cache*")))
                     {:tag "java.util.concurrent.ConcurrentHashMap"})
         f-0 (gensym)
         register-cache! (gensym)]
@@ -430,7 +430,8 @@
                         (when (:hashed? opts#)
                           (fn [m1# k1# v1#] (.putIfAbsent ^ConcurrentHashMap m1# k1# v1#))))
           registered-caches# (:cache-register opts#)
-          ~register-cache! (fn [] (when registered-caches#
+          _# (declare ~cache-sym)
+          ~register-cache! (fn [] (when (and registered-caches# (not '~cache-sym-0))
                                     (coll/assoc! registered-caches# '~name- (var ~cache-sym))))
           ~f-0  (fn ~name- ~@fn-args)]
       (condp = ~memo-type
@@ -459,52 +460,65 @@
                    to-key#             (:to-key             opts#) ; e.g. follower ids
                    key-map#            (:key-map            opts#) ; key translation map
                    skip-keys#          (:skip-keys          opts#)
+                   from-type#          (:from-type          opts#)
                    cache-errors?#      (if (contains? opts# :cache-errors?)
                                            (:cache-errors? opts#)
-                                           true)]
+                                           true)
+                   force-update?#      (:force-update?      opts#)
+                   main-fn#
+                    (fn [from-val# ignore-db-retrieve?#]
+                      (let [get-from-val-state# #(.get ^ConcurrentHashMap ~cache-sym from-val#)
+                            from-val-state-0#   (get-from-val-state#)]
+                      (cond
+                        (not (.containsKey ^ConcurrentHashMap ~cache-sym from-val#))
+                          (if (and (not force-update?#) ; Once, then memoized
+                                   (set? skip-keys#)
+                                   (let [eids# (query ; Possibly slow?
+                                                 (into [:find (list '~'count '~'?e) :where]
+                                                   (conj [['~'?e from-key# from-val#] ['~'?e pk#]]
+                                                     (list '~'or
+                                                       (for [skip-key# skip-keys#] ; different symbols = OR
+                                                         ['~'?e skip-key#])))))]
+                                     (nempty? eids#)))
+                              (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym from-val# :db)
+                                  :db)
+                              (let [; Multiple threads get the same result from the same delayed function
+                                    f# (delay (~f-0 from-val#))]
+                                 (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
+                                       from-val# f#)
+                                     (try+ @(get-from-val-state#)
+                                       (catch Object e#
+                                         (when-not cache-errors?#
+                                           (.remove ^ConcurrentHashMap ~cache-sym from-val#))
+                                         (throw+))))))
+                        (delay? from-val-state-0#)
+                          @from-val-state-0#
+                        (= from-val-state-0# :db)
+                          (if ignore-db-retrieve?#
+                              :db
+                              (-> [:find '?e :where ['?e from-key# from-val#]]
+                                 db/query first first db/entity))
+                        :else
+                          (throw+ (Err. nil "Unhandled exception in cache." from-val-state-0#)))))]
              (do ; The ".putIfAbsent" feature, to my knowledge, is not present in Clojure STM
                  ; Thus the ConcurrentHashMap
                  ; from-key-state-cache-sym
-                 (defonce ~cache-sym (java.util.concurrent.ConcurrentHashMap.))
+                 (when-not '~cache-sym-0
+                   (defonce ~cache-sym (java.util.concurrent.ConcurrentHashMap.)))
                  (~register-cache!)
 
                  (defn ~name- 
                    "@from-val: E.g. email
-                     to-val:   E.g. user metadata"
+                     to-val:   E.g. user metadata
+
+                    Caching: 
+                      If not present in cache, creates delay and derefs it.
+                      Caches errors only if @cache-errors?"
                    [from-val# & [ignore-db-retrieve?#]]
-                   (let [get-from-val-state# #(.get ^ConcurrentHashMap ~cache-sym from-val#)
-                         from-val-state-0#   (get-from-val-state#)]
-                     (cond
-                       (not (.containsKey ^ConcurrentHashMap ~cache-sym from-val#))
-                         (if #_(and (set? skip-keys#)
-                                  (let [eids# (query
-                                                (into [:find (list '~'count '~'?e) :where]
-                                                  (conj [['~'?e pk#] ['~'?e from-key# from-val#]]
-                                                    (list '~'or
-                                                      (for [skip-key# skip-keys#] ; different symbols = OR
-                                                        ['~'?e skip-key#])))))]
-                                    (nempty? eids#)))
-                             #_(do (.putIfAbsent ^ConcurrentHashMap ~cache-sym from-val# :db)
-                                 :db)
-                             true
-                             (let [; Multiple threads get the same result from the same delayed function
-                                   f# (delay (~f-0 from-val#))]
-                                (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym
-                                      from-val# f#)
-                                    (try+ @(get-from-val-state#)
-                                      (catch Object e#
-                                        (when-not cache-errors?#
-                                          (.remove ^ConcurrentHashMap ~cache-sym from-val#))
-                                        (throw+))))))
-                       (delay? from-val-state-0#)
-                         @from-val-state-0#
-                       (= from-val-state-0# :db)
-                         (if ignore-db-retrieve?#
-                             :db
-                             (-> [:find '?e :where ['?e from-key# from-val#]]
-                                db/query first first db/entity))
-                       :else
-                         (throw+ (Err. nil "Unhandled exception in cache." from-val-state-0#)))))
+                   (if (= from-type# :many)
+                       (doseq [from-val-n# from-val#]
+                         (main-fn# from-val-n# ignore-db-retrieve?#))
+                       (main-fn# from-val# ignore-db-retrieve?#)))
                 
                  (defn ~pk-adder-sym
                    "Add primary (+ unique) keys to database,
@@ -513,7 +527,6 @@
                     {:todo ["Redundant and likely unnecessary"]}
                     [pk-vals#]
                    ;(swap! in-db-cache-pk# set/union @in-db-cache-full#)
-                   
                    (batch-transact!
                      pk-vals#
                      (fn [pk-val#]
@@ -540,8 +553,8 @@
                          key-map#))))
 
                  (defn ~cache-fn-sym
-                   "Efficiently transfers from in-memory cache to 
-                    database via |batch-transact!|."
+                  "Efficiently transfers from in-memory cache to 
+                   database via |batch-transact!|."
                    []
                    (let [realizeds# (->> ~cache-sym
                                          filter-realized-delays+

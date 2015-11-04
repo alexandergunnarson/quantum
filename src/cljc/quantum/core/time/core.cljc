@@ -211,12 +211,45 @@
         (.atZone (java.time.ZoneId/of "UTC"))
         (java.time.LocalDateTime/from))))
 
+; (ann keyword->timeunit [Keyword -> TimeUnit])
+; (defn- ^TimeUnit keyword->timeunit
+;   [x]
+;   (case x
+;     (:nanoseconds :nanos :ns)   TimeUnit/NANOSECONDS
+;     (:microseconds :us)         TimeUnit/MICROSECONDS
+;     (:milliseconds :millis :ms) TimeUnit/MILLISECONDS
+;     (:seconds :sec)             TimeUnit/SECONDS
+;     (:minutes :mins)            TimeUnit/MINUTES
+;     (:hours :hrs)               TimeUnit/HOURS
+;     :days                       TimeUnit/DAYS))
+
+; (ann ->timeunit [(U TimeUnit Keyword) -> TimeUnit])
+; (defn ^TimeUnit ->timeunit
+;   "Constructs an instance of `java.util.concurrent.TimeUnit`.
+;   If argument x is already an instance of `TimeUnit`, the function returns x.
+;   Otherwise, x *must* be a keyword, in which case the following conversion
+;   is performed:
+  
+;   :nanoseconds | :nanos | :ns   -> TimeUnit/NANOSECONDS
+;   :microseconds | :us           -> TimeUnit/MICROSECONDS
+;   :milliseconds | :millis | :ms -> TimeUnit/MILLISECONDS
+;   :seconds | :sec               -> TimeUnit/SECONDS
+;   :minutes | :mins              -> TimeUnit/MINUTES
+;   :hours | :hrs                 -> TimeUnit/HOURS
+;   :days                         -> TimeUnit/DAYS
+;   "
+;   [x]
+;   (if (instance? TimeUnit x)
+;     x
+;     (keyword->timeunit x)))
+
 (defn <  ([a b] (core/<  (-> a ->instant :nanos) (-> b ->instant :nanos))))
 (defalias before? <)
 (defn >  ([a b] (core/>  (-> a ->instant :nanos) (-> b ->instant :nanos))))
 (defalias after? >)
 (defn <= ([a b] (core/<= (-> a ->instant :nanos) (-> b ->instant :nanos))))
 (defn >= ([a b] (core/>= (-> a ->instant :nanos) (-> b ->instant :nanos))))
+
 
 ; #?(:clj
 ; (defn now-formatted [date-format]

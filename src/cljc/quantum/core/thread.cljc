@@ -5,28 +5,14 @@
   quantum.core.thread
   (:require-quantum [ns num fn str err macros logic vec coll log res core-async async])
   (:require
-    #?@(:clj [[clojure.core.async.impl.ioc-macros :as ioc]
-              [clojure.core.async.impl.exec.threadpool :as async-threadpool]]))
+    #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
+              [clojure.core.async.impl.exec.threadpool :as async-threadpool]
+              [co.paralleluniverse.pulsar.core         :as pulsar          ]
+              [co.paralleluniverse.pulsar.async        :as pasync          ]]))
   #?(:clj (:import (java.lang Thread Process)
             (java.util.concurrent Future Executor ExecutorService ThreadPoolExecutor)
-            quantum.core.data.queue.LinkedBlockingQueue)))
-
-;(def #^{:macro true} go      #'async/go) ; defalias fails with macros (does it though?)...
-; #?(:clj (defmalias go      core-async/go))
-; #?(:clj (defmalias go-loop core-async/go-loop))
-
-; #?(:clj (defalias <!       core-async/<!))
-; #?(:clj (defalias <!!      core-async/<!!))
-; #?(:clj (defalias >!       core-async/>!))
-; #?(:clj (defalias >!!      core-async/>!!))
-
-; #?(:clj (defalias chan     core-async/chan))
-; ;#?(:clj (defalias close!   async/close!))
-
-; #?(:clj (defalias alts!    core-async/alts!))
-; #?(:clj (defalias alts!!   core-async/alts!!))
-; #?(:clj (defalias thread   core-async/thread))
-
+            quantum.core.data.queue.LinkedBlockingQueue
+            (co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
 
 #?(:clj (defonce reg-threads (atom {}))) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
 #?(:clj (defonce reg-threads-tree (atom {})))
@@ -116,41 +102,13 @@
        result#)))
 
 #?(:clj
-(defnt interrupt!
-  ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
-  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
-
-#?(:clj
-(defnt interrupted?
-  ([#{Thread}         x] (.isInterrupted x))
-  ([#{Process java.util.concurrent.Future} x] :unk)))
-
-#?(:clj
-(defnt close-impl!
-  ([^Thread  x] (.stop    x))
-  ([^Process x] (.destroy x))
-  ([^java.util.concurrent.Future  x] (.cancel  x true))
-  ([         x] (if (nil? x) true (throw :not-implemented)))))
-
-#?(:clj
-(defnt closed?
-  ([^Thread x] (not (.isAlive x)))
-  ([^Process x] (try (.exitValue x) true
-                   (catch IllegalThreadStateException _ false)))
-  ([^java.util.concurrent.Future x] (or (.isCancelled x) (.isDone x)))
-  ([^boolean? x] x)
-  ([x] (if (nil? x) true (throw :not-implemented)))))
-
-#?(:clj (def open? (fn-not closed?)))
-
-#?(:clj
 (defn ^:private interrupt!* [thread thread-id interrupted force?]
   (if-not force?
     (do (log/pr ::debug "Before interrupt handler for id" thread-id)
         ((or interrupted fn-nil) thread)
         (log/pr ::debug "After interrupt handler for id" thread-id))
-    (do (interrupt! thread)
-        (if ((fn-or interrupted? closed?) thread)
+    (do (async/interrupt! thread)
+        (if ((fn-or async/interrupted? async/closed?) thread)
             ((or interrupted fn-nil) thread)
             (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
 
@@ -165,12 +123,12 @@
                     ; that can/should be released before full termination
     (log/pr ::debug "After cleanup for id" thread-id)
     (when force?
-      (close-impl! thread) ; force shutdown
+      (async/close! thread) ; force shutdown
       (loop [tries 0]
         (log/pr :debug "Trying to close thread" thread-id)
-        (when (and (open? thread) (<= tries max-tries))
+        (when (and (async/open? thread) (<= tries max-tries))
           (log/pr :debug {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be closed.")})
-          (Thread/sleep 100) ; wait a little bit for it to stop
+          (async/sleep 100) ; wait a little bit for it to stop
           (recur (inc tries))))))))
 
 #?(:clj
@@ -225,7 +183,7 @@
     (when-let [close-reqs (:close-reqs v)]
       (put!! close-reqs :req))
     (when-let [thread- (:thread v)]
-      (close-impl! thread-))))
+      (async/close! thread-))))
 
 (declare reg-threads)
 (defn close-all-forcibly!
@@ -245,10 +203,16 @@
 (def rejected-execution-handler
   (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f))))
 
-; (count (.getQueue thread/threadpool))
-(def threadpool clojure.core.async.impl.exec.threadpool/the-executor)
 
-(.setRejectedExecutionHandler threadpool
+#?(:clj
+(defonce threadpools
+  (atom {:core.async ^ThreadPoolExecutor clojure.core.async.impl.exec.threadpool/the-executor
+         :future     ^ThreadPoolExecutor clojure.lang.Agent/soloExecutor
+         :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
+         :async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
+         :reducers   ^ForkJoinPool       quantum.core.reducers/pool})))
+
+(.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)
   (reify java.util.concurrent.RejectedExecutionHandler
     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
       (@rejected-execution-handler f))))
@@ -282,18 +246,12 @@
         false)))))
 
 #?(:clj
-(defn ^:internal threadpool-run
-  "Runs Runnable @r in a threadpool thread"
-  [threadpool-n ^Runnable r opts]
-  (closeably-execute threadpool-n r opts)))
-
-#?(:clj
-(defmacro ^:internal lt-go-thread*  
+(defmacro ^:internal async-chan*
   [opts & body]
-  `(let [c# (chan 1)
+  `(let [c# (chan :casync 1)
          captured-bindings# (clojure.lang.Var/getThreadBindingFrame)]
-     (threadpool-run
-       (or (:threadpool ~opts) threadpool)
+     (closeably-execute
+       (or (:threadpool ~opts) (:core.async @threadpools))
        (fn []
          (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
                state# (-> (f#)
@@ -302,14 +260,6 @@
            (ioc/run-state-machine-wrapped state#)))
        ~opts)
      c#)))
-
-#?(:clj
-(defmacro ^:internal lt-thread*  
-  [opts & body]
-  `(threadpool-run
-     (or (:threadpool ~opts) threadpool)
-     (fn [] ~@body)
-     ~opts)))
 
 (defn gen-proc-id [id parent name-]
   (if id id
@@ -325,9 +275,46 @@
           :else
             "")))))
 
+(defn async-fiber*
+  "The main overhead here is the start of the initial thread, which
+   can take up to 1500 msec."
+  {:benchmarks
+    '{(dotimes [n 10000] (async {:id (gensym)} (async/sleep 2000) 123))
+        2064
+      (dotimes [n 10000] (async {:id (gensym)} (async/sleep 1000) 123))
+        1429
+      (dotimes [n 10000] (async {:id (gensym)}                    123))
+        1464}}
+  [async-fn opts]
+  (let [c          (chan 1)
+        susp-fn    (pulsar/suspendable! async-fn)
+        async-fn-f (condp = (:ret opts)
+                     :chan   (@#'pasync/f->chan c susp-fn)
+                     :future susp-fn)
+        ; This with the -jdk8 specification is 3x slower — benchmarked using their benchmarker
+        ; It's especially slow on the first thread spawn
+        ; (time (dotimes [n 10000] (let [abcde (async {:id (gensym)}  (async/sleep 2000) 123)])))
+        fiber (co.paralleluniverse.fibers.Fiber. (name (:id opts))
+                 (pulsar/get-scheduler (:threadpool opts))
+                 (int (or (:stack-size opts) -1))
+                 (pulsar/->suspendable-callable susp-fn))]
+    ; Something in here because of ForkJoinPool took ~1000ms to execute — .scan()
+    (.start fiber)
+    (condp = (:ret opts)
+      :chan   c
+      :future (pulsar/fiber->future fiber))))
+
 #?(:clj
-(defmacro lt-thread
-  "Creates a closeable 'light thread' on a go block.
+(defmacro async
+  "Creates a closeable thread or 'fiber'.
+   Options:
+     :type #{:thread :fiber }
+     :ret  #{:chan   :future}
+     :threadpool — #{^ForkJoinPool
+                     ^ThreadPoolExecutor}
+     :id
+     :handlers
+
 
    Handlers: (maybe make certain of these callable once?) 
      For all threads:
@@ -336,7 +323,8 @@
                      Somewhat analogous to :interrupted.
      :closed       — Called by the thread reaper when the thread is fully closed.
                      Not called if the thread completes without a close request.
-     :completed (Planned)    — Called when the thread runs to completion.
+     :completed (Planned) 
+                   — Called when the thread runs to completion.
                      :completed and :closed may both be called.
      :exception   
        — :default  — Called on early termination (exit code not= 0)
@@ -357,20 +345,26 @@
         cleanup-f      (gensym "cleanup-f")
         opts-f         (gensym "opts-f")]
    `(let [~opts-f ~opts ; so you create it only once
-          asserts# (with-throw (map? ~opts-f) "@opts must be a map.")
-          ; Proper destructuring in a macro would be nice... oh well...
+          asserts# (throw-unless (map? ~opts-f) "@opts must be a map.")
+          ; TODO Proper destructuring in a macro would be nice... oh well...
           close-req#   (-> ~opts-f :handlers :close-req)
           cleanup#     (-> ~opts-f :handlers :cleanup)
-          id#          (:id          ~opts-f)
-          parent#      (:parent      ~opts-f)
-          name#        (:name        ~opts-f)
-          cleanup-seq# (:cleanup-seq ~opts-f)
+          id#              (:id          ~opts-f)
+          type#        (or (:type        ~opts-f) :fiber ) ; "Heaviness" should be explicit
+          _#           (throw-unless (in? type# #{:fiber :thread})
+                         (Err. nil ":type must be in #{:fiber :thread}" type#))
+          ret#         (or (:ret         ~opts-f) :chan)
+          _#           (throw-unless (in? ret# #{:chan :future})
+                         (Err. nil ":ret must be in #{:chan :future}" ret#))
+          parent#          (:parent      ~opts-f)
+          name#            (:name        ~opts-f)
+          cleanup-seq#     (:cleanup-seq ~opts-f)
           asserts#
             (do (when cleanup#
-                  (with-throw (fn? cleanup#) "@cleanup must be a function."))
+                  (throw-unless (fn? cleanup#) "@cleanup must be a function."))
                 (when cleanup-seq#
-                  (with-throw (instance? clojure.lang.IAtom cleanup-seq#)
-                              "@cleanup-seq must be an atom.")))
+                  (throw-unless (instance? clojure.lang.IAtom cleanup-seq#)
+                    "@cleanup-seq must be an atom.")))
           ~cleanup-f
             (if cleanup#
                 (wrap-delay cleanup#)
@@ -381,44 +375,57 @@
                         (catch Object e#
                           (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
           ~close-req-call (wrap-delay close-req#)
-          ~close-reqs (or (:close-reqs ~opts-f) (LinkedBlockingQueue.))
+          ~close-reqs (or (:close-reqs ~opts-f) (chan :queue))
           ~proc-id   (gen-proc-id id# parent# name#)
           ~opts-f    (coll/assocs-in+         ~opts-f
                        [:close-reqs         ] ~close-reqs
-                       [:id]                  ~proc-id
+                       [:id                 ] ~proc-id
                        [:handlers :close-req] ~close-req-call
-                       [:handlers :cleanup  ] ~cleanup-f)]
-      (lt-thread* ~opts-f
-        (.setName (Thread/currentThread) (name ~proc-id))
-        (swap! reg-threads assoc-in [~proc-id :state] :running)
-        (try+ ~@body
-          (catch Object e#
-            ((or (-> ~opts-f :handlers :err/any.pre ) fn-nil))
-            (log/pr-opts :warn #{:thread?} "Exited with exception" e#)
-            ((or (-> ~opts-f :handlers :err/any.post) fn-nil)))
-          (finally 
-            (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
-            (when (get @reg-threads ~proc-id)
-              (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" ~proc-id)
-              (doseq [child-id# (get-in @reg-threads [~proc-id :children])]
-                (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD")
-                (close! child-id#)
-                (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD"))
-              (force ~cleanup-f) ; Performed only once
-              (swap! reg-threads assoc-in [~proc-id :state] :closed)
-              (deregister-thread! ~proc-id)))))))))
+                       [:handlers :cleanup  ] ~cleanup-f
+                       [:ret                ] ret#)
+          async-fn#
+            (fn []
+              (when (= type# :thread)
+                (.setName (Thread/currentThread) (name ~proc-id)))
+
+              (swap! reg-threads assoc-in [~proc-id :state] :running)
+              (try+ ~@body
+                (catch Object e#
+                  ((or (-> ~opts-f :handlers :err/any.pre ) fn-nil))
+                  (log/pr-opts :warn #{:thread?} "Exited with exception" e#)
+                  ((or (-> ~opts-f :handlers :err/any.post) fn-nil)))
+                (finally 
+                  (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
+                  (when (get @reg-threads ~proc-id)
+                    (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" ~proc-id)
+                    (doseq [child-id# (get-in @reg-threads [~proc-id :children])]
+                      (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD")
+                      (close! child-id#)
+                      (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD"))
+                    (force ~cleanup-f) ; Performed only once
+                    (swap! reg-threads assoc-in [~proc-id :state] :closed)
+                    (deregister-thread! ~proc-id)))))]
+      (condp = type#
+        :fiber
+          (async-fiber* async-fn# ~opts-f)
+        :thread ; TODO assumes ret is chan
+          (async-chan* ~opts-f
+            (async-fn#)))))))
+
   
 #?(:clj
-(defmacro lt-thread-loop
+(defmacro async-loop
+  "Like |go-loop| but inherits the additional flexibility
+   that |async| provides."
   [opts bindings & body]
   (let [close-reqs-f   (gensym)
         close-req-call (gensym)]
    `(let [opts-f# ~opts
-          ~close-reqs-f (or (:close-reqs opts-f#) (LinkedBlockingQueue.))
+          ~close-reqs-f   (or (:close-reqs opts-f#) (chan :queue))
           ~close-req-call (wrap-delay (-> opts-f# :handlers :close-req))]
-      (lt-thread (coll/assocs-in+ ~opts
-                   [:close-reqs         ] ~close-reqs-f
-                   [:handlers :close-req] ~close-req-call)
+      (async (coll/assocs-in+ ~opts
+                [:close-reqs         ] ~close-reqs-f
+                [:handlers :close-req] ~close-req-call)
         (try
           (loop ~bindings
             (when (empty? ~close-reqs-f)
@@ -427,7 +434,7 @@
             (when (nempty? ~close-reqs-f)
               (force ~close-req-call)))))))))
 
-(defn lt-thread-chain
+(defn proc-chain
   "To chain subprocesses together on the same thread.
    To track progress, etc. on phases of completion."
   [universal-opts thread-chain-template]
@@ -437,7 +444,7 @@
 (defn reap-threads! []
   (doseq [id thread-meta @reg-threads]
     (let [{:keys [thread state handlers]} thread-meta]
-      (when (or (closed? thread)
+      (when (or (async/closed? thread)
                 (= state :closed))
         (whenf (:closed handlers) nnil?
           (if*n delay? force call))
@@ -448,10 +455,10 @@
 
 #?(:clj
 (defonce thread-reaper
-  (do (log/enable! :macro-expand)
+  (do #_(log/enable! :macro-expand)
       (with-do
         (let [id :thread-reaper]
-          (lt-thread-loop
+          (async-loop
             {:id id
              :handlers {:close-req #(swap! reg-threads dissoc id) ; remove itself
                         :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
@@ -466,16 +473,16 @@
                     (swap! reg-threads assoc-in [id :state] :running)
                     (recur))
                 (do (reap-threads!)
-                    (Thread/sleep 2000)
+                    (async/sleep 2000)
                     (recur)))))
-        (log/disable! :macro-expand)))))
+        #_(log/disable! :macro-expand)))))
 
 #?(:clj (defn pause-thread-reaper!  [] (put!! thread-reaper-pause-requests true)))
 #?(:clj (defn resume-thread-reaper! [] (put!! thread-reaper-resume-requests true)))
 
 (defonce gc-worker
-  (lt-thread {:id :gc-collector}
-    (loop [] (System/gc) (Thread/sleep 60000))))
+  (async {:id :gc-collector}
+    (loop [] (System/gc) (async/sleep 60000))))
 
 ; ===============================================================
 ; ============ TO BE INVESTIGATED AT SOME LATER DATE ============
@@ -574,13 +581,13 @@
 (comment
  
   ;; prints :foo, but not :bar
-  (thread-or #(do (Thread/sleep 1000) (println :foo) true)
-             #(do (Thread/sleep 3000) (println :bar)))
+  (thread-or #(do (async/sleep 1000) (println :foo) true)
+             #(do (async/sleep 3000) (println :bar)))
   ;;= true
  
   ;; prints :foo and :bar
-  (thread-or #(do (Thread/sleep 1000) (println :foo))
-             #(do (Thread/sleep 3000) (println :bar)))
+  (thread-or #(do (async/sleep 1000) (println :foo))
+             #(do (async/sleep 3000) (println :bar)))
   ;;= nil
  
   )
@@ -624,8 +631,8 @@
   ;;= true
  
   ;; prints :foo, but not :bar
-  (thread-and #(do (Thread/sleep 1000) (println :foo))
-              #(do (Thread/sleep 3000) (println :bar)))
+  (thread-and #(do (async/sleep 1000) (println :foo))
+              #(do (async/sleep 3000) (println :bar)))
  
   )
 
@@ -682,7 +689,7 @@
 (defn chunk-doseq
   "Like |fold| but for |doseq|.
    Also configurable by thread names and threadpool, etc."
-  [coll {:keys [total thread-count chunk-size threadpool thread-name chunk-fn]} f]
+  [coll {:keys [total thread-count chunk-size threadpool thread-name chunk-fn] :as opts} f]
   (let [total-f (or total (count coll))
         chunks (coll/partition-all (or chunk-size
                                        (/ total-f
@@ -690,8 +697,7 @@
                  (if total (take total coll) coll))]
     (doseqi [chunk chunks i]
       (let [thread-id (keyword (str thread-name "-" i))]
-        (lt-thread {:id         thread-id
-                    :threadpool threadpool}
+        (async (mergel {:id thread-id} opts)
           ((or chunk-fn fn-nil) chunk i)
           (doseqi [piece chunk n]
             (f piece n chunk i chunks)))))))

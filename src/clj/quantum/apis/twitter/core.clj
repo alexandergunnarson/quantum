@@ -77,6 +77,13 @@
         "count"   "200"}
      :parse? true}))
 
+(defn rate-limits [& [{:keys [parse? handlers] :as opts} username app]]
+  (request! username app
+    {:url "https://api.twitter.com/1.1/application/rate_limit_status.json"
+     :method :get
+     :handlers handlers
+     :parse? (whenc parse? nil? true)}))
+
 (defn followers:list [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/followers/list.json"
@@ -88,7 +95,7 @@
      :parse? parse?
      :handlers handlers}))
 
-(defn followees:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->followees:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/friends/ids.json"
      :method :get
@@ -99,7 +106,7 @@
      :parse? parse?
      :handlers handlers}))
 
-(defn followers:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->followers:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/followers/ids.json"
      :method :get
@@ -110,15 +117,7 @@
      :parse? parse?
      :handlers handlers}))
 
-
-(defn rate-limits [& [{:keys [parse? handlers] :as opts} username app]]
-  (request! username app
-    {:url "https://api.twitter.com/1.1/application/rate_limit_status.json"
-     :method :get
-     :handlers handlers
-     :parse? (whenc parse? nil? true)}))
-
-(defn id->meta [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->metadata [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/users/show.json"
      :method :get
@@ -127,11 +126,16 @@
      :parse? parse?
      :handlers handlers}))
 
-(defn ids->metas [user-id]
+(defn user:ids->metadata [user-ids & [{:keys [cursor parse? handlers] :as opts} username app]]
+  (throw-unless (-> user-ids count (<= 100))
+    (Err. nil "<= 100 user-ids are allowed in a single request to |user:ids->metadata|. Found:" (count user-ids)))
+  ; You are strongly encouraged to use a POST for larger requests.
   (request!
     {:url "https://api.twitter.com/1.1/users/lookup.json"
-     :method :get
-     :query-params {"user_id" user-id}}))
+     :method :post
+     :query-params {"user_id" (str/join "," user-ids)}
+     :parse? parse?
+     :handlers handlers}))
 
 #_(defn tweets-by-id [tweet-ids]
   )
