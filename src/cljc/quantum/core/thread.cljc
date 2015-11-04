@@ -223,10 +223,14 @@
     (.setCorePoolSize    n)
     (.setMaximumPoolSize n)))
 
-(defn gen-threadpool [num-threads]
-  (set-max-threads! 
-    (java.util.concurrent.Executors/newFixedThreadPool num-threads)
-    num-threads))
+(defn gen-threadpool [type num-threads & [name-]]
+  (condp = type
+    :fixed     (set-max-threads! 
+                 (java.util.concurrent.Executors/newFixedThreadPool num-threads)
+                 num-threads) 
+    :fork-join (co.paralleluniverse.fibers.FiberForkJoinScheduler.
+                 (or name- (name (gensym))) num-threads nil
+                 co.paralleluniverse.common.monitoring.MonitorType/JMX false)))
 
 (defn clear-work-queue! [^ThreadPoolExecutor threadpool-n]
   (->> threadpool-n .getQueue (map #(.cancel ^Future % true)) dorun)

@@ -101,21 +101,6 @@
 
 (defalias >!! put!!)
 
-(defnt close!
-#?(:clj
-  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q)))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
-  ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
-  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x)))
-
-(defnt closed?
-#?(:clj
-  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x)))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
-  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x)))
-
-#?(:clj (def open? (fn-not closed?)))
-
 (defnt message?
   ([^quantum.core.thread.async.QueueCloseRequest  obj] false)
   ([^quantum.core.thread.async.TerminationRequest obj] false)
@@ -140,22 +125,32 @@
   ([#{Thread}         x] (.isInterrupted x))
   ([#{Process java.util.concurrent.Future} x] :unk)))
 
-#?(:clj
 (defnt close!
+#?(:clj
   ([^Thread                      x] (.stop    x))
   ([^Process                     x] (.destroy x))
   ([^java.util.concurrent.Future x] (.cancel  x true))
-  ([                             x] (if (nil? x) true (throw :not-implemented)))))
+  ([                             x] (if (nil? x) true (throw :not-implemented)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
+  ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
+  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x))))
 
-#?(:clj
+
 (defnt closed?
+#?(:clj
   ([^Thread x] (not (.isAlive x)))
   ([^Process x] (try (.exitValue x) true
                    (catch IllegalThreadStateException _ false)))
   ([#{java.util.concurrent.Future
       co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
+  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
   ([^boolean? x] x)
   ([x] (if (nil? x) true (throw :not-implemented)))))
+
+#?(:clj (def open? (fn-not closed?)))
 
 #?(:clj
 (defnt realized?
