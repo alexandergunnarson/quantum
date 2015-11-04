@@ -280,8 +280,6 @@
             "")))))
 
 (defn async-fiber*
-  "The main overhead here is the start of the initial thread, which
-   can take up to 1500 msec."
   {:benchmarks
     '{(dotimes [n 10000] (async {:id (gensym)} (async/sleep 2000) 123))
         2064
@@ -291,17 +289,20 @@
         1464}}
   [async-fn opts]
   (let [c          (chan 1)
-        susp-fn    (pulsar/suspendable! async-fn)
-        async-fn-f (condp = (:ret opts)
-                     :chan   (@#'pasync/f->chan c susp-fn)
-                     :future susp-fn)
+        async-fn-f (pulsar/suspendable!
+                     (@#'pasync/f->chan c
+                      (pulsar/suspendable!
+                        ; Wraps the fn because marking suspendable, etc. requires bytecode manipulation 
+                        ; and the shorter the fn, the less the bytecode and the faster the process
+                        ; Otherwise can take at least 1000 ms 
+                        (fn [] (async-fn)))))  
         ; This with the -jdk8 specification is 3x slower — benchmarked using their benchmarker
         ; It's especially slow on the first thread spawn
         ; (time (dotimes [n 10000] (let [abcde (async {:id (gensym)}  (async/sleep 2000) 123)])))
         fiber (co.paralleluniverse.fibers.Fiber. (name (:id opts))
                  (pulsar/get-scheduler (:threadpool opts))
                  (int (or (:stack-size opts) -1))
-                 (pulsar/->suspendable-callable susp-fn))]
+                 (pulsar/->suspendable-callable async-fn-f))]
     ; Something in here because of ForkJoinPool took ~1000ms to execute — .scan()
     (.start fiber)
     (condp = (:ret opts)
