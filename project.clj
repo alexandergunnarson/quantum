@@ -112,7 +112,7 @@
      ; THREADING, ASYNC, CONCURRENCY
      ;[org.clojure/core.async    "0.1.346.0-17112a-alpha"]
      [org.clojure/core.async "0.2.371"]
-     [co.paralleluniverse/pulsar "0.7.4-alpha"] ; If you include it, it conflicts
+     [co.paralleluniverse/pulsar "0.7.3"] ; If you include it, it conflicts
      [co.paralleluniverse/quasar-core "0.7.3"] ; :classifier "jdk8" 
      ; ==== CLOJURESCRIPT ====  
      [org.clojure/clojurescript "0.0-3269"      ]
