@@ -173,6 +173,16 @@
 (defn install-tools! []
   (command "sudo apt-get -y install atop")
   (command "sudo apt-get -y install ifstat")
+  (command "cd ~/ &&
+            git clone https://github.com/flatland/drip.git &&
+            cd ~/drip &&
+            sudo make install &&
+            cd ~/ &&
+            sudo rm /bin/drip &&
+            sudo rm ~/bin/drip &&
+            sudo cp ~/drip/bin/drip /bin/drip
+            sudo cp ~/drip/bin/drip ~/bin/drip
+            sudo rm -rf ~/drip")
   (wait-until-prompt 1000 (prompt)))
 
 

@@ -599,7 +599,7 @@
                     :refers  {:cljc {str      #{re-find}}}}    
           sys      {:aliases {:cljc {sys      quantum.core.system           }}}    
           thread   {:aliases {:cljc {thread   quantum.core.thread           }}
-                    :refers  {:clj  {thread #{thread+ lt-thread lt-thread-loop}}}}
+                    :refers  {:clj  {thread #{thread+ async async-loop}}}}
           ; DATA
           arr     {:aliases {:cljc {arr    quantum.core.data.array }} :refers {:cljc {arr    #{aset!               }}
                                                                                :clj  {arr    #{byte-array+         }}}}
@@ -798,7 +798,7 @@
    quantum.core.print       #{pr-attrs with-print-str*}
    quantum.core.reducers    #{for+ doseq+}
    quantum.core.test        #{qtest}
-   quantum.core.thread      #{thread+ lt-thread}
+   quantum.core.thread      #{thread+ async async-loop}
    quantum.core.type        #{should-transientize?}
    quantum.measure.convert  #{convert}
    cljs.core.async.macros   #{go go-loop}})

@@ -170,7 +170,7 @@
     (web/send-keys! username-field (name username))
     (web/send-keys! password-field (auth/datum :twitter username :password))
     (web/send-keys! password-field "\n") ; to sign in
-    (Thread/sleep 2000) ; Doesn't really check if you logged in, but oh well
+    (async/sleep 2000) ; Doesn't really check if you logged in, but oh well
     ;(web/click-load! login-button)
     ))
 

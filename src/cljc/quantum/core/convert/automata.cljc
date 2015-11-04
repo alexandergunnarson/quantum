@@ -106,7 +106,7 @@
 ;                   (log/pr-opts :warn #{:thread?} "Strange issue with not outputting info from process" sleep-time))
 ;             (log/pr :warn "OUTPUT TIMEOUT IN OTHER STATUS:" (:status @state))))))))
 
-; (defn lt-thread-chain
+; (defn async-chain
 ;   [{:keys [state status result-id result-set]
 ;     :or {state      (atom {})
 ;          status     :running
@@ -119,7 +119,7 @@
 ;             :handlers (:handlers parent-opts)
 ;             :status status :result-set result-set :result-id result-id)
 ;         state state]
-;     (lt-thread (dissoc parent-opts :state :status :result-id :result-set)
+;     (async (dissoc parent-opts :state :status :result-id :result-set)
 ;       (try+
 ;         (log/pr :debug "TRYING TO RUN THREADS" thread-seq)
 ;         (doseqi [thread-opts thread-seq n]
@@ -226,7 +226,7 @@
 ;                            :close-reqs close-reqs
 ;                            :state      state
 ;                            :handlers   converting-handlers}))}]
-;           (lt-thread-chain
+;           (async-chain
 ;             {:state state
 ;              :id         thread-id
 ;              :close-reqs close-reqs
@@ -246,13 +246,13 @@
 ;       (reset! process-limit n)
 ;       (when (or (not orig-process-limit?) force?)
 ;         (log/pr :debug "Spawning processor")
-;         (lt-thread-loop
+;         (async-loop
 ;           {:id :video-processor}
 ;           []
 ;           (when (nempty? (available-videos))
 ;             (when (-> @workers count (< @process-limit))
 ;               (download-videos! (- @process-limit (count @workers))))
-;             (Thread/sleep 500)  ; check every half second
+;             (async/sleep 500)  ; check every half second
 ;             (recur)))))))
 
 ; (defn convert!
@@ -264,8 +264,9 @@
 ;         proc-id   (str/keyword+ "ffmpeg-convert" n)
 ;         mp4-path  [:resources "SIRE" (str n ".mp4")]
 ;         state     (atom {:id proc-id :parent thread-id})]
-;     (lt-thread
+;     (async
 ;       {:id thread-id
+;        :type :thread
 ;        :handlers {:closed #(io/delete! :path mp4-path)}}
 ;       (wmv->mp4 [:resources "SIRE" (str n ".wmv")]
 ;                 mp4-path

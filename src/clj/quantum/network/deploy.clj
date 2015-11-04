@@ -106,10 +106,10 @@
   ([]
     (deploy! @default-app))
   ([^String app-name]
-    (lt-thread {:name :heroku-git}
+    (async {:name :heroku-git} ; TODO This is unnecessary — use sh's built in async
       (sh/exec! "git" ["push"   "heroku" "master"]                 {:dir [:projects app-name]})))
   ([^String app-name ^String commit-desc]
-    (lt-thread {:name :heroku-git}
+    (async {:name :heroku-git} ; TODO This is unnecessary — use sh's built in async
       (sh/exec! "git" ["add"    "."]                               {:dir [:projects app-name]})
       (sh/exec! "git" ["commit" "-am" (str "\"" commit-desc "\"")] {:dir [:projects app-name]})
       (sh/exec! "git" ["push"   "heroku" "master"]                 {:dir [:projects app-name]}))))

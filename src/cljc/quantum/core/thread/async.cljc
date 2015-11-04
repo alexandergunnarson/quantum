@@ -6,7 +6,7 @@
   (:require-quantum
     [ns num fn str err logic vec err macros log coll])
   (:require [#?(:clj  clojure.core.async
-                :cljs cljs.core.async)        :as async ]
+                :cljs cljs.core.async)         :as async ]
    #?@(:clj [[co.paralleluniverse.pulsar.async :as async+]
              [co.paralleluniverse.pulsar.core  :as pasync]]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel

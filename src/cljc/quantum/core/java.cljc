@@ -8,7 +8,7 @@
  #?@(:clj [(:require
              [clojure.data       :as cljdata]
              [clojure.reflect    :refer :all]
-             [alembic.still])
+             #_[alembic.still]) ; TODO fix class conflict between Pulsar and alembic
            (:import java.lang.reflect.Method)]))
 
 #?(:clj
@@ -25,7 +25,7 @@
   (defmacro load-deps [deps]
     `(alembic.still/distill ~deps)))
 
-#?(:clj (defalias lein alembic.still/lein))
+#_#?(:clj (defalias lein alembic.still/lein))
 
 ; (def my-method-fetch
 ;   (memoize

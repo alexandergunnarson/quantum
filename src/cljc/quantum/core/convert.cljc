@@ -51,15 +51,18 @@
       `(java.util.UUID/randomUUID)
       `(->uuid* ~@args))))
 
+(declare ->uri)
+
 (defnt ^java.io.File ->file
   {:todo "Eliminate reflection"}
   ([^java.io.File           x] x          )
   ([^java.nio.file.Path     x] (.toFile x))
   ([#{string? java.net.URI} x] (File.   x))
-  ([^java.net.URL])
+  ([^java.net.URL           x] (-> x ->uri ->file))
   ([                        x] (io/file x)))
 
 (defnt ^java.net.URI ->uri
+  {:todo "Eliminate reflection"}
   ([^java.net.URI                x] x)
   ([^java.nio.file.Path          x] (.toUri x))
   ([#{java.io.File java.net.URL} x] (.toURI x))
@@ -162,6 +165,7 @@
           (.position buf 0)
           buf)
         (ByteBuffer/wrap ary)))
+  (^{:cost 1} [^String x] (->byte-buffer x nil))
   (^{:cost 1} [^String x options]
     (-> x (arr/->bytes options) (->byte-buffer options)))
   #_(^{:cost 1} [(vector-of ByteBuffer) bufs {:keys [direct?] :or {direct? false}}]

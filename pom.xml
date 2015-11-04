@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>58cf74a5a97d5181e8dbeb2b2dc47da3e9133a55
+    <tag>4cfa472e01e2e8369af273f2ae947d819b855a0a
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -337,7 +337,7 @@
     <dependency>
       <groupId>co.paralleluniverse</groupId>
       <artifactId>pulsar</artifactId>
-      <version>0.7.3</version>
+      <version>0.7.4-alpha</version>
     </dependency>
     <dependency>
       <groupId>co.paralleluniverse</groupId>

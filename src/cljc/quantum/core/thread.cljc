@@ -133,7 +133,7 @@
 
 #?(:clj
 (defn close!
-  "Closes a thread or lt-thread, possibly gracefully."
+  "Closes a thread, possibly gracefully."
   {:attribution "Alex Gunnarson"}
   ([^Keyword thread-id] (close! thread-id nil)) ; don't force
   ([^Keyword thread-id {:keys [force?] :as opts}]
@@ -480,7 +480,7 @@
 #?(:clj (defn pause-thread-reaper!  [] (put!! thread-reaper-pause-requests true)))
 #?(:clj (defn resume-thread-reaper! [] (put!! thread-reaper-resume-requests true)))
 
-(defonce gc-worker
+#_(defonce gc-worker
   (async {:id :gc-collector}
     (loop [] (System/gc) (async/sleep 60000))))
 
@@ -639,12 +639,12 @@
 
 ; (defn do-intervals [millis & args]
 ;   (->> args
-;        (interpose #(Thread/sleep millis))
+;        (interpose #(async/sleep millis))
 ;        (map+ fold+)
 ;        fold+
 ;        pr/suppress))
 ; (defn do-every [millis n func]
-;   (dotimes [_ n] (func) (Thread/sleep millis)))
+;   (dotimes [_ n] (func) (async/sleep millis)))
 
 ; ;___________________________________________________________________________________________________________________________________
 ; ;========================================================{  CAPTURE SYS.OUT  }======================================================

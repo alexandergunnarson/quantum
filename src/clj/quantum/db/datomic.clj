@@ -386,17 +386,17 @@
 ; Don't run your geospatial queries or query-with-aggregations in Datomic, it's OK to have multiple datastores in your system.
 
 (defn gen-cacher [thread-id cache-fn-var]
-  (lt-thread-loop {:id thread-id}
+  (async-loop {:id thread-id :type :thread} ; Spawn quickly, mainly not sleeping (hopefully)
     []
     (try+ (@cache-fn-var)
       (catch Err e
         ;(log/pr :warn e)
         (if (-> e :objs :exception :db/error (= :db.error/transactor-unavailable))
             (do #_(init-transactor!)
-                (Thread/sleep 10000))
+                (async/sleep 10000))
             (throw+))))
     ; Just in case there's nothing to cache
-    (Thread/sleep 1000)
+    (async/sleep 1000)
     (recur)))
 
 (defn db-count [& clauses]

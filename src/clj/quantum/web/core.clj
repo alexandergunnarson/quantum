@@ -155,7 +155,7 @@
           (try
             (.findElement driver elem)
             (catch NoSuchElementException _
-              (Thread/sleep interval-ms)
+              (async/sleep interval-ms)
               (looper (inc n)))))) 0)))
 
 (defn find-elements

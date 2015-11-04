@@ -1,5 +1,5 @@
 (ns quantum.core.io.filesystem
-  (:require-quantum [ns io res err fn logic thread log coll macros type])
+  (:require-quantum [ns io res err fn logic thread async log coll macros type])
   (:require [quantum.core.convert :as convert])
 #?(:clj
   (:import 
@@ -15,7 +15,7 @@
    @event-modifiers SensitivityWatchEventModifier/HIGH"
   [{:as thread-opts :keys [close-reqs]} {:keys [event-kinds event-modifiers watch-files callback]}]
   (with-throw (nnil? close-reqs) "Requires close reqs")
-  (lt-thread thread-opts
+  (async thread-opts
     (with-resources
       [watch-service
         (.newWatchService (FileSystems/getDefault))]
@@ -48,7 +48,7 @@
         sleep-delay  (or (:delay opts) 100)]
     (if (io/directory? file-0)
         (throw+ (Err. :not-implemented "Directory parsing not yet implemented." file))
-        (lt-thread-loop thread-opts
+        (async-loop thread-opts
           [prev-timestamp timestamp-0]
           (let [^File file-n  (-> @file convert/->file)
                 _ (with-throw (io/file? file-n)
@@ -61,7 +61,7 @@
                       (catch Object e
                         (log/pr :warn "File watcher Handler threw error" e)))
                     (recur (.lastModified file-n)))
-                (do (Thread/sleep sleep-delay)
+                (do (async/sleep sleep-delay)
                     (recur prev-timestamp)))))))))
 
 ; (ns me.raynes.fs

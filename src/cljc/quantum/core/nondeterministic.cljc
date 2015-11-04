@@ -4,7 +4,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
   (:refer-clojure :exclude [bytes])
-  (:require-quantum [ns coll fn logic macros log thread convert])
+  (:require-quantum [ns coll fn logic macros log thread async convert])
   (:import java.util.Random
            java.security.SecureRandom
            [org.apache.commons.codec.binary Base64 Base32 Hex]))
@@ -21,14 +21,14 @@
 
 #?(:clj 
 (defn gen-native-secure-random-seeder []
-  (lt-thread-loop {:id :native-secure-random-seeder}
+  (async-loop {:id :native-secure-random-seeder}
     []
     (let [native-inst (SecureRandom/getInstance "NativePRNG")
           sleep-time  (* 10 (+ 50 (rand-int 5000)))
           random-bytes  (byte-array 512)
           _ (.nextBytes ^Random native-inst random-bytes)]
       (.setSeed ^SecureRandom secure-random-generator ^"[B" random-bytes)
-      (Thread/sleep sleep-time)
+      (async/sleep sleep-time)
       (recur)))))
 
 #?(:clj

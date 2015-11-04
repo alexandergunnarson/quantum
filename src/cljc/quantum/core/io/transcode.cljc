@@ -40,7 +40,7 @@ AAC encoder available with ffmpeg")
          :output-line}]}
   ([in out] (->mp4-x265 in out #{:encode-audio?}))
   ([in out {:keys [encode-audio?] :as opts}]
-    (lt-thread {:id (-> 'mp4->x265 gensym keyword)}
+    (async {:id (-> 'mp4->x265 gensym keyword) :type :thread}
       (let [audio-args
              (if encode-audio?
                    ["libfdk_aac"

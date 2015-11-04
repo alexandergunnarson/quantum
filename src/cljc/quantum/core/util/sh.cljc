@@ -31,11 +31,11 @@
   (let [output-line            (or output-line            fn-nil)
         output-timeout-handler (or output-timeout-handler fn-nil)
         input-chan-worker
-          (lt-thread-loop
+          (async-loop
             {:name :input-chan :parent id :close-reqs close-reqs}
             []
             (log/pr ::inspect "Input stream doing its job")
-            (let [input-str (async/take-with-timeout! input-chan 2000)] ; so it can make sure to close afterward
+            (let [input-str (async/take!! input-chan 2000)] ; so it can make sure to close afterward
               (when (string? input-str)
                 (.write ^BufferedWriter std-in-writer ^String input-str)
                 (.flush ^BufferedWriter std-in-writer))
@@ -50,17 +50,17 @@
             stream-source (get stream-names n)
             output-chan (get output-chans n)
             buffer-writer
-              (lt-thread-loop
+              (async-loop
                 {:name (str/keyword+ :buffer-writer- stream-source) :parent id :close-reqs close-reqs}
                 []
                 (let [i (int (.read ^BufferedReader reader))] ; doesn't actually block... actually pretty stupid
                   (if (= i (int -1))
-                      (Thread/sleep 10) ; 10ms delay to read the next char if there's no chars
+                      (async/sleep 10) ; 10ms delay to read the next char if there's no chars
                       (->> i char
                            (.append ^StringBuffer buffer)))
                   (recur)))
             line-reader
-              (lt-thread-loop
+              (async-loop
                 {:name (str/keyword+ :line-reader- stream-source) :parent id :close-reqs close-reqs
                  :handlers {:error/any.post (fn [state-] (thread/close! id))}}
                  ; atom because sleep-time isn't getting updated... weird...
@@ -79,7 +79,7 @@
                                   (>!! output-chan rest-line))
                                 (output-line state rest-line stream-source))
                               (recur (lasti buffer) false 0))
-                          (do (Thread/sleep line-timeout)
+                          (do (async/sleep line-timeout)
                               (recur i true (+ sleep-time line-timeout)))) 
                       (do (let [line (.subSequence ^StringBuffer buffer i (inc (long i-n)))]
                             (when-not (str/whitespace? line)
@@ -234,7 +234,7 @@
                         :state                  state
                         :output-timeout-handler (:output-timeout handlers)}))
                  children (get-in @thread/reg-threads [id :children])
-                 _ (swap! cleanup-seq conj #(thread/close-impl! process))
+                 _ (swap! cleanup-seq conj #(async/close! process))
                  _ (log/pr ::debug "Now waiting for process.")
                  exit-code (.waitFor process)
                  _ (log/pr ::debug "Finished waiting for process.")
@@ -242,7 +242,7 @@
                  print-delay
                    (when (and (empty? close-reqs)
                               (or read-streams? print-streams?))
-                     (Thread/sleep 1000))]
+                     (async/sleep 1000))]
              (when (and (empty? close-reqs) write-streams?)
                 (flush-stream! std-out-stream std-out-buffer)
                 (flush-stream! err-out-stream err-out-buffer))
@@ -255,7 +255,7 @@
              (swap! thread/reg-threads assoc-in [process-id :state] :closed)
              (exit-code-handler state exit-code process process-id (:early-termination handlers))))]
     (if thread?
-        (thread/lt-thread {:id parent} (entire-process))
+        (thread/async {:id parent :type :thread} (entire-process))
         (entire-process)))))
 
 #?(:clj (def exec! run-process!))

@@ -74,7 +74,7 @@
 (defn sign-in-email-first! [driver]
   (let [next-button (find-element driver (By/id "next"))]
     (click! next-button)
-    (Thread/sleep 500)))
+    (async/sleep 500)))
 
 (defn sign-in!
   ([^WebDriver driver ^String username ^String password]
@@ -107,7 +107,7 @@
 ; ===== OAUTH =====
 
 (defn approve! [^WebDriver driver]
-  (let [wait-for-btn-enabled! (Thread/sleep 1500) ; For some reason the button is disabled for a little bit
+  (let [wait-for-btn-enabled! (async/sleep 1500) ; For some reason the button is disabled for a little bit
         ^RemoteWebElement accept-btn
           (find-element driver (By/id "submit_approve_access"))
         approve-click! (click-load! accept-btn)]))
@@ -274,9 +274,9 @@
                    (http/request! (assoc req :oauth-token (access-key email service :current))))
              403 (fn [req resp]
                    (log/pr ::warn "Too many requests. Trying again...")
-                   (Thread/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
+                   (async/sleep (+ 2000 (rand 2000)))  ; rand to stagger pauses
                    (http/request! req))
              500 (fn [req resp]
                    (log/pr ::warn "Server error. Trying again...")
-                   (Thread/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
+                   (async/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
                    (http/request! req))})))))
