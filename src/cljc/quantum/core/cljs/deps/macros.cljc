@@ -87,8 +87,14 @@
               ret-type (->> sym meta :tag)
               suspendable? (->> sym meta :suspendable)
               ret-type-quoted (list 'quote ret-type)
-              pre-args (->> (list doc- meta-) (remove nil?))
-              sym-f    (quantum.core.cljs.deps.macros/hint-meta sym ret-type-quoted)
+              ;pre-args (->> (list meta-) (remove nil?))
+              meta-f   (assoc (or meta- {})
+                               :doc doc-)
+              meta-f   (if ret-type
+                           (assoc meta-f :tag ret-type-quoted)
+                           meta-f)
+              sym-f    (-> sym
+                           (with-meta meta-f))
               externs  (atom [])
               body-f   (if arglist (list (cons arglist body)) body)
               body-f   (->> body-f
@@ -101,29 +107,38 @@
                                     sym)))))
               _        (log/ppr :macro-expand "OPTIMIZED BODY:" body-f)
               args-f
-                (concat pre-args
-                  (for [[arglist-n & body-n] body-f]
-                    (list arglist-n
-                      (list 'let
-                        [`pre#  (list 'log/pr :trace (str "IN "             sym-f))
-                         'ret_genned123  (cons 'do body-n)
-                         `post# (list 'log/pr :trace (str "RETURNING FROM " sym-f))]
-                        'ret_genned123))))
+                (for [[arglist-n & body-n] body-f]
+                  (list arglist-n
+                    (list 'let
+                      [`pre#  (list 'log/pr :trace (str "IN "             sym-f))
+                       'ret_genned123  (cons 'do body-n)
+                       `post# (list 'log/pr :trace (str "RETURNING FROM " sym-f))]
+                      'ret_genned123)))
               _ (log/ppr :macro-expand "FINAL ARGS TO |defn|:" args-f)]
            `(do ~@(deref externs)
-                (if (and ~suspendable? (System/getProperty "quantum.core.async:allow-suspendable?"))
-                    (pulsar/suspendable! (fn ~sym-f ~@args-f))
-                    (fn ~sym-f ~@args-f))) ; May greatly increase the compilation time depending on how long the fn is.
+                (let [;~sym-f (with-meta '~sym-f
+                      ;         (assoc (or ~meta- {}) :doc ~doc-))
+                      meta-f# ~meta-f
+                      f# (with-meta
+                           (fn ~sym-f ~@args-f)
+                           meta-f#)]
+                 [(if (and ~suspendable? (System/getProperty "quantum.core.async:allow-suspendable?"))
+                      (pulsar/suspendable! f#)
+                      f#)
+                  meta-f#])) ; May greatly increase the compilation time depending on how long the fn is.
                    ; avoids eval-list stuff
            )))))
 
 #?(:clj
 (defmacro fn+ [sym & body]
-  `(quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body)))
+  `(first (quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body))))
 
 #?(:clj
 (defmacro defn+ [sym & body]
-  `(def ~sym (quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body))))
+  `(let [[f# meta#] (quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body)
+         var# (doto (def ~sym f#)
+                (alter-meta! map/merge meta#))]
+     var#)))
 
 #?(:clj
 (defn hint-body-with-arglist

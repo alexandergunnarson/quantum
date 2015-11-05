@@ -4,9 +4,9 @@
     [quantum.measure.reg]
     [quantum.core.graph :as g
       :refer [graph digraph weighted-digraph]]
-      [loom.alg         :as g.alg]
-      [loom.graph       :as g.graph]
-      [loom.alg-generic :as g.gen-alg]))
+    [loom.alg         :as g.alg]
+    [loom.graph       :as g.graph]
+    [loom.alg-generic :as g.gen-alg]))
 
 (defn ->str
   ([k joiner]
