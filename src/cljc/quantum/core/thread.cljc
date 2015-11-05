@@ -329,8 +329,9 @@
    that would normally take ~1000ms to bytecode-transform into suspendableness.
    This way it is only so transformed once."
   [body-fn {:keys [type id] :as opts}]
+  #?(:clj
   (when (= type :thread)
-    (.setName (Thread/currentThread) (name id)))
+    (.setName (Thread/currentThread) (name id))))
 
   (swap! reg-threads assoc-in [id :state] :running)
   (try+ (body-fn)
@@ -365,7 +366,7 @@
           close-req#   (-> ~opts-f :handlers :close-req)
           cleanup#     (-> ~opts-f :handlers :cleanup)
           id#              (:id          ~opts-f)
-          type#        (or (:type        ~opts-f) :thread) ; Complicated fiberness should be explicit
+          type#        (or (:type        ~opts-f) :fiber) ; Heavyweightness should be explicit
           _#           (throw-unless (in? type# #{:fiber :thread})
                          (Err. nil ":type must be in #{:fiber :thread}" type#))
           ret#         (or (:ret         ~opts-f) :chan)
