@@ -8,7 +8,8 @@
   (:require
     [quantum.core.collections.base :as cbase :refer
       [name default-zipper camelcase ns-qualify zip-reduce ensure-set update-first update-val]]
-    [quantum.core.type.core        :as tcore]
+    [quantum.core.type.core                  :as tcore]
+    [co.paralleluniverse.pulsar.core         :as pulsar]
     [quantum.core.analyze.clojure.predicates :as anap :refer 
       [#?(:clj type-hint) unqualify]]
   #_[backtick :refer [syntax-quote]]
@@ -68,22 +69,23 @@
   [obj] obj))
 
 #?(:clj
-(defmacro defn+*
+(defmacro fn+*
   ([sym doc- meta- arglist body [unk & rest-unk]]
     (if unk
         (cond
           (string? unk)
-            `(defn+* ~sym ~unk  ~meta- ~arglist ~body                 ~rest-unk)
+            `(fn+* ~sym ~unk  ~meta- ~arglist ~body                ~rest-unk)
           (map?    unk)     
-            `(defn+* ~sym ~doc- ~unk   ~arglist ~body                 ~rest-unk)
+            `(fn+* ~sym ~doc- ~unk   ~arglist ~body                ~rest-unk)
           (vector? unk)
-            `(defn+* ~sym ~doc- ~meta- ~unk     ~rest-unk             nil      )
+            `(fn+* ~sym ~doc- ~meta- ~unk     ~rest-unk            nil      )
           (list?   unk)
-            `(defn+* ~sym ~doc- ~meta- nil      ~(cons unk rest-unk) nil      )
+            `(fn+* ~sym ~doc- ~meta- nil      ~(cons unk rest-unk) nil      )
           :else
-            `(throw+ (str "Invalid arguments to |defn+|. " ~unk)))
+            `(throw+ (str "Invalid arguments to |fn+|. " ~unk)))
         (let [_        (log/ppr :macro-expand "ORIG BODY:" body)
               ret-type (->> sym meta :tag)
+              suspendable? (->> sym meta :suspendable)
               ret-type-quoted (list 'quote ret-type)
               pre-args (->> (list doc- meta-) (remove nil?))
               sym-f    (quantum.core.cljs.deps.macros/hint-meta sym ret-type-quoted)
@@ -94,7 +96,7 @@
                               (whenf*n quantum.core.cljs.deps.macros/extern?
                                 (fn [[extern-sym obj]]
                                   (let [sym (gensym "externed")]
-                                    (log/pr :macro-expand "EXTERNED" sym "IN DEFN+")
+                                    (log/pr :macro-expand "EXTERNED" sym "IN FN+")
                                     (swap! externs conj (list 'def sym obj))
                                     sym)))))
               _        (log/ppr :macro-expand "OPTIMIZED BODY:" body-f)
@@ -109,13 +111,19 @@
                         'ret_genned123))))
               _ (log/ppr :macro-expand "FINAL ARGS TO |defn|:" args-f)]
            `(do ~@(deref externs)
-                (defn ~sym-f ~@args-f)) ; avoids eval-list stuff
+                (if (and ~suspendable? (System/getProperty "quantum.core.async:allow-suspendable?"))
+                    (pulsar/suspendable! (fn ~sym-f ~@args-f))
+                    (fn ~sym-f ~@args-f))) ; May greatly increase the compilation time depending on how long the fn is.
+                   ; avoids eval-list stuff
            )))))
 
+#?(:clj
+(defmacro fn+ [sym & body]
+  `(quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body)))
 
 #?(:clj
 (defmacro defn+ [sym & body]
-  `(quantum.core.cljs.deps.macros/defn+* ~sym nil nil nil nil ~body)))
+  `(def ~sym (quantum.core.cljs.deps.macros/fn+* ~sym nil nil nil nil ~body))))
 
 #?(:clj
 (defn hint-body-with-arglist

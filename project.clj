@@ -114,6 +114,7 @@
      [org.clojure/core.async "0.2.371"]
      [co.paralleluniverse/pulsar "0.7.3"] ; If you include it, it conflicts
      [co.paralleluniverse/quasar-core "0.7.3"] ; :classifier "jdk8" 
+     ;[com.typesafe.akka/akka-actor_2.11 "2.4.0"]
      ; ==== CLOJURESCRIPT ====  
      [org.clojure/clojurescript "0.0-3269"      ]
      [reagent                   "0.5.0"         :exclusions [org.json/json]]

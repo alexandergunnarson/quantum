@@ -157,7 +157,7 @@
 
 ; HEADLESS BROWSER AUTOMATION
 
-(defn sign-in!
+(defn+ ^:suspendable sign-in!
   {:in [:argunnarson]}
   [username]
   (.get (web/driver) "http://www.twitter.com/")

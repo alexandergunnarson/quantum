@@ -113,7 +113,7 @@
             (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
 
 #?(:clj
-(defn ^:private close!* [thread thread-id close-reqs cleanup force?]
+(defn+ ^:private ^:suspendable close!* [thread thread-id close-reqs cleanup force?]
   (let [max-tries 3]
     (log/pr ::debug "Before close request for id" thread-id)
     (when (and close-reqs (not (async/closed? close-reqs)))
@@ -279,7 +279,23 @@
           :else
             "")))))
 
-(defn async-fiber*
+#?(:clj (defrecord f->chan-exc [^Throwable exc]))
+
+(defn f->chan
+  [c f & args]
+  (pulsar/sfn []
+    ; TODO can't simply use finally (as in core.async) because it triggers an instrumentation problem in do-alts!
+    (let [ret (try (apply f args)
+                (catch Throwable t
+                  (->f->chan-exc t)))]
+      (when-not (or (nil? ret) (instance? f->chan-exc ret))
+        (async/>!! c ret))
+      (close! c)
+      (when (instance? f->chan-exc ret)
+        (throw (:exc ret))))))
+
+(defmacro async-fiber*
+  ; The -jdk8 specification is 3x slower — benchmarked using their benchmarker
   {:benchmarks
     '{(dotimes [n 10000] (async {:id (gensym)} (async/sleep 2000) 123))
         2064
@@ -287,29 +303,108 @@
         1429
       (dotimes [n 10000] (async {:id (gensym)}                    123))
         1464}}
-  [async-fn opts]
-  (let [c          (chan 1)
-        async-fn-f (pulsar/suspendable!
-                     (@#'pasync/f->chan c
-                      (pulsar/suspendable!
-                        ; Wraps the fn because marking suspendable, etc. requires bytecode manipulation 
-                        ; and the shorter the fn, the less the bytecode and the faster the process
-                        ; Otherwise can take at least 1000 ms 
-                        (fn [] (async-fn)))))  
-        ; This with the -jdk8 specification is 3x slower — benchmarked using their benchmarker
-        ; It's especially slow on the first thread spawn
-        ; (time (dotimes [n 10000] (let [abcde (async {:id (gensym)}  (async/sleep 2000) 123)])))
-        fiber (co.paralleluniverse.fibers.Fiber. (name (:id opts))
-                 (pulsar/get-scheduler (:threadpool opts))
-                 (int (or (:stack-size opts) -1))
-                 (pulsar/->suspendable-callable async-fn-f))]
-    ; Something in here because of ForkJoinPool took ~1000ms to execute — .scan()
-    (.start fiber)
-    (condp = (:ret opts)
-      :chan   c
-      :future (pulsar/fiber->future fiber))))
+  [opts async-fn & args]
+  `(let [opts# ~opts
+         c# (chan 1)
+        ; It would be nice to wrap the fn because marking suspendable, etc. requires bytecode manipulation 
+        ; and the shorter the fn, the less the bytecode and the faster the process
+        ; Otherwise can take at least 1000 ms 
+        ; But it causes instrumentation errors
+        ; f (fn [] (async-fn))
+        fiber# (pulsar/spawn-fiber
+                :name       (name (:id         opts#))
+                :stack-size (or   (:stack-size opts#) -1)
+                :scheduler  (:threadpool opts#)
+                (f->chan c#
+                  ; If it's not marked as suspendable, it strangely (!) executes twice...
+                  (pulsar/suspendable! ~async-fn)
+                  ~@args))]
+    
+    (condp = (:ret opts#)
+      :chan   c#
+      :future (pulsar/fiber->future fiber#))))
+
+(defn+ ^:suspendable gen-async-fn
+  "This fn exists in part because it contains all the code
+   that would normally take ~1000ms to bytecode-transform into suspendableness.
+   This way it is only so transformed once."
+  [body-fn {:keys [type id] :as opts}]
+  (when (= type :thread)
+    (.setName (Thread/currentThread) (name id)))
+
+  (swap! reg-threads assoc-in [id :state] :running)
+  (try+ (body-fn)
+    (catch Object e
+      ((or (-> opts :handlers :err/any.pre ) fn-nil))
+      (log/pr-opts :warn #{:thread?} "Exited with exception" e)
+      ((or (-> opts :handlers :err/any.post) fn-nil)))
+    (finally 
+      (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
+      (when (get @reg-threads id)
+        (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" id)
+        (doseq [child-id (get-in @reg-threads [id :children])]
+          (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id "OF" id "IN END-THREAD")
+          (close! child-id)
+          (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id "OF" id "IN END-THREAD"))
+        (force (-> opts :handlers :cleanup)) ; Performed only once
+        (swap! reg-threads assoc-in [id :state] :closed)
+        (deregister-thread! id)))))
 
 #?(:clj
+(defmacro gen-async-opts
+  "Generates options map for |async|."
+  [opts & body]
+  (let [proc-id        (gensym "proc-id")
+        close-req-call (gensym "close-req-call")
+        close-reqs     (gensym "close-reqs")
+        cleanup-f      (gensym "cleanup-f")
+        opts-f         (gensym "opts-f")]
+   `(let [~opts-f ~opts ; so you create it only once
+          asserts# (throw-unless (map? ~opts-f) "@opts must be a map.")
+          ; TODO Proper destructuring in a macro would be nice... oh well...
+          close-req#   (-> ~opts-f :handlers :close-req)
+          cleanup#     (-> ~opts-f :handlers :cleanup)
+          id#              (:id          ~opts-f)
+          type#        (or (:type        ~opts-f) :thread) ; Complicated fiberness should be explicit
+          _#           (throw-unless (in? type# #{:fiber :thread})
+                         (Err. nil ":type must be in #{:fiber :thread}" type#))
+          ret#         (or (:ret         ~opts-f) :chan)
+          _#           (throw-unless (in? ret# #{:chan :future})
+                         (Err. nil ":ret must be in #{:chan :future}" ret#))
+          parent#          (:parent      ~opts-f)
+          name#            (:name        ~opts-f)
+          cleanup-seq#     (:cleanup-seq ~opts-f)
+          asserts#
+            (do (when cleanup#
+                  (throw-unless (fn? cleanup#) "@cleanup must be a function."))
+                (when cleanup-seq#
+                  (throw-unless (instance? clojure.lang.IAtom cleanup-seq#)
+                    "@cleanup-seq must be an atom.")))
+          ~cleanup-f
+            (if cleanup#
+                (wrap-delay cleanup#)
+                (when cleanup-seq#
+                  (delay
+                    (doseq [f# @cleanup-seq#]
+                      (try+ (f#) 
+                        (catch Object e#
+                          (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
+          ~close-req-call (wrap-delay close-req#)
+          ~close-reqs (or (:close-reqs ~opts-f) (chan :queue))
+          ~proc-id   (gen-proc-id id# parent# name#)
+          async-body-fn# (if (= type# :fiber)
+                             (pulsar/suspendable! (fn [] ~@body))
+                             (fn [] ~@body))
+          ~opts-f    (coll/assocs-in+         ~opts-f
+                       [:close-reqs         ] ~close-reqs
+                       [:id                 ] ~proc-id
+                       [:handlers :close-req] ~close-req-call
+                       [:handlers :cleanup  ] ~cleanup-f
+                       [:ret                ] ret#
+                       [:type               ] type#
+                       [:body-fn            ] async-body-fn#)]
+      ~opts-f))))
+
 (defmacro async
   "Creates a closeable thread or 'fiber'.
    Options:
@@ -344,79 +439,14 @@
    Already handled:
      :cleanup (via |with-cleanup| on @cleanup-seq)"
   [opts & body]
-  (let [proc-id        (gensym "proc-id")
-        close-req-call (gensym "close-req-call")
-        close-reqs     (gensym "close-reqs")
-        cleanup-f      (gensym "cleanup-f")
-        opts-f         (gensym "opts-f")]
-   `(let [~opts-f ~opts ; so you create it only once
-          asserts# (throw-unless (map? ~opts-f) "@opts must be a map.")
-          ; TODO Proper destructuring in a macro would be nice... oh well...
-          close-req#   (-> ~opts-f :handlers :close-req)
-          cleanup#     (-> ~opts-f :handlers :cleanup)
-          id#              (:id          ~opts-f)
-          type#        (or (:type        ~opts-f) :fiber ) ; "Heaviness" should be explicit
-          _#           (throw-unless (in? type# #{:fiber :thread})
-                         (Err. nil ":type must be in #{:fiber :thread}" type#))
-          ret#         (or (:ret         ~opts-f) :chan)
-          _#           (throw-unless (in? ret# #{:chan :future})
-                         (Err. nil ":ret must be in #{:chan :future}" ret#))
-          parent#          (:parent      ~opts-f)
-          name#            (:name        ~opts-f)
-          cleanup-seq#     (:cleanup-seq ~opts-f)
-          asserts#
-            (do (when cleanup#
-                  (throw-unless (fn? cleanup#) "@cleanup must be a function."))
-                (when cleanup-seq#
-                  (throw-unless (instance? clojure.lang.IAtom cleanup-seq#)
-                    "@cleanup-seq must be an atom.")))
-          ~cleanup-f
-            (if cleanup#
-                (wrap-delay cleanup#)
-                (when cleanup-seq#
-                  (delay
-                    (doseq [f# @cleanup-seq#]
-                      (try+ (f#) 
-                        (catch Object e#
-                          (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
-          ~close-req-call (wrap-delay close-req#)
-          ~close-reqs (or (:close-reqs ~opts-f) (chan :queue))
-          ~proc-id   (gen-proc-id id# parent# name#)
-          ~opts-f    (coll/assocs-in+         ~opts-f
-                       [:close-reqs         ] ~close-reqs
-                       [:id                 ] ~proc-id
-                       [:handlers :close-req] ~close-req-call
-                       [:handlers :cleanup  ] ~cleanup-f
-                       [:ret                ] ret#)
-          async-fn#
-            (fn []
-              (when (= type# :thread)
-                (.setName (Thread/currentThread) (name ~proc-id)))
-
-              (swap! reg-threads assoc-in [~proc-id :state] :running)
-              (try+ ~@body
-                (catch Object e#
-                  ((or (-> ~opts-f :handlers :err/any.pre ) fn-nil))
-                  (log/pr-opts :warn #{:thread?} "Exited with exception" e#)
-                  ((or (-> ~opts-f :handlers :err/any.post) fn-nil)))
-                (finally 
-                  (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
-                  (when (get @reg-threads ~proc-id)
-                    (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" ~proc-id)
-                    (doseq [child-id# (get-in @reg-threads [~proc-id :children])]
-                      (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD")
-                      (close! child-id#)
-                      (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLOSING CHILD" child-id# "OF" ~proc-id "IN END-THREAD"))
-                    (force ~cleanup-f) ; Performed only once
-                    (swap! reg-threads assoc-in [~proc-id :state] :closed)
-                    (deregister-thread! ~proc-id)))))]
-      (condp = type#
+  `(let [opts# ~opts
+         opts-f# (gen-async-opts opts# ~@body)]
+     (condp = (:type opts-f#)
         :fiber
-          (async-fiber* async-fn# ~opts-f)
+          (async-fiber* opts-f# gen-async-fn (:body-fn opts-f#) opts-f#)
         :thread ; TODO assumes ret is chan
-          (async-chan* ~opts-f
-            (async-fn#)))))))
-
+          (async-chan* opts-f#
+            (gen-async-fn (:body-fn opts-f#) opts-f#)))))
   
 #?(:clj
 (defmacro async-loop
@@ -642,13 +672,13 @@
   )
 
 
-; (defn do-intervals [millis & args]
+; (defn+ ^:suspendable do-intervals [millis & args]
 ;   (->> args
 ;        (interpose #(async/sleep millis))
 ;        (map+ fold+)
 ;        fold+
 ;        pr/suppress))
-; (defn do-every [millis n func]
+; (defn+ do-every ^:suspendable [millis n func]
 ;   (dotimes [_ n] (func) (async/sleep millis)))
 
 ; ;___________________________________________________________________________________________________________________________________

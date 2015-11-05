@@ -822,6 +822,7 @@
 
 
 #?(:clj (defalias defn+                    deps/defn+))
+#?(:clj (defalias fn+                      deps/fn+  ))
 #?(:clj (defalias extend-protocol-for-all  deps/extend-protocol-for-all))
 #?(:clj (defalias defntp                   deps/defntp))
 ;#?(:clj (defalias defnt                    deps/defnt))

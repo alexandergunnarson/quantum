@@ -143,20 +143,21 @@
   [^RemoteWebElement elem]
   (.click elem))
 
-(defn find-element
+; TODO code pattern with try-times
+(defn+ ^:suspendable find-element
   {:attribution "Alex Gunnarson"
    :todo ["Use the forthcoming |try-times| function"]}
-  ([elem]         (find-element (driver) elem))
-  ([driver elem] (find-element driver elem 1 0))
-  ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms]
-    ((fn looper [n]
-      (if (>= n times)
-          (throw+ (not-found-error driver elem))
-          (try
-            (.findElement driver elem)
-            (catch NoSuchElementException _
-              (async/sleep interval-ms)
-              (looper (inc n)))))) 0)))
+  ([       elem                  ] (find-element (driver) elem))
+  ([driver elem                  ] (find-element  driver  elem 1 0))
+  ([driver elem times interval-ms] (find-element  driver  elem times interval-ms 0))
+  ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms n]
+    (if (>= n times)
+        (throw+ (not-found-error driver elem))
+        (try
+          (.findElement driver elem)
+          (catch NoSuchElementException _
+            (async/sleep interval-ms)
+            (find-element driver elem times interval-ms (inc n))))))
 
 (defn find-elements
   {:attribution "Alex Gunnarson"}

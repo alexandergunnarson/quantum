@@ -27,7 +27,7 @@
 (defn logout! []
   (web/navigate! "https://banking.zionsbank.com/olb/retail/exit"))
 
-(defn initiate-download! []
+(defn+ ^:suspendable initiate-download! []
   (let [accounts-tab (web/find-element (By/xpath "//span[.='Accounts']"))
         _ (web/click! accounts-tab)
         _ (async/sleep 1000)

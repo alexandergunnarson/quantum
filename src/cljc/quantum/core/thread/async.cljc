@@ -160,13 +160,16 @@
   ([#{java.util.concurrent.Future
       co.paralleluniverse.fibers.Fiber} x] (.isDone x))))
 
-(defn sleep
+(defn+ ^:suspendable sleep
   "Never use Thread/sleep in a go block. Use |(<! (timeout <msec>))|.
-   Never use Thread/sleep in a fiber or it will generate constant warnings."
-  [^long msec]
+   Never use Thread/sleep in a fiber or it will generate constant warnings.
+
+   Never use |sleep| without marking the enclosing function |suspendable!| (and probably all other
+   functions that call it...)."
+  [msec]
   #?(:clj   (if (Fiber/currentFiber)
-                (Fiber/sleep  msec)
-                (Strand/sleep msec))
+                (Fiber/sleep  ^long msec)
+                (Strand/sleep ^long msec))
      :cljs (async/<! (async/timeout msec))))
 
 ; MORE COMPLEX OPERATIONS
@@ -174,7 +177,7 @@
 ; For some reason, having lots of threads with core.async/alts!! "clogs the tubes", as it were
 ; Possibly because of deadlocking?
 ; So we're moving away from core.async, but keeping the same concepts
-(defn alts!!-queue [chans timeout]
+(defn+ alts!!-queue [chans timeout] ; Unable to mark ^:suspendable because of synchronization
   (loop []
     (let [result (seq-loop [c   chans
                             ret nil] 
