@@ -80,8 +80,9 @@
   {:msg         "Selenium element not found."
    :type        :not-found
    :elem        elem
-   :on-page     (.getCurrentUrl driver)
-   :page-source (.getPageSource driver)})
+   :driver      driver
+   :on-page     (when driver (.getCurrentUrl driver))
+   :page-source (when driver (.getPageSource driver))})
 
 (defn navigate!
   ([address] (navigate! (driver) address))
@@ -143,21 +144,30 @@
   [^RemoteWebElement elem]
   (.click elem))
 
-; TODO code pattern with try-times
 (defn+ ^:suspendable find-element
-  {:attribution "Alex Gunnarson"
-   :todo ["Use the forthcoming |try-times| function"]}
+  {:attribution "Alex Gunnarson"}
   ([       elem                  ] (find-element (driver) elem))
-  ([driver elem                  ] (find-element  driver  elem 1 0))
-  ([driver elem times interval-ms] (find-element  driver  elem times interval-ms 0))
-  ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms n]
-    (if (>= n times)
-        (throw+ (not-found-error driver elem))
-        (try
-          (.findElement driver elem)
-          (catch NoSuchElementException _
-            (async/sleep interval-ms)
-            (find-element driver elem times interval-ms (inc n))))))
+  ([driver elem                  ] (find-element  driver  elem 2 100))
+  ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms]
+    ; TODO create some sort of contract system to make this less repetitive
+    (throw-unless (nnil? driver)
+      (Err. :invalid/web-driver "Driver cannot be nil." (kmap driver)))
+    (throw-unless (nnil? elem)
+      (Err. :invalid/web-element "Web element cannot be nil." {:web-element elem}))
+    (throw-unless (number? times)
+      (Err. :invalid/number "Try-times must be a number." {:try-times times}))
+    (throw-unless (number? interval-ms)
+      (Err. :invalid/number "Interval-ms must be a number." (kmap interval-ms)))
+
+    (try+ (try-times times 
+            (try
+              (.findElement driver elem)
+              (catch NoSuchElementException _
+                (async/sleep interval-ms))))
+      (catch [:type :max-tries-exceeded] {{:keys [last-error]} :objs :as e}
+        (if (instance? NoSuchElementException last-error)
+            (throw+ (not-found-error driver elem))
+            (throw+ last-error))))))
 
 (defn find-elements
   {:attribution "Alex Gunnarson"}

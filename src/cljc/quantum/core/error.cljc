@@ -8,7 +8,11 @@
   #?(:cljs (:require-macros [quantum.core.log :as log])))
 
 ; Doesn't work: "Use of undeclared Var ___" if at runtime
-;#?(:clj (defmacro try-eval [obj] (eval obj)))
+;#?(:clj (defmacro try-eval [obj] (eval obj)))  
+
+; Error namespaces
+; :missing-data
+; :invalid-format
 
 (defrecord Err [type msg objs])
 
@@ -20,11 +24,9 @@
 ; ================== START SLINGSHOT ==================
 
 (defn appears-within?
-  "Returns true if x appears within coll at any nesting depth.
-
-   I added termination on find."
+  "Returns true if x appears within coll at any nesting depth.."
   {:source "slingshot"
-   :contributors ["Alex Gunnarson"]}
+   :contributors {"Alex Gunnarson" "Added termination on find"}}
   [x coll]
   (log/pr ::macro-expand "APPEARS-WITHIN")
   (let [result (atom false)]
@@ -282,8 +284,8 @@
         _ (log/pr ::macro-expand "AFTER PARSE-THROW IN THROW-FN")
         context (make-context object message cause stack-trace)
         _ (log/pr ::macro-expand "AFTER MAKE-CONTEXT IN THROW-FN")]
-    (doto (*throw-hook* context)
-      (log/pr ::macro-expand "IS THE THROW HOOK"))))
+    (*throw-hook* context)
+    #_(log/pr ::macro-expand "IS THE THROW HOOK")))
 
 #?(:clj
 (defmacro rethrow
@@ -311,6 +313,26 @@
 #?(:clj
 (defmacro try+*
   {:source "https://github.com/scgilardi/slingshot/"
+   :doc "BIG NOTE: If you're ever concerned that the wrong exception is being
+                   printed, then rest assured. It's because |!| prints the
+                   cause, not the returned object.
+
+                   Example:
+                   (try+ (throw (Exception.))
+                     (catch Object e
+                       (throw+ {:random-obj? true})))
+
+                   This will print not |{:random-obj? true}|, but rather
+                   Exception   <NAMESPACE>/eval<RANDOM_NUMS> (form-init ...)
+
+                   This might lead you to think that the incorrect object was
+                   thrown, but this is not the case.
+
+                   Surround the code example like so:
+                   (try+ <CODE>
+                     (catch Object e e))
+
+                   And the correct object will print."
    :in '[(throw+ {}) (catch Object _ 123)]
    :out 123}
   [lang & body]
@@ -425,7 +447,22 @@
        ~arg)))
 
 
+#?(:clj
+(defn try-times-fn [max-n f]
+  (loop [n 0 error-n nil]
+    (if (> n max-n)
+        (throw+ (Err. :max-tries-exceeded nil
+                  {:tries n :last-error error-n}))
+        (let [[error result]
+                (try+ [nil (f)]
+                  (catch Object e [e nil]))]
+          (if error
+              (recur (inc n) error)
+              result))))))
 
+#?(:clj 
+(defmacro try-times [max-n & body]
+  `(try-times-fn ~max-n (fn [] ~@body))))
 
 
 ; Probably something like this but with error catching/gates

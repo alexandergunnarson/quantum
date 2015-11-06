@@ -10,7 +10,8 @@
      dec dec' inc inc'])
   #?(:clj (:require seqspert.vector))
   (:require-quantum
-    [ns err fn log logic red str map set macros type vec arr pconvert num]))
+    [ns err fn log logic red str map set macros type vec arr pconvert num])
+)
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -163,10 +164,12 @@
 (declare array)
 
 (defnt ^long count
-  ([^array? arr ] (alength arr))
-  ([        coll] (core/count coll))
+  ([^array?                                             x] (alength x))
+#?(:clj 
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (count (.buf x))))
+  ([                                                    x] (core/count x))
   ; Debatable whether this should be allowed
-  ([:else   obj ] 0))
+  ([:else                                               x] 0))
 
 #?(:cljs
 (defnt empty?

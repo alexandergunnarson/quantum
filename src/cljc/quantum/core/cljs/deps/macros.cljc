@@ -85,7 +85,8 @@
             `(throw+ (str "Invalid arguments to |fn+|. " ~unk)))
         (let [_        (log/ppr :macro-expand "ORIG BODY:" body)
               ret-type (->> sym meta :tag)
-              suspendable? (->> sym meta :suspendable)
+              suspendable?   (->> sym meta :suspendable)
+              interruptible? (->> sym meta :interruptible)
               ret-type-quoted (list 'quote ret-type)
               ;pre-args (->> (list meta-) (remove nil?))
               meta-f   (assoc (or meta- {})
@@ -111,7 +112,11 @@
                   (list arglist-n
                     (list 'let
                       [`pre#  (list 'log/pr :trace (str "IN "             sym-f))
-                       'ret_genned123  (cons 'do body-n)
+                       'ret_genned123  (if interruptible?
+                                           `(if (quantum.core.thread.async/interrupted?)
+                                                (throw (InterruptedException.))
+                                                (do ~@body-n))
+                                           `(do ~@body-n))
                        `post# (list 'log/pr :trace (str "RETURNING FROM " sym-f))]
                       'ret_genned123)))
               _ (log/ppr :macro-expand "FINAL ARGS TO |defn|:" args-f)]

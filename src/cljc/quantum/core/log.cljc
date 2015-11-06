@@ -25,12 +25,12 @@
        :user              true}
       map->LoggingLevels atom)) ; alert, inspect, debug
 
-(def log  (atom []))
-(def vars (atom {}))
+(defonce log  (atom []))
+(defonce vars (atom {}))
 (defn cache! [k v]
   (swap! vars assoc k v))
-(def statuses (atom (async/chan)))
-(def errors (atom []))
+(defonce statuses (atom (async/chan)))
+(defonce errors (atom []))
 (defn error [throw-context]
   (swap! errors conj
     (update throw-context :stack-trace vec)))
@@ -99,12 +99,13 @@
                         (apply print-fn args-f)))
                 (when (= pr-type :macro-expand) (print " */\n")))]
         (print out-str)
-        (swap! quantum.core.log/log conj
-          (LogEntry.
-            "TIMESTAMP" #_(time/now)
-            pr-type
-            curr-fn
-            out-str))
+        (when (:log? opts)
+          (swap! quantum.core.log/log conj
+            (LogEntry.
+              "TIMESTAMP" #_(time/now)
+              pr-type
+              curr-fn
+              out-str)))
         nil)))
 
 #?(:clj

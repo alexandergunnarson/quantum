@@ -154,6 +154,9 @@
      [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
      [org.eclipse.jetty/jetty-server "9.2.10.v20150310"]
      
+     ; ERROR
+     [slingshot "0.12.2"]
+
      ; AUDIO
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"] ; Creating audio plugin
      ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"] ; Creating audio plugin

@@ -34,17 +34,25 @@
 
 (defn request!
   ([req]
-    (request! (default-username) (default-app) req))
-  ([username-0 app-0 {:as request :keys [url method query-params timestamp]}]
-    (let [username (or username-0 (default-username))
-          app      (or app-0      (default-app     ))
+    (request! (default-username) (default-app) req)) ; For experimentation purposes
+  ([username app {:as request :keys [url method query-params timestamp]}]
+    (let [_ (throw-unless (nnil? username)
+              (Err. :missing-data/username      "Username must not be nil."       username   ))
+          _ (throw-unless (nnil? app     )
+              (Err. :missing-data/app           "App must not be nil."            app        ))
+          api-key     (auth/datum :twitter username :apps app :api-key)
+          _ (throw-unless (string? api-key)
+              (Err. :invalid-format/api-key     "Twitter API key must be string." api-key    ))
+          oauth-token (auth/datum :twitter username :apps app :oauth-token)
+          _ (throw-unless (string? oauth-token)
+              (Err. :invalid-format/oauth-token "Oauth token must be string."     oauth-token))
           auth-params
             (sorted-map
-              "oauth_consumer_key"     (auth/datum :twitter username :apps app :api-key)
+              "oauth_consumer_key"     api-key
               "oauth_nonce"            (rand/rand-string 32 #{:numeric :upper :lower})
               "oauth_signature_method" "HMAC-SHA1"
               "oauth_timestamp"        (-> (time/now-unix) (uconv/convert :millis :sec) core/int str)
-              "oauth_token"            (auth/datum :twitter username :apps app :oauth-token)
+              "oauth_token"            oauth-token
               "oauth_version"          "1.0")
           oauth-signature (gen-oauth-signature username app request auth-params)
           auth-params-f (assoc auth-params "oauth_signature" oauth-signature)
@@ -68,23 +76,27 @@
          flatten+
          (into #{})))
 
-(defn tweets [user-id & [opts username app]]
+(defn tweets [user-id & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/statuses/user_timeline.json"
      :method :get
      :query-params
        {"user_id" user-id
-        "count"   "200"}
-     :parse? true}))
+        "count"   "200"
+        "cursor"  (or cursor "-1")} ; -1 is the start cursor
+     :handlers handlers
+     :parse? parse?
+     :keys-fn keys-fn}))
 
-(defn rate-limits [& [{:keys [parse? handlers] :as opts} username app]]
+(defn rate-limits [& [{:keys [parse? handlers keys-fn] :as opts} username app]]
   (request! username app
     {:url "https://api.twitter.com/1.1/application/rate_limit_status.json"
      :method :get
      :handlers handlers
-     :parse? (whenc parse? nil? true)}))
+     :parse? parse?
+     :keys-fn keys-fn}))
 
-(defn followers:list [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn followers:list [user-id & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/followers/list.json"
      :method :get
@@ -93,9 +105,11 @@
         "count"   "200"
         "cursor"  (or cursor "-1")} ; -1 is the start cursor
      :parse? parse?
+     :keys-fn keys-fn
      :handlers handlers}))
 
-(defn user:id->followees:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->followees:ids [user-id & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
+  ; Very strangely, I get a 401 error
   (request! username app
     {:url    "https://api.twitter.com/1.1/friends/ids.json"
      :method :get
@@ -104,9 +118,10 @@
         "count"   "5000"
         "cursor"  (or cursor "-1")} ; -1 is the start cursor
      :parse? parse?
+     :keys-fn keys-fn
      :handlers handlers}))
 
-(defn user:id->followers:ids [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->followers:ids [user-id & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/followers/ids.json"
      :method :get
@@ -117,16 +132,17 @@
      :parse? parse?
      :handlers handlers}))
 
-(defn user:id->metadata [user-id & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:id->metadata [user-id & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
   (request! username app
     {:url    "https://api.twitter.com/1.1/users/show.json"
      :method :get
      :query-params
        {"user_id" user-id}
      :parse? parse?
+     :keys-fn keys-fn
      :handlers handlers}))
 
-(defn user:ids->metadata [user-ids & [{:keys [cursor parse? handlers] :as opts} username app]]
+(defn user:ids->metadata [user-ids & [{:keys [cursor parse? handlers keys-fn] :as opts} username app]]
   (throw-unless (-> user-ids count (<= 100))
     (Err. nil "<= 100 user-ids are allowed in a single request to |user:ids->metadata|. Found:" (count user-ids)))
   ; You are strongly encouraged to use a POST for larger requests.
@@ -135,6 +151,7 @@
      :method :post
      :query-params {"user_id" (str/join "," user-ids)}
      :parse? parse?
+     :keys-fn keys-fn
      :handlers handlers}))
 
 #_(defn tweets-by-id [tweet-ids]

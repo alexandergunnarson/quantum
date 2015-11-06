@@ -15,6 +15,7 @@
             (co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
 
 #?(:clj (defonce reg-threads (atom {}))) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
+#?(:clj (defn thread-ids [] (-> reg-threads deref keys sort)))
 #?(:clj (defonce reg-threads-tree (atom {})))
 
 (defn wrap-delay [f]
@@ -148,7 +149,7 @@
         (interrupt!* thread thread-id interrupted force?)
         (close!*     thread thread-id close-reqs cleanup force?)))))) ; closed handler is called by the thread reaper when it's actually close
 
-(defn close-threads! [pred]
+(defn force-close-threads! [pred]
   (->> @reg-threads
        (coll/filter-keys+ pred)
        redm

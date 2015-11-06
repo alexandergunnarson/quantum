@@ -414,6 +414,10 @@
 (def error?  (fn-or (fn [x] (instance? Err       x)) ; fn-or with |partial| might have problems?
                     (fn [x] (instance? Throwable x))))
 
+(defn- gen-cache-fn-sym [sym] (symbol (str "cache-" (name sym) "!"          )))
+(defn- gen-cacher-sym   [sym] (symbol (str          (name sym) "-cacher"    )))
+
+
 (defmacro defmemoized
   {:todo ["Make extensible"]}
   [memo-type opts cache-sym-0 name- & fn-args]
@@ -443,8 +447,8 @@
             (~register-cache!)
             (def ~name-     (:f memoized#)))
         :datomic ; TODO ensure function has exactly 1 arg
-         ~(let [cache-fn-sym             (symbol (str "cache-" (name name-) "!"          ))
-                cacher-sym               (symbol (str          (name name-) "-cacher"    ))
+         ~(let [cache-fn-sym             (gen-cache-fn-sym name-)
+                cacher-sym               (gen-cacher-sym   name-)
                 entity-if-sym            (symbol (str          (name name-) "->entity-if"))
                 pk-adder-sym             (symbol (str          (name name-) ":add-pk!"   ))]
             `(let [opts#               ~opts
@@ -476,7 +480,7 @@
                                    (let [eids# (query ; Possibly slow?
                                                  (into [:find (list '~'count '~'?e) :where]
                                                    (conj [['~'?e from-key# from-val#] ['~'?e pk#]]
-                                                     (list '~'or
+                                                     (apply list '~'or
                                                        (for [skip-key# skip-keys#] ; different symbols = OR
                                                          ['~'?e skip-key#])))))]
                                      (nempty? eids#)))
@@ -587,3 +591,25 @@
                      (var ~cache-fn-sym))))))
         (throw+ (Err. nil "Memoization type not recognized." ~memo-type))))))
 
+(defn potential-problems-in-cache [cache]
+  (->> cache
+       (coll/remove-vals+ (eq? :db))
+       filter-realized-delays+
+       redv))
+
+(defn restart-cacher! [base-sym]
+  (let [cacher-sym (gen-cacher-sym base-sym)
+        cacher-kw  (keyword (namespace cacher-sym) (name cacher-sym))]
+    (if (or (not (contains? @thread/reg-threads cacher-kw))
+            (first (thread/force-close-threads! (eq? cacher-kw))))
+        (do (reset-var! (resolve cacher-sym)
+              (gen-cacher
+                (keyword (name (ns-name *ns*))
+                         (name cacher-sym))
+                (resolve (gen-cache-fn-sym base-sym))))
+            true)
+        false)))
+
+(defn ->hidden-key [k]
+  (keyword (namespace k)
+           (-> k name (str ".hidden?"))))

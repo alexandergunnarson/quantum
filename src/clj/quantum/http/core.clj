@@ -163,7 +163,7 @@
                  [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])}]})
     :attribution "Alex Gunnarson"}
   [{:as req
-    :keys [handlers log? log tries max-tries parse?]
+    :keys [handlers log? log tries max-tries parse? keys-fn]
     :or {as :auto
          max-tries 3
          tries     0}}]
@@ -188,7 +188,7 @@
                 (status-handler req-n+1 response)))
             (whenf (fn-and (constantly parse?)
                            (fn-> :headers :content-type (containsv? "application/json")))
-              (fn-> :body (json/parse-string str/keywordize)))))))
+              (fn-> :body (json/parse-string (or keys-fn str/keywordize))))))))
 
 (defnt ping!
   ([^string? url] (with-open [socket (java.net.Socket. url 80)] socket)))

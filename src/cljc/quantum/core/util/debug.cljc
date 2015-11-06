@@ -175,17 +175,3 @@
 ;   [test & args]
 ;   `(when-not ~test
 ;      (fail ~@args)))
-
-#?(:clj 
-(defn try-times-naive [max-tries try-expr-0 catch-expr-0]
-  (loop [tries-n 0 try-expr-f nil]
-    (if (or (and (nnil? try-expr-f) ; not the initial value of nil
-                 (not= try-expr-f catch-expr-0)) ; if the exception is worked out
-            (> tries-n max-tries))
-        try-expr-f
-        (let [try-expr-n 
-               (try (try-expr-0)
-                    (catch Exception e
-                      (doseq [expr catch-expr-0]
-                        (expr e))))]
-          (recur (inc tries-n) try-expr-n))))))

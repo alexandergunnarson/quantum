@@ -42,26 +42,26 @@
 ; ============ VAR MANIPULATION, ETC. ============
 ; CLJS compatible only if you port |alter-var-root| as in-ns, def, in-ns
 #?(:clj
-  (defmacro reset-var!
+  (defn reset-var!
   "Like |reset!| but for vars."
   {:attribution "Alex Gunnarson"}
   [var-0 val-f]
   ;(.bindRoot #'clojure.core/ns ns+)
   ;(alter-meta! #'clojure.core/ns merge (meta #'ns+))
 
-  `(alter-var-root (var ~var-0) (constantly ~val-f))))
+  (alter-var-root var-0 (constantly val-f))))
 ; CLJS compatible
-#?(:clj (defmacro swap-var!
+#?(:clj (defn swap-var!
   "Like |swap!| but for vars."
   {:attribution "Alex Gunnarson"}
   ([var-0 f]
-  `(do (alter-var-root (var ~var-0) ~f)
-       (var ~var-0)))
+  (do (alter-var-root var-0 f)
+       var-0))
   ([var-0 f & args]
-  `(do (alter-var-root (var ~var-0)
-         (fn [var-n#]
-           (~f var-n# ~@args)))
-       (var ~var-0)))))
+  (do (alter-var-root var-0
+         (fn [var-n]
+           (apply f var-n args)))
+       var-0))))
 
 
 #?(:clj
@@ -492,7 +492,7 @@
             {:aliases   {:cljc {err      quantum.core.error}
                          :cljs {err-cljs quantum.core.cljs.error}}
              :refers    {:cljc {err      #{throw+ with-assert with-throw with-throws throw-when throw-unless assertf-> assertf->>}}
-                         :clj  {err      #{try+}}
+                         :clj  {err      #{try+ try-times}}
                          :cljs {err      #{Err}
                                 err-cljs #{try+}}}
              :imports   (quantum.core.error.Err)}
@@ -773,7 +773,7 @@
    quantum.core.cljs.loops  #{reduce reducei for doseq doseqi}
    quantum.core.cljs.logic  #{fn-or fn-and fn-not}
    quantum.core.collections #{reduce reduce- reducei reducei- doseq doseqi for fori repeatedly kmap map->record}
-   quantum.core.error       #{try+ throw+
+   quantum.core.error       #{try+ try-times throw+
                               with-throw with-throws
                               throw-unless throw-when
                               with-catch with-assert
@@ -792,7 +792,7 @@
    quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei
                               dos lfor doseq- doseq doseqi- doseqi for}
    quantum.core.macros      #{quote+ fn+ defn+ defnt compile-if assert-args let-alias}
-   quantum.core.ns          #{def- defalias reset-var! ns-exclude swap-var! source defmalias},
+   quantum.core.ns          #{def- defalias ns-exclude source defmalias},
    quantum.core.numeric     #{+= -=
                               ++ --}
    quantum.core.print       #{pr-attrs with-print-str*}

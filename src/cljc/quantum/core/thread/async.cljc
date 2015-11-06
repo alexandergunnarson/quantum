@@ -121,9 +121,14 @@
   ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
 
 #?(:clj
-(defnt interrupted?
-  ([#{Thread}         x] (.isInterrupted x))
-  ([#{Process java.util.concurrent.Future} x] :unk)))
+(defnt interrupted?*
+  ([#{Thread co.paralleluniverse.strands.Strand}         x] (.isInterrupted x))
+  ([#{Process java.util.concurrent.Future} x] (throw+ (Err. :not-implemented "Not yet implemented." nil)))))
+
+#?(:clj
+(defn interrupted?
+  ([ ] (.isInterrupted ^Strand (current-strand)))
+  ([x] (interrupted?* x))))
 
 (defnt close!
 #?(:clj
@@ -168,8 +173,8 @@
    functions that call it...)."
   [msec]
   #?(:clj   (if (Fiber/currentFiber)
-                (Fiber/sleep  ^long msec)
-                (Strand/sleep ^long msec))
+                (Fiber/sleep  msec)
+                (Strand/sleep msec))
      :cljs (async/<! (async/timeout msec))))
 
 ; MORE COMPLEX OPERATIONS
