@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>242e2ced75f08285a6829695b9f18e99a053797a
+    <tag>f98b076f37bd469f78132ad9d99cc816226def22
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -345,6 +345,11 @@
       <version>0.7.3</version>
     </dependency>
     <dependency>
+      <groupId>org.eclipse.jdt</groupId>
+      <artifactId>org.eclipse.jdt.core</artifactId>
+      <version>3.10.0</version>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojurescript</artifactId>
       <version>0.0-3269</version>
@@ -474,6 +479,11 @@
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
       <version>9.2.10.v20150310</version>
+    </dependency>
+    <dependency>
+      <groupId>slingshot</groupId>
+      <artifactId>slingshot</artifactId>
+      <version>0.12.2</version>
     </dependency>
     <dependency>
       <groupId>org.reflections</groupId>

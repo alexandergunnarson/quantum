@@ -48,12 +48,22 @@
         (.setCapability "phantomjs.page.settings.userAgent"  user-agent-string)
         (.setCapability "phantomjs.page.settings.loadImages" false)
         (.setCapability "phantomjs.cli.args"
+          ; PhantomJSDriverService only logs INFO and WARNING levels.
+          ; It logs too much... and we want to roll our own.
           (into-array ["--ssl-protocol=any" "--ignore-ssl-errors=yes"
-                       "--webdriver-loglevel=ERROR"])) ; possibly don't need to do into-array
+                       "--webdriver-loglevel=NONE"]))
         ))
 
+(declare js-exec!)
 (defn default-driver []
-  (PhantomJSDriver. default-capabilities))
+  (doto (PhantomJSDriver. default-capabilities)
+    (js-exec! false false
+      "var page = this;
+       page.onError = function(msg, trace) {
+         console.error('PHANTOM PAGE ERROR INFO: ' + msg);
+       };
+       return 'truth';") ; must return something
+    ))
 
 ; How do I clear the phantomjs cache on a mac?
 ; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
@@ -137,8 +147,7 @@
   {:attribution "http://www.obeythetestinggoat.com/how-to-get-selenium-to-wait-for-page-load-after-a-click.html"}
   [^RemoteWebElement elem]
   (.click elem)
-  (let []
-    (wait-for-fn! stale-elem? elem)))
+  (wait-for-fn! stale-elem? elem))
 
 (defn click!
   [^RemoteWebElement elem]
@@ -162,8 +171,9 @@
     (try+ (try-times times 
             (try
               (.findElement driver elem)
-              (catch NoSuchElementException _
-                (async/sleep interval-ms))))
+              (catch NoSuchElementException e
+                (async/sleep interval-ms)
+                (throw e)))) ; throw to continue trying
       (catch [:type :max-tries-exceeded] {{:keys [last-error]} :objs :as e}
         (if (instance? NoSuchElementException last-error)
             (throw+ (not-found-error driver elem))
@@ -177,25 +187,25 @@
 (defn parent [^RemoteWebElement elem]
   (.findElement elem (By/xpath "..")))
 
-(defn ins [^WebElement elem]
+(defn ins [^RemoteWebElement elem]
   {:tag-name (.getTagName elem)
    :id       (.getId      elem)
    :enabled? (.isEnabled elem)
    :text     (.getText elem)
    :location (-> elem .getLocation str)})
 
-(defn screenshot! [^WebDriver driver ^String file-name]
+(defn screenshot! [^PhantomJSDriver driver ^String file-name]
   (let [^java.io.File scrFile (.getScreenshotAs driver (. OutputType FILE))]
     (->> [:resources "Screens" (str file-name ".png")]
          io/file
          (FileUtils/copyFile scrFile))))
 
-(def select-all-str (Keys/chord (into-array [(str (. Keys CONTROL)) "a"])))
+(def select-all-str (Keys/chord ^"[Ljava.lang.String;" (into-array [(str (. Keys CONTROL)) "a"])))
 (def backspace (str (. Keys BACK_SPACE)))
 (def kdelete   (str (. Keys DELETE)))
 (def kenter    (str (. Keys ENTER)))
 
-(defn clear! [elem]
+(defn clear! [^RemoteWebElement elem]
   (let [text-length 
           (-> elem .getText count)
         kdeletes (->> (repeat text-length kdelete) (apply str))]
@@ -222,7 +232,7 @@
       (.moveToElement elem)
       (.perform)))
 
-(defn children [^WebElement elem]
+(defn children [^RemoteWebElement elem]
   (when (instance? WebElement elem)
     (.findElementsByXPath elem "child::*")))
 
@@ -255,7 +265,7 @@
                (remove (eq? (.getWindowHandle driver))) first)]
     (-> driver .switchTo (.window popup-handle))))
 
-(defn switch-window! [driver handle]
+(defn switch-window! [^WebDriver driver handle]
   (.window (.switchTo driver) handle))
 
 (defn js-exec!
@@ -270,7 +280,7 @@
                        s
                        "});")
                  s)
-        f #(.executePhantomJS driver code (object-array 0))]
+        f #(.executePhantomJS ^PhantomJSDriver driver code (object-array 0))]
     (if thread?
         (future (f))
         (f))))

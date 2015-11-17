@@ -1,0 +1,17 @@
+//#include "collections.h"
+//using  namespace coll;
+#include "print.h"
+using  namespace pr;
+//#include "string.h"
+//#include "log.h"
+//#include "io.h"
+
+
+#undef DEBUG
+#define DEBUG true
+
+int main(int argc, CString argv[]) {
+println(vstr("Hello World!"), vecX());
+
+  return 0;
+}

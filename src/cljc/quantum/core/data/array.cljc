@@ -76,15 +76,15 @@
     (if (.hasArray buf)
         (if (num/== (alength (.array buf)) (.remaining buf))
             (.array buf)
-            (let [ary (byte-array (.remaining buf))]
+            (let [arr (byte-array (.remaining buf))]
               (doto buf
                 .mark
-                (.get ary 0 (.remaining buf))
+                (.get arr 0 (.remaining buf))
                 .reset)
-              ary))
-        (let [^bytes ary (byte-array (.remaining buf))]
-          (doto buf .mark (.get ary) .reset)
-          ary)))
+              arr))
+        (let [^bytes arr (byte-array (.remaining buf))]
+          (doto buf .mark (.get arr) .reset)
+          arr)))
   (^{:cost 1.5} [^java.io.InputStream in options]
     (let [out (ByteArrayOutputStream. (num/max 64 (.available in)))
           buf (byte-array 16384)]
@@ -288,3 +288,7 @@
 ; TODO Compress
 ; Compresses a PersistentVector into a typed array to fit as closely together as possible
 
+; Check if a sorted array contains the specified value
+; boolean arrayContains(String[] sortedArray, ^String val) {
+;     return Arrays.binarySearch(sortedArray, key) >= 0;
+; }

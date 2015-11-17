@@ -72,7 +72,10 @@
 (def entity? (partial instance? datomic.query.EntityMap))
 
 (defn ^datomic.query.EntityMap entity
-  "Retrieves the data associated with a (long) @id."
+  "Retrieves the data associated with a (long) @id
+   or db/ident such as a schema keyword."
+  {:usage '[(db/entity :person/email)
+            (db/entity 123)]}
   [id]
   (d/entity (db*) id))
 
@@ -175,16 +178,21 @@
     (let [datom (merge {:db/id (d/tempid (or part :db.part/test))} props)]
       (transact! [datom]))))
 
+(defmacro dbfn
+  "Used for defining, but not transacting, a database function."
+  [arglist & body]
+  `(datomic.api/function
+     '{:lang     :clojure
+       :params   ~arglist
+       :code     (do ~@body)}))
+
 (defmacro defn!
-  {:usage '(defn! :part/quanta inc [n] (inc n))}
-  [part sym-key arglist & args]
-  `(create-entity! ~part
-     {:db/ident (keyword "fn" (name '~sym-key))
+  {:usage '(defn! inc [n] (inc n))}
+  [sym arglist & body]
+  `(create-entity! :db.part/fn
+     {:db/ident (keyword "fn" (name '~sym))
       :db/fn    
-        (datomic.api/function
-          '{:lang     "clojure"
-            :params   ~arglist
-            :code     (do ~@args)})}))
+        (dbfn ~arglist ~@body)}))
 
 (defn+ entity-query [q]
   (->> (query q)

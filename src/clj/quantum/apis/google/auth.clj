@@ -25,6 +25,8 @@
 
 (def access-types #{:online :offline})
 
+(defonce error-log (atom []))
+
 (defn scopes-string [^Set scopes-]
   (reducei
     (fn [s ^Key scope-key n]
@@ -61,32 +63,75 @@
 
 ; ===== LOGIN =====
 
-(defn fill-username-field!
-  [^RemoteWebElement username-elem ^String username]
-  (send-keys! username-elem username)
-  (log/pr :debug "Logging in as:" (.getAttribute username-elem "value")))
+(defn fill-field!
+  [^RemoteWebElement elem ^String s]
+  (web/clear-field! elem)
+  (send-keys! elem s))
 
-(defn fill-password-field!
-  [^RemoteWebElement password-elem ^String password]
-  (send-keys! password-elem password)
-  (log/pr :debug "With password:" (.getAttribute password-elem "value")))
+(defn login-challenged-err [& [msg objs]]
+  (Err. :web/login-challenged
+    (or msg "Login challenged. Google asks you to 'verify it's you'.") objs))
 
-(defn+ ^:suspendable sign-in-email-first! [driver]
-  (let [next-button (find-element driver (By/id "next"))]
-    (click! next-button)
-    (async/sleep 500)))
+(defn respond-to-challenge-question
+  {:usage '(respond-to-challenge-question driver1 "MapChallengeLabel" "address" :sign-in-city)}
+  [driver label-id field-id datum-key username password]
+  (when (err/suppress (find-element driver (By/id label-id)))
+    (logic/if-let [challenge-field (err/suppress (find-element driver (By/id field-id        )))
+                   submit-button   (err/suppress (find-element driver (By/id "submitChallenge")))]
+      (if-let [datum (auth/datum :google username datum-key)]
+        (do (log/pr :warn "Login challenged by Google. Responding with" (str/squote datum) "...")
+            (send-keys! challenge-field datum)
+            (click-load! submit-button))
+        (throw+ (login-challenged-err (str "Login challenged. Google asked you for " datum-key ". This is not found in auth keys."))))
+      (throw+ (login-challenged-err (str/sp "Login challenged. Google asked you for" datum-key "."
+                                            "Could not find one or more required HTML components to respond."))))
+    true))
+
+(defn handle-challenge-question [driver username password]
+  (or (respond-to-challenge-question driver "MapChallengeLabel"           "address"     :sign-in-city   username password)
+      (respond-to-challenge-question driver "RecoveryEmailChallengeLabel" "emailAnswer" :recovery-email username password)
+      (throw+ (login-challenged-err))))
 
 (defn sign-in!
+  {:todo ["Handle 'your password was changed ___ ago' error"]}
   ([^WebDriver driver ^String username ^String password]
-    (let [email-element      (find-element driver (By/id "Email"))
-          _                  (fill-username-field! email-element username)
-          password-element   (try+ (find-element driver (By/id "Passwd"))
-                               (catch [:type :not-found] _ ; Treat as if it's an email-only login  
-                                 (sign-in-email-first! driver)
-                                 (find-element driver (By/id "Passwd"))))
-          _                  (fill-password-field! password-element password)
-          signin-button      (find-element driver (By/id "signIn"))
-          sign-in-click!     (click-load! signin-button)]))
+    ;(log/pr :auth "Username" username)
+    ;(log/pr :auth "Password" password)
+    (let [check-recovery     #(when (err/suppress (find-element driver (By/id "goToRecovery")))
+                                (throw+ (Err. :web/login-failed "Google says: 'Sorry, something went wrong with signing in to your account. Try again later or go to recovery for help.'" nil)))
+          check-challenge    #(err/suppress (find-element driver (By/id "login-challenge-heading")))
+          check-unable       #(when (err/suppress (find-element driver (By/xpath "//h1[@class='redtext' and contains(., 'Sorry, we') and contains(., 'process your request right now')]")))
+                                (throw+ (Err. :web/login-failed "Google says: 'Sorry, we can't process your request right now (for security reasons)'. Possible too many failed logins." nil)))
+          check-email-first  (err/suppress (find-element driver (By/id "next")))
+          fill-username! (fn [] (-> driver
+                                    (find-element (By/id "Email"))
+                                    (fill-field! username)))
+          fill-password! (fn [] (-> driver
+                                    (find-element (By/id "Passwd"))
+                                    (fill-field! password)))
+          click-signin!  (fn [] (-> driver
+                                    (find-element (By/id "signIn"))
+                                    (click-load!)))
+          handle-challenge (fn [] (handle-challenge-question driver username password)
+                                  (log/pr :warn "Filling password again after challenge...")
+                                  ; TODO "Passwd" not found
+                                  (fill-password!)
+                                  (click-signin!))]
+      (if check-email-first
+          (do (fill-username!)
+              (log/pr :debug "Signing in email first...")
+              (click! check-email-first)
+              (async/sleep 500))
+          (fill-username!))
+
+      (fill-password!)
+      (click-signin!)
+      
+      (when (check-challenge)
+        (handle-challenge))
+      
+      (check-recovery)
+      (check-unable)))
   ([^WebDriver driver ^String auth-url ^String username ^String password]
     (.get driver auth-url)
     #_(web/screenshot! driver "screen1")
@@ -107,9 +152,12 @@
 ; ===== OAUTH =====
 
 (defn+ ^:suspendable approve! [^WebDriver driver]
-  (let [wait-for-btn-enabled! (async/sleep 1500) ; For some reason the button is disabled for a little bit
+  (let [wait-for-btn-enabled! (async/sleep 1700) ; For some reason the button is disabled for a little bit; was 1500 but didn't work
         ^RemoteWebElement accept-btn
-          (find-element driver (By/id "submit_approve_access"))
+          (try+ (find-element driver (By/id "submit_approve_access"))
+            (catch [:type :not-found] e
+              (conj! error-log [(time/now-instant) (.getPageSource driver)])
+              (throw+)))
         approve-click! (click-load! accept-btn)]))
 
 (defn ^String copy-auth-key!
@@ -150,8 +198,7 @@
       (let [_ (sign-in! driver auth-url username password)
             _ (log/pr :debug "Sign in complete.")
             account-select-div
-             (try+ (find-element driver (By/id "account-list"))
-               (catch [:type :not-found] _ nil))
+              (err/suppress (find-element driver (By/id "account-list")))
             _ (when account-select-div
                 (select-account! driver (or account-select "Alexander Gunnarson"))) ; TODO FIX
             ^String auth-key
@@ -177,7 +224,7 @@
 (defn ^String access-token!
   "Only works for native ('other') apps."
   {:usage '[(access-token! "me@gmail.com" #{:contacts/read-write} :offline)
-            (quantum.apis.google.auth/access-token! "worker1@socialytics.ai" #{:drive/all} :offline)]}
+            (quantum.apis.google.auth/access-token! "rand@gmail.com" #{:drive/all} :offline)]}
   ([email scopes auth-type] (access-token! email scopes auth-type nil))
   ([email scopes ^Key auth-type {:as opts :keys [code]}]
     (let [auth-keys (auth/auth-keys :google)

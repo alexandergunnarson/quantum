@@ -11,7 +11,8 @@
   (:require-quantum [ns fn set map macros logic red num type loops cbase log err])
   (:require
     [clojure.string :as str]
-    [frak]))
+    [frak])
+  #?(:clj (:import java.net.IDN)))
 
 ; http://www.regular-expressions.info
 ; What about structural sharing with strings? Wouldn't there have to be some sort
@@ -120,11 +121,11 @@
             (if (starts-with? s2 separator)
                 (str s1 (.substring s2 1))
                 (str s1 s2))
-          (if (starts-with? s2 separator)
-              (str s1 s2)
-              (if (or (= s1 "") (= s2 ""))
-                  (str s1 s2)
-                  (str s1 separator s2))))))
+            (if (starts-with? s2 separator)
+                (str s1 s2)
+                (if (or (= s1 "") (= s2 ""))
+                    (str s1 s2)
+                    (str s1 separator s2))))))
     nil
     coll))
 
@@ -660,6 +661,110 @@
           (sub-fn (re-groups matcher)))
         (.end matcher))
       (apply str (conj result (.substring value last-end))))))
+
+(defnt'
+ regionMatches
+ "Green implementation of regionMatches.
+  @cs:         the |CharSequence| to be processed
+  @ignoreCase: whether or not to be case insensitive
+  @thisStart:  the index to start on @cs
+  @substring:  the |CharSequence| to be looked for
+  @start:      the index to start on the @substring
+  @length:     character length of the region
+
+  Returns whether the region matched."
+  {:source "org.apache.commons.codec.binary.CharSequenceUtils"
+   :todo   ["Lots of code to do probably a simple thing"]}
+  [^CharSequence cs
+   ^boolean ignore-case?
+   ^int thisStart
+   ^CharSequence substring
+   ^int start
+   ^int length]
+  (if (and (instance? String cs)
+           (instance? String substring))
+      (let [^String cs1 cs]
+        (.regionMatches
+          cs1
+          ignore-case?
+          thisStart
+          ^String substring
+          (int start)
+          (int length)))
+      (loop [index1 (core/int thisStart )
+             index2 (core/int start     )
+             tmpLen (-> length dec core/int)]
+        (if (> tmpLen 0)
+            (let [index1-n+1 (-> index1 inc core/int)
+                  index2-n+1 (-> index2 inc core/int)
+                  c1 (.charAt cs        index1-n+1)
+                  c2 (.charAt substring index2-n+1)]
+              (cond
+                (= c1 c2)
+                  (recur index1-n+1
+                         index2-n+1
+                         (-> tmpLen dec core/int))
+                (or (not ignore-case?)
+                    (and (not= (upper-case c1)
+                               (upper-case c2))
+                         (not= (lower-case c1)
+                               (lower-case c2))))
+                  false
+                :else
+                  (recur index1-n+1
+                         index2-n+1
+                         (-> tmpLen dec core/int))))
+            true))))
+
+; ===== ENCODINGS & CHARSETS =====
+
+; Charsets.ISO_8859_1
+; Charsets.US_ASCII
+; Charsets.UTF_16
+; Charsets.UTF_16BE
+; Charsets.UTF_16LE
+; Charsets.UTF_8
+
+(def ^:const max-ascii-val 0x7F)
+(defn ascii?
+  [s]
+  (and (string? s)
+       (->> s (filter #(> (core/int %) max-ascii-val)) first)))
+
+#?(:clj
+(def ^{:doc "This is because of a bug in java.net.IDN/toASCII that
+             org.apache.commons.validator.routines.DomainValidator pointed out.
+             It may have been fixed already..."}
+  idn:->ascii-preserves-trailing-dots? (= "a." (IDN/toASCII "a."))))
+
+#?(:clj
+(defn unicode->ascii
+  "Converts potentially Unicode input to punycode."
+  {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
+  [input & [silent-fail?]]
+  (if (or (nil? input) (empty? input) (ascii? input)) ; skip possibly expensive processing
+      input
+      (try
+        (let [ascii (IDN/toASCII input)]
+          (if idn:->ascii-preserves-trailing-dots?
+              ascii
+              ; RFC3490 3.1. 1)
+              ; Whenever dots are used as label separators, the following
+              ; characters MUST be recognized as dots: U+002E (full stop), U+3002
+              ; (ideographic full stop), U+FF0E (fullwidth full stop), U+FF61
+              ; (halfwidth ideographic full stop).
+              (condpc = (last input) ; original last char
+                (coll-or \u002E     ; full stop
+                         \u3002     ; ideographic full stop
+                         \uFF0E     ; fullwidth full stop
+                         \uFF61)    ; halfwidth ideographic full stop
+                    (str ascii ".") ; restore the missing stop
+                ascii)))
+      (catch IllegalArgumentException e ; input is not valid
+        (if silent-fail?
+            input
+            (throw e)))))))
+
 
 ; ===== STRING VALUES =====
 

@@ -1,4 +1,5 @@
 (ns quantum.core.analyze.clojure.core
+  (:refer-clojure :exclude [name])
   (:require-quantum [:lib])
   (:require [quantum.core.analyze.clojure.predicates :refer :all]))
 

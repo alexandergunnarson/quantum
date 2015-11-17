@@ -17,7 +17,7 @@
     [byte_streams.graph          Type]
     [java.lang.reflect           Array]
     [java.util.concurrent.atomic AtomicBoolean]
-    [java.net                    URI]
+    [java.net                    URI URL InetAddress]
     [java.io                     File
                                  FileOutputStream FileInputStream
                                  ByteArrayInputStream ByteArrayOutputStream
@@ -28,13 +28,16 @@
                                  RandomAccessFile
                                  Reader BufferedReader InputStreamReader]
     [java.nio                    ByteBuffer DirectByteBuffer CharBuffer]
+    [java.nio.charset            Charset]
     [java.nio.channels           Channels
                                  ReadableByteChannel WritableByteChannel
                                  FileChannel FileChannel$MapMode
                                  Pipe]
     [java.nio.channels.spi       AbstractSelectableChannel]
     [java.nio.file Path          Paths]
-    [javafx.collections          FXCollections])))
+    [java.util                   Locale]
+    [javafx.collections          FXCollections]
+    [java.sql                    Blob Clob])))
 
 (defnt ->uuid*
   ([^string? id] (java.util.UUID/fromString        id))
@@ -66,13 +69,17 @@
   ([^java.net.URI                x] x)
   ([^java.nio.file.Path          x] (.toUri x))
   ([#{java.io.File java.net.URL} x] (.toURI x))
-  ([^string?                     x] (java.net.URI/create x))
+  ([^string?                     x] (URI. x))
   ([                             x] (-> x ->file ->uri)))
 
 (defnt ^java.net.URL ->url
+  ([^string?      x] (URL. x))
   ([^java.net.URL x] x)
   ([^java.net.URI x] (.toURL x))
   ([              x] (-> x ->uri ->url)))
+
+(defnt ^java.net.InetAddress ->inet-address
+  ([^string? x] (InetAddress/getByName x)))
 
 (defnt ^java.nio.file.Path ->path
   ([^java.nio.file.Path x] x)
@@ -263,7 +270,7 @@
       (.flip buffer)
       (while (.hasRemaining buffer)
         (.write out buffer))
-      ; TODO close channels?
+      ; TODO must close out channel in order to flush the data.
       )))
 
 (defnt ->byte-channel
@@ -341,8 +348,29 @@
          (core/remove empty?)
          (str/join joiner)))
 #?(:clj
+  ([^java.net.InetAddress x]
+    (if-let [hostName (.getHostName x)]
+      hostName
+      (.getHostAddress x)))
   (^{:cost 1} [^CharSequence char-sequence]
-    (.toString char-sequence)))
+    (.toString char-sequence))
+  ([^java.nio.charset.Charset x] (.name x))
+  ; Look at Apache Commons Convert to fill in the below code
+  ;([^java.sql.Blob x])
+  ;([^java.sql.Clob x])
+  ([^java.util.Date x]
+    (-> (java.text.SimpleDateFormat. (:calendar time/formats))
+        (.format x)))
+  ([#{java.sql.Date
+      java.sql.Timestamp
+      java.sql.Time}    x] (.toString x))
+  ([^java.util.TimeZone x] (.getID x))
+  ; The returned string is referenced to the default time zone.
+  ([^java.util.Calendar x]
+    (let [df (java.text.SimpleDateFormat. (:calendar time/formats))]
+      (.setCalendar df x)
+      (.format df (.getTime x))))
+  )
 #_(^{:cost 1} [(vector-of String) strings]
     (let [sb (StringBuilder.)]
       (doseq [s strings]
@@ -351,7 +379,7 @@
 #?(:clj
   ; CANDIDATE 0
   ([^java.io.InputStream in]
-    (->str in (.name (java.nio.charset.Charset/defaultCharset))))
+    (->str in (.name (Charset/defaultCharset))))
   ([^java.io.InputStream in enc]
     (with-open [bout (StringWriter.)]
       (io/copy in bout :encoding enc)
@@ -370,6 +398,9 @@
 #_([x options] (streams/convert x String options))
   ([:else x] (str x)))
 
+(defnt ->charset
+  ([^string? x] (Charset/forName x)))
+
 (defnt ->symbol
   ([^string? x] (symbol x))
   ([:else x] (-> x ->str ->symbol)))
@@ -385,7 +416,8 @@
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed"}}
   (^{:cost 0} [^java.io.File x]
-    (.getChannel (->input-stream x))))
+    (let [^FileInputStream in (->input-stream x)]
+      (.getChannel in))))
 
 (defnt ->write-channel
   #_(^{:cost 0} [^File file {:keys [append?] :or {append? true}}]
@@ -396,6 +428,10 @@
 (defnt ->channel
   "Writable or readable."
   (^{:cost 0} [^java.io.File x] (->read-channel x)))
+
+#?(:clj
+(defnt ^java.util.Locale ->locale
+  ([^string? x] (Locale. x))))
 
 (defn ->line-seq
   "Converts the object to a lazy sequence of newline-delimited strings."

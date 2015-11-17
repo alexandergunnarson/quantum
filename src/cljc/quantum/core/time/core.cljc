@@ -6,7 +6,7 @@
   quantum.core.time.core
   (:refer-clojure :exclude [extend second - + < <= > >= format])
   (:require-quantum [ns macros type num fn logic bin err log uconv loops])
-  #?(:clj (:import java.util.Date
+  #?(:clj (:import [java.util Date Calendar]
             (java.time LocalDate)
             (java.time.format DateTimeFormatter)
             (java.time.temporal Temporal TemporalAccessor))))
@@ -173,7 +173,8 @@
 (defnt ->unix-millis
   ([^java.time.Instant       x] (-> x (.toEpochMilli)))
   ([^java.util.Date          x] (-> x (.getTime)     ))
-  ([^org.joda.time.DateTime  x] (-> x (.getMillis)   )))
+  ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
+  ([^java.util.Calendar      x] (-> x (.getTimeInMillis))))
 
 (defnt ^quantum.core.time.core.Instant ->instant
   ([^quantum.core.time.core.Instant x] x)
@@ -258,9 +259,12 @@
 (defn now-formatted [date-format])
 
 #?(:clj
-(def formatting-map
-  {:rfc     (. DateTimeFormatter RFC_1123_DATE_TIME)
-   :windows (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")}))
+(def formats ; TODO map->record
+  {:rfc       DateTimeFormatter/RFC_1123_DATE_TIME
+   :windows   (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")
+   :calendar  "EEE MMM dd HH:mm:ss.SSS z yyyy"
+   :jdbc-date "yyyy-MM-dd"
+   :jdbc-time "HH:mm:ss"}))
 
 #?(:clj 
 (defnt ->string*
@@ -270,7 +274,7 @@
     (.format formatting ^java.time.LocalDateTime (->local-date-time date)))
   ([^keyword?          formatting date]    
             (let [^DateTimeFormatter formatter
-                    (or (get formatting-map formatting)
+                    (or (get formats formatting)
                         (throw (Exception. "Formatter not found")))]
               (.format formatter ^java.time.LocalDateTime (->local-date-time date))))))
 
@@ -373,3 +377,213 @@
 
 (def date-format-json
   (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss'Z'"))
+
+(defnt ^java.util.Calendar ->calendar
+  ; Calendar initialized with the default locale and time zone
+  ([^integer? x] 
+    (doto (java.util.Calendar/getInstance)
+      (.setTimeInMillis x)))
+  ([^java.util.Date x ^java.util.Locale locale ^java.util.TimeZone timeZone]
+    (doto (Calendar/getInstance timeZone locale)
+      (.setTime x)))
+  ([^string? x]
+    (let [df (java.text.SimpleDateFormat. (:calendar formats))]
+      (doto (Calendar/getInstance)
+            (.setTime (.parse df x))))))
+
+(defnt ^java.sql.Time ->sql-time
+  ; The string must be formatted as JDBC_TIME_FORMAT
+  ([^integer?           x] (java.sql.Time. x))
+  ([^string?            x] (java.sql.Time/valueOf x))
+  #_([^String x ^TimeZone timeZone]
+    (-> timeZone ->TimeFormat (.parse x) ->unix-millis ->sql-time))
+  ([^java.util.Date x]
+    (let [^Calendar cal
+            (doto (Calendar/getInstance) (.setTimeInMillis (.getTime x)))]
+      (java.sql.Time.
+        (.get cal Calendar/HOUR_OF_DAY)
+        (.get cal Calendar/MINUTE     )
+        (.get cal Calendar/SECOND     ))))
+  ([^java.sql.Timestamp x] (-> x ->unix-millis ->sql-time)))
+
+
+(defnt ^java.sql.Time ->sql-date
+  ([^integer?           x] (java.sql.Date. x))
+  ; The string must be formatted as JDBC_DATE_FORMAT
+  ([^string?            x] (java.sql.Date/valueOf x))
+  #_([^String x ^java.util.TimeZone timeZone]
+    (-> timeZone ->DateFormat (.parse x) ->unix-millis ->sql-date))
+  ([^java.util.Date x]
+    (let [^Calendar cal
+           (doto (Calendar/getInstance) (.setTimeInMillis (.getTime x)))]
+      (java.sql.Date.
+       (core/- (.get cal Calendar/YEAR   ) 1900)
+       (.get    cal Calendar/MONTH       )
+       (.get    cal Calendar/DAY_OF_MONTH))))
+  ([^java.sql.Timestamp x] (-> x ->unix-millis ->sql-date)))
+
+(defnt ^java.util.Date ->date
+  ([^long?              x] (java.util.Date. x))
+  ([^string?            x] (-> (java.text.SimpleDateFormat. (:calendar formats)) (.parse x)))
+  ([^java.util.Calendar x] (.getTime x))
+  ; Technically Timestamp extends java.util.Date
+  ([#{java.sql.Timestamp java.sql.Date} x] (-> x ->unix-millis ->date)))
+
+(defnt ^java.sql.Time ->timestamp
+  ([^integer?             x] (java.sql.Timestamp. x))
+  ([^string?              x] (java.sql.Timestamp/valueOf x))
+  ([#{java.util.Date
+      java.sql.Date
+      java.util.Calendar} x] (-> x ->unix-millis ->timestamp)))
+
+(defnt ^java.util.TimeZone ->timezone
+  ([^string? x]  (java.util.TimeZone/getTimeZone x)))
+
+
+ 
+; (defn
+;   convert
+;   "Converts @obj to a |java.sql.Timestamp| using the supplied time zone.
+;    Note that the string representation is referenced to @timeZone, not UTC.
+;    The |Timestamp is adjusted to the specified time zone before conversion.
+;    This behavior is intended to accommodate user interfaces, where users are
+;    accustomed to viewing timestamps in their own time zone."
+;   [^String obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let [^Timestamp parsedStamp (->timestamp obj)
+;         ^Calendar cal (Calendar/getInstance timeZone locale)]
+;     (.setTime cal parsedStamp)
+;     (.add cal Calendar/MILLISECOND (- (.getOffset timeZone (.getTime parsedStamp))))
+;       (let [^Timestamp result (Timestamp. (.getTimeInMillis cal))]
+;         (.setNanos result (.getNanos parsedStamp))
+;         result)))
+   
+ 
+
+
+; (defn
+;   convert
+;   "Converts @obj to a |String| using the supplied time zone.
+;    Note that the string representation is referenced to @timeZone, not UTC.
+;    The |Timestamp is adjusted to the specified time zone before conversion.
+;    This behavior is intended to accommodate user interfaces, where users are
+;    accustomed to viewing timestamps in their own time zone."
+;   [^Timestamp obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let [^Calendar cal (Calendar/getInstance timeZone locale)])
+;     (.setTime cal obj)
+;     (.add cal (Calendar/MILLISECOND) (.getOffset timeZone (.getTime obj)))
+;     (let [^Timestamp result (Timestamp. (.getTimeInMillis cal))])
+;       (.setNanos result (.getNanos obj))
+;       (.toString result))
+
+
+
+
+; (defnt
+;   ->DateFormat
+;   ([^java.util.TimeZone tz]
+;     (doto (java.text.SimpleDateFormat. JDBC_DATE_FORMAT)
+;       (.setTimeZone tz))))
+
+; (defn
+;   ->DateTimeFormat
+;   "Returns an initialized DateFormat object.
+;    @param dateTimeFormat
+;    optional format string
+;    @param tz
+;    @param locale
+;    can be null if dateTimeFormat is not null
+;    @return DateFormat object"
+;   [^String dateTimeFormat ^TimeZone tz ^Locale locale]
+;   (let [^DateFormat df nil]
+;   (if (empty? dateTimeFormat)
+;       (swap!
+;        df
+;        (.getDateTimeInstance
+;         DateFormat
+;         (.SHORT DateFormat)
+;         (.MEDIUM DateFormat)
+;         locale))
+;       (swap! df (SimpleDateFormat. dateTimeFormat)))
+;   (.setTimeZone df tz)
+;   df))
+
+; (defn ->TimeFormat
+;   [^TimeZone tz]
+;   (doto (java.text.SimpleDateFormat. (:jdbc-time formats))
+;     (.setTimeZone tz)))
+
+;  (defn
+;   convert
+;   "Converts @obj to a |String| using the supplied locale, time zone, and format string.
+;    If @formatString is nil, the string is formatted as CALENDAR_FORMAT."
+;   [^Calendar obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let
+;    [^DateFormat
+;     df
+;     (toDateTimeFormat
+;      (if (= formatString nil) CALENDAR_FORMAT formatString)
+;      timeZone
+;      locale)])
+;   (.setCalendar df obj)
+;   (.format df (.getTime obj)))
+
+
+
+;  date->str
+;  (defn
+;   convert
+;   [^Date obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let
+;    [^DateFormat
+;     df
+;     (toDateTimeFormat
+;      (if (= formatString nil) CALENDAR_FORMAT formatString)
+;      timeZone
+;      locale)])
+;   (.format df obj))
+
+ 
+;  (defn
+;   convert
+;   "/*\n\nReturns <code>obj</code> converted to a <code>Calendar</code>,\ninitialized with the specified locale and time zone. The\n<code>formatString</code> parameter is ignored.\n         */\n"
+;   [^Long obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let [^Calendar cal (.getInstance Calendar timeZone locale)])
+;   (.setTimeInMillis cal obj)
+;   cal)
+ 
+ 
+;  (defn
+;   convert
+;   "Converts @obj to a String using the supplied time zone.
+;    The returned string is formatted as JDBC_DATE_FORMAT"
+;   [^java.sql.Date obj ^TimeZone timeZone]
+;   (let [^DateFormat df (toDateFormat timeZone)])
+;   (.format df obj))
+ 
+;  (defn
+;   convert
+;   "Converts @obj to a String using the supplied time zone.
+;    The returned string is formatted as JDBC_TIME_FORMAT"
+;   [^java.sql.Time obj ^TimeZone timeZone]
+;   (let [^DateFormat df (toTimeFormat timeZone)])
+;   (.format df obj))
+
+;  (defn
+;   convert
+;   "Converts @obj to a |java.util.Calendar| initialized to\nthe supplied locale and time zone.
+;    If <code>formatString</code> is\n<code>null</code>, the string is formatted as\n{@link DateTimeConverters#CALENDAR_FORMAT}.\n         */\n"
+;   [^String obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (let [^DateFormat df
+;          (toDateTimeFormat (or formatString CALENDAR_FORMAT) timeZone locale)
+;         ^Date date (.parse df obj)
+;         ^Calendar cal (.getInstance Calendar timeZone locale)]
+;     (.setTimeInMillis cal (.getTime date))
+;     cal)))
+ 
+;  (defn convert
+;   "Converts @obj to a java.util.Date.
+;    If @formatString is nil, the string is formatted as CALENDAR_FORMAT."
+;   [^String obj ^Locale locale ^TimeZone timeZone ^String formatString]
+;   (-> (or formatString CALENDAR_FORMAT)
+;       (->DateTimeFormat timeZone locale)
+;       (.parse obj)))
