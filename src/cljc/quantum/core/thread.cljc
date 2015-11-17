@@ -498,7 +498,8 @@
           (async-loop
             {:id id
              :handlers {:close-req #(swap! reg-threads dissoc id) ; remove itself
-                        :closed    #(log/pr :debug "Thread-reaper has been closed.")}} 
+                        :closed    #(log/pr :debug "Thread-reaper has been closed.")
+                        :type      :thread}} 
             []
             (if (nempty? thread-reaper-pause-requests)
                 (do (async/empty! thread-reaper-pause-requests)

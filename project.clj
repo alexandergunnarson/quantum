@@ -5,7 +5,9 @@
      "0.2.4.8" #{:lib}}
   :todos ["Eliminate boxed math and reflection warnings"]
   :description      "Some quanta of computational abstraction, assembled."
-  :jvm-opts         []
+  :jvm-opts ^:replace
+    ["-XX:-OmitStackTraceInFastThrow"
+     "-d64" "-server"]
   ;:aot :all ;[quantum.core.macros] ; "^:skip-aot" doesn't work; same with regexes
   :java-source-paths ["src/java"]
   :jar-name         "quantum-dep.jar"
@@ -115,6 +117,10 @@
      [co.paralleluniverse/pulsar "0.7.3"] ; If you include it, it conflicts
      [co.paralleluniverse/quasar-core "0.7.3"] ; :classifier "jdk8" 
      ;[com.typesafe.akka/akka-actor_2.11 "2.4.0"]
+
+     ; COMPILE/TRANSPILE
+     [org.eclipse.jdt/org.eclipse.jdt.core "3.10.0"] ; For formatting Java
+
      ; ==== CLOJURESCRIPT ====  
      [org.clojure/clojurescript "0.0-3269"      ]
      [reagent                   "0.5.0"         :exclusions [org.json/json]]

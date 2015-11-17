@@ -2,6 +2,7 @@
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
+  (:refer-clojure :exclude [assert])
   (:require-quantum [ns log map fn])
   (:require [clojure.string :as str])
 
@@ -407,6 +408,18 @@
   `(if (~pred ~expr)
        ~expr
        (throw+ ~err))))
+
+#?(:clj
+(defmacro assert
+  "Like |assert|, but takes a type"
+  {:usage '(let [a 4]
+             (assert (neg? (+ 1 3 a)) #{a}))}
+  [expr & [syms type]]
+  `(when-not ~expr
+     (throw+
+       (Err. ~(or type :assertion-error)
+             ~(str "Assertion not satisfied: " `~expr)
+             (quantum.core.collections/kmap ~@syms)))))) ; TODO fix dependency here
 
 #?(:clj
   (defmacro try-or 

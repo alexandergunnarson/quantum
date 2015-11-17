@@ -1,10 +1,16 @@
-(ns quantum.core.analyze.clojure.predicates
+(ns ^{:doc "Clojure (and variants) code analysis namespace.
+            Required for quantum.core.macros."}
+  quantum.core.analyze.clojure.predicates
+  (:refer-clojure :exclude [name])
   (:require-quantum [ns fn logic])
   (:require
     [clojure.string         :as str]
     [quantum.core.type.core :as tcore]))
 
 ; SYMBOLS
+
+(defn name [x]
+  (if (nil? x) nil (core/name x)))
 
 (defn type-hint
   "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
@@ -32,7 +38,7 @@
 
 (def hinted-literal? (fn-or #?(:clj char?) number? string? vector? map? nil? keyword?))
 
-; SCOPE
+; ===== SCOPE =====
 
 (defn shadows-var? [bindings v]
   (->> bindings (apply hash-map)
@@ -46,10 +52,10 @@
     (fn-> first symbol?)
     (fn-> first name (= "let"))))
 
-; ARGLISTS
+; ===== ARGLISTS =====
 
 (def first-variadic?   (fn-> first name (= "&")))
-(def variadic-arglist? (fn-> butlast last name (= "&")))
+(def variadic-arglist? (fn-> butlast last (ifn nil? (constantly nil) name) (= "&")))
 
 (defn arity-type [arglist]
   (if (variadic-arglist? arglist)
@@ -62,7 +68,7 @@
     (fn-> count dec)
     count))
 
-; FORMS
+; ===== FORMS =====
 
 (defn form-and-begins-with? [sym]
   (fn-and seq? (fn-> first (= sym))))
@@ -74,8 +80,10 @@
 (def str-expression?    (fn-and seq? (fn-> first (= 'str))))
 (def string-concatable? (fn-or string? str-expression?))
 
-; STATEMENTS
+; ===== STATEMENTS =====
+
 (def sym-call? (fn-and seq? (fn-> first symbol?)))
+(defalias s-expr? sym-call?)
 
 #?(:clj (def primitive-cast? (fn-and sym-call? (fn-> first name symbol tcore/primitive?))))
 
@@ -84,7 +92,7 @@
   (or (primitive-cast? obj)
       (and (sym-call? obj) (get-in tcore/type-casts-map [lang (-> obj first name symbol)])))))
 
-(def constructor? (fn-and sym-call? (fn-> first name (.endsWith "."))))
+(def constructor? (fn-and sym-call? (fn-> first name (.endsWith ".")))) ; TODO use quantum str package
 
 (def return-statement?      (form-and-begins-with? 'return))
 (def defn-statement?        (form-and-begins-with? 'defn  ))
@@ -92,12 +100,18 @@
 (def function-statement?    (fn-or defn-statement? fn-statement?))
 (def scope?                 (form-and-begins-with-any? '#{defn fn while when doseq for do}))
 (def let-statement?         (form-and-begins-with? 'let   ))
-(def do-statement?          (form-and-begins-with? 'do   ))
+(def do-statement?          (form-and-begins-with? 'do    ))
 (def if-statement?          (form-and-begins-with? 'if    ))
 (def cond-statement?        (form-and-begins-with? 'cond  ))
 (def when-statement?        (form-and-begins-with? 'when  ))
+(def throw-statement?       (form-and-begins-with? 'throw ))
 
-; CONDITIONAL BRANCHES
+; CONDITIONAL (AND TRY) BRANCHES
+
+(def branching-syms #{'if 'cond 'case 'try}) ; TODO Is |try| really considered branching?
+
+(def branching-expr?
+  (fn-and s-expr? (fn->> first (contains? branching-syms))))
 
 (def one-branched?          (fn-or when-statement?
                                    (fn-and if-statement?   (fn-> count (= 3)))

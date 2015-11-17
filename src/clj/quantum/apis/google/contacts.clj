@@ -96,18 +96,20 @@
        :body (-> contact clojure.data.xml/emit-str)})))
 
 
-(defn delete! [email contact-id & [etag]]
+(defn delete! [email contact-id & [opts]]
   (gauth/handled-request! email :contacts
-    {:method :delete
-     :url (str "https://www.google.com/m8/feeds/contacts/" email "/full/" contact-id)
-     :headers {"If-Match" (or etag "*")}})) ; If "*", then it's overwritten no matter what
+    (mergel opts
+      {:method :delete
+       :url (str "https://www.google.com/m8/feeds/contacts/" email "/full/" contact-id)
+       :headers {"If-Match" (or (:etag opts) "*")}}))) ; If "*", then it's overwritten no matter what
 
-(defn create! [email contact]
+(defn create! [email contact & [opts]]
   (if (string? contact)
       (gauth/handled-request! email :contacts
-        {:method :post
-         :url (str "https://www.google.com/m8/feeds/contacts/" email "/full")
-         :headers {"GData-Version" "3.0"
-                   "Content-Type"  "application/atom+xml"}
-         :body contact})
+        (mergel opts
+          {:method :post
+           :url (str "https://www.google.com/m8/feeds/contacts/" email "/full")
+           :headers {"GData-Version" "3.0"
+                     "Content-Type"  "application/atom+xml"}
+           :body contact}))
       (throw+ (Err. nil "Non-XML contact creation not yet supported" nil))))

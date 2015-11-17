@@ -1,0 +1,48 @@
+(ns quantum.compile.util
+  (:require-quantum [:lib]))
+
+(defn ^String semicoloned
+  {:in  '["package" "qjava.abc"]
+   :out "package qjava.abc;\n"}
+  [& args]
+  (str (str/join " " args) ";\n"))
+
+(defn scolon
+  "Appends a semicolon if it doesn't already have one on the end."
+  [s]
+  (if (str/ends-with? s ";")
+      s
+      (str s ";")))
+
+(def default-indent-num 4)
+(def ^:dynamic *indent-num* default-indent-num)
+(def indentation (->> (repeat *indent-num* \space) (apply str)))
+
+(defn indent [s]
+  (->> s (str indentation) (<- str/replace #"\n" (str "\n" indentation))))
+
+(defn bracket
+  {:in '["class ABC" "println()"]
+   :out "class ABC {
+          println()
+        }"}
+  ([^String body]
+    (str "{ " (str/replace body #"\n" (str "\n" indentation))
+      " }"))
+  ([^String header ^String body]
+    (if (empty? body)
+        (str/sp header "{}")
+        (let [^String body-indented
+               (str indentation
+                 (-> body
+                     (str/replace #"\n"     (str "\n"  indentation))
+                     (str/replace #"}$" (str "}\n" indentation))))
+              body-f
+                (-> body-indented
+                    (whenf (f*n str/ends-with? indentation) ; To get rid of trailing indentation
+                      (partial dropr *indent-num*))
+                    (whenf (fn-not (f*n str/ends-with? "\n"))
+                      (fn-> (str "\n"))))]
+          (str header " {\n"
+            body-f
+            "}")))))

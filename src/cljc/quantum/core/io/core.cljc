@@ -231,14 +231,14 @@
   (let [dir   (-> dir-0 parse-dir)
         ^File dir-f (as-file dir)]
     (if (exists? dir)
-        (println "Directory already exists:" dir)
-        (try (writable? dir-f)
-             (assert (.mkdir dir-f) true)
-             (println "Directory created:" dir)
-          (catch SecurityException e (println "The directory" (str/squote dir)
-                                       "could not be created. A security exception occurred."))
-          (catch AssertionError    e (println "The directory" (str/squote dir)
-                                       "could not be created. Possibly administrator permissions are required."))))))
+        (try+ (writable? dir-f)
+              (assert (.mkdir dir-f))
+          (catch SecurityException e
+            (throw+
+              (Err. :mkdir "The directory could not be created. A security exception occurred." (kmap e dir))))
+          (catch [:type :assertion-error] e
+            (throw+
+              (Err. :mkdir "The directory could not be created. Possibly administrator permissions are required." (kmap e dir))))))))
 
 (defn num-to-sortable-str [num-0]
   (ifn num-0 (fn-and num/nneg? (f*n < 10))

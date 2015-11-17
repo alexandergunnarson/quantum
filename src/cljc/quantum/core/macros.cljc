@@ -61,12 +61,6 @@
           false))))
 
 
-; Mikera: 
-; http://stackoverflow.com/questions/15914094/can-any-clojure-implementation-start-fast
-; Although the JVM is often (unjustly) blamed,
-; the JVM is largely irrelevant here:
-; modern JVMs have a startup time of about 0.1secs.
-
 ; If you use (sorted-set+) in macro code you get "can't resolve type hint: IPersistentMap"
 ; (class/all-implementing-leaf-classes 'clojure.lang.ILookup)
 
@@ -131,7 +125,8 @@
     :else           (constantly (throw+ (Err. nil "Don't know how to make hint from" x))))))
 
 #?(:clj
-(def protocol-type-hint-map
+(def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
+  protocol-type-hint-map
   '{boolean java.lang.Boolean
     byte    long
     char    java.lang.Character
@@ -516,6 +511,9 @@
 (defn defnt*-helper
   {:todo ["Make so Object gets protocol if reflection"
           "Add support for nil"
+          "Add support for destructuring — otherwise
+           'ClassCastException clojure.lang.PersistentVector cannot be
+            cast to clojure.lang.Named'"
           "Make it so you don't have to qualify non java.lang.* classes:
            ([#{clojure.lang.Associative java.util.Map} coll k] (.containsKey coll k))"]}
   ([opts lang ns- sym doc- meta- body [unk & rest-unk]]

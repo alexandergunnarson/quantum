@@ -272,6 +272,50 @@
       `(fn ~genned-arglist
          (~macro-sym ~@genned-arglist))))))
 
+
+#?(:clj
+(defmacro import-static
+  "Imports the named static fields and/or static methods of the class
+  as (private) symbols in the current namespace.
+  Example: 
+      user=> (import-static java.lang.Math PI sqrt)
+      nil
+      user=> PI
+      3.141592653589793
+      user=> (sqrt 16)
+      4.0
+  Note: The class name must be fully qualified, even if it has already
+  been imported.  Static methods are defined as MACROS, not
+  first-class fns."
+  {:source "Stuart Sierra, via clojure.clojure-contrib/import-static"}
+  [class & fields-and-methods]
+  (let [only (set (map str fields-and-methods))
+        the-class (. Class forName (str class))
+        static? (fn [x]
+                    (. java.lang.reflect.Modifier
+                       (isStatic (. x (getModifiers)))))
+        statics (fn [array]
+                    (set (map (memfn getName)
+                              (filter static? array))))
+        all-fields (statics (. the-class (getFields)))
+        all-methods (statics (. the-class (getMethods)))
+        fields-to-do (set/intersection all-fields only)
+        methods-to-do (set/intersection all-methods only)
+        make-sym (fn [string]
+                     (with-meta (symbol string) {:private true}))
+        import-field (fn [name]
+                         (list 'def (make-sym name)
+                               (list '. class (symbol name))))
+        import-method (fn [name]
+                          (list 'defmacro (make-sym name)
+                                '[& args]
+                                (list 'list ''. (list 'quote class)
+                                      (list 'apply 'list
+                                            (list 'quote (symbol name))
+                                            'args))))]
+    `(do ~@(map import-field fields-to-do)
+         ~@(map import-method methods-to-do)))))
+
 ; ============ CLASS ALIASES ============
 
 ; Just to be able to synthesize class-name aliases...
@@ -489,9 +533,10 @@
                   :imports (fast_zip.core.ZipperLocation)}
           crypto {:aliases {:cljc {crypto quantum.core.cryptography    }}}
           err
-            {:aliases   {:cljc {err      quantum.core.error}
+            {:core-exclusions #{assert}
+             :aliases   {:cljc {err      quantum.core.error}
                          :cljs {err-cljs quantum.core.cljs.error}}
-             :refers    {:cljc {err      #{throw+ with-assert with-throw with-throws throw-when throw-unless assertf-> assertf->>}}
+             :refers    {:cljc {err      #{throw+ with-assert assert with-throw with-throws throw-when throw-unless assertf-> assertf->>}}
                          :clj  {err      #{try+ try-times}}
                          :cljs {err      #{Err}
                                 err-cljs #{try+}}}
@@ -690,6 +735,8 @@
                                              should-transientize?}}
                                :clj  {type #{construct bigint? file? byte-array? name-from-class}}
                                :cljs {type #{class}}}}
+          tcore
+            {:aliases         {:cljc {tcore quantum.core.type.core}}}
           classes {:aliases {:cljc {classes quantum.core.classes}}}
          ; EXT
           http {:aliases {:clj  {http        quantum.http.core       }
@@ -776,7 +823,7 @@
    quantum.core.error       #{try+ try-times throw+
                               with-throw with-throws
                               throw-unless throw-when
-                              with-catch with-assert
+                              with-catch with-assert assert
                               assertf-> assertf->>},
    quantum.core.function    #{defcurried with-do f*n <- fn-> rfn fn->> mfn MWA doto->>}
    quantum.core.cljs.deps.function #{f*n}

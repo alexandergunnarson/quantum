@@ -99,12 +99,23 @@
   "Creates a byte digest of the string @s according to the @md-type algorithm.
    Assumes UTF-8 encoding for string passed.
 
-   WARNING:
+   WARNINGS:
      CMU Software Engineering Institute now says that MD5
      'should be considered cryptographically broken and
       unsuitable for further use.'
+     SHA-1 has some possible vulnerabilities too.
      Most U.S. government applications now require the SHA-2
-     family of hash functions."
+     family of hash functions.
+
+     As for SHA-3, attackers can crack SHA-3 hashed passswords 8 times
+     faster than SHA-2 hashed passwords -
+     2 times faster because we need to halve the number of hash iterations
+     and 4 times faster because of SHA-3 hardware being faster than SHA-2 hardware.
+
+     SHA-3, like SHA-2, is not intended for use as a password hash function.
+
+     Don't encrypt passwords symmetrically. Other things, maybe, but not passwords.
+     Anything that can be asymmetrically encrypted instead of symmetrically, do it."
   {:todo "Allow more hashing functions"}
   [^Keyword hash-type ^String s]
   {:pre [(splice-or hash-type = :md5 :sha-256)]}
@@ -140,6 +151,7 @@
       ; md4
       :md5 ; 1992
       ; md6 
+      ; As of 2015, no example of a SHA-1 collision has been published yet — Wikipedia
       :sha1   :sha-1-hmac
       :sha256 :sha-256-hmac
       :sha384
@@ -271,7 +283,7 @@
   ;[{:keys [encrypted ^"[B" tweak]}]
   (let [encrypt? (encrypt-param* type password)
         ^SecretKeyFactory factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")
-                          salt    (or salt (rand/rand-bytes true 8))
+                          salt    (or salt (rand/rand-bytes true 128))
         ^KeySpec          spec    (PBEKeySpec. (.toCharArray password)
                                     salt
                                     (num/exp 2 16)

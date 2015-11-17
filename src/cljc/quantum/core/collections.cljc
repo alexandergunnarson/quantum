@@ -428,20 +428,8 @@
 
 (declare drop)
 
-(defn lindices-of
-  "Lazy |indices-of|.
-
-   Originally |positions|."
-  {:source "zcaudate/hara.data.seq"}
-  [pred coll]
-  (keep-indexed
-    (fn [idx x]
-      (when (pred x)
-        idx))
-    coll))
-
 (defn indices-of
-  {:todo ["Make parallizeable" "Maybe make lazy?"]}
+  {:todo ["Make parallizeable"]}
   [coll elem-0]
   (loop [coll-n coll indices []]
     (let [i (index-of coll-n elem-0)]
@@ -453,6 +441,18 @@
             (+ i (if-let [li (last indices)]
                    (+ li (count elem-0))
                    0))))))))
+
+(defn lindices-of
+  "Lazy |indices-of|.
+
+   Originally |positions|."
+  {:source "zcaudate/hara.data.seq"}
+  [pred coll]
+  (keep-indexed
+    (fn [idx x]
+      (when (pred x)
+        idx))
+    coll))
 
 (defn index-of-pred      [coll pred]
   (->> coll (ffilteri pred) key))
@@ -713,7 +713,6 @@
    |(fn [a b] (if (> a b) a b))| is the same thing as
    |(choice-comparator >)|."
   {:todo ["Rename this function."
-          "HOW DOES THIS HAVE ANY RELEVANCE?"
           "Possibly belongs in a different namespace"]}
   [coll ^Fn compare-fn]
   (loops/reducei
@@ -1154,6 +1153,7 @@
                    (let [k-n (first kvs-n)]
                      (-> coll-f (extend-coll-to k-n)
                          (assoc-fn k-n (second kvs-n))))))))))
+
 (defn update+
   "Updates the value in an associative data structure @coll associated with key @k
    by applying the function @f to the existing value."
@@ -1847,6 +1847,41 @@
       (conj! copy (get t n)))
     (persistent! copy)))
 
+(defnt ensurec*
+  ([^vector? ensurer ensured]
+    (cond
+      (vector? ensured)
+        ensured
+      (nil? ensured)
+        ensurer
+      :else (vector ensured))))
+
+(defn ensurec
+  "ensure-collection.
+   Ensures that @ensured is the same class as @ensurer.
+   This might be used in cases where one would like to ensure that
+   |conj|ing onto a value in a map is valid."
+  {:author "Alex Gunnarson"
+   :tests '{(ensurec nil [:a])
+              [:a]
+            (ensurec :a  [:b])
+              [:a]
+            (ensurec []  [:b])
+              []
+            (update {:a 1} :a (fn-> (ensurec []) (conj 3)))
+              {:a [1 3]}}}
+  [ensured ensurer]
+  (ensurec* ensurer ensured))
+
+(defn assoc-with
+  "Like |merge-with| but for |assoc|."
+  {:author "Alex Gunnarson"
+   :tests '{(assoc-with {:a 1} (fn [a b] (-> a (ensurec []) (conj b))) :a 3)
+            {:a [1 3]}}}
+  [m f k v]
+  (if-let [v-0 (get m k)]
+    (assoc m k (f v-0 v))
+    (assoc m k v)))
 
 (defn merge-deep-with
   "Like `merge-with` but merges maps recursively, applying the given fn

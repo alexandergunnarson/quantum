@@ -4,7 +4,7 @@
 (def home-url  "http://www.twitter.com")
 (def login-url (str home-url "/login"))
 
-(defn login! [driver username password]
+(defn login! [^PhantomJSDriver driver username password]
   (.get driver login-url)
   (let [username-field
           (web/find-element driver
@@ -17,4 +17,9 @@
                                and contains(@class, 'js-password-field')]"))
         _ (web/send-keys! password-field password)
         login-button (web/find-element driver (By/xpath "//button[@type='submit']"))]
-    (web/click-load! login-button)))
+    (web/click-load! login-button)
+    (if (err/suppress
+          (web/find-element driver
+            (By/xpath "//p[contains(., 'The email and password do not match.')]")))
+        (throw+ (Err. :login-invalid "Login for twitter failed for username" username))
+        true)))
