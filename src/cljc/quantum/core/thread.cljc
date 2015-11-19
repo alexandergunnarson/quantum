@@ -3,7 +3,7 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-  (:require-quantum [ns num fn str err macros logic vec coll log res core-async async])
+  (:require-quantum [ns num fn str err macros logic vec coll time cache log type res core-async async])
   (:require
     #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
               [clojure.core.async.impl.exec.threadpool :as async-threadpool]
@@ -739,3 +739,97 @@
           ((or chunk-fn fn-nil) chunk i)
           (doseqi [piece chunk n]
             (f piece n chunk i chunks)))))))
+
+
+(defrecord Distributor
+  [name
+   work-queue
+   cache
+   max-threads
+   thread-registrar
+   threadpool
+   distributor-fn
+   interrupted?
+   log])
+
+; TODO move
+(defnt shutdown!
+  [^java.util.concurrent.ThreadPoolExecutor x]
+  (.shutdownNow x))
+
+(defn ->distributor
+  {:usage '(->distributor inc {:cache true
+                               :memoize-only-first-arg? true
+                               :max-threads 8 :name "distrib"})
+   :todo ["Add thread types options"
+          "Add validators to component atoms"
+          "Register distributor and ensure uniquity"]}
+  [f {:keys [cache memoize-only-first-arg? threadpool max-threads
+             max-work-queue-size name] :as opts}]
+  (assert ((fn-or nil? integer?) max-threads        ) #{max-threads})
+  (assert ((fn-or nil? integer?) max-work-queue-size) #{max-work-queue-size})
+  (assert ((fn-or nil? string? ) name               ) #{name})
+  (assert (or (nil? threadpool)
+              (instance? java.util.concurrent.ThreadPoolExecutor threadpool)) #{threadpool})
+  (assert (fn? f) #{f})
+  (let [cache-f          (if (true? cache)
+                             (atom {})
+                             cache) ; TODO bounded cache?
+        log            (atom [])
+        distributor-fn (atom (if cache-f
+                                 (memoize f cache-f memoize-only-first-arg?) ; It doesn't cache errors, by default   
+                                 f))
+        name-f         (or name (-> "distributor" gensym core/name keyword))
+        max-threads-f  (or max-threads (-> (Runtime/getRuntime) (.availableProcessors)))
+        thread-registrar (atom {})
+        work-queue     (if max-work-queue-size
+                          (core-async/chan (core-async/dropping-buffer max-work-queue-size))
+                          (core-async/chan)) ; Unbounded queues don't factor in to core.async 
+        threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
+        threadpool-interrupted?
+          (doto (atom false)
+            (set-validator! (MWA boolean?))
+            (add-watch :interrupt-monitor
+              (fn [_ _ _ newv]
+                (when (true? newv)
+                  (err/suppress (shutdown! @threadpool-f))))))
+        distributor-f  (Distributor.
+                         name-f
+                         work-queue
+                         cache-f
+                         max-threads-f
+                         thread-registrar
+                         threadpool-f
+                         distributor-fn
+                         threadpool-interrupted?
+                         log)]
+    (dotimes [i max-threads-f]
+      (let [thread-name  (keyword (str (core/name name-f) "-" i))
+            interrupted? (atom false)]
+        (assoc! thread-registrar thread-name {:interrupted? interrupted?})
+        (async-loop {:type :thread
+                     :id   thread-name
+                     :threadpool @threadpool-f}
+          []
+          (logic/when-let
+            [[val- queue-]    (core-async/alts!! [work-queue (core-async/timeout 500)])
+             [timestamp work] val-]
+            (try+ (apply @distributor-fn work)
+              (catch Object e ; err/suppress doesn't yet work
+                (conj! log [(time/now-instant) thread-name e])))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
+          (when-not (or @threadpool-interrupted? @interrupted?)
+            (recur)))))
+    distributor-f))
+
+(defn distribute
+  {:usage '(distribute (->distributor) [1 2 3 5 6] {:cache? true})}
+  [distributor & inputs]
+  (assert (instance? Distributor distributor) #{distributor})
+  
+  (core-async/offer! (:work-queue distributor) [(time/now-instant) inputs]))
+
+(defn distribute-all [distributor inputs-set & [apply?]]
+  (for [inputs inputs-set]
+    (if apply?
+        (apply distribute distributor inputs)
+        (distribute distributor inputs))))
