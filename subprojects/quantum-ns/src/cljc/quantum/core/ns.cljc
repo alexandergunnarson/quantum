@@ -717,7 +717,7 @@
             {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
              :aliases         {:cljc {macros      quantum.core.macros     }
                                :cljs {macros-cljs quantum.core.cljs.macros}}
-             :refers          {:cljc {macros      #{quote+ fn+ defn+ let-alias assert-args compile-if emit-comprehension do-mod}}
+             :refers          {:cljc {macros      #{quote+ fn+ defn+ defmethod+ defmethods+ let-alias assert-args compile-if emit-comprehension do-mod}}
                                :clj  {macros      #{defnt defnt'}}
                                :cljs {macros-cljs #{defnt}}}}
           rand
@@ -838,7 +838,7 @@
                               coll-or coll-and}
    quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei
                               dos lfor doseq- doseq doseqi- doseqi for}
-   quantum.core.macros      #{quote+ fn+ defn+ defnt compile-if assert-args let-alias}
+   quantum.core.macros      #{quote+ fn+ defn+ defmethod+ defmethods+ defnt compile-if assert-args let-alias}
    quantum.core.ns          #{def- defalias ns-exclude source defmalias},
    quantum.core.numeric     #{+= -=
                               ++ --}

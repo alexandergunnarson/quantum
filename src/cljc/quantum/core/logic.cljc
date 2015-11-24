@@ -10,6 +10,8 @@
 #?(:clj (set! *warn-on-reflection* true))
 
 ; TODO: ; cond-not, for :pre
+; |Switch| is implemented using an array and then points to the code.
+; String |switch| is implemented using a map8   
 
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================

@@ -39,7 +39,7 @@
 (def raw-compressors-table
   [[:gzip   :gz       :gzip     nil        nil         true         nil                                                        ]
    [:bzip2  :bz2      nil       nil        nil         true         nil                                                        ]
-   [:zip    :zip      nil       nil        nil         false        nil                                                        ]
+   [:zip    :zip      nil       nil        nil         false        ["java.util.* implementation is fastest, supposedly."      ]]
    [:7zip   :7z       nil       nil        nil         false        nil                                                        ]
    [:tar    :tar      nil       nil        nil         false        nil                                                        ]
    [:rar    :tar      nil       nil        nil         false        nil                                                        ]
@@ -49,7 +49,7 @@
    ; 3701584921      187*      67*  1  zpaq 6.40        -m 2 -
    [:zpaq   nil       nil       nil        :highest    false        ["http://mattmahoney.net/dc/10gb.html 10 GB compressed."   ]]
    [:snappy :snappy   :snappy   :very-high :medium     true         nil                                                        ]
-   [:lz4    :lz4      :lz4      :highest   :high        true         ["by far the fastest: https://github.com/jpountz/lz4-java" ]]]))
+   [:lz4    :lz4      :lz4      :highest   :high       true         ["by far the fastest: https://github.com/jpountz/lz4-java" ]]]))
 
 (def- compressors-set
   (->> raw-compressors-table
@@ -91,7 +91,7 @@
 
 #?(:clj
 (defn decompress 
-  {:todo "Do automatically by type"}
+  {:todo ["Do automatically by type"]}
   ([x]           (decompress x :lz4))
   ([x algorithm] (decompress x algorithm nil))
   ([x algorithm options]

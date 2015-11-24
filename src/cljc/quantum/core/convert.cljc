@@ -18,6 +18,9 @@
     [java.lang.reflect           Array]
     [java.util.concurrent.atomic AtomicBoolean]
     [java.net                    URI URL InetAddress]
+    ; http://java-performance.info/java-io-bytearrayoutputstream/ says:
+    ; Do not use ByteArrayOutputStream in performance critical code — it's synchronized
+    ; For performance critical code try to use ByteBuffer instead of ByteArrayOutputStream.
     [java.io                     File
                                  FileOutputStream FileInputStream
                                  ByteArrayInputStream ByteArrayOutputStream
@@ -158,6 +161,8 @@
 
 (declare ->str)
 
+; http://java-performance.info/various-methods-of-binary-serialization-in-java/
+; Look at this to learn more about writing and reading byte-buffers
 (defnt ^java.nio.ByteBuffer ->byte-buffer
   {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
    :contributors {"Alex Gunnarson" "defnt-ed"}}
@@ -333,6 +338,7 @@
    :todo ["Test these against ->bytes"]}
   ([^string? x        ] x)
   ([^string? x options] x)
+  ([#{boolean char int long float double} x] (String/valueOf x))
   ([^bytes?  x        ] (->str x nil))
   ([^bytes?  x options]
     #?(:clj

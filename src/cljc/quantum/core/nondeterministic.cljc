@@ -13,6 +13,12 @@
 #?(:clj (defonce random-generator        (Random.      )))
 #?(:clj (defonce secure-random-generator (SecureRandom/getInstance "SHA1PRNG")))
 
+; http://java-performance.com
+; Do not share an instance of java.util.Random between several threads in any circumstances, wrap it in ThreadLocal instead.
+; From Java 7 prefer java.util.concurrent.ThreadLocalRandom to java.util.Random in all
+; circumstances - it is backwards compatible with existing code, but uses cheaper
+; operations internally.
+
 #?(:clj
 (defn get-generator [secure?]
   (if secure?

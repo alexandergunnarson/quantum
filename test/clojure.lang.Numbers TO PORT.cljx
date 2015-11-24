@@ -1379,38 +1379,6 @@ static public double divide(double x, double y){
 	return x / y;
 }
 
-static public boolean equiv(double x, double y){
-	return x == y;
-}
-
-static public boolean lt(double x, double y){
-	return x < y;
-}
-
-static public boolean lte(double x, double y){
-	return x <= y;
-}
-
-static public boolean gt(double x, double y){
-	return x > y;
-}
-
-static public boolean gte(double x, double y){
-	return x >= y;
-}
-
-static public boolean isPos(double x){
-	return x > 0;
-}
-
-static public boolean isNeg(double x){
-	return x < 0;
-}
-
-static public boolean isZero(double x){
-	return x == 0;
-}
-
 static int throwIntOverflow(){
 	throw new ArithmeticException("integer overflow");
 }
@@ -1446,9 +1414,6 @@ static public int unchecked_int_multiply(int x, int y){
 static public long not(Object x){
     return not(bitOpsCast(x));
 }
-static public long not(long x){
-	return ~x;
-}
 
 static public long and(Object x, Object y){
     return and(bitOpsCast(x),bitOpsCast(y));
@@ -1458,9 +1423,6 @@ static public long and(Object x, long y){
 }
 static public long and(long x, Object y){
     return and(x,bitOpsCast(y));
-}
-static public long and(long x, long y){
-	return x & y;
 }
 
 static public long or(Object x, Object y){
@@ -1472,9 +1434,6 @@ static public long or(Object x, long y){
 static public long or(long x, Object y){
     return or(x,bitOpsCast(y));
 }
-static public long or(long x, long y){
-    return x | y;
-}
 
 static public long xor(Object x, Object y){
     return xor(bitOpsCast(x),bitOpsCast(y));
@@ -1485,9 +1444,6 @@ static public long xor(Object x, long y){
 static public long xor(long x, Object y){
     return xor(x,bitOpsCast(y));
 }
-static public long xor(long x, long y){
-    return x ^ y;
-}
 
 static public long andNot(Object x, Object y){
     return andNot(bitOpsCast(x),bitOpsCast(y));
@@ -1497,9 +1453,6 @@ static public long andNot(Object x, long y){
 }
 static public long andNot(long x, Object y){
     return andNot(x,bitOpsCast(y));
-}
-static public long andNot(long x, long y){
-    return x & ~y;
 }
 
 static public long clearBit(Object x, Object y){
@@ -1562,52 +1515,12 @@ static public int unchecked_int_remainder(int x, int y){
 	return x % y;
 }
 
-
-static public Number num(long x){
-	return Long.valueOf(x);
-}
-
 static public long unchecked_add(long x, long y){return x + y;}
 static public long unchecked_minus(long x, long y){return x - y;}
 static public long unchecked_multiply(long x, long y){return x * y;}
 static public long unchecked_minus(long x){return -x;}
 static public long unchecked_inc(long x){return x + 1;}
 static public long unchecked_dec(long x){return x - 1;}
-
-static public Number unchecked_add(Object x, Object y){return add(x,y);}
-static public Number unchecked_minus(Object x, Object y){return minus(x,y);}
-static public Number unchecked_multiply(Object x, Object y){return multiply(x,y);}
-static public Number unchecked_minus(Object x){return minus(x);}
-static public Number unchecked_inc(Object x){return inc(x);}
-static public Number unchecked_dec(Object x){return dec(x);}
-
-static public double unchecked_add(double x, double y){return add(x,y);}
-static public double unchecked_minus(double x, double y){return minus(x,y);}
-static public double unchecked_multiply(double x, double y){return multiply(x,y);}
-static public double unchecked_minus(double x){return minus(x);}
-static public double unchecked_inc(double x){return inc(x);}
-static public double unchecked_dec(double x){return dec(x);}
-
-static public double unchecked_add(double x, Object y){return add(x,y);}
-static public double unchecked_minus(double x, Object y){return minus(x,y);}
-static public double unchecked_multiply(double x, Object y){return multiply(x,y);}
-static public double unchecked_add(Object x, double y){return add(x,y);}
-static public double unchecked_minus(Object x, double y){return minus(x,y);}
-static public double unchecked_multiply(Object x, double y){return multiply(x,y);}
-
-static public double unchecked_add(double x, long y){return add(x,y);}
-static public double unchecked_minus(double x, long y){return minus(x,y);}
-static public double unchecked_multiply(double x, long y){return multiply(x,y);}
-static public double unchecked_add(long x, double y){return add(x,y);}
-static public double unchecked_minus(long x, double y){return minus(x,y);}
-static public double unchecked_multiply(long x, double y){return multiply(x,y);}
-
-static public Number unchecked_add(long x, Object y){return add(x,y);}
-static public Number unchecked_minus(long x, Object y){return minus(x,y);}
-static public Number unchecked_multiply(long x, Object y){return multiply(x,y);}
-static public Number unchecked_add(Object x, long y){return add(x,y);}
-static public Number unchecked_minus(Object x, long y){return minus(x,y);}
-static public Number unchecked_multiply(Object x, long y){return multiply(x,y);}
 
 static public Number quotient(double x, Object y){return quotient((Object)x,y);}
 static public Number quotient(Object x, double y){return quotient(x,(Object)y);}
@@ -3498,11 +3411,6 @@ static public boolean equiv(long x, double y){
 }
 
 
-static boolean isNaN(Object x){
-	return (x instanceof Double) && ((Double)x).isNaN()
-		|| (x instanceof Float) && ((Float)x).isNaN();
-}
-
 static public double max(double x, double y){
 	return Math.max(x, y);
 }
@@ -3536,15 +3444,6 @@ static public Object max(long x, double y){
 		return y;
 	}
 	if(x > y){
-		return x;
-	} else {
-		return y;
-	}
-}
-
-
-static public long max(long x, long y){
-	if(x > y) {
 		return x;
 	} else {
 		return y;
@@ -3601,10 +3500,6 @@ static public Object max(Object x, Object y){
 }
 
 
-static public double min(double x, double y){
-	return Math.min(x, y);
-}
-
 static public Object min(double x, long y){
 	if (Double.isNaN(x)){
 		return x;
@@ -3640,14 +3535,6 @@ static public Object min(long x, double y){
 	}
 }
 
-
-static public long min(long x, long y){
-	if(x < y) {
-		return x;
-	} else {
-		return y;
-	}
-}
 
 static public Object min(long x, Object y){
 	if(isNaN(y)){

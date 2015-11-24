@@ -14,6 +14,11 @@
 ; Error namespaces
 ; :missing-data
 ; :invalid-format
+; http://java-performance.info/throwing-an-exception-in-java-is-very-slow/
+; There are 3 ways to avoid exception costs:
+; 1) refactor your code not to use them;
+; 2) cache an instance of exception
+; 3) override its fillInStackTrace method
 
 (defrecord Err [type msg objs])
 
@@ -412,7 +417,8 @@
 #?(:clj
 (defmacro assert
   "Like |assert|, but takes a type"
-  {:usage '(let [a 4]
+  {:references ["https://github.com/google/guava/wiki/PreconditionsExplained"]
+   :usage '(let [a 4]
              (assert (neg? (+ 1 3 a)) #{a}))}
   [expr & [syms type]]
   `(when-not ~expr

@@ -1,5 +1,6 @@
 (ns quantum.validate.core
   (:require-quantum [:lib])
+  (:require [quantum.validate.domain])
   (:import java.util.regex.Matcher))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
@@ -16,15 +17,15 @@
 ; getInstance(boolean allowLocal, boolean allowTld) 
 
 #?(:clj
-(defn email.user?
+(defn email:user?
   "Returns |true| if the user component of an email address is valid."
   {:todo ["Port to CLJS"]
    :derivations ["org.apache.commons.validator.routines.EmailValidator"
                  "Sandeep V. Tamhankar (stamhankar@hotmail.com)"]}
   [^String user]
-  (if (and (string? user)
-          (<= (count user) max-user-length)
-          (.matches ^Matcher (re-matcher email:user-pattern user))))))
+  (and (string? user)
+       (<= (count user) max-email:user-length)
+       (.matches ^Matcher (re-matcher email:user-pattern user)))))
    
 #?(:clj
 (defn domain?
@@ -33,30 +34,25 @@
   {:todo ["Port to CLJS"]
    :derivations ["org.apache.commons.validator.routines.EmailValidator"
                  "Sandeep V. Tamhankar (stamhankar@hotmail.com)"]}
-  [domain allow-local?]
+  [domain & [allow-local?]]
   ; see if domain is an IP address in brackets
-  (let [^Matcher ipDomainMatcher (re-matcher email.ip-domain-pattern domain)]
-    if (ipDomainMatcher.matches()) {
-        return InetAddressValidator.getInstance().isValid(ipDomainMatcher.group(1));
-    }
+  (let [^Matcher ipDomainMatcher (re-matcher email:ip-domain-pattern domain)]
+    ; (if (.matches ipDomainMatcher) {
+    ;     InetAddressValidator/getInstance.isValid(ipDomainMatcher.group(1));
+    ; })
     ; Domain is symbolic name
-    DomainValidator domainValidator =
-            DomainValidator.getInstance(allow-local?);
-    if (allowTld) {
-        return domainValidator.isValid(domain) || domainValidator.isValidTld(domain);
-    } else {
-        return domainValidator.isValid(domain);
-    })))
+    (quantum.validate.domain/valid? domain allow-local?))))
 
 #?(:clj
 (defn email?
   {:todo ["Port to CLJS"]
    :derivations ["org.apache.commons.validator.routines.EmailValidator"
                  "Sandeep V. Tamhankar (stamhankar@hotmail.com)"]}
-  [email]
+  [email & [allow-local?]]
   (and (string? email)
-       (not (str/ends-with? ".")) ; Apparently this is common
+       (not (str/ends-with? email ".")) ; Apparently this is common
+       ;(= email (str/trim email))
        (let [^Matcher email-matcher (re-matcher email:pattern email)]
-         (.matches email-matcher)
-         (user?   (.group email-matcher 1))
-         (domain? (.group email-matcher 2) allow-local?)))))
+         (and (.matches email-matcher)
+              (email:user? (.group email-matcher 1))
+              (domain?     (.group email-matcher 2) allow-local?))))))

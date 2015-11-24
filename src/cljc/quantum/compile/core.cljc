@@ -38,7 +38,9 @@
    @wrapped? denotes whether the @from-src has already been wrapped in
              a |(do)|, as per |read-string|'s requirements. This saves
              time and memory."
-  {:todo  ["Add optional compiler checks."]
+  {:todo  ["Add optional compiler checks."
+           "Correct formatting for Clojure"
+           "Type inference for Java — can't all be object"]
    :usage '[(transpile :clj :java
              '(defn abcde [^long x]
                 (let [a (+ x 4)]
@@ -63,5 +65,7 @@
   (let [transpiled-str (transpile-from* from-src from to)]
     transpiled-str)
   )
+
+
 
 

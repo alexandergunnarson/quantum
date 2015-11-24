@@ -1,0 +1,171 @@
+; === HashMap performance ===
+int    => int    : 
+  get    : FastUtil; n > ~3M: Koloboke
+  put    : Koloboke
+  remove : Koloboke
+int    => Object : FastUtil
+Object => int    : FastUtil
+Object => Object
+  get    : java.util.HashMap
+  put    : Koloboke
+  remove : Koloboke
+; === IdentityMap performance ===
+  FastUtil
+
+Here are a list of all non-integral/core* intrinsics taken from the full list at:
+http://hg.openjdk.java.net/jdk8/jdk8/hotspot/file/87ee5ee27509/src/share/vm/classfile/vmSymbols.hpp#l581
+
+* where integral/core means things like, java.lang.Object methods, Reflect*.invoke() any java.lang.Class methods
+
+     ; === unboxing methods ===
+DONE ^boolean (.booleanValue ^Boolean   x)
+DONE ^byte    (.byteValue    ^Byte      x)
+DONE ^char    (.charValue    ^Character x)
+DONE ^short   (.shortValue   ^Short     x)
+DONE ^int     (.intValue     ^Integer   x)
+DONE ^long    (.longValue    ^Long      x)
+DONE ^float   (.floatValue   ^Float     x)
+DONE ^double  (.doubleValue  ^Double    x)
+
+     ; === boxing methods ===  
+DONE ^Boolean   (Boolean/valueOf   ^boolean x)
+DONE ^Byte      (Byte/valueOf      ^byte    x)
+DONE ^Character (Character/valueOf ^char    x)
+DONE ^Short     (Short/valueOf     ^short   x)
+DONE ^Integer   (Integer/valueOf   ^int     x)
+DONE ^Long      (Long/valueOf      ^long    x)
+DONE ^Float     (Float/valueOf     ^float   x)
+DONE ^Double    (Double/valueOf    ^double  x)
+
+; === BIT CONVERSION ===
+^int    (Float/floatToRawIntBits       ^float  x)  
+^int    (Float/floatToIntBits          ^float  x)  
+^float  (Float/intBitsToFloat          ^int    x)  
+^long   (Double/doubleToRawLongBits    ^double x)
+^long   (Double/doubleToLongBits       ^double x)
+^double (Double/longBitsToDouble       ^long   x)
+^int    (Integer/numberOfLeadingZeros  ^int    x)  
+^int    (Long/numberOfLeadingZeros     ^long   x)  
+^int    (Integer/numberOfTrailingZeros ^int    x)  
+^int    (Long/numberOfTrailingZeros    ^long   x)  
+^int    (Integer/bitCount              ^int    x)  
+^long   (Long/bitCount                 ^long   x)  
+^int    (Integer/reverseBytes          ^int    x)  
+^long   (Long/reverseBytes             ^long   x)  
+^char   (Character/reverseBytes        ^char   x)  
+^short  (Short/reverseBytes            ^short  x)
+
+; === MATH ===
+DONE ^double (Math/abs            ^double x)  
+DONE ^double (Math/sin            ^double x)  
+DONE ^double (Math/cos            ^double x)  
+DONE ^double (Math/tan            ^double x)  
+DONE ^double (Math/atan2          ^double x ^double y)  
+DONE ^double (Math/sqrt           ^double x)  
+DONE ^double (Math/log            ^double x)  
+DONE ^double (Math/log10          ^double x)  
+DONE ^double (Math/pow            ^double x ^double y)  
+DONE ^double (Math/exp            ^double x)  
+DONE ^int    (Math/min            ^int  x ^int  y)  
+DONE ^int    (Math/max            ^int  x ^int  y)  
+DONE ^int    (Math/addExact       ^int  x ^int  y)  
+DONE ^long   (Math/addExact       ^long x ^long y)  
+DONE ^int    (Math/decrementExact ^int  x)  
+DONE ^long   (Math/decrementExact ^long x)  
+DONE ^int    (Math/incrementExact ^int  x)  
+DONE ^long   (Math/incrementExact ^long x)  
+DONE ^int    (Math/multiplyExact  ^int  x)  
+DONE ^long   (Math/multiplyExact  ^long x)  
+DONE ^int    (Math/negateExact    ^int  x)  
+DONE ^long   (Math/negateExact    ^long x)  
+DONE ^int    (Math/subtractExact  ^int  x)  
+DONE ^long   (Math/subtractExact  ^long x)  
+                                                                                                                       
+
+
+^int  (System/identityHashCode ^Object x)  
+^long (System/currentTimeMillis)  
+^long (System/nanoTime)  
+^void (System/arraycopy ^Object[] x ^int y ^Object[] z ^int a ^int b))  
+
+^boolean (Thread/isInterrupted)
+^Thread  (Thread/currentThread)
+                                                                                                                       
+  do_intrinsic(_newArray                 java_lang_reflect_Array newArray_name newArray_signature            F_SN) 
+   do_name(     newArray_name                                    "newArray")                                          
+   do_signature(newArray_signature                               "(Ljava/lang/Class;I)Ljava/lang/Object;")            
+                                                                                                                       
+  do_intrinsic(_copyOf                   java_util_Arrays       copyOf_name copyOf_signature                 F_S)  
+   do_name(     copyOf_name                                     "copyOf")                                             
+   do_signature(copyOf_signature             "([Ljava/lang/Object;ILjava/lang/Class;)[Ljava/lang/Object;")            
+                                                                                                                       
+  do_intrinsic(_copyOfRange              java_util_Arrays       copyOfRange_name copyOfRange_signature       F_S)  
+   do_name(     copyOfRange_name                                "copyOfRange")                                        
+   do_signature(copyOfRange_signature        "([Ljava/lang/Object;IILjava/lang/Class;)[Ljava/lang/Object;")           
+                                                                                                                       
+  do_intrinsic(_equalsC                  java_util_Arrays       equals_name    equalsC_signature             F_S)  
+   do_signature(equalsC_signature                               "([C[C)Z")                                            
+                                                                                                                       
+  do_intrinsic(_compareTo                java_lang_String       compareTo_name string_int_signature          F_R)  
+   do_name(     compareTo_name                                  "compareTo")                                          
+  do_intrinsic(_indexOf                  java_lang_String       indexOf_name string_int_signature            F_R)  
+   do_name(     indexOf_name                                    "indexOf")                                            
+  do_intrinsic(_equals                   java_lang_String       equals_name object_boolean_signature         F_R)  
+                                                                                                                       
+  do_intrinsic(_checkIndex               java_nio_Buffer        checkIndex_name int_int_signature            F_R)  
+   do_name(     checkIndex_name                                 "checkIndex")                                         
+                                                                                                                       
+  do_class(sun_nio_cs_iso8859_1_Encoder  "sun/nio/cs/ISO_8859_1$Encoder")                                             
+  do_intrinsic(_encodeISOArray     sun_nio_cs_iso8859_1_Encoder encodeISOArray_name encodeISOArray_signature F_S)  
+   do_name(     encodeISOArray_name                             "encodeISOArray")                                     
+   do_signature(encodeISOArray_signature                        "([CI[BII)I")                                         
+                                                                                                                       
+                                                                                                                       
+  /* support for com.sum.crypto.provider.AESCrypt and some of its callers */                                           
+  do_class(com_sun_crypto_provider_aescrypt      "com/sun/crypto/provider/AESCrypt")                                  
+  do_intrinsic(_aescrypt_encryptBlock com_sun_crypto_provider_aescrypt encryptBlock_name byteArray_int_byteArray_int_signature F_R)
+  do_intrinsic(_aescrypt_decryptBlock com_sun_crypto_provider_aescrypt decryptBlock_name byteArray_int_byteArray_int_signature F_R)
+   do_name(     encryptBlock_name                                 "encryptBlock")                               
+   do_name(     decryptBlock_name                                 "decryptBlock")                               
+   do_signature(byteArray_int_byteArray_int_signature             "([BI[BI)V")                                  
+                                                                                                                 
+  do_class(com_sun_crypto_provider_cipherBlockChaining            "com/sun/crypto/provider/CipherBlockChaining")
+   do_intrinsic(_cipherBlockChaining_encryptAESCrypt com_sun_crypto_provider_cipherBlockChaining encrypt_name byteArray_int_int_byteArray_int_signature F_R)
+   do_intrinsic(_cipherBlockChaining_decryptAESCrypt com_sun_crypto_provider_cipherBlockChaining decrypt_name byteArray_int_int_byteArray_int_signature F_R)
+   do_name(     encrypt_name                                      "encrypt")                                         
+   do_name(     decrypt_name                                      "decrypt")                                         
+   do_signature(byteArray_int_int_byteArray_int_signature         "([BII[BI)V")                                      
+                                                                                                                      
+  /* support for java.util.zip */                                                                                     
+  do_class(java_util_zip_CRC32           "java/util/zip/CRC32")                                                      
+  do_intrinsic(_updateCRC32               java_util_zip_CRC32   update_name int2_int_signature               F_SN)
+   do_name(     update_name                                      "update")                                           
+  do_intrinsic(_updateBytesCRC32          java_util_zip_CRC32   updateBytes_name updateBytes_signature       F_SN)
+   do_name(     updateBytes_name                                "updateBytes")                                       
+   do_signature(updateBytes_signature                           "(I[BII)I")                                          
+  do_intrinsic(_updateByteBufferCRC32     java_util_zip_CRC32   updateByteBuffer_name updateByteBuffer_signature F_SN)
+   do_name(     updateByteBuffer_name                           "updateByteBuffer")
+   do_signature(updateByteBuffer_signature                      "(IJII)I")         
+
+                                                                                                       
+^void (.fillInStackTrace ^Throwable x)
+
+^StringBuilder (StringBuilder.)
+^StringBuilder (StringBuilder.  ^int           x)
+^StringBuilder (StringBuilder.  ^String        x)
+^StringBuilder (.append ^StringBuilder x ^char   y)
+^StringBuilder (.append ^StringBuilder x ^int    y)
+^StringBuilder (.append ^StringBuilder x ^String y)
+^String        (.toString       ^StringBuilder x)
+                                                                                                                     
+^StringBuffer (StringBuffer.)
+^StringBuffer (StringBuffer x ^int    y)
+^StringBuffer (StringBuffer x ^String y)
+^StringBuffer (.append ^StringBuffer x ^char   y)
+^StringBuffer (.append ^StringBuffer x ^int    y)
+^StringBuffer (.append ^StringBuffer x ^String y)
+                                                                                                                       
+^StringBuffer (.toString ^StringBuffer x)
+^String       (Integer/toString ^int x)
+^String       (String.)
+                                                                                                                       

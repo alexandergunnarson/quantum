@@ -8,6 +8,7 @@
       [clojure.pprint     :as pprint                            ]
       [clojure.stacktrace :as trace   :refer [print-cause-trace]]
       [clj-stacktrace.repl]
+      [debugger.core]
       [clojure.string     :as clj-str :refer [split-lines trim] ])))
  ; (:import mikera.cljutils.Error)
 ; (require '[taoensso.encore :as lib+ :refer
@@ -40,49 +41,36 @@
          "FROM SOURCE" ~source- "THIS IS EXCEPTION" e#)
        (throw+)))))
 
-#?(:clj 
-(defmacro break
-  "Stops execution and starts a debug REPL. When the debug REPL is
-   terminated by the ::exit namespaced-qualified keyword, execution
-   returns to just after the breakpoint."
-  {:attribution  "The Joy of Clojure, 2nd ed."
-   :contributors ["Alex Gunnarson"]}
-  ([]
-    `(clojure.main/repl
-      :prompt #(print "debug=> ")
-      :read readr
-      :eval (partial quantum.core.ns/c-eval
-              (quantum.core.ns/context))))
-  ([& args]
-    `(do (println ~@args)
-         (break)))))
+; #?(:clj 
+; (defmacro break
+;   "Stops execution and starts a debug REPL. When the debug REPL is
+;    terminated by the ::exit namespaced-qualified keyword, execution
+;    returns to just after the breakpoint."
+;   {:attribution  "The Joy of Clojure, 2nd ed."
+;    :contributors ["Alex Gunnarson"]}
+;   ([]
+;     `(clojure.main/repl
+;       :prompt #(print "debug=> ")
+;       :read readr
+;       :eval (partial quantum.core.ns/c-eval
+;               (quantum.core.ns/context))))
+;   ([& args]
+;     `(do (println ~@args)
+;          (break)))))
+
+(defonce breakpoint-types (atom #{:user}))
+
+#?(:clj
+(defmacro break [break-enable-sym]
+  `(when (contains? @breakpoint-types ~break-enable-sym)
+     (debugger.core/break nil))))
+
 ; (defn break->>
 ;   "|break| for use with threading macros."
 ;   ([threading-macro-object]
 ;    (break)
 ;    threading-macro-object))
 
-; (defmacro error
-;   "Throws an error with the provided message(s). This is a macro in order to try and ensure the 
-;    stack trace reports the error at the correct source line number."
-;   ^{:attribution "mikera.cljutils.error"}
-;   ([& vals]
-;     `(throw (mikera.cljutils.Error. (str ~@vals)))))
-; (defmacro error?
-;   "Returns true if executing body throws an error, false otherwise."
-;   ^{:attribution "mikera.cljutils.error"}
-;   ([& body]
-;     `(try 
-;        ~@body
-;        false
-;        (catch Throwable t# 
-;          true)))) 
-; (defmacro TODO
-;   "Throws a TODO error. This ia a useful macro as it is easy to search for in source code, while
-;    also throwing an error at runtime if encountered."
-;   ^{:attribution "mikera.cljutils.error"}
-;   ([]
-;     `(error "TODO: Not yet implemented")))
 ; (defmacro valid 
 ;   "Asserts that an expression is true, throws an error otherwise."
 ;   ^{:attribution "mikera.cljutils.error"}

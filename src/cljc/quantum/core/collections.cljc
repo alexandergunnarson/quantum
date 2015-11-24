@@ -38,6 +38,7 @@
             [quantum.core.data.map         :as map]
             [quantum.core.collections.core :as coll]
             [quantum.core.reducers         :as red]
+            [quantum.core.string.format    :as sform]
             [clojure.walk                  :as walk]
     #?(:clj [quantum.core.loops            :as loops])
     #?(:clj [clojure.pprint :refer [pprint]]))
@@ -180,6 +181,7 @@
 (defalias butlast       coll/butlast      )
 (defalias last          coll/last         )
 (defalias assoc!        coll/assoc!       )
+(defn assoc-in! [m ks obj] (swap! m assoc-in ks obj))
 (defalias dissoc!       coll/dissoc!      )
 (defalias conj!         coll/conj!        )
 (defalias disj!         coll/disj!        )
@@ -1954,7 +1956,7 @@
    Based on the limitations of |defrecord|, multi-arity
    functions are declared separately."
   [name- fields constructor & fns]
-  (let [constructor-sym (->> name- name str/un-camelcase (str "->") symbol)
+  (let [constructor-sym (->> name- name sform/un-camelcase (str "->") symbol)
         protocol-sym    (-> name- name (str "Functions") symbol)
         fns-signatures  (->> fns
                              (map (compr (juxt (MWA first)

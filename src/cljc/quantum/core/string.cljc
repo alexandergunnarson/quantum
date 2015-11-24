@@ -10,6 +10,8 @@
   (:refer-clojure :exclude [reverse replace remove val re-find])
   (:require-quantum [ns fn set map macros logic red num type loops cbase log err])
   (:require
+    [quantum.core.string.format :as form]
+    [quantum.core.string.regex :as regex]
     [clojure.string :as str]
     [frak])
   #?(:clj (:import java.net.IDN)))
@@ -52,10 +54,14 @@
   ([^char?   c] (contains? upper-chars c)))
   ([^string? s] (and (nempty? s) (every? (extern (partial contains? upper-chars   )) s))))
 
+(defalias ->upper form/->upper)
+
 (defnt lower?
 #?(:clj
   ([^char?   c] (contains? lower-chars c)))
   ([^string? s] (and (nempty? s) (every? (extern (partial contains? lower-chars   )) s))))
+
+(defalias ->lower form/->lower)
 
 (defnt alphanum?
 #?(:clj
@@ -74,8 +80,9 @@
   ([^char?   c] (contains? line-terminator-chars c)))
   ([^string? s] (and (nempty? s) (every? (extern (partial contains? line-terminator-chars)) s))))
 
+(defalias capitalize form/capitalize)
 
-; ===== PARTIAL PREICATES =====
+; ===== PARTIAL PREDICATES =====
 
 (defnt starts-with?
   {:todo ["Make more portable by looking at java.lang.String/startsWith"]}
@@ -92,6 +99,23 @@
        :cljs (.endsWith super         sub))) ; .endsWith is not implemented everywhere)
   ([^keyword? super sub]
     (ends-with? (name super) sub)))
+
+(defalias
+  ^{:doc "Transforms collections of strings into regexes for matching those strings. 
+          (frak/pattern [\"foo\" \"bar\" \"baz\" \"quux\"])
+          #\"(?:ba[rz]|foo|quux)\"
+          user> (frak/pattern [\"Clojure\" \"Clojars\" \"ClojureScript\"])
+          #\"Cloj(?:ure(?:Script)?|ars)\""}
+  vec->pattern frak/pattern)
+
+(defnt ->pattern
+  ([^string? x] (re-pattern x))
+  ([^regex?  x] x)
+  ([^vector? x] (vec->pattern x)))
+
+#?(:clj
+(defnt contains-pattern?
+  ([^string? x pattern] (-> (->pattern ^Pattern pattern) (.matcher x) .find))))
 
 ; ===== SPLIT/JOIN =====
 
@@ -131,11 +155,7 @@
 
 ; ===== REPLACEMENT =====
 
-(defnt replace*
-  ([^string? pre post s] (.replace    ^String s pre ^String post))
-  ([^regex?  pre post s] (str/replace         s pre         post)))
-
-(defn replace [s pre post] (replace* pre post s))
+(defalias replace form/replace)
 
 (defn replace-with
   "Replace all."
@@ -154,7 +174,6 @@
 
 ; ===== TRIMMING =====
 
-(declare escape-regexp)
 ; CANDIDATE 0
 (def trim        str/trim)
 ; CANDIDATE 1
@@ -165,7 +184,7 @@
   ([s] (trim s " "))
   ([s chs]
    (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (escape-regexp chs)) "]")
+     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
            rxstr (str "^" rxstr "+|" rxstr "+$")]
        (as-> (re-pattern rxstr) rx
              (replace s rx ""))))))
@@ -180,7 +199,7 @@
   ([s] (ltrim s " "))
   ([s chs]
    (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (escape-regexp chs)) "]")
+     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
            rxstr (str "^" rxstr "+")]
        (as-> (re-pattern rxstr) rx
              (replace s rx ""))))))
@@ -194,7 +213,7 @@
   ([s] (rtrim s " "))
   ([s chs]
    (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (escape-regexp chs)) "]")
+     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
            rxstr (str rxstr "+$")]
        (as-> (re-pattern rxstr) rx
              (replace s rx ""))))))
@@ -230,19 +249,6 @@
 (def  str-nil (whencf*n nil? ""))
 
 ; ===== COERCION =====
-
-(defalias
-  ^{:doc "Transforms collections of strings into regexes for matching those strings. 
-          (frak/pattern [\"foo\" \"bar\" \"baz\" \"quux\"])
-          #\"(?:ba[rz]|foo|quux)\"
-          user> (frak/pattern [\"Clojure\" \"Clojars\" \"ClojureScript\"])
-          #\"Cloj(?:ure(?:Script)?|ars)\""}
-  vec->pattern frak/pattern)
-
-(defnt ->pattern
-  ([^string? x] (re-pattern x))
-  ([^regex?  x] x)
-  ([^vector? x] (vec->pattern x)))
 
 (defn keyword+
   "Like |str| but for keywords."
@@ -327,182 +333,20 @@
                          (count end)))
       string))
 
-; ====== CASES ======
-
-(defnt lower-case
-  ([^string? s] (.toLowerCase s))
-  ([^char?   c] (Character/toLowerCase c)))
-(defalias lower lower-case)
-
-(defnt upper-case
-  ([^string? s] (.toUpperCase s))
-  ([^char?   c] (Character/toUpperCase c)))
-(defalias upper upper-case)
-
-; CANDIDATE 0
-(def capitalize  str/capitalize)
-
-; CANDIDATE 1
-#_(defn capitalize
-  "Converts first letter of the string to uppercase."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (when-not (nil? s)
-    (-> (.charAt ^String s 0)
-        #?(:clj (String/valueOf))
-        (upper)
-        (str (slice s 1)))))
-
-(defn capitalize-each-word [string]
-  (str/join " "
-    (map str/capitalize
-         (str/split string #" "))))
-
-(defalias camelcase cbase/camelcase)
-
-(defn un-camelcase
-  {:todo ["Find more efficient algorithm"]}
-  [sym]
-  (let [str-0 (str sym)
-        matches (->> str-0 (re-seq #"[a-z0-1][A-Z]") distinct)]
-    (-> (reduce
-          (fn [ret [char1 char2 :as match]]
-            (replace ret match (str char1 "-" (lower-case char2))))
-          str-0 matches)
-        lower-case)))
-
-(def hump-pattern #"[a-z0-9][A-Z]")
-(def non-camel-separator-pattern #"[_| |\-][A-Za-z]")
-(def non-snake-separator-pattern #"[ |\-]")
-(def non-spear-separator-pattern #"[ |\_]")
-
-(declare gsub)
-
-(defn separate-camel-humps
-  {:attribution "zcaudate/hara"}
-  [value]
-  (gsub value hump-pattern
-    #(fn->> seq (join " "))))
-
-; CANDIDATE 0
-(defn title-case
-  "Human readable."
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "Hello World"}}
-  [value]
-  (join " "
-    (map capitalize
-      (split (separate-camel-humps value) #"[ |\-|_]"))))
-
-; CANDIDATE 1
-(defn titleize
-  "Converts a string into TitleCase."
-  ([s]
-    #?(:clj  (titleize s nil)
-       :cljs (when-not (nil? s)
-               (gstr/toTitleCase s))))
-  ([s delimeters]
-    #?(:clj
-        (when-not (nil? s)
-          (let [delimeters (if delimeters
-                             (escape-regexp delimeters)
-                             "\\s")
-                delimeters (str "|[" delimeters "]+")
-                rx         (re-pattern (str "(^" delimeters ")([a-z])"))]
-            (replace s rx (fn [[c1 _]]
-                            (upper c1)))))
-       :cljs (gstr/toTitleCase s delimiters))))
-
-(defn camel-case
-  "Java, JavaScript, etc."
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "helloWorld"}}
-  [value]
-  (gsub value non-camel-separator-pattern
-    #(upper-case (apply str (rest %)))))
-
-; CANDIDATE 0
-(defn capital-camel-case
-  "C#, Java classes"
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "HelloWorld"}}
-  [value]
-  (let [camel (camel-case value)]
-   (str (upper-case (.substring camel 0 1))
-     (.substring camel 1 (.length camel)))))
-
-; CANDIDATE 1
-#_(defn capital-camel-case ;'classify'
-  "Converts string to camelized class name. First letter is always upper case."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (str)
-          (replace #"[\W_]" " ")
-          (camelize)
-          (replace #"\s" "")
-          (capitalize)))
-
-; CANDIDATE 0
-(defn snake-case
-  "Python, C, some C++"
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "hello_world"}}
-  [value]
-  (replace
-    (lower-case (separate-camel-humps value))
-    non-snake-separator-pattern
-    "_"))
-
-; CANDIDATE 1
-#_(defn snake-case
-  "Converts a camelized or dasherized string
-  into an underscored one."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (trim)
-          (replace #?(:clj  #"([a-z\d])([A-Z]+)"
-                      :cljs (regexp #"([a-z\d])([A-Z]+)" "g"))"$1_$2")
-          (replace #?(:clj  #"[-\s]+"
-                      :cljs (regexp #"[-\s]+", "g")) "_")
-          (lower)))
-
-(defn spear-case
-  "Lisps"
-  {:attribution "zcaudate/hara"
-   :tests {["Hello World"] "hello-world"}}
-  [value]
-  (replace
-    (lower-case (separate-camel-humps value))
-    non-spear-separator-pattern
-    "-"))
-
-(defn human-case
-  "Converts an underscored, camelized, or
-  dasherized string into a humanized one."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (snake-case)
-          (replace #"_id$", "")
-          (replace #?(:clj "_" :cljs (regexp "_" "g")) " ")
-          (capitalize)))
-
 ; ===== KEYWORDIZATION =====
 
 (def properize-keyword
-  (fn-> (ifn nil? str-nil name) (replace #"\-" " ") capitalize-each-word))
+  (fn-> (ifn nil? str-nil name) (replace #"\-" " ") form/capitalize-each-word))
 
 (defn keywordize [^String kw]
   (-> kw
       (replace " " "-")
       (replace "_" "-")
-      lower-case keyword))
+      form/->lower keyword))
 
 (defnt unkeywordize
   ([^keyword? k]
-    (-> k name (replace "-" " ") capitalize-each-word)))
+    (-> k name (replace "-" " ") form/capitalize-each-word)))
 
 ; ===== PUNCTUATION =====
 
@@ -705,65 +549,16 @@
                          index2-n+1
                          (-> tmpLen dec core/int))
                 (or (not ignore-case?)
-                    (and (not= (upper-case c1)
-                               (upper-case c2))
-                         (not= (lower-case c1)
-                               (lower-case c2))))
+                    (and (not= (->upper c1)
+                               (->upper c2))
+                         (not= (->lower c1)
+                               (->lower c2))))
                   false
                 :else
                   (recur index1-n+1
                          index2-n+1
                          (-> tmpLen dec core/int))))
             true))))
-
-; ===== ENCODINGS & CHARSETS =====
-
-; Charsets.ISO_8859_1
-; Charsets.US_ASCII
-; Charsets.UTF_16
-; Charsets.UTF_16BE
-; Charsets.UTF_16LE
-; Charsets.UTF_8
-
-(def ^:const max-ascii-val 0x7F)
-(defn ascii?
-  [s]
-  (and (string? s)
-       (->> s (filter #(> (core/int %) max-ascii-val)) first)))
-
-#?(:clj
-(def ^{:doc "This is because of a bug in java.net.IDN/toASCII that
-             org.apache.commons.validator.routines.DomainValidator pointed out.
-             It may have been fixed already..."}
-  idn:->ascii-preserves-trailing-dots? (= "a." (IDN/toASCII "a."))))
-
-#?(:clj
-(defn unicode->ascii
-  "Converts potentially Unicode input to punycode."
-  {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
-  [input & [silent-fail?]]
-  (if (or (nil? input) (empty? input) (ascii? input)) ; skip possibly expensive processing
-      input
-      (try
-        (let [ascii (IDN/toASCII input)]
-          (if idn:->ascii-preserves-trailing-dots?
-              ascii
-              ; RFC3490 3.1. 1)
-              ; Whenever dots are used as label separators, the following
-              ; characters MUST be recognized as dots: U+002E (full stop), U+3002
-              ; (ideographic full stop), U+FF0E (fullwidth full stop), U+FF61
-              ; (halfwidth ideographic full stop).
-              (condpc = (last input) ; original last char
-                (coll-or \u002E     ; full stop
-                         \u3002     ; ideographic full stop
-                         \uFF0E     ; fullwidth full stop
-                         \uFF61)    ; halfwidth ideographic full stop
-                    (str ascii ".") ; restore the missing stop
-                ascii)))
-      (catch IllegalArgumentException e ; input is not valid
-        (if silent-fail?
-            input
-            (throw e)))))))
 
 
 ; ===== STRING VALUES =====
@@ -811,7 +606,7 @@
                     (str (subs name 3) "!")
 
                     :else name)]
-    (spear-case nname)))
+    (form/->spear-case nname)))
 
 ; TODO MOVE NAMESPACE
 (defn clojure->java
@@ -826,7 +621,7 @@
 
                      :else
                      (str (clojure.core/name suffix) "-" name))]
-     (camel-case nname))))
+     (form/->camel-case nname))))
 
 ; ===== MISCELLANEOUS =====
 
@@ -915,14 +710,6 @@
 ;                      (.substring ^String s begin end)))))
 ;       :cljs (when-not (nil? s)
 ;               (.slice s begin end)))))
-
-(defn escape-regexp
-  "Escapes characters in the string that are not safe
-   to use in a RegExp."
-   {:attribution "funcool/cuerdas"}
-  [s]
-  #?(:clj  (Pattern/quote ^String s)
-     :cljs (gstr/regExpEscape s)))
 
 ; (defn replace
 ;   "Replaces all instance of match with replacement in s.
