@@ -469,7 +469,7 @@
                              :cljs {asyncm #{go go-loop}}}}
           async
             {:aliases {:cljc {async quantum.core.thread.async}}
-             :refers  {:cljc {async #{put!! >!! take!! <!! empty! peek!! alts!! chan wait-until}}}}
+             :refers  {:cljc {async #{concur put!! >!! take!! <!! empty! peek!! alts!! chan wait-until}}}}
           res
             {:aliases {:cljc {res       quantum.core.resources}
                        :clj  {component com.stuartsierra.component}}

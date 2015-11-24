@@ -332,7 +332,7 @@
         ^KeySpec          spec    (PBEKeySpec. (.toCharArray password)
                                     salt
                                     (Math/pow 2 (or (:iterations opts)
-                                                    (-> opts :sensitivity (get sensitivity-map))
+                                                    (->> opts :sensitivity (get sensitivity-map))
                                                     (:password sensitivity-map))) ; iterationCount
                                     (Math/pow 2 8))
         ^SecretKey        secret  (-> factory 
@@ -389,14 +389,14 @@
   {:tests '[(let [opts {:password "Alex"}
                   e (encrypt :aes "Hey! A message!" opts)]
               (decrypt :aes (:encrypted e) (merge opts e)))]}
-  [algo obj & [{:keys [key tweak salt password]}]]
+  [algo obj & [{:keys [key tweak salt password opts]}]]
   (condp = algo
-    :aes       (aes       :encrypt obj password key salt)
+    :aes       (aes       :encrypt obj password key salt opts)
     :threefish (threefish :encrypt obj key tweak)))
 
-(defn decrypt [algo obj & [{:keys [key tweak salt password]}]]
+(defn decrypt [algo obj & [{:keys [key tweak salt password opts]}]]
   (condp = algo
-    :aes       (aes       :decrypt obj password key salt)
+    :aes       (aes       :decrypt obj password key salt opts)
     :threefish (threefish :decrypt obj key tweak)))
 
 ; (import '(java.io FileInputStream FileOutputStream OutputStream))

@@ -219,6 +219,7 @@
 ; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))
 (defalias promise #?(:clj pasync/promise :cljs core/promise))
 
+#?(:clj
 (defmacro wait-until
   ([pred] `(wait-until Long/MAX_VALUE ~pred))
   ([timeout pred]
@@ -227,4 +228,18 @@
           (throw+ (Err. :timeout (str/sp "Operation timed out after" ~timeout "milliseconds") ~timeout))
           (when-not ~pred
             (sleep 10) ; Sleeping so as not to take up thread time
-            (recur (- timeout# 11))))))) ; Takes a tiny bit more time
+            (recur (- timeout# 11)))))))) ; Takes a tiny bit more time
+
+(defn concur
+  "Executes functions @fs concurrently, waiting on the slowest one to finish.
+   Returns a vector of the results.
+
+   Note: The example should only take 2 seconds, not 3."
+  {:usage '(concur #(do (println "A") (Thread/sleep 1000))
+                   #(do (println "B") (Thread/sleep 2000)))}
+  [& fs]
+  (->> fs
+       (mapv (fn [f] (clojure.core.async/go (f))))
+       (mapv (MWA clojure.core.async/<!!))))
+
+
