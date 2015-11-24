@@ -553,10 +553,6 @@
                       (func elem)))))))))))
 
 #?(:clj
-  (defn concur [method max-threads func list-0]
-    (map deref (promise-concur method max-threads func list-0))))
-
-#?(:clj
   (defn promise-concur-go [method max-threads func list-0]
     (let [count- (count list-0)
           chunk-size

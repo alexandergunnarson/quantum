@@ -1159,6 +1159,8 @@
 (declare valid-tld?)
 (declare valid-local-tld?)
 (declare valid-infrastructure-tld?)
+(declare valid-generic-tld?)
+(declare valid-country-code-tld?)
 
 (defn remove-leading-dot [s]
   (if (str/starts-with? s ".")
@@ -1198,7 +1200,7 @@
 
 (defn normalize-tld [tld]
   (-> tld
-      (encode/unicode->ascii true)
+      ^String (encode/unicode->ascii true)
       (.toLowerCase Locale/ENGLISH)
       remove-leading-dot))
 

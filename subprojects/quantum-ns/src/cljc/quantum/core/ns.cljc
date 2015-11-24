@@ -567,6 +567,8 @@
                                                 inc inc*
                                                 += -=
                                                 ++ --}}}}
+          reflect {:aliases       {:clj {reflect quantum.core.reflect}}
+                   :refers        {:clj {reflect #{obj->map}}}}
           ns
             {:requires {:cljc #{clojure.core.rrb-vector}
                         :clj  #{flatland.ordered.map   }}
