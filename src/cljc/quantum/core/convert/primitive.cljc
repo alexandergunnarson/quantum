@@ -111,6 +111,9 @@
   ([^Character x] (->int* (->char (.charValue x))))
   ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedIntCast x))))
 
+; (defnt' ->IntExact
+;   (^int [^long x] (Math/toIntExact x)))
+
 #?(:clj
     (defnt ^int ->int
       {:source "clojure.lang.RT.intCast"}
@@ -141,25 +144,25 @@
 #?(:clj
     (defnt ^long ->long
       {:source "clojure.lang.RT.longCast"}
-      ([#{Integer Long Byte Short} x] (.longValue x))
-      ([^clojure.lang.BigInt x]
+      (^long [#{Integer Long Byte Short} x] (.longValue x))
+      (^long [^clojure.lang.BigInt x]
         (if (nil? (.bipart x))
             (.lpart x)
             (long-out-of-range x)))
-      ([^java.math.BigInteger x]
+      (^long [^java.math.BigInteger x]
         (if (< (.bitLength x) 64)
             (.longValue x)
             (long-out-of-range x)))
-      ([^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
-      ([^Character                  x] (->long (.charValue       x)))
-      ([#{Double Float}             x] (->long (.doubleValue     x)))
-      ([#{char byte short int long} x] (->long* x))
-      ([#{float}                    x] (clojure.lang.RT/longCast x))  ; Because primitive casting in Clojure is not supported
-      ([#{double}                   x] (Double/doubleToRawLongBits x))
-      ([^string?                    x] #?(:clj  (-> x ->Long    ->long)
+      (^long [^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
+      (^long [^Character                  x] (->long (.charValue       x)))
+      (^long [#{Double Float}             x] (->long (.doubleValue     x)))
+      (^long [#{char byte short int long} x] (->long* x))
+      (^long [#{float}                    x] (clojure.lang.RT/longCast x))  ; Because primitive casting in Clojure is not supported
+      (^long [#{double}                   x] (Double/doubleToRawLongBits x))
+      (^long [^string?                    x] #?(:clj  (-> x ->Long    ->long)
                                           :cljs (-> x ->Integer ->long)))
     #?(:clj
-      ([^string?                    x radix] (Long/parseLong x radix))))
+      (^long [^string?                    x radix] (Long/parseLong x radix))))
    :cljs (defalias ->long core/long))
 
 (defalias long ->long)
@@ -221,6 +224,31 @@
    :cljs (defalias ->double core/double))
 
 (defalias double ->double)
+
+#?(:clj
+(defnt' ->boxed
+  "These are all intrinsics."
+  (^Boolean   [^boolean x] (Boolean/valueOf   x))
+  (^Byte      [^byte    x] (Byte/valueOf      x))
+  (^Character [^char    x] (Character/valueOf x))
+  (^Short     [^short   x] (Short/valueOf     x))
+  (^Integer   [^int     x] (Integer/valueOf   x))
+  (^Long      [^long    x] (Long/valueOf      x))
+  (^Float     [^float   x] (Float/valueOf     x))
+  (^Double    [^double  x] (Double/valueOf    x))))
+
+#?(:clj
+(defnt' ->unboxed
+  "These are all intrinsics."
+  (^boolean [^Boolean   x] (.booleanValue x))
+  (^byte    [^Byte      x] (.byteValue    x))
+  (^char    [^Character x] (.charValue    x))
+  (^short   [^Short     x] (.shortValue   x))
+  (^int     [^Integer   x] (.intValue     x))
+  (^long    [^Long      x] (.longValue    x))
+  (^float   [^Float     x] (.floatValue   x))
+  (^double  [^Double    x] (.doubleValue  x))))
+
 ;_____________________________________________________________________
 ;==================={         UNSIGNED         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

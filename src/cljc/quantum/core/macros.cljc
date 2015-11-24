@@ -78,6 +78,29 @@
    (symbol "[I") 'int    
    (symbol "[D") 'double })
 
+(def max-values
+  {'short  Short/MAX_VALUE
+   'byte   Byte/MAX_VALUE
+   'char   (int Character/MAX_VALUE)
+   'int    Integer/MAX_VALUE
+   'long   Long/MAX_VALUE
+   'float  Float/MAX_VALUE
+   'double Double/MAX_VALUE})
+
+(def promoted-types
+  {'short  'int
+   'byte   'short ; Because char is unsigned
+   'char   'int
+   'int    'long
+   'float  'double})
+
+(defn max-type [types]
+  (->> types
+       (map (fn [type] [(get max-values type) type]))
+       (remove (fn-> first nil?))
+       (into (core/sorted-map-by >))
+       first val))
+
 (defn inner-type
   {:todo ["Handle object arrays and multi-dimensional arrays"
           "Throw exception if called on an integral ('uncuttable') type"]}
@@ -554,11 +577,12 @@
       #?@(:clj
           [gen-interface-code-header
             (dlist 'gen-interface :name ns-qualified-interface-name :methods)])
+         ; Pre-expanded 
           extract-all-type-hints-from-arglist
             (fn [arglist]
-              (let [return-type-0 (or (type-hint arglist) (type-hint sym) 'Object)]
-                (->> arglist
-                     extract-type-hints-from-arglist
+              (let [return-type-0 (or (type-hint arglist) (type-hint sym) 'Object)
+                    type-hints (-> arglist extract-type-hints-from-arglist)]
+                (->> type-hints
                      (<- vector return-type-0))))
           arglists-types (->> arglists (map extract-all-type-hints-from-arglist) doall)
           _ (log/ppr-hints :macro-expand "TYPE HINTS EXTRACTED" arglists-types)
@@ -568,12 +592,14 @@
           ;   [fStarry [long #{vector?}] long]]
           gen-interface-code-body-unexpanded
             (->> arglists-types ; [[int String] int]
-                 (map (fn [[type-arglist-n return-type :as arglist-n]]
-                        (update arglist-n 0
-                          (fn->> (mapv (f*n expand-classes-for-type-hint :clj
-                                         type-arglist-n))))))
+                 (map (fn [[type-arglist-n return-type-n :as arglist-n]]
+                        (let [type-hints-n (->> type-arglist-n
+                                                (mapv (f*n expand-classes-for-type-hint :clj
+                                                      type-arglist-n)))]
+                          [type-hints-n return-type-n])))
                  (map (partial into [genned-method-name]))
                  (<- zipmap arities))
+          ; Still unexpanded
           _ (when-not strict?
               (protocol-verify-unique-first-hint (keys gen-interface-code-body-unexpanded)))
           ; {0 {string? #{3} number? #{2 3}} 1 {decimal? #{0} Object #{0 2 3}} 2 nil}
@@ -632,9 +658,16 @@
                                    (let [inner-type-n (-> hints first inner-type)
                                          hints-v (->> hints (map (f*n replace-elem inner-type-n)) (into []))
                                          arglist-hinted (hint-arglist-with arglist hints-v)
-                                         ret-type (if (= ret-type-0 'first)
-                                                      (-> arglist-hinted first type-hint)
-                                                      (or ret-type-0 'Object))
+                                         _ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
+                                         get-max-type (delay (->> arglist-hinted (map type-hint) max-type))
+                                         ret-type (cond
+                                                    (= ret-type-0 'first)
+                                                      (->> arglist-hinted first type-hint)
+                                                    (= ret-type-0 'largest)
+                                                      @get-max-type
+                                                    (= ret-type-0 'auto-promote)
+                                                      (or (get promoted-types @get-max-type) @get-max-type)
+                                                    :else (or ret-type-0 'Object))
                                          arity-hinted (assoc arity 0 arglist-hinted)]
                                      [[method-name hints-v ret-type] (into (dlist) arity-hinted)]))]
                            (->> expanded-hints-list
@@ -821,6 +854,24 @@
 
 #?(:clj (defalias defn+                    deps/defn+))
 #?(:clj (defalias fn+                      deps/fn+  ))
+
+#?(:clj
+(defmacro defmethod+
+  "Like |defmethod| but creates a named function called |this|
+   for purposes of cross-arity recursion."
+  {:attribution "Alex Gunnarson"}
+  [sym type & arities]
+  (let [sym* (with-meta sym {:tag "clojure.lang.MultiFn"})]
+    `(.addMethod ^MultiFn ~sym* ~type
+       (fn+ this ~@arities)))))
+
+#?(:clj
+(defmacro defmethods+
+  "Like |defmethod+| but uses the same fn for multiple dispatches."
+  [sym dispatches & args]
+  `(do ~@(for [dispatch dispatches]
+         `(defmethod+ ~sym ~dispatch ~@args)))))
+
 #?(:clj (defalias extend-protocol-for-all  deps/extend-protocol-for-all))
 #?(:clj (defalias defntp                   deps/defntp))
 ;#?(:clj (defalias defnt                    deps/defnt))

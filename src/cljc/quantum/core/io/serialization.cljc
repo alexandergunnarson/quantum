@@ -28,6 +28,10 @@
 
 ; RECORD SERIALIZATION DOES NOT ALLOW EXTRA KEYS. Sorry
 
+; https://developers.google.com/protocol-buffers/docs/overview
+; Compare protocol buffers to Nippy freezing.
+; Protocol buffers are are 3-10 times smaller than XML and are 20-100 times faster.
+
 (defn assoc-integral-values!
   "Read in integral values and assign to keys of record"
   {:attribution "Alex Gunnarson"}

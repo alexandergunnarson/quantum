@@ -11,6 +11,9 @@
             (java.time.format DateTimeFormatter)
             (java.time.temporal Temporal TemporalAccessor))))
 
+; Static start nano counter and then get an offset
+; System.nanoTime();
+
 ; AD 1 435432080161209600000000000N
 ; 1970 435432142297670400000000000N
 ; Nanos since 1970 1437516575242000000N

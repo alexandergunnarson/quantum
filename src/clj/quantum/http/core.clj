@@ -173,22 +173,22 @@
                 (:status req)))
       (let [request-write!  (when log? (log-entry-write! (or log ) :request tries))
             response        (request!* (dissoc req :status :log))
-            status          (:status response)]
-        (-> (if (or (= status 200) (= status 201))
-              response
-              (let [status-handler
-                     (or (get handlers status)
-                         (get handlers :default)
-                         (constantly
-                           (do (log/pr :warn "unhandled HTTP status:" status) response)))
-                    req-n+1
-                      (assoc req
-                        :tries (inc tries)
-                        :max-tries max-tries) ]
-                (status-handler req-n+1 response)))
-            (whenf (fn-and (constantly parse?)
-                           (fn-> :headers :content-type (containsv? "application/json")))
-              (fn-> :body (json/parse-string (or keys-fn str/keywordize))))))))
+            status          (:status response)
+            parse-middleware (whenf*n (fn-and (constantly parse?)
+                                              (fn-> :headers :content-type (containsv? "application/json")))
+                               (fn-> :body (json/parse-string (or keys-fn str/keywordize))))]
+        (if (or (= status 200) (= status 201))
+            ((or (get handlers status) fn/seconda) req (parse-middleware response))
+            (let [status-handler
+                   (or (get handlers status)
+                       (get handlers :default)
+                       (constantly
+                         (do (log/pr :warn "unhandled HTTP status:" status) response)))
+                  req-n+1
+                    (assoc req
+                      :tries (inc tries)
+                      :max-tries max-tries) ]
+              (status-handler req-n+1 (parse-middleware response)))))))
 
 (defnt ping!
   ([^string? url] (with-open [socket (java.net.Socket. url 80)] socket)))

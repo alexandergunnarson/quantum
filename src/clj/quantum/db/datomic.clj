@@ -42,6 +42,9 @@
 ;["an entity" "has the attribute db/doc" "with value hello world"]]
 
 (defn db*       [ ] (d/db @conn))
+
+(defalias query* d/q)
+
 (defn query
   ([q] (query q false))
   ([q raw?]
@@ -78,6 +81,13 @@
             (db/entity 123)]}
   [id]
   (d/entity (db*) id))
+
+(defn txns
+  "Returns all Datomic database transactions in the log."
+  []
+  (->> @conn d/log
+       (<- d/tx-range nil nil)
+       seq))
 
 (def allowed-types
  #{:keyword
@@ -163,8 +173,24 @@
 
 (ns-unmap 'quantum.db.datomic 'dissoc!)
 
-(defn dissoc! [id & kvs]
+(defn dissoc!*
+  "The built-in |dissoc|-like function for Datomic.
+   Unfortunately requires that one knows the values associated with keys.
+
+   '|Retract| with no value supplied is on our list of possible future
+    enhancements.' — Rich Hickey"
+  [id & kvs]
   (let [q (into [:db/retract id] kvs)]
+    (transact! [q])))
+
+(defn dissoc+
+  [id k] ; TODO fix to be more like clojure.core/dissoc
+  [:fn/retract-except id k []])
+
+(defn dissoc!
+  "Dissociates the attribute @k from @id in database."
+  [id k] ; TODO fix to be more like clojure.core/dissoc
+  (let [q (dissoc+ id k)]
     (transact! [q])))
 
 (ns-unmap 'quantum.db.datomic 'update!)
@@ -187,6 +213,7 @@
        :code     (do ~@body)}))
 
 (defmacro defn!
+  "Used for defining and transacting a database function."
   {:usage '(defn! inc [n] (inc n))}
   [sym arglist & body]
   `(create-entity! :db.part/fn
@@ -227,10 +254,14 @@
 (defn batch-transact!
   "Submits transactions synchronously to the Datomic transactor
    in asynchronous batches of |recommended-txn-ct|."
-  {:todo ["Handle errors better"]}
-  [data-0 ->entity-fn post-fn]
-  (when-let [data data-0]
-    (let [threads 
+  {:todo ["Handle errors better"]
+   :usage '(batch-transact! [9494911 1823883 28283819]
+             (fn [twitter-id]
+               {:twitter/user.id twitter-id}))}
+  [data ->entity-fn & [post-fn-0]]
+  (when (nempty? data)
+    (let [post-fn (or post-fn-0 fn-nil)
+          threads 
            (for [entities (->> data
                                (partition-all recommended-txn-ct)
                                (map (fn->> (map+ ->entity-fn)
@@ -605,7 +636,9 @@
        filter-realized-delays+
        redv))
 
-(defn restart-cacher! [base-sym]
+(defn restart-cacher!
+  "Restarts the cacher for the |defmemoized| fn."
+  [base-sym]
   (let [cacher-sym (gen-cacher-sym base-sym)
         cacher-kw  (keyword (namespace cacher-sym) (name cacher-sym))]
     (if (or (not (contains? @thread/reg-threads cacher-kw))
@@ -621,3 +654,65 @@
 (defn ->hidden-key [k]
   (keyword (namespace k)
            (-> k name (str ".hidden?"))))
+
+(defn add-std-db-fns!
+  "Inserts all the below 'standard' database functions into @db."
+  []
+  (defn! retract-except
+    ^{:doc "This will work for cardinality-many attributes as well as
+            cardinality-one.
+            
+            To make sure Alex loves pizza and ice cream but nothing else
+            that might or might not have asserted earlier: 
+  
+            [[:assertWithRetracts :alex :loves [:pizza :ice-cream]]]
+  
+            For a cardinality/one attribute it's called the same way,
+            but of course with a maximum of one value.
+  
+            It does not work if you pass in an ident as the target
+            of a ref that is not actually changing (which is what I
+            tried to do for a ref to an enum entity). You have to
+            convert the ident to an entity ID up front and pass the
+            entity ID to |retract-except|, otherwise you end up
+            with something like this in the case where there is no
+            change to an enum entity ref."
+      :usage '(db/transact!
+                [[:fn/retract-except 466192930238332 :twitter/user.followers []]])
+      :from "https://groups.google.com/forum/#!msg/datomic/MgsbeFzBilQ/s8Ze4JPKG6YJ"} 
+    [db e a vs]
+    (vals (into (->> (datomic.api/q [:find '?v :where [e a '?v]] db)
+                     (map (comp #(vector % [:db/retract e a %]) first))
+                     (into {}))
+                (->> vs
+                     (map #(vector % [:db/add e a %]))
+                     (into {}))))))
+
+(defn txn-ids-affecting-eid
+  "Returns a set of entity ids of transactions affecting @entity-id."
+  [entity-id]
+  (->> (query*
+         '[:find  ?tx
+           :in    $ ?e
+           :where [?e _ _ ?tx]]
+         (datomic.api/history (db*))
+         entity-id)
+       (map+ (MWA first))
+       (into #{})))
+
+#_(defn rollback
+  "Reassert retracted datoms and retract asserted datoms in a transaction,
+  effectively \"undoing\" the transaction.
+
+  WARNING: *very* naive function!"
+  {:origin "Francis Avila"}
+  [conn tx-id]
+  (let [tx-log (-> @db/conn datomic.api/log
+                   (datomic.api/tx-range tx-id nil) first) ; find the transaction
+        tx-eid   (-> tx-log :t datomic.api/t->tx) ; get the transaction entity id
+        newdata (->> tx-log :data  ; get the datoms from the transaction
+                     (remove (fn-> :e (= tx-eid))) ; remove transaction-metadata datoms
+                     ; invert the datoms add/retract state.
+                     (map #(do [(if (:added %) :db/retract :db/add) (:e %) (:a %) (:v %)]))
+                     reverse)] ; reverse order of inverted datoms.
+    @(d/transact conn newdata)))

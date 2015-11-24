@@ -175,6 +175,19 @@
 (defnt empty?
   ([^array? x] (zero? (count x)))))
 
+(comment
+  #?(:clj
+(defnt empty
+  {:todo ["This should be in some static map somewhere"]}
+  ([^boolean x] false)
+  ([^char    x] (char   0))
+  ([^byte    x] (byte   0))
+  ([^short   x] (short  0))
+  ([^int     x] (int    0))
+  ([^long    x] (long   0))
+  ([^float   x] (short  0))
+  ([^double  x] (double 0)))))
+
 (macros/defnt prim-long? ; defnt' isn't ready yet
   ([^long n] true)
   ([:else n] false))

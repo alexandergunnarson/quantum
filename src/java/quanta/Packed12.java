@@ -3,6 +3,7 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 // SOURCE http://java-performance.info/string-packing-converting-characters-to-bytes/
+//        http://java-performance.info/string-packing-converting-strings-to-any-other-objects/
 
 public class Packed12 extends PackedBase
 {

@@ -142,7 +142,7 @@
   (throw-unless (-> user-ids count (<= 100))
     (Err. nil "<= 100 user-ids are allowed in a single request to |user:ids->metadata|. Found:" (count user-ids)))
   ; You are strongly encouraged to use a POST for larger requests.
-  (request!
+  (request! email app
     {:url "https://api.twitter.com/1.1/users/lookup.json"
      :method :post
      :query-params {"user_id" (str/join "," user-ids)}
@@ -152,6 +152,14 @@
 
 #_(defn tweets-by-id [tweet-ids]
   )
+
+(defn post-status! [status & [{:keys [parse? handlers keys-fn] :as opts} email app]]
+  (assert (string? status) #{status})
+  (request! email app
+    ; TODO additional params are possible
+    {:url "https://api.twitter.com/1.1/statuses/update.json"
+     :method :post
+     :query-params {"status" status}}))
 
 (defn tweets-by-user
   ([user-id] (tweets-by-user false))

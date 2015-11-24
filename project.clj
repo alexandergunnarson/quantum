@@ -93,6 +93,7 @@
      [fipp                              "0.6.2"       ]
      ; NUMERIC                   
      ;[primitive-math                    "0.1.3"]
+     [net.jafama/jafama "2.1.0"]
      ; TIME
      #_[clj-time                          "0.7.0"       ] ; similar to JODA time
      [com.andrewmcveigh/cljs-time       "0.3.2"
@@ -182,6 +183,7 @@
      ; ===== MULTIPLE =====
      ; COMPRESSION, HASHING...
      [byte-transforms "0.1.3"]
+     [debugger "0.1.7"]
 
 
      ; METADATA EXTRACTION/PARSING

@@ -61,8 +61,8 @@ abstract class PackedBase
     @Override
     public int hashCode() {
         int result = f1;
-        result = 31 * result + f2;
-        result = 31 * result + f3;
+        result = (31 * result) + f2;
+        result = (31 * result) + f3;
         return result;
     }
 }

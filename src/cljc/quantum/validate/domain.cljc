@@ -1,6 +1,7 @@
 (ns quantum.validate.domain
   (:require-quantum [:lib])
-  (:require [quantum.validate.regex :as v.regex])
+  (:require [quantum.validate.regex :as v.regex]
+            [quantum.core.string.encode :as encode])
   (:import java.util.regex.Matcher
            java.net.IDN
            java.util.Locale))
@@ -1175,7 +1176,7 @@
   {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
   [domain-0 & [allow-local?]]
   (and (string? domain-0)
-       (let [domain (str/unicode->ascii domain-0 true)]
+       (let [domain (encode/unicode->ascii domain-0 true)]
          ; hosts must be equally reachable via punycode and Unicode;
          ; Unicode is never shorter than punycode, so check punycode
          ; if domain did not convert, then it will be caught by ASCII
@@ -1189,7 +1190,7 @@
 
 (defn normalize-tld [tld]
   (-> tld
-      (str/unicode->ascii true)
+      (encode/unicode->ascii true)
       (.toLowerCase Locale/ENGLISH)
       remove-leading-dot))
 
@@ -1199,7 +1200,7 @@
    The search is case-insensitive."
   {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
   [^String tld-0 & [allow-local?]]
-  (let [tld (str/unicode->ascii tld-0 true)]
+  (let [tld (encode/unicode->ascii tld-0 true)]
     (or (and allow-local? (valid-local-tld? tld))
         (valid-infrastructure-tld? tld)
         (valid-generic-tld?        tld)

@@ -15,7 +15,11 @@
             (co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
 
 #?(:clj (defonce reg-threads (atom {}))) ; {:thread1 :open :thread2 :closed :thread3 :close-req}
-#?(:clj (defn thread-ids [] (-> reg-threads deref keys sort)))
+
+
+#?(:clj (defonce reg reg-threads))
+
+#?(:clj (defn ids [] (-> reg-threads deref keys sort)))
 #?(:clj (defonce reg-threads-tree (atom {})))
 
 (defn wrap-delay [f]

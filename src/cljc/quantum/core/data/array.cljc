@@ -32,7 +32,7 @@
           n-sym (-> 'n gensym (macros/hint-meta 'pinteger?))]
       `(defnt ~fn-sym ([~n-sym] (core-sym ~n-sym))))))
 
-(defn boolean-array [n]
+(defnt boolean-array [^integer? n]
   (if (> n Integer/MAX_VALUE)
       (it.unimi.dsi.fastutil.booleans.BooleanBigArrays/newBigArray 1)
       (core/int-array n)))

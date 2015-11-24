@@ -47,6 +47,9 @@
   ([x] (encode32 (arr/->bytes-protocol x))))
 
 (defnt ^"[B" encode64
+  {:todo ["Add support for java.util.Base64 MIME and URL encoders"]
+   :performance "java.util.Base64 Found to be the fastest impl. according to
+                 http://java-performance.info/base64-encoding-and-decoding-performance/"}
   ([^integer? x]
     (Base64/encodeInteger (num/->big-integer x)))
   ([^bytes? x] (.encode (java.util.Base64/getEncoder) x))
@@ -71,6 +74,9 @@
   ([x] (decode32 (arr/->bytes-protocol x))))
 
 (defnt ^"[B" decode64
+  {:todo ["Add support for java.util.Base64 MIME and URL decoders"]
+   :performance "java.util.Base64 Found to be the fastest impl. according to
+                 http://java-performance.info/base64-encoding-and-decoding-performance/"}
   ([^bytes?  x] (.decode (java.util.Base64/getDecoder) x))
   ([^string? x] (-> x (.getBytes StandardCharsets/ISO_8859_1) decode64))
   ([         x] (-> x arr/->bytes-protocol decode64)))
@@ -120,7 +126,7 @@
   [^Keyword hash-type ^String s]
   {:pre [(splice-or hash-type = :md5 :sha-256)]}
   (let [^String            hash-type-str
-          (-> hash-type name str/upper-case)
+          (-> hash-type name str/->upper)
         ^MessageDigest     md
           (MessageDigest/getInstance hash-type-str)
         ^InputStream       in (conv/->input-stream s)
@@ -178,9 +184,19 @@
     http://csrc.nist.gov/publications/nistpubs/800-132/nist-sp800-132.pdf
 
   OWASP: Use when FIPS certification or enterprise support on many platforms is required.
-  OWASP: Apple uses this algorithm with 10000 iterations for its iTunes passwords."
+  OWASP: Apple uses this algorithm with 10000 iterations for its iTunes passwords.
+
+  @iterations is the number of times that the password is hashed during the
+  derivation of the symmetric key. The higher number, the more difficult it is
+  to brute force the key.
+
+  Feb  2005 - AES in Kerberos 5 'defaults' to 4096 rounds of SHA-1. (source: RFC 3962)
+  Sept 2010 - ElcomSoft claims iOS 3.x uses 2,000 iterations, iOS 4.x uses
+              10,000 iterations (source: ElcomSoft)
+  May  2011 - LastPass uses 100,000 iterations of SHA-256 (source: LastPass)"
+  {:info ["http://security.stackexchange.com/questions/3959/recommended-of-iterations-when-using-pkbdf2-sha256"]}
   ([^String s & [salt iterations key-length]]
-   (let [salt       (if (nnil? salt) (->bytes salt) (rand/rand-bytes 128))
+   (let [salt       (if (nnil? salt) (->bytes salt) (rand/rand-bytes true 128))
          iterations (or iterations 100000)
          k (PBEKeySpec. (.toCharArray s)
              salt iterations
@@ -188,11 +204,10 @@
          hashed
            (->> (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA1")
                 (<- .generateSecret k)
-                (.getEncoded)
-                (encode :base64)
-                ->str)
+                (.getEncoded))
          salt (->str salt)
-         iterations (->> iterations (encode :base64) ->str)]
+         ;(->> iterations (encode :base64) ->str)
+         ]
      (kmap hashed salt iterations)))))
 
 #?(:clj
@@ -271,23 +286,55 @@
                 (Err. nil "Missing required parameters:" (kmap key- tweak))))]
       encrypt-param)))
 
+(def sensitivity-map
+  ; Numbers are from 8-core Linux
+  {             ; 256    0.79 ms   0.33%  |  2  hours + 24 min
+                ; 512    1.88 ms   0.78%  |  5  hours + 41 min
+                ; 1024   3.56 ms   1.5 %  |  11 hours
+                ; 2048   7.31 ms   3.0 %  |  22 hours
+                ; 4096   12.2 ms   5.1 %  |  1 day  + 13 hours
+   1         13 ; 8192   21.9 ms   9.1 %  |  2 days + 18 hours
+   2         14 ; 16384  36.7 ms  15.2 %  |  4 days + 15 hours
+   3         15 ; 32768  72.1 ms  29.9 %  |  9 days + 2 hours
+   4         16 ; 65536  119  ms  49.4 %  |  2 weeks + a day 
+   5         17 ; 131072 242  ms 100.4 %  |  1 month + half day
+   :password 17})
+
 (defn aes
-  "With help from http://stackoverflow.com/questions/992019/java-256-bit-aes-password-based-encryption"
-  {:tests '[(let [pass "password"
+  "Source 1: You need your per-password encryption time to be at least 241 ms, assuming a
+             hacker's patience of one month.
+             So you should set the number of iterations such that computing it over a
+             single password takes at least that much time on your server.
+
+             Go for the maximum iteration count that you can budget for, so long
+             as it doesn't delay real users doing normal logins. And you should
+             increase the value as your compute capacity grows over the years.
+
+   Source 2: SQL Cipher AES-256 encrypted database uses 64000 iterations,
+             so a factor of 16, or ~119 ms."
+  {:todo ["Replace Math/pow with num/exp"]
+   :info {1 "http://stackoverflow.com/questions/992019/java-256-bit-aes-password-based-encryption"
+          2 "http://security.stackexchange.com/questions/3959/recommended-of-iterations-when-using-pkbdf2-sha256"
+          3 "https://www.zetetic.net/sqlcipher/design/"}
+   :performance '{[1091  :ms] (time (dotimes [n 10] (aes :encrypt "myinterestingperson1@ymail.com" "myfunpassword" nil nil {:iterations 16})))
+                  [5.168 :ms] (time (dotimes [n 10] (aes :encrypt "myinterestingperson1@ymail.com" "myfunpassword" nil nil {:iterations 8})))}
+   :tests '[(let [pass "password"
                   e (aes :encrypt "Hey! This is a secret message." pass)]
               (String.
                 (aes :decrypt
                   (:encrypted e) pass
                   (:key e) (:salt e))))]}
-  [type in ^String password & [key salt]]
+  [type in ^String password & [key salt opts]]
   ;[{:keys [encrypted ^"[B" tweak]}]
   (let [encrypt? (encrypt-param* type password)
         ^SecretKeyFactory factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")
                           salt    (or salt (rand/rand-bytes true 128))
         ^KeySpec          spec    (PBEKeySpec. (.toCharArray password)
                                     salt
-                                    (num/exp 2 16)
-                                    (num/exp 2 8))
+                                    (Math/pow 2 (or (:iterations opts)
+                                                    (-> opts :sensitivity (get sensitivity-map))
+                                                    (:password sensitivity-map))) ; iterationCount
+                                    (Math/pow 2 8))
         ^SecretKey        secret  (-> factory 
                                       (.generateSecret spec)
                                       (.getEncoded)
@@ -307,10 +354,6 @@
        (-> (Cipher/getInstance "AES/CBC/PKCS5Padding")
            (doto (.init Cipher/DECRYPT_MODE secret (IvParameterSpec. key)))
            (.doFinal in)))))
-
-; On decryption, the SecretKey is regenerated in exactly the same way,
-;using using the password with the same salt and iteration parameters.
-;Initialize the cipher with this key and the initialization vector stored with the message:
 
 (defn threefish
   {:todo  ["Truncate decrypted text — reverse search for NUL char in last block and truncate from there"]
