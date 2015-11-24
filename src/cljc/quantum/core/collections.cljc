@@ -181,7 +181,6 @@
 (defalias butlast       coll/butlast      )
 (defalias last          coll/last         )
 (defalias assoc!        coll/assoc!       )
-(defn assoc-in! [m ks obj] (swap! m assoc-in ks obj))
 (defalias dissoc!       coll/dissoc!      )
 (defalias conj!         coll/conj!        )
 (defalias disj!         coll/disj!        )
@@ -1249,14 +1248,15 @@
   [coll ks v]
   (update-in+ coll ks (constantly v)))
 
-(defn assoc-in!
+(defnt assoc-in!
   "Associates a value in a nested associative structure, where ks is a sequence of keys
   and v is the new value and returns a new nested structure. The associative structure
   can have transients in it, but if any levels do not exist, non-transient hash-maps will
   be created."
-  ^{:attribution "flatland.useful"}
-  [m ks v]
-  (update-in! m ks (constantly v)))
+  {:attribution "flatland.useful"}
+  ([^clojure.lang.IAtom m ks obj] (swap! m assoc-in ks obj))
+  ([m ks v]
+    (update-in! m ks (constantly v))))
 
 (defn assocs-in+
   {:usage "(assocs-in ['file0' 'file1' 'file2']

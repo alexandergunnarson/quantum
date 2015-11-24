@@ -1156,6 +1156,12 @@
   #{"localdomain" ; Also widely used as localhost.localdomain
     "localhost"}) ; RFC2606 defined
     
+(declare valid-tld?)
+
+(defn remove-leading-dot [s]
+  (if (str/starts-with? s ".")
+      (rest s)
+      s))
 
 (defn valid?
   "Returns true if the @domain-0 parses
@@ -1246,9 +1252,5 @@
   [cc-tld]
   (-> cc-tld normalize-tld (in? country-code-tlds))))
 
-(defn remove-leading-dot [s]
-  (if (str/starts-with? s ".")
-      (rest s)
-      s))
 
 

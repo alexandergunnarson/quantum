@@ -8,7 +8,7 @@
 
 (defn gen-oauth-signature
   [email app {:keys [method url query-params]} auth-params]
-  (let [http-method-caps (-> method name str/upper-case)
+  (let [http-method-caps (-> method name str/->upper)
         ; The OAuth spec says to sort lexigraphically/alphabetically.
         auth-params-sorted auth-params ; (sort-by auth-params key)
         params-string    (url/map->str (into (into (sorted-map) query-params)
@@ -28,7 +28,7 @@
         signing-key (str (url/encode consumer-secret) "&"
                          (url/encode oauth-secret))
         signature (->> (crypto/hash :sha-1-hmac signature-base-string {:secret signing-key})
-                       (crypto/encode :base64)
+                       ^"[B" (crypto/encode :base64)
                        (String.))]
     signature))
 
@@ -181,7 +181,7 @@
 (defn+ ^:suspendable sign-in!
   {:in [:argunnarson]}
   [username]
-  (.get (web/driver) "http://www.twitter.com/")
+  (.get ^WebDriver (web/driver) "http://www.twitter.com/")
   (web/click! (web/find-element (By/xpath "//button[.='Log In']")))
   (let [username-field (web/find-element (By/id "signin-email"))
         password-field (web/find-element (By/id "signin-password"))

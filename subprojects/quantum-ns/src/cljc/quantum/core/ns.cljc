@@ -642,6 +642,7 @@
           str      {:core-exclusions #{re-find}
                     :aliases {:cljc {str      quantum.core.string           }}
                     :refers  {:cljc {str      #{re-find}}}}    
+          strf     {:aliases {:cljc {strf     quantum.core.string.format    }}}    
           sys      {:aliases {:cljc {sys      quantum.core.system           }}}    
           thread   {:aliases {:cljc {thread   quantum.core.thread           }}
                     :refers  {:clj  {thread #{thread+ async async-loop}}}}

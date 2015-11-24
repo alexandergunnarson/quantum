@@ -1,5 +1,5 @@
 (ns quantum.core.reflect
-  (:require-quantum [ns logic fn map java coll str log macros]))
+  (:require-quantum [ns logic fn map java coll str log macros strf]))
 
 (def object-class=>record-class (atom {}))
 
@@ -12,7 +12,7 @@
                (map+ :name)
                redv)]
     (for-m [name-n field-names]
-      [(-> name-n str/un-camelcase keyword)
+      [(-> name-n strf/un-camelcase keyword)
        (java/field obj (name name-n))])))
 
 
