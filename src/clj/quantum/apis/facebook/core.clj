@@ -1,12 +1,12 @@
 (ns quantum.apis.facebook.core
-  (:require-quantum [:lib]))
+  (:require-quantum [:lib http]))
 
 ; http://restfb.com/
 ; GET /v2.3/me HTTP/1.1
 ; Host: graph.facebook.com
 
 ; User access token
-(defn oauth-access-token []
+#_(defn oauth-access-token []
   (http/request!
     {:url          "https://www.facebook.com/dialog/oauth"
      :query-params {"client_id" app-id
