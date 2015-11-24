@@ -266,6 +266,7 @@
   {:rfc       DateTimeFormatter/RFC_1123_DATE_TIME
    :windows   (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")
    :calendar  "EEE MMM dd HH:mm:ss.SSS z yyyy"
+   :friendly  "MMM dd, yyyy h:mm:ss a"
    :jdbc-date "yyyy-MM-dd"
    :jdbc-time "HH:mm:ss"}))
 

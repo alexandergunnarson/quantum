@@ -510,7 +510,8 @@
                          dropl dropr dropr-until dropr-after
                          into redv redm fold foldm
                          map+ map-keys+ map-vals+
-                         ffilter filter+ remove+
+                         ffilter filter+ filter-keys+ filter-vals+
+                         remove+ remove-keys+ remove-vals+
                          flatten+
                          dissoc-in+ assocs-in+ update-in+
                          split-remove
