@@ -1157,6 +1157,8 @@
     "localhost"}) ; RFC2606 defined
     
 (declare valid-tld?)
+(declare valid-local-tld?)
+(declare valid-infrastructure-tld?)
 
 (defn remove-leading-dot [s]
   (if (str/starts-with? s ".")

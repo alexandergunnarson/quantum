@@ -329,12 +329,13 @@
 (defn ->encrypted
   ; TODO can't cache without system property set so throw error
   {:performance "Takes ~160 ms per encryption. Slowwww..."}
-  ([schema val-] (->encrypted schema val- true))
-  ([schema val- entity?]
+  ([schema val-] (->encrypted schema val- true (get crypto/sensitivity-map :password)))
+  ([schema val- entity? sensitivity]
     (let [schema-ns   (namespace schema)
           schema-name (name      schema)
           result (crypto/encrypt :aes val-
-                   {:password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
+                   {:password (System/getProperty (str "password:" schema-ns "/" schema-name))
+                    :opts (kmap sensitivity)})]
       (if entity?
           (let [{:keys [encrypted salt key]} result]
             {schema             (->> encrypted (crypto/encode :base64-string))
@@ -344,8 +345,8 @@
 
 (defn ->decrypted
   {:performance "Probably slow"}
-  ([schema val-] (->decrypted schema val- true false))
-  ([schema encrypted entity? string-decode?]
+  ([schema val-] (->decrypted schema val- true false (get crypto/sensitivity-map :password)))
+  ([schema encrypted entity? string-decode? sensitivity]
     (let [schema-ns   (namespace schema)
           schema-name (name      schema)
           ;schema-key
@@ -360,9 +361,10 @@
               (->> encrypted
                    (<- get schema)
                    (crypto/decode :base64))
-              {:key  key-
-               :salt salt
-               :password (System/getProperty (str "password:" schema-ns "/" schema-name))})]
+              {:key         key-
+               :salt        salt
+               :password    (System/getProperty (str "password:" schema-ns "/" schema-name))
+               :opts (kmap sensitivity)})]
       (if string-decode?
           (String. result java.nio.charset.StandardCharsets/ISO_8859_1)
           result))))
