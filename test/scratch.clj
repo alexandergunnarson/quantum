@@ -24,3 +24,6 @@
               (while (nnil? objectClass)
                 (when (= objectClass typeClass) (return true))
                 (swap! objectClass (.getSuperclass objectClass)))))))
+
+
+

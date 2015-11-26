@@ -36,6 +36,7 @@
   ([req]
     (request! (default-username) (default-app) req)) ; For experimentation purposes
   ([email app {:as request :keys [url method query-params timestamp]}]
+    (when (= url "https://api.twitter.com/1.1/statuses/user_timeline.json") (log/pr ::init-debug (kmap email app request)))
     (let [_ (assert (nnil? email) #{email})
           _ (assert (nnil? app  ) #{app  })
           api-key     (auth/datum :twitter email :apps app :api-key)
@@ -162,15 +163,18 @@
      :query-params {"status" status}}))
 
 (defn tweets-by-user
-  ([user-id] (tweets-by-user false))
-  ([user-id include-user?]
-    (request!
+  ([user-id] (tweets-by-user))
+  ([user-id & [{:keys [parse? handlers keys-fn include-user?] :as opts} email app]]
+    (request! email app
       {:url "https://api.twitter.com/1.1/statuses/user_timeline.json"
        :method :get
+       :parse? parse?
+       :keys-fn keys-fn
+       :handlers handlers
        :query-params {"user_id" user-id
                       "count" 200
-                      "trim_user" (not include-user?)
-                      "exclude_replies" true}})))
+                      "trim_user" (str (not include-user?))
+                      "exclude_replies" "true"}})))
 
 (defn tweets-and-user [user-id]
   (tweets-by-user user-id true))

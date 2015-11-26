@@ -171,8 +171,12 @@
   "rm -rf ~/.m2/repository")
 
 (defn install-tools! []
-  (command "sudo apt-get -y install atop")
-  (command "sudo apt-get -y install ifstat")
+  (command "sudo aptitude update && sudo aptitude safe-upgrade -y &&
+            sudo apt-get update && sudo apt-get upgrade &&
+            sudo apt-get dist-upgrade")
+  (command "sudo apt-get -y install atop &&
+            sudo apt-get -y install ifstat &&
+            sudo apt-get -y install xclip")
   (command "cd ~/ &&
             git clone https://github.com/flatland/drip.git &&
             cd ~/drip &&

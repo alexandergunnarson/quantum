@@ -1660,7 +1660,7 @@
 ; TODO fix
 (def map->record hash-map)
 
-(defn reverse-kv [m]
+(defn reverse-kvs [m]
   (zipmap (vals m) (keys m)))
 
 (defn- update-nth-list*
