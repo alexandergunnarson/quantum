@@ -284,3 +284,12 @@
     (if thread?
         (future (f))
         (f))))
+
+(defmacro suppress-unsafe-eval [& body]
+  `(try+ ~@body
+     (catch org.openqa.selenium.WebDriverException e#
+       (when-not
+         (-> e# .getMessage json/decode
+             (get "errorMessage")
+             (containsv? "Refused to evaluate a string as JavaScript"))
+         (throw+)))))
