@@ -24,7 +24,8 @@
          :financial "Financial"
          :bank      "Financial"
          :fin       "Financial"
-         :plaid     "Plaid"}))
+         :plaid     "Plaid"
+         :pinterest "Pinterest"}))
 
 (defn auth-keys
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
@@ -48,9 +49,9 @@
     :overwrite false
     :data      map-f))
 
-(defn keys-assoc! [^Key auth-source & ks]
+(defn keys-assoc! [^Key auth-source & kvs]
   (write-auth-keys! auth-source
-    (apply assoc-in (auth-keys auth-source) ks)))
+    (apply assoc-in (auth-keys auth-source) kvs)))
 
 (defn keys-dissoc! [^Key auth-source & ks]
   (write-auth-keys! auth-source
