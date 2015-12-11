@@ -692,6 +692,7 @@
 
 (defn txn-ids-affecting-eid
   "Returns a set of entity ids of transactions affecting @entity-id."
+  {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"}
   [entity-id]
   (->> (query*
          '[:find  ?tx
@@ -701,6 +702,37 @@
          entity-id)
        (map+ (MWA first))
        (into #{})))
+
+(defn changes-affecting
+  {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"
+   :todo ["Replace |postwalk| with |prewalk|"
+          "Fix |prewalk|"
+          "|Prewalk| would be 'fully expand'; 'postwalk' is one level"]}
+  [eid & [show-entity-maps?]]
+  (->> eid
+       txn-ids-affecting-eid
+       ;; The transactions are themselves represented as entities. We get the
+       ;; full tx entities from the tx entity IDs we got in the query.
+       (map entity)
+       ;; The transaction entity has a txInstant attribute, which is a timestmap
+       ;; as of the transaction write.
+       (sort-by :db/txInstant)
+       ;; as-of yields the database as of a t. We pass in the transaction t for
+       ;; after, and (dec transaction-t) for before. The list of t's might have
+       ;; gaps, but if you specify a t that doesn't exist, Datomic will round down.
+       (map+
+         (fn [tx]
+           {:before (->> tx :db/id datomic.api/tx->t dec
+                         (datomic.api/as-of (db*))
+                         (<- datomic.api/entity eid))
+            :after  (->> tx :db/id
+                         (datomic.api/as-of (db*))
+                         (<- datomic.api/entity eid))}))
+       (into [])
+       (<- logic/whenp show-entity-maps?
+           (fn->> (postwalk (whenf*n (partial instance? datomic.query.EntityMap)
+                              (fn->> (into {}))))))))
+
 
 #_(defn rollback
   "Reassert retracted datoms and retract asserted datoms in a transaction,

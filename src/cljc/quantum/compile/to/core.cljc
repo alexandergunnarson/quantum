@@ -26,7 +26,7 @@
   (let [^Fn camelcase-if-needed
           (fn [s-n]
             (if camel-lang?
-                (str/camelcase s-n (if upper? nil :lower))
+                (strf/camelcase s-n (if upper? nil :lower))
                 s-n))
         ^Fn apply-conventions
           (fn [s-n]

@@ -80,8 +80,8 @@
 (defn encode [s]
   (let [encoding-map
          (-> (merge-keep-left
-               (coll/reverse-kv (:common   url-percent-codes))
-               (coll/reverse-kv (:reserved url-percent-codes)))
+               (coll/reverse-kvs (:common   url-percent-codes))
+               (coll/reverse-kvs (:reserved url-percent-codes)))
              (dissoc "." "-" "%"))]
     (reduce
       (fn [ret char-n percent-code]
