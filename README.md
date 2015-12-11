@@ -2,7 +2,7 @@ quantum
 ==========
 [![Stack Share](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic)
 
-![](resources/images/quantum.jpg)
+![](http://pre03.deviantart.net/b712/th/pre/i/2012/267/e/3/bubble_chamber_by_deepbluerenegade-d5fssqg.jpg)
 *(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
 
 ***"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction."*** *— Sidney Coleman*
