@@ -39,7 +39,8 @@ General Usage
 **In `project.clj`:**
 
 ![](https://clojars.org/quantum/core/latest-version.svg)
-(Note that Clojars is much less frequently updated than the master branch.)
+
+(Please note that the Clojars release is currently far behind the master branch.)
 
 **In namespaces:**
 
