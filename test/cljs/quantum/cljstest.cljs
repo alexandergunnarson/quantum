@@ -1,10 +1,10 @@
-(ns quantum.cljs-test
-  (:require [quantum.core.ns :as ns]))
+(ns quantum.cljstest
+  #_(:require [quantum.core.ns :as ns]))
 
 (enable-console-print!)
 
 (defn init! []
-  (println "Edits to this text should show up in your developer console!! YAY :D")
+  (println "Edits to this should show up in your console!! YAY :D")
   (println (doseq [a [4 3 5]] (println a))))
 (init!)
 
