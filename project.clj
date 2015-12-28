@@ -33,6 +33,8 @@
      [quantum/ns "1.0"]
      ; CORE
      [proteus                           "0.1.4" ]
+     ; JAVA
+     [org.clojure/java.classpath "0.2.3"]
 
      ; [com.github.detro.ghostdriver/phantomjsdriver "1.1.0"]
      ; ; ==== SERVER ====
@@ -41,12 +43,10 @@
                     org.eclipse.jetty/jetty-servlet
                     javax.servlet/servlet-api
                     clj-http]]
-     ; [ring/ring-jetty-adapter   "1.2.2"         ]
-     ; [environ                   "0.5.0"         ]
      
      ; ==== DB ====
      ; DATOMIC
-        [com.datomic/datomic-pro "0.9.5206" :exclusions [joda-time]]
+     [com.datomic/datomic-pro "0.9.5206" :exclusions [joda-time]]
      ; ==== CORE ====
        ; ==== COLLECTIONS ====
          ; CORE
@@ -123,7 +123,8 @@
      [org.eclipse.jdt/org.eclipse.jdt.core "3.10.0"] ; For formatting Java
 
      ; ==== CLOJURESCRIPT ====  
-     [org.clojure/clojurescript "0.0-3269"      ]
+     ;[org.clojure/clojurescript "0.0-3269"      ]
+     [org.clojure/clojurescript "1.7.48"]
      [reagent                   "0.5.0"         :exclusions [org.json/json]]
      ;[freactive                 "0.1.0"         ] ; a pure ClojureScript answer to react + reagent
      ;[domina                    "1.0.3"         ] ; DOM manipulation
@@ -208,7 +209,8 @@
             :plugins [;[codox "0.8.8"]
                       [lein-cljsbuild                  "1.0.5"]
                       [com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
-                      [lein-figwheel                   "0.3.1"]
+                      [quantum/lein-figwheel           "0.3.3.1" :exclusions
+                        [org.clojure/core.async org.clojure/core.cache]]
                       [jonase/eastwood                 "0.2.1"]
                       ]}}
   :aliases {"all" ["with-profile" "dev:dev,1.5:dev,1.7"]
@@ -221,29 +223,28 @@
                    "src/cljs"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
-  ;:prep-tasks   [["cljx" "once"]] 
   :global-vars {*warn-on-reflection* true}
   :java-agents [[co.paralleluniverse/quasar-core "0.7.3"]] ;  :classifier "jdk8" 
-  ; :cljsbuild
-  ;   {:builds
-  ;     [{:id "dev"
-  ;       :figwheel true
-  ;       :source-paths ["src/cljs" "src/cljc" "test/cljs"]
-  ;       :compiler {:output-to            "resources/public/js/compiled/quantum.js"
-  ;                  :output-dir           "resources/public/js/compiled/out"
-  ;                  :optimizations        :none
-  ;                  :main                 quantum.cljs_test
-  ;                  :asset-path           "js/compiled/out"
-  ;                  :source-map           true
-  ;                  :source-map-timestamp true
-  ;                  :cache-analysis       true}}
-  ;      {:id "min"
-  ;       :source-paths ["src/cljs" "src/cljc"]
-  ;       :compiler {:output-to     "resources/public/js/compiled/quantum.js"
-  ;                  :main          quantum.cljs_test                     
-  ;                  :optimizations :advanced
-  ;                  :pretty-print  false}}]}
-  ; :figwheel {:http-server-root "public" ;; default and assumes "resources" 
-  ;            :server-port 3449
-  ;            :css-dirs ["resources/public/css"]}
+  :cljsbuild
+    {:builds
+      [{:id "dev"
+        :figwheel true
+        :source-paths ["test/cljs" "test/cljc_temp"] #_["src/cljs" "src/cljc"  "test/cljs"]
+        :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
+                   :output-dir           "dev-resources/public/js/compiled/out"
+                   :optimizations        :none
+                   :main                 quantum.cljstest
+                   :asset-path           "js/compiled/out"
+                   :source-map           true
+                   :source-map-timestamp true
+                   :cache-analysis       true}}
+       {:id "min"
+        :source-paths ["src/cljs" "src/cljc"]
+        :compiler {:output-to     "dev-resources/public/js/compiled/quantum.js"
+                   :main          quantum.cljstest                     
+                   :optimizations :advanced
+                   :pretty-print  false}}]}
+  :figwheel {:http-server-root "public" ;; default and assumes "resources" 
+             :server-port 3449
+             :css-dirs ["dev-resources/public/css"]}
   )
