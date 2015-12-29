@@ -13,7 +13,7 @@
                                    proteus proteus}
                             :cljs {core cljs.core}}
                  :refers   {:cljc
-                             {ns   #{defalias defmalias source def- ns-exclude js-println
+                             {ns   #{defalias source def- ns-exclude js-println
                                      ANil ABool ADouble ANum AExactNum AInt ADecimal AKey AVec ASet
                                      AArrList ATreeMap ALSeq ARegex AEditable ATransient AQueue AMap AError}
                               ;test #{qtest}
@@ -22,9 +22,7 @@
                                   refresh #{refresh refresh-all}
                                   proteus #{let-mutable}}
                             :cljs
-                             {ns #{Exception IllegalArgumentException
-                                   Nil Bool Num ExactNum Int Decimal Key Vec Set
-                                   ArrList TreeMap LSeq Regex Editable Transient Queue Map}}}
+                             {ns #{Exception IllegalArgumentException}}}
                 :injection
                   {:clj #(do (set! clojure.core/*warn-on-reflection* true)
                              (set! clojure.core/*unchecked-math* :warn-on-boxed)
