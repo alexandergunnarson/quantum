@@ -5,17 +5,16 @@
     :attribution "Alex Gunnarson"}
   quantum.core.ns
   (:require
-               [clojure.set               :as set                        ]
                [quantum.core.ns.reg-utils :as utils :refer [set-merge ex]]
                [quantum.core.ns.reg       :as reg                        ]
-               [cljs.analyzer             :as ana                        ]
-               [cljs.util                 :as cljs-util                  ]
-               [cljs.env                  :as cljs-env                   ]
-               [clojure.string            :as str                        ]
-    #?@(:clj  ([clojure.repl              :as repl                       ]
+    #?@(:clj  ([clojure.set               :as set                        ]
+               [clojure.repl              :as repl                       ]
                [clojure.java.javadoc                                     ]
                [clojure.pprint            :as pprint                     ]
                [clojure.stacktrace                                       ]
+               [cljs.analyzer             :as ana                        ]
+               [cljs.util                 :as cljs-util                  ]
+               [cljs.env                  :as cljs-env                   ]
                )
         :cljs ([cljs.core                 :as core  :refer [Keyword]     ])))
   #?(:clj (:import (clojure.lang Keyword Var Namespace))))
@@ -34,13 +33,13 @@
 (defn this-fn-name
   ([] (this-fn-name :curr))
   ([k]
-  #?(:clj  (-> (Thread/currentThread)
-               .getStackTrace
-               (#(condp = k
-                   :curr (nth % 2)
-                   :prev (nth % 3)
-                   (throw (ex "Unrecognized key."))))
-               .getClassName clojure.repl/demunge)
+  #?(:clj  (let [st (-> (Thread/currentThread) .getStackTrace)
+                 ^StackTraceElement elem
+                    (condp = k
+                      :curr (nth st 2)
+                      :prev (nth st 3)
+                      (throw (ex "Unrecognized key.")))]
+             (-> elem .getClassName clojure.repl/demunge))
      :cljs (throw (ex "Unimplemented")))))
 
 ; ===== CONTEXTUAL EVAL =====
@@ -286,15 +285,14 @@
   {:source "Stuart Sierra, via clojure.clojure-contrib/import-static"}
   [class & fields-and-methods]
   (let [only (set (map str fields-and-methods))
-        the-class (Class/forName (str class))
-        static? (fn [x]
-                    (java.lang.reflect.Modifier/isStatic
-                      (.getModifiers x)))
+        ^Class the-class (Class/forName (str class))
+        static? (fn [^java.lang.reflect.Member x]
+                    (-> x .getModifiers java.lang.reflect.Modifier/isStatic))
         statics (fn [array]
-                    (set (map (memfn getName)
+                    (set (map (fn [^java.lang.reflect.Member x] (.getName x))
                               (filter static? array))))
-        all-fields    (statics (.getFields  the-class))
-        all-methods   (statics (.getMethods the-class))
+        all-fields    (-> the-class .getFields  statics)
+        all-methods   (-> the-class .getMethods statics)
         fields-to-do  (set/intersection all-fields  only)
         methods-to-do (set/intersection all-methods only)
         make-sym (fn [string]
@@ -557,7 +555,7 @@
                   (or (and (sequential? x)
                            (some sugar-keys x))
                       (reload-spec? x)
-                      (macro-autoload-ns? x))))
+                      (ana/macro-autoload-ns? x))))
               (map (fn [x]
                      (if-not (reload-spec? x)
                        (->> x (remove-from-spec #{:include-macros})
@@ -574,24 +572,23 @@
           (update-in indexed [:require-macros] (fnil into []) require-specs))
         args)))))
 
-#?(:clj (def cljs-parse ana/parse))
+; |in-ns| is necessary; can't do it inline
+#?(:clj (in-ns 'cljs.analyzer))
 
-#?(:clj (remove-method cljs-parse 'ns))
 #?(:clj
-; CLJS: .-add-method
-(.addMethod cljs-parse 'ns
+(.addMethod parse 'ns
   (fn [_ env [_ name & args :as form] _ opts]
-    (when-not (symbol? name) 
-      (throw (ana/error env "Namespaces must be named by a symbol.")))
-    (let [name (cond-> name (:macros-ns opts) ana/macro-ns-name)]
-      (let [segments (str/split (clojure.core/name name) #"\.")]
+    (when-not (symbol? name)
+      (throw (error env "Namespaces must be named by a symbol.")))
+    (let [name (cond-> name (:macros-ns opts) macro-ns-name)]
+      (let [segments (string/split (clojure.core/name name) #"\.")]
         (when (= 1 (count segments))
-          (ana/warning :single-segment-namespace env {:name name}))
-        (when (some ana/js-reserved segments)
-          (ana/warning :munged-namespace env {:name name}))
-        (ana/find-def-clash env name segments)
+          (warning :single-segment-namespace env {:name name}))
+        (when (some js-reserved segments)
+          (warning :munged-namespace env {:name name}))
+        (find-def-clash env name segments)
         #?(:clj
-           (when (some (complement cljs-util/valid-js-id-start?) segments)
+           (when (some (complement util/valid-js-id-start?) segments)
              (throw
                (AssertionError.
                  (str "Namespace " name " has a segment starting with an invaild "
@@ -601,18 +598,18 @@
             args         (if docstring (next args) args)
             metadata     (if (map? (first args)) (first args))
             form-meta    (meta form)
-            args         (desugar-ns-specs+ (if metadata (next args) args))
+            args         (quantum.core.ns/desugar-ns-specs+ (if metadata (next args) args))
             name         (vary-meta name merge metadata)
-            excludes     (ana/parse-ns-excludes env args)
+            excludes     (parse-ns-excludes env args)
             deps         (atom #{})
             aliases      (atom {:fns {} :macros {}})
-            spec-parsers {:require        (partial ana/parse-require-spec env false deps aliases)
-                          :require-macros (partial ana/parse-require-spec env true deps aliases)
-                          :use            (comp (partial ana/parse-require-spec env false deps aliases)
-                                            (partial ana/use->require env))
-                          :use-macros     (comp (partial ana/parse-require-spec env true deps aliases)
-                                            (partial ana/use->require env))
-                          :import         (partial ana/parse-import-spec env deps)}
+            spec-parsers {:require        (partial parse-require-spec env false deps aliases)
+                          :require-macros (partial parse-require-spec env true deps aliases)
+                          :use            (comp (partial parse-require-spec env false deps aliases)
+                                            (partial use->require env))
+                          :use-macros     (comp (partial parse-require-spec env true deps aliases)
+                                            (partial use->require env))
+                          :import         (partial parse-import-spec env deps)}
             valid-forms  (atom #{:use :use-macros :require :require-macros :import})
             reload       (atom {:use nil :require nil :use-macros nil :require-macros nil})
             reloads      (atom {})
@@ -620,9 +617,9 @@
             (reduce
               (fn [m [k & libs]]
                 (when-not (#{:use :use-macros :require :require-macros :import} k)
-                  (throw (ana/error env "Only :refer-clojure, :require, :require-macros, :require-quantum, :use, :use-macros, and :import libspecs supported")))
+                  (throw (error env "Only :refer-clojure, :require, :require-macros, :use, :use-macros, and :import libspecs supported")))
                 (when-not (@valid-forms k)
-                  (throw (ana/error env (str "Only one " k " form is allowed per namespace definition"))))
+                  (throw (error env (str "Only one " k " form is allowed per namespace definition"))))
                 (swap! valid-forms disj k)
                 ;; check for spec type reloads
                 (when-not (= :import k)
@@ -638,7 +635,7 @@
                   (map (spec-parsers k)
                     (remove #{:reload :reload-all} libs))))
               {} (remove (fn [[r]] (= r :refer-clojure)) args))]
-        (set! ana/*cljs-ns* name)
+        (set! *cljs-ns* name)
         (let [ns-info
               {:name           name
                :doc            (or docstring mdocstr)
@@ -651,7 +648,7 @@
               ns-info
               (if (:merge form-meta)
                 ;; for merging information in via require usage in REPLs
-                (let [ns-info' (get-in @cljs-env/*compiler* [::namespaces name])]
+                (let [ns-info' (get-in @env/*compiler* [::namespaces name])]
                   (if (pos? (count ns-info'))
                     (let [merge-keys
                           [:use-macros :require-macros :uses :requires :imports]]
@@ -662,7 +659,7 @@
                           (select-keys ns-info merge-keys))))
                     ns-info))
                 ns-info)]
-          (swap! cljs-env/*compiler* update-in [::namespaces name] merge ns-info)
+          (swap! env/*compiler* update-in [::namespaces name] merge ns-info)
           (merge {:op      :ns
                   :env     env
                   :form    form
@@ -676,3 +673,5 @@
               (@reload :require)
               (update-in [:requires]
                 (fn [m] (with-meta m {(@reload :require) true})))))))))))
+
+#?(:clj (in-ns 'quantum.core.ns))
