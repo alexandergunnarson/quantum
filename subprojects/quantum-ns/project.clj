@@ -11,9 +11,8 @@
   ;:deploy-repositories [["releases" :clojars]
   ;                      ["clojars" {:creds :gpg}]]
  :dependencies
-    [; ==== CLOJURE ====
-     [org.clojure/clojure       "1.7.0-beta3"  ]
-     ;[org.clojure/clojurescript "0.0-3269"      ]
+    [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th
+     [org.clojure/clojurescript                 "1.7.170"         ]
      ]
   :aliases {"deploy-dev"  ["do" "clean," "install"]
             "deploy-prod" ["do" "clean," "install," "deploy" "clojars"]}
