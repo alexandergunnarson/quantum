@@ -3,7 +3,9 @@
     :attribution "Alex Gunnarson"}
   quantum.core.numeric.clj
   (:refer-clojure :exclude
-    [* *' + +' - -' / < > <= >= == rem inc dec zero? min max format
+    [* *' + +' - -' / < > <= >= == inc inc' dec dec'
+     zero? neg? pos? min max format
+     rem quot mod
      bigint biginteger bigdec])
   (:require-quantum [:core logic type fn macros err log pconvert])
   (:require [quantum.core.convert.primitive :as prim :refer [->unboxed]]
