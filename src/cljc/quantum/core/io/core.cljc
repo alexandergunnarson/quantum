@@ -1,375 +1,147 @@
-(ns
-  ^{:doc "I/O operations. Path parsing, read/write, serialization, etc.
-
-          Perhaps it would be better to use, say, org.apache.commons.io.FileUtils
-          for many of these things."}
-  quantum.core.io.core
-  (:refer-clojure :exclude [read descendants])
-  (:require-quantum [ns macros arr pr str time coll num logic type fn sys err log vec])
+(ns quantum.core.io.core
+  (:refer-clojure :exclude [get assoc! dissoc!])
+  (:require-quantum [:core logic fn core-async log err res vec])
+  (:require [com.stuartsierra.component  :as component]
+            [datascript.core             :as mdb      ]
+   #?(:clj  [taoensso.nippy              :as nippy    ])
+   #?(:clj  [iota                        :as iota     ])
+            [quantum.core.convert        :as conv
+              :refer [->name ->str]                   ]
+            [quantum.db.datomic          :as db      
+              #?@(:cljs [:refer [EphemeralDatabase]]) ]
+            [quantum.core.string         :as str      ]
+            [quantum.core.system         :as sys      ]
+            [clojure.walk :refer [postwalk]]
+            [quantum.core.io.utils       :as u        ]
+            [quantum.core.paths          :as p        
+              :refer [path]]
+    #?(:clj [clojure.java.io             :as io       ]))
   #?(:clj
-      (:require
-        [clojure.java.io               :as io    ]
-        [taoensso.nippy                :as nippy ]
-        [quantum.core.io.serialization :as io-ser]
-        [iota                          :as iota  ]))
-  #?(:clj
-      (:import
-        (java.io File
-                 FileNotFoundException IOException
-                 FileReader PushbackReader
-                 DataInputStream DataOutputStream 
-                 OutputStream FileOutputStream
-                 BufferedOutputStream BufferedInputStream
-                 InputStream  FileInputStream
-                 PrintWriter)
-        (java.util.zip ZipOutputStream ZipEntry)
-        java.util.List
-        org.apache.commons.io.FileUtils)))
+  (:import (quantum.db.datomic EphemeralDatabase)
+           (java.io File
+                    InputStream OutputStream
+                    DataInputStream DataOutputStream
+                    FileInputStream FileOutputStream
+                    FileNotFoundException))))
 
-;(require '[clojure.data.csv :as csv])
+(defonce clj-ext (atom :cljd)) ; Clojure data
 
-#?(:clj (do
+; All this isn't just IO, it's persisting, which is a smallish subset
 
-(defnt ^String path->file-name
-  ([^file?   f] (.getName f))
-  ([^string? s] (coll/taker-until-workaround sys/separator nil s)))
-
-(defalias file-name* path->file-name)
-
-(defnt extension
-  ([^string? s] (coll/taker-until-workaround "." nil s))
-  ([^file?   f] (-> f str extension)))
-
-(defalias file-ext extension)
-(def ext-index (f*n last-index-of "."))
-
-(defn- double-escape [^String x]
-  (str/replace x "\\" "\\\\"))
-
-(defn- ^bytes parse-bytes
-  {:todo ["Belongs in |bytes| ns"]}
-  [encoded-bytes]
-  (->> (re-seq #"%.." encoded-bytes)
-       (map+ (f*n subs 1))
-       (map+ #(.byteValue ^Integer (Integer/parseInt % 16)))
-       redv
-       (byte-array)))
-
-(defn url-decode
-  "Decode every percent-encoded character in the given string using the
-  specified encoding, or UTF-8 by default."
-  {:attribution "ring.util.codec.percent-decode"}
-  [encoded & [encoding]]
-  (str/replace
-    encoded
-    #"(?:%..)+"
-    (fn [chars]
-      (-> ^bytes (parse-bytes chars)
-          (String. ^String (or encoding "UTF-8"))
-          (double-escape)))))
-;___________________________________________________________________________________________________________________________________
-;========================================================{ PATH, EXT MGMT }=========================================================
-;========================================================{                }==========================================================
-(defn+ up-dir-str [dir]
-  (->> dir
-       (<- whenf (extern (f*n str/ends-with? sys/separator)) popr)
-       (dropr-until sys/separator)
-       (<- whenc empty?
-         (throw+ {:msg (str/sp "Directory does not have a parent directory:" dir)}))))
-
-; (java.nio.file.Paths/get "asd/" (into-array ["/asdd/"]))
-(defn path
-  "Joins string paths (URLs, file paths, etc.)
-  ensuring correct separator interposition."
-  {:attribution "taoensso.encore"
-   :usage '(path "foo/" "/bar" "baz/" "/qux/")}
-  [& parts]
-  (apply str/join-once sys/separator parts))
-
-(defn path-without-ext [path-0]
-  (coll/taker-after "." path-0))
+; TODO replace
+; Similar to |contains?|
+#?(:clj (defn exists? [x] (.exists ^File x)))
 
 #?(:clj
-(def- test-dir (path (System/getProperty "user.dir") "test")))
-
-(def- this-dir (System/getProperty "user.dir"))
-
-(def- root-dir
-  (condp = sys/os
-    :windows (-> (System/getenv) (get "SYSTEMROOT") str)
-    "/"))
-
-(def- drive-dir
-  (condp = sys/os
-    :windows
-      (whenc (getr root-dir 0
-               (whenc (index-of root-dir "\\") (fn-eq? -1) 0))
-             empty?
-        "C:\\") ; default drive
-    sys/separator))
-(def- home-dir    (System/getProperty "user.home"))
-
-(def- desktop-dir (path home-dir "Desktop"))
-
-(def  dirs
-  (let [proj-path-0
-          (or (get (System/getenv) "PROJECTS")
-              (up-dir-str this-dir))
-        proj-path-f 
-          (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
-               path
-              (partial path drive-dir))]
-    (atom {:test      test-dir
-           :this-dir  this-dir
-           :root      root-dir
-           :drive     drive-dir
-           :home      home-dir
-           :desktop   desktop-dir
-           :projects  proj-path-f
-           :keys      (if (= "local" (System/getProperty "quantum.core.io:paths:keys"))
-                          (path this-dir "dev-resources" "Keys")
-                          (path home-dir "Quanta" "Keys"))
-           :dev-resources (path this-dir "dev-resources")
-           :resources
-             (whenc (path this-dir "resources")
-                    (fn-> io/as-file .exists not)
-                    (path proj-path-f (up-dir-str this-dir) "resources"))})))
-
-(defnt ^String parse-dir
-  ([^vector? keys-n]
-    (reducei
-      (fn [path-n key-n n]
-        (let [first-key-not-root?
-               (and (= n 0) (string? key-n)
-                    ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
-              k-to-add-0 (or (get @dirs key-n) key-n)
-              k-to-add-f
-                (if first-key-not-root?
-                    (str sys/separator k-to-add-0)
-                    k-to-add-0)]
-          (path path-n k-to-add-f)))
-      "" keys-n))
-  ([^string?  s] s)
-  ([^keyword? k] (parse-dir [k]))
-  ([          obj] (if (nil? obj) "" (throw+ (Err. :unimplemented nil {:obj obj :class (class obj)})))))
-
-(defnt ^java.io.File as-file
-  ([^vector? dir] (-> dir parse-dir as-file))
-  ([^string? dir] (-> dir io/file))
-  ([^file?   dir] dir))
-
-(def file-str (fn-> as-file str))
-
-(defnt exists?
-  ([^string? s] (-> s as-file exists?))
-  ([^file?   f] (.exists f)))
-
-(defnt directory?
-  ([^string? s] (-> s as-file directory?))
-  ([^file?   f] (and (exists? f) (.isDirectory f))))
-
-(defalias folder? directory?)
-
-(ns-unmap 'quantum.core.io.core 'file?)
-(def file? (fn-not directory?))
-
-(def clj-extensions #{:clj :cljs :cljc})
-
-(def clj-file?
-  (fn-and file?
-    (fn->> extension keyword (containsv? clj-extensions))))
-
-; FILE RELATIONS
-
-(defnt ^String up-dir
-  ([^string? dir ] (-> dir up-dir-str))
-  ([^vec?    dir ] (-> dir parse-dir up-dir))
-  ([^file?   file] (.getParent file)))
-
-(defn parent [f]
-  (.getParentFile ^File (as-file f)))
-
-(defn children [f]
-  (let [^File file (as-file f)]
-    (when (directory? file)
-      (->> file (.listFiles) seq))))
-
-(defn siblings [f]
-  (let [^File file (as-file f)]
-    (->> file parent children
-         (remove (fn-> str (= (str file)))))))
-
-(def directory-? (mfn 1 directory?))
-(def descendants       (fn->> as-file file-seq))
-(def descendant-leaves (fn->> as-file file-seq (remove directory-?)))
-(def internal-nodes    (fn->> as-file file-seq (filter directory-?)))
-(def descendant-dirs internal-nodes)
-;___________________________________________________________________________________________________________________________________
-;========================================================{ FILES AND I/O  }=========================================================
-;========================================================{                }==========================================================
-(defnt readable?
-  ([^string? dir]
-    (try (->> dir (.checkRead (SecurityManager.)))
-         true
-      (catch SecurityException _ false)))
-  ([^file?   dir] (->> dir str       readable?))
-  ([^vec?    dir] (->> dir parse-dir readable?)))
-
-(defnt writable?
-  ([^string? dir]
-    (try (->> dir (.checkWrite (SecurityManager.)))
-         true
-      (catch SecurityException _ false)))
-  ([^file?   dir] (->> dir str writable?)))
-
-(defalias input-stream  io/input-stream )
-(defalias resource      io/resource     )
-(defalias output-stream io/output-stream)
-(defalias copy!         io/copy         )
-
-(defn create-dir! [dir-0]
-  (let [dir   (-> dir-0 parse-dir)
-        ^File dir-f (as-file dir)]
-    (if (exists? dir)
-        (try+ (writable? dir-f)
-              (assert (.mkdir dir-f))
-          (catch SecurityException e
-            (throw+
-              (Err. :mkdir "The directory could not be created. A security exception occurred." (kmap e dir))))
-          (catch [:type :assertion-error] e
-            (throw+
-              (Err. :mkdir "The directory could not be created. Possibly administrator permissions are required." (kmap e dir))))))))
-
-(defn num-to-sortable-str [num-0]
-  (ifn num-0 (fn-and num/nneg? (f*n < 10))
-       (partial str "0")
-       str))
-(defn next-file-copy-num [path-0]
-  (let [extension (file-ext path-0)
-        file-name (-> path-0 path->file-name)]
-    (try
-      (->> path-0
-           siblings
-           (map+ str)
-           (filter+
-             (partial
-               (fn-and
-                 (fn-> file-name* (str/starts-with? file-name))
-                 (fn-> file-ext (= extension)))))
-           (map+ (fn-> file-name*
-                       (str/replace (str file-name " ") "") 
-                       path-without-ext str/val))
-           (filter+ number?)
-           redv num/greatest inc num-to-sortable-str)
-      (catch Exception _ (num-to-sortable-str 1)))))
-
-(defn- write-from-stream!
-  {:todo ["Reflection"]}
-  [^InputStream in-stream ^String out-path]
+(defn- stream->assoc!
+  {:todo ["Reflection"
+          "Look over Java implementation — probably better"]}
+  [^String out-path ^InputStream in-stream]
   (let [^FileOutputStream out-stream
           (FileOutputStream. (File. out-path))
         ^"[B" buffer (byte-array (* 8 1024))]
-    (loop [bytesRead (int (.read in-stream buffer))]
-      (when (not= bytesRead -1)
-        (do (.write out-stream buffer 0 bytesRead)
+    (loop [bytes-read (int (.read in-stream buffer))]
+      (when (not= bytes-read -1)
+        (do (.write out-stream buffer 0 bytes-read)
             (recur (.read in-stream buffer)))))
 
     (.close in-stream)
-    (.close out-stream)))
+    (.close out-stream))))
 
-(defn write-unserialized!
+#?(:clj
+(defn assoc-unserialized!
   {:todo ["Decomplicate"]}
-  [data ^String path- & {:keys [type] :or {type :string}}]
-  {:pre [(with-throw
-           (or (and (instance? InputStream data)
-                    (= type :binary))
-               (not (instance? InputStream data)))
-           (str/sp "InputStream canot be written to output type:" type))]}
-  (condpc = type
-    (coll-or :str :string :txt) 
-      (spit path- data)
-    :binary
-      (if (instance? InputStream data)
-          (write-from-stream! data path-)
-          (let [^FileOutputStream out-stream
-                  (FileOutputStream. ^File (as-file path-))]
-            (.write out-stream data) ; REFLECTION error
-            (.close out-stream)))
-    ;:csv  (with-open [out-file   (io/writer path-)]  ;  :append true... hmm...
-    ;        (csv/write-csv out-file data))
-    :xls  (with-open [write-file (output-stream path-)]
-            (.write data write-file))
-    :xlsx (with-open [write-file (output-stream path-)]
-            (.write data write-file))))
+  ([^String path- data] (assoc-unserialized! path- data nil))
+  ([^String path- data {:keys [type] :or {type :string}}]
+    (throw-unless
+      (or (and (instance? InputStream data)
+               (= type :binary))
+          (not (instance? InputStream data)))
+      (->ex :err/io "InputStream cannot be written to output type" type))
+    (condpc = type
+      (coll-or :str :string :txt) 
+        (spit path- data)
+      :binary
+        (if (instance? InputStream data)
+            (stream->assoc! path- data)
+            (let [^FileOutputStream out-stream
+                    (FileOutputStream. ^File (io/as-file path-))]
+              (.write out-stream data) ; REFLECTION warning
+              (.close out-stream)))
+      ;:csv  (with-open [out-file   (io/writer path-)]  ;  :append true... hmm...
+      ;        (csv/write-csv out-file data))
+      (coll-or :xls :xlsx)
+        (with-open [write-file (io/output-stream path-)]
+          (.write data write-file))))))
 
-(defn write-serialized! ; can encrypt :encrypt-with :....
-  [data path-0 write-method & [unfreezable-caught?]]
-  (with-open [write-file (output-stream path-0)]
-    (let [data-f (whenf data vector+? ; Because "unfreezable type: rrbt Vector"
-                   (partial core/into []))]
-      (try+ (nippy/freeze-to-out!
-              (DataOutputStream. write-file)
-              (case write-method
-                :serialize data-f
-                :compress  (nippy/freeze data-f)))
-            (catch Object e
-              (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
-                       (not unfreezable-caught?))
-                  (->> data
-                       (postwalk (whenf*n vector+?
-                                   (partial core/into []))) 
-                       (<- write-serialized! path-0 write-method true))
-                  (throw+))
-              ))))); byte-code
+#?(:clj 
+(defn assoc-serialized! ; can encrypt :encrypt-with :....
+  ([path-0 data] (assoc-serialized! path-0 data nil))
+  ([path-0 data {:keys [compress?
+                        unfreezable-caught?]}]
+    (with-open [write-file (io/output-stream path-0)]
+      (let [data-f (whenf data vector+? ; Because "unfreezable type: rrbt Vector"
+                     (partial core/into []))]
+        (try (nippy/freeze-to-out!
+               (DataOutputStream. write-file)
+               (if compress?
+                   (nippy/freeze data-f)
+                   data-f))
+          (catch Throwable e
+            (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
+                     (not unfreezable-caught?))
+                (->> data
+                     (postwalk (whenf*n vector+?
+                                 (partial core/into []))) 
+                     #((assoc-serialized! path-0 %
+                         (assoc :unfreezable-caught? true))))
+                (throw e)))))))))
 
-(def- ill-chars-table
-  {"\\" "-", "/" "-", ":" "-", "*" "!", "?" "!"
-   "\"" "'", "<" "-", ">" "-", "|" "-"})
-
-(defn conv-ill-chars [str-0] ; Make less naive - Mac vs. Windows, etc.
-  (reduce-kv
-    (fn [str-n k v] (str/replace str-n k v))
-    str-0 ill-chars-table))
-
-(defn write-try
+#?(:clj
+(defn try-assoc!
+  {:todo ["rewrite"]}
   [n successful? file-name-f directory-f
-   file-path-f write-method data-formatted file-type]
+   file-path-f method data-formatted file-type]
   (cond successful? (print " complete.\n")
         (> n 2)     (println "Maximum tries exceeded.")
         :else
-        (try+
-          (print "Writing" file-name-f "to" directory-f (str "(try " n ")..."))
-          (condpc = write-method
-            :print  (write-unserialized! data-formatted file-path-f :type :string)
-            #?@(:clj [:pretty (pprint data-formatted (io/writer file-path-f))]) ; is there a better way to do this?)
+        (try
+          (log/pr :debug "Writing" file-name-f "to" directory-f (str "(try " n ")..."))
+          (condpc = method
+            :print  (assoc-unserialized! file-path-f data-formatted {:type :string})
+            :pretty (clojure.pprint/pprint data-formatted (io/writer file-path-f)) ; is there a better way to do this?
 
             (coll-or :serialize :compress :binary)
-              (if (or ;(= write-method :binary)
+              (if (or ;(= method :binary)
                       (splice-or file-type = "csv" "xls" "xlsx" "txt" :binary))
-                  (write-unserialized! data-formatted file-path-f :type (keyword file-type))
-                  (write-serialized!   data-formatted file-path-f write-method))
-            (println "Unknown write method requested."))
-          #(write-try (inc n) true file-name-f directory-f
-             file-path-f write-method data-formatted file-type)
+                  (assoc-unserialized! data-formatted file-path-f :type (keyword file-type))
+                  (assoc-serialized!   data-formatted file-path-f method))
+            (throw (->ex :illegal-arg "Unknown method requested." method)))
+          #(try-assoc! (inc n) true file-name-f directory-f
+             file-path-f method data-formatted file-type)
           (catch FileNotFoundException _
-            (create-dir! directory-f)
-            #(write-try (inc n) false file-name-f directory-f
-               file-path-f write-method data-formatted file-type)))))
-(defn+ write! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
+            (u/create-dir! directory-f)
+            #(try-assoc! (inc n) false file-name-f directory-f
+               file-path-f method data-formatted file-type))))))
+
+#_(defn assoc! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
+  "@file-types : Should be a vector of keywords"
   {:todo ["Apparently has problems with using the :directory key"
-          "Decomplicate"]}
-  [& {file-name :name file-path :path
-      :keys [data directory file-type
-             write-method overwrite formatting-func]
-      :or   {data            nil
-             directory       :resources
-             file-name       "Untitled"
-             file-type       "cljx"
-             write-method    :serialize ; :compress ; can encrypt :encrypt-with :.... ; :write-method :pretty
-             overwrite       true  ; :date, :num :num-0
-             formatting-func identity}
-      :as   options}]
-  (doseq [file-type-n (coll/coll-if file-type)]
+          "Decomplicate"
+          "Rewrite"]}
+  ([opts] (assoc! nil (:data opts) opts))
+  ([path- data] (assoc! path- data opts))
+  ([path- data {file-name :name file-path :path
+                :keys [data directory file-type
+                       method overwrite formatting-func]
+                :or   {directory       :resources
+                       file-name       "Untitled"
+                       file-types      [@clj-ext]
+                       method          :serialize ; :compress ; can encrypt :encrypt-with :.... ; :method :pretty
+                       overwrite       true  ; :date, :num :num-0
+                       formatting-func identity}
+                :as   options}]
+  (doseq [file-type-n file-types]
     (let [file-path-parsed (parse-dir file-path)
           directory-parsed (parse-dir directory)
           directory-f
@@ -414,9 +186,9 @@
             (println file-name-f)
             (println directory-f)
       (trampoline write-try 1 false
-        file-name-f directory-f file-path-f write-method data-formatted file-type))))
+        file-name-f directory-f file-path-f method data-formatted file-type))))
 
-(defn delete!
+#_(defn dissoc!
   {:todo ["Implement recycle bin functionality for Windows" "Decomplicate"]}
   [& {file-name :name file-path :path
       :keys [directory silently?]
@@ -446,61 +218,200 @@
                 (if (exists? file-path-f)
                     (fail-alert!)
                     (success-alert!)))))
-        (println "WARNING: File does not exist. Failed to delete:" file-path-f))))
+        (println "WARNING: File does not exist. Failed to delete:" file-path-f)))))
 
-(defn read
-  {:todo        ["Decomplicate"]
+#?(:clj (def create-file! (fn-> io/as-file (.createNewFile))))
+
+(defn assoc!
+  "Persists @x between page reloads.
+   Assocs @x to @k in js/localStorage.
+
+   Note, according to OWASP:
+   It's recommended not to use js/localStorage, IndexedDB, or the Filesystem API
+   (including for session identifiers) because:
+   1) Any authentication your application requires can be bypassed by a
+      user with local privileges to the machine on which the data is stored
+   2) A single Cross Site Scripting can be used to steal all the data
+      in these objects
+   3) A single Cross Site Scripting can be used to load malicious data
+      into these objects too, so don't consider objects in these to be trusted.
+
+   Cookies can mitigate this risk using the |httpOnly| flag."
+  {:todo ["|path| is naive"
+          "Technically file structures can be like nested keys in a map,
+           so it would be |assoc-in!|"]}
+  [k x & [opts]]
+  #?(:clj  (throw (->ex :not-implemented))
+     :cljs (js/localStorage.setItem (apply path k) (->str x))))
+
+; TODO replace
+#?(:clj
+(defn byte-array? [x]
+  (= (type x) (type (byte-array 0)))))
+
+(defn get
+  "Reads/'gets' a file from the filesystem.
+
+   In the case of CLJS, it gets it from local storage."
+  {:todo        ["Decomplicate" "Rewrite" "|path| is naive"]
    :attribution "Alex Gunnarson"}
-  [& {file-name :name file-path :path
-      :keys [directory file-type read-method class-import]
+  ([unk] (cond (string? unk)
+               (get nil {:path unk})
+               (map? unk)
+               (get nil unk)
+               :else (throw (->ex :unknown-argument nil unk))))
+  ([_ {file-name :name file-path :path
+      :keys [directory file-type method]
       :or   {directory   :resources
-             read-method :unserialize} ; :uncompress is automatic
+             method :unserialize} ; :uncompress is automatic
       :as options}] ; :string??
-  (when (fn? class-import)
-    (class-import))
-  (let [^String directory-f (-> directory parse-dir)
-        ^String file-path-f
-          (or (-> file-path parse-dir (whenc empty? nil))
-              (path directory-f file-name))
-        extension (or file-type (file-ext file-path-f))]
-    (condpc = read-method
-      :load-file (load-file file-path-f) ; don't do this; validate it first
-      :str-seq   (iota/seq file-path-f)
-      :str-vec   (iota/vec file-path-f)
-      :str       (slurp file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
-      :unserialize
-        (condpc = extension
-          (coll-or "txt" "xml")
-            (iota/vec file-path-f) ; default is FileVec
-          "xlsx"
-            (input-stream file-path-f)
-          ;"csv"
-          ;(-> file-path-f io/reader csv/read-csv)
-          (whenf (with-open [read-file (input-stream file-path-f)] ; Clojure object
-                 (nippy/thaw-from-in! (DataInputStream. read-file)))
-            byte-array? nippy/thaw))
-      (println "Unknown read method requested."))))
+  #?(:cljs (js/localStorage.getItem file-path)
+     :clj (let [^String directory-f (-> directory p/parse-dir)
+                ^String file-path-f
+                  (or (-> file-path p/parse-dir (whenc empty? nil))
+                      (path directory-f file-name))
+                extension (keyword (or file-type (p/file-ext file-path-f)))]
+            (condpc = method
+              :str-seq   (iota/seq  file-path-f)
+              :str-vec   (iota/vec  file-path-f)
+              :str       (slurp     file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
+              :load-file (load-file file-path-f) ; don't do this; validate it first
+              :unserialize
+                (condpc = extension
+                  (coll-or :txt :xml)
+                    (iota/vec file-path-f) ; default is FileVec
+                  (coll-or :xls :xlsx)
+                    (io/input-stream file-path-f)
+                  ;"csv"
+                  ;(-> file-path-f io/reader csv/read-csv)
+                  (whenf (with-open [read-file (io/input-stream file-path-f)] ; Clojure object
+                         (nippy/thaw-from-in! (DataInputStream. read-file)))
+                    byte-array? nippy/thaw))
+              (println "Unknown read method requested."))))))
 
-(defn create-temp-file!
-  [^String file-name ^String suffix]
-  (java.io.File/createTempFile file-name suffix))
+#?(:cljs
+(defrecord
+  ^{:doc "Persists @persist-data"}
+  Persister
+  [persist-key persist-class persist-data opts]
+  component/Lifecycle
+    (start [this]
+      ; TODO multimethod
+      (condp = persist-class
+        EphemeralDatabase
+          (let [{:keys [schema]} opts
+                {:keys [db history]} persist-data]
+            #?(:cljs
+            (when (-> db meta :listeners (core/get persist-key))
+              (throw (->ex :duplicate-persisters
+                           "Cannot have multiple ClojureScript Persisters for DataScript database"))))
+            ; restoring once persisted DB on page load
+            (or (when-let [stored (get (->name persist-key))]
+                  (let [stored-db (conv/->mdb stored)]
+                    (when (= (:schema stored-db) schema) ; check for code update
+                      (reset! db stored-db)
+                      (swap! history conj @db)
+                      true)))
+                ; (mdb/transact! conn schema)
+                )
+            (mdb/listen! db :persister
+              (fn [tx-report] ; TODO do not notify with nil as db-report
+                              ; TODO do not notify if tx-data is empty
+                (when-let [db (:db-after tx-report)]
+                  (go (assoc! persist-key db))))))
+        (throw (->ex :unhandled-class
+                       "Class not handled for persistence."
+                       persist-class))))
+    (stop [this]
+      (mdb/unlisten! (:db persist-data) :persister))))
 
-(defmacro with-temp-file
-  {:attribution "From github.com/bevuta/pepa.util"}
-  [[name data suffix] & body]
-  `(let [data# ~data
-         ~name (create-temp-file! "pepa" (or ~suffix ""))]
-     (try
-       (when data#
-         (io/copy data# ~name))
-       ~@body
-       (finally
-         (.delete ~name)))))
 
-; Placed here to avoid shadowing within this ns
-(defalias file       as-file)
-(defalias file-name file-name*)
+; From macourtney/clojure-tools
+;(defn
+; #^{:doc "Returns the file object if the given file is in the given directory, nil otherwise."}
+;   find-file [directory file-name]
+;   (when (and file-name directory (string?  file-name) (instance? File directory))
+;     (let [file (File. (.getPath directory) file-name)]
+;       (when (and file (.exists file))
+;         file))))
 
-(def create-file! (fn-> as-file (.createNewFile)))
+; (defn
+; #^{:doc "Returns the file object if the given directory is in the given parent directory, nil otherwise. Simply calls find-file, but this method reads better if you're really looking for a directory."}
+;   find-directory [parent-directory directory-name]
+;   (find-file parent-directory directory-name))
+  
+; (defn
+; #^{:doc "A convience function for simply writing the given content into the file."}
+;   write-file-content [file content]
+;   (when (and file content (.exists (.getParentFile file)))
+;     (spit file content)))
 
-))
+; (defn
+; #^{:doc "Creates a new child directory under the given base-dir if the child dir does not already exist."}
+;   create-dir 
+;   ([base-dir child-dir-name] (create-dir base-dir child-dir-name false))
+;   ([base-dir child-dir-name silent]
+;     (if-let [child-directory (find-directory base-dir child-dir-name)]
+;       child-directory
+;       (do
+;         (logging/info (str "Creating " child-dir-name " directory in " (. base-dir getName) "..."))
+;         (let [child-directory (new File base-dir child-dir-name)]
+;           (.mkdirs child-directory)
+;           child-directory)))))
+
+; (defn
+; #^{:doc "Recursively creates the given child-dirs under the given base-dir.
+; For example: (create-dirs (new File \"foo\") \"bar\" \"baz\") creates the directory /foo/bar/baz
+; Note: this method prints a bunch of stuff to standard out."}
+;   create-dirs 
+;   ([dirs] (create-dirs dirs false))
+;   ([dirs silent]
+;     (let [base-dir (first dirs)
+;           child-dirs (rest dirs)]
+;       (if base-dir
+;         (reduce (fn [base-dir child-dir] (create-dir base-dir child-dir silent)) base-dir child-dirs)
+;         (logging/error "You must pass in a base directory.")))))
+
+; (defn
+; #^{ :doc "Creates and returns the given file if it does not already exist. If it does exist, the method simply prints to
+; standard out and returns nil" }
+;   create-file 
+;   ([file] (create-file file false))
+;   ([file silent]
+;     (if (. file exists)
+;       (logging/info (str (. file getName) " already exists. Doing nothing."))
+;       (do
+;         (logging/info (str "Creating file " (. file getName) "..."))
+;         (. file createNewFile)
+;         file))))
+
+; (defn
+; #^{ :doc "Deletes the given directory if it contains no files or subdirectories." }
+;   delete-if-empty [directory]
+;   (when-not (empty? (file-seq directory))
+;     (. directory delete)
+;     true))
+
+; (defn
+; #^{ :doc "Deletes if empty all of the given directories in order." }
+;   delete-all-if-empty [& directories]
+;   (reduce (fn [deleted directory] (if deleted (delete-if-empty directory))) true directories))
+
+; (defn
+; #^{ :doc "Deletes the given directory even if it contains files or subdirectories. This function will attempt to delete
+; all of the files and directories in the given directory first, before deleting the directory. If the directory cannot be
+; deleted, this function aborts and returns nil. If the delete finishes successfully, then this function returns true." }
+;   recursive-delete [directory]
+;   (if (.isDirectory directory) 
+;     (when (reduce #(and %1 (recursive-delete %2)) true (.listFiles directory))
+;       (.delete directory))
+;     (.delete directory)))
+
+; (defn
+; #^{ :doc "Returns true if the given file is a directory. False otherwise, even if the is directory check causes an
+; AccessControlException which may happen when running in Google App Engine." }
+;   is-directory? [file]
+;   (try
+;     (.isDirectory file)
+;     (catch AccessControlException access-control-exception
+;       false)))

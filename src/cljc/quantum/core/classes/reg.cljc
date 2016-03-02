@@ -1,5 +1,5 @@
 (ns quantum.core.classes.reg
-  (:require-quantum [ns])
+  (:require-quantum [:core])
   #?(:clj (:import org.reflections.Reflections
                  org.reflections.scanners.SubTypesScanner)))
 

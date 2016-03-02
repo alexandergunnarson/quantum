@@ -2,9 +2,16 @@
   ^{:doc "System-level (environment) vars such as |os|."
     :attribution "Alex Gunnarson"}
   quantum.core.system
-  (:require-quantum [str coll])
-  #?(:clj (:import java.io.File java.lang.management.ManagementFactory)))
+  (:require-quantum [:core fn logic #_str #_coll])
+  (:require [quantum.core.collections :as coll
+              :refer [containsv?]]
+            [clojure.string :as str])
+  #?(:clj (:import java.io.File
+                   java.lang.management.ManagementFactory)))
 
+; TODO possibly move JS feature detection here?
+
+#?(:clj
 (def ^{:from "com.google.common.base.StandardSystemProperty"}
   std-properties
   #{
@@ -63,23 +70,34 @@
   ;User's home directory.
   "user.home"
   ;User's current working directory.
-  "user.dir"})
+  "user.dir"}))
 
-
-#?(:clj
 (def os ; TODO: make less naive
-  (if (containsv? (System/getProperty "os.name") "Windows")
-      :windows
-      :unix)))
+  #?(:cljs (condp containsv? (.-appVersion js/navigator)
+             "Win"   :windows
+             "MacOS" :mac
+             "X11"   :unix
+             "Linux" :linux
+             :unknown)
+     :clj
+      (let [os-0 (-> (System/getProperty "os.name")
+                     str/lower-case)]
+        (condpc containsv? os-0
+          "win"                       :windows
+          "mac"                       :mac
+          (coll-or "nix" "nux" "aix") :unix
+          "sunos"                     :solaris))))
+
+(def separator 
+  #?(:cljs (condp = os :windows "\\" "/") ; TODO make less naive
+     :clj  (str (File/separatorChar)))) ; string because it's useful in certain functions that way
+
+(def os-sep-esc
+  (condp = os
+    :windows "\\\\"
+    "/"))
 
 #?(:clj (defn this-pid [] (->> (ManagementFactory/getRuntimeMXBean) (.getName))))
-
-#?(:clj (def separator (str (File/separatorChar)))) ; string because it's useful in certain functions that way
-#?(:clj
-(def os-sep-esc
-  (case os
-    :windows "\\\\"
-    "/")))
 
 #?(:clj
 (defn env-var
@@ -87,6 +105,23 @@
   {:usage '(env-var "HOME")}
   [env-var-to-lookup]
   (-> (System/getenv) (get env-var-to-lookup))))
+
+#?(:clj
+(defn- java-version
+  {:from "clojure.tools.nrepl.middleware"}
+  []
+  (let [version-string (System/getProperty "java.version")
+        version-seq (re-seq #"\d+" version-string)
+        version-map (if (<= 3 (count version-seq))
+                      (zipmap [:major :minor :incremental :update] version-seq)
+                      {})]
+    (assoc version-map :version-string version-string))))
+
+#?(:clj
+(defn class-loader
+  "Gets the system class loader"
+  []
+  (ClassLoader/getSystemClassLoader)))
 
 #?(:clj
 (defn mem-stats

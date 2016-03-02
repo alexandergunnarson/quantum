@@ -1,32 +1,24 @@
 (ns quantum.core.analyze.clojure.core
-  (:refer-clojure :exclude [name])
-  (:require-quantum [:lib])
-  (:require [quantum.core.analyze.clojure.predicates :refer :all]))
+  (:require-quantum [:core logic fn])
+  (:require #?(:clj  [clojure.jvm.tools.analyzer :as ana])
+            #?(:clj  [clojure.tools.analyzer.jvm]
+               ;:cljs [clojure.tools.analyzer.js ]
+               )))
 
-; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
-(def conditional-branches
-  (condf*n
-    (fn-or if-statement? cond-statement?)
-      (fn->> rest
-             (partition-all 2)
-             (map (if*n (fn-> count (= 2))
-                    second
-                    first))
-             doall)
-    when-statement?
-      last
-    (constantly nil)))
-; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
-(defn map-conditional-branches [f x]
-  (condf x
-    (fn-or if-statement? cond-statement?)
-      (fn->> rest
-             (partition-all 2)
-             (map (if*n (fn-> count (= 2))
-                    (f*n update-nth 1 f)
-                    (f*n update-nth 0 f)))
-             (cons (list (first x)))
-             (apply concat))
-    when-statement?
-      (f*n update-last f)
-    identity))
+#?(:clj
+(defmacro ast
+  {:usage '(ast (let [a 1 b {:a a}] [(-> a (+ 4) (/ 5))]))}
+  ([lang & args]
+    (condp = lang
+      :clj  `(cond
+               true  (ana/ast     ~@args)
+               :else (clojure.tools.analyzer.jvm/analyze ~@args))
+      ;:cljs `(clojure.tools.analyzer.js/analyze)
+      ))))
+
+#?(:clj
+(defalias
+  ^{:doc "Returns a vector of maps representing the ASTs of the forms
+          in the target file."
+    :usage '(analyze-file "my/ns.clj")}
+  analyze-file ana/analyze-file))

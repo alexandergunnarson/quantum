@@ -6,34 +6,20 @@
     :attribution "Alex Gunnarson"}
   quantum.core.log
   (:refer-clojure :exclude [pr])
-  (:require-quantum [ns fn pr])
-  (:require
-    #?(:clj  [clojure.core.async :as async]
-       :cljs [cljs.core.async    :as async]))
-  #_(:require
-    #?(:clj  [clj-time.core  :as time]
-       :cljs [cljs-time.core :as time])))
-
-  ; #?(:cljs (:require-macros
-  ;   [cljs.core.async :refer [go]]))
+  (:require-quantum [:core fn pr core-async tpred debug])
+  (:require [com.stuartsierra.component :as component]
+   #_(:clj  [clj-time.core              :as time     ]
+      :cljs [cljs-time.core             :as time     ])))
 
 (defrecord LoggingLevels
   [warn user macro-expand debug trace env])
 
-(defonce ^:dynamic *prs*
+(defonce levels
   (-> {:warn              true
        :user              true}
       map->LoggingLevels atom)) ; alert, inspect, debug
 
 (defonce log  (atom []))
-(defonce vars (atom {}))
-(defn cache! [k v]
-  (swap! vars assoc k v))
-(defonce statuses (atom (async/chan)))
-(defonce errors (atom []))
-(defn error [throw-context]
-  (swap! errors conj
-    (update throw-context :stack-trace vec)))
 
 (defrecord LogEntry
   [time-stamp ; ^DateTime  
@@ -43,37 +29,51 @@
 
 (defn disable!
   ([^Keyword pr-type]
-    (swap! *prs* assoc pr-type false))
+    (swap! levels assoc pr-type false))
   ([^Keyword pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (disable! pr-type-n))))
 
 (defn enable!
   ([^Keyword pr-type]
-    (swap! *prs* assoc pr-type true))
+    (swap! levels assoc pr-type true))
   ([^Keyword pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (enable! pr-type-n)))) 
 
-(def env-type #?(:clj :clj :cljs :cljs))
+(defrecord LogInitializer
+  [levels]
+  component/Lifecycle
+  (start [this]
+    (apply enable! levels)
+    this)
+  (stop  [this]
+    (apply disable! levels)
+    this))
+
+(defn ->log-initializer [{:keys [levels] :as opts}]
+  (when-not (seqable? levels)
+    (throw (#?(:clj Exception. :cljs js/Error.)) "@levels is not seqable"))
+
+  (LogInitializer. levels))
 
 (defn pr*
   "Prints to |System/out| if the print alert type @pr-type
-   is in the set of enabled print alert types, |*prs*|.
+   is in the set of enabled print alert types, |levels|.
 
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
   [trace? pretty? print-fn pr-type args opts]
-    (when (or (get @*prs* pr-type)
+    (when (or (get @levels pr-type)
               #?(:cljs (= pr-type :macro-expand)))
       (let [trace?     (or (:trace?  opts) trace? )
             pretty?    (or (:pretty? opts) pretty?)
             timestamp? (:timestamp? opts)
-            curr-fn (when trace? (ns/this-fn-name :prev))
+            curr-fn (when trace? (debug/this-fn-name :prev))
             args-f @args
             env-type-str
-              (when (get @*prs* :env)
-                (str (name env-type) " »"))
+              (when (get @levels :env)
+                (str (name reg/lang) " »"))
             out-str
               (with-out-str
                 (when (= pr-type :macro-expand) (print "\n/* "))
@@ -127,22 +127,3 @@
 #?(:clj
 (defmacro ppr-hints [pr-type & args]
   `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
-
-#?(:clj
-(defn status
-  "Updates the system status with the provided string @s."
-  {:attribution "Alex Gunnarson"}
-  ([s]
-    (pr :user s)
-    (let [statuses-chan @statuses]
-      (async/go (async/>! @statuses s))
-      (reset! statuses statuses-chan))
-    nil)
-  ([s & strs]
-    (status (apply str s strs))))) ; TODO should be str/sp not str
-
-#?(:clj
-(defn curr-status
-  "Updates the system status with the provided string @s."
-  [s]
-  (async/go (async/<! @statuses s))))

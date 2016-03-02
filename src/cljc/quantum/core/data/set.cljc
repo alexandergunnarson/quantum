@@ -3,12 +3,12 @@
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "Alex Gunnarson"}
   quantum.core.data.set
-  (:require-quantum [ns])
-  (:require   [clojure.set              :as set]
-              [clojure.data.avl         :as avl]
+  (:require-quantum [:core])
+  (:require   [clojure.set              :as set  ]
+              [clojure.data.avl         :as avl  ]
     #?@(:clj [[clojure.data.finger-tree :as ftree]
               [flatland.ordered.set     :as oset ]
-              [seqspert.hash-set]
+              [seqspert.hash-set                 ]
               [clojure.data.int-map     :as imap]])))
 
 ; ============ STRUCTURES ============
@@ -46,6 +46,8 @@
 
 ; ============ OPERATIONS ============
 
+; TODO use |clojure.data.int-map/union, intersection, difference| for int sets and dense int sets
+; Benchmark these
 #?(:clj
     (defn union
       "337.050528 msecs (core/union s1 s2)

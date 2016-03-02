@@ -3,7 +3,101 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.bootstrap
-  (:require-quantum [ns log pr err map set logic fn]))
+  (:require-quantum [:core map set logic fn]))
+
+(def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
+             In JavaScript, all numbers are 64-bit floating point numbers.
+             This means you can't represent in JavaScript all the Java longs
+             Max 'safe' int: (dec (Math/pow 2 53))"}
+  type-meta
+  {'boolean {:bits 1
+             :min  0
+             :max  1
+             #?@(:clj [:inner-type "[Z"
+                       :boxed      'java.lang.Boolean])}
+   'short   {:bits 16
+             :min -32768
+             :max  32767
+             #?@(:clj [:inner-type "[S"
+                       :boxed      'java.lang.Short])}
+   'byte    {:bits 8
+             :min -128
+             :max  127
+             #?@(:clj [:inner-type "[B"
+                       :boxed      'java.lang.Byte])}
+   'char    {:bits 16
+             :min  0
+             :max  65535
+             #?@(:clj [:inner-type "[C"
+                       :boxed      'java.lang.Character])}
+   'int     {:bits 32
+             :min -2147483648
+             :max  2147483647
+             #?@(:clj [:inner-type "[I"
+                       :boxed      'java.lang.Integer])}
+   'long    {:bits 64
+             :min -9223372036854775808
+             :max  9223372036854775807
+             #?@(:clj [:inner-type "[J"
+                       :boxed      'java.lang.Long])}
+   ; Technically with floating-point nums, "min" isn't the most negative;
+   ; it's the smallest absolute
+   'float   {:bits 32
+             :min  1.4E-45
+             :max  3.4028235E38
+             #?@(:clj [:inner-type "[F"
+                       :boxed      'java.lang.Float])}
+   'double  {:bits 64
+             ; Because:
+             ; Double/MIN_VALUE        = 4.9E-324
+             ; (.-MIN_VALUE js/Number) = 5e-324
+             :min  #?(:clj  Double/MIN_VALUE
+                      :cljs (.-MIN_VALUE js/Number))
+             :max  1.7976931348623157E308 ; Max number in JS
+             #?@(:clj [:inner-type "[D"
+                       :boxed      'java.lang.Double])}}) 
+
+#?(:clj
+(def inner-types
+  (->> type-meta
+       (map (fn [[k v]] [k (:inner-type v)]))
+       (into {}))))
+
+#?(:clj
+(def boxed-types
+  (->> type-meta
+       (map (fn [[k v]] [k (:boxed v)]))
+       (into {}))))
+
+#?(:clj
+(def unboxed-types
+  (zipmap (vals boxed-types) (keys boxed-types))))
+
+(def max-values
+  (->> type-meta
+       (map (fn [[k v]] [k (:max v)]))
+       (into {})))
+
+#?(:clj
+(def promoted-types
+  {'short  'int
+   'byte   'short ; Because char is unsigned
+   'char   'int
+   'int    'long
+   'float  'double}))
+
+(defn max-type [types]
+  (->> types
+       (map (fn [type] [(get max-values type) type]))
+       (remove (fn-> first nil?))
+       (into (core/sorted-map-by >))
+       first val))
+
+(defn inner-type
+  {:todo ["Handle object arrays and multi-dimensional arrays"
+          "Throw exception if called on an integral ('uncuttable') type"]}
+  [type]
+  (or #?(:clj (get inner-types type) :cljs 'object) 'Object))
 
 #?(:clj
 (defmacro def-types [lang]
@@ -311,6 +405,4 @@
                       `(zipmap [~@(->   primitive-type-map (get  lang) keys)]
                                   (-> '~primitive-type-map (get ~lang) vals)))
                     ~(list 'def 'arr-types (get array-types lang)))]    
-         #_(log/enable! :macro-expand)
-    #_(log/ppr :macro-expand "DEF-TYPES CODE" code)  #_(log/disable! :macro-expand)
     code)))

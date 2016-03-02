@@ -1,14 +1,9 @@
-#?(:clj
-(do
-  (set! *warn-on-reflection* false)
-  (set! *unchecked-math*     false)))
-
 (ns
   ^{:doc "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.map
   (:refer-clojure :exclude [split-at merge sorted-map sorted-map-by])
-  (:require-quantum [ns])
+  (:require-quantum [:core])
   (:require
     [clojure.data.avl     :as avl]
     #?@(:clj [[clojure.data.int-map :as imap]
@@ -22,8 +17,8 @@
 (def sorted-map-by avl/sorted-map-by)
 
 #?(:clj (def int-map       imap/int-map))
-; (fold i/merge conj ...)
-#?(:clj (def imerge imap/merge))
+
+; TODO look at imap/merge
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
@@ -57,6 +52,14 @@
 
 #?(:clj (def hash-map? (partial instance? clojure.lang.PersistentHashMap)))
 
+(defn merge'
+  "Like merge, but uses transients"
+  {:from "clojure.tools.analyzer.utils"}
+  [m & mms]
+  (persistent! (reduce conj! (transient (or m {})) mms)))
+
+; TODO use |clojure.data.int-map/merge and merge-with|, |update|, |update!| for int maps.
+; Benchmark these.
 (defn merge
  "A performant drop-in replacement for |clojure.core/merge|.
 
