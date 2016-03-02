@@ -16,7 +16,9 @@
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
   (:require-quantum [:core fn logic macros #_num type map set vec log cbase err])
   (:require         [clojure.walk :as walk]
-                    [quantum.core.numeric :as num]))
+                    [quantum.core.numeric :as num])
+  #?(:cljs
+  (:require-macros  [quantum.core.numeric :as num])))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================

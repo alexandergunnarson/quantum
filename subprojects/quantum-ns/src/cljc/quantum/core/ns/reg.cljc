@@ -274,7 +274,7 @@
                                                         let-alias assert-args
                                                         compile-if emit-comprehension
                                                         do-mod}                               }
-                                   :clj  {macros      #{defnt defnt'}                         }
+                                   :clj  {macros      #{defnt defnt' deftransmacro}                         }
                                    :cljs {macros      #{defnt}                                }}}
     cmacros     {:aliases         {:cljc {cmacros     quantum.core.macros.core}}
                  :refers          {:cljc {cmacros     #{if-cljs when-cljs resolve-local}}}}

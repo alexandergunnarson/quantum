@@ -394,10 +394,8 @@
 
 ; ===== TRUNCATING ===== ;
 
-(defalias ceil #?(:clj clj/ceil :cljs cljs/ceil))
-;#?(:clj  (defmalias ceil quantum.core.numeric.clj/ceil ))
-;#?(:cljs (def       ceil cljs/ceil))
-;(defalias ceiling ceil)
+#?(:clj (deftransmacro ceil quantum.core.numeric.clj/ceil quantum.core.numeric.cljs/ceil))
+#?(:clj (defalias ceiling ceil))
 
 (defalias floor #?(:clj clj/floor :cljs cljs/floor))
 #?(:clj (defalias floor-div clj/floor-div))
@@ -575,12 +573,3 @@
 #?(:clj (defalias display-num   clj/display-num  ))
 #?(:clj (defalias format        clj/format       ))
 #?(:clj (defalias percentage-of clj/percentage-of))
-
-
-
-#?(:cljs (println (cljs/ceil 3.4)
-                  (** 3 3)
-                  ;(quantum.core.numeric/ceiling 3.4)
-                  (quantum.core.numeric/ceil 3.4)
-                  (quantum.core.numeric/max 2 3)
-                  (quantum.core.numeric/rem 2 3)))
