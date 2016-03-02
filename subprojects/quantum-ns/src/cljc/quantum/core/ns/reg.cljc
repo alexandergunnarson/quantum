@@ -248,8 +248,8 @@
                                                         doto->> with->> withf withf->>
                                                         with-pr->> with-msg->> withfs
                                                         with-do rfn defcurried
-                                                        fn->> fn-> <- fn-nil}                 }
-                                   :clj  {fn          #{MWA jfn mfn}                          }}
+                                                        fn->> fn-> <- fn-nil MWA}                 }
+                                   :clj  {fn          #{jfn mfn}                          }}
                  :import          (quantum.core.fn MultiRet)                                  }
     logic       {:core-exclusions {:cljc #{when-let if-let}}
                  :aliases         {:cljc {logic       quantum.core.logic                      }}

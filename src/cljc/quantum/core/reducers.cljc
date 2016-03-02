@@ -14,8 +14,9 @@
   quantum.core.reducers
   #?(:clj  (:refer-clojure :exclude [reduce])
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require-quantum [:core fn logic macros num type map set vec log cbase])
-  (:require         [clojure.walk :as walk]))
+  (:require-quantum [:core fn logic macros #_num type map set vec log cbase err])
+  (:require         [clojure.walk :as walk]
+                    [quantum.core.numeric :as num]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
@@ -269,8 +270,8 @@
        :cljs
       (let [last-index (-> s count unchecked-dec long)]
         (cond
-          (> last-index #?(:clj Long/MAX_VALUE :cljs (. js.Number -MAX_VALUE)))
-            (throw (Exception. "String too large to reduce over (at least, efficiently)."))
+          (> last-index #?(:clj Long/MAX_VALUE :cljs js/Number.-MAX_VALUE))
+            (throw (->ex nil "String too large to reduce over (at least, efficiently)."))
           (= last-index -1)
             (f init nil)
           :else
@@ -429,20 +430,24 @@
       (<= size n)
         (reduce reducef (combinef) coll)    
       :else
-        (let [[left right] (halving-fn coll size)
-              child-fn (fn [child] #(coll-fold child n combinef reducef))]
-          (fjinvoke
-           #(let [f1 (child-fn left)
-                  t2 (fjtask (child-fn right))]
-              (fjfork t2)
-              (combinef (f1) (fjjoin t2))))))))
+        #?(:clj
+            (let [[left right] (halving-fn coll size)
+                  child-fn (fn [child] #(coll-fold child n combinef reducef))]
+              (fjinvoke
+               #(let [f1 (child-fn left)
+                      t2 (fjtask (child-fn right))]
+                  (fjfork t2)
+                  (combinef (f1) (fjjoin t2)))))
+           :cljs
+             (reduce reducef (combinef) coll)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           FOLD           }=====================================================
 ;=================================================={           into           }=====================================================
 (extend-protocol CollFold ; clojure.core.reducers
-  nil
+  #?@(:clj
+  [nil
     (coll-fold [coll n combinef reducef]
-      (combinef))
+      (combinef))])
   #?(:clj  Object
      :cljs object)
     (coll-fold [coll n combinef reducef]

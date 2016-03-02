@@ -57,6 +57,16 @@
         (defnt editable?   ([^editable?   obj] true) ([obj] false))
         (defnt transient?  ([^transient?  obj] true) ([obj] false))
 
+;         #?(:cljs 
+; (defn bigint?
+;   [x]
+;   (instance? com.gfredericks.goog.math.Integer x)))
+
+
+; #?(:cljs 
+; (defn ratio? [x]
+;   (instance? quantum.core.numeric.types.Ratio x)))
+
 (def map-entry?  #?(:clj  (partial instance+? clojure.lang.MapEntry)
                     :cljs (fn-and core/vector? (fn-> count (= 2)))))
 

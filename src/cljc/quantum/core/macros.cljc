@@ -30,40 +30,55 @@
 
 #?(:clj
 (defmacro variadic-proxy
-  "Creates left-associative variadic forms for any operator."
-  {:attribution "ztellman/primitive-math"}
-  ([name fn]
-     `(variadic-proxy ~name ~fn ~(str "A primitive macro version of `" name "`")))
-  ([name fn doc]
-     `(variadic-proxy ~name ~fn ~doc identity))
-  ([name fn doc single-arg-form]
-     (let [x-sym (gensym "x")]
+  "Creates left-associative variadic forms for any unary/binary operator."
+  {:attribution  "ztellman/primitive-math"
+   :contributors ["Alex Gunnarson"]}
+  ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
+     (let [x-sym (gensym "x")
+           y-sym (gensym "y")]
        `(defmacro ~name
-          ~doc
           ([~x-sym]
-             ~((eval single-arg-form) x-sym))
-          ([x# y#]
-             (list '~fn x# y#))
+            ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
+                   cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
+              (if-cljs &env
+                 (do (assert (nnil? cljs-single-arg-fn-f))
+                     `(list '~cljs-single-arg-fn-f ~x-sym))
+                 `(list '~clj-single-arg-fn-f      ~x-sym))))
+          ([~x-sym ~y-sym]
+             ~(log/pr :macro-expand "EXPANDING INTO CLJS ENV?" (if-cljs &env true false))
+             ~(if-cljs &env
+                (do (assert (nnil? cljs-fn))
+                    `(list '~cljs-fn ~x-sym ~y-sym))
+                `(list '~clj-fn      ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
              (list* '~name (list '~name x# y#) rest#)))))))
+
 #?(:clj
 (defmacro variadic-predicate-proxy
-  "Turns variadic predicates into multiple pair-wise comparisons."
-  {:attribution "ztellman/primitive-math"}
-  ([name fn]
-     `(variadic-predicate-proxy ~name ~fn ~(str "A primitive macro version of |" name "|")))
-  ([name fn doc]
-     `(variadic-predicate-proxy ~name ~fn ~doc (constantly true)))
-  ([name fn doc single-arg-form]
-     (let [x-sym (gensym "x")]
+  "Turns variadic predicates into multiple pairwise comparisons."
+  {:attribution  "ztellman/primitive-math"
+   :contributors ["Alex Gunnarson"]}
+  ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
+     (let [x-sym    (gensym "x"   )
+           y-sym    (gensym "y"   )
+           rest-sym (gensym "rest")]
        `(defmacro ~name
-          ~doc
           ([~x-sym]
-             ~((eval single-arg-form) x-sym))
-          ([x# y#]
-             (list '~fn x# y#))
-          ([x# y# ~'& rest#]
-             (list 'quantum.core.Numeric/and (list '~name x# y#) (list* '~name y# rest#))))))))
+            ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
+                   cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
+              (if-cljs &env
+                 (do (assert (nnil? cljs-single-arg-fn-f))
+                     `(list '~cljs-single-arg-fn-f ~x-sym))
+                 `(list '~clj-single-arg-fn-f      ~x-sym))))
+          ([~x-sym ~y-sym]
+             ~(if-cljs &env
+                (do (assert (nnil? cljs-fn))
+                    `(list '~cljs-fn ~x-sym ~y-sym))
+                `(list '~clj-fn      ~x-sym ~y-sym)))
+          ([~x-sym ~y-sym ~'& ~rest-sym]
+             ~(if-cljs &env
+                `(list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
+                `(list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
 
 ; #?(:clj
 ; (defn param-arg-match

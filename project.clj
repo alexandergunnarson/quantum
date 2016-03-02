@@ -96,6 +96,7 @@
            :exclusions [riddley]                                  ]
        ; ==== NUMERIC ====              
          [net.jafama/jafama                     "2.1.0"           ]
+         [com.gfredericks/goog-integer          "1.0.0"           ]
          [org.clojure/math.combinatorics        "0.1.1"           ]
          [quantum/java                          "1.0"             ]
        ; ==== PRINT ====
