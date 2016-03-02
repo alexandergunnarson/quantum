@@ -83,7 +83,7 @@
 
 ; ; TODO this is reducei
 (defn hint-arglist-with [arglist hints]
-  (loop [n 0 
+  (loop [n         0 
          arglist-n arglist
          arglist-f []]
     (if (empty? arglist-n)
@@ -119,14 +119,12 @@
   (let [genned-protocol-name
           (when-not strict? (-> sym name cbase/camelcase (str "Protocol") munge symbol))
         genned-protocol-method-name
-          (when-not strict?
-            (if (= lang :clj)
-                (-> sym name (str "-protocol") symbol)
-                sym))
+          (if (= lang :clj)
+              (-> sym name (str "-protocol") symbol)
+              sym)
         genned-protocol-method-name-qualified
-          (when-not strict?
-            (symbol (name (ns-name *ns*))
-              (name genned-protocol-method-name)))]
+          (symbol (name (ns-name *ns*))
+            (name genned-protocol-method-name))]
     (kmap genned-protocol-name
           genned-protocol-method-name
           genned-protocol-method-name-qualified)))
@@ -202,7 +200,8 @@
   {:tests '{'[[Func [#{String} #{vector?}       ] long]]
             '[[Func [String    IPersistentVector] long]
               [Func [String    ITransientVector ] long]]}}
-  [{:keys [gen-interface-code-body-unexpanded
+  [{:keys [lang
+           gen-interface-code-body-unexpanded
            available-default-types]
     :as env}]
   (assert (nempty? gen-interface-code-body-unexpanded))
@@ -229,7 +228,7 @@
                                           #?@(:clj
                                          [(= ret-type-0 'auto-promote)
                                             (or (get tboot/promoted-types @get-max-type) @get-max-type)])
-                                          :else (or ret-type-0 'Object))
+                                          :else (or ret-type-0 (get trans/default-hint lang)))
                                arity-hinted (assoc arity 0 arglist-hinted)]
                            [[method-name hints-v ret-type] (into (dlist) arity-hinted)]))]
                  (->> expanded-hints-list
@@ -334,10 +333,15 @@
       (let [~args-hinted-sym
               (quantum.core.macros.transform/try-hint-args
                 ~args-sym ~lang ~'&env)]
-        ;(log/ppr :macro-expand (str "HELPER MACRO " '~sym-with-meta " ARGS HINTED:") ~args-hinted-sym)
-        (if (and (not ~strict?)
-                 (quantum.core.macros.transform/any-hint-unresolved?
-                   ~args-hinted-sym ~lang ~'&env))
+        (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta
+                              "|" ~args-hinted-sym
+                              "|" '~genned-protocol-method-name-qualified
+                              "|" '~genned-method-name)
+        (if (or (when-cljs ~'&env true)
+                (= ~lang :cljs)
+                (and (not ~strict?)
+                     (quantum.core.macros.transform/any-hint-unresolved?
+                       ~args-hinted-sym ~lang ~'&env)))
             (seq (concat (list '~genned-protocol-method-name-qualified)
                          ~args-hinted-sym))
             (seq (concat (list '.)
@@ -355,14 +359,15 @@
            genned-method-name]}]
  `(defmacro ~interface-macro-sym-with-meta [& ~args-sym]
     (let [~args-hinted-sym (quantum.core.macros.transform/try-hint-args ~args-sym ~lang ~'&env)]
-      (log/ppr :macro-expand (str "HELPER MACRO " '~sym-with-meta " ARGS HINTED:") ~args-hinted-sym)
+      (log/pr :macro-expand "DEFNT INTERFACE HELPER MACRO" '~sym-with-meta
+                            "|" ~args-hinted-sym)
       (seq (concat (list '.)
                    (list '~reified-sym-qualified)
                    (list '~genned-method-name)
                    ~args-hinted-sym)))))
 
 (defn defnt-gen-final-defnt-def
-  [{:keys [lang strict? externs genned-protocol-method-name
+  [{:keys [lang sym strict? externs genned-protocol-method-name
            gen-interface-def helper-macro-interface-def
            reify-def reified-sym
            helper-macro-def
@@ -379,7 +384,12 @@
        helper-macro-def)
      (when (= lang :clj) reify-def)
      protocol-def
-     extend-protocol-def]))
+     extend-protocol-def
+     (when (= lang :cljs)
+       (list 'defalias (-> sym name
+                               (str "-protocol")
+                               symbol)
+             sym))]))
 
 #?(:clj
 (defn defnt*-helper
@@ -429,7 +439,8 @@
           available-default-types
             (->> types-for-arg-positions
                  (map (f*n update-val
-                        (fn->> keys (into #{}) (set/difference tcore/default-types))))
+                        (fn->> keys (into #{})
+                               (set/difference (-> tcore/types-unevaled (get-in [lang :any]))))))
                  (into {}))
           _ (log/ppr :macro-expand "AVAILABLE DEFAULT TYPES" available-default-types)
           env (merge env (kmap available-default-types))
@@ -473,8 +484,10 @@
             (when (= lang :clj)
               (defnt-gen-helper-macro-interface-def env))
           env (merge env (kmap helper-macro-interface-def))
-          _ (log/ppr-hints :macro-expand "HELPER MACRO DEF" helper-macro-def)]
-        (defnt-gen-final-defnt-def env)))))
+          _ (log/ppr-hints :macro-expand "HELPER MACRO DEF" helper-macro-def)
+          final-def (defnt-gen-final-defnt-def env)
+          _ (log/ppr-hints :macro-expand "DEFNT FINAL" final-def)]
+        final-def))))
 
 (declare defnt*-helper)
 

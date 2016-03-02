@@ -6,9 +6,10 @@
   (:refer-clojure :exclude
     [== reverse boolean-array byte-array char-array short-array
      int-array long-array float-array double-array])
-  (:require-quantum [:core err log logic fn num loops macros])
+  (:require-quantum [:core err log logic fn #_num loops macros])
   (:require [quantum.core.type.core :as tcore]
             [quantum.core.core :refer [name+]]
+            [quantum.core.numeric :as num]
             #?(:clj [loom.alg-generic       :as alg  ])) ; temporarily
   #?(:clj (:import [java.io ByteArrayOutputStream]
                    [java.nio ByteBuffer]

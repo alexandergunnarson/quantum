@@ -29,9 +29,11 @@
                    [quantum.ui.features
                      :refer [browser]                      ]
                    [quantum.core.macros]
-                   [quantum.net.client.impl])
+                   [quantum.net.client.impl]
+                   [quantum.core.numeric.cljs])
   (:require-macros [quantum.system              :as sys    ]
                    [quantum.core.macros :refer [defnt]]
+                   [quantum.core.numeric :as numm]
                    [reagent.ratom
                      :refer [reaction]                     ])
   )
@@ -386,7 +388,17 @@
   ([^string?  x] (println "A string!"))
   ([^vector?  x] (println "A vector!"))
   ([^boolean? x] (println "A boolean!")))
-(randfn "asd")
+(randfn "asd" )
 (randfn false)
 #_(randfn false)
+;(quantum.core.numeric/ceil 3.4)
+;(quantum.core.numeric/max 2 3)
+;(quantum.core.numeric/rem 2 3)
+;(println (num/log10-protocol  2))
+(println (numm/** 3 3))
+(println (quantum.core.numeric.cljs/log2 2))
+;(println (num/exp 2 3))
+;(println (num/ceil  2))
+;(println (num/round 2))
+;(println (num/sign' 2))
 (println "END ==================")

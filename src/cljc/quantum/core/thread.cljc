@@ -3,18 +3,23 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-  (:require-quantum [:core num fn #_str err macros logic vec #_coll loops #_time #_cache log #_type res core-async async])
+  (:require-quantum [:core #_num fn #_str err macros logic vec #_coll loops #_time #_cache log #_type res core-async async])
   (:require [quantum.core.collections.base :refer [dissoc-in]]
   #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
             [clojure.core.async.impl.exec.threadpool :as async-threadpool]
-            [quantum.core.string :as str]
+            [quantum.core.string  :as str]
+            [quantum.core.numeric :as num]
             #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
             #_[co.paralleluniverse.pulsar.async        :as pasync          ]]))
   #?(:clj (:import
             (java.lang Thread Process)
             (java.util.concurrent Future Executor ExecutorService ThreadPoolExecutor)
-            ;quantum.core.data.queue.LinkedBlockingQueue
+            quantum.core.data.queue.LinkedBlockingQueue
             #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
+
+; TODO temporary
+(def wrap-delay identity)
+
 
 (defonce ^{:doc "Thread registry"} reg (atom {}))
 
@@ -68,7 +73,7 @@
 
 ; Why you want to manage your threads when doing network-related things:
 ; http://eng.climate.com/2014/02/25/claypoole-threadpool-tools-for-clojure/
-#?(:clj
+#(:clj
   (defmacro thread+
     "Execute exprs in another thread and returns the thread."
     ^{:attribution "Alex Gunnarson"}
@@ -114,6 +119,11 @@
 ;        (if ((fn-or async/interrupted? async/closed?) thread)
 ;            ((or interrupted fn-nil) thread)
 ;            (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
+
+; TODO for now
+#?(:clj (def interrupt!* identity))
+; TODO for now
+#?(:clj (def close!*     identity))
 
 ;#?(:clj
 ;(defn+ ^:private ^:suspendable close!* [thread thread-id close-reqs cleanup force?]
@@ -216,7 +226,8 @@
   (atom {:core.async ^ThreadPoolExecutor clojure.core.async.impl.exec.threadpool/the-executor
          :future     ^ThreadPoolExecutor clojure.lang.Agent/soloExecutor
          :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
-         :async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
+         ; TODO commented temporarily
+         ;:async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
          :reducers   ^ForkJoinPool       quantum.core.reducers/pool})))
 
 #?(:clj
@@ -292,7 +303,7 @@
 
 #?(:clj (defrecord f->chan-exc [^Throwable exc]))
 
-#?(:clj
+#_(:clj
 (defn f->chan
   [c f & args]
   (pulsar/sfn []
@@ -306,7 +317,7 @@
       (when (instance? f->chan-exc ret)
         (throw (:exc ret)))))))
 
-#?(:clj
+#_(:clj
 (defmacro async-fiber*
   ; The -jdk8 specification is 3x slower — benchmarked using their benchmarker
   {:benchmarks
@@ -337,7 +348,7 @@
       :chan   c#
       :future (pulsar/fiber->future fiber#)))))
 
-#?(:clj
+#_(:clj
 (defn+ ^:suspendable gen-async-fn
   "This fn exists in part because it contains all the code
    that would normally take ~1000ms to bytecode-transform into suspendableness.
@@ -505,7 +516,7 @@
 #?(:clj (defonce thread-reaper-pause-requests  (LinkedBlockingQueue.)))
 #?(:clj (defonce thread-reaper-resume-requests (LinkedBlockingQueue.)))
 
-#?(:clj
+#_(:clj
 (defonce thread-reaper
   (do #_(log/enable! :macro-expand)
       (with-do
@@ -540,7 +551,7 @@
 ; ===============================================================
 ; ============ TO BE INVESTIGATED AT SOME LATER DATE ============
 
-#?(:clj
+#_(:clj
 (defn promise-concur
   {:attribution "Alex Gunnarson"}
   [method max-threads func list-0]
@@ -586,7 +597,7 @@
                   (>! chan-0 (func elem)))) ; the thread blocks it anyway
               [chunk-size-n chan-0]))))))))
 
-#?(:clj
+#_(:clj
 (defn concur-go
   {:attribution "Alex Gunnarson"}
   [method max-threads func list-0]
@@ -601,7 +612,7 @@
              (apply catvec))
         (doseq [chan-n chans] chan-n)))))
 
-#?(:clj
+#_(:clj
 (defn+ thread-or
   "Call each of the fs on a separate thread. Return logical
   disjunction of the results. Short-circuit (and cancel the calls to
@@ -639,7 +650,7 @@
         (future-cancel fut))
       result))))
 
-#?(:clj
+#_(:clj
   (defn+ thread-and
     "Computes logical conjunction of return values of @fs, each of which
     is called in a future. Short-circuits (cancelling the remaining
@@ -720,7 +731,7 @@
 
 
 
-#?(:clj
+#_(:clj
 (defn chunk-doseq
   "Like |fold| but for |doseq|.
    Also configurable by thread names and threadpool, etc."
@@ -756,7 +767,7 @@
   [^java.util.concurrent.ThreadPoolExecutor x]
   (.shutdownNow x)))
 
-#?(:clj
+#_(:clj
 (defn ->distributor
   {:usage '(->distributor inc {:cache true
                                :memoize-only-first-arg? true
@@ -821,7 +832,7 @@
             (recur)))))
     distributor-f)))
 
-#?(:clj
+#_(:clj
 (defn distribute
   {:usage '(distribute (->distributor) [1 2 3 5 6] {:cache? true})}
   [distributor & inputs]
@@ -829,7 +840,7 @@
   
   (core-async/offer! (:work-queue distributor) [(time/now-instant) inputs])))
 
-#?(:clj
+#_(:clj
 (defn distribute-all [distributor inputs-set & [apply?]]
   (for [inputs inputs-set]
     (if apply?

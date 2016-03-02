@@ -85,7 +85,7 @@
 
 (defn extract-all-type-hints-from-arglist
   [lang sym arglist]
-  (let [return-type-0 (or (type-hint arglist) (type-hint sym) 'Object)
+  (let [return-type-0 (or (type-hint arglist) (type-hint sym) (get default-hint lang))
         type-hints (->> arglist (extract-type-hints-from-arglist lang))]
     (->> type-hints
          (<- vector return-type-0))))
