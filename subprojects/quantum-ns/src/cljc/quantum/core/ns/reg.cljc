@@ -3,57 +3,57 @@
             [quantum.core.ns.reg-utils :as utils :refer [set-merge]]))
 
 (def reg-raw
-  '{ns          {:requires {:cljc #{clojure.core.rrb-vector}
-                            :clj  #{flatland.ordered.map   }}
-                 :aliases  {:cljc {ns      quantum.core.ns  
-                                   ;test    quantum.core.test
-                                 }
-                            :clj  {core    clojure.core
-                                   refresh clojure.tools.namespace.repl
-                                   proteus proteus}
-                            :cljs {core cljs.core}}
-                 :refers   {:cljc
-                             {ns   #{defalias source def- ns-exclude js-println
-                                     ANil ABool ADouble ANum AExactNum AInt ADecimal AKey AVec ASet
-                                     AArrList ATreeMap ALSeq ARegex AEditable ATransient AQueue AMap AError}
-                              ;test #{qtest}
-                            }
-                            :clj {ns      #{alias-ns defs javadoc swap-var! reset-var!}
-                                  refresh #{refresh refresh-all}
-                                  proteus #{let-mutable}}
-                            :cljs
-                             {ns #{Exception IllegalArgumentException}}}
-                :injection
-                  {:clj #(do (set! clojure.core/*warn-on-reflection* true)
-                             (set! clojure.core/*unchecked-math* :warn-on-boxed)
-                             #_(gen-class) ; not needed unless for interop, apparently
-                             nil)}
-                :imports
-                  ((quantum.core.ns
-                      Nil Bool Num ExactNum Int Decimal Key Map Set Queue Fn
-                      ArrList TreeMap LSeq Regex #_Editable Transient)
-                   clojure.lang.Compiler$CompilerException
-                   (clojure.lang
-                     Namespace Symbol
-                     Keyword
-                     Delay
-                     Atom Var
-                     AFunction
-                     PersistentList
-                     APersistentVector PersistentVector
-                     MapEntry
-                     APersistentMap    PersistentArrayMap PersistentHashMap
-                     APersistentSet
-                     PersistentQueue
-                     LazySeq
-                     Ratio)
-                   java.util.regex.Pattern
-                   (java.util ArrayList)
-                   org.joda.time.DateTime
-                   clojure.core.Vec
-                   (java.math BigDecimal)
-                   clojure.core.rrb_vector.rrbt.Vector
-                   flatland.ordered.map.OrderedMap)}
+  '{reg        {:injection       {:clj #(do (set! clojure.core/*warn-on-reflection* true)
+                                             (set! clojure.core/*unchecked-math* :warn-on-boxed)
+                                             #_(gen-class) ; not needed unless for interop, apparently
+                                             nil)}
+                :aliases         {:cljc {reg     quantum.core.ns  } ; Temporarily call it |quantum.core.ns| for backwards compatibility
+                                  :clj  {refresh clojure.tools.namespace.repl}}
+                :refers          {:cljc {reg     #{ns-exclude js-println
+                                                   ANil ABool ADouble ANum AExactNum AInt ADecimal
+                                                   AKey AVec ASet AArrList ATreeMap ALSeq
+                                                   ARegex AEditable ATransient AQueue AMap AError}}
+                                  :clj  {refresh #{refresh refresh-all}}
+                                  ; Otherwise "Use of undeclared Var"
+                                  ;:cljs {reg     #{Exception IllegalArgumentException}}
+                                  }}
+    qcore       {:requires        {:cljc #{clojure.core.rrb-vector}
+                                   :clj  #{flatland.ordered.map   }}
+                 :aliases         {:cljc {qcore       quantum.core.core                 }
+                                   :clj  {core        clojure.core
+                                          proteus     proteus                           }
+                                   :cljs {core        cljs.core                         }}
+                 :refers          {:cljc {qcore       #{with lens cursor}               }
+                                   :clj  {proteus     #{let-mutable}                    }}
+                 :imports
+                   (clojure.core.rrb_vector.rrbt.Vector
+                    flatland.ordered.map.OrderedMap
+                    clojure.lang.Compiler$CompilerException
+                    (clojure.lang
+                      Namespace Symbol
+                      Keyword
+                      Delay
+                      Atom Var
+                      AFunction
+                      PersistentList
+                      APersistentVector PersistentVector
+                      MapEntry
+                      APersistentMap    PersistentArrayMap PersistentHashMap
+                      APersistentSet
+                      PersistentQueue
+                      LazySeq
+                      Ratio)
+                    java.util.regex.Pattern
+                    (java.util ArrayList)
+                    clojure.core.Vec
+                    (java.math BigDecimal))}
+    var         {:core-exclusions {:clj  #{defonce}                                     }
+                 :aliases         {:cljc {var         quantum.core.vars                 }}
+                 :refers          {:cljc {var         #{defalias defmalias def-}}
+                                   ; If |defonce| is used in CLJS, even if you :require-macros it, it says cljs.core/defonce 
+                                   :clj  {var         #{defonce reset-var! swap-var! defs defs-}}}}
+    repl        {:aliases         {:clj  {repl        quantum.core.meta.repl            }}
+                 :refers          {:clj  {repl        #{source find-doc doc javadoc}}}}
     core-async  {:aliases         {:clj  {core-async  clojure.core.async}
                                    :cljs {core-async  cljs.core.async}}
                  :macro-aliases   {:cljs {asyncm cljs.core.async.macros}}
@@ -61,20 +61,21 @@
                                    :clj  {core-async  #{go go-loop thread}}
                                    :cljs {asyncm      #{go go-loop}}}}
     async       {:aliases         {:cljc {async       quantum.core.thread.async}}
-                 :refers          {:cljc {async       #{concur put!! >!! take!! <!! empty! peek!! alts!! chan wait-until}}}}
+                 :refers          {:cljc {async       #{concur put!! >!! take!! <!!
+                                                        empty! peek!! alts!! chan wait-until}}}}
     res         {:aliases         {:cljc {res         quantum.core.resources}
                                    :clj  {component   com.stuartsierra.component}}
                  :refers          {:cljc {res         #{with-cleanup with-resources}}}}
     ; QUANTUM.CORE.COLLECTIONS
     coll        {:aliases         {:cljc {coll        quantum.core.collections}}
-                 :core-exclusions #{contains? for doseq subseq
-                                    reduce repeat repeatedly
-                                    range merge count
-                                    vec sorted-map sorted-map-by 
-                                    into first second rest
-                                    last butlast get pop peek empty
-                                    take take-while
-                                    key val conj! assoc! dissoc! disj!} 
+                 :core-exclusions {:cljc #{contains? for doseq subseq
+                                           reduce repeat repeatedly
+                                           range merge count
+                                           vec sorted-map sorted-map-by 
+                                           into first second rest
+                                           last butlast get pop peek empty
+                                           take take-while
+                                           key val conj! assoc! dissoc! disj!} }
                  :refers          {:cljc {coll #{for fori for-m until doseq doseqi
                                                  reduce reducei reducei-
                                                  count lasti
@@ -120,20 +121,20 @@
                  :imports         (quantum.core.collections.core.MutableContainer)            }
     cbase       {:aliases         {:cljc {cbase       quantum.core.collections.base
                                           zip         fast-zip.core                           }}
+                 :refers          {:cljc {cbase       #{kmap}}}
                  :imports         (fast_zip.core.ZipperLocation)                              }
     diff        {:aliases         {:cljc {diff        quantum.core.collections.diff           }}}
     ; QUANTUM.CORE.CRYPTOGRAPHY
     crypto      {:aliases         {:cljc {crypto      quantum.core.cryptography               }}}
     ; QUANTUM.CORE.ERROR
-    err         {:core-exclusions #{assert}
-                 :aliases         {:cljc {err         quantum.core.error                      }
-                                   :cljs {err-cljs    quantum.core.cljs.error                 }}
+    err         {:core-exclusions {:cljc #{assert}}
+                 :aliases         {:cljc {err         quantum.core.error                      }}
                  :refers          {:cljc {err         #{throw+ with-assert assert
-                                                        with-throw with-throws throw-when
-                                                        throw-unless assertf-> assertf->>}    }
-                                   :clj  {err         #{try+ try-times}                       }
-                                   :cljs {err         #{Err}
-                                          err-cljs    #{try+}                                 }}
+                                                        throw-when throw-unless
+                                                        assertf-> assertf->>
+                                                        try+ try-times
+                                                        ->ex}                                 }
+                                   :cljs {err         #{Err}                                  }}
                  :imports         (quantum.core.error.Err)                                    }
     ; QUANTUM.CORE.GRAPH
     graph       {:aliases         {:cljc {graph       quantum.core.graph                      }}}
@@ -156,7 +157,7 @@
     log         {:aliases         {:cljc {log         quantum.core.log                        }}}
     ; QUANTUM.CORE.NUMERIC
     num         {:aliases         {:cljc {num         quantum.core.numeric                    }}
-                 :core-exclusions #{dec inc}
+                 :core-exclusions {:cljc #{dec inc}}
                  :refers          {:cljc {num         #{nneg? greatest least +* -* **
                                                         dec dec*
                                                         inc inc*
@@ -167,14 +168,14 @@
                  :refers          {:clj  {reflect     #{obj->map}                             }}}
     paths       {:aliases         {:clj  {paths       quantum.core.paths                      }}
                  :refers          {:clj  {paths       #{paths}                                }}}
-    cache       {:core-exclusions #{memoize}
+    cache       {:core-exclusions {:cljc #{memoize}}
                  :aliases         {:cljc {cache       quantum.core.cache                      }}
                  :refers          {:cljc {cache       #{memoize}                              }}}
     ; QUANTUM.CORE.CONVERT.*
     convert     {:aliases         {:cljc {conv        quantum.core.convert                    }}
                  :refers          {:cljc {conv        #{->str ->bytes}                        }}}
     pconvert    {:aliases         {:cljc {pconv       quantum.core.convert.primitive          }}
-                 :core-exclusions #{boolean byte char short int long float double}
+                 :core-exclusions {:clj  #{boolean byte char short int long float double}}
                  :refers          {:cljc {pconv       #{boolean ->boolean
                                                         byte    ->byte   ->byte*
                                                         char    ->char   ->char*
@@ -185,9 +186,9 @@
                                                         double  ->double ->double*}           }}}
     ; QUANTUM.CORE.PRINT
     pr          {:aliases         {:cljc {pr          quantum.core.print                      }}
-                 :refers          {:cljc {pr          #{! pprint pr-attrs !*}                 }}}
+                 :refers          {:cljc {pr          #{! pr-attrs !*}                        }}}
     ; QUANTUM.CORE.STRING.*
-    str         {:core-exclusions #{re-find}
+    str         {:core-exclusions {:cljc #{re-find}}
                  :aliases         {:cljc {str         quantum.core.string                     }}
                  :refers          {:cljc {str         #{re-find}                              }}}    
     strf        {:aliases         {:cljc {strf        quantum.core.string.format              }}}    
@@ -200,10 +201,10 @@
     arr         {:aliases         {:cljc {arr         quantum.core.data.array                 }}
                  :refers          {:cljc {arr         #{aset!      }                          }
                                    :clj  {arr         #{byte-array+}                          }}}
-    bin         {:core-exclusions #{bit-or bit-and bit-xor bit-not
-                                    bit-shift-left bit-shift-right
-                                    unsigned-bit-shift-right
-                                    true? false? #_nil?}
+    bin         {:core-exclusions {:cljc #{bit-or bit-and bit-xor bit-not
+                                           bit-shift-left bit-shift-right
+                                           unsigned-bit-shift-right
+                                           true? false? #_nil?}}
                  :aliases         {:cljc {bin         quantum.core.data.binary                }}
                  :refers          {:cljc {bin         #{>>> >> <<
                                                         bit-or bit-and bit-xor bit-not
@@ -217,10 +218,10 @@
                  :imports         (clojure.data.finger_tree.CountedDoubleList)                }
     hex         {:aliases         {:cljc {hex         quantum.core.data.hex                   }}}
     json        {:aliases         {:cljc {json        quantum.core.data.complex.json          }}}
-    map         {:core-exclusions #{merge sorted-map sorted-map-by}
+    map         {:core-exclusions {:cljc #{merge sorted-map sorted-map-by}}
                  :aliases         {:cljc {map         quantum.core.data.map                   }}
                  :refers          {:cljc {map         #{map-entry ordered-map}                }
-                                   :clj  {map         #{int-map imerge}                       }}}
+                                   :clj  {map         #{int-map}                              }}}
     queue       {:aliases         {:cljc {q           quantum.core.data.queue                 }}
                  :refers          {:cljc {q           #{queue}                                }}}
     set         {:aliases         {:cljc {set         quantum.core.data.set                   }}
@@ -234,13 +235,13 @@
     time-coerce {:aliases         {:cljc {time-coerce quantum.core.time.coerce                }}}
     time-format {:aliases         {:cljc {time-form   quantum.core.time.format                }}}
     time-local  {:aliases         {:cljc {time-loc    quantum.core.time.local                 }}}
-    ; QUANTUM.CORE.UTIL.*
-    bench       {:aliases         {:cljc {bench       quantum.core.util.bench                 }}
+    ; QUANTUM.CORE.META.*
+    bench       {:aliases         {:cljc {bench       quantum.core.meta.bench                 }}
                  :refers          {:clj  {bench       #{bench}                                }}}
-    debug       {:aliases         {:cljc {debug       quantum.core.util.debug                 }}
-                 :refers          {:clj  {debug       #{? trace}                              }}}
-    sh          {:aliases         {:cljc {sh          quantum.core.util.sh                    }}}
-    fn          {:aliases         {:cljc {fn          quantum.core.function                   }}
+    debug       {:aliases         {:cljc {debug       quantum.core.meta.debug                 }}
+                 :refers          {:clj  {debug       #{trace}                                }}}
+    sh          {:aliases         {:cljc {sh          quantum.core.thread.sh                    }}}
+    fn          {:aliases         {:cljc {fn          quantum.core.fn                         }}
                  :refers          {:cljc {fn          #{compr *fn f*n unary
                                                         zeroid monoid
                                                         firsta call juxtm juxt-kv
@@ -249,36 +250,34 @@
                                                         with-do rfn defcurried
                                                         fn->> fn-> <- fn-nil}                 }
                                    :clj  {fn          #{MWA jfn mfn}                          }}
-                 :import          (quantum.core.function MultiRet)                            }
-    logic       {:aliases         {:cljc {logic       quantum.core.logic                      }
-                                   :cljs {logic-cljs  quantum.core.cljs.logic                 }}
+                 :import          (quantum.core.fn MultiRet)                                  }
+    logic       {:core-exclusions {:cljc #{when-let if-let}}
+                 :aliases         {:cljc {logic       quantum.core.logic                      }}
                  :refers          {:cljc {logic       #{splice-or coll-or coll-and
                                                         nnil? nempty?
                                                         eq? fn= fn-eq? any?
                                                         ifn if*n ifp
                                                         whenf whenc whenp
                                                         whenf*n whencf*n
-                                                        condf condfc condf*n condpc}          }
-                                   :clj  {logic       #{fn-and fn-or fn-not}                  }
-                                   :cljs {logic-cljs  #{fn-and fn-or fn-not}                  }}}
-    loops       {:core-exclusions #{for doseq reduce}
-                 :aliases         {:cljc {loops       quantum.core.loops                      }
-                                   :cljs {loops-cljs  quantum.core.cljs.loops                 }}
+                                                        condf condfc condf*n condpc
+                                                        fn-and fn-or fn-not
+                                                        when-let if-let}}}}
+    loops       {:core-exclusions {:cljc #{for doseq reduce}}
+                 :aliases         {:cljc {loops       quantum.core.loops                      }}
                  :refers          {:cljc {loops       #{reduce- reducei-}                     }
                                    :clj  {loops       #{reduce reducei for fori
-                                                        doseq doseqi ifor}                    }
-                                   :cljs {loops-cljs  #{reduce reducei for fori
                                                         doseq doseqi ifor}                    }}}
     macros      {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
-                 :aliases         {:cljc {macros      quantum.core.macros                     }
-                                   :cljs {macros-cljs quantum.core.cljs.macros                }}
+                 :aliases         {:cljc {macros      quantum.core.macros                     }}
                  :refers          {:cljc {macros      #{quote+ fn+ defn+
                                                         defmethod+ defmethods+
                                                         let-alias assert-args
                                                         compile-if emit-comprehension
                                                         do-mod}                               }
                                    :clj  {macros      #{defnt defnt'}                         }
-                                   :cljs {macros-cljs #{defnt}                                }}}
+                                   :cljs {macros      #{defnt}                                }}}
+    cmacros     {:aliases         {:cljc {cmacros     quantum.core.macros.core}}
+                 :refers          {:cljc {cmacros     #{if-cljs when-cljs resolve-local}}}}
     rand        {:aliases         {:cljc {rand        quantum.core.nondeterministic           }}}
     red         {:aliases         {:cljc {red         quantum.core.reducers}}
                  :refers          {:cljc {red         #{map+ reduce+ filter+ remove+
@@ -297,6 +296,9 @@
                                                         byte-array? name-from-class}          }
                                    :cljs {type        #{class}                                }}}
     tcore       {:aliases         {:cljc {tcore       quantum.core.type.core                  }}}
+    tpred       {:core-exclusions {:cljs #{seqable?}}
+                 :aliases         {:cljc {tpred       quantum.core.type.predicates}}
+                 :refers          {:cljc {tpred       #{boolean? atom? seqable? derefable?}   }}}       
     classes     {:aliases         {:cljc {classes     quantum.core.classes                    }}}
     ; EXT
     http        {:aliases         {:clj  {http        quantum.http.core                       }
@@ -365,6 +367,50 @@
                                                               TableColumn$CellDataFeatures TableColumn$CellEditEvent)
                                    (javafx.scene.control.cell PropertyValueFactory TextFieldTableCell))}})
 
+(def ^{:doc "All macros in Quantum library. Primarily for ClojureScript's :refer-macros clause."}
+  macros
+ '{quantum.core.core         #{with}
+   quantum.core.collections  #{reduce reduce- reducei reducei- doseq doseqi for fori repeatedly kmap map->record}
+   quantum.core.collections.base #{kmap}
+   quantum.core.error        #{try+ try-times throw+
+                               throw-unless throw-when
+                               with-catch with-assert assert
+                               assertf-> assertf->>},
+   quantum.core.fn           #{defcurried with-do f*n <- fn-> rfn fn->> mfn MWA doto->>}
+   quantum.core.log          #{pr ppr}
+   quantum.core.logic        #{whenf whenc  whenf*n whencf*n whenp
+                               ifn          if*n             ifp
+                               condf condfc condf*n condpc
+                               eq?  fn-eq? fn=
+                               neq? fn-neq?
+                               fn-or   fn-and fn-not
+                               coll-or coll-and
+                               when-let if-let}
+   quantum.core.loops        #{unchecked-inc-long until
+                               dos
+                               reduce  reduce-
+                               reducei reducei-
+                               doseq   doseq- 
+                               doseqi  doseqi-
+                               for lfor}
+   quantum.core.macros       #{quote+ fn+ defn+ defmethod+ defmethods+ defnt compile-if assert-args let-alias}
+   quantum.core.ns           #{ns-exclude},
+   quantum.core.meta.repl    #{source find-doc doc javadoc}
+   quantum.core.vars         #{defalias defonce defmalias def-
+                               reset-var! swap-var! defs defs-}
+   quantum.core.numeric      #{+= -=
+                               ++ --}
+   quantum.core.print        #{pr-attrs with-print-str*}
+   quantum.core.reducers     #{for+ doseq+}
+   quantum.core.resources    #{with-resources}
+   quantum.core.test         #{qtest}
+   quantum.core.thread       #{thread+ async async-loop}
+   quantum.core.thread.async #{wait-until}
+   quantum.core.type         #{should-transientize?}
+   quantum.measure.convert   #{convert}
+   cljs.core.async.macros    #{go go-loop}
+   quantum.core.macros.core  #{resolve-local}})
+
 (defn get-ns-syms
   "Given namespace registrar @reg*, gets the ns symbols"
   [reg* k ns-syms]
@@ -379,7 +425,7 @@
                )))
        (remove empty?)
        (#(cond (= k :core-exclusions)
-                 (apply set-merge %)
+                 (apply merge-with set-merge %)
                (= k :imports)
                  (apply set-merge %)
                (= k :requires)
@@ -388,50 +434,14 @@
                  (apply merge-with merge %)))))
 
 (def reg
-  (let [lib-exclusions (set/union '#{red loops ccore} '#{http web auth url ui}) ; Because contained in coll
+  (let [possible-keys [:injection :core-exclusions :requires :refers :aliases :macro-aliases :imports]
+        lib-exclusions (set/union '#{red loops ccore} '#{http web auth url ui}) ; Because contained in coll
         lib-keys (->> reg-raw keys (remove (partial contains? lib-exclusions)))
-        lib
-          {:core-exclusions (->> lib-keys (get-ns-syms reg-raw :core-exclusions) (into #{}))
-           :requires        (->> lib-keys (get-ns-syms reg-raw :requires       ))
-           :refers          (->> lib-keys (get-ns-syms reg-raw :refers         ))
-           :aliases         (->> lib-keys (get-ns-syms reg-raw :aliases        ))
-           :macro-aliases   (->> lib-keys (get-ns-syms reg-raw :macro-aliases  ))
-           :imports         (->> lib-keys (get-ns-syms reg-raw :imports        ))}]
-    (-> reg-raw (assoc :lib lib))))
-
-(def ^{:doc "All macros in Quantum library. Primarily for ClojureScript's :refer-macros clause."}
-  macros
- '{quantum.core.cljs.error  #{try+}
-   quantum.core.cljs.macros #{defnt}
-   quantum.core.cljs.loops  #{reduce reducei for doseq doseqi}
-   quantum.core.cljs.logic  #{fn-or fn-and fn-not}
-   quantum.core.collections #{reduce reduce- reducei reducei- doseq doseqi for fori repeatedly kmap map->record}
-   quantum.core.error       #{try+ try-times throw+
-                              with-throw with-throws
-                              throw-unless throw-when
-                              with-catch with-assert assert
-                              assertf-> assertf->>},
-   quantum.core.function    #{defcurried with-do f*n <- fn-> rfn fn->> mfn MWA doto->>}
-   quantum.core.cljs.deps.function #{f*n}
-   quantum.core.log         #{pr ppr}
-   quantum.core.logic       #{whenf whenc  whenf*n whencf*n whenp
-                              ifn          if*n             ifp
-                              condf condfc condf*n   condpc
-                              if-let
-                              eq?  fn-eq? fn=
-                              neq? fn-neq?
-                              fn-or   fn-and fn-not
-                              coll-or coll-and}
-   quantum.core.loops       #{unchecked-inc-long until reduce- reduce reducei- reducei
-                              dos lfor doseq- doseq doseqi- doseqi for}
-   quantum.core.macros      #{quote+ fn+ defn+ defmethod+ defmethods+ defnt compile-if assert-args let-alias}
-   quantum.core.ns          #{def- defalias ns-exclude source},
-   quantum.core.numeric     #{+= -=
-                              ++ --}
-   quantum.core.print       #{pr-attrs with-print-str*}
-   quantum.core.reducers    #{for+ doseq+}
-   quantum.core.test        #{qtest}
-   quantum.core.thread      #{thread+ async async-loop}
-   quantum.core.type        #{should-transientize?}
-   quantum.measure.convert  #{convert}
-   cljs.core.async.macros   #{go go-loop}})
+        ; quantum->bundle
+        bundle (fn [bundle-keys]
+                 (zipmap possible-keys
+                   (->> possible-keys
+                        (map (fn [k] (->> bundle-keys (get-ns-syms reg-raw k)))))))]
+    (assoc reg-raw
+      :lib  (bundle lib-keys)
+      :core (bundle '#{reg qcore var repl cmacros}))))

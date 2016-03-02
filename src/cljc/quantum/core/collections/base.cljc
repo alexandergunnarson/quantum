@@ -2,14 +2,12 @@
   ^{:doc "Base collections operations. Pre-generics."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.base
-  (:refer-clojure :exclude [name])
-  (:require-quantum [ns log pr err map set vec logic fn ftree])
-  (:require
-            [quantum.core.type.core     :as tcore]
-            [fast-zip.core              :as zip  ]
+  (:refer-clojure :exclude [name #?(:cljs seqable?)])
+  (:require-quantum [:core map set vec logic fn])
+  (:require [fast-zip.core              :as zip  ]
             [clojure.string             :as str  ]
-            [clojure.walk :refer [postwalk prewalk]]
-    #?(:clj [clojure.math.combinatorics :as combo])))
+            [clojure.walk
+              :refer [postwalk prewalk]]))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -75,3 +73,41 @@
 
 (defn update-val [[k v] f]
   [k (f v)])
+
+#?(:clj
+(defmacro kmap [& ks]
+ `(zipmap (map keyword (quote ~ks)) (list ~@ks))))
+
+(defn appears-within?
+  "Returns true if x appears within coll at any nesting depth.."
+  {:source "scgilardi/slingshot"
+   :contributors {"Alex Gunnarson" "Added termination on find"}}
+  [x coll]
+  (let [result (atom false)]
+    (try
+      (clojure.walk/postwalk
+        (fn [t]
+          (when (= x t)
+            (reset! result true)
+            (throw #?(:clj (Exception.) :cljs (js/Error.)))))
+        coll)
+      @result
+      (catch #?(:clj Exception :cljs js/Error) _ @result))))
+
+; TODO DELETE AFTER INCORPORATING REAL COLLECTIONS
+(defn dissoc-in
+  "Dissociate a value in a nested assocative structure, identified by a sequence
+  of keys. Any collections left empty by the operation will be dissociated from
+  their containing structures.
+  This implementation was adapted from clojure.core.contrib"
+  {:attribution "weavejester.medley"
+   :todo ["Transientize"]}
+  [m ks]
+  (if-let [[k & ks] (seq ks)]
+    (if (empty? ks)
+        (dissoc m k)
+        (let [new-n (dissoc-in (get m k) ks)] ; this is terrible
+          (if (empty? new-n) ; dissoc's empty ones
+              (dissoc m k)
+              (assoc m k new-n))))
+    m))

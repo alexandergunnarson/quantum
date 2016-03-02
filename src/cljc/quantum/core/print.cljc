@@ -6,24 +6,34 @@
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
-  (:require-quantum [ns fn logic vec]) ; |vec| To work around CLJS non-spliceability of Tuples
-  (:require [fipp.edn :as pr]
-            #?(:cljs [cljs.core :refer [StringBufferWriter]])))
+  (:require-quantum [:core fn logic vec]) ; |vec| To work around CLJS non-spliceability of Tuples
+  (:require
+    #?(:clj  [fipp.edn    :as pr]
+       :cljs [cljs.pprint :as pr]) ; Fipp currently has strange execution problems in CLJS 
+    #?(:cljs [cljs.core :refer [StringBufferWriter]]))
+  #?(:cljs
+  (:require-macros 
+             [cljs.pprint       ])))
 
-; "At least 5 times faster than clojure.pprint/pprint
-;  Prints no later than having consumed the bound amount of memory,
-;  so you see your first few lines of output instantaneously.
-;  :attribution: https://github.com/brandonbloom/fipp"
-(defalias pprint pr/pprint)
 (defonce max-length (atom 1000))
-(defonce blacklist  (atom #{})) ; a list of classes not to print
+(defonce ^{:doc "A set of classes not to print"}
+  blacklist  (atom #{}))
+
+#_(defn js-println [& args]
+  (print "\n/* " )
+  (apply println args)
+  (println "*/"))
 
 (defn !
+  "Fast pretty print using brandonbloom/fipp.
+   At least 5 times faster than |clojure.pprint/pprint|.
+   Prints no later than having consumed the bound amount of memory,
+   so you see your first few lines of output instantaneously."
   ([obj]
     (let [ct (long
                (try
                  (count obj)
-                 (catch #?(:clj Throwable :cljs js/Error) _ 1)))] ; if you don't qualify it in JS it won't like it...
+                 (catch #?(:clj Throwable :cljs js/Error) _ 1)))]
       (cond
         (> ct (long @max-length))
           (println
@@ -37,52 +47,16 @@
             (str (type obj) "(" ")")
             "is blacklisted for printing.")
         :else
-          (pprint obj)))
+          (#?(:clj  fipp.edn/pprint
+              :cljs cljs.pprint/pprint) obj)))
     nil)
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
-;(clojure.main/repl :print !) ; This causes a lot of strange problems... sorry...
 
 (def suppress (partial (constantly nil)))
 
-; (defn pprint-xml
-;   {:attribution "Alex Gunnarson"
-;    :todo ["A rather large function. Did this a long time ago" "Where does this function belong?"]}
-;   [xml-str]
-;   (let [print-tabbed 
-;           (fn [[tab xml-ln]]
-;             (->> " "
-;                  (repeat tab)
-;                  (apply str)
-;                  (<- str xml-ln)
-;                  println))
-;         print-body
-;           (fn [[elem-n :as elems-n] 
-;                 elem-n-1
-;                 ^long tabs-n
-;                 elems-f]
-;             (if (empty? elems-n)
-;                 (doseq [elem-n elems-f] (print-tabbed elem-n))
-;                 (let [type-n   (xml/elem-type elem-n)
-;                       type-n-1 (xml/elem-type elem-n-1)
-;                       tabs-n+1
-;                         (cond (or (= :beg type-n)
-;                                   (= :body  type-n))
-;                               (if (= :beg type-n-1)
-;                                   (+ (long tabs-n)  2)
-;                                   (long tabs-n))
-;                               :end
-;                               (if (= :beg type-n-1)
-;                                   (long tabs-n)
-;                                   (- (long tabs-n) 2)))]
-;                   (recur (rest elems-n)
-;                          elem-n
-;                          (long tabs-n+1)
-;                          (conj elems-f [tabs-n+1 elem-n])))))]
-;     (print-body (whenf xml-str string? xml/split) nil (long 0) [])))
-
-(defn representative-coll
+#_(defn representative-coll
   "Gets the first element of every collection, until it returns empty.
 
    Useful for printing out representative samples of large collections
@@ -124,6 +98,8 @@
                      assoc-keys-n+1
                      ret-n+1))))))  
 
+(declare representative-coll)
+
 (defn !* [obj] (-> obj representative-coll !))
 
 #?(:clj
@@ -141,12 +117,11 @@
   `(do (println "Expr:"     (quote ~obj))
        (println "Class:"    (class ~obj))
        (println "Keys:"     (ifn   ~obj coll? keys+ (constantly nil)))
-       (println "Repr. object: ") (-> ~obj quantum.core.print/representative-coll !)
+       (println "Repr. object: ") (-> ~obj representative-coll !)
        (println))))
 
 #_(:clj
 (defmacro with-print-str* [platform & body] ; I reimplemented |with-out-str|
-  ;(println "\n/*" "PRINT PLATFORM IS" platform "*/\n")
   (let [code
          (condp = platform
            :clj

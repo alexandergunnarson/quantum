@@ -1,6 +1,6 @@
 (ns quantum.core.cache
   (:refer-clojure :exclude [memoize])
-  (:require-quantum [ns fn logic err])
+  (:require-quantum [:core fn logic err])
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj
@@ -40,7 +40,7 @@
                 {:get-fn   (or get-fn-0   (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   )))
                  :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1)))}
               :else
-                (throw+ (Err. nil "No get-fn or assoc-fn defined for" m)))]
+                (throw (->ex nil "No get-fn or assoc-fn defined for" m)))]
       {:m m
        :f (fn
             ([                  ] (memoize-form m f get-fn assoc-fn first? false                 ))
@@ -56,10 +56,3 @@
 (defn memoize [& args] (:f (apply memoize* args))))
 
 #?(:cljs (defalias memoize core/memoize))
-
-(defn assoc-watch!
- "The problem with |assoc-watch!| et al. is that it doesn't diff.
-  One can only compare the entire @oldv to the entire @newv."
-  [atom- k f]
-  (remove-watch atom- k)
-  (add-watch atom- k f))

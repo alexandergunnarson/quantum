@@ -1,0 +1,112 @@
+(ns quantum.core.io.utils
+  (:require-quantum [:core logic fn core-async log err res vec cbase macros])
+  (:require [com.stuartsierra.component  :as component]
+            [datascript.core             :as mdb      ]
+            [quantum.core.convert        :as conv
+              :refer [->name ->str]             ]
+            [quantum.db.datomic          :as db      
+              #?@(:cljs [:refer [EphemeralDatabase]]) ]
+            [quantum.core.string         :as str ]
+            [quantum.core.system         :as sys ]
+            [clojure.walk :refer [postwalk]]
+    #?(:clj [clojure.java.io             :as io  ]))
+  #?(:clj
+  (:import (quantum.db.datomic EphemeralDatabase)
+           (java.io File
+                    InputStream OutputStream
+                    DataOutputStream
+                    FileInputStream FileOutputStream))))
+
+; ===== DEPENDENCIES =====
+
+(def- ill-chars-table
+  {"\\" "-", "/" "-", ":" "-", "*" "!", "?" "!"
+   "\"" "'", "<" "-", ">" "-", "|" "-"})
+
+(defn escape-illegal-chars
+  "Escapes illegal characters in filename."
+  {:todo ["Make less naive - Mac vs. Windows, etc."]}
+  [str-0]
+  (reduce-kv
+    (fn [str-n k v] (str/replace str-n k v))
+    str-0 ill-chars-table))
+
+(defn parse-dir [x] x) ; TODO fix
+
+#?(:clj
+(defnt readable?
+  ([^string? dir]
+    (try (->> dir (.checkRead (SecurityManager.)))
+         true
+      (catch SecurityException _ false)))
+  ([^file?   dir] (->> dir str       readable?))
+  ([^vec?    dir] (->> dir parse-dir readable?))))
+
+#?(:clj
+(defnt writable?
+  ([^string? dir]
+    (try (->> dir (.checkWrite (SecurityManager.)))
+         true
+      (catch SecurityException _ false)))
+  ([^file?   dir] (->> dir str writable?))))
+
+#?(:clj
+(defn create-dir! [dir-0]
+  (let [dir   (-> dir-0 parse-dir)
+        ^File dir-f (io/as-file dir)]
+    (if (.exists dir) ; exists?
+        (try+ (writable? dir-f) ; TODO assert this
+              (assert (.mkdir dir-f) #{dir-f})
+          (catch SecurityException e
+            (throw
+              (->ex :mkdir "The directory could not be created. A security exception occurred." (kmap e dir))))
+          (catch [:type :assertion-error] e
+            (throw
+              (->ex :mkdir "The directory could not be created. Possibly administrator permissions are required." (kmap e dir)))))))))
+
+(defn num-to-sortable-str [num-0]
+  (ifn num-0 (fn-and (fn-not neg?) (f*n < 10))
+       (partial str "0")
+       str))
+
+#_(defn next-file-copy-num [path-0]
+  (let [extension (file-ext path-0)
+        file-name (-> path-0 path->file-name)]
+    (try
+      (->> path-0
+           siblings
+           (map+ str)
+           (filter+
+             (partial
+               (fn-and
+                 (fn-> file-name* (str/starts-with? file-name))
+                 (fn-> file-ext (= extension)))))
+           (map+ (fn-> file-name*
+                       (str/replace (str file-name " ") "") 
+                       path-without-ext str/val))
+           (filter+ number?)
+           redv num/greatest inc num-to-sortable-str)
+      (catch Exception _ (num-to-sortable-str 1)))))
+
+
+
+; ===== EXTENSIONS =====
+
+#?(:clj
+(defn create-temp-file!
+  [^String file-name ^String suffix]
+  (File/createTempFile file-name suffix)))
+
+#?(:clj
+(defmacro with-temp-file
+  "Evaluates @body with a temporary file in its scope."
+  {:attribution "From github.com/bevuta/pepa.util"}
+  [[name data suffix] & body]
+  `(let [data# ~data
+         ~name (create-temp-file! "temp_" (or ~suffix ""))]
+     (try
+       (when data#
+         (io/copy data# ~name))
+       ~@body
+       (finally
+         (.delete ~name))))))

@@ -5,7 +5,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.logic
   (:refer-clojure :exclude [if-let when-let])
-  (:require-quantum [ns fn]))
+  (:require-quantum [:core fn]))
 
 #?(:clj (set! *warn-on-reflection* true))
 
@@ -49,19 +49,22 @@
 #?(:clj
 (defmacro fn-logic-base
   "Auto-externs its fn arguments via a compile-time |eval|. Convenient!"
-  [lang oper & preds]
+  [oper & preds]
   (let [arg (gensym)]
    `(fn [~arg]
       (~oper ~@(for [pred preds]
-                 (if (and (= lang :clj) (seq? pred))
+                 (if (and (if-cljs &env false true) (seq? pred))
                      ; Tries to extern it
                      `(~(try (eval pred)
                           (catch java.lang.Throwable _ pred)) ~arg)
                      `(~pred ~arg))))))))
 
-#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base :clj or  ~@preds)))
-#?(:clj (defmacro fn-and [& preds] `(fn-logic-base :clj and ~@preds)))
-#?(:clj (defmacro fn-not [pred]    `(fn-logic-base :clj not ~pred)))
+#?(:clj (defmacro fn-or  [& preds]
+          `(fn-logic-base or  ~@preds)))
+#?(:clj (defmacro fn-and [& preds]
+          `(fn-logic-base and ~@preds)))
+#?(:clj (defmacro fn-not [pred]   
+          `(fn-logic-base not ~pred)))
 
 (defn splice-or  [obj compare-fn & coll]
   (any?   (partial compare-fn obj) coll))
@@ -110,12 +113,14 @@
   {:attribution "Alex Gunnarson"}
   [obj & clauses]
   (let [gobj (gensym "obj__")
+        illegal-argument (if-cljs &env 'js/Error. 'IllegalArgumentException.)
         emit (fn emit [obj args]
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
                      n (count clause)]
                  (cond
-                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
+                   (= 0 n) `(throw (~illegal-argument
+                                     (str "No matching clause for " ~obj)))
                    (= 1 n) a
                    (= 2 n) `(if (or ~(= a :else) 
                                     (~a ~obj))
@@ -138,12 +143,13 @@
   "Like |condf|, but each expr is essentially wrapped in a |constantly|."
   [obj & clauses]
   (let [gobj (gensym "obj__")
+        illegal-argument (if-cljs &env 'js/Error. 'IllegalArgumentException.)
         emit (fn emit [obj args]
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
                      n (count clause)]
                  (cond
-                   (= 0 n) `(throw (IllegalArgumentException. (str "No matching clause for " ~obj)))
+                   (= 0 n) `(throw (~illegal-argument (str "No matching clause for " ~obj)))
                    (= 1 n) a
                    (= 2 n) `(if (or ~(= a :else) 
                                     (~a ~obj))

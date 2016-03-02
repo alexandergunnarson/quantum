@@ -1,0 +1,1 @@
+([:dependencies ([org.clojure/clojure "1.8.0-alpha2"] [org.clojure/clojurescript "1.7.170"])])

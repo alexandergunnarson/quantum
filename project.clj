@@ -22,15 +22,19 @@
                  "https://oss.sonatype.org/content/groups/public/"}
   :plugins [#_[s3-wagon-private "1.1.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th
-     [org.clojure/clojurescript                 "1.7.170"         ]
+    [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
+     [org.clojure/clojurescript                 "1.7.170"         ] ; Latest (as of 30/12/2015)
+     ; ==== PROBLEMATIC DEPS ====
+     [potemkin "0.4.1"]
      ; ==== CORE ====
        [proteus                                 "0.1.4"           ]
+       [com.taoensso/encore "2.31.3"]
        ; ==== NAMESPACE ====
        [quantum/ns                              "1.0"             ]
-       [org.clojure/tools.namespace             "0.2.11"          ]
+       [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.374"         ]
+         [servant                               "0.1.3"           ] ; Latest (as of 4/1/2016)
          [co.paralleluniverse/pulsar            "0.7.3"           ] ; If you include it, it conflicts
          [co.paralleluniverse/quasar-core       "0.7.3"           ] ; :classifier "jdk8" 
          ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
@@ -59,6 +63,7 @@
          ; CORE
        ; ==== CONVERT ====
          [byte-streams                          "0.2.0"           ]
+         [org.clojure/tools.reader              "1.0.0-alpha3"    ]
          #_[gloss                               "0.2.5"           ] 
        ; ==== CRYPTOGRAPHY ====
          [com.lambdaworks/scrypt                "1.4.0"           ]
@@ -68,7 +73,7 @@
        ; ==== ERROR ====
          [slingshot                             "0.12.2"          ]
        ; ==== GRAPH ====
-         [aysylu/loom                           "0.5.0"           ]
+         [aysylu/loom                           "0.5.4"           ] ; Latest 1/26/2015
        ; ==== IO ====
         ;[commons-io/commons-io                 "2.4"             ] ; writing byte arrays to file and such
          [com.taoensso/nippy                    "2.7.0-alpha1"
@@ -87,15 +92,16 @@
          [com.carrotsearch/java-sizeof          "0.0.5"           ] ; Get size of Java Objects
        ; ==== MACROS ====
          [riddley                               "0.1.10"          ]
-         #_[potemkin                            "0.3.11"  ; defprotocol+, definterface+, etc.
+         #_[potemkin                            "0.3.11"            ; defprotocol+, definterface+, etc.
            :exclusions [riddley]                                  ]
        ; ==== NUMERIC ====              
          [net.jafama/jafama                     "2.1.0"           ]
          [org.clojure/math.combinatorics        "0.1.1"           ]
+         [quantum/java                          "1.0"             ]
        ; ==== PRINT ====
-         [fipp                                  "0.6.2"           ]
-       ; ==== RESOURCE ====
-         [com.stuartsierra/component            "0.2.3"           ]
+         [fipp                                  "0.6.4"           ] ; Latest (as of 2/1/2016)
+       ; ==== RESOURCES ====
+         [com.stuartsierra/component            "0.3.1"           ] ; Latest (as of 2/1/2016)
        ; ==== STRING ====
          ; REGEX
          [frak                                  "0.1.6"           ]   
@@ -103,7 +109,7 @@
          #_[clj-time                            "0.7.0"           ] ; similar to JODA time
          [com.andrewmcveigh/cljs-time           "0.3.2"
            :exclusions [org.json/json]                            ]
-       ; ==== UTIL ====
+       ; ==== META ====
          ; BENCH      
          [criterium                             "0.4.3"           ]
          ; DEBUG
@@ -111,10 +117,14 @@
          [debugger                              "0.1.7"           ]
          ; REPL
          [figwheel                              "0.5.0-2-Q"       ]
+         [binaryage/devtools "0.5.2"]
      ; ==== DB ====
        ; DATOMIC
        [com.datomic/datomic-pro                 "0.9.5206"
          :exclusions [joda-time]                                  ]
+       [datascript                              "0.13.3"          ] ; Latest (as of 2/1/2016)
+       [datascript-transit                      "0.2.0"           ] ; Latest (as of 5/1/2016)
+       [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 2/1/2016)
      ; ==== UI ====
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ] ; 0.2.0-SNAPSHOT
@@ -124,7 +134,11 @@
        ;[domina                                 "1.0.3"           ] ; DOM manipulation
        ; CSS
        [garden                                  "1.2.5"           ]
+     ; ==== UUID ====
+       [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 4/1/2016)
+       [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 9/1/2016)
      ; ==== HTTP ====      
+       [com.taoensso/sente                      "1.7.0"           ] ; Latest (as of 9/1/2016)
        [clj-http                                "1.1.2"
          :exclusions [riddley
                       cheshire
@@ -139,13 +153,20 @@
          :exclusions [commons-codec]                              ]
        [org.apache.httpcomponents/httpmime      "4.4"
          :exclusions [commons-codec]                              ]
-       ; ==== SERVER ====
-       [compojure                               "1.3.3"
+       ; ==== ROUTING ====
+       [compojure                               "1.4.0"
          :exclusions [org.eclipse.jetty/jetty-server
                       org.eclipse.jetty/jetty-servlet
                       javax.servlet/servlet-api
                       clj-http]                                   ]
        [org.eclipse.jetty/jetty-server          "9.2.10.v20150310"]
+       [org.immutant/web                        "2.1.2"             ; Latest (as of 9/1/2016)
+         :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
+       ; ==== AUTH ====
+       [com.cemerick/friend                     "0.2.1"
+         :exclusions [org.clojure/core.cache]                     ]
+       ; ==== MIDDLEWARE ====
+       [ring/ring-anti-forgery                  "1.0.0"           ]
      ; WEB
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis
@@ -156,6 +177,8 @@
        ; COMPILE/TRANSPILE
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
        [com.github.javaparser/javaparser-core   "2.1.0"           ] ; Parse Java source code
+       [org.clojure/tools.emitter.jvm           "0.1.0-beta5"     ]
+      ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.9"             ]
      ; DATAGRID
@@ -181,14 +204,16 @@
               ; [(do (ns quanta.main (:gen-class))
               ;      (require '[quantum.core.ns :as ns])
               ;      (clojure.main/repl :print quantum.core.print/!)
+              ;      (clojure.main/repl :print clojure.pprint/pprint)
               ; )]
           :resource-paths ["dev-resources"]
           :dependencies   []
           :plugins [;[codox "0.8.8"]
-                    [lein-cljsbuild                  "1.0.5"]
+                    [lein-cljsbuild                  "1.1.2-Q-SNAPSHOT"]
                     ;[com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
-                    
+
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
+                    ; rm -rf ./target && rm -rf ./dev-resources/public/js/compiled/quantum/ && lein figwheel dev
                     [lein-figwheel                   "0.5.0-2-Q"
                       :exclusions [org.clojure/core.async
                                    org.clojure/core.cache]]
@@ -207,12 +232,14 @@
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
   :global-vars {*warn-on-reflection* true}
-  :java-agents [[co.paralleluniverse/quasar-core "0.7.3"]] ;  :classifier "jdk8" 
+  :java-agents [[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8" 
+                ; This for HTTP/2 support
+                [kr.motd.javaagent/jetty-alpn-agent "1.0.0.Final"]]
   :cljsbuild
     {:builds
       [{:id "dev"
         :figwheel true
-        :source-paths ["test/cljs" "test/cljc_temp"] #_["src/cljs" "src/cljc"  "test/cljs"]
+        :source-paths ["test/cljs" "src/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
         :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                    :output-dir           "dev-resources/public/js/compiled/out"
                    :optimizations        :none
@@ -220,13 +247,17 @@
                    :asset-path           "js/compiled/out"
                    :source-map           true
                    :source-map-timestamp true
-                   :cache-analysis       true}}
+                   :cache-analysis       true
+                   :parallel-build       true}}
        {:id "min"
         :source-paths ["src/cljs" "src/cljc"]
-        :compiler {:output-to     "dev-resources/public/js/compiled/quantum.js"
-                   :main          quantum.cljstest                     
-                   :optimizations :advanced
-                   :pretty-print  false}}]}
+        :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
+                   :output-dir     "dev-resources/public/js/min-compiled/out"
+                   :main           quantum.cljstest                     
+                   :optimizations  :advanced
+                   :asset-path     "js/min-compiled/out"
+                   :pretty-print   false
+                   :parallel-build true}}]}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3449
              :css-dirs ["dev-resources/public/css"]}

@@ -3,26 +3,17 @@
           are faster than their lazy clojure.core counterparts."
     :attribution "Alex Gunnarson"}
   quantum.core.loops
-  (:refer-clojure :exclude [doseq for reduce])
-  (:require-quantum [ns fn logic log map macros type red err])
-  (:require
-    #?(:clj [proteus :refer [let-mutable]])))
+  (:refer-clojure :exclude [doseq for reduce dotimes])
+  (:require-quantum [:core fn logic log map macros err])
+  (:require [quantum.core.reducers :as red]
+   #?@(:clj [[proteus :refer [let-mutable]]
+             [quantum.core.macros.optimization :as opt]])))
   
 #?(:clj (set! *unchecked-math* true))
-
-(def unchecked-inc-long (fn [^long x] (unchecked-inc x)))
 
 #?(:clj
 (defmacro until [pred-expr & body]
  `(while (not ~pred-expr) ~@body)))
-
-#_(defn aprint [arr]
-  (core/doseq [elem arr]
-    (pr elem) (.append *out* \space))
-  (.append *out* \newline)
-  nil)
-
-(def temp-arr (atom nil))
 
 #_(:clj
 (defmacro reduce-extern-arr*
@@ -36,8 +27,8 @@
   [index? f ret coll & args]
   (let [args-f
           (if index?
-              `(quantum.core.data.array/object-array-of ~ret ~(quantum.core.macros/extern- f) (atom 0) ~@args)
-              `(quantum.core.data.array/object-array-of ~ret ~(quantum.core.macros/extern- f) ~@args))
+              `(quantum.core.data.array/object-array-of ~ret ~(opt/extern- f) (atom 0) ~@args)
+              `(quantum.core.data.array/object-array-of ~ret ~(opt/extern- f) ~@args))
         _ (log/pr ::macro-expand "EXTERNING TO NAMESPACE" (ns-name *ns*))
         extra-args-sym (with-meta (gensym 'extra-args) {:tag "[Ljava.lang.Object"})
         args-n-sym     (with-meta (gensym 'args-n    ) {:tag "[Ljava.lang.Object"})
@@ -70,9 +61,9 @@
 #?(:clj
 (defmacro reduce-
   ([f coll]
-   `(quantum.core.reducers/reduce ~f ~coll))
+   `(red/reduce ~f ~coll))
   ([f ret coll]
-   `(quantum.core.reducers/reduce ~f ~ret ~coll))))
+   `(red/reduce ~f ~ret ~coll))))
 
 #?(:clj
 (defmacro reduce*
@@ -81,36 +72,35 @@
   ([lang f ret coll]
    (let [externed
           (condp = lang
-            :clj  (if @ns/externs? 
-                      (try (quantum.core.macros/extern- f)
+            :clj  (if @reg/externs? 
+                      (try (opt/extern- f)
                         (catch Throwable _
                           (log/pr ::macro-expand "COULD NOT EXTERN" f)
                           f))
                       f)
             :cljs f)
-         code `(quantum.core.reducers/reduce ~externed ~ret ~coll)]
+         code `(red/reduce ~externed ~ret ~coll)]
      code))))
 
 #?(:clj
 (defmacro reduce [& args]
   `(reduce* :clj ~@args)))
 
-
-
+; TODO THIS IS THE ORIGINAL AND BETTER
 #?(:clj
 (defmacro reducei*
   [should-extern? f ret-i coll & args]
   (let [f-final
-         `(~(if (and should-extern? @ns/externs?)
+         `(~(if (and should-extern? @reg/externs?)
                 'quantum.core.macros/extern+
-                'quantum.core.macros/identity*) 
+                'quantum.core.macros.optimization/identity*) 
            (let [i# (volatile! (long -1))]
              (fn ([ret# elem#]
-                   (vswap! i# unchecked-inc-long)
-                   (quantum.core.macros/inline-replace (~f ret# elem# @i#)))
+                   (vswap! i# qcore/unchecked-inc-long)
+                   (quantum.core.macros.optimization/inline-replace (~f ret# elem# @i#)))
                  ([ret# k# v#]
-                   (vswap! i# unchecked-inc-long)
-                   (quantum.core.macros/inline-replace (~f ret# k# v# @i#))))))
+                   (vswap! i# qcore/unchecked-inc-long)
+                   (quantum.core.macros.optimization/inline-replace (~f ret# k# v# @i#))))))
         _ (log/ppr ::macro-expand "F FINAL EXTERNED" f-final)
         code `(quantum.core.reducers/reduce ~f-final ~ret-i ~coll) 
         _ (log/ppr ::macro-expand "REDUCEI CODE" code)]
@@ -165,7 +155,8 @@
 
 #?(:clj
 (defmacro lfor [& args]
-  `(#?(:clj clojure.core/for :cljs cljs.core/for) ~@args)) ); "lazy-for"
+  ; TODO fix the conditional read
+  `(#?(:clj core/for :cljs core/for) ~@args)) ); "lazy-for"
 
 #?(:clj
 (defmacro doseq*
@@ -192,7 +183,7 @@
                  nil)
            nil
            ~coll))
-    (throw (Exception. (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
+    (throw (->ex nil (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
 
 #?(:clj
 (defmacro doseq-
@@ -203,7 +194,6 @@
 (defmacro doseq
   [bindings & body]
   `(doseq* false ~bindings ~@body)))
-
 
 #?(:clj
 (defmacro doseqi*
@@ -217,7 +207,7 @@
                 (reduce
                   (fn [_# ~elem]
                     (let [~index-sym @i#] ~@body)
-                    (vswap! i# unchecked-inc-long)
+                    (vswap! i# qcore/unchecked-inc-long)
                     nil)
                   nil ~coll))
         _ (log/ppr ::macro-expand "DOSEQI CODE IS" code)]
@@ -271,9 +261,10 @@
      (for ~(vec (butlast bindings))
        (let [~n-sym (deref n#)
              res# (do ~@body)]
-         (vswap! n# quantum.core.loops/unchecked-inc-long)
+         (vswap! n# qcore/unchecked-inc-long)
          res#))))))
 
+#?(:clj
 (defmacro for-m
   "for:for-m::reduce:reducem"
   [arglist & body]
@@ -292,32 +283,34 @@
               (conj! ret# (do ~@body)))
             (transient {})
             ~coll)))
-    (throw+ (Err. :illegal-argument "Incorrect number of arguments to |for-m|" (count arglist)))))
+    (throw (->ex :illegal-argument "Incorrect number of arguments to |for-m|" (count arglist))))))
 
-(defmacro seq-loop
-  [bindings & exprs]
-  (condp = (count bindings)
-    4 (let [[elem-sym coll
-             ret-sym init] bindings]
-       `(reduce
-          (fn [~ret-sym ~elem-sym]
-            ~@exprs)
-          ~init
-          ~coll))
-    5 (let [[k-sym v-sym coll
-             ret-sym init] bindings]
-       `(reduce
-          (fn [~ret-sym ~k-sym ~v-sym]
-            ~@exprs)
-          ~init
-          ~coll))))
+;#?(:clj
+;(defmacro seq-loop
+;  [bindings & exprs]
+;  (condp = (count bindings)
+;    4 (let [[elem-sym coll
+;             ret-sym init] bindings]
+;       `(reduce
+;          (fn [~ret-sym ~elem-sym]
+;            ~@exprs)
+;          ~init
+;          ~coll))
+;    5 (let [[k-sym v-sym coll
+;             ret-sym init] bindings]
+;       `(reduce
+;          (fn [~ret-sym ~k-sym ~v-sym]
+;            ~@exprs)
+;          ~init
+;          ~coll)))))
 
+#?(:clj
 (defmacro ifor
   "Imperative |for| loop."
   {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}
   [[sym val-0 pred val-n+1] & body]
   `(loop [~sym ~val-0]
-    (when ~pred ~@body (recur ~val-n+1))))
+    (when ~pred ~@body (recur ~val-n+1)))))
 
 ; 2.284878 ms... strangely not faster than transient |for|
 ; (defmacro for-internally-mutable
@@ -337,34 +330,35 @@
 
 
 
-;(defmacro dotimes
-;  "Hopefully an improvement on |dotimes|, via a few optimizations
-;   like |(get _ 0)| instead of |first| and |let-mutable|."
-;  {:performance
-;    "For 1000000 loops: (dotimes [n 1000000] nil)
-;
-;     |clojure.core/dotimes| : 352 µs  — 374 µs  — 405 µs
-;        
-;     Using |while| as loop  : 4.2 ms  — 6.5 ms  — 11.8 ms
-;     - Macroexpansion for |while| loop was likely non-trivial?
-;
-;     This version           : 4.269954 ms — 4.601226 ms — 5.965863 ms ... strange... 
-;    "
-;   :attribution "Alex Gunnarson"}
-;  [bindings & body]
-;  ; (assert-args
-;  ;   (vector? bindings)       "a vector for its binding"
-;  ;   (even? (count bindings)) "an even number of forms in binding vector")
-;  (let [i (-> bindings (get 0))
-;        n (-> bindings (get 1))]
-;    `(let-mutable [n# (clojure.lang.RT/longCast ~n)
-;                   ~i (clojure.lang.RT/longCast 0)]
-;       (loop []      
-;         (when (< ~i n#)
-;           ~@body
-;           (set! ~i (unchecked-inc ~i))
-;           (recur))))))
-;
+#?(:clj
+(defmacro dotimes
+  "Hopefully an improvement on |dotimes|, via a few optimizations
+   like |(get _ 0)| instead of |first| and |let-mutable|."
+  {:performance
+    "For 1000000 loops: (dotimes [n 1000000] nil)
+
+     |clojure.core/dotimes| : 352 µs  — 374 µs  — 405 µs
+        
+     Using |while| as loop  : 4.2 ms  — 6.5 ms  — 11.8 ms
+     - Macroexpansion for |while| loop was likely non-trivial?
+
+     This version           : 4.269954 ms — 4.601226 ms — 5.965863 ms ... strange... 
+    "
+   :attribution "Alex Gunnarson"}
+  [bindings & body]
+  ; (assert-args
+  ;   (vector? bindings)       "a vector for its binding"
+  ;   (even? (count bindings)) "an even number of forms in binding vector")
+  (let [i (-> bindings (get 0))
+        n (-> bindings (get 1))]
+    `(let-mutable [n# (clojure.lang.RT/longCast ~n)
+                   ~i (clojure.lang.RT/longCast 0)]
+       (loop []      
+         (when (< ~i n#)
+           ~@body
+           (set! ~i (unchecked-inc ~i))
+           (recur)))))))
+
 
 
 ; (defmacro doseq+

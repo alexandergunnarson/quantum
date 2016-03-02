@@ -3,7 +3,7 @@
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "Alex Gunnarson"}
   quantum.core.data.vector
-  (:require-quantum [ns])
+  (:require-quantum [:core])
   (:require
          [clojure.core.rrb-vector :as vec+]
     #?@(:clj
@@ -13,9 +13,11 @@
           [clojure.core.rrb-vector.rrbt :refer [AsRRBT as-rrbt]]])))
 
 ; To fix "No implementation of method: :as-rrbt of protocol ___"
+; And also ""IllegalArgumentException No implementation of method:
+; :splicev of protocol: #'clojure.core.rrb-vector.protocols/PSpliceableVector
+; found for class: clojure.lang.Tuple$T1
+
 ; TODO inefficient
-
-
 #?(:clj
 (extend-protocol AsRRBT
   clojure.lang.Tuple$T0 (as-rrbt [v] (as-rrbt       (vector)   ))
@@ -57,6 +59,7 @@
   "|empty| checks to get around StackOverflowErrors inherent in |catvec|
    (At least in Clojure version)"
   {:attribution "Alex Gunnarson"}
+  ([] (vec+))
   ([a] a)
   ([a b]
     (if (empty? a)
@@ -96,3 +99,11 @@
     #?(:clj  clojure.core.rrb_vector.rrbt.Vector
       :cljs clojure.core.rrb-vector.rrbt.Vector) obj))
 
+#?(:clj
+(defalias
+  ^{:doc "Creates a new vector capable of storing homogenous items of type t,
+  which should be one of :object, :int, :long, :float, :double, :byte,
+  :short, :char, :boolean. Primitives are stored unboxed."}
+  vector-of vec+/vector-of))
+
+; TODO use |vec+/vec| to convert a vector to an RRBT vector. Benchmark this

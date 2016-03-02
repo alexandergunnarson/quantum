@@ -5,8 +5,9 @@
   (:refer-clojure :exclude
     [unsigned-bit-shift-right bit-shift-left bit-shift-right
      bit-or bit-and bit-xor bit-not])
-  (:require-quantum [ns macros log])
-  #?(:clj (:import [quantum.core Numeric] java.nio.ByteBuffer)))
+  (:require-quantum [:core macros log])
+  #?(:clj (:import #_[quantum.core Numeric]
+                   java.nio.ByteBuffer)))
 
 ; Because "cannot resolve symbol 'import'"
 #?(:clj
@@ -60,20 +61,20 @@
 
 ; ===== SHIFTS =====
 
-#?(:clj
-     (defmacro bit-shift-left  [n bits]
+#?(:clj (defalias bit-shift-left core/bit-shift-left)
+     #_(defmacro bit-shift-left  [n bits]
        `(Numeric/shiftLeft ~n ~bits))
    :cljs (defalias bit-shift-left core/bit-shift-left))
 (defalias << bit-shift-left)
 
-#?(:clj
-    (defmacro bit-shift-right [n bits]
+#?(:clj (defalias bit-shift-right core/bit-shift-right)
+    #_(defmacro bit-shift-right [n bits]
       `(Numeric/shiftRight ~n ~bits))
    :cljs (defalias bit-shift-right core/bit-shift-right))
 (defalias >> bit-shift-right)
 
-#?(:clj
-    (defmacro unsigned-bit-shift-right
+#?(:clj (defalias unsigned-bit-shift-right core/unsigned-bit-shift-right)
+    #_(defmacro unsigned-bit-shift-right
       "Bit shift right, replace with zeros"
       [n bits]
       `(Numeric/unsignedShiftRight ~n ~bits))
@@ -88,7 +89,8 @@
 
 ; ====== ENDIANNESS REVERSAL =======
 
-#?(:clj
+; TODO DEPS
+#_(:clj
 (defnt reverse
   (^short  [^short  x] (Numeric/reverseShort x))
   (^int    [^int    x] (Numeric/reverseInt x))

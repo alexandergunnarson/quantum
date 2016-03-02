@@ -14,7 +14,7 @@
   quantum.core.reducers
   #?(:clj  (:refer-clojure :exclude [reduce])
      :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require-quantum [ns fn logic macros num type map set vec log cbase])
+  (:require-quantum [:core fn logic macros num type map set vec log cbase])
   (:require         [clojure.walk :as walk]))
 
 ;___________________________________________________________________________________________________________________________________
@@ -347,7 +347,7 @@
   ([to from & froms]
     (reduce into+ (into+ to (fold-pre from)) froms)))
 
-(defn+ reducem+
+(defn reducem+ ; was defn+
   "Requires only one argument for preceding functions in its call chain."
   {:attribution "Alex Gunnarson"
    :performance "9.94 ms vs. 17.02 ms for 10000 calls to (into+ {}) for small collections ;
@@ -356,7 +356,7 @@
   #?(:clj
     (->> coll force
          (reduce
-           (extern
+           (identity #_extern
              (fn ([ret [k v]] (assoc! ret k v))
                  ([ret  k v]  (assoc! ret k v))))
            (transient {}))
@@ -792,7 +792,7 @@
              ([ret k v]
                 (reduce f1 ret (f k v))))))))
 
-(defn ^Delay mapcat+ [func coll] (->> coll fold-pre (mapcat* func) delay)) ; mapcat: ([:a 1] [:b 2] [:c 3]) versus mapcat+: (:a 1 :b 2 :c 3) ; hmm...
+(defn mapcat+ [func coll] (->> coll fold-pre (mapcat* func) delay)) ; mapcat: ([:a 1] [:b 2] [:c 3]) versus mapcat+: (:a 1 :b 2 :c 3) ; hmm...
 
 (defn concat+ [& args]
   ; (mapcat+ identity args) ; one way
@@ -1029,7 +1029,7 @@
                (f1 ret k v)
                ret)))))))
 
-(defn ^Delay drop+ [n coll]
+(defn drop+ [n coll]
   (->> coll fold-pre (drop* n) delay))
 
 (defcurried ^:private drop-while*
@@ -1046,7 +1046,7 @@
                (f1 ret k v)
                ret)))))))
 
-(defn ^Delay drop-while+ [pred coll]
+(defn drop-while+ [pred coll]
   (->> coll fold-pre (drop-while* pred) delay))
 
 #?(:clj
@@ -1066,7 +1066,7 @@
                  ret))))))))
 
 #?(:clj
-  (defn ^Delay dropr+ [n coll]
+  (defn dropr+ [n coll]
     (->> coll fold-pre (dropr* n) delay)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
@@ -1116,7 +1116,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn ^Delay distinct-by+ ; 228.936664 ms (pretty much attains java speeds!!!)
+(defn distinct-by+ ; 228.936664 ms (pretty much attains java speeds!!!)
   "Remove adjacent duplicate values of (@f x) for each x in @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
@@ -1132,7 +1132,7 @@
            sentinel)
          (remove+ (partial identical? sentinel)))))
 
-(defn ^Delay distinct+
+(defn distinct+
   "Remove adjacent duplicate values from @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
@@ -1165,7 +1165,7 @@
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
 #?(:clj
-(defmacro ^Delay for+
+(defmacro for+
   "Reducer comprehension, behaves like \"for\" but yields a reducible/foldable collection.
    Leverages kv-reduce when destructuring and iterating over a map."
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"

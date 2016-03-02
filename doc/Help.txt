@@ -1,0 +1,2 @@
+===== Setting up HTTPS =====
+cd ./dev-resources && keytool -keystore keystore -alias testserver -genkey -keyalg RSA
