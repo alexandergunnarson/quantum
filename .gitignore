@@ -1,5 +1,8 @@
 /resources/
-/dev-resources/
+/dev-resources/public/Fonts
+/dev-resources/public/js/compiled
+/dev-resources/public/js/min-compiled
+/private-resources/
 /target/
 /fonts/
 subprojects/quantum-ns/target/quantum-ns-dep.jar
