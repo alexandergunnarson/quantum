@@ -4,7 +4,7 @@
   quantum.core.data.finger-tree
   (:require-quantum [:core map])
   (:require
-    #? (:clj  [quantum.core.macros.protocol
+    #? (:clj  [quantum.core.macros.deftype
                 :refer [deftype-compatible]])
               [quantum.core.core
                 :refer [seq-equals]]
@@ -16,7 +16,7 @@
                  :refer [INext IEmptyableCollection IEquiv IAssociative]]]))
   #?(:cljs
   (:require-macros
-              [quantum.core.macros.protocol
+              [quantum.core.macros.deftype
                 :refer [deftype-compatible]        ]
               [quantum.core.data.finger-tree.macros
                 :refer [defdigit make-digit delay-ft]]

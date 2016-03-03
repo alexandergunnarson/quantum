@@ -213,8 +213,8 @@
                                    :clj  {bin         #{true? false? #_nil?}                  }}}
     bytes       {:aliases         {:cljc {bytes       quantum.core.data.bytes                 }}}
     csv         {:aliases         {:cljc {csv         quantum.core.data.complex.csv           }}}
-    ftree       {:aliases         {:cljc {ftree       quantum.core.data.ftree                 }}
-                 :refers          {:clj  {ftree       #{dlist}                                }}
+    list        {:aliases         {:cljc {list        quantum.core.data.list                  }}
+                 :refers          {:clj  {list        #{dlist}                                }}
                  :imports         (clojure.data.finger_tree.CountedDoubleList)                }
     hex         {:aliases         {:cljc {hex         quantum.core.data.hex                   }}}
     json        {:aliases         {:cljc {json        quantum.core.data.complex.json          }}}
@@ -264,9 +264,9 @@
                                                         when-let if-let}}}}
     loops       {:core-exclusions {:cljc #{for doseq reduce}}
                  :aliases         {:cljc {loops       quantum.core.loops                      }}
-                 :refers          {:cljc {loops       #{reduce- reducei-}                     }
-                                   :clj  {loops       #{reduce reducei for fori
-                                                        doseq doseqi ifor}                    }}}
+                 :refers          {:cljc {loops       #{reduce- reducei-
+                                                        reduce reducei for fori
+                                                        doseq doseqi ifor}                   }}}
     macros      {:requires        {:cljc #{quantum.core.log}} ; To get logging for macros
                  :aliases         {:cljc {macros      quantum.core.macros                     }}
                  :refers          {:cljc {macros      #{quote+ fn+ defn+
@@ -392,7 +392,7 @@
                                reducei reducei-
                                doseq   doseq- 
                                doseqi  doseqi-
-                               for lfor}
+                               for fori ifor lfor}
    quantum.core.macros       #{quote+ fn+ defn+ defmethod+ defmethods+ defnt compile-if assert-args let-alias}
    quantum.core.ns           #{ns-exclude},
    quantum.core.meta.repl    #{source find-doc doc javadoc}

@@ -3,7 +3,7 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.bootstrap
-  (:require-quantum [:core map set logic fn]))
+  (:require-quantum [:core map set logic fn list]))
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -191,9 +191,13 @@
                    clojure.lang.PersistentList$EmptyList}
            :cljs #{cljs.core/List cljs.core/EmptyList}}
         dlist-types
-          '{:clj #{clojure.data.finger_tree.CountedDoubleList}}
+          '{:clj  #{clojure.data.finger_tree.CountedDoubleList
+                    quantum.core.data.finger_tree.CountedDoubleList}
+            :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
         cdlist-types
-          '{:clj #{clojure.data.finger_tree.CountedDoubleList}}
+          '{:clj  #{clojure.data.finger_tree.CountedDoubleList
+                    quantum.core.data.finger_tree.CountedDoubleList}
+            :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
         map-entry-types '{:clj  #{clojure.lang.MapEntry            }}
         queue-types     '{:clj  #{clojure.lang.PersistentQueue     }
                           :cljs #{cljs.core.PersistentQueue        }}
@@ -314,7 +318,8 @@
            'short?           short-types
            'int?             int-types
            'integer?         integer-types
-           'pinteger?        '{:clj #{long}} 
+           'pinteger?        '{:clj  #{long}
+                               :cljs #{(class 123)}} 
            'long?            long-types
            'bigint?          bigint-types
            'float?           float-types
@@ -364,6 +369,8 @@
                                :cljs #{cljs.core/Keyword}}
            'atom?            atom-types
            :any              {:clj  (set/union (:clj primitive-types) #{'Object})
+                              :cljs '#{(quote default)}}
+           :obj              {:clj  '#{Object}
                               :cljs '#{(quote default)}}}
          unevaled-fn
            (fn [lang-n]

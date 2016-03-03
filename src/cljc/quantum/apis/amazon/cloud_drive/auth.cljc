@@ -51,14 +51,14 @@
     (#?(:clj identity
         :cljs go)
       (->> (http/request!
-           {:url "https://api.amazon.com/auth/o2/token"
-            :method :post
-            :headers {"Content-Type" "application/x-www-form-urlencoded"}
-            :form-params
-              {"grant_type"    "refresh_token"
-               "refresh_token" (-> auth-ks :access-tokens :offline :refresh-token)
-               "client_id"     (:client-id     auth-ks)
-               "client_secret" (:client-secret auth-ks)}})
+             {:url "https://api.amazon.com/auth/o2/token"
+              :method :post
+              :headers {"Content-Type" "application/x-www-form-urlencoded"}
+              :form-params
+                {"grant_type"    "refresh_token"
+                 "refresh_token" (-> auth-ks :access-tokens :offline :refresh-token)
+                 "client_id"     (:client-id     auth-ks)
+                 "client_secret" (:client-secret auth-ks)}})
            #?(:cljs <!)
            :body
            (auth/assoc-in! :amazon

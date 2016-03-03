@@ -2,7 +2,7 @@
       :author "Chris Houser"}
   quantum.core.data.finger-tree.macros
   (:require-quantum [:core logic fn])
-  (:require [quantum.core.macros.protocol
+  (:require [quantum.core.macros.deftype
               :refer [pfn ?Seqable ?Counted ?Indexed ?Sequential ?Seq
                       ?Stack ?Collection]]
    #?(:cljs [cljs.core
