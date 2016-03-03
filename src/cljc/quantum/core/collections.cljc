@@ -1,12 +1,198 @@
-(ns quantum.core.collections
-  (:require-quantum [:core fn logic set map err])
-  (:require [quantum.core.type.predicates :refer [editable?]]
-            [clojure.walk :refer [postwalk]]))
+(ns
+  ^{:doc
+      "Various collections functions.
+
+       Includes better versions of the following than clojure.core:
+
+       for, doseq, repeat, repeatedly, range, merge,
+       count, vec, reduce, into, first, second, rest,
+       last, butlast, get, pop, peek ...
+
+       and more.
+
+       Many of them are aliased from other namespaces like
+       quantum.core.collections.core, or quantum.core.reducers."
+    :attribution "Alex Gunnarson"}
+  quantum.core.collections
+  (:refer-clojure :exclude
+    [for doseq reduce
+     contains?
+     repeat repeatedly
+     range
+     take take-while
+     drop  drop-while
+     subseq
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     vec empty
+     split-at
+     first second rest last butlast get pop peek
+     zipmap
+     conj! assoc! dissoc! disj!
+     partition-all])
+  (:require-quantum [:core logic #_type macros #_num vec set
+                     log err fn str])
+  (:require
+            [quantum.core.data.map         :as map  ]
+            [quantum.core.collections.core :as coll ]
+            [quantum.core.collections.base :as base ]
+            [quantum.core.reducers         :as red  ]
+            [quantum.core.string.format    :as sform]
+            [quantum.core.analyze.clojure.predicates :as anap]
+            [quantum.core.type.predicates  :as tpred]
+            [clojure.walk                  :as walk ]
+    #?(:clj [quantum.core.loops            :as loops])
+    #?(:clj [clojure.pprint :refer [pprint]]))
+  #?(:cljs
+    (:require-macros
+      [quantum.core.reducers   :as red  ]
+      [quantum.core.loops      :as loops])))
+
+(defn key
+  ([kv] (if (nil? kv) nil (core/key kv)))
+  ([k v] k))
+
+(defn val
+  ([kv] (if (nil? kv) nil (core/val kv)))
+  ([k v] v))
+
+#?(:clj (defmacro map-entry [a b] `[~a ~b]))
+
+(defn genkeyword
+  ([]    (keyword (gensym)))
+  ([arg] (keyword (gensym arg))))
+
+(defnt empty
+  ([^string? obj] "")
+  ([         obj] (core/empty obj)))
+
+(defn wrap-delay [f]
+  (if (delay? f) f (delay ((or f fn-nil)))))
+
+#?(:clj (defalias reduce   loops/reduce  ))
+#?(:clj (defalias reduce-  loops/reduce- ))
+#?(:clj (defalias reducei  loops/reducei ))
+#?(:clj (defalias reducei- loops/reducei-))
+#?(:clj (defalias seq-loop loops/seq-loop))
+; Loop via |reduce|  
+#?(:clj (defalias loopr    loops/seq-loop))
+
+(defalias break reduced)
+
+(defalias vec         red/vec+       )    
+#_(defalias array       coll/array     ) ; TODO for now
+(defalias into        red/into+      ) 
+
+(defalias redv        red/fold+      )
+(defalias redm        red/reducem+   )
+(defalias fold        red/fold+      ) ; only certain arities
+(defalias foldv       red/foldp+     ) ; only certain arities
+(defalias foldm       red/foldm+     ) 
+(defalias map+        red/map+       )
+(defalias filter+     red/filter+    )
+(defalias lfilter     filter         )
+(defalias remove+     red/remove+    )
+(defalias lremove     remove         )
+(defalias take+       red/take+      )
+(defalias take-while+ red/take-while+)
+(defalias drop+       red/drop+      )
+(defalias group-by+   red/group-by+  )
+(defalias flatten+    red/flatten+   )
+(def flatten-1 (partial apply concat)) ; TODO more efficient
+
+; ; ====== LOOPS ======
+;(def cljs-for+ (var red/for+))
+; (defalias for+   #?(:clj red/for+         :cljs red/for+))
+; (alter-meta! (var for+) assoc :macro true)
+
+; (def cljs-for (var loops/for)) ; doesn't work because not a var
+; (def cljs-for (mfn loops/for)) ; doesn't work because no |eval|
+#?(:clj (defalias for   loops/for  ))
+#?(:clj (defalias fori  loops/fori ))
+#?(:clj (defalias for-m loops/for-m))
+#?(:clj (defalias until loops/until))
+#?(:clj (alter-meta! (var for) assoc :macro true))
+
+;(def cljs-lfor (var clojure.core/for))
+;(defalias lfor   #?(:clj clojure.core/for :cljs cljs-lfor))
+;#?(:clj (defalias lfor clojure.core/for))
+#?(:clj (defmacro lfor   [& args] `(clojure.core/for ~@args)))
+
+;(def cljs-doseq (var loops/doseq))
+;(defalias doseq  #?(:clj loops/doseq      :cljs cljs-doseq))
+#?(:clj (defmacro doseq  [& args] `(loops/doseq      ~@args)))
+
+;(def cljs-doseqi (var loops/doseqi))
+;(defalias doseqi #?(:clj loops/doseqi     :cljs cljs-doseqi))
+#?(:clj (defmacro doseqi [& args] `(loops/doseqi     ~@args)))
+
+#?(:cljs
+  (defn kv+
+    "For some reason ClojureScript reducers have an issue and it's terrible... so use it like so:
+     (map+ (compr kv+ <myfunc>) _)
+     |reduce| doesn't have this problem."
+    {:todo ["Eliminate the need for this."]}
+    ([obj] obj)
+    ([k v] k)))
+
+; ; ====== COLLECTIONS ======
+
+; ; TODO Don't redefine these vars
+; #?(:cljs (defn map+    [f coll] (red/map+    (compr kv+ f) coll)))
+; #?(:cljs (defn filter+ [f coll] (red/filter+ (compr kv+ f) coll)))
+; #?(:cljs (defn remove+ [f coll] (red/remove+ (compr kv+ f) coll)))
+
+; TODO change these back
+; (defalias lasti         coll/lasti        )
+; (defalias index-of      coll/index-of     )
+; (defalias last-index-of coll/last-index-of)
+(defalias count         core/count        )
+; (defalias getr          coll/getr         )
+; (defalias subseq        getr              )
+; (defalias lsubseq       core/subseq       )
+(defalias get           core/get          )
+; (defalias gets          coll/gets         )
+; (defalias getf          coll/getf         )
+
+; ; If not |defalias|ed, "ArityException Wrong number of args (2) passed to: core/eval36441/fn--36457/G--36432--36466"
+; (defalias conjl         coll/conjl        )
+; (defalias conjr         coll/conjr        )
+(defalias pop           core/pop          )
+; (defalias popr          coll/popr         )
+; (defalias popl          coll/popl         )
+(defalias peek          core/peek         )
+(defalias first         core/first        )
+(defalias second        core/second       )
+; (defalias third         coll/third        )
+(defalias rest          core/rest         )
+; (defalias lrest         core/rest         )
+(defalias butlast       core/butlast      )
+(defalias last          core/last         )
+(defalias assoc!        core/assoc!       )
+; (defalias dissoc!       coll/dissoc!      )
+(defalias conj!         core/conj!        )
+; (defalias disj!         coll/disj!        )
+; (defalias update!       coll/update!      )
+(defalias contains?     core/contains?    )
+; (defalias containsk?    coll/containsk?   )
+; (defalias containsv?    coll/containsv?   )
+
+
+; TODO this doesn't belong here
+(defalias drop core/drop)
+(defalias range core/range)
+(defalias zipmap core/zipmap)
+(defalias postwalk clojure.walk/postwalk)
+
+
+
 
 (defn reduce-map
   {:from "r0man/noencore"}
   [f coll]
-  (if (editable? coll)
+  (if (tpred/editable? coll)
       (persistent! (reduce-kv (f assoc!) (transient (empty coll)) coll))
       (reduce-kv (f assoc) (empty coll) coll)))
 
@@ -177,11 +363,7 @@
    (when-let [s (seq ss)]
      (concat (first s) (lflatten (rest s))))))
 
-(defn safe-mapcat
-  "Like |mapcat|, but works if the returned values aren't sequences."
-  {:from "clojure.jvm.tools.analyzer.examples.tail-recursion"}
-  [f & colls]
-  (apply concat (map #(if (seq? %) % [%]) (apply map f colls))))
+(defalias safe-mapcat anap/safe-mapcat)
 
 (defn dezip
   "The inverse of zip. – Unravels a seq of m n-tuples into a

@@ -238,7 +238,7 @@
   [bindings & body]
   (assert-args
     (vector? bindings)       "a vector for its binding")
-  `(if (should-transientize? ~(last bindings))
+  `(if (quantum.core.type/should-transientize? ~(last bindings))
        (persistent!
          (reduce
            (fn [ret# ~@(butlast bindings)]
@@ -285,24 +285,24 @@
             ~coll)))
     (throw (->ex :illegal-argument "Incorrect number of arguments to |for-m|" (count arglist))))))
 
-;#?(:clj
-;(defmacro seq-loop
-;  [bindings & exprs]
-;  (condp = (count bindings)
-;    4 (let [[elem-sym coll
-;             ret-sym init] bindings]
-;       `(reduce
-;          (fn [~ret-sym ~elem-sym]
-;            ~@exprs)
-;          ~init
-;          ~coll))
-;    5 (let [[k-sym v-sym coll
-;             ret-sym init] bindings]
-;       `(reduce
-;          (fn [~ret-sym ~k-sym ~v-sym]
-;            ~@exprs)
-;          ~init
-;          ~coll)))))
+#?(:clj
+(defmacro seq-loop
+  [bindings & exprs]
+  (condp = (count bindings)
+    4 (let [[elem-sym coll
+             ret-sym init] bindings]
+       `(reduce
+          (fn [~ret-sym ~elem-sym]
+            ~@exprs)
+          ~init
+          ~coll))
+    5 (let [[k-sym v-sym coll
+             ret-sym init] bindings]
+       `(reduce
+          (fn [~ret-sym ~k-sym ~v-sym]
+            ~@exprs)
+          ~init
+          ~coll)))))
 
 #?(:clj
 (defmacro ifor

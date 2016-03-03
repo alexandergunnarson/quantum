@@ -167,9 +167,10 @@
 (defalias div-2 #?(:clj clj/div-2 :cljs cljs/div-2))
 
 ;(defalias / #?(:clj clj// :cljs cljs//))
+#?(:clj
 (macros/variadic-proxy div*
   quantum.core.numeric.clj/div-2
-  quantum.core.numeric.cljs/div-2)
+  quantum.core.numeric.cljs/div-2))
 
 ;_____________________________________________________________________
 ;==================={        PREDICATES        }======================

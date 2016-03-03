@@ -15,6 +15,8 @@
                    [java.nio ByteBuffer]
                    java.util.ArrayList)))
 
+(defalias aset! aset)
+
 ; TODO look at http://fastutil.di.unimi.it to complete this namespace
 ; TODO move this to type
 (def package-class-map
@@ -225,8 +227,6 @@
       (doseq [i (range (count longs-f))] 
         (aset longs-f i (.getLong buffer (* i 8))))
       longs-f))))
-
-(defalias aset! aset)
 
 #?(:clj
 (defnt' copy
