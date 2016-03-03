@@ -2,11 +2,25 @@
   quantum.core.analyze.clojure.predicates
   (:refer-clojure :exclude [name])
   (:require-quantum [:core fn logic])
-  (:require [quantum.core.string               :as str  ]
+  (:require [clojure.string                    :as str  ]
     #?(:clj [clojure.jvm.tools.analyzer        :as tana ])
-            [quantum.core.collections          :as coll ]
             [quantum.core.analyze.clojure.core :as ana  ]
             [quantum.core.type.core            :as tcore]))
+
+(defn safe-mapcat
+  "Like |mapcat|, but works if the returned values aren't sequences."
+  {:from "clojure.jvm.tools.analyzer.examples.tail-recursion"}
+  [f & colls]
+  (apply concat (map #(if (seq? %) % [%]) (apply map f colls))))
+
+; Because clojure.string/index-of works for CLJ but not CLJS yet
+(defn str-index-of [x sub]
+  #?(:clj  (.indexOf ^String x sub)
+     :cljs (.indexOf         x sub)))
+
+(defn str-ends-with? [x sub]
+  #?(:clj  (.endsWith ^String x sub)
+     :cljs (.endsWith         x sub)))
 
 ; SYMBOLS
 (defn name [x] (if (nil? x) nil (core/name x)))
@@ -26,9 +40,10 @@
 (defn metaclass    [sym]
   (whenc (type-hint sym) (fn-> name empty?) nil)))
 
-(defn qualified?   [sym] (-> sym str (str/contains? "/")))
-(defn auto-genned? [sym] (-> sym name (str/ends-with? "__auto__")))
-(def possible-type-predicate? (fn-or keyword? (fn-and symbol? (fn-> name (str/contains? "?")))))
+
+(defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))
+(defn auto-genned? [sym] (-> sym name (str-ends-with? "__auto__")))
+(def possible-type-predicate? (fn-or keyword? (fn-and symbol? (fn-> name (str-index-of "?") (not= -1)))))
 (def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword?))
 
 ;  ===== SCOPE =====
@@ -99,9 +114,9 @@
   {:from "clojure.jvm.tools.analyzer.examples.tail-recursion"}
   [tree]
   (case (:op tree)
-    :def       (coll/safe-mapcat find-tail-ops (rest (tana/children tree)))
+    :def       (safe-mapcat find-tail-ops (rest (tana/children tree)))
     :do        (recur (last (tana/children tree)))
-    :fn-expr   (coll/safe-mapcat find-tail-ops (:methods tree))
+    :fn-expr   (safe-mapcat find-tail-ops (:methods tree))
     :fn-method (recur (:body tree))
 
     :invoke

@@ -85,14 +85,14 @@
 
 (defnt inc
   ([^number?                           x] (core/inc x))
-  ([^com.gfredericks.goog.math.Integer x] (+ x ONE)))
+  ([^com.gfredericks.goog.math.Integer x] (+ x int/ONE)))
 
 (defalias inc' inc          )
 (defalias inc* unchecked-inc)
 
 (defnt dec
   ([^number?                           x] (core/dec x))
-  ([^com.gfredericks.goog.math.Integer x] (- x ONE)))
+  ([^com.gfredericks.goog.math.Integer x] (- x int/ONE)))
 
 (defalias dec' dec          )
 (defalias dec* unchecked-dec)
@@ -101,24 +101,10 @@
 (defn sign' [x] (js/Math.sign x))
 
 ;_____________________________________________________________________
-;==================={        PREDICATES        }======================
-;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-
-(defnt pos?
-  ([^number?                           x] (core/pos? x))
-  ([^com.gfredericks.goog.math.Integer x] (> x ZERO)))
-
-(defnt neg?
-  ([^number?                           x] (core/neg? x))
-  ([^com.gfredericks.goog.math.Integer x] (< x ZERO)))
-
-(defnt zero?
-  ([^number?                           x] (core/zero? x))
-  ([^com.gfredericks.goog.math.Integer x] (= x ZERO)))
-
-;_____________________________________________________________________
 ;==================={        COMPARISON        }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+
+(declare zero?)
 
 ; TODO fix
 (defn =-2
@@ -162,6 +148,21 @@
 ;  ([x y] (not (core/neg? (-compare x y))))))
 ;#?(:cljs (macros/variadic-predicate-proxy >=     quantum.core.numeric/>=*))
 
+;_____________________________________________________________________
+;==================={        PREDICATES        }======================
+;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+
+(defnt pos?
+  ([^number?                           x] (core/pos? x))
+  ([^com.gfredericks.goog.math.Integer x] (> x int/ZERO)))
+
+(defnt neg?
+  ([^number?                           x] (core/neg? x))
+  ([^com.gfredericks.goog.math.Integer x] (< x int/ZERO)))
+
+(defnt zero?
+  ([^number?                           x] (core/zero? x))
+  ([^com.gfredericks.goog.math.Integer x] (= x int/ZERO)))
 
 ;_____________________________________________________________________
 ;================={   MORE COMPLEX OPERATIONS    }====================
