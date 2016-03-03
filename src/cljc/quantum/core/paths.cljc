@@ -1,14 +1,7 @@
 (ns ^{:doc "Paths-related things — resource locators. URIs, URLs, directories, files, etc."}
   quantum.core.paths
-  (:require-quantum [:core logic fn #_coll #_io err sys])
-  (:require #?(:clj [quantum.core.loops :refer [reducei]])
-            [quantum.core.string :as str])
-  #?(:clj (:import java.io.File))
-  #?(:cljs
-  (:require-macros
-            [quantum.core.loops
-              :refer [reducei]]
-            [quantum.core.fn :refer [MWA]]))) ; TODO make so doesn't have to refer to MWA
+  (:require-quantum [:core logic fn #_coll #_io err sys str loops])
+  #?(:clj (:import java.io.File)))
 
 ; TODO validate this
 (def paths-vecs

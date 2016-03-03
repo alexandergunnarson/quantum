@@ -3,7 +3,7 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.core
-  (:require-quantum [:core log pr err map set logic fn cbase])
+  (:require-quantum [:core log pr err map set logic fn cbase list])
   (:require [quantum.core.type.bootstrap :as boot]
     #?(:clj [clojure.tools.analyzer.jvm.utils :as ana]))
   #?(:cljs

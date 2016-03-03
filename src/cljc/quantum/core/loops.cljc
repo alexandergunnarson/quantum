@@ -84,7 +84,7 @@
 
 #?(:clj
 (defmacro reduce [& args]
-  `(reduce* :clj ~@args)))
+  `(reduce* ~(if-cljs &env :cljs :clj) ~@args)))
 
 ; TODO THIS IS THE ORIGINAL AND BETTER
 #?(:clj

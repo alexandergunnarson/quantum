@@ -266,28 +266,28 @@
              method :unserialize} ; :uncompress is automatic
       :as options}] ; :string??
   #?(:cljs (js/localStorage.getItem file-path)
-     :clj (let [^String directory-f (-> directory p/parse-dir)
-                ^String file-path-f
-                  (or (-> file-path p/parse-dir (whenc empty? nil))
-                      (path directory-f file-name))
-                extension (keyword (or file-type (p/file-ext file-path-f)))]
-            (condpc = method
-              :str-seq   (iota/seq  file-path-f)
-              :str-vec   (iota/vec  file-path-f)
-              :str       (slurp     file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
-              :load-file (load-file file-path-f) ; don't do this; validate it first
-              :unserialize
-                (condpc = extension
-                  (coll-or :txt :xml)
-                    (iota/vec file-path-f) ; default is FileVec
-                  (coll-or :xls :xlsx)
-                    (io/input-stream file-path-f)
-                  ;"csv"
-                  ;(-> file-path-f io/reader csv/read-csv)
-                  (whenf (with-open [read-file (io/input-stream file-path-f)] ; Clojure object
-                         (nippy/thaw-from-in! (DataInputStream. read-file)))
-                    byte-array? nippy/thaw))
-              (println "Unknown read method requested."))))))
+     :clj  (let [^String directory-f (-> directory p/parse-dir)
+                 ^String file-path-f
+                   (or (-> file-path p/parse-dir (whenc empty? nil))
+                       (path directory-f file-name))
+                 extension (keyword (or file-type (p/file-ext file-path-f)))]
+             (condpc = method
+               :str-seq   (iota/seq  file-path-f)
+               :str-vec   (iota/vec  file-path-f)
+               :str       (slurp     file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
+               :load-file (load-file file-path-f) ; don't do this; validate it first
+               :unserialize
+                 (condpc = extension
+                   (coll-or :txt :xml)
+                     (iota/vec file-path-f) ; default is FileVec
+                   (coll-or :xls :xlsx)
+                     (io/input-stream file-path-f)
+                   ;"csv"
+                   ;(-> file-path-f io/reader csv/read-csv)
+                   (whenf (with-open [read-file (io/input-stream file-path-f)] ; Clojure object
+                          (nippy/thaw-from-in! (DataInputStream. read-file)))
+                     byte-array? nippy/thaw))
+               (println "Unknown read method requested."))))))
 
 #?(:cljs
 (defrecord

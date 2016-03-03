@@ -24,13 +24,14 @@
 
 ; The six standard {@link Charset} instances which are guaranteed to be supported by all Java platform implementations.
 ; See the Guava User Guide article on https://github.com/google/guava/wiki/StringsExplained#charsets
+#?(:clj
 (def charsets
   #{StandardCharsets/ISO_8859_1 ; ISO Latin Alphabet Number 1 (ISO-LATIN-1
     StandardCharsets/US_ASCII   ; seven-bit ASCII, the Basic Latin block of the Unicode character set (ISO646-US)
     StandardCharsets/UTF_16     ; sixteen-bit UCS Transformation Format, byte order identified by an optional byte-order mark.
     StandardCharsets/UTF_16BE   ; sixteen-bit UCS Transformation Format, big-endian byte order.
     StandardCharsets/UTF_16LE   ; sixteen-bit UCS Transformation Format, little-endian byte order.
-    StandardCharsets/UTF_8})    ; eight-bit UCS Transformation Format
+    StandardCharsets/UTF_8}))    ; eight-bit UCS Transformation Format
 
 (def ^:const max-ascii-val 0x7F)
 

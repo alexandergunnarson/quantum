@@ -57,6 +57,8 @@
         (defnt editable?   ([^editable?   obj] true) ([obj] false))
         (defnt transient?  ([^transient?  obj] true) ([obj] false))
 
+#?(:clj (defnt' prim-long? ([^long n] true) ([:else n] false)))
+
 ;         #?(:cljs 
 ; (defn bigint?
 ;   [x]

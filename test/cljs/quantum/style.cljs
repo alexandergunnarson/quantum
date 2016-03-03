@@ -89,9 +89,15 @@
       }]
    [:button
      {:font-family (family :montserrat)
-      :font-size   12
+      :font-size   16
       :background  :white
-      :color       (theme :sky :light-blue)}]
+      :color       (theme :sky :light-blue)
+      :border-color  :white
+      :border-style  :solid
+      :border-width  4
+      :border-radius "8px"
+      :margin-top    2
+      :margin-bottom 2}]
    [:div#current-weather
      {:display :flex
       :flex-direction :column
