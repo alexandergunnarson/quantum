@@ -10,7 +10,7 @@
       :cljs [datomic-cljs.api                 :as bdb      ])
             [datascript.core                  :as mdb      ]
             [quantum.db.datomic.core          :as db       ]
-            [quantum.db.datomic.reactive.core :as rx-db    ]
+   #?(:cljs [posh.core                        :as rx-db    ])
     ;#?(:clj [quantum.deploy.amazon           :as amz      ])
             [com.stuartsierra.component       :as component]
             [quantum.core.collections         :as coll     ]
@@ -29,42 +29,45 @@
 (def conn* db/conn*)
 (def part* db/part*)
 
-(defalias q            db/q)
-(defalias transact!    db/transact!)
-(defalias entity       db/entity)
+(defalias q              db/q        )
+(defalias transact!      db/transact!)
+(defalias entity         db/entity   )
 
-(defalias conj         db/conj  )
-(defalias disj         db/disj  )
-(defalias assoc        db/assoc )
-(defalias dissoc       db/dissoc)
-(defalias update       db/update)
+(defalias conj           db/conj     )
+(defalias disj           db/disj     )
+(defalias assoc          db/assoc    )
+(defalias dissoc         db/dissoc   )
+(defalias update         db/update   )
 
-(defalias history->seq db/history->seq)
+(defalias history->seq   db/history->seq  )
 (defalias block->schemas db/block->schemas)
-(defalias add-schemas! db/add-schemas!)
+(defalias add-schemas!   db/add-schemas!  )
 
 ; CORE FUNCTIONS
 
+#?(:cljs
 (defn rx-q
   "Reactive |q|. Must be called within a Reagent component and will only
    update the component whenever the data it is querying has changed."
   {:todo ["Add Clojure support"]}
   ([query] (rx-q query @conn*))
-  ([query conn & args] (apply rx-db/q conn query args)))
+  ([query conn & args] (apply rx-db/q conn query args))))
 
+#?(:cljs
 (defn rx-pull
   "Reactive |pull|. Only attempts to pull any new data if there has been a
    transaction of any datoms that might have changed the data it is looking at."
   {:todo ["Add Clojure support"]}
   ([selector eid] (rx-pull @conn* selector eid))
-  ([conn selector eid] (rx-db/pull conn selector eid)))
+  ([conn selector eid] (rx-db/pull conn selector eid))))
 
+#?(:cljs
 (defn rx-transact!
   "Buffers its transactions in 1/60 second intervals, passes them through
    any handlers set up in |rx-db/before-tx!|, then batch transacts them to the database."
   {:todo ["Add (better) Clojure support"]}
   ([tx-data]      (rx-transact! @conn* tx-data))
-  ([conn tx-data] (rx-db/transact! conn tx-data)))
+  ([conn tx-data] (rx-db/transact! conn tx-data))))
 
 (defn init-schemas!
   "Transacts @schemas to the partition @part on the database connection @conn.
@@ -123,7 +126,7 @@
             default-partition-f (or default-partition :db.part/test)
             _ (when init-schemas? (init-schemas! conn-f schemas))
             ; Sets up the tx-report listener for a conn
-            #?@(:cljs [_ (when reactive? (rx-db/react! conn-f))]) ; Is this enough? See also quantum.system
+            #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
             _ (log/pr :user "Ephemeral database reactivity set up.")]
         (c/assoc this :conn              conn-f
                       :history           history

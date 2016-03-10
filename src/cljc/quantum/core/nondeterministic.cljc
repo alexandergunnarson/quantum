@@ -134,17 +134,17 @@
     (when (empty? not-matched)
       (lex/first-if-single (generator)))))
 
-; (defn rand-bytes
-;   #?(:cljs {:todo ["Comes out in Forge bytes string, but should be in UInt8Array"]})
-;   ([size] (rand-bytes false size))
-;   ([secure? size]
-;     #?(:clj  (let [^Random generator (get-generator secure?)
-;                    bytes-f (byte-array size)
-;                    _    (.nextBytes generator bytes-f)]
-;                bytes-f)
-;        :cljs (if secure?
-;                  (js/forge.random.getBytesSync size)
-;                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
+(defn rand-bytes
+  #?(:cljs {:todo ["Comes out in Forge bytes string, but should be in UInt8Array"]})
+  ([size] (rand-bytes false size))
+  ([secure? size]
+    #?(:clj  (let [^Random generator (get-generator secure?)
+                   bytes-f (byte-array size)
+                   _    (.nextBytes generator bytes-f)]
+               bytes-f)
+       :cljs (if secure?
+                 (js/forge.random.getBytesSync size)
+                 (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
 ; ; TODO DEPS ONLY
 ; #_(defn rand-longs

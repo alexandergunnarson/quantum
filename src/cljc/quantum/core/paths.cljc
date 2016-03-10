@@ -1,6 +1,6 @@
 (ns ^{:doc "Paths-related things — resource locators. URIs, URLs, directories, files, etc."}
   quantum.core.paths
-  (:require-quantum [:core logic fn #_coll #_io err sys str loops])
+  (:require-quantum [:core logic fn err sys str macros coll])
   #?(:clj (:import java.io.File)))
 
 ; TODO validate this
@@ -33,9 +33,14 @@
 ;  (atom {"MAGICK_HOME"       (str/join sys/separator ["usr" "local" "Cellar" "imagemagick"])
 ;         "DYLD_LIBRARY_
 
-#_(defnt extension
+
+(defnt ^String path->file-name
+  #?(:clj ([^file?   f] (.getName f)))
+  ([^string? s] (coll/taker-until-workaround sys/separator nil s)))
+
+(defnt extension
   ([^string? s] (coll/taker-until-workaround "." nil s))
-  ([^file?   f] (-> f str extension)))
+  #?(:clj ([^file?   f] (-> f str extension))))
 
 #?(:clj
 (defn extension [x]
@@ -60,19 +65,12 @@
 ;___________________________________________________________________________________________________________________________________
 ;========================================================{ PATH, EXT MGMT }=========================================================
 ;========================================================{                }==========================================================
-#_(defn up-dir-str [dir]
-  (->> dir
-       (<- whenf (f*n str/ends-with? sys/separator) popr)
-       (dropr-until sys/separator)
-       (<- whenc empty?
-         (throw (->ex :err/io "Directory does not have a parent directory:" dir)))))
-
 ; (java.nio.file.Paths/get "asd/" (into-array ["/asdd/"]))
 
-#_(defn path-without-ext [path-0]
+(defn path-without-ext [path-0]
   (coll/taker-after "." path-0))
 
-#_(def- test-dir (path (System/getProperty "user.dir") "test"))
+#?(:clj (def- test-dir (path (System/getProperty "user.dir") "test")))
 
 #?(:clj (def- this-dir (System/getProperty "user.dir")))
 
@@ -82,51 +80,59 @@
     :windows (-> (System/getenv) (get "SYSTEMROOT") str)
     "/")))
 
-#_(def- drive-dir
+#?(:clj (def- drive-dir
   (condp = sys/os
     :windows
       (whenc (getr root-dir 0
                (whenc (index-of root-dir "\\") (fn-eq? -1) 0))
              empty?
         "C:\\") ; default drive
-    sys/separator))
+    sys/separator)))
 
 #?(:clj (def- home-dir    (System/getProperty "user.home")))
 
-#_(def- desktop-dir (path home-dir "Desktop"))
+#?(:clj (def- desktop-dir (path home-dir "Desktop")))
 
-(def dirs (atom {}))
-#_(def dirs
-  (let [proj-path-0
-          (or (get (System/getenv) "PROJECTS")
-              (up-dir-str this-dir))
-        proj-path-f 
-          (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
-               path
-              (partial path drive-dir))]
-    (atom {:test      test-dir
-           :this-dir  this-dir
-           :root      root-dir
-           :drive     drive-dir
-           :home      home-dir
-           :desktop   desktop-dir
-           :projects  proj-path-f
-           :keys      (if (= "local" (System/getProperty "quantum.core.io:paths:keys"))
-                          (path this-dir "dev-resources" "Keys")
-                          (path home-dir "Quanta" "Keys"))
-           :dev-resources (path this-dir "dev-resources")
-           :resources
-             (whenc (path this-dir "resources")
-                    (fn-> io/as-file .exists not)
-                    (path proj-path-f (up-dir-str this-dir) "resources"))})))
+(defn up-dir-str [dir]
+  (->> dir
+       (<- whenf (f*n str/ends-with? sys/separator) popr)
+       (dropr-until sys/separator)
+       (<- whenc empty?
+         (throw (->ex :err/io "Directory does not have a parent directory:" dir)))))
 
-#_(defnt ^String parse-dir
+(def dirs
+  #?(:clj
+      (let [proj-path-0
+              (or (get (System/getenv) "PROJECTS")
+                  (up-dir-str this-dir))
+            proj-path-f 
+              (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
+                   path
+                  (partial path drive-dir))]
+        (atom {:test      test-dir
+               :this-dir  this-dir
+               :root      root-dir
+               :drive     drive-dir
+               :home      home-dir
+               :desktop   desktop-dir
+               :projects  proj-path-f
+               :keys      (if (= "local" (System/getProperty "quantum.core.io:paths:keys"))
+                              (path this-dir "dev-resources" "Keys")
+                              (path home-dir "Quanta" "Keys"))
+               :dev-resources (path this-dir "dev-resources")
+               :resources
+                 (whenc (path this-dir "resources")
+                        (fn-not #(.exists (File. ^String %)))
+                        (path proj-path-f (up-dir-str this-dir) "resources"))}))
+     :cljs (atom {})))
+
+(defnt ^String parse-dir
   ([^vector? keys-n]
     (reducei
       (fn [path-n key-n n]
         (let [first-key-not-root?
                (and (= n 0) (string? key-n)
-                    ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
+                    ((complement #(str/starts-with? %1 %2)) key-n sys/separator))
               k-to-add-0 (or (get @dirs key-n) key-n)
               k-to-add-f
                 (if first-key-not-root?
@@ -136,71 +142,82 @@
       "" keys-n))
   ([^string?  s] s)
   ([^keyword? k] (parse-dir [k]))
-  ([          obj] (if (nil? obj) "" (throw (->ex :unimplemented nil {:obj obj :class (class obj)})))))
+  ([          obj] (if (nil? obj)
+                       ""
+                       (throw (->ex :unimplemented nil
+                                    {:obj obj :class (type obj)})))))
 
-(defn parse-dir [x]
-  (cond (vector? x)
-        (reducei
-          (fn [path-n key-n n]
-            (let [first-key-not-root?
-                   (and (= n 0) (string? key-n)
-                        ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
-                  k-to-add-0 (or (get @dirs key-n) key-n)
-                  k-to-add-f
-                    (if first-key-not-root?
-                        (str sys/separator k-to-add-0)
-                        k-to-add-0)]
-              (path path-n k-to-add-f)))
-          "" x)))
+; (defn parse-dir [x]
+;   (cond (vector? x)
+;         (reducei
+;           (fn [path-n key-n n]
+;             (let [first-key-not-root?
+;                    (and (= n 0) (string? key-n)
+;                         ((complement (MWA 2 str/starts-with?)) key-n sys/separator))
+;                   k-to-add-0 (or (get @dirs key-n) key-n)
+;                   k-to-add-f
+;                     (if first-key-not-root?
+;                         (str sys/separator k-to-add-0)
+;                         k-to-add-0)]
+;               (path path-n k-to-add-f)))
+;           "" x)))
 
-#_(defnt ^java.io.File as-file
+#?(:clj
+(defnt ^java.io.File as-file
   ([^vector? dir] (-> dir parse-dir as-file))
-  ([^string? dir] (-> dir io/file))
-  ([^file?   dir] dir))
+  ([^string? dir] (-> dir (File.)))
+  ([^file?   dir] dir)))
 
-#_(def file-str (fn-> as-file str))
+#?(:clj
+(def file-str (fn-> as-file str)))
 
-#_(defnt exists?
+#?(:clj
+(defnt exists?
   ([^string? s] (-> s as-file exists?))
-  ([^file?   f] (.exists f)))
+  ([^file?   f] (.exists f))))
 
-#_(defnt directory?
+#?(:clj
+(defnt directory?
   ([^string? s] (-> s as-file directory?))
-  ([^file?   f] (and (exists? f) (.isDirectory f))))
+  ([^file?   f] (and (exists? f) (.isDirectory f)))))
 
-#_(defalias folder? directory?)
+#?(:clj (defalias folder? directory?))
 
 #_(ns-unmap 'quantum.core.io.core 'file?)
-#_(def file? (fn-not directory?))
+#?(:clj (def file? (fn-not directory?)))
 
-#_(def clj-extensions #{:clj :cljs :cljc})
+(def clj-extensions #{:clj :cljs :cljc :cljx :cljd})
 
-#_(def clj-file?
+#?(:clj
+(def clj-file?
   (fn-and file?
-    (fn->> extension keyword (containsv? clj-extensions))))
+    (fn->> extension keyword (containsv? clj-extensions)))))
 
 ; FILE RELATIONS
 
-#_(defnt ^String up-dir
+(defnt ^String up-dir
   ([^string? dir ] (-> dir up-dir-str))
   ([^vec?    dir ] (-> dir parse-dir up-dir))
-  ([^file?   file] (.getParent file)))
+  #?(:clj ([^file?   file] (.getParent file))))
 
-#_(defn parent [f]
-  (.getParentFile ^File (as-file f)))
+#?(:clj
+(defn parent [f]
+  (.getParentFile ^File (as-file f))))
 
-#_(defn children [f]
+#?(:clj
+(defn children [f]
   (let [^File file (as-file f)]
     (when (directory? file)
-      (->> file (.listFiles) seq))))
+      (->> file (.listFiles) seq)))))
 
-#_(defn siblings [f]
+#?(:clj
+(defn siblings [f]
   (let [^File file (as-file f)]
     (->> file parent children
-         (remove (fn-> str (= (str file)))))))
+         (remove (fn-> str (= (str file))))))))
 
-#_(def directory-?       (mfn 1 directory?))
-#_(def descendants       (fn->> as-file file-seq))
-#_(def descendant-leaves (fn->> as-file file-seq (remove directory-?)))
-#_(def internal-nodes    (fn->> as-file file-seq (filter directory-?)))
-#_(def descendant-dirs internal-nodes)
+#?(:clj (def directory-?       (mfn 1 directory?)))
+#?(:clj (def descendants       (fn->> as-file file-seq)))
+#?(:clj (def descendant-leaves (fn->> as-file file-seq (remove directory-?))))
+#?(:clj (def internal-nodes    (fn->> as-file file-seq (filter directory-?))))
+#?(:clj (def descendant-dirs internal-nodes))

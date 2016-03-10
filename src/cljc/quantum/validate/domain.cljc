@@ -1,5 +1,5 @@
 (ns quantum.validate.domain
-  (:require-quantum [:core logic fn])
+  (:require-quantum [:core logic fn str coll])
   (:require [quantum.validate.regex :as v.regex]
             [quantum.core.string.encode :as encode])
   #?(:clj (:import java.util.regex.Matcher
@@ -25,11 +25,11 @@
 (def domain-name-regex (str "^(?:" domain-label-regex "\\.)+" "(" top-label-regex ")\\.?$"))
 
 ; RegexValidator for matching domains.
-(def domain-regex (v.regex/validate domain-name-regex))
+#?(:clj (def domain-regex (v.regex/validate domain-name-regex)))
 
 ; RegexValidator for matching a local hostname
 ; RFC1123 sec 2.1 allows hostnames to start with a digit
-(def hostname-regex (v.regex/validate domain-label-regex))
+#?(:clj (def hostname-regex (v.regex/validate domain-label-regex)))
 
 ; ---------------------------------------------
 ; TLDs defined by IANA
@@ -1167,6 +1167,7 @@
       (rest s)
       s))
 
+#?(:clj
 (defn valid?
   "Returns true if the @domain-0 parses
    as a valid domain name with a recognized top-level domain (TLD).
@@ -1196,14 +1197,16 @@
              (let [groups (v.regex/match domain domain-regex)]
                (if (nempty? groups)
                    (valid-tld? (first groups))
-                   (and allow-local? (v.regex/valid? domain hostname-regex))))))))
+                   (and allow-local? (v.regex/valid? domain hostname-regex)))))))))
 
+#?(:clj
 (defn normalize-tld [tld]
   (-> tld
       ^String (encode/unicode->ascii true)
       (.toLowerCase Locale/ENGLISH)
-      remove-leading-dot))
+      remove-leading-dot)))
 
+#?(:clj
 (defn valid-tld?
   "Returns true if @tld-0 matches any
    IANA-defined top-level domain. Leading dots are ignored if present.
@@ -1214,36 +1217,37 @@
     (or (and allow-local? (valid-local-tld? tld))
         (valid-infrastructure-tld? tld)
         (valid-generic-tld?        tld)
-        (valid-country-code-tld?   tld))))
+        (valid-country-code-tld?   tld)))))
 
 ; Returns true if the specified <code>String</code> matches any
 ; IANA-defined infrastructure top-level domain. Leading dots are
 ; ignored if present. The search is case-insensitive.
 ; @param iTld the parameter to check for infrastructure TLD status, not null
 ; @return true if the parameter is an infrastructure TLD
+#?(:clj
 (defn valid-infrastructure-tld?
   {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
   [^String infra-tld]
-  (-> infra-tld normalize-tld (in? infrastructure-tlds)))
-
+  (-> infra-tld normalize-tld (in? infrastructure-tlds))))
 ; Returns true if the specified <code>String</code> matches any
 ; widely used "local" domains (localhost or localdomain). Leading dots are
 ; ignored if present. The search is case-insensitive.
+#?(:clj
 (defn valid-local-tld?
   {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
   [^String local-tld]
-  (-> local-tld normalize-tld (in? local-tlds)))
-
+  (-> local-tld normalize-tld (in? local-tlds))))
 ; Returns true if the specified <code>String</code> matches any
 ; IANA-defined generic top-level domain. Leading dots are ignored
 ; if present. The search is case-insensitive.
 ; @param gTld the parameter to check for generic TLD status, not null
 ; @return true if the parameter is a generic TLD
+#?(:clj
 (defn valid-generic-tld?
   {:contributors ["org.apache.commons.validator.routines.DomainValidator"]}
   [^String gtld]
   (let [s (normalize-tld gtld)]
-    (-> gtld normalize-tld (in? generic-tlds))))
+    (-> gtld normalize-tld (in? generic-tlds)))))
 
 ; Returns true if the specified <code>String</code> matches any
 ; IANA-defined country code top-level domain. Leading dots are

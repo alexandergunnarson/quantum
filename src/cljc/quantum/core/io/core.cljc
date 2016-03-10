@@ -102,8 +102,8 @@
   {:todo ["rewrite"]}
   [n successful? file-name-f directory-f
    file-path-f method data-formatted file-type]
-  (cond successful? (print " complete.\n")
-        (> n 2)     (println "Maximum tries exceeded.")
+  (cond successful? (log/pr " complete.\n")
+        (> n 2)     (log/pr "Maximum tries exceeded.")
         :else
         (try
           (log/pr :debug "Writing" file-name-f "to" directory-f (str "(try " n ")..."))
@@ -114,8 +114,8 @@
             (coll-or :serialize :compress :binary)
               (if (or ;(= method :binary)
                       (splice-or file-type = "csv" "xls" "xlsx" "txt" :binary))
-                  (assoc-unserialized! data-formatted file-path-f :type (keyword file-type))
-                  (assoc-serialized!   data-formatted file-path-f method))
+                  (assoc-unserialized! file-path-f data-formatted {:type (keyword file-type)})
+                  (assoc-serialized!   file-path-f data-formatted method))
             (throw (->ex :illegal-arg "Unknown method requested." method)))
           #(try-assoc! (inc n) true file-name-f directory-f
              file-path-f method data-formatted file-type)
@@ -124,54 +124,60 @@
             #(try-assoc! (inc n) false file-name-f directory-f
                file-path-f method data-formatted file-type))))))
 
-#_(defn assoc! ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
+#?(:clj
+(defn assoc!- ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
   "@file-types : Should be a vector of keywords"
   {:todo ["Apparently has problems with using the :directory key"
           "Decomplicate"
-          "Rewrite"]}
-  ([opts] (assoc! nil (:data opts) opts))
-  ([path- data] (assoc! path- data opts))
-  ([path- data {file-name :name file-path :path
-                :keys [data directory file-type
+          "Rewrite"
+          "|time/now-formatted| needs to be not crossed out"
+          "|next-file-copy-num| needs to be not crossed out"]}
+  ([opts] (assoc!- nil (:data opts) opts))
+  ([path- data] (assoc!- path- data nil))
+  ([path- data- {file-name :name file-path :path
+                :keys [data directory file-type file-types
                        method overwrite formatting-func]
                 :or   {directory       :resources
                        file-name       "Untitled"
-                       file-types      [@clj-ext]
+                       file-types      [:clj]
                        method          :serialize ; :compress ; can encrypt :encrypt-with :.... ; :method :pretty
                        overwrite       true  ; :date, :num :num-0
                        formatting-func identity}
                 :as   options}]
   (doseq [file-type-n file-types]
-    (let [file-path-parsed (parse-dir file-path)
-          directory-parsed (parse-dir directory)
+    (let [data data-
+          file-path (p/parse-dir path-)
+          _ (assert (string? file-path))
+          file-path-parsed file-path
+          directory-parsed (p/parse-dir directory)
           directory-f
-            (or (-> file-path-parsed up-dir   (whenc empty? nil))
+            (or (-> file-path-parsed p/up-dir   (whenc empty? nil))
                 directory-parsed)
           extension
-            (or (-> file-path-parsed file-ext (whenc empty? nil))
-                (file-ext file-name)
+            (or (-> file-path-parsed p/file-ext (whenc empty? nil))
+                (p/file-ext file-name)
                 file-type)
           file-name-0
-            (or (-> file-path-parsed file-name* conv-ill-chars (whenc empty? nil))
-                (-> file-name conv-ill-chars path-without-ext (str "." extension)))
+            (or (-> file-path-parsed p/path->file-name u/escape-illegal-chars (whenc empty? nil))
+                (-> file-name u/escape-illegal-chars p/path-without-ext (str "." extension)))
           file-name-00
-            (or (-> file-path-parsed file-name* conv-ill-chars (whenc empty? nil)
-                    (whenf nnil? (fn-> path-without-ext (str " 00." extension))))
-                (-> file-name conv-ill-chars path-without-ext (str " 00." extension)))
+            (or (-> file-path-parsed p/path->file-name u/escape-illegal-chars (whenc empty? nil)
+                    (whenf nnil? (fn-> p/path-without-ext (str " 00." extension))))
+                (-> file-name u/escape-illegal-chars p/path-without-ext (str " 00." extension)))
           file-path-0  (path directory-f file-name-0)
           date-spaced
             (when (and (= overwrite :date) (exists? file-path-0))
-              (str " " (time/now-formatted "MM-dd-yyyy HH|mm")))
+              (str " " (identity #_time/now-formatted "MM-dd-yyyy HH|mm")))
           file-num
             (cond
               (and (splice-or overwrite = :num :num-0)
-                   (some (extern (mfn 1 exists?)) [file-path-0 (path directory-f file-name-00)]))
-              (next-file-copy-num file-path-0)
+                   (some #(p/exists? %1) [file-path-0 (path directory-f file-name-00)]))
+              "00_FIX" #_(next-file-copy-num file-path-0)
               (and (= overwrite :num-0) ((fn-not exists?) file-path-0))
               "00"
               :else nil)
           file-name-f
-            (-> file-name-0 path-without-ext
+            (-> file-name-0 p/path-without-ext
                 (str (or date-spaced
                          (whenf file-num nnil? (partial str " ")))
                      (when (nempty? extension)
@@ -182,11 +188,11 @@
               "html" data ; (.asXml data) ; should be less naive than this
               "csv" (formatting-func data)
               data)]
-            (println file-num)
-            (println file-name-f)
-            (println directory-f)
-      (trampoline write-try 1 false
-        file-name-f directory-f file-path-f method data-formatted file-type))))
+            (log/pr :debug file-num)
+            (log/pr :debug file-name-f)
+            (log/pr :debug directory-f)
+      (trampoline try-assoc! 1 false
+        file-name-f directory-f file-path-f method data-formatted file-type))))))
 
 #_(defn dissoc!
   {:todo ["Implement recycle bin functionality for Windows" "Decomplicate"]}
@@ -202,7 +208,7 @@
           (or (-> file-path-parsed file-ext (whenc empty? nil))
               (file-ext file-name))
         file-name-0
-          (or (-> file-path-parsed file-name* (whenc empty? nil))
+          (or (-> file-path-parsed p/path->file-name (whenc empty? nil))
               (-> file-name path-without-ext (str "." extension)))
         file-path-f    (path directory-f file-name-0)
         file-f         (as-file file-path-f)
@@ -218,7 +224,7 @@
                 (if (exists? file-path-f)
                     (fail-alert!)
                     (success-alert!)))))
-        (println "WARNING: File does not exist. Failed to delete:" file-path-f)))))
+        (println "WARNING: File does not exist. Failed to delete:" file-path-f))))
 
 #?(:clj (def create-file! (fn-> io/as-file (.createNewFile))))
 
@@ -241,7 +247,7 @@
           "Technically file structures can be like nested keys in a map,
            so it would be |assoc-in!|"]}
   [k x & [opts]]
-  #?(:clj  (throw (->ex :not-implemented))
+  #?(:clj  (apply assoc!- k x opts)
      :cljs (js/localStorage.setItem (apply path k) (->str x))))
 
 ; TODO replace
@@ -415,3 +421,4 @@
 ;     (.isDirectory file)
 ;     (catch AccessControlException access-control-exception
 ;       false)))
+0

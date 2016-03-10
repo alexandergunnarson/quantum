@@ -139,7 +139,7 @@
     (res/reload! @system)
     
     (reset! dbc/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral)
-                         :conn deref*))
+                         :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
     
     #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)

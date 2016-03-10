@@ -3,7 +3,7 @@
           ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"}
-  quantum.core.logic
+  ^:figwheel-no-load quantum.core.logic
   (:refer-clojure :exclude [if-let when-let])
   (:require-quantum [:core fn]))
 

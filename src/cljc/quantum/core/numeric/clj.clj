@@ -569,7 +569,8 @@
         (recur (core/*' x acc) (dec* nn)))))
 
 (defnt exp "|exp| and not |pow| because 'exponent'."
-  (^double ^:intrinsic [^double x ^double y] (Math/pow x y)))
+  (^double ^:intrinsic [^double   x ^double y] (Math/pow x y))
+  (^double             [^integer? x         y] (exp (core/double x) (core/double y))))
 
 ;pow'
 ; Only works with integers larger than zero.

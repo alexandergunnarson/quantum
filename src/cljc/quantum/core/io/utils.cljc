@@ -1,5 +1,5 @@
 (ns quantum.core.io.utils
-  (:require-quantum [:core logic fn core-async log err res vec cbase macros])
+  (:require-quantum [:core logic fn core-async log err res vec cbase macros #_coll])
   (:require [com.stuartsierra.component  :as component]
             [datascript.core             :as mdb      ]
             [quantum.core.convert        :as conv

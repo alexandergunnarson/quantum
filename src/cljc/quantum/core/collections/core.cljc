@@ -7,7 +7,7 @@
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last get pop peek
      conj! conj assoc! dissoc! dissoc disj! contains?
-     #?@(:cljs [empty?])])
+     #?@(:cljs [empty? array])])
   (:require-quantum
     [:core err fn log logic red #_str map set macros type vec arr pconvert #_num])
   #?(:clj (:require seqspert.vector))
@@ -271,7 +271,7 @@
            ([#{string? array?}                            coll ^pinteger? n] (and (>= n 0) (<  (count coll))))
   #?(:clj  ([#{clojure.lang.Associative    java.util.Map} coll            k] (.containsKey coll k)))
   #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} coll            k] (.contains    coll k)))
-  #?(:cljs ([#{set? map?}                                 coll            k] (contains?    coll k))) ; TODO find out how to make faster   
+  #?(:cljs ([#{set? map?}                                 coll            k] (core/contains? coll k))) ; TODO find out how to make faster   
            ([^:obj                                        coll            k]
              (if (nil? coll)
                  false
@@ -374,7 +374,7 @@
   ([#{string? #?(:clj array-list?)} coll] (get coll 1))
   ; 2.8  nanos to (.cast Long _)
   ; 1.26 nanos to (Long. _)
-  ([^vec?                           coll] (get coll (Long. 1))) ; to cast it...
+  ([^vec?                           coll] (get coll #?(:clj (Long. 1) :cljs 1))) ; to cast it...
   ([^qreducer?                      coll] (take+ 1 coll))
   ([:else                           coll] (core/second coll)))
 
@@ -394,7 +394,7 @@
 (defnt last
           ([^string?          coll] (get coll (lasti coll)))
   #?(:clj ([^qreducer?        coll] (taker+ 1 coll)))
-          ([^vec?             coll] (.peek coll)) ; because |peek| works on lists too
+          ([^vec?             coll] (#?(:clj .peek :cljs .-peek) coll)) ; because |peek| works on lists too
   #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]
                   :cljs [cljs.core/TransientVector])} coll]
             (get coll (lasti coll))))

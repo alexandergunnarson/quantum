@@ -27,7 +27,9 @@
 (defn type-hint "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
   {:source "ztellman/riddley.compiler"} [x]
   (when-let [tag (-> x meta :tag)]
-  (let [sym (symbol (if #?@(:clj  [(instance? Class tag) (.getName ^Class tag)]
+  (let [sym (symbol (cond (symbol? tag) (namespace tag)
+                          :else         nil)
+                    (if #?@(:clj  [(instance? Class tag) (.getName ^Class tag)]
                             :cljs [true])
                         (name tag)))]
     (when-not #?(:clj  (= 'java.lang.Object sym)

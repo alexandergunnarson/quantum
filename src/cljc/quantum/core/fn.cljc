@@ -4,7 +4,7 @@
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
     :attribution "Alex Gunnarson"
     :cljs-self-referencing? true}
-  quantum.core.fn
+  ^:figwheel-no-load quantum.core.fn
   (:require-quantum [:core map])
   (:require
     [clojure.walk]

@@ -4,10 +4,10 @@
   quantum.core.string.format
   (:refer-clojure :exclude [reverse replace remove val re-find])
   (:require-quantum [:core fn set map macros logic red type loops cbase log err])
-  (:require
-    [clojure.string :as str]
-    [quantum.core.string.regex :as regex]
-    [frak])
+  (:require [clojure.string            :as str]
+            [quantum.core.string.regex :as regex]
+   #?(:cljs [goog.string               :as gstr])
+            [frak])
   #?(:clj (:import java.net.IDN)))
 
 (defnt replace* ; TODO .replace may try to compile a pattern instead of replacing the actual string
@@ -15,6 +15,19 @@
   ([^regex?  pre post s] (str/replace         s pre         post)))
 
 (defn replace [s pre post] (replace* pre post s))
+
+#?(:cljs
+(defn ->regexp
+  "Build or derive regexp instance."
+  {:attribution "funcool/cuerdas"}
+  ([s]
+   (if (regexp? s)
+     s
+     (js/RegExp. s)))
+  ([s flags]
+   (if (regexp? s)
+     (js/RegExp. (.-source s) flags)
+     (js/RegExp. s flags)))))
 
 ; ====== CASES ======
 
@@ -84,23 +97,29 @@
       (str/split (separate-camel-humps value) #"[ |\-|_]"))))
 
 ; CANDIDATE 1
+#?(:clj
+(defn ->title-case*
+  "Converts a string into TitleCase."
+  ([s] (->title-case* s nil))
+  ([s delimeters-0]
+    (when-not (nil? s)
+      (let [delimeters (if delimeters-0
+                         (regex/escape delimeters-0)
+                         "\\s")
+            delimeters (str "|[" delimeters "]+")
+            rx         (re-pattern (str "(^" delimeters ")([a-z])"))]
+        (replace s rx (fn [[c1 _]]
+                        (->upper c1))))))))
+
+; CANDIDATE 1
+#?(:cljs
 (defn ->title-case*
   "Converts a string into TitleCase."
   ([s]
-    #?(:clj  (->title-case s nil)
-       :cljs (when-not (nil? s)
-               (gstr/toTitleCase s))))
-  ([s delimeters]
-    #?(:clj
-        (when-not (nil? s)
-          (let [delimeters (if delimeters
-                             (regex/escape delimeters)
-                             "\\s")
-                delimeters (str "|[" delimeters "]+")
-                rx         (re-pattern (str "(^" delimeters ")([a-z])"))]
-            (replace s rx (fn [[c1 _]]
-                            (->upper c1)))))
-       :cljs (gstr/toTitleCase s delimiters))))
+    (when (string? s)
+      (gstr/toTitleCase s)))
+  ([s delimiters]
+    (gstr/toTitleCase s delimiters))))
 
 (defn ->camel-case
   "Java, JavaScript, etc."
@@ -152,9 +171,9 @@
   (some-> s
           (trim)
           (replace #?(:clj  #"([a-z\d])([A-Z]+)"
-                      :cljs (regexp #"([a-z\d])([A-Z]+)" "g"))"$1_$2")
+                      :cljs (->regexp #"([a-z\d])([A-Z]+)" "g"))"$1_$2")
           (replace #?(:clj  #"[-\s]+"
-                      :cljs (regexp #"[-\s]+", "g")) "_")
+                      :cljs (->regexp #"[-\s]+", "g")) "_")
           (lower)))
 
 (defn ->spear-case
@@ -175,5 +194,5 @@
   (some-> s
           ->snake-case
           (replace #"_id$", "")
-          (replace #?(:clj "_" :cljs (regexp "_" "g")) " ")
+          (replace #?(:clj "_" :cljs (->regexp "_" "g")) " ")
           (capitalize)))

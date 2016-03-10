@@ -85,7 +85,7 @@
                (->> ms
                     (reduce conj! (transient m0))
                     persistent!)
-               (apply core/merge m0 ms)))))
+               (apply core/merge m0 m1 ms)))))
 
 #?(:clj
 (defn pmerge
