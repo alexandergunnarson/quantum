@@ -370,7 +370,25 @@
 (def ^{:doc "All macros in Quantum library. Primarily for ClojureScript's :refer-macros clause."}
   macros
  '{quantum.core.core         #{with}
-   quantum.core.collections  #{reduce reduce- reducei reducei- doseq doseqi for fori repeatedly kmap map->record}
+   quantum.core.collections  #{for for-m fori lfor
+                               doseq doseqi
+                               reduce reduce- reducei reducei-
+                               seq-loop loopr
+                               until
+                               repeatedly
+                               count lasti
+                               getr subseq
+                               index-of last-index-of
+                               get first second peek rest butlast last
+                               conj conjl conjr
+                               pop popl popr
+                               assoc! dissoc! conj! disj! update!
+                               contains? containsk? containsv?
+                               array
+                               taker-until
+                               map-entry map->record
+                               deficlass
+                               kmap}
    quantum.core.collections.base #{kmap}
    quantum.core.error        #{try+ try-times throw+
                                throw-unless throw-when
