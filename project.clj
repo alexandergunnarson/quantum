@@ -23,7 +23,7 @@
   :plugins [#_[s3-wagon-private "1.1.2"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
-     [org.clojure/clojurescript                 "1.7.170"         ] ; Latest (as of 30/12/2015)
+     [org.clojure/clojurescript                 "1.7.228"         ] ; Latest (as of 3/8/2015)
      ; ==== PROBLEMATIC DEPS ====
      [potemkin "0.4.1"]
      ; ==== CORE ====
@@ -34,7 +34,7 @@
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.374"         ]
-         [servant                               "0.1.3"           ] ; Latest (as of 4/1/2016)
+         [servant                               "0.1.3"           ] ; Latest (as of 1/4/2016)
          [co.paralleluniverse/pulsar            "0.7.3"           ] ; If you include it, it conflicts
          [co.paralleluniverse/quasar-core       "0.7.3"           ] ; :classifier "jdk8" 
          ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
@@ -118,14 +118,17 @@
          [debugger                              "0.1.7"           ]
          ; REPL
          [figwheel                              "0.5.0-2-Q"       ]
-         [binaryage/devtools "0.5.2"]
+         [binaryage/devtools                    "0.5.2"           ]
      ; ==== DB ====
        ; DATOMIC
        [com.datomic/datomic-pro                 "0.9.5206"
          :exclusions [joda-time]                                  ]
-       [datascript                              "0.13.3"          ] ; Latest (as of 2/1/2016)
-       [datascript-transit                      "0.2.0"           ] ; Latest (as of 5/1/2016)
-       [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 2/1/2016)
+       [datascript                              "0.13.3"          ] ; Latest (as of 1/2/2016)
+       [datascript-transit                      "0.2.0"           ] ; Latest (as of 1/5/2016)
+       [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 1/2/2016)
+       [posh                                    "0.3.4.1"         ] ; Latest (as of 3/10/2016)
+     ; ==== HTML ====
+       [hickory                                 "0.6.0"           ] ; Latest (as of 3/4/2016)
      ; ==== UI ====
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ] ; 0.2.0-SNAPSHOT
@@ -136,10 +139,10 @@
        ; CSS
        [garden                                  "1.2.5"           ]
      ; ==== UUID ====
-       [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 4/1/2016)
-       [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 9/1/2016)
+       [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 1/4/2016)
+       [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 1/9/2016)
      ; ==== HTTP ====      
-       [com.taoensso/sente                      "1.7.0"           ] ; Latest (as of 9/1/2016)
+       [com.taoensso/sente                      "1.7.0"           ] ; Latest (as of 1/9/2016)
        [clj-http                                "1.1.2"
          :exclusions [riddley
                       cheshire
@@ -244,22 +247,21 @@
         :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                    :output-dir           "dev-resources/public/js/compiled/out"
                    :optimizations        :none
-                   :main                 quantum.cljstest
+                   :main                 quantum.dev.cljstest
                    :asset-path           "js/compiled/out"
                    :source-map           true
                    :source-map-timestamp true
-                   :cache-analysis       true
-                   :parallel-build       true}}
+                   :cache-analysis       true}}
        {:id "min"
         :source-paths ["src/cljs" "src/cljc"]
         :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                    :output-dir     "dev-resources/public/js/min-compiled/out"
-                   :main           quantum.cljstest                     
+                   :main           quantum.dev.cljstest
                    :optimizations  :advanced
                    :asset-path     "js/min-compiled/out"
                    :pretty-print   false
                    :parallel-build true}}]}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
-             :server-port 3449
+             :server-port 3450
              :css-dirs ["dev-resources/public/css"]}
   )
