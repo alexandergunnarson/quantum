@@ -8,3 +8,4 @@
 subprojects/quantum-ns/target/quantum-ns-dep.jar
 
 figwheel_server.log
+*-init.clj
