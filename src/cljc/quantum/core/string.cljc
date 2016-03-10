@@ -6,7 +6,7 @@
           (for joining strings and keywords into one
           keyword), etc."
     :attribution "Alex Gunnarson"}
-  quantum.core.string
+  ^:figwheel-no-load quantum.core.string
   (:refer-clojure :exclude [reverse replace remove val re-find])
   (:require-quantum [:core fn set map macros logic red type loops cbase log err])
   (:require
@@ -99,7 +99,7 @@
   {:todo ["Make more portable by looking at java.lang.String/endsWith"]}
   ([^string? super sub]
     #?(:clj  (.endsWith super ^String sub)         
-       :cljs (.endsWith super         sub))) ; .endsWith is not implemented everywhere)
+       :cljs (.endsWith super         sub))) ; .endsWith is not implemented everywhere)
   ([^keyword? super sub]
     (ends-with? (name super) sub)))
 
@@ -112,7 +112,7 @@
   vec->pattern frak/pattern)
 
 (defnt ->pattern
-  ([^string? x] (re-pattern x))
+  ([^string? x] (re-pattern   x))
   ([^regex?  x] x)
   ([^vector? x] (vec->pattern x)))
 
@@ -154,7 +154,7 @@
   "Like /clojure.string/join/ but ensures no double separators."
   {:attribution "taoensso.encore"}
   [separator & coll]
-  (reduce-
+  (reduce
     (fn [s1 s2]
       (let [s1 (str s1) s2 (str s2)]
         (if (ends-with? s1 separator)
@@ -168,6 +168,9 @@
                     (str s1 separator s2))))))
     nil
     coll))
+
+(defn ->path [& xs]
+  (apply join-once "/" xs)) ; TODO fix
 
 ; ===== REPLACEMENT =====
 
@@ -434,6 +437,7 @@
               :cljs js/TypeError) _
       nil)))
 
+#?(:clj
 (defn re-find-all
   "Returns a lazy sequence of successive matches of pattern in string,
   using java.util.regex.Matcher.find().
@@ -443,7 +447,7 @@
   (let [m (re-matcher (->pattern re) s)]
     ((fn step []
        (when (. m (find))
-         (cons (.group m 0) (lazy-seq (step))))))))
+         (cons (.group m 0) (lazy-seq (step)))))))))
 
 (def ^{:doc "Special characters in various regular expression implementations."}
   regex-metacharacters
@@ -451,8 +455,9 @@
    ; Vimscript "very-magic" mode
    :vim (set (core/remove #(re-find #"\w" (str %)) (map char (range 0x21 0x7f))))})
 
+#?(:clj
 (def line-terminator-chars-regex
-  (->> line-terminator-chars (map char->regex-code) join bracket))
+  (->> line-terminator-chars (map char->regex-code) join bracket)))
 
 (defn re-get
   [regex ^String string]
@@ -508,6 +513,7 @@
        (map (fn [[i v]]
               (.substring s i (+ i (or preview-ct 20)))))))
 
+#?(:clj
 (defn gsub
   "Matches patterns and replaces those matches with a specified value.
   Expects a string to run the operation on, a pattern in the form of a
@@ -521,8 +527,9 @@
           (.substring value last-end (.start matcher))
           (sub-fn (re-groups matcher)))
         (.end matcher))
-      (apply str (conj result (.substring value last-end))))))
+      (apply str (conj result (.substring value last-end)))))))
 
+#?(:clj
 (defnt'
  regionMatches
  "Green implementation of regionMatches.
@@ -575,7 +582,7 @@
                   (recur index1-n+1
                          index2-n+1
                          (-> tmpLen dec core/int))))
-            true))))
+            true)))))
 
 
 ; ===== STRING VALUES =====

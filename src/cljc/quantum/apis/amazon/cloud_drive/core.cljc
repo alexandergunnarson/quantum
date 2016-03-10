@@ -1,6 +1,6 @@
 (ns quantum.apis.amazon.cloud-drive.core
   (:refer-clojure :exclude [meta])
-  (:require-quantum [:core fn logic err async core-async] #_[:lib http auth web uconv url])
+  (:require-quantum [:core fn logic log err async core-async coll])
   (:require
     [quantum.auth.core    :as auth]
     [quantum.core.convert :as conv]
@@ -13,8 +13,6 @@
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"
    :content "https://content-na.drive.amazonaws.com/cdproxy/"})
 
-(defn ->path [& xs]
-  (apply str/join-once "/" xs))
 (def username nil)
 (defn ^:cljs-async request!
   "Possible inputs are:
@@ -22,14 +20,15 @@
     :account/quota
     :account/endpoint
     :account/usage"
-  ([k url-type] (request! (->path (namespace k) (name k)) :meta nil))
+  ([k url-type] (request! (str/->path (namespace k) (name k)) :meta nil))
   ([k url-type {:keys [append method query-params]
        :or {method :get
             query-params {}}}]
+   (println "AMAZON REQUEST:" (kmap k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
-      (-> (http/request!
-            {:url (->path (get base-urls url-type) (name k) append)
+      (->> (http/request!
+            {:url (str/->path (get base-urls url-type) (name k) append)
              :method method
              :query-params query-params
              :handlers
@@ -38,7 +37,9 @@
                      (http/request!
                        (assoc req :oauth-token
                          (auth/access-token :amazon :cloud-drive))))}
-             :oauth-token (auth/access-token :amazon :cloud-drive)})
+             :oauth-token (let [token (auth/access-token :amazon :cloud-drive)]
+                             (assert (nnil? token))
+                             token)})
           #?(:cljs <!)
           :body))))
 
@@ -48,10 +49,11 @@
     (->> (request! :account/usage :meta)
          #?(:cljs <!)
          (<- dissoc :lastCalculated)
-         (map val)
-         (map :total)
-         (map :bytes)
-         (reduce + 0)
+         (map+ val)
+         (map+ :total)
+         (map+ :bytes)
+         redv
+         (quantum.core.reducers/reduce + 0)
          #_(<- uconv/convert :bytes :gigabytes)
          #_(:clj double))))
 
@@ -96,11 +98,6 @@
     (-> (request! :nodes :meta {:append (conv/->path id "children")})
         #?(:cljs <!)
         :data)))
-
-; #_(-> (http/request!
-;       {:oauth-token (auth/access-token :amazon :cloud-drive)
-;        :url (io/path "https://content-na.drive.amazonaws.com/cdproxy/nodes" "9zfx3GtgSEOUbI9SC7qvPw" "content")})
-;     future)
 
 ; #_(->> (root-folder) :id children (map (juxt :id :name)))
 

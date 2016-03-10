@@ -491,7 +491,7 @@
 
 (declare defnt*-helper)
 
-#?(:clj (log/enable! :macro-expand))
+;#?(:clj (log/enable! :macro-expand))
 
 #?(:clj
 (defmacro defnt

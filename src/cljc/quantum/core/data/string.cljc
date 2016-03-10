@@ -69,5 +69,5 @@
   (fn [sb]
     (doseqi [arg args n]
       (conjl! sb arg)
-      (when (< n (lasti args))
+      (when (< n (-> args count dec))
         (conjl! sb " "))))))

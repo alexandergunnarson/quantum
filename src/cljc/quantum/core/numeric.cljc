@@ -243,27 +243,27 @@
 ;================={          CONSTANTS           }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-#?(:clj  (def ^:const ZERO 0       )
-   :cljs (def         ZERO int/ZERO))
-#?(:clj  (def ^:const ONE  1       )
-   :cljs (def         ONE  int/ONE ))
+#?(:clj  (defonce ^:const ZERO 0       )
+   :cljs (defonce         ZERO int/ZERO))
+#?(:clj  (defonce ^:const ONE  1       )
+   :cljs (defonce         ONE  int/ONE ))
 
 ; For units
-(def ^:const ten              (long   10    ))
-(def ^:const hundred          (long   100   ))
-(def ^:const thousand         (long   1000  ))
-(def ^:const ten-thousand     (long   10000 ))
-(def ^:const hundred-thousand (long   100000))
-(def ^:const million          (long   1E6   ))
-(def ^:const billion          (long   1E9   ))
-(def ^:const trillion         (long   1E12  ))
-(def ^:const quadrillion      (long   1E15  ))
-(def ^:const quintillion      (long   1E18  )) ; + exa | - atto
-(def ^:const sextillion       (bigint 1E21  ))
-(def ^:const septillion       (bigint 1E24  ))
-(def ^:const octillion        (bigint 1E27  ))
-(def ^:const nonillion        (bigint 1E30  ))
-(def ^:const decillion        (bigint 1E33  ))
+(defonce ^:const ten              (long   10    ))
+(defonce ^:const hundred          (long   100   ))
+(defonce ^:const thousand         (long   1000  ))
+(defonce ^:const ten-thousand     (long   10000 ))
+(defonce ^:const hundred-thousand (long   100000))
+(defonce ^:const million          (long   1E6   ))
+(defonce ^:const billion          (long   1E9   ))
+(defonce ^:const trillion         (long   1E12  ))
+(defonce ^:const quadrillion      (long   1E15  ))
+(defonce ^:const quintillion      (long   1E18  )) ; + exa | - atto
+(defonce ^:const sextillion       (bigint 1E21  ))
+(defonce ^:const septillion       (bigint 1E24  ))
+(defonce ^:const octillion        (bigint 1E27  ))
+(defonce ^:const nonillion        (bigint 1E30  ))
+(defonce ^:const decillion        (bigint 1E33  ))
 
 ;_____________________________________________________________________
 ;================={   MORE COMPLEX OPERATIONS    }====================

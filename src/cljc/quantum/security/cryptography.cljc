@@ -91,7 +91,7 @@
     :base64-string
       (let [^"[B" encoded (encode64 obj)]
         (String. encoded StandardCharsets/ISO_8859_1))
-    (throw+ (Err. nil "Unrecognized codec" k))))
+    (throw (->ex nil "Unrecognized codec" k))))
 
 ; __________________________________________
 ; =========== HASH / MSG DIGEST ============

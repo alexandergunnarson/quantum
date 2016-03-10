@@ -132,3 +132,9 @@
 
 ; Nested |let-mutable| :
     ; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
+
+
+#?(:cljs
+(defn ensure-println [& args]
+  (enable-console-print!)
+  (apply println args)))

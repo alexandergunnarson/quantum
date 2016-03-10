@@ -70,7 +70,7 @@
             pretty?    (or (:pretty? opts) pretty?)
             timestamp? (:timestamp? opts)
             curr-fn (when trace? (debug/this-fn-name :prev))
-            args-f @args
+            args-f ( when args @args)
             env-type-str
               (when (get @levels :env)
                 (str (name reg/lang) " »"))

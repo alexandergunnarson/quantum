@@ -1,5 +1,5 @@
 (ns quantum.validate.regex
-  (:require-quantum [:core logic fn])
+  (:require-quantum [:core logic fn coll])
   #?(:clj (:import java.util.regex.Matcher
                    java.util.regex.Pattern
                    java.net.IDN

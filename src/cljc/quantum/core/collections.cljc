@@ -53,8 +53,13 @@
       [quantum.core.collections.core :as coll ]
       [quantum.core.collections     
         :refer [for lfor doseq doseqi reduce reducei
+                seq-loop
                 count lasti
+                subseq
+                contains? containsk? containsv?
+                index-of last-index-of
                 first second rest last butlast get pop peek
+                conjl
                 conj! assoc! dissoc! disj!
                 map-entry]])))
 
@@ -82,13 +87,13 @@
 
 ; ; ====== COLLECTIONS ======
 
-#?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias index-of      coll/index-of     ))
 #?(:clj (defalias last-index-of coll/last-index-of))
 #?(:clj (defalias count         coll/count        ))
+#?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias getr          coll/getr         ))
 #?(:clj (defalias subseq        getr              ))
-#?(:clj (defalias lsubseq       core/subseq       ))
+        (defalias lsubseq       core/subseq       )
 #?(:clj (defalias get           coll/get          ))
         (defalias gets          coll/gets         )
         (defalias getf          coll/getf         )
@@ -97,8 +102,8 @@
 #?(:clj (defalias conjl         coll/conjl        ))
 #?(:clj (defalias conjr         coll/conjr        ))
 #?(:clj (defalias pop           coll/pop          ))
-#?(:clj (defalias popr          coll/popr         ))
 #?(:clj (defalias popl          coll/popl         ))
+#?(:clj (defalias popr          coll/popr         ))
 #?(:clj (defalias peek          coll/peek         ))
 #?(:clj (defalias first         coll/first        ))
 #?(:clj (defalias second        coll/second       ))
@@ -119,7 +124,7 @@
 
 
 (defalias vec         red/vec+       )    
-#_(defalias array       coll/array     ) ; TODO for now
+#?(:clj (defalias array       coll/array     ))
 (defalias into        red/into+      ) 
 
 (defalias redv        red/fold+      )
@@ -217,14 +222,7 @@
     ([k v] k)))
 
 
-
-; TODO these 3 doesn't belong here
-(defalias drop core/drop)
 (defalias zipmap core/zipmap)
-(defalias postwalk clojure.walk/postwalk)
-
-
-
 (defalias merge         map/merge        )
 (defalias sorted-map    map/sorted-map   )
 (defalias sorted-map-by map/sorted-map-by)
@@ -411,11 +409,13 @@
         (pred x) (conj acc x)
         :else  (recur (conj acc x) (next xs))))))
 
+(declare drop ldropl)
+
 (defn trim-head
   {:from "tonsky/datascript-todo.util"}
   [xs n]
   (->> xs
-       (drop (- (count xs) n))
+       (ldropl (- (count xs) n))
        vec))
 
 (defn take-until
@@ -518,6 +518,8 @@
       (keyword (#?(:clj  .replaceAll
                    :cljs .replace) x "_" "-"))
       x))
+
+(declare postwalk)
 
 (defn apply-to-keys
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"
@@ -747,8 +749,6 @@
         []
         coll)))
 
-(declare drop)
-
 (defn indices-of
   {:todo ["Make parallizeable"]}
   [coll elem-0]
@@ -926,7 +926,7 @@
 
 (def drop dropl)
 
-(def ldropl drop)
+(def ldropl core/drop)
 
 (defn dropr
   {:in  [3 "abcdefg"]
@@ -990,7 +990,7 @@
   [(take-until split-at-obj coll)
    (take-after split-at-obj coll)])
 
-(defn zipmap
+#_(defn zipmap
   ([ks vs] (zipmap hash-map ks vs))
   ([map-gen-fn ks-0 vs-0]
     (loop [map (map-gen-fn)
@@ -1572,7 +1572,7 @@
   can have transients in it, but if any levels do not exist, non-transient hash-maps will
   be created."
   {:attribution "flatland.useful"}
-  ([^clojure.lang.IAtom m ks obj] (swap! m assoc-in ks obj))
+  ([^atom? m ks obj] (swap! m assoc-in ks obj))
   ([m ks v]
     (update-in! m ks (constantly v))))
 
@@ -1618,8 +1618,9 @@
 (defnt dissoc++
   {:todo ["Move to collections.core"
           "Implement for vector"]}
-  ([#{map? Object} coll obj] (dissoc coll obj))
-  ([^set?          coll obj] (disj   coll obj)))
+  ([#{map?} coll obj] (dissoc coll obj))
+  ([^:obj   coll obj] (dissoc coll obj))
+  ([^set?   coll obj] (disj   coll obj)))
 
 (defn dissoc-in+
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -1845,7 +1846,7 @@
   #?(:clj  ([^map-entry? coll f] (map-entry (f (key coll)) (f (val coll)))))
   #?(:clj  ([^record?    coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll)))
   #?(:clj  ([:else       x    f] x))
-  #?(:cljs ([obj  f]
+  #?(:cljs ([:else obj  f]
              (if (coll? obj)
                  (into (empty obj) (map f obj))
                  obj))))
@@ -2018,26 +2019,29 @@
       vec-0
       vec-0)))
 
+#?(:clj
 (defn ^java.util.function.Predicate ->predicate [f]
   (reify java.util.function.Predicate
     (^boolean test [this ^Object elem]
-      (f elem))))
+      (f elem)))))
 
+#?(:clj
 (defnt filter!
   ([^javafx.collections.ObservableList coll pred]
     (doseqi [elem coll n]
       (when-not (pred elem)
         (.remove coll (int n) (int n)))))
   ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate pred))))
+    (.setPredicate coll (->predicate pred)))))
 
+#?(:clj
 (defnt remove!
   ([^javafx.collections.ObservableList coll pred]
     (doseqi [elem coll n]
       (when (pred elem)
         (.remove coll (int n) (int n)))))
   ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate (fn-not pred)))))
+    (.setPredicate coll (->predicate (fn-not pred))))))
 
 ; REQUIRES hara.string.PATH/JOIN
 #_(defn flatten-keys
@@ -2070,7 +2074,8 @@
    (reduce-kv (fn [m k v]
                 (if (or (and (not (> 0 max))
                              (<= max 1))
-                        (not (map/hash-map? v))
+                        (not (#?(:clj  map/hash-map?
+                                 :cljs map?) v))
                         (and keep-empty
                              (empty? v)))
                   (assoc m (conj arr k) v)
@@ -2273,6 +2278,7 @@
 ; (doc avl/subrange)
 
 
+#?(:clj
 (defmacro deficlass
   "Define an immutable class.
    Based on the limitations of |defrecord|, multi-arity
@@ -2293,7 +2299,7 @@
         (defrecord ~name- ~fields ~protocol-sym
           ~@fns)
         ~(concat (list 'defn constructor-sym)
-                 constructor))))
+                 constructor)))))
 
 (defn into-map-by [m k ms]
   (reduce (fn [ret elem] (assoc ret (k elem) elem)) m ms))
