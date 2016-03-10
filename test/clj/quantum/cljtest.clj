@@ -37,7 +37,7 @@
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (when ?reply-fn
     (let [to-send ;(io/get "/Users/alexandergunnarson/Quanta/Keys/Amazon.cljx")
-          (binding [auth/*mem?* true]
+          (binding [auth/*mem?* false] ; TODO make this |true|
             (amz-auth/refresh-token! nil)
             {:cloud-drive
               {:access-tokens
@@ -51,3 +51,10 @@
             ((fn [x]
                (->> x (map (fn [[k v]] [k (->base-64 v)])) (into {}))))
             (conv/->transit :json))))))
+
+(defmethod conn/event-msg-handler :lds/scriptures
+  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  (println "RECEIVED LDS SCRIPTURES REQ")
+  (when ?reply-fn
+    (?reply-fn (-> (http/request! {:url (str "https://www.lds.org/scriptures/" (:url ?data))})
+                   (conv/->transit :json)))))
