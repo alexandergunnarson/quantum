@@ -1,4 +1,5 @@
-(ns ^{:doc "Taken from gardener.respond"}
+(ns ^{:doc "Taken from gardener.respond"
+      :cljs-self-referencing? true}
   quantum.ui.style.css.devices
   (:refer-clojure :exclude [+ - * / rem])
   (:require [garden.core                 :refer [css]]

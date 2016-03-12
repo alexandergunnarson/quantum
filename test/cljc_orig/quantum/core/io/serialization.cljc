@@ -69,7 +69,9 @@
 
 (defmacro extend-serialization-for-record!
   {:attribution "Alex Gunnarson"
-   :todo ["Likely inefficient"]}
+   :todo ["Likely inefficient"]
+   :examples '[(extend-serialization-for-record! QBDBEntry    1)
+               (extend-serialization-for-record! QuickBooksDB 2)]}
   [^Class record-type & [type-id-0]]
   `(let [;type-id# (keyword (str *ns*) (str ~record-type))
          type-id# ~type-id-0

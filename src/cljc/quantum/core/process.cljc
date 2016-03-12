@@ -11,7 +11,7 @@
             [quantum.core.paths        :as paths]
             [quantum.core.thread.async :refer [close-req? message?]]
             #?(:clj [clojure.java.io :as io]))
-  #?(:clj (:import (java.lang ProcessBuilder Process StringBuffer)
+  #?(:clj (:import (java.lang ProcessBuilder StringBuffer)
                    (java.io InputStreamReader BufferedReader
                      OutputStreamWriter BufferedWriter
                      IOException)
@@ -266,8 +266,6 @@
 ; (defn input! [id s]
 ;   (when-let [in-stream (get-in @thread/reg-threads [id :input-chan])]
 ;     (>!! in-stream s))))
-
-
 
 
 #?(:clj (ns-unmap (ns-name *ns*) 'Process))

@@ -9,6 +9,10 @@
   (-> elem .-style .-display (set! flex-name))
   (-> elem .-style .-display (not= ""))))
 
+#?(:cljs
+(defn web-worker-test []
+  (not (undefined? js/Worker))))
+
 (defn feature-test []
   #?(:clj {:chrome true} ; Because JavaFX will use Chromium via JXBrowser?
      :cljs
@@ -196,3 +200,19 @@
 ;     utils.attachEvent(document.documentElement, 'click', handlers.click))
 
 ; (attachEvent js/window "load" init)
+
+;; ## Polyfills
+
+#?(:cljs
+(def request-animation-frame
+  (or
+   (.-requestAnimationFrame       js/window)
+   (.-webkitRequestAnimationFrame js/window)
+   (.-mozRequestAnimationFrame    js/window)
+   (.-msRequestAnimationFrame     js/window)
+   (.-oRequestAnimationFrame      js/window)
+   (let [t0 (.getTime (js/Date.))]
+     (fn [f]
+       (js/setTimeout
+        #(f (- (.getTime (js/Date.)) t0))
+        16.66666))))))

@@ -96,7 +96,7 @@
   (^int    [^int    x] (Numeric/reverseInt x))
   (^long   [^long   x] (Numeric/reverseLong x))))
 
-#?(:clj
+#_(:clj
 (defnt' make-long
   "Combines byte values into a long value."
   [^byte b7 ^byte b6 ^byte b5 ^byte b4

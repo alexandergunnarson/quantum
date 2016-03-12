@@ -7,8 +7,6 @@
   (:require [quantum.core.collections.base
               :refer [update-first update-val ensure-set
                       zip-reduce default-zipper]]
-            [quantum.core.data.list
-              :refer [dlist]]
             [quantum.core.type.bootstrap             :as tboot]
             [quantum.core.numeric.combinatorics      :as combo]
             [quantum.core.macros.fn                  :as mfn  ]
@@ -154,7 +152,7 @@
           (-> genned-interface-name
               #?(:clj (cbase/ns-qualify (namespace-munge *ns*))))
         gen-interface-code-header
-          (dlist 'gen-interface :name ns-qualified-interface-name :methods)
+          (list 'gen-interface :name ns-qualified-interface-name :methods)
         gen-interface-code-body-unexpanded
           (->> arglists-types ; [[int String] int]
                (map (fn [[type-arglist-n return-type-n :as arglist-n]]
@@ -230,7 +228,7 @@
                                             (or (get tboot/promoted-types @get-max-type) @get-max-type)])
                                           :else (or ret-type-0 (get trans/default-hint lang)))
                                arity-hinted (assoc arity 0 arglist-hinted)]
-                           [[method-name hints-v ret-type] (into (dlist) arity-hinted)]))]
+                           [[method-name hints-v ret-type] (seq arity-hinted)]))]
                  (->> expanded-hints-list
                       (map #(defnt-replace-kw :first {:type-arglist %}))
                       (mapv assoc-arity-etc)))))
@@ -238,8 +236,8 @@
 
 (defn defnt-gen-interface-def
   [{:keys [gen-interface-code-header gen-interface-code-body-expanded]}]
-  (conj gen-interface-code-header
-    (mapv first gen-interface-code-body-expanded)))
+  (concat gen-interface-code-header ; technically |conjr|
+    (list (mapv first gen-interface-code-body-expanded))))
 
 (defn defnt-positioned-types-for-arglist
   {:todo "The shape of this (reducei) is probably useful and can be reused"}

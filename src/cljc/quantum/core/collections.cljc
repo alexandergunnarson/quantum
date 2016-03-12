@@ -13,7 +13,7 @@
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
     :attribution "Alex Gunnarson"
-    :cljs-macro-self-referring? true}
+    :cljs-self-referencing? true}
   quantum.core.collections
   (:refer-clojure :exclude
     [for doseq reduce
@@ -553,10 +553,14 @@
    (when-let [s (seq ss)]
      (concat (first s) (lflatten (rest s))))))
 
+(defalias concatv catvec)
+; TODO generalize concat
+(defalias lconcat core/concat)
+
 (defalias safe-mapcat anap/safe-mapcat)
 
 (defn dezip
-  "The inverse of zip. – Unravels a seq of m n-tuples into a
+  "The inverse of zip. — Unravels a seq of m n-tuples into a
   n-tuple of seqs of length m.
   Example:
     (dezip '([11 12] [21 22] [31 32] [41 42]))

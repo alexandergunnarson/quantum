@@ -28,7 +28,7 @@
 
 ; If you want your software to have the exact same result regardless 
 ; of hardware. Java provides the StrictMath class for that purpose.
-; It’s slower but is guaranteed to have the same answer regardless of hardware.
+; It's slower but is guaranteed to have the same answer regardless of hardware.
 
 ; Not all implementations of the equivalent functions of class Math
 ; are not defined to return the bit-for-bit same results (unlike StrictMath)

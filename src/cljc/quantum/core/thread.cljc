@@ -459,7 +459,7 @@
        — (Various) — Non-exceptions (not thrown)
                      Not automatically called.
                      Grouped with handlers for organization.
-     For native processes:  
+     For native processes:
      :output-line  — Called when a new output line is available
                      or on timeout (default 2000 ms).
 

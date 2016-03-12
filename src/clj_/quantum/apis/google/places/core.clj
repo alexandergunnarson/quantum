@@ -181,7 +181,7 @@
 ; Optional parameters
 
 ; location — The latitude/longitude around which to retrieve place information. This must be specified as latitude,longitude. If you specify a location parameter, you must also specify a radius parameter.
-; radius — Defines the distance (in meters) within which to bias place results. The maximum allowed radius is 50 000 meters. Results inside of this region will be ranked higher than results outside of the search circle; however, prominent results from outside of the search radius may be included.
+; radius — Defines the distance (in meters) within which to bias place results. The maximum allowed radius is 50000 meters. Results inside of this region will be ranked higher than results outside of the search circle; however, prominent results from outside of the search radius may be included.
 ; language — The language code, indicating in which language the results should be returned, if possible. See the list of supported languages and their codes. Note that we often update supported languages so this list may not be exhaustive.
 ; minprice and maxprice (optional) — Restricts results to only those places within the specified price level. Valid values are in the range from 0 (most affordable) to 4 (most expensive), inclusive. The exact amount indicated by a specific value will vary from region to region.
 ; opennow — Returns only those places that are open for business at the time the query is sent. places that do not specify opening hours in the Google Places database will not be returned if you include this parameter in your query.
@@ -204,7 +204,7 @@
 
 ; The Google Places API Web Service is for use in server applications. If you're building a client-side application, take a look at the Google Places API for Android and the Places Library in the Google Maps JavaScript API.
 
-; Note: The id and reference fields are deprecated as of June 24, 2014. They are replaced by the new place ID, a textual identifier that uniquely identifies a place and can be used to retrieve information about the place. The usual deprecation period of one year has been extended, as we’re looking into ways of ensuring this change will not break existing code. We’ll update this page with a final notice at least 90 days before we change the way the API handles the id and reference fields. We recommend that you update your code to use the new place ID instead of id and reference as soon as possible.
+; Note: The id and reference fields are deprecated as of June 24, 2014. They are replaced by the new place ID, a textual identifier that uniquely identifies a place and can be used to retrieve information about the place. The usual deprecation period of one year has been extended, as we're looking into ways of ensuring this change will not break existing code. We'll update this page with a final notice at least 90 days before we change the way the API handles the id and reference fields. We recommend that you update your code to use the new place ID instead of id and reference as soon as possible.
 ; The Google Places API Web Service allows you to query for place information on a variety of categories, such as: establishments, prominent points of interest, geographic locations, and more. You can search for places either by proximity or a text string. A Place Search returns a list of places along with summary information about each place; additional information is available via a Place Details query.
 
 ; Nearby Search Requests
@@ -226,7 +226,7 @@
 
 ; key — Your application's API key. This key identifies your application for purposes of quota management and so that places added from your application are made immediately available to your app. Visit the Google Developers Console to create an API Project and obtain your key.
 ; location — The latitude/longitude around which to retrieve place information. This must be specified as latitude,longitude.
-; radius — Defines the distance (in meters) within which to return place results. The maximum allowed radius is 50 000 meters. Note that radius must not be included if rankby=distance (described under Optional parameters below) is specified.
+; radius — Defines the distance (in meters) within which to return place results. The maximum allowed radius is 50000 meters. Note that radius must not be included if rankby=distance (described under Optional parameters below) is specified.
 ; If rankby=distance (described under Optional parameters below) is specified, then one or more of keyword, name, or types is required.
 ; Optional parameters
 
@@ -270,7 +270,7 @@
 ; Optional parameters
 
 ; location — The latitude/longitude around which to retrieve place information. This must be specified as latitude,longitude. If you specify a location parameter, you must also specify a radius parameter.
-; radius — Defines the distance (in meters) within which to bias place results. The maximum allowed radius is 50 000 meters. Results inside of this region will be ranked higher than results outside of the search circle; however, prominent results from outside of the search radius may be included.
+; radius — Defines the distance (in meters) within which to bias place results. The maximum allowed radius is 50000 meters. Results inside of this region will be ranked higher than results outside of the search circle; however, prominent results from outside of the search radius may be included.
 ; language — The language code, indicating in which language the results should be returned, if possible. See the list of supported languages and their codes. Note that we often update supported languages so this list may not be exhaustive.
 ; minprice and maxprice (optional) — Restricts results to only those places within the specified price level. Valid values are in the range from 0 (most affordable) to 4 (most expensive), inclusive. The exact amount indicated by a specific value will vary from region to region.
 ; opennow — Returns only those places that are open for business at the time the query is sent. places that do not specify opening hours in the Google Places database will not be returned if you include this parameter in your query.
@@ -308,7 +308,7 @@
 
 ; key — Your application's API key. This key identifies your application for purposes of quota management and so that places added from your application are made immediately available to your app. Visit the Google Developers Console to create an API Project and obtain your key.
 ; location — The latitude/longitude around which to retrieve place information. This must be specified as latitude,longitude.
-; radius — Defines the distance (in meters) within which to return place results. The maximum allowed radius is 50 000 meters.
+; radius — Defines the distance (in meters) within which to return place results. The maximum allowed radius is 50000 meters.
 ; A Radar Search request must include at least one of keyword, name, or types.
 ; Optional parameters
 

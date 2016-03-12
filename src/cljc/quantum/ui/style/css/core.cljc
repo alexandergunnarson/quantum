@@ -9,7 +9,7 @@
   (:require
     [garden.color         :as color     :refer [color? #?(:cljs CSSColor)]]
     [garden.core          :as css       :refer [css]]
-    [garden.stylesheet    :as css-style             ])
+    [garden.stylesheet    :as css-style :refer [at-keyframes at-font-face]])
   #?(:clj (:import garden.color.CSSColor)))
 
 ; TODO generate this in a more sane way 
@@ -347,3 +347,23 @@
 ;        (io/write!
 ;         :path [:resources "public" "css" "styles.css"]
 ;         :write-method :print :data))))
+
+
+(defn trans
+  "Defines a transition."
+  [id & props]
+  [(at-keyframes (-> id name (str "-in"))
+     [:from {:-webkit-transition props
+             :transition         props}]
+     [:to   {:-webkit-transition props
+             :transition         props}])
+   (at-keyframes (-> id name (str "-out"))
+     [:from {:-webkit-transition props
+             :transition         props}]
+     [:to   {:-webkit-transition props
+             :transition         props}])])
+
+(defn hpadding [v] {:padding-left v :padding-right  v})
+(defn vpadding [v] {:padding-top  v :padding-bottom v})
+(defn hmargin  [v] {:margin-left  v :margin-right   v})
+(defn vmargin  [v] {:margin-top   v :margin-bottom  v})

@@ -1,5 +1,5 @@
 (ns quantum.core.convert
-  (:require-quantum [:core])
+  (:require-quantum [:core core-async])
   (:require [cognitect.transit                  :as t     ]
             [quantum.core.numeric               :as num   ]
             [quantum.core.string                :as str   ]
@@ -780,28 +780,21 @@
 ; (defalias ->bytes      arr/->bytes)
 ; (defalias bytes->longs arr/bytes->longs)
 
-; ; CLJS
-; ; (defn mime-type
-; ;   {:source ["https://en.wikipedia.org/wiki/List_of_file_signatures"
-; ;             "https://mimesniff.spec.whatwg.org/#matching-an-image-type-pattern"]}
-; ;   [file]
-; ;   (let [file-reader (js/FileReader.)
-; ;         header (atom nil)]
-; ;     (set! (.-onloadend file-reader)
-; ;       (fn [e]
-; ;         (when-let [result (-> e .-target .-result)]
-; ;           (let [arr (-> result (js/Uint8Array.) (.subarray 0 4))]
-; ;             (reset! header
-; ;               (reduce
-; ;                 (fn [ret elem]
-; ;                   (str ret (.toString elem 16)))
-; ;                 ""
-; ;                 (array-seq arr)))))))
-; ;     ; Check the file signature against known types
-; ;     (.readAsArrayBuffer file-reader file)
-; ;     (condpc = header
-; ;       "89504e47" :image/png
-; ;       "47494638" :image/gif
-; ;       (coll-or "ffd8ffe0" "ffd8ffe1" "ffd8ffe2") :image/jpeg
-; ;       (.-type file))) 
-; ; )
+#?(:cljs
+(defn arr->vec [arr]
+  (let [v (transient [])]
+    (dotimes [n (alength arr)]
+      (conj! v (aget arr n)))
+    (persistent! v))))
+
+#?(:cljs
+(defn file->u8arr [file]
+  (let [ch (core-async/chan) 
+        file-reader (js/FileReader.)]
+    (set! (.-onload file-reader)
+          (fn [e]
+            (if-let [file-content e.target.result]
+              (core-async/put!   ch (js/Uint8Array. file-content))
+              (core-async/close! ch))))
+    (.readAsArrayBuffer file-reader file)
+    ch)))

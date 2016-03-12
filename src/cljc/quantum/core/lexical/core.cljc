@@ -1,4 +1,4 @@
-(ns ^:cljs-self-referring?
+(ns ^:cljs-self-referencing?
   quantum.core.lexical.core
   (:require-quantum [:core set err])
   #?(:cljs

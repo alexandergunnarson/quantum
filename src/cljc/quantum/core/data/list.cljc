@@ -4,6 +4,6 @@
 
 ; brandonbloom: Benchmarks suggest that the rrb-vector
 ; deque is twice as fast as finger trees version for
-;realistic EDN data.
+; realistic EDN data.
 (defalias dlist ftree/counted-double-list)
 (defalias conjl ftree/conjl)

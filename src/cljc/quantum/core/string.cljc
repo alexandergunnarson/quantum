@@ -6,7 +6,7 @@
           (for joining strings and keywords into one
           keyword), etc."
     :attribution "Alex Gunnarson"}
-  ^:figwheel-no-load quantum.core.string
+  quantum.core.string
   (:refer-clojure :exclude [reverse replace remove val re-find])
   (:require-quantum [:core fn set map macros logic red type loops cbase log err])
   (:require
@@ -1137,3 +1137,9 @@
 ;             second
 ;             (split suffix)
 ;             first)))
+
+#?(:clj
+(defn remove-accents [^String s]
+  {:attribution "github.com/jkk/sundry/string"}
+  (-> (java.text.Normalizer/normalize s java.text.Normalizer$Form/NFD)
+      (.replaceAll "[^\\p{ASCII}]" ""))))

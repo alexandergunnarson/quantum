@@ -117,7 +117,7 @@
       ; md4
       :md5 ; 1992
       ; md6 
-      ; As of 2015, no example of a SHA-1 collision has been published yet — Wikipedia
+      ; As of 2015, no example of a SHA-1 collision has been published yet — Wikipedia
       :sha1   :sha-1-hmac
       :sha256 :sha-256-hmac
       :sha384
@@ -183,7 +183,7 @@
 
 #?(:clj
 (defn ^String scrypt
-  "OWASP: Use when resisting any and all hardware accelerated attacks is necessary but support isn’t."
+  "OWASP: Use when resisting any and all hardware accelerated attacks is necessary but support isn't."
   [^String s & [cpu-cost ram-cost parallelism]]
   (SCryptUtil/scrypt s
     (num/exp 2 (or cpu-cost 15)) ; Milliseconds?

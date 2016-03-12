@@ -9,7 +9,7 @@
               [quantum.core.core
                 :refer [seq-equals]]
     #? (:clj  [quantum.core.data.finger-tree.macros
-                :refer [defdigit make-digit delay-ft]])
+                :refer [defdigit make-digit delay-ft meter]])
     #?@(:cljs [[cljs.analyzer
                  :refer [macroexpand-1]]
                [cljs.core    
@@ -19,9 +19,7 @@
               [quantum.core.macros.deftype
                 :refer [deftype-compatible]        ]
               [quantum.core.data.finger-tree.macros
-                :refer [defdigit make-digit delay-ft]]
-              [quantum.core.data.finger-tree
-                :refer [meter]]))
+                :refer [defdigit make-digit delay-ft meter]]))
   #?(:clj
   (:import (clojure.lang Seqable Sequential ISeq IPersistentSet ILookup
                          IPersistentStack IPersistentCollection Associative
@@ -99,13 +97,6 @@
   ([meter-obj a b]     (make-digit meter-obj a b))
   ([meter-obj a b c]   (make-digit meter-obj a b c))
   ([meter-obj a b c d] (make-digit meter-obj a b c d)))
-
-#?(:clj
-(defmacro meter [measure idElem op]
-  `(reify ObjMeter
-      (measure [_# a#] (~measure a#))
-      (idElem  [_#]    ~idElem)
-      (opfn    [_#]    ~op))))
 
 (defn ^:static nodes [mfns xs]
   (let [v (vec xs) c (count v)]

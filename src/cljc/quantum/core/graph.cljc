@@ -62,7 +62,7 @@
 #?(:clj (defalias add-nodes           graph/add-nodes        ))
 #?(:clj (defalias add-labeled-nodes   label/add-labeled-nodes))
 #?(:clj (defalias add-attr            attr/add-attr          ))
-#?(:clj (defalias add-attr-to-nodes   label/add-attr-to-nodes))
+;#?(:clj (defalias add-attr-to-nodes   label/add-attr-to-nodes))
 #?(:clj (defalias add-edges           graph/add-edges        ))
 #?(:clj (defalias add-label           label/add-label        ))
 #?(:clj (defalias add-labeled-edges   label/add-labeled-edges))
@@ -98,7 +98,7 @@
 ; Traverses graph breadth-first from start
 #?(:clj (defalias bf-traverse                     alg/bf-traverse                     ))
 ; Breadth-first spanning tree
-#?(:clj (defalias bf-span                         alg/bg-span                         ))
+#?(:clj (defalias bf-span                         alg/bf-span                         ))
 ; Unidirectional breath-first pathfinder. Finds path from start to
 ; end with the fewest hops (irrespective of edge weights)
 #?(:clj (defalias bf-path                         alg/bf-path                         ))
@@ -120,9 +120,9 @@
 #?(:clj (defalias weighted-path                   dijkstra-path-dist                  ))
 
 ; bf-path + dijkstra-path
-#?(:clj (defalias shortest-path                   alg/shortest-path?                  ))
+#?(:clj (defalias shortest-path                   alg/shortest-path                   ))
 ; Find the longest of the shortest paths
-#?(:clj (defalias longest-shortest-path           alg/longest-shortest-path?          ))
+#?(:clj (defalias longest-shortest-path           alg/longest-shortest-path           ))
 
 ; Minimum spanning tree (or forest) of given graph
 #?(:clj (defalias prim-mst                        alg/prim-mst                        ))
@@ -179,7 +179,7 @@
 ; ----- DATAFLOW -----
 
 ; TODO learn how to use this
-#?(:clj (defalias dataflow-analysis               dataflow/dataflow-analysis          ))
+;#?(:clj (defalias dataflow-analysis               dataflow/dataflow-analysis          ))
 
 ; ----- NETWORK -----
 
@@ -228,7 +228,7 @@
   (println (-> g nodes count) "Nodes:")
   (doseq [node (nodes g)] 
     (println \tab node (let [a (attrs g node)] (if (seq a) a ""))))
-  (println (count-unique-edges g) "Edges:")
+  ;(println (count-unique-edges g) "Edges:")
   (doseq [edge (edges g)]
     (println \tab (graph/src edge) "->" (graph/dest edge) 
       (let [a (attrs g edge)]

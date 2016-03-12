@@ -120,3 +120,10 @@
 #?(:clj
 (defmacro delay-ft [tree-expr mval]
   `(quantum.core.data.finger_tree.DelayedTree. (delay ~tree-expr) ~mval)))
+
+#?(:clj
+(defmacro meter [measure idElem op]
+  `(reify quantum.core.data.finger-tree/ObjMeter
+     (quantum.core.data.finger-tree/measure [_# a#] (~measure a#))
+     (quantum.core.data.finger-tree/idElem  [_#]    ~idElem)
+     (quantum.core.data.finger-tree/opfn    [_#]    ~op))))

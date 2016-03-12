@@ -1,7 +1,7 @@
 ; Jetty 9 instead of 7
-(ns ring.adapter.jetty
-  "A Ring adapter that uses the Jetty 9 embedded web server.
-  Adapters are used to convert Ring handlers into running web servers."
+(ns ^{:doc "A Ring adapter that uses the Jetty 9 embedded web server.
+            Adapters are used to convert Ring handlers into running web servers."}
+  ring.adapter.jetty
   (:require-quantum [:lib])
   (:require [ring.util.servlet :as servlet])
   (:import  [org.eclipse.jetty.server Server Request ServerConnector

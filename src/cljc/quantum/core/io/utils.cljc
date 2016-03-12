@@ -110,3 +110,23 @@
        ~@body
        (finally
          (.delete ~name))))))
+
+#?(:cljs
+(defn file-reader
+  ([] (file-reader nil))
+  ([{:keys [on-load on-load-end] :as opts}]
+    (let [reader (js/FileReader.)]
+      (when on-load     (set! (.-onload    reader) on-load))
+      (when on-load-end (set! (.-onloadend reader) on-load-end))
+      reader))))
+
+(defrecord ^{:doc "Cross-platform abstraction over java.io.File and js/File"}
+  ByteEntity [type name])
+
+; Files.probeContentType(path)
+#?(:cljs (defnt get-type ([^file? x] (#?(:clj ? :cljs .-type) x))))
+#?(:cljs (defnt get-name ([^file? x] (#?(:clj ? :cljs .-name) x))))
+
+#?(:cljs (defnt ->byte-entity
+  ([^file? x]
+  (map->ByteEntity {:type (get-type x) :name (get-name x)}))))
