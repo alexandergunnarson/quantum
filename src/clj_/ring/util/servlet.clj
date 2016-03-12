@@ -1,5 +1,5 @@
-(ns ring.util.servlet
-  "Compatibility functions for turning a ring handler into a Java servlet."
+(ns ^{:doc "Compatibility functions for turning a ring handler into a Java servlet."}
+  ring.util.servlet
   (:require-quantum [:lib])
   (:import
     [java.util Locale]

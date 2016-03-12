@@ -2,10 +2,10 @@
   (:require-quantum [:lib auth http url web]))
 
 ; SCOPES
-; read_public Use GET method on a user’s Pins, boards and likes.
-; write_public  Use PATCH, POST and DELETE methods on a user’s Pins and boards.
-; read_relationships  Use GET method on a user’s follows and followers (on boards, users and interests).
-; write_relationships Use PATCH, POST and DELETE methods on a user’s follows and followers (on boards, users and interests).
+; read_public Use GET method on a user's Pins, boards and likes.
+; write_public  Use PATCH, POST and DELETE methods on a user's Pins and boards.
+; read_relationships  Use GET method on a user's follows and followers (on boards, users and interests).
+; write_relationships Use PATCH, POST and DELETE methods on a user's follows and followers (on boards, users and interests).
 
 (defn oauth-code
   "Get OAuth code for a Pinterest app.
@@ -76,7 +76,7 @@ code  The access code you received from your redirect URI.
   ;"description string                    The user-entered description of the board."
   ;"creator     map<string,string>        The first and last name, ID and profile URL of the user who created the board."
   ;"created_at  string in ISO 8601 format The date the user created the board."
-  ;"counts      map<string,i32>           The board’s stats, including Pins, following, followers and collaborators."
-  ;"image       map<string,image>         The user’s profile image. The response returns the image’s URL, width and height."
+  ;"counts      map<string,i32>           The board's stats, including Pins, following, followers and collaborators."
+  ;"image       map<string,image>         The user's profile image. The response returns the image's URL, width and height."
   (http/request!
     {:url "https://pinterest.com/v1/boards/<board>/"}))

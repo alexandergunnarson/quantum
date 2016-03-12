@@ -60,7 +60,7 @@
     (js-exec! false false
       "var page = this;
        page.onError = function(msg, trace) {
-         console.error('PHANTOM PAGE ERROR INFO: ' + msg);
+         console.error('PHANTOM PAGE ERROR INFO: ' + msg);
        };
        return 'truth';") ; must return something
     ))

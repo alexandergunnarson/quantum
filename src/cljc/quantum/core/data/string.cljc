@@ -1,5 +1,5 @@
 (ns quantum.core.data.string
-  (:require-quantum [:core ccore])
+  (:require-quantum [:core ccore macros coll])
   #?(:clj (:import com.carrotsearch.hppc.CharArrayDeque)))
 
 ; What about structural sharing with strings?

@@ -49,3 +49,9 @@
 #?(:cljs
 (defn viewport-h []
   (-> js/document .-documentElement .-clientHeight)))
+
+#?(:cljs
+(defn visual-length [text]
+  (let [elem (.createElement js/document "span")]
+    (set! (.-innerHTML elem) text)
+    (.-clientWidth elem))))

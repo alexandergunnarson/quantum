@@ -138,7 +138,7 @@
 ;=================================================={      LAZY REDUCERS       }=====================================================
 ;=================================================={                          }=====================================================
 ; Sometimes in a seq pipeline, you know that some intermediate results are, well,
-; intermediate and as such don’t need to be persistent but, on the whole, you still need the laziness.
+; intermediate and as such don't need to be persistent but, on the whole, you still need the laziness.
 (defn- reverse-conses 
   {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
   ([s tail] 
@@ -158,7 +158,7 @@
      :out "(\"5\" \"6\" \"7\" \"8\" \"9\" \"10\" \"11\" \"12\" \"13\" \"14\" \"15\" \"16\" 
             \"17\" \"18\" \"19\" \"20\" \"21\" \"22\" \"23\" \"24\")"}
     [f s] 
-    (let [f1 (clojure.core/reduce #(cons %2 %1) nil ; Note that the captured function (f1) may be impure, so don’t share it!
+    (let [f1 (clojure.core/reduce #(cons %2 %1) nil ; Note that the captured function (f1) may be impure, so don't share it!
                 (f (reify clojure.core.protocols.CollReduce
                      (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
                        f1))))]

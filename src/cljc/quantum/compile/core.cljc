@@ -29,9 +29,9 @@
     :else
     (-> x ana/analyze ->classes))))
 
-#?(:clj
+#_(:clj
  ; (write-class! @class-name @bytecode)
 (defalias write-class! emit/write-class))
 
-#?(:clj
+#_(:clj
 (defalias compile-and-load! emit/compile-and-load))

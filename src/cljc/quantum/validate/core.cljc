@@ -1,5 +1,5 @@
 (ns quantum.validate.core
-  (:require-quantum [:core fn logic])
+  (:require-quantum [:core fn logic str])
   (:require [quantum.validate.domain])
   #?(:clj (:import java.util.regex.Matcher)))
 

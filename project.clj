@@ -224,10 +224,19 @@
                     [jonase/eastwood                 "0.2.1"]
                     ]}}
   :aliases {"all" ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy-dev"  ["do" "clean," "install"]
-            "deploy-prod" ["do" "clean," "install," "deploy" "clojars"]
-            "test"        ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
+            "deploy-dev"      ["do" "clean," "install"]
+            "deploy-prod"     ["do" "clean," "install," "deploy" "clojars"]
+            "deploy-ns"       ["cd subprojects/quantum-ns/ && lein deploy-dev && cd ../../"]
+            "deploy-test-dev" ["do" "clean," "cljsbuild" "once" "dev"]
+            "autobuilder"     ["do" "clean," "figwheel" "dev"]
+            "test"            ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
   :auto-clean     false ; is this a mistake?
+  :target-path "target"
+  :clean-targets ^{:protect false} [:target-path
+                                    [:cljsbuild :builds :dev :compiler :output-dir]
+                                    [:cljsbuild :builds :dev :compiler :output-to ]
+                                    [:cljsbuild :builds :min :compiler :output-dir]
+                                    [:cljsbuild :builds :min :compiler :output-to ]]
   :java-source-paths ["src/java"]
   :source-paths      ["src/clj"
                       "src/cljc"
@@ -243,24 +252,25 @@
     {:builds
       [{:id "dev"
         :figwheel true
-        :source-paths ["test/cljs" "src/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
+        :source-paths ["test/cljs" "src/cljc" "dev/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
         :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                    :output-dir           "dev-resources/public/js/compiled/out"
                    :optimizations        :none
-                   :main                 quantum.dev.cljstest
+                   :main                 quantum.dev
                    :asset-path           "js/compiled/out"
                    :source-map           true
                    :source-map-timestamp true
                    :cache-analysis       true}}
        {:id "min"
-        :source-paths ["src/cljs" "src/cljc"]
+        :source-paths ["src/cljs" "src/cljc" "dev/cljc"]
         :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                    :output-dir     "dev-resources/public/js/min-compiled/out"
-                   :main           quantum.dev.cljstest
+                   :main           quantum.dev
                    :optimizations  :advanced
                    :asset-path     "js/min-compiled/out"
                    :pretty-print   false
-                   :parallel-build true}}]}
+                   ;:parallel-build true
+                   }}]}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3450
              :css-dirs ["dev-resources/public/css"]}

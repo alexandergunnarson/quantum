@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>bf8941ec7842e5825d227f8fdfd6dbbf9833c295
+    <tag>650f2f5db2771cd42ad3839469a8dcfefac77827
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -97,20 +97,19 @@
   </repositories>
   <dependencies>
     <dependency>
-      <groupId>com.cemerick</groupId>
-      <artifactId>clojurescript.test</artifactId>
-      <version>0.3.1</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojure</artifactId>
       <version>1.8.0-alpha2</version>
     </dependency>
     <dependency>
-      <groupId>quantum</groupId>
-      <artifactId>ns</artifactId>
-      <version>1.0</version>
+      <groupId>org.clojure</groupId>
+      <artifactId>clojurescript</artifactId>
+      <version>1.7.228</version>
+    </dependency>
+    <dependency>
+      <groupId>potemkin</groupId>
+      <artifactId>potemkin</artifactId>
+      <version>0.4.1</version>
     </dependency>
     <dependency>
       <groupId>proteus</groupId>
@@ -118,43 +117,44 @@
       <version>0.1.4</version>
     </dependency>
     <dependency>
-      <groupId>compojure</groupId>
-      <artifactId>compojure</artifactId>
-      <version>1.3.3</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.eclipse.jetty</groupId>
-          <artifactId>jetty-server</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.eclipse.jetty</groupId>
-          <artifactId>jetty-servlet</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.servlet</groupId>
-          <artifactId>servlet-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>clj-http</groupId>
-          <artifactId>clj-http</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.taoensso</groupId>
+      <artifactId>encore</artifactId>
+      <version>2.31.3</version>
     </dependency>
     <dependency>
-      <groupId>com.datomic</groupId>
-      <artifactId>datomic-pro</artifactId>
-      <version>0.9.5206</version>
-      <exclusions>
-        <exclusion>
-          <groupId>joda-time</groupId>
-          <artifactId>joda-time</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>quantum</groupId>
+      <artifactId>ns</artifactId>
+      <version>1.0</version>
     </dependency>
     <dependency>
-      <groupId>seqspert</groupId>
-      <artifactId>seqspert</artifactId>
-      <version>1.7.0-alpha6.1.0</version>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.namespace</artifactId>
+      <version>0.2.11</version>
+    </dependency>
+    <dependency>
+      <groupId>org.clojure</groupId>
+      <artifactId>core.async</artifactId>
+      <version>0.2.374</version>
+    </dependency>
+    <dependency>
+      <groupId>servant</groupId>
+      <artifactId>servant</artifactId>
+      <version>0.1.3</version>
+    </dependency>
+    <dependency>
+      <groupId>co.paralleluniverse</groupId>
+      <artifactId>pulsar</artifactId>
+      <version>0.7.3</version>
+    </dependency>
+    <dependency>
+      <groupId>co.paralleluniverse</groupId>
+      <artifactId>quasar-core</artifactId>
+      <version>0.7.3</version>
+    </dependency>
+    <dependency>
+      <groupId>com.carrotsearch</groupId>
+      <artifactId>hppc</artifactId>
+      <version>0.7.1</version>
     </dependency>
     <dependency>
       <groupId>it.unimi.dsi</groupId>
@@ -162,45 +162,14 @@
       <version>7.0.7</version>
     </dependency>
     <dependency>
-      <groupId>clj-stacktrace</groupId>
-      <artifactId>clj-stacktrace</artifactId>
-      <version>0.2.8</version>
-    </dependency>
-    <dependency>
-      <groupId>frak</groupId>
-      <artifactId>frak</artifactId>
-      <version>0.1.6</version>
-    </dependency>
-    <dependency>
-      <groupId>riddley</groupId>
-      <artifactId>riddley</artifactId>
-      <version>0.1.10</version>
-    </dependency>
-    <dependency>
-      <groupId>fx-clj</groupId>
-      <artifactId>fx-clj</artifactId>
-      <version>0.2.0-alpha1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>potemkin</groupId>
-          <artifactId>potemkin</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>seqspert</groupId>
+      <artifactId>seqspert</artifactId>
+      <version>1.7.0-alpha6.1.0</version>
     </dependency>
     <dependency>
       <groupId>fast-zip</groupId>
       <artifactId>fast-zip</artifactId>
       <version>0.6.1</version>
-    </dependency>
-    <dependency>
-      <groupId>org.clojure</groupId>
-      <artifactId>math.combinatorics</artifactId>
-      <version>0.1.1</version>
-    </dependency>
-    <dependency>
-      <groupId>com.carrotsearch</groupId>
-      <artifactId>hppc</artifactId>
-      <version>0.7.1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -228,6 +197,11 @@
       <version>0.2.1</version>
     </dependency>
     <dependency>
+      <groupId>cheshire</groupId>
+      <artifactId>cheshire</artifactId>
+      <version>5.3.1</version>
+    </dependency>
+    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.csv</artifactId>
       <version>0.1.2</version>
@@ -244,50 +218,44 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>cheshire</groupId>
-      <artifactId>cheshire</artifactId>
-      <version>5.3.1</version>
-    </dependency>
-    <dependency>
-      <groupId>aysylu</groupId>
-      <artifactId>loom</artifactId>
-      <version>0.5.0</version>
-    </dependency>
-    <dependency>
       <groupId>byte-streams</groupId>
       <artifactId>byte-streams</artifactId>
       <version>0.2.0</version>
     </dependency>
     <dependency>
-      <groupId>fipp</groupId>
-      <artifactId>fipp</artifactId>
-      <version>0.6.2</version>
+      <groupId>org.clojure</groupId>
+      <artifactId>tools.reader</artifactId>
+      <version>1.0.0-alpha3</version>
     </dependency>
     <dependency>
-      <groupId>net.jafama</groupId>
-      <artifactId>jafama</artifactId>
-      <version>2.1.0</version>
+      <groupId>com.lambdaworks</groupId>
+      <artifactId>scrypt</artifactId>
+      <version>1.4.0</version>
     </dependency>
     <dependency>
-      <groupId>com.andrewmcveigh</groupId>
-      <artifactId>cljs-time</artifactId>
-      <version>0.3.2</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.json</groupId>
-          <artifactId>json</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>org.mindrot</groupId>
+      <artifactId>jbcrypt</artifactId>
+      <version>0.3m</version>
     </dependency>
     <dependency>
-      <groupId>alembic</groupId>
-      <artifactId>alembic</artifactId>
-      <version>0.3.2</version>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+      <version>1.10</version>
     </dependency>
     <dependency>
-      <groupId>criterium</groupId>
-      <artifactId>criterium</artifactId>
-      <version>0.4.3</version>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+      <version>1.53</version>
+    </dependency>
+    <dependency>
+      <groupId>slingshot</groupId>
+      <artifactId>slingshot</artifactId>
+      <version>0.12.2</version>
+    </dependency>
+    <dependency>
+      <groupId>aysylu</groupId>
+      <artifactId>loom</artifactId>
+      <version>0.5.4</version>
     </dependency>
     <dependency>
       <groupId>com.taoensso</groupId>
@@ -336,28 +304,146 @@
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
-      <artifactId>core.async</artifactId>
-      <version>0.2.371</version>
+      <artifactId>java.classpath</artifactId>
+      <version>0.2.3</version>
     </dependency>
     <dependency>
-      <groupId>co.paralleluniverse</groupId>
-      <artifactId>pulsar</artifactId>
-      <version>0.7.3</version>
+      <groupId>alembic</groupId>
+      <artifactId>alembic</artifactId>
+      <version>0.3.2</version>
     </dependency>
     <dependency>
-      <groupId>co.paralleluniverse</groupId>
-      <artifactId>quasar-core</artifactId>
-      <version>0.7.3</version>
+      <groupId>org.reflections</groupId>
+      <artifactId>reflections</artifactId>
+      <version>0.9.10</version>
     </dependency>
     <dependency>
-      <groupId>org.eclipse.jdt</groupId>
-      <artifactId>org.eclipse.jdt.core</artifactId>
-      <version>3.10.0</version>
+      <groupId>com.carrotsearch</groupId>
+      <artifactId>java-sizeof</artifactId>
+      <version>0.0.5</version>
+    </dependency>
+    <dependency>
+      <groupId>riddley</groupId>
+      <artifactId>riddley</artifactId>
+      <version>0.1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>net.jafama</groupId>
+      <artifactId>jafama</artifactId>
+      <version>2.1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.gfredericks</groupId>
+      <artifactId>goog-integer</artifactId>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
-      <artifactId>clojurescript</artifactId>
-      <version>0.0-3269</version>
+      <artifactId>math.combinatorics</artifactId>
+      <version>0.1.1</version>
+    </dependency>
+    <dependency>
+      <groupId>quantum</groupId>
+      <artifactId>java</artifactId>
+      <version>1.0</version>
+    </dependency>
+    <dependency>
+      <groupId>fipp</groupId>
+      <artifactId>fipp</artifactId>
+      <version>0.6.4</version>
+    </dependency>
+    <dependency>
+      <groupId>com.stuartsierra</groupId>
+      <artifactId>component</artifactId>
+      <version>0.3.1</version>
+    </dependency>
+    <dependency>
+      <groupId>frak</groupId>
+      <artifactId>frak</artifactId>
+      <version>0.1.6</version>
+    </dependency>
+    <dependency>
+      <groupId>com.andrewmcveigh</groupId>
+      <artifactId>cljs-time</artifactId>
+      <version>0.3.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.json</groupId>
+          <artifactId>json</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>criterium</groupId>
+      <artifactId>criterium</artifactId>
+      <version>0.4.3</version>
+    </dependency>
+    <dependency>
+      <groupId>clj-stacktrace</groupId>
+      <artifactId>clj-stacktrace</artifactId>
+      <version>0.2.8</version>
+    </dependency>
+    <dependency>
+      <groupId>debugger</groupId>
+      <artifactId>debugger</artifactId>
+      <version>0.1.7</version>
+    </dependency>
+    <dependency>
+      <groupId>figwheel</groupId>
+      <artifactId>figwheel</artifactId>
+      <version>0.5.0-2-Q</version>
+    </dependency>
+    <dependency>
+      <groupId>binaryage</groupId>
+      <artifactId>devtools</artifactId>
+      <version>0.5.2</version>
+    </dependency>
+    <dependency>
+      <groupId>com.datomic</groupId>
+      <artifactId>datomic-pro</artifactId>
+      <version>0.9.5206</version>
+      <exclusions>
+        <exclusion>
+          <groupId>joda-time</groupId>
+          <artifactId>joda-time</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>datascript</groupId>
+      <artifactId>datascript</artifactId>
+      <version>0.13.3</version>
+    </dependency>
+    <dependency>
+      <groupId>datascript-transit</groupId>
+      <artifactId>datascript-transit</artifactId>
+      <version>0.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.zachallaun</groupId>
+      <artifactId>datomic-cljs</artifactId>
+      <version>0.0.1-alpha-1</version>
+    </dependency>
+    <dependency>
+      <groupId>posh</groupId>
+      <artifactId>posh</artifactId>
+      <version>0.3.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>hickory</groupId>
+      <artifactId>hickory</artifactId>
+      <version>0.6.0</version>
+    </dependency>
+    <dependency>
+      <groupId>fx-clj</groupId>
+      <artifactId>fx-clj</artifactId>
+      <version>0.2.0-alpha1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>potemkin</groupId>
+          <artifactId>potemkin</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>reagent</groupId>
@@ -371,39 +457,24 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>figwheel</groupId>
-      <artifactId>figwheel</artifactId>
-      <version>0.3.1</version>
+      <groupId>garden</groupId>
+      <artifactId>garden</artifactId>
+      <version>1.2.5</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi</artifactId>
-      <version>3.9</version>
+      <groupId>com.lucasbradstreet</groupId>
+      <artifactId>cljs-uuid-utils</artifactId>
+      <version>1.0.2</version>
     </dependency>
     <dependency>
-      <groupId>org.apache.poi</groupId>
-      <artifactId>poi-ooxml</artifactId>
-      <version>3.9</version>
+      <groupId>danlentz</groupId>
+      <artifactId>clj-uuid</artifactId>
+      <version>0.1.6</version>
     </dependency>
     <dependency>
-      <groupId>com.lambdaworks</groupId>
-      <artifactId>scrypt</artifactId>
-      <version>1.4.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mindrot</groupId>
-      <artifactId>jbcrypt</artifactId>
-      <version>0.3m</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-codec</groupId>
-      <artifactId>commons-codec</artifactId>
-      <version>1.10</version>
-    </dependency>
-    <dependency>
-      <groupId>org.bouncycastle</groupId>
-      <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.53</version>
+      <groupId>com.taoensso</groupId>
+      <artifactId>sente</artifactId>
+      <version>1.7.0</version>
     </dependency>
     <dependency>
       <groupId>clj-http</groupId>
@@ -471,14 +542,27 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.carrotsearch</groupId>
-      <artifactId>java-sizeof</artifactId>
-      <version>0.0.5</version>
-    </dependency>
-    <dependency>
-      <groupId>com.github.javaparser</groupId>
-      <artifactId>javaparser-core</artifactId>
-      <version>2.1.0</version>
+      <groupId>compojure</groupId>
+      <artifactId>compojure</artifactId>
+      <version>1.4.0</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-server</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.eclipse.jetty</groupId>
+          <artifactId>jetty-servlet</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>javax.servlet</groupId>
+          <artifactId>servlet-api</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>clj-http</groupId>
+          <artifactId>clj-http</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
@@ -486,14 +570,35 @@
       <version>9.2.10.v20150310</version>
     </dependency>
     <dependency>
-      <groupId>slingshot</groupId>
-      <artifactId>slingshot</artifactId>
-      <version>0.12.2</version>
+      <groupId>org.immutant</groupId>
+      <artifactId>web</artifactId>
+      <version>2.1.2</version>
+      <exclusions>
+        <exclusion>
+          <groupId>clj-tuple</groupId>
+          <artifactId>clj-tuple</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.jboss.logging</groupId>
+          <artifactId>jboss-logging</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-      <version>0.9.10</version>
+      <groupId>com.cemerick</groupId>
+      <artifactId>friend</artifactId>
+      <version>0.2.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.clojure</groupId>
+          <artifactId>core.cache</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>ring</groupId>
+      <artifactId>ring-anti-forgery</artifactId>
+      <version>1.0.0</version>
     </dependency>
     <dependency>
       <groupId>com.github.detro</groupId>
@@ -511,34 +616,39 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>garden</groupId>
-      <artifactId>garden</artifactId>
-      <version>1.2.5</version>
+      <groupId>org.eclipse.jdt</groupId>
+      <artifactId>org.eclipse.jdt.core</artifactId>
+      <version>3.10.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.github.javaparser</groupId>
+      <artifactId>javaparser-core</artifactId>
+      <version>2.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
-      <artifactId>tools.namespace</artifactId>
-      <version>0.2.11</version>
-    </dependency>
-    <dependency>
-      <groupId>com.stuartsierra</groupId>
-      <artifactId>component</artifactId>
-      <version>0.2.3</version>
-    </dependency>
-    <dependency>
-      <groupId>byte-transforms</groupId>
-      <artifactId>byte-transforms</artifactId>
-      <version>0.1.3</version>
-    </dependency>
-    <dependency>
-      <groupId>debugger</groupId>
-      <artifactId>debugger</artifactId>
-      <version>0.1.7</version>
+      <artifactId>tools.emitter.jvm</artifactId>
+      <version>0.1.0-beta5</version>
     </dependency>
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parsers</artifactId>
       <version>1.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi</artifactId>
+      <version>3.9</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.poi</groupId>
+      <artifactId>poi-ooxml</artifactId>
+      <version>3.9</version>
+    </dependency>
+    <dependency>
+      <groupId>byte-transforms</groupId>
+      <artifactId>byte-transforms</artifactId>
+      <version>0.1.3</version>
     </dependency>
   </dependencies>
 </project>

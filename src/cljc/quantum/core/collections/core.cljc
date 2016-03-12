@@ -10,7 +10,7 @@
      #?@(:cljs [empty? array])])
   (:require-quantum
     [:core err fn log logic red #_str map set macros type vec arr pconvert #_num])
-  #?(:clj (:require seqspert.vector))
+  #?(:clj (:require [seqspert.vector]))
 )
 
 ; FastUtil is the best

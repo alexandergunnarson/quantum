@@ -84,14 +84,14 @@
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
 (defnt inc
-  ([^number?                           x] (core/inc x))
+  ([^number?                           x] (core/inc x))
   ([^com.gfredericks.goog.math.Integer x] (+ x int/ONE)))
 
 (defalias inc' inc          )
 (defalias inc* unchecked-inc)
 
 (defnt dec
-  ([^number?                           x] (core/dec x))
+  ([^number?                           x] (core/dec x))
   ([^com.gfredericks.goog.math.Integer x] (- x int/ONE)))
 
 (defalias dec' dec          )

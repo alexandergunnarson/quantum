@@ -1,7 +1,6 @@
 (ns quantum.auth.oauth
   #_(:require-quantum [:lib])
   #_(:require [quantum.auth.core :as auth]))
-;(require '[quantum.core.collections.core :refer [conjr]])
 
 #_(defn client-config
   {:in ["http://localhost:5000/" :facebook :dev]}

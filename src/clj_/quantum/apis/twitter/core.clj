@@ -24,7 +24,7 @@
         ; Note that there are some flows, such as when obtaining a request token,
         ; where the token secret is not yet known.
         ; In this case, the signing key should consist of the percent-encoded
-        ; consumer secret followed by an ampersand character ‘&’.
+        ; consumer secret followed by an ampersand character '&'.
         signing-key (str (url/encode consumer-secret) "&"
                          (url/encode oauth-secret))
         signature (->> (crypto/hash :sha-1-hmac signature-base-string {:secret signing-key})

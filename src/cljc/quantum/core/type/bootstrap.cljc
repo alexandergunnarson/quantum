@@ -137,7 +137,7 @@
                    cljs.core/TransientArrayMap}}
         tree-map-types
          '{:clj  #{clojure.lang.PersistentTreeMap}
-           :cljs #{cljs.core.PersistentTreeMap   }}
+           :cljs #{cljs.core/PersistentTreeMap   }}
         map-types
           (cond-union
             hash-map-types 
@@ -148,7 +148,8 @@
                        java.util.Map}})
         array-list-types
          '{:clj  #{java.util.ArrayList java.util.Arrays$ArrayList}
-           :cljs #{cljs.core.ArrayList                           }}
+           :cljs #{cljs.core.ArrayList                           }
+         }
         array-types
          '{:clj  {:short   (class (short-array   0)      )
                   :long    (class (long-array    0)      )
@@ -200,7 +201,7 @@
             :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
         map-entry-types '{:clj  #{clojure.lang.MapEntry            }}
         queue-types     '{:clj  #{clojure.lang.PersistentQueue     }
-                          :cljs #{cljs.core.PersistentQueue        }}
+                          :cljs #{cljs.core/PersistentQueue        }}
         transient-types '{:clj  #{clojure.lang.ITransientCollection}
                           :cljs #{#_cljs.core/ITransientCollection ; Problems with this
                                   cljs.core/TransientVector
@@ -213,9 +214,9 @@
           (cond-union map-types set-types vec-types)
         cons-types
          '{:clj  #{clojure.lang.Cons}
-           :cljs #{cljs.core.Cons}}
+           :cljs #{cljs.core/Cons}}
         lseq-types '{:clj  #{clojure.lang.LazySeq}
-                     :cljs #{cljs.core.LazySeq   }}
+                     :cljs #{cljs.core/LazySeq   }}
         seq-types            (cond-union
                                cons-types
                                list-types
@@ -308,9 +309,9 @@
            'nil?             '{:cljc #{nil}}
            'string?          string-types
            'symbol?          '{:clj  #{clojure.lang.Symbol}
-                               :cljs #{cljs.core.Symbol}}
+                               :cljs #{cljs.core/Symbol}}
            'record?          '{:clj  #{clojure.lang.IRecord}
-                               :cljs #{cljs.core.IRecord}}
+                               :cljs #{cljs.core/IRecord}}
            'char?            char-types
            'boolean?         bool-types
            'bool?            bool-types
@@ -340,7 +341,8 @@
                                       #_quantum.core.reducers.Folder}
                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface 
                                        cljs.core/Delay}}
-           'file?            '{:clj #{java.io.File}}
+           'file?            '{:clj  #{java.io.File}
+                               :cljs #{js/File}}
            'array-list?      array-list-types
            'array?           {:clj  (->> array-types :clj vals (into #{}))
                               :cljs (->> array-types :cljs)}

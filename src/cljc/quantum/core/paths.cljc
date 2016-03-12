@@ -38,18 +38,19 @@
   #?(:clj ([^file?   f] (.getName f)))
   ([^string? s] (coll/taker-until-workaround sys/separator nil s)))
 
-(defnt extension
+(defnt extension ; TODO really should take from first "." after the last "/"
   ([^string? s] (coll/taker-until-workaround "." nil s))
   #?(:clj ([^file?   f] (-> f str extension))))
 
-#?(:clj
-(defn extension [x]
-  (cond (vector? x)
-        (-> x last extension)
-        (string? x)
-        (.substring ^String x
-          (inc (.indexOf ^String x ".")))
-        :else (throw (->ex :no-matching-expr "Unknown type" (class x))))))
+; #?(:clj
+; (defn extension [x]
+;   (cond (vector? x)
+;         (-> x last extension)
+;         (string? x)
+;         (.substring ^String x
+;           (inc (.indexOf ^String x ".")))
+;         (nil? x) nil
+;         :else (throw (->ex :no-matching-expr "Unknown type" (class x))))))
 
 #?(:clj (defalias file-ext extension))
 

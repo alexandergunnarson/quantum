@@ -215,7 +215,8 @@
     csv         {:aliases         {:cljc {csv         quantum.core.data.complex.csv           }}}
     list        {:aliases         {:cljc {list        quantum.core.data.list                  }}
                  :refers          {:clj  {list        #{dlist}                                }}
-                 :imports         (clojure.data.finger_tree.CountedDoubleList)                }
+                 :imports         (quantum.core.data.finger_tree.CountedDoubleList)           
+               }
     hex         {:aliases         {:cljc {hex         quantum.core.data.hex                   }}}
     json        {:aliases         {:cljc {json        quantum.core.data.complex.json          }}}
     map         {:core-exclusions {:cljc #{merge sorted-map sorted-map-by}}
