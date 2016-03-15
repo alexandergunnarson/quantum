@@ -8,7 +8,7 @@
               :refer [lens deref*]                  ]))
 
 (defmulti event-msg-handler :id) ; Dispatch on event-id
-(def send-msg! (lens res/systems (fn-> :quantum.dev.cljstest/system :sys-map deref* :connection :send-fn)))
+(def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))
 
 ; Wrap for logging, catching, etc.:
 (defn     event-msg-handler* [{:as ev-msg :keys [id ?data event]}]

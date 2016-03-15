@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.4.9-beta</version>
+  <version>0.2.5</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>650f2f5db2771cd42ad3839469a8dcfefac77827
+    <tag>a0bfe3166e1455881ce4087708cccc39fb0d04fc
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>

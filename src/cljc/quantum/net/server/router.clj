@@ -27,7 +27,7 @@
 ; SECURITY MEASURES TAKEN CARE OF
 ; CSRF : ring.middleware.anti-forgery
 
-(def sys-map (lens res/systems (fn-> :quantum.cljtest/system :sys-map qcore/deref*)))
+(def sys-map (lens res/systems (fn-> :global :sys-map qcore/deref*)))
 
 ; ===== ACCESS CONTROL (ROLES) =====
 
