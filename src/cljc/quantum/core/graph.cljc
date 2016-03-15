@@ -211,7 +211,7 @@
 ; the shell's path. Possible algorithms include :dot, :neato, :fdp, :sfdp
 ; :twopi, and :circo
 #?(:clj
-(defalias ->image-bytes                   g.io/render-to-bytes                ))
+(defalias ->image-bytes                           g.io/render-to-bytes                ))
 
 #?(:clj (defalias highlight                       attr/hilite                         ))
 #?(:clj (defalias highlight-path                  attr/hilite-path                    ))
@@ -275,7 +275,7 @@
          [:zs           :ys        ] 1/1000}}
   [m]
   (->> (root-node-paths* m [])
-       (map (juxt (compr (extern (mfn 1 first)) (juxt (extern (mfn 1 first)) (extern (mfn 1 last)))) (extern (mfn 1 second))))
+       (map (juxt (compr (mfn 1 first) (juxt (mfn 1 first) (mfn 1 last))) (extern (mfn 1 second))))
        (into (sorted-map))))
 
 
