@@ -15,12 +15,17 @@
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
   ; :signing          {:gpg-key "72F3C25A"}
-  #_:deploy-repositories #_[;["releases" :clojars]
-                        ["clojars" {:creds :gpg}]
-                        []]
+  :env {:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
+        :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
   :repositories {"sonatype-oss-public"
-                 "https://oss.sonatype.org/content/groups/public/"}
-  :plugins [#_[s3-wagon-private "1.1.2"]]
+                 "https://oss.sonatype.org/content/groups/public/"
+
+                 "repo-s3-releases"
+                   {:url        "s3://repo.quantum/releases/"
+                    :username   :env/PUBLIC_REPO_S3_USERNAME
+                    :passphrase :env/PUBLIC_REPO_S3_PASSWORD
+                    :checksum   :warn}}
+  :plugins [[lein-environ     "1.0.1"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
      [org.clojure/clojurescript                 "1.7.228"         ] ; Latest (as of 3/8/2015)
@@ -118,7 +123,8 @@
          [debugger                              "0.1.7"           ]
          ; REPL
          [figwheel                              "0.5.0-2-Q"       ]
-         [binaryage/devtools                    "0.5.2"           ]
+         #_[binaryage/devtools                    "0.5.2"           ]
+         [environ  "1.0.1"  ]
      ; ==== DB ====
        ; DATOMIC
        [com.datomic/datomic-pro                 "0.9.5206"
@@ -250,27 +256,27 @@
                 [kr.motd.javaagent/jetty-alpn-agent "1.0.0.Final"]]
   :cljsbuild
     {:builds
-      [{:id "dev"
-        :figwheel true
-        :source-paths ["test/cljs" "src/cljc" "dev/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
-        :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
-                   :output-dir           "dev-resources/public/js/compiled/out"
-                   :optimizations        :none
-                   :main                 quantum.dev
-                   :asset-path           "js/compiled/out"
-                   :source-map           true
-                   :source-map-timestamp true
-                   :cache-analysis       true}}
-       {:id "min"
-        :source-paths ["src/cljs" "src/cljc" "dev/cljc"]
-        :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
-                   :output-dir     "dev-resources/public/js/min-compiled/out"
-                   :main           quantum.dev
-                   :optimizations  :advanced
-                   :asset-path     "js/min-compiled/out"
-                   :pretty-print   false
-                   ;:parallel-build true
-                   }}]}
+      {:dev
+        {:figwheel true
+         :source-paths ["test/cljs" "src/cljc" "dev/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
+         :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
+                    :output-dir           "dev-resources/public/js/compiled/out"
+                    :optimizations        :none
+                    :main                 quantum.dev
+                    :asset-path           "js/compiled/out"
+                    :source-map           true
+                    :source-map-timestamp true
+                    :cache-analysis       true}}
+       :min
+         {:source-paths ["src/cljs" "src/cljc" "dev/cljc"]
+          :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
+                     :output-dir     "dev-resources/public/js/min-compiled/out"
+                     :main           quantum.dev
+                     :optimizations  :advanced
+                     :asset-path     "js/min-compiled/out"
+                     :pretty-print   false
+                     ;:parallel-build true
+                     }}}}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3450
              :css-dirs ["dev-resources/public/css"]}
