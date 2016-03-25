@@ -17,15 +17,13 @@
   ; :signing          {:gpg-key "72F3C25A"}
   :env {:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
         :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
-  :repositories {"sonatype-oss-public"
-                 "https://oss.sonatype.org/content/groups/public/"
-
-                 "repo-s3-releases"
+  :repositories {"repo-s3-releases"
                    {:url        "s3://repo.quantum/releases/"
-                    :username   :env/PUBLIC_REPO_S3_USERNAME
-                    :passphrase :env/PUBLIC_REPO_S3_PASSWORD
+                    :username   :env/public-repo-s3-username
+                    :passphrase :env/public-repo-s3-password
                     :checksum   :warn}}
-  :plugins [[lein-environ     "1.0.1"]]
+  :plugins [[lein-environ  "1.0.1"]
+            [lein-essthree "0.2.1"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
      [org.clojure/clojurescript                 "1.7.228"         ] ; Latest (as of 3/8/2015)
