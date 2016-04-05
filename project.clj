@@ -251,7 +251,7 @@
   :global-vars {*warn-on-reflection* true}
   :java-agents [[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8" 
                 ; This for HTTP/2 support
-                [kr.motd.javaagent/jetty-alpn-agent "1.0.0.Final"]]
+                [kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
       {:dev

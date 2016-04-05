@@ -1,6 +1,6 @@
 (ns quantum.type.mime
   (:refer-clojure :exclude [type])
-  (:require-quantum [:core]))
+  (:require-quantum [:core logic fn]))
 
 #?(:cljs
 (defn type

@@ -31,11 +31,11 @@
                key-password trust-password host] :as server} :server
        {:keys [uri msg-handler]             :as connection} :connection
        {:keys [js-source-file]                            } :deployment
-       {:keys [schemas]                                   } :db
+       {:keys [schemas ephemeral]           :as db        } :db
        {:keys [render root-id]                            } :frontend
        {                                    :as backend   } :backend}]]
   (let [host*            (or "0.0.0.0" host)
-        port*            (or port 8080)
+        port*            (or port 80)
         server-type      :immutant
         js-source-file-f (or js-source-file "system")
         frontend-init    (-> config :frontend :init)]
@@ -90,9 +90,11 @@
           :txr-bin-path           "./bin/transactor"
           :txr-props-path         "./config/samples/free-transactor-template.properties"])})
       #?@(:cljs
-         [:ephemeral {:history-limit js/Number.MAX_SAFE_INTEGER
-                      :reactive?     true
-                      :schemas       schemas}])}
+         [:ephemeral (merge ephemeral
+                       {:history-limit  js/Number.MAX_SAFE_INTEGER
+                        :reactive?      true
+                        :set-main-conn? true
+                        :schemas        schemas})])}
    #?@(:cljs
     [:threadpool
         {:thread-ct 2
@@ -118,7 +120,7 @@
     #?@(:cljs
          [:renderer      (component/using
                            (ui/map->Renderer        (:renderer   config-0))
-                           [:log])])
+                           [:log :db])])
     #?@(:clj
          [:server        (component/using 
                            (http/map->Server        (:server     config-0))
@@ -138,12 +140,10 @@
     @system-creator
     (res/reload! @system)
     
-    (reset! dbc/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral)
-                         :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
     
     #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)
-               (db-rx/react! @dbc/conn*))) ; Is this) necessary?
+               (db-rx/react! @dbc/conn*))) ; Is this necessary?
     ))
 
 #?(:clj

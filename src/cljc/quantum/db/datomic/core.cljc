@@ -513,21 +513,6 @@
 ;        (<- db/tx-range nil nil)
 ;        seq))
 
-; (def allowed-types
-;  #{:keyword
-;    :string 
-;    :boolean
-;    :long
-;    :bigint 
-;    :float
-;    :double 
-;    :bigdec 
-;    :ref
-;    :instant
-;    :uuid
-;    :uri
-;    :bytes})
-
 ; (defmacro call! [f & args]
 ;   `(transact! [[f ~@args]]))
 

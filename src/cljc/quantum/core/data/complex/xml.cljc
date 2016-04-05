@@ -252,16 +252,18 @@
 (defmethod parse-plist :string [c] (first-content c))
 
 
+
+
+))
+
+#?(:clj
 (defnt lparse
   ([^string? x]
     (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
   ([^file?   x]
     (-> x (java.io.FileReader.)   (java.io.BufferedReader.) cxml/parse))
-  ([#{string? file?} data k]
-    (throw-unless (in? k #{:plist}) (Err. nil "Parser option not recognized" k))
+  #_([#{string? file?} data k]
+    (throw-unless (contains? #{:plist} k) (->ex nil "Parser option not recognized" k))
     (condp = k
-      :plist (->> data lparse first-content parse-plist))))
+      :plist (->> data lparse first-content parse-plist)))))
 
-
-
-))

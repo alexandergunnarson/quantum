@@ -104,10 +104,13 @@
   EphemeralDatabase
   [conn history history-limit reactive?
    default-partition
-   init-schemas? schemas]
+   init-schemas? schemas
+   set-main-conn?
+   post]
   component/Lifecycle
     (start [this]
       (log/pr :user "Starting Ephemeral database...")
+      (log/pr :user "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
       (let [; Maintain DB history.
             history (when (pos? history-limit) (atom []))
             conn-f (mdb/create-conn)
@@ -128,6 +131,8 @@
             ; Sets up the tx-report listener for a conn
             #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
             _ (log/pr :user "Ephemeral database reactivity set up.")]
+        (when set-main-conn? (reset! conn* conn-f))
+        (when post (post))
         (c/assoc this :conn              conn-f
                       :history           history
                       :default-partition default-partition-f)))
