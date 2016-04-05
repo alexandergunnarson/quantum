@@ -310,9 +310,10 @@
   (let [;output :base64 ; TODO change default to bytes
         encrypt? (encrypt-param* type password)
         in-f  #?(:clj in 
-                 :cljs (whenp in base64->?
-                         (fn-> conv/base64->forge-bytes
-                           js/forge.util.createBuffer)))
+                 :cljs (if base64->?
+                           (-> in conv/base64->forge-bytes
+                               js/forge.util.createBuffer)
+                           (js/forge.util.createBuffer in "utf8")))
         #?@(:clj
           ; ^KeySpec
        [^SecretKeyFactory factory (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA256")])
@@ -338,7 +339,7 @@
                                     (-> (#?(:clj  num/exp
                                             :cljs js/Math.pow) 2 8)
                                         #?(:cljs (/ 8)))
-                                    #?(:cljs "sha256")) ; defaults to SHA1
+                                    #?(:cljs (js/forge.md.sha256.create))) ; defaults to SHA1
         #?@(:clj
        [^SecretKey        secret  (-> factory 
                                       (.generateSecret keyspec)

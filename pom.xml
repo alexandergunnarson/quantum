@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>a0bfe3166e1455881ce4087708cccc39fb0d04fc
+    <tag>70323d9775a6f59a439d6f98522c4228746ed920
 </tag>
     <url>https://github.com/alexandergunnarson/quanta-lib</url>
   </scm>
@@ -85,8 +85,8 @@
       </releases>
     </repository>
     <repository>
-      <id>sonatype-oss-public</id>
-      <url>https://oss.sonatype.org/content/groups/public/</url>
+      <id>repo-s3-releases</id>
+      <url>s3://repo.quantum/releases/</url>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
@@ -394,9 +394,9 @@
       <version>0.5.0-2-Q</version>
     </dependency>
     <dependency>
-      <groupId>binaryage</groupId>
-      <artifactId>devtools</artifactId>
-      <version>0.5.2</version>
+      <groupId>environ</groupId>
+      <artifactId>environ</artifactId>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>com.datomic</groupId>

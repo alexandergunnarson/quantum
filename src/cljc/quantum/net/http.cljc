@@ -24,7 +24,7 @@
                         ;:http-kit (http-kit/run-server routes {:port (or port 0)})
                         :immutant (imm/run routes
                                     {:host           (or host     "localhost")
-                                     :port           (or port     8080)
+                                     :port           (or port     80)
                                      :ssl-port       (or ssl-port 443)
                                      :http2?         (or http2?   false)
                                      :keystore       (or key-store-path   "resources/server.keystore")

@@ -311,21 +311,23 @@
 
 (defnt get
   {:imported "clojure.lang.RT/get"}
-  #?(:clj ([^clojure.lang.ILookup coll            k             ] (.valAt coll k)))
-  #?(:clj ([^clojure.lang.ILookup coll            k if-not-found] (.valAt coll k if-not-found)))
-  #?(:clj ([#{java.util.Map clojure.lang.IPersistentSet}
-                                  coll            k             ] (.get coll k)))
-          ([^string?              coll ^pinteger? n             ] (.charAt  coll n             ))
-  #?(:clj ([^array-list?          coll ^pinteger? n             ] (get      coll n nil         )))
-  #?(:clj ([^array-list?          coll ^pinteger? n if-not-found]
-            (try (.get coll n)
-              (catch ArrayIndexOutOfBoundsException e# if-not-found))))
-          ([^array?               coll ^pinteger? n             ] (aget     coll n             ))
-          ([^listy?               coll            n             ] (nth      coll n nil         ))
-          ([^listy?               coll            n if-not-found] (nth      coll n if-not-found))
-          ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
-          ([                      coll            n             ] (core/get coll n nil         ))
-          ([                      coll            n if-not-found] (core/get coll n if-not-found)))
+  #?(:clj  ([^clojure.lang.ILookup coll            k             ] (.valAt coll k)))
+  #?(:clj  ([^clojure.lang.ILookup coll            k if-not-found] (.valAt coll k if-not-found)))
+  #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
+                                   coll            k             ] (.get coll k)))
+           ([^string?              coll ^pinteger? n             ] (.charAt  coll n             ))
+  #?(:clj  ([^array-list?          coll ^pinteger? n             ] (get      coll n nil         )))
+  #?(:clj  ([^array-list?          coll ^pinteger? n if-not-found]
+             (try (.get coll n)
+               (catch ArrayIndexOutOfBoundsException e# if-not-found))))
+           ([^array?               coll ^pinteger? n             ] (aget     coll n             ))
+           ([^listy?               coll            n             ] (nth      coll n nil         ))
+           ([^listy?               coll            n if-not-found] (nth      coll n if-not-found))
+           ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
+  #?(:cljs ([^nil?                 coll            n             ] (core/get coll n nil         )))
+  #?(:cljs ([^nil?                 coll            n if-not-found] (core/get coll n if-not-found)))
+           ([                      coll            n             ] (core/get coll n nil         ))
+           ([                      coll            n if-not-found] (core/get coll n if-not-found)))
 
 (defalias doto! swap!)
 
