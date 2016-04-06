@@ -3,8 +3,9 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.complex.xml
   (:refer-clojure :exclude [split])
-  (:require-quantum [:core err logic fn type #_num #_coll vec #_str macros log #_time #_crypto])
-  #?(:clj (:require [clojure.data.xml :as cxml]))
+  (:require-quantum [:core err logic fn type #_num coll vec str macros log #_time])
+  #?(:clj (:require [clojure.data.xml :as cxml]
+                    [quantum.security.cryptography :as crypto]))
   #?(:clj (:import (javax.xml.stream XMLInputFactory XMLEventReader)
                    (javax.xml.stream.events XMLEvent Attribute
                      StartElement EndElement Characters)
@@ -14,7 +15,7 @@
 
 ; ENTIRE FILE IS CLJ-ONLY (for now)
 ; Commented out temporarily 
-#_(:clj (do
+#?(:clj (do
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
 ;=================================================={                          }=====================================================
@@ -70,50 +71,6 @@
 ; ;=================================================={       XML PARSING        }=====================================================
 ; ;=================================================={                          }=====================================================
 ; ALSO APPLIES TO HTML
-
-(defn split
-  {:todo ["Likely not efficient"]}
-  [^String xml-str]
-  (->> xml-str str
-      (<- str/replace #"<"    "\n<")
-      (<- str/replace #">"    ">\n")
-      (<- str/replace #"\n\n" "\n")
-      (<- str/split   #"\n")
-      (remove+ (partial every? (fn-eq? \space)))
-      redv))
-
-(defn open? [^String elem]
-  (and (-> elem first  (=    "<"))
-       (-> elem second (not= "/"))
-       (-> elem last   (=    ">"))))
-
-(defn close? [^String elem]
-  (-> elem (str/starts-with? "</")))
-
-(defn body? [^String elem]
-  (-> elem first (not= "<")))
-
-(defn standalone? [^String elem]
-  (and (or (-> elem (str/starts-with? "<" ))
-           (-> elem (str/starts-with? "<?")))
-       (or (-> elem (str/ends-with?   "/>"))
-           (-> elem (str/ends-with?   "?>")))))
-
-(defrecord XMLElem [elem-type tag content])
-
-(defn elem-type [^String elem]
-  (condfc elem
-    body?       :body
-    standalone? :standalone
-    open?       :open
-    close?      :close
-    :else       (throw+ 
-                  (str "XML element "
-                       (str/squote elem)
-                       " not recognized."))))
-
-; NEW
-
 
 (defrecord XMLAttr [name val])
 (defrecord XMLElem [name attrs val children])
@@ -232,10 +189,10 @@
 (defmethod parse-plist :array [c]
   (for [item (:content c)] (parse-plist item)))
 
-(defmethod parse-plist :data [c]
+#_(defmethod parse-plist :data [c]
   (-> c first-content (crypto/decode :base64)))
 
-(defmethod parse-plist :date [c]
+#_(defmethod parse-plist :date [c]
   (-> c first-content (org.joda.time.DateTime.) time/->instant))
 
 (defmethod parse-plist :dict [c]
@@ -251,12 +208,6 @@
 
 (defmethod parse-plist :string [c] (first-content c))
 
-
-
-
-))
-
-#?(:clj
 (defnt lparse
   ([^string? x]
     (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
@@ -265,5 +216,7 @@
   #_([#{string? file?} data k]
     (throw-unless (contains? #{:plist} k) (->ex nil "Parser option not recognized" k))
     (condp = k
-      :plist (->> data lparse first-content parse-plist)))))
+      :plist (->> data lparse first-content parse-plist))))
+
+))
 

@@ -31,9 +31,8 @@
                key-password trust-password host] :as server} :server
        {:keys [uri msg-handler]             :as connection} :connection
        {:keys [js-source-file]                            } :deployment
-       {:keys [schemas ephemeral]           :as db        } :db
-       {:keys [render root-id]                            } :frontend
-       {                                    :as backend   } :backend}]]
+       {:keys [schemas ephemeral backend]   :as db        } :db
+       {:keys [render root-id]                            } :frontend}]]
   (let [host*            (or "0.0.0.0" host)
         port*            (or port 80)
         server-type      :immutant
