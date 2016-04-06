@@ -124,6 +124,12 @@
 #?(:clj (defalias ->bigdec clj/->bigdec))
 #?(:clj (defalias bigdec   clj/bigdec  ))
 
+(defnt exactly
+  ([#{decimal?} x]
+    (-> x rationalize exactly))
+  ([#{int? long?} x] (->bigint x))
+  ([#{bigint? clojure.lang.Ratio} x] x))
+
 ;_____________________________________________________________________
 ;==================={        OPERATORS         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

@@ -86,7 +86,7 @@
             #?@(:clj
            [:start-txr?             true
             :txr-dir                (str (System/getProperty "user.dir")
-                                         "/../datomic-free-0.9.5344")
+                                         "/resources/datomic-free-0.9.5344")
             :txr-bin-path           "./bin/transactor"
             :txr-props-path         "./config/samples/free-transactor-template.properties"])}
            backend))
@@ -140,7 +140,7 @@
   (fn [& [port]]
     @system-creator
     (res/reload! @system)
-    
+    (reset! db/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral) :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
     
     #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)

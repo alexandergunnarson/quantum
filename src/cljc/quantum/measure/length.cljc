@@ -1,5 +1,5 @@
 (ns ^:skip-aot  quantum.measure.length
-  (:require-quantum [ns fn logic num set err macros pr log str])
+  (:require-quantum [:core])
   (:require [quantum.measure.core :refer [defunits-of]]))
 
 #?(:clj (set! *unchecked-math* false))

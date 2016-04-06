@@ -1,5 +1,5 @@
 (ns quantum.measure.information
-  (:require-quantum [ns fn logic num set err macros pr log str])
+  (:require-quantum [:core])
   (:require [quantum.measure.core :refer [defunits-of]]))
 
 ; Basic unit of information (entropy).  The entropy in bits
