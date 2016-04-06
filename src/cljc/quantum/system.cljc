@@ -73,21 +73,23 @@
    :db
      {:backend 
        (when backend
-         {:type                   :free
-          :name                   "test"
-          :host                   "localhost"
-          :port                   4334
-          :create-if-not-present? true
-          :txr-alias              "local"
-          :default-partition      :db.part/test
-          :init-schemas?          true
-          :schemas                schemas
-          #?@(:clj
-         [:start-txr?             true
-          :txr-dir                (str (System/getProperty "user.dir")
-                                       "/../datomic-free-0.9.5344")
-          :txr-bin-path           "./bin/transactor"
-          :txr-props-path         "./config/samples/free-transactor-template.properties"])})
+         (merge
+           {:type                   :free
+            :name                   "test"
+            :host                   "localhost"
+            :port                   4334
+            :create-if-not-present? true
+            :txr-alias              "local"
+            :default-partition      :db.part/test
+            :init-schemas?          true
+            :schemas                schemas
+            #?@(:clj
+           [:start-txr?             true
+            :txr-dir                (str (System/getProperty "user.dir")
+                                         "/../datomic-free-0.9.5344")
+            :txr-bin-path           "./bin/transactor"
+            :txr-props-path         "./config/samples/free-transactor-template.properties"])}
+           backend))
       #?@(:cljs
          [:ephemeral (merge ephemeral
                        {:history-limit  js/Number.MAX_SAFE_INTEGER
