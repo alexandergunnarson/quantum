@@ -1,14 +1,13 @@
 (ns quantum.measure.core
-  (:require-quantum [ns fn logic num set err macros pr log str])
+  (:require-quantum [:core fn logic num set err macros pr log str])
   (:require
     [quantum.measure.reg]
-    [quantum.core.graph :as g
-      :refer [graph digraph weighted-digraph]]
-    [loom.alg         :as g.alg]
-    [loom.graph       :as g.graph]
-    [loom.alg-generic :as g.gen-alg]))
+  #?(:clj
+      [quantum.core.graph :as g
+      :refer [->graph ->digraph ->weighted-digraph]])))
 
 (defn ->str
+  {:todo ["MOVE TO CONVERT"]}
   ([k joiner]
     (->> [(namespace k) (name k)]
          (core/remove empty?)
@@ -17,8 +16,9 @@
 ; TODO Include frinj stuff
 ; https://github.com/martintrojer/frinj/blob/master/src/frinj/feeds.clj
 ; {:metric-cables #{:length} ...}
+#?(:clj
 (defn defunits-of* [unit-type std-unit unit-pairs emit-type]
-  (throw-unless (contains? #{:map :code} emit-type) (Err. nil "Emit type not recognized" emit-type))
+  (throw-unless (contains? #{:map :code} emit-type) (->ex nil "Emit type not recognized" emit-type))
   (let [units-graph
              (->> (core/for [[unit [[rate conv-unit] & [aliases]]] unit-pairs]
                     (->> (core/for [alias aliases]
@@ -28,7 +28,7 @@
                          (concat [[unit conv-unit (/ 1 (num/exactly rate))]
                                   [conv-unit unit (num/exactly rate)]])))
                   (apply concat)
-                  (apply weighted-digraph))
+                  (apply ->weighted-digraph))
            fn-chart
              (->> (g/all-pairs-shortest-paths units-graph *)
                   g/root-node-paths)
@@ -56,14 +56,15 @@
                                                 (constantly #{~unit-type-k}))))))))]
          (condp = emit-type
            :map
-             (quote+ ((def ~conversion-map-sym ~conversion-map)))
+             (list (list 'def 'conversion-map conversion-map))
            :code
              (core/for [[[from to] multiplier] fn-chart]
                (let [multiplier (/ 1 multiplier)
                      fn-name (symbol (str (->str from "-") "->" (->str to "-")))]
                  (if (= multiplier 1) ; Identical
-                     (quote+ (defn ~fn-name [n] n))
-                     (quote+ (defn ~fn-name [n] (* n ~multiplier))))))))))
+                     `(defn ~'fn-name [n] n)
+                     `(defn ~'fn-name [n] (* n ~multiplier))))))))))
 
+#?(:clj
 (defmacro defunits-of [unit-type std-unit & {:as unit-pairs}]
-  (defunits-of* unit-type std-unit unit-pairs :map))
+  (defunits-of* unit-type std-unit unit-pairs :map)))

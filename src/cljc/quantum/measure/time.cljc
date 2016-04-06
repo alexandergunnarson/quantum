@@ -1,5 +1,5 @@
 (ns quantum.measure.time
-  (:require-quantum [ns fn logic num set err macros pr log str])
+  (:require-quantum [:core])
   (:require quantum.measure.reg)
   (:require [quantum.measure.core :refer [defunits-of]]))
 
