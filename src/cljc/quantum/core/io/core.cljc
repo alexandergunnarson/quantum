@@ -422,7 +422,7 @@
 ;       false)))
 
 
-(defalias ->input-stream  io/input-stream )
-(defalias resource        io/resource     )
-(defalias ->output-stream io/output-stream)
-(defalias copy!           io/copy         )
+#?(:clj (defalias ->input-stream  io/input-stream ))
+#?(:clj (defalias resource        io/resource     ))
+#?(:clj (defalias ->output-stream io/output-stream))
+#?(:clj (defalias copy!           io/copy         ))
