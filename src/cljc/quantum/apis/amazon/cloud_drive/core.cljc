@@ -66,6 +66,7 @@
 (defn download! [id]
   (request! :nodes :content {:method :get  :append (conv/->path id "content")}))
 
+#?(:clj
 (defn download-to-file!
   {:usage '(download-to-file! "2gg_3MaYTS-CA7PaPfbdow"
              [:home "Downloads" "download.jpg"])}
@@ -73,7 +74,7 @@
   (-> id download!
       (Files/copy
         (-> file conv/->path (Paths/get (into-array [""])))
-        (make-array java.nio.file.CopyOption 0))))
+        (make-array java.nio.file.CopyOption 0)))))
 
 ; ; https://forums.developer.amazon.com/forums/message.jspa?messageID=15671
 ; ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API. 

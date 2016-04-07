@@ -23,6 +23,8 @@
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/closed? obj)))
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw (->ex :not-implemented)))))
 
+#?(:cljs (declare open?))
+
 (def closed? (fn-not open?))
 
 #?(:clj
@@ -33,6 +35,8 @@
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (core-async/close! obj))
   ([                     obj]
     (when (nnil? obj) (throw (->ex :not-implemented))))))
+
+#?(:cljs (declare close!))
 
 #?(:clj
 (defnt closeable?
