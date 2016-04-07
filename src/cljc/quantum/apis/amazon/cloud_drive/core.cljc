@@ -2,12 +2,13 @@
   (:refer-clojure :exclude [meta])
   (:require-quantum [:core fn logic log err async core-async coll])
   (:require
-    [quantum.auth.core    :as auth]
-    [quantum.core.convert :as conv]
+    [quantum.auth.core    :as auth ]
+    [quantum.core.convert :as conv ]
     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
-    [quantum.core.string  :as str ]
-    [quantum.net.http     :as http])
-  #_(:import [java.nio.file Files Paths]))
+    [quantum.core.string  :as str  ]
+    [quantum.net.http     :as http ]
+    [quantum.core.paths   :as paths])
+  #?(:clj (:import [java.nio.file Files Paths])))
 
 (def base-urls
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"
@@ -62,15 +63,17 @@
 ; ; overwrite PUT : {{contentUrl}}/nodes/{id}/content Overwrite the content of a file
 ; )
 
-; (defn download! [id] (request! :nodes :content {:method :get  :append (io/path id "content")}))
-; (defn download-to-file!
-;   {:usage '(download-to-file! "2gg_3MaYTS-CA7PaPfbdow"
-;              [:home "Downloads" "download.jpg"])}
-;   [id file]
-;   (-> id download! :body
-;       (Files/copy
-;         (convert/->path file)
-;         (make-array java.nio.file.CopyOption 0))))
+(defn download! [id]
+  (request! :nodes :content {:method :get  :append (conv/->path id "content")}))
+
+(defn download-to-file!
+  {:usage '(download-to-file! "2gg_3MaYTS-CA7PaPfbdow"
+             [:home "Downloads" "download.jpg"])}
+  [id file]
+  (-> id download!
+      (Files/copy
+        (-> file conv/->path (Paths/get (into-array [""])))
+        (make-array java.nio.file.CopyOption 0))))
 
 ; ; https://forums.developer.amazon.com/forums/message.jspa?messageID=15671
 ; ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API. 

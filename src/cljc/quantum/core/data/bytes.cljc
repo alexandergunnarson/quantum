@@ -4,7 +4,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
-  (:require-quantum [:core str logic bin macros type ccore arr log])
+  (:require-quantum [:core str logic fn bin macros type ccore arr log])
   #?@(:clj
     [(:require [clojure.java.io :as io])
      (:import  java.util.Arrays)]))
@@ -64,3 +64,11 @@
           (count bytes))
         (aset! result (-> result count dec) (byte 0))
         result))))
+
+#?(:clj
+(defn ^bytes parse-bytes
+  [encoded-bytes]
+  (->> (re-seq #"%.." encoded-bytes)
+       (map (f*n subs 1))
+       (map #(.byteValue ^Integer (Integer/parseInt % 16)))
+       (byte-array))))

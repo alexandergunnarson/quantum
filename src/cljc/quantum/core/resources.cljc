@@ -2,7 +2,7 @@
             according to Stuart Sierra's Component framework."}
   quantum.core.resources
   (:require-quantum
-    [:core #_num fn #_str log err #_macros logic vec #_coll log core-async async tpred])
+    [:core #_num fn #_str log err macros logic vec #_coll log core-async async tpred])
   (:require [com.stuartsierra.component       :as component]
     #?(:clj [clojure.tools.namespace.repl
               :refer [refresh refresh-all set-refresh-dirs]]))
@@ -14,38 +14,36 @@
                    ;quantum.core.data.queue.LinkedBlockingQueue
                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
-; (defnt open?
-; #?(:clj
-;   ([^java.io.InputStream stream]
-;     (try (.available stream) true
-;       (catch IOException _ false)))
-;   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/closed? obj)))
-;   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw+ :not-implemented)))
-
-(declare open?)
+#?(:clj
+(defnt open?
+#?(:clj
+  ([^java.io.InputStream stream]
+    (try (.available stream) true
+      (catch IOException _ false)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/closed? obj)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw (->ex :not-implemented)))))
 
 (def closed? (fn-not open?))
 
-; (defnt close!
-;   #?@(:clj
-;  [([#{Writer Reader}     obj] (.close obj))
-;   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
-;   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (core-async/close! obj))
-;   ([                     obj]
-;     (when (nnil? obj) (throw+ :not-implemented))))
+#?(:clj
+(defnt close!
+  #?@(:clj
+ [([#{Writer Reader}     obj] (.close obj))
+  ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (core-async/close! obj))
+  ([                     obj]
+    (when (nnil? obj) (throw (->ex :not-implemented))))))
 
-(declare close!)
+#?(:clj
+(defnt closeable?
+  ([^java.io.Closeable x] true)
+  ([x] false)))
 
-; (defnt closeable?
-;   ([^java.io.Closeable x] true)
-;   ([x] false))
-
-; (defnt cleanup!
-;   #?@(:clj
-;  [([^org.openqa.selenium.WebDriver obj] (.quit  obj))
-;   ([^java.io.Closeable             obj] (.close obj))]))
-
-(declare cleanup!)
+#?(:clj
+(defnt cleanup!
+  #?@(:clj
+ [([^org.openqa.selenium.WebDriver obj] (.quit  obj))
+  ([^java.io.Closeable             obj] (.close obj))])))
 
 (defn with-cleanup [obj cleanup-seq]
   (swap! cleanup-seq conj #(close! obj))
@@ -58,7 +56,7 @@
      (try
        ~@body
        (finally
-         (doseq [resource# ~(->> bindings (apply array-map) keys)]
+         (doseq [resource# ~(->> bindings (apply array-map) keys (into []))]
            (cleanup! resource#)))))))
 
 ; ======= SYSTEM ========

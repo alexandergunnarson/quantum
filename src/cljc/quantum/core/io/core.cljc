@@ -1,6 +1,6 @@
 (ns quantum.core.io.core
   (:refer-clojure :exclude [get assoc! dissoc!])
-  (:require-quantum [:core logic fn core-async log err res vec])
+  (:require-quantum [:core logic fn core-async log err res vec str])
   (:require [com.stuartsierra.component  :as component]
             [datascript.core             :as mdb      ]
    #?(:clj  [taoensso.nippy              :as nippy    ])
@@ -9,7 +9,6 @@
               :refer [->name ->str]                   ]
             [quantum.db.datomic          :as db      
               #?@(:cljs [:refer [EphemeralDatabase]]) ]
-            [quantum.core.string         :as str      ]
             [quantum.core.system         :as sys      ]
             [clojure.walk :refer [postwalk]]
             [quantum.core.io.utils       :as u        ]
@@ -421,4 +420,9 @@
 ;     (.isDirectory file)
 ;     (catch AccessControlException access-control-exception
 ;       false)))
-0
+
+
+(defalias ->input-stream  io/input-stream )
+(defalias resource        io/resource     )
+(defalias ->output-stream io/output-stream)
+(defalias copy!           io/copy         )
