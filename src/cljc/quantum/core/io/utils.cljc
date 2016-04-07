@@ -69,6 +69,11 @@
        (partial str "0")
        str))
 
+#?(:clj
+(defnt ^String path->file-name
+  ([^file?   f] (.getName f))
+  ([^string? s] (coll/taker-until-workaround sys/separator nil s))))
+
 #_(defn next-file-copy-num [path-0]
   (let [extension (file-ext path-0)
         file-name (-> path-0 path->file-name)]

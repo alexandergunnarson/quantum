@@ -10,7 +10,8 @@
   (:require [quantum.core.resources    :as res    :refer [closed?   ]]
             [quantum.core.paths        :as paths]
             [quantum.core.thread.async :refer [close-req? message?]]
-            #?(:clj [clojure.java.io :as io]))
+            #?@(:clj [[clojure.java.io    :as io   ]
+                      [clojure.java.shell :as shell]]))
   #?(:clj (:import (java.lang ProcessBuilder StringBuffer)
                    (java.io InputStreamReader BufferedReader
                      OutputStreamWriter BufferedWriter
@@ -308,3 +309,5 @@
   [command args & [{:keys [env-vars dir pr-to-out?]
                     :as opts}]]
   (Process. nil command args env-vars dir pr-to-out?)))
+
+#?(:clj (defalias exec! shell/sh))

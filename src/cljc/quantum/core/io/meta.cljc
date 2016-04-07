@@ -1,6 +1,8 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
-  (:require-quantum [:lib])
+  (:require-quantum [:core fn logic str macros coll io res])
+  (:require [quantum.core.io.utils :as iou]
+            [quantum.core.process :as proc])
 #?(:clj (:import
           (org.apache.tika.parser   AutoDetectParser  )
           (org.apache.tika.sax      BodyContentHandler)
@@ -43,35 +45,39 @@
                        ret))))
            {}))))
 
-(defn- media-extract
+#?(:clj
+(defn file->meta:mediainfo
   "MediaInfo is a convenient unified display of the most relevant
    technical and tag data for video and audio files."
   {:url "https://mediaarea.net/en/MediaInfo"}
   [file]
-  (let [sb (StringBuffer. 400)]
-    (sh/run-process! ; TODO synchronously
-      (io/file-str
-        [:this-dir "fraternal-projects" "MediaInfo" "mediainfo"])
-      [(io/file-str file)]
-      {:write-streams? true :std-buffer sb})
-    (-> sb str parse-media-metadata)))
+  (-> (proc/exec! "mediainfo" file)
+      :out
+      parse-media-metadata)))
 
 (def media-exts #{:mp4})
 
-(defn extract
+#?(:clj
+(defn file->meta:tika [file-str]
+  (with-resources [stream (FileInputStream. file-str)]
+    (let [parser   (AutoDetectParser.)
+          handler  (BodyContentHandler.)
+          metadata (Metadata.)]
+      (.parse parser stream handler metadata)
+      (reduce (fn [ret k]
+        (assoc ret (keyword k) (into [] (.getValues metadata k))))
+        {}
+        (->> metadata .names (into [])))))))
+
+(defalias file->meta file->meta:tika)
+
+#_#?(:clj
+(defn file->meta
   "Uses org.apache.tika.parser.AutoDetectParser to parse metadata for a file."
   {:in '[[:resources "Music Library" "1.mp4"]]}
   [file]
-  (let [file-str (io/file-str file)]
-    (if (-> file-str io/extension str/keywordize (in? media-exts))
+  (let [file-str (iou/file-str file)]
+    (if (-> file-str iou/extension str/keywordize (in? media-exts))
         (media-extract file-str)
-        (with-resources [stream (FileInputStream. file-str)]
-          (let [parser   (AutoDetectParser.)
-                handler  (BodyContentHandler.)
-                metadata (Metadata.)]
-            (.parse parser stream handler metadata)
-            (reduce (fn [ret k]
-              (assoc ret k (into [] (.getValues metadata k))))
-              {}
-              (->> metadata .names (into []))))))))
+        (extract:tika file-str)))))
 
