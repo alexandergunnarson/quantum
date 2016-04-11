@@ -1,14 +1,12 @@
 (ns quantum.core.io.utils
-  (:require-quantum [:core logic fn core-async log err res vec cbase macros #_coll])
+  (:require-quantum [:core logic fn core-async log err res vec macros coll str])
   (:require [com.stuartsierra.component  :as component]
             [datascript.core             :as mdb      ]
             [quantum.core.convert        :as conv
               :refer [->name ->str]             ]
             [quantum.db.datomic          :as db      
               #?@(:cljs [:refer [EphemeralDatabase]]) ]
-            [quantum.core.string         :as str ]
             [quantum.core.system         :as sys ]
-            [clojure.walk :refer [postwalk]]
     #?(:clj [clojure.java.io             :as io  ]))
   #?(:clj
   (:import (quantum.db.datomic EphemeralDatabase)

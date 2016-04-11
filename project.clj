@@ -175,6 +175,7 @@
          :exclusions [org.clojure/core.cache]                     ]
        ; ==== MIDDLEWARE ====
        [ring/ring-anti-forgery                  "1.0.0"           ]
+       [bk/ring-gzip                            "0.1.1"           ]
      ; WEB
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis

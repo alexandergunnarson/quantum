@@ -4,7 +4,7 @@
     :todo ["Rename ns and move functions"]
     :attribution "Alex Gunnarson"}
   quantum.core.java
-  (:require-quantum [ns str])
+  (:require-quantum [:core str])
  #?@(:clj [(:require
              [clojure.data       :as cljdata]
              [clojure.reflect    :refer :all]
