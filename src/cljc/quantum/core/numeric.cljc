@@ -4,7 +4,7 @@
   quantum.core.numeric
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? min max format
-     #?@(:clj  [bigint biginteger bigdec numerator denominator]
+     #?@(:clj  [long bigint biginteger bigdec numerator denominator]
          :cljs [mod quot neg? pos?])])
   (:require-quantum [:core logic type fn macros err log pconvert])
   (:require  [quantum.core.convert.primitive :as prim :refer [->unboxed]]
@@ -57,6 +57,8 @@
      rem min max})
 
 (def override-fns? (atom false))
+
+
 
 ; INTEGER
 ; Long       | Long       : LongOps
@@ -256,16 +258,16 @@
    :cljs (defonce         ONE  int/ONE ))
 
 ; For units
-(defonce ^:const ten              (long   10    ))
-(defonce ^:const hundred          (long   100   ))
-(defonce ^:const thousand         (long   1000  ))
-(defonce ^:const ten-thousand     (long   10000 ))
-(defonce ^:const hundred-thousand (long   100000))
-(defonce ^:const million          (long   1E6   ))
-(defonce ^:const billion          (long   1E9   ))
-(defonce ^:const trillion         (long   1E12  ))
-(defonce ^:const quadrillion      (long   1E15  ))
-(defonce ^:const quintillion      (long   1E18  )) ; + exa | - atto
+(defonce ^:const ten              (#?(:clj long :cljs int)   10    ))
+(defonce ^:const hundred          (#?(:clj long :cljs int)   100   ))
+(defonce ^:const thousand         (#?(:clj long :cljs int)   1000  ))
+(defonce ^:const ten-thousand     (#?(:clj long :cljs int)   10000 ))
+(defonce ^:const hundred-thousand (#?(:clj long :cljs int)   100000))
+(defonce ^:const million          (#?(:clj long :cljs int)   1E6   ))
+(defonce ^:const billion          (#?(:clj long :cljs int)   1E9   ))
+(defonce ^:const trillion         (#?(:clj long :cljs int)   1E12  ))
+(defonce ^:const quadrillion      (#?(:clj long :cljs int)   1E15  ))
+(defonce ^:const quintillion      (#?(:clj long :cljs int)   1E18  )) ; + exa | - atto
 (defonce ^:const sextillion       (bigint 1E21  ))
 (defonce ^:const septillion       (bigint 1E24  ))
 (defonce ^:const octillion        (bigint 1E27  ))
