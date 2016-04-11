@@ -74,12 +74,11 @@
    Expects @schemas to be in block-format (see |db/block->schemas|)."
   ([schemas] (init-schemas! @conn* schemas))
   ([conn schemas]
-    (assert (nempty? schemas) #{schemas})
-          
-    (log/pr :debug "Initializing database with schemas...")
-    
-    (with (db/add-schemas! conn (db/block->schemas schemas {:conn conn}))
-      (log/pr :debug "Schema initialization complete."))))
+    (when schemas
+      (log/pr :debug "Initializing database with schemas...")
+      
+      (with (db/add-schemas! conn (db/block->schemas schemas {:conn conn}))
+        (log/pr :debug "Schema initialization complete.")))))
 
 
 ; RECORDS
