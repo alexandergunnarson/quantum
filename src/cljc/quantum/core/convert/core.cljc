@@ -122,7 +122,7 @@
 
 (defn- apply-unit [number unit]
   (if (string? unit)
-    (case (str/upper-case unit)
+    (case (#?(:clj str/upper-case :cljs .toUpperCase) unit)
       (case unit
         "M" (* number 1000000)
         "B" (* number 1000000000)))
