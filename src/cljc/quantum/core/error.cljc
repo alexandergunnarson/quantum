@@ -7,11 +7,18 @@
   (:require [clojure.string                :as str  ]
             [quantum.core.collections.base :as cbase]
             [quantum.core.error.try-catch  :as tc   ]
-    #?(:clj [clojure.stacktrace            :as trace]))
+            [clojure.string                :as str  ]
+    #?(:clj [clj-stacktrace.repl           :as trace]))
   #?(:cljs 
   (:require-macros
             [quantum.core.collections.base :as cbase]
             [quantum.core.log              :as log  ])))
+
+(defn generic-error [env]
+  (if-cljs env 'js/Error 'Throwable))
+
+(def error?  (partial instance? #?(:clj Throwable
+                                   :cljs js/Error)))
 
 (defrecord Err [type msg objs])
 
@@ -29,18 +36,16 @@
   ([type msg]      (ex-info msg  (->err type msg)))
   ([type msg objs] (ex-info msg  (->err type msg objs))))
 
-
 #?(:clj 
 (defn ex->map
-  "Transforms an exception into a map with the keys :name, :message, and :trace."
-  {:attribution "flatland.useful.exception"}
-  [e]
-  {:name    (-> e class .getName)
-   :message (-> e .getMessage)
-   :trace   (-> e trace/print-cause-trace with-out-str)}))
-
-(def error?  (partial instance? #?(:clj Throwable
-                                   :cljs js/Error)))
+  "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
+  [^Throwable e]
+  (let [m {:name    (-> e class .getName)
+           :message (-> e .getMessage)
+           :trace   (-> e clj-stacktrace.repl/pst with-out-str clojure.string/split-lines)}]
+    (if (instance? clojure.lang.ExceptionInfo e)
+        (assoc m :ex-data (ex-data e))
+        m))))
 
 ; NEED MORE MACRO EXPERIENCE TO DO THIS
 ; (defmacro catch-or
@@ -85,7 +90,7 @@
   {:usage '(->> 0 (/ 1) (with-catch (constantly -1)))}
   [handler try-val]
   `(try ~try-val
-     (catch Error e# (~handler e#)))))
+     (catch Throwable e# (~handler e#)))))
 
 #?(:clj
 (defmacro with-assert [expr pred err]
@@ -103,7 +108,9 @@
   `(when-not ~expr
      (throw
        (->ex ~(or type :assertion-error)
-             ~(str "Assertion not satisfied: " `~expr)
+             (str "Assertion not satisfied: " '~expr
+                   "\n"
+                   "Symbols: " (kmap ~@syms))
              (kmap ~@syms))))))
 
 #?(:clj
