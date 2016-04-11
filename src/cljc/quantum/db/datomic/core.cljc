@@ -394,10 +394,10 @@
 
 #?(:clj
 (defn entity->map
-  "'Unrolls' entities into maps.
+  "'Unrolls' entities into maps. 
    If a second argument is used, unrolling will be applied once.
    If it is not used, unrolling will be applied until there are no more entity maps."
-  {:todo ["Code pattern here" "Check for cycles"]}
+  {:todo ["Code pattern here" "Check for cycles" "This is the *SAME THING* as datomic.api/touch"]}
   ([m]
     (coll/prewalk
       (whenf*n (partial instance? datomic.query.EntityMap)
@@ -414,6 +414,12 @@
                         m-n)]
             (recur m-n+1 (inc n-n))))))))
 
+(defn get* ; TODO rename |get|
+  [attr v]
+  (-> (q [:find '?e :where ['?e attr v]])
+      ffirst
+      entity
+      touch))
 
 (defn rename [old new-]
   {:db/id    old
@@ -421,10 +427,13 @@
 
 (defn assoc
   "Transaction function which asserts the attributes (@kvs)
-   associated with entity id @id."
+   associated with entity id @id.
+   Results in a seq of transaction-elems, not a single elem."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [eid & kvs]
-  #?(:clj  [:fn/transform (concat `(:db/add ~eid) kvs)]
+  #?(:clj  (mapv (fn [[k v]]
+                   [:fn/transform (list :db/add eid k v)])
+                 (partition-all 2 kvs))
      :cljs (into [:db/add eid] kvs)))
 
 (defn dissoc
@@ -1256,6 +1265,23 @@
          entity-id)
        (coll/map+ #(first %1))
        (into #{}))))
+
+(defn ensure-conj-entities!
+  "Postwalks a transaction and makes sure each map has a :db/id.
+   Recursively replaces maps with tempids."
+  [txn part]
+  (let [to-conj (volatile! [])
+        txn-replaced
+          (coll/postwalk
+            (whenf*n map?
+              (whenf*n (fn-not :db/id)
+                (fn [m]
+                  (let [eid (tempid part)]
+                    (vswap! to-conj c/conj (c/assoc m :db/id eid))
+                    eid))))
+            txn)]
+    (coll/concatv @to-conj txn-replaced)))
+
 
 #?(:clj
 (defn transact-if!

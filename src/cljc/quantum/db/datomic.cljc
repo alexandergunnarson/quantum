@@ -1,6 +1,6 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
-  (:refer-clojure :exclude [assoc dissoc conj disj update])
+  (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge])
   (:require-quantum [:core err core-async pr log logic fn cbase tpred async])
   (:require
    #?(:clj  [clojure.core                     :as c        ]
@@ -32,12 +32,15 @@
 (defalias q              db/q        )
 (defalias transact!      db/transact!)
 (defalias entity         db/entity   )
+(defalias touch          db/touch    )
 
 (defalias conj           db/conj     )
 (defalias disj           db/disj     )
+(defalias disj!          db/disj!     )
 (defalias assoc          db/assoc    )
 (defalias dissoc         db/dissoc   )
 (defalias update         db/update   )
+(defalias merge          db/merge    )
 
 (defalias history->seq   db/history->seq  )
 (defalias block->schemas db/block->schemas)

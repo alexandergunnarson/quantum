@@ -468,6 +468,7 @@
    :media:date-recorded:mediainfo       [:string  :one]
    :media:itunes-cddb-1                 [:string  :one]
    :data:media:source-data:mediainfo    [:string  :one]
+   :data:audio:encoding-settings        [:string  :one]
    :media:genre                         nil
    :data:audio:encoded-date:mediainfo   [:string  :one]
    :data:audio:date-tagged:mediainfo    [:string  :one]
