@@ -14,6 +14,7 @@
      :format           str/keywordize
      :maximum-bit-rate bit-rate-parser
      :bit-rate         bit-rate-parser
+     :nominal-bit-rate bit-rate-parser
      :bit-rate-mode    str/keywordize
      :channels         (fn-> (str/remove "channels") str/trim str/val)}))
 
