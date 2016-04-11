@@ -2329,3 +2329,18 @@
                                  (conj! row (-> table-0 (get col-i) (get row-i))))]
                      (conj! table-n (persistent! row-f))))]
     (persistent! table-f)))
+
+(defn merge-keys-with 
+  {:tests '{(merge-keys-with {:a {:b 1 :c 2}
+                              :b {:c 3 :a 4}}
+              [:a :b]
+              (fn [a b] a))
+            {:a {:b 1 :c 2 :a 4}}}}
+  [m [k-0 & ks] f]
+  (reduce
+    (fn [ret k]
+      (-> m
+          (update k-0 #(merge-with f % (get m k)))
+          (dissoc k)))
+    m
+    ks))
