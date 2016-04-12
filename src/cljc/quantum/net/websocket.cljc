@@ -12,7 +12,7 @@
 (def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))
 
 ; Wrap for logging, catching, etc.:
-(defn     event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
+(defn event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
   (event-msg-handler ev-msg))
 
 (declare put!)
@@ -100,15 +100,15 @@
       (assert (fn? msg-handler))
       (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
     #?(:clj 
-      (assert (contains? #{:immutant #_:http-kit} server-type) #{server-type}))
+      (assert (contains? #{:aleph :immutant #_:http-kit} server-type) #{server-type}))
       (assert (keyword? packer))
 
       (let [{:keys [chsk ch-recv send-fn state] :as socket}
              (ws/make-channel-socket!
                #?(:clj (condp = server-type
                          ;:http-kit a-http-kit/sente-web-server-adapter
-                         :immutant a-imm/sente-web-server-adapter
-                         )
+                         :aleph    a-aleph/sente-web-server-adapter
+                         :immutant a-imm/sente-web-server-adapter)
                   :cljs uri)
                {:type   (or type :auto)
                 :packer packer
