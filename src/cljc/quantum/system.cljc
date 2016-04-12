@@ -27,15 +27,14 @@
                            :render         ui-render-fn
                            :root-id        "app"}})}
   [& [{:as config
-       {:keys [port ssl-port routes
-               key-password trust-password host] :as server} :server
+       {:keys [port ssl-port routes host]   :as server} :server
        {:keys [uri msg-handler]             :as connection} :connection
        {:keys [js-source-file]                            } :deployment
        {:keys [schemas ephemeral backend]   :as db        } :db
        {:keys [render root-id]                            } :frontend}]]
   (let [host*            (or "0.0.0.0" host)
         port*            (or port 80)
-        server-type      :immutant
+        server-type      :aleph ; :immutant
         js-source-file-f (or js-source-file "system")
         frontend-init    (-> config :frontend :init)]
   {:log
@@ -48,11 +47,7 @@
         :ssl-port                 ssl-port
         :routes                   routes
         :type                     server-type
-        :http2?                   true
-        :key-password             key-password
-        :key-store-path           "./resources/server.keystore"
-        :trust-password           trust-password
-        :trust-store-path         "./resources/server.keystore"}
+        :http2?                   true}
        server)])
    :connection
      (when connection
