@@ -35,8 +35,10 @@
 
       (let [opts (->> (merge
                         {:host           (or host     "localhost")
-                         :port           (or port     80)
-                         :ssl-port       (or ssl-port 443)
+                         :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
+                                             port 80)
+                         :ssl-port       (when-not (= type :aleph) ; SSL port ignored for Aleph
+                                           (or ssl-port 443))
                          :http2?         (or http2?   false)
                          :keystore       key-store-path
                          :truststore     trust-store-path}
