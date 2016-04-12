@@ -1,11 +1,11 @@
 (ns quantum.net.http
-  (:require-quantum [:core err logic fn log async casync])
+  (:require-quantum [:core err logic fn log async casync coll])
   (:require        [com.stuartsierra.component              :as component]
                    [taoensso.sente                          :as ws       ]
-           #?(:clj [immutant.web                            :as imm      ]
-                   [aleph.http                              :as server   ])
-           #_(:clj [taoensso.sente.server-adapters.immutant :as a-imm    ]
-                   #_[taoensso.sente.server-adapters.aleph    :as a-aleph  ])
+         #?@(:clj [[immutant.web                            :as imm      ]
+                   [aleph.http                              :as aleph    ]
+                   [taoensso.sente.server-adapters.immutant :as a-imm    ]
+                   [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
                    [clojure.string                          :as str      ]
                    [quantum.net.client.impl                 :as impl     ]
                    [quantum.net.core                        :as net      ]))
@@ -24,7 +24,6 @@
    raw-stream?
    bootstrap-transform
    pipeline-transform
-   ssl-context
    request-buffer-size
    shutdown-executor?
    rejected-handler
@@ -32,29 +31,31 @@
   component/Lifecycle
     (start [this]
       (err/assert (net/valid-port? port) #{port})
-      (err/assert (contains? #{:immutant :aleph #_:http-kit} type) #{type})
+      (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type})
 
-      (let [opts (merge
-                   {:host           (or host     "localhost")
-                    :port           (or port     80)
-                    :ssl-port       (or ssl-port 443)
-                    :http2?         (or http2?   false)
-                    :keystore       key-store-path
-                    :truststore     trust-store-path}
-                   (kmap
-                    key-password
-                    trust-password
-                    ssl-context
-                    socket-address
-                    executor
-                    raw-stream?
-                    bootstrap-transform
-                    pipeline-transform
-                    ssl-context
-                    request-buffer-size
-                    shutdown-executor?
-                    rejected-handler
-                    epoll?))
+      (let [opts (->> (merge
+                        {:host           (or host     "localhost")
+                         :port           (or port     80)
+                         :ssl-port       (or ssl-port 443)
+                         :http2?         (or http2?   false)
+                         :keystore       key-store-path
+                         :truststore     trust-store-path}
+                        (kmap
+                         key-password
+                         trust-password
+                         ssl-context
+                         socket-address
+                         executor
+                         raw-stream?
+                         bootstrap-transform
+                         pipeline-transform
+                         ssl-context
+                         request-buffer-size
+                         shutdown-executor?
+                         rejected-handler
+                         epoll?))
+                      (remove-vals+ nil?)
+                      (into {}))
             _ (log/ppr :debug "Launching server with options:" opts)
             server (condp =
                      :aleph    (aleph/start-server routes opts)
@@ -72,14 +73,16 @@
                      :http-kit (:local-port (meta server))
                      port)
           :stop-fn (condp = type
-                     :aleph    #(.close server)
+                     :aleph    #(do (when (nnil? server)
+                                      (.close server)))
                      :immutant #(do (when (nnil? server)
                                       (imm/stop server)))
                      :http-kit server))))
     (stop [this]
       (condp = type
-        :http-kit (stop-fn :timeout (or stop-timeout 100))
-        :immutant (stop-fn))
+        :aleph    (stop-fn)
+        :immutant (stop-fn)
+        :http-kit (stop-fn :timeout (or stop-timeout 100)))
       (assoc this
         :stop-fn nil))))
 
