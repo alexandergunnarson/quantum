@@ -2,8 +2,9 @@
   (:require-quantum [:core log fn logic err res async core-async cbase])
   (:require [com.stuartsierra.component              :as component]
             [taoensso.sente                          :as ws       ]
-    #?(:clj [immutant.web                            :as imm      ])
-    #?(:clj [taoensso.sente.server-adapters.immutant :as a-imm    ])
+  #?@(:clj [[immutant.web                            :as imm      ]
+            [taoensso.sente.server-adapters.immutant :as a-imm    ]
+            [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
             [quantum.core.core                
               :refer [lens deref*]                  ]))
 
