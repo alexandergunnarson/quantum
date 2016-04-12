@@ -2,7 +2,8 @@
   (:require-quantum [:core err logic fn log async casync])
   (:require        [com.stuartsierra.component              :as component]
                    [taoensso.sente                          :as ws       ]
-           #?(:clj [immutant.web                            :as imm      ])
+           #?(:clj [immutant.web                            :as imm      ]
+                   [aleph.http                              :as server   ])
            #?(:clj [taoensso.sente.server-adapters.immutant :as a-imm    ])
                    [clojure.string                          :as str      ]
                    [quantum.net.client.impl                 :as impl     ]
@@ -10,40 +11,70 @@
 
 #?(:clj
 (defrecord
-  ^{:doc "A web server. Currently only the :http-kit and :immutant server @types are supported."}
+  ^{:doc "A web server. Currently only the :aleph, :immutant, and :http-kit server @types are supported."}
   Server
   [routes server type host port ssl-port http2?
-   key-store-path key-password trust-store-path trust-password
-   stop-fn stop-timeout ran ssl-context]
+   key-store-path key-password
+   trust-store-path trust-password
+   stop-fn stop-timeout
+   ran ssl-context
+   socket-address
+   executor
+   raw-stream?
+   bootstrap-transform
+   pipeline-transform
+   ssl-context
+   request-buffer-size
+   shutdown-executor?
+   rejected-handler
+   epoll?]
   component/Lifecycle
     (start [this]
       (err/assert (net/valid-port? port) #{port})
-      (err/assert (contains? #{:immutant #_:http-kit} type) #{type})
+      (err/assert (contains? #{:immutant :aleph #_:http-kit} type) #{type})
 
-      (let [server (condp = type
-                        ;:http-kit (http-kit/run-server routes {:port (or port 0)})
-                        :immutant (imm/run routes
-                                    {:host           (or host     "localhost")
-                                     :port           (or port     80)
-                                     :ssl-port       (or ssl-port 443)
-                                     :http2?         (or http2?   false)
-                                     :keystore       key-store-path
-                                     :key-password   key-password
-                                     :truststore     trust-store-path
-                                     :trust-password trust-password
-                                     :ssl-context    ssl-context}))]
+      (let [opts (merge
+                   {:host           (or host     "localhost")
+                    :port           (or port     80)
+                    :ssl-port       (or ssl-port 443)
+                    :http2?         (or http2?   false)
+                    :keystore       key-store-path
+                    :truststore     trust-store-path}
+                   (kmap
+                    key-password
+                    trust-password
+                    ssl-context
+                    socket-address
+                    executor
+                    raw-stream?
+                    bootstrap-transform
+                    pipeline-transform
+                    ssl-context
+                    request-buffer-size
+                    shutdown-executor?
+                    rejected-handler
+                    epoll?))
+            _ (log/ppr :debug "Launching server with options:" opts)
+            server (condp =
+                     :aleph    (aleph/start-server routes opts)
+                     :immutant (imm/run            routes opts)
+                     ;:http-kit (http-kit/run-server routes {:port (or port 0)})
+                     )]
         (assoc this
           :ran     server
           :server  (condp = type
-                     :http-kit nil ; http-kit doesn't expose this
-                     :immutant (imm/server server))
+                     :aleph    nil ; aleph doesn't expose it
+                     :immutant (imm/server server)
+                     :http-kit nil) ; http-kit doesn't expose it
           :port    (condp = type
+                     :aleph    (aleph.netty/port server)
                      :http-kit (:local-port (meta server))
                      port)
           :stop-fn (condp = type
-                     :http-kit server
+                     :aleph    #(.close server)
                      :immutant #(do (when (nnil? server)
-                                      (imm/stop server)))))))
+                                      (imm/stop server)))
+                     :http-kit server))))
     (stop [this]
       (condp = type
         :http-kit (stop-fn :timeout (or stop-timeout 100))

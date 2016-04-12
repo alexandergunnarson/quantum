@@ -146,7 +146,7 @@
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 1/4/2016)
        [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 1/9/2016)
      ; ==== HTTP ====      
-       [com.taoensso/sente                      "1.7.0"           ] ; Latest (as of 1/9/2016)
+       [com.taoensso/sente                      "1.8.1"           ] ; Latest (as of 1/9/2016)
        [clj-http                                "1.1.2"
          :exclusions [riddley
                       cheshire
@@ -170,6 +170,7 @@
        [org.eclipse.jetty/jetty-server          "9.2.10.v20150310"]
        [org.immutant/web                        "2.1.2"             ; Latest (as of 9/1/2016)
          :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
+       [aleph                                   "0.4.1"           ]
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
