@@ -14,7 +14,7 @@
   Server
   [routes server type host port ssl-port http2?
    key-store-path key-password trust-store-path trust-password
-   stop-fn stop-timeout ran]
+   stop-fn stop-timeout ran ssl-context]
   component/Lifecycle
     (start [this]
       (err/assert (net/valid-port? port) #{port})
@@ -27,10 +27,11 @@
                                      :port           (or port     80)
                                      :ssl-port       (or ssl-port 443)
                                      :http2?         (or http2?   false)
-                                     :keystore       (or key-store-path   "resources/server.keystore")
+                                     :keystore       key-store-path
                                      :key-password   key-password
-                                     :truststore     (or trust-store-path "resources/server.truststore")
-                                     :trust-password trust-password}))]
+                                     :truststore     trust-store-path
+                                     :trust-password trust-password
+                                     :ssl-context    ssl-context}))]
         (assoc this
           :ran     server
           :server  (condp = type
