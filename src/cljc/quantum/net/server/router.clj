@@ -17,6 +17,7 @@
             [ring.util.response                       :as resp     ]
             [ring.middleware.anti-forgery             :as maf      ]
             [ring.middleware.params                   :as params   ]
+            [ring.middleware.gzip                     :as gzip     ]
             [ring.middleware.keyword-params           :as kw-params]
             [ring.middleware.session                  :as session  ]
             ; UTILS
@@ -114,6 +115,7 @@
       ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
       kw-params/wrap-keyword-params
       params/wrap-params
+      gzip/wrap-gzip
       session/wrap-session
       compojure.handler/site
       #_(friend/requires-scheme :https))) ; TODO make HTTPS work
