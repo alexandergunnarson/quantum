@@ -27,11 +27,8 @@
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
      [org.clojure/clojurescript                 "1.7.228"         ] ; Latest (as of 3/8/2015)
-     ; ==== PROBLEMATIC DEPS ====
-     [potemkin "0.4.1"]
      ; ==== CORE ====
        [proteus                                 "0.1.4"           ]
-       [com.taoensso/encore "2.31.3"]
        ; ==== NAMESPACE ====
        [quantum/ns                              "1.0"             ]
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
@@ -79,7 +76,7 @@
          [aysylu/loom                           "0.5.4"           ] ; Latest 1/26/2015
        ; ==== IO ====
         ;[commons-io/commons-io                 "2.4"             ] ; writing byte arrays to file and such
-         [com.taoensso/nippy                    "2.7.0-alpha1"
+         [com.taoensso/nippy                    "2.11.1"
            :exclusions [org.clojure/tools.reader
                         org.clojure/clojure
                         org.json/json]                            ] ; data serialization
@@ -170,7 +167,8 @@
        [org.eclipse.jetty/jetty-server          "9.2.10.v20150310"]
        [org.immutant/web                        "2.1.2"             ; Latest (as of 9/1/2016)
          :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
-       [aleph                                   "0.4.1"           ]
+       [aleph                                   "0.4.1"           
+         :exclusions [primitive-math manifold]                    ]
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
@@ -225,7 +223,8 @@
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js/compiled/quantum/ && lein figwheel dev
                     [lein-figwheel                   "0.5.0-2-Q"
-                      :exclusions [org.clojure/core.async
+                      :exclusions [org.clojure/clojure
+                                   org.clojure/core.async
                                    org.clojure/core.cache]]
                     [jonase/eastwood                 "0.2.1"]
                     ]}}
