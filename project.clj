@@ -32,6 +32,7 @@
        ; ==== NAMESPACE ====
        [quantum/ns                              "1.0"             ]
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
+       [com.taoensso/encore                     "2.49.0"          ] ; To not break things
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.374"         ]
          [servant                               "0.1.3"           ] ; Latest (as of 1/4/2016)
@@ -143,7 +144,8 @@
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 1/4/2016)
        [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 1/9/2016)
      ; ==== HTTP ====      
-       [com.taoensso/sente                      "1.8.1"           ] ; Latest (as of 1/9/2016)
+       [com.taoensso/sente                      "1.8.1"           
+         :exclusions [com.taoensso/encore]                        ] ; Latest (as of 1/9/2016)
        [clj-http                                "1.1.2"
          :exclusions [riddley
                       cheshire
