@@ -55,7 +55,7 @@
                          rejected-handler
                          epoll?))
                       (remove-vals+ nil?)
-                      (into {}))
+                      redm)
             _ (log/ppr :debug "Launching server with options:" opts)
             server (condp =
                      :aleph    (aleph/start-server routes opts)
