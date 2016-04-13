@@ -63,7 +63,7 @@
        ; ==== COLLECTIONS ====
          ; CORE
        ; ==== CONVERT ====
-         [byte-streams                          "0.2.0"           ]
+         [byte-streams                          "0.2.2"           ]
          [org.clojure/tools.reader              "1.0.0-alpha3"    ]
          #_[gloss                               "0.2.5"           ] 
        ; ==== CRYPTOGRAPHY ====
