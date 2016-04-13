@@ -125,7 +125,7 @@
            [:connection
             (component/using 
               (conn/map->ChannelSocket (:connection config-0))
-              [:log])]))))))
+              [:log :server])]))))))
 
 (defn gen-main
   "Creates a standard |-main| function.

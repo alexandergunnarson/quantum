@@ -176,4 +176,4 @@
 #?(:clj (defalias try+   tc/try+  ))
 #?(:clj (defalias throw+ tc/throw+))
 
-#?(:clj (defmacro warn! [e] (log/ppr :warn (ex->map e))))
+#?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
