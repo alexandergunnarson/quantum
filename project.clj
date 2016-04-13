@@ -170,7 +170,7 @@
        [org.immutant/web                        "2.1.2"             ; Latest (as of 9/1/2016)
          :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
        [aleph                                   "0.4.1"           
-         :exclusions [primitive-math manifold]                    ]
+         :exclusions [primitive-math]                             ]
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
