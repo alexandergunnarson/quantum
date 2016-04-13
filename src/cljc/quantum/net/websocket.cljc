@@ -95,36 +95,44 @@
    connected-uids]
   component/Lifecycle
     (start [this]
-      (log/pr :debug "Starting Channel Socket with:" this)
-      (assert (string? uri) #{uri})
-      (assert (fn? msg-handler))
-      (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
-    #?(:clj 
-      (assert (contains? #{:aleph :immutant #_:http-kit} server-type) #{server-type}))
-      (assert (keyword? packer))
+      (let [stop-fn-f (atom (fn []))]
+        (try
+          (log/pr :debug "Starting Channel Socket with:" this)
+          (assert (string? uri) #{uri})
+          (assert (fn? msg-handler))
+          (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
+        #?(:clj 
+          (assert (contains? #{:aleph :immutant #_:http-kit} server-type) #{server-type}))
+          (assert (keyword? packer))
 
-      (let [{:keys [chsk ch-recv send-fn state] :as socket}
-             (ws/make-channel-socket!
-               #?(:clj (condp = server-type
-                         ;:http-kit a-http-kit/sente-web-server-adapter
-                         :aleph    a-aleph/sente-web-server-adapter
-                         :immutant a-imm/sente-web-server-adapter)
-                  :cljs uri)
-               {:type   (or type :auto)
-                :packer packer
-                #?@(:cljs
-                [:host host])})
-            stop-fn-f (ws/start-chsk-router! ch-recv msg-handler)]
-        (assoc this
-          :chan                        chsk
-          :chan-recv                   ch-recv
-          :send-fn                     send-fn
-          :chan-state                  state
-          :stop-fn                     stop-fn-f
-          :ajax-post-fn                (:ajax-post-fn                socket)
-          :ajax-get-or-ws-handshake-fn (:ajax-get-or-ws-handshake-fn socket)
-          :connected-uids              (:connected-uids              socket))))
+          (let [{:keys [chsk ch-recv send-fn state] :as socket}
+                 (ws/make-channel-socket!
+                   #?(:clj (condp = server-type
+                             ;:http-kit a-http-kit/sente-web-server-adapter
+                             :aleph    a-aleph/sente-web-server-adapter
+                             :immutant a-imm/sente-web-server-adapter)
+                      :cljs uri)
+                   {:type   (or type :auto)
+                    :packer packer
+                    #?@(:cljs
+                    [:host host])})
+                _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv msg-handler))]
+            (assoc this
+              :chan                        chsk
+              :chan-recv                   ch-recv
+              :send-fn                     send-fn
+              :chan-state                  state
+              :stop-fn                     @stop-fn-f
+              :ajax-post-fn                (:ajax-post-fn                socket)
+              :ajax-get-or-ws-handshake-fn (:ajax-get-or-ws-handshake-fn socket)
+              :connected-uids              (:connected-uids              socket)))
+          (catch Throwable e
+            (err/warn! e)
+            (@stop-fn-f)
+            (throw e)))))
     (stop [this]
-      (when stop-fn (stop-fn))
+      (try (when stop-fn (stop-fn))
+        (catch Throwable e
+          (err/warn! e)))
       ; TODO should assoc other vals as nil?
       this))

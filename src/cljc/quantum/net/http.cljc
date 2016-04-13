@@ -30,61 +30,72 @@
    epoll?]
   component/Lifecycle
     (start [this]
-      (err/assert (net/valid-port? port) #{port})
-      (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type})
+      (let [stop-fn-f (atom (fn []))]
+        (try
+          (err/assert (net/valid-port? port) #{port})
+          (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type})
 
-      (let [opts (->> (merge
-                        {:host           (or host     "localhost")
-                         :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
-                                             port 80)
-                         :ssl-port       (when-not (= type :aleph) ; SSL port ignored for Aleph
-                                           (or ssl-port 443))
-                         :http2?         (or http2?   false)
-                         :keystore       key-store-path
-                         :truststore     trust-store-path}
-                        (kmap
-                         key-password
-                         trust-password
-                         ssl-context
-                         socket-address
-                         executor
-                         raw-stream?
-                         bootstrap-transform
-                         pipeline-transform
-                         ssl-context
-                         request-buffer-size
-                         shutdown-executor?
-                         rejected-handler
-                         epoll?))
-                      (remove-vals+ nil?)
-                      redm)
-            _ (log/ppr :debug "Launching server with options:" opts)
-            server (condp =
-                     :aleph    (aleph/start-server routes opts)
-                     :immutant (imm/run            routes opts)
-                     ;:http-kit (http-kit/run-server routes {:port (or port 0)})
-                     )]
-        (assoc this
-          :ran     server
-          :server  (condp = type
-                     :aleph    nil ; aleph doesn't expose it
-                     :immutant (imm/server server)
-                     :http-kit nil) ; http-kit doesn't expose it
-          :port    (condp = type
-                     :aleph    (aleph.netty/port server)
-                     :http-kit (:local-port (meta server))
-                     port)
-          :stop-fn (condp = type
-                     :aleph    #(do (when (nnil? server)
-                                      (.close server)))
-                     :immutant #(do (when (nnil? server)
-                                      (imm/stop server)))
-                     :http-kit server))))
+          (let [opts (->> (merge
+                            {:host           (or host     "localhost")
+                             :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
+                                                 port 80)
+                             :ssl-port       (when-not (= type :aleph) ; SSL port ignored for Aleph
+                                               (or ssl-port 443))
+                             :http2?         (or http2?   false)
+                             :keystore       key-store-path
+                             :truststore     trust-store-path}
+                            (kmap
+                             key-password
+                             trust-password
+                             ssl-context
+                             socket-address
+                             executor
+                             raw-stream?
+                             bootstrap-transform
+                             pipeline-transform
+                             ssl-context
+                             request-buffer-size
+                             shutdown-executor?
+                             rejected-handler
+                             epoll?))
+                          (remove-vals+ nil?)
+                          redm)
+                _ (log/ppr :debug "Launching server with options:" opts)
+                server (condp =
+                         :aleph    (aleph/start-server routes opts)
+                         :immutant (imm/run            routes opts)
+                         ;:http-kit (http-kit/run-server routes {:port (or port 0)})
+                         )
+                _ (reset! stop-fn-f
+                    (condp = type
+                      :aleph    #(do (when (nnil? server)
+                                       (.close server)))
+                      :immutant #(do (when (nnil? server)
+                                       (imm/stop server)))
+                      :http-kit server))]
+            (assoc this
+              :ran     server
+              :server  (condp = type
+                         :aleph    nil ; aleph doesn't expose it
+                         :immutant (imm/server server)
+                         :http-kit nil) ; http-kit doesn't expose it
+              :port    (condp = type
+                         :aleph    (aleph.netty/port server)
+                         :http-kit (:local-port (meta server))
+                         port)
+              :stop-fn @stop-fn-f))
+        (catch Throwable e
+          (err/warn! e)
+          (@stop-fn-f)
+          (throw e)))))
     (stop [this]
-      (condp = type
-        :aleph    (stop-fn)
-        :immutant (stop-fn)
-        :http-kit (stop-fn :timeout (or stop-timeout 100)))
+      (try
+        (condp = type
+          :aleph    (stop-fn)
+          :immutant (stop-fn)
+          :http-kit (stop-fn :timeout (or stop-timeout 100)))
+        (catch Throwable e
+          (err/warn! e)))
       (assoc this
         :stop-fn nil))))
 
