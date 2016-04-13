@@ -57,7 +57,7 @@
   [#?(:clj uid) [msg-id msg] callback & [timeout]]
   (let [f @send-msg!]
     (assert (nnil? f))
-    (@send-msg! #?(:clj uid) [msg-id msg] (or timeout 200) callback)))
+    (@send-msg! #?(:clj uid) [msg-id msg] (or timeout 200) (or callback (fn [_]))))) ; to ensure no auto-close
 
 (defn try-put!
   "Try to send messsage @?times times with intervals of @?sleep
