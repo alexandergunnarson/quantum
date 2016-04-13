@@ -61,7 +61,7 @@
                           (remove-vals+ nil?)
                           redm)
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
-                server (condp =
+                server (condp = type
                          :aleph    (aleph/start-server routes opts)
                          :immutant (imm/run            routes opts)
                          ;:http-kit (http-kit/run-server routes {:port (or port 0)})
@@ -81,7 +81,7 @@
                          :immutant (imm/server server)
                          :http-kit nil) ; http-kit doesn't expose it
               :port    (condp = type
-                         :aleph    (aleph.netty/port server)
+                         :aleph    port ; (aleph.netty/port server)
                          :http-kit (:local-port (meta server))
                          port)
               :stop-fn @stop-fn-f))
