@@ -151,7 +151,8 @@
                       cheshire
                       org.json/json
                       com.fasterxml.jackson.core/jackson-core
-                      commons-codec]                              ]
+                      commons-codec
+                      potemkin]                                   ]
        ;[cljs-http                              "0.1.27"          ]
        [http-kit                                "2.1.18"
          :exclusions [org.clojure/clojure]                        ] 
