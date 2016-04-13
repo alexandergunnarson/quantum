@@ -60,7 +60,7 @@
                              epoll?))
                           (remove-vals+ nil?)
                           redm)
-                _ (log/ppr :debug "Launching server with options:" opts)
+                _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
                 server (condp =
                          :aleph    (aleph/start-server routes opts)
                          :immutant (imm/run            routes opts)
@@ -73,6 +73,7 @@
                       :immutant #(do (when (nnil? server)
                                        (imm/stop server)))
                       :http-kit server))]
+            (log/pr :debug "Server launched.")
             (assoc this
               :ran     server
               :server  (condp = type
