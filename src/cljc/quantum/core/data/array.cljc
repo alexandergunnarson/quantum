@@ -313,6 +313,16 @@
   (.append *out* \newline)
   nil)
 
+#?(:cljs
+(defnt ->uint8-array
+  ([^js/Uint8Array x] x)
+  ([#{js/Int8Array array?} x] (js/Uint8Array. x))))
+
+#?(:cljs
+(defnt ->int8-array
+  ([^js/Int8Array x] x)
+  ([#{js/Uint8Array array?} x] (js/Int8Array. x))))
+
 
 ; TODO Compress
 ; Compresses a PersistentVector into a typed array to fit as closely together as possible

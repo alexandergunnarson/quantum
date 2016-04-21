@@ -338,7 +338,7 @@
 
 (defnt remove*
   ([^string? to-remove str-0]
-    (.replaceAll ^String str-0 ^Pattern (conv-regex-specials to-remove) ""))
+    (.replaceAll ^String str-0 (conv-regex-specials to-remove) ""))
   ([^regex?  to-remove str-0]
     (replace str-0 to-remove "")))
 

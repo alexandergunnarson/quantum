@@ -6,9 +6,9 @@
   quantum.security.cryptography
   (:refer-clojure :exclude [hash])
   (:require-quantum
-    [:core #_bytes set fn logic err rand cbase
-     ;str type num macros log convert
-     ;coll arr bin
+    [:core #_bytes set arr fn logic err rand cbase macros core-async hex
+     ;str type num log convert
+     ;coll  bin
      ])
   (:require 
       #?(:clj [byte-transforms      :as bt  ])
@@ -26,7 +26,7 @@
     [javax.crypto.spec SecretKeySpec PBEKeySpec IvParameterSpec]
     [org.apache.commons.codec.binary Base32 Base64] ; Unnecessary
     org.mindrot.jbcrypt.BCrypt
-    com.lambdaworks.crypto.SCryptUtil
+    [com.lambdaworks.crypto SCryptUtil SCrypt]
     org.bouncycastle.crypto.engines.ThreefishEngine
     org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
     [org.bouncycastle.crypto BlockCipher BufferedBlockCipher])))
@@ -68,13 +68,15 @@
 ; (:clj (defalias encode bt/encode))
 ; (:clj (defalias decode bt/decode))
 
-#_(defnt ^"[B" encode32
+#?(:clj
+(defnt ^"[B" encode32
   ([^integer? x]
     (throw (->ex :not-implemented "Encode32 not implemented for |integer|" x)))
   ([^bytes? x] (.encode (Base32.) x))
-  ([x] (encode32 (arr/->bytes-protocol x))))
+  ([x] (encode32 (arr/->bytes-protocol x)))))
 
-#_(defnt ^"[B" encode64
+#?(:clj
+(defnt ^"[B" encode64
   {:todo ["Add support for java.util.Base64 MIME and URL encoders"]
    :performance "java.util.Base64 Found to be the fastest impl. according to
                  http://java-performance.info/base64-encoding-and-decoding-performance/"}
@@ -82,16 +84,22 @@
     (Base64/encodeInteger (num/->big-integer x)))
   ([^bytes? x] (.encode (java.util.Base64/getEncoder) x))
   ; TODO make so Object gets protocol if reflection
-  ([x] (encode64 (arr/->bytes-protocol x))))
+  ([x] (encode64 (arr/->bytes-protocol x)))))
 
-#_(defn encode [k obj]
+(defnt ^String encode64-string
+  #?(:cljs ([#{js/Int8Array js/Uint8Array array?} x]
+              (-> x arr/->uint8-array js/forge.util.binary.base64.encode))) ; Google Closure's implementation didn't work
+  #?(:clj  ([x]
+             (let [encoded (encode64 x)]
+               (String. ^"[B" encoded StandardCharsets/ISO_8859_1)))))
+
+(defn encode [k obj]
   (condp = k
-    :base32 (encode32 obj)
-    :base64 (encode64 obj)
-    :base64-string
-      (let [^"[B" encoded (encode64 obj)]
-        (String. encoded StandardCharsets/ISO_8859_1))
-    (throw (->ex nil "Unrecognized codec" k))))
+    #?@(:clj
+      [:base32        (encode32 obj)
+       :base64        (encode64 obj)])
+       :base64-string (encode64-string obj)
+       (throw (->ex nil "Unrecognized codec" k))))
 
 ; __________________________________________
 ; =========== HASH / MSG DIGEST ============
@@ -129,7 +137,7 @@
       :scrypt}
     (into #{} (bt/available-hash-functions)))))
 
-#_#?(:clj
+#?(:clj
 (defn sha-hmac ^"[B" [instance-str message secret]
   (throw-unless (and message secret)
     (Err. nil "Neither message nor secret can be nil" (kmap message secret)))
@@ -140,7 +148,7 @@
 
 #?(:clj (def sha-hmac identity))
 
-#_#?(:clj
+#?(:clj
 (defn pbkdf2
  "Recommended by NIST:
     http://csrc.nist.gov/publications/nistpubs/800-132/nist-sp800-132.pdf
@@ -167,7 +175,7 @@
            (->> (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA1")
                 (<- .generateSecret k)
                 (.getEncoded))
-         salt (->str salt)
+         salt (conv/->str salt)
          ;(->> iterations (encode :base64) ->str)
          ]
      (kmap hashed salt iterations)))))
@@ -181,18 +189,56 @@
   ([raw & [work-factor]]
     (BCrypt/hashpw raw (BCrypt/gensalt (or work-factor 11))))))
 
-#?(:clj
-(defn ^String scrypt
+(defn scrypt ; returns String in CLJ; returns promise in CLJS
   "OWASP: Use when resisting any and all hardware accelerated attacks is necessary but support isn't."
-  [^String s & [cpu-cost ram-cost parallelism]]
-  (SCryptUtil/scrypt s
-    (num/exp 2 (or cpu-cost 15)) ; Milliseconds?
-    (or ram-cost    8)    ; Gigabytes?
-    (or parallelism 1)))) ; Cores
+  [^String s & [{:keys [cpu-cost ram-cost parallelism dk-length salt]}]]
+  (let [log2-cpu-cost      (or cpu-cost 15)  ; 1 to 31
+        exp-cpu-cost       (num/exp 2 log2-cpu-cost)
+        ram-cost           (or ram-cost 8) ; block size
+        parallelism        (or parallelism 1) ; Cores
+        salt               (or salt (rand/rand-bytes true 16)) ; bytes
+        derived-key-length (or dk-length 32)
+        #?@(:cljs [result (core-async/promise-chan)])
+        derived-to-string
+          (fn [derived]
+            (let [params (hex/->hex-string (bit-or #_| (bit-shift-left #_<< log2-cpu-cost 16)
+                                             (bit-shift-left #_<< ram-cost 8)
+                                             parallelism))]
+              (str "$s0$" params "$" (encode :base64-string salt)
+                                 "$" (encode :base64-string derived))))
+        derived 
+          (do #?(:clj  (SCrypt/scrypt ^"[B" (.getBytes s "UTF-8")
+                                      ^"[B" salt exp-cpu-cost  ram-cost parallelism derived-key-length)
+                 :cljs (js/ScryptAsync      s
+                                            salt log2-cpu-cost ram-cost             derived-key-length
+                                            (fn [v] (->> v
+                                                         derived-to-string
+                                                         (core-async/put! result))))))] 
+        #?(:clj  (derived-to-string derived)
+           :cljs result)))
+
+#_(secure=
+  (scrypt "password" {:cpu-cost 15 :ram-cost 8 :parallelism 1 :dk-length 32 :salt salt**})
+  (scrypt "password" {:cpu-cost 15 :ram-cost 8 :parallelism 1 :dk-length 32 :salt salt**}))
+
+#_(defn check-pw [user-id pass'] ; "user-id$public-site-salt$hashed-pass-from-client"
+  (if-let [pass''-0 (db/q [:find ['?pass'' ...]
+                        :where ['?e :user/id   user-id]
+                               ['?e :user/pass '?pass'']])]
+    (let [salt''      (->salt pass''-0)
+          _           (assert (string? salt''))
+          pass''-test (scrypt pass' {:salt salt''})]
+      ; |public-site-salt| is a publicly known string (embedded into client app),
+      ; which is supposedly unique for the site (it is added as an additional precaution to
+      ; avoid pre-computation per-user attacks to work across different sites).
+      (secure= pass''-0 pass''-test))
+    false))
+
+; http://ithare.com/client-plus-server-password-hashing-as-a-potential-way-to-improve-security-against-brute-force-attacks-without-overloading-server/
 
 #?(:clj
 (defn hash
-  ([obj] (hash :murmur64 obj))
+  ([obj] (hash :murmur64 obj)) ; murmur64 is Clojure's implementation
   ([algorithm obj & [opts]]
     (condp = algorithm
       :clojure      (core/hash obj)
@@ -202,16 +248,17 @@
                           (:iterations  opts)
                           (:key-length  opts))
       :bcrypt (bcrypt obj (:work-factor opts))
-      :scrypt (scrypt obj (:cpu-cost    opts)
-                          (:ram-cost    opts)
-                          (:parallelism opts))
+      :scrypt (scrypt obj opts)
       (bt/hash obj algorithm opts)))))
 
 ; ===== HASH COMPARE =====
 
 (defn secure=
   "Test whether two sequences of characters or bytes are equal in a way that
-   protects against timing attacks. Note that this does not prevent an attacker
+   protects against timing attacks.
+   (It compares values in a way that takes the same amount of time no matter
+   how much of the values match.)
+   Note that this does not prevent an attacker
    from discovering the *length* of the data being compared."
   {:source "weavejester/crypto.equality"}
   [a b]
@@ -320,7 +367,7 @@
                           salt-f  (or #?(:clj  salt
                                          :cljs (whenp salt base64->?
                                                  conv/base64->forge-bytes))
-                                      #?(:clj  (rand/rand-bytes true 128) ; TODO make same x-platform
+                                      #?(:clj  (rand/rand-bytes true 128)
                                          :cljs (js/forge.random.getBytesSync 128)))
                           keyspec (#?(:clj  PBEKeySpec.
                                       :cljs js/forge.pkcs5.pbkdf2)

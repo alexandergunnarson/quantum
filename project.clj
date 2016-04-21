@@ -1,4 +1,4 @@
-(defproject quantum/core "0.2.5"
+(defproject quantum/core "0.2.5-4-21-2016.1"
   :version-history
     {"0.2.4.6" #{:stable :clj :cljs}
      "0.2.4.7" #{:abandoned}
@@ -42,7 +42,7 @@
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
          [it.unimi.dsi/fastutil                 "7.0.7"           ]
-         [seqspert                              "1.7.0-alpha6.1.0"]
+         [quantum/seqspert                      "1.7.0-alpha6.1.0"]
          [fast-zip                              "0.6.1"           ]
          ; VECTOR
          [org.clojure/core.rrb-vector           "0.0.11"          ]
@@ -118,17 +118,18 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.1.7"           ]
          ; REPL
-         [figwheel                              "0.5.0-2-Q"       ]
-         #_[binaryage/devtools                    "0.5.2"           ]
+         [quantum/figwheel                      "0.5.0-2.1"       ]
+         #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.1"  ]
      ; ==== DB ====
        ; DATOMIC
-       [com.datomic/datomic-pro                 "0.9.5206"
+       [quantum/datomic-pro                     "0.9.5206"
          :exclusions [joda-time]                                  ]
        [datascript                              "0.13.3"          ] ; Latest (as of 1/2/2016)
        [datascript-transit                      "0.2.0"           ] ; Latest (as of 1/5/2016)
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 1/2/2016)
        [posh                                    "0.3.4.1"         ] ; Latest (as of 3/10/2016)
+       [quantum/datsync                         "0.0.1-4-11-2016" ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ] ; Latest (as of 3/4/2016)
      ; ==== UI ====
@@ -154,6 +155,7 @@
                       commons-codec
                       potemkin]                                   ]
        ;[cljs-http                              "0.1.27"          ]
+       [less-awful-ssl                          "1.0.1"           ]
        [http-kit                                "2.1.18"
          :exclusions [org.clojure/clojure]                        ] 
        [org.apache.httpcomponents/httpcore      "4.4.1"           ]
@@ -176,7 +178,7 @@
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
        ; ==== MIDDLEWARE ====
-       [ring/ring-anti-forgery                  "1.0.0"           ]
+       [ring/ring-defaults                      "0.2.0"           ]
        [bk/ring-gzip                            "0.1.1"           ]
      ; WEB
      [com.github.detro/phantomjsdriver          "1.2.0"
@@ -220,12 +222,12 @@
           :resource-paths ["dev-resources"]
           :dependencies   []
           :plugins [;[codox "0.8.8"]
-                    [lein-cljsbuild                  "1.1.2-Q-SNAPSHOT"]
+                    [quantum/lein-cljsbuild          "1.1.2-Q-1"]
                     ;[com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
 
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js/compiled/quantum/ && lein figwheel dev
-                    [lein-figwheel                   "0.5.0-2-Q"
+                    [quantum/lein-figwheel           "0.5.0-2.1"
                       :exclusions [org.clojure/clojure
                                    org.clojure/core.async
                                    org.clojure/core.cache]]

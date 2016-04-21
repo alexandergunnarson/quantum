@@ -217,7 +217,8 @@
                  :refers          {:clj  {list        #{dlist}                                }}
                  :imports         (quantum.core.data.finger_tree.CountedDoubleList)           
                }
-    hex         {:aliases         {:cljc {hex         quantum.core.data.hex                   }}}
+    hex         {:aliases         {:cljc {hex         quantum.core.data.hex                   }}
+                 :macro-aliases   {:cljs {hex         quantum.core.data.hex                   }}}
     json        {:aliases         {:cljc {json        quantum.core.data.complex.json          }}}
     map         {:core-exclusions {:cljc #{merge sorted-map sorted-map-by}}
                  :aliases         {:cljc {map         quantum.core.data.map                   }}
