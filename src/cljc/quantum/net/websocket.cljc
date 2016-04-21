@@ -106,7 +106,7 @@
           (assert (keyword? packer))
 
           (let [{:keys [chsk ch-recv send-fn state] :as socket}
-                 (ws/make-channel-socket!
+                 (ws/make-channel-socket-server!
                    #?(:clj (condp = server-type
                              ;:http-kit a-http-kit/sente-web-server-adapter
                              :aleph    a-aleph/sente-web-server-adapter
@@ -126,13 +126,13 @@
               :ajax-post-fn                (:ajax-post-fn                socket)
               :ajax-get-or-ws-handshake-fn (:ajax-get-or-ws-handshake-fn socket)
               :connected-uids              (:connected-uids              socket)))
-          (catch Throwable e
+          (catch #?(:clj Throwable :cljs js/Error) e
             (err/warn! e)
             (@stop-fn-f)
             (throw e)))))
     (stop [this]
       (try (when stop-fn (stop-fn))
-        (catch Throwable e
+        (catch #?(:clj Throwable :cljs js/Error) e
           (err/warn! e)))
       ; TODO should assoc other vals as nil?
       this))

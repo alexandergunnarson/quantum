@@ -5,7 +5,7 @@
   quantum.core.nondeterministic
   (:refer-clojure :exclude [bytes])
   (:require-quantum
-    [:core err fn logic log async macros #_convert
+    [:core err fn logic log arr async macros #_convert
      ;coll macros thread  
      ])
   (:require [quantum.core.lexical.core :as lex  ]
@@ -134,8 +134,7 @@
     (when (empty? not-matched)
       (lex/first-if-single (generator)))))
 
-(defn rand-bytes
-  #?(:cljs {:todo ["Comes out in Forge bytes string, but should be in UInt8Array"]})
+(defn rand-bytes ; [B for CLJ, Uint8Array for CLJS
   ([size] (rand-bytes false size))
   ([secure? size]
     #?(:clj  (let [^Random generator (get-generator secure?)
@@ -143,7 +142,9 @@
                    _    (.nextBytes generator bytes-f)]
                bytes-f)
        :cljs (if secure?
-                 (js/forge.random.getBytesSync size)
+                 (-> (js/forge.random.getBytesSync size)
+                     js/forge.util.binary.raw.decode
+                     arr/->int8-array)
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
 ; ; TODO DEPS ONLY
