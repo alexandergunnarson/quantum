@@ -1,5 +1,5 @@
 (ns quantum.net.server.router
-  (:require-quantum [:core logic fn err debug log res])
+  (:require-quantum [:core logic fn err debug log res str coll])
   (:require ; AUTHENTICATION
             [cemerick.friend                          :as friend   ]
             [cemerick.friend.workflows                :as workflows]
@@ -15,15 +15,33 @@
             ; MIDDLEWARE
             [ring.util.anti-forgery                   :as af       ]
             [ring.util.response                       :as resp     ]
-            [ring.middleware.anti-forgery             :as maf      ]
-            [ring.middleware.params                   :as params   ]
-            [ring.middleware.gzip                     :as gzip     ]
-            [ring.middleware.keyword-params           :as kw-params]
-            [ring.middleware.session                  :as session  ]
+            [ring.middleware.x-headers :as x]
+            [ring.middleware.gzip               :refer [wrap-gzip]                 ]
+            [ring.middleware.session            :refer [wrap-session]              ]
+            [ring.middleware.flash              :refer [wrap-flash]                ]
+            [ring.middleware.keyword-params     :refer [wrap-keyword-params]       ]
+            [ring.middleware.nested-params      :refer [wrap-nested-params]        ]
+            [ring.middleware.anti-forgery       :refer [wrap-anti-forgery]         ]
+            [ring.middleware.multipart-params   :refer [wrap-multipart-params]     ]
+            [ring.middleware.params             :refer [wrap-params]               ]
+            [ring.middleware.cookies            :refer [wrap-cookies]              ]
+            [ring.middleware.resource           :refer [wrap-resource]             ]
+            [ring.middleware.file               :refer [wrap-file]                 ]
+            [ring.middleware.not-modified       :refer [wrap-not-modified]         ]
+            [ring.middleware.content-type       :refer [wrap-content-type]         ]
+            [ring.middleware.default-charset    :refer [wrap-default-charset]      ]
+            [ring.middleware.absolute-redirects :refer [wrap-absolute-redirects]   ]
+            [ring.middleware.proxy-headers      :refer [wrap-forwarded-remote-addr]]
+            [ring.middleware.ssl                :refer [wrap-ssl-redirect
+                                                        wrap-hsts
+                                                        wrap-forwarded-scheme  ]]
+            [ring.middleware.defaults :as defaults]
             ; UTILS
             [com.stuartsierra.component               :as component]
-            [clojure.string                           :as str      ]
             [clj-uuid                                 :as uuid     ]))
+
+
+
 
 ; SECURITY MEASURES TAKEN CARE OF
 ; CSRF : ring.middleware.anti-forgery
@@ -83,8 +101,31 @@
 
 #_(bidi.ring/make-handler (create-api))
 
+(def server-root (str/->path (System/getProperty "user.dir") "/dev-resources/public"))
+(def main-page (slurp (str/->path server-root "index.html")))
+
+(defn resources+
+  "A route for serving resources on the classpath. Accepts the following
+  keys:
+    :root       - the root prefix path of the resources, defaults to 'public'
+    :mime-types - an optional map of file extensions to mime types"
+  [path & [options]]
+  (GET (@#'compojure.route/add-wildcard path) {{resource-path :*} :route-params :as req}
+    (let [root (:root options "public")
+          body (if (contains? #{"js/compiled/system.js"} resource-path)
+                   ""
+                   (->> resource-path
+                        (<- str/remove "..") ; to prevent weird things
+                        (str/->path root)
+                        (java.io.FileInputStream.)))]
+      {:body body}
+      #_(add-mime-type resource-path options))))
+
 (defroutes app-routes
-  (GET "/"        req (friend/authenticated (#'token-index req)))
+  (GET "/"        req (fn [req]
+                        (when (-> req :query-params :user (= "alex"))
+                          {:content-type "text/html"
+                           :body main-page})) #_(friend/authenticated (#'token-index req)))
   (GET "/admin"   req (friend/authorize #{::admin}
                         #_any-code-requiring-admin-authorization
                         "Admin page."))
@@ -103,21 +144,37 @@
                         (let [post-f @ring-ajax-post]
                           (assert (nnil? post-f))
                           (post-f req))))
-  (resources "/")  ; static files
+  (resources+ "/" {:root server-root}) ; static files
   (not-found not-found-page))
 
 (defn wrap-middleware [routes]
   (-> routes
       wrap-uid
-      (maf/wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))})
-      (friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
+      (wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))})
+      (defaults/wrap-defaults
+        (assocs-in+ defaults/secure-site-defaults
+          [:security :anti-forgery] false
+          [:static   :resources   ] false
+          [:static   :files       ] false))
+      #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
                             :workflows [(workflows/interactive-form)]})
       ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
-      kw-params/wrap-keyword-params
-      params/wrap-params
-      gzip/wrap-gzip
-      session/wrap-session
-      compojure.handler/site
+      wrap-gzip
+      compojure.handler/site ; ?
       #_(friend/requires-scheme :https))) ; TODO make HTTPS work
 
 (defroutes routes (wrap-middleware app-routes))
+
+
+(comment
+ "Blob storage: instead of transmitting the same data twice, simply
+  asks for an authentication key from the database and uploads directly to the blob
+  storage using that authentication key.    
+
+  Unfortunately the same is not true of things one wishes to put in the database.
+  That data must be sent twice because the database is not REST-accessible (possibly
+  thank goodness). But luckily there is not much data that need be sent this way.
+ 
+  Find out whether AWS, Azure, or Google is cheaper (for storage, specifically). 
+  
+  ")
