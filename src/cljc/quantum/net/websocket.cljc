@@ -50,8 +50,8 @@
 
 (defn put!
   "Sends a message @msg across via a WebSocket connection."
-  {:usage '(put! :my/button {:my-key1 "Data1"
-                             :my-key2 "Data2"}
+  {:usage '(put! [:my/button {:my-key1 "Data1"
+                              :my-key2 "Data2"}]
                  (fn [resp] (println "Response is" resp))
                  100)}
   [#?(:clj uid) [msg-id msg] callback & [timeout]]
@@ -97,7 +97,7 @@
     (start [this]
       (let [stop-fn-f (atom (fn []))]
         (try
-          (log/pr :debug "Starting Channel Socket with:" this)
+          (log/pr :debug "Starting channel-socket with:" this)
           (assert (string? uri) #{uri})
           (assert (fn? msg-handler))
           (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
@@ -106,7 +106,7 @@
           (assert (keyword? packer))
 
           (let [{:keys [chsk ch-recv send-fn state] :as socket}
-                 (ws/make-channel-socket-server!
+                 (ws/make-channel-socket!
                    #?(:clj (condp = server-type
                              ;:http-kit a-http-kit/sente-web-server-adapter
                              :aleph    a-aleph/sente-web-server-adapter
@@ -117,6 +117,7 @@
                     #?@(:cljs
                     [:host host])})
                 _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv msg-handler))]
+            (log/pr :debug "Channel-socket started.")
             (assoc this
               :chan                        chsk
               :chan-recv                   ch-recv
