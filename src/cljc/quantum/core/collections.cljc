@@ -1477,6 +1477,17 @@
                      (-> coll-f (extend-coll-to k-n)
                          (assoc-fn k-n (second kvs-n))))))))))
 
+(defn assoc-when-none 
+  "assoc's @args to @m only when the respective keys are not present in @m."
+  [m & args]
+  (reduce
+    (fn [m-f k v]
+      (if (contains? m-f k)
+          m-f
+          (assoc m-f k v)))
+    m
+    (partition-all 2 args)))
+
 (defn update+
   "Updates the value in an associative data structure @coll associated with key @k
    by applying the function @f to the existing value."
@@ -1678,13 +1689,29 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
+(defn distinct-by
+  "Returns a lazy sequence of the elements of coll, removing any elements that
+  return duplicate values when passed to a function f."
+  {:attribution "medley.core"}
+  [f coll]
+  (let [step (fn step [xs seen]
+               (lazy-seq
+                ((fn [[x :as xs] seen]
+                   (when-let [s (seq xs)]
+                     (let [fx (f x)]
+                       (if (contains? seen fx) 
+                         (recur (rest s) seen)
+                         (cons x (step (rest s) (conj seen fx)))))))
+                 xs seen)))]
+    (step coll #{})))
+
 #?(:clj
 (defn distinct-by-java
   "Returns elements of coll which return unique
    values according to f. If multiple elements of coll return the same
    value under f, the first is returned"
   {:attribution "prismatic.plumbing"
-   :performance "Faster than |core/distinct-by|"}
+   :performance "Faster than |distinct-by|"}
   [f coll]
   (let [s (java.util.HashSet.)] ; instead of #{}
     (lfor [x coll
