@@ -36,16 +36,24 @@
   ([type msg]      (ex-info msg  (->err type msg)))
   ([type msg objs] (ex-info msg  (->err type msg objs))))
 
-#?(:clj 
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
-  [^Throwable e]
-  (let [m {:name    (-> e class .getName)
-           :message (-> e .getMessage)
-           :trace   (-> e clj-stacktrace.repl/pst with-out-str clojure.string/split-lines)}]
-    (if (instance? clojure.lang.ExceptionInfo e)
-        (assoc m :ex-data (ex-data e))
-        m))))
+  [e]
+  #?(:clj (let [^Throwable e e
+                m {:name    (-> e class .getName)
+                   :message (-> e .getMessage)
+                   :trace   (-> e clj-stacktrace.repl/pst with-out-str clojure.string/split-lines)}]
+            (if (instance? clojure.lang.ExceptionInfo e)
+                (assoc m :ex-data (ex-data e))
+                m))
+     :cljs (if (instance? js/Error e)
+               (let [m {:name nil
+                        :message (.-message e)
+                        :trace   (.-trace   e)}]
+                 (if (instance? cljs.core.ExceptionInfo e)
+                     (assoc m :ex-data (ex-data e))
+                     m))
+               {:ex-data e})))
 
 ; NEED MORE MACRO EXPERIENCE TO DO THIS
 ; (defmacro catch-or
@@ -68,14 +76,15 @@
 
 #?(:clj
 (defmacro throw-unless
-  "Throws an exception with the given message @message if
+  "Throws an exception with the given content @throw-content if
    @expr evaluates to false.
 
    Specifically for use with :pre and :post conditions."
   {:attribution "Alex Gunnarson"}
   ([expr throw-content]
-   `(if ~expr ~expr (throw ~throw-content)))
-  ; This arity doesn't work yet.
+   `(let [expr# ~expr]
+      (if expr# expr# (throw ~throw-content))))
+   ; This arity doesn't work yet.
   ([expr1 expr2 & exprs]
     `(core/doseq [[expr# throw-content#] (map/map-entry-seq ~exprs)]
        (throw-unless expr# throw-content#)))))
@@ -99,19 +108,20 @@
        (throw ~err))))
 
 #?(:clj
-(defmacro assert
+(defmacro assert+
   "Like |assert|, but takes a type"
   {:references ["https://github.com/google/guava/wiki/PreconditionsExplained"]
    :usage '(let [a 4]
-             (assert (neg? (+ 1 3 a)) #{a}))}
+             (assert+ (neg? (+ 1 3 a)) #{a}))}
   [expr & [syms type]]
   `(when-not ~expr
      (throw
        (->ex ~(or type :assertion-error)
-             (str "Assertion not satisfied: " '~expr
+             (str "Assertion not satisfied: " '~expr ; TODO having this assertion string can be expensive if assertions fail on large data structures 
                    "\n"
                    "Symbols: " (kmap ~@syms))
-             (kmap ~@syms))))))
+             (assoc (kmap ~@syms)
+               :assert-expr '~expr))))))
 
 #?(:clj
 (defmacro try-or 
