@@ -63,8 +63,8 @@
   [x]
   (js/btoa (.apply js/String.fromCharCode nil x))))
 
-#?(:cljs (defn base64->forge-bytes [x] (js/forge.util.decode64 x)))
-#?(:cljs (defn forge-bytes->base64 [x] (js/forge.util.encode64 x)))
+#?(:cljs (defn base64->forge-bytes [x] (js/forge.util.binary.base64.decode x)))
+#?(:cljs (defn forge-bytes->base64 [x] (js/forge.util.binary.base64.encode x)))
 
 ; TODO test how to use these
 #?(:cljs (defn ?->utf-8 [x] (js/forge.util.encodeUtf8 x)))
