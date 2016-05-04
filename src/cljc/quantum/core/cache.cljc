@@ -22,6 +22,20 @@
              @(do (~assoc-fn ~m ~k v-delay#) v-delay#))
            (if (delay? v#) @v# v#))))))
 
+#_(defn memoize+
+  "I have a fuller version in Quantum, but this was all we needed."
+  [f & [{:keys [data get-fn txn-fn assoc-fn] :as opts}]]
+  (let [get-fn   (or get-fn   (fn [data-n args  ] (get data-n args)))
+        txn-fn   (or txn-fn   swap!)
+        assoc-fn (or assoc-fn (fn [data-n args v-delay] (assoc data-n args @v-delay)))]
+    (fn [& args]
+      (let [v (delay (apply f args))]
+        (txn-fn data
+          (fn [data-n]
+            (if (nil? (get-fn data-n args))
+                (assoc-fn data-n args v)
+                data-n)))))))
+
 #?(:clj
 (defn memoize*
   "A faster, customizable version of |core/memoize|."
@@ -34,8 +48,8 @@
           {:keys [get-fn assoc-fn]}
             (cond
               (instance? clojure.lang.IDeref m)
-                {:get-fn   (or get-fn-0   (fn [m1 k1   ] (get @m1 k1)))
-                 :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (swap! m1 assoc k1 @v1)))} ; undelays it because usually that's what is wanted
+                {:get-fn   (or get-fn-0   (fn [data-n k1   ] (get @data-n k1)))
+                 :assoc-fn (or assoc-fn-0 (fn [data-n k1 v1] (swap! data-n assoc k1 @v1)))} ; undelays it because usually that's what is wanted
               (instance? ConcurrentHashMap   m)
                 {:get-fn   (or get-fn-0   (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   )))
                  :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1)))}
