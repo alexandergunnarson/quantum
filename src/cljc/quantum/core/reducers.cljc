@@ -12,13 +12,35 @@
       :author       "Rich Hickey"
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers
-  #?(:clj  (:refer-clojure :exclude [reduce])
-     :cljs (:refer-clojure :exclude [Range ->Range reduce]))
-  (:require-quantum [:core fn logic macros #_num type map set vec log cbase err])
-  (:require         [clojure.walk :as walk]
-                    [quantum.core.numeric :as num])
-  #?(:cljs
-  (:require-macros  [quantum.core.numeric :as num])))
+           (:refer-clojure :exclude [reduce #?@(:clj [Range ->Range])])
+           (:require [quantum.core.collections.base :as cbase               ]
+                     [quantum.core.data.map         :as map                 ]
+                     [quantum.core.data.set         :as set                 ]
+                     [quantum.core.data.vector      :as vec                 
+                       :refer [catvec subvec+]                              ]
+                     [quantum.core.error            :as err               
+                       :refer [->ex]                                        ]
+                     [quantum.core.fn               :as fn
+                       :refer [#?@(:clj [f*n fn-> compr MWA defcurried rfn])
+                               call firsta monoid]                          ]
+                     [quantum.core.logic            :as logic
+                       :refer [#?@(:clj [fn-not fn-or fn-and
+                                         whenf ifn condf condf*n]) nnil?]   ]
+                     [quantum.core.macros           :as macros
+                       :refer [#?@(:clj [defnt])]                           ]
+                     [quantum.core.numeric          :as num                 ]
+                     [quantum.core.type             :as type
+                       :refer [#?@(:clj [array-list? lseq?])]               ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn               :as fn
+                       :refer [f*n fn-> compr MWA defcurried rfn]           ]
+                     [quantum.core.logic            :as logic
+                       :refer [fn-not fn-or fn-and whenf ifn condf condf*n] ]
+                     [quantum.core.macros           :as macros
+                       :refer [defnt]                                       ]
+                     [quantum.core.numeric          :as num                 ]
+                     [quantum.core.type             :as type
+                       :refer [lseq?]                                       ])))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================

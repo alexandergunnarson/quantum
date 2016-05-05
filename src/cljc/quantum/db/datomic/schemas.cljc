@@ -1,17 +1,30 @@
 (ns quantum.db.datomic.schemas
   (:refer-clojure :exclude [type])
-  (:require-quantum [:core logic fn err macros str coll conv #?(:clj uconv) pconv debug])
-  (:require [quantum.db.datomic.entities
-              #?@(:clj [:refer [defattribute defentity declare-entity schemas attributes]])]
-            [quantum.net.http               :as http    ]
-            [quantum.core.data.complex.xml  :as xml     ]
-            [quantum.db.datomic             :as db      ]
-            [quantum.core.convert.primitive :as pconv]
-    #?(:clj [clojure.java.shell             :as shell   ]))
-  #?(:cljs
-  (:require-macros
-      [quantum.db.datomic.entities :refer [defattribute defentity declare-entity]])))
+            (:require
+              #?(:clj [clojure.java.shell             :as shell  ])
+                      [quantum.db.datomic.entities
+                        :refer [#?@(:clj [defattribute defentity 
+                                          declare-entity schemas
+                                          attributes])]          ]
+                      [quantum.core.fn                :as fn
+                        :refer [#?@(:clj [f*n])]                 ]
+                      [quantum.core.logic             :as logic
+                        :refer [#?@(:clj [fn-and])]              ]
+                      [quantum.core.string            :as str    ]
+                      [quantum.net.http               :as http   ]
+                      [quantum.core.data.complex.xml  :as xml    ]
+                      [quantum.db.datomic             :as db     ]
+                      [quantum.core.convert.primitive :as pconv  ])
+  #?(:cljs  (:require-macros
+                      [quantum.core.fn                :as fn
+                        :refer [f*n]                             ]
+                      [quantum.core.logic             :as logic
+                        :refer [fn-and]                          ]
+                      [quantum.db.datomic.entities
+                        :refer [defattribute defentity
+                                declare-entity]                  ])))
 
+; TODO move
 (def percent? (fn-and (f*n >= 0) (f*n <= 1)))
 
 ; =========== GENERAL =========== ;
@@ -145,6 +158,8 @@
 (defrecord Agent_Organization [])
 (defrecord Agent_Person [])
 
+(declare ->agent:organization)
+
 (defentity :agent:registration
   {:component? true}
   {:agent:registration:detail
@@ -216,7 +231,7 @@
   {:component? true}
   {:data:source          nil ; From what source do you get your certainty? ; TODO make into a logical proposition, not just a source entity
    :data:certainty:value [:double :one {:doc "The certainty that the data is the case / true."
-                                        :validator amazon-player.db/percent?}]})
+                                        :validator quantum.db.datomic.schemas/percent?}]})
 
 ; =========== MEDIA =========== ;
 
@@ -268,22 +283,22 @@
    :media:plays
      [:ref :many {:ref-to :time:instant :doc "Dates played"}]})
 
-(defentity :media:genre
+(defentity :data:media:genre
   {:doc "Like rock, classical, new age, rap"}
   {:data:title       nil
    :data:description nil})
 
-(defentity :media:sub-genre
+(defentity :data:media:sub-genre
   {:doc "Like baroque, indie rock (?). TODO should be "}
   {:data:title       nil
    :data:description nil})
 
-(defentity :media:category
+(defentity :data:media:category
   {:doc "TODO Ambiguous"}
   {:data:title       nil
    :data:description nil})
 
-(defentity :media:kind
+(defentity :data:media:kind
   {:doc "TODO Ambiguous"}
   {:data:title       nil
    :data:description nil})
@@ -349,6 +364,9 @@
 (defattribute :data:bytes-size
   [:long :one])
 
+(defattribute :cloud:amazon:id
+  [:string :one {:unique :value}])
+
 (defentity :media:track
   {:doc "video or audio"}
   {:data:title          nil
@@ -392,9 +410,6 @@
 (defentity :data:format
   {:data:mime-type                  [:keyword :one  {:unique :identity :doc "Refer to http://www.sitepoint.com/web-foundations/mime-types-complete-list/"}]
    :data:appropriate-extension:many [:keyword :many {:doc "Needs to correspond with its mime-type"}]})
-
-(defattribute :cloud:amazon:id
-  [:string :one {:unique :value}])
 
 (defentity :file
   {:doc "A file's metadata. TODO figure out all of valid file metadata"}
@@ -469,7 +484,7 @@
    :media:itunes-cddb-1                 [:string  :one]
    :data:media:source-data:mediainfo    [:string  :one]
    :data:audio:encoding-settings        [:string  :one]
-   :media:genre                         nil
+   :data:media:genre                    nil
    :data:audio:encoded-date:mediainfo   [:string  :one]
    :data:audio:date-tagged:mediainfo    [:string  :one]
    :data:writing-library                [:string  :one]

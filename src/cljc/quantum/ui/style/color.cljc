@@ -1,9 +1,13 @@
 (ns quantum.ui.style.color
-  (:require-quantum [:core])
-  (:require [clojure.string :as str]
-            [garden.color :as color 
-              :refer [color? #?(:cljs CSSColor)]])
-  #?(:clj (:import garden.color.CSSColor)))
+           (:require [clojure.string    :as str]
+                     [garden.color      :as color 
+                       :refer [color? #?(:cljs CSSColor)]]
+                     [quantum.core.vars :as var 
+                       :refer [#?(:clj defalias)]        ])
+  #?(:cljs (:require-macros
+                     [quantum.core.vars :as var 
+                       :refer [defalias]                 ]))
+  #?(:clj  (:import  garden.color.CSSColor)))
 
 ;(defnt ->color*
 ;  ([^garden.color.CSSColor c]

@@ -1,14 +1,24 @@
 (ns ^{:doc "Graph operations."}
   quantum.core.graph
-  (:require-quantum [:core fn logic err log])
-    (:require #?(:clj [loom.alg         :as alg    ]) ; temporarily
-              #?(:clj [loom.graph       :as graph  ]) ; temporarily
-              #?(:clj [loom.alg-generic :as galg   ]) ; temporarily
-              #?(:clj [loom.label       :as label  ]) ; temporarily
-              #?(:clj [loom.attr        :as attr   ]) ; temporarily
-              #?(:clj [loom.flow        :as flow   ]) ; temporarily
-      #?(:clj [loom.io          :as g.io   ])
-      #?(:clj [clojure.java.io  :as io     ])))
+             (:require
+               #?(:clj [loom.alg                 :as alg  ]) ; temporarily
+               #?(:clj [loom.graph               :as graph]) ; temporarily
+               #?(:clj [loom.alg-generic         :as galg ]) ; temporarily
+               #?(:clj [loom.label               :as label]) ; temporarily
+               #?(:clj [loom.attr                :as attr ]) ; temporarily
+               #?(:clj [loom.flow                :as flow ]) ; temporarily
+               #?(:clj [loom.io                  :as g.io ])
+                       [quantum.core.error       :as err
+                         :refer [->ex]                    ]
+                       [quantum.core.fn          :as fn 
+                         :refer [#?@(:clj [compr])]       ]
+                       [quantum.core.vars        :as var 
+                         :refer [#?(:clj defalias)]       ])
+    #?(:cljs (:require-macros  
+                       [quantum.core.fn          :as fn 
+                         :refer [compr]                   ]
+                       [quantum.core.vars        :as var 
+                         :refer [defalias]                ])))
 
 ; Ubergraph goes beyond Loom's protocols, allowing a
 ; mixture of directed and undirected edges within a
@@ -396,8 +406,8 @@
                         (loop [node v
                                path ()]
                           (if node
-                            (recur (get paths node) (cons node path))
-                            path))))
+                              (recur (get paths node) (cons node path))
+                              path))))
                {}))])))))
 
 #?(:clj 

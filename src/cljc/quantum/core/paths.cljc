@@ -1,6 +1,34 @@
 (ns ^{:doc "Paths-related things — resource locators. URIs, URLs, directories, files, etc."}
   quantum.core.paths
-  (:require-quantum [:core logic fn err sys str macros coll])
+           (:refer-clojure :exclude [descendants])
+           (:require [quantum.core.collections :as coll
+                       :refer [#?@(:clj [getr index-of containsv?
+                                         popr reducei])
+                               dropr-until]                          ]
+                     [quantum.core.error       :as err            
+                       :refer [->ex]                                 ]
+                     [quantum.core.fn          :as fn             
+                       :refer [#?@(:clj [<- fn-> fn->> f*n mfn])]    ]
+                     [quantum.core.logic       :as logic        
+                       :refer [#?@(:clj [fn-not fn-and fn-eq? 
+                                         whenf whenc ifn])]          ]
+                     [quantum.core.macros      :as macros 
+                       :refer [#?@(:clj [defnt])]                    ]
+                     [quantum.core.system      :as sys               ]
+                     [quantum.core.vars        :as var               
+                       :refer [#?@(:clj [defalias def-])]            ]
+                     [quantum.core.string      :as str               ])
+  #?(:cljs (:require-macros                
+                     [quantum.core.collections :as coll             
+                       :refer [getr index-of containsv? popr reducei]]
+                     [quantum.core.fn          :as fn               
+                       :refer [<- fn-> fn->> f*n mfn]                ]
+                     [quantum.core.logic       :as logic             
+                       :refer [fn-not fn-and fn-eq? whenf whenc ifn] ]
+                     [quantum.core.macros      :as macros            
+                       :refer [defnt]                                ]
+                     [quantum.core.vars        :as var               
+                       :refer [defalias def-]                        ]))
   #?(:clj (:import java.io.File)))
 
 ; TODO validate this

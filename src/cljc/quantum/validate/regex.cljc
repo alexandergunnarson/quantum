@@ -1,9 +1,20 @@
 (ns quantum.validate.regex
-  (:require-quantum [:core logic fn coll])
-  #?(:clj (:import java.util.regex.Matcher
-                   java.util.regex.Pattern
-                   java.net.IDN
-                   java.util.Locale)))
+          (:require [#?(:clj  clojure.core
+                        :cljs cljs.core   )   :as core ]
+                    [quantum.core.collections :as coll
+                      :refer [#?@(:clj [fori seq-loop])
+                               ffilter break]          ]
+                    [quantum.core.fn          :as fn
+                      :refer [#?@(:clj [fn->])]        ])
+  #?(:cljs (:require-macros
+                    [quantum.core.collections :as coll
+                      :refer [fori seq-loop]           ]
+                    [quantum.core.fn          :as fn
+                      :refer [fn->]                    ]))
+  #?(:clj  (:import java.util.regex.Matcher
+                    java.util.regex.Pattern
+                    java.net.IDN
+                    java.util.Locale)))
 
 ; /**
 ;  * Construct a validator that matches any one of the set of regular

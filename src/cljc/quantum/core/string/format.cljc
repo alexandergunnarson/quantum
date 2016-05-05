@@ -2,12 +2,31 @@
   ^{:doc "Useful string utils for formatting strings."
     :attribution "Alex Gunnarson"}
   quantum.core.string.format
-  (:refer-clojure :exclude [reverse replace remove val re-find])
-  (:require-quantum [:core fn set map macros logic red type loops cbase log err])
-  (:require [clojure.string            :as str]
-            [quantum.core.string.regex :as regex]
-   #?(:cljs [goog.string               :as gstr])
-            [frak])
+           (:refer-clojure :exclude [replace])
+           (:require [frak]
+                     [clojure.string                :as str   ]
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )        :as core  ]
+                     [quantum.core.collections.base :as cbase ]
+            #?(:cljs [goog.string                   :as gstr  ])
+                     [quantum.core.fn               :as fn
+                       :refer [#?@(:clj [fn->>])]             ]
+                     [quantum.core.loops            :as loops
+                       :refer [#?@(:clj [reduce])]            ]
+                     [quantum.core.macros           :as macros
+                       :refer [#?@(:clj [defnt])]             ]
+                     [quantum.core.string.regex     :as regex ]
+                     [quantum.core.vars             :as var
+                       :refer [#?@(:clj [defalias])]          ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn               :as fn
+                       :refer [fn->>]                         ]
+                     [quantum.core.loops            :as loops
+                       :refer [reduce]                        ]
+                     [quantum.core.macros           :as macros
+                       :refer [defnt]                         ]
+                     [quantum.core.vars             :as var
+                       :refer [defalias]                      ]))
   #?(:clj (:import java.net.IDN)))
 
 (defnt replace* ; TODO .replace may try to compile a pattern instead of replacing the actual string

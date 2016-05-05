@@ -3,12 +3,18 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.map
   (:refer-clojure :exclude [split-at merge sorted-map sorted-map-by])
-  (:require-quantum [:core])
-  (:require
-    [clojure.data.avl     :as avl]
-    #?@(:clj [[clojure.data.int-map :as imap]
-              [flatland.ordered.map :as omap]
-              [seqspert.hash-map]])))
+  (:require [quantum.core.vars    :as var
+              :refer [#?(:clj defalias)]  ]
+   #?(:clj  [clojure.core         :as core]
+      :cljs [cljs.core            :as core])
+            [clojure.data.avl     :as avl ]
+  #?@(:clj [[clojure.data.int-map :as imap]
+            [flatland.ordered.map :as omap]
+            [seqspert.hash-map            ]]))
+  #?(:cljs
+  (:require-macros
+            [quantum.core.vars    :as var
+              :refer [defalias]           ])))
 
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          #?(:clj omap/ordered-map :cljs array-map))

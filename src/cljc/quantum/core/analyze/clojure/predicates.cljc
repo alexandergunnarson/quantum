@@ -1,11 +1,25 @@
 (ns ^{:doc "Clojure (and variants) code analysis namespace. Required for quantum.core.macros."}
   quantum.core.analyze.clojure.predicates
   (:refer-clojure :exclude [name])
-  (:require-quantum [:core fn logic])
-  (:require [clojure.string                    :as str  ]
-    #?(:clj [clojure.jvm.tools.analyzer        :as tana ])
-            [quantum.core.analyze.clojure.core :as ana  ]
-            [quantum.core.type.core            :as tcore]))
+           (:require [clojure.string                    :as str                      ]
+             #?(:clj [clojure.jvm.tools.analyzer        :as tana                     ])
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )            :as core                     ]
+                     [quantum.core.analyze.clojure.core :as ana                      ]
+                     [quantum.core.fn                   :as fn
+                       :refer [#?@(:clj [<- fn-> fn->>])]                            ]
+                     [quantum.core.logic                :as logic
+                       :refer [#?@(:clj [eq? fn-or fn-and whenc ifn if*n]) splice-or]]
+                     [quantum.core.type.core            :as tcore                    ]
+                     [quantum.core.vars                 :as var
+                       :refer [#?@(:clj [defalias])]                                 ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                   :as fn
+                       :refer [<- fn-> fn->>]                        ]
+                     [quantum.core.logic                :as logic
+                       :refer [eq? fn-or fn-and whenc ifn if*n]                      ]
+                     [quantum.core.vars                 :as var
+                       :refer [defalias]                                             ])))
 
 (defn safe-mapcat
   "Like |mapcat|, but works if the returned values aren't sequences."
@@ -161,9 +175,10 @@
   ([var m]
      (:const (or m (meta var)))))
 
+#?(:clj
 (defn dynamic?
   ([var] (dynamic? var nil))
   ([var m]
      (or (:dynamic (or m (meta var)))
          (when (var? var) ;; workaround needed since Clojure doesn't always propagate :dynamic
-           (.isDynamic ^Var var)))))
+           (.isDynamic ^clojure.lang.Var var))))))

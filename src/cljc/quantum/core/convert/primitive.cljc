@@ -1,8 +1,22 @@
 (ns quantum.core.convert.primitive
   (:refer-clojure :exclude
     [boolean byte char short int long float double])
-  (:require-quantum [:core logic fn macros log bin err])
-  #_(:cljs (:require [com.gfredericks.goog.math.Integer :as int]))
+           (:require #_(:cljs [com.gfredericks.goog.math.Integer :as int])
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )   :as core  ]
+                     [quantum.core.data.binary :as bin
+                       :refer [&]                        ]
+                     [quantum.core.error       :as err
+                       :refer [->ex]                     ]
+                     [quantum.core.macros      :as macros
+                       :refer [#?@(:clj [defnt defnt'])] ]
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]        ])
+  #?(:cljs (:require-macros
+                     [quantum.core.macros      :as macros
+                       :refer [defnt defnt']             ]
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                 ]))
   #?(:clj  (:import java.nio.ByteBuffer [quantum.core Numeric])))
 
 (declare byte    ->byte    ->byte*
@@ -272,9 +286,9 @@
   {:attribution  ["ztellman/primitive-math" "gloss.data.primitives"]
    :contributors {"Alex Gunnarson" "defnt-ed"}
    :todo ["change to unchecked-bit-and after making sure it won't overflow"]}
-  (^short [^byte  x] (bit-and (->short*' bytes2) x))
-  (^int   [^short x] (bit-and (->int*'   bytes4) x))
-  (^long  [^int   x] (bit-and (->long*'  bytes8) x))
+  (^short [^byte  x] (& (->short*' bytes2) x))
+  (^int   [^short x] (& (->int*'   bytes4) x))
+  (^long  [^int   x] (& (->long*'  bytes8) x))
   (       [^long  x]
     (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array)))))
 

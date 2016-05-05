@@ -3,12 +3,28 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.macros
-  (:refer-clojure :exclude [macroexpand macroexpand-all])
-  (:require-quantum [:core fn logic pr log err])
-  (:require [quantum.core.macros.defnt :as defnt]
-            [quantum.core.macros.fn    :as mfn]
-            [clojure.walk :refer [postwalk]])
-  )
+           (:refer-clojure :exclude [macroexpand macroexpand-all])
+           (:require [clojure.walk
+                       :refer [postwalk]                              ]
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )    :as core              ]
+                     [quantum.core.error        :as err
+                       :refer [->ex]                                  ]
+                     [quantum.core.log          :as log               ]
+                     [quantum.core.logic        :as logic
+                       :refer [#?@(:clj [fn-and whenc whenf*n]) nnil?]]
+                     [quantum.core.macros.core  :as cmacros       
+                       :refer [if-cljs]                               ]
+                     [quantum.core.macros.defnt :as defnt             ]
+                     [quantum.core.macros.fn    :as mfn               ]
+                     [quantum.core.vars         :as var
+                       :refer [#?@(:clj [defalias defmalias])]        ])
+  #?(:cljs (:require-macros
+                     [quantum.core.log          :as log]
+                     [quantum.core.logic        :as logic
+                       :refer [fn-and whenc whenf*n]                  ]
+                     [quantum.core.vars         :as var
+                       :refer [defalias defmalias]                    ])))
 
 #?(:clj
 (defmacro maptemplate

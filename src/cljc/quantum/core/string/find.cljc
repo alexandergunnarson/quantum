@@ -1,5 +1,4 @@
-(ns quantum.core.string.find
-  (:require-quantum [:core]))
+(ns quantum.core.string.find)
 
 ; TODO pair with validation?
 ; TODO uncomment

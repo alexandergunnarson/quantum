@@ -4,10 +4,12 @@
     :todo ["Rename ns and move functions"]
     :attribution "Alex Gunnarson"}
   quantum.core.java
-  (:require-quantum [:core str])
  #?@(:clj [(:require
+             [clojure.string     :as str    ]
              [clojure.data       :as cljdata]
-             [clojure.reflect    :refer :all]
+             [clojure.reflect    :as refl   ]
+             [quantum.core.vars  :as var
+               :refer [defalias]            ]
              #_[alembic.still]) ; TODO fix class conflict between Pulsar and alembic
            (:import java.lang.reflect.Method)]))
 
@@ -19,7 +21,7 @@
 #?(:clj
   (defn methods-names [object]
     (sort ; alphabetizes
-      (map :name (:members (reflect object))))))
+      (map :name (:members (refl/reflect object))))))
 
 #?(:clj
   (defmacro load-deps [deps]

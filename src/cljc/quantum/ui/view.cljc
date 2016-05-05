@@ -1,5 +1,4 @@
-(ns quantum.ui.view
-  (:require-quantum [:core]))
+(ns quantum.ui.view)
 
 #?(:cljs
 (defn toggle-full-screen!

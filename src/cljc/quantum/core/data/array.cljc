@@ -5,15 +5,39 @@
   quantum.core.data.array
   (:refer-clojure :exclude
     [== reverse boolean-array byte-array char-array short-array
-     int-array long-array float-array double-array])
-  (:require-quantum [:core err log logic fn #_num loops macros])
-  (:require [quantum.core.type.core :as tcore]
-            [quantum.core.core :refer [name+]]
-            [quantum.core.numeric :as num]
-            #?(:clj [loom.alg-generic       :as alg  ])) ; temporarily
-  #?(:clj (:import [java.io ByteArrayOutputStream]
-                   [java.nio ByteBuffer]
-                   java.util.ArrayList)))
+     int-array long-array float-array double-array
+     doseq])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )       :as core  ]
+             #?(:clj [loom.alg-generic             :as alg   ]) ; temporarily
+                     [quantum.core.type.core       :as tcore ]
+                     [quantum.core.core            :as qcore
+                       :refer [name+]                        ]
+                     [quantum.core.fn              :as fn
+                       :refer [#?@(:clj [fn->])]             ]
+                     [quantum.core.logic           :as logic
+                       :refer [#?@(:clj [whenc])]            ]
+                     [quantum.core.loops           :as loops
+                       :refer [#?@(:clj [doseqi doseq])]     ]
+                     [quantum.core.macros          :as macros
+                       :refer [#?@(:clj [defnt defnt'])]     ]
+                     [quantum.core.numeric :as num]
+                     [quantum.core.vars            :as var
+                       :refer [#?(:clj defalias)]            ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn              :as fn
+                       :refer [fn->]                         ]
+                     [quantum.core.logic           :as logic
+                       :refer [whenc]                        ]
+                     [quantum.core.loops           :as loops
+                       :refer [doseqi doseq]                 ]
+                     [quantum.core.macros          :as macros
+                       :refer [defnt defnt']                 ]
+                     [quantum.core.vars            :as var
+                       :refer [defalias]                     ]))
+  #?(:clj  (:import  [java.io ByteArrayOutputStream]
+                     [java.nio ByteBuffer]
+                     java.util.ArrayList)))
 
 (defalias aset! aset)
 
@@ -215,8 +239,7 @@
       (transfer src os)
       (.toByteArray os)))))
 
-; TODO DEPS
-#_#?(:clj
+#?(:clj
 (defnt ^longs bytes->longs
   ([^bytes? b]
     (let [longs-ct (-> b count (/ 8) num/ceil int)

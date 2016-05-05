@@ -1,11 +1,18 @@
 (ns quantum.net.core
-  (:require-quantum [:core err logic fn casync])
-  (:require [clojure.string           :as str  ]
-   #?(:cljs [goog.userAgent           :as agent])
-   #?(:cljs [goog.Uri                 :as uri  ])
-            [quantum.core.collections :as coll ]
-            [quantum.core.convert     :as conv ])
-  #?(:clj (:import (java.net URLEncoder URLDecoder))))
+           (:require 
+            #?(:cljs [goog.userAgent           :as agent      ])
+            #?(:cljs [goog.Uri                 :as uri        ])
+                     [quantum.core.error       :as err
+                       :refer [->ex]                          ]
+                     [quantum.core.collections :as coll       ]
+                     [quantum.core.string      :as str        ]
+                     [quantum.core.convert     :as conv       ]
+                     [quantum.core.logic       :as logic
+                       :refer [#?@(:clj [fn-not fn-or whenc])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic       :as logic
+                       :refer [fn-not fn-or whenc]            ]))
+  #?(:clj  (:import  (java.net URLEncoder URLDecoder))))
 
 ; UTILS
 
@@ -60,7 +67,9 @@
        (replace regex-char-esc-smap)
        (reduce str)))
 
-(defn ^String mime-type->str [^Keyword mime-type]
+(defn ^String mime-type->str
+  {:in-types '{mime-type Keyword}}
+  [mime-type]
   (whenc mime-type (fn-not (fn-or string? nil?)) ; |fn-not| gives an ExceptionInInitializer error
     (condp = mime-type
       :json "application/json"

@@ -1,9 +1,29 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
-  (:require-quantum [:core fn logic str macros coll io res])
-  (:require [quantum.core.io.utils :as iou]
-            [quantum.core.process :as proc])
+           (:require [quantum.core.io.utils          :as iou  ] 
+                     [quantum.core.process           :as proc ]
+                     [quantum.core.string            :as str  ]
+                     [quantum.core.collections       :as coll
+                       :refer [map+ dropr in?]                ]
+                     [quantum.core.fn                :as fn
+                       :refer [#?@(:clj [<- fn-> fn->> f*n])] ]
+                     [quantum.core.logic             :as logic
+                       :refer [#?@(:clj [whenf])]             ]
+                     [quantum.core.resources         :as res
+                       :refer [#?(:clj with-resources)]       ]
+                     [quantum.core.vars              :as var
+                       :refer [#?@(:clj [defalias def-])]     ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                :as fn
+                        :refer [<- fn-> fn->> f*n]            ]
+                     [quantum.core.logic             :as logic
+                        :refer [whenf]                        ]
+                     [quantum.core.resources         :as res
+                       :refer [with-resources]                ]
+                     [quantum.core.vars              :as var
+                       :refer [defalias def-]                 ]))
 #?(:clj (:import
+          java.io.FileInputStream
           (org.apache.tika.parser   AutoDetectParser  )
           (org.apache.tika.sax      BodyContentHandler)
           (org.apache.tika.metadata Metadata          ))))

@@ -3,23 +3,49 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-  (:require-quantum [:core #_num fn #_str err macros logic vec #_coll loops #_time #_cache log #_type res core-async async])
-  (:require [quantum.core.collections.base :refer [dissoc-in]]
-  #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
-            [clojure.core.async.impl.exec.threadpool :as async-threadpool]
-            [quantum.core.string  :as str]
-            [quantum.core.numeric :as num]
-            #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
-            #_[co.paralleluniverse.pulsar.async        :as pasync          ]]))
-  #?(:clj (:import
-            (java.lang Thread Process)
-            (java.util.concurrent Future Executor ExecutorService ThreadPoolExecutor)
-            quantum.core.data.queue.LinkedBlockingQueue
-            #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
-
+             (:require 
+           #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
+                     [clojure.core.async.impl.exec.threadpool :as async-threadpool]
+                   #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
+                   #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
+                     [quantum.core.string                     :as str             ]
+                     [quantum.core.numeric                    :as num             ]
+                     [quantum.core.thread.async               :as async
+                       :refer [put!! chan #?(:clj go)]                            ]
+                     [quantum.core.collections
+                       :refer [#?@(:clj [doseq]) dissoc-in+]                      ]
+                     [quantum.core.error                      :as err
+                       :refer [#?(:clj throw-unless) ->ex]                        ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [<- fn-> f*n compr]) call]                ]
+                     [quantum.core.log                        :as log             ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [fn-not eq? whenf whenp if*n]) nnil?]     ]
+                     [quantum.core.macros                     :as macros
+                       :refer [#?(:clj defnt)]                                    ])
+  #?(:cljs (:require-macros
+                     [quantum.core.thread.async               :as async
+                       :refer [go]                                                ]
+                     [quantum.core.collections                :as coll
+                       :refer [doseq]                                             ]
+                     [quantum.core.error                      :as err
+                       :refer [throw-unless]                                      ]
+                     [quantum.core.fn                         :as fn
+                       :refer [<- fn-> f*n compr]                                 ]
+                     [quantum.core.log                        :as log             ]
+                     [quantum.core.logic                      :as logic
+                       :refer [fn-not eq? whenf whenp if*n]                       ]
+                     [quantum.core.macros                     :as macros
+                       :refer [defnt]                                             ]))
+  #?(:clj  (:import
+             (java.lang Thread Process)
+             (java.util.concurrent Future Executor
+                ExecutorService ThreadPoolExecutor)
+             quantum.core.data.queue.LinkedBlockingQueue
+             #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
+ 
 ; TODO temporary
 (def wrap-delay identity)
-
 
 (defonce ^{:doc "Thread registry"} reg (atom {}))
 
@@ -65,8 +91,8 @@
         (log/pr ::debug "DEREGISTERING THREAD" id)
         (swap! reg
           (fn-> (dissoc id)
-                (whenp parent (f*n dissoc-in [parent :children id]))))
-        (swap! reg-tree dissoc-in [parents id])))
+                (whenp parent (f*n dissoc-in+ [parent :children id]))))
+        (swap! reg-tree dissoc-in+ [parents id])))
       (log/pr ::warn "Attempted to deregister nonexistent thread:" id)))
 
 #?(:clj (def thread-num (.. Runtime getRuntime availableProcessors)))
@@ -148,8 +174,8 @@
 (defn close!
   "Closes a thread, possibly gracefully."
   {:attribution "Alex Gunnarson"}
-  ([^Keyword thread-id] (close! thread-id nil)) ; don't force
-  ([^Keyword thread-id {:keys [force?] :as opts}]
+  ([thread-id] (close! thread-id nil)) ; don't force
+  ([thread-id {:keys [force?] :as opts}]
     (if-not (contains? @reg thread-id)
       (log/pr ::warn (str/sp "Thread-id" thread-id "does not exist; attempted to be closed."))
       (let [{:keys [thread children close-reqs]
@@ -184,7 +210,7 @@
               (catch [:type :nonexistent-thread] {:keys [type]}
                 (when-not (= type :nonexistent-thread) (throw+))))
             (if traversal-keys
-                (swap! reg-tree dissoc-in [traversal-keys id])
+                (swap! reg-tree dissoc-in+ [traversal-keys id])
                 (swap! reg-tree dissoc id))
           ))
         @reg-tree))
@@ -574,7 +600,7 @@
                   (doseq [elem (take chunk-size list-n)]
                     (func elem)))))))))))
 
-#?(:clj
+#_(:clj
 (defn promise-concur-go [method max-threads func list-0]
   (let [count- (count list-0)
         chunk-size

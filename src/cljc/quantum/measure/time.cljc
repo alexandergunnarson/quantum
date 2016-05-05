@@ -1,7 +1,6 @@
 (ns quantum.measure.time
-  (:require-quantum [:core])
-  (:require quantum.measure.reg)
-  (:require [quantum.measure.core :refer [defunits-of]]))
+  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
+  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
 
 #?(:clj (set! *unchecked-math* false))
 
@@ -36,3 +35,5 @@
   :millennia     [[1000                 :years ] nil #{:megayears}])
 
 ; PRECOMPILED DUE TO COMPILER LIMITATIONS ("Method code too large!" error)
+
+#?(:clj (set! *unchecked-math* :warn-on-boxed))

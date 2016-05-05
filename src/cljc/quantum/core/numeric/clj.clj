@@ -7,10 +7,21 @@
      zero? neg? pos? min max format
      rem quot mod
      bigint biginteger bigdec])
-  (:require-quantum [:core logic type fn macros err log pconvert])
-  (:require [quantum.core.convert.primitive :as prim :refer [->unboxed]]
-            [clojure.walk :refer [postwalk]]
-            [quantum.core.numeric.types :as ntypes])
+  #_(:require-quantum [logic type fn log pconvert])
+  (:require [clojure.core                   :as core  ]
+            [clojure.walk
+              :refer [postwalk]                       ]
+            [quantum.core.convert.primitive :as prim
+              :refer [->unboxed ->double]             ]
+            [quantum.core.error             :as err
+              :refer [->ex]                           ]
+            [quantum.core.fn                :as fn
+              :refer [fn->]                           ]
+            [quantum.core.macros            :as macros
+              :refer [defnt defnt']]
+            [quantum.core.numeric.types     :as ntypes]
+            [quantum.core.vars              :as var
+              :refer [defalias defmalias def-]        ])
   (:import [java.nio ByteBuffer]
            [quantum.core Numeric] ; loops?
            [net.jafama FastMath]

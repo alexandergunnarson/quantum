@@ -1,9 +1,14 @@
 (ns quantum.core.analyze.clojure.core
-  (:require-quantum [:core logic fn])
-  (:require #?(:clj  [clojure.jvm.tools.analyzer :as ana])
-            #?(:clj  [clojure.tools.analyzer.jvm]
-               ;:cljs [clojure.tools.analyzer.js ]
-               )))
+           (:require
+            #?(:clj  [clojure.jvm.tools.analyzer :as ana  ])
+            #?(:clj  [clojure.tools.analyzer.jvm          ]
+              ;:cljs [clojure.tools.analyzer.js           ]
+                     )
+                     [quantum.core.vars          :as var
+                             :refer [#?@(:clj [defalias])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.vars          :as var
+                       :refer [defalias]                  ])))
 
 #?(:clj
 (defmacro ast

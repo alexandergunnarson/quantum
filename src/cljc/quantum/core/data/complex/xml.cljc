@@ -3,9 +3,29 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.complex.xml
   (:refer-clojure :exclude [split])
-  (:require-quantum [:core err logic fn type #_num coll vec str macros log #_time])
-  #?(:clj (:require [clojure.data.xml :as cxml]
-                    [quantum.security.cryptography :as crypto]))
+           (:require
+             #?(:clj [clojure.data.xml              :as cxml  ])
+                     [quantum.core.collections      :as coll
+                       :refer [#?@(:clj [lasti])]             ]
+                     [quantum.core.error            :as err
+                       :refer [->ex]                          ]
+                     [quantum.core.fn               :as fn
+                       :refer [#?@(:clj [fn->])]              ]
+                     [quantum.core.string           :as str   ]
+                     [quantum.security.cryptography :as crypto]
+                     [quantum.core.macros           :as macros
+                       :refer [#?@(:clj [defnt])]             ]
+                     [quantum.core.vars             :as var
+                       :refer [#?(:clj def-)]                 ])
+  #?(:cljs (:require-macros 
+                     [quantum.core.collections      :as coll
+                       :refer [lasti]                         ]
+                     [quantum.core.fn               :as fn
+                       :refer [fn->]                          ]
+                     [quantum.core.macros           :as macros
+                       :refer [defnt]                         ]
+                     [quantum.core.vars             :as var
+                       :refer [def-]                          ]))
   #?(:clj (:import (javax.xml.stream XMLInputFactory XMLEventReader)
                    (javax.xml.stream.events XMLEvent Attribute
                      StartElement EndElement Characters)

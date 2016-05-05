@@ -1,11 +1,15 @@
 (ns quantum.core.core
   (:refer-clojure :exclude [#?(:cljs seqable?)])
-  (:require-quantum [reg])
   (:require #?(:clj  [clojure.core  :as core ]
                :cljs [cljs.core     :as core
                        :refer [IDeref IAtom]]))
   #?(:clj (:import [clojure.lang IDeref
                                  IAtom])))
+
+(def lang #?(:clj :clj :cljs :cljs))
+
+(defonce debug?   (atom false))
+(defonce externs? (atom true ))
 
 ; ===== TYPE PREDICATES =====
 
@@ -138,3 +142,8 @@
 (defn ensure-println [& args]
   (enable-console-print!)
   (apply println args)))
+
+(defn js-println [& args]
+  (print "\n/* " )
+  (apply println args)
+  (println "*/"))

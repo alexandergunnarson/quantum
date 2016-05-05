@@ -1,6 +1,6 @@
 (ns quantum.measure.weight
-  (:require-quantum [:core])
-  (:require [quantum.measure.core :refer [defunits-of]]))
+  #?(:clj (:require [quantum.measure.core :refer [defunits-of]]))
+  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
 
 #?(:clj (set! *unchecked-math* false))
 
@@ -36,3 +36,5 @@
 
   :carat       [[200 :mg] nil #{:metric-carat :CD}]
   :pearl-grain [[1/4 :carat] #{:jewelers-grain}])
+
+#?(:clj (set! *unchecked-math* :warn-on-boxed))

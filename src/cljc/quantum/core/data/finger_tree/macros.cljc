@@ -1,7 +1,6 @@
 (ns ^{:doc "Persistent collections based on 2-3 finger trees."
       :author "Chris Houser"}
   quantum.core.data.finger-tree.macros
-  (:require-quantum [:core logic fn])
   (:require [quantum.core.macros.deftype
               :refer [pfn ?Seqable ?Counted ?Indexed ?Sequential ?Seq
                       ?Stack ?Collection]]

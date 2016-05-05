@@ -1,6 +1,12 @@
 (ns quantum.core.cache
-  (:refer-clojure :exclude [memoize])
-  (:require-quantum [:core fn logic err])
+           (:refer-clojure :exclude [memoize])
+           (:require [quantum.core.error   :as err
+                       :refer [->ex]              ]
+                     [quantum.core.vars    :as var
+                        :refer [#?(:clj defalias)]])
+  #?(:cljs (:require-macros
+                     [quantum.core.vars    :as var
+                       :refer [defalias]          ]))
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj

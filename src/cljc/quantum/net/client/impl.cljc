@@ -1,26 +1,53 @@
 (ns ^{:doc "HTTP request processing with error handling, log writing, etc."}
   quantum.net.client.impl
-  (:require-quantum [:core err log fn logic async core-async cbase])
-  (:require
-    #?(:cljs [goog.userAgent           :as agent])
-             [cognitect.transit        :as t    ]
-     #?(:clj [org.httpkit.client       :as http])
-             [quantum.core.convert        :refer [base64-encode ->json json-> ->transit transit->]]
-    #?(:cljs [cljs.reader                 :refer [read-string]])
-             [clojure.string           :as str :refer [blank? capitalize join split lower-case]]
-             [quantum.core.string      :as qstr ]
-             [quantum.net.core         :as net  ]
-             [quantum.core.collections :as coll])
-  #?(:clj  (:import
-             org.apache.http.entity.mime.MultipartEntityBuilder
-             org.apache.http.entity.ContentType
-             org.apache.http.client.methods.HttpPost
-             org.apache.http.client.methods.HttpEntityEnclosingRequestBase
-             org.apache.http.impl.client.DefaultHttpClient
-             java.io.File)
-     :cljs (:import
-             goog.Uri
-             [goog.net EventType ErrorCode XhrIo Jsonp])))
+  #_(:require-quantum [log async core-async cbase])
+           (:require  [#?(:clj  clojure.core
+                         :cljs cljs.core   )        :as core  ]
+             #?(:cljs [goog.userAgent               :as agent ])
+                      [cognitect.transit            :as t     ]
+             #?(:clj  [org.httpkit.client           :as http  ])
+             #?(:cljs [cljs.reader
+                        :refer [read-string]                  ])
+                      [#?(:clj  clojure.core.async
+                          :cljs cljs.core.async   ) :as casync]
+                      [quantum.core.convert
+                        :refer [base64-encode ->json json->
+                                ->transit transit->]          ]
+                      [clojure.string               :as str
+                        :refer [blank? capitalize join  
+                                split lower-case]             ]
+                      [quantum.core.error           :as err
+                        :refer [->ex]                         ]
+                      [quantum.core.log             :as log   ]
+                      [quantum.core.string          :as qstr  ]
+                      [quantum.net.core             :as net   ]
+                      [quantum.core.fn              :as fn
+                        :refer [#?@(:clj [fn-> f*n])]         ]
+                      [quantum.core.logic           :as logic
+                        :refer [#?@(:clj [fn-and whenf*n])
+                                nnil?]                        ]
+                      [quantum.core.collections     :as coll
+                        :refer [#?(:clj kmap)]                ]
+                      [quantum.core.vars            :as var  
+                        :refer [#?(:clj def-)]                ])
+  #?(:cljs (:require-macros
+                      [quantum.core.collections     :as coll
+                        :refer [kmap]                         ]
+                      [quantum.core.fn              :as fn
+                        :refer [fn-> f*n]                     ]
+                      [quantum.core.log             :as log   ]
+                      [quantum.core.logic           :as logic
+                        :refer [fn-and whenf*n]               ]
+                      [quantum.core.vars            :as var
+                        :refer [def-]                         ]))
+  #?(:clj  (:import   org.apache.http.entity.mime.MultipartEntityBuilder
+                      org.apache.http.entity.ContentType
+                      org.apache.http.client.methods.HttpPost
+                      org.apache.http.client.methods.HttpEntityEnclosingRequestBase
+                      org.apache.http.impl.client.DefaultHttpClient
+                      java.io.File)
+     :cljs (:import   goog.Uri
+                      [goog.net EventType ErrorCode XhrIo Jsonp])))
 
 ; CLJS HTTP UTIL
 
@@ -72,7 +99,7 @@
      :cljs
       (when-let [req (@pending-requests channel)]
         (swap! pending-requests dissoc channel)
-        (core-async/close! channel)
+        (casync/close! channel)
         (if (.hasOwnProperty req "abort")
             (.abort req)
             (.cancel (:jsonp req) (:request req))))))
@@ -121,7 +148,7 @@
   map and return a core.async channel."
   [{:keys [request-method headers body with-credentials? cancel] :as request}]
   (log/pr ::debug (kmap request))
-  (let [channel     (core-async/chan)
+  (let [channel     (casync/chan)
         request-url (build-url request)
         xhr         (build-xhr (assoc request :default-headers headers))
         ;_ (log/pr :debug "XHR IS" xhr)
@@ -143,14 +170,14 @@
                  :error-code      (->> target .getLastErrorCode      error-kw            )
                  :error-text      (->> target .getLastError                              )}]
           (when-not (aborted? xhr)
-            (core-async/put! channel response))
+            (casync/put! channel response))
           (swap! pending-requests dissoc channel)
-          (when cancel (core-async/close! cancel))
-          (core-async/close! channel))))
+          (when cancel (casync/close! cancel))
+          (casync/close! channel))))
     (.send xhr request-url method body headers-js)
     (when cancel
       (go
-        (let [v (core-async/<! cancel)]
+        (let [v (casync/<! cancel)]
           (when-not (.isComplete xhr)
             (.abort xhr)))))
     channel)))
@@ -160,7 +187,7 @@
   "Execute the JSONP request corresponding to the given Ring request
   map and return a core.async channel."
   [{:keys [timeout callback-name cancel] :as request}]
-  (let [channel (core-async/chan)
+  (let [channel (casync/chan)
         jsonp (Jsonp. (build-url request) callback-name)]
     (.setRequestTimeout jsonp timeout)
     (let [req (.send jsonp nil
@@ -168,18 +195,18 @@
                        (let [response {:status 200
                                        :success true
                                        :body (js->clj data :keywordize-keys true)}]
-                         (core-async/put! channel response)
+                         (casync/put! channel response)
                          (swap! pending-requests dissoc channel)
-                         (if cancel (core-async/close! cancel))
-                         (core-async/close! channel)))
+                         (if cancel (casync/close! cancel))
+                         (casync/close! channel)))
                      (fn error-callback []
                        (swap! pending-requests dissoc channel)
-                       (if cancel (core-async/close! cancel))
-                       (core-async/close! channel)))]
+                       (if cancel (casync/close! cancel))
+                       (casync/close! channel)))]
       (swap! pending-requests assoc channel {:jsonp jsonp :request req})
       (when cancel
         (go
-          (let [v (core-async/<! cancel)]
+          (let [v (casync/<! cancel)]
             (.cancel jsonp req)))))
     channel)))
 
@@ -256,7 +283,7 @@
   [client]
   (fn [request]
     (-> #(decode-body % read-string "application/edn" (:request-method request))
-        (core-async/map [(client request)]))))
+        (casync/map [(client request)]))))
 
 (defn wrap-default-headers
   [client & [default-headers]]
@@ -320,7 +347,7 @@
             (merge default-transit-opts (:transit-opts request))
           transit-decode #(transit-> % decoding decoding-opts)]
       (->> [(client request)]
-           (core-async/map
+           (casync/map
              #(decode-body % transit-decode "application/transit+json"
                 (:request-method request)))))))
 
@@ -343,7 +370,7 @@
   (fn [request]
     (log/pr ::debug (kmap request))
     (->> [(client request)]
-         (core-async/map
+         (casync/map
            #(decode-body % (fn [x] (json-> x coll/keywordize)) "application/json"
               (:request-method request))))))
 
@@ -428,7 +455,7 @@
   [client]
   (fn [request]
     (if-let [custom-channel (:channel request)]
-      (core-async/pipe (client request) custom-channel)
+      (casync/pipe (client request) custom-channel)
       (client request))))
 
 (def ^{:doc "According to OWASP, these are important and
@@ -481,7 +508,7 @@
 
 ; http://www.december.com/html/spec/httpstat.html
 
-(defrecord HTTPLogEntry [^Vec tries])
+(defrecord HTTPLogEntry [tries])
 ; TODO don't use a global log...
 (defonce http-log (atom {}))
 

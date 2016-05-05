@@ -2,12 +2,21 @@
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
           ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
-    :attribution "Alex Gunnarson"}
-  ^:figwheel-no-load quantum.core.logic
-  (:refer-clojure :exclude [if-let when-let])
-  (:require-quantum [:core fn]))
-
-#?(:clj (set! *warn-on-reflection* true))
+    :attribution "Alex Gunnarson"
+    :figwheel-no-load true}
+  quantum.core.logic
+           (:refer-clojure :exclude [if-let when-let])
+           (:require [quantum.core.fn          :as fn
+                       :refer [#?@(:clj [f*n fn->])]      ]
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]         ]
+                     [quantum.core.macros.core :as cmacros
+                       :refer [if-cljs]                   ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn          :as fn
+                       :refer [f*n fn->]                  ]
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                  ])))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.

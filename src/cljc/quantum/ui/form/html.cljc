@@ -1,8 +1,7 @@
 (ns
   ^{:doc "Namespace for functions related HTML. Tag domain, etc."
     :attribution "Alex Gunnarson"}
-  quantum.ui.form.html
-  #_(:require-quantum [:core]))  
+  quantum.ui.form.html)  
 
 (def ui-tag-domain (atom #{}))
 

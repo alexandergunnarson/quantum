@@ -2,23 +2,29 @@
             Mostly taken from mpdairy/posh (distributed under EPL >= 1)
             and ported to CLJC."}
   quantum.db.datomic.reactive.core
-  (:require-quantum [:core async log core-async])
-  (:require [com.stuartsierra.component              :as component ]
-   #?(:cljs [reagent.core                            :as rx        ])
-            [quantum.core.collections                :as coll      ]
-            [quantum.db.datomic.core                 :as db        ]
-            [datascript.core                         :as mdb       ]
-            [quantum.db.datomic.reactive.datom-match
-              :refer [datom-match? any-datoms-match? query-symbol?]]
-            [quantum.db.datomic.reactive.pattern-gen :as pgen      ])
-  #?(:cljs
-  (:require-macros 
-            [reagent.ratom :refer [reaction]])))
+           (:require [com.stuartsierra.component              :as component ]
+            #?(:cljs [reagent.core                            :as rx        ])
+                     [#?(:clj  clojure.core.async 
+                         :cljs cljs.core.async   )            :as casync    
+                       :refer [#?(:clj go)]                                 ]
+                     [quantum.core.collections                :as coll      ]
+                     [quantum.core.log                        :as log       ]
+                     [quantum.db.datomic.core                 :as db        ]
+                     [datascript.core                         :as mdb       ]
+                     [quantum.db.datomic.reactive.datom-match 
+                       :refer [datom-match? any-datoms-match? query-symbol?]]
+                     [quantum.db.datomic.reactive.pattern-gen :as pgen      ])
+  #?(:cljs (:require-macros 
+                     [reagent.ratom 
+                       :refer [reaction]                                    ]
+                     [cljs.core.async.macros                 
+                       :refer [go]] 
+                     [quantum.core.log                        :as log       ])))
 
 ; TODO fix
 #?(:clj (def reaction identity))
 
-(def rx-conns (atom {}))
+(defonce rx-conns (atom {}))
 
 (declare try-after-tx)
 
@@ -48,7 +54,7 @@
               (while (not @interrupted?)
                 (let [txn (.take q)]
                   (doseq [[listener-id listener-chan] @listeners]
-                    (core-async/put! listener-chan txn))))
+                    (casync/put! listener-chan txn))))
               (log/pr :warn "Transaction listener complete.")))
           (assoc this :interrupted? interrupted?))
         (catch Throwable e (reset! txn-listener-running? false))))

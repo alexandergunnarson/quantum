@@ -3,14 +3,17 @@
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "Alex Gunnarson"}
   quantum.core.data.vector
-  (:require-quantum [:core])
-  (:require
-         [clojure.core.rrb-vector :as vec+]
-    #?@(:clj
-         [[clojure.core.rrb-vector.protocols :refer
-            [PSliceableVector  slicev
-             PSpliceableVector splicev]]
-          [clojure.core.rrb-vector.rrbt :refer [AsRRBT as-rrbt]]])))
+           (:require [clojure.core.rrb-vector  :as vec+  ]
+           #?@(:clj [[clojure.core.rrb-vector.protocols
+                       :refer [PSliceableVector  slicev
+                               PSpliceableVector splicev]]
+                     [clojure.core.rrb-vector.rrbt
+                       :refer [AsRRBT as-rrbt]]])
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]        ])
+  #?(:cljs (:require-macros
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                 ])))
 
 ; To fix "No implementation of method: :as-rrbt of protocol ___"
 ; And also ""IllegalArgumentException No implementation of method:
@@ -51,8 +54,8 @@
   clojure.lang.Tuple$T6 (splicev [v1 v2] (splicev (into (vector) v1) v2))))
 
 
-(def vec+    vec+/vec)
-(def vector+ vec+/vector)
+(defalias vec+    vec+/vec)
+(defalias vector+ vec+/vector)
 
 ; slice
 (defn catvec
@@ -94,16 +97,16 @@
       _
       (subvec coll a b))))
 
-(defn vector+? [obj]
-  (instance?
+(def vector+?
+  (partial instance?
     #?(:clj  clojure.core.rrb_vector.rrbt.Vector
-      :cljs clojure.core.rrb-vector.rrbt.Vector) obj))
+       :cljs clojure.core.rrb-vector.rrbt.Vector)))
 
 #?(:clj
 (defalias
   ^{:doc "Creates a new vector capable of storing homogenous items of type t,
   which should be one of :object, :int, :long, :float, :double, :byte,
   :short, :char, :boolean. Primitives are stored unboxed."}
-  vector-of vec+/vector-of))
+  vector-of+ vec+/vector-of))
 
 ; TODO use |vec+/vec| to convert a vector to an RRBT vector. Benchmark this

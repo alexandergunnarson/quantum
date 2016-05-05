@@ -1,10 +1,25 @@
 (ns quantum.measure.core
-  (:require-quantum [:core fn logic num set err macros pr log str])
-  (:require
-    [quantum.measure.reg]
-  #?(:clj
-      [quantum.core.graph :as g
-      :refer [->graph ->digraph ->weighted-digraph]])))
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   ) :as core     ]
+                     [quantum.core.error     :as err
+                       :refer [->ex #?(:clj throw-unless)]]
+                     [quantum.core.numeric   :as num      ]
+                     [quantum.core.string    :as str      ]
+             #?(:clj [quantum.core.graph     :as g
+                       :refer [->graph ->digraph
+                               ->weighted-digraph]        ])
+                     [quantum.core.fn        :as fn
+                       :refer [#?@(:clj [f*n])]           ]
+                     [quantum.core.logic     :as logic
+                       :refer [#?@(:clj [eq? whenc ifn])] ]
+                     [quantum.measure.reg                 ])
+  #?(:cljs (:require-macros     
+                    [quantum.core.error      :as err
+                      :refer [throw-unless]               ]
+                    [quantum.core.fn         :as fn
+                       :refer [f*n]                       ]
+                    [quantum.core.logic      :as logic
+                       :refer [eq? whenc ifn]             ])))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}
@@ -29,11 +44,10 @@
                                   [conv-unit unit (num/exactly rate)]])))
                   (apply concat)
                   (apply ->weighted-digraph))
-           fn-chart
-             (->> (g/all-pairs-shortest-paths units-graph *)
-                  g/root-node-paths)
-           unit-type-k (-> unit-type name keyword)
-           nodes (into #{} (g/nodes units-graph))
+           fn-chart (->> (g/all-pairs-shortest-paths units-graph *)
+                         g/root-node-paths)
+           unit-type-k        (-> unit-type name keyword)
+           nodes              (into #{} (g/nodes units-graph))
            conversion-map-sym 'conversion-map
            conversion-map
              (when (= emit-type :map)

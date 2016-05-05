@@ -1,13 +1,15 @@
 (ns quantum.core.numeric.matrix
-  (:require-quantum [:core logic fn err])
-  (:require [#?(:clj  clojure.pprint
-                :cljs cljs.pprint) :as pprint]
-            [quantum.core.loops
-              #?@(:clj [:refer [reducei]])])
-  #?(:cljs
-  (:require-macros
-            [quantum.core.loops
-              :refer [reducei]])))
+           (:require [#?(:clj  clojure.pprint
+                         :cljs cljs.pprint) :as pprint]
+                     [quantum.core.error    :as err
+                       :refer [->ex]                  ]
+                     [quantum.core.loops    :as loops
+                       :refer [#?(:clj reducei)]      ])
+  #?(:cljs (:require-macros
+                     [quantum.core.loops    :as loops
+                       :refer [reducei]               ])))
+
+; TODO clean this namespace up
 
 (def ->vec vec)
 

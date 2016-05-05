@@ -1,27 +1,53 @@
 (ns quantum.core.io.core
-  (:refer-clojure :exclude [get assoc! dissoc!])
-  (:require-quantum [:core logic fn core-async log err res vec str])
-  (:require [com.stuartsierra.component  :as component]
-            [datascript.core             :as mdb      ]
-   #?(:clj  [taoensso.nippy              :as nippy    ])
-   #?(:clj  [iota                        :as iota     ])
-            [quantum.core.convert        :as conv
-              :refer [->name ->str]                   ]
-            [quantum.db.datomic          :as db      
-              #?@(:cljs [:refer [EphemeralDatabase]]) ]
-            [quantum.core.system         :as sys      ]
-            [clojure.walk :refer [postwalk]]
-            [quantum.core.io.utils       :as u        ]
-            [quantum.core.paths          :as p        
-              :refer [path]]
-    #?(:clj [clojure.java.io             :as io       ]))
-  #?(:clj
-  (:import (quantum.db.datomic EphemeralDatabase)
-           (java.io File
-                    InputStream OutputStream
-                    DataInputStream DataOutputStream
-                    FileInputStream FileOutputStream
-                    FileNotFoundException))))
+           (:refer-clojure :exclude [get assoc! dissoc!])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )      :as core     ]
+                     [com.stuartsierra.component  :as component]
+                     [datascript.core             :as mdb      ]
+            #?(:clj  [taoensso.nippy              :as nippy    ])
+            #?(:clj  [clojure.java.io             :as io       ])
+            #?(:clj  [iota                        :as iota     ])
+                     [quantum.core.convert        :as conv
+                       :refer [->name ->str]                   ]
+                     [quantum.core.error          :as err
+                       :refer [->ex #?(:clj throw-unless)]     ]
+                     [quantum.core.fn             :as fn
+                       :refer [#?@(:clj [fn->])]               ]
+                     [quantum.core.log            :as log      ]
+                     [quantum.core.logic          :as logic
+                       :refer [#?@(:clj [whenf whenf*n whenc
+                                         condpc coll-or fn-not])
+                               splice-or nnil? nempty?]        ]
+                     [quantum.core.system         :as sys      ]
+                     [quantum.core.collections    :as coll     
+                       :refer [#?(:clj postwalk)]              ]
+                     [quantum.core.io.utils       :as u        ]
+                     [quantum.core.paths          :as p        
+                       :refer [path]                           ]
+                     [quantum.core.resources      :as res      ]
+                     [quantum.core.type           :as type
+                       :refer [vector+?]                       ]
+                     [quantum.core.vars           :as var
+                       :refer [#?(:clj defalias)]              ])
+  #?(:cljs (:refer-macros
+                     [quantum.core.collections    :as coll     
+                       :refer [postwalk]                       ]
+                     [quantum.core.error          :as err
+                       :refer [throw-unless]                   ]
+                     [quantum.core.fn             :as fn
+                        :refer [fn->]                          ]
+                     [quantum.core.log            :as log      ]
+                     [quantum.core.logic          :as logic
+                       :refer [whenf whenf*n whenc condpc
+                               coll-or fn-not]                 ]
+                     [quantum.core.vars           :as var
+                       :refer [defalias]                       ]))
+  #?(:clj  (:import  (quantum.db.datomic EphemeralDatabase)
+                     (java.io File
+                              InputStream OutputStream
+                              DataInputStream DataOutputStream
+                              FileInputStream FileOutputStream
+                              FileNotFoundException))))
 
 (defonce clj-ext (atom :cljd)) ; Clojure data
 

@@ -4,8 +4,12 @@
             sequences for common combinatorial functions. (See the source code 
             for a longer description.)"}
   quantum.core.numeric.combinatorics
-  (:refer-clojure :exclude [update])
-  (:require-quantum [:core err log fn]))
+  (:refer-clojure :exclude [update assert])
+           (:require [quantum.core.error :as err
+                       :refer [#?(:clj assert)] ])
+  #?(:cljs (:require-macros
+                     [quantum.core.error :as err
+                       :refer [assert]          ])))
 
 ;;; combinatorics.clj: efficient, functional algorithms for generating lazy
 ;;; sequences for common combinatorial functions.

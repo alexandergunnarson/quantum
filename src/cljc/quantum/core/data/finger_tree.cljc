@@ -2,24 +2,28 @@
       :author "Chris Houser"
       :contributors {"Alex Gunnarson" "Added CLJS compatibility"}}
   quantum.core.data.finger-tree
-  (:require-quantum [:core map])
-  (:require
-    #? (:clj  [quantum.core.macros.deftype
-                :refer [deftype-compatible]])
-              [quantum.core.core
-                :refer [seq-equals]]
-    #? (:clj  [quantum.core.data.finger-tree.macros
-                :refer [defdigit make-digit delay-ft meter]])
-    #?@(:cljs [[cljs.analyzer
-                 :refer [macroexpand-1]]
-               [cljs.core    
-                 :refer [INext IEmptyableCollection IEquiv IAssociative]]]))
-  #?(:cljs
-  (:require-macros
-              [quantum.core.macros.deftype
-                :refer [deftype-compatible]        ]
-              [quantum.core.data.finger-tree.macros
-                :refer [defdigit make-digit delay-ft meter]]))
+  (:refer-clojure :exclude [macroexpand-1])
+          (:require   [quantum.core.data.map    :as map
+                        :refer [map-entry]                         ]
+            #?(:clj   [quantum.core.macros.deftype
+                        :refer [deftype-compatible]                ])
+                      [quantum.core.core
+                        :refer [seq-equals]                        ]
+                      [quantum.core.macros.core :as cmacros
+                        :refer [macroexpand-1]                     ]
+            #?(:clj   [quantum.core.data.finger-tree.macros
+                        :refer [defdigit make-digit delay-ft meter]])
+            #?@(:cljs [[cljs.core    
+                        :refer [INext IEmptyableCollection IEquiv IAssociative]]])
+                      [quantum.core.vars        :as var
+                        :refer [#?(:clj def-)]                  ])
+  #?(:cljs(:require-macros
+                      [quantum.core.vars        :as var
+                        :refer [def-]                  ]
+                      [quantum.core.macros.deftype
+                        :refer [deftype-compatible]        ]
+                      [quantum.core.data.finger-tree.macros
+                        :refer [defdigit make-digit delay-ft meter]]))
   #?(:clj
   (:import (clojure.lang Seqable Sequential ISeq IPersistentSet ILookup
                          IPersistentStack IPersistentCollection Associative

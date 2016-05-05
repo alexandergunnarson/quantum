@@ -5,12 +5,16 @@
           CSS instead of generating an external stylesheet."
     :attribution "Alex Gunnarson"}
   quantum.ui.style.css.core
-  (:require-quantum [:core map log err logic fn tpred #_:lib])
-  (:require
-    [garden.color         :as color     :refer [color? #?(:cljs CSSColor)]]
-    [garden.core          :as css       :refer [css]]
-    [garden.stylesheet    :as css-style :refer [at-keyframes at-font-face]])
-  #?(:clj (:import garden.color.CSSColor)))
+           (:require [garden.color      :as color    
+                       :refer [color? #?(:cljs CSSColor)]]
+                     [garden.core       :as css      
+                       :refer [css]]
+                     [garden.stylesheet :as css-style
+                       :refer [at-keyframes at-font-face]]
+                     [quantum.core.log  :as log          ])
+  #?(:cljs (:require-macros
+                     [quantum.core.log  :as log          ]))
+  #?(:clj  (:import  garden.color.CSSColor)))
 
 ; TODO generate this in a more sane way 
 (def listener-map
@@ -58,7 +62,7 @@
                (if (set? vs)
                    (->> vs (map (partial map-entry k)))
                    vs)))
-       quantum.core.reducers/flatten-1+
+       red/flatten-1+
        redv))
 
 ; ======== HELPER FUNCTIONS ========

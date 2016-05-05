@@ -1,10 +1,21 @@
 (ns
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
     :attribution "Alex Gunnarson"}
-  quantum.core.util.bench
-  (:require-quantum [:core str fn logic #?(:clj num)])
-  #?(:clj (:require [criterium.core :as bench]))
-  #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator quanta.ClassIntrospector)))
+  quantum.core.meta.bench
+           (:require 
+             #?(:clj [criterium.core         :as bench])
+                     [quantum.core.string    :as str  ]
+                     [quantum.core.fn        :as fn
+                       :refer [#?@(:clj [fn->])]      ]
+                     [quantum.core.vars      :as var
+                       :refer [#?(:clj defalias)]     ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn        :as fn
+                       :refer [fn->]                  ]
+                     [quantum.core.vars      :as var
+                       :refer [defalias]              ]))
+  #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
+                   quanta.ClassIntrospector)))
 
 #?(:clj 
   (defn num-from-timing [time-str]
@@ -26,6 +37,7 @@
 ; FOR CLJS 
 #?(:clj
 (defmacro profile [k & body]
+  ; if-cljs
   `(let [k# ~k]
      (.time js/console k#)
      (let [res# (do ~@body)]
@@ -57,8 +69,8 @@
 (defn byte-size [obj]
   (let [result-1 (byte-size-alt-1 obj)
         result-2 (byte-size-alt-2 obj)]
-    [(num/min result-1 result-2)
-     (num/max result-1 result-2)])))
+    [(min result-1 result-2)
+     (max result-1 result-2)])))
 
 #?(:clj
 (defn calc-byte-size-of-all-vars
@@ -71,4 +83,4 @@
                    (map (juxt key (fn-> val deref byte-size)))
                    (map (juxt (constantly ns-) first second)))))
        (apply concat)
-       (sort-by (f*n get 2)))))
+       (sort-by #(get % 2)))))

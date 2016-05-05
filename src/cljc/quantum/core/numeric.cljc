@@ -3,21 +3,37 @@
     :attribution "Alex Gunnarson"}
   quantum.core.numeric
   (:refer-clojure :exclude
-    [* *' + +' - -' / < > <= >= == rem inc dec zero? min max format
-     #?@(:clj  [long bigint biginteger bigdec numerator denominator]
-         :cljs [mod quot neg? pos?])])
-  (:require-quantum [:core logic type fn macros err log pconvert])
-  (:require  [quantum.core.convert.primitive :as prim :refer [->unboxed]]
-             [clojure.walk :refer [postwalk]]
-             [quantum.core.numeric.types :as ntypes]
-    #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-    #?(:clj  [quantum.core.numeric.clj  :as clj ])
-    #?(:cljs [quantum.core.numeric.cljs :as cljs]))
-  #?(:clj (:import [java.nio ByteBuffer]      
-                   [quantum.core Numeric] ; loops?
-                   [net.jafama FastMath]
-                   clojure.lang.BigInt
-                   java.math.BigDecimal))) 
+    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? min max quot format
+     #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec']
+         :cljs [mod])])
+           (:require  
+            #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )            :as core    ]
+            #?(:clj  [quantum.core.numeric.clj          :as clj     ])
+            #?(:cljs [quantum.core.numeric.cljs         :as cljs    ])
+                     [quantum.core.convert.primitive    :as pconvert
+                       :refer [#?(:clj ->long)]                     ]
+                     [quantum.core.error                :as err
+                       :refer [->ex]                                ]
+                     [quantum.core.logic                :as logic
+                       :refer [#?@(:clj [whenf*n])]                 ]
+                     [quantum.core.macros               :as macros
+                       :refer [#?@(:clj [defnt deftransmacro])]     ]
+                     [quantum.core.vars                 :as var
+                       :refer [#?(:clj defalias)]                   ])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic                :as logic
+                       :refer [whenf*n]                             ]
+                     [quantum.core.macros               :as macros
+                       :refer [defnt deftransmacro]                 ]
+                     [quantum.core.vars                 :as var
+                       :refer [defalias]                            ]))
+  #?(:clj  (:import  [java.nio ByteBuffer]      
+                     [quantum.core Numeric] ; loops?
+                     [net.jafama FastMath]
+                     clojure.lang.BigInt
+                     java.math.BigDecimal))) 
 
 ; TODO look at https://github.com/clojure/math.numeric-tower/
 
@@ -258,16 +274,16 @@
    :cljs (defonce         ONE  int/ONE ))
 
 ; For units
-(defonce ^:const ten              (#?(:clj long :cljs int)   10    ))
-(defonce ^:const hundred          (#?(:clj long :cljs int)   100   ))
-(defonce ^:const thousand         (#?(:clj long :cljs int)   1000  ))
-(defonce ^:const ten-thousand     (#?(:clj long :cljs int)   10000 ))
-(defonce ^:const hundred-thousand (#?(:clj long :cljs int)   100000))
-(defonce ^:const million          (#?(:clj long :cljs int)   1E6   ))
-(defonce ^:const billion          (#?(:clj long :cljs int)   1E9   ))
-(defonce ^:const trillion         (#?(:clj long :cljs int)   1E12  ))
-(defonce ^:const quadrillion      (#?(:clj long :cljs int)   1E15  ))
-(defonce ^:const quintillion      (#?(:clj long :cljs int)   1E18  )) ; + exa | - atto
+(defonce ^:const ten              (#?(:clj ->long :cljs int)   10    ))
+(defonce ^:const hundred          (#?(:clj ->long :cljs int)   100   ))
+(defonce ^:const thousand         (#?(:clj ->long :cljs int)   1000  ))
+(defonce ^:const ten-thousand     (#?(:clj ->long :cljs int)   10000 ))
+(defonce ^:const hundred-thousand (#?(:clj ->long :cljs int)   100000))
+(defonce ^:const million          (#?(:clj ->long :cljs int)   1E6   ))
+(defonce ^:const billion          (#?(:clj ->long :cljs int)   1E9   ))
+(defonce ^:const trillion         (#?(:clj ->long :cljs int)   1E12  ))
+(defonce ^:const quadrillion      (#?(:clj ->long :cljs int)   1E15  ))
+(defonce ^:const quintillion      (#?(:clj ->long :cljs int)   1E18  )) ; + exa | - atto
 (defonce ^:const sextillion       (bigint 1E21  ))
 (defonce ^:const septillion       (bigint 1E24  ))
 (defonce ^:const octillion        (bigint 1E27  ))

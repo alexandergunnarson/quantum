@@ -4,21 +4,34 @@
     :cljs-self-referencing? true}
   quantum.core.thread.async
   (:refer-clojure :exclude [promise realized? future])
-  (:require-quantum
-    [:core #_num fn #_str err logic vec err #_macros log #_coll])
-  (:require [com.stuartsierra.component       :as component]
-            [#?(:clj  clojure.core.async
-                :cljs cljs.core.async)        :as async    ]
-  ;#?@(:clj [[co.paralleluniverse.pulsar.async :as async+   ]
-  ;          [co.paralleluniverse.pulsar.core  :as pasync   ]])
-   #?(:cljs [servant.core                     :as servant  ]))
-  #?(:cljs
-  (:require-macros
-            [servant.macros                   :as servant
-              :refer [defservantfn]                        ]
-            [cljs.core.async.macros           :as asyncm   ]
-            [quantum.core.thread.async
-              :refer [go]                                  ]))
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )           :as core     ]
+                     [com.stuartsierra.component       :as component]
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async)        :as async    ]
+          ;#?@(:clj [[co.paralleluniverse.pulsar.async :as async+   ]
+          ;          [co.paralleluniverse.pulsar.core  :as pasync   ]])
+            #?(:cljs [servant.core                     :as servant  ])
+                     [quantum.core.error               :as err
+                       :refer [->ex]                                ]
+                     [quantum.core.log                 :as log      ]
+                     [quantum.core.logic               :as logic
+                       :refer [#?@(:clj [fn-not])]                  ]
+                     [quantum.core.macros.core         :as cmacros       
+                       :refer [#?@(:clj [if-cljs])]                 ]
+                     [quantum.core.vars                :as var
+                       :refer [#?@(:clj [defalias defmalias])]      ])
+  #?(:cljs (:require-macros
+                     [servant.macros                   :as servant
+                       :refer [defservantfn]                        ]
+                     [cljs.core.async.macros           :as asyncm   ]
+                     [quantum.core.log                 :as log      ]
+                     [quantum.core.logic               :as logic
+                       :refer [fn-not]                              ]
+                     [quantum.core.thread.async
+                       :refer [go]                                  ]
+                     [quantum.core.vars                :as var
+                       :refer [defalias defmalias]                  ]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
                    #_quantum.core.data.queue.LinkedBlockingQueue

@@ -1,27 +1,52 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
   (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge])
-  (:require-quantum [:core err core-async pr log logic fn cbase tpred async])
-  (:require
-   #?(:clj  [clojure.core                     :as c        ]
-      :cljs [cljs.core                        :as c        ])
-   #?(:cljs [cljs-uuid-utils.core             :as uuid     ])
-   #?(:clj  [datomic.api                      :as bdb      ]
-      :cljs [datomic-cljs.api                 :as bdb      ])
-            [datascript.core                  :as mdb      ]
-            [quantum.db.datomic.core          :as db       ]
-   #?(:cljs [posh.core                        :as rx-db    ])
-    ;#?(:clj [quantum.deploy.amazon           :as amz      ])
-            [com.stuartsierra.component       :as component]
-            [quantum.core.collections         :as coll     ]
-            [quantum.core.resources           :as res      ]
-    #?(:clj [quantum.core.process             :as proc     ]))
+  #_(:require-quantum [core-async])
+          (:require [#?(:clj  clojure.core
+                        :cljs cljs.core   )           :as c        ]
+           #?(:cljs [cljs-uuid-utils.core             :as uuid     ]) ; TODO have a quantum UUID ns
+           #?(:clj  [datomic.api                      :as bdb      ]
+              :cljs [datomic-cljs.api                 :as bdb      ])
+                    [datascript.core                  :as mdb      ]
+                    [quantum.db.datomic.core          :as db       ]
+           #?(:cljs [posh.core                        :as rx-db    ])
+           ;#?(:clj [quantum.deploy.amazon            :as amz      ])
+                    [com.stuartsierra.component       :as component]
+                    [quantum.core.collections         :as coll     
+                       :refer [#?(:clj kmap)]                      ]
+                    [quantum.core.error               :as err
+                       :refer [->ex #?(:clj try-times)]            ]
+                    [quantum.core.fn                  :as fn
+                       :refer [#?@(:clj [with])]                   ]
+                    [quantum.core.log                 :as log      ]
+                    [quantum.core.logic               :as logic
+                       :refer [#?@(:clj [fn-and fn-or])
+                               nnil? nempty?]     ]
+                    [quantum.core.resources           :as res      ]
+            #?(:clj [quantum.core.process             :as proc     ])
+                    [quantum.core.thread.async        :as async    ]
+                    [quantum.core.type                :as type
+                      :refer [atom? #?(:clj boolean?)]]
+                    [quantum.core.vars                :as var
+                      :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros
-            [datomic-cljs.macros   
-              :refer [<?]                                  ]))
-  #?(:clj (:import datomic.Peer
-                   [datomic.peer LocalConnection Connection]
-                   java.util.concurrent.ConcurrentHashMap)))
+                    [datomic-cljs.macros   
+                      :refer [<?]                                  ]
+                    [quantum.core.collections         :as coll     
+                       :refer [kmap]                               ]
+                    [quantum.core.error               :as err
+                       :refer [try-times]                          ]
+                    [quantum.core.fn                  :as fn
+                       :refer [with]                               ]
+                    [quantum.core.logic               :as logic
+                       :refer [fn-and fn-or]                       ]
+                    [quantum.core.log                 :as log      ]
+                    [quantum.core.thread.async        :as async    ]
+                    [quantum.core.vars                :as var
+                      :refer [defalias]                            ]))
+  #?(:clj  (:import datomic.Peer
+                    [datomic.peer LocalConnection Connection]
+                    java.util.concurrent.ConcurrentHashMap)))
 
 ; TODO use potemkin here
 ; |def| instead of |defalias| because CLJS doen't like how it's meta-ing atom

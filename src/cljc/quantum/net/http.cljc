@@ -1,14 +1,28 @@
 (ns quantum.net.http
-  (:require-quantum [:core err logic fn log async casync coll])
-  (:require        [com.stuartsierra.component              :as component]
-                   [taoensso.sente                          :as ws       ]
-         #?@(:clj [[immutant.web                            :as imm      ]
-                   [aleph.http                              :as aleph    ]
-                   [taoensso.sente.server-adapters.immutant :as a-imm    ]
-                   [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-                   [clojure.string                          :as str      ]
-                   [quantum.net.client.impl                 :as impl     ]
-                   [quantum.net.core                        :as net      ]))
+           (:require [com.stuartsierra.component              :as component]
+                     [taoensso.sente                          :as ws       ]
+           #?@(:clj [[immutant.web                            :as imm      ]
+                     [aleph.http                              :as aleph    ]
+                     [taoensso.sente.server-adapters.immutant :as a-imm    ]
+                     [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
+                     [quantum.core.collections                :as coll
+                       :refer [#?(:clj kmap) remove-vals+ redm]            ]
+                     [quantum.core.string                     :as str      ]
+                     [quantum.net.client.impl                 :as impl     ]
+                     [quantum.net.core                        :as net      ]
+                     [quantum.core.error                      :as err      ]
+                     [quantum.core.log                        :as log      ]
+                     [quantum.core.logic                      :as logic
+                       :refer [nnil?]                                      ]
+                     [quantum.core.vars                       :as var
+                       :refer [#?@(:clj [defalias])]                       ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections                :as coll
+                       :refer [kmap]                                       ]
+                     [quantum.core.error                      :as err      ]
+                     [quantum.core.log                        :as log      ]
+                     [quantum.core.vars                       :as var
+                       :refer [defalias]                                   ])))
 
 #?(:clj
 (defrecord

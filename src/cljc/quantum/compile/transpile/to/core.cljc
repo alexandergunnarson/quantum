@@ -1,9 +1,39 @@
-(ns quantum.compile.to.core
-  (:refer-clojure :exclude [name])
-  (:require-quantum [:lib])
-  (:require [quantum.core.analyze.clojure.predicates :refer :all]) ; TODO refer-all not CLJS compatible
-  (:require
-    [quantum.compile.util :as util]))
+(ns quantum.compile.transpile.to.core
+           (:require [quantum.compile.transpile.util          :as util ]
+                     [quantum.core.analyze.clojure.predicates :as anap ]
+                     [quantum.core.data.map                   :as map  ]
+                     [quantum.core.collections                :as coll
+                       :refer [#?@(:clj [containsv? kmap popr popl])
+                               in? dropl]                              ]
+                     [quantum.core.convert                    :as conv
+                       :refer [->name]]
+                     [quantum.core.error                      :as err
+                       :refer [#?(:clj throw-unless) ->ex]             ]
+                     [quantum.core.log                        :as log  ]
+                     [quantum.core.numeric                    :as num  ]
+                     [quantum.core.string                     :as str  ]
+                     [quantum.core.string.format              :as strf ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [<- fn-> fn->> f*n])]          ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [eq? fn-not fn-or fn-and whenf
+                                         whenf*n whenc ifn condfc condpc
+                                         coll-or]) nempty? nnil?]      ]
+                     [quantum.core.macros                     :as macros
+                       :refer [#?(:clj defnt)]                         ])
+  #?(:cljs (:require-macros
+                     [quantum.core.error                      :as err
+                       :refer [throw-unless]                           ]
+                     [quantum.core.log                        :as log  ]
+                     [quantum.core.collections                :as coll
+                       :refer [containsv? kmap popr popl]              ]
+                     [quantum.core.fn                         :as fn
+                       :refer [<- fn-> fn->> f*n]                      ]
+                     [quantum.core.logic                      :as logic
+                       :refer [eq? fn-not fn-or fn-and whenf whenf*n
+                               whenc ifn condfc condpc coll-or]        ]
+                     [quantum.core.macros                     :as macros
+                       :refer [defnt]                                  ])))
 
 ; special-symbol? is a clojure thing
 
@@ -20,7 +50,7 @@
 
 (defrecord ObjLangText [text])
 
-(def demunge-class (f*n str/replace "$" "."))  ; For inner classes
+(def demunge-class (f*n str/replace "$" "."))  ; For inner classes; TODO more than this is required  
 
 (defn replace-specials [^String s-0 & [upper?]]
   (let [^Fn camelcase-if-needed
@@ -160,14 +190,14 @@
   (let [default-do-fn
           (fn [body] (list 'do body))
         do-fn
-          (logic/ifc form (fn-and listy? (fn-> first symbol?))
+          (logic/ifc form (fn-and seq? (fn-> first symbol?))
             (or (-> do-form-map (get (first form))) default-do-fn)
             default-do-fn)]
     (do-fn form)))
 
 (def apply-do-form
   (fn->> (map (partial do-form))
-         (map (MWA rest)) ; to get rid of |do|
+         (map rest) ; to get rid of |do|
          coll/flatten-1  ; join |do|s
          (cons 'do)))
 
@@ -199,10 +229,10 @@
    Handles nested if-statements as well."
    {:todo "Dispatch on protocol"}
   [expr]
-  (whenc expr s-expr?
+  (whenc expr anap/s-expr?
     (let [[spec-sym & exprs] expr
           needs-return-statement?
-            (fn-and (fn-not branching-expr?) (fn-not throw-statement?))]
+            (fn-and (fn-not anap/branching-expr?) (fn-not anap/throw-statement?))]
       (condp = spec-sym
         'when (let [[pred & exprs-t] exprs
                    _ (println "EXPRS-T" exprs-t)
@@ -229,11 +259,13 @@
           (->> expr (do-form) (add-return-statements))
         expr))))
 
-(defn gen-return-statement [^Num vertical-spacing body-in-do-form]
+(defn gen-return-statement
+  {:in-types '{vertical-spacing number?}}
+  [vertical-spacing body-in-do-form]
   (let [last-expr (last body-in-do-form)
         _ (log/pr :debug "ADDING RETURN STATEMENT TO:" last-expr)
         expr-str
-          (if (-> last-expr branching-expr?)
+          (if (-> last-expr anap/branching-expr?)
               (eval-form (add-return-statements last-expr))
               (str "return "
                 (->> body-in-do-form last (eval-form)) ";" "\n"))]
@@ -258,7 +290,7 @@
 
 (defn scope-if-needed [expr]
   (log/pr :debug "SCOPING" expr)
-  (whenf expr listy?
+  (whenf expr seq?
     (whenf*n (fn-> first (in? (get scoped-syms *lang*)))
       (partial list 'scope))))
 
@@ -272,7 +304,7 @@
   (atom
     {'for
        (fn for-fn [[special-sym bindings & body :as form]]
-         {:pre [(with-throw (-> bindings count even?)
+         {:pre [(throw-unless (-> bindings count even?)
                 (str/sp "'For' requires an even number of bindings. Supplied:" (count bindings)))]}
          (log/pr :debug "IN |FOR|")
          (->> form do-form eval-form))
@@ -291,11 +323,11 @@
          (eval-form (apply list 'defglobal sym form args)))
      'def*
        (fn def*-fn [[special-sym global? sym form & args]]
-         {:pre [(with-throw (nnil? form) (str/sp "Cannot bind var" (str/squote sym) "to nothing"))
+         {:pre [(throw-unless (nnil? form) (str/sp "Cannot bind var" (str/squote sym) "to nothing"))
                 (-> args count (= 0))]}
          (when (-> reserved-syms (get *lang*) (contains? sym))
-           (throw+ {:msg (str/sp "Symbol" (str/squote sym)
-                            "is a reserved symbol and cannot be redefined.")}))
+           (throw (->ex (str/sp "Symbol" (str/squote sym)
+                          "is a reserved symbol and cannot be redefined."))))
          (let [_ (log/pr :debug "META FOR SYM" sym "IS" (meta sym))
                form-scoped (->> form (scope-if-needed))
                class- (or (-> sym meta :tag)
@@ -319,18 +351,18 @@
                      (if global?
                          (str/sp visibility dynamicity class-)
                          class-))]
-           (str/sp prefix (replace-specials (name sym)) "="
+           (str/sp prefix (replace-specials (->name sym)) "="
                              (->> form-f eval-form util/scolon))))
      'declare
        (fn declare-fn [[special-sym sym & args]]
-         {:pre [(with-throw (-> args count (= 0))
+         {:pre [(throw-unless (-> args count (= 0))
                   (str/sp "'Declare' takes only one argument. Supplied:" (count args)))]}
          (condp = *lang*
            ; TODO throw on trying to def a special JS symbol
-           :js (str/sp "var" (util/scolon (replace-specials (name sym))))))
+           :js (str/sp "var" (util/scolon (replace-specials (->name sym))))))
      'let
        (fn let-fn [[special-sym bindings & body :as form]]
-         {:pre [(with-throw (-> bindings count even?)
+         {:pre [(throw-unless (-> bindings count even?)
                 (str/sp "'Let' requires an even number of arguments. Supplied:" (count bindings)))]}
          (log/pr :debug "IN |LET|")
          (->> form do-form eval-form))
@@ -338,7 +370,7 @@
        (fn quote-fn [[special-sym & args]]
          (if (and (coll/single? args) (-> args first symbol?))
              (eval-form (first args))
-             (throw+ "Quote not supported yet.")))
+             (throw (->ex "Quote not supported yet."))))
      'when
        (fn when-fn [[special-sym pred & args]]
          (let [
@@ -354,7 +386,7 @@
 
      'if
        (fn if-fn [[special-sym pred expr-t expr-f & args]]
-         {:pre [(with-throw (-> args count (= 0))
+         {:pre [(throw-unless (-> args count (= 0))
                   (str/sp "|if| takes three arguments. Supplied extra:" args))]}
          (let [default-fn
                 (fn []
@@ -371,7 +403,7 @@
   
      'cond ; TODO need to add return statement capability
        (fn cond-fn [[special-sym pred expr & expr-pairs]]
-         {:pre [(with-throw (-> expr-pairs count even?)
+         {:pre [(throw-unless (-> expr-pairs count even?)
                   (str/sp "|cond| takes an even number of arguments. Supplied:"
                     (concat (list pred expr) expr-pairs)))]}
          (->> (concat (list special-sym pred expr) expr-pairs) do-form eval-form))
@@ -380,11 +412,11 @@
        (fn try-fn [[special-sym & args]]
          (let [default-fn
                 (fn []
-                  (let [catch?       (fn-> first (symbol-eq? 'catch)) 
-                        finally?     (fn-> first (symbol-eq? 'finally))
-                        try-body     (->> args (remove (fn-and listy? (fn-or catch? finally?))))
-                        catches      (->> args (filter (fn-and listy? catch?)))
-                        finallys     (->> args (filter (fn-and listy? finally?)))
+                  (let [catch?       (fn-> first (anap/symbol-eq? 'catch)) 
+                        finally?     (fn-> first (anap/symbol-eq? 'finally))
+                        try-body     (->> args (remove (fn-and seq? (fn-or catch? finally?))))
+                        catches      (->> args (filter (fn-and seq? catch?)))
+                        finallys     (->> args (filter (fn-and seq? finally?)))
                         ^Fn do-eval  (fn->> apply-do-form eval-form)
                         try-str      (->> try-body do-eval (<- str "\n") (util/bracket "try"))
                         catch-str    (when (nempty? catches)
@@ -413,9 +445,9 @@
                    :java ":"
                    :cs   "in"
                    :js   "in"
-                   (throw+ {:msg (str/sp "No doseq in-token recognized for language:" *lang*)}))
+                   (throw (->ex (str/sp "No doseq in-token recognized for language:" *lang*))))
                ; (elem-class super)
-               var-decl (or (metaclass sub)
+               var-decl (or (anap/metaclass sub)
                             (-> sub meta :t)
                             (get dynamic-type *lang*)
                             (infer-type))
@@ -454,12 +486,12 @@
      'fn*
        (fn fn*-fn [[spec-sym lambda? unk & body]]
          (let [sym (when (symbol? unk) unk)
-               ret-type (or (metaclass sym) (-> sym meta :t) "Object")
+               ret-type (or (anap/metaclass sym) (-> sym meta :t) "Object")
                arglist (if (symbol? unk) (first body) unk )
                body    (if (symbol? unk) (rest  body) body)
                _ (log/pr :debug "CREATING FN:" arglist body)
                arglist-f
-                 (whenf arglist variadic-arglist?
+                 (whenf arglist anap/variadic-arglist?
                    (fn-> popr popr)) ; to remove variadic args
                fn-arglist
                  (->> arglist-f
@@ -467,7 +499,7 @@
                              (let [evaled (eval-form sym)]
                                (condp = *lang*
                                  :js evaled
-                                 (str/sp (or (metaclass sym) "Object") evaled)))
+                                 (str/sp (or (anap/metaclass sym) "Object") evaled)))
                                ))
                       (str/join ", ")
                       str/paren)
@@ -480,7 +512,7 @@
                body-in-do-form-0
                  (apply-do-form body)
                variadic-def-statement
-                 (when (variadic-arglist? arglist)
+                 (when (anap/variadic-arglist? arglist)
                    (list 'def (last arglist) 'arguments))
                _ (log/pr :debug "FN VARIADIC DEF STATEMENT FROM" arglist ":" variadic-def-statement)
                ; Add, e.g. "var myArgs = arguments;"
@@ -520,7 +552,7 @@
            (coll-or :cs :java)
              (let [visibility (if (-> sym meta :protected) "protected" "public")
                        dynamicity (if (-> sym meta :dynamic) nil "static")]
-                   (str/sp visibility dynamicity (or (metaclass sym) (-> sym meta :t) "Object")
+                   (str/sp visibility dynamicity (or (anap/metaclass sym) (-> sym meta :t) "Object")
                      (eval-form sym)
                      (eval-form (apply list 'extern-fn sym bindings form))))))
      '.
@@ -549,7 +581,7 @@
                          (and (= 1 arg-ct) (nil? arg-0))
                            {}
                          :else
-                           (throw+ {:msg "Invalid number of arguments to JavaScript object."}))
+                           (throw (->ex "Invalid number of arguments to JavaScript object.")))
                      longest-key-length
                        (->> obj-map keys
                             (map (fn->> name symbol eval-form count))
@@ -627,7 +659,7 @@
                  [(-> ['macro-sym] (into arglist))]
                var-args-name '_args-extra_
                arglist-f
-                 (if (variadic-arglist? arglist)
+                 (if (anap/variadic-arglist? arglist)
                      arglist-base
                      (-> arglist-base
                          (update 0 (f*n conj '& var-args-name))))
@@ -637,7 +669,7 @@
                macro-f
                  (concat
                    (list 'fn sym-munged arglist-f
-                     {:pre [(list 'with-throw ('-> var-args-name 'empty?)
+                     {:pre [(list 'throw-unless ('-> var-args-name 'empty?)
                               (list 'str "Too many args to |" 'macro-sym "|."))]})
                    args)]
            (log/ppr :debug "ADDING MACRO:" macro-f)
@@ -707,10 +739,10 @@
      (apply fn-pos (eval-form 'hash-set!) obj))
    ([^symbol? obj]
      (log/pr :debug "IN SYM WITH" (str obj))
-     (if (qualified? obj)
+     (if (anap/qualified? obj)
          (do (log/pr :debug "QUALIFIED SYMBOL:" (str obj))
              (if (->> obj str (filter (eq? \/)) count (<- > 1))
-               (throw+ {:msg (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")})
+               (throw (->ex (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
                (->> obj str (<- str/replace #"\/" ".") symbol eval-form)))
          (->> obj str replace-specials)))
    ([^string? obj] (str \" obj \"))
@@ -722,7 +754,7 @@
    ([:else obj]
      (if (nil? obj)
          "null"
-         (throw+ {:msg ["Unrecognized form:" obj] :class (class obj)}))))
+         (throw (->ex (class obj) ["Unrecognized form:" obj])))))
 
 (defn ^String eval-form [obj]
   (println "Evaluating" obj "class" (class obj))

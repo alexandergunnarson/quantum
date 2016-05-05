@@ -1,11 +1,23 @@
 (ns quantum.core.macros.protocol
-  (:require-quantum [:core fn logic cmacros log tcore])
-  (:require [quantum.core.analyze.clojure.predicates :as anap
-              :refer [type-hint]]
-            [quantum.core.macros.transform :as trans]
-            [quantum.core.collections.base
-              :refer [update-first update-val ensure-set
-                      zip-reduce default-zipper]]))
+           (:require [quantum.core.analyze.clojure.predicates :as anap
+                       :refer [type-hint]]
+                     [quantum.core.macros.transform :as trans      ]
+                     [quantum.core.fn               :as fn
+                                :refer [#?@(:clj [f*n fn-> fn->>])]]
+                     [quantum.core.log              :as log        ]
+                     [quantum.core.logic            :as logic
+                       :refer [#?@(:clj [whenp]) nempty? nnil?]    ]
+                     [quantum.core.collections.base :as cbase
+                       :refer [update-first update-val ensure-set
+                               zip-reduce default-zipper]          ]
+                     [quantum.core.macros.core      :as cmacros    ]
+                     [quantum.core.type.core        :as tcore      ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn               :as fn
+                       :refer [f*n fn-> fn->>]                     ]
+                     [quantum.core.log              :as log        ]
+                     [quantum.core.logic            :as logic
+                       :refer [whenp]                              ])))
 
 (def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
   protocol-type-hint-map

@@ -1,10 +1,9 @@
 (ns quantum.numeric.core
-  (:require-quantum [:core])
-  (:require [quantum.core.numeric :refer [exp sqrt]]))
+  #_(:require [quantum.core.numeric :refer [exp sqrt]]))
 
-(defalias $ exp)
+#_(defalias $ exp)
 
-(defn quartic-root [a b c d]
+#_(defn quartic-root [a b c d]
   (let [A (+ (* 2  ($ b 3))
              (* -9 a b c)
              (* 27 ($ c 2))

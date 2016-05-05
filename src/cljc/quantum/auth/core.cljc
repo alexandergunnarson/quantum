@@ -5,8 +5,10 @@
     :attribution "Alex Gunnarson"}
   quantum.auth.core
   (:refer-clojure :exclude [get get-in assoc!])
-  (:require-quantum [:core fn logic cbase] #_[:lib])
-  (:require [quantum.core.io.core :as io]))
+  (:require [#?(:clj  clojure.core
+                :cljs cljs.core   )   :as core]
+            [quantum.core.io.core     :as io  ]
+            [quantum.core.collections :as coll]))
 
 ; TODO: /assoc/ for file; /update/ for file; overarching syntax
 ; https://developer.mozilla.org/docs/Security/Weak_Signature_Algorithm
@@ -38,13 +40,14 @@
 
 (defn get
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
-  ([^Keyword auth-source]
+  {:usage (get :amazon)}
+  ([auth-source]
     (if *mem?*
         (core/get @auths auth-source)
         (io/get
           {:path [:keys
                    (str (core/get @auth-source-table auth-source) ".cljd")]})))     ; CLJD = Clojure Data
-  ([^Keyword auth-source k]
+  ([auth-source k]
     (core/get (get auth-source) k))) 
 
 (defn get-in
@@ -55,7 +58,7 @@
 
 (defn assoc!
   "Writes the given authorization keys to a file."
-  [^Keyword auth-source map-f]
+  [auth-source map-f]
   (if *mem?*
       (swap! auths assoc auth-source map-f)
       (io/assoc!
@@ -64,18 +67,19 @@
         map-f
         {:overwrite? false})))
 
-(defn assoc-in! [^Keyword auth-source & kvs]
+(defn assoc-in! [auth-source & kvs]
   (assoc! auth-source
     (apply assoc-in (get auth-source) kvs)))
 
-(defn dissoc-in! [^Keyword auth-source & ks]
+(defn dissoc-in! [auth-source & ks]
   (assoc! auth-source
-    (apply cbase/dissoc-in (get auth-source) ks)))
+    (apply coll/dissoc-in+ (get auth-source) ks)))
 
 ; TODO temp change
 (defn access-token
   "Retrieves the current access token for @auth-source."
-  [^Keyword auth-source service]
-  (-> (get auth-source) (core/get service) :access-tokens :current :access-token))
+  [auth-source service]
+  (-> (get auth-source) (core/get service)
+      :access-tokens :current :access-token))
 
 

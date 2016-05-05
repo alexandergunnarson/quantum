@@ -30,7 +30,7 @@
      ; ==== CORE ====
        [proteus                                 "0.1.4"           ]
        ; ==== NAMESPACE ====
-       [quantum/ns                              "1.0"             ]
+       #_[quantum/ns                              "1.0"             ]
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
        [com.taoensso/encore                     "2.49.0"          ] ; To not break things
        ; ==== ASYNC ====
@@ -205,8 +205,8 @@
      [byte-transforms                           "0.1.3"           ]
      ; ==== MISCELLANEOUS ====
      ]
-   :injections [(require '[quantum.core.ns :as ns])
-                (reset! ns/externs? false)
+   :injections [#_(require '[quantum.core.ns :as ns])
+                #_(reset! ns/externs? false)
                 (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
                                        'print-cause-trace)
                       newv (ns-resolve (doto 'clj-stacktrace.repl require)
@@ -222,7 +222,7 @@
           :resource-paths ["dev-resources"]
           :dependencies   []
           :plugins [;[codox "0.8.8"]
-                    [quantum/lein-cljsbuild          "1.1.2-Q-1"]
+                    [lein-cljsbuild          "1.1.3" #_"1.1.2-Q-1"]
                     ;[com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
 
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
@@ -254,7 +254,8 @@
                       "src/cljs"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
-  :global-vars {*warn-on-reflection* true}
+  :global-vars {*warn-on-reflection* true
+                *unchecked-math*     :warn-on-boxed}
   :java-agents [#_[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8" 
                 ; This for HTTP/2 support
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]

@@ -1,6 +1,6 @@
 (ns quantum.validate.core
-  (:require-quantum [:core fn logic str])
-  (:require [quantum.validate.domain])
+  (:require [quantum.validate.domain    ]
+            [quantum.core.string :as str])
   #?(:clj (:import java.util.regex.Matcher)))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")

@@ -3,11 +3,7 @@
             [quantum.core.ns.reg-utils :as utils :refer [set-merge]]))
 
 (def reg-raw
-  '{reg        {:injection       {:clj #(do (set! clojure.core/*warn-on-reflection* true)
-                                             (set! clojure.core/*unchecked-math* :warn-on-boxed)
-                                             #_(gen-class) ; not needed unless for interop, apparently
-                                             nil)}
-                :aliases         {:cljc {reg     quantum.core.ns  } ; Temporarily call it |quantum.core.ns| for backwards compatibility
+  '{reg        {:aliases         {:cljc {reg     quantum.core.ns  } ; Temporarily call it |quantum.core.ns| for backwards compatibility
                                   :clj  {refresh clojure.tools.namespace.repl}}
                 :refers          {:cljc {reg     #{ns-exclude js-println
                                                    ANil ABool ADouble ANum AExactNum AInt ADecimal
@@ -91,7 +87,7 @@
                                                  last butlast
                                                  pop popl popr peek
                                                  empty
-                                                 conjl conjr
+                                                 conj conjl conjr
                                                  index-of last-index-of
                                                  take ltake take-while ltake-while
                                                  take-until take-until-inc
@@ -369,6 +365,8 @@
                                                               TableColumn$CellDataFeatures TableColumn$CellEditEvent)
                                    (javafx.scene.control.cell PropertyValueFactory TextFieldTableCell))}})
 
+
+
 (def ^{:doc "All macros in Quantum library. Primarily for ClojureScript's :refer-macros clause."}
   macros
  '{quantum.core.core         #{with}
@@ -465,3 +463,4 @@
     (assoc reg-raw
       :lib  (bundle lib-keys)
       :core (bundle '#{reg qcore var repl cmacros}))))
+

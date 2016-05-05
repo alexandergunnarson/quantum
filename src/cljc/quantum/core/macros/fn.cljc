@@ -3,10 +3,25 @@
             Also includes helper functions for macros which create
             |defn| and |fn| variants."}
   quantum.core.macros.fn
-  (:require-quantum [:core log logic fn err])
-  (:require [quantum.core.macros.optimization :as opt
-              :refer [extern?]]
-    #_(:clj [co.paralleluniverse.pulsar.core  :as pulsar])))
+           (:require
+             #_(:clj [co.paralleluniverse.pulsar.core  :as pulsar ])
+                     [quantum.core.error               :as err 
+                       :refer [->ex]                              ]
+                     [quantum.core.fn                  :as fn
+                       :refer [#?@(:clj [doto->>])]               ]
+                     [quantum.core.log                 :as log    ]
+                     [quantum.core.logic               :as logic
+                       :refer [#?@(:clj [fn-or whenf*n])]         ]
+                     [quantum.core.macros.core         :as cmacros
+                       :refer [if-cljs]                           ]
+                     [quantum.core.macros.optimization :as opt
+                       :refer [extern?]])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                  :as fn
+                       :refer [doto->>]                           ]
+                     [quantum.core.log                 :as log    ]
+                     [quantum.core.logic               :as logic
+                       :refer [fn-or whenf*n]                     ])))
 
 (defn defn-variant-organizer
   "Organizes the arguments for use for a |defn| variant.

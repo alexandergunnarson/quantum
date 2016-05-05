@@ -1,6 +1,11 @@
 (ns quantum.ui.style.css.dom
-  (:require-quantum [:core fn logic err])
-  (:require [clojure.string :as str]))
+           (:refer-clojure :exclude [assert])
+           (:require [clojure.string     :as str]
+                     [quantum.core.error :as err
+                       :refer [#?(:clj assert)] ])
+  #?(:cljs (:require-macros
+                     [quantum.core.error :as err
+                       :refer [assert]          ])))
 
 #?(:cljs
 (defn add-link! [link]

@@ -1,7 +1,11 @@
 (ns quantum.validate.domain
-  (:require-quantum [:core logic fn str coll])
-  (:require [quantum.validate.regex :as v.regex]
-            [quantum.core.string.encode :as encode])
+  (:require [quantum.validate.regex     :as v.regex]
+            [quantum.core.collections   :as coll
+              :refer [in?]                         ]
+            [quantum.core.string        :as str    ]
+            [quantum.core.logic         :as logic
+              :refer [nempty?]                     ]
+            [quantum.core.string.encode :as encode ])
   #?(:clj (:import java.util.regex.Matcher
                    java.net.IDN
                    java.util.Locale)))

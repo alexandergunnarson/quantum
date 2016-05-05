@@ -3,23 +3,27 @@
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "Alex Gunnarson"}
   quantum.core.data.set
-  (:require-quantum [:core])
-  (:require   [clojure.set              :as set  ]
-              [clojure.data.avl         :as avl  ]
-    #?@(:clj [[clojure.data.finger-tree :as ftree]
-              [flatland.ordered.set     :as oset ]
-              [seqspert.hash-set                 ]
-              [clojure.data.int-map     :as imap]])))
+           (:require [clojure.set              :as set  ]
+                     [clojure.data.avl         :as avl  ]
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]       ]
+           #?@(:clj [[clojure.data.finger-tree :as ftree]
+                     [flatland.ordered.set     :as oset ]
+                     [seqspert.hash-set                 ]
+                     [clojure.data.int-map     :as imap ]]))
+  #?(:cljs (:require-macros
+                     [quantum.core.vars        :as var
+                        :refer [defalias]               ])))
 
 ; ============ STRUCTURES ============
 
-#?(:clj (def ordered-set  oset/ordered-set))
-#?(:clj (def c-sorted-set ftree/counted-sorted-set)) ; sorted set that provides log-n nth
-(def sorted-set+    avl/sorted-set)
-(def sorted-set-by+ avl/sorted-set-by)
+#?(:clj (defalias ordered-set  oset/ordered-set))
+#?(:clj (defalias c-sorted-set ftree/counted-sorted-set)) ; sorted set that provides log-n nth
+(defalias sorted-set+    avl/sorted-set)
+(defalias sorted-set-by+ avl/sorted-set-by)
 
-#?(:clj (def int-set       imap/int-set))
-#?(:clj (def dense-int-set imap/dense-int-set))
+#?(:clj (defalias int-set       imap/int-set))
+#?(:clj (defalias dense-int-set imap/dense-int-set))
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 
