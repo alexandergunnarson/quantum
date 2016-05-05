@@ -37,8 +37,10 @@ AAC encoder available with ffmpeg")
    crf=28 is the recommended preset."
   {:in [[:resources "Music Library" "1.mp4"]
         [:resources "Music Library" "x265" "1.mp4"]
-        {:write-streams? true :err-buffer sb-err :std-buffer sb-std
-         :output-line}]}
+        {:write-streams? true
+         :err-buffer     sb-err
+         :std-buffer     sb-std
+         :output-line    true}]}
   ([in out] (->mp4-x265 in out #{:encode-audio?}))
   ([in out {:keys [encode-audio?] :as opts}]
     (async {:id (-> 'mp4->x265 gensym keyword) :type :thread}

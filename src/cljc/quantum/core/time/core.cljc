@@ -282,7 +282,7 @@
                         (throw (Exception. "Formatter not found")))]
               (.format formatter ^java.time.LocalDateTime (->local-date-time date))))))
 
-#?(:clj
+#_(:clj
 (defn ->string [date formatting]
   (->string* formatting date)))
 
