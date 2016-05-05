@@ -6,6 +6,8 @@
            (:require
              #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
                      [quantum.core.type.bootstrap      :as boot]
+                     [quantum.core.error               :as err
+                       :refer [->ex]                           ]
                      [quantum.core.vars                :as var
                        :refer [#?@(:clj [defalias])]           ])
   #?(:cljs (:require-macros
@@ -27,7 +29,7 @@
    :cljs
      (if (-> types (get 'primitive?) (contains? class-0))
          (or (get primitive-types class-0)
-             (throw+ {:msg (str "Class " (type->str class-0) " not found in primitive types.")}))
+             (throw (->ex (str "Class " (type->str class-0) " not found in primitive types."))))
          (-> class-0 type->str symbol))))
 
 #?(:clj

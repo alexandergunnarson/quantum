@@ -26,7 +26,7 @@
      :cljs (instance? js/RegExp               obj)))
 
 (defn derefable? [obj]
-  (satisfies? #?(:clj clojure.lang.IDeref :cljs core/IDeref) obj))
+  (satisfies? #?(:clj clojure.lang.IDeref :cljs cljs.core/IDeref) obj))
 
 (def map-entry?  #?(:clj  (partial instance? clojure.lang.MapEntry)
                     :cljs (fn-and vector? (fn-> count (= 2)))))

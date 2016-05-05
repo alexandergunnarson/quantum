@@ -46,8 +46,8 @@
                      [quantum.core.error                      :as err  
                        :refer [->ex]                                     ]
                      [quantum.core.fn                         :as fn  
-                       :refer [#?@(:clj [compr <- fn-> fn->> withf->>  
-                                         f*n MWA]) fn-nil juxt-kv]       ]
+                       :refer [#?@(:clj [compr <- fn-> fn->>  
+                                         f*n MWA]) fn-nil juxt-kv withf->>]]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
@@ -79,7 +79,7 @@
                                conjl conj! assoc! dissoc! disj!
                                map-entry]]
                      [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> withf->> f*n MWA]     ]
+                       :refer [compr <- fn-> fn->> f*n MWA]              ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic 
                        :refer [fn-not fn-or fn-and whenf whenf*n 

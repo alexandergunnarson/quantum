@@ -16,6 +16,8 @@
              #?(:clj [clojure.pprint           :as pprint
                        :refer [pprint]                    ]))
   #?(:cljs (:require-macros
+                     [quantum.core.macros.core :as cmacros
+                       :refer [when-cljs]                 ]
                      [quantum.core.fn          :as fn
                        :refer [f*n]                       ]
                      [quantum.core.vars        :as var

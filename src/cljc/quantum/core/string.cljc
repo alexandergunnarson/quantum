@@ -17,9 +17,10 @@
                      [quantum.core.fn            :as fn 
                        :refer [#?@(:clj [fn->])]                       ]
                      [quantum.core.logic         :as logic
-                       :refer [#?@(:clj [fn-and whencf*n ifn]) nempty?]]
+                       :refer [#?@(:clj [fn-and whenc whencf*n ifn])
+                               nempty?]                                ]
                      [quantum.core.loops         :as loops
-                       :refer [reduce reducei]                         ]
+                       :refer [#?@(:clj [reduce reducei])]             ]
                      [quantum.core.macros        :as macros
                        :refer [#?@(:clj [defnt defnt'])]               ]
                      [quantum.core.string.format :as form              ]
@@ -30,7 +31,7 @@
                      [quantum.core.fn            :as fn
                        :refer [fn->]                                   ]
                      [quantum.core.logic         :as logic
-                       :refer [fn-and whencf*n ifn]                    ]
+                       :refer [fn-and whenc whencf*n ifn]              ]
                      [quantum.core.loops         :as loops
                        :refer [reduce reducei]                         ]
                      [quantum.core.macros        :as macros

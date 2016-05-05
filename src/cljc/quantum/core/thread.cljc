@@ -3,6 +3,7 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
+             (:refer-clojure :exclude [doseq])
              (:require 
            #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
                      [clojure.core.async.impl.exec.threadpool :as async-threadpool]

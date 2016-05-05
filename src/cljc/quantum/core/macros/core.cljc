@@ -117,9 +117,9 @@
 
 (defn macroexpand-1 [form & [impl & args]]
   (condp = impl
-    :ana #?(:clj  (apply clojure.tools.analyzer.jvm/macroexpand-1 form args)
-            :cljs (apply cljs.analyzer/macroexpand-1              form args))
-    nil (core/macroexpand-1 form)))
+             :ana #?(:clj  (apply clojure.tools.analyzer.jvm/macroexpand-1 form args)
+                     :cljs (apply cljs.analyzer/macroexpand-1              form args))
+    #?@(:clj [nil (core/macroexpand-1 form)])))
 
 #?(:clj (defn macroexpand-all
   {:todo ["Compare implementations"]}

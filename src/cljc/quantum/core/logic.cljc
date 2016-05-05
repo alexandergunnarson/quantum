@@ -11,10 +11,12 @@
                      [quantum.core.vars        :as var
                        :refer [#?(:clj defalias)]         ]
                      [quantum.core.macros.core :as cmacros
-                       :refer [if-cljs]                   ])
+                       :refer [#?(:clj if-cljs)]          ])
   #?(:cljs (:require-macros
                      [quantum.core.fn          :as fn
                        :refer [f*n fn->]                  ]
+                     [quantum.core.macros.core :as cmacros
+                       :refer [if-cljs]                   ]
                      [quantum.core.vars        :as var
                        :refer [defalias]                  ])))
 

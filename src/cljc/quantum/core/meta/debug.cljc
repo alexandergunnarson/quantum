@@ -8,7 +8,7 @@
              #?(:clj [clojure.repl                      ])
              #?(:clj [debugger.core                     ])
                      [quantum.core.vars        :as var
-                       :refer [defalias]                ])
+                       :refer [#?(:clj defalias)]       ])
   #?(:cljs (:require-macros
                      [quantum.core.vars        :as var
                        :refer [defalias]                ])))
