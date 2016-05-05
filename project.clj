@@ -30,7 +30,6 @@
      ; ==== CORE ====
        [proteus                                 "0.1.4"           ]
        ; ==== NAMESPACE ====
-       #_[quantum/ns                              "1.0"             ]
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
        [com.taoensso/encore                     "2.49.0"          ] ; To not break things
        ; ==== ASYNC ====
@@ -222,7 +221,7 @@
           :resource-paths ["dev-resources"]
           :dependencies   []
           :plugins [;[codox "0.8.8"]
-                    [lein-cljsbuild          "1.1.3" #_"1.1.2-Q-1"]
+                    [lein-cljsbuild                  "1.1.3"]
                     ;[com.cemerick/clojurescript.test "0.3.1" :exclusions [org.json/json]]
 
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
