@@ -162,3 +162,34 @@
 ;    {:raw "V" :symbol 'void    :string "void"    :class Void/TYPE      :container Void}])
 
 #?(:clj (def ^:runtime-eval construct (mfn new)))
+
+; ============ CLASS ALIASES ============
+
+; Just to be able to synthesize class-name aliases...
+; TODO these aren't quite right
+         (def ANil       nil)
+;#?(:clj (def Fn         clojure.lang.IFn))
+         (def AKey       #?(:clj clojure.lang.Keyword              :cljs cljs.core.Keyword             ))
+         (def ANum       #?(:clj java.lang.Number                  :cljs js/Number                     ))
+         (def AExactNum  #?(:clj clojure.lang.Ratio                :cljs js/Number                     ))
+         (def AInt       #?(:clj java.lang.Integer                 :cljs js/Number                     ))
+         (def ADouble    #?(:clj java.lang.Double                  :cljs js/Number                     ))
+         (def ADecimal   #?(:clj java.lang.Double                  :cljs js/Number                     ))
+         (def ASet       #?(:clj clojure.lang.APersistentSet       :cljs cljs.core.PersistentHashSet   ))
+         (def ABool      #?(:clj Boolean                           :cljs js/Boolean                    ))
+         (def AArrList   #?(:clj java.util.ArrayList               :cljs cljs.core.ArrayList           ))
+         (def ATreeMap   #?(:clj clojure.lang.PersistentTreeMap    :cljs cljs.core.PersistentTreeMap   ))
+         (def ALSeq      #?(:clj clojure.lang.LazySeq              :cljs cljs.core.LazySeq             ))
+         (def AVec       #?(:clj clojure.lang.APersistentVector    :cljs cljs.core.PersistentVector    )) ; Conflicts with clojure.core/->Vec
+         (def AMEntry    #?(:clj clojure.lang.MapEntry             :cljs cljs.core.Vec                 ))
+         (def ARegex     #?(:clj java.util.regex.Pattern           :cljs js/RegExp                     ))
+         (def AEditable  #?(:clj clojure.lang.IEditableCollection  :cljs cljs.core.IEditableCollection ))
+         (def ATransient #?(:clj clojure.lang.ITransientCollection :cljs cljs.core.ITransientCollection))
+         (def AQueue     #?(:clj clojure.lang.PersistentQueue      :cljs cljs.core.PersistentQueue     ))
+         (def AMap       #?(:clj java.util.Map                     :cljs cljs.core.IMap                ))
+         (def AError     #?(:clj java.lang.Throwable               :cljs js/Error                      ))
+#?(:clj  (def ASeq       clojure.lang.ISeq                                                     ))
+; Otherwise "Use of undeclared Var"
+;#?(:cljs (defrecord Exception                [e]))
+;#?(:cljs (defrecord IllegalArgumentException [e]))
+
