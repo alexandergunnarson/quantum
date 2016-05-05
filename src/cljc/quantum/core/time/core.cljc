@@ -5,7 +5,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
   (:refer-clojure :exclude [extend second - + < <= > >= format])
-  (:require-quantum [ns macros type num fn logic bin err log uconv loops])
+  #_(:require-quantum [ns macros type num fn logic bin err log uconv loops])
   #?(:clj (:import [java.util Date Calendar]
             (java.time LocalDate)
             (java.time.format DateTimeFormatter)
@@ -20,7 +20,7 @@
 ; 2015 435432143717740800000000000N
 ; NOW  435432143735187066453000000N
 
-(defn binary-search
+#_(defn binary-search
   "Finds earliest occurrence of @x in @xs (a (sorted) List) using binary search."
   {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"
    :todo ["Move ns"]}
@@ -46,7 +46,7 @@
 ;(java.time Period Instant LocalDateTime LocalDate OffsetDateTime ZoneId)
 
 ; Measured since the beginning of time within this realm of being
-(def ^:const beg-of-time-to-calendar-begin
+#_(def ^:const beg-of-time-to-calendar-begin
   ; As of 2013, time's expansion is estimated to have begun
   ; 13.798 ± 0.037 billion years ago. (Wikipedia)
   (-> (rationalize 13.798)
@@ -56,12 +56,12 @@
 ; 1 nanoday = 1.44 minutes
 
 ; Negative is for BC
-(def ^:const strange-leap-years
+#_(def ^:const strange-leap-years
   #{-45 -42 -39 -36 -33 -30 -27 -24 -21 -18 -15 -12 -9 -8 12})
-(def ^:const first-normal-leap-year 12)
-(def ^:const gregorian-calendar-decree-year 1582)
+#_(def ^:const first-normal-leap-year 12)
+#_(def ^:const gregorian-calendar-decree-year 1582)
 
-(defnt leap-year?
+#_(defnt leap-year?
   "Using Gregorian calendar 3 criteria."
   {:source "Wikipedia"
    :todo ["Implement Julian calendar, etc."]}
@@ -83,20 +83,20 @@
 ; Can't make constant... "maybe print-dup not defined"
 ; ObjectArray[4000]      15.640625  MB
 ; PersistentVector[4000] 115.109375 MB
-(def ^"[Lclojure.lang.BigInt;" nanos-at-beg-of-year 
+#_(def ^"[Lclojure.lang.BigInt;" nanos-at-beg-of-year 
   (make-array clojure.lang.BigInt 14000))
 
-(defnt nanos-arr-index->year
+#_(defnt nanos-arr-index->year
   ([^long? n] (if (= n 10000) nil (core/- n 10000))))
 
-(defnt year->nanos-arr-index
+#_(defnt year->nanos-arr-index
   ([^long? n]
     (whenc (if (= n 0) nil (core/+ n 10000))
       (fn-or nil? (f*n core/< 0) (f*n core/>= (alength nanos-at-beg-of-year)))
       nil)))
 
 ; Initialize nanos-at-beg-of-year
-(do (aset nanos-at-beg-of-year 0 beg-of-time-to-calendar-begin)
+#_(do (aset nanos-at-beg-of-year 0 beg-of-time-to-calendar-begin)
     (ifor [n 1 (core/< n (alength nanos-at-beg-of-year)) (inc n)]
       (when-let [year (nanos-arr-index->year n)]
         (let [year-nanos (convert (if (leap-year? year) 366 365) :days :nanos)
@@ -116,11 +116,11 @@
 ; Nanoseconds since the Big Bang
 ; (Optimally would have done Planck quanta since the Big Bang)
 ; Nanosecond: 1E-9 seconds
-(defrecord Instant  [^long nanos])
-(defrecord StandardInstant [year month day minute second nanos])
-(defrecord Duration [^long nanos])
+#_(defrecord Instant  [^long nanos])
+#_(defrecord StandardInstant [year month day minute second nanos])
+#_(defrecord Duration [^long nanos])
 
-(defn year->nanos
+#_(defn year->nanos
   [y]
   (if-let [i (year->nanos-arr-index y)]
     (aget nanos-at-beg-of-year i)
@@ -131,25 +131,25 @@
           (->> (range (inc last-year) y) (filter (mfn leap-year?)) count (* 366) (<- convert :days :nanos))
           (->> (range (inc last-year) y) (remove (mfn leap-year?)) count (* 365) (<- convert :days :nanos)))))))
 
-(defn nanos->instant [n] (Instant. n))
+#_(defn nanos->instant [n] (Instant. n))
 
 ; Sum of time from beginning of Big Bang through 1969, in nanoseconds
-(def ^:const unix-epoch (-> 1970 year->nanos nanos->instant))
+#_(def ^:const unix-epoch (-> 1970 year->nanos nanos->instant))
 
-(defn unix-millis->nanos        [         n] (-> n (convert :millis :nanos) (core/+ (:nanos unix-epoch))))
-(defn unix-millis->instant      [         n] (-> n unix-millis->nanos nanos->instant))
+#_(defn unix-millis->nanos        [         n] (-> n (convert :millis :nanos) (core/+ (:nanos unix-epoch))))
+#_(defn unix-millis->instant      [         n] (-> n unix-millis->nanos nanos->instant))
 
-(defn instant->nanos            [         n] (-> n :nanos))
-(defn instant->unix-millis      [         n] (-> n instant->nanos     (core/- (:nanos unix-epoch)) (convert :nanos :millis)))
-(defn nanos->standard-instant   [         n])
-(defn instant->standard-instant [^Instant n] (-> n instant->nanos nanos->standard-instant))
+#_(defn instant->nanos            [         n] (-> n :nanos))
+#_(defn instant->unix-millis      [         n] (-> n instant->nanos     (core/- (:nanos unix-epoch)) (convert :nanos :millis)))
+#_(defn nanos->standard-instant   [         n])
+#_(defn instant->standard-instant [^Instant n] (-> n instant->nanos nanos->standard-instant))
 
-(defn now-unix    [] (System/currentTimeMillis))
-(defn now-nanos   [] (-> (System/currentTimeMillis) unix-millis->nanos))
-(defn now-instant [] (-> (System/currentTimeMillis) unix-millis->instant))
-(defn now         [] (-> (now-instant) instant->standard-instant))
+#_(defn now-unix    [] (System/currentTimeMillis))
+#_(defn now-nanos   [] (-> (System/currentTimeMillis) unix-millis->nanos))
+#_(defn now-instant [] (-> (System/currentTimeMillis) unix-millis->instant))
+#_(defn now         [] (-> (now-instant) instant->standard-instant))
 
-(defn nanos->year
+#_(defn nanos->year
   {:todo ["Unoptimized"]}
   [n]
   (let [gregorian-difference
@@ -167,19 +167,19 @@
 
 ;(def RFC_1123_DATE_TIME ) ; A working replacement
 
-(defn + [^Instant a ^Duration b]
+#_(defn + [^Instant a ^Duration b]
   (Instant. (core/+ (:nanos a) (:nanos b))))
 
-(defnt ->duration
+#_(defnt ->duration
   ([^java.time.LocalTime x] (-> x (.toNanoOfDay) (Duration.))))
 
-(defnt ->unix-millis
+#_(defnt ->unix-millis
   ([^java.time.Instant       x] (-> x (.toEpochMilli)))
   ([^java.util.Date          x] (-> x (.getTime)     ))
   ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
   ([^java.util.Calendar      x] (-> x (.getTimeInMillis))))
 
-(defnt ^quantum.core.time.core.Instant ->instant
+#_(defnt ^quantum.core.time.core.Instant ->instant
   ([^quantum.core.time.core.Instant x] x)
   ([^java.time.LocalDate     x] (-> x (.toEpochDay) (convert :days :millis) unix-millis->instant))
   ([^java.time.LocalDateTime x] (+ (-> x (.toLocalDate) ->instant)
@@ -199,17 +199,17 @@
   #_([^java.time.YearMonth     x])
   #_([^java.util.Date$ZonedDateTime x]))
 
-(defnt ^java.time.Instant ->jinstant
+#_(defnt ^java.time.Instant ->jinstant
   ([^quantum.core.time.core.Instant x]
     (-> x instant->unix-millis (java.time.Instant/ofEpochMilli))))
 
-(defnt ^java.util.Date ->jdate
+#_(defnt ^java.util.Date ->jdate
   ([^java.time.Instant t]
     (Date/from t))
   ([^quantum.core.time.core.Instant t]
     (-> t ->jinstant ->jdate)))
 
-(defn ->local-date-time [t-0]
+#_(defn ->local-date-time [t-0]
   (let [^java.time.Instant t (-> t-0 ->jinstant) ]
     (-> t
         (.atZone (java.time.ZoneId/of "UTC"))
@@ -247,12 +247,12 @@
 ;     x
 ;     (keyword->timeunit x)))
 
-(defn <  ([a b] (core/<  (-> a ->instant :nanos) (-> b ->instant :nanos))))
-(defalias before? <)
-(defn >  ([a b] (core/>  (-> a ->instant :nanos) (-> b ->instant :nanos))))
-(defalias after? >)
-(defn <= ([a b] (core/<= (-> a ->instant :nanos) (-> b ->instant :nanos))))
-(defn >= ([a b] (core/>= (-> a ->instant :nanos) (-> b ->instant :nanos))))
+#_(defn <  ([a b] (core/<  (-> a ->instant :nanos) (-> b ->instant :nanos))))
+#_(defalias before? <)
+#_(defn >  ([a b] (core/>  (-> a ->instant :nanos) (-> b ->instant :nanos))))
+#_(defalias after? >)
+#_(defn <= ([a b] (core/<= (-> a ->instant :nanos) (-> b ->instant :nanos))))
+#_(defn >= ([a b] (core/>= (-> a ->instant :nanos) (-> b ->instant :nanos))))
 
 
 ; #?(:clj
@@ -261,7 +261,7 @@
 
 (defn now-formatted [date-format])
 
-#?(:clj
+#_(:clj
 (def formats ; TODO map->record
   {:rfc       DateTimeFormatter/RFC_1123_DATE_TIME
    :windows   (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")
@@ -270,7 +270,7 @@
    :jdbc-date "yyyy-MM-dd"
    :jdbc-time "HH:mm:ss"}))
 
-#?(:clj 
+#_(:clj 
 (defnt ->string*
   ([^string?           formatting date]
     (.format (DateTimeFormatter/ofPattern formatting) ^java.time.LocalDateTime (->local-date-time date)))
@@ -330,13 +330,13 @@
 ;   ([date y m d]
 ;     (time/within? (whole-day y m d)   date)))
 
-#?(:clj
+#_(:clj
   (defmethod print-dup java.util.Date
     ^{:attribution "clojuredocs.org, |print-dup|"}
     [o w]
     (print-ctor o (fn [o w] (print-dup (.getTime  o) w)) w)) )
 
-#?(:clj
+#_(:clj
   (defmethod print-dup org.joda.time.DateTime
     ^{:todo ["Fix this... only prints out current date"]}
     [d stream]
@@ -354,7 +354,7 @@
 ;   (for+ [day (take (inc difference-in-days) instants-on-beg-of-days)]
 ;     (f day))))
 
-#?(:clj
+#_(:clj
   (defn long-timestamp []
     (long (/ (.getTime (Date.)) 1000))))
 
@@ -372,17 +372,17 @@
 ; (defn since [date]
 ;   (between date (now))))
 
-#?(:clj
+#_(:clj
 (defn parse [text formatter]
   (LocalDate/parse text (DateTimeFormatter/ofPattern formatter))))
 
-(defn system-timezone []
+#_(defn system-timezone []
   (.getID (java.util.TimeZone/getDefault)))
 
-(def date-format-json
+#_(def date-format-json
   (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss'Z'"))
 
-(defnt ^java.util.Calendar ->calendar
+#_(defnt ^java.util.Calendar ->calendar
   ; Calendar initialized with the default locale and time zone
   ([^integer? x] 
     (doto (java.util.Calendar/getInstance)
@@ -395,7 +395,7 @@
       (doto (Calendar/getInstance)
             (.setTime (.parse df x))))))
 
-(defnt ^java.sql.Time ->sql-time
+#_(defnt ^java.sql.Time ->sql-time
   ; The string must be formatted as JDBC_TIME_FORMAT
   ([^integer?           x] (java.sql.Time. x))
   ([^string?            x] (java.sql.Time/valueOf x))
@@ -411,7 +411,7 @@
   ([^java.sql.Timestamp x] (-> x ->unix-millis ->sql-time)))
 
 
-(defnt ^java.sql.Time ->sql-date
+#_(defnt ^java.sql.Time ->sql-date
   ([^integer?           x] (java.sql.Date. x))
   ; The string must be formatted as JDBC_DATE_FORMAT
   ([^string?            x] (java.sql.Date/valueOf x))
@@ -426,21 +426,21 @@
        (.get    cal Calendar/DAY_OF_MONTH))))
   ([^java.sql.Timestamp x] (-> x ->unix-millis ->sql-date)))
 
-(defnt ^java.util.Date ->date
+#_(defnt ^java.util.Date ->date
   ([^long?              x] (java.util.Date. x))
   ([^string?            x] (-> (java.text.SimpleDateFormat. (:calendar formats)) (.parse x)))
   ([^java.util.Calendar x] (.getTime x))
   ; Technically Timestamp extends java.util.Date
   ([#{java.sql.Timestamp java.sql.Date} x] (-> x ->unix-millis ->date)))
 
-(defnt ^java.sql.Time ->timestamp
+#_(defnt ^java.sql.Time ->timestamp
   ([^integer?             x] (java.sql.Timestamp. x))
   ([^string?              x] (java.sql.Timestamp/valueOf x))
   ([#{java.util.Date
       java.sql.Date
       java.util.Calendar} x] (-> x ->unix-millis ->timestamp)))
 
-(defnt ^java.util.TimeZone ->timezone
+#_(defnt ^java.util.TimeZone ->timezone
   ([^string? x]  (java.util.TimeZone/getTimeZone x)))
 
 
