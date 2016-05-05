@@ -2,12 +2,22 @@
   ^{:doc "Base collections operations. Pre-generics."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.base
-  (:refer-clojure :exclude [name #?(:cljs seqable?)])
-  (:require-quantum [:core map set vec logic fn])
-  (:require [fast-zip.core              :as zip  ]
-            [clojure.string             :as str  ]
-            [clojure.walk
-              :refer [postwalk prewalk]]))
+           (:refer-clojure :exclude [name])
+           (:require [fast-zip.core              :as zip  ]
+                     [clojure.string             :as str  ]
+                     [clojure.walk
+                       :refer [postwalk prewalk]          ]
+                     [#?(:clj  clojure.core
+                         :cljs cljs.core   )     :as core ]
+                     [quantum.core.fn            :as fn
+                       :refer [#?@(:clj [fn->])]          ]
+                     [quantum.core.logic         :as logic
+                       :refer [#?@(:clj [condf*n fn-not])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn            :as fn
+                       :refer [fn->]                      ]
+                     [quantum.core.logic         :as logic
+                       :refer [condf*n fn-not]            ])))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -36,7 +46,7 @@
   [str-0 & [method?]]
   (-> str-0
       (str/replace #"[-_](\w)"
-        (compr second str/upper-case))
+        (fn-> second str/upper-case))
       (#(if (not method?)
            (apply str (-> % first str/upper-case) (rest %))
            %))))

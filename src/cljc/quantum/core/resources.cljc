@@ -1,18 +1,35 @@
 (ns ^{:doc "Convenience functions for creating a system and registering components
             according to Stuart Sierra's Component framework."}
   quantum.core.resources
-  (:require-quantum
-    [:core #_num fn #_str log err macros logic vec #_coll log core-async async tpred])
-  (:require [com.stuartsierra.component       :as component]
-    #?(:clj [clojure.tools.namespace.repl
-              :refer [refresh refresh-all set-refresh-dirs]]))
-  #?(:clj (:import org.openqa.selenium.WebDriver
-                   (java.lang ProcessBuilder Process StringBuffer)
-                   (java.io InputStream Reader Writer
-                     IOException)
-                   (java.util.concurrent TimeUnit)
-                   ;quantum.core.data.queue.LinkedBlockingQueue
-                   clojure.core.async.impl.channels.ManyToManyChannel)))
+           (:require [com.stuartsierra.component   :as component]
+             #?(:clj [clojure.tools.namespace.repl :as repl
+                       :refer [refresh refresh-all
+                               set-refresh-dirs]                ])
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   ) :as casync   ]
+                     [quantum.core.error           :as err
+                       :refer [->ex]                            ]
+                     [quantum.core.log             :as log      ]
+                     [quantum.core.logic           :as logic
+                       :refer [#?@(:clj [fn-not fn-or]) nnil?]  ]
+                     [quantum.core.macros          :as macros
+                       :refer [#?@(:clj [defnt])]               ]
+                     [quantum.core.thread.async    :as async    ]
+                     [quantum.core.type            :as type          
+                       :refer [atom?]                           ])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic           :as logic
+                       :refer [fn-not fn-or]                    ]
+                     [quantum.core.macros          :as macros
+                       :refer [defnt]                           ]
+                     [quantum.core.log             :as log      ]))
+  #?(:clj  (:import org.openqa.selenium.WebDriver
+                    (java.lang ProcessBuilder Process StringBuffer)
+                    (java.io InputStream Reader Writer
+                      IOException)
+                    (java.util.concurrent TimeUnit)
+                    ;quantum.core.data.queue.LinkedBlockingQueue
+                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
 #?(:clj
 (defnt open?
@@ -32,7 +49,7 @@
   #?@(:clj
  [([#{Writer Reader}     obj] (.close obj))
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
-  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (core-async/close! obj))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (casync/close! obj))
   ([                     obj]
     (when (nnil? obj) (throw (->ex :not-implemented))))))
 

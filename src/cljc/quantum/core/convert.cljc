@@ -1,20 +1,69 @@
-(ns quantum.core.convert
-  (:require-quantum [:core core-async])
-  (:require [cognitect.transit                  :as t     ]
-            [quantum.core.numeric               :as num   ]
-            [quantum.core.string                :as str   ]
-            [quantum.core.convert.core          :as conv  ]
-            [quantum.core.data.complex.json     :as json  ]
-    #?(:clj [clojure.tools.emitter.jvm                    ])
-            [#?(:clj  clojure.tools.reader
-                :cljs cljs.tools.reader       ) :as r     ]
-            [#?(:clj  clojure.tools.reader.edn
-                :cljs cljs.tools.reader.edn   ) :as r-edn ]
-   #?(:cljs [cljs.reader :as core-r])
-   #?(:cljs [goog.crypt.base64              :as base64]))
-  #?(:clj (:import (org.apache.commons.codec.binary Base64)
-                   java.io.EOFException
-                   clojure.tools.reader.reader_types.IPushbackReader)))
+(ns quantum.core.convert ; perhaps coerce?
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )             :as core   ]
+                     [cognitect.transit                  :as t      ]
+             #?(:clj [clojure.tools.emitter.jvm                     ])
+                     [#?(:clj  clojure.tools.reader 
+                         :cljs cljs.tools.reader       ) :as r      ]
+                     [#?(:clj  clojure.tools.reader.edn 
+                         :cljs cljs.tools.reader.edn   ) :as r-edn  ]
+            #?(:cljs [cljs.reader                        :as core-r ])
+            #?(:cljs [goog.crypt.base64                  :as base64 ])
+                     [byte-streams                       :as streams]
+                     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1) 
+                   ; [gloss.core.formats                 :as gforms ]
+                     [manifold.stream                    :as s      ]
+                     [manifold.deferred                  :as d      ]
+                     [byte-streams.graph                 :as g      ]
+                     [byte-streams.protocols             :as proto  ]
+                     [byte-streams.pushback-stream       :as ps     ]
+                     [byte-streams.char-sequence         :as cs     ]
+             #?(:clj [clojure.java.io                    :as io     ])
+                     [quantum.core.data.array            :as arr    ]
+                     [quantum.core.numeric               :as num    ]
+                     [quantum.core.string                :as str    ]
+                     [quantum.core.convert.core          :as conv   ]
+                     [quantum.core.data.complex.json     :as json   ]
+                     [quantum.core.macros                :as macros 
+                       :refer [#?(:clj defnt)]                      ]
+                     [quantum.core.vars                  :as var   
+                       :refer [#?(:clj defalias)]                   ])
+  #?(:cljs (:require-macros 
+                     [quantum.core.macros                :as macros
+                       :refer [defnt]                               ]
+                     [quantum.core.vars                  :as var
+                         :refer [defalias]                          ]))
+  #?(:clj (:import
+            [org.apache.commons.codec.binary Base64]
+            [quantum.core.data.streams    ByteBufferInputStream]
+            [clojure.tools.reader.reader_types IPushbackReader]
+            [byte_streams.graph          Type]
+            [java.lang.reflect           Array]
+            [java.util.concurrent.atomic AtomicBoolean]
+            [java.net                    URI URL InetAddress]
+            ; http://java-performance.info/java-io-bytearrayoutputstream/ says:
+            ; Do not use ByteArrayOutputStream in performance critical code — it's synchronized
+            ; For performance critical code try to use ByteBuffer instead of ByteArrayOutputStream.
+            [java.io                     File
+                                         FileOutputStream FileInputStream
+                                         ByteArrayInputStream ByteArrayOutputStream
+                                         PipedOutputStream PipedInputStream
+                                         DataInputStream
+                                         InputStream OutputStream
+                                         IOException EOFException
+                                         RandomAccessFile
+                                         Reader BufferedReader InputStreamReader]
+            [java.nio                    ByteBuffer DirectByteBuffer CharBuffer]
+            [java.nio.charset            Charset]
+            [java.nio.channels           Channels
+                                         ReadableByteChannel WritableByteChannel
+                                         FileChannel FileChannel$MapMode
+                                         Pipe]
+            [java.nio.channels.spi       AbstractSelectableChannel]
+            [java.nio.file Path          Paths]
+            [java.util                   Locale]
+            [javafx.collections          FXCollections]
+            [java.sql                    Blob Clob])))
 
 (defalias ->name        conv/->name       )
 (defalias ->symbol      conv/->symbol     )
@@ -85,7 +134,6 @@
         (js/forge.util.createBuffer x "utf8")
         (js/forge.util.createBuffer x "raw")))))
 
-;#?(:cljs (defn ))
 
 ; (defn streams=
  ;  {:from "alioth.util.core"}
@@ -214,50 +262,6 @@
 
 ; TODO UNCOMMENT THIS — IT'S GOOD
 
-; (ns ^{:doc "The Rosetta Stone."}
-;   quantum.core.convert ; perhaps coerce?
-;   (:require-quantum [ns fn logic num macros type io log str coll arr pconvert])
-;   (:require
-;     [byte-streams :as streams]
-;     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1) 
-;     ; [gloss.core.formats         :as gformats]
-;     [manifold.stream              :as s    ]
-;     [manifold.deferred            :as d    ]
-;     [byte-streams.graph           :as g    ]
-;     [byte-streams.protocols       :as proto]
-;     [byte-streams.pushback-stream :as ps   ]
-;     [byte-streams.char-sequence   :as cs   ])
-; #?(:clj
-;   (:import
-;     [quantum.core.data.streams    ByteBufferInputStream]
-;     [byte_streams.graph          Type]
-;     [java.lang.reflect           Array]
-;     [java.util.concurrent.atomic AtomicBoolean]
-;     [java.net                    URI URL InetAddress]
-;     ; http://java-performance.info/java-io-bytearrayoutputstream/ says:
-;     ; Do not use ByteArrayOutputStream in performance critical code — it's synchronized
-;     ; For performance critical code try to use ByteBuffer instead of ByteArrayOutputStream.
-;     [java.io                     File
-;                                  FileOutputStream FileInputStream
-;                                  ByteArrayInputStream ByteArrayOutputStream
-;                                  PipedOutputStream PipedInputStream
-;                                  DataInputStream
-;                                  InputStream OutputStream
-;                                  IOException
-;                                  RandomAccessFile
-;                                  Reader BufferedReader InputStreamReader]
-;     [java.nio                    ByteBuffer DirectByteBuffer CharBuffer]
-;     [java.nio.charset            Charset]
-;     [java.nio.channels           Channels
-;                                  ReadableByteChannel WritableByteChannel
-;                                  FileChannel FileChannel$MapMode
-;                                  Pipe]
-;     [java.nio.channels.spi       AbstractSelectableChannel]
-;     [java.nio.file Path          Paths]
-;     [java.util                   Locale]
-;     [javafx.collections          FXCollections]
-;     [java.sql                    Blob Clob])))
-
 ; (defnt ->uuid*
 ;   ([^string? id] (java.util.UUID/fromString        id))
 ;   ([^bytes?  id] (java.util.UUID/nameUUIDFromBytes id))
@@ -273,23 +277,25 @@
 ;       `(java.util.UUID/randomUUID)
 ;       `(->uuid* ~@args))))
 
-; (declare ->uri)
+(declare ->uri)
 
-; (defnt ^java.io.File ->file
-;   {:todo "Eliminate reflection"}
-;   ([^java.io.File           x] x          )
-;   ([^java.nio.file.Path     x] (.toFile x))
-;   ([#{string? java.net.URI} x] (File.   x))
-;   ([^java.net.URL           x] (-> x ->uri ->file))
-;   ([                        x] (io/file x)))
+#?(:clj
+(defnt ^java.io.File ->file
+  {:todo "Eliminate reflection"}
+  ([^java.io.File           x] x          )
+  ([^java.nio.file.Path     x] (.toFile x))
+  ([#{string? java.net.URI} x] (File.   x))
+  ([^java.net.URL           x] (-> x ->uri ->file))
+  ([                        x] (io/file x))))
 
-; (defnt ^java.net.URI ->uri
-;   {:todo "Eliminate reflection"}
-;   ([^java.net.URI                x] x)
-;   ([^java.nio.file.Path          x] (.toUri x))
-;   ([#{java.io.File java.net.URL} x] (.toURI x))
-;   ([^string?                     x] (URI. x))
-;   ([                             x] (-> x ->file ->uri)))
+#?(:clj
+(defnt ^java.net.URI ->uri
+  {:todo "Eliminate reflection"}
+  ([^java.net.URI                x] x)
+  ([^java.nio.file.Path          x] (.toUri x))
+  ([#{java.io.File java.net.URL} x] (.toURI x))
+  ([^string?                     x] (URI. x))
+  ([                             x] (-> x ->file ->uri))))
 
 ; (defnt ^java.net.URL ->url
 ;   ([^string?      x] (URL. x))
@@ -320,47 +326,48 @@
 
 ; #_(defalias ->keyword str/->keyword)
 
-; (defnt ^java.io.InputStream ->input-stream
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed and added to"}}
-;   (^{:cost 0} [^bytes? ary]
-;     (ByteArrayInputStream. ary))
-;   ([^String x]
-;     (-> x arr/->bytes ->input-stream))
-;   (^{:cost 0} [^java.nio.ByteBuffer buf]
-;     (ByteBufferInputStream. (.duplicate buf))) ; in a different function, .duplicate is not used.
-;   (^{:cost 0} [^java.nio.channels.ReadableByteChannel channel]
-;     (Channels/newInputStream channel))
-;   (^{:cost 0} [^java.io.File x] (FileInputStream. x))
-;   #_(^{:cost 0} [(stream-of bytes) s options]
-;     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
-;       (s/consume
-;         (fn [^bytes ary]
-;           (ps/put-array ps ary 0 (alength ary)))
-;         s)
-;       (s/on-drained s #(ps/close ps))
-;       (ps/->input-stream ps)))
-;   #_(^{:cost 0} [(stream-of ByteBuffer) s options]
-;     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
-;       (s/consume
-;         (fn [^ByteBuffer buf]
-;           (ps/put-buffer ps (.duplicate buf)))
-;         s)
-;       (s/on-drained s #(ps/close ps))
-;       (ps/->input-stream ps)))
-;   (^{:cost 1.5} [(seq-of #'proto/ByteSource) srcs options]
-;     (let [chunk-size (get options :chunk-size 65536)
-;           out (PipedOutputStream.)
-;           in (PipedInputStream. out chunk-size)]
-;       (future
-;         (try
-;           (loop [s srcs]
-;             (when-not (empty? s)
-;               (streams/transfer (first s) out)
-;               (recur (rest s))))
-;           (finally
-;             (.close out))))
-;       in)))
+#?(:clj
+(defnt ^java.io.InputStream ->input-stream
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed and added to"}}
+  (^{:cost 0} [^bytes? ary]
+    (ByteArrayInputStream. ary))
+  ([^String x]
+    (-> x arr/->bytes ->input-stream))
+  (^{:cost 0} [^java.nio.ByteBuffer buf]
+    (ByteBufferInputStream. (.duplicate buf))) ; in a different function, .duplicate is not used.
+  (^{:cost 0} [^java.nio.channels.ReadableByteChannel channel]
+    (Channels/newInputStream channel))
+  (^{:cost 0} [^java.io.File x] (FileInputStream. x))
+  #_(^{:cost 0} [(stream-of bytes) s options]
+    (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
+      (s/consume
+        (fn [^bytes ary]
+          (ps/put-array ps ary 0 (alength ary)))
+        s)
+      (s/on-drained s #(ps/close ps))
+      (ps/->input-stream ps)))
+  #_(^{:cost 0} [(stream-of ByteBuffer) s options]
+    (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
+      (s/consume
+        (fn [^ByteBuffer buf]
+          (ps/put-buffer ps (.duplicate buf)))
+        s)
+      (s/on-drained s #(ps/close ps))
+      (ps/->input-stream ps)))
+  (^{:cost 1.5} [(seq-of #'proto/ByteSource) srcs options]
+    (let [chunk-size (get options :chunk-size 65536)
+          out (PipedOutputStream.)
+          in (PipedInputStream. out chunk-size)]
+      (future
+        (try
+          (loop [s srcs]
+            (when-not (empty? s)
+              (streams/transfer (first s) out)
+              (recur (rest s))))
+          (finally
+            (.close out))))
+      in))))
 
 ; (defnt ^java.io.DataInputStream ->data-input-stream
 ;   {:attribution "ztellman/byte-streams"
@@ -777,8 +784,8 @@
 ;   [a b]
 ;   (num/== 0 (compare-bytes a b)))
 
-; (defalias ->bytes      arr/->bytes)
-; (defalias bytes->longs arr/bytes->longs)
+#?(:clj (defalias ->bytes      arr/->bytes     ))
+#?(:clj (defalias bytes->longs arr/bytes->longs))
 
 #?(:cljs
 (defn arr->vec [arr]

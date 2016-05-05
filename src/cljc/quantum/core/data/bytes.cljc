@@ -4,10 +4,20 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
-  (:require-quantum [:core str logic fn bin macros type ccore arr log])
-  #?@(:clj
-    [(:require [clojure.java.io :as io])
-     (:import  java.util.Arrays)]))
+           (:require 
+             #?(:clj [clojure.java.io          :as io   ])
+                     [quantum.core.data.array  :as arr
+                       :refer [byte-array+ aset!]       ]
+                     [quantum.core.data.binary :as bin
+                       :refer [& >>>]                   ]
+                     [quantum.core.fn          :as fn
+                       :refer [#?@(:clj [f*n])]         ]
+                     [quantum.core.logic       :as logic
+                       :refer [nnil?]                   ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn          :as fn
+                       :refer [f*n]                     ]))
+  #?(:clj  (:import  java.util.Arrays)))
 
 #?(:clj (set! *unchecked-math* true))
 
@@ -25,8 +35,8 @@
   (^"[B" [size-or-seq] 
     (. clojure.lang.Numbers byte_array 
       (if (number? size-or-seq) 
-        size-or-seq
-        (map unchecked-byte size-or-seq ))))
+          size-or-seq
+          (map unchecked-byte size-or-seq ))))
   (^"[B" [size init-val-or-seq] 
     (. clojure.lang.Numbers byte_array size 
       (if (sequential? init-val-or-seq) 
@@ -42,9 +52,9 @@
         ^chars hex-chars (-> digested count (* 2) char-array)]
     (loop [i 0] 
       (if (< i (count digested))
-          (let [v           (-> digested (get i) (bit-and 0xFF))
-                bit-shifted (-> hex-arr  (get (>>>     v 4   )))
-                bit-anded   (-> hex-arr  (get (bit-and v 0x0F)))]
+          (let [v           (-> digested (get i) (& 0xFF))
+                bit-shifted (-> hex-arr  (get (>>> v 4   )))
+                bit-anded   (-> hex-arr  (get (&   v 0x0F)))]
                 (aset hex-chars (* i 2)       bit-shifted)
                 (aset hex-chars (+ (* i 2) 1) bit-anded)
               (recur (inc i)))))

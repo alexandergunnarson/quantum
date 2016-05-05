@@ -2,8 +2,7 @@
   ^{:doc "Incorporates the semi-obscure clojure.lang.PersistentQueue into the
           quantum library."
     :attribution "Alex Gunnarson"}
-  quantum.core.data.queue
-  (:require-quantum [:core]))
+  quantum.core.data.queue)
 
 ; QUEUES
 ; https://github.com/michalmarczyk/jumping-queues

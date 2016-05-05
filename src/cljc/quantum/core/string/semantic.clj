@@ -1,5 +1,4 @@
-(ns quantum.core.string.semantic
-  (:require-quantum [ns fn logic str]))
+(ns quantum.core.string.semantic)
 
 (def vowels
   #{\a \e \i \o \u

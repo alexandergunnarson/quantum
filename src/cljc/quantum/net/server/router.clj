@@ -1,5 +1,4 @@
 (ns quantum.net.server.router
-  (:require-quantum [:core logic fn err debug log res str coll])
   (:require ; AUTHENTICATION
             [cemerick.friend                          :as friend   ]
             [cemerick.friend.workflows                :as workflows]
@@ -35,10 +34,21 @@
             [ring.middleware.ssl                :refer [wrap-ssl-redirect
                                                         wrap-hsts
                                                         wrap-forwarded-scheme  ]]
-            [ring.middleware.defaults :as defaults]
+            [ring.middleware.defaults   :as defaults]
             ; UTILS
-            [com.stuartsierra.component               :as component]
-            [clj-uuid                                 :as uuid     ]))
+            [com.stuartsierra.component :as component]
+            [clj-uuid                   :as uuid     ]
+            [quantum.core.string        :as str      ]
+            [quantum.core.log           :as log      ]
+            [quantum.core.resources     :as res      ]
+            [quantum.core.collections   :as coll     
+              :refer [containsv? assocs-in+]         ]
+            [quantum.core.core          :as qcore    
+              :refer [lens]                          ]
+            [quantum.core.logic         :as logic    
+              :refer [nnil?]                         ]
+            [quantum.core.fn            :as fn    
+              :refer [<- fn->]                       ]))
 
 
 
@@ -102,7 +112,7 @@
 #_(bidi.ring/make-handler (create-api))
 
 (def server-root (str/->path (System/getProperty "user.dir") "/dev-resources/public"))
-(def main-page (slurp (str/->path server-root "index.html")))
+(def main-page (delay (slurp (str/->path server-root "index.html"))))
 
 (defn resources+
   "A route for serving resources on the classpath. Accepts the following
@@ -112,8 +122,9 @@
   [path & [options]]
   (GET (@#'compojure.route/add-wildcard path) {{resource-path :*} :route-params :as req}
     (let [root (:root options "public")
-          body (if (contains? #{"js/compiled/system.js"} resource-path)
-                   ""
+          _ (println "RESOURCE PATH" resource-path)
+          body (if (containsv? resource-path "js/compiled/system.js")
+                   (do (println "REQUESTING SYSTEM.js!!") "")
                    (->> resource-path
                         (<- str/remove "..") ; to prevent weird things
                         (str/->path root)
@@ -121,11 +132,31 @@
       {:body body}
       #_(add-mime-type resource-path options))))
 
+(defn content-security-policy []
+  (str/sp "default-src https: data: gap: https://ssl.gstatic.com;"
+          "style-src    'self' 'unsafe-inline';"
+          "script-src   'self' 'unsafe-inline';"
+          "font-src     'self';"
+          "form-action  'self';"
+          "reflected-xss block;"
+          "report-uri https://quanta.audio/csp-report/;"))
+
+(defn wrap-exception-handling
+  [handler]
+  (fn [request]
+    (try
+      (handler request)
+      (catch Throwable e
+        (log/ppr :warn "Error in HTTP handler:" e)
+        {:status 500
+         :headers {"Content-Type" "text/html"}
+         :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
+
 (defroutes app-routes
   (GET "/"        req (fn [req]
-                        (when (-> req :query-params :user (= "alex"))
-                          {:content-type "text/html"
-                           :body main-page})) #_(friend/authenticated (#'token-index req)))
+                        {:headers {"Content-Type" "text/html"
+                                   "Content-Security-Policy" (content-security-policy)}
+                         :body main-page}) #_(friend/authenticated (#'token-index req)))
   (GET "/admin"   req (friend/authorize #{::admin}
                         #_any-code-requiring-admin-authorization
                         "Admin page."))
@@ -136,6 +167,9 @@
   ; If the page serving the JavaScript (ClojureScript) is running
   ; HTTPS, the Sente channel sockets will run over HTTPS and/or
   ; the WebSocket equivalent (WSS).
+  (POST "/csp-report" req (fn [req]
+                            (log/pr :warn "CSP REPORT:" req)
+                            nil))
   (GET  chan-uri  req (do #_friend/authenticated
                         (let [get-f @ring-ajax-get-or-ws-handshake]
                           (assert (nnil? get-f))
@@ -147,6 +181,37 @@
   (resources+ "/" {:root server-root}) ; static files
   (not-found not-found-page))
 
+
+
+; TODO repetitive
+
+(defn wrap-x-permitted-cross-domain-policies
+  {:doc "Recommended implicitly by https://github.com/twitter/secureheaders"}
+  [handler]
+  (fn [request]
+    (when-let [response (handler request)]
+      (resp/header response "X-Permitted-Cross-Domain-Policies" "none" #_"master-only")))) ; either one is fine; Twitter uses "none"
+
+(defn wrap-x-download-options
+  {:doc "Recommended implicitly by https://github.com/twitter/secureheaders"}
+  [handler]
+  (fn [request]
+    (when-let [response (handler request)]
+      (resp/header response "X-Download-Options" "noopen"))))
+
+(defn wrap-strictest-transport-security
+  {:doc "Considered the 'most secure' STS setting"}
+  [handler]
+  (fn [request]
+    (when-let [response (handler request)]
+      (resp/header response "Strict-Transport-Security" "max-age=10886400; includeSubDomains; preload"))))
+
+(defn wrap-hide-server
+  [handler]
+  (fn [request]
+    (when-let [response (handler request)]
+      (resp/header response "Server" "nil"))))
+
 (defn wrap-middleware [routes]
   (-> routes
       wrap-uid
@@ -156,12 +221,17 @@
           [:security :anti-forgery] false
           [:static   :resources   ] false
           [:static   :files       ] false))
+      wrap-strictest-transport-security
+      wrap-x-permitted-cross-domain-policies
+      wrap-x-download-options
+      wrap-hide-server
       #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
                             :workflows [(workflows/interactive-form)]})
       ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
       wrap-gzip
       compojure.handler/site ; ?
-      #_(friend/requires-scheme :https))) ; TODO make HTTPS work
+      #_(friend/requires-scheme :https)
+      wrap-exception-handling))
 
 (defroutes routes (wrap-middleware app-routes))
 

@@ -7,13 +7,13 @@
     :attribution "Alex Gunnarson"}
   quantum.core.io.serialization
   (:refer-clojure :exclude [read])
-  (:require-quantum [ns coll])
   #?(:clj
-    (:require 
-      [taoensso.nippy             :as nippy :refer
-        [read-bytes read-utf8 read-biginteger]]
-      [iota                       :as iota]
-      [cognitect.transit :as t]))
+    (:require [taoensso.nippy             :as nippy
+                :refer [read-bytes read-utf8
+                        read-biginteger]           ]
+              [iota                       :as iota ]
+              [quantum.core.collections   :as coll
+                :refer [#?@(:clj [lasti]) range+]  ]))
   #?(:clj
      (:import 
         (java.io File FileNotFoundException PushbackReader
@@ -37,7 +37,7 @@
   {:attribution "Alex Gunnarson"}
   [data-input integral-keys record-in]
   (reduce
-    (fn [record-n ^Keyword integral-k]
+    (fn [record-n integral-k]
       (let [integral-v
              (nippy/thaw-from-in! data-input)]
         (assoc record-n integral-k integral-v)))
@@ -54,7 +54,7 @@
   {:attribution "Alex Gunnarson"}
   [data-input record-in]
   (reduce
-    (fn [record-n ^Int iteration]
+    (fn [record-n iteration]
       (try
         (let [extra-k
                (nippy/thaw-from-in! data-input)
@@ -119,12 +119,5 @@
   (dotimes [n (lasti records)]
       ;(extend-serialization-for-record! record (deref (inc n)))
     ))
-
-(defn ^String ->transit [^Map m]
-  (let [baos (ByteArrayOutputStream.)]
-    (->> m (t/write (t/writer baos :json)))
-    (.close baos)
-    (.toString baos)))
-
 
 ))

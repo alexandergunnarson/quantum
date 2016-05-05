@@ -1,6 +1,5 @@
 (ns quantum.format.clojure.core
   (:refer-clojure :exclude [format])
-  (:require-quantum [:core])
   #_(:require [quantum.core.analyze.clojure.predicates :refer :all]
             [quantum.core.analyze.clojure.core       :refer :all])
   #?(:clj (:import com.carrotsearch.hppc.CharArrayDeque)))

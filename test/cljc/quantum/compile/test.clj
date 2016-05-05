@@ -1,5 +1,4 @@
-(ns quanta.compile.test
-  (:require-quantum [:lib])
+(ns quantum.compile.test
   (:require
     [quanta.compile.cpp  :as cpp ]
     [quanta.compile.js   :as js  ]

@@ -1,3 +1,3 @@
 (ns quantum.measure.reg)
 
-(def reg-units (atom {}))
+(defonce reg-units (atom {}))

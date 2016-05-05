@@ -1,11 +1,26 @@
 (ns quantum.core.macros.reify
-  (:require-quantum [:core fn logic cmacros log tcore cbase err])
-  (:require [quantum.core.analyze.clojure.predicates :as anap
-              :refer [type-hint]]
-            [quantum.core.macros.transform :as trans]
-            [quantum.core.collections.base
-              :refer [update-first update-val ensure-set
-                      zip-reduce default-zipper]]))
+           (:require [quantum.core.analyze.clojure.predicates :as anap
+                       :refer [type-hint]                                ]
+                     [quantum.core.collections.base           :as cbase
+                       :refer [update-first update-val ensure-set
+                               zip-reduce default-zipper #?(:clj kmap)]  ]
+                     [quantum.core.error                      :as err                 
+                               :refer [->ex]                             ]
+                     [quantum.core.fn                         :as fn
+                                :refer [#?@(:clj [fn-> fn->> <-])]       ]
+                              [quantum.core.log               :as log    ]
+                              [quantum.core.logic             :as logic
+                                :refer [#?@(:clj [whenc]) nempty?]       ]
+                     [quantum.core.macros.core                :as cmacros]
+                     [quantum.core.macros.transform           :as trans  ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.base           :as cbase
+                       :refer [kmap]]
+                     [quantum.core.fn                         :as fn
+                       :refer [fn-> fn->> <-]                            ]
+                     [quantum.core.log                        :as log    ]
+                     [quantum.core.logic                      :as logic
+                       :refer [whenc]                                    ])))
 #?(:clj
 (defn gen-reify-def
   [{:keys [sym ns-qualified-interface-name reify-body]}]

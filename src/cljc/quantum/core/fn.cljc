@@ -3,19 +3,43 @@
 
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
     :attribution "Alex Gunnarson"
-    :cljs-self-referencing? true}
-  ^:figwheel-no-load quantum.core.fn
-  (:require-quantum [:core map])
-  (:require
-    [clojure.walk]
-    #?(:clj [clojure.pprint :as pprint :refer [pprint]]))
-  #?(:cljs (:require-macros [quantum.core.fn :refer [f*n]])))
+    :cljs-self-referencing? true
+    :figwheel-no-load       true}
+  quantum.core.fn
+           (:require [clojure.walk                        ]
+                     [quantum.core.core        :as qcore  ]
+                     [quantum.core.data.map    :as map    ]
+                     [quantum.core.macros.core :as cmacros
+                       :refer [#?(:clj when-cljs)]        ]
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]         ]
+             #?(:clj [clojure.pprint           :as pprint
+                       :refer [pprint]                    ]))
+  #?(:cljs (:require-macros
+                     [quantum.core.fn          :as fn
+                       :refer [f*n]                       ]
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                  ])))
 
 ; To signal that it's a multi-return 
 (deftype MultiRet [val])
 
 #?(:clj (defalias jfn memfn))
-#?(:clj (defalias mfn reg/mfn))
+
+#?(:clj
+(defmacro mfn
+  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
+   Originally named |functionize| by mikera."
+  ([macro-sym]
+    ; When CLJS
+    (when-cljs &env (throw (Exception. "|mfn| not supported for CLJS.")))
+   `(fn [& args#]
+      (qcore/js-println "WARNING: Runtime eval with |mfn| via" '~macro-sym)
+      (clojure.core/eval (cons '~macro-sym args#))))
+  ([n macro-sym]
+    (let [genned-arglist (->> (repeatedly gensym) (take n) (into []))]
+      `(fn ~genned-arglist
+         (~macro-sym ~@genned-arglist))))))
 
 (def fn-nil (constantly nil))
 
@@ -80,10 +104,10 @@
     ([]    (ctor))
     ([a b] (op a b))))
 
-(defn compr
-  {:todo ["Make more efficient by not using |reverse|."]}
+#?(:clj
+(defmacro compr
   [& args]
-  (apply comp (reverse args)))
+  `(comp ~@(reverse args))))
 
 #_(defn fn*
   "This doesn't work because it is a constant in the Clojure compiler.
@@ -219,6 +243,9 @@
   (let [obj (last args)]
     `(do (~f ~@(butlast args) ~obj)
          ~obj))))
+
+(defalias with qcore/with)
+
 (defn with-pr->>  [obj      ] (do (println obj) obj))
 (defn with-msg->> [msg  obj ] (do (println msg) obj))
 (defn with->>     [expr obj ] (do expr          obj))

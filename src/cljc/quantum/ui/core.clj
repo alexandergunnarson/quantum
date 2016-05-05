@@ -3,15 +3,14 @@
     :contributors #{"Alex Gunnarson"}}
   quantum.ui.core
   (:refer-clojure :exclude [descendants])
-  (:require-quantum [:lib])
-  (:require
+  #_(:require
     [freactive.core     :as rx    :refer [rx]]
     [fx-clj.core        :as fx    :refer [run<! pset!]]
     [fx-clj.css         :as fx.css]
     [quantum.hotfix]
     [quantum.ui.css     :as css]
     [quantum.core.convert :as convert :refer [->observable ->predicate]])
-  (:import
+  #_(:import
     (javafx.stage Modality Stage)
     (javafx.animation      Animation KeyValue KeyFrame Timeline AnimationTimer Interpolator
                            FadeTransition TranslateTransition RotateTransition ScaleTransition
@@ -55,7 +54,7 @@
 ;   (io/read   :directory [:resources] :name "stg"))
 ; Implement a version of DaisyDisk.
 
-(def pseudo-properties
+#_(def pseudo-properties
   (atom
     {:grid-pane/column-index (fn [^Node node val-] (GridPane/setColumnIndex node (int val-)))
      :grid-pane/row-index    (fn [^Node node val-] (GridPane/setRowIndex    node (int val-)))
@@ -94,7 +93,7 @@
                                                 (.next change) ; Apparently necessary...
                                                 (-> change (.getAddedSubList) first val-))))))}))
 
-(def pseudo-tags
+#_(def pseudo-tags
   (atom
     {:column-constraints
       (fn [props]
@@ -103,7 +102,7 @@
             (.setPercentWidth node (:percent-width props)))
           node))}))
 
-(defn fx [root-node]
+#_(defn fx [root-node]
   (let [node? (fn-and vector? (fn-not map-entry?)
                 (fn-> first keyword?))
         node-and-has-properties? (fn-and node? (fn-> second map?))
@@ -146,11 +145,11 @@
 
 ; OBSERVABLE
 
-(defrecord FXObservableAtom
+#_(defrecord FXObservableAtom
   [^clojure.lang.IAtom immutable
    ^javafx.collections.transformation.FilteredList observable])
 
-(defn fx-observable-atom [v]
+#_(defn fx-observable-atom [v]
   (FXObservableAtom. (atom v)
     ; Default is to show nothing...
     (-> v ->observable (FilteredList. (->predicate (constantly true))))))
@@ -158,20 +157,20 @@
 
 ; TREE
 
-(defn uberparent [^Node x]
+#_(defn uberparent [^Node x]
   (if-let [parent (-> x .getParent)]
     (uberparent parent)
     x))
 
-(defnt children
+#_(defnt children
   ([^javafx.scene.Node x]
     (try (->> x .getChildren (into []))
       (catch Exception _ []))))
 
-(defnt descendants
+#_(defnt descendants
   ([^javafx.scene.Node x] (->> x children (map+ (juxt identity (fn-> descendants))) redm)))
 
-(defn print-nodes
+#_(defn print-nodes
   {:java-source "http://stackoverflow.com/questions/9904726/javafx-2-and-css-classes"}
   [^Node node depth]
   (dotimes [i depth]
@@ -183,7 +182,7 @@
 
 ; STAGE
 
-(defn sandbox
+#_(defn sandbox
   "Creates a JavaFX stage with the root element of the stage's scene set to
   the result of evaluating refresh-fn. If F5 is pressed within the stage,
   refresh-fn will be re-evaluated and its new result will be bound to as the
@@ -215,15 +214,15 @@
 
 ; RESIZABLE
 
-(defn set-absolute-height! [^Region region n]
+#_(defn set-absolute-height! [^Region region n]
   (.setMinHeight region n)
   (.setMaxHeight region n))
 
-(defn set-absolute-width! [^Region region n]
+#_(defn set-absolute-width! [^Region region n]
   (.setMinWidth region n)
   (.setMaxWidth region n))
 
-(defn set-drag-resizable!
+#_(defn set-drag-resizable!
   "Only height resizing is currently implemented."
   {:usage '(set-drag-resizable! @resizable-region :top :x)}
   ([^Region region type dimension] (set-drag-resizable! region type dimension nil))
@@ -299,13 +298,13 @@
         (fx/event-handler [^MouseEvent event]
           (.setCursor region Cursor/DEFAULT))))))
 
-(defn listen! [^Property prop listener]
+#_(defn listen! [^Property prop listener]
   (.addListener prop
     (proxy [ChangeListener] []
       (changed [^ObservableValue observable, oldValue newValue]
         (listener observable, oldValue newValue)))))
 
-(defn listen-invalidated! [^Property prop f]
+#_(defn listen-invalidated! [^Property prop f]
   (.addListener prop
     (proxy [InvalidationListener] []
       (invalidated [arg0]

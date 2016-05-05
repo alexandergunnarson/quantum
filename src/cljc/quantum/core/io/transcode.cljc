@@ -1,5 +1,5 @@
 (ns quantum.core.io.transcode
-  (:require-quantum [ns logic fn sh coll io sys paths]))
+  (:require-quantum [logic fn sh coll io sys paths]))
 
 (comment "https://trac.ffmpeg.org/wiki/Encode/AAC
 ​Advanced Audio Coding (AAC) is the successor format to MP3.
@@ -115,5 +115,5 @@ AAC encoder available with ffmpeg")
              url]
             {:write-streams? true :std-buffer buffer})
         n (-> buffer str str/val)]
-  (throw-unless (number? n) (Err. :not-a-number "Duration is not a number!" n)) 
+  (throw-unless (number? n) (->ex :not-a-number "Duration is not a number!" n)) 
   (-> n (* 1000)))))

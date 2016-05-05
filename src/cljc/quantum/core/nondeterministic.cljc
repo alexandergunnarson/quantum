@@ -4,13 +4,24 @@
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
   (:refer-clojure :exclude [bytes])
-  (:require-quantum
-    [:core err fn logic log arr async macros #_convert
-     ;coll macros thread  
-     ])
-  (:require [quantum.core.lexical.core :as lex  ]
-            [quantum.core.type.predicates :refer [regex?]]
-            #?(:clj [loom.gen                  :as g-gen])) ; for now
+          (:require
+            #?(:clj [loom.gen                  :as g-gen])  ; for now
+                    [quantum.core.convert      :as conv  ]
+                    [quantum.core.lexical.core :as lex   ]
+                    [quantum.core.error        :as err
+                      :refer [->ex]                      ]
+                    [quantum.core.macros       :as macros
+                       :refer [#?@(:clj [defnt])]        ]
+                    [quantum.core.type         :as type
+                      :refer [#?(:clj regex?)]           ])
+  #?(:cljs (:require-macros
+                    [quantum.core.convert      :as conv  ]
+                    [quantum.core.fn           :as fn
+                      :refer [<-]                        ]
+                    [quantum.core.macros       :as macros
+                      :refer [defnt]                     ]
+                    [quantum.core.type         :as type
+                      :refer [regex?]                    ]))
   #?(:clj
   (:import java.util.Random
            java.security.SecureRandom
@@ -147,13 +158,12 @@
                      arr/->int8-array)
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
-; ; TODO DEPS ONLY
-; #_(defn rand-longs
-;   {:todo ["Base off of random longs, for speed"]}
-;   ([size] (rand-longs false size))
-;   ([secure? size]
-;     ; * 8 because longs are 8 bytes
-;     (conv/bytes->longs (rand-bytes secure? (* 8 size)))))
+(defn rand-longs
+  {:todo ["Base off of random longs, for speed"]}
+  ([size] (rand-longs false size))
+  ([secure? size]
+    ; * 8 because longs are 8 bytes
+    (conv/bytes->longs (rand-bytes secure? (* 8 size)))))
 
 ; ; TODO DEPS ONLY
 ; #_(:clj

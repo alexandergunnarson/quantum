@@ -1,12 +1,31 @@
 (ns quantum.net.websocket
-  (:require-quantum [:core log fn logic err res async core-async cbase])
-  (:require [com.stuartsierra.component              :as component]
-            [taoensso.sente                          :as ws       ]
-  #?@(:clj [[immutant.web                            :as imm      ]
-            [taoensso.sente.server-adapters.immutant :as a-imm    ]
-            [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-            [quantum.core.core                
-              :refer [lens deref*]                  ]))
+  #_(:require-quantum [async core-async cbase])
+           (:require [com.stuartsierra.component              :as component]
+                     [taoensso.sente                          :as ws       ]
+           #?@(:clj [[immutant.web                            :as imm      ]
+                     [taoensso.sente.server-adapters.immutant :as a-imm    ]
+                     [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   )            :as casync
+                       :refer [#?(:clj go)]                                ]
+                     [quantum.core.core                
+                       :refer [lens deref*]                                ]
+                     [quantum.core.error                      :as err
+                       :refer [->ex #?(:clj try-times)]                    ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [fn->])]                           ]
+                     [quantum.core.log                        :as log      ]
+                     [quantum.core.logic                      :as logic
+                       :refer [nnil?]                                      ]
+                     [quantum.core.resources                  :as res      ])
+  #?(:cljs (:require-macros
+                     [cljs.core.async.macros
+                       :refer [go]                                         ]
+                     [quantum.core.error                      :as err
+                       :refer [try-times]                                  ]
+                     [quantum.core.fn                         :as fn
+                       :refer [fn->]                                       ]
+                     [quantum.core.log                        :as log      ])))
 
 (defmulti event-msg-handler :id) ; Dispatch on event-id
 (def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))

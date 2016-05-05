@@ -1,9 +1,7 @@
 (ns ^{:doc "Query and pull pattern generation. Mostly taken from mpdairy/posh
             (distributed under EPL >= 1) and ported to CLJC."}
   quantum.db.datomic.reactive.pattern-gen
-  (:require-quantum [:core])
-  (:require [quantum.core.collections :as coll])
-  )
+  (:require [quantum.core.collections :as coll]))
 
 ; QUERY PATTERN GENERATION
 

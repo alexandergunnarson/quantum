@@ -2,13 +2,15 @@
   ^{:doc "Useful string utils for formatting strings."
     :attribution "Alex Gunnarson"}
   quantum.core.string.encode
-  (:refer-clojure :exclude [reverse replace remove val re-find])
-  (:require-quantum [:core fn set map macros logic red type loops cbase log err])
-  (:require
-    [clojure.string :as str]
-    [frak])
-  #?(:clj (:import java.net.IDN
-                   java.nio.charset.StandardCharsets)))
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )  :as core    ]
+                     [quantum.core.logic      :as logic
+                       :refer [#?@(:clj [condpc coll-or])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic :as logic
+                       :refer [condpc coll-or]            ]))
+  #?(:clj  (:import  java.net.IDN
+                     java.nio.charset.StandardCharsets)))
 
 ; ===== ENCODINGS & CHARSETS =====
 

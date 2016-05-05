@@ -1,9 +1,12 @@
 (ns quantum.db.datomic.defs
-  (:require-quantum [:core #_http coll])
-  (:require [quantum.net.http           :as http ]
-            [instaparse.core            :as insta]
-            [quantum.db.datomic         :as db   ]
-            [quantum.db.datomic.schemas :as s    ]))
+           (:require [quantum.core.collections   :as c    
+                       :refer [remove+]                   ]
+                     [quantum.net.http           :as http ]
+                     [instaparse.core            :as insta]
+                     [quantum.db.datomic         :as db   ]
+                     [quantum.db.datomic.schemas :as s    ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections   :as c    ])))
 
 (def mime-types-source "http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types")
 
@@ -28,7 +31,7 @@
          {:lines     (fn [& lines] (->> lines
                                         (remove+ nil?)
                                         force
-                                        (reduce #(conj %1 %2) {})))
+                                        (reduce #(c/conj %1 %2) {})))
           :word      identity
           :extension keyword
           :mime-type keyword

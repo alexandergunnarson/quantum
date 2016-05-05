@@ -1,5 +1,4 @@
 (ns quantum.core.macros.deftype
-  (:require-quantum [:core fn logic cmacros log])
   (:require [quantum.core.collections.base
               :refer [update-first update-val ensure-set
                       zip-reduce default-zipper]]))

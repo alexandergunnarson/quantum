@@ -1,31 +1,34 @@
 (ns ^{:doc "Macro-building helper functions."}
   quantum.core.macros.core
-  (:refer-clojure :exclude [macroexpand macroexpand-1])
-  (:require-quantum [reg])
-  (:require [clojure.walk :refer [prewalk]]
+  (:refer-clojure :exclude [macroexpand #?(:clj macroexpand-1)])
+  (:require [clojure.walk :as walk
+              :refer [prewalk]]
+   #?(:cljs [cljs.analyzer                      ])
   #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
-            [clojure.jvm.tools.analyzer]
-            [clojure.tools.analyzer.jvm]
-            [riddley.walk]
+            [clojure.jvm.tools.analyzer         ]
+            [clojure.tools.analyzer.jvm         ]
+            [riddley.walk                       ]
             [clojure.tools.reader :as r]])))
 
 ; ===== ENVIRONMENT =====
 
-(defn- cljs-env?
+(defn cljs-env?
   "Given an &env from a macro, tells whether it is expanding into CLJS."
   [env]
   (boolean (:ns env)))
 
-(defn if-cljs
+#?(:clj
+(defmacro if-cljs
   "Return @then if the macro is generating CLJS code and @else for CLJ code."
   {:from "https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"}
   ([env then else]
-    (if (cljs-env? env) then else)))
+    `(if (cljs-env? ~env) ~then ~else))))
 
-(defn when-cljs
+#?(:clj
+(defmacro when-cljs
   "Return @then if the macro is generating CLJS code."
   ([env then]
-    (when (cljs-env? env) then)))
+    `(when (cljs-env? ~env) ~then))))
 
 #?(:clj
 (defmacro context
@@ -110,9 +113,11 @@
 
 #?(:clj (def macroexpand     riddley.walk/macroexpand))
 
-#?(:clj (defn macroexpand-1 [x & [impl]]
+(defn macroexpand-1 [x & [impl]]
   (condp = impl
-    :ctools         (clojure.tools.analyzer.jvm/macroexpand-1 x))))
+    #?@(:clj [:ctools         (clojure.tools.analyzer.jvm/macroexpand-1 x)])
+    nil #?(:clj  (macroexpand-1 x)
+           :cljs (cljs.analyzer/macroexpand-1 x))))
 
 #?(:clj (defn macroexpand-all
   {:todo ["Compare implementations"]}

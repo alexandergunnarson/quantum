@@ -1,5 +1,4 @@
 (ns quantum.core.data.complex.csv
-  (:require-quantum [:core #_coll #_str err])
   #?(:clj (:require [clojure.data.csv :as csv])))
 
 #_(:clj ; TODO for now

@@ -1,6 +1,6 @@
-(ns ^:skip-aot  quantum.measure.length
-  (:require-quantum [:core])
-  (:require [quantum.measure.core :refer [defunits-of]]))
+(ns ^:skip-aot quantum.measure.length
+  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
+  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
 
 #?(:clj (set! *unchecked-math* false))
 
@@ -88,3 +88,5 @@
   :french/points   [[1/12   :french/picas  ]]
   :american/points [[1/12   :american/picas]]
   :computer/points [[1/12   :computer/picas]])
+
+#?(:clj (set! *unchecked-math* :warn-on-boxed))

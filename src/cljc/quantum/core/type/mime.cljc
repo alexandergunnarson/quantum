@@ -1,6 +1,10 @@
-(ns quantum.type.mime
-  (:refer-clojure :exclude [type])
-  (:require-quantum [:core logic fn]))
+(ns quantum.core.type.mime
+           (:refer-clojure :exclude [type])
+           (:require [quantum.core.logic :as logic
+                       :refer [#?@(:clj [condpc coll-or])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic :as logic
+                       :refer [condpc coll-or]            ])))
 
 #?(:cljs
 (defn type

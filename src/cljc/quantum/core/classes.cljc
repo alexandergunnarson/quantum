@@ -4,16 +4,13 @@
     :attribution "Alex Gunnarson"}
   quantum.core.classes
   (:refer-clojure :exclude [name])
-  (:require-quantum [:core log pr err map set vec logic fn cbase])
-  (:require
-            [quantum.core.collections.base :as cbase :refer
-              [name default-zipper camelcase ns-qualify zip-reduce
-               comparators ensure-set]]
-            [quantum.core.classes.reg :as class-reg]
-            [clojure.string           :as str  ]
-            [clojure.walk :refer [postwalk prewalk]]
-          #_[backtick     :refer [syntax-quote]]
-    #?(:clj [clojure.math.combinatorics :as combo])))
+  #_(:require-quantum [logic fn])
+  (:require [quantum.core.collections.base :as cbase
+              :refer [name default-zipper camelcase ns-qualify zip-reduce
+                      comparators ensure-set]]
+            [quantum.core.classes.reg      :as class-reg]
+            [quantum.core.data.map         :as map      ]
+            [quantum.core.data.set         :as set      ]))
 
 ; ; PACKAGE RESOLUTION
 ; ; clojure (class @clojure.lang.Compiler/LOADER)

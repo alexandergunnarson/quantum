@@ -1,5 +1,4 @@
-(ns quantum.numeric.statistics
-  (:require-quantum [:core fn logic]))
+(ns quantum.numeric.statistics)
 
 #?(:clj
 (defn get-random-elem

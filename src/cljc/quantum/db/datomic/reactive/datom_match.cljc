@@ -1,7 +1,6 @@
 (ns ^{:doc "Datom matching. Mostly taken from mpdairy/posh (distributed under EPL >= 1)
             and ported to CLJC."}
   quantum.db.datomic.reactive.datom-match
-  (:require-quantum [:core])
   (:require [quantum.db.datomic.core :as db]))
 
 (defn query-symbol? [s]

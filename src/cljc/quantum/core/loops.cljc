@@ -4,10 +4,21 @@
     :attribution "Alex Gunnarson"}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce dotimes])
-  (:require-quantum [:core fn logic log map macros err])
-  (:require [quantum.core.reducers :as red]
-   #?@(:clj [[proteus :refer [let-mutable]]
-             [quantum.core.macros.optimization :as opt]])))
+           (:require
+             #?(:clj [proteus
+                       :refer [let-mutable]])
+                     [quantum.core.core                :as qcore  ]
+                     [quantum.core.error               :as err                
+                       :refer [->ex]                              ]
+                     [quantum.core.log                 :as log    ]
+                     [quantum.core.macros.core         :as cmacros
+                       :refer [#?@(:clj [if-cljs])]               ]
+                     [quantum.core.macros              :as macros       
+                       :refer [#?@(:clj [assert-args])]           ]
+                     [quantum.core.reducers            :as red    ]
+                     [quantum.core.macros.optimization :as opt    ])
+  #?(:cljs (:require-macros
+                     [quantum.core.log                 :as log    ])))
   
 #?(:clj (set! *unchecked-math* true))
 
@@ -72,7 +83,7 @@
   ([lang f ret coll]
    (let [externed
           (condp = lang
-            :clj  (if @reg/externs? 
+            :clj  (if @qcore/externs? 
                       (try (opt/extern- f)
                         (catch Throwable _
                           (log/pr ::macro-expand "COULD NOT EXTERN" f)
@@ -91,7 +102,7 @@
 (defmacro reducei*
   [should-extern? f ret-i coll & args]
   (let [f-final
-         `(~(if (and should-extern? @reg/externs?)
+         `(~(if (and should-extern? @qcore/externs?)
                 'quantum.core.macros/extern+
                 'quantum.core.macros.optimization/identity*) 
            (let [i# (volatile! (long -1))]

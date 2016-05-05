@@ -1,6 +1,7 @@
 ; Or, "nested"
 (ns quantum.core.collections.inner
-  (:require-quantum [ns fn logic map set type]))
+  (:require [quantum.core.data.map :as map]
+            [quantum.core.data.set :as set]))
 
 (defn nest-keys
   "Returns a map that takes `m` and extends all keys with the
@@ -37,7 +38,7 @@
   ([m nskv ex]
    (let [tm     (treeify-keys-nested m)
          c-map  (get-in tm nskv)
-         x-map  (map/dissoc-in tm nskv)]
+         x-map  (dissoc-in tm nskv)] ; was map/dissoc-in
     (map/merge c-map (if (empty? ex)
                    x-map
                    (assoc-in {} ex x-map))))))

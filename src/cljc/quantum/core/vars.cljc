@@ -1,7 +1,8 @@
 (ns ^{:doc "Var- and namespace-related functions."}
   quantum.core.vars
   (:refer-clojure :exclude [defonce])
-  (:require-quantum [reg cmacros]))
+  (:require [quantum.core.macros.core :as cmacros
+              :refer [if-cljs when-cljs]]))
 
 ; ============ DECLARATION ============
 
@@ -49,13 +50,12 @@
         (meta sym)))
     (when (.hasRoot ^clojure.lang.Var var-0) [@var-0]))))
 
-#?(:clj (cmacros/defmalias defmalias cmacros/defmalias))
+#?(:clj (quantum.core.macros.core/defmalias defmalias quantum.core.macros.core/defmalias))
 
 #?(:clj
 (defmacro defonce
   "Like |clojure.core/defonce| but supports optional docstring and attributes
    map for name symbol."
-  {:arglists '([name expr])}
   [name & sigs]
   (let [[name [expr]] (cmacros/name-with-attrs name sigs)]
     `(core/defonce ~name ~expr))))
@@ -170,7 +170,7 @@
 
 #?(:clj
 (defn namespace-exists?
-  {:todo ["Likely a better way to do this"]}
+  {:todo ["There has to be a better way to do this"]}
   [ns-sym]
   (try (require ns-sym)
        true

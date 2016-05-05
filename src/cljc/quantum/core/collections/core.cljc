@@ -7,10 +7,46 @@
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last get pop peek
      conj! conj assoc! dissoc! dissoc disj! contains?
-     #?@(:cljs [empty? array])])
-  (:require-quantum
-    [:core err fn log logic red #_str map set macros type vec arr pconvert #_num])
-  #?(:clj (:require [seqspert.vector]))
+     #?@(:cljs [empty? array])
+     #?@(:clj  [boolean byte char short int long float double])])
+  #_(:require-quantum [type])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )         :as core    ]
+             #?(:clj [seqspert.vector                            ])
+             #?(:clj [clojure.core.async             :as casync  ])
+                     [quantum.core.convert.primitive :as pconvert
+                       :refer [boolean ->boolean
+                               byte    ->byte   ->byte*
+                               char    ->char   ->char*
+                               short   ->short  ->short*
+                               int     ->int    ->int*
+                               long    ->long   ->long*
+                               float   ->float  ->float*
+                               double  ->double ->double*]       ]
+                     [quantum.core.data.vector       :as vec     
+                       :refer [catvec subvec+ vector+]           ]
+                     [quantum.core.error             :as err
+                       :refer [->ex]                             ]
+                     [quantum.core.fn                :as fn
+                       :refer [#?@(:clj [f*n])]                  ]
+                     [quantum.core.logic             :as logic
+                       :refer [#?@(:clj [eq? fn-eq? whenc whenf])
+                               any? nnil? nempty?]               ]
+                     [quantum.core.macros            :as macros
+                       :refer [#?@(:clj [defnt])]                ]
+                     [quantum.core.reducers          :as red     
+                       :refer [drop+ take+ dropr+ taker+]        ]
+                     [quantum.core.vars              :as var
+                       :refer [#?(:clj defalias)]                ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                :as fn
+                       :refer [f*n]                              ]
+                     [quantum.core.logic             :as logic
+                       :refer [eq? fn-eq? whenc whenf]           ]
+                     [quantum.core.macros            :as macros
+                       :refer [defnt]                            ]
+                     [quantum.core.vars              :as var
+                       :refer [defalias]                         ]))
 )
 
 ; FastUtil is the best
@@ -239,7 +275,7 @@
           "Add 3-arity for |index-of-from|"]}
   ([^vec?    coll elem] (whenc (.indexOf coll elem) neg-1? nil))
   ([^string? coll elem] (whenc (.indexOf coll (str elem)) neg-1? nil))
-  ([coll elem] (throw+ (Err. :unimplemented "Index-of not implemented for" (class coll)))))
+  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (class coll)))))
 
 ; Spent too much time on this...
 ; (defn nth-index-of [super sub n]
@@ -443,6 +479,8 @@
 ;     (if (nil? coll)
 ;         (PersistentList. x)
 ;         (.cons coll x))))
+
+(defalias conj core/conj)
 
 (defnt conjr
   ([^vec?   coll a    ] (core/conj a    ))

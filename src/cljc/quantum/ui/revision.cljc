@@ -1,9 +1,8 @@
-(ns quantum.ui.revision
-  (:require-quantum [:lib ui]))
+(ns quantum.ui.revision)
 
 ; COMMIT AND UNDO/REDO
 
-(defnt commit!*
+#_(defnt commit!*
   ([^quantum.ui.core.FXObservableAtom x states]
     (swap! states coll/updates-in+
       [:last-modified :instant] (constantly (time/now))
@@ -11,9 +10,9 @@
       [x :index ] (whenf*n nil? (constantly 0) (MWA inc))
       [x :states] (f*n conj (-> x :immutable deref)))))
 
-(defn commit! [states x] (commit!* x states))
+#_(defn commit! [states x] (commit!* x states))
 
-(defnt oswap!*
+#_(defnt oswap!*
   ([^javafx.collections.transformation.FilteredList x states f args]
     (println "OSWAP WITH ARGS CLASS" (class args))
     (condp = f
@@ -31,10 +30,10 @@
     (when commit? (commit!* x states))
     x))
 
-(defn oswap! [states commit? x f & args]
+#_(defn oswap! [states commit? x f & args]
   (oswap!* x states commit? f args))
 
-(defnt oreset!*
+#_(defnt oreset!*
   ([^javafx.collections.transformation.FilteredList x-0 states x-f]
     (log/pr :user 3)
     (println "ORESET WITH NEW-X CLASS" (class x-f))
@@ -50,16 +49,16 @@
     (log/pr :user 6)
     x))
 
-(defn oreset! [states commit? x-0 x-f] (oreset!* x-0 states commit? x-f))
+#_(defn oreset! [states commit? x-0 x-f] (oreset!* x-0 states commit? x-f))
 
-(defn coordinate-state! [states x]
+#_(defn coordinate-state! [states x]
   (log/pr :user 1)
   (let [i (get-in @states [x :index])]
     (log/pr :user 2)
     (oreset! states false x (get-in @states [x :states i]))))
 
 ; TODO doesn't fully work
-(defn redo!
+#_(defn redo!
   "Increments the pointer"
   ([states] (if-let [item (-> @states :last-modified :item)]
               (redo! states item false)
@@ -78,7 +77,7 @@
             (coordinate-state! states x)
             true))))
 
-(defn undo!
+#_(defn undo!
   "Decrements the pointer"
   ([states] (if-let [item (-> @states :last-modified :item)]
               (undo! states item false)
@@ -97,22 +96,22 @@
             (coordinate-state! states x)
             true))))
 
-(defnt add-undo-redo!*
+#_(defnt add-undo-redo!*
   ([^quantum.ui.core.FXObservableAtom x states]
     (swap! states assoc x {:index 0 :states [(-> x :immutable deref)]})))
-(defn add-undo-redo! [states x] (add-undo-redo!* x states) true)
+#_(defn add-undo-redo! [states x] (add-undo-redo!* x states) true)
 
-(defnt unsaved-changes?
+#_(defnt unsaved-changes?
   [^clojure.lang.Atom states]
   (any? (fn-> val :index (> 0)) @states))
 
-(defnt revert!
+#_(defnt revert!
   ([^clojure.lang.Atom states]
     (doseq [component meta- @states]
       (undo! states component true)
       (add-undo-redo! states component))))
 
-(defn append-data!
+#_(defn append-data!
   {:todo ["Rename, etc."]}
   [states source dest]
   (oreset! states true dest

@@ -1,23 +1,43 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic.core
-  (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge conj!])
-  (:require-quantum [:core err core-async pr log logic fn cbase tpred])
-  (:require
-   #?(:clj  [clojure.core                     :as c        ]
-      :cljs [cljs.core                        :as c        ])
-   #?(:cljs [cljs-uuid-utils.core             :as uuid     ])
-   #?(:clj  [datomic.api                      :as db       ]
-      :cljs [datomic-cljs.api                 :as db       ])
-            [datascript.core                  :as mdb      ]
-    ;#?(:clj [quantum.deploy.amazon            :as amz      ])
-            [com.stuartsierra.component       :as component]
-            [quantum.core.collections         :as coll     ]
-            [quantum.core.resources           :as res      ]
-    #?(:clj [quantum.core.process             :as proc     ]))
-  #?(:cljs (:require-macros
-            [datomic-cljs.macros   
-              :refer [<?]                                  ]
-            [quantum.core.collections         :as coll     ]))
+           (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge conj! if-let])
+  #_(:require-quantum [core-async cbase tpred])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )     :as c              ]
+            #?(:cljs [cljs-uuid-utils.core       :as uuid           ])
+            #?(:clj  [datomic.api                :as db             ])
+                     [datascript.core            :as mdb            ]
+            ;#?(:clj [quantum.deploy.amazon      :as amz            ])
+                     [com.stuartsierra.component :as component      ]
+                     [quantum.core.collections   :as coll           ]
+                     [quantum.core.error         :as err      
+                       :refer [->ex]                                ]
+                     [quantum.core.fn            :as fn      
+                       :refer [#?@(:clj [<- fn-> fn->> f*n])]       ]
+                     [quantum.core.log           :as log            ]
+                     [quantum.core.logic         :as logic
+                       :refer [#?@(:clj [fn-not fn-and fn-or whenf
+                                         whenf*n ifn if*n if-let])
+                               nnil?]                               ]
+                     [quantum.core.print         :as pr             ]
+                     [quantum.core.resources     :as res            ]
+             #?(:clj [quantum.core.process       :as proc           ])
+                     [quantum.core.type          :as type      
+                       :refer [atom?]                               ]
+                     [quantum.core.vars          :as var      
+                       :refer [#?@(:clj [defalias])]                ])
+  #?(:cljs (:require-macros      
+                     [quantum.core.fn            :as fn      
+                       :refer [<- fn-> fn->> f*n]                   ]
+                     [quantum.core.log           :as log            ]
+                     [quantum.core.logic         :as logic      
+                       :refer [fn-not fn-and fn-or whenf whenf*n
+                               ifn if*n if-let]                     ]
+                     [datomic-cljs.macros         
+                       :refer [<?]                                  ]
+                     [quantum.core.collections   :as coll           ]
+                     [quantum.core.vars          :as var      
+                       :refer [defalias]                            ]))
   #?(:clj (:import datomic.Peer
                    [datomic.peer LocalConnection Connection]
                    java.util.concurrent.ConcurrentHashMap)))
@@ -50,14 +70,14 @@
 #?(:clj (def entity? (partial instance? datomic.query.EntityMap)))
 (defalias mentity? datascript.impl.entity/entity?)
 
-(def db?  (partial instance? #?(:clj  datomic.db.Db
-                                :cljs datomic-cljs.api.DatomicDB)))
+#?(:clj (def tempid? (partial instance? datomic.db.DbId)))
+
+#?(:clj (def db? (partial instance? datomic.db.Db)))
 
 (def ^{:doc "'mdb' because checks if it is an in-*mem*ory database."}
   mdb? (partial instance? datascript.db.DB))
 
-(def conn? (partial instance? #?(:clj  datomic.Connection
-                                 :cljs datomic-cljs.api.DatomicConnection)))
+#?(:clj (def conn? (partial instance? datomic.Connection)))
 (defn mconn? [x] (and (atom? x) (mdb? @x)))
 
 ; TRANSFORMATIONS/CONVERSIONS
@@ -105,15 +125,15 @@
 (defn q
   ([query] (q query (->db)))
   ([query db & args]
-    (cond (mdb? db) (apply mdb/q query db args)
-          (db?  db) (apply db/q  query db args)
+    (cond           (mdb? db) (apply mdb/q query db args)
+          #?@(:clj [(db?  db) (apply db/q  query db args)])
           :else (throw (unhandled-type :db db)))))
 
 (defn entity
   ([eid] (entity (->db) eid))
   ([db eid]
-    (cond (mdb? db) (mdb/entity db eid)
-          (db?  db) (db/entity  db eid)
+    (cond           (mdb? db) (mdb/entity db eid)
+          #?@(:clj [(db?  db) (db/entity  db eid)])
           :else (throw (unhandled-type :db db)))))
 
 (defn entity-db
@@ -126,11 +146,12 @@
 ; It can collide with a peer-supplied tempid, causing very strange bugs.
 ; I recommend passing a tempid in as an arg instead.
 (defn tempid
+  ([] (tempid @part*))
   ([part] (tempid @conn* part))
   ([conn part]
+    (assert (nnil? part))
     (cond            (mconn? conn) (mdb/tempid part)
-          #?@(:clj  [(conn?  conn) (db/tempid  part)]
-              :cljs [(db?    conn) (db/tempid  part)])
+          #?@(:clj  [(conn?  conn) (db/tempid  part)])
           :else (throw (unhandled-type :conn conn)))))
 
 (defn pull
@@ -168,8 +189,8 @@
 (defn datoms
   ; TODO add @db* arity
   ([db index & args]
-    (cond (mdb? db) (apply mdb/datoms db index args)
-          (db?  db) (apply db/datoms  db index args)
+    (cond           (mdb? db) (apply mdb/datoms db index args)
+          #?@(:clj [(db?  db) (apply db/datoms  db index args)])
           :else (throw (unhandled-type :db db)))))
 
 (defn seek-datoms
@@ -182,8 +203,8 @@
 (defn index-range
   ([attr start end] (index-range (->db) attr start end))
   ([db attr start end]
-    (cond (mdb? db) (mdb/index-range db attr start end)
-          (db?  db) (db/index-range  db attr start end)
+    (cond           (mdb? db) (mdb/index-range db attr start end)
+          #?@(:clj [(db?  db) (db/index-range  db attr start end)])
           :else (throw (unhandled-type :db db)))))
 
 (defn transact!
@@ -318,6 +339,7 @@
               :db/unique             (when (:unique opts)
                                        (->> opts :unique name
                                             (str "db.unique/") keyword))
+              :db/isComponent        (:component? opts)
               :db/index              (:index?     opts)
               :db.install/_attribute part-f}
              (filter (fn [[k v]] (nnil? v)))
@@ -421,20 +443,25 @@
       entity
       touch))
 
+(def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
+
+(defn wrap-transform [x]
+  #?(:clj  (if (has-transform? x)
+                x
+                [:fn/transform x])
+     :cljs x))
+
 (defn rename [old new-]
   {:db/id    old
    :db/ident new-})
 
 (defn assoc
   "Transaction function which asserts the attributes (@kvs)
-   associated with entity id @id.
-   Results in a seq of transaction-elems, not a single elem."
+   associated with entity id @id."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [eid & kvs]
-  #?(:clj  (mapv (fn [[k v]]
-                   [:fn/transform (list :db/add eid k v)])
-                 (partition-all 2 kvs))
-     :cljs (into [:db/add eid] kvs)))
+  (wrap-transform
+    (apply hash-map :db/id eid kvs)))
 
 (defn dissoc
   "Transaction function which retracts the attributes (@kvs)
@@ -459,8 +486,7 @@
 (defn merge
   "Merges in @props to @eid."
   [eid props]
-  (apply assoc eid
-    (->> props validated->txn seq (apply concat))))
+  (-> props (c/assoc :db/id eid) validated->txn))
 
 (defn excise
   ([eid attrs] (excise eid @part* attrs))
@@ -473,11 +499,11 @@
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  ([m]      (conj @conn* @part* m))
-  ([part m] (conj @conn* part m))
-  ([conn part m]
-    #?(:clj  [:fn/transform (c/assoc (validated->txn m) :db/id (tempid conn part))]
-       :cljs (c/assoc (validated->txn m) :db/id (tempid conn part)))))
+  ([m]      (conj @conn* @part* false m))
+  ([part m] (conj @conn* part false m))
+  ([conn part no-transform? m]
+    (let [txn (coll/assoc-when-none (validated->txn m) :db/id (tempid conn part))]
+      (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
   "Creates and transacts an entity from the supplied attribute-map."
@@ -487,7 +513,7 @@
 (defn disj
   ([eid] (disj @conn* eid))
   ([conn eid]
-    [:db.fn/retractEntity eid]))
+    (wrap-transform [:db.fn/retractEntity eid])))
 
 (defn disj! [& args]
   (transact! [(apply disj args)]))
@@ -601,40 +627,6 @@
 ;        (<- db/tx-range nil nil)
 ;        seq))
 
-; (defmacro call! [f & args]
-;   `(transact! [[f ~@args]]))
-
-; (defn schema
-;   {:usage '(schema :string :person.name/family-name :one {:doc "nodoc"})}
-;   ([val-type ident cardinality]
-;     (schema val-type ident cardinality {}))
-;   ([val-type ident cardinality opts]
-;     (with-throw (in? val-type allowed-types) (Err. nil "Val-type not recognized." val-type))
-;     (let [cardinality-f
-;             (condp = cardinality
-;               :one  :db.cardinality/one
-;               :many :db.cardinality/many
-;               (throw+ (Err. nil "Cardinality not recognized:" cardinality)))
-;           part-f
-;             (or (:part opts) :db.part/db)]
-;       (->> {:db/id                 (d/tempid part-f)
-;             :db/ident              ident
-;             :db/valueType          (keyword "db.type" (name val-type))
-;             :db/cardinality        cardinality-f
-;             :db/doc                (:doc        opts)
-;             :db/fulltext           (:full-text? opts)
-;             :db/unique             (when (:unique opts)
-;                                      (->> opts :unique name
-;                                           (str "db.unique/") keyword))
-;             :db/index              (:index?     opts)
-;             :db.install/_attribute part-f}
-;            (coll/filter-vals+ nnil?)
-;            redm))))
-
-; (defn rename [old new-]
-;   {:db/id    old
-;    :db/ident new-})
-
 ; (defn rename-schemas [mapping]
 ;   (for [oldv newv mapping]
 ;     {:db/id oldv :db/ident newv}))
@@ -660,13 +652,6 @@
 ;            :where
 ;            [?e :db/ident ?ident]
 ;            [_ :db.install/attribute ?e]]))
-
-; (ns-unmap 'quantum.db.datomic 'assoc)
-
-; (defn assoc [id & kvs]
-;   (into [:db/add id] kvs))
-
-; (ns-unmap 'quantum.db.datomic 'dissoc!)
 
 ; (defn dissoc!*
 ;   "The built-in |dissoc|-like function for Datomic.
@@ -1139,8 +1124,40 @@
   (defn! q [[datomic.api :as api]] [db query] (api/q query db))
   (defn! first  [] [db coll] (first  coll))
   (defn! ffirst [] [db coll] (ffirst coll))
- 
+  (defn! nil?   [] [db expr] (nil? expr))
+  (defn! nnil?  [] [db expr] (not (nil? expr)))
+
   ; MACROS
+
+  (defn! apply-or
+    [[datomic.api :as api]]
+    ^{:macro? true
+      :doc "Variadic |or|."}
+    [db args]
+    (loop [args-n args]
+      (if-let [arg (->> args-n first (api/invoke db :fn/eval db))]
+        arg
+        (recur (rest args-n)))))
+
+  (defn! or
+    [[datomic.api :as api]]
+    ^{:macro? true
+      :doc "2-arity |or|."}
+    [db alt0 alt1]
+    (or (api/invoke db :fn/eval db alt0)
+        (api/invoke db :fn/eval db alt1)))
+
+  (defn! validate
+    ^{:macro? true
+      :doc    "|eval|s @expr. If the result satisifies @pred, returns @expr.
+               Otherwise, throws an assertion error."}
+    [[datomic.api :as api]]
+    [db pred expr]
+    (let [expr-eval (api/invoke db :fn/eval db expr)]
+      (if (api/invoke db pred db expr-eval)
+          expr-eval
+          (throw (ex-info (str "Assertion not met: " pred)
+                   {:pred pred :expr expr :expr-eval expr-eval})))))
 
   (defn! throw [] [db expr] (throw (Exception. expr)))
 
@@ -1165,7 +1182,7 @@
                (-> expr first keyword?)
                (-> expr first namespace (= "fn")))
             (let [[f & args] expr
-                  macros #{:fn/if :fn/when}]
+                  macros #{:fn/if :fn/when :fn/validate :fn/or :fn/apply-or}]
               (if (contains? macros f)
                   (apply datomic.api/invoke db f db args)
                   (apply datomic.api/invoke db f db
@@ -1251,6 +1268,18 @@
                 (->> vs
                      (map #(vector % [:db/add e a %]))
                      (into {})))))))
+
+(defn new-if-not-found
+  "Creates a new entity if the one specified by the key-value pairs, @attrs,
+   is not found in the database."
+  [attrs]
+  (let [query (into [:find '?e :where]
+                (for [[k v] attrs]
+                  ['?e k v]))]
+  `(:fn/or
+     (:fn/ffirst
+       (:fn/q ~query))
+     ~(tempid))))
 
 #_(:clj
 (defn txn-ids-affecting-eid

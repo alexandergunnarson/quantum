@@ -1,7 +1,25 @@
 (ns quantum.core.analyze.clojure.transform
-  (:require-quantum [:core err fn logic])
-  (:require [quantum.core.analyze.clojure.predicates :refer
-              [if-statement? cond-statement? when-statement?]]))
+           (:refer-clojure :exclude [destructure])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )                  :as core ]
+                     [quantum.core.analyze.clojure.predicates
+                       :refer [if-statement? cond-statement?
+                               when-statement?]                        ]
+                     [quantum.core.error                      :as err
+                       :refer [->ex]                                   ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [fn-> fn->>])]                 ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [fn-or if*n condf*n])]         ]
+                     [quantum.core.vars                       :as var
+                       :refer [#?(:clj defalias)]                      ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                         :as fn
+                        :refer [fn-> fn->>]                            ]
+                     [quantum.core.logic                      :as logic
+                        :refer [fn-or if*n condf*n]                    ]
+                     [quantum.core.vars                       :as var
+                       :refer [defalias]                               ])))
 
 ; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
 (def conditional-branches
@@ -31,9 +49,12 @@
 ;;      (f*n update-last f)
 ;;    identity))
 
+#?(:clj (defalias destructure core/destructure))
+
+#?(:cljs
 (defn destructure
   {:from "clojure.tools.analyzer.js.cljs.core"
-   :todo ["Is this in clojure.core or cljs.core such that this fn won't be necessary?"]}
+   :todo ["Is this in cljs.core such that this fn won't be necessary?"]}
   [bindings]
   (let [bents (partition 2 bindings)
          pb (fn pb [bvec b v]
@@ -98,4 +119,4 @@
           bindings
           (if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
             (throw (->ex :unsupported (core/str "Unsupported binding key:") (ffirst kwbs)))
-            (reduce process-entry [] bents)))))
+            (reduce process-entry [] bents))))))

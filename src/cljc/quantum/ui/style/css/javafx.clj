@@ -1,8 +1,7 @@
-(ns quantum.ui.css.javafx
-  (:require-quantum [:lib ui]))
+(ns quantum.ui.css.javafx)
 
-(in-ns 'fx-clj.css)
-(defn remove-global-stylesheet! [url]
+#_(in-ns 'fx-clj.css)
+#_(defn remove-global-stylesheet! [url]
   (let [^java.util.ArrayList stylesheets
           (-> (StyleManager/getInstance)
               (quantum.core.java/field "platformUserAgentStylesheetContainers")) ; was |userAgentStylesheets| before a certain revision
@@ -11,10 +10,10 @@
               (quantum.core.java/invoke "getIndex" (str url)))]
     (.remove stylesheets stylesheet-index) ; This apparently doesn't work
     (.clear stylesheets)))
-(in-ns 'quantum.ui.css.javafx)
+#_(in-ns 'quantum.ui.css.javafx)
 
 
-(defn set-css! [file]
+#_(defn set-css! [file]
   #_(let [file-str (io/file-str file)]
     (fx/run! (javafx.application.Application/setUserAgentStylesheet nil)
      #_(-> (StyleManager/getInstance)
@@ -33,25 +32,24 @@
   (fx/run<!!
     (fx.css/set-global-css!
       (io/read :read-method :str :path file))))
-(import 'javafx.application.Application)
+#_(import 'javafx.application.Application)
 
-(def css-file-modified-handler
+#_(def css-file-modified-handler
   (atom (fn [file]
           (set-css! (io/file-str file))
           (log/pr ::debug "CSS set."))))
 
-(defonce css-file-watched (atom [:resources "test.css"]))
+#_(defonce css-file-watched (atom [:resources "test.css"]))
 
-(defonce css-file-watcher
+#_(defonce css-file-watcher
   (fs/file-watcher
     {:file     css-file-watched
      :handlers {:modified (fn [e] (@css-file-modified-handler e))}}
     {:id :css-file-watcher}))
 
+#_(declare extract-css-metadata)
 
-(declare extract-css-metadata)
-
-(defn- extract-css-metadatum
+#_(defn- extract-css-metadatum
   [^javafx.css.CssMetaData meta-0 ^Node node]
   (let [^javafx.css.StyleableProperty prop
          (.getStyleableProperty meta-0 node)
@@ -68,12 +66,12 @@
         meta-name (-> meta-0 (.getProperty) keyword)]
     [meta-name meta-extracted-f]))
 
-(defn- extract-css-metadata [meta-list ^Node node]
+#_(defn- extract-css-metadata [meta-list ^Node node]
   (->> meta-list
        (map (f*n extract-css-metadatum node))
        (into (sorted-map)))) ; TODO use |redm|
 
-(defn get-css
+#_(defn get-css
   "Retrieves the CSS metadata for a JavaFX node."
   [^Node node]  ; getSubProperties
   (-> node

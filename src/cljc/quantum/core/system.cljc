@@ -2,10 +2,14 @@
   ^{:doc "System-level (environment) vars such as |os|."
     :attribution "Alex Gunnarson"}
   quantum.core.system
-  (:require-quantum [:core fn logic #_str #_coll])
-  (:require [quantum.core.collections :as coll
-              :refer [containsv?]]
-            [clojure.string :as str])
+           (:require [quantum.core.collections :as coll
+                       :refer [containsv?]                ]
+                     [quantum.core.logic       :as logic
+                       :refer [#?@(:clj [condpc coll-or])]]
+                     [quantum.core.string      :as str    ])
+  #?(:cljs (:require-macros
+                     [quantum.core.logic       :as logic
+                       :refer [condpc coll-or]            ]))
   #?(:clj (:import java.io.File
                    java.lang.management.ManagementFactory)))
 
@@ -81,7 +85,7 @@
              :unknown)
      :clj
       (let [os-0 (-> (System/getProperty "os.name")
-                     str/lower-case)]
+                     str/->lower)]
         (condpc containsv? os-0
           "win"                       :windows
           "mac"                       :mac

@@ -1,5 +1,4 @@
 (ns quantum.core.data.string
-  (:require-quantum [:core ccore macros coll])
   #?(:clj (:import com.carrotsearch.hppc.CharArrayDeque)))
 
 ; What about structural sharing with strings?
@@ -11,14 +10,14 @@
 ; parsed types and dispatch in |defnt| accordingly
 
 ; Currently only for strings
-#?(:clj
+#_(:clj
 (defn rreduce [f init ^String s]
   (loop [ret init i (-> s lasti int)] ; int because charAt requires int, I think
     (if (>= i 0)
         (recur (f ret (.charAt s i)) (unchecked-dec i))
         ret))))
 ; Basically a double-sided StringBuilder
-#?(:clj
+#_(:clj
 (defn conjl! [^CharArrayDeque x ^String arg]
   (rreduce
     (fn [^CharArrayDeque ret c]
@@ -26,7 +25,7 @@
     x
     arg)))
 
-#?(:clj
+#_(:clj
 (defn conjr! [^CharArrayDeque x ^String arg]
   (reduce
     (fn [^CharArrayDeque ret c]
@@ -34,13 +33,13 @@
     x
     arg)))
 
-#?(:clj
+#_(:clj
 (defnt concat!
   ([^com.carrotsearch.hppc.CharArrayDeque x arg] (conjr! x arg))
   ([^string? x arg] (conjl! arg x))
   #_([^fn? x arg] (conjl! ))))
 
-#?(:clj
+#_(:clj
 (defnt paren+
   ([^string? arg] (fn [sb] (conjl! sb "(") (conjr! sb arg) (conjr! sb ")")))
   ([^fn?     arg] (fn [sb] (conjl! sb "(") (conjr! sb (arg sb)) (conjr! sb ")")))))
@@ -64,7 +63,7 @@
 ;(conjl! "abc")
 
 
-#?(:clj
+#_(:clj
 (defn sp+ [& args]
   (fn [sb]
     (doseqi [arg args n]

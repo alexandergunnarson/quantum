@@ -5,11 +5,18 @@
           By no means a full-fledged logging system, but useful nonetheless."
     :attribution "Alex Gunnarson"}
   quantum.core.log
-  (:refer-clojure :exclude [pr])
-  (:require-quantum [:core fn pr core-async tpred debug])
-  (:require [com.stuartsierra.component :as component]
-   #_(:clj  [clj-time.core              :as time     ]
-      :cljs [cljs-time.core             :as time     ])))
+           (:refer-clojure :exclude [pr #?(:cljs seqable?)])
+           (:require [com.stuartsierra.component   :as component]
+                     [quantum.core.core            :as qcore    ]
+                     [quantum.core.fn              :as fn
+                       :refer [#?@(:clj [])]                    ]
+                     [quantum.core.meta.debug      :as debug    ]
+                     [quantum.core.print           :as pr       ]
+                     [quantum.core.type.predicates :as tpred
+                       :refer [seqable?]])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn            :as fn
+                       :refer []                              ])))
 
 (defrecord LoggingLevels
   [warn user macro-expand debug trace env])
@@ -28,16 +35,18 @@
    message])  ; ^String  
 
 (defn disable!
-  ([^Keyword pr-type]
+  {:in-types '{pr-type keyword?}}
+  ([pr-type]
     (swap! levels assoc pr-type false))
-  ([^Keyword pr-type & pr-types]
+  ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (disable! pr-type-n))))
 
 (defn enable!
-  ([^Keyword pr-type]
+  {:in-types '{pr-type keyword?}}
+  ([pr-type]
     (swap! levels assoc pr-type true))
-  ([^Keyword pr-type & pr-types]
+  ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (enable! pr-type-n)))) 
 
@@ -73,7 +82,7 @@
             args-f ( when args @args)
             env-type-str
               (when (get @levels :env)
-                (str (name reg/lang) " »"))
+                (str (name qcore/lang) " »"))
             out-str
               (with-out-str
                 (when (= pr-type :macro-expand) (print "\n/* "))
@@ -122,7 +131,7 @@
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(pr* true  true  !       ~pr-type (delay (list ~@args)) nil)))
+  `(pr* true  true  pr/!    ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
 (defmacro ppr-hints [pr-type & args]

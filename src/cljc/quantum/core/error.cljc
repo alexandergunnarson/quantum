@@ -2,17 +2,23 @@
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
-  (:refer-clojure :exclude [assert])
-  (:require-quantum [:core log map fn cbase])
-  (:require [clojure.string                :as str  ]
-            [quantum.core.collections.base :as cbase]
-            [quantum.core.error.try-catch  :as tc   ]
-            [clojure.string                :as str  ]
-    #?(:clj [clj-stacktrace.repl           :as trace]))
-  #?(:cljs 
-  (:require-macros
-            [quantum.core.collections.base :as cbase]
-            [quantum.core.log              :as log  ])))
+           (:refer-clojure :exclude [assert])
+           (:require [clojure.string                :as str    ]
+                     [quantum.core.collections.base :as cbase  
+                       :refer [#?(:clj kmap)]                  ]
+                     [quantum.core.data.map         :as map    ]
+                     [quantum.core.error.try-catch  :as tc     ]
+                     [quantum.core.macros.core      :as cmacros
+                       :refer [if-cljs]                        ]
+                     [quantum.core.log              :as log    ]
+                     [quantum.core.vars             :as var
+                       :refer [#?(:clj defalias)]              ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.base :as cbase
+                       :refer [kmap]                           ]
+                     [quantum.core.log              :as log    ]
+                     [quantum.core.vars             :as var
+                       :refer [defalias]                       ])))
 
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))
@@ -108,11 +114,11 @@
        (throw ~err))))
 
 #?(:clj
-(defmacro assert+
+(defmacro assert
   "Like |assert|, but takes a type"
   {:references ["https://github.com/google/guava/wiki/PreconditionsExplained"]
    :usage '(let [a 4]
-             (assert+ (neg? (+ 1 3 a)) #{a}))}
+             (assert (neg? (+ 1 3 a)) #{a}))}
   [expr & [syms type]]
   `(when-not ~expr
      (throw

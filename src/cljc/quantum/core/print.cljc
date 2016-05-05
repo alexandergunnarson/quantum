@@ -6,23 +6,31 @@
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
-  (:require-quantum [:core fn logic vec]) ; |vec| To work around CLJS non-spliceability of Tuples
-  (:require
-    #?(:clj  [fipp.edn    :as pr]
-       :cljs [cljs.pprint :as pr]) ; Fipp currently has strange execution problems in CLJS 
-    #?(:cljs [cljs.core :refer [StringBufferWriter]]))
-  #?(:cljs
-  (:require-macros 
-             [cljs.pprint       ])))
+           (:require [quantum.core.core              :as qcore]
+                     [quantum.core.fn                :as fn
+                       :refer [#?@(:clj [fn-> fn->>])]        ]
+                     [quantum.core.logic             :as logic
+                       :refer [#?@(:clj [condf])]             ]
+                     [quantum.core.data.vector       :as vec  ]  ; To work around CLJS non-spliceability of Tuples
+                     [quantum.core.vars              :as var
+                       :refer [#?(:clj defalias)]             ]
+            #?(:clj  [fipp.edn                       :as pr   ]
+                     ; Fipp currently has strange execution problems in CLJS
+               :cljs [cljs.pprint                    :as pr   ]))
+  #?(:cljs (:require-macros 
+                     [cljs.pprint                             ]
+                     [quantum.core.fn                :as fn
+                       :refer [fn-> fn->>]                    ]
+                     [quantum.core.logic             :as logic
+                       :refer [condf]                         ]
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                  ])))
 
 (defonce max-length (atom 1000))
 (defonce ^{:doc "A set of classes not to print"}
   blacklist  (atom #{}))
 
-#_(defn js-println [& args]
-  (print "\n/* " )
-  (apply println args)
-  (println "*/"))
+(defalias js-println qcore/js-println)
 
 (defn !
   "Fast pretty print using brandonbloom/fipp.
@@ -120,28 +128,6 @@
        (println "Repr. object: ") (-> ~obj representative-coll !)
        (println))))
 
-#_(:clj
-(defmacro with-print-str* [platform & body] ; I reimplemented |with-out-str|
-  (let [code
-         (condp = platform
-           :clj
-             `(with-open [s# (java.io.StringWriter.)]
-                (binding [*out* s#]
-                  ~@body
-                  (str *out*)))
-           :cljs
-             `(let [sb#     (goog.string.StringBuffer.)
-                    writer# (cljs.core.StringBufferWriter. sb#)] ; THIS NEEDS TO WORK. Apparently it doesn't...
-                (binding [cljs.core/*print-fn*
-                           (fn [& objs]
-                             (cljs.core/pr-seq-writer objs writer#
-                               (assoc (cljs.core/pr-opts) :readably false)))]
-                  ~@body
-                  (cljs.core/-flush writer#)
-                  (str sb#)))
-           (throw (Exception. (str "Unrecognized platform: " platform))))]
-    code)))
-
 (defn- pprint-symbol [x]
   (when-let [has-hint? (-> x meta (contains? :tag))]
     (print "^")
@@ -164,7 +150,7 @@
     (print " "))
   (pprint-vector-0 x)))
 
-#?(:clj (.addMethod clojure.pprint/simple-dispatch Symbol pprint-symbol))
+#?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.Symbol pprint-symbol))
 #?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
 
 (defn pprint-hints [x]

@@ -1,19 +1,43 @@
 (ns quantum.core.io.utils
-  (:require-quantum [:core logic fn core-async log err res vec macros coll str])
-  (:require [com.stuartsierra.component  :as component]
-            [datascript.core             :as mdb      ]
-            [quantum.core.convert        :as conv
-              :refer [->name ->str]             ]
-            [quantum.db.datomic          :as db      
-              #?@(:cljs [:refer [EphemeralDatabase]]) ]
-            [quantum.core.system         :as sys ]
-    #?(:clj [clojure.java.io             :as io  ]))
-  #?(:clj
-  (:import (quantum.db.datomic EphemeralDatabase)
-           (java.io File
-                    InputStream OutputStream
-                    DataOutputStream
-                    FileInputStream FileOutputStream))))
+           (:require [com.stuartsierra.component  :as component]
+                     [datascript.core             :as mdb      ]
+             #?(:clj [clojure.java.io             :as io       ])
+                     [quantum.core.convert        :as conv
+                       :refer [->name ->str]                   ]
+                     [quantum.db.datomic          :as db      
+                       #?@(:cljs [:refer [EphemeralDatabase]]) ]
+                     [quantum.core.collections    :as coll
+                       :refer [#?(:clj kmap)]                  ]
+                     [quantum.core.error          :as err
+                       :refer [->ex #?(:clj try+)]             ]
+                     [quantum.core.fn             :as fn
+                       :refer [#?@(:clj [f*n])]                ]
+                     [quantum.core.system         :as sys      ]
+                     [quantum.core.string         :as str      ]
+                     [quantum.core.logic          :as logic
+                       :refer [#?@(:clj [fn-not fn-and ifn])]  ]
+                     [quantum.core.macros         :as macros
+                       :refer [#?@(:clj [defnt])]              ]
+                     [quantum.core.vars           :as var
+                       :refer [#?(:clj def-)]                  ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections    :as coll
+                       :refer [kmap]                           ]
+                     [quantum.core.error          :as err
+                       :refer [try+]                           ]
+                     [quantum.core.fn             :as fn
+                       :refer [f*n]                            ]
+                     [quantum.core.logic          :as logic
+                       :refer [fn-not fn-and ifn]              ]
+                     [quantum.core.macros         :as macros
+                       :refer [defnt]                          ]
+                     [quantum.core.vars           :as var
+                       :refer [def-]                           ]))
+  #?(:clj  (:import  (quantum.db.datomic EphemeralDatabase)
+                     (java.io File
+                              InputStream OutputStream
+                              DataOutputStream
+                              FileInputStream FileOutputStream))))
 
 ; ===== DEPENDENCIES =====
 

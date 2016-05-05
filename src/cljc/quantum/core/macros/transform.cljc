@@ -1,13 +1,27 @@
 (ns quantum.core.macros.transform
-  (:require-quantum [:core fn logic cmacros log tcore err cbase])
-  (:require [fast-zip.core :as zip]
-            [quantum.core.analyze.clojure.predicates :as anap
-              :refer [type-hint]]
-            [clojure.walk
-              :refer [postwalk]]
-            [quantum.core.collections.base
-              :refer [update-first update-val ensure-set
-                      zip-reduce default-zipper]]))
+           (:require [fast-zip.core                           :as zip                   ]
+                     [clojure.walk
+                       :refer [postwalk]                                                ]
+                     [quantum.core.analyze.clojure.predicates :as anap
+                       :refer [type-hint]                                               ]
+                     [quantum.core.collections.base           :as cbase
+                       :refer [update-first update-val ensure-set
+                               zip-reduce default-zipper]                               ]
+                     [quantum.core.error                      :as err                 
+                      :refer [->ex]                                                     ]
+                     [quantum.core.fn                         :as fn                  
+                       :refer [#?@(:clj [<- f*n fn->])]                                 ]
+                     [quantum.core.log                        :as log                   ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [fn-not fn-or fn-and whenc condf*n]) nnil? any?]]
+                     [quantum.core.macros.core                :as cmacros               ]
+                     [quantum.core.type.core                  :as tcore                 ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                         :as fn
+                       :refer [<- f*n fn->]                                             ]
+                     [quantum.core.log                        :as log                   ]
+                     [quantum.core.logic                      :as logic
+                       :refer [fn-not fn-or fn-and whenc condf*n]                       ])))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 

@@ -1,14 +1,26 @@
 (ns ^{:doc "Helper functions for macros which provide optimization."}
   quantum.core.macros.optimization
-  (:require-quantum [:core fn log logic var err]))
+           (:require [quantum.core.core        :as qcore]
+                     [quantum.core.fn          :as fn
+                       :refer [#?@(:clj [fn->])]        ]
+                     [quantum.core.log         :as log  ]
+                     [quantum.core.logic       :as logic
+                       :refer [#?@(:clj [fn-and])]      ]
+                     [quantum.core.vars        :as var  ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn          :as fn
+                       :refer [fn->]                    ]
+                     [quantum.core.log         :as log  ]
+                     [quantum.core.logic       :as logic
+                       :refer [fn-and]                  ])))
 
-; ===== EXTERN =====
+; ===== EXTERN =====d
 
 (def extern? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "extern"))))
 
 #?(:clj
 (defn extern* [ns- [spec-sym quoted-obj & extra-args]]
-  (if @quantum.core.ns/externs?
+  (if @qcore/externs?
       (do (log/pr :macro-expand "EXTERNING" quoted-obj)
           (when-not (empty? extra-args)
             (throw (Exception. (str "|extern| takes only one argument. Received: " (-> extra-args count inc)))))

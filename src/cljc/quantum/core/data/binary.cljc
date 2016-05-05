@@ -5,9 +5,19 @@
   (:refer-clojure :exclude
     [unsigned-bit-shift-right bit-shift-left bit-shift-right
      bit-or bit-and bit-xor bit-not])
-  (:require-quantum [:core macros log])
-  #?(:clj (:import #_[quantum.core Numeric]
-                   java.nio.ByteBuffer)))
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   ) :as core  ]
+                     [quantum.core.macros    :as macros
+                       :refer [#?@(:clj [defnt])]      ]
+                     [quantum.core.vars      :as var
+                       :refer [#?(:clj defalias)]      ])
+  #?(:cljs (:require-macros
+                     [quantum.core.macros    :as macros
+                       :refer [defnt]                  ]
+                     [quantum.core.vars      :as var
+                       :refer [defalias]               ]))
+  #?(:clj  (:import #_[quantum.core Numeric]
+                    java.nio.ByteBuffer)))
 
 ; Because "cannot resolve symbol 'import'"
 #?(:clj
@@ -56,7 +66,9 @@
 
 (defalias bit-not core/bit-not)
 (defalias bit-and core/bit-and)
+(defalias & bit-and)
 (defalias bit-or  core/bit-or)
+(defalias | bit-or)
 (defalias bit-xor core/bit-xor)
 
 ; ===== SHIFTS =====

@@ -7,13 +7,36 @@
           keyword), etc."
     :attribution "Alex Gunnarson"}
   quantum.core.string
-  (:refer-clojure :exclude [reverse replace remove val re-find])
-  (:require-quantum [:core fn set map macros logic red type loops cbase log err])
-  (:require
-    [quantum.core.string.format :as form ]
-    [quantum.core.string.regex  :as regex]
-    [clojure.string :as str]
-    [frak])
+  (:refer-clojure :exclude [reverse replace remove val re-find reduce])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )     :as core              ]
+                     [clojure.string             :as str               ]
+                     [frak                                             ]
+                     [quantum.core.data.map      :as map               ]
+                     [quantum.core.data.set      :as set               ]
+                     [quantum.core.fn            :as fn 
+                       :refer [#?@(:clj [fn->])]                       ]
+                     [quantum.core.logic         :as logic
+                       :refer [#?@(:clj [fn-and whencf*n ifn]) nempty?]]
+                     [quantum.core.loops         :as loops
+                       :refer [reduce reducei]                         ]
+                     [quantum.core.macros        :as macros
+                       :refer [#?@(:clj [defnt defnt'])]               ]
+                     [quantum.core.string.format :as form              ]
+                     [quantum.core.string.regex  :as regex             ]
+                     [quantum.core.vars          :as var
+                       :refer [#?@(:clj [defalias])]                   ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn            :as fn
+                       :refer [fn->]                                   ]
+                     [quantum.core.logic         :as logic
+                       :refer [fn-and whencf*n ifn]                    ]
+                     [quantum.core.loops         :as loops
+                       :refer [reduce reducei]                         ]
+                     [quantum.core.macros        :as macros
+                       :refer [defnt defnt']                           ]
+                     [quantum.core.vars          :as var
+                       :refer [defalias]                               ]))
   #?(:clj (:import java.net.IDN)))
 
 #_(defn contains? [s sub]

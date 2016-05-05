@@ -4,15 +4,26 @@
       "Compression."
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
   quantum.core.io.compress
-  (:require-quantum [ns arr err str time coll num logic type fn])
+     (:refer-clojure :exclude [into])
+  #_(:require-quantum [arr err str time coll num logic type fn])
   #?(:clj
-      (:require
-        [clojure.java.io               :as clj-io                   ]
-        [quantum.core.convert          :as convert]
-        [taoensso.nippy                :as nippy                    ]
-        [quantum.core.io.serialization :as io-ser                   ]
-        [iota                          :as iota                     ]
-        [byte-transforms               :as bt                       ]))
+      (:require [clojure.java.io               :as clj-io ]
+                [taoensso.nippy                :as nippy  ]
+                [iota                          :as iota   ]
+                [byte-transforms               :as bt     ]
+                [quantum.core.convert          :as convert]
+                [quantum.core.io.serialization :as io-ser ]
+                [quantum.core.collections      :as coll  
+                  :refer [map+ filter+ into in-k?]        ]
+                [quantum.core.error            :as err 
+                  :refer [#?(:clj throw-when)]]
+                [quantum.core.type             :as type 
+                  :refer [construct]                      ]
+                [quantum.core.logic            :as logic
+                  :refer [#?@(:clj [condpc coll-or])]     ]
+                [quantum.core.data.set         :as set    ]
+                [quantum.core.vars             :as var
+                  :refer [#?(:clj def-)]                  ]))
   #?(:clj
       (:import
         (net.jpountz.lz4 LZ4Factory LZ4Compressor)
@@ -57,16 +68,16 @@
 
 ; TODO make a |key-by| macro for all this
 (def- supported-compressors
-  (->> compressors-set (filter :implemented?) (into #{})))
+  (->> compressors-set (filter+ :implemented?) (into #{})))
 
 (def supported-extensions
-  (->> supported-compressors (map :extension) (into #{})))
+  (->> supported-compressors (map+ :extension) (into #{})))
 
 (def supported-formats
-  (->> supported-compressors (map :name) (into #{})))
+  (->> supported-compressors (map+ :name) (into #{})))
 
 (def supported-algorithms 
-  (set/union (->> supported-compressors (map :algorithm) (into #{}))
+  (set/union (->> supported-compressors (map+ :algorithm) (into #{}))
     (into #{} bt/available-compressors)))
 
 (def supported-preferences
@@ -96,7 +107,7 @@
   ([x algorithm] (decompress x algorithm nil))
   ([x algorithm options]
     ; His lz4 is net.jpountz.lz4, which is the best
-    (bt/decompress x algorithm options)))
+    (bt/decompress x algorithm options))))
 
 ; TODO THIS IS FROM RAYNES... GOOD STUFF WORTH INCORPORATING
 

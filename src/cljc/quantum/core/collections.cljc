@@ -31,37 +31,69 @@
      split-at
      first second rest last butlast get pop peek
      zipmap
+     conj
      conj! assoc! dissoc! disj!
-     partition-all])
-  (:require-quantum [:core logic type macros #_num vec set
-                     log err fn str list])
-  (:require
-            [quantum.core.data.map         :as map  ]
-            [quantum.core.collections.core :as coll ]
-            [quantum.core.collections.base :as base ]
-            [quantum.core.reducers         :as red  ]
-            [quantum.core.string.format    :as sform]
-            [quantum.core.analyze.clojure.predicates :as anap]
-            [quantum.core.type.predicates  :as tpred]
-            [clojure.walk                  :as walk ]
-    #?(:clj [quantum.core.loops            :as loops])
-    #?(:clj [clojure.pprint :refer [pprint]]))
-  #?(:cljs
-    (:require-macros
-      [quantum.core.reducers         :as red  ]
-      [quantum.core.loops            :as loops]
-      [quantum.core.collections.core :as coll ]
-      [quantum.core.collections     
-        :refer [for lfor doseq doseqi reduce reducei
-                seq-loop
-                count lasti
-                subseq
-                contains? containsk? containsv?
-                index-of last-index-of
-                first second rest last butlast get pop peek
-                conjl
-                conj! assoc! dissoc! disj!
-                map-entry]])))
+     partition-all
+     #?(:cljs boolean?)])
+  #_(:require-quantum [list])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )                  :as core   ]
+                     [quantum.core.data.map                   :as map    ]
+                     [quantum.core.data.set                   :as set    ]
+                     [quantum.core.data.vector                :as vec  
+                       :refer [catvec subvec+]                           ]
+                     [quantum.core.collections.core           :as coll   ]
+                     [quantum.core.collections.base           :as base   ]
+                     [quantum.core.error                      :as err  
+                       :refer [->ex]                                     ]
+                     [quantum.core.fn                         :as fn  
+                       :refer [#?@(:clj [compr <- fn-> fn->> withf->>  
+                                         f*n MWA]) fn-nil juxt-kv]       ]
+                     [quantum.core.log                        :as log    ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
+                                         ifn condf condf*n]) nnil? any?] ]
+                     [quantum.core.macros                     :as macros 
+                       :refer [#?@(:clj [defnt])]                        ]
+                     [quantum.core.reducers                   :as red    ]
+                     [quantum.core.string                     :as str    ]
+                     [quantum.core.string.format              :as sform  ]
+                     [quantum.core.type                       :as type  
+                       :refer [#?@(:clj [lseq? transient? editable? 
+                                         boolean? should-transientize?])]]
+                     [quantum.core.analyze.clojure.predicates :as anap   ]
+                     [quantum.core.type.predicates            :as tpred  ]
+                     [clojure.walk                            :as walk   ]
+                     [quantum.core.loops                      :as loops  ]
+                     [quantum.core.vars                       :as var  
+                       :refer [#?@(:clj [defalias])]                     ])
+  #?(:cljs (:require-macros  
+                     [quantum.core.collections.core           :as coll   ]
+                     [quantum.core.collections     
+                       :refer [for lfor doseq doseqi reduce reducei
+                               seq-loop
+                               count lasti
+                               subseq
+                               contains? containsk? containsv?
+                               index-of last-index-of
+                               first second rest last butlast get pop peek
+                               conjl conj! assoc! dissoc! disj!
+                               map-entry]]
+                     [quantum.core.fn                         :as fn
+                       :refer [compr <- fn-> fn->> withf->> f*n MWA]     ]
+                     [quantum.core.log                        :as log    ]
+                     [quantum.core.logic                      :as logic 
+                       :refer [fn-not fn-or fn-and whenf whenf*n 
+                               ifn condf condf*n]                        ]
+                     [quantum.core.loops                      :as loops  ]
+                     [quantum.core.macros                     :as macros 
+                       :refer [defnt]                                    ]
+                     [quantum.core.reducers                   :as red    ]
+                     [quantum.core.type                       :as type 
+                       :refer [lseq? transient? editable? boolean? 
+                               should-transientize?]                     ]
+                     [quantum.core.vars                       :as var 
+                       :refer [defalias]                                 ])))
 
 (defn key
   ([kv] (if (nil? kv) nil (core/key kv)))
@@ -114,6 +146,7 @@
 #?(:clj (defalias last          coll/last         ))
 #?(:clj (defalias assoc!        coll/assoc!       ))
 #?(:clj (defalias dissoc!       coll/dissoc!      ))
+        (defalias conj          coll/conj         )
 #?(:clj (defalias conj!         coll/conj!        ))
 #?(:clj (defalias disj!         coll/disj!        ))
 #?(:clj (defalias update!       coll/update!      ))
@@ -289,15 +322,17 @@
         (lrrange a b)
         (core/range a b))))
 
-(defn ^Vec rrange
+(defn rrange
   "Reverse range"
-  {:todo ["Performance with |range+| on [a b] arity, and rseq"]}
+  {:ret-type 'Vector
+   :todo ["Performance with |range+| on [a b] arity, and rseq"]}
   ([]    (lrrange))
   ([a]   (lrrange a))
   ([a b] (-> (range+ a b) redv reverse)))
 
-(defn ^Vec range
-  {:todo ["Performance with |range+| on [a b] arity"]}
+(defn range
+  {:ret-type 'Vector
+   :todo ["Performance with |range+| on [a b] arity"]}
   ([]    (lrange))
   ([a]   (lrange a))
   ([a b]
@@ -809,7 +844,7 @@
    :out "cdefg"}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw+ (Err. :out-of-bounds nil [super sub])))]
+              (throw (->ex :out-of-bounds nil [super sub])))]
     (takel-fromi i super)))
 
 (def take-from takel-from)
@@ -827,7 +862,7 @@
    :out "efg"}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw+ (Err. :out-of-bounds nil [super sub])))
+              (throw (->ex :out-of-bounds nil [super sub])))
         i-f (+ i (lasti sub))]
     (takel-afteri i-f super)))
 
@@ -1791,13 +1826,14 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
-(defn ^Delay group-merge-with+
+(defn group-merge-with+
   {:attribution "Alex Gunnarson"
    :todo ["Can probably make the |merge| process parallel."]
    :in [":a"
         "(fn [k v1 v2] v1)"
         "[{:a 1 :b 2} {:a 1 :b 5} {:a 5 :b 65}]"]
-   :out "[{:b 65, :a 5} {:a 1, :b 2}]"}
+   :out "[{:b 65, :a 5} {:a 1, :b 2}]"
+   :out-type 'Delay}
   [group-by-f merge-with-f coll]
   (let [merge-like-elems 
          (fn [grouped-elems]

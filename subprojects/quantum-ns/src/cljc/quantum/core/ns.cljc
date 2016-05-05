@@ -18,35 +18,6 @@
                )))
   #?(:clj (:import (clojure.lang Keyword Var Namespace))))
 
-; DEFAULTS
-#?(:clj (set! *unchecked-math*     :warn-on-boxed))
-#?(:clj (set! *warn-on-reflection* true          ))
-
-(def lang #?(:clj :clj :cljs :cljs))
-
-(def debug?   (atom false))
-(def externs? (atom true ))
-
-(defn js-println [& args]
-  (print "\n/* " )
-  (apply println args)
-  (println "*/"))
-
-#?(:clj
-(defmacro mfn
-  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
-   Originally named |functionize| by mikera."
-  ([macro-sym]
-    ; When CLJS
-    (when (boolean (:ns &env)) (throw (Exception. "|mfn| not supported for CLJS.")))
-   `(fn [& args#]
-      (js-println "WARNING: Runtime eval with |mfn| via" '~macro-sym)
-      (clojure.core/eval (cons '~macro-sym args#))))
-  ([n macro-sym]
-    (let [genned-arglist (->> (repeatedly gensym) (take n) (into []))]
-      `(fn ~genned-arglist
-         (~macro-sym ~@genned-arglist))))))
-
 #?(:clj
 (defmacro search-var
   "Searches for a var @var0 in the available namespaces."
@@ -289,10 +260,10 @@
   (condp = lang-
     :clj
       (do ; Can't use a macro in the same namespace... hmm  
-        (apply (mfn quantum.core.ns/ns-exclude)
+          (apply (mfn quantum.core.ns/ns-exclude)
             (second core-exclusions))
-          (apply require          require-statements-f)
-          (apply (mfn import)     (reg/get-ns-syms reg/reg :imports ns-syms)))
+          (apply require      require-statements-f)
+          (apply (mfn import) (reg/get-ns-syms reg/reg :imports ns-syms)))
     :cljs final-statements))))
 
 #?(:clj
@@ -303,7 +274,7 @@
     (throw (Exception. "|require-quantum| body cannot be empty.")))
   (require-quantum* :cljs ns-sym ns-syms)))
 
-#?(:clj
+#_(:clj
 (do (in-ns 'clojure.core)
     (require 'quantum.core.ns)
     (def require-quantum #(quantum.core.ns/require-quantum* :clj nil %))

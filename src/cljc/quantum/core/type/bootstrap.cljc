@@ -3,7 +3,20 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.bootstrap
-  (:require-quantum [:core map set logic fn list]))
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )               :as core ]
+                     [quantum.core.data.map                :as map
+                       :refer [map-entry]                           ]
+                     [quantum.core.data.set                :as set  ]
+                     [quantum.core.fn                      :as fn
+                       :refer [#?@(:clj [fn->])]                    ]
+                     [quantum.core.logic                   :as logic
+                       :refer [#?@(:clj [fn-and condf*n])]          ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                      :as fn
+                       :refer [fn->]                                ]
+                     [quantum.core.logic                   :as logic
+                       :refer [fn-and condf*n]                      ])))
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -192,11 +205,13 @@
                    clojure.lang.PersistentList$EmptyList}
            :cljs #{cljs.core/List cljs.core/EmptyList}}
         dlist-types
-          '{:clj  #{clojure.data.finger_tree.CountedDoubleList
+           {}
+          #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
                     quantum.core.data.finger_tree.CountedDoubleList}
             :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
         cdlist-types
-          '{:clj  #{clojure.data.finger_tree.CountedDoubleList
+          {}
+          #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
                     quantum.core.data.finger_tree.CountedDoubleList}
             :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
         map-entry-types '{:clj  #{clojure.lang.MapEntry            }}

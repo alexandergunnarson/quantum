@@ -1,18 +1,21 @@
 (ns
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.numeric.cljs
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? min max format
      mod quot neg? pos?])
-  (:require-quantum [:core logic type fn macros err log pconvert])
-  (:require [quantum.core.convert.primitive :as prim :refer [->unboxed]]
-            [clojure.walk :refer [postwalk]]
-            [com.gfredericks.goog.math.Integer :as int]
-            [quantum.core.numeric.types :as ntypes])) 
+  #_(:require-quantum [type pconvert])
+  (:require [cljs.core                         :as core  ]
+            [com.gfredericks.goog.math.Integer :as int   ]
+            [quantum.core.numeric.types        :as ntypes])
+  (:require-macros
+            [quantum.core.macros               :as macros
+              :refer [defnt]                             ]
+            [quantum.core.vars                 :as var
+              :refer [defalias]                          ])) 
 
-(defalias rem   core/rem  )
+(defalias rem core/rem)
 
 
 ; ===== NON-TRANSFORMATIVE OPERATIONS ===== ;

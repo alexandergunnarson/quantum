@@ -3,16 +3,15 @@
           with |defcomponent|."
     :attribution "Alex Gunnarson"}
   quantum.ui.components
-  (:require-quantum [:lib ui])
   (:require [quantum.ui.revision :as rev]))  
 
 ; COLUMN
 
-(defn column-factory [f]
+#_(defn column-factory [f]
   (fx/callback [^TableColumn$CellDataFeatures p]
     (SimpleStringProperty. (-> p (.getValue) (f) str))))
 
-(defn default-column
+#_(defn default-column
   ([states ^FXObservableAtom data width text getter validators transformers not-editable?]
     (default-column states ^FXObservableAtom data width text getter validators transformers not-editable? nil))
   ([states ^FXObservableAtom data width text getter validators transformers
@@ -33,7 +32,7 @@
          :cell-value-factory (column-factory (compr getter transformer))}])))
 
 
-(defn gen-columns [data data-k fields states width-map
+#_(defn gen-columns [data data-k fields states width-map
                    validators transformers not-editable?
                    uneditable-map]
   (for [field fields]
@@ -45,7 +44,7 @@
 
 ; TABLE VIEW
 
-(defn table-view
+#_(defn table-view
   ([data columns] (table-view data columns nil))
   ([data columns opts]
     [:table-view
@@ -56,7 +55,7 @@
          :editable true
          :columns columns})]))
 
-(defn command-ribbon [opts & buttons]
+#_(defn command-ribbon [opts & buttons]
   (let [spacer [:h-box.spacer {:min-width (or (:spacer-width opts) 0)}]]
     (->> buttons
          (reducei

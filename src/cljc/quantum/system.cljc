@@ -1,16 +1,26 @@
 (ns ^{:doc "A namespace for bootstrapping/streamlining system creation."}
   quantum.system
-  (:require-quantum [:core async log err logic fn res debug])
-  (:require [com.stuartsierra.component       :as component]
-   #?(:cljs [reagent.core                     :as rx       ])
-            [quantum.core.core                   
-              :refer [deref* lens]                         ]
-            [quantum.db.datomic               :as db       ]
-            [quantum.db.datomic.core          :as dbc      ]
-            [quantum.db.datomic.reactive.core :as db-rx    ]
-            [quantum.net.http                 :as http     ]
-            [quantum.net.websocket            :as conn     ]
-            [quantum.ui.core                  :as ui       ]))
+           (:require [com.stuartsierra.component       :as component]
+            #?(:cljs [reagent.core                     :as rx       ])
+                     [quantum.core.core                   
+                       :refer [deref* lens]                         ]
+                     [quantum.core.fn                  :as fn
+                       :refer [#?@(:clj [fn->])]                    ]
+                     [quantum.core.log                 :as log      ]
+                     [quantum.core.macros.core         :as cmacros  
+                       :refer [#?@(:clj [if-cljs])]                 ]
+                     [quantum.core.resources           :as res      ]
+                     [quantum.core.thread.async        :as async    ]
+                     [quantum.db.datomic               :as db       ]
+                     [quantum.db.datomic.core          :as dbc      ]
+                     [quantum.db.datomic.reactive.core :as db-rx    ]
+                     [quantum.net.http                 :as http     ]
+                     [quantum.net.websocket            :as conn     ]
+                     [quantum.ui.core                  :as ui       ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                  :as fn
+                       :refer [fn->]                                ]  
+                     [quantum.core.log                 :as long     ])))
 
 (defn default-config
   "A decent default configuration for a web app.

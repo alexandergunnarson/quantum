@@ -1,26 +1,40 @@
-(ns quantum.core.util.test
-  (:refer-clojure :exclude [merge]))
+(ns quantum.core.meta.test)
 
-; (ns
-;   ^{:doc "An almost-never-used namespace for generating random data structures
-;           for testing purposes."
-;     :attribution "Alex Gunnarson"}
-;   quantum.core.util.test
-;   (:refer-clojure :exclude [merge])
-;   (:require
-;     [quantum.core.ns :as ns
-;       #?@(:clj [:refer [defalias alias-ns]])]
-;   	[quantum.core.string :as str]
-;   	[quantum.core.collections :as coll :refer [merge]])
-;   #?(:clj (:gen-class)))
+#?(:clj
+(defmacro qtest
+  {:attribution "Alex Gunnarson"}
+  [f-sym]
+  `(let [var-f#    (if (var? ~f-sym)
+                       ~f-sym
+                       (ns-resolve *ns* ~f-sym))
+         var-meta# (meta var-f#)
+         in#       (:in  var-meta#)
+         out#      (:out var-meta#)]
+     (if (or (nil? in#) (nil? out#))
+         (println (str "Test not defined for |" var-f# "|."))
+         (let [ret#        (apply (deref var-f#) (eval in#))
+               out-evaled# (eval out#)]
+           (if (= ret# out-evaled#)
+               (println (str "Test passed for |" var-f# "|."))
+               (throw
+                 (Exception.
+                   (str "Test failed for |" var-f# "|. "
+                        "Expected " out-evaled# "; got " ret# ".")))))))))
 
-; #?(:clj (ns/require-all *ns* :clj))
+#?(:clj
+(defn qtests [sym]
+  (for [test result (->  sym resolve meta :tests)]
+    [test
+     (try (apply (eval sym) (eval test))
+        (catch Throwable e e))
+      (eval result)])))
 
-; (defn rand-maps [ct]
-;   (for [n (range 0 ct)]
-;     (hash-map
-;       (keyword (str/rand-str 30))
-;       (str/rand-str 5))))
-
-; (defn rand-map [ct]
-;   (apply merge (rand-maps ct)))
+#?(:clj
+(defn test-ns
+  "Tests all public vars of a namespace."
+  [ns-sym]
+  (->> ns-sym
+       ns-publics
+       vals
+       (map (fn [var-] (qtest var-)))
+       doall)))

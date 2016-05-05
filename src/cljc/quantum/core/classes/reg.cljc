@@ -1,7 +1,6 @@
 (ns quantum.core.classes.reg
-  (:require-quantum [:core])
   #?(:clj (:import org.reflections.Reflections
-                 org.reflections.scanners.SubTypesScanner)))
+                   org.reflections.scanners.SubTypesScanner)))
 
 #?(:clj
 (defonce clojure-classes-unevaled

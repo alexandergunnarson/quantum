@@ -1,5 +1,4 @@
 (ns quantum.core.io.filesystem
-  (:require-quantum [ns io res err fn logic thread async log coll macros type])
   (:require [quantum.core.convert :as convert])
 #?(:clj
   (:import 
@@ -9,7 +8,7 @@
      WatchEvent$Modifier)
     quantum.core.data.queue.LinkedBlockingQueue)))
 
-#?(:clj
+#_(:clj
 (defn java-file-watcher
   "@event-kinds     StandardWatchEventKinds/ENTRY_MODIFY
    @event-modifiers SensitivityWatchEventModifier/HIGH"
@@ -36,7 +35,7 @@
               ; Necessary to receive more watches
               (.reset watch-key)))))))))
 
-#?(:clj 
+#_(:clj 
 (defn file-watcher
   [{:as opts :keys [file]
     {:keys [modified]} :handlers}
@@ -47,7 +46,7 @@
         timestamp-0  (.lastModified file-0)
         sleep-delay  (or (:delay opts) 100)]
     (if (io/directory? file-0)
-        (throw+ (Err. :not-implemented "Directory parsing not yet implemented." file))
+        (throw (->ex :not-implemented "Directory parsing not yet implemented." file))
         (async-loop thread-opts
           [prev-timestamp timestamp-0]
           (let [^File file-n  (-> @file convert/->file)

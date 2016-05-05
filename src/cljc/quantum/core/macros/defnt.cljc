@@ -1,33 +1,54 @@
 (ns ^{:doc "Because of the size of the dependencies for |defnt|,
       it was determined that it should have its own namespace."}
   quantum.core.macros.defnt
-  (:require-quantum [:core logic fn log pr err
-                     list set vec map
-                     cbase tcore cmacros])
-  (:require [quantum.core.collections.base
-              :refer [update-first update-val ensure-set
-                      zip-reduce default-zipper]]
-            [quantum.core.type.bootstrap             :as tboot]
-            [quantum.core.numeric.combinatorics      :as combo]
-            [quantum.core.macros.fn                  :as mfn  ]
-            [quantum.core.analyze.clojure.predicates :as anap
-              :refer [type-hint]]
-            [quantum.core.macros.core
-              #?@(:clj [:refer [quote+]])]
-              [quantum.core.macros.protocol       :as proto]
-            [quantum.core.macros.reify          :as reify]
-            [quantum.core.macros.transform      :as trans])
-  #?(:cljs
-  (:require-macros
-            [quantum.core.macros.core
-              :refer [quote+]])))
+           (:refer-clojure :exclude [merge])
+           (:require [quantum.core.collections.base           :as cbase
+                       :refer [update-first update-val ensure-set
+                               zip-reduce default-zipper #?(:clj kmap)]         ]
+                     [quantum.core.data.map                   :as map
+                       :refer [merge]                                           ]
+                     [quantum.core.data.set                   :as set           ]
+                     [quantum.core.data.vector                :as vec
+                       :refer [catvec]                                          ]
+                     [quantum.core.error                      :as err
+                       :refer [->ex #?@(:clj [throw-unless assertf->>])]        ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [<- fn-> fn->> f*n])]                   ]
+                     [quantum.core.log                        :as log           ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [eq? fn-not fn-or whenc whenf whencf*n
+                                         if*n condf]) nempty? nnil?]            ]
+                     [quantum.core.macros.core                :as cmacros       
+                       :refer [#?@(:clj [when-cljs if-cljs])]                   ]
+                     [quantum.core.macros.fn                  :as mfn           ]
+                     [quantum.core.analyze.clojure.predicates :as anap
+                       :refer [type-hint]]
+                     [quantum.core.macros.protocol            :as proto         ]
+                     [quantum.core.macros.reify               :as reify         ]
+                     [quantum.core.macros.transform           :as trans         ]
+                     [quantum.core.numeric.combinatorics      :as combo         ]
+                     [quantum.core.print                      :as pr            ]
+                     [quantum.core.type.bootstrap             :as tboot         ]
+                     [quantum.core.type.core                  :as tcore         ]
+                     [quantum.core.vars                       :as var
+                       :refer [#?@(:clj [defalias])]                            ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.base           :as cbase
+                       :refer [kmap]                                            ]
+                     [quantum.core.error                      :as err
+                       :refer [throw-unless assertf->>]                         ]
+                     [quantum.core.fn                         :as fn
+                       :refer [<- fn-> fn->> f*n]                               ]
+                     [quantum.core.log                        :as log           ]
+                     [quantum.core.logic                      :as logic
+                       :refer [eq? fn-not fn-or whenc whenf whencf*n if*n condf]]
+                     [quantum.core.vars                       :as var
+                       :refer [defalias]                                        ])))
 
 ; TODO reorganize this namespace and move into other ones as necessary
 
 (def special-defnt-keywords
   '#{:first :else :elem})
-
-(defalias merge map/merge)
 
 (defn special-defnt-keyword? [x]
   (contains? special-defnt-keywords x))
@@ -203,7 +224,7 @@
            available-default-types]
     :as env}]
   (assert (nempty? gen-interface-code-body-unexpanded))
-  (js-println "available-default-types" available-default-types)
+  (pr/js-println "available-default-types" available-default-types)
   (assert (nnil?   available-default-types))
   (->> gen-interface-code-body-unexpanded
        (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]
@@ -384,7 +405,7 @@
      protocol-def
      extend-protocol-def
      (when (= lang :cljs)
-       (list 'defalias (-> sym name
+       (list `defalias (-> sym name
                                (str "-protocol")
                                symbol)
              sym))]))

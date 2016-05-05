@@ -3,11 +3,15 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.core
-  (:require-quantum [:core log pr err map set logic fn cbase list])
-  (:require [quantum.core.type.bootstrap :as boot]
-    #?(:clj [clojure.tools.analyzer.jvm.utils :as ana]))
-  #?(:cljs
-      (:require-macros [quantum.core.type.bootstrap :as boot])))
+           (:require
+             #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
+                     [quantum.core.type.bootstrap      :as boot]
+                     [quantum.core.vars                :as var
+                       :refer [#?@(:clj [defalias])]           ])
+  #?(:cljs (:require-macros
+                     [quantum.core.type.bootstrap      :as boot]
+                     [quantum.core.vars                :as var
+                       :refer [defalias]                       ])))
 
 #?(:cljs (def class type))
 

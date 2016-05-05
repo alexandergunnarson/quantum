@@ -3,10 +3,15 @@
           adaptation for both Clojure & ClojureScript."
     :attribution "Alex Gunnarson"}
   quantum.core.error.try-catch
-  (:require-quantum [:core])
-  (:require [clojure.string             :as str]
-            [quantum.core.collections.base
-              :refer [appears-within?]         ]))
+  (:require [clojure.string                :as str      ]
+            [quantum.core.macros.core      :as cmacros
+              :refer [#?@(:clj [resolve-local if-cljs])]]
+            [quantum.core.collections.base :as cbase
+              :refer [appears-within?]                  ])
+  #?(:cljs
+  (:require-macros
+            [quantum.core.macros.core
+              :refer [if-cljs resolve-local]            ])))
 
 ; ================== START SLINGSHOT ==================
 

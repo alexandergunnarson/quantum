@@ -1,12 +1,10 @@
-(ns quantum.compile.to.java
-  (:require-quantum [:lib])
-  (:require
-    [quantum.compile.util    :as util ])
-  (:import
-    org.eclipse.jdt.core.formatter.CodeFormatter
-    org.eclipse.jdt.internal.formatter.DefaultCodeFormatter
-    org.eclipse.jface.text.Document))
+(ns quantum.compile.transpile.to.java
+  (:require [quantum.compile.transpile.util :as util])
+  #?(:clj (:import org.eclipse.jdt.core.formatter.CodeFormatter
+                   org.eclipse.jdt.internal.formatter.DefaultCodeFormatter
+                   org.eclipse.jface.text.Document)))
 
+#?(:clj
 (defn format-java
   "Formats Java code to be pretty."
   {:attribution "ztellman, http://blog.factual.com/using-clojure-to-generate-java-to-reimplement-clojure"
@@ -19,7 +17,7 @@
         te (.format f CodeFormatter/K_UNKNOWN s 0 (count s) 0 nil)
         d  (Document. s)]
     (.apply te d)
-    (.get d)))
+    (.get d))))
 
 (defn package [^String class-str ^String package-name]
   (let [^String package-str (str (util/semicoloned "package" package-name) "\n")]

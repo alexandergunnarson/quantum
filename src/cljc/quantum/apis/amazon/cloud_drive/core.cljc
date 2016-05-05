@@ -1,14 +1,23 @@
 (ns quantum.apis.amazon.cloud-drive.core
-  (:refer-clojure :exclude [meta])
-  (:require-quantum [:core fn logic log err async core-async coll])
-  (:require
-    [quantum.auth.core    :as auth ]
-    [quantum.core.convert :as conv ]
-    [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
-    [quantum.core.string  :as str  ]
-    [quantum.net.http     :as http ]
-    [quantum.core.paths   :as paths])
-  #?(:clj (:import [java.nio.file Files Paths])))
+           (:refer-clojure :exclude [meta])
+           (:require [quantum.auth.core                    :as auth    ]
+                     [quantum.core.convert                 :as conv    ]
+                     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
+                     [quantum.core.string                  :as str     ]
+                     [quantum.net.http                     :as http    ]
+                     [quantum.core.paths                   :as paths   ]
+                     [quantum.core.collections             :as coll    
+                       :refer [#?(:clj kmap) redv map+]                ]
+                     [quantum.core.fn                      :as fn
+                       :refer [#?@(:clj [<-])]                         ]
+                     [quantum.core.logic                   :as logic
+                       :refer [nnil?]                                  ])
+  #?(:cljs (:require-macros
+                     [quantum.core.collections             :as coll    
+                       :refer [kmap]                                   ]
+                     [quantum.core.fn                      :as fn
+                       :refer [<-]                                     ]))
+  #?(:clj  (:import  [java.nio.file Files Paths])))
 
 (def base-urls
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"

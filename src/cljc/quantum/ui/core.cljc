@@ -1,13 +1,16 @@
 (ns quantum.ui.core
-  (:require-quantum [:core res log err async])
-  (:require [com.stuartsierra.component :as component]
-   #?(:cljs [reagent.core               :as rx       ])
-            [quantum.core.loops
-              #?@(:clj [:refer [until]])])
-  #?(:cljs
-  (:require-macros
-            [quantum.core.loops
-              :refer [until]])))
+           (:require [com.stuartsierra.component :as component]
+            #?(:cljs [reagent.core               :as rx       ])
+                     [quantum.core.error         :as err      ]
+                     [quantum.core.log           :as log      ]
+                     [quantum.core.loops
+                       #?@(:clj [:refer [until]])             ]
+                     [quantum.core.thread.async  :as async    ])
+  #?(:cljs (:require-macros
+                     [quantum.core.error         :as err      ]
+                     [quantum.core.log           :as log      ]
+                     [quantum.core.loops
+                       :refer [until]                         ])))
 
 (defrecord
   ^{:doc "An abstraction for a renderer.

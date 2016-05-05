@@ -1,7 +1,13 @@
 (ns ^{:doc "A namespace that checks for availability of CSS features."
       :todo ["Possibly rename 'quantum.ui.platform'?"]}
   quantum.ui.features
-  (:require-quantum [:core fn map logic]))
+           (:require [quantum.core.data.map :as map 
+                       :refer [map-entry]            ]
+                     [quantum.core.logic    :as logic
+                       :refer [#?@(:clj [eq?])]      ])
+  #?(:cljs (:require-macros 
+                     [quantum.core.logic    :as logic
+                       :refer [eq?]                  ])))
 
 #?(:cljs
 (defn flex-test [elem flex-name]

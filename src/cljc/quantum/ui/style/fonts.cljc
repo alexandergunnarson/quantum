@@ -1,5 +1,4 @@
 (ns quantum.ui.style.fonts
-  (:require-quantum [:core])
   #_(:require [garden.core :refer [css]])
   #_(:import javafx.scene.text.Font))
 

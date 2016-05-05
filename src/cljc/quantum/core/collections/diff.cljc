@@ -1,5 +1,4 @@
 (ns quantum.core.collections.diff
-  (:require-quantum [:core logic fn map #_coll type err macros log #_num])
   (:require [quantum.core.collections.inner :as inner]))
 
 ; COMMENTED OUT FOR NOW

@@ -1,8 +1,8 @@
 (ns quantum.apis.amazon.cloud-drive.auth
-  (:require-quantum [:core fn logic async core-async cbase #_auth] #_[:lib http web])
-  (:require [quantum.net.http  :as http]
-            [quantum.auth.core :as auth]
-            [quantum.core.data.complex.json :refer [->json json->]]))
+  (:require [quantum.net.http               :as http]
+            [quantum.auth.core              :as auth]
+            [quantum.core.data.complex.json
+              :refer [->json json->]                ]))
 
 ; (defn driver []
 ;   (-> res/system :quantum.web.core :web-driver))

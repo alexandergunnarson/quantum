@@ -5,11 +5,23 @@
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? string? keyword? fn?
      nil? list? coll? char? symbol? record? number? integer? float? decimal?])
-  (:require-quantum [:core fn logic set map macros err log classes])
-  (:require
-    [quantum.core.type.core :as tcore]
-    [quantum.core.analyze.clojure.predicates :as anap]
-    [clojure.walk :refer [postwalk]]))
+           (:require [quantum.core.classes         :as classes]
+                     [quantum.core.fn              :as fn
+                       :refer [#?@(:clj [mfn])]               ]
+                     [quantum.core.data.vector     :as vec    ]
+                     [quantum.core.macros          :as macros
+                       :refer [#?@(:clj [defnt defnt'])]      ]
+                     [quantum.core.type.core       :as tcore  ]
+                     [quantum.core.type.predicates :as tpred  ]
+                     [quantum.core.vars            :as var 
+                       :refer [#?(:clj defalias)]             ])
+  #?(:cljs (:require-macros 
+                     [quantum.core.fn              :as fn 
+                       :refer [mfn]                           ]
+                     [quantum.core.macros          :as macros 
+                       :refer [defnt defnt']                  ]
+                     [quantum.core.vars            :as var 
+                       :refer [defalias]                      ])))
 
 ; TODO: Should include typecasting? (/cast/)
 
@@ -17,15 +29,17 @@
 
 #?(:clj (def instance+? instance?)
    :cljs
-     (defn instance+? [class-0 obj] ; inline this?
+     (defn instance+?
+       {:todo ["try-catch in something this basic is a performance issue"]}
+       [class-0 obj] ; inline this?
        (try
          (instance? class-0 obj)
          (catch js/TypeError _
            (try (satisfies? class-0 obj))))))
 
 (def name-from-class tcore/name-from-class)
-(def arr-types tcore/arr-types)
-(def types     tcore/types)
+(def arr-types       tcore/arr-types      )
+(def types           tcore/types          )
 
 ; TODO takes way too long to compile. Fix this
 #_#?(:clj
@@ -69,17 +83,19 @@
 ; (defn ratio? [x]
 ;   (instance? quantum.core.numeric.types.Ratio x)))
 
-(def map-entry?  #?(:clj  (partial instance+? clojure.lang.MapEntry)
-                    :cljs (fn-and core/vector? (fn-> count (= 2)))))
+(defalias map-entry? tpred/map-entry?)
+(defalias atom?      tpred/atom?)
 
-(def double?     #?(:clj  (partial instance+? ADouble)
-                    :cljs (fn-and
-                             core/number?
-                             #(not (zero? (rem % 1))))))
-
+#?(:clj  (defnt double? ([^double? obj] true) ([obj] false))
+   :cljs (def double?
+           (fn-and
+             core/number?
+             #(not (zero? (rem % 1))))))
+         (defalias vector+? vec/vector+?)
 #?(:clj  (def indexed?   (partial instance+? clojure.lang.Indexed)))
 #?(:clj  (def throwable? (partial instance+? java.lang.Throwable )))
-         (def error?     (partial instance+? AError              ))
+         (defnt error?  ([#{#?(:clj  Throwable
+                               :cljs js/Error)} obj] true) ([obj] false))
 #?(:clj
 (defnt interface?
   [^java.lang.Class class-]

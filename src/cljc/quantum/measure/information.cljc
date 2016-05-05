@@ -1,6 +1,6 @@
 (ns quantum.measure.information
-  (:require-quantum [:core])
-  (:require [quantum.measure.core :refer [defunits-of]]))
+  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
+  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
 
 ; Basic unit of information (entropy).  The entropy in bits
 ; of a random variable over a finite alphabet is defined
@@ -23,3 +23,5 @@
   :kbits  [[1000 :bits ] #{:kilobits   :kibits    :kibibits}]
   :Mbits  [[1000 :kbits] #{:megabits   :Mibits    :mebibits}]
   :Gbits  [[1000 :Mbits] #{:gigabits   :gibibits  :gibits  }])
+
+#?(:clj (set! *unchecked-math* :warn-on-boxed))

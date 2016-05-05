@@ -1,7 +1,20 @@
 (ns quantum.core.type.predicates
-  (:refer-clojure :exclude [#?(:clj boolean?) #?(:cljs seqable?)])
-  (:require-quantum [:core fn logic])
-  (:require [quantum.core.core :as c]))
+           (:refer-clojure :exclude
+             [#?(:clj boolean?) #?(:cljs seqable?)])
+           (:require [quantum.core.core        :as c      ]
+                     [quantum.core.fn          :as fn
+                       :refer [#?@(:clj [fn->])]          ]
+                     [quantum.core.logic       :as logic
+                       :refer [#?@(:clj [fn-and])]        ]
+                     [quantum.core.vars        :as var
+                       :refer [#?(:clj defalias)]         ])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn          :as fn
+                       :refer [fn->]                      ]
+                     [quantum.core.logic       :as logic
+                       :refer [fn-and]                    ]
+                     [quantum.core.vars        :as var
+                       :refer [defalias]                  ])))
 
 (defalias atom?     c/atom?    )
 (defalias seqable?  c/seqable? )
