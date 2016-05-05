@@ -1,7 +1,9 @@
 (ns ^{:doc "Macro-building helper functions."}
   quantum.core.macros.core
-  (:refer-clojure :exclude [macroexpand #?(:clj macroexpand-1)])
-  (:require [clojure.walk :as walk
+  (:refer-clojure :exclude [macroexpand macroexpand-1])
+  (:require [#?(:clj  clojure.core
+                :cljs cljs.core   ) :as core    ]
+            [clojure.walk           :as walk
               :refer [prewalk]]
    #?(:cljs [cljs.analyzer                      ])
   #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
@@ -111,13 +113,13 @@
 
 ; ===== MACROEXPANSION ====
 
-#?(:clj (def macroexpand     riddley.walk/macroexpand))
+#?(:clj (def macroexpand riddley.walk/macroexpand))
 
-(defn macroexpand-1 [x & [impl]]
+(defn macroexpand-1 [form & [impl & args]]
   (condp = impl
-    #?@(:clj [:ctools         (clojure.tools.analyzer.jvm/macroexpand-1 x)])
-    nil #?(:clj  (macroexpand-1 x)
-           :cljs (cljs.analyzer/macroexpand-1 x))))
+    :ana #?(:clj  (apply clojure.tools.analyzer.jvm/macroexpand-1 form args)
+            :cljs (apply cljs.analyzer/macroexpand-1              form args))
+    nil (core/macroexpand-1 form)))
 
 #?(:clj (defn macroexpand-all
   {:todo ["Compare implementations"]}

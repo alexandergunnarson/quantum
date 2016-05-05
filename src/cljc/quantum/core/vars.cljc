@@ -1,8 +1,11 @@
 (ns ^{:doc "Var- and namespace-related functions."}
   quantum.core.vars
-  (:refer-clojure :exclude [defonce])
-  (:require [quantum.core.macros.core :as cmacros
-              :refer [if-cljs when-cljs]]))
+           (:refer-clojure :exclude [defonce])
+           (:require [quantum.core.macros.core :as cmacros
+                       :refer [#?@(:clj [if-cljs when-cljs])]])
+  #?(:cljs (:require-macros
+                     [quantum.core.macros.core :as cmacros
+                       :refer [if-cljs when-cljs]            ])))
 
 ; ============ DECLARATION ============
 

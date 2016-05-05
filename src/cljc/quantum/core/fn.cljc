@@ -244,7 +244,7 @@
     `(do (~f ~@(butlast args) ~obj)
          ~obj))))
 
-(defalias with qcore/with)
+#?(:clj (defalias with qcore/with))
 
 (defn with-pr->>  [obj      ] (do (println obj) obj))
 (defn with-msg->> [msg  obj ] (do (println msg) obj))

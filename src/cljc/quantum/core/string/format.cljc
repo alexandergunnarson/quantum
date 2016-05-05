@@ -2,7 +2,7 @@
   ^{:doc "Useful string utils for formatting strings."
     :attribution "Alex Gunnarson"}
   quantum.core.string.format
-           (:refer-clojure :exclude [replace])
+           (:refer-clojure :exclude [replace reduce])
            (:require [frak]
                      [clojure.string                :as str   ]
                      [#?(:clj  clojure.core

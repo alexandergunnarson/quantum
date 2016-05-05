@@ -3,9 +3,8 @@
     :attribution "Alex Gunnarson"}
   quantum.core.numeric
   (:refer-clojure :exclude
-    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? min max quot format
-     #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec']
-         :cljs [mod])])
+    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? min max quot mod format
+     #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
            (:require  
             #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
                      [#?(:clj  clojure.core
@@ -284,11 +283,11 @@
 (defonce ^:const trillion         (#?(:clj ->long :cljs int)   1E12  ))
 (defonce ^:const quadrillion      (#?(:clj ->long :cljs int)   1E15  ))
 (defonce ^:const quintillion      (#?(:clj ->long :cljs int)   1E18  )) ; + exa | - atto
-(defonce ^:const sextillion       (bigint 1E21  ))
-(defonce ^:const septillion       (bigint 1E24  ))
-(defonce ^:const octillion        (bigint 1E27  ))
-(defonce ^:const nonillion        (bigint 1E30  ))
-(defonce ^:const decillion        (bigint 1E33  ))
+(defonce ^:const sextillion       #?(:clj (core/bigint 1E21  ) :cljs 0))
+(defonce ^:const septillion       #?(:clj (core/bigint 1E24  ) :cljs 0))
+(defonce ^:const octillion        #?(:clj (core/bigint 1E27  ) :cljs 0))
+(defonce ^:const nonillion        #?(:clj (core/bigint 1E30  ) :cljs 0))
+(defonce ^:const decillion        #?(:clj (core/bigint 1E33  ) :cljs 0))
 
 ;_____________________________________________________________________
 ;================={   MORE COMPLEX OPERATIONS    }====================

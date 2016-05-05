@@ -23,7 +23,7 @@
 
 #?(:clj
 (defn qtests [sym]
-  (for [test result (->  sym resolve meta :tests)]
+  (for [[test result] (->  sym resolve meta :tests)]
     [test
      (try (apply (eval sym) (eval test))
         (catch Throwable e e))

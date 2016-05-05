@@ -8,7 +8,7 @@
   (let [random-percent (* (clojure.core/rand)
                           100)
         cdf (->> distribution
-                 (sort-by (MWA second) >)
+                 (sort-by second >)
                  (reduce (fn [[agg total] [elem dist]]
                            (let [nval (+ total dist)]
                              [(conj agg [elem nval]) nval]))
