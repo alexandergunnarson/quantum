@@ -4,9 +4,7 @@
           Possibly should just alias some better library for this."
     :attribution "Alex Gunnarson"}
   quantum.security.cryptography
-  (:refer-clojure :exclude [hash])
-  #_(:require-quantum
-    [fn logic rand cbase core-async])
+           (:refer-clojure :exclude [hash])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core   ]
              #?(:clj [byte-transforms               :as bt     ])

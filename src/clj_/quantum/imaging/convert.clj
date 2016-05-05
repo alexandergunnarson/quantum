@@ -1,8 +1,7 @@
 (ns
   ^{:doc "Image library. Conversion."
     :attribution "Alex Gunnarson"}
-  quantum.imaging.convert
-  (:require-quantum [:lib]))
+  quantum.imaging.convert)
 
 (def supported-types #{:jpg :png :tiff :jpeg :gif :pdf})
 

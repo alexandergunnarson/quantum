@@ -1,5 +1,5 @@
 (ns quantum.apis.apple.icloud.contacts
-  (:require-quantum [:lib http])
+  (:require-quantum [http])
   (:import ezvcard.Ezvcard))
 
 ; For any interaction with iCloud, you have to be a

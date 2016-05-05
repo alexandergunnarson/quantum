@@ -1,5 +1,6 @@
-(ns quantum.core.io.transcode
-  (:require-quantum [logic fn sh coll io sys paths]))
+(ns quantum.core.io.transcode)
+
+; TODO the logic in here is good, but it requires the |sh| dep which is at the moment incomplete/broken  
 
 (comment "https://trac.ffmpeg.org/wiki/Encode/AAC
 ​Advanced Audio Coding (AAC) is the successor format to MP3.
@@ -27,7 +28,7 @@ The Fraunhofer FDK AAC codec library. This is currently the highest-quality
 AAC encoder available with ffmpeg")
 
 
-(defn ->mp4-x265
+#_(defn ->mp4-x265
   "ffmpeg static mac: http://evermeet.cx/ffmpeg/
    ffmpeg static windows: https://ffmpeg.zeranoe.com/builds/
 
@@ -62,7 +63,7 @@ AAC encoder available with ffmpeg")
         args
         opts)))))
 
-(defn ->mp4
+#_(defn ->mp4
   ([in-path out-path] (->mp4 in-path out-path nil))
   ([in-path out-path opts]
     (let [platform-opts
@@ -87,7 +88,7 @@ AAC encoder available with ffmpeg")
               (<- assoc :read-streams? true))))))
 
 
-#?(:clj
+#_(:clj
 (defn extract-audio!
   ([in out] (extract-audio in out nil))
   ([in out opts]
@@ -101,9 +102,9 @@ AAC encoder available with ffmpeg")
         args
         opts)))))
 
-(defalias ->audio extract-audio!)
+#_(defalias ->audio extract-audio!)
 
-#?(:clj
+#_(:clj
 (defn duration-of
   "Checks the duration of a video for the given @url.
    Returns value in milliseconds."

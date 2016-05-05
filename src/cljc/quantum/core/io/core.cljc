@@ -29,7 +29,7 @@
                        :refer [vector+?]                       ]
                      [quantum.core.vars           :as var
                        :refer [#?(:clj defalias)]              ])
-  #?(:cljs (:refer-macros
+  #?(:cljs (:require-macros
                      [quantum.core.collections    :as coll     
                        :refer [postwalk]                       ]
                      [quantum.core.error          :as err

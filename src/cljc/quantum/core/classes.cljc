@@ -4,7 +4,6 @@
     :attribution "Alex Gunnarson"}
   quantum.core.classes
   (:refer-clojure :exclude [name])
-  #_(:require-quantum [logic fn])
   (:require [quantum.core.collections.base :as cbase
               :refer [name default-zipper camelcase ns-qualify zip-reduce
                       comparators ensure-set]]

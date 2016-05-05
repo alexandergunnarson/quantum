@@ -5,7 +5,6 @@
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
   quantum.core.io.compress
      (:refer-clojure :exclude [into])
-  #_(:require-quantum [arr err str time coll num logic type fn])
   #?(:clj
       (:require [clojure.java.io               :as clj-io ]
                 [taoensso.nippy                :as nippy  ]

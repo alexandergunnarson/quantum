@@ -1,5 +1,5 @@
 (ns quantum.apis.microsoft.azure.core
-  (:require-quantum [:lib http]))
+  (:require-quantum [http]))
 
 (defn url->account-name [url]
   (->> url

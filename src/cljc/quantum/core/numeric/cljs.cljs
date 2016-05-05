@@ -5,7 +5,6 @@
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? min max format
      mod quot neg? pos?])
-  #_(:require-quantum [type pconvert])
   (:require [cljs.core                         :as core  ]
             [com.gfredericks.goog.math.Integer :as int   ]
             [quantum.core.numeric.types        :as ntypes])

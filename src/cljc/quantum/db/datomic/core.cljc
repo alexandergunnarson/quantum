@@ -1,7 +1,6 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic.core
            (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge conj! if-let])
-  #_(:require-quantum [core-async cbase tpred])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as c              ]
             #?(:cljs [cljs-uuid-utils.core       :as uuid           ])

@@ -7,7 +7,6 @@
      zero? neg? pos? min max format
      rem quot mod
      bigint biginteger bigdec])
-  #_(:require-quantum [logic type fn log pconvert])
   (:require [clojure.core                   :as core  ]
             [clojure.walk
               :refer [postwalk]                       ]

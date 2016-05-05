@@ -7,9 +7,7 @@
           Call this quantum.http.transcode"
     :attribution "Alex Gunnarson"}
   quantum.http.url
-  (:require-quantum [:lib])
-  (:require
-    [quantum.http.core :as http]))
+  (:require [quantum.net.http :as http]))
 
 (def url-percent-codes
   {:common
