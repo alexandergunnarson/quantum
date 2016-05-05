@@ -13,7 +13,7 @@
                      [quantum.core.logic               :as logic
                        :refer [#?@(:clj [fn-or whenf*n])]         ]
                      [quantum.core.macros.core         :as cmacros
-                       :refer [if-cljs]                           ]
+                       :refer [#?(:clj if-cljs)]                  ]
                      [quantum.core.macros.optimization :as opt
                        :refer [extern?]])
   #?(:cljs (:require-macros

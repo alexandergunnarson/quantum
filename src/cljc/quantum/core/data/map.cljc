@@ -87,7 +87,7 @@
        :cljs (core/merge m0 m1)))
   ([m0 m1 & ms]
   #?(:clj  (reduce merge (merge m0 m1) ms)
-     :cljs (if (satisfies? AEditable m0)
+     :cljs (if (satisfies? core/IEditableCollection m0)
                (->> ms
                     (reduce conj! (transient m0))
                     persistent!)

@@ -5,9 +5,13 @@
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? string? keyword? fn?
      nil? list? coll? char? symbol? record? number? integer? float? decimal?])
-           (:require [quantum.core.classes         :as classes]
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )       :as core   ]
+                     [quantum.core.classes         :as classes]
                      [quantum.core.fn              :as fn
                        :refer [#?@(:clj [mfn])]               ]
+                     [quantum.core.logic           :as logic
+                       :refer [#?@(:clj [fn-and])]            ]
                      [quantum.core.data.vector     :as vec    ]
                      [quantum.core.macros          :as macros
                        :refer [#?@(:clj [defnt defnt'])]      ]
@@ -18,6 +22,8 @@
   #?(:cljs (:require-macros 
                      [quantum.core.fn              :as fn 
                        :refer [mfn]                           ]
+                     [quantum.core.logic           :as logic
+                       :refer [fn-and]                        ]
                      [quantum.core.macros          :as macros 
                        :refer [defnt defnt']                  ]
                      [quantum.core.vars            :as var 

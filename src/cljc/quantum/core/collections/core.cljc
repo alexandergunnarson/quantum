@@ -34,7 +34,7 @@
                      [quantum.core.macros            :as macros
                        :refer [#?@(:clj [defnt])]                ]
                      [quantum.core.reducers          :as red     
-                       :refer [drop+ take+ dropr+ taker+]        ]
+                       :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
                      [quantum.core.vars              :as var
                        :refer [#?(:clj defalias)]                ])
   #?(:cljs (:require-macros
@@ -274,7 +274,7 @@
           "Add 3-arity for |index-of-from|"]}
   ([^vec?    coll elem] (whenc (.indexOf coll elem) neg-1? nil))
   ([^string? coll elem] (whenc (.indexOf coll (str elem)) neg-1? nil))
-  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (class coll)))))
+  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (type coll)))))
 
 ; Spent too much time on this...
 ; (defn nth-index-of [super sub n]
@@ -299,7 +299,7 @@
   {:todo ["Reflection on short, bigint"]}
   ([^vec?    coll elem] (whenc (.lastIndexOf coll elem) neg-1? nil))
   ([^string? coll elem] (whenc (.lastIndexOf coll (str elem)) neg-1? nil))
-  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (class coll)))))
+  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (type coll)))))
 
 (defnt containsk?
   {:imported "clojure.lang.RT.contains"}

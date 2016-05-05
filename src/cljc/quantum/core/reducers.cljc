@@ -30,7 +30,7 @@
                        :refer [#?@(:clj [defnt])]                           ]
                      [quantum.core.numeric          :as num                 ]
                      [quantum.core.type             :as type
-                       :refer [#?@(:clj [array-list? lseq?])]               ])
+                       :refer [#?@(:clj [array-list? lseq?]) instance+?]    ])
   #?(:cljs (:require-macros
                      [quantum.core.fn               :as fn
                        :refer [f*n fn-> compr MWA defcurried rfn]           ]
@@ -40,7 +40,7 @@
                        :refer [defnt]                                       ]
                      [quantum.core.numeric          :as num                 ]
                      [quantum.core.type             :as type
-                       :refer [lseq?]                                       ])))
+                       :refer [array-list? lseq?]                           ])))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
@@ -553,7 +553,7 @@
 ; The following falls back to normal /reduce/ because it was operating on a sequential collection... that's why
 ; (persistent! (fold+   (fn ([] (transient (vec+ []))) ([a b] (conj! a b))) (range 0 1000000))) ; 64 ms L 63 ms U 67  ms
 (def reducer? 
-  (compr class
+  (compr type
     (fn-or #?(:clj  (f*n isa?       clojure.core.protocols.CollReduce)
               :cljs (f*n instance+? cljs.core/IReduce))
            (f*n isa? quantum.core.reducers.Folder))))

@@ -14,13 +14,15 @@
                      [quantum.core.logic        :as logic
                        :refer [#?@(:clj [fn-and whenc whenf*n]) nnil?]]
                      [quantum.core.macros.core  :as cmacros       
-                       :refer [if-cljs]                               ]
+                       :refer [#?(:clj if-cljs)]                      ]
                      [quantum.core.macros.defnt :as defnt             ]
                      [quantum.core.macros.fn    :as mfn               ]
                      [quantum.core.vars         :as var
                        :refer [#?@(:clj [defalias defmalias])]        ])
   #?(:cljs (:require-macros
-                     [quantum.core.log          :as log]
+                     [quantum.core.macros.core  :as cmacros
+                       :refer [if-cljs]                               ]
+                     [quantum.core.log          :as log               ]
                      [quantum.core.logic        :as logic
                        :refer [fn-and whenc whenf*n]                  ]
                      [quantum.core.vars         :as var

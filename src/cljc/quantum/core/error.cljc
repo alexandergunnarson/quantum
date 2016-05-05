@@ -9,13 +9,15 @@
                      [quantum.core.data.map         :as map    ]
                      [quantum.core.error.try-catch  :as tc     ]
                      [quantum.core.macros.core      :as cmacros
-                       :refer [if-cljs]                        ]
+                       :refer [#?(:clj if-cljs)]               ]
                      [quantum.core.log              :as log    ]
                      [quantum.core.vars             :as var
                        :refer [#?(:clj defalias)]              ])
   #?(:cljs (:require-macros
                      [quantum.core.collections.base :as cbase
                        :refer [kmap]                           ]
+                     [quantum.core.macros.core      :as cmacros
+                       :refer [if-cljs]                        ]
                      [quantum.core.log              :as log    ]
                      [quantum.core.vars             :as var
                        :refer [defalias]                       ])))

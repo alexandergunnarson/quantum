@@ -1,7 +1,8 @@
 (ns quantum.core.numeric.types
   (:refer-clojure :exclude
     [#?@(:cljs [-compare])])
-           (:require
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )            :as core  ]
             #?(:cljs [com.gfredericks.goog.math.Integer :as int   ])                    
                      [quantum.core.macros               :as macros
                        :refer [#?@(:clj [defnt])]                 ])
