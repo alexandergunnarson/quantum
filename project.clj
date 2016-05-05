@@ -250,8 +250,7 @@
   :java-source-paths ["src/java"]
   :source-paths      ["src/clj"
                       "src/cljc"
-                      "src/cljc_next"
-                      "src/cljs"]
+                      "src/cljc_next"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test"]
   :global-vars {*warn-on-reflection* true
@@ -263,7 +262,7 @@
     {:builds
       {:dev
         {:figwheel true
-         :source-paths ["test/cljs" "src/cljc" "dev/cljc"] #_["src/cljs" "src/cljc"  "test/cljs"]
+         :source-paths ["test/cljs" "src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
          :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                     :output-dir           "dev-resources/public/js/compiled/out"
                     :optimizations        :none
@@ -273,7 +272,7 @@
                     :source-map-timestamp true
                     :cache-analysis       true}}
        :min
-         {:source-paths ["src/cljs" "src/cljc" "dev/cljc"]
+         {:source-paths ["src/cljc" "dev/cljc"]
           :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                      :output-dir     "dev-resources/public/js/min-compiled/out"
                      :main           quantum.dev

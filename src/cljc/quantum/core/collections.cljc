@@ -15,27 +15,26 @@
     :attribution "Alex Gunnarson"
     :cljs-self-referencing? true}
   quantum.core.collections
-  (:refer-clojure :exclude
-    [for doseq reduce
-     contains?
-     repeat repeatedly
-     range
-     take take-while
-     drop  drop-while
-     subseq
-     key val
-     merge sorted-map sorted-map-by
-     into
-     count
-     vec empty
-     split-at
-     first second rest last butlast get pop peek
-     zipmap
-     conj
-     conj! assoc! dissoc! disj!
-     partition-all
-     #?(:cljs boolean?)])
-  #_(:require-quantum [list])
+           (:refer-clojure :exclude
+             [for doseq reduce
+              contains?
+              repeat repeatedly
+              range
+              take take-while
+              drop  drop-while
+              subseq
+              key val
+              merge sorted-map sorted-map-by
+              into
+              count
+              vec empty
+              split-at
+              first second rest last butlast get pop peek
+              zipmap
+              conj
+              conj! assoc! dissoc! disj!
+              partition-all
+              #?(:cljs boolean?)])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [quantum.core.data.map                   :as map    ]

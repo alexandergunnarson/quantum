@@ -1,7 +1,6 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
-  (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge])
-  #_(:require-quantum [core-async])
+          (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge])
           (:require [#?(:clj  clojure.core
                         :cljs cljs.core   )           :as c        ]
            #?(:cljs [cljs-uuid-utils.core             :as uuid     ]) ; TODO have a quantum UUID ns

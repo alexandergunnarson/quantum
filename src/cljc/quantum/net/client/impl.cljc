@@ -1,6 +1,5 @@
 (ns ^{:doc "HTTP request processing with error handling, log writing, etc."}
   quantum.net.client.impl
-  #_(:require-quantum [log async core-async cbase])
            (:require  [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core  ]
              #?(:cljs [goog.userAgent               :as agent ])

@@ -1,5 +1,4 @@
-(ns quantum.dev
-  (:require-quantum [:core coll macros]))
+(ns quantum.dev)
 
 #?(:cljs (enable-console-print!))
 (println "Hey console!")

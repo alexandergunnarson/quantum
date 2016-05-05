@@ -1,5 +1,4 @@
 (ns quantum.net.websocket
-  #_(:require-quantum [async core-async cbase])
            (:require [com.stuartsierra.component              :as component]
                      [taoensso.sente                          :as ws       ]
            #?@(:clj [[immutant.web                            :as imm      ]

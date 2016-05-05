@@ -4,12 +4,11 @@
 
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
-  (:refer-clojure :exclude
-    [vector hash-map rest count first second butlast last get pop peek
-     conj! conj assoc! dissoc! dissoc disj! contains?
-     #?@(:cljs [empty? array])
-     #?@(:clj  [boolean byte char short int long float double])])
-  #_(:require-quantum [type])
+           (:refer-clojure :exclude
+             [vector hash-map rest count first second butlast last get pop peek
+              conj! conj assoc! dissoc! dissoc disj! contains?
+              #?@(:cljs [empty? array])
+              #?@(:clj  [boolean byte char short int long float double])])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )         :as core    ]
              #?(:clj [seqspert.vector                            ])

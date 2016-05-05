@@ -1,5 +1,4 @@
-(ns quantum.ai.core
-  (:require-quantum [:lib]))
+(ns quantum.ai.core)
 
 ; Last year Wired quoted an ex-Google employee as saying that
 ; "Everything in the company is really driven by machine learning."

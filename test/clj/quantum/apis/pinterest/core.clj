@@ -1,6 +1,6 @@
 (ns quantum.test.apis.pinterest.core
   (:require [quantum.apis.pinterest.core :as root])
-  (:require-quantum [:lib auth http url web]))
+  (:require-quantum [auth http url web]))
 
 (defn lower-ids-are-previous-ids? []
   (let [id_created-date (->> @pin->meta
