@@ -2,7 +2,7 @@
   ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
-  quantum.core.type.bootstrap
+  quantum.core.type.defs
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )               :as core ]
                      [quantum.core.data.map                :as map
@@ -176,12 +176,19 @@
            :cljs #{(class (array))}}
         number-types
          '{:clj  #{java.lang.Long}}
-        set-types
-         '{:clj  #{clojure.lang.APersistentSet
-                   clojure.lang.IPersistentSet}
+        hash-set-types
+         '{:clj  #{clojure.lang.PersistentHashSet
+                   clojure.lang.PersistentHashSet$TransientHashSet}
            :cljs #{cljs.core/PersistentHashSet
-                   cljs.core/TransientHashSet
-                   cljs.core/PersistentTreeSet}}
+                   cljs.core/TransientHashSet}}
+        tree-set-types
+         '{:clj  #{clojure.lang.PersistentTreeSet}
+           :cljs #{cljs.core/PersistentTreeSet   }}
+        set-types
+          {:clj  '#{clojure.lang.APersistentSet
+                    clojure.lang.IPersistentSet}
+           :cljs (set/union (:cljs hash-set-types)
+                            (:cljs tree-set-types))}
         tuple-types
           '{:clj #{clojure.lang.Tuple$T0
                    clojure.lang.Tuple$T1
@@ -303,9 +310,13 @@
            'tree-map?        tree-map-types
            'sorted-map?      tree-map-types
            'map?             map-types
+           'hash-map?        hash-map-types
            'array-map?       array-map-types
            'map-entry?       map-entry-types
            'set?             set-types
+           'hash-set?        hash-set-types
+           'tree-set?        tree-set-types
+           'sorted-set?      tree-set-types
            'vec?             vec-types
            'vector?          vec-types
            'list?            list-types

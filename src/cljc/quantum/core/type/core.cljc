@@ -5,19 +5,19 @@
   quantum.core.type.core
            (:require
              #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
-                     [quantum.core.type.bootstrap      :as boot]
+                     [quantum.core.type.defs           :as defs]
                      [quantum.core.error               :as err
                        :refer [->ex]                           ]
                      [quantum.core.vars                :as var
                        :refer [#?@(:clj [defalias])]           ])
   #?(:cljs (:require-macros
-                     [quantum.core.type.bootstrap      :as boot]
+                     [quantum.core.type.defs           :as defs]
                      [quantum.core.vars                :as var
                        :refer [defalias]                       ])))
 
 #?(:cljs (def class type))
 
-(boot/def-types #?(:clj :clj :cljs :cljs))
+(defs/def-types #?(:clj :clj :cljs :cljs))
 
 (defn name-from-class
   [class-0]

@@ -19,6 +19,7 @@
              [for doseq reduce
               contains?
               repeat repeatedly
+              interpose
               range
               take take-while
               drop  drop-while
@@ -27,13 +28,14 @@
               merge sorted-map sorted-map-by
               into
               count
-              vec empty
+              vec empty empty?
               split-at
               first second rest last butlast get pop peek
+              select-keys
               zipmap
+              reverse
               conj
               conj! assoc! dissoc! disj!
-              partition-all
               #?(:cljs boolean?)])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
@@ -41,17 +43,23 @@
                      [quantum.core.data.set                   :as set    ]
                      [quantum.core.data.vector                :as vec  
                        :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.core           :as coll   ]
                      [quantum.core.collections.base           :as base   ]
+                     [quantum.core.collections.core           :as coll   ]
+                     [quantum.core.collections.sociative      :as soc    ]
+                     [quantum.core.collections.differential   :as diff   ]
+                     [quantum.core.collections.generative     :as gen    ]
+                     [quantum.core.collections.map-filter     :as mf     ]
+                     [quantum.core.collections.selective      :as sel    ]
+                     [quantum.core.collections.tree           :as tree   ]
                      [quantum.core.error                      :as err  
                        :refer [->ex]                                     ]
                      [quantum.core.fn                         :as fn  
                        :refer [#?@(:clj [compr <- fn-> fn->>  
-                                         f*n MWA]) fn-nil juxt-kv withf->>]]
+                                         f*n]) fn-nil juxt-kv withf->>]  ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn condf condf*n]) nnil? any?] ]
+                                         ifn if*n condf condf*n]) nnil? any?]]
                      [quantum.core.macros                     :as macros 
                        :refer [#?@(:clj [defnt])]                        ]
                      [quantum.core.reducers                   :as red    ]
@@ -68,6 +76,7 @@
                        :refer [#?@(:clj [defalias])]                     ])
   #?(:cljs (:require-macros  
                      [quantum.core.collections.core           :as coll   ]
+                     [quantum.core.collections.differential   :as diff   ]
                      [quantum.core.collections     
                        :refer [for lfor doseq doseqi reduce reducei
                                seq-loop
@@ -79,11 +88,11 @@
                                conjl conj! assoc! dissoc! disj!
                                map-entry]]
                      [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n MWA]              ]
+                       :refer [compr <- fn-> fn->> f*n]                  ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic 
                        :refer [fn-not fn-or fn-and whenf whenf*n 
-                               ifn condf condf*n]                        ]
+                               ifn if*n condf condf*n]                   ]
                      [quantum.core.loops                      :as loops  ]
                      [quantum.core.macros                     :as macros 
                        :refer [defnt]                                    ]
@@ -94,24 +103,15 @@
                      [quantum.core.vars                       :as var 
                        :refer [defalias]                                 ])))
 
-(defn key
-  ([kv] (if (nil? kv) nil (core/key kv)))
-  ([k v] k))
-
-(defn val
-  ([kv] (if (nil? kv) nil (core/val kv)))
-  ([k v] v))
+(defalias key     coll/key    )
+(defalias val     coll/val    )
+(defalias reverse coll/reverse)
 
 #?(:clj (defmacro map-entry [a b] `[~a ~b]))
 
 (defn genkeyword
   ([]    (keyword (gensym)))
   ([arg] (keyword (gensym arg))))
-
-; TODO put in collections.core
-(defnt empty
-  ([^string? obj] "")
-  ([         obj] (core/empty obj)))
 
 (defn wrap-delay [f]
   (if (delay? f) f (delay ((or f fn-nil)))))
@@ -152,355 +152,122 @@
 #?(:clj (defalias contains?     coll/contains?    ))
 #?(:clj (defalias containsk?    coll/containsk?   ))
 #?(:clj (defalias containsv?    coll/containsv?   ))
+#?(:clj (defalias empty?        coll/empty?       ))
+#?(:clj (defalias empty         coll/empty        ))
+#?(:clj (defalias array         coll/array        ))
+        (defalias join          red/join          )
+        (defalias joinl         red/join          )
+        (defalias pjoin         red/pjoin         )
+        (defalias pjoinl        red/pjoin         )
 
-
-
-(defalias vec         red/vec+       )    
-#?(:clj (defalias array       coll/array     ))
-(defalias into        red/into+      ) 
-
-(defalias redv        red/fold+      )
-(defalias redm        red/reducem+   )
-(defalias fold        red/fold+      ) ; only certain arities
-(defalias foldv       red/foldp+     ) ; only certain arities
-(defalias foldm       red/foldm+     ) 
-(defalias map+        red/map+       )
-(defalias remove+     red/remove+    )
-(defalias lremove     remove         )
-(defalias take+       red/take+      )
-(defalias take-while+ red/take-while+)
-(defalias drop+       red/drop+      )
-(defalias group-by+   red/group-by+  )
-(defalias flatten+    red/flatten+   )
-(def flatten-1 (partial apply concat)) ; TODO more efficient
-
+        (defalias fold          red/fold          )
+        (defalias cat+          red/cat+          )
+        (defalias foldcat+      red/foldcat+      )
+        (defalias indexed+      red/indexed+      )
+        (defalias reductions+   red/reductions+   )
+        (defalias ltake         diff/ltake        )
+        (defalias take+         diff/take+        )
+#?(:clj (defalias taker+        diff/taker+       ))
+        (defalias take-while+   diff/take-while+  )
+        (defalias take-after    diff/take-after   )
+        (defalias taker-after   diff/taker-after  )
+        (defalias take-until    diff/take-until   )
+#?(:clj (defalias taker-until   diff/taker-until  ))
+        (defalias drop          diff/drop         )
+        (defalias drop+         diff/drop+        )
+        (defalias dropl         diff/dropl        )
+        (defalias ldropl        diff/ldropl       )
+        (defalias drop-while+   red/drop-while+   )
+        (defalias dropr         diff/dropr        )
+#?(:clj (defalias dropr+        diff/dropr+       ))
+        (defalias dropr-until   diff/dropr-until  )
+        (defalias group-by+     red/group-by+     )
+        (defalias flatten+      red/flatten+      )
+        (defalias flatten-1+    red/flatten-1+    )
+        (defalias iterate+      red/iterate+      )
+        (defalias reduce-by+    red/reduce-by+    )
+        (defalias distinct-by+  red/distinct-by+  )
+        (defalias distinct+     red/distinct+     )
+        (defalias zipvec+       red/zipvec+       )
+        ; for+
+        ; doseq+
+        
+        (def flatten-1 (partial apply concat)) ; TODO more efficient
 
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-
-; ============================ REDUCE ============================
-
 #?(:clj (defalias reduce   loops/reduce  ))
 #?(:clj (defalias reduce-  loops/reduce- ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reducei- loops/reducei-))
-
-(defn reduce-2
-  "Like |reduce|, but reduces over two items in a collection at a time.
-
-   Its function @func must take three arguments:
-   1) The accumulated return value of the reduction function
-   2) The                next item in the collection being reduced over
-   3) The item after the next item in the collection being reduced over"
-  {:attribution "Alex Gunnarson"}
-  [func init coll] ; not actually implementing of CollReduce... so not as fast...
-  (loop [ret init coll-n coll]
-    (if (empty? coll-n)
-        ret
-        (recur (func ret (first coll-n) (second coll-n))
-               (-> coll-n rest rest)))))
-
-(defn reduce-map
-  {:from "r0man/noencore"}
-  [f coll]
-  (if (tpred/editable? coll)
-      (persistent! (reduce-kv (f #(assoc! %1 %2 %3)) (transient (empty coll)) coll))
-      (reduce-kv (f assoc) (empty coll) coll)))
-
-
-
-
-
-
+        (defalias reduce-2 loops/reduce-2)
 #?(:clj (defalias seq-loop loops/seq-loop))
-; Loop via |reduce|  
 #?(:clj (defalias loopr    loops/seq-loop))
+;#?(:clj(defalias for+     red/for+      )) ; TODO have this
+#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) assoc :macro true))
+#?(:clj (defalias fori     loops/fori    ))
+#?(:clj (defalias for-m    loops/for-m   ))
+#?(:clj (defalias until    loops/until   ))
+#?(:clj (defmacro lfor   [& args] `(loops/lfor   ~@args)))
+#?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
+#?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
 
-(defalias break reduced)
-
-;(def cljs-for+ (var red/for+))
-; (defalias for+   #?(:clj red/for+         :cljs red/for+))
-; (alter-meta! (var for+) assoc :macro true)
-
-; (def cljs-for (var loops/for)) ; doesn't work because not a var
-; (def cljs-for (mfn loops/for)) ; doesn't work because no |eval|
-#?(:clj (defalias for   loops/for  ))
-#?(:clj (defalias fori  loops/fori ))
-#?(:clj (defalias for-m loops/for-m))
-#?(:clj (defalias until loops/until))
-#?(:clj (alter-meta! (var for) assoc :macro true))
-
-;(def cljs-lfor (var clojure.core/for))
-;(defalias lfor   #?(:clj clojure.core/for :cljs cljs-lfor))
-;#?(:clj (defalias lfor clojure.core/for))
-#?(:clj (defmacro lfor   [& args] `(clojure.core/for ~@args)))
-
-;(def cljs-doseq (var loops/doseq))
-;(defalias doseq  #?(:clj loops/doseq      :cljs cljs-doseq))
-#?(:clj (defmacro doseq  [& args] `(loops/doseq      ~@args)))
-
-;(def cljs-doseqi (var loops/doseqi))
-;(defalias doseqi #?(:clj loops/doseqi     :cljs cljs-doseqi))
-#?(:clj (defmacro doseqi [& args] `(loops/doseqi     ~@args)))
-
-#?(:cljs
-  (defn kv+
-    "For some reason ClojureScript reducers have an issue and it's terrible... so use it like so:
-     (map+ (compr kv+ <myfunc>) _)
-     |reduce| doesn't have this problem."
-    {:todo ["Eliminate the need for this."]}
-    ([obj] obj)
-    ([k v] k)))
-
-
-(defalias zipmap core/zipmap)
-(defalias merge         map/merge        )
-(defalias sorted-map    map/sorted-map   )
-(defalias sorted-map-by map/sorted-map-by)
-
-; ===== REPEAT =====
-
-(declare range)
-
-(defn repeat
-  ([obj]   (core/repeat obj)) ; can't do eager infinite repeat
-  ([n obj] (for [i (range n)] obj)))
-
-(defalias lrepeat core/repeat)
-
-; ===== REPEATEDLY ===== ;
-
-#?(:clj
-(defmacro repeatedly-into
-  {:todo ["Best to just inline this. Makes no sense to have a macro."]}
-  [coll n & body]
-  `(let [coll# ~coll
-         n#    ~n]
-     (if (should-transientize? coll#)
-         (loop [v# (transient coll#) idx# 0]
-           (if (>= idx# n#)
-               (persistent! v#)
-               (recur (conj! v# ~@body)
-                      (inc idx#))))
-         (loop [v#   coll# idx# 0]
-           (if (>= idx# n#)
-               v#
-               (recur (conj v# ~@body)
-                      (inc idx#))))))))
-
-(def lrepeatedly clojure.core/repeatedly)
-
-#?(:clj
-(defmacro repeatedly
-  "Like |clojure.core/.repeatedly| but (significantly) faster and returns a vector."
-  ; ([n f]
-  ;   `(repeatedly-into* [] ~n ~arg1 ~@body))
-  {:todo ["Makes no sense to have a macro. Just inline"]}
-  ([n arg1 & body]
-    `(repeatedly-into* [] ~n ~arg1 ~@body))))
-
-; ===== RANGE ===== ;
-
-(#?(:clj defalias :cljs def) range+ red/range+)
-
-(defn lrrange
-  "Lazy reverse range."
-  {:usage '(lrrange 0 5)
-   :out   '(5 4 3 2 1)}
-  ([]    (iterate core/dec 0))
-  ([a]   (iterate core/dec a))
-  ([a b]
-    (->> (iterate core/dec b) (core/take (- b (core/dec a))))))
-
-(defn lrange
-  ([]  (core/range))
-  ([a] (core/range a))
-  ([a b]
-    (if (neg? (- a b))
-        (lrrange a b)
-        (core/range a b))))
-
-(defn rrange
-  "Reverse range"
-  {:ret-type 'Vector
-   :todo ["Performance with |range+| on [a b] arity, and rseq"]}
-  ([]    (lrrange))
-  ([a]   (lrrange a))
-  ([a b] (-> (range+ a b) redv reverse)))
-
-(defn range
-  {:ret-type 'Vector
-   :todo ["Performance with |range+| on [a b] arity"]}
-  ([]    (lrange))
-  ([a]   (lrange a))
-  ([a b]
-    (if (neg? (- a b))
-        (rrange a b))
-        (-> (range+ a b) redv)))
-
-; ============================ FILTER ============================
-
-(defalias filter+     red/filter+    )
-(defalias lfilter     filter         )
-
-(defn ffilter
-  "Returns the first result of a |filter| operation.
-   Uses lazy |filter| so as to do it in the fastest possible way."
-   [filter-fn coll]
-   (->> coll (filter filter-fn) first))
-
-(defn ffilter+
-  {:todo ["Use a delayed reduction as the base!"]}
-  [pred coll]
-  (reduce
-    (fn [ret elem-n]
-      (when (pred elem-n)
-        (reduced elem-n)))
-    nil
-    coll))
-
-(defn ffilteri
-  {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
-   :in   '[(fn-eq? "4") ["a" "d" "t" "4" "10"]]
-   :out  [3 "4"]
-   :out-type 'MapEntry}
-  [pred coll]
-  (reducei
-    (fn [ret elem-n index-n]
-      (if (pred elem-n)
-          (reduced (map-entry index-n elem-n))
-          ret))
-    (map-entry nil nil)
-    coll))
-
-(defn filteri
-  {:todo ["Use reducers"]}
-  [pred coll]
-  (if (type/should-transientize? coll)
-      (persistent!
-        (loops/reducei
-          (fn [ret elem-n n]
-            (if (pred elem-n)
-                (conj! ret (map-entry n elem-n))
-                ret))
-          (transient [])
-          coll))
-      (loops/reducei
-        (fn [ret elem-n n]
-          (if (pred elem-n)
-              (conj ret (map-entry n elem-n))
-              ret))
-        []
-        coll)))
-
-(defnt ^clojure.lang.MapEntry last-filteri*
-  {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
-   :in   '[["a" "d" "t" "4" "4" "10"] (fn-eq? "4")]
-   :out  [4 "4"]}
-  ([^indexed? coll pred]
-    (->> coll rseq (ffilteri pred)
-         (<- update 0 (partial - (lasti coll)))))
-  ([coll pred]
-    (loops/reducei
-      (fn [ret elem-n index-n]
-        (if (pred elem-n)
-            (map-entry index-n elem-n)
-            ret))
-      (map-entry nil nil)
-      coll)))
-
-#?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
-   :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
+        (defalias break reduced)
+; _______________________________________________________________
+; ========================= GENERATIVE ==========================
+; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        (defalias repeat        gen/repeat        )
+        (defalias lrepeat       gen/lrepeat       )
+#?(:clj (defalias repeatedly    gen/repeatedly    ))
+        (defalias lrepeatedly   gen/repeatedly    )
+        (defalias range         gen/range         )
+        (defalias rrange        gen/rrange        )
+        (defalias range+        gen/range+        )
+        (defalias lrange        gen/lrange        )
+        (defalias lrrange       gen/lrrange       )
+; _______________________________________________________________
+; ================== FULL-SEQUENCE TRANSFORMS ===================
+; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        (defalias map+            mf/map+            )
+        (defalias lmap            mf/lmap            )
+        (defalias map-indexed+    mf/map-indexed+    )
+        (defalias map-keys+       mf/map-keys+       )
+        (defalias map-vals+       mf/map-vals+       )
+        (defalias filter+         mf/filter+         )
+        (defalias filter-keys+    mf/filter-keys+    )
+        (defalias filter-vals+    mf/filter-vals+    )
+        (defalias lfilter         mf/lfilter         )
+        (defalias ffilter         mf/ffilter         )
+        (defalias remove+         mf/remove+         )
+        (defalias remove-keys+    mf/remove-keys+    )
+        (defalias remove-vals+    mf/remove-vals+    )
+        (defalias lremove         mf/lremove         )
+        (defalias keep+           red/keep+          )
+        (defalias mapcat+         red/mapcat+        )
+; _______________________________________________________________
+; ============================ TREE =============================
+; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+#?(:clj (defalias postwalk        tree/postwalk      ))
+#?(:clj (defalias prewalk         tree/prewalk       ))
+; _______________________________________________________________
+; ======================== COMBINATIVE ==========================
+; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        (defalias zipmap          core/zipmap        )
+        (defalias merge           map/merge          )
+        (defalias sorted-map      map/sorted-map     )
+        (defalias sorted-map-by   map/sorted-map-by  )
+; _______________________________________________________________
+; ========================== SOCIATIVE ==========================
+; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        (defalias assoc+          soc/assoc+         )
+        (defalias assocs-in+      soc/assocs-in+     )
+        (defalias dissoc-in+      soc/dissoc-in+     )
+        (defalias update-val+     soc/update-val+    )
+        (defalias assoc-when-none soc/assoc-when-none)
+        (defalias assoc-with      soc/assoc-with     )
 
 
-
-
-
-
-
-(defn map-keys
-  "Maps a function over the keys of an associative collection."
-  {:from "r0man/noencore"}
-  [f coll]
-  (reduce-map (fn [xf] (fn [m k v] (xf m (f k) v))) coll))
-
-(defn map-vals
-  "Maps a function over the values of an associative collection."
-  {:from "r0man/noencore"}
-  [f coll]
-  (reduce-map (fn [xf] (fn [m k v] (xf m k (f v)))) coll))
-
-(defn drop-tail
-  {:from "tonsky/datascript-todo.util"
-   :todo ["It doesn't seem like this actually does anything"]}
-  [xs pred]
-  (loop [acc []
-         xs  xs]
-    (let [x (first xs)]
-      (cond
-        (nil? x) acc
-        (pred x) (conj acc x)
-        :else  (recur (conj acc x) (next xs))))))
-
-(declare drop ldropl)
-
-(defn trim-head
-  {:from "tonsky/datascript-todo.util"}
-  [xs n]
-  (->> xs
-       (ldropl (- (count xs) n))
-       vec))
-
-(defn take-until
-  {:from "mpdairy/posh.q-pattern-gen"}
-  [stop-at? ls]
-  (if (or
-       (empty? ls)
-       (stop-at? (first ls)))
-    []
-    (cons (first ls) (take-until stop-at? (rest ls)))))
-
-(defn rest-at
-  {:from "mpdairy/posh.q-pattern-gen"}
-  [rest-at? ls]
-  (if (or (empty? ls) (rest-at? (first ls)))
-    ls
-    (recur rest-at? (rest ls))))
-
-(defn split-list-at
-  {:from "mpdairy/posh.q-pattern-gen"}
-  [split-at? ls]
-  (if (empty? ls)
-    {}
-    (map/merge {(first ls) (take-until split-at? (take-until split-at? (rest ls)))}
-                (split-list-at split-at? (rest-at split-at? (rest ls))))))
-
-(defn deep-list?
-  {:from "mpdairy/posh.core"}
-  [x]
-  (cond (list? x) true
-        (coll? x) (if (empty? x) false
-                      (or (deep-list? (first x))
-                          (deep-list? (vec (rest x)))))))
-
-(defn deep-find
-  {:from "mpdairy/posh.core"}
-  [f x]
-  (if (coll? x)
-      (if (empty? x)
-        false
-        (or (deep-find f (first x))
-             (deep-find f (rest x))))
-      (f x)))
-
-(defn deep-map [f x]
-  {:from "mpdairy/posh.core"}
-  (cond
-   (map? x) (let [r (map (partial deep-map f) x)]
-              (zipmap (map (MWA first) r) (map (MWA second) r)))
-   (coll? x) (vec (map (partial deep-map f) x))
-   :else (f x)))
 
 (defn deep-merge
   "Like merge, but merges maps recursively."
@@ -545,32 +312,7 @@
          (dissoc m k) m)))
    m (keys m)))
 
-(defn keywordize
-  "Transforms string @x to a dash-case keyword."
-  [x]
-  (if (string? x)
-      (keyword (#?(:clj  .replaceAll
-                   :cljs .replace) x "_" "-"))
-      x))
 
-(declare postwalk)
-
-(defn apply-to-keys
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"
-   :contributors #{"Alex Gunnarson"}}
-  ([m] (apply-to-keys m identity))
-  ([m f]
-    (let [apply-fn
-           (fn [[k v]] (map-entry (f k) v))]
-      ; only apply to maps
-      (postwalk
-        (whenf*n map? (fn->> (map apply-fn) (into {})))
-        m))))
-
-(defn keywordize-keys
-  "Recursively transforms all map keys from keywords to strings."
-  [x]
-  (apply-to-keys x keywordize))
 
 (defn containsv? [super sub]
   (if (string? super)
@@ -612,20 +354,6 @@
             (map #(nth % n) s-seq))
           (range tuple-size))))
 
-(defn assoc-if
-  "Works like assoc, but only associates if condition is true."
-  {:from "macourtney/clojure-tools"}
-  ([condition map key val] 
-    (if condition
-      (assoc map key val)
-      map))
-  ([condition map key val & kvs]
-    (reduce 
-      (fn [output key-pair] 
-        (assoc-if condition output (first key-pair) (second key-pair)))
-      (assoc-if condition map key val)
-      (partition 2 kvs))))
-
 (defn- flatten-map
   "Flatten a map into a seq of alternate keys and values"
   {:from "clojure.tools/reader"}
@@ -646,7 +374,7 @@
   {:from "cljs.tools/reader"}
   [obj m]
   (let [orig-meta (meta obj)]
-    (with-meta obj (map/merge m (dissoc orig-meta :source)))))
+    (with-meta obj (merge m (dissoc orig-meta :source)))))
 
 (defnt into!
   "Like into, but for transients"
@@ -680,22 +408,9 @@
   [m f]
   (reduce-kv (fn [m k v] (assoc m (f k) (f v))) {} (or m {})))
 
-(defn select-keys'
-  "Like clojure.core/select-keys, but uses transients and doesn't preserve meta"
-  {:from "clojure.tools.analyzer.utils"}
-  [map keyseq]
-  (loop [ret (transient {}) keys (seq keyseq)]
-    (if keys
-      (let [entry (find map (first keys))]
-        (recur (if entry
-                 (conj! ret entry)
-                 ret)
-               (next keys)))
-      (persistent! ret))))
-
 (def mmerge
   "Same as (fn [m1 m2] (merge-with merge m2 m1))"
-  #(merge-with map/merge %2 %1))
+  #(merge-with merge %2 %1))
 
 (defn mapv'
   "Like mapv, but short-circuits on reduced"
@@ -732,31 +447,6 @@
     (set/difference a b)
     (set/difference b a)))
 
-; ; a better merge?
-; ; a better merge-with?
-#?(:clj
-(defn get-map-constructor
-  "Gets a record's map-constructor function via its class name."
-  [rec]
-  (let [^String class-name-0
-          (if (class? rec)
-              (-> rec str)
-              (-> rec class str))
-        ^String class-name
-          (subseq class-name-0
-            (-> class-name-0 (last-index-of ".") inc)
-            (-> class-name-0 count))
-        map-constructor-fn
-          (->> class-name (str "map->") symbol eval)]
-    map-constructor-fn)))
-
-
-
-
-
-
-
-; TODO UNCOMMENT ALL THIS BECAUSE THIS IS GOOD STUFF
 ; ================================================ INDEX-OF ================================================
 (defn seq-contains?
   "Like |contains?|, but tests if a collection @super contains
@@ -788,7 +478,8 @@
         coll)))
 
 (defn indices-of
-  {:todo ["Make parallizeable"]}
+  {:todo ["Make parallizeable"
+          "|drop| is a performance killer here"]}
   [coll elem-0]
   (loop [coll-n coll indices []]
     (let [i (index-of coll-n elem-0)]
@@ -802,9 +493,7 @@
                    0))))))))
 
 (defn lindices-of
-  "Lazy |indices-of|.
-
-   Originally |positions|."
+  "Lazy |indices-of|."
   {:source "zcaudate/hara.data.seq"}
   [pred coll]
   (keep-indexed
@@ -813,209 +502,16 @@
         idx))
     coll))
 
-(defn index-of-pred      [coll pred]
-  (->> coll (ffilteri pred) key))
 
-(defn last-index-of-pred [coll pred]
-  (->> coll (last-filteri pred) key))
-; ================================================ TAKE ================================================
-; ============ TAKE-LEFT ============
-(defn takel
-  {:in  [2 "abcdefg"]
-   :out "ab"}
-  [i super]
-  (subseq super 0 (-> i long)))
 
-(def take takel)
-(def ltake core/take)
 
-(defn takel-fromi
-  "Take starting at and including index n."
-  {:in  [2 "abcdefg"]
-   :out "cdefg"}
-  [i super]
-  (subseq super i (lasti super)))
-
-(def take-fromi takel-fromi)
-
-(defn takel-from
-  {:in  ["cd" "abcdefg"]
-   :out "cdefg"}
-  [sub super]
-  (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil [super sub])))]
-    (takel-fromi i super)))
-
-(def take-from takel-from)
-
-(defn takel-afteri
-  {:in  [2 "abcdefg"]
-   :out "defg"}
-  [i super]
-  (subseq super (-> i long inc) (lasti super)))
-
-(def take-afteri takel-afteri)
-
-(defn takel-after
-  {:in  ["cd" "abcdefg"]
-   :out "efg"}
-  [sub super]
-  (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil [super sub])))
-        i-f (+ i (lasti sub))]
-    (takel-afteri i-f super)))
-
-(def take-after takel-after)
-
-(defn takel-while
-  {:in '[(f*n in-v? str/alphanum-chars) "abcdef123&^$sd"]
-   :out "abcdef123"}
-  [pred super]
-  (subseq super 0 (index-of-pred super pred)))
-
-(def take-while   takel-while    )
-(def ltakel-while core/take-while)
-(def ltake-while  ltakel-while   )
-
-(def takel-untili takel)
-(def take-untili  take-untili)
-
-(defnt takel-until
-  ([^fn? pred super] (takel-while super (fn-not pred)))
-  ([     sub  super]
-    (if-let [i (index-of super sub)]
-      (takel-untili i super)
-      super)))
-
-(defalias take-until takel-until)
-
-(defnt takel-until-inc
-  ([sub super]
-    (if-let [i (index-of super sub)]
-      (takel-untili (+ i (count sub)) super)
-      super)))
-
-(defalias take-until-inc takel-until-inc)
-
-; ============ TAKE-RIGHT ============
-(defn taker 
-  [i super]
-  (subseq super (- (count super) i) (lasti super)))
-
-(defn takeri
-  "Take up to and including index, starting at the right."
-  {:in  [2 "abcdefg"]
-   :out "cdefg"}
-  [i super]
-  (subseq super i (lasti super)))
-
-(defn taker-untili
-  "Take until index, starting at the right."
-  {:in  [2 "abcdefg"]
-   :out "defg"}
-  [i super]
-  (subseq super (-> i long inc) (lasti super)))
-
-(defn taker-while
-  {:todo ["Use rreduce (reversed reduce) instead of reverse. Possibly reversed-last-index-of"]}
-  [pred super]
-  (let [rindex
-          (reduce
-            (fn [i elem]
-              (if (pred elem) (dec i) (reduced i)))
-            (count super)
-            (reverse super))]
-    (subseq super rindex (lasti super))))
-
-(defn taker-until-workaround
-  ([sub super]
-      (taker-until-workaround sub super super))
-    ([sub alt super]
-      (let [i (last-index-of super sub)]
-        (if i
-            (taker-untili i super)
-            alt))))
-
-(defnt taker-until*
-  "Take until index of, starting at the right."
-  {:in  ["c" "abcdefg"]
-   :out "defg"}
-  ([^fn? pred super] (taker-while (fn-not pred) super)))
-
-; This is how to handle variadic protocols 
-#?(:clj
-(defmacro taker-until
-  [& args]
-  (if (-> args count (= 2))
-      `(taker-until* ~@args)
-      `(taker-until-workaround ~@args))))
-
-(defn taker-after
-  {:in ["." "abcdefg.asd"]
-   :out "abcdefg"}
-  [sub super]
-  (if-let [i (last-index-of super sub)]
-    (subseq super 0 (-> i long dec))
-    nil))
-
-; ================================================ DROP ================================================
-
-(defn dropl [n coll] (subseq coll n (lasti coll)))
-
-(def drop dropl)
-
-(def ldropl core/drop)
-
-(defn dropr
-  {:in  [3 "abcdefg"]
-   :out "abcd"}
-  [n coll]
-  (subseq coll 0 (-> coll lasti long (- (long n)))))
-
-(defn ldropr
-  {:attribution "Alex Gunnarson"}
-  [n coll]
-  (lsubseq coll 0 (-> coll lasti long (- (long n)))))
-
-(defn dropr-while [pred super]
-  (subseq super 0
-    (dec (or (last-index-of-pred super pred)
-             (count super)))))
-
-(defnt dropr-until
-  "Until right index of."
-  {:todo "Combine code with /takeri/"
-   :in  ["cd" "abcdefg"]
-   :out "abcd"}
-  ([^fn? pred super] (dropr-while super (fn-not pred)))
-  ([sub super]
-    (if-let [i (last-index-of super sub)]
-      (subseq super 0 (+ i (lasti sub)))
-      super)))
-
-(defn dropr-after
-  "Until right index of."
-  {:todo "Combine code with /takeri/"
-   :in  ["cd" "abcdefg"]
-   :out "ab"}
-  ([sub super]
-    (if (index-of super sub)
-        (subseq super 0 (index-of super sub))
-        super)))
-
-; (let [index-r
-;           (whenc (last-index-of super sub) (fn= -1)
-;             (throw (str "Index of" (str/squote sub) "not found.")))])
-;   (subseq super
-;     (inc (last-index-of super sub))
-;     (-> super lasti))
 
 ; ================================================ MERGE ================================================
 
 (defn index-with [coll f]
   (->> coll
        (map+ #(map-entry (f %) %))
-       redm))
+       (join {})))
 
 (defn mergel  [a b] (merge b a))
 (defalias merge-keep-left mergel)
@@ -1041,6 +537,7 @@
         map))))
 
 #?(:clj (defalias kmap base/kmap))
+#?(:clj (defalias eval-map base/eval-map))
 
 (defn select
   "Applies a list of functions, @fns, separately to an object, @coll.
@@ -1080,14 +577,6 @@
     nil
     coll))
 
-(defn coll-if [obj]
-  (whenf obj (fn-not coll?) vector))
-
-(defn seq-if [obj]
-  (condf obj
-    (fn-or seq? nil?) identity
-    coll?             seq
-    :else             list))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         LAZY SEQS        }=====================================================
 ;=================================================={                          }=====================================================
@@ -1140,10 +629,8 @@
 ;            []))))
 
 
-(defn fkey+ [m]
-  (-> m first key))
-(defn fval+ [m]
-  (-> m first val))
+(def fkey (fn-> first key))
+(def fval (fn-> first val))
 
 (defn up-val
   {:in '[{:a "ABC" :b 123} :a]
@@ -1174,8 +661,7 @@
   (if (= iden identity)
       coll
       (get-in coll keys-0)))
-(defn reverse+ [coll] ; what about arrays? some transient loop or something
-  (ifn coll reversible? rseq reverse))
+
 (def single?
   "Does coll have only one element?"
   (fn-and seq (fn-not next)))
@@ -1206,6 +692,8 @@
 ;      (fn [n]
 ;        (map+ (getf+ n) colls))
 ;      (range 0 (inc 2)))))
+
+; ; a better merge-with?
 
 (defn merge-with+
   "Like merge-with, but the merging function takes the key being merged
@@ -1269,131 +757,15 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FINDING IN COLLECTION   }=====================================================
 ;=================================================={  in?, index-of, find ... }=====================================================
-(defn in?
-  "The inverse of |contains?|"
-  {:todo ["|definline| this?"]}
-  [elem coll] (contains? coll elem))
-
-(defn in-k?
-  {:todo ["|definline| this?"]}
-  [elem coll] (containsk? coll elem))
-
-(defn in-v?
-  {:todo ["|definline| this?"]}
-  [elem coll] (containsv? coll elem))
-
-; ;-----------------------{       SELECT-KEYS       }-----------------------
-(defn- select-keys-large
-  "A transient and reducing version of clojure.core's |select-keys|."
-  {:performance
-    "45.3 ms vs. core's 60.29 ms on:
-     (dotimes [_ 100000]
-       (select-keys
-         {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7}
-         [:b :c :e]))).
-     Performs much better on large set of keys."} 
-  [keyseq m]
-    (-> (transient {})
-        (loops/reduce
-          (fn [ret k]
-            (let [entry (find m k)]
-              (if entry
-                  (conj! ret entry)
-                  ret)))
-          (seq keyseq))
-        persistent!
-        (with-meta (meta m))))
-
-(defn- select-keys-small
-  "A transient version of clojure.core's |select-keys|.
-
-   Note: using a reducer here incurs the overhead of creating a
-   function on the fly (can't extern it because of a closure).
-   This is better for small set of keys."
-  {:performance
-    "39.09 ms vs. core's 60.29 ms on:
-     (dotimes [_ 100000]
-       (select-keys
-         {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7}
-         [:b :c :e])))"} 
-  [keyseq m]
-    (loop [ret (transient {}) keys (seq keyseq)]
-      (if keys
-        (let [entry (find m (first keys))]
-          (recur
-           (if entry
-             (conj! ret entry)
-             ret)
-           (next keys)))
-        (with-meta (persistent! ret) (meta m)))))
-
-(defn- select-keys-delay
-  "Not as fast as select-keys with transients."
-  {:todo ["FIX THIS"]}
-  [ks m]
-  (let [ks-set (into #{} ks)]
-    (->> m
-         (filter+
-           (compr key (f*n in-k? ks-set))))))
-
-(defn select-keys+
-  {:todo
-    ["Determine actual inflection point at which select-keys-large
-      should be used over select-keys-small."]}
-  [m ks]
-  (if (-> ks count (> 10))
-      (select-keys-small m ks)
-      (select-keys-large m ks)))
-
-; ;-----------------------{       CONTAINMENT       }-----------------------
-
-; ; index-of-from [o val index-from] - index-of, starting at index-from
-; (defn contains-or? [coll elems]
-;   (apply-or (map (partial contains? coll) elems)))
-(defn get-keys
-  {:attribution "Alex Gunnarson"}
-  [m obj]
-  (persistent!
-    (loops/reduce
-      (fn [ret k v]
-        (if (identical? obj v)
-            (conj! ret k)
-            ret))
-      (transient [])
-      m)))
-(defn get-key [m obj] (-> m (get-keys obj) first))
-; ; /find/ Returns the map entry for key, or nil if key not present
-; ; (find {:b 2 :a 1 :c 3} :a) => [:a 1]
-; ; (select-keys {:a 1 :b 2} [:a :c]) =>  {:a 1}
-; ; /frequencies/
-; ; (frequencies ['a 'b 'a 'a])
-; ; {a 3, b 1}
-; ; /partition-by/
-; ; splits the coll each time f returns a new value
-; ; (partition-by odd? [1 1 1 2 2 3 3])
-; ; => ((1 1 1) (2 2) (3 3)) /lseq/
-;___________________________________________________________________________________________________________________________________
-;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
-;=================================================={                          }=====================================================
-(defn map-keys+ [f coll] (->> coll (map+ (juxt-kv f identity))))
-(defn map-vals+ [f coll] (->> coll (map+ (juxt-kv identity f))))
-
-
-(defn filter-keys+ [pred coll] (->> coll (filter+ (compr key pred))))
-(defn remove-keys+ [pred coll] (->> coll (remove+ (compr key pred))))
-(defn filter-vals+ [pred coll] (->> coll (filter+ (compr val pred))))
-(defn remove-vals+ [pred coll] (->> coll (remove+ (compr val pred))))
-
-(defn vals+
-  {:attribution "Alex Gunnarson"
-   :todo ["Compare performance with core functions"]}
-  [m]
-  (->> m (map+ val) redv))
-(defn keys+
-  {:attribution "Alex Gunnarson"
-   :todo ["Compare performance with core functions"]}
-  [m]
-  (->> m (map+ key) redv))
+(defalias in?          sel/in?         )
+(defalias in-k?        sel/in-k?       )
+(defalias in-v?        sel/in-v?       )
+(defalias select-keys  sel/select-keys )
+(defalias select-keys+ sel/select-keys+)
+(defalias get-keys     sel/get-keys    )
+(defalias get-key      sel/get-key     )
+(defalias keys+        sel/keys+       )
+(defalias vals+        sel/vals+       )
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
 ;=================================================={       incl. slice        }=====================================================
@@ -1405,308 +777,14 @@
   {:attribution "flatland.useful.seq"
    :todo ["Optimize" "Use transients"]}
   [n-0 coll]
-  (loop [n-n n-0 slices [] items (vec coll)]
+  (loop [n-n n-0 slices [] items (core/vec coll)]
     (if (empty? items)
       slices
       (let [size (num/ceil (/ (count items) n-n))]
         (recur (dec n-n)
                (conj slices (subvec+ items 0 size))
                (subvec+ items size (lasti items)))))))
-; /partition/
-; (partition 4 (range 20))
-; => ((0 1 2 3) (4 5 6 7) (8 9 10 11) (12 13 14 15) (16 17 18 19))
-; (partition 4 6 ["a" "b" "c" "d"] (range 20))
-; => ((0 1 2 3) (6 7 8 9) (12 13 14 15) (18 19 "a" "b"))
-; /partition-all/
-; Returns a lazy sequence of lists like partition, but may include
-; partitions with fewer than n items at the end.
-; (partition-all 4 [0 1 2 3 4 5 6 7 8 9])
-; => ((0 1 2 3) (4 5 6 7) (8 9))
 
-(defn partition-all
-  ([n] (core/partition-all n))
-  ([n coll]
-    (if (= n 0) (list) (core/partition-all n coll)))
-  ([n step coll]
-    (core/partition-all n step coll)))
-;___________________________________________________________________________________________________________________________________
-;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================
-;=================================================={     take, drop, split    }=====================================================
-; /take-nth/
-; (take-nth 2 (range 10))
-; => (0 2 4 6 8)
-; /cycle/
-; (take 5 (cycle ["a" "b"]))
-; => ("a" "b" "a" "b" "a")
-; /take-last/ ; turn this into a subvec
-; (take-last 2 [1 2 3 4]) => (3 4)
-; /last/    is a limiting case (1) of take-last
-; /drop-last/ ; (drop-last 2 [1 2 3 4]) => (1 2)
-; /butlast/ is a limiting case (1) of drop-last
-
-; splice [o index n val] - fast remove and insert in one go
-; splice-arr [o index n val-arr] - fast remove and insert in one go
-; insert-before [o index val] - insert one item inside coll
-; insert-before-arr [o index val] - insert array of items inside coll
-; remove-at [o index] - remove one item from index pos
-; remove-n [o index n] - remove n items starting at index pos
-; triml [o n] - trims n items from left
-; trimr [o n] - trims n items from right
-; trim [o nl nr] - trims nl items from left and nr items from right
-; rip [o index] - rips coll and returns [pre-coll item-at suf-coll]
-; sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
-(defn split [ind coll-0]
-  (if (vector? coll-0)
-      [(subvec+ coll-0 0   ind)
-       (subvec+ coll-0 ind (count coll-0))]
-      (split-at coll-0 ind)))
-(defn split-with-v+ [pred coll-0] ; IMPROVE
-  (->> coll-0
-       (split-with pred)
-       (map+ vec)))
-;_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._
-;=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*{        ASSOCIATIVE       }=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-;=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*{                          }=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
-;___________________________________________________________________________________________________________________________________
-;=================================================={          ASSOC           }=====================================================
-;=================================================={ update(-in), assoc(-in)  }=====================================================
-(defn- extend-coll-to
-  "Extends an associative structure (for now, only vector) to a given index."
-  {:attribution "Alex Gunnarson"
-   :usage "USAGE: (extend-coll-to [1 2 3] 5) => [1 2 3 nil nil]"}
-  [coll-0 k]
-  (if (and (vector? coll-0)
-           (number? k)
-           (-> coll-0 count dec (< k)))
-      (let [trans?   (transient? coll-0)
-            trans-fn (if trans? identity transient)
-            pers-fn  (if trans? identity persistent!)]
-        (pers-fn
-          (loops/reduce
-            (fn [coll-n _] (conj! coll-n nil)) ; extend-vec part
-            (trans-fn coll-0)
-            (range (count coll-0) (inc k)))))
-      coll-0))
-
-(defn assoc+
-  {:todo ["Protocolize on IEditableCollection"
-          "Probably has performance issues"
-          "Stop the assoc things"]}
-  ([coll-0 k v]
-    (assoc (extend-coll-to coll-0 k) k v))
-    ; once probably gives no performance benefit from transience
-  ([coll-0 k v & kvs-0]
-    (let [edit?    (editable? coll-0)
-          trans-fn (if edit? transient   identity)
-          pers-fn  (if edit? persistent! identity)
-          assoc-fn (if edit? #(assoc! %1 %2 %3) #(assoc %1 %2 %3))]
-      (loop [kvs-n  kvs-0
-             coll-f (-> coll-0 trans-fn
-                        (extend-coll-to k)
-                        (assoc-fn k v))]
-        (if (empty? kvs-n)
-            (pers-fn coll-f)
-            (recur (-> kvs-n rest rest)
-                   (let [k-n (first kvs-n)]
-                     (-> coll-f (extend-coll-to k-n)
-                         (assoc-fn k-n (second kvs-n))))))))))
-
-(defn assoc-when-none 
-  "assoc's @args to @m only when the respective keys are not present in @m."
-  [m & args]
-  (reduce
-    (fn [m-f k v]
-      (if (contains? m-f k)
-          m-f
-          (assoc m-f k v)))
-    m
-    (partition-all 2 args)))
-
-(defn update+
-  "Updates the value in an associative data structure @coll associated with key @k
-   by applying the function @f to the existing value."
-  ^{:attribution "weavejester.medley"
-    :contributors ["Alex Gunnarson"]}
-  ([coll k f]      (assoc+ coll k       (f (get coll k))))
-  ([coll k f args] (assoc+ coll k (apply f (get coll k) args))))
-
-(defn update-when
-  "Updates only if @pred is true for @k in @m."
-  [m k pred f]
-  (if (-> m k pred)
-      (update m k f)
-      m))
-
-(defn updates+
-  "For each key-function pair in @kfs,
-   updates value in an associative data structure @coll associated with key
-   by applying the function @f to the existing value."
-  ^{:attribution "Alex Gunnarson"
-    :todo ["Probably updates and update are redundant"]}
-  ([coll & kfs]
-    (reduce-2 ; This is inefficient
-      (fn [ret k f] (update+ ret k f))
-      coll
-      kfs)))
-
-(defn update-key+
-  {:attribution "Alex Gunnarson"
-   :usage '(->> {:a 4 :b 12}
-                (map+ (update-key+ str)))}
-  ([f]
-    (fn
-      ([kv]
-        (assoc+ kv 0 (f (get kv 0))))
-      ([k v]
-        (map-entry (f k) v)))))
-
-(defn update-val+
-  {:attribution "Alex Gunnarson"
-   :usage '(->> {:a 4 :b 12}
-                (map+ (update-val+ (f*n / 2))))}
-  ([f]
-    (fn
-      ([kv]
-        (assoc+ kv 1 (f (get kv 1))))
-      ([k v]
-        (map-entry k (f v))))))
-
-(defn mapmux
-  ([kv]  kv)
-  ([k v] (map-entry k v)))
-(defn record->map [rec]
-  (into {} rec))
-
-;--------------------------------------------------{        UPDATE-IN         }-----------------------------------------------------
-(defn update-in!
-  "'Updates' a value in a nested associative structure, where ks is a sequence of keys and
-  f is a function that will take the old value and any supplied args and return the new
-  value, and returns a new nested structure. The associative structure can have transients
-  in it, but if any levels do not exist, non-transient hash-maps will be created."
-  {:attribution "flatland.useful"}
-  [m [k & ks] f & args]
-  (let [assoc-fn (if ((fn-or transient?) m)
-                     #(assoc! %1 %2 %3)
-                     #(assoc  %1 %2 %3))
-        val (get m k)]
-    (assoc-fn m k
-      (if ks
-          (apply update-in! val ks f args)
-          (apply f val args)))))
-; perhaps make a version of update-in : update :: assoc-in : assoc ?
-
-(defn update-in+
-  "Created so vectors would also automatically be grown like maps,
-   given indices not present in the vector."
-  {:attribution "Alex Gunnarson"
-   :todo ["optimize via transients"
-          "allow to use :last on vectors"
-          "allow |identity| function for unity's sake"]}
-  [coll-0 [k0 & keys-0] v0]
-  (let [value (core/get coll-0 k0 (when (-> keys-0 first number?) []))
-        coll-f (extend-coll-to coll-0 k0)
-        val-f (if keys-0
-                  (update-in+ value keys-0 v0) ; make a non-stack-consuming version, possibly via trampoline? 
-                  v0)
-        final  (assoc coll-f k0 (whenf val-f fn? #(% (get coll-f k0))))]
-   final))
-;--------------------------------------------------{         ASSOC-IN         }-----------------------------------------------------
-(defn assoc-in+
-  [coll ks v]
-  (update-in+ coll ks (constantly v)))
-
-(defnt assoc-in!
-  "Associates a value in a nested associative structure, where ks is a sequence of keys
-  and v is the new value and returns a new nested structure. The associative structure
-  can have transients in it, but if any levels do not exist, non-transient hash-maps will
-  be created."
-  {:attribution "flatland.useful"}
-  ([^atom? m ks obj] (swap! m assoc-in ks obj))
-  ([m ks v]
-    (update-in! m ks (constantly v))))
-
-(defn assocs-in+
-  {:usage "(assocs-in ['file0' 'file1' 'file2']
-             [0] 'file10'
-             [1] 'file11'
-             [2] 'file12')"}
-  [coll & kvs]
-  (reduce-2 ; this is inefficient
-    (fn [ret k v] (assoc-in+ ret k v))
-    coll
-    kvs))
-;___________________________________________________________________________________________________________________________________
-;=================================================={          DISSOC          }=====================================================
-;=================================================={                          }=====================================================
-(defn dissoc+
-  {:todo ["Protocolize"]}
-  ([coll key-0]
-    (try
-      (cond ; probably use tricks to see which subvec is longer to into is less consumptive
-        (vector? coll)
-          (catvec (subvec+ coll 0 key-0)
-                  (subvec+ coll (inc key-0) (count coll)))
-        (editable? coll)
-          (-> coll transient (core/dissoc! coll key-0) persistent!)
-        :else
-          (dissoc coll key-0))))
-  ([coll key-0 & keys-0]
-    (loops/reduce dissoc+ coll (cons key-0 keys-0))))
-
-(defn dissocs+ [coll & ks]
-  (loops/reduce
-    (fn [ret k]
-      (dissoc+ ret k))
-    coll
-    ks))
-
-(defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
-  (whenf coll (fn-> (get k) pred)
-    (f*n dissoc+ k)))
-
-(defnt dissoc++
-  {:todo ["Move to collections.core"
-          "Implement for vector"]}
-  ([#{map?} coll obj] (dissoc coll obj))
-  ([^:obj   coll obj] (dissoc coll obj))
-  ([^set?   coll obj] (disj   coll obj)))
-
-(defn dissoc-in+
-  "Dissociate a value in a nested assocative structure, identified by a sequence
-  of keys. Any collections left empty by the operation will be dissociated from
-  their containing structures.
-  This implementation was adapted from clojure.core.contrib"
-  {:attribution "weavejester.medley"
-   :todo ["Transientize"]}
-  [m ks]
-  (if-let [[k & ks] (seq ks)]
-    (if (empty? ks)
-        (dissoc++ m k)
-        (let [new-n (dissoc-in+ (get m k) ks)] ; this is terrible
-          (if (empty? new-n) ; dissoc's empty ones
-              (dissoc++ m k)
-              (assoc m k new-n))))
-    m))
-
-(defn updates-in+
-  [coll & kfs]
-  (reduce-2 ; Inefficient
-    (fn [ret k-n f-n] (update-in+ ret k-n f-n))
-    coll
-    kfs))
-
-(defn re-assoc+ [coll k-0 k-f]
-  (if (containsk? coll k-0)
-      (-> coll
-         (assoc+  k-f (get coll k-0))
-         (dissoc+ k-0))
-      coll))
-
-(defn re-assocs+ [coll & kfs]
-  (reduce-2 ; Inefficient
-    (fn [ret k-n f-n] (re-assoc+ ret k-n f-n))
-    coll
-    kfs))
 
 (defn select-as+
   {:todo ["Name this function more appropriately"]
@@ -1723,36 +801,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn distinct-by
-  "Returns a lazy sequence of the elements of coll, removing any elements that
-  return duplicate values when passed to a function f."
-  {:attribution "medley.core"}
-  [f coll]
-  (let [step (fn step [xs seen]
-               (lazy-seq
-                ((fn [[x :as xs] seen]
-                   (when-let [s (seq xs)]
-                     (let [fx (f x)]
-                       (if (contains? seen fx) 
-                         (recur (rest s) seen)
-                         (cons x (step (rest s) (conj seen fx)))))))
-                 xs seen)))]
-    (step coll #{})))
 
-#?(:clj
-(defn distinct-by-java
-  "Returns elements of coll which return unique
-   values according to f. If multiple elements of coll return the same
-   value under f, the first is returned"
-  {:attribution "prismatic.plumbing"
-   :performance "Faster than |distinct-by|"}
-  [f coll]
-  (let [s (java.util.HashSet.)] ; instead of #{}
-    (lfor [x coll
-           :let [id (f x)]
-           :when (not (.contains s id))]
-     (do (.add s id)
-         x)))))
 
 ; (defn plicates
 ;   {:attribution "Alex Gunnarson"}
@@ -1764,18 +813,18 @@
 ;                (oper n))) ; duplicates? keep them
 ;          (filter+ coll)
 ;          distinct+
-;          redv)))
+;          (join [])))))
 
 ; TODO: make a reducers version of coll/elem
-(defnt interpose+-
+(defnt interpose*
   ([^string? coll elem]
     (str/join elem coll))
   ([coll elem]
-    (interpose elem coll)))
+    (core/interpose elem coll)))
 
-(defn interpose+
+(defn interpose
   {:todo ["|definline| this"]}
-  [elem coll] (interpose+- coll elem))
+  [elem coll] (interpose* coll elem))
 
 (defn linterleave-all
   "Analogy: partition:partition-all :: interleave:interleave-all"
@@ -1788,16 +837,6 @@
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
-; (defn partition-all*
-;   "Groups the elements of @coll into groups of @n."
-;   {:attribution "Alex Gunnarson"
-;    :todo "Compare performance to |partition-all|"}
-;   [coll n]
-;   (loop [coll-n coll]
-;     (if (-> coll-n count (< n))
-;         coll-n
-;         (recur (ltake n coll)))))
-
 ; (defn interleave+ [& args] ; 4.307220 ms vs. 1.424329 ms normal interleave :/ because of zipvec...
 ;   (reduce
 ;     (fn ([]      [])
@@ -1805,6 +844,12 @@
 ;         ([a b]   (conj    a b)) 
 ;         ([a b c] (conj    a b c)))
 ;     (apply zipvec+ args)))
+
+; ; /partition-by/
+; ; splits the coll each time f returns a new value
+; ; (partition-by odd? [1 1 1 2 2 3 3])
+; ; => ((1 1 1) (2 2) (3 3)) /lseq/
+
 
 #?(:clj
   (defn frequencies+
@@ -1821,7 +866,7 @@
              int
              unchecked-inc)
              (.put res x))
-      (into {} res))))
+      (join {} res))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
@@ -1832,7 +877,7 @@
         "(fn [k v1 v2] v1)"
         "[{:a 1 :b 2} {:a 1 :b 5} {:a 5 :b 65}]"]
    :out "[{:b 65, :a 5} {:a 1, :b 2}]"
-   :out-type 'Delay}
+   :out-type 'Reducer}
   [group-by-f merge-with-f coll]
   (let [merge-like-elems 
          (fn [grouped-elems]
@@ -1875,145 +920,10 @@
   (->> coll
        (group-by+ k)
        (map+ (update-val+ #(first %1)))))
-;___________________________________________________________________________________________________________________________________
-;=================================================={     TREE STRUCTURES      }=====================================================
-;=================================================={                          }=====================================================
-; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
-(defnt walk2
-  "If coll is a collection, applies f to each element of the collection
-   and returns a collection of the results, of the same type and order
-   as coll. If coll is not a collection, returns it unchanged. \"Same
-   type\" means a type with the same behavior. For example, a hash-map
-   may be returned as an array-map, but a a sorted-map will be returned
-   as a sorted-map with the same comparator."
-  {:todo ["Fix class overlap" "Preserve metadata"]}
-  ; clojure.lang.PersistentList$EmptyList : '()
-  ; special case to preserve type
-  ([^list?  coll f] (apply list  (map f coll)))
-  #_([^dlist? coll f] (apply dlist (map f coll)))  ; TODO ENABLE THIS UPON RESTART
-  ([^transientizable? coll f]
-     (persistent!
-       (core/reduce
-         (fn [r x] (core/conj! r (f x)))
-         (transient (core/empty coll)) coll)))
-  ; generic sequence fallback
-  ; TODO add any seq in general
-  ([#{lseq? #_(- seq? list?)} coll f] (map f coll))
-  ; |transient| discards metadata as of Clojure 1.6.0
 
-  ; Persistent collections that don't support transients
-  #?(:clj  ([#{clojure.lang.PersistentQueue
-               clojure.lang.PersistentStructMap
-               clojure.lang.PersistentTreeMap
-               clojure.lang.PersistentTreeSet} coll f]
-             (core/reduce
-               (fn [r x] (conj r (f x)))
-               (empty coll) coll)))
-  #?(:clj  ([^map-entry? coll f] (map-entry (f (key coll)) (f (val coll)))))
-  #?(:clj  ([^record?    coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll)))
-  #?(:clj  ([:else       x    f] x))
-  #?(:cljs ([:else obj  f]
-             (if (coll? obj)
-                 (into (empty obj) (map f obj))
-                 obj))))
 
-(defn walk
-  "Traverses form, an arbitrary data structure.  inner and outer are
-  functions.  Applies inner to each element of form, building up a
-  data structure of the same type, then applies outer to the result.
-  Recognizes all Clojure data structures. Consumes seqs as with doall."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-  [inner outer form]
-  (outer (walk2 form inner)))
 
-(defn postwalk
-  "Performs a depth-first, post-order traversal of form.  Calls f on
-  each sub-form, uses f's return value in place of the original.
-  Recognizes all Clojure data structures. Consumes seqs as with doall."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-  [f form]
-  (walk (partial postwalk f) f form))
-
-(defn prewalk
-  "Like postwalk, but does pre-order traversal."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-  [f form]
-  (walk (partial prewalk f) identity (f form)))
-
-; COMBINE THESE TWO
-(defn keywordify-keys
-  "Recursively transforms all map keys from keywords to strings."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"
-   :contributors #{"Alex Gunnarson"}}
-  [m]
-  (let [keywordify-key
-         (fn [k v]
-           (if (string? k)
-               (map-entry (keyword k) v)
-               (map-entry k v)))]
-    ; only apply to maps
-    (postwalk
-      (whenf*n map? (fn->> (map+ keywordify-key) redm))
-      m)))
-
-; COMBINE THESE TWO
-(defn stringify-keys
-  "Recursively transforms all map keys from keywords to strings."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"
-   :contributors #{"Alex Gunnarson"}}
-  [m]
-  (let [stringify-key
-         (fn [[k v]]
-           (if (keyword? k)
-               (map-entry (name k) v)
-               (map-entry k v)))]
-    ; only apply to maps
-    (postwalk
-      (whenf*n map? (fn->> (map+ stringify-key) redm))
-      m)))
-
-(defn properize-key [k v]
-  (let [k-0 (str/keywordize k)
-        k-f (if (boolean? v)
-                (str/keyword+ k-0 "?")
-                k-0)]
-    k-f))
-
-(defn properize-keys-1
-  "Properizes keys for @m.
-   Only one level deep."
-  [m]
-  (->> m
-       (map+ (fn [k v] (map-entry (properize-key k v) v)))
-       redm))
-
-(defn prewalk-replace
-  "Recursively transforms form by replacing keys in smap with their
-  values.  Like clojure/replace but works on any data structure.  Does
-  replacement at the root of the tree first."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-  [smap form]
-  (prewalk (whenf*n (f*n in-k? smap) smap) form))
-
-(defn postwalk-replace
-  "Recursively transforms form by replacing keys in smap with their
-  values.  Like clojure/replace but works on any data structure.  Does
-  replacement at the leaves of the tree first."
-  {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
-  [smap form]
-  (postwalk (whenf*n (f*n in-k? smap) smap) form))
-
-(defn tree-filter
-  "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
-   only the elements for which @pred is true."
-  {:attribution "Alex Gunnarson"}
-  [pred tree]
-  (let [results (transient [])]
-    (postwalk
-      (whenf*n pred
-        (fn->> (withf->> #(conj! results %)))) ; keep it the same
-      tree)
-    (persistent! results)))
+; ===== SORTING ===== ;
 
 (defn- sort-parts
   "Lazy, tail-recursive, incremental quicksort. Works against
@@ -2072,7 +982,7 @@
   (let [ids (->> vec-0
                  (map+ :id)
                  (remove+ nil?)
-                 (into (sorted-set-by (fn [a b] (> a b))))
+                 (join (sorted-set-by (fn [a b] (> a b))))
                  atom)]
     (reducei
       (fn [vec-n entry n]
@@ -2085,29 +995,7 @@
       vec-0
       vec-0)))
 
-#?(:clj
-(defn ^java.util.function.Predicate ->predicate [f]
-  (reify java.util.function.Predicate
-    (^boolean test [this ^Object elem]
-      (f elem)))))
 
-#?(:clj
-(defnt filter!
-  ([^javafx.collections.ObservableList coll pred]
-    (doseqi [elem coll n]
-      (when-not (pred elem)
-        (.remove coll (int n) (int n)))))
-  ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate pred)))))
-
-#?(:clj
-(defnt remove!
-  ([^javafx.collections.ObservableList coll pred]
-    (doseqi [elem coll n]
-      (when (pred elem)
-        (.remove coll (int n) (int n)))))
-  ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate (fn-not pred))))))
 
 ; REQUIRES hara.string.PATH/JOIN
 #_(defn flatten-keys
@@ -2238,13 +1126,12 @@
     (persistent! copy)))
 
 (defnt ensurec*
-  ([^vector? ensurer ensured]
-    (cond
-      (vector? ensured)
-        ensured
-      (nil? ensured)
-        ensurer
-      :else (vector ensured))))
+  ([#{vector? set? map?} ensurer ensured]
+    (cond ((type/->pred ensurer) ensured)
+          ensured
+          (nil? ensured)
+          ensurer
+          :else (conj (type/->base ensurer) ensured))))
 
 (defn ensurec
   "ensure-collection.
@@ -2263,15 +1150,33 @@
   [ensured ensurer]
   (ensurec* ensurer ensured))
 
-(defn assoc-with
-  "Like |merge-with| but for |assoc|."
-  {:author "Alex Gunnarson"
-   :tests '{(assoc-with {:a 1} (fn [a b] (-> a (ensurec []) (conj b))) :a 3)
-            {:a [1 3]}}}
-  [m f k v]
-  (if-let [v-0 (get m k)]
-    (assoc m k (f v-0 v))
-    (assoc m k v)))
+(defn index-by-vals
+  {:tests '{(index-by-vals
+              {:a #{1 2 3}
+               :b #{2 4 5}
+               :c #{1 3 4}})
+            {1 #{:a :c}
+             2 #{:a :b}
+             3 #{:a :c}
+             4 #{:b :c}
+             5 #{:b}}}}
+  [coll & [{:keys [into-coll get-key get-val]
+            :or {into-coll #{}
+                 get-key fn/seconda
+                 get-val fn/firsta}
+            :as opts}]]
+  (let [update-f (fn [index-f k v]
+                   (update! index-f (get-key k v)
+                     (fn-> (ensurec into-coll) (conj (get-val k v)))))]
+    (persistent!
+      (reduce
+        (fn [index k vs]
+          (reduce (fn ([index-f v      ] (update-f index-f k v                  ))
+                      ([index-f v-k v-v] (update-f index-f k (map-entry v-k v-v))))
+            index
+            vs))
+        (transient {})
+        coll))))
 
 (defn merge-deep-with
   "Like `merge-with` but merges maps recursively, applying the given fn
@@ -2309,27 +1214,18 @@
    :out [[{:n 2 :a 3}]]}
   ([l r]
     (set/difference
-      (->> l (into #{}))
-      (->> r (into #{}))))
+      (->> l (join #{}))
+      (->> r (join #{}))))
   ([l r selectors]
     (let [l-grouped (->> l (group-by (apply juxt selectors)))
           r-grouped (->> r (group-by (apply juxt selectors)))]
       (->> (set/difference
-             (->> l-grouped keys (into #{}))
-             (->> r-grouped keys (into #{})))
-           (map+ (fn->> (get l-grouped))) force
-           (reduce into #{})))))
+             (->> l-grouped keys (join #{}))
+             (->> r-grouped keys (join #{})))
+           (map+ (fn->> (get l-grouped)))
+           (reduce #(join %1 %2) #{})))))
 
-; TODO extern would be better...
-#_(defn+ extreme-comparator [comparator-n]
-  (get (extern {> num/greatest
-                < num/least   })
-    comparator-n))
 
-#_(defn extreme-comparator [comparator-n]
-  (get {> num/greatest
-        < num/least   }
-    comparator-n))
 
 ;; find rank of element as primitive long, -1 if not found
 ; (doc avl/rank-of)
@@ -2343,6 +1239,22 @@
 ;; reminiscent of clojure.core/{subseq,rsubseq}
 ; (doc avl/subrange)
 
+#?(:clj
+(defn get-map-constructor
+  "Gets a record's map-constructor function via its class name."
+  [rec]
+  (let [^String class-name-0
+          (if (class? rec)
+              (-> rec str)
+              (-> rec class str))
+        ^String class-name
+          (subseq class-name-0
+            (-> class-name-0 (last-index-of ".") inc)
+            (-> class-name-0 count))
+        map-constructor-fn
+          (->> class-name (str "map->") symbol eval)]
+    map-constructor-fn)))
+
 
 #?(:clj
 (defmacro deficlass
@@ -2353,12 +1265,12 @@
   (let [constructor-sym (->> name- name sform/un-camelcase (str "->") symbol)
         protocol-sym    (-> name- name (str "Functions") symbol)
         fns-signatures  (->> fns
-                             (map (compr (juxt (MWA first)
-                                               (MWA second))))
-                             (group-by (MWA first))
+                             (map (compr (juxt #(first %1)
+                                               #(second %1))))
+                             (group-by #(first %1))
                              (map-vals+ (fn->> (map (fn-> rest)) flatten-1))
                              (map+ (fn [x] (cons (first x) (second x))))
-                             redv) ]
+                             (join [])) ]
     (log/pr :macro-expand "FNS-SIGNATURES" fns-signatures)
    `(do (defprotocol ~protocol-sym ~@fns-signatures)
         (declare ~constructor-sym)
@@ -2406,3 +1318,74 @@
           (dissoc k)))
     m
     ks))
+
+; =========== NECESSITIES FOR DATASCRIPT AND POSH ============== ;
+
+(defn trim-head
+  {:from "tonsky/datascript-todo.util"}
+  [xs n]
+  (->> xs
+       (ldropl (- (count xs) n))
+       core/vec))
+
+(defn take-until
+  {:from "mpdairy/posh.q-pattern-gen"}
+  [stop-at? ls]
+  (if (or
+       (empty? ls)
+       (stop-at? (first ls)))
+    []
+    (cons (first ls) (take-until stop-at? (rest ls)))))
+
+(defn rest-at
+  {:from "mpdairy/posh.q-pattern-gen"}
+  [rest-at? ls]
+  (if (or (empty? ls) (rest-at? (first ls)))
+    ls
+    (recur rest-at? (rest ls))))
+
+(defn split-list-at
+  {:from "mpdairy/posh.q-pattern-gen"}
+  [split-at? ls]
+  (if (empty? ls)
+    {}
+    (merge {(first ls) (take-until split-at? (take-until split-at? (rest ls)))}
+           (split-list-at split-at? (rest-at split-at? (rest ls))))))
+
+(defn deep-list?
+  {:from "mpdairy/posh.core"}
+  [x]
+  (cond (list? x) true
+        (coll? x) (if (empty? x) false
+                      (or (deep-list? (first x))
+                          (deep-list? (core/vec (rest x)))))))
+
+(defn deep-find
+  {:from "mpdairy/posh.core"}
+  [f x]
+  (if (coll? x)
+      (if (empty? x)
+        false
+        (or (deep-find f (first x))
+             (deep-find f (rest x))))
+      (f x)))
+
+(defn deep-map [f x]
+  {:from "mpdairy/posh.core"}
+  (cond
+   (map? x) (let [r (map (partial deep-map f) x)]
+              (zipmap (map #(first %1) r) (map #(second %1) r)))
+   (coll? x) (core/vec (map (partial deep-map f) x))
+   :else (f x)))
+
+(defn drop-tail
+  {:from "tonsky/datascript-todo.util"
+   :todo ["It doesn't seem like this actually does anything"]}
+  [xs pred]
+  (loop [acc []
+         xs  xs]
+    (let [x (first xs)]
+      (cond
+        (nil? x) acc
+        (pred x) (conj acc x)
+        :else  (recur (conj acc x) (next xs))))))

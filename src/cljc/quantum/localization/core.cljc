@@ -1,8 +1,8 @@
 (ns quantum.localization.core
   (:require [quantum.core.string      :as str     ]
             [quantum.core.collections :as coll
-              :refer [#?@(:clj [containsv?])
-                      dropr filter+ remove+ redv] ]
+              :refer [#?@(:clj [containsv? join])
+                      dropr filter+ remove+] ]
             [quantum.core.fn          :as fn
               :refer [#?@(:clj [fn->])]           ]
             [quantum.core.logic       :as logic
@@ -47,7 +47,7 @@
   (->> (iana-languages)
        (remove+ (fn-or :deprecated
                        (fn-> :type (= :redundant))))
-       redv)))
+       (join []))))
 
 #?(:clj
 (defn iana-regions []
@@ -56,7 +56,7 @@
                        (fn-> :type (= :redundant))))
        (filter+ (fn-> :type (= :region)))
        (remove+ (fn-> :subtag "AA"))) ; because "Private use"
-       redv))
+       (join [])))
 
 
 

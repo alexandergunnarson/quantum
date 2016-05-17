@@ -112,3 +112,9 @@
             x)))))))
 
 ; TODO use <=, =, >= for comparison of non-numeric types
+
+
+#_(defn extreme-comparator [comparator-n]
+  (get {> num/greatest
+        < num/least   }
+    comparator-n))

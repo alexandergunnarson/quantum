@@ -6,7 +6,7 @@
                      [taoensso.sente.server-adapters.immutant :as a-imm    ]
                      [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
                      [quantum.core.collections                :as coll
-                       :refer [#?(:clj kmap) remove-vals+ redm]            ]
+                       :refer [#?@(:clj [kmap join]) remove-vals+]         ]
                      [quantum.core.string                     :as str      ]
                      [quantum.net.client.impl                 :as impl     ]
                      [quantum.net.core                        :as net      ]
@@ -18,7 +18,7 @@
                        :refer [#?@(:clj [defalias])]                       ])
   #?(:cljs (:require-macros
                      [quantum.core.collections                :as coll
-                       :refer [kmap]                                       ]
+                       :refer [kmap join]                                  ]
                      [quantum.core.error                      :as err      ]
                      [quantum.core.log                        :as log      ]
                      [quantum.core.vars                       :as var
@@ -73,7 +73,7 @@
                              rejected-handler
                              epoll?))
                           (remove-vals+ nil?)
-                          redm)
+                          (join {}))
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
                 server (condp = type
                          :aleph    (aleph/start-server routes opts)

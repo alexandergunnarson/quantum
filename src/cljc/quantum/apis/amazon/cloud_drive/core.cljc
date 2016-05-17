@@ -7,14 +7,14 @@
                      [quantum.net.http                     :as http    ]
                      [quantum.core.paths                   :as paths   ]
                      [quantum.core.collections             :as coll    
-                       :refer [#?(:clj kmap) redv map+]                ]
+                       :refer [#?@(:clj [kmap join])  map+]             ]
                      [quantum.core.fn                      :as fn
                        :refer [#?@(:clj [<-])]                         ]
                      [quantum.core.logic                   :as logic
                        :refer [nnil?]                                  ])
   #?(:cljs (:require-macros
                      [quantum.core.collections             :as coll    
-                       :refer [kmap]                                   ]
+                       :refer [kmap join]                              ]
                      [quantum.core.fn                      :as fn
                        :refer [<-]                                     ]))
   #?(:clj  (:import  [java.nio.file Files Paths])))
@@ -62,7 +62,7 @@
          (map+ val)
          (map+ :total)
          (map+ :bytes)
-         redv
+         (join [])
          (quantum.core.reducers/reduce + 0)
          #_(<- uconv/convert :bytes :gigabytes)
          #_(:clj double))))

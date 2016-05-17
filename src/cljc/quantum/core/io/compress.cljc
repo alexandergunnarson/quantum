@@ -13,7 +13,7 @@
                 [quantum.core.convert          :as convert]
                 [quantum.core.io.serialization :as io-ser ]
                 [quantum.core.collections      :as coll  
-                  :refer [map+ filter+ into in-k?]        ]
+                  :refer [#?(:clj join) map+ filter+ in-k?]]
                 [quantum.core.error            :as err 
                   :refer [#?(:clj throw-when)]]
                 [quantum.core.type             :as type 
@@ -23,6 +23,9 @@
                 [quantum.core.data.set         :as set    ]
                 [quantum.core.vars             :as var
                   :refer [#?(:clj def-)]                  ]))
+    #?(:cljs (:require-macros
+                [quantum.core.collections      :as coll
+                  :refer [join]                           ]))
   #?(:clj
       (:import
         (net.jpountz.lz4 LZ4Factory LZ4Compressor)
@@ -63,21 +66,21 @@
 
 (def- compressors-set
   (->> raw-compressors-table
-       (map (fn [args] (apply construct CompressionCodec args)))))
+       (map+ (fn [args] (apply construct CompressionCodec args)))))
 
 ; TODO make a |key-by| macro for all this
 (def- supported-compressors
-  (->> compressors-set (filter+ :implemented?) (into #{})))
+  (->> compressors-set (filter+ :implemented?) (join #{})))
 
 (def supported-extensions
-  (->> supported-compressors (map+ :extension) (into #{})))
+  (->> supported-compressors (map+ :extension) (join #{})))
 
 (def supported-formats
-  (->> supported-compressors (map+ :name) (into #{})))
+  (->> supported-compressors (map+ :name) (join #{})))
 
 (def supported-algorithms 
-  (set/union (->> supported-compressors (map+ :algorithm) (into #{}))
-    (into #{} bt/available-compressors)))
+  (join (->> supported-compressors (map+ :algorithm) (join #{}))
+    (join #{} (bt/available-compressors))))
 
 (def supported-preferences
   #{:fastest :smallest

@@ -4,9 +4,10 @@
     :attribution "Alex Gunnarson"}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce dotimes])
-           (:require
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )           :as core   ]
              #?(:clj [proteus
-                       :refer [let-mutable]])
+                       :refer [let-mutable]                       ])
                      [quantum.core.core                :as qcore  ]
                      [quantum.core.error               :as err                
                        :refer [->ex]                              ]
@@ -15,7 +16,7 @@
                        :refer [#?@(:clj [if-cljs])]               ]
                      [quantum.core.macros              :as macros       
                        :refer [#?@(:clj [assert-args])]           ]
-                     [quantum.core.reducers            :as red    ]
+                     [quantum.core.reducers.reduce     :as red    ]
                      [quantum.core.macros.optimization :as opt    ])
   #?(:cljs (:require-macros
                      [quantum.core.log                 :as log    ])))
@@ -61,7 +62,7 @@
         _ (log/ppr ::macro-expand "F IS" f-0)
         f-evaled (eval f-0)
         code-f
-          `(->> (quantum.core.reducers/reduce
+          `(->> (red/reduce
                   ~f-evaled
                   ~args-f
                   ~coll)
@@ -113,7 +114,7 @@
                    (vswap! i# qcore/unchecked-inc-long)
                    (quantum.core.macros.optimization/inline-replace (~f ret# k# v# @i#))))))
         _ (log/ppr ::macro-expand "F FINAL EXTERNED" f-final)
-        code `(quantum.core.reducers/reduce ~f-final ~ret-i ~coll) 
+        code `(red/reduce ~f-final ~ret-i ~coll) 
         _ (log/ppr ::macro-expand "REDUCEI CODE" code)]
  code))) 
 
@@ -323,6 +324,8 @@
   `(loop [~sym ~val-0]
     (when ~pred ~@body (recur ~val-n+1)))))
 
+#?(:clj (defmacro lfor [& args] `(core/for ~@args)))
+
 ; 2.284878 ms... strangely not faster than transient |for|
 ; (defmacro for-internally-mutable
 ;   "A lighter, eager version of |for| based on |reduce|.
@@ -400,5 +403,20 @@
 ;                             ~v))
 ;                      body)))]
 ;     `(do ~(step seq-exprs `(do ~@body nil)) nil)))
+
+(defn reduce-2
+  "Like |reduce|, but reduces over two items in a collection at a time.
+
+   Its function @func must take three arguments:
+   1) The accumulated return value of the reduction function
+   2) The                next item in the collection being reduced over
+   3) The item after the next item in the collection being reduced over"
+  {:attribution "Alex Gunnarson"}
+  [func init coll]
+  (loop [ret init coll-n coll]
+    (if (empty? coll-n)
+        ret
+        (recur (func ret (first coll-n) (second coll-n))
+               (-> coll-n rest rest)))))
 
 #?(:clj (set! *unchecked-math* false))
