@@ -106,6 +106,20 @@
     ([]    (ctor))
     ([a b] (op a b))))
 
+(defn aritoid
+  "Combines fns as arity-callers."
+  {:attribution "clojure.core.reducers"}
+  ([f0         ] (fn ([        ] (f0         ))))
+  ([f0 f1      ] (fn ([        ] (f0         ))
+                     ([x1      ] (f1 x1      ))))
+  ([f0 f1 f2   ] (fn ([        ] (f0         ))
+                     ([x1      ] (f1 x1      ))
+                     ([x1 x2   ] (f2 x1 x2   ))))
+  ([f0 f1 f2 f3] (fn ([        ] (f0         ))
+                     ([x1      ] (f1 x1      ))
+                     ([x1 x2   ] (f2 x1 x2   ))
+                     ([x1 x2 x3] (f2 x1 x2 x3)))))
+
 #?(:clj
 (defmacro compr
   [& args]
@@ -257,6 +271,12 @@
   (doseq [f fs] (f obj))
   obj)
 
+#?(:clj
+(defn ^java.util.function.Predicate ->predicate [f]
+  (reify java.util.function.Predicate
+    (^boolean test [this ^Object elem]
+      (f elem)))))
+
 ; ========= REDUCER PLUMBING ==========
 
 (defn- do-rfn
@@ -278,3 +298,19 @@
   {:attribution "clojure.core.reducers"}
   [[f1 k] fkv]
   (do-rfn f1 k fkv)))
+
+#?(:clj (defn maybe-unary
+  "Not all functions used in `tesser/fold` and `tesser/reduce` have a
+  single-arity form. This takes a function `f` and returns a fn `g` such that
+  `(g x)` is `(f x)` unless `(f x)` throws ArityException, in which case `(g
+  x)` returns just `x`."
+  {:attribution "tesser.utils"}
+  [f]
+  (fn wrapper
+    ([] (f))
+    ([x] (try
+           (f x)
+           (catch clojure.lang.ArityException e
+             x)))
+    ([x y] (f x y))
+    ([x y & more] (apply f x y more)))))

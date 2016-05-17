@@ -1,47 +1,51 @@
 (ns quantum.core.macros.transform
-           (:require [fast-zip.core                           :as zip                   ]
+           (:refer-clojure :exclude [every?])
+           (:require [fast-zip.core                           :as zip       ]
                      [clojure.walk
-                       :refer [postwalk]                                                ]
+                       :refer [postwalk]                                    ]
                      [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]                                               ]
+                       :refer [type-hint]                                   ]
                      [quantum.core.collections.base           :as cbase
                        :refer [update-first update-val ensure-set
-                               zip-reduce default-zipper]                               ]
-                     [quantum.core.error                      :as err                 
-                      :refer [->ex]                                                     ]
-                     [quantum.core.fn                         :as fn                  
-                       :refer [#?@(:clj [<- f*n fn->])]                                 ]
-                     [quantum.core.log                        :as log                   ]
+                               zip-reduce default-zipper]                   ]
+                     [quantum.core.error                      :as err       
+                      :refer [->ex]                                         ]
+                     [quantum.core.fn                         :as fn        
+                       :refer [#?@(:clj [<- f*n fn->])]                     ]
+                     [quantum.core.log                        :as log       ]
                      [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenc condf*n]) nnil? any?]]
-                     [quantum.core.macros.core                :as cmacros               ]
-                     [quantum.core.type.core                  :as tcore                 ])
+                       :refer [#?@(:clj [fn-not fn-or fn-and whenc condf*n])
+                               nnil? any? every?]                           ]
+                     [quantum.core.macros.core                :as cmacros   ]
+                     [quantum.core.type.core                  :as tcore     ])
   #?(:cljs (:require-macros
                      [quantum.core.fn                         :as fn
-                       :refer [<- f*n fn->]                                             ]
-                     [quantum.core.log                        :as log                   ]
+                       :refer [<- f*n fn->]                                 ]
+                     [quantum.core.log                        :as log       ]
                      [quantum.core.logic                      :as logic
-                       :refer [fn-not fn-or fn-and whenc condf*n]                       ])))
+                       :refer [fn-not fn-or fn-and whenc condf*n]           ])))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 
 (def default-hint {:clj 'Object :cljs 'object})
 
+(defn hint-resolved? [x lang env]
+  ((fn-or anap/hinted-literal?
+     (f*n anap/type-cast? lang)
+     anap/constructor?
+     type-hint
+     (fn [sym]
+       (when env
+         (log/ppr :macro-expand (str "TRYING TO RESOLVE HINT FOR SYM FROM &env " sym) env)
+         (log/pr  :macro-expand "SYM" sym "IN ENV?" (contains? env sym))
+         (log/pr  :macro-expand "ENV TYPE HINT" (-> env (find sym) first type-hint)))
+       (-> env (find sym) first type-hint)))
+   x))
 
 (defn any-hint-unresolved?
   ([args lang] (any-hint-unresolved? args lang nil))
   ([args lang env]
-    (any? (fn-not (fn-or anap/hinted-literal?
-                         (f*n anap/type-cast? lang)
-                         anap/constructor?
-                         type-hint
-                         (fn [sym]
-                           (when env
-                             (log/ppr :macro-expand (str "TRYING TO RESOLVE HINT FOR SYM FROM &env " sym) env)
-                             (log/pr  :macro-expand "SYM" sym "IN ENV?" (contains? env sym))
-                             (log/pr  :macro-expand "ENV TYPE HINT" (-> env (find sym) first type-hint)))
-                           (-> env (find sym) first type-hint))))
-          args)))
+    (any? (fn-not #(hint-resolved? % lang env)) args)))
 
 
 (defn hint-body-with-arglist

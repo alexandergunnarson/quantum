@@ -58,12 +58,6 @@
 
 #?(:clj (def hash-map? (partial instance? clojure.lang.PersistentHashMap)))
 
-(defn merge'
-  "Like merge, but uses transients"
-  {:from "clojure.tools.analyzer.utils"}
-  [m & mms]
-  (persistent! (reduce conj! (transient (or m {})) mms)))
-
 ; TODO use |clojure.data.int-map/merge and merge-with|, |update|, |update!| for int maps.
 ; Benchmark these.
 (defn merge
@@ -74,8 +68,8 @@
   25.401196  msecs (seqspert.hash-map/parallel-splice-hash-maps   m1 m2)))"
   {:attribution "Alex Gunnarson"
    :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge|
-                 on the CLJS version; 1.5 times faster!"}
-  ([] nil)
+                 on the CLJ version; 1.5 times faster!"}
+  ([] (hash-map))
   ([m0] m0)
   ([m0 m1]
     ; To avoid NullPointerException
@@ -91,13 +85,15 @@
                (->> ms
                     (reduce conj! (transient m0))
                     persistent!)
-               (apply core/merge m0 m1 ms)))))
+               (reduce core/merge (core/merge m0 m1) ms)))))
 
 #?(:clj
 (defn pmerge
+  ([] (hash-map))
+  ([m0] m0)
   ([m0 m1] (seqspert.hash-map/parallel-splice-hash-maps m0 m1))
   ([m0 m1 & ms]
-    (reduce seqspert.hash-map/parallel-splice-hash-maps
+    (reduce pmerge
       (pmerge m0 m1) ms))))
 
 ; Required for |reducers|

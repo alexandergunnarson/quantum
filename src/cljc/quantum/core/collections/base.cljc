@@ -88,6 +88,11 @@
 (defmacro kmap [& ks]
  `(zipmap (map keyword (quote ~ks)) (list ~@ks))))
 
+#?(:clj
+(defmacro eval-map [& ks]
+ `(zipmap (quote ~ks) (list ~@ks))))
+
+
 (defn appears-within?
   "Returns true if x appears within coll at any nesting depth.."
   {:source "scgilardi/slingshot"

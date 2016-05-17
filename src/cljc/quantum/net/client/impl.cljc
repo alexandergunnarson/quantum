@@ -12,13 +12,10 @@
                       [quantum.core.convert
                         :refer [base64-encode ->json json->
                                 ->transit transit->]          ]
-                      [clojure.string               :as str
-                        :refer [blank? capitalize join  
-                                split lower-case]             ]
                       [quantum.core.error           :as err
                         :refer [->ex]                         ]
                       [quantum.core.log             :as log   ]
-                      [quantum.core.string          :as qstr  ]
+                      [quantum.core.string          :as str   ]
                       [quantum.net.core             :as net   ]
                       [quantum.core.fn              :as fn
                         :refer [#?@(:clj [fn-> f*n])]         ]
@@ -76,14 +73,14 @@
 (defn build-headers
   "Build the headers from the map."
   [m]
-  (->> m keys (map qstr/camelize) (#(zipmap % (vals m)))
+  (->> m keys (map str/camelize) (#(zipmap % (vals m)))
       #?(:cljs clj->js)))
 
 (defn parse-headers [headers]
   (reduce
    #(let [[k v] (str/split %2 #":\s+")]
       (if (or (str/blank? k) (str/blank? v))
-        %1 (assoc %1 (str/lower-case k) v)))
+        %1 (assoc %1 (str/->lower k) v)))
    {} (str/split (or headers "") #"(\n)|(\r)|(\r\n)|(\n\r)")))
 
 ; CLJS HTTP CORE
@@ -112,7 +109,7 @@
   [xhr headers]
   #?(:clj (throw (->ex :not-implemented))
      :cljs
-      (doseq [h-name (map qstr/camelize (keys headers))
+      (doseq [h-name (map str/camelize (keys headers))
               h-val  (vals headers)]
         (.set (.-headers xhr) h-name h-val))))
    
@@ -138,7 +135,7 @@
   (->> (js->clj goog.net.ErrorCode)
        (keep (fn [[code-name n]]
                (when (integer? n)
-                 [n (keyword (qstr/kebabize code-name))])))
+                 [n (keyword (str/kebabize code-name))])))
        (into {}))))
 
 #?(:cljs
@@ -240,7 +237,7 @@
   (->>
     vs
     (map #(encode-val k %))
-    (join "&")))
+    (str/join "&")))
 
 (defn- encode-param [[k v]]
   (if (coll? v)
@@ -251,7 +248,7 @@
   (->>
     params
     (map encode-param)
-    (join "&")))
+    (str/join "&")))
 
 (defn decode-body
   "Decode the :body of @response with @decode-fn if the content type matches."
@@ -370,7 +367,7 @@
     (log/pr ::debug (kmap request))
     (->> [(client request)]
          (casync/map
-           #(decode-body % (fn [x] (json-> x coll/keywordize)) "application/json"
+           #(decode-body % (fn [x] (json-> x str/keywordize)) "application/json"
               (:request-method request))))))
 
 (defn wrap-query-params [client]
@@ -627,7 +624,7 @@
             status          (:status response)
             parse-middleware (whenf*n (fn-and (constantly (not raw?))
                                               (fn-> :headers :content-type (.contains "application/json"))) ; containsv?
-                               (fn-> (update :body (f*n json-> (or keys-fn coll/keywordize)))))]
+                               (fn-> (update :body (f*n json-> (or keys-fn str/keywordize)))))]
         (if (or (= status 200) (= status 201))
             ((or (get handlers status) fn/seconda) req (parse-middleware response))
             (let [status-handler

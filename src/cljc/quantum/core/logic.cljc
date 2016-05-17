@@ -3,9 +3,10 @@
           ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"
-    :figwheel-no-load true}
+    :figwheel-no-load true
+    :cljs-self-referring? true}
   quantum.core.logic
-           (:refer-clojure :exclude [if-let when-let])
+           (:refer-clojure :exclude [if-let when-let every?])
            (:require [quantum.core.fn          :as fn
                        :refer [#?@(:clj [f*n fn->])]      ]
                      [quantum.core.vars        :as var
@@ -18,7 +19,9 @@
                      [quantum.core.macros.core :as cmacros
                        :refer [if-cljs]                   ]
                      [quantum.core.vars        :as var
-                       :refer [defalias]                  ])))
+                       :refer [defalias]                  ]
+                     [quantum.core.logic       :as logic
+                       :refer [fn-or]])))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.
@@ -30,6 +33,7 @@
 (def  nnil?   (comp not nil?))   ; same as /seq/ - nil punning
 (def  nempty? (comp not empty?))
 (def  nseq?   (comp not seq?))
+
 (defn iff  [pred const else]
   (if (pred const) const else))
 (defn iffn [pred const else-fn]
@@ -44,18 +48,30 @@
 
 #?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
 #?(:clj (defalias fn-neq?  neq?))
-(def any?    some)
+
+(defn any?
+  "A faster version of |some| using |reduce| instead of |seq|."
+  [pred args]
+  (reduce (fn [_ arg] (and (pred arg) (reduced true ))) nil args))
+
+(defalias seq-or any?)
+
+(defn every?
+  "A faster version of |every?| using |reduce| instead of |seq|."
+  [pred args]
+  (reduce (fn [_ arg] (or  (pred arg) (reduced false))) nil args))
+
+(defalias seq-and every?)
+
 (defn apply-and [arg-list]
   (every? identity arg-list))
+
 (defn apply-or  [arg-list]
   (any?   identity arg-list))
+
 (defn dor [& args] ; xor ; why "dor"?
   (and (apply-or args)
        (not (apply-and args))))
-(defn pred-or   [pred obj args]
-  (apply-or  (map (pred obj) args)))
-(defn pred-and  [pred obj args]
-  (apply-and (map (pred obj) args)))
 
 #?(:clj
 (defmacro fn-logic-base
@@ -76,6 +92,9 @@
           `(fn-logic-base and ~@preds)))
 #?(:clj (defmacro fn-not [pred]   
           `(fn-logic-base not ~pred)))
+
+(def falsey? (fn-or false? nil? ))
+(def truthy? (fn-or true?  nnil?))
 
 (defn splice-or  [obj compare-fn & coll]
   (any?   (partial compare-fn obj) coll))

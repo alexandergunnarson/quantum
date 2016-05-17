@@ -53,6 +53,15 @@
         (meta sym)))
     (when (.hasRoot ^clojure.lang.Var var-0) [@var-0]))))
 
+(comment
+  "What to do when aliasing a macro:"
+  ;(def cljs-doseqi (var loops/doseqi)) ; doesn't work because not a var in CLJS
+  ;(def cljs-doseqi (mfn loops/doseqi)) ; doesn't work because no |eval| in CLJS
+  ;(defalias doseqi #?(:clj loops/doseqi :cljs cljs-doseqi))
+  ; #?(:clj (alter-meta! (var doseqi) assoc :macro true)) ; Sometimes this works
+ 
+  #_(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args))))
+
 #?(:clj (quantum.core.macros.core/defmalias defmalias quantum.core.macros.core/defmalias))
 
 #?(:clj

@@ -64,10 +64,10 @@
 
 (defnt ^String path->file-name
   #?(:clj ([^file?   f] (.getName f)))
-  ([^string? s] (coll/taker-until-workaround sys/separator nil s)))
+  ([^string? s] (coll/taker-until sys/separator nil s)))
 
 (defnt extension ; TODO really should take from first "." after the last "/"
-  ([^string? s] (coll/taker-until-workaround "." nil s))
+  ([^string? s] (coll/taker-until "." nil s))
   #?(:clj ([^file?   f] (-> f str extension))))
 
 ; #?(:clj

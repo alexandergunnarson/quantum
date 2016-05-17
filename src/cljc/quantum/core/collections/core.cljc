@@ -6,13 +6,16 @@
   quantum.core.collections.core
            (:refer-clojure :exclude
              [vector hash-map rest count first second butlast last get pop peek
-              conj! conj assoc! dissoc! dissoc disj! contains?
-              #?@(:cljs [empty? array])
+              conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
+              empty? empty
+              #?@(:cljs [array])
               #?@(:clj  [boolean byte char short int long float double])])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )         :as core    ]
              #?(:clj [seqspert.vector                            ])
              #?(:clj [clojure.core.async             :as casync  ])
+                     [quantum.core.collections.base
+                       :refer [#?(:clj kmap)]                    ]
                      [quantum.core.convert.primitive :as pconvert
                        :refer [boolean ->boolean
                                byte    ->byte   ->byte*
@@ -29,7 +32,8 @@
                      [quantum.core.fn                :as fn
                        :refer [#?@(:clj [f*n])]                  ]
                      [quantum.core.logic             :as logic
-                       :refer [#?@(:clj [eq? fn-eq? whenc whenf])
+                       :refer [#?@(:clj [eq? fn-eq? whenc whenf
+                                         if*n])
                                any? nnil? nempty?]               ]
                      [quantum.core.macros            :as macros
                        :refer [#?@(:clj [defnt])]                ]
@@ -38,10 +42,12 @@
                      [quantum.core.vars              :as var
                        :refer [#?(:clj defalias)]                ])
   #?(:cljs (:require-macros
+                     [quantum.core.collections.base
+                       :refer [kmap]                             ]
                      [quantum.core.fn                :as fn
                        :refer [f*n]                              ]
                      [quantum.core.logic             :as logic
-                       :refer [eq? fn-eq? whenc whenf]           ]
+                       :refer [eq? fn-eq? whenc whenf if*n]      ]
                      [quantum.core.macros            :as macros
                        :refer [defnt]                            ]
                      [quantum.core.vars              :as var
@@ -204,22 +210,22 @@
   ; Debatable whether this should be allowed
   ([:else                                               x] 0))
 
-#?(:cljs
 (defnt empty?
-  ([^array? x] (zero? (count x)))))
+  #?(:cljs ([^array? x] (zero? (count x))))
+           ([        x] (core/empty? x)  ))
 
-(comment
-  #?(:clj
 (defnt empty
-  {:todo ["This should be in some static map somewhere"]}
-  ([^boolean x] false)
-  ([^char    x] (char   0))
-  ([^byte    x] (byte   0))
-  ([^short   x] (short  0))
-  ([^int     x] (int    0))
-  ([^long    x] (long   0))
-  ([^float   x] (short  0))
-  ([^double  x] (double 0)))))
+  {:todo ["Most of this should be in some static map somewhere"]}
+          ([^boolean?  x] false         )
+  #?(:clj ([^char?     x] (char   0)    ))
+  #?(:clj ([^byte?     x] (byte   0)    ))
+  #?(:clj ([^short?    x] (short  0)    ))
+          ([^int?      x] (int    0)    )
+  #?(:clj ([^long?     x] (long   0)    ))
+  #?(:clj ([^float?    x] (short  0)    ))
+  #?(:clj ([^double?   x] (double 0)    ))
+          ([^string?   x] ""            )
+          ([           x] (core/empty x)))
 
 (defnt #?(:clj  ^long lasti
           :cljs       lasti)
@@ -274,7 +280,9 @@
           "Add 3-arity for |index-of-from|"]}
   ([^vec?    coll elem] (whenc (.indexOf coll elem) neg-1? nil))
   ([^string? coll elem] (whenc (.indexOf coll (str elem)) neg-1? nil))
-  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (type coll)))))
+  #_([coll elem] (throw (->ex :unimplemented
+                            (str "|index-of| not implemented for " (type coll) " on " (type elem))
+                            (kmap coll elem)))))
 
 ; Spent too much time on this...
 ; (defn nth-index-of [super sub n]
@@ -297,15 +305,17 @@
 
 (defnt last-index-of
   {:todo ["Reflection on short, bigint"]}
-  ([^vec?    coll elem] (whenc (.lastIndexOf coll elem) neg-1? nil))
+  ([^vec?    coll elem] (whenc (.lastIndexOf coll elem      ) neg-1? nil))
   ([^string? coll elem] (whenc (.lastIndexOf coll (str elem)) neg-1? nil))
-  ([coll elem] (throw (->ex :unimplemented "Index-of not implemented for" (type coll)))))
+  #_([coll elem] (throw (->ex :unimplemented
+                            (str "|last-index-of| not implemented for " (type coll) " on " (type elem))
+                            (kmap coll elem)))))
 
 (defnt containsk?
   {:imported "clojure.lang.RT.contains"}
            ([#{string? array?}                            coll ^pinteger? n] (and (>= n 0) (<  (count coll))))
-  #?(:clj  ([#{clojure.lang.Associative    java.util.Map} coll            k] (.containsKey coll k)))
-  #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} coll            k] (.contains    coll k)))
+  #?(:clj  ([#{clojure.lang.Associative    java.util.Map} coll            k] (.containsKey   coll k)))
+  #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} coll            k] (.contains      coll k)))
   #?(:cljs ([#{set? map?}                                 coll            k] (core/contains? coll k))) ; TODO find out how to make faster   
            ([^:obj                                        coll            k]
              (if (nil? coll)
@@ -447,7 +457,7 @@
 
 
 (defn gets [coll indices]
-  (->> indices (red/map+ #(get coll %)) red/fold+))
+  (->> indices (red/map+ #(get coll %)) (red/join [])))
 
 (def third (f*n get 2))
 
@@ -519,4 +529,13 @@
 ; If the array is sorted, you can make use of a binary search for performance:
 ; java.util.Arrays.binarySearch(theArray, o)
 
+(defn key
+  ([kv] (if (nil? kv) nil (core/key kv)))
+  ([k v] k))
 
+(defn val
+  ([kv] (if (nil? kv) nil (core/val kv)))
+  ([k v] v))
+
+; what about arrays? some transient loop or something
+(def reverse (if*n reversible? rseq core/reverse))

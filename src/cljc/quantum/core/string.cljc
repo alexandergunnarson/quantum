@@ -7,7 +7,7 @@
           keyword), etc."
     :attribution "Alex Gunnarson"}
   quantum.core.string
-  (:refer-clojure :exclude [reverse replace remove val re-find reduce])
+  (:refer-clojure :exclude [reverse replace remove val re-find reduce every?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as core              ]
                      [clojure.string             :as str               ]
@@ -17,8 +17,9 @@
                      [quantum.core.fn            :as fn 
                        :refer [#?@(:clj [fn->])]                       ]
                      [quantum.core.logic         :as logic
-                       :refer [#?@(:clj [fn-and whenc whencf*n ifn])
-                               nempty?]                                ]
+                       :refer [#?@(:clj [fn-and whenc whencf*n ifn
+                                         condf])
+                               nempty? every?]                         ]
                      [quantum.core.loops         :as loops
                        :refer [#?@(:clj [reduce reducei])]             ]
                      [quantum.core.macros        :as macros
@@ -26,16 +27,20 @@
                      [quantum.core.string.format :as form              ]
                      [quantum.core.string.regex  :as regex             ]
                      [quantum.core.vars          :as var
-                       :refer [#?@(:clj [defalias])]                   ])
+                       :refer [#?@(:clj [defalias])]                   ]
+                     [quantum.core.type          :as type
+                       :refer [#?(:clj boolean?)]                      ])
   #?(:cljs (:require-macros
                      [quantum.core.fn            :as fn
                        :refer [fn->]                                   ]
                      [quantum.core.logic         :as logic
-                       :refer [fn-and whenc whencf*n ifn]              ]
+                       :refer [fn-and whenc whencf*n ifn condf]        ]
                      [quantum.core.loops         :as loops
                        :refer [reduce reducei]                         ]
                      [quantum.core.macros        :as macros
                        :refer [defnt defnt']                           ]
+                     [quantum.core.type          :as type
+                       :refer [boolean?]                               ]
                      [quantum.core.vars          :as var
                        :refer [defalias]                               ]))
   #?(:clj (:import java.net.IDN)))
@@ -89,6 +94,11 @@
   ([^string? s] (and (nempty? s) (every? (extern (partial contains? lower-chars   )) s))))
 
 (defalias ->lower form/->lower)
+
+(defnt alpha?
+#?(:clj
+  ([^char?   c] (contains? alpha-chars c)))
+  ([^string? s] (and (nempty? s) (every? (extern (partial contains? alpha-chars   )) s))))
 
 (defnt alphanum?
 #?(:clj
@@ -296,9 +306,9 @@
 (defn keyword+
   "Like |str| but for keywords."
   ([obj]
-    (cond ; would have done |condf| but likely |cond| is faster...?
-      (keyword? obj) obj
-      (string?  obj) (keyword obj)))
+    (condf obj
+      keyword? identity
+      string?  keyword))
   ([obj & objs]
     (->> (cons obj objs)
          (reduce
@@ -379,14 +389,26 @@
 
 ; ===== KEYWORDIZATION =====
 
+(defn keywordize
+  "Transforms string @x to a dash-case keyword."
+  [^String x]
+  (if (string? x)
+      (-> x
+          (replace " " "-")
+          (replace "_" "-")
+          form/->lower keyword)
+      x))
+
 (def properize-keyword
   (fn-> (ifn nil? str-nil name) (replace #"\-" " ") form/capitalize-each-word))
 
-(defn keywordize [^String kw]
-  (-> kw
-      (replace " " "-")
-      (replace "_" "-")
-      form/->lower keyword))
+(defn properize-key [k v]
+  (let [k-0 (keywordize k)
+        k-f (if (boolean? v)
+                (keyword+ k-0 "?")
+                k-0)]
+    k-f))
+
 
 (defnt unkeywordize
   ([^keyword? k]

@@ -255,7 +255,7 @@
          :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
          ; TODO commented temporarily
          ;:async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
-         :reducers   ^ForkJoinPool       quantum.core.reducers/pool})))
+         :reducers   ^ForkJoinPool       quantum.core.reducers.fold/pool})))
 
 #?(:clj
 (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)

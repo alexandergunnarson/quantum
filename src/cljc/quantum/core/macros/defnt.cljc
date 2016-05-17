@@ -28,7 +28,7 @@
                      [quantum.core.macros.transform           :as trans         ]
                      [quantum.core.numeric.combinatorics      :as combo         ]
                      [quantum.core.print                      :as pr            ]
-                     [quantum.core.type.bootstrap             :as tboot         ]
+                     [quantum.core.type.defs                  :as tdefs         ]
                      [quantum.core.type.core                  :as tcore         ]
                      [quantum.core.vars                       :as var
                        :refer [#?@(:clj [defalias])]                            ])
@@ -232,13 +232,13 @@
                                               (apply combo/cartesian-product))
                      assoc-arity-etc
                        (fn [hints]
-                         (let [inner-type-n (-> hints first tboot/inner-type)
+                         (let [inner-type-n (-> hints first tdefs/inner-type)
                                hints-v (->> hints
                                             (map (fn [hint] (defnt-replace-kw :elem (kmap hint inner-type-n))))
                                             (into []))
                                arglist-hinted (hint-arglist-with arglist hints-v)
                                ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
-                               get-max-type (delay (->> arglist-hinted (map type-hint) tboot/max-type))
+                               get-max-type (delay (->> arglist-hinted (map type-hint) tdefs/max-type))
                                ret-type (cond
                                           (= ret-type-0 'first)
                                             (->> arglist-hinted first type-hint)
@@ -246,7 +246,7 @@
                                             @get-max-type
                                           #?@(:clj
                                          [(= ret-type-0 'auto-promote)
-                                            (or (get tboot/promoted-types @get-max-type) @get-max-type)])
+                                            (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
                                           :else (or ret-type-0 (get trans/default-hint lang)))
                                arity-hinted (assoc arity 0 arglist-hinted)]
                            [[method-name hints-v ret-type] (seq arity-hinted)]))]

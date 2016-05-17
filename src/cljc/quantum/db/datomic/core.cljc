@@ -8,7 +8,9 @@
                      [datascript.core            :as mdb            ]
             ;#?(:clj [quantum.deploy.amazon      :as amz            ])
                      [com.stuartsierra.component :as component      ]
-                     [quantum.core.collections   :as coll           ]
+                     [quantum.core.collections   :as coll           
+                       :refer [#?@(:clj [join])
+                               filter-vals+ remove-vals+]           ]
                      [quantum.core.error         :as err      
                        :refer [->ex]                                ]
                      [quantum.core.fn            :as fn      
@@ -34,7 +36,8 @@
                                ifn if*n if-let]                     ]
                      [datomic-cljs.macros         
                        :refer [<?]                                  ]
-                     [quantum.core.collections   :as coll           ]
+                     [quantum.core.collections   :as coll           
+                       :refer [join]                                ]
                      [quantum.core.vars          :as var      
                        :refer [defalias]                            ]))
   #?(:clj (:import datomic.Peer
@@ -341,8 +344,8 @@
               :db/isComponent        (:component? opts)
               :db/index              (:index?     opts)
               :db.install/_attribute part-f}
-             (filter (fn [[k v]] (nnil? v)))
-             (into {}))))))
+             (filter-vals+ nnil?)
+             (join {}))))))
 
 (defn block->schemas
   "Transforms a schema-block @block into a vector of individual schemas."
@@ -368,7 +371,7 @@
                              (coll/map+ (fn [schema]
                                      [(:db/ident schema)
                                       (c/dissoc schema :db/ident)]))
-                             (into {}))]
+                             (join {}))]
           (swap! conn c/update :schema c/merge schemas-f)) ; TODO there hopefully is a better way...? 
         (transact! schemas))))
 
@@ -385,8 +388,8 @@
       (whenf*n (fn-and record? #?(:clj (fn-not #(instance? datomic.db.DbId %))))
         (if*n attribute?
               :v
-              (fn->> (coll/remove-vals+ nil?)
-                     (coll/into {})))))))
+              (fn->> (remove-vals+ nil?)
+                     (join {})))))))
 
 (defn validated->new-txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction.
@@ -404,8 +407,8 @@
                     (fn [m]
                       (let [id (tempid part)]
                         (->> m
-                             (coll/remove-vals+ nil?)
-                             (coll/into {})
+                             (remove-vals+ nil?)
+                             (join {})
                              (<- c/assoc :db/id )
                              (<- c/conj! txn-components))
                         id)))))
@@ -422,7 +425,7 @@
   ([m]
     (coll/prewalk
       (whenf*n (partial instance? datomic.query.EntityMap)
-        (partial into {}))
+        #(join {} %))
       m))
   ([m n]
     (loop [m-n m
@@ -431,7 +434,7 @@
           m-n
           (let [m-n+1 (coll/postwalk
                         (whenf*n (partial instance? datomic.query.EntityMap)
-                          (partial into {}))
+                          #(join {} %))
                         m-n)]
             (recur m-n+1 (inc n-n))))))))
 
@@ -1191,7 +1194,7 @@
             (seq? expr) (doall (map db-eval expr))
             (instance? clojure.lang.IRecord expr)
               (reduce (fn [r x] (conj r (db-eval x))) expr expr)
-            (coll? expr) (into (empty expr) (map db-eval expr))
+            (coll? expr) (join (empty expr) (map db-eval expr))
 
             :else ; atomic — limiting case
             expr)))
@@ -1231,7 +1234,7 @@
            (fn [x]
               (if (and (not (coll? x))
                        (instance? java.util.List x))
-                  (into [] x)
+                  (join [] x)
                   x)))
          (datomic.api/invoke db :fn/eval db)
          #_(#(doto % (println "IS AFTER EVALUATION")))
@@ -1263,16 +1266,16 @@
     [db e a vs]
     (vals (into (->> (datomic.api/q [:find '?v :where [e a '?v]] db)
                      (map (comp #(vector % [:db/retract e a %]) first))
-                     (into {}))
+                     (join {}))
                 (->> vs
                      (map #(vector % [:db/add e a %]))
-                     (into {})))))))
+                     (join {})))))))
 
 (defn new-if-not-found
   "Creates a new entity if the one specified by the key-value pairs, @attrs,
    is not found in the database."
   [attrs]
-  (let [query (into [:find '?e :where]
+  (let [query (join [:find '?e :where]
                 (for [[k v] attrs]
                   ['?e k v]))]
   `(:fn/or
@@ -1292,7 +1295,7 @@
          (db/history (db*))
          entity-id)
        (coll/map+ #(first %1))
-       (into #{}))))
+       (join #{}))))
 
 (defn ensure-conj-entities!
   "Postwalks a transaction and makes sure each map has a :db/id.
@@ -1339,7 +1342,7 @@
                  (fn-> :type (= :already-exists))))}
   [txn filter-fn ex-data-pred]
   (try (let [txn-result (transact! txn)
-             txn-data (->> txn-result second force :tx-data (into []))
+             txn-data (->> txn-result second force :tx-data (join []))
              txn-eid  (->> txn-data ^datomic.Datom first .e)
              db-as-of-txn-time-t (datomic.api/as-of (->db) txn-eid)]
          {:successful? true
@@ -1380,10 +1383,10 @@
 ;             :after  (->> tx :db/id
 ;                          (datomic.api/as-of (db*))
 ;                          (<- datomic.api/entity eid))}))
-;        (into [])
+;        (join [])
 ;        (<- whenp show-entity-maps?
 ;            (fn->> (postwalk (whenf*n (partial instance? datomic.query.EntityMap)
-;                               (fn->> (into {}))))))))
+;                               (fn->> (join {}))))))))
 
 
 ; #_(defn rollback
