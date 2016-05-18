@@ -82,7 +82,7 @@
                        :refer [#?@(:clj [defalias])]                     ])
   #?(:cljs (:require-macros  
                      [quantum.core.collections.core           :as coll   
-                       :refer [count first second rest getr lasti index-of
+                       :refer [count first second rest get lasti index-of
                                lasti conj conj! contains? containsk? assoc!
                                empty?]]
                      [quantum.core.collections.base           :as base   
@@ -155,11 +155,11 @@
   "Works like assoc, but only associates if condition is true."
   {:from "macourtney/clojure-tools"
    :contributors ["Alex Gunnarson"]}
-  ([pred m k v] 
+  ([m pred k v] 
     (if (pred m k v)
         (assoc m k v)
         m))
-  ([pred m k v & kvs]
+  ([m pred k v & kvs]
     (reduce 
       (fn [output k-n v-n] 
         (assoc-if pred output k-n v-n))
@@ -169,7 +169,7 @@
 (defn assoc-when-none 
   "assoc's @args to @m only when the respective keys are not present in @m."
   [m & args]
-  (assoc-if (fn [m k _] (not (contains? m k)))))
+  (apply assoc-if m (fn [m* k _] (not (contains? m* k))) args))
 
 (defn update+
   "Updates the value in an associative data structure @coll associated with key @k

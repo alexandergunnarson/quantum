@@ -5,12 +5,16 @@
                      [aleph.http                              :as aleph    ]
                      [taoensso.sente.server-adapters.immutant :as a-imm    ]
                      [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   )            :as async    ]
                      [quantum.core.collections                :as coll
                        :refer [#?@(:clj [kmap join]) remove-vals+]         ]
                      [quantum.core.string                     :as str      ]
                      [quantum.net.client.impl                 :as impl     ]
                      [quantum.net.core                        :as net      ]
                      [quantum.core.error                      :as err      ]
+                     [quantum.core.fn
+                       :refer [fn-nil]                                     ]
                      [quantum.core.log                        :as log      ]
                      [quantum.core.logic                      :as logic
                        :refer [nnil?]                                      ]

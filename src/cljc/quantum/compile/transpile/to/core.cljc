@@ -114,9 +114,9 @@
 
 ; TODO use quantum.core.type
 (def primitives-map
-  {(class (long 0)) "long"
-   (class (int  0)) "int"
-   (class "")       "String"})
+  {(type (long 0)) "long"
+   (type (int  0)) "int"
+   (type "")       "String"})
 
 (defn elem-class
   {:in  '[1 2 3]
@@ -129,7 +129,7 @@
    :out "Vector<long>"}
   [obj]
   (if (primitive? obj)
-      (get primitives-map (class obj))
+      (get primitives-map (type obj))
       (str (enc-class obj) "<" (elem-class obj) ">")))
 
 (declare eval-form)
@@ -674,7 +674,7 @@
                    args)]
            (log/ppr :debug "ADDING MACRO:" macro-f)
            (swap! special-syms assoc sym
-             (eval macro-f))
+             (#?(:clj eval :cljs identity) macro-f)) ; TODO eval is necessary but can't be used from CLJS
            nil))
      'oeval ; object-level eval
        (fn oeval-fn [[spec-sym form]] (eval-form form))
@@ -746,7 +746,7 @@
                (->> obj str (<- str/replace #"\/" ".") symbol eval-form)))
          (->> obj str replace-specials)))
    ([^string? obj] (str \" obj \"))
-   ([^char? obj] (str \' obj \'))
+   #?(:clj ([^char? obj] (str \' obj \')))
    ([^keyword? obj]
      (log/pr :debug "IN KEYWORD")
      (->> obj name replace-specials eval-form))
@@ -754,20 +754,20 @@
    ([:else obj]
      (if (nil? obj)
          "null"
-         (throw (->ex (class obj) ["Unrecognized form:" obj])))))
+         (throw (->ex (type obj) ["Unrecognized form:" obj])))))
 
 (defn ^String eval-form [obj]
-  (println "Evaluating" obj "class" (class obj))
+  (println "Evaluating" obj "class" (type obj))
   (-> obj eval-form*))
 (def oeval eval-form)
 
 ; TODO logger with context awareness
 (defn ^String comma-splice
   ([arg]
-    (println "Comma-splice:" "arg" arg "class" (class arg))
+    (println "Comma-splice:" "arg" arg "class" (type arg))
     (eval-form arg))
   ([arg & args]
-    (println "Comma-splice:" "args" (cons arg args) "rest class" (class args) "first class" (-> arg class))
+    (println "Comma-splice:" "args" (cons arg args) "rest class" (type args) "first class" (type arg))
     (->> (cons arg args)
          (map (partial eval-form))
          (interpose (if whitespace? ", " ","))

@@ -1,4 +1,5 @@
 (ns quantum.net.core
+           (:refer-clojure :exclude [when-let])
            (:require 
             #?(:cljs [goog.userAgent           :as agent      ])
             #?(:cljs [goog.Uri                 :as uri        ])
@@ -8,10 +9,11 @@
                      [quantum.core.string      :as str        ]
                      [quantum.core.convert     :as conv       ]
                      [quantum.core.logic       :as logic
-                       :refer [#?@(:clj [fn-not fn-or whenc])]])
+                       :refer [#?@(:clj [when-let fn-not fn-or
+                                         whenc])]             ])
   #?(:cljs (:require-macros
                      [quantum.core.logic       :as logic
-                       :refer [fn-not fn-or whenc]            ]))
+                       :refer [when-let fn-not fn-or whenc]   ]))
   #?(:clj  (:import  (java.net URLEncoder URLDecoder))))
 
 ; UTILS

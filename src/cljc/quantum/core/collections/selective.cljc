@@ -73,7 +73,7 @@
                      [quantum.core.type.predicates            :as tpred  ]
                      [clojure.walk                            :as walk   ]
                      [quantum.core.loops                      :as loops  
-                       :refer [for]                                      ]
+                       :refer [#?(:clj for)]                             ]
                      [quantum.core.vars                       :as var  
                        :refer [#?@(:clj [defalias])]                     ])
   #?(:cljs (:require-macros  

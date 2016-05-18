@@ -7,18 +7,20 @@
                          :cljs cljs.tools.reader       ) :as r      ]
                      [#?(:clj  clojure.tools.reader.edn 
                          :cljs cljs.tools.reader.edn   ) :as r-edn  ]
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async         ) :as async  ]
             #?(:cljs [cljs.reader                        :as core-r ])
             #?(:cljs [goog.crypt.base64                  :as base64 ])
-                     [byte-streams                       :as streams]
                      ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1) 
                    ; [gloss.core.formats                 :as gforms ]
+           #?@(:clj [[clojure.java.io                    :as io     ]
                      [manifold.stream                    :as s      ]
                      [manifold.deferred                  :as d      ]
+                     [byte-streams                       :as streams]
                      [byte-streams.graph                 :as g      ]
                      [byte-streams.protocols             :as proto  ]
                      [byte-streams.pushback-stream       :as ps     ]
-                     [byte-streams.char-sequence         :as cs     ]
-             #?(:clj [clojure.java.io                    :as io     ])
+                     [byte-streams.char-sequence         :as cs     ]])
                      [quantum.core.data.array            :as arr    ]
                      [quantum.core.numeric               :as num    ]
                      [quantum.core.string                :as str    ]
@@ -796,12 +798,12 @@
 
 #?(:cljs
 (defn file->u8arr [file]
-  (let [ch (core-async/chan) 
+  (let [ch (async/chan) 
         file-reader (js/FileReader.)]
     (set! (.-onload file-reader)
           (fn [e]
             (if-let [file-content e.target.result]
-              (core-async/put!   ch (js/Uint8Array. file-content))
-              (core-async/close! ch))))
+              (async/put!   ch (js/Uint8Array. file-content))
+              (async/close! ch))))
     (.readAsArrayBuffer file-reader file)
     ch)))

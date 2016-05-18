@@ -1,6 +1,7 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic.core
-           (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge conj! if-let])
+           (:refer-clojure :exclude [assoc dissoc dissoc! conj conj! disj disj!
+                                     update merge if-let assert])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as c              ]
             #?(:cljs [cljs-uuid-utils.core       :as uuid           ])
@@ -10,16 +11,17 @@
                      [com.stuartsierra.component :as component      ]
                      [quantum.core.collections   :as coll           
                        :refer [#?@(:clj [join])
-                               filter-vals+ remove-vals+]           ]
+                               filter-vals+ remove-vals+ map+ group-by+
+                               postwalk]                            ]
                      [quantum.core.error         :as err      
-                       :refer [->ex]                                ]
+                       :refer [#?(:clj assert) ->ex]                ]
                      [quantum.core.fn            :as fn      
                        :refer [#?@(:clj [<- fn-> fn->> f*n])]       ]
                      [quantum.core.log           :as log            ]
                      [quantum.core.logic         :as logic
                        :refer [#?@(:clj [fn-not fn-and fn-or whenf
                                          whenf*n ifn if*n if-let])
-                               nnil?]                               ]
+                               nnil? nempty?]                       ]
                      [quantum.core.print         :as pr             ]
                      [quantum.core.resources     :as res            ]
              #?(:clj [quantum.core.process       :as proc           ])
@@ -28,6 +30,8 @@
                      [quantum.core.vars          :as var      
                        :refer [#?@(:clj [defalias])]                ])
   #?(:cljs (:require-macros      
+                     [quantum.core.error         :as err
+                       :refer [assert]                              ]
                      [quantum.core.fn            :as fn      
                        :refer [<- fn-> fn->> f*n]                   ]
                      [quantum.core.log           :as log            ]
@@ -73,6 +77,7 @@
 (defalias mentity? datascript.impl.entity/entity?)
 
 #?(:clj (def tempid? (partial instance? datomic.db.DbId)))
+#?(:clj (def tempid-like? (fn-or tempid? integer?)))
 
 #?(:clj (def db? (partial instance? datomic.db.Db)))
 
@@ -81,6 +86,21 @@
 
 #?(:clj (def conn? (partial instance? datomic.Connection)))
 (defn mconn? [x] (and (atom? x) (mdb? @x)))
+
+(defn ->uri-string
+  [{:keys [type host port db-name]
+    :or {type    :free
+         host    "localhost"
+         port    4334
+         db-name "test"}}]
+  (str "datomic:" (name type) "://" host ":" port "/" db-name
+       "?" "h2-port"     "=" (-> port inc)
+       "&" "h2-web-port" "=" (-> port inc inc)))
+
+#?(:clj
+(defn ->conn
+  "Creates a connection to a Datomic database."
+  [uri] (db/connect uri)))
 
 ; TRANSFORMATIONS/CONVERSIONS
 
@@ -114,8 +134,8 @@
   ([arg]
     (cond (mconn? arg)
             @arg
-          (conn? arg)
-            (db/db arg)
+ #?@(:clj [(conn? arg)
+            (db/db arg)])
           :else
             (throw (->ex nil "Object cannot be transformed into database" arg)))))
 
@@ -213,11 +233,10 @@
   ([tx-data]      (transact! @conn* tx-data))
   ([conn tx-data] (transact! conn tx-data nil))
   ([conn tx-data tx-meta]
-    (let [txn (cond (mconn? conn) (mdb/transact! conn tx-data tx-meta)
-                    (conn?  conn) @(db/transact   conn tx-data)
+    (let [txn (cond           (mconn? conn) (mdb/transact! conn tx-data tx-meta)
+                    #?@(:clj [(conn?  conn) @(db/transact   conn tx-data)])
                     :else (throw (unhandled-type :conn conn)))]
-      ; |delay| to avoid printing out the entire database
-      [true (delay txn)])))
+      txn)))
 
 #?(:clj
 (defn transact-async!
@@ -315,14 +334,14 @@
   ([ident val-type cardinality]
     (->schema ident val-type cardinality nil))
   ([ident val-type cardinality {:keys [conn part] :as opts}]
-    (err/assert (contains? allowed-types val-type) #{val-type})
+    (assert (contains? allowed-types val-type) #{val-type})
     (let [conn-f (or conn @conn*)
           part-f (when-not (mconn? conn-f)
                    (or part
                        :db.part/db))]
       ; Partitions are not supported in DataScript (yet)
       (when-not (mconn? conn-f)
-        (err/assert (nnil? part-f) #{conn-f part-f}))
+        (assert (nnil? part-f) #{conn-f part-f}))
   
       (let [cardinality-f
               (condp = cardinality
@@ -375,6 +394,26 @@
           (swap! conn c/update :schema c/merge schemas-f)) ; TODO there hopefully is a better way...? 
         (transact! schemas))))
 
+(defn update-schema!
+  {:usage '(update-schema! :task:estimated-duration :db/valueType :db.type/long)}
+  [schema & kvs]
+  (transact! [[:fn/transform
+                (c/merge
+                  {:db/id               schema
+                   :db.alter/_attribute :db.part/db}
+                  (apply hash-map kvs))]]))
+
+(defn new-if-not-found
+  "Creates a new entity if the one specified by the key-value pairs, @attrs,
+   is not found in the database."
+  [attrs]
+  (let [query (join [:find '?e :where]
+                (for [[k v] attrs]
+                  ['?e k v]))]
+  `(:fn/or
+     (:fn/fq ~query)
+     ~(tempid))))
+
 (def attribute?
   (fn-and (f*n coll/containsk? :v)
           (fn-> count (= 1))))
@@ -384,7 +423,7 @@
    Assumes nested maps/records are component entities."
   [x]
   (whenf x record?
-    (partial coll/postwalk
+    (partial postwalk
       (whenf*n (fn-and record? #?(:clj (fn-not #(instance? datomic.db.DbId %))))
         (if*n attribute?
               :v
@@ -400,7 +439,7 @@
     (fn [r]
       (let [txn-components (transient [])]
         (c/assoc
-          (coll/postwalk
+          (postwalk
             (whenf*n map?
               (if*n attribute?
                     :v
@@ -409,12 +448,15 @@
                         (->> m
                              (remove-vals+ nil?)
                              (join {})
-                             (<- c/assoc :db/id )
+                             (<- c/assoc :db/id id)
                              (<- c/conj! txn-components))
                         id)))))
           :db/id
           (tempid part))))
     vector))
+
+(defn queried->maps [db queried]
+  (map #(->> % first entity (join {})) queried))
 
 #?(:clj
 (defn entity->map
@@ -432,7 +474,7 @@
            n-n 0]
       (if (= n-n n)
           m-n
-          (let [m-n+1 (coll/postwalk
+          (let [m-n+1 (postwalk
                         (whenf*n (partial instance? datomic.query.EntityMap)
                           #(join {} %))
                         m-n)]
@@ -452,6 +494,8 @@
                 x
                 [:fn/transform x])
      :cljs x))
+
+(def transform (fn-> validated->txn wrap-transform))
 
 (defn rename [old new-]
   {:db/id    old
@@ -475,20 +519,27 @@
     enhancements.' — Rich Hickey"
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [arg & args]
-  (let [db-like? (fn-or mdb? db? mconn? conn?)
+  (let [db-like? (fn-or mdb? #?(:clj db?) mconn? #?(:clj conn?))
         [db eid kvs] (if (db-like? arg)    
                          [(->db arg) (first args) (rest args)]
                          [(->db)     arg          args       ])
-        _ (log/pr :debug (type db))
         retract-fn (if (mdb? db)
                        :db.fn/retractEntity
                        :db/retract)]
     [:fn/transform (concat (list retract-fn eid) kvs)]))
 
+(defn dissoc! [& args]
+  (transact! [(apply dissoc args)]))
+
 (defn merge
   "Merges in @props to @eid."
   [eid props]
-  (-> props (c/assoc :db/id eid) validated->txn))
+  (-> props (c/assoc :db/id eid) validated->txn wrap-transform))
+
+(defn merge!
+  "Merges in @props to @eid and transacts."
+  ([& args]
+    (transact! [(apply merge args)])))
 
 (defn excise
   ([eid attrs] (excise eid @part* attrs))
@@ -515,7 +566,7 @@
 (defn disj
   ([eid] (disj @conn* eid))
   ([conn eid]
-    (wrap-transform [:db.fn/retractEntity eid])))
+    (wrap-transform `(:db.fn/retractEntity ~eid))))
 
 (defn disj! [& args]
   (transact! [(apply disj args)]))
@@ -551,6 +602,24 @@
      {:db/ident (keyword "fn" (name '~sym))
       :db/fn    
         (dbfn ~requires ~arglist ~@body)})))
+
+#?(:clj
+(defn entity-history [e]
+  (q '[:find ?e ?a ?v ?tx ?added
+       :in $ ?e
+       :where [?e ?a ?v ?tx ?added]]
+    (db/history (->db @conn*))
+    e)))
+
+#?(:clj
+(defn entity-history-by-txn
+  {:usage '(entity-history-by-txn (lookup :task:short-description :get-all-project-cljs))}
+  [e]
+  (->> (entity-history e)
+       (map+ #(update % 1 (fn-> entity :db/ident)))
+       (group-by+ #(get % 3))
+       (join (sorted-map))
+       (map val))))
 
 ; ==== TRANSACTIONS ====
 (def ^:const
@@ -1271,18 +1340,6 @@
                      (map #(vector % [:db/add e a %]))
                      (join {})))))))
 
-(defn new-if-not-found
-  "Creates a new entity if the one specified by the key-value pairs, @attrs,
-   is not found in the database."
-  [attrs]
-  (let [query (join [:find '?e :where]
-                (for [[k v] attrs]
-                  ['?e k v]))]
-  `(:fn/or
-     (:fn/ffirst
-       (:fn/q ~query))
-     ~(tempid))))
-
 #_(:clj
 (defn txn-ids-affecting-eid
   "Returns a set of entity ids of transactions affecting @entity-id."
@@ -1303,7 +1360,7 @@
   [txn part]
   (let [to-conj (volatile! [])
         txn-replaced
-          (coll/postwalk
+          (postwalk
             (whenf*n map?
               (whenf*n (fn-not :db/id)
                 (fn [m]

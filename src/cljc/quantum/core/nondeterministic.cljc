@@ -13,7 +13,8 @@
                     [quantum.core.macros       :as macros
                        :refer [#?@(:clj [defnt])]        ]
                     [quantum.core.type         :as type
-                      :refer [#?(:clj regex?)]           ])
+                      :refer [#?(:clj regex?)]           ]
+                    [quantum.core.data.array   :as arr   ])
   #?(:cljs (:require-macros
                     [quantum.core.convert      :as conv  ]
                     [quantum.core.fn           :as fn
@@ -158,12 +159,13 @@
                      arr/->int8-array)
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
+#?(:clj
 (defn rand-longs
   {:todo ["Base off of random longs, for speed"]}
   ([size] (rand-longs false size))
   ([secure? size]
     ; * 8 because longs are 8 bytes
-    (conv/bytes->longs (rand-bytes secure? (* 8 size)))))
+    (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
 
 ; ; TODO DEPS ONLY
 ; #_(:clj

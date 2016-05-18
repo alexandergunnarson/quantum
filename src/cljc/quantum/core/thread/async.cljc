@@ -16,7 +16,7 @@
                        :refer [->ex]                                ]
                      [quantum.core.log                 :as log      ]
                      [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-not])]                  ]
+                       :refer [#?@(:clj [fn-and fn-or fn-not])]     ]
                      [quantum.core.macros.core         :as cmacros       
                        :refer [#?@(:clj [if-cljs])]                 ]
                      [quantum.core.vars                :as var
@@ -27,7 +27,7 @@
                      [cljs.core.async.macros           :as asyncm   ]
                      [quantum.core.log                 :as log      ]
                      [quantum.core.logic               :as logic
-                       :refer [fn-not]                              ]
+                       :refer [fn-and fn-or  fn-not]                ]
                      [quantum.core.thread.async
                        :refer [go]                                  ]
                      [quantum.core.vars                :as var

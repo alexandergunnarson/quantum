@@ -84,7 +84,7 @@
                                     tx-datom after-tx)))
                    (reset! (:last-tx-report (@rx-conns conn)) tx-report)))))
 
-    (db/conn?))
+    #?(:clj (db/conn? conn)))
 
 ;==================================================================
 ; Transact

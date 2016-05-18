@@ -27,6 +27,8 @@
                       [quantum.core.vars            :as var  
                         :refer [#?(:clj def-)]                ])
   #?(:cljs (:require-macros
+                      [cljs.core.async.macros
+                        :refer [go]                           ]
                       [quantum.core.collections     :as coll
                         :refer [kmap]                         ]
                       [quantum.core.fn              :as fn
@@ -149,7 +151,7 @@
         xhr         (build-xhr (assoc request :default-headers headers))
         ;_ (log/pr :debug "XHR IS" xhr)
         headers-js  (build-headers headers) ; was camelizing before
-        method      (-> (or request-method :get) name str/upper-case)]
+        method      (-> (or request-method :get) name str/->upper)]
     (swap! pending-requests assoc channel xhr)
     ; xhr (and (.-headers xhr)) is a "circular structure"
     ; so it can't be converted to JSON

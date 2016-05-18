@@ -246,12 +246,14 @@
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([to] to)
-  ([^hash-set?   to from] (if (hash-set? from)  
-                              (seqspert.hash-set/parallel-splice-hash-sets to from)
-                              (pjoinl-fold to from)))
-  ([^hash-map?   to from] (if (hash-map? from)
-                              (seqspert.hash-map/parallel-splice-hash-maps to from)
-                              (pjoinl-fold to from)))
+  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)  
+                                       (seqspert.hash-set/parallel-splice-hash-sets to from)
+                                       (pjoinl-fold to from))
+                             :cljs (pjoinl-fold to from)))
+  ([^hash-map?   to from] #?(:clj  (if (hash-map? from)
+                                       (seqspert.hash-map/parallel-splice-hash-maps to from)
+                                       (pjoinl-fold to from))
+                             :cljs (pjoinl-fold to from)))
   ([             to from] (if (nil? to) from (pjoinl-fold to from))))
 
 (defn pjoinl

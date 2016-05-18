@@ -4,28 +4,33 @@
       "Compression."
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
   quantum.core.io.compress
-     (:refer-clojure :exclude [into])
-  #?(:clj
-      (:require [clojure.java.io               :as clj-io ]
+      (:refer-clojure :exclude [into])
+      (:require
+      #?@(:clj [[clojure.java.io               :as clj-io ]
                 [taoensso.nippy                :as nippy  ]
                 [iota                          :as iota   ]
-                [byte-transforms               :as bt     ]
+                [byte-transforms               :as bt     ]])
                 [quantum.core.convert          :as convert]
                 [quantum.core.io.serialization :as io-ser ]
                 [quantum.core.collections      :as coll  
                   :refer [#?(:clj join) map+ filter+ in-k?]]
                 [quantum.core.error            :as err 
-                  :refer [#?(:clj throw-when)]]
-                [quantum.core.type             :as type 
-                  :refer [construct]                      ]
+                  :refer [#?(:clj throw-when) ->ex]       ]
                 [quantum.core.logic            :as logic
                   :refer [#?@(:clj [condpc coll-or])]     ]
                 [quantum.core.data.set         :as set    ]
                 [quantum.core.vars             :as var
-                  :refer [#?(:clj def-)]                  ]))
+                  :refer [#?(:clj def-)]                  ])
     #?(:cljs (:require-macros
+                [quantum.core.convert          :as convert]
+                [quantum.core.error            :as err 
+                  :refer [throw-when]                     ]
+                [quantum.core.logic            :as logic
+                  :refer [condpc coll-or]                 ]
                 [quantum.core.collections      :as coll
-                  :refer [join]                           ]))
+                  :refer [join]                           ]
+                [quantum.core.vars             :as var
+                  :refer [def-]                           ]))
   #?(:clj
       (:import
         (net.jpountz.lz4 LZ4Factory LZ4Compressor)
@@ -46,27 +51,26 @@
         (quanta Packed12 ClassIntrospector))))
 
 (defrecord CompressionCodec
-   [name    extension algorithm speed      compression implemented? doc                                                        ])
+   [name    extension algorithm speed      compression implemented?              doc                                                        ])
 
-#?(:clj
 (def raw-compressors-table
-  [[:gzip   :gz       :gzip     nil        nil         true         nil                                                        ]
-   [:bzip2  :bz2      nil       nil        nil         true         nil                                                        ]
-   [:zip    :zip      nil       nil        nil         false        ["java.util.* implementation is fastest, supposedly."      ]]
-   [:7zip   :7z       nil       nil        nil         false        nil                                                        ]
-   [:tar    :tar      nil       nil        nil         false        nil                                                        ]
-   [:rar    :tar      nil       nil        nil         false        nil                                                        ]
+  [[:gzip   :gz       :gzip     nil        nil         #?(:clj true :cljs false) nil                                                        ]
+   [:bzip2  :bz2      nil       nil        nil         #?(:clj true :cljs false) nil                                                        ]
+   [:zip    :zip      nil       nil        nil         false                     ["java.util.* implementation is fastest, supposedly."      ]]
+   [:7zip   :7z       nil       nil        nil         false                     nil                                                        ]
+   [:tar    :tar      nil       nil        nil         false                     nil                                                        ]
+   [:rar    :tar      nil       nil        nil         false                     nil                                                        ]
    ; Bytes size    Sec comp Sec de.    Version          Command Line Args
    ; 2720359988    43888*   45359*  1  zpaq 6.41        -m 611 -th 1
    ; 3594933877    10003      519   1  7zip 4.47b       -mx
    ; 3701584921      187*      67*  1  zpaq 6.40        -m 2 -
-   [:zpaq   nil       nil       nil        :highest    false        ["http://mattmahoney.net/dc/10gb.html 10 GB compressed."   ]]
-   [:snappy :snappy   :snappy   :very-high :medium     true         nil                                                        ]
-   [:lz4    :lz4      :lz4      :highest   :high       true         ["by far the fastest: https://github.com/jpountz/lz4-java" ]]]))
+   [:zpaq   nil       nil       nil        :highest    false                     ["http://mattmahoney.net/dc/10gb.html 10 GB compressed."   ]]
+   [:snappy :snappy   :snappy   :very-high :medium     #?(:clj true :cljs false) nil                                                        ]
+   [:lz4    :lz4      :lz4      :highest   :high       #?(:clj true :cljs false) ["by far the fastest: https://github.com/jpountz/lz4-java" ]]])
 
 (def- compressors-set
   (->> raw-compressors-table
-       (map+ (fn [args] (apply construct CompressionCodec args)))))
+       (map+ (fn [args] (apply ->CompressionCodec args)))))
 
 ; TODO make a |key-by| macro for all this
 (def- supported-compressors
@@ -80,12 +84,13 @@
 
 (def supported-algorithms 
   (join (->> supported-compressors (map+ :algorithm) (join #{}))
-    (join #{} (bt/available-compressors))))
+    (join #{} #?(:clj (bt/available-compressors)))))
 
 (def supported-preferences
   #{:fastest :smallest
     :speed :size})
 
+#?(:clj 
 (defn ^"[B" compress
   ([data] (compress data {:format :lz4}))
   ([data {:keys [format prefer] :as options}]
@@ -100,7 +105,8 @@
                (condpc = prefer
                  (coll-or :fastest :speed) :lz4
                  (coll-or :smallest :size) :zpaq))]
-      (-> data convert/->bytes (bt/compress format-f options)))))
+      (-> data convert/->bytes #?(:clj  (bt/compress format-f options)
+                                  :cljs (#(throw (->ex :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
 
 #?(:clj
 (defn decompress 

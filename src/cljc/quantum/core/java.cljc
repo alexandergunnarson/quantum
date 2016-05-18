@@ -50,24 +50,6 @@
 ;                   (update-in [:static] #(flatten (conj % (:static b)))))))
 ;           methods (:bases class-map)))))) ; #{com.google.api.client.json.GenericJson}
 
-#?(:clj
-  (defn invoke*
-    "Invoke a private or protected Java method."
-    {:attribution "flatland.useful.java"}
-    [^String method instance & params]
-    (let [signature (into-array Class (map class params))
-          c (class instance)]
-      (when-let [^Method method
-      	        (some
-      	          #(try
-                       (.getDeclaredMethod ^Class % method signature)
-                       (catch NoSuchMethodException e))
-                     (conj (ancestors c) c))]
-        (let [accessible (.isAccessible method)]
-          (.setAccessible method true)
-          (let [result (.invoke method instance (into-array params))]
-            (.setAccessible method accessible)
-            result))))))
 
 #?(:clj
 (defmacro invoke
@@ -81,3 +63,23 @@
              (.setAccessible true))
        (.get  ~instance))))
 
+#?(:clj
+(defn invoke*
+  "Invoke a private or protected Java method."
+  {:attribution "flatland.useful.java"}
+  [^String method instance & params]
+  (let [signature (into-array Class (map class params))
+        c (class instance)]
+    (when-let [^Method method
+              (some
+                #(try
+                     (.getDeclaredMethod ^Class % method signature)
+                     (catch NoSuchMethodException e))
+                   (conj (ancestors c) c))]
+      (let [accessible (.isAccessible method)]
+        (.setAccessible method true)
+        (let [result (.invoke method instance (into-array params))]
+          (.setAccessible method accessible)
+          result))))))
+
+123

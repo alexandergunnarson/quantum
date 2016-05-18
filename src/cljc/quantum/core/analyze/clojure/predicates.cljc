@@ -37,7 +37,8 @@
      :cljs (.endsWith         x sub)))
 
 ; SYMBOLS
-(defn name [x] (if (nil? x) nil (core/name x)))
+(defn name [x] (if (nil? x) nil (core/name x))) ; TODO move
+
 (defn type-hint "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
   {:source "ztellman/riddley.compiler"} [x]
   (when-let [tag (-> x meta :tag)]
@@ -52,9 +53,9 @@
 ; TODO abstract platform-dependent member calls
 
 (defn symbol-eq? [s1 s2] (= (name s1) (name s2)))
-#?(:clj
+
 (defn metaclass    [sym]
-  (whenc (type-hint sym) (fn-> name empty?) nil)))
+  (whenc (type-hint sym) (fn-> name empty?) nil))
 
 
 (defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))

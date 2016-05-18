@@ -86,7 +86,7 @@
                                index-of last-index-of
                                first second rest last butlast get pop peek
                                conjl conj! assoc! dissoc! disj!
-                               map-entry]]
+                               map-entry join empty? update!]]
                      [quantum.core.fn                         :as fn
                        :refer [compr <- fn-> fn->> f*n]                  ]
                      [quantum.core.log                        :as log    ]
@@ -155,12 +155,12 @@
 #?(:clj (defalias empty?        coll/empty?       ))
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias array         coll/array        ))
-        (defalias join          red/join          )
-        (defalias joinl         red/join          )
+#?(:clj (defalias join          red/join          ))
+#?(:clj (defalias joinl         red/join          ))
         (defalias pjoin         red/pjoin         )
         (defalias pjoinl        red/pjoin         )
 
-        (defalias fold          red/fold          )
+        (defalias fold          red/fold*         )
         (defalias cat+          red/cat+          )
         (defalias foldcat+      red/foldcat+      )
         (defalias indexed+      red/indexed+      )
@@ -170,6 +170,7 @@
 #?(:clj (defalias taker+        diff/taker+       ))
         (defalias take-while+   diff/take-while+  )
         (defalias take-after    diff/take-after   )
+        (defalias takel-after   diff/takel-after  )
         (defalias taker-after   diff/taker-after  )
         (defalias take-until    diff/take-until   )
 #?(:clj (defalias taker-until   diff/taker-until  ))
@@ -220,7 +221,7 @@
         (defalias repeat        gen/repeat        )
         (defalias lrepeat       gen/lrepeat       )
 #?(:clj (defalias repeatedly    gen/repeatedly    ))
-        (defalias lrepeatedly   gen/repeatedly    )
+        (defalias lrepeatedly   gen/lrepeatedly   )
         (defalias range         gen/range         )
         (defalias rrange        gen/rrange        )
         (defalias range+        gen/range+        )
@@ -248,8 +249,9 @@
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-#?(:clj (defalias postwalk        tree/postwalk      ))
-#?(:clj (defalias prewalk         tree/prewalk       ))
+        (defalias postwalk        tree/postwalk      )
+        (defalias prewalk         tree/prewalk       )
+        (defalias apply-to-keys   tree/apply-to-keys )
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -311,13 +313,6 @@
                     (empty? v)))
          (dissoc m k) m)))
    m (keys m)))
-
-
-
-(defn containsv? [super sub]
-  (if (string? super)
-      (not= -1 (.indexOf ^String super sub)) ; because .contains is not supported in JS
-      (throw (->ex :not-implemented))))
 
 ; TODO extract code pattern for lazy transformation
 (defn lflatten
@@ -1328,14 +1323,14 @@
        (ldropl (- (count xs) n))
        core/vec))
 
-(defn take-until
+(defn take-until*
   {:from "mpdairy/posh.q-pattern-gen"}
   [stop-at? ls]
   (if (or
        (empty? ls)
        (stop-at? (first ls)))
     []
-    (cons (first ls) (take-until stop-at? (rest ls)))))
+    (cons (first ls) (take-until* stop-at? (rest ls)))))
 
 (defn rest-at
   {:from "mpdairy/posh.q-pattern-gen"}
@@ -1349,7 +1344,7 @@
   [split-at? ls]
   (if (empty? ls)
     {}
-    (merge {(first ls) (take-until split-at? (take-until split-at? (rest ls)))}
+    (merge {(first ls) (take-until* split-at? (take-until* split-at? (rest ls)))}
            (split-list-at split-at? (rest-at split-at? (rest ls))))))
 
 (defn deep-list?

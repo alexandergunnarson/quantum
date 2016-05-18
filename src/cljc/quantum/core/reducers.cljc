@@ -10,7 +10,7 @@
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}
       :cljs-self-referring? true}
   quantum.core.reducers
-           (:refer-clojure :exclude [reduce #?@(:clj [Range ->Range])])
+           (:refer-clojure :exclude [reduce Range ->Range])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core                ]
                      [quantum.core.collections.base :as cbase               ]
@@ -50,7 +50,7 @@
                      [quantum.core.numeric          :as num                 ]
                      [quantum.core.type             :as type
                        :refer [array-list? lseq?]                           ]
-                     [quantum.core.reducers         :as red
+                     [quantum.core.reducers        
                        :refer [reduce join]                                 ]
                      [quantum.core.vars             :as var
                        :refer [defalias]                                    ])))
@@ -66,9 +66,9 @@
   "Which is used as the reducing function to reduce into a vector.")
 
 #?(:clj (defalias join   red/join  ))
-#?(:clj (defalias pjoin  fold/pjoin))
+        (defalias pjoin  fold/pjoin)
 #?(:clj (defalias reduce red/reduce))
-        (defalias fold   fold/fold )
+        (defalias fold*  fold/fold ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
 ;=================================================={  with support for /fold/ }=====================================================
@@ -265,7 +265,7 @@
    :performance "On non-counted collections, |count| is 71.542581 ms, whereas
                  |count*| is 36.824665 ms - twice as fast!!"}
   [coll]
-  (fold
+  (fold*
     (aritoid (constantly 0) identity +)
     (aritoid (constantly 0) identity (compr firsta inc))
     coll))
@@ -324,7 +324,7 @@
   CollFold
     (coll-fold
      [#?(:clj _ :cljs this) n combinef reducef]
-      #?(:cljs (reduce+ this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
+      #?(:cljs (reduce this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
          :clj
          (fjinvoke
            (fn []
@@ -369,7 +369,7 @@
    :attribution "clojure.core.reducers"
    :performance "foldcat+ is faster than |into| a PersistentVector because it outputs ArrayLists"}
   [coll]
-  (fold cat+ append! coll))
+  (fold* cat+ append! coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
@@ -704,7 +704,7 @@
    :usage '(group-by+ odd? (range 10))
    :out   '{false [0 2 4 6 8], true [1 3 5 7 9]}}
   [f coll]
-  (fold
+  (fold*
     (partial merge-with ; merge-with is why...
       (fn [v1 v2] (->> (concat+ v1 v2) (join []))))
     (fn ([ret] ret)
@@ -744,7 +744,7 @@
    A terminal transform."
   {:todo ["Can probably make this use transients in the reducing fn."]}
   [coll]
-  (fold
+  (fold*
     (aritoid hash-map identity (partial merge-with +))
     (aritoid hash-map identity (fn add [freqs x]
                                  (assoc freqs x (inc (get freqs x 0)))))
@@ -764,7 +764,7 @@
    :tests '{(->> [1 2 3 4 5 6] (fold-some #{1 2}))
             2}}
   [pred coll]
-  (fold
+  (fold*
     (aritoid (constantly nil) identity first-non-nil-reducer)
     (aritoid (constantly nil)
              identity
@@ -781,7 +781,7 @@
   [coll]
   (let [combiner+reducer
          (aritoid (constantly nil) identity first-non-nil-reducer)]
-    (fold combiner+reducer combiner+reducer coll)))
+    (fold* combiner+reducer combiner+reducer coll)))
 
 (defn fold-extremum
   "Finds the largest element using a comparison function, e.g. `compare`.
@@ -799,7 +799,7 @@
                  true                    m))
         combiner+reducer
           (aritoid (constantly nil) identity extremum-reducer)]
-    (fold combiner+reducer combiner+reducer coll)))
+    (fold* combiner+reducer combiner+reducer coll)))
 
 (defn fold-min
   "Finds the smallest value using `compare`."
@@ -861,7 +861,7 @@
   ([vec-0]
     (->> vec-0 zipvec* (take+ (/ (count vec-0) 2))))
   ([vec-0 & vecs]
-    (->> vecs (apply map vector vec-0) fold)))
+    (->> vecs (apply map vector vec-0) fold*)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
@@ -990,7 +990,7 @@
               ; Unwrap reduced
               combined (if (reduced? combined) @combined combined)
               ; Postcombine
-              result ((:post-combiner fold) combined)
+              result ((:post-combiner folder) combined)
               t1    (System/nanoTime)]
           result)
         (finally
@@ -1182,7 +1182,7 @@
   (let [ks             (vec (keys fold-map))
         n              (count ks)
         folders        (mapv (comp compile-fold (partial get fold-map)) ks)
-        reducers       (mapv :reducer folders)
+        reducers       (mapv :reducer  folders)
         combiners      (mapv :combiner folders)]
     ; We're gonna project into a particular key basis vector for the
     ; reduce/combine steps

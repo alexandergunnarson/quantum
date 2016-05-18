@@ -72,7 +72,7 @@
                      [quantum.core.type.predicates            :as tpred  ]
                      [clojure.walk                            :as walk   ]
                      [quantum.core.loops                      :as loops  
-                       :refer [for]                                      ]
+                       :refer [#?(:clj for)]                             ]
                      [quantum.core.vars                       :as var  
                        :refer [#?@(:clj [defalias])]                     ])
   #?(:cljs (:require-macros  
@@ -128,14 +128,15 @@
                (recur (conj v# ~@body)
                       (inc idx#))))))))
 
-(def lrepeatedly clojure.core/repeatedly)
+(def lrepeatedly core/repeatedly)
 
 #?(:clj
 (defmacro repeatedly
   "Like |clojure.core/.repeatedly| but (significantly) faster and returns a vector."
   ; ([n f]
   ;   `(repeatedly-into* [] ~n ~arg1 ~@body))
-  {:todo ["Makes no sense to have a macro. Just inline"]}
+  {:todo ["Makes no sense to have a macro. Just inline"
+          "Test performance assertions"]}
   ([n arg1 & body]
     `(repeatedly-into* [] ~n ~arg1 ~@body))))
 

@@ -1,4 +1,5 @@
 (ns quantum.db.datomic.entities
+            (:refer-clojure :exclude [#?(:cljs boolean?)])
             (:require [quantum.core.error       :as err
                         :refer [->ex]                     ]
                       [quantum.core.fn          :as fn
@@ -9,10 +10,14 @@
                                 nnil? nempty?]            ]
                       [quantum.db.datomic       :as db    ]
                       [quantum.core.string      :as str   ]
+                      [quantum.core.collections :as coll 
+                        :refer [#?@(:clj [join])]         ]
                       [quantum.core.type        :as type  
                         :refer [#?@(:clj [boolean? double?
                                           bigint?])]      ])
   #?(:cljs (:require-macros
+                      [quantum.core.collections :as coll 
+                        :refer [join]                     ]
                       [quantum.core.error       :as err   ]
                       [quantum.core.fn          :as fn
                         :refer [<- fn-> fn->>]            ]
@@ -20,10 +25,12 @@
                       [quantum.core.logic       :as logic
                         :refer [fn-or fn-and]             ]
                       [quantum.core.type        :as type  
-                        :refer [double?]                  ])))
+                        :refer [boolean?]                 ])))
 
 (def schemas    (atom  {}))
 (def attributes (atom #{}))
+
+(def attribute? #(and (:v %) (-> % count (= 1))))
 
 (def identifier? (fn-or keyword? integer?
                         #?(:clj #(instance? datomic.db.DbId %))))
@@ -44,10 +51,10 @@
                            #(instance? Short   %)) #_long?  
                :cljs integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
    :bigint  #?(:clj #(bigint? %1) :cljs integer?) ; TODO CLJS |bigint?|
-   :float   #?(:clj float?  :cljs number? ) ; TODO CLJS |float?|
-   :double  #(double? %1)
+   :float   #?(:clj float?        :cljs number? ) ; TODO CLJS |float?|
+   :double  #?(:clj #(double? %1) :cljs number? )
    :bigdec  #?(:clj (partial instance? BigDecimal) #_bigdec? :cljs number? ) ; TODO CLJS |bigdec?|
-   :ref     (fn-or map? identifier? lookup?) ; Can be any entity/record
+   :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
    ; TODO add these in
    ;:instant #?(:clj instant?)
    ;:uuid    #?(:clj uuid?)
@@ -60,19 +67,13 @@
        (<- str/split #"\:")
        (map str/capitalize)
        (str/join "_")
-       (<- str/replace "+" "AND")
+       (<- str/replace "+" "AND"   )
+       (<- str/replace "*" "_STAR_")
+       (<- str/replace "-" "__"    )
        symbol))
 
 (defn attr->constructor-sym [k]
   (symbol (str "->" (name k))))
-
-(defn ->ref-tos
-  "Extract the ref-tos from an options map"
-  [opts]
-  (when-let [ref-to-0 (:ref-to opts)]
-    (if (coll? ref-to-0)
-        (map keyword->class-name ref-to-0)
-        [(keyword->class-name ref-to-0)])))
 
 (defn ->ref-tos-constructors
   "Extract the ref-tos constructors from an options map"
@@ -91,14 +92,14 @@
   {:example '(defattribute :agent
                [:ref :one {:ref-to #{:agent:person :agent:organization}}])}
   [attr-k schema]
-  (let [[type cardinality opts] (eval schema)
+  (let [[type cardinality opts] schema
         attribute-sym (-> attr-k name symbol)
         v-0         (gensym 'v-0)
         v-f         (gensym 'v-f)
-        schema-eval (gensym 'schema-eval)
-        opts-f      (dissoc opts :validator :transformer :ref-to)
+        ;schema-eval (gensym 'schema-eval)
+        opts-f      (dissoc opts #_:validator #_:transformer :ref-to)
         schema-f    [type cardinality opts-f]
-        ref-tos     (->ref-tos opts)
+        ref-tos     (->ref-tos-constructors opts)
         class-name  (-> attr-k keyword->class-name)
         constructor-name (symbol (str "->" (name attr-k)))]
     `(do (swap! schemas assoc ~attr-k ~schema-f)
@@ -109,18 +110,18 @@
            (cond
                (or (instance? ~class-name ~v-0)
                    (and ~(= type :ref) (identifier? ~v-0))
-                   (lookup? ~v-0)
+                   (lookup?    ~v-0)
                    (dbfn-call? ~v-0)
-                   (nil? ~v-0))
+                   (nil?       ~v-0))
                ~v-0
                :else
                (let [~v-f (atom ~v-0)]
                  ~(if (= cardinality :many)
                       `(err/assert (every? (get validators ~type) (deref ~v-f)) #{~v-f})
                       `(err/assert        ((get validators ~type) (deref ~v-f)) #{~v-f})) 
-                 (when-let [transformer# (:transformer ~opts)]
+                 (when-let [transformer# (-> @schemas ~attr-k (get 2) :transformer)]
                    (swap! ~v-f transformer#))
-                 (when-let [validator#   (:validator   ~opts)] ; technically, post-transformer-validator 
+                 (when-let [validator#   (-> @schemas ~attr-k (get 2) :validator  )] ; technically, post-transformer-validator 
                    (err/assert (validator# (deref ~v-f)) #{~v-f}))
                  
                  ~(when ref-tos
@@ -152,9 +153,9 @@
   (let [args `~args
         [opts entity]
           (condp = (count args)
-            1 [nil (eval (first args))] 
-            2 [(eval (first args))
-               (eval (second args))]
+            1 [nil (first args)] 
+            2 [(first  args)
+               (second args)]
             (throw (->ex :illegal-argument "Invalid number of args" (count args))))
         fields
           (->> entity keys (mapv (fn-> name symbol)))
@@ -168,14 +169,14 @@
         args-sym (gensym 'args)
         args (if (nempty? fields) [args-sym] [])
         destructured {:keys fields :as args-sym}
-        ref-tos (->ref-tos opts)
+        ref-tos (->ref-tos-constructors opts)
         ;_ (println "/*" "INSIDE DEFENTITY AFTER REF TOS" "*/")
-        m-f (gensym 'm-f)
+        m-f  (gensym 'm-f )
         m-f* (gensym 'm-f*)
         code
           `(do (swap! schemas assoc ~attr-k [:ref :one ~opts])
                (defrecord ~class-name ~(conj fields 'type))
-               (def ~class-name-fields (->> ~entity keys (into #{:db/id :db/ident})))
+               (def ~class-name-fields (->> ~entity keys (join #{:db/id :db/ident})))
                (declare ~constructor-name)
                ~@(for [[k v] entity]
                    (when (nnil? v) `(defattribute ~k ~(update v 2 #(assoc % :component? true))))) ; assume all inline-declared attributes are components

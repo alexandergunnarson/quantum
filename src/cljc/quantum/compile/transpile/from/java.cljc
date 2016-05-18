@@ -1,25 +1,29 @@
 (ns quantum.compile.transpile.from.java
-  (:require
-              [quantum.core.analyze.clojure.predicates :as anap ]
-              [quantum.core.analyze.clojure.core       :as ana  ]
-              [quantum.core.string                     :as str  ]
-              [quantum.core.collections                :as coll
-                :refer [#?@(:clj [postwalk prewalk containsv?
-                                  popr])
-                        take-until update-last]                 ]
-              [quantum.core.convert                    :as conv
-                :refer [->name]                                 ]
-              [quantum.core.error                      :as err
-                :refer [->ex]                                   ]
-              [quantum.core.macros                     :as macros
-                :refer [#?(:clj defnt)]                         ]
-              [quantum.core.fn                         :as fn
-                :refer [#?@(:clj [fn-> fn->> f*n compr])]       ]
-              [quantum.core.logic                      :as logic
-                :refer [#?@(:clj [eq? fn-or fn-and whenf if*n
-                                  condf*n])
-                        nnil? any?]                             ]
-              [quantum.core.type.core                  :as tcore])
+           (:require [quantum.core.analyze.clojure.predicates :as anap ]
+                     [quantum.core.analyze.clojure.core       :as ana  ]
+                     [quantum.core.string                     :as str  ]
+                     [quantum.core.collections                :as coll
+                       :refer [#?@(:clj [postwalk prewalk containsv?
+                                         popr])
+                               take-until update-last]                 ]
+                     [quantum.core.convert                    :as conv
+                       :refer [->name]                                 ]
+                     [quantum.core.error                      :as err
+                       :refer [->ex]                                   ]
+                     [quantum.core.macros                     :as macros
+                       :refer [#?(:clj defnt)]                         ]
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [fn-> fn->> f*n compr])]       ]
+                     [quantum.core.logic                      :as logic
+                       :refer [#?@(:clj [eq? fn-or fn-and whenf if*n
+                                         condf*n])
+                               nnil? any?]                             ]
+                     [quantum.core.type.core                  :as tcore])
+  #?(:cljs (:require-macros
+                     [quantum.core.fn                         :as fn
+                       :refer [fn-> fn->> f*n compr]                   ]
+                     [quantum.core.logic                      :as logic
+                       :refer [eq? fn-or fn-and whenf if*n condf*n]    ]))
   #?(:clj (:import com.github.javaparser.JavaParser
                   [com.github.javaparser.ast CompilationUnit]
                   [com.github.javaparser.ast.body
@@ -120,7 +124,7 @@
    "posDecrement"  'dec!
    "binAnd"        'bit-and})
 
-#(:clj (def string-literal? (partial instance? StringLiteralExpr)))
+#?(:clj (def string-literal? (partial instance? StringLiteralExpr)))
 
 #?(:clj
 (defn parse-modifiers [mods]

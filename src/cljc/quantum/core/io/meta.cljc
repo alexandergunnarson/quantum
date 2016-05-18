@@ -90,9 +90,9 @@
         {}
         (->> metadata .names (into [])))))))
 
-(defalias file->meta file->meta:tika)
+#?(:clj (defalias file->meta file->meta:tika))
 
-#_#?(:clj
+#_(:clj
 (defn file->meta
   "Uses org.apache.tika.parser.AutoDetectParser to parse metadata for a file."
   {:in '[[:resources "Music Library" "1.mp4"]]}

@@ -138,7 +138,12 @@
   #_`(reducei* true ~f ~ret ~coll)))
  
 (defn reduce-2
-  "|reduce|s over 2 values in a collection with each pass.
+  "Like |reduce|, but reduces over two items in a collection at a time.
+
+   Its function @func must take three arguments:
+   1) The accumulated return value of the reduction function
+   2) The                next item in the collection being reduced over
+   3) The item after the next item in the collection being reduced over
 
    Doesn't use CollReduce... so not as fast as |reduce|."
   {:todo        ["Possibly find a better way to do it?"]
@@ -149,6 +154,8 @@
         ret
         (recur (func ret (first coll-n) (second coll-n))
                (-> coll-n rest rest)))))
+
+
 
 (defn while-recur
   {:attribution "Alex Gunnarson"}
@@ -403,20 +410,5 @@
 ;                             ~v))
 ;                      body)))]
 ;     `(do ~(step seq-exprs `(do ~@body nil)) nil)))
-
-(defn reduce-2
-  "Like |reduce|, but reduces over two items in a collection at a time.
-
-   Its function @func must take three arguments:
-   1) The accumulated return value of the reduction function
-   2) The                next item in the collection being reduced over
-   3) The item after the next item in the collection being reduced over"
-  {:attribution "Alex Gunnarson"}
-  [func init coll]
-  (loop [ret init coll-n coll]
-    (if (empty? coll-n)
-        ret
-        (recur (func ret (first coll-n) (second coll-n))
-               (-> coll-n rest rest)))))
 
 #?(:clj (set! *unchecked-math* false))

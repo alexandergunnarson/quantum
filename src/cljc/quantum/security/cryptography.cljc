@@ -7,9 +7,11 @@
            (:refer-clojure :exclude [hash])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core   ]
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   )  :as async  ]
              #?(:clj [byte-transforms               :as bt     ])
-             #?(:clj [quantum.core.data.array       :as arr
-                       :refer [->bytes]                        ])
+                     [quantum.core.data.array       :as arr
+                       :refer [#?(:clj ->bytes)]               ]
                      [quantum.core.data.bytes       :as bytes  ]
                      [quantum.core.data.hex         :as hex    ]
                      [quantum.core.data.set         :as set    ]
@@ -18,9 +20,10 @@
                      [quantum.core.error            :as err               
                        :refer [->ex #?(:clj throw-unless)]     ]
                      [quantum.core.fn               :as fn
-                       :refer [#?@(:clj [<-])]                 ]
+                       :refer [#?@(:clj [fn-> <-])]            ]
                      [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [whenp]) nnil? splice-or]]
+                       :refer [#?@(:clj [whenp condpc])
+                               nnil? splice-or]                ]
                      [quantum.core.macros           :as macros
                        :refer [#?@(:clj [defnt])]              ]
                      [quantum.core.nondeterministic :as rand   ]
@@ -35,9 +38,9 @@
                      [quantum.core.error            :as err               
                        :refer [throw-unless]                   ]
                      [quantum.core.fn               :as fn
-                       :refer [<-]                             ]
+                       :refer [fn-> <-]                        ]
                      [quantum.core.logic            :as logic
-                       :refer [whenp]                          ]
+                       :refer [whenp condpc]                   ]
                      [quantum.core.macros           :as macros
                        :refer [defnt]                          ]
                      [quantum.core.vars             :as var
@@ -311,7 +314,7 @@
         parallelism        (or parallelism 1) ; Cores
         salt               (or salt (rand/rand-bytes true 16)) ; bytes
         derived-key-length (or dk-length 32)
-        #?@(:cljs [result (core-async/promise-chan)])
+        #?@(:cljs [result (async/promise-chan)])
         derived-to-string
           (fn [derived]
             (let [params (hex/->hex-string (bit-or #_| (bit-shift-left #_<< log2-cpu-cost 16)
@@ -326,7 +329,7 @@
                                             salt log2-cpu-cost ram-cost             derived-key-length
                                             (fn [v] (->> v
                                                          derived-to-string
-                                                         (core-async/put! result))))))] 
+                                                         (async/put! result))))))] 
         #?(:clj  (derived-to-string derived)
            :cljs result)))
 

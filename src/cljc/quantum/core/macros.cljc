@@ -1,7 +1,8 @@
 (ns
   ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
           Also some plumbing macros for |for| loops and the like."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :cljs-self-referring? true}
   quantum.core.macros
            (:refer-clojure :exclude [macroexpand macroexpand-all])
            (:require [clojure.walk
@@ -22,6 +23,8 @@
   #?(:cljs (:require-macros
                      [quantum.core.macros.core  :as cmacros
                        :refer [if-cljs]                               ]
+                     [quantum.core.macros
+                       :refer [assert-args]]
                      [quantum.core.log          :as log               ]
                      [quantum.core.logic        :as logic
                        :refer [fn-and whenc whenf*n]                  ]
@@ -199,13 +202,13 @@
 ;#?(:clj (def macroexpand-all! (fn-> macroexpand-all pr/pprint-hints)))
 
 #?(:clj
-(defmacro assert-args [fnname & pairs]
+(defmacro assert-args [fn-name & pairs]
   `(do (when-not ~(first pairs)
          (throw (->ex :illegal-argument
-                  ~(str fnname " requires " (second pairs)))))
+                  ~(str fn-name " requires " (second pairs)))))
      ~(let [more (nnext pairs)]
         (when more
-          (list* `assert-args fnname more))))))
+          (list* `assert-args fn-name more))))))
 
 (defn emit-comprehension
   {:attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"

@@ -1,9 +1,9 @@
 (ns quantum.core.data.list
            (:require [quantum.core.data.finger-tree :as ftree]
-                     [quantum.core.vars             :as var
+                     [quantum.core.vars            
                        :refer [#?(:clj defalias)]            ]))
   #?(:cljs (:require-macros
-                     [quantum.core.vars             :as var
+                     [quantum.core.vars            
                        :refer [defalias]                     ]))
 
 ; brandonbloom: Benchmarks suggest that the rrb-vector

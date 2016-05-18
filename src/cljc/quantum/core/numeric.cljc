@@ -15,15 +15,19 @@
                        :refer [#?(:clj ->long)]                     ]
                      [quantum.core.error                :as err
                        :refer [->ex]                                ]
+                     [quantum.core.fn
+                       :refer [#?@(:clj [f*n])]                     ]
                      [quantum.core.logic                :as logic
-                       :refer [#?@(:clj [whenf*n])]                 ]
+                       :refer [#?@(:clj [fn-and whenf*n])]          ]
                      [quantum.core.macros               :as macros
                        :refer [#?@(:clj [defnt deftransmacro])]     ]
                      [quantum.core.vars                 :as var
                        :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros
+                     [quantum.core.fn
+                       :refer [f*n]                                 ]
                      [quantum.core.logic                :as logic
-                       :refer [whenf*n]                             ]
+                       :refer [fn-and whenf*n]                      ]
                      [quantum.core.macros               :as macros
                        :refer [defnt deftransmacro]                 ]
                      [quantum.core.vars                 :as var
@@ -598,3 +602,5 @@
 #?(:clj (defalias display-num   clj/display-num  ))
 #?(:clj (defalias format        clj/format       ))
 #?(:clj (defalias percentage-of clj/percentage-of))
+
+(def percent? (fn-and (f*n core/>= 0) (f*n core/<= 1)))
