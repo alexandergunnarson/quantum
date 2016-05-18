@@ -1,6 +1,9 @@
 (ns quantum.apis.amazon.cloud-drive.core
            (:refer-clojure :exclude [meta])
-           (:require [quantum.auth.core                    :as auth    ]
+           (:require [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   )         :as async   
+                       :refer [<!]                                     ]
+                     [quantum.auth.core                    :as auth    ]
                      [quantum.core.convert                 :as conv    ]
                      [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
                      [quantum.core.string                  :as str     ]
@@ -13,6 +16,8 @@
                      [quantum.core.logic                   :as logic
                        :refer [nnil?]                                  ])
   #?(:cljs (:require-macros
+                     [cljs.core.async.macros
+                       :refer [go]                                     ]
                      [quantum.core.collections             :as coll    
                        :refer [kmap join]                              ]
                      [quantum.core.fn                      :as fn

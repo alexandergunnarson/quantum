@@ -26,7 +26,7 @@
             [lein-essthree "0.2.1"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
-     [org.clojure/clojurescript                 "1.7.228"         ] ; Latest (as of 3/8/2015)
+     [org.clojure/clojurescript                 "1.8.51"          ] ; Latest (as of 5/17/2016)
      ; ==== CORE ====
        [proteus                                 "0.1.4"           ]
        ; ==== NAMESPACE ====
@@ -202,6 +202,7 @@
      ; ==== MULTIPLE ====
      ; COMPRESSION, HASHING...
      [byte-transforms                           "0.1.3"           ]
+     [net.jpountz.lz4/lz4                       "1.3"             ]
      ; ==== MISCELLANEOUS ====
      ]
    :injections [#_(require '[quantum.core.ns :as ns])

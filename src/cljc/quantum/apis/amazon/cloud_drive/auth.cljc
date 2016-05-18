@@ -1,8 +1,14 @@
 (ns quantum.apis.amazon.cloud-drive.auth
-  (:require [quantum.net.http               :as http]
-            [quantum.auth.core              :as auth]
-            [quantum.core.data.complex.json
-              :refer [->json json->]                ]))
+           (:require [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async   )   :as async   
+                       :refer [<!]                            ]
+                     [quantum.net.http               :as http ]
+                     [quantum.auth.core              :as auth ]
+                     [quantum.core.data.complex.json
+                       :refer [->json json->]                 ])
+  #?(:cljs (:require-macros 
+                     [cljs.core.async.macros
+                       :refer [go]                            ])))
 
 ; (defn driver []
 ;   (-> res/system :quantum.web.core :web-driver))

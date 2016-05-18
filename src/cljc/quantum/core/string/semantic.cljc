@@ -1,6 +1,7 @@
 (ns quantum.core.string.semantic
            (:refer-clojure :exclude [every?])
-           (:require [quantum.core.logic  :as logic
+           (:require [clojure.set         :as set  ]
+                     [quantum.core.logic  :as logic
                        :refer [nempty? every? any?]]
                      [quantum.core.macros :as macros
                        :refer [#?@(:clj [defnt])]   ])

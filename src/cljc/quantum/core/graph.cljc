@@ -476,7 +476,7 @@
 
 #?(:clj (in-ns 'quantum.core.graph))
 
-(defalias all-pairs-shortest-paths        alg/all-pairs-shortest-paths        )
+#?(:clj (defalias all-pairs-shortest-paths alg/all-pairs-shortest-paths))
 
 (defn root-node-paths* [m depv]
   (->> (for [[k sub] m]

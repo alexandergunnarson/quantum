@@ -4,7 +4,7 @@
 
 #?(:clj (set! *unchecked-math* false))
 
-(def ^:const planck-time-constant (rationalize 5.39106E-44))
+(def ^:const planck-time-constant (#?(:clj rationalize :cljs identity) 5.39106E-44))
 
 (defunits-of time [:seconds #{:sec :s}]
   ; A second is a duration of 9192631770 periods of the radiation

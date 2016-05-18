@@ -78,8 +78,8 @@
                        :refer [#?@(:clj [defalias])]                     ])
   #?(:cljs (:require-macros  
                      [quantum.core.collections.core           :as coll   
-                       :refer [count first rest getr lasti index-of lasti
-                               empty?]                                   ]
+                       :refer [count first rest getr lasti last-index-of
+                               index-of empty?]                          ]
                      [quantum.core.collections.base           :as base   
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn

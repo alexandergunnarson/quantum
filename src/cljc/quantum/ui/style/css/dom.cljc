@@ -2,10 +2,18 @@
            (:refer-clojure :exclude [assert])
            (:require [clojure.string     :as str]
                      [quantum.core.error :as err
-                       :refer [#?(:clj assert)] ])
+                       :refer [#?(:clj assert)] ]
+                     [quantum.core.fn    :as fn
+                       :refer [#?@(:clj [fn->])]]
+                     [quantum.core.logic :as logic
+                       :refer [#?@(:clj [fn-and]) nnil?]])
   #?(:cljs (:require-macros
+                     [quantum.core.logic :as logic
+                       :refer [fn-and]            ]
                      [quantum.core.error :as err
-                       :refer [assert]          ])))
+                       :refer [assert]            ]
+                     [quantum.core.fn    :as fn
+                       :refer [fn->]              ])))
 
 #?(:cljs
 (defn add-link! [link]

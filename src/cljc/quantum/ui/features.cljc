@@ -4,10 +4,10 @@
            (:require [quantum.core.data.map :as map 
                        :refer [map-entry]            ]
                      [quantum.core.logic    :as logic
-                       :refer [#?@(:clj [eq?])]      ])
+                       :refer [#?@(:clj [whenc eq?])]])
   #?(:cljs (:require-macros 
                      [quantum.core.logic    :as logic
-                       :refer [eq?]                  ])))
+                       :refer [eq? whenc]            ])))
 
 #?(:cljs
 (defn flex-test [elem flex-name]

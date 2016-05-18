@@ -3,11 +3,13 @@
     :attribution "Alex Gunnarson"}
   quantum.core.system
            (:require [quantum.core.collections :as coll
-                       :refer [containsv?]                ]
+                       :refer [#?(:clj containsv?)]       ]
                      [quantum.core.logic       :as logic
                        :refer [#?@(:clj [condpc coll-or])]]
                      [quantum.core.string      :as str    ])
   #?(:cljs (:require-macros
+                     [quantum.core.collections :as coll
+                       :refer [containsv?]                ]
                      [quantum.core.logic       :as logic
                        :refer [condpc coll-or]            ]))
   #?(:clj (:import java.io.File
@@ -77,7 +79,7 @@
   "user.dir"}))
 
 (def os ; TODO: make less naive
-  #?(:cljs (condp containsv? (.-appVersion js/navigator)
+  #?(:cljs (condp #(containsv? %1 %2) (.-appVersion js/navigator)
              "Win"   :windows
              "MacOS" :mac
              "X11"   :unix
@@ -86,7 +88,7 @@
      :clj
       (let [os-0 (-> (System/getProperty "os.name")
                      str/->lower)]
-        (condpc containsv? os-0
+        (condpc #(containsv? %1 %2) os-0
           "win"                       :windows
           "mac"                       :mac
           (coll-or "nix" "nux" "aix") :unix

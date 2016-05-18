@@ -20,7 +20,7 @@
                                splice-or nnil? nempty?]        ]
                      [quantum.core.system         :as sys      ]
                      [quantum.core.collections    :as coll     
-                       :refer [#?(:clj postwalk)]              ]
+                       :refer [postwalk]                       ]
                      [quantum.core.io.utils       :as u        ]
                      [quantum.core.paths          :as p        
                        :refer [path]                           ]
@@ -28,10 +28,12 @@
                      [quantum.core.type           :as type
                        :refer [vector+?]                       ]
                      [quantum.core.vars           :as var
-                       :refer [#?(:clj defalias)]              ])
+                       :refer [#?(:clj defalias)]              ]
+                     [quantum.db.datomic          :as db
+                       :refer [#?(:cljs EphemeralDatabase)]    ])
   #?(:cljs (:require-macros
-                     [quantum.core.collections    :as coll     
-                       :refer [postwalk]                       ]
+                     [cljs.core.async.macros
+                       :refer [go]                             ]
                      [quantum.core.error          :as err
                        :refer [throw-unless]                   ]
                      [quantum.core.fn             :as fn

@@ -216,16 +216,17 @@
 
 (defnt empty
   {:todo ["Most of this should be in some static map somewhere"]}
-          ([^boolean?  x] false         )
-  #?(:clj ([^char?     x] (char   0)    ))
-  #?(:clj ([^byte?     x] (byte   0)    ))
-  #?(:clj ([^short?    x] (short  0)    ))
-          ([^int?      x] (int    0)    )
-  #?(:clj ([^long?     x] (long   0)    ))
-  #?(:clj ([^float?    x] (short  0)    ))
-  #?(:clj ([^double?   x] (double 0)    ))
-          ([^string?   x] ""            )
-          ([           x] (core/empty x)))
+           ([^boolean?  x] false         )
+  #?(:clj  ([^char?     x] (char   0)    ))
+  #?(:clj  ([^byte?     x] (byte   0)    ))
+  #?(:clj  ([^short?    x] (short  0)    ))
+  #?(:clj  ([^int?      x] (int    0)    ))
+  #?(:clj  ([^long?     x] (long   0)    ))
+  #?(:clj  ([^float?    x] (short  0)    ))
+  #?(:clj  ([^double?   x] (double 0)    ))
+  #?(:cljs ([^num?      x] 0             ))
+           ([^string?   x] ""            )
+           ([           x] (core/empty x)))
 
 (defnt #?(:clj  ^long lasti
           :cljs       lasti)
@@ -327,7 +328,7 @@
 
 (defnt containsv?
   ([^string?  coll elem]
-    (and (nnil? subs) (index-of coll elem)))
+    (and (nnil? elem) (index-of coll elem)))
   ([^pattern? coll elem]
     (nnil? (re-find elem coll)))
   ([          coll elem]

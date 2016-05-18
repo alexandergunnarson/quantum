@@ -45,8 +45,8 @@
                        :refer [catvec subvec+]                           ]
                      [quantum.core.collections.core           :as coll   
                        :refer [#?@(:clj [count first rest getr last-index-of
-                                         index-of lasti conj conj! contains?])
-                               key val]                                  ]
+                                         index-of lasti conj! contains?])
+                               conj key val]                             ]
                      [quantum.core.collections.base           :as base   
                        :refer [#?@(:clj [kmap])]                         ]
                      [quantum.core.error                      :as err  
@@ -79,7 +79,7 @@
   #?(:cljs (:require-macros  
                      [quantum.core.collections.core           :as coll   
                        :refer [count first rest getr lasti index-of lasti
-                               conj conj! contains? ] ]
+                               conj! contains? ] ]
                      [quantum.core.collections.base           :as base   
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn

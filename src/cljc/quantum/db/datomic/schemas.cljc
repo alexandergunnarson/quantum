@@ -14,7 +14,9 @@
                       [quantum.net.http               :as http   ]
                       [quantum.core.data.complex.xml  :as xml    ]
                       [quantum.db.datomic             :as db     ]
-                      [quantum.core.convert.primitive :as pconv  ])
+                      [quantum.core.convert.primitive :as pconv  ]
+                      [quantum.core.numeric           :as num   
+                        :refer [percent?]                        ])
   #?(:cljs  (:require-macros
                       [quantum.core.fn                :as fn
                         :refer [f*n]                             ]
@@ -23,9 +25,6 @@
                       [quantum.db.datomic.entities
                         :refer [defattribute defentity
                                 declare-entity]                  ])))
-
-; TODO move
-(def percent? (fn-and (f*n >= 0) (f*n <= 1)))
 
 ; =========== GENERAL =========== ;
 
@@ -231,7 +230,7 @@
   {:component? true}
   {:data:source          nil ; From what source do you get your certainty? ; TODO make into a logical proposition, not just a source entity
    :data:certainty:value [:double :one {:doc "The certainty that the data is the case / true."
-                                        :validator quantum.db.datomic.schemas/percent?}]})
+                                        :validator quantum.core.numeric/percent?}]})
 
 ; =========== MEDIA =========== ;
 

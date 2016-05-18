@@ -1,6 +1,7 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
-          (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge])
+          (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge
+                                    #?(:cljs boolean?)])
           (:require [#?(:clj  clojure.core
                         :cljs cljs.core   )           :as c        ]
            #?(:cljs [cljs-uuid-utils.core             :as uuid     ]) ; TODO have a quantum UUID ns
@@ -29,6 +30,8 @@
                     [quantum.core.vars                :as var
                       :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros
+                    [cljs.core.async.macros
+                       :refer [go]                                 ]
                     [datomic-cljs.macros   
                       :refer [<?]                                  ]
                     [quantum.core.collections         :as coll     
@@ -41,6 +44,8 @@
                        :refer [fn-and fn-or]                       ]
                     [quantum.core.log                 :as log      ]
                     [quantum.core.thread.async        :as async    ]
+                    [quantum.core.type                :as type
+                      :refer [boolean?]                            ]
                     [quantum.core.vars                :as var
                       :refer [defalias]                            ]))
   #?(:clj  (:import datomic.Peer

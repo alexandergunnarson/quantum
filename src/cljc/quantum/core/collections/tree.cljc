@@ -143,7 +143,7 @@
   #?(:clj  ([:else       x    f] x))
   #?(:cljs ([:else obj  f]
              (if (coll? obj)
-                 (into (empty obj) (map f obj))
+                 (join (empty obj) (map f obj))
                  obj))))
 
 (defn walk

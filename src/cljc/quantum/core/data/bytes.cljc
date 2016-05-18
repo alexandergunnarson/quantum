@@ -7,7 +7,7 @@
            (:require 
              #?(:clj [clojure.java.io          :as io   ])
                      [quantum.core.data.array  :as arr
-                       :refer [byte-array+ aset!]       ]
+                       :refer [#?(:clj byte-array+) aset!]       ]
                      [quantum.core.data.binary :as bin
                        :refer [& >>>]                   ]
                      [quantum.core.fn          :as fn

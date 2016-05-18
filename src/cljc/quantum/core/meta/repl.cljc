@@ -1,6 +1,6 @@
 (ns quantum.core.meta.repl
   (:require [quantum.core.vars    :as var
-              :refer [defalias]]
+              :refer [#?(:clj defalias)]]
   #?@(:clj [[clojure.repl         :as repl]
             [clojure.java.javadoc         ]])))
 
