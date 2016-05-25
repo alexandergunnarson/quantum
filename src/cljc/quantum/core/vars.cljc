@@ -160,7 +160,6 @@
   (doseq [[name var] (ns-publics (the-ns ns-name-))]
     (alias-var name var))))
 
-
 #?(:clj
 (defn defs
   "Defines a provided list of symbol-value pairs as vars in the

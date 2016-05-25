@@ -29,10 +29,9 @@
 #?(:clj
 (defmacro with-ns
   "Perform an operation in another ns."
-  {:todo ["Dubious as to whether this actually works."]}
   [ns- & body]
   (let [ns-0 (ns-name *ns*)]
-    `(do (in-ns ~ns-) ~@body (in-ns ~ns-0)))))
+    `(do (in-ns ~ns-) ~@body (in-ns '~ns-0)))))
 
 #?(:clj
 (defmacro with-temp-ns

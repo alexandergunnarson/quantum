@@ -4,7 +4,9 @@
                      [quantum.net.http           :as http ]
              #?(:clj [instaparse.core            :as insta])
                      [quantum.db.datomic         :as db   ]
-                     [quantum.db.datomic.schemas :as s    ])
+                     [quantum.db.datomic.core    :as dbc  ]
+                     [quantum.db.datomic.schemas :as s    ]
+                     [quantum.db.datomic.fns     :as fns  ])
   #?(:cljs (:require-macros
                      [quantum.core.collections   :as c    ])))
 
@@ -43,6 +45,9 @@
        delay)))
 
 (defn transact-std-definitions! []
+  (db/transact! (dbc/->partition :db.part/test))
+  (db/transact! (dbc/->partition :db.part/fn  ))
+  #?(:clj (fns/define-std-db-fns!))
   ; Transact mime-types
   #?(:clj
     (db/transact!

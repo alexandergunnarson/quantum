@@ -38,6 +38,8 @@
                      clojure.lang.BigInt
                      java.math.BigDecimal))) 
 
+; (if a b true) => (or (not a) b)
+
 ; TODO look at https://github.com/clojure/math.numeric-tower/
 
 ; TODO benchmark against https://github.com/gfredericks/cljs-numbers/blob/master/test-cljs/cljs_numbers/test.cljs

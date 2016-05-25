@@ -1,7 +1,46 @@
 (ns quantum.validate.core
-  (:require [quantum.validate.domain    ]
-            [quantum.core.string :as str])
+           (:require [schema.core :as s]
+                     [quantum.core.error     :as err
+                       :refer [->ex]                ]
+                     [quantum.validate.domain       ]
+                     [quantum.core.string    :as str]
+                     [quantum.core.vars      :as var 
+                       :refer [#?(:clj defalias)]   ])
+  #?(:cljs (:require-macros 
+                     [quantum.core.vars      :as var 
+                       :refer [defalias]            ]))
   #?(:clj (:import java.util.regex.Matcher)))
+
+#?(:clj
+(defmacro validate
+  {:todo ["Should:
+            - attempt to reduce the verbosity of its output by
+              restricting the size of values that fail validation
+              to 19 characters. If a value exceeds this, it will
+              be replaced by the name of its class. You can adjust
+              this size limitation by calling set-max-value-length!."]}
+  [pred v]
+  `(try (s/validate ~pred ~v)
+     (catch clojure.lang.ExceptionInfo e#
+       (let [data# (ex-data e#)
+             value-unevaled# '~v]
+         (throw (->ex (:type data#)
+                      (str "Value does not match schema: " {:value-unevaled value-unevaled#
+                                                            :value (:error data#)})
+                      (assoc data# :value-unevaled value-unevaled#))))))))
+
+(def constrained s/constrained)
+(def pred        s/pred)
+(def one*        s/one)
+#?(:clj (defmacro one [schema]
+  `(one* ~schema '~schema)))
+(def optional*   s/optional)
+#?(:clj (defmacro optional [schema]
+  `(optional* ~schema '~schema)))
+(def Str         s/Str)
+(def Int         s/Int)
+(def Keyword     s/Keyword)
+(def Num         s/Num)
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
 (def email:valid-chars       (str "[^\\s" email:special-chars "]"))

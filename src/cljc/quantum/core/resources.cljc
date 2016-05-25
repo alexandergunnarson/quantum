@@ -70,6 +70,9 @@
   (swap! cleanup-seq conj #(close! obj))
   obj)
 
+(def start! component/start)
+(def stop!  component/stop )
+
 #?(:clj 
 (defmacro with-resources
   [bindings & body]
@@ -88,12 +91,26 @@
 
 (defprotocol ISystem
   (init!   [this])
-  (start!  [this])
-  (stop!   [this])
   (go!     [this])
   (reload! [this] [this ns-]))
 
 (defrecord System [config sys-map make-system running?]
+  component/Lifecycle
+    (start [this]
+      (if @running?
+          (log/pr :warn "System already running.")
+          (do (swap! sys-map start!)
+              (reset! running? true)
+              (log/pr :user "System started."))))
+    (stop [this]
+      (if (and @sys-map @running?)
+          (do (swap! sys-map
+                (fn [s]
+                  (log/pr :user "======== STOPPING SYSTEM ========")
+                  (doto s stop!)))
+              (reset! running? false)
+              (log/pr :user "System stopped."))
+          (log/pr :warn "System cannot be stopped; system is not running.")))
   ISystem
     (init! [this]
       (if @running?
@@ -101,22 +118,6 @@
           (do (reset! sys-map
                 (make-system config))
               (log/pr :user "System created."))))
-    (start! [this]
-      (if @running?
-          (log/pr :warn "System already running.")
-          (do (swap! sys-map component/start)
-              (reset! running? true)
-              (log/pr :user "System started."))))
-    (stop! [this]
-      (if (and @sys-map @running?)
-          (do (swap! sys-map
-                (fn [s]
-                  (log/pr :user "======== STOPPING SYSTEM ========")
-                  (doto s
-                    (component/stop))))
-              (reset! running? false)
-              (log/pr :user "System stopped."))
-          (log/pr :warn "System cannot be stopped; system is not running.")))
     (go! [this] 
       (init!  this)
       (start! this))

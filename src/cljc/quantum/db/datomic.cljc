@@ -74,6 +74,7 @@
 (defalias history->seq   db/history->seq  )
 (defalias block->schemas db/block->schemas)
 (defalias add-schemas!   db/add-schemas!  )
+(defalias db->seq        db/db->seq       )
 
 ; CORE FUNCTIONS
 
@@ -144,7 +145,10 @@
       (log/pr :user "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
       (let [; Maintain DB history.
             history (when (pos? history-limit) (atom []))
-            conn-f (mdb/create-conn)
+            conn-f (mdb/create-conn
+                     (if init-schemas?
+                         (db/block->schemas schemas)
+                         {}))
             _ (when (pos? history-limit)
                 (log/pr :user "Ephemeral database history set up.")
                 (mdb/listen! conn-f :history1 ; just ":history" doesn't work
@@ -158,7 +162,6 @@
                               (c/conj db-after)
                               (coll/trim-head history-limit)))))))))
             default-partition-f (or default-partition :db.part/test)
-            _ (when init-schemas? (init-schemas! conn-f schemas))
             ; Sets up the tx-report listener for a conn
             #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
             _ (log/pr :user "Ephemeral database reactivity set up.")]
@@ -182,7 +185,8 @@
   [type
    name db-name table-name instance-name ; <- TODO disambiguate these three
    host port rest-port uri conn create-if-not-present?
-   start-txr? txr-bin-path txr-props-path txr-dir txr-process txr-alias
+   start-txr? kill-txr-on-shutdown?
+   txr-bin-path txr-props-path txr-dir txr-process txr-alias
    init-partitions? partitions
    default-partition
    init-schemas? schemas]
@@ -217,7 +221,7 @@
                                          type)))
             txr-process-f
               (when start-txr?
-                #?(:clj (let [proc (component/start
+                #?(:clj (let [proc (res/start!
                                      (proc/->proc txr-bin-path
                                        [txr-props-path]
                                        {:pr-to-out? true
@@ -225,6 +229,9 @@
                           (log/pr :debug "Starting transactor..." (kmap txr-bin-path txr-props-path txr-dir))
                           (async/sleep 3000)
                           proc)))
+            _ (when kill-txr-on-shutdown?
+                #?(:clj (.addShutdownHook (Runtime/getRuntime)
+                          (Thread. #(res/stop! txr-process-f)))))
             connect (fn [] (log/pr :debug "Trying to connect with" uri-f)
                            (let [conn-f (do #?(:clj  (bdb/connect uri-f)
                                                :cljs (bdb/connect host rest-port txr-alias name)))]
@@ -263,7 +270,7 @@
         #?(:clj (bdb/release @conn))
         (reset! conn nil))
       (when txr-process
-        (component/stop txr-process))
+        (res/stop! txr-process))
       this))
 
 (defrecord
@@ -297,17 +304,17 @@
   ; TODO code pattern here
   component/Lifecycle
     (start [this]
-      (let [ephemeral-f  (when ephemeral  (component/start ephemeral ))
-            backend-f    (when backend    (component/start backend   ))
-            reconciler-f (when reconciler (component/start reconciler))]
+      (let [ephemeral-f  (when ephemeral  (res/start! ephemeral ))
+            backend-f    (when backend    (res/start! backend   ))
+            reconciler-f (when reconciler (res/start! reconciler))]
         (c/assoc this
           :ephemeral  ephemeral-f
           :reconciler reconciler-f
           :backend    backend-f)))
     (stop [this]
-      (let [reconciler-f (when reconciler (component/stop reconciler))
-            ephemeral-f  (when ephemeral  (component/stop ephemeral ))
-            backend-f    (when backend    (component/stop backend   ))]
+      (let [reconciler-f (when reconciler (res/stop! reconciler))
+            ephemeral-f  (when ephemeral  (res/stop! ephemeral ))
+            backend-f    (when backend    (res/stop! backend   ))]
         (c/assoc this
           :ephemeral  ephemeral-f
           :reconciler reconciler-f

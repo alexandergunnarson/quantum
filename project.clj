@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-5-18-2016.1"
+(defproject quantum/core "0.3.0-5-25-2016.1"
   :version-history
     {"0.2.4.6" #{:stable :clj :cljs}
      "0.2.4.7" #{:abandoned}
@@ -110,6 +110,8 @@
          #_[clj-time                            "0.7.0"           ] ; similar to JODA time
          [com.andrewmcveigh/cljs-time           "0.3.2"
            :exclusions [org.json/json]                            ]
+       ; ==== VALIDATE ====
+         [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
          ; BENCH      
          [criterium                             "0.4.3"           ]
@@ -117,7 +119,8 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.1.7"           ]
          ; REPL
-         [quantum/figwheel                      "0.5.0-2.1"       ]
+         ;[quantum/figwheel                      "0.5.0-2.1"       ]
+         [figwheel                              "0.5.3-1"         ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.1"  ]
      ; ==== DB ====
@@ -129,6 +132,7 @@
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 1/2/2016)
        [posh                                    "0.3.4.1"         ] ; Latest (as of 3/10/2016)
        [quantum/datsync                         "0.0.1-4-11-2016" ]
+       [re-frame                                "0.7.0"           ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ] ; Latest (as of 3/4/2016)
      ; ==== UI ====
@@ -227,7 +231,7 @@
 
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js/compiled/quantum/ && lein figwheel dev
-                    [quantum/lein-figwheel           "0.5.0-2.1"
+                    [lein-figwheel "0.5.3-1"  ;quantum/lein-figwheel           "0.5.0-2.1"
                       :exclusions [org.clojure/clojure
                                    org.clojure/core.async
                                    org.clojure/core.cache]]

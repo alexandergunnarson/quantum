@@ -148,13 +148,10 @@
         (fn [coll-0 ct]
           (let [split-ind (quot ct 2)]
             (map/split-at split-ind coll-0)))
-          coll n combinef reducef)))
-
-#?(:clj
-  (extend-type quantum.core.reducers.reduce.Folder
-    CollFold
-      (coll-fold [fldr n combine-fn reduce-fn]
-        (coll-fold (:coll fldr) n combine-fn ((:transform fldr) reduce-fn)))))
+          coll n combinef reducef))
+  quantum.core.reducers.reduce.Folder
+    (coll-fold [fldr n combine-fn reduce-fn]
+      (coll-fold (:coll fldr) n combine-fn ((:transform fldr) reduce-fn))))
 
 (defn folder
   "Given a foldable collection, and a transformation function transform,
@@ -169,17 +166,7 @@
   {:attribution "Christophe Grand - http://clj-me.cgrand.net/2013/09/11/macros-closures-and-unexpected-object-retention/"
    :todo ["Possibly fix the CLJS version?"]}
   ([coll transform]
-    #?(:clj  (quantum.core.reducers.reduce.Folder. coll transform)
-       :cljs (reify
-               cljs.core/IReduce
-               (-reduce [_ f1]
-                 (reduce coll (transform f1) (f1)))
-               (-reduce [_ f1 init]
-                 (reduce coll (transform f1) init))
-       
-               CollFold
-               (coll-fold [_ n combinef reducef]
-                 (coll-fold coll n combinef (transform reducef)))))))
+    (quantum.core.reducers.reduce.Folder. coll transform)))
 
 (def folder? #(instance? quantum.core.reducers.reduce.Folder %))
 
@@ -227,8 +214,9 @@
   ([n combine-fn reduce-fn coll]
     (combine-fn ; single-arity combine-fn is the post-combine
       (coll-fold coll n
-        (aritoid combine-fn nil
-          (compr combine-fn reduce-fn)) ; single-arity reduce-fn is the post-reduce
+        (aritoid reduce-fn nil
+          (fn [a b] (combine-fn (reduce-fn a)
+                                (reduce-fn b)))) ; single-arity reduce-fn is the post-reduce
         reduce-fn))))
 
 (def preduce fold)
@@ -237,7 +225,7 @@
   "|pjoinl| using |fold|."
   [to from]
   (let [red-fn (if (editable? to) red/conj!-red red/conj-red)]
-    (fold (aritoid #(->joinable to)                identity     #(joinl %1 %2))
+    (fold (aritoid nil                             identity     #(joinl %1 %2))
           (aritoid #(transient!* (type/->base to)) persistent!* red-fn red-fn)
           from)))
 

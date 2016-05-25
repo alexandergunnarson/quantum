@@ -56,7 +56,7 @@
    :bigdec  #?(:clj (partial instance? BigDecimal) #_bigdec? :cljs number? ) ; TODO CLJS |bigdec?|
    :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
    ; TODO add these in
-   ;:instant #?(:clj instant?)
+   :instant #?(:clj #(instance? java.util.Date %))
    ;:uuid    #?(:clj uuid?)
    #?(:clj :uri)     #?(:clj (partial instance? java.net.URI))
    ;:bytes   #?(:clj bytes? :cljs bytes?)
@@ -90,15 +90,15 @@
    Also adds the schema into the in-memory schema store
    when it defines this fn."
   {:example '(defattribute :agent
-               [:ref :one {:ref-to #{:agent:person :agent:organization}}])}
+               [:one :ref {:ref-to #{:agent:person :agent:organization}}])}
   [attr-k schema]
-  (let [[type cardinality opts] schema
+  (let [[cardinality type opts] schema
         attribute-sym (-> attr-k name symbol)
         v-0         (gensym 'v-0)
         v-f         (gensym 'v-f)
         ;schema-eval (gensym 'schema-eval)
         opts-f      (dissoc opts #_:validator #_:transformer :ref-to)
-        schema-f    [type cardinality opts-f]
+        schema-f    [cardinality type opts-f]
         ref-tos     (->ref-tos-constructors opts)
         class-name  (-> attr-k keyword->class-name)
         constructor-name (symbol (str "->" (name attr-k)))]
@@ -174,7 +174,7 @@
         m-f  (gensym 'm-f )
         m-f* (gensym 'm-f*)
         code
-          `(do (swap! schemas assoc ~attr-k [:ref :one ~opts])
+          `(do (swap! schemas assoc ~attr-k [:one :ref ~opts])
                (defrecord ~class-name ~(conj fields 'type))
                (def ~class-name-fields (->> ~entity keys (join #{:db/id :db/ident})))
                (declare ~constructor-name)
