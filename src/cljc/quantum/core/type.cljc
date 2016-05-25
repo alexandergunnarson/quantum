@@ -1,6 +1,7 @@
 (ns
   ^{:doc "Type-checking predicates, 'transientization' checks, class aliases, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :cljs-self-referring? true}
   quantum.core.type
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? string? keyword? fn?
@@ -21,6 +22,8 @@
                      [quantum.core.vars            :as var 
                        :refer [#?(:clj defalias)]             ])
   #?(:cljs (:require-macros 
+                     [quantum.core.type
+                       :refer [should-transientize?]]
                      [quantum.core.fn              :as fn 
                        :refer [f*n mfn]                       ]
                      [quantum.core.logic           :as logic
@@ -230,14 +233,26 @@
 
 (defnt ->base
   "Gets the base value associated with the value passed."
-  ([^vector? x] (vector  ))
-  ([^set?    x] (hash-set))
-  ([^map?    x] (hash-map)))
+  ([^vector?   x] (vector  ))
+  ([^hash-set? x] (hash-set))
+  ([^hash-map? x] #?(:clj  clojure.lang.PersistentHashMap/EMPTY
+                     :cljs cljs.core.PersistentHashMap.EMPTY))
+  ([           x] (empty x)))
 
 (def transient!*  (whenf*n editable?  transient))
 (def persistent!* (whenf*n transient? persistent!))
 
+(def transient-persistent-fns
+  {true  [transient      conj! persistent!     ]
+   false [core/identity  conj  core/identity   ]})
+
+(defn transient-fns [coll]
+  (get transient-persistent-fns (editable? coll)))
+
+(defn recommended-transient-fns [coll]
+  (get transient-persistent-fns (should-transientize? coll)))
+
 (defnt ->joinable
-  ([#{vector? hash-map? set?} x] x)
+  ([#{vector? hash-map? hash-set?} x] x)
   ([#{array-map?}             x] (into (->base x) x))
   ([                          x] x))

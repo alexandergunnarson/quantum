@@ -48,7 +48,7 @@
                    [datomic.peer LocalConnection Connection]
                    java.util.concurrent.ConcurrentHashMap)))
 
-#?(:clj (swap! pr/blacklist c/conj datomic.db.Db))
+#?(:clj (swap! pr/blacklist c/conj datomic.db.Db datascript.db.DB))
 
 ; GLOBALS
 
@@ -128,9 +128,9 @@
    Arity 1: Tries to coerce @arg to a database-like object"
   ([]
     (let [db*-f   @db*
-          conn*-f @conn*]
-      (or db*-f
-          (->db conn*-f))))
+          conn*-f @conn*
+          db-new  (->db conn*-f)]
+      (if (= db*-f db-new) db*-f (reset! db* db-new))))
   ([arg]
     (cond (mconn? arg)
             @arg
@@ -236,7 +236,7 @@
     (let [txn (cond           (mconn? conn) (mdb/transact! conn tx-data tx-meta)
                     #?@(:clj [(conn?  conn) @(db/transact   conn tx-data)])
                     :else (throw (unhandled-type :conn conn)))]
-      txn)))
+      [true (delay txn)])))
 
 #?(:clj
 (defn transact-async!
@@ -331,16 +331,16 @@
   "Defines, but does not transact, a new database schema.
    Takes the pain out of schema creation."
   {:usage '(->schema :person.name/family-name :string :one {:doc "nodoc"})}
-  ([ident val-type cardinality]
-    (->schema ident val-type cardinality nil))
-  ([ident val-type cardinality {:keys [conn part] :as opts}]
+  ([ident cardinality val-type]
+    (->schema ident cardinality val-type nil))
+  ([ident cardinality val-type {:keys [conn part] :as opts}]
     (assert (contains? allowed-types val-type) #{val-type})
     (let [conn-f (or conn @conn*)
           part-f (when-not (mconn? conn-f)
                    (or part
                        :db.part/db))]
       ; Partitions are not supported in DataScript (yet)
-      (when-not (mconn? conn-f)
+      (when-not ((fn-or mconn? nil?) conn-f)
         (assert (nnil? part-f) #{conn-f part-f}))
   
       (let [cardinality-f
@@ -350,7 +350,7 @@
                 (throw (->ex :unrecognized-cardinality  
                              "Cardinality not recognized:"
                              cardinality)))]
-        (->> {:db/id                 (when-not (mconn? conn)
+        (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
                                        (tempid part-f))
               :db/ident              ident
               :db/valueType          (keyword "db.type" (name val-type))
@@ -369,13 +369,13 @@
 (defn block->schemas
   "Transforms a schema-block @block into a vector of individual schemas."
   {:usage '(block->schemas
-             {:todo/text       [:string  :one]
-              :todo/completed? [:boolean :one {:index? true}]
-              :todo/id         [:long    :one {:index? true}]})}
+             {:todo/text       [:one :string ]
+              :todo/completed? [:one :boolean {:index? true}]
+              :todo/id         [:one :long    {:index? true}]})}
   [block & [opts]]
   (->> block
-       (mapv (fn [[ident [val-type cardinality opts-n]]]
-               (->schema ident val-type cardinality
+       (mapv (fn [[ident [cardinality val-type opts-n]]]
+               (->schema ident cardinality val-type
                  (c/merge {} opts opts-n))))))
 
 (defn add-schemas!
@@ -489,10 +489,14 @@
 
 (def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
 
+(def ^:dynamic *transform?* false)
+
 (defn wrap-transform [x]
-  #?(:clj  (if (has-transform? x)
-                x
-                [:fn/transform x])
+  #?(:clj  (if *transform?*
+               (if (has-transform? x)
+                   x
+                   [:fn/transform x])
+               x)
      :cljs x))
 
 (def transform (fn-> validated->txn wrap-transform))
@@ -526,7 +530,8 @@
         retract-fn (if (mdb? db)
                        :db.fn/retractEntity
                        :db/retract)]
-    [:fn/transform (concat (list retract-fn eid) kvs)]))
+    (wrap-transform
+      (concat (list retract-fn eid) kvs))))
 
 (defn dissoc! [& args]
   (transact! [(apply dissoc args)]))
@@ -598,10 +603,11 @@
    Is not supported by DataScript."
   {:usage '(defn! inc [n] (inc n))}
   [sym requires arglist & body]
-  `(conj! :db.part/fn
-     {:db/ident (keyword "fn" (name '~sym))
-      :db/fn    
-        (dbfn ~requires ~arglist ~@body)})))
+  `(transact!
+     [(conj @conn* :db.part/fn true
+        {:db/ident (keyword "fn" (name '~sym))
+         :db/fn    
+           (dbfn ~requires ~arglist ~@body)})])))
 
 #?(:clj
 (defn entity-history [e]
@@ -1188,157 +1194,7 @@
 ; FOR DATASCRIPT:
 ;Transactor functions can be called as [:db.fn/call f args] where f is a function reference and will take db as first argument (thx @thegeez)
 
-#?(:clj
-(defn define-std-db-fns!
-  "Transacts all the below 'standard' database functions into @db."
-  []
-  (defn! q [[datomic.api :as api]] [db query] (api/q query db))
-  (defn! first  [] [db coll] (first  coll))
-  (defn! ffirst [] [db coll] (ffirst coll))
-  (defn! nil?   [] [db expr] (nil? expr))
-  (defn! nnil?  [] [db expr] (not (nil? expr)))
 
-  ; MACROS
-
-  (defn! apply-or
-    [[datomic.api :as api]]
-    ^{:macro? true
-      :doc "Variadic |or|."}
-    [db args]
-    (loop [args-n args]
-      (if-let [arg (->> args-n first (api/invoke db :fn/eval db))]
-        arg
-        (recur (rest args-n)))))
-
-  (defn! or
-    [[datomic.api :as api]]
-    ^{:macro? true
-      :doc "2-arity |or|."}
-    [db alt0 alt1]
-    (or (api/invoke db :fn/eval db alt0)
-        (api/invoke db :fn/eval db alt1)))
-
-  (defn! validate
-    ^{:macro? true
-      :doc    "|eval|s @expr. If the result satisifies @pred, returns @expr.
-               Otherwise, throws an assertion error."}
-    [[datomic.api :as api]]
-    [db pred expr]
-    (let [expr-eval (api/invoke db :fn/eval db expr)]
-      (if (api/invoke db pred db expr-eval)
-          expr-eval
-          (throw (ex-info (str "Assertion not met: " pred)
-                   {:pred pred :expr expr :expr-eval expr-eval})))))
-
-  (defn! throw [] [db expr] (throw (Exception. expr)))
-
-  (defn! when
-    []
-    [db pred then]
-    (when (datomic.api/invoke db :fn/eval db pred)
-          (datomic.api/invoke db :fn/eval db then)))
-
-  (defn! if
-    []
-    [db pred then else]
-    (if (datomic.api/invoke db :fn/eval db pred)
-        (datomic.api/invoke db :fn/eval db then)
-        (datomic.api/invoke db :fn/eval db else)))
-
-  (defn! eval
-    [[clojure.walk :as walk]]
-    [db expr]
-    (let [db-eval #(datomic.api/invoke db :fn/eval db %)]
-      (cond (and (instance? java.util.List expr) ; is callable?
-               (-> expr first keyword?)
-               (-> expr first namespace (= "fn")))
-            (let [[f & args] expr
-                  macros #{:fn/if :fn/when :fn/validate :fn/or :fn/apply-or}]
-              (if (contains? macros f)
-                  (apply datomic.api/invoke db f db args)
-                  (apply datomic.api/invoke db f db
-                    (mapv db-eval args)))) ; args are evaluated in order
-            
-            (instance? clojure.lang.IMapEntry expr) (vec (map db-eval expr))
-            (seq? expr) (doall (map db-eval expr))
-            (instance? clojure.lang.IRecord expr)
-              (reduce (fn [r x] (conj r (db-eval x))) expr expr)
-            (coll? expr) (join (empty expr) (map db-eval expr))
-
-            :else ; atomic — limiting case
-            expr)))
-
-  (defn! fail-when-exists
-    [[datomic.api :as api]]
-    [db query err-msg else]
-    (let [result (api/q query db)]
-      (if (not (empty? result))
-          (throw (ex-info err-msg {:query  query
-                                   :result result
-                                   :type   :already-exists
-                                   :msg    err-msg}))
-          (api/invoke db :fn/eval db else))))
-
-  (defn! transform
-    [[clojure.walk :as walk]]
-    ^{:doc "Expands the database function keywords to the database function calls *at the actual transaction time*,
-            instead of e.g. just before the transaction is sent off.
-            This enforces atomicity when the transaction needs to refer back to another part of the database.
-
-            Essentially the example says, update person1’s song:preference attribute to whatever song title is
-            one that is popular *during the transaction*.
-            This is opposed to getting a bunch of inconsistent snapshots of the db and performing queries on them,
-            aggregating the results into a transaction, *before* it’s sent off to the db."
-      :example
-        '(transact!
-           [[:fn/transform
-              {:db/id (tempid :db.part/test)
-               :agent:person:name:last:maternal
-                 '(:fn/ffirst
-                    (:fn/q [:find ?surname
-                            :where [_ :agent:person:name:last:surname ?surname]]))}]])}
-    [db m]
-    (->> m
-         (walk/prewalk ; Get rid of weird ArrayLists in order to walk correctly
-           (fn [x]
-              (if (and (not (coll? x))
-                       (instance? java.util.List x))
-                  (join [] x)
-                  x)))
-         (datomic.api/invoke db :fn/eval db)
-         #_(#(doto % (println "IS AFTER EVALUATION")))
-         vector))
-
-  (defn! retract-except
-    [[datomic.api]]
-    ^{:doc "This will work for cardinality-many attributes as well as
-            cardinality-one.
-          
-            To make sure Alex loves pizza and ice cream but nothing else
-            that might or might not have asserted earlier: 
-
-            [[:assertWithRetracts :alex :loves [:pizza :ice-cream]]]
-
-            For a cardinality/one attribute it's called the same way,
-            but of course with a maximum of one value.
-
-            It does not work if you pass in an ident as the target
-            of a ref that is not actually changing (which is what I
-            tried to do for a ref to an enum entity). You have to
-            convert the ident to an entity ID up front and pass the
-            entity ID to |retract-except|, otherwise you end up
-            with something like this in the case where there is no
-            change to an enum entity ref."
-      :usage '(db/transact!
-                [[:fn/retract-except 466192930238332 :twitter/user.followers []]])
-      :from "https://groups.google.com/forum/#!msg/datomic/MgsbeFzBilQ/s8Ze4JPKG6YJ"} 
-    [db e a vs]
-    (vals (into (->> (datomic.api/q [:find '?v :where [e a '?v]] db)
-                     (map (comp #(vector % [:db/retract e a %]) first))
-                     (join {}))
-                (->> vs
-                     (map #(vector % [:db/add e a %]))
-                     (join {})))))))
 
 #_(:clj
 (defn txn-ids-affecting-eid

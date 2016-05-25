@@ -17,7 +17,8 @@
                      [quantum.core.macros              :as macros       
                        :refer [#?@(:clj [assert-args])]           ]
                      [quantum.core.reducers.reduce     :as red    ]
-                     [quantum.core.macros.optimization :as opt    ])
+                     [quantum.core.macros.optimization :as opt    ]
+                     [quantum.core.type                :as type   ])
   #?(:cljs (:require-macros
                      [quantum.core.log                 :as log    ])))
   
@@ -243,10 +244,32 @@
   `(doseqi* true ~bindings ~@body)))
 
 #?(:clj
+(defmacro for*
+  "A lighter, eager version of |for| based on |reduce|.
+   Also accepts a "
+  {:attribution "Alex Gunnarson"
+   :performance "    2.043435 ms (for+ [elem v] nil))
+                 vs. 2.508727 ms (doall (for [elem v] nil))
+
+                 , where 'v' is a vectorized (range 1000000).
+
+                 22.5% faster!"}
+  [ret bindings & body]
+  (assert-args
+    (vector? bindings) "a vector for its binding")
+  `(let [coll# ~(last bindings)
+         [pre# conj# post#] (type/recommended-transient-fns coll#)]
+     (post#
+       (reduce
+         (fn [ret# ~@(butlast bindings)]
+           (conj# ret# (do ~@body)))
+         (pre# ~ret)
+         coll#)))))
+
+#?(:clj
 (defmacro for
   "A lighter, eager version of |for| based on |reduce|.
-   Optimized for one destructured coll.
-   Recognizes persistent vs. transient tradeoff."
+   Optimized for one coll."
   {:attribution "Alex Gunnarson"
    :performance "    2.043435 ms (for+ [elem v] nil))
                  vs. 2.508727 ms (doall (for [elem v] nil))
@@ -255,54 +278,27 @@
 
                  22.5% faster!"}
   [bindings & body]
-  (assert-args
-    (vector? bindings)       "a vector for its binding")
-  `(if (quantum.core.type/should-transientize? ~(last bindings))
-       (persistent!
-         (reduce
-           (fn [ret# ~@(butlast bindings)]
-             (conj! ret# (do ~@body)))
-           (transient [])
-           ~(last bindings)))
-       (reduce
-         (fn [ret# ~@(butlast bindings)]
-           (conj ret# (do ~@body)))
-         []
-         ~(last bindings)))))
+  `(for* [] ~bindings ~@body)))
+
 
 #?(:clj
-(defmacro fori
-  "fori:for::reducei:reduce"
+(defmacro fori*
   {:attribution "Alex Gunnarson"}
-  [bindings & body]
+  [ret bindings & body]
   (let [n-sym (last bindings)]
   `(let [n# (volatile! 0)]
-     (for ~(vec (butlast bindings))
+     (for* ~ret ~(vec (butlast bindings))
        (let [~n-sym (deref n#)
              res# (do ~@body)]
          (vswap! n# qcore/unchecked-inc-long)
          res#))))))
 
 #?(:clj
-(defmacro for-m
-  "for:for-m::reduce:reducem"
-  [arglist & body]
-  (condp = (count arglist)
-    3 (let [[k v m] arglist]
-       `(persistent!
-          (reduce
-            (fn [ret# ~k ~v]
-              (conj! ret# (do ~@body)))
-            (transient {})
-            ~m)))
-    2 (let [[elem coll] arglist]
-       `(persistent!
-          (reduce
-            (fn [ret# ~elem]
-              (conj! ret# (do ~@body)))
-            (transient {})
-            ~coll)))
-    (throw (->ex :illegal-argument "Incorrect number of arguments to |for-m|" (count arglist))))))
+(defmacro fori
+  "fori:for::reducei:reduce"
+  {:attribution "Alex Gunnarson"}
+  [bindings & body]
+  `(fori* [] ~bindings ~@body)))
 
 #?(:clj
 (defmacro seq-loop

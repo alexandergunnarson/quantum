@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.2.5</version>
+  <version>0.3.0-5-25-2016.1</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -14,11 +14,11 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:git://github.com/alexandergunnarson/quanta-lib.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quanta-lib.git</developerConnection>
-    <tag>39acdc11aadfe0b88aebd00a931b804c4364c634
+    <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
+    <tag>101bca837c6d0052d04f9a6afd576c7efd730465
 </tag>
-    <url>https://github.com/alexandergunnarson/quanta-lib</url>
+    <url>https://github.com/alexandergunnarson/quantum</url>
   </scm>
   <build>
     <sourceDirectory>src/clj</sourceDirectory>
@@ -54,7 +54,6 @@
               <sources>
                 <source>src/cljc</source>
                 <source>src/cljc_next</source>
-                <source>src/cljs</source>
                 <source>src/java</source>
               </sources>
             </configuration>
@@ -104,12 +103,7 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>clojurescript</artifactId>
-      <version>1.7.228</version>
-    </dependency>
-    <dependency>
-      <groupId>potemkin</groupId>
-      <artifactId>potemkin</artifactId>
-      <version>0.4.1</version>
+      <version>1.8.51</version>
     </dependency>
     <dependency>
       <groupId>proteus</groupId>
@@ -117,19 +111,14 @@
       <version>0.1.4</version>
     </dependency>
     <dependency>
-      <groupId>com.taoensso</groupId>
-      <artifactId>encore</artifactId>
-      <version>2.31.3</version>
-    </dependency>
-    <dependency>
-      <groupId>quantum</groupId>
-      <artifactId>ns</artifactId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>tools.namespace</artifactId>
       <version>0.2.11</version>
+    </dependency>
+    <dependency>
+      <groupId>com.taoensso</groupId>
+      <artifactId>encore</artifactId>
+      <version>2.49.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -162,7 +151,7 @@
       <version>7.0.7</version>
     </dependency>
     <dependency>
-      <groupId>seqspert</groupId>
+      <groupId>quantum</groupId>
       <artifactId>seqspert</artifactId>
       <version>1.7.0-alpha6.1.0</version>
     </dependency>
@@ -220,7 +209,7 @@
     <dependency>
       <groupId>byte-streams</groupId>
       <artifactId>byte-streams</artifactId>
-      <version>0.2.0</version>
+      <version>0.2.2</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -260,7 +249,7 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>nippy</artifactId>
-      <version>2.7.0-alpha1</version>
+      <version>2.11.1</version>
       <exclusions>
         <exclusion>
           <groupId>org.clojure</groupId>
@@ -374,6 +363,11 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>prismatic</groupId>
+      <artifactId>schema</artifactId>
+      <version>1.1.1</version>
+    </dependency>
+    <dependency>
       <groupId>criterium</groupId>
       <artifactId>criterium</artifactId>
       <version>0.4.3</version>
@@ -391,7 +385,7 @@
     <dependency>
       <groupId>figwheel</groupId>
       <artifactId>figwheel</artifactId>
-      <version>0.5.0-2-Q</version>
+      <version>0.5.3-1</version>
     </dependency>
     <dependency>
       <groupId>environ</groupId>
@@ -399,7 +393,7 @@
       <version>1.0.1</version>
     </dependency>
     <dependency>
-      <groupId>com.datomic</groupId>
+      <groupId>quantum</groupId>
       <artifactId>datomic-pro</artifactId>
       <version>0.9.5206</version>
       <exclusions>
@@ -428,6 +422,16 @@
       <groupId>posh</groupId>
       <artifactId>posh</artifactId>
       <version>0.3.4.1</version>
+    </dependency>
+    <dependency>
+      <groupId>quantum</groupId>
+      <artifactId>datsync</artifactId>
+      <version>0.0.1-4-11-2016</version>
+    </dependency>
+    <dependency>
+      <groupId>re-frame</groupId>
+      <artifactId>re-frame</artifactId>
+      <version>0.7.0</version>
     </dependency>
     <dependency>
       <groupId>hickory</groupId>
@@ -474,7 +478,13 @@
     <dependency>
       <groupId>com.taoensso</groupId>
       <artifactId>sente</artifactId>
-      <version>1.7.0</version>
+      <version>1.8.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>com.taoensso</groupId>
+          <artifactId>encore</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>clj-http</groupId>
@@ -501,7 +511,16 @@
           <groupId>commons-codec</groupId>
           <artifactId>commons-codec</artifactId>
         </exclusion>
+        <exclusion>
+          <groupId>potemkin</groupId>
+          <artifactId>potemkin</artifactId>
+        </exclusion>
       </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>less-awful-ssl</groupId>
+      <artifactId>less-awful-ssl</artifactId>
+      <version>1.0.1</version>
     </dependency>
     <dependency>
       <groupId>http-kit</groupId>
@@ -585,6 +604,17 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>aleph</groupId>
+      <artifactId>aleph</artifactId>
+      <version>0.4.1</version>
+      <exclusions>
+        <exclusion>
+          <groupId>primitive-math</groupId>
+          <artifactId>primitive-math</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
       <groupId>com.cemerick</groupId>
       <artifactId>friend</artifactId>
       <version>0.2.1</version>
@@ -597,8 +627,13 @@
     </dependency>
     <dependency>
       <groupId>ring</groupId>
-      <artifactId>ring-anti-forgery</artifactId>
-      <version>1.0.0</version>
+      <artifactId>ring-defaults</artifactId>
+      <version>0.2.0</version>
+    </dependency>
+    <dependency>
+      <groupId>bk</groupId>
+      <artifactId>ring-gzip</artifactId>
+      <version>0.1.1</version>
     </dependency>
     <dependency>
       <groupId>com.github.detro</groupId>
@@ -649,6 +684,11 @@
       <groupId>byte-transforms</groupId>
       <artifactId>byte-transforms</artifactId>
       <version>0.1.3</version>
+    </dependency>
+    <dependency>
+      <groupId>net.jpountz.lz4</groupId>
+      <artifactId>lz4</artifactId>
+      <version>1.3</version>
     </dependency>
   </dependencies>
 </project>

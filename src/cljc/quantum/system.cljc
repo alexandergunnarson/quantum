@@ -37,11 +37,12 @@
                            :render         ui-render-fn
                            :root-id        "app"}})}
   [& [{:as config
-       {:keys [port ssl-port routes host]   :as server} :server
+       {:keys [port ssl-port routes host]   :as server    } :server
        {:keys [uri msg-handler]             :as connection} :connection
        {:keys [js-source-file]                            } :deployment
        {:keys [schemas ephemeral backend]   :as db        } :db
-       {:keys [render root-id]                            } :frontend}]]
+       {:keys [render root-id]              :as frontend  } :frontend
+       {                                    :as threadpool} :threadpool}]]
   (let [host*            (or "0.0.0.0" host)
         port*            (or port 80)
         server-type      :aleph ; :immutant
@@ -51,14 +52,15 @@
      {:levels                   #{:debug :warn}}
    #?@(:clj
   [:server
-     (merge
-       {:host                     host*
-        :port                     port*
-        :ssl-port                 ssl-port
-        :routes                   routes
-        :type                     server-type
-        :http2?                   true}
-       server)])
+     (when server
+       (merge
+         {:host                     host*
+          :port                     port*
+          :ssl-port                 ssl-port
+          :routes                   routes
+          :type                     server-type
+          :http2?                   true}
+         server))])
    :connection
      (when connection
        (merge
@@ -71,10 +73,11 @@
           :msg-handler              msg-handler}
          connection))
    :renderer
-     {:init-fn                    frontend-init
-      :render-fn                  render
-      :root-id                    (or root-id "root")
-      :type                       :reagent}
+     (when frontend
+       {:init-fn                    frontend-init
+        :render-fn                  render
+        :root-id                    (or root-id "root")
+        :type                       :reagent})
    :db
      {:backend 
        (when backend
@@ -96,46 +99,54 @@
             :txr-props-path         "./config/samples/free-transactor-template.properties"])}
            backend))
       #?@(:cljs
-         [:ephemeral (merge ephemeral
-                       {:history-limit  js/Number.MAX_SAFE_INTEGER
-                        :reactive?      true
-                        :set-main-conn? true
-                        :schemas        schemas})])}
+         [:ephemeral (when ephemeral
+                       (merge ephemeral
+                         {:history-limit  js/Number.MAX_SAFE_INTEGER
+                          :reactive?      true
+                          :set-main-conn? true
+                          :schemas        schemas}))])}
    #?@(:cljs
     [:threadpool
-        {:thread-ct 2
-         ; This is whatever the name of the compiled JavaScript will be
-         :script-src (str "./js/compiled/" js-source-file-f ".js")}])
-        }))
+        (when threadpool
+          {:thread-ct 2
+           ; This is whatever the name of the compiled JavaScript will be
+           :script-src (str "./js/compiled/" js-source-file-f ".js")})])
+}))
 
 (defn gen-system-creator [system-kw config]
   (delay
     (res/register-system!
       system-kw
       config
-      (fn [{:as config-0 :keys [connection]}]
-        (apply component/system-map
-          :log           (log/->log-initializer     (:log        config-0))
-    #?@(:cljs
-         [:threadpool    (component/using 
-                           (async/->threadpool      (:threadpool config-0))
-                           [:log])])
-          :db            (component/using 
-                           (db/->db                 (:db         config-0))
-                           [:log #?(:cljs :threadpool)])
-    #?@(:cljs
-         [:renderer      (component/using
-                           (ui/map->Renderer        (:renderer   config-0))
-                           [:log :db])])
-    #?@(:clj
-         [:server        (component/using 
-                           (http/map->Server        (:server     config-0))
-                           [:log])])
-         (when connection
-           [:connection
-            (component/using 
-              (conn/map->ChannelSocket (:connection config-0))
-              [:log #?(:clj :server)])]))))))
+      (fn [{:as config-0 :keys [connection log threadpool db renderer server]}]
+        (->> (conj {}
+               (when log        [:log
+                                  (log/->log-initializer     log)])
+           #?(:cljs
+               (when threadpool [:threadpool    
+                                  (component/using 
+                                    (async/->threadpool      threadpool)
+                                    [:log])]))
+               (when db         [:db
+                                  (component/using 
+                                    (db/->db                 db)
+                                    [:log #?(:cljs :threadpool)])])
+          #?(:cljs  
+               (when renderer   [:renderer      
+                                  (component/using
+                                    (ui/map->Renderer        renderer)
+                                    [:log :db])]))
+           #?(:clj  
+               (when server     [:server 
+                                  (component/using 
+                                    (http/map->Server        server)
+                                    [:log])]))
+               (when connection [:connection
+                                  (component/using 
+                                    (conn/map->ChannelSocket (:connection config-0))
+                                    [:log #?(:clj :server)])]))
+             seq flatten
+             (apply component/system-map))))))
 
 (defn gen-main
   "Creates a standard |-main| function.
@@ -167,7 +178,7 @@
            (when (deref* ~system-code)
              (res/stop! @~system-code)
              (when-let [sys-map# (-> res/systems deref ~system-kw :sys-map deref)]
-               (component/stop sys-map#)))
+               (res/stop! sys-map#)))
            (catch ~err e#
              (log/pr :warn "Could not stop system." e#)))
          

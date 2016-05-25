@@ -161,16 +161,20 @@
         (defalias pjoinl        red/pjoin         )
 
         (defalias fold          red/fold*         )
-        (defalias cat+          red/cat+          )
+        (defalias cat+          red/cat+          ) 
         (defalias foldcat+      red/foldcat+      )
         (defalias indexed+      red/indexed+      )
         (defalias reductions+   red/reductions+   )
         (defalias ltake         diff/ltake        )
         (defalias take+         diff/take+        )
+        (defalias takel+        take+             )
+        (defalias taker         diff/taker        )
 #?(:clj (defalias taker+        diff/taker+       ))
         (defalias take-while+   diff/take-while+  )
         (defalias take-after    diff/take-after   )
+        (defalias takel-while+  take-while+       )
         (defalias takel-after   diff/takel-after  )
+        (defalias takel-until-matches diff/takel-until-matches)
         (defalias taker-after   diff/taker-after  )
         (defalias take-until    diff/take-until   )
 #?(:clj (defalias taker-until   diff/taker-until  ))
@@ -206,9 +210,11 @@
 #?(:clj (defalias seq-loop loops/seq-loop))
 #?(:clj (defalias loopr    loops/seq-loop))
 ;#?(:clj(defalias for+     red/for+      )) ; TODO have this
+#?(:clj (defalias ifor     loops/ifor    ))
 #?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) assoc :macro true))
+#?(:clj (defalias for*     loops/for*    ))
 #?(:clj (defalias fori     loops/fori    ))
-#?(:clj (defalias for-m    loops/for-m   ))
+#?(:clj (defalias fori*    loops/fori*   ))
 #?(:clj (defalias until    loops/until   ))
 #?(:clj (defmacro lfor   [& args] `(loops/lfor   ~@args)))
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
@@ -244,6 +250,7 @@
         (defalias remove-keys+    mf/remove-keys+    )
         (defalias remove-vals+    mf/remove-vals+    )
         (defalias lremove         mf/lremove         )
+        (defalias remove-surrounding diff/remove-surrounding)
         (defalias keep+           red/keep+          )
         (defalias mapcat+         red/mapcat+        )
 ; _______________________________________________________________
@@ -942,6 +949,25 @@
   {:attribution "The Joy of Clojure, 2nd ed."}
   [elems]
   (sort-parts (list elems))) 
+
+(defn binary-search
+  "Finds earliest occurrence of @x in @xs (a sorted List of numbers) using binary search."
+  {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"}
+  ([xs x] (binary-search xs x 0 (unchecked-dec #_dec* (count xs)) false))
+  ([xs x a b between?]
+    (loop [l (long a) h (long b)]
+      (if (core/<= h (inc l))
+          (cond
+            (= x (get xs l)) l
+            (= x (get xs h)) h
+            :else (when between?
+                    (if (= l h)
+                        [(dec l) h]
+                        [l       h])))
+          (let [m (-> h (unchecked-subtract #_-* l) (bit-shift-right #_>> 1) (unchecked-add #_+* l))]
+            (if (core/< (get xs m) x) ; negative favors the left side in |compare|
+                (recur (long (unchecked-inc #_inc* m)) (long h))
+                (recur (long l)        (long m))))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   COLLECTIONS CREATION   }=====================================================
 ;=================================================={                          }=====================================================
