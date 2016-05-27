@@ -1,14 +1,15 @@
 (ns quantum.db.datomic.defs
-           (:require [quantum.core.collections   :as c    
-                       :refer [remove+]                   ]
-                     [quantum.net.http           :as http ]
-             #?(:clj [instaparse.core            :as insta])
-                     [quantum.db.datomic         :as db   ]
-                     [quantum.db.datomic.core    :as dbc  ]
-                     [quantum.db.datomic.schemas :as s    ]
-                     [quantum.db.datomic.fns     :as fns  ])
+           (:require [quantum.core.collections    :as c    
+                       :refer [remove+]                    ]
+                     [quantum.net.http            :as http ]
+             #?(:clj [instaparse.core             :as insta])
+                     [quantum.db.datomic          :as db   ]
+                     [quantum.db.datomic.core     :as dbc  ]
+                     [quantum.db.datomic.schemas  :as s    ]
+                     [quantum.db.datomic.entities :as dbe  ]
+                     [quantum.db.datomic.fns      :as fns  ])
   #?(:cljs (:require-macros
-                     [quantum.core.collections   :as c    ])))
+                     [quantum.core.collections    :as c    ])))
 
 (def mime-types-source "http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types")
 
@@ -48,8 +49,9 @@
   (db/transact! (dbc/->partition :db.part/test))
   (db/transact! (dbc/->partition :db.part/fn  ))
   #?(:clj (fns/define-std-db-fns!))
+  (dbe/transact-schemas!)
   ; Transact mime-types
-  #?(:clj
+  #_#?(:clj
     (db/transact!
       (->> mime-types force
            (mapv (fn [[k v]] (db/conj (s/->data:format

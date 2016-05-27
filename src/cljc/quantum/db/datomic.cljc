@@ -186,7 +186,7 @@
    name db-name table-name instance-name ; <- TODO disambiguate these three
    host port rest-port uri conn create-if-not-present?
    start-txr? kill-txr-on-shutdown?
-   txr-bin-path txr-props-path txr-dir txr-process txr-alias
+   txr-bin-path txr-flags txr-props-path txr-dir txr-process txr-alias
    init-partitions? partitions
    default-partition
    init-schemas? schemas]
@@ -223,10 +223,10 @@
               (when start-txr?
                 #?(:clj (let [proc (res/start!
                                      (proc/->proc txr-bin-path
-                                       [txr-props-path]
+                                       (c/conj (or txr-flags []) txr-props-path)
                                        {:pr-to-out? true
                                         :dir        txr-dir}))]
-                          (log/pr :debug "Starting transactor..." (kmap txr-bin-path txr-props-path txr-dir))
+                          (log/pr :debug "Starting transactor..." (kmap txr-bin-path txr-flags txr-props-path txr-dir))
                           (async/sleep 3000)
                           proc)))
             _ (when kill-txr-on-shutdown?
@@ -237,19 +237,15 @@
                                                :cljs (bdb/connect host rest-port txr-alias name)))]
                              (log/pr :debug "Connection successful.")
                              conn-f))
+            _ (when create-if-not-present?
+                (log/pr :debug "Creating database...")
+                #?(:clj  (Peer/createDatabase uri-f)
+                   :cljs (go (<? (bdb/create-database host rest-port txr-alias name)))))
             conn-f  (try 
                       (try-times 5 1000
                         (try (connect)
                           (catch #?(:clj RuntimeException :cljs js/Error) e
                             (log/pr :warn "RuntimeException while trying to connect:" e)
-                            (when (and #?(:clj
-                                           (-> e .getMessage
-                                               (=  (str "Could not find " name " in catalog")))
-                                          :cljs "TODO")
-                                       create-if-not-present?)
-                              (log/pr :warn "Creating database...")
-                              #?(:clj  (Peer/createDatabase uri-f)
-                                 :cljs (go (<? (bdb/create-database host rest-port txr-alias name)))))
                             (throw e))
                           (catch #?(:clj Throwable :cljs js/Error) e
                             (log/pr :warn "Error while trying to connect:" e)
