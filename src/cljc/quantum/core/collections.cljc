@@ -219,7 +219,7 @@
 #?(:clj (defmacro lfor   [& args] `(loops/lfor   ~@args)))
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
-
+#?(:clj (defalias while-let loops/while-let))
         (defalias break reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
