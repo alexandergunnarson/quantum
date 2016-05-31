@@ -247,7 +247,9 @@
                                           #?@(:clj
                                          [(= ret-type-0 'auto-promote)
                                             (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
-                                          :else (or ret-type-0 (get trans/default-hint lang)))
+                                          :else (or (-> ret-type-0 (classes-for-type-predicate lang) first)
+                                                    ret-type-0
+                                                    (get trans/default-hint lang)))
                                arity-hinted (assoc arity 0 arglist-hinted)]
                            [[method-name hints-v ret-type] (seq arity-hinted)]))]
                  (->> expanded-hints-list

@@ -283,9 +283,9 @@
     (fn [f1]
       (let [state (atom init)]
         (fn [acc x]
-          (let [[state* x*] (f @state x)] ; How about using volatiles here?
-            (reset! state state*)
-            (f1 acc x*)))))))
+          (let [[state' x'] (f @state x)] ; How about using volatiles here?
+            (reset! state state')
+            (f1 acc x')))))))
 
 (defcurried mapcat-state
   "Like mapcat, but threads a state through the sequence of transformations. ; so basically like /reductions/?
@@ -719,15 +719,15 @@
   "Remove adjacent duplicate values of (@f x) for each x in @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
-  [f coll]
+  [f eq-f coll]
   (let  #?(:clj  [sentinel (Object.)] ; instead of nil, because it's unique
            :cljs [sentinel (array  )])
-    (->> (apply concat+ [coll [sentinel]])
+    (->> coll
          (map-state
            (fn [x x']
-             (let [xf  (ifn x  (partial identical? sentinel) identity f)
-                   xf' (ifn x' (partial identical? sentinel) identity f)]
-               [x' (if (= xf xf') sentinel x')]))
+             (let [xf  (whenf x  (fn-not (f*n identical? sentinel)) f)
+                   xf' (whenf x' (fn-not (f*n identical? sentinel)) f)]
+               [x' (if (eq-f xf xf') sentinel x')]))
            sentinel)
          (remove+ (partial identical? sentinel)))))
 
@@ -735,7 +735,7 @@
   "Remove adjacent duplicate values from @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
-  [coll] (->> coll (distinct-by+ identity)))
+  [coll] (->> coll (distinct-by+ identity =)))
 
  
 (defn fold-frequencies

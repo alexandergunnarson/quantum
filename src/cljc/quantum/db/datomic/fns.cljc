@@ -194,4 +194,16 @@
                 (->> vs
                      (map #(vector % [:db/add e a %]))
                      (join {})))))
+
+  (dbc/defn! ->fn
+    [[datomic.api :as api]]
+    [db ident]
+    (->> (api/q '[:find ?e
+                  :in   $ ?ident
+                  :where [?e :db/ident ?ident]]
+                db ident)
+         ffirst
+         (api/entity db)
+         :db/fn :fnref force))
+
   true))

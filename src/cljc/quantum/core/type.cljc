@@ -86,6 +86,11 @@
         (defnt editable?   ([^editable?   obj] true) ([obj] false))
         (defnt transient?  ([^transient?  obj] true) ([obj] false))
 
+        (defnt array?
+          ([^array? x] true)
+          ([x] #?(:clj  (-> x .getClass .isArray)
+                  :cljs (-> x core/array?))))
+        
 #?(:clj (defnt' prim-long? ([^long n] true) ([:else n] false)))
 
 ;         #?(:cljs 

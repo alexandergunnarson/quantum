@@ -23,11 +23,12 @@
 
 #?(:clj
 (defn qtests [sym]
-  (for [[test result] (->  sym resolve meta :tests)]
-    [test
-     (try (apply (eval sym) (eval test))
-        (catch Throwable e e))
-      (eval result)])))
+  (doall
+    (for [[test result] (->  sym resolve meta :tests)]
+      [test
+       (try (apply (eval sym) (eval test))
+          (catch Throwable e e))
+        (eval result)]))))
 
 #?(:clj
 (defn test-ns

@@ -26,39 +26,39 @@
   {'boolean {:bits 1
              :min  0
              :max  1
-             #?@(:clj [:inner-type "[Z"
+             #?@(:clj [:outer-type "[Z"
                        :boxed      'java.lang.Boolean])}
    'short   {:bits 16
              :min -32768
              :max  32767
-             #?@(:clj [:inner-type "[S"
+             #?@(:clj [:outer-type "[S"
                        :boxed      'java.lang.Short])}
    'byte    {:bits 8
              :min -128
              :max  127
-             #?@(:clj [:inner-type "[B"
+             #?@(:clj [:outer-type "[B"
                        :boxed      'java.lang.Byte])}
    'char    {:bits 16
              :min  0
              :max  65535
-             #?@(:clj [:inner-type "[C"
+             #?@(:clj [:outer-type "[C"
                        :boxed      'java.lang.Character])}
    'int     {:bits 32
              :min -2147483648
              :max  2147483647
-             #?@(:clj [:inner-type "[I"
+             #?@(:clj [:outer-type "[I"
                        :boxed      'java.lang.Integer])}
    'long    {:bits 64
              :min -9223372036854775808
              :max  9223372036854775807
-             #?@(:clj [:inner-type "[J"
+             #?@(:clj [:outer-type "[J"
                        :boxed      'java.lang.Long])}
    ; Technically with floating-point nums, "min" isn't the most negative;
    ; it's the smallest absolute
    'float   {:bits 32
              :min  1.4E-45
              :max  3.4028235E38
-             #?@(:clj [:inner-type "[F"
+             #?@(:clj [:outer-type "[F"
                        :boxed      'java.lang.Float])}
    'double  {:bits 64
              ; Because:
@@ -67,14 +67,17 @@
              :min  #?(:clj  Double/MIN_VALUE
                       :cljs (.-MIN_VALUE js/Number))
              :max  1.7976931348623157E308 ; Max number in JS
-             #?@(:clj [:inner-type "[D"
+             #?@(:clj [:outer-type "[D"
                        :boxed      'java.lang.Double])}}) 
 
 #?(:clj
 (def inner-types
   (->> type-meta
-       (map (fn [[k v]] [k (:inner-type v)]))
-       (into {}))))
+       (map (fn [[k v]] [(:outer-type v) k]))
+       (reduce
+         (fn [m [k v]]
+           (assoc m k v (symbol k) v))
+         {}))))
 
 #?(:clj
 (def boxed-types

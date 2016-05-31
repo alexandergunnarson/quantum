@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-5-25-2016.1"
+(defproject quantum/core "0.3.0-5-26-2016.1"
   :version-history
     {"0.2.4.6" #{:stable :clj :cljs}
      "0.2.4.7" #{:abandoned}

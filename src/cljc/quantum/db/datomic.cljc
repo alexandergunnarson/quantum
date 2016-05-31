@@ -64,12 +64,17 @@
 (defalias touch          db/touch    )
 
 (defalias conj           db/conj     )
+(defalias conj!          db/conj!    )
 (defalias disj           db/disj     )
-(defalias disj!          db/disj!     )
+(defalias disj!          db/disj!    )
 (defalias assoc          db/assoc    )
+(defalias assoc!         db/assoc!   )
 (defalias dissoc         db/dissoc   )
+(defalias dissoc!        db/dissoc!  )
 (defalias update         db/update   )
+(defalias update!        db/update!  )
 (defalias merge          db/merge    )
+(defalias merge!         db/merge!   )
 
 (defalias history->seq   db/history->seq  )
 (defalias block->schemas db/block->schemas)
