@@ -15,10 +15,10 @@
                      [quantum.core.error               :as err
                        :refer [->ex]                                ]
                      [quantum.core.collections         :as coll
-                       :refer [#?@(:clj [nempty?]) break]           ]
+                       :refer [#?@(:clj [nempty? seq-loop]) break]           ]
                      [quantum.core.log                 :as log      ]
                      [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-and fn-or fn-not condpc]) nnil?]]
+                       :refer [#?@(:clj [fn-and fn-or fn-not condpc whenc]) nnil?]]
                      [quantum.core.macros.core         :as cmacros       
                        :refer [#?@(:clj [if-cljs])]                 ]
                      [quantum.core.macros              :as macros
