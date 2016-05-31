@@ -324,7 +324,7 @@
   "Imperative |for| loop."
   {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}
   [[sym val-0 pred val-n+1] & body]
-  `(loop ['~sym ~val-0]
+  `(loop [~sym ~val-0]
     (when ~pred ~@body (recur ~val-n+1)))))
 
 #?(:clj (defmacro lfor [& args] `(core/for ~@args)))
