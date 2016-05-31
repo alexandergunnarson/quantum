@@ -14,6 +14,7 @@
                      [quantum.core.collections                :as coll            
                        :refer [in? #?@(:clj [conj! assoc! empty? nempty?])]]
                      [quantum.core.numeric                    :as num             ]
+                     #?(:clj [clojure.core.async :as casync])
                      [quantum.core.thread.async               :as async
                        :refer [put!! chan buffer #?(:clj go)]                     ]
                      [quantum.core.collections

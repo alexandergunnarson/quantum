@@ -195,7 +195,7 @@
                      (map #(vector % [:db/add e a %]))
                      (join {})))))
 
-  (dbc/defn! ->fn
+  (defn! ->fn
     [[datomic.api :as api]]
     [db ident]
     (->> (api/q '[:find ?e
