@@ -190,7 +190,7 @@
         (-* x 1))))
 
 ; TODO for now
-(defalias dec' core/inc)
+(defalias dec' core/dec)
 
 #_(defnt' dec
   (^Number [^long x] ; TODO boxes value... how to fix?
@@ -199,7 +199,7 @@
         (-* x 1))))
 
 ; TODO for now
-(defalias dec core/inc)
+(defalias dec core/dec)
 
 #_(defnt' inc' "Strict inc, throwing exception on overflow"
   (^:first ^:intrinsic [#{int long} x] (Math/incrementExact x))

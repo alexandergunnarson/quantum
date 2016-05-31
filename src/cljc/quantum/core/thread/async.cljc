@@ -14,11 +14,15 @@
             #?(:cljs [servant.core                     :as servant  ])
                      [quantum.core.error               :as err
                        :refer [->ex]                                ]
+                     [quantum.core.collections         :as coll
+                       :refer [#?@(:clj [nempty?]) break]           ]
                      [quantum.core.log                 :as log      ]
                      [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-and fn-or fn-not])]     ]
+                       :refer [#?@(:clj [fn-and fn-or fn-not condpc]) nnil?]]
                      [quantum.core.macros.core         :as cmacros       
                        :refer [#?@(:clj [if-cljs])]                 ]
+                     [quantum.core.macros              :as macros
+                       :refer [#?(:clj defnt)]                      ]
                      [quantum.core.vars                :as var
                        :refer [#?@(:clj [defalias defmalias])]      ])
   #?(:cljs (:require-macros
@@ -27,14 +31,16 @@
                      [cljs.core.async.macros           :as asyncm   ]
                      [quantum.core.log                 :as log      ]
                      [quantum.core.logic               :as logic
-                       :refer [fn-and fn-or  fn-not]                ]
+                       :refer [fn-and fn-or fn-not condpc]          ]
                      [quantum.core.thread.async
                        :refer [go]                                  ]
+                     [quantum.core.macros              :as macros
+                       :refer [defnt]                               ]
                      [quantum.core.vars                :as var
                        :refer [defalias defmalias]                  ]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
-                   #_quantum.core.data.queue.LinkedBlockingQueue
+                   quantum.core.data.queue.LinkedBlockingQueue
                    #_co.paralleluniverse.fibers.Fiber
                    #_co.paralleluniverse.strands.Strand)))
 
@@ -62,42 +68,42 @@
          (catch ~err-class e#
            e#))))))
 
-(defrecord QueueCloseRequest [])
-(defrecord TerminationRequest [])
+(deftype QueueCloseRequest [])
+(deftype TerminationRequest [])
 
-;(defnt chan*
-;  "(chan (buffer n)) or (chan n) are the same as (channel n :block   ) or (channel n).
-;   (chan (dropping-buffer n))    is  the same as (channel n :drop    )
-;   (chan (sliding-buffer n))     is  the same as (channel n :displace)
-;
-;   Promises can be implemented in terms of |chan|:
-;
-;   (let [a (promise)]
-;     (deliver a 123))
-;
-;   (let [c (chan)]
-;     (>! c 123)" ; But then close chan
-;  ;([] (async+/chan))
-;  ([^integer? n]
-;   (async+/chan n))
-;  ([^keyword? type]
-;    (condp = type
-;      :std     (async+/chan)
-;      :queue   (LinkedBlockingQueue.)
-;      :casync  (async/chan)))
-;  ([^keyword? type n]
-;    (condpc = type
-;      :std     (async+/chan n)
-;      :queue   (LinkedBlockingQueue. ^Integer n) ; TODO reflection here
-;      :casync  (async/chan n))))
-;
-;(defn chan
-;  ([         ] (async+/chan))
-;  ([arg0     ] (chan* arg0     ))
-;  ([arg0 arg1] (chan* arg0 arg1)))
+(defalias buffer async/buffer)
 
-(defalias chan async/chan)
+(defnt chan*
+  "(chan (buffer n)) or (chan n) are the same as (channel n :block   ) or (channel n).
+   (chan (dropping-buffer n))    is  the same as (channel n :drop    )
+   (chan (sliding-buffer n))     is  the same as (channel n :displace)
 
+   Promises can be implemented in terms of |chan|:
+
+   (let [a (promise)]
+     (deliver a 123))
+
+   (let [c (chan)]
+     (>! c 123)" ; But then close chan
+  ;([] (async+/chan)) ; can't have no-arg |defnt|
+  ([#{#?(:clj integer? :cljs number?) #?(:clj clojure.core.async.impl.buffers.FixedBuffer)} n]
+   (async/chan n)
+   #_(async+/chan n))
+  ([^keyword? type]
+    (condp = type
+      #_:std     #_(async+/chan)
+      :queue   (LinkedBlockingQueue.)
+      :casync  (async/chan)))
+  ([^keyword? type n]
+    (condpc = type
+               #_:std     #_(async+/chan n)
+                :casync  (async/chan n)
+      #?@(:clj [:queue   (LinkedBlockingQueue. ^Integer n)])))) ; TODO reflection here
+               
+(defn chan
+  ([         ] (async/chan) #_(async+/chan))
+  ([arg0     ] (chan* arg0     ))
+  ([arg0 arg1] (chan* arg0 arg1)))
 
 ;(defn current-strand [] (Strand/currentStrand))
 #?(:clj (defn current-strand [] (Thread/currentThread)))
@@ -108,16 +114,16 @@
 ;(defalias sliding-buffer      #?(:clj async+/sliding-buffer      :cljs async/sliding-buffer     ))
 ;(defalias unblocking-buffer?  #?(:clj async+/unblocking-buffer?  :cljs async/unblocking-buffer? ))
 
-; TODO FIX THIS
-;(defnt take!! ; receive
-;#?@(:clj
-; [([^quantum.core.data.queue.LinkedBlockingQueue        q  ] (.take q))
-;  ([^quantum.core.data.queue.LinkedBlockingQueue        q n] (.poll q n TimeUnit/MILLISECONDS))])
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel c  ] (async/take! c identity))
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel c n] (async/alts! [(async/timeout n) c]))
-;  ([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c)))
-
 (declare take!!)
+
+; TODO FIX THIS
+#?(:clj (defnt take!! ; receive
+#?@(:clj
+ [([^quantum.core.data.queue.LinkedBlockingQueue        q  ] (.take q))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        q n] (.poll q n TimeUnit/MILLISECONDS))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c  ] (async/take! c identity))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c n] (async/alts! [(async/timeout n) c]))
+  #_([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c))))
 
 ;(defalias <!! take!!)
 
@@ -127,58 +133,60 @@
 
 (defalias <! async/<!)
 
-;(defnt empty!
-;#?(:clj
-;  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.clear q)))
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented)))
-;
-
 (declare empty!)
+
+#?(:clj
+(defnt empty!
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.clear q)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw (->ex :unimplemented)))))
+
 
 (defalias put! async/put!)
 
-;(defnt put!! ; send
-;#?(:clj
-;  ([^quantum.core.data.queue.LinkedBlockingQueue        x obj] (.put x obj)))
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel x obj] (async/put! x obj))
-;  ([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj)))
-
 (declare put!!)
 
-;(defalias >!! put!!)
 (declare >!!)
 
+#?(:clj
+(defnt put!! ; send
+#?(:clj
+  ([^quantum.core.data.queue.LinkedBlockingQueue        x obj] (.put x obj)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x obj] (async/put! x obj))
+  #_([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj))))
+
+;(defalias >!! put!!)
+
 (defalias >! async/>!)
-;
-;(defnt message?
-;  ([^quantum.core.thread.async.QueueCloseRequest  obj] false)
-;  ([^quantum.core.thread.async.TerminationRequest obj] false)
-;  ([                    obj] (when (nnil? obj) true)))
 
-(declare message?)
+(defnt message?
+  ([^quantum.core.thread.async.QueueCloseRequest  obj] false)
+  ([^quantum.core.thread.async.TerminationRequest obj] false)
+  ([                    obj] (when (nnil? obj) true)))
 
-(def close-req? (partial instance? QueueCloseRequest))
-
-;(defnt peek!!
-;  "Blocking peek."
-;#?@(:clj
-; [([^quantum.core.data.queue.LinkedBlockingQueue q]         (.blockingPeek q))
-;  ([^quantum.core.data.queue.LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw+ (Err. :not-implemented "Not yet implemented." nil))))
+(def close-req? #(instance? QueueCloseRequest %))
 
 (declare peek!!)
 
-;#?(:clj
-;(defnt interrupt!
-;  ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
-;  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
+#?(:clj
+(defnt peek!!
+  "Blocking peek."
+#?@(:clj
+ [([^quantum.core.data.queue.LinkedBlockingQueue q]         (.blockingPeek q))
+  ([^quantum.core.data.queue.LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw (->ex :not-implemented "Not yet implemented." nil)))))
 
 (declare interrupt!)
 
-;#?(:clj
-;(defnt interrupted?*
-;  ([#{Thread co.paralleluniverse.strands.Strand}         x] (.isInterrupted x))
-;  ([#{Process java.util.concurrent.Future} x] (throw+ (Err. :not-implemented "Not yet implemented." nil)))))
+#?(:clj
+(defnt interrupt!
+  ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
+  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
+
+#?(:clj
+(defnt interrupted?*
+  ([#{Thread #_co.paralleluniverse.strands.Strand}         x] (.isInterrupted x))
+  ([#{Process java.util.concurrent.Future} x] (throw (->ex :not-implemented "Not yet implemented." nil)))))
 
 ;#?(:clj
 ;(defn interrupted?
@@ -187,43 +195,45 @@
 
 (declare interrupted?)
 
-;(defnt close!
-;#?(:clj
-;  ([^Thread                      x] (.stop    x))
-;  ([^Process                     x] (.destroy x))
-;  ([^java.util.concurrent.Future x] (.cancel  x true))
-;  ([                             x] (if (nil? x) true (throw :not-implemented)))
-;  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
-;  ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
-;  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x))))
-
 (declare close!)
 
-;(defnt closed?
-;#?(:clj
-;  ([^Thread x] (not (.isAlive x)))
-;  ([^Process x] (try (.exitValue x) true
-;                   (catch IllegalThreadStateException _ false)))
-;  ([#{java.util.concurrent.Future
-;      co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
-;  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
-;  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
-;  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
-;  ([^boolean? x] x)
-;  ([x] (if (nil? x) true (throw :not-implemented)))))
+#?(:clj
+(defnt close!
+#?(:clj
+  ([^Thread                      x] (.stop    x))
+  ([^Process                     x] (.destroy x))
+  ([^java.util.concurrent.Future x] (.cancel  x true))
+  ([                             x] (if (nil? x) true (throw :not-implemented)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
+  ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
+  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x)))))
 
 (declare closed?)
 
+#?(:clj
+(defnt closed?
+#?(:clj
+  ([^Thread x] (not (.isAlive x)))
+  ([^Process x] (try (.exitValue x) true
+                   (catch IllegalThreadStateException _ false)))
+  ([#{java.util.concurrent.Future
+      #_co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
+  #_([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
+  ([^boolean? x] x)
+  ([x] (if (nil? x) true (throw :not-implemented))))))
+
 #?(:clj (def open? (fn-not closed?)))
 
-;#?(:clj
-;(defnt realized?
-;  ([^clojure.lang.IPending x] (realized? x))
-;  ([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
-;    (-> x .getQueueLength (> 0)))
-;  ([#{java.util.concurrent.Future
-;      co.paralleluniverse.fibers.Fiber} x] (.isDone x))))
+#?(:clj
+(defnt realized?
+  ([^clojure.lang.IPending x] (realized? x))
+  #_([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
+    (-> x .getQueueLength (> 0)))
+  ([#{java.util.concurrent.Future
+      #_co.paralleluniverse.fibers.Fiber} x] (.isDone x))))
 
 #?(:clj
 (defmacro sleep
@@ -248,38 +258,40 @@
 ; For some reason, having lots of threads with core.async/alts!! "clogs the tubes", as it were
 ; Possibly because of deadlocking?
 ; So we're moving away from core.async, but keeping the same concepts
-;(defn+ alts!!-queue [chans timeout] ; Unable to mark ^:suspendable because of synchronization
-;  (loop []
-;    (let [result (seq-loop [c   chans
-;                            ret nil] 
-;                   (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
-;                     (when (nempty? c)
-;                       (break [(take!! c) c]))))]
-;      (whenc result nil?
-;        (do (sleep 5)
-;            (recur))))))
-
-;(defnt alts!!
-;  "Takes the first available value from a chan."
-;  {:todo ["Implement timeout"]
-;   :attribution "Alex Gunnarson"}
-;  ([^keyword? type chans]
-;    (alts!! type chans nil))
-;  ([^coll? chans]
-;    (async+/alts!! chans))
-;  ([^coll? chans timeout]
-;    (async+/alts!! chans timeout))
-;  ([^keyword? type chans timeout]
-;    (condp = type
-;      :std     (if timeout
-;                   (async+/alts!! chans timeout)
-;                   (async+/alts!! chans))
-;      :queue   (alts!!-queue chans (or timeout Integer/MAX_VALUE))
-;      :casync  (if timeout
-;                   (async/alts!! chans timeout)
-;                   (async/alts!! chans)))))
+#?(:clj
+(defn alts!!-queue [chans timeout] ; Unable to mark ^:suspendable because of synchronization
+  (loop []
+    (let [result (seq-loop [c   chans
+                            ret nil] 
+                   (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
+                     (when (nempty? c)
+                       (break [(take!! c) c]))))]
+      (whenc result nil?
+        (do (sleep 5)
+            (recur)))))))
 
 (declare alts!!)
+
+#?(:clj
+(defnt alts!!
+  "Takes the first available value from a chan."
+  {:todo ["Implement timeout"]
+   :attribution "Alex Gunnarson"}
+  ([^keyword? type chans]
+    (alts!! type chans nil))
+  #_([^coll? chans]
+    (async+/alts!! chans))
+  #_([^coll? chans timeout]
+    (async+/alts!! chans timeout))
+  ([^keyword? type chans timeout]
+    (condp = type
+      ;:std     (if timeout
+      ;             (async+/alts!! chans timeout)
+      ;             (async+/alts!! chans))
+      :queue   (alts!!-queue chans (or timeout Integer/MAX_VALUE))
+      :casync  (if timeout
+                   (async/alts!! chans timeout)
+                   (async/alts!! chans))))))
 
 ; Promise, delay, future
 ; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))

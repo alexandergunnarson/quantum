@@ -39,6 +39,9 @@
 (defattribute :type
   [:one :ref {:ref-to :db/schema}])
 
+(defentity :globals
+  {:globals:log:levels [:many :keyword]})
+
 (defentity :ratio:long
   {:doc "A ratio specifically using longs instead of bigints."}
   {:ratio:long:numerator   [:one :long]

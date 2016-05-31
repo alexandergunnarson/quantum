@@ -39,7 +39,8 @@
                      [quantum.core.type             :as type
                        :refer [editable? hash-set? hash-map?] ]
                      [quantum.core.vars             :as var 
-                       :refer [defalias]                      ])))
+                       :refer [defalias]                      ]))
+  #?(:cljs (:import [goog.string StringBuffer])))
 
 
 ; HEADLESS FIX
@@ -49,7 +50,8 @@
 
 ; Fixing it so the seqs are headless.
 ; Christophe Grand - https://groups.google.com/forum/#!searchin/clojure-dev/reducer/clojure-dev/t6NhGnYNH1A/2lXghJS5HywJ
-(defrecord Folder [coll transform])
+(defrecord Folder  [coll transform])
+(defrecord Reducer [coll transform])
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          REDUCE          }=====================================================
 ;=================================================={                          }=====================================================
@@ -95,7 +97,8 @@
                                (recur (unchecked-inc n)
                                       (f ret (.charAt s n)))))))))
 #?(:clj ([^record? coll f init] (clojure.core.protocols/coll-reduce coll f init)))
-        ([^quantum.core.reducers.reduce.Folder x f init]
+        ([#{quantum.core.reducers.reduce.Reducer
+            quantum.core.reducers.reduce.Folder} x f init]
           (reduce* (:coll x) ((:transform x) f) init))
         ([^map?    coll f init] (#?(:clj  clojure.core.protocols/kv-reduce
                                     :cljs -kv-reduce)
@@ -131,16 +134,9 @@
   {:added "1.5"
    :attribution "clojure.core.reducers"}
   ([coll transform]
-    (reify
-      #?(:clj  clojure.core.protocols/CollReduce
-         :cljs cljs.core/IReduce)
-      (#?(:clj coll-reduce :cljs -reduce) [this f1]
-        (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
-      (#?(:clj coll-reduce :cljs -reduce) [_ f1 init]
-        (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) coll (transform f1) init)))))
+    (Reducer. coll transform)))
 
-(def reducer? #?(:clj  #(instance?  clojure.core.protocols.CollReduce %)
-                 :cljs #(satisfies? cljs.core/IReduce                 %)))
+(def reducer? #(instance? Reducer %))
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."
@@ -184,6 +180,8 @@
                                        (transient-into to from))
                              :cljs (transient-into to from)))
   ([^sorted-map? to from] (persistent-into to from))
+  ([^string?     to from] (.toString #?(:clj  (reduce #(.append ^StringBuilder %1 %2) (StringBuilder. to) from)
+                                        :cljs (reduce #(.append ^StringBuffer  %1 %2) (StringBuffer.  to) from))))
   ([             to from] (if (nil? to) from (persistent-into to from))))
 
 #_(defn joinl

@@ -161,9 +161,11 @@
         m))
   ([m pred k v & kvs]
     (reduce 
-      (fn [output k-n v-n] 
-        (assoc-if pred output k-n v-n))
-      (assoc-if pred m k v)
+      (fn ([ret k-n v-n] 
+            (assoc-if ret pred k-n v-n))
+          ([ret [k-n v-n]] 
+            (assoc-if ret pred k-n v-n)))
+      (assoc-if m pred k v)
       (partition-all 2 kvs))))
 
 (defn assoc-when-none 

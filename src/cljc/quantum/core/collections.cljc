@@ -30,8 +30,8 @@
               count
               vec empty empty?
               split-at
-              first second rest last butlast get pop peek
-              select-keys
+              first second rest last butlast get aget pop peek
+              select-keys get-in
               zipmap
               reverse
               conj
@@ -101,7 +101,8 @@
                        :refer [lseq? transient? editable? boolean? 
                                should-transientize?]                     ]
                      [quantum.core.vars                       :as var 
-                       :refer [defalias]                                 ])))
+                       :refer [defalias]                                 ]))
+  #?(:cljs (:import goog.string.StringBuffer)))
 
 (defalias key     coll/key    )
 (defalias val     coll/val    )
@@ -143,6 +144,8 @@
         (defalias lrest         core/rest         )
 #?(:clj (defalias butlast       coll/butlast      ))
 #?(:clj (defalias last          coll/last         ))
+#?(:clj (defalias aset!         coll/aset!        ))
+#?(:clj (defalias aget          coll/aget         ))
 #?(:clj (defalias assoc!        coll/assoc!       ))
 #?(:clj (defalias dissoc!       coll/dissoc!      ))
         (defalias conj          coll/conj         )
@@ -153,6 +156,7 @@
 #?(:clj (defalias containsk?    coll/containsk?   ))
 #?(:clj (defalias containsv?    coll/containsv?   ))
 #?(:clj (defalias empty?        coll/empty?       ))
+#?(:clj (def      nempty?       (fn-not empty?)   ))
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias join          red/join          ))
@@ -170,6 +174,7 @@
         (defalias takel+        take+             )
         (defalias taker         diff/taker        )
 #?(:clj (defalias taker+        diff/taker+       ))
+        (defalias take-while    diff/take-while   )
         (defalias take-while+   diff/take-while+  )
         (defalias take-after    diff/take-after   )
         (defalias takel-while+  take-while+       )
@@ -199,6 +204,7 @@
         
         (def flatten-1 (partial apply concat)) ; TODO more efficient
 
+#?(:clj (defalias ->array       coll/->array      ))
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -266,6 +272,11 @@
         (defalias merge           map/merge          )
         (defalias sorted-map      map/sorted-map     )
         (defalias sorted-map-by   map/sorted-map-by  )
+
+(defn sorted-map-by-val [m-0]
+  (sorted-map-by (fn [k1 k2]
+                    (compare [(get m-0 k2) k2]
+                             [(get m-0 k1) k1]))))
 ; _______________________________________________________________
 ; ========================== SOCIATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -276,7 +287,92 @@
         (defalias assoc-when-none soc/assoc-when-none)
         (defalias assoc-with      soc/assoc-with     )
 
+#?(:clj
+(defn ->multi-array
+  "Creates an n-dimensional array.
+   The outermost dims go first (e.g. height then width)."
+  {:performance "(->multi-array 30 [3000 3000])
+                 is 24 times faster than:
+                 (to-array-2d (repeat 3000 (repeat 3000 0)))"}
+  ([base-type dims]
+    (when-not (empty? dims)
+      (let [last-dim?  (-> dims count (= 1))
+            sub-arr-0  (when-not last-dim?
+                         (->multi-array base-type (rest dims))) ; recursion
+            sub-type   (if last-dim?
+                           base-type
+                           (class sub-arr-0))
+            super-dim  (first dims)
+            super-arr  (->array sub-type super-dim)]
+            (if last-dim?
+                super-arr
+                (do (aset! super-arr 0 sub-arr-0)
+                    (dotimes [i (dec super-dim)]
+                      (let [sub-arr-n (->multi-array base-type (rest dims))]
+                        (aset! super-arr (inc i) sub-arr-n)))
+                    super-arr)))))))
 
+#?(:clj
+(defn array->dimensionality
+  "e.g. an array with the '[[[J' tag would be of 3 dimensionality."
+  [arr]
+  (->> arr type str (drop 6) (take-while (f*n = \[)) count)))
+
+#?(:clj 
+(defnt array->array-manager-key
+  ([^boolean? x] :boolean)
+  ([^byte?    x] :byte   )
+  ([^char?    x] :char   )
+  ([^short?   x] :short  )
+  ([^int?     x] :int    )
+  ([^long?    x] :long   )
+  ([^float?   x] :float  )
+  ([^double?  x] :double )))
+
+#?(:clj (def array-managers @#'clojure.core/ams))
+
+#?(:clj
+(defnt array->vector*
+  ([#{array? Object} arr]
+   (let [t  (array->array-manager-key (aget arr 0))
+         ^clojure.core.ArrayManager am (get array-managers t)
+         ct (int (count arr))
+         first-few-i (min 4 ct)
+         arr-0 (.array am first-few-i)]
+     (dotimes [i first-few-i]
+       (.aset am arr-0 i (aget arr (int i))))
+     (let [v (clojure.core.Vec. am first-few-i 5 EMPTY-NODE arr-0 nil)]
+       (if (<= ct 4)
+           v
+           (loop [v' v
+                  i' (int 4)]
+             (if (>= i' ct)
+                 v'
+                 (recur (conj v' (aget arr (int i'))) (inc i'))))))))))
+
+#?(:clj
+(defn array->vector
+  "Recursively transforms an n-dimensional array into an
+   n-dimensional vector of vectors.
+   Preserves primitiveness, where relevant, via |vector-of|."
+  ([curr-dim arr]
+    (if (<= curr-dim 1)
+        (when arr (array->vector* arr))
+        (let [ret (transient [])]
+          (dotimes [i (count arr)]
+            (conj! ret (array->vector (dec curr-dim) (aget arr i))))
+          (persistent! ret))))
+  ([arr]
+    (let [dim (-> arr array->dimensionality)]
+      (array->vector dim arr)))))
+ 
+(defnt padr
+  "Pad, right."
+  ([#{#?(:clj StringBuilder :cljs StringBuffer)} x i add]
+    (dotimes [i' (- i (lasti x))] (.append x add))
+    x)
+  ([^String x i add]
+    (str (padr (#?(:clj StringBuilder. :cljs StringBuffer.) x) i add))))
 
 (defn deep-merge
   "Like merge, but merges maps recursively."
@@ -657,6 +753,32 @@
 
 ; ; /nthrest/
 ; ; (nthrest (range 10) 4) => (4 5 6 7 8 9)
+
+; ===== GET-IN ===== ;
+
+(def aget-in-f* #(aget %1 %2))
+
+(defn aget-in [coll ks] (reduce aget-in-f* coll ks))
+
+(def get-in-f* #(get %1 %2))
+
+(defn get-in
+  [coll ks]
+  (if (type/array? coll)
+      (aget-in coll ks)
+      (reduce get-in-f* coll ks)))
+
+(defn aset-in!
+  [coll ks v]
+  (aset! (aget-in coll (butlast ks)) (last ks) v)) ; TODO |butlast| and |last| are not effective if not vecs
+
+(defn assoc-in!
+  [coll ks v]
+  (if (type/array? coll)
+      (aset-in! coll ks v)
+      (assoc! (get-in coll (butlast ks)) (last ks) v)))
+
+
 
 ; ; TODO: get-in from clojure, make it better
 (defn get-in+ [coll [iden :as keys-0]] ; implement recursively
@@ -1410,3 +1532,24 @@
         (nil? x) acc
         (pred x) (conj acc x)
         :else  (recur (conj acc x) (next xs))))))
+
+; ===== MUTABILITY ===== ;
+
+#?(:clj
+(definterface IMutable
+  (get [])
+  (set [x])))
+
+#?(:clj
+(deftype MutableContainer [^:unsynchronized-mutable val]
+  IMutable
+  (get [this] val)
+  (set [this x]
+    (set! val x))
+  clojure.lang.IDeref
+  (deref [this] val)))
+
+(defnt eq! ; |set!| was taken, just like |fn*|
+  ([^quantum.core.collections.MutableContainer x v] (.set x v) v))
+
+(defn mutable! [x] (MutableContainer. x))

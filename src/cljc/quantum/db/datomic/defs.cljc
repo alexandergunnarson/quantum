@@ -5,7 +5,7 @@
              #?(:clj [instaparse.core             :as insta])
                      [quantum.db.datomic          :as db   ]
                      [quantum.db.datomic.core     :as dbc  ]
-                     [quantum.db.datomic.schemas  :as s    ]
+                     [quantum.db.datomic.schemas  :as dbs  ]
                      [quantum.db.datomic.entities :as dbe  ]
                      [quantum.db.datomic.fns      :as fns  ])
   #?(:cljs (:require-macros
@@ -50,11 +50,12 @@
   (db/transact! (dbc/->partition :db.part/fn  ))
   #?(:clj (fns/define-std-db-fns!))
   (dbe/transact-schemas!)
+  (db/conj! (dbs/->globals {:db/ident :globals*}))
   ; Transact mime-types
   #_#?(:clj
     (db/transact!
       (->> mime-types force
-           (mapv (fn [[k v]] (db/conj (s/->data:format
+           (mapv (fn [[k v]] (db/conj (dbs/->data:format
                                         {:data:mime-type                  k
                                          :data:appropriate-extension:many v}))))))))
 

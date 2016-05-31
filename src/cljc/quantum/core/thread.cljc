@@ -3,27 +3,36 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-             (:refer-clojure :exclude [doseq])
-             (:require 
+             (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
+             (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )                  :as core            ]
            #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
                      [clojure.core.async.impl.exec.threadpool :as async-threadpool]
                    #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
                    #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
                      [quantum.core.string                     :as str             ]
+                     [quantum.core.collections                :as coll            
+                       :refer [in? #?@(:clj [conj! assoc! empty? nempty?])]]
                      [quantum.core.numeric                    :as num             ]
                      [quantum.core.thread.async               :as async
-                       :refer [put!! chan #?(:clj go)]                            ]
+                       :refer [put!! chan buffer #?(:clj go)]                     ]
                      [quantum.core.collections
                        :refer [#?@(:clj [doseq]) dissoc-in+]                      ]
                      [quantum.core.error                      :as err
                        :refer [#?(:clj throw-unless) ->ex]                        ]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> f*n compr]) call]                ]
+                       :refer [#?@(:clj [<- fn-> f*n compr]) call fn-nil]                ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not eq? whenf whenp if*n]) nnil?]     ]
+                       :refer [#?@(:clj [fn-or fn-not eq? whenf whenp whenf*n if*n])
+                               nnil?]                                             ]
                      [quantum.core.macros                     :as macros
-                       :refer [#?(:clj defnt)]                                    ])
+                       :refer [#?(:clj defnt)]                                    ]
+                     [quantum.core.type                       :as type
+                       :refer [boolean?]                                          ]
+                     [quantum.core.time.core                  :as time            ]
+                     [quantum.core.cache
+                       :refer [memoize]])
   #?(:cljs (:require-macros
                      [quantum.core.thread.async               :as async
                        :refer [go]                                                ]
@@ -35,9 +44,11 @@
                        :refer [<- fn-> f*n compr]                                 ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
-                       :refer [fn-not eq? whenf whenp if*n]                       ]
+                       :refer [fn-or fn-not eq? whenf whenp whenf*n if*n]         ]
                      [quantum.core.macros                     :as macros
-                       :refer [defnt]                                             ]))
+                       :refer [defnt]                                             ]
+                     [quantum.core.type                       :as type
+                       :refer [boolean?]                                          ]))
   #?(:clj  (:import
              (java.lang Thread Process)
              (java.util.concurrent Future Executor
@@ -47,6 +58,7 @@
  
 ; TODO temporary
 (def wrap-delay identity)
+#_(def wrap-delay (whenf*n (fn-not delay?) delay))
 
 (defonce ^{:doc "Thread registry"} reg (atom {}))
 
@@ -301,7 +313,7 @@
 #?(:clj
 (defmacro ^:internal async-chan*
   [opts & body]
-  `(let [c# (chan :casync 1)
+  `(let [c# (chan 1)
          captured-bindings# (clojure.lang.Var/getThreadBindingFrame)]
      (closeably-execute
        (or (:threadpool ~opts) (:core.async @threadpools))
@@ -344,7 +356,7 @@
       (when (instance? f->chan-exc ret)
         (throw (:exc ret)))))))
 
-#_(:clj
+#?(:clj
 (defmacro async-fiber*
   ; The -jdk8 specification is 3x slower — benchmarked using their benchmarker
   {:benchmarks
@@ -375,8 +387,8 @@
       :chan   c#
       :future (pulsar/fiber->future fiber#)))))
 
-#_(:clj
-(defn+ ^:suspendable gen-async-fn
+#?(:clj
+(defn gen-async-fn ; defn+ ^:suspendable 
   "This fn exists in part because it contains all the code
    that would normally take ~1000ms to bytecode-transform into suspendableness.
    This way it is only so transformed once."
@@ -386,8 +398,8 @@
     (.setName (Thread/currentThread) (name id))))
 
   (swap! reg assoc-in [id :state] :running)
-  (try+ (body-fn)
-    (catch Object e
+  (try (body-fn)
+    (catch Throwable e
       ((or (-> opts :handlers :err/any.pre ) fn-nil))
       (log/pr-opts :warn #{:thread?} "Exited with exception" e)
       ((or (-> opts :handlers :err/any.post) fn-nil)))
@@ -418,8 +430,8 @@
           close-req#   (-> ~opts-f :handlers :close-req)
           cleanup#     (-> ~opts-f :handlers :cleanup)
           id#              (:id          ~opts-f)
-          type#        (or (:type        ~opts-f) :fiber) ; Heavyweightness should be explicit
-          _#           (throw-unless (in? type# #{:fiber :thread})
+          type#        (or (:type        ~opts-f) #_:fiber :thread) ; Heavyweightness should be explicit
+          _#           (throw-unless (in? type# #{#_:fiber :thread})
                          (->ex nil ":type must be in #{:fiber :thread}" type#))
           ret#         (or (:ret         ~opts-f) :chan)
           _#           (throw-unless (in? ret# #{:chan :future})
@@ -443,10 +455,11 @@
                         (catch Throwable e#
                           (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
           ~close-req-call (wrap-delay close-req#)
-          ~close-reqs (or (:close-reqs ~opts-f) (chan :queue))
+          ~close-reqs (or (:close-reqs ~opts-f) (async/chan :queue))
           ~proc-id   (gen-proc-id id# parent# name#)
           async-body-fn# (if (= type# :fiber)
-                             (pulsar/suspendable! (fn [] ~@body))
+                             (fn [] ~@body)
+                             #_(pulsar/suspendable! (fn [] ~@body))
                              (fn [] ~@body))
           ~opts-f    (coll/assocs-in+         ~opts-f
                        [:close-reqs         ] ~close-reqs
@@ -496,8 +509,8 @@
   `(let [opts# ~opts
          opts-f# (gen-async-opts opts# ~@body)]
      (condp = (:type opts-f#)
-        :fiber
-          (async-fiber* opts-f# gen-async-fn (:body-fn opts-f#) opts-f#)
+        #_:fiber
+          #_(async-fiber* opts-f# gen-async-fn (:body-fn opts-f#) opts-f#)
         :thread ; TODO assumes ret is chan
           (async-chan* opts-f#
             (gen-async-fn (:body-fn opts-f#) opts-f#))))))
@@ -510,7 +523,7 @@
   (let [close-reqs-f   (gensym)
         close-req-call (gensym)]
    `(let [opts-f# ~opts
-          ~close-reqs-f   (or (:close-reqs opts-f#) (chan :queue))
+          ~close-reqs-f   (or (:close-reqs opts-f#) (async/chan :queue))
           ~close-req-call (wrap-delay (-> opts-f# :handlers :close-req))]
       (async (coll/assocs-in+ ~opts
                 [:close-reqs         ] ~close-reqs-f
@@ -543,10 +556,10 @@
 #?(:clj (defonce thread-reaper-pause-requests  (LinkedBlockingQueue.)))
 #?(:clj (defonce thread-reaper-resume-requests (LinkedBlockingQueue.)))
 
-#_(:clj
+#?(:clj
 (defonce thread-reaper
   (do #_(log/enable! :macro-expand)
-      (with-do
+      (fn/with-do
         (let [id :thread-reaper]
           (async-loop
             {:id id
@@ -558,7 +571,7 @@
                 (do (async/empty! thread-reaper-pause-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
                     (swap! reg assoc-in [id :state] :paused)
-                    (take!! thread-reaper-resume-requests) ; blocking take
+                    (async/take!! thread-reaper-resume-requests) ; blocking take
                     (async/empty! thread-reaper-resume-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
                     (swap! reg assoc-in [id :state] :running)
@@ -794,7 +807,7 @@
   [^java.util.concurrent.ThreadPoolExecutor x]
   (.shutdownNow x)))
 
-#_(:clj
+#?(:clj
 (defn ->distributor
   {:usage '(->distributor inc {:cache true
                                :memoize-only-first-arg? true
@@ -810,9 +823,9 @@
   (assert (or (nil? threadpool)
               (instance? java.util.concurrent.ThreadPoolExecutor threadpool)) #{threadpool})
   (assert (fn? f) #{f})
-  (let [cache-f          (if (true? cache)
-                             (atom {})
-                             cache) ; TODO bounded cache?
+  (let [cache-f        (if (true? cache)
+                           (atom {})
+                           cache) ; TODO bounded or auto-invalidating cache?
         log            (atom [])
         distributor-fn (atom (if cache-f
                                  (memoize f cache-f memoize-only-first-arg?) ; It doesn't cache errors, by default   
@@ -821,12 +834,12 @@
         max-threads-f  (or max-threads (-> (Runtime/getRuntime) (.availableProcessors)))
         thread-registrar (atom {})
         work-queue     (if max-work-queue-size
-                          (core-async/chan (core-async/dropping-buffer max-work-queue-size))
-                          (core-async/chan)) ; Unbounded queues don't factor in to core.async 
+                          (chan (buffer max-work-queue-size))
+                          (chan)) ; Unbounded queues don't factor in to core.async 
         threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
         threadpool-interrupted?
           (doto (atom false)
-            (set-validator! (MWA boolean?))
+            (set-validator! #(boolean? %))
             (add-watch :interrupt-monitor
               (fn [_ _ _ newv]
                 (when (true? newv)
@@ -850,24 +863,24 @@
                      :threadpool @threadpool-f}
           []
           (logic/when-let
-            [[val- queue-]    (core-async/alts!! [work-queue (core-async/timeout 500)])
+            [[val- queue-]    (casync/alts!! [work-queue (casync/timeout 500)])
              [timestamp work] val-]
-            (try+ (apply @distributor-fn work)
-              (catch Object e ; err/suppress doesn't yet work
+            (try (apply @distributor-fn work)
+              (catch Throwable e ; err/suppress doesn't yet work
                 (conj! log [(time/now-instant) thread-name e])))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
           (when-not (or @threadpool-interrupted? @interrupted?)
             (recur)))))
     distributor-f)))
 
-#_(:clj
+#?(:clj
 (defn distribute
   {:usage '(distribute (->distributor) [1 2 3 5 6] {:cache? true})}
   [distributor & inputs]
   (assert (instance? Distributor distributor) #{distributor})
   
-  (core-async/offer! (:work-queue distributor) [(time/now-instant) inputs])))
+  (casync/offer! (:work-queue distributor) [(time/now-instant) inputs])))
 
-#_(:clj
+#?(:clj
 (defn distribute-all [distributor inputs-set & [apply?]]
   (for [inputs inputs-set]
     (if apply?

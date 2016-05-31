@@ -513,6 +513,9 @@
   (wrap-transform
     (apply hash-map :db/id eid kvs)))
 
+(defn assoc! [& args]
+  (transact! [(apply assoc args)]))
+
 (defn dissoc
   "Transaction function which retracts the attributes (@kvs)
    associated with entity id @id.
@@ -565,8 +568,8 @@
 
 (defn conj!
   "Creates and transacts an entity from the supplied attribute-map."
-  ([& args]
-    (transact! [(apply conj args)])))
+  [& args]
+  (transact! [(apply conj args)]))
 
 (defn disj
   ([eid] (disj @conn* eid))
@@ -583,6 +586,10 @@
   ([conn eid k f]
     (let [v-f (get (entity @conn eid) k)]
       (assoc eid k (f v-f)))))
+
+(defn update!
+  [& args]
+  (transact! [(apply update args)]))
 
 #?(:clj
 (defmacro dbfn
