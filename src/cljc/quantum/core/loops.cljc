@@ -1,7 +1,8 @@
 (ns
   ^{:doc "Useful looping constructs. Most of these, like |doseq| and |for|,
           are faster than their lazy clojure.core counterparts."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :cljs-self-referring? true}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce dotimes])
            (:require [#?(:clj  clojure.core
@@ -20,7 +21,9 @@
                      [quantum.core.macros.optimization :as opt    ]
                      [quantum.core.type                :as type   ])
   #?(:cljs (:require-macros
-                     [quantum.core.log                 :as log    ])))
+                     [quantum.core.log                 :as log    ]
+                     [quantum.core.loops
+                       :refer [doseq]                             ])))
   
 #?(:clj (set! *unchecked-math* true))
 
@@ -417,5 +420,13 @@
        (when ~form
            ~@body
            (recur ~test)))))
+
+(defn each
+  "Like |run!|, but returns @coll.
+   Like an in-place |doseq|."
+  {:added "1.7"}
+  [f coll]
+  (doseq [x coll] (f x))
+  coll)
 
 #?(:clj (set! *unchecked-math* false))
