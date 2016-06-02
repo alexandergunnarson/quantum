@@ -490,8 +490,7 @@
      (fn ([] (reducer-))
          ([ret v]
             (if (sequential? v)
-                (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce)
-                   (flatten+ v) reducer- ret)
+                (reduce reducer- ret (flatten+ v))
                 (reducer- ret v)))))))
 
 (def flatten-1+ (fn->> (mapcat+ identity)))
