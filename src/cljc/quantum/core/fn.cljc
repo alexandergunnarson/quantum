@@ -260,6 +260,15 @@
     `(do (~f ~@(butlast args) ~obj)
          ~obj))))
 
+#?(:clj
+(defmacro doto-2
+  "useful for e.g. logging fns"
+  {:usage `(doto-2 [1 2 3 4 5] (log/pr :debug "is result"))}
+  [expr side]
+  `(let [expr# ~expr]
+     (~(first side) ~(second side) expr# ~@(-> side rest rest))
+     expr#)))
+
 #?(:clj (defalias with qcore/with))
 
 (defn with-pr->>  [obj      ] (do (println obj) obj))
