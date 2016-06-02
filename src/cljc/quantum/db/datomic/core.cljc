@@ -480,12 +480,11 @@
                         m-n)]
             (recur m-n+1 (inc n-n))))))))
 
-(defn get* ; TODO rename |get|
+(defn lookup
   [attr v]
   (-> (q [:find '?e :where ['?e attr v]])
       ffirst
-      entity
-      touch))
+      entity))
 
 (def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
 
