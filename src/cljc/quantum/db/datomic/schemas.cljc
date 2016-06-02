@@ -37,7 +37,7 @@
 (def ->any identity)
 
 (defattribute :type
-  [:one :ref {:ref-to :db/schema}])
+  [:one :ref {:ref-to :db/schema :index? true}])
 
 (defentity :globals
   {:globals:log:levels [:many :keyword]})
