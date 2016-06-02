@@ -39,6 +39,7 @@
               #?(:cljs boolean?)])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
+                     [fast-zip.core                           :as zip    ]
                      [quantum.core.data.map                   :as map    ]
                      [quantum.core.data.set                   :as set    ]
                      [quantum.core.data.vector                :as vec  
@@ -226,6 +227,7 @@
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
 #?(:clj (defalias while-let loops/while-let))
+        (defalias each  loops/each)
         (defalias break reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
@@ -789,6 +791,34 @@
 (def single?
   "Does coll have only one element?"
   (fn-and seq (fn-not next)))
+
+; ===== ZIPPERS ===== ;
+
+(defalias up    zip/up   )
+(defalias down  zip/down )
+(defalias right zip/right)
+(defalias left  zip/left )
+
+(defnt zipper
+  ([^vector? v] (zip/vector-zip v))
+  ([^map?    m] (zip/zipper  ; source https://clojuredocs.org/clojure.zip/zipper
+                  (fn [x] (or (map? x) (map? (nth x 1))))
+                  (fn [x] (seq (if (map? x) x (nth x 1))))
+                  (fn [x children] 
+                    (if (map? x) 
+                        (join {} children) 
+                        (assoc x 1 (join {} children))))
+                  m))
+  ([         x] (zip/seq-zip x)))
+
+(defn zipper-mapv
+  [f coll]
+  (loop [ret (transient [])
+         elem (-> coll zipper down)]
+    (if (nil? elem)
+        (persistent! ret)
+        (recur (conj! ret (f elem)) (right elem)))))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   ADDITIVE OPERATIONS    }=====================================================
 ;=================================================={    conj, cons, assoc     }=====================================================
