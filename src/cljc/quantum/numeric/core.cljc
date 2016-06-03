@@ -1,5 +1,17 @@
-(ns quantum.numeric.core
-  #_(:require [quantum.core.numeric :refer [exp sqrt]]))
+(ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
+  quantum.numeric.core
+           (:refer-clojure :exclude [reduce])
+           (:require
+           #_[quantum.core.numeric :refer [exp sqrt]]
+             [quantum.core.collections :as coll
+               :refer [map+ #?@(:clj [reduce])]]
+             [quantum.core.vars
+               :refer [defalias]])
+  #?(:cljs (:require-macros
+             [quantum.core.collections
+               :refer [reduce]]
+             [quantum.core.vars
+               :refer [defalias]])))
 
 #_(defalias $ exp)
 
@@ -38,3 +50,10 @@
    :major-eleventh (/ 8 3)
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
+
+(def sum #(reduce + 0 %))
+
+(defn sigma [set- step-fn]
+  (->> set- (map+ #(step-fn %)) sum))
+
+(defalias ∑ sigma)

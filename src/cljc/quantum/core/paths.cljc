@@ -1,7 +1,9 @@
 (ns ^{:doc "Paths-related things — resource locators. URIs, URLs, directories, files, etc."}
   quantum.core.paths
-           (:refer-clojure :exclude [descendants])
-           (:require [quantum.core.collections :as coll
+           (:refer-clojure :exclude [descendants contains?])
+           (:require
+             #?(:clj [clojure.java.io          :as io                ])
+                     [quantum.core.collections :as coll
                        :refer [#?@(:clj [getr index-of containsv?
                                          popr reducei])
                                dropr-until]                          ]
@@ -29,11 +31,46 @@
                        :refer [defnt]                                ]
                      [quantum.core.vars        :as var               
                        :refer [defalias def-]                        ]))
-  #?(:clj (:import java.io.File)))
+  #?(:clj (:import java.io.File
+                   [java.net URI URL])))
 
 ; TODO validate this
 (def paths-vecs
   {:ffmpeg [:this-dir "bin" "ffmpeg-static" "mac" "ffmpeg"]})
+
+(declare ->uri-protocol parse-dir-protocol)
+
+#?(:clj
+(defnt ^java.io.File ->file
+  {:todo "Eliminate reflection"}
+  ([^java.io.File           x] x          )
+  ([^java.nio.file.Path     x] (.toFile x))
+  ([#{string? java.net.URI} x] (File.   x))
+  ([^java.net.URL           x] (-> x ->uri-protocol ->file))
+  ([#{vector? keyword?}     x] (-> x parse-dir-protocol ->file))
+  ([                        x] (io/file x))))
+
+#?(:clj
+(defnt ^java.net.URI ->uri
+  {:todo "Eliminate reflection"}
+  ([^java.net.URI                x] x)
+  ([^java.nio.file.Path          x] (.toUri x))
+  ([#{java.io.File java.net.URL} x] (.toURI x))
+  ([^string?                     x] (URI. x))
+  ([                             x] (-> x ->file ->uri))))
+
+#?(:clj
+(defnt ^java.net.URL ->url
+  ([^string?      x] (URL. x))
+  ([^java.net.URL x] x)
+  ([^java.net.URI x] (.toURL x))
+  ([              x] (-> x ->uri ->url))))
+
+#?(:clj
+(defnt contains?
+  "Does the filesystem contain @x?"
+  ([^java.io.File x] (.exists x))
+  ([^string?      x] (-> x ->file contains?))))
 
 ;#?(:clj
 ;(def paths
@@ -88,7 +125,7 @@
   "Returns the file object if the given file is in the given directory, nil otherwise."
   [directory file-name]
   (when (and file-name directory (string? file-name) (instance? File directory))
-    (let [file (File. ^String (.getPath directory) ^String file-name)]
+    (let [file (File. ^String (.getPath ^File directory) ^String file-name)]
       (when (and file (.exists file))
         file)))))
 ;___________________________________________________________________________________________________________________________________
@@ -191,23 +228,19 @@
 ;               (path path-n k-to-add-f)))
 ;           "" x)))
 
-#?(:clj
-(defnt ^java.io.File as-file
-  ([^vector? dir] (-> dir parse-dir as-file))
-  ([^string? dir] (-> dir (File.)))
-  ([^file?   dir] dir)))
+
 
 #?(:clj
-(def file-str (fn-> as-file str)))
+(def file-str (fn-> ->file str)))
 
 #?(:clj
 (defnt exists?
-  ([^string? s] (-> s as-file exists?))
+  ([^string? s] (-> s ->file exists?))
   ([^file?   f] (.exists f))))
 
 #?(:clj
 (defnt directory?
-  ([^string? s] (-> s as-file directory?))
+  ([^string? s] (-> s ->file directory?))
   ([^file?   f] (and (exists? f) (.isDirectory f)))))
 
 #?(:clj (defalias folder? directory?))
@@ -229,24 +262,22 @@
   ([^vec?    dir ] (-> dir parse-dir up-dir))
   #?(:clj ([^file?   file] (.getParent file))))
 
-#?(:clj
-(defn parent [f]
-  (.getParentFile ^File (as-file f))))
+#?(:clj (defalias parent up-dir))
 
 #?(:clj
 (defn children [f]
-  (let [^File file (as-file f)]
+  (let [^File file (->file f)]
     (when (directory? file)
       (->> file (.listFiles) seq)))))
 
 #?(:clj
 (defn siblings [f]
-  (let [^File file (as-file f)]
+  (let [file (->file f)]
     (->> file parent children
          (remove (fn-> str (= (str file))))))))
 
 #?(:clj (def directory-?       (mfn 1 directory?)))
-#?(:clj (def descendants       (fn->> as-file file-seq)))
-#?(:clj (def descendant-leaves (fn->> as-file file-seq (remove directory-?))))
-#?(:clj (def internal-nodes    (fn->> as-file file-seq (filter directory-?))))
+#?(:clj (def descendants       (fn->> ->file file-seq)))
+#?(:clj (def descendant-leaves (fn->> ->file file-seq (remove directory-?))))
+#?(:clj (def internal-nodes    (fn->> ->file file-seq (filter directory-?))))
 #?(:clj (def descendant-dirs internal-nodes))

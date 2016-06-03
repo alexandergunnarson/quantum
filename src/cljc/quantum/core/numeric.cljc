@@ -20,7 +20,7 @@
                      [quantum.core.logic                :as logic
                        :refer [#?@(:clj [fn-and whenf*n])]          ]
                      [quantum.core.macros               :as macros
-                       :refer [#?@(:clj [defnt deftransmacro])]     ]
+                       :refer [#?@(:clj [defnt defnt' deftransmacro])]]
                      [quantum.core.vars                 :as var
                        :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros
@@ -29,7 +29,7 @@
                      [quantum.core.logic                :as logic
                        :refer [fn-and whenf*n]                      ]
                      [quantum.core.macros               :as macros
-                       :refer [defnt deftransmacro]                 ]
+                       :refer [defnt defnt' deftransmacro]          ]
                      [quantum.core.vars                 :as var
                        :refer [defalias]                            ]))
   #?(:clj  (:import  [java.nio ByteBuffer]      
@@ -406,6 +406,14 @@
 #?(:clj (defalias log-10* clj/log-10*))
 
 #?(:clj (defalias log1p* clj/log1p*))
+
+(defnt' log*
+  ([#?(:clj #{double}) x #?(:clj #{double}) base] ; arbitrary to choose ln vs. log-10
+    (div* (ln x) (ln base))))
+
+#?(:clj
+(defmacro log [base x]
+  `(log* (double ~x) (double ~base))))
 
 (defalias cube-root #?(:clj clj/cube-root :cljs cljs/cube-root))
 

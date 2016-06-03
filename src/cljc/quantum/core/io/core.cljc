@@ -1,5 +1,5 @@
 (ns quantum.core.io.core
-           (:refer-clojure :exclude [get assoc! dissoc!])
+           (:refer-clojure :exclude [get assoc! dissoc! assert contains?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )      :as core     ]
                      [com.stuartsierra.component  :as component]
@@ -10,9 +10,9 @@
                      [quantum.core.convert        :as conv
                        :refer [->name ->str]                   ]
                      [quantum.core.error          :as err
-                       :refer [->ex #?(:clj throw-unless)]     ]
+                       :refer [->ex #?@(:clj [throw-unless assert])]     ]
                      [quantum.core.fn             :as fn
-                       :refer [#?@(:clj [fn->])]               ]
+                       :refer [#?@(:clj [fn->]) firsta]        ]
                      [quantum.core.log            :as log      ]
                      [quantum.core.logic          :as logic
                        :refer [#?@(:clj [whenf whenf*n whenc
@@ -29,23 +29,24 @@
                        :refer [vector+?]                       ]
                      [quantum.core.vars           :as var
                        :refer [#?(:clj defalias)]              ]
-                     [quantum.db.datomic          :as db
-                       :refer [#?(:cljs EphemeralDatabase)]    ])
+                     [quantum.core.macros         :as macros
+                       :refer [defnt]                          ])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
                        :refer [go]                             ]
                      [quantum.core.error          :as err
-                       :refer [throw-unless]                   ]
+                       :refer [throw-unless assert]                   ]
                      [quantum.core.fn             :as fn
                         :refer [fn->]                          ]
                      [quantum.core.log            :as log      ]
                      [quantum.core.logic          :as logic
                        :refer [whenf whenf*n whenc condpc
                                coll-or fn-not]                 ]
+                     [quantum.core.macros         :as macros
+                       :refer [defnt]                          ]
                      [quantum.core.vars           :as var
                        :refer [defalias]                       ]))
-  #?(:clj  (:import  (quantum.db.datomic EphemeralDatabase)
-                     (java.io File
+  #?(:clj  (:import  (java.io File
                               InputStream OutputStream
                               DataInputStream DataOutputStream
                               FileInputStream FileOutputStream
@@ -55,9 +56,7 @@
 
 ; All this isn't just IO, it's persisting, which is a smallish subset
 
-; TODO replace
-; Similar to |contains?|
-#?(:clj (defn exists? [x] (.exists ^File x)))
+#?(:clj (defalias contains? p/contains?))
 
 #?(:clj
 (defn- stream->assoc!
@@ -93,13 +92,13 @@
             (stream->assoc! path- data)
             (let [^FileOutputStream out-stream
                     (FileOutputStream. ^File (io/as-file path-))]
-              (.write out-stream data) ; REFLECTION warning
+              (.write out-stream ^"[B" data)
               (.close out-stream)))
       ;:csv  (with-open [out-file   (io/writer path-)]  ;  :append true... hmm...
       ;        (csv/write-csv out-file data))
       (coll-or :xls :xlsx)
-        (with-open [write-file (io/output-stream path-)]
-          (.write data write-file))))))
+        (with-open [^OutputStream write-file (io/output-stream path-)]
+          (.write write-file ^"[B" data))))))
 
 #?(:clj 
 (defn assoc-serialized! ; can encrypt :encrypt-with :....
@@ -167,10 +166,11 @@
                 :or   {directory       :resources
                        file-name       "Untitled"
                        file-types      [:clj]
-                       method          :serialize ; :compress ; can encrypt :encrypt-with :.... ; :method :pretty
+                       method          :serialize ; can encrypt :encrypt-with :.... 
                        overwrite       true  ; :date, :num :num-0
                        formatting-func identity}
                 :as   options}]
+  (assert (contains? #{:compress :pretty :serialize :print} method) #{method})
   (doseq [file-type-n file-types]
     (let [data data-
           file-path (p/parse-dir path-)
@@ -198,7 +198,7 @@
           file-num
             (cond
               (and (splice-or overwrite = :num :num-0)
-                   (some #(p/exists? %1) [file-path-0 (path directory-f file-name-00)]))
+                   (some #(exists? %1) [file-path-0 (path directory-f file-name-00)]))
               "00_FIX" #_(next-file-copy-num file-path-0)
               (and (= overwrite :num-0) ((fn-not exists?) file-path-0))
               "00"
@@ -242,9 +242,9 @@
         success-alert! #(println "Successfully deleted:" file-path-f)
         fail-alert!    #(println "WARNING: Unknown IOException. Failed to delete:" file-path-f)]
     (if (exists? file-path-f)
-        (try+ (if (io/delete-file file-f silently?)
-                  (success-alert!)
-                  (fail-alert!))
+        (try (if (io/delete-file file-f silently?)
+                 (success-alert!)
+                 (fail-alert!))
           (catch IOException e
             (do (println "Couldn't delete file due to an IOException. Trying to delete as directory...")
                 (FileUtils/deleteDirectory file-f)
@@ -256,7 +256,10 @@
 #?(:clj (def create-file! (fn-> io/as-file (.createNewFile))))
 
 (defn assoc!
-  "Persists @x between page reloads.
+  "For CLJ and CLJS.
+
+   In CLJS:
+   Persists @x between page reloads.
    Assocs @x to @k in js/localStorage.
 
    Note, according to OWASP:
@@ -270,11 +273,11 @@
       into these objects too, so don't consider objects in these to be trusted.
 
    Cookies can mitigate this risk using the |httpOnly| flag."
-  {:todo ["|path| is naive"
+  {:todo ["|path| is OS-naive"
           "Technically file structures can be like nested keys in a map,
            so it would be |assoc-in!|"]}
   [k x & [opts]]
-  #?(:clj  (apply assoc!- k x opts)
+  #?(:clj  (assoc!- k x opts)
      :cljs (js/localStorage.setItem (apply path k) (->str x))))
 
 ; TODO replace
@@ -322,39 +325,16 @@
                      byte-array? nippy/thaw))
                (println "Unknown read method requested."))))))
 
+(defmulti persist! firsta)
+
 #?(:cljs
 (defrecord
   ^{:doc "Persists @persist-data"}
   Persister
-  [persist-key persist-class persist-data opts]
+  [persist-class persist-key persist-data opts]
   component/Lifecycle
     (start [this]
-      ; TODO multimethod
-      (condp = persist-class
-        EphemeralDatabase
-          (let [{:keys [schema]} opts
-                {:keys [db history]} persist-data]
-            #?(:cljs
-            (when (-> db meta :listeners (core/get persist-key))
-              (throw (->ex :duplicate-persisters
-                           "Cannot have multiple ClojureScript Persisters for DataScript database"))))
-            ; restoring once persisted DB on page load
-            (or (when-let [stored (get (->name persist-key))]
-                  (let [stored-db (conv/->mdb stored)]
-                    (when (= (:schema stored-db) schema) ; check for code update
-                      (reset! db stored-db)
-                      (swap! history conj @db)
-                      true)))
-                ; (mdb/transact! conn schema)
-                )
-            (mdb/listen! db :persister
-              (fn [tx-report] ; TODO do not notify with nil as db-report
-                              ; TODO do not notify if tx-data is empty
-                (when-let [db (:db-after tx-report)]
-                  (go (assoc! persist-key db))))))
-        (throw (->ex :unhandled-class
-                       "Class not handled for persistence."
-                       persist-class))))
+      (persist! persist-class persist-key persist-data opts))
     (stop [this]
       (mdb/unlisten! (:db persist-data) :persister))))
 
@@ -412,9 +392,9 @@
 ;   ([file] (create-file file false))
 ;   ([file silent]
 ;     (if (. file exists)
-;       (logging/info (str (. file getName) " already exists. Doing nothing."))
+;       (log/pr :info (str (. file getName) " already exists. Doing nothing."))
 ;       (do
-;         (logging/info (str "Creating file " (. file getName) "..."))
+;         (log/pr :info (str "Creating file " (. file getName) "..."))
 ;         (. file createNewFile)
 ;         file))))
 
@@ -454,3 +434,5 @@
 #?(:clj (defalias resource        io/resource     ))
 #?(:clj (defalias ->output-stream io/output-stream))
 #?(:clj (defalias copy!           io/copy         ))
+
+#?(:clj (defn mkdir! [x] (.mkdir ^File (io/as-file x))))

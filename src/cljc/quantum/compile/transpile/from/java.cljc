@@ -404,13 +404,13 @@
            (eq? '.equals)
            (constantly '=)
 
-           :else identity))
+           identity))
        (prewalk ; Start from the top, not the bottom. Essential for cond-folding 
          (condf*n
            anap/cond-foldable?
            identity #_cond-fold
 
-           :else identity))
+           identity))
        #_(postwalk ; TODO uncomment this; just need to fix |conditional-branches|
          (compr
            (condf*n
@@ -418,7 +418,7 @@
                (fn->> ana/conditional-branches (every? anap/return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements   
              (fn [x] (list 'return (->> x (ana/map-conditional-branches (f*n second)))))
        
-             :else identity)
+             identity)
            #_join-lets))
        ;(prewalk (fn-> enclose-lets str-fold))
        (postwalk
@@ -430,7 +430,7 @@
            (fn-and anap/do-statement? (fn-> count (= 2)))
            (f*n second)
 
-           :else identity))
+           identity))
        first
        (map (if*n (fn-and seq? (fn-> first (= 'do))) rest list))
        (apply concat))))

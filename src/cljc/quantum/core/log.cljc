@@ -18,15 +18,19 @@
                      [quantum.core.fn            :as fn
                        :refer []                              ])))
 
-(defrecord LoggingLevels
-  [warn user macro-expand debug trace env])
+(defrecord
+  ^{:doc "This is a record and not a map because it's quicker
+          to check the default levels (member access: O(1)) than
+          it would be with a hash-map (O(log32(n)))."}
+  LoggingLevels
+  [warn user alert info inspect debug macro-expand trace env])
 
 (defonce levels
-  (-> {:warn              true
-       :user              true}
-      map->LoggingLevels atom)) ; alert, inspect, debug
+  (atom (map->LoggingLevels
+          {:warn true
+           :user true})))
 
-(defonce log  (atom []))
+(defonce log (atom []))
 
 (defrecord LogEntry
   [time-stamp ; ^DateTime  

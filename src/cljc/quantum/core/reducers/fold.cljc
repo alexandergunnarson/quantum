@@ -190,7 +190,7 @@
                  (fn-> folder->coll from-proc)
                counted?
                  from-proc
-               :else (constantly 512)))
+               (constantly 512)))
      :cljs count)) ; Because it's only single-threaded anyway...
 
 ;___________________________________________________________________________________________________________________________________

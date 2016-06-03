@@ -686,7 +686,7 @@
   (def lseq+
     (condf*n
       (fn-or seq? nil? coll?) #(lseq %) ; not |partial|, because can't take value of a macro
-      :else (fn-> list lseq first))))
+      (fn-> list lseq first))))
 
 (defn unchunk
   "Takes a seqable and returns a lazy sequence that

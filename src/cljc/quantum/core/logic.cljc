@@ -151,9 +151,8 @@
                  (cond
                    (= 0 n) `(throw (~illegal-argument
                                      (str "No matching clause for " ~obj)))
-                   (= 1 n) a
-                   (= 2 n) `(if (or ~(= a :else) 
-                                    (~a ~obj))
+                   (= 1 n) `(~a ~obj)
+                   (= 2 n) `(if (~a ~obj)
                                 (~b ~obj)
                                 ~(emit obj more))
                    :else   (emit obj more))))]
@@ -180,7 +179,7 @@
                      n (count clause)]
                  (cond
                    (= 0 n) `(throw (~illegal-argument (str "No matching clause for " ~obj)))
-                   (= 1 n) a
+                   (= 1 n) `(~a ~obj)
                    (= 2 n) `(if (or ~(= a :else) 
                                     (~a ~obj))
                                 ~b ; As in, this expression is not used as a function taking @obj as an argument

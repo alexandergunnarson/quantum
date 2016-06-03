@@ -28,6 +28,7 @@
                      [quantum.core.data.complex.json     :as json   ]
                      [quantum.core.macros                :as macros 
                        :refer [#?(:clj defnt)]                      ]
+                     [quantum.core.paths                 :as path   ]
                      [quantum.core.vars                  :as var   
                        :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros 
@@ -118,8 +119,8 @@
 #?(:cljs (defn forge-bytes->base64 [x] (js/forge.util.binary.base64.encode x)))
 
 ; TODO test how to use these
-#?(:cljs (defn ?->utf-8 [x] (js/forge.util.encodeUtf8 x)))
-#?(:cljs (defn utf-8->? [x] (js/forge.util.decodeUtf8 x)))
+#?(:cljs (defn ?->utf-8   [x] (js/forge.util.encodeUtf8 x)))
+#?(:cljs (defn utf-8->?   [x] (js/forge.util.decodeUtf8 x)))
 
 #?(:cljs (defn bytes->hex [x] (js/forge.util.bytesToHex x)))
 #?(:cljs (defn hex->bytes [x] (js/forge.util.hexToBytes x)))
@@ -252,79 +253,50 @@
           (recur (+ offset result) (- len result)))))
     content)))
 
-
-
-
-
-
-
-
-
-
-
-; TODO UNCOMMENT THIS — IT'S GOOD
-
-; (defnt ->uuid*
-;   ([^string? id] (java.util.UUID/fromString        id))
-;   ([^bytes?  id] (java.util.UUID/nameUUIDFromBytes id))
-;   ([^Long msb lsb]
-;      (java.util.UUID. msb ^Long lsb)))
-
-; #?(:clj
-; (defmacro ->uuid
-;   "Because 'IllegalArgumentException Definition of function ->uuid-protocol
-;             in protocol __GT_uuidProtocol must take at least one arg'"
-;   [& args]
-;   (if (empty? args)
-;       `(java.util.UUID/randomUUID)
-;       `(->uuid* ~@args))))
-
-(declare ->uri)
+#?(:clj
+(defnt ->uuid*
+  ([^string? id] (java.util.UUID/fromString        id))
+  ([^bytes?  id] (java.util.UUID/nameUUIDFromBytes id))
+  ([^Long msb lsb]
+     (java.util.UUID. msb ^Long lsb))))
 
 #?(:clj
-(defnt ^java.io.File ->file
-  {:todo "Eliminate reflection"}
-  ([^java.io.File           x] x          )
-  ([^java.nio.file.Path     x] (.toFile x))
-  ([#{string? java.net.URI} x] (File.   x))
-  ([^java.net.URL           x] (-> x ->uri ->file))
-  ([                        x] (io/file x))))
+(defmacro ->uuid
+  "Because 'IllegalArgumentException Definition of function ->uuid-protocol
+            in protocol __GT_uuidProtocol must take at least one arg'"
+  [& args]
+  (if (empty? args)
+      `(java.util.UUID/randomUUID)
+      `(->uuid* ~@args))))
+
+#?(:clj (defalias ->file path/->file))
+#?(:clj (defalias ->uri  path/->uri ))
+#?(:clj (defalias ->url  path/->url ))
 
 #?(:clj
-(defnt ^java.net.URI ->uri
-  {:todo "Eliminate reflection"}
-  ([^java.net.URI                x] x)
-  ([^java.nio.file.Path          x] (.toUri x))
-  ([#{java.io.File java.net.URL} x] (.toURI x))
-  ([^string?                     x] (URI. x))
-  ([                             x] (-> x ->file ->uri))))
+(defnt ^java.net.InetAddress ->inet-address
+  ([^string? x] (InetAddress/getByName x))))
 
-; (defnt ^java.net.URL ->url
-;   ([^string?      x] (URL. x))
-;   ([^java.net.URL x] x)
-;   ([^java.net.URI x] (.toURL x))
-;   ([              x] (-> x ->uri ->url)))
+#?(:clj
+(defnt ^java.nio.file.Path ->java-path
+  ([^java.nio.file.Path x] x)
+  ([                    x] (Paths/get ^URI (->uri x)))))
+  ; TODO have a smart mechanism which adds arity based on
+  ; unaccounted-for arities from ->uri
 
-; (defnt ^java.net.InetAddress ->inet-address
-;   ([^string? x] (InetAddress/getByName x)))
+#?(:clj
+(defnt ->buffered
+  ([^java.io.BufferedInputStream  x] x)
+  ([^java.io.BufferedOutputStream x] x)
+  ([^java.io.InputStream          x] (BufferedInputStream.  x))
+  ([^java.io.OutputStream         x] (BufferedOutputStream. x))))
 
-; (defnt ^java.nio.file.Path ->path
-;   ([^java.nio.file.Path x] x)
-;   ([                    x] (Paths/get ^URI (->uri x))))
-;   ; TODO have a smart mechanism which adds arity based on
-;   ; unaccounted-for arities from ->uri
+#?(:clj
+(defnt ->observable ; O(1)
+  ([^vector? v] (FXCollections/observableArrayList v))
+  ([^listy?  l] (FXCollections/observableArrayList l))))
 
-; (defnt ->buffered
-;   ([^java.io.BufferedInputStream  x] x)
-;   ([^java.io.BufferedOutputStream x] x)
-;   ([^java.io.InputStream          x] (BufferedInputStream.  x))
-;   ([^java.io.OutputStream         x] (BufferedOutputStream. x)))
-
-; (defnt ->observable ; O(1)
-;   ([^vector? v] (FXCollections/observableArrayList v))
-;   ([^listy?  l] (FXCollections/observableArrayList l)))
-
-; (defalias ->predicate coll/->predicate)
+#?(:clj (defalias ->predicate coll/->predicate))
 
 ; #_(defalias ->keyword str/->keyword)
 
@@ -370,6 +342,8 @@
           (finally
             (.close out))))
       in))))
+
+; TODO UNCOMMENT THIS — IT'S GOOD
 
 ; (defnt ^java.io.DataInputStream ->data-input-stream
 ;   {:attribution "ztellman/byte-streams"

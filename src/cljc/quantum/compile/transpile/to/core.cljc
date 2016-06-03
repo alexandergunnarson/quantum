@@ -218,7 +218,7 @@
       (condfc (-> prev-block line-height)
         (eq? 0)    "\n"
         (f*n <= 2) "\n"
-        :else      "\n\n")))
+        "\n\n")))
 
 (declare special-syms) ; For use with the object-language |defmacro|
 
