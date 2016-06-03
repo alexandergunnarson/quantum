@@ -30,7 +30,7 @@
       (constantly #{})
     (fn-not set?)
       hash-set
-    :else identity))
+    identity))
 
 (defn zip-reduce [f init z]
   (loop [z (zip/down z)

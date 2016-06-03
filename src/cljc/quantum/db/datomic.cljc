@@ -1,9 +1,13 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
-          (:refer-clojure :exclude [assoc dissoc conj disj disj! update merge
+          (:refer-clojure :exclude [conj conj! disj disj!
+                                    assoc assoc! dissoc dissoc! update merge
                                     #?(:cljs boolean?)])
           (:require [#?(:clj  clojure.core
                         :cljs cljs.core   )           :as c        ]
+                    [#?(:clj  clojure.core.async
+                        :cljs cljs.core.async)
+                       :refer [#?(:clj go)]                        ]
            #?(:cljs [cljs-uuid-utils.core             :as uuid     ]) ; TODO have a quantum UUID ns
            #?(:clj  [datomic.api                      :as bdb      ]
               :cljs [datomic-cljs.api                 :as bdb      ])
@@ -20,15 +24,21 @@
                        :refer [#?@(:clj [with])]                   ]
                     [quantum.core.log                 :as log      ]
                     [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-and fn-or])
+                       :refer [#?@(:clj [fn-and fn-or whenf condf])
                                nnil? nempty?]     ]
                     [quantum.core.resources           :as res      ]
+                    [quantum.core.string              :as str      ]
             #?(:clj [quantum.core.process             :as proc     ])
                     [quantum.core.thread.async        :as async    ]
                     [quantum.core.type                :as type
                       :refer [atom? #?(:clj boolean?)]]
                     [quantum.core.vars                :as var
-                      :refer [#?(:clj defalias)]                   ])
+                      :refer [#?(:clj defalias)]                   ]
+                    [quantum.core.io.core             :as io       ]
+                    [quantum.core.convert             :as conv
+                      :refer [->name]                              ]
+                    [quantum.core.paths               :as path     ]
+                    [quantum.parse.core               :as parse    ])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
@@ -119,7 +129,7 @@
         (log/pr :debug "Schema initialization complete.")))))
 
 
-; RECORDS
+; RECORDS / RESOURCES (TODO: MOVE)
 
 (defrecord
   ^{:doc "Ephemeral (in-memory) database. Currently implemented as
@@ -180,6 +190,56 @@
         (reset! conn nil)) ; TODO is this wise?
       this))
 
+(defn ->ephemeral-db
+  [{:keys [history-limit] :as config}]
+  (err/assert ((fn-or nil? integer?) history-limit))
+  (map->EphemeralDatabase
+    (c/assoc config :history-limit (or history-limit 0))))
+
+#?(:clj
+(defn start-transactor!
+  [{:keys [type host port]}
+   {:keys [kill-on-shutdown? datomic-path flags resources-path internal-props]
+    :as   txr-props}]
+  (let [res          resources-path
+        props-path-f (condf internal-props
+                            string? identity
+                            map?    (fn-or :path
+                                           (fn [_]
+                                             (path/path resources-path
+                                               (str (-> "generated" gensym name) ".properties"))))
+                            #(throw (->ex nil "Invalid transactor props" %)))
+        write-props! (fn write-props! []
+                       (let [internal-props-f
+                              (c/merge {:protocol               (name type)
+                                        :host                   host ; "localhost"
+                                        :port                   port ; 4334
+                                         ; TODO dynamically determine based on flag passed
+                                        :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage 
+                                        :memory-index-max       "256m"
+                                        :object-cache-max       "128m"
+                                        :data-dir               (if res (str/dquote (path/path res "data")) "data")
+                                        :log-dir                (if res (str/dquote (path/path res "log" )) "log" )
+                                        :pid-file               (if res (str/dquote (path/path res "transactor.pid"))
+                                                                        "transactor.pid")}
+                                     (c/dissoc internal-props :path))]
+                         (io/assoc! props-path-f
+                           (parse/output :java-properties internal-props-f {:no-quote? true})
+                           {:method :print})))
+        _ (when (map? internal-props) (write-props!))
+        _ (log/pr :debug "Starting transactor..." (kmap datomic-path flags props-path-f resources-path))
+        proc (res/start!
+               (proc/->proc (path/path datomic-path "bin" "transactor")
+                 (c/conj (or flags []) props-path-f)
+                 {:pr-to-out? true
+                  :dir        datomic-path}))
+        _ (when kill-on-shutdown?
+            (.addShutdownHook (Runtime/getRuntime)
+              (Thread. #(res/stop! proc))))]
+    (async/sleep 3000)
+    (log/pr :debug "Done.")
+    proc)))
+
 (defrecord
   ^{:doc "Datomic database.
 
@@ -188,10 +248,9 @@
     :todo ["Decompose this"]}
   BackendDatabase
   [type
-   name db-name table-name instance-name ; <- TODO disambiguate these three
+   name table-name instance-name ; <- TODO disambiguate these three
    host port rest-port uri conn create-if-not-present?
-   start-txr? kill-txr-on-shutdown?
-   txr-bin-path txr-flags txr-props-path txr-dir txr-process txr-alias
+   txr-props txr-process
    init-partitions? partitions
    default-partition
    init-schemas? schemas]
@@ -214,10 +273,10 @@
                               (str "datomic:" (c/name type)
                                    "://" name)
                             :http
-                              (str "http://" host ":" rest-port "/" txr-alias "/" name)
+                              (str "http://" host ":" rest-port "/" (:alias txr-props) "/" name)
                             :dynamo nil
                               #_(str "datomic:ddb://"    (amz/get-server-region instance-name)
-                                   "/" db-name
+                                   "/" name
                                    "/" table-name
                                    "?aws_access_key_id=" (amz/get-aws-id     instance-name)
                                    "&aws_secret_key="    (amz/get-aws-secret instance-name))
@@ -225,27 +284,18 @@
                                          "Database type not supported"
                                          type)))
             txr-process-f
-              (when start-txr?
-                #?(:clj (let [proc (res/start!
-                                     (proc/->proc txr-bin-path
-                                       (c/conj (or txr-flags []) txr-props-path)
-                                       {:pr-to-out? true
-                                        :dir        txr-dir}))]
-                          (log/pr :debug "Starting transactor..." (kmap txr-bin-path txr-flags txr-props-path txr-dir))
-                          (async/sleep 3000)
-                          proc)))
-            _ (when kill-txr-on-shutdown?
-                #?(:clj (.addShutdownHook (Runtime/getRuntime)
-                          (Thread. #(res/stop! txr-process-f)))))
+              (when (:start? txr-props)
+                #?(:clj (start-transactor! (kmap type host port) txr-props)))
             connect (fn [] (log/pr :debug "Trying to connect with" uri-f)
                            (let [conn-f (do #?(:clj  (bdb/connect uri-f)
-                                               :cljs (bdb/connect host rest-port txr-alias name)))]
+                                               :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
                              (log/pr :debug "Connection successful.")
                              conn-f))
             _ (when create-if-not-present?
                 (log/pr :debug "Creating database...")
                 #?(:clj  (Peer/createDatabase uri-f)
-                   :cljs (go (<? (bdb/create-database host rest-port txr-alias name)))))
+                   :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
+                (log/pr :debug "Done."))
             conn-f  (try 
                       (try-times 5 1000
                         (try (connect)
@@ -258,10 +308,11 @@
                       (catch #?(:clj Throwable :cljs js/Error) e
                         (log/pr :warn "Failed to connect:" e)
                         (throw e)))
+            _ (log/pr :debug "Connected.")
             _ (reset! conn conn-f)
             default-partition-f (or default-partition :db.part/test)
             _ (when init-schemas? (init-schemas! conn-f schemas))]
-
+      (log/pr :debug "Datomic database initialized.")
       (c/assoc this
         :uri               uri-f
         :txr-process       txr-process-f
@@ -273,6 +324,20 @@
       (when txr-process
         (res/stop! txr-process))
       this))
+
+(defn ->backend-db
+  [{:keys [type name host port txr-alias create-if-not-present?]
+    :as config}]
+  ; TODO change these things to use schema?  
+  (err/assert (contains? #{:free :http} type)) ; TODO for now
+  (err/assert ((fn-and string? nempty?) name))
+  (err/assert ((fn-and string? nempty?) host))
+  (err/assert ((fn-or nil? integer?) port))
+  (err/assert ((fn-or nil? string?)  txr-alias))
+  (err/assert ((fn-or nil? boolean?) create-if-not-present?))
+  (map->BackendDatabase 
+    (c/assoc config :uri  (atom nil)
+                    :conn (atom nil))))
 
 (defrecord
   ^{:doc "Database-system consisting of an EphemeralDatabase (e.g. DataScript),
@@ -323,32 +388,32 @@
 
 (defn ->db
   "Constructor for |Database|."
-  [{{:keys [type name host port rest-port txr-alias create-if-not-present?] :as backend}
-    :backend
-    {:keys [] :as reconciler}
-    :reconciler
-    {:keys [history-limit] :as ephemeral}
-    :ephemeral
-    :as config}]
-  (log/pr :user (kmap config))
-  (when backend
-    (err/assert (contains? #{:free :http} type)) ; TODO for now
-    (err/assert ((fn-and string? nempty?) name))
-    (err/assert ((fn-and string? nempty?) host))
-    (err/assert (integer? port))
-    (err/assert ((fn-or nil? integer?) port))
-    (err/assert ((fn-or nil? string?)  txr-alias))
-    (err/assert ((fn-or nil? boolean?) create-if-not-present?)))
-
-  (when ephemeral
-    (err/assert ((fn-or nil? integer?) history-limit)))
-
+  [{:keys [backend reconciler ephemeral] :as config}]
+  (log/pr ::resources (kmap config))
   (Database.
-    (when ephemeral
-      (map->EphemeralDatabase
-        (c/assoc ephemeral :history-limit (or history-limit 0))))
+    (whenf ephemeral nnil? ->ephemeral-db)
     reconciler
-    (when backend
-      (map->BackendDatabase 
-        (c/assoc backend :uri  (atom nil)
-                         :conn (atom nil))))))
+    (whenf backend   nnil? ->backend-db  )))
+
+(defmethod io/persist! EphemeralDatabase
+  [_ persist-key
+   {:keys [db history] :as persist-data}
+   {:keys [schema]     :as opts        }]
+  #?(:cljs
+    (when (-> db meta :listeners (c/get persist-key))
+      (throw (->ex :duplicate-persisters
+                   "Cannot have multiple ClojureScript Persisters for DataScript database"))))
+    ; restoring once persisted DB on page load
+    (or (when-let [stored (io/get (->name persist-key))]
+          (let [stored-db (conv/->mdb stored)]
+            (when (= (:schema stored-db) schema) ; check for code update
+              (reset! db stored-db)
+              (swap! history c/conj @db)
+              true)))
+        ; (mdb/transact! conn schema)
+        )
+    (mdb/listen! db :persister
+      (fn [tx-report] ; TODO do not notify with nil as db-report
+                      ; TODO do not notify if tx-data is empty
+        (when-let [db (:db-after tx-report)]
+          (go (io/assoc! persist-key db))))))

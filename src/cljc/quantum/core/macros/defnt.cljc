@@ -98,7 +98,7 @@
                      (into #{}))
       string? (fn-> symbol hash-set)
       ;nil?    (constantly #{'Object})
-     (constantly (throw (->ex nil "Not a type hint." x))))))
+      #(throw (->ex nil "Not a type hint." %)))))
 
 ; ; TODO this is reducei
 (defn hint-arglist-with [arglist hints]
@@ -124,7 +124,7 @@
   (condf body
     (fn-> first vector?) (fn->> defnt-remove-hints vector)
     (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
-    (fn [form] (throw (->ex nil "Unexpected form when trying to parse arities." form)))))
+    #(throw (->ex nil "Unexpected form when trying to parse arities." %))))
 
 (defn defnt-arglists
   {:out '[[^string? x] [^vector? x]]}
@@ -132,7 +132,7 @@
   (condf body
     (fn-> first vector?) (fn->> first vector)
     (fn-> first seq?   ) (fn->> (mapv first))
-    (fn [form] (throw (->ex nil "Unexpected form when trying to parse arglists." form)))))
+    #(throw (->ex nil "Unexpected form when trying to parse arglists." %))))
 
 (defn defnt-gen-protocol-names [{:keys [sym strict? lang]}]
   (let [genned-protocol-name

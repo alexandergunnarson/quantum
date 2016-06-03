@@ -430,7 +430,7 @@
                                                          obj))
                                                    (fn-and seq? (fn-> first name (= "quote")))
                                                      second
-                                                   :else identity))
+                                                   identity))
                                             (into #{})))))
                               (into {})))))
                 (into {}))

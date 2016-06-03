@@ -265,10 +265,9 @@
                                          (normalize-prop-v sub-prop-k-f)
                                          css-prop-str)))))
                              redm)
-                    :else
-                      (fn->> (<- normalize-prop-v prop-k)
-                             css-prop-str
-                             (map-entry prop-k)))]
+                    (fn->> (<- normalize-prop-v prop-k)
+                           css-prop-str
+                           (map-entry prop-k)))]
              (merge ret normalized-props)))
          {})
        compatibilize))

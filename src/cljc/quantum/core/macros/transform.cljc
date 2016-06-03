@@ -70,7 +70,7 @@
                                     first)]
                     (throw (->ex :unsupported "Arglist in |let| shadows hinted arg." sym))
                     scope))
-              :else identity)
+              identity)
             body)
         body-unboxed
           (if (= body-type :protocol)

@@ -19,7 +19,9 @@
                      [quantum.core.macros         :as macros
                        :refer [#?@(:clj [defnt])]              ]
                      [quantum.core.vars           :as var
-                       :refer [#?(:clj def-)]                  ])
+                       :refer [#?(:clj def-)]                  ]
+                     [quantum.core.paths          :as paths    
+                       :refer [#?(:clj ->file)]])
   #?(:cljs (:require-macros
                      [quantum.core.collections    :as coll
                        :refer [kmap]                           ]
@@ -53,8 +55,6 @@
     (fn [str-n k v] (str/replace str-n k v))
     str-0 ill-chars-table))
 
-(defn parse-dir [x] x) ; TODO fix
-
 #?(:clj
 (defnt readable?
   ([^string? dir]
@@ -74,11 +74,10 @@
 
 #?(:clj
 (defn create-dir! [dir-0]
-  (let [dir   (-> dir-0 parse-dir)
-        ^File dir-f (io/as-file dir)]
-    (if (.exists dir) ; exists?
-        (try+ (writable? dir-f) ; TODO assert this
-              (assert (.mkdir dir-f) #{dir-f})
+  (let [dir (-> dir-0 ->file)]
+    (if (paths/contains? dir) ; exists?
+        (try+ (writable? dir) ; TODO assert this
+              (assert (.mkdir ^File dir) #{dir})
           (catch SecurityException e
             (throw
               (->ex :mkdir "The directory could not be created. A security exception occurred." (kmap e dir))))
