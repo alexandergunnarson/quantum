@@ -140,7 +140,7 @@
 
 #?(:clj
 (defonce pprint-vector-0
-  (.getMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector)))
+  (.getMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.APersistentVector)))
 
 #?(:clj
 (defn- pprint-vector [x]
@@ -150,8 +150,8 @@
     (print " "))
   (pprint-vector-0 x)))
 
-#?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.Symbol pprint-symbol))
-#?(:clj (.addMethod clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
+#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.Symbol pprint-symbol))
+#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
 
 (defn pprint-hints [x]
   #?(:clj
