@@ -21,6 +21,9 @@
                      [quantum.core.vars                       :as var
                        :refer [defalias]                               ])))
 
+(defn unhint [x]
+  (with-meta x (-> x meta (dissoc :tag))))  ; TODO update-meta
+
 ; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
 (def conditional-branches
   (condf*n
