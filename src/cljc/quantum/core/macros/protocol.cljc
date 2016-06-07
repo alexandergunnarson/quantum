@@ -1,6 +1,8 @@
 (ns quantum.core.macros.protocol
            (:require [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]]
+                       :refer [type-hint]                          ]
+                     [quantum.core.analyze.clojure.transform
+                       :refer [unhint]                             ]
                      [quantum.core.macros.transform :as trans      ]
                      [quantum.core.fn               :as fn
                                 :refer [#?@(:clj [f*n fn-> fn->>])]]
@@ -29,18 +31,21 @@
            float   double}
     :cljs {boolean boolean}})
 
-(defn ensure-protocol-appropriate-type-hint [lang i hint]
-  (when-not (and (> i 0) (= hint 'Object)) ; The extra object hints mess things up
-    (if-let [protocol-appropriate-type-hint (get-in protocol-type-hint-map [lang hint])]
-      protocol-appropriate-type-hint
-      hint)))
+(defn ensure-protocol-appropriate-type-hint [arg lang i]
+  (let [unhinted (unhint    arg)
+        hint-0   (type-hint arg)
+        ; hint-f   (get-in protocol-type-hint-map [lang hint])
+        ]
+    (if (or (= hint-0 'Object)
+            (= hint-0 'java.lang.Object) ; The extra object hints mess things up
+            (-> protocol-type-hint-map (get lang) (get hint-0)))
+        unhinted ; just remove the hint — don't "upgrade" it 
+        (cmacros/hint-meta arg hint-0))))
 
 (defn ensure-protocol-appropriate-arglist [lang arglist-0]
   (->> arglist-0
        (map-indexed
-         (fn [i arg]
-           (cmacros/hint-meta arg
-             (ensure-protocol-appropriate-type-hint lang i (type-hint arg)))))
+         (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i)))
        (into [])))
 
 (defn gen-protocol-from-interface
@@ -96,13 +101,13 @@
                                              ; (whenc (-> arglist second type-hint tcore/->boxed)
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
-                                  return-type (->> arglist type-hint
-                                                   (ensure-protocol-appropriate-type-hint lang 0))
+                                  return-type (-> arglist
+                                                  (ensure-protocol-appropriate-type-hint lang 0))
                                   arglist-f (->> arglist rest (ensure-protocol-appropriate-arglist lang))
                                   arglist-f (if return-type
                                                 arglist-f
                                                 (cmacros/hint-meta arglist-f return-type) )
-                                  body-f (trans/hint-body-with-arglist body arglist-f lang :protocol)
+                                  body-f (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
                               (if (or (= boxed-first-type 'Object)
                                       (= boxed-first-type 'java.lang.Object))

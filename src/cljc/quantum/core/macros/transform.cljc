@@ -5,6 +5,8 @@
                        :refer [postwalk]                                    ]
                      [quantum.core.analyze.clojure.predicates :as anap
                        :refer [type-hint]                                   ]
+                     [quantum.core.analyze.clojure.transform
+                       :refer [unhint]                                      ]
                      [quantum.core.collections.base           :as cbase
                        :refer [update-first update-val ensure-set
                                zip-reduce default-zipper]                   ]
@@ -52,20 +54,21 @@
   "Hints a code body with the hints in the arglist."
   ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
   ([body arglist lang body-type]
-  (let [arglist-set (into #{} arglist)
+  (let [arglist-map (->> arglist 
+                         (map (fn [sym] [sym (type-hint sym)]))
+                         (into {}))
         body-hinted 
           (postwalk 
             (condf*n
               symbol?
                 (fn [sym]
-                  (if-let [arg (get arglist-set sym)]
-                    (if (tcore/primitive? (type-hint arg)) ; Because "Can't type hint a primitive local"
-                        sym
-                        arg)
-                    sym)) ; replace it
+                  (let [[hinted hint] (find arglist-map sym)]
+                    (if (and hinted (-> hint tcore/primitive? not)) ; Because "Can't type hint a primitive local"
+                        hinted
+                        sym)))
               anap/new-scope?
                 (fn [scope]
-                  (if-let [sym (->> arglist-set
+                  (if-let [sym (->> arglist-map keys
                                     (filter (partial anap/shadows-var? (second scope)))
                                     first)]
                     (throw (->ex :unsupported "Arglist in |let| shadows hinted arg." sym))
@@ -74,7 +77,16 @@
             body)
         body-unboxed
           (if (= body-type :protocol)
-              body-hinted ; TODO? add (let [x (long x)] ...) unboxing
+              (list
+                (list* 'let
+                  (->> arglist ; to preserve order
+                       (map (juxt unhint type-hint))
+                       (filter (fn-> second tcore/primitive?))
+                       (map (fn [[sym hint]]
+                              [sym (list hint sym)])) ; add primitive type cast in let-binding
+                       (apply concat)
+                       vec)
+                  body-hinted))
               body-hinted)]
     body-unboxed)))
 
