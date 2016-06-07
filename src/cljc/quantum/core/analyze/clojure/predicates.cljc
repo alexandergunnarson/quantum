@@ -29,11 +29,11 @@
 
 ; Because clojure.string/index-of works for CLJ but not CLJS yet
 (defn str-index-of [x sub]
-  #?(:clj  (.indexOf ^String x sub)
+  #?(:clj  (.indexOf ^String x ^String sub)
      :cljs (.indexOf         x sub)))
 
 (defn str-ends-with? [x sub]
-  #?(:clj  (.endsWith ^String x sub)
+  #?(:clj  (.endsWith ^String x ^String sub)
      :cljs (.endsWith         x sub)))
 
 ; SYMBOLS
