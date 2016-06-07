@@ -43,7 +43,8 @@
                        :refer [boolean?]                               ]
                      [quantum.core.vars          :as var
                        :refer [defalias]                               ]))
-  #?(:clj (:import java.net.IDN)))
+  #?(:clj (:import java.net.IDN
+                   java.util.regex.Pattern)))
 
 #_(defn contains? [s sub]
   (not= (.indexOf ^String s sub) -1))
@@ -152,7 +153,7 @@
 
 #?(:clj
 (defnt contains-pattern?
-  ([^string? x pattern] (-> (->pattern ^Pattern pattern) (.matcher x) .find))))
+  ([^string? x pattern] (-> pattern ^Pattern ->pattern-protocol (.matcher x) .find))))
 
 ; ===== SPLIT/JOIN =====
 
@@ -371,15 +372,15 @@
   (reduce #(replace %1 %2 "") str-0 to-remove))
 
 (defnt remove*
-  ([^string? to-remove str-0]
-    (.replaceAll ^String str-0 (conv-regex-specials to-remove) ""))
+  ([^string? to-remove ^String str-0]
+    (.replaceAll str-0 (conv-regex-specials to-remove) ""))
   ([^regex?  to-remove str-0]
     (replace str-0 to-remove "")))
 
 (defnt remove
   {:todo ["Port to cljs"]}
   ([^string? str-0 to-remove]
-    (remove* to-remove str-0)))
+    (remove*-protocol to-remove str-0)))
 
 (defn remove-from-end [^String string ^String end]
   (if (.endsWith string end)
@@ -536,21 +537,21 @@
           212 "divg"}}
   [reg s]
   (loop
-    [#?@(:clj  [^String s-n s]
-         :cljs [        s-n s])
+    [s-n s
      matches (re-seq reg s)
      indexed (map/sorted-map)]
     (if (empty? matches)
         indexed
         (let [match-n    (first matches)
-              i-relative (.indexOf s-n match-n)
+              i-relative (.indexOf ^String s-n ^String match-n)
               i-absolute
                 (if (empty? indexed)
                     i-relative
                     (+ i-relative (-> indexed last first)
                                   (-> indexed last second count)))]
-          (recur (.substring s-n (+ i-relative (count match-n))
-                           (-> s-n count dec))
+          (recur (.substring ^String s-n
+                   (+ i-relative (count match-n))
+                   (-> s-n count dec))
                  (rest matches)
                  (assoc indexed i-absolute match-n))))))
 

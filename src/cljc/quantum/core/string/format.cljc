@@ -30,8 +30,8 @@
   #?(:clj (:import java.net.IDN)))
 
 (defnt replace* ; TODO .replace may try to compile a pattern instead of replacing the actual string
-  ([^string? pre post s] (.replace    ^String s pre ^String post))
-  ([^regex?  pre post s] (str/replace         s pre         post)))
+  ([^string? pre ^String post ^String s] (.replace    s pre post))
+  ([^regex?  pre         post         s] (str/replace s pre post)))
 
 (defn replace [s pre post] (replace* pre post s))
 

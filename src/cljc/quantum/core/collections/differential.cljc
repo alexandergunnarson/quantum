@@ -244,7 +244,7 @@
 
 (def take-until takel-until)
 
-(defnt takel-until-inc
+(defn takel-until-inc
   ([sub super]
     (if-let [i (index-of super sub)]
       (takel-untili (+ i (count sub)) super)
@@ -313,7 +313,7 @@
   ([^fn? pred super] (taker-while (fn-not pred) super      ))
   ([     sub  super] (taker-until sub           super super))
   ([sub alt   super]
-    (let [i (last-index-of super sub)]
+    (let [i (coll/last-index-of-protocol super sub)]
       (if i
           (taker-untili i super)
           alt))))
@@ -391,7 +391,7 @@
    :out "abcd"}
   ([^fn? pred super] (dropr-while super (fn-not pred)))
   ([sub super]
-    (if-let [i (last-index-of super sub)]
+    (if-let [i (coll/last-index-of-protocol super sub)]
       (getr super 0 (+ i (lasti sub)))
       super)))
 
