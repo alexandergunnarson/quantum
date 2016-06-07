@@ -323,7 +323,7 @@
                    (whenf (with-open [read-file (io/input-stream file-path-f)] ; Clojure object
                           (nippy/thaw-from-in! (DataInputStream. read-file)))
                      byte-array? nippy/thaw))
-               (println "Unknown read method requested."))))))
+               (throw (->ex nil "Unknown read method requested." method)))))))
 
 (defmulti persist! firsta)
 
