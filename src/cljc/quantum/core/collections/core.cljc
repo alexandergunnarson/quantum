@@ -39,7 +39,8 @@
                        :refer [#?@(:clj [defnt])]                ]
                      [quantum.core.reducers          :as red     
                        :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
-                     [quantum.core.type              :as type    ]
+                     [quantum.core.type              :as type    
+                       :refer [#?(:clj pattern?)]]
                      [quantum.core.vars              :as var
                        :refer [#?(:clj defalias)]                ])
   #?(:cljs (:require-macros
@@ -51,7 +52,8 @@
                        :refer [eq? fn-eq? whenc whenf if*n]      ]
                      [quantum.core.macros            :as macros
                        :refer [defnt]                            ]
-                     [quantum.core.type              :as type    ]
+                     [quantum.core.type              :as type    
+                       :refer [pattern?]]
                      [quantum.core.vars              :as var
                        :refer [defalias]                         ]))
 )
@@ -284,7 +286,17 @@
   {:todo ["Reflection on short, bigint"
           "Add 3-arity for |index-of-from|"]}
   ([^vec?    coll elem] (whenc (.indexOf coll elem) neg-1? nil))
-  ([^string? coll elem] (whenc (.indexOf coll (str elem)) neg-1? nil))
+  ([^string? coll elem]
+    (cond (string? elem)
+          (whenc (.indexOf coll (str elem)) neg-1? nil)
+          (pattern? elem)
+          #?(:clj  (let [^java.util.regex.Matcher matcher
+                          (re-matcher (re-pattern elem) coll)]
+                     (when (.find matcher)
+                       (.start matcher)))
+             :cljs (throw (->ex :unimplemented
+                                (str "|index-of| not implemented for " (type coll) " on " (type elem))
+                                (kmap coll elem))))))
   #_([coll elem] (throw (->ex :unimplemented
                             (str "|index-of| not implemented for " (type coll) " on " (type elem))
                             (kmap coll elem)))))
