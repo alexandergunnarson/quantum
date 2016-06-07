@@ -247,6 +247,7 @@
 
 #?(:clj (defmalias defnt       quantum.core.macros.defnt/defnt    ))
 #?(:clj (defmalias defnt'      quantum.core.macros.defnt/defnt'   ))
+#?(:clj (defmalias defntp      quantum.core.macros.defnt/defntp   ))
 
 #?(:clj (defmalias compile-if  quantum.core.macros.core/compile-if))
 #?(:clj (defmalias quote+      quantum.core.macros.core/quote+    ))
