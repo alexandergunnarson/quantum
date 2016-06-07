@@ -16,7 +16,7 @@
 ; ================== START SLINGSHOT ==================
 
 (defn throw-arg [& args]
-  (throw #?(:clj (Exception. (apply str args))
+  (throw #?(:clj (Exception. ^String (apply str args))
             :cljs (js/Error. (apply str args)))))
 
 ;; context support
@@ -36,11 +36,11 @@
 
 (defn wrap
   "Returns a context wrapper given a context"
-  [{:keys [object message cause #?(:clj ^Throwable stack-trace :cljs stack-trace)]}]
-  (let [data (if (map? object) object ^::wrapper? {:object object})]
-    (doto (ex-info message data cause)
-          #?(:clj  (.setStackTrace stack-trace)
-             :cljs identity))))
+  [{:keys [object message cause stack-trace]}]
+  (let [data (if (map? object) object ^::wrapper? {:object object})
+        ex   (ex-info message data cause)]
+    #?(:clj  (doto ^Throwable ex (.setStackTrace stack-trace))
+       :cljs ex)))
 
 (defn unwrap
   "If t is a context wrapper or other IExceptionInfo, returns the
