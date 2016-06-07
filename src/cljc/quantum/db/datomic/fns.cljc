@@ -85,7 +85,10 @@
     [[datomic.api :as api]]
     [db a v]
     (ffirst
-      (api/q [:find '?e :where ['?e a v]] db)))
+      (api/q '[:find  ?e
+               :in    $ ?a ?v
+               :where [?e ?a ?v]]
+        db a v)))
 
   (defn! lookup-nnil
     [[datomic.api :as api]]
@@ -121,7 +124,7 @@
             :else ; atomic — limiting case
             expr)))
 
-  (defn! fail-when-exists
+  (defn! fail-when-found
     [[datomic.api :as api]]
     [db query err-msg else]
     (let [result (api/q query db)]
@@ -131,6 +134,30 @@
                                    :type   :already-exists
                                    :msg    err-msg}))
           (api/invoke db :fn/eval db else))))
+
+  (defn! skip-when-found
+    [[datomic.api :as api]]
+    [db query else]
+    (when (empty? (api/q query db))
+      (api/invoke db :fn/eval db else)))
+
+  (defn! skip-when-lookup
+    [[datomic.api :as api]]
+    [db attr-val else]
+    (when (empty? (apply api/q '[:find [?e]
+                                 :in $ ?a ?v
+                                 :where [?e ?a ?v]]
+                    db attr-val))
+      (api/invoke db :fn/eval db else)))
+
+  (defn! ct-within-tolerance?
+    []
+    [db w1 w2 tolerance]
+    (let [abs #(if (pos? %) % (- %))]
+      (<= (abs
+             (- (-> w1 name count)
+                (-> w2 name count)))
+          tolerance)))
 
   (defn! transform
     [[clojure.walk :as walk]]
