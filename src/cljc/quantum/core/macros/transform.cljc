@@ -63,7 +63,11 @@
               symbol?
                 (fn [sym]
                   (let [[hinted hint] (find arglist-map sym)]
-                    (if (and hinted (-> hint tcore/primitive? not)) ; Because "Can't type hint a primitive local"
+                    (if (and hinted
+                             (-> hint tcore/primitive? not)  ; Because "Can't type hint a primitive local"
+                             (-> hint (not= 'Object))
+                             (-> hint (not= 'java.lang.Object))
+                             (-> sym type-hint not))
                         hinted
                         sym)))
               anap/new-scope?

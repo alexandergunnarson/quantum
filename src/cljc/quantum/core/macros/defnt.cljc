@@ -47,6 +47,9 @@
 
 ; TODO reorganize this namespace and move into other ones as necessary
 
+; In using |defnt|, you should always prefer unboxed to boxed.
+; The internal |reify| may differentiate unboxed and boxed, but the protocol won't
+
 (def special-defnt-keywords
   '#{:first :else :elem})
 
@@ -346,6 +349,7 @@
            genned-protocol-method-name-qualified
            reified-sym-qualified
            strict?
+           relaxed?
            sym-with-meta
            args-sym
            args-hinted-sym
@@ -360,6 +364,7 @@
                               "|" '~genned-method-name)
         (if (or (when-cljs ~'&env true)
                 (= ~lang :cljs)
+                ~relaxed?
                 (and (not ~strict?)
                      (quantum.core.macros.transform/any-hint-unresolved?
                        ~args-hinted-sym ~lang ~'&env)))
@@ -429,13 +434,14 @@
     (apply mfn/defn-variant-organizer
       [defnt*-helper opts lang ns- sym doc- meta- body (cons unk rest-unk)]))
   ([opts lang ns- sym doc- meta- body]
-    (let [strict?  (:strict? opts)
+    (let [strict?  (:strict?  opts)
+          relaxed? (:relaxed? opts)
           externs  (atom [])
           sym-with-meta (with-meta sym (map/merge {:doc doc-} meta-))
           body-f   (mfn/optimize-defn-variant-body! body externs)
           arities  (defnt-arities  body-f)
           arglists (defnt-arglists body-f)
-          env      (kmap sym strict? sym-with-meta lang externs arities arglists)
+          env      (kmap sym strict? relaxed? sym-with-meta lang externs arities arglists)
           genned-protocol-names
             (defnt-gen-protocol-names env)
           env (merge env genned-protocol-names)
@@ -528,3 +534,9 @@
    Only for use with Clojure."
   [sym & body]
   (defnt*-helper {:strict? true} :clj *ns* sym nil nil nil body)))
+
+#?(:clj
+(defmacro defntp
+  "'Relaxed' |defnt|. I.e., generates only a protocol and no interface."
+  [sym & body]
+  (defnt*-helper {:relaxed? true} :clj *ns* sym nil nil nil body)))
