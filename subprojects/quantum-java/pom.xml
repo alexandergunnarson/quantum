@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>java</artifactId>
   <packaging>jar</packaging>
-  <version>1.0</version>
+  <version>1.1</version>
   <name>java</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum-java</url>
