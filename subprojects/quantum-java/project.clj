@@ -1,4 +1,4 @@
-(defproject quantum/java "1.0"
+(defproject quantum/java "1.1"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}
@@ -10,7 +10,7 @@
   ; :signing          {:gpg-key "72F3C25A"}
   ;:deploy-repositories [["releases" :clojars]
   ;                      ["clojars" {:creds :gpg}]]
- :dependencies
+  :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th
      [org.clojure/clojurescript                 "1.7.170"         ]
      ]
