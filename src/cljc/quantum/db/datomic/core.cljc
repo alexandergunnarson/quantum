@@ -418,6 +418,10 @@
   (fn-and (f*n coll/containsk? :v)
           (fn-> count (= 1))))
 
+(def dbfn-call? (fn-and seq?
+                        (fn-> first keyword?)
+                        (fn-> first namespace (= "fn"))))
+
 (defn validated->txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction component.
    Assumes nested maps/records are component entities."
@@ -482,7 +486,7 @@
 
 (defn lookup
   [attr v]
-  (-> (q [:find '?e :where ['?e attr v]])
+  (-> (q [:find '?e :where ['?e attr v]]) ; TODO use parameterized queries
       ffirst
       entity))
 
@@ -562,7 +566,8 @@
   ([m]      (conj @conn* @part* false m))
   ([part m] (conj @conn* part false m))
   ([conn part no-transform? m]
-    (let [txn (coll/assoc-when-none (validated->txn m) :db/id (tempid conn part))]
+    (let [txn (whenf m (fn-not dbfn-call?)
+                (fn-> validated->txn (coll/assoc-when-none :db/id (tempid conn part))))]
       (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
