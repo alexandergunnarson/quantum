@@ -51,9 +51,15 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(def sum #(reduce + 0 %))
+(def sum     #(reduce + 0 %)) ; TODO use +* or sometihng
+(def product #(reduce * 1 %)) ; TODO use ** or sometihng
 
 (defn sigma [set- step-fn]
   (->> set- (map+ #(step-fn %)) sum))
 
 (defalias ∑ sigma)
+
+(defn pi* [set- step-fn]
+  (->> set- (map+ #(step-fn %)) product))
+
+(defalias ∏ pi*)
