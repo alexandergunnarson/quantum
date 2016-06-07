@@ -9,6 +9,8 @@
                         :refer [#?@(:clj [fn-or fn-and])
                                 nnil? nempty?]            ]
                       [quantum.db.datomic       :as db    ]
+                      [quantum.db.datomic.core  :as dbc  
+                        :refer [dbfn-call?]               ]
                       [quantum.core.string      :as str   ]
                       [quantum.core.collections :as coll 
                         :refer [#?@(:clj [join])]         ]
@@ -34,10 +36,6 @@
 
 (def identifier? (fn-or keyword? integer?
                         #?(:clj #(instance? datomic.db.DbId %))))
-
-(def dbfn-call? (fn-and seq?
-                        (fn-> first keyword?)
-                        (fn-> first namespace (= "fn"))))
 
 (def lookup? (fn-and vector? (fn->  first keyword?)))
 
