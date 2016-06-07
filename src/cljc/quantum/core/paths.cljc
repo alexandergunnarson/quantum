@@ -208,6 +208,7 @@
       "" keys-n))
   ([^string?  s] s)
   ([^keyword? k] (parse-dir [k]))
+  #?(:clj ([^file?    x] (str x)))
   ([          obj] (if (nil? obj)
                        ""
                        (throw (->ex :unimplemented nil
