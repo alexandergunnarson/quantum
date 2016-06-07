@@ -488,6 +488,7 @@
 (defnt last
           ([^string?          coll] (get coll (lasti coll)))
   #?(:clj ([^qreducer?        coll] (taker+ 1 coll)))
+          ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^vec?             coll] (#?(:clj .peek :cljs .-peek) coll)) ; because |peek| works on lists too
   #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]
                   :cljs [cljs.core/TransientVector])} coll]

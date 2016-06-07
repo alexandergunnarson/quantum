@@ -11,6 +11,8 @@
                      [quantum.core.error :as err
                        :refer [assert]          ])))
 
+; TODO remove boxed math here
+
 ;;; combinatorics.clj: efficient, functional algorithms for generating lazy
 ;;; sequences for common combinatorial functions.
 
@@ -200,7 +202,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
                                         (map #(map v-items %) (index-combinations t cnt))),
               :else (multi-comb items t))))))
 
-(defn- unchunk
+(defn- unchunk ; TODO move
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
    lazy with no chunks. Chunks are good for efficiency when the data items are
    small, but when being processed via map, for example, a reference is kept to
@@ -214,7 +216,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
     (when (seq s)
       (cons (first s) (unchunk (rest s))))))
 
-            (defn subsets
+(defn subsets
   "All the subsets of items"
   [items]
   (mapcat (fn [n] (combinations items n))

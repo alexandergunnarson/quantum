@@ -180,8 +180,8 @@
                                        (transient-into to from))
                              :cljs (transient-into to from)))
   ([^sorted-map? to from] (persistent-into to from))
-  ([^string?     to from] (.toString #?(:clj  (reduce #(.append ^StringBuilder %1 %2) (StringBuilder. to) from)
-                                        :cljs (reduce #(.append ^StringBuffer  %1 %2) (StringBuffer.  to) from))))
+  ([^string?     to from] (str #?(:clj  (reduce #(.append ^StringBuilder %1 %2) (StringBuilder. to) from)
+                                  :cljs (reduce #(.append ^StringBuffer  %1 %2) (StringBuffer.  to) from))))
   ([             to from] (if (nil? to) from (persistent-into to from))))
 
 #_(defn joinl
