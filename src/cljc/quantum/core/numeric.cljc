@@ -1,6 +1,7 @@
 (ns
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :cljs-self-referring? true}
   quantum.core.numeric
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? min max quot mod format
@@ -31,7 +32,9 @@
                      [quantum.core.macros               :as macros
                        :refer [defnt defnt' deftransmacro]          ]
                      [quantum.core.vars                 :as var
-                       :refer [defalias]                            ]))
+                       :refer [defalias]                            ]
+                     [quantum.core.numeric
+                       :refer [< > <= >=]]))
   #?(:clj  (:import  [java.nio ByteBuffer]      
                      [quantum.core Numeric] ; loops?
                      [net.jafama FastMath]
@@ -317,15 +320,15 @@
   "Return true if the absolute value of the difference between x and y
    is less than eps."
   [x y eps]
-  (<-2 (abs (--base x y)) eps))
+  (core/< (abs (core/- x y)) eps)) ; TODO use < and -
 
 (defn within-tolerance? [n total tolerance]
-  (and (>=-2 n (--base total tolerance))
-       (<=-2 n (+-2 total tolerance))))
+  (and (core/>= n (core/- total tolerance)) ; TODO use >= and -
+       (core/<= n (core/+ total tolerance)))) ; TODO use <= and +
 
 (def  int-nil   (whenf*n nil? (constantly 0)))
 
-(defn evenly-divisible-by? [a b] (=-2 0 (rem a b)))
+(defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 
 ;_____________________________________________________________________
 ;================={   TRIGONOMETRIC FUNCTIONS    }====================
@@ -498,7 +501,7 @@
 
 (defn least
   "Returns the 'least' element in coll in O(n) time."
-  ^{:attribution "taoensso.encore, possibly via weavejester.medley"}
+  {:attribution "taoensso.encore, possibly via weavejester.medley"}
   [coll & [?comparator]]
   (let [comparator (or ?comparator rcompare)]
     (reduce
@@ -506,20 +509,20 @@
       coll)))
 
 (defn greatest-or [a b else]
-  (cond (>-2 a b) a
-        (>-2 b a) b
+  (cond (core/> a b) a ; TODO use >
+        (core/> b a) b ; TODO use >
         :else else))
 
 (defn least-or [a b else]
-  (cond (<-2 a b) a
-        (<-2 b a) b
+  (cond (core/< a b) a ; TODO use <
+        (core/< b a) b ; TODO use <
         :else else))
 
 (defn approx? [tolerance a b]
-  (-> (--base (int-nil a) (int-nil b)) abs (<-2 tolerance)))
+  (-> (core/- (int-nil a) (int-nil b)) abs (core/< tolerance))) ; TODO use - and <
 
 (defn whole-number? [n]
-  (= n (floor n)))
+  (= n (floor n))) ; TODO use ==
 
 ; (defn whole? [n]
 ;   (assert (instance? Double n))
@@ -577,7 +580,7 @@
 (defn factors [n]
   (->> (range 1 (inc (sqrt n)))
        (filter #(zero? (rem n %)))
-       (mapcat (fn [x] [x (div-2 n x)]))
+       (mapcat (fn [x] [x (div* n x)]))
        (into (sorted-set))))
 
 ; TODO MERGE
@@ -613,4 +616,4 @@
 #?(:clj (defalias format        clj/format       ))
 #?(:clj (defalias percentage-of clj/percentage-of))
 
-(def percent? (fn-and (f*n core/>= 0) (f*n core/<= 1)))
+(def percent? (fn-and (f*n core/>= 0) (f*n core/<= 1))) ; TODO use >= and <=

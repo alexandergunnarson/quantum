@@ -17,7 +17,7 @@
             [quantum.core.fn                :as fn
               :refer [fn->]                           ]
             [quantum.core.macros            :as macros
-              :refer [defnt defnt']]
+              :refer [defnt defnt' defntp]]
             [quantum.core.numeric.types     :as ntypes]
             [quantum.core.vars              :as var
               :refer [defalias defmalias def-]        ])
@@ -241,7 +241,7 @@
   [x y]
   (validate-exact x)
   (validate-exact y)
-  (*' x y))
+  (*' (long x) (long y)))
 
 (defnt ^boolean neg?
   ([#{byte char short int float double} x] (quantum.core.Numeric/isNeg x))
@@ -273,8 +273,9 @@
 ;   (validate-exact y)
 ;   (core/compare x y))
 
-(defnt' div-2
-  (^double
+(defnt' div-2-
+  "Doesn't preserve ratios."
+  (^double ; is it actually always double?
     [#{byte char short int long float double} n
      #{byte char short int long float double} d]
     (quantum.core.Numeric/divide n d))
@@ -294,25 +295,57 @@
               :else (clojure.lang.Ratio. (if (neg? d-f) (.negate n-f) n-f)
                                          (if (neg? d-f) (.negate d-f) d-f)))))))
   ([^clojure.lang.BigInt n ^clojure.lang.BigInt d]
-    (div-2 (->big-integer n) (->big-integer d)))
-  ([^java.math.BigDecimal x ^java.math.BigDecimal y]
+    (div-2- (->big-integer n) (->big-integer d)))
+  ([^java.math.BigDecimal n ^java.math.BigDecimal d]
     (if (nil? *math-context*)
-        (.divide x y)
-        (.divide x y *math-context*))))
+        (.divide n d)
+        (.divide n d *math-context*))))
+
+; TODO you lose the |defnt'| power with this
+; TODO have |defnt| handle all this automagically 
+
+(defnt div-2-denom-byte
+  ([#{byte char short int long float double} d ^byte   n] (div-2- n d)))
+(defnt div-2-denom-char
+  ([#{byte char short int long float double} d ^char   n] (div-2- n d)))
+(defnt div-2-denom-short
+  ([#{byte char short int long float double} d ^short  n] (div-2- n d)))
+(defnt div-2-denom-int
+  ([#{byte char short int long float double} d ^int    n] (div-2- n d)))
+(defnt div-2-denom-long
+  ([#{byte char short int long float double} d ^long   n] (div-2- n d)))
+(defnt div-2-denom-float
+  ([#{byte char short int long float double} d ^float  n] (div-2- n d)))
+(defnt div-2-denom-double
+  ([#{byte char short int long float double} d ^double n] (div-2- n d)))
+
+(defntp div-2
+  ([^byte   n d] (div-2-denom-byte-protocol   d n))
+  ([^char   n d] (div-2-denom-char-protocol   d n))
+  ([^short  n d] (div-2-denom-short-protocol  d n))
+  ([^int    n d] (div-2-denom-int-protocol    d n))
+  ([^long   n d] (div-2-denom-long-protocol   d n))
+  ([^float  n d] (div-2-denom-float-protocol  d n))
+  ([^double n d] (div-2-denom-double-protocol d n))
+  (^Number [^java.math.BigInteger n ^java.math.BigInteger d]
+    (div-2- n d))
+  ([^clojure.lang.BigInt n ^clojure.lang.BigInt d]
+    (div-2- n d))
+  ([^java.math.BigDecimal n ^java.math.BigDecimal d]
+    (div-2- n d)))
 
 ; (/ x 4) = (& x 3)
 
-(defnt' not-num?
+(defnt not-num?
   ([^double? x] (Double/isNaN x))
   ([^float?  x] (Float/isNaN  x)))
-
 ;_____________________________________________________________________
 ;==================={        PREDICATES        }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-(defmacro <-2  [a b] `(quantum.core.Numeric/lt  ~a ~b))
-(defmacro <=-2 [a b] `(quantum.core.Numeric/lte ~a ~b))
-(defmacro >-2  [a b] `(quantum.core.Numeric/gt  ~a ~b))
-(defmacro >=-2 [a b] `(quantum.core.Numeric/gte ~a ~b))
+(defmacro <-2  [a b] `(quantum.core.Numeric/lt  ~a ~b)) ; TODO defnt this
+(defmacro <=-2 [a b] `(quantum.core.Numeric/lte ~a ~b)) ; TODO defnt this
+(defmacro >-2  [a b] `(quantum.core.Numeric/gt  ~a ~b)) ; TODO defnt this
+(defmacro >=-2 [a b] `(quantum.core.Numeric/gte ~a ~b)) ; TODO defnt this
 
 (defnt' =-2
   (^boolean
@@ -330,21 +363,15 @@
   (^boolean [^clojure.lang.BigInt x ^clojure.lang.BigInt y]
     (not (=-2 x y)))) ; TODO use primitive |not| fn
 
-; (defn ==
-;   [x y]
-;   (validate-exact x)
-;   (validate-exact y)
-;   (core/= x y))
-
-(defnt' ^boolean zero?
-  ([#{byte char short long float double} x] (quantum.core.Numeric/isZero x))
+(defnt ^boolean zero?
+  ([#{byte char short float double} x] (quantum.core.Numeric/isZero x))
+  ([#{long}                         x] (-> x int zero?))
   ([^clojure.lang.Ratio     x] (-> x .numerator .signum zero?))
   ([^clojure.lang.BigInt    x] (if (nil?  (.bipart x))
                                    (zero? (.lpart  x))
                                    (-> x .bipart .signum zero?)))
   ([#{java.math.BigInteger
       java.math.BigDecimal} x] (-> x .signum zero?)))
-
 ;_____________________________________________________________________
 ;================={   MORE COMPLEX OPERATIONS    }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -379,8 +406,6 @@
     (let [qualified-sym (symbol "core" (name sym))]
       (eval (quote+ (defalias ~sym ~qualified-sym))))))
 
-(defn abs [x] (if (core/neg? x) (core/- x) x))
-
 (defnt' abs'
   (^int               [^int    x] (Math/abs x))
   (^long              [^long   x] (Math/abs x))
@@ -399,6 +424,8 @@
   (^clojure.lang.Ratio [^clojure.lang.Ratio x] ; TODO this might be an awful implementation
     (div-2 (abs' (numerator   x))
            (abs' (denominator x)))))
+
+(defalias abs abs')
 
 (defnt' next-after
   (^double [^double start ^double direction] (Math/nextAfter start direction))
@@ -573,7 +600,7 @@
 
 (defnt' exp'
   {:todo ["Performance" "Rename"]}
-  [#{byte char short int float double} x #{long? double?} n]
+  [#{byte #_char short int float double} x #{long? double?} n]
   (loop [acc (Long. 1) nn n]
     (if (<=-2 (double nn) 0) acc
         (recur (core/*' x acc) (dec* nn)))))
@@ -630,7 +657,7 @@
                 :half-down   BigDecimal/ROUND_HALF_DOWN
                 :down        BigDecimal/ROUND_DOWN
                 :floor       BigDecimal/ROUND_FLOOR))]
-    (.setScale (bigdec num-0) ^Integer to round-type)))
+    (.setScale ^BigDecimal (bigdec num-0) ^Integer to round-type)))
 
 (defnt' round' "Rounds up in cases of ambiguity."
   (^long                 [^double               x] (Math/round x))
@@ -709,7 +736,7 @@
   (apply core/* (repeat 53 2)))
 
 (def- minus-two-to-fifty-three
-  (core/- two-to-fifty-three))
+  (-' two-to-fifty-three))
 
 (defn native-integer?
   [n]
@@ -753,4 +780,4 @@
     (throw (->ex nil "Unrecognized format" type))))
 
 (defn percentage-of [of total-n]
-  (-> of (core// total-n) (core/* 100) display-num (str "%")))
+  (-> of (div-2 total-n) double (core/* 100) display-num (str "%"))) ; TODO use *-2
