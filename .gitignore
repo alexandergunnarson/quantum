@@ -24,3 +24,7 @@ subprojects/quantum-java/target/classes/META-INF/maven/quantum/java/pom.properti
 subprojects/quantum-java/target/classes/quantum/core/data/Array.class
 
 subprojects/quantum-java/target/quantum-java-dep.jar.asc
+
+subprojects/quantum-java/pom.xml
+
+subprojects/quantum-java/pom.xml

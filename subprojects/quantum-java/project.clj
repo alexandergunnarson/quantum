@@ -1,4 +1,4 @@
-(defproject quantum/java "1.2"
+(defproject quantum/java "1.3"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts         []
   ;:uberjar          {:aot :all}

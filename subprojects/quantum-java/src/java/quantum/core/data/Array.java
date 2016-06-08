@@ -2,6 +2,99 @@ package quantum.core.data;
 
 public class Array {
 
+  // ================================ COUNT ================================ //
+
+  public static int count (final boolean[]                   x) { return x.length; }
+  public static int count (final byte   []                   x) { return x.length; }
+  public static int count (final char   []                   x) { return x.length; }
+  public static int count (final short  []                   x) { return x.length; }
+  public static int count (final int    []                   x) { return x.length; }
+  public static int count (final long   []                   x) { return x.length; }
+  public static int count (final float  []                   x) { return x.length; }
+  public static int count (final double []                   x) { return x.length; }
+  public static int count (final Object []                   x) { return x.length; }
+  public static int count (final boolean[][]                 x) { return x.length; }
+  public static int count (final byte   [][]                 x) { return x.length; }
+  public static int count (final char   [][]                 x) { return x.length; }
+  public static int count (final short  [][]                 x) { return x.length; }
+  public static int count (final int    [][]                 x) { return x.length; }
+  public static int count (final long   [][]                 x) { return x.length; }
+  public static int count (final float  [][]                 x) { return x.length; }
+  public static int count (final double [][]                 x) { return x.length; }
+  public static int count (final Object [][]                 x) { return x.length; }
+  public static int count (final boolean[][][]               x) { return x.length; }
+  public static int count (final byte   [][][]               x) { return x.length; }
+  public static int count (final char   [][][]               x) { return x.length; }
+  public static int count (final short  [][][]               x) { return x.length; }
+  public static int count (final int    [][][]               x) { return x.length; }
+  public static int count (final long   [][][]               x) { return x.length; }
+  public static int count (final float  [][][]               x) { return x.length; }
+  public static int count (final double [][][]               x) { return x.length; }
+  public static int count (final Object [][][]               x) { return x.length; }
+  public static int count (final boolean[][][][]             x) { return x.length; }
+  public static int count (final byte   [][][][]             x) { return x.length; }
+  public static int count (final char   [][][][]             x) { return x.length; }
+  public static int count (final short  [][][][]             x) { return x.length; }
+  public static int count (final int    [][][][]             x) { return x.length; }
+  public static int count (final long   [][][][]             x) { return x.length; }
+  public static int count (final float  [][][][]             x) { return x.length; }
+  public static int count (final double [][][][]             x) { return x.length; }
+  public static int count (final Object [][][][]             x) { return x.length; }
+  public static int count (final boolean[][][][][]           x) { return x.length; }
+  public static int count (final byte   [][][][][]           x) { return x.length; }
+  public static int count (final char   [][][][][]           x) { return x.length; }
+  public static int count (final short  [][][][][]           x) { return x.length; }
+  public static int count (final int    [][][][][]           x) { return x.length; }
+  public static int count (final long   [][][][][]           x) { return x.length; }
+  public static int count (final float  [][][][][]           x) { return x.length; }
+  public static int count (final double [][][][][]           x) { return x.length; }
+  public static int count (final Object [][][][][]           x) { return x.length; }
+  public static int count (final boolean[][][][][][]         x) { return x.length; }
+  public static int count (final byte   [][][][][][]         x) { return x.length; }
+  public static int count (final char   [][][][][][]         x) { return x.length; }
+  public static int count (final short  [][][][][][]         x) { return x.length; }
+  public static int count (final int    [][][][][][]         x) { return x.length; }
+  public static int count (final long   [][][][][][]         x) { return x.length; }
+  public static int count (final float  [][][][][][]         x) { return x.length; }
+  public static int count (final double [][][][][][]         x) { return x.length; }
+  public static int count (final Object [][][][][][]         x) { return x.length; }
+  public static int count (final boolean[][][][][][][]       x) { return x.length; }
+  public static int count (final byte   [][][][][][][]       x) { return x.length; }
+  public static int count (final char   [][][][][][][]       x) { return x.length; }
+  public static int count (final short  [][][][][][][]       x) { return x.length; }
+  public static int count (final int    [][][][][][][]       x) { return x.length; }
+  public static int count (final long   [][][][][][][]       x) { return x.length; }
+  public static int count (final float  [][][][][][][]       x) { return x.length; }
+  public static int count (final double [][][][][][][]       x) { return x.length; }
+  public static int count (final Object [][][][][][][]       x) { return x.length; }
+  public static int count (final boolean[][][][][][][][]     x) { return x.length; }
+  public static int count (final byte   [][][][][][][][]     x) { return x.length; }
+  public static int count (final char   [][][][][][][][]     x) { return x.length; }
+  public static int count (final short  [][][][][][][][]     x) { return x.length; }
+  public static int count (final int    [][][][][][][][]     x) { return x.length; }
+  public static int count (final long   [][][][][][][][]     x) { return x.length; }
+  public static int count (final float  [][][][][][][][]     x) { return x.length; }
+  public static int count (final double [][][][][][][][]     x) { return x.length; }
+  public static int count (final Object [][][][][][][][]     x) { return x.length; }
+  public static int count (final boolean[][][][][][][][][]   x) { return x.length; }
+  public static int count (final byte   [][][][][][][][][]   x) { return x.length; }
+  public static int count (final char   [][][][][][][][][]   x) { return x.length; }
+  public static int count (final short  [][][][][][][][][]   x) { return x.length; }
+  public static int count (final int    [][][][][][][][][]   x) { return x.length; }
+  public static int count (final long   [][][][][][][][][]   x) { return x.length; }
+  public static int count (final float  [][][][][][][][][]   x) { return x.length; }
+  public static int count (final double [][][][][][][][][]   x) { return x.length; }
+  public static int count (final Object [][][][][][][][][]   x) { return x.length; }
+  public static int count (final boolean[][][][][][][][][][] x) { return x.length; }
+  public static int count (final byte   [][][][][][][][][][] x) { return x.length; }
+  public static int count (final char   [][][][][][][][][][] x) { return x.length; }
+  public static int count (final short  [][][][][][][][][][] x) { return x.length; }
+  public static int count (final int    [][][][][][][][][][] x) { return x.length; }
+  public static int count (final long   [][][][][][][][][][] x) { return x.length; }
+  public static int count (final float  [][][][][][][][][][] x) { return x.length; }
+  public static int count (final double [][][][][][][][][][] x) { return x.length; }
+  public static int count (final Object [][][][][][][][][][] x) { return x.length; }
+
   // ================================ GET ================================ //
   
   // ----- 1 ----- //
