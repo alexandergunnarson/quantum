@@ -17,7 +17,7 @@
            ;#?(:clj [quantum.deploy.amazon            :as amz      ])
                     [com.stuartsierra.component       :as component]
                     [quantum.core.collections         :as coll     
-                       :refer [#?(:clj kmap)]                      ]
+                       :refer [#?@(:clj [kmap containsv?])]        ]
                     [quantum.core.error               :as err
                        :refer [->ex #?(:clj try-times)]            ]
                     [quantum.core.fn                  :as fn
@@ -38,14 +38,16 @@
                     [quantum.core.convert             :as conv
                       :refer [->name]                              ]
                     [quantum.core.paths               :as path     ]
-                    [quantum.parse.core               :as parse    ])
+                    [quantum.parse.core               :as parse    ]
+                    [quantum.validate.core            :as val
+                      :refer [#?(:clj validate)]                   ])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
                     [datomic-cljs.macros   
                       :refer [<?]                                  ]
                     [quantum.core.collections         :as coll     
-                       :refer [kmap]                               ]
+                       :refer [kmap containsv?]                    ]
                     [quantum.core.error               :as err
                        :refer [try-times]                          ]
                     [quantum.core.fn                  :as fn
@@ -57,7 +59,9 @@
                     [quantum.core.type                :as type
                       :refer [boolean?]                            ]
                     [quantum.core.vars                :as var
-                      :refer [defalias]                            ]))
+                      :refer [defalias]                            ]
+                    [quantum.validate.core            :as val
+                      :refer [validate]]))
   #?(:clj  (:import datomic.Peer
                     [datomic.peer LocalConnection Connection]
                     java.util.concurrent.ConcurrentHashMap)))
@@ -218,10 +222,12 @@
                                         :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage 
                                         :memory-index-max       "256m"
                                         :object-cache-max       "128m"
-                                        :data-dir               (if res (str/dquote (path/path res "data")) "data")
-                                        :log-dir                (if res (str/dquote (path/path res "log" )) "log" )
-                                        :pid-file               (if res (str/dquote (path/path res "transactor.pid"))
-                                                                        "transactor.pid")}
+                                        :data-dir               (validate val/no-blanks?
+                                                                  (if res (path/path res "data"          ) "data"          ))
+                                        :log-dir                (validate val/no-blanks?
+                                                                  (if res (path/path res "log"           ) "log"           ))
+                                        :pid-file               (validate val/no-blanks?
+                                                                  (if res (path/path res "transactor.pid") "transactor.pid"))}
                                      (c/dissoc internal-props :path))]
                          (io/assoc! props-path-f
                            (parse/output :java-properties internal-props-f {:no-quote? true})
@@ -236,7 +242,7 @@
         _ (when kill-on-shutdown?
             (.addShutdownHook (Runtime/getRuntime)
               (Thread. #(res/stop! proc))))]
-    (async/sleep 3000)
+    (async/sleep 5000)
     (log/pr :debug "Done.")
     proc)))
 
@@ -291,19 +297,19 @@
                                                :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
                              (log/pr :debug "Connection successful.")
                              conn-f))
-            _ (when create-if-not-present?
-                (log/pr :debug "Creating database...")
-                #?(:clj  (Peer/createDatabase uri-f)
-                   :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
-                (log/pr :debug "Done."))
+            create-db! (fn []
+                         (when create-if-not-present?
+                           (log/pr :debug "Creating database...")
+                           #?(:clj  (Peer/createDatabase uri-f)
+                              :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
+                           (log/pr :debug "Done.")))
             conn-f  (try 
                       (try-times 5 1000
                         (try (connect)
-                          (catch #?(:clj RuntimeException :cljs js/Error) e
-                            (log/pr :warn "RuntimeException while trying to connect:" e)
-                            (throw e))
                           (catch #?(:clj Throwable :cljs js/Error) e
                             (log/pr :warn "Error while trying to connect:" e)
+                            #?(:clj (when (-> e .getMessage (containsv? #"Could not find .* in catalog"))
+                                      (create-db!)))
                             (throw e))))
                       (catch #?(:clj Throwable :cljs js/Error) e
                         (log/pr :warn "Failed to connect:" e)
