@@ -88,7 +88,7 @@
 
         (defnt array?
           ([^array? x] true)
-          ([x] #?(:clj  (-> x .getClass .isArray)
+          ([x] #?(:clj  (-> x class .isArray)
                   :cljs (-> x core/array?))))
         
 #?(:clj (defnt' prim-long? ([^long n] true) ([:else n] false)))

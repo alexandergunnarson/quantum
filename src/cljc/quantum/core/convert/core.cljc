@@ -91,7 +91,7 @@
   "Returns `bytes` as an UTF-8 encoded string."
   {:from "r0man/noencore"}
   [bytes]
-  #?(:clj (String. bytes "UTF-8")
+  #?(:clj (String. ^"[B" bytes "UTF-8")
      :cljs (throw (ex-info "utf8-string not implemented yet" bytes))))
 
 (defn base64-encode
@@ -107,21 +107,21 @@
   {:from "r0man/noencore"}
   [s]
   (when s
-    #?(:clj (Base64/decodeBase64 (.getBytes s))
+    #?(:clj (Base64/decodeBase64 (.getBytes ^String s))
        :cljs (base64/decodeString s false))))
 
 ; PARSING
 
 (def byte-scale
-  {"B" (num/exp 1024 0)
-   "K" (num/exp 1024 1)
-   "M" (num/exp 1024 2)
-   "G" (num/exp 1024 3)
-   "T" (num/exp 1024 4)
-   "P" (num/exp 1024 5)
-   "E" (num/exp 1024 6)
-   "Z" (num/exp 1024 7)
-   "Y" (num/exp 1024 8)})
+  {"B" (num/exp-protocol 1024 0) ; TODO use num/exp
+   "K" (num/exp-protocol 1024 1) ; TODO use num/exp
+   "M" (num/exp-protocol 1024 2) ; TODO use num/exp
+   "G" (num/exp-protocol 1024 3) ; TODO use num/exp
+   "T" (num/exp-protocol 1024 4) ; TODO use num/exp
+   "P" (num/exp-protocol 1024 5) ; TODO use num/exp
+   "E" (num/exp-protocol 1024 6) ; TODO use num/exp
+   "Z" (num/exp-protocol 1024 7) ; TODO use num/exp
+   "Y" (num/exp-protocol 1024 8)}) ; TODO use num/exp
 
 (defn- apply-unit [number unit]
   (if (string? unit)

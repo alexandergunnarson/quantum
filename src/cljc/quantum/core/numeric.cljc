@@ -394,7 +394,8 @@
 (defalias e-exp #?(:clj clj/e-exp :cljs cljs/e-exp))
 #?(:clj (defalias e-exp* clj/e-exp*))
 
-(defalias exp #?(:clj clj/exp :cljs cljs/exp))
+(defalias exp          #?(:clj clj/exp          :cljs cljs/exp))
+(defalias exp-protocol #?(:clj clj/exp-protocol :cljs cljs/exp-protocol))
 #?(:clj (defalias exp' clj/exp'))
 #?(:clj (defalias exp* clj/exp*))
 #?(:clj (defalias expm1* clj/expm1*))
