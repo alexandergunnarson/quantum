@@ -48,6 +48,7 @@
 (defn transact-std-definitions! []
   (db/transact! (dbc/->partition :db.part/test))
   (db/transact! (dbc/->partition :db.part/fn  ))
+  (db/transact! [(db/conj {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns!))
   (dbe/transact-schemas!)
   (db/conj! (dbs/->globals {:db/ident :globals*}))

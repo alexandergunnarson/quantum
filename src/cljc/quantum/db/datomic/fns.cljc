@@ -144,11 +144,12 @@
   (defn! skip-when-lookup
     [[datomic.api :as api]]
     [db attr-val else]
-    (when (empty? (apply api/q '[:find [?e]
-                                 :in $ ?a ?v
-                                 :where [?e ?a ?v]]
-                    db attr-val))
-      (api/invoke db :fn/eval db else)))
+    (if (empty? (apply api/q '[:find [?e]
+                               :in $ ?a ?v
+                               :where [?e ?a ?v]]
+                  db attr-val))
+        (api/invoke db :fn/eval db else)
+        {:db/id :dummy})) ; can't transact nil
 
   (defn! ct-within-tolerance?
     []
@@ -158,6 +159,27 @@
              (- (-> w1 name count)
                 (-> w2 name count)))
           tolerance)))
+
+  (defn! get-if
+    [[datomic.api :as api]]
+    ^{:usage `(get-if db
+                :word:text <?text>
+                :word:in-dictionary? false
+                true)}
+    [db k v then-k then-v else]
+    (let [eid-results
+           (->> (api/q  '[:find  ?e
+                          :in    $ ?k ?v
+                          :where [?e ?k ?v]]
+                  db k v)
+                (mapv first))]
+      (if (empty? eid-results)
+          else
+          (let [results
+                 (->> eid-results
+                      (filter #(-> (api/entity db %) (get then-k) (= then-v)))
+                      (into #{}))]
+            (when-not (empty? results) results)))))
 
   (defn! transform
     [[clojure.walk :as walk]]
