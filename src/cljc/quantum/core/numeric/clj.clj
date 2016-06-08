@@ -419,8 +419,8 @@
     (.abs x))
   (^clojure.lang.BigInt [^clojure.lang.BigInt x]
     (if (nil? (.bipart x))
-        (clojure.lang.BigInt/fromLong       (abs (.lpart  x)))
-        (clojure.lang.BigInt/fromBigInteger (abs (.bipart x)))))
+        (clojure.lang.BigInt/fromLong       (abs' (.lpart  x)))
+        (clojure.lang.BigInt/fromBigInteger (abs' (.bipart x)))))
   (^clojure.lang.Ratio [^clojure.lang.Ratio x] ; TODO this might be an awful implementation
     (div-2 (abs' (numerator   x))
            (abs' (denominator x)))))
