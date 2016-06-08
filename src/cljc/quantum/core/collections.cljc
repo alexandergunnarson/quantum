@@ -602,6 +602,39 @@
         idx))
     coll))
 
+(defn matching-seqs
+  {:tests `{[[1 2 3 4 4 2 1 2 2 6 8 2 4]]
+            {1 [2], 3 [4 4 2], 7 [2 2 6 8 2 4]}}
+   :todo ["Abstract; maybe use the regex for seqs"]}
+  [pred coll]
+  (loop [i       0
+         coll'   coll
+         match-i -1
+         match   []
+         matches {}]
+    (if (empty? coll')
+        (if (> match-i -1)
+            (assoc matches match-i match)
+            matches)
+        (let [elem   (first coll')
+              match? (pred elem)
+              match' (if match?
+                         (conj match elem)
+                         [])
+              end-match?   (and (nempty? match )
+                                (empty?  match'))
+              start-match? (and (empty?  match )
+                                (nempty? match'))
+              match-i'     (if start-match? i match-i)
+              matches'
+                (if (and end-match? (> match-i -1))
+                    (assoc matches match-i match)
+                    matches)]
+        (recur (inc i)
+               (rest coll')
+               match-i'
+               match'
+               matches')))))
 
 
 
