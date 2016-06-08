@@ -127,12 +127,11 @@
          (transient (core/empty coll)) coll)))
   ; generic sequence fallback
   ; TODO add any seq in general
-  ([#{lseq? #_(- seq? list?)} coll f] (map f coll))
+  ([#{cons? lseq? misc-seq? queue?} coll f] (map f coll))
   ; |transient| discards metadata as of Clojure 1.6.0
 
   ; Persistent collections that don't support transients
-  #?(:clj  ([#{clojure.lang.PersistentQueue
-               clojure.lang.PersistentStructMap
+  #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
                clojure.lang.PersistentTreeSet} coll f]
              (core/reduce
