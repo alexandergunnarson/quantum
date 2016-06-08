@@ -192,16 +192,17 @@
 
 (declare array)
 
-(defnt count
-  (^long [^array?                                             x] (alength x))
-  (^long [^string?                                            x] (#?(:clj .length :cljs .-length) x))
-  (^long [^keyword?                                           x] (count ^String (name x)))
-#?(:clj 
-  (^long [^clojure.core.async.impl.channels.ManyToManyChannel x] (count (.buf x))))
-  (^long [^vector?                                            x] (.count x))
-  (^long [                                                    x] (core/count x))
-  ; Debatable whether this should be allowed
-  (^long [:else                                               x] 0))
+(defnt count ; TODO incorporate clojure.lang.RT/count
+  #?(:cljs (^long [^array?                                             x] (.-length x)))
+  #?(:clj  (^long [^any-array?                                         x] (Array/count x)))
+           (^long [^string?                                            x] (#?(:clj .length :cljs .-length) x))
+           (^long [^keyword?                                           x] (count ^String (name x)))
+         #?(:clj 
+           (^long [^clojure.core.async.impl.channels.ManyToManyChannel x] (count (.buf x))))
+           (^long [^vector?                                            x] (.count x))
+           (^long [                                                    x] (core/count x))
+           ; Debatable whether this should be allowed
+           (^long [:else                                               x] 0))
 
 (defnt empty?
   ([#{array? string? keyword? #?(:clj clojure.core.async.impl.channels.ManyToManyChannel)} x] (zero? (count x)))
