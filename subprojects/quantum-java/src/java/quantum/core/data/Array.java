@@ -1,6 +1,6 @@
 package quantum.core.data;
 
-class Array {
+public class Array {
 
   // ================================ GET ================================ //
   
