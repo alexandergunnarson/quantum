@@ -1,6 +1,6 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic.core
-           (:refer-clojure :exclude [assoc dissoc dissoc! conj conj! disj disj!
+           (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
                                      update merge if-let assert])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as c              ]
@@ -76,7 +76,8 @@
 #?(:clj (def entity? (partial instance? datomic.query.EntityMap)))
 (defalias mentity? datascript.impl.entity/entity?)
 
-#?(:clj (def tempid? (partial instance? datomic.db.DbId)))
+#?(:clj (def tempid? #(instance? datomic.db.DbId           %)))
+#?(:clj (def dbfn?   #(instance? datomic.function.Function %)))
 #?(:clj (def tempid-like? (fn-or tempid? integer?)))
 
 #?(:clj (def db? (partial instance? datomic.db.Db)))
@@ -403,6 +404,11 @@
                    :db.alter/_attribute :db.part/db}
                   (apply hash-map kvs))]]))
 
+(defn retract-from-schema! [s k v]
+  (transact!
+    [[:db/retract s k v]
+     [:db/add :db.part/db :db.alter/attribute k]]))
+
 (defn new-if-not-found
   "Creates a new entity if the one specified by the key-value pairs, @attrs,
    is not found in the database."
@@ -422,17 +428,21 @@
                         (fn-> first keyword?)
                         (fn-> first namespace (= "fn"))))
 
+(defn transform-validated [x]
+  (postwalk
+    (whenf*n (fn-and record? #?(:clj (fn-and (fn-not tempid?)
+                                             (fn-not dbfn?  ))))
+      (if*n attribute?
+            :v
+            (fn->> (remove-vals+ nil?)
+                   (join {}))))
+    x))
+
 (defn validated->txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction component.
    Assumes nested maps/records are component entities."
   [x]
-  (whenf x record?
-    (partial postwalk
-      (whenf*n (fn-and record? #?(:clj (fn-not #(instance? datomic.db.DbId %))))
-        (if*n attribute?
-              :v
-              (fn->> (remove-vals+ nil?)
-                     (join {})))))))
+  (whenf x (fn-and record? #?(:clj (fn-not dbfn?))) transform-validated))
 
 (defn validated->new-txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction.
@@ -467,12 +477,8 @@
   "'Unrolls' entities into maps. 
    If a second argument is used, unrolling will be applied once.
    If it is not used, unrolling will be applied until there are no more entity maps."
-  {:todo ["Code pattern here" "Check for cycles" "This is the *SAME THING* as datomic.api/touch"]}
-  ([m]
-    (coll/prewalk
-      (whenf*n (partial instance? datomic.query.EntityMap)
-        #(join {} %))
-      m))
+  {:todo ["Code pattern here"]}
+  ([m] (touch m))
   ([m n]
     (loop [m-n m
            n-n 0]
@@ -563,11 +569,12 @@
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  ([m]      (conj @conn* @part* false m))
-  ([part m] (conj @conn* part false m))
-  ([conn part no-transform? m]
-    (let [txn (whenf m (fn-not dbfn-call?)
-                (fn-> validated->txn (coll/assoc-when-none :db/id (tempid conn part))))]
+  ([x]      (conj @conn* @part* false x))
+  ([part x] (conj @conn* part false x))
+  ([conn part no-transform? x] ; TODO no-txr-transform? no-client-transform?
+    (let [txn (-> x transform-validated
+                  (whenf (fn-not dbfn-call?)
+                    (f*n coll/assoc-when-none :db/id (tempid conn part))))]
       (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
