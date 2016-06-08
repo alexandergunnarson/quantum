@@ -758,9 +758,9 @@
 
 ; ===== GET-IN ===== ;
 
-(def aget-in-f* #(aget %1 %2))
+#?(:clj (defalias aget-in* coll/aget-in*))
 
-(defn aget-in [coll ks] (reduce aget-in-f* coll ks))
+(defn aget-in [arr ks] (apply coll/aget-in*-protocol arr ks))
 
 (def get-in-f* #(get %1 %2))
 
@@ -770,11 +770,11 @@
       (aget-in coll ks)
       (reduce get-in-f* coll ks)))
 
-(defn aset-in!
+(defn aset-in! ; TODO use the Array/aset fn; |defnt|?
   [coll ks v]
   (aset! (aget-in coll (butlast ks)) (last ks) v)) ; TODO |butlast| and |last| are not effective if not vecs
 
-(defn assoc-in!
+(defn assoc-in! ; TODO |defnt|?
   [coll ks v]
   (if (type/array? coll)
       (aset-in! coll ks v)
