@@ -98,7 +98,7 @@
          [net.jafama/jafama                     "2.1.0"           ]
          [com.gfredericks/goog-integer          "1.0.0"           ]
          [org.clojure/math.combinatorics        "0.1.1"           ]
-         [quantum/java                          "1.1"             ]
+         [quantum/java                          "1.2"             ]
        ; ==== PRINT ====
          [fipp                                  "0.6.4"           ] ; Latest (as of 2/1/2016)
        ; ==== RESOURCES ====
