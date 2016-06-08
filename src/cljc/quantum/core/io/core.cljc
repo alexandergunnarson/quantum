@@ -170,7 +170,7 @@
                        overwrite       true  ; :date, :num :num-0
                        formatting-func identity}
                 :as   options}]
-  (assert (contains? #{:compress :pretty :serialize :print} method) #{method})
+  (assert (core/contains? #{:compress :pretty :serialize :print} method) #{method})
   (doseq [file-type-n file-types]
     (let [data data-
           file-path (p/parse-dir path-)
@@ -193,14 +193,14 @@
                 (-> file-name u/escape-illegal-chars p/path-without-ext (str " 00." extension)))
           file-path-0  (path directory-f file-name-0)
           date-spaced
-            (when (and (= overwrite :date) (exists? file-path-0))
+            (when (and (= overwrite :date) (contains? file-path-0))
               (str " " (identity #_time/now-formatted "MM-dd-yyyy HH|mm")))
           file-num
             (cond
               (and (splice-or overwrite = :num :num-0)
-                   (some #(exists? %1) [file-path-0 (path directory-f file-name-00)]))
+                   (some #(contains? %1) [file-path-0 (path directory-f file-name-00)]))
               "00_FIX" #_(next-file-copy-num file-path-0)
-              (and (= overwrite :num-0) ((fn-not exists?) file-path-0))
+              (and (= overwrite :num-0) ((fn-not contains?) file-path-0))
               "00"
               :else nil)
           file-name-f

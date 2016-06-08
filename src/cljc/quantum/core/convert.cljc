@@ -29,6 +29,7 @@
                      [quantum.core.macros                :as macros 
                        :refer [#?(:clj defnt)]                      ]
                      [quantum.core.paths                 :as path   ]
+                     [quantum.core.fn                    :as fn     ]
                      [quantum.core.vars                  :as var   
                        :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros 
@@ -51,6 +52,7 @@
                                          FileOutputStream FileInputStream
                                          ByteArrayInputStream ByteArrayOutputStream
                                          PipedOutputStream PipedInputStream
+                                         BufferedInputStream BufferedOutputStream
                                          DataInputStream
                                          InputStream OutputStream
                                          IOException EOFException
@@ -292,11 +294,11 @@
   ([^java.io.OutputStream         x] (BufferedOutputStream. x))))
 
 #?(:clj
-(defnt ->observable ; O(1)
+(defnt ->observable ; O(1) ; TODO Reflection on clojure.lang.IndexedSeq
   ([^vector? v] (FXCollections/observableArrayList v))
   ([^listy?  l] (FXCollections/observableArrayList l))))
 
-#?(:clj (defalias ->predicate coll/->predicate))
+#?(:clj (defalias ->predicate fn/->predicate))
 
 ; #_(defalias ->keyword str/->keyword)
 

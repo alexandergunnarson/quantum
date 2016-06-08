@@ -1,11 +1,8 @@
 (ns quantum.core.io.utils
            (:require [com.stuartsierra.component  :as component]
-                     [datascript.core             :as mdb      ]
              #?(:clj [clojure.java.io             :as io       ])
                      [quantum.core.convert        :as conv
                        :refer [->name ->str]                   ]
-                     [quantum.db.datomic          :as db      
-                       #?@(:cljs [:refer [EphemeralDatabase]]) ]
                      [quantum.core.collections    :as coll
                        :refer [#?(:clj kmap)]                  ]
                      [quantum.core.error          :as err
@@ -35,8 +32,7 @@
                        :refer [defnt]                          ]
                      [quantum.core.vars           :as var
                        :refer [def-]                           ]))
-  #?(:clj  (:import  (quantum.db.datomic EphemeralDatabase)
-                     (java.io File
+  #?(:clj  (:import  (java.io File
                               InputStream OutputStream
                               DataOutputStream
                               FileInputStream FileOutputStream))))
@@ -62,7 +58,7 @@
          true
       (catch SecurityException _ false)))
   ([^file?   dir] (->> dir str       readable?))
-  ([^vec?    dir] (->> dir parse-dir readable?))))
+  ([^vec?    dir] (->> dir paths/parse-dir readable?))))
 
 #?(:clj
 (defnt writable?
