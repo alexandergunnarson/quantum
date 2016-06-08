@@ -8,8 +8,7 @@
              [vector hash-map rest count first second butlast last aget get pop peek
               conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
               empty? empty
-              #?@(:cljs [array])
-              #?@(:clj  [boolean byte char short int long float double])])
+              #?@(:cljs [array])])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )         :as core    ]
              #?(:clj [seqspert.vector                            ])
@@ -17,14 +16,14 @@
                      [quantum.core.collections.base
                        :refer [#?(:clj kmap)]                    ]
                      [quantum.core.convert.primitive :as pconvert
-                       :refer [boolean ->boolean
-                               byte    ->byte   ->byte*
-                               char    ->char   ->char*
-                               short   ->short  ->short*
-                               int     ->int    ->int*
-                               long    ->long   ->long*
-                               float   ->float  ->float*
-                               double  ->double ->double*]       ]
+                       :refer [->boolean
+                               ->byte   ->byte*
+                               ->char   ->char*
+                               ->short  ->short*
+                               ->int    ->int*
+                               ->long   ->long*
+                               ->float  ->float*
+                               ->double ->double*]       ]
                      [quantum.core.data.vector       :as vec     
                        :refer [catvec subvec+ vector+]           ]
                      [quantum.core.error             :as err
@@ -56,7 +55,7 @@
                        :refer [pattern?]]
                      [quantum.core.vars              :as var
                        :refer [defalias]                         ]))
-)
+  #?(:clj  (:import quantum.core.data.Array)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -199,6 +198,7 @@
   (^long [^keyword?                                           x] (count ^String (name x)))
 #?(:clj 
   (^long [^clojure.core.async.impl.channels.ManyToManyChannel x] (count (.buf x))))
+  (^long [^vector?                                            x] (.count x))
   (^long [                                                    x] (core/count x))
   ; Debatable whether this should be allowed
   (^long [:else                                               x] 0))
@@ -371,9 +371,52 @@
 
 ; }
 
-(defnt aget
-          ([^array? coll ^pinteger? n] (core/aget coll n))
-  #?(:clj ([        coll ^pinteger? n] (java.lang.reflect.Array/get coll n)))) ; about 4 times faster than core/get
+(defnt aget  ;  (java.lang.reflect.Array/get coll n) is about 4 times faster than core/get
+  "Basically this is the whole quantum/java Array file.
+   Takes only 1-2 seconds to generate and compile this."
+  ([^array? x ^pinteger? i1] (#?(:clj  Array/get
+                                 :cljs core/aget) x i1))
+  ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1]
+    (Array/get x i1)))
+
+#?(:clj
+(defnt aget-in*
+  ([#{array? array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1]
+    (Array/get x i1))
+  ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2]
+    (Array/get x i1 i2))
+  ([#{array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3]
+    (Array/get x i1 i2 i3))
+  ([#{array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4]
+    (Array/get x i1 i2 i3 i4))
+  ([#{array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5]
+    (Array/get x i1 i2 i3 i4 i5))
+  ([#{array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
+    ^int i6]
+    (Array/get x i1 i2 i3 i4 i5 i6))
+  ([#{array-7d? array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
+    ^int i6 ^int i7]
+    (Array/get x i1 i2 i3 i4 i5 i6 i7))
+  ([#{array-8d? array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
+    ^int i6 ^int i7 ^int i8]
+    (Array/get x i1 i2 i3 i4 i5 i6 i7 i8))
+  ([#{array-9d? array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
+    ^int i6 ^int i7 ^int i8 ^int i9]
+    (Array/get x i1 i2 i3 i4 i5 i6 i7 i8 i9))
+  ([#{array-10d?} x
+    ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
+    ^int i6 ^int i7 ^int i8 ^int i9 ^int i10]
+    (Array/get x i1 i2 i3 i4 i5 i6 i7 i8 i9 i10))))
 
 (defnt get
   {:imported "clojure.lang.RT/get"}
@@ -394,6 +437,24 @@
   #?(:cljs ([^nil?                 coll            n if-not-found] (core/get coll n if-not-found)))
            ([                      coll            n             ] (core/get coll n nil         ))
            ([                      coll            n if-not-found] (core/get coll n if-not-found)))
+
+#_(defnt aget-in ; TODO construct using a macro
+  "Haven't fixed reflection issues for unused code paths. Also not performant."
+  ([#{array? array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+    indices]
+   (condp = (count indices)
+     1  (aget-in* x (int (get indices 0))                )
+     2  (aget-in* x (int (get indices 0)) (int (get indices 1)))
+     3  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)))
+     4  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)))
+     5  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)))
+     6  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)) (int (get indices 5)))
+     7  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)) (int (get indices 5)) (int (get indices 6)))
+     8  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)) (int (get indices 5)) (int (get indices 6)) (int (get indices 7)))
+     9  (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)) (int (get indices 5)) (int (get indices 6)) (int (get indices 7)) (int (get indices 8)))
+     10 (aget-in* x (int (get indices 0)) (int (get indices 1)) (int (get indices 2)) (int (get indices 3)) (int (get indices 4)) (int (get indices 5)) (int (get indices 6)) (int (get indices 7)) (int (get indices 8)) (int (get indices 9)))
+     0 (throw (->ex "Indices can't be empty"))
+     :else (throw (->ex "Indices count can't be >10")))))
 
 (defalias doto! swap!)
 
