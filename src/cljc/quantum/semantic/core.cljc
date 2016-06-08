@@ -8,7 +8,7 @@
              [quantum.core.collections :as coll
                :refer [map+ remove+
                        mutable! eq!
-                       #?@(:clj [kmap aset-in! aget-in ifor get reducei])]]
+                       #?@(:clj [kmap aset-in! aget-in aget-in* ifor get reducei])]]
              [quantum.core.error
                :refer [#?(:clj assert) ->ex]]
              [quantum.core.numeric :as num
@@ -22,7 +22,7 @@
              [quantum.core.error
                :refer [assert]]
              [quantum.core.collections
-               :refer [aset-in! aget-in ifor get reducei]]
+               :refer [aset-in! aget-in aget-in* ifor get reducei]]
              [quantum.core.numeric
                :refer [inc* +*]]))
   #?(:cljs (:import goog.string.StringBuffer)))
@@ -78,13 +78,16 @@
       ["Boxed math doesn't seem to
         make a difference in performance"
        "|ifor| shaves about 20-40% off the time compared to
-        |doseq| with |range|! pretty amazing"]}
+        |doseq| with |range|! pretty amazing"]
+    :todo ["Move from |aset-in!| to |aset-in!*|"
+           "Eliminate boxed math"
+           "Improve |coll/->multi-array|"]} 
   [s1 s2]
   (let [s1-ct+1 (-> s1 count int inc*)
         s2-ct+1 (-> s2 count int inc*)
-        m    (coll/->multi-array (int 0)
-               [(-> s1 count inc)
-                (-> s2 count inc)])
+        ^"[[I" m    (coll/->multi-array (int 0)
+                      [(-> s1 count inc)
+                       (-> s2 count inc)])
         cost (mutable! 0)]
     (ifor [i 0 (< i s1-ct+1) (inc* i)]
       (aset-in! m [i 0] i))
@@ -97,9 +100,9 @@
             (eq! cost 0)
             (eq! cost 1))
         (aset-in! m [i j]
-          (min (inc     (aget-in m [(dec i) j      ]))     ; deletion
-               (inc     (aget-in m [i       (dec j)]))     ; insertion
-               (+ @cost (aget-in m [(dec i) (dec j)])))))) ; substitution
+          (min (inc     (aget-in* m (dec i) j      ))     ; deletion
+               (inc     (aget-in* m i       (dec j)))     ; insertion
+               (+ @cost (aget-in* m (dec i) (dec j))))))) ; substitution
      m))
 
 (defn levenshtein-distance [str1 str2]
