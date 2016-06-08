@@ -115,6 +115,20 @@
   [type]
   (or #?(:clj (get inner-types type) :cljs 'object) 'Object))
 
+#?(:clj (def class->str (fn-> str (.substring 6))))
+
+#?(:clj
+(defmacro array-nd-types [n]
+  `#{`(class (apply make-array Short/TYPE     (repeat ~~n 0)))
+     `(class (apply make-array Long/TYPE      (repeat ~~n 0)))
+     `(class (apply make-array Float/TYPE     (repeat ~~n 0)))
+     `(class (apply make-array Integer/TYPE   (repeat ~~n 0)))
+     `(class (apply make-array Double/TYPE    (repeat ~~n 0)))
+     `(class (apply make-array Boolean/TYPE   (repeat ~~n 0)))
+     `(class (apply make-array Byte/TYPE      (repeat ~~n 0)))
+     `(class (apply make-array Character/TYPE (repeat ~~n 0)))
+     `(class (apply make-array Object         (repeat ~~n 0)))}))
+
 #?(:clj
 (defmacro def-types [lang]
   (let [retrieve
@@ -375,6 +389,15 @@
            'array-list?      array-list-types
            'array?           {:clj  (->> array-types :clj vals (into #{}))
                               :cljs (->> array-types :cljs)}
+           'array-2d?        {:clj (array-nd-types 2 )}
+           'array-3d?        {:clj (array-nd-types 3 )}
+           'array-4d?        {:clj (array-nd-types 4 )}
+           'array-5d?        {:clj (array-nd-types 5 )}
+           'array-6d?        {:clj (array-nd-types 6 )}
+           'array-7d?        {:clj (array-nd-types 7 )}
+           'array-8d?        {:clj (array-nd-types 8 )}
+           'array-9d?        {:clj (array-nd-types 9 )}
+           'array-10d?       {:clj (array-nd-types 10)}
            'boolean-array?   {:clj #{(-> array-types :clj :boolean)}}
            'byte-array?      {:clj #{(-> array-types :clj :byte)}}
            'char-array?      {:clj #{(-> array-types :clj :char)}}
@@ -424,9 +447,9 @@
                                             (map (condf*n
                                                    (fn-and seq? (fn-> first name (= "class")))
                                                      (fn [obj]
-                                                       (condp = lang
+                                                       (condp = lang-n
+                                                         :clj  (-> obj eval class->str symbol)
                                                          :cljs (get-in primitive-type-map [lang-n obj])
-                                                         :clj  (get-in primitive-type-map [lang-n obj])
                                                          obj))
                                                    (fn-and seq? (fn-> first name (= "quote")))
                                                      second

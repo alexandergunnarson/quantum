@@ -11,7 +11,7 @@
                          :cljs cljs.core   )       :as core   ]
                      [quantum.core.classes         :as classes]
                      [quantum.core.fn              :as fn
-                       :refer [#?@(:clj [f*n mfn])]           ]
+                       :refer [#?@(:clj [f*n mfn fn->])]      ]
                      [quantum.core.logic           :as logic
                        :refer [#?@(:clj [fn-and whenf*n])]    ]
                      [quantum.core.data.vector     :as vec    ]
@@ -25,7 +25,7 @@
                      [quantum.core.type
                        :refer [should-transientize?]]
                      [quantum.core.fn              :as fn 
-                       :refer [f*n mfn]                       ]
+                       :refer [f*n mfn fn->]                  ]
                      [quantum.core.logic           :as logic
                        :refer [fn-and whenf*n]                ]
                      [quantum.core.macros          :as macros 
