@@ -84,20 +84,15 @@
          (merge
            {:type                   :free
             :name                   "test"
-            :host                   "localhost"
+            :host                   "0.0.0.0"
             :port                   4334
             :create-if-not-present? true
-            :txr-alias              "local"
             :default-partition      :db.part/test
             :init-schemas?          true
-            :schemas                schemas
-            #?@(:clj
-           [:start-txr?             true
-            :txr-dir                (str (System/getProperty "user.dir")
-                                         "/resources/datomic-free-0.9.5344")
-            :txr-bin-path           "./bin/transactor"
-            :txr-props-path         "./config/samples/free-transactor-template.properties"])}
-           backend))
+            :schemas                schemas ; TODO update these
+            :txr-props {:start?   true
+                        :alias    "local"}})
+           backend)
       #?@(:cljs
          [:ephemeral (when ephemeral
                        (merge ephemeral
