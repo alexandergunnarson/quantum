@@ -1,14 +1,22 @@
 (ns quantum.validate.core
-           (:require [schema.core :as s]
-                     [quantum.core.error     :as err
-                       :refer [->ex]                ]
-                     [quantum.validate.domain       ]
-                     [quantum.core.string    :as str]
-                     [quantum.core.vars      :as var 
-                       :refer [#?(:clj defalias)]   ])
+           (:require [schema.core              :as s   ]
+                     [quantum.core.logic
+                       :refer [#?@(:clj [fn-not])]]
+                     [quantum.core.error       :as err
+                       :refer [->ex]                   ]
+                     [quantum.core.string      :as str ]
+                     [quantum.core.collections :as coll
+                       :refer [#?@(:clj [containsv?])] ]
+                     [quantum.core.vars        :as var 
+                       :refer [#?(:clj defalias)]      ]
+                     [quantum.validate.domain          ])
   #?(:cljs (:require-macros 
-                     [quantum.core.vars      :as var 
-                       :refer [defalias]            ]))
+                     [quantum.core.collections :as coll
+                       :refer [containsv?]             ]
+                     [quantum.core.logic
+                       :refer [fn-not]]
+                     [quantum.core.vars        :as var 
+                       :refer [defalias]               ]))
   #?(:clj (:import java.util.regex.Matcher)))
 
 #?(:clj
@@ -41,6 +49,10 @@
 (def Int         s/Int)
 (def Keyword     s/Keyword)
 (def Num         s/Num)
+
+; A few built-in validators
+
+(def no-blanks?  (pred (fn no-blanks? [x] (not (containsv? x " ")))))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
 (def email:valid-chars       (str "[^\\s" email:special-chars "]"))

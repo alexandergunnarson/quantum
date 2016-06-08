@@ -191,6 +191,25 @@
                   :char    (class (char-array    "")     )
                   :object  (class (object-array  [])     )}
            :cljs #{(class (array))}}
+        array-2d-types  {:clj (array-nd-types 2 )}
+        array-3d-types  {:clj (array-nd-types 3 )}
+        array-4d-types  {:clj (array-nd-types 4 )}
+        array-5d-types  {:clj (array-nd-types 5 )}
+        array-6d-types  {:clj (array-nd-types 6 )}
+        array-7d-types  {:clj (array-nd-types 7 )}
+        array-8d-types  {:clj (array-nd-types 8 )}
+        array-9d-types  {:clj (array-nd-types 9 )}
+        array-10d-types {:clj (array-nd-types 10)}
+        any-array-types (cond-union (->> array-types vals (into #{}))
+                                    array-2d-types 
+                                    array-3d-types 
+                                    array-4d-types 
+                                    array-5d-types 
+                                    array-6d-types 
+                                    array-7d-types 
+                                    array-8d-types 
+                                    array-9d-types 
+                                    array-10d-types)
         number-types
          '{:clj  #{java.lang.Long}}
         hash-set-types
@@ -256,21 +275,25 @@
            :cljs #{cljs.core/Cons}}
         lseq-types '{:clj  #{clojure.lang.LazySeq}
                      :cljs #{cljs.core/LazySeq   }}
-        seq-types            (cond-union
-                               cons-types
-                               list-types
-                               dlist-types
-                               queue-types
-                               lseq-types
-                               '{:clj  #{clojure.lang.APersistentMap$ValSeq
-                                         clojure.lang.APersistentMap$KeySeq
-                                         clojure.lang.PersistentVector$ChunkedSeq
-                                         clojure.lang.IndexedSeq}
-                                 :cljs #{cljs.core/ValSeq
-                                         cljs.core/KeySeq
-                                         cljs.core/IndexedSeq
-                                         cljs.core/ChunkedSeq}})
+        misc-seq-types '{:clj  #{clojure.lang.APersistentMap$ValSeq
+                                 clojure.lang.APersistentMap$KeySeq
+                                 clojure.lang.PersistentVector$ChunkedSeq
+                                 clojure.lang.IndexedSeq}
+                         :cljs #{cljs.core/ValSeq
+                                 cljs.core/KeySeq
+                                 cljs.core/IndexedSeq
+                                 cljs.core/ChunkedSeq}}
+        seq-types       (cond-union
+                           cons-types
+                           list-types
+                           dlist-types
+                           queue-types
+                           lseq-types
+                           misc-seq-types)
         listy-types           seq-types
+        seq-not-list-types   (cond-union cons-types queue-types
+                               lseq-types
+                               misc-seq-types)
         indexed-types         vec-types
         prim-bool-types       '{:clj  #{boolean}}
         bool-types            '{:clj  #{boolean java.lang.Boolean}
@@ -341,9 +364,11 @@
            'cdlist?          cdlist-types
            'listy?           listy-types
            'cons?            cons-types
+           'misc-seq?        misc-seq-types
            'associative?     associative-types
            'lseq?            lseq-types
            'seq?             seq-types
+           'seq-not-list?    seq-not-list-types
            'queue?           queue-types
            'coll?            coll-types
            'indexed?         indexed-types
@@ -389,15 +414,7 @@
            'array-list?      array-list-types
            'array?           {:clj  (->> array-types :clj vals (into #{}))
                               :cljs (->> array-types :cljs)}
-           'array-2d?        {:clj (array-nd-types 2 )}
-           'array-3d?        {:clj (array-nd-types 3 )}
-           'array-4d?        {:clj (array-nd-types 4 )}
-           'array-5d?        {:clj (array-nd-types 5 )}
-           'array-6d?        {:clj (array-nd-types 6 )}
-           'array-7d?        {:clj (array-nd-types 7 )}
-           'array-8d?        {:clj (array-nd-types 8 )}
-           'array-9d?        {:clj (array-nd-types 9 )}
-           'array-10d?       {:clj (array-nd-types 10)}
+
            'boolean-array?   {:clj #{(-> array-types :clj :boolean)}}
            'byte-array?      {:clj #{(-> array-types :clj :byte)}}
            'char-array?      {:clj #{(-> array-types :clj :char)}}
@@ -418,6 +435,16 @@
            'doubles?         {:clj #{(-> array-types :clj :double)}}
            'objects?         {:clj #{(-> array-types :clj :object)}}
 
+           'array-2d?        array-2d-types     
+           'array-3d?        array-3d-types  
+           'array-4d?        array-4d-types  
+           'array-5d?        array-5d-types  
+           'array-6d?        array-6d-types  
+           'array-7d?        array-7d-types  
+           'array-8d?        array-8d-types  
+           'array-9d?        array-9d-types  
+           'array-10d?       array-10d-types
+           'any-array?       any-array-types
 
            'keyword?         '{:clj  #{clojure.lang.Keyword}
                                :cljs #{cljs.core/Keyword}}
@@ -465,5 +492,5 @@
                     ~(list 'def 'primitive-types 
                       `(zipmap [~@(->   primitive-type-map (get  lang) keys)]
                                   (-> '~primitive-type-map (get ~lang) vals)))
-                    ~(list 'def 'arr-types (get array-types lang)))]    
+                    ~(list 'def 'arr-types (get array-types lang)))]
     code)))
