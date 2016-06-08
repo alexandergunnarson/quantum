@@ -18,3 +18,9 @@ subprojects/quantum-java/target/quantum-java-dep.jar
 subprojects/quantum-java/target/quantum-java-dep.jar
 
 .nrepl-port
+
+subprojects/quantum-java/target/classes/META-INF/maven/quantum/java/pom.properties
+
+subprojects/quantum-java/target/classes/quantum/core/data/Array.class
+
+subprojects/quantum-java/target/quantum-java-dep.jar.asc
