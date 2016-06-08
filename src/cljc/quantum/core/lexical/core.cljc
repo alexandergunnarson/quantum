@@ -13,7 +13,7 @@
 (defn match
   "Create a rule to match a regular expression."
   [re]
-  (fn [src]
+  (fn [^String src]
     #?(:clj
          (let [m (re-matcher re src)]
            (if (.lookingAt m)
@@ -177,7 +177,7 @@
   [src]
   (let [f (match sequence-of-chars-regex)]
     (if-let [[[_ m _ s] src] (f src)]
-      [(.replace m "\\" "")
+      [(.replace ^String m "\\" "")
        (str s src)])))
 
 (def range-of-chars-regex #"(\\.|[^\^\-\[\]\\])-(\\.|[^\^\-\[\]\\])")

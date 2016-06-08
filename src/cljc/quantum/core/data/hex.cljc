@@ -20,7 +20,8 @@
   #?(:cljs ([^number?  x] (.toString x 16)))
   #?(:clj  ([#{int Integer} x] (Integer/toHexString x)))
   #?(:clj  ([^char?    x]
-             (.substring ^String (->hex-string (->int x)) 0 4)))
+             (let [^String s (->hex-string (->int x))]
+               (.substring s 0 4))))
   #?(:clj  ([^byte?    x]
              (let [^String hs (->hex-string (+ 256 (long x)))
                    n-f  (count hs)]

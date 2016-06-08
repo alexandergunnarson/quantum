@@ -566,7 +566,7 @@
   Expects a string to run the operation on, a pattern in the form of a
   regular expression, and a function that handles the replacing."
   {:source "zcaudate/hara"}
-  [value pattern sub-fn]
+  [^String value pattern sub-fn]
   (loop [matcher (re-matcher pattern value) result [] last-end 0]
     (if (.find matcher)
       (recur matcher

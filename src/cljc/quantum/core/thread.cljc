@@ -247,12 +247,12 @@
   []
   (->> @reg
        (<- dissoc :thread-reaper)
-       (map (fn-> val :thread (.cancel true)))
+       (map (fn-> val :thread async/close!))
        dorun)))
 
 #?(:clj
 (defonce add-thread-shutdown-hooks!
-  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. (close-all! true))))))
+  (-> (Runtime/getRuntime) (.addShutdownHook (Thread. #(close-all! true))))))
  
 ; ASYNC
 

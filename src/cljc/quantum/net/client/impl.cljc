@@ -23,14 +23,14 @@
                         :refer [#?@(:clj [fn-and whenf*n])
                                 nnil?]                        ]
                       [quantum.core.collections     :as coll
-                        :refer [#?(:clj kmap)]                ]
+                        :refer [#?@(:clj [kmap containsv?])]  ]
                       [quantum.core.vars            :as var  
                         :refer [#?(:clj def-)]                ])
   #?(:cljs (:require-macros
                       [cljs.core.async.macros
                         :refer [go]                           ]
                       [quantum.core.collections     :as coll
-                        :refer [kmap]                         ]
+                        :refer [kmap containsv?]              ]
                       [quantum.core.fn              :as fn
                         :refer [fn-> f*n]                     ]
                       [quantum.core.log             :as log   ]
@@ -625,7 +625,7 @@
       (let [response        (request!* (dissoc req :status :log))
             status          (:status response)
             parse-middleware (whenf*n (fn-and (constantly (not raw?))
-                                              (fn-> :headers :content-type (.contains "application/json"))) ; containsv?
+                                              (fn-> :headers :content-type (containsv? "application/json")))
                                (fn-> (update :body (f*n json-> (or keys-fn str/keywordize)))))]
         (if (or (= status 200) (= status 201))
             ((or (get handlers status) fn/seconda) req (parse-middleware response))

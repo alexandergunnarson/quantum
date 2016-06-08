@@ -202,7 +202,8 @@
 #?(:clj
   ([^Thread                      x] (.stop    x))
   ([^Process                     x] (.destroy x))
-  ([^java.util.concurrent.Future x] (.cancel  x true))
+  ([#{java.util.concurrent.Future
+      java.util.concurrent.FutureTask} x] (.cancel x true))
   ([                             x] (if (nil? x) true (throw :not-implemented)))
   ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
   ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
@@ -213,17 +214,17 @@
 
 #?(:clj
 (defnt closed?
-#?(:clj
   ([^Thread x] (not (.isAlive x)))
   ([^Process x] (try (.exitValue x) true
                    (catch IllegalThreadStateException _ false)))
   ([#{java.util.concurrent.Future
+      java.util.concurrent.FutureTask
       #_co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
   ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
   ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
   ([^boolean? x] x)
-  ([x] (if (nil? x) true (throw :not-implemented))))))
+  ([x] (if (nil? x) true (throw :not-implemented)))))
 
 #?(:clj (def open? (fn-not closed?)))
 
@@ -233,6 +234,7 @@
   #_([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
     (-> x .getQueueLength (> 0)))
   ([#{java.util.concurrent.Future
+      java.util.concurrent.FutureTask
       #_co.paralleluniverse.fibers.Fiber} x] (.isDone x))))
 
 #?(:clj

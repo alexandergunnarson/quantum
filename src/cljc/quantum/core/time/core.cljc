@@ -219,8 +219,7 @@
 #?(:clj
 (defnt ^java.time.Instant ->jinstant
   ([#{long? bigint?} x] (-> x pconv/->long (java.time.Instant/ofEpochMilli)))
-  ([x]
-    (-> x ->unix-millis ->jinstant))))
+  ([x] (-> x ->unix-millis-protocol ->jinstant))))
 
 #?(:clj
 (defnt ^java.util.Date ->jdate
@@ -364,12 +363,12 @@
   (defmethod print-dup java.util.Date
     ^{:attribution "clojuredocs.org, |print-dup|"}
     [o w]
-    (print-ctor o (fn [o w] (print-dup (.getTime  o) w)) w)) )
+    (print-ctor o (fn [o w] (print-dup (.getTime ^java.util.Date o) w)) w)) )
 
 #?(:clj
   (defmethod print-dup org.joda.time.DateTime
     ^{:todo ["Fix this... only prints out current date"]}
-    [d stream]
+    [d ^java.io.StringWriter stream]
     (.write stream "#=(list \"A date should go here\" ")
     (.write stream "")
     (.write stream ")"))) 

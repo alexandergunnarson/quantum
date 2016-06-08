@@ -286,7 +286,7 @@
     (start [this]
       (let [pb (->> (into [command] args)
                     (map str)
-                    into-array
+                    ^"[Ljava.lang.String;" into-array
                     (ProcessBuilder.))
             set-env-vars!
               (doseq [[^String env-var ^String val-] env-vars]
@@ -301,7 +301,7 @@
         (assoc this :process process)))
     (stop [this]
       (when process
-        (.destroy process))
+        (.destroy ^java.lang.Process process))
       this)))
 
 #?(:clj

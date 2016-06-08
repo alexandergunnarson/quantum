@@ -544,8 +544,7 @@
                                     ; 24 => AES-192, 32 => AES-256
                                     ; TODO make customizable
                                     ; This is key size in bits in CLJ, but in bytes in CLJS
-                                    (-> (#?(:clj  num/exp
-                                            :cljs js/Math.pow) 2 8)
+                                    (-> (num/exp-protocol 2 8)
                                         #?(:cljs (/ 8)))
                                     #?(:cljs (js/forge.md.sha256.create))) ; defaults to SHA1
         #?@(:clj

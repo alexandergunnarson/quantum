@@ -53,10 +53,10 @@
     (loop [i 0] 
       (if (< i (count digested))
           (let [v           (-> digested (get i) (& 0xFF))
-                bit-shifted (-> hex-arr  (get (>>> v 4   )))
-                bit-anded   (-> hex-arr  (get (&   v 0x0F)))]
-                (aset hex-chars (* i 2)       bit-shifted)
-                (aset hex-chars (+ (* i 2) 1) bit-anded)
+                bit-shifted (-> hex-arr  (get (>>> v 4   )) char)
+                bit-anded   (-> hex-arr  (get (&   v 0x0F)) char)]
+                (aset hex-chars (char (* i 2))       bit-shifted)
+                (aset hex-chars (char (+ (* i 2) 1)) bit-anded)
               (recur (inc i)))))
     (String. hex-chars))))
 
@@ -72,7 +72,7 @@
           bytes  0
           result 0
           (count bytes))
-        (aset! result (-> result count dec) (byte 0))
+        (aset result (-> result count dec) (byte 0))
         result))))
 
 #?(:clj

@@ -87,7 +87,7 @@
                 _ (reset! stop-fn-f
                     (condp = type
                       :aleph    #(do (when (nnil? server)
-                                       (.close server)))
+                                       (.close ^java.io.Closeable server)))
                       :immutant #(do (when (nnil? server)
                                        (imm/stop server)))
                       :http-kit server))]

@@ -406,7 +406,7 @@
     (let [qualified-sym (symbol "core" (name sym))]
       (eval (quote+ (defalias ~sym ~qualified-sym))))))
 
-(defnt' abs'
+(defnt abs'
   (^int               [^int    x] (Math/abs x))
   (^long              [^long   x] (Math/abs x))
   (^double            [^double x] (Math/abs x))
@@ -607,7 +607,7 @@
 
 (defnt exp "|exp| and not |pow| because 'exponent'."
   (^double ^:intrinsic [^double   x ^double y] (Math/pow x y))
-  (^double             [^integer? x         y] (exp (core/double x) (core/double y))))
+  (^double             [#{byte short int long float} x y] (exp (core/double x) (core/double y))))
 
 ;pow'
 ; Only works with integers larger than zero.
