@@ -6,7 +6,7 @@
                     [quantum.core.data.map      :as map ]
                     [quantum.core.collections   :as coll
                       :refer [filter+ map+
-                              #?@(:clj [for-m join])]   ]
+                              #?@(:clj [for* join])]   ]
                     [quantum.core.vars          :as var
                       :refer [#?(:clj defmalias)]       ]
                     [quantum.core.fn            :as fn
@@ -31,7 +31,7 @@
                (filter+ (partial instance? clojure.reflect.Field))
                (map+ :name)
                (join []))]
-    (for-m [name-n field-names]
+    (for* {} [name-n field-names]
       [(-> name-n strf/un-camelcase keyword)
        (java/field obj (name name-n))]))))
 
