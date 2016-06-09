@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-5-26-2016.1"
+(defproject quantum/core "0.3.0-6-8-2016.1.aot"
   :version-history
     {"0.2.4.6" #{:stable :clj :cljs}
      "0.2.4.7" #{:abandoned}
@@ -8,7 +8,7 @@
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"
      "-d64" "-server"]
-  ;:aot :all ;[quantum.core.macros] ; "^:skip-aot" doesn't work; same with regexes
+  :aot :all
   :jar-name          "quantum-dep.jar"
   :uberjar-name      "quantum.jar"
   :url               "https://www.github.com/alexandergunnarson/quantum"
@@ -17,44 +17,45 @@
   ; :signing          {:gpg-key "72F3C25A"}
   :env {:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
         :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
-  :repositories {"repo-s3-releases"
+  #_:repositories #_{"repo-s3-releases" ; this has problems with lein-ancient
                    {:url        "s3://repo.quantum/releases/"
                     :username   :env/public-repo-s3-username
                     :passphrase :env/public-repo-s3-password
                     :checksum   :warn}}
-  :plugins [[lein-environ  "1.0.1"]
-            [lein-essthree "0.2.1"]]
+  :plugins [[lein-environ  "1.0.3" ]
+            [lein-essthree "0.2.1" ]
+            [lein-ancient  "0.6.10"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
      [org.clojure/clojurescript                 "1.8.51"          ] ; Latest (as of 5/17/2016)
      ; ==== CORE ====
-       [proteus                                 "0.1.4"           ]
+       [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
        [org.clojure/tools.namespace             "0.2.11"          ] ; Latest (as of 1/2/2016)
        [com.taoensso/encore                     "2.49.0"          ] ; To not break things
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.374"         ]
-         [servant                               "0.1.3"           ] ; Latest (as of 1/4/2016)
-         [co.paralleluniverse/pulsar            "0.7.3"           ] ; If you include it, it conflicts
-         [co.paralleluniverse/quasar-core       "0.7.3"           ] ; :classifier "jdk8" 
+         [servant                               "0.1.5"           ] ; Latest (as of 1/4/2016)
+         [co.paralleluniverse/pulsar            "0.7.5"           ] ; If you include it, it conflicts
+         [co.paralleluniverse/quasar-core       "0.7.5"           ] ; :classifier "jdk8" 
          ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
-         [it.unimi.dsi/fastutil                 "7.0.7"           ]
+         [it.unimi.dsi/fastutil                 "7.0.12"           ]
          [quantum/seqspert                      "1.7.0-alpha6.1.0"]
-         [fast-zip                              "0.6.1"           ]
+         [fast-zip                              "0.7.0"           ]
          ; VECTOR
          [org.clojure/core.rrb-vector           "0.0.11"          ]
          [org.clojure/data.finger-tree          "0.0.2"           ]
          ; MAP / SET     
-         [org.flatland/ordered                  "1.5.2"           ]
-         [org.clojure/data.avl                  "0.0.12"          ]
-         [org.clojure/data.int-map              "0.2.1"           ]
+         [org.flatland/ordered                  "1.5.3"           ]
+         [org.clojure/data.avl                  "0.0.13"          ]
+         [org.clojure/data.int-map              "0.2.2"           ]
          ; ==== COMPLEX ====
            ; JSON
-           [cheshire                            "5.3.1"           ] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
+           [cheshire                            "5.6.1"           ] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
            ; CSV
-           [org.clojure/data.csv                "0.1.2"           ]
+           [org.clojure/data.csv                "0.1.3"           ]
            ; XML
            [org.clojure/data.xml                "0.0.8"
              :exclusions [org.clojure/clojure]                    ]
@@ -69,38 +70,38 @@
          [com.lambdaworks/scrypt                "1.4.0"           ]
          [org.mindrot/jbcrypt                   "0.3m"            ]
          [commons-codec/commons-codec           "1.10"            ]
-         [org.bouncycastle/bcprov-jdk15on       "1.53"            ]
+         [org.bouncycastle/bcprov-jdk15on       "1.54"            ]
        ; ==== ERROR ====
          [slingshot                             "0.12.2"          ]
        ; ==== GRAPH ====
-         [aysylu/loom                           "0.5.4"           ] ; Latest 1/26/2015
+         [aysylu/loom                           "0.6.0"           ] ; Latest 1/26/2015
        ; ==== IO ====
         ;[commons-io/commons-io                 "2.4"             ] ; writing byte arrays to file and such
          [com.taoensso/nippy                    "2.11.1"
            :exclusions [org.clojure/tools.reader
                         org.clojure/clojure
                         org.json/json]                            ] ; data serialization
-         [iota                                  "1.1.2"       
+         [iota                                  "1.1.3"       
            :exclusions [org.codehaus.jsr166-mirror/jsr166y
                         org.clojure/clojure]                      ] ; fast/efficient string IO manipulation
-         [com.cognitect/transit-clj             "0.8.271"
+         [com.cognitect/transit-clj             "0.8.285"
            :exclusions [com.fasterxml.jackson.core/jackson-core]  ]
        ; ==== JAVA/CLASS ====
          [org.clojure/java.classpath            "0.2.3"           ]
          [alembic                               "0.3.2"           ]
-         [org.reflections/reflections           "0.9.10"          ]
+       #_[org.reflections/reflections           "0.9.10"          ]
          [com.carrotsearch/java-sizeof          "0.0.5"           ] ; Get size of Java Objects
        ; ==== MACROS ====
-         [riddley                               "0.1.10"          ]
+         [riddley                               "0.1.12"          ]
          #_[potemkin                            "0.3.11"            ; defprotocol+, definterface+, etc.
            :exclusions [riddley]                                  ]
        ; ==== NUMERIC ====              
          [net.jafama/jafama                     "2.1.0"           ]
          [com.gfredericks/goog-integer          "1.0.0"           ]
-         [org.clojure/math.combinatorics        "0.1.1"           ]
+         [org.clojure/math.combinatorics        "0.1.3"           ]
          [quantum/java                          "1.3"             ]
        ; ==== PRINT ====
-         [fipp                                  "0.6.4"           ] ; Latest (as of 2/1/2016)
+         [fipp                                  "0.6.5"           ] ; Latest (as of 2/1/2016)
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ] ; Latest (as of 2/1/2016)
        ; ==== STRING ====
@@ -108,29 +109,29 @@
          [frak                                  "0.1.6"           ]   
        ; ==== TIME ====    
          #_[clj-time                            "0.7.0"           ] ; similar to JODA time
-         [com.andrewmcveigh/cljs-time           "0.3.2"
+         [com.andrewmcveigh/cljs-time           "0.4.0"
            :exclusions [org.json/json]                            ]
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
          ; BENCH      
-         [criterium                             "0.4.3"           ]
+         [criterium                             "0.4.4"           ]
          ; DEBUG
          [clj-stacktrace                        "0.2.8"           ]
-         [debugger                              "0.1.7"           ]
+         [debugger                              "0.2.0"           ]
          ; REPL
          ;[quantum/figwheel                      "0.5.0-2.1"       ]
-         [figwheel                              "0.5.3-1"         ]
+         [figwheel                              "0.5.3-2"         ]
          #_[binaryage/devtools                  "0.5.2"           ]
-         [environ  "1.0.1"  ]
+         [environ  "1.0.3"  ]
      ; ==== DB ====
        ; DATOMIC
        [quantum/datomic-pro                     "0.9.5206"
          :exclusions [joda-time]                                  ]
-       [datascript                              "0.13.3"          ] ; Latest (as of 1/2/2016)
+       [datascript                              "0.15.0"          ] ; Latest (as of 1/2/2016)
        [datascript-transit                      "0.2.0"           ] ; Latest (as of 1/5/2016)
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ] ; Latest (as of 1/2/2016)
-       [posh                                    "0.3.4.1"         ] ; Latest (as of 3/10/2016)
+       [posh                                    "0.3.5"           ] ; Latest (as of 3/10/2016)
        [quantum/datsync                         "0.0.1-4-11-2016" ]
        [re-frame                                "0.7.0"           ]
      ; ==== HTML ====
@@ -138,19 +139,19 @@
      ; ==== UI ====
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ] ; 0.2.0-SNAPSHOT
-       [reagent                                 "0.5.0"
+       [reagent                                 "0.5.1"
          :exclusions [org.json/json]                              ]
        ;[freactive                              "0.1.0"           ] ; a pure ClojureScript answer to react + reagent
        ;[domina                                 "1.0.3"           ] ; DOM manipulation
        ; CSS
-       [garden                                  "1.2.5"           ]
+       [garden                                  "1.3.2"           ]
      ; ==== UUID ====
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ] ; Latest (as of 1/4/2016)
        [danlentz/clj-uuid                       "0.1.6"           ] ; Latest (as of 1/9/2016)
      ; ==== HTTP ====      
        [com.taoensso/sente                      "1.8.1"           
          :exclusions [com.taoensso/encore]                        ] ; Latest (as of 1/9/2016)
-       [clj-http                                "1.1.2"
+       [clj-http                                "3.1.0"
          :exclusions [riddley
                       cheshire
                       org.json/json
@@ -159,21 +160,21 @@
                       potemkin]                                   ]
        ;[cljs-http                              "0.1.27"          ]
        [less-awful-ssl                          "1.0.1"           ]
-       [http-kit                                "2.1.18"
+       [http-kit                                "2.1.19"
          :exclusions [org.clojure/clojure]                        ] 
-       [org.apache.httpcomponents/httpcore      "4.4.1"           ]
-       [org.apache.httpcomponents/httpclient    "4.4" 
+       [org.apache.httpcomponents/httpcore      "4.4.4"           ]
+       [org.apache.httpcomponents/httpclient    "4.5.2" 
          :exclusions [commons-codec]                              ]
-       [org.apache.httpcomponents/httpmime      "4.4"
+       [org.apache.httpcomponents/httpmime      "4.5.2"
          :exclusions [commons-codec]                              ]
        ; ==== ROUTING ====
-       [compojure                               "1.4.0"
+       [compojure                               "1.5.0"
          :exclusions [org.eclipse.jetty/jetty-server
                       org.eclipse.jetty/jetty-servlet
                       javax.servlet/servlet-api
                       clj-http]                                   ]
-       [org.eclipse.jetty/jetty-server          "9.2.10.v20150310"]
-       [org.immutant/web                        "2.1.2"             ; Latest (as of 9/1/2016)
+       [org.eclipse.jetty/jetty-server          "9.4.0.M0"        ]
+       [org.immutant/web                        "2.1.4"             ; Latest (as of 9/1/2016)
          :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
        [aleph                                   "0.4.1"           
          :exclusions [primitive-math]                             ]
@@ -192,20 +193,20 @@
        ;[repetition-hunter                      "1.0.0"           ]
        ; COMPILE/TRANSPILE
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
-       [com.github.javaparser/javaparser-core   "2.1.0"           ] ; Parse Java source code
+       [com.github.javaparser/javaparser-core   "2.4.0"           ] ; Parse Java source code
        [org.clojure/tools.emitter.jvm           "0.1.0-beta5"     ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
-     [org.apache.tika/tika-parsers              "1.9"             ]
+     [org.apache.tika/tika-parsers              "1.13"            ]
      ; DATAGRID
-     [org.apache.poi/poi                        "3.9"             ]
-     [org.apache.poi/poi-ooxml                  "3.9"             ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
+     [org.apache.poi/poi                        "3.14"            ]
+     [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
      ; AUDIO
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"            ] ; Creating audio plugin
      ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"            ] ; Creating audio plugin
      ; ==== MULTIPLE ====
      ; COMPRESSION, HASHING...
-     [byte-transforms                           "0.1.3"           ]
+     [byte-transforms                           "0.1.4"           ]
      [net.jpountz.lz4/lz4                       "1.3"             ]
      ; ==== MISCELLANEOUS ====
      ]
@@ -231,7 +232,7 @@
 
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js && lein figwheel dev
                     ; rm -rf ./target && rm -rf ./dev-resources/public/js/compiled/quantum/ && lein figwheel dev
-                    [lein-figwheel "0.5.3-1"  ;quantum/lein-figwheel           "0.5.0-2.1"
+                    [lein-figwheel "0.5.3-2"  ;quantum/lein-figwheel           "0.5.0-2.1"
                       :exclusions [org.clojure/clojure
                                    org.clojure/core.async
                                    org.clojure/core.cache]]
