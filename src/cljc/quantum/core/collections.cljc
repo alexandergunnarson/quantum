@@ -30,7 +30,7 @@
               count
               vec empty empty?
               split-at
-              first second rest last butlast get aget pop peek
+              first second rest last butlast get aget nth pop peek
               select-keys get-in
               zipmap
               reverse
@@ -60,9 +60,11 @@
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil? any?]]
+                                         ifn if*n condf condf*n])
+                               nnil? any? splice-or]]
                      [quantum.core.macros                     :as macros 
                        :refer [#?@(:clj [defnt])]                        ]
+                     [quantum.core.numeric                    :as num    ]
                      [quantum.core.reducers                   :as red    ]
                      [quantum.core.string                     :as str    ]
                      [quantum.core.string.format              :as sform  ]
@@ -97,6 +99,7 @@
                      [quantum.core.loops                      :as loops  ]
                      [quantum.core.macros                     :as macros 
                        :refer [defnt]                                    ]
+                     [quantum.core.numeric                    :as num    ]
                      [quantum.core.reducers                   :as red    ]
                      [quantum.core.type                       :as type 
                        :refer [lseq? transient? editable? boolean? 
@@ -130,6 +133,7 @@
 #?(:clj (defalias get           coll/get          ))
         (defalias gets          coll/gets         )
         (defalias getf          coll/getf         )
+#?(:clj (defalias nth           coll/nth          ))
 
 ; ; If not |defalias|ed, "ArityException Wrong number of args (2) passed to: core/eval36441/fn--36457/G--36432--36466"
 #?(:clj (defalias conjl         coll/conjl        ))
@@ -636,8 +640,8 @@
                match'
                matches')))))
 
-
-
+(defn indices+ [coll]
+  (range+ 0 (count coll)))
 
 ; ================================================ MERGE ================================================
 
@@ -988,19 +992,13 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-
-
-; (defn plicates
-;   {:attribution "Alex Gunnarson"}
-;   [oper n]
-;   (fn [coll]
-;      (-> (fn [elem]
-;            (-> (filter+ (fn-eq? elem) coll)
-;                count
-;                (oper n))) ; duplicates? keep them
-;          (filter+ coll)
-;          distinct+
-;          (join [])))))
+(defn duplicates-by
+  {:attribution "Alex Gunnarson"}
+  [pred coll]
+  (->> coll
+       (group-by pred)  ; TODO use reducer group-by+
+       (filter-vals+ (fn-> count (> 1)))
+       (join {})))
 
 ; TODO: make a reducers version of coll/elem
 (defnt interpose*
@@ -1616,3 +1614,34 @@
   ([^quantum.core.collections.MutableContainer x v] (.set x v) v))
 
 (defn mutable! [x] (MutableContainer. x))
+
+; ====== NUMERIC ======
+
+(defn allocate-by-percentages
+  "Allocate @n into groups of @percents.
+   Overflow and underflow are applied to the greatest percentage.
+   Throws if is not able to partition."
+  {:tests `{[1 [1 1]]
+            :fail
+            [1 [1]]
+            [1]
+            [3 [0.33 0.66]]
+            [1 2]
+            [3 [0.1 0.33]]
+            [1 2]}}
+  [n percents]
+  (let [_ (assert (->> percents (reduce + 0) (<- <= 1)))
+        allocated (for [p percents]
+                    (long (num/ceil (* n p)))) ; TODO make not use long
+        sorted (->> allocated
+                    (map-indexed+ vector)
+                    (join [])
+                    (sort-by #(second %1)))
+        total  (->> allocated (reduce + 0))
+        *flow  (- total n)]
+    (cond (splice-or *flow = 0)
+          allocated
+          (splice-or *flow = 1 -1) ; TODO fix
+          (update allocated (-> sorted last first) - *flow)
+          (-> *flow num/abs (> 1))
+          (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
