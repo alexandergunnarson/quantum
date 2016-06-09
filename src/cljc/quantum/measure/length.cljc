@@ -8,7 +8,7 @@
 ; in vacuum during a time interval of 1/299,792,458 of a 
 ; second. Originally meant to be 1e-7 of the length along 
 ; a meridian from the equator to a pole.
-(defunits-of length [:m #{:meter}]
+#_(defunits-of length [:m #{:meter}] ; TODO "method code too large"
   ; Microscopic
   :fm       [[1/1000     :pm      ] #{:femtometers :fermi}]
   :pm       [[1/1000     :nm      ] #{:picometers} #{:µµ}]
