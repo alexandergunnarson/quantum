@@ -1,4 +1,4 @@
-(ns quantum.ui.css.javafx)
+(ns quantum.ui.style.css.javafx)
 
 #_(in-ns 'fx-clj.css)
 #_(defn remove-global-stylesheet! [url]

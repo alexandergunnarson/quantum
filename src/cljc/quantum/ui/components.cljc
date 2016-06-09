@@ -101,10 +101,11 @@
           (join (first (gen-rows v (fn-> first vector) k  ))
                        (gen-rows v rest                nil)))))))
 
+#?(:cljs
 (defn render-db
   "A component which renders a DataScript or Datomic DB."
   [db]
   (fn []
     [table
       (reaction (->> @db db/db->seq (group-by :e) seq))
-      (reaction [:a :v :added])]))
+      (reaction [:a :v :added])])))
