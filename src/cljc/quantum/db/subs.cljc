@@ -1,15 +1,17 @@
 (ns quantum.db.subs
-          (:require [re-frame.core      :as re   
-                      :refer [subscribe dispatch]]
-                    [quantum.db.datomic :as db])
+          (:require
+            #?(:cljs [re-frame.core      :as re   
+                       :refer [subscribe dispatch]])
+                     [quantum.db.datomic :as db])
  #?(:cljs (:require-macros
-             [reagent.ratom :as rx
+             [reagent.ratom    :as rx
                :refer [reaction]]
               [quantum.core.fn :as fn
               :refer [<-]])))
 
 (def dom-id 0)
 
+#?(:cljs
 (def subscriptions
   {:db       (fn [db [_ _]] db)
    :q        (fn [db [_ q]] ; yes, it's impure but that's how it has to be for now
@@ -28,8 +30,9 @@
             (->> dom-id
                  db/entity
                  (into {})
-                 (<- get k))))})
+                 (<- get k))))}))
 
+#?(:cljs
 (def handlers
   {:transact! (fn [db [_ txn]]
                 (db/transact! txn)
@@ -41,5 +44,5 @@
                 (dispatch
                   [:transact!
                     [(db/assoc dom-id k v)]])
-                @@db/conn*)}) ; TODO impure
+                @@db/conn*)})) ; TODO impure
              

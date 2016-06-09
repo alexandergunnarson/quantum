@@ -1,4 +1,4 @@
-(ns quantum.ui.css.defaults)
+(ns quantum.ui.style.css.defaults)
 
 (defn clearfix [class-]
   [class- {:*zoom 1}

@@ -70,7 +70,7 @@
                             (log/pr ::debug "Copying source code...")
                             (io/mkdir! (path/path root' "src"))
                             )]
-    (doseq [sub-project project-dirs]
+    #_(doseq [sub-project project-dirs]
       (let [root'        ""
             project-clj' "" ; TODO transform root project.clj to sub project.clj
             ]
