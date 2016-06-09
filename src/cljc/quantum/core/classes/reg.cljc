@@ -1,10 +1,10 @@
 (ns quantum.core.classes.reg
-  #?(:clj (:import org.reflections.Reflections
+  #_(:clj (:import org.reflections.Reflections
                    org.reflections.scanners.SubTypesScanner)))
 
-#?(:clj
+#_(:clj
 (defonce clojure-classes-unevaled
-  (->> (Reflections. "clojure" (into-array [(SubTypesScanner. false)]))
+  (->> (Reflections. "clojure" (into-array [(SubTypesScanner. false)])) ; This takes around 3 seconds
        (.getAllTypes)
        (remove (fn [^String s] (.contains s "__"))) ; to remove auto-genned classes
        (remove (fn [^String s] (.contains s ".proxy$")))
