@@ -671,11 +671,13 @@
 
 ; ===== TRUNCATING ===== ;
 
-(defnt' ceil
-  (^double [^double x] (Math/ceil x)))
+(defnt ceil
+  (^double [^double x] (Math/ceil x))
+  (^double [        x] (ceil (double x)))) ; TODO fix
 
-(defnt' floor
-  (^double [^double x] (Math/floor x)))
+(defnt floor
+  (^double [^double x] (Math/floor x))
+  (^double [        x] (floor (double x)))) ; TODO fix
 
 (defnt' floor-div
   (^int  [^int  x ^int  y] (Math/floorDiv x y))
