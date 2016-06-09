@@ -5,7 +5,7 @@
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
            (:refer-clojure :exclude
-             [vector hash-map rest count first second butlast last aget get pop peek
+             [vector hash-map rest count first second butlast last aget get nth pop peek
               conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
               empty? empty
               #?@(:cljs [array])])
@@ -431,13 +431,23 @@
              (try (.get coll n)
                (catch ArrayIndexOutOfBoundsException e# if-not-found))))
            ([^array?               coll ^pinteger? n             ] (aget     coll n             ))
-           ([^listy?               coll            n             ] (nth      coll n nil         ))
-           ([^listy?               coll            n if-not-found] (nth      coll n if-not-found))
+           ([^listy?               coll            n             ] (core/nth coll n nil         ))
+           ([^listy?               coll            n if-not-found] (core/nth coll n if-not-found))
            ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
   #?(:cljs ([^nil?                 coll            n             ] (core/get coll n nil         )))
   #?(:cljs ([^nil?                 coll            n if-not-found] (core/get coll n if-not-found)))
            ([                      coll            n             ] (core/get coll n nil         ))
            ([                      coll            n if-not-found] (core/get coll n if-not-found)))
+
+(defnt nth
+  ; TODO import clojure.lang.RT/nth
+  ([#{vector? string? array-list? array?
+      listy?} coll i] (get coll i))
+  ([coll i] (core/nth coll i))
+  #_([#{clojure.data.avl.AVLSet
+      clojure.data.avl.AVLMap
+      java.util.Map
+      clojure.lang.IPersistentSet} coll i] (core/nth coll i)))
 
 #_(defnt aget-in ; TODO construct using a macro
   "Haven't fixed reflection issues for unused code paths. Also not performant."
