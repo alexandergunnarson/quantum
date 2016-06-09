@@ -1,1 +1,1 @@
-(ns quantum.compile.to.js)
+(ns quantum.compile.transpile.to.js)

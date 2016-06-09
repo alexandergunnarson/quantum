@@ -14,7 +14,7 @@
                        :refer [fn->]                  ]
                      [quantum.core.vars      :as var
                        :refer [defalias]              ]))
-  #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
+  #_(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 
 #?(:clj 
@@ -57,22 +57,22 @@
 
 ; BYTE SIZE
 
-#?(:clj (defn byte-size-alt-1 [obj] (RamUsageEstimator/sizeOf obj)))
+#_(:clj (defn byte-size-alt-1 [obj] (RamUsageEstimator/sizeOf obj)))
 
-#?(:clj
+#_(:clj
 (defn byte-size-alt-2 [obj]
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))
 
-#?(:clj
+#_(:clj
 (defn byte-size [obj]
   (let [result-1 (byte-size-alt-1 obj)
         result-2 (byte-size-alt-2 obj)]
     [(min result-1 result-2)
      (max result-1 result-2)])))
 
-#?(:clj
+#_(:clj
 (defn calc-byte-size-of-all-vars
   "WARNING: Takes a really long time"
   []

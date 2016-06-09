@@ -17,26 +17,12 @@
                        :refer [defalias]                 ]))
   #?(:clj  (:import java.nio.ByteBuffer [quantum.core Numeric])))
 
-(declare ->byte    ->byte*
-         ->double  ->double*
-         ->char    ->char*
-         ->boolean
-         ->long    ->long*
-         ->short   ->short*
-         ->float   ->float*
-         ->int     ->int*
-         ->unboxed)
-
 ;_____________________________________________________________________
 ;==================={           LONG           }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
 (defmacro long-out-of-range [x]
   `(throw (->ex :illegal-argument (str "Value out of range for long: " ~x)))))
-
-#?(:clj
-(defnt ->Long
-  ([^string? x] (Long/parseLong x))))
 
 #?(:clj
 (defnt ^long ->long*
@@ -64,7 +50,7 @@
       (^long [#{float}                    x] (clojure.lang.RT/longCast x))  ; Because primitive casting in Clojure is not supported
       (^long [#{double}                   x] (Double/doubleToRawLongBits x)) ; TODO is this safe?
       (^long [#{boolean}                  x] (if x 1 0))
-      (^long [^string?                    x] #?(:clj  (-> x ->Long         ->long)
+      (^long [^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
                                                 :cljs (-> x int/fromString ->long)))
     #?(:clj
       (^long [^string?                    x radix] (Long/parseLong x radix))))
@@ -129,10 +115,6 @@
 ;==================={           SHORT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
-(defnt ->Short
-  ([^string? s] (try (Short. s) (catch NumberFormatException _)))))
-
-#?(:clj
 (defnt ^short ->short*
   {:source "clojure.lang.RT.uncheckedShortCast"}
   ([^Number x] (.shortValue x))
@@ -144,17 +126,12 @@
       ([^Short                   x] (.shortValue x))
       ([#{byte short}            x] (->short* x))
       ([#{int long float double} x] (clojure.lang.RT/shortCast x))
-      ([^string?                 x] (-> x ^Short ->Short ->short))
+      ([^string?                 x] (-> x Short/parseShort ->short))
       ([#{boolean}               x] (-> x ->long ->short)))
    :cljs (defalias ->short core/short))
 ;_____________________________________________________________________
 ;==================={            INT           }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj
-(defnt ->Integer
-  ; ~10% faster than (Integer. x)
-  ([^string? x] (#?(:clj Integer/parseInt :cljs js/parseInt) x))))
-
 #?(:clj
 (defnt ^int ->int*
   {:source "clojure.lang.RT.uncheckedIntCast"}
@@ -172,7 +149,7 @@
       ([#{char byte short int} x] (->int* x))
       ([#{long double}         x] (clojure.lang.RT/intCast x))
       ([^float                 x] (Float/floatToRawIntBits x))
-      ([^string?               x] (-> x #?(:clj ->Integer :cljs js/parseInt) ->int))
+      ([^string?               x] (-> x #?(:clj Integer/parseInt :cljs js/parseInt) ->int))
       ([^string?               x radix] (#?(:clj Integer/parseInt :cljs int/fromString) x radix))
       ([:else                  x  (-> x ->long ->int)]))
    :cljs (defalias ->int core/int))
@@ -181,15 +158,13 @@
 ;_____________________________________________________________________
 ;==================={          FLOAT           }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj
-(defnt ->Float
-  ([^string? s] (Float/parseFloat s))))
 
 #?(:clj
 (defnt ^float ->float*
   {:source "clojure.lang.RT/uncheckedFloatCast"}
   ([^Number                             x] (.floatValue x))
-  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedFloatCast x))))
+  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedFloatCast x))
+  ([^string?                            x] (Float/parseFloat x)))) ; TODO unbox 
 
 ; ; TODO duplicate methods
 ; (defnt ^float ->float
@@ -212,10 +187,6 @@
 ;==================={          DOUBLE          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
-(defnt ->Double
-  ([^string? s] (Double/parseDouble s))))
-
-#?(:clj
 (defnt ^double ->double*
   {:source "clojure.lang.RT/uncheckedDoubleCast"}
   ([^Number                      x] (.doubleValue x))
@@ -230,7 +201,7 @@
       ([^double                 x] x)
       ([#{byte short int float} x] (->double* x))
       ([^long                   x] (->double* x)) ; Double/longBitsToDouble is bad
-      ([^string?                x] (-> x ->Double ->double)))
+      ([^string?                x] (-> x Double/parseDouble ->double)))
    :cljs (defalias ->double core/double))
 
 #?(:clj
