@@ -106,6 +106,15 @@
         ([^set?    coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
                                     :cljs -reduce-seq)
                                   coll f init))
+        ([^integer? i f init]
+          (if (< i 0)
+              init
+              (loop [i'  0
+                     ret init]
+                (if (= i' i)
+                    ret
+                    (recur (unchecked-inc i')
+                           (f ret i'))))))
         ([:else    coll f init] (when (nnil? coll)
                                   (#?(:clj  clojure.core.protocols/coll-reduce
                                       :cljs -reduce)
