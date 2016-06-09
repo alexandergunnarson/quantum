@@ -3,22 +3,37 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes])
+  (:refer-clojure :exclude [bytes reduce for last nth])
           (:require
             #?(:clj [loom.gen                  :as g-gen])  ; for now
                     [quantum.core.convert      :as conv  ]
                     [quantum.core.lexical.core :as lex   ]
+                    [quantum.core.data.set     :as set   
+                      :refer [sorted-set+]               ]
+                    [quantum.core.collections  :as coll
+                      :refer [#?@(:clj [fori reduce for join last lasti nth])
+                              map+ map-vals+ map-indexed+ indices+]]
                     [quantum.core.error        :as err
-                      :refer [->ex]                      ]
+                      :refer [->ex #?(:clj throw-unless)]]
                     [quantum.core.macros       :as macros
                        :refer [#?@(:clj [defnt])]        ]
                     [quantum.core.type         :as type
                       :refer [#?(:clj regex?)]           ]
+                    [quantum.core.logic        :as logic
+                      :refer [splice-or nempty?
+                              #?@(:clj [condf*n])]       ]
+                    [quantum.core.numeric      :as num   ]
+                    [quantum.core.fn           :as fn
+                      :refer [<-]                        ]
                     [quantum.core.data.array   :as arr   ])
   #?(:cljs (:require-macros
                     [quantum.core.convert      :as conv  ]
+                    [quantum.core.collections  :as coll
+                      :refer [reduce for join last lasti]]
                     [quantum.core.fn           :as fn
                       :refer [<-]                        ]
+                    [quantum.core.logic
+                      :refer [condf*n]]
                     [quantum.core.macros       :as macros
                       :refer [defnt]                     ]
                     [quantum.core.type         :as type
@@ -200,43 +215,106 @@
 
 ; ; OTHER MORE COMPLEX FUNCTIONS
 
-; #?(:clj
-; (defmacro cond-percent*
-;   {:attribution "thebusby.bagotricks"}
-;   [random-percent & clauses]
-;   (let [cond-details (->> clauses
-;                           (partition 2 2 nil)
-;                           (sort-by (MWA first) >)
-;                           (reduce (fn [[agg total] [percent clause]]
-;                                     (if (not (and percent clause))
-;                                       (throw (->ex nil "cond-percent requires an even number of forms"))
-;                                       (let [nval (+ percent total)]
-;                                         [(conj agg
-;                                                (list clojure.core/<
-;                                                      random-percent
-;                                                      nval)
-;                                                clause)
-;                                          nval])))
-;                                   [['clojure.core/cond] 0]))]
-;     (if (== (second cond-details) 100)
-;       (-> cond-details
-;           first
-;           seq)
-;       (throw (->ex nil
-;               "cond-percent requires percent clauses sum to 100%"))))))
+(defn rand-elem [coll]
+  (nth coll (rand-int-between 0 (lasti coll))))
 
-; #?(:clj
-; (defmacro cond-percent
-;   "Similar to |cond|, but for each condition takes the percentage chance
-;    the form should be executed and returned.
+#?(:clj
+(defmacro cond-percent
+  "Similar to |cond|, but for each condition takes the percentage chance
+   the form should be executed and returned.
 
-;    Ex. (cond-percent
-;          50 \"50% Chance\"
-;          40 \"40% Chance\"
-;          10 (str 10 \"% Chance\")
+   Ex. (cond-percent
+         40         \"40% Chance\"
+         my-percent \"50% Chance\"
+         10         (str 10 \"% Chance\")
 
-;    NOTE: all conditions must sum to 100%"
-;    {:attribution "thebusby.bagotricks"}
-;   [& clauses]
-;   `(let [random-percent# (* (core/rand) 100)]
-;      (cond-percent* random-percent# ~@clauses))))
+   NOTE: The conditions' probabilities must sum to 100%."
+   {:derivation "thebusby.bagotricks"
+    :contributors ["Alex Gunnarson"]}
+  [& clauses]
+  (throw-unless (-> clauses count even?)
+    (->ex "Cond takes an even number of forms"))
+  (let [curr-p-sym   (gensym "curr-p")
+        p-f-sym      (gensym "p-f") ; actual probability
+        partitioned  (partition 2 clauses)
+        p-syms       (vec (repeatedly (count partitioned) #(gensym "p")))
+        clauses-f    (fori [[_ form] partitioned i]
+                       [(get p-syms i) form])
+        let-bindings (apply conj [curr-p-sym `(volatile! 0)
+                                  p-f-sym    `(-> (rand) (* 100))]
+                       (apply concat
+                         (fori [[p _] partitioned i]
+                           [(get p-syms i) p])))]
+    `(let ~let-bindings
+       (throw-unless (= 100 (+ ~@p-syms))
+         (->ex "Percent-probabilities must sum to 100."))
+       (cond ~@(apply concat
+                 (for [[p-sym form] clauses-f]
+                  `[(let [lower# (deref ~curr-p-sym)
+                          upper# (+ lower# ~p-sym)
+                          test# (<= lower# ~p-f-sym upper#)]
+                      (vreset! ~curr-p-sym upper#)
+                      test#)
+                    ~form])))))))
+
+(defn prob
+  "Probabilistically calls a function according to the probability-function pairs given.
+   When |check-sum?| is true, the sum of the probabilities are validated to be 1."
+  {:example `{(prob [[0.3 (constantly :red  )]
+                     [0.2 (constantly :blue )]
+                     [0.5 (constantly :green)]])
+              :red}}
+  ([ps+fs] (prob ps+fs false))
+  ([ps+fs check-sum?]
+    (when check-sum?
+      (throw-unless (->> ps+fs (map+ first) (reduce + 0) (= 1))
+        (->ex "Probabilities must sum to 1.")))
+    (let [p-f (rand)] ; TODO |secure?|
+      (reduce
+        (fn [p-accum [p f]]
+          (let [lower p-accum
+                upper (+ p-accum p)]
+          (if (<= lower p-f upper)
+              (reduced (f))
+              upper)))
+        0
+        ps+fs))))
+
+(defn split
+  "Randomly splits up a collection @coll according to the distributions @distrs-0 given,
+   using the supplied predicate @pred."
+  {:tests `{[[1 2 3 4 5] [0.2 :test] [0.8 :training]]
+            {:test [4], :training [3 2 1 5]}
+            [[1 2 3 4]   [0.2 :test] [0.8 :training]]
+            {:test [2], :training [3 1 4]  }}}
+  [coll & distrs-0]
+  (assert (nempty? distrs-0))
+  (let [coll        (vec coll) ; to be able to index
+        to-distr    (condf*n vector? (juxt second first)
+                             number? (juxt #(gensym (str "split-" %)) identity))
+        distrs      (->> distrs-0
+                         (map+ to-distr)
+                         (join {}))
+        total-p     (->> distrs vals (reduce + 0))
+        _ (assert (splice-or total-p = 1 1.0) #{total-p}) ; TODO =
+        ; probability-function pairs
+        chunk-sizes (coll/allocate-by-percentages (count coll) (vals distrs))
+        partitions  (zipmap (keys distrs) chunk-sizes)]
+    ; for chunks of size c, chooses random indices to belong to that category
+    ; TODO move
+    (->> partitions
+         (reduce
+           (fn [[result remaining-indices] assigned-category chunk-size]
+             (reduce
+               (fn [[result' remaining-indices'] _]
+                 (let [_        (assert (nempty? remaining-indices'))
+                       chosen-i (rand-elem remaining-indices')]
+                    [(update result' assigned-category conj! (get coll chosen-i))
+                     (disj remaining-indices' chosen-i)]))
+               [result remaining-indices]
+               chunk-size))
+           [(zipmap (keys distrs) (repeatedly #(transient [])))  ; to be able to do efficient nth and also disj ; TODO |indices|
+            (->> coll indices+ (join (sorted-set+)))])
+         first
+         (map-vals+ persistent!)
+         (join {}))))
