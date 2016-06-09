@@ -206,7 +206,7 @@
       java.util.concurrent.FutureTask} x] (.cancel x true))
   ([                             x] (if (nil? x) true (throw :not-implemented)))
   ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw+ :unimplemented))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw (->ex :unimplemented)))
   ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
   ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x)))))
 
@@ -221,10 +221,10 @@
       java.util.concurrent.FutureTask
       #_co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
   ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw+ :unimplemented))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw (->ex :unimplemented)))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
   ([^boolean? x] x)
-  ([x] (if (nil? x) true (throw :not-implemented)))))
+  ([x] (if (nil? x) true (throw (->ex :not-implemented))))))
 
 #?(:clj (def open? (fn-not closed?)))
 
