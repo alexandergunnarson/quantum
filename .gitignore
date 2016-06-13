@@ -11,9 +11,7 @@ figwheel_server.log
 *-init.clj
 .lein-env
 
-subprojects/quantum-java/target/quantum-java-dep.jar
-
-subprojects/quantum-java/target/quantum-java-dep.jar
+subprojects/quantum-deploy
 
 subprojects/quantum-java/target/quantum-java-dep.jar
 

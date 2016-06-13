@@ -3,9 +3,11 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes reduce for last nth])
+  (:refer-clojure :exclude [bytes reduce for last nth rand-nth shuffle])
           (:require
             #?(:clj [loom.gen                  :as g-gen])  ; for now
+                    [#?(:clj  clojure.core
+                        :cljs cljs.core)       :as core  ]
                     [quantum.core.convert      :as conv  ]
                     [quantum.core.lexical.core :as lex   ]
                     [quantum.core.data.set     :as set   
@@ -25,7 +27,9 @@
                     [quantum.core.numeric      :as num   ]
                     [quantum.core.fn           :as fn
                       :refer [<-]                        ]
-                    [quantum.core.data.array   :as arr   ])
+                    [quantum.core.data.array   :as arr   ]
+                    [quantum.core.vars
+                      :refer [#?(:clj defalias)]])
   #?(:cljs (:require-macros
                     [quantum.core.convert      :as conv  ]
                     [quantum.core.collections  :as coll
@@ -37,7 +41,9 @@
                     [quantum.core.macros       :as macros
                       :refer [defnt]                     ]
                     [quantum.core.type         :as type
-                      :refer [regex?]                    ]))
+                      :refer [regex?]                    ]
+                    [quantum.core.vars
+                      :refer [defalias]]))
   #?(:clj
   (:import java.util.Random
            java.security.SecureRandom
@@ -88,7 +94,7 @@
 ; TODO shorten all this repetitiveness by adding no-arg option to defnt
 
 #?(:clj
-(defn rand-int-between
+(defn rand-int-between ; |rand-int| ?
   ([        a b] (rand-int-between false a b))
   ([secure? a b]
     (let [^Random generator (get-generator secure?)]
@@ -215,7 +221,7 @@
 
 ; ; OTHER MORE COMPLEX FUNCTIONS
 
-(defn rand-elem [coll]
+(defn rand-nth [coll]
   (nth coll (rand-int-between 0 (lasti coll))))
 
 #?(:clj
@@ -280,6 +286,8 @@
         0
         ps+fs))))
 
+(defalias shuffle core/shuffle)
+
 (defn split
   "Randomly splits up a collection @coll according to the distributions @distrs-0 given,
    using the supplied predicate @pred."
@@ -308,7 +316,7 @@
              (reduce
                (fn [[result' remaining-indices'] _]
                  (let [_        (assert (nempty? remaining-indices'))
-                       chosen-i (rand-elem remaining-indices')]
+                       chosen-i (rand-nth remaining-indices')]
                     [(update result' assigned-category conj! (get coll chosen-i))
                      (disj remaining-indices' chosen-i)]))
                [result remaining-indices]

@@ -14,6 +14,7 @@
                      [quantum.core.data.vector       :as vec  ]  ; To work around CLJS non-spliceability of Tuples
                      [quantum.core.vars              :as var
                        :refer [#?(:clj defalias)]             ]
+                     [quantum.core.meta.debug        :as debug]
             #?(:clj  [fipp.edn                       :as pr   ]
                      ; Fipp currently has strange execution problems in CLJS
                :cljs [cljs.pprint                    :as pr   ]))
@@ -38,26 +39,30 @@
    Prints no later than having consumed the bound amount of memory,
    so you see your first few lines of output instantaneously."
   ([obj]
-    (let [ct (long
-               (try
-                 (count obj)
-                 (catch #?(:clj Throwable :cljs js/Error) _ 1)))]
-      (cond
-        (> ct (long @max-length))
-          (println
-            (str "Object is too long to print ("
-                 (str ct " elements")
-                 ").")
-            "|max-length| is set at" (str @max-length "."))
-        (contains? @blacklist (type obj))
-          (println
-            "Object's class"
-            (str (type obj) "(" ")")
-            "is blacklisted for printing.")
-        :else
-          (#?(:clj  fipp.edn/pprint
-              :cljs cljs.pprint/pprint) obj)))
-    nil)
+    (if #?(:clj  (instance? Throwable obj)
+           :cljs false)
+        #?(:clj  (debug/trace obj)
+           :cljs false)
+        (let [ct (long
+                   (try
+                     (count obj)
+                     (catch #?(:clj Throwable :cljs js/Error) _ 1)))]
+          (cond
+            (> ct (long @max-length))
+              (println
+                (str "Object is too long to print ("
+                     (str ct " elements")
+                     ").")
+                "|max-length| is set at" (str @max-length "."))
+            (contains? @blacklist (type obj))
+              (println
+                "Object's class"
+                (str (type obj) "(" ")")
+                "is blacklisted for printing.")
+            :else
+              (#?(:clj  fipp.edn/pprint
+                  :cljs cljs.pprint/pprint) obj))
+          nil)))
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))

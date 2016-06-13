@@ -195,3 +195,6 @@
 #?(:clj (defalias throw+ tc/throw+))
 
 #?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
+
+(defn todo [] (throw (->ex :todo "This feature has not yet been implemented.")))
+(defalias TODO todo)

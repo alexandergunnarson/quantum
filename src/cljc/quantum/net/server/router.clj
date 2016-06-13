@@ -50,9 +50,6 @@
             [quantum.core.fn            :as fn    
               :refer [<- fn->]                       ]))
 
-
-
-
 ; SECURITY MEASURES TAKEN CARE OF
 ; CSRF : ring.middleware.anti-forgery
 
@@ -152,7 +149,7 @@
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
 
-(defroutes app-routes
+(defroutes routes*
   (GET "/"        req (fn [req]
                         {:headers {"Content-Type" "text/html"
                                    "Content-Security-Policy" (content-security-policy)}
@@ -233,7 +230,7 @@
       #_(friend/requires-scheme :https)
       wrap-exception-handling))
 
-(defroutes routes (wrap-middleware app-routes))
+(defroutes routes (wrap-middleware routes*))
 
 
 (comment

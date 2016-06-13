@@ -196,6 +196,15 @@
       tree)
     (persistent! results)))
 
+#?(:clj (defn prewalk-find [pred x] ; can't find nil but oh well ; TODO clean
+  (cond (try (pred x)
+          (catch Throwable _ false))
+        [true x]
+        (instance? clojure.lang.Seqable x) ; 
+        (let [x' (first (filter #(first (prewalk-find pred %)) x))]
+          (if (nil? x') [false x'] [true x']))
+        :else [false nil])))
+
 ; ===== Transform nested maps =====
 
 (defn apply-to-keys

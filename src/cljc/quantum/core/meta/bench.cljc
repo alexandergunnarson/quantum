@@ -17,6 +17,8 @@
   #_(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 
+; TODO maybe use Timbre profiling?
+
 #?(:clj 
   (defn num-from-timing [time-str]
     (-> (str/replace time-str "\"" "")

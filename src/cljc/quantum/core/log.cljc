@@ -18,6 +18,8 @@
                      [quantum.core.fn            :as fn
                        :refer []                              ])))
 
+; TODO maybe use Timbre?
+
 (defrecord
   ^{:doc "This is a record and not a map because it's quicker
           to check the default levels (member access: O(1)) than
@@ -79,10 +81,11 @@
   [trace? pretty? print-fn pr-type args opts]
     (when (or (get @levels pr-type)
               #?(:cljs (= pr-type :macro-expand)))
-      (let [trace?     (or (:trace?  opts) trace? )
-            pretty?    (or (:pretty? opts) pretty?)
+      (let [trace?  (or (:trace?  opts) trace? )
+            pretty? (or (:pretty? opts) pretty?)
+            stack   (or (:stack   opts) -1     )
             timestamp? (:timestamp? opts)
-            curr-fn (when trace? (debug/this-fn-name :prev))
+            curr-fn (when trace? (debug/this-fn-name stack))
             args-f ( when args @args)
             env-type-str
               (when (get @levels :env)
@@ -121,6 +124,7 @@
               out-str)))
         nil)))
 
+; TODO make these more efficient
 #?(:clj
 (defmacro pr [pr-type & args]
   `(pr* true  false println ~pr-type (delay (list ~@args)) nil)))
@@ -131,7 +135,7 @@
 
 #?(:clj
 (defmacro pr-opts [pr-type opts & args]
-  `(pr* false false println ~pr-type (delay (list ~@args)) ~opts)))
+  `(pr* true false println ~pr-type (delay (list ~@args)) ~opts)))
 
 #?(:clj
 (defmacro ppr [pr-type & args]

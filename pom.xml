@@ -3,7 +3,7 @@
   <groupId>quantum</groupId>
   <artifactId>core</artifactId>
   <packaging>jar</packaging>
-  <version>0.3.0-5-26-2016.1</version>
+  <version>0.3.0-6-8-2016.1.aot</version>
   <name>core</name>
   <description>Some quanta of computational abstraction, assembled.</description>
   <url>https://www.github.com/alexandergunnarson/quantum</url>
@@ -16,7 +16,7 @@
   <scm>
     <connection>scm:git:git://github.com/alexandergunnarson/quantum.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/alexandergunnarson/quantum.git</developerConnection>
-    <tag>2740fa26ecca76b9cd8a673a38e088f2debecbc4
+    <tag>c9d6c94cd5aacf715254d10185a9e84d0666b362
 </tag>
     <url>https://github.com/alexandergunnarson/quantum</url>
   </scm>
@@ -83,16 +83,6 @@
         <enabled>true</enabled>
       </releases>
     </repository>
-    <repository>
-      <id>repo-s3-releases</id>
-      <url>s3://repo.quantum/releases/</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
   </repositories>
   <dependencies>
     <dependency>
@@ -108,7 +98,7 @@
     <dependency>
       <groupId>proteus</groupId>
       <artifactId>proteus</artifactId>
-      <version>0.1.4</version>
+      <version>0.1.6</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -128,17 +118,17 @@
     <dependency>
       <groupId>servant</groupId>
       <artifactId>servant</artifactId>
-      <version>0.1.3</version>
+      <version>0.1.5</version>
     </dependency>
     <dependency>
       <groupId>co.paralleluniverse</groupId>
       <artifactId>pulsar</artifactId>
-      <version>0.7.3</version>
+      <version>0.7.5</version>
     </dependency>
     <dependency>
       <groupId>co.paralleluniverse</groupId>
       <artifactId>quasar-core</artifactId>
-      <version>0.7.3</version>
+      <version>0.7.5</version>
     </dependency>
     <dependency>
       <groupId>com.carrotsearch</groupId>
@@ -148,7 +138,7 @@
     <dependency>
       <groupId>it.unimi.dsi</groupId>
       <artifactId>fastutil</artifactId>
-      <version>7.0.7</version>
+      <version>7.0.12</version>
     </dependency>
     <dependency>
       <groupId>quantum</groupId>
@@ -158,7 +148,7 @@
     <dependency>
       <groupId>fast-zip</groupId>
       <artifactId>fast-zip</artifactId>
-      <version>0.6.1</version>
+      <version>0.7.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -173,27 +163,27 @@
     <dependency>
       <groupId>org.flatland</groupId>
       <artifactId>ordered</artifactId>
-      <version>1.5.2</version>
+      <version>1.5.3</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.avl</artifactId>
-      <version>0.0.12</version>
+      <version>0.0.13</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.int-map</artifactId>
-      <version>0.2.1</version>
+      <version>0.2.2</version>
     </dependency>
     <dependency>
       <groupId>cheshire</groupId>
       <artifactId>cheshire</artifactId>
-      <version>5.3.1</version>
+      <version>5.6.1</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>data.csv</artifactId>
-      <version>0.1.2</version>
+      <version>0.1.3</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -234,7 +224,7 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk15on</artifactId>
-      <version>1.53</version>
+      <version>1.54</version>
     </dependency>
     <dependency>
       <groupId>slingshot</groupId>
@@ -244,7 +234,7 @@
     <dependency>
       <groupId>aysylu</groupId>
       <artifactId>loom</artifactId>
-      <version>0.5.4</version>
+      <version>0.6.0</version>
     </dependency>
     <dependency>
       <groupId>com.taoensso</groupId>
@@ -268,7 +258,7 @@
     <dependency>
       <groupId>iota</groupId>
       <artifactId>iota</artifactId>
-      <version>1.1.2</version>
+      <version>1.1.3</version>
       <exclusions>
         <exclusion>
           <groupId>org.codehaus.jsr166-mirror</groupId>
@@ -283,7 +273,7 @@
     <dependency>
       <groupId>com.cognitect</groupId>
       <artifactId>transit-clj</artifactId>
-      <version>0.8.271</version>
+      <version>0.8.285</version>
       <exclusions>
         <exclusion>
           <groupId>com.fasterxml.jackson.core</groupId>
@@ -302,11 +292,6 @@
       <version>0.3.2</version>
     </dependency>
     <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-      <version>0.9.10</version>
-    </dependency>
-    <dependency>
       <groupId>com.carrotsearch</groupId>
       <artifactId>java-sizeof</artifactId>
       <version>0.0.5</version>
@@ -314,7 +299,7 @@
     <dependency>
       <groupId>riddley</groupId>
       <artifactId>riddley</artifactId>
-      <version>0.1.10</version>
+      <version>0.1.12</version>
     </dependency>
     <dependency>
       <groupId>net.jafama</groupId>
@@ -329,17 +314,17 @@
     <dependency>
       <groupId>org.clojure</groupId>
       <artifactId>math.combinatorics</artifactId>
-      <version>0.1.1</version>
+      <version>0.1.3</version>
     </dependency>
     <dependency>
       <groupId>quantum</groupId>
       <artifactId>java</artifactId>
-      <version>1.0</version>
+      <version>1.3</version>
     </dependency>
     <dependency>
       <groupId>fipp</groupId>
       <artifactId>fipp</artifactId>
-      <version>0.6.4</version>
+      <version>0.6.5</version>
     </dependency>
     <dependency>
       <groupId>com.stuartsierra</groupId>
@@ -354,7 +339,7 @@
     <dependency>
       <groupId>com.andrewmcveigh</groupId>
       <artifactId>cljs-time</artifactId>
-      <version>0.3.2</version>
+      <version>0.4.0</version>
       <exclusions>
         <exclusion>
           <groupId>org.json</groupId>
@@ -370,7 +355,7 @@
     <dependency>
       <groupId>criterium</groupId>
       <artifactId>criterium</artifactId>
-      <version>0.4.3</version>
+      <version>0.4.4</version>
     </dependency>
     <dependency>
       <groupId>clj-stacktrace</groupId>
@@ -380,17 +365,17 @@
     <dependency>
       <groupId>debugger</groupId>
       <artifactId>debugger</artifactId>
-      <version>0.1.7</version>
+      <version>0.2.0</version>
     </dependency>
     <dependency>
       <groupId>figwheel</groupId>
       <artifactId>figwheel</artifactId>
-      <version>0.5.3-1</version>
+      <version>0.5.3-2</version>
     </dependency>
     <dependency>
       <groupId>environ</groupId>
       <artifactId>environ</artifactId>
-      <version>1.0.1</version>
+      <version>1.0.3</version>
     </dependency>
     <dependency>
       <groupId>quantum</groupId>
@@ -406,7 +391,7 @@
     <dependency>
       <groupId>datascript</groupId>
       <artifactId>datascript</artifactId>
-      <version>0.13.3</version>
+      <version>0.15.0</version>
     </dependency>
     <dependency>
       <groupId>datascript-transit</groupId>
@@ -421,7 +406,7 @@
     <dependency>
       <groupId>posh</groupId>
       <artifactId>posh</artifactId>
-      <version>0.3.4.1</version>
+      <version>0.3.5</version>
     </dependency>
     <dependency>
       <groupId>quantum</groupId>
@@ -452,7 +437,7 @@
     <dependency>
       <groupId>reagent</groupId>
       <artifactId>reagent</artifactId>
-      <version>0.5.0</version>
+      <version>0.5.1</version>
       <exclusions>
         <exclusion>
           <groupId>org.json</groupId>
@@ -463,7 +448,7 @@
     <dependency>
       <groupId>garden</groupId>
       <artifactId>garden</artifactId>
-      <version>1.2.5</version>
+      <version>1.3.2</version>
     </dependency>
     <dependency>
       <groupId>com.lucasbradstreet</groupId>
@@ -489,7 +474,7 @@
     <dependency>
       <groupId>clj-http</groupId>
       <artifactId>clj-http</artifactId>
-      <version>1.1.2</version>
+      <version>3.1.0</version>
       <exclusions>
         <exclusion>
           <groupId>riddley</groupId>
@@ -525,7 +510,7 @@
     <dependency>
       <groupId>http-kit</groupId>
       <artifactId>http-kit</artifactId>
-      <version>2.1.18</version>
+      <version>2.1.19</version>
       <exclusions>
         <exclusion>
           <groupId>org.clojure</groupId>
@@ -536,12 +521,12 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpcore</artifactId>
-      <version>4.4.1</version>
+      <version>4.4.4</version>
     </dependency>
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpclient</artifactId>
-      <version>4.4</version>
+      <version>4.5.2</version>
       <exclusions>
         <exclusion>
           <groupId>commons-codec</groupId>
@@ -552,7 +537,7 @@
     <dependency>
       <groupId>org.apache.httpcomponents</groupId>
       <artifactId>httpmime</artifactId>
-      <version>4.4</version>
+      <version>4.5.2</version>
       <exclusions>
         <exclusion>
           <groupId>commons-codec</groupId>
@@ -563,7 +548,7 @@
     <dependency>
       <groupId>compojure</groupId>
       <artifactId>compojure</artifactId>
-      <version>1.4.0</version>
+      <version>1.5.0</version>
       <exclusions>
         <exclusion>
           <groupId>org.eclipse.jetty</groupId>
@@ -586,12 +571,12 @@
     <dependency>
       <groupId>org.eclipse.jetty</groupId>
       <artifactId>jetty-server</artifactId>
-      <version>9.2.10.v20150310</version>
+      <version>9.4.0.M0</version>
     </dependency>
     <dependency>
       <groupId>org.immutant</groupId>
       <artifactId>web</artifactId>
-      <version>2.1.2</version>
+      <version>2.1.4</version>
       <exclusions>
         <exclusion>
           <groupId>clj-tuple</groupId>
@@ -658,7 +643,7 @@
     <dependency>
       <groupId>com.github.javaparser</groupId>
       <artifactId>javaparser-core</artifactId>
-      <version>2.1.0</version>
+      <version>2.4.0</version>
     </dependency>
     <dependency>
       <groupId>org.clojure</groupId>
@@ -668,22 +653,22 @@
     <dependency>
       <groupId>org.apache.tika</groupId>
       <artifactId>tika-parsers</artifactId>
-      <version>1.9</version>
+      <version>1.13</version>
     </dependency>
     <dependency>
       <groupId>org.apache.poi</groupId>
       <artifactId>poi</artifactId>
-      <version>3.9</version>
+      <version>3.14</version>
     </dependency>
     <dependency>
       <groupId>org.apache.poi</groupId>
       <artifactId>poi-ooxml</artifactId>
-      <version>3.9</version>
+      <version>3.14</version>
     </dependency>
     <dependency>
       <groupId>byte-transforms</groupId>
       <artifactId>byte-transforms</artifactId>
-      <version>0.1.3</version>
+      <version>0.1.4</version>
     </dependency>
     <dependency>
       <groupId>net.jpountz.lz4</groupId>

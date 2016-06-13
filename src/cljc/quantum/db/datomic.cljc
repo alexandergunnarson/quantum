@@ -66,11 +66,10 @@
                     [datomic.peer LocalConnection Connection]
                     java.util.concurrent.ConcurrentHashMap)))
 
-; TODO use potemkin here
-; |def| instead of |defalias| because CLJS doen't like how it's meta-ing atom
-(def db*   db/db*  )
-(def conn* db/conn*)
-(def part* db/part*)
+; TODO take out repetition
+(defonce db*   db/db*  )
+(defonce conn* db/conn*)
+(defonce part* db/part*)
 
 (defalias q              db/q        )
 (defalias transact!      db/transact!)
@@ -220,7 +219,7 @@
                                         :port                   port ; 4334
                                          ; TODO dynamically determine based on flag passed
                                         :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage 
-                                        :memory-index-max       "256m"
+                                        :memory-index-max       "128"
                                         :object-cache-max       "128m"
                                         :data-dir               (validate val/no-blanks?
                                                                   (if res (path/path res "data"          ) "data"          ))

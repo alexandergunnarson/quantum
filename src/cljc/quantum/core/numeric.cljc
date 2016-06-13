@@ -316,6 +316,10 @@
   quantum.core.numeric.clj/max-2
   quantum.core.numeric.cljs/max-2)
 
+(defn max' ; TODO merge with |max|? ; also add variadic proxy
+  ([] 0)
+  ([a b] (core/max a b))) 
+
 (defn approx=
   "Return true if the absolute value of the difference between x and y
    is less than eps."
@@ -416,7 +420,7 @@
     (div* (ln x) (ln base))))
 
 #?(:clj
-(defmacro log [base x]
+(defmacro log [base x] ; TODO do ln'
   `(log* (double ~x) (double ~base))))
 
 (defalias cube-root #?(:clj clj/cube-root :cljs cljs/cube-root))
@@ -575,30 +579,6 @@
   [f]
   (or (get base-map f)
       (throw (->ex :undefined "|base| not defined for function" f))))
-
-; ===== MORE COMPLEX ===== ;
-
-(defn factors [n]
-  (->> (range 1 (inc (sqrt n)))
-       (filter #(zero? (rem n %)))
-       (mapcat (fn [x] [x (div* n x)]))
-       (into (sorted-set))))
-
-; TODO MERGE
-;#?(:cljs
-;(defn gcd [x y]
-;  (if (.isZero y)
-;      x
-;      (recur y (.modulo x y)))))
-
-(defn gcd
-  "(gcd a b) computes the greatest common divisor of a and b."
-  ([a b]
-  (if (zero? b)
-      a
-      (recur b (mod a b))))
-  ([a b & args]
-    (reduce gcd (gcd a b) args)))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         MUTATION         }=====================================================
