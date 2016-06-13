@@ -225,7 +225,7 @@
   "|pjoinl| using |fold|."
   [to from]
   (let [red-fn (if (editable? to) red/conj!-red red/conj-red)]
-    (fold (aritoid nil                             identity     #(joinl %1 %2))
+    (fold (aritoid nil                             persistent!* #(joinl %1 %2))
           (aritoid #(transient!* (type/->base to)) persistent!* red-fn red-fn)
           from)))
 
