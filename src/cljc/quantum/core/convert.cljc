@@ -200,7 +200,7 @@
     :else (eval x))))
 
 #?(:clj
-(defn ->form
+(defn ->form ; Not just for Clojure
   [x & [opts]]
   (cond
     (string? x)
