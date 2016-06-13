@@ -2,14 +2,18 @@
   quantum.numeric.core
            (:refer-clojure :exclude [reduce])
            (:require
-           #_[quantum.core.numeric :refer [exp sqrt]]
+             [quantum.core.numeric     :as num
+               :refer [#?@(:clj [sqrt])]
+               #?@(:cljs [:refer-macros [sqrt]])]
+             [quantum.core.error       :as err
+               :refer [->ex]]
              [quantum.core.collections :as coll
-               :refer [map+ #?@(:clj [reduce])]]
+               :refer [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]]
              [quantum.core.vars
                :refer [defalias]])
   #?(:cljs (:require-macros
              [quantum.core.collections
-               :refer [reduce]]
+               :refer [reduce join]]
              [quantum.core.vars
                :refer [defalias]])))
 
@@ -51,8 +55,8 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(def sum     #(reduce + 0 %)) ; TODO use +* or sometihng
-(def product #(reduce * 1 %)) ; TODO use ** or sometihng
+(def sum     #(reduce + %)) ; TODO use +* and +', differentiating sum* and sum'
+(def product #(reduce * %)) ; TODO use ** and *', differentiating product* and product'
 
 (defn sigma [set- step-fn]
   (->> set- (map+ #(step-fn %)) sum))
@@ -63,3 +67,39 @@
   (->> set- (map+ #(step-fn %)) product))
 
 (defalias ∏ pi*)
+
+(defn find-max-by ; |max-by| would be the first of it
+  ([pred x] x)
+  ([pred a b] (if (> (pred a) (pred b))
+                  a
+                  b)))
+
+(defn factors
+  "All factors of @n."
+  [n]
+  (->> (range+ 1 (inc (sqrt n)))
+       (filter+ #(zero? (rem n %)))
+       (mapcat+ (fn [x] [x (num/div* n x)])) ; TODO have a choice of using unsafe div
+       (join #{})))
+
+(defn lfactors
+  "All factors of @n, lazily computed."
+  [n] (err/todo))
+
+; TODO MERGE
+;#?(:cljs
+;(defn gcd [x y]
+;  (if (.isZero y)
+;      x
+;      (recur y (.modulo x y)))))
+
+(defn gcd
+  "(gcd a b) computes the greatest common divisor of a and b."
+  ([a b]
+  (if (zero? b)
+      a
+      (recur b (num/mod a b))))
+  ([a b & args]
+    (reduce gcd (gcd a b) args)))
+
+(defn sq [x] (* x x)) ; TODO cube

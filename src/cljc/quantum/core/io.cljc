@@ -4,7 +4,8 @@
             [quantum.core.vars
               :refer [#?(:clj defalias)]]))
 
-#?(:clj (defalias contains?       io.core/contains?       ))
+#?(:clj (defalias contains?       io.core/contains?      ))
+#?(:clj (defalias get             io.core/get            ))
 #?(:clj (defalias assoc!          io.core/assoc!         ))
 #_(:clj (defalias dissoc!         io.core/dissoc!        ))
 #?(:clj (defalias create-file!    io.core/create-file!   ))

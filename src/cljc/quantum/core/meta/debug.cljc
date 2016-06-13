@@ -50,8 +50,8 @@
 
 (defn this-fn-name
   "Returns the current function name."
-  ([] (this-fn-name :curr))
-  ([k]
+  ([] (this-fn-name 0))
+  ([i]
     (let [st (identity
                #?(:clj  (-> (Thread/currentThread) .getStackTrace)
                   :cljs (-> (js/Error) .-stack
@@ -60,13 +60,8 @@
                             (str/split "\n    at "))))
           #?(:clj ^StackTraceElement elem
              :cljs elem)
-             (condp = k
-               :curr (nth st (min #?(:clj 2 :cljs 4)
-                                 (-> st count dec)))
-               :prev (nth st (min #?(:clj 3 :cljs 5)
-                                 (-> st count dec)))
-               (throw (#?(:clj  Exception.
-                          :cljs js/Error.) "Unrecognized key.")))]
+             (nth st (min (- #?(:clj 2 :cljs 4) i) ; TODO browser-dependent
+                          (-> st count dec)))]
       #?(:clj  (-> elem .getClassName clojure.repl/demunge)
          :cljs (-> elem str/trim (str/split " ") first cljs.core/demunge-str)))))
 

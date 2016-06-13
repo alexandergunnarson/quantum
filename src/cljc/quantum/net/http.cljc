@@ -32,7 +32,8 @@
 (defrecord
   ^{:doc "A web server. Currently only the :aleph, :immutant, and :http-kit server @types are supported."}
   Server
-  [routes server type host port ssl-port http2?
+  [server type host port ssl-port http2?
+   root-path make-routes-fn routes-var
    key-store-path key-password
    trust-store-path trust-password
    stop-fn stop-timeout
@@ -51,7 +52,8 @@
       (let [stop-fn-f (atom (fn []))]
         (try
           (err/assert (net/valid-port? port) #{port})
-          (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type})
+          (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type}) ; TODO use clojure.spec
+          (err/assert (var? routes-var) #{routes-var})
 
           (let [opts (->> (merge
                             {:host           (or host     "localhost")
@@ -78,11 +80,14 @@
                              epoll?))
                           (remove-vals+ nil?)
                           (join {}))
+                _ (when make-routes-fn ; sets up routes
+                    (alter-var-root routes-var ; TODO reset-var
+                      (constantly (make-routes-fn (merge this opts)))))
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
                 server (condp = type
-                         :aleph    (aleph/start-server routes opts)
-                         :immutant (imm/run            routes opts)
-                         ;:http-kit (http-kit/run-server routes {:port (or port 0)})
+                         :aleph    (aleph/start-server routes-var opts)
+                         :immutant (imm/run            routes-var opts)
+                         ;:http-kit (http-kit/run-server routes opts)
                          )
                 _ (reset! stop-fn-f
                     (condp = type

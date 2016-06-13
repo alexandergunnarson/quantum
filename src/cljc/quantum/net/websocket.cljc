@@ -41,9 +41,9 @@
   (let [session (:session ring-req)
         uid     (:uid     session)]
     (log/pr :debug "Unhandled event:" ev-msg "from" uid)
-    (log/pr :debug "Responding" "reply-fn?" ?reply-fn)
-  
+    
     (when ?reply-fn
+      (log/pr :debug "Responding to callback")
       (?reply-fn {:unhandled-event event})))))
 
 #?(:clj
@@ -61,10 +61,6 @@
   [ev-msg]
   ; Do nothing
   ))
-
-; ------> Add your (defmethod event-msg-handler <event-id> [ev-msg] <body>)s here <------
-
-; ------> Add your (defmethod handle-event-msg! <event-id> [ev-msg] <body>)s here <------
 
 (defn put!
   "Sends a message @msg across via a WebSocket connection."
@@ -108,43 +104,47 @@
             current browsers is RFC 6455 (supported by Firefox 11+, Chrome 16+,
             Safari 6, Opera 12.50, and IE10). Don't use previous versions."]}
   ChannelSocket
-  [uri host chan chan-recv send-fn chan-state type server-type packer
-   stop-fn ajax-post-fn ajax-get-or-ws-handshake-fn msg-handler
-   connected-uids]
+  [endpoint host chan chan-recv send-fn chan-state type packer
+   stop-fn post-fn get-fn msg-handler
+   connected-uids
+   #?@(:clj [server make-routes-fn])]
   component/Lifecycle
     (start [this]
       (let [stop-fn-f (atom (fn []))]
         (try
           (log/pr :debug "Starting channel-socket with:" this)
-          (assert (string? uri) #{uri})
+          ; TODO for all these assertions, use clojure.spec!
+          (assert (string? endpoint) #{endpoint})
           (assert (fn? msg-handler))
+  #?(:clj (assert (fn? make-routes-fn)))
           (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
-        #?(:clj 
-          (assert (contains? #{:aleph :immutant #_:http-kit} server-type) #{server-type}))
-          (assert (keyword? packer))
 
-          (let [{:keys [chsk ch-recv send-fn state] :as socket}
+          (let [packer (or packer :edn)
+                {:keys [chsk ch-recv send-fn state] :as socket}
                  (ws/make-channel-socket!
-                   #?(:clj (condp = server-type
+                   #?(:clj (condp = (:type server)
                              ;:http-kit a-http-kit/sente-web-server-adapter
                              :aleph    a-aleph/sente-web-server-adapter
                              :immutant a-imm/sente-web-server-adapter)
-                      :cljs uri)
+                      :cljs endpoint)
                    {:type   (or type :auto)
                     :packer packer
-                    #?@(:cljs
-                    [:host host])})
-                _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv msg-handler))]
+         #?@(:cljs [:host   (str host ":" port)])})
+                _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv msg-handler))
+                this' (assoc this
+                        :chan           chsk
+                        :chan-recv      ch-recv
+                        :send-fn        send-fn
+                        :chan-state     state
+                        :packer         packer
+                        :stop-fn        @stop-fn-f
+                        :post-fn        (:ajax-post-fn                socket)
+                        :get-fn         (:ajax-get-or-ws-handshake-fn socket)
+                        :connected-uids (:connected-uids              socket))]
+            #?(:clj (alter-var-root (:routes-var server) ; TODO reset-var
+                      (constantly (make-routes-fn (merge this' server {:ws-uri endpoint})))))
             (log/pr :debug "Channel-socket started.")
-            (assoc this
-              :chan                        chsk
-              :chan-recv                   ch-recv
-              :send-fn                     send-fn
-              :chan-state                  state
-              :stop-fn                     @stop-fn-f
-              :ajax-post-fn                (:ajax-post-fn                socket)
-              :ajax-get-or-ws-handshake-fn (:ajax-get-or-ws-handshake-fn socket)
-              :connected-uids              (:connected-uids              socket)))
+            this')
           (catch #?(:clj Throwable :cljs js/Error) e
             (err/warn! e)
             (@stop-fn-f)

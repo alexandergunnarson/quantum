@@ -1,4 +1,5 @@
-(ns quantum.core.cache
+(ns ^{:clojure.tools.namespace.repl/unload false} ; because of cache
+  quantum.core.cache
            (:refer-clojure :exclude [memoize])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )  :as core]
@@ -6,9 +7,13 @@
                        :refer [->ex]                  ]
                      [quantum.core.fn         :as fn
                        :refer [#?@(:clj [f*n])]]
+                     [quantum.core.logic
+                       :refer [#?@(:clj [whencf*n])]]
                      [quantum.core.vars       :as var
                         :refer [#?(:clj defalias)]    ])
   #?(:cljs (:require-macros
+                     [quantum.core.logic
+                       :refer [whencf*n]              ]
                      [quantum.core.vars       :as var
                        :refer [defalias]              ]))
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
@@ -80,18 +85,19 @@
     (f)))
 
 (defn clear! [var-]
-  (swap! (get @caches var-) empty))
+  (swap! (get @caches var-) empty)
+  true) ; to avoid printing out the entire cache
 
 #?(:clj
 (defmacro defmemoized
   [sym opts & args]
   (let [cache-sym      (symbol (str (name sym) "-cache"))
         sym-star       (symbol (str (name sym) "*"))]
-    `(do (defn ~sym-star ~@args)
-         (declare ~sym)
+    `(do (declare ~sym)
+         (defn ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
-             (swap! caches assoc (var ~sym) cache-f#)
+             (swap! caches update (var ~sym) (whencf*n nil? cache-f#)) ; override cache only if not present
              cache-f#))
          (def ~sym (let [opts# ~opts]
                      (when-let [init-cache-fn# (:init-fn opts#)]

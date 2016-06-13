@@ -1,4 +1,5 @@
-(ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
+(ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"
+      :clojure.tools.namespace.repl/unload false}
   quantum.db.datomic.core
            (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
                                      update merge if-let assert])

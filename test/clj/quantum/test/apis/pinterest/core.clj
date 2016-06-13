@@ -1,8 +1,8 @@
 (ns quantum.test.apis.pinterest.core
-  (:require [quantum.apis.pinterest.core :as root])
-  (:require-quantum [auth http url web]))
+  #_(:require [quantum.apis.pinterest.core :as root])
+  #_(:require-quantum [auth http url web]))
 
-(defn lower-ids-are-previous-ids? []
+#_(defn lower-ids-are-previous-ids? []
   (let [id_created-date (->> @pin->meta
                              (coll/filter-vals+ map?)
                              (map-vals+ (fn-> :data :created-at))

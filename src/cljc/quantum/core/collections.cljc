@@ -204,6 +204,7 @@
         (defalias distinct-by+  red/distinct-by+  )
         (defalias distinct+     red/distinct+     )
         (defalias zipvec+       red/zipvec+       )
+        (defalias reduce-count  red/reduce-count  )
         ; for+
         ; doseq+
         
@@ -1645,3 +1646,13 @@
           (update allocated (-> sorted last first) - *flow)
           (-> *flow num/abs (> 1))
           (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
+
+; ===== LOGGING ===== ; (TODO MOVE)
+
+(defn notify-progress+
+  ([topic r] (notify-progress+ topic (fn [i _] (str "Item # " i " complete.")) r))
+  ([topic report-fn r]
+  (->> r
+       (map-indexed+ (fn [i x]
+                       (log/pr-opts topic {:stack -4} (report-fn i x))
+                       x)))))
