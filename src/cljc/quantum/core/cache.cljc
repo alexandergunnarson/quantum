@@ -10,7 +10,10 @@
                      [quantum.core.logic
                        :refer [#?@(:clj [whencf*n])]]
                      [quantum.core.vars       :as var
-                        :refer [#?(:clj defalias)]    ])
+                        :refer [#?(:clj defalias)]    ]
+                     [taoensso.timbre.profiling :as p]
+                     [quantum.core.macros.core  :as cmacros
+                       :refer [#?(:clj if-cljs)]])
   #?(:cljs (:require-macros
                      [quantum.core.logic
                        :refer [whencf*n]              ]
@@ -94,7 +97,7 @@
   (let [cache-sym      (symbol (str (name sym) "-cache"))
         sym-star       (symbol (str (name sym) "*"))]
     `(do (declare ~sym)
-         (defn ~sym-star ~@args)
+         (~(if-cljs &env `defn `p/defnp) ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
              (swap! caches update (var ~sym) (whencf*n nil? cache-f#)) ; override cache only if not present
