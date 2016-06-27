@@ -68,10 +68,6 @@
       (app (assoc-in req [:session :uid] (uuid/v1)))
       (app req))))
 
-; This is why you serve your page dynamically, so you can place the anti forgery field there 
-(defn token-index [req]
-  (str/replace index-file #"token-string" (af/anti-forgery-field)))
-
 ; ===== ROUTES =====
 
 ; This seems really useful
@@ -206,7 +202,6 @@
 (defn make-routes
   [{:keys [middleware]
     :as opts}]
-  (log/ppr :debug "Making routes with" opts)
   (middleware
     (apply route/routes (routes opts))))
 

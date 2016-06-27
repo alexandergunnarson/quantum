@@ -204,8 +204,7 @@
      [net.jpountz.lz4/lz4                       "1.3"             ]
      ; ==== MISCELLANEOUS ====
      ]
-   :injections [#_(require '[quantum.core.ns :as ns])
-                #_(reset! ns/externs? false)
+   :injections [#_(reset! ns/externs? false)
                 (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
                                        'print-cause-trace)
                       newv (ns-resolve (doto 'clj-stacktrace.repl require)
@@ -213,9 +212,7 @@
                   (alter-var-root oldv (constantly (deref newv))))] ; for :aot
    :profiles
    {:dev {:injections []
-              ; [(do (ns quanta.main (:gen-class))
-              ;      (require '[quantum.core.ns :as ns])
-              ;      (clojure.main/repl :print quantum.core.print/!)
+              ; [(do (clojure.main/repl :print quantum.core.print/!)
               ;      (clojure.main/repl :print clojure.pprint/pprint)
               ; )]
           :resource-paths ["dev-resources"]
@@ -229,12 +226,13 @@
                                    org.clojure/core.cache]]
                     [jonase/eastwood                 "0.2.1"]
                     ]}}
-  :aliases {"all" ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy-dev"      ["do" "clean," "install"]
-            "deploy-prod"     ["do" "clean," "install," "deploy" "clojars"]
-            "deploy-test-dev" ["do" "clean," "cljsbuild" "once" "dev"]
-            "autobuilder"     ["do" "clean," "figwheel" "dev"]
-            "test"            ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
+  :aliases {"all"               ["with-profile" "dev:dev,1.5:dev,1.7"]
+            "deploy-dev"        ["do" "clean," "install"]
+            "deploy-prod"       ["do" "clean," "install," "deploy" "clojars"]
+            "deploy-test-dev"   ["do" "clean," "cljsbuild" "once" "dev"]
+            "autobuilder"       ["do" "clean," "figwheel" "dev"]
+            "debug-autobuilder" ["do" "clean," "cljsbuild" "once" "debug"]
+            "test"              ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
   :auto-clean     false ; is this a mistake?
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
@@ -255,27 +253,34 @@
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
-      {:dev
-        {:figwheel true
-         :source-paths ["src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
-         :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
-                    :output-dir           "dev-resources/public/js/compiled/out"
-                    :optimizations        :none
-                    :main                 quantum.dev
-                    :asset-path           "js/compiled/out"
-                    :source-map           true
-                    :source-map-timestamp true
-                    :cache-analysis       true}}
-       :min
-         {:source-paths ["src/cljc" "dev/cljc"]
-          :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
-                     :output-dir     "dev-resources/public/js/min-compiled/out"
-                     :main           quantum.dev
-                     :optimizations  :advanced
-                     :asset-path     "js/min-compiled/out"
-                     :pretty-print   false
-                     ;:parallel-build true
-                     }}}}
+      {:debug {:source-paths ["src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
+               :compiler     {:output-to            "dev-resources/public/js/debug-compiled/quantum.js"
+                              :output-dir           "dev-resources/public/js/debug-compiled/out"
+                              :optimizations        :none
+                              :main                 quantum.dev
+                              :asset-path           "js/debug-compiled/out"
+                              :source-map           true
+                              :source-map-timestamp true
+                              :cache-analysis       true}}
+       :dev {:figwheel true
+             :source-paths ["src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
+             :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
+                        :output-dir           "dev-resources/public/js/compiled/out"
+                        :optimizations        :none
+                        :main                 quantum.dev
+                        :asset-path           "js/compiled/out"
+                        :source-map           true
+                        :source-map-timestamp true
+                        :cache-analysis       true}}
+       :min {:source-paths ["src/cljc" "dev/cljc"]
+             :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
+                        :output-dir     "dev-resources/public/js/min-compiled/out"
+                        :main           quantum.dev
+                        :optimizations  :advanced
+                        :asset-path     "js/min-compiled/out"
+                        :pretty-print   false
+                        ;:parallel-build true
+                        }}}}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3450
              :css-dirs ["dev-resources/public/css"]}
