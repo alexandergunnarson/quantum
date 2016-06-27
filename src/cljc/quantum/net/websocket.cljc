@@ -16,7 +16,8 @@
                      [quantum.core.log                        :as log      ]
                      [quantum.core.logic                      :as logic
                        :refer [nnil?]                                      ]
-                     [quantum.core.resources                  :as res      ])
+                     [quantum.core.resources                  :as res      ]
+             #?(:clj [quantum.net.server.router               :as router   ]))
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
                        :refer [go]                                         ]
@@ -107,7 +108,7 @@
   [endpoint host chan chan-recv send-fn chan-state type packer
    stop-fn post-fn get-fn msg-handler
    connected-uids
-   #?@(:clj [server make-routes-fn])]
+   #?@(:clj [server])]
   component/Lifecycle
     (start [this]
       (let [stop-fn-f (atom (fn []))]
@@ -116,7 +117,6 @@
           ; TODO for all these assertions, use clojure.spec!
           (assert (string? endpoint) #{endpoint})
           (assert (fn? msg-handler))
-  #?(:clj (assert (fn? make-routes-fn)))
           (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
 
           (let [packer (or packer :edn)
@@ -141,8 +141,8 @@
                         :post-fn        (:ajax-post-fn                socket)
                         :get-fn         (:ajax-get-or-ws-handshake-fn socket)
                         :connected-uids (:connected-uids              socket))]
-            #?(:clj (alter-var-root (:routes-var server) ; TODO reset-var
-                      (constantly (make-routes-fn (merge this' server {:ws-uri endpoint})))))
+            #?(:clj (alter-var-root (:routes-var server) ; TODO defnt |reset!|
+                      (constantly (router/make-routes (merge this' server {:ws-uri endpoint})))))
             (log/pr :debug "Channel-socket started.")
             this')
           (catch #?(:clj Throwable :cljs js/Error) e

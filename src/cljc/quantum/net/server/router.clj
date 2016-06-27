@@ -9,12 +9,12 @@
             [compojure.core                           :as route
               :refer [GET ANY POST defroutes]                      ]
             [compojure.route
-              :refer [resources not-found]                         ]
+              :refer [not-found]                                   ]
             [compojure.handler                                     ]
             ; MIDDLEWARE
             [ring.util.anti-forgery                   :as af       ]
             [ring.util.response                       :as resp     ]
-            [ring.middleware.x-headers :as x]
+            [ring.middleware.x-headers                :as x        ]
             [ring.middleware.gzip               :refer [wrap-gzip]                 ]
             [ring.middleware.session            :refer [wrap-session]              ]
             [ring.middleware.flash              :refer [wrap-flash]                ]
@@ -53,8 +53,6 @@
 ; SECURITY MEASURES TAKEN CARE OF
 ; CSRF : ring.middleware.anti-forgery
 
-(def sys-map (lens res/systems (fn-> :global :sys-map qcore/deref*)))
-
 ; ===== ACCESS CONTROL (ROLES) =====
 
 (def users {"admin" {:username "admin"
@@ -70,32 +68,11 @@
       (app (assoc-in req [:session :uid] (uuid/v1)))
       (app req))))
 
-; ===== HANDLERS =====
-
-(def ring-ajax-get-or-ws-handshake (lens sys-map (fn-> :connection :ajax-get-or-ws-handshake-fn)))
-(def ring-ajax-post                (lens sys-map (fn-> :connection :ajax-post-fn)))
-
-#_(def index-file (slurp "resources/public/index.html"))
-(def index-file "")
-
-(def not-found-page "<h1>Page not found. Sorry!</h1>")
-
 ; This is why you serve your page dynamically, so you can place the anti forgery field there 
 (defn token-index [req]
   (str/replace index-file #"token-string" (af/anti-forgery-field)))
 
-(defn login!
-  "Here's where you'll add your server-side login/auth procedure (Friend).
-  In our simplified example we'll just always successfully authenticate the user
-  with whatever user-id they provided in the auth request."
-  [ring-request]
-  (let [{:keys [session params]} ring-request
-        {:keys [user-id]} params]
-    {:status 200 :session (assoc session :uid user-id)}))
-
 ; ===== ROUTES =====
-
-(def chan-uri "/chan")
 
 ; This seems really useful
 #_(defn create-api []
@@ -108,35 +85,30 @@
 
 #_(bidi.ring/make-handler (create-api))
 
-(def server-root (str/->path (System/getProperty "user.dir") "/dev-resources/public"))
-(def main-page (delay (slurp (str/->path server-root "index.html"))))
-
-(defn resources+
-  "A route for serving resources on the classpath. Accepts the following
-  keys:
+(defn resources
+  "A route for serving resources on the classpath. Accepts the following keys:
     :root       - the root prefix path of the resources, defaults to 'public'
-    :mime-types - an optional map of file extensions to mime types"
+    :mime-types - an optional map of file extensions to mime types
+   (This is an improved version of Compojure's |resources| fn.)"
   [path & [options]]
   (GET (@#'compojure.route/add-wildcard path) {{resource-path :*} :route-params :as req}
-    (let [root (:root options "public")
+    (let [root (get options :root "public")
           _ (println "RESOURCE PATH" resource-path)
-          body (if (containsv? resource-path "js/compiled/system.js")
-                   (do (println "REQUESTING SYSTEM.js!!") "")
-                   (->> resource-path
-                        (<- str/remove "..") ; to prevent weird things
-                        (str/->path root)
-                        (java.io.FileInputStream.)))]
-      {:body body}
+          body (->> resource-path
+                    (<- str/remove "..") ; to prevent insecure access
+                    ^String (str/->path root)
+                    (java.io.FileInputStream.))]
+      {:body body} ; TODO add content-type  
       #_(add-mime-type resource-path options))))
 
-(defn content-security-policy []
+(defn content-security-policy [report-uri]
   (str/sp "default-src https: data: gap: https://ssl.gstatic.com;"
           "style-src    'self' 'unsafe-inline';"
           "script-src   'self' 'unsafe-inline';"
           "font-src     'self';"
           "form-action  'self';"
           "reflected-xss block;"
-          "report-uri https://quanta.audio/csp-report/;"))
+          "report-uri" (str report-uri ";")))
 
 (defn wrap-exception-handling
   [handler]
@@ -148,37 +120,6 @@
         {:status 500
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
-
-(defroutes routes*
-  (GET "/"        req (fn [req]
-                        {:headers {"Content-Type" "text/html"
-                                   "Content-Security-Policy" (content-security-policy)}
-                         :body main-page}) #_(friend/authenticated (#'token-index req)))
-  (GET "/admin"   req (friend/authorize #{::admin}
-                        #_any-code-requiring-admin-authorization
-                        "Admin page."))
-  ; Accessible by anonymous users. 
-  (GET  "/login"  req (login! req))
-  ; Accessible by anonymous users. 
-  (GET  "/logout" req (friend/logout* (resp/redirect (str (:context req) "/login"))))
-  ; If the page serving the JavaScript (ClojureScript) is running
-  ; HTTPS, the Sente channel sockets will run over HTTPS and/or
-  ; the WebSocket equivalent (WSS).
-  (POST "/csp-report" req (fn [req]
-                            (log/pr :warn "CSP REPORT:" req)
-                            nil))
-  (GET  chan-uri  req (do #_friend/authenticated
-                        (let [get-f @ring-ajax-get-or-ws-handshake]
-                          (assert (nnil? get-f))
-                          (get-f req))))
-  (POST chan-uri  req (do #_friend/authenticated
-                        (let [post-f @ring-ajax-post]
-                          (assert (nnil? post-f))
-                          (post-f req))))
-  (resources+ "/" {:root server-root}) ; static files
-  (not-found not-found-page))
-
-
 
 ; TODO repetitive
 
@@ -230,8 +171,44 @@
       #_(friend/requires-scheme :https)
       wrap-exception-handling))
 
-(defroutes routes (wrap-middleware routes*))
+; ROUTES PRESETS
 
+(defn ws-routes
+  [{:keys [ws-uri get-fn post-fn]}]
+  (assert (fn? get-fn )) ; TODO use clojure.spec
+  (assert (fn? post-fn))
+  (assert (string? ws-uri))
+  [(GET  ws-uri req (get-fn  req))
+   (POST ws-uri req (post-fn req))])
+
+(defn csp-report-route
+  [{:keys [csp-report-uri csp-report-handler]}]
+  [(POST csp-report-uri req csp-report-handler)])
+
+(defn not-found-route
+  [opts]
+  (or (:not-found-handler opts)
+      (fn [req]
+        {:status 404
+         :body   (when-not (= (:request-method req) :head)
+                   "<h1>Page not found.<h1>")})))
+
+(defn routes
+  [{:keys [ws-uri csp-report-uri
+           root-path]
+    :as opts}]
+  (concat (when ws-uri (ws-routes opts))
+          ((:routes-fn opts) opts)
+          (when csp-report-uri (csp-report-route opts))
+          [(resources "/" {:root root-path}) ; static files
+           (not-found-route opts)]))
+
+(defn make-routes
+  [{:keys [middleware]
+    :as opts}]
+  (log/ppr :debug "Making routes with" opts)
+  (middleware
+    (apply route/routes (routes opts))))
 
 (comment
  "Blob storage: instead of transmitting the same data twice, simply
@@ -240,7 +217,7 @@
 
   Unfortunately the same is not true of things one wishes to put in the database.
   That data must be sent twice because the database is not REST-accessible (possibly
-  thank goodness). But luckily there is not much data that need be sent this way.
+  thank goodness).
  
   Find out whether AWS, Azure, or Google is cheaper (for storage, specifically). 
   

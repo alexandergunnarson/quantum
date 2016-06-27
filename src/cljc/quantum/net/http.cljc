@@ -12,7 +12,10 @@
                      [quantum.core.string                     :as str      ]
                      [quantum.net.client.impl                 :as impl     ]
                      [quantum.net.core                        :as net      ]
-                     [quantum.core.error                      :as err      ]
+                     [quantum.core.paths                      :as path    ]
+             #?(:clj [quantum.net.server.router               :as router   ])
+                     [quantum.core.error                      :as err      
+                       :refer [#?(:clj validate)]]
                      [quantum.core.fn
                        :refer [fn-nil]                                     ]
                      [quantum.core.log                        :as log      ]
@@ -23,7 +26,8 @@
   #?(:cljs (:require-macros
                      [quantum.core.collections                :as coll
                        :refer [kmap join]                                  ]
-                     [quantum.core.error                      :as err      ]
+                     [quantum.core.error                      :as err      
+                       :refer [validate]                                   ]
                      [quantum.core.log                        :as log      ]
                      [quantum.core.vars                       :as var
                        :refer [defalias]                                   ])))
@@ -33,8 +37,10 @@
   ^{:doc "A web server. Currently only the :aleph, :immutant, and :http-kit server @types are supported."}
   Server
   [server type host port ssl-port http2?
-   root-path make-routes-fn routes-var
-   key-store-path key-password
+   root-path
+   routes-var middleware routes-fn
+   csp-report-uri csp-report-handler
+   key-store-path   key-password
    trust-store-path trust-password
    stop-fn stop-timeout
    ran ssl-context
@@ -54,6 +60,7 @@
           (err/assert (net/valid-port? port) #{port})
           (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type}) ; TODO use clojure.spec
           (err/assert (var? routes-var) #{routes-var})
+          (err/assert (fn? routes-fn) #{routes-fn})
 
           (let [opts (->> (merge
                             {:host           (or host     "localhost")
@@ -63,7 +70,14 @@
                                                (or ssl-port 443))
                              :http2?         (or http2?   false)
                              :keystore       key-store-path
-                             :truststore     trust-store-path}
+                             :truststore     trust-store-path
+                             
+                             :root-path      (or root-path
+                                               (path/path (System/getProperty "user.dir")
+                                                 "resources" "public"))
+                             :middleware     (or middleware identity)
+                             :csp-report-uri (when csp-report-handler
+                                               (or csp-report-uri "/csp-report"))}
                             (kmap
                              key-password
                              trust-password
@@ -80,9 +94,8 @@
                              epoll?))
                           (remove-vals+ nil?)
                           (join {}))
-                _ (when make-routes-fn ; sets up routes
-                    (alter-var-root routes-var ; TODO reset-var
-                      (constantly (make-routes-fn (merge this opts)))))
+                _ (alter-var-root routes-var ; TODO reset-var
+                    (constantly (router/make-routes (merge this opts))))
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
                 server (condp = type
                          :aleph    (aleph/start-server routes-var opts)
@@ -97,17 +110,18 @@
                                        (imm/stop server)))
                       :http-kit server))]
             (log/pr :debug "Server launched.")
-            (assoc this
-              :ran     server
-              :server  (condp = type
-                         :aleph    nil ; aleph doesn't expose it
-                         :immutant (imm/server server)
-                         :http-kit nil) ; http-kit doesn't expose it
-              :port    (condp = type
-                         :aleph    port ; (aleph.netty/port server)
-                         :http-kit (:local-port (meta server))
-                         port)
-              :stop-fn @stop-fn-f))
+            (merge this
+              {:ran     server
+               :server  (condp = type
+                          :aleph    nil ; aleph doesn't expose it
+                          :immutant (imm/server server)
+                          :http-kit nil) ; http-kit doesn't expose it
+               :port    (condp = type
+                          :aleph    port ; (aleph.netty/port server)
+                          :http-kit (:local-port (meta server))
+                          port)
+               :stop-fn @stop-fn-f}
+              opts))
         (catch Throwable e
           (err/warn! e)
           (@stop-fn-f)
