@@ -95,7 +95,7 @@
      :cljs (throw (ex-info "utf8-string not implemented yet" bytes))))
 
 (defn base64-encode
-  "Returns `s` as a Base64 encoded string."
+  "Returns @s as a Base64 encoded string."
   {:from "r0man/noencore"}
   [bytes]
   (when bytes
@@ -103,12 +103,13 @@
        :cljs (base64/encodeString bytes false))))
 
 (defn base64-decode
-  "Returns `s` as a Base64 decoded string."
-  {:from "r0man/noencore"}
-  [s]
+  "Returns @s as a Base64 decoded string."
+  [^String s]
   (when s
-    #?(:clj (Base64/decodeBase64 (.getBytes ^String s))
+    #?(:clj (->> s (<- .getBytes java.nio.charset.StandardCharsets/ISO_8859_1)
+                   (.decode (java.util.Base64/getDecoder)))
        :cljs (base64/decodeString s false))))
+
 
 ; PARSING
 

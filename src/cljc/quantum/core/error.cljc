@@ -132,6 +132,12 @@
                :assert-expr '~expr))))))
 
 #?(:clj
+(defmacro validate [pred expr]
+  `(let [expr# ~expr]
+     (assert (~pred expr#))
+     expr#)))
+
+#?(:clj
 (defmacro try-or 
   "An exception-handling version of the 'or' macro.
    Tries expressions in sequence until one produces a result that is neither false nor an exception.
