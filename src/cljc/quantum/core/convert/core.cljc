@@ -1,16 +1,22 @@
 (ns quantum.core.convert.core
-  (:require [cognitect.transit    :as t     ]
-            [datascript.transit   :as dt    ]
-            [datascript.core      :as mdb   ]
-            [clojure.string       :as str   ]
-   #?(:cljs [cljs.reader
-              :refer [read-string]          ])
-   #?(:cljs [goog.crypt.base64    :as base64])
-            [quantum.core.error   :as err
-              :refer [->ex]                 ]
-            [quantum.core.numeric :as num   ])
-  #?(:clj (:import (org.apache.commons.codec.binary Base64)
-                   clojure.lang.Var)))
+           (:require
+             [cognitect.transit    :as t     ]
+             [datascript.transit   :as dt    ]
+             [datascript.core      :as mdb   ]
+             [clojure.string       :as str   ]
+             [quantum.core.fn      :as fn
+               :refer [#?@(:clj [<-])]       ]
+    #?(:cljs [cljs.reader
+               :refer [read-string]          ])
+    #?(:cljs [goog.crypt.base64    :as base64])
+             [quantum.core.error   :as err
+               :refer [->ex]                 ]
+             [quantum.core.numeric :as num   ])
+  #?(:cljs (:require-macros
+             [quantum.core.fn      :as fn
+               :refer [<-]                   ]))
+  #?(:clj  (:import (org.apache.commons.codec.binary Base64)
+                    clojure.lang.Var)))
 
 ; TODO type dispatch would be faster with protocols
 
