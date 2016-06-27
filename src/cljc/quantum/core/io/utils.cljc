@@ -124,14 +124,15 @@
   "Evaluates @body with a temporary file in its scope."
   {:attribution "From github.com/bevuta/pepa.util"}
   [[name data suffix] & body]
-  `(let [data# ~data
-         ~name (create-temp-file! "temp_" (or ~suffix ""))]
-     (try
-       (when data#
-         (io/copy data# ~name))
-       ~@body
-       (finally
-         (.delete ~name))))))
+  (let [name' (with-meta name {:tag 'java.io.File})]
+    `(let [data# ~data
+           ~name' (create-temp-file! "temp_" (or ~suffix ""))]
+       (try
+         (when data#
+           (io/copy data# ~name'))
+         ~@body
+         (finally
+           (.delete ~name')))))))
 
 #?(:cljs
 (defn file-reader
