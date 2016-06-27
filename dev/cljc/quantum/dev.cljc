@@ -13,7 +13,8 @@
             [quantum.core.reducers :as red
               :refer [reduce-count]]
             [quantum.numeric.core
-              :refer [∏ ∑ sum]]))
+              :refer [∏ ∑ sum]]
+            [quantum.system :as gsys]))
 
 #?(:cljs (enable-console-print!))
 (println "Hey console!")
