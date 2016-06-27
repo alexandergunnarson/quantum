@@ -37,7 +37,7 @@
                            :render         ui-render-fn
                            :root-id        "app"}})}
   [& [{:as config
-       {:keys [port ssl-port routes host]   :as server    } :server
+       {:keys [port ssl-port host]          :as server    } :server
        {:keys [uri msg-handler]             :as connection} :connection
        {:keys [js-source-file]                            } :deployment
        {:keys [schemas ephemeral backend]   :as db        } :db
@@ -57,7 +57,6 @@
          {:host                     host*
           :port                     port*
           :ssl-port                 ssl-port
-          :routes                   routes
           :type                     server-type
           :http2?                   true}
          server))])
@@ -156,7 +155,7 @@
     
     #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)
                (db-rx/react! @dbc/conn*))) ; Is this necessary?
-    ))
+    true))
 
 #?(:clj
 (defmacro create-system-vars
