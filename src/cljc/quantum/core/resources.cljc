@@ -99,9 +99,16 @@
     (start [this]
       (if @running?
           (log/pr :warn "System already running.")
-          (do (swap! sys-map start!)
-              (reset! running? true)
-              (log/pr :user "System started."))))
+          (let [[started? system']
+                 (try [true (start! @sys-map)]
+                   (catch Throwable t
+                     (-> t ex-data :system stop!)
+                     [false @sys-map]))]
+            (if started?
+                (do (reset! sys-map  system') ; TODO fix this to be immutable
+                    (reset! running? true   ) ; TODO fix this to be immutable
+                    (log/pr :user "System started."))
+                (log/pr :user "System failed to start.")))))
     (stop [this]
       (if (and @sys-map @running?)
           (do (swap! sys-map
