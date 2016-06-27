@@ -77,6 +77,7 @@
 (defalias utf8-string   conv/utf8-string  )
 (defalias base64-encode conv/base64-encode)
 (defalias base64-decode conv/base64-decode)
+(defalias base64->bytes base64-decode     ) ; kind of
 (defalias parse-bytes   conv/parse-bytes  )
 (defalias parse-integer conv/parse-integer)
 (defalias parse-long    conv/parse-long   )
@@ -112,7 +113,7 @@
 (defalias ->json json/->json)
 
 #?(:cljs
-(defn byte-array->base64
+(defn bytes->base64
   {:todo ["This is an extremely inefficient algorithm"]}
   [x]
   (js/btoa (.apply js/String.fromCharCode nil x))))
