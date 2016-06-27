@@ -81,7 +81,7 @@
 
 (defn cosine-similarity [a b]
   (/ (dot-product a b)
-     (vlength a) (vlength b)))
+     (* (vlength a) (vlength b))))
 
 (defn dist* [v1 v2]
   (assert (= (count v1) (count v2)))
