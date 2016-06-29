@@ -1,12 +1,18 @@
 (ns ^{:original-java "Rajiv Yerra"}
   quantum.semantic.stemmers.porter
-  (:refer-clojure :exclude [get count reduce when-let])
-  (:require [quantum.core.logic           :as logic
-              :refer [nempty? when-let]            ]
-            [quantum.core.string          :as str  ]
-            [quantum.core.collections     :as coll
-             :refer [get count reduce in? dropr]   ]
-            [quantum.core.string.semantic :as sem  ]))
+           (:refer-clojure :exclude [get count reduce when-let])
+           (:require
+             [quantum.core.logic           :as logic
+               :refer [nempty? #?@(:clj [when-let])]]
+             [quantum.core.string          :as str  ]
+             [quantum.core.collections     :as coll
+               :refer [#?@(:clj [reduce get count]) in? dropr]   ]
+             [quantum.core.string.semantic :as sem  ])
+  #?(:cljs (:require-macros
+             [quantum.core.logic           :as logic
+               :refer [when-let]]
+             [quantum.core.collections
+               :refer [reduce get count]            ])))
 
 (defn ends-with-doubled-consonant? [s]
   (when (nempty? s)

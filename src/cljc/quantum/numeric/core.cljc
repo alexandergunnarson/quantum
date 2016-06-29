@@ -10,7 +10,7 @@
              [quantum.core.collections :as coll
                :refer [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]]
              [quantum.core.vars
-               :refer [defalias]])
+               :refer [#?(:clj defalias)]])
   #?(:cljs (:require-macros
              [quantum.core.collections
                :refer [reduce join]]
