@@ -182,6 +182,9 @@
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis
                     commons-codec]                                ]
+     ; ==== PARSING ==== ;
+     [instaparse                                "1.4.2"           ]
+     [com.lucasbradstreet/instaparse-cljs       "1.4.1.2"         ]
      ; ==== CODE TRANSFORMATION ====
        ; META (CODE)      
        ;[repetition-hunter                      "1.0.0"           ]
@@ -231,7 +234,7 @@
             "deploy-prod"       ["do" "clean," "install," "deploy" "clojars"]
             "deploy-test-dev"   ["do" "clean," "cljsbuild" "once" "dev"]
             "autobuilder"       ["do" "clean," "figwheel" "dev"]
-            "debug-autobuilder" ["do" "clean," "cljsbuild" "once" "debug"]
+            "debug-autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
             "test"              ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
   :auto-clean     false ; is this a mistake?
   :target-path "target"

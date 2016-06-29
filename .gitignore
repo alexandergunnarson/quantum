@@ -2,6 +2,7 @@
 /dev-resources/public/Fonts
 /dev-resources/public/js/compiled
 /dev-resources/public/js/min-compiled
+/dev-resources/public/js/debug-compiled
 /private-resources/
 /target/
 /fonts/
