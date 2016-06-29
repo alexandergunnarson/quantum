@@ -1,7 +1,8 @@
 (ns quantum.ir.cluster
   (:refer-clojure :exclude [reduce for])
   (:require
-    [clojure.core :as core]
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )  :as core]
     [quantum.core.collections :as coll
       :refer [#?@(:clj [for lfor reduce join kmap])
               map+ vals+ filter+ filter-vals+ flatten-1+ range+ ffilter
@@ -12,15 +13,16 @@
       :refer [find-max-by]]
     [quantum.numeric.vectors :as v]
     [quantum.core.fn :as fn
-      :refer [<- fn-> fn->>]]
+      :refer [#?@(:clj [<- fn-> fn->>])]
+      #?@(:clj [:refer-macros [<- fn-> fn->>]])]
     [quantum.core.cache
       :refer [#?(:clj defmemoized)]
       #?@(:cljs [:refer-macros  [defmemoized]])]
     [quantum.core.error
       :refer [->ex]]
     [quantum.core.logic
-      :refer [coll-or #?@(:clj [condpc])]
-      #?@(:clj [:refer-macros [condpc]])]
+      :refer [#?@(:clj [condpc coll-or])]
+      #?@(:clj [:refer-macros [condpc coll-or]])]
     [quantum.numeric.core
       :refer [∏ ∑ sum]]))
 
@@ -41,6 +43,9 @@
                                    (let [r (v/centroid ci)]
                                      (->> ci (map+ (fn [p] (v/dist* p r))) sum))))
                            (join []))))
+
+
+(defn k-means-clustering [k & xs])
 
 #_(defn k-means-clustering
   [k & xs]
