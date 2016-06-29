@@ -26,7 +26,7 @@
                               #?@(:clj [condf*n])]       ]
                     [quantum.core.numeric      :as num   ]
                     [quantum.core.fn           :as fn
-                      :refer [<-]                        ]
+                      :refer [#?(:clj <-)]               ]
                     [quantum.core.data.array   :as arr   ]
                     [quantum.core.vars
                       :refer [#?(:clj defalias)]])
