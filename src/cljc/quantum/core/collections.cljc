@@ -16,7 +16,7 @@
     :cljs-self-referencing? true}
   quantum.core.collections
            (:refer-clojure :exclude
-             [for doseq reduce
+             [for doseq reduce set
               contains?
               repeat repeatedly
               interpose
@@ -87,9 +87,9 @@
                                subseq
                                contains? containsk? containsv?
                                index-of last-index-of
-                               first second rest last butlast get pop peek
-                               conjl conj! assoc! dissoc! disj!
-                               map-entry join empty? update!]]
+                               first second rest last butlast get pop peek nth
+                               conjl conj! assoc! dissoc! disj! aset!
+                               map-entry join empty? update! empty?]]
                      [quantum.core.fn                         :as fn
                        :refer [compr <- fn-> fn->> f*n]                  ]
                      [quantum.core.log                        :as log    ]
@@ -161,7 +161,7 @@
 #?(:clj (defalias containsk?    coll/containsk?   ))
 #?(:clj (defalias containsv?    coll/containsv?   ))
 #?(:clj (defalias empty?        coll/empty?       ))
-#?(:clj (def      nempty?       (fn-not empty?)   ))
+        (def      nempty?       (fn-not empty?)   )
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias join          red/join          ))
@@ -378,7 +378,7 @@
   ([#{#?(:clj StringBuilder :cljs StringBuffer)} x i add]
     (dotimes [i' (- i (lasti x))] (.append x add))
     x)
-  ([^String x i add]
+  ([^string? x i add]
     (str (padr (#?(:clj StringBuilder. :cljs StringBuffer.) x) i add))))
 
 (defn deep-merge
@@ -1597,19 +1597,18 @@
 
 ; ===== MUTABILITY ===== ;
 
-#?(:clj
-(definterface IMutable
-  (get [])
-  (set [x])))
+(#?(:clj definterface :cljs defprotocol) IMutable
+  (get [#?(:cljs this)])
+  (set [#?(:cljs this) x]))
 
-#?(:clj
 (deftype MutableContainer [^:unsynchronized-mutable val]
   IMutable
   (get [this] val)
   (set [this x]
     (set! val x))
-  clojure.lang.IDeref
-  (deref [this] val)))
+  #?(:clj  clojure.lang.IDeref
+     :cljs cljs.core/IDeref)
+  (#?(:clj deref :cljs -deref) [this] val))
 
 (defnt eq! ; |set!| was taken, just like |fn*|
   ([^quantum.core.collections.MutableContainer x v] (.set x v) v))
