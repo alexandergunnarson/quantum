@@ -11,7 +11,7 @@
                        :refer [#?@(:clj [whencf*n])]]
                      [quantum.core.vars       :as var
                         :refer [#?(:clj defalias)]    ]
-                     [taoensso.timbre.profiling :as p]
+             #?(:clj [taoensso.timbre.profiling :as p])
                      [quantum.core.macros.core  :as cmacros
                        :refer [#?(:clj if-cljs)]])
   #?(:cljs (:require-macros
@@ -96,7 +96,7 @@
   [sym opts & args]
   (let [cache-sym      (symbol (str (name sym) "-cache"))
         sym-star       (symbol (str (name sym) "*"))]
-    `(do (declare ~sym)
+    `(do (declare ~sym ~sym-star)
          (~(if-cljs &env `defn `p/defnp) ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
