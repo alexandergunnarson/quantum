@@ -5,7 +5,7 @@
   quantum.core.type
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? string? keyword? fn?
-     nil? list? coll? char? symbol? record? number? integer? float? decimal?
+     nil? list? coll? char? symbol? record? number? integer? float? decimal? array?
      identity])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )       :as core   ]
