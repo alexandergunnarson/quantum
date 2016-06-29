@@ -53,10 +53,10 @@
    :double  #?(:clj #(double? %1) :cljs number? )
    :bigdec  #?(:clj (partial instance? BigDecimal) #_bigdec? :cljs number? ) ; TODO CLJS |bigdec?|
    :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
+   :instant #(instance? #?(:clj java.util.Date :cljs js/Date) %)
+   #?(:clj :uri) #?(:clj (partial instance? java.net.URI))
    ; TODO add these in
-   :instant #?(:clj #(instance? java.util.Date %))
    ;:uuid    #?(:clj uuid?)
-   #?(:clj :uri)     #?(:clj (partial instance? java.net.URI))
    ;:bytes   #?(:clj bytes? :cljs bytes?)
    })
 
