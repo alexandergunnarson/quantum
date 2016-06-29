@@ -40,8 +40,6 @@ General Usage
 
 ![](https://clojars.org/quantum/core/latest-version.svg)
 
-(Please note that the Clojars release is currently far behind the master branch.)
-
 **In namespaces:**
 
 `(require 'quantum.core. ... )`
