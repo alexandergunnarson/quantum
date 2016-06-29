@@ -53,7 +53,7 @@
   (dbe/transact-schemas!)
   (db/conj! (dbs/->globals {:db/ident :globals*}))
   ; Transact mime-types
-  #_#?(:clj
+  #_(:clj
     (db/transact!
       (->> mime-types force
            (mapv (fn [[k v]] (db/conj (dbs/->data:format
