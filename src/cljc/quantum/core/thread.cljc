@@ -161,9 +161,9 @@
 ;            (throw+ {:type :thread-already-closed :msg (str/sp "Thread" thread-id "cannot be interrupted.")}))))))
 
 ; TODO for now
-#?(:clj (def interrupt!* identity))
+#?(:clj (def interrupt!* (fn [thread & args] thread)))
 ; TODO for now
-#?(:clj (def close!*     identity))
+#?(:clj (def close!*     (fn [thread & args] thread)))
 
 ;#?(:clj
 ;(defn+ ^:private ^:suspendable close!* [thread thread-id close-reqs cleanup force?]
