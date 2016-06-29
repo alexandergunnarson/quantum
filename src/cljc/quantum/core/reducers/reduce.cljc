@@ -106,7 +106,7 @@
         ([^set?    coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
                                     :cljs -reduce-seq)
                                   coll f init))
-        ([^integer? i f init]
+        ([#{#?(:clj integer? :cljs number?)} i f init]
           (if (< i 0)
               init
               (loop [i'  0

@@ -30,7 +30,7 @@
                      [quantum.core.vars           :as var
                        :refer [#?(:clj defalias)]              ]
                      [quantum.core.macros         :as macros
-                       :refer [defnt]                          ])
+                       :refer [#?(:clj defnt)]                 ])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
                        :refer [go]                             ]

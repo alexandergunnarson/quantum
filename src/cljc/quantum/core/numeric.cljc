@@ -34,7 +34,7 @@
                      [quantum.core.vars                 :as var
                        :refer [defalias]                            ]
                      [quantum.core.numeric
-                       :refer [< > <= >=]]))
+                       :refer [< > <= >= div*]]))
   #?(:clj  (:import  [java.nio ByteBuffer]      
                      [quantum.core Numeric] ; loops?
                      [net.jafama FastMath]
@@ -399,7 +399,7 @@
 #?(:clj (defalias e-exp* clj/e-exp*))
 
 (defalias exp          #?(:clj clj/exp          :cljs cljs/exp))
-(defalias exp-protocol #?(:clj clj/exp-protocol :cljs cljs/exp-protocol))
+(defalias exp-protocol #?(:clj clj/exp-protocol :cljs cljs/exp))
 #?(:clj (defalias exp' clj/exp'))
 #?(:clj (defalias exp* clj/exp*))
 #?(:clj (defalias expm1* clj/expm1*))
@@ -415,9 +415,9 @@
 
 #?(:clj (defalias log1p* clj/log1p*))
 
-(defnt' log*
+(#?(:clj defnt' :cljs defn) log*
   ([#?(:clj #{double}) x #?(:clj #{double}) base] ; arbitrary to choose ln vs. log-10
-    (div* (ln x) (ln base))))
+    (div-2 (ln x) (ln base)))) ; tried to use div* but CLJS doesn't like it for some reason
 
 #?(:clj
 (defmacro log [base x] ; TODO do ln'
