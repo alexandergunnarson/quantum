@@ -1,44 +1,47 @@
 (ns quantum.ir.classify
-  (:refer-clojure :exclude [reduce for])
-  (:require
-    [clojure.core :as core]
-    [quantum.core.collections :as coll
-      :refer [#?@(:clj [for for* lfor reduce join pjoin kmap in?])
-              map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
-              flatten-1+ range+ ffilter
-              reduce-count]
-      #?@(:cljs [:refer-macros [for lfor reduce join kmap in?]])]
-    [quantum.core.numeric :as num]
-    [quantum.numeric.core
-      :refer [find-max-by]]
-    [quantum.numeric.vectors :as v]
-    [quantum.core.fn :as fn
-      :refer [<- fn-> fn->>]]
-    [quantum.core.cache
-      :refer [#?(:clj defmemoized)]
-      #?@(:cljs [:refer-macros  [defmemoized]])]
-    [quantum.core.error
-      :refer [->ex]]
-    [quantum.core.logic
-      :refer [coll-or nnil? #?@(:clj [condpc fn-and])]
-      #?@(:clj [:refer-macros [condpc fn-and]])]
-    [quantum.core.nondeterministic   :as rand]
-    [quantum.numeric.core
-      :refer [∏ ∑ sum]]))
+           (:refer-clojure :exclude [reduce for])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )          :as core   ]
+             [quantum.core.collections :as coll
+               :refer [#?@(:clj [for for* fori lfor reduce join pjoin kmap in?])
+                       map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
+                       flatten-1+ range+ ffilter
+                       reduce-count]
+               #?@(:cljs [:refer-macros [for lfor reduce join kmap in?]])]
+             [quantum.core.numeric :as num]
+             [quantum.numeric.core
+               :refer [find-max-by]]
+             [quantum.numeric.vectors :as v]
+             [quantum.core.fn :as fn
+               :refer        [#?@(:clj [<- fn-> fn->>])]
+               #?@(:cljs [:refer-macros [<- fn-> fn->>]])]
+             [quantum.core.cache :as cache
+               :refer [#?(:clj defmemoized)]
+               #?@(:cljs [:refer-macros  [defmemoized]])]
+             [quantum.core.error
+               :refer [->ex]]
+             [quantum.core.logic
+               :refer [nnil? #?@(:clj [coll-or condpc fn-and])]
+               #?@(:clj [:refer-macros [coll-or condpc fn-and]])]
+             [quantum.core.nondeterministic   :as rand]
+             [quantum.core.thread             :as thread
+                          :refer        [#?(:clj async)]
+               #?@(:cljs [:refer-macros [async]])]
+             [quantum.numeric.core            :as num*
+               :refer [∏ ∑ sum]]
+     #?(:clj [taoensso.timbre.profiling :as prof
+               :refer [profile defnp p]])))
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
 
-(defonce D-0 @alexandergunnarson.cs453.routes/D-0)
-(def ^:dynamic *corpus*)
-(defn corpus []
-  (assert (nnil? *corpus*))
-  *corpus*
-  #_alexandergunnarson.cs453.routes/D-0)
+(def ^:dynamic *exact?* true)
 
 (def doc->terms+
   (fn->> :document:words 
          (remove+ (fn-> :word:indexed:word :word:stopword?))
-         (map+    (fn-> :word:indexed:word :word:text     ))))
+         (map+    (fn-> :word:indexed:word :word:stem:porter #_:word:text     ))
+         (filter+ nnil?)))
 
 (defmemoized C {}
   "All the classes in doc collection @D."
@@ -110,7 +113,8 @@
             (map+ (juxt :document:class (fn-> doc->terms+ reduce-count)))
             (map+ vector)
             (reduce (partial merge-with +) {})))
-  ([D c] ((Nt:c D) c)))
+  ([D c] (or ((Nt:c D) c)
+             (throw (->ex nil "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:w+d {}
   "word @w :: Number of occurrences of @w in document @d"
@@ -118,7 +122,7 @@
   ([d] (->> d doc->terms+
               (join [])
               frequencies))
-  ([w d] ((Nt:w+d d) w)))
+  ([w d] (or ((Nt:w+d d) w) 0)))
 
 ; cached query
 (defmemoized Nd:w {}
@@ -168,63 +172,44 @@
 ; ------------------ PROBABILITY ------------------
 ; =================================================
 
-(defmacro P* [t D & args] ; TODO code pattern
-  (assert (-> args count even?))
-  (let [partitioned (->> args
-                         (partition-all 2))
-        pred-syms   (->> partitioned (map+ first ) (join []))
-        pred-vals   (->> partitioned (map+ second) (join []))]
-    (condp = pred-syms
-      '[c]     `(P:c    ~t ~D ~@pred-vals)
-      '[w]     `(P:w    ~t ~D ~@pred-vals)
-      '[ŵ]     `(P:w    ~t ~D ~@pred-vals nil)
-      '[w  c ] `(P:w|c  ~t ~D ~@pred-vals)
-      '[c  w ] `(P:c|w  ~t ~D ~@pred-vals nil)
-      '[c  ŵ ] `(P:c|w  ~t ~D ~@pred-vals nil)
-      '[c  d'] `(P:c|d' ~t ~D ~@pred-vals)
-      '[d' c ] `(P:d'|c ~t ~D ~@pred-vals)
-      (throw (->ex nil "No matching predicate pairs:" pred-syms)))))
-
-(defmacro P
-  "The probability of something.
-   This is specific to whatever it's talking about"
-  [t D & args] ; TODO code pattern
-  `(P* ~t ~D ~@(apply concat (for [arg args]
-                           [arg arg]))))
-
 (defmemoized P:c {}
-  "The probability of observing class c"
-  [t D c] (doto (/ (doto (Nd:c D c) #_(println "N c")) (N D))
-                #_(println "P c")))
+  "The probability of observing class @c"
+  #_([t D c] (P:c t D c (V D)))
+  ([t D c V] (/ (Nd:c D c) (N D))))
 
 (defmemoized P:w {}
-  ([t D w]   (doto (/ (doto (Nd:w D w) #_(println "* N w")) (N D))
-                   #_(println "P w")))
-  ([t D ŵ _] (doto (/ (doto (Nd:w D ŵ) #_(println "* N ŵ")) (N D))
-                   #_(println "P ŵ"))))
+  "The probability of observing word @w"
+  ([t D w]   (/ (Nd:w D w) (N D)))
+  ([t D ŵ _] (/ (Nd:w D ŵ nil) (N D))))
 
 (defmemoized P:c|w {}
-  ([t D c w]   (doto (/ (doto (Nd:w D c w) #_(println "N c w" c w)) (doto (Nd:w D w) #_(println "N w")))
-                   #_(println "P w|c")))
-  ([t D c ŵ _] (doto (/ (doto (Nd:w D c ŵ) #_(println "N c ŵ" c ŵ)) (doto (Nd:w D ŵ) #_(println "N ŵ")))
-                   #_(println "P ŵ|c"))))
+  "The probability of a word @w being of class @c."
+  ([t D c w]   (/ (Nd:c+w D c w) (Nd:w D w)))
+  ([t D c ŵ _] (/ (Nd:c+w D c ŵ nil) (Nd:w D ŵ nil))))
 
 (defn laplacian-smoothed-estimate
-  [t D w c]
+  [t D w c V]
   (condp = t
-    :multinomial (/ (+ (Nd:c+w D w c) 1)
-                    (+ (Nt:c D c) (count (V D))))
-    :bernoulli   (/ (+ (Nd:c+w D w c) 1)
+    :multinomial (/ (+ (p :Ndcw (Nd:c+w D c w)) 1)
+                    (+ (p :Ntc (Nt:c D c)) (count V)))
+    :bernoulli   (/ (+ (Nd:c+w D c w) 1)
                     (+ (Nd:c D c)   1))))
 
 (defmemoized P:w|c {}
-  ([t D w c]
-    (condpc = t
+  "The probability of class @c containing word @w."
+  ([t D w c V]
+    (laplacian-smoothed-estimate t D w c V) ; Weird memoization problem here! TODO FIX
+    #_(condp = t
       (coll-or :multinomial :bernoulli)
-        (laplacian-smoothed-estimate t D w c)
+        (laplacian-smoothed-estimate t D w c V)
+
       #_:collection-smoothed ; alternate for :bernoulli
-        #_(/ (+ (Nd:c+w D w c) (* µ (/ (Nd:w D w) (N))))
+        #_(/ (+ (Nd:c+w D c w) (* µ (/ (Nd:w D w) (N))))
              (+ (Nd:c D c) µ)))))
+
+(def get-word-probability P:w|c)
+
+(def P:w|c laplacian-smoothed-estimate)
 
 (defmemoized delta {}
   "delta(w, d) = 1 iff term w occurs in d, 0 otherwise"
@@ -234,75 +219,103 @@
        (ffilter #(= % w))
        boolean-value))
 
+(defn expi
+  "Exponent to the integer power" ; TODO move
+  [x i]
+  (cond (> i 1) (reduce (fn [ret _] (* ret x)) x (dec i))
+        (= i 1) x
+        (= i 0) 1
+        (< i 0) (throw (->ex "Not handled"))))
+
 (defmemoized P:d'|c {}
   "The probability that document @d is observed, given that the class is known to be @c."
-  ([t D d' c]
+  #_([t D d' c] (P:d'|c t D d' c (V D)))
+  ([t D d' c V]
     (condp = t
-      :multinomial (∏ (V D) (fn [w] (num/exp (double (P t D w c)) ; TODO extend num/exp to non-doubles
-                                      (Nt:w+d w d'))))
-      :bernoulli   (∏ (V D) (fn [w] (* (num/exp (double (P t D w c))
+      :multinomial (if *exact?*
+                       (∏ V (fn [w] (expi (P:w|c t D w c V) 
+                                          (Nt:w+d w d'))))
+                       #_(->> (V D) ; somehow doesn't work :((
+                            (map+ (fn [w] (num/log 2 (double (expi (P:w|c t D w c V)
+                                                               (Nt:w+d w d'))))))
+                            (reduce #(log %1 %2) 0.0))
+                       (∏ V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
+                                                                     (Nt:w+d w d')
+                                                                     ))))))         ; Addition and such: 43%!
+      :bernoulli   (∏ V (fn [w] (* (expi (P:w|c t D w c V) ; TODO use |exp'|  ; TODO extend num/exp to non-doubles
                                          (delta w d'))
-                                       (num/exp (double (- 1 (P t D w c)))
+                                       (expi (- 1 (P:w|c t D w c V))
                                          (- 1 (delta w d')))))))))
 
 (defmemoized P:c|d' {}
-  ([t D c d' & denom?]
+  "The probability that given document @d, it should be classified as class @c."
+  #_([t D c d'] (P:c|d' t D c d' (V D)))
+  ([t D c d' V] (P:c|d' t D c d' V false))
+  ([t D c d' V denom?]
     (condpc = t
       (coll-or :bernoulli :multinomial)
-      (/ (* (P t D d' c) (P t D c))
-         (if denom?
-             (∑ (C D)
-                (fn [c] (* (P t D d' c) (P t D c))))
-             1))))) ; Because can be same denominator
+      (let [Pc  (P:c t D c V)
+            Pc' (if *exact?*
+                    Pc
+                    (with-precision 10 (bigdec Pc)))]
+        (/ (* (P:d'|c t D d' c V) Pc')
+           (if denom?
+               (∑ (C D)
+                  (fn [c] (* (P:d'|c t D d' c V) (P:c t D c V))))
+               1)))))) ; Because are all same denominator
 
 (defn classifier-score+
-  [t D d']
-  (->> (C D) (map+ (fn [c] [c (P t D c d')]))))
+  [t D d' V]
+  (->> (C D) (map+ (fn [c] [c (P:c|d' t D c d' V)]))))
 
-(defn max-classifier-score
+(defn classifier-scores
+  [t D d' V]
+  (->> (classifier-score+ t D d' V)
+       (join {})))
+
+(defmemoized max-classifier-score {}
   "@D : set of training documents
    @t : the type of probability, in #{:multinomial :bernoulli}
    @d': test document"
-  [t D d']
-  (->> (classifier-score+ t D d')
-       (reduce (partial find-max-by second) [nil 0])))
+  ([t D d'] (max-classifier-score t D d' (V D)))
+  ([t D d' V]
+    (->> (classifier-score+ t D d' V)
+         (reduce (partial find-max-by second) [nil 0]))))
 
 (defn multinomial-naive-bayes-classifier
-  [D d']
-  (max-classifier-score :multinomial D d'))
+  ([D d'] (multinomial-naive-bayes-classifier D d' (V D)))
+  ([D d' V] (max-classifier-score :multinomial D d' V)))
 
 (defn multiple-bernoulli-naive-bayes-classifier
-  [D d']
-  (max-classifier-score :bernoulli D d'))
+  ([D d'] (multiple-bernoulli-naive-bayes-classifier D d' (V D)))
+  ([D d' V] (max-classifier-score :bernoulli D d' V)))
 
 ; ================================================
 
 
-(defmemoized information-gain {}
-  "@w : a term in the vocabulary.
+(defmemoized information-gain {} ; 9 seconds
+  "The information gain of a vocabulary word @w.
+   @w : a term in the vocabulary.
    @C : the set of distinct natural classes in DC"
-  [t D w C]
+  [t D w C V]
   (let [[ŵ] [w]
-        self*log2 (fn [x] #_(println "x" x) (if (= x 0) 0 (* x (num/exactly (num/log 2 x)))))] ; (num/log 2 0) => -infinity
-    (+ (- (∑ C (fn [c] (self*log2 (P t D c) ))))
-       (* (P t D w)
-          (∑ C (fn [c] (self*log2 (P t D c w)))))
-       (* (P t D ŵ)
-          (∑ C (fn [c] (self*log2 (P t D c ŵ))))))))
-
-#_(information-gain (corpus) :prone (C))
+        self*log2 (fn [x] (if (= x 0) 0 (* x (identity #_num/exactly (num/log 2 x)))))] ; (num/log 2 0) => -infinity
+    (+ (- (∑ C (fn [c] (self*log2 (P:c t D c V) ))))
+       (* (P:w t D w)
+          (∑ C (fn [c] (self*log2 (P:c|w t D c w)))))
+       (* (P:w t D ŵ nil)
+          (∑ C (fn [c] (self*log2 (P:c|w t D c ŵ nil))))))))
 
 (defmemoized all-information-gains {}
-  ([t D]
-  (let [w-to-ig (->> (V D)
-                     (map+ (juxt identity #(information-gain D % (C))))
-                     (pjoin {}))
-        sorted (->> w-to-ig
-                    (sort-by val))]
-    {:w=>ig  w-to-ig
-     :sorted sorted})))
-
-#_(go (time (do (all-information-gains) (println "DONE"))))
+  "All the information gains from document collection @D."
+  ([t D V]
+    (let [w-to-ig (->> V
+                       (map+ (juxt identity #(information-gain t D % (C D) V)))
+                       (pjoin {}))
+          sorted (->> w-to-ig
+                      (sort-by val))]
+      {:w=>ig  w-to-ig
+       :sorted sorted})))
 
 (defn feature-selection
   "Determines the (sampled) words which should be chosen to represent
@@ -321,131 +334,109 @@
   (let [V (V T)]
     (if (= M (count V))
         V
-        (->> (all-information-gains T)
+        (->> (all-information-gains :multinomial T V)
              :sorted
-             (filter+ (fn-> first (in? V)))
+             (filter+ (fn-> first (in? V))) ; make sure your selected ones are in your vocab
              (take+   M)
+             (map+ first)
              (join #{})))))
 
-(defn label
-  "Assigns the most probable class for a particular document in |test-set|.
-   @d : A document"
-  {:out-doc "the class @c that should be assigned to @d"}
-  [d]
-  (compute-word-probability)
-  #_argmax ;p(d|c)p(c)
-  )
 
-; ======== MNB-PROBABILITY ======== ;
-; Used for training an MNB
-
-(defmemoized compute-word-probability {}
-  "Computes the probability of each distinct word in each natural class in C
-   using training set @D."
-  {:performance "4.373 sec on 16 cores"
-   :out-doc "Includes for each word in the vocabulary its probability for each class in C."}
-  [D]
-  (let [C (C D)]
-    (->> (V D)
-         (map+ (fn [w] [w (for* {} [c C]
-                            [c (P :multinomial D w c)])]))  ; uses Laplacian method here
-         (pjoin {}))))
-
-(defmemoized compute-class-probability {}
-  "Computes the probability of each natural class in C using training set @D."
-  {:out-doc "Includes the probability of each class in C."}
-  [D]
-  (for* {} [c (C D)]
-    [c (P :multinomial D c)]))
-
-(defn word-probability
-  "Retrieves the probability value of a word in a particular class, which includes the
-   probability value of each word not seen during the training phase of MNB.
-
-   @w : a word
-   @c : a class"
-  {:out-doc "The probability of @w in @c"}
-  [D w c]
-  (or (get-in (compute-word-probability D) [w c]) 0))
-
-(defn class-probability
-  "Retrieves the probability value of a natural class.
-   @c : a class"
-  {:out-doc "The probability of @c"}
-  [D c]
-  (or (get (compute-class-probability D) c) 0))
 
 ; ======== MNB EVALUATION ========
 
-(defn accuracy-measure
+(defn label
+  "Assigns the most probable class for a particular document in |test-set|.
+   @D : The set of training document
+   @d : A document in |test-set|"
+  {:out-doc "the class @c that should be assigned to @d"}
+  [D d V']
+  (multinomial-naive-bayes-classifier D d V'))
+
+(defmemoized accuracy-measure {}
   "Computes the accuracy of the trained MNB.
    Accuracy is defined as the proportion of documents in test set for which
    their classification labels determined using the trained MNB are the same
    as their pre-defined, i.e., original, labels over the total number of
    documents in test set.
 
-   @D : the set of documents in test set and their labels determined by using
-        the method |label| in MNB-classification"
+   @D  : the set of documents in training set
+   @D' : the set of documents in test set"
   {:out-doc "The classification accuracy of the documents in test set"}
-  [D]
-  
-  )
-
-(defmacro test* [& body]
-  `(binding [~'quantum.ir.classify/*corpus* (alexandergunnarson.cs453.classify/corpus)]
-    ~@body))
+  [D D' V']
+  (let [scores (->> D' (filter+ :document:class)
+                       (map+    (fn [d] (let [c (:document:class d)
+                                              [c' score] (label D d V')]
+                                          [c c' score])))
+                       #_(coll/notify-progress+ ::accuracy
+                         (fn [i x] (str "Document #" i " processed.")))
+                       (pjoin []) ; pjoin didn't work here with {} and is weak for []. Why??
+                       (group-by #(= (first %) (second %))))]
+    {:scores scores
+     :accuracy (double (/ (-> scores (get true) count)
+                          (count D')))})) 
 
 ; TODO memoization problem: If DC is called while corpus is running, it doesn't realize that corpus has already started...
 
-(defn D' [D] ; D-split
+(defn D-split [D]
   (rand/split D [0.2 :test] [0.8 :training])) ; 45.968 ms (kind of a lot in the scheme of things)
 
+#_(defonce splitted ; 5 experiments
+  (for [i (range 0 5)]
+    (D-split D-0)))
 
-(defn run-test []
-  (let [{:keys [training test]} (D' (corpus))]
-    (binding [*corpus* training]
-      (feature-selection training) ; then word prob, then class prob
-      (compute-class-probability training)
-      (compute-word-probability  training)
-  
-      (test)
-      )))
+#_(def training0 (->> (get splitted 0) :training))
+#_(def test0     (->> (get splitted 0) :test))
 
-; Now:
-; • Use the MNB model and the 5-fold cross validation approach to determine
-;   the classification accuracy and the training and test time based on a
-;   set of 10,000 documents in the 20NG dataset, without applying feature selection.
-; • Use the trained MNB and the 10,000 documents in 20NG to determine the
-;   effects of its accuracy, as well as its training and test time, when
-;   considering different vocabulary sizes. In accomplishing this task, use
-;   the 5-fold cross validation approach and for each one of the four
-;   vocabulary size values M (∈ { 6200, 12400, 18600, 24800 })
-;   (i) perform feature selection
-;   (ii) determine the classification accuracy
-;   (iii) determine the training and test time.
-; In the 5-fold cross validation approach, each experiment is repeated 5 times.
-; That is, each time a different subset of 20NG is used for the training and
-; testing purpose. Thereafter, the averaged classification accuracy and the
-; training and test time of each iteration should be reported.
+#_(defn run-test [D]
+  (async {:name :test}
+    (fori [M [6200 12400 18600 24800 (count (V D))] i]
+      (println "=====" "Round" (inc i) "with M =" (if (= i 4) "<all>" M) "=====" )
+      (let [{:keys [training test]} (get splitted i)
+            V'       (time (feature-selection training M))
+            D'       (->> test (take 100) (filter+ (fn-and :document:class :document:words)) (join []))
+            accuracy (time (accuracy-measure training ( test) V'))]
+        (println "Accuracy:" (->> accuracy :accuracy (* 100)) "%")
+      ))
+    (println "Test complete.")))
 
 
-; You don’t have to calculate the denominator since it will be the same for all classes.
-;
-; 2) Handle vocabulary that you did not see on the training.
-; Add a term for example “not seen” and use the Laplacian Smoothed Estimate for this term on each class.
-;
-; 3) Create a small sample training and test set before running on the 10,000 . Use the example on slides 14 chapter 9.
 
+#_(defonce D**  (atom nil))
+#_(defonce d'** (atom nil))
+#_(defonce V**  (atom nil))
+#_(defonce M**  (atom nil))
+#_(defonce c**  (atom nil))
+#_(defonce t**  (atom nil))
+#_(defn test* [M]; #{6200 12400 18600 24800}
+  (binding [*exact?* false] ; Same results
+    (let [_  (reset! M** M)
+          D  training0
+          D' (take 100 test0)
+          _  (reset! D** D)
+          V (feature-selection training0 M)
+          _ (reset! V** V)]
+      #_(cache/clear! #'P:d'|c)
+      #_(cache/clear! #'P:c|d')
+      #_(cache/clear! #'max-classifier-score)
+      (let [results+ (->> D'
+                         (map+ (fn [d']
+                                 #_(reset! d'** d')
+                                 [(:document:class d')
+                                  (label D d' V)
+                                  (classifier-scores :multinomial D d' V)])))
+            accuracy (->> results+
+                          (map+ (fn [[c [c' _] _]]
+                                  (= c c')))
+                          (pjoin [])
+                          frequencies)]
+        accuracy))))
 
-; In verifying that your MNB implementation is working adequately, instead of
-; using the subset of 10,000 documents in 20NG, you can assess the classes
-; and methods im- plemented for training and testing the MNB model using the
-; documents shown in Slide #14 in the Lecture Notes of Chapter 9, which should
-; significantly reduce the time spent in debugging.
+#_(async {} (time (quantum.core.print/! (test* 6200))))
 
-; Prior to passing off Project 4, you are required to prepare
-; - (i) a diagram which shows the accuracy of your MNB classifier with and without
-;   applying feature selection based on Information Gain, and
-; - (ii) another diagram which shows the training and test time using different
-; vocabulary sizes, which should allow the TA to verify the correct implementation
-; of your Project.
+#_(defn clear-caches! []
+  (doseq [v #{#'V #'Nt:c #'N- #'C #'Nd:c #'Nt:w+d #'Nd:w #'Nd:c+w
+              #'N:w+c #'P:c #'P:w #'P:c|w #'P:w|c #'delta #'P:d'|c
+              #'P:c|d' #'max-classifier-score #'information-gain
+              #'all-information-gains #'accuracy-measure}]
+    (cache/clear! v)))
