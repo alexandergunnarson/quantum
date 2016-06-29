@@ -17,13 +17,20 @@
                        :refer [#?(:clj kmap)]                    ]
                      [quantum.core.convert.primitive :as pconvert
                        :refer [->boolean
-                               ->byte   ->byte*
-                               ->char   ->char*
-                               ->short  ->short*
-                               ->int    ->int*
-                               ->long   ->long*
-                               ->float  ->float*
-                               ->double ->double*]       ]
+                               ->byte 
+                       #?(:clj ->char)
+                               ->short
+                               ->int  
+                               ->long 
+                       #?(:clj ->float)
+                               ->double
+                     #?@(:clj [->byte*
+                               ->char*
+                               ->short*
+                               ->int*
+                               ->long*
+                               ->float*
+                               ->double*])]       ]
                      [quantum.core.data.vector       :as vec     
                        :refer [catvec subvec+ vector+]           ]
                      [quantum.core.error             :as err
@@ -375,13 +382,14 @@
 (defnt aget  ;  (java.lang.reflect.Array/get coll n) is about 4 times faster than core/get
   "Basically this is the whole quantum/java Array file.
    Takes only 1-2 seconds to generate and compile this."
-  ([^array? x ^pinteger? i1] (#?(:clj  Array/get
-                                 :cljs core/aget) x i1))
-  ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
-    ^int i1]
-    (Array/get x i1)))
+          ([^array? x #?(:clj #{pinteger?}) i1]
+            (#?(:clj  Array/get
+                :cljs core/aget) x i1))
+  #?(:clj ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
+            ^int i1]
+            (Array/get x i1))))
 
-#?(:clj
+#?(:clj ; TODO macro to de-repetitivize
 (defnt aget-in*
   ([#{array? array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
     ^int i1]
@@ -473,32 +481,32 @@
   "Yay, |aset| no longer causes reflection or needs type hints!"
   {:performance"|java.lang.reflect.Array/set| is 26 times faster
                  than 'normal' reflection"}
-  #?(:cljs (^first [^array?         coll            i          v] (aset coll i v                       ) coll))
-  #?(:clj  (^first [^boolean-array? coll ^pinteger? i ^boolean v] (aset coll i v                       ) coll))
-  #?(:clj  (^first [^byte-array?    coll ^pinteger? i ^byte    v] (aset coll i (core/byte  v)          ) coll)) ; TODO make this not required
-  #?(:clj  (^first [^char-array?    coll ^pinteger? i ^char    v] (aset coll i v)                      ) coll)
-  #?(:clj  (^first [^short-array?   coll ^pinteger? i ^short   v] (aset coll i (core/short v)          ) coll)) ; TODO make this not required
-  #?(:clj  (^first [^int-array?     coll ^pinteger? i ^int     v] (aset coll i v)                      ) coll)
-  #?(:clj  (^first [^long-array?    coll ^pinteger? i ^long    v] (aset coll i v)                      ) coll)
-  #?(:clj  (^first [^float-array?   coll ^pinteger? i ^float   v] (aset coll i v)                      ) coll)
-  #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v)                      ) coll)
-  #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v)                      ) coll)
+  #?(:cljs (^first [^array?         coll            i          v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^boolean-array? coll ^pinteger? i ^boolean v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^byte-array?    coll ^pinteger? i ^byte    v] (aset coll i (core/byte  v)) coll)) ; TODO make this not required
+  #?(:clj  (^first [^char-array?    coll ^pinteger? i ^char    v] (aset coll i v)              coll))
+  #?(:clj  (^first [^short-array?   coll ^pinteger? i ^short   v] (aset coll i (core/short v)) coll)) ; TODO make this not required
+  #?(:clj  (^first [^int-array?     coll ^pinteger? i ^int     v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^long-array?    coll ^pinteger? i ^long    v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^float-array?   coll ^pinteger? i ^float   v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v             ) coll))
   #?(:clj  (^first [                coll ^pinteger? i          v] (java.lang.reflect.Array/set coll i v) coll)))
 
 
 ; TODO assoc-in and assoc-in! for files
 (defnt assoc!
   {:todo ["Remove reflection for |aset!|."]}
-  #?(:cljs (^first [^array?         coll            i          v] (aset coll i v)))
-  #?(:clj  (^first [^boolean-array? coll ^pinteger? i ^boolean v] (aset coll i v)))
+  #?(:cljs (^first [^array?         coll            i          v] (aset coll i v             )))
+  #?(:clj  (^first [^boolean-array? coll ^pinteger? i ^boolean v] (aset coll i v             )))
   #?(:clj  (^first [^byte-array?    coll ^pinteger? i ^byte    v] (aset coll i (core/byte  v)))) ; TODO make this not required
-  #?(:clj  (^first [^char-array?    coll ^pinteger? i ^char    v] (aset coll i v)))
+  #?(:clj  (^first [^char-array?    coll ^pinteger? i ^char    v] (aset coll i v             )))
   #?(:clj  (^first [^short-array?   coll ^pinteger? i ^short   v] (aset coll i (core/short v)))) ; TODO make this not required
-  #?(:clj  (^first [^int-array?     coll ^pinteger? i ^int     v] (aset coll i v)))
-  #?(:clj  (^first [^long-array?    coll ^pinteger? i ^long    v] (aset coll i v)))
-  #?(:clj  (^first [^float-array?   coll ^pinteger? i ^float   v] (aset coll i v)))
-  #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v)))
-  #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v)))
+  #?(:clj  (^first [^int-array?     coll ^pinteger? i ^int     v] (aset coll i v             )))
+  #?(:clj  (^first [^long-array?    coll ^pinteger? i ^long    v] (aset coll i v             )))
+  #?(:clj  (^first [^float-array?   coll ^pinteger? i ^float   v] (aset coll i v             )))
+  #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v             )))
+  #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v             )))
            (^first [^transient?     coll            k          v] (core/assoc! coll k v))
            (       [^atom?          coll            k          v] (swap! coll assoc k v)))
 
