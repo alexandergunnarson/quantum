@@ -119,15 +119,15 @@
 
 #?(:clj
 (defmacro array-nd-types [n]
-  `#{`(class (apply make-array Short/TYPE     (repeat ~~n 0)))
-     `(class (apply make-array Long/TYPE      (repeat ~~n 0)))
-     `(class (apply make-array Float/TYPE     (repeat ~~n 0)))
-     `(class (apply make-array Integer/TYPE   (repeat ~~n 0)))
-     `(class (apply make-array Double/TYPE    (repeat ~~n 0)))
-     `(class (apply make-array Boolean/TYPE   (repeat ~~n 0)))
-     `(class (apply make-array Byte/TYPE      (repeat ~~n 0)))
-     `(class (apply make-array Character/TYPE (repeat ~~n 0)))
-     `(class (apply make-array Object         (repeat ~~n 0)))}))
+  `#{`(type (apply make-array Short/TYPE     (repeat ~~n 0)))
+     `(type (apply make-array Long/TYPE      (repeat ~~n 0)))
+     `(type (apply make-array Float/TYPE     (repeat ~~n 0)))
+     `(type (apply make-array Integer/TYPE   (repeat ~~n 0)))
+     `(type (apply make-array Double/TYPE    (repeat ~~n 0)))
+     `(type (apply make-array Boolean/TYPE   (repeat ~~n 0)))
+     `(type (apply make-array Byte/TYPE      (repeat ~~n 0)))
+     `(type (apply make-array Character/TYPE (repeat ~~n 0)))
+     `(type (apply make-array Object         (repeat ~~n 0)))}))
 
 #?(:clj
 (defmacro def-types [lang]
@@ -139,21 +139,21 @@
              :clj  (retrieve :clj  sets)
              :cljs (retrieve :cljs sets)})
         primitive-type-map
-           {:clj {'(class (boolean-array [false])) (symbol "[Z")
-                  '(class (byte-array    0)      ) (symbol "[B")
-                  '(class (char-array    "")     ) (symbol "[C")
-                  '(class (short-array   0)      ) (symbol "[S")
-                  '(class (long-array    0)      ) (symbol "[J")
-                  '(class (float-array   0)      ) (symbol "[F")
-                  '(class (int-array     0)      ) (symbol "[I")
-                  '(class (double-array  0.0)    ) (symbol "[D")
-                  '(class (object-array  [])     ) (symbol "[Ljava.lang.Object;")}
-            :cljs '{(class ""                     ) string
-                    (class 123                    ) number
-                    (class (clj->js {})           ) object
-                    (class true                   ) boolean
-                    (class (array)                ) array
-                    (class inc                    ) function}}
+           {:clj {'(type (boolean-array [false])) (symbol "[Z")
+                  '(type (byte-array    0)      ) (symbol "[B")
+                  '(type (char-array    "")     ) (symbol "[C")
+                  '(type (short-array   0)      ) (symbol "[S")
+                  '(type (long-array    0)      ) (symbol "[J")
+                  '(type (float-array   0)      ) (symbol "[F")
+                  '(type (int-array     0)      ) (symbol "[I")
+                  '(type (double-array  0.0)    ) (symbol "[D")
+                  '(type (object-array  [])     ) (symbol "[Ljava.lang.Object;")}
+            :cljs `{(type ""                     ) ~'string
+                    (type 123                    ) ~'number
+                    (type (cljs.core/clj->js {}) ) ~'object
+                    (type true                   ) ~'boolean
+                    (type (cljs.core/array)      ) ~'array
+                    (type inc                    ) ~'function}}
 
         hash-map-types
          '{:clj  #{clojure.lang.PersistentHashMap
@@ -181,16 +181,16 @@
            :cljs #{cljs.core.ArrayList                           }
          }
         array-types
-         '{:clj  {:short   (class (short-array   0)      )
-                  :long    (class (long-array    0)      )
-                  :float   (class (float-array   0)      )
-                  :int     (class (int-array     0)      )
-                  :double  (class (double-array  0.0)    )
-                  :boolean (class (boolean-array [false]))
-                  :byte    (class (byte-array    0)      )
-                  :char    (class (char-array    "")     )
-                  :object  (class (object-array  [])     )}
-           :cljs #{(class (array))}}
+         `{:clj  {:short   (type (short-array   0)      )
+                  :long    (type (long-array    0)      )
+                  :float   (type (float-array   0)      )
+                  :int     (type (int-array     0)      )
+                  :double  (type (double-array  0.0)    )
+                  :boolean (type (boolean-array [false]))
+                  :byte    (type (byte-array    0)      )
+                  :char    (type (char-array    "")     )
+                  :object  (type (object-array  [])     )}
+           :cljs #{(type (cljs.core/array))}}
         array-2d-types  {:clj (array-nd-types 2 )}
         array-3d-types  {:clj (array-nd-types 3 )}
         array-4d-types  {:clj (array-nd-types 4 )}
@@ -296,8 +296,8 @@
                                misc-seq-types)
         indexed-types         vec-types
         prim-bool-types       '{:clj  #{boolean}}
-        bool-types            '{:clj  #{boolean java.lang.Boolean}
-                                :cljs #{(class true)}}
+        bool-types            `{:clj  #{~'boolean java.lang.Boolean}
+                                :cljs #{(type true)}}
         prim-byte-types       '{:clj  #{byte}}
         byte-types            '{:clj  #{byte  java.lang.Byte}}
         prim-char-types       '{:clj  #{char}}
@@ -330,15 +330,15 @@
         decimal-types         (cond-union
                                 float-types double-types bigdec-types)
         number-types          (cond-union integer-types decimal-types
-                                '{:clj  #{java.lang.Number}
-                                  :cljs #{(class 123)     }})
+                                `{:clj  #{java.lang.Number}
+                                  :cljs #{(type 123)     }})
         integral-types        (cond-union bool-types char-types number-types)
-        string-types          '{:clj #{String} :cljs #{(class "")}}
+        string-types          '{:clj #{String} :cljs #{(type "")}}
         primitive-types       (cond-union prim-bool-types prim-byte-types prim-char-types
                                 prim-short-types prim-int-types prim-long-types
                                 prim-float-types prim-double-types
-                                '{:cljs #{(class "")}})
-        fn-types              '{:clj #{clojure.lang.Fn} :cljs #{(class inc)}}
+                                `{:cljs #{(type "")}})
+        fn-types              `{:clj #{clojure.lang.Fn} :cljs #{(type inc)}}
         multimethod-types     '{:clj #{clojure.lang.MultiFn}}
         coll-types            (cond-union seq-types associative-types
                                 array-list-types)
@@ -387,8 +387,8 @@
            'short?           short-types
            'int?             int-types
            'integer?         integer-types
-           'pinteger?        '{:clj  #{long}
-                               :cljs #{(class 123)}} 
+           'pinteger?        `{:clj  #{~'long}
+                               :cljs #{(type 123)}} 
            'long?            long-types
            'bigint?          bigint-types
            'float?           float-types
@@ -472,7 +472,7 @@
                                      (map-entry pred-n
                                        (->> types-n
                                             (map (condf*n
-                                                   (fn-and seq? (fn-> first name (= "class")))
+                                                   (fn-and seq? (fn-> first name (= "type")))
                                                      (fn [obj]
                                                        (condp = lang-n
                                                          :clj  (-> obj eval class->str symbol)
