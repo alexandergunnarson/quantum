@@ -128,9 +128,9 @@
 ; Nanoseconds since the Big Bang
 ; (Optimally would have done Planck quanta since the Big Bang)
 ; Nanosecond: 1E-9 seconds
-(defrecord Instant  [^long nanos])
+(defrecord Instant  [nanos]) ; may or may not be a long
 (defrecord StandardInstant [year month day minute second nanos])
-(defrecord Duration [^long nanos])
+(defrecord Duration [nanos]) ; may or may not be a long
 
 #?(:clj
 (defn year->nanos
