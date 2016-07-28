@@ -1,5 +1,5 @@
-(ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"
-      :clojure.tools.namespace.repl/unload false}
+(ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
+    ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
            (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
                                      update merge if-let assert])
@@ -13,7 +13,8 @@
                      [quantum.core.collections   :as coll           
                        :refer [#?@(:clj [join])
                                filter-vals+ remove-vals+ map+ group-by+
-                               postwalk]                            ]
+                               postwalk]                            
+                       #?@(:cljs [:refer-macros [join]])]
                      [quantum.core.error         :as err      
                        :refer [#?(:clj assert) ->ex]                ]
                      [quantum.core.fn            :as fn      
@@ -41,8 +42,6 @@
                                ifn if*n if-let]                     ]
                      [datomic-cljs.macros         
                        :refer [<?]                                  ]
-                     [quantum.core.collections   :as coll           
-                       :refer [join]                                ]
                      [quantum.core.vars          :as var      
                        :refer [defalias]                            ]))
   #?(:clj (:import datomic.Peer
@@ -183,7 +182,7 @@
   ([db selector eid]
     (cond           (mdb? db) (mdb/pull db selector eid)
           #?@(:clj [(db?  db) (db/pull  db selector eid)])
-          :else (throw (unhandled-type :db db) db))))
+          :else (throw (unhandled-type :db db)))))
 
 
 (defn pull-many

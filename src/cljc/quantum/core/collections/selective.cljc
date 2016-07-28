@@ -35,7 +35,7 @@
               reverse
               conj
               conj! assoc! dissoc! disj!
-              #?(:cljs boolean?)])
+              boolean?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [quantum.core.data.map                   :as map

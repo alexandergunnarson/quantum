@@ -226,13 +226,7 @@
            :cljs (set/union (:cljs hash-set-types)
                             (:cljs tree-set-types))}
         tuple-types
-          '{:clj #{clojure.lang.Tuple$T0
-                   clojure.lang.Tuple$T1
-                   clojure.lang.Tuple$T2
-                   clojure.lang.Tuple$T3
-                   clojure.lang.Tuple$T4
-                   clojure.lang.Tuple$T5
-                   clojure.lang.Tuple$T6}}
+          '{:clj #{clojure.lang.Tuple}}
         vec-types
          (cond-union tuple-types
             '{:clj  #{clojure.lang.APersistentVector
@@ -333,7 +327,7 @@
                                 `{:clj  #{java.lang.Number}
                                   :cljs #{(type 123)     }})
         integral-types        (cond-union bool-types char-types number-types)
-        string-types          '{:clj #{String} :cljs #{(type "")}}
+        string-types          `{:clj #{String} :cljs #{(type "")}}
         primitive-types       (cond-union prim-bool-types prim-byte-types prim-char-types
                                 prim-short-types prim-int-types prim-long-types
                                 prim-float-types prim-double-types

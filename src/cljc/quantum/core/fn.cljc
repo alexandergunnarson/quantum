@@ -23,7 +23,7 @@
                      [quantum.core.vars        :as var
                        :refer [defalias]                  ])))
 
-; To signal that it's a multi-return 
+; To signal that it's a multi-return
 (deftype MultiRet [val])
 
 #?(:clj (defalias jfn memfn))
@@ -54,7 +54,7 @@
   ([f x y z]              (f x y z))
   ([f x y z & more] (apply f x y z more)))
 
-(defn firsta 
+(defn firsta
   "Accepts any number of arguments and returns the first."
   {:attribution "parkour.reducers"}
   ([x]            x)
@@ -161,7 +161,7 @@
   [& body]
   `(fn [x#] (-> x# ~@body))))
 
-#?(:clj 
+#?(:clj
 (defmacro fn->>
   "Equivalent to |(fn [x] (->> x ~@body))|"
   {:attribution "thebusby.bagotricks"}
@@ -250,7 +250,7 @@
 
 ; TODO: use whatever REPL's print fn is
 ; (defn with-pr  [obj]      (do (#+clj  pprint
-;                                #+cljs println obj) 
+;                                #+cljs println obj)
 ;                               obj))
 #?(:clj
 (defmacro doto->>

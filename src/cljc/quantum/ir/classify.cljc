@@ -1,37 +1,41 @@
-(ns quantum.ir.classify
+(ns ^{:cljs-self-referring? true}
+  quantum.ir.classify
            (:refer-clojure :exclude [reduce for])
            (:require
              [#?(:clj  clojure.core
                  :cljs cljs.core   )          :as core   ]
              [quantum.core.collections :as coll
-               :refer [#?@(:clj [for for* fori lfor reduce join pjoin kmap in?])
-                       map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
+               :refer [#?@(:clj [for for* fori lfor reduce join kmap])
+                       pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
                        flatten-1+ range+ ffilter
                        reduce-count]
-               #?@(:cljs [:refer-macros [for lfor reduce join kmap in?]])]
+               #?@(:cljs [:refer-macros [for lfor reduce join kmap]])]
              [quantum.core.numeric :as num]
              [quantum.numeric.core
                :refer [find-max-by]]
              [quantum.numeric.vectors :as v]
              [quantum.core.fn :as fn
-               :refer        [#?@(:clj [<- fn-> fn->>])]
-               #?@(:cljs [:refer-macros [<- fn-> fn->>]])]
+                          :refer         [#?@(:clj [<- fn-> fn->>])]
+               #?@(:cljs [:refer-macros            [<- fn-> fn->>]])]
              [quantum.core.cache :as cache
-               :refer [#?(:clj defmemoized)]
+                          :refer         [#?(:clj defmemoized)]
                #?@(:cljs [:refer-macros  [defmemoized]])]
              [quantum.core.error
                :refer [->ex]]
              [quantum.core.logic
-               :refer [nnil? #?@(:clj [coll-or condpc fn-and])]
-               #?@(:clj [:refer-macros [coll-or condpc fn-and]])]
+                          :refer        [#?@(:clj [coll-or condpc fn-and]) nnil?]
+               #?@(:cljs [:refer-macros [coll-or condpc fn-and]])]
              [quantum.core.nondeterministic   :as rand]
              [quantum.core.thread             :as thread
                           :refer        [#?(:clj async)]
                #?@(:cljs [:refer-macros [async]])]
              [quantum.numeric.core            :as num*
                :refer [∏ ∑ sum]]
-     #?(:clj [taoensso.timbre.profiling :as prof
-               :refer [profile defnp p]])))
+    #?(:clj  [taoensso.timbre.profiling :as prof
+               :refer [profile defnp p]]))
+  #?(:cljs (:require-macros
+              [quantum.ir.classify
+                :refer [N N*]])))
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
 
@@ -72,6 +76,7 @@
 ; ----------------------- N -----------------------
 ; =================================================
 
+#?(:clj
 (defmacro N*
   ([D] `(N- ~D))
   ([D arg & args] ; TODO code pattern
@@ -84,11 +89,12 @@
         '[c]   `(N:c   ~D ~@pred-vals)
         '[w]   `(N:w   ~D ~@pred-vals)
         '[ŵ]   `(N:w   ~D ~@pred-vals nil)
-        (throw (->ex nil "No matching predicate pairs:" pred-syms))))))
+        (throw (->ex nil "No matching predicate pairs:" pred-syms)))))))
 
+#?(:clj
 (defmacro N [D & args] ; TODO code pattern
   `(N* ~D ~@(apply concat (for [arg args]
-                           [arg arg]))))
+                           [arg arg])))))
 
 (defmemoized N- {}
   (^{:doc "The total number of documents in doc collection @D."}
@@ -190,12 +196,12 @@
 (defn laplacian-smoothed-estimate
   [t D w c V]
   (condp = t
-    :multinomial (/ (+ (p :Ndcw (Nd:c+w D c w)) 1)
-                    (+ (p :Ntc (Nt:c D c)) (count V)))
+    :multinomial (/ (+ (Nd:c+w D c w) 1)
+                    (+ (Nt:c D c) (count V)))
     :bernoulli   (/ (+ (Nd:c+w D c w) 1)
                     (+ (Nd:c D c)   1))))
 
-(defmemoized P:w|c {}
+#_(defmemoized P:w|c {}
   "The probability of class @c containing word @w."
   ([t D w c V]
     (laplacian-smoothed-estimate t D w c V) ; Weird memoization problem here! TODO FIX
@@ -206,8 +212,6 @@
       #_:collection-smoothed ; alternate for :bernoulli
         #_(/ (+ (Nd:c+w D c w) (* µ (/ (Nd:w D w) (N))))
              (+ (Nd:c D c) µ)))))
-
-(def get-word-probability P:w|c)
 
 (def P:w|c laplacian-smoothed-estimate)
 
@@ -232,16 +236,15 @@
   #_([t D d' c] (P:d'|c t D d' c (V D)))
   ([t D d' c V]
     (condp = t
-      :multinomial (if *exact?*
+      :multinomial (if #?(:clj *exact?* :cljs true)
                        (∏ V (fn [w] (expi (P:w|c t D w c V) 
                                           (Nt:w+d w d'))))
                        #_(->> (V D) ; somehow doesn't work :((
                             (map+ (fn [w] (num/log 2 (double (expi (P:w|c t D w c V)
                                                                (Nt:w+d w d'))))))
                             (reduce #(log %1 %2) 0.0))
-                       (∏ V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
-                                                                     (Nt:w+d w d')
-                                                                     ))))))         ; Addition and such: 43%!
+                       #?(:clj (∏ V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
+                                                                             (Nt:w+d w d'))))))))         ; Addition and such: 43%!
       :bernoulli   (∏ V (fn [w] (* (expi (P:w|c t D w c V) ; TODO use |exp'|  ; TODO extend num/exp to non-doubles
                                          (delta w d'))
                                        (expi (- 1 (P:w|c t D w c V))
@@ -255,9 +258,9 @@
     (condpc = t
       (coll-or :bernoulli :multinomial)
       (let [Pc  (P:c t D c V)
-            Pc' (if *exact?*
+            Pc' (if #?(:clj *exact?* :cljs true)
                     Pc
-                    (with-precision 10 (bigdec Pc)))]
+                    #?(:clj (with-precision 10 (bigdec Pc))))]
         (/ (* (P:d'|c t D d' c V) Pc')
            (if denom?
                (∑ (C D)

@@ -10,44 +10,19 @@
               :refer [GET ANY POST defroutes]                      ]
             [compojure.route
               :refer [not-found]                                   ]
-            [compojure.handler                                     ]
-            ; MIDDLEWARE
-            [ring.util.anti-forgery                   :as af       ]
-            [ring.util.response                       :as resp     ]
-            [ring.middleware.x-headers                :as x        ]
-            [ring.middleware.gzip               :refer [wrap-gzip]                 ]
-            [ring.middleware.session            :refer [wrap-session]              ]
-            [ring.middleware.flash              :refer [wrap-flash]                ]
-            [ring.middleware.keyword-params     :refer [wrap-keyword-params]       ]
-            [ring.middleware.nested-params      :refer [wrap-nested-params]        ]
-            [ring.middleware.anti-forgery       :refer [wrap-anti-forgery]         ]
-            [ring.middleware.multipart-params   :refer [wrap-multipart-params]     ]
-            [ring.middleware.params             :refer [wrap-params]               ]
-            [ring.middleware.cookies            :refer [wrap-cookies]              ]
-            [ring.middleware.resource           :refer [wrap-resource]             ]
-            [ring.middleware.file               :refer [wrap-file]                 ]
-            [ring.middleware.not-modified       :refer [wrap-not-modified]         ]
-            [ring.middleware.content-type       :refer [wrap-content-type]         ]
-            [ring.middleware.default-charset    :refer [wrap-default-charset]      ]
-            [ring.middleware.absolute-redirects :refer [wrap-absolute-redirects]   ]
-            [ring.middleware.proxy-headers      :refer [wrap-forwarded-remote-addr]]
-            [ring.middleware.ssl                :refer [wrap-ssl-redirect
-                                                        wrap-hsts
-                                                        wrap-forwarded-scheme  ]]
-            [ring.middleware.defaults   :as defaults]
             ; UTILS
             [com.stuartsierra.component :as component]
-            [clj-uuid                   :as uuid     ]
-            [quantum.core.string        :as str      ]
-            [quantum.core.log           :as log      ]
-            [quantum.core.resources     :as res      ]
-            [quantum.core.collections   :as coll     
-              :refer [containsv? assocs-in+]         ]
-            [quantum.core.core          :as qcore    
+            [quantum.net.server.middleware :as mid   ]
+            [quantum.validate.core         :as v     ]
+            [quantum.core.string           :as str   ]
+            [quantum.core.log              :as log   ]
+            [quantum.core.resources        :as res   ]
+            [quantum.core.paths            :as paths ]
+            [quantum.core.core             :as qcore 
               :refer [lens]                          ]
-            [quantum.core.logic         :as logic    
+            [quantum.core.logic            :as logic 
               :refer [nnil?]                         ]
-            [quantum.core.fn            :as fn    
+            [quantum.core.fn               :as fn    
               :refer [<- fn->]                       ]))
 
 ; SECURITY MEASURES TAKEN CARE OF
@@ -58,15 +33,6 @@
 (def users {"admin" {:username "admin"
                      :password (creds/hash-bcrypt "admin")
                      :roles    #{::admin}}})
-
-; ===== MIDDLEWARE =====
-
-(defn wrap-uid
-  [app]
-  (fn [req]
-    (if-not (get-in req [:session :uid])
-      (app (assoc-in req [:session :uid] (uuid/v1)))
-      (app req))))
 
 ; ===== ROUTES =====
 
@@ -92,88 +58,18 @@
           _ (println "RESOURCE PATH" resource-path)
           body (->> resource-path
                     (<- str/remove "..") ; to prevent insecure access
-                    ^String (str/->path root)
+                    ^String (paths/url-path root)
                     (java.io.FileInputStream.))]
       {:body body} ; TODO add content-type  
       #_(add-mime-type resource-path options))))
-
-(defn content-security-policy [report-uri]
-  (str/sp "default-src https: data: gap: https://ssl.gstatic.com;"
-          "style-src    'self' 'unsafe-inline';"
-          "script-src   'self' 'unsafe-inline';"
-          "font-src     'self';"
-          "form-action  'self';"
-          "reflected-xss block;"
-          "report-uri" (str report-uri ";")))
-
-(defn wrap-exception-handling
-  [handler]
-  (fn [request]
-    (try
-      (handler request)
-      (catch Throwable e
-        (log/ppr :warn "Error in HTTP handler:" e)
-        {:status 500
-         :headers {"Content-Type" "text/html"}
-         :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
-
-; TODO repetitive
-
-(defn wrap-x-permitted-cross-domain-policies
-  {:doc "Recommended implicitly by https://github.com/twitter/secureheaders"}
-  [handler]
-  (fn [request]
-    (when-let [response (handler request)]
-      (resp/header response "X-Permitted-Cross-Domain-Policies" "none" #_"master-only")))) ; either one is fine; Twitter uses "none"
-
-(defn wrap-x-download-options
-  {:doc "Recommended implicitly by https://github.com/twitter/secureheaders"}
-  [handler]
-  (fn [request]
-    (when-let [response (handler request)]
-      (resp/header response "X-Download-Options" "noopen"))))
-
-(defn wrap-strictest-transport-security
-  {:doc "Considered the 'most secure' STS setting"}
-  [handler]
-  (fn [request]
-    (when-let [response (handler request)]
-      (resp/header response "Strict-Transport-Security" "max-age=10886400; includeSubDomains; preload"))))
-
-(defn wrap-hide-server
-  [handler]
-  (fn [request]
-    (when-let [response (handler request)]
-      (resp/header response "Server" "nil"))))
-
-(defn wrap-middleware [routes]
-  (-> routes
-      wrap-uid
-      (wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))})
-      (defaults/wrap-defaults
-        (assocs-in+ defaults/secure-site-defaults
-          [:security :anti-forgery] false
-          [:static   :resources   ] false
-          [:static   :files       ] false))
-      wrap-strictest-transport-security
-      wrap-x-permitted-cross-domain-policies
-      wrap-x-download-options
-      wrap-hide-server
-      #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
-                            :workflows [(workflows/interactive-form)]})
-      ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
-      wrap-gzip
-      compojure.handler/site ; ?
-      #_(friend/requires-scheme :https)
-      wrap-exception-handling))
 
 ; ROUTES PRESETS
 
 (defn ws-routes
   [{:keys [ws-uri get-fn post-fn]}]
-  (assert (fn? get-fn )) ; TODO use clojure.spec
-  (assert (fn? post-fn))
-  (assert (string? ws-uri))
+  (v/validate fn?     get-fn )
+  (v/validate fn?     post-fn)
+  (v/validate string? ws-uri)
   [(GET  ws-uri req (get-fn  req))
    (POST ws-uri req (post-fn req))])
 

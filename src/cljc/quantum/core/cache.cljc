@@ -1,4 +1,4 @@
-(ns ^{:clojure.tools.namespace.repl/unload false} ; because of cache
+(ns ; ^{:clojure.tools.namespace.repl/unload false} ; because of cache
   quantum.core.cache
            (:refer-clojure :exclude [memoize])
            (:require [#?(:clj  clojure.core

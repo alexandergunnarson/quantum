@@ -4,19 +4,19 @@
           within a REPL."
     :attribution "Alex Gunnarson"}
   quantum.core.process
-           (:require [com.stuartsierra.component :as component]
-           #?@(:clj [[clojure.java.io            :as io       ]
-                     [clojure.java.shell         :as shell    ]])
-                     [quantum.core.paths         :as paths    ]
-                     [quantum.core.resources     :as res     
-                       :refer [closed?]                       ]
+           (:require [com.stuartsierra.component :as comp ]
+           #?@(:clj [[clojure.java.io            :as io   ]
+                     [clojure.java.shell         :as shell]])
+                     [quantum.core.paths         :as paths]
+                     [quantum.core.resources     :as res  
+                       :refer [closed?]                   ]
                      [quantum.core.thread.async 
                        :refer [close-req? message?]]
                     [quantum.core.vars           :as var
-                       :refer [#?@(:clj [defalias])]          ])
+                       :refer [#?@(:clj [defalias])]      ])
   #?(:cljs (:require-macros
                      [quantum.core.vars          :as var
-                       :refer [defalias]                      ]))
+                       :refer [defalias]                  ]))
   #?(:clj (:import (java.lang ProcessBuilder StringBuffer)
                    (java.io InputStreamReader BufferedReader
                      OutputStreamWriter BufferedWriter
@@ -282,7 +282,7 @@
                     @args and options @opts."}
   Process
   [process command args env-vars dir pr-to-out?]
-  component/Lifecycle
+  comp/Lifecycle
     (start [this]
       (let [pb (->> (into [command] args)
                     (map str)
@@ -314,5 +314,8 @@
   [command args & [{:keys [env-vars dir pr-to-out?]
                     :as opts}]]
   (Process. nil command args env-vars dir pr-to-out?)))
+
+(def proc! #?(:clj  (comp comp/start ->proc)
+              :cljs (fn [& args] (throw (->ex :unimplemented)))))
 
 #?(:clj (defalias exec! shell/sh))

@@ -158,11 +158,9 @@
   {:out '{[Randfn [#{java.lang.String}] Object]
             [[^string? x] (println "A string!")],
           [Randfn
-           [#{clojure.lang.APersistentVector$RSeq clojure.lang.Tuple$T3
-              clojure.lang.APersistentVector clojure.lang.Tuple$T2
-              clojure.lang.Tuple$T5 clojure.lang.Tuple$T1
-              clojure.lang.PersistentVector clojure.lang.Tuple$T4
-              clojure.lang.Tuple$T6 clojure.lang.Tuple$T0
+           [#{clojure.lang.APersistentVector$RSeq clojure.lang.Tuple
+              clojure.lang.APersistentVector
+              clojure.lang.PersistentVector
               clojure.core.rrb_vector.rrbt.Vector}]
            Object]
             [[^vector? x] (println "A vector!")]}}
@@ -227,7 +225,6 @@
            available-default-types]
     :as env}]
   (assert (nempty? gen-interface-code-body-unexpanded))
-  (pr/js-println "available-default-types" available-default-types)
   (assert (nnil?   available-default-types))
   (->> gen-interface-code-body-unexpanded
        (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]

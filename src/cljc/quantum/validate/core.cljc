@@ -1,25 +1,27 @@
 (ns quantum.validate.core
-           (:require [schema.core              :as s   ]
+           (:refer-clojure :exclude [string? keyword? set? number? fn? assert])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )   :as core]
+                     [#?(:clj  clojure.spec
+                         :cljs cljs.spec   )   :as s   ]
                      [quantum.core.logic
                        :refer [#?@(:clj [fn-not])]]
                      [quantum.core.error       :as err
                        :refer [->ex]                   ]
                      [quantum.core.string      :as str ]
                      [quantum.core.collections :as coll
-                       :refer [#?@(:clj [containsv?])] ]
+                                  :refer [#?@(:clj [containsv?])]
+                       #?@(:cljs [:refer-macros [containsv?]])]
                      [quantum.core.vars        :as var 
-                       :refer [#?(:clj defalias)]      ]
+                                  :refer        [#?(:clj defalias)]      
+                       #?@(:cljs [:refer-macros [defalias]])]
                      [quantum.validate.domain          ])
   #?(:cljs (:require-macros 
-                     [quantum.core.collections :as coll
-                       :refer [containsv?]             ]
                      [quantum.core.logic
-                       :refer [fn-not]]
-                     [quantum.core.vars        :as var 
-                       :refer [defalias]               ]))
+                       :refer [fn-not]]))
   #?(:clj (:import java.util.regex.Matcher)))
 
-#?(:clj
+#_(:clj
 (defmacro validate
   {:todo ["Should:
             - attempt to reduce the verbosity of its output by
@@ -37,22 +39,25 @@
                                                             :value (:error data#)})
                       (assoc data# :value-unevaled value-unevaled#))))))))
 
-(def constrained s/constrained)
-(def pred        s/pred)
-(def one*        s/one)
-#?(:clj (defmacro one [schema]
+#_(def constrained s/constrained)
+#?(:clj (defalias spec     s/spec))
+#?(:clj (defalias validate s/assert))
+
+#_(def one*        s/one)
+#_(:clj (defmacro one [schema]
   `(one* ~schema '~schema)))
-(def optional*   s/optional)
-#?(:clj (defmacro optional [schema]
+#_(def optional*   s/optional)
+#_(:clj (defmacro optional [schema]
   `(optional* ~schema '~schema)))
-(def Str         s/Str)
-(def Int         s/Int)
-(def Keyword     s/Keyword)
-(def Num         s/Num)
+(def string?  (spec core/string? ))
+(def keyword? (spec core/keyword?))
+(def set?     (spec core/set?    ))
+(def number?  (spec core/number? ))
+(def fn?      (spec core/fn?     ))
 
 ; A few built-in validators
 
-(def no-blanks?  (pred (fn no-blanks? [x] (not (containsv? x " ")))))
+(def no-blanks?  (spec (fn no-blanks? [x] (not (containsv? x " ")))))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
 (def email:valid-chars       (str "[^\\s" email:special-chars "]"))

@@ -4,7 +4,8 @@
     :cljs-self-referring? true}
   quantum.core.numeric
   (:refer-clojure :exclude
-    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? min max quot mod format
+    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
+     min max quot mod format
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
            (:require  
             #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
@@ -418,6 +419,8 @@
 (#?(:clj defnt' :cljs defn) log*
   ([#?(:clj #{double}) x #?(:clj #{double}) base] ; arbitrary to choose ln vs. log-10
     (div-2 (ln x) (ln base)))) ; tried to use div* but CLJS doesn't like it for some reason
+
+#?(:cljs (defalias log*-protocol log*))
 
 #?(:clj
 (defmacro log [base x] ; TODO do ln'

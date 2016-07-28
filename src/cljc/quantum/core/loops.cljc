@@ -108,15 +108,15 @@
   [should-extern? f ret-i coll & args]
   (let [f-final
          `(~(if (and should-extern? @qcore/externs?)
-                'quantum.core.macros/extern+
-                'quantum.core.macros.optimization/identity*) 
+                `quantum.core.macros/extern+
+                `quantum.core.macros.optimization/identity*) 
            (let [i# (volatile! (long -1))]
              (fn ([ret# elem#]
                    (vswap! i# qcore/unchecked-inc-long)
-                   (quantum.core.macros.optimization/inline-replace (~f ret# elem# @i#)))
+                   (opt/inline-replace (~f ret# elem# @i#)))
                  ([ret# k# v#]
                    (vswap! i# qcore/unchecked-inc-long)
-                   (quantum.core.macros.optimization/inline-replace (~f ret# k# v# @i#))))))
+                   (opt/inline-replace (~f ret# k# v# @i#))))))
         _ (log/ppr ::macro-expand "F FINAL EXTERNED" f-final)
         code `(red/reduce ~f-final ~ret-i ~coll) 
         _ (log/ppr ::macro-expand "REDUCEI CODE" code)]

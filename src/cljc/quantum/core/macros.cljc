@@ -89,16 +89,21 @@
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              (if-cljs &env
-                 (do (assert (nnil? cljs-single-arg-fn-f))
-                     `(list '~cljs-single-arg-fn-f ~x-sym))
-                 `(list '~clj-single-arg-fn-f      ~x-sym))))
+              `(do (quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
+                (if-cljs ~'&env
+                  (list '~cljs-single-arg-fn-f ~x-sym)
+                  (list '~clj-single-arg-fn-f      ~x-sym)))
+              (if-cljs ~'&env
+                  (list '~cljs-single-arg-fn-f ~x-sym)
+                  (list '~clj-single-arg-fn-f      ~x-sym)))))
           ([~x-sym ~y-sym]
-             ~(log/pr :macro-expand "EXPANDING INTO CLJS ENV?" (if-cljs &env true false))
-             ~(if-cljs &env
-                (do (assert (nnil? cljs-fn))
-                    `(list '~cljs-fn ~x-sym ~y-sym))
-                `(list '~clj-fn      ~x-sym ~y-sym)))
+             (quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
+                (if-cljs ~'&env
+                  (list '~cljs-fn ~x-sym ~y-sym)
+                  (list '~clj-fn      ~x-sym ~y-sym)))
+             (if-cljs ~'&env
+               (list '~cljs-fn ~x-sym ~y-sym)
+               (list '~clj-fn      ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
              (list* '~name (list '~name x# y#) rest#)))))))
 
@@ -128,6 +133,16 @@
              ~(if-cljs &env
                 `(list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
                 `(list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
+
+#?(:clj
+(defmacro env []
+  `(identity '~(->> &env
+                    (clojure.walk/postwalk
+                      (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
+                                     (.name x#)
+                                     (nil? x#)
+                                     []
+                                     :else x#)))))))
 
 ; #?(:clj
 ; (defn param-arg-match

@@ -1,5 +1,5 @@
 (ns quantum.core.core
-  (:refer-clojure :exclude [#?(:cljs seqable?)])
+  (:refer-clojure :exclude [seqable? boolean?])
   (:require #?(:clj  [clojure.core  :as core ]
                :cljs [cljs.core     :as core
                        :refer [IDeref IAtom]]))
@@ -17,7 +17,8 @@
                        :cljs satisfies?)
                     IAtom x))
 
-(defn boolean? [x] (or (true? x) (false? x)))
+(defn boolean? [x] #?(:clj  (instance? Boolean x)
+                      :cljs (or (true? x) (false? x))))
 
 #?(:clj
      (defn seqable?

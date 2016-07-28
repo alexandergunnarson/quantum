@@ -1,7 +1,9 @@
 (ns quantum.core.type.predicates
            (:refer-clojure :exclude
-             [#?(:clj boolean?) #?(:cljs seqable?)])
-           (:require [quantum.core.core        :as c      ]
+             [map-entry? boolean? seqable?])
+           (:require
+             #?(:clj [clojure.core             :as core   ])
+                     [quantum.core.core        :as c      ]
                      [quantum.core.fn          :as fn
                        :refer [#?@(:clj [fn->])]          ]
                      [quantum.core.logic       :as logic
@@ -28,7 +30,7 @@
 (defn derefable? [obj]
   (satisfies? #?(:clj clojure.lang.IDeref :cljs cljs.core/IDeref) obj))
 
-(def map-entry?  #?(:clj  (partial instance? clojure.lang.MapEntry)
+(def map-entry?  #?(:clj  core/map-entry?
                     :cljs (fn-and vector? (fn-> count (= 2)))))
 
 (defn listy? [obj] (seq? obj)
