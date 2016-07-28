@@ -21,7 +21,7 @@
 ; found for class: clojure.lang.Tuple$T1
 
 ; TODO inefficient
-#?(:clj
+#_(:clj
 (extend-protocol AsRRBT
   clojure.lang.Tuple$T0 (as-rrbt [v] (as-rrbt       (vector)   ))
   clojure.lang.Tuple$T1 (as-rrbt [v] (as-rrbt (into (vector) v)))
@@ -32,7 +32,7 @@
   clojure.lang.Tuple$T6 (as-rrbt [v] (as-rrbt (into (vector) v)))))
 
 ; TODO inefficient
-#?(:clj
+#_(:clj
 (extend-protocol PSliceableVector
   clojure.lang.Tuple$T0 (slicev  [v a b] (slicev        (vector)    a b))
   clojure.lang.Tuple$T1 (slicev  [v a b] (slicev  (into (vector) v) a b))
@@ -43,7 +43,7 @@
   clojure.lang.Tuple$T6 (slicev  [v a b] (slicev  (into (vector) v) a b))))
 
 ; TODO inefficient
-#?(:clj
+#_(:clj
 (extend-protocol PSpliceableVector
   clojure.lang.Tuple$T0 (splicev [v1 v2] (splicev       (vector)    v2))
   clojure.lang.Tuple$T1 (splicev [v1 v2] (splicev (into (vector) v1) v2))

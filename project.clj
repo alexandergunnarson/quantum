@@ -21,8 +21,8 @@
             [lein-essthree "0.2.1" ]
             [lein-ancient  "0.6.10"]]
   :dependencies
-    [[org.clojure/clojure                       "1.8.0-alpha2"    ] ; July 16th (Latest before hard-linking)
-     [org.clojure/clojurescript                 "1.8.51"          ] ; Latest (as of 5/17/2016)
+    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha10"          ] ; With hardlinking
+     [org.clojure/clojurescript                 "1.9.93"          ] ; Latest (as of 7/28/2016)
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
@@ -67,7 +67,7 @@
          [commons-codec/commons-codec           "1.10"            ]
          [org.bouncycastle/bcprov-jdk15on       "1.54"            ]
        ; ==== ERROR ====
-         [slingshot                             "0.12.2"          ]
+         [alexandergunnarson/slingshot          "0.14"            ]
        ; ==== GRAPH ====
          [aysylu/loom                           "0.6.0"           ]
        ; ==== IO ====
@@ -201,6 +201,9 @@
      ; AUDIO
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"            ] ; Creating audio plugin
      ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"            ] ; Creating audio plugin
+     ; TESTING
+     [org.clojure/test.generative               "0.5.2"           ]
+     [org.clojure/test.check                    "0.9.0"           ]
      ; ==== MULTIPLE ====
      ; COMPRESSION, HASHING...
      [byte-transforms                           "0.1.4"           ]
@@ -221,13 +224,16 @@
           :resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
-          :plugins [;[codox "0.8.8"]
-                    [lein-cljsbuild                  "1.1.3"]
+          :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
+                    [lein-doo                          "0.1.7" ] ; CLJS test
+                    [lein-cljsbuild                    "1.1.3" ]
                     [lein-figwheel "0.5.3-2"
                       :exclusions [org.clojure/clojure
+                                   org.clojure/clojurescript
                                    org.clojure/core.async
                                    org.clojure/core.cache]]
                     [jonase/eastwood                 "0.2.1"]
+                    [lein-cloverage                  "1.0.6"]
                     ]}}
   :aliases {"all"               ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"        ["do" "clean," "install"]
@@ -245,8 +251,7 @@
                                     [:cljsbuild :builds :min :compiler :output-to ]]
   :java-source-paths ["src/java"]
   :source-paths      ["src/clj"
-                      "src/cljc"
-                      "src/cljc_next"]
+                      "src/cljc"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test/cljs" "test/clj" "test/cljc"]
   :global-vars {*warn-on-reflection* true
@@ -256,7 +261,9 @@
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
-      {:debug {:source-paths ["src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
+      {:debug {:source-paths ["src/cljs"  "src/cljc"
+                              "dev/cljs"  "dev/cljc"
+                              "test/cljs" "test/cljc"]
                :compiler     {:output-to            "dev-resources/public/js/debug-compiled/quantum.js"
                               :output-dir           "dev-resources/public/js/debug-compiled/out"
                               :optimizations        :none
@@ -266,7 +273,9 @@
                               :source-map-timestamp true
                               :cache-analysis       true}}
        :dev {:figwheel true
-             :source-paths ["src/cljc" "dev/cljc"] #_["src/cljc"  "test/cljs"]
+             :source-paths ["src/cljs"  "src/cljc"
+                            "dev/cljs"  "dev/cljc"
+                            "test/cljs" "test/cljc"]
              :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                         :output-dir           "dev-resources/public/js/compiled/out"
                         :optimizations        :none
@@ -286,5 +295,4 @@
                         }}}}
   :figwheel {:http-server-root "public" ;; default and assumes "resources" 
              :server-port 3450
-             :css-dirs ["dev-resources/public/css"]}
-  )
+             :css-dirs ["dev-resources/public/css"]})

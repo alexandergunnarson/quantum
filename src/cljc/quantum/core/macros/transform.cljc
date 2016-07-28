@@ -123,9 +123,8 @@
         type-hints (->> arglist (extract-type-hints-from-arglist lang))]
     (vector type-hints return-type-0)))
 
-; TODO do CLJS version
-(def vec-classes-for-count
-  '{0 clojure.lang.Tuple$T0
+(def vec-classes-for-count {}
+  #_{0 clojure.lang.Tuple$T0
     1 clojure.lang.Tuple$T1
     2 clojure.lang.Tuple$T2
     3 clojure.lang.Tuple$T3

@@ -2,7 +2,7 @@
   quantum.db.datomic
           (:refer-clojure :exclude [conj conj! disj disj!
                                     assoc assoc! dissoc dissoc! update merge
-                                    #?(:cljs boolean?)])
+                                    boolean?])
           (:require [#?(:clj  clojure.core
                         :cljs cljs.core   )           :as c        ]
                     [#?(:clj  clojure.core.async

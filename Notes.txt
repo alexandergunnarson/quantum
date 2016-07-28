@@ -168,4 +168,122 @@ DONE ^long   (Math/subtractExact  ^long x)
 ^StringBuffer (.toString ^StringBuffer x)
 ^String       (Integer/toString ^int x)
 ^String       (String.)
-                                                                                                                       
+              
+
+
+(defonce aaa (atom 0))
+#_(do (->> D-0
+     (filter+ :document:class)
+     (join [])
+     (partition-all (/ 10000 16))
+     (coll/each (fn [chunk]
+                  (quantum.core.thread/async {} ; Now |THIS| works
+                    (->> chunk
+                         (map+ #(label D-0 %))
+                         (coll/notify-progress+ ::accuracy
+                           (fn [i x] (str "Document #" (inc @aaa) " processed.") (swap! aaa inc)))
+                         (join [])))))
+     ) true)                                                                                                         
+
+                                                                                                                       #_(:clj
+(defn pjoin* [to fldr]
+  (let [coll-0 (:coll fldr)
+        red-fn (if (quantum.core.type/editable? to)
+                   quantum.core.reducers.reduce/conj!-red
+                   quantum.core.reducers.reduce/conj-red)
+        chunk-size (quantum.core.reducers.fold/->chunk-size coll-0)]
+    (let [combiner (fn/aritoid nil                                          quantum.core.type/persistent!* #(join %1 %2))
+          reducer  (fn/aritoid #(quantum.core.type/transient!* (quantum.core.type/->base to)) quantum.core.type/persistent!* red-fn red-fn)
+          reducer' ((:transform fldr) reducer)
+          threads  (for [chunk (->> coll-0 (partition-all chunk-size))]
+                     (async {} (->> chunk (reduce reducer' (reducer)) reducer)))]
+      (->> (rest threads)
+           (map+ <!!)
+           (reduce combiner (-> threads first <!!))
+           combiner)))))
+
+
+(quantum.core.macros/defnt log+
+  "To add small doubles together in the log space"
+  [^double a ^double b]
+  (if (< b a)
+      (num/+* a (Math/log (num/+* 1 (Math/exp (num/-* b a)))))
+      (num/+* b (Math/log (num/+* 1 (Math/exp (num/-* a b)))))))
+
+
+
+#_(let [M 6200
+      {:keys [training test]} (get splitted 0)
+       D training
+       V' (feature-selection D M)
+       D' [(-> test seq (nth 5))]
+       t :multinomial
+       c :talk.politics.mideast
+       d' (first D')
+       V V']
+  #_(profile* (P:w|c t D w c V'))
+  (profile*
+    (∏ V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
+                                                  (Nt:w+d w d'))))))))
+
+
+
+#_(defonce splitted ; 5 experiments
+  (for [i (range 0 5)]
+    (D-split D-0)))
+
+#_(def training0 (->> (get splitted 0) :training))
+#_(def test0     (->> (get splitted 0) :test))
+
+#_(defn run-test [D]
+  (async {:name :test}
+    (fori [M [6200 12400 18600 24800 (count (V D))] i]
+      (println "=====" "Round" (inc i) "with M =" (if (= i 4) "<all>" M) "=====" )
+      (let [{:keys [training test]} (get splitted i)
+            V'       (time (feature-selection training M))
+            D'       (->> test (take 100) (filter+ (fn-and :document:class :document:words)) (join []))
+            accuracy (time (accuracy-measure training ( test) V'))]
+        (println "Accuracy:" (->> accuracy :accuracy (* 100)) "%")
+      ))
+    (println "Test complete.")))
+
+
+
+#_(defonce D**  (atom nil))
+#_(defonce d'** (atom nil))
+#_(defonce V**  (atom nil))
+#_(defonce M**  (atom nil))
+#_(defonce c**  (atom nil))
+#_(defonce t**  (atom nil))
+#_(defn test* [M]; #{6200 12400 18600 24800}
+  (binding [*exact?* false] ; Same results
+    (let [_  (reset! M** M)
+          D  training0
+          D' (take 100 test0)
+          _  (reset! D** D)
+          V (feature-selection training0 M)
+          _ (reset! V** V)]
+      #_(cache/clear! #'P:d'|c)
+      #_(cache/clear! #'P:c|d')
+      #_(cache/clear! #'max-classifier-score)
+      (let [results+ (->> D'
+                         (map+ (fn [d']
+                                 #_(reset! d'** d')
+                                 [(:document:class d')
+                                  (label D d' V)
+                                  (classifier-scores :multinomial D d' V)])))
+            accuracy (->> results+
+                          (map+ (fn [[c [c' _] _]]
+                                  (= c c')))
+                          (pjoin [])
+                          frequencies)]
+        accuracy))))
+
+#_(async {} (time (quantum.core.print/! (test* 6200))))
+
+#_(defn clear-caches! []
+  (doseq [v #{#'V #'Nt:c #'N- #'C #'Nd:c #'Nt:w+d #'Nd:w #'Nd:c+w
+              #'N:w+c #'P:c #'P:w #'P:c|w #'P:w|c #'delta #'P:d'|c
+              #'P:c|d' #'max-classifier-score #'information-gain
+              #'all-information-gains #'accuracy-measure}]
+    (cache/clear! v)))

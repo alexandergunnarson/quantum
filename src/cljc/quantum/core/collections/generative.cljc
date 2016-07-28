@@ -15,7 +15,8 @@
     :attribution "Alex Gunnarson"}
   quantum.core.collections.generative
            (:refer-clojure :exclude
-             [for doseq reduce
+             [boolean?
+              for doseq reduce
               contains?
               repeat repeatedly
               interpose
@@ -34,8 +35,7 @@
               zipmap
               reverse
               conj
-              conj! assoc! dissoc! disj!
-              #?(:cljs boolean?)])
+              conj! assoc! dissoc! disj!])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [quantum.core.data.map                   :as map

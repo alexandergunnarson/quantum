@@ -36,7 +36,7 @@
               reverse
               conj
               conj! assoc! dissoc! disj!
-              #?(:cljs boolean?)])
+              boolean?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [fast-zip.core                           :as zip    ]
@@ -608,7 +608,7 @@
     coll))
 
 (defn matching-seqs
-  {:tests `{[[1 2 3 4 4 2 1 2 2 6 8 2 4]]
+  {:tests `{[even? [1 2 3 4 4 2 1 2 2 6 8 2 4]]
             {1 [2], 3 [4 4 2], 7 [2 2 6 8 2 4]}}
    :todo ["Abstract; maybe use the regex for seqs"]}
   [pred coll]

@@ -1,55 +1,115 @@
 (ns quantum.test.ir.classify
-           (:refer-clojure :exclude [reduce for])
-           (:require
-             [clojure.core :as core]
-             [quantum.core.collections :as coll
-               :refer [#?@(:clj [for lfor reduce join kmap])
-                       map+ vals+ filter+ filter-vals+ flatten-1+ range+ ffilter
-                       reduce-count]
-               #?@(:cljs [:refer-macros [for lfor reduce join kmap]])]
-             [quantum.core.numeric :as num]
-             [quantum.numeric.core
-               :refer [find-max-by]]
-             [quantum.numeric.vectors :as v]
-             [quantum.core.fn :as fn
-               :refer [<- fn-> fn->>]]
-             [quantum.core.cache
-               :refer [#?(:clj defmemoized)]
-               #?@(:cljs [:refer-macros  [defmemoized]])]
-             [quantum.core.error
-               :refer [->ex]]
-             [quantum.core.logic
-               :refer [coll-or #?@(:clj [condpc])]
-               #?@(:clj [:refer-macros [condpc]])]
-             [quantum.numeric.core
-               :refer [∏ ∑ sum]]
-             [quantum.ir.classify :as this]
-             [quantum.core.log :as log])
-  #?(:cljs (:require-macros
-             [quantum.core.log :as log])))
+  (:require [quantum.ir.classify :refer :all]))
 
-(log/enable! :test)
-(log/pr :test "===== TESTING ======")
+(defn test:C ([D]))
 
-(let [training-docs
-       {1 {:class :not-japan
-           :words ["Taipei" "Taiwan"]}
-        2 {:class :not-japan
-           :words ["Macao" "Taiwan" "Shanghai"]}
-        3 {:class :japan
-           :words ["Japan" "Sapporo"]}
-        4 {:class :japan
-           :words ["Sapporo" "Osako" "Taiwan"]}}
-      D training-docs
-      test-doc ["Taiwan" "Taiwan" "Sapporo"]
-      d' test-doc]
-  (log/ppr :test "MULTINOMIAL IS"
-    [(->> (this/classifier-score+ D :multinomial d')
-          (join []) (sort-by second))
-     (this/multinomial-naive-bayes-classifier D d')])
-  (log/ppr :test "MULTIPLE BERNOULLI IS"
-     [(->> (this/classifier-score+ D :bernoulli d')
-           (join []) (sort-by second))
-     (this/multiple-bernoulli-naive-bayes-classifier D d')]))
+(defn test:V ([D]))
 
-(log/pr :test "===== END TESTING ======")
+; =================================================
+; ----------------------- N -----------------------
+; =================================================
+
+#?(:clj
+(defmacro test:N*
+  ([D])
+  ([D arg & args])))
+
+#?(:clj
+(defmacro test:N [D & args]))
+
+(defn test:N- [D])
+
+(defn test:Nd:c
+  ([D])
+  ([D c]))
+
+(defn test:Nt:c
+  ([D])
+  ([D c]))
+
+(defn test:Nt:w+d
+  ([d])
+  ([w d]))
+
+(defn test:Nd:w
+  ([D] )
+  ([D w])
+  ([D ŵ _] ))
+
+(defn test:Nd:c+w
+  ([D])
+  ([D c w])
+  ([D c ŵ _] ))
+
+(defn test:N:w+c
+  ([D])
+  ([D w c]))
+
+; =================================================
+; ------------------ PROBABILITY ------------------
+; =================================================
+
+(defn test:P:c
+  ([t D c V]))
+
+(defn test:P:w
+  ([t D w]  )
+  ([t D ŵ _]))
+
+(defn test:P:c|w 
+  ([t D c w]  )
+  ([t D c ŵ _]))
+
+(defn test:laplacian-smoothed-estimate
+  [t D w c V])
+
+(defn test:P:w|c
+  ([t D w c V]))
+
+(defn test:delta
+  [w d])
+
+(defn test:expi [x i])
+
+(defn test:P:d'|c
+  [t D d' c V])
+
+(defn test:P:c|d'
+  ([t D c d' V])
+  ([t D c d' V denom?]))
+
+(defn test:classifier-score+
+  [t D d' V])
+
+(defn test:classifier-scores
+  [t D d' V])
+
+(defn test:max-classifier-score
+  ([t D d'])
+  ([t D d' V]))
+
+(defn test:multinomial-naive-bayes-classifier
+  ([D d'])
+  ([D d' V]))
+
+(defn test:multiple-bernoulli-naive-bayes-classifier
+  ([D d'])
+  ([D d' V]))
+
+; ================================================
+
+
+(defn test:information-gain [t D w C V])
+
+(defn test:all-information-gains [t D V])
+
+(defn test:feature-selection [T M])
+
+; ======== MNB EVALUATION ========
+
+(defn test:label [D d V'])
+
+(defn test:accuracy-measure [D D' V'])
+
+(defn test:D-split [D])
+

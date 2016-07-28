@@ -7,7 +7,7 @@
                      [quantum.core.collections.base :as cbase  
                        :refer [#?(:clj kmap)]                  ]
                      [quantum.core.data.map         :as map    ]
-                     [quantum.core.error.try-catch  :as tc     ]
+                     [slingshot.slingshot           :as try    ]
                      [quantum.core.macros.core      :as cmacros
                        :refer [#?(:clj if-cljs)]               ]
                      [quantum.core.log              :as log    ]
@@ -197,8 +197,8 @@
                    (recur (inc n#) error#)
                    result#))))))))
 
-#?(:clj (defalias try+   tc/try+  ))
-#?(:clj (defalias throw+ tc/throw+))
+#?(:clj (defalias try+   try/try+  ))
+#?(:clj (defalias throw+ try/throw+))
 
 #?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
 
