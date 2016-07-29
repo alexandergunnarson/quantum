@@ -1,5 +1,5 @@
 (ns quantum.test.apis.facebook.driver
-  (:require [quantum.apis.facebook.driver :refer :all]))
+  (:require [quantum.apis.facebook.driver :as ns]))
 
 #_(defn test:login! [driver username password]
   (.get driver login-url)

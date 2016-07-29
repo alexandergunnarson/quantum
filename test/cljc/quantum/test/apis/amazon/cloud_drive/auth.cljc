@@ -1,5 +1,5 @@
 (ns quantum.test.apis.amazon.cloud-drive.auth
-  (:require [quantum.apis.amazon.cloud-drive.auth :refer :all]))
+  (:require [quantum.apis.amazon.cloud-drive.auth :as ns]))
 
 (defn test:retrieve-authorization-code [user])
 

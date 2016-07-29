@@ -1,5 +1,5 @@
 (ns quantum.test.net.core
-  (:require [quantum.net.core :refer :all]))
+  (:require [quantum.net.core :as ns]))
 
 ; UTILS
 

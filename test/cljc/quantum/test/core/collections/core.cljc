@@ -1,5 +1,5 @@
  (ns quantum.test.core.collections.core
-   (:require [quantum.core.collections.core :refer :all]))
+   (:require [quantum.core.collections.core :as ns]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        EQUIVALENCE       }=====================================================

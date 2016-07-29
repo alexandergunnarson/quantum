@@ -1,5 +1,5 @@
 (ns quantum.test.core.string
-  (:require [quantum.core.string :refer :all]))
+  (:require [quantum.core.string :as ns]))
 
 ; ===== WHOLE PREDICATES =====
 

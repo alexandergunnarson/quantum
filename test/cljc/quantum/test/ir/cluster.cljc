@@ -1,5 +1,5 @@
 (ns quantum.test.ir.cluster
-  (:require [quantum.ir.cluster :refer :all]))
+  (:require [quantum.ir.cluster :as ns]))
 
 (defn test:cost [type ci cj])
 

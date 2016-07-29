@@ -1,5 +1,5 @@
 (ns quantum.test.net.websocket
-  (:require [quantum.net.websocket :refer :all]))
+  (:require [quantum.net.websocket :as ns]))
 
 (defn test:put!
   [#?(:clj uid) [msg-id msg] callback & [timeout]])

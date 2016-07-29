@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.selective
-  (:require [quantum.core.collections.selective :refer :all]))
+  (:require [quantum.core.collections.selective :as ns]))
 
 (defn test:in?
   [elem coll])

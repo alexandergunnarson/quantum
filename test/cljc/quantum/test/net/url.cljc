@@ -1,5 +1,5 @@
 (ns quantum.test.net.url
-  (:require [quantum.net.url :refer :all]))
+  (:require [quantum.net.url :as ns]))
 
 (defn test:decode
   [code-map-key s])

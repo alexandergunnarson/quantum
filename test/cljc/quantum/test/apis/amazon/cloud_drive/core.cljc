@@ -1,5 +1,5 @@
 (ns quantum.test.apis.amazon.cloud-drive.core
-  (:require [quantum.apis.amazon.cloud-drive.core :refer :all]))
+  (:require [quantum.apis.amazon.cloud-drive.core :as ns]))
 
 (defn ^:cljs-async test:request!
   ([k url-type] )

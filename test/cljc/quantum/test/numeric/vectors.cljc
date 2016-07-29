@@ -1,5 +1,5 @@
 (ns quantum.test.numeric.vectors
-  (:require [quantum.numeric.vectors :refer :all]))
+  (:require [quantum.numeric.vectors :as ns]))
 
 (defn test:vlength [v])
 

@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.sociative
-  (:require [quantum.core.collections.sociative :refer :all]))
+  (:require [quantum.core.collections.sociative :as ns]))
 
 ;_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._
 ;=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*{        ASSOCIATIVE       }=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=

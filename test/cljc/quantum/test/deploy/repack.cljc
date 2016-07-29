@@ -1,5 +1,5 @@
 (ns quantum.test.deploy.repack
-  (:require [quantum.deploy.repack :refer :all]))
+  (:require [quantum.deploy.repack :as ns]))
 
 #?(:clj
 (defn test:repack!

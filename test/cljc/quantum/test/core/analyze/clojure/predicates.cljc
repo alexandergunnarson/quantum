@@ -1,5 +1,5 @@
 (ns quantum.test.core.analyze.clojure.predicates
-  (:require [quantum.core.analyze.clojure.predicates :refer :all]))
+  (:require [quantum.core.analyze.clojure.predicates :as ns]))
 
 (defn test:safe-mapcat
   [f & colls])

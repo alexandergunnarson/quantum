@@ -1,5 +1,5 @@
 (ns quantum.test.apis.google.places.core
-  (:require [quantum.apis.google.places.core :refer :all]))
+  (:require [quantum.apis.google.places.core :as ns]))
 
 #_(defn test:search
   [coord api-key & [{:keys [radius search-type place-types parse?]

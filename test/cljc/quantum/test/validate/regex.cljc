@@ -1,5 +1,5 @@
 (ns quantum.test.validate.regex
-  (:require [quantum.validate.regex :refer :all]))
+  (:require [quantum.validate.regex :as ns]))
 
 #?(:clj
 (defn test:validate

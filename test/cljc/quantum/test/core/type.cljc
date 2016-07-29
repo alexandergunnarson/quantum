@@ -1,5 +1,5 @@
 (ns quantum.test.core.type
-  (:require [quantum.core.type :refer :all]))
+  (:require [quantum.core.type :as ns]))
 
 (defn test:instance+? [x])
 

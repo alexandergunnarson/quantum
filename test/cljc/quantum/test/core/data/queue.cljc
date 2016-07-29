@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.queue
-  (:require [quantum.core.data.queue :refer :all]))
+  (:require [quantum.core.data.queue :as ns]))
 
 (defn test:queue
   ([])

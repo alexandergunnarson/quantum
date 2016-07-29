@@ -1,5 +1,5 @@
 (ns quantum.test.ui.features
-  (:require [quantum.ui.features :refer :all]))
+  (:require [quantum.ui.features :as ns]))
 
 #?(:cljs
 (defn test:flex-test [elem flex-name]))

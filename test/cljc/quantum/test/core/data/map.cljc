@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.map
-  (:require [quantum.core.data.map :refer :all]))
+  (:require [quantum.core.data.map :as ns]))
 
 (defn test:map-entry [k v])
 

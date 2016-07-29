@@ -1,5 +1,5 @@
 (ns quantum.test.db.datomic.entities
-  (:require [quantum.db.datomic.entities :refer :all]))
+  (:require [quantum.db.datomic.entities :as ns]))
 
 (defn test:attribute? [x])
 

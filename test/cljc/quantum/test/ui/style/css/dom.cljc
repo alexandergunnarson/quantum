@@ -1,5 +1,5 @@
 (ns quantum.test.ui.style.css.dom
-  (:require [quantum.ui.style.css.dom :refer :all]))
+  (:require [quantum.ui.style.css.dom :as ns]))
 
 #?(:cljs
 (defn test:add-link! [link]))

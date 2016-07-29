@@ -1,5 +1,5 @@
 (ns quantum.test.net.server.router
-  (:require [quantum.net.server.router :refer :all]))
+  (:require [quantum.net.server.router :as ns]))
 
 ; ===== ROUTES =====
 

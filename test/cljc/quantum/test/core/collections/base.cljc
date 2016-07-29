@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.base
-  (:require [quantum.core.collections.base :refer :all]))
+  (:require [quantum.core.collections.base :as ns]))
 
 (defn test:name [x])
 

@@ -1,5 +1,5 @@
 (ns quantum.test.core.classes
-  (:require [quantum.core.classes :refer :all]))
+  (:require [quantum.core.classes :as ns]))
 
 #?(:clj
 (defn test:ancestor-list

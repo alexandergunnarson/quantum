@@ -1,5 +1,5 @@
 (ns quantum.test.core.convert.primitive
-  (:require [quantum.core.convert.primitive :refer :all]))
+  (:require [quantum.core.convert.primitive :as ns]))
 
 ;_____________________________________________________________________
 ;==================={           LONG           }======================

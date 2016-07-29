@@ -1,5 +1,5 @@
 (ns quantum.test.validate.core
-  (:require [quantum.validate.core :refer :all]))
+  (:require [quantum.validate.core :as ns]))
 
 #?(:clj
 (defn test:email:user?

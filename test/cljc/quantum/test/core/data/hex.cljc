@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.hex
-  (:require [quantum.core.data.hex :refer :all]))
+  (:require [quantum.core.data.hex :as ns]))
 
 (defn test:->hex-string 
   ([x])

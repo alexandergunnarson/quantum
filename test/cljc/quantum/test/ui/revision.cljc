@@ -1,5 +1,5 @@
 (ns quantum.test.ui.revision
-  (:require [quantum.ui.revision :refer :all]))
+  (:require [quantum.ui.revision :as ns]))
 
 (defn test:commit! [states x])
 

@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.set
-  (:require [quantum.core.data.set :refer :all]))
+  (:require [quantum.core.data.set :as ns]))
 
 #?(:clj (defn test:hash-set? [x]))
 

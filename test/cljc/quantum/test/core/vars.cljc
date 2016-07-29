@@ -1,16 +1,17 @@
 (ns quantum.test.core.vars
-  (:require [quantum.core.vars :refer :all]))
+  (:require [quantum.core.vars :as ns]))
 
 ; ============ DECLARATION ============
 
-#?(:clj
-(defmacro test:defalias
+(defn test:defalias
   ([name orig])
-  ([name orig doc])))
+  ([name orig doc]))
 
-#?(:clj 
+(defn test:defaliases
+  [ns- & names])
+
 (defn test:var-name
-  [v]))
+  [v])
 
 #?(:clj
 (defn test:alias-var

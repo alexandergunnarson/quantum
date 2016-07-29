@@ -1,5 +1,5 @@
 (ns quantum.test.browser.core
-  (:require [quantum.browser.core :refer [all]]))
+  (:require [quantum.browser.core :as ns]))
 
 #?(:clj
 (defn test:default-driver []))

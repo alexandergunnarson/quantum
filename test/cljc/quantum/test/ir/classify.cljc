@@ -1,5 +1,5 @@
 (ns quantum.test.ir.classify
-  (:require [quantum.ir.classify :refer :all]))
+  (:require [quantum.ir.classify :as ns]))
 
 (defn test:C ([D]))
 

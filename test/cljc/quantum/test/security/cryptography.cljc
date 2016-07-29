@@ -1,5 +1,5 @@
 (ns quantum.test.security.cryptography
-  (:require [quantum.security.cryptography :refer :all]))
+  (:require [quantum.security.cryptography :as ns]))
 
 ; __________________________________________
 ; =============== TRANSPORTS ===============

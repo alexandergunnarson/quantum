@@ -1,5 +1,5 @@
 (ns quantum.test.deploy.amazon
-  (:require [quantum.deploy.amazon :refer :all]))
+  (:require [quantum.deploy.amazon :as ns]))
 
 #_(defn test:default-account [])
 #_(defn test:default-instance-name  [                 ])

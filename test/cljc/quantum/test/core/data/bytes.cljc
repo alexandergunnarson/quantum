@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.bytes
-  (:require [quantum.core.data.bytes :refer :all]))
+  (:require [quantum.core.data.bytes :as ns]))
 
 #?(:clj
 (defn test:unchecked-byte-array 

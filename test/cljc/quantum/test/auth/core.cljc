@@ -1,5 +1,5 @@
 (ns quantum.test.auth.core
-  (:require [quantum.auth.core :refer :all]))
+  (:require [quantum.auth.core :as ns]))
 
 (defn test:get
   ([auth-source])

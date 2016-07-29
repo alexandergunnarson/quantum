@@ -1,0 +1,17 @@
+(ns quantum.test.core.numeric.misc
+  (:require [quantum.core.numeric.misc :as ns]))
+
+(defn test:rem [a b])
+(defn test:mod [a b])
+(defn test:ieee-rem [a b])
+(defn test:quot [a b])
+(defn test:hypot [a])
+(defn test:hypot* [a])
+(defn test:sign [a])
+(defn test:sign' [a])
+(defn test:with-sign [a b])
+(defn test:scalb [a b])
+(defn test:ulp [a])
+(defn test:leading-zeros [a])
+(defn test:native-integer? [a])
+(defn test:gcd ([a b]) ([a b & args]))
