@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.array
-  (:require [quantum.core.data.array :refer :all]))
+  (:require [quantum.core.data.array :as ns]))
 
 ; ----- BOOLEAN ARRAY ----- ;
 

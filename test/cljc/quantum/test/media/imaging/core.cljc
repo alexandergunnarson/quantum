@@ -1,2 +1,2 @@
 (ns quantum.test.media.imaging.core
-  (:require [quantum.media.imaging.core :refer :all]))
+  (:require [quantum.media.imaging.core :as ns]))

@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.generative
-  (:require [quantum.core.collections.generative :refer :all]))
+  (:require [quantum.core.collections.generative :as ns]))
 
 ; ===== REPEAT =====
 

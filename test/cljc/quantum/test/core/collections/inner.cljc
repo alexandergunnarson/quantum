@@ -1,7 +1,5 @@
-; Or, "nested"
-(ns quantum.core.collections.inner
-  (:require [quantum.core.data.map :as map]
-            [quantum.core.data.set :as set]))
+(ns quantum.test.core.collections.inner
+  (:require [quantum.core.collections.inner :as ns]))
 
 (defn test:nest-keys
   ([m nskv])

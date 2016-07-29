@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.complex.csv
-  (:require [quantum.core.data.complex.csv :refer :all]))
+  (:require [quantum.core.data.complex.csv :as ns]))
 
 (defn test:parse
   ([text])

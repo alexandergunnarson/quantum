@@ -1,5 +1,5 @@
 (ns quantum.test.core.cache
-  (:require [quantum.core.cache :refer :all]))
+  (:require [quantum.core.cache :as ns]))
 
 #?(:clj
 (defn test:memoize*

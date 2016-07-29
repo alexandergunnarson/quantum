@@ -1,5 +1,5 @@
 (ns quantum.test.apis.google.wallet.core
-  (:require [quantum.apis.google.wallet.core :refer :all]))
+  (:require [quantum.apis.google.wallet.core :as ns]))
 
 #_(defn test:no-handler [err])
 

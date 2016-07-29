@@ -1,13 +1,12 @@
 (ns quantum.test.compile.transpile.util
-  (:require [quantum.compile.transpile.util :refer :all]))
+  (:require [quantum.compile.transpile.util :as ns]))
 
-(defn ^String test:semicoloned
-  [& args])
+(defn test:semicoloned [& args])
 
 (defn test:scolon [s])
 
 (defn test:indent [s])
 
 (defn test:bracket
-  ([^String body])
-  ([^String header ^String body]))
+  ([body])
+  ([header body]))

@@ -1,2 +1,2 @@
 (ns quantum.test.db.subs
-  (:require [quantum.db.subs :refer :all]))
+  (:require [quantum.db.subs :as ns]))

@@ -1,5 +1,5 @@
 (ns quantum.test.net.server.middleware
-  (:require [quantum.net.server.middleware :refer :all]))
+  (:require [quantum.net.server.middleware :as ns]))
 
 #_(defn test:wrap-keywordify [f])
 

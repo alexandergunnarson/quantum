@@ -1,5 +1,5 @@
 (ns quantum.test.validate.domain
-  (:require [quantum.validate.domain :refer :all]))
+  (:require [quantum.validate.domain :as ns]))
 
 (defn test:remove-leading-dot [s])
 

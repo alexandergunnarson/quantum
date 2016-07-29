@@ -1,5 +1,5 @@
 (ns quantum.test.auth.oauth
-  (:require [quantum.auth.oauth :refer :all]))
+  (:require [quantum.auth.oauth :as ns]))
 
 #_(defn test:client-config
   [^String domain & [service & service-ks]])

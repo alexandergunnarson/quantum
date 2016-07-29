@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.binary
-  (:require [quantum.core.data.binary :refer :all]))
+  (:require [quantum.core.data.binary :as ns]))
 
 (defn test:nil? [x])
 (defn test:not [x])

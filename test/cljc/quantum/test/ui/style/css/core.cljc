@@ -1,5 +1,5 @@
 (ns quantum.test.ui.style.css.core
-  (:require [quantum.ui.style.css.core :refer :all]))
+  (:require [quantum.ui.style.css.core :as ns]))
 
 ; ======== HELPER FUNCTIONS ========
 

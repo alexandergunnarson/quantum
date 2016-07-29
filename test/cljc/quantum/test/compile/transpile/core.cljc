@@ -1,5 +1,5 @@
 (ns quantum.test.compile.transpile.core
-  (:require [quantum.compile.transpile.core :refer :all]))
+  (:require [quantum.compile.transpile.core :as ns]))
 
 #?(:clj
 (defn test:transpile

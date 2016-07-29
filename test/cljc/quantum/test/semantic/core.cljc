@@ -1,5 +1,5 @@
 (ns quantum.test.semantic.core
-  (:require [quantum.semantic.core :refer :all]))
+  (:require [quantum.semantic.core :as ns]))
 
 (defn test:->soundex
   [w])

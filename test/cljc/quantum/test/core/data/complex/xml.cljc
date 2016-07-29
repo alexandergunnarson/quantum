@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.complex.xml
-  (:require [quantum.core.data.complex.xml :refer :all]))
+  (:require [quantum.core.data.complex.xml :as ns]))
 
 (defn test:parse
   ([s])

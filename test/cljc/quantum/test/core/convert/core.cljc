@@ -1,5 +1,5 @@
 (ns quantum.test.core.convert.core
-  (:require [quantum.core.convert.core :refer :all]))
+  (:require [quantum.core.convert.core :as ns]))
 
 (defn test:->name [x])
 

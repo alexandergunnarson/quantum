@@ -1,12 +1,5 @@
 (ns quantum.test.compile.transpile.javaesque
-  (:require [quantum.compile.transpile.javaesque :refer :all])
-  (:require
-    [quantum.compile.transpile.to.java    :as javac]
-    [quantum.compile.transpile.to.c-sharp :as csc  ]
-    [quantum.compile.transpile.util       :as util ]
-    [quantum.compile.transpile.core       :as comp ]
-    [quantum.core.string                  :as str  ]
-    [quantum.core.io.core                 :as io   ]))
+  (:require [quantum.compile.transpile.javaesque :as ns]))
 
 (defn ^String test:class-str [access ^String class-name & [^String contents]])
 

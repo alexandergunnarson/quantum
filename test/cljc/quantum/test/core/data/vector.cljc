@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.vector
-  (:require [quantum.core.data.vector :refer :all]))
+  (:require [quantum.core.data.vector :as ns]))
 
 (defn test:catvec
   ([])

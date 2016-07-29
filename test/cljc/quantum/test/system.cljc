@@ -1,5 +1,5 @@
 (ns quantum.test.system
-  (:require [quantum.system :refer :all]))
+  (:require [quantum.system :as ns]))
 
 (defn test:default-config
   [& [{:as config

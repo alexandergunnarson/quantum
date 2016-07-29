@@ -1,5 +1,5 @@
 (ns quantum.test.core.data.complex.json
-  (:require [quantum.core.data.complex.json :refer :all]))
+  (:require [quantum.core.data.complex.json :as ns]))
 
 (defn test:json->
   ([x])

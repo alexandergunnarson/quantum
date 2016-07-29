@@ -1,5 +1,5 @@
 (ns quantum.test.apis.google.auth
-  (:require [quantum.apis.google.auth :refer :all]))
+  (:require [quantum.apis.google.auth :as ns]))
  
 (defn test:assert-email [auth-keys email]
   (or (in? email auth-keys)

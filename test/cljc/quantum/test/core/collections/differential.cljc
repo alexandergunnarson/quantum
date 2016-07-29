@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.differential
-  (:require [quantum.core.collections.differential :refer :all]))
+  (:require [quantum.core.collections.differential :as ns]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================

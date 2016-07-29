@@ -1,5 +1,5 @@
 (ns quantum.test.format.clojure.core
-  (:require [quantum.format.clojure.core :refer :all]))
+  (:require [quantum.format.clojure.core :as ns]))
  
 #_(defn test:format
   ([x])

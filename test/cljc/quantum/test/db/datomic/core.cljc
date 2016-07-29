@@ -1,5 +1,5 @@
 (ns quantum.test.db.datomic.core
-  (:require [quantum.db.datomic.core :refer :all]))
+  (:require [quantum.db.datomic.core :as ns]))
 
 (defn test:unhandled-type [type obj])
 

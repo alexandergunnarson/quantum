@@ -1,5 +1,5 @@
 (ns quantum.test.core.system
-  (:require [quantum.core.system :refer :all]))
+  (:require [quantum.core.system :as ns]))
 
 #?(:clj (defn test:this-pid []))
 

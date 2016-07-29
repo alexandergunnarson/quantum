@@ -1,5 +1,5 @@
 (ns quantum.core.thread
-  (:require [quantum.core.thread :refer :all]))
+  (:require [quantum.core.thread :as ns]))
  
 #?(:clj
 (defn test:add-child-proc! [parent id]))

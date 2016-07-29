@@ -1,5 +1,5 @@
 (ns quantum.test.core.collections.map-filter
-  (:require [quantum.core.collections.map-filter :refer :all]))
+  (:require [quantum.core.collections.map-filter :as ns]))
 
 (defn test:each [f coll])
 

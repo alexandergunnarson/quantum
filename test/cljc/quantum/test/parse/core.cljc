@@ -1,5 +1,5 @@
 (ns quantum.test.parse.core
-  (:require [quantum.parse.core :refer :all]
+  (:require [quantum.parse.core :as ns]
             [quantum.core.fn
               :refer [firsta]]))
 

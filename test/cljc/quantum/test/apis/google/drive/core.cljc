@@ -1,5 +1,5 @@
 (ns quantum.test.apis.google.drive.core
-  (:require [quantum.apis.google.drive.core :refer :all]))
+  (:require [quantum.apis.google.drive.core :as ns]))
  
 ;___________________________________________________________________________________________________________________________________
 ;================================================={       AUX REQUEST-MAKING      }=================================================

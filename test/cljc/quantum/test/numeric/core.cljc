@@ -1,5 +1,5 @@
 (ns quantum.test.numeric.core
-  (:require [quantum.numeric.core :refer :all]))
+  (:require [quantum.numeric.core :as ns]))
 
 #_(defn test:quartic-root [a b c d])
 

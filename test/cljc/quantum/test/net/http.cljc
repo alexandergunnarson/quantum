@@ -1,5 +1,5 @@
 (ns quantum.test.net.http
-  (:require [quantum.net.http :refer :all]))
+  (:require [quantum.net.http :as ns]))
 
 (defn test:->Server [m])
 

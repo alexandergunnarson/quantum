@@ -1,5 +1,5 @@
 (ns quantum.test.apis.google.contacts
-  (:require [quantum.apis.google.contacts :refer :all]))
+  (:require [quantum.apis.google.contacts :as ns]))
 
 #_(defn test:parse-contacts
   [^String xml-response])

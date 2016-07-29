@@ -1,5 +1,5 @@
 (ns quantum.test.db.datomic
-  (:require [quantum.db.datomic :refer :all]
+  (:require [quantum.db.datomic :as ns]
             [quantum.core.io :as io]))
 ; CORE FUNCTIONS
 

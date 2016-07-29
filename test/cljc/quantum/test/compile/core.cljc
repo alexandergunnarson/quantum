@@ -1,7 +1,6 @@
 (ns quantum.test.compile.core
-  (:require [quantum.compile.core :refer :all]))
+  (:require [quantum.compile.core :as ns]))
 
-; TODO handle options-passing
 #?(:clj
 (defn test:->bytecode [x]))
 
