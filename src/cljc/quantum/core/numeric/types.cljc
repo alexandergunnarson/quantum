@@ -1,14 +1,15 @@
 (ns quantum.core.numeric.types
   (:refer-clojure :exclude
-    [#?@(:cljs [-compare])])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )            :as core  ]
-            #?(:cljs [com.gfredericks.goog.math.Integer :as int   ])                    
-                     [quantum.core.macros               :as macros
-                       :refer [#?@(:clj [defnt])]                 ])
-  #?(:cljs (:require-macros
-                     [quantum.core.macros               :as macros
-                       :refer [defnt]                             ])))
+    [denominator numerator #?@(:cljs [-compare])])
+   (:require [#?(:clj  clojure.core
+                 :cljs cljs.core   )            :as core  ]
+    #?(:cljs [com.gfredericks.goog.math.Integer :as int   ])                    
+             [quantum.core.macros
+               :refer        [#?@(:clj [defnt])]
+               :refer-macros [defnt]]
+             [quantum.core.vars
+               :refer        [#?@(:clj [defalias])]
+               :refer-macros [defalias]]))
 
 (declare gcd)
 (declare normalize)
@@ -138,3 +139,11 @@
       (if (.isNegative y')
           (Ratio. (.negate x') (.negate y'))
           (Ratio. x' y'))))))
+
+#?(:clj  (defalias numerator core/numerator)
+   :cljs (defnt numerator
+           ([^quantum.core.numeric.types.Ratio x] (.-n x))))
+
+#?(:clj  (defalias denominator core/denominator)
+   :cljs (defnt denominator
+           ([^quantum.core.numeric.types.Ratio x] (.-d x))))

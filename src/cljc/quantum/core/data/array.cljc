@@ -21,6 +21,7 @@
                        :refer [#?@(:clj [doseqi doseq])]     ]
                      [quantum.core.macros          :as macros
                        :refer [#?@(:clj [defnt defnt'])]     ]
+                     [quantum.core.compare :as comp]
                      [quantum.core.numeric :as num]
                      [quantum.core.vars            :as var
                        :refer [#?(:clj defalias)]            ])
@@ -214,7 +215,7 @@
                (js/Int8Array. buff))))
   (^{:cost 1} [^java.nio.ByteBuffer buf]
     (if (.hasArray buf)
-        (if (num/== (alength (.array buf)) (.remaining buf))
+        (if (comp/= (alength (.array buf)) (.remaining buf))
             (.array buf)
             (let [arr (byte-array (.remaining buf))]
               (doto buf
@@ -226,7 +227,7 @@
           (doto buf .mark (.get arr) .reset)
           arr)))
   (^{:cost 1.5} [^java.io.InputStream in options]
-    (let [out (ByteArrayOutputStream. (num/max 64 (.available in)))
+    (let [out (ByteArrayOutputStream. (comp/max 64 (.available in)))
           buf (byte-array 16384)]
       (loop []
         (let [len (.read in buf 0 16384)]
