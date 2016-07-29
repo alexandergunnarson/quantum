@@ -33,7 +33,8 @@
 
 #?(:clj
 (defmacro maptemplate
-  [template-fn coll] ; TODO warn about runtime eval
+  [template-fn coll]
+  (quantum.core.print/js-println "WARNING: Runtime eval in |maptemplate|")
   `(do ~@(map `~#((eval template-fn) %) coll))))
 
 (defn let-alias* [bindings body]
@@ -139,7 +140,7 @@
   `(identity '~(->> &env
                     (clojure.walk/postwalk
                       (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
-                                     (.name x#)
+                                     (.name ^clojure.lang.Compiler$LocalBinding x#)
                                      (nil? x#)
                                      []
                                      :else x#)))))))

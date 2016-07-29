@@ -29,6 +29,13 @@
   ([name orig doc]
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))
 
+#?(:clj
+(defmacro defaliases
+  "|defalias|es multiple vars @names in the given namespace @ns."
+  [ns- & names]
+  `(do ~@(for [name- names]
+           `(defalias ~name- ~(symbol (name ns-) (name name-)))))))
+
 #?(:clj 
 (defn var-name
   "Get the namespace-qualified name of a var."

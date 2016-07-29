@@ -5,7 +5,8 @@
              [datascript.core      :as mdb   ]
              [clojure.string       :as str   ]
              [quantum.core.fn      :as fn
-               :refer [#?@(:clj [<-])]       ]
+               :refer        [#?@(:clj [<-])]       
+               :refer-macros [<-]]
     #?(:cljs [cljs.reader
                :refer [read-string]          ])
     #?(:cljs [goog.crypt.base64    :as base64])
@@ -13,8 +14,7 @@
                :refer [->ex]                 ]
              [quantum.core.numeric :as num   ])
   #?(:cljs (:require-macros
-             [quantum.core.fn      :as fn
-               :refer [<-]                   ]))
+             [quantum.core.numeric :as num   ]))
   #?(:clj  (:import (org.apache.commons.codec.binary Base64)
                     clojure.lang.Var)))
 
@@ -120,15 +120,15 @@
 ; PARSING
 
 (def byte-scale
-  {"B" (num/exp-protocol 1024 0) ; TODO use num/exp
-   "K" (num/exp-protocol 1024 1) ; TODO use num/exp
-   "M" (num/exp-protocol 1024 2) ; TODO use num/exp
-   "G" (num/exp-protocol 1024 3) ; TODO use num/exp
-   "T" (num/exp-protocol 1024 4) ; TODO use num/exp
-   "P" (num/exp-protocol 1024 5) ; TODO use num/exp
-   "E" (num/exp-protocol 1024 6) ; TODO use num/exp
-   "Z" (num/exp-protocol 1024 7) ; TODO use num/exp
-   "Y" (num/exp-protocol 1024 8)}) ; TODO use num/exp
+  {"B" (num/pow 1024 0)
+   "K" (num/pow 1024 1)
+   "M" (num/pow 1024 2)
+   "G" (num/pow 1024 3)
+   "T" (num/pow 1024 4)
+   "P" (num/pow 1024 5)
+   "E" (num/pow 1024 6)
+   "Z" (num/pow 1024 7)
+   "Y" (num/pow 1024 8)})
 
 (defn- apply-unit [number unit]
   (if (string? unit)
