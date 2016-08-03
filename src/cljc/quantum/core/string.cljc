@@ -7,7 +7,8 @@
           keyword), etc."
     :attribution "Alex Gunnarson"}
   quantum.core.string
-  (:refer-clojure :exclude [reverse replace remove val re-find reduce every?])
+           (:refer-clojure :exclude
+             [reverse replace remove val re-find reduce every? boolean?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as core              ]
                      [clojure.string             :as str               ]
@@ -440,8 +441,8 @@
 ;    :out "Abcdef"}
 ;   [s]
 ;   (if (and  (= (first s) (last s))
-;         (any? (partial starts-with? s) quote-types)
-;         (any? (partial ends-with?   s) quote-types))
+;         (some? (partial starts-with? s) quote-types)
+;         (some? (partial ends-with?   s) quote-types))
 ;       (-> s popl popr) ; TODO this will be optimized away 
 ;       s))
 

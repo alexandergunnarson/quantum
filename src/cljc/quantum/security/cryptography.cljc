@@ -309,7 +309,7 @@
   "OWASP: Use when resisting any and all hardware accelerated attacks is necessary but support isn't."
   [^String s & [{:keys [cpu-cost ram-cost parallelism dk-length salt]}]]
   (let [log2-cpu-cost      (or cpu-cost 15)  ; 1 to 31
-        exp-cpu-cost       (num/exp 2 log2-cpu-cost)
+        exp-cpu-cost       (num/pow 2 log2-cpu-cost)
         ram-cost           (or ram-cost 8) ; block size
         parallelism        (or parallelism 1) ; Cores
         salt               (or salt (rand/rand-bytes true 16)) ; bytes
@@ -502,8 +502,7 @@
 
    Source 2: SQL Cipher AES-256 encrypted database uses 64000 iterations,
              so a factor of 16, or ~119 ms."
-  {:todo ["Replace Math/pow with num/exp"]
-   :info {1 "http://stackoverflow.com/questions/992019/java-256-bit-aes-password-based-encryption"
+  {:info {1 "http://stackoverflow.com/questions/992019/java-256-bit-aes-password-based-encryption"
           2 "http://security.stackexchange.com/questions/3959/recommended-of-iterations-when-using-pkbdf2-sha256"
           3 "https://www.zetetic.net/sqlcipher/design/"}
    :performance '{[1091  :ms] (time (dotimes [n 10] (aes :encrypt "myinterestingperson1@ymail.com" "myfunpassword" nil nil {:iterations 16})))
@@ -535,8 +534,7 @@
                                     (#?(:clj  .toCharArray
                                         :cljs identity) password) ; TODO use a conversion here
                                     salt-f
-                                    (#?(:clj  num/exp
-                                        :cljs js/Math.pow) 2 (or (:iterations opts)
+                                    (num/pow 2 (or (:iterations opts) ; TODO num/pow might not work here
                                                    (->> opts :sensitivity
                                                         (get sensitivity-map))
                                                    (:password sensitivity-map))) ; iterationCount
@@ -544,7 +542,7 @@
                                     ; 24 => AES-192, 32 => AES-256
                                     ; TODO make customizable
                                     ; This is key size in bits in CLJ, but in bytes in CLJS
-                                    (-> (num/exp-protocol 2 8)
+                                    (-> (num/pow 2 8)
                                         #?(:cljs (/ 8)))
                                     #?(:cljs (js/forge.md.sha256.create))) ; defaults to SHA1
         #?@(:clj
@@ -561,7 +559,7 @@
               ; to avoid reflection
               ^IvParameterSpec     iv-spec   (-> params (.getParameterSpec IvParameterSpec))])
    #?@(:clj  [^"[B"                iv        (.getIV iv-spec)]
-       :cljs [                     iv        (js/forge.random.getBytesSync (js/Math.pow 2 4))]) ; Should be 16 bytes  
+       :cljs [                     iv        (js/forge.random.getBytesSync (num/pow 2 4))]) ; Should be 16 bytes   ; TODO num/pow might not work
    #?@(:clj  [^"[B"                encrypted (-> cipher (.doFinal (->bytes in-f #_"UTF-8")))]
        :cljs [                     encrypted (-> cipher
                                                  (doto (.start #js {:iv iv})
