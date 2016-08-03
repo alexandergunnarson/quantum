@@ -1,25 +1,23 @@
 (ns quantum.core.macros.protocol
-           (:require [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]                          ]
-                     [quantum.core.analyze.clojure.transform
-                       :refer [unhint]                             ]
-                     [quantum.core.macros.transform :as trans      ]
-                     [quantum.core.fn               :as fn
-                                :refer [#?@(:clj [f*n fn-> fn->>])]]
-                     [quantum.core.log              :as log        ]
-                     [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [whenp]) nempty? nnil?]    ]
-                     [quantum.core.collections.base :as cbase
-                       :refer [update-first update-val ensure-set
-                               zip-reduce default-zipper]          ]
-                     [quantum.core.macros.core      :as cmacros    ]
-                     [quantum.core.type.core        :as tcore      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn               :as fn
-                       :refer [f*n fn-> fn->>]                     ]
-                     [quantum.core.log              :as log        ]
-                     [quantum.core.logic            :as logic
-                       :refer [whenp]                              ])))
+  (:require
+    [quantum.core.analyze.clojure.predicates :as anap
+      :refer [type-hint]                                ]
+    [quantum.core.analyze.clojure.transform
+      :refer [unhint]                                   ]
+    [quantum.core.macros.transform           :as trans  ]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [f*n fn-> fn->>])]
+      :refer-macros [f*n fn-> fn->>]                    ]
+    [quantum.core.log                        :as log       
+      :include-macros true                              ]
+    [quantum.core.logic                      :as logic
+      :refer        [#?@(:clj [whenp]) nempty? nnil?]    
+      :refer-macros [whenp]                             ]
+    [quantum.core.collections.base           :as cbase
+      :refer [update-first update-val ensure-set
+              zip-reduce default-zipper]                ]
+    [quantum.core.macros.core                :as cmacros]
+    [quantum.core.type.core                  :as tcore  ]))
 
 (def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
   protocol-type-hint-map
@@ -31,7 +29,8 @@
            float   double}
     :cljs {boolean boolean}})
 
-(defn ensure-protocol-appropriate-type-hint [arg lang i]
+(defn ensure-protocol-appropriate-type-hint
+  [arg lang i]
   (let [unhinted (unhint    arg)
         hint-0   (type-hint arg)
         ; hint-f   (get-in protocol-type-hint-map [lang hint])
@@ -48,12 +47,14 @@
          (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i)))
        (into [])))
 
-(defn gen-protocol-from-interface
+(defn gen-protocols-from-interface
   {:in '[[[Func [String IPersistentVector] long]]
          [[Func [String ITransientVector ] long]]]}
   [{:keys [gen-interface-code-body-expanded
            genned-protocol-name
-           genned-protocol-method-name]}]
+           genned-protocol-method-name]
+    :as env}]
+  (log/ppr-hints :macro-expand-protocol "ENV" env)
   (let [protocol-def-body
           (->> gen-interface-code-body-expanded
                (map (fn-> first second))
@@ -103,11 +104,11 @@
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
                                                   (ensure-protocol-appropriate-type-hint lang 0))
-                                  arglist-f (->> arglist rest (ensure-protocol-appropriate-arglist lang))
-                                  arglist-f (if return-type
-                                                arglist-f
-                                                (cmacros/hint-meta arglist-f return-type) )
-                                  body-f (trans/hint-body-with-arglist body arglist lang :protocol)
+                                  arglist-f   (->> arglist rest (ensure-protocol-appropriate-arglist lang))
+                                  arglist-f   (if return-type
+                                                  arglist-f
+                                                  (cmacros/hint-meta arglist-f return-type) )
+                                  body-f      (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
                               (if (or (= boxed-first-type 'Object)
                                       (= boxed-first-type 'java.lang.Object))

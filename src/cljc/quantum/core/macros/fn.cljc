@@ -48,8 +48,12 @@
                             :rest-unk rest-unk}})))
       (f opts lang ns- sym doc- meta- body)))
 
-(defn optimize-defn-variant-body! [body externs]
-  (log/ppr :macro-expand "ORIG BODY:" body)
+(defn optimize-defn-variant-body!
+  "Optimizes a body similar to |defn|.
+   Currently performs the following optimizations:
+   - Externs"
+  [body externs]
+  (log/ppr-hints :macro-expand "ORIG BODY:" body)
   (->> body
        (clojure.walk/postwalk
          (whenf*n extern?
@@ -57,7 +61,7 @@
              (let [sym (gensym "externed")]
                (swap! externs conj (list 'def sym obj))
                sym))))
-       (doto->> log/ppr :macro-expand "OPTIMIZED BODY:")))
+       (doto->> log/ppr-hints :macro-expand "OPTIMIZED BODY:")))
 
 #?(:clj
 (defmacro fn+*
@@ -75,7 +79,7 @@
             `(fn+* ~sym ~doc- ~meta- nil      ~(cons unk rest-unk) nil      )
           :else
             `(throw (->ex :illegal-argument "Invalid arguments to |fn+|. " ~unk)))
-        (let [_        (log/ppr :macro-expand "ORIG BODY:" body)
+        (let [_        (log/ppr-hints :macro-expand "ORIG BODY:" body)
               ret-type (->> sym meta :tag)
               suspendable?   (->> sym meta :suspendable)
               interruptible? (->> sym meta :interruptible)
@@ -143,8 +147,6 @@
          var# (doto (def ~sym f#)
                 (alter-meta! map/merge meta#))]
      var#)))
-
-
 
 #?(:clj
 (defmacro defmethod+
