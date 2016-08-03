@@ -152,21 +152,21 @@
 #?(:clj
 (defmacro suppress
   "Suppresses any errors thrown in the body.
-  (suppress (error \"Error\")) => nil
+  (suppress (error \"Error\")) => <Exception>
   (suppress (error \"Error\") :error) => :error
   (suppress (error \"Error\")
             (fn [e]
               (.getMessage e))) => \"Error\""
-  {:source "zcaudate/hara.common.error"}
   ([body]
-    (let [c (if-cljs &env 'js/Error 'Throwable)]
-     `(try ~body (catch ~c ~'t))))
+    (let [c (if-cljs &env :default 'Throwable)]
+     `(try ~body (catch ~c ~'t ~'t))))
   ([body catch-val]
-    (let [c (if-cljs &env 'js/Error 'Throwable)]
+    (let [c (if-cljs &env :default 'Throwable)]
      `(try ~body (catch ~c ~'t
-                   (cond (fn? ~catch-val)
-                         (~catch-val ~'t)
-                         :else ~catch-val)))))))
+                   (let [catch-val# ~catch-val]
+                     (cond (fn? catch-val#)
+                           (catch-val# ~'t)
+                           :else catch-val#))))))))
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]
