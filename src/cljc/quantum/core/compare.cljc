@@ -1,21 +1,27 @@
 (ns quantum.core.compare
-  (:refer-clojure :exclude
-    [< > <= >= max min max-key min-key neg? pos? zero?])
-  (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )     :as core  ]
-    [quantum.core.macros
-      :refer        [#?@(:clj [defnt defnt' variadic-predicate-proxy])]
-      :refer-macros [defnt]]
-    [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [defalias]]
-    [quantum.core.numeric.operators
-      :refer        [#?@(:clj [- +]) abs]
-      :refer-macros [- +]]
-    [quantum.core.numeric.predicates
-      :refer        [#?@(:clj [neg? pos? zero?])]
-      :refer-macros [neg? pos? zero?]]))
+           (:refer-clojure :exclude
+             [= not= < > <= >= max min max-key min-key neg? pos? zero? - +])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )     :as core  ]
+             [quantum.core.error :as err
+              :refer [TODO]]
+             [quantum.core.macros
+               :refer        [#?@(:clj [defnt defnt' variadic-predicate-proxy])]
+               :refer-macros [defnt]]
+             [quantum.core.vars
+               :refer        [#?@(:clj [defalias])]
+               :refer-macros [defalias]]
+             [quantum.core.numeric.operators
+               :refer        [#?@(:clj [- +]) abs]
+               :refer-macros [- +]]
+             [quantum.core.numeric.predicates
+               :refer        [#?@(:clj [neg? pos? zero?])]
+               :refer-macros [neg? pos? zero?]]
+             [quantum.core.numeric.types :as ntypes])
+  #?(:cljs (:require-macros
+             [quantum.core.compare
+               :refer [< > <= >=]])))
 
 ; Some of the ideas here adapted from gfredericks/compare
 ; TODO include diffing
@@ -221,7 +227,7 @@
   "Return true if the absolute value of the difference between x and y
    is less than eps."
   [x y eps]
-  (< (abs (core/- x y)) eps)) ; TODO use < and -
+  (< (abs (- x y)) eps))
 
 (defn within-tolerance? [n total tolerance]
   (and (>= n (- total tolerance))

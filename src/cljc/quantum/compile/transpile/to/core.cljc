@@ -10,7 +10,7 @@
                      [quantum.core.error                      :as err
                        :refer [#?(:clj throw-unless) ->ex]             ]
                      [quantum.core.log                        :as log  ]
-                     [quantum.core.numeric                    :as num  ]
+                     [quantum.core.compare                    :as comp ]
                      [quantum.core.string                     :as str  ]
                      [quantum.core.string.format              :as strf ]
                      [quantum.core.fn                         :as fn
@@ -585,7 +585,7 @@
                      longest-key-length
                        (->> obj-map keys
                             (map (fn->> name symbol eval-form count))
-                            (<- ifn empty? (constantly 0) num/greatest))
+                            (<- ifn empty? (constantly 0) comp/greatest))
                      ^String obj-map-contents
                        (let [prev-line (atom nil)]
                          (reduce

@@ -1,47 +1,49 @@
 (ns quantum.core.numeric.operators
-          (:refer-clojure :exclude
-            [+ +' - -' * *' /
-             inc inc' dec dec'
-             numerator denominator])
-          (:require
-            [#?(:clj  clojure.core
-                :cljs cljs.core   )     :as core  ]
-            [quantum.core.error :as err
-              :refer [TODO]]
-            [quantum.core.macros
-              :refer        [#?@(:clj [defnt defntp defnt' variadic-proxy])]
-              :refer-macros [defnt defntp]]
-            [quantum.core.vars
-              :refer        [#?@(:clj [defalias defmalias])]
-              :refer-macros [defalias]]
-            [quantum.core.numeric.types :as ntypes
-              :refer [numerator denominator]]
-            [quantum.core.numeric.convert
-              :refer        [#?@(:clj [->bigint ->big-integer])]
-              :refer-macros [->bigint]])
-  #?(:clj (:import 
-            java.math.BigInteger
-            clojure.lang.BigInt)))
+           (:refer-clojure :exclude
+             [+ +' - -' * *' /
+              inc inc' dec dec'
+              numerator denominator])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )     :as core  ]
+             [quantum.core.error :as err
+               :refer [TODO]]
+             [quantum.core.macros
+               :refer        [#?@(:clj [defnt defntp defnt' variadic-proxy])]
+               :refer-macros [defnt defntp]]
+             [quantum.core.vars
+               :refer        [#?@(:clj [defalias defmalias])]
+               :refer-macros [defalias]]
+             [quantum.core.numeric.types :as ntypes
+               :refer [numerator denominator]]
+             [quantum.core.numeric.convert
+               :refer        [#?@(:clj [->bigint ->big-integer])]
+               :refer-macros [->bigint]])
+  #?(:cljs (:require-macros
+             [quantum.core.numeric.operators 
+               :refer [+ * -]]))
+  #?(:clj  (:import 
+             java.math.BigInteger
+             clojure.lang.BigInt)))
 
 ; Auto-unboxes; no boxed combinations necessary
+; TODO right now: multiple typed arguments in |defnt|, even in protocols
 
 ; ===== ADD ===== ;
 
-#?(:clj  (defnt' +*-bin "Lax |+|; continues on overflow/underflow"
-           (^{:tag :auto-promote}
-             [#{byte char short int long float double} #_(- primitive? boolean) x
-              #{byte char short int long float double} #_(- primitive? boolean) y]
-             (quantum.core.Numeric/add x y))
-           (^clojure.lang.BigInt  [^clojure.lang.BigInt  x ^clojure.lang.BigInt  y]
-             (.add x y))
-           (^java.math.BigDecimal [^java.math.BigDecimal x ^java.math.BigDecimal y]
-             (if (nil? *math-context*)
-                 (.add x y)
-                 (.add x y *math-context*))))
-   :cljs (defn +*-bin "Lax |+|; continues on overflow/underflow"
-           ([] 0)
-           ([x] x)
-           ([x y] (ntypes/-add x y))))
+#?(:clj  (defnt +*-bin "Lax |+|; continues on overflow/underflow"
+                   (^{:tag :first} [^number? x] x)
+           #?(:clj (^{:tag :auto-promote}
+                     [#{byte char short int long float double} #_(- primitive? boolean) x
+                      #{byte char short int long float double} #_(- primitive? boolean) y]
+                     (quantum.core.Numeric/add x y)))
+           #?(:clj (^clojure.lang.BigInt  [^clojure.lang.BigInt  x ^clojure.lang.BigInt  y]
+                     (.add x y)))
+           #?(:clj (^java.math.BigDecimal [^java.math.BigDecimal x ^java.math.BigDecimal y]
+                     (if (nil? *math-context*)
+                         (.add x y)
+                         (.add x y *math-context*))))
+           #?(:cljs ([x y] (TODO) (ntypes/-add x y)))))
 
 #?(:clj (variadic-proxy +* quantum.core.numeric.operators/+*-bin))
 
@@ -56,7 +58,7 @@
                 (+* x))))
    :cljs (defalias +'-bin core/+))
 
-#?(:clj (variadic-proxy +' +'-bin))
+#?(:clj (variadic-proxy +' quantum.core.numeric.operators/+'-bin))
 
 ; "Natural |+|; promotes on overflow/underflow"
 #?(:clj  (defalias +-bin core/+)
@@ -67,20 +69,18 @@
 
 ; ===== SUBTRACT ===== ;
 
-#?(:clj  (defnt' -*-bin "Lax |-|; continues on overflow/underflow"
-           (^{:tag :first} [#{byte char short int long float double} x] (quantum.core.Numeric/negate x))
-           (^{:tag :auto-promote}
-             [#{byte char short int long float double} #_(- primitive? boolean) x
-              #{byte char short int long float double} #_(- primitive? boolean) y]
-             (quantum.core.Numeric/subtract x y))
-           (^java.math.BigInteger [^java.math.BigInteger x] (-> x .negate))
-           (^clojure.lang.BigInt  [^clojure.lang.BigInt  x]
-             (-> x ->big-integer -*-bin ->bigint)))
-   :cljs (defn -*-bin "Lax |-|; continues on overflow/underflow"
-           ([x] (TODO "fix") (ntypes/-negate x))
-           ([x y & more]
-              (TODO "fix")
-              (+ x (ntypes/-negate (apply + y more))))))
+(defnt -*-bin "Lax |-|; continues on overflow/underflow"
+  #?(:clj  (^{:tag :first} [#{byte char short int long float double} x]
+             (quantum.core.Numeric/negate x))
+     :cljs (^{:tag :first} [^number? x] (TODO "fix") (ntypes/-negate x)))
+  #?(:clj (^{:tag :auto-promote} ; TODO should be :first?
+            [#{byte char short int long float double} #_(- primitive? boolean) x
+             #{byte char short int long float double} #_(- primitive? boolean) y]
+            (quantum.core.Numeric/subtract x y)))
+  #?(:clj (^java.math.BigInteger [^java.math.BigInteger x]
+            (-> x .negate)))
+  #?(:clj (^clojure.lang.BigInt  [^clojure.lang.BigInt  x]
+            (-> x ->big-integer -*-bin ->bigint))))
 
 #?(:clj (variadic-proxy -* quantum.core.numeric.operators/-*-bin))
 
@@ -99,13 +99,12 @@
 
 #?(:clj (variadic-proxy -' quantum.core.numeric.operators/-'-bin))
 
-#?(:clj  (defnt' --bin "Natural |-|; promotes on overflow/underflow"
-           ; TODO take out auto-quote generator
-           (^Number [^long x] ; TODO boxes value... how to fix?
+(defnt --bin "Natural |-|; promotes on overflow/underflow"
+  #?(:clj  (^{:tag :auto-promote} [^long x] ; TODO boxes value... how to fix?
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-   :cljs (defalias --bin core/-))
+  #?(:cljs ([x y] (core/- x y))))
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 
