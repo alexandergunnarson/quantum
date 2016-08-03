@@ -1,5 +1,5 @@
 (ns quantum.test.core.macros.optimization
-  quantum.core.macros.optimization)
+  (:require [quantum.core.macros.optimization :as ns]))
 
 ; ===== EXTERN =====
 

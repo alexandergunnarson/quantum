@@ -1,5 +1,11 @@
 (ns quantum.test.core.error
-  (:require [quantum.core.error :as ns]))
+  (:require
+    [quantum.core.error :as ns
+      :include-macros true]
+    [#?(:clj clojure.test
+        :cljs cljs.test)
+      :refer        [#?@(:clj [deftest is testing])]
+      :refer-macros [deftest is testing]]))
 
 (defn test:generic-error [env])
 
@@ -38,9 +44,12 @@
 (defn test:try-or 
   ([exp & alternatives]))
 
-(defn test:suppress
-  ([body])
-  ([body catch-val]))
+(deftest test:suppress
+  (is (instance? #?(:clj Exception :cljs js/Error)
+        (ns/suppress (throw (#?(:clj Exception. :cljs js/Error.))))))
+  (is (= "abcde" (ns/suppress "abcde")))
+  (is (= "abcde" (ns/suppress (throw (ns/->ex :abcde)) "abcde")))
+  (is (= "abcde" (ns/suppress (throw (ns/->ex :abcde)) (fn [_] "abcde")))))
 
 (defn test:assertf-> [f arg throw-obj])
 

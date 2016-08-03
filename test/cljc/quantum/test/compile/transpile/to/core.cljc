@@ -1,5 +1,5 @@
 (ns quantum.test.compile.transpile.to.core
-  (:require [quantum.compile.transpile.to.core :refer :all]))
+  (:require [quantum.compile.transpile.to.core :as ns]))
 
 (defn test:demunge-class [x])
 

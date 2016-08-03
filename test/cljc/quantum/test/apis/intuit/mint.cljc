@@ -1,4 +1,4 @@
-(ns quantum.apis.intuit.mint
+(ns quantum.test.apis.intuit.mint
   (:require [quantum.apis.intuit.mint :as ns]))
 
 (defn test:login! [driver])

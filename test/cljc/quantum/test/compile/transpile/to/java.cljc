@@ -1,5 +1,5 @@
 (ns quantum.test.compile.transpile.to.java
-  (:require [quantum.compile.transpile.to.java :refer :all]))
+  (:require [quantum.compile.transpile.to.java :as ns]))
 
 #?(:clj
 (defn test:format-java

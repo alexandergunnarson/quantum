@@ -6,10 +6,10 @@
                :refer-macros [deftest is]]
              [quantum.core.reducers :as ns]
              [clojure.test.generative :refer [defspec]]
-             [clojure.data.generators :as gen]
+             [clojure.data.generators :as gen])
   #?(:cljs (:require-macros
              [quantum.test.core.reducers
-               :refer [defequivtest]]))))
+               :refer [defequivtest]])))
 
 (comment
   "How a reducer works:"
@@ -99,7 +99,7 @@
 (defn test:remove+
   [pred coll])
 
-(def keep+ (compr map+ (partial remove+ nil?))) 
+(defn test:keep+ [coll])
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         FLATTEN          }=====================================================
 ;=================================================={                          }=====================================================
@@ -200,7 +200,7 @@
   [f coll])
 
 
-
+(comment
 
 
 #?(:clj
@@ -268,4 +268,4 @@
           m (zipmap nums nums)]
       (reduced-at-probe m probe)))
   [^{:tag `gen-num} probe ^{:tag `gen-num} to-end]
-  (assert (= :foo %)))
+  (assert (= :foo %))))
