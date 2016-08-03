@@ -31,11 +31,11 @@
   [x y]
   (TODO))
 
-#?(:clj  (defnt pow "x ^ y"
-           (^double ^:intrinsic [^double   x ^double y] (Math/pow x y))
-           (^double             [#{byte short int long float} x y]
-                                  (pow (core/double x) (core/double y))))
-   :cljs (defn pow "x ^ y" [x] (js/Math.pow x)))
+(defnt pow "x ^ y"
+  #?(:clj  (^double ^:intrinsic [^double   x ^double y] (Math/pow x y))
+     :cljs ([^number? x #_number? y] (js/Math.pow x y)))
+  #?(:clj (^double             [#{byte short int long float} x y]
+                                 (pow (core/double x) (core/double y)))))
 
 #?(:clj
 (defnt' pow*

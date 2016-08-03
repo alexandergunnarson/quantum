@@ -8,42 +8,41 @@
      min max quot mod format
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
            (:require  
-            #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )            :as core    ]
-                     [quantum.core.convert.primitive    :as pconvert
-                       :refer [#?(:clj ->long)]                     ]
-                     [quantum.core.error                :as err
-                       :refer        [->ex TODO]                    ]
-                     [quantum.core.fn
-                       :refer        [#?@(:clj [f*n fn->])]         
-                       :refer-macros [f*n fn->]                     ]
-                     [quantum.core.logic                :as logic
-                       :refer        [#?@(:clj [fn-and whenf*n])]   
-                       :refer-macros [fn-and whenf*n]               ]
-                     [quantum.core.macros               :as macros
-                       :refer        [#?@(:clj [defnt defnt' deftransmacro])]
-                       :refer-macros [defnt defnt' deftransmacro]   ]
-                     [quantum.core.vars                 :as var
-                       :refer        [#?@(:clj [defalias defaliases])]
-                       :refer-macros [defalias defaliases]          ]
-                     [quantum.core.numeric.convert]
-                     [quantum.core.numeric.misc]
-                     [quantum.core.numeric.operators
-                       :refer        [#?@(:clj [/])]
-                       :refer-macros [/]]
-                     [quantum.core.numeric.predicates]
-                     [quantum.core.numeric.trig]
-                     [quantum.core.numeric.truncate]
-                     [quantum.core.numeric.types :as ntypes])
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )            :as core    ]
+    #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
+             [quantum.core.convert.primitive    :as pconvert
+               :refer [#?(:clj ->long)]                     ]
+             [quantum.core.error                :as err
+               :refer        [->ex TODO]                    ]
+             [quantum.core.fn
+               :refer        [#?@(:clj [f*n fn->])]         
+               :refer-macros [f*n fn->]                     ]
+             [quantum.core.logic                :as logic
+               :refer        [#?@(:clj [fn-and whenf*n])]   
+               :refer-macros [fn-and whenf*n]               ]
+             [quantum.core.macros               :as macros
+               :refer        [#?@(:clj [defnt defnt' deftransmacro])]
+               :refer-macros [defnt defnt' deftransmacro]   ]
+             [quantum.core.vars                 :as var
+               :refer        [#?@(:clj [defalias defaliases])]
+               :refer-macros [defalias defaliases]          ]
+             [quantum.core.numeric.convert   ]
+             [quantum.core.numeric.misc      ]
+             [quantum.core.numeric.operators ]
+             [quantum.core.numeric.predicates]
+             [quantum.core.numeric.trig      ]
+             [quantum.core.numeric.truncate  ]
+             [quantum.core.numeric.types :as ntypes])
   #?(:cljs (:require-macros
-                     [quantum.core.numeric
-                       :refer [< > <= >= div*]]))
-  #?(:clj  (:import  [java.nio ByteBuffer]      
-                     [quantum.core Numeric] ; loops?
-                     [net.jafama FastMath]
-                     clojure.lang.BigInt
-                     java.math.BigDecimal))) 
+             [quantum.core.numeric
+               :refer [/]]))
+  #?(:clj  (:import
+             [java.nio ByteBuffer]      
+             [quantum.core Numeric] ; loops?
+             [net.jafama FastMath]
+             clojure.lang.BigInt
+             java.math.BigDecimal))) 
 
 ; op* : Lax. Continues on overflow.
 ; op' : Strict. Throws on overflow.
@@ -159,29 +158,29 @@
   +*   +'   +
   -*   -'   -
   **   *'   *
-  div* div' div
+  div* div' / 
   inc* inc' inc
   dec* dec' dec
        abs' abs))
 ;_____________________________________________________________________
 ;==================={        PREDICATES        }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj
+
 (defaliases quantum.core.numeric.predicates
-  neg? pos? zero? nneg? pos-int? nneg-int? exact?))
+  zero?
+  #?@(:clj [neg? pos? nneg? pos-int? nneg-int? exact?]))
 ;_____________________________________________________________________
 ;==================={         TRUNCATE         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj
 (defaliases quantum.core.numeric.truncate
-  rint round round' ceil floor floor-div floor-mod))
+  round #?@(:clj [rint round' ceil floor floor-div floor-mod])))
 ;_____________________________________________________________________
 ;==================={       MISCELLANEOUS      }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj
 (defaliases quantum.core.numeric.misc
-  rem mod ieee-rem quot hypot hypot* sign sign'
-  with-sign scalb ulp leading-zeros native-integer? gcd))
+  rem mod
+  #?@(:clj [ieee-rem quot hypot hypot* sign sign'
+            with-sign scalb ulp leading-zeros native-integer? gcd])))
 ;_____________________________________________________________________
 ;================={          CONSTANTS           }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -215,6 +214,13 @@
 (def  int-nil   (whenf*n nil? (constantly 0)))
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
+
+#?(:clj  (defnt exactly
+           ([#{decimal?} x]
+             (-> x rationalize exactly))
+           ([#{int? long?} x] (->bigint x))
+           ([#{bigint? clojure.lang.Ratio} x] x))
+   :cljs (defn exactly [x] (TODO)))
 
 ;_____________________________________________________________________
 ;================={   TRIGONOMETRIC FUNCTIONS    }====================
