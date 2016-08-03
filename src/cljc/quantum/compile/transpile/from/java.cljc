@@ -1,4 +1,5 @@
 (ns quantum.compile.transpile.from.java
+           (:refer-clojure :exclude [some?])
            (:require [quantum.core.analyze.clojure.predicates :as anap ]
                      [quantum.core.analyze.clojure.core       :as ana  ]
                      [quantum.core.string                     :as str  ]
@@ -17,7 +18,7 @@
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [eq? fn-or fn-and whenf if*n
                                          condf*n])
-                               nnil? any?]                             ]
+                               nnil? some?]                          ]
                      [quantum.core.type.core                  :as tcore])
   #?(:cljs (:require-macros
                      [quantum.core.fn                         :as fn
@@ -132,7 +133,7 @@
                       (ModifierSet/getAccessSpecifier)
                       str clojure.string/lower-case
                       (str "^:"))]
-    (when-not (any? (eq? all-mods)
+    (when-not (some? (eq? all-mods)
                       #{"^:default"
                         "^:public"}) 
       (symbol all-mods)))))
