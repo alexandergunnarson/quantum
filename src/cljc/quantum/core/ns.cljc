@@ -2,7 +2,8 @@
   ^{:doc "Useful namespace and var-related functions."
     :attribution "Alex Gunnarson"}
   quantum.core.ns
-  (:require [clojure.set :as set]))
+  (:require [clojure.set    :as set]
+            [clojure.string :as str]))
 
 #?(:clj
 (defmacro search-var
@@ -89,4 +90,16 @@
     `(do ~@(map import-field fields-to-do)
          ~@(map import-method methods-to-do)))))
 
+#?(:clj
+(defn load-ns [path ns-sym]
+  (remove-ns ns-sym)
+  (load-file path)))
 
+#?(:clj
+(defn load-nss
+  {:todo ["This function is not robust"]}
+  ([ns-syms] (load-nss "./src/cljc" ns-syms))
+  ([base-path ns-syms]
+    (doseq [ns-sym ns-syms]
+      (load-ns (str base-path "/" (str/replace (name ns-sym) "." "/") ".cljc")
+               ns-sym)))))
