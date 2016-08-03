@@ -6,8 +6,10 @@
     :figwheel-no-load true
     :cljs-self-referring? true}
   quantum.core.logic
-           (:refer-clojure :exclude [if-let when-let every?])
-           (:require [quantum.core.fn          :as fn
+           (:refer-clojure :exclude [if-let when-let every? some some?])
+           (:require [#?(:clj  clojure.core
+                         :cljs cljs.core   )   :as core   ]
+                     [quantum.core.fn          :as fn
                        :refer [#?@(:clj [f*n fn->])]      ]
                      [quantum.core.vars        :as var
                        :refer [#?(:clj defalias)]         ]
@@ -30,7 +32,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
 ;==================================================={                         }=====================================================
-(def  nnil?   (comp not nil?))   ; same as /seq/ - nil punning
+(def  nnil?   core/some?)
 (def  nempty? (comp not empty?))
 (def  nseq?   (comp not seq?))
 
@@ -49,25 +51,32 @@
 #?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
 #?(:clj (defalias fn-neq?  neq?))
 
-(defn any?
-  "A faster version of |some| using |reduce| instead of |seq|."
-  [pred args]
-  (reduce (fn [_ arg] (and (pred arg) (reduced true ))) nil args))
+(defn some
+  "A faster version of |some| using |reduce| instead of |seq|.
+   Also adds an overload whereby it is equivalent to |some?| in a
+   1-arity context, but |some| in a two-arity context."
+  ([x] (core/some? x))
+  ([pred args]
+    (reduce (fn [_ arg] (and (pred arg) (reduced true ))) nil args)))
 
-(defalias seq-or any?)
+; (defalias any? some) ; Sadly, already (pointlessly) taken in 1.9.
+(defalias some? some) ; Yes, overrides, but has an extra arity that can make sense  
+; (defalias exists? some) ; as in ∃ ; Sadly, already taken in CLJS
+(defalias seq-or some)
 
 (defn every?
   "A faster version of |every?| using |reduce| instead of |seq|."
   [pred args]
   (reduce (fn [_ arg] (or  (pred arg) (reduced false))) nil args))
 
+(defalias all? every?) ; as in ∀
 (defalias seq-and every?)
 
 (defn apply-and [arg-list]
-  (every? identity arg-list))
+  (every?  identity arg-list))
 
 (defn apply-or  [arg-list]
-  (any?   identity arg-list))
+  (some?   identity arg-list))
 
 (defn dor [& args] ; xor ; why "dor"?
   (and (apply-or args)
@@ -97,7 +106,7 @@
 (def truthy? (fn-or true?  nnil?))
 
 (defn splice-or  [obj compare-fn & coll]
-  (any?   (partial compare-fn obj) coll))
+  (some?  (partial compare-fn obj) coll))
 (defn splice-and [obj compare-fn & coll]
   (every? (partial compare-fn obj) coll))
 

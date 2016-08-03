@@ -59,7 +59,7 @@
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil? any?]]
+                                         ifn if*n condf condf*n]) nnil?]]
                      [quantum.core.macros                     :as macros 
                        :refer [#?@(:clj [defnt])]                        ]
                      [quantum.core.reducers                   :as red    
