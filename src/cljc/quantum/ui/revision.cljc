@@ -103,7 +103,7 @@
 
 #_(defnt unsaved-changes?
   [^clojure.lang.Atom states]
-  (any? (fn-> val :index (> 0)) @states))
+  (some? (fn-> val :index (> 0)) @states))
 
 #_(defnt revert!
   ([^clojure.lang.Atom states]
