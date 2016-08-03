@@ -4,32 +4,35 @@
     :attribution "Alex Gunnarson"
     :cljs-self-referring? true}
   quantum.core.macros
-           (:refer-clojure :exclude [macroexpand macroexpand-all])
-           (:require [clojure.walk
-                       :refer [postwalk]                              ]
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )    :as core              ]
-                     [quantum.core.error        :as err
-                       :refer [->ex]                                  ]
-                     [quantum.core.log          :as log               ]
-                     [quantum.core.logic        :as logic
-                       :refer [#?@(:clj [fn-and whenc whenf*n]) nnil?]]
-                     [quantum.core.macros.core  :as cmacros       
-                       :refer [#?(:clj if-cljs)]                      ]
-                     [quantum.core.macros.defnt :as defnt             ]
-                     [quantum.core.macros.fn    :as mfn               ]
-                     [quantum.core.vars         :as var
-                       :refer [#?@(:clj [defalias defmalias])]        ])
+           (:refer-clojure
+             :exclude [macroexpand macroexpand-all])
+           (:require
+             [clojure.walk
+               :refer [postwalk]                              ]
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )    :as core              ]
+             [quantum.core.error        :as err
+               :refer [->ex]                                  ]
+             [quantum.core.fn           :as fn
+               :refer        [#?@(:clj [fn->])]
+               :refer-macros [fn->]                           ]
+             [quantum.core.log          :as log              
+               :include-macros true                           ]
+             [quantum.core.logic        :as logic
+               :refer        [#?@(:clj [fn-and whenc whenf*n]) nnil?]
+               :refer-macros [fn-and whenc whenf*n]           ]
+             [quantum.core.macros.core  :as cmacros       
+               :refer        [#?(:clj if-cljs)]                      
+               :refer-macros [if-cljs]                        ]
+             [quantum.core.macros.defnt :as defnt             ]
+             [quantum.core.macros.fn    :as mfn               ]
+             [quantum.core.print        :as pr                ]
+             [quantum.core.vars         :as var
+               :refer        [#?@(:clj [defalias defmalias])] 
+               :refer-macros [defalias defmalias]             ])
   #?(:cljs (:require-macros
-                     [quantum.core.macros.core  :as cmacros
-                       :refer [if-cljs]                               ]
-                     [quantum.core.macros
-                       :refer [assert-args]]
-                     [quantum.core.log          :as log               ]
-                     [quantum.core.logic        :as logic
-                       :refer [fn-and whenc whenf*n]                  ]
-                     [quantum.core.vars         :as var
-                       :refer [defalias defmalias]                    ])))
+             [quantum.core.macros
+               :refer [assert-args]])))
 
 #?(:clj
 (defmacro maptemplate
@@ -84,8 +87,9 @@
   {:attribution  "ztellman/primitive-math"
    :contributors ["Alex Gunnarson"]}
   ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
-     (let [x-sym (gensym "x")
-           y-sym (gensym "y")]
+     (let [x-sym   (gensym "x")
+           y-sym   (gensym "y")
+           cljs-fn (or cljs-fn clj-fn)]
        `(defmacro ~name
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
@@ -93,18 +97,18 @@
               `(do (quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
                 (if-cljs ~'&env
                   (list '~cljs-single-arg-fn-f ~x-sym)
-                  (list '~clj-single-arg-fn-f      ~x-sym)))
+                  (list '~clj-single-arg-fn-f  ~x-sym)))
               (if-cljs ~'&env
                   (list '~cljs-single-arg-fn-f ~x-sym)
-                  (list '~clj-single-arg-fn-f      ~x-sym)))))
+                  (list '~clj-single-arg-fn-f  ~x-sym)))))
           ([~x-sym ~y-sym]
              (quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
                 (if-cljs ~'&env
                   (list '~cljs-fn ~x-sym ~y-sym)
-                  (list '~clj-fn      ~x-sym ~y-sym)))
+                  (list '~clj-fn  ~x-sym ~y-sym)))
              (if-cljs ~'&env
                (list '~cljs-fn ~x-sym ~y-sym)
-               (list '~clj-fn      ~x-sym ~y-sym)))
+               (list '~clj-fn  ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
              (list* '~name (list '~name x# y#) rest#)))))))
 
@@ -116,24 +120,23 @@
   ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
      (let [x-sym    (gensym "x"   )
            y-sym    (gensym "y"   )
-           rest-sym (gensym "rest")]
+           rest-sym (gensym "rest")
+           cljs-fn  (or cljs-fn clj-fn)]
        `(defmacro ~name
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              (if-cljs &env
-                 (do (assert (nnil? cljs-single-arg-fn-f))
-                     `(list '~cljs-single-arg-fn-f ~x-sym))
-                 `(list '~clj-single-arg-fn-f      ~x-sym))))
+              `(if-cljs ~'&env
+                 `(list '~cljs-single-arg-fn-f ~x-sym)
+                 `(list '~clj-single-arg-fn-f  ~x-sym))))
           ([~x-sym ~y-sym]
-             ~(if-cljs &env
-                (do (assert (nnil? cljs-fn))
-                    `(list '~cljs-fn ~x-sym ~y-sym))
-                `(list '~clj-fn      ~x-sym ~y-sym)))
+             (if-cljs &env
+               `(list '~cljs-fn ~x-sym ~y-sym)
+               `(list '~clj-fn  ~x-sym ~y-sym)))
           ([~x-sym ~y-sym ~'& ~rest-sym]
-             ~(if-cljs &env
-                `(list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
-                `(list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
+             (if-cljs &env
+               (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
+               (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
 
 #?(:clj
 (defmacro env []
@@ -213,9 +216,9 @@
 
 ; ; ===== MACROEXPANSION =====
 
-;#?(:clj (def macroexpand-1!   (fn-> macroexpand-1 pr/pprint-hints)))
-;#?(:clj (def macroexpand!     (fn-> macroexpand     pr/pprint-hints)))
-;#?(:clj (def macroexpand-all! (fn-> macroexpand-all pr/pprint-hints)))
+#?(:clj (def macroexpand-1!   (fn-> cmacros/macroexpand-1   pr/pprint-hints)))
+#?(:clj (def macroexpand!     (fn-> cmacros/macroexpand     pr/pprint-hints)))
+#?(:clj (def macroexpand-all! (fn-> cmacros/macroexpand-all pr/pprint-hints)))
 
 #?(:clj
 (defmacro assert-args [fn-name & pairs]
