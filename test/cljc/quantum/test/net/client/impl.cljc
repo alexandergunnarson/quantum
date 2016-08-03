@@ -35,9 +35,6 @@
 (defn test:jsonp
   [{:keys [timeout callback-name cancel] :as request}])
 
-(defn test:request*
-  [{:keys [request-method] :as req}])
-
 (defn test:parse-query-params
   [s])
 
@@ -107,8 +104,6 @@
 (defn test:wrap-request
   [req])
 
-(defn test:request! [x])
-
 ; ======== CLOJURE IMPLEMENTATION =========
 
 ;___________________________________________________________________________________________________________________________________
@@ -129,12 +124,4 @@
            ^String oauth-token
                    headers]}])
 
-(defn test:request!*
-  [{:keys [^Key method ^Map multipart] :as req}])
-
-(defn test:request!
-  [{:as req
-    :keys [handlers log? log tries max-tries keys-fn raw?]
-    :or {as :auto
-         max-tries 3
-         tries     0}}])
+(defn test:request! [x])

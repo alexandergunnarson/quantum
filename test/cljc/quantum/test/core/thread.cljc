@@ -1,4 +1,4 @@
-(ns quantum.core.thread
+(ns quantum.test.core.thread
   (:require [quantum.core.thread :as ns]))
  
 #?(:clj
