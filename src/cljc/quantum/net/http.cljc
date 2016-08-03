@@ -1,36 +1,32 @@
 (ns quantum.net.http
-           (:require [com.stuartsierra.component              :as component]
-                     [taoensso.sente                          :as ws       ]
-           #?@(:clj [[immutant.web                            :as imm      ]
-                     [aleph.http                              :as aleph    ]
-                     [taoensso.sente.server-adapters.immutant :as a-imm    ]
-                     [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )            :as async    ]
-                     [quantum.core.collections                :as coll
-                       :refer [#?@(:clj [kmap join]) remove-vals+]         ]
-                     [quantum.core.string                     :as str      ]
-                     [quantum.net.client.impl                 :as impl     ]
-                     [quantum.net.core                        :as net      ]
-                     [quantum.core.paths                      :as path    ]
-             #?(:clj [quantum.net.server.router               :as router   ])
-                     [quantum.core.error                      :as err      
-                       :refer [#?(:clj validate)]]
-                     [quantum.core.fn
-                       :refer [fn-nil]                                     ]
-                     [quantum.core.log                        :as log      ]
-                     [quantum.core.logic                      :as logic
-                       :refer [nnil?]                                      ]
-                     [quantum.core.vars                       :as var
-                       :refer [#?@(:clj [defalias])]                       ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections                :as coll
-                       :refer [kmap join]                                  ]
-                     [quantum.core.error                      :as err      
-                       :refer [validate]                                   ]
-                     [quantum.core.log                        :as log      ]
-                     [quantum.core.vars                       :as var
-                       :refer [defalias]                                   ])))
+  (:require [com.stuartsierra.component              :as component]
+            [taoensso.sente                          :as ws       ]
+  #?@(:clj [[immutant.web                            :as imm      ]
+            [aleph.http                              :as aleph    ]
+            [taoensso.sente.server-adapters.immutant :as a-imm    ]
+            [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
+            [#?(:clj  clojure.core.async
+                :cljs cljs.core.async   )            :as async    ]
+            [quantum.core.collections                :as coll
+              :refer        [#?@(:clj [kmap join]) remove-vals+]         
+              :refer-macros [kmap join]]
+            [quantum.core.string                     :as str      ]
+            [quantum.net.client.impl                 :as impl     ]
+            [quantum.net.core                        :as net      ]
+            [quantum.core.paths                      :as path    ]
+    #?(:clj [quantum.net.server.router               :as router   ])
+            [quantum.core.error                      :as err      
+              :refer        [#?(:clj validate)]
+              :refer-macros [validate]]
+            [quantum.core.fn
+              :refer [fn-nil]                                     ]
+            [quantum.core.log                        :as log      
+              :include-macros true]
+            [quantum.core.logic                      :as logic
+              :refer [nnil?]                                      ]
+            [quantum.core.vars                       :as var
+              :refer        [#?@(:clj [defalias])]                       
+              :refer-macros [defalias]]))
 
 #?(:clj
 (defrecord
