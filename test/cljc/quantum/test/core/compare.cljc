@@ -58,7 +58,7 @@
 (defn test:greatest-or [a b else])
 
 (defn test:compare-bytes-lexicographically
-  [a b]))
+  [a b])
 
 (defn test:extreme-comparator [comparator-n])
 

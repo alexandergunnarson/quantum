@@ -94,7 +94,7 @@
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              `(do (quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
+              `(do #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
                 (if-cljs ~'&env
                   (list '~cljs-single-arg-fn-f ~x-sym)
                   (list '~clj-single-arg-fn-f  ~x-sym)))
@@ -102,7 +102,7 @@
                   (list '~cljs-single-arg-fn-f ~x-sym)
                   (list '~clj-single-arg-fn-f  ~x-sym)))))
           ([~x-sym ~y-sym]
-             (quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
+             #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
                 (if-cljs ~'&env
                   (list '~cljs-fn ~x-sym ~y-sym)
                   (list '~clj-fn  ~x-sym ~y-sym)))
@@ -127,14 +127,14 @@
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
               `(if-cljs ~'&env
-                 `(list '~cljs-single-arg-fn-f ~x-sym)
-                 `(list '~clj-single-arg-fn-f  ~x-sym))))
+                 (list '~cljs-single-arg-fn-f ~x-sym)
+                 (list '~clj-single-arg-fn-f  ~x-sym))))
           ([~x-sym ~y-sym]
-             (if-cljs &env
-               `(list '~cljs-fn ~x-sym ~y-sym)
-               `(list '~clj-fn  ~x-sym ~y-sym)))
+             (if-cljs ~'&env
+               (list '~cljs-fn ~x-sym ~y-sym)
+               (list '~clj-fn  ~x-sym ~y-sym)))
           ([~x-sym ~y-sym ~'& ~rest-sym]
-             (if-cljs &env
+             (if-cljs ~'&env
                (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
                (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
 

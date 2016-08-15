@@ -31,7 +31,8 @@
 
 ; ===== ADD ===== ;
 
-#?(:clj  (defnt +*-bin "Lax |+|; continues on overflow/underflow"
+#?(:clj (defalias +*-bin unchecked-add) 
+        #_(defnt +*-bin "Lax |+|; continues on overflow/underflow"
                    (^{:tag :first} [^number? x] x)
            #?(:clj (^{:tag :auto-promote}
                      [#{byte char short int long float double} #_(- primitive? boolean) x
@@ -69,7 +70,9 @@
 
 ; ===== SUBTRACT ===== ;
 
-(defnt -*-bin "Lax |-|; continues on overflow/underflow"
+(defalias -*-bin unchecked-subtract)
+
+#_(defnt -*-bin "Lax |-|; continues on overflow/underflow"
   #?(:clj  (^{:tag :first} [#{byte char short int long float double} x]
              (quantum.core.Numeric/negate x))
      :cljs (^{:tag :first} [^number? x] (TODO "fix") (ntypes/-negate x)))
@@ -104,7 +107,7 @@
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-  #?(:cljs ([x y] (core/- x y))))
+           ([x y] (core/- x y)))
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 

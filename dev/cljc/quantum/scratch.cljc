@@ -7,8 +7,10 @@
          )
 #_(refresh)
 
-(ns user
+(ns quantum.scratch
   (:require
+    [clojure.repl
+      :refer [source]]
     [clojure.test :as test]
     [clojure.pprint
       :refer [pprint]]

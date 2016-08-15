@@ -10,9 +10,9 @@
   ([env then else]))
 
 (defn test:when-cljs
-  ([env then])))
+  ([env then]))
 
-(defn test:context []))
+(defn test:context [])
 
 ; ===== LOCAL EVAL & RESOLVE =====
 

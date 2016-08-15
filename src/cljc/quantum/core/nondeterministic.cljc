@@ -334,7 +334,7 @@
          (join {}))))
 
 (defmulti
-  "Generates a random object."
+  ^{:doc "Generates a random object."}
   generate (fn [k & args] k))
 
 ; TODO :unique-<object>, :string, :keyword, :symbol, etc.

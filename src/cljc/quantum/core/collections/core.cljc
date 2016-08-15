@@ -13,8 +13,10 @@
                          :cljs cljs.core   )         :as core    ]
              #?(:clj [seqspert.vector                            ])
              #?(:clj [clojure.core.async             :as casync  ])
+                     [quantum.core.log :as log]
                      [quantum.core.collections.base
-                       :refer [#?(:clj kmap)]                    ]
+                       :refer        [#?(:clj kmap)]             
+                       :refer-macros [kmap]                      ]
                      [quantum.core.convert.primitive :as pconvert
                        :refer [->boolean
                                ->byte 
@@ -36,33 +38,26 @@
                      [quantum.core.error             :as err
                        :refer [->ex]                             ]
                      [quantum.core.fn                :as fn
-                       :refer [#?@(:clj [f*n])]                  ]
+                       :refer        [#?@(:clj [f*n])]           
+                       :refer-macros [f*n]                       ]
                      [quantum.core.logic             :as logic
-                       :refer [#?@(:clj [eq? fn-eq? whenc whenf
-                                         if*n])
-                               some? nnil? nempty?]               ]
+                       :refer        [#?@(:clj [eq? fn-eq? whenc
+                                                whenf if*n])
+                                      some? nnil? nempty?]               
+                       :refer-macros [eq? fn-eq? whenc whenf if*n]]
                      [quantum.core.macros            :as macros
-                       :refer [#?@(:clj [defnt])]                ]
+                       :refer        [#?@(:clj [defnt])]         
+                       :refer-macros [defnt]                     ]
                      [quantum.core.reducers          :as red     
                        :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
                      [quantum.core.type              :as type    
-                       :refer [#?(:clj pattern?)]]
+                       :refer        [#?(:clj pattern?)]
+                       :refer-macros [pattern?]                  ]
                      [quantum.core.vars              :as var
-                       :refer [#?(:clj defalias)]                ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.base
-                       :refer [kmap]                             ]
-                     [quantum.core.fn                :as fn
-                       :refer [f*n]                              ]
-                     [quantum.core.logic             :as logic
-                       :refer [eq? fn-eq? whenc whenf if*n]      ]
-                     [quantum.core.macros            :as macros
-                       :refer [defnt]                            ]
-                     [quantum.core.type              :as type    
-                       :refer [pattern?]]
-                     [quantum.core.vars              :as var
-                       :refer [defalias]                         ]))
-  #?(:clj  (:import quantum.core.data.Array)))
+                       :refer        [#?(:clj defalias)]         
+                       :refer-macros [defalias]                  ])
+  #?(:clj  (:import quantum.core.data.Array
+                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -200,19 +195,19 @@
 (declare array)
 
 (defnt count ; TODO incorporate clojure.lang.RT/count
-  #?(:cljs (^long [^array?                                             x] (.-length x)))
-  #?(:clj  (^long [^any-array?                                         x] (Array/count x)))
-           (^long [^string?                                            x] (#?(:clj .length :cljs .-length) x))
-           (^long [^keyword?                                           x] (count ^String (name x)))
+  #?(:cljs (^long [^array?            x] (.-length x)))
+  #?(:clj  (^long [^any-array?        x] (Array/count x)))
+           (^long [^string?           x] (#?(:clj .length :cljs .-length) x))
+           (^long [^keyword?          x] (count ^String (name x)))
          #?(:clj 
-           (^long [^clojure.core.async.impl.channels.ManyToManyChannel x] (count (.buf x))))
-           (^long [^vector?                                            x] (.count x))
-           (^long [                                                    x] (core/count x))
+           (^long [^ManyToManyChannel x] (count (.buf x))))
+           (^long [^vector?           x] (.count x))
+           (^long [                   x] (core/count x))
            ; Debatable whether this should be allowed
-           (^long [:else                                               x] 0))
+           (^long [:else              x] 0))
 
 (defnt empty?
-  ([#{array? string? keyword? #?(:clj clojure.core.async.impl.channels.ManyToManyChannel)} x] (zero? (count x)))
+  ([#{array? string? keyword? #?(:clj ManyToManyChannel)} x] (zero? (count x)))
   ([        x] (core/empty? x)  ))
 
 (defnt empty
@@ -449,7 +444,7 @@
 
 (defnt nth
   ; TODO import clojure.lang.RT/nth
-  ([#{vector? string? array-list? array?
+  ([#{vector? string? array-list? #_array? ; for now, because java.lang.VerifyError: reify method: Nth signature: ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;) Incompatible object argument for function call
       listy?} coll i] (get coll i))
   ([coll i] (core/nth coll i))
   #_([#{clojure.data.avl.AVLSet
@@ -492,7 +487,6 @@
   #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v             ) coll))
   #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v             ) coll))
   #?(:clj  (^first [                coll ^pinteger? i          v] (java.lang.reflect.Array/set coll i v) coll)))
-
 
 ; TODO assoc-in and assoc-in! for files
 (defnt assoc!

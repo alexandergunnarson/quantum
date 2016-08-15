@@ -47,8 +47,7 @@
                     (if #?@(:clj  [(instance? Class tag) (.getName ^Class tag)]
                             :cljs [true])
                         (name tag)))]
-    (when-not #?(:clj  (= 'java.lang.Object sym)
-                 :cljs false) sym))))
+    sym)))
 
 ; TODO abstract platform-dependent member calls
 

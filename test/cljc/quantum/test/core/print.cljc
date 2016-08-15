@@ -8,7 +8,7 @@
 (defn test:representative-coll
   [source-0])
 
-(defn test:!* [obj] (-> obj representative-coll !))
+(defn test:!* [obj])
 
 (defn test:pr-attrs
   [obj])

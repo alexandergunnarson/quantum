@@ -29,7 +29,7 @@
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 
-(def default-hint {:clj 'Object :cljs 'object})
+(def default-hint {:clj 'java.lang.Object :cljs 'object})
 
 (defn hint-resolved? [x lang env]
   ((fn-or anap/hinted-literal?

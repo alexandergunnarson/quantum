@@ -6,7 +6,7 @@
   ([k url-type
     {:keys [append method query-params]
      :or   {method :get
-            query-params {}}}])
+            query-params {}}}]))
 
 (defn ^:cljs-async test:used-gb [])
 

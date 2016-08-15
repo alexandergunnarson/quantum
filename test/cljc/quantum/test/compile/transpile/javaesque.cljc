@@ -5,7 +5,7 @@
 
 #_(:clj
 (defn test:emit!
-  [in-path-vec out-path-vec lang])
+  [in-path-vec out-path-vec lang]))
 
 #_(:clj
-(defn test:emit-std! [])
+(defn test:emit-std! []))

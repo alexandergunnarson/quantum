@@ -5,4 +5,4 @@
 (defn test:->bytecode [x]))
 
 #?(:clj
-(defn test:->classes [x]) 
+(defn test:->classes [x]))

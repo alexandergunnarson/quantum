@@ -119,8 +119,8 @@
 
 ; Non |deftest| tests
 
-(log/enable! :macro-expand)
-(log/enable! :macro-expand-protocol)
+#_(log/enable! :macro-expand)
+#_(log/enable! :macro-expand-protocol)
 
 (def test-boxed-long (Long.    1))
 (def test-boxed-int  (Integer. 1))
