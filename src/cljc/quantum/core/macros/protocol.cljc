@@ -116,7 +116,7 @@
         body-mapped
           (->> body-filtered
                (map (fn [[arglist & body :as method]]
-                      (log/ppr-hints :macro-expand-protocol "IN BODY MAPPED" (kmap arglist body))
+                      (log/ppr-hints :macro-expand "IN BODY MAPPED" (kmap arglist body))
                       (let [first-type         (-> arglist second type-hint)
                             first-type-unboxed (-> first-type tcore/->unboxed)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
@@ -135,6 +135,7 @@
                                                   (cmacros/hint-meta arglist-f return-type) )
                                   body-f      (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
+                              (log/ppr-hints :macro-expand "IN BODY AFTER MAPPED" (kmap boxed-first-type extension-f first-type))
                               (if (or (= boxed-first-type 'Object)
                                       (= boxed-first-type 'java.lang.Object))
                                   (into ['nil (-> extension-f rest first)] extension-f)
@@ -150,3 +151,5 @@
         extend-protocol-def
          (apply concat (list 'extend-protocol genned-protocol-name) body-grouped)]
     extend-protocol-def)))
+
+(log/disable! :macro-expand)

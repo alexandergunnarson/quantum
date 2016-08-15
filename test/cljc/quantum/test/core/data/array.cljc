@@ -63,7 +63,7 @@
 
 
 (defn test:aconcat
-  ([a b])))
+  ([a b]))
 
 (defn test:slice
   ([a start])

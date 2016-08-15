@@ -5,4 +5,4 @@
 
 (defn test:conditional-branches [x])
 
-(defn test:destructure [bindings]))
+(defn test:destructure [bindings])

@@ -144,3 +144,5 @@
 #?(:clj
 (defmacro ppr-hints [pr-type & args]
   `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
+
+#?(:clj (pr :user "HERE IS THIS PID" (->> (java.lang.management.ManagementFactory/getRuntimeMXBean) (.getName))))

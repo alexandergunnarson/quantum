@@ -125,8 +125,6 @@
      :method :get
      :query-params {"tempLink" true}}))
 
-(println (meta "9F_GB0f2Q0u-sk27otqETg"))
-
 ; ; The ice-cast stream doesn't include a Content-Length header
 ; ; (because you know, it's a stream), so this was causing libfxplugins
 ; ; to crash as in my previous post on the subject.

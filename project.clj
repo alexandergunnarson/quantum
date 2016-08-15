@@ -235,14 +235,15 @@
                     [jonase/eastwood                 "0.2.1"]
                     [lein-cloverage                  "1.0.6"]
                     ]}}
-  :aliases {"all"               ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy-dev"        ["do" "clean," "install"]
-            "deploy-prod"       ["do" "clean," "install," "deploy" "clojars"]
-            "deploy-test-dev"   ["do" "clean," "cljsbuild" "once" "dev"]
-            "autobuilder"       ["do" "clean," "figwheel" "dev"]
-            "debug-autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
-            "test"              ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]}
-  :auto-clean     false ; is this a mistake?
+  :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
+            "deploy-dev"             ["do" "clean," "install"]
+            "deploy-prod"            ["do" "clean," "install," "deploy" "clojars"]
+            "deploy-test-dev"        ["do" "clean," "cljsbuild" "once" "dev"]
+            "cljs:autobuilder"       ["do" "clean," "figwheel" "dev"]
+            "cljs:debug:autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
+            "test"                   ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]
+            "clj:autotester"         ["do" "clean," "test-refresh"]}
+  :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
                                     [:cljsbuild :builds :dev :compiler :output-dir]

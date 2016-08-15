@@ -113,7 +113,7 @@
   {:todo ["Handle object arrays and multi-dimensional arrays"
           "Throw exception if called on an integral ('uncuttable') type"]}
   [type]
-  (or #?(:clj (get inner-types type) :cljs 'object) 'Object))
+  (or #?(:clj (get inner-types type) :cljs 'object) 'java.lang.Object))
 
 #?(:clj (def class->str (fn-> str (.substring 6))))
 
@@ -443,7 +443,7 @@
            'keyword?         '{:clj  #{clojure.lang.Keyword}
                                :cljs #{cljs.core/Keyword}}
            'atom?            atom-types
-           :any              {:clj  (set/union (:clj primitive-types) #{'Object})
+           :any              {:clj  (set/union (:clj primitive-types) #{'java.lang.Object})
                               :cljs '#{(quote default)}}
            :obj              {:clj  '#{Object}
                               :cljs '#{(quote default)}}}

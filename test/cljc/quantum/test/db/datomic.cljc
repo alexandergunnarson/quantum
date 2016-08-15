@@ -1,6 +1,7 @@
 (ns quantum.test.db.datomic
   (:require [quantum.db.datomic :as ns]
-            [quantum.core.io :as io]))
+            [quantum.core.io.core :as io])
+  (:import quantum.db.datomic.EphemeralDatabase))
 ; CORE FUNCTIONS
 
 #?(:cljs
@@ -40,7 +41,7 @@
 (defn test:->db
   [{:keys [backend reconciler ephemeral] :as config}])
 
-(defmethod io/test:persist! EphemeralDatabase
+(defmethod io/persist! EphemeralDatabase
   [_ persist-key
    {:keys [db history] :as persist-data}
    {:keys [schema]     :as opts        }])

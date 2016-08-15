@@ -7,7 +7,7 @@
 
 (defn ^String test:fn-pos
   ([fn-str])
-  ([fn-str & args])
+  ([fn-str & args]))
 
 (defn test:enc-class [obj])
 
@@ -42,6 +42,4 @@
 
 (defn ^String test:comma-splice
   ([arg])
-  ([arg & args])
-
-
+  ([arg & args]))

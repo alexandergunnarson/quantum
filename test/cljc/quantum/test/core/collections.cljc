@@ -1,14 +1,13 @@
 (ns quantum.test.core.collections
   (:require [quantum.core.collections :as ns]))
 
-#?(:clj (defmacro map-entry [a b] `[~a ~b]))
+(defn test:map-entry [a b])
 
-(defn genkeyword
-  ([]    (keyword (gensym)))
-  ([arg] (keyword (gensym arg))))
+(defn test:genkeyword
+  ([])
+  ([arg]))
 
-(defn wrap-delay [f]
-  (if (delay? f) f (delay ((or f fn-nil)))))
+(defn test:wrap-delay [f])
 
 ; ; ====== COLLECTIONS ======
 
@@ -270,11 +269,7 @@
   [ensured ensurer])
 
 (defn test:index-by-vals
-  [coll & [{:keys [into-coll get-key get-val]
-            :or {into-coll #{}
-                 get-key fn/seconda
-                 get-val fn/firsta}
-            :as opts}]])
+  [coll & [opts]])
 
 (defn test:merge-deep-with
   [f & maps])
