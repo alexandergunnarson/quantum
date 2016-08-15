@@ -145,10 +145,11 @@
         (vector? arg)
           ; Otherwise the tag meta is assumed to be 
           ; clojure.lang.IPersistentVector, etc.
-          ; TODO do CLJS version
           (cmacros/hint-meta (list 'identity arg)
             (or (get vec-classes-for-count (count arg))
-                'clojure.lang.PersistentVector))
+                (case lang
+                  :clj  'clojure.lang.PersistentVector
+                  :cljs 'cljs.core.PersistentVector)))
         :else arg))))
 
 (defn gen-arglist

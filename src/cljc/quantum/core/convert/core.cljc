@@ -18,7 +18,7 @@
   #?(:clj  (:import (org.apache.commons.codec.binary Base64)
                     clojure.lang.Var)))
 
-; TODO type dispatch would be faster with protocols
+; TODO type dispatch would be faster with |defnt|
 
 ; TODO THIS IS GOOD
 ; #?(:clj

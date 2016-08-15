@@ -4,7 +4,7 @@
   (:refer-clojure :exclude [merge])
   (:require
     [quantum.core.collections.base           :as cbase
-      :refer        [#?(:clj kmap)
+      :refer        [#?(:clj kmap) merge-call
                      update-first update-val ensure-set
                      zip-reduce default-zipper reducei]         
       :refer-macros [kmap]]
@@ -115,19 +115,21 @@
 (defn defnt-arities
   {:out '[[[^string? x] (println "A string!")]
           [[^vector? x] (println "A vector!")]]}
-  [body]
-  (condf body
-    (fn-> first vector?) (fn->> defnt-remove-hints vector)
-    (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
-    #(throw (->ex nil "Unexpected form when trying to parse arities." %))))
+  [{:as env :keys [body]}]
+  {:arities
+    (condf body
+      (fn-> first vector?) (fn->> defnt-remove-hints vector)
+      (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
+      #(throw (->ex nil "Unexpected form when trying to parse arities." %)))})
 
 (defn defnt-arglists
   {:out '[[^string? x] [^vector? x]]}
-  [body]
-  (condf body
-    (fn-> first vector?) (fn->> first vector)
-    (fn-> first seq?   ) (fn->> (mapv first))
-    #(throw (->ex nil "Unexpected form when trying to parse arglists." %))))
+  [{:as env :keys [body]}]
+  {:arglists
+    (condf body
+      (fn-> first vector?) (fn->> first vector)
+      (fn-> first seq?   ) (fn->> (mapv first))
+      #(throw (->ex nil "Unexpected form when trying to parse arglists." %)))})
 
 (defn defnt-gen-protocol-names
   "Generates |defnt| protocol names"
@@ -159,6 +161,7 @@
            Object]
             [[^vector? x] (println "A vector!")]}}
   [{:keys [sym arities arglists-types lang ns-]}]
+  {:post [(log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY UNEXP" %)]}
   (assert (nempty? arities))
   (let [genned-method-name
           (-> sym name cbase/camelcase munge symbol)
@@ -218,43 +221,47 @@
            gen-interface-code-body-unexpanded
            available-default-types]
     :as env}]
+  {:post [(log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY EXP" %)]}
   (assert (nempty? gen-interface-code-body-unexpanded))
   (assert (nnil?   available-default-types))
-  (->> gen-interface-code-body-unexpanded
-       (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]
-               (let [expanded-hints-list (->> (defnt-replace-kw :else (merge env {:type-hints hints}))
-                                              (apply combo/cartesian-product))
-                     assoc-arity-etc
-                       (fn [hints]
-                         (let [inner-type-n (-> hints first tdefs/inner-type)
-                               hints-v (->> hints
-                                            (map (fn [hint] (defnt-replace-kw :elem (kmap hint inner-type-n))))
-                                            (into []))
-                               arglist-hinted (hint-arglist-with arglist hints-v)
-                               ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
-                               get-max-type (delay (->> arglist-hinted (map type-hint) tdefs/max-type))
-                               ret-type (cond
-                                          (= ret-type-0 'first)
-                                            (->> arglist-hinted first type-hint)
-                                          (= ret-type-0 'largest)
-                                            @get-max-type
-                                          #?@(:clj
-                                         [(= ret-type-0 'auto-promote)
-                                            (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
-                                          :else (or (-> ret-type-0 (classes-for-type-predicate lang) first)
-                                                    ret-type-0
-                                                    (get trans/default-hint lang)))
-                               arity-hinted (assoc arity 0 arglist-hinted)]
-                           [[method-name hints-v ret-type] (seq arity-hinted)]))]
-                 (->> expanded-hints-list
-                      (map #(defnt-replace-kw :first {:type-arglist %}))
-                      (mapv assoc-arity-etc)))))
-       (apply catvec)))
-
+  {:gen-interface-code-body-expanded
+    (->> gen-interface-code-body-unexpanded
+         (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]
+                 (let [expanded-hints-list (->> (defnt-replace-kw :else (merge env {:type-hints hints}))
+                                                (apply combo/cartesian-product))
+                       assoc-arity-etc
+                         (fn [hints]
+                           (let [inner-type-n (-> hints first tdefs/inner-type)
+                                 hints-v (->> hints
+                                              (map (fn [hint] (defnt-replace-kw :elem (kmap hint inner-type-n))))
+                                              (into []))
+                                 arglist-hinted (hint-arglist-with arglist hints-v)
+                                 ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
+                                 get-max-type (delay (->> arglist-hinted (map type-hint) tdefs/max-type))
+                                 ret-type (cond
+                                            (= ret-type-0 'first)
+                                              (->> arglist-hinted first type-hint)
+                                            (= ret-type-0 'largest)
+                                              @get-max-type
+                                            #?@(:clj
+                                           [(= ret-type-0 'auto-promote)
+                                              (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
+                                            :else (or (-> ret-type-0 (classes-for-type-predicate lang) first)
+                                                      ret-type-0
+                                                      (get trans/default-hint lang)))
+                                 arity-hinted (assoc arity 0 arglist-hinted)]
+                             [[method-name hints-v ret-type] (seq arity-hinted)]))]
+                   (->> expanded-hints-list
+                        (map #(defnt-replace-kw :first {:type-arglist %}))
+                        (mapv assoc-arity-etc)))))
+         (apply catvec))})
+  
 (defn defnt-gen-interface-def
   [{:keys [gen-interface-code-header gen-interface-code-body-expanded]}]
-  (concat gen-interface-code-header ; technically |conjr|
-    (list (mapv first gen-interface-code-body-expanded))))
+  {:post [(log/ppr-hints :macro-expand "INTERFACE DEF:" %)]}
+  {:gen-interface-def
+    (concat gen-interface-code-header ; technically |conjr|
+      (list (mapv first gen-interface-code-body-expanded)))})
 
 (defn defnt-positioned-types-for-arglist
   {:todo "The shape of this (reducei) is probably useful and can be reused"}
@@ -272,22 +279,26 @@
                          (merge-with set/union type-map new-map))))))))))
 
 (defn defnt-types-for-arg-positions
-  {:out '{0 {string?  #{3} number? #{2 3}  }
-          1 {decimal? #{0} Object  #{0 2 3}}
-          2 nil}}
+  {:out-like '{0 {string?  #{3} number? #{2 3}  }
+               1 {decimal? #{0} Object  #{0 2 3}}
+               2 nil}}
   [{:keys [lang ns- arglists-types]}]
-  (->> arglists-types
-       (map first)
-       (reduce (fn [types-n arglist-n]
-                 (defnt-positioned-types-for-arglist arglist-n types-n))
-                 {})
-       (map (f*n update-val
-              (fn->> (map (fn [[type-hint arity-cts]]
-                              ; TODO what are you going to do with arity-cts?
-                              (zipmap (expand-classes-for-type-hint type-hint lang ns-)
-                                      (repeat arity-cts))))
-                     (apply merge-with set/union))))
-       (into {})))
+  {:post [(do (log/ppr :macro-expand "TYPES FOR ARG POSITIONS" %)
+              true)]}
+  (let [types (->> arglists-types
+                   (map first)
+                   (reduce (fn [types-n arglist-n]
+                             (defnt-positioned-types-for-arglist arglist-n types-n))
+                             {})
+                   (map (f*n update-val
+                          (fn->> (map (fn [[type-hint arity-cts]]
+                                          ; TODO what are you going to do with arity-cts?
+                                          (zipmap (expand-classes-for-type-hint type-hint lang ns-)
+                                                  (repeat arity-cts))))
+                                 (apply merge-with set/union))))
+                   (into {}))]
+    {:types-for-arg-positions types
+     :first-types             (get types 0)}))
 
 (defn protocol-verify-unique-first-hint
   "Not allowed same arity and same first hint. 
@@ -295,8 +306,8 @@
    Protocols can't dispatch on non-first args.
    ([^long x ^int    y ^char z] (+ x y) (str z))
    ([^long x ^String y ^char z] (str x z y))"
-  {:in '[[Abcde [#{int } #{String               }] int  ]
-         [Abcde [#{long} #{APersistentVector ...}] float]]
+  {:in-like '[[Abcde [#{int } #{String               }] int  ]
+              [Abcde [#{long} #{APersistentVector ...}] float]]
    :todo ["Allow for implicitly convertible types (e.g. long and Long) with the same codebase to
            pass through this verification"]}
   [arglists]
@@ -325,29 +336,74 @@
            strict?
            relaxed?
            sym-with-meta
-           args-sym
-           args-hinted-sym
            lang]}]
-   `(defmacro ~sym-with-meta [& ~args-sym]
-      (let [~args-hinted-sym
-              (quantum.core.macros.transform/try-hint-args
-                ~args-sym ~lang ~'&env)]
-        (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta
-                              "|" ~args-hinted-sym
-                              "|" '~genned-protocol-method-name-qualified
-                              "|" '~genned-method-name)
-        (if (or (when-cljs ~'&env true)
-                (= ~lang :cljs)
-                ~relaxed?
-                (and (not ~strict?)
-                     (quantum.core.macros.transform/any-hint-unresolved?
-                       ~args-hinted-sym ~lang ~'&env)))
-            (seq (concat (list '~genned-protocol-method-name-qualified)
-                         ~args-hinted-sym))
-            (seq (concat (list '.)
-                         (list '~reified-sym-qualified)
-                         (list '~genned-method-name)
-                         ~args-hinted-sym))))))
+  {:post [(log/ppr-hints :macro-expand "HELPER MACRO DEF" %)]}
+   (let [args-sym        'args-sym
+         args-hinted-sym 'args-hinted-sym]
+     {:helper-macro-def
+       `(defmacro ~sym-with-meta [& ~args-sym]
+          (let [~args-hinted-sym
+                  (quantum.core.macros.transform/try-hint-args
+                    ~args-sym ~lang ~'&env)]
+            (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta
+                                  "|" ~args-hinted-sym
+                                  "|" '~genned-protocol-method-name-qualified
+                                  "|" '~genned-method-name)
+            (if (or (when-cljs ~'&env true)
+                    (= ~lang :cljs)
+                    ~relaxed?
+                    (and (not ~strict?)
+                         (quantum.core.macros.transform/any-hint-unresolved?
+                           ~args-hinted-sym ~lang ~'&env)))
+                (seq (concat (list '~genned-protocol-method-name-qualified)
+                             ~args-hinted-sym))
+                (seq (concat (list '.)
+                             (list '~reified-sym-qualified)
+                             (list '~genned-method-name)
+                             ~args-hinted-sym)))))}))
+
+
+(defn defnt-arglists-types
+  {:out-like `{:arglists-types
+                ([[AtomicInteger] Object]
+                 [[integer?] Object]
+                 [[#{String StringBuilder} #{boolean char}] Object]
+                 [[#{short byte} #{long int} #{double float}] Object])}}
+  [{:as env :keys [arglists lang sym]}]
+  {:post [(log/ppr-hints :macro-expand "TYPE HINTS EXTRACTED" %)]}
+  {:arglists-types
+    (->> arglists
+         (map #(trans/extract-all-type-hints-from-arglist lang sym %))
+         doall)})
+
+(defn defnt-available-default-types
+  {:out-like `{:available-default-types
+                {0 #{Object boolean char double float},
+                 1 #{Object double short float byte},
+                 2 #{Object boolean char long short int byte}}}}
+  [{:as env :keys [lang types-for-arg-positions]}]
+  {:post [(log/ppr :macro-expand "AVAILABLE DEFAULT TYPES" %)]}
+  {:available-default-types
+    (->> types-for-arg-positions
+         (map (f*n update-val
+                (fn->> keys (into #{})
+                       (set/difference (-> tcore/types-unevaled (get-in [lang :any]))))))
+         (into {}))})
+
+(defn defnt-extend-protocol-def
+  [{:as env :keys [strict? types-for-arg-positions]}]
+  {:post [(log/ppr-hints :macro-expand "EXTEND PROTOCOL DEF" %)]}
+  {:extend-protocol-def
+    (when-not strict?
+      (proto/gen-extend-protocol-from-interface env))})
+
+(defn defnt-notify-unbox
+  "Currently doesn't actually get used by |defnt|, even though it's called."
+  [{:as env :keys [sym]}]
+  (let [defnt-auto-unboxable? (-> sym type-hint tcore/auto-unboxable?)
+        auto-unbox-fn (type-hint sym) ; unbox-fn (long, int, etc.) is same as type hint
+        ; TODO auto-unbox according to arguments when no defnt-wide type hint is given 
+        _ (log/ppr :macro-expand "Auto-unboxable?" defnt-auto-unboxable? auto-unbox-fn)]))
 
 (defn defnt-gen-final-defnt-def
   "The finishing function for |defnt|.
@@ -357,15 +413,16 @@
    - Protocol and extend-protocol, if not strict
    - Macro (helper), if a Clojure environment
    - Protocol alias, if a ClojureScript environment"
-  [{:keys [lang sym strict? externs genned-protocol-method-name
+  [{:keys [lang sym strict? externs genned-protocol-method-names
            gen-interface-def
            reify-def reified-sym
            helper-macro-def
            protocol-def extend-protocol-def]}]
-  (concat (apply list 'do @externs)
+  {:post [(log/ppr-hints :macro-expand "DEFNT FINAL" %)]}
+  (concat (list* 'do @externs)
     [(when (= lang :clj) gen-interface-def)
      (when-not strict?
-       (list 'declare genned-protocol-method-name)) ; For recursion
+       (list* 'declare genned-protocol-method-names)) ; For recursion
      (when (= lang :clj) (list 'declare reified-sym)) ; For recursion
      (when (= lang :clj) helper-macro-def)
      (when (= lang :clj) reify-def)
@@ -391,80 +448,32 @@
   ([opts lang ns- sym doc- meta- body [unk & rest-unk]]
     (apply mfn/defn-variant-organizer
       [defnt*-helper opts lang ns- sym doc- meta- body (cons unk rest-unk)]))
-  ([opts lang ns- sym doc- meta- body]
+  ([{:as opts
+     :keys [strict? relaxed?]} lang ns- sym doc- meta- body]
     (log/ppr :debug (kmap opts lang ns- sym doc- meta- body))
-    (let [strict?  (:strict?  opts)
-          relaxed? (:relaxed? opts)
-          externs  (atom [])
+    (let [externs       (atom [])
           sym-with-meta (with-meta sym (merge {:doc doc-} meta-))
-          body-f   (mfn/optimize-defn-variant-body! body externs)
-          arities  (defnt-arities  body-f)
-          arglists (defnt-arglists body-f)
-          env      (kmap sym strict? relaxed? sym-with-meta lang ns- externs arities arglists)
-          genned-protocol-names
-            (defnt-gen-protocol-names env)
-          env (merge env genned-protocol-names)
-          ; Pre-expanded 
-          arglists-types (->> arglists
-                              (map #(trans/extract-all-type-hints-from-arglist lang sym %))
-                              doall)
-          env (merge env (kmap arglists-types))
-          _ (log/ppr-hints :macro-expand "TYPE HINTS EXTRACTED" arglists-types)
-          {:as   genned-interface-names
-           :keys [gen-interface-code-body-unexpanded]}
-            (defnt-gen-interface-unexpanded env)
-          _ (log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY UNEXP" gen-interface-code-body-unexpanded)
-          env (merge env genned-interface-names)
-          types-for-arg-positions (defnt-types-for-arg-positions env)
-          _ (log/ppr :macro-expand "TYPES FOR ARG POSITIONS" types-for-arg-positions)
-          available-default-types
-            (->> types-for-arg-positions
-                 (map (f*n update-val
-                        (fn->> keys (into #{})
-                               (set/difference (-> tcore/types-unevaled (get-in [lang :any]))))))
-                 (into {}))
-          _ (log/ppr :macro-expand "AVAILABLE DEFAULT TYPES" available-default-types)
-          env (merge env (kmap available-default-types))
-          gen-interface-code-body-expanded (defnt-gen-interface-expanded env)
-          _ (log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY EXP" gen-interface-code-body-expanded)
-          env (merge env (kmap gen-interface-code-body-expanded))
-          gen-interface-def (defnt-gen-interface-def env)
-          env (merge env (kmap gen-interface-def))
-          _ (log/ppr-hints :macro-expand "INTERFACE DEF:" gen-interface-def)
-          reify-body (reify/gen-reify-body env) ; Necessary for |gen-protocols-from-interface|
-          env (merge env (kmap reify-body))
-          _ (when (= lang :clj)
-              (log/ppr-hints :macro-expand "REIFY BODY" reify-body))
-          reified (when (= lang :clj) (reify/gen-reify-def env))
-          env (merge env reified)
-          protocol-def (when-not strict? (proto/gen-protocols-from-interface env))
-          _ (log/ppr-hints :macro-expand "PROTOCOL DEF" protocol-def)
-          env (merge env (kmap protocol-def))
-          extend-protocol-def
-            (when-not strict?
-              (proto/gen-extend-protocol-from-interface
-                (assoc env :first-types (get types-for-arg-positions 0))))
-          _ (log/ppr-hints :macro-expand "EXTEND PROTOCOL DEF" extend-protocol-def)
-          env (merge env (kmap extend-protocol-def))
-          defnt-auto-unboxable? (-> sym type-hint tcore/auto-unboxable?)
-          auto-unbox-fn (type-hint sym) ; unbox-fn (long, int, etc.) is same as type hint
-          ; TODO auto-unbox according to arguments when no defnt-wide type hint is given 
-          _ (log/ppr :macro-expand "Auto-unboxable?" defnt-auto-unboxable? auto-unbox-fn)
-          args-sym        (gensym 'args)
-          args-hinted-sym (gensym 'args-hinted)
-          env (merge env (kmap args-sym args-hinted-sym))
-          helper-macro-def
-            (when (= lang :clj)
-              (defnt-gen-helper-macro env))
-          env (merge env (kmap helper-macro-def))
-          interface-macro-sym-with-meta
-            (-> sym-with-meta name (str "'") symbol
-                (with-meta (meta sym-with-meta)))
-          env (merge env (kmap interface-macro-sym-with-meta))
-          _ (log/ppr-hints :macro-expand "HELPER MACRO DEF" helper-macro-def)
-          final-def (defnt-gen-final-defnt-def env)
-          _ (log/ppr-hints :macro-expand "DEFNT FINAL" final-def)]
-        final-def))))
+          body          (mfn/optimize-defn-variant-body! body externs)
+          env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs)
+                  (merge-call defnt-arities
+                              defnt-arglists
+                              defnt-gen-protocol-names
+                              defnt-arglists-types
+                              defnt-gen-interface-unexpanded
+                              defnt-types-for-arg-positions
+                              defnt-available-default-types
+                              defnt-gen-interface-expanded
+                              defnt-gen-interface-def
+                              (fn [env] {:reify-body (reify/gen-reify-body env)}) ; Necessary for |gen-protocol-from-interface|
+                              (fn [env] (when (= lang :clj)
+                                          (reify/gen-reify-def env)))
+                              (fn [env] (when-not strict?
+                                          (proto/gen-defprotocol-from-interface env)))
+                              defnt-extend-protocol-def
+                              defnt-notify-unbox
+                              (fn [env] (when (= lang :clj)
+                                          (defnt-gen-helper-macro env)))))]
+      (defnt-gen-final-defnt-def env)))))
 
 (declare defnt*-helper)
 

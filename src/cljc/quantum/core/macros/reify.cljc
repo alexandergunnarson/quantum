@@ -1,26 +1,25 @@
 (ns quantum.core.macros.reify
-           (:require [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]                                ]
-                     [quantum.core.collections.base           :as cbase
-                       :refer [update-first update-val ensure-set
-                               zip-reduce default-zipper #?(:clj kmap)]  ]
-                     [quantum.core.error                      :as err                 
-                               :refer [->ex]                             ]
-                     [quantum.core.fn                         :as fn
-                                :refer [#?@(:clj [fn-> fn->> <-])]       ]
-                              [quantum.core.log               :as log    ]
-                              [quantum.core.logic             :as logic
-                                :refer [#?@(:clj [whenc]) nempty?]       ]
-                     [quantum.core.macros.core                :as cmacros]
-                     [quantum.core.macros.transform           :as trans  ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.base           :as cbase
-                       :refer [kmap]]
-                     [quantum.core.fn                         :as fn
-                       :refer [fn-> fn->> <-]                            ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [whenc]                                    ])))
+  (:require
+    [quantum.core.analyze.clojure.predicates :as anap
+      :refer [type-hint]                                ]
+    [quantum.core.collections.base           :as cbase
+      :refer        [update-first update-val ensure-set
+                     zip-reduce default-zipper
+                     #?(:clj kmap)]  
+      :refer-macros [kmap]                              ]
+    [quantum.core.error                      :as err 
+      :refer [->ex]                                     ]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [fn-> fn->> <-])]         
+      :refer-macros [fn-> fn->> <-]                     ]
+    [quantum.core.log                        :as log    
+      :include-macros true                              ]
+    [quantum.core.logic                      :as logic
+      :refer        [#?@(:clj [whenc]) nempty?]         
+      :refer-macros [whenc]                             ]
+    [quantum.core.macros.core                :as cmacros]
+    [quantum.core.macros.transform           :as trans  ]))
+
 #?(:clj
 (defn gen-reify-def
   [{:keys [sym ns-qualified-interface-name reify-body]}]
@@ -76,5 +75,6 @@
            ns-qualified-interface-name
            genned-method-name
            gen-interface-code-body-expanded]}]
+  {:post [(log/ppr-hints :macro-expand "REIFY BODY" %)]}
   (-> (gen-reify-body-raw args)
       (verify-reify-body sym))))
