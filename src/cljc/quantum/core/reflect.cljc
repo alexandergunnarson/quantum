@@ -22,6 +22,8 @@
 
 (def object-class=>record-class (atom {}))
 
+; TODO use clojure.core/bean, because that's basically the same thing
+
 #?(:clj
 (defn obj->map
   {:todo "Implement |object->record| for more memory efficiency"}

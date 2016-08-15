@@ -1,5 +1,5 @@
 (ns quantum.db.datomic.entities
-            (:refer-clojure :exclude [#?(:cljs boolean?)])
+            (:refer-clojure :exclude [boolean? double?])
             (:require [quantum.core.error       :as err
                         :refer [->ex]                     ]
                       [quantum.core.fn          :as fn

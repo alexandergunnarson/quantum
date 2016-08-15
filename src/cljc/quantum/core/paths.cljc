@@ -86,6 +86,10 @@
   [& parts]
   (apply str/join-once sys/separator parts))
 
+(defn url-path
+  [& parts]
+  (apply str/join-once "/" parts))
+
 ;#?(:clj
 ;(defn validate-paths []
 ;  (doseq [bin-name path paths]

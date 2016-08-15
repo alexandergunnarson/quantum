@@ -1,5 +1,5 @@
 (ns quantum.core.macros.transform
-           (:refer-clojure :exclude [every?])
+           (:refer-clojure :exclude [some? every?])
            (:require [fast-zip.core                           :as zip       ]
                      [clojure.walk
                        :refer [postwalk]                                    ]
@@ -17,7 +17,7 @@
                      [quantum.core.log                        :as log       ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenc condf*n])
-                               nnil? any? every?]                           ]
+                               nnil? some? every?]                           ]
                      [quantum.core.macros.core                :as cmacros   ]
                      [quantum.core.type.core                  :as tcore     ])
   #?(:cljs (:require-macros
@@ -47,7 +47,7 @@
 (defn any-hint-unresolved?
   ([args lang] (any-hint-unresolved? args lang nil))
   ([args lang env]
-    (any? (fn-not #(hint-resolved? % lang env)) args)))
+    (some? (fn-not #(hint-resolved? % lang env)) args)))
 
 
 (defn hint-body-with-arglist
@@ -123,9 +123,8 @@
         type-hints (->> arglist (extract-type-hints-from-arglist lang))]
     (vector type-hints return-type-0)))
 
-; TODO do CLJS version
-(def vec-classes-for-count
-  '{0 clojure.lang.Tuple$T0
+(def vec-classes-for-count {}
+  #_{0 clojure.lang.Tuple$T0
     1 clojure.lang.Tuple$T1
     2 clojure.lang.Tuple$T2
     3 clojure.lang.Tuple$T3
@@ -146,10 +145,11 @@
         (vector? arg)
           ; Otherwise the tag meta is assumed to be 
           ; clojure.lang.IPersistentVector, etc.
-          ; TODO do CLJS version
           (cmacros/hint-meta (list 'identity arg)
             (or (get vec-classes-for-count (count arg))
-                'clojure.lang.PersistentVector))
+                (case lang
+                  :clj  'clojure.lang.PersistentVector
+                  :cljs 'cljs.core.PersistentVector)))
         :else arg))))
 
 (defn gen-arglist

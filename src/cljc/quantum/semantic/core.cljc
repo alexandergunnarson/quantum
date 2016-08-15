@@ -2,29 +2,25 @@
            (:refer-clojure :exclude [assert get])
            (:require
              [quantum.core.logic
-               :refer [#?@(:clj [fn-or])]]
+               :refer        [#?@(:clj [fn-or])]
+               :refer-macros [          fn-or]]
              [quantum.core.fn
-               :refer [#?@(:clj [<- f*n])]]
+               :refer        [#?@(:clj [<- f*n])]
+               :refer-macros [          <- f*n]]
              [quantum.core.collections :as coll
                :refer [map+ remove+
                        mutable! eq!
-                       #?@(:clj [kmap aset-in! aget-in aget-in* ifor get reducei])]]
+                       #?@(:clj [kmap aset-in! aget-in aget-in*
+                                 ifor get reducei])]
+               :refer-macros [   kmap aset-in! aget-in aget-in*
+                                 ifor get reducei]]
              [quantum.core.error
-               :refer [#?(:clj assert) ->ex]]
+               :refer        [#?(:clj assert) ->ex]
+               :refer-macros [        assert]]
              [quantum.core.numeric :as num
-               :refer [#?@(:clj [inc* +*])]]
+               :refer        [#?@(:clj [+*]) inc* ]
+               :refer-macros [          +*]]
              [quantum.core.string :as str])
-  #?(:cljs (:require-macros
-             [quantum.core.logic
-               :refer [fn-or]]
-             [quantum.core.fn
-               :refer [<- f*n]]
-             [quantum.core.error
-               :refer [assert]]
-             [quantum.core.collections
-               :refer [aset-in! aget-in aget-in* ifor get reducei]]
-             [quantum.core.numeric
-               :refer [inc* +*]]))
   #?(:cljs (:import goog.string.StringBuffer)))
 
 (defn ->soundex

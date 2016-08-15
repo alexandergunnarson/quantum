@@ -28,7 +28,7 @@
               merge sorted-map sorted-map-by
               into
               count
-              vec empty empty?
+              vec empty empty? some?
               split-at
               first second rest last butlast get aget nth pop peek
               select-keys get-in
@@ -36,7 +36,8 @@
               reverse
               conj
               conj! assoc! dissoc! disj!
-              #?(:cljs boolean?)])
+              boolean?
+              -])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [fast-zip.core                           :as zip    ]
@@ -61,10 +62,12 @@
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
                                          ifn if*n condf condf*n])
-                               nnil? any? splice-or]]
+                               nnil? some? splice-or]]
                      [quantum.core.macros                     :as macros 
                        :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.numeric                    :as num    ]
+                     [quantum.core.numeric                    :as num    
+                       :refer        [#?@(:clj [-])]
+                       :refer-macros [-]]
                      [quantum.core.reducers                   :as red    ]
                      [quantum.core.string                     :as str    ]
                      [quantum.core.string.format              :as sform  ]
@@ -608,7 +611,7 @@
     coll))
 
 (defn matching-seqs
-  {:tests `{[[1 2 3 4 4 2 1 2 2 6 8 2 4]]
+  {:tests `{[even? [1 2 3 4 4 2 1 2 2 6 8 2 4]]
             {1 [2], 3 [4 4 2], 7 [2 2 6 8 2 4]}}
    :todo ["Abstract; maybe use the regex for seqs"]}
   [pred coll]
@@ -894,7 +897,7 @@
     :todo ["Make it not output HashMaps but preserve records"]
     :contributors ["Alex Gunnarson"]}
   [f & maps]
-  (when (any? identity maps)
+  (when (some? identity maps)
     (let [merge-entry
            (fn [m e]
              (let [k (key e) v (val e)]
@@ -1642,7 +1645,7 @@
     (cond (splice-or *flow = 0)
           allocated
           (splice-or *flow = 1 -1) ; TODO fix
-          (update allocated (-> sorted last first) - *flow)
+          (update allocated (-> sorted last first) (f*n - *flow))
           (-> *flow num/abs (> 1))
           (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
 

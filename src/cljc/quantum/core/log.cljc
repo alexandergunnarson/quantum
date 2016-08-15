@@ -5,14 +5,14 @@
           By no means a full-fledged logging system, but useful nonetheless."
     :attribution "Alex Gunnarson"}
   quantum.core.log
-           (:refer-clojure :exclude [pr #?(:cljs seqable?)])
+           (:refer-clojure :exclude [pr seqable?])
            (:require [com.stuartsierra.component   :as component]
                      [quantum.core.core            :as qcore    ]
                      [quantum.core.fn              :as fn
                        :refer [#?@(:clj [])]                    ]
                      [quantum.core.meta.debug      :as debug    ]
                      [quantum.core.print           :as pr       ]
-                     [quantum.core.type.predicates :as tpred
+                     [quantum.core.type.predicates
                        :refer [seqable?]])
   #?(:cljs (:require-macros
                      [quantum.core.fn            :as fn
@@ -68,7 +68,7 @@
 
 (defn ->log-initializer [{:keys [levels] :as opts}]
   (when-not (seqable? levels)
-    (throw (#?(:clj Exception. :cljs js/Error.)) "@levels is not seqable"))
+    (throw (new #?(:clj Exception :cljs js/Error) "@levels is not seqable")))
 
   (LogInitializer. levels))
 
@@ -80,7 +80,7 @@
   {:attribution "Alex Gunnarson"}
   [trace? pretty? print-fn pr-type args opts]
     (when (or (get @levels pr-type)
-              #?(:cljs (= pr-type :macro-expand)))
+              #_(:cljs (= pr-type :macro-expand)))
       (let [trace?  (or (:trace?  opts) trace? )
             pretty? (or (:pretty? opts) pretty?)
             stack   (or (:stack   opts) -1     )
@@ -121,8 +121,8 @@
               "TIMESTAMP" #_(time/now)
               pr-type
               curr-fn
-              out-str)))
-        nil)))
+              out-str)))))
+    true) ; for :post logging
 
 ; TODO make these more efficient
 #?(:clj

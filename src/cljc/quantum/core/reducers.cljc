@@ -55,16 +55,6 @@
                      [quantum.core.vars             :as var
                        :refer [defalias]                                    ])))
 
-(comment
-  "How a reducer works:"
-  (->> coll (map+ inc) (map+ triple) (join []))
-  "Results in this reducer:"
-  (fn reducer [acc x]
-    (let [reducer1 (fn reducer [acc x]
-                     (conj acc (triple x)))]
-      (reducer1 acc (inc x))))
-  "Which is used as the reducing function to reduce into a vector.")
-
 #?(:clj (defalias join   red/join  ))
         (defalias pjoin  fold/pjoin)
 #?(:clj (defalias reduce red/reduce))

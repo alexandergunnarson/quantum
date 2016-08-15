@@ -142,3 +142,43 @@
 ;                                                (comparator-n pivot))))]
 ;   (into [] new-on-last-date new-after-last-date)))
 
+
+#_(defn diff*
+  "Diffs a collection.
+   `nil` means no difference; otherwise differences will be displayed
+   in a datatype-specific way.
+
+   (Possibly mistakenly) assumes both collections have the same |count|.
+   Sadly, `clojure.data/diff` isn't good enough for our use case.
+
+   Could be rewritten as a multimethod, but no need."
+  [a b]
+  (cond (and (number? a) (number? b)) ; atomic case
+        (when-not (= a b)
+          (let [a-rat (rationalize a)
+                b-rat (rationalize b)]
+            {:each {:orig     [a b]
+                    :rational [a-rat b-rat]}
+             :- (- a-rat b-rat)
+             :+ (+ a-rat b-rat)
+             :* (* a-rat b-rat)
+             :/ (if (zero? b)
+                    :undefined
+                    (let [div (/ a-rat b-rat)]
+                      [div (double div)]))}))
+
+        (and (keyword? a) (keyword? b))
+        (when-not (= a b) ; atomic case
+          {:each [a b]})
+
+        (and (map? a) (map? b))
+        (reduce-2 a b
+          (fn [ret a-sub b-sub k] (assoc ret k (diff a-sub b-sub)))
+          {} (keys a))
+
+        (and (vector? a) (vector? b))
+        (reduce-2 a b
+          (fn [ret a-sub b-sub _] (conj ret (diff a-sub b-sub)))
+          [] (range 0 (count a)))
+
+        :else (throw (ex-info "Cannot diff" {:a a :b b}))))

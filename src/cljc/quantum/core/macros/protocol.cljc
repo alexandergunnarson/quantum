@@ -1,25 +1,24 @@
 (ns quantum.core.macros.protocol
-           (:require [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]                          ]
-                     [quantum.core.analyze.clojure.transform
-                       :refer [unhint]                             ]
-                     [quantum.core.macros.transform :as trans      ]
-                     [quantum.core.fn               :as fn
-                                :refer [#?@(:clj [f*n fn-> fn->>])]]
-                     [quantum.core.log              :as log        ]
-                     [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [whenp]) nempty? nnil?]    ]
-                     [quantum.core.collections.base :as cbase
-                       :refer [update-first update-val ensure-set
-                               zip-reduce default-zipper]          ]
-                     [quantum.core.macros.core      :as cmacros    ]
-                     [quantum.core.type.core        :as tcore      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn               :as fn
-                       :refer [f*n fn-> fn->>]                     ]
-                     [quantum.core.log              :as log        ]
-                     [quantum.core.logic            :as logic
-                       :refer [whenp]                              ])))
+  (:require
+    [quantum.core.analyze.clojure.predicates :as anap
+      :refer [type-hint]                                ]
+    [quantum.core.analyze.clojure.transform
+      :refer [unhint]                                   ]
+    [quantum.core.macros.transform           :as trans  ]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [f*n fn-> fn->>])]
+      :refer-macros [f*n fn-> fn->>]                    ]
+    [quantum.core.log                        :as log       
+      :include-macros true                              ]
+    [quantum.core.logic                      :as logic
+      :refer        [#?@(:clj [whenp]) nempty? nnil?]    
+      :refer-macros [whenp]                             ]
+    [quantum.core.collections.base           :as cbase
+      :refer        [#?(:clj kmap) update-first update-val
+                     ensure-set zip-reduce default-zipper]               
+      :refer-macros [kmap]]
+    [quantum.core.macros.core                :as cmacros]
+    [quantum.core.type.core                  :as tcore  ]))
 
 (def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
   protocol-type-hint-map
@@ -31,7 +30,8 @@
            float   double}
     :cljs {boolean boolean}})
 
-(defn ensure-protocol-appropriate-type-hint [arg lang i]
+(defn ensure-protocol-appropriate-type-hint
+  [arg lang i]
   (let [unhinted (unhint    arg)
         hint-0   (type-hint arg)
         ; hint-f   (get-in protocol-type-hint-map [lang hint])
@@ -42,29 +42,55 @@
         unhinted ; just remove the hint — don't "upgrade" it 
         (cmacros/hint-meta arg hint-0))))
 
-(defn ensure-protocol-appropriate-arglist [lang arglist-0]
+(defn ensure-protocol-appropriate-arglist 
+  [lang arglist-0]
   (->> arglist-0
        (map-indexed
          (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i)))
        (into [])))
 
-(defn gen-protocol-from-interface
+(defn append-variant-identifier
+  "Appends a variant identifier to a(n e.g. protocol) symbol.
+   Used in auto-generating protocol names for additional dispatch arguments other than the first."
+  [sym n]
+  (assert (symbol? sym))
+  (symbol (namespace sym)
+          (str (name sym) "__" n)))
+
+(defn gen-defprotocol-from-interface
   {:in '[[[Func [String IPersistentVector] long]]
          [[Func [String ITransientVector ] long]]]}
-  [{:keys [gen-interface-code-body-expanded
-           genned-protocol-name
-           genned-protocol-method-name]}]
-  (let [protocol-def-body
-          (->> gen-interface-code-body-expanded
-               (map (fn-> first second))
-               (group-by count)
-               (map (fn-> val first trans/gen-arglist))
-               (cons genned-protocol-method-name))
-        protocol-def 
-          (list 'defprotocol genned-protocol-name protocol-def-body)]
-    protocol-def))
+  [{:keys [genned-protocol-name
+           genned-protocol-method-name
+           arities]
+    :as env}]
+  {:post [(do (log/ppr-hints :macro-expand "PROTOCOL DEF" %)
+              true)]}
+  (let [distinct-arities (->> arities
+                              (map (fn-> first trans/gen-arglist))
+                              distinct
+                              (sort-by count >))
+        protocol-def
+          (->> (reductions conj '() distinct-arities)
+               rest
+               (map-indexed
+                 (fn [i arities]
+                   (let [variant-identifier (- (count distinct-arities) i)
+                         genned-protocol-method-name-variant
+                          (if (= i (-> distinct-arities count dec))
+                              genned-protocol-method-name
+                              (append-variant-identifier genned-protocol-method-name
+                                variant-identifier))]
+                     (cons genned-protocol-method-name-variant arities))))
+               (list* 'defprotocol genned-protocol-name))
+        genned-protocol-method-names
+          (->> protocol-def
+               rest rest
+               (map first))]
+    (kmap protocol-def genned-protocol-method-names)))
 
 ; TODO hopefully get rid of this step
+; TODO break it up
 #?(:clj 
 (defn gen-extend-protocol-from-interface
   ; Original Interface:         ([#{number?} x #{number?} y #{char? Object} z] ~@body)
@@ -77,7 +103,6 @@
   ; ((fn [^"[B" x ^long n] (clojure.lang.RT/aget x n)) my-byte-array abcde) => 0, no reflection
   [{:keys [genned-protocol-name genned-protocol-method-name
            reify-body lang first-types]}]
-  (log/ppr-hints :macro-expand-protocol "REIFY BODY" reify-body)
   (assert (nempty? reify-body))
   (assert (nnil? genned-protocol-name))
   (assert (nnil? genned-protocol-method-name))
@@ -91,6 +116,7 @@
         body-mapped
           (->> body-filtered
                (map (fn [[arglist & body :as method]]
+                      (log/ppr-hints :macro-expand-protocol "IN BODY MAPPED" (kmap arglist body))
                       (let [first-type         (-> arglist second type-hint)
                             first-type-unboxed (-> first-type tcore/->unboxed)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
@@ -103,11 +129,11 @@
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
                                                   (ensure-protocol-appropriate-type-hint lang 0))
-                                  arglist-f (->> arglist rest (ensure-protocol-appropriate-arglist lang))
-                                  arglist-f (if return-type
-                                                arglist-f
-                                                (cmacros/hint-meta arglist-f return-type) )
-                                  body-f (trans/hint-body-with-arglist body arglist lang :protocol)
+                                  arglist-f   (->> arglist rest (ensure-protocol-appropriate-arglist lang))
+                                  arglist-f   (if return-type
+                                                  arglist-f
+                                                  (cmacros/hint-meta arglist-f return-type) )
+                                  body-f      (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
                               (if (or (= boxed-first-type 'Object)
                                       (= boxed-first-type 'java.lang.Object))

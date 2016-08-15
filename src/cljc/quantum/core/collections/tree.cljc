@@ -35,7 +35,7 @@
               reverse
               conj
               conj! assoc! dissoc! disj!
-              #?(:cljs boolean?)])
+              boolean?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
                      [quantum.core.data.map                   :as map
@@ -64,7 +64,7 @@
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil? any?]]
+                                         ifn if*n condf condf*n]) nnil?]]
                      [quantum.core.macros                     :as macros 
                        :refer [#?@(:clj [defnt])]                        ]
                      [quantum.core.reducers                   :as red    

@@ -7,7 +7,7 @@
                      [quantum.core.collections.base :as cbase  
                        :refer [#?(:clj kmap)]                  ]
                      [quantum.core.data.map         :as map    ]
-                     [quantum.core.error.try-catch  :as tc     ]
+                     [slingshot.slingshot           :as try    ]
                      [quantum.core.macros.core      :as cmacros
                        :refer [#?(:clj if-cljs)]               ]
                      [quantum.core.log              :as log    ]
@@ -152,21 +152,21 @@
 #?(:clj
 (defmacro suppress
   "Suppresses any errors thrown in the body.
-  (suppress (error \"Error\")) => nil
+  (suppress (error \"Error\")) => <Exception>
   (suppress (error \"Error\") :error) => :error
   (suppress (error \"Error\")
             (fn [e]
               (.getMessage e))) => \"Error\""
-  {:source "zcaudate/hara.common.error"}
   ([body]
-    (let [c (if-cljs &env 'js/Error 'Throwable)]
-     `(try ~body (catch ~c ~'t))))
+    (let [c (if-cljs &env :default 'Throwable)]
+     `(try ~body (catch ~c ~'t ~'t))))
   ([body catch-val]
-    (let [c (if-cljs &env 'js/Error 'Throwable)]
+    (let [c (if-cljs &env :default 'Throwable)]
      `(try ~body (catch ~c ~'t
-                   (cond (fn? ~catch-val)
-                         (~catch-val ~'t)
-                         :else ~catch-val)))))))
+                   (let [catch-val# ~catch-val]
+                     (cond (fn? catch-val#)
+                           (catch-val# ~'t)
+                           :else catch-val#))))))))
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]
@@ -197,8 +197,8 @@
                    (recur (inc n#) error#)
                    result#))))))))
 
-#?(:clj (defalias try+   tc/try+  ))
-#?(:clj (defalias throw+ tc/throw+))
+#?(:clj (defalias try+   try/try+  ))
+#?(:clj (defalias throw+ try/throw+))
 
 #?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
 

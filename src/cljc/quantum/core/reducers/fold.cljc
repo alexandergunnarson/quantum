@@ -254,6 +254,8 @@
   ([to from & froms]
     (reduce #(pjoinl* %1 %2) (pjoinl* to from) froms)))
 
+; TODO make pjoin actually parallel in CLJS via WebWorkers 
+
 (def pjoin pjoinl)
 
 ; TODO move

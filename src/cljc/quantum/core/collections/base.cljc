@@ -39,10 +39,32 @@
         ret-n
         (recur (zip/right z) (f ret-n z)))))
 
+(defn reducei [f init coll]
+  (let [i (volatile! (long -1))]
+    (reduce
+      (fn ([ret elem]
+            (vswap! i inc)
+            (f ret elem @i))
+          ([ret k v]
+            (vswap! i inc)
+            (f ret k v @i)))
+      init
+      coll)))
+
+(defn merge-call
+  "Useful when e.g. there's a long series of functions which return their
+   results to an aggregated result."
+  {:example `(-> {}
+                 (merge-call #(assoc % :a 1))
+                 (merge-call my-associng-fn)
+                 (merge-call fn-that-uses-the-previous-results))}
+  ([m f] (merge m (f m)))
+  ([m f & fs] (reduce merge-call (merge-call m f) fs)))
+
 (defn camelcase
   "In the macro namespace because it is used with protocol creation."
-  ^{:attribution  "flatland.useful.string"
-    :contributors "Alex Gunnarson"}
+  {:attribution  "flatland.useful.string"
+   :contributors "Alex Gunnarson"}
   [str-0 & [method?]]
   (-> str-0
       (str/replace #"[-_](\w)"

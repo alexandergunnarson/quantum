@@ -71,7 +71,7 @@
 ;     (fn [state line stream-source]
 ;       (with-throw (nnil? (:handlers @state)) "Handlers nil at output-line-handler! How?")
 ;       (@log-buffer! state line stream-source)
-;       (if (or (str/starts-with? line "frame=") (any? (partial contains? line) #{"Non-monotonous" "Queue input is backward"}))
+;       (if (or (str/starts-with? line "frame=") (some? (partial contains? line) #{"Non-monotonous" "Queue input is backward"}))
 ;           (log/pr-opts :unimportant #{:thread? :timestamp?} line)
 ;           (log/pr-opts :debug       #{:thread? :timestamp?} line))
 ;       (condpc contains? line
