@@ -121,8 +121,8 @@
               "TIMESTAMP" #_(time/now)
               pr-type
               curr-fn
-              out-str)))
-        nil)))
+              out-str)))))
+    true) ; for :post logging
 
 ; TODO make these more efficient
 #?(:clj

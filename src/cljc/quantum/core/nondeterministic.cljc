@@ -146,6 +146,9 @@
   ([^boolean? secure?  ] (rand-char-between  secure?   97 122))
   ([^boolean? secure? n] (rand-chars-between secure? n 97 122))))
 
+; TODO rand-char of any type: 0 - 65535
+; TODO multiple types, as in regex
+
 #?(:clj
 (defn rand-lower
   ([   ] (rand-lower* false))
@@ -182,11 +185,14 @@
 
 #?(:clj
 (defn rand-longs
-  {:todo ["Base off of random longs, for speed"]}
+  {:todo ["Base off of random longs, for speed"
+          "Lazy |repeatedly| version"]}
   ([size] (rand-longs false size))
   ([secure? size]
     ; * 8 because longs are 8 bytes
     (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
+
+; TODO |rand-chars| where you can "harden" to a string or not. Also lazy version
 
 ; ; TODO DEPS ONLY
 ; #_(:clj
@@ -326,3 +332,10 @@
          first
          (map-vals+ persistent!)
          (join {}))))
+
+(defmulti
+  "Generates a random object."
+  generate (fn [k & args] k))
+
+; TODO :unique-<object>, :string, :keyword, :symbol, etc.
+; TODO generate both valid and invalid types for tests, e.g. according to differences in datatype, length, etc.

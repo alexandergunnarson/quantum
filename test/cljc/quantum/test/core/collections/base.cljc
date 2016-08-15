@@ -9,6 +9,10 @@
 
 (defn test:zip-reduce [f init z])
 
+(defn test:reducei [f init coll])
+
+(defn test:merge-call [m f])
+
 (defn test:camelcase
   [str-0 & [method?]])
 
