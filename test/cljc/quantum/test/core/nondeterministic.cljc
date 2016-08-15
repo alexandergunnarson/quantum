@@ -21,7 +21,6 @@
 
 (defn test:rand-numeric*
   ([n        ])
-  ([secure?  ])
   ([secure? n]))
 
 (defn test:rand-numeric
@@ -31,7 +30,6 @@
 
 (defn test:rand-upper*
   ([n        ])
-  ([secure?  ])
   ([secure? n]))
 
 (defn test:rand-upper
@@ -41,7 +39,6 @@
 
 (defn test:rand-lower*
   ([n        ])
-  ([secure?  ])
   ([secure? n]))
 
 (defn test:rand-lower

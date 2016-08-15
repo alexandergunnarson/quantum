@@ -173,14 +173,14 @@
 ;==================={         TRUNCATE         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 (defaliases quantum.core.numeric.truncate
-  round #?@(:clj [rint round' ceil floor floor-div floor-mod])))
+  round #?@(:clj [rint round' ceil floor floor-div floor-mod]))
 ;_____________________________________________________________________
 ;==================={       MISCELLANEOUS      }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 (defaliases quantum.core.numeric.misc
   rem mod
   #?@(:clj [ieee-rem quot hypot hypot* sign sign'
-            with-sign scalb ulp leading-zeros native-integer? gcd])))
+            with-sign scalb ulp leading-zeros native-integer? gcd]))
 ;_____________________________________________________________________
 ;================={          CONSTANTS           }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

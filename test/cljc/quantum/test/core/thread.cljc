@@ -47,7 +47,7 @@
 (defn test:gen-threadpool [type num-threads & [name-]]))
 
 #?(:clj
-(defn test:clear-work-queue! [^ThreadPoolExecutor threadpool-n]))
+(defn test:clear-work-queue! [threadpool-n]))
 
 #?(:clj
 (defn test:closeably-execute [threadpool-n ^Runnable r {:keys [id] :as opts}]))
@@ -119,8 +119,8 @@
 ; ===== DISTRIBUTOR =====
 
 #?(:clj
-(defnt test:shutdown!
-  [^java.util.concurrent.ThreadPoolExecutor x])
+(defn test:shutdown!
+  [^java.util.concurrent.ThreadPoolExecutor x]))
 
 #?(:clj
 (defn test:->distributor

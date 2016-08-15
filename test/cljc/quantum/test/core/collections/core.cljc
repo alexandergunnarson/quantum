@@ -22,7 +22,7 @@
 (defn test:array-of-type [obj n]))
 
 #?(:clj
-(defnt test:->array [x ct]))
+(defn test:->array [x ct]))
 
 
 (defn test:getr
