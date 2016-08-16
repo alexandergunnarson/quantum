@@ -26,7 +26,10 @@
               :refer [nnil?]                                      ]
             [quantum.core.vars                       :as var
               :refer        [#?@(:clj [defalias])]                       
-              :refer-macros [defalias]]))
+              :refer-macros [defalias]])
+  #?(:cljs (:require-macros [quantum.core.vars :refer [defalias]])))
+
+(defalias request! impl/request!)
 
 #?(:clj
 (defrecord
@@ -132,8 +135,6 @@
           (err/warn! e)))
       (assoc this
         :stop-fn nil))))
-
-(defalias request! impl/request!)
 
 ; UTILS
 
