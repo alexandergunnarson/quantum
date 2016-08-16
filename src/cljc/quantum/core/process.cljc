@@ -7,6 +7,8 @@
            (:require [com.stuartsierra.component :as comp ]
            #?@(:clj [[clojure.java.io            :as io   ]
                      [clojure.java.shell         :as shell]])
+                     [quantum.core.error
+                       :refer [->ex]                      ]
                      [quantum.core.paths         :as paths]
                      [quantum.core.resources     :as res  
                        :refer [closed?]                   ]

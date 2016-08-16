@@ -5,7 +5,8 @@
                      [#?(:clj  clojure.spec
                          :cljs cljs.spec   )   :as s   ]
                      [quantum.core.logic
-                       :refer [#?@(:clj [fn-not])]]
+                       :refer [#?@(:clj [fn-not])]
+                       :refer-macros [fn-not]          ]
                      [quantum.core.error       :as err
                        :refer [->ex]                   ]
                      [quantum.core.string      :as str ]
@@ -17,8 +18,8 @@
                        #?@(:cljs [:refer-macros [defalias]])]
                      [quantum.validate.domain          ])
   #?(:cljs (:require-macros 
-                     [quantum.core.logic
-                       :refer [fn-not]]))
+                     [quantum.validate.core
+                       :refer [spec]]))
   #?(:clj (:import java.util.regex.Matcher)))
 
 #_(:clj

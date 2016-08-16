@@ -1,4 +1,4 @@
-(ns quantum.db.datomic.schemas
+(ns ^{:figwheel-no-load true} quantum.db.datomic.schemas
   (:refer-clojure :exclude [type])
             (:require
               #?(:clj [clojure.java.shell             :as shell  ])

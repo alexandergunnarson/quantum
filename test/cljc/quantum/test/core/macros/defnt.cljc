@@ -11,6 +11,9 @@
                 :cljs cljs.test)
               :refer        [#?@(:clj [deftest is testing])]
               :refer-macros [deftest is testing]])
+  #?(:cljs (:require-macros
+             [quantum.test.core.macros.defnt
+               :refer [with-merge-test]]))
   #?(:clj (:import java.util.concurrent.atomic.AtomicInteger)))
 
 (def data

@@ -101,7 +101,7 @@
           (log/pr :warn "System already running.")
           (let [[started? system']
                  (try [true (start! @sys-map)]
-                   (catch Throwable t
+                   (catch #?(:clj Throwable :cljs :default) t
                      (-> t ex-data :system stop!)
                      [false @sys-map]))]
             (if started?
