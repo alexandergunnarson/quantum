@@ -1,17 +1,20 @@
 (ns quantum.scratch
   (:refer-clojure :exclude [when-let])
   (:require
-    [clojure.repl
-      :refer [source]]
-    [#?(:clj clojure.test :cljs cljs.test) :as test]
-    [#?(:clj clojure.pprint :cljs cljs.pprint)
-      :refer [pprint]]
-    [clojure.data
-      :refer [diff]]
-    [quantum.core.logic
-      :refer [when-let]]
-    [quantum.core.error
-      :refer [->ex]]))
+    #?(:clj [clojure.repl
+              :refer [source]])
+            [#?(:clj  clojure.test  
+                :cljs cljs.test) :as test]
+            [#?(:clj  clojure.pprint 
+                :cljs cljs.pprint)
+              :refer [pprint]]
+    #?(:clj [clojure.data
+              :refer [diff]])
+            [quantum.core.logic
+              :refer        [#?@(:clj [when-let])]
+              :refer-macros [when-let]]
+            [quantum.core.error
+              :refer [->ex]]))
 
 #?(:clj
 (defn throw-on-test-fail [ns-sym]

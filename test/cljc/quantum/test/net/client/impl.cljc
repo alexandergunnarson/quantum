@@ -1,4 +1,5 @@
-(ns quantum.net.client.impl)
+(ns quantum.test.net.client.impl
+  (:require [quantum.net.client.impl :as ns]))
 
 ; CLJS HTTP UTIL
 

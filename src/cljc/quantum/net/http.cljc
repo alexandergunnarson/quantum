@@ -29,7 +29,7 @@
               :refer-macros [defalias]])
   #?(:cljs (:require-macros [quantum.core.vars :refer [defalias]])))
 
-(defalias request! impl/request!)
+(def request! impl/request!)
 
 #?(:clj
 (defrecord

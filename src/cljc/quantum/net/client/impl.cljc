@@ -46,9 +46,6 @@
                       org.apache.http.impl.client.DefaultHttpClient
                       java.io.File)))
 
-#?(:cljs (enable-console-print!))
-#?(:cljs (println "IN HTTP IMPLS"))
-
 (def ^{:doc "According to OWASP, these are important and
              recommended headers to add to every request."}
   security-headers
@@ -97,8 +94,6 @@
              * :method
              * :query-params"}
   request! (wrap-request cljs-http.core/request)))
-
-#?(:cljs (do (println "REQUEST IS") (println request!)))
 
 ; ======== CLOJURE IMPLEMENTATION ========= ;
 
