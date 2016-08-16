@@ -8,46 +8,44 @@
             #?(:clj [loom.gen                  :as g-gen])  ; for now
                     [#?(:clj  clojure.core
                         :cljs cljs.core)       :as core  ]
-                    [quantum.core.convert      :as conv  ]
+                    [quantum.core.convert      :as conv  
+                      :include-macros true               ]
                     [quantum.core.lexical.core :as lex   ]
                     [quantum.core.data.set     :as set   
                       :refer [sorted-set+]               ]
                     [quantum.core.collections  :as coll
-                      :refer [#?@(:clj [fori reduce for join last lasti nth])
-                              map+ map-vals+ map-indexed+ indices+]]
+                      :refer        [#?@(:clj [fori reduce
+                                     for join last lasti nth])
+                                     map+ map-vals+ map-indexed+
+                                     indices+]
+                      :refer-macros [fori reduce for join
+                                     last lasti nth]]
                     [quantum.core.error        :as err
-                      :refer [->ex #?(:clj throw-unless)]]
+                      :refer [->ex TODO
+                              #?(:clj throw-unless)]     
+                      :refer-macros [throw-unless]      ]
                     [quantum.core.macros       :as macros
-                       :refer [#?@(:clj [defnt])]        ]
+                      :refer        [#?@(:clj [defnt])]
+                      :refer-macros [defnt]              ]
                     [quantum.core.type         :as type
-                      :refer [#?(:clj regex?)]           ]
+                      :refer [#?(:clj regex?)]           
+                      :refer-macros [regex?]             ]
                     [quantum.core.logic        :as logic
-                      :refer [splice-or nempty?
-                              #?@(:clj [condf*n])]       ]
+                      :refer        [splice-or nempty?
+                                     #?@(:clj [condf*n])]       
+                      :refer-macros [condf*n]            ]
                     [quantum.core.numeric      :as num   ]
                     [quantum.core.fn           :as fn
-                      :refer [#?(:clj <-)]               ]
+                      :refer        [#?(:clj <-)]               
+                      :refer-macros [<-]                 ]
                     [quantum.core.data.array   :as arr   ]
                     [quantum.core.vars
-                      :refer [#?(:clj defalias)]])
-  #?(:cljs (:require-macros
-                    [quantum.core.convert      :as conv  ]
-                    [quantum.core.collections  :as coll
-                      :refer [reduce for join last lasti]]
-                    [quantum.core.fn           :as fn
-                      :refer [<-]                        ]
-                    [quantum.core.logic
-                      :refer [condf*n]]
-                    [quantum.core.macros       :as macros
-                      :refer [defnt]                     ]
-                    [quantum.core.type         :as type
-                      :refer [regex?]                    ]
-                    [quantum.core.vars
-                      :refer [defalias]]))
-  #?(:clj
-  (:import java.util.Random
-           java.security.SecureRandom
-           [org.apache.commons.codec.binary Base64 Base32 Hex])))
+                      :refer        [#?(:clj defalias)]
+                      :refer-macros [defalias]           ])
+  (:import #?@(:clj  [java.util.Random
+                      java.security.SecureRandom
+                      [org.apache.commons.codec.binary Base64 Base32 Hex]]
+               :cljs [goog.string.StringBuffer])))
 
 ; Affects KeyGenerator, KeyPairGenerator, KeyAgreement, and Signature.
 ; http://java-performance.com
@@ -93,82 +91,52 @@
 
 ; TODO shorten all this repetitiveness by adding no-arg option to defnt
 
-#?(:clj
 (defn rand-int-between ; |rand-int| ?
   ([        a b] (rand-int-between false a b))
   ([secure? a b]
-    (let [^Random generator (get-generator secure?)]
-      (+ a (.nextInt generator (inc (- b a))))))))
+    #?(:clj (let [^Random generator (get-generator secure?)]
+              (+ a (.nextInt generator (inc (- b a)))))
+       :cljs (if secure?
+                 (throw (TODO "CLJS does not yet support secure random numbers"))
+                 (+ a (rand-int (inc (- b a))))))))
 
-; js.Math/random
-
-#?(:clj
 (defn rand-char-between
   ([        a b] (rand-char-between false a b))
-  ([secure? a b] (char (rand-int-between secure? a b)))))
+  ([secure? a b] (char (rand-int-between secure? a b))))
 
-#?(:clj
 (defn ^String rand-chars-between
   ([n a b] (rand-chars-between false n a b))
   ([secure? n a b]
-    (let [sb (StringBuilder.)]
+    (let [sb (#?(:clj StringBuilder. :cljs StringBuffer.))]
       (dotimes [m n]
         (.append sb (rand-char-between secure? a b)))
-      (str sb)))))
+      (str sb))))
 
-#?(:clj
-(defnt ^String rand-numeric*
-  ([^integer? n        ] (rand-chars-between         n 48 57 ))
-  ([^boolean? secure?  ] (rand-char-between  secure?   48 57 ))
-  ([^boolean? secure? n] (rand-chars-between secure? n 48 57 ))))
-
-#?(:clj
-(defn rand-numeric
-  ([   ] (rand-numeric* false))
-  ([a  ] (rand-numeric* a))
-  ([a b] (rand-numeric* a b))))
-
-#?(:clj
-(defnt ^String rand-upper*
-  ([^integer? n        ] (rand-chars-between         n 65 90 ))
-  ([^boolean? secure?  ] (rand-char-between  secure?   65 90 ))
-  ([^boolean? secure? n] (rand-chars-between secure? n 65 90 ))))
-
-#?(:clj
-(defn rand-upper
-  ([   ] (rand-upper* false))
-  ([a  ] (rand-upper* a))
-  ([a b] (rand-upper* a b))))
-
-#?(:clj
-(defnt ^String rand-lower*
-  ([^integer? n        ] (rand-chars-between         n 97 122))
-  ([^boolean? secure?  ] (rand-char-between  secure?   97 122))
-  ([^boolean? secure? n] (rand-chars-between secure? n 97 122))))
-
-; TODO rand-char of any type: 0 - 65535
-; TODO multiple types, as in regex
-
-#?(:clj
-(defn rand-lower
-  ([   ] (rand-lower* false))
-  ([a  ] (rand-lower* a))
-  ([a b] (rand-lower* a b))))
-
-#?(:clj
-(def generators
+#_(def generators
   {:numeric rand-numeric
    :upper   rand-upper
-   :lower   rand-lower}))
+   :lower   rand-lower})
+
+; TODO multiple types, as in regex
+; TODO |rand-chars| where you can "harden" to a string or not. Also lazy version
 
 (defn rand-chars
   "Returns a random string that matches the regular expression."
-  {:from "weavejester/re-rand"}
-  [x]
-  (assert (regex? x))
-  (let [[generator not-matched] (lex/pattern (str x))]
-    (when (empty? not-matched)
-      (lex/first-if-single (generator)))))
+  {:inspiration-from "weavejester/re-rand"}
+  ([x]
+    (assert (regex? x))
+    (let [[generator not-matched] (lex/pattern (str x))]
+      (when (empty? not-matched)
+        (lex/first-if-single (generator)))))
+  ([type n] (rand-chars type false n))
+  ([type secure? n]
+    (let [[a b]
+           (case type
+             :numeric [48 57   ]
+             :upper   [65 90   ]
+             :lower   [97 122  ]
+             :any     [0  65535])]
+      (rand-chars-between secure? n a b))))
 
 (defn rand-bytes ; [B for CLJ, Uint8Array for CLJS
   ([size] (rand-bytes false size))
@@ -192,8 +160,6 @@
     ; * 8 because longs are 8 bytes
     (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
 
-; TODO |rand-chars| where you can "harden" to a string or not. Also lazy version
-
 ; ; TODO DEPS ONLY
 ; #_(:clj
 ; (defn ^String rand-string
@@ -216,16 +182,16 @@
 ;               (.append sb (generator (whenc (:secure? opts) nil? false)))))
 ;           (str sb))))))
 
-; #?(:clj
-; (defn rand-graph
-;   "Creates a random graph."
-;   [type & args]
-;   (condp = type
-;     :probability (apply g-gen/gen-rand-p args)
-;     :default     (apply g-gen/gen-rand   args)
-;     (apply g-gen/gen-rand args))))
+#?(:clj
+(defn rand-graph
+  "Creates a random graph."
+  [type & args]
+  (condp = type
+    :probability (apply g-gen/gen-rand-p args)
+    :default     (apply g-gen/gen-rand   args)
+    (apply g-gen/gen-rand args))))
 
-; ; OTHER MORE COMPLEX FUNCTIONS
+; OTHER MORE COMPLEX FUNCTIONS
 
 (defn rand-nth [coll]
   (nth coll (rand-int-between 0 (lasti coll))))
