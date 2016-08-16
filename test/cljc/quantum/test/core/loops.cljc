@@ -31,8 +31,6 @@
 (defn test:dos
   [args])
 
-(defn test:lfor [& args])
-
 (defn test:doseq
   [bindings & body])
 

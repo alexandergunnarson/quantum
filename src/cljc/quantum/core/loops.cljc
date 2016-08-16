@@ -177,11 +177,6 @@
   `(do ~@args)))
 
 #?(:clj
-(defmacro lfor [& args]
-  ; TODO fix the conditional read
-  `(#?(:clj core/for :cljs core/for) ~@args)) ); "lazy-for"
-
-#?(:clj
 (defmacro doseq*
   "A lighter version of |doseq| based on |reduce|.
    Optimized for one destructured coll."

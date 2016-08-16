@@ -152,7 +152,7 @@
                       com.fasterxml.jackson.core/jackson-core
                       commons-codec
                       potemkin]                                   ]
-       ;[cljs-http                              "0.1.27"          ]
+       [cljs-http                               "0.1.41"          ]
        [less-awful-ssl                          "1.0.1"           ]
        [http-kit                                "2.1.19"
          :exclusions [org.clojure/clojure]                        ] 

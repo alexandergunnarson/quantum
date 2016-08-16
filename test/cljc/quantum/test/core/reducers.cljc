@@ -5,8 +5,8 @@
                :refer [#?@(:clj [deftest is])]
                :refer-macros [deftest is]]
              [quantum.core.reducers :as ns]
-             [clojure.test.generative :refer [defspec]]
-             [clojure.data.generators :as gen])
+     #?(:clj [clojure.test.generative :refer [defspec]])
+     #?(:clj [clojure.data.generators :as gen]))
   #?(:cljs (:require-macros
              [quantum.test.core.reducers
                :refer [defequivtest]])))
@@ -200,9 +200,6 @@
   [f coll])
 
 
-(comment
-
-
 #?(:clj
 (defmacro defequivtest
   ;; f is the core fn, r is the reducers equivalent, rt is the reducible ->
@@ -213,6 +210,8 @@
        (doseq [fn# ~fns]
          (is (= (~f fn# c#)
                 (~rt (~r fn# c#)))))))))
+
+(comment
 
 (defequivtest test-map
   [map r/map #(into [] %)]

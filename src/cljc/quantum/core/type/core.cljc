@@ -119,14 +119,23 @@
 
 #?(:clj (def primitive-types (-> types-unevaled :clj (get 'primitive?))))
 (def primitive? (partial contains? primitive-types))
-#?(:clj (def auto-unboxable? primitive?))
+#?(:clj  (def auto-unboxable? primitive?)
+   :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))
 
 (def compiler-lang #?(:clj :clj :cljs :cljs))
 (def default-types (-> types-unevaled (get compiler-lang) :any))
 
-#?(:clj (defn ->boxed   [t] (if-let [boxed   (get boxed-type-map   t)] boxed   t)))
-#?(:clj (defn ->unboxed [t] (if-let [unboxed (get unboxed-type-map t)] unboxed t)))
-#?(:clj (defn boxed?    [t] (contains? unboxed-type-map t)))
+(defn ->boxed   [t]
+  #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
+     :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
+
+(defn ->unboxed [t]
+  #?(:clj  (if-let [unboxed (get unboxed-type-map t)] unboxed t)
+     :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
+
+(defn boxed?    [t]
+  #?(:clj  (contains? unboxed-type-map t)
+     :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
 
 (def type-casts-map
   {:clj

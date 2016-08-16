@@ -91,7 +91,7 @@
 
 ; TODO hopefully get rid of this step
 ; TODO break it up
-#?(:clj 
+
 (defn gen-extend-protocol-from-interface
   ; Original Interface:         ([#{number?} x #{number?} y #{char? Object} z] ~@body)
   ; Expanded Interface Arity 1: ([^long      x ^int       y ^char           z] ~@body)
@@ -150,6 +150,6 @@
         _ (log/ppr-hints :macro-expand-protocol "BODY GROUPED" body-grouped)
         extend-protocol-def
          (apply concat (list 'extend-protocol genned-protocol-name) body-grouped)]
-    extend-protocol-def)))
+    extend-protocol-def))
 
 (log/disable! :macro-expand)

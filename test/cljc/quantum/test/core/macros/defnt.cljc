@@ -13,8 +13,6 @@
               :refer-macros [deftest is testing]])
   #?(:clj (:import java.util.concurrent.atomic.AtomicInteger)))
 
-(log/enable! :debug)
-
 (def data
   {:ns- *ns*
    :lang :clj

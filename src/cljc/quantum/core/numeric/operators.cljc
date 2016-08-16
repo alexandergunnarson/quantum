@@ -5,7 +5,8 @@
               numerator denominator])
            (:require
              [#?(:clj  clojure.core
-                 :cljs cljs.core   )     :as core  ]
+                 :cljs cljs.core   )            :as core    ]
+    #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
              [quantum.core.error :as err
                :refer [TODO]]
              [quantum.core.macros
@@ -24,6 +25,7 @@
                :refer [+ * -]]))
   #?(:clj  (:import 
              java.math.BigInteger
+             java.math.BigDecimal
              clojure.lang.BigInt)))
 
 ; Auto-unboxes; no boxed combinations necessary
@@ -31,20 +33,21 @@
 
 ; ===== ADD ===== ;
 
-#?(:clj (defalias +*-bin unchecked-add) 
+#?(:clj  (defalias +*-bin unchecked-add) 
         #_(defnt +*-bin "Lax |+|; continues on overflow/underflow"
                    (^{:tag :first} [^number? x] x)
            #?(:clj (^{:tag :auto-promote}
                      [#{byte char short int long float double} #_(- primitive? boolean) x
                       #{byte char short int long float double} #_(- primitive? boolean) y]
                      (quantum.core.Numeric/add x y)))
-           #?(:clj (^clojure.lang.BigInt  [^clojure.lang.BigInt  x ^clojure.lang.BigInt  y]
+           #?(:clj (^BigInt  [^BigInt  x ^clojure.lang.BigInt  y]
                      (.add x y)))
-           #?(:clj (^java.math.BigDecimal [^java.math.BigDecimal x ^java.math.BigDecimal y]
+           #?(:clj (^BigDecimal [^BigDecimal x ^BigDecimal y]
                      (if (nil? *math-context*)
                          (.add x y)
                          (.add x y *math-context*))))
-           #?(:cljs ([x y] (TODO) (ntypes/-add x y)))))
+           #?(:cljs ([x y] (TODO) (ntypes/-add x y))))
+   :cljs (defalias +*-bin unchecked-add))
 
 #?(:clj (variadic-proxy +* quantum.core.numeric.operators/+*-bin))
 
@@ -299,25 +302,24 @@
                    (+* x 1))))
    :cljs (defalias inc' inc          ))
 
-#?(:clj
-(defnt abs'
-  (^int               [^int    x] (Math/abs x))
-  (^long              [^long   x] (Math/abs x))
-  (^double            [^double x] (Math/abs x))
-  (^float ^:intrinsic [^float  x] (Math/abs x))
-  (^java.math.BigDecimal [^java.math.BigDecimal x]
-    (.abs x))
-  (^java.math.BigDecimal [^java.math.BigDecimal x math-context]
-    (.abs x math-context))
-  (^java.math.BigInteger [^java.math.BigInteger x]
-    (.abs x))
-  (^clojure.lang.BigInt [^clojure.lang.BigInt x]
-    (if (nil? (.bipart x))
-        (clojure.lang.BigInt/fromLong       (abs' (.lpart  x)))
-        (clojure.lang.BigInt/fromBigInteger (abs' (.bipart x)))))
-  (^clojure.lang.Ratio [^clojure.lang.Ratio x] ; TODO this might be an awful implementation
-    (/ (abs' (numerator   x))
-       (abs' (denominator x))))))
+#?(:clj (defnt abs'
+          (^int               [^int    x] (Math/abs x))
+          (^long              [^long   x] (Math/abs x))
+          (^double            [^double x] (Math/abs x))
+          (^float ^:intrinsic [^float  x] (Math/abs x))
+          (^java.math.BigDecimal [^java.math.BigDecimal x]
+            (.abs x))
+          (^java.math.BigDecimal [^java.math.BigDecimal x math-context]
+            (.abs x math-context))
+          (^java.math.BigInteger [^java.math.BigInteger x]
+            (.abs x))
+          (^clojure.lang.BigInt [^clojure.lang.BigInt x]
+            (if (nil? (.bipart x))
+                (clojure.lang.BigInt/fromLong       (abs' (.lpart  x)))
+                (clojure.lang.BigInt/fromBigInteger (abs' (.bipart x)))))
+          (^clojure.lang.Ratio [^clojure.lang.Ratio x] ; TODO this might be an awful implementation
+            (/ (abs' (numerator   x))
+               (abs' (denominator x)))))
+   :cljs (defn abs' [x] (TODO "incomplete") (js/Math.abs x)))
 
-#?(:clj  (defalias abs abs')
-   :cljs (defn abs [x] (TODO "incomplete") (js/Math.abs x)))
+(defalias abs abs')

@@ -7,6 +7,9 @@
     [quantum.core.macros
       :refer        [#?@(:clj [defnt defnt'])]
       :refer-macros [defnt]]
+    [quantum.core.vars      :as var
+      :refer        [#?@(:clj [defalias defaliases])]
+      :refer-macros [defalias defaliases]          ]
     [quantum.core.numeric.convert
       :refer [#?@(:clj [->bigdec])]]))
 
@@ -43,7 +46,7 @@
                         :down        BigDecimal/ROUND_DOWN
                         :floor       BigDecimal/ROUND_FLOOR))]
             (.setScale ^BigDecimal (bigdec num-0) ^Integer to round-type)))
-   :clj (defalias round round')) ; TODO fix
+   :cljs (defalias round round')) ; TODO fix
 
 #?(:clj  (defnt ceil
            (^double [^double x] (Math/ceil x))

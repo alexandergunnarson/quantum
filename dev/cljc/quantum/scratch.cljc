@@ -1,18 +1,10 @@
-#_(quantum.core.log/disable! :macro-expand)
-#_(quantum.core.ns/load-nss
-  '[quantum.core.macros.defnt
-    quantum.test.core.macros.defnt])
-#_(require '[clojure.tools.namespace.repl :refer [refresh]]
-         
-         )
-#_(refresh)
-
 (ns quantum.scratch
+  (:refer-clojure :exclude [when-let])
   (:require
     [clojure.repl
       :refer [source]]
-    [clojure.test :as test]
-    [clojure.pprint
+    [#?(:clj clojure.test :cljs cljs.test) :as test]
+    [#?(:clj clojure.pprint :cljs cljs.pprint)
       :refer [pprint]]
     [clojure.data
       :refer [diff]]
@@ -21,10 +13,11 @@
     [quantum.core.error
       :refer [->ex]]))
 
+#?(:clj
 (defn throw-on-test-fail [ns-sym]
   (when-let [{:keys [fail error] :as tested} (test/run-tests ns-sym)
              fail? (or (pos? fail) (pos? error))]
-    (throw (->ex :tests-failed "Failed tests" tested))))
+    (throw (->ex :tests-failed "Failed tests" tested)))))
 
 (defn pr*
   "`pprint`s a collection, optionally preceded by a `println`-ed message."
@@ -33,6 +26,7 @@
             (pprint coll)))
 
 ; Overrides clojure.test/report for prettier / easier-to-read-and-debug messages. Yay!
+#?(:clj
 (defmethod test/report :fail [m]
   (test/with-test-out
     (test/inc-report-counter :fail)
@@ -45,10 +39,11 @@
     (pr* "----- expected: -----" (:expected m))
     (pr* "----- actual: -----"   (:actual   m)))
     #_(pr* "----- diff: -----"     (diff (:expected m) (:actual m)))
-    (println "=========="))
+    (println "==========")))
 
+#?(:clj 
 (defn retest []
-  (try (quantum.core.log/enable! :macro-expand-protocol)
+  (try #_(quantum.core.log/enable! :macro-expand-protocol)
        (remove-ns 'quantum.test.core.error)
        (load-file "./test/cljc/quantum/test/core/error.cljc")
        (throw-on-test-fail 'quantum.test.core.error)
@@ -70,6 +65,6 @@
        (remove-ns 'quantum.test.core.macros.defnt)
        (load-file "./test/cljc/quantum/test/core/macros/defnt.cljc")
        (throw-on-test-fail 'quantum.test.core.macros.defnt)
-    (catch Throwable e (clj-stacktrace.repl/pst e))))
+    (catch Throwable e (clj-stacktrace.repl/pst e)))))
 
-(retest)
+#_(retest)

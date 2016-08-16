@@ -17,15 +17,18 @@
            ;#?(:clj [quantum.deploy.amazon            :as amz      ])
                     [com.stuartsierra.component       :as component]
                     [quantum.core.collections         :as coll     
-                       :refer [#?@(:clj [kmap containsv?])]        ]
+                      :refer [#?@(:clj [kmap containsv?])]         ]
                     [quantum.core.error               :as err
-                       :refer [->ex #?(:clj try-times)]            ]
+                      :refer [->ex #?(:clj try-times)]             ]
                     [quantum.core.fn                  :as fn
-                       :refer [#?@(:clj [with])]                   ]
-                    [quantum.core.log                 :as log      ]
+                      :refer [#?@(:clj [with])]                    ]
+                    [quantum.core.log                 :as log      
+                      :include-macros trus]
                     [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-and fn-or whenf condf])
-                               nnil? nempty?]     ]
+                      :refer        [#?@(:clj [fn-and fn-or whenf
+                                               condf])
+                                     nnil? nempty?]     
+                      :refer-macros [fn-and fn-or whenf condf]]
                     [quantum.core.resources           :as res      ]
                     [quantum.core.string              :as str      ]
             #?(:clj [quantum.core.process             :as proc     ])
@@ -52,9 +55,6 @@
                        :refer [try-times]                          ]
                     [quantum.core.fn                  :as fn
                        :refer [with]                               ]
-                    [quantum.core.logic               :as logic
-                       :refer [fn-and fn-or]                       ]
-                    [quantum.core.log                 :as log      ]
                     [quantum.core.thread.async        :as async    ]
                     [quantum.core.type                :as type
                       :refer [boolean?]                            ]
