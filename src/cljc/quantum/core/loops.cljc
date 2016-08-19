@@ -251,7 +251,8 @@
 
                  , where 'v' is a vectorized (range 1000000).
 
-                 22.5% faster!"}
+                 22.5% faster!"
+   :todo ["Could be as simple as (->> coll (map+ f) (into ret))"]}
   [ret bindings & body]
   (assert-args
     (vector? bindings) "a vector for its binding")

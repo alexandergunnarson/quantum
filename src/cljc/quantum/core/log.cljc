@@ -8,15 +8,11 @@
            (:refer-clojure :exclude [pr seqable?])
            (:require [com.stuartsierra.component   :as component]
                      [quantum.core.core            :as qcore    ]
-                     [quantum.core.fn              :as fn
-                       :refer [#?@(:clj [])]                    ]
+                     [quantum.core.fn              :as fn       ]
                      [quantum.core.meta.debug      :as debug    ]
                      [quantum.core.print           :as pr       ]
                      [quantum.core.type.predicates
-                       :refer [seqable?]])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn            :as fn
-                       :refer []                              ])))
+                       :refer [seqable?]]))
 
 ; TODO maybe use Timbre?
 
@@ -145,4 +141,4 @@
 (defmacro ppr-hints [pr-type & args]
   `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
 
-#?(:clj (pr :user "HERE IS THIS PID" (->> (java.lang.management.ManagementFactory/getRuntimeMXBean) (.getName))))
+#_(:clj (println "HERE IS THIS PID" (->> (java.lang.management.ManagementFactory/getRuntimeMXBean) (.getName))))
