@@ -3,12 +3,13 @@
     :attribution "Alex Gunnarson"}
   quantum.media.imaging.convert
   (:require
-    #?(:clj [quantum.core.process
-              :refer [proc!]])
-            [quantum.core.io    :as io  ]
-            [quantum.core.paths :as path]
-            [quantum.core.collections
-              :refer [nempty? in?]]))
+    [quantum.core.process :as proc
+      :refer [proc!]              ]
+    [quantum.core.io      :as io  ]
+    [quantum.core.paths   :as path
+      :include-macros true        ]
+    [quantum.core.collections
+      :refer [nempty? in?]        ]))
 
 (def supported-types #{:jpg :png :tiff :jpeg :gif :pdf})
 

@@ -29,7 +29,8 @@
                                nnil?]                                       ]
                      [quantum.core.macros           :as macros
                        :refer [#?@(:clj [defnt])]                           ]
-                     [quantum.core.numeric          :as num                 ]
+                     [quantum.core.numeric          :as num                 
+                       :include-macros true                                 ]
                      [quantum.core.type             :as type
                        :refer [#?@(:clj [array-list? lseq?]) instance+?]    ]
                      [quantum.core.reducers.reduce  :as red
@@ -47,7 +48,6 @@
                                condf*n]                                     ]
                      [quantum.core.macros           :as macros
                        :refer [defnt]                                       ]
-                     [quantum.core.numeric          :as num                 ]
                      [quantum.core.type             :as type
                        :refer [array-list? lseq?]                           ]
                      [quantum.core.reducers        

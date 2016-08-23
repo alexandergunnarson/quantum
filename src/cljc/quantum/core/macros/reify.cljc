@@ -20,22 +20,20 @@
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.macros.transform           :as trans  ]))
 
-#?(:clj
 (defn gen-reify-def
-  [{:keys [sym ns-qualified-interface-name reify-body]}]
+  [{:keys [ns- sym ns-qualified-interface-name reify-body]}]
   (let [reified-sym (-> sym name
                         (str "-reified")
                         symbol)
         reified-sym-qualified
-          (-> (symbol (name (ns-name *ns*)) (name reified-sym))
+          (-> (symbol (name (ns-name ns-)) (name reified-sym))
               (cmacros/hint-meta ns-qualified-interface-name))
         reify-def
           (list 'def reified-sym reify-body)]
     (kmap reified-sym
           reified-sym-qualified
-          reify-def))))
+          reify-def)))
 
-#?(:clj
 (defn gen-reify-body-raw
   [{:keys [ns-qualified-interface-name
            genned-method-name
@@ -48,9 +46,8 @@
                       arglist-n    (->> body first (into ['this]))
                       body-f       (->  body rest (trans/hint-body-with-arglist (first body) :clj))
                       updated-body (->> body-f (cons arglist-n))]
-                  (cons return-type-hinted-method updated-body))))))))
+                  (cons return-type-hinted-method updated-body)))))))
 
-#?(:clj
 (defn verify-reify-body [reify-body sym]
   (let [; To handle ClassFormatError "Duplicate method name&signature"
         duplicate-methods
@@ -66,9 +63,8 @@
             (log/pr        :user "Duplicate methods for" sym ":")
             (log/ppr-hints :user duplicate-methods)
             (throw (->ex nil "Duplicate methods.")))]
-    reify-body)))
+    reify-body))
 
-#?(:clj
 (defn gen-reify-body
   [{:as args
     :keys [sym
@@ -77,4 +73,4 @@
            gen-interface-code-body-expanded]}]
   {:post [(log/ppr-hints :macro-expand "REIFY BODY" %)]}
   (-> (gen-reify-body-raw args)
-      (verify-reify-body sym))))
+      (verify-reify-body sym)))

@@ -7,6 +7,8 @@
             [quantum.core.macros.protocol  :as proto]
             [quantum.core.macros.reify     :as reify]
             [quantum.core.macros.transform :as trans]
+            [quantum.core.macros.core
+              :refer [#?@(:clj [when-cljs if-cljs])]]
             [#?(:clj clojure.test
                 :cljs cljs.test)
               :refer        [#?@(:clj [deftest is testing])]
@@ -123,8 +125,8 @@
 #_(log/enable! :macro-expand)
 #_(log/enable! :macro-expand-protocol)
 
-(def test-boxed-long (Long.    1))
-(def test-boxed-int  (Integer. 1))
+#?(:clj (def test-boxed-long (Long.    1)))
+#?(:clj (def test-boxed-int  (Integer. 1)))
 (def test-string     "abcde")
 
 #_(ns/defnt test:defnt-def**
@@ -145,10 +147,11 @@
 (defmacro with-merge-test [env sym expected]
   `(quantum.core.collections.base/merge-call ~env
      (fn [env#]
-       (testing '~sym
+       (~(if-cljs &env 'cljs.test/testing
+                       'clojure.test/testing) '~sym
          (let [ret# (~sym env#)]
            (log/ppr-hints :user ~(str "<< TESTING " (name sym) " >>") ret#)
-           (is (= ret# ~expected))
+           (~(if-cljs &env 'cljs.test/is 'clojure.test/is) (= ret# ~expected))
            ret#))))))
 
 (deftest integration:defnt

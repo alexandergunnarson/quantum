@@ -22,8 +22,8 @@
                :refer        [#?@(:clj [fn-and whenf*n])]   
                :refer-macros [fn-and whenf*n]               ]
              [quantum.core.macros               :as macros
-               :refer        [#?@(:clj [defnt defnt' deftransmacro])]
-               :refer-macros [defnt defnt' deftransmacro]   ]
+               :refer        [#?@(:clj [defnt defnt'])]
+               :refer-macros [defnt defnt']   ]
              [quantum.core.vars                 :as var
                :refer        [#?@(:clj [defalias defaliases])]
                :refer-macros [defalias defaliases]          ]
@@ -36,7 +36,7 @@
              [quantum.core.numeric.types :as ntypes])
   #?(:cljs (:require-macros
              [quantum.core.numeric
-               :refer [/]]))
+               :refer [/ floor abs]]))
   #?(:clj  (:import
              [java.nio ByteBuffer]      
              [quantum.core Numeric] ; loops?
@@ -153,19 +153,18 @@
 ;_____________________________________________________________________
 ;==================={        OPERATORS         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-
 (defaliases quantum.core.numeric.operators
   #?@(:clj [+*   +'   +
             -*   -'   -
             **   *'   *
-            div* div' /])
-            inc* inc' inc
-            dec* dec' dec
-                 abs' abs)
+            div* div' /
+            inc* #_inc' inc
+            dec* #_dec' dec
+                 abs' abs])
+            inc' dec')
 ;_____________________________________________________________________
 ;==================={        PREDICATES        }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-
 (defaliases quantum.core.numeric.predicates
   zero?
   #?@(:clj [neg? pos? nneg? pos-int? nneg-int? exact?]))

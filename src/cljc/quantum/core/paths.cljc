@@ -2,37 +2,37 @@
   quantum.core.paths
            (:refer-clojure :exclude [descendants contains?])
            (:require
-             #?(:clj [clojure.java.io          :as io                ])
-                     [quantum.core.collections :as coll
-                       :refer [#?@(:clj [getr index-of containsv?
-                                         popr reducei])
-                               dropr-until]                          ]
-                     [quantum.core.error       :as err            
-                       :refer [->ex]                                 ]
-                     [quantum.core.fn          :as fn             
-                       :refer [#?@(:clj [<- fn-> fn->> f*n mfn])]    ]
-                     [quantum.core.logic       :as logic        
-                       :refer [#?@(:clj [fn-not fn-and fn-eq? 
-                                         whenf whenc ifn])]          ]
-                     [quantum.core.macros      :as macros 
-                       :refer [#?@(:clj [defnt])]                    ]
-                     [quantum.core.system      :as sys               ]
-                     [quantum.core.vars        :as var               
-                       :refer [#?@(:clj [defalias def-])]            ]
-                     [quantum.core.string      :as str               ])
-  #?(:cljs (:require-macros                
-                     [quantum.core.collections :as coll             
-                       :refer [getr index-of containsv? popr reducei]]
-                     [quantum.core.fn          :as fn               
-                       :refer [<- fn-> fn->> f*n mfn]                ]
-                     [quantum.core.logic       :as logic             
-                       :refer [fn-not fn-and fn-eq? whenf whenc ifn] ]
-                     [quantum.core.macros      :as macros            
-                       :refer [defnt]                                ]
-                     [quantum.core.vars        :as var               
-                       :refer [defalias def-]                        ]))
-  #?(:clj (:import java.io.File
-                   [java.net URI URL])))
+     #?(:clj [clojure.java.io          :as io                ])
+             [quantum.core.collections :as coll
+               :refer        [#?@(:clj [getr index-of containsv?
+                                        popr reducei])
+                              dropr-until]                          
+               :refer-macros [getr index-of containsv? popr
+                              reducei]                       ]
+             [quantum.core.error       :as err            
+               :refer [->ex TODO]                            ]
+             [quantum.core.fn          :as fn             
+               :refer        [#?@(:clj [<- fn-> fn->> f*n mfn])]    
+               :refer-macros [<- fn-> fn->> f*n mfn]         ]
+             [quantum.core.logic       :as logic        
+               :refer        [#?@(:clj [fn-not fn-and fn-eq? 
+                                        whenf whenc ifn])]   
+               :refer-macros [fn-not fn-and fn-eq? whenf
+                              whenc ifn]                     ]
+             [quantum.core.macros      :as macros 
+               :refer        [#?@(:clj [defnt])]             
+               :refer-macros [defnt]                         ]
+             [quantum.core.system      :as sys               ]
+             [quantum.core.vars        :as var               
+               :refer        [#?@(:clj [defalias def-])]     
+               :refer-macros [defalias def-]                 ]
+             [quantum.core.string      :as str               ])
+  #?(:cljs (:require-macros
+             [quantum.core.paths
+               :refer [->file exists?]]))
+  #?(:clj  (:import
+             java.io.File
+             [java.net URI URL])))
 
 ; TODO validate this
 (def paths-vecs
@@ -40,15 +40,17 @@
 
 (declare ->uri-protocol parse-dir-protocol)
 
-#?(:clj
-(defnt ^java.io.File ->file
+
+(defnt #?(:clj ^java.io.File ->file
+          :cljs              ->file)
   {:todo "Eliminate reflection"}
-  ([^java.io.File           x] x          )
-  ([^java.nio.file.Path     x] (.toFile x))
-  ([#{string? java.net.URI} x] (File.   x))
-  ([^java.net.URL           x] (-> x ->uri-protocol ->file))
-  ([#{vector? keyword?}     x] (-> x parse-dir-protocol ->file))
-  ([                        x] (io/file x))))
+  #?(:cljs ([x] (TODO)))
+  #?(:clj ([^java.io.File           x] x          ))
+  #?(:clj ([^java.nio.file.Path     x] (.toFile x)))
+  #?(:clj ([#{string? java.net.URI} x] (File.   x)))
+  #?(:clj ([^java.net.URL           x] (-> x ->uri-protocol ->file)))
+  #?(:clj ([#{vector? keyword?}     x] (-> x parse-dir-protocol ->file)))
+  #?(:clj ([                        x] (io/file x))))
 
 #?(:clj
 (defnt ^java.net.URI ->uri
@@ -233,15 +235,13 @@
 ;               (path path-n k-to-add-f)))
 ;           "" x)))
 
+(def file-str (fn-> ->file str))
 
-
-#?(:clj
-(def file-str (fn-> ->file str)))
-
-#?(:clj
+(declare exists?-protocol)
 (defnt exists?
   ([^string? s] (-> s ->file exists?))
-  ([^file?   f] (.exists f))))
+  ([^file?   f] #?(:clj  (.exists f)
+                   :cljs (TODO))))
 
 #?(:clj
 (defnt directory?

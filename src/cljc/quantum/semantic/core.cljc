@@ -9,10 +9,10 @@
                :refer-macros [          <- f*n]]
              [quantum.core.collections :as coll
                :refer [map+ remove+
-                       mutable! eq!
-                       #?@(:clj [kmap aset-in! aget-in aget-in*
+                       mutable! eq! aset-in!
+                       #?@(:clj [kmap aget-in aget-in*
                                  ifor get reducei])]
-               :refer-macros [   kmap aset-in! aget-in aget-in*
+               :refer-macros [   kmap aget-in aget-in*
                                  ifor get reducei]]
              [quantum.core.error
                :refer        [#?(:clj assert) ->ex]

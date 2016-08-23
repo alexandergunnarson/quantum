@@ -68,7 +68,10 @@
              [:resources "Images" "test-ocr-out.txt"]
              :data-dir ["usr" "local" "share"]
              :lang "eng" "tessedit_write_images" true)}
-  [in out & {:keys [lang data-dir pdf?] :or {data-dir (sys/env-var "TESSDATA_PREFIX")} :as opts}]
+  [in out & {:keys [lang data-dir pdf?]
+             :or {data-dir #?(:clj  (sys/env-var "TESSDATA_PREFIX")
+                              :cljs nil)}
+             :as opts}]
   (let [image-file  (-> in  path/file-str)
         outbase     (-> out path/file-str path/path-without-ext)
         timeout     10000

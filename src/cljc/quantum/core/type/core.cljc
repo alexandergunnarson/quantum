@@ -3,19 +3,18 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.core
-           (:require
-             #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
-                     [quantum.core.type.defs           :as defs]
-                     [quantum.core.error               :as err
-                       :refer [->ex]                           ]
-                     [quantum.core.vars                :as var
-                       :refer [#?@(:clj [defalias])]           ])
-  #?(:cljs (:require-macros
-                     [quantum.core.type.defs           :as defs]
-                     [quantum.core.vars                :as var
-                       :refer [defalias]                       ])))
+  (:refer-clojure :exclude [class])
+  (:require
+    #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
+            [quantum.core.type.defs           :as defs
+              :include-macros true]
+            [quantum.core.error               :as err
+              :refer [->ex]                           ]
+            [quantum.core.vars                :as var
+              :refer        [#?@(:clj [defalias])]    
+              :refer-macros [defalias]                ]))
 
-#?(:cljs (def class type))
+(def class #?(:clj clojure.core/class :cljs type))
 
 (defs/def-types #?(:clj :clj :cljs :cljs))
 

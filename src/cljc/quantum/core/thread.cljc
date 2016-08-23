@@ -263,18 +263,12 @@
 
 #?(:clj
 (defonce threadpools
-  (atom {:core.async ^ThreadPoolExecutor clojure.core.async.impl.exec.threadpool/the-executor
+  (atom {:core.async ^clojure.core.async.impl.protocols.Executor @clojure.core.async.impl.dispatch/executor ; because it's a Delay
          :future     ^ThreadPoolExecutor clojure.lang.Agent/soloExecutor
          :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
          ; TODO commented temporarily
          ;:async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
          :reducers   ^ForkJoinPool       quantum.core.reducers.fold/pool})))
-
-#?(:clj
-(.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)
-  (reify java.util.concurrent.RejectedExecutionHandler
-    (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
-      (@rejected-execution-handler f)))))
 
 #?(:clj
 (defnt set-max-threads!

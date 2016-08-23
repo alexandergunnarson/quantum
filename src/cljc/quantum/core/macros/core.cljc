@@ -10,7 +10,8 @@
             [clojure.jvm.tools.analyzer         ]
             [clojure.tools.analyzer.jvm         ]
             [riddley.walk                       ]
-            [clojure.tools.reader :as r]])))
+            [clojure.tools.reader :as r]])
+            [quantum.core.core]))
 
 ; ===== ENVIRONMENT =====
 
@@ -170,11 +171,10 @@
     (let [args-sym   (gensym "args")
           orig-sym-f (gensym "orig-sym")]
      `(defmacro ~name [& ~args-sym]
-        (let [~orig-sym-f (if-cljs ~'&env '~cljs-sym '~clj-sym)]
-          (when (= ~orig-sym-f 'nil)
-            (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))
-          ; Double unquote because we want it to be unquoted in the generated macro
-          `(~~orig-sym-f ~@~args-sym)))))))
+        (let [~orig-sym-f (if-cljs ~'&env '~cljs-sym '~clj-sym)
+              _# (when (= ~orig-sym-f 'nil)
+                   (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))]
+          (cons ~orig-sym-f ~args-sym)))))))
 
 ; ------------- SYNTAX QUOTE; QUOTE+ -------------
 

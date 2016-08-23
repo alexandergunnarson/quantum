@@ -3,19 +3,20 @@
           General to all Google authentication/OAuth2 processes."
     :attribution "Alex Gunnarson"}
   quantum.apis.google.auth
-  #_(:require-quantum [:lib web auth http url])
   (:refer-clojure :exclude [empty?])
   (:require
-    [quantum.validate.core :as v]
-    [quantum.net.http :as http]
-    [quantum.net.url :as url]
-    [quantum.auth.core :as auth]
-    [quantum.core.data.map :as map]
+    [quantum.validate.core :as v   
+      :include-macros true]
+    [quantum.net.http      :as http]
+    [quantum.net.url       :as url ]
+    [quantum.auth.core     :as auth]
+    [quantum.core.data.map :as map ]
     [quantum.core.error    :as err
-      :refer [->ex]]
+      :refer [->ex]                ]
     [quantum.core.collections :as coll
-                 :refer        [#?@(:clj [reducei in? empty? containsk?])]
-      #?@(:cljs [:refer-macros [reducei in? empty? containsk?]])]
+      :refer        [#?@(:clj [reducei empty? containsk?])
+                     in?]
+      :refer-macros [reducei empty? containsk?]]
     [quantum.core.paths
       :refer [url-path]])
   #_(:require 

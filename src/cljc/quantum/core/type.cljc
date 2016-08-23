@@ -7,7 +7,7 @@
     [vector? map? set? associative? seq? string? keyword? fn? map-entry? boolean?
      indexed? nil? list? coll? char? symbol? record? number? integer? float?
      double? decimal? array?
-     identity])
+     identity class])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )       :as core   ]
                      [quantum.core.classes         :as classes]
@@ -36,7 +36,7 @@
 
 ; TODO: Should include typecasting? (/cast/)
 
-#?(:cljs (def class type))
+(def class #?(:clj clojure.core/class :cljs type))
 
 #?(:clj (def instance+? instance?)
    :cljs

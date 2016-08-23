@@ -13,7 +13,7 @@
           ;          [co.paralleluniverse.pulsar.core  :as pasync   ]])
             #?(:cljs [servant.core                     :as servant  ])
                      [quantum.core.error               :as err
-                       :refer [->ex]                                ]
+                       :refer [->ex TODO]                           ]
                      [quantum.core.collections         :as coll
                        :refer [#?@(:clj [nempty? seq-loop]) break]           ]
                      [quantum.core.log                 :as log      ]
@@ -92,13 +92,15 @@
   ([^keyword? type]
     (condp = type
       #_:std     #_(async+/chan)
-      :queue   (LinkedBlockingQueue.)
+      :queue   #?(:clj (LinkedBlockingQueue.)
+                  :cljs (TODO))
       :casync  (async/chan)))
   ([^keyword? type n]
     (condpc = type
-               #_:std     #_(async+/chan n)
-                :casync  (async/chan n)
-      #?@(:clj [:queue   (LinkedBlockingQueue. ^Integer n)])))) ; TODO reflection here
+     #_:std     #_(async+/chan n)
+      :casync  (async/chan n)
+      :queue   #?(:clj  (LinkedBlockingQueue. ^Integer n)
+                  :cljs (TODO))))) ; TODO reflection here
                
 (defn chan
   ([         ] (async/chan) #_(async+/chan))

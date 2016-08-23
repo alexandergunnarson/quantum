@@ -4,60 +4,61 @@
 
           Also includes innovative functions like getr, etc."}
   quantum.core.collections.core
-           (:refer-clojure :exclude
-             [vector hash-map rest count first second butlast last aget get nth pop peek
-              conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
-              empty? empty some?
-              #?@(:cljs [array])])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )         :as core    ]
-             #?(:clj [seqspert.vector                            ])
-             #?(:clj [clojure.core.async             :as casync  ])
-                     [quantum.core.log :as log]
-                     [quantum.core.collections.base
-                       :refer        [#?(:clj kmap)]             
-                       :refer-macros [kmap]                      ]
-                     [quantum.core.convert.primitive :as pconvert
-                       :refer [->boolean
-                               ->byte 
-                       #?(:clj ->char)
-                               ->short
-                               ->int  
-                               ->long 
-                       #?(:clj ->float)
-                               ->double
-                     #?@(:clj [->byte*
-                               ->char*
-                               ->short*
-                               ->int*
-                               ->long*
-                               ->float*
-                               ->double*])]       ]
-                     [quantum.core.data.vector       :as vec     
-                       :refer [catvec subvec+ vector+]           ]
-                     [quantum.core.error             :as err
-                       :refer [->ex]                             ]
-                     [quantum.core.fn                :as fn
-                       :refer        [#?@(:clj [f*n])]           
-                       :refer-macros [f*n]                       ]
-                     [quantum.core.logic             :as logic
-                       :refer        [#?@(:clj [eq? fn-eq? whenc
-                                                whenf if*n])
-                                      some? nnil? nempty?]               
-                       :refer-macros [eq? fn-eq? whenc whenf if*n]]
-                     [quantum.core.macros            :as macros
-                       :refer        [#?@(:clj [defnt])]         
-                       :refer-macros [defnt]                     ]
-                     [quantum.core.reducers          :as red     
-                       :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
-                     [quantum.core.type              :as type    
-                       :refer        [#?(:clj pattern?)]
-                       :refer-macros [pattern?]                  ]
-                     [quantum.core.vars              :as var
-                       :refer        [#?(:clj defalias)]         
-                       :refer-macros [defalias]                  ])
-  #?(:clj  (:import quantum.core.data.Array
-                    clojure.core.async.impl.channels.ManyToManyChannel)))
+  (:refer-clojure :exclude
+    [vector hash-map rest count first second butlast last aget get nth pop peek
+     conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
+     empty? empty some? class
+     #?@(:cljs [array])])
+  (:require [#?(:clj  clojure.core
+                :cljs cljs.core   )         :as core    ]
+    #?(:clj [seqspert.vector                            ])
+    #?(:clj [clojure.core.async             :as casync  ])
+            [quantum.core.log :as log]
+            [quantum.core.collections.base
+              :refer        [#?(:clj kmap)]             
+              :refer-macros [kmap]                      ]
+            [quantum.core.convert.primitive :as pconvert
+              :refer [->boolean
+                      ->byte 
+              #?(:clj ->char)
+                      ->short
+                      ->int  
+                      ->long 
+              #?(:clj ->float)
+                      ->double
+            #?@(:clj [->byte*
+                      ->char*
+                      ->short*
+                      ->int*
+                      ->long*
+                      ->float*
+                      ->double*])]       ]
+            [quantum.core.data.vector       :as vec     
+              :refer [catvec subvec+ vector+]           ]
+            [quantum.core.error             :as err
+              :refer [->ex TODO]                        ]
+            [quantum.core.fn                :as fn
+              :refer        [#?@(:clj [f*n])]           
+              :refer-macros [f*n]                       ]
+            [quantum.core.logic             :as logic
+              :refer        [#?@(:clj [eq? fn-eq? whenc
+                                       whenf if*n])
+                             some? nnil? nempty?]               
+              :refer-macros [eq? fn-eq? whenc whenf if*n]]
+            [quantum.core.macros            :as macros
+              :refer        [#?@(:clj [defnt])]         
+              :refer-macros [defnt]                     ]
+            [quantum.core.reducers          :as red     
+              :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
+            [quantum.core.type              :as type    
+              :refer        [#?(:clj pattern?) class    ]
+              :refer-macros [pattern?]                  ]
+            [quantum.core.vars              :as var
+              :refer        [#?(:clj defalias)]         
+              :refer-macros [defalias]                  ])
+  #?(:clj  (:import
+             quantum.core.data.Array
+             clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -241,18 +242,17 @@
   (^first [^char-array?    obj ^pinteger? n] (char-array    n))
   (^first [^object-array?  obj ^pinteger? n] (object-array  n))))
 
-#?(:clj
 (defnt ->array
-  (^boolean-array? [^boolean?        t ^pinteger? ct] (boolean-array ct))
-  (^byte-array?    [^byte?           t ^pinteger? ct] (byte-array    ct))
-  (^char-array?    [^char?           t ^pinteger? ct] (char-array    ct))
-  (^short-array?   [^short?          t ^pinteger? ct] (short-array   ct))
-  (^int-array?     [^int?            t ^pinteger? ct] (int-array     ct))
-  (^long-array?    [^long?           t ^pinteger? ct] (long-array    ct))
-  (^float-array?   [^float?          t ^pinteger? ct] (float-array   ct))
-  (^double-array?  [^double?         t ^pinteger? ct] (double-array  ct))
-  (                [^java.lang.Class c ^pinteger? ct] (make-array c  ct)))) ; object-array is subsumed into this
-
+  #?(:cljs ([x ct] (TODO)))
+  #?(:clj (^boolean-array? [^boolean?        t ^pinteger? ct] (boolean-array ct)))
+  #?(:clj (^byte-array?    [^byte?           t ^pinteger? ct] (byte-array    ct)))
+  #?(:clj (^char-array?    [^char?           t ^pinteger? ct] (char-array    ct)))
+  #?(:clj (^short-array?   [^short?          t ^pinteger? ct] (short-array   ct)))
+  #?(:clj (^int-array?     [^int?            t ^pinteger? ct] (int-array     ct)))
+  #?(:clj (^long-array?    [^long?           t ^pinteger? ct] (long-array    ct)))
+  #?(:clj (^float-array?   [^float?          t ^pinteger? ct] (float-array   ct)))
+  #?(:clj (^double-array?  [^double?         t ^pinteger? ct] (double-array  ct)))
+  #?(:clj (                [^java.lang.Class c ^pinteger? ct] (make-array c  ct)))) ; object-array is subsumed into this
 
 (defnt getr
   {:todo "Differentiate between |subseq| and |slice|"}
@@ -298,10 +298,10 @@
                      (when (.find matcher)
                        (.start matcher)))
              :cljs (throw (->ex :unimplemented
-                                (str "|index-of| not implemented for " (type coll) " on " (type elem))
+                                (str "|index-of| not implemented for " (class coll) " on " (class elem))
                                 (kmap coll elem))))))
   #_([coll elem] (throw (->ex :unimplemented
-                            (str "|index-of| not implemented for " (type coll) " on " (type elem))
+                            (str "|index-of| not implemented for " (class coll) " on " (class elem))
                             (kmap coll elem)))))
 
 ; Spent too much time on this...
@@ -328,7 +328,7 @@
   ([^vec?    coll elem] (whenc (.lastIndexOf coll elem      ) neg-1? nil))
   ([^string? coll elem] (whenc (.lastIndexOf coll (str elem)) neg-1? nil))
   #_([coll elem] (throw (->ex :unimplemented
-                            (str "|last-index-of| not implemented for " (type coll) " on " (type elem))
+                            (str "|last-index-of| not implemented for " (class coll) " on " (class elem))
                             (kmap coll elem)))))
 
 (defnt containsk?
@@ -341,7 +341,7 @@
              (if (nil? coll)
                  false
                  (throw (->ex :not-supported
-                          (str "contains? not supported on type: " (-> coll type)))))))
+                          (str "contains? not supported on type: " (-> coll class)))))))
 
 (defalias contains? containsk?)
 
@@ -421,6 +421,8 @@
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6 ^int i7 ^int i8 ^int i9 ^int i10]
     (Array/get x i1 i2 i3 i4 i5 i6 i7 i8 i9 i10))))
+
+#?(:cljs (defn aget-in*-protocol [arr & ks] (TODO)))
 
 (defnt get
   {:imported "clojure.lang.RT/get"}
@@ -511,7 +513,7 @@
            ([coll k]
              (if (nil? coll)
                  nil
-                 (throw (->ex :not-supported (str "|dissoc| not supported on" (type coll)))))))
+                 (throw (->ex :not-supported (str "|dissoc| not supported on" (class coll)))))))
 
 (defnt dissoc!
   ([^transient? coll k  ] (core/dissoc! coll k))
@@ -574,7 +576,7 @@
 
 #?(:clj  (defn array
            {:todo ["Consider efficiency here"]}
-           [& args] (into-array (-> args first type) args))
+           [& args] (into-array (-> args first class) args))
    :cljs (defalias array core/array))
 
 

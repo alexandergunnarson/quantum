@@ -1,27 +1,29 @@
 (ns quantum.validate.core
            (:refer-clojure :exclude [string? keyword? set? number? fn? assert])
            (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )   :as core]
+                         :cljs cljs.core   )   :as core        ]
                      [#?(:clj  clojure.spec
-                         :cljs cljs.spec   )   :as s   ]
+                         :cljs cljs.spec   )   :as s           
+                       :refer-macros [assert]]
                      [quantum.core.logic
-                       :refer [#?@(:clj [fn-not])]
-                       :refer-macros [fn-not]          ]
+                       :refer        [#?@(:clj [fn-not])       ]
+                       :refer-macros [fn-not]                  ]
                      [quantum.core.error       :as err
-                       :refer [->ex]                   ]
-                     [quantum.core.string      :as str ]
+                       :refer        [->ex]                    ]
+                     [quantum.core.macros.core
+                       :refer [#?(:clj if-cljs)]]
+                     [quantum.core.string      :as str         ]
                      [quantum.core.collections :as coll
                                   :refer [#?@(:clj [containsv?])]
                        #?@(:cljs [:refer-macros [containsv?]])]
                      [quantum.core.vars        :as var 
-                                  :refer        [#?(:clj defalias)]      
-                       #?@(:cljs [:refer-macros [defalias]])]
-                     [quantum.validate.domain          ])
+                                  :refer        [#?@(:clj [defalias defmalias])]      
+                       #?@(:cljs [:refer-macros [defalias defmalias]])]
+                     [quantum.validate.domain                  ])
   #?(:cljs (:require-macros 
                      [quantum.validate.core
                        :refer [spec]]))
   #?(:clj (:import java.util.regex.Matcher)))
-
 #_(:clj
 (defmacro validate
   {:todo ["Should:
@@ -41,8 +43,13 @@
                       (assoc data# :value-unevaled value-unevaled#))))))))
 
 #_(def constrained s/constrained)
-#?(:clj (defalias spec     s/spec))
-#?(:clj (defalias validate s/assert))
+#?(:clj (quantum.core.vars/defmalias spec     clojure.spec/spec   cljs.spec/spec  ))
+#_(:clj (quantum.core.vars/defmalias validate clojure.spec/assert cljs.spec/assert))
+#?(:clj
+(defmacro validate [& args]
+  (if-cljs &env
+    `(cljs.spec/assert ~@args)
+    `(clojure.spec/assert ~@args))))
 
 #_(def one*        s/one)
 #_(:clj (defmacro one [schema]
@@ -55,7 +62,6 @@
 (def set?     (spec core/set?    ))
 (def number?  (spec core/number? ))
 (def fn?      (spec core/fn?     ))
-
 ; A few built-in validators
 
 (def no-blanks?  (spec (fn no-blanks? [x] (not (containsv? x " ")))))

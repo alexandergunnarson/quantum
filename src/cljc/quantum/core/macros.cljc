@@ -68,20 +68,6 @@
     (throw (->ex :sym-not-found (str "Symbol not able to be resolved: " x) x)))))
 
 #?(:clj
-(defmacro deftransmacro
-  "Defines a trans/cross-platform macro.
-   If expansion is detected to be in a CLJS environment,
-   it expands using the CLJS symbol."
-  [name clj-fn cljs-fn]
-  (let [args-sym (gensym)
-        clj-fn-f  clj-fn  #_(qualify clj-fn )
-        cljs-fn-f cljs-fn #_(qualify cljs-fn)]
-   `(defmacro ~name [& ~args-sym]
-      (let [ret# (apply list (if-cljs ~'&env '~cljs-fn-f '~clj-fn-f) ~args-sym)]
-        (log/pr :macro-expand "EXPANDING |deftransmacro|:" ret#)
-        ret#)))))
-
-#?(:clj
 (defmacro variadic-proxy
   "Creates left-associative variadic forms for any unary/binary operator."
   {:attribution  "ztellman/primitive-math"

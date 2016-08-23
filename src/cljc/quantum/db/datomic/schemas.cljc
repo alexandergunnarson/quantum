@@ -27,6 +27,7 @@
                                 declare-entity]                  ])))
 
 ; =========== GENERAL =========== ;
+ 
 
 (defrecord Schema [])
 (defn ->schema [k]
@@ -41,7 +42,7 @@
 
 (defentity :globals
   {:globals:log:levels [:many :keyword]})
-
+(comment
 (defentity :ratio:long
   {:doc "A ratio specifically using longs instead of bigints."}
   {:ratio:long:numerator   [:one :long]
@@ -495,3 +496,4 @@
    :time:duration                       nil})
 
 
+)

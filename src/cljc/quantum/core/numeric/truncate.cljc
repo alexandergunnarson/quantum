@@ -51,12 +51,12 @@
 #?(:clj  (defnt ceil
            (^double [^double x] (Math/ceil x))
            (^double [        x] (TODO "fix") (ceil (core/double x))))  
-   :cljs (defn ceil [x] (js/Math.ceil x)))
+   :cljs (defnt ceil [^number? x] (js/Math.ceil x)))
 
 #?(:clj  (defnt floor
            (^double [^double x] (Math/floor x))
            (^double [        x] (TODO "fix") (floor (core/double x)))) 
-   :cljs (defn floor [x] (js/Math.floor x)))
+   :cljs (defnt floor [^number? x] (js/Math.floor x)))
 
 #?(:clj
 (defnt' floor-div

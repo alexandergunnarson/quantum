@@ -37,78 +37,76 @@
               conj
               conj! assoc! dissoc! disj!
               boolean?
+              class
               -])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core   ]
-                     [fast-zip.core                           :as zip    ]
-                     [quantum.core.data.map                   :as map    ]
-                     [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec  
-                       :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.base           :as base   ]
-                     [quantum.core.collections.core           :as coll   ]
-                     [quantum.core.collections.sociative      :as soc    ]
-                     [quantum.core.collections.differential   :as diff   ]
-                     [quantum.core.collections.generative     :as gen    ]
-                     [quantum.core.collections.map-filter     :as mf     ]
-                     [quantum.core.collections.selective      :as sel    ]
-                     [quantum.core.collections.tree           :as tree   ]
-                     [quantum.core.error                      :as err  
-                       :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn  
-                       :refer [#?@(:clj [compr <- fn-> fn->>  
-                                         f*n]) fn-nil juxt-kv withf->>]  ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n])
-                               nnil? some? splice-or]]
-                     [quantum.core.macros                     :as macros 
-                       :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.numeric                    :as num    
-                       :refer        [#?@(:clj [-])]
-                       :refer-macros [-]]
-                     [quantum.core.reducers                   :as red    ]
-                     [quantum.core.string                     :as str    ]
-                     [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type  
-                       :refer [#?@(:clj [lseq? transient? editable? 
-                                         boolean? should-transientize?])]]
-                     [quantum.core.analyze.clojure.predicates :as anap   ]
-                     [quantum.core.type.predicates            :as tpred  ]
-                     [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops  ]
-                     [quantum.core.vars                       :as var  
-                       :refer [#?@(:clj [defalias])]                     ])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )                  :as core   ]
+             [fast-zip.core                           :as zip    ]
+             [quantum.core.data.map                   :as map    ]
+             [quantum.core.data.set                   :as set    ]
+             [quantum.core.data.vector                :as vec  
+               :refer [catvec subvec+]                           ]
+             [quantum.core.collections.base           :as base   ]
+             [quantum.core.collections.core           :as coll   
+               :include-macros true?                             ]
+             [quantum.core.collections.sociative      :as soc    ]
+             [quantum.core.collections.differential   :as diff   
+               :include-macros true                              ]
+             [quantum.core.collections.generative     :as gen    ]
+             [quantum.core.collections.map-filter     :as mf     ]
+             [quantum.core.collections.selective      :as sel    ]
+             [quantum.core.collections.tree           :as tree   ]
+             [quantum.core.error                      :as err  
+               :refer [->ex]                                     ]
+             [quantum.core.fn                         :as fn  
+               :refer        [#?@(:clj [compr <- fn-> fn->> f*n])
+                              fn-nil juxt-kv withf->>]  
+               :refer-macros [compr <- fn-> fn->> f*n]           ]
+             [quantum.core.log                        :as log    
+               :include-macros true                              ]
+             [quantum.core.logic                      :as logic
+               :refer         [#?@(:clj [fn-not fn-or fn-and whenf
+                                         whenf*n ifn if*n condf
+                                         condf*n])
+                               nnil? some? splice-or]
+               :refer-macros [fn-not fn-or fn-and whenf whenf*n 
+                              ifn if*n condf condf*n]            ]
+             [quantum.core.macros                     :as macros 
+               :refer        [#?@(:clj [defnt])]                
+               :refer-macros [defnt]                             ]
+             [quantum.core.numeric                    :as num    
+               :refer        [#?@(:clj [-])]
+               :refer-macros [-]]
+             [quantum.core.reducers                   :as red    
+               :include-macros true                              ]
+             [quantum.core.string                     :as str    ]
+             [quantum.core.string.format              :as sform  ]
+             [quantum.core.type                       :as type  
+               :refer        [#?@(:clj [lseq? transient? editable? 
+                                        boolean? should-transientize?])
+                              class]                                    
+               :refer-macros [lseq? transient? editable? boolean?
+                              should-transientize?]              ]
+             [quantum.core.analyze.clojure.predicates :as anap   ]
+             [quantum.core.type.predicates            :as tpred  ]
+             [clojure.walk                            :as walk   ]
+             [quantum.core.loops                      :as loops  
+               :include-macros true                              ]
+             [quantum.core.vars                       :as var  
+               :refer        [#?@(:clj [defalias])]              
+               :refer-macros [defalias]                          ])
   #?(:cljs (:require-macros  
-                     [quantum.core.collections.core           :as coll   ]
-                     [quantum.core.collections.differential   :as diff   ]
-                     [quantum.core.collections     
-                       :refer [for lfor doseq doseqi reduce reducei
-                               seq-loop
-                               count lasti
-                               subseq
-                               contains? containsk? containsv?
-                               index-of last-index-of
-                               first second rest last butlast get pop peek nth
-                               conjl conj! assoc! dissoc! disj! aset!
-                               map-entry join empty? update! empty?]]
-                     [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n]                  ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic 
-                       :refer [fn-not fn-or fn-and whenf whenf*n 
-                               ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops  ]
-                     [quantum.core.macros                     :as macros 
-                       :refer [defnt]                                    ]
-                     [quantum.core.numeric                    :as num    ]
-                     [quantum.core.reducers                   :as red    ]
-                     [quantum.core.type                       :as type 
-                       :refer [lseq? transient? editable? boolean? 
-                               should-transientize?]                     ]
-                     [quantum.core.vars                       :as var 
-                       :refer [defalias]                                 ]))
+             [quantum.core.collections     
+               :refer [for lfor doseq doseqi reduce reducei
+                       seq-loop
+                       count lasti
+                       subseq
+                       contains? containsk? containsv?
+                       index-of last-index-of
+                       first second rest last butlast get pop peek nth
+                       conjl conj! assoc! dissoc! disj! aset!
+                       map-entry join empty? update! empty? ->array]]))
   #?(:cljs (:import goog.string.StringBuffer)))
 
 (defalias key     coll/key    )
@@ -297,7 +295,6 @@
         (defalias assoc-when-none soc/assoc-when-none)
         (defalias assoc-with      soc/assoc-with     )
 
-#?(:clj
 (defn ->multi-array
   "Creates an n-dimensional array.
    The outermost dims go first (e.g. height then width)."
@@ -320,7 +317,7 @@
                     (dotimes [i (dec super-dim)]
                       (let [sub-arr-n (->multi-array base-type (rest dims))]
                         (aset! super-arr (inc i) sub-arr-n)))
-                    super-arr)))))))
+                    super-arr))))))
 
 #?(:clj
 (defn array->dimensionality

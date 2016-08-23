@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-6-27-2016.2"
+(defproject quantum/core "0.3.0-4b9be3f"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"
@@ -21,15 +21,15 @@
             [lein-essthree "0.2.1" ]
             [lein-ancient  "0.6.10"]]
   :dependencies
-    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha10"          ] ; With hardlinking
-     [org.clojure/clojurescript                 "1.9.93"          ] ; Latest (as of 7/28/2016)
+    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha10"] ; alpha11 is annoying ; With hardlinking
+     [org.clojure/clojurescript                 "1.9.216" #_"1.9.93"         ] ; Latest (as of 7/28/2016)
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
        [org.clojure/tools.namespace             "0.2.11"          ]
-       [com.taoensso/encore                     "2.49.0"          ] ; To not break things
+       [com.taoensso/encore                      "2.79.1" #_"2.49.0"] ; To not break things
        ; ==== ASYNC ====
-         [org.clojure/core.async                "0.2.374"         ]
+         [org.clojure/core.async                "0.2.385"         ]
          [servant                               "0.1.5"           ]
          [co.paralleluniverse/pulsar            "0.7.5"           ] ; If you include it, it conflicts
          [co.paralleluniverse/quasar-core       "0.7.5"           ] ; :classifier "jdk8" 
@@ -40,7 +40,8 @@
          [quantum/seqspert                      "1.7.0-alpha6.1.0"]
          [fast-zip                              "0.7.0"           ]
          ; VECTOR
-         [org.clojure/core.rrb-vector           "0.0.11"          ]
+       #_[org.clojure/core.rrb-vector           "0.0.11"          ]
+         [quantum/org.clojure.core.rrb-vector   "0.0.12"          ]
          [org.clojure/data.finger-tree          "0.0.2"           ]
          ; MAP / SET     
          [org.flatland/ordered                  "1.5.3"           ]
@@ -59,7 +60,7 @@
          ; CORE
        ; ==== CONVERT ====
          [byte-streams                          "0.2.2"           ]
-         [org.clojure/tools.reader              "1.0.0-alpha3"    ]
+         [org.clojure/tools.reader              "1.0.0-beta3"    ]
          #_[gloss                               "0.2.5"           ] 
        ; ==== CRYPTOGRAPHY ====
          [com.lambdaworks/scrypt                "1.4.0"           ]
@@ -96,7 +97,8 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [quantum/java                          "1.3"             ]
        ; ==== PRINT ====
-         [fipp                                  "0.6.5"           ]
+         [fipp                                  "0.6.6"           
+           :exclusions [org.clojure/core.rrb-vector]]
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ]
        ; ==== STRING ====
@@ -115,7 +117,7 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.2.0"           ]
          ; REPL
-         [figwheel                              "0.5.3-2"         ]
+         [figwheel                              "0.5.4-7"         ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====
@@ -192,6 +194,7 @@
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
        [com.github.javaparser/javaparser-core   "2.4.0"           ] ; Parse Java source code
        [org.clojure/tools.emitter.jvm           "0.1.0-beta5"     ]
+       [org.clojure/tools.analyzer              "0.6.9"           ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.13"            ]
@@ -227,13 +230,14 @@
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.3" ]
-                    [lein-figwheel "0.5.3-2"
+                    [lein-figwheel "0.5.4-7"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
                                    org.clojure/core.async
                                    org.clojure/core.cache]]
-                    [jonase/eastwood                 "0.2.1"]
-                    [lein-cloverage                  "1.0.6"]
+                    [jonase/eastwood                   "0.2.1"]
+                    [lein-cloverage                    "1.0.6"]
+                    [quantum/lein-vanity               "0.3.0-quantum"]
                     ]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"             ["do" "clean," "install"]
@@ -242,7 +246,8 @@
             "cljs:autobuilder"       ["do" "clean," "figwheel" "dev"]
             "cljs:debug:autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
             "test"                   ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]
-            "clj:autotester"         ["do" "clean," "test-refresh"]}
+            "clj:autotester"         ["do" "clean," "test-refresh"]
+            "count-loc"              ["vanity"]}
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path

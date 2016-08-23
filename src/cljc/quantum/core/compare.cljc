@@ -13,8 +13,8 @@
                :refer        [#?@(:clj [defalias])]
                :refer-macros [defalias]]
              [quantum.core.numeric.operators
-               :refer        [#?@(:clj [- +]) abs]
-               :refer-macros [- +]]
+               :refer        [#?@(:clj [- + abs])]
+               :refer-macros [- + abs]]
              [quantum.core.numeric.predicates
                :refer        [#?@(:clj [neg? pos? zero?])]
                :refer-macros [neg? pos? zero?]]

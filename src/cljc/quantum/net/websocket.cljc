@@ -108,7 +108,8 @@
   [endpoint host chan chan-recv send-fn chan-state type packer
    stop-fn post-fn get-fn msg-handler
    connected-uids
-   #?@(:clj [server])]
+   #?@(:clj  [server]
+       :cljs [port  ])]
   component/Lifecycle
     (start [this]
       (let [stop-fn-f (atom (fn []))]

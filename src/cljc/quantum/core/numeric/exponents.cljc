@@ -60,11 +60,13 @@
 
 #?(:clj  (defnt' sqrt
            (^double ^:intrinsic [^double x] (Math/sqrt x)))
-   :cljs (defn sqrt [x] (js/Math.sqrt  x)))
+   :cljs (defnt sqrt
+           ([^number? x] (js/Math.sqrt  x))))
 
 #?(:clj  (defnt' cbrt "cube root"
            (^double [^double x] (Math/cbrt x)))
-   :cljs (defn cbrt "cube root" [x] (js/Math.cbrt x)))
+   :cljs (defnt cbrt "cube root"
+           ([^number? x] (js/Math.cbrt x))))
 
 #?(:clj
 (defnt cbrt*
@@ -77,9 +79,9 @@
 
 #?(:clj  (defnt' e-exp "Euler's number (e) raised to the power of @x"
            (^double ^:intrinsic [^double x] (Math/exp x)))
-   :cljs (defn e-exp
+   :cljs (defnt e-exp
            "Euler's number (e) raised to the power of @x"
-           [x] (js/Math.exp x)))
+           ([^number? x] (js/Math.exp x))))
 
 #?(:clj
 (defnt' e-exp*
@@ -90,8 +92,8 @@
 
 #?(:clj  (defnt' log-e "Natural logarithm"
            (^double ^:intrinsic [^double x] (Math/log x)))
-   :cljs (defn log-e "Natural logarithm"
-           [x] (js/Math.log x)))
+   :cljs (defnt log-e "Natural logarithm"
+           [^number? x] (js/Math.log x)))
 
 (defalias ln log-e)
 
@@ -107,8 +109,8 @@
 
 #?(:clj  (defnt' log-10 "Logarithm, base 10"
            (^double ^:intrinsic [^double x] (Math/log10 x)))
-   :cljs (defn log-10 "Logarithm, base 10"
-           [x] (js/Math.log10 x)))
+   :cljs (defnt log-10 "Logarithm, base 10"
+           [^number? x] (js/Math.log10 x)))
 
 #?(:clj
 (defnt' log-10*
@@ -124,7 +126,7 @@
                  "Worst case 2E-14 difference"]}
   (^double [^double x] (FastMath/log1p x))))
 
-(#?(:clj defnt' :cljs defn) log-
+(#?(:clj defnt' :cljs defnt) log-
   {:todo ["Need to intelligently determine, at compile time if possible, whether
            @x is e, 2, or 10 and choose the appropriate fn."]}
   ([#?(:clj #{double}) x #?(:clj #{double}) base] ; arbitrary to choose ln vs. log-10

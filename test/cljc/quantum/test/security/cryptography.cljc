@@ -1,5 +1,9 @@
 (ns quantum.test.security.cryptography
-  (:require [quantum.security.cryptography :as ns]))
+  (:require [quantum.security.cryptography :as ns]
+            [#?(:clj  clojure.test
+                :cljs cljs.test)
+              :refer        [#?@(:clj [deftest testing is])]
+              :refer-macros [deftest testing is]]))
 
 ; __________________________________________
 ; =============== TRANSPORTS ===============
@@ -100,9 +104,34 @@
 (defn test:threefish
   [in type & [{:keys [key tweak bits] :as opts}]]))
 
-(defn test:aes
-  [in type ^String password
-   & [{:keys [key salt iterations sensitivity ->base64? base64->? ->str?] :as opts}]])
+
+#_(defn aes-roundtrip [algo in pass & [base64?]]
+  (go (let [encrypted (<! (pass-natal.crypto/aes algo in :encrypt pass))
+            encrypted
+              (if base64?
+                  encrypted
+                  (->> encrypted
+                       (postwalk (whenf*n #(instance? js/Uint8Array %) u/->base64))
+                       (postwalk (whenf*n string? u/base64->byte-array))))
+            decrypted
+              (<! (pass-natal.crypto/aes algo (:encrypted encrypted)
+                    :decrypt pass encrypted))
+            _ (assert (= in (u/->str decrypted)))])))
+
+(deftest unit:aes []
+  (testing "roundtrip"
+    ))
+
+#_(go (let [in   "Hey! This is a secret message."
+          pass "password"]
+      (testing "CBC, no base64"
+        (<! (test:aes-roundtrip :cbc in pass))) ; 10 seconds... but sometimes only milliseconds
+      (testing "CBC, base64"
+        (<! (test:aes-roundtrip :cbc in pass true)))
+      (testing "GCM, no base64"
+        (<! (test:aes-roundtrip :gcm in pass))) ; 15 seconds... but sometimes only milliseconds
+      (testing "GCM, base64"
+        (<! (test:aes-roundtrip :gcm in pass true)))))
 
 (defn test:encrypt
   [algo obj & [{:keys [key tweak salt password]} :as opts]])

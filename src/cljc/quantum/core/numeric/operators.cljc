@@ -110,7 +110,7 @@
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-           ([x y] (core/- x y)))
+           ([x y] (core/- (double x) (double y)))) ; TODO just to get around warnings
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 
@@ -221,7 +221,7 @@
               ;(* x (-invert (apply * y more)))
               (* x (ntypes/-invert y)))
            ([^number? x  ] (core// x))
-           ([^number? x y] (core// x y))))
+           ([^number? x y] (core// x (double y))))) ; TODO just to get around warning
 
 #?(:clj (variadic-proxy div* quantum.core.numeric.operators/div*-bin))
 
@@ -250,7 +250,7 @@
             (if (nil? *math-context*)
                 (.subtract x BigDecimal/ONE)
                 (.subtract x BigDecimal/ONE *math-context*))))
-   :cljs (defalias dec* unchecked-dec))
+   :cljs (defnt dec* ([x] (unchecked-dec (double x))))) ; TODO just to get around warning 
 
 #?(:clj  (defalias dec' core/dec)
          #_(defnt' dec' "Strict |dec|; throws exception on overflow/underflow"
@@ -280,7 +280,7 @@
              (if (nil? *math-context*)
                  (.add x BigDecimal/ONE)
                  (.add x BigDecimal/ONE *math-context*))))
-   :cljs (defalias inc* unchecked-inc))
+   :cljs (defnt inc* ([^number? x] (unchecked-inc x))))
 
 #?(:clj  (defalias inc core/inc)
          #_(defnt' inc "Natural |inc|; promotes on overflow/underflow"
@@ -320,6 +320,6 @@
           (^clojure.lang.Ratio [^clojure.lang.Ratio x] ; TODO this might be an awful implementation
             (/ (abs' (numerator   x))
                (abs' (denominator x)))))
-   :cljs (defn abs' [x] (TODO "incomplete") (js/Math.abs x)))
+   :cljs (defnt abs' ([x] (TODO "incomplete") (js/Math.abs x))))
 
-(defalias abs abs')
+#?(:clj (defalias abs abs'))
