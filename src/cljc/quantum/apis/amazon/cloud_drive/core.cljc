@@ -11,6 +11,7 @@
                      [quantum.core.paths                   :as paths   ]
                      [quantum.core.collections             :as coll    
                        :refer [#?@(:clj [kmap join])  map+]             ]
+                     [quantum.core.print :as pr]
                      [quantum.core.fn                      :as fn
                        :refer [#?@(:clj [<-])]                         ]
                      [quantum.core.logic                   :as logic
@@ -27,7 +28,7 @@
 (def base-urls
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"
    :content "https://content-na.drive.amazonaws.com/cdproxy/"})
-
+(pr/js-println "base-urls" base-urls)
 (def username nil)
 (defn ^:cljs-async request!
   "Possible inputs are:
@@ -57,7 +58,7 @@
                              token)})
           #?(:cljs <!)
           :body))))
-
+(pr/js-println "request!" request!)
 (defn ^:cljs-async used-gb [] 
   (#?(:clj  identity
       :cljs go)
@@ -71,7 +72,7 @@
          (quantum.core.reducers/reduce + 0)
          #_(<- uconv/convert :bytes :gigabytes)
          #_(:clj double))))
-
+(pr/js-println "used-gb" used-gb)
 ; (defn upload! []
 ; ;   upload  POST : {{contentUrl}}/nodes Upload a new file & its metadata
 ; ; overwrite PUT : {{contentUrl}}/nodes/{id}/content Overwrite the content of a file
@@ -79,7 +80,7 @@
 
 (defn download! [id]
   (request! :nodes :content {:method :get  :append (conv/->path id "content")}))
-
+(pr/js-println "download!" download!)
 #?(:clj
 (defn download-to-file!
   {:usage '(download-to-file! "2gg_3MaYTS-CA7PaPfbdow"
@@ -89,7 +90,7 @@
       (Files/copy
         (-> file conv/->path (Paths/get (into-array [""])))
         (make-array java.nio.file.CopyOption 0)))))
-
+(pr/js-println "download-to-file!" download-to-file!)
 ; ; https://forums.developer.amazon.com/forums/message.jspa?messageID=15671
 ; ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API. 
 ; (defn trash!    [id] (request! :trash :meta {:method :post :append id}))
@@ -104,10 +105,10 @@
        #?(:cljs <!)
        :data
        first))) ; :id
-
+(pr/js-println "root" root-folder)
 (defn trashed-items []
   (request! :trash :meta {:method :get}))
-
+(pr/js-println "trashed" trashed-items)
 (defn ^:cljs-async children
   "Gets the children of an Amazon Cloud Drive @id."
   [id]
@@ -116,7 +117,7 @@
     (-> (request! :nodes :meta {:append (conv/->path id "children")})
         #?(:cljs <!)
         :data)))
-
+(pr/js-println "children" children)
 ; #_(->> (root-folder) :id children (map (juxt :id :name)))
 
 (defn meta [id]
@@ -124,7 +125,7 @@
     {:append id
      :method :get
      :query-params {"tempLink" true}}))
-
+(pr/js-println "meta" meta)
 ; ; The ice-cast stream doesn't include a Content-Length header
 ; ; (because you know, it's a stream), so this was causing libfxplugins
 ; ; to crash as in my previous post on the subject.
