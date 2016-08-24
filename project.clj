@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-4b9be3f"
+(defproject quantum/core "0.3.0-243e69b"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"

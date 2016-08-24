@@ -188,9 +188,9 @@
                :home      home-dir
                :desktop   desktop-dir
                :projects  proj-path-f
-               :keys      (if (= "local" (System/getProperty "quantum.core.io:paths:keys"))
-                              (path this-dir "dev-resources" "Keys")
-                              (path home-dir "Quanta" "Keys"))
+               :keys      (if (= "global" (System/getProperty "quantum.core.io:paths:keys"))
+                              (path home-dir "Quanta" "Keys")
+                              (path this-dir "dev-resources" "Keys"))
                :dev-resources (path this-dir "dev-resources")
                :resources
                  (whenc (path this-dir "resources")
