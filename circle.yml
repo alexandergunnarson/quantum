@@ -1,3 +1,4 @@
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) lein test:clj ;; 1) lein test:cljs ;; esac
+    - case $CIRCLE_NODE_INDEX in 0) lein test:clj ;; 1) lein test:cljs ;; esac:
+        parallel: true
