@@ -689,6 +689,8 @@
 
 (defn special-sym? [sym] (in? sym @special-syms))
 
+(def backslash-regex (re-pattern "\\/"))
+
 (defn camel-lang? []
   (condp = *lang*
     :java true
@@ -743,7 +745,7 @@
          (do (log/pr :debug "QUALIFIED SYMBOL:" (str obj))
              (if (->> obj str (filter (eq? \/)) count (<- > 1))
                (throw (->ex (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
-               (->> obj str (<- str/replace #"\/" ".") symbol eval-form)))
+               (->> obj str (<- str/replace backslash-regex ".") symbol eval-form)))
          (->> obj str replace-specials)))
    ([^string? obj] (str \" obj \"))
    #?(:clj ([^char? obj] (str \' obj \')))

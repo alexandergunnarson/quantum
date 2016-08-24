@@ -254,10 +254,12 @@
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
-                                    [:cljsbuild :builds :dev :compiler :output-dir]
-                                    [:cljsbuild :builds :dev :compiler :output-to ]
-                                    [:cljsbuild :builds :min :compiler :output-dir]
-                                    [:cljsbuild :builds :min :compiler :output-to ]]
+                                    [:cljsbuild :builds :test :compiler :output-dir]
+                                    [:cljsbuild :builds :test :compiler :output-to ]
+                                    [:cljsbuild :builds :dev  :compiler :output-dir]
+                                    [:cljsbuild :builds :dev  :compiler :output-to ]
+                                    [:cljsbuild :builds :min  :compiler :output-dir]
+                                    [:cljsbuild :builds :min  :compiler :output-to ]]
   :java-source-paths ["src/java"]
   :source-paths      ["src/clj"
                       "src/cljc"]
@@ -275,11 +277,9 @@
                              "test/cljs" "test/cljc"]
               :compiler     {:output-to            "dev-resources/public/js/test-compiled/quantum.js"
                              :output-dir           "dev-resources/public/js/test-compiled/out"
-                             :optimizations        :none
-                             :main                 quantum.dev
+                             :optimizations        :whitespace
+                             :main                 quantum.test
                              :asset-path           "js/test-compiled/out"
-                             :source-map           true
-                             :source-map-timestamp true
                              :cache-analysis       true}}
        :dev {:figwheel true
              :source-paths ["src/cljs"  "src/cljc"

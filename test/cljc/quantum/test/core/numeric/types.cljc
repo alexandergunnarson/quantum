@@ -3,7 +3,7 @@
 
 (defn test:number [x])
 
-(defn test:com.gfredericks.goog.math.Integer [x])
+(defn test:Integer [x])
 
 (defn test:->bigint
   ([x]))

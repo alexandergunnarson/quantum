@@ -24,21 +24,23 @@
    :class-sym 'AtomicInteger
    :expanded 'java.util.concurrent.atomic.AtomicInteger})
 
-(deftest test:get-qualified-class-name
+#?(:clj
+(deftest test:get-qualified-class-name ; TODO :clj only for now
   (let [{:keys [ns- lang class-sym]} data]
     (is (= (ns/get-qualified-class-name
              lang ns- class-sym)
-           (:expanded data)))))
+           (:expanded data))))))
 
 (defn test:classes-for-type-predicate
   ([pred lang])
   ([pred lang type-arglist]))
 
-(deftest test:expand-classes-for-type-hint
+#?(:clj
+(deftest test:expand-classes-for-type-hint ; TODO :clj only for now
   (let [{:keys [ns- lang class-sym]} data]
     (is (= (ns/expand-classes-for-type-hint
              class-sym lang ns- [class-sym])
-           #{(:expanded data)}))))
+           #{(:expanded data)})))))
 
 (defn test:hint-arglist-with [arglist hints])
 

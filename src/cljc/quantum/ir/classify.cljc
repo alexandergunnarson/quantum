@@ -30,7 +30,7 @@
                           :refer        [#?(:clj async)]
                #?@(:cljs [:refer-macros [async]])]
              [quantum.numeric.core            :as num*
-               :refer [∏ ∑ sum]]
+               :refer [pi* sigma sum]]
     #?(:clj  [taoensso.timbre.profiling :as prof
                :refer [profile defnp p]]))
   #?(:cljs (:require-macros
@@ -237,15 +237,15 @@
   ([t D d' c V]
     (condp = t
       :multinomial (if #?(:clj *exact?* :cljs true)
-                       (∏ V (fn [w] (expi (P:w|c t D w c V) 
+                       (pi* V (fn [w] (expi (P:w|c t D w c V) 
                                           (Nt:w+d w d'))))
                        #_(->> (V D) ; somehow doesn't work :((
                             (map+ (fn [w] (num/log 2 (double (expi (P:w|c t D w c V)
                                                                (Nt:w+d w d'))))))
                             (reduce #(log %1 %2) 0.0))
-                       #?(:clj (∏ V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
+                       #?(:clj (pi* V (fn [w] (with-precision 10 (bigdec (expi (P:w|c t D w c V) ; 99%
                                                                              (Nt:w+d w d'))))))))         ; Addition and such: 43%!
-      :bernoulli   (∏ V (fn [w] (* (expi (P:w|c t D w c V) ; TODO use |exp'|  ; TODO extend num/exp to non-doubles
+      :bernoulli   (pi* V (fn [w] (* (expi (P:w|c t D w c V) ; TODO use |exp'|  ; TODO extend num/exp to non-doubles
                                          (delta w d'))
                                        (expi (- 1 (P:w|c t D w c V))
                                          (- 1 (delta w d')))))))))
@@ -263,7 +263,7 @@
                     #?(:clj (with-precision 10 (bigdec Pc))))]
         (/ (* (P:d'|c t D d' c V) Pc')
            (if denom?
-               (∑ (C D)
+               (sigma (C D)
                   (fn [c] (* (P:d'|c t D d' c V) (P:c t D c V))))
                1)))))) ; Because are all same denominator
 
@@ -303,11 +303,11 @@
   [t D w C V]
   (let [[ŵ] [w]
         self*log2 (fn [x] (if (= x 0) 0 (* x (identity #_num/exactly (num/log 2 x)))))] ; (num/log 2 0) => -infinity
-    (+ (- (∑ C (fn [c] (self*log2 (P:c t D c V) ))))
+    (+ (- (sigma C (fn [c] (self*log2 (P:c t D c V) ))))
        (* (P:w t D w)
-          (∑ C (fn [c] (self*log2 (P:c|w t D c w)))))
+          (sigma C (fn [c] (self*log2 (P:c|w t D c w)))))
        (* (P:w t D ŵ nil)
-          (∑ C (fn [c] (self*log2 (P:c|w t D c ŵ nil))))))))
+          (sigma C (fn [c] (self*log2 (P:c|w t D c ŵ nil))))))))
 
 (defmemoized all-information-gains {}
   "All the information gains from document collection @D."

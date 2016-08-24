@@ -1,8 +1,8 @@
 (ns quantum.test
   (:require
-#?(:cljs
     [doo.runner
-      :refer-macros [doo-tests]])
+      :refer-macros [doo-tests]]
+    [quantum.core.print :as pr]
     [quantum.test.apis.amazon.cloud-drive.auth]
     [quantum.test.apis.amazon.cloud-drive.core]
     [quantum.test.apis.google.auth]
@@ -157,6 +157,10 @@
     [quantum.test.validate.core]
     [quantum.test.validate.domain]
     [quantum.test.validate.regex]))
+
+(defn test-fn [])
+
+(pr/js-println "======= QUANTUM TEST NS LOADED. =======")
 
 #?(:cljs
 (doo-tests 

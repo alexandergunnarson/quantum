@@ -61,12 +61,12 @@
 (defn sigma [set- step-fn]
   (->> set- (map+ #(step-fn %)) sum))
 
-(defalias ∑ sigma)
+#?(:clj (defalias ∑ sigma))
 
 (defn pi* [set- step-fn]
   (->> set- (map+ #(step-fn %)) product))
 
-(defalias ∏ pi*)
+#?(:clj (defalias ∏ pi*))
 
 (defn find-max-by ; |max-by| would be the first of it
   ([pred x] x)

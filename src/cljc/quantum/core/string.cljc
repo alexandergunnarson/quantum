@@ -5,7 +5,8 @@
           val (reading a number of a string), keyword+
           (for joining strings and keywords into one
           keyword), etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "Alex Gunnarson"
+    :cljs-self-referring? true}
   quantum.core.string
            (:refer-clojure :exclude
              [reverse replace remove val re-find reduce every? boolean?])
@@ -40,6 +41,8 @@
                        :refer [reduce reducei]                         ]
                      [quantum.core.macros        :as macros
                        :refer [defnt defnt']                           ]
+                     [quantum.core.string
+                       :refer [ends-with?]                             ]
                      [quantum.core.type          :as type
                        :refer [boolean?]                               ]
                      [quantum.core.vars          :as var
@@ -127,7 +130,7 @@
   {:todo ["Make more portable by looking at java.lang.String/startsWith"]}
   ([^string? super sub]
     #?(:clj  (.startsWith super ^String sub)         
-       :cljs (zero? (.indexOf super sub)))) ; .startsWith is not implemented everywhere)
+       :cljs (zero? (.indexOf super sub)))) ; .startsWith is not implemented everywhere
   ([^keyword? super sub]
     (starts-with? (name super) sub)))
 
@@ -135,7 +138,7 @@
   {:todo ["Make more portable by looking at java.lang.String/endsWith"]}
   ([^string? super sub]
     #?(:clj  (.endsWith super ^String sub)         
-       :cljs (.endsWith super         sub))) ; .endsWith is not implemented everywhere)
+       :cljs (str/ends-with? super sub))) ; .endsWith is not implemented everywhere
   ([^keyword? super sub]
     (ends-with? (name super) sub)))
 
@@ -384,7 +387,7 @@
     (remove*-protocol to-remove str-0)))
 
 (defn remove-from-end [^String string ^String end]
-  (if (.endsWith string end)
+  (if (ends-with? string end)
       (.substring string 0 (- (count string)
                          (count end)))
       string))
@@ -685,10 +688,10 @@
   {:source "zcaudate/hara.object.util"}
   ([name] (clojure->java name :get))
   ([^String name suffix]
-   (let [nname (cond (.endsWith name "?")
+   (let [nname (cond (ends-with? name "?")
                      (str "is-" (.substring name 0 (.length name)))
 
-                     (.endsWith name "!")
+                     (ends-with? name "!")
                      (str "has-" (.substring name 0 (.length name)))
 
                      :else

@@ -52,7 +52,7 @@
                        :refer [boolean?]                                          ]))
   #?(:clj  (:import
              (java.lang Thread Process)
-             (java.util.concurrent Future Executor
+             (java.util.concurrent Future Executor Executors
                 ExecutorService ThreadPoolExecutor)
              quantum.core.data.queue.LinkedBlockingQueue
              #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
@@ -260,15 +260,23 @@
 (def rejected-execution-handler
   (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f)))))
 
-
 #?(:clj
 (defonce threadpools
-  (atom {:core.async ^clojure.core.async.impl.protocols.Executor @clojure.core.async.impl.dispatch/executor ; because it's a Delay
+  (atom {:core.async ^ThreadPoolExecutor (Executors/newFixedThreadPool
+                                           @@#'clojure.core.async.impl.exec.threadpool/pool-size
+                                           (clojure.core.async.impl.concurrent/counted-thread-factory "async-dispatch-%d" true))
+         ; ^clojure.core.async.impl.protocols.Executor @clojure.core.async.impl.dispatch/executor ; because it's a Delay
          :future     ^ThreadPoolExecutor clojure.lang.Agent/soloExecutor
          :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
          ; TODO commented temporarily
          ;:async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
          :reducers   ^ForkJoinPool       quantum.core.reducers.fold/pool})))
+
+ #?(:clj
+ (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)    
+   (reify java.util.concurrent.RejectedExecutionHandler    
+     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]    
+       (@rejected-execution-handler f)))))
 
 #?(:clj
 (defnt set-max-threads!
