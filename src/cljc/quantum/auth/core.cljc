@@ -40,7 +40,7 @@
 
 (defn get
   "Retrieves authorization keys associated with the given authorization source @auth-source (e.g. Google, Facebook, etc.)."
-  {:usage (get :amazon)}
+  {:usage `(get :amazon)}
   ([auth-source]
     (if *mem?*
         (core/get @auths auth-source)
@@ -51,7 +51,7 @@
     (core/get (get auth-source) k))) 
 
 (defn get-in
-  {:usage '(get-in :google ["alex" :password])
+  {:usage `(get-in :google ["alex" :password])
    :out   "__my-password__"}
   [auth-source ks]
   (core/get-in (get auth-source) ks))
