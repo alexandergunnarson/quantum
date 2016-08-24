@@ -134,6 +134,7 @@
   ([^keyword? super sub]
     (starts-with? (name super) sub)))
 
+(declare ends-with?-protocol)
 (defnt ends-with?
   {:todo ["Make more portable by looking at java.lang.String/endsWith"]}
   ([^string? super sub]

@@ -14,7 +14,7 @@
              [quantum.core.error   :as err
                :refer [->ex]]
              [quantum.numeric.core
-               :refer [∏ ∑ sum]]
+               :refer [pi* sigma sum]]
              [quantum.core.vars
                :refer [#?(:clj defalias)]])
   #?(:cljs (:require-macros

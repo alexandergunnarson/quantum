@@ -239,7 +239,8 @@
                     [jonase/eastwood                   "0.2.1"]
                     [lein-cloverage                    "1.0.6"]
                     [quantum/lein-vanity               "0.3.0-quantum"]
-                    ]}}
+                    ]}
+    :test {:jvm-opts ["-Xmx3g"]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"             ["do" "clean," "install"]
             "deploy-prod"            ["do" "clean," "install," "deploy" "clojars"]
