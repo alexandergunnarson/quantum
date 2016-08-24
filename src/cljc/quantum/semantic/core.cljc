@@ -16,10 +16,10 @@
                                  ifor get reducei]]
              [quantum.core.error
                :refer        [#?(:clj assert) ->ex]
-               :refer-macros [        assert]]
+               :refer-macros [assert]]
              [quantum.core.numeric :as num
-               :refer        [#?@(:clj [+*]) inc* ]
-               :refer-macros [          +*]]
+               :refer        [#?@(:clj [+* inc*])]
+               :refer-macros [inc* +*]]
              [quantum.core.string :as str])
   #?(:cljs (:import goog.string.StringBuffer)))
 

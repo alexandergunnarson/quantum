@@ -212,6 +212,7 @@
      [byte-transforms                           "0.1.4"           ]
      [net.jpountz.lz4/lz4                       "1.3"             ]
      ; ==== MISCELLANEOUS ====
+     [lein-doo "0.1.7"]
      ]
    :injections [#_(reset! ns/externs? false)
                 (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
@@ -245,7 +246,9 @@
             "deploy-test-dev"        ["do" "clean," "cljsbuild" "once" "dev"]
             "cljs:autobuilder"       ["do" "clean," "figwheel" "dev"]
             "cljs:debug:autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
-            "test"                   ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]
+            ;"test"                   ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]
+            "test:clj"               ["test"]
+            "test:cljs"              ["doo" "phantom" "test" "once"]
             "clj:autotester"         ["do" "clean," "test-refresh"]
             "count-loc"              ["vanity"]}
   :auto-clean  false
@@ -267,17 +270,17 @@
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
-      {:debug {:source-paths ["src/cljs"  "src/cljc"
-                              "dev/cljs"  "dev/cljc"
-                              "test/cljs" "test/cljc"]
-               :compiler     {:output-to            "dev-resources/public/js/debug-compiled/quantum.js"
-                              :output-dir           "dev-resources/public/js/debug-compiled/out"
-                              :optimizations        :none
-                              :main                 quantum.dev
-                              :asset-path           "js/debug-compiled/out"
-                              :source-map           true
-                              :source-map-timestamp true
-                              :cache-analysis       true}}
+      {:test {:source-paths ["src/cljs"  "src/cljc"
+                             "dev/cljs"  "dev/cljc"
+                             "test/cljs" "test/cljc"]
+              :compiler     {:output-to            "dev-resources/public/js/test-compiled/quantum.js"
+                             :output-dir           "dev-resources/public/js/test-compiled/out"
+                             :optimizations        :none
+                             :main                 quantum.dev
+                             :asset-path           "js/test-compiled/out"
+                             :source-map           true
+                             :source-map-timestamp true
+                             :cache-analysis       true}}
        :dev {:figwheel true
              :source-paths ["src/cljs"  "src/cljc"
                             "dev/cljs"  "dev/cljc"

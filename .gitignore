@@ -3,6 +3,7 @@
 /dev-resources/public/js/compiled
 /dev-resources/public/js/min-compiled
 /dev-resources/public/js/debug-compiled
+/dev-resources/public/js/test-compiled
 /private-resources/
 /target/
 /fonts/
