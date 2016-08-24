@@ -256,8 +256,8 @@
             "cljs:debug:autobuilder" ["do" "clean,"
                                            "cljsbuild" "auto" "debug"]
             "test-all"               ["with-profile" "+test"
-                                      "do" "clean,"
-                                           "test:cljs"]
+                                      "do" "cljsbuild" "once" "test," ; Tests CLJ and builds CLJS in one step
+                                           "test:cljs"]               ; Tests CLJS
             "test:clj"               ["test"]
             "test:cljs"              ["doo" "phantom" "test" "once"]
             "clj:autotester"         ["do" "clean,"
