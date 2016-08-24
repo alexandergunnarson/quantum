@@ -154,7 +154,7 @@
            (~(if-cljs &env 'cljs.test/is 'clojure.test/is) (= ret# ~expected))
            ret#))))))
 
-(deftest integration:defnt
+#_(deftest integration:defnt
   (let [sym 'test-defnt
         env {:sym           sym ; TODO test the defnt before it gets to this point
              :strict?       false
