@@ -187,5 +187,3 @@
 #?(:cljs (println "======= RUNNING CLOJURESCRIPT TESTS ======="))
 
 #?(:cljs (doo-all-tests #"quantum.test.+"))
-
-#?(:cljs (println (green "======= CLOJURESCRIPT TESTS COMPLETE =======")))
