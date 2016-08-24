@@ -27,7 +27,7 @@
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
        [org.clojure/tools.namespace             "0.2.11"          ]
-       [com.taoensso/encore                      "2.79.1" #_"2.49.0"] ; To not break things
+       [com.taoensso/encore                     "2.79.1"          ] ; To not break things
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.385"         ]
          [servant                               "0.1.5"           ]
@@ -211,7 +211,7 @@
      ; COMPRESSION, HASHING...
      [byte-transforms                           "0.1.4"           ]
      [net.jpountz.lz4/lz4                       "1.3"             ]
-     ; ==== MISCELLANEOUS ====
+     ; ==== MISCELLANEOUS ==== 
      [lein-doo "0.1.7"]
      ]
    :injections [#_(reset! ns/externs? false)
@@ -222,7 +222,7 @@
                   (alter-var-root oldv (constantly (deref newv))))] ; for :aot
    :profiles
    {:dev {:injections []
-              ; [(do (clojure.main/repl :print quantum.core.print/!)
+              ; [(do `       await-forbasesF
               ;      (clojure.main/repl :print clojure.pprint/pprint)
               ; )]
           :resource-paths ["dev-resources"]
@@ -230,7 +230,7 @@
           :dependencies   []
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
-                    [lein-cljsbuild                    "1.1.3" ]
+                    [lein-cljsbuild                    "1.1.4" ]
                     [lein-figwheel "0.5.4-7"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
@@ -240,17 +240,28 @@
                     [lein-cloverage                    "1.0.6"]
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     ]}
-    :test {:jvm-opts ["-Xmx3g"]}}
+    :test {:jvm-opts ["-Xmx3g"]
+           :env      {:run-tests?            "true"
+                      :exit-on-test-failure? "true"}}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy-dev"             ["do" "clean," "install"]
-            "deploy-prod"            ["do" "clean," "install," "deploy" "clojars"]
-            "deploy-test-dev"        ["do" "clean," "cljsbuild" "once" "dev"]
-            "cljs:autobuilder"       ["do" "clean," "figwheel" "dev"]
-            "cljs:debug:autobuilder" ["do" "clean," "cljsbuild" "auto" "debug"]
-            ;"test"                   ["do" "clean," "test," "with-profile" "dev" "cljsbuild" "test"]
+            "deploy-dev"             ["do" "clean,"
+                                           "install"]
+            "deploy-prod"            ["do" "clean,"
+                                           "install,"
+                                           "deploy" "clojars"]
+            "deploy-test-dev"        ["do" "clean,"
+                                           "cljsbuild" "once" "dev"]
+            "cljs:autobuilder"       ["do" "clean,"
+                                           "figwheel" "dev"]
+            "cljs:debug:autobuilder" ["do" "clean,"
+                                           "cljsbuild" "auto" "debug"]
+            "test-all"               ["with-profile" "+test"
+                                      "do" "clean,"
+                                           "test:cljs"]
             "test:clj"               ["test"]
             "test:cljs"              ["doo" "phantom" "test" "once"]
-            "clj:autotester"         ["do" "clean," "test-refresh"]
+            "clj:autotester"         ["do" "clean,"
+                                           "test-refresh"]
             "count-loc"              ["vanity"]}
   :auto-clean  false
   :target-path "target"
