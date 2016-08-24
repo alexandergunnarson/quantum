@@ -162,28 +162,6 @@
 
 (pr/js-println "======= QUANTUM TEST NS LOADED. =======")
 
-(def reset-color "\u001b[0m")
-(def foreground-red "\u001b[31m")
-(def foreground-green "\u001b[32m")
-
-(defn- colorizer [c]
-  (fn [& args]
-    (str c (apply str args) reset-color)))
-
-(def red (colorizer foreground-red))
-(def green (colorizer foreground-green))
-
-#?(:clj
-(binding [*out* *err*]
-  (when (-> env :run-tests? (= "true"))
-    (println "======= RUNNING CLOJURE TESTS =======")
-    (let [{:keys [fail error]} (test/run-all-tests #"quantum.test.+")]
-      (when (and (-> env :exit-on-test-failure? (= "true"))
-                 (or (pos? fail )
-                     (pos? error)))
-        (System/exit 1))
-      (println (green "======= CLOJURE TESTS COMPLETE. =======")))))) ; test failure
-
 #?(:cljs (println "======= RUNNING CLOJURESCRIPT TESTS ======="))
 
 #?(:cljs (doo-all-tests #"quantum.test.+"))

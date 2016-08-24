@@ -240,9 +240,7 @@
                     [lein-cloverage                    "1.0.6"]
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     ]}
-    :test {:jvm-opts ["-Xmx3g"]
-           :env      {:run-tests?            "true"
-                      :exit-on-test-failure? "true"}}}
+    :test {:jvm-opts ["-Xmx3g"]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"             ["do" "clean,"
                                            "install"]
@@ -255,11 +253,10 @@
                                            "figwheel" "dev"]
             "cljs:debug:autobuilder" ["do" "clean,"
                                            "cljsbuild" "auto" "debug"]
-            "test-all"               ["with-profile" "+test"
-                                      "do" "cljsbuild" "once" "test," ; Tests CLJ and builds CLJS in one step
-                                           "test:cljs"]               ; Tests CLJS
-            "test:clj"               ["test"]
-            "test:cljs"              ["doo" "phantom" "test" "once"]
+            "test:clj"               ["with-profile" "+test"
+                                      "test"]
+            "test:cljs"              ["with-profile" "+test"
+                                      "doo" "phantom" "test" "once"]
             "clj:autotester"         ["do" "clean,"
                                            "test-refresh"]
             "count-loc"              ["vanity"]}
