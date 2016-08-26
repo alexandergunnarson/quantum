@@ -239,9 +239,8 @@
 
 (declare exists?-protocol)
 (defnt exists?
-  ([^string? s] (-> s ->file exists?))
-  ([^file?   f] #?(:clj  (.exists f)
-                   :cljs (TODO))))
+          ([^string? s] (-> s ->file exists?))
+  #?(:clj ([^file?   f] (.exists f))))
 
 #?(:clj
 (defnt directory?
@@ -262,7 +261,7 @@
 
 ; FILE RELATIONS
 
-(defnt ^String up-dir
+(defnt #?(:clj ^String up-dir :cljs up-dir)
   ([^string? dir ] (-> dir up-dir-str))
   ([^vec?    dir ] (-> dir parse-dir up-dir))
   #?(:clj ([^file?   file] (.getParent file))))
