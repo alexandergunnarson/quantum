@@ -404,7 +404,7 @@
                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface 
                                        cljs.core/Delay}}
            'file?            '{:clj  #{java.io.File}
-                               :cljs #{js/File}}
+                               :cljs #{}} ; js/File isn't always available! Use an abstraction
            'array-list?      array-list-types
            'array?           {:clj  (->> array-types :clj vals (into #{}))
                               :cljs (->> array-types :cljs)}
