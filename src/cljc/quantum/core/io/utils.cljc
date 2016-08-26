@@ -147,9 +147,9 @@
   ByteEntity [type name])
 
 ; Files.probeContentType(path)
-#?(:cljs (defnt get-type ([^file? x] (#?(:clj ? :cljs .-type) x))))
-#?(:cljs (defnt get-name ([^file? x] (#?(:clj ? :cljs .-name) x))))
+;#?(:cljs (defnt get-type ([^file? x] (#?(:clj ? :cljs .-type) x)))) ; This works only if File is declared
+;#?(:cljs (defnt get-name ([^file? x] (#?(:clj ? :cljs .-name) x)))) ; This works only if File is declared
 
-#?(:cljs (defnt ->byte-entity
-  ([^file? x]
-  (map->ByteEntity {:type (get-type x) :name (get-name x)}))))
+;#?(:cljs (defnt ->byte-entity ; This works only if File is declared
+;  ([^file? x]
+;  (map->ByteEntity {:type (get-type x) :name (get-name x)}))))
