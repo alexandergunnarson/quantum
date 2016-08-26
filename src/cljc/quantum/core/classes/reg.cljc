@@ -11,6 +11,7 @@
        (map symbol)
        (into (sorted-set)))))
 
+#?(:clj
 (defonce java-classes-unevaled
   ^{:source ["https://cloud.google.com/appengine/docs/java/jrewhitelist"
              "http://docs.oracle.com/javase/7/docs/api/allclasses-noframe.html"]}
@@ -1945,4 +1946,4 @@
   sun.security.validator.Validator
   sun.security.x509.Extension
   sun.util.calendar.Era
-  sun.util.locale.Extension})
+  sun.util.locale.Extension}))

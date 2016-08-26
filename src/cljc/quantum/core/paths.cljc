@@ -105,7 +105,7 @@
 ;         "DYLD_LIBRARY_
 
 
-(defnt ^String path->file-name
+(defnt #?(:clj ^String path->file-name :cljs path->file-name)
   #?(:clj ([^file?   f] (.getName f)))
   ([^string? s] (coll/taker-until sys/separator nil s)))
 
@@ -198,7 +198,7 @@
                         (path proj-path-f (up-dir-str this-dir) "resources"))}))
      :cljs (atom {})))
 
-(defnt ^String parse-dir
+(defnt #?(:clj ^String parse-dir :cljs parse-dir)
   ([^vector? keys-n]
     (reducei
       (fn [path-n key-n n]
