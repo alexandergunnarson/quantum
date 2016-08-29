@@ -184,3 +184,5 @@
 
 #?(:clj
 (defn test:remove-accents [^String s]))
+
+(defn test:search-str-within [super sub])

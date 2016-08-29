@@ -27,16 +27,13 @@
                      [quantum.core.convert.core          :as conv   ]
                      [quantum.core.data.complex.json     :as json   ]
                      [quantum.core.macros                :as macros 
-                       :refer [#?(:clj defnt)]                      ]
+                       :refer        [#?(:clj defnt)]         
+                       :refer-macros [defnt]                        ]
                      [quantum.core.paths                 :as path   ]
                      [quantum.core.fn                    :as fn     ]
                      [quantum.core.vars                  :as var   
-                       :refer [#?(:clj defalias)]                   ])
-  #?(:cljs (:require-macros 
-                     [quantum.core.macros                :as macros
-                       :refer [defnt]                               ]
-                     [quantum.core.vars                  :as var
-                         :refer [defalias]                          ]))
+                       :refer        [#?(:clj defalias)]                   
+                       :refer-macros [defalias]                     ])
   #?(:clj (:import
             [org.apache.commons.codec.binary Base64]
             [quantum.core.data.streams    ByteBufferInputStream]
@@ -83,6 +80,10 @@
 (defalias parse-long    conv/parse-long   )
 (defalias parse-float   conv/parse-float  )
 (defalias parse-double  conv/parse-double )
+
+(defnt ->regex
+  ([^string? s] (-> s str/conv-regex-specials re-pattern))
+  ([^regex?  r] r))
 
 (defn transit->
   "Transit decode an object from @x."

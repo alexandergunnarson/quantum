@@ -17,11 +17,14 @@
            ;#?(:clj [quantum.deploy.amazon            :as amz      ])
                     [com.stuartsierra.component       :as component]
                     [quantum.core.collections         :as coll     
-                      :refer [#?@(:clj [kmap containsv?])]         ]
+                      :refer        [#?@(:clj [kmap containsv?])] 
+                      :refer-macros [kmap containsv?]              ]
                     [quantum.core.error               :as err
-                      :refer [->ex #?(:clj try-times)]             ]
+                      :refer        [->ex #?(:clj try-times)]      
+                      :refer-macros [try-times]                    ]
                     [quantum.core.fn                  :as fn
-                      :refer [#?@(:clj [with])]                    ]
+                      :refer        [#?@(:clj [with])]             
+                      :refer-macros [with]                         ]
                     [quantum.core.log                 :as log      
                       :include-macros trus]
                     [quantum.core.logic               :as logic
@@ -32,36 +35,27 @@
                     [quantum.core.resources           :as res      ]
                     [quantum.core.string              :as str      ]
             #?(:clj [quantum.core.process             :as proc     ])
-                    [quantum.core.thread.async        :as async    ]
+                    [quantum.core.thread.async        :as async    
+                      :include-macros true                         ]
                     [quantum.core.type                :as type
-                      :refer [atom? #?(:clj boolean?)]]
+                      :refer        [atom? #?(:clj boolean?)]
+                      :refer-macros [boolean?]                     ]
                     [quantum.core.vars                :as var
-                      :refer [#?(:clj defalias)]                   ]
+                      :refer        [#?(:clj defalias)]            
+                      :refer-macros [defalias]                     ]
                     [quantum.core.io.core             :as io       ]
                     [quantum.core.convert             :as conv
                       :refer [->name]                              ]
                     [quantum.core.paths               :as path     ]
                     [quantum.parse.core               :as parse    ]
                     [quantum.validate.core            :as val
-                      :refer [#?(:clj validate)]                   ])
+                      :refer        [#?(:clj validate)]            
+                      :refer-macros [validate]                     ])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
                     [datomic-cljs.macros   
-                      :refer [<?]                                  ]
-                    [quantum.core.collections         :as coll     
-                       :refer [kmap containsv?]                    ]
-                    [quantum.core.error               :as err
-                       :refer [try-times]                          ]
-                    [quantum.core.fn                  :as fn
-                       :refer [with]                               ]
-                    [quantum.core.thread.async        :as async    ]
-                    [quantum.core.type                :as type
-                      :refer [boolean?]                            ]
-                    [quantum.core.vars                :as var
-                      :refer [defalias]                            ]
-                    [quantum.validate.core            :as val
-                      :refer [validate]]))
+                      :refer [<?]                                  ]))
   #?(:clj  (:import datomic.Peer
                     [datomic.peer LocalConnection Connection]
                     java.util.concurrent.ConcurrentHashMap)))
@@ -234,7 +228,7 @@
         _ (when (map? internal-props) (write-props!))
         _ (log/pr :debug "Starting transactor..." (kmap datomic-path flags props-path-f resources-path))
         proc (res/start!
-               (proc/->proc (path/path datomic-path "bin" "transactor")
+               (proc/->proc (path/path "." "bin" "transactor")
                  (c/conj (or flags []) props-path-f)
                  {:pr-to-out? true
                   :dir        datomic-path}))

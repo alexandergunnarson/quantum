@@ -24,12 +24,17 @@
                     :headers {"Cookie" (->> (web/get-cookies driver) cook/encode-cookies)}
                      #_:query-params #_{"queryNew" "" "offset" "0" "filterType" "cash" "comparableType" "8"}})
             _ (with-throw (-> resp :opts :url (= url))
-                (Err. :err/url "Didn't get to the right url" url))
+                (->ex :err/url "Didn't get to the right url" url))
             csv (:body resp)]
         csv)
       (finally (.quit driver)))))
 
 #_(defn parse-transactions
+    {:example `{:account-remap
+                 {"Bank 1 Savings" :bank1/savings
+                  "Checking"       :bank2/checking
+                  "BANK3 CHECKN"   :bank3/checking
+                  "Mastercard K4"  :bank2/credit}}}
   ([csv] (parse-transactions csv nil))
   ([csv {:as opts :keys [account-remap]}]
     (let [account-remapper

@@ -17,36 +17,33 @@
                      [quantum.core.data.map      :as map               ]
                      [quantum.core.data.set      :as set               ]
                      [quantum.core.fn            :as fn 
-                       :refer [#?@(:clj [fn->])]                       ]
+                       :refer        [#?@(:clj [fn-> f*n])]            
+                       :refer-macros [fn-> f*n]                        ]
                      [quantum.core.logic         :as logic
-                       :refer [#?@(:clj [fn-and whenc whencf*n ifn
-                                         condf])
-                               nempty? every?]                         ]
+                       :refer        [#?@(:clj [fn-and whenc whencf*n ifn
+                                                condf])
+                                      nempty? every?]                  
+                       :refer-macros [fn-and whenc whencf*n ifn condf] ]
                      [quantum.core.loops         :as loops
-                       :refer [#?@(:clj [reduce reducei])]             ]
+                       :refer        [#?@(:clj [reduce reducei])]      
+                       :refer-macros [reduce reducei]                  ]
                      [quantum.core.macros        :as macros
-                       :refer [#?@(:clj [defnt defnt'])]               ]
+                       :refer        [#?@(:clj [defnt defnt'])]        
+                       :refer-macros [defnt defnt']                    ]
+                     [quantum.core.collections.core
+                       :refer        [#?@(:clj [containsv?])]
+                       :refer-macros [containsv?]                      ]
                      [quantum.core.string.format :as form              ]
                      [quantum.core.string.regex  :as regex             ]
                      [quantum.core.vars          :as var
-                       :refer [#?@(:clj [defalias])]                   ]
+                       :refer        [#?@(:clj [defalias])]            
+                       :refer-macros [defalias]                        ]
                      [quantum.core.type          :as type
-                       :refer [#?(:clj boolean?)]                      ])
+                       :refer        [#?(:clj boolean?)]               
+                       :refer-macros [boolean?]                        ])
   #?(:cljs (:require-macros
-                     [quantum.core.fn            :as fn
-                       :refer [fn->]                                   ]
-                     [quantum.core.logic         :as logic
-                       :refer [fn-and whenc whencf*n ifn condf]        ]
-                     [quantum.core.loops         :as loops
-                       :refer [reduce reducei]                         ]
-                     [quantum.core.macros        :as macros
-                       :refer [defnt defnt']                           ]
                      [quantum.core.string
-                       :refer [ends-with?]                             ]
-                     [quantum.core.type          :as type
-                       :refer [boolean?]                               ]
-                     [quantum.core.vars          :as var
-                       :refer [defalias]                               ]))
+                       :refer [ends-with?]                             ]))
   #?(:clj (:import java.net.IDN
                    java.util.regex.Pattern)))
 
@@ -500,6 +497,22 @@
     ((fn step []
        (when (. m (find))
          (cons (.group m 0) (lazy-seq (step)))))))))
+
+(defn search-str-within [super sub]
+  (let [strict-search (f*n containsv? sub)
+        regexized     (->> sub conv-regex-specials (str "(?i)") re-pattern)
+        case-insensitive-regex-search
+          (partial re-find regexized)]
+    (->> super
+         (reducei
+          (fn [ret m n]
+            (if (->> m vals
+                     (filter (fn-> str case-insensitive-regex-search))
+                     first)
+                (assoc! ret n m)
+                ret))
+          (transient {}))
+        persistent!)))
 
 (def ^{:doc "Special characters in various regular expression implementations."}
   regex-metacharacters
