@@ -146,7 +146,7 @@ React, Meteor, and Ember follow this pattern.
 *Pithy quote:*
 ["Juggling a multimodule project over multiple repos is like trying to teach a newborn baby how to ride a bike."](https://github.com/babel/babel/blob/master/doc/design/monorepo.md)
 
-See [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) for a (slightly) more complete justification.
+See [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) and [here](http://danluu.com/monorepo/) for a more complete justification.
 
 Copyright and License
 -
