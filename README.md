@@ -132,6 +132,22 @@ I've been coding in Clojure for over two years, but expect some rustiness. Expec
 
 I welcome any and all contributions, comments, thoughts, suggestions, and/or feedback you may wish to provide. This endeavor towards greater efficiency in thought, processing power, and time spent programming should be a joint one.
 
+Appendix
+-
+
+###Why is `quantum` a monorepo?
+
+*TL;DR:*
+It's *much* easier and has few (if any) real disadvantages.
+
+*Appeal to authority:*
+React, Meteor, and Ember follow this pattern.
+
+*Pithy quote:*
+["Juggling a multimodule project over multiple repos is like trying to teach a newborn baby how to ride a bike."](https://github.com/babel/babel/blob/master/doc/design/monorepo.md)
+
+See [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) for a (slightly) more complete justification.
+
 Copyright and License
 -
 *Copyright © 2015 Alex Gunnarson*
