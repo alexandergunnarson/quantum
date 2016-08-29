@@ -14,7 +14,7 @@
       :refer-macros [<- fn->>]]
     [quantum.core.collections :as coll
       :refer        [#?@(:clj [lfor for getr lasti join array])]
-      :refer-macros [lfor for getr lasti join array]]
+      :refer-macros [lfor for getr lasti join]]
     [quantum.core.nondeterministic :as rand]))
 
 (def syls
@@ -44,7 +44,7 @@
 (def neg-pattern (re-pattern (str "^" neg-syl "(.+)$")))
 
 (def digits
-  (array \0 \1 \2 \3 \4 \5
+  (#?(:clj array :cljs core/array) \0 \1 \2 \3 \4 \5
          \6 \7 \8 \9 \a \b
          \c \d \e \f \g \h
          \i \j \k \l \m \n
