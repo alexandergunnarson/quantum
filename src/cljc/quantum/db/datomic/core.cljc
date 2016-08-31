@@ -409,8 +409,8 @@
     [[:db/retract s k v]
      [:db/add :db.part/db :db.alter/attribute k]]))
 
-(defn new-if-not-found
-  "Creates a new entity if the one specified by the key-value pairs, @attrs,
+(defn id-or-new
+  "Creates a new id if the one specified by the key-value pairs, @attrs,
    is not found in the database."
   [attrs]
   (let [query (join [:find '?e :where]
@@ -500,8 +500,8 @@
 
 (def ^:dynamic *transform?* false)
 
-(defn wrap-transform [x]
-  #?(:clj  (if *transform?*
+(defn wrap-transform [x & [force?]]
+  #?(:clj  (if (or force? *transform?*)
                (if (has-transform? x)
                    x
                    [:fn/transform x])
@@ -557,6 +557,15 @@
   "Merges in @props to @eid and transacts."
   ([& args]
     (transact! [(apply merge args)])))
+
+(defn new-or-merge
+  "If @id-query does not find an id, creates a new entity with the supplied @attrs.
+   Otherwise, merges in @attrs to the found id.
+   Expects @id-query to return a single id."
+  [id-query attrs]
+  (c/assoc attrs :db/id
+    `(:fn/or (:fn/first (:fn/q ~id-query))
+             ~(tempid)))) 
 
 (defn excise
   ([eid attrs] (excise eid @part* attrs))
@@ -1228,9 +1237,14 @@
        (coll/map+ #(first %1))
        (join #{}))))
 
-(defn ensure-conj-entities!
-  "Postwalks a transaction and makes sure each map has a :db/id.
-   Recursively replaces maps with tempids."
+(defn externalize-inner-entities
+  "Postwalks a transaction and makes sure each map (inner entity) has a :db/id.
+   Recursively 'externalizes' these inner entities, ensuring that these children
+   are transacted before their parents. These 'externalized' entities are given ids,
+   and the previously inner entities are replaced with these ids."
+  {:example `{[{:db/id -99 :a {:b 1}}]
+              [{:b 1 :db/id -100}
+               {:db/id -99 :a -100}]}}
   [txn part]
   (let [to-conj (volatile! [])
         txn-replaced
@@ -1263,7 +1277,7 @@
                  [(db/conj
                     (->media:track
                       {:cloud:amazon:id
-                        `(:fn/fail-when-exists
+                        `(:fn/fail-when-found
                            [:find ~'?e
                             :where [~'?e :cloud:amazon:id ~id]]
                            "ID already exists in database"
