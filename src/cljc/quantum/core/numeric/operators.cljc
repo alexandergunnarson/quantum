@@ -9,6 +9,8 @@
     #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
              [quantum.core.error :as err
                :refer [TODO]]
+             [quantum.core.log :as log
+               :include-macros true]
              [quantum.core.macros
                :refer        [#?@(:clj [defnt defntp defnt' variadic-proxy])]
                :refer-macros [defnt defntp]]
@@ -27,6 +29,8 @@
              java.math.BigInteger
              java.math.BigDecimal
              clojure.lang.BigInt)))
+
+(log/this-ns)
 
 ; Auto-unboxes; no boxed combinations necessary
 ; TODO right now: multiple typed arguments in |defnt|, even in protocols
@@ -110,7 +114,7 @@
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-           ([x y] (core/- (double x) (double y)))) ; TODO just to get around warnings
+           ([x y] (core/- x y))) ; TODO CLJS arithmetic warning here
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 
@@ -221,7 +225,7 @@
               ;(* x (-invert (apply * y more)))
               (* x (ntypes/-invert y)))
            ([^number? x  ] (core// x))
-           ([^number? x y] (core// x (double y))))) ; TODO just to get around warning
+           ([^number? x y] (core// x y)))) ; TODO CLJS arithmetic warning here
 
 #?(:clj (variadic-proxy div* quantum.core.numeric.operators/div*-bin))
 
@@ -250,7 +254,7 @@
             (if (nil? *math-context*)
                 (.subtract x BigDecimal/ONE)
                 (.subtract x BigDecimal/ONE *math-context*))))
-   :cljs (defnt dec* ([x] (unchecked-dec (double x))))) ; TODO just to get around warning 
+   :cljs (defnt dec* ([x] (unchecked-dec x)))) ; TODO CLJS arithmetic warning here
 
 #?(:clj  (defalias dec' core/dec)
          #_(defnt' dec' "Strict |dec|; throws exception on overflow/underflow"
