@@ -178,6 +178,7 @@
                 (-> (js/require "quantum-react-native-gpuimage")
                     (rx/adapt-react-class)))))
 
+#?(:cljs
 (defn grid-scroll-view [parent-props content-fn]
   (let [data-indices (range 0 (if (= sys/os "web") 15 5))
         margins      4
@@ -227,7 +228,7 @@
                                        :margin-left       (scaled (if first-col? (* 2 margins) margins))
                                        :margin-right      (scaled (if last-col?  (* 2 margins) margins))
                                        :background-color  :white}}
-                          [content-fn calc-col-i]])))))))))))
+                          [content-fn calc-col-i]]))))))))))))
 
 ; LinearGradient ; https://github.com/react-native-community/react-native-linear-gradient
 ; SideMenu ; https://github.com/react-native-community/react-native-side-menu
