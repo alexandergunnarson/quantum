@@ -70,18 +70,18 @@
       (go (js/alert title)) ; even this totally stops everything
       (.alert (.-Alert @ReactNative) title))))
 
-#?(:cljs (def text                (rx/adapt-react-class (.-Text  ReactNative))))
-#?(:cljs (def view                (rx/adapt-react-class (.-View  ReactNative))))
-#?(:cljs (def image               (rx/adapt-react-class (.-Image ReactNative))))
+#?(:cljs (def text                (whenf (.-Text       ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (def view                (whenf (.-View       ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (def image               (whenf (.-Image      ReactNative) nnil? rx/adapt-react-class)))
 ; var CacheImage = require('@remobile/react-native-cache-image'); doesn't work on web ; better to have something else
-#?(:cljs (def touchable-highlight (rx/adapt-react-class (.-TouchableHighlight ReactNative))))
+#?(:cljs (def touchable-highlight (whenf (.-TouchableHighlight ReactNative) nnil? rx/adapt-react-class)))
 #?(:cljs (def accordion           (when-not (= sys/os "web")
-                                    (rx/adapt-react-class (js/require "react-native-accordion")))))
-#?(:cljs (def text-input          (rx/adapt-react-class (.-TextInput          ReactNative))))
+                                    (err/ignore (rx/adapt-react-class (js/require "react-native-accordion"))))))
+#?(:cljs (def text-input          (whenf (.-TextInput  ReactNative) nnil? rx/adapt-react-class)))
 #?(:cljs (def modal               (when-not (= sys/os "web")
-                                    (rx/adapt-react-class (.-Modal ReactNative)))))
-#?(:cljs (def scroll-view         (rx/adapt-react-class (.-ScrollView         ReactNative))))
-#?(:cljs (def list-view           (rx/adapt-react-class (.-ListView           ReactNative))))
+                                    (whenf (.-Modal    ReactNative) nnil? rx/adapt-react-class))))
+#?(:cljs (def scroll-view         (whenf (.-ScrollView ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (def list-view           (whenf (.-ListView   ReactNative) nnil? rx/adapt-react-class)))
 #?(:cljs (def video               (if (= sys/os "web")
                                       :video
                                        ; https://github.com/react-native-community/react-native-video
