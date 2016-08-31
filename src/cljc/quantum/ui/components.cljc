@@ -13,6 +13,9 @@
              [quantum.core.fn     :as fn
                :refer        [#?@(:clj [fn-> fn->> <-])]
                :refer-macros [fn-> fn->> <-]]
+             [quantum.core.logic
+               :refer        [#?@(:clj [whenf]) nnil?]
+               :refer-macros [whenf]]
              [quantum.core.error  :as err  
                :include-macros true]
              [quantum.core.log    :as log  
