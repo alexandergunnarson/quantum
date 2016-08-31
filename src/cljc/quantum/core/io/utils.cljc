@@ -71,15 +71,12 @@
 #?(:clj
 (defn create-dir! [dir-0]
   (let [dir (-> dir-0 ->file)]
-    (if (paths/contains? dir) ; exists?
-        (try+ (writable? dir) ; TODO assert this
-              (assert (.mkdir ^File dir) #{dir})
-          (catch SecurityException e
-            (throw
-              (->ex :mkdir "The directory could not be created. A security exception occurred." (kmap e dir))))
-          (catch [:type :assertion-error] e
-            (throw
-              (->ex :mkdir "The directory could not be created. Possibly administrator permissions are required." (kmap e dir)))))))))
+    (when-not (paths/contains? dir) ; exists?
+      (try (writable? dir) ; TODO assert this
+           (assert (.mkdir ^File dir) #{dir})
+        (catch Throwable t
+          (throw
+            (->ex :mkdir "The directory could not be created." (kmap t dir)))))))))
 
 (defn num-to-sortable-str [num-0]
   (ifn num-0 (fn-and (fn-not neg?) (f*n < 10))
@@ -116,17 +113,20 @@
 
 #?(:clj
 (defn create-temp-file!
-  [^String file-name ^String suffix]
-  (File/createTempFile file-name suffix)))
+  [^String file-name ^String suffix & [^File dir]]
+  (if dir
+      (do (create-dir! dir)
+          (File/createTempFile file-name suffix dir))
+      (File/createTempFile file-name suffix))))
 
 #?(:clj
 (defmacro with-temp-file
   "Evaluates @body with a temporary file in its scope."
   {:attribution "From github.com/bevuta/pepa.util"}
-  [[name data suffix] & body]
+  [[name data suffix dir] & body]
   (let [name' (with-meta name {:tag 'java.io.File})]
     `(let [data# ~data
-           ~name' (create-temp-file! "temp_" (or ~suffix ""))]
+           ~name' (create-temp-file! "temp_" (or ~suffix "") (when ~dir (->file ~dir)))]
        (try
          (when data#
            (io/copy data# ~name'))
