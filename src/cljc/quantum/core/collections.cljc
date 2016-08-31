@@ -98,13 +98,13 @@
                :refer-macros [defalias]                          ])
   #?(:cljs (:require-macros  
              [quantum.core.collections     
-               :refer [for lfor doseq doseqi reduce reducei
+               :refer [for for* lfor doseq doseqi reduce reducei
                        seq-loop
                        count lasti
                        subseq
                        contains? containsk? containsv?
                        index-of last-index-of
-                       first second rest last butlast get pop peek nth
+                       first second rest last butlast get aget pop peek nth
                        conjl conj! assoc! dissoc! disj! aset!
                        map-entry join empty? update! empty? ->array]]))
   #?(:cljs (:import goog.string.StringBuffer)))
@@ -1645,6 +1645,16 @@
           (update allocated (-> sorted last first) (f*n - *flow))
           (-> *flow num/abs (> 1))
           (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
+
+#?(:cljs
+(defn jsx->clj
+  [x]
+  (for* {} [k (.keys js/Object x)] 
+    [(keyword k)
+     (let [v (aget x k)]
+       (if (fn? v)
+           "<function>"
+           v))])))
 
 ; ===== LOGGING ===== ; (TODO MOVE)
 
