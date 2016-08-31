@@ -42,7 +42,7 @@
 
 (defentity :globals
   {:globals:log:levels [:many :keyword]})
-(comment
+
 (defentity :ratio:long
   {:doc "A ratio specifically using longs instead of bigints."}
   {:ratio:long:numerator   [:one :long]
@@ -422,6 +422,7 @@
    :data:format                         nil
    :data:title                          nil
    :data:video:frame-rate               [:one  :double ]
+   :data:frame-rate:mediainfo           [:one  :string ]
    :data:video:format-settings:gop      [:one  :string ]
    :data:video:frame-rate-mode          [:one  :string ]
    :data:video:scan-type                [:one  :string ]
@@ -494,6 +495,3 @@
    :data:writing-application            [:one  :string ]
    :data:media:compilation:tika         [:one  :long   ]
    :time:duration                       nil})
-
-
-)
