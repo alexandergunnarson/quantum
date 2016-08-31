@@ -1,6 +1,8 @@
 (ns quantum.db.datomic.defs
+           (:refer-clojure :exclude [reduce])
            (:require [quantum.core.collections    :as c    
-                       :refer [remove+]                    ]
+                       :refer        [remove+ #?@(:clj [reduce])] 
+                       :refer-macros [reduce]]
                      [quantum.net.http            :as http ]
              #?(:clj [instaparse.core             :as insta])
                      [quantum.db.datomic          :as db   ]
@@ -35,7 +37,6 @@
        (insta/transform
          {:lines     (fn [& lines] (->> lines
                                         (remove+ nil?)
-                                        force
                                         (reduce #(c/conj %1 %2) {})))
           :word      identity
           :extension keyword
@@ -45,20 +46,21 @@
           :line       (fn ([] nil) ([line] line))})
        delay)))
 
-(defn transact-std-definitions! []
+(defn transact-std-definitions! [& [{:as opts :keys [mime-types?]}]]
   (db/transact! (dbc/->partition :db.part/test))
   (db/transact! (dbc/->partition :db.part/fn  ))
   (db/transact! [(db/conj {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns!))
   (dbe/transact-schemas!)
   (db/conj! (dbs/->globals {:db/ident :globals*}))
-  ; Transact mime-types
-  #_(:clj
-    (db/transact!
-      (->> mime-types force
-           (mapv (fn [[k v]] (db/conj (dbs/->data:format
-                                        {:data:mime-type                  k
-                                         :data:appropriate-extension:many v}))))))))
+  
+  #?(:clj
+    (when mime-types?
+      (db/transact!
+        (->> mime-types force
+             (mapv (fn [[k v]] (db/conj (dbs/->data:format
+                                          {:data:mime-type                  k
+                                           :data:appropriate-extension:many v})))))))))
 
 
 
