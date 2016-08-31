@@ -148,8 +148,9 @@
    For ClojureScript, this can be used e.g. with Figwheel's :main."
   [config system-creator system sys-map]
   (fn [& [port]]
+    (when @system (res/stop! @system))
     @system-creator
-    (res/reload! @system)
+    (res/go! @system)
     (reset! db/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral) :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
     

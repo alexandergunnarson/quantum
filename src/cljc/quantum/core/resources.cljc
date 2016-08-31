@@ -87,6 +87,65 @@
 
 #?(:clj (ns-unmap (ns-name *ns*) 'System))
 
+(defn- start-with-pred
+  "Starts a component and associates a started? key if it
+   successfully starts."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  [component]
+  (-> component start! (assoc :started? true)))
+
+(defn- stop-with-pred
+  "Stops a component and dissasociates a started? key if it
+   successfully stops."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  [component]
+  (-> component stop! (assoc :started? false)))
+
+(defn started?
+  "Determines if the component is in a started state."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  [component]
+  (boolean (:started? component)))
+
+(defn stopped?
+  "Determines if the given component is in a stopped state."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  [component]
+  (not (started? component)))
+
+(defn start-system!
+  "Recursively starts components in the system, in dependency order,
+  assoc'ing in their dependencies along the way. component-keys is a
+  collection of keys (order doesn't matter) in the system specifying
+  the components to start, defaults to all keys in the system. If
+  an exception is thrown, it'll tear down the system and ensure any
+  components that were started are stopped."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  ([system]
+     (start-system! system (keys system)))
+  ([system component-keys]
+   (try
+     (component/update-system system component-keys start-with-pred)
+     (catch Throwable e
+       (let [thrown-system (-> e ex-data :system)
+             started-keys (->> thrown-system
+                               (filter (fn [[k v]] (started? v)))
+                               (keys))]
+         (component/update-system-reverse thrown-system started-keys stop-with-pred))
+       (throw e)))))
+
+
+(defn stop-system!
+  "Recursively stops components in the system, in reverse dependency
+  order. component-keys is a collection of keys (order doesn't matter)
+  in the system specifying the components to stop, defaults to all
+  keys in the system."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  ([system]
+   (stop-system! system (keys system)))
+  ([system component-keys]
+   (component/update-system-reverse system component-keys stop-with-pred)))
+
 (defonce systems (atom nil))
 
 (defprotocol ISystem
@@ -99,32 +158,28 @@
     (start [this]
       (if @running?
           (log/pr :warn "System already running.")
-          (let [[started? system']
-                 (try [true (start! @sys-map)]
-                   (catch #?(:clj Throwable :cljs :default) t
-                     (-> t ex-data :system stop!)
-                     [false @sys-map]))]
-            (if started?
-                (do (reset! sys-map  system') ; TODO fix this to be immutable
-                    (reset! running? true   ) ; TODO fix this to be immutable
-                    (log/pr :user "System started."))
-                (log/pr :user "System failed to start.")))))
+          (try (log/pr :user "======== STARTING SYSTEM ========")
+               (let [sys-map' (start-system! @sys-map)]
+                 (reset! sys-map sys-map')) ; TODO fix this to be immutable
+               (reset! running? true) ; TODO fix this to be immutable
+               (log/pr :user "System started.")
+            (catch #?(:clj Throwable :cljs :default) t
+              (log/pr :warn "System failed to start:" t)))))
     (stop [this]
       (if (and @sys-map @running?)
-          (do (swap! sys-map
-                (fn [s]
-                  (log/pr :user "======== STOPPING SYSTEM ========")
-                  (doto s stop!)))
-              (reset! running? false)
-              (log/pr :user "System stopped."))
+          (let [_ (log/pr :user "======== STOPPING SYSTEM ========")
+                sys-map' (stop-system! @sys-map)]
+            (reset! sys-map sys-map')
+            (reset! running? false)
+            (log/pr :user "System stopped."))
           (log/pr :warn "System cannot be stopped; system is not running.")))
   ISystem
     (init! [this]
-      (if @running?
+      (if @sys-map
           (log/pr :warn "System already created.")
-          (do (reset! sys-map
-                (make-system config))
-              (log/pr :user "System created."))))
+          (let [sys-map' (make-system config)]
+            (reset! sys-map sys-map')
+            (log/pr :user "System created."))))
     (go! [this] 
       (init!  this)
       (start! this))
