@@ -1,14 +1,17 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
+           (:refer-clojure :exclude [reduce])
            (:require [quantum.core.io.utils          :as iou  ] 
                      [quantum.core.process           :as proc ]
                      [quantum.core.string            :as str  ]
+                     [quantum.core.log               :as log  ]
                      [quantum.core.collections       :as coll
-                       :refer [map+ dropr in?]                ]
+                       :refer        [map+ dropr in? #?@(:clj [kmap reduce])]
+                       :refer-macros [kmap reduce]            ]
                      [quantum.core.fn                :as fn
-                       :refer [#?@(:clj [<- fn-> fn->> f*n])] ]
+                       :refer [#?@(:clj [<- fn-> fn->> f*n doto->>])] ]
                      [quantum.core.logic             :as logic
-                       :refer [#?@(:clj [whenf])]             ]
+                       :refer [#?@(:clj [whenf])]]
                      [quantum.core.resources         :as res
                        :refer [#?(:clj with-resources)]       ]
                      [quantum.core.vars              :as var
@@ -48,7 +51,6 @@
     (->> meta-
          (<- str/split #"\n")
          (map+ (f*n str/split #": "))
-         force
          (reduce
            (fn [ret v-0]
              (let [entry? (fn-> count (= 2))
@@ -72,9 +74,10 @@
    technical and tag data for video and audio files."
   {:url "https://mediaarea.net/en/MediaInfo"}
   [file]
-  (-> (proc/exec! "mediainfo" file)
-      :out
-      parse-media-metadata)))
+  (->> (proc/exec! "mediainfo" file)
+       (doto->> log/pr ::debug "Path:" file "Mediainfo result:")
+       :out
+       parse-media-metadata)))
 
 (def media-exts #{:mp4})
 
