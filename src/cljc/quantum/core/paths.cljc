@@ -32,7 +32,7 @@
                :refer [->file exists?]]))
   #?(:clj  (:import
              java.io.File
-             [java.net URI URL])))
+             [java.net URI URL URLEncoder])))
 
 ; TODO validate this
 (def paths-vecs
@@ -58,7 +58,7 @@
   ([^java.net.URI                x] x)
   ([^java.nio.file.Path          x] (.toUri x))
   ([#{java.io.File java.net.URL} x] (.toURI x))
-  ([^string?                     x] (URI. x))
+  ([^string?                     x] (-> x (str/replace " " "+") (URI.)))
   ([                             x] (-> x ->file ->uri))))
 
 #?(:clj
