@@ -1,15 +1,29 @@
 (ns
   ^{:doc "UI style functions"}
   quantum.ui.style.core
-  #_(:require [quantum.ui.css     :as css :refer [color]]
-           [garden.color :as color :refer [rgb->hsl hex->hsl rgb]]))
+  (:require
+    [quantum.core.log :as log
+      :include-macros true]
+    [quantum.core.system :as sys]))
 
+(log/this-ns)
 
-; (defnt solid-background
-;   ([^javafx.scene.paint.Color c]
-;     (-> c
-;         (BackgroundFill. nil nil)
-;         array
-;         (Background.))) ; REFLECTION here
-;   ([:else c]
-;     (->> c ->color solid-background)))
+; Flex helpers
+(def layout-x         :row)
+(def layout-y         :column)
+(def layout           :justify-content)
+(def layout-perp      :align-items)
+(def layout-wrap      :flex-wrap)
+(def layout-direction :flex-direction)
+(def layout-fit       :flex)
+(def autofit          1)
+
+(def scaling-factors
+  {:iphone-6 0.58})
+
+(def scaling-factor
+  (case sys/os 
+    "web" 1
+    "ios" (:iphone-6 scaling-factors)))
+
+(defn scaled [x] (* x scaling-factor))

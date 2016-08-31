@@ -6,7 +6,9 @@
                        :refer [#?(:clj containsv?)]       ]
                      [quantum.core.logic       :as logic
                        :refer [#?@(:clj [condpc coll-or])]]
-                     [quantum.core.string      :as str    ])
+                     [quantum.core.string      :as str    ]
+                     [quantum.core.error       :as err
+                       :include-macros true               ])
   #?(:cljs (:require-macros
                      [quantum.core.collections :as coll
                        :refer [containsv?]                ]
@@ -78,13 +80,22 @@
   ;User's current working directory.
   "user.dir"}))
 
+#?(:cljs
+(def ReactNative
+  (err/ignore
+    (if (undefined? js/window.ReactNative)
+        (js/require "react-native")
+        js/window.ReactNative)))) ; https://github.com/necolas/react-native-web
+
 (def os ; TODO: make less naive
-  #?(:cljs (condp #(containsv? %1 %2) (.-appVersion js/navigator)
-             "Win"   :windows
-             "MacOS" :mac
-             "X11"   :unix
-             "Linux" :linux
-             :unknown)
+  #?(:cljs (if ReactNative
+               (-> ReactNative .-Platform .-OS)
+               (condp #(containsv? %1 %2) (.-appVersion js/navigator)
+                   "Win"   :windows
+                   "MacOS" :mac
+                   "X11"   :unix
+                   "Linux" :linux
+                   :unknown))
      :clj
       (let [os-0 (-> (System/getProperty "os.name")
                      str/->lower)]
@@ -144,3 +155,15 @@
      :total (mb (.totalMemory r))
      :used  (mb (- (.totalMemory r) (.freeMemory r)))
      :free  (mb (.freeMemory r))})))
+
+#?(:cljs
+(set! (-> js/console .-ignoredYellowBox)
+  #js ["re-frame: overwriting an event-handler for:"
+       "re-frame: overwriting  :event  handler for:"
+       "has been renamed"
+       "You are manually calling a React.PropTypes validation function for the"]))
+
+#?(:cljs (def app-registry (when ReactNative (.-AppRegistry  ReactNative))))
+
+#?(:cljs (def AsyncStorage (when ReactNative (.-AsyncStorage ReactNative))))
+#?(:cljs (def StatusBar    (when ReactNative (.-StatusBar    ReactNative))))
