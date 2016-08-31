@@ -14,6 +14,8 @@
                      [quantum.core.type.predicates
                        :refer [seqable?]]))
 
+#?(:cljs (enable-console-print!))
+
 ; TODO maybe use Timbre?
 
 (defrecord
@@ -26,7 +28,8 @@
 (defonce levels
   (atom (map->LoggingLevels
           {:warn true
-           :user true})))
+           :user true
+           :ns   true})))
 
 (defonce log (atom []))
 
@@ -59,7 +62,7 @@
     (apply enable! levels)
     this)
   (stop  [this]
-    (apply disable! levels)
+    #_(apply disable! levels) ; we don't necessarily want this logic
     this))
 
 (defn ->log-initializer [{:keys [levels] :as opts}]
@@ -110,7 +113,9 @@
                     (do (when pretty? (println))
                         (apply print-fn args-f)))
                 (when (= pr-type :macro-expand) (print " */\n")))]
-        (print out-str)
+        
+#?(:clj  (binding [*out* *err*] (print out-str) (flush)) ; in order to not print to file
+   :cljs (print out-str))
         (when (:log? opts)
           (swap! quantum.core.log/log conj
             (LogEntry.
@@ -140,5 +145,9 @@
 #?(:clj
 (defmacro ppr-hints [pr-type & args]
   `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
+
+#?(:clj
+(defmacro this-ns []
+  `(pr* true false println :ns (delay ['~(ns-name *ns*)]) nil)))
 
 #_(:clj (println "HERE IS THIS PID" (->> (java.lang.management.ManagementFactory/getRuntimeMXBean) (.getName))))
