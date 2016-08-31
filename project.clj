@@ -1,4 +1,4 @@
-(defproject quantum/core "0.3.0-243e69b"
+(defproject quantum/core "0.3.0-01043fd"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"
@@ -129,7 +129,7 @@
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ]
        [posh                                    "0.3.5"           ]
        [quantum/datsync                         "0.0.1-4-11-2016" ]
-       [re-frame                                "0.7.0"           ]
+       [re-frame                                "0.8.0-alpha11"   ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ]
      ; ==== UI ====
