@@ -24,6 +24,7 @@
 (def scaling-factor
   (case sys/os 
     "web" 1
-    "ios" (:iphone-6 scaling-factors)))
+    "ios" (:iphone-6 scaling-factors)
+    nil))
 
 (defn scaled [x] (* x scaling-factor))
