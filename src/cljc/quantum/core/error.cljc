@@ -169,6 +169,11 @@
                            :else catch-val#))))))))
 
 #?(:clj
+(defmacro ignore [& body]
+  (let [c (if-cljs &env :default 'Throwable)]
+    `(try ~@body (catch ~c _# nil)))))
+
+#?(:clj
 (defmacro assertf-> [f arg throw-obj]
   `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
        ~arg)))
