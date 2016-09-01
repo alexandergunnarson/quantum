@@ -126,7 +126,7 @@
   ([system component-keys]
    (try
      (component/update-system system component-keys start-with-pred)
-     (catch Throwable e
+     (catch #?(:clj Throwable :cljs :default) e
        (let [thrown-system (-> e ex-data :system)
              started-keys (->> thrown-system
                                (filter (fn [[k v]] (started? v)))
