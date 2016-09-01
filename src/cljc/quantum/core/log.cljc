@@ -115,7 +115,9 @@
                 (when (= pr-type :macro-expand) (print " */\n")))]
         
 #?(:clj  (binding [*out* *err*] (print out-str) (flush)) ; in order to not print to file
-   :cljs (print out-str))
+   :cljs (let [console-print-fn
+                (or (aget js/console (name pr-type)) println)]
+           (console-print-fn out-str)))
         (when (:log? opts)
           (swap! quantum.core.log/log conj
             (LogEntry.
