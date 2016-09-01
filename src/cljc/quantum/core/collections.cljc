@@ -185,9 +185,10 @@
         (defalias take-after    diff/take-after   )
         (defalias takel-while+  take-while+       )
         (defalias takel-after   diff/takel-after  )
-        (defalias takel-until-matches diff/takel-until-matches)
+        (defalias takel-after-matches diff/takel-after-matches)
         (defalias taker-after   diff/taker-after  )
         (defalias take-until    diff/take-until   )
+        (defalias takel-until-matches diff/takel-until-matches)
 #?(:clj (defalias taker-until   diff/taker-until  ))
         (defalias drop          diff/drop         )
         (defalias drop+         diff/drop+        )
@@ -657,10 +658,22 @@
 (defalias merge-keep-right merger)
             
 (defn split-remove
-  {:todo ["Slightly inefficient — two /index-of/ implicit."]}
+  {:todo ["Slightly inefficient — two |index-of| implicit."]}
   [split-at-obj coll]
-  [(take-until split-at-obj coll)
-   (take-after split-at-obj coll)])
+  (let [left  (take-until split-at-obj coll)]
+    (if (= left coll)
+        [left]
+        [left (take-after split-at-obj coll)])))
+
+(defn split-remove-match
+  {:todo ["Slightly inefficient — two |index-of| implicit."]
+   :tests `{(split-remove-match "--" "ab--sddasd--")
+            ["ab" "sddasd--"]}}
+  [split-at-obj coll]
+  (let [left (takel-until-matches split-at-obj coll)]
+    (if (= left coll)
+        [left]
+        [left (takel-after-matches split-at-obj coll)])))
 
 #_(defn zipmap
   ([ks vs] (zipmap hash-map ks vs))

@@ -276,6 +276,18 @@
 
 (def takel-while-not-matches takel-until-matches)
 
+(declare dropl)
+
+(defn takel-after-matches 
+  {:tests '{(takel-after-matches  "--" "ab--sddasd--")
+            "sddasd--"}}
+  [sub super]
+  (while-matches sub super fn/firsta
+    (fn [super-i _] (dropl (+ (count sub) (- super-i (lasti sub))) super))
+    (constantly super)))
+
+(def take-after-matches takel-after-matches)
+
 ; ============ TAKE-RIGHT ============
 (defn taker 
   [i super]

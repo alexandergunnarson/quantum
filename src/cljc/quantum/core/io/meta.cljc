@@ -5,6 +5,9 @@
                      [quantum.core.process           :as proc ]
                      [quantum.core.string            :as str  ]
                      [quantum.core.log               :as log  ]
+                     [quantum.core.paths             :as paths]
+                     [quantum.core.error             :as err
+                       :refer        [->ex]                   ]
                      [quantum.core.collections       :as coll
                        :refer        [map+ dropr in? #?@(:clj [kmap reduce])]
                        :refer-macros [kmap reduce]            ]
@@ -26,10 +29,10 @@
                      [quantum.core.vars              :as var
                        :refer [defalias def-]                 ]))
 #?(:clj (:import
-          java.io.FileInputStream
-          (org.apache.tika.parser   AutoDetectParser  )
-          (org.apache.tika.sax      BodyContentHandler)
-          (org.apache.tika.metadata Metadata          ))))
+          (java.io                  File FileInputStream)
+          (org.apache.tika.parser   AutoDetectParser    )
+          (org.apache.tika.sax      BodyContentHandler  )
+          (org.apache.tika.metadata Metadata            ))))
 
 (def- parsers 
   (let [bit-rate-parser (fn-> (str/remove "Kbps") str/trim str/val)]
@@ -50,7 +53,7 @@
   (let [section (volatile! nil)]
     (->> meta-
          (<- str/split #"\n")
-         (map+ (f*n str/split #": "))
+         (map+ (partial coll/split-remove-match ": "))
          (reduce
            (fn [ret v-0]
              (let [entry? (fn-> count (= 2))
@@ -74,22 +77,23 @@
    technical and tag data for video and audio files."
   {:url "https://mediaarea.net/en/MediaInfo"}
   [file]
-  (->> (proc/exec! "mediainfo" file)
-       (doto->> log/pr ::debug "Path:" file "Mediainfo result:")
-       :out
-       parse-media-metadata)))
+  (let [{:as result :keys [err out]} (proc/exec! "mediainfo" file)]
+    (log/pr ::debug "Path:" file "Mediainfo result:" result)
+    (if err
+        (throw (->ex nil "Mediainfo error" {:mediainfo-message err})))
+        (-> out parse-media-metadata))))
 
 (def media-exts #{:mp4})
 
 #?(:clj
 (defn file->meta:tika [file-str]
-  (with-resources [stream (FileInputStream. file-str)]
+  (with-resources [stream (FileInputStream. ^String file-str)]
     (let [parser   (AutoDetectParser.)
           handler  (BodyContentHandler.)
           metadata (Metadata.)]
       (.parse parser stream handler metadata)
       (reduce (fn [ret k]
-        (assoc ret (keyword k) (into [] (.getValues metadata k))))
+        (assoc ret (keyword k) (into [] (.getValues metadata ^String k))))
         {}
         (->> metadata .names (into [])))))))
 
