@@ -3,32 +3,29 @@
             (:require
               #?(:clj [clojure.java.shell             :as shell  ])
                       [quantum.db.datomic.entities
-                        :refer [#?@(:clj [defattribute defentity 
-                                          declare-entity schemas
-                                          attributes])]          ]
+                        :refer        [#?@(:clj [defattribute defentity 
+                                                 declare-entity schemas
+                                                 attributes])]          
+                        :refer-macros [defattribute defentity
+                                       declare-entity]           ]
                       [quantum.core.fn                :as fn
-                        :refer [#?@(:clj [f*n])]                 ]
+                        :refer        [#?@(:clj [f*n])]                 
+                        :refer-macros [f*n]                      ]
                       [quantum.core.logic             :as logic
-                        :refer [#?@(:clj [fn-and])]              ]
+                        :refer        [#?@(:clj [fn-and])]       
+                        :refer-macros [fn-and]                   ]
                       [quantum.core.string            :as str    ]
+                      [quantum.core.error             :as err
+                        :refer [->ex TODO]                       ]
                       [quantum.net.http               :as http   ]
                       [quantum.core.data.complex.xml  :as xml    ]
                       [quantum.db.datomic             :as db     ]
                       [quantum.core.convert.primitive :as pconv  ]
                       [quantum.core.numeric           :as num   
-                        :refer [percent?]                        ])
-  #?(:cljs  (:require-macros
-                      [quantum.core.fn                :as fn
-                        :refer [f*n]                             ]
-                      [quantum.core.logic             :as logic
-                        :refer [fn-and]                          ]
-                      [quantum.db.datomic.entities
-                        :refer [defattribute defentity
-                                declare-entity]                  ])))
+                        :refer [percent?]                        ]))
 
 ; =========== GENERAL =========== ;
  
-
 (defrecord Schema [])
 (defn ->schema [k]
   #_(:db/q '[:find [?ident ...]
@@ -48,24 +45,27 @@
   {:ratio:long:numerator   [:one :long]
    :ratio:long:denominator [:one :long]})
 
+
 (defn num->ratio:long [n]
-  (let [r (rationalize n)]
-    (if (instance? clojure.lang.Ratio r)
-        (let [n      (numerator   r)
-              n-long (long n)
-              _ (assert (= n-long n) #{n n-long})
-              d      (denominator r)
-              d-long (long d)
-              _ (assert (= d-long d) #{d d-long})]
-          (->ratio:long
-             {:ratio:long:numerator   n-long
-              :ratio:long:denominator d-long}))
-        (let [n r
-              n-long (long n)
-              _ (assert (= n-long n) #{n n-long})]
-          (->ratio:long
-            {:ratio:long:numerator   n-long
-             :ratio:long:denominator 1})))))
+  #?(:clj
+      (let [r (rationalize n)]
+        (if (instance? clojure.lang.Ratio r)
+            (let [n      (numerator   r)
+                  n-long (long n)
+                  _ (assert (= n-long n) #{n n-long})
+                  d      (denominator r)
+                  d-long (long d)
+                  _ (assert (= d-long d) #{d d-long})]
+              (->ratio:long
+                 {:ratio:long:numerator   n-long
+                  :ratio:long:denominator d-long}))
+            (let [n r
+                  n-long (long n)
+                  _ (assert (= n-long n) #{n n-long})]
+              (->ratio:long
+                {:ratio:long:numerator   n-long
+                 :ratio:long:denominator 1}))))
+     :cljs (TODO)))
 
 ; =========== LOCATION =========== ;
 
@@ -452,6 +452,7 @@
    :data:audio:stream-size              [:one  :string ]
    :data:audio:bit-rate                 nil
    :data:audio:channels                 [:one  :long   ]
+   :data:audio:channel-positions        [:one  :string ]
    :data:audio:compression-mode         [:one  :string ]
    :data:audio:compressor               [:one  :string ]
    :data:audio:writing-library          [:one  :string ]
@@ -472,6 +473,7 @@
    :data:tagged-date:mediainfo          [:one  :string ]
    :data:minor-version:mediainfo        [:one  :string ]
    :media:album-art:type:mediainfo      [:one  :string ]
+   :data:media:compilation?             [:one  :boolean]
    :media:has-album-art?                [:one  :boolean]
    :media:album-art:format              [:one  :ref    {:ref-to :data:format}]
    :data:audio:max-bit-rate             nil
