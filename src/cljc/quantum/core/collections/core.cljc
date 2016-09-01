@@ -202,7 +202,7 @@
            (^long [^keyword?          x] (count ^String (name x)))
          #?(:clj 
            (^long [^ManyToManyChannel x] (count (.buf x))))
-           (^long [^vector?           x] (.count x))
+           (^long [^vector?           x] (#?(:clj .count :cljs core/count) x))
            (^long [                   x] (core/count x))
            ; Debatable whether this should be allowed
            (^long [:else              x] 0))
