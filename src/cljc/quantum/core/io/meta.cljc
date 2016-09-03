@@ -1,7 +1,7 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
            (:refer-clojure :exclude [reduce])
-           (:require [quantum.core.io.utils          :as iou  ] 
+           (:require [quantum.core.io.utils          :as iou  ]
                      [quantum.core.process           :as proc ]
                      [quantum.core.string            :as str  ]
                      [quantum.core.log               :as log  ]
@@ -11,30 +11,28 @@
                      [quantum.core.collections       :as coll
                        :refer        [map+ dropr in? #?@(:clj [kmap reduce])]
                        :refer-macros [kmap reduce]            ]
+                     [quantum.core.convert           :as conv
+                       :refer        [#?@(:clj [->keyword])]
+                       :refer-macros [->keyword]              ]
                      [quantum.core.fn                :as fn
-                       :refer [#?@(:clj [<- fn-> fn->> f*n doto->>])] ]
+                       :refer        [#?@(:clj [<- fn-> fn->> f*n doto->>])]
+                       :refer-macros [<- fn-> fn->> f*n]]
                      [quantum.core.logic             :as logic
-                       :refer [#?@(:clj [whenf])]]
+                       :refer        [#?@(:clj [whenf]) nempty?]
+                       :refer-macros [whenf]                  ]
                      [quantum.core.resources         :as res
-                       :refer [#?(:clj with-resources)]       ]
+                       :refer        [#?(:clj with-resources)]
+                       :refer-macros [with-resources]         ]
                      [quantum.core.vars              :as var
-                       :refer [#?@(:clj [defalias def-])]     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                :as fn
-                        :refer [<- fn-> fn->> f*n]            ]
-                     [quantum.core.logic             :as logic
-                        :refer [whenf]                        ]
-                     [quantum.core.resources         :as res
-                       :refer [with-resources]                ]
-                     [quantum.core.vars              :as var
-                       :refer [defalias def-]                 ]))
+                       :refer        [#?@(:clj [defalias def-])]
+                       :refer-macros [defalias def-]          ])
 #?(:clj (:import
           (java.io                  File FileInputStream)
           (org.apache.tika.parser   AutoDetectParser    )
           (org.apache.tika.sax      BodyContentHandler  )
           (org.apache.tika.metadata Metadata            ))))
 
-(def- parsers 
+(def- parsers
   (let [bit-rate-parser (fn-> (str/remove "Kbps") str/trim str/val)]
     {:frame-rate       (fn->> (dropr 4) str/val)
      :format           str/keywordize
@@ -79,7 +77,7 @@
   [file]
   (let [{:as result :keys [err out]} (proc/exec! "mediainfo" file)]
     (log/pr ::debug "Path:" file "Mediainfo result:" result)
-    (if err
+    (if (nempty? err)
         (throw (->ex nil "Mediainfo error" {:mediainfo-message err})))
         (-> out parse-media-metadata))))
 
