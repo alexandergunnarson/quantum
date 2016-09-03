@@ -2,13 +2,15 @@
   quantum.system
            (:require [com.stuartsierra.component       :as component]
             #?(:cljs [reagent.core                     :as rx       ])
-                     [quantum.core.core                   
-                       :refer [deref* lens]                         ]
+                     [quantum.core.core
+                       :refer        [deref* lens]                  ]
                      [quantum.core.fn                  :as fn
-                       :refer [#?@(:clj [fn->])]                    ]
-                     [quantum.core.log                 :as log      ]
-                     [quantum.core.macros.core         :as cmacros  
-                       :refer [#?@(:clj [if-cljs])]                 ]
+                       :refer        [#?@(:clj [fn-> with-do])]
+                       :refer-macros [fn-> with-do]]
+                     [quantum.core.log                 :as log
+                       :include-macros true                         ]
+                     [quantum.core.macros.core         :as cmacros
+                       :refer        [#?@(:clj [if-cljs])]          ]
                      [quantum.core.resources           :as res      ]
                      [quantum.core.thread.async        :as async    ]
                      [quantum.db.datomic               :as db       ]
@@ -16,11 +18,9 @@
                      [quantum.db.datomic.reactive.core :as db-rx    ]
                      [quantum.net.http                 :as http     ]
                      [quantum.net.websocket            :as conn     ]
-                     [quantum.ui.core                  :as ui       ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                  :as fn
-                       :refer [fn->]                                ]  
-                     [quantum.core.log                 :as long     ])))
+                     [quantum.ui.core                  :as ui       ]))
+
+(log/this-ns)
 
 (defn default-config
   "A decent default configuration for a web app.
@@ -38,12 +38,12 @@
                            :root-id        "app"}})}
   [& [{:as config
        {:keys [port ssl-port host]          :as server    } :server
-       {:keys [uri msg-handler]             :as connection} :connection
+       {:keys [endpoint msg-handler]        :as connection} :connection
        {:keys [js-source-file]                            } :deployment
        {:keys [schemas ephemeral backend]   :as db        } :db
        {:keys [render root-id]              :as frontend  } :frontend
        {                                    :as threadpool} :threadpool}]]
-  (let [host*            (or "0.0.0.0" host)
+  (let [host*            (or host "0.0.0.0")
         port*            (or port 80)
         server-type      :aleph ; :immutant
         js-source-file-f (or js-source-file "system")
@@ -63,7 +63,7 @@
    :connection
      (when connection
        (merge
-         {:uri                      (or uri "/chan")
+         {:endpoint                 (or endpoint "/chan")
           #?@(:cljs
          [:host                     (str host* ":" (or ssl-port port))])
           :packer                   :edn
@@ -78,7 +78,7 @@
         :root-id                    (or root-id "root")
         :type                       :reagent})
    :db
-     {:backend 
+     {:backend
        (when backend
          (merge
            {:type                   :free
@@ -109,38 +109,43 @@
 
 (defn gen-system-creator [system-kw config]
   (delay
-    (res/register-system!
-      system-kw
-      config
-      (fn [{:as config-0 :keys [connection log threadpool db renderer server]}]
-        (->> (conj {}
-               (when log        [:log
-                                  (log/->log-initializer     log)])
-           #?(:cljs
-               (when threadpool [:threadpool    
-                                  (component/using 
-                                    (async/->threadpool      threadpool)
-                                    [:log])]))
-               (when db         [:db
-                                  (component/using 
-                                    (db/->db                 db)
-                                    [:log #?(:cljs :threadpool)])])
-          #?(:cljs  
-               (when renderer   [:renderer      
-                                  (component/using
-                                    (ui/map->Renderer        renderer)
-                                    [:log :db])]))
-           #?(:clj  
-               (when server     [:server 
-                                  (component/using 
-                                    (http/map->Server        server)
-                                    [:log])]))
-               (when connection [:connection
-                                  (component/using 
-                                    (conn/map->ChannelSocket (:connection config-0))
-                                    [:log #?(:clj :server)])]))
-             seq flatten
-             (apply component/system-map))))))
+    (do (log/pr ::debug "Registering system...")
+        (with-do
+          (res/register-system!
+            system-kw
+            config
+            (fn [{:as config-0 :keys [connection log threadpool db renderer server]}]
+              (->> (conj {}
+                     (when log        [:log
+                                        (log/->log-initializer     log)])
+                 #?(:cljs
+                     (when threadpool [:threadpool
+                                        (component/using
+                                          (async/->threadpool      threadpool)
+                                          [:log])]))
+                     (when db         [:db
+                                        (component/using
+                                          (db/->db                 db)
+                                          (if (and threadpool #?(:clj false :cljs true))
+                                              [:log :threadpool]
+                                              [:log]))])
+                #?(:cljs
+                     (when renderer   [:renderer
+                                        (component/using
+                                          (ui/map->Renderer        renderer)
+                                          [:log :db])]))
+                 #?(:clj
+                     (when server     [:server
+                                        (component/using
+                                          (http/map->Server        server)
+                                          [:log])]))
+                     (when connection [:connection
+                                        (component/using
+                                          (conn/map->ChannelSocket (:connection config-0))
+                                          [:log #?(:clj :server)])]))
+                   seq flatten
+                   (apply component/system-map))))
+          (log/pr ::debug "Registered system.")))))
 
 (defn gen-main
   "Creates a standard |-main| function.
@@ -148,14 +153,16 @@
    For ClojureScript, this can be used e.g. with Figwheel's :main."
   [config system-creator system sys-map]
   (fn [& [port]]
-    (when @system (res/stop! @system))
+    (when @system
+      (res/stop! @system))
     @system-creator
     (res/go! @system)
     (reset! db/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral) :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
-    
+
     #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)
-               (db-rx/react! @dbc/conn*))) ; Is this necessary?
+               (db-rx/react! @dbc/conn*)
+               (log/pr ::debug "Ephemeral DB made reactive."))) ; Is this necessary?
     true))
 
 #?(:clj
@@ -168,7 +175,7 @@
         err      (if-cljs &env 'js/Error 'Throwable)]
     `(do (def ~'system  ~system-code)
          (def ~'sys-map (lens ~'system (fn-> :sys-map deref*)))
-         
+
          (try
            (when (deref* ~system-code)
              (res/stop! @~system-code)
@@ -176,7 +183,7 @@
                (res/stop! sys-map#)))
            (catch ~err e#
              (log/pr :warn "Could not stop system." e#)))
-         
+
          ; In CLJS, ~main-sym content can't refer to e.g. ~'sys-map unless
          ; it has been previously declared outside of the macro
          (defn ~main-sym [& args#]

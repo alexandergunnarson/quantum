@@ -175,7 +175,7 @@
 (defn ->hsla [c]
   (-> c color/as-hsl (assoc :alpha (:alpha c))))
 
-(defn render-color [c]
+(defn render-color [c] ; ->str
   (if (:alpha c)
       (let [{:keys [red green blue alpha]} (->rgba c)]
         (str "rgba(" (str/join "," [red green blue (or alpha 1)]) ")"))
@@ -183,3 +183,5 @@
 
 (defalias darken color/darken)
 (defalias lighten color/lighten)
+
+(defn ->hex [c] (-> c ->hsla color/as-hex))

@@ -27,15 +27,15 @@
             [ring.middleware.defaults   :as defaults]
             ; QUANTUM
             [quantum.core.string        :as str      ]
-            [quantum.core.collections   :as coll     
-              :refer [containsv? assocs-in+]         ]
+            [quantum.core.collections   :as coll
+              :refer [containsv? assocs-in+ flatten-1]]
             [quantum.core.log           :as log]))
 
 (def cors? (atom true))
 
 (def cors-headers
-  {"Access-Control-Allow-Origin"      "http://localhost:3450"    
-   "Access-Control-Allow-Credentials" "true" ; can't use boolean... don't know why... ; cannot use wildcard when allow-credentials is true  
+  {"Access-Control-Allow-Origin"      "http://localhost:3450"
+   "Access-Control-Allow-Credentials" "true" ; can't use boolean... don't know why... ; cannot use wildcard when allow-credentials is true
    "Access-Control-Allow-Headers"     "Content-Type, Accept, Access-Control-Allow-Credentials, Access-Control-Allow-Origin"})
 
 #_(defn wrap-keywordify [f]
@@ -109,15 +109,18 @@
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
 
-(defn wrap-middleware [routes]
+(defn wrap-middleware [routes & [opts]]
   (-> routes
       wrap-uid
       (wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))})
       (defaults/wrap-defaults
-        (assocs-in+ defaults/secure-site-defaults
+        (apply assocs-in+ defaults/secure-site-defaults
           [:security :anti-forgery] false
           [:static   :resources   ] false
-          [:static   :files       ] false))
+          [:static   :files       ] false
+          (-> opts
+              :override-secure-site-defaults
+              flatten-1)))
       wrap-strictest-transport-security
       wrap-x-permitted-cross-domain-policies
       wrap-x-download-options

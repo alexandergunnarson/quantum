@@ -29,3 +29,7 @@ src/.DS_Store
 pom.xml
 
 pom.xml.asc
+
+# MAC
+
+.DS_Store

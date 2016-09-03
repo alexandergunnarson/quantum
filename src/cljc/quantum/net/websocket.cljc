@@ -7,7 +7,7 @@
                      [#?(:clj  clojure.core.async
                          :cljs cljs.core.async   )            :as casync
                        :refer [#?(:clj go)]                                ]
-                     [quantum.core.core                
+                     [quantum.core.core
                        :refer [lens deref*]                                ]
                      [quantum.core.error                      :as err
                        :refer [->ex #?(:clj try-times)]                    ]
@@ -42,7 +42,7 @@
   (let [session (:session ring-req)
         uid     (:uid     session)]
     (log/pr :debug "Unhandled event:" ev-msg "from" uid)
-    
+
     (when ?reply-fn
       (log/pr :debug "Responding to callback")
       (?reply-fn {:unhandled-event event})))))
@@ -88,7 +88,7 @@
           (when (nil? (apply put! args-f))
             (throw (->ex nil "WebSocket apparently not open for message")))))))
 
-(defrecord 
+(defrecord
   ^{:doc "A WebSocket-channel abstraction of Sente's functionality.
 
           Creates a Sente WebSocket channel and Sente WebSocket channel
@@ -114,7 +114,7 @@
     (start [this]
       (let [stop-fn-f (atom (fn []))]
         (try
-          (log/pr :debug "Starting channel-socket with:" this)
+          (log/pr ::debug "Starting channel-socket with:" this)
           ; TODO for all these assertions, use clojure.spec!
           (assert (string? endpoint) #{endpoint})
           (assert (fn? msg-handler))
@@ -144,7 +144,7 @@
                         :connected-uids (:connected-uids              socket))]
             #?(:clj (alter-var-root (:routes-var server) ; TODO defnt |reset!|
                       (constantly (router/make-routes (merge this' server {:ws-uri endpoint})))))
-            (log/pr :debug "Channel-socket started.")
+            (log/pr ::debug "Channel-socket started.")
             this')
           (catch #?(:clj Throwable :cljs js/Error) e
             (err/warn! e)
