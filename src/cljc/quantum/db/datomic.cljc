@@ -16,32 +16,32 @@
            #?(:cljs [posh.core                        :as rx-db    ])
            ;#?(:clj [quantum.deploy.amazon            :as amz      ])
                     [com.stuartsierra.component       :as component]
-                    [quantum.core.collections         :as coll     
-                      :refer        [#?@(:clj [kmap containsv?])] 
+                    [quantum.core.collections         :as coll
+                      :refer        [#?@(:clj [kmap containsv?])]
                       :refer-macros [kmap containsv?]              ]
                     [quantum.core.error               :as err
-                      :refer        [->ex #?(:clj try-times)]      
+                      :refer        [->ex #?(:clj try-times)]
                       :refer-macros [try-times]                    ]
                     [quantum.core.fn                  :as fn
-                      :refer        [#?@(:clj [with])]             
+                      :refer        [#?@(:clj [with])]
                       :refer-macros [with]                         ]
-                    [quantum.core.log                 :as log      
+                    [quantum.core.log                 :as log
                       :include-macros trus]
                     [quantum.core.logic               :as logic
                       :refer        [#?@(:clj [fn-and fn-or whenf
                                                condf])
-                                     nnil? nempty?]     
+                                     nnil? nempty?]
                       :refer-macros [fn-and fn-or whenf condf]]
                     [quantum.core.resources           :as res      ]
                     [quantum.core.string              :as str      ]
             #?(:clj [quantum.core.process             :as proc     ])
-                    [quantum.core.thread.async        :as async    
+                    [quantum.core.thread.async        :as async
                       :include-macros true                         ]
                     [quantum.core.type                :as type
                       :refer        [atom? #?(:clj boolean?)]
                       :refer-macros [boolean?]                     ]
                     [quantum.core.vars                :as var
-                      :refer        [#?(:clj defalias)]            
+                      :refer        [#?(:clj defalias)]
                       :refer-macros [defalias]                     ]
                     [quantum.core.io.core             :as io       ]
                     [quantum.core.convert             :as conv
@@ -49,12 +49,12 @@
                     [quantum.core.paths               :as path     ]
                     [quantum.parse.core               :as parse    ]
                     [quantum.validate.core            :as val
-                      :refer        [#?(:clj validate)]            
+                      :refer        [#?(:clj validate)]
                       :refer-macros [validate]                     ])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
-                    [datomic-cljs.macros   
+                    [datomic-cljs.macros
                       :refer [<?]                                  ]))
   #?(:clj  (:import datomic.Peer
                     [datomic.peer LocalConnection Connection]
@@ -121,7 +121,7 @@
   ([conn schemas]
     (when schemas
       (log/pr :debug "Initializing database with schemas...")
-      
+
       (with (db/add-schemas! conn (db/block->schemas schemas {:conn conn}))
         (log/pr :debug "Schema initialization complete.")))))
 
@@ -153,8 +153,8 @@
    post]
   component/Lifecycle
     (start [this]
-      (log/pr :user "Starting Ephemeral database...")
-      (log/pr :user "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
+      (log/pr ::debug "Starting Ephemeral database...")
+      (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
       (let [; Maintain DB history.
             history (when (pos? history-limit) (atom []))
             conn-f (mdb/create-conn
@@ -212,7 +212,7 @@
                                         :host                   host ; "localhost"
                                         :port                   port ; 4334
                                          ; TODO dynamically determine based on flag passed
-                                        :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage 
+                                        :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage
                                         :memory-index-max       "128"
                                         :object-cache-max       "128m"
                                         :data-dir               (validate val/no-blanks?
@@ -226,7 +226,7 @@
                            (parse/output :java-properties internal-props-f {:no-quote? true})
                            {:method :print})))
         _ (when (map? internal-props) (write-props!))
-        _ (log/pr :debug "Starting transactor..." (kmap datomic-path flags props-path-f resources-path))
+        _ (log/pr ::debug "Starting transactor..." (kmap datomic-path flags props-path-f resources-path))
         proc (res/start!
                (proc/->proc (path/path "." "bin" "transactor")
                  (c/conj (or flags []) props-path-f)
@@ -236,7 +236,7 @@
             (.addShutdownHook (Runtime/getRuntime)
               (Thread. #(res/stop! proc))))]
     (async/sleep 5000)
-    (log/pr :debug "Done.")
+    (log/pr ::debug "Done.")
     proc)))
 
 (defrecord
@@ -255,7 +255,8 @@
    init-schemas? schemas]
   component/Lifecycle
     (start [this]
-      ; Set all transactor logs to WARN 
+      (log/pr ::debug "Starting Datomic database...")
+      ; Set all transactor logs to WARN
       #?(:clj (try
                 (doseq [^ch.qos.logback.classic.Logger logger
                           (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
@@ -285,18 +286,18 @@
             txr-process-f
               (when (:start? txr-props)
                 #?(:clj (start-transactor! (kmap type host port) txr-props)))
-            connect (fn [] (log/pr :debug "Trying to connect with" uri-f)
+            connect (fn [] (log/pr ::debug "Trying to connect with" uri-f)
                            (let [conn-f (do #?(:clj  (bdb/connect uri-f)
                                                :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
-                             (log/pr :debug "Connection successful.")
+                             (log/pr ::debug "Connection successful.")
                              conn-f))
             create-db! (fn []
                          (when create-if-not-present?
-                           (log/pr :debug "Creating database...")
+                           (log/pr ::debug "Creating database...")
                            #?(:clj  (Peer/createDatabase uri-f)
                               :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
-                           (log/pr :debug "Done.")))
-            conn-f  (try 
+                           (log/pr ::debug "Done.")))
+            conn-f  (try
                       (try-times 5 1000
                         (try (connect)
                           (catch #?(:clj Throwable :cljs js/Error) e
@@ -311,7 +312,7 @@
             _ (reset! conn conn-f)
             default-partition-f (or default-partition :db.part/test)
             _ (when init-schemas? (init-schemas! conn-f schemas))]
-      (log/pr :debug "Datomic database initialized.")
+      (log/pr ::debug "Datomic database initialized.")
       (c/assoc this
         :uri               uri-f
         :txr-process       txr-process-f
@@ -327,14 +328,14 @@
 (defn ->backend-db
   [{:keys [type name host port txr-alias create-if-not-present?]
     :as config}]
-  ; TODO change these things to use schema?  
+  ; TODO change these things to use schema?
   (err/assert (contains? #{:free :http} type)) ; TODO for now
   (err/assert ((fn-and string? nempty?) name))
   (err/assert ((fn-and string? nempty?) host))
   (err/assert ((fn-or nil? integer?) port))
   (err/assert ((fn-or nil? string?)  txr-alias))
   (err/assert ((fn-or nil? boolean?) create-if-not-present?))
-  (map->BackendDatabase 
+  (map->BackendDatabase
     (c/assoc config :uri  (atom nil)
                     :conn (atom nil))))
 
