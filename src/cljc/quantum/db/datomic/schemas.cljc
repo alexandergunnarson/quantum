@@ -1,31 +1,31 @@
-(ns ^{:figwheel-no-load true} quantum.db.datomic.schemas
-  (:refer-clojure :exclude [type])
-            (:require
-              #?(:clj [clojure.java.shell             :as shell  ])
-                      [quantum.db.datomic.entities
-                        :refer        [#?@(:clj [defattribute defentity 
-                                                 declare-entity schemas
-                                                 attributes])]          
-                        :refer-macros [defattribute defentity
-                                       declare-entity]           ]
-                      [quantum.core.fn                :as fn
-                        :refer        [#?@(:clj [f*n])]                 
-                        :refer-macros [f*n]                      ]
-                      [quantum.core.logic             :as logic
-                        :refer        [#?@(:clj [fn-and])]       
-                        :refer-macros [fn-and]                   ]
-                      [quantum.core.string            :as str    ]
-                      [quantum.core.error             :as err
-                        :refer [->ex TODO]                       ]
-                      [quantum.net.http               :as http   ]
-                      [quantum.core.data.complex.xml  :as xml    ]
-                      [quantum.db.datomic             :as db     ]
-                      [quantum.core.convert.primitive :as pconv  ]
-                      [quantum.core.numeric           :as num   
-                        :refer [percent?]                        ]))
+(ns quantum.db.datomic.schemas
+  (:refer-clojure :exclude [type agent ref])
+  (:require
+    #?(:clj [clojure.java.shell             :as shell  ])
+            [quantum.db.datomic.entities
+              :refer        [#?@(:clj [defattribute defentity
+                                       declare-entity])
+                             schemas attributes]
+              :refer-macros [defattribute defentity
+                             declare-entity]           ]
+            [quantum.core.fn                :as fn
+              :refer        [#?@(:clj [f*n])]
+              :refer-macros [f*n]                      ]
+            [quantum.core.logic             :as logic
+              :refer        [#?@(:clj [fn-and])]
+              :refer-macros [fn-and]                   ]
+            [quantum.core.string            :as str    ]
+            [quantum.core.error             :as err
+              :refer [->ex TODO]                       ]
+            [quantum.net.http               :as http   ]
+            [quantum.core.data.complex.xml  :as xml    ]
+            [quantum.db.datomic             :as db     ]
+            [quantum.core.convert.primitive :as pconv  ]
+            [quantum.core.numeric           :as num
+              :refer [percent?]                        ]))
 
 ; =========== GENERAL =========== ;
- 
+
 (defrecord Schema [])
 (defn ->schema [k]
   #_(:db/q '[:find [?ident ...]
@@ -69,13 +69,16 @@
 
 ; =========== LOCATION =========== ;
 
+(defattribute :location ; TODO
+  [:one :keyword])
+
 (defentity :location:country
-  {:location [:one :keyword]}) ; TODO
+  {:location nil})
 
 ; ; =========== LINGUISTICS =========== ;
 
 (defentity :linguistics:language
-  {:location [:one :keyword]}) ; TODO
+  {:location nil})
 
 ; ; =========== UNITS =========== ;
 
@@ -123,7 +126,7 @@
 
 ; =========== PERSON NAME =========== ;
 
-; Many of these are keywords because the same names happen over and over again   
+; Many of these are keywords because the same names happen over and over again
 
 (defentity :agent:person:name:last
   {:component? true :doc "E:g. \"Gutierrez de Santos, III\""}
@@ -141,19 +144,19 @@
 (defentity :agent:person:name
   {:component? true
    :doc "TODO Support hyphenated and maiden names"}
-  {:agent:person:name:legal-in 
+  {:agent:person:name:legal-in
      [:many :ref     {:ref-to :location:country}]
    :agent:person:name:called-by
      [:one  :ref     {:ref-to :db/schema :doc "refers to a schema, e.g. \":agent:person:name:middle\" if they go by middle name"}]
    :agent:person:name:prefix
      [:many :keyword {:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}]
-   :agent:person:name:first    
+   :agent:person:name:first
      [:one  :keyword {:doc "e.g. \"José\" in \"José Maria Gutierrez de Santos\""}]
-   :agent:person:name:middle  
-     [:one  :keyword {:doc "e:g. \"Maria\" in \"José Maria Gutierrez de Santos\""}] 
+   :agent:person:name:middle
+     [:one  :keyword {:doc "e:g. \"Maria\" in \"José Maria Gutierrez de Santos\""}]
    :agent:person:name:last nil})
 
-(defattribute :agent:person:name:alias 
+(defattribute :agent:person:name:alias
   [:one :keyword {:component? true :doc "AKA nickname"}])
 
 ; =========== REGISTRATION =========== ;
@@ -186,7 +189,7 @@
 
 (defentity :agent:email
   {:unique :value}
-  {:agent:email:username 
+  {:agent:email:username
      [:one :keyword {:doc "E.g. alexandergunnarson"}]
    :network:domain nil
    :agent:email:validated-by
@@ -205,7 +208,7 @@
      [:many :ref {:ref-to :agent:email}]
    :agent:registration:many
      [:many :ref {:ref-to :agent:registration}]})
-  
+
 (defentity :agent:organization:name
   {:component? true}
   {:agent:organization:name:legal-in
@@ -352,7 +355,7 @@
 (do (swap! schemas assoc :data:image:width [:one :ref {:component? true}]) nil)
 
 #_(defentity :media:track-num+track
-  {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS 
+  {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS
    :media:track nil})
 
 #_(defentity :media/grouping
@@ -409,7 +412,7 @@
 
 ; If a transaction specifies a unique identity for a temporary id,
 ; and that unique identity already exists in the database, then that temporary id
-; will resolve to the existing entity in the system. 
+; will resolve to the existing entity in the system.
 (defentity :data:format
   {:data:mime-type                  [:one  :keyword {:unique :identity :doc "Refer to http://www.sitepoint.com/web-foundations/mime-types-complete-list/"}]
    :data:appropriate-extension:many [:many :keyword {:doc "Needs to correspond with its mime-type"}]})
@@ -471,6 +474,7 @@
    :media:track:total                   [:one  :long   ]
    :media:encoding-params               [:one  :string ]
    :data:tagged-date:mediainfo          [:one  :string ]
+   :data:audio:tagged-date:mediainfo    [:one  :string ]
    :data:minor-version:mediainfo        [:one  :string ]
    :media:album-art:type:mediainfo      [:one  :string ]
    :data:media:compilation?             [:one  :boolean]
