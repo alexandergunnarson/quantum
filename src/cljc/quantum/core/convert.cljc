@@ -3,15 +3,15 @@
                          :cljs cljs.core   )             :as core   ]
                      [cognitect.transit                  :as t      ]
              #?(:clj [clojure.tools.emitter.jvm                     ])
-                     [#?(:clj  clojure.tools.reader 
+                     [#?(:clj  clojure.tools.reader
                          :cljs cljs.tools.reader       ) :as r      ]
-                     [#?(:clj  clojure.tools.reader.edn 
+                     [#?(:clj  clojure.tools.reader.edn
                          :cljs cljs.tools.reader.edn   ) :as r-edn  ]
                      [#?(:clj  clojure.core.async
                          :cljs cljs.core.async         ) :as async  ]
             #?(:cljs [cljs.reader                        :as core-r ])
             #?(:cljs [goog.crypt.base64                  :as base64 ])
-                     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1) 
+                     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
                    ; [gloss.core.formats                 :as gforms ]
            #?@(:clj [[clojure.java.io                    :as io     ]
                      [manifold.stream                    :as s      ]
@@ -26,13 +26,13 @@
                      [quantum.core.string                :as str    ]
                      [quantum.core.convert.core          :as conv   ]
                      [quantum.core.data.complex.json     :as json   ]
-                     [quantum.core.macros                :as macros 
-                       :refer        [#?(:clj defnt)]         
+                     [quantum.core.macros                :as macros
+                       :refer        [#?(:clj defnt)]
                        :refer-macros [defnt]                        ]
                      [quantum.core.paths                 :as path   ]
                      [quantum.core.fn                    :as fn     ]
-                     [quantum.core.vars                  :as var   
-                       :refer        [#?(:clj defalias)]                   
+                     [quantum.core.vars                  :as var
+                       :refer        [#?(:clj defalias)]
                        :refer-macros [defalias]                     ])
   #?(:clj (:import
             [org.apache.commons.codec.binary Base64]
@@ -130,7 +130,7 @@
 #?(:cljs (defn hex->bytes [x] (js/forge.util.hexToBytes x)))
 
 ; TODO look at https://github.com/digitalbazaar/forge#task
-; and use those methods if you want to manipulate them 
+; and use those methods if you want to manipulate them
 #?(:cljs
 (defn ->forge-byte-buffer
   ([] (js/forge.util.createBuffer))
@@ -150,9 +150,9 @@
 ;     (loop [nth-chars (advance)]
 ;       (if (apply not= nth-chars)
 ;         false
-;         (if (= -1 (first nth-chars)) 
+;         (if (= -1 (first nth-chars))
 ;           true
-;           (recur (advance))))))) 
+;           (recur (advance)))))))
 
 
 ; FROM macourtney/clj-crypto
@@ -211,7 +211,7 @@
     (or (instance? IPushbackReader        x)
         (instance? java.io.PushbackReader x))
     (r-edn/read opts x)
-    
+
     :else x)))
 
 ; TODO incorporate conversion functions at end of (clojure|cljs).tools.reader.reader-types
@@ -302,7 +302,14 @@
 
 #?(:clj (defalias ->predicate fn/->predicate))
 
-; #_(defalias ->keyword str/->keyword)
+(defnt ->keyword
+  ([^keyword? x] x)
+  ([^string? x]
+    (assert (not (re-find #"(\(|\)|\[|\]|\{|\}|\"|\\|\^|\@|\`|\;|\,)" x))
+      "Keyword candidate must not contain characters that would be illegal in a keyword literal")
+    (keyword x))
+  ([^symbol? x]
+    (keyword (namespace x) (name x))))
 
 #?(:clj
 (defnt ^java.io.InputStream ->input-stream
@@ -369,7 +376,7 @@
 ; (defnt ^java.nio.ByteBuffer ->byte-buffer
 ;   {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
 ;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   ; ===== ztellman/byte-streams ===== 
+;   ; ===== ztellman/byte-streams =====
 ;   (^{:cost 0} [^java.nio.ByteBuffer x] x)
 ;   (^{:cost 0} [^bytes? ary] (->byte-buffer ary nil))
 ;   (^{:cost 0} [^bytes? ary opts]
@@ -468,7 +475,7 @@
 
 ; (defnt' in-stream->out-stream
 ;   {:source "https://thomaswabner.wordpress.com/2007/10/09/fast-stream-copy-using-javanio-channels/"}
-;   (^java.nio.channels.WritableByteChannel 
+;   (^java.nio.channels.WritableByteChannel
 ;     [^java.nio.channels.ReadableByteChannel in ^java.nio.channels.WritableByteChannel out]
 ;     (let [^ByteBuffer buffer (ByteBuffer/allocateDirect (* 16 1024))]
 ;       (while (not= -1 (.read in buffer))
@@ -504,7 +511,7 @@
 ;             (.close sink))))
 ;       source)))
 
-; ; ByteSource : generic byte-source 
+; ; ByteSource : generic byte-source
 ; (defnt ^CharSequence ->char-seq
 ;   {:attribution "ztellman/byte-streams"
 ;    :contributors {"Alex Gunnarson" "defnt-ed"}}
@@ -776,7 +783,7 @@
 
 #?(:cljs
 (defn file->u8arr [file]
-  (let [ch (async/chan) 
+  (let [ch (async/chan)
         file-reader (js/FileReader.)]
     (set! (.-onload file-reader)
           (fn [e]
