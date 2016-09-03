@@ -1,7 +1,7 @@
 (ns quantum.apis.amazon.cloud-drive.core
-           (:refer-clojure :exclude [meta])
+           (:refer-clojure :exclude [meta reduce val])
            (:require [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )         :as async   
+                         :cljs cljs.core.async   )         :as async
                        :refer [<!]                                     ]
                      [quantum.auth.core                    :as auth    ]
                      [quantum.core.convert                 :as conv    ]
@@ -9,19 +9,19 @@
                      [quantum.core.string                  :as str     ]
                      [quantum.net.http                     :as http    ]
                      [quantum.core.paths                   :as paths   ]
-                     [quantum.core.collections             :as coll    
-                       :refer [#?@(:clj [kmap join])  map+]             ]
+                     [quantum.core.collections             :as coll
+                       :refer        [#?@(:clj [kmap join reduce]) map+ val]
+                       :refer-macros [kmap join reduce]                ]
                      [quantum.core.fn                      :as fn
-                       :refer [#?@(:clj [<-])]                         ]
+                       :refer        [#?@(:clj [<-])]
+                       :refer-macros [<-]                              ]
                      [quantum.core.logic                   :as logic
-                       :refer [nnil?]                                  ])
+                       :refer [nnil?]                                  ]
+                     [quantum.core.log                     :as log
+                       :include-macros true                            ])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
-                       :refer [go]                                     ]
-                     [quantum.core.collections             :as coll    
-                       :refer [kmap join]                              ]
-                     [quantum.core.fn                      :as fn
-                       :refer [<-]                                     ]))
+                       :refer [go]                                     ]))
   #?(:clj  (:import  [java.nio.file Files Paths])))
 
 (def base-urls
@@ -39,7 +39,7 @@
   ([k url-type {:keys [append method query-params]
        :or {method :get
             query-params {}}}]
-   (println "AMAZON REQUEST:" (kmap k url-type append method query-params method))
+   (log/pr ::debug "AMAZON REQUEST:" (kmap k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
       (->> (http/request!
@@ -58,7 +58,7 @@
           #?(:cljs <!)
           :body))))
 
-(defn ^:cljs-async used-gb [] 
+(defn ^:cljs-async used-gb []
   (#?(:clj  identity
       :cljs go)
     (->> (request! :account/usage :meta)
@@ -68,7 +68,7 @@
          (map+ :total)
          (map+ :bytes)
          (join [])
-         (quantum.core.reducers/reduce + 0)
+         (reduce + 0)
          #_(<- uconv/convert :bytes :gigabytes)
          #_(:clj double))))
 
@@ -91,12 +91,12 @@
         (make-array java.nio.file.CopyOption 0)))))
 
 ; ; https://forums.developer.amazon.com/forums/message.jspa?messageID=15671
-; ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API. 
+; ; As of right now permanently deleting content is not available through the Amazon Cloud Drive API.
 ; (defn trash!    [id] (request! :trash :meta {:method :post :append id}))
 ; (defn untrash!  [id] (request! :trash :meta {:method :post :append (io/path id "restore")}))
 
 (defn ^:cljs-async root-folder []
-  (#?(:clj  identity 
+  (#?(:clj  identity
       :cljs go)
    (-> (request! :nodes :meta
          {:method :get
@@ -111,7 +111,7 @@
 (defn ^:cljs-async children
   "Gets the children of an Amazon Cloud Drive @id."
   [id]
-  (#?(:clj  identity 
+  (#?(:clj  identity
       :cljs go)
     (-> (request! :nodes :meta {:append (conv/->path id "children")})
         #?(:cljs <!)
