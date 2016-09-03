@@ -16,28 +16,26 @@
                        :refer [->ex TODO]                           ]
                      [quantum.core.collections         :as coll
                        :refer [#?@(:clj [nempty? seq-loop]) break]           ]
-                     [quantum.core.log                 :as log      ]
+                     [quantum.core.log                 :as log
+                       :include-macros true                         ]
                      [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-and fn-or fn-not condpc whenc]) nnil?]]
-                     [quantum.core.macros.core         :as cmacros       
+                       :refer        [#?@(:clj [fn-and fn-or fn-not condpc whenc]) nnil?]
+                       :refer-macros [fn-and fn-or fn-not condpc]   ]
+                     [quantum.core.macros.core         :as cmacros
                        :refer [#?@(:clj [if-cljs])]                 ]
                      [quantum.core.macros              :as macros
-                       :refer [#?(:clj defnt)]                      ]
+                       :refer        [#?(:clj defnt)]
+                       :refer-macros [defnt]                        ]
+                     [quantum.core.system              :as sys      ]
                      [quantum.core.vars                :as var
-                       :refer [#?@(:clj [defalias defmalias])]      ])
+                       :refer        [#?@(:clj [defalias defmalias])]
+                       :refer-macros [defalias defmalias]           ])
   #?(:cljs (:require-macros
                      [servant.macros                   :as servant
                        :refer [defservantfn]                        ]
                      [cljs.core.async.macros           :as asyncm   ]
-                     [quantum.core.log                 :as log      ]
-                     [quantum.core.logic               :as logic
-                       :refer [fn-and fn-or fn-not condpc]          ]
                      [quantum.core.thread.async
-                       :refer [go]                                  ]
-                     [quantum.core.macros              :as macros
-                       :refer [defnt]                               ]
-                     [quantum.core.vars                :as var
-                       :refer [defalias defmalias]                  ]))
+                       :refer [go]                                  ]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
                    quantum.core.data.queue.LinkedBlockingQueue
@@ -101,7 +99,7 @@
       :casync  (async/chan n)
       :queue   #?(:clj  (LinkedBlockingQueue. ^Integer n)
                   :cljs (TODO))))) ; TODO reflection here
-               
+
 (defn chan
   ([         ] (async/chan) #_(async+/chan))
   ([arg0     ] (chan* arg0     ))
@@ -183,7 +181,7 @@
 #?(:clj
 (defnt interrupt!
   ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
-  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel? 
+  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel?
 
 #?(:clj
 (defnt interrupted?*
@@ -266,7 +264,7 @@
 (defn alts!!-queue [chans timeout] ; Unable to mark ^:suspendable because of synchronization
   (loop []
     (let [result (seq-loop [c   chans
-                            ret nil] 
+                            ret nil]
                    (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
                      (when (nempty? c)
                        (break [(take!! c) c]))))]
@@ -339,7 +337,8 @@
   "Checks whether the current thread is a WebWorker."
   []
   #?(:clj  false
-     :cljs (servant/webworker?)))
+     :cljs (and (servant/webworker?)
+                (or (nil? sys/os) (= sys/os "web")))))
 
 #?(:cljs (defalias bootstrap-worker servant.worker/bootstrap ))
 
