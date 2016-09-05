@@ -23,9 +23,9 @@
                :refer        [#?@(:clj [->bigint ->big-integer])]
                :refer-macros [->bigint]])
   #?(:cljs (:require-macros
-             [quantum.core.numeric.operators 
+             [quantum.core.numeric.operators
                :refer [+ * -]]))
-  #?(:clj  (:import 
+  #?(:clj  (:import
              java.math.BigInteger
              java.math.BigDecimal
              clojure.lang.BigInt)))
@@ -37,7 +37,7 @@
 
 ; ===== ADD ===== ;
 
-#?(:clj  (defalias +*-bin unchecked-add) 
+#?(:clj  (defalias +*-bin unchecked-add)
         #_(defnt +*-bin "Lax |+|; continues on overflow/underflow"
                    (^{:tag :first} [^number? x] x)
            #?(:clj (^{:tag :auto-promote}
@@ -109,12 +109,14 @@
 
 #?(:clj (variadic-proxy -' quantum.core.numeric.operators/-'-bin))
 
+#?(:cljs (defn --bin- [x y] (core/- x y)))  ; TODO only to fix CLJS arithmetic warning here
+
 (defnt --bin "Natural |-|; promotes on overflow/underflow"
   #?(:clj  (^{:tag :auto-promote} [^long x] ; TODO boxes value... how to fix?
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-           ([x y] (core/- x y))) ; TODO CLJS arithmetic warning here
+           ([x y] (#?(:clj core/- :cljs --bin-) x y)))
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 
@@ -186,7 +188,7 @@
         (.divide n d *math-context*)))))
 
 ; TODO you lose the |defnt'| power with this
-; TODO have |defnt| handle all this automagically 
+; TODO have |defnt| handle all this automagically
 
 #?(:clj (defnt div*-bin-denom-byte
   ([#{byte char short int long float double} d ^byte   n] (div*-bin- n d))))
@@ -202,6 +204,8 @@
   ([#{byte char short int long float double} d ^float  n] (div*-bin- n d))))
 #?(:clj (defnt div*-bin-denom-double
   ([#{byte char short int long float double} d ^double n] (div*-bin- n d))))
+
+#?(:cljs (defn div*-bin- [x y] (core// x y)))  ; TODO only to fix CLJS arithmetic warning here
 
 ; TODO optimization: (/ x 4) = (& x 3)
 #?(:clj  (defntp div*-bin "Lax |/|. Continues on overflow/underflow."
@@ -225,7 +229,7 @@
               ;(* x (-invert (apply * y more)))
               (* x (ntypes/-invert y)))
            ([^number? x  ] (core// x))
-           ([^number? x y] (core// x y)))) ; TODO CLJS arithmetic warning here
+           ([^number? x y] (div*-bin- x y))))
 
 #?(:clj (variadic-proxy div* quantum.core.numeric.operators/div*-bin))
 
@@ -254,7 +258,7 @@
             (if (nil? *math-context*)
                 (.subtract x BigDecimal/ONE)
                 (.subtract x BigDecimal/ONE *math-context*))))
-   :cljs (defnt dec* ([x] (unchecked-dec x)))) ; TODO CLJS arithmetic warning here
+   :cljs (defnt dec* ([^number? x] (unchecked-dec x)))) ; TODO CLJS arithmetic warning here
 
 #?(:clj  (defalias dec' core/dec)
          #_(defnt' dec' "Strict |dec|; throws exception on overflow/underflow"
