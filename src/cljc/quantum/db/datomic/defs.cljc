@@ -1,7 +1,7 @@
 (ns quantum.db.datomic.defs
            (:refer-clojure :exclude [reduce])
-           (:require [quantum.core.collections    :as c    
-                       :refer        [remove+ #?@(:clj [reduce])] 
+           (:require [quantum.core.collections    :as c
+                       :refer        [remove+ #?@(:clj [reduce])]
                        :refer-macros [reduce]]
                      [quantum.net.http            :as http ]
              #?(:clj [instaparse.core             :as insta])
@@ -51,9 +51,9 @@
   (db/transact! (dbc/->partition :db.part/fn  ))
   (db/transact! [(db/conj {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns!))
-  (dbe/transact-schemas!)
+  #?(:clj (dbe/transact-schemas!))
   (db/conj! (dbs/->globals {:db/ident :globals*}))
-  
+
   #?(:clj
     (when mime-types?
       (db/transact!

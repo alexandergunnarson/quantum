@@ -4,25 +4,30 @@
     #?(:clj [clojure.java.shell             :as shell  ])
             [quantum.db.datomic.entities
               :refer        [#?@(:clj [defattribute defentity
-                                       declare-entity])
+                                       declare-entity defunit])
                              schemas attributes]
               :refer-macros [defattribute defentity
-                             declare-entity]           ]
+                             declare-entity defunit]           ]
             [quantum.core.fn                :as fn
               :refer        [#?@(:clj [f*n])]
               :refer-macros [f*n]                      ]
+            [quantum.core.log               :as log
+              :include-macros true                     ]
             [quantum.core.logic             :as logic
               :refer        [#?@(:clj [fn-and])]
               :refer-macros [fn-and]                   ]
             [quantum.core.string            :as str    ]
             [quantum.core.error             :as err
-              :refer [->ex TODO]                       ]
+              :refer [->ex TODO]
+              :include-macros true                     ]
             [quantum.net.http               :as http   ]
             [quantum.core.data.complex.xml  :as xml    ]
             [quantum.db.datomic             :as db     ]
             [quantum.core.convert.primitive :as pconv  ]
             [quantum.core.numeric           :as num
-              :refer [percent?]                        ]))
+              :refer        [percent?]                 ]))
+
+(log/this-ns)
 
 ; =========== GENERAL =========== ;
 
@@ -40,32 +45,10 @@
 (defentity :globals
   {:globals:log:levels [:many :keyword]})
 
-(defentity :ratio:long
+#_(defentity :ratio:long ; Defined elsewhere
   {:doc "A ratio specifically using longs instead of bigints."}
   {:ratio:long:numerator   [:one :long]
    :ratio:long:denominator [:one :long]})
-
-
-(defn num->ratio:long [n]
-  #?(:clj
-      (let [r (rationalize n)]
-        (if (instance? clojure.lang.Ratio r)
-            (let [n      (numerator   r)
-                  n-long (long n)
-                  _ (assert (= n-long n) #{n n-long})
-                  d      (denominator r)
-                  d-long (long d)
-                  _ (assert (= d-long d) #{d d-long})]
-              (->ratio:long
-                 {:ratio:long:numerator   n-long
-                  :ratio:long:denominator d-long}))
-            (let [n r
-                  n-long (long n)
-                  _ (assert (= n-long n) #{n n-long})]
-              (->ratio:long
-                {:ratio:long:numerator   n-long
-                 :ratio:long:denominator 1}))))
-     :cljs (TODO)))
 
 ; =========== LOCATION =========== ;
 
@@ -90,9 +73,6 @@
 (defattribute :unit:kb-per-s         [:one :double])
 (defattribute :unit:pixels           [:one :long  ])
 (defattribute :unit:beats-per-minute [:one :double])
-
-(defattribute :unit:v
-  [:one :ref {:ref-to :ratio:long :component? true}])
 
 ; ; =========== TIME =========== ;
 
@@ -309,50 +289,15 @@
   {:data:title       nil
    :data:description nil})
 
-
-
 (defattribute :data:audio:sample-rate
   [:one :double {:doc "E.g. 44100 kHz"}])
 
-; DEFUNIT HERE
-(defrecord Data_Audio_Bit_Rate [type unit unit:v])
-(defn ->data:audio:bit-rate [v]
-  (Data_Audio_Bit_Rate. :data:audio:bit-rate :unit:kb-per-s
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:audio:bit-rate [:one :ref {:component? true}]) nil)
-
-(defrecord Data_Audio_Max_Bit_Rate [type unit unit:v])
-(defn ->data:audio:max-bit-rate [v]
-  (Data_Audio_Max_Bit_Rate. :data:audio:max-bit-rate :unit:kb-per-s
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:audio:max-bit-rate [:one :ref {:component? true}]) nil)
-
-(defrecord Data_Audio_Nominal_Bit_Rate [type unit unit:v])
-(defn ->data:audio:nominal-bit-rate [v]
-  (Data_Audio_Nominal_Bit_Rate. :data:audio:nominal-bit-rate :unit:kb-per-s
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:audio:nominal-bit-rate [:one :ref {:component? true}]) nil)
-
-; DEFUNIT HERE
-(defrecord Data_Video_Bit_Rate [type unit unit:v])
-(defn ->data:video:bit-rate [v]
-  (Data_Video_Bit_Rate. :data:video:bit-rate :unit:kb-per-s
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:video:bit-rate [:one :ref {:component? true}]) nil)
-
-; DEFUNIT HERE
-(defrecord Data_Image_Height [type unit unit:v])
-(defn ->data:image:height [v]
-  (Data_Image_Height. :data:image:height :unit:pixels
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:image:height [:one :ref {:component? true}]) nil)
-
-; DEFUNIT HERE
-(defrecord Data_Image_Width [type unit unit:v])
-(defn ->data:image:width [v]
-  (Data_Image_Width. :data:image:width :unit:pixels
-    (num->ratio:long v)))
-(do (swap! schemas assoc :data:image:width [:one :ref {:component? true}]) nil)
+(defunit :data:audio:bit-rate         :unit:kb-per-s)
+(defunit :data:audio:max-bit-rate     :unit:kb-per-s)
+(defunit :data:audio:nominal-bit-rate :unit:kb-per-s)
+(defunit :data:video:bit-rate         :unit:kb-per-s)
+(defunit :data:image:height           :unit:pixels  )
+(defunit :data:image:width            :unit:pixels  )
 
 #_(defentity :media:track-num+track
   {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS

@@ -1,12 +1,14 @@
-(ns quantum.db.datomic.entities
-  (:refer-clojure :exclude [boolean? double?])
+(ns ^{:cljs-self-referring? true}
+  quantum.db.datomic.entities
+  (:refer-clojure :exclude
+    [boolean? double? numerator denominator ratio?])
   (:require
     [quantum.core.error       :as err
       :refer [->ex]
       :include-macros true              ]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [<- fn-> fn->>])]
-      :refer-macros [<- fn-> fn->>]     ]
+      :refer        [#?@(:clj [f*n <- fn-> fn->>])]
+      :refer-macros [f*n <- fn-> fn->>]     ]
     [quantum.core.log         :as log
       :include-macros true              ]
     [quantum.core.logic       :as logic
@@ -26,7 +28,17 @@
     [quantum.core.type        :as type
       :refer        [#?@(:clj [boolean? double?
                                bigint?])]
-      :refer-macros [boolean?]          ]))
+      :refer-macros [boolean?]          ]
+    [quantum.core.numeric.types
+      :refer        [#?@(:clj [numerator denominator])
+                     ratio?                ]
+      :refer-macros [numerator denominator]]
+    [quantum.core.numeric.convert :as nconv
+      :refer        [->ratio]              ])
+  #?(:cljs
+  (:require-macros
+    [quantum.db.datomic.entities
+      :refer [defentity defattribute]])))
 
 (def schemas    (atom  {}))
 (def attributes (atom #{}))
@@ -181,7 +193,9 @@
                 ~args-sym
                 (let [~destructured ~args-sym]
                   (doseq [k# (keys ~args-sym)]
-                    (assert (contains? ~class-name-fields k#)  #{k#}))
+                    (assert (contains? ~class-name-fields k#) #{k#}))
+                  (when-let [type# (:type ~args-sym)]
+                    (assert (= type# ~attr-k) #{type#}))
                   (let [~m-f (volatile! {})]
                     ; For each k, ensure the right constructor is called
                     ~@(for [k (->> entity keys)]
@@ -200,7 +214,7 @@
                         (remove nil?)))
                (swap! schemas assoc ~attr-k [:one :ref ~opts])
                (defrecord ~class-name ~(conj fields 'type))
-               (def ~class-name-fields (->> ~entity keys (join #{:db/id :db/ident})))
+               (def ~class-name-fields (->> ~entity keys (join #{:db/id :db/ident :type})))
                ~@(->> (for [[k v] entity]
                         (when (nnil? v)
                          `(defattribute ~k ~(update v 2 #(assoc % :component? true)))))
@@ -217,7 +231,69 @@
       `(do (defrecord ~class-name [])
            (declare ~(attr->constructor-sym entity-k)))))))
 
-(defn transact-schemas! []
+(declare ->ratio:long)
+
+(defentity :ratio:long
+  {:doc "A ratio specifically using longs instead of bigints."}
+  {:ratio:long:numerator   [:one :long]
+   :ratio:long:denominator [:one :long]})
+
+(defattribute :unit:v
+  [:one :ref {:ref-to :ratio:long :component? true}])
+
+(defn num->ratio:long [x]
+  (let [r (->ratio x)
+        n      (quantum.core.numeric.types/numerator   r)
+        n-long (long n) ; TODO for JS this will be a problem if overflows
+        _ (assert (= n-long n) #{n n-long})
+        d      (quantum.core.numeric.types/denominator r)
+        d-long (long d) ; TODO for JS this will be a problem if overflows
+        _ (assert (= d-long d) #{d d-long})]
+    (->ratio:long
+      {:ratio:long:numerator   n-long
+       :ratio:long:denominator d-long})))
+
+(defn validate-unit [v c constructor validators]
+  (cond
+    (instance? c v)
+    v
+    (map? v)
+    (reduce-kv
+      (fn [ret k v]
+        (err/assert (contains? validators k) #{k})
+        (err/assert ((get validators k) v) #{v})
+        (assoc ret k
+          (if (= k :unit:v)
+              (->ratio:long v)
+              v)))
+      (constructor nil nil nil)
+      v)
+    :else
+    (constructor :data:audio:bit-rate :unit:kb-per-s
+      (num->ratio:long v))))
+
+#?(:clj
+(defmacro defunit
+  [name- unit]
+  (let [class-name       (attr->class-sym name-)
+        constructor-name (attr->constructor-sym name-)
+        raw-constructor-name (symbol (str (name constructor-name) "*"))
+        validators-name  (symbol (str (name class-name) ":__validators"))]
+    `(do (defrecord ~class-name [~'type ~'unit ~'unit:v])
+         (def ~validators-name
+           {:type   (f*n = ~name-)
+            :unit   (f*n = ~unit)
+            :unit:v (constantly true)
+            :db/id  identifier?})
+         (defn ~constructor-name [v#]
+           (validate-unit v# ~class-name ~raw-constructor-name ~validators-name))
+         (do (swap! schemas assoc ~name- [:one :ref {:component? true}]) nil)))))
+
+#?(:clj
+(defn transact-schemas!
+  "Clojure only because schemas can only be added upon creation of the DataScript
+   connection; they cannot be transacted."
+  []
   (-> @schemas
       quantum.db.datomic.core/block->schemas
-      db/transact!))
+      db/transact!)))
