@@ -98,6 +98,7 @@
                          {:history-limit  js/Number.MAX_SAFE_INTEGER
                           :reactive?      true
                           :set-main-conn? true
+                          :set-main-part? true
                           :schemas        schemas}))])}
    #?@(:cljs
     [:threadpool
