@@ -2,7 +2,7 @@
     ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
            (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
-                                     update merge if-let assert])
+                                     update merge if-let assert for])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as c              ]
             #?(:cljs [cljs-uuid-utils.core       :as uuid           ])
@@ -10,40 +10,36 @@
                      [datascript.core            :as mdb            ]
             ;#?(:clj [quantum.deploy.amazon      :as amz            ])
                      [com.stuartsierra.component :as component      ]
-                     [quantum.core.collections   :as coll           
-                       :refer [#?@(:clj [join])
-                               filter-vals+ remove-vals+ map+ group-by+
-                               postwalk]                            
-                       #?@(:cljs [:refer-macros [join]])]
-                     [quantum.core.error         :as err      
-                       :refer [#?(:clj assert) ->ex]                ]
-                     [quantum.core.fn            :as fn      
-                       :refer [#?@(:clj [<- fn-> fn->> f*n])]       ]
-                     [quantum.core.log           :as log            ]
+                     [quantum.core.collections   :as coll
+                       :refer [#?@(:clj [join for])
+                               filter-vals+ remove-vals+ map+ remove+
+                               group-by+ postwalk merge-deep dissoc-in+]
+                       #?@(:cljs [:refer-macros [join for]])]
+                     [quantum.core.error         :as err
+                       :refer        [#?(:clj assert) ->ex]
+                       :refer-macros [assert]                       ]
+                     [quantum.core.fn            :as fn
+                       :refer        [#?@(:clj [<- fn-> fn->> f*n])]
+                       :refer-macros [<- fn-> fn->> f*n]            ]
+                     [quantum.core.log           :as log
+                       :include-macros true                         ]
                      [quantum.core.logic         :as logic
-                       :refer [#?@(:clj [fn-not fn-and fn-or whenf
-                                         whenf*n ifn if*n if-let])
-                               nnil? nempty?]                       ]
+                       :refer        [#?@(:clj [fn-not fn-and fn-or whenf
+                                                whenf*n ifn if*n if-let])
+                                      nnil? nempty?]
+                       :refer-macros [fn-not fn-and fn-or
+                                      whenf whenf*n ifn if*n if-let]]
                      [quantum.core.print         :as pr             ]
                      [quantum.core.resources     :as res            ]
              #?(:clj [quantum.core.process       :as proc           ])
-                     [quantum.core.type          :as type      
+                     [quantum.core.type          :as type
                        :refer [atom?]                               ]
-                     [quantum.core.vars          :as var      
-                       :refer [#?@(:clj [defalias])]                ])
-  #?(:cljs (:require-macros      
-                     [quantum.core.error         :as err
-                       :refer [assert]                              ]
-                     [quantum.core.fn            :as fn      
-                       :refer [<- fn-> fn->> f*n]                   ]
-                     [quantum.core.log           :as log            ]
-                     [quantum.core.logic         :as logic      
-                       :refer [fn-not fn-and fn-or whenf whenf*n
-                               ifn if*n if-let]                     ]
-                     [datomic-cljs.macros         
-                       :refer [<?]                                  ]
-                     [quantum.core.vars          :as var      
-                       :refer [defalias]                            ]))
+                     [quantum.core.vars          :as var
+                       :refer        [#?@(:clj [defalias])]
+                       :refer-macros [defalias]                     ])
+  #?(:cljs (:require-macros
+                     [datomic-cljs.macros
+                       :refer [<?]                                  ]))
   #?(:clj (:import datomic.Peer
                    [datomic.peer LocalConnection Connection]
                    java.util.concurrent.ConcurrentHashMap)))
@@ -169,7 +165,7 @@
 ; It can collide with a peer-supplied tempid, causing very strange bugs.
 ; I recommend passing a tempid in as an arg instead.
 (defn tempid
-  ([] (tempid @part*))
+  ([] (tempid (or @part* #?(:cljs :db.part/test)))) ; because DataScript doesn't really care about partitions
   ([part] (tempid @conn* part))
   ([conn part]
     (assert (nnil? part))
@@ -253,13 +249,13 @@
 
 (def allowed-types
  #{:keyword
-   :string 
+   :string
    :boolean
    :long
-   :bigint 
+   :bigint
    :float
-   :double 
-   :bigdec 
+   :double
+   :bigdec
    :ref
    :instant
    :uuid
@@ -324,10 +320,6 @@
            [:db/add :db.part/db
             :db.install/partition id]]))))
 
-(defn rename-schemas [mapping]
-  (for [[oldv newv] mapping]
-    {:db/id oldv :db/ident newv}))
-
 (defn ->schema
   "Defines, but does not transact, a new database schema.
    Takes the pain out of schema creation."
@@ -343,12 +335,12 @@
       ; Partitions are not supported in DataScript (yet)
       (when-not ((fn-or mconn? nil?) conn-f)
         (assert (nnil? part-f) #{conn-f part-f}))
-  
+
       (let [cardinality-f
               (condp = cardinality
                 :one  :db.cardinality/one
                 :many :db.cardinality/many
-                (throw (->ex :unrecognized-cardinality  
+                (throw (->ex :unrecognized-cardinality
                              "Cardinality not recognized:"
                              cardinality)))]
         (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
@@ -373,48 +365,83 @@
              {:todo/text       [:one :string ]
               :todo/completed? [:one :boolean {:index? true}]
               :todo/id         [:one :long    {:index? true}]})}
-  [block & [opts]]
-  (->> block
-       (mapv (fn [[ident [cardinality val-type opts-n]]]
-               (->schema ident cardinality val-type
-                 (c/merge {} opts opts-n))))))
+  [block & [{:keys [datascript?] :as opts}]]
+  (let [not-ref? (fn-> :db/valueType (not= :db.type/ref))
+        post (if datascript?
+                 (fn->> (remove+ (fn-and :db/isComponent not-ref?))
+                        (map+    (whenf*n
+                                   (fn-and :db/valueType not-ref?)
+                                   (f*n c/dissoc :db/valueType)))
+                        (map+    (juxt :db/ident identity))
+                        (join {}))
+                 (fn->> (join [])))]
+    (->> block
+         (map+ (fn [ident [cardinality val-type opts-n]]
+                 (->schema ident cardinality val-type
+                   (c/merge {} opts opts-n))))
+         post)))
 
-(defn add-schemas!
-  "This function exists mainly because schema implementation differs from Datomic
-   to DataScript.
+#?(:cljs
+(defn update-schemas
+  {:see-also "metasoarous/datsync.client"}
+  ([f] (update-schemas (->db)))
+  ([x f]
+    (let [for-mdb (fn [mdb] (mdb/init-db
+                              (mdb/datoms mdb :eavt)
+                              (f (:schema mdb))))]
+      (cond (mdb? x)
+            (for-mdb x)
+            (mconn? x)
+            (for-mdb @x)
+            :else (throw (unhandled-type :conn x)))))))
 
-   @schemas should be a vector of schema."
-  ([schemas] (add-schemas! @conn* schemas))
+#?(:cljs
+(defn update-schemas!
+  ([f] (update-schemas! @conn* f))
+  ([conn f] (swap! conn update-schemas f))))
+
+(defn merge-schemas
+  "Merges schemas and/or schema attributes (@schemas) into the database @db."
+  {:usage '(merge-schemas {:task:estimated-duration {:db/valueType :db.type/long}})}
+  ([schemas] (merge-schemas #?(:clj nil :cljs (->db)) schemas))
+  ([#?(:clj _ :cljs db) schemas]
+  #?(:clj  (for [schema kvs schemas]
+             [:fn/transform
+               (c/merge
+                 {:db/id               schema
+                  :db.alter/_attribute :db.part/db}
+                 kvs)])
+     :cljs (update-schemas db (f*n merge-deep schemas)))))
+
+(defn merge-schemas!
+  ([schemas] (merge-schemas! @conn* schemas))
   ([conn schemas]
-    (if (mconn? conn)
-        (let [schemas-f (->> schemas
-                             (coll/map+ (fn [schema]
-                                     [(:db/ident schema)
-                                      (c/dissoc schema :db/ident)]))
-                             (join {}))]
-          (swap! conn c/update :schema c/merge schemas-f)) ; TODO there hopefully is a better way...? 
-        (transact! schemas))))
+  #?(:clj  (transact! conn (merge-schemas schemas))
+     :cljs (swap! conn merge-schemas schemas))))
 
-(defn update-schema!
-  {:usage '(update-schema! :task:estimated-duration :db/valueType :db.type/long)}
-  [schema & kvs]
-  (transact! [[:fn/transform
-                (c/merge
-                  {:db/id               schema
-                   :db.alter/_attribute :db.part/db}
-                  (apply hash-map kvs))]]))
+#?(:cljs
+(defn replace-schemas!
+  ([schemas] (replace-schemas! @conn* schemas))
+  ([conn schemas] (swap! conn update-schemas (constantly schemas)))))
 
-(defn retract-from-schema! [s k v]
-  (transact!
-    [[:db/retract s k v]
-     [:db/add :db.part/db :db.alter/attribute k]]))
+(defn dissoc-schema!
+  ([s k v] (dissoc-schema! @conn* s k v))
+  ([conn s k #?(:clj v :cljs _)]
+  #?(:clj  (transact! conn
+             [[:db/retract s k v]
+              [:db/add :db.part/db :db.alter/attribute k]])
+     :cljs (update-schemas! conn (f*n dissoc-in+ [s k])))))
+
+(defn rename-schemas [mapping]
+  (for [oldv newv mapping]
+    {:db/id oldv :db/ident newv}))
 
 (defn id-or-new
   "Creates a new id if the one specified by the key-value pairs, @attrs,
    is not found in the database."
   [attrs]
   (let [query (join [:find '?e :where]
-                (for [[k v] attrs]
+                (for [k v attrs]
                   ['?e k v]))]
   `(:fn/or
      (:fn/fq ~query)
@@ -474,7 +501,7 @@
 
 #?(:clj
 (defn entity->map
-  "'Unrolls' entities into maps. 
+  "'Unrolls' entities into maps.
    If a second argument is used, unrolling will be applied once.
    If it is not used, unrolling will be applied until there are no more entity maps."
   {:todo ["Code pattern here"]}
@@ -536,7 +563,7 @@
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [arg & args]
   (let [db-like? (fn-or mdb? #?(:clj db?) mconn? #?(:clj conn?))
-        [db eid kvs] (if (db-like? arg)    
+        [db eid kvs] (if (db-like? arg)
                          [(->db arg) (first args) (rest args)]
                          [(->db)     arg          args       ])
         retract-fn (if (mdb? db)
@@ -565,20 +592,27 @@
   [id-query attrs]
   (c/assoc attrs :db/id
     `(:fn/or (:fn/first (:fn/q ~id-query))
-             ~(tempid)))) 
+             ~(tempid))))
 
+#?(:clj
 (defn excise
   ([eid attrs] (excise eid @part* attrs))
   ([eid part attrs] (excise @conn* eid part attrs))
   ([conn eid part attrs]
     {:db/id           (tempid conn part)
      :db/excise       eid
-     :db.excise/attrs attrs}))
+     :db.excise/attrs attrs})))
+
+#?(:clj
+(defn excise!
+  ([eid attrs] (excise! eid @part* attrs))
+  ([eid part attrs] (excise! @conn* eid part attrs))
+  ([conn eid part attrs] (transact! (excise conn eid part attrs)))))
 
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  ([x]      (conj @conn* @part* false x))
+  ([x]      (conj @conn* (or @part* #?(:cljs :db.part/test)) false x))
   ([part x] (conj @conn* part false x))
   ([conn part no-transform? x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
@@ -633,7 +667,7 @@
   `(transact!
      [(conj @conn* :db.part/fn true
         {:db/ident (keyword "fn" (name '~sym))
-         :db/fn    
+         :db/fn
            (dbfn ~requires ~arglist ~@body)})])))
 
 #?(:clj
@@ -670,7 +704,7 @@
 ;   [^Database db data ->entity-fn & [post-fn-0]]
 ;   (when (nempty? data)
 ;     (let [post-fn (or post-fn-0 (constantly nil))
-;           threads 
+;           threads
 ;            (for [entities (->> data
 ;                                (partition-all recommended-txn-ct)
 ;                                (map (fn->> (map ->entity-fn)
@@ -731,41 +765,11 @@
 ;        (<- db/tx-range nil nil)
 ;        seq))
 
-; (defn rename-schemas [mapping]
-;   (for [oldv newv mapping]
-;     {:db/id oldv :db/ident newv}))
-
-; (defn excise [id part attrs]
-;   {:db/id           (db/tempid part)
-;    :db/excise       id
-;    :db.excise/attrs attrs})
-
 ; (defn add-partition [part]
 ;   {:db/id                 (d/tempid :db.part/db)
 ;    :db/ident              part
 ;    :db.install/_partition :db.part/db})
 
-; (defn add-schema! [& args] (transact! [(apply schema args)]))
-
-; (defn schemas []
-;   (query '[:find [?ident ...]
-;            :where [_ :db/ident ?ident]]))
-
-; (defn attributes []
-;   (query '[:find [?ident ...]
-;            :where
-;            [?e :db/ident ?ident]
-;            [_ :db.install/attribute ?e]]))
-
-; (defn dissoc!*
-;   "The built-in |dissoc|-like function for Datomic.
-;    Unfortunately requires that one knows the values associated with keys.
-
-;    '|Retract| with no value supplied is on our list of possible future
-;     enhancements.' — Rich Hickey"
-;   [id & kvs]
-;   (let [q (into [:db/retract id] kvs)]
-;     (transact! [q])))
 
 ; (defn dissoc+
 ;   [id k] ; TODO fix to be more like clojure.core/dissoc
@@ -777,8 +781,6 @@
 ;   (let [q (dissoc+ id k)]
 ;     (transact! [q])))
 
-; (ns-unmap 'quantum.db.datomic 'update!)
-
 ; (defn update! [id f-key & args]
 ;   (transact! (apply vector (keyword "fn" (name f-key)) id args)))
 
@@ -787,13 +789,6 @@
 ;        (map+ (f*n first))
 ;        (map+ (extern (fn [id] [id (entity id)])))
 ;        redm))
-
-; (defn partitions []
-;   (->> (query '[:find ?ident
-;            :where [:db.part/db :db.install/partition ?p]
-;                   [?p :db/ident ?ident]])
-;        (map+ (f*n first))
-;        (into #{})))
 
 ; #_(do
 ;   (query '[:find   ?entity
@@ -822,7 +817,7 @@
 ;   [^Database db data ->entity-fn & [post-fn-0]]
 ;   (when (nempty? data)
 ;     (let [post-fn (or post-fn-0 fn-nil)
-;           threads 
+;           threads
 ;            (for [entities (->> data
 ;                                (partition-all recommended-txn-ct)
 ;                                (map (fn->> (map+ ->entity-fn)
@@ -938,7 +933,7 @@
 ; ; // empty, given the example data
 ; ; peopleJaneLikes = jane.get(":person/likes")
 ; ; If you precede an attribute's local name with an underscore (_), get will navigate backwards, returning the Set of entities that point to the current entity. The following example returns all the entities who like Jane:
-; ; 
+; ;
 ; ; // returns set containing John
 ; ; peopleWhoLikeJane = jane.get(":person/_likes")
 
@@ -1054,7 +1049,7 @@
 ;                 entity-if-sym            (symbol (str          (name name-) "->entity-if"))
 ;                 pk-adder-sym             (symbol (str          (name name-) ":add-pk!"   ))]
 ;             `(let [opts#               ~opts
-;                    memo-subtype#       (:type               opts#) ; :many or :one 
+;                    memo-subtype#       (:type               opts#) ; :many or :one
 ;                    _# (throw-unless (in? memo-subtype# #{:one :many})
 ;                         (Err. nil "Memoization subtype not recognized." memo-subtype#))
 ;                    db-partition#       (:db-partition       opts#)
@@ -1113,11 +1108,11 @@
 ;                    (defonce ~cache-sym (java.util.concurrent.ConcurrentHashMap.)))
 ;                  (~register-cache!)
 
-;                  (defn ~name- 
+;                  (defn ~name-
 ;                    "@from-val: E.g. email
 ;                      to-val:   E.g. user metadata
 
-;                     Caching: 
+;                     Caching:
 ;                       If not present in cache, creates delay and derefs it.
 ;                       Caches errors only if @cache-errors?"
 ;                    [from-val# & [ignore-db-retrieve?#]]
@@ -1125,7 +1120,7 @@
 ;                        (doseq [from-val-n# from-val#]
 ;                          (main-fn# from-val-n# ignore-db-retrieve?#))
 ;                        (main-fn# from-val# ignore-db-retrieve?#)))
-                
+
 ;                  (defn ~pk-adder-sym
 ;                    "Add primary (+ unique) keys to database,
 ;                     e.g. :twitter/user.id entities.
@@ -1159,7 +1154,7 @@
 ;                          key-map#))))
 
 ;                  (defn ~cache-fn-sym
-;                   "Efficiently transfers from in-memory cache to 
+;                   "Efficiently transfers from in-memory cache to
 ;                    database via |batch-transact!|."
 ;                    []
 ;                    (let [realizeds# (->> ~cache-sym
@@ -1171,7 +1166,7 @@
 ;                        ~entity-if-sym
 ;                        (fn [entities#]
 ;                          ; :db/error :db.error/entity-missing-db-id
-;                          ; Record that they're in the db 
+;                          ; Record that they're in the db
 ;                          ; TODO: Is this even necessary?
 ;                          ;(swap! in-db-cache-to-key# into (map pk# entities#))
 ;                          ;(swap! in-db-cache-pk# set/union @in-db-cache-to-key#)

@@ -23,8 +23,8 @@
                       :refer        [->ex #?(:clj try-times)]
                       :refer-macros [try-times]                    ]
                     [quantum.core.fn                  :as fn
-                      :refer        [#?@(:clj [with])]
-                      :refer-macros [with]                         ]
+                      :refer        [#?@(:clj [with fn->])]
+                      :refer-macros [with fn->]                    ]
                     [quantum.core.log                 :as log
                       :include-macros trus]
                     [quantum.core.logic               :as logic
@@ -85,7 +85,6 @@
 
 (defalias history->seq   db/history->seq  )
 (defalias block->schemas db/block->schemas)
-(defalias add-schemas!   db/add-schemas!  )
 (defalias db->seq        db/db->seq       )
 
 ; CORE FUNCTIONS
@@ -122,7 +121,7 @@
     (when schemas
       (log/pr :debug "Initializing database with schemas...")
 
-      (with (db/add-schemas! conn (db/block->schemas schemas {:conn conn}))
+      (with (db/transact! conn (db/block->schemas schemas))
         (log/pr :debug "Schema initialization complete.")))))
 
 
@@ -136,9 +135,8 @@
           @conn, while also a 'connection', in the case of DataScript is really an atom
           with the current DataScript DB value.
 
-          Though e.g. DataScript has no schemas (or at least they server no purpose),
-          one can set @init-schemas? to be true and the |start| function will transact
-          @schemas to the database using |init-schemas!|. This is mainly only useful
+          One can set @init-schemas? to be true and the |start| function will transact
+          @schemas to the database using |init-schemas!|. This is primarily useful
           for backend-syncing purposes where schemas are not just 'a good idea' but
           actually required.
 
@@ -150,6 +148,7 @@
    default-partition
    init-schemas? schemas
    set-main-conn?
+   set-main-part?
    post]
   component/Lifecycle
     (start [this]
@@ -157,27 +156,36 @@
       (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
       (let [; Maintain DB history.
             history (when (pos? history-limit) (atom []))
+            default-schemas {:db/ident {:db/unique :db.unique/identity}}
             conn-f (mdb/create-conn
-                     (if init-schemas?
-                         (db/block->schemas schemas)
-                         {}))
+                     (merge
+                       default-schemas
+                       (when init-schemas?
+                         (db/block->schemas schemas {:datascript? true}))))
+            _ (db/transact! conn-f
+                [{:db/ident  :type  }
+                 {:db/ident  :schema}])
+            _ (db/transact! conn-f
+                (for [schema (-> @conn-f :schema keys)]
+                  {:db/ident schema
+                   :type     [:db/ident :schema]}))
             _ (when (pos? history-limit)
-                (log/pr :user "Ephemeral database history set up.")
+                (log/pr ::debug "Ephemeral database history set up.")
                 (mdb/listen! conn-f :history1 ; just ":history" doesn't work
                   (fn [tx-report]
-                    (log/pr :user "Adding to history")
+                    (log/pr ::debug "Adding to history")
                     (let [{:keys [db-before db-after]} tx-report]
                       (when (and db-before db-after)
-                        (swap! history (fn [h]
-                          (-> h
-                              (coll/drop-tail #(identical? % db-before))
-                              (c/conj db-after)
-                              (coll/trim-head history-limit)))))))))
+                        (swap! history
+                          (fn-> (coll/drop-tail #(identical? % db-before))
+                                (c/conj db-after)
+                                (coll/trim-head history-limit))))))))
             default-partition-f (or default-partition :db.part/test)
             ; Sets up the tx-report listener for a conn
             #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
-            _ (log/pr :user "Ephemeral database reactivity set up.")]
+            _ (log/pr ::debug "Ephemeral database reactivity set up.")]
         (when set-main-conn? (reset! conn* conn-f))
+        (when set-main-part? (reset! part* default-partition-f))
         (when post (post))
         (c/assoc this :conn              conn-f
                       :history           history
