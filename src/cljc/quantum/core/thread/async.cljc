@@ -42,7 +42,9 @@
                    #_co.paralleluniverse.fibers.Fiber
                    #_co.paralleluniverse.strands.Strand)))
 
-#?(:clj (defmalias go async/go asyncm/go))
+(log/this-ns)
+
+#?(:clj (defmalias go clojure.core.async/go cljs.core.async.macros/go))
 
 #?(:clj
 (defmacro <?
@@ -88,13 +90,13 @@
    (async/chan n)
    #_(async+/chan n))
   ([^keyword? type]
-    (condp = type
+    (case type
       #_:std     #_(async+/chan)
       :queue   #?(:clj (LinkedBlockingQueue.)
                   :cljs (TODO))
       :casync  (async/chan)))
   ([^keyword? type n]
-    (condpc = type
+    (case type
      #_:std     #_(async+/chan n)
       :casync  (async/chan n)
       :queue   #?(:clj  (LinkedBlockingQueue. ^Integer n)
@@ -104,6 +106,10 @@
   ([         ] (async/chan) #_(async+/chan))
   ([arg0     ] (chan* arg0     ))
   ([arg0 arg1] (chan* arg0 arg1)))
+
+(defalias promise-chan async/promise-chan)
+
+(defalias timeout async/timeout)
 
 ;(defn current-strand [] (Strand/currentStrand))
 #?(:clj (defn current-strand [] (Thread/currentThread)))
@@ -147,6 +153,8 @@
 (declare put!!)
 
 (declare >!!)
+
+(defalias offer! async/offer!)
 
 #?(:clj
 (defnt put!! ; send
@@ -337,7 +345,8 @@
   "Checks whether the current thread is a WebWorker."
   []
   #?(:clj  false
-     :cljs (and (servant/webworker?)
+     :cljs (and (-> js/window .-self)
+                (-> js/window .-self .-document undefined?)
                 (or (nil? sys/os) (= sys/os "web")))))
 
 #?(:cljs (defalias bootstrap-worker servant.worker/bootstrap ))
