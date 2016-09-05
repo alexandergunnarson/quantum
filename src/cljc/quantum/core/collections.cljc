@@ -45,59 +45,59 @@
              [fast-zip.core                           :as zip    ]
              [quantum.core.data.map                   :as map    ]
              [quantum.core.data.set                   :as set    ]
-             [quantum.core.data.vector                :as vec  
+             [quantum.core.data.vector                :as vec
                :refer [catvec subvec+]                           ]
              [quantum.core.collections.base           :as base   ]
-             [quantum.core.collections.core           :as coll   
+             [quantum.core.collections.core           :as coll
                :include-macros true?                             ]
              [quantum.core.collections.sociative      :as soc    ]
-             [quantum.core.collections.differential   :as diff   
+             [quantum.core.collections.differential   :as diff
                :include-macros true                              ]
              [quantum.core.collections.generative     :as gen    ]
              [quantum.core.collections.map-filter     :as mf     ]
              [quantum.core.collections.selective      :as sel    ]
              [quantum.core.collections.tree           :as tree   ]
-             [quantum.core.error                      :as err  
+             [quantum.core.error                      :as err
                :refer [->ex]                                     ]
-             [quantum.core.fn                         :as fn  
+             [quantum.core.fn                         :as fn
                :refer        [#?@(:clj [compr <- fn-> fn->> f*n])
-                              fn-nil juxt-kv withf->>]  
+                              fn-nil juxt-kv withf->>]
                :refer-macros [compr <- fn-> fn->> f*n]           ]
-             [quantum.core.log                        :as log    
+             [quantum.core.log                        :as log
                :include-macros true                              ]
              [quantum.core.logic                      :as logic
                :refer         [#?@(:clj [fn-not fn-or fn-and whenf
                                          whenf*n ifn if*n condf
                                          condf*n])
                                nnil? some? splice-or]
-               :refer-macros [fn-not fn-or fn-and whenf whenf*n 
+               :refer-macros [fn-not fn-or fn-and whenf whenf*n
                               ifn if*n condf condf*n]            ]
-             [quantum.core.macros                     :as macros 
-               :refer        [#?@(:clj [defnt])]                
+             [quantum.core.macros                     :as macros
+               :refer        [#?@(:clj [defnt])]
                :refer-macros [defnt]                             ]
-             [quantum.core.numeric                    :as num    
+             [quantum.core.numeric                    :as num
                :refer        [#?@(:clj [-])]
                :refer-macros [-]]
-             [quantum.core.reducers                   :as red    
+             [quantum.core.reducers                   :as red
                :include-macros true                              ]
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
-             [quantum.core.type                       :as type  
-               :refer        [#?@(:clj [lseq? transient? editable? 
+             [quantum.core.type                       :as type
+               :refer        [#?@(:clj [lseq? transient? editable?
                                         boolean? should-transientize?])
-                              class]                                    
+                              class]
                :refer-macros [lseq? transient? editable? boolean?
                               should-transientize?]              ]
              [quantum.core.analyze.clojure.predicates :as anap   ]
              [quantum.core.type.predicates            :as tpred  ]
              [clojure.walk                            :as walk   ]
-             [quantum.core.loops                      :as loops  
+             [quantum.core.loops                      :as loops
                :include-macros true                              ]
-             [quantum.core.vars                       :as var  
-               :refer        [#?@(:clj [defalias])]              
+             [quantum.core.vars                       :as var
+               :refer        [#?@(:clj [defalias])]
                :refer-macros [defalias]                          ])
-  #?(:cljs (:require-macros  
-             [quantum.core.collections     
+  #?(:cljs (:require-macros
+             [quantum.core.collections
                :refer [for for* lfor doseq doseqi reduce reducei
                        seq-loop
                        count lasti
@@ -171,7 +171,7 @@
         (defalias pjoinl        red/pjoin         )
 
         (defalias fold          red/fold*         )
-        (defalias cat+          red/cat+          ) 
+        (defalias cat+          red/cat+          )
         (defalias foldcat+      red/foldcat+      )
         (defalias indexed+      red/indexed+      )
         (defalias reductions+   red/reductions+   )
@@ -209,7 +209,7 @@
         (defalias reduce-count  red/reduce-count  )
         ; for+
         ; doseq+
-        
+
         (def flatten-1 (partial apply concat)) ; TODO more efficient
 
 #?(:clj (defalias ->array       coll/->array      ))
@@ -326,7 +326,7 @@
   [arr]
   (->> arr type str (drop 6) (take-while (f*n = \[)) count)))
 
-#?(:clj 
+#?(:clj
 (defnt array->array-manager-key
   ([^boolean? x] :boolean)
   ([^byte?    x] :byte   )
@@ -373,7 +373,7 @@
   ([arr]
     (let [dim (-> arr array->dimensionality)]
       (array->vector dim arr)))))
- 
+
 (defnt padr
   "Pad, right."
   ([#{#?(:clj StringBuilder :cljs StringBuffer)} x i add]
@@ -381,26 +381,6 @@
     x)
   ([^string? x i add]
     (str (padr (#?(:clj StringBuilder. :cljs StringBuffer.) x) i add))))
-
-(defn deep-merge
-  "Like merge, but merges maps recursively."
-  {:from "r0man/noencore"}
-  [& maps]
-  (if (every? map? maps)
-    (apply merge-with deep-merge maps)
-    (last maps)))
-
-(defn deep-merge-with
-  "Like merge-with, but merges maps recursively, applying the given fn
-  only when there's a non-map at a particular level."
-  {:from "r0man/noencore"}
-  [f & maps]
-  (apply
-   (fn m [& maps]
-     (if (every? map? maps)
-       (apply merge-with m maps)
-       (apply f maps)))
-   maps))
 
 (defn merge-with-set [m1 m2]
   (merge-with (fn [v1 v2] (if (set? v1)
@@ -543,7 +523,7 @@
 
 ; ----- MISCELLANEOUS ----- ;
 
-(defn abs-difference 
+(defn abs-difference
   "Returns the absolute difference between a and b.
    That is, (a diff b) union (b diff a)."
   {:out 'Set
@@ -656,7 +636,7 @@
 (defalias merge-keep-left mergel)
 (defn merger [a b] (merge a b))
 (defalias merge-keep-right merger)
-            
+
 (defn split-remove
   {:todo ["Slightly inefficient — two |index-of| implicit."]}
   [split-at-obj coll]
@@ -855,9 +835,9 @@
   ([^map?    m] (zip/zipper  ; source https://clojuredocs.org/clojure.zip/zipper
                   (fn [x] (or (map? x) (map? (nth x 1))))
                   (fn [x] (seq (if (map? x) x (nth x 1))))
-                  (fn [x children] 
-                    (if (map? x) 
-                        (join {} children) 
+                  (fn [x children]
+                    (if (map? x)
+                        (join {} children)
                         (assoc x 1 (join {} children))))
                   m))
   ([         x] (zip/seq-zip x)))
@@ -1040,7 +1020,7 @@
 ;   (reduce
 ;     (fn ([]      [])
 ;         ([a]     (conj [] a))
-;         ([a b]   (conj    a b)) 
+;         ([a b]   (conj    a b))
 ;         ([a b c] (conj    a b c)))
 ;     (apply zipvec+ args)))
 
@@ -1078,7 +1058,7 @@
    :out "[{:b 65, :a 5} {:a 1, :b 2}]"
    :out-type 'Reducer}
   [group-by-f merge-with-f coll]
-  (let [merge-like-elems 
+  (let [merge-like-elems
          (fn [grouped-elems]
            (if (single? grouped-elems)
                grouped-elems
@@ -1093,7 +1073,7 @@
          (map+ merge-like-elems)
          flatten+)))
 
-(defn merge-left 
+(defn merge-left
   ([alert-level] ; Keyword
     (fn [k v1 v2]
       (when (not= v1 v2)
@@ -1145,7 +1125,7 @@
   "Lazy 'quick'-sorting"
   {:attribution "The Joy of Clojure, 2nd ed."}
   [elems]
-  (sort-parts (list elems))) 
+  (sort-parts (list elems)))
 
 (defn binary-search
   "Finds earliest occurrence of @x in @xs (a sorted List of numbers) using binary search."
@@ -1522,7 +1502,7 @@
                      (conj! table-n (persistent! row-f))))]
     (persistent! table-f)))
 
-(defn merge-keys-with 
+(defn merge-keys-with
   {:tests '{(merge-keys-with {:a {:b 1 :c 2}
                               :b {:c 3 :a 4}}
               [:a :b]
@@ -1662,7 +1642,7 @@
 #?(:cljs
 (defn jsx->clj
   [x]
-  (for* {} [k (.keys js/Object x)] 
+  (for* {} [k (.keys js/Object x)]
     [(keyword k)
      (let [v (aget x k)]
        (if (fn? v)
