@@ -1,6 +1,6 @@
 (ns quantum.core.numeric.convert
           (:refer-clojure :exclude [bigdec])
-          (:require 
+          (:require
             [#?(:clj  clojure.core
                 :cljs cljs.core   )     :as core  ]
             [quantum.core.error :as err
@@ -15,13 +15,7 @@
   #?(:clj (:import java.math.BigInteger
                    clojure.lang.BigInt)))
 
-#?(:clj
-(defnt' ^java.math.BigInteger ->big-integer
-  ([^java.math.BigInteger x] x)
-  ([^clojure.lang.BigInt     x] (.toBigInteger x))
-  ([;#{(- number? BigInteger BigInt)} x
-    #{short int long Short Integer Long} x] ; TODO BigDecimal
-    (-> x core/long (BigInteger/valueOf)))))
+#?(:clj (defalias ->big-integer ntypes/->big-integer))
 
 #?(:clj  (defnt' ^clojure.lang.BigInt ->bigint
            ([^clojure.lang.BigInt  x] x)
@@ -44,7 +38,7 @@
            ([#{(- number? :curr)} x] (BigDecimal/valueOf x)))
    :cljs (defn ->bigdec [x] (TODO)))
 
-#?(:clj (defalias ->ratio rationalize)
+#?(:clj (defalias ->ratio ntypes/->ratio)
         #_(defnt ^clojure.lang.Ratio ->ratio
            ([^clojure.lang.Ratio   x] x)
            ([^java.math.BigDecimal x]
