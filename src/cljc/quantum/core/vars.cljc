@@ -1,11 +1,14 @@
-(ns ^{:doc "Var- and namespace-related functions."}
+(ns ^{:doc "Var- and namespace-related functions."
+      :cljs-self-referring? true}
   quantum.core.vars
            (:refer-clojure :exclude [defonce])
-           (:require [quantum.core.macros.core :as cmacros
-                       :refer [#?@(:clj [if-cljs when-cljs])]])
+           (:require
+             [quantum.core.macros.core :as cmacros
+               :refer        [#?@(:clj [if-cljs when-cljs])]
+               :refer-macros [if-cljs when-cljs]])
   #?(:cljs (:require-macros
-                     [quantum.core.macros.core :as cmacros
-                       :refer [if-cljs when-cljs]            ])))
+             [quantum.core.vars
+               :refer [defalias]])))
 
 ; ============ DECLARATION ============
 
@@ -21,7 +24,7 @@
         (let [orig-var# (var ~orig)]
           (if true ; Can't have different clj-cljs things within macro...  ;#?(:clj (-> orig-var# .hasRoot) :cljs true)
               (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
-                  ; for some reason, the :macro metadata doesn't really register unless you do it manually 
+                  ; for some reason, the :macro metadata doesn't really register unless you do it manually
                   (when (-> orig-var# meta :macro true?)
                     (alter-meta! #'~name assoc :macro true)))
               (def ~name)))
@@ -36,7 +39,7 @@
   `(do ~@(for [name- names]
            `(defalias ~name- ~(symbol (name ns-) (name name-)))))))
 
-#?(:clj 
+#?(:clj
 (defn var-name
   "Get the namespace-qualified name of a var."
   {:attribution "flatland.useful.ns"}
@@ -66,7 +69,7 @@
   ;(def cljs-doseqi (mfn loops/doseqi)) ; doesn't work because no |eval| in CLJS
   ;(defalias doseqi #?(:clj loops/doseqi :cljs cljs-doseqi))
   ; #?(:clj (alter-meta! (var doseqi) assoc :macro true)) ; Sometimes this works
- 
+
   #_(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args))))
 
 #?(:clj (quantum.core.macros.core/defmalias defmalias quantum.core.macros.core/defmalias))
@@ -196,3 +199,5 @@
       false))))
 
 (defn unqualify [sym] (-> sym name symbol))
+
+(defalias update-meta vary-meta)
