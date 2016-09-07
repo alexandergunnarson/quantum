@@ -11,10 +11,10 @@
             ;#?(:clj [quantum.deploy.amazon      :as amz            ])
                      [com.stuartsierra.component :as component      ]
                      [quantum.core.collections   :as coll
-                       :refer [#?@(:clj [join for])
+                       :refer [#?@(:clj [join for kmap])
                                filter-vals+ remove-vals+ map+ remove+
                                group-by+ postwalk merge-deep dissoc-in+]
-                       #?@(:cljs [:refer-macros [join for]])]
+                       #?@(:cljs [:refer-macros [join for kmap]])]
                      [quantum.core.error         :as err
                        :refer        [#?(:clj assert) ->ex]
                        :refer-macros [assert]                       ]
@@ -132,7 +132,7 @@
     (cond (mconn? arg)
             @arg
  #?@(:clj [(conn? arg)
-            (db/db arg)])
+           (db/db arg)])
           :else
             (throw (->ex nil "Object cannot be transformed into database" arg)))))
 
@@ -166,12 +166,12 @@
 ; I recommend passing a tempid in as an arg instead.
 (defn tempid
   ([] (tempid (or @part* #?(:cljs :db.part/test)))) ; because DataScript doesn't really care about partitions
-  ([part] (tempid @conn* part))
-  ([conn part]
+  ([part] (tempid (->db) part))
+  ([db part]
     (assert (nnil? part))
-    (cond            (mconn? conn) (mdb/tempid part)
-          #?@(:clj  [(conn?  conn) (db/tempid  part)])
-          :else (throw (unhandled-type :conn conn)))))
+    (cond            (mdb? db) (mdb/tempid part)
+          #?@(:clj  [(db?  db) (db/tempid  part)])
+          :else (throw (unhandled-type :db db)))))
 
 (defn pull
   ([selector eid] (pull (->db) selector eid))
@@ -197,9 +197,9 @@
 
 (defalias filtered? is-filtered)
 
-(defn with-
-  ([tx-data] (with- (->db) tx-data))
-  ([db tx-data] (with- db tx-data nil))
+(defn with
+  ([tx-data] (with (->db) tx-data))
+  ([db tx-data] (with db tx-data nil))
   ([db tx-data tx-meta]
     (cond           (mdb? db) (mdb/with db tx-data tx-meta)
           #?@(:clj [(db?  db) (db/with  db tx-data tx-meta)])
@@ -381,24 +381,35 @@
                    (c/merge {} opts opts-n))))
          post)))
 
-#?(:cljs
 (defn update-schemas
   {:see-also "metasoarous/datsync.client"}
   ([f] (update-schemas (->db)))
   ([x f]
-    (let [for-mdb (fn [mdb] (mdb/init-db
-                              (mdb/datoms mdb :eavt)
-                              (f (:schema mdb))))]
+    (let [for-mdb (fn [mdb]
+                    (assert (mdb? mdb) #{mdb})
+                    (let [schemas (f (:schema mdb))]
+                      (log/pr ::debug (kmap schemas))
+                      (-> (mdb/init-db
+                            (mdb/datoms mdb :eavt)
+                            schemas)
+                          (mdb/db-with
+                            [{:db/ident  :type  }
+                             {:db/ident  :schema}])
+                          (mdb/db-with
+                            (for [schema (keys schemas)]
+                              {:db/ident schema
+                               :type     [:db/ident :schema]})))))]
       (cond (mdb? x)
             (for-mdb x)
             (mconn? x)
             (for-mdb @x)
-            :else (throw (unhandled-type :conn x)))))))
+            :else (throw (unhandled-type :conn x))))))
 
-#?(:cljs
 (defn update-schemas!
   ([f] (update-schemas! @conn* f))
-  ([conn f] (swap! conn update-schemas f))))
+  ([conn f]
+    (assert (mconn? conn) #{conn})
+    (swap! conn update-schemas f)))
 
 (defn merge-schemas
   "Merges schemas and/or schema attributes (@schemas) into the database @db."
@@ -419,10 +430,11 @@
   #?(:clj  (transact! conn (merge-schemas schemas))
      :cljs (swap! conn merge-schemas schemas))))
 
-#?(:cljs
 (defn replace-schemas!
   ([schemas] (replace-schemas! @conn* schemas))
-  ([conn schemas] (swap! conn update-schemas (constantly schemas)))))
+  ([conn schemas]
+    (assert (mconn? conn) #{conn})
+    (swap! conn update-schemas (constantly schemas))))
 
 (defn dissoc-schema!
   ([s k v] (dissoc-schema! @conn* s k v))
@@ -612,12 +624,12 @@
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  ([x]      (conj @conn* (or @part* #?(:cljs :db.part/test)) false x))
-  ([part x] (conj @conn* part false x))
-  ([conn part no-transform? x] ; TODO no-txr-transform? no-client-transform?
+  ([x]      (conj (->db) (or @part* #?(:cljs :db.part/test)) false x))
+  ([part x] (conj (->db) part false x))
+  ([db part no-transform? x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
                   (whenf (fn-not dbfn-call?)
-                    (f*n coll/assoc-when-none :db/id (tempid conn part))))]
+                    (f*n coll/assoc-when-none :db/id (tempid db part))))]
       (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
