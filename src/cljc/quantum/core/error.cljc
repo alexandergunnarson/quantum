@@ -4,7 +4,7 @@
   quantum.core.error
            (:refer-clojure :exclude [assert])
            (:require [clojure.string                :as str    ]
-                     [quantum.core.collections.base :as cbase  
+                     [quantum.core.collections.base :as cbase
                        :refer [#?(:clj kmap)]                  ]
                      [quantum.core.data.map         :as map    ]
                      [slingshot.slingshot           :as try    ]
@@ -125,7 +125,7 @@
   `(when-not ~expr
      (throw
        (->ex ~(or type :assertion-error)
-             (str "Assertion not satisfied: " '~expr ; TODO having this assertion string can be expensive if assertions fail on large data structures 
+             (str "Assertion not satisfied: " '~expr ; TODO having this assertion string can be expensive if assertions fail on large data structures
                    "\n"
                    "Symbols: " (kmap ~@syms))
              (assoc (kmap ~@syms)
@@ -138,14 +138,14 @@
      expr#)))
 
 #?(:clj
-(defmacro try-or 
+(defmacro try-or
   "An exception-handling version of the 'or' macro.
    Tries expressions in sequence until one produces a result that is neither false nor an exception.
    Useful for providing a default value in the case of errors."
   {:attribution "mikera.cljutils.error"}
   ([exp & alternatives]
      (let [c (if-cljs &env 'js/Error 'Throwable)]
-       (if-let [as (seq alternatives)] 
+       (if-let [as (seq alternatives)]
          `(or (try ~exp (catch ~c t# (try-or ~@as))))
          exp)))))
 
@@ -184,7 +184,7 @@
        ~arg)))
 
 
-#?(:clj 
+#?(:clj
 (defmacro try-times [max-n sleep-millis & body]
   (let [c (if-cljs &env 'js/Error 'Throwable)]
     `(let [max-n#        ~max-n
@@ -201,6 +201,9 @@
                (if error#
                    (recur (inc n#) error#)
                    result#))))))))
+
+(defn tries-exceeded [tries & [state]]
+  (throw (->ex :max-tries-exceeded nil {:tries tries :state state})))
 
 #?(:clj (defalias try+   try/try+  ))
 #?(:clj (defalias throw+ try/throw+))
