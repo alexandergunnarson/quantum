@@ -12,7 +12,7 @@
            #?(:clj  [datomic.api                      :as bdb      ]
               :cljs [datomic-cljs.api                 :as bdb      ])
                     [datascript.core                  :as mdb      ]
-                    [quantum.db.datomic.core          :as db       ]
+                    [quantum.db.datomic.core          :as dbc      ]
            #?(:cljs [posh.core                        :as rx-db    ])
            ;#?(:clj [quantum.deploy.amazon            :as amz      ])
                     [com.stuartsierra.component       :as component]
@@ -23,10 +23,10 @@
                       :refer        [->ex #?(:clj try-times)]
                       :refer-macros [try-times]                    ]
                     [quantum.core.fn                  :as fn
-                      :refer        [#?@(:clj [with fn->])]
-                      :refer-macros [with fn->]                    ]
+                      :refer        [#?@(:clj [fn->])]
+                      :refer-macros [fn->]                         ]
                     [quantum.core.log                 :as log
-                      :include-macros trus]
+                      :include-macros true]
                     [quantum.core.logic               :as logic
                       :refer        [#?@(:clj [fn-and fn-or whenf
                                                condf])
@@ -60,32 +60,36 @@
                     [datomic.peer LocalConnection Connection]
                     java.util.concurrent.ConcurrentHashMap)))
 
+#?(:clj (ns-unmap 'quantum.db.datomic 'with))
+
 ; TODO take out repetition
-(defonce db*   db/db*  )
-(defonce conn* db/conn*)
-(defonce part* db/part*)
+(defonce db*   dbc/db*  )
+(defonce conn* dbc/conn*)
+(defonce part* dbc/part*)
 
-(defalias q              db/q        )
-(defalias transact!      db/transact!)
-(defalias entity         db/entity   )
-(defalias touch          db/touch    )
+(defalias q                dbc/q        )
+(defalias transact!        dbc/transact!)
+(defalias with             dbc/with     )
+(defalias entity           dbc/entity   )
+(defalias touch            dbc/touch    )
 
-(defalias conj           db/conj     )
-(defalias conj!          db/conj!    )
-(defalias disj           db/disj     )
-(defalias disj!          db/disj!    )
-(defalias assoc          db/assoc    )
-(defalias assoc!         db/assoc!   )
-(defalias dissoc         db/dissoc   )
-(defalias dissoc!        db/dissoc!  )
-(defalias update         db/update   )
-(defalias update!        db/update!  )
-(defalias merge          db/merge    )
-(defalias merge!         db/merge!   )
+(defalias conj             dbc/conj     )
+(defalias conj!            dbc/conj!    )
+(defalias disj             dbc/disj     )
+(defalias disj!            dbc/disj!    )
+(defalias assoc            dbc/assoc    )
+(defalias assoc!           dbc/assoc!   )
+(defalias dissoc           dbc/dissoc   )
+(defalias dissoc!          dbc/dissoc!  )
+(defalias update           dbc/update   )
+(defalias update!          dbc/update!  )
+(defalias merge            dbc/merge    )
+(defalias merge!           dbc/merge!   )
 
-(defalias history->seq   db/history->seq  )
-(defalias block->schemas db/block->schemas)
-(defalias db->seq        db/db->seq       )
+(defalias history->seq     dbc/history->seq  )
+(defalias block->schemas   dbc/block->schemas)
+(defalias replace-schemas! dbc/replace-schemas!)
+(defalias db->seq          dbc/db->seq       )
 
 ; CORE FUNCTIONS
 
@@ -113,16 +117,18 @@
   ([tx-data]      (rx-transact! @conn* tx-data))
   ([conn tx-data] (rx-db/transact! conn tx-data))))
 
+; TODO this fn is unnecessary
+#?(:clj
 (defn init-schemas!
   "Transacts @schemas to the partition @part on the database connection @conn.
-   Expects @schemas to be in block-format (see |db/block->schemas|)."
+   Expects @schemas to be in block-format (see |dbc/block->schemas|)."
   ([schemas] (init-schemas! @conn* schemas))
   ([conn schemas]
     (when schemas
       (log/pr :debug "Initializing database with schemas...")
 
-      (with (db/transact! conn (db/block->schemas schemas))
-        (log/pr :debug "Schema initialization complete.")))))
+      (fn/with (dbc/transact! conn (dbc/block->schemas schemas))
+        (log/pr :debug "Schema initialization complete."))))))
 
 
 ; RECORDS / RESOURCES (TODO: MOVE)
@@ -144,52 +150,58 @@
           required for Datomic, and so for syncing purposes @default-partition is required
           to initialize @schemas."}
   EphemeralDatabase
-  [conn history history-limit reactive?
+  [conn history history-limit reactive? evented?
    default-partition
-   init-schemas? schemas
+   schemas
    set-main-conn?
    set-main-part?
    post]
   component/Lifecycle
     (start [this]
-      (log/pr ::debug "Starting Ephemeral database...")
-      (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? init-schemas? reactive?))
-      (let [; Maintain DB history.
-            history (when (pos? history-limit) (atom []))
-            default-schemas {:db/ident {:db/unique :db.unique/identity}}
-            conn-f (mdb/create-conn
-                     (merge
-                       default-schemas
-                       (when init-schemas?
-                         (db/block->schemas schemas {:datascript? true}))))
-            _ (db/transact! conn-f
-                [{:db/ident  :type  }
-                 {:db/ident  :schema}])
-            _ (db/transact! conn-f
-                (for [schema (-> @conn-f :schema keys)]
-                  {:db/ident schema
-                   :type     [:db/ident :schema]}))
-            _ (when (pos? history-limit)
-                (log/pr ::debug "Ephemeral database history set up.")
-                (mdb/listen! conn-f :history1 ; just ":history" doesn't work
-                  (fn [tx-report]
-                    (log/pr ::debug "Adding to history")
-                    (let [{:keys [db-before db-after]} tx-report]
-                      (when (and db-before db-after)
-                        (swap! history
-                          (fn-> (coll/drop-tail #(identical? % db-before))
-                                (c/conj db-after)
-                                (coll/trim-head history-limit))))))))
-            default-partition-f (or default-partition :db.part/test)
-            ; Sets up the tx-report listener for a conn
-            #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
-            _ (log/pr ::debug "Ephemeral database reactivity set up.")]
-        (when set-main-conn? (reset! conn* conn-f))
-        (when set-main-part? (reset! part* default-partition-f))
-        (when post (post))
-        (c/assoc this :conn              conn-f
-                      :history           history
-                      :default-partition default-partition-f)))
+      (try
+        (log/pr ::debug "Starting Ephemeral database...")
+        (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
+        (let [; Maintain DB history.
+              history (when (pos? history-limit) (atom []))
+              default-schemas {:db/ident {:db/unique :db.unique/identity}}
+              default-partition-f (or default-partition :db.part/test)
+              block-schemas (when schemas
+                               (dbc/block->schemas schemas
+                                 {:datascript? true
+                                  :part        default-partition-f}))
+              db        (mdb/empty-db {})
+              conn-f    (atom db :meta
+                          (c/merge {:listeners (atom {})}
+                            (when evented?
+                              {:subs         (atom {})
+                               :transformers (atom {})})))
+              schemas-f (c/merge default-schemas block-schemas)
+              _ (replace-schemas! conn-f schemas-f)
+              _ (log/pr ::debug "Ephemeral database and connection created.")
+              _ (when (pos? history-limit)
+                  (log/pr ::debug "Ephemeral database history set up.")
+                  (mdb/listen! conn-f :history1 ; just ":history" doesn't work
+                    (fn [tx-report]
+                      (log/pr ::debug "Adding to history")
+                      (let [{:keys [db-before db-after]} tx-report]
+                        (when (and db-before db-after)
+                          (swap! history
+                            (fn-> (coll/drop-tail #(identical? % db-before))
+                                  (c/conj db-after)
+                                  (coll/trim-head history-limit))))))))
+              ; Sets up the tx-report listener for a conn
+              #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
+              _ (log/pr ::debug "Ephemeral database reactivity set up. Conn's meta keys:" (-> conn-f meta keys))]
+          (when set-main-conn? (reset! conn* conn-f))
+          (when set-main-part? (reset! part* default-partition-f))
+          (when post (post))
+          (c/assoc this :conn              conn-f
+                        :history           history
+                        :default-partition default-partition-f))
+        (catch #?(:clj Throwable :cljs :default) e
+          (log/ppr :warn "Error in starting EphemeralDatabase"
+            {:this this :err {:e e :stack (.-stack e)}})
+          e)))
     (stop [this]
       (when (atom? conn)
         (reset! conn nil)) ; TODO is this wise?
@@ -260,7 +272,7 @@
    txr-props txr-process
    init-partitions? partitions
    default-partition
-   init-schemas? schemas]
+   schemas]
   component/Lifecycle
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
@@ -319,7 +331,7 @@
             _ (log/pr :debug "Connected.")
             _ (reset! conn conn-f)
             default-partition-f (or default-partition :db.part/test)
-            _ (when init-schemas? (init-schemas! conn-f schemas))]
+            _ (when schemas #?(:clj (init-schemas! conn-f schemas)))]
       (log/pr ::debug "Datomic database initialized.")
       (c/assoc this
         :uri               uri-f
