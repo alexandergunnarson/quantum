@@ -20,18 +20,18 @@
                        :refer [#?@(:clj [defnt defnt'])]      ]
                      [quantum.core.type.core       :as tcore  ]
                      [quantum.core.type.predicates :as tpred  ]
-                     [quantum.core.vars            :as var 
+                     [quantum.core.vars            :as var
                        :refer [#?(:clj defalias)]             ])
-  #?(:cljs (:require-macros 
+  #?(:cljs (:require-macros
                      [quantum.core.type
                        :refer [should-transientize?]]
-                     [quantum.core.fn              :as fn 
+                     [quantum.core.fn              :as fn
                        :refer [f*n mfn fn->]                  ]
                      [quantum.core.logic           :as logic
                        :refer [fn-and whenf*n]                ]
-                     [quantum.core.macros          :as macros 
+                     [quantum.core.macros          :as macros
                        :refer [defnt defnt']                  ]
-                     [quantum.core.vars            :as var 
+                     [quantum.core.vars            :as var
                        :refer [defalias]                      ])))
 
 ; TODO: Should include typecasting? (/cast/)
@@ -67,7 +67,7 @@
                     '((^boolean [:else obj] false)))))]
        code))
    ~(->> types (remove (fn-> key (= 'nil?)))))))
-
+        ; TODO for JS, primitives (function, array, number, string) aren't covered by these
         (defnt byte-array? ([^byte-array? obj] true) ([obj] false))
 #?(:clj (defnt bigint?     ([^bigint?     obj] true) ([obj] false)))
 #?(:clj (defnt file?       ([^file?       obj] true) ([obj] false)))
@@ -84,23 +84,23 @@
         (defnt lseq?       ([^lseq?       obj] true) ([obj] false))
         (defnt pattern?    ([^pattern?    obj] true) ([obj] false))
         (defnt regex?      ([^regex?      obj] true) ([obj] false))
-        (defnt editable?   ([^editable?   obj] true) ([obj] false))
+        (defnt editable?   ([^editable?   obj] true) ([#?(:cljs :else) obj] false))
         (defnt transient?  ([^transient?  obj] true) ([obj] false))
 
         (defnt array?
           ([^array? x] true)
           ([x] #?(:clj  (-> x class .isArray)
                   :cljs (-> x core/array?))))
-        
+
 #?(:clj (defnt' prim-long? ([^long n] true) ([:else n] false)))
 
-;         #?(:cljs 
+;         #?(:cljs
 ; (defn bigint?
 ;   [x]
 ;   (instance? com.gfredericks.goog.math.Integer x)))
 
 
-; #?(:cljs 
+; #?(:cljs
 ; (defn ratio? [x]
 ;   (instance? quantum.core.numeric.types.Ratio x)))
 
@@ -161,7 +161,7 @@
 ; ; TODO this is just intuition. Better to |bench| it
 ; ; TODO move these vars
 (def transient-threshold 3)
-; macro because it will probably be heavily used  
+; macro because it will probably be heavily used
 #?(:clj
 (defmacro should-transientize? [coll]
   `(and (editable? ~coll)
