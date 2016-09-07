@@ -15,7 +15,7 @@
                      [quantum.core.macros          :as macros
                        :refer [#?@(:clj [defnt])]               ]
                      [quantum.core.thread.async    :as async    ]
-                     [quantum.core.type            :as type          
+                     [quantum.core.type            :as type
                        :refer [atom?]                           ])
   #?(:cljs (:require-macros
                      [quantum.core.logic           :as logic
@@ -73,7 +73,7 @@
 (def start! component/start)
 (def stop!  component/stop )
 
-#?(:clj 
+#?(:clj
 (defmacro with-resources
   [bindings & body]
   `(let ~bindings
@@ -164,7 +164,7 @@
                (reset! running? true) ; TODO fix this to be immutable
                (log/pr :user "System started.")
             (catch #?(:clj Throwable :cljs :default) t
-              (log/pr :warn "System failed to start:" t)))))
+              (log/pr :warn "System failed to start:" t #?(:cljs {:stack (.-stack t)}))))))
     (stop [this]
       (if (and @sys-map @running?)
           (let [_ (log/pr :user "======== STOPPING SYSTEM ========")
@@ -180,7 +180,7 @@
           (let [sys-map' (make-system config)]
             (reset! sys-map sys-map')
             (log/pr :user "System created."))))
-    (go! [this] 
+    (go! [this]
       (init!  this)
       (start! this))
     (reload! [this]
@@ -196,7 +196,7 @@
   [config make-system]
   (assert ((fn-or atom? map?) config) #{config})
   (assert (fn? make-system) #{make-system})
-  
+
   (System. config (atom nil) make-system (atom false)))
 
 (defn register-system!
@@ -207,7 +207,7 @@
 
 #?(:clj
 (defn reload-namespaces
-  "Reloads all of the given namespaces." 
+  "Reloads all of the given namespaces."
   [namespaces]
   (doseq [ns-to-load namespaces]
     (require :reload (symbol ns-to-load)))))
