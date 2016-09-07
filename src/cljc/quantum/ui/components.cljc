@@ -16,12 +16,12 @@
              [quantum.core.logic
                :refer        [#?@(:clj [whenf]) nnil?]
                :refer-macros [whenf]]
-             [quantum.core.error  :as err  
+             [quantum.core.error  :as err
                :include-macros true]
-             [quantum.core.log    :as log  
+             [quantum.core.log    :as log
                :include-macros true]
              [quantum.db.datomic  :as db   ]
-             [quantum.core.system :as sys 
+             [quantum.core.system :as sys
                :refer        [#?@(:cljs [ReactNative])]]
              [quantum.core.collections :as coll
                :refer        [#?@(:clj [for fori join kmap reduce])
@@ -35,7 +35,7 @@
              [reagent.ratom
                :refer [reaction]]
              [cljs.core.async.macros
-               :refer [go]])))  
+               :refer [go]])))
 
 (log/this-ns)
 
@@ -73,31 +73,52 @@
       (go (js/alert title)) ; even this totally stops everything
       (.alert (.-Alert @ReactNative) title))))
 
-#?(:cljs (def text                (whenf (.-Text       ReactNative) nnil? rx/adapt-react-class)))
-#?(:cljs (def view                (whenf (.-View       ReactNative) nnil? rx/adapt-react-class)))
-#?(:cljs (def image               (whenf (.-Image      ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (defn rx-adapt [super sub]
+           (when super
+             (whenf (aget super sub) nnil? rx/adapt-react-class))))
+
+#?(:cljs (def text                (rx-adapt ReactNative "Text" )))
+#?(:cljs (def view                (rx-adapt ReactNative "View" )))
+#?(:cljs (def image               (rx-adapt ReactNative "Image")))
 ; var CacheImage = require('@remobile/react-native-cache-image'); doesn't work on web ; better to have something else
-#?(:cljs (def touchable-highlight (whenf (.-TouchableHighlight ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (def touchable-highlight (rx-adapt ReactNative "TouchableHighlight")))
 #?(:cljs (def accordion           (when-not (= sys/os "web")
                                     (err/ignore (rx/adapt-react-class (js/require "react-native-accordion"))))))
-#?(:cljs (def text-input          (whenf (.-TextInput  ReactNative) nnil? rx/adapt-react-class)))
+#?(:cljs (def text-input          (rx-adapt ReactNative "TextInput")))
 #?(:cljs (def modal               (when-not (= sys/os "web")
-                                    (whenf (.-Modal    ReactNative) nnil? rx/adapt-react-class))))
-#?(:cljs (def scroll-view         (whenf (.-ScrollView ReactNative) nnil? rx/adapt-react-class)))
-#?(:cljs (def list-view           (whenf (.-ListView   ReactNative) nnil? rx/adapt-react-class)))
+                                    (rx-adapt ReactNative "Modal"))))
+#?(:cljs (def scroll-view         (rx-adapt ReactNative "ScrollView")))
+#?(:cljs (def list-view           (rx-adapt ReactNative "ListView"  )))
 #?(:cljs (def video               (if (= sys/os "web")
                                       :video
                                        ; https://github.com/react-native-community/react-native-video
                                       #_(rx/adapt-react-class (js/require "react-native-video")))))
-#?(:cljs (def list-view-data-source (-> ReactNative .-ListView .-DataSource)))
+
+; Uses StreamingKit
+; Supported codecs (list incomplete):
+#_"mp4 audio (m4a)
+   mp3
+   aac
+   wav"
+#_"  seekToTime <double seconds >
+   , goForward  <double seconds >
+   , goBack     <double seconds >
+   , getStatus  <fn     callback>"
+; https://github.com/tlenclos/react-native-audio-streaming
+#?(:cljs
+(def Audio (when-not (= sys/os "web")
+             (err/ignore
+               (.-ReactNativeAudioStreaming (js/require "react-native-audio-streaming"))))))
+
+#?(:cljs (def audio (when (= sys/os "web") :audio)))
+
+#?(:cljs (def list-view-data-source (err/ignore (-> ReactNative .-ListView .-DataSource))))
 
 ; https://github.com/react-native-community/react-native-blur
 #?(:cljs (def Blur          (when-not (= sys/os "web")
                               (err/ignore (js/require "react-native-blur")))))
-#?(:cljs (def blur-view*    (when Blur
-                              (rx/adapt-react-class (.-BlurView     Blur)))))
-#?(:cljs (def vibrancy-view (when Blur
-                              (rx/adapt-react-class (.-VibrancyView Blur)))))
+#?(:cljs (def blur-view*    (rx-adapt Blur "BlurView"    )))
+#?(:cljs (def vibrancy-view (rx-adapt Blur "VibrancyView")))
 #?(:cljs (def ios-blur-view (when (= sys/os "ios")
                               (err/ignore
                                 (-> (js/require "react-native-fxblurview")
@@ -178,8 +199,9 @@
 #?(:cljs
 (def image+ (if (= sys/os "web")
                 image
-                (-> (js/require "quantum-react-native-gpuimage")
-                    (rx/adapt-react-class)))))
+                (err/ignore
+                  (-> (js/require "quantum-react-native-gpuimage")
+                      (rx/adapt-react-class))))))
 
 #?(:cljs
 (defn grid-scroll-view [parent-props content-fn]
@@ -196,7 +218,7 @@
                         :style {layout-direction  layout-x
                                 layout-fit        autofit ; previously had manual height and width
                                 :background-color :transparent
-                                ;layout-wrap       :wrap ; doesn't work on scroll view 
+                                ;layout-wrap       :wrap ; doesn't work on scroll view
                                 :top              0
                                 :position :absolute}}
                     (merge (when-not (= sys/os "web")
@@ -210,7 +232,7 @@
                 (let [first-row?    (= row-i 0)
                       last-row?     (= row-i (-> data-indices count dec))
                       total-margins (+ margins (* margins 2 row-fit-number) margins)
-                      hw  (-> @width  
+                      hw  (-> @width
                               (- total-margins)
                               (/ row-fit-number))]
                   ^{:key (gensym)}
@@ -292,7 +314,7 @@
                                                                             :margin margin})}
                                                (str (get-in data*
                                                       [row (-> headers* (get col) first)]))]))))}])))
-  
+
 
 
 (def this-val (fn-> (.-target) (.-value)))
@@ -352,7 +374,7 @@
        :on-drag-enter #(.preventDefault %) ;; because DnD in HTMl5 is crazy...
        :on-drag-start #(.setData (.-dataTransfer %) "text/plain" "") ;; for Firefox. You MUST set something as data.
        :on-drag-end   (fn [e] (.preventDefault e) (println "drag ended!"))
-       :on-drop 
+       :on-drop
          (fn [e]
            (.preventDefault e)
            (when (drop-valid? e)
@@ -382,7 +404,7 @@
   (.focus elem)
   (if (.-setSelectionRange elem) ; Doesn't work in IE
       (let [; Double the length because Opera is inconsistent about whether a carriage return is one character or two
-            ct (-> elem (.val) count (* 2))]  
+            ct (-> elem (.val) count (* 2))]
         (.setSelectionRange elem ct ct))
       ; ... otherwise replace the contents with itself (Doesn't work in Google Chrome)
       (set! (.-value elem) (.-value elem)))
@@ -392,7 +414,7 @@
   (set! (.-scrollTop elem) js/MAX_SAFE_INTEGER))
 
 (defn field-template
-  [^Key k {:keys [initial-style changed-style 
+  [^Key k {:keys [initial-style changed-style
                   on-change on-select
                   on-click]}]
   (log/pr :debug "Initial style for" k "is" initial-style)
@@ -408,7 +430,7 @@
         on-change (or on-change default-handler)
         on-select (or on-select default-handler)
         on-click  (or on-click  default-handler)
-        default-initial-color (css/color :light-gray) 
+        default-initial-color (css/color :light-gray)
         default-changed-color :black
         changed? (cursor state [comp-key :changed?])
         hidden?  (cursor state [comp-key :hidden? ])
@@ -438,7 +460,7 @@
                    (clear-field-if-not-changed! comp-key (.-target e))
                    (on-click e)
                    )
-       :style    
+       :style
        (merge-keep-left
          (dissoc (or initial-style default-style) :color :display)
          {:color   (rx  (doto (if @changed?
@@ -487,7 +509,7 @@
            :style {:font-size     font-size
                    :width         (- cell-width font-size)
                    :height        (* font-size 1 clamp-lines)
-                   
+
                    :justify-content :flex-start}}
                       [:div {:style {:white-space   :nowrap
                                      :overflow      :hidden
@@ -565,7 +587,7 @@
             ; Don't allow to scroll sub 0
             (swap! left (fn [x] (if (> x 0) x 0)))
             (swap! top  (fn [x] (if (> x 0) x 0))))
-        scroll-left* scroll-left* 
+        scroll-left* scroll-left*
         scroll-top*  scroll-top*]
     (reset! scroller ; Because only on mount, not on render
       (new js/ZyngaScroller.Scroller
@@ -707,7 +729,7 @@
                                   (rx/as-element
                                     (row-render-fn row scroll-top width (row-height-getter))))}]])))
 
-; TODO use TableView https://github.com/bvaughn/react-virtualized/blob/master/source/Grid/Grid.example.js 
+; TODO use TableView https://github.com/bvaughn/react-virtualized/blob/master/source/Grid/Grid.example.js
 (defn test-flex-table [headers data]
   (let [ref-name (name (gensym))]
     (fn []
