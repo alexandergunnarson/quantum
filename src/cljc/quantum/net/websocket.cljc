@@ -1,31 +1,26 @@
 (ns quantum.net.websocket
-           (:require [com.stuartsierra.component              :as component]
-                     [taoensso.sente                          :as ws       ]
-           #?@(:clj [[immutant.web                            :as imm      ]
-                     [taoensso.sente.server-adapters.immutant :as a-imm    ]
-                     [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )            :as casync
-                       :refer [#?(:clj go)]                                ]
-                     [quantum.core.core
-                       :refer [lens deref*]                                ]
-                     [quantum.core.error                      :as err
-                       :refer [->ex #?(:clj try-times)]                    ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [fn->])]                           ]
-                     [quantum.core.log                        :as log      ]
-                     [quantum.core.logic                      :as logic
-                       :refer [nnil?]                                      ]
-                     [quantum.core.resources                  :as res      ]
-             #?(:clj [quantum.net.server.router               :as router   ]))
-  #?(:cljs (:require-macros
-                     [cljs.core.async.macros
-                       :refer [go]                                         ]
-                     [quantum.core.error                      :as err
-                       :refer [try-times]                                  ]
-                     [quantum.core.fn                         :as fn
-                       :refer [fn->]                                       ]
-                     [quantum.core.log                        :as log      ])))
+  (:require [com.stuartsierra.component              :as component]
+            [taoensso.sente                          :as ws       ]
+  #?@(:clj [[immutant.web                            :as imm      ]
+            [taoensso.sente.server-adapters.immutant :as a-imm    ]
+            [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
+            [quantum.core.core
+              :refer        [lens deref*]]
+            [quantum.core.error                      :as err
+              :refer        [->ex #?(:clj try-times)]
+              :refer-macros [try-times]]
+            [quantum.core.fn                         :as fn
+              :refer        [#?@(:clj [fn->])]
+              :refer-macros [fn->]]
+            [quantum.core.log                        :as log
+              :include-macros true]
+            [quantum.core.logic                      :as logic
+              :refer [nnil?]                                      ]
+            [quantum.core.thread.async               :as async
+              :refer        [promise-chan offer! #?@(:clj [go])]
+              :refer-macros [go]]
+            [quantum.core.resources                  :as res      ]
+    #?(:clj [quantum.net.server.router               :as router   ])))
 
 (defmulti event-msg-handler :id) ; Dispatch on event-id
 (def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))
@@ -69,10 +64,22 @@
                               :my-key2 "Data2"}]
                  (fn [resp] (println "Response is" resp))
                  100)}
-  [#?(:clj uid) [msg-id msg] callback & [timeout]]
-  (let [f @send-msg!]
-    (assert (nnil? f))
-    (@send-msg! #?(:clj uid) [msg-id msg] (or timeout 200) (or callback (fn [_]))))) ; to ensure no auto-close
+  ([#?(:clj uid) msg-pack callback]
+    (put! #?(:clj uid) msg-pack callback 200))
+  ([#?(:clj uid) msg-pack callback timeout]
+    (let [f @send-msg!]
+      (assert (nnil? f))
+      (@send-msg! #?(:clj uid) msg-pack timeout (or callback (fn [_])))))) ; to ensure no auto-close
+
+(defn put-chan!
+  ([#?(:clj uid) msg-pack]
+    (put-chan! #?(:clj uid) msg-pack nil))
+  ([#?(:clj uid) msg-pack timeout]
+    (let [ret (promise-chan)]
+      (put! #?(:clj uid) msg-pack
+        (fn [resp] (offer! ret resp))
+        timeout)
+      ret)))
 
 (defn try-put!
   "Try to send messsage @?times times with intervals of @?sleep
