@@ -116,7 +116,7 @@
              (if (== x Long/MIN_VALUE)
                  (-> x ->big-integer -* ->bigint)
                  (-* x))))
-           ([x y] (#?(:clj core/- :cljs --bin-) x y)))
+           ([#?(:clj x :cljs ^number? x) y] (#?(:clj core/- :cljs --bin-) x y)))
 
 #?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
 
