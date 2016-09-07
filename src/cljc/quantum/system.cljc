@@ -87,7 +87,6 @@
             :port                   4334
             :create-if-not-present? true
             :default-partition      :db.part/test
-            :init-schemas?          true
             :schemas                schemas ; TODO update these
             :txr-props {:start?   true
                         :alias    "local"}})
@@ -161,7 +160,7 @@
     (reset! db/conn* (-> @sys-map :db #?(:clj :backend :cljs :ephemeral) :conn #?(:clj deref*)))
     #?(:clj (reset! dbc/part* (-> @sys-map :db :backend :default-partition)))
 
-    #?(:cljs (when (-> @sys-map :db :ephemeral :reactive?)
+    #_(:cljs (when (-> @sys-map :db :ephemeral :reactive?)
                (db-rx/react! @dbc/conn*)
                (log/pr ::debug "Ephemeral DB made reactive."))) ; Is this necessary?
     true))
@@ -170,7 +169,7 @@
 (defmacro create-system-vars
   "Generally @system-kw should be simply ::system.
    @config : A config-map."
-  [system-kw config]
+  [stop-system? system-kw config]
   (let [main-sym (with-meta '-main {:export true})
         system-code `(lens res/systems ~system-kw)
         err      (if-cljs &env 'js/Error 'Throwable)]
@@ -178,7 +177,7 @@
          (def ~'sys-map (lens ~'system (fn-> :sys-map deref*)))
 
          (try
-           (when (deref* ~system-code)
+           (when (and ~stop-system? (deref* ~system-code))
              (res/stop! @~system-code)
              (when-let [sys-map# (-> res/systems deref ~system-kw :sys-map deref)]
                (res/stop! sys-map#)))
