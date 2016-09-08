@@ -276,6 +276,10 @@
      ; com.datomic/datomic-free
      ; org.immutant/web
      [org.jboss.logging/jboss-logging          "3.1.0.GA"]
+     ; com.datomic/datomic-free
+     ; org.immutant/web
+     [ch.qos.logback/logback-classic           "1.1.7"
+       :exclusions [org.slf4j/*]                         ]
      ; org.ow2.asm/*
      ;   org.clojure/tools.emitter.jvm
      ;   org.apache.tika/tika-parsers
