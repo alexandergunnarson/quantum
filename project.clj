@@ -212,6 +212,9 @@
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis
                     commons-codec]                                ]
+     ; ==== APIS ==== ;
+     [com.amazonaws/aws-java-sdk                "1.11.32"
+       :exclusions [com.fasterxml.jackson.core/jackson-databind]]
      ; ==== PARSING ==== ;
      [instaparse                                "1.4.2"           ]
      [com.lucasbradstreet/instaparse-cljs       "1.4.1.2"         ]
