@@ -74,6 +74,15 @@
   (clojure.lang.Reflector/invokeInstanceMethod obj method
     (into-array Object args))))
 
+#?(:clj
+(defn invoke-private
+  ([^Class c ^String name- params args]
+    (invoke-private c name- params nil args))
+  ([^Class c ^String name- params target args]
+    (let [m (doto (.getDeclaredMethod c name- (into-array Class params))
+                  (.setAccessible true))]
+      (.invoke m nil (into-array Object args))))))
+
 ; from zcaudate/hara.reflect.types.modifiers
 
 (def flags
@@ -101,7 +110,7 @@
 (def method-flags
   {:bridge         64    ;; java.lang.reflect.Modifier/BRIDGE
    :varargs        128})    ;; java.lang.reflect.Modifier/VARARGS
-   
+
 #_(defn enum-values
   {:source "zcaudate/hara.object.enum"}
   [type]
@@ -110,12 +119,12 @@
 
 #_(defn max-inputs
   "finds the maximum number of inputs that a function can take
-  
+
   (max-inputs (fn ([a]) ([a b])) 4)
   => 2
   (max-inputs (fn [& more]) 4)
   => 4
-  
+
   (max-inputs (fn ([a])) 0)
   => throws"
   {:source "zcaudate/hara.concurrent.procedure"}
@@ -129,7 +138,7 @@
           (apply max carr)))))
 
 #?(:clj
-(defnt qualified-name 
+(defnt qualified-name
   {:todo ["Different ns"]}
   ([^clojure.lang.Var x]
     (str (-> x meta :ns ns-name name) "/"
