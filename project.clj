@@ -211,6 +211,7 @@
      ; ==== PARSING ==== ;
      [instaparse                                "1.4.2"           ]
      [com.lucasbradstreet/instaparse-cljs       "1.4.1.2"         ]
+     [automat                                   "0.2.0"           ]
      ; ==== MISCELLANEOUS ====
      [org.clojure/core.match                    "0.3.0-alpha4"    ]
      ; ==== CODE TRANSFORMATION ====
