@@ -32,9 +32,13 @@
          [org.clojure/core.async                "0.2.385"         ]
          [servant                               "0.1.5"           ]
          [co.paralleluniverse/pulsar            "0.7.5"
-           :exclusions [org.slf4j/* potemkin
-                        org.clojure/core.match]]
-         [co.paralleluniverse/quasar-core       "0.7.5"           ] ; :classifier "jdk8"
+           :exclusions [org.slf4j/*
+                        potemkin
+                        org.clojure/core.match
+                        org.ow2.asm/*
+                        com.esotericsoftware/reflectasm]]
+         [co.paralleluniverse/quasar-core       "0.7.5"
+           :exclusions [com.esotericsoftware/reflectasm]] ; :classifier "jdk8"
          ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
@@ -154,19 +158,19 @@
        [org.slf4j/jul-to-slf4j                  "1.7.21"          ]
        [org.slf4j/jcl-over-slf4j                "1.7.21"          ]
      ; ==== UI ====
+       ; FORM
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ]
        [reagent                                 "0.6.0-rc"
          :exclusions [org.json/json]                              ]
-       ;[freactive                              "0.1.0"           ] ; a pure ClojureScript answer to react + reagent
        ;[domina                                 "1.0.3"           ] ; DOM manipulation
-       ; CSS
+       ; STYLE
        [garden                                  "1.3.2"           ]
      ; ==== UUID ====
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ]
        [danlentz/clj-uuid                       "0.1.6"           ]
      ; ==== HTTP ====
-       [com.taoensso/sente                      "1.8.1"
+       [com.taoensso/sente                      "1.8.1"             ; WebSockets
          :exclusions [com.taoensso/encore]                        ]
        [clj-http                                "3.1.0"
          :exclusions [riddley
@@ -220,12 +224,14 @@
        ; COMPILE/TRANSPILE
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
        [com.github.javaparser/javaparser-core   "2.4.0"           ] ; Parse Java source code
-       [org.clojure/tools.emitter.jvm           "0.1.0-beta5"     ]
+       [org.clojure/tools.emitter.jvm           "0.1.0-beta5"
+         :exclusions [org.ow2.asm/*]]
        [org.clojure/tools.analyzer              "0.6.9"           ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.13"
-       :exclusions [org.apache.poi/poi org.apache.poi/poi-ooxml]]
+       :exclusions [org.apache.poi/poi org.apache.poi/poi-ooxml
+                    org.ow2.asm/*]]
      ; DATAGRID
      [org.apache.poi/poi                        "3.14"            ]
      [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
@@ -242,10 +248,13 @@
        :exclusions [org.xerial.snappy/snappy-java]]
      [net.jpountz.lz4/lz4                       "1.3"             ]
      ; ==== MAP-REDUCE ====
-     [gorillalabs/sparkling                     "1.2.5"]
+     [gorillalabs/sparkling                     "1.2.5"
+       :exclusions [org.ow2.asm/*
+                    com.esotericsoftware.reflectasm/reflectasm]]
        [org.apache.spark/spark-core_2.10        "1.6.1"
          :exclusions [com.google.inject/guice
-                      org.xerial.snappy/snappy-java]]
+                      org.xerial.snappy/snappy-java
+                      asm]]
        [com.github.fommil.netlib/all            "1.1.2"
          :extension "pom"]
        [com.googlecode.matrix-toolkits-java/mtj "1.0.2"]
@@ -256,25 +265,33 @@
                       org.scalamacros/quasiquotes_2.10
                       org.codehaus.janino/commons-compiler]]
      ; ==== DEPENDENCY-CONFLICTED ====
-     ; quantum/datomic-pro, spark
+     ; quantum/datomic-pro
+     ; spark
      [org.codehaus.janino/commons-compiler-jdk "2.6.1"   ]
-     ; byte-transforms, spark
+     ; byte-transforms
+     ; spark
      [org.xerial.snappy/snappy-java            "1.1.1.7" ]
      ; many
      [potemkin                                 "0.4.3"   ]
-     ; com.datomic/datomic-free, org.immutant/web
-     [org.jboss.logging/jboss-logging          "3.1.0.GA"]]
-   :injections [#_(reset! ns/externs? false)
-                (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
+     ; com.datomic/datomic-free
+     ; org.immutant/web
+     [org.jboss.logging/jboss-logging          "3.1.0.GA"]
+     ; org.ow2.asm/*
+     ;   org.clojure/tools.emitter.jvm
+     ;   org.apache.tika/tika-parsers
+     ;   co.paralleluniverse/pulsar
+     ;   org.apache.spark/spark-core_2.10
+     ; co.paralleluniverse/pulsar
+     ; gorillalabs/sparkling
+     [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
+     ]
+   #_:injections #_[(let [oldv (ns-resolve (doto 'clojure.stacktrace require)
                                        'print-cause-trace)
                       newv (ns-resolve (doto 'clj-stacktrace.repl require)
                                       'pst)]
                   (alter-var-root oldv (constantly (deref newv))))] ; for :aot
    :profiles
-   {:dev {:injections []
-              ; [(do `       await-forbasesF
-              ;      (clojure.main/repl :print clojure.pprint/pprint)
-              ; )]
+   {:dev {;:injections    [(clojure.main/repl :print clojure.pprint/pprint)]
           :resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
@@ -312,7 +329,7 @@
             "clj:autotester"         ["do" "clean,"
                                            "test-refresh"]
             "count-loc"              ["vanity"]
-            ":cljfast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
+            "clj:fast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
@@ -364,6 +381,6 @@
                         :pretty-print   false
                         ;:parallel-build true
                         }}}}
-  :figwheel {:http-server-root "public" ;; default and assumes "resources"
-             :server-port 3450
-             :css-dirs ["dev-resources/public/css"]})
+  :figwheel {:http-server-root "public" ; default and assumes "resources"
+             :server-port      3450
+             :css-dirs         ["dev-resources/public/css"]})
