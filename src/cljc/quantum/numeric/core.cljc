@@ -1,21 +1,18 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
-           (:refer-clojure :exclude [reduce])
-           (:require
-             [quantum.core.numeric     :as num
-               :refer [#?@(:clj [sqrt])]
-               #?@(:cljs [:refer-macros [sqrt]])]
-             [quantum.core.error       :as err
-               :refer [->ex]]
-             [quantum.core.collections :as coll
-               :refer [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]]
-             [quantum.core.vars
-               :refer [#?(:clj defalias)]])
-  #?(:cljs (:require-macros
-             [quantum.core.collections
-               :refer [reduce join]]
-             [quantum.core.vars
-               :refer [defalias]])))
+  (:refer-clojure :exclude [reduce])
+  (:require
+    [quantum.core.numeric     :as num
+      :refer        [#?@(:clj [sqrt])]
+      :refer-macros [sqrt]]
+    [quantum.core.error       :as err
+      :refer        [->ex]]
+    [quantum.core.collections :as coll
+      :refer        [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]
+      :refer-macros [reduce join]]
+    [quantum.core.vars
+      :refer        [#?(:clj defalias)]
+      :refer-macros [defalias]]))
 
 #_(defalias $ exp)
 
@@ -93,6 +90,11 @@
 ;      x
 ;      (recur y (.modulo x y)))))
 
+(defn call-max [f a b]
+  (if (> a b)
+      (f a b)
+      (f b a)))
+
 (defn gcd
   "(gcd a b) computes the greatest common divisor of a and b."
   ([a b]
@@ -102,4 +104,29 @@
   ([a b & args]
     (reduce gcd (gcd a b) args)))
 
-(defn sq [x] (* x x)) ; TODO cube
+(defn- gcf*
+  [a b]
+  (if (zero? b)
+      a
+      (recur b (num/mod a b))))
+
+(defn gcf
+  "Using Euclid's algorithm"
+  [a b]
+  (call-max gcf* a b))
+
+(defn- gcf-extended*
+  [a b]
+  (if (zero? b)
+      [1 0 a]
+      (let [[x' y' div] (ee b (num/mod a b))]
+        [y' (- x' (* (num/floor (/ a b)) y')) div])))
+
+(defn gcf-extended
+  "Using the Extended Euclid algorithm"
+  [a b]
+  (call-max gcf* a b))
+
+(defn sq [x] (* x x))
+
+(defn cube [x] (* x x x))
