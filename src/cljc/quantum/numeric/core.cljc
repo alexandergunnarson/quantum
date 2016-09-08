@@ -3,16 +3,19 @@
   (:refer-clojure :exclude [reduce])
   (:require
     [quantum.core.numeric     :as num
-      :refer        [#?@(:clj [sqrt])]
-      :refer-macros [sqrt]]
+      :refer        [#?@(:clj [sqrt mod])]
+      :refer-macros [sqrt mod]]
+    [quantum.core.data.binary :as bin
+      :refer        [>>]]
     [quantum.core.error       :as err
-      :refer        [->ex]]
+      :refer        [->ex TODO]]
     [quantum.core.collections :as coll
       :refer        [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]
       :refer-macros [reduce join]]
     [quantum.core.vars
       :refer        [#?(:clj defalias)]
-      :refer-macros [defalias]]))
+      :refer-macros [defalias]]
+    [quantum.core.numeric.misc :as misc]))
 
 #_(defalias $ exp)
 
@@ -95,23 +98,17 @@
       (f a b)
       (f b a)))
 
-(defn gcd
-  "(gcd a b) computes the greatest common divisor of a and b."
-  ([a b]
-  (if (zero? b)
-      a
-      (recur b (num/mod a b))))
-  ([a b & args]
-    (reduce gcd (gcd a b) args)))
+(defalias gcd misc/gcd)
 
 (defn- gcf*
   [a b]
   (if (zero? b)
       a
-      (recur b (num/mod a b))))
+      (recur b (mod a b))))
 
 (defn gcf
   "Using Euclid's algorithm"
+  {:O "O(n^3)"}
   [a b]
   (call-max gcf* a b))
 
@@ -119,7 +116,7 @@
   [a b]
   (if (zero? b)
       [1 0 a]
-      (let [[x' y' div] (ee b (num/mod a b))]
+      (let [[x' y' div] (ee b (mod a b))]
         [y' (- x' (* (num/floor (/ a b)) y')) div])))
 
 (defn gcf-extended
@@ -130,3 +127,24 @@
 (defn sq [x] (* x x))
 
 (defn cube [x] (* x x x))
+
+(defn mod-pow
+  "Computes the modular power: (b^e) mod m"
+  {:adapted-from "Applied Cryptography by Bruce Schneier, via Wikipedia"}
+  [b e m]
+  (if (= m 1)
+      0
+      ; Elided assertion of pseudocode due to Clojure's numeric auto-promotion
+      (loop [ret 1
+             b'  (mod b m)
+             e'  e]
+        (if (> e' 0)
+            (recur (if (= 1 (mod e' 2))
+                       (mod (* ret b') m)
+                       ret)
+                   (>> e' 1)
+                   (mod (sq b') m))
+            ret))))
+
+(defn prime? [x]
+  )
