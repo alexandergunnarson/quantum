@@ -2,20 +2,30 @@
   ^{:doc "System-level (environment) vars such as |os|."
     :attribution "Alex Gunnarson"}
   quantum.core.system
-           (:require [quantum.core.collections :as coll
-                       :refer [#?(:clj containsv?)]       ]
-                     [quantum.core.logic       :as logic
-                       :refer [#?@(:clj [condpc coll-or])]]
-                     [quantum.core.string      :as str    ]
-                     [quantum.core.error       :as err
-                       :include-macros true               ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections :as coll
-                       :refer [containsv?]                ]
-                     [quantum.core.logic       :as logic
-                       :refer [condpc coll-or]            ]))
-  #?(:clj (:import java.io.File
-                   java.lang.management.ManagementFactory)))
+           (:require
+     #?(:clj [environ.core
+               :refer [env]])
+             [quantum.core.core        :as qcore]
+             [quantum.core.collections :as coll
+               :refer        [#?(:clj containsv?)]
+               :refer-macros [containsv?]]
+             [quantum.core.logic       :as logic
+               :refer        [#?@(:clj [condpc coll-or])]
+               :refer-macros [condpc coll-or]]
+             [quantum.core.log         :as log
+               :include-macros true]
+             [quantum.core.string      :as str]
+             [quantum.core.error       :as err
+               :include-macros true]
+             [quantum.core.reflect     :as refl]
+             [quantum.core.vars
+               :refer        [#?(:clj defalias)]
+               :refer-macros [defalias]])
+  #?(:clj (:import (java.io   File)
+                   (java.util Map Collections)
+                   (java.lang.reflect Field))))
+
+(log/this-ns)
 
 ; TODO possibly move JS feature detection here?
 
@@ -105,7 +115,7 @@
           (coll-or "nix" "nux" "aix") :unix
           "sunos"                     :solaris))))
 
-(def separator 
+(def separator
   #?(:cljs (condp = os :windows "\\" "/") ; TODO make less naive
      :clj  (str (File/separatorChar)))) ; string because it's useful in certain functions that way
 
@@ -114,14 +124,54 @@
     :windows "\\\\"
     "/"))
 
-#?(:clj (defn this-pid [] (->> (ManagementFactory/getRuntimeMXBean) (.getName))))
+#?(:clj (defalias pid qcore/pid))
 
 #?(:clj
 (defn env-var
   "Gets an environment variable."
   {:usage '(env-var "HOME")}
-  [env-var-to-lookup]
-  (-> (System/getenv) (get env-var-to-lookup))))
+  [v]
+  (-> (System/getenv) (get v))))
+
+#?(:clj
+(defn merge-env!
+  {:from "http://stackoverflow.com/questions/318239/how-do-i-set-environment-variables-from-java"}
+  [^Map newenv]
+  (try
+    (let [newenv (->> newenv
+                      (map (fn [[^String k ^String v]]
+                             [(refl/invoke-private
+                                (Class/forName "java.lang.ProcessEnvironment$Variable")
+                                "valueOf"
+                                [String] [k])
+                              (refl/invoke-private
+                                (Class/forName "java.lang.ProcessEnvironment$Value")
+                                "valueOf"
+                                [String] [v])]))
+                      (into {}))
+          ^Class processEnvironmentClass (Class/forName "java.lang.ProcessEnvironment")
+          ^Field theEnvironmentField
+            (doto (.getDeclaredField processEnvironmentClass "theEnvironment")
+                  (.setAccessible true))
+          _ (doto ^Map (.get theEnvironmentField nil)
+                       (.putAll newenv))
+          ^Field theCaseInsensitiveEnvironmentField
+            (doto (.getDeclaredField processEnvironmentClass "theCaseInsensitiveEnvironment")
+                  (.setAccessible true))
+          _ (doto ^Map (.get theCaseInsensitiveEnvironmentField nil)
+                       (.putAll newenv))])
+    (catch NoSuchFieldException e
+      (let [^"[Ljava.lang.Class;" classes
+             (.getDeclaredClasses Collections)
+            env (System/getenv)]
+        (doseq [^Class cl classes]
+          (when (= "java.util.Collections$UnmodifiableMap" (.getName cl))
+            (let [^Field field (doto (.getDeclaredField cl "m")
+                                     (.setAccessible true))
+                  ^Map  m (.get field env)
+                  _ (doto ^Map m
+                               (.putAll newenv))]))))))
+  (System/getenv)))
 
 #?(:clj
 (defn- java-version
