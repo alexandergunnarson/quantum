@@ -18,8 +18,8 @@
                     :passphrase :env/public-repo-s3-password
                     :checksum   :warn}}
   :plugins [[lein-environ  "1.0.3" ]
-            [lein-essthree "0.2.1" ]
-            [lein-ancient  "0.6.10"]]
+            [lein-essthree "0.2.1"
+              :exclusions [org.clojure/tools.reader]]]
   :dependencies
     [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha10"] ; alpha11 is annoying ; With hardlinking
      [org.clojure/clojurescript                 "1.9.216" #_"1.9.93"         ] ; Latest (as of 7/28/2016)
@@ -31,8 +31,10 @@
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.385"         ]
          [servant                               "0.1.5"           ]
-         [co.paralleluniverse/pulsar            "0.7.5"           ] ; If you include it, it conflicts
-         [co.paralleluniverse/quasar-core       "0.7.5"           ] ; :classifier "jdk8" 
+         [co.paralleluniverse/pulsar            "0.7.5"
+           :exclusions [org.slf4j/* potemkin
+                        org.clojure/core.match]]
+         [co.paralleluniverse/quasar-core       "0.7.5"           ] ; :classifier "jdk8"
          ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
@@ -43,7 +45,7 @@
        #_[org.clojure/core.rrb-vector           "0.0.11"          ]
          [quantum/org.clojure.core.rrb-vector   "0.0.12"          ]
          [org.clojure/data.finger-tree          "0.0.2"           ]
-         ; MAP / SET     
+         ; MAP / SET
          [org.flatland/ordered                  "1.5.3"           ]
          [org.clojure/data.avl                  "0.0.13"          ]
          [org.clojure/data.int-map              "0.2.2"           ]
@@ -55,13 +57,13 @@
            ; XML
            [org.clojure/data.xml                "0.0.8"
              :exclusions [org.clojure/clojure]                    ]
-     
+
        ; ==== COLLECTIONS ====
          ; CORE
        ; ==== CONVERT ====
          [byte-streams                          "0.2.2"           ]
          [org.clojure/tools.reader              "1.0.0-beta3"    ]
-         #_[gloss                               "0.2.5"           ] 
+         #_[gloss                               "0.2.5"           ]
        ; ==== CRYPTOGRAPHY ====
          [com.lambdaworks/scrypt                "1.4.0"           ]
          [org.mindrot/jbcrypt                   "0.3m"            ]
@@ -77,11 +79,12 @@
            :exclusions [org.clojure/tools.reader
                         org.clojure/clojure
                         org.json/json]                            ]
-         [iota                                  "1.1.3"       
+         [iota                                  "1.1.3"
            :exclusions [org.codehaus.jsr166-mirror/jsr166y
                         org.clojure/clojure]                      ]
          [com.cognitect/transit-clj             "0.8.285"
            :exclusions [com.fasterxml.jackson.core/jackson-core]  ]
+         [com.cognitect/transit-cljs            "0.8.239"         ]
        ; ==== JAVA/CLASS ====
          [org.clojure/java.classpath            "0.2.3"           ]
          [alembic                               "0.3.2"           ]
@@ -89,29 +92,29 @@
          [com.carrotsearch/java-sizeof          "0.0.5"           ] ; Get size of Java Objects
        ; ==== MACROS ====
          [riddley                               "0.1.12"          ]
-         #_[potemkin                            "0.3.11"           
+         #_[potemkin                            "0.3.11"
            :exclusions [riddley]                                  ]
-       ; ==== NUMERIC ====              
+       ; ==== NUMERIC ====
          [net.jafama/jafama                     "2.1.0"           ]
          [com.gfredericks/goog-integer          "1.0.0"           ]
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [quantum/java                          "1.3"             ]
        ; ==== PRINT ====
-         [fipp                                  "0.6.6"           
+         [fipp                                  "0.6.6"
            :exclusions [org.clojure/core.rrb-vector]]
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ]
        ; ==== STRING ====
          ; REGEX
-         [frak                                  "0.1.6"           ]   
-       ; ==== TIME ====    
+         [frak                                  "0.1.6"           ]
+       ; ==== TIME ====
          #_[clj-time                            "0.7.0"           ] ; similar to JODA time
          [com.andrewmcveigh/cljs-time           "0.4.0"
            :exclusions [org.json/json]                            ]
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
-         ; BENCH      
+         ; BENCH
          [criterium                             "0.4.4"           ]
          ; DEBUG
          [clj-stacktrace                        "0.2.8"           ]
@@ -122,20 +125,38 @@
          [environ  "1.0.3"  ]
      ; ==== DB ====
        ; DATOMIC
-       [quantum/datomic-pro                     "0.9.5206"
-         :exclusions [joda-time]                                  ]
+      #_[quantum/datomic-pro                     "0.9.5206" ; Doesn't work, apparnetly
+         :exclusions [joda-time
+                      org.slf4j/slf4j-nop
+                      org.slf4j/log4j-over-slf4j
+                      org.slf4j/jul-to-slf4j
+                      org.slf4j/jcl-over-slf4j
+                      org.codehaus.janino/commons-compiler-jdk]   ]
+       [com.datomic/datomic-free                "0.9.5394"
+         :exclusions [org.slf4j/slf4j-nop
+                      org.slf4j/log4j-over-slf4j
+                      org.jboss.logging/jboss-logging]]
        [datascript                              "0.15.0"          ]
-       [datascript-transit                      "0.2.0"           ]
+       [datascript-transit                      "0.2.0"
+         :exclusions [com.cognitect/transit-cljs]                 ]
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ]
        [posh                                    "0.3.5"           ]
-       [quantum/datsync                         "0.0.1-4-11-2016" ]
+       [quantum/datsync                         "0.0.1-4-11-2016"
+         :exclusions [org.slf4j/slf4j-nop
+                      org.clojure/core.match]]
        [re-frame                                "0.8.0-alpha11"   ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ]
+     ; ==== INTEROP ====
+       [org.python/jython-standalone            "2.5.3"           ]
+     ; ==== LOGGING ====
+       [org.slf4j/slf4j-log4j12                 "1.7.21"          ]
+       [org.slf4j/jul-to-slf4j                  "1.7.21"          ]
+       [org.slf4j/jcl-over-slf4j                "1.7.21"          ]
      ; ==== UI ====
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ]
-       [reagent                                 "0.5.1"
+       [reagent                                 "0.6.0-rc"
          :exclusions [org.json/json]                              ]
        ;[freactive                              "0.1.0"           ] ; a pure ClojureScript answer to react + reagent
        ;[domina                                 "1.0.3"           ] ; DOM manipulation
@@ -144,8 +165,8 @@
      ; ==== UUID ====
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ]
        [danlentz/clj-uuid                       "0.1.6"           ]
-     ; ==== HTTP ====      
-       [com.taoensso/sente                      "1.8.1"           
+     ; ==== HTTP ====
+       [com.taoensso/sente                      "1.8.1"
          :exclusions [com.taoensso/encore]                        ]
        [clj-http                                "3.1.0"
          :exclusions [riddley
@@ -154,12 +175,13 @@
                       com.fasterxml.jackson.core/jackson-core
                       commons-codec
                       potemkin]                                   ]
-       [cljs-http                               "0.1.41"          ]
+       [cljs-http                               "0.1.41"
+         :exclusions [com.cognitect/transit-cljs]]
        [less-awful-ssl                          "1.0.1"           ]
        [http-kit                                "2.1.19"
-         :exclusions [org.clojure/clojure]                        ] 
+         :exclusions [org.clojure/clojure]                        ]
        [org.apache.httpcomponents/httpcore      "4.4.4"           ]
-       [org.apache.httpcomponents/httpclient    "4.5.2" 
+       [org.apache.httpcomponents/httpclient    "4.5.2"
          :exclusions [commons-codec]                              ]
        [org.apache.httpcomponents/httpmime      "4.5.2"
          :exclusions [commons-codec]                              ]
@@ -170,9 +192,11 @@
                       javax.servlet/servlet-api
                       clj-http]                                   ]
        [org.eclipse.jetty/jetty-server          "9.4.0.M0"        ]
-       [org.immutant/web                        "2.1.4"            
-         :exclusions [clj-tuple org.jboss.logging/jboss-logging]  ]
-       [aleph                                   "0.4.1"           
+       [org.immutant/web                        "2.1.4"
+         :exclusions [clj-tuple
+                      ch.qos.logback/logback-classic
+                      org.jboss.logging/jboss-logging]  ]
+       [aleph                                   "0.4.1"
          :exclusions [primitive-math]                             ]
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
@@ -187,8 +211,10 @@
      ; ==== PARSING ==== ;
      [instaparse                                "1.4.2"           ]
      [com.lucasbradstreet/instaparse-cljs       "1.4.1.2"         ]
+     ; ==== MISCELLANEOUS ====
+     [org.clojure/core.match                    "0.3.0-alpha4"    ]
      ; ==== CODE TRANSFORMATION ====
-       ; META (CODE)      
+       ; META (CODE)
        ;[repetition-hunter                      "1.0.0"           ]
        ; COMPILE/TRANSPILE
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
@@ -197,7 +223,8 @@
        [org.clojure/tools.analyzer              "0.6.9"           ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
-     [org.apache.tika/tika-parsers              "1.13"            ]
+     [org.apache.tika/tika-parsers              "1.13"
+       :exclusions [org.apache.poi/poi org.apache.poi/poi-ooxml]]
      ; DATAGRID
      [org.apache.poi/poi                        "3.14"            ]
      [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
@@ -207,13 +234,35 @@
      ; TESTING
      [org.clojure/test.generative               "0.5.2"           ]
      [org.clojure/test.check                    "0.9.0"           ]
+     [lein-doo                                  "0.1.7"           ]
      ; ==== MULTIPLE ====
      ; COMPRESSION, HASHING...
-     [byte-transforms                           "0.1.4"           ]
+     [byte-transforms                           "0.1.4"
+       :exclusions [org.xerial.snappy/snappy-java]]
      [net.jpountz.lz4/lz4                       "1.3"             ]
-     ; ==== MISCELLANEOUS ==== 
-     [lein-doo "0.1.7"]
-     ]
+     ; ==== MAP-REDUCE ====
+     [gorillalabs/sparkling                     "1.2.5"]
+       [org.apache.spark/spark-core_2.10        "1.6.1"
+         :exclusions [com.google.inject/guice
+                      org.xerial.snappy/snappy-java]]
+       [com.github.fommil.netlib/all            "1.1.2"
+         :extension "pom"]
+       [com.googlecode.matrix-toolkits-java/mtj "1.0.2"]
+       [org.apache.spark/spark-mllib_2.10       "1.6.1"
+         :exclusions [com.google.inject/guice
+                      org.slf4j/jcl-over-slf4j
+                      org.xerial.snappy/snappy-java
+                      org.scalamacros/quasiquotes_2.10
+                      org.codehaus.janino/commons-compiler]]
+     ; ==== DEPENDENCY-CONFLICTED ====
+     ; quantum/datomic-pro, spark
+     [org.codehaus.janino/commons-compiler-jdk "2.6.1"   ]
+     ; byte-transforms, spark
+     [org.xerial.snappy/snappy-java            "1.1.1.7" ]
+     ; many
+     [potemkin                                 "0.4.3"   ]
+     ; com.datomic/datomic-free, org.immutant/web
+     [org.jboss.logging/jboss-logging          "3.1.0.GA"]]
    :injections [#_(reset! ns/externs? false)
                 (let [oldv (ns-resolve (doto 'clojure.stacktrace require)
                                        'print-cause-trace)
@@ -239,6 +288,8 @@
                     [jonase/eastwood                   "0.2.1"]
                     [lein-cloverage                    "1.0.6"]
                     [quantum/lein-vanity               "0.3.0-quantum"]
+                    [lein-ancient                      "0.6.10"
+                      :exclusions [com.amazonaws/aws-java-sdk-s3]]
                     ]}
     :test {:jvm-opts ["-Xmx3g"]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
@@ -259,7 +310,8 @@
                                       "doo" "phantom" "test" "once"]
             "clj:autotester"         ["do" "clean,"
                                            "test-refresh"]
-            "count-loc"              ["vanity"]}
+            "count-loc"              ["vanity"]
+            ":cljfast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
@@ -276,7 +328,7 @@
   :test-paths     ["test/cljs" "test/clj" "test/cljc"]
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
-  :java-agents [#_[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8" 
+  :java-agents [#_[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8"
                 ; This for HTTP/2 support
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
@@ -311,6 +363,6 @@
                         :pretty-print   false
                         ;:parallel-build true
                         }}}}
-  :figwheel {:http-server-root "public" ;; default and assumes "resources" 
+  :figwheel {:http-server-root "public" ;; default and assumes "resources"
              :server-port 3450
              :css-dirs ["dev-resources/public/css"]})

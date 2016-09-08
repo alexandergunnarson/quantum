@@ -95,7 +95,7 @@ Reducers operations in quantum.core.reducers (exposed via quantum.core.collectio
      flatten-1+
      frequencies+
      (into []))
-```     
+```
 without creating intermediate sequences or incurring the cost of laziness. This has already been accomplished in [clojure.core.reducers](http://clojure.org/reducers), so it's not a new idea, but it does add various reducer functions to the existing clojure.core.reducers ones.
 
 ####[quantum.core.log](https://github.com/alexandergunnarson/quantum/tree/master/src/cljc/quantum/core/log.cljc)
@@ -147,6 +147,10 @@ React, Meteor, and Ember follow this pattern.
 ["Juggling a multimodule project over multiple repos is like trying to teach a newborn baby how to ride a bike."](https://github.com/babel/babel/blob/master/doc/design/monorepo.md)
 
 See [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) and [here](http://danluu.com/monorepo/) for a more complete justification.
+
+###Good practices for dependency hell
+
+- When two dependencies A and B have a conflicting common dependency C, try to explicitly declare C and its version in the project.clj and annotate the conflict.
 
 Copyright and License
 -
