@@ -130,7 +130,8 @@
 
 (defn mod-pow
   "Computes the modular power: (b^e) mod m"
-  {:adapted-from "Applied Cryptography by Bruce Schneier, via Wikipedia"}
+  {:adapted-from "Applied Cryptography by Bruce Schneier, via Wikipedia"
+   :O "O(log(@e))"}
   [b e m]
   (if (= m 1)
       0
