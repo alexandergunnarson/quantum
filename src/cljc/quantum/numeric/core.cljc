@@ -116,13 +116,13 @@
   [a b]
   (if (zero? b)
       [1 0 a]
-      (let [[x' y' div] (ee b (mod a b))]
+      (let [[x' y' div] (gcf-extended* b (mod a b))]
         [y' (- x' (* (num/floor (/ a b)) y')) div])))
 
 (defn gcf-extended
   "Using the Extended Euclid algorithm"
   [a b]
-  (call-max gcf* a b))
+  (call-max gcf-extended* a b))
 
 (defn sq [x] (* x x))
 
@@ -147,5 +147,7 @@
                    (mod (sq b') m))
             ret))))
 
-(defn prime? [x]
-  )
+(defn prime?
+  "Checks whether @x is prime."
+  [x]
+  (TODO))
