@@ -1,29 +1,25 @@
 (ns quantum.measure.core
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )  :as core    ]
-                     [quantum.core.error      :as err
-                       :refer [->ex #?(:clj throw-unless)]]
-                     [quantum.core.numeric    :as num     ]
-                     [quantum.core.string     :as str     ]
-             #?(:clj [quantum.core.graph      :as g
-                       :refer [->graph ->digraph
-                               ->weighted-digraph]        ])
-                     [quantum.core.fn         :as fn
-                       :refer [#?@(:clj [f*n])]           ]
-                     [quantum.core.logic      :as logic
-                       :refer [#?@(:clj [eq? whenc ifn])] ]
-                     [quantum.measure.reg                 ]
-                     [quantum.core.macros.core :as cmacros
-                       :refer [#?(:clj if-cljs)]          ])
-  #?(:cljs (:require-macros     
-                    [quantum.core.error       :as err
-                      :refer [throw-unless]               ]
-                    [quantum.core.fn          :as fn
-                       :refer [f*n]                       ]
-                    [quantum.core.logic       :as logic
-                       :refer [eq? whenc ifn]             ]
-                    [quantum.core.macros.core :as cmacros
-                       :refer [if-cljs]                   ])))
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )  :as core    ]
+    [quantum.core.error      :as err
+      :refer        [->ex #?(:clj throw-unless)]
+      :refer-macros [throw-unless]]
+    [quantum.core.numeric    :as num     ]
+    [quantum.core.string     :as str     ]
+    [quantum.core.graph      :as g
+      :refer        [#?@(:clj [->graph ->digraph
+                               ->weighted-digraph])]]
+    [quantum.core.fn         :as fn
+      :refer        [#?@(:clj [f*n])]
+      :refer-macros [f*n]]
+    [quantum.core.logic      :as logic
+      :refer        [#?@(:clj [eq? whenc ifn])]
+      :refer-macros [eq? whenc ifn]]
+    [quantum.measure.reg                 ]
+    [quantum.core.macros.core :as cmacros
+      :refer        [#?(:clj if-cljs)]
+      :refer-macros [if-cljs]]))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}
@@ -64,7 +60,7 @@
                               (assoc-in m [from to] multiplier-f)))
                     {}
                     fn-chart))]
-             (concat 
+             (concat
                ; Incorporate the new units in
                (list 'do)
                `[(swap! quantum.measure.reg/reg-units
@@ -79,7 +75,7 @@
                (condp = emit-type
                  :map
                    (list (list 'def 'conversion-map conversion-map))
-                 :code    
+                 :code
                    (core/for [[[from to] multiplier] fn-chart]
                      (let [multiplier (num-cast (/ 1 multiplier))
                            fn-name (symbol (str (->str from "-") "->" (->str to "-")))]
