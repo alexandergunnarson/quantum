@@ -1,7 +1,8 @@
 (ns quantum.validate.email
-  (:require
-    [quantum.core.string :as str]
-    [quantum.validate.domain]))
+          (:require
+            [quantum.core.string :as str]
+            [quantum.validate.domain])
+  #?(:clj (:import java.util.regex.Matcher)))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
 (def email:valid-chars       (str "[^\\s" email:special-chars "]"))
@@ -14,7 +15,7 @@
 
 (def ^:const max-email:user-length 64)
 
-; getInstance(boolean allowLocal, boolean allowTld) 
+; getInstance(boolean allowLocal, boolean allowTld)
 
 #?(:clj
 (defn email:user?
@@ -26,7 +27,7 @@
   (and (string? user)
        (<= (count user) max-email:user-length)
        (.matches ^Matcher (re-matcher email:user-pattern user)))))
-   
+
 #?(:clj
 (defn domain?
   "Returns true if the domain component of an email address is valid.
