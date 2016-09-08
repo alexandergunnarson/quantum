@@ -2,9 +2,19 @@
   (:refer-clojure :exclude [seqable? boolean?])
   (:require #?(:clj  [clojure.core  :as core ]
                :cljs [cljs.core     :as core
-                       :refer [IDeref IAtom]]))
+                       :refer [IDeref IAtom]])
+            #?(:clj  [environ.core
+                       :refer [env]]))
   #?(:clj (:import [clojure.lang IDeref
                                  IAtom])))
+
+#?(:clj
+(defn pid []
+  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+       (.getName))))
+
+#?(:clj (when (:print-pid? env)
+          (binding [*out* *err*] (println "PID:" (pid)) (flush))))
 
 (def lang #?(:clj :clj :cljs :cljs))
 
@@ -20,18 +30,17 @@
 (defn boolean? [x] #?(:clj  (instance? Boolean x)
                       :cljs (or (true? x) (false? x))))
 
-#?(:clj
-     (defn seqable?
-       "Returns true if (seq x) will succeed, false otherwise."
-       {:from "clojure.contrib.core"}
-       [x]
-       (or (seq? x)
-           (instance? clojure.lang.Seqable x)
-           (nil? x)
-           (instance? Iterable x)
-           (-> x class .isArray)
-           (string? x)
-           (instance? java.util.Map x)))
+#?(:clj  (defn seqable?
+           "Returns true if (seq x) will succeed, false otherwise."
+           {:from "clojure.contrib.core"}
+           [x]
+           (or (seq? x)
+               (instance? clojure.lang.Seqable x)
+               (nil? x)
+               (instance? Iterable x)
+               (-> x class .isArray)
+               (string? x)
+               (instance? java.util.Map x)))
    :cljs (def seqable? core/seqable?))
 
 (defn editable? [coll]
@@ -109,7 +118,7 @@
 
 (defn seq-equals [a b]
   (boolean
-    (when (or (sequential? b) #?(:clj  (instance? java.util.List b)  
+    (when (or (sequential? b) #?(:clj  (instance? java.util.List b)
                                  :cljs (list? b)))
       (loop [a (seq a) b (seq b)]
         (when (= (nil? a) (nil? b))
@@ -120,7 +129,7 @@
 
 ; ===== TYPE =====
 
-(def unchecked-inc-long 
+(def unchecked-inc-long
   #?(:clj  (fn [^long x] (unchecked-inc x))
      :cljs inc))
 
