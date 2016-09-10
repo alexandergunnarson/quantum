@@ -4,10 +4,7 @@ quantum
      alt="CircleCI">
 <a href="http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic">
   <img src="http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat"
-       alt="Stack Share"
-       height=80
-       width=70
-       align="top">
+       alt="Stack Share">
 </a>
 <img src="https://quantum-library.herokuapp.com/badge.svg">
 
