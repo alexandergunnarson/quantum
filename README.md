@@ -1,6 +1,8 @@
 quantum
 ==========
-[![Join the conversation](https://quantum-library.herokuapp.com/badge.svg)](https://quantum-library.herokuapp.com/) [![Stack Share](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic) [![CircleCI](https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token)]()
+[![Stack Share](http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat)](http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic)
+[![CircleCI](https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token)]()
+[![Join the conversation](https://quantum-library.herokuapp.com/badge.svg)](https://quantum-library.herokuapp.com/) 
 
 ![](http://pre03.deviantart.net/b712/th/pre/i/2012/267/e/3/bubble_chamber_by_deepbluerenegade-d5fssqg.jpg)
 *(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
