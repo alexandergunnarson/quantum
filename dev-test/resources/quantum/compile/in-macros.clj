@@ -118,7 +118,7 @@
 (defmacro cast [class- obj]
   (str (-> class- str demunge-class str/paren) (oeval obj)))
 
-(def-macro-alias conj! push)
+(defmalias conj! push)
 
 
 (defmacro dot [& args] (->> args (map oeval) (str/join ".")))

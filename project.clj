@@ -3,7 +3,7 @@
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"
      "-d64" "-server"]
-  ; :aot :all
+  :aot [sparkling.serialization sparkling.destructuring]
   :jar-name          "quantum-dep.jar"
   :uberjar-name      "quantum.jar"
   :url               "https://www.github.com/alexandergunnarson/quantum"
