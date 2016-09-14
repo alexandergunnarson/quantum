@@ -99,53 +99,72 @@
       (f b a)))
 
 (defalias gcd misc/gcd)
+(defalias gcf misc/gcf)
 
-(defn- gcf*
+(defn extended-euclid*
+  {:adapted-from "http://anh.cs.luc.edu/331/notes/xgcd.pdf"}
   [a b]
-  (if (zero? b)
-      a
-      (recur b (mod a b))))
+  (loop [prev-x 1 x 0
+         prev-y 0 y 1
+         a'     a
+         b'     b]
+    (if (zero? b')
+        [a' prev-x prev-y]
+        (let [q (long (num/floor (/ a' b')))]
+          (recur x
+                 (- prev-x (* q x))
+                 y
+                 (- prev-y (* q y))
+                 b'
+                 (mod a' b'))))))
 
-(defn gcf
-  "Using Euclid's algorithm"
-  {:O "O(n^3)"}
-  [a b]
-  (call-max gcf* a b))
+(defn gcd-via-extended-euclid [a b]
+  (first (extended-euclid* a b)))
 
-(defn- gcf-extended*
+(defn modular-multiplicative-inverse
+  {:adapted-from "http://www.geeksforgeeks.org/multiplicative-inverse-under-modulo-m/"
+   :tests `{(modular-multiplicative-inverse 60 13)
+            5
+            (modular-multiplicative-inverse 60 12)
+            nil}}
   [a b]
-  (if (zero? b)
-      [1 0 a]
-      (let [[x' y' div] (gcf-extended* b (mod a b))]
-        [y' (- x' (* (num/floor (/ a b)) y')) div])))
-
-(defn gcf-extended
-  "Using the Extended Euclid algorithm"
-  [a b]
-  (call-max gcf-extended* a b))
+  (let [[g x y] (extended-euclid* a b)]
+    (when (= g 1)
+      (-> x (mod b) (+ b) (mod b)))))
 
 (defn sq [x] (* x x))
 
 (defn cube [x] (* x x x))
 
 (defn mod-pow
-  "Computes the modular power: (b^e) mod m"
+  "Computes the modular power: (a^b) mod n"
   {:adapted-from "Applied Cryptography by Bruce Schneier, via Wikipedia"
-   :O "O(log(@e))"}
-  [b e m]
-  (if (= m 1)
+   :O "O(log(@e))"
+   :tests `{(mod-pow 105 235 391)
+            41}}
+  [a b n]
+  (loop [r 1 a' a b' b]
+    (let [r' (if (= 1 (mod b' 2))
+                 (mod (* r a') n)
+                 r)
+          b'' (bit-shift-right b' 1)]
+      (if (zero? b'')
+          r'
+          (recur r' (mod (* a' a') n) b'')))))
+  #_(if (= m 1)
       0
       ; Elided assertion of pseudocode due to Clojure's numeric auto-promotion
       (loop [ret 1
              b'  (mod b m)
              e'  e]
-        (if (> e' 0)
+        (if ())
+        #_(if (> e' 0)
             (recur (if (= 1 (mod e' 2))
                        (mod (* ret b') m)
                        ret)
                    (>> e' 1)
                    (mod (sq b') m))
-            ret))))
+            ret)))
 
 (defn prime?
   "Checks whether @x is prime."

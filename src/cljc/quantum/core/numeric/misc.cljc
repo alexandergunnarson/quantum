@@ -107,10 +107,14 @@
        (core/integer? n)))
 
 (defn gcd
-  "(gcd a b) computes the greatest common divisor of a and b."
+  "(gcd a b) computes the greatest common divisor of a and b
+   (using Euclid's algorithm)"
+  {:O "O(n^3)"}
   ([a b]
   (if (zero? b)
       a
       (recur b (mod a b))))
   ([a b & args]
     (reduce gcd (gcd a b) args)))
+
+(defalias gcf gcd)
