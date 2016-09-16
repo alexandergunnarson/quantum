@@ -1,6 +1,6 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
-  (:refer-clojure :exclude [reduce])
+  (:refer-clojure :exclude [reduce mod])
   (:require
     [quantum.core.numeric     :as num
       :refer        [#?@(:clj [sqrt mod])]
@@ -9,6 +9,9 @@
       :refer        [>>]]
     [quantum.core.error       :as err
       :refer        [->ex TODO]]
+    [quantum.core.fn
+      :refer        [#?@(:clj [fn-> <-])]
+      :refer-macros [fn-> <-]]
     [quantum.core.collections :as coll
       :refer        [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]
       :refer-macros [reduce join]]
@@ -84,7 +87,7 @@
 
 (defn lfactors
   "All factors of @n, lazily computed."
-  [n] (err/todo))
+  [n] (TODO))
 
 ; TODO MERGE
 ;#?(:cljs
@@ -170,3 +173,16 @@
   "Checks whether @x is prime."
   [x]
   (TODO))
+
+; ===== STATISTICAL CALCULATIONS ===== ;
+
+(defn mean [v]
+  (/ (sum v) (count v)))
+
+(defn std-dev [v]
+  (let [mean' (mean v)]
+    (->> v
+         (map+ (fn-> (- mean') sq))
+         sum
+         (<- (/ (count v)))
+         num/sqrt)))
