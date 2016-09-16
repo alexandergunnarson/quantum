@@ -13,8 +13,11 @@
   (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
        (.getName))))
 
-#?(:clj (when (:print-pid? env)
-          (binding [*out* *err*] (println "PID:" (pid)) (flush))))
+#?(:clj
+(binding [*out* *err*]
+  (when (:print-pid?          env) (println "PID:" (pid)))
+  (when (:print-java-version? env) (println (System/getProperty "java.version")))
+  (flush)))
 
 (def lang #?(:clj :clj :cljs :cljs))
 
