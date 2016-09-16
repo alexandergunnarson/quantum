@@ -280,6 +280,12 @@
   (doseq [f fs] (f obj))
   obj)
 
+#?(:clj
+(defn ^java.util.function.Predicate ->predicate [f]
+  (reify java.util.function.Predicate
+    (^boolean test [this ^Object elem]
+      (f elem)))))
+
 ; ========= REDUCER PLUMBING ==========
 
 (defn- do-rfn

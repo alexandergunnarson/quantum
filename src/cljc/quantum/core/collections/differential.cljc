@@ -41,62 +41,62 @@
                      [quantum.core.data.map                   :as map
                        :refer [split-at]                                 ]
                      [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec  
+                     [quantum.core.data.vector                :as vec
                        :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.core           :as coll   
+                     [quantum.core.collections.core           :as coll
                        :refer [#?@(:clj [count first rest getr last-index-of
                                          index-of lasti empty?])
                                key val reverse]                          ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [#?@(:clj [kmap])]                         ]
                      [quantum.core.collections.map-filter
                        :refer [ffilteri last-filteri]                    ]
-                     [quantum.core.error                      :as err  
+                     [quantum.core.error                      :as err
                        :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn  
+                     [quantum.core.fn                         :as fn
                        :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n ->predicate])
+                                         f*n])
                                fn-nil juxt-kv withf->>]                  ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
                                          ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [#?@(:clj [reduce]) map+]                  ]
                      [quantum.core.string                     :as str    ]
                      [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type  
-                       :refer [#?@(:clj [lseq? transient? editable? 
+                     [quantum.core.type                       :as type
+                       :refer [#?@(:clj [lseq? transient? editable?
                                          boolean? should-transientize?])]]
                      [quantum.core.analyze.clojure.predicates :as anap   ]
                      [quantum.core.type.predicates            :as tpred  ]
                      [clojure.walk                            :as walk   ]
                      [quantum.core.loops                      :as loops  ]
-                     [quantum.core.vars                       :as var  
+                     [quantum.core.vars                       :as var
                        :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros  
-                     [quantum.core.collections.core           :as coll   
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.core           :as coll
                        :refer [count first rest getr lasti last-index-of
                                index-of empty?]                          ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn
                        :refer [compr <- fn-> fn->> f*n]       ]
                      [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic 
-                       :refer [fn-not fn-or fn-and whenf whenf*n 
+                     [quantum.core.logic                      :as logic
+                       :refer [fn-not fn-or fn-and whenf whenf*n
                                ifn if*n condf condf*n]                   ]
                      [quantum.core.loops                      :as loops  ]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [reduce]                                   ]
-                     [quantum.core.type                       :as type 
-                       :refer [lseq? transient? editable? boolean? 
+                     [quantum.core.type                       :as type
+                       :refer [lseq? transient? editable? boolean?
                                should-transientize?]                     ]
-                     [quantum.core.vars                       :as var 
+                     [quantum.core.vars                       :as var
                        :refer [defalias]                                 ])))
 
 ;___________________________________________________________________________________________________________________________________
@@ -252,7 +252,7 @@
 
 (defalias take-until-inc takel-until-inc)
 
-(defn takel-while-matches 
+(defn takel-while-matches
   {:tests '{(takel-while-matches "--" "---asddasd--")
             "--"}}
   [sub super]
@@ -262,7 +262,7 @@
 
 (def take-while-matches takel-while-matches)
 
-(defn takel-until-matches 
+(defn takel-until-matches
   {:tests '{(takel-until-matches  "--" "ab--sddasd--")
             "ab"
             (takel-until-matches [1 2] [9 8 82 1 2 3 5 3])
@@ -278,7 +278,7 @@
 
 (declare dropl)
 
-(defn takel-after-matches 
+(defn takel-after-matches
   {:tests '{(takel-after-matches  "--" "ab--sddasd--")
             "sddasd--"}}
   [sub super]
@@ -289,7 +289,7 @@
 (def take-after-matches takel-after-matches)
 
 ; ============ TAKE-RIGHT ============
-(defn taker 
+(defn taker
   [i super]
   (getr super (- (count super) i) (lasti super)))
 
@@ -354,7 +354,7 @@
 ;     (inc (last-index-of super sub))
 ;     (-> super lasti))
 
-(defn dropl-while-matches 
+(defn dropl-while-matches
   {:tests '{(dropl-while-matches "--" "---asddasd--")
             "-asddasd--"}}
   [sub super]
@@ -364,7 +364,7 @@
 
 (def drop-while-matches dropl-while-matches)
 
-(defn dropl-until-matches 
+(defn dropl-until-matches
   {:tests '{(dropl-until-matches  "--" "ab--sddasd--")
             "--sddasd--"}}
   [sub super]
@@ -426,7 +426,7 @@
     (fn [_ match-length] (dropr match-length super))
     (constantly nil)))
 
-(defn dropr-until-matches 
+(defn dropr-until-matches
   {:tests '{(dropr-until-matches  "--" "ab--sddasd-")
             "ab--"}
    :todo ["Use |rreduce|, not |reverse|"]}

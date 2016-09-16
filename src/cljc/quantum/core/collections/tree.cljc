@@ -41,68 +41,67 @@
                      [quantum.core.data.map                   :as map
                        :refer [split-at map-entry]                       ]
                      [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec  
+                     [quantum.core.data.vector                :as vec
                        :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [#?@(:clj [kmap])]                         ]
-                     [quantum.core.collections.core           :as coll   
+                     [quantum.core.collections.core           :as coll
                        :refer [#?@(:clj [count first rest getr last-index-of
                                          index-of lasti conj conj! contains?
                                          empty])
                                key val]                                  ]
-                     [quantum.core.collections.selective      :as sel    
+                     [quantum.core.collections.selective      :as sel
                        :refer [in-k?]                                    ]
-                     [quantum.core.collections.map-filter     :as mf    
+                     [quantum.core.collections.map-filter     :as mf
                        :refer [map-keys+]                                ]
-                     [quantum.core.error                      :as err  
+                     [quantum.core.error                      :as err
                        :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn  
-                       :refer [#?@(:clj [compr <- fn-> fn->>  
-                                         f*n defcurried
-                                         ->predicate])
+                     [quantum.core.fn                         :as fn
+                       :refer [#?@(:clj [compr <- fn-> fn->>
+                                         f*n defcurried])
                               fn-nil juxt-kv withf->>]  ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
                                          ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [#?@(:clj [reduce join])]                  ]
                      [quantum.core.string                     :as str    ]
                      [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type  
-                       :refer [#?@(:clj [lseq? transient? editable? 
+                     [quantum.core.type                       :as type
+                       :refer [#?@(:clj [lseq? transient? editable?
                                          boolean? should-transientize?])]]
                      [quantum.core.analyze.clojure.predicates :as anap   ]
                      [quantum.core.type.predicates            :as tpred  ]
                      [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops  
+                     [quantum.core.loops                      :as loops
                        :refer [#?@(:clj [doseqi reducei lfor])]]
-                     [quantum.core.vars                       :as var  
+                     [quantum.core.vars                       :as var
                        :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros  
-                     [quantum.core.collections.core           :as coll   
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.core           :as coll
                        :refer [count first rest getr lasti index-of lasti
                                conj conj! contains? empty]               ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn
                        :refer [compr <- fn-> fn->> f*n defcurried]       ]
                      [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic 
-                       :refer [fn-not fn-or fn-and whenf whenf*n 
+                     [quantum.core.logic                      :as logic
+                       :refer [fn-not fn-or fn-and whenf whenf*n
                                ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops  
+                     [quantum.core.loops                      :as loops
                        :refer [doseqi reducei lfor]                      ]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [reduce join]                              ]
-                     [quantum.core.type                       :as type 
-                       :refer [lseq? transient? editable? boolean? 
+                     [quantum.core.type                       :as type
+                       :refer [lseq? transient? editable? boolean?
                                should-transientize?]                     ]
-                     [quantum.core.vars                       :as var 
+                     [quantum.core.vars                       :as var
                        :refer [defalias]                                 ])))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
@@ -200,7 +199,7 @@
   (cond (try (pred x)
           (catch Throwable _ false))
         [true x]
-        (instance? clojure.lang.Seqable x) ; 
+        (instance? clojure.lang.Seqable x) ;
         (let [x' (first (filter #(first (prewalk-find pred %)) x))]
           (if (nil? x') [false x'] [true x']))
         :else [false nil])))

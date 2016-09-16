@@ -41,63 +41,63 @@
                      [quantum.core.data.map                   :as map
                        :refer [split-at]                                 ]
                      [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec  
+                     [quantum.core.data.vector                :as vec
                        :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.core           :as coll   
+                     [quantum.core.collections.core           :as coll
                        :refer [#?@(:clj [count first rest getr last-index-of
                                          contains? containsk? containsv?
                                          index-of lasti conj!])
                                key val reverse]                          ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [#?@(:clj [kmap])]                         ]
-                      [quantum.core.error                      :as err  
+                      [quantum.core.error                      :as err
                        :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn  
+                     [quantum.core.fn                         :as fn
                        :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n ->predicate])
+                                         f*n])
                                fn-nil juxt-kv withf->>]                  ]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
                                          ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [#?@(:clj [reduce join]) map+ filter+]     ]
                      [quantum.core.string                     :as str    ]
                      [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type  
-                       :refer [#?@(:clj [lseq? transient? editable? 
+                     [quantum.core.type                       :as type
+                       :refer [#?@(:clj [lseq? transient? editable?
                                          boolean? should-transientize?])]]
                      [quantum.core.analyze.clojure.predicates :as anap   ]
                      [quantum.core.type.predicates            :as tpred  ]
                      [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops  
+                     [quantum.core.loops                      :as loops
                        :refer [#?(:clj for)]                             ]
-                     [quantum.core.vars                       :as var  
+                     [quantum.core.vars                       :as var
                        :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros  
-                     [quantum.core.collections.core           :as coll   
+  #?(:cljs (:require-macros
+                     [quantum.core.collections.core           :as coll
                        :refer [count first rest getr lasti index-of lasti
                                contains? containsk? containsv? conj!]    ]
-                     [quantum.core.collections.base           :as base   
+                     [quantum.core.collections.base           :as base
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn
                        :refer [compr <- fn-> fn->> f*n]                  ]
                      [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic 
-                       :refer [fn-not fn-or fn-and whenf whenf*n 
+                     [quantum.core.logic                      :as logic
+                       :refer [fn-not fn-or fn-and whenf whenf*n
                                ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops  
+                     [quantum.core.loops                      :as loops
                        :refer [for]                                      ]
-                     [quantum.core.macros                     :as macros 
+                     [quantum.core.macros                     :as macros
                        :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red    
+                     [quantum.core.reducers                   :as red
                        :refer [reduce join]                              ]
-                     [quantum.core.type                       :as type 
-                       :refer [lseq? transient? editable? boolean? 
+                     [quantum.core.type                       :as type
+                       :refer [lseq? transient? editable? boolean?
                                should-transientize?]                     ]
-                     [quantum.core.vars                       :as var 
+                     [quantum.core.vars                       :as var
                        :refer [defalias]                                 ])))
 
 (defn in?
@@ -122,7 +122,7 @@
        (select-keys
          {:a 1 :b 2 :c 3 :d 4 :e 5 :f 6 :g 7}
          [:b :c :e]))).
-     Performs much better on large set of keys."} 
+     Performs much better on large set of keys."}
   [keyseq m]
     (-> (loops/reduce
           (fn [ret k]

@@ -34,10 +34,10 @@
 (defonce log (atom []))
 
 (defrecord LogEntry
-  [time-stamp ; ^DateTime  
-   type       ; ^Keyword   
-   ns-source  ; ^Namespace 
-   message])  ; ^String  
+  [time-stamp ; ^DateTime
+   type       ; ^Keyword
+   ns-source  ; ^Namespace
+   message])  ; ^String
 
 (defn disable!
   {:in-types '{pr-type keyword?}}
@@ -53,7 +53,7 @@
     (swap! levels assoc pr-type true))
   ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
-      (enable! pr-type-n)))) 
+      (enable! pr-type-n))))
 
 (defrecord LogInitializer
   [levels]
@@ -85,7 +85,7 @@
             stack   (or (:stack   opts) -1     )
             timestamp? (:timestamp? opts)
             curr-fn (when trace? (debug/this-fn-name stack))
-            args-f ( when args @args)
+            args-f  (when args @args)
             env-type-str
               (when (get @levels :env)
                 (str (name qcore/lang) " »"))
@@ -97,7 +97,7 @@
                     (let [timestamp
                            (.format
                              (java.time.format.DateTimeFormatter/ofPattern
-                                "MM-dd-yyyy HH:mm::ss")
+                               "MM-dd-yyyy HH:mm::ss")
                              (java.time.LocalDateTime/now))]
                       (print (str "[" timestamp "] ")))))
                 (when trace?
@@ -113,7 +113,7 @@
                     (do (when pretty? (println))
                         (apply print-fn args-f)))
                 (when (= pr-type :macro-expand) (print " */\n")))]
-        
+
 #?(:clj  (binding [*out* *err*] (print out-str) (flush)) ; in order to not print to file
    :cljs (let [console-print-fn
                 (or (aget js/console (name pr-type)) println)]
