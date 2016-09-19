@@ -6,22 +6,21 @@
     :cljs-self-referencing? true
     :figwheel-no-load       true}
   quantum.core.fn
-           (:require [clojure.walk                        ]
-                     [quantum.core.core        :as qcore  ]
-                     [quantum.core.data.map    :as map    ]
-                     [quantum.core.macros.core :as cmacros
-                       :refer [#?(:clj when-cljs)]        ]
-                     [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]         ]
-             #?(:clj [clojure.pprint           :as pprint
-                       :refer [pprint]                    ]))
+           (:require
+             [clojure.walk                        ]
+             [quantum.core.core        :as qcore  ]
+             [quantum.core.data.map    :as map    ]
+             [quantum.core.macros.core :as cmacros
+               :refer        [#?@(:clj [when-cljs compile-if])]
+               :refer-macros [when-cljs]]
+             [quantum.core.vars        :as var
+               :refer        [#?(:clj defalias)]
+               :refer-macros [defalias]]
+     #?(:clj [clojure.pprint           :as pprint
+               :refer [pprint]                    ]))
   #?(:cljs (:require-macros
-                     [quantum.core.macros.core :as cmacros
-                       :refer [when-cljs]                 ]
-                     [quantum.core.fn          :as fn
-                       :refer [f*n]                       ]
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                  ])))
+             [quantum.core.fn          :as fn
+               :refer [f*n]                       ])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -281,10 +280,12 @@
   obj)
 
 #?(:clj
-(defn ^java.util.function.Predicate ->predicate [f]
-  (reify java.util.function.Predicate
-    (^boolean test [this ^Object elem]
-      (f elem)))))
+  (compile-if (Class/forName "java.util.function.Predicate")
+    (defn ^java.util.function.Predicate ->predicate [f]
+      (reify java.util.function.Predicate
+        (^boolean test [this ^Object elem]
+          (f elem))))
+    (defn ->predicate [f] (throw (ex-info "java.util.function.Predicate not available: probably using JDK < 8" nil)))))
 
 ; ========= REDUCER PLUMBING ==========
 
