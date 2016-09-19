@@ -8,6 +8,8 @@
            (:refer-clojure :exclude [pr seqable?])
            (:require [com.stuartsierra.component   :as component]
                      [quantum.core.core            :as qcore    ]
+                     [quantum.core.macros.core     :as cmacros
+                       :refer [#?(:clj compile-if)]]
                      [quantum.core.fn              :as fn       ]
                      [quantum.core.meta.debug      :as debug    ]
                      [quantum.core.print           :as pr       ]
@@ -95,10 +97,13 @@
                 #?(:clj
                   (when timestamp?
                     (let [timestamp
-                           (.format
-                             (java.time.format.DateTimeFormatter/ofPattern
-                               "MM-dd-yyyy HH:mm::ss")
-                             (java.time.LocalDateTime/now))]
+                           (compile-if (do (Class/forName "java.time.format.DateTimeFormatter")
+                                           (Class/forName "java.time.LocalDateTime"))
+                             (.format
+                               (java.time.format.DateTimeFormatter/ofPattern
+                                 "MM-dd-yyyy HH:mm::ss")
+                               (java.time.LocalDateTime/now))
+                             nil)] ; TODO JDK 7 timestamp
                       (print (str "[" timestamp "] ")))))
                 (when trace?
                   (print "[")
