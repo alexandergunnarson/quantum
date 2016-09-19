@@ -281,7 +281,7 @@
 
 #?(:clj
   (compile-if (Class/forName "java.util.function.Predicate")
-    (defn ^java.util.function.Predicate ->predicate [f]
+    (defn ->predicate [f]
       (reify java.util.function.Predicate
         (^boolean test [this ^Object elem]
           (f elem))))
