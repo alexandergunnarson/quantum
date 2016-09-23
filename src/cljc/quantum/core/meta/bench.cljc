@@ -2,7 +2,7 @@
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
     :attribution "Alex Gunnarson"}
   quantum.core.meta.bench
-           (:require 
+           (:require
              #?(:clj [criterium.core         :as bench])
                      [quantum.core.string    :as str  ]
                      [quantum.core.fn        :as fn
@@ -14,12 +14,12 @@
                        :refer [fn->]                  ]
                      [quantum.core.vars      :as var
                        :refer [defalias]              ]))
-  #_(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
+  #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 
 ; TODO maybe use Timbre profiling?
 
-#?(:clj 
+#?(:clj
   (defn num-from-timing [time-str]
     (-> (str/replace time-str "\"" "")
         (str/replace "\n" "")
@@ -36,7 +36,7 @@
          ret# ~expr]
      (/ (double (- (System/nanoTime) start#)) 1000000.0))))
 
-; FOR CLJS 
+; FOR CLJS
 #?(:clj
 (defmacro profile [k & body]
   ; if-cljs
@@ -46,7 +46,7 @@
        (.timeEnd js/console k#)
        res#))))
 
-#?(:clj 
+#?(:clj
   (defn shoddy-benchmark [to-repeat func & args]
     (let [times-list
             (take to-repeat
@@ -59,16 +59,16 @@
 
 ; BYTE SIZE
 
-#_(:clj (defn byte-size-alt-1 [obj] (RamUsageEstimator/sizeOf obj)))
+#?(:clj (defn shallow-byte-size [obj] (RamUsageEstimator/sizeOf obj)))
 
-#_(:clj
-(defn byte-size-alt-2 [obj]
+#?(:clj
+(defn deep-byte-size [obj]
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))
 
 #_(:clj
-(defn byte-size [obj]
+(defn byte-size-range [obj]
   (let [result-1 (byte-size-alt-1 obj)
         result-2 (byte-size-alt-2 obj)]
     [(min result-1 result-2)
