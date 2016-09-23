@@ -29,17 +29,16 @@
        [org.clojure/tools.namespace             "0.2.11"          ]
        [com.taoensso/encore                     "2.79.1"          ] ; To not break things
        ; ==== ASYNC ====
-         [org.clojure/core.async                "0.2.385"         ]
+         [org.clojure/core.async                "0.2.391"         ]
          [servant                               "0.1.5"           ]
-         [co.paralleluniverse/pulsar            "0.7.5"
+         [alexandergunnarson/co.paralleluniverse.pulsar #_co.paralleluniverse/pulsar "0.7.6.2" #_"0.7.6"
            :exclusions [org.slf4j/*
                         potemkin
                         org.clojure/core.match
                         org.ow2.asm/*
                         com.esotericsoftware/reflectasm]]
-         [co.paralleluniverse/quasar-core       "0.7.5"
-           :exclusions [com.esotericsoftware/reflectasm]] ; :classifier "jdk8"
-         ;[com.typesafe.akka/akka-actor_2.11    "2.4.0"           ]
+         [co.paralleluniverse/quasar-core       "0.7.6"
+           :exclusions [com.esotericsoftware/reflectasm]]
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
          [it.unimi.dsi/fastutil                 "7.0.12"           ]
@@ -152,7 +151,8 @@
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ]
      ; ==== INTEROP ====
-       [org.python/jython-standalone            "2.5.3"           ]
+       [org.python/jython-standalone            "2.5.3"
+         :exclusions [jline]]
      ; ==== LOGGING ====
        [org.slf4j/slf4j-log4j12                 "1.7.21"          ]
        [org.slf4j/jul-to-slf4j                  "1.7.21"          ]
@@ -230,6 +230,7 @@
        [org.clojure/tools.emitter.jvm           "0.1.0-beta5"
          :exclusions [org.ow2.asm/*]]
        [org.clojure/tools.analyzer              "0.6.9"           ]
+       [org.clojure/jvm.tools.analyzer          "0.6.1"           ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.13"
@@ -257,7 +258,8 @@
        [org.apache.spark/spark-core_2.10        "1.6.1"
          :exclusions [com.google.inject/guice
                       org.xerial.snappy/snappy-java
-                      asm]]
+                      asm
+                      jline]]
        [com.github.fommil.netlib/all            "1.1.2"
          :extension "pom"]
        [com.googlecode.matrix-toolkits-java/mtj "1.0.2"]
@@ -291,12 +293,7 @@
      ; co.paralleluniverse/pulsar
      ; gorillalabs/sparkling
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
-     ]
-   #_:injections #_[(let [oldv (ns-resolve (doto 'clojure.stacktrace require)
-                                       'print-cause-trace)
-                      newv (ns-resolve (doto 'clj-stacktrace.repl require)
-                                      'pst)]
-                  (alter-var-root oldv (constantly (deref newv))))] ; for :aot
+     [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
    :profiles
    {:dev {;:injections    [(clojure.main/repl :print clojure.pprint/pprint)]
           :resource-paths ["dev-resources"]
@@ -315,7 +312,12 @@
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     [lein-ancient                      "0.6.10"
                       :exclusions [com.amazonaws/aws-java-sdk-s3]]
-                    ]}
+                    ]
+    :fibers
+       {:java-agents [[co.paralleluniverse/quasar-core "0.7.6"]]}
+    :auto-instrument
+       {:jvm-opts ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
+        :java-agents [[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}}
     :test {:jvm-opts ["-Xmx3g"]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"             ["do" "clean,"
@@ -351,10 +353,13 @@
                       "src/cljc"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test/cljs" "test/clj" "test/cljc"]
+  :repl-options {:init (do (require 'quantum.core.print)
+                           (clojure.main/repl
+                             :print  quantum.core.print/!
+                             :caught quantum.core.print/!))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
-  :java-agents [#_[co.paralleluniverse/quasar-core    "0.7.3"      ] ;  :classifier "jdk8"
-                ; This for HTTP/2 support
+  :java-agents [; This for HTTP/2 support
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
