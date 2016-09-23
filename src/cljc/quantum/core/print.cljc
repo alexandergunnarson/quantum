@@ -2,7 +2,7 @@
   ^{:doc "Printing functions such as fipp.edn (a fast pretty printer),
           |pr-attrs| (which prints the key attributes of a given object
           or expression, blacklisted printable objects (so you don't
-          have to wait while you accidentally print out an entire database), 
+          have to wait while you accidentally print out an entire database),
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
@@ -18,7 +18,7 @@
             #?(:clj  [fipp.edn                       :as pr   ]
                      ; Fipp currently has strange execution problems in CLJS
                :cljs [cljs.pprint                    :as pr   ]))
-  #?(:cljs (:require-macros 
+  #?(:cljs (:require-macros
                      [cljs.pprint                             ]
                      [quantum.core.fn                :as fn
                        :refer [fn-> fn->>]                    ]
@@ -38,6 +38,7 @@
    At least 5 times faster than |clojure.pprint/pprint|.
    Prints no later than having consumed the bound amount of memory,
    so you see your first few lines of output instantaneously."
+  ([] (println))
   ([obj]
     (if #?(:clj  (instance? Throwable obj)
            :cljs false)
@@ -67,6 +68,8 @@
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
 
+#?(:clj (reset! debug/pretty-printer !))
+
 (def suppress (partial (constantly nil)))
 
 #_(defn representative-coll
@@ -92,7 +95,7 @@
                       ;             (->> source-n* first (apply hash-map)
                       ;                  constructor-fn)))
                       map?    (fn->> first (apply hash-map))
-                      vector? (fn->> first vector)) 
+                      vector? (fn->> first vector))
                   assoc-key-n+1
                     (condf ret-n+1-0
                       map?    (fn-> keys first)
@@ -109,7 +112,7 @@
                       vector? first)]
               (recur source-n+1
                      assoc-keys-n+1
-                     ret-n+1))))))  
+                     ret-n+1))))))
 
 (declare representative-coll)
 
