@@ -353,7 +353,7 @@
                       "src/cljc"]
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test/cljs" "test/clj" "test/cljc"]
-  :repl-options {:init (do (require 'quantum.core.print)
+  :repl-options {:init (do (clojure.core/require 'quantum.core.print)
                            (clojure.main/repl
                              :print  quantum.core.print/!
                              :caught quantum.core.print/!))}
