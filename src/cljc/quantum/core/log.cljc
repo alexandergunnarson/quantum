@@ -103,7 +103,7 @@
                                (java.time.format.DateTimeFormatter/ofPattern
                                  "MM-dd-yyyy HH:mm::ss")
                                (java.time.LocalDateTime/now))
-                             nil)] ; TODO JDK 7 timestamp
+                             nil)] ; TODO JDK < 8 timestamp
                       (print (str "[" timestamp "] ")))))
                 (when trace?
                   (print "[")

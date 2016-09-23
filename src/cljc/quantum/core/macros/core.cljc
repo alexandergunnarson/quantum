@@ -2,7 +2,8 @@
   quantum.core.macros.core
   (:refer-clojure :exclude [macroexpand macroexpand-1])
   (:require [#?(:clj  clojure.core
-                :cljs cljs.core   ) :as core    ]
+                :cljs cljs.core   ) :as core]
+            [clojure.core.reducers  :as red]
             [clojure.walk           :as walk
               :refer [prewalk]]
    #?(:cljs [cljs.analyzer                      ])
@@ -34,28 +35,20 @@
     `(when (cljs-env? ~env) ~then))))
 
 #?(:clj
-(defmacro context
-  {:contributors {"The Joy of Clojure, 2nd ed." "Clojure implementation"
-                  "Alex Gunnarson"              "ClojureScript implementation"}
+(defmacro locals
+  "Returns a map of the local variables in scope of wherever
+   this macro is expanded, from symbols to values.
+
+   Inspired by The Joy of Clojure, 2nd ed., |context| macro."
+  {:contributors #{"Alex Gunnarson"}
    :todo ["'IOException: Pushback buffer overflow' on certain
-            very large data structures"
-          "Use reducers"]}
-  ([]
-    (let [lang- (if-cljs &env :cljs :clj)]
-      (condp = lang-
-        :clj 
-          (let [symbols (keys &env)]
-            (zipmap
-              (map (fn [sym] `(quote ~sym))
-                      symbols)
-              symbols))
-        :cljs
-          ; #{:ns :context :locals :fn-scope :js-globals :line :column}
-          `(->> '~&env
-                :locals
-                (map (fn [[sym# meta#]]
-                       [sym# (-> meta# :init :form)]))
-                (into {})))))))
+            very large data structures"]}
+  ([] `(locals ~&env)) ; #{:ns :context :locals :fn-scope :js-globals :line :column}
+  ([env]
+    (let [getter (if-cljs env :locals identity)]
+      (->> env getter
+           (red/map (fn [[sym _]] [`(quote ~sym) sym]))
+           (into {}))))))
 
 ; ===== LOCAL EVAL & RESOLVE =====
 
@@ -68,24 +61,24 @@
    :contributors {"Alex Gunnarson" "Added error handling for too-large vars"}
    :todo ["'IOException: Pushback buffer overflow' on certain
             very large data structures"]}
-  ([context expr]
+  ([locals expr]
     (eval
      `(let [~@(mapcat
                 (fn [[k v]]
                   (try [k `'~v]
                     (catch java.io.IOException _ [k "var too large to show"])))
-                context)]
+                locals)]
         ~expr)))))
- 
+
 #?(:clj
 (defmacro let-eval [expr]
-  `(c-eval context ~expr)))
+  `(c-eval locals ~expr)))
 
 #?(:clj
 (defmacro tag
   "Doesn't really work unless print-dup is defined for all local vars."
   [obj tag-]
-  `(c-eval (context) (with-meta '~obj {:tag '~tag-}))))
+  `(c-eval (locals) (with-meta '~obj {:tag '~tag-}))))
 
 #?(:clj
 (defmacro resolve-local
@@ -128,7 +121,7 @@
   (condp = impl
     ; Like clojure.walk/macroexpand-all but correctly handles lexical scope
     :ctools         (clojure.tools.analyzer.jvm/macroexpand-all      x)
-    
+
     :tools.hygienic (clojure.jvm.tools.analyzer.hygienic/macroexpand x)
     :tools          (clojure.jvm.tools.analyzer/macroexpand          x)
     ; :walk         (clojure.walk/macroexpand-all x)
@@ -158,7 +151,7 @@
 #?(:clj
 (defmacro defmalias
   "Defines an cross-platform alias for a macro.
-   
+
    In Clojure one can use |defalias| for this purpose without a problem, but
    in ClojureScript macros can't be used in a |defalias| context because |defalias|
    creates a ClojureScript (var) binding where a Clojure (macro) one is needed.
@@ -202,5 +195,5 @@
            (for [b 2] (inc ~a)))]
    :out '(for [a 1] (inc 1))}
   [form]
- `(let [sym-map# (context)]
+ `(let [sym-map# (locals)]
     (unquote-replacement sym-map# '~form))))

@@ -32,7 +32,6 @@
   "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
    Originally named |functionize| by mikera."
   ([macro-sym]
-    ; When CLJS
     (when-cljs &env (throw (Exception. "|mfn| not supported for CLJS.")))
    `(fn [& args#]
       (qcore/js-println "WARNING: Runtime eval with |mfn| via" '~macro-sym)
@@ -130,8 +129,6 @@
    Likewise, simply copying and pasting the code for |partial| from clojure.core doesn't work either..."
   [& args]
   (apply partial args))
-
-;#?(:clj (defalias f*n dep/f*n))
 
 #?(:clj
 (defmacro f*n  [func & args]
