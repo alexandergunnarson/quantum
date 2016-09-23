@@ -1,6 +1,8 @@
 (ns quantum.core.validate
-  (:refer-clojure :as core :exclude [string? keyword? set? number? fn? assert])
+  (:refer-clojure :exclude [string? keyword? set? number? fn? assert])
   (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )   :as core]
     [#?(:clj  clojure.spec
         :cljs cljs.spec   )   :as s]
     [quantum.core.macros.core
