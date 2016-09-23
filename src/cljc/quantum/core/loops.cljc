@@ -427,8 +427,14 @@
 
 (defn each
   "Same as |core/run!| but uses reducers' reduce"
-  [proc coll]
-  (red/reduce #(proc %2) nil coll)
+  [f coll]
+  (red/reduce #(f %2) nil coll)
+  nil)
+
+(defn eachi
+  "eachi : each :: fori : for"
+  [f coll]
+  (reducei (fn [_ x i] (f x i)) nil coll)
   nil)
 
 #?(:clj (set! *unchecked-math* false))

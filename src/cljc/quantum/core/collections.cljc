@@ -236,6 +236,7 @@
 #?(:clj (defalias while-let loops/while-let))
         (defalias doeach  loops/doeach)
         (defalias each    loops/each)
+        (defalias eachi   loops/eachi)
         (defalias break   reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================

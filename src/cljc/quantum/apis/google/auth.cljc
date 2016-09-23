@@ -5,7 +5,7 @@
   quantum.apis.google.auth
   (:refer-clojure :exclude [empty?])
   (:require
-    [quantum.validate.core :as v   
+    [quantum.core.validate :as v
       :include-macros true]
     [quantum.net.http      :as http]
     [quantum.net.url       :as url ]
@@ -19,11 +19,11 @@
       :refer-macros [reducei empty? containsk?]]
     [quantum.core.paths
       :refer [url-path]])
-  #_(:require 
+  #_(:require
     [quantum.web.core    :as web :refer
       [send-keys! click! click-load! find-element write-page! default-capabilities]]
     #_[quantum.apis.google.core :as goog]))
- 
+
 (def urls
   {:oauth-access-token "https://www.googleapis.com/oauth2/v3/token"
    :oauth              "https://accounts.google.com/o/oauth2/auth"
@@ -44,10 +44,10 @@
 (defonce error-log (atom []))
 
 (defn scopes-string [scopes-]
-  (v/validate v/set? scopes-)
+  (v/validate (s/spec set?) scopes-) ; TODO no runtime spec decl
   (reducei
     (fn [s scope-key n]
-      (v/validate v/keyword? scope-key)
+      (v/validate (s/spec keyword?) scope-key) ; TODO no runtime spec decl
       (let [space* (when (> n 0) " ")  ; join spaces
             ns-   (-> scope-key namespace keyword)
             name- (-> scope-key name keyword)
@@ -144,10 +144,10 @@
 
       (fill-password!)
       (click-signin!)
-      
+
       (when (check-challenge)
         (handle-challenge))
-      
+
       (check-recovery)
       (check-unable)))
   ([^WebDriver driver ^String auth-url ^String username ^String password]
@@ -271,7 +271,7 @@
 
 #_(defn ^String access-token-refresh! [email service]
   (let [^Map    auth-keys (auth/auth-keys :google)
-        resp (http/request! 
+        resp (http/request!
                {:method :post
                 :url    (:oauth-access-token urls)
                 :form-params
@@ -291,7 +291,7 @@
 
 ; (defn credential-fn
 ;   [token]
-;   (println "TOKEN IS" token) 
+;   (println "TOKEN IS" token)
 ;   ;;lookup token in DB or whatever to fetch appropriate :roles
 ;   {:identity token :roles #{::user}})
 
@@ -343,5 +343,5 @@
                    (http/request! req))
              500 (fn+ ^:suspendable f# [req resp]
                    (log/pr ::warn "Server error. Trying again...")
-                   (async/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...  
+                   (async/sleep (+ 5000 (rand 2000))) ; a little more b/c server errors can persist...
                    (http/request! req))})))))
