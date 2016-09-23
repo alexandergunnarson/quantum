@@ -5,7 +5,7 @@
                      [quantum.core.log           :as log      ]
                      [quantum.core.loops
                        #?@(:clj [:refer [until]])             ]
-                     [quantum.core.thread.async  :as async    ])
+                     [quantum.core.async         :as async    ])
   #?(:cljs (:require-macros
                      [quantum.core.error         :as err      ]
                      [quantum.core.log           :as log      ]
@@ -39,17 +39,17 @@
       :reagent
       (do (err/assert (fn?     render-fn) #{render-fn})
           (err/assert (string? root-id  ) #{root-id  })
-        
-            ; If the root node does not exist, creates it as a div and 
+
+            ; If the root node does not exist, creates it as a div and
             ; appends it to the DOM
             #?(:cljs
             (let [elem (or (.getElementById js/document root-id)
                            (doto (.createElement js/document "div")
                                  (-> .-id (set! root-id))
                                  (->> (.appendChild (.-body js/document)))))]
-          
+
               (log/pr :debug "Now rendering on root node, id" root-id)
-          
+
               (rx/render [render-fn] elem)))))
     this)
   (stop [this]

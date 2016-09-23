@@ -10,9 +10,9 @@
                      [quantum.core.error
                        :refer [->ex]                      ]
                      [quantum.core.paths         :as paths]
-                     [quantum.core.resources     :as res  
+                     [quantum.core.resources     :as res
                        :refer [closed?]                   ]
-                     [quantum.core.thread.async 
+                     [quantum.core.async
                        :refer [close-req? message?]]
                     [quantum.core.vars           :as var
                        :refer [#?@(:clj [defalias])]      ])
@@ -81,7 +81,7 @@
 ;                                 (.indexOf ^StringBuffer buffer (str c) i))
 ;                       i-n (->> indices (remove neg?) num/least)]
 ;                   (if (nil? i-n)
-;                       (if (and slept? (> (lasti buffer) i)) ; unoutputted chars in buffer 
+;                       (if (and slept? (> (lasti buffer) i)) ; unoutputted chars in buffer
 ;                           ; Output all of the remaning ones
 ;                           (do (let [rest-line (.subSequence ^StringBuffer buffer i (lasti buffer))]
 ;                                 (when-not (str/whitespace? rest-line)
@@ -89,7 +89,7 @@
 ;                                 (output-line state rest-line stream-source))
 ;                               (recur (lasti buffer) false 0))
 ;                           (do (async/sleep line-timeout)
-;                               (recur i true (+ sleep-time line-timeout)))) 
+;                               (recur i true (+ sleep-time line-timeout))))
 ;                       (do (let [line (.subSequence ^StringBuffer buffer i (inc (long i-n)))]
 ;                             (when-not (str/whitespace? line)
 ;                                (>!! output-chan line))
@@ -98,7 +98,7 @@
 
 ; #?(:clj
 ; (def ^{:help "http://www.tldp.org/LDP/abs/html/exitcodes.html"}
-;   exit-code-table 
+;   exit-code-table
 ;   {1   (Err. :bash/general                  "General error"                                                                      nil)
 ;    2   (Err. :bash/shell-misuse             "Misuse of shell builtins, missing keyword or command, or permission problem"        nil)
 ;    126 (Err. :bash/command-not-executable   "Command invoked cannot execute. Permission problem or command is not an executable" nil)
@@ -151,7 +151,7 @@
 ;                     :keys [ex-data env-vars dir timeout id parent state
 ;                            print-streams? ; Overrides @output-line handler; TODO handle this
 ;                            pr-to-out? ; Overrides other options; TODO handle this
-;                            read-streams? 
+;                            read-streams?
 ;                            write-streams? ; Currently doesn't do much
 ;                            close-reqs
 ;                            std-buffer err-buffer ; for recording the process's output
@@ -199,7 +199,7 @@
 ;                  _ (thread/register-thread!
 ;                      {:id              process-id
 ;                       :parent          parent
-;                       :std-output      std-out-buffer 
+;                       :std-output      std-out-buffer
 ;                       :err-output      err-out-buffer
 ;                       :err-output-chan err-output-chan
 ;                       :std-output-chan std-output-chan

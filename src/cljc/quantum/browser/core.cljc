@@ -7,16 +7,16 @@
             [com.stuartsierra.component     :as comp ]
             [quantum.validate.core          :as v    ]
             [quantum.auth.core              :as auth ]
-            [quantum.core.log               :as log  
+            [quantum.core.log               :as log
               :include-macros true]
-            [quantum.core.resources         :as res  
+            [quantum.core.resources         :as res
               :include-macros true]
             [quantum.core.time.core         :as time ]
             [quantum.core.io                :as io   ]
             [quantum.core.convert           :as conv ]
             [quantum.core.data.complex.json :as json ]
             [quantum.core.string            :as str  ]
-            [quantum.core.thread.async      :as async]
+            [quantum.core.async             :as async]
             [quantum.core.logic
               :refer [nnil?]]
             [quantum.core.fn
@@ -26,7 +26,7 @@
               :refer        [#?@(:clj [try+ try-times]) ->ex]
               :refer-macros [try+ try-times]]
             [quantum.core.collections :as coll
-              :refer        [#?@(:clj [join]) 
+              :refer        [#?@(:clj [join])
                              map+]
               :refer-macros [join]]
             [quantum.core.macros
@@ -91,7 +91,7 @@
          console.error('PHANTOM PAGE ERROR INFO: ' + msg);
        };
        return 'truth';")))) ; must return something
-    
+
 
 ; How do I clear the phantomjs cache on a mac?
 ; rm -rf ~/Library/Application\ Support/Ofi\ Labs/PhantomJS/*
@@ -196,7 +196,7 @@
     (assert (number? times      ))
     (assert (number? interval-ms))
 
-    (try+ (try-times times 
+    (try+ (try-times times
             (try
               (.findElement driver elem)
               (catch NoSuchElementException e
@@ -238,7 +238,7 @@
 
 #?(:clj
 (defn clear! [^RemoteWebElement elem]
-  (let [text-length 
+  (let [text-length
           (-> elem .getText count)
         kdeletes (->> (repeat text-length kdelete) (apply str))]
     (send-keys! elem kdeletes))))
@@ -303,7 +303,7 @@
                (remove (eq? (.getWindowHandle driver))) first)]
     (-> driver .switchTo (.window popup-handle))))
 
-#?(:clj 
+#?(:clj
 (defn switch-window! [^WebDriver driver handle]
   (.window (.switchTo driver) handle)))
 
@@ -314,7 +314,7 @@
              var link = document.getElementById(id);
              return link.href;\"")}
   [driver page? #_thread? s]
-  (let [code (if page? 
+  (let [code (if page?
                  (str "var page = this;
                        return page.evaluate(function() {"
                        s

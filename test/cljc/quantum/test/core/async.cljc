@@ -1,12 +1,12 @@
-(ns quantum.test.core.thread.async
-  (:require [quantum.core.thread.async :as ns]))
+(ns quantum.test.core.async
+  (:require [quantum.core.async :as ns]))
 
 (defn test:<?
   [expr])
 
 (defn test:try-go
   [& body])
-               
+
 (defn test:chan
   ([         ])
   ([arg0     ])

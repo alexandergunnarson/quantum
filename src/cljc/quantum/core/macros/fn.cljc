@@ -5,7 +5,7 @@
   quantum.core.macros.fn
            (:require
              #_(:clj [co.paralleluniverse.pulsar.core  :as pulsar ])
-                     [quantum.core.error               :as err 
+                     [quantum.core.error               :as err
                        :refer [->ex]                              ]
                      [quantum.core.fn                  :as fn
                        :refer [#?@(:clj [doto->>])]               ]
@@ -31,7 +31,7 @@
       (cond
         (string? unk)
           (f opts lang ns- sym unk  meta- body                rest-unk)
-        (map?    unk)     
+        (map?    unk)
           (f opts lang ns- sym doc- unk   body                rest-unk)
         ((fn-or symbol? keyword? vector? seq?) unk)
           (f opts lang ns- sym doc- meta- (cons unk rest-unk) nil     )
@@ -71,7 +71,7 @@
         (cond
           (string? unk)
             `(fn+* ~sym ~unk  ~meta- ~arglist ~body                ~rest-unk)
-          (map?    unk)     
+          (map?    unk)
             `(fn+* ~sym ~doc- ~unk   ~arglist ~body                ~rest-unk)
           (vector? unk)
             `(fn+* ~sym ~doc- ~meta- ~unk     ~rest-unk            nil      )
@@ -110,7 +110,7 @@
                     (list 'let
                       [`pre#  (list 'log/pr :trace (str "IN "             sym-f))
                        'ret_genned123  (if interruptible?
-                                           `(if (quantum.core.thread.async/interrupted?)
+                                           `(if (quantum.core.async/interrupted?)
                                                 (throw (InterruptedException.))
                                                 (do ~@body-n))
                                            `(do ~@body-n))

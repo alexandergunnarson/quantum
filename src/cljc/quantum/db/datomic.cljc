@@ -35,7 +35,7 @@
                     [quantum.core.resources           :as res      ]
                     [quantum.core.string              :as str      ]
             #?(:clj [quantum.core.process             :as proc     ])
-                    [quantum.core.thread.async        :as async
+                    [quantum.core.async               :as async
                       :include-macros true                         ]
                     [quantum.core.type                :as type
                       :refer        [atom? #?(:clj boolean?)]

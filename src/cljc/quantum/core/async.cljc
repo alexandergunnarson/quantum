@@ -2,7 +2,7 @@
   ^{:doc "Asynchronous things."
     :attribution "Alex Gunnarson"
     :cljs-self-referencing? true}
-  quantum.core.thread.async
+  quantum.core.async
   (:refer-clojure :exclude [promise realized? future])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )           :as core     ]
@@ -13,7 +13,8 @@
           ;          [co.paralleluniverse.pulsar.core  :as pasync   ]])
             #?(:cljs [servant.core                     :as servant  ])
                      [quantum.core.error               :as err
-                       :refer [->ex TODO]                           ]
+                       :refer        [->ex TODO #?(:clj catch-all)]
+                       :refer-macros [catch-all]]
                      [quantum.core.collections         :as coll
                        :refer [#?@(:clj [nempty? seq-loop]) break]           ]
                      [quantum.core.log                 :as log
@@ -34,7 +35,7 @@
                      [servant.macros                   :as servant
                        :refer [defservantfn]                        ]
                      [cljs.core.async.macros           :as asyncm   ]
-                     [quantum.core.thread.async
+                     [quantum.core.async
                        :refer [go]                                  ]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
@@ -44,7 +45,14 @@
 
 (log/this-ns)
 
+; Use optimal/maximum core async pool size
+
+#?(:clj (System/setProperty
+          "clojure.core.async.pool-size"
+          (str (.. Runtime getRuntime availableProcessors))))
+
 #?(:clj (defmalias go clojure.core.async/go cljs.core.async.macros/go))
+#?(:clj (defalias async go))
 
 #?(:clj
 (defmacro <?
@@ -61,12 +69,7 @@
 #?(:clj
 (defmacro try-go
   [& body]
-  (let [err-class (if-cljs &env 'js/Error 'Throwable)]
-    `(asyncm/go
-       (try
-         ~@body
-         (catch ~err-class e#
-           e#))))))
+  `(asyncm/go (catch-all (do ~@body) e# e#))))
 
 (deftype QueueCloseRequest [])
 (deftype TerminationRequest [])
@@ -168,8 +171,8 @@
 (defalias >! async/>!)
 
 (defnt message?
-  ([^quantum.core.thread.async.QueueCloseRequest  obj] false)
-  ([^quantum.core.thread.async.TerminationRequest obj] false)
+  ([^quantum.core.async.QueueCloseRequest  obj] false)
+  ([^quantum.core.async.TerminationRequest obj] false)
   ([                    obj] (when (nnil? obj) true)))
 
 (def close-req? #(instance? QueueCloseRequest %))
@@ -387,17 +390,6 @@
     (map->Threadpool opts))))
 
 #?(:cljs (defservantfn dispatch "The global web worker dispatch fn" [f] (f)))
-
-#?(:clj
-(defmacro async
-  "Evaluates @body asynchronously and returns a channel
-   awaiting the result.
-   Same as |go|, but named more reasonably."
-  [& body]
-  (let [go-impl
-         (if-cljs &env 'cljs.core.async.macros/go
-                       'clojure.core.async/go)]
-    `(~go-impl ~@body))))
 
 #?(:clj
 (defmacro future

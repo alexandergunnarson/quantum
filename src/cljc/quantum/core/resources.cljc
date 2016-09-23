@@ -14,7 +14,7 @@
                        :refer [#?@(:clj [fn-not fn-or]) nnil?]  ]
                      [quantum.core.macros          :as macros
                        :refer [#?@(:clj [defnt])]               ]
-                     [quantum.core.thread.async    :as async    ]
+                     [quantum.core.async           :as async    ]
                      [quantum.core.type            :as type
                        :refer [atom?]                           ])
   #?(:cljs (:require-macros

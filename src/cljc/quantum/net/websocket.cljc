@@ -16,7 +16,7 @@
               :include-macros true]
             [quantum.core.logic                      :as logic
               :refer [nnil?]                                      ]
-            [quantum.core.thread.async               :as async
+            [quantum.core.async                      :as async
               :refer        [promise-chan offer! #?@(:clj [go])]
               :refer-macros [go]]
             [quantum.core.resources                  :as res      ]

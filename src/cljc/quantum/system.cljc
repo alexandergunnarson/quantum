@@ -12,7 +12,7 @@
                      [quantum.core.macros.core         :as cmacros
                        :refer        [#?@(:clj [if-cljs])]          ]
                      [quantum.core.resources           :as res      ]
-                     [quantum.core.thread.async        :as async    ]
+                     [quantum.core.async               :as async    ]
                      [quantum.db.datomic               :as db       ]
                      [quantum.db.datomic.core          :as dbc      ]
                      [quantum.db.datomic.reactive.core :as db-rx    ]

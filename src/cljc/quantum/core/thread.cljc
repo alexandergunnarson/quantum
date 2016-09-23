@@ -11,11 +11,11 @@
                    #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
                    #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
                      [quantum.core.string                     :as str             ]
-                     [quantum.core.collections                :as coll            
+                     [quantum.core.collections                :as coll
                        :refer [in? #?@(:clj [conj! assoc! empty? nempty?])]]
                      [quantum.core.numeric                    :as num             ]
                      #?(:clj [clojure.core.async :as casync])
-                     [quantum.core.thread.async               :as async
+                     [quantum.core.async                      :as async
                        :refer [put!! chan buffer #?(:clj go)]                     ]
                      [quantum.core.collections
                        :refer [#?@(:clj [doseq]) dissoc-in+]                      ]
@@ -35,7 +35,7 @@
                      [quantum.core.cache
                        :refer [memoize]])
   #?(:cljs (:require-macros
-                     [quantum.core.thread.async               :as async
+                     [quantum.core.async                      :as async
                        :refer [go]                                                ]
                      [quantum.core.collections                :as coll
                        :refer [doseq]                                             ]
@@ -56,7 +56,7 @@
                 ExecutorService ThreadPoolExecutor)
              quantum.core.data.queue.LinkedBlockingQueue
              #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
- 
+
 ; TODO temporary
 (def wrap-delay identity)
 #_(def wrap-delay (whenf*n (fn-not delay?) delay))
@@ -193,7 +193,7 @@
     (if-not (contains? @reg thread-id)
       (log/pr ::warn (str/sp "Thread-id" thread-id "does not exist; attempted to be closed."))
       (let [{:keys [thread children close-reqs]
-             {:keys [interrupted cleanup]} :handlers} ; close-req is another, but it's called asynchronously 
+             {:keys [interrupted cleanup]} :handlers} ; close-req is another, but it's called asynchronously
               (get @reg thread-id)]
         (doseq [child children]
           (close! child opts)) ; close children before parent
@@ -253,10 +253,10 @@
 #?(:clj
 (defonce add-thread-shutdown-hooks!
   (-> (Runtime/getRuntime) (.addShutdownHook (Thread. #(close-all! true))))))
- 
+
 ; ASYNC
 
-#?(:clj 
+#?(:clj
 (def rejected-execution-handler
   (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f)))))
 
@@ -273,9 +273,9 @@
          :reducers   ^ForkJoinPool       quantum.core.reducers.fold/pool})))
 
  #?(:clj
- (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)    
-   (reify java.util.concurrent.RejectedExecutionHandler    
-     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]    
+ (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)
+   (reify java.util.concurrent.RejectedExecutionHandler
+     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
        (@rejected-execution-handler f)))))
 
 #?(:clj
@@ -288,9 +288,9 @@
 #?(:clj
 (defn gen-threadpool [type num-threads & [name-]]
   (condp = type
-    :fixed     (set-max-threads! 
+    :fixed     (set-max-threads!
                  (java.util.concurrent.Executors/newFixedThreadPool num-threads)
-                 num-threads) 
+                 num-threads)
     :fork-join (co.paralleluniverse.fibers.FiberForkJoinScheduler.
                  (or name- (name (gensym))) num-threads nil
                  co.paralleluniverse.common.monitoring.MonitorType/JMX false))))
@@ -372,9 +372,9 @@
   [opts async-fn & args]
   `(let [opts# ~opts
          c# (chan 1)
-        ; It would be nice to wrap the fn because marking suspendable, etc. requires bytecode manipulation 
+        ; It would be nice to wrap the fn because marking suspendable, etc. requires bytecode manipulation
         ; and the shorter the fn, the less the bytecode and the faster the process
-        ; Otherwise can take at least 1000 ms 
+        ; Otherwise can take at least 1000 ms
         ; But it causes instrumentation errors
         ; f (fn [] (async-fn))
         fiber# (pulsar/spawn-fiber
@@ -385,13 +385,13 @@
                   ; If it's not marked as suspendable, it strangely (!) executes twice...
                   (pulsar/suspendable! ~async-fn)
                   ~@args))]
-    
+
     (condp = (:ret opts#)
       :chan   c#
       :future (pulsar/fiber->future fiber#)))))
 
 #?(:clj
-(defn gen-async-fn ; defn+ ^:suspendable 
+(defn gen-async-fn ; defn+ ^:suspendable
   "This fn exists in part because it contains all the code
    that would normally take ~1000ms to bytecode-transform into suspendableness.
    This way it is only so transformed once."
@@ -406,7 +406,7 @@
       ((or (-> opts :handlers :err/any.pre ) fn-nil))
       (log/pr-opts :warn #{:thread?} "Exited with exception" e)
       ((or (-> opts :handlers :err/any.post) fn-nil)))
-    (finally 
+    (finally
       (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
       (when (get @reg id)
         (log/pr-opts :quantum.core.thread/debug #{:thread?} "CLEANING UP" id)
@@ -454,7 +454,7 @@
                 (when cleanup-seq#
                   (delay
                     (doseq [f# @cleanup-seq#]
-                      (try (f#) 
+                      (try (f#)
                         (catch Throwable e#
                           (log/pr-opts :quantum.core.thread/warn #{:thread?} "Exception in cleanup:" e#)))))))
           ~close-req-call (wrap-delay close-req#)
@@ -486,19 +486,19 @@
      :handlers
 
 
-   Handlers: (maybe make certain of these callable once?) 
+   Handlers: (maybe make certain of these callable once?)
      For all threads:
      :close-req    — Called when another thread requests to close
-                     (adds an obj to the close-reqs queue)  
+                     (adds an obj to the close-reqs queue)
                      Somewhat analogous to :interrupted.
      :closed       — Called by the thread reaper when the thread is fully closed.
                      Not called if the thread completes without a close request.
-     :completed (Planned) 
+     :completed (Planned)
                    — Called when the thread runs to completion.
                      :completed and :closed may both be called.
-     :exception   
+     :exception
        — :default  — Called on early termination (exit code not= 0)
-     :error 
+     :error
        — (Various) — Non-exceptions (not thrown)
                      Not automatically called.
                      Grouped with handlers for organization.
@@ -517,7 +517,7 @@
         :thread ; TODO assumes ret is chan
           (async-chan* opts-f#
             (gen-async-fn (:body-fn opts-f#) opts-f#))))))
-  
+
 #?(:clj
 (defmacro async-loop
   "Like |go-loop| but inherits the additional flexibility
@@ -568,7 +568,7 @@
             {:id id
              :handlers {:close-req #(swap! reg dissoc id) ; remove itself
                         :closed    #(log/pr :debug "Thread-reaper has been closed.")
-                        :type      :thread}} 
+                        :type      :thread}}
             []
             (if (nempty? thread-reaper-pause-requests)
                 (do (async/empty! thread-reaper-pause-requests)
@@ -764,7 +764,7 @@
 ; SHUT DOWN ALL FUTURES
 ; ; DOESN'T ACTUALLY WORK
 ; (import 'clojure.lang.Agent)
-; (import 'java.util.concurrent.Executors) 
+; (import 'java.util.concurrent.Executors)
 ; (defn close-all-futures! []
 ;   (shutdown-agents)
 ;   (.shutdownNow Agent/soloExecutor)
@@ -831,14 +831,14 @@
                            cache) ; TODO bounded or auto-invalidating cache?
         log            (atom [])
         distributor-fn (atom (if cache-f
-                                 (memoize f cache-f memoize-only-first-arg?) ; It doesn't cache errors, by default   
+                                 (memoize f cache-f memoize-only-first-arg?) ; It doesn't cache errors, by default
                                  f))
         name-f         (or name (-> "distributor" gensym core/name keyword))
         max-threads-f  (or max-threads (-> (Runtime/getRuntime) (.availableProcessors)))
         thread-registrar (atom {})
         work-queue     (if max-work-queue-size
                           (chan (buffer max-work-queue-size))
-                          (chan)) ; Unbounded queues don't factor in to core.async 
+                          (chan)) ; Unbounded queues don't factor in to core.async
         threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
         threadpool-interrupted?
           (doto (atom false)
@@ -880,7 +880,7 @@
   {:usage '(distribute (->distributor) [1 2 3 5 6] {:cache? true})}
   [distributor & inputs]
   (assert (instance? Distributor distributor) #{distributor})
-  
+
   (casync/offer! (:work-queue distributor) [(time/now-instant) inputs])))
 
 #?(:clj
