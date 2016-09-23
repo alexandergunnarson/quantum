@@ -31,7 +31,7 @@
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.391"         ]
          [servant                               "0.1.5"           ]
-         [alexandergunnarson/co.paralleluniverse.pulsar #_co.paralleluniverse/pulsar "0.7.6.2" #_"0.7.6"
+         [#_alexandergunnarson/co.paralleluniverse.pulsar co.paralleluniverse/pulsar "0.7.6.2" "0.7.6"
            :exclusions [org.slf4j/*
                         potemkin
                         org.clojure/core.match
