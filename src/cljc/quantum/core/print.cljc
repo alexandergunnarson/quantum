@@ -27,7 +27,6 @@
                      [quantum.core.vars        :as var
                        :refer [defalias]                  ])))
 
-(defonce max-length (atom 1000))
 (defonce ^{:doc "A set of classes not to print"}
   blacklist  (atom #{}))
 
@@ -44,17 +43,14 @@
            :cljs false)
         #?(:clj  (debug/trace obj)
            :cljs false)
-        (let [ct (long
-                   (try
-                     (count obj)
-                     (catch #?(:clj Throwable :cljs js/Error) _ 1)))]
+        (do
           (cond
-            (> ct (long @max-length))
+            (and (string? obj) (> (count obj) *print-length*))
               (println
-                (str "Object is too long to print ("
-                     (str ct " elements")
+                (str "String is too long to print ("
+                     (str (count obj) " elements")
                      ").")
-                "|max-length| is set at" (str @max-length "."))
+                "|max-length| is set at" (str *print-length* ".")) ; TODO fix so ellipsize
             (contains? @blacklist (type obj))
               (println
                 "Object's class"
@@ -67,6 +63,8 @@
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
+
+(set! *print-length* 1000) ; A reasonable default
 
 #?(:clj (reset! debug/pretty-printer !))
 

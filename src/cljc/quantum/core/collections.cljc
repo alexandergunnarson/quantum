@@ -1031,23 +1031,19 @@
 ; ; (partition-by odd? [1 1 1 2 2 3 3])
 ; ; => ((1 1 1) (2 2) (3 3)) /lseq/
 
-
-#?(:clj
-  (defn frequencies+
-    "Like clojure.core/frequencies, but faster.
-     Uses Java's equal/hash, so may produce incorrect results if
-     given values that are = but not .equal"
-    {:attribution "prismatic.plumbing"
-     :performance "4.048617 ms vs. |frequencies| 6.341091 ms"}
-    [xs]
-    (let [res (java.util.HashMap.)]
-      (doseq [x xs]
-        (->> (.get res x)
-             (or 0)
-             int
-             unchecked-inc
-             (.put res x)))
-      (join {} res))))
+(defn red-frequencies
+  "Like `frequencies`, but uses reducers `reduce` and can choose
+   what to reduce into."
+  ([coll] (red-frequencies {} coll))
+  ([to coll]
+  ; TODO ensure coll is map
+  (let [[postf assocf] (if (should-transientize? to)
+                           [persistent! #(assoc! %1 %2 %3)]
+                           [identity    #(assoc  %1 %2 %3)])]
+    (postf
+      (reduce (fn [counts x]
+                (assocf counts x (inc (or (get counts x) 0))))
+        to coll)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
