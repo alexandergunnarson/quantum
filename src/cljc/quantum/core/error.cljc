@@ -25,7 +25,20 @@
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))
 
-(def error?  (partial instance? #?(:clj Throwable
+#?(:clj
+(defmacro catch-all
+  "Cross-platform try/catch/finally."
+  {:from 'taoensso.truss.impl/catching
+   :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
+  ; TODO js/Error instead of :default as temp workaround for http://goo.gl/UW7773
+  ([try-expr                     ] `(catching ~try-expr ~'_ nil))
+  ([try-expr error-sym catch-expr]
+   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
+  ([try-expr error-sym catch-expr finally-expr]
+   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
+
+
+(def error?  (partial instance? #?(:clj  Throwable
                                    :cljs js/Error)))
 
 (defrecord Err [type msg objs])
@@ -106,8 +119,7 @@
 (defmacro with-catch
   {:usage '(->> 0 (/ 1) (with-catch (constantly -1)))}
   [handler try-val]
-  `(try ~try-val
-     (catch Throwable e# (~handler e#)))))
+  `(catch-all ~try-val e# (~handler e#))))
 
 #?(:clj
 (defmacro with-assert [expr pred err]
@@ -183,7 +195,6 @@
   `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
        ~arg)))
 
-
 #?(:clj
 (defmacro try-times [max-n sleep-millis & body]
   (let [c (if-cljs &env 'js/Error 'Throwable)]
@@ -196,7 +207,7 @@
              (let [[error# result#]
                      (try [nil (do ~@body)]
                        (catch ~c e#
-                         (quantum.core.thread.async/sleep sleep-millis#)
+                         (quantum.core.async/sleep sleep-millis#)
                          [e# nil]))]
                (if error#
                    (recur (inc n#) error#)
