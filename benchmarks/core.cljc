@@ -1,5 +1,9 @@
+(ns quantum.user.benchmarks)
+(require '[criterium.core]
+         '[quantum.core.vars :refer [defalias]])
+(defalias bench criterium.core/quick-bench)
+
 (in-ns 'quantum.core.collections.core)
-(require '[quantum.core.meta.bench :refer [bench]])
 
 (def test:byte (byte 1))
 (def test:Byte (Byte. (byte 1)))
@@ -50,7 +54,7 @@
 14.789     µs : (bench (dotimes [i 10000] (aget                        ^floats   test:arr-float1 3))) ; extra time because extra (reify) fn call
 9.754      µs : (bench (dotimes [i 10000] (core/aget                   ^floats   test:arr-float1 3))) ; no reflection
 9.531      µs : (bench (dotimes [i 10000] (Array/get                   ^floats   test:arr-float1 3)))
-   
+
 ; AGET-IN*
 (def cache (doto (java.util.HashMap.)
                  (.put (class (apply make-array Float/TYPE (repeat 5 0)))
@@ -70,10 +74,10 @@
 
 6.139      ms : (let [f #(java.lang.reflect.Array/get %1 %2)
                       v [4 3 2 1 0]]
-                  (bench (dotimes [i 10000] (reduce f test:arr-float5 v))))   
+                  (bench (dotimes [i 10000] (reduce f test:arr-float5 v))))
 4.674      ms : (let [f #(aget %1 %2)
                       v [4 3 2 1 0]]
-                  (bench (dotimes [i 10000] (reduce f test:arr-float5 v))))      
+                  (bench (dotimes [i 10000] (reduce f test:arr-float5 v))))
 4.353      ms : (let [v [4 3 2 1 0]]
                   (bench (dotimes [i 10000] (aget-in                   ^"[[[[[F" test:arr-float5 v))))
 4.299      ms : (let [v [4 3 2 1 0]]
@@ -92,4 +96,59 @@
 
 
 
+; CORE.ASYNC VS. PULSAR
 
+(require '[clojure.core.async               :as async])
+(require '[co.paralleluniverse.pulsar.async :as async+])
+
+; TEST 1
+
+(defn test-1
+  ; From https://github.com/clojure/core.async/blob/master/examples/walkthrough.clj
+
+  ; core.async
+  ; With    Quasar auto-instrumentation: 188.272277 ms
+  ; Without Quasar auto-instrumentation: 125-151 ms
+  (bench
+    (let [n 1000
+          cs (repeatedly n async/chan)]
+    (doseq [c cs] (async/go (async/>! c "hi")))
+    (dotimes [i n]
+      (let [[v c] (async/alts!! cs)]
+        (assert (= "hi" v))))))
+
+  ; Pulsar
+  ; With    Quasar auto-instrumentation: 270.163299 ms ; 44%    slower than core.async
+  ; Without Quasar auto-instrumentation: 188.913573 ms ; 24-50% slower than core.async
+  (bench
+    (let [n 1000
+          cs (repeatedly n async+/chan)]
+    (doseq [c cs] (async+/go (async+/>! c "hi")))
+    (dotimes [i n]
+      (let [[v c] (async+/alts!! cs)]
+        (assert (= "hi" v)))))))
+
+; TEST 2
+
+(require '[clj-http.client :as http])
+
+(def cores (.. Runtime getRuntime availableProcessors))
+
+(defn test-2
+  ; core.async
+  ; Without Quasar auto-instrumentation: ~270 ms
+  (bench
+    (let [n  (* cores 3)
+          cs (repeatedly n async/chan)]
+    (doseq [c cs] (async/go (async/>! c (http/request {:method :get :url "http://checkip.amazonaws.com" :as :text}))))
+    (dotimes [i n]
+      (let [[v c] (async/alts!! cs)]))))
+
+  ; Pulsar
+  ; Without Quasar auto-instrumentation: ~400 ms ; 48% slower than core.async
+  (bench
+    (let [n  (* cores 3)
+          cs (repeatedly n async+/chan)]
+    (doseq [c cs] (async+/go (async+/>! c (http/request {:method :get :url "http://checkip.amazonaws.com" :as :text}))))
+    (dotimes [i n]
+      (let [[v c] (async+/alts!! cs)])))))
