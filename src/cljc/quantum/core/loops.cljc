@@ -10,12 +10,12 @@
              #?(:clj [proteus
                        :refer [let-mutable]                       ])
                      [quantum.core.core                :as qcore  ]
-                     [quantum.core.error               :as err                
+                     [quantum.core.error               :as err
                        :refer [->ex]                              ]
                      [quantum.core.log                 :as log    ]
                      [quantum.core.macros.core         :as cmacros
                        :refer [#?@(:clj [if-cljs])]               ]
-                     [quantum.core.macros              :as macros       
+                     [quantum.core.macros              :as macros
                        :refer [#?@(:clj [assert-args])]           ]
                      [quantum.core.reducers.reduce     :as red    ]
                      [quantum.core.macros.optimization :as opt    ]
@@ -24,7 +24,7 @@
                      [quantum.core.log                 :as log    ]
                      [quantum.core.loops
                        :refer [doseq]                             ])))
-  
+
 #?(:clj (set! *unchecked-math* true))
 
 #?(:clj
@@ -34,7 +34,7 @@
 #_(:clj
 (defmacro reduce-extern-arr*
   "|reduce| template, externed.
-   
+
    The fn (|reduce|'s first argument) is externed so as to not incur the overhead
    of creating a function every time the function which calls reduce is called.
 
@@ -88,7 +88,7 @@
   ([lang f ret coll]
    (let [externed
           (condp = lang
-            :clj  (if @qcore/externs? 
+            :clj  (if @qcore/externs?
                       (try (opt/extern- f)
                         (catch Throwable _
                           (log/pr ::macro-expand "COULD NOT EXTERN" f)
@@ -109,7 +109,7 @@
   (let [f-final
          `(~(if (and should-extern? @qcore/externs?)
                 `quantum.core.macros/extern+
-                `quantum.core.macros.optimization/identity*) 
+                `quantum.core.macros.optimization/identity*)
            (let [i# (volatile! (long -1))]
              (fn ([ret# elem#]
                    (vswap! i# qcore/unchecked-inc-long)
@@ -118,9 +118,9 @@
                    (vswap! i# qcore/unchecked-inc-long)
                    (opt/inline-replace (~f ret# k# v# @i#))))))
         _ (log/ppr ::macro-expand "F FINAL EXTERNED" f-final)
-        code `(red/reduce ~f-final ~ret-i ~coll) 
+        code `(red/reduce ~f-final ~ret-i ~coll)
         _ (log/ppr ::macro-expand "REDUCEI CODE" code)]
- code))) 
+ code)))
 
 #?(:clj
 (defmacro reducei-
@@ -140,7 +140,7 @@
   [f ret coll]
   `(reducei- ~f ~ret ~coll)
   #_`(reducei* true ~f ~ret ~coll)))
- 
+
 (defn reduce-2
   "Like |reduce|, but reduces over two items in a collection at a time.
 
@@ -336,7 +336,7 @@
 ;   {:attribution "Alex Gunnarson"}
 ;   [[elem coll] & body]
 ;   `(let-mutable [ret# (transient [])]
-;      (reduce ; would normally replace this with this namespace's |doseq|, but needed the |^:local| hint to be present  
+;      (reduce ; would normally replace this with this namespace's |doseq|, but needed the |^:local| hint to be present
 ;        ^:local
 ;        (fn [_# ~elem]
 ;          (set! ret# (conj! ret# (do ~@body)))
@@ -354,11 +354,11 @@
     "For 1000000 loops: (dotimes [n 1000000] nil)
 
      |clojure.core/dotimes| : 352 µs  — 374 µs  — 405 µs
-        
+
      Using |while| as loop  : 4.2 ms  — 6.5 ms  — 11.8 ms
      - Macroexpansion for |while| loop was likely non-trivial?
 
-     This version           : 4.269954 ms — 4.601226 ms — 5.965863 ms ... strange... 
+     This version           : 4.269954 ms — 4.601226 ms — 5.965863 ms ... strange...
     "
    :attribution "Alex Gunnarson"}
   [bindings & body]
@@ -369,7 +369,7 @@
         n (-> bindings (get 1))]
     `(let-mutable [n# (clojure.lang.RT/longCast ~n)
                    ~i (clojure.lang.RT/longCast 0)]
-       (loop []      
+       (loop []
          (when (< ~i n#)
            ~@body
            (set! ~i (unchecked-inc ~i))
@@ -417,12 +417,18 @@
            ~@body
            (recur ~test)))))
 
-(defn each
+(defn doeach
   "Like |run!|, but returns @coll.
    Like an in-place |doseq|."
   {:added "1.7"}
   [f coll]
   (doseq [x coll] (f x))
   coll)
+
+(defn each
+  "Same as |core/run!| but uses reducers' reduce"
+  [proc coll]
+  (red/reduce #(proc %2) nil coll)
+  nil)
 
 #?(:clj (set! *unchecked-math* false))

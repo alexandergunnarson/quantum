@@ -234,8 +234,9 @@
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
 #?(:clj (defalias while-let loops/while-let))
-        (defalias each  loops/each)
-        (defalias break reduced)
+        (defalias doeach  loops/doeach)
+        (defalias each    loops/each)
+        (defalias break   reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
