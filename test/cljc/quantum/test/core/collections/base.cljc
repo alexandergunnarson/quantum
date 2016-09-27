@@ -7,7 +7,7 @@
 
 (defn test:ensure-set [x])
 
-(defn test:zip-reduce [f init z])
+(defn test:zip-reduce* [f init z])
 
 (defn test:reducei [f init coll])
 

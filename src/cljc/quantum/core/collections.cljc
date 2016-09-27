@@ -57,6 +57,7 @@
              [quantum.core.collections.map-filter     :as mf     ]
              [quantum.core.collections.selective      :as sel    ]
              [quantum.core.collections.tree           :as tree   ]
+             [quantum.core.collections.zip            :as qzip   ]
              [quantum.core.error                      :as err
                :refer [->ex]                                     ]
              [quantum.core.fn                         :as fn
@@ -832,25 +833,10 @@
 (defalias right zip/right)
 (defalias left  zip/left )
 
-(defnt zipper
-  ([^vector? v] (zip/vector-zip v))
-  ([^map?    m] (zip/zipper  ; source https://clojuredocs.org/clojure.zip/zipper
-                  (fn [x] (or (map? x) (map? (nth x 1))))
-                  (fn [x] (seq (if (map? x) x (nth x 1))))
-                  (fn [x children]
-                    (if (map? x)
-                        (join {} children)
-                        (assoc x 1 (join {} children))))
-                  m))
-  ([         x] (zip/seq-zip x)))
-
-(defn zipper-mapv
-  [f coll]
-  (loop [ret (transient [])
-         elem (-> coll zipper down)]
-    (if (nil? elem)
-        (persistent! ret)
-        (recur (conj! ret (f elem)) (right elem)))))
+#?(:clj (defalias zipper qzip/zipper))
+(defalias zipper-mapv qzip/zipper-mapv)
+#?(:clj (defalias zipwalk    qzip/zipwalk))
+#?(:clj (defalias zip-reduce qzip/zip-reduce))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   ADDITIVE OPERATIONS    }=====================================================

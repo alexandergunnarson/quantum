@@ -32,7 +32,7 @@
       hash-set
     identity))
 
-(defn zip-reduce [f init z]
+(defn zip-reduce* [f init z]
   (loop [z (zip/down z)
          ret-n init]
     (if (nil? z)

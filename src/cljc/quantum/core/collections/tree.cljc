@@ -38,6 +38,7 @@
               boolean?])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )                  :as core   ]
+                     [fast-zip.core                           :as zip    ]
                      [quantum.core.data.map                   :as map
                        :refer [split-at map-entry]                       ]
                      [quantum.core.data.set                   :as set    ]
@@ -54,12 +55,14 @@
                        :refer [in-k?]                                    ]
                      [quantum.core.collections.map-filter     :as mf
                        :refer [map-keys+]                                ]
+                     [quantum.core.collections.zip            :as qzip
+                       :include-macros true]
                      [quantum.core.error                      :as err
                        :refer [->ex]                                     ]
                      [quantum.core.fn                         :as fn
                        :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n defcurried])
-                              fn-nil juxt-kv withf->>]  ]
+                                         f*n defcurried with-do])
+                              fn-nil juxt-kv withf->> firsta]]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
@@ -87,7 +90,7 @@
                      [quantum.core.collections.base           :as base
                        :refer [kmap]                                     ]
                      [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n defcurried]       ]
+                       :refer [compr <- fn-> fn->> f*n defcurried with-do]]
                      [quantum.core.log                        :as log    ]
                      [quantum.core.logic                      :as logic
                        :refer [fn-not fn-or fn-and whenf whenf*n
@@ -117,8 +120,7 @@
   {:todo ["Fix class overlap" "Preserve metadata"]}
   ; clojure.lang.PersistentList$EmptyList : '()
   ; special case to preserve type
-  ([^list?  coll f] (apply list  (map f coll)))
-  #_([^dlist? coll f] (apply dlist (map f coll)))  ; TODO ENABLE THIS UPON RESTART
+  ([^list?  coll f] (apply list (map f coll)))
   ([^transientizable? coll f]
      (persistent!
        (core/reduce
@@ -137,7 +139,10 @@
                (fn [r x] (conj r (f x)))
                (empty coll) coll)))
   #?(:clj  ([^map-entry? coll f] (map-entry (f (key coll)) (f (val coll)))))
-  #?(:clj  ([^record?    coll f] (core/reduce (fn [r x] (conj r (f x))) coll coll)))
+  #?(:clj  ([^record?    coll f]
+             (core/reduce
+               (fn [r x] (conj r (f x)))
+               coll coll)))
   #?(:clj  ([:else       x    f] x))
   #?(:cljs ([:else obj  f]
              (if (coll? obj)
@@ -231,3 +236,44 @@
   {:attribution "Alex Gunnarson"}
   [x]
   (apply-to-keys x (whenf*n keyword? name)))
+
+; ZIPPER TREES
+
+(defn zip-walk
+  "|walk| for zippers.
+   @inner and @outer must both return a non-zipper."
+  ([inner outer form] (zip/node (zip-walk inner outer nil (qzip/zipper form))))
+  ([inner outer _ loc-0]
+    (let [[i loc] (loop [i    0
+                         loc  loc-0]
+                    (if-let [loc' (if (zero? i)
+                                      (zip/down  loc)
+                                      (zip/right loc))]
+                      (let [innered (inner loc')
+                            _ (assert (not (instance? fast_zip.core.ZipperLocation innered))
+                                      {:innered innered
+                                       :derefed (zip/node innered)
+                                       :arg     (zip/node loc')})
+                            replaced (zip/replace loc' innered)]
+                        (recur (inc i)
+                               replaced))
+                      [i loc]))
+          loc' (if (> i 0) (zip/up loc) loc)
+          outered (outer loc')
+          _ (assert (not (instance? fast_zip.core.ZipperLocation outered)) {:outered outered})
+          ret (zip/replace loc' outered)
+          _ (assert (instance? fast_zip.core.ZipperLocation ret) {:ret ret})]
+      ret)))
+
+(defn zip-postwalk
+  "|postwalk| with zippers.
+   @f must return a non-zipper."
+  ([f form    ] (qzip/node* (zip-postwalk f nil (qzip/zipper form))))
+  ([f _    loc] (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
+
+(defn zip-prewalk
+  "|prewalk| with zippers.
+   @f must return a non-zipper."
+  ([f form    ] (qzip/node* (zip-prewalk f nil (qzip/zipper form))))
+  ([f _    loc] (zip-walk (comp zip/node #(zip-prewalk f nil %)) zip/node nil
+                  (zip/replace loc (f loc)))))
