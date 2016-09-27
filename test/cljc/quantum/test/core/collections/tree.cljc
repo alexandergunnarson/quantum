@@ -6,8 +6,8 @@
       :refer-macros [deftest is testing]]
     [fast-zip.core                 :as zip]
     [quantum.core.fn
-      :refer        [#?@(:clj [compr f*n])]
-      :refer-macros [compr f*n]]
+      :refer        [#?@(:clj [compr f*n fn->])]
+      :refer-macros [compr f*n fn->]]
     [quantum.core.logic
       :refer        [#?@(:clj [condf])]
       :refer-macros [condf]]
@@ -112,6 +112,36 @@
 
 (deftest test:zip-prewalk
   (prewalk-like-test ns/zip-prewalk assert-same-zipper))
+
+(deftest test:zip-prewalk:all-zip-information-accessible
+  (let [dirs (atom {})
+        ret (ns/zip-prewalk
+              (fn [x] (swap! dirs
+                        (fn-> (update :up    (compr conj vec) (-> x zip/up    qzip/node*))
+                              (update :at    (compr conj vec) (-> x           qzip/node*))
+                              (update :left  (compr conj vec) (-> x zip/left  qzip/node*))
+                              (update :right (compr conj vec) (-> x zip/right qzip/node*))
+                              (update :down  (compr conj vec) (-> x zip/down  qzip/node*))))
+                      (zip/node x))
+              walk-order-data)
+        dirs-expected
+        {:up [nil
+              [1 2 {:a 3} '(4 [5])]
+              [1 2 {:a 3} '(4 [5])]
+              [1 2 {:a 3} '(4 [5])]
+              {:a 3}
+              [:a 3]
+              [:a 3]
+              [1 2 {:a 3} '(4 [5])]
+              '(4 [5])
+              '(4 [5])
+              [5]],
+         :at    [[1 2 {:a 3} '(4 [5])] 1 2 {:a 3} [:a 3] :a 3 '(4 [5]) 4 [5] 5],
+         :left  [nil nil 1 2 nil nil :a {:a 3} nil 4 nil],
+         :right [nil 2 {:a 3} '(4 [5]) nil 3 nil nil [5] nil nil],
+         :down  [1 nil nil [:a 3] :a nil nil 4 nil 5 nil]}]
+    (is (= ret walk-order-data))
+    (is (= dirs-expected @dirs))))
 
 ; ------------------------------------------         OTHERS ----- ;
 

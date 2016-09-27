@@ -158,11 +158,7 @@
   "General-purpose zipper."
   {:attribution "Alex Gunnarson"}
   [coll]
-  (zip/zipper
-    coll?
-    seq
-    (fn [node children] (walking node nil children))
-    coll))
+  (zip/zipper coll? seq #(walking %1 nil %2) coll))
 
 (defn zip-reduce [f init coll] (zip-reduce* f init (zipper coll)))
 
