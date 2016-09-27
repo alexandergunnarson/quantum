@@ -13,16 +13,16 @@
             ; UTILS
             [com.stuartsierra.component :as component]
             [quantum.net.server.middleware :as mid   ]
-            [quantum.validate.core         :as v     ]
+            [quantum.core.validate         :as v     ]
             [quantum.core.string           :as str   ]
             [quantum.core.log              :as log   ]
             [quantum.core.resources        :as res   ]
             [quantum.core.paths            :as paths ]
-            [quantum.core.core             :as qcore 
+            [quantum.core.core             :as qcore
               :refer [lens]                          ]
-            [quantum.core.logic            :as logic 
+            [quantum.core.logic            :as logic
               :refer [nnil?]                         ]
-            [quantum.core.fn               :as fn    
+            [quantum.core.fn               :as fn
               :refer [<- fn->]                       ]))
 
 ; SECURITY MEASURES TAKEN CARE OF
@@ -38,7 +38,7 @@
 
 ; This seems really useful
 #_(defn create-api []
-  ["/"                   
+  ["/"
    [
     ["" (bidi.ring/redirect "index.html")]
     ["favicon.ico" (yada nil)]
@@ -60,7 +60,7 @@
                     (<- str/remove "..") ; to prevent insecure access
                     ^String (paths/url-path root)
                     (java.io.FileInputStream.))]
-      {:body body} ; TODO add content-type  
+      {:body body} ; TODO add content-type
       #_(add-mime-type resource-path options))))
 
 ; ROUTES PRESETS
@@ -104,12 +104,12 @@
 (comment
  "Blob storage: instead of transmitting the same data twice, simply
   asks for an authentication key from the database and uploads directly to the blob
-  storage using that authentication key.    
+  storage using that authentication key.
 
   Unfortunately the same is not true of things one wishes to put in the database.
   That data must be sent twice because the database is not REST-accessible (possibly
   thank goodness).
- 
-  Find out whether AWS, Azure, or Google is cheaper (for storage, specifically). 
-  
+
+  Find out whether AWS, Azure, or Google is cheaper (for storage, specifically).
+
   ")

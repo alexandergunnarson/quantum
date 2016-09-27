@@ -5,8 +5,9 @@
   quantum.apis.google.auth
   (:refer-clojure :exclude [empty?])
   (:require
-    [quantum.core.validate :as v
-      :include-macros true]
+    [quantum.core.validate
+      :refer        [#?(:clj validate) spec]
+      :refer-macros [validate]]
     [quantum.net.http      :as http]
     [quantum.net.url       :as url ]
     [quantum.auth.core     :as auth]
@@ -44,10 +45,10 @@
 (defonce error-log (atom []))
 
 (defn scopes-string [scopes-]
-  (v/validate (s/spec set?) scopes-) ; TODO no runtime spec decl
+  (validate (spec set?) scopes-) ; TODO no runtime spec decl
   (reducei
     (fn [s scope-key n]
-      (v/validate (s/spec keyword?) scope-key) ; TODO no runtime spec decl
+      (validate (spec keyword?) scope-key) ; TODO no runtime spec decl
       (let [space* (when (> n 0) " ")  ; join spaces
             ns-   (-> scope-key namespace keyword)
             name- (-> scope-key name keyword)

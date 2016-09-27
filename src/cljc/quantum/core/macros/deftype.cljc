@@ -1,7 +1,6 @@
 (ns quantum.core.macros.deftype
   (:require [quantum.core.collections.base
-              :refer [update-first update-val ensure-set
-                      zip-reduce default-zipper]]))
+              :refer [update-first update-val ensure-set]]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
 
@@ -110,7 +109,7 @@
                ~@(p-arity 'empty  (get-in skel ['?Collection 'empty ]))
                ~@(p-arity 'equiv  (get-in skel ['?Collection 'equals])) ; TBD
                ~@(p-arity 'cons   (get-in skel ['?Collection 'conj  ]))]
-          :cljs 
+          :cljs
            `[cljs.core/IEmptyableCollection
                ~@(p-arity '-empty (get-in skel ['?Collection 'empty ]))
              cljs.core/IEquiv

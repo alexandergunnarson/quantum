@@ -5,7 +5,7 @@
   quantum.core.classes
   (:refer-clojure :exclude [name])
   (:require [quantum.core.collections.base :as cbase
-              :refer [name default-zipper camelcase ns-qualify zip-reduce
+              :refer [name default-zipper camelcase ns-qualify
                       comparators ensure-set]]
             [quantum.core.classes.reg      :as class-reg]
             [quantum.core.data.map         :as map      ]
@@ -42,7 +42,7 @@
 
 ; #?(:clj
 ; (defn package-resolve [class-name]
-;   (reduce 
+;   (reduce
 ;     (fn [ret ^Package p]
 ;       (let [pack    (.getName p)
 ;           tentative (str pack "." class-name)]

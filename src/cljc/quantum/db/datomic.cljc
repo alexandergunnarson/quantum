@@ -48,9 +48,10 @@
                       :refer [->name]                              ]
                     [quantum.core.paths               :as path     ]
                     [quantum.parse.core               :as parse    ]
-                    [quantum.validate.core            :as val
+                    [quantum.core.validate
                       :refer        [#?(:clj validate)]
-                      :refer-macros [validate]                     ])
+                      :refer-macros [validate]                     ]
+                    [quantum.validate.core            :as v        ])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
@@ -235,11 +236,11 @@
                                         :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage
                                         :memory-index-max       "128"
                                         :object-cache-max       "128m"
-                                        :data-dir               (validate val/no-blanks?
+                                        :data-dir               (validate v/no-blanks?
                                                                   (if res (path/path res "data"          ) "data"          ))
-                                        :log-dir                (validate val/no-blanks?
+                                        :log-dir                (validate v/no-blanks?
                                                                   (if res (path/path res "log"           ) "log"           ))
-                                        :pid-file               (validate val/no-blanks?
+                                        :pid-file               (validate v/no-blanks?
                                                                   (if res (path/path res "transactor.pid") "transactor.pid"))}
                                      (c/dissoc internal-props :path))]
                          (io/assoc! props-path-f

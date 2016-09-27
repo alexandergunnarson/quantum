@@ -3,19 +3,17 @@
     [quantum.core.analyze.clojure.predicates :as anap
       :refer [type-hint]                                ]
     [quantum.core.collections.base           :as cbase
-      :refer        [update-first update-val ensure-set
-                     zip-reduce default-zipper
-                     #?(:clj kmap)]  
+      :refer        [update-first update-val ensure-set #?(:clj kmap)]
       :refer-macros [kmap]                              ]
-    [quantum.core.error                      :as err 
+    [quantum.core.error                      :as err
       :refer [->ex]                                     ]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn-> fn->> <-])]         
+      :refer        [#?@(:clj [fn-> fn->> <-])]
       :refer-macros [fn-> fn->> <-]                     ]
-    [quantum.core.log                        :as log    
+    [quantum.core.log                        :as log
       :include-macros true                              ]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [whenc]) nempty?]         
+      :refer        [#?@(:clj [whenc]) nempty?]
       :refer-macros [whenc]                             ]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.macros.transform           :as trans  ]))

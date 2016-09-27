@@ -8,14 +8,14 @@
     [quantum.core.fn                         :as fn
       :refer        [#?@(:clj [f*n fn-> fn->>])]
       :refer-macros [f*n fn-> fn->>]                    ]
-    [quantum.core.log                        :as log       
+    [quantum.core.log                        :as log
       :include-macros true                              ]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [whenp]) nempty? nnil?]    
+      :refer        [#?@(:clj [whenp]) nempty? nnil?]
       :refer-macros [whenp]                             ]
     [quantum.core.collections.base           :as cbase
       :refer        [#?(:clj kmap) update-first update-val
-                     ensure-set zip-reduce default-zipper]               
+                     ensure-set]
       :refer-macros [kmap]]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore  ]))
@@ -39,10 +39,10 @@
     (if (or (= hint-0 'Object)
             (= hint-0 'java.lang.Object) ; The extra object hints mess things up
             (-> protocol-type-hint-map (get lang) (get hint-0)))
-        unhinted ; just remove the hint — don't "upgrade" it 
+        unhinted ; just remove the hint — don't "upgrade" it
         (cmacros/hint-meta arg hint-0))))
 
-(defn ensure-protocol-appropriate-arglist 
+(defn ensure-protocol-appropriate-arglist
   [lang arglist-0]
   (->> arglist-0
        (map-indexed
@@ -123,7 +123,7 @@
                         (if ; Unboxed version of arity already exists? Skip generation of that type/arity
                             (and (tcore/boxed? first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
                             [] ; Empty so concat gets nothing
-                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed)) 
+                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed))
                                              ; (whenc (-> arglist second type-hint tcore/->boxed)
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))

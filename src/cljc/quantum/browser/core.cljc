@@ -5,7 +5,9 @@
   quantum.browser.core
           (:require
             [com.stuartsierra.component     :as comp ]
-            [quantum.validate.core          :as v    ]
+            [quantum.core.validate
+              :refer        [#?(:clj validate) spec]
+              :refer-macros [validate]]
             [quantum.auth.core              :as auth ]
             [quantum.core.log               :as log
               :include-macros true]
@@ -151,7 +153,7 @@
   {:attribution "Alex Gunnarson"
    :todo ["Just a band-aid. Use a timeout channel for this."]}
   [f & fn-args]
-  (v/validate v/fn? f)
+  (validate (spec fn?) f) ; TODO no runtime spec
   (let [timeout        5000
         timer-interval 100] ; try every 10th of a second
     (loop [timer   0

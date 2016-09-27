@@ -5,8 +5,7 @@
   (:require
     [quantum.core.collections.base           :as cbase
       :refer        [#?(:clj kmap) merge-call
-                     update-first update-val ensure-set
-                     zip-reduce default-zipper reducei]         
+                     update-first update-val ensure-set reducei]
       :refer-macros [kmap]]
     [quantum.core.data.map                   :as map
       :refer [merge]                                           ]
@@ -14,12 +13,12 @@
     [quantum.core.data.vector                :as vec
       :refer [catvec]                                          ]
     [quantum.core.error                      :as err
-      :refer        [#?@(:clj [throw-unless assertf->>]) ->ex] 
+      :refer        [#?@(:clj [throw-unless assertf->>]) ->ex]
       :refer-macros [throw-unless assertf->>]                  ]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- fn-> fn->> f*n])] 
+      :refer        [#?@(:clj [<- fn-> fn->> f*n])]
       :refer-macros [<- fn-> fn->> f*n]                        ]
-    [quantum.core.log                        :as log           
+    [quantum.core.log                        :as log
       :include-macros true                                     ]
     [quantum.core.logic                      :as logic
       :refer        [#?@(:clj [eq? fn-not fn-or whenc whenf
@@ -27,7 +26,7 @@
                      nempty? nnil?                             ]
       :refer-macros [eq? fn-not fn-or whenc whenf whencf*n if*n
                      condf]]
-    [quantum.core.macros.core                :as cmacros       
+    [quantum.core.macros.core                :as cmacros
       :refer [#?@(:clj [when-cljs if-cljs])]                   ]
     [quantum.core.macros.fn                  :as mfn           ]
     [quantum.core.analyze.clojure.predicates :as anap
@@ -40,7 +39,7 @@
     [quantum.core.type.defs                  :as tdefs         ]
     [quantum.core.type.core                  :as tcore         ]
     [quantum.core.vars                       :as var
-      :refer        [#?@(:clj [defalias])]                    
+      :refer        [#?@(:clj [defalias])]
       :refer-macros [defalias]                                 ]))
 
 ; TODO reorganize this namespace and move into other ones as necessary
@@ -79,7 +78,7 @@
   (throw-unless ((fn-or symbol? keyword?) pred) "Type predicate must be a symbol or keyword.")
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
-      (->> tcore/types-unevaled 
+      (->> tcore/types-unevaled
            (<- get lang)
            (<- get pred)
            (assertf->> nempty? "No classes match the predicate provided.")
@@ -165,7 +164,7 @@
   (assert (nempty? arities))
   (let [genned-method-name
           (-> sym name cbase/camelcase munge symbol)
-        genned-interface-name 
+        genned-interface-name
           (-> sym name cbase/camelcase (str "Interface") munge symbol)
         ns-qualified-interface-name
           (-> genned-interface-name
@@ -203,7 +202,7 @@
     :else (do (assert (nnil? available-default-types))
               (->> type-hints
                    (map-indexed
-                     (fn [n type-hint] 
+                     (fn [n type-hint]
                        (cond
                          (= type-hint #{:else}); because expanded
                            (whenc (get available-default-types n) empty?
@@ -255,7 +254,7 @@
                         (map #(defnt-replace-kw :first {:type-arglist %}))
                         (mapv assoc-arity-etc)))))
          (apply catvec))})
-  
+
 (defn defnt-gen-interface-def
   [{:keys [gen-interface-code-header gen-interface-code-body-expanded]}]
   {:post [(log/ppr-hints :macro-expand "INTERFACE DEF:" %)]}
@@ -268,7 +267,7 @@
   [arglist types]
   (loop [i 0 arglist-n arglist types-n types]
     (let [type-n (first arglist-n)]
-      (if (empty? arglist-n) 
+      (if (empty? arglist-n)
           types-n
           (recur (inc i) (rest arglist-n)
                  (update types-n i
@@ -301,7 +300,7 @@
      :first-types             (get types 0)}))
 
 (defn protocol-verify-unique-first-hint
-  "Not allowed same arity and same first hint. 
+  "Not allowed same arity and same first hint.
 
    Protocols can't dispatch on non-first args.
    ([^long x ^int    y ^char z] (+ x y) (str z))
@@ -402,7 +401,7 @@
   [{:as env :keys [sym]}]
   (let [defnt-auto-unboxable? (-> sym type-hint tcore/auto-unboxable?)
         auto-unbox-fn (type-hint sym) ; unbox-fn (long, int, etc.) is same as type hint
-        ; TODO auto-unbox according to arguments when no defnt-wide type hint is given 
+        ; TODO auto-unbox according to arguments when no defnt-wide type hint is given
         _ (log/ppr :macro-expand "Auto-unboxable?" defnt-auto-unboxable? auto-unbox-fn)]))
 
 (defn defnt-gen-final-defnt-def

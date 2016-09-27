@@ -9,10 +9,10 @@
                        :refer [unhint]                                      ]
                      [quantum.core.collections.base           :as cbase
                        :refer [update-first update-val ensure-set
-                               zip-reduce default-zipper]                   ]
-                     [quantum.core.error                      :as err       
+                               zip-reduce* default-zipper]                   ]
+                     [quantum.core.error                      :as err
                       :refer [->ex]                                         ]
-                     [quantum.core.fn                         :as fn        
+                     [quantum.core.fn                         :as fn
                        :refer [#?@(:clj [<- f*n fn->])]                     ]
                      [quantum.core.log                        :as log       ]
                      [quantum.core.logic                      :as logic
@@ -54,11 +54,11 @@
   "Hints a code body with the hints in the arglist."
   ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
   ([body arglist lang body-type]
-  (let [arglist-map (->> arglist 
+  (let [arglist-map (->> arglist
                          (map (fn [sym] [sym (type-hint sym)]))
                          (into {}))
-        body-hinted 
-          (postwalk 
+        body-hinted
+          (postwalk
             (condf*n
               symbol?
                 (fn [sym]
@@ -98,7 +98,7 @@
   {:tests '{'[w #{Exception} x ^int y ^integer? z]
             '[Object #{Exception} int integer?]}}
   [lang arglist]
-  (zip-reduce
+  (zip-reduce*
     (fn [type-hints z]
       (let [type-hint-n
              (cond
@@ -143,7 +143,7 @@
             (cmacros/hint-meta arg hint)
             arg)
         (vector? arg)
-          ; Otherwise the tag meta is assumed to be 
+          ; Otherwise the tag meta is assumed to be
           ; clojure.lang.IPersistentVector, etc.
           (cmacros/hint-meta (list 'identity arg)
             (or (get vec-classes-for-count (count arg))

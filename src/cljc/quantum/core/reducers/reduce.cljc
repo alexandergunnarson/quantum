@@ -14,13 +14,13 @@
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core  ]
                      [quantum.core.collections.base :as cbase ]
-                     [quantum.core.data.vector      :as vec   
+                     [quantum.core.data.vector      :as vec
                        :refer [catvec]                        ]
            #?@(:clj [[seqspert.hash-set                       ]
                      [seqspert.hash-map                       ]])
                      [quantum.core.data.set         :as set   ]
                      [quantum.core.data.map         :as map   ]
-                     [quantum.core.error            :as err   
+                     [quantum.core.error            :as err
                        :refer [->ex]                          ]
                      [quantum.core.logic            :as logic
                        :refer [nnil?]                         ]
@@ -29,7 +29,7 @@
                      [quantum.core.type             :as type
                        :refer [#?@(:clj [editable? hash-set?
                                          hash-map?])]         ]
-                     [quantum.core.vars             :as var 
+                     [quantum.core.vars             :as var
                        :refer [#?(:clj defalias)]             ])
   #?(:cljs (:require-macros
                      [quantum.core.reducers.reduce
@@ -38,7 +38,7 @@
                        :refer [defnt]                         ]
                      [quantum.core.type             :as type
                        :refer [editable? hash-set? hash-map?] ]
-                     [quantum.core.vars             :as var 
+                     [quantum.core.vars             :as var
                        :refer [defalias]                      ]))
   #?(:cljs (:import [goog.string StringBuffer])))
 
@@ -74,7 +74,7 @@
 (defnt reduce*
   {:attribution "Alex Gunnarson"}
         ([^fast_zip.core.ZipperLocation z f init]
-          (cbase/zip-reduce f init z))
+          (cbase/zip-reduce* f init z))
         ([^array? arr f init]
           #?(:clj  (loop [i (long 0) ret init]
                      (if (< i (-> arr count long))
@@ -125,7 +125,7 @@
   "Like |core/reduce| except:
    When init is not provided, (f) is used.
    Maps are reduced with reduce-kv.
-   
+
    Entry point for internal reduce (in order to switch the args
    around to dispatch on type)."
   {:attribution "Alex Gunnarson"
@@ -177,7 +177,7 @@
   ([^vector?     to from] (if (vector?   from)
                               (catvec         to from)
                               (transient-into to from)))
-  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)  
+  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)
                                        (seqspert.hash-set/sequential-splice-hash-sets to from)
                                        (transient-into to from))
                              :cljs (transient-into to from)))
