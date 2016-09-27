@@ -21,7 +21,8 @@
             [lein-essthree "0.2.1"
               :exclusions [org.clojure/tools.reader]]]
   :dependencies
-    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha10"] ; alpha11 is annoying ; With hardlinking
+    [[org.clojure/clojure                       "1.8.0"] ; 1.9.0-alpha* has some problems
+     [clojure-future-spec                       "1.9.0-alpha12-2"]
      [org.clojure/clojurescript                 "1.9.216" #_"1.9.93"         ] ; Latest (as of 7/28/2016)
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
@@ -226,12 +227,13 @@
        ;[repetition-hunter                      "1.0.0"           ]
        ; COMPILE/TRANSPILE
        [org.eclipse.jdt/org.eclipse.jdt.core    "3.10.0"          ] ; Format Java source code
-       [com.github.javaparser/javaparser-core   "2.4.0"           ] ; Parse Java source code
+       [com.github.javaparser/javaparser-core   "2.5.1"           ] ; Parse Java source code
        [org.clojure/tools.emitter.jvm           "0.1.0-beta5"
          :exclusions [org.ow2.asm/*]]
        [org.clojure/tools.analyzer              "0.6.9"           ]
        [org.clojure/jvm.tools.analyzer          "0.6.1"           ]
       ;[org.clojure/tools.analyzer.js           "0.1.0-beta5"     ] ; Broken
+       [cljfmt                                  "0.5.5"           ]
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.13"
        :exclusions [org.apache.poi/poi org.apache.poi/poi-ooxml
@@ -295,8 +297,7 @@
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
      [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
    :profiles
-   {:dev {;:injections    [(clojure.main/repl :print clojure.pprint/pprint)]
-          :resource-paths ["dev-resources"]
+   {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
@@ -354,6 +355,7 @@
   ;:resource-paths ["resources"] ; important for Figwheel
   :test-paths     ["test/cljs" "test/clj" "test/cljc"]
   :repl-options {:init (do (clojure.core/require 'quantum.core.print)
+                           (require 'alembic.still)
                            (clojure.main/repl
                              :print  quantum.core.print/!
                              :caught quantum.core.print/!))}
