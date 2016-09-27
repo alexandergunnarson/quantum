@@ -56,7 +56,8 @@
                      [quantum.core.collections.map-filter     :as mf
                        :refer [map-keys+]                                ]
                      [quantum.core.collections.zip            :as qzip
-                       :include-macros true]
+                       :refer        [#?@(:clj [walking])]
+                       :refer-macros [walking]]
                      [quantum.core.error                      :as err
                        :refer [->ex]                                     ]
                      [quantum.core.fn                         :as fn
@@ -78,7 +79,6 @@
                                          boolean? should-transientize?])]]
                      [quantum.core.analyze.clojure.predicates :as anap   ]
                      [quantum.core.type.predicates            :as tpred  ]
-                     [clojure.walk                            :as walk   ]
                      [quantum.core.loops                      :as loops
                        :refer [#?@(:clj [doseqi reducei lfor])]]
                      [quantum.core.vars                       :as var
@@ -109,46 +109,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================
-; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
-(defnt walk2
-  "If coll is a collection, applies f to each element of the collection
-   and returns a collection of the results, of the same type and order
-   as coll. If coll is not a collection, returns it unchanged. \"Same
-   type\" means a type with the same behavior. For example, a hash-map
-   may be returned as an array-map, but a a sorted-map will be returned
-   as a sorted-map with the same comparator."
-  {:todo ["Fix class overlap" "Preserve metadata"]}
-  ; clojure.lang.PersistentList$EmptyList : '()
-  ; special case to preserve type
-  ([^list?  coll f] (apply list (map f coll)))
-  ([^transientizable? coll f]
-     (persistent!
-       (core/reduce
-         (fn [r x] (core/conj! r (f x)))
-         (transient (core/empty coll)) coll)))
-  ; generic sequence fallback
-  ; TODO add any seq in general
-  ([#{cons? lseq? misc-seq? queue?} coll f] (map f coll))
-  ; |transient| discards metadata as of Clojure 1.6.0
-
-  ; Persistent collections that don't support transients
-  #?(:clj  ([#{clojure.lang.PersistentStructMap
-               clojure.lang.PersistentTreeMap
-               clojure.lang.PersistentTreeSet} coll f]
-             (core/reduce
-               (fn [r x] (conj r (f x)))
-               (empty coll) coll)))
-  #?(:clj  ([^map-entry? coll f] (map-entry (f (key coll)) (f (val coll)))))
-  #?(:clj  ([^record?    coll f]
-             (core/reduce
-               (fn [r x] (conj r (f x)))
-               coll coll)))
-  #?(:clj  ([:else       x    f] x))
-  #?(:cljs ([:else obj  f]
-             (if (coll? obj)
-                 (join (empty obj) (map f obj))
-                 obj))))
-
 (defn walk
   "Traverses form, an arbitrary data structure.  inner and outer are
   functions.  Applies inner to each element of form, building up a
@@ -156,7 +116,7 @@
   Recognizes all Clojure data structures. Consumes seqs as with doall."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [inner outer form]
-  (outer (walk2 form inner)))
+  (outer (walking form inner)))
 
 (defn postwalk
   "Performs a depth-first, post-order traversal of form.  Calls f on
