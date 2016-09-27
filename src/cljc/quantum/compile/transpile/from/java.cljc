@@ -1,68 +1,68 @@
 (ns quantum.compile.transpile.from.java
-           (:refer-clojure :exclude [some?])
-           (:require [quantum.core.analyze.clojure.predicates :as anap ]
-                     [quantum.core.analyze.clojure.core       :as ana  ]
-                     [quantum.core.string                     :as str  ]
-                     [quantum.core.collections                :as coll
-                       :refer [#?@(:clj [postwalk prewalk containsv?
-                                         popr])
-                               take-until update-last]                 ]
-                     [quantum.core.convert                    :as conv
-                       :refer [->name]                                 ]
-                     [quantum.core.error                      :as err
-                       :refer [->ex]                                   ]
-                     [quantum.core.macros                     :as macros
-                       :refer [#?(:clj defnt)]                         ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [fn-> fn->> f*n compr])]       ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [eq? fn-or fn-and whenf if*n
-                                         condf*n])
-                               nnil? some?]                          ]
-                     [quantum.core.type.core                  :as tcore])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                         :as fn
-                       :refer [fn-> fn->> f*n compr]                   ]
-                     [quantum.core.logic                      :as logic
-                       :refer [eq? fn-or fn-and whenf if*n condf*n]    ]))
-  #?(:clj (:import com.github.javaparser.JavaParser
-                  [com.github.javaparser.ast CompilationUnit]
-                  [com.github.javaparser.ast.body
-                    ClassOrInterfaceDeclaration InitializerDeclaration
-                    ConstructorDeclaration
-                    MethodDeclaration FieldDeclaration FieldDeclaration
-                    ModifierSet
-                    Parameter MultiTypeParameter
-                    VariableDeclarator VariableDeclaratorId]
-                  [com.github.javaparser.ast.comments JavadocComment]
-                  [com.github.javaparser.ast.stmt
-                    ExplicitConstructorInvocationStmt
-                    BlockStmt Statement ExpressionStmt
-                    TryStmt ThrowStmt CatchClause
-                    BreakStmt ContinueStmt
-                    WhileStmt
-                    ForStmt ForeachStmt
-                    ReturnStmt
-                    IfStmt
-                    SwitchStmt SwitchEntryStmt]
-                  [com.github.javaparser.ast.expr
-                    ObjectCreationExpr NameExpr VariableDeclarationExpr
-                    SuperExpr
-                    ArrayAccessExpr ArrayCreationExpr ArrayInitializerExpr
-                    ConditionalExpr
-                    CastExpr
-                    LambdaExpr
-                    NullLiteralExpr AssignExpr MethodCallExpr
-                    InstanceOfExpr
-                    ClassExpr ThisExpr
-                    FieldAccessExpr
-                    EnclosedExpr
-                    UnaryExpr UnaryExpr$Operator
-                    BinaryExpr BinaryExpr$Operator
-                    BooleanLiteralExpr StringLiteralExpr IntegerLiteralExpr]
-                  [com.github.javaparser.ast.type
-                    ReferenceType ClassOrInterfaceType
-                    PrimitiveType PrimitiveType$Primitive])))
+  (:refer-clojure :exclude [some?])
+  (:require
+    [quantum.core.analyze.clojure.predicates :as anap ]
+    [quantum.core.analyze.clojure.core       :as ana  ]
+    [quantum.core.string                     :as str  ]
+    [quantum.core.collections                :as coll
+      :refer        [#?@(:clj [containsv? popr])
+                     postwalk prewalk take-until update-last]
+      :refer-macros [          containsv? popr]]
+    [quantum.core.convert                    :as conv
+      :refer [->name]                                 ]
+    [quantum.core.convert.primitive          :as pconv]
+    [quantum.core.error                      :as err
+      :refer [->ex]                                   ]
+    [quantum.core.macros                     :as macros
+      :refer [#?(:clj defnt)]                         ]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [fn-> fn->> f*n compr <-])]
+      :refer-macros [          fn-> fn->> f*n compr <-]]
+    [quantum.core.logic                      :as logic
+      :refer        [nnil? some?
+                     #?@(:clj [eq? fn-or fn-and whenf if*n condf*n])]
+      :refer-macros [          eq? fn-or fn-and whenf if*n condf*n]]
+    [quantum.core.type.core                  :as tcore])
+#?(:clj
+    (:import
+      com.github.javaparser.JavaParser
+     [com.github.javaparser.ast CompilationUnit]
+     [com.github.javaparser.ast.body
+       ClassOrInterfaceDeclaration InitializerDeclaration
+       ConstructorDeclaration
+       MethodDeclaration FieldDeclaration FieldDeclaration
+       ModifierSet
+       Parameter MultiTypeParameter
+       VariableDeclarator VariableDeclaratorId]
+     [com.github.javaparser.ast.comments JavadocComment]
+     [com.github.javaparser.ast.stmt
+       ExplicitConstructorInvocationStmt
+       BlockStmt Statement ExpressionStmt
+       TryStmt ThrowStmt CatchClause
+       BreakStmt ContinueStmt
+       WhileStmt DoStmt
+       ForStmt ForeachStmt
+       ReturnStmt
+       IfStmt
+       SwitchStmt SwitchEntryStmt]
+     [com.github.javaparser.ast.expr
+       ObjectCreationExpr NameExpr VariableDeclarationExpr
+       SuperExpr
+       ArrayAccessExpr ArrayCreationExpr ArrayInitializerExpr
+       ConditionalExpr
+       CastExpr
+       LambdaExpr
+       NullLiteralExpr AssignExpr MethodCallExpr
+       InstanceOfExpr
+       ClassExpr ThisExpr
+       FieldAccessExpr
+       EnclosedExpr
+       UnaryExpr UnaryExpr$Operator
+       BinaryExpr BinaryExpr$Operator
+       BooleanLiteralExpr StringLiteralExpr IntegerLiteralExpr LongLiteralExpr]
+     [com.github.javaparser.ast.type
+       ReferenceType ClassOrInterfaceType
+       PrimitiveType PrimitiveType$Primitive])))
 
 ; JAVA->CLOJURE
 
@@ -102,28 +102,30 @@
         list))
 
 (def operators
-  {"assign"        'set!
-   "equals"        '=
-   "notEquals"     'not=
-   "lessEquals"    '<=
-   "greaterEquals" '>=
-   "and"           'and
-   "or"            'or
-   "not"           'not
-   "plus"          '+
-   "minus"         '-
-   "divide"        '/
-   "times"         '*
-   "greater"       '>
-   "less"          '<
-   "lShift"        '<<
-   "rSignedShift"  '>>
-   "remainder"     'rem
-   "negative"      '-
-   "preIncrement"  'inc! ; TODO is it wise to equate these two?
-   "posIncrement"  'inc!
-   "posDecrement"  'dec!
-   "binAnd"        'bit-and})
+  {"assign"         'set!
+   "equals"         '=
+   "notEquals"      'not=
+   "lessEquals"     '<=
+   "greaterEquals"  '>=
+   "and"            'and
+   "not"            'not
+   "plus"           '+
+   "minus"          '-
+   "divide"         '/
+   "times"          '*
+   "greater"        '>
+   "less"           '<
+   "lShift"         '<<
+   "rSignedShift"   '>>
+   "rUnsignedShift" '>>>
+   "remainder"      'rem
+   "negative"       '-
+   "preIncrement"   'inc! ; TODO is it wise to equate these two?
+   "posIncrement"   'inc!
+   "posDecrement"   'dec!
+   "binAnd"         '&
+   "inverse"        'bit-not
+   "or"             '|})
 
 #?(:clj (def string-literal? (partial instance? StringLiteralExpr)))
 
@@ -135,34 +137,34 @@
                       (str "^:"))]
     (when-not (some? (eq? all-mods)
                       #{"^:default"
-                        "^:public"}) 
+                        "^:public"})
       (symbol all-mods)))))
 
 #?(:clj
 (defn parse-operator [x]
   (if-let [oper (->> x str (get operators))]
     oper
-    (throw (->ex (str "Operator not found: '" x "'"))))))
+    (throw (->ex nil (str "Operator not found") {:operator x})))))
 
 #?(:clj
 (defn parse-conditional [x]
   (let [pred (-> x (.getCondition) parse*)
         raw-then (condp instance? x
-                   ConditionalExpr (.getThenExpr x)
-                   IfStmt          (.getThenStmt x)
+                   ConditionalExpr (.getThenExpr ^ConditionalExpr x)
+                   IfStmt          (.getThenStmt ^IfStmt x)
                    (throw (->ex nil "Conditional exception" nil)))
         then (-> raw-then parse* remove-do-when-possible)]
     (if-let [else (condp instance? x
-                    ConditionalExpr (.getElseExpr x)
-                    IfStmt          (.getElseStmt x)
+                    ConditionalExpr (.getElseExpr ^ConditionalExpr x)
+                    IfStmt          (.getElseStmt ^IfStmt x)
                     (throw (->ex nil "Conditional exception" nil)))]
       (concat (list 'if) (list pred) then (-> else parse* remove-do-when-possible))
       (apply list 'when pred then)))))
 
 #?(:clj
 (defnt get-inner
-  ([^com.github.javaparser.ast.body.MethodDeclaration      x] (.getBody  x))
-  ([^com.github.javaparser.ast.body.ConstructorDeclaration x] (.getBlock x))))
+  ([^MethodDeclaration      x] (.getBody  x))
+  ([^ConstructorDeclaration x] (.getBlock x))))
 
 (def dep-primitive->clojure-primitive
   {'Byte 'byte
@@ -175,34 +177,34 @@
     (-> x conv/->input-stream JavaParser/parse parse*))
   ([#{java.io.File java.io.InputStream} x]
     (-> x JavaParser/parse parse*))
-  ([^com.github.javaparser.ast.CompilationUnit x]
+  ([^CompilationUnit x]
     (->> x (.getTypes) (mapv parse*)))
   ; TYPE
-  ([^com.github.javaparser.ast.type.ReferenceType x]
+  ([^ReferenceType x]
      ;.getArrayCount missing
     (-> x .getType parse*))
-  ([^com.github.javaparser.ast.type.PrimitiveType x] 
+  ([^PrimitiveType x]
     (->> x .getType str symbol
          (get dep-primitive->clojure-primitive)))
-  ([^com.github.javaparser.ast.type.ClassOrInterfaceType x]
+  ([^ClassOrInterfaceType x]
     ;.getScope
     (-> x .getName
           (whenf (f*n containsv? "<") ; Parameterized class
             (fn->> (take-until "<")))
           symbol))
   ; BODY
-  ([^com.github.javaparser.ast.body.ClassOrInterfaceDeclaration x]
+  ([^ClassOrInterfaceDeclaration x]
     (-> x (.getMembers) do-each))
-  ([^com.github.javaparser.ast.body.FieldDeclaration x]
+  ([^FieldDeclaration x]
     (cons 'do
           (coll/lfor [v (.getVariables x)]
             (apply list 'def (-> x .getModifiers parse-modifiers)
               (-> x .getType type-hint*)
               (-> v parse*)))))
-  ([^com.github.javaparser.ast.body.InitializerDeclaration x]
+  ([^InitializerDeclaration x]
     (-> x .getBlock parse*))
-  ([#{com.github.javaparser.ast.body.MethodDeclaration
-     com.github.javaparser.ast.body.ConstructorDeclaration} x]
+  ([#{MethodDeclaration
+     ConstructorDeclaration} x]
      ; getTypeParameters
     (let [pre {:modifier (-> x .getModifiers parse-modifiers)
                :doc      (-> x (.getComment) str clean-javadoc)
@@ -219,31 +221,31 @@
                   (->> inner parse* implicit-do))]
       (concat (list 'defn) pres
            arglist body)))
-  ([^com.github.javaparser.ast.body.VariableDeclarator x]
+  ([^VariableDeclarator x]
     [(-> x .getId parse*) (when-let [init (.getInit x)] (parse* init))])
-  ([^com.github.javaparser.ast.body.VariableDeclaratorId x]
+  ([^VariableDeclaratorId x]
     (-> x str symbol))
-  ([^com.github.javaparser.ast.body.Parameter x]
+  ([^Parameter x]
     [(-> x .getType type-hint*)
      (-> x .getId parse*)])
-  ([^com.github.javaparser.ast.body.MultiTypeParameter x]
+  ([^MultiTypeParameter x]
     (concat (->> x .getTypes (map parse*))
             (list (-> x .getId parse*))))
   ; STATEMENTS
-  ([^com.github.javaparser.ast.stmt.BlockStmt x] 
+  ([^BlockStmt x]
     (-> x (.getStmts) do-each))
-  ([^com.github.javaparser.ast.stmt.ExpressionStmt x] 
+  ([^ExpressionStmt x]
     (-> x .getExpression parse*))
-  ([^com.github.javaparser.ast.stmt.BreakStmt x]
+  ([^BreakStmt x]
     (if-let [id (.getId x)]
       (list 'break (symbol id))
       (list 'break)))
-  ([^com.github.javaparser.ast.stmt.ContinueStmt x]
+  ([^ContinueStmt x]
     (if-let [id (.getId x)]
       (list 'continue (symbol id))
       (list 'continue)))
-  ([^com.github.javaparser.ast.stmt.TryStmt x]
-    ;(.getResources x) 
+  ([^TryStmt x]
+    ;(.getResources x)
     (->> (list
            (cons 'try
              (-> x .getTryBlock parse* implicit-do))
@@ -253,89 +255,95 @@
              (when-let [fb (.getFinallyBlock x)]
                (list (cons 'finally (-> fb parse* implicit-do)))))
          (apply concat)))
-  ([^com.github.javaparser.ast.stmt.ReturnStmt x] 
+  ([^ReturnStmt x]
     (if-let [expr (.getExpr x)]
       (list 'return (parse* expr))
       (list 'return)))
-  ([^com.github.javaparser.ast.stmt.ThrowStmt x]
+  ([^ThrowStmt x]
     (list 'throw (-> x .getExpr parse*)))
-  ([^com.github.javaparser.ast.stmt.CatchClause x]
+  ([^CatchClause x]
     (concat (-> x .getExcept parse*) (-> x .getCatchBlock parse* implicit-do)))
-  ([^com.github.javaparser.ast.stmt.IfStmt x]
+  ([^IfStmt x]
     (parse-conditional x))
-  ([^com.github.javaparser.ast.stmt.SwitchStmt x]
+  ([^SwitchStmt x]
     (apply concat (list 'case (parse* (.getSelector x)))
       (->> x .getEntries (map parse*))))
-  ([^com.github.javaparser.ast.stmt.SwitchEntryStmt x]
+  ([^SwitchEntryStmt x]
     (let [label (-> x .getLabel (whenf nnil? parse*))
           stmts (->> x .getStmts (map parse*) (cons 'do))]
     (if label
         [label stmts]
         [stmts])))
-  ([^com.github.javaparser.ast.stmt.WhileStmt x]
-    (apply list 'while (-> x .getCondition parse*) (-> x .getBody parse* implicit-do)))
-  ([^com.github.javaparser.ast.stmt.ForStmt x]
-    (apply list 'ifor
-      (->> x .getInit    (mapv parse*))
-      (->> x .getCompare parse*)
-      (->> x .getUpdate  (mapv parse*))
-      (->> x .getBody    parse*)))
-  ([^com.github.javaparser.ast.stmt.ForeachStmt x]
+  ([^WhileStmt x]
+    `(~'while ~(-> x .getCondition parse*)
+       ~@(-> x .getBody parse* implicit-do)))
+  ([^DoStmt x]
+    `(~'loop []
+      ~@(-> x .getBody parse* implicit-do)
+      (~'when ~(-> x .getCondition parse*) (~'recur))))
+  ([^ForStmt x]
+    `(~'ifor
+      ~(->> x .getInit    (mapv parse*))
+      ~(->> x .getCompare parse*)
+      ~(->> x .getUpdate  (map parse*) (cons 'do))
+      ~@(->> x .getBody    parse* implicit-do)))
+  ([^ForeachStmt x]
     (apply list 'doseq
       (conj (-> x .getVariable parse* second popr) (-> x .getIterable parse*))
       (-> x .getBody parse* implicit-do)))
-  ([^com.github.javaparser.ast.stmt.ExplicitConstructorInvocationStmt x]
+  ([^ExplicitConstructorInvocationStmt x]
     ["EXPLICIT CONSTRUCTOR" (str x)])
-  ; EXPRESSIONS     
-  ([^com.github.javaparser.ast.expr.NameExpr x]
+  ; EXPRESSIONS
+  ([^NameExpr x]
     (-> x .getName symbol))
-  ([^com.github.javaparser.ast.expr.AssignExpr x]
+  ([^AssignExpr x]
     (let [right  (-> x .getValue parse*)
           oper-0 (->> x .getOperator parse-operator)
           oper-1 (when (not= oper-0 'set!) oper-0)
           oper-f (if (and (= oper-1 '+) (anap/str-expression? right))
                      'str
-                     oper-1)]
-      (->> (list 'swap! (-> x .getTarget parse*) oper-f right)
-           (remove nil?)
-           doall)))
-  ([^com.github.javaparser.ast.expr.ThisExpr x]
+                     oper-1)
+          target (-> x .getTarget parse*)]
+      (if oper-f
+          `(~'swap! ~target ~oper-f ~right)
+          `(~'set!  ~target ~right))))
+  ([^ThisExpr x]
     'this)
-  ([^com.github.javaparser.ast.expr.SuperExpr x]
+  ([^SuperExpr x]
     ["SUPER" (str x)])
-  ([^com.github.javaparser.ast.expr.EnclosedExpr x] ; Parenthesis-enclosed
+  ([^EnclosedExpr x] ; Parenthesis-enclosed
     (list 'do (-> x .getInner parse*)))
-  ([^com.github.javaparser.ast.expr.NullLiteralExpr x]
+  ([^NullLiteralExpr x]
     'nil)
-  ([^com.github.javaparser.ast.expr.InstanceOfExpr x]
+  ([^InstanceOfExpr x]
     (list 'instance?
       (-> x .getType parse*)
       (-> x .getExpr parse*)))
-  ([^com.github.javaparser.ast.expr.FieldAccessExpr x]
+  ([^FieldAccessExpr x]
     (list (->> x .getField (str ".") symbol)
           (->> x .getScope  parse*)))
-  ([^com.github.javaparser.ast.expr.ArrayCreationExpr x]
+  ([^ArrayCreationExpr x]
     ["ARRAY" (->> x .getType parse*)
              (list 'array (.getArrayCount x))
              (->> x .getDimensions (map parse*))
              (->> x .getInitializer)])
-  ([^com.github.javaparser.ast.expr.ArrayAccessExpr x]
+  ([^ArrayAccessExpr x]
     (list 'aget (-> x .getName parse*) (-> x .getIndex parse* str/val)))
-  ([^com.github.javaparser.ast.expr.ArrayInitializerExpr x]
+  ([^ArrayInitializerExpr x]
     (cons 'array (->> x .getValues (map parse*))))
-  ([^com.github.javaparser.ast.expr.ClassExpr x]
+  ([^ClassExpr x]
     (-> x .getType parse*))
-  ([^com.github.javaparser.ast.expr.CastExpr x]
+  ([^CastExpr x]
     (let [type (-> x .getType parse*)
           expr (-> x .getExpr parse*)]
       (if (tcore/primitive? type)
           (let [cast-fn (symbol (str "->" (->name type)))]
             (list cast-fn expr))
           (list 'cast type expr))))
-  ([^com.github.javaparser.ast.expr.ConditionalExpr x]
+  ([^ConditionalExpr x]
     (parse-conditional x))
-  ([^com.github.javaparser.ast.expr.MethodCallExpr x]
-    (let [args (->> x .getArgs (map parse*))] 
+  ([^MethodCallExpr x]
+    (let [args (->> x .getArgs (map parse*))]
        (if (.getScope x)
            (apply list
              (->> x (.getName) (str ".") symbol)
@@ -343,24 +351,26 @@
            (apply list
              (->> x (.getName) symbol)
              args))))
-  ([^com.github.javaparser.ast.expr.LambdaExpr x]
+  ([^LambdaExpr x]
     ["LAMBDA" (str x)])
-  ([^com.github.javaparser.ast.expr.UnaryExpr x]
+  ([^UnaryExpr x]
     (let [oper (-> x .getOperator parse*)
           expr (-> x .getExpr parse*)]
       (if (and (number? expr)
                (= oper '-))
           (- expr)
           (list oper expr))))
-  ([^com.github.javaparser.ast.expr.UnaryExpr$Operator x]
+  ([^UnaryExpr$Operator x]
     (parse-operator x))
-  ([^com.github.javaparser.ast.expr.StringLiteralExpr x] 
+  ([^StringLiteralExpr x]
     (-> x .getValue))
-  ([^com.github.javaparser.ast.expr.BooleanLiteralExpr x]
+  ([^LongLiteralExpr x]
+    `(~'long ~(->> x .getValue popr pconv/->long)))
+  ([^BooleanLiteralExpr x]
     (-> x .getValue))
-  ([^com.github.javaparser.ast.expr.IntegerLiteralExpr x]
+  ([^IntegerLiteralExpr x]
     (-> x .getValue str/val))
-  ([^com.github.javaparser.ast.expr.BinaryExpr x]
+  ([^BinaryExpr x]
     (let [left   (-> x .getLeft     parse*)
           right  (-> x .getRight    parse*)
           oper-0 (-> x .getOperator parse*)
@@ -370,17 +380,17 @@
                    'str
                    oper-0)]
       (list oper left right)))
-  ([^com.github.javaparser.ast.expr.BinaryExpr$Operator x]
+  ([^BinaryExpr$Operator x]
     (parse-operator x))
-  ([^com.github.javaparser.ast.expr.VariableDeclarationExpr x]
-    ; TODO if type is primitive, cast it to it; can't hint it 
+  ([^VariableDeclarationExpr x]
+    ; TODO if type is primitive, cast it to it; can't hint it
     (let [t (-> x .getType type-hint*)]
       (list 'let (->> (.getVars x)
                       (map parse*)
                       (map (partial into [t]))
                       (apply concat)
                       (into [])))))
-  ([^com.github.javaparser.ast.expr.ObjectCreationExpr x] 
+  ([^ObjectCreationExpr x]
     (apply list (-> x .getType (str ".") symbol)
       (->> x .getArgs (mapv parse*))))))
 
@@ -389,12 +399,21 @@
 (def log1 (atom []))
 (def print-log #(swap! log1 conj (apply println-str %&)))
 
+(defn clean-lets [form]
+  (prewalk
+    (whenf*n
+      (fn-and seq? ; lone `let` statements like `(let [^int abc (+ (* abcde 2) 1)])`
+        (fn-> first (= 'let))
+        (fn-> count (= 2)))
+      (fn->> ))
+    form))
+
 #?(:clj
 (defn clean
   "Fixes funky imperative Clojure code to be more idiomatic."
   [x]
   (->> x
-       (postwalk ; Start from bottom. Essential for granular things 
+       (postwalk ; Start from bottom. Essential for granular things
          (condf*n
            (fn-and seq?
              (fn-> first (= '.println))
@@ -406,7 +425,8 @@
            (constantly '=)
 
            identity))
-       (prewalk ; Start from the top, not the bottom. Essential for cond-folding 
+       clean-lets
+       (prewalk ; Start from the top, not the bottom. Essential for cond-folding
          (condf*n
            anap/cond-foldable?
            identity #_cond-fold
@@ -416,9 +436,9 @@
          (compr
            (condf*n
              (fn-and anap/conditional-statement?
-               (fn->> ana/conditional-branches (every? anap/return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements   
+               (fn->> ana/conditional-branches (every? anap/return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements
              (fn [x] (list 'return (->> x (ana/map-conditional-branches (f*n second)))))
-       
+
              identity)
            #_join-lets))
        ;(prewalk (fn-> enclose-lets str-fold))
@@ -433,6 +453,6 @@
 
            identity))
        first
-       (map (if*n (fn-and seq? (fn-> first (= 'do))) rest list))
+       (map (if*n (fn-and seq? (fn-> first (= 'do)) (fn-> count (= 2))) rest list))
        (apply concat))))
 

@@ -7,9 +7,9 @@
             [quantum.core.convert                :as conv     ]
             [quantum.core.macros                 :as macros
               :refer [#?(:clj defnt)]                         ]
-            [quantum.core.collections            :as core    
+            [quantum.core.collections            :as core
               :refer [#?(:clj kmap) in?]                      ]
-            [quantum.core.error                  :as err    
+            [quantum.core.error                  :as err
               :refer [->ex #?(:clj throw-unless)]             ]))
 
 #?(:clj
@@ -39,7 +39,6 @@
         (binding [to/*lang* to]
           (to/eval-form from-src))))))
 
-
 #?(:clj
 (defn transpile
   "Might alternatively be named 'compile', but this is not strictly correct.
@@ -54,7 +53,7 @@
    :usage '[(transpile :clj :java
              '(defn abcde [^long x]
                 (let [a (+ x 4)]
-                  (* b 2)))) 
+                  (* b 2))))
             (transpile :java :clj
               [:projects "quantum" "test" "Temp.java"])]}
   [from to from-src & [to-src literal? wrapped?]]
@@ -67,7 +66,7 @@
         [:clj  :c-sharp]
         ; [:clj :cpp]
         })
-    (->ex :invalid "From-To language combination invalid" (kmap from to)))  
+    (->ex :invalid "From-To language combination invalid" (kmap from to)))
 
   (when (= [from to] [:clj :c-sharp])
     (log/pr :warn "Clojure -> C-Sharp transpiler is pre-alpha."))
