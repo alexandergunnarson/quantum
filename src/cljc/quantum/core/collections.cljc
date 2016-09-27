@@ -833,10 +833,14 @@
 (defalias right zip/right)
 (defalias left  zip/left )
 
-#?(:clj (defalias zipper qzip/zipper))
-(defalias zipper-mapv qzip/zipper-mapv)
-#?(:clj (defalias zipwalk    qzip/zipwalk))
-#?(:clj (defalias zip-reduce qzip/zip-reduce))
+(defalias zipper qzip/zipper)
+(defalias zip-mapv        qzip/zip-mapv       )
+(defalias zip-map-with    qzip/zip-map-with   )
+(defalias zip-walk        tree/zip-walk       )
+(defalias zip-postwalk    tree/zip-postwalk   )
+(defalias zip-prewalk     tree/zip-prewalk    )
+(defalias zip-reduce      qzip/zip-reduce     )
+(defalias zip-reduce-with qzip/zip-reduce-with)
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   ADDITIVE OPERATIONS    }=====================================================
