@@ -1,36 +1,33 @@
 (ns quantum.core.analyze.clojure.transform
-           (:refer-clojure :exclude [destructure])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core ]
-                     [quantum.core.analyze.clojure.predicates
-                       :refer [if-statement? cond-statement?
-                               when-statement?]                        ]
-                     [quantum.core.error                      :as err
-                       :refer [->ex]                                   ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [fn-> fn->>])]                 ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-or if*n condf*n])]         ]
-                     [quantum.core.vars                       :as var
-                       :refer [#?(:clj defalias)]                      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                         :as fn
-                        :refer [fn-> fn->>]                            ]
-                     [quantum.core.logic                      :as logic
-                        :refer [fn-or if*n condf*n]                    ]
-                     [quantum.core.vars                       :as var
-                       :refer [defalias]                               ])))
+  (:refer-clojure :exclude [destructure])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )                  :as core]
+    [quantum.core.analyze.clojure.predicates
+      :refer [if-statement? cond-statement?
+              when-statement?]]
+    [quantum.core.error                      :as err
+      :refer [->ex]]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [fn-> fn->>])]
+      :refer-macros [          fn-> fn->>]]
+    [quantum.core.logic                      :as logic
+      :refer        [#?@(:clj [fn-or if$n condf$n])]
+      :refer-macros [          fn-or if$n condf$n]]
+    [quantum.core.vars                       :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]))
 
 (defn unhint [x]
   (with-meta x (-> x meta (dissoc :tag))))  ; TODO update-meta
 
 ; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
 (def conditional-branches
-  (condf*n
+  (condf$n
     (fn-or if-statement? cond-statement?)
       (fn->> rest
              (partition-all 2)
-             (map (if*n (fn-> count (= 2))
+             (map (if$n (fn-> count (= 2))
                     second
                     first))
              doall)
@@ -43,13 +40,13 @@
 ;;    (fn-or if-statement? cond-statement?)
 ;;      (fn->> rest
 ;;             (partition-all 2)
-;;             (map (if*n (fn-> count (= 2))
-;;                    (f*n update-nth 1 f)
-;;                    (f*n update-nth 0 f)))
+;;             (map (if$n (fn-> count (= 2))
+;;                    (f$n update-nth 1 f)
+;;                    (f$n update-nth 0 f)))
 ;;             (cons (list (first x)))
 ;;             (apply concat))
 ;;    when-statement?
-;;      (f*n update-last f)
+;;      (f$n update-last f)
 ;;    identity))
 
 #?(:clj (defalias destructure core/destructure))

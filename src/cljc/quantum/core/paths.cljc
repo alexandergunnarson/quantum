@@ -6,25 +6,25 @@
              [quantum.core.collections :as coll
                :refer        [#?@(:clj [getr index-of containsv?
                                         popr reducei])
-                              dropr-until]                          
+                              dropr-until]
                :refer-macros [getr index-of containsv? popr
                               reducei]                       ]
-             [quantum.core.error       :as err            
+             [quantum.core.error       :as err
                :refer [->ex TODO]                            ]
-             [quantum.core.fn          :as fn             
-               :refer        [#?@(:clj [<- fn-> fn->> f*n mfn])]    
-               :refer-macros [<- fn-> fn->> f*n mfn]         ]
-             [quantum.core.logic       :as logic        
-               :refer        [#?@(:clj [fn-not fn-and fn-eq? 
-                                        whenf whenc ifn])]   
+             [quantum.core.fn          :as fn
+               :refer        [#?@(:clj [<- fn-> fn->> f$n mfn])]
+               :refer-macros [<- fn-> fn->> f$n mfn]         ]
+             [quantum.core.logic       :as logic
+               :refer        [#?@(:clj [fn-not fn-and fn-eq?
+                                        whenf whenc ifn])]
                :refer-macros [fn-not fn-and fn-eq? whenf
                               whenc ifn]                     ]
-             [quantum.core.macros      :as macros 
-               :refer        [#?@(:clj [defnt])]             
+             [quantum.core.macros      :as macros
+               :refer        [#?@(:clj [defnt])]
                :refer-macros [defnt]                         ]
              [quantum.core.system      :as sys               ]
-             [quantum.core.vars        :as var               
-               :refer        [#?@(:clj [defalias def-])]     
+             [quantum.core.vars        :as var
+               :refer        [#?@(:clj [defalias def-])]
                :refer-macros [defalias def-]                 ]
              [quantum.core.string      :as str               ])
   #?(:cljs (:require-macros
@@ -77,7 +77,7 @@
 ;#?(:clj
 ;(def paths
 ;  (->> paths-vecs
-;       (map-vals+ (f*n io/file-str))
+;       (map-vals+ (f$n io/file-str))
 ;       redm)))
 
 (defn path
@@ -167,7 +167,7 @@
 
 (defn up-dir-str [dir]
   (->> dir
-       (<- whenf (f*n str/ends-with? sys/separator) popr)
+       (<- whenf (f$n str/ends-with? sys/separator) popr)
        (dropr-until sys/separator)
        (<- whenc empty?
          (throw (->ex :err/io "Directory does not have a parent directory:" dir)))))
@@ -177,7 +177,7 @@
       (let [proj-path-0
               (or (get (System/getenv) "PROJECTS")
                   (up-dir-str this-dir))
-            proj-path-f 
+            proj-path-f
               (ifn proj-path-0 (fn-> (index-of drive-dir) (= 0))
                    path
                   (partial path drive-dir))]

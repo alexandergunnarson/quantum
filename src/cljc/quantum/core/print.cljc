@@ -6,26 +6,24 @@
           and so on."
     :attribution "Alex Gunnarson"}
   quantum.core.print
-           (:require [quantum.core.core              :as qcore]
-                     [quantum.core.fn                :as fn
-                       :refer [#?@(:clj [fn-> fn->>])]        ]
-                     [quantum.core.logic             :as logic
-                       :refer [#?@(:clj [condf])]             ]
-                     [quantum.core.data.vector       :as vec  ]  ; To work around CLJS non-spliceability of Tuples
-                     [quantum.core.vars              :as var
-                       :refer [#?(:clj defalias)]             ]
-                     [quantum.core.meta.debug        :as debug]
-            #?(:clj  [fipp.edn                       :as pr   ]
-                     ; Fipp currently has strange execution problems in CLJS
-               :cljs [cljs.pprint                    :as pr   ]))
-  #?(:cljs (:require-macros
-                     [cljs.pprint                             ]
-                     [quantum.core.fn                :as fn
-                       :refer [fn-> fn->>]                    ]
-                     [quantum.core.logic             :as logic
-                       :refer [condf]                         ]
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                  ])))
+  (:require
+    [quantum.core.core        :as qcore]
+    [quantum.core.fn          :as fn
+      :refer        [#?@(:clj [fn-> fn->>])]
+      :refer-macros [          fn-> fn->>]]
+    [quantum.core.logic       :as logic
+      :refer        [#?@(:clj [condf])]
+      :refer-macros [          condf]]
+    [quantum.core.data.vector :as vec]  ; To work around CLJS non-spliceability of Tuples
+    [quantum.core.vars        :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]
+    [quantum.core.meta.debug  :as debug]
+#?(:clj
+    [fipp.edn                 :as pr] ; Fipp currently has strange execution problems in CLJS
+   :cljs
+    [cljs.pprint              :as pr
+      :include-macros true])))
 
 (defonce ^{:doc "A set of classes not to print"}
   blacklist  (atom #{}))

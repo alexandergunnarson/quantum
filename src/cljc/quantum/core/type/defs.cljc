@@ -3,20 +3,18 @@
           Also some plumbing macros for |for| loops and the like."
     :attribution "Alex Gunnarson"}
   quantum.core.type.defs
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )               :as core ]
-                     [quantum.core.data.map                :as map
-                       :refer [map-entry]                           ]
-                     [quantum.core.data.set                :as set  ]
-                     [quantum.core.fn                      :as fn
-                       :refer [#?@(:clj [fn->])]                    ]
-                     [quantum.core.logic                   :as logic
-                       :refer [#?@(:clj [fn-and condf*n])]          ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                      :as fn
-                       :refer [fn->]                                ]
-                     [quantum.core.logic                   :as logic
-                       :refer [fn-and condf*n]                      ])))
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )               :as core]
+    [quantum.core.data.map                :as map
+      :refer [map-entry]]
+    [quantum.core.data.set                :as set]
+    [quantum.core.fn                      :as fn
+      :refer        [#?@(:clj [fn->])]
+      :refer-macros [          fn->]]
+    [quantum.core.logic                   :as logic
+      :refer        [#?@(:clj [fn-and condf$n])]
+      :refer-macros [          fn-and condf$n]]))
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -68,7 +66,7 @@
                       :cljs (.-MIN_VALUE js/Number))
              :max  1.7976931348623157E308 ; Max number in JS
              #?@(:clj [:outer-type "[D"
-                       :boxed      'java.lang.Double])}}) 
+                       :boxed      'java.lang.Double])}})
 
 #?(:clj
 (def inner-types
@@ -158,9 +156,9 @@
         hash-map-types
          '{:clj  #{clojure.lang.PersistentHashMap
                    clojure.lang.PersistentHashMap$TransientHashMap}
-           :cljs #{cljs.core/PersistentHashMap 
+           :cljs #{cljs.core/PersistentHashMap
                    cljs.core/TransientHashMap}}
-        array-map-types 
+        array-map-types
          '{:clj  #{clojure.lang.PersistentArrayMap
                    clojure.lang.PersistentArrayMap$TransientArrayMap}
            :cljs #{cljs.core/PersistentArrayMap
@@ -170,7 +168,7 @@
            :cljs #{cljs.core/PersistentTreeMap   }}
         map-types
           (cond-union
-            hash-map-types 
+            hash-map-types
             array-map-types
             tree-map-types
             '{:clj #{flatland.ordered.map.OrderedMap}}
@@ -201,14 +199,14 @@
         array-9d-types  {:clj (array-nd-types 9 )}
         array-10d-types {:clj (array-nd-types 10)}
         any-array-types (cond-union (->> array-types vals (into #{}))
-                                    array-2d-types 
-                                    array-3d-types 
-                                    array-4d-types 
-                                    array-5d-types 
-                                    array-6d-types 
-                                    array-7d-types 
-                                    array-8d-types 
-                                    array-9d-types 
+                                    array-2d-types
+                                    array-3d-types
+                                    array-4d-types
+                                    array-5d-types
+                                    array-6d-types
+                                    array-7d-types
+                                    array-8d-types
+                                    array-9d-types
                                     array-10d-types)
         number-types
          '{:clj  #{java.lang.Long}}
@@ -382,7 +380,7 @@
            'int?             int-types
            'integer?         integer-types
            'pinteger?        `{:clj  #{~'long}
-                               :cljs #{(type 123)}} 
+                               :cljs #{(type 123)}}
            'long?            long-types
            'bigint?          bigint-types
            'float?           float-types
@@ -401,7 +399,7 @@
            'qreducer?        '{:clj #{clojure.core.protocols.CollReduce
                                       clojure.lang.Delay
                                       #_quantum.core.reducers.Folder}
-                               :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface 
+                               :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
                                        cljs.core/Delay}}
            'file?            '{:clj  #{java.io.File}
                                :cljs #{}} ; js/File isn't always available! Use an abstraction
@@ -418,7 +416,7 @@
            'float-array?     {:clj #{(-> array-types :clj :float)}}
            'double-array?    {:clj #{(-> array-types :clj :double)}}
            'object-array?    {:clj #{(-> array-types :clj :object)}}
-           
+
            'booleans?        {:clj #{(-> array-types :clj :boolean)}}
            'bytes?           {:clj #{(-> array-types :clj :byte)}}
            'chars?           {:clj #{(-> array-types :clj :char)}}
@@ -429,14 +427,14 @@
            'doubles?         {:clj #{(-> array-types :clj :double)}}
            'objects?         {:clj #{(-> array-types :clj :object)}}
 
-           'array-2d?        array-2d-types     
-           'array-3d?        array-3d-types  
-           'array-4d?        array-4d-types  
-           'array-5d?        array-5d-types  
-           'array-6d?        array-6d-types  
-           'array-7d?        array-7d-types  
-           'array-8d?        array-8d-types  
-           'array-9d?        array-9d-types  
+           'array-2d?        array-2d-types
+           'array-3d?        array-3d-types
+           'array-4d?        array-4d-types
+           'array-5d?        array-5d-types
+           'array-6d?        array-6d-types
+           'array-7d?        array-7d-types
+           'array-8d?        array-8d-types
+           'array-9d?        array-9d-types
            'array-10d?       array-10d-types
            'any-array?       any-array-types
 
@@ -465,7 +463,7 @@
                               (map (fn [[pred-n types-n]]
                                      (map-entry pred-n
                                        (->> types-n
-                                            (map (condf*n
+                                            (map (condf$n
                                                    (fn-and seq? (fn-> first name (= "type")))
                                                      (fn [obj]
                                                        (condp = lang-n
@@ -483,7 +481,7 @@
                     ~(list 'def 'types
                       `(zipmap    (keys '~lang-unevaled)
                                [~@(vals   lang-unevaled)]))
-                    ~(list 'def 'primitive-types 
+                    ~(list 'def 'primitive-types
                       `(zipmap [~@(->   primitive-type-map (get  lang) keys)]
                                   (-> '~primitive-type-map (get ~lang) vals)))
                     ~(list 'def 'arr-types (get array-types lang)))]

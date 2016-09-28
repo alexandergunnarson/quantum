@@ -6,8 +6,8 @@
       :refer-macros [deftest is testing]]
     [fast-zip.core                 :as zip]
     [quantum.core.fn
-      :refer        [#?@(:clj [compr f*n fn->])]
-      :refer-macros [compr f*n fn->]]
+      :refer        [#?@(:clj [compr f$n fn->])]
+      :refer-macros [compr f$n fn->]]
     [quantum.core.logic
       :refer        [#?@(:clj [condf])]
       :refer-macros [condf]]
@@ -26,10 +26,10 @@
 
 (defn walk-modify [x]
   (condf x number?  inc
-           list?    (f*n conj "c")
-           vector?  (f*n assoc 0 "d")
+           list?    (f$n conj "c")
+           vector?  (f$n assoc 0 "d")
            keyword? name
-           map?     (f*n assoc :e 7)
+           map?     (f$n assoc :e 7)
            string?  identity))
 
 (defn walk-like-test

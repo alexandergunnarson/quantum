@@ -17,7 +17,7 @@
 #?(:clj
 (defn test:decode32 [x]))
 
-#?(:clj 
+#?(:clj
 (defn test:decode64 [x]))
 
 #?(:clj
@@ -111,8 +111,8 @@
               (if base64?
                   encrypted
                   (->> encrypted
-                       (postwalk (whenf*n #(instance? js/Uint8Array %) u/->base64))
-                       (postwalk (whenf*n string? u/base64->byte-array))))
+                       (postwalk (whenf$n #(instance? js/Uint8Array %) u/->base64))
+                       (postwalk (whenf$n string? u/base64->byte-array))))
             decrypted
               (<! (pass-natal.crypto/aes algo (:encrypted encrypted)
                     :decrypt pass encrypted))

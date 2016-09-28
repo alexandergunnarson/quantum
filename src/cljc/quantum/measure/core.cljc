@@ -1,25 +1,25 @@
 (ns quantum.measure.core
   (:require
     [#?(:clj  clojure.core
-        :cljs cljs.core   )  :as core    ]
-    [quantum.core.error      :as err
-      :refer        [->ex #?(:clj throw-unless)]
-      :refer-macros [throw-unless]]
-    [quantum.core.numeric    :as num     ]
-    [quantum.core.string     :as str     ]
-    [quantum.core.graph      :as g
-      :refer        [#?@(:clj [->graph ->digraph
-                               ->weighted-digraph])]]
-    [quantum.core.fn         :as fn
-      :refer        [#?@(:clj [f*n])]
-      :refer-macros [f*n]]
-    [quantum.core.logic      :as logic
+        :cljs cljs.core   )   :as core    ]
+    [quantum.core.error       :as err
+      :refer        [->ex
+                     #?(:clj throw-unless)]
+      :refer-macros [        throw-unless]]
+    [quantum.core.numeric     :as num     ]
+    [quantum.core.string      :as str     ]
+    [quantum.core.graph       :as g
+      :refer        [#?@(:clj [->graph ->digraph ->weighted-digraph])]]
+    [quantum.core.fn          :as fn
+      :refer        [#?@(:clj [f$n])]
+      :refer-macros [          f$n]]
+    [quantum.core.logic       :as logic
       :refer        [#?@(:clj [eq? whenc ifn])]
-      :refer-macros [eq? whenc ifn]]
+      :refer-macros [          eq? whenc ifn]]
     [quantum.measure.reg                 ]
     [quantum.core.macros.core :as cmacros
-      :refer        [#?(:clj if-cljs)]
-      :refer-macros [if-cljs]]))
+      :refer        [#?@(:clj [if-cljs])]
+      :refer-macros [          if-cljs]]))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}
@@ -70,7 +70,7 @@
                        u#
                        (zipmap ~nodes
                                (repeat (fn [node#] (ifn (core/get quantum.measure.reg/reg-units node#) identity
-                                                      (f*n core/conj ~unit-type-k)
+                                                      (f$n core/conj ~unit-type-k)
                                                       (constantly #{~unit-type-k}))))))))]
                (condp = emit-type
                  :map

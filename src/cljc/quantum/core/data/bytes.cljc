@@ -4,24 +4,22 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse])
-           (:require 
-             #?(:clj [clojure.java.io          :as io   ])
+           (:require
+             #?(:clj [clojure.java.io          :as io])
                      [quantum.core.data.array  :as arr
-                       :refer [#?(:clj byte-array+) aset!]       ]
+                       :refer        [#?(:clj byte-array+) aset!]]
                      [quantum.core.data.binary :as bin
-                       :refer [& >>>]                   ]
+                       :refer        [& >>>]]
                      [quantum.core.fn          :as fn
-                       :refer [#?@(:clj [f*n])]         ]
+                       :refer        [#?@(:clj [f$n])]
+                       :refer-macros [          f$n]]
                      [quantum.core.logic       :as logic
-                       :refer [nnil?]                   ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn          :as fn
-                       :refer [f*n]                     ]))
+                       :refer        [nnil?]])
   #?(:clj  (:import  java.util.Arrays)))
 
 #?(:clj (set! *unchecked-math* true))
 
-; (defn to-hex-string 
+; (defn to-hex-string
 ;   "Converts a byte array to a string representation , with space as a default separator."
 ;   ([^"[B" bs]
 ;     (to-hex-string bs " "))
@@ -29,17 +27,17 @@
 ;     (str/join separator (map #(hex/hex-string-from-byte %) bs))))
 
 #?(:clj
-(defn unchecked-byte-array 
+(defn unchecked-byte-array
   "Like clojure.core/byte-array but performs unchecked casts on sequence values."
   {:attribution "mikera.cljutils.bytes"}
-  (^"[B" [size-or-seq] 
-    (. clojure.lang.Numbers byte_array 
-      (if (number? size-or-seq) 
+  (^"[B" [size-or-seq]
+    (. clojure.lang.Numbers byte_array
+      (if (number? size-or-seq)
           size-or-seq
           (map unchecked-byte size-or-seq ))))
-  (^"[B" [size init-val-or-seq] 
-    (. clojure.lang.Numbers byte_array size 
-      (if (sequential? init-val-or-seq) 
+  (^"[B" [size init-val-or-seq]
+    (. clojure.lang.Numbers byte_array size
+      (if (sequential? init-val-or-seq)
         (map unchecked-byte init-val-or-seq )
         init-val-or-seq)))))
 
@@ -50,7 +48,7 @@
   [^"[B" digested]
   (let [^chars hex-arr   (.toCharArray "0123456789abcdef")
         ^chars hex-chars (-> digested count (* 2) char-array)]
-    (loop [i 0] 
+    (loop [i 0]
       (if (< i (count digested))
           (let [v           (-> digested (get i) (& 0xFF))
                 bit-shifted (-> hex-arr  (get (>>> v 4   )) char)
@@ -79,6 +77,6 @@
 (defn ^bytes parse-bytes
   [encoded-bytes]
   (->> (re-seq #"%.." encoded-bytes)
-       (map (f*n subs 1))
+       (map (f$n subs 1))
        (map #(.byteValue ^Integer (Integer/parseInt % 16)))
        (byte-array))))

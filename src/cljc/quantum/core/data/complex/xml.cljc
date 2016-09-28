@@ -17,7 +17,7 @@
                        :refer [#?@(:clj [defnt])]             ]
                      [quantum.core.vars             :as var
                        :refer [#?(:clj def-)]                 ])
-  #?(:cljs (:require-macros 
+  #?(:cljs (:require-macros
                      [quantum.core.collections      :as coll
                        :refer [lasti]                         ]
                      [quantum.core.fn               :as fn
@@ -34,7 +34,7 @@
                    java.util.Iterator)))
 
 ; ENTIRE FILE IS CLJ-ONLY (for now)
-; Commented out temporarily 
+; Commented out temporarily
 #?(:clj (do
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
@@ -52,7 +52,7 @@
 ;     (let [^String open-tag
 ;             (-> tag name
 ;                 (whenf (constantly (nnil? opts))
-;                   (f*n str " " opts))
+;                   (f$n str " " opts))
 ;                 brs-open)
 ;           ^String flattened-str-body
 ;             (whenf body coll?

@@ -14,7 +14,7 @@
                      [quantum.core.logic       :as logic
                        :refer [fn-and]                  ])))
 
-; ===== EXTERN =====d
+; ===== EXTERN =====
 
 (def extern? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "extern"))))
 
@@ -26,7 +26,7 @@
             (throw (Exception. (str "|extern| takes only one argument. Received: " (-> extra-args count inc)))))
           (let [genned (gensym 'externed)
                 obj-evaled
-                  (try (eval quoted-obj) ; Possibly extern breaks because no runtime eval? 
+                  (try (eval quoted-obj) ; Possibly extern breaks because no runtime eval?
                     (catch Throwable e#
                       (throw (Exception. (str "Can't extern object " quoted-obj
                                               " because of error: |" e# "|")))))]

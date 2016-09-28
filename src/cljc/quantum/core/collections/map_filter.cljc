@@ -14,91 +14,54 @@
        quantum.core.collections.core, or quantum.core.reducers."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.map-filter
-           (:refer-clojure :exclude
-             [for doseq reduce
-              contains?
-              repeat repeatedly
-              interpose
-              range
-              take take-while
-              drop drop-while
-              subseq
-              key val
-              merge sorted-map sorted-map-by
-              into
-              count
-              empty empty?
-              split-at
-              first second rest last butlast get pop peek
-              select-keys
-              zipmap
-              reverse
-              conj
-              conj! assoc! dissoc! disj!
-              boolean?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core   ]
-                     [quantum.core.data.map                   :as map
-                       :refer [split-at map-entry]                       ]
-                     [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec  
-                       :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.core           :as coll   
-                       :refer [#?@(:clj [count first rest getr last-index-of
-                                         index-of lasti conj! contains?])
-                               conj key val]                             ]
-                     [quantum.core.collections.base           :as base   
-                       :refer [#?@(:clj [kmap])]                         ]
-                     [quantum.core.error                      :as err  
-                       :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn  
-                       :refer [#?@(:clj [compr <- fn-> fn->>  
-                                         f*n defcurried
-                                         ->predicate])
-                              fn-nil juxt-kv withf->>]  ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros 
-                       :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red    
-                       :refer [#?@(:clj [reduce])]                       ]
-                     [quantum.core.string                     :as str    ]
-                     [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type  
-                       :refer [#?@(:clj [lseq? transient? editable? 
-                                         boolean? should-transientize?])]]
-                     [quantum.core.analyze.clojure.predicates :as anap   ]
-                     [quantum.core.type.predicates            :as tpred  ]
-                     [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops  
-                       :refer [#?@(:clj [doseqi reducei lfor])]]
-                     [quantum.core.vars                       :as var  
-                       :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros  
-                     [quantum.core.collections.core           :as coll   
-                       :refer [count first rest getr lasti index-of lasti
-                               conj! contains? ] ]
-                     [quantum.core.collections.base           :as base   
-                       :refer [kmap]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n defcurried]       ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic 
-                       :refer [fn-not fn-or fn-and whenf whenf*n 
-                               ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops  
-                       :refer [doseqi reducei lfor]                      ]
-                     [quantum.core.macros                     :as macros 
-                       :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red    
-                       :refer [reduce]]
-                     [quantum.core.type                       :as type 
-                       :refer [lseq? transient? editable? boolean? 
-                               should-transientize?]                     ]
-                     [quantum.core.vars                       :as var 
-                       :refer [defalias]                                 ])))
+  (:refer-clojure :exclude
+    [for doseq reduce
+     contains?
+     repeat repeatedly
+     interpose
+     range
+     take take-while
+     drop  drop-while
+     subseq
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     empty empty?
+     split-at
+     first second rest last butlast get pop peek
+     select-keys
+     zipmap
+     reverse
+     conj
+     conj! assoc! dissoc! disj!
+     boolean?])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )        :as core]
+    [quantum.core.data.map         :as map
+      :refer [map-entry]]
+    [quantum.core.collections.core :as coll
+      :refer        [key val
+                     #?@(:clj [first rest conj! conj lasti contains?])]
+      :refer-macros [          first rest conj! conj lasti contains?]]
+    [quantum.core.fn               :as fn
+      :refer        [juxt-kv
+                     #?@(:clj [<- compr defcurried])]
+      :refer-macros [          <- compr defcurried]]
+    [quantum.core.macros           :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]
+    [quantum.core.reducers         :as red
+      :refer        [#?@(:clj [reduce])]
+      :refer-macros [          reduce]]
+    [quantum.core.type             :as type]
+    [quantum.core.loops            :as loops
+      :refer        [#?@(:clj [reducei doseqi lfor])]
+      :refer-macros [          reducei doseqi lfor]]
+    [quantum.core.vars             :as var
+      :refer        [#?@(:clj [defalias])]
+      :refer-macros [          defalias]]))
 
 (defcurried each ; like doseq
   "Applies f to each item in coll, returns nil"
@@ -199,26 +162,6 @@
 (defn filter-vals+ [pred coll] (->> coll (filter+ (compr val pred))))
 (defn remove-vals+ [pred coll] (->> coll (remove+ (compr val pred))))
 
-
-#?(:clj
-(defnt filter!
-  ([^javafx.collections.ObservableList coll pred]
-    (doseqi [elem coll n]
-      (when-not (pred elem)
-        (.remove coll (int n) (int n)))))
-  ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate pred)))))
-
-#?(:clj
-(defnt remove!
-  ([^javafx.collections.ObservableList coll pred]
-    (doseqi [elem coll n]
-      (when (pred elem)
-        (.remove coll (int n) (int n)))))
-  ([^javafx.collections.transformation.FilteredList coll pred]
-    (.setPredicate coll (->predicate (fn-not pred))))))
-
-
 ; Distinct can be seen as sort of a filter
 
 (defn ldistinct-by
@@ -231,7 +174,7 @@
                 ((fn [[x :as xs] seen]
                    (when-let [s (seq xs)]
                      (let [fx (f x)]
-                       (if (contains? seen fx) 
+                       (if (contains? seen fx)
                          (recur (rest s) seen)
                          (cons x (step (rest s) (conj seen fx)))))))
                  xs seen)))]

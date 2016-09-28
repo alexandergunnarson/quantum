@@ -4,43 +4,43 @@
   (:refer-clojure :exclude [merge])
   (:require
     [quantum.core.collections.base           :as cbase
-      :refer        [#?(:clj kmap) merge-call
-                     update-first update-val ensure-set reducei]
-      :refer-macros [kmap]]
+      :refer        [merge-call update-first update-val ensure-set reducei
+                     #?(:clj kmap)]
+      :refer-macros [        kmap]]
     [quantum.core.data.map                   :as map
-      :refer [merge]                                           ]
-    [quantum.core.data.set                   :as set           ]
+      :refer [merge]]
+    [quantum.core.data.set                   :as set]
     [quantum.core.data.vector                :as vec
-      :refer [catvec]                                          ]
+      :refer [catvec]]
     [quantum.core.error                      :as err
-      :refer        [#?@(:clj [throw-unless assertf->>]) ->ex]
-      :refer-macros [throw-unless assertf->>]                  ]
+      :refer        [->ex
+                     #?@(:clj [throw-unless assertf->>])]
+      :refer-macros [          throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- fn-> fn->> f*n])]
-      :refer-macros [<- fn-> fn->> f*n]                        ]
+      :refer        [#?@(:clj [<- fn-> fn->> f$n])]
+      :refer-macros [          <- fn-> fn->> f$n]]
     [quantum.core.log                        :as log
-      :include-macros true                                     ]
+      :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [eq? fn-not fn-or whenc whenf
-                               whencf*n if*n condf])
-                     nempty? nnil?                             ]
-      :refer-macros [eq? fn-not fn-or whenc whenf whencf*n if*n
-                     condf]]
+      :refer        [nempty? nnil?
+                     #?@(:clj [eq? fn-not fn-or whenc whenf whencf$n if$n condf])
+                                                  ]
+      :refer-macros [          eq? fn-not fn-or whenc whenf whencf$n if$n condf]]
     [quantum.core.macros.core                :as cmacros
-      :refer [#?@(:clj [when-cljs if-cljs])]                   ]
-    [quantum.core.macros.fn                  :as mfn           ]
+      :refer [#?@(:clj [when-cljs if-cljs])]]
+    [quantum.core.macros.fn                  :as mfn]
     [quantum.core.analyze.clojure.predicates :as anap
       :refer [type-hint]]
-    [quantum.core.macros.protocol            :as proto         ]
-    [quantum.core.macros.reify               :as reify         ]
-    [quantum.core.macros.transform           :as trans         ]
-    [quantum.core.numeric.combinatorics      :as combo         ]
-    [quantum.core.print                      :as pr            ]
-    [quantum.core.type.defs                  :as tdefs         ]
-    [quantum.core.type.core                  :as tcore         ]
+    [quantum.core.macros.protocol            :as proto]
+    [quantum.core.macros.reify               :as reify]
+    [quantum.core.macros.transform           :as trans]
+    [quantum.core.numeric.combinatorics      :as combo]
+    [quantum.core.print                      :as pr]
+    [quantum.core.type.defs                  :as tdefs]
+    [quantum.core.type.core                  :as tcore]
     [quantum.core.vars                       :as var
       :refer        [#?@(:clj [defalias])]
-      :refer-macros [defalias]                                 ]))
+      :refer-macros [          defalias]]))
 
 ; TODO reorganize this namespace and move into other ones as necessary
 
@@ -63,7 +63,7 @@
   [lang ns- class-sym]
   #?(:clj  (if (= lang :clj)
                (whenf class-sym (fn-not special-defnt-keyword?)
-                 (whencf*n symbol?
+                 (whencf$n symbol?
                    (if-let [qualified-class-name (get @qualified-class-name-map class-sym)]
                      qualified-class-name
                      (let [new-qualified-class-name (symbol (.getName ^Class (ns-resolve ns- class-sym)))]
@@ -91,7 +91,7 @@
     (condf x
       (fn-or symbol? keyword?)
         (fn-> hash-set (expand-classes-for-type-hint lang ns- arglist))
-      set?    (fn->> (map (f*n classes-for-type-predicate lang arglist))
+      set?    (fn->> (map (f$n classes-for-type-predicate lang arglist))
                      (apply concat)
                      (map #(get-qualified-class-name lang ns- %))
                      (into #{}))
@@ -176,7 +176,7 @@
                (map (fn [[type-arglist-n return-type-n :as arglist-n]]
                       (let [_ (log/pr :macro-expand "UNEXPANDED TYPE HINTS" type-arglist-n "IN NS" ns-)
                             type-hints-n (->> type-arglist-n
-                                              (mapv (f*n expand-classes-for-type-hint lang ns-
+                                              (mapv (f$n expand-classes-for-type-hint lang ns-
                                                     type-arglist-n)))
                             _ (log/pr :macro-expand "EXPANDED TYPE HINTS" type-hints-n)]
                         [type-hints-n return-type-n])))
@@ -195,7 +195,7 @@
   [kw {:keys [type-hints type-arglist available-default-types hint inner-type-n]}]
   (condp = kw
     :first (->> type-arglist
-                (map (whencf*n (eq? :first) (first type-arglist))))
+                (map (whencf$n (eq? :first) (first type-arglist))))
     :elem  (if (= hint :elem)
                inner-type-n
                hint)
@@ -289,7 +289,7 @@
                    (reduce (fn [types-n arglist-n]
                              (defnt-positioned-types-for-arglist arglist-n types-n))
                              {})
-                   (map (f*n update-val
+                   (map (f$n update-val
                           (fn->> (map (fn [[type-hint arity-cts]]
                                           ; TODO what are you going to do with arity-cts?
                                           (zipmap (expand-classes-for-type-hint type-hint lang ns-)
@@ -384,7 +384,7 @@
   {:post [(log/ppr :macro-expand "AVAILABLE DEFAULT TYPES" %)]}
   {:available-default-types
     (->> types-for-arg-positions
-         (map (f*n update-val
+         (map (f$n update-val
                 (fn->> keys (into #{})
                        (set/difference (-> tcore/types-unevaled (get-in [lang :any]))))))
          (into {}))})

@@ -7,8 +7,8 @@
       :refer [->ex]
       :include-macros true              ]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [f*n <- fn-> fn->>])]
-      :refer-macros [f*n <- fn-> fn->>]     ]
+      :refer        [#?@(:clj [f$n <- fn-> fn->>])]
+      :refer-macros [f$n <- fn-> fn->>]     ]
     [quantum.core.log         :as log
       :include-macros true              ]
     [quantum.core.logic       :as logic
@@ -281,8 +281,8 @@
         validators-name  (symbol (str (name class-name) ":__validators"))]
     `(do (defrecord ~class-name [~'type ~'unit ~'unit:v])
          (def ~validators-name
-           {:type   (f*n = ~name-)
-            :unit   (f*n = ~unit)
+           {:type   (f$n = ~name-)
+            :unit   (f$n = ~unit)
             :unit:v (constantly true)
             :db/id  identifier?})
          (defn ~constructor-name [v#]

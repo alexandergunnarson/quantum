@@ -1,24 +1,24 @@
 (ns quantum.core.macros.protocol
   (:require
     [quantum.core.analyze.clojure.predicates :as anap
-      :refer [type-hint]                                ]
+      :refer [type-hint]]
     [quantum.core.analyze.clojure.transform
-      :refer [unhint]                                   ]
-    [quantum.core.macros.transform           :as trans  ]
+      :refer [unhint]]
+    [quantum.core.macros.transform           :as trans]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [f*n fn-> fn->>])]
-      :refer-macros [f*n fn-> fn->>]                    ]
+      :refer        [#?@(:clj [f$n fn-> fn->>])]
+      :refer-macros [          f$n fn-> fn->>]]
     [quantum.core.log                        :as log
-      :include-macros true                              ]
+      :include-macros true]
     [quantum.core.logic                      :as logic
       :refer        [#?@(:clj [whenp]) nempty? nnil?]
-      :refer-macros [whenp]                             ]
+      :refer-macros [whenp]]
     [quantum.core.collections.base           :as cbase
       :refer        [#?(:clj kmap) update-first update-val
                      ensure-set]
       :refer-macros [kmap]]
     [quantum.core.macros.core                :as cmacros]
-    [quantum.core.type.core                  :as tcore  ]))
+    [quantum.core.type.core                  :as tcore]))
 
 (def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
   protocol-type-hint-map
@@ -110,7 +110,7 @@
   (let [body-sorted
           (->> reify-body rest rest
                (map (fn [[sym & body]]
-                      (-> body (update-first (f*n cmacros/hint-meta (type-hint sym))))))) ; remove reify method names
+                      (-> body (update-first (f$n cmacros/hint-meta (type-hint sym))))))) ; remove reify method names
         body-filtered body-sorted
         _ (log/ppr-hints :macro-expand-protocol "BODY SORTED" body-sorted)
         body-mapped

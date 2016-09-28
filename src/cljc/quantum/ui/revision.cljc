@@ -7,8 +7,8 @@
     (swap! states coll/updates-in+
       [:last-modified :instant] (constantly (time/now))
       [:last-modified :item   ] (constantly x)
-      [x :index ] (whenf*n nil? (constantly 0) (MWA inc))
-      [x :states] (f*n conj (-> x :immutable deref)))))
+      [x :index ] (whenf$n nil? (constantly 0) (MWA inc))
+      [x :states] (f$n conj (-> x :immutable deref)))))
 
 #_(defn commit! [states x] (commit!* x states))
 
@@ -73,7 +73,7 @@
         (do (swap! states update x
               (fn [x-n] (update x-n :index (if full?
                                                (constantly (lasti x-n))
-                                               (whenf*n (f*n < (lasti x-n)) inc)))))
+                                               (whenf$n (f$n < (lasti x-n)) inc)))))
             (coordinate-state! states x)
             true))))
 
@@ -92,7 +92,7 @@
         (do (swap! states update x
               (fn [x-n] (update x-n :index (if full?
                                                (constantly 0)
-                                               (whenf*n (f*n > 0) dec)))))
+                                               (whenf$n (f$n > 0) dec)))))
             (coordinate-state! states x)
             true))))
 

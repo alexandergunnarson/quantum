@@ -20,7 +20,7 @@
                :refer [pprint]                    ]))
   #?(:cljs (:require-macros
              [quantum.core.fn          :as fn
-               :refer [f*n]                       ])))
+               :refer [f$n]                       ])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -123,32 +123,24 @@
   [& args]
   `(comp ~@(reverse args))))
 
-#_(defn fn*
-  "This doesn't work because it is a constant in the Clojure compiler.
-   It should be munged but isn't.
-   Likewise, simply copying and pasting the code for |partial| from clojure.core doesn't work either..."
-  [& args]
-  (apply partial args))
+#?(:clj
+(defmacro f$n  [f & args]
+  `(fn [inner-arg#] (~f inner-arg# ~@args))))
 
 #?(:clj
-(defmacro f*n  [func & args]
-  `(fn [arg-inner#]
-     (~func arg-inner# ~@args))))
+(defmacro fn$ [f & args]
+  `(fn [last-arg#] (~f ~@args last-arg#))))
 
 ; MWA: "Macro WorkAround"
-#?(:clj (defmacro MWA ([f] `(f*n ~f)) ([n f] `(mfn ~n ~f))))
+#?(:clj (defmacro MWA ([f] `(f$n ~f)) ([n f] `(mfn ~n ~f))))
 
-(defn f**n [func & args]
-  (fn [& args-inner]
-    (apply func (concat args-inner args))))
-
-(defn *fn [& args] (f*n apply args))
+(defn $fn [& args] (f$n apply args))
 
 (defn fn-bi [arg] #(arg %1 %2))
 (defn unary [pred]
-  (fn ([a    ] (f*n pred a))
-      ([a b  ] (f*n pred a b))
-      ([a b c] (f*n pred a b c))))
+  (fn ([a    ] (f$n pred a))
+      ([a b  ] (f$n pred a b))
+      ([a b c] (f$n pred a b c))))
 
 #?(:clj
 (defmacro fn->

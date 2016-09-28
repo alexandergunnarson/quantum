@@ -11,49 +11,44 @@
       :cljs-self-referring? true}
   quantum.core.reducers
            (:refer-clojure :exclude [reduce Range ->Range])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core                ]
-                     [quantum.core.collections.base :as cbase               ]
-                     [quantum.core.data.map         :as map                 ]
-                     [quantum.core.data.set         :as set                 ]
-                     [quantum.core.data.vector      :as vec                 
-                       :refer [catvec subvec+]                              ]
-                     [quantum.core.error            :as err               
-                       :refer [->ex]                                        ]
-                     [quantum.core.fn               :as fn
-                       :refer [#?@(:clj [f*n fn-> fn->> compr defcurried rfn])
-                               call firsta monoid aritoid]                   ]
-                     [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and
-                                         whenf whenf*n ifn condf condf*n])
-                               nnil?]                                       ]
-                     [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt])]                           ]
-                     [quantum.core.numeric          :as num                 
-                       :include-macros true                                 ]
-                     [quantum.core.type             :as type
-                       :refer [#?@(:clj [array-list? lseq?]) instance+?]    ]
-                     [quantum.core.reducers.reduce  :as red
-                       :refer [reducer first-non-nil-reducer]               ]
-                     [quantum.core.reducers.fold    :as fold
-                       :refer [folder coll-fold CollFold 
-                               fjinvoke fjtask fjfork fjjoin]               ]
-                     [quantum.core.vars             :as var
-                       :refer [#?(:clj defalias)]                           ])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )        :as core]
+             [quantum.core.collections.base :as cbase]
+             [quantum.core.data.map         :as map]
+             [quantum.core.data.set         :as set]
+             [quantum.core.data.vector      :as vec
+               :refer [catvec subvec+]]
+             [quantum.core.error            :as err
+               :refer [->ex]]
+             [quantum.core.fn               :as fn
+               :refer        [call firsta monoid aritoid
+                              #?@(:clj [f$n fn-> fn->> compr defcurried rfn])]
+               :refer-macros [          f$n fn-> fn->> compr defcurried rfn]]
+             [quantum.core.logic            :as logic
+               :refer        [nnil?
+                              #?@(:clj [fn-not fn-or fn-and whenf whenf$n ifn condf condf$n])]
+               :refer-macros [          fn-not fn-or fn-and whenf whenf$n ifn condf condf$n]                                       ]
+             [quantum.core.macros           :as macros
+               :refer        [#?@(:clj [defnt])]
+               :refer-macros [          defnt]]
+             [quantum.core.numeric          :as num
+               :include-macros true]
+             [quantum.core.type             :as type
+               :refer        [instance+?
+                              #?@(:clj [array-list? lseq?])]
+               :refer-macros [          array-list? lseq?]]
+             [quantum.core.reducers.reduce  :as red
+               :refer [reducer first-non-nil-reducer]]
+             [quantum.core.reducers.fold    :as fold
+               :refer [folder coll-fold CollFold
+                       fjinvoke fjtask fjfork fjjoin]]
+             [quantum.core.vars             :as var
+               :refer        [#?(:clj defalias)]
+               :refer-macros [        defalias]])
   #?(:cljs (:require-macros
-                     [quantum.core.fn               :as fn
-                       :refer [f*n fn-> fn->> compr defcurried rfn]         ]
-                     [quantum.core.logic            :as logic
-                       :refer [fn-not fn-or fn-and whenf whenf*n ifn condf
-                               condf*n]                                     ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt]                                       ]
-                     [quantum.core.type             :as type
-                       :refer [array-list? lseq?]                           ]
-                     [quantum.core.reducers        
-                       :refer [reduce join]                                 ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                                    ])))
+             [quantum.core.reducers
+               :refer [reduce join]])))
 
 #?(:clj (defalias join   red/join  ))
         (defalias pjoin  fold/pjoin)
@@ -73,32 +68,32 @@
   (def indexed (partial zip (range))) ; my own code
   (seq (indexed s1))
   ;; => ((0 \H) (1 \e) (2 \l) (3 \l) (4 \o) (5 \space) (6 \W) (7 \o) (8 \r) (9 \l) (10 \d))
- 
+
   ;; you can have more than 2 collections in the multireducible
   (reduce conj [] (indexed s1 s2))
   ;; => [(0 \H \l) (1 \e \l) (2 \l \l) (3 \l \l) (4 \o \l) (5 \space \l) (6 \W \l) (7 \o \l) (8 \r \l) (9 \l \l) (10 \d \l)]
- 
+
   ;; reduce can work on tuples (as seen above), or can work on individual elements
   (reduce conj [] (unpacked (indexed s1 s2)))
   ;; => [0 \H \l 1 \e \l 2 \l \l 3 \l \l 4 \o \l 5 \space \l 6 \W \l 7 \o \l 8 \r \l 9 \l \l 10 \d \l]
- 
+
   ;; lets find index where both strings have same character
   (let [s (unpacked (indexed s1 s2))
         f (fn [index ch1 ch2] (when (= ch1 ch2) index))]
     (into [] (keep f s)))
   ;; => [2 3 9]
- 
+
   ;; some multireducibles also support folding, both with tuples and individual elements
   (let [s (unpacked (indexed s1 s2))
         combinef (fn ([] []) ([a b] [a b]))
         reducef (fn [val index ch1 ch2] (if (= ch1 ch2) (conj val index) val))]
     (fold+ 5 combinef reducef s))
   ;; => [[2 3] [[] [9]]]
- 
+
   ;; maps can behave like multireducibles too
   (reduce conj [] (unpacked {:foo 1 :bar 2 :baz 3}))
   ;; => [:baz 3 :bar 2 :foo 1]
- 
+
   ;; and did I mention multireducibles are very fast?
   (time (let [mr (indexed (range -1000000 1000000)
                           (range 1000000 -1000000 -1))
@@ -132,7 +127,7 @@
                     #(let [f1 (fc v1)
                            t2 (fork (fc v2))]
                        (combinef (f1) (join t2)))))))))
- 
+
   (deftype ZipIterator [^:unsynchronized-mutable iters]
     IOpenAware
     (-open? [this] (every? open? iters)) ; open?
@@ -178,9 +173,9 @@
 ;=================================================={                          }=====================================================
 ; Sometimes in a seq pipeline, you know that some intermediate results are, well,
 ; intermediate and as such don't need to be persistent but, on the whole, you still need the laziness.
-(defn- reverse-conses 
+(defn- reverse-conses
   {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
-  ([s tail] 
+  ([s tail]
     (if (identical? (rest s) tail)
       s
       (reverse-conses s tail tail)))
@@ -194,17 +189,17 @@
   (defn seq-seq
     {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"
      :usage "(seq->> (range) (map+ str) (take+ 25) (drop+ 5))"
-     :out "(\"5\" \"6\" \"7\" \"8\" \"9\" \"10\" \"11\" \"12\" \"13\" \"14\" \"15\" \"16\" 
+     :out "(\"5\" \"6\" \"7\" \"8\" \"9\" \"10\" \"11\" \"12\" \"13\" \"14\" \"15\" \"16\"
             \"17\" \"18\" \"19\" \"20\" \"21\" \"22\" \"23\" \"24\")"}
-    [f s] 
+    [f s]
     (let [f1 (clojure.core/reduce #(cons %2 %1) nil ; Note that the captured function (f1) may be impure, so don't share it!
                 (f (reify clojure.core.protocols.CollReduce
                      (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
                        f1))))]
       ((fn this [s]
-         (lazy-seq 
+         (lazy-seq
            (when-let [s (seq s)]
-             (let [more (this (rest s)) 
+             (let [more (this (rest s))
                    x (f1 more (first s))]
                (if (reduced? x)
                  (reverse-conses @x more nil)
@@ -213,7 +208,7 @@
 #?(:clj
   (defmacro lseq->>
     ^{:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
-    [s & forms] 
+    [s & forms]
     `(seq-seq (fn [n#] (->> n# ~@forms)) ~s)))
 
 #?(:clj
@@ -224,7 +219,7 @@
     ^{:attribution "Christophe Grand, http://stackoverflow.com/questions/22031829/tuning-clojure-reducers-library-performace"}
     [coll]
     (let [a (atom coll)]
-      (reify clojure.lang.Seqable ; ClojureScript has cljs.core.ISeqable but its method |seq| is private 
+      (reify clojure.lang.Seqable ; ClojureScript has cljs.core.ISeqable but its method |seq| is private
         (seq [_]
           (let [coll @a]
             (reset! a nil)
@@ -464,7 +459,7 @@
   [pred coll]
   (filter+ (complement pred) coll))
 
-(def keep+ (compr map+ (partial remove+ nil?))) 
+(def keep+ (compr map+ (partial remove+ nil?)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         FLATTEN          }=====================================================
 ;=================================================={                          }=====================================================
@@ -714,8 +709,8 @@
     (->> coll
          (map-state
            (fn [x x']
-             (let [xf  (whenf x  (fn-not (f*n identical? sentinel)) f)
-                   xf' (whenf x' (fn-not (f*n identical? sentinel)) f)]
+             (let [xf  (whenf x  (fn-not (f$n identical? sentinel)) f)
+                   xf' (whenf x' (fn-not (f$n identical? sentinel)) f)]
                [x' (if (eq-f xf xf') sentinel x')]))
            sentinel)
          (remove+ (partial identical? sentinel)))))
@@ -726,7 +721,7 @@
   {:attribution "parkour.reducers"}
   [coll] (->> coll (distinct-by+ identity =)))
 
- 
+
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
    times those inputs appeared in the collection.
@@ -821,7 +816,7 @@
   {:source "tesser.core"
    :adapted-by "alexandergunnarson"
    :tests '{(->> [1 3 5] (fold-every? odd?))
-            true}} 
+            true}}
   [pred coll]
   (->> coll
        (remove+ pred)
@@ -861,15 +856,15 @@
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"
    :performance "51.454164 ms vs. 72.568330 ms for |doall| with normal |for|"}
   [seq-exprs body-expr]
-  (letfn [(emit-fn [form] 
+  (letfn [(emit-fn [form]
           (fn [sub-expr [bind expr & mod-pairs]]
             (let [foldable (not-any? (comp #{:while} first) mod-pairs)
                   kv-able (and (vector? bind) (not-any? #{:as} bind)
                             (every? #(and (symbol? %) (not= % '&)) (take 2 bind)))
-                  [kv-args kv-bind] 
+                  [kv-args kv-bind]
                   (if kv-able
                     [(take 2 (concat bind (repeat `_#)))
-                     (if (< 2 (count bind)) 
+                     (if (< 2 (count bind))
                        [(subvec bind 2) nil]
                        [])]
                     `[[k# v#] [~bind [k# v#]]])
@@ -910,7 +905,7 @@
 ;=================================================={      TO INCORPORATE      }=====================================================
 ;=================================================={                          }=====================================================
 
-(comment 
+(comment
 (defn- chunk-reducer
   "Given a compiled fold, constructs a function which takes a chunk and returns
   its post-reduced value."
@@ -1040,7 +1035,7 @@
                                                                          x1 x2))))))))
                                              outer-acc
                                              (partition 2 reductions))]
-       
+
                             ; Break off as soon as we have n elements
                             (if (= n (first acc'))
                               (reduced acc')

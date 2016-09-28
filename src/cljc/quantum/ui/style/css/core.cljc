@@ -5,9 +5,9 @@
           CSS instead of generating an external stylesheet."
     :attribution "Alex Gunnarson"}
   quantum.ui.style.css.core
-           (:require [garden.color      :as color    
+           (:require [garden.color      :as color
                        :refer [color? #?(:cljs CSSColor)]]
-                     [garden.core       :as css      
+                     [garden.core       :as css
                        :refer [css]]
                      [garden.stylesheet :as css-style
                        :refer [at-keyframes at-font-face]]
@@ -16,7 +16,7 @@
                      [quantum.core.log  :as log          ]))
   #?(:clj  (:import  garden.color.CSSColor)))
 
-; TODO generate this in a more sane way 
+; TODO generate this in a more sane way
 (def listener-map
   {"load"       "load"
    "mouse-over" "mouseover"
@@ -72,12 +72,12 @@
 ; 100
 ; 200
 ; 300
-; 400 400 is the same as normal, 
+; 400 400 is the same as normal,
 ; 500
 ; 600
 ; 700 700 is the same as bold
 ; 800
-; 900 
+; 900
 
 (defn ^String px [n] (str n "px"))
 
@@ -115,13 +115,13 @@
            (css {:pretty-print? false})
            (dropl 2)   ; drops "a{"g
            (dropr 1)   ; drops "}"
-           (dropl 2)))) ; drops "a:"  
+           (dropl 2)))) ; drops "a:"
 
 (def styles          (atom {}))
 (def class-watch?    (atom false))
 (def class-watchlist (atom {}))
 (def themes          (atom {}))
-(def styles-template (atom {})) ; This needs to be initialized 
+(def styles-template (atom {})) ; This needs to be initialized
 
 (defn theme
   {:todo ["More arity"]}
@@ -206,7 +206,7 @@
 #_(defnt normalize-prop-v
   ([^keyword? v k] (name v))
   ([^number?  v k] (if (contains? px-props k) (px v) (str v)))
-  ([^vector?  v k] (postwalk (f*n normalize-prop-v k) v))
+  ([^vector?  v k] (postwalk (f$n normalize-prop-v k) v))
   ([:else     v k] (whenf v css-color? render-color)))
 
 #_(defn compatibilize
@@ -245,7 +245,7 @@
           :background-position   "left"}
    :out-type "Vector"}
   [^Map css-block]
-  (->> css-block 
+  (->> css-block
        (reduce
          (fn [^Map ret ^Key prop-k prop-v]
            (let [^Map normalized-props
@@ -296,7 +296,7 @@
                ; Starts with the most specific and works upward
                (loop [^Map class-props-n {}
                       tagl-n 0
-                      tagr-n 0] 
+                      tagr-n 0]
                  (let [^Vec tags-n (subseq tags tagl-n tagr-n) ; [div pillar upper] ; or maybe :#abc
                        joined (str/join "." tags-n)
                        ^Key class-n (keyword (if (= tagl-n 0) joined (str "." joined)))

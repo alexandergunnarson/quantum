@@ -1,25 +1,24 @@
 (ns ^{:doc "Clojure (and variants) code analysis namespace. Required for quantum.core.macros."}
   quantum.core.analyze.clojure.predicates
   (:refer-clojure :exclude [name])
-           (:require [clojure.string                    :as str                      ]
-             #?(:clj [clojure.jvm.tools.analyzer        :as tana                     ])
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )            :as core                     ]
-                     [quantum.core.analyze.clojure.core :as ana                      ]
-                     [quantum.core.fn                   :as fn
-                       :refer [#?@(:clj [<- fn-> fn->>])]                            ]
-                     [quantum.core.logic                :as logic
-                       :refer [#?@(:clj [eq? fn-or fn-and whenc ifn if*n]) splice-or]]
-                     [quantum.core.type.core            :as tcore                    ]
-                     [quantum.core.vars                 :as var
-                       :refer [#?@(:clj [defalias])]                                 ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                   :as fn
-                       :refer [<- fn-> fn->>]                        ]
-                     [quantum.core.logic                :as logic
-                       :refer [eq? fn-or fn-and whenc ifn if*n]                      ]
-                     [quantum.core.vars                 :as var
-                       :refer [defalias]                                             ])))
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )            :as core]
+    [clojure.string                    :as str]
+#?(:clj
+    [clojure.jvm.tools.analyzer        :as tana])
+    [quantum.core.analyze.clojure.core :as ana]
+    [quantum.core.fn                   :as fn
+      :refer        [#?@(:clj [<- fn-> fn->>])]
+      :refer-macros [          <- fn-> fn->>]]
+    [quantum.core.logic                :as logic
+      :refer        [splice-or
+                     #?@(:clj [eq? fn-or fn-and whenc ifn if$n])]
+      :refer-macros [          eq? fn-or fn-and whenc ifn if$n]]
+    [quantum.core.type.core            :as tcore]
+    [quantum.core.vars                 :as var
+      :refer        [#?@(:clj [defalias])]
+      :refer-macros [          defalias]]))
 
 (defn safe-mapcat
   "Like |mapcat|, but works if the returned values aren't sequences."
@@ -74,7 +73,7 @@
 (def variadic-arglist?
   (fn-> butlast last (ifn nil? (constantly nil) name) (= "&")))
 (defn arity-type [arglist] (if (variadic-arglist? arglist) :variadic :fixed))
-(def arglist-arity (if*n variadic-arglist? (fn-> count dec) count))
+(def arglist-arity (if$n variadic-arglist? (fn-> count dec) count))
 
 ; ===== FORMS =====
 (defn form-and-begins-with? [sym] (fn-and seq? (fn-> first (= sym))))
@@ -119,7 +118,7 @@
 (def many-branched?         (fn-and cond-statement? (fn-or (fn-and (fn-> count (= 5)) (fn-> (nth 3) else-pred? not)) (fn-> count (> 5)))))
 (def conditional-statement? (fn-or cond-statement? if-statement? when-statement?))
 (def cond-foldable?         (fn-and two-branched?
-                                    (fn-or (fn-and if-statement? 
+                                    (fn-or (fn-and if-statement?
                                                    (fn-> (nth 3) conditional-statement?))
                                            (fn-and cond-statement?
                                                    (fn-> (nth 4) conditional-statement?)))))

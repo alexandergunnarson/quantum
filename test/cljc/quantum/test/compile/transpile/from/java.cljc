@@ -58,3 +58,5 @@
        popr popr ; TODO fix to do before `apply str`
      #_(apply str)
        fmt/reformat-string))) ; TODO fix this
+
+(spit "./dev-resources/test/quantum/compile/transpile/bit_sieve.clj" (with-out-str (println (test-integration))))

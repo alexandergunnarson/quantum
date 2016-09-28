@@ -48,7 +48,7 @@
            ~x)
        ~x)
     (if clojure.spec/*compile-asserts*
-       `(if clojure.lang.RT/checkSpecAsserts
+       `(if (clojure.spec/check-asserts?) #_clojure.lang.RT/checkSpecAsserts
             (validate* ~spec ~x '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
            ~x)
         x))))

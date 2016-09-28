@@ -7,26 +7,26 @@
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
      min max quot mod format
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
-           (:require  
+           (:require
              [#?(:clj  clojure.core
-                 :cljs cljs.core   )            :as core    ]
-    #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
+                 :cljs cljs.core   )            :as core]
+    #?(:cljs [com.gfredericks.goog.math.Integer :as int])
              [quantum.core.convert.primitive    :as pconvert
-               :refer [#?(:clj ->long)]                     ]
+               :refer [#?(:clj ->long)]]
              [quantum.core.error                :as err
-               :refer        [->ex TODO]                    ]
+               :refer        [->ex TODO]]
              [quantum.core.fn
-               :refer        [#?@(:clj [f*n fn->])]         
-               :refer-macros [f*n fn->]                     ]
+               :refer        [#?@(:clj [f$n fn->])]
+               :refer-macros [          f$n fn->]]
              [quantum.core.logic                :as logic
-               :refer        [#?@(:clj [fn-and whenf*n])]   
-               :refer-macros [fn-and whenf*n]               ]
+               :refer        [#?@(:clj [fn-and whenf$n])]
+               :refer-macros [          fn-and whenf$n]]
              [quantum.core.macros               :as macros
                :refer        [#?@(:clj [defnt defnt'])]
-               :refer-macros [defnt defnt']   ]
+               :refer-macros [          defnt defnt']]
              [quantum.core.vars                 :as var
                :refer        [#?@(:clj [defalias defaliases])]
-               :refer-macros [defalias defaliases]          ]
+               :refer-macros [          defalias defaliases]]
              [quantum.core.numeric.convert   ]
              [quantum.core.numeric.misc      ]
              [quantum.core.numeric.operators ]
@@ -38,16 +38,16 @@
              [quantum.core.numeric
                :refer [/ floor abs]]))
   #?(:clj  (:import
-             [java.nio ByteBuffer]      
+             [java.nio ByteBuffer]
              [quantum.core Numeric] ; loops?
              [net.jafama FastMath]
              clojure.lang.BigInt
-             java.math.BigDecimal))) 
+             java.math.BigDecimal)))
 
 ; op* : Lax. Continues on overflow.
 ; op' : Strict. Throws on overflow.
 ; op  : Natural. Auto-promotes on overflow.
-; op& : Lax. Provides less-accurate results in much less time.   
+; op& : Lax. Provides less-accurate results in much less time.
 
 
 ; (if a b true) => (or (not a) b)
@@ -59,7 +59,7 @@
 ; http://blog.juma.me.uk/2011/02/23/performance-of-fastmath-from-commons-math/
 ; http://blog.element84.com/improving-java-math-perf-with-jafama.html
 
-; If you want your software to have the exact same result regardless 
+; If you want your software to have the exact same result regardless
 ; of hardware. Java provides the StrictMath class for that purpose.
 ; It's slower but is guaranteed to have the same answer regardless of hardware.
 
@@ -96,7 +96,7 @@
 ;            | Ratio      : Ratio
 ;            | Double     : Double ; DOUBLE_OPS
 ;            | BigInt     : BigInt
-;            | BigDecimal : BigDecimal  
+;            | BigDecimal : BigDecimal
 
 ; INTEGER
 ; BigInt     | Long       : BigInt
@@ -210,7 +210,7 @@
 ;================={   MORE COMPLEX OPERATIONS    }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-(def  int-nil   (whenf*n nil? (constantly 0)))
+(def  int-nil   (whenf$n nil? (constantly 0)))
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 
@@ -284,7 +284,7 @@
   [num div]
   (not (divisible? num div)))
 
-(def percent? (fn-and (f*n core/>= 0) (f*n core/<= 1))) ; TODO use >= and <=
+(def percent? (fn-and (f$n core/>= 0) (f$n core/<= 1))) ; TODO use >= and <=
 
 ; PROPERTIES OF NUMERIC FUNCTIONS
 
@@ -313,7 +313,7 @@
 
 (defn base
   "Gets the identity-base for the given function `f`.
-   
+
    For instance:
    The identity-base of the `+` function is 0: (= x (+ x 0)).
    By contrast, that of the `*` function is 1: (= x (* x 0))"

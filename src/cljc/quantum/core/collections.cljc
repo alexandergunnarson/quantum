@@ -61,18 +61,18 @@
              [quantum.core.error                      :as err
                :refer [->ex]                                     ]
              [quantum.core.fn                         :as fn
-               :refer        [#?@(:clj [compr <- fn-> fn->> f*n])
+               :refer        [#?@(:clj [compr <- fn-> fn->> f$n])
                               fn-nil juxt-kv withf->>]
-               :refer-macros [compr <- fn-> fn->> f*n]           ]
+               :refer-macros [compr <- fn-> fn->> f$n]           ]
              [quantum.core.log                        :as log
                :include-macros true                              ]
              [quantum.core.logic                      :as logic
                :refer         [#?@(:clj [fn-not fn-or fn-and whenf
-                                         whenf*n ifn if*n condf
-                                         condf*n])
+                                         whenf$n ifn if$n condf
+                                         condf$n])
                                nnil? some? splice-or]
-               :refer-macros [fn-not fn-or fn-and whenf whenf*n
-                              ifn if*n condf condf*n]            ]
+               :refer-macros [fn-not fn-or fn-and whenf whenf$n
+                              ifn if$n condf condf$n]            ]
              [quantum.core.macros                     :as macros
                :refer        [#?@(:clj [defnt])]
                :refer-macros [defnt]                             ]
@@ -327,7 +327,7 @@
 (defn array->dimensionality
   "e.g. an array with the '[[[J' tag would be of 3 dimensionality."
   [arr]
-  (->> arr type str (drop 6) (take-while (f*n = \[)) count)))
+  (->> arr type str (drop 6) (take-while (f$n = \[)) count)))
 
 #?(:clj
 (defnt array->array-manager-key
@@ -718,7 +718,7 @@
 
 #?(:clj
   (def lseq+
-    (condf*n
+    (condf$n
       (fn-or seq? nil? coll?) #(lseq %) ; not |partial|, because can't take value of a macro
       (fn-> list lseq first))))
 
@@ -854,7 +854,7 @@
 ;   (let [colls (->> colls-0 (map+ fold+) fold+)]
 ;     (for+ [n (range 0 (count (get colls 0)))] ; should be easy, because count will be O(1) with folded colls
 ;       (->> colls
-;            (map (f*n get+ n)))))) ; get+ doesn't take long at all; also, apparently can't use map+ within for+...
+;            (map (f$n get+ n)))))) ; get+ doesn't take long at all; also, apparently can't use map+ within for+...
 ;                                   ; 234.462665 ms if you realize them
 ; (defn zipfor- [& colls-0] ;  [[1 2 3] [4 5 6] [7 8 9]]
 ;   (let [colls (->> colls-0 (map+ fold+) fold+) ; nested /for/s, no
@@ -1623,7 +1623,7 @@
     (cond (splice-or *flow = 0)
           allocated
           (splice-or *flow = 1 -1) ; TODO fix
-          (update allocated (-> sorted last first) (f*n - *flow))
+          (update allocated (-> sorted last first) (f$n - *flow))
           (-> *flow num/abs (> 1))
           (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
 

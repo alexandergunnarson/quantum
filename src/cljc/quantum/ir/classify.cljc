@@ -3,46 +3,47 @@
            (:refer-clojure :exclude [reduce for])
            (:require
              [#?(:clj  clojure.core
-                 :cljs cljs.core   )          :as core   ]
+                 :cljs cljs.core   )   :as core   ]
              [quantum.core.collections :as coll
-               :refer [#?@(:clj [for for* fori lfor reduce join kmap])
-                       pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
-                       flatten-1+ range+ ffilter
-                       reduce-count]
-               #?@(:cljs [:refer-macros [for lfor reduce join kmap]])]
-             [quantum.core.numeric :as num]
+               :refer        [#?@(:clj [for for* fori lfor reduce join kmap])
+                              pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
+                              flatten-1+ range+ ffilter
+                              reduce-count]
+               :refer-macros [for lfor reduce join kmap]]
+             [quantum.core.numeric          :as num]
              [quantum.numeric.core
-               :refer [find-max-by]]
-             [quantum.numeric.vectors :as v]
-             [quantum.core.fn :as fn
-                          :refer         [#?@(:clj [<- fn-> fn->>])]
-               #?@(:cljs [:refer-macros            [<- fn-> fn->>]])]
-             [quantum.core.cache :as cache
-                          :refer         [#?(:clj defmemoized)]
-               #?@(:cljs [:refer-macros  [defmemoized]])]
+               :refer        [find-max-by]]
+             [quantum.numeric.vectors       :as v]
+             [quantum.core.fn               :as fn
+               :refer        [#?@(:clj [<- fn-> fn->>])]
+               :refer-macros [          <- fn-> fn->>]]
+             [quantum.core.cache            :as cache
+               :refer        [#?(:clj defmemoized)]
+               :refer-macros [        defmemoized]]
              [quantum.core.error
-               :refer [->ex]]
+               :refer        [->ex]]
              [quantum.core.logic
-                          :refer        [#?@(:clj [coll-or condpc fn-and]) nnil?]
-               #?@(:cljs [:refer-macros [coll-or condpc fn-and]])]
-             [quantum.core.nondeterministic   :as rand]
-             [quantum.core.thread             :as thread
-                          :refer        [#?(:clj async)]
-               #?@(:cljs [:refer-macros [async]])]
-             [quantum.numeric.core            :as num*
-               :refer [pi* sigma sum]]
-    #?(:clj  [taoensso.timbre.profiling :as prof
-               :refer [profile defnp p]]))
+               :refer        [nnil?
+                              #?@(:clj [coll-or condpc fn-and])]
+               :refer-macros [          coll-or condpc fn-and]]
+             [quantum.core.nondeterministic :as rand]
+             [quantum.core.thread           :as thread
+               :refer        [#?@(:clj [async])]
+               :refer-macros [          async]]
+             [quantum.numeric.core          :as num*
+               :refer        [pi* sigma sum]]
+    #?(:clj  [taoensso.timbre.profiling     :as prof
+               :refer        [profile defnp p]]))
   #?(:cljs (:require-macros
-              [quantum.ir.classify
-                :refer [N N*]])))
+             [quantum.ir.classify
+               :refer        [N N*]])))
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
 
 (def ^:dynamic *exact?* true)
 
 (def doc->terms+
-  (fn->> :document:words 
+  (fn->> :document:words
          (remove+ (fn-> :word:indexed:word :word:stopword?))
          (map+    (fn-> :word:indexed:word :word:stem:porter #_:word:text     ))
          (filter+ nnil?)))
@@ -114,7 +115,7 @@
 (defmemoized Nt:c {}
   "Total number of occurrences of words in doc collection @D of class @c."
   {:performance "O(n^2)"}
-  ([D] (->> D 
+  ([D] (->> D
             (filter+ (fn-and :document:class :document:words))
             (map+ (juxt :document:class (fn-> doc->terms+ reduce-count)))
             (map+ vector)
@@ -152,7 +153,7 @@
                     :words {:w1 1
                             :w2 3}}
                :c2 ...}}
-  ([D] (->> D 
+  ([D] (->> D
             (filter+ (fn-and :document:class :document:words)) ; in case is nil
             (map+ (juxt :document:class (fn->> Nt:w+d (map-vals+ (constantly 1)) (join {}))))
             (map+ vector)
@@ -237,7 +238,7 @@
   ([t D d' c V]
     (condp = t
       :multinomial (if #?(:clj *exact?* :cljs true)
-                       (pi* V (fn [w] (expi (P:w|c t D w c V) 
+                       (pi* V (fn [w] (expi (P:w|c t D w c V)
                                           (Nt:w+d w d'))))
                        #_(->> (V D) ; somehow doesn't work :((
                             (map+ (fn [w] (num/log 2 (double (expi (P:w|c t D w c V)
@@ -377,7 +378,7 @@
                        (group-by #(= (first %) (second %))))]
     {:scores scores
      :accuracy (double (/ (-> scores (get true) count)
-                          (count D')))})) 
+                          (count D')))}))
 
 ; TODO memoization problem: If DC is called while corpus is running, it doesn't realize that corpus has already started...
 

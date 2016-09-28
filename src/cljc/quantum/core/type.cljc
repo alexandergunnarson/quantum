@@ -8,31 +8,28 @@
      indexed? nil? list? coll? char? symbol? record? number? integer? float?
      double? decimal? array?
      identity class])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )       :as core   ]
-                     [quantum.core.classes         :as classes]
-                     [quantum.core.fn              :as fn
-                       :refer [#?@(:clj [f*n mfn fn->])]      ]
-                     [quantum.core.logic           :as logic
-                       :refer [#?@(:clj [fn-and whenf*n])]    ]
-                     [quantum.core.data.vector     :as vec    ]
-                     [quantum.core.macros          :as macros
-                       :refer [#?@(:clj [defnt defnt'])]      ]
-                     [quantum.core.type.core       :as tcore  ]
-                     [quantum.core.type.predicates :as tpred  ]
-                     [quantum.core.vars            :as var
-                       :refer [#?(:clj defalias)]             ])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )       :as core   ]
+             [quantum.core.classes         :as classes]
+             [quantum.core.fn              :as fn
+               :refer        [#?@(:clj [f$n mfn fn->])]
+               :refer-macros [          f$n mfn fn->]]
+             [quantum.core.logic           :as logic
+               :refer        [#?@(:clj [fn-and whenf$n])]
+               :refer-macros [          fn-and whenf$n]]
+             [quantum.core.data.vector     :as vec    ]
+             [quantum.core.macros          :as macros
+               :refer        [#?@(:clj [defnt defnt'])]
+               :refer-macros [          defnt defnt']]
+             [quantum.core.type.core       :as tcore  ]
+             [quantum.core.type.predicates :as tpred  ]
+             [quantum.core.vars            :as var
+               :refer        [#?(:clj defalias)]
+               :refer-macros [        defalias]])
   #?(:cljs (:require-macros
-                     [quantum.core.type
-                       :refer [should-transientize?]]
-                     [quantum.core.fn              :as fn
-                       :refer [f*n mfn fn->]                  ]
-                     [quantum.core.logic           :as logic
-                       :refer [fn-and whenf*n]                ]
-                     [quantum.core.macros          :as macros
-                       :refer [defnt defnt']                  ]
-                     [quantum.core.vars            :as var
-                       :refer [defalias]                      ])))
+             [quantum.core.type
+               :refer [should-transientize?]])))
 
 ; TODO: Should include typecasting? (/cast/)
 
@@ -221,9 +218,9 @@
   ([^map?    x] hash-map)
   ([^set?    x] hash-set))
 
-(def vector?-fn (f*n vector?))
-(def set?-fn    (f*n set?   ))
-(def map?-fn    (f*n map?   ))
+(def vector?-fn (f$n vector?))
+(def set?-fn    (f$n set?   ))
+(def map?-fn    (f$n map?   ))
 
 (defnt ->pred
   "Gets the type predicate associated with the value passed."
@@ -245,8 +242,8 @@
                      :cljs cljs.core.PersistentHashMap.EMPTY))
   ([           x] (empty x)))
 
-(def transient!*  (whenf*n editable?  transient))
-(def persistent!* (whenf*n transient? persistent!))
+(def transient!*  (whenf$n editable?  transient))
+(def persistent!* (whenf$n transient? persistent!))
 
 (def transient-persistent-fns
   {true  [transient      conj! persistent!     ]

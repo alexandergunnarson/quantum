@@ -5,7 +5,7 @@
   [sym & {:as body}]
   (let [type-map-sym (gensym 'symbol-map)
         f-genned     (gensym 'f)]
-    (intern *ns* sym nil) ; In case of recursive calls  
+    (intern *ns* sym nil) ; In case of recursive calls
    (eval `(let [_# (log/pr :macro-expand "BODY" '~body)
           type-map-temp# (atom {})
           ; Need to know the arities to be able to create the fn efficiently instead of all var-args
@@ -29,7 +29,7 @@
       ; Need to generate all the apropriate arities via a template. These are type-independent.
       ; Once a particular arity is generated, it need not be generated again.
       (doseq [[pred# arities-n#] '~body]
-        (let [; Normalizes the arities to be in an arity-group, even if there's only one arity for that type 
+        (let [; Normalizes the arities to be in an arity-group, even if there's only one arity for that type
               arities-normalized#
                 (whenf arities-n# (fn-> first vector?) list)
               arities-for-type# (atom {})]
@@ -65,9 +65,9 @@
                   (log/pr :macro-expand "GENNED ARITY FOR ARGLIST" arglist#)
                   (log/pr :macro-expand genned-arity#)
                   (swap! genned-arities# assoc-in [arity-n# arity-type-n#] genned-arity#)))))))
-       
-       ; Create type overloads 
-       (doseq [[pred# arities-n#] '~body] 
+
+       ; Create type overloads
+       (doseq [[pred# arities-n#] '~body]
          (log/pr :macro-expand (str "ADDING OVERLOAD FOR PRED " pred#) (apply list 'fn arities-n#))
          (doseq [type# (get type/types pred#)]
            (swap! type-map-temp# assoc type#
@@ -85,7 +85,7 @@
         (log/pr :macro-expand "GENNED FN FINAL" genned-fn-f#)
         (->> genned-fn-f#
              (clojure.walk/postwalk
-               (whenf*n (fn-and symbol? qualified? auto-genned?) unqualify))
+               (whenf$n (fn-and symbol? qualified? auto-genned?) unqualify))
              ))))))
 
 #_(defnt testing
@@ -146,14 +146,14 @@
     ;(list 'console/log (list 'apply 'jstr/sp objs))
     ))
 
-; TODO pre-register ns's and have |require| only be to def an alias 
+; TODO pre-register ns's and have |require| only be to def an alias
 (defmacro require [arg]
   (let [[ns-name-0 & {:keys [as]}] (-> arg (nth 1))
         _ (println "REQUIRING" (-> arg (nth 1)))
         ns-name-f (or as ns-name-0)
         file-name (str (-> ns-name-0 name) ".clj")
         file-str
-          (io/read 
+          (io/read
             :path [:test "quanta" "compile" file-name]
             :read-method :str)
         code (read-string (str "(do " file-str ")"))
@@ -163,7 +163,7 @@
                   transformed-body
                     (condp = spec-sym
                       'def  (do (assert (-> body count (= 1)))
-                                (first body))   
+                                (first body))
                       'defn (cons 'fn body))]
               [registered-sym transformed-body]))
         ^Fn register-ns
@@ -205,7 +205,7 @@
     "symbol"    "Symbol"
     "function"  "Fn"))
 
-; TODO dispatch on JS object field 
+; TODO dispatch on JS object field
 (defn get [coll n]
   (if (vector? coll)
       (aget coll n)
@@ -275,7 +275,7 @@
         (cons 'do prop-defs)))))
 
 (defrecord Var [class- val]) ; add meta later
-  
+
 ; Defines a variable
 (defmacro var [class-0 val-]
   (let [class-f class-0]
@@ -318,7 +318,7 @@
 (defmacro compress-props [sym props-vec]
   (->> props-vec
        (map oeval)
-       (map (whenf*n (f*n str/starts-with? "\"") (fn-> popl popr)))
+       (map (whenf$n (f$n str/starts-with? "\"") (fn-> popl popr)))
        (str/join ".")
        (str (oeval sym) ".")))
 

@@ -8,10 +8,10 @@
             #?(:clj [loom.gen                  :as g-gen])  ; for now
                     [#?(:clj  clojure.core
                         :cljs cljs.core)       :as core  ]
-                    [quantum.core.convert      :as conv  
+                    [quantum.core.convert      :as conv
                       :include-macros true               ]
                     [quantum.core.lexical.core :as lex   ]
-                    [quantum.core.data.set     :as set   
+                    [quantum.core.data.set     :as set
                       :refer [sorted-set+]               ]
                     [quantum.core.collections  :as coll
                       :refer        [#?@(:clj [fori reduce
@@ -22,21 +22,21 @@
                                      last lasti nth]]
                     [quantum.core.error        :as err
                       :refer [->ex TODO
-                              #?(:clj throw-unless)]     
+                              #?(:clj throw-unless)]
                       :refer-macros [throw-unless]      ]
                     [quantum.core.macros       :as macros
                       :refer        [#?@(:clj [defnt])]
                       :refer-macros [defnt]              ]
                     [quantum.core.type         :as type
-                      :refer [#?(:clj regex?)]           
+                      :refer [#?(:clj regex?)]
                       :refer-macros [regex?]             ]
                     [quantum.core.logic        :as logic
                       :refer        [splice-or nempty?
-                                     #?@(:clj [condf*n])]       
-                      :refer-macros [condf*n]            ]
+                                     #?@(:clj [condf$n])]
+                      :refer-macros [condf$n]            ]
                     [quantum.core.numeric      :as num   ]
                     [quantum.core.fn           :as fn
-                      :refer        [#?(:clj <-)]               
+                      :refer        [#?(:clj <-)]
                       :refer-macros [<-]                 ]
                     [quantum.core.data.array   :as arr   ]
                     [quantum.core.vars
@@ -65,7 +65,7 @@
 (defn rand-prime [callback & web-workers?]
   (js/forge.prime.generateProbablePrime 1024
     #js {:algorithm "PRIMEINC"
-         ; -1 means auto-optimiing 
+         ; -1 means auto-optimiing
          :workers (if web-workers? -1 0)}
     (fn [err n] (callback (.toString n 16))))))
 
@@ -270,7 +270,7 @@
   [coll & distrs-0]
   (assert (nempty? distrs-0))
   (let [coll        (vec coll) ; to be able to index
-        to-distr    (condf*n vector? (juxt second first)
+        to-distr    (condf$n vector? (juxt second first)
                              number? (juxt #(gensym (str "split-" %)) identity))
         distrs      (->> distrs-0
                          (map+ to-distr)

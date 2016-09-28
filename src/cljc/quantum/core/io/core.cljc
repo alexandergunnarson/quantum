@@ -1,56 +1,53 @@
 (ns quantum.core.io.core
            (:refer-clojure :exclude [get assoc! dissoc! assert contains?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )      :as core     ]
-                     [com.stuartsierra.component  :as component]
-                     [datascript.core             :as mdb      ]
-            #?(:clj  [taoensso.nippy              :as nippy    ])
-            #?(:clj  [clojure.java.io             :as io       ])
-            #?(:clj  [iota                        :as iota     ])
-                     [quantum.core.convert        :as conv
-                       :refer [->name ->str]                   ]
-                     [quantum.core.error          :as err
-                       :refer [->ex #?@(:clj [throw-unless assert])]     ]
-                     [quantum.core.fn             :as fn
-                       :refer [#?@(:clj [fn->]) firsta]        ]
-                     [quantum.core.log            :as log      ]
-                     [quantum.core.logic          :as logic
-                       :refer [#?@(:clj [whenf whenf*n whenc
-                                         condpc coll-or fn-not])
-                               splice-or nnil? nempty?]        ]
-                     [quantum.core.system         :as sys      ]
-                     [quantum.core.collections    :as coll     
-                       :refer [postwalk]                       ]
-                     [quantum.core.io.utils       :as u        ]
-                     [quantum.core.paths          :as p        
-                       :refer [path]                           ]
-                     [quantum.core.resources      :as res      ]
-                     [quantum.core.type           :as type
-                       :refer [vector+?]                       ]
-                     [quantum.core.vars           :as var
-                       :refer [#?(:clj defalias)]              ]
-                     [quantum.core.macros         :as macros
-                       :refer [#?(:clj defnt)]                 ])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )     :as core]
+             [com.stuartsierra.component :as component]
+             [datascript.core            :as mdb]
+    #?(:clj  [taoensso.nippy             :as nippy])
+    #?(:clj  [clojure.java.io            :as io])
+    #?(:clj  [iota                       :as iota])
+             [quantum.core.convert       :as conv
+               :refer        [->name ->str]]
+             [quantum.core.error         :as err
+               :refer        [->ex
+                              #?@(:clj [throw-unless assert])]
+               :refer-macros [          throw-unless assert]]
+             [quantum.core.fn            :as fn
+               :refer        [firsta
+                              #?@(:clj [fn->])]
+               :refer-macros [          fn->]]
+             [quantum.core.log           :as log
+               :include-macros true]
+             [quantum.core.logic         :as logic
+               :refer        [splice-or nnil? nempty?
+                              #?@(:clj [whenf whenf$n whenc condpc coll-or fn-not])]
+               :refer-macros [          whenf whenf$n whenc condpc coll-or fn-not]]
+             [quantum.core.system        :as sys]
+             [quantum.core.collections   :as coll
+               :refer        [postwalk]]
+             [quantum.core.io.utils      :as u]
+             [quantum.core.paths         :as p
+               :refer        [path]]
+             [quantum.core.resources     :as res]
+             [quantum.core.type          :as type
+               :refer        [vector+?]]
+             [quantum.core.vars          :as var
+               :refer        [#?@(:clj [defalias])]
+               :refer-macros [          defalias]]
+             [quantum.core.macros        :as macros
+               :refer        [#?@(:clj [defnt])]
+               :refer-macros [          defnt]])
   #?(:cljs (:require-macros
-                     [cljs.core.async.macros
-                       :refer [go]                             ]
-                     [quantum.core.error          :as err
-                       :refer [throw-unless assert]                   ]
-                     [quantum.core.fn             :as fn
-                        :refer [fn->]                          ]
-                     [quantum.core.log            :as log      ]
-                     [quantum.core.logic          :as logic
-                       :refer [whenf whenf*n whenc condpc
-                               coll-or fn-not]                 ]
-                     [quantum.core.macros         :as macros
-                       :refer [defnt]                          ]
-                     [quantum.core.vars           :as var
-                       :refer [defalias]                       ]))
-  #?(:clj  (:import  (java.io File
-                              InputStream OutputStream
-                              DataInputStream DataOutputStream
-                              FileInputStream FileOutputStream
-                              FileNotFoundException))))
+             [cljs.core.async.macros
+               :refer [go]                             ]))
+  #?(:clj  (:import
+             (java.io File
+                      InputStream OutputStream
+                      DataInputStream DataOutputStream
+                      FileInputStream FileOutputStream
+                      FileNotFoundException))))
 
 (defonce clj-ext (atom :cljd)) ; Clojure data
 
@@ -85,7 +82,7 @@
           (not (instance? InputStream data)))
       (->ex :err/io "InputStream cannot be written to output type" type))
     (condpc = type
-      (coll-or :str :string :txt) 
+      (coll-or :str :string :txt)
         (spit path- data)
       :binary
         (if (instance? InputStream data)
@@ -100,7 +97,7 @@
         (with-open [^OutputStream write-file (io/output-stream path-)]
           (.write write-file ^"[B" data))))))
 
-#?(:clj 
+#?(:clj
 (defn assoc-serialized! ; can encrypt :encrypt-with :....
   ([path-0 data] (assoc-serialized! path-0 data nil))
   ([path-0 data {:keys [compress?
@@ -117,8 +114,8 @@
             (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
                      (not unfreezable-caught?))
                 (->> data
-                     (postwalk (whenf*n vector+?
-                                 (partial core/into []))) 
+                     (postwalk (whenf$n vector+?
+                                 (partial core/into [])))
                      #((assoc-serialized! path-0 %
                          (assoc :unfreezable-caught? true))))
                 (throw e)))))))))
@@ -166,7 +163,7 @@
                 :or   {directory       :resources
                        file-name       "Untitled"
                        file-types      [:clj]
-                       method          :serialize ; can encrypt :encrypt-with :.... 
+                       method          :serialize ; can encrypt :encrypt-with :....
                        overwrite       true  ; :date, :num :num-0
                        formatting-func identity}
                 :as   options}]
@@ -352,7 +349,7 @@
 ; #^{:doc "Returns the file object if the given directory is in the given parent directory, nil otherwise. Simply calls find-file, but this method reads better if you're really looking for a directory."}
 ;   find-directory [parent-directory directory-name]
 ;   (find-file parent-directory directory-name))
-  
+
 ; (defn
 ; #^{:doc "A convience function for simply writing the given content into the file."}
 ;   write-file-content [file content]
@@ -361,7 +358,7 @@
 
 ; (defn
 ; #^{:doc "Creates a new child directory under the given base-dir if the child dir does not already exist."}
-;   create-dir 
+;   create-dir
 ;   ([base-dir child-dir-name] (create-dir base-dir child-dir-name false))
 ;   ([base-dir child-dir-name silent]
 ;     (if-let [child-directory (find-directory base-dir child-dir-name)]
@@ -376,7 +373,7 @@
 ; #^{:doc "Recursively creates the given child-dirs under the given base-dir.
 ; For example: (create-dirs (new File \"foo\") \"bar\" \"baz\") creates the directory /foo/bar/baz
 ; Note: this method prints a bunch of stuff to standard out."}
-;   create-dirs 
+;   create-dirs
 ;   ([dirs] (create-dirs dirs false))
 ;   ([dirs silent]
 ;     (let [base-dir (first dirs)
@@ -388,7 +385,7 @@
 ; (defn
 ; #^{ :doc "Creates and returns the given file if it does not already exist. If it does exist, the method simply prints to
 ; standard out and returns nil" }
-;   create-file 
+;   create-file
 ;   ([file] (create-file file false))
 ;   ([file silent]
 ;     (if (. file exists)
@@ -415,7 +412,7 @@
 ; all of the files and directories in the given directory first, before deleting the directory. If the directory cannot be
 ; deleted, this function aborts and returns nil. If the delete finishes successfully, then this function returns true." }
 ;   recursive-delete [directory]
-;   (if (.isDirectory directory) 
+;   (if (.isDirectory directory)
 ;     (when (reduce #(and %1 (recursive-delete %2)) true (.listFiles directory))
 ;       (.delete directory))
 ;     (.delete directory)))

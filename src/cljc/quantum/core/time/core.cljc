@@ -7,16 +7,16 @@
   (:refer-clojure :exclude [extend second - + < <= > >= format])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )            :as core    ]
-                     [quantum.core.error                :as err  
+                     [quantum.core.error                :as err
                        :refer [->ex #?(:clj throw-unless)]          ]
                      [quantum.core.fn                   :as fn
-                       :refer [#?@(:clj [f*n <-])]                  ]
+                       :refer [#?@(:clj [f$n <-])]                  ]
                      [quantum.core.logic                :as logic
                        :refer [#?@(:clj [fn-or whenc])]             ]
                      [quantum.core.macros               :as macros
                        :refer [#?@(:clj [defnt])]                   ]
                      [quantum.core.numeric              :as num     ]
-                     [quantum.core.collections          :as coll    
+                     [quantum.core.collections          :as coll
                        :refer [#?@(:clj [ifor])]                    ]
                      [quantum.measure.convert           :as uconv
                        :refer [#?(:clj convert)]                    ]
@@ -24,15 +24,15 @@
                      [quantum.core.vars                 :as var
                        :refer [#?(:clj defalias)]                   ])
   #?(:cljs (:require-macros
-                     [quantum.core.error                :as err  
+                     [quantum.core.error                :as err
                        :refer [throw-unless]                        ]
                      [quantum.core.fn                   :as fn
-                       :refer [f*n <-]                              ]
+                       :refer [f$n <-]                              ]
                      [quantum.core.logic                :as logic
                        :refer [fn-or whenc]                         ]
                      [quantum.core.macros               :as macros
                        :refer [defnt]                               ]
-                     [quantum.core.collections          :as coll    
+                     [quantum.core.collections          :as coll
                        :refer [ifor]                                 ]
                      [quantum.core.vars                 :as var
                        :refer [defalias]                            ]))
@@ -96,7 +96,7 @@
 ; 1 BC     = arr[9999]
 ; 1 AD     = arr[10001]
 #?(:clj
-(def ^"[Lclojure.lang.BigInt;" nanos-at-beg-of-year 
+(def ^"[Lclojure.lang.BigInt;" nanos-at-beg-of-year
   (make-array clojure.lang.BigInt 14000)))
 
 #?(:clj
@@ -107,7 +107,7 @@
 (defnt year->nanos-arr-index
   ([^long? n]
     (whenc (if (= n 0) nil (core/+ n 10000))
-      (fn-or nil? (f*n core/< 0) (f*n core/>= (alength nanos-at-beg-of-year)))
+      (fn-or nil? (f$n core/< 0) (f$n core/>= (alength nanos-at-beg-of-year)))
       nil))))
 
 ; Initialize nanos-at-beg-of-year
@@ -262,7 +262,7 @@
 ;   If argument x is already an instance of `TimeUnit`, the function returns x.
 ;   Otherwise, x *must* be a keyword, in which case the following conversion
 ;   is performed:
-  
+
 ;   :nanoseconds | :nanos | :ns   -> TimeUnit/NANOSECONDS
 ;   :microseconds | :us           -> TimeUnit/MICROSECONDS
 ;   :milliseconds | :millis | :ms -> TimeUnit/MILLISECONDS
@@ -299,13 +299,13 @@
    :jdbc-date "yyyy-MM-dd"
    :jdbc-time "HH:mm:ss"}))
 
-#?(:clj 
+#?(:clj
 (defnt ->string*
   ([^string?           formatting date]
     (.format (DateTimeFormatter/ofPattern formatting) ^java.time.LocalDateTime (->local-date-time date)))
   ([^java.time.format.DateTimeFormatter formatting date]
     (.format formatting ^java.time.LocalDateTime (->local-date-time date)))
-  ([^keyword?          formatting date]    
+  ([^keyword?          formatting date]
             (let [^DateTimeFormatter formatter
                     (or (get formats formatting)
                         (throw (Exception. "Formatter not found")))]
@@ -371,7 +371,7 @@
     [d ^java.io.StringWriter stream]
     (.write stream "#=(list \"A date should go here\" ")
     (.write stream "")
-    (.write stream ")"))) 
+    (.write stream ")")))
 
 ; (defn ^Delay for-days-between
 ;   [date-a date-b f]
@@ -414,7 +414,7 @@
 #?(:clj
 (defnt ^java.util.Calendar ->calendar
   ; Calendar initialized with the default locale and time zone
-  ([^integer? x] 
+  ([^integer? x]
     (doto (java.util.Calendar/getInstance)
       (.setTimeInMillis x)))
   ([^java.util.Date x ^java.util.Locale locale ^java.util.TimeZone timeZone]
@@ -479,7 +479,7 @@
   ([^string? x]  (java.util.TimeZone/getTimeZone x))))
 
 
- 
+
 ; (defn
 ;   convert
 ;   "Converts @obj to a |java.sql.Timestamp| using the supplied time zone.
@@ -495,8 +495,8 @@
 ;       (let [^Timestamp result (Timestamp. (.getTimeInMillis cal))]
 ;         (.setNanos result (.getNanos parsedStamp))
 ;         result)))
-   
- 
+
+
 
 
 ; (defn
@@ -581,7 +581,7 @@
 ;      locale)])
 ;   (.format df obj))
 
- 
+
 ;  (defn
 ;   convert
 ;   "/*\n\nReturns <code>obj</code> converted to a <code>Calendar</code>,\ninitialized with the specified locale and time zone. The\n<code>formatString</code> parameter is ignored.\n         */\n"
@@ -589,8 +589,8 @@
 ;   (let [^Calendar cal (.getInstance Calendar timeZone locale)])
 ;   (.setTimeInMillis cal obj)
 ;   cal)
- 
- 
+
+
 ;  (defn
 ;   convert
 ;   "Converts @obj to a String using the supplied time zone.
@@ -598,7 +598,7 @@
 ;   [^java.sql.Date obj ^TimeZone timeZone]
 ;   (let [^DateFormat df (toDateFormat timeZone)])
 ;   (.format df obj))
- 
+
 ;  (defn
 ;   convert
 ;   "Converts @obj to a String using the supplied time zone.
@@ -618,7 +618,7 @@
 ;         ^Calendar cal (.getInstance Calendar timeZone locale)]
 ;     (.setTimeInMillis cal (.getTime date))
 ;     cal)))
- 
+
 ;  (defn convert
 ;   "Converts @obj to a java.util.Date.
 ;    If @formatString is nil, the string is formatted as CALENDAR_FORMAT."

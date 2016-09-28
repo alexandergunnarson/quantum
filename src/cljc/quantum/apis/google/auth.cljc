@@ -333,7 +333,7 @@
         (assoc :oauth-token (access-key email service :current))
         (update
           :handlers
-          (f*n mergel
+          (f$n mergel
             {401 (fn [req resp]
                    (log/pr ::warn "Unauthorized. Trying again...")
                    (access-token-refresh! email service)

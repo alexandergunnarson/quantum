@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
-          ifn, whenf*n, compr, fn->, condpc, and the like. Extremely useful
+          ifn, whenf$n, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"
     :figwheel-no-load true
@@ -10,24 +10,21 @@
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )   :as core   ]
                      [quantum.core.fn          :as fn
-                       :refer [#?@(:clj [f*n fn->])]      ]
+                       :refer        [#?@(:clj [f$n fn->])]
+                       :refer-macros [          f$n fn->]]
                      [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]         ]
+                       :refer        [#?(:clj defalias)]
+                       :refer-macros [        defalias]]
                      [quantum.core.macros.core :as cmacros
-                       :refer [#?(:clj if-cljs)]          ])
+                       :refer        [#?(:clj if-cljs)]
+                       :refer-macros [        if-cljs]])
   #?(:cljs (:require-macros
-                     [quantum.core.fn          :as fn
-                       :refer [f*n fn->]                  ]
-                     [quantum.core.macros.core :as cmacros
-                       :refer [if-cljs]                   ]
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                  ]
                      [quantum.core.logic       :as logic
                        :refer [fn-or]])))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.
-; String |switch| is implemented using a map8   
+; String |switch| is implemented using a map8
 
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
@@ -60,7 +57,7 @@
     (reduce (fn [_ arg] (and (pred arg) (reduced true ))) nil args)))
 
 ; (defalias any? some) ; Sadly, already (pointlessly) taken in 1.9.
-(defalias some? some) ; Yes, overrides, but has an extra arity that can make sense  
+(defalias some? some) ; Yes, overrides, but has an extra arity that can make sense
 ; (defalias exists? some) ; as in ∃ ; Sadly, already taken in CLJS
 (defalias seq-or some)
 
@@ -99,7 +96,7 @@
           `(fn-logic-base or  ~@preds)))
 #?(:clj (defmacro fn-and [& preds]
           `(fn-logic-base and ~@preds)))
-#?(:clj (defmacro fn-not [pred]   
+#?(:clj (defmacro fn-not [pred]
           `(fn-logic-base not ~pred)))
 
 (def falsey? (fn-or false? nil? ))
@@ -169,11 +166,11 @@
        ~(emit gobj clauses)))))
 
 #?(:clj
-(defmacro condf*n [& args]
+(defmacro condf$n [& args]
   `(fn [obj#] (condf obj# ~@args))))
 
 #?(:clj
-(defmacro condf**n [& args]
+(defmacro condf&$n [& args]
   `(fn [& inner-args#] (condf inner-args# ~@args))))
 
 #?(:clj
@@ -189,7 +186,7 @@
                  (cond
                    (= 0 n) `(throw (~illegal-argument (str "No matching clause for " ~obj)))
                    (= 1 n) `(~a ~obj)
-                   (= 2 n) `(if (or ~(= a :else) 
+                   (= 2 n) `(if (or ~(= a :else)
                                     (~a ~obj))
                                 ~b ; As in, this expression is not used as a function taking @obj as an argument
                                 ~(emit obj more))
@@ -199,25 +196,25 @@
 
 #?(:clj
 (defmacro ifn [obj pred true-fn false-fn] ; macro to delay
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#)))))
 
 #?(:clj
 (defmacro ifc [obj pred true-expr false-expr] ; macro to delay
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if (~pred obj-f#) ~true-expr ~false-expr))))
 
 #?(:clj
 (defmacro ifp [obj pred true-fn false-fn] ; macro to delay
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if ~pred (~true-fn obj-f#) (~false-fn obj-f#)))))
 
 #?(:clj
-(defmacro ifcf*n [pred true-expr false-expr]
+(defmacro ifcf$n [pred true-expr false-expr]
   `(fn [arg#] (ifc arg# ~pred ~true-expr ~false-expr))))
 
 #?(:clj
-(defmacro if*n [pred true-fn false-fn]
+(defmacro if$n [pred true-fn false-fn]
   `(fn [arg#] (ifn arg# ~pred ~true-fn ~false-fn))))
 
 #?(:clj
@@ -226,7 +223,7 @@
    (whenf 1 nnil? inc) = (ifn 1 nnil? inc identity)
    whenf : identity :: when : nil"
   [obj pred true-fn]
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if (~pred obj-f#) (~true-fn obj-f#) obj-f#))))
 
 #?(:clj
@@ -234,24 +231,24 @@
   "Analogous to whenf, but evaluates the result instead of
    using it as a function."
   [obj pred true-expr]
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if (~pred obj-f#) ~true-expr obj-f#))))
 
 #?(:clj
 (defmacro whenp
   [obj pred true-fn]
-  `(let [obj-f# ~obj] 
+  `(let [obj-f# ~obj]
      (if ~pred (~true-fn obj-f#) obj-f#))))
 
 #?(:clj
-(defmacro whenf*n 
-  "Analogous to if*n.
-   (whenf*n nnil? inc) = (if*n nnil? inc identity)"
+(defmacro whenf$n
+  "Analogous to if'n.
+   (whenf$n nnil? inc) = (if'n nnil? inc identity)"
   [pred true-fn] `(fn [arg#] (whenf arg# ~pred ~true-fn))))
 
 #?(:clj
-(defmacro whencf*n 
-  "Analogous to whenf*n."
+(defmacro whencf$n
+  "Analogous to whenf$n."
   [pred true-obj] `(fn [arg#] (whenc arg# ~pred ~true-obj))))
 
 

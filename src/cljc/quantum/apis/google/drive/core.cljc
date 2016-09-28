@@ -10,7 +10,7 @@
     :attribution "Alex Gunnarson"}
   quantum.apis.google.drive.core
   #_(:require-quantum [:lib http auth])
-  (:require 
+  (:require
     [quantum.apis.google.auth :as gauth]))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
@@ -31,7 +31,7 @@
     ; Special scope used to let users approve installation of an app
    :install            (io/path api-auth "drive.install")
    ; Allows access to the Application Data folder
-   :app-data           (io/path api-auth "drive.appdata") 
+   :app-data           (io/path api-auth "drive.appdata")
    ; Allows access to Apps Script files
    :scripts            (io/path api-auth "drive.scripts")})
 
@@ -44,7 +44,7 @@
 ; With updates that use the HTTP PUT verb, the request fails if you
 ; don't supply required parameters, and it clears previously set
 ; data if you don't supply optional parameters.
-; It's much safer to use patch for this reason. 
+; It's much safer to use patch for this reason.
 ;___________________________________________________________________________________________________________________________________
 ;================================================={              LOG              }=================================================
 ;================================================={                               }=================================================
@@ -102,7 +102,7 @@
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
-             (f*n assoc :q (str "'" id "' in parents")))
+             (f$n assoc :q (str "'" id "' in parents")))
         query-params (query-params-fn params-f)
         request
           {:method       http-method
@@ -123,7 +123,7 @@
    OPTIONS:
      :add   - {:params {*:uploadType :media/:multipart/:resumable}, :req {...}}  INSERT+
      :copy  - {*:id, *:to :in-place/\"folder-id\",                               COPY+
-                :params {...}, :request {:file, :meta}} 
+                :params {...}, :request {:file, :meta}}
      :meta  - {*:id,  :params  {...}}                                            GET+
      :mod   - {*:id, *:method :patch, :params {...}, :req {...}},                PATCH+
               {*:id, *:method :update,                                           UPDATE+
@@ -168,7 +168,7 @@
         ns-0 *ns*]
     (try (-> str-code read-string eval) ; TODO read string is dangerous
       (finally (in-ns (ns-name ns-0))))))
-            
+
 ; the go block threads are "hogged" by the long running IO operations.
 ; The situation can be improved by switching the go blocks to normal threads.
 
@@ -186,7 +186,7 @@
 ;     nil) ; ((6)(5)(4)(3)(2)(1)(0))
 ; (def *drive-max-threads* 50)
 ; ; 1000 never
-; ; 
+; ;
 ; (time (doseq [depth-n (range 6 (inc 6))] ; what happens when there's nothing?
 ;   (reset! file-lists (conj @file-lists (file-list-bare depth-n :thread (first @file-lists))))
 ;   (io/write! :in :resources :file-name (str "Bare File List to Depth " depth-n) :data (first @file-lists))
@@ -201,18 +201,18 @@
 ; ; 3  426  |
 ; ; 4  899  |
 ; ; 5  4163 | 69.6s  / 1.16m | 12 threads | 12.92 req/sec | 0.93 sec/req | 1.08 req/sec/thread
-; ;         | 57.1s          | 30 threads |               |              | 
+; ;         | 57.1s          | 30 threads |               |              |
 ; ; 6  4720 | 188.4s / 3.14m | 12 threads | 22.10 req/sec | 0.54 sec/req | 1.85 req/sec/thread
 ; ;         | 126.8s (5+6)   | "1000" thr | 39.92 req/sec |              |
 ; ; 7  4450 | 185.3s / 3.09m | 15 threads | 25.47 req/sec | 0.59 sec/req | 1.70 req/sec/thread
 ; ;         | 81.0s          | 100 thr.ds |
 ; ; 8  6470 | 146.1s / 2.44m | 20 threads | 30.46 req/sec | 0.66 sec/req | 1.52 req/sec/txrhread
-; ;    4160 | 152.5s (7+8)   | "1000" thr | 60.13 req/sec | Uncaught exceptions 
+; ;    4160 | 152.5s (7+8)   | "1000" thr | 60.13 req/sec | Uncaught exceptions
 ; ;    6466 | 80.3s          | 100 thr.ds |
 ; ; 9  6901 | 127.1s / 2.12m | 30 threads | 50.90 req/sec | 0.59 sec/req | 1.70 req/sec/thread
 ; ;    2210 | 41.9s          | "1000" thr | 99.28 req/sec | Uncaught exceptions
 ; ;    6901 | 113.9s         | 100 thr.ds |
-; ; 10 5324 | 110.1s / 1.84m | 40 threads | 62.68 req/sec | 0.64 sec/req | 1.57 req/sec/thread 
+; ; 10 5324 | 110.1s / 1.84m | 40 threads | 62.68 req/sec | 0.64 sec/req | 1.57 req/sec/thread
 ; ; 11 746  | 195.4s / 3.26m | 30 threads | 27.25 req/sec | 1.10 sec/req | 0.91 req/sec/thread
 ; ; 12 501  | 19.3s          | 30 threads | 25.92 req/sec | 0.78 sec/req | 1.28 req/sec/thread
 ; ; 13 479  | 85.2s through 27
@@ -243,7 +243,7 @@
 ;       drive-dir))
 ; (map (comp (juxt (comp count first)
 ;                  (comp identity second))
-;            list) @unfamilified-list (reverse (range 1 5))) 
+;            list) @unfamilified-list (reverse (range 1 5)))
 ; (-> (item-query :file-extension @drive-map-4)
 ;     frequencies
 ;     (#(sort-by val %))
@@ -257,7 +257,7 @@
 ;     (#(map (comp time-coerce/to-long time-form/parse)
 ;            %))
 ;     sort
-;     (#(map (fn [date-num] 
+;     (#(map (fn [date-num]
 ;              (time-form/unparse (time-form/formatter "MM/dd/yyyy")
 ;                (time-coerce/from-long date-num)))
 ;            %))
@@ -280,7 +280,7 @@
 ;     body))
 ; (defn test-place-file []
 ;   (time
-;     (let [body (insert-file) 
+;     (let [body (insert-file)
 ;           file-content (clojure.java.io/file "README.md") ; The local file.
 ;           media-content (new FileContent "text/plain" file-content) ; Concretizes AbstractInputStreamContent. Generates repeatable input streams based on the contents of a file.
 ;           file (-> (.files @drive-client'current) ; Accesses the "files" method of the Drive client
@@ -306,7 +306,7 @@
 ;   {:kind                       "drive#file"  ; The type of file. This is always drive#file.
 ;    :id                         "<string>"    ; The ID of the file.
 ;    :etag                       etag          ; ETag of the file.
-;    ; Links     
+;    ; Links
 ;    :selfLink                   "<string>"    ; A link back to this file.
 ;    :webContentLink             "<string>"    ; A link for downloading the content of the file in a browser using cookie based authentication. In cases where the content is shared publicly, the content can be downloaded without any credentials.
 ;    :webViewLink                "<string>"    ; A link only available on public folders for viewing their static web assets (HTML, CSS, JS, etc) via Google Drive's Website Hosting.
@@ -318,7 +318,7 @@
 ;    :thumbnailLink              "<string>"    ; A link to the file's thumbnail.
 ;    :thumbnail                                ; Thumbnail for the file. Only accepted on upload and for files that are not already thumbnailed by Google.
 ;      {:image                    <bytes>      ; The URL-safe Base64 encoded bytes of the thumbnail image.
-;       :mimeType                "<string>"} 
+;       :mimeType                "<string>"}
 ;    :title                      "<string>"    ; WRITABLE. The title of the this file. Used to identify file or folder name. (https://developers.google.com/drive/folder)
 ;    :mimeType                   "<string>"    ; WRITABLE. The MIME type of the file. This is only mutable on update when uploading new content. This field can be left blank, and the mimetype will be determined from the uploaded content's MIME type.
 ;    :description                "<string>"    ; WRITABLE. A short description of the file.
@@ -338,7 +338,7 @@
 ;    :sharingUser                              ; User that shared the item with the current user, if available.
 ;      {:kind                    "drive#user"  ; This is always drive#user.
 ;       :displayName             "<string>"    ; A plain text displayable name for this user.
-;       :picture                               ; The user's profile picture. 
+;       :picture                               ; The user's profile picture.
 ;         {url                   "<string>"}   ; A URL that points to a profile picture of this user.
 ;       :isAuthenticatedUser      <boolean>    ; Whether this user is the same as the authenticated user for whom the request was made.
 ;       :permissionId            "<string>"    ; The user's ID as visible in the permissions collection.
@@ -362,7 +362,7 @@
 ;    :owners                                   ; The owner(s) of this file.
 ;      [{:kind                   "drive#user"  ; This is always drive#user.
 ;        :displayName            "<string>"    ; A plain text displayable name for this user.
-;        :picture                              ; The user's profile picture. 
+;        :picture                              ; The user's profile picture.
 ;          {:url                 "<string>"}   ; A URL that points to a profile picture of this user.
 ;        :isAuthenticatedUser     <boolean>    ; Whether this user is the same as the authenticated user for whom the request was made.
 ;        :permissionId           "<string>"    ; The user's ID as visible in the permissions collection.

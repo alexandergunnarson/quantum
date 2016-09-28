@@ -3,25 +3,23 @@
             Also includes helper functions for macros which create
             |defn| and |fn| variants."}
   quantum.core.macros.fn
-           (:require
-             #_(:clj [co.paralleluniverse.pulsar.core  :as pulsar ])
-                     [quantum.core.error               :as err
-                       :refer [->ex]                              ]
-                     [quantum.core.fn                  :as fn
-                       :refer [#?@(:clj [doto->>])]               ]
-                     [quantum.core.log                 :as log    ]
-                     [quantum.core.logic               :as logic
-                       :refer [#?@(:clj [fn-or whenf*n])]         ]
-                     [quantum.core.macros.core         :as cmacros
-                       :refer [#?(:clj if-cljs)]                  ]
-                     [quantum.core.macros.optimization :as opt
-                       :refer [extern?]])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                  :as fn
-                       :refer [doto->>]                           ]
-                     [quantum.core.log                 :as log    ]
-                     [quantum.core.logic               :as logic
-                       :refer [fn-or whenf*n]                     ])))
+  (:require
+#_(:clj
+    [co.paralleluniverse.pulsar.core  :as pulsar])
+    [quantum.core.error               :as err
+      :refer [->ex]]
+    [quantum.core.fn                  :as fn
+      :refer        [#?@(:clj [doto->>])]
+      :refer-macros [          doto->>]]
+    [quantum.core.log                 :as log
+      :include-macros true]
+    [quantum.core.logic               :as logic
+      :refer        [#?@(:clj [fn-or whenf$n])]
+      :refer-macros [          fn-or whenf$n]]
+    [quantum.core.macros.core         :as cmacros
+      :refer [#?(:clj if-cljs)]]
+    [quantum.core.macros.optimization :as opt
+      :refer [extern?]]))
 
 (defn defn-variant-organizer
   "Organizes the arguments for use for a |defn| variant.
@@ -56,7 +54,7 @@
   (log/ppr-hints :macro-expand "ORIG BODY:" body)
   (->> body
        (clojure.walk/postwalk
-         (whenf*n extern?
+         (whenf$n extern?
            (fn [[extern-sym obj]]
              (let [sym (gensym "externed")]
                (swap! externs conj (list 'def sym obj))
@@ -96,7 +94,7 @@
               body-f   (if arglist (list (cons arglist body)) body)
               body-f   (->> body-f
                             (clojure.walk/postwalk
-                              (whenf*n opt/extern?
+                              (whenf$n opt/extern?
                                 (fn [[extern-sym obj]]
                                   (let [sym (gensym "externed")]
                                     (log/pr :macro-expand "EXTERNED" sym "IN FN+")

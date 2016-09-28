@@ -37,7 +37,7 @@
                           :content
                           first)
                   ^String image-link
-                     (->> elem 
+                     (->> elem
                           (ffilter (fn-> :tag (= :link)))
                           :attrs
                           :href)
@@ -75,9 +75,9 @@
 #_(defn ^Vec update-contacts
   [^String email f]
   (->> (retrieve-contacts-xml email)
-       xml/lparse :content 
+       xml/lparse :content
        (filter (fn-> :tag (= :entry)))
-       (postwalk (if*n (fn-and keyword? (fn-> namespace nnil?))
+       (postwalk (if$n (fn-and keyword? (fn-> namespace nnil?))
                        (fn [k] (str (namespace k) ":" (name k))) ; If you don't do this, XML emission messes up: http://dev.clojure.org/jira/browse/DXML-15
                        f))))
 

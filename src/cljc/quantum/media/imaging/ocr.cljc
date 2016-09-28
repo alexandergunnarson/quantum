@@ -8,10 +8,10 @@
                          :refer [#?@(:clj [fn->])]
               #?@(:cljs [:refer-macros [fn->]])]
             [quantum.core.logic
-                         :refer [#?@(:clj [if*n])]
-              #?@(:cljs [:refer-macros [if*n]])]
+                         :refer [#?@(:clj [if$n])]
+              #?@(:cljs [:refer-macros [if$n]])]
             [quantum.core.collections :as coll
-                         :refer [#?@(:clj [join]) 
+                         :refer [#?@(:clj [join])
                                  map+ filter+ flatten+]
               #?@(:cljs [:refer-macros [join]])]))
 
@@ -23,7 +23,7 @@
    ./configure
    make
    sudo make install
-   
+
    Install homebrew
    <ruby -e \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)\">
 
@@ -35,7 +35,7 @@
 
    Install qt4
    <brew install qt>
-   
+
    Install scantailor (http://scantailor.org)
    - Download from https://github.com/scantailor/scantailor/releases/tag/RELEASE_0_9_11_1
    - Deps: qt4, boost
@@ -85,7 +85,7 @@
         args        (->> opts-f
                          (filter+ (fn-> key string?))
                          (map+ (fn [[opt v]]
-                                 (let [v-f ((if*n true? (constantly "T") str) v)]
+                                 (let [v-f ((if$n true? (constantly "T") str) v)]
                                    ["-c" (str opt "=" v-f)])))
                          flatten+
                          (join [image-file outbase "--tessdata-dir" (path/file-str data-dir) "-l" language]))]

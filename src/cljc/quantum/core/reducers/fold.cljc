@@ -9,44 +9,36 @@
       :author       "Rich Hickey"
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers.fold
-           (:refer-clojure :exclude [reduce into])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core  ]
-                     [quantum.core.collections.base :as cbase ]
-                     [quantum.core.data.map         :as map   ]
-                     [quantum.core.data.set         :as set   ]
-                     [quantum.core.data.vector      :as vec   
-                       :refer [subvec+]                       ]
-           #?@(:clj [[seqspert.hash-set                       ]
-                     [seqspert.hash-map                       ]])
-                     [quantum.core.fn               :as fn
-                       :refer [#?@(:clj [f*n fn-> compr])
-                               aritoid]                       ]
-                     [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [fn-or fn-and whenf
-                                         condf*n])
-                               nnil?]                         ]
-                     [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt])]             ]
-                     [quantum.core.reducers.reduce  :as red
-                       :refer [#?@(:clj [reduce joinl])]      ]
-                     [quantum.core.type             :as type
-                       :refer [#?@(:clj [lseq? editable?
-                                         hash-set? hash-map?
-                                         ->joinable])
-                               transient!* persistent!*]      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.reducers.reduce  :as red
-                       :refer [reduce joinl]                  ]
-                     [quantum.core.fn               :as fn
-                       :refer [f*n fn-> compr]                ]
-                     [quantum.core.logic            :as logic
-                       :refer [fn-or fn-and whenf condf*n]    ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt]                         ]
-                     [quantum.core.type             :as type
-                       :refer [lseq? editable? hash-set?
-                               hash-map? ->joinable]          ])))
+  (:refer-clojure :exclude [reduce into])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )        :as core  ]
+    [quantum.core.collections.base :as cbase ]
+    [quantum.core.data.map         :as map   ]
+    [quantum.core.data.set         :as set   ]
+    [quantum.core.data.vector      :as vec
+      :refer [subvec+]                       ]
+#?@(:clj
+   [[seqspert.hash-set                       ]
+    [seqspert.hash-map                       ]])
+    [quantum.core.fn               :as fn
+      :refer        [aritoid
+                     #?@(:clj [f$n fn-> compr])]
+      :refer-macros [          f$n fn-> compr]]
+    [quantum.core.logic            :as logic
+      :refer        [nnil?
+                     #?@(:clj [fn-or fn-and whenf condf$n])]
+      :refer-macros [          fn-or fn-and whenf condf$n]]
+    [quantum.core.macros           :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]
+    [quantum.core.reducers.reduce  :as red
+      :refer        [#?@(:clj [reduce joinl])]
+      :refer-macros [          reduce joinl]]
+    [quantum.core.type             :as type
+      :refer        [transient!* persistent!*
+                     #?@(:clj [lseq? editable? hash-set? hash-map? ->joinable])]
+      :refer-macros [          lseq? editable? hash-set? hash-map? ->joinable]]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        FORK/JOIN         }=====================================================
@@ -104,7 +96,7 @@
       (zero? size)
         (combinef)
       (<= size n)
-        (reduce reducef (combinef) coll)    
+        (reduce reducef (combinef) coll)
       :else
         #?(:clj
             (let [[left right] (halving-fn coll size)
@@ -137,7 +129,7 @@
           (let [split-ind (quot ct 2)]
             [(subvec+ coll-0 0 split-ind) ; test subvec against subvec+
              (subvec+ coll-0   split-ind ct)]))
-          coll n combinef reducef)) 
+          coll n combinef reducef))
   #?@(:clj
     [clojure.lang.PersistentHashMap
       (coll-fold [coll n combinef reducef]
@@ -182,10 +174,10 @@
 
 (def ^{:doc "Given a collection, determines its appropriate chunk size."}
   ->chunk-size
-  #?(:clj  (let [from-proc (fn-> count dec  
+  #?(:clj  (let [from-proc (fn-> count dec
                                  (quot (.. Runtime getRuntime availableProcessors))
                                  inc)]
-             (condf*n
+             (condf$n
                (fn-and transformer? (fn-> folder->coll counted?))
                  (fn-> folder->coll from-proc)
                counted?
@@ -234,7 +226,7 @@
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([to] to)
-  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)  
+  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)
                                        (seqspert.hash-set/parallel-splice-hash-sets to from)
                                        (pjoinl-fold to from))
                              :cljs (pjoinl-fold to from)))
@@ -254,7 +246,7 @@
   ([to from & froms]
     (reduce #(pjoinl* %1 %2) (pjoinl* to from) froms)))
 
-; TODO make pjoin actually parallel in CLJS via WebWorkers 
+; TODO make pjoin actually parallel in CLJS via WebWorkers
 
 (def pjoin pjoinl)
 

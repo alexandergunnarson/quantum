@@ -14,98 +14,51 @@
        quantum.core.collections.core, or quantum.core.reducers."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.tree
-           (:refer-clojure :exclude
-             [for doseq reduce
-              contains?
-              repeat repeatedly
-              interpose
-              range
-              take take-while
-              drop drop-while
-              subseq
-              key val
-              merge sorted-map sorted-map-by
-              into
-              count
-              empty empty?
-              split-at
-              first second rest last butlast get pop peek
-              select-keys
-              zipmap
-              reverse
-              conj
-              conj! assoc! dissoc! disj!
-              boolean?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core   ]
-                     [fast-zip.core                           :as zip    ]
-                     [quantum.core.data.map                   :as map
-                       :refer [split-at map-entry]                       ]
-                     [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec
-                       :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.base           :as base
-                       :refer [#?@(:clj [kmap])]                         ]
-                     [quantum.core.collections.core           :as coll
-                       :refer [#?@(:clj [count first rest getr last-index-of
-                                         index-of lasti conj conj! contains?
-                                         empty])
-                               key val]                                  ]
-                     [quantum.core.collections.selective      :as sel
-                       :refer [in-k?]                                    ]
-                     [quantum.core.collections.map-filter     :as mf
-                       :refer [map-keys+]                                ]
-                     [quantum.core.collections.zip            :as qzip
-                       :refer        [#?@(:clj [walking])]
-                       :refer-macros [walking]]
-                     [quantum.core.error                      :as err
-                       :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n defcurried with-do])
-                              fn-nil juxt-kv withf->> firsta]]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros
-                       :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red
-                       :refer [#?@(:clj [reduce join])]                  ]
-                     [quantum.core.string                     :as str    ]
-                     [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type
-                       :refer [#?@(:clj [lseq? transient? editable?
-                                         boolean? should-transientize?])]]
-                     [quantum.core.analyze.clojure.predicates :as anap   ]
-                     [quantum.core.type.predicates            :as tpred  ]
-                     [quantum.core.loops                      :as loops
-                       :refer [#?@(:clj [doseqi reducei lfor])]]
-                     [quantum.core.vars                       :as var
-                       :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.core           :as coll
-                       :refer [count first rest getr lasti index-of lasti
-                               conj conj! contains? empty]               ]
-                     [quantum.core.collections.base           :as base
-                       :refer [kmap]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n defcurried with-do]]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-not fn-or fn-and whenf whenf*n
-                               ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops
-                       :refer [doseqi reducei lfor]                      ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red
-                       :refer [reduce join]                              ]
-                     [quantum.core.type                       :as type
-                       :refer [lseq? transient? editable? boolean?
-                               should-transientize?]                     ]
-                     [quantum.core.vars                       :as var
-                       :refer [defalias]                                 ])))
+  (:refer-clojure :exclude
+    [for doseq reduce
+     contains?
+     repeat repeatedly
+     interpose
+     range
+     take take-while
+     drop  drop-while
+     subseq
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     empty empty?
+     split-at
+     first second rest last butlast get pop peek
+     select-keys
+     zipmap
+     reverse
+     conj
+     conj! assoc! dissoc! disj!
+     boolean?])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )             :as core]
+    [quantum.core.collections.core :as coll
+      :refer        [#?@(:clj [first conj!])]
+      :refer-macros [          first conj!]]
+    [quantum.core.collections.map-filter     :as mf
+      :refer        [map-keys+]]
+    [quantum.core.collections.selective :as sel
+      :refer        [in-k?]]
+    [quantum.core.collections.zip       :as zip
+      :refer        [#?@(:clj [walking])]
+      :refer-macros [walking]]
+    [quantum.core.fn                    :as fn
+      :refer        [#?@(:clj [f$n fn->> withf->>])]
+      :refer-macros [          f$n fn->> withf->>]]
+    [quantum.core.logic
+      :refer        [#?@(:clj [whenf$n])]
+      :refer-macros [          whenf$n]]
+    [quantum.core.reducers              :as red
+     :refer        [#?@(:clj [join])]
+     :refer-macros [          join]]
+    [quantum.core.string                :as str]))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================
@@ -138,7 +91,7 @@
   replacement at the root of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (prewalk (whenf*n (f*n in-k? smap) smap) form))
+  (prewalk (whenf$n (f$n in-k? smap) smap) form))
 
 (defn postwalk-replace
   "Recursively transforms form by replacing keys in smap with their
@@ -146,7 +99,7 @@
   replacement at the leaves of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (postwalk (whenf*n (f*n in-k? smap) smap) form))
+  (postwalk (whenf$n (f$n in-k? smap) smap) form))
 
 (defn tree-filter
   "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
@@ -155,7 +108,7 @@
   [pred tree]
   (let [results (transient [])]
     (postwalk
-      (whenf*n pred
+      (whenf$n pred
         (fn->> (withf->> #(conj! results %)))) ; keep it the same
       tree)
     (persistent! results)))
@@ -176,7 +129,7 @@
   ([m] (apply-to-keys m identity))
   ([m f]
     (postwalk
-      (whenf*n map? (fn->> (map-keys+ f) (join {})))
+      (whenf$n map? (fn->> (map-keys+ f) (join {})))
       m)))
 
 (defn keywordize-keys
@@ -189,20 +142,20 @@
   "Recursively transforms all map keys from strings to keywords."
   {:attribution "Alex Gunnarson"}
   [x]
-  (apply-to-keys x (whenf*n string? keyword)))
+  (apply-to-keys x (whenf$n string? keyword)))
 
 (defn stringify-keys
   "Recursively transforms all map keys from keywords to strings."
   {:attribution "Alex Gunnarson"}
   [x]
-  (apply-to-keys x (whenf*n keyword? name)))
+  (apply-to-keys x (whenf$n keyword? name)))
 
 ; ZIPPER TREES
 
 (defn zip-walk
   "|walk| for zippers.
    @inner and @outer must both return a non-zipper."
-  ([inner outer form] (zip/node (zip-walk inner outer nil (qzip/zipper form))))
+  ([inner outer form] (zip/node (zip-walk inner outer nil (zip/zipper form))))
   ([inner outer _ loc-0]
     (let [[i loc] (loop [i    0
                          loc  loc-0]
@@ -228,12 +181,13 @@
 (defn zip-postwalk
   "|postwalk| with zippers.
    @f must return a non-zipper."
-  ([f form    ] (qzip/node* (zip-postwalk f nil (qzip/zipper form))))
+  ([f form    ] (zip/node* (zip-postwalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
 
 (defn zip-prewalk
   "|prewalk| with zippers.
    @f must return a non-zipper."
-  ([f form    ] (qzip/node* (zip-prewalk f nil (qzip/zipper form))))
+  ([f form    ] (zip/node* (zip-prewalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-prewalk f nil %)) zip/node nil
+                  #_(zip/update f loc)
                   (zip/replace loc (f loc)))))

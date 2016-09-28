@@ -2,22 +2,20 @@
   ^{:doc "Base collections operations. Pre-generics."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.base
-           (:refer-clojure :exclude [name])
-           (:require [fast-zip.core              :as zip  ]
-                     [clojure.string             :as str  ]
-                     [clojure.walk
-                       :refer [postwalk prewalk]          ]
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )     :as core ]
-                     [quantum.core.fn            :as fn
-                       :refer [#?@(:clj [fn->])]          ]
-                     [quantum.core.logic         :as logic
-                       :refer [#?@(:clj [condf*n fn-not])]])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn            :as fn
-                       :refer [fn->]                      ]
-                     [quantum.core.logic         :as logic
-                       :refer [condf*n fn-not]            ])))
+  (:refer-clojure :exclude [name])
+  (:require
+    [fast-zip.core              :as zip  ]
+    [clojure.string             :as str  ]
+    [clojure.walk
+      :refer [postwalk prewalk]          ]
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )     :as core ]
+    [quantum.core.fn            :as fn
+      :refer        [#?@(:clj [fn->])]
+      :refer-macros [          fn->]]
+    [quantum.core.logic         :as logic
+      :refer        [#?@(:clj [condf$n fn-not])]
+      :refer-macros [          condf$n fn-not]]))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -25,7 +23,7 @@
   (zip/zipper coll? seq (fn [_ c] c) coll))
 
 (def ensure-set
-  (condf*n
+  (condf$n
     nil?
       (constantly #{})
     (fn-not set?)

@@ -14,95 +14,58 @@
        quantum.core.collections.core, or quantum.core.reducers."
     :attribution "Alex Gunnarson"}
   quantum.core.collections.sociative
-           (:refer-clojure :exclude
-             [for doseq reduce
-              contains?
-              repeat repeatedly
-              interpose
-              range
-              take take-while
-              drop  drop-while
-              subseq
-              key val
-              merge sorted-map sorted-map-by
-              into
-              count
-              empty empty?
-              split-at
-              first second rest last butlast get pop peek
-              select-keys
-              zipmap
-              reverse
-              conj
-              conj! assoc! dissoc! disj!
-              boolean?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core   ]
-                     [quantum.core.data.map                   :as map
-                       :refer [split-at map-entry]                       ]
-                     [quantum.core.data.set                   :as set    ]
-                     [quantum.core.data.vector                :as vec
-                       :refer [catvec subvec+]                           ]
-                     [quantum.core.collections.core           :as coll
-                       :refer [#?@(:clj [count first second rest get
-                                         last-index-of index-of lasti conj
-                                         conj! contains? containsk? assoc!
-                                         empty?])
-                               key val]                                  ]
-                     [quantum.core.collections.base           :as base
-                       :refer [#?@(:clj [kmap])]                         ]
-                     [quantum.core.collections.generative
-                       :refer [range]                                    ]
-                     [quantum.core.error                      :as err
-                       :refer [->ex]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n defcurried])
-                              fn-nil juxt-kv withf->>]  ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros
-                       :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red
-                       :refer [#?@(:clj [reduce join])]                  ]
-                     [quantum.core.string                     :as str    ]
-                     [quantum.core.string.format              :as sform  ]
-                     [quantum.core.type                       :as type
-                       :refer [#?@(:clj [lseq? transient? editable?
-                                         boolean? should-transientize?])]]
-                     [quantum.core.analyze.clojure.predicates :as anap   ]
-                     [quantum.core.type.predicates            :as tpred  ]
-                     [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops
-                       :refer [#?@(:clj [doseqi reducei lfor]) reduce-2]]
-                     [quantum.core.vars                       :as var
-                       :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.core           :as coll
-                       :refer [count first second rest get lasti index-of
-                               lasti conj conj! contains? containsk? assoc!
-                               empty?]]
-                     [quantum.core.collections.base           :as base
-                       :refer [kmap]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n defcurried]       ]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-not fn-or fn-and whenf whenf*n
-                               ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops
-                       :refer [doseqi reducei lfor]                      ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red
-                       :refer [reduce join]                              ]
-                     [quantum.core.type                       :as type
-                       :refer [lseq? transient? editable? boolean?
-                               should-transientize?]                     ]
-                     [quantum.core.vars                       :as var
-                       :refer [defalias]                                 ])))
+  (:refer-clojure :exclude
+    [for doseq reduce
+     contains?
+     repeat repeatedly
+     interpose
+     range
+     take take-while
+     drop  drop-while
+     subseq
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     empty empty?
+     split-at
+     first second rest last butlast get pop peek
+     select-keys
+     zipmap
+     reverse
+     conj
+     conj! assoc! dissoc! disj!
+     boolean?])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )        :as core]
+    [quantum.core.data.map         :as map
+      :refer        [map-entry]]
+    [quantum.core.data.vector      :as vec
+      :refer        [catvec subvec+]]
+    [quantum.core.collections.core :as coll
+      :refer        [#?@(:clj [first second rest get count conj! assoc! assoc!* empty? contains? containsk?])]
+      :refer-macros [          first second rest get count conj! assoc! assoc!* empty? contains? containsk?]]
+    [quantum.core.collections.generative
+      :refer        [range]]
+    [quantum.core.fn               :as fn
+      :refer        [#?@(:clj [f$n fn->])]
+      :refer-macros [          f$n fn->]]
+    [quantum.core.logic            :as logic
+      :refer        [#?@(:clj [fn-or whenf])]
+      :refer-macros [          fn-or whenf]]
+    [quantum.core.macros           :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]
+    [quantum.core.reducers         :as red
+      :refer        [#?@(:clj [reduce join])]
+      :refer-macros [          reduce join]]
+    [quantum.core.type             :as type
+      :refer        [transient!* persistent!*
+                     #?@(:clj [transient? editable?])]
+      :refer-macros [          transient? editable?]]
+    [quantum.core.loops            :as loops
+      :refer        [reduce-2]]))
 
 ;_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._
 ;=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*{        ASSOCIATIVE       }=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
@@ -135,20 +98,16 @@
     (assoc (extend-coll-to coll-0 k) k v))
     ; once probably gives no performance benefit from transience
   ([coll-0 k v & kvs-0]
-    (let [edit?    (editable? coll-0)
-          trans-fn (if edit? transient   identity)
-          pers-fn  (if edit? persistent! identity)
-          assoc-fn (if edit? #(assoc! %1 %2 %3) #(assoc %1 %2 %3))]
-      (loop [kvs-n  kvs-0
-             coll-f (-> coll-0 trans-fn
-                        (extend-coll-to k)
-                        (assoc-fn k v))]
-        (if (empty? kvs-n)
-            (pers-fn coll-f)
-            (recur (-> kvs-n rest rest)
-                   (let [k-n (first kvs-n)]
-                     (-> coll-f (extend-coll-to k-n)
-                         (assoc-fn k-n (second kvs-n))))))))))
+    (loop [kvs-n  kvs-0
+           coll-f (-> coll-0 transient!*
+                      (extend-coll-to k)
+                      (assoc!* k v))]
+      (if (empty? kvs-n)
+          (persistent!* coll-f)
+          (recur (-> kvs-n rest rest)
+                 (let [k-n (first kvs-n)]
+                   (-> coll-f (extend-coll-to k-n)
+                       (assoc!* k-n (second kvs-n)))))))))
 
 (defn assoc-if
   "Works like assoc, but only associates if condition is true."
@@ -213,7 +172,7 @@
 (defn update-val+
   {:attribution "Alex Gunnarson"
    :usage '(->> {:a 4 :b 12}
-                (map+ (update-val+ (f*n / 2))))}
+                (map+ (update-val+ (f$n / 2))))}
   ([f]
     (fn
       ([kv]
@@ -312,7 +271,7 @@
 
 (defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
   (whenf coll (fn-> (get k) pred)
-    (f*n dissoc+ k)))
+    (f$n dissoc+ k)))
 
 (defnt dissoc++
   {:todo ["Move to collections.core"

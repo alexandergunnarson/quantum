@@ -12,93 +12,54 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referencing? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.collections.zip
-           (:refer-clojure :exclude
-             [for doseq reduce
-              contains?
-              repeat repeatedly
-              interpose
-              range
-              take take-while
-              drop drop-while
-              subseq
-              key val
-              merge sorted-map sorted-map-by
-              into
-              count
-              empty empty?
-              split-at
-              first second rest last butlast get pop peek
-              select-keys
-              zipmap
-              reverse
-              conj
-              conj! assoc! dissoc! disj!
-              map-entry?
-              boolean?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core   ]
-                     [fast-zip.core                           :as zip    ]
-                     [quantum.core.data.map                   :as map
-                       :refer [map-entry]                                ]
-                     [quantum.core.collections.base           :as base]
-                     [quantum.core.collections.core           :as coll
-                       :refer [#?@(:clj [count first second rest getr last-index-of
-                                         index-of lasti conj conj! contains?
-                                         empty])
-                               key val]                                  ]
-                     [quantum.core.error                      :as err
-                       :refer        [->ex #?@(:clj [catch-all])]
-                       :refer-macros [catch-all]]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [compr <- fn-> fn->>
-                                         f*n with-do])
-                              fn-nil juxt-kv withf->>]  ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenf whenf*n
-                                         ifn if*n condf condf*n]) nnil?]]
-                     [quantum.core.macros                     :as macros
-                       :refer [#?@(:clj [defnt])]                        ]
-                     [quantum.core.reducers                   :as red
-                       :refer [#?@(:clj [reduce join])]                  ]
-                     [quantum.core.type                       :as type
-                       :refer [map-entry?
-                               #?@(:clj [lseq? transient? editable?
-                                         boolean? should-transientize?])]]
-                     [quantum.core.analyze.clojure.predicates :as anap   ]
-                     [quantum.core.type.predicates            :as tpred  ]
-                     [clojure.walk                            :as walk   ]
-                     [quantum.core.loops                      :as loops
-                       :refer [#?@(:clj [doseqi reducei lfor])]]
-                     [quantum.core.vars                       :as var
-                       :refer [#?@(:clj [defalias])]                     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.core           :as coll
-                       :refer [count first second rest getr lasti index-of lasti
-                               conj conj! contains? empty]               ]
-                     [quantum.core.collections.zip
-                       :refer [walking]]
-                     [quantum.core.collections.base           :as base
-                       :refer [kmap]                                     ]
-                     [quantum.core.fn                         :as fn
-                       :refer [compr <- fn-> fn->> f*n defcurried with-do]]
-                     [quantum.core.log                        :as log    ]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-not fn-or fn-and whenf whenf*n
-                               ifn if*n condf condf*n]                   ]
-                     [quantum.core.loops                      :as loops
-                       :refer [doseqi reducei lfor]                      ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]                                    ]
-                     [quantum.core.reducers                   :as red
-                       :refer [reduce join]                              ]
-                     [quantum.core.type                       :as type
-                       :refer [lseq? transient? editable? boolean?
-                               should-transientize?]                     ]
-                     [quantum.core.vars                       :as var
-                       :refer [defalias]                                 ])))
+  (:refer-clojure :exclude
+    [for doseq reduce
+     contains?
+     repeat repeatedly
+     interpose
+     range
+     take take-while
+     drop  drop-while
+     subseq
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     empty empty?
+     split-at
+     first second rest last butlast get pop peek
+     select-keys
+     zipmap
+     reverse
+     conj
+     conj! assoc! dissoc! dissoc disj!
+     boolean?
+     replace remove update])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )        :as core]
+    [fast-zip.core                 :as zip]
+    [quantum.core.data.map         :as map
+      :refer        [map-entry]]
+    [quantum.core.collections.base :as base]
+    [quantum.core.collections.core :as coll
+      :refer        [key val
+                     #?@(:clj [first second conj conj! empty])]
+      :refer-macros [          first second conj conj! empty]]
+    [quantum.core.fn               :as fn
+      :refer        [#?@(:clj [with-do])]
+      :refer-macros [          with-do]]
+    [quantum.core.macros           :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]
+    [quantum.core.reducers         :as red
+      :refer        [#?@(:clj [join])]
+      :refer-macros [          join]]
+    [quantum.core.vars             :as var
+      :refer        [#?@(:clj [defalias])]
+      :refer-macros [          defalias]]))
 
 ; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
 (defnt walking
@@ -150,9 +111,29 @@
 ;=================================================={     ZIPPERS     }=====================================================
 ;=================================================={                 }=====================================================
 
-(defalias zip-reduce* base/zip-reduce*)
+(defalias node    zip/node   )
 
-(defn node* [x] (if (instance? fast_zip.core.ZipperLocation x) (zip/node x) x))
+(defn node* [x] (if (instance? fast_zip.core.ZipperLocation x) (node x) x))
+
+(defalias up      zip/up     )
+(defalias down    zip/down   )
+(defalias left    zip/left   )
+(defalias right   zip/right  )
+(defalias replace zip/replace)
+(defalias remove  zip/remove )
+(defalias dissoc remove)
+
+(defalias edit zip/edit)
+
+(defn update
+  "A slightly more performant (and threading-macro-last) alternative to zip/edit"
+  [f ^fast_zip.core.ZipperLocation loc]
+  (replace loc (f (.-node loc))))
+
+(defn insert-left  [item loc] (zip/insert-left  loc item))
+(defn insert-right [item loc] (zip/insert-right loc item))
+
+(defalias zip-reduce* base/zip-reduce*)
 
 (defn zipper
   "General-purpose zipper."
@@ -164,28 +145,37 @@
 
 (defn zip-reduce-with
   [accumulator f post init coll loc]
-  (let [loc* (volatile! (zip/down loc))]
+  (let [loc* (volatile! (down loc))]
     (post
       (core/reduce
         (fn [r x] (with-do (accumulator r (f x @loc*))
-                    (vswap! loc* zip/right)))
+                    (vswap! loc* right)))
         init coll))))
 
 (defn zip-map-with [coll f loc]
   (let [loc* (volatile! (zip/down loc))]
     (map (fn [x] (with-do (f x @loc*)
-                   (vswap! loc* zip/right))) coll)))
+                   (vswap! loc* right))) coll)))
 
 (defn zip-mapv
   "Like `mapv` but allows zip functions to be applied to each elem."
   [f coll]
   (loop [ret  (transient [])
-         elem (-> coll zipper zip/down)]
+         elem (-> coll zipper down)]
     (if (nil? elem)
         (persistent! ret)
-        (recur (conj! ret (f elem)) (zip/right elem)))))
+        (recur (conj! ret (f elem)) (right elem)))))
 
-(defn edit
-  "A slightly more performant alternative to zip/edit"
-  [^fast_zip.core.ZipperLocation loc f]
-  (zip/replace loc (f (.-node loc))))
+(defn right-until [pred z]
+  (loop [z' z]
+    (when z'
+      (if (pred (node z'))
+          (node z')
+          (recur (right z'))))))
+
+(defn left-until [pred z]
+  (loop [z' z]
+    (when z'
+      (if (pred (node z'))
+          (node z')
+          (recur (left z'))))))

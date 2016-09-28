@@ -10,42 +10,43 @@
   quantum.core.string
            (:refer-clojure :exclude
              [reverse replace remove val re-find reduce every? boolean?])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )     :as core              ]
-                     [clojure.string             :as str               ]
-                     [frak                                             ]
-                     [quantum.core.data.map      :as map               ]
-                     [quantum.core.data.set      :as set               ]
-                     [quantum.core.fn            :as fn 
-                       :refer        [#?@(:clj [fn-> f*n])]            
-                       :refer-macros [fn-> f*n]                        ]
-                     [quantum.core.logic         :as logic
-                       :refer        [#?@(:clj [fn-and whenc whencf*n ifn
-                                                condf])
-                                      nempty? every?]                  
-                       :refer-macros [fn-and whenc whencf*n ifn condf] ]
-                     [quantum.core.loops         :as loops
-                       :refer        [#?@(:clj [reduce reducei])]      
-                       :refer-macros [reduce reducei]                  ]
-                     [quantum.core.macros        :as macros
-                       :refer        [#?@(:clj [defnt defnt'])]        
-                       :refer-macros [defnt defnt']                    ]
-                     [quantum.core.collections.core
-                       :refer        [#?@(:clj [containsv?])]
-                       :refer-macros [containsv?]                      ]
-                     [quantum.core.string.format :as form              ]
-                     [quantum.core.string.regex  :as regex             ]
-                     [quantum.core.vars          :as var
-                       :refer        [#?@(:clj [defalias])]            
-                       :refer-macros [defalias]                        ]
-                     [quantum.core.type          :as type
-                       :refer        [#?(:clj boolean?)]               
-                       :refer-macros [boolean?]                        ])
+           (:require
+             [#?(:clj  clojure.core
+                 :cljs cljs.core   )     :as core]
+             [clojure.string             :as str]
+             [frak]
+             [quantum.core.data.map      :as map]
+             [quantum.core.data.set      :as set]
+             [quantum.core.fn            :as fn
+               :refer        [#?@(:clj [fn-> f$n])]
+               :refer-macros [          fn-> f$n]]
+             [quantum.core.logic         :as logic
+               :refer        [nempty? every?
+                              #?@(:clj [fn-and whenc whencf$n ifn condf])]
+               :refer-macros [          fn-and whenc whencf$n ifn condf] ]
+             [quantum.core.loops         :as loops
+               :refer        [#?@(:clj [reduce reducei])]
+               :refer-macros [          reduce reducei]]
+             [quantum.core.macros        :as macros
+               :refer        [#?@(:clj [defnt defnt'])]
+               :refer-macros [          defnt defnt']]
+             [quantum.core.collections.core
+               :refer        [#?@(:clj [containsv?])]
+               :refer-macros [          containsv?]]
+             [quantum.core.string.format :as form]
+             [quantum.core.string.regex  :as regex]
+             [quantum.core.vars          :as var
+               :refer        [#?@(:clj [defalias])]
+               :refer-macros [          defalias]]
+             [quantum.core.type          :as type
+               :refer        [#?(:clj boolean?)]
+               :refer-macros [        boolean?]])
   #?(:cljs (:require-macros
-                     [quantum.core.string
-                       :refer [ends-with?]                             ]))
-  #?(:clj (:import java.net.IDN
-                   java.util.regex.Pattern)))
+             [quantum.core.string
+               :refer [ends-with?]]))
+  #?(:clj (:import
+             java.net.IDN
+             java.util.regex.Pattern)))
 
 #_(defn contains? [s sub]
   (not= (.indexOf ^String s sub) -1))
@@ -126,7 +127,7 @@
 (defnt starts-with?
   {:todo ["Make more portable by looking at java.lang.String/startsWith"]}
   ([^string? super sub]
-    #?(:clj  (.startsWith super ^String sub)         
+    #?(:clj  (.startsWith super ^String sub)
        :cljs (zero? (.indexOf super sub)))) ; .startsWith is not implemented everywhere
   ([^keyword? super sub]
     (starts-with? (name super) sub)))
@@ -135,13 +136,13 @@
 (defnt ends-with?
   {:todo ["Make more portable by looking at java.lang.String/endsWith"]}
   ([^string? super sub]
-    #?(:clj  (.endsWith super ^String sub)         
+    #?(:clj  (.endsWith super ^String sub)
        :cljs (str/ends-with? super sub))) ; .endsWith is not implemented everywhere
   ([^keyword? super sub]
     (ends-with? (name super) sub)))
 
 (defalias
-  ^{:doc "Transforms collections of strings into regexes for matching those strings. 
+  ^{:doc "Transforms collections of strings into regexes for matching those strings.
           (frak/pattern [\"foo\" \"bar\" \"baz\" \"quux\"])
           #\"(?:ba[rz]|foo|quux)\"
           user> (frak/pattern [\"Clojure\" \"Clojars\" \"ClojureScript\"])
@@ -302,7 +303,7 @@
   (-> s trim
       (replace #"\s+" " "))) ; should it be |collapse-whitespace| instead?
 
-(def  str-nil (whencf*n nil? ""))
+(def  str-nil (whencf$n nil? ""))
 
 ; ===== COERCION =====
 
@@ -346,11 +347,11 @@
     ["(subs+ \"Hello\"  0 5)" "Hello"
      "(subs+ \"Hello\"  0 9)" "Hello"
      "(subs+ \"Hello\" -4 5)" "Hello"
-     "(subs+ \"Hello\"  2 2)" "ll"   
-     "(subs+ \"Hello\" -2 2)" "ll"   
-     "(subs+ \"Hello\" -2)  " "llo"  
-     "(subs+ \"Hello\"  2)  " "llo"  
-     "(subs+ \"Hello\"  9 9)" ""     
+     "(subs+ \"Hello\"  2 2)" "ll"
+     "(subs+ \"Hello\" -2 2)" "ll"
+     "(subs+ \"Hello\" -2)  " "llo"
+     "(subs+ \"Hello\"  2)  " "llo"
+     "(subs+ \"Hello\"  9 9)" ""
      "(subs+ \"Hello\"  0 0)" ""]
    :attribution "taoensso.encore"}
   ([s ^long start-idx] (subs+ s start-idx nil))
@@ -444,7 +445,7 @@
 ;   (if (and  (= (first s) (last s))
 ;         (some? (partial starts-with? s) quote-types)
 ;         (some? (partial ends-with?   s) quote-types))
-;       (-> s popl popr) ; TODO this will be optimized away 
+;       (-> s popl popr) ; TODO this will be optimized away
 ;       s))
 
 (defn paren
@@ -499,7 +500,7 @@
          (cons (.group m 0) (lazy-seq (step)))))))))
 
 (defn search-str-within [super sub]
-  (let [strict-search (f*n containsv? sub)
+  (let [strict-search (f$n containsv? sub)
         regexized     (->> sub conv-regex-specials (str "(?i)") re-pattern)
         case-insensitive-regex-search
           (partial re-find regexized)]
@@ -664,7 +665,7 @@
 ;    :uri     (fn [v] (hara.common/uri v))
 ;    :enum    (fn [v] (read-enum v))
 ;    :ref     (fn [v] (read-ref v))})
-   
+
 (defn val [obj]
   (if (string? obj)
       #?(:clj
@@ -675,7 +676,7 @@
                 (try (Double/parseDouble obj)
                   (catch Exception e obj))))))
         :cljs
-        (whenc (js/Number obj) js/isNaN 
+        (whenc (js/Number obj) js/isNaN
           obj))
       obj))
 
@@ -1024,7 +1025,7 @@
        (str/join "-")))
 
 (defn kebabize [s]
-  (-> s 
+  (-> s
       str/lower-case
       (str/replace #"_" "-")))
 

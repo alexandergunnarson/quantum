@@ -1,45 +1,36 @@
 (ns quantum.core.io.utils
-           (:require [com.stuartsierra.component  :as component]
-             #?(:clj [clojure.java.io             :as io       ])
-                     [quantum.core.convert        :as conv
-                       :refer [->name ->str]                   ]
-                     [quantum.core.collections    :as coll
-                       :refer [#?(:clj kmap)]                  ]
-                     [quantum.core.error          :as err
-                       :refer [->ex #?(:clj try+)]             ]
-                     [quantum.core.fn             :as fn
-                       :refer [#?@(:clj [f*n])]                ]
-                     [quantum.core.system         :as sys      ]
-                     [quantum.core.string         :as str      ]
-                     [quantum.core.logic          :as logic
-                       :refer [#?@(:clj [fn-not fn-and ifn])]  ]
-                     [quantum.core.macros         :as macros
-                       :refer [#?@(:clj [defnt])]              ]
-                     [quantum.core.vars           :as var
-                       :refer [#?(:clj def-)]                  ]
-                     [quantum.core.paths          :as paths    
-                       :refer [#?(:clj ->file)]])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections    :as coll
-                       :refer [kmap]                           ]
-                     [quantum.core.error          :as err
-                       :refer [try+]                           ]
-                     [quantum.core.fn             :as fn
-                       :refer [f*n]                            ]
-                     [quantum.core.logic          :as logic
-                       :refer [fn-not fn-and ifn]              ]
-                     [quantum.core.macros         :as macros
-                       :refer [defnt]                          ]
-                     [quantum.core.vars           :as var
-                       :refer [def-]                           ]))
-  #?(:clj  (:import  (java.io File
-                              InputStream OutputStream
-                              DataOutputStream
-                              FileInputStream FileOutputStream))))
+          (:require
+            [com.stuartsierra.component  :as component]
+    #?(:clj [clojure.java.io             :as io])
+            [quantum.core.convert        :as conv
+              :refer        [->name ->str]]
+            [quantum.core.collections    :as coll
+              :refer        [#?(:clj kmap)]
+              :refer-macros [        kmap]]
+            [quantum.core.error          :as err
+              :refer        [->ex]             ]
+            [quantum.core.fn             :as fn
+              :refer        [#?@(:clj [f$n])]
+              :refer-macros [          f$n]]
+            [quantum.core.system         :as sys]
+            [quantum.core.string         :as str]
+            [quantum.core.logic          :as logic
+              :refer        [#?@(:clj [fn-not fn-and ifn])]
+              :refer-macros [          fn-not fn-and ifn]]
+            [quantum.core.macros         :as macros
+              :refer        [#?@(:clj [defnt])]
+              :refer-macros [         defnt]]
+            [quantum.core.paths          :as paths
+              :refer [#?(:clj ->file)]])
+  #?(:clj (:import
+            (java.io File
+                     InputStream OutputStream
+                     DataOutputStream
+                     FileInputStream FileOutputStream))))
 
 ; ===== DEPENDENCIES =====
 
-(def- ill-chars-table
+(def ill-chars-table
   {"\\" "-", "/" "-", ":" "-", "*" "!", "?" "!"
    "\"" "'", "<" "-", ">" "-", "|" "-"})
 
@@ -79,7 +70,7 @@
             (->ex :mkdir "The directory could not be created." (kmap t dir)))))))))
 
 (defn num-to-sortable-str [num-0]
-  (ifn num-0 (fn-and (fn-not neg?) (f*n < 10))
+  (ifn num-0 (fn-and (fn-not neg?) (f$n < 10))
        (partial str "0")
        str))
 
@@ -101,7 +92,7 @@
                  (fn-> file-name* (str/starts-with? file-name))
                  (fn-> file-ext (= extension)))))
            (map+ (fn-> file-name*
-                       (str/replace (str file-name " ") "") 
+                       (str/replace (str file-name " ") "")
                        path-without-ext str/val))
            (filter+ number?)
            redv num/greatest inc num-to-sortable-str)

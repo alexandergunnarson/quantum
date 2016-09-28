@@ -9,8 +9,8 @@
               :refer-macros [defattribute defentity
                              declare-entity defunit]           ]
             [quantum.core.fn                :as fn
-              :refer        [#?@(:clj [f*n])]
-              :refer-macros [f*n]                      ]
+              :refer        [#?@(:clj [f$n])]
+              :refer-macros [f$n]                      ]
             [quantum.core.log               :as log
               :include-macros true                     ]
             [quantum.core.logic             :as logic

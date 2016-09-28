@@ -4,14 +4,14 @@
 ;   keyword? ([k] (if (-> k namespace (= "error"))
 ;                     k
 ;                     (keyword (str "error/"
-;                                (whenf (namespace k) nnil? (f*n str "."))
+;                                (whenf (namespace k) nnil? (f$n str "."))
 ;                                (name k)))))
 ;   nil?     ([k] nil))
 
 ; (defonce workers (atom {}))
 
 ; ; Add to quantum.core.state-machine
-; (defn update-state! [state new-status & args] 
+; (defn update-state! [state new-status & args]
 ;   (with-throw (nnil? (:handlers @state)) "Handlers nil at update-state! How?")
 ;   (let [{:keys [handlers result-set result-id]} @state
 ;         get-ns-handler #(get handlers (keyword (namespace new-status) %))
@@ -22,7 +22,7 @@
 ;     (log/pr-no-trace :debug (str/bracket (:id @state)) "STATE TRANSITION FROM" (:status @state) "TO" new-status)
 ;     (assoc! state :status new-status)
 ;     (swap! result-set assoc-in [result-id :status] (:status @state))
-  
+
 ;     (apply (or (get-ns-handler "any.pre" ) fn-nil) state args)
 ;     (apply state-handler state args)
 ;     (apply (or (get-ns-handler "any.post") fn-nil) state args)))
@@ -54,7 +54,7 @@
 ;   (atom
 ;     (fn [state line stream-source]
 ;       (with-throw (nnil? (:handlers @state)) "Handlers nil at log-buffer! How?")
-;       (let [logged-buffer-get #(get-in @thread/reg-threads [(:id @state) :logged-buffer]) 
+;       (let [logged-buffer-get #(get-in @thread/reg-threads [(:id @state) :logged-buffer])
 ;             _ (when-not (logged-buffer-get)
 ;                 (swap! thread/reg-threads assoc-in
 ;                   [(:id @state) :logged-buffer] (StringBuffer. 200)))
@@ -84,7 +84,7 @@
 ;         "Input/output error"
 ;           (update-state! state :error/io-error)))))
 
-; (def output-timeout-handler 
+; (def output-timeout-handler
 ;   (atom
 ;     (fn [state sleep-time stream-source]
 ;       (with-throw (nnil? (:handlers @state)) "Handlers nil at output-timeout-handler! How?")
@@ -133,7 +133,7 @@
 ;                                              (not (-> @state :status namespace (= "error"))))
 ;                                     (update-state! state :error/close-req))
 ;                                   (-> @state :status namespace (= "error")))]
-;             (try+ 
+;             (try+
 ;               (when-not (error-state?)
 ;                 (update-state! state
 ;                   (or (-> thread-opts :status :init) (str/keyword+ "phase-" n "-running")))
@@ -199,7 +199,7 @@
 ;                 {:status {:init :downloading :post :downloaded}
 ;                  :handlers downloading-handlers
 ;                  :id       downloading-id
-;                  :proc 
+;                  :proc
 ;                    #(do (assoc! workers vid-id :downloading)
 ;                         (download!
 ;                           {:type       :wmv
@@ -270,7 +270,7 @@
 ;        :handlers {:closed #(io/delete! :path mp4-path)}}
 ;       (wmv->mp4 [:resources "SIRE" (str n ".wmv")]
 ;                 mp4-path
-;         {:read-streams? true 
+;         {:read-streams? true
 ;          :threads 1
 ;          :state state
 ;          :handlers

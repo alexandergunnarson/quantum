@@ -8,28 +8,29 @@
              :exclude [macroexpand macroexpand-all])
            (:require
              [clojure.walk
-               :refer [postwalk]                              ]
+               :refer [postwalk]]
              [#?(:clj  clojure.core
-                 :cljs cljs.core   )    :as core              ]
+                 :cljs cljs.core   )    :as core]
              [quantum.core.error        :as err
-               :refer [->ex]                                  ]
+               :refer [->ex]]
              [quantum.core.fn           :as fn
                :refer        [#?@(:clj [fn->])]
-               :refer-macros [fn->]                           ]
-             [quantum.core.log          :as log              
-               :include-macros true                           ]
+               :refer-macros [          fn->]]
+             [quantum.core.log          :as log
+               :include-macros true]
              [quantum.core.logic        :as logic
-               :refer        [#?@(:clj [fn-and whenc whenf*n]) nnil?]
-               :refer-macros [fn-and whenc whenf*n]           ]
-             [quantum.core.macros.core  :as cmacros       
-               :refer        [#?(:clj if-cljs)]                      
-               :refer-macros [if-cljs]                        ]
-             [quantum.core.macros.defnt :as defnt             ]
-             [quantum.core.macros.fn    :as mfn               ]
-             [quantum.core.print        :as pr                ]
+               :refer        [nnil?
+                              #?@(:clj [fn-and whenc whenf$n])]
+               :refer-macros [          fn-and whenc whenf$n]]
+             [quantum.core.macros.core  :as cmacros
+               :refer        [#?(:clj if-cljs)]
+               :refer-macros [        if-cljs]]
+             [quantum.core.macros.defnt :as defnt]
+             [quantum.core.macros.fn    :as mfn]
+             [quantum.core.print        :as pr]
              [quantum.core.vars         :as var
-               :refer        [#?@(:clj [defalias defmalias])] 
-               :refer-macros [defalias defmalias]             ])
+               :refer        [#?@(:clj [defalias defmalias])]
+               :refer-macros [          defalias defmalias]])
   #?(:cljs (:require-macros
              [quantum.core.macros
                :refer [assert-args]])))
@@ -43,7 +44,7 @@
 (defn let-alias* [bindings body]
   (cons 'do
     (postwalk
-      (whenf*n (fn-and symbol? (partial contains? bindings))
+      (whenf$n (fn-and symbol? (partial contains? bindings))
         (partial get bindings))
       body)))
 
@@ -175,7 +176,7 @@
 
 ; #?(:clj (defalias hint-body-with-arglist deps/hint-body-with-arglist))
 
-; (def default-hint (f*n hint-meta 'Object))
+; (def default-hint (f$n hint-meta 'Object))
 
 ; #?(:clj
 ; (defn default-hint-if-needed
@@ -187,7 +188,7 @@
 ;              (fn-> first symbol?)
 ;              (fn-> first resolve type-hint)))
 ;                     identity
-;     symbol?         (whenf*n (fn-> meta :tag nil?) default-hint)
+;     symbol?         (whenf$n (fn-> meta :tag nil?) default-hint)
 ;     seq?            default-hint
 ;     keyword?        default-hint
 ;     set?            default-hint
@@ -233,9 +234,9 @@
 
 (defn do-mod [mod-pairs cont & {:keys [skip stop]}]
   (let [err (fn [& msg] (throw (->ex nil (apply str msg))))]
-    (reduce 
+    (reduce
       (fn [cont [k v]]
-        (cond 
+        (cond
           (= k :let)   `(let ~v ~cont)
           (= k :while) `(if  ~v ~cont ~stop)
           (= k :when)  `(if  ~v ~cont ~skip)

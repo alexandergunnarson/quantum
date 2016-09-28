@@ -14,10 +14,10 @@
                      [quantum.core.string                     :as str  ]
                      [quantum.core.string.format              :as strf ]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> fn->> f*n])]          ]
+                       :refer [#?@(:clj [<- fn-> fn->> f$n])]          ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [eq? fn-not fn-or fn-and whenf
-                                         whenf*n whenc ifn condfc condpc
+                                         whenf$n whenc ifn condfc condpc
                                          coll-or]) nempty? nnil?]      ]
                      [quantum.core.macros                     :as macros
                        :refer [#?(:clj defnt)]                         ])
@@ -28,9 +28,9 @@
                      [quantum.core.collections                :as coll
                        :refer [containsv? kmap popr popl]              ]
                      [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn->> f*n]                      ]
+                       :refer [<- fn-> fn->> f$n]                      ]
                      [quantum.core.logic                      :as logic
-                       :refer [eq? fn-not fn-or fn-and whenf whenf*n
+                       :refer [eq? fn-not fn-or fn-and whenf whenf$n
                                whenc ifn condfc condpc coll-or]        ]
                      [quantum.core.macros                     :as macros
                        :refer [defnt]                                  ])))
@@ -44,13 +44,13 @@
 (declare comma-splice)
 (declare camel-lang?)
 
-#?(:clj 
+#?(:clj
 (defmacro mcall [msym & args]
   `(~msym :js (list '~msym ~@args))))
 
 (defrecord ObjLangText [text])
 
-(def demunge-class (f*n str/replace "$" "."))  ; For inner classes; TODO more than this is required  
+(def demunge-class (f$n str/replace "$" "."))  ; For inner classes; TODO more than this is required
 
 (defn replace-specials [^String s-0 & [upper?]]
   (let [^Fn camelcase-if-needed
@@ -64,9 +64,9 @@
         ^Fn apply-conventions
           (fn [s-n]
             (-> s-n
-                (whenf (f*n str/ends-with? "?")
+                (whenf (f$n str/ends-with? "?")
                   (fn->> popr (str "is-")))
-                (whenf (f*n str/ends-with? "!")
+                (whenf (f$n str/ends-with? "!")
                   (fn->  popr (str "X")))))
         s-f (if (containsv? s-0 "_") ; intentionally naming it as such
                 s-0
@@ -101,7 +101,7 @@
 ; A bracketed form — a scope
 (defrecord LangForm [first-str inner last-str])
 
-(defn enc-class 
+(defn enc-class
   {:in  '[1 2 3]
    :out "Vector"}
   [obj]
@@ -152,7 +152,7 @@
    'for
      (fn [[special-sym [sub super :as bindings] & body]]
        (do-form ; to do-form the |let|
-        ; TODO utilize "transientize" on this   
+        ; TODO utilize "transientize" on this
          `(~'let [~'result_ (~'transient! [])]
             (~'doseq [~sub ~super]
               (~'let [~'temp_ ~(cons 'do body)]
@@ -169,7 +169,7 @@
                   (~'let [~'temp_ ~(cons 'do body)]
                     (~'conj! ~'result_ ~'temp_)))
                 ~'result_))))
-   'cond 
+   'cond
      (fn [[special-sym pred expr & expr-pairs]]
       (cond
         (= pred :else)
@@ -217,7 +217,7 @@
       ""
       (condfc (-> prev-block line-height)
         (eq? 0)    "\n"
-        (f*n <= 2) "\n"
+        (f$n <= 2) "\n"
         "\n\n")))
 
 (declare special-syms) ; For use with the object-language |defmacro|
@@ -291,7 +291,7 @@
 (defn scope-if-needed [expr]
   (log/pr :debug "SCOPING" expr)
   (whenf expr seq?
-    (whenf*n (fn-> first (in? (get scoped-syms *lang*)))
+    (whenf$n (fn-> first (in? (get scoped-syms *lang*)))
       (partial list 'scope))))
 
 (defn infix [^String oper]
@@ -334,7 +334,7 @@
                           (get dynamic-type *lang*)
                           (infer-type))
                form-f
-                 (condp = *lang* 
+                 (condp = *lang*
                    :js (if true
                            #_class-
                            #_(do (log/pr :debug "CREATING VAR WITH CLASS" class-)
@@ -400,19 +400,19 @@
              :cs   (default-fn)
              :java (default-fn)
              :cpp  (default-fn))))
-  
+
      'cond ; TODO need to add return statement capability
        (fn cond-fn [[special-sym pred expr & expr-pairs]]
          {:pre [(throw-unless (-> expr-pairs count even?)
                   (str/sp "|cond| takes an even number of arguments. Supplied:"
                     (concat (list pred expr) expr-pairs)))]}
          (->> (concat (list special-sym pred expr) expr-pairs) do-form eval-form))
-     
+
      'try
        (fn try-fn [[special-sym & args]]
          (let [default-fn
                 (fn []
-                  (let [catch?       (fn-> first (anap/symbol-eq? 'catch)) 
+                  (let [catch?       (fn-> first (anap/symbol-eq? 'catch))
                         finally?     (fn-> first (anap/symbol-eq? 'finally))
                         try-body     (->> args (remove (fn-and seq? (fn-or catch? finally?))))
                         catches      (->> args (filter (fn-and seq? catch?)))
@@ -474,7 +474,7 @@
                           ^String block
                             (->> block-evaled
                                  (<- whenf (fn-and nempty?
-                                                   (fn-not (f*n str/ends-with? "}")))
+                                                   (fn-not (f$n str/ends-with? "}")))
                                      util/scolon) ; Could be a macro, in which case it wouldn't show up in the .js file
                                  (<- whenf nempty? (partial str spacing)))]
                       (when (nempty? block) (reset! prev-block block))
@@ -523,7 +523,7 @@
                _ (log/pr :debug "FN BODY IN DO FORM" body-in-do-form)
                fn-body
                  (if (-> spec-sym meta :class)
-                     ; JavaScript function-classes shouldn't have return statements  
+                     ; JavaScript function-classes shouldn't have return statements
                      (do (log/pr :debug "CREATING JS FUNCTION-CLASS")
                          (eval-form body-in-do-form))
                      (let [pre-ret-statement (->> body-in-do-form butlast)
@@ -539,11 +539,11 @@
                              (if (= ret-type "void")
                                  (util/semicoloned (str vertical-spacing (eval-form (last body-in-do-form))))
                                  (gen-return-statement vertical-spacing body-in-do-form))
-                             
+
                            _ (log/pr :debug "RET STATEMENT" (str/squote ret-statement-str))]
                        (str pre-ret-statement-str ret-statement-str)))]
            (util/bracket fn-header fn-body)))
-     'defn 
+     'defn
        (fn defn-fn [[spec-sym sym bindings & form]]
          (condpc = *lang*
            :js (eval-form
@@ -662,7 +662,7 @@
                  (if (anap/variadic-arglist? arglist)
                      arglist-base
                      (-> arglist-base
-                         (update 0 (f*n conj '& var-args-name))))
+                         (update 0 (f$n conj '& var-args-name))))
                sym-munged
                  (-> sym name (str "-") symbol)
                _ (println "IN MACRO")
@@ -714,7 +714,7 @@
           form obj
           first-0 (first obj)
           rest-0  (rest obj)]
-      (log/pr :debug "IN LIST") 
+      (log/pr :debug "IN LIST")
       (if (-> first-0 symbol?)
           (cond
             (-> first-0 special-sym?)

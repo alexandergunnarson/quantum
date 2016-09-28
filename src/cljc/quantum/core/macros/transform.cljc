@@ -1,31 +1,29 @@
 (ns quantum.core.macros.transform
-           (:refer-clojure :exclude [some? every?])
-           (:require [fast-zip.core                           :as zip       ]
-                     [clojure.walk
-                       :refer [postwalk]                                    ]
-                     [quantum.core.analyze.clojure.predicates :as anap
-                       :refer [type-hint]                                   ]
-                     [quantum.core.analyze.clojure.transform
-                       :refer [unhint]                                      ]
-                     [quantum.core.collections.base           :as cbase
-                       :refer [update-first update-val ensure-set
-                               zip-reduce* default-zipper]                   ]
-                     [quantum.core.error                      :as err
-                      :refer [->ex]                                         ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- f*n fn->])]                     ]
-                     [quantum.core.log                        :as log       ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-not fn-or fn-and whenc condf*n])
-                               nnil? some? every?]                           ]
-                     [quantum.core.macros.core                :as cmacros   ]
-                     [quantum.core.type.core                  :as tcore     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn                         :as fn
-                       :refer [<- f*n fn->]                                 ]
-                     [quantum.core.log                        :as log       ]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-not fn-or fn-and whenc condf*n]           ])))
+  (:refer-clojure :exclude [some? every?])
+  (:require
+    [fast-zip.core                           :as zip]
+    [clojure.walk
+      :refer [postwalk]]
+    [quantum.core.analyze.clojure.predicates :as anap
+      :refer [type-hint]]
+    [quantum.core.analyze.clojure.transform
+      :refer [unhint]]
+    [quantum.core.collections.base           :as cbase
+      :refer [update-first update-val ensure-set
+              zip-reduce* default-zipper]]
+    [quantum.core.error                      :as err
+      :refer [->ex]]
+    [quantum.core.fn                         :as fn
+      :refer        [#?@(:clj [<- f$n fn->])]
+      :refer-macros [          <- f$n fn->]]
+    [quantum.core.log                        :as log
+      :include-macros true]
+    [quantum.core.logic                      :as logic
+      :refer        [nnil? some? every?
+                     #?@(:clj [fn-not fn-or fn-and whenc condf$n])]
+      :refer-macros [          fn-not fn-or fn-and whenc condf$n]]
+    [quantum.core.macros.core                :as cmacros]
+    [quantum.core.type.core                  :as tcore]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 
@@ -33,7 +31,7 @@
 
 (defn hint-resolved? [x lang env]
   ((fn-or anap/hinted-literal?
-     (f*n anap/type-cast? lang)
+     (f$n anap/type-cast? lang)
      anap/constructor?
      type-hint
      (fn [sym]
@@ -59,7 +57,7 @@
                          (into {}))
         body-hinted
           (postwalk
-            (condf*n
+            (condf$n
               symbol?
                 (fn [sym]
                   (let [[hinted hint] (find arglist-map sym)]

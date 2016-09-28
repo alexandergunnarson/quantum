@@ -5,8 +5,8 @@
                :refer        [#?@(:clj [fn-or])]
                :refer-macros [          fn-or]]
              [quantum.core.fn
-               :refer        [#?@(:clj [<- f*n])]
-               :refer-macros [          <- f*n]]
+               :refer        [#?@(:clj [<- f$n])]
+               :refer-macros [          <- f$n]]
              [quantum.core.collections :as coll
                :refer [map+ remove+
                        mutable! eq! aset-in!
@@ -48,7 +48,7 @@
                                     "Not a soundex-able word"
                                     (kmap w))))))
        (coll/distinct-by+ identity (fn [x y] (and (= x y) (str/numeric? x))))
-       (remove+ (f*n = \-))
+       (remove+ (f$n = \-))
        (reducei (fn [^StringBuilder s c i]
                   (when (= i 0)
                     (.append s (-> w name first str/->upper)))
@@ -77,7 +77,7 @@
         |doseq| with |range|! pretty amazing"]
     :todo ["Move from |aset-in!| to |aset-in!*|"
            "Eliminate boxed math"
-           "Improve |coll/->multi-array|"]} 
+           "Improve |coll/->multi-array|"]}
   [s1 s2]
   (let [s1-ct+1 (-> s1 count int inc*)
         s2-ct+1 (-> s2 count int inc*)
@@ -111,7 +111,7 @@
         str2 (name str2)
         n (-> str1 count int)
         m (-> str2 count int)]
-    (cond 
+    (cond
      (= 0 n) m
      (= 0 m) n
      :else
@@ -122,13 +122,13 @@
            (assoc! col 0 (inc* i)) ; update col[0]
            (dotimes [j m]
              (let [j (int j)]
-               (assoc! col (inc* j)  ; update col[1..m] 
+               (assoc! col (inc* j)  ; update col[1..m]
                (min (inc* (int (get col      j       )))
                     (inc* (int (get prev-col (inc* j))))
                     (+*   (int (get prev-col j))
                           (if (= (get str1 i)
                                  (get str2 j))
                               0 1))))))
-           (dotimes [i (count prev-col)] 
-             (assoc! prev-col i (get col i))))) ; 
+           (dotimes [i (count prev-col)]
+             (assoc! prev-col i (get col i))))) ;
        (last col))))) ; last element of last column
