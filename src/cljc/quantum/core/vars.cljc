@@ -198,6 +198,8 @@
     (catch java.io.FileNotFoundException e
       false))))
 
+(defn qualify [ns-sym sym] (symbol (name ns-sym) (name sym)))
+
 (defn unqualify [sym] (-> sym name symbol))
 
 (defalias update-meta vary-meta)

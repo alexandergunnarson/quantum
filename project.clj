@@ -220,8 +220,9 @@
      [instaparse                                "1.4.2"           ]
      [com.lucasbradstreet/instaparse-cljs       "1.4.1.2"         ]
      [automat                                   "0.2.0"           ]
-     ; ==== MISCELLANEOUS ====
+     ; ==== MATCH ====
      [org.clojure/core.match                    "0.3.0-alpha4"    ]
+     [net.cgrand/seqexp                         "0.6.0"]
      ; ==== CODE TRANSFORMATION ====
        ; META (CODE)
        ;[repetition-hunter                      "1.0.0"           ]

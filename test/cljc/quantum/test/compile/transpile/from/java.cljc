@@ -52,11 +52,12 @@
        conv/->file
        ns/parse
        ns/clean
+       doall
        (#(with-out-str (! %)))
        (dropl 5) ; (do
-       #_(dropr 1) ; TODO fix to do before `apply str` — currently `dropr` is slightly broken
        popr popr ; TODO fix to do before `apply str`
-     #_(apply str)
        fmt/reformat-string))) ; TODO fix this
 
-(spit "./dev-resources/test/quantum/compile/transpile/bit_sieve.clj" (with-out-str (println (test-integration))))
+#?(:clj (spit "./dev-resources/test/quantum/compile/transpile/bit_sieve.clj"
+              (let [ret (test-integration)]
+                (with-out-str (println ret)))))

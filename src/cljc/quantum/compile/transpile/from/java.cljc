@@ -7,8 +7,8 @@
     [quantum.core.collections.zip            :as zip]
     [quantum.core.collections                :as coll
       :refer        [postwalk prewalk zip-prewalk take-until update-last
-                     #?@(:clj [containsv? popr])]
-      :refer-macros [          containsv? popr]]
+                     #?@(:clj [containsv? popl popr kmap])]
+      :refer-macros [          containsv? popl popr kmap]]
     [quantum.core.convert                    :as conv
       :refer [->name]                                 ]
     [quantum.core.convert.primitive          :as pconv]
@@ -20,10 +20,12 @@
       :refer        [#?@(:clj [fn-> fn->> f$n compr <-])]
       :refer-macros [          fn-> fn->> f$n compr <-]]
     [quantum.core.logic                      :as logic
-      :refer        [nnil? some?
-                     #?@(:clj [eq? fn-or fn-and whenf whenf$n if$n condf$n if-let])]
-      :refer-macros [          eq? fn-or fn-and whenf whenf$n if$n condf$n if-let]]
-    [quantum.core.type.core                  :as tcore])
+      :refer        [nnil? some? nempty?
+                     #?@(:clj [eq? fn-or fn-and whenf whenf$n if$n condf$n if-let cond-let])]
+      :refer-macros [          eq? fn-or fn-and whenf whenf$n if$n condf$n if-let cond-let]]
+    [quantum.core.type.core                  :as tcore]
+    [quantum.core.match                      :as m
+      :refer        [#?@(:clj [re-match re-match* re-match-whole*])]])
 #?(:clj
     (:import
       com.github.javaparser.JavaParser
@@ -220,7 +222,7 @@
                     (remove (fn-or nil? (fn-and string? empty?))))
           body (when-let [inner (get-inner x)]
                   (->> inner parse* implicit-do))]
-      (concat (list 'defn) pres
+      (concat (list 'defnt) pres
            arglist body)))
   ([^VariableDeclarator x]
     [(-> x .getId parse*) (when-let [init (.getInit x)] (parse* init))])
@@ -293,6 +295,7 @@
       (conj (-> x .getVariable parse* second popr) (-> x .getIterable parse*))
       (-> x .getBody parse* implicit-do)))
   ([^ExplicitConstructorInvocationStmt x]
+    (throw (->ex nil "unsupported" {:x x}))
     ["EXPLICIT CONSTRUCTOR" (str x)])
   ; EXPRESSIONS
   ([^NameExpr x]
@@ -311,6 +314,7 @@
   ([^ThisExpr x]
     'this)
   ([^SuperExpr x]
+    (throw (->ex nil "unsupported" {:x x}))
     ["SUPER" (str x)])
   ([^EnclosedExpr x] ; Parenthesis-enclosed
     (list 'do (-> x .getInner parse*)))
@@ -324,14 +328,18 @@
     (list (->> x .getField (str ".") symbol)
           (->> x .getScope  parse*)))
   ([^ArrayCreationExpr x]
-    ["ARRAY" (->> x .getType parse*)
-             (list 'array (.getArrayCount x))
-             (->> x .getDimensions (map parse*))
-             (->> x .getInitializer)])
+    (assert (not (and (->> x .getInitializer)
+                      (->> x .getDimensions nempty?))))
+    (if (->> x .getInitializer)
+        `(~'array-of ~(->> x .getType parse*)
+                     ~@(->> x .getInitializer parse*))
+        `(~'->multi-array ~(->> x .getType parse*)
+                          ~(->> x .getDimensions (mapv parse*))))
+    )
   ([^ArrayAccessExpr x]
     (list 'aget (-> x .getName parse*) (-> x .getIndex parse* str/val)))
   ([^ArrayInitializerExpr x]
-    (cons 'array (->> x .getValues (map parse*))))
+    (->> x .getValues (map parse*)))
   ([^ClassExpr x]
     (-> x .getType parse*))
   ([^CastExpr x]
@@ -442,30 +450,68 @@
 
              identity)
            #_join-lets))
-       ;(prewalk (fn-> enclose-lets str-fold))
        (postwalk
+         (whenf$n
+           ; Elide superfluous `do`s
+           (fn-and anap/do-statement? (fn-> count (= 2)))
+           (f$n second)))
+       (postwalk
+         ; Replace +1 and -1 with inc* and dec*
+         ; =0 with zero?
+         ; >0 with pos?
+         ; *2 with >> 1
          (condf$n
+          ; Elide superfluous return statements
            (fn-and anap/function-statement?
              (fn-> last anap/return-statement?))
            (f$n update-last (f$n second))
-
-           (fn-and anap/do-statement? (fn-> count (= 2)))
-           (f$n second)
-
+           anap/sym-call?
+           (fn [x] (cond-let
+                     [{[form] :form [oper] :oper}
+                      (re-match-whole* x
+                        (& (m/as :oper (| '+ '-))
+                           (| (& 1 (m/as :form _))
+                              (& (m/as :form _) 1))))]
+                     (list ('{+ inc* - dec*} oper) form)
+                     [{[form] :form}
+                      (re-match-whole* x
+                        (& '=
+                           (| (& 0 (m/as :form _))
+                              (& (m/as :form _) 0))))]
+                     (list 'zero? form)
+                     [{[form] :form}
+                      (re-match-whole* x
+                        (& '> (& (m/as :form _) 0)))]
+                     (list 'pos? form)
+                     [{[form] :form}
+                      (re-match-whole* x
+                        (& '*
+                           (| (& 2 (m/as :form _))
+                              (& (m/as :form _) 2))))]
+                     (list '>> form 1)
+                     x))
            identity))
+       ; TODO combine adjacent lone lets
+       ; TODO extend lets to surround subsequent siblings
+       #_(zip-prewalk
+         (if$n))
+       ; Fix docstrings
+       ; TODO use seqxpr for this (?)
        (zip-prewalk
          (if$n
-           (fn-> zip/node anap/defn-statement?)
+           (fn-> zip/node anap/defnt-statement?)
            (fn [form]
              (zip/node
-               (if-let [arglist* (->> form (zip/right-until vector?))
+               (if-let [arglist* (->> form zip/down (zip/right-until vector?))
                         docstr*  (->> arglist* (zip/left-until string?))
                         docstr   (zip/node docstr*)]
                  ; We know that meta map won't be there
-                 (let [meta-f {:doc docstr}]
+                 (let [docstr' (-> docstr (str/split #"\v") popl popl popr)
+                       meta-f {:doc docstr'}]
                    (->> docstr* zip/dissoc ; moves left
                         (zip/right-until vector?) ; arglist
-                        (zip/insert-left meta-f)))
+                        (zip/insert-left meta-f)
+                        zip/up))
                  form)))
            zip/node))
        first

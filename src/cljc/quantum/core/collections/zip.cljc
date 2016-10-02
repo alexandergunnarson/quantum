@@ -43,6 +43,8 @@
     [fast-zip.core                 :as zip]
     [quantum.core.data.map         :as map
       :refer        [map-entry]]
+    [quantum.core.data.vector      :as vec
+      :refer        [vec+]]
     [quantum.core.collections.base :as base]
     [quantum.core.collections.core :as coll
       :refer        [key val
@@ -86,8 +88,11 @@
        (meta coll)))
   ; generic sequence fallback
   ; TODO add any seq in general
+
   ([#{cons? lseq? misc-seq? queue?} coll f        ] (map f coll))
-  ([#{cons? lseq? misc-seq? queue?} _    _ to-join] (seq to-join))
+  ([#{cons? lseq? misc-seq? queue?} coll _ to-join] (seq to-join))
+  ([^vec+? coll f        ] (vec+ (mapv f coll)))
+  ([^vec+? coll _ to-join] (vec+ to-join))
   ; Persistent collections that don't support transients
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
@@ -98,7 +103,7 @@
                clojure.lang.PersistentTreeSet} coll _ to-join]
              (core/reduce conj (empty coll) to-join)))
   #?(:clj  ([^map-entry? coll f        ] (map-entry (f (key coll)) (f (val coll)))))
-  #?(:clj  ([^map-entry? _    _ to-join] (map-entry (first to-join) (second to-join))))
+  #?(:clj  ([^map-entry? coll _ to-join] (map-entry (first to-join) (second to-join))))
   #?(:clj  ([^record?    coll f]
              (core/reduce (fn [r x] (conj r (f x))) coll coll)))
   #?(:clj  ([^record?    coll _ to-join]
@@ -170,12 +175,12 @@
   (loop [z' z]
     (when z'
       (if (pred (node z'))
-          (node z')
+          z'
           (recur (right z'))))))
 
 (defn left-until [pred z]
   (loop [z' z]
     (when z'
       (if (pred (node z'))
-          (node z')
+          z'
           (recur (left z'))))))

@@ -302,7 +302,7 @@
 (defn ->multi-array
   "Creates an n-dimensional array.
    The outermost dims go first (e.g. height then width)."
-  {:performance "(->multi-array 30 [3000 3000])
+  {:performance "(->multi-array 1 [3000 3000])
                  is 24 times faster than:
                  (to-array-2d (repeat 3000 (repeat 3000 0)))"}
   ([base-type dims]

@@ -100,8 +100,9 @@
 ; TODO use quantum str package
 (def return-statement?      (form-and-begins-with? 'return))
 (def defn-statement?        (form-and-begins-with? 'defn  ))
+(def defnt-statement?       (form-and-begins-with? 'defnt ))
 (def fn-statement?          (form-and-begins-with? 'fn  ))
-(def function-statement?    (fn-or defn-statement? fn-statement?))
+(def function-statement?    (fn-or defn-statement? fn-statement? defnt-statement?))
 (def scope?                 (form-and-begins-with-any? '#{defn fn while when doseq for do}))
 (def let-statement?         (form-and-begins-with? 'let   ))
 (def do-statement?          (form-and-begins-with? 'do    ))
@@ -109,6 +110,7 @@
 (def cond-statement?        (form-and-begins-with? 'cond  ))
 (def when-statement?        (form-and-begins-with? 'when  ))
 (def throw-statement?       (form-and-begins-with? 'throw ))
+(def quote-statement?       (form-and-begins-with? 'quote ))
 ; ; CONDITIONAL (AND TRY) BRANCHES
 (def branching-syms #{'when 'if 'cond 'case 'try})
 ; ; TODO Is |try| really considered branching?

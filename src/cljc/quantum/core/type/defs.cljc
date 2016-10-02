@@ -234,6 +234,9 @@
               :cljs #{cljs.core/PersistentVector
                       cljs.core/TransientVector
                       clojure.core.rrb_vector.rrbt.Vector}})
+        vec+-types
+          '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
+            :cljs #{clojure.core.rrb_vector.rrbt.Vector}}
         list-types
          '{:clj  #{;java.util.List ; Because otherwise vectors get handled that same way
                    clojure.lang.PersistentList
@@ -351,6 +354,8 @@
            'sorted-set?      tree-set-types
            'vec?             vec-types
            'vector?          vec-types
+           'vec+?            vec+-types
+           'vector+?         vec+-types
            'list?            list-types
            'dlist?           dlist-types
            'cdlist?          cdlist-types
