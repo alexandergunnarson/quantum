@@ -115,20 +115,20 @@
     "Creates a long array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
     (^longs [] (core/long-array 0))
-    (^longs [a] 
+    (^longs [a]
       (let [arr (core/long-array 1)]
         (aset! arr 0 (long a))
         arr))
-    ([a b] 
+    ([a b]
       (let [arr (core/long-array 2)]
         (aset! arr 0 (long a))
         (aset! arr 1 (long b))
         arr))
-    ; ([a b & more] 
+    ; ([a b & more]
     ;   (let [arr (long-array (+ 2 (count more)))]
     ;     (aset! arr 0 (long a))
     ;     (aset! arr 1 (long b))
-    ;     (doseqi [x more i] (aset! arr (+ 2 i) (long x))) 
+    ;     (doseqi [x more i] (aset! arr (+ 2 i) (long x)))
     ;     arr))
     ))
 
@@ -136,37 +136,37 @@
 
 ; TODO: Use a macro for this
 #?(:clj
-  (defn object-array-of 
+  (defn object-array-of
     "Creates an object array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
     ([] (core/object-array 0))
-    ([a] 
+    ([a]
       (let [arr (core/object-array 1)]
         (aset! arr 0 a)
         arr))
-    ([a b] 
+    ([a b]
       (let [arr (core/object-array 2)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         arr))
-    ([a b c] 
+    ([a b c]
       (let [arr (core/object-array 3)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
         arr))
-    ([a b c d] 
+    ([a b c d]
       (let [arr (core/object-array 4)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
         (aset! arr 3 d)
         arr))
-    ; ([a b & more] 
+    ; ([a b & more]
     ;   (let [arr (object-array (+ 2 (count more)))]
     ;     (aset! arr 0 a)
     ;     (aset! arr 1 b)
-    ;     (doseqi [x more i] (aset! arr (+ 2 i) x)) 
+    ;     (doseqi [x more i] (aset! arr (+ 2 i) x))
     ;     arr))
     ))
 
@@ -234,7 +234,7 @@
           (when-not (neg? len)
             (.write out buf 0 len)
             (recur))))
-      (.toByteArray out))) 
+      (.toByteArray out)))
   #_(^{:cost 2} [#'proto/ByteSource src options]
     (let [os (ByteArrayOutputStream.)]
       (transfer src os)
@@ -248,7 +248,7 @@
           ; Empty bytes are put at end
           buffer   (doto (ByteBuffer/allocate (* 8 longs-ct))
                          (.put b))]
-      (doseq [i (range (count longs-f))] 
+      (doseq [i (range (count longs-f))]
         (aset longs-f i (.getLong buffer (* i 8))))
       longs-f))))
 
@@ -278,7 +278,7 @@
           (ArrayList.) args)))
 
 #?(:clj
-(defn reverse 
+(defn reverse
   {:attribution "mikera.cljutils.bytes"}
   (^"[B" [^"[B" bs]
     (let [n (alength bs)
@@ -299,18 +299,6 @@
       (System/arraycopy a (int 0) res (int 0) al)
       (System/arraycopy b (int 0) res (int al) bl)
       res))))
-
-; CANDIDATE 1
-#_(:clj
-(defn- aconcat
-  "Concatenates arrays of given type."
-  [type & xs]
-  (let [target (make-array type (apply + (map count xs)))]
-    (loop [i 0 idx 0]
-      (when-let [a (nth xs i nil)]
-        (System/arraycopy a 0 target idx (count a))
-        (recur (inc i) (+ idx (count a)))))
-    target)))
 
 #?(:clj
 (defn slice

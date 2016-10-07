@@ -84,7 +84,8 @@
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
              [quantum.core.type                       :as type
-               :refer        [#?@(:clj [lseq? transient? editable?
+               :refer        [transient!* persistent!*
+                              #?@(:clj [lseq? transient? editable?
                                         boolean? should-transientize?])
                               class]
                :refer-macros [lseq? transient? editable? boolean?
@@ -106,7 +107,7 @@
                        contains? containsk? containsv?
                        index-of last-index-of
                        first second rest last butlast get aget pop peek nth
-                       conjl conj! assoc! dissoc! disj! aset!
+                       conjl conj! assoc! assoc!* dissoc! disj! aset!
                        map-entry join empty? update! empty? ->array]]))
   #?(:cljs (:import goog.string.StringBuffer)))
 
@@ -154,6 +155,7 @@
 #?(:clj (defalias aset!         coll/aset!        ))
 #?(:clj (defalias aget          coll/aget         ))
 #?(:clj (defalias assoc!        coll/assoc!       ))
+#?(:clj (defalias assoc!*       coll/assoc!*      ))
 #?(:clj (defalias dissoc!       coll/dissoc!      ))
         (defalias conj          coll/conj         )
 #?(:clj (defalias conj!         coll/conj!        ))
@@ -1024,16 +1026,13 @@
 (defn red-frequencies
   "Like `frequencies`, but uses reducers `reduce` and can choose
    what to reduce into."
-  ([coll] (red-frequencies {} coll))
-  ([to coll]
-  ; TODO ensure coll is map
-  (let [[postf assocf] (if (should-transientize? to)
-                           [persistent! #(assoc! %1 %2 %3)]
-                           [identity    #(assoc  %1 %2 %3)])]
-    (postf
-      (reduce (fn [counts x]
-                (assocf counts x (inc (or (get counts x) 0))))
-        to coll)))))
+  ([x] (red-frequencies {} x))
+  ([to x]
+  ; TODO ensure `to` is map
+  (persistent!*
+    (reduce (fn [counts x]
+              (assoc!* counts x (inc (or (get counts x) 0))))
+      (transient!* to) x))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================

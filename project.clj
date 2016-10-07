@@ -314,7 +314,7 @@
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     [lein-ancient                      "0.6.10"
                       :exclusions [com.amazonaws/aws-java-sdk-s3]]
-                    ]
+                    [lein-nodisassemble "0.1.3"]]
     :fibers
        {:java-agents [[co.paralleluniverse/quasar-core "0.7.6"]]}
     :auto-instrument

@@ -376,7 +376,7 @@
    :out   '([0 \f] [1 \o] [2 \o] [3 \b] [4 \a] [5 \r])}
   [f coll]
   (map-state
-    (fn [n x] [(inc n) (f n x)]) ; juxt?
+    (fn [i x] [(inc i) (f i x)]) ; juxt?
     0 coll))
 
 (defn indexed+
@@ -662,7 +662,7 @@
   "Partition `coll` with `keyfn` as per /partition-by/, then reduce
   each partition with `f` and optional initial value `init` as per
   /reduce/."
-  ^{:attribution "parkour.reducers"}
+  {:attribution "parkour.reducers"}
   ([keyfn f coll]
      (let #?(:clj  [sentinel (Object.)] ; instead of nil, because it's unique
              :cljs [sentinel (array  )])
@@ -854,7 +854,7 @@
   "Reducer comprehension, behaves like \"for\" but yields a reducible/foldable collection.
    Leverages kv-reduce when destructuring and iterating over a map."
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"
-   :performance "51.454164 ms vs. 72.568330 ms for |doall| with normal |for|"}
+   :performance "51.454164 ms vs. 72.568330 ms for |doall| with normal (lazy) |for|"}
   [seq-exprs body-expr]
   (letfn [(emit-fn [form]
           (fn [sub-expr [bind expr & mod-pairs]]
