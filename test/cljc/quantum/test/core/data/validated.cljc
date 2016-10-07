@@ -3,6 +3,8 @@
     [quantum.core.data.validated :as ns]
     [quantum.core.print          :as pr
       :refer        [!]]
+    [quantum.core.log            :as log
+      :include-macros true]
     [quantum.core.logic
       :refer        [#?@(:clj [eq?])]
       :refer-macros [          eq?]]
@@ -11,7 +13,10 @@
       :refer-macros [          catch-all]]
     [quantum.core.validate       :as v
       :refer        [#?@(:clj [validate defspec])]
-      :refer-macros [          validate defspec]]))
+      :refer-macros [          validate defspec]]
+    [quantum.core.macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]))
 
 ; s/cat conforms to a map
 
@@ -44,31 +49,37 @@
      (assert (= (.getMessage e#) ~msg) {:e e#}))))
 
 #?(:clj
-(try
-  (eval
-    `(do ; DEFINITION ;
-         #_(pr/pprint-hints (macroexpand-1 `(ns/def-validated-map ~'MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])))
-         (ns/def-validated-map ~'MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
-         (def ~'abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3}))
-         (! abc)
-         ; ASSOC ;
-         ; reassoc required
-         (! (assoc abc ::a 5))
-         ; assoc optional
-         (! (assoc abc ::e 20))
-         (assert-message
-           v/spec-assertion-failed
-           (! (assoc abc ::a "A")))
-         ; DISSOC ;
-         ; Dissoc required key
-         (assert-message
-           "Key is in ValidatedMap's required keys and cannot be dissoced"
-           (! (dissoc abc ::a)))
-         ; Dissoc optional key
-         (! (-> abc (assoc ::e 20) (dissoc ::e)))
-         ; Permissive about dissocing keys not in spec
-         (dissoc abc ::f)
-         ; CONJ ;
-         (! (conj abc [::c "7"]))
-         ))
-  (catch Throwable e (! (or (.getCause e) e)))))
+ (do ; DEFINITION ;
+  #_(pr/pprint-hints (macroexpand-1 `(ns/def-validated-map ~'MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])))
+  (ns/def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
+  (def ^MyTypeOfValidatedMap abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3}))
+  (! abc)
+  ; ASSOC ;
+  ; reassoc required
+  (! (assoc abc ::a 5))
+  ; assoc optional
+  (! (assoc abc ::e 20))
+  (assert-message
+    v/spec-assertion-failed
+    (! (assoc abc ::a "A")))
+  ; DISSOC ;
+  ; Dissoc required key
+  (assert-message
+    "Key is in ValidatedMap's required keys and cannot be dissoced"
+    (! (dissoc abc ::a)))
+  ; Dissoc optional key
+  (! (-> abc (assoc ::e 20) (dissoc ::e)))
+  ; Permissive about dissocing keys not in spec
+  (dissoc abc ::f)
+  ; CONJ ;
+  (! (conj abc [::c "7"]))
+  ; DEFNT ;
+  (defnt trythis
+    ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
+    ([^java.util.Map x] (assoc x ::e 41)))
+  ; Invalid state is possible when not validated
+  (! (trythis ^java.util.Map (.-v abc)))
+  ; But invalid state is impossible when validated
+  (assert-message
+    v/spec-assertion-failed
+    (! (trythis abc)))))

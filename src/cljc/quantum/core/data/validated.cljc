@@ -82,30 +82,30 @@
                                      (zipmap ~opt-ks (repeat nil))))
         (def ~keyspec-sym ~keyspec)
         (deftype-compatible ~sym
-          [~(with-meta 'm {:tag record-sym})]
+          [~(with-meta 'v {:tag record-sym})]
           {~'?Seqable
-            {~'seq          ([_#] (seq ~'m))}
+            {~'seq          ([_#] (seq ~'v))}
            ~'?Record        true
            ~'?Sequential    true
            ; ?Cloneable     ([_] (#?(:clj .clone :cljs .-clone) m))
            ~'?Counted
-             {~'count       ([_#] (~(if-cljs &env '.-count '.count) ~'m))}
+             {~'count       ([_#] (~(if-cljs &env '.-count '.count) ~'v))}
            ~'?Collection
-             {~'empty       ([_#] (~(if-cljs &env '.-empty '.empty) ~'m))
+             {~'empty       ([_#] (~(if-cljs &env '.-empty '.empty) ~'v))
               ~'empty!      ([_#] (throw (UnsupportedOperationException.)))
-              ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'m))
-              ~'equals      ([_# other#] (~(if-cljs &env '.-equiv '.equiv) ~'m other#))
+              ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'v))
+              ~'equals      ([_# other#] (~(if-cljs &env '.-equiv '.equiv) ~'v other#))
               ~'conj        ([_# [k0# v0#]]
                               (let [k# k0#
                                     v# (validate k# v0#)]
                                 (new ~sym
-                                  (~(if-cljs &env '.-assoc '.assoc) ~'m k# v#))))}
+                                  (~(if-cljs &env '.-assoc '.assoc) ~'v k# v#))))}
            ~'?Associative
              {~'assoc       ([_# k0# v0#]
                               (let [k# k0#
                                     v# (validate k# v0#)]
                                 (new ~sym
-                                  (~(if-cljs &env '.-assoc '.assoc) ~'m k# v#))))
+                                  (~(if-cljs &env '.-assoc '.assoc) ~'v k# v#))))
               ~'assoc!      ([_# _# _#] (throw (UnsupportedOperationException.)))
               ~'merge!      ([_# _#] (throw (UnsupportedOperationException.)))
               ~'dissoc      ([_# k0#]
@@ -115,43 +115,43 @@
                                   (throw (->ex nil "Key is in ValidatedMap's required keys and cannot be dissoced"
                                                    {:class ~sym :k k# :keyspec ~keyspec-sym})))
                                 (new ~sym
-                                  (~(if-cljs &env '.-dissoc '.without) ~'m k#))))
+                                  (~(if-cljs &env '.-dissoc '.without) ~'v k#))))
               ; `dissoc` is currently not possible, just as adding extra keys isn't
               ~'dissoc!     ([_# _#] (throw (UnsupportedOperationException.)))
-              ~'keys        ([_#] (.keySet   ~'m))
-              ~'vals        ([_#] (.values   ~'m))
-              ~'entries     ([_#] (.entrySet ~'m))}
+              ~'keys        ([_#] (.keySet   ~'v))
+              ~'vals        ([_#] (.values   ~'v))
+              ~'entries     ([_#] (.entrySet ~'v))}
            ~'?Lookup
-             {~'contains?   ([_# k#]   (~(if-cljs &env nil '.containsKey) ~'m k#))
-              ~'containsv?  ([_# v#]   (~(if-cljs &env nil '.containsValue) ~'m v#))
+             {~'contains?   ([_# k#]   (~(if-cljs &env nil '.containsKey) ~'v k#))
+              ~'containsv?  ([_# v#]   (~(if-cljs &env nil '.containsValue) ~'v v#))
               ; Currently fully unrestricted `get`s: all "fields"/key-value pairs are public.
               ~'get        [([_# k#]
                               #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
-                              (~(if-cljs &env '.-lookup '.valAt) ~'m k#))
-                            #_([_# k# else#] (~(if-cljs &env '.-lookup '.valAt) ~'m k# else#))]
+                              (~(if-cljs &env '.-lookup '.valAt) ~'v k#))
+                            #_([_# k# else#] (~(if-cljs &env '.-lookup '.valAt) ~'v k# else#))]
               ~'kw-get      ([_# k#]
                               #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
-                              (.getLookupThunk ~'m k#))
+                              (.getLookupThunk ~'v k#))
               ~'get-entry   ([_# k#]
                               #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
-                              (~(if-cljs &env nil '.entryAt) ~'m k#))}
+                              (~(if-cljs &env nil '.entryAt) ~'v k#))}
            ~'?Object
-             {~'hash        ([_#] (.hashCode ~'m))
+             {~'hash        ([_#] (.hashCode ~'v))
               ~'equals      ([this# ~other]
                               (and (not (nil? ~other))
                                    (or (identical? this# ~other)
                                        (and (instance? ~sym ~other)
                                             (~(if-cljs &env '.equiv '.equals)
-                                             ~'m (.-m ~(with-meta other {:tag sym})))))))}
+                                             ~'v (.-m ~(with-meta other {:tag sym})))))))}
            ~'?Iterable
-             {~'iterator    ([_#] (~(if-cljs &env '.-iterator '.iterator) ~'m))}
+             {~'iterator    ([_#] (~(if-cljs &env '.-iterator '.iterator) ~'v))}
            ~'?Meta
-             {~'meta        ([_#] (meta ~'m))
-              ~'with-meta   ([_# new-meta#] (new ~sym (with-meta ~'m new-meta#)))}
+             {~'meta        ([_#] (meta ~'v))
+              ~'with-meta   ([_# new-meta#] (new ~sym (with-meta ~'v new-meta#)))}
            ~'?Print
-             {~'pr          ([_# w# opts#] (.-pr-writer ~'m w# opts#))}
+             {~'pr          ([_# w# opts#] (.-pr-writer ~'v w# opts#))}
            ~'?HashEq
-             {~'hash-eq     ([_#] (~(if-cljs &env '.-hash '.hashEq) ~'m))}})
+             {~'hash-eq     ([_#] (~(if-cljs &env '.-hash '.hashEq) ~'v))}})
         (defn ~(symbol (str "->" sym)) [m#]
           (let [m-f# (if (instance? ~record-sym m#)
                          (v/validate ~keyspec-name m#) ; TODO conformer?
