@@ -32,31 +32,45 @@
                  :cljs [contains? base-record]) k)
     (throw (->ex nil "Key is not present in ValidatedMap's spec" {:class c :k k :keyspec ks}))))
 
+#?(:clj
+(defn hash-classname [cname]
+  (hash (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname)))))
 
-(defprotocol IValidatedKV
-  (get- [this])
-  (set- [this newv]))
+(defn std-equals [this-class other equals-fn]
+  `([this# ~other] ; TODO currently equals requires they be an instance of this class
+     (and (not (nil? ~other))
+          (or (identical? this# ~other)
+              (and (instance? ~this-class ~other)
+                   (~equals-fn ~'v (.-v ~(with-meta other {:tag this-class}))))))))
 
-; (defmacro defvalidated-kv
-;   [name- spec]
-;   `(deftype-compatible ~name- ~'[v]
-;      {IValidatedKV
-;        {~'get ([_#] ~'v)
-;         ~'set ([_# newv#]
-;               (let [conformed# (s/conform spec)]
-;                 (new ~name- conformed)))}}))
-
-; (defmacro defvalidated
-;   [name- spec]
-;   (cond (keyword? name-)
-;         (do (s/def name- ~spec)
-;             (defvalidated-kv name- spec)))
-
-;   )
+#?(:clj
+(defmacro def-validated
+  "Defines a validated value."
+  [sym spec]
+  (v/validate symbol? sym)
+  (let [other     (gensym "other")
+        spec-name (keyword (str (ns-name *ns*)) (name sym))
+        type-hash (hash-classname sym)]
+    `(do (defspec ~spec-name ~spec)
+         (deftype-compatible ~sym ~'[v]
+           {~'?Object
+             {~'hash     ([_#] (.hashCode ~'v))
+              ~'equals   ~(std-equals sym other '=)}
+            ~'?HashEq
+              {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '.-hash '.hashEq) ~'v))))}
+            ~'?Deref
+              {~'deref   ([_#] ~'v)}
+            quantum.core.core/IValue
+              {get       ([_#] ~'v)
+               set       ([_# v#] (new ~sym (v/validate ~spec-name v#)))}})
+         (defn ~(symbol (str "->" sym)) [v#]
+           (new ~sym (v/validate ~spec-name v#))))))) ; TODO conformer?
 
 #?(:clj
 (defmacro def-validated-map
-  "Same semantics of `clojure.spec/keys`"
+  "Defines a validated map.
+   Same semantics of `clojure.spec/keys`.
+   Basically a validator on a record."
   {:usage `(def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])}
   [sym req req-ks & [opt opt-ks]]
   (v/validate-all
@@ -73,14 +87,15 @@
         ;all-ks      (into req-ks opt-ks)
         req-ks-syms (mapv #(symbol (namespace %) (name %)) req-ks)
         keyspec     (vec (remove nil? [req req-ks opt opt-ks]))
-        keyspec-name (keyword (str (ns-name *ns*)) (name sym))
-        keyspec-sym  (gensym "keyspec")]
-   `(do (defspec  ~keyspec-name (v/keys ~@keyspec))
+        spec-name (keyword (str (ns-name *ns*)) (name sym))
+        spec-sym  (gensym "keyspec")
+        type-hash (hash-classname sym)]
+   `(do (defspec  ~spec-name (v/keys ~@keyspec))
         (defrecord+ ~record-sym ~req-ks-syms)
         (def ~required-keys-record (~(symbol (str "map->" record-sym)) nil))
         (def ~all-keys-record      (merge (~(symbol (str "map->" record-sym)) nil)
                                      (zipmap ~opt-ks (repeat nil))))
-        (def ~keyspec-sym ~keyspec)
+        (def ~spec-sym ~keyspec)
         (deftype-compatible ~sym
           [~(with-meta 'v {:tag record-sym})]
           {~'?Seqable
@@ -94,7 +109,7 @@
              {~'empty       ([_#] (~(if-cljs &env '.-empty '.empty) ~'v))
               ~'empty!      ([_#] (throw (UnsupportedOperationException.)))
               ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'v))
-              ~'equals      ([_# other#] (~(if-cljs &env '.-equiv '.equiv) ~'v other#))
+              ~'equals      ~(std-equals sym other (if-cljs &env '.-equiv '.equiv))
               ~'conj        ([_# [k0# v0#]]
                               (let [k# k0#
                                     v# (validate k# v0#)]
@@ -113,7 +128,7 @@
                                 (when (#?@(:clj  [.containsKey ~required-keys-record]
                                            :cljs [contains? ~required-keys-record]) k#)
                                   (throw (->ex nil "Key is in ValidatedMap's required keys and cannot be dissoced"
-                                                   {:class ~sym :k k# :keyspec ~keyspec-sym})))
+                                                   {:class ~sym :k k# :keyspec ~spec-sym})))
                                 (new ~sym
                                   (~(if-cljs &env '.-dissoc '.without) ~'v k#))))
               ; `dissoc` is currently not possible, just as adding extra keys isn't
@@ -126,23 +141,18 @@
               ~'containsv?  ([_# v#]   (~(if-cljs &env nil '.containsValue) ~'v v#))
               ; Currently fully unrestricted `get`s: all "fields"/key-value pairs are public.
               ~'get        [([_# k#]
-                              #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
+                              #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                               (~(if-cljs &env '.-lookup '.valAt) ~'v k#))
                             #_([_# k# else#] (~(if-cljs &env '.-lookup '.valAt) ~'v k# else#))]
               ~'kw-get      ([_# k#]
-                              #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
+                              #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                               (.getLookupThunk ~'v k#))
               ~'get-entry   ([_# k#]
-                              #_(enforce-get ~empty-record ~sym ~keyspec-sym k#)
+                              #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                               (~(if-cljs &env nil '.entryAt) ~'v k#))}
            ~'?Object
              {~'hash        ([_#] (.hashCode ~'v))
-              ~'equals      ([this# ~other]
-                              (and (not (nil? ~other))
-                                   (or (identical? this# ~other)
-                                       (and (instance? ~sym ~other)
-                                            (~(if-cljs &env '.equiv '.equals)
-                                             ~'v (.-m ~(with-meta other {:tag sym})))))))}
+              ~'equals      ~(std-equals sym other (if-cljs &env '.equiv '.equiv))}
            ~'?Iterable
              {~'iterator    ([_#] (~(if-cljs &env '.-iterator '.iterator) ~'v))}
            ~'?Meta
@@ -151,10 +161,13 @@
            ~'?Print
              {~'pr          ([_# w# opts#] (.-pr-writer ~'v w# opts#))}
            ~'?HashEq
-             {~'hash-eq     ([_#] (~(if-cljs &env '.-hash '.hashEq) ~'v))}})
+             {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '.-hash '.hashEq) ~'v))))}
+             quantum.core.core/IValue
+             {get           ([_#] ~'v)
+              set           ([_# v#] (new ~sym (v/validate ~spec-name v#)))}})
         (defn ~(symbol (str "->" sym)) [m#]
           (let [m-f# (if (instance? ~record-sym m#)
-                         (v/validate ~keyspec-name m#) ; TODO conformer?
+                         (v/validate ~spec-name m#) ; TODO conformer?
                          (~(symbol (str "map->" record-sym))
-                          (v/validate ~keyspec-name m#)))] ; TODO conformer?
+                          (v/validate ~spec-name m#)))] ; TODO conformer?
             (new ~sym m-f#)))))))

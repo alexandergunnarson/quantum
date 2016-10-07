@@ -1,5 +1,5 @@
 (ns quantum.core.core
-  (:refer-clojure :exclude [seqable? boolean?])
+  (:refer-clojure :exclude [seqable? boolean? get set])
   (:require #?(:clj  [clojure.core  :as core ]
                :cljs [cljs.core     :as core
                        :refer [IDeref IAtom]])
@@ -135,6 +135,10 @@
 (def unchecked-inc-long
   #?(:clj  (fn [^long x] (unchecked-inc x))
      :cljs inc))
+
+(defprotocol IValue
+  (get [this])
+  (set [this newv]))
 
 #?(:clj
 (defmacro with

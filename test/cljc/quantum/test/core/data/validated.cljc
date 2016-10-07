@@ -1,5 +1,9 @@
 (ns quantum.test.core.data.validated
   (:require
+    [#?(:clj clojure.test
+        :cljs cljs.test)
+      :refer        [#?@(:clj [deftest is testing])]
+      :refer-macros [deftest is testing]]
     [quantum.core.data.validated :as ns]
     [quantum.core.print          :as pr
       :refer        [!]]
@@ -8,6 +12,9 @@
     [quantum.core.logic
       :refer        [#?@(:clj [eq?])]
       :refer-macros [          eq?]]
+    [quantum.core.fn
+      :refer        [#?@(:clj [fn->])]
+      :refer-macros [          fn->]]
     [quantum.core.error
       :refer        [#?@(:clj [catch-all])]
       :refer-macros [          catch-all]]
@@ -27,6 +34,7 @@
 (defspec ::c string?)
 (defspec ::d (v/and integer? odd?))
 (defspec ::e (v/and integer? even?))
+(defspec ::f (v/and string? (fn-> count (= 5))))
 #_(def shape1 (v/cat :forty-two #{42}
               :odds (v/+ ::odd?)
               :m (v/keys :req #_:req-un [::a ::b ::c])
@@ -73,13 +81,35 @@
   (dissoc abc ::f)
   ; CONJ ;
   (! (conj abc [::c "7"]))
+
   ; DEFNT ;
   (defnt trythis
     ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
-    ([^java.util.Map x] (assoc x ::e 41)))
+    ([^java.util.Map        x] (assoc x ::e 41)))
   ; Invalid state is possible when not validated
   (! (trythis ^java.util.Map (.-v abc)))
   ; But invalid state is impossible when validated
+
   (assert-message
     v/spec-assertion-failed
-    (! (trythis abc)))))
+    (! (trythis abc)))
+
+  ; EQUALITY ;
+  (is (= abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})))
+  (is (not= abc {::a 1 ::b 1 ::c "2" ::d 3}))
+
+  ;; VALIDATED VALUE ;;
+  ; DEFINITION ;
+  (ns/def-validated MyTypeOfValidatedValue ::f)
+  (def abcde (->MyTypeOfValidatedValue "abcde"))
+  (! abcde)
+  ; EQUALITY ;
+  (is (= abcde (->MyTypeOfValidatedValue "abcde")))
+  (is (not= abcde "abcde"))
+
+  ; DEFNT ;
+  (defnt trythis2
+    ([^MyTypeOfValidatedValue x] (quantum.core.core/set x "abcdf"))
+    ([^string?                x] nil))
+  (is (= @(trythis2 abcde) "abcdf"))
+  ))

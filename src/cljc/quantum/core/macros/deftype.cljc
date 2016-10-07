@@ -23,6 +23,7 @@
 (defn ?HashEq        [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
 (defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
 (defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
+(defn ?Deref         [lang] (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
 
 (defn pfn
   "Protocol fn"
@@ -174,8 +175,14 @@
           :clj  nil
           :cljs `[cljs.core/IPrintWithWriter
                   ~@(p-arity (pfn 'pr-writer lang) (get impls 'pr))])
+      ?Deref
+        `[~(?Deref lang)
+          ~@(p-arity (pfn 'deref lang) (get impls 'deref))]
       ?HashEq
-        nil)))
+        nil
+      `[~iname
+        ~@(apply concat
+           (for [[name- arities] impls] (p-arity name- arities)))])))
 
 #?(:clj
 (defmacro deftype-compatible
