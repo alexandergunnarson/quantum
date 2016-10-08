@@ -3,7 +3,8 @@
     [quantum.core.collections.base
       :refer [update-first update-val ensure-set]]
     [quantum.core.macros.core
-      :refer [#?@(:clj [if-cljs])]]))
+      :refer [#?@(:clj [if-cljs])]]
+    [quantum.core.vars :as var]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
 
@@ -186,12 +187,25 @@
 
 #?(:clj
 (defmacro deftype-compatible
+  "Creates a `deftype` which is cross-platform in its usage of core
+   protocols. Also catches and logs duplicate class definition errors."
   {:usage '(deftype-compatible
              EmptyTree
              [meter-obj]
              {?Seqable
                {first ([a] (+ a 1))}})}
   [sym arglist skel]
-  (let [lang (if-cljs &env :cljs :clj)]
-   `(deftype ~sym ~arglist
-      ~@(apply concat (deftype-compatible-helper skel lang))))))
+  (let [lang (if-cljs &env :cljs :clj)
+        qualified-sym (var/qualify-class sym)
+        code `(do (deftype ~sym ~arglist
+                    ~@(apply concat (deftype-compatible-helper skel lang)))
+                  ~(when (= lang :clj) `(import (quote ~qualified-sym))))]
+    (if-cljs &env
+      code
+      ; To avoid duplicate class errors
+      (try (eval code)
+        (catch Throwable t
+          (if (and (string? (.getMessage t))
+                   (-> t .getMessage (.contains "duplicate class definition")))
+              (println "WARNING: duplicate class definition for class" sym)
+              (throw t))))))))

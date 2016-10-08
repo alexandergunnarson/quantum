@@ -56,60 +56,65 @@
      e#
      (assert (= (.getMessage e#) ~msg) {:e e#}))))
 
+; TODO Now what about unions, differences, etc? Do we just do new defrecords for each?
+(ns/def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
+
+(defnt trythis
+  ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
+  ([^java.util.Map        x] (assoc x ::e 41)))
+
 #?(:clj
- (do ; DEFINITION ;
-  #_(pr/pprint-hints (macroexpand-1 `(ns/def-validated-map ~'MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])))
-  (ns/def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
-  (def ^MyTypeOfValidatedMap abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3}))
-  (! abc)
-  ; ASSOC ;
-  ; reassoc required
-  (! (assoc abc ::a 5))
-  ; assoc optional
-  (! (assoc abc ::e 20))
-  (assert-message
-    v/spec-assertion-failed
-    (! (assoc abc ::a "A")))
-  ; DISSOC ;
-  ; Dissoc required key
-  (assert-message
-    "Key is in ValidatedMap's required keys and cannot be dissoced"
-    (! (dissoc abc ::a)))
-  ; Dissoc optional key
-  (! (-> abc (assoc ::e 20) (dissoc ::e)))
-  ; Permissive about dissocing keys not in spec
-  (dissoc abc ::f)
-  ; CONJ ;
-  (! (conj abc [::c "7"]))
+(deftest validated-map
+  (let [^MyTypeOfValidatedMap abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})]
+    (testing "assoc"
+      (testing "reassoc required"
+        (! (assoc abc ::a 5)))
+      (testing "optional"
+        (! (assoc abc ::e 20)))
+      (assert-message
+        v/spec-assertion-failed
+        (! (assoc abc ::a "A"))))
+    (testing "dissoc"
+      (testing "required key"
+        (assert-message
+          "Key is in ValidatedMap's required keys and cannot be dissoced"
+          (! (dissoc abc ::a))))
+      (testing "optional key"
+        (! (-> abc (assoc ::e 20) (dissoc ::e))))
+      (testing "Permissive about dissocing keys not in spec"
+        (dissoc abc ::f)))
+    (testing "conj"
+      (! (conj abc [::c "7"])))
+    (testing "defnt"
+      ; Here the schema is enforced *much* more cheaply than if the
+      ; entire thing were revalidated at every single call
+      (testing "Invalid state is possible when not validated"
+        (! (trythis ^java.util.Map (.-v abc))))
+      (testing "Invalid state is impossible when validated"
+        (assert-message
+          v/spec-assertion-failed
+          (! (trythis abc)))))
+    (testing "equality"
+      (is (= abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})))
+      (is (not= abc {::a 1 ::b 1 ::c "2" ::d 3}))))))
 
-  ; DEFNT ;
-  (defnt trythis
-    ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
-    ([^java.util.Map        x] (assoc x ::e 41)))
-  ; Invalid state is possible when not validated
-  (! (trythis ^java.util.Map (.-v abc)))
-  ; But invalid state is impossible when validated
+(ns/def-validated MyTypeOfValidatedValue ::f)
 
-  (assert-message
-    v/spec-assertion-failed
-    (! (trythis abc)))
+(defnt trythis2 [^MyTypeOfValidatedValue x]
+  (quantum.core.core/set x "abcdf"))
 
-  ; EQUALITY ;
-  (is (= abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})))
-  (is (not= abc {::a 1 ::b 1 ::c "2" ::d 3}))
-
-  ;; VALIDATED VALUE ;;
-  ; DEFINITION ;
-  (ns/def-validated MyTypeOfValidatedValue ::f)
-  (def abcde (->MyTypeOfValidatedValue "abcde"))
-  (! abcde)
-  ; EQUALITY ;
-  (is (= abcde (->MyTypeOfValidatedValue "abcde")))
-  (is (not= abcde "abcde"))
-
-  ; DEFNT ;
-  (defnt trythis2
-    ([^MyTypeOfValidatedValue x] (quantum.core.core/set x "abcdf"))
-    ([^string?                x] nil))
-  (is (= @(trythis2 abcde) "abcdf"))
-  ))
+#?(:clj
+(deftest validated-value
+  (let [abcde (->MyTypeOfValidatedValue "abcde")]
+    (! abcde)
+    (testing "equality"
+      (is (= abcde (->MyTypeOfValidatedValue "abcde")))
+      (is (not= abcde "abcde")))
+    (testing "defnt"
+      (is (= @(trythis2 abcde) "abcdf")))
+    (testing "set"
+      (assert-message
+        v/spec-assertion-failed
+        (! (quantum.core.core/set abcde "abcdef"))))
+    (testing "get"
+      (= (quantum.core.core/get abcde) "abcde")))))

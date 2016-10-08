@@ -83,6 +83,14 @@
                   (.setAccessible true))]
       (.invoke m nil (into-array Object args))))))
 
+#?(:clj
+(defn get-static
+  "Gets a static member variable"
+  ([^Class c ^String name-]
+    (let [f (doto (.getDeclaredField c name-)
+                  (.setAccessible true))]
+      (.get f c)))))
+
 ; from zcaudate/hara.reflect.types.modifiers
 
 (def flags

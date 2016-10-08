@@ -65,21 +65,21 @@
   `(do ~@(->> args (partition-all 2)
                    (map (fn [[v spec]] `(validate ~spec ~v)))))))
 
-#?(:clj (quantum.core.vars/defmalias spec clojure.spec/spec cljs.spec/spec))
+#?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
 #?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
 
-#?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def  cljs.spec/def ))
-#?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys cljs.spec/keys))
-#?(:clj (quantum.core.vars/defmalias alt     clojure.spec/alt  cljs.spec/alt ))
-#?(:clj (quantum.core.vars/defmalias cat     clojure.spec/cat  cljs.spec/cat ))
-#?(:clj (quantum.core.vars/defmalias +       clojure.spec/+    cljs.spec/+   ))
-#?(:clj (quantum.core.vars/defmalias *       clojure.spec/*    cljs.spec/*   ))
-#?(:clj (quantum.core.vars/defmalias ?       clojure.spec/?    cljs.spec/?   ))
-#?(:clj (quantum.core.vars/defmalias and     clojure.spec/and  cljs.spec/and ))
-#?(:clj (quantum.core.vars/defmalias or      clojure.spec/or   cljs.spec/or  ))
+#?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def     cljs.spec/def    ))
+#?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys    cljs.spec/keys   ))
+#?(:clj (quantum.core.vars/defmalias alt     clojure.spec/alt     cljs.spec/alt    ))
+#?(:clj (quantum.core.vars/defmalias cat     clojure.spec/cat     cljs.spec/cat    ))
+#?(:clj (quantum.core.vars/defmalias +       clojure.spec/+       cljs.spec/+      ))
+#?(:clj (quantum.core.vars/defmalias *       clojure.spec/*       cljs.spec/*      ))
+#?(:clj (quantum.core.vars/defmalias ?       clojure.spec/?       cljs.spec/?      ))
+#?(:clj (quantum.core.vars/defmalias and     clojure.spec/and     cljs.spec/and    ))
+#?(:clj (quantum.core.vars/defmalias or      clojure.spec/or      cljs.spec/or     ))
 
 #?(:clj
 (defmacro or*
-  "Like `spec/or`, except names aren't required for preds."
+  "Like `spec/or`, except labels aren't required for preds."
   [& preds]
   `(or ~@(->> preds (map #(vector (keyword (str %)) %)) (apply concat)))))

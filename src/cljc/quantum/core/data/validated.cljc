@@ -17,15 +17,8 @@
       :refer-macros [          defrecord+]]
     [quantum.core.validate         :as v
       :refer        [#?@(:clj [validate defspec])]
-      :refer-macros [          validate defspec]]))
-
-
-#_(defmacro defvalidated []
-  ())
-
-#_(defnt whatever-function
-    [^MyTypeOfValidatedMap v] ; so the schema is enforced much more cheaply
-    )
+      :refer-macros [          validate defspec]]
+    [quantum.core.vars :as var]))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
@@ -68,10 +61,11 @@
 
 #?(:clj
 (defmacro def-validated-map
-  "Defines a validated map.
+  "Defines a validated associative structure.
    Same semantics of `clojure.spec/keys`.
    Basically a validator on a record."
-  {:usage `(def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])}
+  {:usage `(def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
+   :todo  ["Break this macro up"]}
   [sym req req-ks & [opt opt-ks]]
   (v/validate-all
     sym    symbol?
@@ -79,19 +73,21 @@
     req-ks (v/coll-of keyword?)
     opt    (v/or* nil? (eq? :opt))
     opt-ks (v/coll-of keyword?))
-  (let [record-sym (symbol (str (name sym) "__"))
+  (let [qualified-sym (var/qualify-class sym)
+        record-sym (symbol (str (name sym) "__"))
+        qualified-record-sym (var/qualify-class record-sym)
         other   (gensym "other")
         required-keys-record (with-meta (gensym "required-keys-record")
-                                        {:tag record-sym})
+                                        {:tag qualified-record-sym})
         all-keys-record      (gensym "all-keys-record")
         ;all-ks      (into req-ks opt-ks)
         req-ks-syms (mapv #(symbol (namespace %) (name %)) req-ks)
         keyspec     (vec (remove nil? [req req-ks opt opt-ks]))
         spec-name (keyword (str (ns-name *ns*)) (name sym))
         spec-sym  (gensym "keyspec")
-        type-hash (hash-classname sym)]
-   `(do (defspec  ~spec-name (v/keys ~@keyspec))
-        (defrecord+ ~record-sym ~req-ks-syms)
+        type-hash (hash-classname sym)
+        code  `(do (defrecord+ ~record-sym ~req-ks-syms)
+        (defspec ~spec-name (v/keys ~@keyspec))
         (def ~required-keys-record (~(symbol (str "map->" record-sym)) nil))
         (def ~all-keys-record      (merge (~(symbol (str "map->" record-sym)) nil)
                                      (zipmap ~opt-ks (repeat nil))))
@@ -162,12 +158,19 @@
              {~'pr          ([_# w# opts#] (.-pr-writer ~'v w# opts#))}
            ~'?HashEq
              {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '.-hash '.hashEq) ~'v))))}
+             ~'?Deref
+             {~'deref       ([_#] ~'v)}
              quantum.core.core/IValue
              {get           ([_#] ~'v)
               set           ([_# v#] (new ~sym (v/validate ~spec-name v#)))}})
         (defn ~(symbol (str "->" sym)) [m#]
-          (let [m-f# (if (instance? ~record-sym m#)
+          (let [m-f# (if (instance? ~qualified-record-sym m#)
                          (v/validate ~spec-name m#) ; TODO conformer?
                          (~(symbol (str "map->" record-sym))
                           (v/validate ~spec-name m#)))] ; TODO conformer?
-            (new ~sym m-f#)))))))
+            (new ~qualified-sym m-f#)))
+        ~(if-cljs &env ~qualified-sym `(import (quote ~qualified-sym))))]
+  code)))
+
+; TODO validated vector, set, and (maybe) list
+; Not sure what else might be useful to create a validated wrapper for... I mean, queues I guess

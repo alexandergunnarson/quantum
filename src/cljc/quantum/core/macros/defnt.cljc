@@ -56,19 +56,19 @@
 (def qualified-class-name-map
   (->> tcore/primitive-types
        (repeat 2)
-       (apply zipmap)
-       atom))
+       (apply zipmap)))
 
 (defn get-qualified-class-name
   [lang ns- class-sym]
   #?(:clj  (if (= lang :clj)
                (whenf class-sym (fn-not special-defnt-keyword?)
                  (whencf$n symbol?
-                   (if-let [qualified-class-name (get @qualified-class-name-map class-sym)]
+                   (if-let [qualified-class-name (get qualified-class-name-map class-sym)]
                      qualified-class-name
-                     (let [new-qualified-class-name (symbol (.getName ^Class (ns-resolve ns- class-sym)))]
-                       (swap! qualified-class-name-map assoc class-sym new-qualified-class-name)
-                       new-qualified-class-name))))
+                     (let [class-name (or (ns-resolve ns- class-sym)
+                                          (resolve (symbol (str (ns-name ns-) "." class-sym))))
+                           _ (assert (some? class-name) {:class class-sym :ns ns- :msg "Class not found for symbol in namespace"})]
+                       (symbol (.getName ^Class class-name))))))
                class-sym)
      :cljs class-sym))
 

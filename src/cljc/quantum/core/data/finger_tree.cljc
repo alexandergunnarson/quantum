@@ -239,7 +239,7 @@
       conj   ([_ b] (deep (digit meter-obj x)
                            (EmptyTree. (finger-meter meter-obj))
                            (digit meter-obj b)))}
-   ?ConjL
+   ConjL
      {conjl  ([_ a] (deep (digit meter-obj a)
                           (EmptyTree. (finger-meter meter-obj))
                           (digit meter-obj x)))}
@@ -382,7 +382,7 @@
      ; clj entryAt
      entry-at  ([_ n] (map-entry
                          n (second (split-tree tree #(> % n)))))
-     get    [([this n notfound]
+     get    [#_([this n notfound]
                  (if (.containsKey this n)
                      (second (split-tree tree #(> % n)))
                      notfound))
@@ -416,7 +416,7 @@
                       (cond
                         (< n 0) [(empty this) notfound this]
                         (< n (count this))
-                          (let [[pre m post] (split-tree tree (> % n))]
+                          (let [[pre m post] (split-tree tree #(> % n))]
                             [(CountedDoubleList. pre mdata) m (CountedDoubleList. post mdata)])
                         :else [this notfound (empty this)]))
                     ([this n]

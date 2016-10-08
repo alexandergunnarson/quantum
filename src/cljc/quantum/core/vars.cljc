@@ -189,16 +189,9 @@
   (doseq [[sym v] vars]
     (intern *ns* (-> sym (with-meta {:private true})) v))))
 
-#?(:clj
-(defn namespace-exists?
-  {:todo ["There has to be a better way to do this"]}
-  [ns-sym]
-  (try (require ns-sym)
-       true
-    (catch java.io.FileNotFoundException e
-      false))))
-
 (defn qualify [ns-sym sym] (symbol (name ns-sym) (name sym)))
+
+#?(:clj (defn qualify-class [sym] (symbol (str (munge (ns-name *ns*)) "." sym))))
 
 (defn unqualify [sym] (-> sym name symbol))
 
