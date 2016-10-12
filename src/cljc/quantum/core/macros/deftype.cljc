@@ -187,13 +187,15 @@
 
 #?(:clj
 (defmacro deftype-compatible
-  "Creates a `deftype` which is cross-platform in its usage of core
-   protocols. Also catches and logs duplicate class definition errors."
+  "Creates a `deftype` which is cross-platform in its declaration of core
+   protocols. Also catches and logs duplicate class definition errors for
+   purposes of easier constant recompilation for e.g. tools.namespace or
+   figwheel."
   {:usage '(deftype-compatible
              EmptyTree
-             [meter-obj]
+             [field1]
              {?Seqable
-               {first ([a] (+ a 1))}})}
+               {first ([this] (+ field1 1))}})}
   [sym arglist skel]
   (let [lang (if-cljs &env :cljs :clj)
         qualified-sym (var/qualify-class sym)

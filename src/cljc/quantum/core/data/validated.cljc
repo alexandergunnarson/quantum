@@ -2,10 +2,10 @@
   (:require
     [#?(:clj  clojure.core
         :cljs cljs.core   ) :as core]
-    [quantum.core.error :as err
-      :refer [->ex TODO]]
+    [quantum.core.error     :as err
+      :refer        [->ex TODO]]
     [quantum.core.macros.core
-      :refer [#?@(:clj [if-cljs])]]
+      :refer        [#?@(:clj [if-cljs])]]
     [quantum.core.macros.deftype
       :refer        [#?@(:clj [deftype-compatible])]
       :refer-macros [          deftype-compatible]]
@@ -15,10 +15,10 @@
     [quantum.core.macros.defrecord
       :refer        [#?@(:clj [defrecord+])]
       :refer-macros [          defrecord+]]
-    [quantum.core.validate         :as v
+    [quantum.core.validate  :as v
       :refer        [#?@(:clj [validate defspec])]
       :refer-macros [          validate defspec]]
-    [quantum.core.vars :as var]))
+    [quantum.core.vars      :as var]))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]

@@ -516,23 +516,11 @@
   (compr doc->normalized+ normalized->tokenized-terms+))
 
 (defn doc->term-frequencies
+  "Lower case; preserves only letters; no hyphens or apostrophes
+   are preserved if not found in dictionary.
+   Sorts in descending frequency."
   [doc-str & [post]]
   (->> (doc->terms+ doc-str post)
        (r/remove+   empty?)
        (r/frequencies {})
        (sort-by val >))) ; TODO use sort-by+
-
-
-
-#_(defn tokenize-text+
-  "Lower case,
-   preserves only letters and numbers.
-   No hyphens or apostrophes are preserved.
-   Results in a set of words/tokens."
-  [text]
-  (->> text normalize-text+ tokenize-terms+))
-
-#_(def text->terms
-  (fn->> tokenize-text+
-         (map+ keyword)
-         (join [])))

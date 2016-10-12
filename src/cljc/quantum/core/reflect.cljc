@@ -91,6 +91,15 @@
                   (.setAccessible true))]
       (.get f c)))))
 
+#?(:clj (def class-cache (get-static clojure.lang.DynamicClassLoader "classCache")))
+
+#?(:clj (def ref-queue (get-static clojure.lang.DynamicClassLoader "rq")))
+
+#?(:clj
+(defn unload-class [name]
+  (clojure.lang.Util/clearCache ref-queue class-cache)
+  (.remove ^java.util.Map class-cache name)))
+
 ; from zcaudate/hara.reflect.types.modifiers
 
 (def flags

@@ -179,6 +179,8 @@
         (defalias indexed+      red/indexed+      )
         (defalias reductions+   red/reductions+   )
         (defalias ltake         diff/ltake        )
+        (defalias take          diff/takel        )
+        (defalias takel         diff/takel        )
         (defalias take+         diff/take+        )
         (defalias takel+        take+             )
         (defalias taker         diff/taker        )

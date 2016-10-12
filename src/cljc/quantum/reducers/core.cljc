@@ -26,7 +26,11 @@
 #?(:clj (defreducer map+      spark/map))
 #?(:clj (defreducer filter+   spark/filter))
 #?(:clj (defreducer group-by+ spark/group-by))
-#?(:clj (defreducer flatten-1+ #(spark/flat-map identity %)))
+#?(:clj
+(defn flatten-1+ [r]
+  (if (rdd? r)
+      (spark/flat-map identity r)
+      (coll/flatten-1+ r))))
 
 #?(:clj
 (defn remove+ [f x] (filter+ (fn-not f) x)))
