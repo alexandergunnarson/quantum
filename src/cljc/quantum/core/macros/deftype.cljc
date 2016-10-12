@@ -18,7 +18,7 @@
 (defn ?Collection    [lang] (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))
 (defn ?Reversible    [lang] (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
 (defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
-(defn ?MutableMap    [lang] (case lang :clj 'java.util.Map))
+(defn ?MutableMap    [lang] (case lang :clj 'java.util.Map nil))
 (defn ?Map           [lang] (case lang :clj 'clojure.lang.IPersistentMap        :cljs 'cljs.core/IMap        ))
 (defn ?Lookup        [lang] (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
 (defn ?HashEq        [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
@@ -90,7 +90,8 @@
            ~@(p-arity (pfn 'count lang) (get impls 'count))
            ~@(case lang :clj
                `[~(implement-map-or-collection skel)
-                 ~@(p-arity 'size (get impls 'count))])]
+                 ~@(p-arity 'size (get impls 'count))]
+               nil)]
       ?Object
         (case lang
           :clj
@@ -145,7 +146,7 @@
                      ~'java.util.Map
                        ~@(p-arity 'containsValue  (get impls 'containsv?))
                        ~@(p-arity 'get            (get impls 'get))]
-              :cljs nil)]
+              nil)]
       ?Associative
         `[~(?Associative   lang)
           ~@(p-arity (pfn 'assoc  lang) (get impls 'assoc    ))
@@ -170,12 +171,12 @@
         (case lang
           :clj `[~(?Iterable lang)
                  ~@(p-arity 'iterator (get impls 'iterator))]
-          :cljs nil)
+          nil)
       ?Print
         (case lang
-          :clj  nil
           :cljs `[cljs.core/IPrintWithWriter
-                  ~@(p-arity (pfn 'pr-writer lang) (get impls 'pr))])
+                  ~@(p-arity (pfn 'pr-writer lang) (get impls 'pr))]
+          nil)
       ?Deref
         `[~(?Deref lang)
           ~@(p-arity (pfn 'deref lang) (get impls 'deref))]

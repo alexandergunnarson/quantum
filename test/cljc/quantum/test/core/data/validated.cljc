@@ -60,8 +60,8 @@
 (ns/def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
 
 (defnt trythis
-  ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
-  ([^java.util.Map        x] (assoc x ::e 41)))
+          ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
+  #?(:clj ([^java.util.Map        x] (assoc x ::e 41))))
 
 #?(:clj
 (deftest validated-map
