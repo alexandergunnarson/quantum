@@ -38,12 +38,12 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer        [#?@(:clj [f$n])]
-              :refer-macros [          f$n]]
+              :refer        [#?@(:clj [fn1])]
+              :refer-macros [          fn1]]
             [quantum.core.logic             :as logic
               :refer        [some? nnil? nempty?
-                             #?@(:clj [eq? fn-eq? whenc whenf if$n])]
-              :refer-macros [          eq? fn-eq? whenc whenf if$n]]
+                             #?@(:clj [eq? fn-eq? whenc whenf ifn1])]
+              :refer-macros [          eq? fn-eq? whenc whenf ifn1]]
             [quantum.core.macros            :as macros
               :refer        [#?@(:clj [defnt])]
               :refer-macros [          defnt]]
@@ -56,9 +56,9 @@
             [quantum.core.vars              :as var
               :refer        [#?(:clj defalias)]
               :refer-macros [        defalias]])
-  #?(:clj  (:import
-             quantum.core.data.Array
-             clojure.core.async.impl.channels.ManyToManyChannel)))
+ #?(:clj (:import quantum.core.data.Array
+                  (java.util List)
+                  clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -204,6 +204,7 @@
            (^long [^ManyToManyChannel x] (count (.buf x))))
            (^long [^vector?           x] (#?(:clj .count :cljs core/count) x))
            (^long [                   x] (core/count x))
+           (^long [^qreducer?         x] (red/reduce-count x))
            ; Debatable whether this should be allowed
            (^long [:else              x] 0))
 
@@ -598,9 +599,9 @@
 (defn gets [coll indices]
   (->> indices (red/map+ #(get coll %)) (red/join [])))
 
-(def third (f$n get 2))
+(def third (fn1 get 2))
 
-(defn getf [n] (f$n get n))
+(defn getf [n] (fn1 get n))
 
 ;--------------------------------------------------{           CONJL          }-----------------------------------------------------
 ; This will take AGES to compile if you try to allow primitives
@@ -662,19 +663,25 @@
 ; 106.545886 msecs (seqspert.vector/vmap   identity v1)))
 ; 22.778568  msecs (seqspert.vector/fjvmap identity v1)
 
+(defn- handle-kv
+  [kv f]
+  (if (-> kv count (= 2))
+      (f)
+      (throw (->ex nil "`key/val` not supported on collections of count != 2"
+                   {:coll kv :ct (count kv)}))))
 
-; If the array is not sorted:
-; java.util.Arrays.asList(theArray).indexOf(o)
-; If the array is sorted, you can make use of a binary search for performance:
-; java.util.Arrays.binarySearch(theArray, o)
+(defnt key*
+  #?@(:clj  [([^map-entry? kv] (core/key kv))
+             ([^List       kv] (handle-kv kv #(first kv)))]
+      :cljs [([#{vec? array?} kv] (handle-kv kv #(first kv)))]))
 
-(defn key
-  ([kv] (if (nil? kv) nil (core/key kv)))
-  ([k v] k))
+(defnt val*
+  #?@(:clj  [([^map-entry? kv] (core/val kv))
+             ([^List       kv] (handle-kv kv #(second kv)))]
+      :cljs [([#{vec? array?} kv] (handle-kv kv #(second kv)))]))
 
-(defn val
-  ([kv] (if (nil? kv) nil (core/val kv)))
-  ([k v] v))
+(defn key ([kv] (when kv (key* kv))) ([k v] k))
+(defn val ([kv] (when kv (val* kv))) ([k v] v))
 
 ; what about arrays? some transient loop or something
-(def reverse (if$n reversible? rseq core/reverse))
+(def reverse (ifn1 reversible? rseq core/reverse))
