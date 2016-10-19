@@ -1,9 +1,10 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
-  (:refer-clojure :exclude [reduce mod])
+  (:refer-clojure :exclude [reduce mod count])
   (:require
     [quantum.core.numeric     :as num
-      :refer        [#?@(:clj [sqrt mod])]
+      :refer        [*+* *-* *** *div*
+                     #?@(:clj [sqrt mod])]
       :refer-macros [sqrt mod]]
     [quantum.core.data.binary :as bin
       :refer        [>>]]
@@ -13,8 +14,9 @@
       :refer        [#?@(:clj [fn-> <-])]
       :refer-macros [fn-> <-]]
     [quantum.core.collections :as coll
-      :refer        [map+ range+ filter+ mapcat+ #?@(:clj [reduce join])]
-      :refer-macros [reduce join]]
+      :refer        [map+ range+ filter+ mapcat+
+                     #?@(:clj [reduce join count kmap])]
+      :refer-macros [          reduce join count kmap]]
     [quantum.core.vars
       :refer        [#?(:clj defalias)]
       :refer-macros [defalias]]
@@ -58,8 +60,14 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(def sum     #(reduce + %)) ; TODO use +* and +', differentiating sum* and sum'
-(def product #(reduce * %)) ; TODO use ** and *', differentiating product* and product'
+(defn sum+count [x]
+  (reduce
+    (fn [[sum ct] e] [(*+* sum e) (inc ct)])
+    [0 0]
+    x))
+
+(def sum     #(reduce *+* %)) ; TODO use +* and +', differentiating sum* and sum'
+(def product #(reduce *** %)) ; TODO use ** and *', differentiating product* and product'
 
 (defn sigma [set- step-fn]
   (->> set- (map+ #(step-fn %)) sum))
@@ -135,9 +143,9 @@
     (when (= g 1)
       (-> x (mod b) (+ b) (mod b)))))
 
-(defn sq [x] (* x x))
+(defn sq [x] (*** x x))
 
-(defn cube [x] (* x x x))
+(defn cube [x] (*** x x x))
 
 (defn mod-pow
   "Computes the modular power: (a^b) mod n"
@@ -176,13 +184,15 @@
 
 ; ===== STATISTICAL CALCULATIONS ===== ;
 
-(defn mean [v]
-  (/ (sum v) (count v)))
+(defn mean [x]
+  (let [[sum ct] (sum+count x)]
+    (when (> ct 0)
+      (*div* sum ct))))
 
 (defn std-dev [v]
   (let [mean' (mean v)]
     (->> v
-         (map+ (fn-> (- mean') sq))
+         (map+ (fn-> (*-* mean') sq))
          sum
-         (<- (/ (count v)))
+         (<- (*div* (count v)))
          num/sqrt)))
