@@ -8,29 +8,49 @@
     [sparkling.destructuring  :as de]
     [sparkling.utils          :as u]])
     [quantum.core.logic
-      :refer        [#?@(:clj [fn-not])]
-      :refer-macros [fn-not]]
-    [quantum.core.collections :as coll])
-#?(:clj (:import (org.apache.spark.api.java JavaRDDLike))))
+      :refer        [#?@(:clj [fn-not fn-or])]
+      :refer-macros [fn-not fn-or]]
+    [quantum.core.error :as err
+      :refer [->ex TODO]]
+    [quantum.core.collections :as coll]
+    [quantum.reducers.spark   :as spark+])
+#?(:clj (:import (org.apache.spark.api.java JavaRDDLike)
+                 (org.apache.spark.sql      Dataset))))
 
-#?(:clj (defn rdd? [x] (instance? JavaRDDLike x)))
+#?(:clj (defn rdd?     [x] (instance? JavaRDDLike x)))
+#?(:clj (defn dataset? [x] (instance? Dataset     x)))
 
 #?(:clj
 (defmacro defreducer
-  [name- spark-fn]
+  [name- rdd-fn dataset-fn]
   `(defn ~name- [f# x#]
-     (if (rdd? x#)
-         (~spark-fn f# x#)
-         (~(symbol "quantum.core.collections" (name name-)) f# x#)))))
+     (cond (rdd? x#)
+           (~rdd-fn f# x#)
+           (dataset? x#)
+           (~dataset-fn f# x#)
+           :else (~(symbol "quantum.core.collections" (name name-)) f# x#)))))
 
-#?(:clj (defreducer map+      spark/map))
-#?(:clj (defreducer filter+   spark/filter))
-#?(:clj (defreducer group-by+ spark/group-by))
+#?(:clj (defreducer map+      spark/map      spark+/map     ))
+#?(:clj (defreducer filter+   spark/filter   spark+/filter  ))
+
+; TODO move
+(defn tuple->vector [kv] [(de/key kv) (coll/join [] (de/value kv))])
+
+#?(:clj
+(defn group-by+ [f r]
+  (cond (rdd? r)
+        (->> r (spark/group-by  f) (map+ tuple->vector))
+        (dataset? r)
+        (->> r (spark+/group-by f) (map+ tuple->vector))
+        :else (coll/group-by+ f r))))
+
 #?(:clj
 (defn flatten-1+ [r]
-  (if (rdd? r)
-      (spark/flat-map identity r)
-      (coll/flatten-1+ r))))
+  (cond (rdd? r)
+        (spark/flat-map identity r)
+        (dataset? r)
+        (spark+/flat-map identity r)
+        :else (coll/flatten-1+ r))))
 
 #?(:clj
 (defn remove+ [f x] (filter+ (fn-not f) x)))
@@ -40,14 +60,16 @@
 #?(:clj
 (defn join
   ([x]
-    (if (rdd? x)
-        (spark/collect x)
-        (coll/join [] x)))
+    (cond (rdd? x)
+          (spark/collect x)
+          (dataset? x)
+          (spark+/collect x)
+          :else (coll/join [] x)))
   ([base-coll pipeline]
-    (if (rdd? pipeline)
+    (if ((fn-or rdd? dataset?) pipeline)
         (.-v
           ^Reduced
-          (spark/reduce
+          ((if rdd? spark/reduce spark+/reduce)
             (fn [ret elem]
               (if (instance? Reduced ret)
                   (if (instance? Reduced elem)
@@ -58,13 +80,35 @@
                   ; Initial
                   (Reduced. (conj base-coll ret elem))))
             pipeline))
-        (coll/join base-coll pipeline)))))
+        (coll/join base-coll pipeline)))
+  ([base-coll parallel? pipeline]
+    (if ((fn-or rdd? dataset?) pipeline)
+        (join base-coll pipeline)
+        (coll/pjoin base-coll pipeline)))))
 
 #?(:clj
 (defn frequencies [to x]
   (if (rdd? x)
       (->> x
            (group-by+ identity)
-           (map+      (fn [tuple] [(de/key tuple) (count (de/value tuple))]))
+           (map+      (fn [[k v]] [k (count v)]))
            (join      to))
+      #_(dataset? x)
+      #_(->> x
+           (group-by+ identity)
+           (map+      (fn [?] ...)
+           (join to)))
       (coll/red-frequencies to x))))
+
+
+#?(:clj
+(defn sort-by+
+  ([kf x]
+    (sort-by+ kf compare x))
+  ([kf compf x]
+    (if (rdd? x)
+        (->> x
+             (spark/map-to-pair (fn [elem] (tuple (kf elem) elem)))
+             (spark/sort-by-key compf)
+             (map+              de/value))
+        (TODO)))))
