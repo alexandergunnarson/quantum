@@ -22,9 +22,9 @@
              [quantum.core.error            :as err
                :refer [->ex]]
              [quantum.core.fn               :as fn
-               :refer        [call firsta monoid aritoid
-                              #?@(:clj [fn1 fn-> fn->> compr defcurried rfn])]
-               :refer-macros [          fn1 fn-> fn->> compr defcurried rfn]]
+               :refer        [call firsta aritoid
+                              #?@(:clj [fn1 fn-> fn->> rcomp defcurried])]
+               :refer-macros [          fn1 fn-> fn->> rcomp defcurried]]
              [quantum.core.logic            :as logic
                :refer        [nnil?
                               #?@(:clj [fn-not fn-or fn-and whenf whenf1 ifn condf condf1])]
@@ -168,6 +168,21 @@
           (->FoldableZip (map #(section % new-begin new-end) colls)))))
     ICounted
     (-count [this] (apply min (map count colls)))))
+
+ #?(:clj
+(defmacro rfn
+  "Creates a reducer-safe function."
+  [arglist & body]
+  (let [sym (gensym)]
+    (case (count arglist)
+          1 `(fn ~sym (~arglist ~@body)
+                      ([k# v#] (~sym [k# v#])))
+          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
+                      (~arglist ~@body)
+                      ([ret# k# v#] (~sym ret# [k# v#])))
+          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
+                      (~arglist ~@body))
+          (throw (->ex nil "Illegal arglist count passed to rfn" (cbase/kmap arglist)))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      LAZY REDUCERS       }=====================================================
 ;=================================================={                          }=====================================================
@@ -225,36 +240,6 @@
             (reset! a nil)
             (seq coll)))))))
 ;___________________________________________________________________________________________________________________________________
-;=================================================={      FUNCTIONEERING      }=====================================================
-;=================================================={      incl. currying      }=====================================================
-(defn- reduce-impl
-  "Creates an implementation of CollReduce using the given reducer.
-  The two-argument implementation of reduce will call f1 with no args
-  to get an init value, and then forward on to your three-argument version."
-  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  [reducer-n]
-  {#?(:clj  :coll-reduce
-      :cljs :-reduce)
-    (fn ([coll f1     ] (reducer-n coll f1 (f1)))
-        ([coll f1 init] (reducer-n coll f1 init)))})
-
-(defn reduce-count
-  {:attribution "parkour.reducers"
-   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
-                 |count*| is 36.824665 ms - twice as fast!!"}
-  [coll]
-  (reduce (compr firsta inc) 0 coll))
-
-(defn fold-count
-  {:attribution "parkour.reducers"
-   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
-                 |count*| is 36.824665 ms - twice as fast!!"}
-  [coll]
-  (fold*
-    (aritoid (constantly 0) identity +)
-    (aritoid (constantly 0) identity (compr firsta inc))
-    coll))
-;___________________________________________________________________________________________________________________________________
 ;=================================================={    transduce.reducers    }=====================================================
 ;=================================================={                          }=====================================================
 (defcurried map-state
@@ -272,21 +257,33 @@
             (reset! state state')
             (f1 acc x')))))))
 
-(defcurried mapcat-state
-  "Like mapcat, but threads a state through the sequence of transformations. ; so basically like /reductions/?
-  For each x in coll, f is applied to [state x] and should return [state' xs].
-  The result is the concatenation of each returned xs."
-  {:attribution "transduce.reducers"}
-  [f init coll]
-  (reducer coll
-    (fn [f1]
-      (let [state (atom init)]
-        (fn [acc x]
-          (let [[state* xs] (f @state x)]
-            (reset! state state*)
-            (if (seq xs)
-                (reduce f1 acc xs)
-                acc)))))))
+(defn- reduce-impl
+  "Creates an implementation of CollReduce using the given reducer.
+  The two-argument implementation of reduce will call f1 with no args
+  to get an init value, and then forward on to your three-argument version."
+  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
+  [reducer-n]
+  {#?(:clj  :coll-reduce
+      :cljs :-reduce)
+    (fn ([coll f1     ] (reducer-n coll f1 (f1)))
+        ([coll f1 init] (reducer-n coll f1 init)))})
+
+(defn reduce-count
+  {:attribution "parkour.reducers"
+   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
+                 |count*| is 36.824665 ms - twice as fast!!"}
+  [coll]
+  (reduce (rcomp firsta inc) 0 coll))
+
+(defn fold-count
+  {:attribution "parkour.reducers"
+   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
+                 |count*| is 36.824665 ms - twice as fast!!"}
+  [coll]
+  (fold*
+    (aritoid (constantly 0) identity +)
+    (aritoid (constantly 0) identity (rcomp firsta inc))
+    coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
 ;=================================================={                          }=====================================================
@@ -318,27 +315,7 @@
                 (coll-fold left n combinef reducef)
                 (fjjoin rt))))))))
 
-(defn cat+
-  "A high-performance combining fn that yields the catenation of the
-  reduced values. The result is reducible, foldable, seqable and
-  counted, providing the identity collections are reducible, seqable
-  and counted. The single argument version will build a combining fn
-  with the supplied identity constructor. Tests for identity
-  with (zero? (count x)). See also foldcat."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  ([] #?(:clj  (java.util.ArrayList.)
-         :cljs (array)))
-  ([ctor]
-    (fn
-      ([] (ctor))
-      ([left right] (cat+ left right))))
-  ([left right]
-    (cond
-      (zero? (count left )) right ; count* takes longer, because /count/ for ArrayLists is O(1)
-      (zero? (count right)) left
-      :else
-      (Cat. (+ (count left) (count right)) left right))))
+(defn cat+ [f coll] (folder coll (core/cat f)))
 
 (defn append!
   ".adds x to acc and returns acc"
@@ -358,26 +335,9 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried map+
-  "Applies f to every value in the reduction of coll. Foldable."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [f coll]
-  (folder coll
-    (fn [reducer-]
-      (rfn [reducer- k]
-           ([ret k v]
-              (reducer- ret (f k v)))))))
+(defn #_defcurried map+ [f coll] (folder coll (core/map f)))
 
-(defn map-indexed+
-  "Reducers version of /map-indexed/."
-  {:attribution "parkour.reducers"
-   :usage '(map-indexed vector "foobar")
-   :out   '([0 \f] [1 \o] [2 \o] [3 \b] [4 \a] [5 \r])}
-  [f coll]
-  (map-state
-    (fn [i x] [(inc i) (f i x)]) ; juxt?
-    0 coll))
+(defn map-indexed+ [f coll] (folder coll (core/map-indexed f)))
 
 (defn indexed+
   "Returns an ordered sequence of vectors `[index item]`, where item is a
@@ -390,26 +350,11 @@
 ;=================================================={                          }=====================================================
 ; mapcat: ([:a 1] [:b 2] [:c 3]) versus mapcat+: (:a 1 :b 2 :c 3) ; hmm...
 
-(defcurried mapcat+
+(defn #_defcurried mapcat+
   "Applies f to every value in the reduction of coll, concatenating the result
   colls of (f val). Foldable."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
   [f coll]
-  (folder coll
-    (fn [f1-0]
-      (let [reducer- (fn
-                 ([]
-                   (let [x (f1-0        )] (if (reduced? x) (reduced x) x)))
-                 ([ret]
-                   (let [x (f1-0 ret    )] (if (reduced? x) (reduced x) x)))
-                 ([ret v]
-                   (let [x (f1-0 ret   v)] (if (reduced? x) (reduced x) x)))
-                 ([ret k v]
-                   (let [x (f1-0 ret k v)] (if (reduced? x) (reduced x) x))))]
-        (rfn [reducer- k]
-             ([ret k v]
-                (reduce reducer- ret (f k v))))))))
+  (folder coll (core/mapcat f)))
 
 (defn concat+ [& args] (reduce cat+ args))
 ;___________________________________________________________________________________________________________________________________
@@ -437,29 +382,18 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FILTER, REMOVE      }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried filter+
+(defn #_defcurried filter+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is truthy."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [pred coll]
-  (folder coll
-    (fn [reducer-]
-      (rfn [reducer- k]
-           ([acc k v]
-              (if (pred k v)
-                  (reducer- acc k v)
-                  acc))))))
+  [pred coll] (folder coll (core/filter pred)))
 
-(defcurried remove+
+(defn #_defcurried remove+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is falsey."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [pred coll]
-  (filter+ (complement pred) coll))
+  [pred coll] (filter+ (complement pred) coll))
 
-(def keep+ (compr map+ (partial remove+ nil?)))
+(defn keep+         [f coll] (folder coll (core/keep         f)))
+(defn keep-indexed+ [f coll] (folder coll (core/keep-indexed f)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         FLATTEN          }=====================================================
 ;=================================================={                          }=====================================================
@@ -558,34 +492,14 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried take+
-  "Ends the reduction of coll after consuming n values."
-  {:added "1.5"
-   :attribution  "clojure.core.reducers"
-   :contributors "Alex Gunnarson"}
-  [n coll]
-  (reducer coll
-    (fn [reducer-]
-      (let [cnt (atom n)]
-        (rfn [reducer- k]
-          ([ret k v]
-             (swap! cnt dec)
-             (if (neg? @cnt)
-               (reduced ret)
-               (reducer- ret k v))))))))
+(defn #_defcurried take+
+  [n coll] (reducer coll (core/take n)))
 
-(defcurried take-while+
-  "Ends the reduction of coll when (pred val) returns logical false."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [pred coll]
-  (reducer coll
-    (fn [f1]
-      (rfn [f1 k]
-           ([ret k v]
-              (if (pred k v)
-                  (f1 ret k v)
-                  (reduced ret)))))))
+(defn #_defcurried take-while+
+  [pred coll] (reducer coll (core/take-while pred)))
+
+(defn take-nth+
+  [n coll] (reducer coll (core/take-nth n)))
 
 #?(:clj
 (defn taker+
@@ -611,50 +525,27 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     DROP, DROP-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried drop+
-  "Elides the first n values from the reduction of coll."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [n coll]
-  (reducer coll
-    (fn [f1]
-      (let [cnt (atom n)]
-        (rfn [f1 k]
-          ([ret k v]
-             (swap! cnt dec)
-             (if (neg? @cnt)
-               (f1 ret k v)
-               ret)))))))
+(defn #_defcurried drop+
+  [n coll] (reducer coll (core/drop n)))
 
-(defcurried drop-while+
-  "Skips values from the reduction of coll while (pred val) returns logical true."
-  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  [pred coll]
-  (reducer coll
-    (fn [f1]
-      (let [keeping? (atom false)]
-        (rfn [f1 k]
-          ([ret k v]
-             (if (or @keeping?
-                     (reset! keeping? (not (pred k v))))
-               (f1 ret k v)
-               ret)))))))
+(defn #_defcurried drop-while+
+  [pred coll] (reducer coll (core/drop-while pred)))
 
 #?(:clj
-  (defn dropr+ ; This is extremely slow by comparison. About twice as slow
-    {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-    [n coll]
-     (reducer coll
-       (fn [f1]
-         (let [buffer (java.util.ArrayDeque. (int n))]
-           (fn self
-             ([] (f1))
-             ([ret x]
-               (let [ret (if (= (count buffer) n) ; because Java object
-                           (f1 ret (.pop buffer))
-                           ret)]
-                 (.add buffer x)
-                 ret))))))))
+(defn dropr+ ; This is extremely slow by comparison. About twice as slow
+  {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
+  [n coll]
+   (reducer coll
+     (fn [f1]
+       (let [buffer (java.util.ArrayDeque. (int n))]
+         (fn self
+           ([] (f1))
+           ([ret x]
+             (let [ret (if (= (count buffer) n) ; because Java object
+                         (f1 ret (.pop buffer))
+                         ret)]
+               (.add buffer x)
+               ret))))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
 ;=================================================={       incl. slice        }=====================================================
@@ -680,6 +571,9 @@
   ([keyfn f init coll]
      (let [f (fn ([] init) ([acc x] (f acc x)))]
        (reduce-by+ keyfn f coll))))
+
+(defn partition-by+  [coll f] (folder coll (core/partition-by  f)))
+(defn partition-all+ [coll n] (folder coll (core/partition-all n)))
 
 (defn group-by+ ; Yes, but folds a lazy sequence... hmm...
   "Reducers version. Possibly slower than |core/group-by|.
@@ -715,12 +609,9 @@
            sentinel)
          (remove+ (partial identical? sentinel)))))
 
-(defn distinct+
-  "Remove adjacent duplicate values from @coll.
-   CAVEAT: Requires @coll to be sorted to work correctly."
-  {:attribution "parkour.reducers"}
-  [coll] (->> coll (distinct-by+ identity =)))
+(defn distinct+ [coll] (folder coll (core/distinct)))
 
+(defn replace+ [smap coll] (folder coll (core/replace smap)))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
@@ -790,7 +681,7 @@
   {:tests '{(->> [:a :b :c :d] (fold-min))
             :a}}
   [coll]
-  (->> coll (fold-extremum (compr compare -))))
+  (->> coll (fold-extremum (rcomp compare -))))
 
 (defn fold-max
   "Finds the largest value using `compare`."
@@ -822,30 +713,9 @@
        (remove+ pred)
        fold-empty?))
 
-;___________________________________________________________________________________________________________________________________
-;=================================================={          ZIPVEC          }=====================================================
-;=================================================={                          }=====================================================
-(defcurried ^:private zipvec*
-  "Zipvec. Needs a better implementation.
-   Must start out with pre-catvec'd colls."
-  {:attribution "Alex Gunnarson"}
-  [coll]
-  (let [ind-n   (atom 0) ; This probably makes it single-threaded only...
-        coll-ct (-> coll count (/ 2) long)]
-    (folder coll
-      (fn [reducer-]
-        (rfn [reducer- k]
-          ([ret k v]
-            (if (< (count ret) coll-ct)
-                (do (reducer- ret k [v nil]))
-                (do  ; This part is problematic
-                    (swap! ind-n inc)
-                    (reducer- (assoc! ret (dec @ind-n) [(-> ret (get (dec @ind-n)) (get 0)) v]) k nil)))))))))
-(defn zipvec+
-  ([vec-0]
-    (->> vec-0 zipvec* (take+ (/ (count vec-0) 2))))
-  ([vec-0 & vecs]
-    (->> vecs (apply map vector vec-0) fold*)))
+(defn interpose+ [sep coll] (folder coll (core/interpose sep)))
+
+(defalias zipvec+ interpose+)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
@@ -900,6 +770,10 @@
   {:attribution "transduce.reducers"}
   [f coll]
   (reduce (fn [_ x] (f x) nil) nil coll))
+
+(defn sample+ [prob coll] (folder coll (core/random-sample prob)))
+
+(defalias random-sample+ sample+)
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      TO INCORPORATE      }=====================================================
@@ -1208,3 +1082,7 @@
               :max (fold-max)})
        (post-combine (juxt :min :max))))
 )
+
+
+
+; TODO completing, transduce, eduction, sequence

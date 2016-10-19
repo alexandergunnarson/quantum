@@ -33,11 +33,20 @@
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))
 
 #?(:clj
-(defmacro defaliases
+(defmacro defaliases'
   "|defalias|es multiple vars @names in the given namespace @ns."
   [ns- & names]
   `(do ~@(for [name- names]
            `(defalias ~name- ~(symbol (name ns-) (name name-)))))))
+
+#?(:clj
+(defmacro defaliases
+  "|defalias|es multiple vars @names in the given namespace alias @alias."
+  [alias- & names]
+  (let [ns-sym (if-let [resolved (get (ns-aliases *ns*) alias-)]
+                 (ns-name resolved)
+                 alias-)]
+    `(defaliases' ~ns-sym ~@names))))
 
 #?(:clj
 (defn var-name

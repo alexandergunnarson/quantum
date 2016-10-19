@@ -339,7 +339,7 @@
 
 #_(defn to-css-str [css-map]
   (->> css-map
-       (map+ (juxt key (compr val flattened-style)))
+       (map+ (juxt key (rcomp val flattened-style)))
        (map+ (fn [[k v]] (garden.core/css {:pretty-print? false} [k v])))
        redv
        (str/join "\n")))

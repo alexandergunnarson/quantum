@@ -1,12 +1,12 @@
 (ns quantum.compile.transpile.from.java
-  (:refer-clojure :exclude [some? if-let])
+  (:refer-clojure :exclude [if-let])
   (:require
     [quantum.core.analyze.clojure.predicates :as anap ]
     [quantum.core.analyze.clojure.core       :as ana  ]
     [quantum.core.string                     :as str  ]
     [quantum.core.collections.zip            :as zip]
     [quantum.core.collections                :as coll
-      :refer        [postwalk prewalk zip-prewalk take-until update-last
+      :refer        [postwalk prewalk zip-prewalk take-until update-last seq-nor
                      #?@(:clj [containsv? popl popr kmap])]
       :refer-macros [          containsv? popl popr kmap]]
     [quantum.core.convert                    :as conv
@@ -17,10 +17,10 @@
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn-> fn->> fn1 compr <-])]
-      :refer-macros [          fn-> fn->> fn1 compr <-]]
+      :refer        [#?@(:clj [fn-> fn->> fn1 rcomp <-])]
+      :refer-macros [          fn-> fn->> fn1 rcomp <-]]
     [quantum.core.logic                      :as logic
-      :refer        [nnil? some? nempty?
+      :refer        [nnil? nempty?
                      #?@(:clj [eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let])]
       :refer-macros [          eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type.core                  :as tcore]
@@ -138,9 +138,9 @@
                       (ModifierSet/getAccessSpecifier)
                       str clojure.string/lower-case
                       (str "^:"))]
-    (when-not (some? (eq? all-mods)
-                      #{"^:default"
-                        "^:public"})
+    (when (seq-nor (eq? all-mods)
+                   #{"^:default"
+                     "^:public"})
       (symbol all-mods)))))
 
 #?(:clj

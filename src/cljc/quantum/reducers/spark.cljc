@@ -67,12 +67,13 @@
         ([^Encoder encoder f ^Dataset x]
           (.flatMap x (reify FlatMapFunction (call [_ x] (f x))) encoder)))
 
-      (defn reduce [f ^Dataset x]
-        (.reduce x
+      #_(defn fold [f ^Dataset x]
+        (.fold x
           (reify ReduceFunction (call [_ v1 v2] (f v1 v2)))))
+      (defn fold [f x] (TODO))
       (defn collect [^Dataset x] (.collect x)))
   (do (defn- requires-spark>=2 [& _]
         (throw (->ex nil "Requires Spark >= 2.0" (kmap version))))
 
-      (doseq [sym '#{map filter group-by take flat-map reduce collect}]
+      (doseq [sym '#{map filter group-by take flat-map fold collect}]
         (intern *ns* sym requires-spark>=2)))))

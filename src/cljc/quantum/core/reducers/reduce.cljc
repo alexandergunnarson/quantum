@@ -100,8 +100,10 @@
         ([#{quantum.core.reducers.reduce.Reducer
             quantum.core.reducers.reduce.Folder} x f init]
           (reduce* (:coll x) ((:transform x) f) init))
-        ([^map?    coll f init] (#?(:clj  clojure.core.protocols/kv-reduce
-                                    :cljs -kv-reduce)
+        ([^map?    coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
+                                    :cljs -kv-reduce) ; in order to use transducers...
+                                 #?(:clj  clojure.core.protocols/coll-reduce
+                                    :cljs -reduce-seq)
                                   coll f init))
         ([^set?    coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
                                     :cljs -reduce-seq)

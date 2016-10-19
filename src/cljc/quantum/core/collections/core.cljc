@@ -7,7 +7,7 @@
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
      conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
-     empty? empty some? class
+     empty? empty class
      #?@(:cljs [array])])
   (:require [#?(:clj  clojure.core
                 :cljs cljs.core   )         :as core    ]
@@ -41,9 +41,11 @@
               :refer        [#?@(:clj [fn1])]
               :refer-macros [          fn1]]
             [quantum.core.logic             :as logic
-              :refer        [some? nnil? nempty?
+              :refer        [nnil? nempty?
                              #?@(:clj [eq? fn-eq? whenc whenf ifn1])]
               :refer-macros [          eq? fn-eq? whenc whenf ifn1]]
+            [quantum.core.collections.logic
+              :refer        [seq-or]]
             [quantum.core.macros            :as macros
               :refer        [#?@(:clj [defnt])]
               :refer-macros [          defnt]]
@@ -352,7 +354,7 @@
   ([^pattern? coll elem]
     (nnil? (re-find elem coll)))
   ([          coll elem]
-    (some? (fn-eq? elem) coll)))
+    (seq-or (fn-eq? elem) coll)))
 
 ; static Object getFrom(Object coll, Object key, Object notFound){
 ;   else if(coll instanceof Map) {

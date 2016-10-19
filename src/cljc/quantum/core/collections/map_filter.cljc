@@ -47,8 +47,8 @@
       :refer-macros [          first rest conj! lasti contains?]]
     [quantum.core.fn               :as fn
       :refer        [juxt-kv
-                     #?@(:clj [<- compr defcurried])]
-      :refer-macros [          <- compr defcurried]]
+                     #?@(:clj [<- rcomp defcurried])]
+      :refer-macros [          <- rcomp defcurried]]
     [quantum.core.macros           :as macros
       :refer        [#?@(:clj [defnt])]
       :refer-macros [          defnt]]
@@ -157,10 +157,10 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
-(defn filter-keys+ [pred coll] (->> coll (filter+ (compr key pred))))
-(defn remove-keys+ [pred coll] (->> coll (remove+ (compr key pred))))
-(defn filter-vals+ [pred coll] (->> coll (filter+ (compr val pred))))
-(defn remove-vals+ [pred coll] (->> coll (remove+ (compr val pred))))
+(defn filter-keys+ [pred coll] (->> coll (filter+ (rcomp key pred))))
+(defn remove-keys+ [pred coll] (->> coll (remove+ (rcomp key pred))))
+(defn filter-vals+ [pred coll] (->> coll (filter+ (rcomp val pred))))
+(defn remove-vals+ [pred coll] (->> coll (remove+ (rcomp val pred))))
 
 ; Distinct can be seen as sort of a filter
 

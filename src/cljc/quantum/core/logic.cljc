@@ -1,12 +1,12 @@
 (ns
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
-          ifn, whenf1, compr, fn->, condpc, and the like. Extremely useful
+          ifn, whenf1, rcomp, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"
     :figwheel-no-load true
     :cljs-self-referring? true}
   quantum.core.logic
-           (:refer-clojure :exclude [if-let when-let every? some some?])
+           (:refer-clojure :exclude [if-let when-let])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )   :as core   ]
                      [quantum.core.fn          :as fn
@@ -30,15 +30,8 @@
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
 ;==================================================={                         }=====================================================
 (def  nnil?   core/some?)
-(def  nempty? (comp not empty?))
-(def  nseq?   (comp not seq?))
+(def  nempty? (comp not empty?)) ; TODO fix this performance-wise
 
-(defn iff  [pred const else]
-  (if (pred const) const else))
-(defn iffn [pred const else-fn]
-  (if (pred const)
-      const
-      (else-fn const)))
 ; Otherwise ExceptionInInitializerError if not macro
 #?(:clj (defmacro eq?  [x] `(fn-> (=    ~x))))
 
@@ -48,36 +41,13 @@
 #?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
 #?(:clj (defalias fn-neq?  neq?))
 
-(defn some
-  "A faster version of |some| using |reduce| instead of |seq|.
-   Also adds an overload whereby it is equivalent to |some?| in a
-   1-arity context, but |some| in a two-arity context."
-  ([x] (core/some? x))
-  ([pred args]
-    (reduce (fn [_ arg] (and (pred arg) (reduced true ))) nil args)))
-
-; (defalias any? some) ; Sadly, already (pointlessly) taken in 1.9.
-(defalias some? some) ; Yes, overrides, but has an extra arity that can make sense
-; (defalias exists? some) ; as in ∃ ; Sadly, already taken in CLJS
-(defalias seq-or some)
-
-(defn every?
-  "A faster version of |every?| using |reduce| instead of |seq|."
-  [pred args]
-  (reduce (fn [_ arg] (or  (pred arg) (reduced false))) nil args))
-
-(defalias all? every?) ; as in ∀
-(defalias seq-and every?)
-
-(defn apply-and [arg-list]
-  (every?  identity arg-list))
-
-(defn apply-or  [arg-list]
-  (some?   identity arg-list))
-
-(defn dor [& args] ; xor ; why "dor"?
-  (and (apply-or args)
-       (not (apply-and args))))
+#?(:clj
+(defmacro xor
+  ([] nil)
+  ([x] false)
+  ([x y] (if x (not y) y))
+  ([x y & next]
+    `(if ~x (when-not (and ~y ~@next) ~x) (xor ~y ~@next)))))
 
 #?(:clj
 (defmacro fn-logic-base
@@ -91,20 +61,17 @@
                           (catch java.lang.Throwable _ pred)) ~arg)
                      `(~pred ~arg))))))))
 
-#?(:clj (defmacro fn-or  [& preds]
-          `(fn-logic-base or  ~@preds)))
-#?(:clj (defmacro fn-and [& preds]
-          `(fn-logic-base and ~@preds)))
-#?(:clj (defmacro fn-not [pred]
-          `(fn-logic-base not ~pred)))
+#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base or  ~@preds)))
+#?(:clj (defmacro fn-and [& preds] `(fn-logic-base and ~@preds)))
+#?(:clj (defmacro fn-not [pred]    `(fn-logic-base not ~pred  )))
 
-(def falsey? (fn-or false? nil? ))
-(def truthy? (fn-or true?  nnil?))
+(def falsey? (fn-or false? nil?))
+(def truthy? identity)
 
 (defn splice-or  [obj compare-fn & coll]
-  (some?  (partial compare-fn obj) coll))
+  (some   #_seq-or  (partial compare-fn obj) coll))
 (defn splice-and [obj compare-fn & coll]
-  (every? (partial compare-fn obj) coll))
+  (every? #_seq-and (partial compare-fn obj) coll))
 
 #?(:clj
 (defmacro coll-base [logical-oper & elems]
@@ -116,14 +83,12 @@
             `(~bin-pred ~obj ~elem)))))))
 
 #?(:clj
-(defmacro coll-or [& elems]
-  `(coll-base or ~@elems)))
+(defmacro coll-or [& elems] `(coll-base or ~@elems)))
 
 #?(:clj
 (defmacro coll-and
-  {:usage "((and-coll 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
-  [& elems]
-  `(coll-base and ~@elems)))
+  {:usage "((coll-and 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
+  [& elems] `(coll-base and ~@elems)))
 
 (defn bool
   {:todo ["Deprecate or incorporate"]}
@@ -135,12 +100,6 @@
       (throw (#?(:clj  IllegalArgumentException.
                  :cljs js/Error.)
                (str "Value not booleanizable: " v)))))
-
-(defn rcompare
-  "Reverse comparator."
-  {:attribution "taoensso.encore"}
-  [x y]
-  (compare y x))
 
 #?(:clj
 (defmacro condf
@@ -164,11 +123,8 @@
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
-#?(:clj
-(defmacro condf1 [& args] `(fn [arg#] (condf arg# ~@args))))
-
-#?(:clj
-(defmacro condf& [& args] `(fn [& args#] (condf args# ~@args))))
+#?(:clj (defmacro condf1 [& args] `(fn [  arg# ] (condf arg#  ~@args))))
+#?(:clj (defmacro condf& [& args] `(fn [& args#] (condf args# ~@args))))
 
 #?(:clj
 (defmacro condfc
@@ -191,17 +147,9 @@
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
-#?(:clj
-(defmacro ifn [obj pred true-fn false-fn]
-  `(let [obj-f# ~obj] (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#)))))
-
-#?(:clj
-(defmacro ifc [obj pred true-expr false-expr]
-  `(let [obj-f# ~obj] (if (~pred obj-f#) ~true-expr ~false-expr))))
-
-#?(:clj
-(defmacro ifp [obj pred true-fn false-fn]
-  `(let [obj-f# ~obj] (if ~pred (~true-fn obj-f#) (~false-fn obj-f#)))))
+#?(:clj (defmacro ifn [x pred tf ff] `(let [x# ~x] (if (~pred x#) (~tf x#) (~ff x#)))))
+#?(:clj (defmacro ifc [x pred t  f ] `(let [x# ~x] (if (~pred x#)  ~t       ~f     ))))
+#?(:clj (defmacro ifp [x pred tf ff] `(let [x# ~x] (if  ~pred     (~tf x#) (~ff x#)))))
 
 #?(:clj (defmacro ifn1 [x0 x1 x2] `(fn [arg#] (ifn arg# ~x0 ~x1 ~x2))))
 #?(:clj (defmacro ifp1 [x0 x1 x2] `(fn [arg#] (ifp arg# ~x0 ~x1 ~x2))))

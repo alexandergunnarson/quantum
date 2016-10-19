@@ -23,8 +23,8 @@
     [seqspert.hash-map                       ]])
     [quantum.core.fn               :as fn
       :refer        [aritoid
-                     #?@(:clj [fn1 fn-> compr])]
-      :refer-macros [          fn1 fn-> compr]]
+                     #?@(:clj [fn1 fn-> rcomp])]
+      :refer-macros [          fn1 fn-> rcomp]]
     [quantum.core.logic            :as logic
       :refer        [nnil?
                      #?@(:clj [fn-or fn-and whenf condf1])]

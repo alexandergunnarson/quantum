@@ -307,6 +307,9 @@
     (getr super 0 (-> i long dec))
     nil))
 
+(defalias take-nth+  red/take-nth+)
+(defalias takel-nth+ take-nth+)
+
 ; ================================================ DROP ================================================
 
 (defn dropl [n coll] (getr coll n (lasti coll)))

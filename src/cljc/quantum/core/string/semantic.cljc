@@ -1,13 +1,11 @@
 (ns quantum.core.string.semantic
-           (:refer-clojure :exclude [some? every?])
-           (:require [clojure.set         :as set  ]
-                     [quantum.core.logic  :as logic
-                       :refer [nempty? every? some?]]
-                     [quantum.core.macros :as macros
-                       :refer [#?@(:clj [defnt])]   ])
-  #?(:cljs (:require-macros
-                     [quantum.core.macros :as macros
-                       :refer [defnt]               ])))
+  (:require
+    [clojure.set         :as set  ]
+    [quantum.core.logic  :as logic
+      :refer        [nempty?]]
+    [quantum.core.macros :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]))
 
 (def vowels
   #{\a \e \i \o \u
@@ -23,4 +21,4 @@
   ([#{#?(:clj char? :cljs string?)} x] (ext-vowels x)))
 
 (defnt contains-ext-vowel?
-  ([^string? x] (some? ext-vowels x)))
+  ([^string? x] (some ext-vowels x)))

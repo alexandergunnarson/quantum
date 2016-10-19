@@ -6,8 +6,8 @@
       :refer-macros [deftest is testing]]
     [fast-zip.core                 :as zip]
     [quantum.core.fn
-      :refer        [#?@(:clj [compr fn1 fn->])]
-      :refer-macros [compr fn1 fn->]]
+      :refer        [#?@(:clj [rcomp fn1 fn->])]
+      :refer-macros [rcomp fn1 fn->]]
     [quantum.core.logic
       :refer        [#?@(:clj [condf])]
       :refer-macros [condf]]
@@ -45,18 +45,18 @@
                  (->Foo 1 2 3)
                  (map->Foo {:a 1 :b 2 :c 3 :extra 4})]]
       (doseq [c colls]
-        (let [walked (walk-fn (compr pre identity)
-                              (compr pre identity)
+        (let [walked (walk-fn (rcomp pre identity)
+                              (rcomp pre identity)
                               c)]
           (is (= c walked))
              ;;(is (= (type c) (type walked)))
           (if (map? c)
-            (is (= (walk-fn (compr pre #(update-in % [1] inc))
-                            (compr pre #(reduce + (vals %)))
+            (is (= (walk-fn (rcomp pre #(update-in % [1] inc))
+                            (rcomp pre #(reduce + (vals %)))
                             c)
                    (reduce + (map (comp inc val) c))))
-            (is (= (walk-fn (compr pre inc)
-                            (compr pre #(reduce + %))
+            (is (= (walk-fn (rcomp pre inc)
+                            (rcomp pre #(reduce + %))
                             c)
                    (reduce + (map inc c)))))
           (when (or (instance? #?(:clj clojure.lang.PersistentTreeMap :cljs cljs.core/PersistentTreeMap) c)
@@ -79,7 +79,7 @@
   [walk-fn pre]
   (testing "order"
     (is (= (let [a (atom [])]
-             (walk-fn (compr pre (fn [form] (swap! a conj (walk-modify form))
+             (walk-fn (rcomp pre (fn [form] (swap! a conj (walk-modify form))
                                             (walk-modify form)))
                walk-order-data)
              @a)
@@ -99,7 +99,7 @@
   [walk-fn pre]
   (testing "order"
     (is (= (let [a (atom [])]
-             (walk-fn (compr pre (fn [form] (swap! a conj (walk-modify form))
+             (walk-fn (rcomp pre (fn [form] (swap! a conj (walk-modify form))
                                             (walk-modify form)))
                walk-order-data)
              @a)
@@ -117,11 +117,11 @@
   (let [dirs (atom {})
         ret (ns/zip-prewalk
               (fn [x] (swap! dirs
-                        (fn-> (update :up    (compr conj vec) (-> x zip/up    qzip/node*))
-                              (update :at    (compr conj vec) (-> x           qzip/node*))
-                              (update :left  (compr conj vec) (-> x zip/left  qzip/node*))
-                              (update :right (compr conj vec) (-> x zip/right qzip/node*))
-                              (update :down  (compr conj vec) (-> x zip/down  qzip/node*))))
+                        (fn-> (update :up    (rcomp conj vec) (-> x zip/up    qzip/node*))
+                              (update :at    (rcomp conj vec) (-> x           qzip/node*))
+                              (update :left  (rcomp conj vec) (-> x zip/left  qzip/node*))
+                              (update :right (rcomp conj vec) (-> x zip/right qzip/node*))
+                              (update :down  (rcomp conj vec) (-> x zip/down  qzip/node*))))
                       (zip/node x))
               walk-order-data)
         dirs-expected

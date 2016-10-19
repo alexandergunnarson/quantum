@@ -22,7 +22,7 @@
                      [quantum.core.error                      :as err
                        :refer [#?(:clj throw-unless) ->ex]                        ]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> fn1 compr]) call fn-nil]                ]
+                       :refer [#?@(:clj [<- fn-> fn1 rcomp]) call fn-nil]                ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [fn-or fn-not eq? whenf whenp whenf1 ifn1])
@@ -42,7 +42,7 @@
                      [quantum.core.error                      :as err
                        :refer [throw-unless]                                      ]
                      [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn1 compr]                                 ]
+                       :refer [<- fn-> fn1 rcomp]                                 ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
                        :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1]         ]
@@ -235,7 +235,7 @@
 (defn close-all-alt!
   "An alternative version of |close-all|. Test both."
   []
-  (doseq [[k v] (->> @reg (remove (compr key (eq? :thread-reaper))) (into {}))]
+  (doseq [[k v] (->> @reg (remove (rcomp key (eq? :thread-reaper))) (into {}))]
     (when-let [close-reqs (:close-reqs v)]
       (put!! close-reqs :req))
     (when-let [thread- (:thread v)]
@@ -647,7 +647,7 @@
   (let [chans (promise-concur-go method max-threads func list-0)]
     (if (= method :for)
         (->> chans
-             (map+ (compr #(doall
+             (map+ (rcomp #(doall
                              (for [n (range (first %))]
                                (<!! (second %))))
                           vec))

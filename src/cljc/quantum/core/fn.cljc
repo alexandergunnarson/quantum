@@ -94,34 +94,23 @@
       ([arg1 arg2 arg3]                    (func (func arg1 arg2) arg3))
       ([arg1 arg2 arg3 & args] (apply func (func (func arg1 arg2) arg3) args))))
 
-(defn monoid
-  "Builds a combining fn out of the supplied operator and identity
-  constructor. op must be associative and ctor called with no args
-  must return an identity value for it."
-  {:attribution "clojure.core.reducers"}
-  [op ctor]
-  (fn mon
-    ([]    (ctor))
-    ([a b] (op a b))))
-
-(defn aritoid
-  "Combines fns as arity-callers."
-  {:attribution "clojure.core.reducers"}
-  ([f0         ] (fn ([        ] (f0         ))))
-  ([f0 f1      ] (fn ([        ] (f0         ))
-                     ([x1      ] (f1 x1      ))))
-  ([f0 f1 f2   ] (fn ([        ] (f0         ))
-                     ([x1      ] (f1 x1      ))
-                     ([x1 x2   ] (f2 x1 x2   ))))
-  ([f0 f1 f2 f3] (fn ([        ] (f0         ))
-                     ([x1      ] (f1 x1      ))
-                     ([x1 x2   ] (f2 x1 x2   ))
-                     ([x1 x2 x3] (f2 x1 x2 x3)))))
-
 #?(:clj
-(defmacro compr
-  [& args]
-  `(comp ~@(reverse args))))
+(defmacro aritoid
+  "Combines fns as arity-callers."
+  {:attribution "Alex Gunnarson"
+   :equivalent `{(aritoid vector identity conj)
+                 (fn ([]      (vector))
+                     ([x0]    (identity x0))
+                     ([x0 x1] (conj x0 x1)))}}
+  [& fs]
+  (let [genned  (repeatedly (count fs) #(gensym "f"))
+        fs-syms (vec (interleave genned fs))]
+   `(let ~fs-syms
+      (fn ~@(for [[i f-sym] (map-indexed vector genned)]
+              (let [args (vec (repeatedly i #(gensym "x")))]
+                `(~args (~f-sym ~@args)))))))))
+
+#?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
 
 #?(:clj (defmacro fn0 [  & args] `(fn [f#] (f# ~@args))))
 #?(:clj (defmacro fn1 [f & args] `(fn [arg#] (~f arg# ~@args))))
@@ -271,26 +260,6 @@
     (defn ->predicate [f] (throw (ex-info "java.util.function.Predicate not available: probably using JDK < 8" nil)))))
 
 ; ========= REDUCER PLUMBING ==========
-
-(defn- do-rfn
-  {:attribution "clojure.core.reducers"}
-  [f1 k fkv]
-  `(fn
-     ([] (~f1))
-     ~(clojure.walk/postwalk
-       #(if (sequential? %)
-            ((if (vector? %) vec identity)
-             (remove #{k} %))
-            %)
-       fkv)
-     ~fkv))
-
-#?(:clj
-(defmacro rfn
-  "Builds 3-arity reducing fn given names of wrapped fn and key, and k/v impl."
-  {:attribution "clojure.core.reducers"}
-  [[f1 k] fkv]
-  (do-rfn f1 k fkv)))
 
 #?(:clj (defn maybe-unary
   "Not all functions used in `tesser/fold` and `tesser/reduce` have a

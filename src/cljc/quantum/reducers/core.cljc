@@ -80,16 +80,24 @@
     (if ((fn-or rdd? dataset?) pipeline)
         (.-v
           ^Reduced*
-          ((if rdd? spark/reduce spark+/reduce)
+          ((if rdd? spark/fold spark+/fold)
             (fn [ret elem]
+              (println "ret" ret "elem" elem)
               (if (instance? Reduced* ret)
                   (if (instance? Reduced* elem)
                       ; Combine reductions
                       (Reduced*. (coll/join (.-v ^Reduced* ret) (.-v ^Reduced* elem)))
                       ; Reduce into
                       (Reduced*. (conj (.-v ^Reduced* ret) elem)))
-                  ; Initial
-                  (Reduced*. (conj base-coll ret elem))))
+                  (if (instance? Reduced* elem)
+                      ; Combine first combined into base-coll
+                      (Reduced*. (coll/join ret (.-v ^Reduced* elem)))
+                      ; Initial
+                      (Reduced*. (conj ret elem)))
+                  #_(Reduced*. (coll/join (.-v ^Reduced* ret) (.-v ^Reduced* elem)))
+
+                  #_(Reduced*. (conj base-coll ret elem))))
+            base-coll
             pipeline))
         (coll/join base-coll pipeline)))
   ([base-coll parallel? pipeline]

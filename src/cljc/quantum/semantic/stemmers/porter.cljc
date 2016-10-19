@@ -1,18 +1,17 @@
 (ns ^{:original-java "Rajiv Yerra"}
   quantum.semantic.stemmers.porter
-           (:refer-clojure :exclude [get count reduce when-let])
-           (:require
-             [quantum.core.logic           :as logic
-               :refer [nempty? #?@(:clj [when-let])]]
-             [quantum.core.string          :as str  ]
-             [quantum.core.collections     :as coll
-               :refer [#?@(:clj [reduce get count]) in? dropr]   ]
-             [quantum.core.string.semantic :as sem  ])
-  #?(:cljs (:require-macros
-             [quantum.core.logic           :as logic
-               :refer [when-let]]
-             [quantum.core.collections
-               :refer [reduce get count]            ])))
+  (:refer-clojure :exclude [get count reduce when-let])
+  (:require
+    [quantum.core.logic           :as logic
+      :refer        [nempty?
+                     #?@(:clj [when-let])]
+      :refer-macros [          when-let]]
+    [quantum.core.string          :as str  ]
+    [quantum.core.collections     :as coll
+      :refer        [in? dropr seq-or
+                     #?@(:clj [reduce get count])]
+      :refer-macros [          reduce get count]]
+    [quantum.core.string.semantic :as sem]))
 
 (defn ends-with-doubled-consonant? [s]
   (when (nempty? s)
@@ -33,7 +32,7 @@
                 :else ret)))
       [0 false]
       s)))
-    
+
 (defn ends-with-cvc?
   "Does stem end with CVC?"
   [s]
@@ -57,10 +56,10 @@
 (defn step1b2 [s]
   ; AT -> ATE
   (cond
-    (logic/seq-or #(str/ends-with? s %) ["at" "bl" "iz"])
+    (coll/seq-or #(str/ends-with? s %) ["at" "bl" "iz"])
     (str s "e"))
     (and (ends-with-doubled-consonant? s)
-         (not (logic/seq-or #(str/ends-with? s %1) ["l" "s" "z"])))
+         (not (coll/seq-or #(str/ends-with? s %1) ["l" "s" "z"])))
     (dropr 1 s)
     (and (= 1 (cvc-measure s))
          (ends-with-cvc? s))
@@ -81,7 +80,7 @@
     (step1b2 (dropr 2 s))
     ; (*v*) ING ->
     (and (str/ends-with? s "ing")
-         (sem/contains-ext-vowel? (dropr 3 s))) 
+         (sem/contains-ext-vowel? (dropr 3 s)))
     (step1b2 (dropr 3 s))
     :else
     s))
@@ -181,8 +180,8 @@
       step1a
       step1b
       step1c
-      step2 
-      step3 
-      step4 
+      step2
+      step3
+      step4
       step5a
       step5b))

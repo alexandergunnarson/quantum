@@ -28,7 +28,8 @@
               merge sorted-map sorted-map-by
               into
               count
-              vec empty empty? some?
+              vec empty empty?
+              every? some not-every? not-any?
               split-at
               first second rest last butlast get aget nth pop peek
               select-keys get-in
@@ -58,19 +59,20 @@
              [quantum.core.collections.selective      :as sel    ]
              [quantum.core.collections.tree           :as tree   ]
              [quantum.core.collections.zip            :as qzip   ]
+             [quantum.core.collections.logic          :as clog   ]
              [quantum.core.error                      :as err
-               :refer [->ex]                                     ]
+               :refer [->ex]]
              [quantum.core.fn                         :as fn
-               :refer        [#?@(:clj [compr <- fn-> fn->> fn1])
-                              fn-nil juxt-kv withf->>]
-               :refer-macros [compr <- fn-> fn->> fn1]           ]
+               :refer        [fn-nil juxt-kv withf->>
+                              #?@(:clj [rcomp <- fn-> fn->> fn1])]
+               :refer-macros [          rcomp <- fn-> fn->> fn1]]
              [quantum.core.log                        :as log
                :include-macros true                              ]
              [quantum.core.logic                      :as logic
                :refer         [#?@(:clj [fn-not fn-or fn-and whenf
                                          whenf1 ifn ifn1 condf
                                          condf1])
-                               nnil? some? splice-or]
+                               nnil? splice-or]
                :refer-macros [fn-not fn-or fn-and whenf whenf1
                               ifn ifn1 condf condf1]            ]
              [quantum.core.macros                     :as macros
@@ -90,14 +92,14 @@
                               class]
                :refer-macros [lseq? transient? editable? boolean?
                               should-transientize?]              ]
-             [quantum.core.analyze.clojure.predicates :as anap   ]
-             [quantum.core.type.predicates            :as tpred  ]
-             [clojure.walk                            :as walk   ]
+             [quantum.core.analyze.clojure.predicates :as anap]
+             [quantum.core.type.predicates            :as tpred]
+             [clojure.walk                            :as walk]
              [quantum.core.loops                      :as loops
-               :include-macros true                              ]
+               :include-macros true]
              [quantum.core.vars                       :as var
-               :refer        [#?@(:clj [defalias])]
-               :refer-macros [defalias]                          ])
+               :refer        [#?@(:clj [defalias defaliases])]
+               :refer-macros [          defalias defaliases]])
   #?(:cljs (:require-macros
              [quantum.core.collections
                :refer [for for* lfor doseq doseqi reduce reducei
@@ -111,24 +113,12 @@
                        map-entry join empty? update! empty? ->array]]))
   #?(:cljs (:import goog.string.StringBuffer)))
 
-(defalias key     coll/key    )
-(defalias val     coll/val    )
-(defalias reverse coll/reverse)
+(defaliases clog
+  seq-or some seq-nor not-any? seq-and every? seq-nand not-every? apply-and apply-or)
 
-#?(:clj
-(defmacro rfn
-  "Creates a reducer-safe function."
-  [arglist & body]
-  (let [sym (gensym)]
-    (case (coll/count arglist)
-          1 `(fn ~sym (~arglist ~@body)
-                      ([k# v#] (~sym [k# v#])))
-          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
-                      (~arglist ~@body)
-                      ([ret# k# v#] (~sym ret# [k# v#])))
-          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
-                      (~arglist ~@body))
-          (throw (->ex nil "Illegal arglist count passed to rfn" (base/kmap arglist)))))))
+; KV ;
+
+(defaliases coll key val reverse)
 
 #?(:clj (defmacro map-entry [a b] `[~a ~b]))
 
@@ -200,6 +190,8 @@
         (defalias takel+        take+             )
         (defalias taker         diff/taker        )
 #?(:clj (defalias taker+        diff/taker+       ))
+        (defalias take-nth+     diff/take-nth+    )
+        (defalias takel-nth+    diff/takel-nth+   )
         (defalias take-while    diff/take-while   )
         (defalias take-while+   diff/take-while+  )
         (defalias take-after    diff/take-after   )
@@ -209,25 +201,31 @@
         (defalias taker-after   diff/taker-after  )
         (defalias take-until    diff/take-until   )
         (defalias takel-until-matches diff/takel-until-matches)
-#?(:clj (defalias taker-until   diff/taker-until  ))
-        (defalias drop          diff/drop         )
-        (defalias drop+         diff/drop+        )
-        (defalias dropl         diff/dropl        )
-        (defalias ldropl        diff/ldropl       )
-        (defalias ldrop         diff/ldropl       )
-        (defalias drop-while+   red/drop-while+   )
-        (defalias dropr         diff/dropr        )
-#?(:clj (defalias dropr+        diff/dropr+       ))
-        (defalias dropr-until   diff/dropr-until  )
-        (defalias group-by+     red/group-by+     )
-        (defalias flatten+      red/flatten+      )
-        (defalias flatten-1+    red/flatten-1+    )
-        (defalias iterate+      red/iterate+      )
-        (defalias reduce-by+    red/reduce-by+    )
-        (defalias distinct-by+  red/distinct-by+  )
-        (defalias distinct+     red/distinct+     )
-        (defalias zipvec+       red/zipvec+       )
-        (defalias reduce-count  red/reduce-count  )
+#?(:clj (defalias taker-until    diff/taker-until  ))
+        (defalias drop           diff/drop         )
+        (defalias drop+          diff/drop+        )
+        (defalias dropl          diff/dropl        )
+        (defalias ldropl         diff/ldropl       )
+        (defalias ldrop          diff/ldropl       )
+        (defalias drop-while+    red/drop-while+   )
+        (defalias dropr          diff/dropr        )
+#?(:clj (defalias dropr+         diff/dropr+       ))
+        (defalias dropr-until    diff/dropr-until  )
+        (defalias group-by+      red/group-by+     )
+        (defalias flatten+       red/flatten+      )
+        (defalias flatten-1+     red/flatten-1+    )
+        (defalias iterate+       red/iterate+      )
+        (defalias reduce-by+     red/reduce-by+    )
+        (defalias distinct+      red/distinct+     )
+        (defalias distinct-by+   red/distinct-by+  )
+        (defalias replace+       red/replace+      )
+        (defalias partition-by+  red/partition-by+ )
+        (defalias partition-all+ red/partition-all+)
+        (defalias interpose+     red/interpose+    )
+        (defalias zipvec+        red/zipvec+       )
+        (defalias random-sample+ red/random-sample+)
+        (defalias sample+        red/sample+       )
+        (defalias reduce-count   red/reduce-count  )
         ; for+
         ; doseq+
 
@@ -290,6 +288,7 @@
         (defalias lremove         mf/lremove         )
         (defalias remove-surrounding diff/remove-surrounding)
         (defalias keep+           red/keep+          )
+        (defalias keep-indexed+   red/keep-indexed+  )
         (defalias mapcat+         red/mapcat+        )
 ; _______________________________________________________________
 ; ============================ TREE =============================
@@ -691,7 +690,7 @@
    A good use case is returning values from an associative structure with keys as @fns.
    Returns a vector of the results."
   ^{:attribution "Alex Gunnarson"
-    :usage "(select {:a 1 :b [3]} :a (compr :b 0)) => [1 3]"}
+    :usage "(select {:a 1 :b [3]} :a (rcomp :b 0)) => [1 3]"}
   [coll & fns]
   ((apply juxt fns) coll))
 
@@ -892,7 +891,7 @@
     :todo ["Make it not output HashMaps but preserve records"]
     :contributors ["Alex Gunnarson"]}
   [f & maps]
-  (when (some? identity maps)
+  (when (apply-or maps)
     (let [merge-entry
            (fn [m e]
              (let [k (key e) v (val e)]
@@ -1386,7 +1385,7 @@
   [f & maps]
   (apply
     (fn m [& maps]
-      (if (every? map? maps)
+      (if (seq-and map? maps)
           (apply merge-with m maps)
           (apply f maps)))
     maps))
@@ -1461,8 +1460,8 @@
   (let [constructor-sym (->> name- name sform/un-camelcase (str "->") symbol)
         protocol-sym    (-> name- name (str "Functions") symbol)
         fns-signatures  (->> fns
-                             (map (compr (juxt #(first %1)
-                                               #(second %1))))
+                             (map (juxt #(first  %1)
+                                        #(second %1)))
                              (group-by #(first %1))
                              (map-vals+ (fn->> (map (fn-> rest)) flatten-1))
                              (map+ (fn [x] (cons (first x) (second x))))

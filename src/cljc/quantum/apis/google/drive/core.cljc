@@ -173,7 +173,7 @@
 ; The situation can be improved by switching the go blocks to normal threads.
 
 ; (->> (get-children "root")
-;      (map+ (compr :id get-children))
+;      (map+ (rcomp :id get-children))
 ;      foldp+ ; even foldp-max+ doesn't really work as well... hmm...
 ;      !)
 

@@ -9,7 +9,7 @@
     :cljs-self-referring? true}
   quantum.core.string
            (:refer-clojure :exclude
-             [reverse replace remove val re-find reduce every? boolean?])
+             [reverse replace remove val re-find reduce boolean?])
            (:require
              [#?(:clj  clojure.core
                  :cljs cljs.core   )     :as core]
@@ -21,7 +21,7 @@
                :refer        [#?@(:clj [fn-> fn1])]
                :refer-macros [          fn-> fn1]]
              [quantum.core.logic         :as logic
-               :refer        [nempty? every?
+               :refer        [nempty?
                               #?@(:clj [fn-and whenc whenc1 ifn condf])]
                :refer-macros [          fn-and whenc whenc1 ifn condf] ]
              [quantum.core.loops         :as loops
@@ -33,6 +33,8 @@
              [quantum.core.collections.core
                :refer        [#?@(:clj [containsv?])]
                :refer-macros [          containsv?]]
+             [quantum.core.collections.logic
+               :refer        [seq-and]]
              [quantum.core.string.format :as form]
              [quantum.core.string.regex  :as regex]
              [quantum.core.vars          :as var
@@ -82,43 +84,43 @@
 (defnt numeric?
 #?(:clj
   ([^char?   c] (contains? num-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? num-chars     )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? num-chars     )) s))))
 
 (defnt upper?
 #?(:clj
   ([^char?   c] (contains? upper-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? upper-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? upper-chars   )) s))))
 
 (defalias ->upper form/->upper)
 
 (defnt lower?
 #?(:clj
   ([^char?   c] (contains? lower-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? lower-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? lower-chars   )) s))))
 
 (defalias ->lower form/->lower)
 
 (defnt alpha?
 #?(:clj
   ([^char?   c] (contains? alpha-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? alpha-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? alpha-chars   )) s))))
 
 (defnt alphanum?
 #?(:clj
   ([^char?   c] (contains? alphanum-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? alphanum-chars)) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? alphanum-chars)) s))))
 
 (defnt blank?
 #?(:clj
   ([^char?   c] (contains? whitespace-chars c)))
-  ([^string? s] (every? (extern (partial contains? whitespace-chars)) s)))
+  ([^string? s] (seq-and (extern (partial contains? whitespace-chars)) s)))
 
 (def whitespace? (fn-and nempty? blank?))
 
 (defnt line-terminator?
 #?(:clj
   ([^char?   c] (contains? line-terminator-chars c)))
-  ([^string? s] (and (nempty? s) (every? (extern (partial contains? line-terminator-chars)) s))))
+  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? line-terminator-chars)) s))))
 
 (defalias capitalize form/capitalize)
 

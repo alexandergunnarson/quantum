@@ -1,5 +1,4 @@
 (ns quantum.core.macros.transform
-  (:refer-clojure :exclude [some? every?])
   (:require
     [fast-zip.core                           :as zip]
     [clojure.walk
@@ -19,7 +18,7 @@
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer        [nnil? some? every?
+      :refer        [nnil?
                      #?@(:clj [fn-not fn-or fn-and whenc condf1])]
       :refer-macros [          fn-not fn-or fn-and whenc condf1]]
     [quantum.core.macros.core                :as cmacros]
@@ -45,7 +44,7 @@
 (defn any-hint-unresolved?
   ([args lang] (any-hint-unresolved? args lang nil))
   ([args lang env]
-    (some? (fn-not #(hint-resolved? % lang env)) args)))
+    (some (fn-not #(hint-resolved? % lang env)) args)))
 
 
 (defn hint-body-with-arglist

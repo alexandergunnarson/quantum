@@ -1,8 +1,8 @@
 (ns quantum.ir.document
   (:require
     [quantum.core.fn
-      :refer        [#?@(:clj [fn1 fn$ fn-> fn->> <- compr])]
-      :refer-macros [          fn1 fn$ fn-> fn->> <- compr]]
+      :refer        [#?@(:clj [fn1 fn$ fn-> fn->> <- rcomp])]
+      :refer-macros [          fn1 fn$ fn-> fn->> <- rcomp]]
     [quantum.core.logic
       :refer        [#?@(:clj [ifn1 whenf1 whenf fn-not])]
       :refer-macros [          ifn1 whenf1 whenf fn-not]]
@@ -522,7 +522,7 @@
          (r/remove+ empty?)))
 
 (def doc->terms+
-  (compr doc->normalized+ normalized->tokenized-terms+))
+  (rcomp doc->normalized+ normalized->tokenized-terms+))
 
 (defn doc->term-frequencies
   "Lower case; preserves only letters; no hyphens or apostrophes

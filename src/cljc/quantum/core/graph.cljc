@@ -10,14 +10,14 @@
                #?(:clj [loom.io                  :as g.io ])
                        [quantum.core.error       :as err
                          :refer [->ex]                    ]
-                       [quantum.core.fn          :as fn 
-                         :refer [#?@(:clj [compr])]       ]
-                       [quantum.core.vars        :as var 
+                       [quantum.core.fn          :as fn
+                         :refer [#?@(:clj [rcomp])]       ]
+                       [quantum.core.vars        :as var
                          :refer [#?(:clj defalias)]       ])
-    #?(:cljs (:require-macros  
-                       [quantum.core.fn          :as fn 
-                         :refer [compr]                   ]
-                       [quantum.core.vars        :as var 
+    #?(:cljs (:require-macros
+                       [quantum.core.fn          :as fn
+                         :refer [rcomp]                   ]
+                       [quantum.core.vars        :as var
                          :refer [defalias]                ])))
 
 ; Ubergraph goes beyond Loom's protocols, allowing a
@@ -169,7 +169,7 @@
 #?(:clj (defalias bipartite-sets                  alg/bipartite-sets           ))
 #?(:clj (defalias bipartite?                      alg/bipartite?               ))
 
-; Whether a map of nodes to colors is a proper coloring of a graph 
+; Whether a map of nodes to colors is a proper coloring of a graph
 #?(:clj (defalias coloring?                       alg/coloring?                ))
 
 ; ----- DENSITY -----
@@ -236,11 +236,11 @@
   [g]
   (println (type g))
   (println (-> g nodes count) "Nodes:")
-  (doseq [node (nodes g)] 
+  (doseq [node (nodes g)]
     (println \tab node (let [a (attrs g node)] (if (seq a) a ""))))
   ;(println (count-unique-edges g) "Edges:")
   (doseq [edge (edges g)]
-    (println \tab (graph/src edge) "->" (graph/dest edge) 
+    (println \tab (graph/src edge) "->" (graph/dest edge)
       (let [a (attrs g edge)]
         (if (seq a) a ""))))))
 
@@ -277,7 +277,7 @@
 ;               Weights won't always be simply added - they might be multiplied, for instance."
 ;  :contributor "Alex Gunnarson"}
 
-#?(:clj 
+#?(:clj
 (defn dijkstra-traverse
   "Returns a lazy-seq of [current-node state] where state is a map in the
   format {node [distance predecessor]}. When f is provided, returns
@@ -373,7 +373,7 @@
                  (relax-edge edge (graph/weight g u v) estimates waf))
                estimates))))
 
-#?(:clj 
+#?(:clj
 (defn bellman-ford
   "Given a weighted, directed graph G = (V, E) with source start,
    the Bellman-Ford algorithm produces map of single source shortest
@@ -410,7 +410,7 @@
                               path))))
                {}))])))))
 
-#?(:clj 
+#?(:clj
 (defn- bellman-ford-transform
   "Helper function for Johnson's algorithm. Uses Bellman-Ford to remove negative weights."
   ([wg] (bellman-ford-transform +))
@@ -517,7 +517,7 @@
          [:zs           :ys        ] 1/1000}}
   [m]
   (->> (root-node-paths* m [])
-       (map (juxt (compr #(first %1) (juxt #(first %1) #(last %1))) #(second %1)))
+       (map (juxt (rcomp #(first %1) (juxt #(first %1) #(last %1))) #(second %1)))
        (into (sorted-map))))
 
 
@@ -530,7 +530,7 @@
 ;;  Created 23 June 2009
 
 
-; (ns 
+; (ns
 ;   ^{:author "Jeffrey Straszheim",
 ;      :doc "Basic graph theory algorithms"}
 ;   clojure.algo.graph
@@ -611,8 +611,8 @@
 ;     (struct directed-graph
 ;             (:nodes g)
 ;             (fn [n] (force (nbs n))))))
-          
-                
+
+
 ; ;; Strongly Connected Components
 
 ; (defn- post-ordered-visit
@@ -624,7 +624,7 @@
 ;                             [(conj visited n) acc]
 ;                             (get-neighbors g n))]
 ;       [v2 (conj acc2 n)])))
-  
+
 ; (defn post-ordered-nodes
 ;   "Return a sequence of indexes of a post-ordered walk of the graph."
 ;   [g]
@@ -678,7 +678,7 @@
 ;    self-recursive."
 ;   [g]
 ;   (filter (partial recursive-component? g) (scc g)))
-                          
+
 
 ; ;; Dependency Lists
 
@@ -695,7 +695,7 @@
 ;                    new-data
 ;                    (recur new-data (and idx (dec idx))))))]
 ;     (step data max)))
-                  
+
 ; (defn- fold-into-sets
 ;   [priorities]
 ;   (let [max (inc (apply max 0 (vals priorities)))
@@ -704,7 +704,7 @@
 ;     (reduce step
 ;             (vec (replicate max #{}))
 ;             priorities)))
-            
+
 ; (defn dependency-list
 ;   "Similar to a topological sort, this returns a vector of sets. The
 ;    set of nodes at index 0 are independent.  The set at index 1 depend
@@ -721,7 +721,7 @@
 ;                             (inc (count (:nodes g)))
 ;                             =)]
 ;     (fold-into-sets counts)))
-    
+
 ; (defn stratification-list
 ;   "Similar to dependency-list (see doc), except two graphs are
 ;    provided.  The first is as dependency-list.  The second (which may

@@ -42,8 +42,8 @@
                      #?@(:clj [first conj! contains? containsk? containsv?])]
       :refer-macros [          first conj! contains? containsk? containsv?]]
     [quantum.core.fn               :as fn
-      :refer        [#?@(:clj [fn1 compr])]
-      :refer-macros [          fn1 compr]]
+      :refer        [#?@(:clj [fn1 rcomp])]
+      :refer-macros [          fn1 rcomp]]
     [quantum.core.reducers         :as red
       :refer        [map+ filter+
                      #?@(:clj [reduce join])]
@@ -91,7 +91,7 @@
   (let [ks-set (set ks)]
     (->> m
          (filter+
-           (compr key (fn1 in-k? ks-set))))))
+           (rcomp key (fn1 in-k? ks-set))))))
 
 ; ;-----------------------{       CONTAINMENT       }-----------------------
 
