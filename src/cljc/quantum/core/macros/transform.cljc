@@ -14,14 +14,14 @@
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- f$n fn->])]
-      :refer-macros [          <- f$n fn->]]
+      :refer        [#?@(:clj [<- fn1 fn->])]
+      :refer-macros [          <- fn1 fn->]]
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
       :refer        [nnil? some? every?
-                     #?@(:clj [fn-not fn-or fn-and whenc condf$n])]
-      :refer-macros [          fn-not fn-or fn-and whenc condf$n]]
+                     #?@(:clj [fn-not fn-or fn-and whenc condf1])]
+      :refer-macros [          fn-not fn-or fn-and whenc condf1]]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 
@@ -31,7 +31,7 @@
 
 (defn hint-resolved? [x lang env]
   ((fn-or anap/hinted-literal?
-     (f$n anap/type-cast? lang)
+     (fn1 anap/type-cast? lang)
      anap/constructor?
      type-hint
      (fn [sym]
@@ -57,7 +57,7 @@
                          (into {}))
         body-hinted
           (postwalk
-            (condf$n
+            (condf1
               symbol?
                 (fn [sym]
                   (let [[hinted hint] (find arglist-map sym)]

@@ -11,8 +11,8 @@
     [quantum.core.graph       :as g
       :refer        [#?@(:clj [->graph ->digraph ->weighted-digraph])]]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [f$n])]
-      :refer-macros [          f$n]]
+      :refer        [#?@(:clj [fn1])]
+      :refer-macros [          fn1]]
     [quantum.core.logic       :as logic
       :refer        [#?@(:clj [eq? whenc ifn])]
       :refer-macros [          eq? whenc ifn]]
@@ -70,7 +70,7 @@
                        u#
                        (zipmap ~nodes
                                (repeat (fn [node#] (ifn (core/get quantum.measure.reg/reg-units node#) identity
-                                                      (f$n core/conj ~unit-type-k)
+                                                      (fn1 core/conj ~unit-type-k)
                                                       (constantly #{~unit-type-k}))))))))]
                (condp = emit-type
                  :map

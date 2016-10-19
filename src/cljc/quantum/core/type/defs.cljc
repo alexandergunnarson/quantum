@@ -13,8 +13,8 @@
       :refer        [#?@(:clj [fn->])]
       :refer-macros [          fn->]]
     [quantum.core.logic                   :as logic
-      :refer        [#?@(:clj [fn-and condf$n])]
-      :refer-macros [          fn-and condf$n]]))
+      :refer        [#?@(:clj [fn-and condf1])]
+      :refer-macros [          fn-and condf1]]))
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -252,7 +252,8 @@
           #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
                     quantum.core.data.finger_tree.CountedDoubleList}
             :cljs #{quantum.core.data.finger-tree/CountedDoubleList}}
-        map-entry-types '{:clj  #{clojure.lang.MapEntry            }}
+        map-entry-types '{:clj  #{;clojure.lang.MapEntry
+                                  java.util.Map$Entry}}
         queue-types     '{:clj  #{clojure.lang.PersistentQueue     }
                           :cljs #{cljs.core/PersistentQueue        }}
         transient-types '{:clj  #{clojure.lang.ITransientCollection}
@@ -402,10 +403,10 @@
            'integral?        integral-types
            'primitive?       primitive-types
            'qreducer?        '{:clj #{clojure.core.protocols.CollReduce
-                                      clojure.lang.Delay
                                       #_quantum.core.reducers.Folder}
                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
-                                       cljs.core/Delay}}
+                                       quantum.core.reducers.Folder
+                                       quantum.core.reducers.Reducer}}
            'file?            '{:clj  #{java.io.File}
                                :cljs #{}} ; js/File isn't always available! Use an abstraction
            'array-list?      array-list-types
@@ -468,7 +469,7 @@
                               (map (fn [[pred-n types-n]]
                                      (map-entry pred-n
                                        (->> types-n
-                                            (map (condf$n
+                                            (map (condf1
                                                    (fn-and seq? (fn-> first name (= "type")))
                                                      (fn [obj]
                                                        (condp = lang-n

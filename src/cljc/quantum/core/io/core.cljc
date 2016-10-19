@@ -22,8 +22,8 @@
                :include-macros true]
              [quantum.core.logic         :as logic
                :refer        [splice-or nnil? nempty?
-                              #?@(:clj [whenf whenf$n whenc condpc coll-or fn-not])]
-               :refer-macros [          whenf whenf$n whenc condpc coll-or fn-not]]
+                              #?@(:clj [whenf whenf1 whenc condpc coll-or fn-not])]
+               :refer-macros [          whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
              [quantum.core.collections   :as coll
                :refer        [postwalk]]
@@ -114,7 +114,7 @@
             (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
                      (not unfreezable-caught?))
                 (->> data
-                     (postwalk (whenf$n vector+?
+                     (postwalk (whenf1 vector+?
                                  (partial core/into [])))
                      #((assoc-serialized! path-0 %
                          (assoc :unfreezable-caught? true))))

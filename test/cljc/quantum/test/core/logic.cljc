@@ -51,7 +51,7 @@
 (defn test:condf
   [obj & clauses])
 
-(defn test:condf$n [& args])
+(defn test:condf1 [& args])
 
 (defn test:condf**n [& args])
 
@@ -66,7 +66,7 @@
 
 (defn test:ifcf$n [pred true-expr false-expr])
 
-(defn test:if$n [pred true-fn false-fn])
+(defn test:ifn1 [pred true-fn false-fn])
 
 (defn test:whenf
   [obj pred true-fn])
@@ -77,10 +77,10 @@
 (defn test:whenp
   [obj pred true-fn])
 
-(defn test:whenf$n
+(defn test:whenf1
   [pred true-fn])
 
-(defn test:whencf$n
+(defn test:whenc1
   [pred true-obj])
 
 (defn test:condpc

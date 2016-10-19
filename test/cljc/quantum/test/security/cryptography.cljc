@@ -111,8 +111,8 @@
               (if base64?
                   encrypted
                   (->> encrypted
-                       (postwalk (whenf$n #(instance? js/Uint8Array %) u/->base64))
-                       (postwalk (whenf$n string? u/base64->byte-array))))
+                       (postwalk (whenf1 #(instance? js/Uint8Array %) u/->base64))
+                       (postwalk (whenf1 string? u/base64->byte-array))))
             decrypted
               (<! (pass-natal.crypto/aes algo (:encrypted encrypted)
                     :decrypt pass encrypted))

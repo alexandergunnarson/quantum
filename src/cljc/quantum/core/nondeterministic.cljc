@@ -32,8 +32,8 @@
                       :refer-macros [regex?]             ]
                     [quantum.core.logic        :as logic
                       :refer        [splice-or nempty?
-                                     #?@(:clj [condf$n])]
-                      :refer-macros [condf$n]            ]
+                                     #?@(:clj [condf1])]
+                      :refer-macros [condf1]            ]
                     [quantum.core.numeric      :as num   ]
                     [quantum.core.fn           :as fn
                       :refer        [#?(:clj <-)]
@@ -270,7 +270,7 @@
   [coll & distrs-0]
   (assert (nempty? distrs-0))
   (let [coll        (vec coll) ; to be able to index
-        to-distr    (condf$n vector? (juxt second first)
+        to-distr    (condf1 vector? (juxt second first)
                              number? (juxt #(gensym (str "split-" %)) identity))
         distrs      (->> distrs-0
                          (map+ to-distr)

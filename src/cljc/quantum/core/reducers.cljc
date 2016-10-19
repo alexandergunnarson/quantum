@@ -23,12 +23,12 @@
                :refer [->ex]]
              [quantum.core.fn               :as fn
                :refer        [call firsta monoid aritoid
-                              #?@(:clj [f$n fn-> fn->> compr defcurried rfn])]
-               :refer-macros [          f$n fn-> fn->> compr defcurried rfn]]
+                              #?@(:clj [fn1 fn-> fn->> compr defcurried rfn])]
+               :refer-macros [          fn1 fn-> fn->> compr defcurried rfn]]
              [quantum.core.logic            :as logic
                :refer        [nnil?
-                              #?@(:clj [fn-not fn-or fn-and whenf whenf$n ifn condf condf$n])]
-               :refer-macros [          fn-not fn-or fn-and whenf whenf$n ifn condf condf$n]                                       ]
+                              #?@(:clj [fn-not fn-or fn-and whenf whenf1 ifn condf condf1])]
+               :refer-macros [          fn-not fn-or fn-and whenf whenf1 ifn condf condf1]                                       ]
              [quantum.core.macros           :as macros
                :refer        [#?@(:clj [defnt])]
                :refer-macros [          defnt]]
@@ -709,8 +709,8 @@
     (->> coll
          (map-state
            (fn [x x']
-             (let [xf  (whenf x  (fn-not (f$n identical? sentinel)) f)
-                   xf' (whenf x' (fn-not (f$n identical? sentinel)) f)]
+             (let [xf  (whenf x  (fn-not (fn1 identical? sentinel)) f)
+                   xf' (whenf x' (fn-not (fn1 identical? sentinel)) f)]
                [x' (if (eq-f xf xf') sentinel x')]))
            sentinel)
          (remove+ (partial identical? sentinel)))))

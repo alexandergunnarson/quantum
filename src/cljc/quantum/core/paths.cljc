@@ -12,8 +12,8 @@
              [quantum.core.error       :as err
                :refer [->ex TODO]                            ]
              [quantum.core.fn          :as fn
-               :refer        [#?@(:clj [<- fn-> fn->> f$n mfn])]
-               :refer-macros [<- fn-> fn->> f$n mfn]         ]
+               :refer        [#?@(:clj [<- fn-> fn->> fn1 mfn])]
+               :refer-macros [<- fn-> fn->> fn1 mfn]         ]
              [quantum.core.logic       :as logic
                :refer        [#?@(:clj [fn-not fn-and fn-eq?
                                         whenf whenc ifn])]
@@ -77,7 +77,7 @@
 ;#?(:clj
 ;(def paths
 ;  (->> paths-vecs
-;       (map-vals+ (f$n io/file-str))
+;       (map-vals+ (fn1 io/file-str))
 ;       redm)))
 
 (defn path
@@ -167,7 +167,7 @@
 
 (defn up-dir-str [dir]
   (->> dir
-       (<- whenf (f$n str/ends-with? sys/separator) popr)
+       (<- whenf (fn1 str/ends-with? sys/separator) popr)
        (dropr-until sys/separator)
        (<- whenc empty?
          (throw (->ex :err/io "Directory does not have a parent directory:" dir)))))

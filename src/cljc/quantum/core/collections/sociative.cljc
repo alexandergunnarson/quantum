@@ -49,8 +49,8 @@
     [quantum.core.collections.generative
       :refer        [range]]
     [quantum.core.fn               :as fn
-      :refer        [#?@(:clj [f$n fn->])]
-      :refer-macros [          f$n fn->]]
+      :refer        [#?@(:clj [fn1 fn->])]
+      :refer-macros [          fn1 fn->]]
     [quantum.core.logic            :as logic
       :refer        [#?@(:clj [fn-or whenf])]
       :refer-macros [          fn-or whenf]]
@@ -172,7 +172,7 @@
 (defn update-val+
   {:attribution "Alex Gunnarson"
    :usage '(->> {:a 4 :b 12}
-                (map+ (update-val+ (f$n / 2))))}
+                (map+ (update-val+ (fn1 / 2))))}
   ([f]
     (fn
       ([kv]
@@ -271,7 +271,7 @@
 
 (defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
   (whenf coll (fn-> (get k) pred)
-    (f$n dissoc+ k)))
+    (fn1 dissoc+ k)))
 
 (defnt dissoc++
   {:todo ["Move to collections.core"

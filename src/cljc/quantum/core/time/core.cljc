@@ -10,7 +10,7 @@
                      [quantum.core.error                :as err
                        :refer [->ex #?(:clj throw-unless)]          ]
                      [quantum.core.fn                   :as fn
-                       :refer [#?@(:clj [f$n <-])]                  ]
+                       :refer [#?@(:clj [fn1 <-])]                  ]
                      [quantum.core.logic                :as logic
                        :refer [#?@(:clj [fn-or whenc])]             ]
                      [quantum.core.macros               :as macros
@@ -27,7 +27,7 @@
                      [quantum.core.error                :as err
                        :refer [throw-unless]                        ]
                      [quantum.core.fn                   :as fn
-                       :refer [f$n <-]                              ]
+                       :refer [fn1 <-]                              ]
                      [quantum.core.logic                :as logic
                        :refer [fn-or whenc]                         ]
                      [quantum.core.macros               :as macros
@@ -107,7 +107,7 @@
 (defnt year->nanos-arr-index
   ([^long? n]
     (whenc (if (= n 0) nil (core/+ n 10000))
-      (fn-or nil? (f$n core/< 0) (f$n core/>= (alength nanos-at-beg-of-year)))
+      (fn-or nil? (fn1 core/< 0) (fn1 core/>= (alength nanos-at-beg-of-year)))
       nil))))
 
 ; Initialize nanos-at-beg-of-year

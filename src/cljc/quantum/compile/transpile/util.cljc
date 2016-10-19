@@ -3,12 +3,12 @@
                      [quantum.core.collections :as coll
                        :refer [dropr]                   ]
                      [quantum.core.fn          :as fn
-                       :refer [#?@(:clj [<- f$n fn->])] ]
+                       :refer [#?@(:clj [<- fn1 fn->])] ]
                      [quantum.core.logic       :as logic
                        :refer [#?@(:clj [whenf fn-not])]])
   #?(:cljs (:require-macros
                      [quantum.core.fn          :as fn
-                       :refer [<- f$n fn->]             ]
+                       :refer [<- fn1 fn->]             ]
                      [quantum.core.logic       :as logic
                        :refer [whenf fn-not]            ])))
 
@@ -50,9 +50,9 @@
                      (str/replace #"}$" (str "}\n" indentation))))
               body-f
                 (-> body-indented
-                    (whenf (f$n str/ends-with? indentation) ; To get rid of trailing indentation
+                    (whenf (fn1 str/ends-with? indentation) ; To get rid of trailing indentation
                       (partial dropr *indent-num*))
-                    (whenf (fn-not (f$n str/ends-with? "\n"))
+                    (whenf (fn-not (fn1 str/ends-with? "\n"))
                       (fn-> (str "\n"))))]
           (str header " {\n"
             body-f

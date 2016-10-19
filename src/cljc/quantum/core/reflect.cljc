@@ -174,6 +174,6 @@
        (apply concat)
        (map (juxt identity (fn-> meta :todo)))
        (remove (fn-> second empty?))
-       (into (map/sorted-map-by
+       (into (sorted-map-by
                (fn [a b] (compare (qualified-name a)
                                   (qualified-name b))))))))

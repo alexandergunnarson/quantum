@@ -6,9 +6,9 @@
                      [quantum.core.error      :as err
                        :refer [->ex]                  ]
                      [quantum.core.fn         :as fn
-                       :refer [#?@(:clj [f$n])]]
+                       :refer [#?@(:clj [fn1])]]
                      [quantum.core.logic
-                       :refer [#?@(:clj [whencf$n])]]
+                       :refer [#?@(:clj [whenc1])]]
                      [quantum.core.vars       :as var
                         :refer [#?(:clj defalias)]    ]
              #?(:clj [taoensso.timbre.profiling :as p])
@@ -16,7 +16,7 @@
                        :refer [#?(:clj if-cljs)]])
   #?(:cljs (:require-macros
                      [quantum.core.logic
-                       :refer [whencf$n]              ]
+                       :refer [whenc1]              ]
                      [quantum.core.vars       :as var
                        :refer [defalias]              ]))
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
@@ -100,7 +100,7 @@
          (~(if-cljs &env `defn `p/defnp) ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
-             (swap! caches update (var ~sym) (whencf$n nil? cache-f#)) ; override cache only if not present
+             (swap! caches update (var ~sym) (whenc1 nil? cache-f#)) ; override cache only if not present
              cache-f#))
          (def ~sym (let [opts# ~opts]
                      (when-let [init-cache-fn# (:init-fn opts#)]
@@ -112,7 +112,7 @@
                        (:memoize-first       opts#))))
          (doto (var ~sym)
            (alter-meta! ; transfer metadata from |sym-star| to |sym|
-             (f$n merge (-> (var ~sym-star)
+             (fn1 merge (-> (var ~sym-star)
                             meta
                             (dissoc :line)
                             (dissoc :name)))))))))

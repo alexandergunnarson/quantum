@@ -52,7 +52,7 @@
 ;     (let [^String open-tag
 ;             (-> tag name
 ;                 (whenf (constantly (nnil? opts))
-;                   (f$n str " " opts))
+;                   (fn1 str " " opts))
 ;                 brs-open)
 ;           ^String flattened-str-body
 ;             (whenf body coll?

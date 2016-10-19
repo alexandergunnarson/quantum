@@ -50,11 +50,11 @@
       :refer        [#?@(:clj [walking])]
       :refer-macros [walking]]
     [quantum.core.fn                    :as fn
-      :refer        [#?@(:clj [f$n fn->> withf->>])]
-      :refer-macros [          f$n fn->> withf->>]]
+      :refer        [#?@(:clj [fn1 fn->> withf->>])]
+      :refer-macros [          fn1 fn->> withf->>]]
     [quantum.core.logic
-      :refer        [#?@(:clj [whenf$n])]
-      :refer-macros [          whenf$n]]
+      :refer        [#?@(:clj [whenf1])]
+      :refer-macros [          whenf1]]
     [quantum.core.reducers              :as red
      :refer        [#?@(:clj [join])]
      :refer-macros [          join]]
@@ -91,7 +91,7 @@
   replacement at the root of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (prewalk (whenf$n (f$n in-k? smap) smap) form))
+  (prewalk (whenf1 (fn1 in-k? smap) smap) form))
 
 (defn postwalk-replace
   "Recursively transforms form by replacing keys in smap with their
@@ -99,7 +99,7 @@
   replacement at the leaves of the tree first."
   {:attribution "Stuart Sierra, stuartsierra/clojure.walk2"}
   [smap form]
-  (postwalk (whenf$n (f$n in-k? smap) smap) form))
+  (postwalk (whenf1 (fn1 in-k? smap) smap) form))
 
 (defn tree-filter
   "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
@@ -108,7 +108,7 @@
   [pred tree]
   (let [results (transient [])]
     (postwalk
-      (whenf$n pred
+      (whenf1 pred
         (fn->> (withf->> #(conj! results %)))) ; keep it the same
       tree)
     (persistent! results)))
@@ -129,7 +129,7 @@
   ([m] (apply-to-keys m identity))
   ([m f]
     (postwalk
-      (whenf$n map? (fn->> (map-keys+ f) (join {})))
+      (whenf1 map? (fn->> (map-keys+ f) (join {})))
       m)))
 
 (defn keywordize-keys
@@ -142,13 +142,13 @@
   "Recursively transforms all map keys from strings to keywords."
   {:attribution "Alex Gunnarson"}
   [x]
-  (apply-to-keys x (whenf$n string? keyword)))
+  (apply-to-keys x (whenf1 string? keyword)))
 
 (defn stringify-keys
   "Recursively transforms all map keys from keywords to strings."
   {:attribution "Alex Gunnarson"}
   [x]
-  (apply-to-keys x (whenf$n keyword? name)))
+  (apply-to-keys x (whenf1 keyword? name)))
 
 ; ZIPPER TREES
 

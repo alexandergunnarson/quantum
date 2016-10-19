@@ -8,8 +8,8 @@
     [cheshire.core            :as json ])
     [quantum.core.collections :as coll ]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [<- f$n])]
-      :refer-macros [          <- f$n]]
+      :refer        [#?@(:clj [<- fn1])]
+      :refer-macros [          <- fn1]]
     [quantum.core.logic       :as logic
       :refer        [nnil?
                      #?@(:clj [whenp])]
@@ -29,7 +29,7 @@
              (->> x
                   (t/read (t/reader :json))
                   (<- whenp (nnil? key-fn)
-                      (f$n coll/apply-to-keys key-fn)))))))
+                      (fn1 coll/apply-to-keys key-fn)))))))
 
 (defn ->json
   "JSON encode @x into a String."

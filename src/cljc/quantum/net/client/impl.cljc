@@ -19,9 +19,9 @@
                       [quantum.core.string          :as str   ]
                       [quantum.net.core             :as net   ]
                       [quantum.core.fn              :as fn
-                        :refer [#?@(:clj [fn-> f$n])]         ]
+                        :refer [#?@(:clj [fn-> fn1])]         ]
                       [quantum.core.logic           :as logic
-                        :refer [#?@(:clj [fn-and whenf$n])
+                        :refer [#?@(:clj [fn-and whenf1])
                                 nnil?]                        ]
                       [quantum.core.collections     :as coll
                         :refer [#?@(:clj [kmap containsv?])]  ]
@@ -33,10 +33,10 @@
                       [quantum.core.collections     :as coll
                         :refer [kmap containsv?]              ]
                       [quantum.core.fn              :as fn
-                        :refer [fn-> f$n]                     ]
+                        :refer [fn-> fn1]                     ]
                       [quantum.core.log             :as log   ]
                       [quantum.core.logic           :as logic
-                        :refer [fn-and whenf$n]               ]
+                        :refer [fn-and whenf1]               ]
                       [quantum.core.vars            :as var
                         :refer [def-]                         ]))
   #?(:clj  (:import   org.apache.http.entity.mime.MultipartEntityBuilder
@@ -217,9 +217,9 @@
                    {:status (:status req)}))
       (let [response        (request!* (dissoc req :status :log))
             status          (:status response)
-            parse-middleware (whenf$n (fn-and (constantly (not raw?))
+            parse-middleware (whenf1 (fn-and (constantly (not raw?))
                                               (fn-> :headers :content-type (containsv? "application/json")))
-                               (fn-> (update :body (f$n json-> (or keys-fn str/keywordize)))))]
+                               (fn-> (update :body (fn1 json-> (or keys-fn str/keywordize)))))]
         (if (or (= status 200) (= status 201))
             ((or (get handlers status) fn/seconda) req (parse-middleware response))
             (let [status-handler

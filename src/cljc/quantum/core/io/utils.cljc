@@ -10,8 +10,8 @@
             [quantum.core.error          :as err
               :refer        [->ex]             ]
             [quantum.core.fn             :as fn
-              :refer        [#?@(:clj [f$n])]
-              :refer-macros [          f$n]]
+              :refer        [#?@(:clj [fn1])]
+              :refer-macros [          fn1]]
             [quantum.core.system         :as sys]
             [quantum.core.string         :as str]
             [quantum.core.logic          :as logic
@@ -70,7 +70,7 @@
             (->ex :mkdir "The directory could not be created." (kmap t dir)))))))))
 
 (defn num-to-sortable-str [num-0]
-  (ifn num-0 (fn-and (fn-not neg?) (f$n < 10))
+  (ifn num-0 (fn-and (fn-not neg?) (fn1 < 10))
        (partial str "0")
        str))
 

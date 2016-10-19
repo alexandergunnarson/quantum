@@ -20,8 +20,8 @@
                :include-macros true]
              [quantum.core.logic        :as logic
                :refer        [nnil?
-                              #?@(:clj [fn-and whenc whenf$n])]
-               :refer-macros [          fn-and whenc whenf$n]]
+                              #?@(:clj [fn-and whenc whenf1])]
+               :refer-macros [          fn-and whenc whenf1]]
              [quantum.core.macros.core  :as cmacros
                :refer        [#?(:clj if-cljs)]
                :refer-macros [        if-cljs]]
@@ -44,7 +44,7 @@
 (defn let-alias* [bindings body]
   (cons 'do
     (postwalk
-      (whenf$n (fn-and symbol? (partial contains? bindings))
+      (whenf1 (fn-and symbol? (partial contains? bindings))
         (partial get bindings))
       body)))
 
@@ -176,7 +176,7 @@
 
 ; #?(:clj (defalias hint-body-with-arglist deps/hint-body-with-arglist))
 
-; (def default-hint (f$n hint-meta 'Object))
+; (def default-hint (fn1 hint-meta 'Object))
 
 ; #?(:clj
 ; (defn default-hint-if-needed
@@ -188,7 +188,7 @@
 ;              (fn-> first symbol?)
 ;              (fn-> first resolve type-hint)))
 ;                     identity
-;     symbol?         (whenf$n (fn-> meta :tag nil?) default-hint)
+;     symbol?         (whenf1 (fn-> meta :tag nil?) default-hint)
 ;     seq?            default-hint
 ;     keyword?        default-hint
 ;     set?            default-hint
@@ -246,15 +246,16 @@
 (defn log!   [] (log/enable!  :macro-expand))
 (defn unlog! [] (log/disable! :macro-expand))
 
-#?(:clj (defmalias defn+       quantum.core.macros.fn/defn+      ))
-#?(:clj (defmalias fn+         quantum.core.macros.fn/fn+        ))
-#?(:clj (defalias  defmethod+  quantum.core.macros.fn/defmethod+ ))
-#?(:clj (defalias  defmethods+ quantum.core.macros.fn/defmethods+))
+#?(:clj (defmalias defn+        quantum.core.macros.fn/defn+        ))
+#?(:clj (defmalias fn+          quantum.core.macros.fn/fn+          ))
+#?(:clj (defalias  defmethod+   quantum.core.macros.fn/defmethod+   ))
+#?(:clj (defalias  defmethods+  quantum.core.macros.fn/defmethods+  ))
 
-#?(:clj (defmalias defnt       quantum.core.macros.defnt/defnt    ))
-#?(:clj (defmalias defnt'      quantum.core.macros.defnt/defnt'   ))
-#?(:clj (defmalias defntp      quantum.core.macros.defnt/defntp   ))
+#?(:clj (defmalias defnt        quantum.core.macros.defnt/defnt      ))
+#?(:clj (defmalias defnt'       quantum.core.macros.defnt/defnt'     ))
+#?(:clj (defmalias defntp       quantum.core.macros.defnt/defntp     ))
 
-#?(:clj (defmalias compile-if  quantum.core.macros.core/compile-if))
-#?(:clj (defmalias quote+      quantum.core.macros.core/quote+    ))
-#?(:clj (defmalias hint-meta   quantum.core.macros.core/hint-meta ))
+#?(:clj (defmalias compile-if   quantum.core.macros.core/compile-if  ))
+#?(:clj (defmalias compile-when quantum.core.macros.core/compile-when))
+#?(:clj (defmalias quote+       quantum.core.macros.core/quote+      ))
+#?(:clj (defmalias hint-meta    quantum.core.macros.core/hint-meta   ))

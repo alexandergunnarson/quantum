@@ -102,7 +102,7 @@
   (let [[http-method url] (method+url-fn func id to method)
         params-f
           (whenf params (fn-> :q (= :children))
-             (f$n assoc :q (str "'" id "' in parents")))
+             (fn1 assoc :q (str "'" id "' in parents")))
         query-params (query-params-fn params-f)
         request
           {:method       http-method

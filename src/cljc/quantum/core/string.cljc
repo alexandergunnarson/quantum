@@ -18,12 +18,12 @@
              [quantum.core.data.map      :as map]
              [quantum.core.data.set      :as set]
              [quantum.core.fn            :as fn
-               :refer        [#?@(:clj [fn-> f$n])]
-               :refer-macros [          fn-> f$n]]
+               :refer        [#?@(:clj [fn-> fn1])]
+               :refer-macros [          fn-> fn1]]
              [quantum.core.logic         :as logic
                :refer        [nempty? every?
-                              #?@(:clj [fn-and whenc whencf$n ifn condf])]
-               :refer-macros [          fn-and whenc whencf$n ifn condf] ]
+                              #?@(:clj [fn-and whenc whenc1 ifn condf])]
+               :refer-macros [          fn-and whenc whenc1 ifn condf] ]
              [quantum.core.loops         :as loops
                :refer        [#?@(:clj [reduce reducei])]
                :refer-macros [          reduce reducei]]
@@ -303,7 +303,7 @@
   (-> s trim
       (replace #"\s+" " "))) ; should it be |collapse-whitespace| instead?
 
-(def  str-nil (whencf$n nil? ""))
+(def  str-nil (whenc1 nil? ""))
 
 ; ===== COERCION =====
 
@@ -500,7 +500,7 @@
          (cons (.group m 0) (lazy-seq (step)))))))))
 
 (defn search-str-within [super sub]
-  (let [strict-search (f$n containsv? sub)
+  (let [strict-search (fn1 containsv? sub)
         regexized     (->> sub conv-regex-specials (str "(?i)") re-pattern)
         case-insensitive-regex-search
           (partial re-find regexized)]
@@ -558,7 +558,7 @@
   (loop
     [s-n s
      matches (re-seq reg s)
-     indexed (map/sorted-map)]
+     indexed (map/sorted-rank-map)]
     (if (empty? matches)
         indexed
         (let [match-n    (first matches)

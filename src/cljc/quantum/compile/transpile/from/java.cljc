@@ -17,12 +17,12 @@
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn-> fn->> f$n compr <-])]
-      :refer-macros [          fn-> fn->> f$n compr <-]]
+      :refer        [#?@(:clj [fn-> fn->> fn1 compr <-])]
+      :refer-macros [          fn-> fn->> fn1 compr <-]]
     [quantum.core.logic                      :as logic
       :refer        [nnil? some? nempty?
-                     #?@(:clj [eq? fn-or fn-and whenf whenf$n if$n condf$n if-let cond-let])]
-      :refer-macros [          eq? fn-or fn-and whenf whenf$n if$n condf$n if-let cond-let]]
+                     #?@(:clj [eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let])]
+      :refer-macros [          eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
       :refer        [#?@(:clj [re-match re-match* re-match-whole*])]])
@@ -93,12 +93,12 @@
 (defn do-each [x] (apply list 'do (->> x (map parse*))))
 
 (def implicit-do
-  (if$n (fn-> first (= 'do))
+  (ifn1 (fn-> first (= 'do))
        rest
        list))
 
 (def remove-do-when-possible
-  (if$n (fn-and seq?
+  (ifn1 (fn-and seq?
                 (fn-> first (= 'do))
                 (fn-> count (<= 2)))
         rest
@@ -192,7 +192,7 @@
   ([^ClassOrInterfaceType x]
     ;.getScope
     (-> x .getName
-          (whenf (f$n containsv? "<") ; Parameterized class
+          (whenf (fn1 containsv? "<") ; Parameterized class
             (fn->> (take-until "<")))
           symbol))
   ; BODY
@@ -410,7 +410,7 @@
 
 (defn clean-lets [form]
   (prewalk
-    (whenf$n
+    (whenf1
       (fn-and seq? ; lone `let` statements like `(let [^int abc (+ (* abcde 2) 1)])`
         (fn-> first (= 'let))
         (fn-> count (= 2)))
@@ -423,7 +423,7 @@
   [x]
   (->> x
        (postwalk ; Start from bottom. Essential for granular things
-         (condf$n
+         (condf1
            (fn-and seq?
              (fn-> first (= '.println))
              (fn-> second seq?)
@@ -436,35 +436,35 @@
            identity))
        clean-lets
        (prewalk ; Start from the top, not the bottom. Essential for cond-folding
-         (condf$n
+         (condf1
            anap/cond-foldable?
            identity #_cond-fold
 
            identity))
        #_(postwalk ; TODO uncomment this; just need to fix |conditional-branches|
          (compr
-           (condf$n
+           (condf1
              (fn-and anap/conditional-statement?
                (fn->> ana/conditional-branches (every? anap/return-statement?))) ; Have to do this in separate postwalk because cond-fold affects return statements
-             (fn [x] (list 'return (->> x (ana/map-conditional-branches (f$n second)))))
+             (fn [x] (list 'return (->> x (ana/map-conditional-branches (fn1 second)))))
 
              identity)
            #_join-lets))
        (postwalk
-         (whenf$n
+         (whenf1
            ; Elide superfluous `do`s
            (fn-and anap/do-statement? (fn-> count (= 2)))
-           (f$n second)))
+           (fn1 second)))
        (postwalk
          ; Replace +1 and -1 with inc* and dec*
          ; =0 with zero?
          ; >0 with pos?
          ; *2 with >> 1
-         (condf$n
+         (condf1
           ; Elide superfluous return statements
            (fn-and anap/function-statement?
              (fn-> last anap/return-statement?))
-           (f$n update-last (f$n second))
+           (fn1 update-last (fn1 second))
            anap/sym-call?
            (fn [x] (cond-let
                      [{[form] :form [oper] :oper}
@@ -494,11 +494,11 @@
        ; TODO combine adjacent lone lets
        ; TODO extend lets to surround subsequent siblings
        #_(zip-prewalk
-         (if$n))
+         (ifn1))
        ; Fix docstrings
        ; TODO use seqxpr for this (?)
        (zip-prewalk
-         (if$n
+         (ifn1
            (fn-> zip/node anap/defnt-statement?)
            (fn [form]
              (zip/node
@@ -515,6 +515,6 @@
                  form)))
            zip/node))
        first
-       (map (if$n (fn-and seq? (fn-> first (= 'do)) (fn-> count (= 2))) rest list))
+       (map (ifn1 (fn-and seq? (fn-> first (= 'do)) (fn-> count (= 2))) rest list))
        (apply concat))))
 

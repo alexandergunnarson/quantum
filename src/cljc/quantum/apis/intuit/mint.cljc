@@ -39,16 +39,16 @@
   ([csv {:as opts :keys [account-remap]}]
     (let [account-remapper
            (if account-remap
-               (fn->> (map+ (f$n update :account-name
+               (fn->> (map+ (fn1 update :account-name
                               #(or (get account-remap %) %)) ))
                identity)]
       (->> csv
            (<- csv/parse #{:as-map? :reducer?})
-           (map+ (f$n update :amount               (fn-> str/val rationalize)))
-           (map+ (f$n update :transaction-type     keyword))
-           (map+ (f$n update :date                 (fn-> (time/parse "M/dd/yyyy")
+           (map+ (fn1 update :amount               (fn-> str/val rationalize)))
+           (map+ (fn1 update :transaction-type     keyword))
+           (map+ (fn1 update :date                 (fn-> (time/parse "M/dd/yyyy")
                                                          time/->instant)))
-           (map+ (f$n update :original-description (fn->> (url/decode :xml))))
+           (map+ (fn1 update :original-description (fn->> (url/decode :xml))))
            (map+ fin/debit-credit->num)
            account-remapper))))
 

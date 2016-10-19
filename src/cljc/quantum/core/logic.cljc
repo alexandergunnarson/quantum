@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
-          ifn, whenf$n, compr, fn->, condpc, and the like. Extremely useful
+          ifn, whenf1, compr, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"
     :figwheel-no-load true
@@ -10,8 +10,8 @@
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )   :as core   ]
                      [quantum.core.fn          :as fn
-                       :refer        [#?@(:clj [f$n fn->])]
-                       :refer-macros [          f$n fn->]]
+                       :refer        [#?@(:clj [fn1 fn->])]
+                       :refer-macros [          fn1 fn->]]
                      [quantum.core.vars        :as var
                        :refer        [#?(:clj defalias)]
                        :refer-macros [        defalias]]
@@ -81,12 +81,11 @@
 
 #?(:clj
 (defmacro fn-logic-base
-  "Auto-externs its fn arguments via a compile-time |eval|. Convenient!"
   [oper & preds]
   (let [arg (gensym)]
    `(fn [~arg]
-      (~oper ~@(for [pred preds]
-                 (if (and (if-cljs &env false true) (seq? pred))
+      (~oper ~@(for [pred preds] `(~pred ~arg)
+                 #_(if (and (if-cljs &env false true) (seq? pred))
                      ; Tries to extern it
                      `(~(try (eval pred)
                           (catch java.lang.Throwable _ pred)) ~arg)
@@ -166,12 +165,10 @@
        ~(emit gobj clauses)))))
 
 #?(:clj
-(defmacro condf$n [& args]
-  `(fn [obj#] (condf obj# ~@args))))
+(defmacro condf1 [& args] `(fn [arg#] (condf arg# ~@args))))
 
 #?(:clj
-(defmacro condf&$n [& args]
-  `(fn [& inner-args#] (condf inner-args# ~@args))))
+(defmacro condf& [& args] `(fn [& args#] (condf args# ~@args))))
 
 #?(:clj
 (defmacro condfc
@@ -195,27 +192,20 @@
        ~(emit gobj clauses)))))
 
 #?(:clj
-(defmacro ifn [obj pred true-fn false-fn] ; macro to delay
-  `(let [obj-f# ~obj]
-     (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#)))))
+(defmacro ifn [obj pred true-fn false-fn]
+  `(let [obj-f# ~obj] (if (~pred obj-f#) (~true-fn obj-f#) (~false-fn obj-f#)))))
 
 #?(:clj
-(defmacro ifc [obj pred true-expr false-expr] ; macro to delay
-  `(let [obj-f# ~obj]
-     (if (~pred obj-f#) ~true-expr ~false-expr))))
+(defmacro ifc [obj pred true-expr false-expr]
+  `(let [obj-f# ~obj] (if (~pred obj-f#) ~true-expr ~false-expr))))
 
 #?(:clj
-(defmacro ifp [obj pred true-fn false-fn] ; macro to delay
-  `(let [obj-f# ~obj]
-     (if ~pred (~true-fn obj-f#) (~false-fn obj-f#)))))
+(defmacro ifp [obj pred true-fn false-fn]
+  `(let [obj-f# ~obj] (if ~pred (~true-fn obj-f#) (~false-fn obj-f#)))))
 
-#?(:clj
-(defmacro ifcf$n [pred true-expr false-expr]
-  `(fn [arg#] (ifc arg# ~pred ~true-expr ~false-expr))))
-
-#?(:clj
-(defmacro if$n [pred true-fn false-fn]
-  `(fn [arg#] (ifn arg# ~pred ~true-fn ~false-fn))))
+#?(:clj (defmacro ifn1 [x0 x1 x2] `(fn [arg#] (ifn arg# ~x0 ~x1 ~x2))))
+#?(:clj (defmacro ifp1 [x0 x1 x2] `(fn [arg#] (ifp arg# ~x0 ~x1 ~x2))))
+#?(:clj (defmacro ifc1 [x0 x1 x2] `(fn [arg#] (ifc arg# ~x0 ~x1 ~x2))))
 
 #?(:clj
 (defmacro whenf
@@ -223,34 +213,30 @@
    (whenf 1 nnil? inc) = (ifn 1 nnil? inc identity)
    whenf : identity :: when : nil"
   [obj pred true-fn]
-  `(let [obj-f# ~obj]
-     (if (~pred obj-f#) (~true-fn obj-f#) obj-f#))))
+  `(let [obj-f# ~obj] (if (~pred obj-f#) (~true-fn obj-f#) obj-f#))))
 
 #?(:clj
 (defmacro whenc
-  "Analogous to whenf, but evaluates the result instead of
-   using it as a function."
+  "`whenf` + `ifc`"
   [obj pred true-expr]
-  `(let [obj-f# ~obj]
-     (if (~pred obj-f#) ~true-expr obj-f#))))
+  `(let [obj-f# ~obj] (if (~pred obj-f#) ~true-expr obj-f#))))
 
 #?(:clj
 (defmacro whenp
+  "`whenf` + `ifp`"
   [obj pred true-fn]
-  `(let [obj-f# ~obj]
-     (if ~pred (~true-fn obj-f#) obj-f#))))
+  `(let [obj-f# ~obj] (if ~pred (~true-fn obj-f#) obj-f#))))
 
 #?(:clj
-(defmacro whenf$n
-  "Analogous to if'n.
-   (whenf$n nnil? inc) = (if'n nnil? inc identity)"
+(defmacro whenf1
+  "`whenf` + `if1`.
+   (whenf1 nnil? inc) = (if1 nnil? inc identity)"
   [pred true-fn] `(fn [arg#] (whenf arg# ~pred ~true-fn))))
 
 #?(:clj
-(defmacro whencf$n
-  "Analogous to whenf$n."
+(defmacro whenc1
+  "Analogous to whenf1."
   [pred true-obj] `(fn [arg#] (whenc arg# ~pred ~true-obj))))
-
 
 (def is? #(%1 %2)) ; for use with condp
 

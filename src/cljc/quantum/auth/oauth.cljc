@@ -8,10 +8,10 @@
     {:client-id     (apply auth/datum service (concat service-ks (list :client-id    )))
      :client-secret (apply auth/datum service (concat service-ks (list :client-secret)))
      :callback ; TODO some of this functionality will be rendered unnecesssary
-       {:domain (whenf domain   (f$n str/ends-with? "/")
+       {:domain (whenf domain   (fn1 str/ends-with? "/")
                   popr)
-        :path   (whenf endpoint (f$n (fn-not (MWA 2 str/starts-with?)) "/")
-                  (f$n conjl "/"))}}))
+        :path   (whenf endpoint (fn1 (fn-not (MWA 2 str/starts-with?)) "/")
+                  (fn1 conjl "/"))}}))
 
 #_(defn insert-client-id-and-secret
   {:todo ["Use |assocs-in+| when it's ready..."] }

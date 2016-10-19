@@ -11,8 +11,8 @@
                      [quantum.core.data.binary :as bin
                        :refer        [& >>>]]
                      [quantum.core.fn          :as fn
-                       :refer        [#?@(:clj [f$n])]
-                       :refer-macros [          f$n]]
+                       :refer        [#?@(:clj [fn1])]
+                       :refer-macros [          fn1]]
                      [quantum.core.logic       :as logic
                        :refer        [nnil?]])
   #?(:clj  (:import  java.util.Arrays)))
@@ -77,6 +77,6 @@
 (defn ^bytes parse-bytes
   [encoded-bytes]
   (->> (re-seq #"%.." encoded-bytes)
-       (map (f$n subs 1))
+       (map (fn1 subs 1))
        (map #(.byteValue ^Integer (Integer/parseInt % 16)))
        (byte-array))))

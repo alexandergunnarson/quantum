@@ -14,8 +14,8 @@
     [quantum.core.log                 :as log
       :include-macros true]
     [quantum.core.logic               :as logic
-      :refer        [#?@(:clj [fn-or whenf$n])]
-      :refer-macros [          fn-or whenf$n]]
+      :refer        [#?@(:clj [fn-or whenf1])]
+      :refer-macros [          fn-or whenf1]]
     [quantum.core.macros.core         :as cmacros
       :refer [#?(:clj if-cljs)]]
     [quantum.core.macros.optimization :as opt
@@ -54,7 +54,7 @@
   (log/ppr-hints :macro-expand "ORIG BODY:" body)
   (->> body
        (clojure.walk/postwalk
-         (whenf$n extern?
+         (whenf1 extern?
            (fn [[extern-sym obj]]
              (let [sym (gensym "externed")]
                (swap! externs conj (list 'def sym obj))
@@ -94,7 +94,7 @@
               body-f   (if arglist (list (cons arglist body)) body)
               body-f   (->> body-f
                             (clojure.walk/postwalk
-                              (whenf$n opt/extern?
+                              (whenf1 opt/extern?
                                 (fn [[extern-sym obj]]
                                   (let [sym (gensym "externed")]
                                     (log/pr :macro-expand "EXTERNED" sym "IN FN+")

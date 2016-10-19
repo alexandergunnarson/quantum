@@ -4,7 +4,7 @@
 ;   keyword? ([k] (if (-> k namespace (= "error"))
 ;                     k
 ;                     (keyword (str "error/"
-;                                (whenf (namespace k) nnil? (f$n str "."))
+;                                (whenf (namespace k) nnil? (fn1 str "."))
 ;                                (name k)))))
 ;   nil?     ([k] nil))
 

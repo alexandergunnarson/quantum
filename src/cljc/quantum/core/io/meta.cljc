@@ -15,8 +15,8 @@
                        :refer        [#?@(:clj [->keyword])]
                        :refer-macros [->keyword]              ]
                      [quantum.core.fn                :as fn
-                       :refer        [#?@(:clj [<- fn-> fn->> f$n doto->>])]
-                       :refer-macros [<- fn-> fn->> f$n]]
+                       :refer        [#?@(:clj [<- fn-> fn->> fn1 doto->>])]
+                       :refer-macros [<- fn-> fn->> fn1]]
                      [quantum.core.logic             :as logic
                        :refer        [#?@(:clj [whenf]) nempty?]
                        :refer-macros [whenf]                  ]

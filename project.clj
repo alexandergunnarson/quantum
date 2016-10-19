@@ -147,7 +147,8 @@
        [posh                                    "0.3.5"           ]
        [quantum/datsync                         "0.0.1-4-11-2016"
          :exclusions [org.slf4j/slf4j-nop
-                      org.clojure/core.match]]
+                      org.clojure/core.match
+                      io.netty/netty]]
        [re-frame                                "0.8.0-alpha11"   ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ]
@@ -201,8 +202,9 @@
          :exclusions [clj-tuple
                       ch.qos.logback/logback-classic
                       org.jboss.logging/jboss-logging]  ]
-       [aleph                                   "0.4.1"
-         :exclusions [primitive-math]                             ]
+       [aleph                                   "0.4.1" ; but incompatible Netty dep with Spark 2.0.1
+         :exclusions [primitive-math
+                      io.netty/netty-all] #_"For Spark's sake"    ]
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
@@ -212,7 +214,8 @@
      ; WEB
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis
-                    commons-codec]                                ]
+                    commons-codec
+                    io.netty/netty]]
      ; ==== APIS ==== ;
      [com.amazonaws/aws-java-sdk                "1.11.32"
        :exclusions [com.fasterxml.jackson.core/jackson-databind]]
@@ -258,36 +261,45 @@
      [gorillalabs/sparkling                     "1.2.5"
        :exclusions [org.ow2.asm/*
                     com.esotericsoftware.reflectasm/reflectasm]]
-       [org.apache.spark/spark-core_2.10        "1.6.1"
+       [org.apache.spark/spark-core_2.10        "1.6.1" #_"2.0.1" ; problematic netty
          :exclusions [com.google.inject/guice
                       org.xerial.snappy/snappy-java
                       asm
-                      jline]]
+                      jline
+                      #_io.netty/netty
+                      io.netty/netty-all]]
        [com.github.fommil.netlib/all            "1.1.2"
          :extension "pom"]
        [com.googlecode.matrix-toolkits-java/mtj "1.0.2"]
-       [org.apache.spark/spark-mllib_2.10       "1.6.1"
+       [org.apache.spark/spark-mllib_2.10       "2.0.1" #_"1.6.1"
          :exclusions [com.google.inject/guice
                       org.slf4j/jcl-over-slf4j
                       org.xerial.snappy/snappy-java
                       org.scalamacros/quasiquotes_2.10
-                      org.codehaus.janino/commons-compiler]]
+                      org.codehaus.janino/commons-compiler
+                      io.netty/netty]]
      ; ==== DEPENDENCY-CONFLICTED ====
      ; quantum/datomic-pro
      ; spark
-     [org.codehaus.janino/commons-compiler-jdk "2.6.1"   ]
+     [org.codehaus.janino/commons-compiler-jdk "2.7.4" #_"2.6.1"]
      ; byte-transforms
      ; spark
-     [org.xerial.snappy/snappy-java            "1.1.1.7" ]
+     [org.xerial.snappy/snappy-java            "1.1.1.7"]
      ; many
-     [potemkin                                 "0.4.3"   ]
+     [potemkin                                 "0.4.3"]
+     ; aleph
+     ; org.apache.spark/spark-core_2.10
+     ; org.apache.spark/spark-mllib_2.10
+     ; quantum/datsync
+     ; com.github.detro/phantomjsdriver
+     [io.netty/netty-all                       "4.1.0.CR3"  #_"4.1.6.Final"] ; 4.0.29.Final is Required version for Spark 2
      ; com.datomic/datomic-free
      ; org.immutant/web
      [org.jboss.logging/jboss-logging          "3.1.0.GA"]
      ; com.datomic/datomic-free
      ; org.immutant/web
      [ch.qos.logback/logback-classic           "1.1.7"
-       :exclusions [org.slf4j/*]                         ]
+       :exclusions [org.slf4j/*]]
      ; org.ow2.asm/*
      ;   org.clojure/tools.emitter.jvm
      ;   org.apache.tika/tika-parsers

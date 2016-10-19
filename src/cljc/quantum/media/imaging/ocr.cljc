@@ -8,8 +8,8 @@
                          :refer [#?@(:clj [fn->])]
               #?@(:cljs [:refer-macros [fn->]])]
             [quantum.core.logic
-                         :refer [#?@(:clj [if$n])]
-              #?@(:cljs [:refer-macros [if$n]])]
+                         :refer [#?@(:clj [ifn1])]
+              #?@(:cljs [:refer-macros [ifn1]])]
             [quantum.core.collections :as coll
                          :refer [#?@(:clj [join])
                                  map+ filter+ flatten+]
@@ -85,7 +85,7 @@
         args        (->> opts-f
                          (filter+ (fn-> key string?))
                          (map+ (fn [[opt v]]
-                                 (let [v-f ((if$n true? (constantly "T") str) v)]
+                                 (let [v-f ((ifn1 true? (constantly "T") str) v)]
                                    ["-c" (str opt "=" v-f)])))
                          flatten+
                          (join [image-file outbase "--tessdata-dir" (path/file-str data-dir) "-l" language]))]

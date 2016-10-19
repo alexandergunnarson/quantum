@@ -13,11 +13,11 @@
                  :cljs cljs.core   )       :as core   ]
              [quantum.core.classes         :as classes]
              [quantum.core.fn              :as fn
-               :refer        [#?@(:clj [f$n mfn fn->])]
-               :refer-macros [          f$n mfn fn->]]
+               :refer        [#?@(:clj [fn1 mfn fn->])]
+               :refer-macros [          fn1 mfn fn->]]
              [quantum.core.logic           :as logic
-               :refer        [#?@(:clj [fn-and whenf$n])]
-               :refer-macros [          fn-and whenf$n]]
+               :refer        [#?@(:clj [fn-and whenf1])]
+               :refer-macros [          fn-and whenf1]]
              [quantum.core.data.vector     :as vec    ]
              [quantum.core.macros          :as macros
                :refer        [#?@(:clj [defnt defnt'])]
@@ -218,9 +218,9 @@
   ([^map?    x] hash-map)
   ([^set?    x] hash-set))
 
-(def vector?-fn (f$n vector?))
-(def set?-fn    (f$n set?   ))
-(def map?-fn    (f$n map?   ))
+(def vector?-fn (fn1 vector?))
+(def set?-fn    (fn1 set?   ))
+(def map?-fn    (fn1 map?   ))
 
 (defnt ->pred
   "Gets the type predicate associated with the value passed."
@@ -242,8 +242,8 @@
                      :cljs cljs.core.PersistentHashMap.EMPTY))
   ([           x] (empty x)))
 
-(def transient!*  (whenf$n editable?  transient))
-(def persistent!* (whenf$n transient? persistent!))
+(def transient!*  (whenf1 editable?  transient))
+(def persistent!* (whenf1 transient? persistent!))
 
 (def transient-persistent-fns
   {true  [transient      conj! persistent!     ]

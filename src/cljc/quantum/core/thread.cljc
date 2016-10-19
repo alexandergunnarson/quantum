@@ -22,10 +22,10 @@
                      [quantum.core.error                      :as err
                        :refer [#?(:clj throw-unless) ->ex]                        ]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> f$n compr]) call fn-nil]                ]
+                       :refer [#?@(:clj [<- fn-> fn1 compr]) call fn-nil]                ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-or fn-not eq? whenf whenp whenf$n if$n])
+                       :refer [#?@(:clj [fn-or fn-not eq? whenf whenp whenf1 ifn1])
                                nnil?]                                             ]
                      [quantum.core.macros                     :as macros
                        :refer [#?(:clj defnt)]                                    ]
@@ -42,10 +42,10 @@
                      [quantum.core.error                      :as err
                        :refer [throw-unless]                                      ]
                      [quantum.core.fn                         :as fn
-                       :refer [<- fn-> f$n compr]                                 ]
+                       :refer [<- fn-> fn1 compr]                                 ]
                      [quantum.core.log                        :as log             ]
                      [quantum.core.logic                      :as logic
-                       :refer [fn-or fn-not eq? whenf whenp whenf$n if$n]         ]
+                       :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1]         ]
                      [quantum.core.macros                     :as macros
                        :refer [defnt]                                             ]
                      [quantum.core.type                       :as type
@@ -59,7 +59,7 @@
 
 ; TODO temporary
 (def wrap-delay identity)
-#_(def wrap-delay (whenf$n (fn-not delay?) delay))
+#_(def wrap-delay (whenf1 (fn-not delay?) delay))
 
 (defonce ^{:doc "Thread registry"} reg (atom {}))
 
@@ -105,7 +105,7 @@
         (log/pr ::debug "DEREGISTERING THREAD" id)
         (swap! reg
           (fn-> (dissoc id)
-                (whenp parent (f$n dissoc-in+ [parent :children id]))))
+                (whenp parent (fn1 dissoc-in+ [parent :children id]))))
         (swap! reg-tree dissoc-in+ [parents id])))
       (log/pr ::warn "Attempted to deregister nonexistent thread:" id)))
 
@@ -553,7 +553,7 @@
       (when (or (async/closed? thread)
                 (= state :closed))
         (whenf (:closed handlers) nnil?
-          (if$n delay? force call))
+          (ifn1 delay? force call))
         (deregister-thread! id))))))
 
 #?(:clj (defonce thread-reaper-pause-requests  (LinkedBlockingQueue.)))

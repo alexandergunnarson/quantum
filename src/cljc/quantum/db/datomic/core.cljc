@@ -19,16 +19,16 @@
                        :refer        [#?(:clj assert) ->ex]
                        :refer-macros [assert]                       ]
                      [quantum.core.fn            :as fn
-                       :refer        [#?@(:clj [<- fn-> fn->> f$n])]
-                       :refer-macros [<- fn-> fn->> f$n]            ]
+                       :refer        [#?@(:clj [<- fn-> fn->> fn1])]
+                       :refer-macros [<- fn-> fn->> fn1]            ]
                      [quantum.core.log           :as log
                        :include-macros true                         ]
                      [quantum.core.logic         :as logic
                        :refer        [#?@(:clj [fn-not fn-and fn-or whenf
-                                                whenf$n ifn if$n if-let])
+                                                whenf1 ifn ifn1 if-let])
                                       nnil? nempty?]
                        :refer-macros [fn-not fn-and fn-or
-                                      whenf whenf$n ifn if$n if-let]]
+                                      whenf whenf1 ifn ifn1 if-let]]
                      [quantum.core.print         :as pr             ]
                      [quantum.core.resources     :as res            ]
              #?(:clj [quantum.core.process       :as proc           ])
@@ -369,9 +369,9 @@
   (let [not-ref? (fn-> :db/valueType (not= :db.type/ref))
         post (if datascript?
                  (fn->> (remove+ (fn-and :db/isComponent not-ref?))
-                        (map+    (whenf$n
+                        (map+    (whenf1
                                    (fn-and :db/valueType not-ref?)
-                                   (f$n c/dissoc :db/valueType)))
+                                   (fn1 c/dissoc :db/valueType)))
                         (map+    (juxt :db/ident identity))
                         (join {}))
                  (fn->> (join [])))]
@@ -422,7 +422,7 @@
                  {:db/id               schema
                   :db.alter/_attribute :db.part/db}
                  kvs)])
-     :cljs (update-schemas db (f$n merge-deep schemas)))))
+     :cljs (update-schemas db (fn1 merge-deep schemas)))))
 
 (defn merge-schemas!
   ([schemas] (merge-schemas! @conn* schemas))
@@ -442,7 +442,7 @@
   #?(:clj  (transact! conn
              [[:db/retract s k v]
               [:db/add :db.part/db :db.alter/attribute k]])
-     :cljs (update-schemas! conn (f$n dissoc-in+ [s k])))))
+     :cljs (update-schemas! conn (fn1 dissoc-in+ [s k])))))
 
 (defn rename-schemas [mapping]
   (for [oldv newv mapping]
@@ -460,7 +460,7 @@
      ~(tempid))))
 
 (def attribute?
-  (fn-and (f$n coll/containsk? :v)
+  (fn-and (fn1 coll/containsk? :v)
           (fn-> count (= 1))))
 
 (def dbfn-call? (fn-and seq?
@@ -469,9 +469,9 @@
 
 (defn transform-validated [x]
   (postwalk
-    (whenf$n (fn-and record? #?(:clj (fn-and (fn-not tempid?)
+    (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
                                              (fn-not dbfn?  ))))
-      (if$n attribute?
+      (ifn1 attribute?
             :v
             (fn->> (remove-vals+ nil?)
                    (join {}))))
@@ -493,8 +493,8 @@
       (let [txn-components (transient [])]
         (c/assoc
           (postwalk
-            (whenf$n map?
-              (if$n attribute?
+            (whenf1 map?
+              (ifn1 attribute?
                     :v
                     (fn [m]
                       (let [id (tempid part)]
@@ -524,7 +524,7 @@
       (if (= n-n n)
           m-n
           (let [m-n+1 (postwalk
-                        (whenf$n (partial instance? datomic.query.EntityMap)
+                        (whenf1 (partial instance? datomic.query.EntityMap)
                           #(join {} %))
                         m-n)]
             (recur m-n+1 (inc n-n))))))))
@@ -629,7 +629,7 @@
   ([db part no-transform? x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
                   (whenf (fn-not dbfn-call?)
-                    (f$n coll/assoc-when-none :db/id (tempid db part))))]
+                    (fn1 coll/assoc-when-none :db/id (tempid db part))))]
       (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
@@ -798,7 +798,7 @@
 
 ; (defn+ entity-query [q]
 ;   (->> (query q)
-;        (map+ (f$n first))
+;        (map+ (fn1 first))
 ;        (map+ (extern (fn [id] [id (entity id)])))
 ;        redm))
 
@@ -1256,8 +1256,8 @@
   (let [to-conj (volatile! [])
         txn-replaced
           (postwalk
-            (whenf$n map?
-              (whenf$n (fn-not :db/id)
+            (whenf1 map?
+              (whenf1 (fn-not :db/id)
                 (fn [m]
                   (let [eid (tempid part)]
                     (vswap! to-conj c/conj (c/assoc m :db/id eid))
@@ -1337,7 +1337,7 @@
 ;                          (<- datomic.api/entity eid))}))
 ;        (join [])
 ;        (<- whenp show-entity-maps?
-;            (fn->> (postwalk (whenf$n (partial instance? datomic.query.EntityMap)
+;            (fn->> (postwalk (whenf1 (partial instance? datomic.query.EntityMap)
 ;                               (fn->> (join {}))))))))
 
 

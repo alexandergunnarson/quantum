@@ -13,8 +13,8 @@
       :refer-macros [          <- fn-> fn->>]]
     [quantum.core.logic                :as logic
       :refer        [splice-or
-                     #?@(:clj [eq? fn-or fn-and whenc ifn if$n])]
-      :refer-macros [          eq? fn-or fn-and whenc ifn if$n]]
+                     #?@(:clj [eq? fn-or fn-and whenc ifn ifn1])]
+      :refer-macros [          eq? fn-or fn-and whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
     [quantum.core.vars                 :as var
       :refer        [#?@(:clj [defalias])]
@@ -73,7 +73,7 @@
 (def variadic-arglist?
   (fn-> butlast last (ifn nil? (constantly nil) name) (= "&")))
 (defn arity-type [arglist] (if (variadic-arglist? arglist) :variadic :fixed))
-(def arglist-arity (if$n variadic-arglist? (fn-> count dec) count))
+(def arglist-arity (ifn1 variadic-arglist? (fn-> count dec) count))
 
 ; ===== FORMS =====
 (defn form-and-begins-with? [sym] (fn-and seq? (fn-> first (= sym))))

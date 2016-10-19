@@ -14,10 +14,10 @@
                      [quantum.core.string                     :as str  ]
                      [quantum.core.string.format              :as strf ]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> fn->> f$n])]          ]
+                       :refer [#?@(:clj [<- fn-> fn->> fn1])]          ]
                      [quantum.core.logic                      :as logic
                        :refer [#?@(:clj [eq? fn-not fn-or fn-and whenf
-                                         whenf$n whenc ifn condfc condpc
+                                         whenf1 whenc ifn condfc condpc
                                          coll-or]) nempty? nnil?]      ]
                      [quantum.core.macros                     :as macros
                        :refer [#?(:clj defnt)]                         ])
@@ -28,9 +28,9 @@
                      [quantum.core.collections                :as coll
                        :refer [containsv? kmap popr popl]              ]
                      [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn->> f$n]                      ]
+                       :refer [<- fn-> fn->> fn1]                      ]
                      [quantum.core.logic                      :as logic
-                       :refer [eq? fn-not fn-or fn-and whenf whenf$n
+                       :refer [eq? fn-not fn-or fn-and whenf whenf1
                                whenc ifn condfc condpc coll-or]        ]
                      [quantum.core.macros                     :as macros
                        :refer [defnt]                                  ])))
@@ -50,7 +50,7 @@
 
 (defrecord ObjLangText [text])
 
-(def demunge-class (f$n str/replace "$" "."))  ; For inner classes; TODO more than this is required
+(def demunge-class (fn1 str/replace "$" "."))  ; For inner classes; TODO more than this is required
 
 (defn replace-specials [^String s-0 & [upper?]]
   (let [^Fn camelcase-if-needed
@@ -64,9 +64,9 @@
         ^Fn apply-conventions
           (fn [s-n]
             (-> s-n
-                (whenf (f$n str/ends-with? "?")
+                (whenf (fn1 str/ends-with? "?")
                   (fn->> popr (str "is-")))
-                (whenf (f$n str/ends-with? "!")
+                (whenf (fn1 str/ends-with? "!")
                   (fn->  popr (str "X")))))
         s-f (if (containsv? s-0 "_") ; intentionally naming it as such
                 s-0
@@ -217,7 +217,7 @@
       ""
       (condfc (-> prev-block line-height)
         (eq? 0)    "\n"
-        (f$n <= 2) "\n"
+        (fn1 <= 2) "\n"
         "\n\n")))
 
 (declare special-syms) ; For use with the object-language |defmacro|
@@ -291,7 +291,7 @@
 (defn scope-if-needed [expr]
   (log/pr :debug "SCOPING" expr)
   (whenf expr seq?
-    (whenf$n (fn-> first (in? (get scoped-syms *lang*)))
+    (whenf1 (fn-> first (in? (get scoped-syms *lang*)))
       (partial list 'scope))))
 
 (defn infix [^String oper]
@@ -474,7 +474,7 @@
                           ^String block
                             (->> block-evaled
                                  (<- whenf (fn-and nempty?
-                                                   (fn-not (f$n str/ends-with? "}")))
+                                                   (fn-not (fn1 str/ends-with? "}")))
                                      util/scolon) ; Could be a macro, in which case it wouldn't show up in the .js file
                                  (<- whenf nempty? (partial str spacing)))]
                       (when (nempty? block) (reset! prev-block block))
@@ -662,7 +662,7 @@
                  (if (anap/variadic-arglist? arglist)
                      arglist-base
                      (-> arglist-base
-                         (update 0 (f$n conj '& var-args-name))))
+                         (update 0 (fn1 conj '& var-args-name))))
                sym-munged
                  (-> sym name (str "-") symbol)
                _ (println "IN MACRO")

@@ -20,7 +20,7 @@
                :refer [pprint]                    ]))
   #?(:cljs (:require-macros
              [quantum.core.fn          :as fn
-               :refer [f$n]                       ])))
+               :refer [fn1]                       ])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -123,24 +123,18 @@
   [& args]
   `(comp ~@(reverse args))))
 
-#?(:clj
-(defmacro f$n  [f & args]
-  `(fn [inner-arg#] (~f inner-arg# ~@args))))
-
-#?(:clj
-(defmacro fn$ [f & args]
-  `(fn [last-arg#] (~f ~@args last-arg#))))
+#?(:clj (defmacro fn0 [  & args] `(fn [f#] (f# ~@args))))
+#?(:clj (defmacro fn1 [f & args] `(fn [arg#] (~f arg# ~@args))))
+#?(:clj (defmacro fn$ [f & args] `(fn [arg#] (~f ~@args arg#))))
 
 ; MWA: "Macro WorkAround"
-#?(:clj (defmacro MWA ([f] `(f$n ~f)) ([n f] `(mfn ~n ~f))))
-
-(defn $fn [& args] (f$n apply args))
+#?(:clj (defmacro MWA ([f] `(fn1 ~f)) ([n f] `(mfn ~n ~f))))
 
 (defn fn-bi [arg] #(arg %1 %2))
 (defn unary [pred]
-  (fn ([a    ] (f$n pred a))
-      ([a b  ] (f$n pred a b))
-      ([a b c] (f$n pred a b c))))
+  (fn ([a    ] (fn1 pred a))
+      ([a b  ] (fn1 pred a b))
+      ([a b c] (fn1 pred a b c))))
 
 #?(:clj
 (defmacro fn->
@@ -221,7 +215,7 @@
   "Like /juxt/, but applies a sorted-map+ instead of a vector.
    Requires an even number of arguments."
   [& args]
-  (juxtm* map/sorted-map args))
+  (juxtm* sorted-map args))
 
 (defn juxtk
   "Like /juxtm/, but each key is constant.

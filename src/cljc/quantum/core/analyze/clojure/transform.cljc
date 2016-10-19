@@ -12,8 +12,8 @@
       :refer        [#?@(:clj [fn-> fn->>])]
       :refer-macros [          fn-> fn->>]]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [fn-or if$n condf$n])]
-      :refer-macros [          fn-or if$n condf$n]]
+      :refer        [#?@(:clj [fn-or ifn1 condf1])]
+      :refer-macros [          fn-or ifn1 condf1]]
     [quantum.core.vars                       :as var
       :refer        [#?(:clj defalias)]
       :refer-macros [        defalias]]))
@@ -23,11 +23,11 @@
 
 ; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
 (def conditional-branches
-  (condf$n
+  (condf1
     (fn-or if-statement? cond-statement?)
       (fn->> rest
              (partition-all 2)
-             (map (if$n (fn-> count (= 2))
+             (map (ifn1 (fn-> count (= 2))
                     second
                     first))
              doall)
@@ -40,13 +40,13 @@
 ;;    (fn-or if-statement? cond-statement?)
 ;;      (fn->> rest
 ;;             (partition-all 2)
-;;             (map (if$n (fn-> count (= 2))
-;;                    (f$n update-nth 1 f)
-;;                    (f$n update-nth 0 f)))
+;;             (map (ifn1 (fn-> count (= 2))
+;;                    (fn1 update-nth 1 f)
+;;                    (fn1 update-nth 0 f)))
 ;;             (cons (list (first x)))
 ;;             (apply concat))
 ;;    when-statement?
-;;      (f$n update-last f)
+;;      (fn1 update-last f)
 ;;    identity))
 
 #?(:clj (defalias destructure core/destructure))

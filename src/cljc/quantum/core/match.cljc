@@ -10,8 +10,8 @@
        :refer        [#?@(:clj [defalias])]
        :refer-macros [          defalias]]
      [quantum.core.logic
-       :refer        [#?@(:clj [fn-not fn-and fn-or whenf$n condf$n])]
-       :refer-macros [          fn-not fn-and fn-or whenf$n condf$n]]
+       :refer        [#?@(:clj [fn-not fn-and fn-or whenf1 condf1])]
+       :refer-macros [          fn-not fn-and fn-or whenf1 condf1]]
      [quantum.core.collections      :as coll]
      [quantum.core.collections.tree :as tree]
      [quantum.core.collections.zip  :as zip]))
@@ -21,7 +21,7 @@
 ; TODO fix the performance implications of multiple apply and varargs
 (defn wrap-eq [f]
   (fn [& args]
-    (apply f (map (whenf$n (fn-not (fn-or fn? (fn$ instance? net.cgrand.seqexp.Pattern)))
+    (apply f (map (whenf1 (fn-not (fn-or fn? (fn$ instance? net.cgrand.seqexp.Pattern)))
                     (fn [x] #(= % x))) ; non-fns are wrapped in =
                   args))))
 

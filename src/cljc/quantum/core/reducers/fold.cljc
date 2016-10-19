@@ -23,12 +23,12 @@
     [seqspert.hash-map                       ]])
     [quantum.core.fn               :as fn
       :refer        [aritoid
-                     #?@(:clj [f$n fn-> compr])]
-      :refer-macros [          f$n fn-> compr]]
+                     #?@(:clj [fn1 fn-> compr])]
+      :refer-macros [          fn1 fn-> compr]]
     [quantum.core.logic            :as logic
       :refer        [nnil?
-                     #?@(:clj [fn-or fn-and whenf condf$n])]
-      :refer-macros [          fn-or fn-and whenf condf$n]]
+                     #?@(:clj [fn-or fn-and whenf condf1])]
+      :refer-macros [          fn-or fn-and whenf condf1]]
     [quantum.core.macros           :as macros
       :refer        [#?@(:clj [defnt])]
       :refer-macros [          defnt]]
@@ -177,7 +177,7 @@
   #?(:clj  (let [from-proc (fn-> count dec
                                  (quot (.. Runtime getRuntime availableProcessors))
                                  inc)]
-             (condf$n
+             (condf1
                (fn-and transformer? (fn-> folder->coll counted?))
                  (fn-> folder->coll from-proc)
                counted?

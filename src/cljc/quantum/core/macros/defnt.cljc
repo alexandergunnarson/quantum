@@ -17,15 +17,15 @@
                      #?@(:clj [throw-unless assertf->>])]
       :refer-macros [          throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- fn-> fn->> f$n])]
-      :refer-macros [          <- fn-> fn->> f$n]]
+      :refer        [#?@(:clj [<- fn-> fn->> fn1])]
+      :refer-macros [          <- fn-> fn->> fn1]]
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
       :refer        [nempty? nnil?
-                     #?@(:clj [eq? fn-not fn-or whenc whenf whencf$n if$n condf])
+                     #?@(:clj [eq? fn-not fn-or whenc whenf whenc1 ifn1 condf])
                                                   ]
-      :refer-macros [          eq? fn-not fn-or whenc whenf whencf$n if$n condf]]
+      :refer-macros [          eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
       :refer [#?@(:clj [when-cljs if-cljs])]]
     [quantum.core.macros.fn                  :as mfn]
@@ -62,7 +62,7 @@
   [lang ns- class-sym]
   #?(:clj  (if (= lang :clj)
                (whenf class-sym (fn-not special-defnt-keyword?)
-                 (whencf$n symbol?
+                 (whenc1 symbol?
                    (if-let [qualified-class-name (get qualified-class-name-map class-sym)]
                      qualified-class-name
                      (let [class-name (or (ns-resolve ns- class-sym)
@@ -91,7 +91,7 @@
     (condf x
       (fn-or symbol? keyword?)
         (fn-> hash-set (expand-classes-for-type-hint lang ns- arglist))
-      set?    (fn->> (map (f$n classes-for-type-predicate lang arglist))
+      set?    (fn->> (map (fn1 classes-for-type-predicate lang arglist))
                      (apply concat)
                      (map #(get-qualified-class-name lang ns- %))
                      (into #{}))
@@ -176,7 +176,7 @@
                (map (fn [[type-arglist-n return-type-n :as arglist-n]]
                       (let [_ (log/pr :macro-expand "UNEXPANDED TYPE HINTS" type-arglist-n "IN NS" ns-)
                             type-hints-n (->> type-arglist-n
-                                              (mapv (f$n expand-classes-for-type-hint lang ns-
+                                              (mapv (fn1 expand-classes-for-type-hint lang ns-
                                                     type-arglist-n)))
                             _ (log/pr :macro-expand "EXPANDED TYPE HINTS" type-hints-n)]
                         [type-hints-n return-type-n])))
@@ -195,7 +195,7 @@
   [kw {:keys [type-hints type-arglist available-default-types hint inner-type-n]}]
   (condp = kw
     :first (->> type-arglist
-                (map (whencf$n (eq? :first) (first type-arglist))))
+                (map (whenc1 (eq? :first) (first type-arglist))))
     :elem  (if (= hint :elem)
                inner-type-n
                hint)
@@ -289,7 +289,7 @@
                    (reduce (fn [types-n arglist-n]
                              (defnt-positioned-types-for-arglist arglist-n types-n))
                              {})
-                   (map (f$n update-val
+                   (map (fn1 update-val
                           (fn->> (map (fn [[type-hint arity-cts]]
                                           ; TODO what are you going to do with arity-cts?
                                           (zipmap (expand-classes-for-type-hint type-hint lang ns-)
@@ -384,7 +384,7 @@
   {:post [(log/ppr :macro-expand "AVAILABLE DEFAULT TYPES" %)]}
   {:available-default-types
     (->> types-for-arg-positions
-         (map (f$n update-val
+         (map (fn1 update-val
                 (fn->> keys (into #{})
                        (set/difference (-> tcore/types-unevaled (get-in [lang :any]))))))
          (into {}))})

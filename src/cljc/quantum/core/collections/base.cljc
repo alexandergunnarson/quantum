@@ -14,8 +14,8 @@
       :refer        [#?@(:clj [fn->])]
       :refer-macros [          fn->]]
     [quantum.core.logic         :as logic
-      :refer        [#?@(:clj [condf$n fn-not])]
-      :refer-macros [          condf$n fn-not]]))
+      :refer        [#?@(:clj [condf1 fn-not])]
+      :refer-macros [          condf1 fn-not]]))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -23,7 +23,7 @@
   (zip/zipper coll? seq (fn [_ c] c) coll))
 
 (def ensure-set
-  (condf$n
+  (condf1
     nil?
       (constantly #{})
     (fn-not set?)

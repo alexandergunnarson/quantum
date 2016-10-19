@@ -5,8 +5,8 @@
                :refer        [#?@(:clj [fn-or])]
                :refer-macros [          fn-or]]
              [quantum.core.fn
-               :refer        [#?@(:clj [<- f$n])]
-               :refer-macros [          <- f$n]]
+               :refer        [#?@(:clj [<- fn1])]
+               :refer-macros [          <- fn1]]
              [quantum.core.collections :as coll
                :refer [map+ remove+
                        mutable! eq! aset-in!
@@ -48,7 +48,7 @@
                                     "Not a soundex-able word"
                                     (kmap w))))))
        (coll/distinct-by+ identity (fn [x y] (and (= x y) (str/numeric? x))))
-       (remove+ (f$n = \-))
+       (remove+ (fn1 = \-))
        (reducei (fn [^StringBuilder s c i]
                   (when (= i 0)
                     (.append s (-> w name first str/->upper)))

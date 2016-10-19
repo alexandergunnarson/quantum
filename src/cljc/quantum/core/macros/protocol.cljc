@@ -6,8 +6,8 @@
       :refer [unhint]]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [f$n fn-> fn->>])]
-      :refer-macros [          f$n fn-> fn->>]]
+      :refer        [#?@(:clj [fn1 fn-> fn->>])]
+      :refer-macros [          fn1 fn-> fn->>]]
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
@@ -110,7 +110,7 @@
   (let [body-sorted
           (->> reify-body rest rest
                (map (fn [[sym & body]]
-                      (-> body (update-first (f$n cmacros/hint-meta (type-hint sym))))))) ; remove reify method names
+                      (-> body (update-first (fn1 cmacros/hint-meta (type-hint sym))))))) ; remove reify method names
         body-filtered body-sorted
         _ (log/ppr-hints :macro-expand-protocol "BODY SORTED" body-sorted)
         body-mapped
