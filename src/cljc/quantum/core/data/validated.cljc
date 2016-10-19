@@ -40,7 +40,7 @@
 (defmacro def-validated
   "Defines a validated value."
   [sym spec]
-  (v/validate symbol? sym)
+  (v/validate sym symbol?)
   (let [other     (gensym "other")
         spec-name (keyword (str (ns-name *ns*)) (name sym))
         type-hash (hash-classname sym)]
@@ -55,9 +55,9 @@
               {~'deref   ([_#] ~'v)}
             quantum.core.core/IValue
               {get       ([_#] ~'v)
-               set       ([_# v#] (new ~sym (v/validate ~spec-name v#)))}})
+               set       ([_# v#] (new ~sym (v/validate v# ~spec-name)))}})
          (defn ~(symbol (str "->" sym)) [v#]
-           (new ~sym (v/validate ~spec-name v#))))))) ; TODO conformer?
+           (new ~sym (v/validate v# ~spec-name))))))) ; TODO conformer?
 
 #?(:clj
 (defmacro def-validated-map
@@ -67,7 +67,7 @@
   {:usage `(def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
    :todo  ["Break this macro up"]}
   [sym req req-ks & [opt opt-ks]]
-  (v/validate-all
+  (v/validate
     sym    symbol?
     req    (v/or* nil? (eq? :req))
     req-ks (v/coll-of keyword?)
@@ -108,13 +108,13 @@
               ~'equals      ~(std-equals sym other (if-cljs &env '.-equiv '.equiv))
               ~'conj        ([_# [k0# v0#]]
                               (let [k# k0#
-                                    v# (validate k# v0#)]
+                                    v# (validate v0# k#)]
                                 (new ~sym
                                   (~(if-cljs &env '.-assoc '.assoc) ~'v k# v#))))}
            ~'?Associative
              {~'assoc       ([_# k0# v0#]
                               (let [k# k0#
-                                    v# (validate k# v0#)]
+                                    v# (validate v0# k#)]
                                 (new ~sym
                                   (~(if-cljs &env '.-assoc '.assoc) ~'v k# v#))))
               ~'assoc!      ([_# _# _#] (throw (UnsupportedOperationException.)))
@@ -162,12 +162,12 @@
              {~'deref       ([_#] ~'v)}
              quantum.core.core/IValue
              {get           ([_#] ~'v)
-              set           ([_# v#] (new ~sym (v/validate ~spec-name v#)))}})
+              set           ([_# v#] (new ~sym (v/validate v# ~spec-name)))}})
         (defn ~(symbol (str "->" sym)) [m#]
           (let [m-f# (if (instance? ~qualified-record-sym m#)
-                         (v/validate ~spec-name m#) ; TODO conformer?
+                         (v/validate m# ~spec-name) ; TODO conformer?
                          (~(symbol (str "map->" record-sym))
-                          (v/validate ~spec-name m#)))] ; TODO conformer?
+                          (v/validate m# ~spec-name)))] ; TODO conformer?
             (new ~qualified-sym m-f#)))
         ~(if-cljs &env ~qualified-sym `(import (quote ~qualified-sym))))]
   code)))
