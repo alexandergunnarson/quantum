@@ -95,11 +95,14 @@
    :usage '(compile-if (Class/forName "java.util.concurrent.ForkJoinTask")
              (do-cool-stuff-with-fork-join)
              (fall-back-to-executor-services))}
-  [exp then else]
-  (if (try (eval exp)
+  [pred then else]
+  (if (try (eval pred)
            (catch Throwable _ false))
      `(do ~then)
      `(do ~else))))
+
+#?(:clj
+(defmacro compile-when [pred then] `(compile-if ~pred ~then nil)))
 
 ; ===== SYMBOLS =====
 
