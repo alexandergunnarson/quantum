@@ -1,18 +1,20 @@
 (ns quantum.ir.document
   (:require
     [quantum.core.fn
-      :refer        [#?@(:clj [f$n fn$ fn-> fn->> <- compr])]
-      :refer-macros [          f$n fn$ fn-> fn->> <- compr]]
+      :refer        [#?@(:clj [fn1 fn$ fn-> fn->> <- compr])]
+      :refer-macros [          fn1 fn$ fn-> fn->> <- compr]]
     [quantum.core.logic
-      :refer        [#?@(:clj [if$n whenf$n whenf fn-not])]
-      :refer-macros [          if$n whenf$n whenf fn-not]]
+      :refer        [#?@(:clj [ifn1 whenf1 whenf fn-not])]
+      :refer-macros [          ifn1 whenf1 whenf fn-not]]
     [quantum.core.string      :as str]
     [quantum.core.collections :as coll
-      :refer [containsv? in?]]
+      :refer        [containsv? in? map+
+                     #?@(:clj [join])]
+      :refer-macros [          join]]
     [quantum.reducers.core    :as r]
     [quantum.core.validate    :as v
-      :refer        [#?@(:clj [validate-all])]
-      :refer-macros [          validate-all]]
+      :refer        [#?@(:clj [validate])]
+      :refer-macros [          validate]]
     [quantum.net.http         :as http]))
 
 (defonce
@@ -470,10 +472,17 @@
       :you've
       :z}))
 
-(def dictionary
-  ^{:doc "A semi-exhaustive English dictionary taken from /usr/share/dict/words."}
+(defonce dictionary
+  ^{:doc "A semi-exhaustive English dictionary taken from /usr/share/dict/words.
+          462,984 unique lowercase words."
+    :performance "Takes ~10 seconds to download
+                  4,953,699 characters"}
   (delay
-    (http/request! {:url "https://raw.githubusercontent.com/dwyl/english-words/master/words3.txt"})))
+    (->> (http/request! {:url "https://raw.githubusercontent.com/dwyl/english-words/master/words3.txt"})
+         :body
+         (<- str/split #"\s")
+         (map+ (fn-> str/->lower keyword))
+         (join #{}))))
 
 (def undesirables-regex
   #"[^a-zA-Z\-\'']") ; don't include 0-9
@@ -481,7 +490,7 @@
 (defn doc->normalized+
   "Lower case; preserves only letters, hyphens, and apostrophes."
   [doc-str & [post]]
-  (validate-all
+  (validate
     doc-str string?
     post    (v/or* nil? fn?))
   (->> doc-str
@@ -490,19 +499,19 @@
        (<- str/split #" ") ; How to do this distributively?
        (r/remove+   empty?)
        ((or post identity))
-       (r/map+      (f$n str/->lower))
+       (r/map+      (fn1 str/->lower))
        ; Tokenize
-       (r/map+      (whenf$n (f$n containsv? "'")
-                      (f$n coll/remove-surrounding "'")))
+       (r/map+      (whenf1 (fn1 containsv? "'")
+                      (fn1 coll/remove-surrounding "'")))
        (r/remove+   empty?)
-       (r/map+      (f$n str/remove #"\'"))))
+       (r/map+      (fn1 str/remove #"\'"))))
 
 (def normalized->tokenized-terms+
-  (fn->> (r/map+    (if$n (f$n containsv? "-")
+  (fn->> (r/map+    (ifn1 (fn1 containsv? "-")
                       (fn->> (coll/remove-surrounding "-")
                              str
                              (<- str/split #"\-")
-                             (<- whenf (partial every? (f$n in? @dictionary))
+                             (<- whenf (partial every? (fn1 in? @dictionary))
                                (fn [words]
                                  (let [concatted (apply str words)]
                                    (if (in? concatted @dictionary)

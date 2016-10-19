@@ -44,7 +44,7 @@
         (throw (ex-info spec-assertion-failed data)))))
 
 #?(:clj
-(defmacro validate [spec x]
+(defmacro validate-one [spec x]
   (if-cljs &env
    `(if cljs.spec/*compile-asserts*
         (if cljs.spec/*runtime-asserts*
@@ -57,13 +57,13 @@
            ~x)
         x))))
 #?(:clj
-(defmacro validate-all
+(defmacro validate
   "Multiple validations performed.
    Keys are values; vals are specs.
    Useful for :pre checks."
   [& args]
   `(do ~@(->> args (partition-all 2)
-                   (map (fn [[v spec]] `(validate ~spec ~v)))))))
+                   (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
 #?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
 #?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
