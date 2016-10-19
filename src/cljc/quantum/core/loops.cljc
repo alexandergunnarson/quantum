@@ -12,7 +12,8 @@
                      [quantum.core.core                :as qcore  ]
                      [quantum.core.error               :as err
                        :refer [->ex]                              ]
-                     [quantum.core.log                 :as log    ]
+                     [quantum.core.log                 :as log
+                       :include-macros true]
                      [quantum.core.macros.core         :as cmacros
                        :refer [#?@(:clj [if-cljs])]               ]
                      [quantum.core.macros              :as macros
@@ -21,9 +22,8 @@
                      [quantum.core.macros.optimization :as opt    ]
                      [quantum.core.type                :as type   ])
   #?(:cljs (:require-macros
-                     [quantum.core.log                 :as log    ]
                      [quantum.core.loops
-                       :refer [doseq]                             ])))
+                       :refer [doseq reducei]                     ])))
 
 #?(:clj (set! *unchecked-math* true))
 

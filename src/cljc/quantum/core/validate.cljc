@@ -67,7 +67,6 @@
 
 #?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
 #?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
-
 #?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def     cljs.spec/def    ))
 #?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys    cljs.spec/keys   ))
 #?(:clj (quantum.core.vars/defmalias alt     clojure.spec/alt     cljs.spec/alt    ))

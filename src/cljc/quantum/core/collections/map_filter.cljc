@@ -42,9 +42,9 @@
     [quantum.core.data.map         :as map
       :refer [map-entry]]
     [quantum.core.collections.core :as coll
-      :refer        [key val
-                     #?@(:clj [first rest conj! conj lasti contains?])]
-      :refer-macros [          first rest conj! conj lasti contains?]]
+      :refer        [key val conj
+                     #?@(:clj [first rest conj! lasti contains?])]
+      :refer-macros [          first rest conj! lasti contains?]]
     [quantum.core.fn               :as fn
       :refer        [juxt-kv
                      #?@(:clj [<- compr defcurried])]
