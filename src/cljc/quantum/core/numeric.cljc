@@ -16,14 +16,19 @@
              [quantum.core.error                :as err
                :refer        [->ex TODO]]
              [quantum.core.fn
-               :refer        [#?@(:clj [f$n fn->])]
-               :refer-macros [          f$n fn->]]
+               :refer        [aritoid
+                              #?@(:clj [fn1 fn->])]
+               :refer-macros [          fn1 fn->]]
              [quantum.core.logic                :as logic
-               :refer        [#?@(:clj [fn-and whenf$n])]
-               :refer-macros [          fn-and whenf$n]]
+               :refer        [nnil?
+                              #?@(:clj [fn-and whenf1])]
+               :refer-macros [          fn-and whenf1]]
              [quantum.core.macros               :as macros
                :refer        [#?@(:clj [defnt defnt'])]
                :refer-macros [          defnt defnt']]
+             [quantum.core.macros.core          :as cmacros
+               :refer        [#?@(:clj [if-cljs])]
+               :refer-macros [          if-cljs]]
              [quantum.core.vars                 :as var
                :refer        [#?@(:clj [defalias defaliases])]
                :refer-macros [          defalias defaliases]]
@@ -36,7 +41,7 @@
              [quantum.core.numeric.types :as ntypes])
   #?(:cljs (:require-macros
              [quantum.core.numeric
-               :refer [/ floor abs]]))
+               :refer [+ - * / floor abs zeros-op nils-op]]))
   #?(:clj  (:import
              [java.nio ByteBuffer]
              [quantum.core Numeric] ; loops?
@@ -210,7 +215,7 @@
 ;================={   MORE COMPLEX OPERATIONS    }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-(def  int-nil   (whenf$n nil? (constantly 0)))
+(def int-nil (whenf1 nil? (constantly 0)))
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 
@@ -243,31 +248,58 @@
 ;==============={        OTHER OPERATIONS          }==================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-; TODO macro to reduce repetitiveness here
-(defn safe+
-  ([a    ] (int-nil a))
-  ([a b  ] (core/+ (int-nil a) (int-nil b)))
-  ([a b c] (core/+ (int-nil a) (int-nil b) (int-nil c)))
-  ([a b c & args] (->> (conj args c b a) (map int-nil) (reduce core/+))))
+#?(:clj
+(defmacro zeros-op
+  "Treats nils like 0"
+  [op]
+  (let [op'     (if (= op '/) '-div op)
+        sym     (symbol (str "zeros" op'))
+        core-op (symbol "core" (str op))]
+    `(defn ~sym
+       ([a#      ] (~core-op (int-nil a#)))
+       ([a# b#   ] (~core-op (int-nil a#) (int-nil b#)))
+       ([a# b# c#] (~core-op (int-nil a#) (int-nil b#) (int-nil c#)))
+       ([a# b# c# & args#] (->> (conj args# c# b# a#) (map int-nil) (reduce ~core-op)))))))
 
-(defn safe*
-  ([a    ] (int-nil a))
-  ([a b  ] (core/* (int-nil a) (int-nil b)))
-  ([a b c] (core/* (int-nil a) (int-nil b) (int-nil c)))
-  ([a b c & args] (->> (conj args c b a) (map int-nil) (reduce core/*))))
+(zeros-op +)
+(zeros-op -)
+(zeros-op *)
+(zeros-op /)
 
-(defn safe-
-  ([a] (core/- (int-nil a)))
-  ([a b] (core/- (int-nil a) (int-nil b)))
-  ([a b c] (core/- (int-nil a) (int-nil b) (int-nil c)))
-  ([a b c & args] (->> (conj args c b a) (map int-nil) (reduce core/-))))
+#?(:clj
+(defmacro nils-op
+  "If any nils are present, returns nil"
+  [op]
+  (let [op'     (if (= op '/) '-div op)
+        sym     (symbol (str "nils" op'))
+        core-op (symbol "core" (str op))]
+    `(defn ~sym
+       ([a#      ] (when a# (~core-op a#)))
+       ([a# b#   ] (when (and a# b#) (~core-op a# b#)))
+       ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
+       ([a# b# c# & args#]
+         (let [argsf# (conj args# c# b# a#)]
+           (when (every? nnil? argsf#) (reduce ~core-op argsf#))))))))
 
-(defn safediv
-  ([a b  ] (core// (int-nil a) (int-nil b)))
-  ([a b c] (core// (int-nil a) (int-nil b) (int-nil c)))
-  ([a b c & args] (->> (conj args c b a) (map int-nil) (reduce core//))))
+(nils-op +)
+(nils-op -)
+(nils-op *)
+(nils-op /)
 
+(def ^:dynamic *+*   (aritoid (fn [] 0) #(+ %) #(+ %1 %2)))
+(def ^:dynamic *-*   (aritoid (fn [] 0) #(- %) #(- %1 %2)))
+(def ^:dynamic ***   (aritoid (fn [] 1) #(* %) #(* %1 %2)))
+(def ^:dynamic *div* (aritoid (fn [] 1) #(/ %) #(/ %1 %2)))
 
+#?(:clj
+(defmacro with-ops [k & body]
+ `(let [k# ~k]
+    (case k#
+      :zeros (binding [*+* zeros+ *-* zeros- *** zeros* *div* zeros-div]
+               ~@body)
+      :nils  (binding [*+* nils+  *-* nils-  *** nils*  *div* nils-div ]
+               ~@body)
+      (throw (->ex nil "Numeric operation not recognized" {:op k#}))))))
 
 (defn whole-number? [n]
   (= n (floor n))) ; TODO use ==
@@ -284,7 +316,7 @@
   [num div]
   (not (divisible? num div)))
 
-(def percent? (fn-and (f$n core/>= 0) (f$n core/<= 1))) ; TODO use >= and <=
+(def percent? (fn-and (fn1 core/>= 0) (fn1 core/<= 1))) ; TODO use >= and <=
 
 ; PROPERTIES OF NUMERIC FUNCTIONS
 
