@@ -227,16 +227,9 @@
   [obj pred true-fn]
   `(let [obj-f# ~obj] (if ~pred (~true-fn obj-f#) obj-f#))))
 
-#?(:clj
-(defmacro whenf1
-  "`whenf` + `if1`.
-   (whenf1 nnil? inc) = (if1 nnil? inc identity)"
-  [pred true-fn] `(fn [arg#] (whenf arg# ~pred ~true-fn))))
-
-#?(:clj
-(defmacro whenc1
-  "Analogous to whenf1."
-  [pred true-obj] `(fn [arg#] (whenc arg# ~pred ~true-obj))))
+#?(:clj (defmacro whenf1 [x0 x1] `(fn [arg#] (whenf arg# ~x0 ~x1))))
+#?(:clj (defmacro whenc1 [x0 x1] `(fn [arg#] (whenc arg# ~x0 ~x1))))
+#?(:clj (defmacro whenp1 [x0 x1] `(fn [arg#] (whenp arg# ~x0 ~x1))))
 
 (def is? #(%1 %2)) ; for use with condp
 

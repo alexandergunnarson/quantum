@@ -31,18 +31,21 @@
 #?(:clj
 (defmacro defreducer
   [name- rdd-fn dataset-fn]
-  `(defn ~name- [f# x#]
-     (cond (rdd? x#)
-           (~rdd-fn f# x#)
-           (dataset? x#)
-           (~dataset-fn f# x#)
-           :else (~(symbol "quantum.core.collections" (name name-)) f# x#)))))
+  (let [core-sym (symbol "quantum.core.collections" (name name-))]
+    (if-cljs &env
+     `(defalias ~name- ~core-sym)
+     `(defn ~name- [f# x#]
+        (cond (rdd? x#)
+              (~rdd-fn f# x#)
+              (dataset? x#)
+              (~dataset-fn f# x#)
+              :else (~core-sym f# x#)))))))
 
-#?(:clj (defreducer map+      spark/map      spark+/map     ))
-#?(:clj (defreducer filter+   spark/filter   spark+/filter  ))
+(defreducer map+      spark/map      spark+/map     )
+(defreducer filter+   spark/filter   spark+/filter  )
 
 ; TODO move
-(defn tuple->vector [kv] [(de/key kv) (coll/join [] (de/value kv))])
+#?(:clj (defn tuple->vector [kv] [(de/key kv) (coll/join [] (de/value kv))]))
 
 #?(:clj
 (defn group-by+ [f r]
@@ -53,18 +56,12 @@
         :else (coll/group-by+ f r))))
 
 #?(:clj
-(defn flatten-1+ [r]
-  (cond (rdd? r)
-        (spark/flat-map identity r)
-        (dataset? r)
-        (spark+/flat-map identity r)
-        :else (coll/flatten-1+ r))))
-
-#?(:clj
     (defn flatten-1+ [r]
-      (if (rdd? r)
-          (spark/flat-map identity r)
-          (coll/flatten-1+ r)))
+      (cond (rdd? r)
+            (spark/flat-map identity r)
+            (dataset? r)
+            (spark+/flat-map identity r)
+            :else (coll/flatten-1+ r)))
    :cljs (defalias flatten-1+ coll/flatten-1+))
 
 (defn remove+ [f x] (filter+ (fn-not f) x))
@@ -82,7 +79,7 @@
   ([base-coll pipeline]
     (if ((fn-or rdd? dataset?) pipeline)
         (.-v
-          ^Reduced
+          ^Reduced*
           ((if rdd? spark/reduce spark+/reduce)
             (fn [ret elem]
               (if (instance? Reduced* ret)
@@ -97,8 +94,14 @@
         (coll/join base-coll pipeline)))
   ([base-coll parallel? pipeline]
     (if ((fn-or rdd? dataset?) pipeline)
-        (join base-coll pipeline)
+        (join* base-coll pipeline)
         (coll/pjoin base-coll pipeline)))))
+
+#?(:clj  (defalias join join*)
+   :cljs (defn     join
+           (fn ([   ] (coll/join    ))
+               ([a  ] (coll/join a  ))
+               ([a b] (coll/join a b)))))
 
 #?(:clj
 (defn frequencies [to x]
