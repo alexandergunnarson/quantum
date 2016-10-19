@@ -19,8 +19,20 @@
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          #?(:clj omap/ordered-map :cljs array-map))
 
-(def sorted-map    avl/sorted-map)
-(def sorted-map-by avl/sorted-map-by)
+(defalias sorted-map         core/sorted-map   )
+(defalias sorted-map-by      core/sorted-map-by)
+(defalias sorted-rank-map    avl/sorted-map    )
+(defalias sorted-rank-map-by avl/sorted-map-by )
+(defalias nearest            avl/nearest       )
+(defalias rank-of            avl/rank-of       )
+(defalias subrange           avl/subrange      )
+(defalias split-key          avl/split-key     )
+(defalias split-at           avl/split-at      )
+
+(defn sorted-map-by-val [m-0]
+  (sorted-map-by (fn [k1 k2]
+                   (compare [(get m-0 k2) k2]
+                            [(get m-0 k1) k1]))))
 
 #?(:clj (def int-map       imap/int-map))
 
@@ -95,6 +107,3 @@
   ([m0 m1 & ms]
     (reduce pmerge
       (pmerge m0 m1) ms))))
-
-; Required for |reducers|
-(defalias split-at clojure.data.avl/split-at)
