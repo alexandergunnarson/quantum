@@ -82,7 +82,6 @@
           ^Reduced*
           ((if rdd? spark/fold spark+/fold)
             (fn [ret elem]
-              (println "ret" ret "elem" elem)
               (if (instance? Reduced* ret)
                   (if (instance? Reduced* elem)
                       ; Combine reductions
