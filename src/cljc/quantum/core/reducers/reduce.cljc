@@ -13,6 +13,8 @@
            (:refer-clojure :exclude [reduce into])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )        :as core  ]
+                     [#?(:clj  clojure.core.async
+                         :cljs cljs.core.async)     :as async]
                      [quantum.core.collections.base :as cbase ]
                      [quantum.core.data.vector      :as vec
                        :refer [catvec]                        ]
@@ -100,6 +102,7 @@
         ([#{quantum.core.reducers.reduce.Reducer
             quantum.core.reducers.reduce.Folder} x f init]
           (reduce* (:coll x) ((:transform x) f) init))
+        ([^chan?   x    f init] (async/reduce f init x))
         ([^map?    coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
                                     :cljs -kv-reduce) ; in order to use transducers...
                                  #?(:clj  clojure.core.protocols/coll-reduce

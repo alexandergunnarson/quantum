@@ -340,6 +340,8 @@
                                 array-list-types)
         atom-types            '{:clj  #{clojure.lang.IAtom}
                                 :cljs #{cljs.core/Atom}}
+        chan-types            '{:clj  #{clojure.core.async.impl.protocols.Channel}
+                                :cljs #{cljs.core.async.impl.channels/ManyToManyChannel}}
         types-0
           {'number?          number-types
            'num?             number-types
@@ -447,6 +449,7 @@
            'keyword?         '{:clj  #{clojure.lang.Keyword}
                                :cljs #{cljs.core/Keyword}}
            'atom?            atom-types
+           'chan?            chan-types
            :any              {:clj  (set/union (:clj primitive-types) #{'java.lang.Object})
                               :cljs '#{(quote default)}}
            :obj              {:clj  '#{Object}
