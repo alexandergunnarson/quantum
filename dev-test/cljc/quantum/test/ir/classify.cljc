@@ -8,8 +8,6 @@
                        reduce-count]
                #?@(:cljs [:refer-macros [for lfor reduce join kmap]])]
              [quantum.core.numeric :as num]
-             [quantum.numeric.core
-               :refer [find-max-by]]
              [quantum.numeric.vectors :as v]
              [quantum.core.fn :as fn
                :refer [<- fn-> fn->>]]
