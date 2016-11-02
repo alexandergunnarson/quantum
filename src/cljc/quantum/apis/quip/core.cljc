@@ -29,7 +29,7 @@
                (mapv (fn->> :content
                             (mapv (fn-> :content first :content first
                                         (whenf map? (fn-> :content first)))))))]
-    (coll/zipmap map/om (first columns) (-> columns rest coll/pivot))))
+    (coll/zipmap map/om (first columns) (-> columns rest coll/transpose))))
 
 #_(def ^{:doc "Checks whether the argument is a singleton string consisting of
              the zero-width space character."

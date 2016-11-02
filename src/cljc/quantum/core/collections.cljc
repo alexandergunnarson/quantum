@@ -19,8 +19,10 @@
              [for doseq reduce set
               contains?
               repeat repeatedly
-              interpose
+              interpose mapcat
+              reductions
               range
+              map
               take take-while
               drop  drop-while
               subseq
@@ -82,7 +84,8 @@
                :refer        [#?@(:clj [-])]
                :refer-macros [-]]
              [quantum.core.reducers                   :as red
-               :include-macros true                              ]
+               :refer        [#?@(:clj [defeager])]
+               :refer-macros [          defeager]]
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
              [quantum.core.type                       :as type
@@ -120,7 +123,13 @@
 
 (defaliases coll key val reverse)
 
-#?(:clj (defmacro map-entry [a b] `[~a ~b]))
+(definline map-entry
+  "Create a map entry from a and b. Equivalent to a cons cell."
+  [a b]
+  #?(:clj  (clojure.lang.MapEntry. a b)
+     :cljs [a b]))
+
+(defalias pair map-entry)
 
 (defn genkeyword
   ([]    (keyword (gensym)))
@@ -175,14 +184,21 @@
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias join          red/join          ))
 #?(:clj (defalias joinl         red/join          ))
+#?(:clj (defalias join'         red/join'         ))
+#?(:clj (defalias joinl'        red/joinl'        ))
         (defalias pjoin         red/pjoin         )
         (defalias pjoinl        red/pjoin         )
+        (defalias red-apply     red/red-apply     )
 
         (defalias fold          red/fold*         )
         (defalias cat+          red/cat+          )
         (defalias foldcat+      red/foldcat+      )
         (defalias indexed+      red/indexed+      )
-        (defalias reductions+   red/reductions+   )
+
+        (defn indexed
+          "Returns a lazy sequence of pairs of index and item."
+          [coll] (map-indexed pair coll))
+
         (defalias ltake         diff/ltake        )
         (defalias take          diff/takel        )
         (defalias takel         diff/takel        )
@@ -211,6 +227,7 @@
         (defalias dropr          diff/dropr        )
 #?(:clj (defalias dropr+         diff/dropr+       ))
         (defalias dropr-until    diff/dropr-until  )
+        (defalias ldrop-at       diff/ldrop-at     )
         (defalias group-by+      red/group-by+     )
         (defalias flatten+       red/flatten+      )
         (defalias flatten-1+     red/flatten-1+    )
@@ -226,19 +243,20 @@
         (defalias random-sample+ red/random-sample+)
         (defalias sample+        red/sample+       )
         (defalias reduce-count   red/reduce-count  )
-        ; for+
+#?(:clj (defalias for+           red/for+          ))
         ; doseq+
 
         (def flatten-1 (partial apply concat)) ; TODO more efficient
 
 #?(:clj (defalias ->array       coll/->array      ))
+
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 #?(:clj (defalias reduce   loops/reduce  ))
-#?(:clj (defalias reduce-  loops/reduce- ))
 #?(:clj (defalias reducei  loops/reducei ))
-#?(:clj (defalias reducei- loops/reducei-))
+#?(:clj (defalias reduce*  loops/reduce* ))
+#?(:clj (defalias red-for  loops/red-for ))
         (defalias reduce-2 loops/reduce-2)
 #?(:clj (defalias seq-loop loops/seq-loop))
 #?(:clj (defalias loopr    loops/seq-loop))
@@ -272,6 +290,7 @@
 ; _______________________________________________________________
 ; ================== FULL-SEQUENCE TRANSFORMS ===================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+        (defalias map             mf/map             )
         (defalias map+            mf/map+            )
         (defalias lmap            mf/lmap            )
         (defalias map-indexed+    mf/map-indexed+    )
@@ -289,7 +308,15 @@
         (defalias remove-surrounding diff/remove-surrounding)
         (defalias keep+           red/keep+          )
         (defalias keep-indexed+   red/keep-indexed+  )
-        (defalias mapcat+         red/mapcat+        )
+        (defeager mapcat          red/mapcat+        )
+
+        (defalias lreductions core/reductions)
+        (defn reductions
+          [f init coll]
+          (persistent!
+            (reduce (fn [ret in] (conj! ret (f (last ret) in)))
+                    (conj! (transient []) init)
+                    coll)))
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -434,8 +461,6 @@
 ; TODO generalize concat
 (defalias lconcat core/concat)
 
-(defalias safe-mapcat anap/safe-mapcat)
-
 (defn dezip
   "The inverse of zip. — Unravels a seq of m n-tuples into a
   n-tuple of seqs of length m.
@@ -452,7 +477,7 @@
   (let [tuple-size (count (first s))
         s-seq (seq s)]
     (mapv (fn [n]
-            (map #(nth % n) s-seq))
+            (lmap #(nth % n) s-seq))
           (range tuple-size))))
 
 (defn- flatten-map
@@ -540,7 +565,7 @@
 
 (defn abs-difference
   "Returns the absolute difference between a and b.
-   That is, (a diff b) union (b diff a)."
+   That is, (a - b) union (b - a)."
   {:out 'Set
    :todo ["Probably a better name for this."]}
   [a b]
@@ -579,7 +604,7 @@
         coll)))
 
 (defn indices-of
-  {:todo ["Make parallizeable"
+  {:todo ["Make parallelizable"
           "|drop| is a performance killer here"]}
   [coll elem-0]
   (loop [coll-n coll indices []]
@@ -597,11 +622,7 @@
   "Lazy |indices-of|."
   {:source "zcaudate/hara.data.seq"}
   [pred coll]
-  (keep-indexed
-    (fn [idx x]
-      (when (pred x)
-        idx))
-    coll))
+  (keep-indexed (fn [i x] (when (pred x) i)) coll))
 
 (defn matching-seqs
   {:tests `{[even? [1 2 3 4 4 2 1 2 2 6 8 2 4]]
@@ -746,11 +767,20 @@
    is guaranteed to stop slurping after the first awesome website.
 
   Taken from http://stackoverflow.com/questions/3407876/how-do-i-avoid-clojures-chunking-behavior-for-lazy-seqs-that-i-want-to-short-ci"
-  {:attribution "prismatic.plumbing"}
+  {:attribution 'amalloy/flatland.useful.seq #_"prismatic.plumbing"}
   [s]
-  (when (seq s)
-    (cons (first s)
-          (lazy-seq (s lrest unchunk)))))
+  (lazy-seq
+    (when-let [s (seq s)]
+      (cons (first s)
+            (unchunk (rest s))))))
+
+#?(:clj
+(defmacro lazy
+  "Return a lazy sequence of the passed-in expressions. Each will be evaluated
+  only if necessary."
+  {:attribution 'amalloy/flatland.useful.seq}
+  [& exprs]
+  `(lmap force (list ~@(for [expr exprs] `(delay ~expr))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  POSITION IN COLLECTION  }=====================================================
 ;=================================================={ first, rest, nth, get ...}=====================================================
@@ -853,7 +883,6 @@
 (defalias zip-prewalk     tree/zip-prewalk    )
 (defalias zip-reduce      qzip/zip-reduce     )
 (defalias zip-reduce-with qzip/zip-reduce-with)
-
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   ADDITIVE OPERATIONS    }=====================================================
 ;=================================================={    conj, cons, assoc     }=====================================================
@@ -1016,7 +1045,7 @@
   (lazy-seq
    ((fn helper [seqs]
       (when (seq seqs)
-        (concat (map #(first %1) seqs)
+        (concat (lmap #(first %1) seqs)
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
@@ -1111,9 +1140,9 @@
       (if-let [[pivot & xs] (seq part)]
         (let [smaller? #(< % pivot)]
           (recur (list*
-                  (filter smaller? xs)
+                  (lfilter smaller? xs)
                   pivot
-                  (remove smaller? xs)
+                  (lremove smaller? xs)
                   parts)))
         (when-let [[x & parts] parts]
           (cons x (sort-parts parts)))))))
@@ -1145,7 +1174,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   COLLECTIONS CREATION   }=====================================================
 ;=================================================={                          }=====================================================
-
 ; TODO fix
 (def map->record hash-map)
 
@@ -1477,9 +1505,8 @@
 (defn into-map-by [m k ms]
   (reduce (fn [ret elem] (assoc ret (k elem) elem)) m ms))
 
-(defn pivot
-  "Pivot a table à la Excel.
-   Defaults to right pivot."
+(defn transpose
+  "Transposes a 2D matrix. (Pivots a table à la Excel.)"
   {:in '[[1 4 7 a]
          [2 5 8 b]
          [3 6 9 c]]
@@ -1555,22 +1582,22 @@
                       (or (deep-list? (first x))
                           (deep-list? (core/vec (rest x)))))))
 
-(defn deep-find
+(defn deep-find ; TODO this might be `postwalk-seq-or`?
   {:from "mpdairy/posh.core"}
   [f x]
   (if (coll? x)
       (if (empty? x)
         false
         (or (deep-find f (first x))
-             (deep-find f (rest x))))
+            (deep-find f (rest  x))))
       (f x)))
 
 (defn deep-map [f x]
   {:from "mpdairy/posh.core"}
   (cond
-   (map? x) (let [r (map (partial deep-map f) x)]
-              (zipmap (map #(first %1) r) (map #(second %1) r)))
-   (coll? x) (core/vec (map (partial deep-map f) x))
+   (map? x) (let [r (lmap (partial deep-map f) x)]
+              (zipmap (lmap #(first %1) r) (lmap #(second %1) r)))
+   (coll? x) (mapv (partial deep-map f) x)
    :else (f x)))
 
 (defn drop-tail
@@ -1585,12 +1612,33 @@
         (pred x) (conj acc x)
         :else  (recur (conj acc x) (next xs))))))
 
+
+(defn max-subseq
+  "The contiguous subsequence of maximum sum.
+   Uses Kadane's algorithm.
+   A subsequence of length zero has sum zero."
+   {:attribution "Alex Gunnarson"
+    :todo  ["Extend to all comparables"
+            "Handle all-negatives gracefully (see Wikipedia)"]
+    :tests `{(max-subseq [10 -5 15 -30 10 -5 40 10])
+             [10 -5 40 10]}}
+  [s]
+  (let [pos+       (fn [[fromi toi sum] [i x]]
+                     (if (neg? sum) [i toi x] [fromi i (+ sum x)]))
+        [from to]  (->> s indexed+
+                          (reductions pos+ [0 0 0])
+                          (reduce (partial max-key (fn1 get 2))
+                                  [0 0 #?(:clj  Long/MIN_VALUE
+                                          :cljs js/Number.MIN_SAFE_INTEGER)]))]
+    (subvec s from (inc to)))) ; TODO maybe use subseq instead of subvec?
+
 ; ===== MUTABILITY ===== ;
 
 (#?(:clj definterface :cljs defprotocol) IMutable
   (get [#?(:cljs this)])
   (set [#?(:cljs this) x]))
 
+; TODO create for every primitive datatype as well
 (deftype MutableContainer [^:unsynchronized-mutable val]
   IMutable
   (get [this] val)
