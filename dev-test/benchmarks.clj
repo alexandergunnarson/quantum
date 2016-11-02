@@ -20,8 +20,8 @@
 
 
 
-; 43.51 ms (reduce+ + (range  1000000)) 
-; 43.17 ms (fold+   + (range  1000000)) 
+; 43.51 ms (reduce+ + (range  1000000))
+; 43.17 ms (fold+   + (range  1000000))
 ; 23.91 ms (reduce+ + (range+ 1000000)) ; because of splitting the vector in two
 ; 11.63 ms (fold+   + (range+ 1000000)) ; because of 4 cores :D
 
@@ -58,9 +58,9 @@
 
 
 
-; 6.0  ms (doseq   [elem v]) 
-; 7.7  ms (doseq+  [elem v]) 
-; 7.0  ms (doseq++ [elem v]) 
+; 6.0  ms (doseq   [elem v])
+; 7.7  ms (doseq+  [elem v])
+; 7.0  ms (doseq++ [elem v])
 ; 6.7  ms (doseq   [elem v1])
 ; 10.6 ms (doseq+  [elem v1])
 ; 9.3  ms (doseq++ [elem v1])
@@ -74,3 +74,93 @@
 ; 24.0 ms (22.8 ms - 32.4 ms) (-> (for+   [elem v1] nil)      )
 ; 54.4 ms (48.9 ms - 73.5 ms) (-> (r/for+ [elem v1] nil)      )
 ; 24.8 ms (22.9 ms - 35.0 ms) (-> (for++  [elem v1] nil)      )
+
+; ===== ARRAYS ===== ;
+
+(def arr** (long-array (range 0 10000)))
+
+; 272.670908 µs
+(core/reduce (fn [ret ^long x] (inc x) ret) nil ^longs arr**)
+(core/reduce (fn [ret ^long x] (dec x) ret) nil ^longs arr**)
+; 167.985959 µs
+(->> arr** (quantum.core.reducers/map+ inc) (reduce (fn [ret x] ret) nil))
+(->> arr** (quantum.core.reducers/map+ (fn [^long x] (inc x)))
+           (reduce (fn [ret ^long x] ret) nil))
+; 354.380656 µs
+(->> arr** (quantum.core.reducers/map+ (fn [^long x] (inc x)))
+           (quantum.core.reducers/map+ (fn [^long x] (dec x)))
+           (reduce (fn [ret ^long x] ret) nil))
+; 82.894538 µs
+(reduce (fn [ret ^long x] (inc x) ret) nil ^longs arr**)
+; 39.956599 µs ; 4.28 times faster
+(areduce ^longs arr** i ret nil  (inc (aget ^longs arr** i)))
+; 40.999279 µs
+(areduce ^longs arr** i ret nil  (dec (inc (aget ^longs arr** i))))
+
+; ===== MATRIX ===== ;
+
+(import 'org.apache.spark.mllib.linalg.BLAS)
+(import 'org.apache.spark.mllib.linalg.DenseVector)
+(require '[quantum.core.meta.bench :refer [bench]])
+
+; NORMAL
+; 777.295457 ns
+(let [v [1 2 3 4]]
+  (bench (join [] (scale+ 123 v))))
+; 5.344824 ms
+(let [v (vec (range 1 100000))]
+  (bench (join [] (scale+ 123 v))))
+; NEANDERTHAL
+; 1.464254 µs
+(let [v [1 2 3 4]]
+  (bench (scale 123 (->dvec v))))
+; 556.587383 ns
+(let [v' (->dvec [1 2 3 4])]
+  (bench (scale 123 v')))
+; 121.413562 ns
+(let [v' (->dvec [1 2 3 4])]
+  (bench (scale! 123 v')))
+; 174.191738 ns
+(let [v' (->dvec (range 1 500))]
+  (bench (scale! 123 v')))
+; 232.877991 ns
+(let [v' (->dvec (range 1 1000))]
+  (bench (scale! 123 v')))
+; 39.534914 µs
+(let [v' (->dvec (range 1 100000))]
+  (bench (scale! 123 v')))
+; 2.573799 ms
+(let [v' (->dvec (range 1 100000))]
+  (bench (join [] (ax! 123 v'))))
+; 6.002957 ms
+(let [v (vec (range 1 100000))]
+  (bench (join [] (ax! 123 (->dvec v)))))
+; 745.238052 ns
+(let [v' (->fvec [1 2 3 4])]
+  (bench (scale 123 v')))
+; 128.818985 ns
+(let [v' (->fvec [1 2 3 4])]
+  (bench (scale! 123 v')))
+
+; MLLIB
+; 12.776010 ns
+(let [v' (DenseVector. (into-array Double/TYPE [1.0 2.0 3.0 4.0]))]
+  (bench (BLAS/scal 123 v'))) ; like `scale!`
+; 12.729649 ns
+(let [^doubles arr (into-array Double/TYPE [1.0 2.0 3.0 4.0])]
+  (bench (BLAS/scal 123 (DenseVector. arr))))
+; 269.401094 ns
+(let [^doubles arr (into-array Double/TYPE (range 1 500))]
+  (bench (BLAS/scal 123 (DenseVector. arr))))
+; 506.420075 ns
+(let [^doubles arr (into-array Double/TYPE (range 1 1000))]
+  (bench (BLAS/scal 123 (DenseVector. arr))))
+; 69.971019 µs
+(let [^doubles arr (into-array Double/TYPE (range 1 100000))]
+  (bench (BLAS/scal 123 (DenseVector. arr))))
+; 10.680578 ms
+(let [v (vec (range 1 100000))]
+  (bench (BLAS/scal 123 (DenseVector. ^doubles (into-array Double/TYPE v)))))
+; 387.023311 ns
+(let [v [1 2 3 4]]
+  (bench (BLAS/scal 123 (DenseVector. ^doubles (into-array Double/TYPE v)))))
