@@ -4,15 +4,15 @@
   (:require
     [quantum.core.numeric     :as num
       :refer        [*+* *-* *** *div* mod
-                     #?@(:clj [sqrt pow])]
-      :refer-macros [          sqrt pow]]
+                     #?@(:clj [sqrt pow *' +' exactly])]
+      :refer-macros [          sqrt pow *' +' exactly]]
     [quantum.core.data.binary :as bin
       :refer        [>>]]
     [quantum.core.error       :as err
       :refer        [->ex TODO]]
     [quantum.core.fn
-      :refer        [#?@(:clj [fn-> <-])]
-      :refer-macros [          fn-> <-]]
+      :refer        [#?@(:clj [fn-> <- fn& fn&2])]
+      :refer-macros [          fn-> <- fn& fn&2]]
     [quantum.core.collections :as coll
       :refer        [map+ range+ filter+ mapcat+
                      #?@(:clj [reduce join count kmap])]
@@ -207,7 +207,7 @@
   "Computes the factorial of `n`."
   {:implemented-by '#{org.apache.commons.math3.util.CombinatoricsUtils}
    :todo ["Optionally use memoization to make this more efficient"]}
-  [n] (reduce *' (range 1 (inc n))))
+  [n] (reduce (fn&2 *') (range 1 (inc n))))
 
 (defn e
   "Computes the constant `e` to the `k`-th series term."
@@ -222,6 +222,6 @@
    :example `(with-precision 10000 (bigdec (pi 20)))
    :todo ["Optionally use memoization to make this more efficient"]}
   [k] (*' 2 (sigma (range 0 k)
-                   #(/ (*' (rationalize (pow 2     %)) ; TODO use pow'
-                           (rationalize (pow (! %) 2)))
+                   #(/ (*' (exactly (pow 2     %)) ; TODO use pow'
+                           (exactly (pow (! %) 2)))
                        (! (+' 1 (*' 2 %)))))))
