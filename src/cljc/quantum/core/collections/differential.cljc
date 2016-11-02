@@ -206,6 +206,7 @@
 (def take-untili  take-untili    )
 
 (defn takel-until
+  "Take from coll up to and including the first item that satisfies pred."
   {:tests '{(takel-until (eq? \=) "!===abc=")
             "!"}}
   [pred super]
@@ -317,6 +318,7 @@
 (def      drop   dropl    )
 (defalias drop+  red/drop+)
 (def      ldropl core/drop)
+(def      ldrop  core/drop)
 
 
 ; (let [index-r
@@ -416,3 +418,10 @@
   (->> s
        (dropl-while-matches surr)
        (dropr-while-matches surr)))
+
+(defn ldrop-at
+  {:adapted-from 'criterium.stats}
+  [n coll]
+  (lazy-seq
+    (when-let [s (seq coll)]
+      (concat (ltake n s) (next (ldrop n s))))))
