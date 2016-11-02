@@ -3,49 +3,55 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes reduce for last nth rand-nth shuffle])
-          (:require
-            #?(:clj [loom.gen                  :as g-gen])  ; for now
-                    [#?(:clj  clojure.core
-                        :cljs cljs.core)       :as core  ]
-                    [quantum.core.convert      :as conv
-                      :include-macros true               ]
-                    [quantum.core.lexical.core :as lex   ]
-                    [quantum.core.data.set     :as set
-                      :refer [sorted-set+]               ]
-                    [quantum.core.collections  :as coll
-                      :refer        [#?@(:clj [fori reduce
-                                     for join last lasti nth])
-                                     map+ map-vals+ map-indexed+
-                                     indices+]
-                      :refer-macros [fori reduce for join
-                                     last lasti nth]]
-                    [quantum.core.error        :as err
-                      :refer [->ex TODO
-                              #?(:clj throw-unless)]
-                      :refer-macros [throw-unless]      ]
-                    [quantum.core.macros       :as macros
-                      :refer        [#?@(:clj [defnt])]
-                      :refer-macros [defnt]              ]
-                    [quantum.core.type         :as type
-                      :refer [#?(:clj regex?)]
-                      :refer-macros [regex?]             ]
-                    [quantum.core.logic        :as logic
-                      :refer        [splice-or nempty?
-                                     #?@(:clj [condf1])]
-                      :refer-macros [condf1]            ]
-                    [quantum.core.numeric      :as num   ]
-                    [quantum.core.fn           :as fn
-                      :refer        [#?(:clj <-)]
-                      :refer-macros [<-]                 ]
-                    [quantum.core.data.array   :as arr   ]
-                    [quantum.core.vars
-                      :refer        [#?(:clj defalias)]
-                      :refer-macros [defalias]           ])
-  (:import #?@(:clj  [java.util.Random
-                      java.security.SecureRandom
-                      [org.apache.commons.codec.binary Base64 Base32 Hex]]
-               :cljs [goog.string.StringBuffer])))
+  (:refer-clojure :exclude [bytes reduce for last nth rand-nth rand-int shuffle])
+  (:require
+    #?(:clj [loom.gen                  :as g-gen])  ; for now
+            [#?(:clj  clojure.core
+                :cljs cljs.core)       :as core  ]
+            [quantum.core.convert      :as conv
+              :include-macros true               ]
+            [quantum.core.lexical.core :as lex   ]
+            [quantum.core.data.set     :as set
+              :refer [sorted-set+]               ]
+            [quantum.core.collections  :as coll
+              :refer        [#?@(:clj [fori reduce
+                             for join last lasti nth])
+                             map+ map-vals+ map-indexed+
+                             indices+]
+              :refer-macros [fori reduce for join
+                             last lasti nth]]
+            [quantum.core.error        :as err
+              :refer [->ex TODO
+                      #?(:clj throw-unless)]
+              :refer-macros [throw-unless]      ]
+            [quantum.core.macros       :as macros
+              :refer        [#?@(:clj [defnt])]
+              :refer-macros [defnt]              ]
+            [quantum.core.type         :as type
+              :refer [#?(:clj regex?)]
+              :refer-macros [regex?]             ]
+            [quantum.core.logic        :as logic
+              :refer        [splice-or nempty?
+                             #?@(:clj [condf1])]
+              :refer-macros [condf1]            ]
+            [quantum.core.numeric      :as num   ]
+            [quantum.core.fn           :as fn
+              :refer        [#?(:clj <-)]
+              :refer-macros [<-]                 ]
+            [quantum.core.data.array   :as arr   ]
+            [quantum.core.vars
+              :refer        [#?(:clj defalias)]
+              :refer-macros [defalias]           ])
+  (:import
+    #?@(:clj  [java.util.Random
+               java.security.SecureRandom
+               java.nio.ByteBuffer
+               [org.apache.commons.codec.binary Base64 Base32 Hex]]
+        :cljs [goog.string.StringBuffer])))
+
+; TO EXPLORE
+; - java.util.Random
+; =========================
 
 ; Affects KeyGenerator, KeyPairGenerator, KeyAgreement, and Signature.
 ; http://java-performance.com
@@ -53,7 +59,8 @@
 ; From Java 7 prefer java.util.concurrent.ThreadLocalRandom to java.util.Random in all
 ; circumstances - it is backwards compatible with existing code, but uses cheaper
 ; operations internally.
-#?(:clj (defonce secure-random-generator (SecureRandom/getInstance "SHA1PRNG")))
+#?(:clj (defonce ^SecureRandom secure-random-generator
+          (SecureRandom/getInstance "SHA1PRNG")))
 
 #?(:clj
 (defn get-generator [secure?]
@@ -68,6 +75,12 @@
          ; -1 means auto-optimiing
          :workers (if web-workers? -1 0)}
     (fn [err n] (callback (.toString n 16))))))
+
+#?(:clj
+(defn rand-buffer [^long n]
+  (let [b (ByteBuffer/allocate n)]
+    (.nextBytes secure-random-generator (.array b))
+    b)))
 
 (defn gen-native-secure-random-seeder []
   ; Register the main thread to send entropy or a Web Worker to receive
@@ -97,8 +110,12 @@
     #?(:clj (let [^Random generator (get-generator secure?)]
               (+ a (.nextInt generator (inc (- b a)))))
        :cljs (if secure?
-                 (throw (TODO "CLJS does not yet support secure random numbers"))
-                 (+ a (rand-int (inc (- b a))))))))
+                 (TODO) ; "CLJS does not yet support secure random numbers"
+                 (+ a (core/rand-int (inc (- b a))))))))
+
+(defn rand-int
+  ([        b] (rand-int false b))
+  ([secure? b] (rand-int-between secure? 0 b)))
 
 (defn rand-char-between
   ([        a b] (rand-char-between false a b))
@@ -159,6 +176,9 @@
   ([secure? size]
     ; * 8 because longs are 8 bytes
     (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
+
+; TODO implement
+; (defn rand-vec [...] ...)
 
 ; ; TODO DEPS ONLY
 ; #_(:clj
@@ -241,9 +261,10 @@
   {:example `{(prob [[0.3 (constantly :red  )]
                      [0.2 (constantly :blue )]
                      [0.5 (constantly :green)]])
-              :red}}
-  ([ps+fs] (prob ps+fs false))
-  ([ps+fs check-sum?]
+              :red}} ; or :blue, or :green, depending
+  ([ps+fs] (prob ps+fs false false))
+  ([ps+fs check-sum? secure?]
+    (when secure? (TODO))
     (when check-sum?
       (throw-unless (->> ps+fs (map+ first) (reduce + 0) (= 1))
         (->ex "Probabilities must sum to 1.")))
@@ -305,3 +326,44 @@
 
 ; TODO :unique-<object>, :string, :keyword, :symbol, etc.
 ; TODO generate both valid and invalid types for tests, e.g. according to differences in datatype, length, etc.
+
+; Some options are :lcg (linear congruential generator, Java's default)
+; and :twister (Marsenne twister).
+
+; TODO implement
+#_(defalias gen-gaussian ...)
+
+; ===== GENERATORS ===== ;
+
+(defn generator
+  "All these generators are from org.apache.commons.math3.random.*"
+  [type]
+  (TODO)
+  (case type
+    ; Represents an empirical probability distribution -- a probability
+    ; distribution derived from observed data without making any assumptions
+    ; about the functional form of the population distribution that the data
+    ; come from.
+    :empirical           nil
+    ; gaussian normalized random generator for scalars.
+    :gaussian-normalized nil
+    :halton-sequence     nil
+    :sobol-sequence      nil
+    :stable-normalized   nil
+    :normalized-uniform  nil
+    ; a fast cryptographic pseudo-random number generator
+    ; ISAAC (Indirection, Shift, Accumulate, Add, and Count)
+    ; generates 32-bit random numbers
+    :isaac               nil
+    :jdk        (get-generator false)
+    :jdk-secure (get-generator true ) ; TODO more varieties are available
+    ; This class implements a powerful pseudo-random number generator
+    ; developed by Makoto Matsumoto and Takuji Nishimura during 1996-1997.
+    :mersenne-twister nil
+    ; The below are from François Panneton, Pierre L'Ecuyer and Makoto Matsumoto
+    :well512a   nil
+    :well1024a  nil
+    :well19937a nil
+    :well19937c nil
+    :well44497a nil
+    :well44497b nil))
