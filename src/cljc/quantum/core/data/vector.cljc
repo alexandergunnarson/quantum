@@ -15,44 +15,9 @@
                      [quantum.core.vars        :as var
                        :refer [defalias]                 ])))
 
-; To fix "No implementation of method: :as-rrbt of protocol ___"
-; And also ""IllegalArgumentException No implementation of method:
-; :splicev of protocol: #'clojure.core.rrb-vector.protocols/PSpliceableVector
-; found for class: clojure.lang.Tuple$T1
-
-; TODO inefficient
-#_(:clj
-(extend-protocol AsRRBT
-  clojure.lang.Tuple$T0 (as-rrbt [v] (as-rrbt       (vector)   ))
-  clojure.lang.Tuple$T1 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T2 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T3 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T4 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T5 (as-rrbt [v] (as-rrbt (into (vector) v)))
-  clojure.lang.Tuple$T6 (as-rrbt [v] (as-rrbt (into (vector) v)))))
-
-; TODO inefficient
-#_(:clj
-(extend-protocol PSliceableVector
-  clojure.lang.Tuple$T0 (slicev  [v a b] (slicev        (vector)    a b))
-  clojure.lang.Tuple$T1 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T2 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T3 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T4 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T5 (slicev  [v a b] (slicev  (into (vector) v) a b))
-  clojure.lang.Tuple$T6 (slicev  [v a b] (slicev  (into (vector) v) a b))))
-
-; TODO inefficient
-#_(:clj
-(extend-protocol PSpliceableVector
-  clojure.lang.Tuple$T0 (splicev [v1 v2] (splicev       (vector)    v2))
-  clojure.lang.Tuple$T1 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T2 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T3 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T4 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T5 (splicev [v1 v2] (splicev (into (vector) v1) v2))
-  clojure.lang.Tuple$T6 (splicev [v1 v2] (splicev (into (vector) v1) v2))))
-
+; TO EXPLORE
+; - michalmarczyk/devec: double-ended vector
+; =======================================
 
 (defalias vec+    vec+/vec)
 (defalias vector+ vec+/vector)

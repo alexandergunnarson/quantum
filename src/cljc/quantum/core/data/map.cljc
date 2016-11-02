@@ -16,6 +16,13 @@
             [quantum.core.vars    :as var
               :refer [defalias]           ])))
 
+; TO EXPLORE
+; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
+;   - http://michael.steindorfer.name/publications/oopsla15.pdf
+;   - Overall significantly faster on what they've chosen to measure.
+;   - Alex Miller: "We have seen it and will probably investigate some of these ideas after 1.8."
+; =======================
+
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          #?(:clj omap/ordered-map :cljs array-map))
 
