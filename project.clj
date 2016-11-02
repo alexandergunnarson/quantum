@@ -42,7 +42,7 @@
            :exclusions [com.esotericsoftware/reflectasm]]
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
-         [it.unimi.dsi/fastutil                 "7.0.12"           ]
+         [it.unimi.dsi/fastutil                 "7.0.12"          ]
          [quantum/seqspert                      "1.7.0-alpha6.1.0"]
          [fast-zip                              "0.7.0"           ]
          ; VECTOR
@@ -102,7 +102,10 @@
          [net.jafama/jafama                     "2.1.0"           ]
          [com.gfredericks/goog-integer          "1.0.0"           ]
          [org.clojure/math.combinatorics        "0.1.3"           ]
+         [net.mikera/core.matrix                "0.56.0"
+           :exclusions [org.clojure/clojure]]
          [quantum/java                          "1.3"             ]
+         [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
          [fipp                                  "0.6.6"
            :exclusions [org.clojure/core.rrb-vector]]
@@ -261,7 +264,7 @@
      [gorillalabs/sparkling                     "1.2.5"
        :exclusions [org.ow2.asm/*
                     com.esotericsoftware.reflectasm/reflectasm]]
-       [org.apache.spark/spark-core_2.10        "1.6.1" #_"2.0.1" ; problematic netty
+       [org.apache.spark/spark-core_2.11        "2.0.1"  #_"1.6.1" ; problematic netty
          :exclusions [com.google.inject/guice
                       org.xerial.snappy/snappy-java
                       asm
@@ -271,11 +274,11 @@
        [com.github.fommil.netlib/all            "1.1.2"
          :extension "pom"]
        [com.googlecode.matrix-toolkits-java/mtj "1.0.2"]
-       [org.apache.spark/spark-mllib_2.10       "2.0.1" #_"1.6.1"
+       [org.apache.spark/spark-mllib_2.11       "2.0.1" #_"1.6.1"
          :exclusions [com.google.inject/guice
                       org.slf4j/jcl-over-slf4j
                       org.xerial.snappy/snappy-java
-                      org.scalamacros/quasiquotes_2.10
+                      org.scalamacros/quasiquotes_2.11
                       org.codehaus.janino/commons-compiler
                       io.netty/netty]]
      ; ==== DEPENDENCY-CONFLICTED ====
