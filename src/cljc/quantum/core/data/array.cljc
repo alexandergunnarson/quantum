@@ -8,34 +8,37 @@
      int-array long-array float-array double-array
      doseq])
            (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )       :as core  ]
-             #?(:clj [loom.alg-generic             :as alg   ]) ; temporarily
-                     [quantum.core.type.core       :as tcore ]
-                     [quantum.core.core            :as qcore
+                         :cljs cljs.core   )        :as core  ]
+             #?(:clj [loom.alg-generic              :as alg   ]) ; temporarily
+                     [quantum.core.collections.base :as cbase
+                       :refer [reducei]]
+                     [quantum.core.type.core        :as tcore ]
+                     [quantum.core.core             :as qcore
                        :refer [name+]                        ]
-                     [quantum.core.fn              :as fn
-                       :refer [#?@(:clj [fn->])]             ]
-                     [quantum.core.logic           :as logic
+                     [quantum.core.fn               :as fn
+                       :refer        [#?@(:clj [<- fn->])]
+                       :refer-macros [          <- fn->]]
+                     [quantum.core.logic            :as logic
                        :refer [#?@(:clj [whenc])]            ]
-                     [quantum.core.loops           :as loops
+                     [quantum.core.loops            :as loops
                        :refer [#?@(:clj [doseqi doseq])]     ]
-                     [quantum.core.macros          :as macros
+                     [quantum.core.macros           :as macros
                        :refer [#?@(:clj [defnt defnt'])]     ]
                      [quantum.core.compare :as comp]
                      [quantum.core.numeric :as num]
-                     [quantum.core.vars            :as var
+                     [quantum.core.vars             :as var
                        :refer [#?(:clj defalias)]            ])
   #?(:cljs (:require-macros
-                     [quantum.core.fn              :as fn
-                       :refer [fn->]                         ]
-                     [quantum.core.logic           :as logic
+                     [quantum.core.logic            :as logic
                        :refer [whenc]                        ]
-                     [quantum.core.loops           :as loops
+                     [quantum.core.loops            :as loops
                        :refer [doseqi doseq]                 ]
-                     [quantum.core.macros          :as macros
+                     [quantum.core.macros           :as macros
                        :refer [defnt defnt']                 ]
-                     [quantum.core.vars            :as var
-                       :refer [defalias]                     ]))
+                     [quantum.core.vars             :as var
+                       :refer [defalias]                     ]
+                     [quantum.core.data.array
+                       :refer [gen-typed-array-defnt]]))
   #?(:clj  (:import  [java.io ByteArrayOutputStream]
                      [java.nio ByteBuffer]
                      java.util.ArrayList)))
@@ -272,8 +275,7 @@
 
 #?(:clj
 (defn array-list [& args]
-  (reduce (fn [ret elem]
-          (.add ^ArrayList ret elem)
+  (reduce (fn [ret elem] (.add ^ArrayList ret elem)
           ret)
           (ArrayList.) args)))
 
@@ -319,21 +321,42 @@
   ([^array? a :first b]
     (java.util.Arrays/equals a b))))
 
-#_(defn aprint [arr]
-  (core/doseq [elem arr]
-    (pr elem) (.append *out* \space))
-  (.append *out* \newline)
-  nil)
+(def cljs-types
+  '{js/Uint8Array        uint8
+    js/Uint8ClampedArray uint8c
+    js/Uint16Array       uint16
+    js/Uint32Array       uint32
+    js/Int8Array         int8
+    js/Int16Array        int16
+    js/Int32Array        int32
+    js/Float32Array      float32
+    js/Float64Array      float64})
 
-#?(:cljs
-(defnt ->uint8-array
-  ([^js/Uint8Array x] x)
-  ([#{js/Int8Array array?} x] (js/Uint8Array. x))))
+(def cljs-equivalence-classes
+  (->> cljs-types
+       (reduce
+         (fn [ret [k v]]
+           (let [v' (->> v name (remove #{\u \c}))]
+             (assoc ret k (->> cljs-types
+                               (filter (fn [[k1 v1]] (->> v1 name (remove #{\u \c}) (= v'))))
+                               (map    key)
+                               set
+                               (<- disj k)))))
+         {})))
 
-#?(:cljs
-(defnt ->int8-array
-  ([^js/Int8Array x] x)
-  ([#{js/Uint8Array array?} x] (js/Int8Array. x))))
+#?(:clj
+(defmacro gen-typed-array-defnts []
+  `(do ~@(for [[ctor-sym sym] cljs-types]
+           (let [fn-sym (symbol (str "->" sym "-array"))]
+             `(defnt ~fn-sym
+                ([#{~ctor-sym} x#] x#)
+                ([~(into (get cljs-equivalence-classes ctor-sym)
+                         '#{array? number?}) x#] (new ~ctor-sym x#))
+                ([x#] (assert (coll? x#)) ; TODO maybe other acceptable datatypes?
+                      (reducei (fn [buf# elem# i#] (aset buf# i# elem#) buf#)
+                               (~fn-sym (count x#))))))))))
+
+#?(:cljs (gen-typed-array-defnts))
 
 
 ; TODO Compress
