@@ -38,7 +38,7 @@
                      [quantum.core.vars             :as var
                        :refer [defalias]                     ]
                      [quantum.core.data.array
-                       :refer [gen-typed-array-defnt]]))
+                       :refer [gen-typed-array-defnts]]))
   #?(:clj  (:import  [java.io ByteArrayOutputStream]
                      [java.nio ByteBuffer]
                      java.util.ArrayList)))
@@ -354,7 +354,8 @@
                          '#{array? number?}) x#] (new ~ctor-sym x#))
                 ([x#] (assert (coll? x#)) ; TODO maybe other acceptable datatypes?
                       (reducei (fn [buf# elem# i#] (aset buf# i# elem#) buf#)
-                               (~fn-sym (count x#))))))))))
+                               (~fn-sym (count x#))
+                               x#))))))))
 
 #?(:cljs (gen-typed-array-defnts))
 
