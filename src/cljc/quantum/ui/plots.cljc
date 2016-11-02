@@ -1,5 +1,14 @@
 (ns quantum.ui.plots)
 
+; Mathematica
+; - 2D and 3D data, function and geo visualization and animation tools
+
+; uncomplicate.bayadera.toolbox.plots
+; - render-histogram
+; - render-sample
+; uncomplicate.bayadera.toolbox.processing
+; - plot2d
+
 ; (plot)  - http://sameersingh.org/scalaplot/
 ; (spark) - https://github.com/RichardWarburton/jspark
 
