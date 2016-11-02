@@ -7,10 +7,6 @@
 
 (defn test:pi* [set- step-fn])
 
-(defn test:find-max-by ; |max-by| would be the first of it
-  ([pred x])
-  ([pred a b]))
-
 (defn test:factors [n])
 
 (defn test:lfactors [n])
