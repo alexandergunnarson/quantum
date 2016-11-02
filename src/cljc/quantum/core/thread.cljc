@@ -57,9 +57,13 @@
              quantum.core.data.queue.LinkedBlockingQueue
              #_(co.paralleluniverse.fibers FiberScheduler DefaultFiberScheduler))))
 
-; TODO temporary
-(def wrap-delay identity)
-#_(def wrap-delay (whenf1 (fn-not delay?) delay))
+; TO EXPLORE
+; - Task manager using the ideas from here and from mikera/task:
+;   - :source/:form, :promise, :creation-time
+;   - Can print out a list of all running tasks in a pprint-table form
+; ============================
+
+(def wrap-delay (whenf1 (fn-not delay?) delay))
 
 (defonce ^{:doc "Thread registry"} reg (atom {}))
 
