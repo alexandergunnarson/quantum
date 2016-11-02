@@ -38,32 +38,31 @@
    so you see your first few lines of output instantaneously."
   ([] (println))
   ([obj]
-    (if #?(:clj  (instance? Throwable obj)
-           :cljs false)
-        #?(:clj  (debug/trace obj)
-           :cljs false)
-        (do
-          (cond
-            (and (string? obj) (> (count obj) *print-length*))
-              (println
-                (str "String is too long to print ("
-                     (str (count obj) " elements")
-                     ").")
-                "|max-length| is set at" (str *print-length* ".")) ; TODO fix so ellipsize
-            (contains? @blacklist (type obj))
-              (println
-                "Object's class"
-                (str (type obj) "(" ")")
-                "is blacklisted for printing.")
-            :else
-              (#?(:clj  fipp.edn/pprint
-                  :cljs cljs.pprint/pprint) obj))
-          nil)))
+    (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
+      (if #?(:clj  (instance? Throwable obj)
+             :cljs false)
+          #?(:clj  (debug/trace obj)
+             :cljs false)
+          (do
+            (cond
+              (and (string? obj) (> (count obj) *print-length*))
+                (println
+                  (str "String is too long to print ("
+                       (str (count obj) " elements")
+                       ").")
+                  "|max-length| is set at" (str *print-length* ".")) ; TODO fix so ellipsize
+              (contains? @blacklist (type obj))
+                (println
+                  "Object's class"
+                  (str (type obj) "(" ")")
+                  "is blacklisted for printing.")
+              :else
+                (#?(:clj  fipp.edn/pprint
+                    :cljs cljs.pprint/pprint) obj))
+            nil))))
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
-
-(set! *print-length* 1000) ; A reasonable default
 
 #?(:clj (reset! debug/pretty-printer !))
 
