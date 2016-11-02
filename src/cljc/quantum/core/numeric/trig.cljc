@@ -157,13 +157,10 @@
 
 ; ===== DEGREES + RADIANS ===== ;
 
-#?(:clj  (defnt' radians->degrees
+#?(:clj  (defnt' rad->deg
            (^double [^double x] (Math/toDegrees x)))
-   :cljs (defn radians->degrees [x] (TODO)))
+   :cljs (defn rad->deg [x] (/ (* x 180.0) js/Math.PI)))
 
-#?(:clj  (defnt' degrees->radians
+#?(:clj  (defnt' deg->rad
            (^double [^double x] (Math/toRadians x)))
-   :cljs (defn degrees->radians [x] (TODO)))
-
-
-
+   :cljs (defn deg->rad [x] (/ (* x js/Math.PI) 180.0)))
