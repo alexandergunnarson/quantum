@@ -13,6 +13,8 @@
     [quantum.core.fn
       :refer        [#?@(:clj [fn-> <- fn& fn&2])]
       :refer-macros [          fn-> <- fn& fn&2]]
+    [quantum.core.log :as log
+      :include-macros true]
     [quantum.core.collections :as coll
       :refer        [map+ range+ filter+ mapcat+
                      #?@(:clj [reduce join count kmap])]
@@ -21,6 +23,8 @@
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
     [quantum.core.numeric.misc :as misc]))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - GNU Multiple Precision Arithmetic Library

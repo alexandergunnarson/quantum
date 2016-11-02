@@ -142,10 +142,13 @@
 
 #?(:clj (variadic-proxy ** quantum.core.numeric.operators/*-bin))
 
+#?(:cljs (defn *'-bin- [x y] (TODO))) ; TODO only to fix CLJS arithmetic warning here
+
 #?(:clj  (defnt' *'-bin "Strict |*|; throws exception on overflow/underflow"
            (^int  ^:intrinsic [^int  x ^int  y] (Math/multiplyExact x y))
            (^long ^:intrinsic [^long x ^long y] (Math/multiplyExact x y)))
-   :cljs (defalias *'-bin core/*))
+   :cljs (defnt  *'-bin
+           ([x y] (*'-bin- x y))))
 
 #?(:clj (variadic-proxy *' quantum.core.numeric.operators/*'-bin))
 

@@ -8,6 +8,8 @@
     [quantum.core.fn
       :refer        [#?@(:clj [fn1 fn$ fn-> <-])]
       :refer-macros [          fn1 fn$ fn-> <-]]
+    [quantum.core.log :as log
+      :include-macros true]
     [quantum.core.numeric       :as cnum
       :refer        [*+* *-* *** *div* mod
                      #?@(:clj [abs sqrt pow e-exp floor log-e])]
@@ -21,6 +23,8 @@
       :refer-macros [          defalias]]
     [quantum.core.error
       :refer [->ex TODO]]))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - Mathematica
@@ -145,7 +149,7 @@
   {:implemented-by '#{org.apache.commons.math3.stat.interval.NormalApproximationInterval}}
   [?] (TODO))
 
-(defn normal-approximation-interval
+(defn wilson-score-interval
   "The Wilson score method for creating a binomial proportion confidence interval."
   {:implemented-by '#{org.apache.commons.math3.stat.interval.WilsonScoreInterval}}
   [?] (TODO))
@@ -179,7 +183,7 @@
   [q1 q3]
   (let [iqr    (- q3 q1)
         severe (* iqr 3)
-        mild   (* iqr 3/2)]
+        mild   (* iqr #?(:clj 3/2 :cljs 1.5))]
     [(- q1 severe)
      (- q1 mild)
      (+ q3 mild)

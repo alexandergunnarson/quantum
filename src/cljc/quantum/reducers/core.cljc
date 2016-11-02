@@ -106,9 +106,9 @@
 
 #?(:clj  (defalias join join*)
    :cljs (defn     join
-           (fn ([   ] (coll/join    ))
-               ([a  ] (coll/join a  ))
-               ([a b] (coll/join a b)))))
+           ([   ] (coll/join    ))
+           ([a  ] (coll/join a  ))
+           ([a b] (coll/join a b))))
 
 #?(:clj
 (defn frequencies [to x]
@@ -124,6 +124,7 @@
            (join to)))
       (coll/red-frequencies to x))))
 
+#?(:cljs (defn frequencies [to x] (coll/red-frequencies to x)))
 
 #?(:clj
 (defn sort-by+

@@ -19,6 +19,8 @@
                :refer        [aritoid
                               #?@(:clj [fn1 fn->])]
                :refer-macros [          fn1 fn->]]
+             [quantum.core.log :as log
+               :include-macros true]
              [quantum.core.logic                :as logic
                :refer        [nnil?
                               #?@(:clj [fn-and whenf1])]
@@ -48,6 +50,8 @@
              [net.jafama FastMath]
              clojure.lang.BigInt
              java.math.BigDecimal)))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - org.apache.commons.math3.dfp for performance, precision, accuracy
