@@ -260,12 +260,12 @@
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 
-#?(:clj  (defnt exactly
-           ([#{decimal?} x]
-             (-> x rationalize exactly))
-           ([#{int? long?} x] (->bigint x))
-           ([#{bigint? clojure.lang.Ratio} x] x))
-   :cljs (defn exactly [x] (TODO)))
+(defnt exactly
+  #?@(:clj  [([#{decimal?} x]
+               (-> x rationalize exactly))
+             ([#{int? long?} x] (->bigint x))
+             ([#{bigint? clojure.lang.Ratio} x] x)]
+      :cljs [([^number? x] (TODO))]))
 
 ;_____________________________________________________________________
 ;================={   TRIGONOMETRIC FUNCTIONS    }====================
