@@ -3,7 +3,8 @@
     :attribution "Alex Gunnarson"}
   quantum.core.ns
   (:require [clojure.set    :as set]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+    #?(:clj [alembic.still])))
 
 #?(:clj
 (defmacro search-var
@@ -52,7 +53,7 @@
 (defmacro import-static
   "Imports the named static fields and/or static methods of the class
   as (private) symbols in the current namespace.
-  Example: 
+  Example:
       user=> (import-static java.lang.Math PI sqrt)
       nil
       user=> PI
@@ -90,6 +91,8 @@
     `(do ~@(map import-field fields-to-do)
          ~@(map import-method methods-to-do)))))
 
+; DYNAMIC LOADING
+
 #?(:clj
 (defn load-ns [path ns-sym]
   (remove-ns ns-sym)
@@ -98,8 +101,14 @@
 #?(:clj
 (defn load-nss
   {:todo ["This function is not robust"]}
-  ([ns-syms] (load-nss "./src/cljc" ns-syms))
+  ([ns-syms] (load-nss "./src/cljc" ns-syms)) ; TODO all src paths from project.clj
   ([base-path ns-syms]
     (doseq [ns-sym ns-syms]
-      (load-ns (str base-path "/" (str/replace (name ns-sym) "." "/") ".cljc")
+      (load-ns (str base-path "/" (str/replace (name ns-sym) "." "/") ".cljc") ; TODO path separator
                ns-sym)))))
+
+#?(:clj
+(defmacro load-deps [deps]
+  `(alembic.still/distill ~deps)))
+
+#_(:clj (defalias lein alembic.still/lein))

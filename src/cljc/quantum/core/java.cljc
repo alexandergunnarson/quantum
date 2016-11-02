@@ -9,25 +9,18 @@
              [clojure.data       :as cljdata]
              [clojure.reflect    :as refl   ]
              [quantum.core.vars  :as var
-               :refer [defalias]            ]
-             #_[alembic.still]) ; TODO fix class conflict between Pulsar and alembic
+               :refer [defalias]            ])
            (:import java.lang.reflect.Method)]))
 
 #?(:clj
   (defn get-by-key [object info-type & args]
     (let [method-str (str "get" (str/capitalize (name info-type)))]
       (clojure.lang.Reflector/invokeInstanceMethod object method-str (to-array args)))))
-  
+
 #?(:clj
   (defn methods-names [object]
     (sort ; alphabetizes
       (map :name (:members (refl/reflect object))))))
-
-#?(:clj
-  (defmacro load-deps [deps]
-    `(alembic.still/distill ~deps)))
-
-#_#?(:clj (defalias lein alembic.still/lein))
 
 ; (def my-method-fetch
 ;   (memoize
