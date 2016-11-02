@@ -205,3 +205,6 @@
 (defn unqualify [sym] (-> sym name symbol))
 
 (defalias update-meta vary-meta)
+
+(defn merge-meta   [from to] (with-meta to (merge (meta from) (meta to))))
+(defn replace-meta [from to] (with-meta to (meta from)))

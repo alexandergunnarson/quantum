@@ -12,7 +12,7 @@
       :refer-macros [locals]]
     [quantum.core.vars        :as var
       :refer        [#?@(:clj [defalias defmalias])]
-      :refer-macros [defalias defmalias]]))
+      :refer-macros [          defalias defmalias]]))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
 
