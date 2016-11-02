@@ -12,3 +12,7 @@
   [s]
   #?(:clj  (Pattern/quote ^String s)
      :cljs (gstr/regExpEscape s)))
+
+; http://stackoverflow.com/questions/22945910/what-regex-is-b-equivalent-to-and-is-there-a-way-to-deparse-it
+#_(= #"(?:(?<!\w)(?=\w)|(?<=\w)(?!\w))"
+     #"\b")
