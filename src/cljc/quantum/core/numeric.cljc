@@ -49,11 +49,32 @@
              clojure.lang.BigInt
              java.math.BigDecimal)))
 
+; TO EXPLORE
+; - org.apache.commons.math3.dfp for performance, precision, accuracy
+;   - The radix of 10000 was chosen because it should be faster to
+;     operate on 4 decimal digits at once instead of one at a time.
+;   - Compare to BigDecimal
+; - org.apache.commons.math3.util.BigReal
+;   - Compare to BigDecimal
+; - org.apache.commons.math3.fraction.BigFraction
+;   - Compare to Ratio
+; - org.apache.commons.math3.util.Precision
+;   - Probably not needed
+; - Compare org.apache.commons.math3.util.FastMath to jafama
+
+; TODOS
+; - Use sqrt like ratios
+; ===========================
+
 ; op* : Lax. Continues on overflow.
 ; op' : Strict. Throws on overflow.
 ; op  : Natural. Auto-promotes on overflow.
 ; op& : Lax. Provides less-accurate results in much less time.
 
+; Unlike StrictMath, not all implementations of the equivalent
+; functions of class Math are defined to return the bit-for-bit
+; same results. This relaxation permits better-performing impls
+; where strict reproducibility is not required.
 
 ; (if a b true) => (or (not a) b)
 
@@ -86,6 +107,26 @@
 
 ; TODO Configurable isNaN
 ; TODO ^:inline
+
+(def ^{:const true
+       :tag   #?(:clj 'double :cljs 'number)
+       :doc   "Napier's constant (Euler's number) e,
+               base of the natural logarithm."} e* #?(:clj Math/E :cljs js/Math.E))
+
+(def ^{:const true
+       :tag   #?(:clj 'double :cljs 'number)
+       :doc   "Archimedes' constant π, ratio of circle
+               circumference to diameter."} pi* #?(:clj Math/PI :cljs js/Math.PI))
+
+(def ^{:const true
+       :tag   #?(:clj 'double :cljs 'number)
+       :doc    "Largest double-precision floating-point
+                number such that 1 + eps is numerically
+                equal to 1. This value is an upper bound
+                on the relative error due to rounding
+                real numbers to double precision
+                floating-point numbers.
+                In IEEE 754 arithmetic, this is 2^-53."} eps 1.1102230246251565E-16)
 
 (def overridden-fns
   '#{+ - * /
@@ -234,7 +275,7 @@
   asin asin* asinh sin sin* sinh sinh*
   acos acos* acosh cos cos* cosh cosh*
   atan atan* atanh tan tan* tanh tanh* atan2 atan2*
-  radians->degrees degrees->radians))
+  rad->deg deg->rad))
 ;_____________________________________________________________________
 ;==============={            EXPONENTS             }==================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -320,7 +361,7 @@
 
 ; PROPERTIES OF NUMERIC FUNCTIONS
 
-(def inverse-map ; some better way of doing this?
+(def ^:const inverse-map ; some better way of doing this?
   {core/+ core/-
    core/- core/+
    core// core/*
@@ -336,12 +377,16 @@
   (or (get inverse-map f)
       (throw (->ex :undefined "|inverse| not defined for function" f))))
 
-(def ^{:doc "Base values for operators."}
+(def ^{:doc "Base values for operators." :const true}
   base-map
   {core/+ 0
    core/- 0
    core// 1
-   core/* 1})
+   core/* 1
+   '+ 0
+   '- 0
+   '/ 1
+   '* 1})
 
 (defn base
   "Gets the identity-base for the given function `f`.
@@ -355,13 +400,17 @@
   (or (get base-map f)
       (throw (->ex :undefined "|base| not defined for function" f))))
 
+(defn range?
+  {:tests `{((range? 1 4) 3)
+            true}}
+  [a b] #(and (core/>= % a) (core/< % b)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         MUTATION         }=====================================================
 ;=================================================={                          }=====================================================
-#?(:clj (defmacro += [x a] `(set! ~x (+ ~x ~a))))
-#?(:clj (defmacro -= [x a] `(set! ~x (- ~x ~a))))
-#?(:clj (defmacro ++ [x] `(set! ~x (inc ~x))))
-#?(:clj (defmacro -- [x] `(set! ~x (dec ~x))))
+#?(:clj (defmacro += [x a] `(~'set! ~x (+ ~x ~a))))
+#?(:clj (defmacro -= [x a] `(~'set! ~x (- ~x ~a))))
+#?(:clj (defmacro ++ [x  ] `(~'set! ~x (inc ~x))))
+#?(:clj (defmacro -- [x  ] `(~'set! ~x (dec ~x))))
 #?(:clj (defalias inc! ++))
 #?(:clj (defalias dec! ++))
 ;___________________________________________________________________________________________________________________________________
