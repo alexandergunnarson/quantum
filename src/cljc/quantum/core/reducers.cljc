@@ -50,10 +50,29 @@
              [quantum.core.reducers
                :refer [reduce join]])))
 
-#?(:clj (defalias join   red/join  ))
-        (defalias pjoin  fold/pjoin)
-#?(:clj (defalias reduce red/reduce))
-        (defalias fold*  fold/fold ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
+#?(:clj (defalias join      red/join     ))
+#?(:clj (defalias joinl'    red/joinl'   ))
+#?(:clj (defalias join'     red/join'    ))
+        (defalias pjoin     fold/pjoin   )
+        (defalias pjoin'    fold/pjoin'  )
+#?(:clj (defalias reduce    red/reduce   ))
+        (defalias fold*     fold/fold    ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
+        (defalias red-apply red/red-apply)
+
+#?(:clj
+(defmacro rfn
+  "Creates a reducer-safe function."
+  [arglist & body]
+  (let [sym (gensym)]
+    (case (count arglist)
+          1 `(fn ~sym (~arglist ~@body)
+                      ([k# v#] (~sym [k# v#])))
+          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
+                      (~arglist ~@body)
+                      ([ret# k# v#] (~sym ret# [k# v#])))
+          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
+                      (~arglist ~@body))
+          (throw (->ex nil "Illegal arglist count passed to rfn" (cbase/kmap arglist)))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
 ;=================================================={  with support for /fold/ }=====================================================
@@ -169,20 +188,6 @@
     ICounted
     (-count [this] (apply min (map count colls)))))
 
- #?(:clj
-(defmacro rfn
-  "Creates a reducer-safe function."
-  [arglist & body]
-  (let [sym (gensym)]
-    (case (count arglist)
-          1 `(fn ~sym (~arglist ~@body)
-                      ([k# v#] (~sym [k# v#])))
-          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
-                      (~arglist ~@body)
-                      ([ret# k# v#] (~sym ret# [k# v#])))
-          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
-                      (~arglist ~@body))
-          (throw (->ex nil "Illegal arglist count passed to rfn" (cbase/kmap arglist)))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      LAZY REDUCERS       }=====================================================
 ;=================================================={                          }=====================================================
@@ -360,7 +365,8 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        REDUCTIONS        }=====================================================
 ;=================================================={                          }=====================================================
-(defn reductions+
+; Unknown whether this is more efficient than simply reducing normally
+#_(defn reductions+
   "Reducers version of /reductions/.
    Returns a reducer of the intermediate values of the reduction (as per reduce) of coll by f.
    "
@@ -1083,6 +1089,29 @@
        (post-combine (juxt :min :max))))
 )
 
-
-
 ; TODO completing, transduce, eduction, sequence
+
+#?(:clj
+(defmacro defeager [sym plus-sym]
+  (let [lazy-sym            (symbol (str "l" sym))
+        quoted-sym          (symbol (str sym "'"))
+        parallel-sym        (symbol (str "p" sym))
+        parallel-quoted-sym (symbol (str "p" sym "'"))]
+    `(do (defalias ~lazy-sym ~(symbol "core" (name sym)))
+         (defalias ~(var/unqualify plus-sym) ~plus-sym)
+         (defn ~sym
+           ~(str "Like `core/" sym "`, but eager. Reduces into vector.")
+           ([f#] (fn [coll#] (~sym f# coll#)))
+           ([f# coll#] (->> coll# (~plus-sym f#) join)))
+         (defn ~quoted-sym
+           ~(str "Like `" sym "`, but reduces into the empty version of the collection which was passed to it.")
+           ([f#] (fn [coll#] (~quoted-sym f# coll#)))
+           ([f# coll#] (->> coll# (~plus-sym f#) join')))
+         (defn ~parallel-sym
+           ~(str "Like `core/" sym "`, but eager and parallelized. Folds into vector.")
+           ([f#] (fn [coll#] (~parallel-sym f# coll#)))
+           ([f# coll#] (->> coll# (~plus-sym f#) pjoin)))
+         (defn ~parallel-quoted-sym
+           ~(str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")
+           ([f#] (fn [coll#] (~parallel-quoted-sym f# coll#)))
+           ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))

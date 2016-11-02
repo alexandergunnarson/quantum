@@ -17,6 +17,7 @@
   (:refer-clojure :exclude
     [for doseq reduce
      contains?
+     map pmap map-indexed filter remove
      repeat repeatedly
      interpose
      range
@@ -53,8 +54,9 @@
       :refer        [#?@(:clj [defnt])]
       :refer-macros [          defnt]]
     [quantum.core.reducers         :as red
-      :refer        [#?@(:clj [reduce])]
-      :refer-macros [          reduce]]
+      :refer        [indexed+
+                     #?@(:clj [join' reduce defeager])]
+      :refer-macros [          join' reduce defeager]]
     [quantum.core.type             :as type]
     [quantum.core.loops            :as loops
       :refer        [#?@(:clj [reducei doseqi lfor])]
@@ -71,47 +73,29 @@
 
 ; ============================ MAP ============================ ;
 
-(defalias lmap         core/map        )
-(defalias map+         red/map+        )
-(defalias map-indexed+ red/map-indexed+)
+(defeager map         red/map+)
+(defeager map-indexed red/map-indexed+)
 
-(defn map-keys+ [f coll] (->> coll (map+ (juxt-kv f identity))))
-(defn map-vals+ [f coll] (->> coll (map+ (juxt-kv identity f))))
+; TODO do eager versions
+(defn map-keys+ [f coll] (->> coll (map+ (rcomp key f))))
+(defn map-vals+ [f coll] (->> coll (map+ (rcomp val f))))
 
 ; ============================ FILTER ============================ ;
 
-(defalias filter+     red/filter+    )
-(defalias lfilter     filter         )
+(defeager filter red/filter+)
 
 (defn ffilter
-  "Returns the first result of a |filter| operation.
-   Uses lazy |filter| so as to do it in the fastest possible way."
-   [filter-fn coll]
-   (->> coll (filter filter-fn) first))
-
-(defn ffilter+
-  {:todo ["Use a delayed reduction as the base!"]}
+  "Returns only the first result of a |filter| operation."
+  {:todo ["Allow parallelization"]}
   [pred coll]
-  (reduce
-    (fn [ret elem-n]
-      (when (pred elem-n)
-        (reduced elem-n)))
-    nil
-    coll))
+  (->> coll (filter+ pred) first))
 
 (defn ffilteri
-  {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
+  {:todo ["Allow parallelization"]
    :in   '[(fn-eq? "4") ["a" "d" "t" "4" "10"]]
-   :out  [3 "4"]
-   :out-type 'MapEntry}
+   :out  [3 "4"]}
   [pred coll]
-  (reducei
-    (fn [ret elem-n index-n]
-      (if (pred elem-n)
-          (reduced (map-entry index-n elem-n))
-          ret))
-    (map-entry nil nil)
-    coll))
+  (->> coll indexed+ (ffilter (rcomp val pred))))
 
 (defn filteri
   {:todo ["Use reducers"]}
@@ -152,11 +136,11 @@
 #?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
    :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
 
-(defalias lremove core/remove)
-(defalias remove+ red/remove+)
+(defeager remove red/remove+)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
+; TODO do eager versions
 (defn filter-keys+ [pred coll] (->> coll (filter+ (rcomp key pred))))
 (defn remove-keys+ [pred coll] (->> coll (remove+ (rcomp key pred))))
 (defn filter-vals+ [pred coll] (->> coll (filter+ (rcomp val pred))))
