@@ -21,3 +21,11 @@
 ;             (io/parse-dirs-keys
 ;               [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])))]
 ;   img)
+
+; PROCEDURAL GENERATION
+
+; mikera/clisk: procedural texture generation
+
+; RENDERING/RAYTRACING
+
+; Scene description / generation
