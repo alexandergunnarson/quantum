@@ -1,4 +1,4 @@
-(ns 
+(ns
   ^{:doc "Useful binary operations."
     :attribution "Alex Gunnarson"}
   quantum.core.data.binary
@@ -94,10 +94,29 @@
 
 (defalias >>> unsigned-bit-shift-right)
 
+(declare bits)
+
+(defalias ? core/bit-test)
+
+; ===== BULK BIT OPERATIONS ===== ;
+
+(defn ?-coll
+  "Returns true or false for the bit at the given index of the collection."
+  [bits i]
+  (? (bits (>> i 6)) (& i 0x3f)))
+
 (defn bits
-  {:attribution "gloss.data.primitives"}
-  [x num-bits]
-  (map #(if (pos? (bit-and (bit-shift-left 1 %) x)) 1 0) (range num-bits)))
+  "The bits of x, aggregated into a vector and truncated/extended to length n."
+  {:adapted-from 'gloss.data.primitives}
+  [x n]
+  (mapv #(if (pos? (& (<< 1 %) x)) 1 0) (range n)))
+
+(defn truncate
+  "Truncates x to the specified number of bits."
+  {:adapted-from 'bigml.sketchy.murmur}
+  [#?(:clj ^long x :cljs x)
+   #?(:clj ^long n :cljs n)]
+  (& x (unchecked-dec (<< 1 n))))
 
 ; ====== ENDIANNESS REVERSAL =======
 
