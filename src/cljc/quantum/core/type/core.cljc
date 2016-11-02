@@ -5,13 +5,14 @@
   quantum.core.type.core
   (:refer-clojure :exclude [class])
   (:require
-    #?(:clj [clojure.tools.analyzer.jvm.utils :as ana])
+  #?@(:clj [[clojure.tools.analyzer.jvm.utils :as ana]
+            [clojure.core.async.impl.protocols]])
             [quantum.core.type.defs           :as defs
               :include-macros true]
             [quantum.core.error               :as err
               :refer [->ex]                           ]
             [quantum.core.vars                :as var
-              :refer        [#?@(:clj [defalias])]    
+              :refer        [#?@(:clj [defalias])]
               :refer-macros [defalias]                ]))
 
 (def class #?(:clj clojure.core/class :cljs type))

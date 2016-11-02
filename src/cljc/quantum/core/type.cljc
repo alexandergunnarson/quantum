@@ -10,7 +10,7 @@
      identity class])
            (:require
              [#?(:clj  clojure.core
-                 :cljs cljs.core   )       :as core   ]
+                 :cljs cljs.core   )       :as core]
              [quantum.core.classes         :as classes]
              [quantum.core.fn              :as fn
                :refer        [#?@(:clj [fn1 mfn fn->])]
@@ -65,31 +65,33 @@
        code))
    ~(->> types (remove (fn-> key (= 'nil?)))))))
         ; TODO for JS, primitives (function, array, number, string) aren't covered by these
-        (defnt byte-array? ([^byte-array? obj] true) ([obj] false))
-#?(:clj (defnt bigint?     ([^bigint?     obj] true) ([obj] false)))
-#?(:clj (defnt file?       ([^file?       obj] true) ([obj] false)))
-        (defnt hash-map?   ([^hash-map?   obj] true) ([obj] false))
-        (defnt sorted-map? ([^sorted-map? obj] true) ([obj] false))
-        (defnt boolean?    ([^boolean?    obj] true) ([obj] false))
-        (defnt listy?      ([^listy?      obj] true) ([obj] false))
-        (defnt vector?     ([^vector?     obj] true) ([obj] false))
-        (defnt set?        ([^set?        obj] true) ([obj] false))
-        (defnt hash-set?   ([^hash-set?   obj] true) ([obj] false))
-        (defnt map?        ([^map?        obj] true) ([obj] false))
-        (defnt array-list? ([^array-list? obj] true) ([obj] false))
-        (defnt queue?      ([^queue?      obj] true) ([obj] false))
-        (defnt lseq?       ([^lseq?       obj] true) ([obj] false))
-        (defnt pattern?    ([^pattern?    obj] true) ([obj] false))
-        (defnt regex?      ([^regex?      obj] true) ([obj] false))
-        (defnt editable?   ([^editable?   obj] true) ([#?(:cljs :else) obj] false))
-        (defnt transient?  ([^transient?  obj] true) ([obj] false))
+         (defnt byte-array? ([^byte-array? obj] true) ([obj] false))
+#?(:clj  (defnt bigint?     ([^bigint?     obj] true) ([obj] false)))
+#?(:clj  (defnt file?       ([^file?       obj] true) ([obj] false)))
+         (defnt hash-map?   ([^hash-map?   obj] true) ([obj] false))
+         (defnt sorted-map? ([^sorted-map? obj] true) ([obj] false))
+         (defnt boolean?    ([^boolean?    obj] true) ([obj] false))
+         (defnt listy?      ([^listy?      obj] true) ([obj] false))
+         (defnt vector?     ([^vector?     obj] true) ([obj] false))
+         (defnt set?        ([^set?        obj] true) ([obj] false))
+         (defnt hash-set?   ([^hash-set?   obj] true) ([obj] false))
+         (defnt map?        ([^map?        obj] true) ([obj] false))
+         (defnt array-list? ([^array-list? obj] true) ([obj] false))
+         (defnt queue?      ([^queue?      obj] true) ([obj] false))
+         (defnt lseq?       ([^lseq?       obj] true) ([obj] false))
+         (defnt pattern?    ([^pattern?    obj] true) ([obj] false))
+         (defnt regex?      ([^regex?      obj] true) ([obj] false))
+         (defnt editable?   ([^editable?   obj] true) ([#?(:cljs :else) obj] false))
+         (defnt transient?  ([^transient?  obj] true) ([obj] false))
 
-        (defnt array?
-          ([^array? x] true)
-          ([x] #?(:clj  (-> x class .isArray)
-                  :cljs (-> x core/array?))))
+         (defnt array?
+           ([^array? x] true)
+           ([x] #?(:clj  (-> x class .isArray)
+                   :cljs (-> x core/array?))))
 
-#?(:clj (defnt' prim-long? ([^long n] true) ([:else n] false)))
+; #?(:cljs (defnt typed-array? ...))
+
+#?(:clj  (defnt' prim-long? ([^long n] true) ([:else n] false)))
 
 ;         #?(:cljs
 ; (defn bigint?
@@ -128,17 +130,12 @@
 
 #?(:clj
 (defn protocol?
-  {:source "zcaudate/hara.class.checks"
-   :todo ["A more efficient version to found in ztellman's work. Not sure where."]}
-  [obj]
-  (and (instance? clojure.lang.PersistentArrayMap obj)
-       (every? #(contains? obj %) [:on :on-interface :var])
-       (-> obj :on str Class/forName class?)
-       (-> obj :on-interface class?))))
+  "Returns true if an argument is a protocol'"
+  [x] (class? (:on-interface x))))
 
 #?(:clj
 (defn promise?
-  {:source "zcaudate/hara.class.checks"}
+  {:source 'zcaudate/hara.class.checks}
   [^Object obj]
   (let [^String s (.getName ^Class (type obj))]
     (.startsWith s "clojure.core$promise$"))))
