@@ -43,6 +43,7 @@
 
 #?(:clj
 (defmacro xor
+  {:attribution 'alexandergunnarson}
   ([] nil)
   ([x] false)
   ([x y] (if x (not y) y))

@@ -154,7 +154,14 @@
   `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
 
 #?(:clj
+(defmacro prl
+  "'Print labeled'.
+   Puts each x in `xs` as vals in a map.
+   The keys in the map are the quoted vals. Then prints the map."
+  [level & xs]
+  `(let [level# ~level]
+     (ppr level# ~(->> xs (map #(vector (list 'quote %) %)) (into {}))))))
+
+#?(:clj
 (defmacro this-ns []
   `(pr* true false println :ns (delay ['~(ns-name *ns*)]) nil)))
-
-#_(:clj (println "HERE IS THIS PID" (->> (java.lang.management.ManagementFactory/getRuntimeMXBean) (.getName))))
