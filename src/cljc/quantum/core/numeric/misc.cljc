@@ -15,8 +15,8 @@
               :refer [#?@(:clj [<=])]
               :refer-macros [<=]]
             [quantum.core.numeric.operators
-              :refer        [#?@(:clj [-'])]
-              :refer-macros [-']]
+              :refer        [#?@(:clj [-' abs'])]
+              :refer-macros [-' abs']]
             [quantum.core.numeric.predicates
               :refer        [#?@(:clj [neg? zero?])]
               :refer-macros [neg? zero?]])
@@ -106,6 +106,12 @@
            two-to-fifty-three)
        (core/integer? n)))
 
+(defn power-of-two?
+  {:implemented-by '#{org.apache.commons.math3.util.ArithmeticUtils/isPowerOfTwo}}
+  [n] (TODO))
+
+; TODO look at org.apache.commons.math3.util.ArithmeticUtils/gcd
+; Gets the greatest common divisor of the absolute value of two numbers, using the "binary gcd" method which avoids division and modulo operations.
 (defn gcd
   "(gcd a b) computes the greatest common divisor of a and b
    (using Euclid's algorithm)"
@@ -118,3 +124,10 @@
     (reduce gcd (gcd a b) args)))
 
 (defalias gcf gcd)
+
+(defn lcm
+  "Returns the least common multiple of the absolute value of
+   `a` and `b`."
+  [a b]
+  (let [a' (abs' a) b' (abs' b)] ; TODO use `abs`
+    (* b' (/ a' (gcd a' b')))))
