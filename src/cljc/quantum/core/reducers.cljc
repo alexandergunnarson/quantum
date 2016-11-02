@@ -320,7 +320,10 @@
                 (coll-fold left n combinef reducef)
                 (fjjoin rt))))))))
 
-(defn cat+ [f coll] (folder coll (core/cat f)))
+(defn cat+
+  ([] (throw (->ex nil "Not supported"))) ; TODO fix this arity that CLJS is complaining about
+  ([f] (core/cat f))
+  ([f coll] (folder coll (core/cat f))))
 
 (defn append!
   ".adds x to acc and returns acc"
