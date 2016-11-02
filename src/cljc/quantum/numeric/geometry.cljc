@@ -1,6 +1,7 @@
 (ns quantum.numeric.geometry
-  [quantum.core.error :as err
-    :refer [TODO]])
+  (:require
+    [quantum.core.error :as err
+      :refer [TODO]]))
 
 (defn smallest-enclosing-ball
   "Uses the Emo Welzl algorithm to find the smallest

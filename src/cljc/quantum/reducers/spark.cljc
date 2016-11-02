@@ -20,7 +20,7 @@
                      ReduceFunction MapFunction FilterFunction
                      FlatMapFunction))))
 
-(sys/merge-env! {"SPARK_LOCAL_IP" "127.0.0.1"})
+#?(:clj (sys/merge-env! {"SPARK_LOCAL_IP" "127.0.0.1"}))
 
 #?(:clj
 (def version

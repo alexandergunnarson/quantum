@@ -1,7 +1,8 @@
 (ns quantum.numeric.fitting
   "Curve fitting"
-  [quantum.core.error :as err
-    :refer [TODO]])
+  (:require
+    [quantum.core.error :as err
+      :refer [TODO]]))
 
 (defn fit:least-squares:gauss-newton
   {:implemented-by '#{org.apache.commons.math3.fitting.leastsquares.GaussNewtonOptimizer}}

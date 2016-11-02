@@ -27,7 +27,7 @@
              [quantum.core.vars
                :refer        [#?(:clj defalias)]
                :refer-macros [        defalias]])
-  (:import (org.apache.spark.mllib.linalg BLAS DenseVector)))
+  #?(:clj (:import (org.apache.spark.mllib.linalg BLAS DenseVector))))
 
 ; TODO probably use core.matrix API
 
@@ -222,7 +222,7 @@
 
 (defn dot [v1 v2] (num/sum (v*+ v1 v2)))
 
-(defn vsum [vs] (reduce v+ (first vs) (rest vs))) ; TODO optimize better
+(defn vsum [vs] (reduce v++ (first vs) (rest vs))) ; TODO optimize better
 
 (defn centroid+ [vs]
   (->> vs vsum (map+ (fn1 / (count vs)))))

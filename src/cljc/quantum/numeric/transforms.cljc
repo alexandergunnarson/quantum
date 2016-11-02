@@ -1,6 +1,7 @@
 (ns quantum.numeric.transforms
-  [quantum.core.error :as err
-    :refer [TODO]])
+  (:require
+    [quantum.core.error :as err
+      :refer [TODO]]))
 
 (defn fast-cosine
   "Fast Cosine Transform for transformation of one-dimensional real data sets."
