@@ -6,7 +6,7 @@
             [clojure.core.reducers  :as red]
             [clojure.walk           :as walk
               :refer [prewalk]]
-   #?(:cljs [cljs.analyzer                      ])
+            [cljs.analyzer                      ]
   #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
             [clojure.jvm.tools.analyzer         ]
             [clojure.tools.analyzer.jvm         ]
@@ -25,14 +25,12 @@
 (defmacro if-cljs
   "Return @then if the macro is generating CLJS code and @else for CLJ code."
   {:from "https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"}
-  ([env then else]
-    `(if (cljs-env? ~env) ~then ~else))))
+  ([env then else] `(if (cljs-env? ~env) ~then ~else))))
 
 #?(:clj
 (defmacro when-cljs
   "Return @then if the macro is generating CLJS code."
-  ([env then]
-    `(when (cljs-env? ~env) ~then))))
+  ([env then] `(when (cljs-env? ~env) ~then))))
 
 #?(:clj
 (defmacro locals
@@ -49,6 +47,19 @@
       (->> env getter
            (red/map (fn [[sym _]] [`(quote ~sym) sym]))
            (into {}))))))
+
+#?(:clj
+(defmacro env
+  "Retrieves the (sanitized) macroexpansion environment."
+  []
+  `(identity
+     '~(->> &env
+            (clojure.walk/postwalk
+              (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
+                             (.name ^clojure.lang.Compiler$LocalBinding x#)
+                             (nil? x#)
+                             []
+                             :else x#)))))))
 
 ; ===== LOCAL EVAL & RESOLVE =====
 
@@ -85,7 +96,7 @@
   "Expands to sym if it names a local in the current environment or
   nil otherwise"
   [sym]
-  (if (contains? &env sym) sym)))
+  (if (contains? (if-cljs &env (:locals &env) &env) sym) sym)))
 
 #?(:clj
 (defmacro compile-if
@@ -110,26 +121,49 @@
 
 ; ===== MACROEXPANSION ====
 
-#?(:clj (def macroexpand riddley.walk/macroexpand))
-
 (defn macroexpand-1 [form & [impl & args]]
-  (condp = impl
-             :ana #?(:clj  (apply clojure.tools.analyzer.jvm/macroexpand-1 form args)
-                     :cljs (apply cljs.analyzer/macroexpand-1              form args))
-    #?@(:clj [nil (core/macroexpand-1 form)])))
+  (case impl
+    #?@(:clj [:ana (apply clojure.tools.analyzer.jvm/macroexpand-1 form args)])
+    #?(:clj  (core/macroexpand-1 form)
+       :cljs (apply cljs.analyzer/macroexpand-1 (concat args [form])))))
 
-#?(:clj (defn macroexpand-all
-  {:todo ["Compare implementations"]}
-  [x & [impl]]
-  (condp = impl
-    ; Like clojure.walk/macroexpand-all but correctly handles lexical scope
-    :ctools         (clojure.tools.analyzer.jvm/macroexpand-all      x)
+(defn cljs-macroexpand
+  {:adapted-from 'com.rpl.specter/cljs-macroexpand}
+  ([form] (cljs-macroexpand (env)))
+  ([form env-]
+    (let [mform (cljs.analyzer/macroexpand-1 env- form)]
+      (cond (identical? form mform) mform
+            (and (seq? mform) (#{'js*} (first mform))) form
+            :else (cljs-macroexpand mform env-)))))
 
-    :tools.hygienic (clojure.jvm.tools.analyzer.hygienic/macroexpand x)
-    :tools          (clojure.jvm.tools.analyzer/macroexpand          x)
-    ; :walk         (clojure.walk/macroexpand-all x)
+#?(:clj  (def macroexpand riddley.walk/macroexpand)
+   :cljs (def macroexpand cljs-macroexpand))
 
-    (riddley.walk/macroexpand-all x))))
+(defn cljs-macroexpand-all
+  {:adapted-from 'com.rpl.specter/cljs-macroexpand-all}
+  ([form] (cljs-macroexpand-all (env)))
+  ([form env-]
+    (if (and (seq? form)
+             (#{'fn 'fn* 'cljs.core/fn} (first form)))
+      form
+      (let [expanded (if (seq? form) (cljs-macroexpand form env-) form)]
+        (walk/walk #(cljs-macroexpand-all % env-) identity expanded)))))
+
+#?(:clj
+    (defn macroexpand-all
+      {:todo ["Compare implementations"]}
+      [form & [impl & args]]
+      (case impl
+        ; Like clojure.walk/macroexpand-all but correctly handles lexical scope
+        :ctools         (clojure.tools.analyzer.jvm/macroexpand-all      form)
+        :tools.hygienic (clojure.jvm.tools.analyzer.hygienic/macroexpand form)
+        :tools          (clojure.jvm.tools.analyzer/macroexpand          form)
+        :cljs           (apply cljs-macroexpand-all form args)
+        ; :walk         (clojure.walk/macroexpand-all form)
+        (riddley.walk/macroexpand-all form)))
+   :cljs
+    (def macroexpand-all cljs-macroexpand-all))
+
 
 ; ===== MACRO CREATION HELPERS =====
 

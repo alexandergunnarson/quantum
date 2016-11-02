@@ -125,15 +125,7 @@
                (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
                (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
 
-#?(:clj
-(defmacro env []
-  `(identity '~(->> &env
-                    (clojure.walk/postwalk
-                      (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
-                                     (.name ^clojure.lang.Compiler$LocalBinding x#)
-                                     (nil? x#)
-                                     []
-                                     :else x#)))))))
+#?(:clj (defalias env cmacros/env))
 
 ; #?(:clj
 ; (defn param-arg-match
