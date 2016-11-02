@@ -9,7 +9,7 @@
                      [quantum.core.data.array  :as arr
                        :refer        [#?(:clj byte-array+) aset!]]
                      [quantum.core.data.binary :as bin
-                       :refer        [& >>>]]
+                       :refer        [&& >>>]]
                      [quantum.core.fn          :as fn
                        :refer        [#?@(:clj [fn1])]
                        :refer-macros [          fn1]]
@@ -50,9 +50,9 @@
         ^chars hex-chars (-> digested count (* 2) char-array)]
     (loop [i 0]
       (if (< i (count digested))
-          (let [v           (-> digested (get i) (& 0xFF))
+          (let [v           (-> digested (get i) (&& 0xFF))
                 bit-shifted (-> hex-arr  (get (>>> v 4   )) char)
-                bit-anded   (-> hex-arr  (get (&   v 0x0F)) char)]
+                bit-anded   (-> hex-arr  (get (&&   v 0x0F)) char)]
                 (aset hex-chars (char (* i 2))       bit-shifted)
                 (aset hex-chars (char (+ (* i 2) 1)) bit-anded)
               (recur (inc i)))))

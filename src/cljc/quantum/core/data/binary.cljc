@@ -66,7 +66,7 @@
 
 (defalias bit-not core/bit-not)
 (defalias bit-and core/bit-and)
-(defalias & bit-and)
+(defalias && bit-and) ; tried to do `& but, "No method in multimethod 'parse' for dispatch value: &"
 (defalias bit-or  core/bit-or)
 (defalias | bit-or)
 (defalias bit-xor core/bit-xor)
@@ -103,20 +103,20 @@
 (defn ?-coll
   "Returns true or false for the bit at the given index of the collection."
   [bits i]
-  (? (bits (>> i 6)) (& i 0x3f)))
+  (? (bits (>> i 6)) (&& i 0x3f)))
 
 (defn bits
   "The bits of x, aggregated into a vector and truncated/extended to length n."
   {:adapted-from 'gloss.data.primitives}
   [x n]
-  (mapv #(if (pos? (& (<< 1 %) x)) 1 0) (range n)))
+  (mapv #(if (pos? (&& (<< 1 %) x)) 1 0) (range n)))
 
 (defn truncate
   "Truncates x to the specified number of bits."
   {:adapted-from 'bigml.sketchy.murmur}
   [#?(:clj ^long x :cljs x)
    #?(:clj ^long n :cljs n)]
-  (& x (unchecked-dec (<< 1 n))))
+  (&& x (unchecked-dec (<< 1 n))))
 
 ; ====== ENDIANNESS REVERSAL =======
 

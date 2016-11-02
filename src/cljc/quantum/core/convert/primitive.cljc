@@ -3,7 +3,7 @@
                      [#?(:clj  clojure.core
                          :cljs cljs.core   )   :as core  ]
                      [quantum.core.data.binary :as bin
-                       :refer [&]                        ]
+                       :refer [&&]                       ]
                      [quantum.core.error       :as err
                        :refer [->ex]                     ]
                      [quantum.core.macros      :as macros
@@ -164,7 +164,7 @@
   {:source "clojure.lang.RT/uncheckedFloatCast"}
   ([^Number                             x] (.floatValue x))
   ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedFloatCast x))
-  ([^string?                            x] (Float/parseFloat x)))) ; TODO unbox 
+  ([^string?                            x] (Float/parseFloat x)))) ; TODO unbox
 
 ; ; TODO duplicate methods
 ; (defnt ^float ->float
@@ -240,9 +240,9 @@
   {:attribution  ["ztellman/primitive-math" "gloss.data.primitives"]
    :contributors {"Alex Gunnarson" "defnt-ed"}
    :todo ["change to unchecked-bit-and after making sure it won't overflow"]}
-  (^short [^byte  x] (& (->short* bytes2) x))
-  (^int   [^short x] (& (->int*   bytes4) x))
-  (^long  [^int   x] (& (->long*  bytes8) x))
+  (^short [^byte  x] (&& (->short* bytes2) x))
+  (^int   [^short x] (&& (->int*   bytes4) x))
+  (^long  [^int   x] (&& (->long*  bytes8) x))
   (       [^long  x]
     (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array)))))
 
@@ -265,6 +265,6 @@
   (long (int x))))
 
 #?(:clj
-(defn ulong->long 
+(defn ulong->long
   ^long [x]
   (.longValue ^clojure.lang.BigInt (bigint x))))
