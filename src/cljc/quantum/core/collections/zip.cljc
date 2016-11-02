@@ -60,7 +60,8 @@
       :refer        [#?@(:clj [join])]
       :refer-macros [          join]]
     [quantum.core.vars             :as var
-      :refer        [#?@(:clj [defalias])]
+      :refer        [replace-meta
+                     #?@(:clj [defalias])]
       :refer-macros [          defalias]]))
 
 ; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
@@ -73,45 +74,50 @@
    as a sorted-map with the same comparator."
   {:todo ["Fix class overlap" "fix clojure.lang.PersistentList$EmptyList"]}
   ; Special case to preserve type
-  ([^list? coll f        ] (apply list (map f coll)))
-  ([^list? coll _ to-join] (apply list to-join))
+  ([^list? coll f        ] (replace-meta coll (apply list (map f coll))))
+  ([^list? coll _ to-join] (replace-meta coll (apply list to-join)))
   ([^transientizable? coll f]
-     (with-meta
+     (replace-meta coll
        (persistent!
          (core/reduce
            (fn [r x] (core/conj! r (f x)))
-           (transient (empty coll)) coll))
-       (meta coll)))
+           (transient (empty coll)) coll))))
   ([^transientizable? coll _ to-join]
-     (with-meta
-       (join (empty coll) to-join)
-       (meta coll)))
+     (replace-meta coll (join (empty coll) to-join)))
   ; generic sequence fallback
   ; TODO add any seq in general
-
-  ([#{cons? lseq? misc-seq? queue?} coll f        ] (map f coll))
-  ([#{cons? lseq? misc-seq? queue?} coll _ to-join] (seq to-join))
-  ([^vec+? coll f        ] (vec+ (mapv f coll)))
-  ([^vec+? coll _ to-join] (vec+ to-join))
+  ; TODO fix queue?
+  ([#{cons? lseq? misc-seq? queue?} coll f        ]
+    (replace-meta coll (map f coll)))
+  ([#{cons? lseq? misc-seq? queue?} coll _ to-join]
+    (replace-meta coll (seq to-join)))
+  ([^vec+? coll f        ]
+    (replace-meta coll (vec+ (mapv f coll))))
+  ([^vec+? coll _ to-join]
+    (replace-meta coll (vec+ to-join)))
   ; Persistent collections that don't support transients
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
                clojure.lang.PersistentTreeSet} coll f]
-             (core/reduce (fn [r x] (conj r (f x))) (empty coll) coll)))
+             (replace-meta coll
+              (core/reduce (fn [r x] (conj r (f x))) (empty coll) coll))))
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
                clojure.lang.PersistentTreeSet} coll _ to-join]
-             (core/reduce conj (empty coll) to-join)))
-  #?(:clj  ([^map-entry? coll f        ] (map-entry (f (key coll)) (f (val coll)))))
-  #?(:clj  ([^map-entry? coll _ to-join] (map-entry (first to-join) (second to-join))))
+             (replace-meta coll (core/reduce conj (empty coll) to-join))))
+  #?(:clj  ([^map-entry? coll f        ]
+             (map-entry (f (key coll)) (f (val coll)))))
+  #?(:clj  ([^map-entry? coll _ to-join]
+             (map-entry (first to-join) (second to-join))))
   #?(:clj  ([^record?    coll f]
-             (core/reduce (fn [r x] (conj r (f x))) coll coll)))
+             (replace-meta coll (core/reduce (fn [r x] (conj r (f x))) coll coll))))
   #?(:clj  ([^record?    coll _ to-join]
-             (core/reduce conj coll to-join)))
+             (replace-meta coll (core/reduce conj coll to-join))))
   #?(:clj  ([:else       x    f] x))
-  #?(:cljs ([:else       x    f] (if (coll? x) (join (empty x) (map f x)) x)))
+  #?(:cljs ([:else       x    f]
+             (if (coll? x) (replace-meta x (join (empty x) (map f x))) x)))
   #?(:cljs ([:else       x    _ to-join]
-             (if (coll? x) (join (empty x) to-join)))))
+             (if (coll? x) (replace-meta x (join (empty x) to-join))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     ZIPPERS     }=====================================================
 ;=================================================={                 }=====================================================
