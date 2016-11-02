@@ -28,23 +28,40 @@
 
 #?(:clj (defalias jfn memfn))
 
-(defalias fn& partial)
+#?(:clj
+(defmacro fn&* [arity f & args]
+  (let [f-sym (gensym) ct (count args)
+        macro? (-> f resolve meta :macro)]
+    `(let [~f-sym ~(when-not macro? f)]
+     (fn ~@(for [i (range (if arity arity       0 )
+                          (if arity (inc arity) 10))]
+             (let [args' (vec (repeatedly i #(gensym)))]
+               `(~args' (~(if macro? f f-sym) ~@args ~@args'))))
+         ; Add variadic arity if macro
+         ~@(when (and (not macro?)
+                      (nil? arity))
+             (let [args' (vec (repeatedly (+ ct 10) #(gensym)))]
+               [`([~@args' & xs#] (apply ~f-sym ~@args ~@args' xs#))])))))))
+
+#?(:clj (defmacro fn&  [f & args] `(fn&* nil ~f ~@args)))
+#?(:clj (defmacro fn&2 [f & args] `(fn&* 2   ~f ~@args)))
 
 (defn constantly
   {:from 'com.rpl.specter.impl}
   [v]
   (fn ([] v)
-      ([a1] v)
-      ([a1 a2] v)
-      ([a1 a2 a3] v)
-      ([a1 a2 a3 a4] v)
-      ([a1 a2 a3 a4 a5] v)
-      ([a1 a2 a3 a4 a5 a6] v)
-      ([a1 a2 a3 a4 a5 a6 a7] v)
-      ([a1 a2 a3 a4 a5 a6 a7 a8] v)
-      ([a1 a2 a3 a4 a5 a6 a7 a8 a9] v)
-      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] v)
-      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 & r] v)))
+      ([x0] v)
+      ([x0 x1] v)
+      ([x0 x1 x2] v)
+      ([x0 x1 x2 x3] v)
+      ([x0 x1 x2 x3 x4] v)
+      ([x0 x1 x2 x3 x4 x5] v)
+      ([x0 x1 x2 x3 x4 x5 x6] v)
+      ([x0 x1 x2 x3 x4 x5 x6 x7] v)
+      ([x0 x1 x2 x3 x4 x5 x6 x7 x8] v)
+      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9] v)
+      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10] v)
+      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 & r] v)))
 
 (defalias fn' constantly)
 
