@@ -19,6 +19,8 @@
                      [quantum.core.macros              :as macros
                        :refer [#?@(:clj [assert-args])]           ]
                      [quantum.core.reducers.reduce     :as red    ]
+                     [quantum.core.reducers
+                       :refer [#?@(:clj [rfn])]]
                      [quantum.core.macros.optimization :as opt    ]
                      [quantum.core.type                :as type   ])
   #?(:cljs (:require-macros
@@ -32,49 +34,6 @@
  `(while (not ~pred-expr) ~@body)))
 
 #_(:clj
-(defmacro reduce-extern-arr*
-  "|reduce| template, externed.
-
-   The fn (|reduce|'s first argument) is externed so as to not incur the overhead
-   of creating a function every time the function which calls reduce is called.
-
-   Instead of this overhead, the overhead of creating an array is incurred,
-   which is minimal."
-  [index? f ret coll & args]
-  (let [args-f
-          (if index?
-              `(quantum.core.data.array/object-array-of ~ret ~(opt/extern- f) (atom 0) ~@args)
-              `(quantum.core.data.array/object-array-of ~ret ~(opt/extern- f) ~@args))
-        _ (log/pr ::macro-expand "EXTERNING TO NAMESPACE" (ns-name *ns*))
-        extra-args-sym (with-meta (gensym 'extra-args) {:tag "[Ljava.lang.Object"})
-        args-n-sym     (with-meta (gensym 'args-n    ) {:tag "[Ljava.lang.Object"})
-        f-0
-         `(fn [~args-n-sym elem#]
-            ; A possibly faster alternative to destructuring
-            (let [ret-0#     (aget ~args-n-sym 0)
-                  f-0#       (aget ~args-n-sym 1)
-                  ~extra-args-sym
-                    (-> (quantum.core.collections.core/getr ~args-n-sym
-                          2 (quantum.core.collections.core/lasti ~args-n-sym)))
-                  _#  ~(when index?
-                         `(aset! ~extra-args-sym (int 0)
-                            (deref (aget ~extra-args-sym (int 0)))))
-                  ret-f#     (apply f-0# ret-0# elem# ~extra-args-sym)]
-              ~(when index? `(swap! (aget ~args-n-sym (int 2)) inc))
-              (aset! ~args-n-sym (int 0) ret-f#)
-              ~args-n-sym))
-        _ (log/ppr ::macro-expand "F IS" f-0)
-        f-evaled (eval f-0)
-        code-f
-          `(->> (red/reduce
-                  ~f-evaled
-                  ~args-f
-                  ~coll)
-                first)]
-          (log/ppr ::macro-expand "CODE IS" code-f)
-    code-f)))
-
-#?(:clj
 (defmacro reduce-
   ([f coll]
    `(red/reduce ~f ~coll))
@@ -82,9 +41,9 @@
    `(red/reduce ~f ~ret ~coll))))
 
 #?(:clj
-(defmacro reduce*
+(defmacro reduce-
   ([lang f coll]
-   `(reduce* ~lang ~f (~f) ~coll))
+   `(reduce- ~lang ~f (~f) ~coll))
   ([lang f ret coll]
    (let [externed
           (condp = lang
@@ -100,11 +59,11 @@
 
 #?(:clj
 (defmacro reduce [& args]
-  `(reduce* ~(if-cljs &env :cljs :clj) ~@args)))
+  `(reduce- ~(if-cljs &env :cljs :clj) ~@args)))
 
 ; TODO THIS IS THE ORIGINAL AND BETTER
 #?(:clj
-(defmacro reducei*
+(defmacro reducei-
   [should-extern? f ret-i coll & args]
   (let [f-final
          `(~(if (and should-extern? @qcore/externs?)
@@ -123,11 +82,6 @@
  code)))
 
 #?(:clj
-(defmacro reducei-
-  [f ret coll]
-  `(reducei* false ~f ~ret ~coll)))
-
-#?(:clj
 (defmacro reducei
   "|reduce|, indexed.
 
@@ -138,8 +92,7 @@
   {:attribution "Alex Gunnarson"
    :todo ["Make this an inline function, not a macro."]}
   [f ret coll]
-  `(reducei- ~f ~ret ~coll)
-  #_`(reducei* true ~f ~ret ~coll)))
+  `(reducei- false ~f ~ret ~coll)))
 
 (defn reduce-2
   "Like |reduce|, but reduces over two items in a collection at a time.
@@ -159,7 +112,37 @@
         (recur (func ret (first coll-n) (second coll-n))
                (-> coll-n rest rest)))))
 
+#?(:clj
+(defmacro reduce*
+  "Like `reduce`, but with the syntax of `for*`."
+  {:equivalent {`(->> coll
+                      (reduce* {} [ret m]
+                        (merge-with + ret m)))
+                `(reduce
+                   (rfn [ret m] (merge-with + ret m))
+                   {}
+                   coll)}}
+  [init & body]
+  `(reduce
+     (rfn ~@(butlast body))
+     ~init
+     ~(last body))))
 
+#?(:clj
+(defmacro red-for
+  "Like `reduce`, but with a similar syntax to `for`."
+  {:equivalent {`(red-for [ret {}
+                           m   [{1 2} {3 4}]]
+                   (merge-with + ret m))
+                `(reduce
+                   (rfn [ret m] (merge-with + ret m))
+                   {}
+                   [{1 2} {3 4}])}}
+  [[ret-sym init x-sym coll] & body]
+  `(reduce
+     (rfn ~[ret-sym x-sym] ~@body)
+     ~init
+     ~coll)))
 
 (defn while-recur
   {:attribution "Alex Gunnarson"}
@@ -244,7 +227,8 @@
 #?(:clj
 (defmacro for*
   "A lighter, eager version of |for| based on |reduce|.
-   Also accepts a "
+   Also accepts a collection into which to aggregate the results
+   (i.e. doesn't default to a lazy seq or a vector, etc.)"
   {:attribution "Alex Gunnarson"
    :performance "    2.043435 ms (for+ [elem v] nil))
                  vs. 2.508727 ms (doall (for [elem v] nil))
@@ -420,7 +404,6 @@
 (defn doeach
   "Like |run!|, but returns @coll.
    Like an in-place |doseq|."
-  {:added "1.7"}
   [f coll]
   (doseq [x coll] (f x))
   coll)
