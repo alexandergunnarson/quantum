@@ -1,9 +1,9 @@
 (ns quantum.apis.twitter.core
   (:require [quantum.auth.core :as auth]))
 
-; TODO turn api calls into less repetitive ones  
+; TODO turn api calls into less repetitive ones
 
-#_(def default-username #(auth/datum :twitter :default-username))
+#_(def default-username #(auth/get-in [:twitter :default-username]))
 #_(def default-app      #(auth/datum :twitter :default-app     ))
 
 #_(defn gen-oauth-signature
