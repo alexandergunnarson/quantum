@@ -25,7 +25,8 @@
 
 ; Some of the ideas here adapted from gfredericks/compare
 ; TODO include diffing
-; TODO use -compare in CLJS 
+; TODO use -compare in CLJS
+; TODO do `defnt` `compare` for different types
 
 #?(:clj  (defnt' =-bin
            (^boolean
@@ -65,7 +66,7 @@
 #?(:clj (variadic-predicate-proxy
           ^{:doc "Returns truthy if args are in monotonically increasing order
                   according to |compare|, otherwise false."}
-          < <-bin)) 
+          < <-bin))
 
 ; ===== |<=| =====
 
@@ -95,7 +96,7 @@
 #?(:clj (variadic-predicate-proxy
           ^{:doc "Returns truthy if args are in monotonically decreasing order
                   according to |compare|, otherwise false."}
-          > quantum.core.compare/>-bin)) 
+          > quantum.core.compare/>-bin))
 
 ; ===== |>=| =====
 
@@ -110,7 +111,7 @@
 #?(:clj (variadic-predicate-proxy
           ^{:doc "Returns truthy if args are in monotonically non-increasing order
                   according to |compare|, otherwise false."}
-          >= quantum.core.compare/>=-bin)) 
+          >= quantum.core.compare/>=-bin))
 
 (defn min*
   ([x] x)
@@ -128,7 +129,7 @@
 #?(:clj (variadic-predicate-proxy
           ^{:doc "Returns the least of the arguments according to
                   |compare|, preferring later values."}
-          min quantum.core.compare/min-bin)) 
+          min quantum.core.compare/min-bin))
 
 (defn max*
   ([x] x)
@@ -146,12 +147,13 @@
 #?(:clj (variadic-predicate-proxy
           ^{:doc "Returns the greatest of the arguments according to
                   |compare|, preferring later values."}
-          max quantum.core.compare/max-bin)) 
+          max quantum.core.compare/max-bin))
 
 (defn min-key
   "Returns the x for which (k x) is least, according to
    |compare|."
   {:from "gfredericks/compare"}
+  ([k] nil)
   ([k x] x)
   ([k x y] (if (< (k x) (k y)) x y))
   ([k x y & more]
@@ -161,6 +163,7 @@
   "Returns the x for which (k x) is greatest, according to
    |compare|."
   {:from "gfredericks/compare"}
+  ([k] nil)
   ([k x] x)
   ([k x y] (if (> (k x) (k y)) x y))
   ([k x y & more]
@@ -213,8 +216,8 @@
         (- alen blen)
         (let [x (- (int (aget a i)) (int (aget b i)))]
           (if (zero? x)
-            (recur (inc i))
-            x)))))))
+              (recur (inc i))
+              x)))))))
 
 #_(defn extreme-comparator [comparator-n]
   (get {> num/greatest
