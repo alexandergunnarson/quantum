@@ -23,6 +23,11 @@
              [quantum.core.string :as str])
   #?(:cljs (:import goog.string.StringBuffer)))
 
+; TO EXPLORE
+; - Mathematica
+;   - Tools for text mining including semantic analysis
+; ====================================
+
 (defn ->soundex
   {:tests `{[:extenssions] :E235
             [:extensions]  :E235
@@ -61,74 +66,3 @@
        str
        keyword))
 
-(defn levenshtein-matrix
-  {:tests '{["kitten" "sitting"]
-            [[0 1 2 3 4 5 6 7]
-             [1 1 2 3 4 5 6 7]
-             [2 2 1 2 3 4 5 6]
-             [3 3 2 1 2 3 4 5]
-             [4 4 3 2 1 2 3 4]
-             [5 5 4 3 2 2 3 4]
-             [6 6 5 4 3 3 2 3]]}
-   :performance
-      ["Boxed math doesn't seem to
-        make a difference in performance"
-       "|ifor| shaves about 20-40% off the time compared to
-        |doseq| with |range|! pretty amazing"]
-    :todo ["Move from |aset-in!| to |aset-in!*|"
-           "Eliminate boxed math"
-           "Improve |coll/->multi-array|"]}
-  [s1 s2]
-  (let [s1-ct+1 (-> s1 count int inc*)
-        s2-ct+1 (-> s2 count int inc*)
-        ^"[[I" m    (coll/->multi-array (int 0)
-                      [(-> s1 count inc)
-                       (-> s2 count inc)])
-        cost (mutable! 0)]
-    (ifor [i 0 (< i s1-ct+1) (inc* i)]
-      (aset-in! m [i 0] i))
-    (ifor [j 0 (< j s2-ct+1) (inc* j)]
-      (aset-in! m [0 j] j))
-    (ifor [i 1 (< i s1-ct+1) (inc* i)]
-      (ifor [j 1 (< j s2-ct+1) (inc* j)]
-        (if (= (get s1 (dec i))
-               (get s2 (dec j)))
-            (eq! cost 0)
-            (eq! cost 1))
-        (aset-in! m [i j]
-          (min (inc     (aget-in* m (dec i) j      ))     ; deletion
-               (inc     (aget-in* m i       (dec j)))     ; insertion
-               (+ @cost (aget-in* m (dec i) (dec j))))))) ; substitution
-     m))
-
-(defn levenshtein-distance [str1 str2]
-  {:modified-by {"Alex Gunnarson"
-                 ["removed boxed math"
-                  "|nth| -> |get|"
-                  "removed unnecessary |persistent!| call"]}
-   :original-source "https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Clojure"}
-  (let [str1 (name str1)
-        str2 (name str2)
-        n (-> str1 count int)
-        m (-> str2 count int)]
-    (cond
-     (= 0 n) m
-     (= 0 m) n
-     :else
-     (let [prev-col (transient (vec (range (inc* m))))
-           col      (transient [])] ; initialization for the first column.
-       (dotimes [i n]
-         (let [i (int i)]
-           (assoc! col 0 (inc* i)) ; update col[0]
-           (dotimes [j m]
-             (let [j (int j)]
-               (assoc! col (inc* j)  ; update col[1..m]
-               (min (inc* (int (get col      j       )))
-                    (inc* (int (get prev-col (inc* j))))
-                    (+*   (int (get prev-col j))
-                          (if (= (get str1 i)
-                                 (get str2 j))
-                              0 1))))))
-           (dotimes [i (count prev-col)]
-             (assoc! prev-col i (get col i))))) ;
-       (last col))))) ; last element of last column
