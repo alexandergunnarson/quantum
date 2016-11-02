@@ -11,8 +11,6 @@
                               reduce-count]
                :refer-macros [for lfor reduce join kmap]]
              [quantum.core.numeric          :as num]
-             [quantum.numeric.core
-               :refer        [find-max-by]]
              [quantum.numeric.vectors       :as v]
              [quantum.core.fn               :as fn
                :refer        [#?@(:clj [<- fn-> fn->>])]
@@ -284,7 +282,7 @@
   ([t D d'] (max-classifier-score t D d' (V D)))
   ([t D d' V]
     (->> (classifier-score+ t D d' V)
-         (reduce (partial find-max-by second) [nil 0]))))
+         (reduce (partial max-key second) [nil 0]))))
 
 (defn multinomial-naive-bayes-classifier
   ([D d'] (multinomial-naive-bayes-classifier D d' (V D)))
