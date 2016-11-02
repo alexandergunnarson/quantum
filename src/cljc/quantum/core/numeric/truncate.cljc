@@ -10,6 +10,8 @@
     [quantum.core.vars      :as var
       :refer        [#?@(:clj [defalias defaliases])]
       :refer-macros [defalias defaliases]          ]
+    [quantum.core.convert.primitive
+      :refer [#?@(:clj [->double])]]
     [quantum.core.numeric.convert
       :refer [#?@(:clj [->bigdec])]]))
 
@@ -17,14 +19,14 @@
 (defnt' rint "The double value that is closest in value to @x and is equal to a mathematical integer."
   (^double [^double x] (Math/rint x))))
 
-#?(:clj  (defnt' round' "Rounds up in cases of ambiguity."
+#?(:clj  (defnt round' "Rounds up in cases of ambiguity."
            (^long                 [^double               x] (Math/round x))
            (^long                 [^float                x] (Math/round x))
            (^java.math.BigDecimal [^java.math.BigDecimal x math-context]
              (.round x math-context))
-           (^java.math.BigDecimal [^clojure.lang.Ratio x]
-             (round' (core/double x)))
-           (^java.math.BigDecimal [^clojure.lang.Ratio x math-context]
+           (^long                 [#{long clojure.lang.Ratio} x]
+             (round' (->double x))) ; TODO use ->double
+           (^java.math.BigDecimal [#{long clojure.lang.Ratio} x math-context]
              (round' (->bigdec x) math-context)))
    :cljs (defn round' [x] (js/Math.round x)))
 
@@ -48,14 +50,35 @@
             (.setScale ^BigDecimal (bigdec num-0) ^Integer to round-type)))
    :cljs (defalias round round')) ; TODO fix
 
+; http://stackoverflow.com/questions/2808535/round-a-double-to-2-decimal-places
+#_(:clj
+(defn ^double round [^double value ^long places]
+  (when (neg? places) (throw (->ex nil "|places| must be positive" places)))
+
+  (-> value
+      (java.math.BigDecimal.)
+      (.setScale places java.math.RoundingMode/HALF_UP)
+      (.doubleValue))))
+
+#_(:cljs (defn round [value places] value))
+
+(defn nearest
+  "Round x to the nearest n."
+  {:tests `{(nearest 23 15)
+            30
+            (nearest 22 15)
+            15}}
+  [x n]
+  (-> x (/ n) round' (* n)))
+
 #?(:clj  (defnt ceil
            (^double [^double x] (Math/ceil x))
-           (^double [        x] (TODO "fix") (ceil (core/double x))))  
+           (^double [        x] (TODO "fix") (ceil (core/double x))))
    :cljs (defnt ceil [^number? x] (js/Math.ceil x)))
 
 #?(:clj  (defnt floor
            (^double [^double x] (Math/floor x))
-           (^double [        x] (TODO "fix") (floor (core/double x)))) 
+           (^double [        x] (TODO "fix") (floor (core/double x))))
    :cljs (defnt floor [^number? x] (js/Math.floor x)))
 
 #?(:clj
@@ -83,3 +106,15 @@
 (defnt' next-up
   (^double [^double x] (Math/nextUp x))
   (^float  [^float  x] (Math/nextUp x))))
+
+(defn trunc
+  "Round towards zero to an integral value."
+  [x] (if (pos? x) (floor x) (ceil x)))
+
+(defn clamp
+  "Clamp v between [a, b]."
+  [a b v]
+  (cond
+    (<= v a) a
+    (>= v b) b
+    :else v))
