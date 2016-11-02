@@ -404,3 +404,25 @@
   [& body]
   `(servant.core/servant-thread global-threadpool
      servant.core/standard-message dispatch (fn [] ~@body))))
+
+
+#?(:clj
+(defn thread-local*
+  {:from "flatland.useful.utils"}
+  [init]
+  (let [generator (proxy [ThreadLocal] []
+                    (initialValue [] (init)))]
+    (reify clojure.lang.IDeref
+      (deref [this]
+        (.get generator))))))
+
+#?(:clj
+(defmacro thread-local
+  "Takes a body of expressions, and returns a java.lang.ThreadLocal object.
+   (see http://download.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html).
+   To get the current value of the thread-local binding, you must deref (@) the
+   thread-local object. The body of expressions will be executed once per thread
+   and future derefs will be cached."
+  {:from "flatland.useful.utils"}
+  [& body]
+  `(thread-local* (fn [] ~@body))))
