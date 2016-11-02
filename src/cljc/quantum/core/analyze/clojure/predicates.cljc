@@ -9,12 +9,12 @@
     [clojure.jvm.tools.analyzer        :as tana])
     [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.fn                   :as fn
-      :refer        [#?@(:clj [<- fn-> fn->>])]
-      :refer-macros [          <- fn-> fn->>]]
+      :refer        [#?@(:clj [fn$ <- fn-> fn->>])]
+      :refer-macros [          fn$ <- fn-> fn->>]]
     [quantum.core.logic                :as logic
       :refer        [splice-or
-                     #?@(:clj [eq? fn-or fn-and whenc ifn ifn1])]
-      :refer-macros [          eq? fn-or fn-and whenc ifn ifn1]]
+                     #?@(:clj [eq? fn-or fn-and fn-not whenc ifn ifn1])]
+      :refer-macros [          eq? fn-or fn-and fn-not whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
     [quantum.core.vars                 :as var
       :refer        [#?@(:clj [defalias])]
@@ -161,25 +161,28 @@
   [expr]
   (->> expr (ana/ast #?(:clj :clj :cljs :cljs)) tail-recursive?)))
 
-(defn private?
-  ([var] (private? var nil))
-  ([var m]
-     (:private (or m (meta var)))))
+(defn constant? [v] (when (var? v) (-> v meta :const  )))
 
-(defn macro?
-  ([var] (macro? var nil))
-  ([var m]
-     (:macro (or m (meta var)))))
+(defn private? [v]
+  (when (var? v)
+    (or (-> v meta :private)
+        #?(:clj (not (.isPublic ^clojure.lang.Var v))))))
 
-(defn constant?
-  ([var] (constant? var nil))
-  ([var m]
-     (:const (or m (meta var)))))
+(defn macro? [v]
+  (when (var? v)
+    (or (-> v meta :macro)
+        #?(:clj (.isMacro ^clojure.lang.Var v)))))
 
-#?(:clj
-(defn dynamic?
-  ([var] (dynamic? var nil))
-  ([var m]
-     (or (:dynamic (or m (meta var)))
-         (when (var? var) ;; workaround needed since Clojure doesn't always propagate :dynamic
-           (.isDynamic ^clojure.lang.Var var))))))
+(defn dynamic? [v]
+  (when (var? v)
+    (or (-> v meta :dynamic)
+        #?(:clj (.isDynamic ^clojure.lang.Var v))))) ; workaround needed since Clojure doesn't always propagate :dynamic
+
+(def ^{:doc "As in, macro-embeddable"} ; Really, anything for which `print-dup` is defined
+  embeddable?
+  (fn-or number? symbol? keyword? string?
+         char? list? vector? set?
+         (fn-and map? (fn-not record?))
+         nil?
+         #?@(:clj [(fn$ instance? clojure.lang.Cons   ) ; TODO maybe other things too
+                   (fn$ instance? clojure.lang.LazySeq)])))
