@@ -1,7 +1,13 @@
-(ns quantum.location.core)
+(ns quantum.location.core
+  (:require [quantum.net.http :as http]))
 
-; Countries of the world
-; (http/request! {:url "http://restcountries.eu/rest/v1/all" :parse? true})
+; TO EXPLORE
+; - http://developer.factual.com for Factual (Geo, etc.) API
+; - Factual/geo
+; - Countries of the world
+;   - (http/request! {:url http://restcountries.eu/rest/v1/all :parse? true})
+; - mpenet/sextant — Geo location utility functions
+; ============================
 
 (def us-states
   #{:ak :al :ar :az :ca :co :ct :de :fl :ga :hi :ia :id :il :in :ks :ky :la
