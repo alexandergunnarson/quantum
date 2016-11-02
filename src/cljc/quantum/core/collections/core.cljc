@@ -7,7 +7,7 @@
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
      conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
-     empty? empty class
+     empty? empty class reduce
      #?@(:cljs [array])])
   (:require [#?(:clj  clojure.core
                 :cljs cljs.core   )         :as core    ]
@@ -50,7 +50,9 @@
               :refer        [#?@(:clj [defnt])]
               :refer-macros [          defnt]]
             [quantum.core.reducers          :as red
-              :refer [drop+ take+ #?@(:clj [dropr+ taker+])]]
+              :refer        [drop+ take+
+                             #?@(:clj [dropr+ taker+ rfn reduce])]
+              :refer-macros [rfn reduce]]
             [quantum.core.type              :as type
               :refer        [class
                              #?(:clj pattern?)]
@@ -451,6 +453,13 @@
   ; TODO import clojure.lang.RT/nth
   ([#{vector? string? array-list? #_array? ; for now, because java.lang.VerifyError: reify method: Nth signature: ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;) Incompatible object argument for function call
       listy?} coll i] (get coll i))
+  ([^qreducer? coll i]
+    (let [i' (volatile! 0)]
+      (reduce (rfn [ret x] (if (= @i' i)
+                                (reduced x)
+                                (do (vswap! i' inc)
+                                    ret)))
+        nil coll)))
   ([coll i] (core/nth coll i))
   #_([#{clojure.data.avl.AVLSet
       clojure.data.avl.AVLMap
@@ -492,6 +501,9 @@
   #?(:clj  (^first [^double-array?  coll ^pinteger? i ^double  v] (aset coll i v             ) coll))
   #?(:clj  (^first [^object-array?  coll ^pinteger? i          v] (aset coll i v             ) coll))
   #?(:clj  (^first [                coll ^pinteger? i          v] (java.lang.reflect.Array/set coll i v) coll)))
+
+; TODO
+; (defnt aset-in!)
 
 ; TODO assoc-in and assoc-in! for files
 (defnt assoc!
@@ -554,16 +566,17 @@
   ([^vec?                                  coll] (get coll #?(:clj (Long. 0) :cljs 0))) ; to cast it...
   ; TODO is this wise?
   ([^integral?                             coll] coll)
+  ([^qreducer?                             coll] (reduce (rfn [_ x] (reduced x)) nil coll))
   ([:else                                  coll] (core/first coll)))
 
-(defalias firstl first)
+(defalias firstl first) ; TODO not always true
 
 (defnt second
   ([#{string? #?(:clj array-list?)} coll] (get coll 1))
   ; 2.8  nanos to (.cast Long _)
   ; 1.26 nanos to (Long. _)
   ([^vec?                           coll] (get coll #?(:clj (Long. 1) :cljs 1))) ; to cast it...
-  ([^qreducer?                      coll] (take+ 1 coll))
+  ([^qreducer?                      coll] (nth coll 1))
   ([:else                           coll] (core/second coll)))
 
 (defnt butlast
