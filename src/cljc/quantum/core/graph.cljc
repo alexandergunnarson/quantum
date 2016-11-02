@@ -20,6 +20,11 @@
                        [quantum.core.vars        :as var
                          :refer [defalias]                ])))
 
+; TO EXPLORE
+; - Mathematica
+;   - Tools for visualizing and analysing directed and undirected graphs
+; ============================================
+
 ; Ubergraph goes beyond Loom's protocols, allowing a
 ; mixture of directed and undirected edges within a
 ; single graph, multiple "parallel" edges between a
