@@ -1,4 +1,4 @@
-(ns quantum.compile.transpile.to.scala
+(ns quantum.compile.transpile.from.scala
   (:require #?(:clj [instaparse.core :as insta])))
 
 ; https://github.com/Aivean/scala-to-java/blob/master/src/main/scala/com/github/scalatojava/ScalaToJava.scala
