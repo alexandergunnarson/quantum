@@ -27,3 +27,43 @@
           in the target file."
     :usage '(analyze-file "my/ns.clj")}
   analyze-file ana/analyze-file))
+
+#?(:clj
+ (defn expr-info*
+  {:attribution 'clisk.util}
+  [expr]
+  (let [fn-ast ^clojure.lang.Compiler$FnExpr
+               (clojure.lang.Compiler/analyze
+                clojure.lang.Compiler$C/EXPRESSION expr)
+        expr-ast ^clojure.lang.Compiler$BodyExpr
+                 (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
+        (println "class" (class expr-ast ))
+    (when (.hasJavaClass expr-ast)
+      {:class      (.getJavaClass expr-ast)
+       :primitive? (.isPrimitive (.getJavaClass expr-ast))}))))
+
+#?(:clj
+(defn expr-info
+  "Uses the Clojure compiler to analyze the given s-expr.  Returns
+  a map with keys :class and :primitive? indicating what the compiler
+  concluded about the return value of the expression.  Returns nil if
+  no type info can be determined at compile-time.
+
+  Example: (expression-info '(+ (int 5) (float 10)))
+  Returns: {:class float, :primitive? true}"
+  {:attribution 'clisk.util}
+  [expr]
+  (expr-info* `(fn [] ~expr))))
+
+#?(:clj
+(defmacro static-cast
+  "Performs a static type cast"
+  {:attribution 'clisk.util}
+  [class-sym expr]
+  (let [sym (gensym "cast")]
+    `(let [~(with-meta sym {:tag class-sym}) ~expr] ~sym))))
+
+#?(:clj (defmacro typeof     {:attribution 'clisk.util}
+          ([expr] (-> expr expr-info :class     ))))
+#?(:clj (defmacro primitive? {:attribution 'clisk.util}
+          ([expr] (-> expr expr-info :primitive?))))
