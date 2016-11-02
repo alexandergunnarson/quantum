@@ -4,8 +4,8 @@
   (:require
     [quantum.core.numeric     :as num
       :refer        [*+* *-* *** *div* mod
-                     #?@(:clj [sqrt])]
-      :refer-macros [          sqrt]]
+                     #?@(:clj [sqrt pow])]
+      :refer-macros [          sqrt pow]]
     [quantum.core.data.binary :as bin
       :refer        [>>]]
     [quantum.core.error       :as err
@@ -21,6 +21,26 @@
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
     [quantum.core.numeric.misc :as misc]))
+
+; TO EXPLORE
+; - GNU Multiple Precision Arithmetic Library
+;   - GMP aims to be faster than any other bignum library for all operand sizes.
+; - Mathematica
+;   - Number theory function library
+;   - Elementary and Special mathematical function libraries
+;   - Support for complex numbers, arbitrary precision, interval arithmetic
+;   - Solvers for systems of equations, diophantine equations, ODEs, PDEs, DAEs, DDEs, SDEs and recurrence relations
+;   - Finite element analysis including 2D and 3D adaptive mesh generation
+;   - Numeric and symbolic tools for discrete and continuous calculus including continuous and discrete integral transforms
+;   - Computational geometry in 2D, 3D and higher dimensions
+;   - Libraries for signal processing including wavelet analysis on sounds, images and data
+;   - Linear and non-linear Control systems libraries
+;   - Tools for 2D and 3D image processing[11] and morphological image processing including image recognition
+;   - Group theory and symbolic tensor functions
+;   - Import and export filters for data, images, video, sound, CAD, GIS,[12] document and biomedical formats
+;   - Database collection for mathematical, scientific, and socio-economic information and access to WolframAlpha data and computations
+;   - Technical word processing including formula editing and automated report generating
+; ================================
 
 #_(defalias $ exp)
 
@@ -60,11 +80,11 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(defn sum+count [x]
-  (reduce
-    (fn [[sum ct] e] [(*+* sum e) (inc ct)])
-    [0 0]
-    x))
+(defn sum+count     [xs] ; TODO is this necessary?
+  (reduce (fn [[sum ct] x] [(*+* sum x) (inc ct)]) [0 0] xs))
+
+(defn product+count [xs] ; TODO is this necessary?
+  (reduce (fn [[sum ct] x] [(*** sum x) (inc ct)]) [1 0] xs))
 
 (def sum     #(reduce *+* %)) ; TODO use +* and +', differentiating sum* and sum'
 (def product #(reduce *** %)) ; TODO use ** and *', differentiating product* and product'
@@ -78,12 +98,6 @@
   (->> set- (map+ #(step-fn %)) product))
 
 #?(:clj (defalias ∏ pi*))
-
-(defn find-max-by ; |max-by| would be the first of it
-  ([pred x] x)
-  ([pred a b] (if (> (pred a) (pred b))
-                  a
-                  b)))
 
 (defn factors
   "All factors of @n."
@@ -150,49 +164,64 @@
 (defn mod-pow
   "Computes the modular power: (a^b) mod n"
   {:adapted-from "Applied Cryptography by Bruce Schneier, via Wikipedia"
-   :O "O(log(@e))"
+   :time-complexity '(log n)
    :tests `{(mod-pow 105 235 391)
             41}}
   [a b n]
   (loop [r 1 a' a b' b]
-    (let [r' (if (= 1 (mod b' 2))
-                 (mod (* r a') n)
-                 r)
-          b'' (bit-shift-right b' 1)]
+    (let [r'  (if (= 1 (mod b' 2))
+                  (mod (* r a') n)
+                  r)
+          b'' (>> b' 1)]
       (if (zero? b'')
           r'
           (recur r' (mod (* a' a') n) b'')))))
-  #_(if (= m 1)
-      0
-      ; Elided assertion of pseudocode due to Clojure's numeric auto-promotion
-      (loop [ret 1
-             b'  (mod b m)
-             e'  e]
-        (if ())
-        #_(if (> e' 0)
-            (recur (if (= 1 (mod e' 2))
-                       (mod (* ret b') m)
-                       ret)
-                   (>> e' 1)
-                   (mod (sq b') m))
-            ret)))
+
+; ===== PRIMES ===== ;
+
+(defn prime?*
+  "Checks whether @x is a (provable) prime or not.
+   Uses the Miller-Rabin probabilistic test in such
+   a way that a result is guaranteed: it uses the
+   firsts prime numbers as successive base (see
+   Handbook of applied cryptography by Menezes, table 4.1)."
+  {:implemented-by '#{org.apache.commons.math3.primes.Primes}}
+  [x] (TODO))
 
 (defn prime?
-  "Checks whether @x is prime."
-  [x]
-  (TODO))
+  "Checks whether @x is a prime or not. Less efficient
+   than `prime?*` but exhaustive."
+  [x] (TODO))
 
-; ===== STATISTICAL CALCULATIONS ===== ;
+(defn next-prime
+  "Evaluates to the smallest prime p >= x."
+  {:implemented-by '#{org.apache.commons.math3.primes.Primes}}
+  [x] (TODO))
 
-(defn mean [x]
-  (let [[sum ct] (sum+count x)]
-    (when (> ct 0)
-      (*div* sum ct))))
+(defn prime-factors
+  "Prime factors decomposition"
+  {:implemented-by '#{org.apache.commons.math3.primes.Primes}}
+  [x] (TODO))
 
-(defn std-dev [v]
-  (let [mean' (mean v)]
-    (->> v
-         (map+ (fn-> (*-* mean') sq))
-         sum
-         (<- (*div* (count v)))
-         num/sqrt)))
+(defn !
+  "Computes the factorial of `n`."
+  {:implemented-by '#{org.apache.commons.math3.util.CombinatoricsUtils}
+   :todo ["Optionally use memoization to make this more efficient"]}
+  [n] (reduce *' (range 1 (inc n))))
+
+(defn e
+  "Computes the constant `e` to the `k`-th series term."
+  {:author 'alexandergunnarson
+   :todo ["Optionally use memoization to make this more efficient"]}
+  [k] (sigma (range 0 k) #(/ 1 (! %))))
+
+(defn pi
+  "Computes the constant `π` to the `k`-th series term
+   using the Newton / Euler Convergence Transformation."
+  {:author 'alexandergunnarson
+   :example `(with-precision 10000 (bigdec (pi 20)))
+   :todo ["Optionally use memoization to make this more efficient"]}
+  [k] (*' 2 (sigma (range 0 k)
+                   #(/ (*' (rationalize (pow 2     %)) ; TODO use pow'
+                           (rationalize (pow (! %) 2)))
+                       (! (+' 1 (*' 2 %)))))))
