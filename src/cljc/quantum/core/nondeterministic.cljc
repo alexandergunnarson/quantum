@@ -62,11 +62,11 @@
 #?(:clj (defonce ^SecureRandom secure-random-generator
           (SecureRandom/getInstance "SHA1PRNG")))
 
-#?(:clj
 (defn get-generator [secure?]
-  (if secure?
-      secure-random-generator
-      (java.util.concurrent.ThreadLocalRandom/current))))
+  #?(:clj (if secure?
+              secure-random-generator
+              (java.util.concurrent.ThreadLocalRandom/current))
+     :cljs (TODO)))
 
 #?(:cljs
 (defn rand-prime [callback & web-workers?]
