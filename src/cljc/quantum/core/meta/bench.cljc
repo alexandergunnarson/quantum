@@ -17,7 +17,10 @@
   #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 
-; TODO maybe use Timbre profiling?
+; TO EXPLORE
+; - Timbre profiling
+; - Like Criterium for JS: https://github.com/bestiejs/benchmark.js
+; ==================================
 
 #?(:clj
   (defn num-from-timing [time-str]
