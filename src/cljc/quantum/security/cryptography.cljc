@@ -17,7 +17,7 @@
                      [quantum.core.data.set         :as set    ]
                      [quantum.core.collections      :as coll
                        :refer [#?(:clj kmap)]                  ]
-                     [quantum.core.error            :as err               
+                     [quantum.core.error            :as err
                        :refer [->ex #?(:clj throw-unless)]     ]
                      [quantum.core.fn               :as fn
                        :refer [#?@(:clj [fn-> <-])]            ]
@@ -30,12 +30,12 @@
                      [quantum.core.numeric          :as num    ]
                      [quantum.core.convert          :as conv   ]
                      [quantum.core.string           :as str    ]
-                     [quantum.core.vars             :as var   
+                     [quantum.core.vars             :as var
                        :refer [#?(:clj defalias)]              ])
   #?(:cljs (:require-macros
                      [quantum.core.collections      :as coll
-                       :refer [kmap]]     
-                     [quantum.core.error            :as err               
+                       :refer [kmap]]
+                     [quantum.core.error            :as err
                        :refer [throw-unless]                   ]
                      [quantum.core.fn               :as fn
                        :refer [fn-> <-]                        ]
@@ -60,8 +60,26 @@
     org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
     [org.bouncycastle.crypto BlockCipher BufferedBlockCipher])))
 
+; TO EXPLORE
+; - Compare Google Closure vs. Forge crypto implementations
+; - michaelklishin/chash — Consistent Hashing Clojure Library
+; - weavejester/whorl
+;   — Generating unique fingerprints for Clojure data structures.
+;     Equivalent data structures will always produce the same fingerprint.
+;   - Only basic Clojure types are supported so far. Records and types will produce unpredictable results.
+; - funcool/buddy-sign — High level message signing library
+; - funcool/buddy-core — Cryptographic Api
+; - weavejester/crypto-equality
+;   — A very small Clojure library for protecting against timing attacks
+;     when comparing strings or sequences of bytes. This is useful for comparing
+;     user-supplied values against secrets held by the application, such as tokens
+;     or keys.
+; - weavejester/crypto-password — Library for securely hashing passwords
+; - weavejester/crypto-random — Generating cryptographically secure random bytes and strings
+; - xsc/pandect — Hashing library
+; ============================
+
 ; TODO move to charsets
-; TODO compare Google Closure vs. Forge crypto implementations
 
 #?(:clj
   (def ^sun.nio.cs.UTF_8 utf-8
@@ -105,7 +123,7 @@
   ([^bytes? x] (.decode (Base32.) x))
   ([x] (decode32 (arr/->bytes-protocol x)))))
 
-#?(:clj 
+#?(:clj
 (defnt ^"[B" decode64
   {:todo ["Add support for java.util.Base64 MIME and URL decoders"]
    :performance "java.util.Base64 Found to be the fastest impl. according to
@@ -240,7 +258,7 @@
       :md2 ; 1989
       ; md4
       :md5 ; 1992
-      ; md6 
+      ; md6
       ; As of 2015, no example of a SHA-1 collision has been published yet — Wikipedia
       :sha1   :sha-1-hmac
       :sha256 :sha-256-hmac
@@ -322,14 +340,14 @@
                                              parallelism))]
               (str "$s0$" params "$" (encode :base64-string salt)
                                  "$" (encode :base64-string derived))))
-        derived 
+        derived
           (do #?(:clj  (SCrypt/scrypt ^"[B" (.getBytes s "UTF-8")
                                       ^"[B" salt exp-cpu-cost  ram-cost parallelism derived-key-length)
                  :cljs (js/ScryptAsync      s
                                             salt log2-cpu-cost ram-cost             derived-key-length
                                             (fn [v] (->> v
                                                          derived-to-string
-                                                         (async/put! result))))))] 
+                                                         (async/put! result))))))]
         #?(:clj  (derived-to-string derived)
            :cljs result)))
 
@@ -389,7 +407,7 @@
 
 ; TODO test more
 #_(defn hash-match? [algo test encrypted]
-  (condp = algo 
+  (condp = algo
     :pbkdf2
       (if-not (map? encrypted)
         (throw+ (Err. nil "Encrypted must be map." encrypted))
@@ -428,7 +446,7 @@
    1         13 ; 8192   21.9 ms   9.1 %  |  2 days + 18 hours
    2         14 ; 16384  36.7 ms  15.2 %  |  4 days + 15 hours
    3         15 ; 32768  72.1 ms  29.9 %  |  9 days + 2 hours
-   4         16 ; 65536  119  ms  49.4 %  |  2 weeks + a day 
+   4         16 ; 65536  119  ms  49.4 %  |  2 weeks + a day
    5         17 ; 131072 242  ms 100.4 %  |  1 month + half day
    :password 17})
 
@@ -516,7 +534,7 @@
   ;[{:keys [encrypted ^"[B" tweak]}]
   (let [;output :base64 ; TODO change default to bytes
         encrypt? (encrypt-param* type password)
-        in-f  #?(:clj in 
+        in-f  #?(:clj in
                  :cljs (if base64->?
                            (-> in conv/base64->forge-bytes
                                js/forge.util.createBuffer)
@@ -546,7 +564,7 @@
                                         #?(:cljs (/ 8)))
                                     #?(:cljs (js/forge.md.sha256.create))) ; defaults to SHA1
         #?@(:clj
-       [^SecretKey        secret  (-> factory 
+       [^SecretKey        secret  (-> factory
                                       (.generateSecret keyspec)
                                       (.getEncoded)
                                       (SecretKeySpec. "AES"))])]
