@@ -19,6 +19,7 @@
       :refer        [#?(:clj defalias)]
       :refer-macros [        defalias]]
     [quantum.core.meta.debug  :as debug]
+#?(:clj [clojure.core.matrix.impl.pprint :as mpprint])
 #?(:clj
     [fipp.edn                 :as pr] ; Fipp currently has strange execution problems in CLJS
    :cljs
@@ -164,3 +165,5 @@
      :cljs
       (! x)))
 
+#_"Pretty-prints an array. Returns a String containing the pretty-printed representation."
+#?(:clj (defalias pprint-arr mpprint/pm))
