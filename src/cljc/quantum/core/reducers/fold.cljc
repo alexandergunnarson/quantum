@@ -21,6 +21,8 @@
 #?@(:clj
    [[seqspert.hash-set                       ]
     [seqspert.hash-map                       ]])
+    [quantum.core.error
+      :refer        [TODO]]
     [quantum.core.fn               :as fn
       :refer        [aritoid
                      #?@(:clj [fn1 fn-> rcomp])]
@@ -250,6 +252,8 @@
 
 (def pjoin pjoinl)
 
+(defn pjoin' [& args] (TODO))
+
 ; TODO move
 (defnt ->vec
   ([^vector? x] x)
@@ -257,3 +261,5 @@
       #?(:clj  clojure.core.protocols.CollReduce
          :cljs cljs.core/IReduce)} x] (joinl [] x))
   ([x] (if (nil? x) [] [x])))
+
+; TODO use uncomplicate/clojurecl for lower-level parallel operations
