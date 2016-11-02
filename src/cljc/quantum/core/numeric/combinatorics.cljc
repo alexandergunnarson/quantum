@@ -1,7 +1,7 @@
 (ns ^{:author       "Mark Engelberg",
       :contributors {"Alex Gunnarson" "Added CLJS compatibility"}
       :doc "Efficient, functional algorithms for generating lazy
-            sequences for common combinatorial functions. (See the source code 
+            sequences for common combinatorial functions. (See the source code
             for a longer description.)"}
   quantum.core.numeric.combinatorics
   (:refer-clojure :exclude [update assert])
@@ -10,6 +10,10 @@
   #?(:cljs (:require-macros
                      [quantum.core.error :as err
                        :refer [assert]          ])))
+
+; TO EXPLORE
+; - Mathematica
+; ============================
 
 ; TODO remove boxed math here
 
@@ -20,7 +24,7 @@
 ;; Last updated - March 20, 2015
 
 (comment
-"  
+"
 (combinations items t) - A lazy sequence of all the unique
 ways of taking t different elements from items.
 Example: (combinations [1 2 3] 2) -> ((1 2) (1 3) (2 3))
@@ -126,7 +130,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
           (conj distribution [index quantity-to-distribute total])
           (recur (conj distribution [index mi (+ already-distributed mi)])
                  (inc index)
-                 (+ already-distributed mi))))))) 
+                 (+ already-distributed mi)))))))
 
 ;; Helper function for bounded-distributions
 (defn- next-distribution
@@ -138,7 +142,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
       (< index (dec (count m)))
       (if (= this-bucket 1)
         (conj (pop distribution) [(inc index) 1 this-and-to-the-left])
-        (conj (pop distribution) 
+        (conj (pop distribution)
               [index (dec this-bucket) (dec this-and-to-the-left)]
               [(inc index) 1 this-and-to-the-left])),
       ; so we have stuff in the last bucket
@@ -147,23 +151,23 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
       (loop [distribution (pop distribution)],
         (let
           [[index this-bucket this-and-to-the-left] (peek distribution),
-           distribution (if (= this-bucket 1) 
+           distribution (if (= this-bucket 1)
                           (pop distribution)
                           (conj (pop distribution)
                                 [index (dec this-bucket) (dec this-and-to-the-left)]))],
           (cond
-            (<= (- total (dec this-and-to-the-left)) (apply + (subvec m (inc index))))       
+            (<= (- total (dec this-and-to-the-left)) (apply + (subvec m (inc index))))
             (distribute m (inc index) total distribution (dec this-and-to-the-left)),
-            
+
             (seq distribution) (recur distribution)
             :else nil))))))
-      
+
 ;; Helper function for multi-comb
 (defn- bounded-distributions
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [m t]
-  (let [step 
+  (let [step
         (fn step [distribution]
           (cons distribution
                 (lazy-seq (when-let [next-step (next-distribution m t distribution)]
@@ -186,18 +190,18 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
       (apply concat
              (for [[index this-bucket _] q]
                (repeat this-bucket (v index)))))))
-                
+
 (defn combinations
   "All the unique ways of taking t different elements from items"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
-  [items t]      
+  [items t]
   (let [v-items (vec (reverse items))]
     (if (zero? t) (list ())
       (let [cnt (count items)]
         (cond (> t cnt) nil
               (= t 1) (for [item (distinct items)] (list item))
-              (all-different? items) (if (= t cnt) 
+              (all-different? items) (if (= t cnt)
                                         (list (seq items))
                                         (map #(map v-items %) (index-combinations t cnt))),
               :else (multi-comb items t))))))
@@ -265,7 +269,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
       (let [vj (v j)
             l (loop [i (dec len)]
                 (if (< vj (v i)) i (recur (dec i))))]
-        (loop [v (assoc v j (v l) l vj) 
+        (loop [v (assoc v j (v l) l vj)
                k (inc j)
                l (dec len)]
           (if (< k l)
@@ -315,18 +319,18 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
     (map (partial map v) (lex-permutations indices))))
 
 (defn permutations
-  "All the distinct permutations of items, lexicographic by index 
+  "All the distinct permutations of items, lexicographic by index
    (special handling for duplicate items)."
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [items]
   (cond
     (sorted-numbers? items) (lex-permutations items)
-    
+
     (all-different? items)
     (let [v (vec items)]
       (map #(map v %) (lex-permutations (range (count v)))))
-    
+
     :else
     (multi-perm items)))
 
@@ -346,13 +350,13 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
 (defn- factorial-numbers
   "Input is a non-negative base 10 integer, output is the number in the
    factorial number system (http://en.wikipedia.org/wiki/Factorial_number_system)
-   expressed as a list of 'digits'" 
+   expressed as a list of 'digits'"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [n]
   {:pre [(integer? n) (not (neg? n))]}
   (loop [n n digits () divisor 1]
-    (if (zero? n) 
+    (if (zero? n)
       digits
       (let [q (quot n divisor) r (rem n divisor)]
         (recur q (cons r digits) (inc divisor))))))
@@ -366,14 +370,14 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
       (recur (conj acc (first l)) (rest l) (dec n)))))
 
 (defn- nth-permutation-distinct
-  "Input should be a sorted sequential collection l of distinct items, 
+  "Input should be a sorted sequential collection l of distinct items,
    output is nth-permutation (0-based)"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"
    :contributors ["Alex Gunnarson"]}
   [l n]
   (let [fact (factorial (count l))]
-    (assert (< n fact) 
+    (assert (< n fact)
             #{n l}
             (str n    " is too large. Input has only "
                  fact " permutations."))
@@ -403,9 +407,9 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [l]
-  (if (all-different? l) 
+  (if (all-different? l)
     (factorial (count l))
-    (count-permutations-from-frequencies (frequencies l))))    
+    (count-permutations-from-frequencies (frequencies l))))
 
 (defn- initial-perm-numbers
   "Takes a sorted frequency map and returns how far into the sequence of
@@ -453,27 +457,27 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
 
 (defn- factorial-numbers-with-duplicates
   "Input is a non-negative base 10 integer n, and a sorted frequency map freqs.
-   Output is a list of 'digits' in this wacky duplicate factorial number system" 
+   Output is a list of 'digits' in this wacky duplicate factorial number system"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [n freqs]
   (loop [n n digits [] freqs freqs]
     (if (zero? n) (into digits (repeat (apply + (vals freqs)) 0))
-      (let [[index remainder] 
+      (let [[index remainder]
             (index-remainder (initial-perm-numbers freqs) n)]
         (recur remainder (conj digits index)
                (let [nth-key (nth (keys freqs) index)]
                  (dec-key freqs nth-key)))))))
 
 (defn- nth-permutation-duplicates
-  "Input should be a sorted sequential collection l of distinct items, 
+  "Input should be a sorted sequential collection l of distinct items,
    output is nth-permutation (0-based)"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"
    :contributors ["Alex Gunnarson"]}
   [l n]
   (let [ct (count-permutations l)]
-    (assert (< n ct) 
+    (assert (< n ct)
             #{n l}
             (str n  " is too large. Input has only "
                  ct " permutations."))
@@ -484,7 +488,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
         (let [i (first indices)
               item (nth (keys freqs) i)]
           (recur (dec-key freqs item)
-                 (rest indices) 
+                 (rest indices)
                  (conj perm item)))))))
 
 ;; Now we create the public version, which detects which underlying algorithm to call
@@ -495,7 +499,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
    :from "clojure.math.combinatorics"}
   [items n]
   (if (sorted-numbers? items)
-    (if (all-different? items) 
+    (if (all-different? items)
       (nth-permutation-distinct items n)
       (nth-permutation-duplicates items n))
     (if (all-different? items)
@@ -519,7 +523,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
     (= n (count-permutations items)) ()
     :else
     (if (sorted-numbers? items)
-      (if (all-different? items) 
+      (if (all-different? items)
         (vec-lex-permutations (nth-permutation-distinct items n))
         (vec-lex-permutations (nth-permutation-duplicates items n)))
       (if (all-different? items)
@@ -531,7 +535,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
               indices (apply concat
                              (for [i (range (count v))]
                                (repeat (f (v i)) i)))]
-          (map (partial map v) 
+          (map (partial map v)
                (vec-lex-permutations
                  (nth-permutation-duplicates indices n))))))))
 
@@ -556,7 +560,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   [freqs t]
   (let [counts (vals freqs)
         sum (apply + counts)]
-    (cond 
+    (cond
       (zero? t) 1
       (= t 1) (count freqs)
       (every? #{1} counts) (n-take-k (count freqs) t)
@@ -599,14 +603,14 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [items]
-  (cond 
+  (cond
     (empty? items) 1
     (all-different? items) (expt-int 2 (count items))
     :else (apply plus (for [i (range 0 (inc (count items)))]
                         (count-combinations-unmemoized items i)))))
 
 (defn count-subsets
-  "|(count (subsets items))| but computed more directly"  
+  "|(count (subsets items))| but computed more directly"
   {:author "Mark Engelberg"
    :from "clojure.math.combinatorics"}
   [items]
@@ -626,10 +630,10 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
          n n]
     (if (or (zero? n) (empty? items)) (into comb (take t items))
       (let [dc-dt (n-take-k (dec (count items)) (dec t))]
-        (if (< n dc-dt) 
+        (if (< n dc-dt)
           (recur (conj comb (first items)) (rest items) (dec t) n)
           (recur comb (rest items) t (- n dc-dt)))))))
-                         
+
 (defn- nth-combination-freqs
   "The nth element of the sequence of t-combinations of the multiset
    represented by freqs"
@@ -640,7 +644,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
          freqs freqs
          t t
          n n]
-    (if (or (zero? n) (empty? freqs)) 
+    (if (or (zero? n) (empty? freqs))
       (into comb (take t (apply concat (for [[k v] freqs] (repeat v k)))))
       (let [first-key (first (keys freqs))
             remove-one-key (dec-key freqs first-key)
@@ -648,7 +652,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
         (if (< n dc-dt)
           (recur (conj comb first-key) remove-one-key (dec t) n)
           (recur comb (dissoc freqs first-key) t (- n dc-dt)))))))
-              
+
 (defn nth-combination
   "The nth element of the sequence of t-combinations of items"
   {:author "Mark Engelberg"
@@ -690,7 +694,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
 ;; Now let's go the other direction, from a sortable collection to the nth
 ;; position in which we would find the collection in the lexicographic sequence
 ;; of permutations
-    
+
 (defn- list-index
   "The opposite of nth, i.e., from an item in a list, find the n"
   {:author "Mark Engelberg"
@@ -707,7 +711,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   [l]
   (loop [l l index 0 n (dec (count l))]
     (if (empty? l) index
-      (recur (rest l) 
+      (recur (rest l)
              (+ index (* (factorial n) (list-index (sort l) (first l))))
              (dec n)))))
 
@@ -718,7 +722,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   (loop [l l index 0 freqs (into (sorted-map) (frequencies l))]
     (if (empty? l) index
       (recur (rest l)
-             (reduce + index 
+             (reduce + index
                      (for [k (take-while #(neg? (compare % (first l))) (keys freqs))]
                        (count-permutations-from-frequencies (dec-key freqs k))))
              (dec-key freqs (first l))))))
@@ -809,14 +813,14 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
                                                     (bool->num (== (b j) (a j))))]
                                 (cond
                                   (== i n) [a b]
-                                  
+
                                   (and s (> i (- (- n x) 1)))
                                   (let [new-a-i (+ (- i n) s)]
                                     (recur (assoc a i new-a-i)
                                            (assoc b i current-max)
                                            (inc i)
                                            (max current-max (inc new-a-i))))
-                                  
+
                                   :else (recur (assoc a i 0)
                                                (assoc b i current-max)
                                                (inc i)
@@ -835,7 +839,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
           to (if (and to (>= to N)) nil to)]
       (cond
         (not (<= 1 (or from 1) (or to N) N)) ()
-        
+
         (= N 0) '(())
         (= N 1) '(([0]))
         (= to 1) `((~(range N)))
