@@ -56,11 +56,11 @@
 
 ; ===== CONSTANTS ===== ;
 
-(defrecord Infinity [])
+(defrecord Inf [])
 
 ; <org.apache.commons.math3.complex>
 
-(def ^:const inf (Infinity.))
+(def ^:const inf (Inf.))
 
 (def i     ^{:doc "The square root of -1" :const true} (cx 0   1  ))
 (def iinf  ^{:doc "Represents +∞ + ∞i"    :const true} (cx inf inf))
