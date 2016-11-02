@@ -6,6 +6,7 @@
     :cljs-self-referencing? true
     :figwheel-no-load       true}
   quantum.core.fn
+           (:refer-clojure :exclude [constantly])
            (:require
              [clojure.walk                        ]
              [quantum.core.core        :as qcore  ]
@@ -27,6 +28,26 @@
 
 #?(:clj (defalias jfn memfn))
 
+(defalias fn& partial)
+
+(defn constantly
+  {:from 'com.rpl.specter.impl}
+  [v]
+  (fn ([] v)
+      ([a1] v)
+      ([a1 a2] v)
+      ([a1 a2 a3] v)
+      ([a1 a2 a3 a4] v)
+      ([a1 a2 a3 a4 a5] v)
+      ([a1 a2 a3 a4 a5 a6] v)
+      ([a1 a2 a3 a4 a5 a6 a7] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10] v)
+      ([a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 & r] v)))
+
+(defalias fn' constantly)
+
 #?(:clj
 (defmacro mfn
   "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
@@ -44,8 +65,9 @@
 (def fn-nil (constantly nil))
 
 (defn call
-  "Call function `f` with additional arguments."
-  {:attribution "Alex Gunnarson"}
+  "Call function `f` with (optional) arguments.
+   Like clojure.core/apply, but doesn't expand/splice the last argument."
+  {:attribution 'alexandergunnarson}
   ([f]                    (f))
   ([f x]                  (f x))
   ([f x y]                (f x y))
@@ -141,11 +163,9 @@
 
 #?(:clj
 (defmacro with-do
-  "Same as lisp's |prog1|."
+  "Like prog1 in Common Lisp, or a `(do)` that returns the first form."
   [expr & exprs]
-  `(let [result# ~expr]
-     ~@exprs
-     result#)))
+  `(let [ret# ~expr] ~@exprs ret#)))
 
 
 ; TODO: deprecate these... likely they're not useful
