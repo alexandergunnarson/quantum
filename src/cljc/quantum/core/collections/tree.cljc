@@ -50,8 +50,9 @@
       :refer        [#?@(:clj [walking])]
       :refer-macros [walking]]
     [quantum.core.fn                    :as fn
-      :refer        [#?@(:clj [fn1 fn->> withf->>])]
-      :refer-macros [          fn1 fn->> withf->>]]
+      :refer        [withf->>
+                     #?@(:clj [fn1 fn->>])]
+      :refer-macros [          fn1 fn->>]]
     [quantum.core.logic
       :refer        [#?@(:clj [whenf1])]
       :refer-macros [          whenf1]]
