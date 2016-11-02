@@ -32,7 +32,7 @@
 (defn test:array->vector
   ([curr-dim arr])
   ([arr]))
- 
+
 (defn test:padr
   ([x i add]))
 
@@ -85,7 +85,7 @@
 
 ; ----- MISCELLANEOUS ----- ;
 
-(defn test:abs-difference 
+(defn test:abs-difference
   [a b])
 
 ; ================================================ INDEX-OF ================================================
@@ -112,7 +112,7 @@
 
 (defn test:mergel  [a b])
 (defn test:merger [a b])
-            
+
 (defn test:split-remove
   [split-at-obj coll])
 
@@ -203,7 +203,7 @@
 (defn test:group-merge-with+
   [group-by-f merge-with-f coll])
 
-(defn test:merge-left 
+(defn test:merge-left
   ([alert-level])
   ([k v1 v2]))
 
@@ -288,10 +288,10 @@
 
 (defn test:into-map-by [m k ms])
 
-(defn test:pivot
+(defn test:transpose
   [table-0])
 
-(defn test:merge-keys-with 
+(defn test:merge-keys-with
   [m [k-0 & ks] f])
 
 ; =========== NECESSITIES FOR DATASCRIPT AND POSH ============== ;
