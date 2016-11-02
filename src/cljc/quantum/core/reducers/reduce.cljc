@@ -54,6 +54,7 @@
 ; Christophe Grand - https://groups.google.com/forum/#!searchin/clojure-dev/reducer/clojure-dev/t6NhGnYNH1A/2lXghJS5HywJ
 (defrecord Folder  [coll transform])
 (defrecord Reducer [coll transform])
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          REDUCE          }=====================================================
 ;=================================================={                          }=====================================================
@@ -77,11 +78,12 @@
   {:attribution "Alex Gunnarson"}
         ([^fast_zip.core.ZipperLocation z f init]
           (cbase/zip-reduce* f init z))
-        ([^array? arr f init]
-          #?(:clj  (loop [i (long 0) ret init]
-                     (if (< i (-> arr count long))
-                         (recur (unchecked-inc i) (f ret (aget arr i)))
-                         ret))
+        ([^array? arr f init] ; Taken from `areduce`
+          #?(:clj  (let [ct (alength arr)]
+                     (loop  [i 0 ret init]
+                       (if (< i ct)
+                           (recur (unchecked-inc-int i) (f ret (aget arr i)))
+                           ret)))
              :cljs (array-reduce arr f init)))
         ([^string? s f init]
           #?(:clj  (clojure.core.protocols/coll-reduce s f init)
@@ -205,26 +207,27 @@
   ([to from & froms]
     (reduce joinl (joinl to from) froms)))
 
-#?(:clj (defalias join joinl))
+(defnt joinl'
+  "Like |joinl|, but reduces into the empty version of the
+   collection passed."
+  ([^qreducer?    from] (joinl' (empty (:coll from)) from))
+  ([              from] (joinl' (empty        from ) from))
+  ([^list?     to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
+  ([           to from] (joinl to from)))
 
-(defn reduce-first
-  "clojure.core/first, but for for reducibles."
-  {:attribution "@alexandergunnarson"}
-  [r]
-  (reduce (fn f ([_ x  ] (reduced x))
-                ([_ k v] (reduced [k v]))) nil r))
+#?(:clj (defalias join  joinl ))
+#?(:clj (defalias join' joinl'))
 
-(defn reduce-nth
-  "clojure.core/nth, but for for reducibles."
-  {:attribution "@alexandergunnarson"}
-  [r n]
-  (let [i (volatile! 0)]
-    (reduce (fn f ([ret x  ] (if (= @i n)
-                                 (reduced x)
-                                 (do (vswap! i inc)
-                                     ret)))
-                  ([ret k v] (f ret [k v])))
-      nil r)))
+(defn red-apply
+  "Applies `f` to `coll`, pairwise, using `reduce`."
+  [f coll]
+  (let [first? (volatile! true)]
+    (reduce (fn [ret x]
+              (if @first?
+                  (do (vreset! first? false) (f x))
+                  (f ret x)))
+            nil
+            coll)))
 
 (defn first-non-nil-reducer
   "A reducing function that simply returns the first non-nil element in the
