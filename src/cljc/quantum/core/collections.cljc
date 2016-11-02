@@ -123,7 +123,7 @@
 
 (defaliases coll key val reverse)
 
-(definline map-entry
+(#?(:clj definline :cljs defn) map-entry
   "Create a map entry from a and b. Equivalent to a cons cell."
   [a b]
   #?(:clj  (clojure.lang.MapEntry. a b)
