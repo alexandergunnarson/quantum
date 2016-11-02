@@ -43,6 +43,8 @@
       :refer-macros [          defalias]]))
 
 ; TODO reorganize this namespace and move into other ones as necessary
+; TODO allow for ^:inline on certain `defnt` arities
+; TODO allow for use as higher-order function
 
 ; In using |defnt|, you should always prefer unboxed to boxed.
 ; The internal |reify| may differentiate unboxed and boxed, but the protocol won't
