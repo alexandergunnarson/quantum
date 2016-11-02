@@ -1,16 +1,19 @@
 (ns quantum.compile.transpile.core
-  (:require [quantum.compile.transpile.to.core   :as to       ]
-            [quantum.compile.transpile.from.java :as from-java]
-            [quantum.core.io.core                :as io       ]
-            [quantum.core.log                    :as log      ]
-            [quantum.core.print                  :as pr       ]
-            [quantum.core.convert                :as conv     ]
-            [quantum.core.macros                 :as macros
-              :refer [#?(:clj defnt)]                         ]
-            [quantum.core.collections            :as core
-              :refer [#?(:clj kmap) in?]                      ]
-            [quantum.core.error                  :as err
-              :refer [->ex #?(:clj throw-unless)]             ]))
+  (:require
+#?(:clj
+    [instaparse.core                     :as insta])
+    [quantum.compile.transpile.to.core   :as to]
+    [quantum.compile.transpile.from.java :as from-java]
+    [quantum.core.io.core                :as io]
+    [quantum.core.log                    :as log]
+    [quantum.core.print                  :as pr]
+    [quantum.core.convert                :as conv]
+    [quantum.core.macros                 :as macros
+      :refer [#?(:clj defnt)]]
+    [quantum.core.collections            :as core
+      :refer [#?(:clj kmap) in?]]
+    [quantum.core.error                  :as err
+      :refer [->ex #?(:clj throw-unless)]]))
 
 #?(:clj
 (defnt ^String transpile-from*
@@ -73,4 +76,3 @@
 
   (let [transpiled-str (transpile-from* from-src from to)]
     transpiled-str)))
-
