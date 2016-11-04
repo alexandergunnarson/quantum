@@ -372,10 +372,14 @@
 
 #?(:clj
 (defn hash
-  ([obj] (hash :murmur64 obj)) ; murmur64 is Clojure's implementation
+  ; Many have switched from MurmurHash3 to SipHash to prevent DoS collision attack (hash flooding)
+  ; http://dev.clojure.org/jira/browse/CLJ-1431
+  ; Python, Ruby, JRuby, Haskell, Rust, Perl, Redis, etc have all switched to SipHash
+  ; https://en.wikipedia.org/wiki/SipHash
+  ([obj] (hash :murmur64 obj)) ; murmur64 is Clojure's implementation ; TODO look at clojure.lang.Murmur3.java
   ([algorithm obj & [opts]]
     (condp = algorithm
-      :clojure      (core/hash obj)
+      :clojure      (core/hash obj) ; TODO check whether it does what is claimed
       :sha-1-hmac   (sha-hmac "HmacSHA1"   obj (:secret opts))
       :sha-256-hmac (sha-hmac "HmacSHA256" obj (:secret opts))
       :pbkdf2 (pbkdf2 obj (:salt        opts)
