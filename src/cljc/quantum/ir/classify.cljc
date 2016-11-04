@@ -19,7 +19,7 @@
                :refer        [#?(:clj defmemoized)]
                :refer-macros [        defmemoized]]
              [quantum.core.error
-               :refer        [->ex]]
+               :refer        [->ex TODO]]
              [quantum.core.logic
                :refer        [nnil?
                               #?@(:clj [coll-or condpc fn-and])]
@@ -294,7 +294,6 @@
 
 ; ================================================
 
-
 (defmemoized information-gain {} ; 9 seconds
   "The information gain of a vocabulary word @w.
    @w : a term in the vocabulary.
@@ -382,4 +381,53 @@
 
 (defn D-split [D]
   (rand/split D [0.2 :test] [0.8 :training])) ; 45.968 ms (kind of a lot in the scheme of things)
+
+; ===== IMPLS ===== ;
+
+(defn logistic:lbfgs
+  "Train a classification model for Multinomial/Binary Logistic Regression
+   using Limited-memory BFGS. Standard feature scaling and L2 regularization
+   are used by default."
+  {:implemented-by '#{org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS}}
+  [?] (TODO))
+
+(defn logistic:sgd
+  "Train a classification model for Binary Logistic Regression using
+   Stochastic Gradient Descent."
+  {:implemented-by '#{org.apache.spark.mllib.classification.LogisticRegressionWithSGD}}
+  [?] (TODO))
+
+(defn logistic
+  "Create a Binary Logistic Regression classification model and train it.
+   Handles streaming or non-streaming data."
+  {:implemented-by '#{org.apache.spark.mllib.classification.LogisticModel
+                      org.apache.spark.mllib.classification.StreamingLogisticRegressionWithSGD}}
+  [? & [impl]]
+  (TODO)
+  (case impl
+    :lbfgs (logistic:lbfgs ?)
+    :sgd   (logistic:lbfgs ?)
+    (logistic:lbfgs ?))) ; Recommended by Spark over SGD
+
+(defn naive-bayes
+  "Trains a Naive Bayes model given label-feature pairs.
+   This is the Multinomial NB (http://nlp.stanford.edu/IR-book/html/htmledition/naive-bayes-text-classification-1.html)
+   which can handle all kinds of discrete data. For example, by converting
+   documents into TF-IDF vectors, it can be used for document classification.
+   By making every vector a 0-1 vector, it can also be used as Bernoulli NB
+   (http://nlp.stanford.edu/IR-book/html/htmledition/the-bernoulli-model-1.html).
+   The input feature values must be nonnegative."
+  {:implemented-by '#{org.apache.spark.mllib.classification.NaiveBayes
+                      org.apache.spark.mllib.classification.NaiveBayesModel}}
+  [?] (TODO))
+
+(defn svm
+  "Support Vector Machines (SVMs).
+   Training performed using Stochastic Gradient Descent.
+   By default L2 regularization is used."
+  {:implemented-by '#{org.apache.spark.mllib.classification.SVMWithSGD
+                      org.apache.spark.mllib.classification.SVMModel}}
+  [?] (TODO))
+
+
 
