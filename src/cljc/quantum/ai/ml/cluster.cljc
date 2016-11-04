@@ -11,7 +11,7 @@
     [quantum.core.numeric :as cnum]
     [quantum.numeric.core :as num
       :refer        [sum]]
-    [quantum.ai.ml.distance
+    [quantum.ai.ml.similarity
       :refer        [dist]]
     [quantum.core.fn :as fn
       :refer        [#?@(:clj [<- fn-> fn->>])]
@@ -27,6 +27,11 @@
     [quantum.core.vars        :as var
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]))
+
+; NOTES
+; - org.apache.spark.mllib will be deprecated in favor of org.apache.spark.ml
+;   once all features are migrated to it.
+; =======================
 
 (defn cost
   "Measures how expensive it is to merge 2 clusters"
@@ -48,7 +53,35 @@
 (defn cluster:db-scan
   "DBSCAN (density-based spatial clustering of applications
    with noise) algorithm."
-  {:implemented-by '#{org.apache.commons.math3.ml.clustering.FuzzyKMeansClusterer}}
+  {:implemented-by '#{org.apache.commons.math3.ml.clustering.DBSCANClusterer}}
+  [k & xs] (TODO))
+
+(defn cluster:k-medoids
+  "- Pick k random elements
+   - Assignment: Assign points to medoid
+   - Update:     pick new medoid:
+                 for every point in cluster C.m: (n^2)
+                    swap p with m
+                    compute cost
+                    keep lowest-cost medoid"
+  [k & xs] (TODO))
+
+(defn cluster:clarans
+  "CLARANS: 'Clustering large applications _ _'
+   Better than CLARA.
+   The sample must be representative of the whole.
+   repeat `i` times:
+     select sample
+     k-medoids(sample)
+     Only adjust one of them
+     compute cost"
+  [k & xs] (TODO))
+
+(defn cluster:k-means
+  "- Pick k random points
+   - Assignment: go through all points; assign to closest mean
+   - Update:     calculate new means
+   until convergence (`i` iterations)"
   [k & xs] (TODO))
 
 (defn cluster:fuzzy-k-means
