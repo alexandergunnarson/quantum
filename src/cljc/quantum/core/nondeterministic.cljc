@@ -3,7 +3,7 @@
           Not especially used at the moment."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes reduce for last nth rand-nth rand-int shuffle])
+  (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle])
   (:require
     #?(:clj [loom.gen                  :as g-gen])  ; for now
             [#?(:clj  clojure.core
@@ -45,6 +45,7 @@
   (:import
     #?@(:clj  [java.util.Random
                java.security.SecureRandom
+               smile.math.random.UniversalGenerator
                java.nio.ByteBuffer
                [org.apache.commons.codec.binary Base64 Base32 Hex]]
         :cljs [goog.string.StringBuffer])))
@@ -116,6 +117,28 @@
 (defn rand-int
   ([        b] (rand-int false b))
   ([secure? b] (rand-int-between secure? 0 b)))
+
+(defn rand-bits
+  "Returns up to 32 random bits."
+  [g] (TODO)
+  ; return randInt(g) >>> (32 - numbits);
+  )
+
+#_(defn rand-int
+  [g] (TODO)
+  ; return (int) Math.floor(Integer.MAX_VALUE * (2 * nextDouble() - 1.0));
+  )
+
+#_(defn rand-long
+  [g] (TODO)
+  ; return (long) Math.floor(Long.MAX_VALUE * (2 * nextDouble() - 1.0));
+  )
+
+(defn rand-gaussian
+  [g] (TODO)
+  ; use java.util.Random's impl
+  )
+
 
 (defn rand-char-between
   ([        a b] (rand-char-between false a b))
@@ -330,21 +353,44 @@
 ; Some options are :lcg (linear congruential generator, Java's default)
 ; and :twister (Marsenne twister).
 
-; TODO implement
-#_(defalias gen-gaussian ...)
-
 ; ===== GENERATORS ===== ;
+
+(defn generator:mersenne-twister-32
+  {:implemented-by '#{smile.math.random.MersenneTwister
+                      org.apache.commons.math3.random.MersenneTwister}}
+  [] (TODO))
+
+(defn generator:mersenne-twister-64
+  {:implemented-by '#{smile.math.random.MersenneTwister
+                      org.apache.commons.math3.random.MersenneTwister64}}
+  [] (TODO))
+
+#?(:clj
+(defn generator:universal
+  "The so called \"Universal Generator\" based on multiplicative congruential
+   method, which originally appeared in \"Toward a Universal Random Number
+   Generator\" by Marsaglia, Zaman and Tsang."
+  {:implemented-by '#{}}
+  ([] (UniversalGenerator.))
+  ([^long seed] (UniversalGenerator. seed))))
+
+(defprotocol IRandomGenerator
+  ; Returns the next pseudorandom, uniformly distributed double value between 0.0 and 1.0
+  (next      [this])
+  (impl      [this])
+  (set-seed! [this seed]))
 
 (defn generator
   "All these generators are from org.apache.commons.math3.random.*"
-  [type]
+  [type & [seed :as args]]
   (TODO)
   (case type
-    ; Represents an empirical probability distribution -- a probability
-    ; distribution derived from observed data without making any assumptions
-    ; about the functional form of the population distribution that the data
-    ; come from.
-    :empirical           nil
+    :universal           #?(:clj  (let [^UniversalGenerator g (apply generator:universal args)]
+                                    (reify IRandomGenerator
+                                      (next      [this]      (.nextDouble g))
+                                      (impl      [this]      g)
+                                      (set-seed! [this seed] (.setSeed g (long seed)))))
+                            :cljs (TODO))
     ; gaussian normalized random generator for scalars.
     :gaussian-normalized nil
     :halton-sequence     nil
@@ -357,9 +403,12 @@
     :isaac               nil
     :jdk        (get-generator false)
     :jdk-secure (get-generator true ) ; TODO more varieties are available
-    ; This class implements a powerful pseudo-random number generator
+    ; A powerful pseudo-random number generator
     ; developed by Makoto Matsumoto and Takuji Nishimura during 1996-1997.
-    :mersenne-twister nil
+    ; Has the advantage of having a far longer period and the ability to use a
+    ; far larger seed value.
+    :mersenne-twister-32 nil
+    :mersenne-twister-64 nil
     ; The below are from François Panneton, Pierre L'Ecuyer and Makoto Matsumoto
     :well512a   nil
     :well1024a  nil
@@ -367,3 +416,28 @@
     :well19937c nil
     :well44497a nil
     :well44497b nil))
+
+
+; public class Random {
+;     /**
+;      * Generates a permutation of 0, 1, 2, ..., n-1, which is useful for
+;      * sampling without replacement.
+;      */
+;     public int[] permutate(int n) {
+;         int[] x = new int[n];
+;         for (int i = 0; i < n; i++) {
+;             x[i] = i;
+;         }
+
+;         permutate(x);
+
+;         return x;
+;     }
+
+;     public void shuffle(Object[] x) {
+;         for (int i = 0; i < x.length; i++) {
+;             int j = i + nextInt(x.length - i);
+;             Math.swap(x, i, j);
+;         }
+;     }
+; }
