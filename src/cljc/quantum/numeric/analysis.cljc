@@ -10,7 +10,7 @@
 
 ; FUNCTIONS ;
 
-; root finding, function interpolation and integration.
+; root finding, function integration.
 
 ; Function interfaces are intended to be implemented by user code
 ; to represent domain problems. The algorithms provided by the
@@ -84,10 +84,6 @@
   [f]
   (TODO))
 
-; ===== INTERPOLATION ===== ;
-
-; <org.apache.commons.math3.analysis.interpolation>
-
 ; ===== POLYNOMIAL ===== ;
 
 ; <org.apache.commons.math3.analysis.polynomials>
@@ -127,3 +123,10 @@
   (TODO))
 
 (defalias solve evaluate)
+
+; ===== INTERPOLATION, VARIOGRAMS, ETC. ===== ;
+
+; <org.apache.commons.math3.analysis.interpolation>
+
+; <smile.interpolation.*>
+; http://commons.apache.org/proper/commons-math/javadocs/api-3.3/index.html
