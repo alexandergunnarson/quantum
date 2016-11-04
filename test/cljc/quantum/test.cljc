@@ -141,7 +141,7 @@
             [quantum.test.net.url]
             [quantum.test.net.websocket]
             [quantum.test.numeric.core]
-            [quantum.test.numeric.statistics]
+          #_[quantum.test.numeric.statistics]
             [quantum.test.numeric.vectors]
             [quantum.test.numeric.optimization]
             [quantum.test.parse.core]

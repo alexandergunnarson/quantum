@@ -1,4 +1,4 @@
-(ns quantum.numeric.statistics
+(ns quantum.numeric.statistics.core
   (:refer-clojure :exclude [for nth count take drop first last map mod])
   (:require
     [quantum.core.collections
@@ -18,6 +18,7 @@
       :refer        [sum sq]]
     [quantum.numeric.vectors    :as v]
     [quantum.numeric.polynomial :as poly]
+    [quantum.numeric.statistics.distribution :as dist]
     [quantum.core.vars
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
@@ -32,8 +33,7 @@
 ;     and probability and expectation calculations on over 160 distributions.
 ;   - Support for censored data, temporal data, time-series and unit based data
 ;   - Calculations and simulations on random processes and queues
-; uncomplicate.bayadera.core:
-; - uniform, gaussian, t, beta, gamma, exponential, erlang
+; uncomplicate.bayadera.core
 ; uncomplicate.bayadera.distributions
 ; [bigml/sampling "3.0"]
 ; ================================
@@ -189,131 +189,43 @@
      (+ q3 mild)
      (+ q3 severe)]))
 
-; ===== DISTRIBUTION =====
+(defn log-likelihood
+  "The log-likelihood of a given a sample set following the distribution."
+  [D xs] (TODO))
 
-; <org.apache.commons.math3.distribution>
-; <uncomplicate.bayadera.core>
+(defn likelihood
+  "The likelihood of a given a sample set following the distribution."
+  [D xs] (TODO))
 
-(defn uniform-distribution+
-  "Return uniformly distributed deviates on 0..max-val use the specified rng."
-  {:adapted-from 'criterium.stats}
-  ; TODO also uncomplicate.bayadera.core has probably a better version
-  [max-val rng]
-  (map+ (fn1 * max-val) rng))
-
-(defn beta-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.BetaDistribution
-                      uncomplicate.bayadera.core}}
+(defn shannon-entropy
   [?] (TODO))
 
-(defn binomial-distribution
-  "AKA Bernoulli distribution"
-  {:implemented-by '#{org.apache.commons.math3.distribution.BinomialDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
+(defn bayesian-information-criterion
+  "AKA BIC, or Schwarz Criterion.
+   A criterion for model selection among a class of parametric models
+   with different numbers of parameters. Choosing a model to optimize
+   BIC is a form of regularization.
+   A model with the larger value of BIC is the one to be preferred."
+  {:adapted-from 'smile.stat.distribution.BIC/bic
+   :params-doc '[[L "the log-likelihood of estimated model"]
+                 [v "the number of free parameters to be estimated in the model"]
+                 [n "the number of samples"]]}
+  [L v n]
+  (- L (* #?(:clj 1/2 :cljs 0.5) v (log-e n))))
 
-(defn cauchy-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.CauchyDistribution}}
-  [?] (TODO))
-
-(defn chi-squared-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.ChiSquaredDistribution}}
-  [?] (TODO))
-
-(defn enumerated-distribution
-  "A generic implementation of a discrete probability distribution
-   over a finite sample space, based on an enumerated list of
-   <value, probability> pairs."
-  {:implemented-by '#{org.apache.commons.math3.distribution.EnumeratedDistribution}}
-  [?] (TODO))
-
-(defn erlang-distribution
-  {:implemented-by '#{uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn exponential-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.ExponentialDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn f-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.FDistribution}}
-  [?] (TODO))
-
-(defn gamma-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.GammaDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn geometric-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.GeometricDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn hypergeometric-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.HypergeometricDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn levy-distribution
-  "Lévy distribution"
-  {:implemented-by '#{org.apache.commons.math3.distribution.LevyDistribution}}
-  [?] (TODO))
-
-(defn log-normal-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.LogNormalDistribution}}
-  [?] (TODO))
-
-(defn normal-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.NormalDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defalias gaussian-distribution normal-distribution)
-
-(defn multinomial-distribution
-  {:implemented-by '#{uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn pareto-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.ParetoDistribution}}
-  [?] (TODO))
-
-(defn pascal-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.PascalDistribution}}
-  [?] (TODO))
-
-(defalias negative-binomial-distribution normal-distribution)
-
-(defn poisson-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.PoissonDistribution}}
-  [?] (TODO))
-
-(defn t-distribution
-  "Student's t-distribution"
-  {:implemented-by '#{org.apache.commons.math3.distribution.TDistribution
-                      uncomplicate.bayadera.core}}
-  [?] (TODO))
-
-(defn triangular-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.TriangularDistribution}}
-  [?] (TODO))
-
-(defn weibull-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.WeibullDistribution}}
-  [?] (TODO))
-
-(defn zipf-distribution
-  {:implemented-by '#{org.apache.commons.math3.distribution.ZipfDistribution}}
-  [?] (TODO))
+(defalias schwartz-criterion bayesian-information-criterion)
+(defalias bic bayesian-information-criterion)
 
 ; ===== SAMPLING =====
+
+; The selection of a subset of individuals from within a statistical
+; population to estimate characteristics of the whole population.
 
 (defn sample-uniform+
   "Provide n samples from a uniform distribution on 0..max-val"
   {:adapted-from 'criterium.stats}
   [n max-val rng]
-  (take+ n (uniform-distribution+ max-val rng)))
+  (take+ n (dist/uniform+ max-val rng)))
 
 (defn sample+
   "Sample with replacement."
@@ -323,9 +235,12 @@
     (map+ (fn$ nth x) (sample-uniform+ n n rng))))
 
 (defn bootstrap-sample
-  "Bootstrap sampling of a statistic, using resampling with replacement."
+  "Bootstrap sampling ('bagging') of a statistic, using resampling with replacement.
+   A way to improve the classification by combining classifications of randomly
+   generated training sets."
+  {:adapted-from 'criterium.stats
+   :implemented-by '{smile.sampling.Bagging "Faster implementation using arrays"}}
   [data statistic size rng-factory]
-  {:adapted-from 'criterium.stats}
   (v/transpose
     (for [_ (range size)] (statistic (sort (join [] (sample+ data (rng-factory))))))))
 
@@ -529,58 +444,87 @@
   {:implemented-by '#{org.apache.commons.math3.stat.correlation.StorelessCovariance}}
   [?] (TODO))
 
+
+(defn correlation-test
+  "Correlation test. Correlation of two variables is a measure of the degree
+   to which they vary together."
+  {:implemented-by '#{}}
+  [?] (TODO))
+
 (defn kendalls-correlation
   "Kendall's Tau-b rank correlation."
-  {:implemented-by '#{org.apache.commons.math3.stat.correlation.KendallsCorrelation}}
+  {:implemented-by '#{org.apache.commons.math3.stat.correlation.KendallsCorrelation
+                      smile.stat.hypothesis.CorTest/kendall}}
   [?] (TODO))
 
 (defn pearsons-correlation
   "Computes Pearson's product-moment correlation coefficients for
    pairs of arrays or columns of a matrix."
-  {:implemented-by '#{org.apache.commons.math3.stat.correlation.PearsonsCorrelation}}
+  {:implemented-by '#{org.apache.commons.math3.stat.correlation.PearsonsCorrelation
+                      smile.stat.hypothesis.CorTest/pearson}}
   [?] (TODO))
 
 (defn spearmans-correlation
   "Spearman's rank correlation."
-  {:implemented-by '#{org.apache.commons.math3.stat.correlation.SpearmansCorrelation}}
+  {:implemented-by '#{org.apache.commons.math3.stat.correlation.SpearmansCorrelation
+                      smile.stat.hypothesis.CorTest/spearman}}
   [?] (TODO))
 
-; ===== INFERENCE ===== ;
+; ===== HYPOTHESIS/INFERENCE ===== ;
+
+; Statistical hypothesis tests.
+; A statistical hypothesis test is a method of making decisions using data,
+; whether from a controlled experiment or an observational study (not controlled).
+; In statistics, a result is called statistically significant if it is unlikely
+; to have occurred by chance alone, according to a pre-determined threshold
+; probability, the significance level.
 
 (defn binomial-test
   {:implemented-by '#{org.apache.commons.math3.stat.inference.BinomialTest}}
-  [] (TODO))
+  [?] (TODO))
 
-(defn chi-square-test
-  {:implemented-by '#{org.apache.commons.math3.stat.inference.ChiSquareTest}}
-  [] (TODO))
+(defn chi-squared-test
+  {:implemented-by '#{org.apache.commons.math3.stat.inference.ChiSquareTest
+                      smile.stat.hypothesis.ChiSqTest
+                      smile.stat.hypothesis.CorTest/chisq}}
+  [?] (TODO))
+
+(defn f-test
+  "F test of the hypothesis that two independent samples come from normal
+   distributions with the same variance, against the alternative that they
+   come from normal distributions with different variances."
+  {:implemented-by '#{smile.stat.hypothesis.FTest}}
+  [?] (TODO))
+
 
 (defn g-test
   {:implemented-by '#{org.apache.commons.math3.stat.inference.GTest}}
-  [] (TODO))
+  [?] (TODO))
 
-(defn kolmogorov-smirnov-test
+(defn ks-test
   "Kolmogorov-Smirnov (K-S) test for equality of continuous distributions."
-  {:implemented-by '#{org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest}}
-  [] (TODO))
+  {:implemented-by '#{org.apache.commons.math3.stat.inference.KolmogorovSmirnovTest
+                      smile.stat.hypothesis.KSTest}}
+  [?] (TODO))
 
 (defn mann-whitney-u-test
   "The Mann-Whitney U test (also called Wilcoxon rank-sum test)."
   {:implemented-by '#{org.apache.commons.math3.stat.inference.MannWhitneyUTest}}
-  [] (TODO))
+  [?] (TODO))
 
 (defalias wilcoxon-rank-sum-test mann-whitney-u-test)
 
 (defn one-way-anova-test
   "One-way ANOVA (analysis of variance) statistics."
-  {:implemented-by '#{org.apache.commons.math3.stat.inference.OneWayAnova }}
-  [] (TODO))
+  {:implemented-by '#{org.apache.commons.math3.stat.inference.OneWayAnova}}
+  [?] (TODO))
 
 (defn t-test
-  "An implementation for Student's t-tests."
-  {:implemented-by '#{org.apache.commons.math3.stat.inference.TTest}}
-  [] (TODO))
+  "Student's t-test."
+  {:implemented-by '#{org.apache.commons.math3.stat.inference.TTest
+                      smile.stat.hypothesis.TTest}}
+  [?] (TODO))
 
 (defn wilcoxon-signed-rank-test
   {:implemented-by '#{org.apache.commons.math3.stat.inference.WilcoxonSignedRankTest}}
-  [] (TODO))
+  [?] (TODO))

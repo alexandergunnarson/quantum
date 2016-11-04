@@ -1,5 +1,7 @@
 (ns quantum.ui.plots)
 
+; TO EXPLORE
+
 ; Mathematica
 ; - 2D and 3D data, function and geo visualization and animation tools
 
@@ -23,3 +25,6 @@
 ;       - http://code.openark.org/blog/mysql/sql-pie-chart
 
 ; visualization - https://code.google.com/p/androguard/wiki/Visualization#default
+; - smile.plot.*
+; - smile.swing.*
+; ==================
