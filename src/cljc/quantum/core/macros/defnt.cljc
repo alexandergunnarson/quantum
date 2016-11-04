@@ -77,7 +77,7 @@
 (defn classes-for-type-predicate
   ([pred lang] (classes-for-type-predicate pred lang nil))
   ([pred lang type-arglist]
-  (throw-unless ((fn-or symbol? keyword?) pred) "Type predicate must be a symbol or keyword.")
+  (throw-unless ((fn-or symbol? keyword? string?) pred) (->ex "Type predicate must be a symbol, keyword, or string."))
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
       (->> tcore/types-unevaled
