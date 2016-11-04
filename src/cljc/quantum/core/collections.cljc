@@ -63,7 +63,7 @@
              [quantum.core.collections.zip            :as qzip   ]
              [quantum.core.collections.logic          :as clog   ]
              [quantum.core.error                      :as err
-               :refer [->ex]]
+               :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
                :refer        [fn-nil juxt-kv withf->>
                               #?@(:clj [rcomp <- fn-> fn->> fn1])]
@@ -1153,9 +1153,84 @@
   [elems]
   (sort-parts (list elems)))
 
+; TODO subarray-only sort
+
+#?(:clj
+(defnt heap-sort!
+  [#{ints? floats? doubles? "[Ljava.lang.Comparable;"} arr]
+  (doto arr (smile.sort.HeapSort/sort))))
+
+#?(:clj
+(defnt quicksort!
+  "A comparison sort that, on average, makes O(n log n)
+   comparisons to sort n items. For large n (say, > 1000), Quicksort is faster,
+   on most machines, by a factor of 1.5 or 2 than other O(n log n) algorithms.
+   However, in the worst case, it makes O(n^2) comparisons."
+  {:todo ["Can also optionally sort only the first n elements of `arr`"]}
+  [#{ints? floats? doubles? "[Ljava.lang.Comparable;"} arr]
+  (doto arr (smile.sort.QuickSort/sort))))
+
+#?(:clj
+ (defnt dual-pivot-quicksort!
+  "The Dual-Pivot Quicksort algorithm by Vladimir Yaroslavskiy,
+   Jon Bentley, and Josh Bloch. The algorithm offers O(n log(n))
+   performance on many data sets that cause other quicksorts to
+   degrade to O(n^2) performance, and is typically faster than
+   traditional (one-pivot) quicksort implementations."
+  {:todo ["Only in more recent Java versions does Arrays/sort use
+           Dual-Pivot Quicksort"
+          "Can also sort a subarray"]}
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles?} arr]
+    (doto arr (java.util.Arrays/sort)))
+  ([#{objects?} arr]
+    (doto arr (java.util.Arrays/sort ^java.util.Comparator compare)))
+  ([#{objects?} arr compare-fn]
+    (doto arr (java.util.Arrays/sort ^java.util.Comparator compare-fn)))))
+
+#?(:clj
+(defnt shell-sort!
+  "A generalization of insertion sort, with two observations:
+   - insertion sort is efficient if the input is \"almost sorted\", and
+   - insertion sort is typically inefficient because it moves values
+     just one position at a time.
+   Shell sort improves insertion sort.
+   The original implementation performs O(n^2) comparisons and
+   exchanges in the worst case. A minor change given in V. Pratt's book
+   improved the bound to O(n log.2(n)). This is worse than the
+   optimal comparison sorts, which are O(n log n).
+   For n < 50, roughly, Shell sort is competitive with the more complicated
+   Quicksort on many machines. For n > 50, Quicksort is generally faster."
+  {:todo ["Can also sort only the first n elements of `arr`"]}
+  [#{ints? floats? doubles? "[Ljava.lang.Comparable;"} arr]
+  (doto arr (smile.sort.ShellSort/sort))))
+
+#?(:clj
+(defnt tim-sort!
+  "TimSort. A stable, adaptive, iterative mergesort that requires far
+   fewer than nlog(n) comparisons when running on partially sorted arrays,
+   while offering performance comparable to a traditional mergesort when
+   run on random arrays. This sort is stable and runs O(n log n) time
+   (worst case)."
+  [#{ints? floats? doubles? objects?} arr]
+  (TODO)))
+
+#?(:clj
+(defnt p-tim-sort!
+  "Parallel TimSort."
+  {:todo ["Can also sort a subarray"]}
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles?} arr]
+    (doto arr (java.util.Arrays/parallelSort)))
+  ([#{objects?} arr]
+    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare)))
+  ([#{objects?} arr compare-fn]
+    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare-fn)))))
+
+#?(:clj (defalias psort! p-tim-sort!))
+
 (defn binary-search
   "Finds earliest occurrence of @x in @xs (a sorted List of numbers) using binary search."
-  {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"}
+  {:source "http://stackoverflow.com/questions/8949837/binary-search-in-clojure-implementation-performance"
+   :todo ["Use Java impl for CLJ(S)"]}
   ([xs x] (binary-search xs x 0 (unchecked-dec #_dec* (count xs)) false))
   ([xs x a b between?]
     (loop [l (long a) h (long b)]
