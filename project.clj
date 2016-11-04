@@ -1,3 +1,4 @@
+; TODO lazy-load jars based on desired features (or optionally force load all)
 (defproject quantum/core "0.3.0-01043fd"
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts ^:replace
@@ -260,6 +261,7 @@
      [byte-transforms                           "0.1.4"
        :exclusions [org.xerial.snappy/snappy-java]]
      [net.jpountz.lz4/lz4                       "1.3"             ]
+     [com.github.haifengl/smile-core            "1.2.0"           ]
      ; ==== MAP-REDUCE ====
      [gorillalabs/sparkling                     "1.2.5"
        :exclusions [org.ow2.asm/*
@@ -335,7 +337,11 @@
     :auto-instrument
        {:jvm-opts ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
         :java-agents [[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}}
-    :test {:jvm-opts ["-Xmx3g"]}}
+    :test {:jvm-opts ["-Xms4g"
+                      "-Xmx4g"
+                      "-XX:+UseSuperWord"
+                      "-XX:+Inline"
+                      "-XX:+UseCompressedOops"]}}
   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
             "deploy-dev"             ["do" "clean,"
                                            "install"]
