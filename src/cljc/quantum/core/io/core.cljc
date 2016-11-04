@@ -147,6 +147,9 @@
             #(try-assoc! (inc n) false file-name-f directory-f
                file-path-f method data-formatted file-type))))))
 
+; Currently, Breeze supports IO for Matrices in two ways: Java serialization and csv.
+; The latter comes from two functions: breeze.linalg.csvread and
+; breeze.linalg.csvwrite
 #?(:clj
 (defn assoc!- ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
   "@file-types : Should be a vector of keywords"

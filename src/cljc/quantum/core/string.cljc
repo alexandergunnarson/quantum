@@ -50,6 +50,10 @@
              java.net.IDN
              java.util.regex.Pattern)))
 
+; TO EXPLORE
+; - https://github.com/expez/superstring
+; ==================
+
 #_(defn contains? [s sub]
   (not= (.indexOf ^String s sub) -1))
 

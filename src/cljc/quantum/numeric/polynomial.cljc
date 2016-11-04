@@ -2,7 +2,9 @@
 
 (defn value
   "Evaluate a polynomial at the given value x, for the coefficients given in
-   descending order (so the last element of coefficients is the constant term)."
+   descending order (so the last element of coefficients is the constant term).
+
+   Breeze: polyval(coef,x)"
   {:source 'criterium.stats
    :todo ["Rework this to not use laziness"]}
   [x coefficients]

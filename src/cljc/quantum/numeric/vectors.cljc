@@ -21,7 +21,7 @@
                :refer        [#?@(:clj [fn1 <- fn-> fn->>])]
                :refer-macros [          fn1 <- fn-> fn->>]]
              [quantum.core.error   :as err
-               :refer [->ex]]
+               :refer [->ex TODO]]
              [quantum.numeric.core :as num
                :refer [pi* sigma sq]]
              [quantum.core.vars
@@ -133,7 +133,9 @@
 #?(:clj (defalias                                transpose*       fnum/trans    ))
 
 #_"Computes the dot product of vectors x and y."
+; Also implemented in Breeze
 #?(:clj (defalias ^{:time-complexity 'n}         dot*             real/dot   ))
+
 #_"Computes the Euclidan (L2) norm of vector x."
 #?(:clj (defalias ^{:time-complexity 'n}         l2-norm          real/nrm2  ))
 #_"Sums absolute values of entries of vector x."
@@ -178,6 +180,23 @@
 #?(:clj (defalias copy             fnum/copy  ))
 #_"Swaps the entries of containers x and y."
 #?(:clj (defalias ^{:time-complexity 'n}         swap!            fnum/swp!  ))
+
+; ===== LAPACK ===== ;
+
+(defn dgemm!
+  {:implemented-by '#{org.apache.spark.ml.ann.BreezeUtil/dgemm}}
+  [a A B b C] (TODO))
+
+(defn dgemv!
+  {:implemented-by '#{org.apache.spark.ml.ann.BreezeUtil/dgemv}}
+  [a A x b y] (TODO))
+
+; ===== SPARSE MATRIX SOLUTIONS ===== ;
+
+; <no.uib.cipr.matrix.sparse.*>
+; Unstructured sparse matrices and vectors with iterative solvers and preconditioners.
+
+; ===== IMMUTABLE ===== ;
 
 (defn transpose
   "Transpose a vector of vectors."
