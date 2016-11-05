@@ -86,7 +86,7 @@
 
          (defnt array?
            ([^array? x] true)
-           ([x] #?(:clj  (-> x class .isArray)
+           ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* array types in `defnt`
                    :cljs (-> x core/array?))))
 
 ; #?(:cljs (defnt typed-array? ...))

@@ -15,12 +15,14 @@
                :refer-macros [   kmap aget-in aget-in*
                                  ifor get reducei]]
              [quantum.core.error
-               :refer        [#?(:clj assert) ->ex]
-               :refer-macros [assert]]
+               :refer        [->ex]]
              [quantum.core.numeric :as num
                :refer        [#?@(:clj [+* inc*])]
                :refer-macros [inc* +*]]
-             [quantum.core.string :as str])
+             [quantum.core.string   :as str]
+             [quantum.core.validate :as v
+               :refer        [#?(:clj validate)]
+               :refer-macros [        validate]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
 ; TO EXPLORE
@@ -38,7 +40,7 @@
             [:poiner]      :P560
             [:pointer]     :P536}}
   [w]
-  (assert ((fn-or keyword? string?) w) #{w})
+  (validate w (v/or* keyword? string?))
   (->> w name
        (coll/ldropl 1)
        (map+ (fn [c] (condp contains? c

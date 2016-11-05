@@ -70,8 +70,15 @@
   (swap! cleanup-seq conj #(close! obj))
   obj)
 
-(def start! component/start)
-(def stop!  component/stop )
+(defonce systems (atom nil))
+
+(defn start!
+  ([] (start! (:global @systems)))
+  ([c] (component/start c)))
+
+(defn stop!
+  ([] (stop! (:global @systems)))
+  ([c] (component/stop c)))
 
 #?(:clj
 (defmacro with-resources
@@ -145,8 +152,6 @@
    (stop-system! system (keys system)))
   ([system component-keys]
    (component/update-system-reverse system component-keys stop-with-pred)))
-
-(defonce systems (atom nil))
 
 (defprotocol ISystem
   (init!   [this])

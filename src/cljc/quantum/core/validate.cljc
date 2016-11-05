@@ -27,33 +27,37 @@
    the failed value to a string, which can be problematic with e.g.
    large collections or lazy seqs."
   [spec x form locals ns-str ?line]
-  (if (s/valid? spec x)
-      x
-      (let [inst        #?(:clj  (java.util.Date.)
-                           :cljs (js/Date.))
-            explained   (s/explain-data* spec [] [] [] x)
-            data        (ValidationError.
-                          (::s/problems explained)
-                          :assertion-failed
-                          (str ns-str ":" (core/or ?line "?"))
-                          inst
-                          form
-                          locals
-                          x
-                          (type x))]
-        (throw (ex-info spec-assertion-failed data)))))
+  (let [inst        #?(:clj  (java.util.Date.)
+                       :cljs (js/Date.))
+        explained   (s/explain-data* spec [] [] [] x)
+        data        (ValidationError.
+                      (::s/problems explained)
+                      :assertion-failed
+                      (str ns-str ":" (core/or ?line "?"))
+                      inst
+                      form
+                      locals
+                      x
+                      (type x))]
+    (throw (ex-info spec-assertion-failed data))))
 
 #?(:clj
 (defmacro validate-one [spec x]
   (if-cljs &env
-   `(if cljs.spec/*compile-asserts*
+   `(if cljs.spec/*compile-asserts* ; TODO should probably be outside quote like this
         (if cljs.spec/*runtime-asserts*
-            (validate* ~spec ~x '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
+            (let [spec# ~spec x# ~x]
+              (if (cljs.spec/valid? spec# x#)
+                  x#
+                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))))
            ~x)
        ~x)
     (if clojure.spec/*compile-asserts*
        `(if (clojure.spec/check-asserts?) #_clojure.lang.RT/checkSpecAsserts
-            (validate* ~spec ~x '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
+            (let [spec# ~spec x# ~x]
+              (if (clojure.spec/valid? spec# x#)
+                  x#
+                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))))
            ~x)
         x))))
 #?(:clj
