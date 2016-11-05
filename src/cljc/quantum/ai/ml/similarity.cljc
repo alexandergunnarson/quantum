@@ -6,7 +6,7 @@
    - non-negativity: d(x, y) > 0
    - isolation:      d(x, y) = 0 iff x = y
    - symmetry:       d(x, y) = d(x, y)"
-  (:refer-clojure :exclude [assert get])
+  (:refer-clojure :exclude [get])
   (:require
     [quantum.core.logic
       :refer        [#?@(:clj [fn-or])]
@@ -22,8 +22,7 @@
       :refer-macros [   kmap aget-in aget-in*
                         ifor get reducei]]
     [quantum.core.error
-      :refer        [ ->ex TODO #?(:clj assert)]
-      :refer-macros [assert]]
+      :refer        [ ->ex TODO]]
     [quantum.core.numeric :as cnum
       :refer        [#?@(:clj [+* inc* pow abs sqrt])]
       :refer-macros [          +* inc* pow abs sqrt]]

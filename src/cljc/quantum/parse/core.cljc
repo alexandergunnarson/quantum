@@ -81,9 +81,9 @@
   [_ props & [{:keys [no-quote?] :as opts}]]
   ; TODO syntactially validate prop key
   (->> props
-       (map+ (fn [k v] (str (name k) \=
-                            (when-not no-quote? \") v
-                            (when-not no-quote? \"))))
+       (map+ (rfn [k v] (str (name k) \=
+                             (when-not no-quote? \") v
+                             (when-not no-quote? \"))))
        (reduce (rfn [#?(:clj  ^StringBuilder ret
                         :cljs ^StringBuffer  ret) kv] ; TODO abstract this
                  (.append ret \newline)
