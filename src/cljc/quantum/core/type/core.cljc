@@ -44,8 +44,6 @@
    int     java.lang.Integer
    float   java.lang.Float}))
 
-
-
 ; (def primitive?
 ;   "Returns non-nil if the argument represents a primitive Class other than Void"
 ;   #{Double/TYPE Character/TYPE Byte/TYPE Boolean/TYPE

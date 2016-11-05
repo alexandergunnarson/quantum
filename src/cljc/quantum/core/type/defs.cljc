@@ -16,6 +16,9 @@
       :refer        [#?@(:clj [fn-and condf1])]
       :refer-macros [          fn-and condf1]]))
 
+(defrecord Folder  [coll transform])
+(defrecord Reducer [coll transform])
+
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
              This means you can't represent in JavaScript all the Java longs
@@ -127,6 +130,7 @@
      `(type (apply make-array Character/TYPE (repeat ~~n 0)))
      `(type (apply make-array Object         (repeat ~~n 0)))}))
 
+; TODO make this extensible
 #?(:clj
 (defmacro def-types [lang]
   (let [retrieve
@@ -407,8 +411,8 @@
            'qreducer?        '{:clj #{clojure.core.protocols.CollReduce
                                       #_quantum.core.reducers.Folder}
                                :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
-                                       quantum.core.reducers.Folder
-                                       quantum.core.reducers.Reducer}}
+                                       quantum.core.type.defs.Folder
+                                       quantum.core.type.defs.Reducer}}
            'file?            '{:clj  #{java.io.File}
                                :cljs #{}} ; js/File isn't always available! Use an abstraction
            'array-list?      array-list-types

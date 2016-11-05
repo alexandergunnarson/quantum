@@ -1,5 +1,5 @@
 (ns quantum.numeric.linear
-  (:refer-clojure :exclude [identity])
+  (:refer-clojure :exclude [identity get subvec last])
   (:require
     [clojure.core.matrix.linear :as mat]
     [quantum.core.vars

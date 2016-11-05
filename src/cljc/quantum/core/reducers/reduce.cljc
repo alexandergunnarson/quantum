@@ -31,6 +31,8 @@
                      [quantum.core.type             :as type
                        :refer [#?@(:clj [editable? hash-set?
                                          hash-map?])]         ]
+                     [quantum.core.type.defs
+                       :refer [Reducer Folder]]
                      [quantum.core.vars             :as var
                        :refer [#?(:clj defalias)]             ])
   #?(:cljs (:require-macros
@@ -52,8 +54,6 @@
 
 ; Fixing it so the seqs are headless.
 ; Christophe Grand - https://groups.google.com/forum/#!searchin/clojure-dev/reducer/clojure-dev/t6NhGnYNH1A/2lXghJS5HywJ
-(defrecord Folder  [coll transform])
-(defrecord Reducer [coll transform])
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          REDUCE          }=====================================================

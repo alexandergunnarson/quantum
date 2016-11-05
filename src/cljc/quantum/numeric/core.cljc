@@ -1,6 +1,6 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
-  (:refer-clojure :exclude [reduce mod count])
+  (:refer-clojure :exclude [reduce mod count *' +'])
   (:require
     [quantum.core.numeric     :as num
       :refer        [*+* *-* *** *div* mod

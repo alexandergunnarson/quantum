@@ -38,7 +38,7 @@
 ; [bigml/sampling "3.0"]
 ; ================================
 
-(defn pi* [xs step-fn]
+(defn pi* [xs step-fn] ; TODO move
   (->> xs (map+ #(step-fn %)) num/product))
 
 (defn mean
@@ -348,7 +348,7 @@
       (let [r (if (< x 0.5) x (- 1.0 x))
             r (sqrt (- (log-e r)))]
         (if (<= r 5.0)
-          (let [r (- r (double 16/10))]
+          (let [r (- r (double #?(:clj 16/10 :cljs 1.6)))]
             (* (cnum/sign' (double (- x 0.5)))
                (/ (poly/value r c) (poly/value r d))))
           (let [r (- r 5.0)]

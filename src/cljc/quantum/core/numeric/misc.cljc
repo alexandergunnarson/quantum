@@ -65,7 +65,7 @@
            -1.0 if the argument is less than zero."
           (^double [^double x] (Math/signum x))
           (^float  [^float  x] (Math/signum x)))
-   :cljs (defn sign' [x] (js/Math.sign x)))
+   :cljs (defnt sign' [^number? x] (js/Math.sign x)))
 
 #?(:clj
 (defnt' with-sign "Returns @x with the sign of @y."

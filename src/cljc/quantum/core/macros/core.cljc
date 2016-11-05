@@ -1,4 +1,5 @@
-(ns ^{:doc "Macro-building helper functions."}
+(ns ^{:doc "Macro-building helper functions."
+      :cljs-self-referring? true}
   quantum.core.macros.core
   (:refer-clojure :exclude [macroexpand macroexpand-1])
   (:require [#?(:clj  clojure.core
@@ -12,7 +13,9 @@
             [clojure.tools.analyzer.jvm         ]
             [riddley.walk                       ]
             [clojure.tools.reader :as r]])
-            [quantum.core.core]))
+            [quantum.core.core])
+  (:require-macros
+            [quantum.core.macros.core :refer [env]]))
 
 ; ===== ENVIRONMENT =====
 
