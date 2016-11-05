@@ -19,7 +19,7 @@
 (defrecord Folder  [coll transform])
 (defrecord Reducer [coll transform])
 
-(def ^{:doc "Could do <Class>/MAX_VALUE for the maxes vin Java but JS doesn't like it of course
+(def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
              This means you can't represent in JavaScript all the Java longs
              Max 'safe' int: (dec (Math/pow 2 53))"}

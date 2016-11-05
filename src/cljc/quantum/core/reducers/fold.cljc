@@ -40,7 +40,10 @@
     [quantum.core.type             :as type
       :refer        [transient!* persistent!*
                      #?@(:clj [lseq? editable? hash-set? hash-map? ->joinable])]
-      :refer-macros [          lseq? editable? hash-set? hash-map? ->joinable]]))
+      :refer-macros [          lseq? editable? hash-set? hash-map? ->joinable]]
+    [quantum.core.type.defs
+      #?@(:cljs [:refer [Reducer Folder]])])
+  #?(:clj (:import [quantum.core.type.defs Reducer Folder])))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        FORK/JOIN         }=====================================================
@@ -143,7 +146,7 @@
           (let [split-ind (quot ct 2)]
             (map/split-at split-ind coll-0)))
           coll n combinef reducef))
-  quantum.core.reducers.reduce.Folder
+  Folder
     (coll-fold [fldr n combine-fn reduce-fn]
       (coll-fold (:coll fldr) n combine-fn ((:transform fldr) reduce-fn))))
 
@@ -160,9 +163,9 @@
   {:attribution "Christophe Grand - http://clj-me.cgrand.net/2013/09/11/macros-closures-and-unexpected-object-retention/"
    :todo ["Possibly fix the CLJS version?"]}
   ([coll transform]
-    (quantum.core.reducers.reduce.Folder. coll transform)))
+    (Folder. coll transform)))
 
-(def folder? #(instance? quantum.core.reducers.reduce.Folder %))
+(def folder? #(instance? Folder %))
 
 (def transformer? (fn-or red/reducer? folder?))
 
@@ -257,7 +260,7 @@
 ; TODO move
 (defnt ->vec
   ([^vector? x] x)
-  ([#{map? list? set? array-list? quantum.core.reducers.reduce.Folder
+  ([#{map? list? set? array-list? Folder
       #?(:clj  clojure.core.protocols.CollReduce
          :cljs cljs.core/IReduce)} x] (joinl [] x))
   ([x] (if (nil? x) [] [x])))

@@ -10,41 +10,42 @@
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}
       :cljs-self-referring? true}
   quantum.core.reducers.reduce
-           (:refer-clojure :exclude [reduce into])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core  ]
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async)     :as async]
-                     [quantum.core.collections.base :as cbase ]
-                     [quantum.core.data.vector      :as vec
-                       :refer [catvec]                        ]
-           #?@(:clj [[seqspert.hash-set                       ]
-                     [seqspert.hash-map                       ]])
-                     [quantum.core.data.set         :as set   ]
-                     [quantum.core.data.map         :as map   ]
-                     [quantum.core.error            :as err
-                       :refer [->ex]                          ]
-                     [quantum.core.logic            :as logic
-                       :refer [nnil?]                         ]
-                     [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt])]             ]
-                     [quantum.core.type             :as type
-                       :refer [#?@(:clj [editable? hash-set?
-                                         hash-map?])]         ]
-                     [quantum.core.type.defs
-                       :refer [Reducer Folder]]
-                     [quantum.core.vars             :as var
-                       :refer [#?(:clj defalias)]             ])
+          (:refer-clojure :exclude [reduce into])
+          (:require [#?(:clj  clojure.core
+                        :cljs cljs.core   )        :as core  ]
+                    [#?(:clj  clojure.core.async
+                        :cljs cljs.core.async)     :as async]
+                    [quantum.core.collections.base :as cbase ]
+                    [quantum.core.data.vector      :as vec
+                      :refer [catvec]                        ]
+          #?@(:clj [[seqspert.hash-set                       ]
+                    [seqspert.hash-map                       ]])
+                    [quantum.core.data.set         :as set   ]
+                    [quantum.core.data.map         :as map   ]
+                    [quantum.core.error            :as err
+                      :refer [->ex]                          ]
+                    [quantum.core.logic            :as logic
+                      :refer [nnil?]                         ]
+                    [quantum.core.macros           :as macros
+                      :refer [#?@(:clj [defnt])]             ]
+                    [quantum.core.type             :as type
+                      :refer [#?@(:clj [editable? hash-set?
+                                        hash-map?])]         ]
+                    [quantum.core.type.defs
+                      #?@(:cljs [:refer [Reducer Folder]])]
+                    [quantum.core.vars             :as var
+                      :refer [#?(:clj defalias)]             ])
   #?(:cljs (:require-macros
-                     [quantum.core.reducers.reduce
-                       :refer [reduce]                        ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt]                         ]
-                     [quantum.core.type             :as type
-                       :refer [editable? hash-set? hash-map?] ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                      ]))
-  #?(:cljs (:import [goog.string StringBuffer])))
+                    [quantum.core.reducers.reduce
+                      :refer [reduce]                        ]
+                    [quantum.core.macros           :as macros
+                      :refer [defnt]                         ]
+                    [quantum.core.type             :as type
+                      :refer [editable? hash-set? hash-map?] ]
+                    [quantum.core.vars             :as var
+                      :refer [defalias]                      ]))
+  (:import #?(:clj  [quantum.core.type.defs Reducer Folder]
+              :cljs [goog.string StringBuffer])))
 
 
 ; HEADLESS FIX
@@ -101,8 +102,7 @@
                                (recur (unchecked-inc n)
                                       (f ret (.charAt s n)))))))))
 #?(:clj ([^record? coll f init] (clojure.core.protocols/coll-reduce coll f init)))
-        ([#{quantum.core.reducers.reduce.Reducer
-            quantum.core.reducers.reduce.Folder} x f init]
+        ([^qreducer? x f init]
           (reduce* (:coll x) ((:transform x) f) init))
         ([^chan?   x    f init] (async/reduce f init x))
         ([^map?    coll f init] (#_(:clj  clojure.core.protocols/kv-reduce

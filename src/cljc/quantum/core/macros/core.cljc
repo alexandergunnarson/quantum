@@ -2,20 +2,21 @@
       :cljs-self-referring? true}
   quantum.core.macros.core
   (:refer-clojure :exclude [macroexpand macroexpand-1])
-  (:require [#?(:clj  clojure.core
-                :cljs cljs.core   ) :as core]
-            [clojure.core.reducers  :as red]
-            [clojure.walk           :as walk
-              :refer [prewalk]]
-            [cljs.analyzer                      ]
-  #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
-            [clojure.jvm.tools.analyzer         ]
-            [clojure.tools.analyzer.jvm         ]
-            [riddley.walk                       ]
-            [clojure.tools.reader :as r]])
-            [quantum.core.core])
-  (:require-macros
-            [quantum.core.macros.core :refer [env]]))
+  (:require  [#?(:clj  clojure.core
+                 :cljs cljs.core   ) :as core]
+             [clojure.core.reducers  :as red]
+             [clojure.walk           :as walk
+               :refer [prewalk]]
+             [cljs.analyzer                      ]
+   #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
+             [clojure.jvm.tools.analyzer         ]
+             [clojure.tools.analyzer.jvm         ]
+             [riddley.walk                       ]
+             [clojure.tools.reader :as r]])
+             [quantum.core.core])
+  #?(:cljs (:require-macros
+             [quantum.core.macros.core
+               :refer [env]])))
 
 ; ===== ENVIRONMENT =====
 
