@@ -408,11 +408,12 @@
            'regex?           regex-types
            'integral?        integral-types
            'primitive?       primitive-types
-           'qreducer?        '{:clj #{clojure.core.protocols.CollReduce
-                                      #_quantum.core.reducers.Folder}
-                               :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
-                                       quantum.core.type.defs.Folder
-                                       quantum.core.type.defs.Reducer}}
+           'reducer?        '{:clj #{#_clojure.core.protocols.CollReduce
+                                     quantum.core.type.defs.Folder
+                                     quantum.core.type.defs.Reducer}
+                              :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
+                                      quantum.core.type.defs.Folder
+                                      quantum.core.type.defs.Reducer}}
            'file?            '{:clj  #{java.io.File}
                                :cljs #{}} ; js/File isn't always available! Use an abstraction
            'array-list?      array-list-types

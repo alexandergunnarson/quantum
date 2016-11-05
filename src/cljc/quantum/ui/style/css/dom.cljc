@@ -1,19 +1,17 @@
 (ns quantum.ui.style.css.dom
-           (:refer-clojure :exclude [assert])
-           (:require [clojure.string     :as str]
-                     [quantum.core.error :as err
-                       :refer [#?(:clj assert)] ]
-                     [quantum.core.fn    :as fn
-                       :refer [#?@(:clj [fn->])]]
-                     [quantum.core.logic :as logic
-                       :refer [#?@(:clj [fn-and]) nnil?]])
-  #?(:cljs (:require-macros
-                     [quantum.core.logic :as logic
-                       :refer [fn-and]            ]
-                     [quantum.core.error :as err
-                       :refer [assert]            ]
-                     [quantum.core.fn    :as fn
-                       :refer [fn->]              ])))
+  (:require
+    [clojure.string        :as str]
+    [quantum.core.error    :as err]
+    [quantum.core.fn       :as fn
+      :refer        [#?@(:clj [fn->])]
+      :refer-macros [          fn->]]
+    [quantum.core.logic    :as logic
+      :refer        [nnil?
+                     #?@(:clj [fn-and])]
+      :refer-macros [          fn-and]]
+    [quantum.core.validate :as v
+      :refer        [#?(:clj validate)]
+      :refer-macros [        validate]]))
 
 #?(:cljs
 (defn add-link! [link]
@@ -38,7 +36,7 @@
 (defn replace-css-at! [id css-str]
   "Replaces CSS at a style node."
   (let [elem (.getElementById js/document id)
-        _ (assert ((fn-and nnil? (fn-> .-tagName str/lower-case (= "style"))) elem) #{elem})
+        _ (validate elem (v/and nnil? (fn-> .-tagName str/lower-case (= "style"))))
         text (.createTextNode js/document css-str)]
     (while (.-firstChild elem)
       (.removeChild elem (.-firstChild elem)))

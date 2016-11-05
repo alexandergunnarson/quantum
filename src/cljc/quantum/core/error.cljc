@@ -2,25 +2,21 @@
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
-           (:refer-clojure :exclude [assert])
-           (:require [clojure.string                :as str    ]
-                     [quantum.core.collections.base :as cbase
-                       :refer [#?(:clj kmap)]                  ]
-                     [quantum.core.data.map         :as map    ]
-                     [slingshot.slingshot           :as try    ]
-                     [quantum.core.macros.core      :as cmacros
-                       :refer [#?(:clj if-cljs)]               ]
-                     [quantum.core.log              :as log    ]
-                     [quantum.core.vars             :as var
-                       :refer [#?(:clj defalias)]              ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections.base :as cbase
-                       :refer [kmap]                           ]
-                     [quantum.core.macros.core      :as cmacros
-                       :refer [if-cljs]                        ]
-                     [quantum.core.log              :as log    ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                       ])))
+  (:require
+    [clojure.string                :as str]
+    [quantum.core.collections.base :as cbase
+      :refer        [#?(:clj kmap)]
+      :refer-macros [        kmap]]
+    [quantum.core.data.map         :as map]
+    [slingshot.slingshot           :as try]
+    [quantum.core.macros.core      :as cmacros
+      :refer        [#?(:clj if-cljs)]
+      :refer-macros [        if-cljs]]
+    [quantum.core.log              :as log
+      :include-macros true]
+    [quantum.core.vars             :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]))
 
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))
@@ -126,28 +122,6 @@
   `(if (~pred ~expr)
        ~expr
        (throw ~err))))
-
-#?(:clj
-(defmacro assert
-  "Like |assert|, but takes a type"
-  {:references ["https://github.com/google/guava/wiki/PreconditionsExplained"]
-   :usage '(let [a 4]
-             (assert (neg? (+ 1 3 a)) #{a}))}
-  [expr & [syms type]]
-  `(when-not ~expr
-     (throw
-       (->ex ~(or type :assertion-error)
-             (str "Assertion not satisfied: " '~expr ; TODO having this assertion string can be expensive if assertions fail on large data structures
-                   "\n"
-                   "Symbols: " (kmap ~@syms))
-             (assoc (kmap ~@syms)
-               :assert-expr '~expr))))))
-
-#?(:clj
-(defmacro validate [pred expr]
-  `(let [expr# ~expr]
-     (assert (~pred expr#))
-     expr#)))
 
 #?(:clj
 (defmacro try-or

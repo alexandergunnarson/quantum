@@ -8,24 +8,25 @@
             [#?(:clj  clojure.core.async
                 :cljs cljs.core.async   )            :as async    ]
             [quantum.core.collections                :as coll
-              :refer        [#?@(:clj [kmap join]) remove-vals+]         
+              :refer        [#?@(:clj [kmap join]) remove-vals+]
               :refer-macros [kmap join]]
             [quantum.core.string                     :as str      ]
             [quantum.net.client.impl                 :as impl     ]
             [quantum.net.core                        :as net      ]
             [quantum.core.paths                      :as path    ]
     #?(:clj [quantum.net.server.router               :as router   ])
-            [quantum.core.error                      :as err      
+            [quantum.core.error                      :as err]
+            [quantum.core.validate                   :as v
               :refer        [#?(:clj validate)]
-              :refer-macros [validate]]
+              :refer-macros [        validate]]
             [quantum.core.fn
               :refer [fn-nil]                                     ]
-            [quantum.core.log                        :as log      
+            [quantum.core.log                        :as log
               :include-macros true]
             [quantum.core.logic                      :as logic
               :refer [nnil?]                                      ]
             [quantum.core.vars                       :as var
-              :refer        [#?@(:clj [defalias])]                       
+              :refer        [#?@(:clj [defalias])]
               :refer-macros [defalias]])
   #?(:cljs (:require-macros [quantum.core.vars :refer [defalias]])))
 
@@ -56,11 +57,10 @@
     (start [this]
       (let [stop-fn-f (atom (fn []))]
         (try
-          (err/assert (net/valid-port? port) #{port})
-          (err/assert (contains? #{:aleph :immutant #_:http-kit} type) #{type}) ; TODO use clojure.spec
-          (err/assert (var? routes-var) #{routes-var})
-          (err/assert (fn? routes-fn) #{routes-fn})
-
+          (validate port       net/valid-port?
+                    type       #{:aleph :immutant #_:http-kit}
+                    routes-var var?
+                    routes-fn  fn?)
           (let [opts (->> (merge
                             {:host           (or host     "localhost")
                              :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
@@ -70,7 +70,7 @@
                              :http2?         (or http2?   false)
                              :keystore       key-store-path
                              :truststore     trust-store-path
-                             
+
                              :root-path      (or root-path
                                                (path/path (System/getProperty "user.dir")
                                                  "resources" "public"))
@@ -177,7 +177,7 @@
                 (println "Load")
                 (check-status)
                 (apply (or on-load-0 fn-nil) args))))
-        (do (set! (.-onreadystatechange xhr) 
+        (do (set! (.-onreadystatechange xhr)
               (fn [& args]
                 (println "State change")
                 (condp = (.-readyState xhr)
@@ -185,7 +185,7 @@
                   0 (on-down)
                   (apply (or on-ready-state-change-0 fn-nil) args)))))))))
 
-; ===== NETWORK CONNECTIVITY CHECKING/HANDLING ===== 
+; ===== NETWORK CONNECTIVITY CHECKING/HANDLING =====
 
 (defonce network-connected? (atom nil))
 (defonce network-connection-handlers

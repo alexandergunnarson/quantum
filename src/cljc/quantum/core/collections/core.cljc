@@ -38,8 +38,8 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer        [#?@(:clj [fn1])]
-              :refer-macros [          fn1]]
+              :refer        [#?@(:clj [fn1 rfn])]
+              :refer-macros [          fn1 rfn]]
             [quantum.core.logic             :as logic
               :refer        [nnil? nempty?
                              #?@(:clj [eq? fn-eq? whenc whenf ifn1])]
@@ -51,8 +51,8 @@
               :refer-macros [          defnt]]
             [quantum.core.reducers          :as red
               :refer        [drop+ take+
-                             #?@(:clj [dropr+ taker+ rfn reduce])]
-              :refer-macros [rfn reduce]]
+                             #?@(:clj [dropr+ taker+ reduce])]
+              :refer-macros [reduce]]
             [quantum.core.type              :as type
               :refer        [class
                              #?(:clj pattern?)]
@@ -208,7 +208,7 @@
            (^long [^ManyToManyChannel x] (count (.buf x))))
            (^long [^vector?           x] (#?(:clj .count :cljs core/count) x))
            (^long [                   x] (core/count x))
-           (^long [^qreducer?         x] (red/reduce-count x))
+           (^long [^reducer?          x] (red/reduce-count x))
            ; Debatable whether this should be allowed
            (^long [:else              x] 0))
 
@@ -263,7 +263,7 @@
   {:todo "Differentiate between |subseq| and |slice|"}
   ; inclusive range
           ([^string?     coll ^pinteger? a ^pinteger? b] (.substring coll a (inc b)))
-          ([^qreducer?   coll ^pinteger? a ^pinteger? b] (->> coll (take+ b) (drop+ a)))
+          ([^reducer?    coll ^pinteger? a ^pinteger? b] (->> coll (take+ b) (drop+ a)))
   #?(:clj ([^array-list? coll ^pinteger? a ^pinteger? b] (.subList coll a b)))
           ([^vec?        coll ^pinteger? a ^pinteger? b] (subvec+ coll a (inc b)))
           ([^vec?        coll ^pinteger? a             ] (subvec+ coll a (-> coll count)))
@@ -278,13 +278,13 @@
 
 (defnt rest
   "Eager rest."
-  ([^keyword?  k]    (-> k name core/rest))
-  ([^symbol?   s]    (-> s name core/rest))
-  ([^qreducer? coll] (drop+ 1 coll))
-  ([^string?   coll] (getr coll 1 (lasti coll)))
-  ([^vec?      coll] (getr coll 1 (lasti coll)))
-  ([^array?    coll] (getr coll 1 (core/long (lasti coll)))) ; TODO use macro |long|
-  ([           coll] (core/rest coll)))
+  ([^keyword? k]    (-> k name core/rest))
+  ([^symbol?  s]    (-> s name core/rest))
+  ([^reducer? coll] (drop+ 1 coll))
+  ([^string?  coll] (getr coll 1 (lasti coll)))
+  ([^vec?     coll] (getr coll 1 (lasti coll)))
+  ([^array?   coll] (getr coll 1 (core/long (lasti coll)))) ; TODO use macro |long|
+  ([          coll] (core/rest coll)))
 
 #?(:clj (defalias popl rest))
 
@@ -453,7 +453,7 @@
   ; TODO import clojure.lang.RT/nth
   ([#{vector? string? array-list? #_array? ; for now, because java.lang.VerifyError: reify method: Nth signature: ([Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;) Incompatible object argument for function call
       listy?} coll i] (get coll i))
-  ([^qreducer? coll i]
+  ([^reducer? coll i]
     (let [i' (volatile! 0)]
       (reduce (rfn [ret x] (if (= @i' i)
                                 (reduced x)
@@ -566,7 +566,7 @@
   ([^vec?                                  coll] (get coll #?(:clj (Long. 0) :cljs 0))) ; to cast it...
   ; TODO is this wise?
   ([^integral?                             coll] coll)
-  ([^qreducer?                             coll] (reduce (rfn [_ x] (reduced x)) nil coll))
+  ([^reducer?                              coll] (reduce (rfn [_ x] (reduced x)) nil coll))
   ([:else                                  coll] (core/first coll)))
 
 (defalias firstl first) ; TODO not always true
@@ -576,14 +576,14 @@
   ; 2.8  nanos to (.cast Long _)
   ; 1.26 nanos to (Long. _)
   ([^vec?                           coll] (get coll #?(:clj (Long. 1) :cljs 1))) ; to cast it...
-  ([^qreducer?                      coll] (nth coll 1))
+  ([^reducer?                       coll] (nth coll 1))
   ([:else                           coll] (core/second coll)))
 
 (defnt butlast
   {:todo ["Add support for arrays"
           "Add support for CLJS IPersistentStack"]}
           ([^string?                       coll] (getr coll 0 (-> coll lasti dec)))
-  #?(:clj ([^qreducer?                     coll] (dropr+ 1 coll)))
+  #?(:clj ([^reducer?                      coll] (dropr+ 1 coll)))
   #?(:clj ([^clojure.lang.IPersistentStack coll] (.pop coll)))
           ([^vec?                          coll] (whenf coll nempty? core/pop))
   #?(:clj ([^clojure.lang.IPersistentList  coll] (core/butlast coll)))
@@ -594,7 +594,7 @@
 
 (defnt last
           ([^string?          coll] (get coll (lasti coll)))
-  #?(:clj ([^qreducer?        coll] (taker+ 1 coll)))
+  #?(:clj ([^reducer?         coll] (taker+ 1 coll)))
           ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^vec?             coll] (#?(:clj .peek :cljs .-peek) coll)) ; because |peek| works on lists too
   #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]

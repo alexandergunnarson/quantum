@@ -7,8 +7,8 @@
       :refer [->ex]
       :include-macros true              ]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [fn1 <- fn-> fn->>])]
-      :refer-macros [fn1 <- fn-> fn->>]     ]
+      :refer        [#?@(:clj [fn1 fn$ <- fn-> fn->>])]
+      :refer-macros [          fn1 fn$ <- fn-> fn->>]     ]
     [quantum.core.log         :as log
       :include-macros true              ]
     [quantum.core.logic       :as logic
@@ -34,7 +34,10 @@
                      ratio?                ]
       :refer-macros [numerator denominator]]
     [quantum.core.numeric.convert :as nconv
-      :refer        [->ratio]              ])
+      :refer        [->ratio]              ]
+    [quantum.core.validate            :as v
+      :refer        [#?(:clj validate)]
+      :refer-macros [        validate]])
   #?(:cljs
   (:require-macros
     [quantum.db.datomic.entities
@@ -122,12 +125,12 @@
                 :else
                 (let [~v-f (atom ~v-0)]
                   ~(if (= cardinality :many)
-                       `(err/assert (every? (get validators ~type) (deref ~v-f)) #{~v-f})
-                       `(err/assert        ((get validators ~type) (deref ~v-f)) #{~v-f}))
+                       `(validate (deref ~v-f) (fn$ every? (get validators ~type)))
+                       `(validate (deref ~v-f) (get validators ~type)))
                   (when-let [transformer# (-> @schemas ~attr-k (get 2) :transformer)]
                     (swap! ~v-f transformer#))
                   (when-let [validator#   (-> @schemas ~attr-k (get 2) :validator  )] ; technically, post-transformer-validator
-                    (err/assert (validator# (deref ~v-f)) #{~v-f}))
+                    (validate (deref ~v-f) validator#))
 
                   ~(when ref-tos
                      (let [valid-instance?
@@ -135,7 +138,7 @@
                               `(identifier? ~(list 'deref v-f))
                               (map #(list 'instance? % (list 'deref v-f)) ref-tos))
                            err-sym (gensym 'e)]
-                       `(try (err/assert ~valid-instance? #{~v-f})
+                       `(try (assert ~valid-instance?) ; TODO make a better assert
                           (catch Throwable ~err-sym
                             ~(if (-> ref-tos count (> 1))
                                  `(throw ~err-sym)
@@ -260,8 +263,8 @@
     (map? v)
     (reduce-kv
       (fn [ret k v]
-        (err/assert (contains? validators k) #{k})
-        (err/assert ((get validators k) v) #{v})
+        (validate k validators
+                  v (fn1 (get validators k)))
         (assoc ret k
           (if (= k :unit:v)
               (->ratio:long v)

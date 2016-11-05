@@ -59,20 +59,6 @@
         (defalias fold*     fold/fold    ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
         (defalias red-apply red/red-apply)
 
-#?(:clj
-(defmacro rfn
-  "Creates a reducer-safe function."
-  [arglist & body]
-  (let [sym (gensym)]
-    (case (count arglist)
-          1 `(fn ~sym (~arglist ~@body)
-                      ([k# v#] (~sym [k# v#])))
-          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
-                      (~arglist ~@body)
-                      ([ret# k# v#] (~sym ret# [k# v#])))
-          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
-                      (~arglist ~@body))
-          (throw (->ex nil "Illegal arglist count passed to rfn" (cbase/kmap arglist)))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
 ;=================================================={  with support for /fold/ }=====================================================

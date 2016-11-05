@@ -1,16 +1,16 @@
 (ns quantum.ui.core
-           (:require [com.stuartsierra.component :as component]
-            #?(:cljs [reagent.core               :as rx       ])
-                     [quantum.core.error         :as err      ]
-                     [quantum.core.log           :as log      ]
-                     [quantum.core.loops
-                       #?@(:clj [:refer [until]])             ]
-                     [quantum.core.async         :as async    ])
-  #?(:cljs (:require-macros
-                     [quantum.core.error         :as err      ]
-                     [quantum.core.log           :as log      ]
-                     [quantum.core.loops
-                       :refer [until]                         ])))
+  (:require [com.stuartsierra.component :as component]
+   #?(:cljs [reagent.core               :as rx       ])
+            [quantum.core.error         :as err      ]
+            [quantum.core.log           :as log      
+              :include-macros true]
+            [quantum.core.loops
+              :refer        [#?@(:clj [until])]
+              :refer-macros [          until]]
+            [quantum.core.async         :as async    ]
+            [quantum.core.validate            :as v
+             :refer        [#?(:clj validate)]
+             :refer-macros [        validate]]))
 
 (defrecord
   ^{:doc "An abstraction for a renderer.
@@ -28,18 +28,17 @@
   [type init-fn render-fn root-id]
   component/Lifecycle
   (start [this]
-    (err/assert (contains? #{:reagent} type) #{type})
-    (err/assert (not (async/web-worker?)))
+    (validate type #{:reagent})
+    (assert (not (async/web-worker?)))
 
     (when init-fn
-      (err/assert (fn? init-fn) #{init-fn})
+      (validate init-fn fn?)
       (init-fn))
 
     (condp = type
       :reagent
-      (do (err/assert (fn?     render-fn) #{render-fn})
-          (err/assert (string? root-id  ) #{root-id  })
-
+      (do (validate render-fn fn?
+                    root-id   string?)
             ; If the root node does not exist, creates it as a div and
             ; appends it to the DOM
             #?(:cljs

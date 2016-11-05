@@ -1,16 +1,16 @@
 (ns quantum.parse.core
-           (:refer-clojure :exclude [reduce])
-           (:require
-             [quantum.core.fn          :as fn
-               :refer [firsta aritoid fn-nil]]
-             [quantum.core.collections :as coll
-               :refer [#?@(:clj [join reduce]) remove+ map+]]
-             [instaparse.core          :as insta])
-  #?(:cljs (:require-macros
-             [quantum.core.collections
-               :refer [join reduce]                    ]))
-  #?(:cljs (:import
-             goog.string.StringBuffer)))
+  (:refer-clojure :exclude [reduce])
+  (:require
+    [quantum.core.fn          :as fn
+      :refer        [firsta aritoid fn-nil
+                     #?@(:clj [rfn])]
+      :refer-macros [          rfn]]
+    [quantum.core.collections :as coll
+      :refer        [remove+ map+
+                     #?@(:clj [join reduce]) ]
+      :refer-macros [          join reduce]]
+    [instaparse.core          :as insta])
+  #?(:cljs (:import goog.string.StringBuffer)))
 
 (def std-defs ; newline to facilitate concatenation
   "
@@ -33,7 +33,7 @@
 (def java-properties-parser
   (insta/parser
     (str "S         = (line newline)+ line? / line
-      
+
           line      = spaces? / <comment> / prop-pair
           comment   = spaces? '#' non-newlines
           prop-pair = spaces? prop spaces? <'='> spaces? value spaces?
@@ -84,8 +84,8 @@
        (map+ (fn [k v] (str (name k) \=
                             (when-not no-quote? \") v
                             (when-not no-quote? \"))))
-       (reduce (fn [#?(:clj  ^StringBuilder ret
-                       :cljs ^StringBuffer  ret) kv] ; TODO abstract this
+       (reduce (rfn [#?(:clj  ^StringBuilder ret
+                        :cljs ^StringBuffer  ret) kv] ; TODO abstract this
                  (.append ret \newline)
                  (.append ret kv))
          #?(:clj  (StringBuilder.)

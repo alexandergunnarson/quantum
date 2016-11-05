@@ -19,7 +19,7 @@
                      [quantum.core.macros              :as macros
                        :refer [#?@(:clj [assert-args])]           ]
                      [quantum.core.reducers.reduce     :as red    ]
-                     [quantum.core.reducers
+                     [quantum.core.fn
                        :refer [#?@(:clj [rfn])]]
                      [quantum.core.macros.optimization :as opt    ]
                      [quantum.core.type                :as type   ])

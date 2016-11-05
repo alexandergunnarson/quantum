@@ -1,29 +1,31 @@
 (ns quantum.net.server.router
-  (:require ; AUTHENTICATION
-            [cemerick.friend                          :as friend   ]
-            [cemerick.friend.workflows                :as workflows]
-            [cemerick.friend.credentials              :as creds    ]
-            ; WEBSOCKETS
-            [taoensso.sente                           :as ws       ]
-            ; ROUTING
-            [compojure.core                           :as route
-              :refer [GET ANY POST defroutes]                      ]
-            [compojure.route
-              :refer [not-found]                                   ]
-            ; UTILS
-            [com.stuartsierra.component :as component]
-            [quantum.net.server.middleware :as mid   ]
-            [quantum.core.validate         :as v     ]
-            [quantum.core.string           :as str   ]
-            [quantum.core.log              :as log   ]
-            [quantum.core.resources        :as res   ]
-            [quantum.core.paths            :as paths ]
-            [quantum.core.core             :as qcore
-              :refer [lens]                          ]
-            [quantum.core.logic            :as logic
-              :refer [nnil?]                         ]
-            [quantum.core.fn               :as fn
-              :refer [<- fn->]                       ]))
+  (:require
+    ; AUTHENTICATION
+    [cemerick.friend                  :as friend]
+    [cemerick.friend.workflows        :as workflows]
+    [cemerick.friend.credentials      :as creds]
+    ; WEBSOCKETS
+    [taoensso.sente                   :as ws]
+    ; ROUTING
+    [compojure.core                   :as route
+      :refer [GET ANY POST defroutes]]
+    [compojure.route
+      :refer [not-found]]
+    ; UTILS
+    [com.stuartsierra.component       :as component]
+    [quantum.net.server.middleware    :as mid]
+    [quantum.core.validate            :as v
+      :refer [validate]]
+    [quantum.core.string              :as str]
+    [quantum.core.log                 :as log]
+    [quantum.core.resources           :as res]
+    [quantum.core.paths               :as paths]
+    [quantum.core.core                :as qcore
+      :refer [lens]]
+    [quantum.core.logic               :as logic
+      :refer [nnil?]]
+    [quantum.core.fn                  :as fn
+      :refer [<- fn->]]))
 
 ; SECURITY MEASURES TAKEN CARE OF
 ; CSRF : ring.middleware.anti-forgery
@@ -67,9 +69,9 @@
 
 (defn ws-routes
   [{:keys [ws-uri get-fn post-fn]}]
-  (v/validate fn?     get-fn )
-  (v/validate fn?     post-fn)
-  (v/validate string? ws-uri)
+  (validate get-fn  fn?
+            post-fn fn?
+            ws-uri  string?)
   [(GET  ws-uri req (get-fn  req))
    (POST ws-uri req (post-fn req))])
 

@@ -313,3 +313,18 @@
              x)))
     ([x y] (f x y))
     ([x y & more] (apply f x y more)))))
+
+#?(:clj
+(defmacro rfn
+  "Creates a reducer-safe function."
+  [arglist & body]
+  (let [sym (gensym)]
+    (case (count arglist)
+          1 `(fn ~sym (~arglist ~@body)
+                      ([k# v#] (~sym [k# v#])))
+          2 `(fn ~sym ([[k# v#]] (~sym k# v#))
+                      (~arglist ~@body)
+                      ([ret# k# v#] (~sym ret# [k# v#])))
+          3 `(fn ~sym ([ret# [k# v#]] (~sym ret# k# v#))
+                      (~arglist ~@body))
+          (throw (ex-info "Illegal arglist count passed to rfn" {:arglist arglist}))))))

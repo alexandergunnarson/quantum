@@ -2,7 +2,7 @@
     ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
            (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
-                                     update merge if-let assert for])
+                                     update merge if-let for])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )     :as c              ]
             #?(:cljs [cljs-uuid-utils.core       :as uuid           ])
@@ -16,8 +16,7 @@
                                group-by+ postwalk merge-deep dissoc-in+]
                        #?@(:cljs [:refer-macros [join for kmap]])]
                      [quantum.core.error         :as err
-                       :refer        [#?(:clj assert) ->ex]
-                       :refer-macros [assert]                       ]
+                       :refer        [->ex]]
                      [quantum.core.fn            :as fn
                        :refer        [#?@(:clj [<- fn-> fn->> fn1])]
                        :refer-macros [<- fn-> fn->> fn1]            ]
@@ -36,7 +35,10 @@
                        :refer [atom?]                               ]
                      [quantum.core.vars          :as var
                        :refer        [#?@(:clj [defalias])]
-                       :refer-macros [defalias]                     ])
+                       :refer-macros [defalias]                     ]
+                     [quantum.core.validate      :as v
+                       :refer        [#?(:clj validate)]
+                       :refer-macros [        validate]])
   #?(:cljs (:require-macros
                      [datomic-cljs.macros
                        :refer [<?]                                  ]))
@@ -168,7 +170,7 @@
   ([] (tempid (or @part* #?(:cljs :db.part/test)))) ; because DataScript doesn't really care about partitions
   ([part] (tempid (->db) part))
   ([db part]
-    (assert (nnil? part))
+    (validate part nnil?)
     (cond            (mdb? db) (mdb/tempid part)
           #?@(:clj  [(db?  db) (db/tempid  part)])
           :else (throw (unhandled-type :db db)))))
@@ -327,14 +329,14 @@
   ([ident cardinality val-type]
     (->schema ident cardinality val-type nil))
   ([ident cardinality val-type {:keys [conn part] :as opts}]
-    (assert (contains? allowed-types val-type) #{val-type})
+    (validate val-type allowed-types)
     (let [conn-f (or conn @conn*)
           part-f (when-not (mconn? conn-f)
                    (or part
                        :db.part/db))]
       ; Partitions are not supported in DataScript (yet)
       (when-not ((fn-or mconn? nil?) conn-f)
-        (assert (nnil? part-f) #{conn-f part-f}))
+        (validate part-f nnil?))
 
       (let [cardinality-f
               (condp = cardinality
@@ -386,7 +388,7 @@
   ([f] (update-schemas (->db)))
   ([x f]
     (let [for-mdb (fn [mdb]
-                    (assert (mdb? mdb) #{mdb})
+                    (validate mdb mdb?)
                     (let [schemas (f (:schema mdb))]
                       (log/pr ::debug (kmap schemas))
                       (-> (mdb/init-db
@@ -408,7 +410,7 @@
 (defn update-schemas!
   ([f] (update-schemas! @conn* f))
   ([conn f]
-    (assert (mconn? conn) #{conn})
+    (validate conn mconn?)
     (swap! conn update-schemas f)))
 
 (defn merge-schemas
@@ -433,7 +435,7 @@
 (defn replace-schemas!
   ([schemas] (replace-schemas! @conn* schemas))
   ([conn schemas]
-    (assert (mconn? conn) #{conn})
+    (validate conn mconn?)
     (swap! conn update-schemas (constantly schemas))))
 
 (defn dissoc-schema!
@@ -742,7 +744,7 @@
   ([^Database db]
     (let [history (-> db :ephemeral :history)
           conn    (-> db :ephemeral :conn   )]
-      (err/assert (atom? history) #{history})
+      (validate history atom?)
       (when (nempty? @history)
         (let [prev   (peek @history)
               before (:db-before prev)

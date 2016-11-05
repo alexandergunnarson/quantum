@@ -12,8 +12,8 @@
                :refer        [->name ->str]]
              [quantum.core.error         :as err
                :refer        [->ex
-                              #?@(:clj [throw-unless assert])]
-               :refer-macros [          throw-unless assert]]
+                              #?@(:clj [throw-unless])]
+               :refer-macros [          throw-unless]]
              [quantum.core.fn            :as fn
                :refer        [firsta
                               #?@(:clj [fn->])]
@@ -36,6 +36,9 @@
              [quantum.core.vars          :as var
                :refer        [#?@(:clj [defalias])]
                :refer-macros [          defalias]]
+             [quantum.core.validate      :as v
+              :refer        [#?(:clj validate)]
+              :refer-macros [        validate]]
              [quantum.core.macros        :as macros
                :refer        [#?@(:clj [defnt])]
                :refer-macros [          defnt]])
@@ -170,11 +173,11 @@
                        overwrite       true  ; :date, :num :num-0
                        formatting-func identity}
                 :as   options}]
-  (assert (core/contains? #{:compress :pretty :serialize :print} method) #{method})
+  (validate method #{:compress :pretty :serialize :print})
   (doseq [file-type-n file-types]
     (let [data data-
           file-path (p/parse-dir path-)
-          _ (assert (string? file-path))
+          _ (validate file-path string?)
           file-path-parsed file-path
           directory-parsed (p/parse-dir directory)
           directory-f

@@ -18,13 +18,13 @@
                     [com.stuartsierra.component       :as component]
                     [quantum.core.collections         :as coll
                       :refer        [#?@(:clj [kmap containsv?])]
-                      :refer-macros [kmap containsv?]              ]
+                      :refer-macros [          kmap containsv?]]
                     [quantum.core.error               :as err
                       :refer        [->ex #?(:clj try-times)]
-                      :refer-macros [try-times]                    ]
+                      :refer-macros [             try-times]]
                     [quantum.core.fn                  :as fn
-                      :refer        [#?@(:clj [fn->])]
-                      :refer-macros [fn->]                         ]
+                      :refer        [#?@(:clj [fn1 fn->])]
+                      :refer-macros [          fn1 fn->]]
                     [quantum.core.log                 :as log
                       :include-macros true]
                     [quantum.core.logic               :as logic
@@ -48,10 +48,11 @@
                       :refer [->name]                              ]
                     [quantum.core.paths               :as path     ]
                     [quantum.parse.core               :as parse    ]
-                    [quantum.core.validate
+                    [quantum.core.validate            :as v
                       :refer        [#?(:clj validate)]
-                      :refer-macros [validate]                     ]
-                    [quantum.validate.core            :as v        ])
+                      :refer-macros [        validate]]
+                    [quantum.validate.core
+                      :refer        [no-blanks?]])
   #?(:cljs (:require-macros
                     [cljs.core.async.macros
                        :refer [go]                                 ]
@@ -201,7 +202,7 @@
                         :default-partition default-partition-f))
         (catch #?(:clj Throwable :cljs :default) e
           (log/ppr :warn "Error in starting EphemeralDatabase"
-            {:this this :err {:e e :stack (.-stack e)}})
+            {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
           e)))
     (stop [this]
       (when (atom? conn)
@@ -210,7 +211,7 @@
 
 (defn ->ephemeral-db
   [{:keys [history-limit] :as config}]
-  (err/assert ((fn-or nil? integer?) history-limit))
+  (validate history-limit (v/or* nil? integer?))
   (map->EphemeralDatabase
     (c/assoc config :history-limit (or history-limit 0))))
 
@@ -236,12 +237,9 @@
                                         :memory-index-threshold "32m" ; Recommended settings for -Xmx1g usage
                                         :memory-index-max       "128"
                                         :object-cache-max       "128m"
-                                        :data-dir               (validate v/no-blanks?
-                                                                  (if res (path/path res "data"          ) "data"          ))
-                                        :log-dir                (validate v/no-blanks?
-                                                                  (if res (path/path res "log"           ) "log"           ))
-                                        :pid-file               (validate v/no-blanks?
-                                                                  (if res (path/path res "transactor.pid") "transactor.pid"))}
+                                        :data-dir               (validate (if res (path/path res "data"          ) "data"          ) no-blanks?)
+                                        :log-dir                (validate (if res (path/path res "log"           ) "log"           ) no-blanks?)
+                                        :pid-file               (validate (if res (path/path res "transactor.pid") "transactor.pid") no-blanks?)}
                                      (c/dissoc internal-props :path))]
                          (io/assoc! props-path-f
                            (parse/output :java-properties internal-props-f {:no-quote? true})
@@ -349,13 +347,12 @@
 (defn ->backend-db
   [{:keys [type name host port txr-alias create-if-not-present?]
     :as config}]
-  ; TODO change these things to use schema?
-  (err/assert (contains? #{:free :http} type)) ; TODO for now
-  (err/assert ((fn-and string? nempty?) name))
-  (err/assert ((fn-and string? nempty?) host))
-  (err/assert ((fn-or nil? integer?) port))
-  (err/assert ((fn-or nil? string?)  txr-alias))
-  (err/assert ((fn-or nil? boolean?) create-if-not-present?))
+  (validate type                   #{:free :http}  ; TODO for now
+            name                   (v/and string? nempty?)
+            host                   (v/and string? nempty?)
+            port                   (v/or* nil? integer?)
+            txr-alias              (v/or* nil? string?)
+            create-if-not-present? (v/or* nil? (fn1 boolean?)))
   (map->BackendDatabase
     (c/assoc config :uri  (atom nil)
                     :conn (atom nil))))

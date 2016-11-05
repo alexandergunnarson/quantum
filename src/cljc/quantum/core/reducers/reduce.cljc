@@ -102,7 +102,7 @@
                                (recur (unchecked-inc n)
                                       (f ret (.charAt s n)))))))))
 #?(:clj ([^record? coll f init] (clojure.core.protocols/coll-reduce coll f init)))
-        ([^qreducer? x f init]
+        ([^reducer? x f init]
           (reduce* (:coll x) ((:transform x) f) init))
         ([^chan?   x    f init] (async/reduce f init x))
         ([^map?    coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
@@ -210,7 +210,7 @@
 (defnt joinl'
   "Like |joinl|, but reduces into the empty version of the
    collection passed."
-  ([^qreducer?    from] (joinl' (empty (:coll from)) from))
+  ([^reducer?     from] (joinl' (empty (:coll from)) from))
   ([              from] (joinl' (empty        from ) from))
   ([^list?     to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
   ([           to from] (joinl to from)))

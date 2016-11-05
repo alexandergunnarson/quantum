@@ -4,12 +4,7 @@
             sequences for common combinatorial functions. (See the source code
             for a longer description.)"}
   quantum.core.numeric.combinatorics
-  (:refer-clojure :exclude [update assert])
-           (:require [quantum.core.error :as err
-                       :refer [#?(:clj assert)] ])
-  #?(:cljs (:require-macros
-                     [quantum.core.error :as err
-                       :refer [assert]          ])))
+  (:refer-clojure :exclude [update]))
 
 ; TO EXPLORE
 ; - Mathematica
@@ -378,7 +373,6 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   [l n]
   (let [fact (factorial (count l))]
     (assert (< n fact)
-            #{n l}
             (str n    " is too large. Input has only "
                  fact " permutations."))
     (let [length (count l)
@@ -477,10 +471,8 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
    :contributors ["Alex Gunnarson"]}
   [l n]
   (let [ct (count-permutations l)]
-    (assert (< n ct)
-            #{n l}
-            (str n  " is too large. Input has only "
-                 ct " permutations."))
+    (assert (< n ct) (str n  " is too large. Input has only "
+                          ct " permutations."))
     (loop [freqs (into (sorted-map) (frequencies l))
            indices (factorial-numbers-with-duplicates n freqs)
            perm []]
@@ -660,7 +652,6 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
    :contributors ["Alex Gunnarson"]}
   [items t n]
   (assert (< n (count-combinations items t))
-          #{n items t}
           (str n  " is too large. Input has only "
                (count-combinations-unmemoized items t) " combinations."))
   (if (all-different? items)
@@ -681,7 +672,6 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
   [items n]
   (let [ct (count-subsets items)]
     (assert (< n ct)
-            #{n ct items}
             (str n  " is too large. Input has only "
                  ct " subsets."))
     (loop [size 0
@@ -701,7 +691,7 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
    :from "clojure.math.combinatorics"}
   [l item]
   (loop [l l n 0]
-    (assert (seq l) #{l})
+    (assert (seq l))
     (if (= item (first l)) n
       (recur (rest l) (inc n)))))
 
