@@ -58,7 +58,7 @@
 
 (defn <*
   ([x] true)
-  ([x y] (neg? (compare x y))))
+  ([x y] (core/< (compare x y) 0)))
 
 #?(:clj  (defmacro <-bin  [a b] `(quantum.core.Numeric/lt  ~a ~b)) ; TODO defnt this
    :cljs (defalias <-bin  <*))
@@ -72,7 +72,7 @@
 
 (defn <=*
   ([x] true)
-  ([x y] (not (pos? (compare x y)))))
+  ([x y] (core/<= (compare x y) 0)))
 
 #?(:clj  (defalias <=-bin <=*)
          #_(defmacro <=-bin [a b] `(quantum.core.Numeric/lte ~a ~b)) ; TODO defnt this
@@ -87,7 +87,7 @@
 
 (defn >*
   ([x] true)
-  ([x y] (pos? (compare x y))))
+  ([x y] (core/> (compare x y) 0)))
 
 #?(:clj  (defalias >-bin  >* )
          #_(defmacro >-bin  [a b] `(quantum.core.Numeric/gt  ~a ~b)) ; TODO defnt this
@@ -102,7 +102,7 @@
 
 (defn >=*
   ([x] true)
-  ([x y] (not (neg? (compare x y)))))
+  ([x y] (core/>= (compare x y) 0)))
 
 #?(:clj  (defalias >=-bin >=*)
          #_(defmacro >=-bin [a b] `(quantum.core.Numeric/gte ~a ~b)) ; TODO defnt this
@@ -192,12 +192,12 @@
       (fn ([] nil) ([a b] (if (neg? (comparator a b)) b a)))
       coll)))
 
-(defn least-or [a b else]
+(defn min-or [a b else]
   (cond (< a b) a
         (< b a) b
         :else else))
 
-(defn greatest-or [a b else]
+(defn max-or [a b else]
   (cond (> a b) a
         (> b a) b
         :else else))
