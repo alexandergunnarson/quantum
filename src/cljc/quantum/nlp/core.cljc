@@ -1,4 +1,4 @@
-(ns quantum.semantic.core
+(ns quantum.nlp.core
            (:refer-clojure :exclude [assert get])
            (:require
              [quantum.core.logic
@@ -26,6 +26,9 @@
   #?(:cljs (:import goog.string.StringBuffer)))
 
 ; TO EXPLORE
+; - Apache OpenNLP
+; - Stanford NLP
+; - Lucene
 ; - Mathematica
 ;   - Tools for text mining including semantic analysis
 ; ====================================
