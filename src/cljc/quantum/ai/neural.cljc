@@ -4,51 +4,19 @@
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
     [quantum.core.error
-      :refer [->ex TODO]]))
+      :refer [->ex TODO]]
+    [quantum.ai.ml.projection :as proj]
+    [quantum.core.log :as log
+      :include-macros true]))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - <org.apache.commons.math3.ml.neuralnet.*>
 ; ================
 
-; unsupervised learning
-; artificial neural network
-; multidimensional scaling
-; competitive learning
-; vector quantization
-(defn som
-  "Self-Organizing Map.
-   An unsupervised learning method to produce
-   a low-dimensional (typically two-dimensional) discretized representation
-   (called a map) of the input space of the training samples. The model was
-   first described as an artificial neural network by Teuvo Kohonen, and is
-   sometimes called a Kohonen map.
-
-   SOMs are useful for visualizing low-dimensional views of high-dimensional
-   data, akin to multidimensional scaling.
-   They belong to a large family of competitive learning processes and vector
-   quantization.
-   SOMs consist of components called nodes or neurons.
-   SOMs form a semantic map where similar samples are mapped close together
-   and dissimilar ones apart. More neurons point to regions with high training
-   sample concentration and fewer where the samples are scarce.
-
-   SOMs may be considered a nonlinear generalization of Principal components
-   analysis (PCA).
-
-   COMPARISON WITH OTHER ALGORITHMS
-   It has been shown, using both artificial and real geophysical data, that SOMs
-   have many advantages over the conventional feature extraction methods such as
-   Empirical Orthogonal Functions (EOF) or PCA. (CITE)
-
-   SOMs with a small number of nodes behave in a way that is similar to K-means.
-   However, larger SOMs display properties which are emergent. Therefore, large
-   maps are preferable to smaller ones.
-   In maps consisting of thousands of nodes, it is possible to perform cluster
-   operations on the map itself."
-  {:implemented-by '#{smile.vq.SOM}}
-  [?] (TODO))
-
-(defalias kohonen-map som)
+(defalias som         proj/som)
+(defalias kohonen-map proj/kohonen-map)
 
 (defn neural-gas
   "Neural Gas soft competitive learning algorithm.
