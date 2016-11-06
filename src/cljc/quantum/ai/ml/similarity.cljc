@@ -51,7 +51,8 @@
     :todo ["Move from |aset-in!| to |aset-in!*|"
            "Eliminate boxed math"
            "Allow for n-dimensional, and weighted Levenshtein"
-           "Improve |coll/->multi-array|"]}
+           "Improve |coll/->multi-array|"
+           "Incorporate lightweight stuff from gene sequencing"]}
   [s1 s2]
   (let [s1-ct+1 (-> s1 count int inc*)
         s2-ct+1 (-> s2 count int inc*)
@@ -164,7 +165,8 @@
    [a b]
    The (L-2|Euclidean) distance between two n-dimensional vectors."
   {:implemented-by '{smile.math.distance.EuclideanDistance "faster array implementation"
-                     smile.math.distance.SparseEuclideanDistance "for sparse arrays"}}
+                     smile.math.distance.SparseEuclideanDistance "for sparse arrays"
+                     smile.math.matrix.SingularValueDecomposition "The largest singular value"}}
   ([v] (->> v (map+ sq) sum sqrt))
   ^{:implemented-by '#{org.apache.commons.math3.ml.distance.EuclideanDistance}}
   ([a b] (TODO)))
