@@ -22,3 +22,7 @@
 
 (defnt contains-ext-vowel?
   ([^string? x] (some ext-vowels x)))
+
+(def ^{:doc "Specifically in English"} punctuation
+  #{\[ \] \( \) \{ \} \< \> \:
+    \, \; \- \– \— \! \? \. \… \` \' \" \/}
