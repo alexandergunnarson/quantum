@@ -21,6 +21,8 @@
                        :refer [->ex #?(:clj throw-unless)]     ]
                      [quantum.core.fn               :as fn
                        :refer [#?@(:clj [fn-> <-])]            ]
+                     [quantum.core.log :as log
+                       :include-macros true]
                      [quantum.core.logic            :as logic
                        :refer [#?@(:clj [whenp condpc])
                                nnil? splice-or]                ]
@@ -59,6 +61,8 @@
     org.bouncycastle.crypto.engines.ThreefishEngine
     org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
     [org.bouncycastle.crypto BlockCipher BufferedBlockCipher])))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - Compare Google Closure vs. Forge crypto implementations
