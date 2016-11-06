@@ -9,6 +9,8 @@
                      #?@(:clj [for for+ reduce join kmap count])]
       :refer-macros [          for for+ reduce join kmap count]]
     [quantum.core.numeric :as cnum]
+    [quantum.core.log     :as log
+      :include-macros true]
     [quantum.numeric.core :as num
       :refer        [sum]]
     [quantum.ai.ml.similarity
@@ -27,6 +29,8 @@
     [quantum.core.vars        :as var
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]))
+
+(log/this-ns)
 
 ; NOTES
 ; - org.apache.spark.mllib will be deprecated in favor of org.apache.spark.ml
