@@ -5,6 +5,7 @@
             [environ.core
               :refer [env]]])
             [quantum.core.print :as pr]
+            [quantum.test.ai.ml.classify]
             [quantum.test.apis.amazon.cloud-drive.auth]
             [quantum.test.apis.amazon.cloud-drive.core]
             [quantum.test.apis.google.auth]
@@ -127,7 +128,6 @@
             [quantum.test.db.datomic.shard]
             [quantum.test.deploy.repack]
             [quantum.test.financial.core]
-            [quantum.test.ir.classify]
             [quantum.test.localization.core]
             [quantum.test.measure.convert]
             [quantum.test.measure.core]
@@ -140,6 +140,8 @@
           #_[quantum.test.net.server.router]
             [quantum.test.net.url]
             [quantum.test.net.websocket]
+            [quantum.test.nlp.core]
+            [quantum.test.nlp.stemmers.porter]
             [quantum.test.numeric.core]
           #_[quantum.test.numeric.statistics]
             [quantum.test.numeric.vectors]
@@ -147,8 +149,6 @@
             [quantum.test.parse.core]
             [quantum.test.security.core]
             [quantum.test.security.cryptography]
-            [quantum.test.semantic.core]
-            [quantum.test.semantic.stemmers.porter]
             [quantum.test.system]
             [quantum.test.ui.components]
             [quantum.test.ui.core]
