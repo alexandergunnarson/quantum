@@ -34,6 +34,8 @@
               :refer        [splice-or nempty?
                              #?@(:clj [condf1])]
               :refer-macros [condf1]            ]
+            [quantum.core.log :as log
+              :include-macros true]
             [quantum.core.numeric      :as num   ]
             [quantum.core.fn           :as fn
               :refer        [#?(:clj <-)]
@@ -49,6 +51,8 @@
                java.nio.ByteBuffer
                [org.apache.commons.codec.binary Base64 Base32 Hex]]
         :cljs [goog.string.StringBuffer])))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - java.util.Random
