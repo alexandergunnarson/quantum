@@ -1,4 +1,7 @@
-(ns quantum.numeric.vectors
+(ns quantum.numeric.arrays
+  "1D array: vector
+   2D array: matrix
+   3D array: (no special name)"
   (:refer-clojure :exclude [reduce max for count get subvec swap!])
            (:require
    #?@(:clj [[uncomplicate.neanderthal
@@ -27,7 +30,8 @@
              [quantum.core.vars
                :refer        [#?(:clj defalias)]
                :refer-macros [        defalias]])
-  #?(:clj (:import (org.apache.spark.mllib.linalg BLAS DenseVector))))
+  #?(:clj (:import [org.apache.spark.mllib.linalg BLAS DenseVector]
+                   [uncomplicate.neanderthal.protocols RealVector RealMatrix RealChangeable])))
 
 ; TODO probably use core.matrix API
 
@@ -50,20 +54,6 @@
 ; auto-promotion
 
 ; This takes after mllib/breeze's API
-
-; ============ GET / SET ============
-
-#_"Returns a primitive ^double i-th entry of vector x, or ij-th entry of matrix m."
-#?(:clj (defalias                                get              real/entry ))
-#_"Sets the i-th entry of vector x, or ij-th entry of matrix m."
-#?(:clj (defalias                                set!             real/entry!))
-#_"Returns the BOXED i-th entry of vector x, or ij-th entry of matrix m."
-#?(:clj (defalias                                boxed-get        fnum/entry ))
-#?(:clj (defalias                                boxed-set!       fnum/entry!))
-
-#_"May take either a boxed or unboxed fn:
-   (update! (dv 1 2 3) 2 (fn ^double [^double x] (inc x)))"
-#?(:clj (defalias                                update!          fnum/alter!))
 
 ; ============ CREATE ============
 
@@ -90,6 +80,71 @@
 #?(:clj (defalias                                create           fnum/create    ))
 #?(:clj (defalias                                create-raw       fnum/create-raw))
 
+; ============ GET / SET ============
+
+(defnt get
+  "Returns the i-th entry of vector x,
+   or ij-th entry of matrix m.
+   Breeze: a(0,1)
+   Matlab: a(1,2)
+   numpy:  a[0,1]
+   R:      a[1,2]"
+  {:implemented-by '#{smile.math.matrix.Matrix}}
+  #?(:clj (^double [^RealVector X ^long a        ] (real/entry X a  )))
+          (        [            X       a        ] (TODO))
+  #?(:clj (^double [^RealMatrix X ^long a ^long b] (real/entry X a b)))
+          (        [            X       a       b] (TODO)))
+
+(defn set!
+  "Sets the i-th entry of vector x,
+   or ij-th entry of matrix m."
+  {:implemented-by '#{smile.math.matrix.Matrix}}
+  #?(:clj (^double [^RealChangeable X ^double v ^long a        ] (real/entry! X a v  )))
+          (        [                X         v       a        ] (TODO))
+  #?(:clj (^double [^RealMatrix     X ^double v ^long a ^long b] (real/entry! X a b v)))
+          (        [                X         v       a       b] (TODO)))
+
+#_"Returns the BOXED i-th entry of vector x, or ij-th entry of matrix m."
+#?(:clj (defalias                                boxed-get        fnum/entry ))
+#?(:clj (defalias                                boxed-set!       fnum/entry!))
+
+#_"May take either a boxed or unboxed fn:
+   (update! (dv 1 2 3) 2 (fn ^double [^double x] (inc x)))"
+#?(:clj (defalias                                update!          fnum/alter!))
+
+(defnt subvec
+  "Extract subset of vector.
+   Returns a subvector starting with a, b entries long.
+   Breeze: a(1 to 4) or a(1 until 5) or a.slice(1,5)
+   Matlab: a(2:5)
+   numpy:  a[1:5]
+   R:      a[2:5]
+
+   (negative steps)
+   Breeze: a(5 to 0 by -1)
+   Matlab: a(6:-1:1)
+   numpy:  a[5::-1]
+
+   (tail)  a(1 to -1)  a(2:end)  a[1:] a[2:length(a)] or tail(a,n=length(a)-1)"
+  #?(:clj ([^Vector X ^long a ^long b] (fnum/subvector X a b)))
+          ([        X       a       b] (TODO)))
+
+(defn last
+  "(last element)
+   Breeze: a( -1 )
+   Matlab: a(end)
+   numpy:  a[-1]
+   R:      tail(a, n=1)"
+  [m] (TODO))
+
+(defn col
+  "Extract column of matrix
+   Breeze: a(::, 2)
+   Matlab: a(:,3)
+   numpy:  a[:,2]
+   R:      a[,2]"
+  [m i] (TODO))
+
 ; ============ PREDICATES ============
 
 #?(:clj (defalias                                vec?             fnum/vect?  ))
@@ -112,8 +167,6 @@
 #_"Returns the total number of elements in all dimensions of a block x
   of (possibly strided) memory."
 #?(:clj (defalias                                ecount           fnum/ecount   ))
-#_"Returns a subvector starting witk a, b entries long"
-#?(:clj (defalias                                subvec           fnum/subvector))
 
 #?(:clj (defalias                                num-rows         fnum/mrows    ))
 #?(:clj (defalias                                num-cols         fnum/ncols    ))

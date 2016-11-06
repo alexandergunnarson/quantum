@@ -2,11 +2,15 @@
   (:refer-clojure :exclude [identity get subvec last])
   (:require
     [clojure.core.matrix.linear :as mat]
+    [quantum.core.log :as log
+      :include-macros true]
     [quantum.core.vars
       :refer        [#?(:clj defalias)]
       :refer-macros [        defalias]]
     [quantum.core.error :as err
       :refer [TODO]]))
+
+(log/this-ns)
 
 ; TO EXPLORE
 ; - http://www.javadoc.io/doc/com.googlecode.matrix-toolkits-java/mtj/1.0.4
@@ -95,6 +99,7 @@
    Matlab: [1 2; 3 4]
    numpy:  array([ [1,2], [3,4] ])
    R:      matrix(c(1,2,3,4), nrow = 2, ncol = 2)"
+  {:implemented-by '#{smile.math.matrix.Matrix}}
   [& vs]
   (TODO))
 
@@ -154,47 +159,6 @@
    R:      matrix(runif(6),2) (requires stats library)"
   [n m]
   (TODO))
-
-; ===== GETTING AND SLICING ===== ;
-
-(defn get
-  "Breeze: a(0,1)
-   Matlab: a(1,2)
-   numpy:  a[0,1]
-   R:      a[1,2]"
-  [m a b] (TODO))
-
-(defn subvec
-  "Extract subset of vector
-   Breeze: a(1 to 4) or a(1 until 5) or a.slice(1,5)
-   Matlab: a(2:5)
-   numpy:  a[1:5]
-   R:      a[2:5]
-
-   (negative steps)
-   Breeze: a(5 to 0 by -1)
-   Matlab: a(6:-1:1)
-   numpy:  a[5::-1]
-
-   (tail)  a(1 to -1)  a(2:end)  a[1:] a[2:length(a)] or tail(a,n=length(a)-1)"
-  [m a b] (TODO))
-
-(defn last
-  "(last element)
-   Breeze: a( -1 )
-   Matlab: a(end)
-   numpy:  a[-1]
-   R:      tail(a, n=1)"
-  [m] (TODO))
-
-(defn col
-  "Extract column of matrix
-   Breeze: a(::, 2)
-   Matlab: a(:,3)
-   numpy:  a[:,2]
-   R:      a[,2]"
-  [m i] (TODO))
-
 
 ; Operation Breeze  Matlab  Numpy R
 ; Reshaping a.reshape(3, 2) reshape(a, 3, 2)  a.reshape(3,2)  matrix(a,nrow=3,byrow=T)
@@ -265,7 +229,9 @@
 
 ; SYMMETRICITY/TRIANGULARITY/DIAGONALITY/SHAPE ;
 
-(defn symmetric?        [m] (TODO))
+(defn symmetric?
+  {:implemented-by '#{smile.math.matrix.Matrix}}
+  [m] (TODO))
 (defn lower-symmetric?  [m] (TODO))
 (defn upper-symmetric?  [m] (TODO))
 
@@ -281,9 +247,20 @@
 
 (defn square?           [m] (TODO))
 
+(defn singular?
+  {:implemented-by '#{smile.math.matrix.QRDecomposition
+                      smile.math.matrix.SingularValueDecomposition}}
+  [m] (TODO))
+
+(defn full-column-rank?
+  {:implemented-by '#{smile.math.matrix.QRDecomposition}}
+  [m] (TODO))
+
 ; DEFINITIVITY ;
 
-(defn positive-definite? [m] (TODO))
+(defn positive-definite?
+  {:implemented-by '#{smile.math.matrix.Matrix}}
+  [m] (TODO))
 ; TODO others
 
 ; ===== FEATURES ===== ;
@@ -291,7 +268,29 @@
 (defalias norm          mat/norm)
 (defalias rank          mat/rank)
 
-(defn dims [m] (TODO))
+; TODO use as an implementation for core.matrix
+(defn rank-
+  {:implemented-by '#{smile.math.matrix.Matrix
+                      smile.math.matrix.SingularValueDecomposition}}
+  [m] (TODO))
+
+(defn det
+  "Determinant"
+  {:implemented-by '#{smile.math.matrix.Matrix
+                      smile.math.matrix.LUDecomposition
+                      smile.math.matrix.CholeskyDecomposition}}
+  [m] (TODO))
+
+(defn dims
+  {:implemented-by '#{smile.math.matrix.Matrix}}
+  [m] (TODO))
+
+(defn inv
+  "Inverse"
+  {:implemented-by '#{smile.math.matrix.LUDecomposition
+                      smile.math.matrix.CholeskyDecomposition
+                      smile.math.matrix.QRDecomposition}}
+  [m] (TODO))
 
 ; ===== DECOMPOSITIONS ===== ;
 
@@ -300,8 +299,30 @@
 #_"Computes the Cholesky decomposition of a hermitian, positive definite matrix."
 (defalias cholesky      mat/cholesky)
 
+; TODO use as an implementation for core.matrix
+(defn cholesky-
+  "Returns:
+   {; lower triangular factor
+    :l ...}"
+  {:implemented-by '#{smile.math.matrix.CholeskyDecomposition
+                      smile.math.matrix.Matrix}}
+  [?] (TODO))
+
 #_"Computes the LU(P) decomposition of a matrix with partial row pivoting."
 (defalias lu            mat/lu)
+
+; TODO use as an implementation for core.matrix
+(defn lu-
+  "Returns, lazily computed:
+   {; lower triangular factor
+    :l ...
+    ; upper triangular factor
+    :u ...
+    ; pivot permutation factor
+    :pivot ...}"
+  {:implemented-by '#{smile.math.matrix.LUDecomposition
+                      smile.math.matrix.Matrix}}
+  [?] (TODO))
 
 ; ORTHOGONAL ;
 
@@ -315,6 +336,30 @@
 
 #_"QR decomposition of a full rank matrix."
 (defalias qr            mat/qr)
+
+; TODO use as an implementation for core.matrix
+(defn qr-
+  "Returns, lazily computed:
+   {; orthogonal factor
+    :q ...
+    ; upper triangular factor
+    :r ...}"
+  {:implemented-by '#{smile.math.matrix.QRDecomposition
+                      smile.math.matrix.Matrix}}
+  [?] (TODO))
+
+(defn update-qr!
+  "Rank-1 update of the QR decomposition for A = A + u * v.
+   Instead of a full decomposition from scratch in O(N^3),
+   we can update the QR factorization in O(N^2)."
+  {:implemented-by '#{smile.math.matrix.QRDecomposition}}
+  [?] (TODO))
+
+(defn householders
+  "The Householder vectors:Lower trapezoidal matrix whose
+   columns define the reflections."
+  {:implemented-by '#{smile.math.matrix.QRDecomposition}}
+  [?] (TODO))
 
 (defn rq
   "Computes the RQ decomposition of a matrix."
@@ -335,13 +380,68 @@
 #_"Computes the eigenvalue decomposition of a diagonalizable matrix."
 (defalias evd           mat/eigen)
 
+; TODO use as an implementation for core.matrix
+(defn evd-
+  "Returns
+   {:eigenvectors ...
+    :eigenvalues  ...
+    :real-eigenvalues ...
+    :imaginary-eigenvalues ...
+    ; the block diagonal eigenvalue matrix whose diagonal are the real
+    ; part of eigenvalues, lower subdiagonal are positive imaginary parts, and
+    ; upper subdiagonal are negative imaginary parts.
+    :d ...
+    }"
+  {:implemented-by '#{smile.math.matrix.EigenValueDecomposition
+                      smile.math.matrix.Matrix}}
+  [?] (TODO))
+
+(defn page-rank
+  "Calculates the page rank vector."
+  {:implemented-by '#{smile.math.matrix.EigenValueDecomposition}}
+  [?] (TODO))
+
 #_"Computes the Singular Value decomposition of a matrix."
 (defalias svd           mat/svd)
+
+; TODO use as an implementation for core.matrix
+(defn svd-
+  "Returns:
+   {; The left singular vectors
+    :u ...
+    ; The right singular vectors
+    :v ...
+    ; The one-dimensional array of singular values, ordered by
+    ; from largest to smallest.
+    :s ...
+    ; Lazily computed. The diagonal matrix of singular values
+    :S ...
+    ; Lazily computed. Returns the dimension of null space.
+    ; The number of negligible singular values.
+    :nullity ...
+    ; Lazily computed. Returns a matrix of which columns give
+    ; an orthonormal basis for the range space.
+    :range-space ...
+    ; Lazily computed. Returns a matrix of which columns give
+    ; an orthonormal basis for the null space.
+    :null-space ...}"
+  {:implemented-by '#{smile.math.matrix.SingularValueDecomposition
+                      smile.math.matrix.Matrix}}
+  [?] (TODO))
 
 ; ===== SOLUTIONS ===== ;
 
 #_"Solves a linear matrix equation, i.e., X such that A.X = B"
 (defalias solve         mat/solve)
+
+; TODO use as an implementation for core.matrix
+(defn solve-
+  {:implemented-by '#{smile.math.matrix.LUDecomposition
+                      smile.math.matrix.CholeskyDecomposition
+                      smile.math.matrix.SingularValueDecomposition
+                      smile.math.matrix.QRDecomposition}}
+  [?] (TODO))
+
 #_"Computes least-squares solution to a linear matrix equation."
 (defalias least-squares mat/least-squares)
 
@@ -352,3 +452,6 @@
 
 ; <org.apache.commons.math3.filter>
 ; Implementations of common discrete-time linear filters.
+
+; <smile.math.kernel>
+; All sorts of kernel operations.
