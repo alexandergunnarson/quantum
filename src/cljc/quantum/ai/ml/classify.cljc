@@ -1,5 +1,8 @@
 (ns ^{:cljs-self-referring? true}
-  quantum.ir.classify
+  quantum.ai.ml.classify
+  "In machine learning and pattern recognition, classification refers to an
+   algorithmic procedure for assigning a given input object into one of a
+   given number of categories."
            (:refer-clojure :exclude [reduce for])
            (:require
              [#?(:clj  clojure.core
@@ -33,10 +36,18 @@
     #?(:clj  [taoensso.timbre.profiling     :as prof
                :refer        [profile defnp p]]))
   #?(:cljs (:require-macros
-             [quantum.ir.classify
+             [quantum.ai.ml.classify
                :refer        [N N*]])))
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
+
+(defn expi
+  "Exponent to the integer power" ; TODO move
+  [x i]
+  (cond (> i 1) (reduce (fn [ret _] (* ret x)) x (dec i))
+        (= i 1) x
+        (= i 0) 1
+        (< i 0) (throw (->ex "Not handled"))))
 
 (def ^:dynamic *exact?* true)
 
@@ -222,14 +233,6 @@
        (ffilter #(= % w))
        boolean-value))
 
-(defn expi
-  "Exponent to the integer power" ; TODO move
-  [x i]
-  (cond (> i 1) (reduce (fn [ret _] (* ret x)) x (dec i))
-        (= i 1) x
-        (= i 0) 1
-        (< i 0) (throw (->ex "Not handled"))))
-
 (defmemoized P:d'|c {}
   "The probability that document @d is observed, given that the class is known to be @c."
   #_([t D d' c] (P:d'|c t D d' c (V D)))
@@ -399,9 +402,14 @@
 
 (defn logistic
   "Create a Binary Logistic Regression classification model and train it.
-   Handles streaming or non-streaming data."
+   Handles streaming or non-streaming data.
+   It is a generalized linear model used for binomial regression.
+
+   Compared with linear discriminant analysis (LDA), logistic regression has
+   several advantages, but it requires much more data to achieve good results."
   {:implemented-by '#{org.apache.spark.mllib.classification.LogisticModel
-                      org.apache.spark.mllib.classification.StreamingLogisticRegressionWithSGD}}
+                      org.apache.spark.mllib.classification.StreamingLogisticRegressionWithSGD
+                      smile.classification.LogisticRegression}}
   [? & [impl]]
   (TODO)
   (case impl
@@ -416,18 +424,93 @@
    documents into TF-IDF vectors, it can be used for document classification.
    By making every vector a 0-1 vector, it can also be used as Bernoulli NB
    (http://nlp.stanford.edu/IR-book/html/htmledition/the-bernoulli-model-1.html).
-   The input feature values must be nonnegative."
+   The input feature values must be nonnegative.
+
+   A naive Bayes classifier is a simple probabilistic classifier based on applying
+   Bayes' theorem with strong (naive) independence assumptions. Depending on the
+   precise nature of the probability model, naive Bayes classifiers can be trained
+   very efficiently in a supervised learning setting.
+
+   In spite of their naive design and apparently over-simplified assumptions,
+   naive Bayes classifiers have worked quite well in many complex real-world
+   situations and are very popular in NLP."
   {:implemented-by '#{org.apache.spark.mllib.classification.NaiveBayes
-                      org.apache.spark.mllib.classification.NaiveBayesModel}}
+                      org.apache.spark.mllib.classification.NaiveBayesModel
+                      smile.classification.NaiveBayes}}
   [?] (TODO))
 
 (defn svm
   "Support Vector Machines (SVMs).
-   Training performed using Stochastic Gradient Descent.
+   Training performed (with Spark) using Stochastic Gradient Descent.
    By default L2 regularization is used."
   {:implemented-by '#{org.apache.spark.mllib.classification.SVMWithSGD
-                      org.apache.spark.mllib.classification.SVMModel}}
+                      org.apache.spark.mllib.classification.SVMModel
+                      smile.classification.SVM}}
   [?] (TODO))
 
+(defn adaptive-boosting
+  "AdaBoost (Adaptive Boosting) classifier with decision trees.
+   In principle, AdaBoost is a meta-algorithm, and can be used in conjunction
+   with many other learning algorithms to improve their performance.
+   The basic AdaBoost algorithm is only for binary classification problems."
+  {:implemented-by '#{smile.classification.AdaBoost}}
+  [?] (TODO))
 
+(defalias ada-boost adaptive-boosting)
 
+(defn gradient-boosting
+  "Gradient boosting for classification."
+  {:implemented-by '#{smile.classification.GradientTreeBoost}}
+  [?] (TODO))
+
+(defn knn
+  "K-nearest neighbor classifier.
+   The k-nearest neighbor algorithm (k-NN) is a method for classifying objects
+   by a majority vote of its neighbors, with the object being assigned to the
+   class most common amongst its k nearest neighbors.
+   k-NN is a type of instance-based learning, or lazy learning where the
+   function is only approximated locally and all computation is deferred until
+   classification."
+  {:implemented-by '#{smile.classification.KNN}}
+  [?] (TODO))
+
+(defn lda
+  "Linear discriminant analysis. LDA is based on the Bayes decision theory
+   and assumes that the conditional probability density functions are normally
+   distributed.
+
+   LDA is closely related to ANOVA (analysis of variance) and linear regression
+   analysis, which also attempt to express one dependent variable as a
+   linear combination of other features or measurements."
+  {:implemented-by '#{smile.classification.LDA}}
+  [?] (TODO))
+
+(defn fld
+  "Fisher's linear discriminant. Fisher defined the separation between two
+   distributions to be the ratio of the variance between the classes to
+   the variance within the classes, which is, in some sense, a measure
+   of the signal-to-noise ratio for the class labeling.
+
+   FLD is closely related to principal component analysis (PCA).
+   However, FLD is supervised; PCA is unsupervised.
+   One complication in applying FLD (and LDA) to data occurs when the
+   number of variables/features does not exceed the number of samples."
+  {:implemented-by '#{smile.classification.FLD}}
+  [?] (TODO))
+
+(defn maximum-entropy
+  "Maximum Entropy Classifier. Maximum entropy is a technique for learning
+   probability distributions from data.
+   Maximum entropy classifier is another name for multinomial logistic
+   regression applied to categorical independent variables, which are
+   converted to binary dummy variables. Maximum entropy models are widely
+   used in natural language processing. Here, we provide an implementation
+   which assumes that binary features are stored in a sparse array, of which
+   entries are the indices of nonzero features."
+  {:implemented-by '#{smile.classification.Maxent}}
+  [?] (TODO))
+
+(defalias maxent maximum-entropy)
+
+; Online learning is a model of induction that learns one instance at a time.
+; More formally, an online algorithm proceeds in a sequence of trials.
