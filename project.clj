@@ -140,7 +140,7 @@
                       org.slf4j/jul-to-slf4j
                       org.slf4j/jcl-over-slf4j
                       org.codehaus.janino/commons-compiler-jdk]   ]
-       [com.datomic/datomic-free                "0.9.5394"
+       [com.datomic/datomic-free                "0.9.5407"
          :exclusions [org.slf4j/slf4j-nop
                       org.slf4j/log4j-over-slf4j
                       org.jboss.logging/jboss-logging]]
