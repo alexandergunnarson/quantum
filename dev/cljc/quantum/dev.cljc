@@ -8,7 +8,8 @@
     [clojure.core                         :as core]
  #?@(:clj
    [[clojure.tools.namespace.repl
-      :refer [refresh]]])
+      :refer [refresh]]
+    [quantum.net.server.middleware        :as mid]])
     [quantum.core.collections             :as coll]
     [quantum.core.numeric                 :as num]
     [quantum.core.fn                      :as fn]
@@ -24,7 +25,6 @@
     [quantum.core.convert                 :as conv]
     [quantum.core.paths                   :as path]
     [quantum.net.http                     :as http]
-    [quantum.net.server.middleware        :as mid]
     [quantum.db.datomic                   :as db]
     [quantum.db.datomic.core              :as dbc]
     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]

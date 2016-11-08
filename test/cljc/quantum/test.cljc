@@ -144,7 +144,7 @@
             [quantum.test.nlp.stem.porter]
             [quantum.test.numeric.core]
           #_[quantum.test.numeric.statistics]
-            [quantum.test.numeric.vectors]
+            [quantum.test.numeric.arrays]
             [quantum.test.numeric.optimization]
             [quantum.test.parse.core]
             [quantum.test.security.core]

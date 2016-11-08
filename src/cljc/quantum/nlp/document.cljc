@@ -1,20 +1,15 @@
-(ns quantum.ir.document
+(ns quantum.nlp.document
   (:require
     [quantum.core.fn
-      :refer        [#?@(:clj [fn1 fn$ fn-> fn->> <- rcomp])]
-      :refer-macros [          fn1 fn$ fn-> fn->> <- rcomp]]
+      :refer [fn1 fn$ fn-> fn->> <- rcomp]]
     [quantum.core.logic
-      :refer        [#?@(:clj [ifn1 whenf1 whenf fn-not])]
-      :refer-macros [          ifn1 whenf1 whenf fn-not]]
+      :refer [ifn1 whenf1 whenf fn-not]]
     [quantum.core.string      :as str]
     [quantum.core.collections :as coll
-      :refer        [containsv? in? map+
-                     #?@(:clj [join])]
-      :refer-macros [          join]]
+      :refer [containsv? in? map+ join]]
     [quantum.reducers.core    :as r]
     [quantum.core.validate    :as v
-      :refer        [#?@(:clj [validate])]
-      :refer-macros [          validate]]
+      :refer [validate]]
     [quantum.net.http         :as http]))
 
 (defonce

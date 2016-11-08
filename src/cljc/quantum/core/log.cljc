@@ -5,16 +5,20 @@
           By no means a full-fledged logging system, but useful nonetheless."
     :attribution "Alex Gunnarson"}
   quantum.core.log
-           (:refer-clojure :exclude [pr seqable?])
-           (:require [com.stuartsierra.component   :as component]
-                     [quantum.core.core            :as qcore    ]
-                     [quantum.core.macros.core     :as cmacros
-                       :refer [#?(:clj compile-if)]]
-                     [quantum.core.fn              :as fn       ]
-                     [quantum.core.meta.debug      :as debug    ]
-                     [quantum.core.print           :as pr       ]
-                     [quantum.core.type.predicates
-                       :refer [seqable?]]))
+  (:refer-clojure :exclude [pr seqable?])
+  (:require
+    [com.stuartsierra.component   :as component]
+    [quantum.core.core            :as qcore    ]
+    [quantum.core.macros.core     :as cmacros
+      :refer [#?(:clj compile-if)]]
+    [quantum.core.fn              :as fn       ]
+    [quantum.core.meta.debug      :as debug    ]
+    [quantum.core.print           :as pr       ]
+    [quantum.core.type.predicates
+      :refer [seqable?]])
+#?(:cljs
+  (:require-macros
+    [quantum.core.log :as self])))
 
 #?(:cljs (enable-console-print!))
 

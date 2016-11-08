@@ -6,7 +6,7 @@
   (:require
     [clojure.core                     :as core]
 #?@(:clj
-    [[taoensso.timbre.profiling       :as prof
+   [[taoensso.timbre.profiling        :as prof
       :refer [profile defnp p]]])
     [quantum.core.collections         :as coll
       :refer [for for* fori lfor reduce join kmap
@@ -26,11 +26,16 @@
     [quantum.core.nondeterministic    :as rand]
     [quantum.core.thread              :as thread
       :refer [async]]
+    [quantum.core.vars                :as var
+      :refer [defalias]]
+    [quantum.core.log                 :as log]
     [quantum.numeric.core             :as num*
       :refer [pi* sigma sum]])
   (:require-macros
     [quantum.ai.ml.classify
       :refer [N N*]]))
+
+(log/this-ns)
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
 
