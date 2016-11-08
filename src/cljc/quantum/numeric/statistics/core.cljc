@@ -2,26 +2,21 @@
   (:refer-clojure :exclude [for nth count take drop first last map mod])
   (:require
     [quantum.core.collections
-      :refer        [nth take drop lasti map take+ map+
-                     #?@(:clj [first for last count join])]
-      :refer-macros [          first for last count join]]
+      :refer [nth take drop lasti map take+ map+
+              first for last count join]]
     [quantum.core.fn
-      :refer        [#?@(:clj [fn1 fn$ fn-> <-])]
-      :refer-macros [          fn1 fn$ fn-> <-]]
-    [quantum.core.log :as log
-      :include-macros true]
+      :refer [fn1 fn$ fn-> <-]]
+    [quantum.core.log :as log]
     [quantum.core.numeric       :as cnum
-      :refer        [*+* *-* *** *div* mod
-                     #?@(:clj [abs sqrt pow e-exp floor log-e])]
-      :refer-macros [          abs sqrt pow e-exp floor log-e]]
+      :refer [*+* *-* *** *div* mod
+              abs sqrt pow e-exp floor log-e]]
     [quantum.numeric.core       :as num
-      :refer        [sum sq]]
-    [quantum.numeric.vectors    :as v]
+      :refer [sum sq]]
+    [quantum.numeric.arrays     :as a]
     [quantum.numeric.polynomial :as poly]
     [quantum.numeric.statistics.distribution :as dist]
     [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
+      :refer [defalias]]
     [quantum.core.error
       :refer [->ex TODO]]))
 
@@ -241,7 +236,7 @@
   {:adapted-from 'criterium.stats
    :implemented-by '{smile.sampling.Bagging "Faster implementation using arrays"}}
   [data statistic size rng-factory]
-  (v/transpose
+  (a/transpose
     (for [_ (range size)] (statistic (sort (join [] (sample+ data (rng-factory))))))))
 
 (defn bootstrap-estimate
@@ -359,7 +354,7 @@
 #_(defn jacknife
   "Jacknife statistics on data."
   [data statistic]
-  (v/transpose
+  (a/transpose
     (map #(statistic (coll/ldrop-at %1 data)) (range (count data)))))
 
 
