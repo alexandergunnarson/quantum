@@ -118,10 +118,7 @@
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====
-         [clj-time                              "0.12.2"          ] ; similar to JODA time
-         [com.andrewmcveigh/cljs-time           "0.4.0"
-           :exclusions [org.json/json]                            ]
-         [quantum/js-joda                       "1.1.13-0"        ] ; transition to this
+         [quantum/js-joda                       "1.1.13-0"        ]
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
