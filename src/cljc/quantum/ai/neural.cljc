@@ -49,3 +49,32 @@
    balanced CF trees."
   {:implemented-by '#{smile.vq.NeuralMap}}
   [?] (TODO))
+
+(defn mlp
+  "Multilayer perceptron neural network.
+   An MLP consists of several layers of nodes, interconnected through weighted
+   acyclic arcs from each preceding layer to the following, without lateral or
+   feedback connections.
+   The most popular algorithm to train MLPs is back-propagation, which is a
+   gradient descent method.
+   For neural networks, the input patterns usually should be scaled/standardized."
+  {:implemented-by '#{smile.classification.NeuralNetwork}}
+  [?] (TODO))
+
+(defn rbf
+  "Radial basis function network, an artificial neural network that uses
+   radial basis functions as activation functions.
+   Used in function approximation, time series prediction, and control.
+
+   A variant on RBF networks is normalized radial basis function (NRBF)
+   networks, in which we require the sum of the basis functions to be unity.
+   There is no evidence that either the NRBF method is consistently superior
+   to the RBF method, or vice versa.
+
+   With similar number of support vectors/centers, SVM shows better generalization
+   performance than RBF when the training data size is relatively small.
+   On the other hand, RBF network gives better generalization performance than SVM
+   on large training data."
+  {:implemented-by '#{smile.classification.RBFNetwork
+                      smile.util.SmileUtils.GaussianRadialBasis}}
+  [?] (TODO))

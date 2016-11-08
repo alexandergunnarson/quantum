@@ -193,6 +193,8 @@
   [D xs] (TODO))
 
 (defn shannon-entropy
+  "Based on Shannon's theory of information, in which he assumes only a binary
+   classification: Yes or No."
   [?] (TODO))
 
 (defn bayesian-information-criterion

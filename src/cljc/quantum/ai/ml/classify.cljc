@@ -437,6 +437,12 @@
                       smile.classification.NaiveBayes}}
   [?] (TODO))
 
+(defn platt-scaling
+  "Platt scaling or Platt calibration is a way of transforming the outputs
+   of a classification model into a probability distribution over classes."
+  {:implemented-by '#{smile.classification.PlattScaling}}
+  [?] (TODO))
+
 (defn svm
   "Support Vector Machines (SVMs).
    Training performed (with Spark) using Stochastic Gradient Descent.
@@ -496,6 +502,22 @@
   {:implemented-by '#{smile.classification.FLD}}
   [?] (TODO))
 
+(defn qda
+  "Quadratic discriminant analysis. QDA is closely related to linear discriminant
+   analysis (LDA). Like LDA, QDA models the conditional probability density
+   functions as a Gaussian distribution. Unlike LDA, however, in QDA there is no
+   assumption that the covariance of each of the classes is identical."
+  {:implemented-by '#{smile.classification.QDA}}
+  [?] (TODO))
+
+(defn rda
+  "Regularized discriminant analysis. RDA is a compromise between LDA and QDA.
+   When α=1, RDA becomes QDA.
+   When α=0, RDA is equivalent to LDA.
+   The regularization factor α allows a continuum of models between LDA and QDA."
+  {:implemented-by '#{smile.classification.RDA}}
+  [?] (TODO))
+
 (defn maximum-entropy
   "Maximum Entropy Classifier. Maximum entropy is a technique for learning
    probability distributions from data.
@@ -509,6 +531,29 @@
   [?] (TODO))
 
 (defalias maxent maximum-entropy)
+
+(defn random-forest
+  "Random forest for classification, an ensemble classifier that consists of many
+   decision trees and outputs the majority vote of individual trees. The method
+   combines bagging idea and the random selection of features.
+
+   Advantages:
+   - For many data sets, it produces a highly accurate classifier.
+   - It runs efficiently on large data sets.
+   - It can handle thousands of input variables without variable deletion.
+   - It gives estimates of what variables are important in the classification.
+   - It generates an internal unbiased estimate of the generalization error
+     as the forest building progresses.
+   - It has an effective method for estimating missing data and maintains
+     accuracy when a large proportion of the data are missing.
+   Disadvantages:
+   - Prone to over-fitting for some datasets, especially noisy data.
+   - For data including categorical variables with different number of
+     levels, random forests are biased in favor of those attributes with more
+     levels. Therefore, the variable importance scores from random forest are
+     not reliable for this type of data."
+  {:implemented-by '#{smile.classification.RandomForest}}
+  [?] (TODO))
 
 ; Online learning is a model of induction that learns one instance at a time.
 ; More formally, an online algorithm proceeds in a sequence of trials.

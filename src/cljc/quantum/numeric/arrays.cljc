@@ -59,6 +59,33 @@
 
 ; ============ CREATE ============
 
+(defn ->sparse-matrix
+  "A sparse matrix is a matrix populated primarily with zeros. Conceptually,
+   sparsity corresponds to systems which are loosely coupled. Huge sparse
+   matrices often appear when solving partial differential equations."
+  {:implemented-by '#{package smile.math.matrix.SparseMatrix}}
+  [?] (TODO))
+
+(defn ->band-matrix
+  "A band matrix is a sparse matrix whose non-zero entries are confined to
+   a diagonal band, comprising the main diagonal and zero or more diagonals
+   on either side."
+  {:implemented-by '#{package smile.math.matrix.BandMatrix}}
+  [?] (TODO))
+
+(defn ->row-major-matrix
+  "A dense matrix whose data is stored in a single 1D array of
+   doubles in row major order."
+  {:implemented-by '#{package smile.math.matrix.RowMajorMatrix}}
+  [?] (TODO))
+
+(defn ->column-major-matrix
+  "A dense matrix whose data is stored in a single 1D array of
+   doubles in column major order."
+  {:implemented-by '#{package smile.math.matrix.ColumnMajorMatrix}}
+  [?] (TODO))
+
+
 #_"Creates a native-backed float vector from source."
 #?(:clj (defalias                                ->fvec           nat/sv ))
 #_"Creates a native-backed double vector from source."
