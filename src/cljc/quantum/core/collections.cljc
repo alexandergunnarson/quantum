@@ -38,7 +38,7 @@
               zipmap
               reverse
               conj
-              conj! assoc! dissoc! disj!
+              conj! assoc assoc! dissoc dissoc! disj!
               boolean?
               class
               -])
@@ -112,7 +112,7 @@
                        contains? containsk? containsv?
                        index-of last-index-of
                        first second rest last butlast get aget pop peek nth
-                       conjl conj! assoc! assoc!* dissoc! disj! aset!
+                       conjl conj! assoc assoc! assoc!* dissoc dissoc! disj! aset!
                        map-entry join empty? update! empty? ->array]]))
   #?(:cljs (:import goog.string.StringBuffer)))
 
@@ -168,8 +168,10 @@
 #?(:clj (defalias last          coll/last         ))
 #?(:clj (defalias aset!         coll/aset!        ))
 #?(:clj (defalias aget          coll/aget         ))
+#?(:clj (defalias assoc         coll/assoc        ))
 #?(:clj (defalias assoc!        coll/assoc!       ))
 #?(:clj (defalias assoc!*       coll/assoc!*      ))
+#?(:clj (defalias dissoc        coll/dissoc       ))
 #?(:clj (defalias dissoc!       coll/dissoc!      ))
         (defalias conj          coll/conj         )
 #?(:clj (defalias conj!         coll/conj!        ))

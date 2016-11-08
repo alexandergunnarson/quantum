@@ -6,17 +6,15 @@
   quantum.core.collections.core
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
-     conj! conj assoc! dissoc! dissoc disj! contains? key val reverse
+     conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse
      empty? empty class reduce
      #?@(:cljs [array])])
-  (:require [#?(:clj  clojure.core
-                :cljs cljs.core   )         :as core    ]
+  (:require [clojure.core                   :as core]
     #?(:clj [seqspert.vector                            ])
-    #?(:clj [clojure.core.async             :as casync  ])
-            [quantum.core.log               :as log     ]
+    #?(:clj [clojure.core.async             :as casync])
+            [quantum.core.log               :as log]
             [quantum.core.collections.base
-              :refer        [#?(:clj kmap)]
-              :refer-macros [kmap]]
+              :refer [kmap]]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte
@@ -38,31 +36,28 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer        [#?@(:clj [fn1 rfn])]
-              :refer-macros [          fn1 rfn]]
+              :refer [fn1 rfn]]
             [quantum.core.logic             :as logic
-              :refer        [nnil? nempty?
-                             #?@(:clj [eq? fn-eq? whenc whenf ifn1])]
-              :refer-macros [          eq? fn-eq? whenc whenf ifn1]]
+              :refer [nnil? nempty?
+                      eq? fn-eq? whenc whenf ifn1]]
             [quantum.core.collections.logic
-              :refer        [seq-or]]
+              :refer [seq-or]]
             [quantum.core.macros            :as macros
-              :refer        [#?@(:clj [defnt])]
-              :refer-macros [          defnt]]
+              :refer [defnt]]
             [quantum.core.reducers          :as red
-              :refer        [drop+ take+
-                             #?@(:clj [dropr+ taker+ reduce])]
-              :refer-macros [reduce]]
+              :refer [drop+ take+ reduce
+                      #?@(:clj [dropr+ taker+])]]
             [quantum.core.type              :as type
-              :refer        [class
-                             #?(:clj pattern?)]
-              :refer-macros [        pattern?]]
+              :refer [class pattern?]]
             [quantum.core.vars              :as var
-              :refer        [#?(:clj defalias)]
-              :refer-macros [        defalias]])
- #?(:clj (:import quantum.core.data.Array
-                  (java.util List)
-                  clojure.core.async.impl.channels.ManyToManyChannel)))
+              :refer [defalias]])
+  (:require-macros
+    [quantum.core.collections.core
+      :refer [assoc]])
+ #?(:clj (:import
+           quantum.core.data.Array
+           [java.util List]
+           clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -98,7 +93,7 @@
 
 ; Arbitrary.
 ; TODO test this on every permutation for inflection point.
-(def ^:const parallelism-threshold 10000)
+(def parallelism-threshold 10000)
 
 ; https://github.com/JulesGosnell/seqspert
 ; Very useful sequence and data structure info.
@@ -519,7 +514,7 @@
   #?(:clj  (^first [^double-array?  coll ^pinteger? k ^double  v] (aset coll k v             )))
   #?(:clj  (^first [^object-array?  coll ^pinteger? k          v] (aset coll k v             )))
            (^first [^transient?     coll            k          v] (core/assoc! coll k v))
-           (       [^atom?          coll            k          v] (swap! coll assoc k v)))
+           (       [^atom?          coll            k          v] (swap! coll core/assoc k v)))
 
 (defnt assoc!*
   #?(:cljs (^first [^array?         coll            k          v] (assoc! coll k v)))
@@ -535,6 +530,12 @@
            (^first [^transient?     coll            k          v] (assoc! coll k v))
            (       [^atom?          coll            k          v] (assoc! coll k v))
            (       [                coll            k          v] (core/assoc coll k v)))
+
+(defnt assoc
+  {:imported "clojure.lang.RT/assoc"}
+  #?(:clj  ([^clojure.lang.Associative x k v] (.assoc x k v)))
+  #?(:cljs ([#{vec? map?}              x k v] (cljs.core/-assoc x k v)))
+           ([                          x k v] (core/assoc x k v)))
 
 (defnt dissoc
   {:imported "clojure.lang.RT/dissoc"}
