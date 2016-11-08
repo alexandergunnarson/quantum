@@ -1,23 +1,23 @@
 (ns quantum.measure.convert
-           (:require [quantum.core.error         :as err
-                       :refer [->ex #?(:clj throw-unless)]]
-                     [quantum.core.logic         :as logic
-                       :refer [nempty?]                   ]
-                     [quantum.measure.reg        :as mreg ]
-                     [quantum.measure.core       :as meas ]
-                     [quantum.measure.angle               ]
-                     [quantum.measure.information         ] ; Not too large
-                   #_[quantum.measure.length              ] ; Too large
-                     [quantum.measure.luminosity          ]
-                     [quantum.measure.solid-angle         ]
-                     [quantum.measure.substance           ]
-                     [quantum.measure.temperature         ]
-                     [quantum.measure.time                ] ; Not too large
-                     [quantum.measure.volume              ]
-                     [quantum.measure.weight              ])
-  #?(:cljs (:require-macros 
-                     [quantum.core.error         :as err
-                       :refer [throw-unless]              ])))
+  (:require
+    [quantum.core.error   :as err
+      :refer [->ex throw-unless]]
+    [quantum.core.logic   :as logic
+      :refer [nempty?]]
+    [quantum.measure.reg  :as mreg]
+    [quantum.measure.core :as meas]
+    [quantum.measure.angle]
+    [quantum.measure.information] ; Not too large
+  #_[quantum.measure.length] ; Too large
+    [quantum.measure.luminosity]
+    [quantum.measure.solid-angle]
+    [quantum.measure.substance]
+    [quantum.measure.temperature]
+    [quantum.measure.time] ; Not too large
+    [quantum.measure.volume]
+    [quantum.measure.weight])
+  (:require-macros
+    [quantum.measure.convert :as self]))
 
 (defn assert-types [& type-pairs]
   (doseq [[unit unit-types] type-pairs]

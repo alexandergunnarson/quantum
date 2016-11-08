@@ -4,54 +4,44 @@
           |on?|, |for-days-between|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
-  (:refer-clojure :exclude [extend second - + < <= > >= format])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )            :as core    ]
-            #?@(:clj  [[clj-time.core   ]]
-                :cljs
-                      [[cljs-time.core :as time]
-                       [cljs-time.extend] ; To test for equality
-                       [cljs-time.instant] ; To make dates serializable with pr-str
-                       [cljs-time.coerce :as coerce]
-                       [cljsjs.js-joda]])
-                     [quantum.core.error                :as err
-                       :refer [->ex TODO #?(:clj throw-unless)]     ]
-                     [quantum.core.fn                   :as fn
-                       :refer [#?@(:clj [fn1 <-])]                  ]
-                     [quantum.core.logic                :as logic
-                       :refer [#?@(:clj [fn-or whenc])]             ]
-                     [quantum.core.macros               :as macros
-                       :refer [#?@(:clj [defnt])]                   ]
-                     [quantum.core.numeric              :as num     ]
-                     [quantum.core.collections          :as coll
-                       :refer [#?@(:clj [ifor])]                    ]
-                     [quantum.measure.convert           :as uconv
-                       :refer [#?(:clj convert)]                    ]
-                     [quantum.core.convert.primitive    :as pconv   ]
-                     [quantum.core.vars                 :as var
-                       :refer [#?(:clj defalias)]                   ])
-  #?(:cljs (:require-macros
-                     [quantum.core.error                :as err
-                       :refer [throw-unless]                        ]
-                     [quantum.core.fn                   :as fn
-                       :refer [fn1 <-]                              ]
-                     [quantum.core.logic                :as logic
-                       :refer [fn-or whenc]                         ]
-                     [quantum.core.macros               :as macros
-                       :refer [defnt]                               ]
-                     [quantum.core.collections          :as coll
-                       :refer [ifor]                                 ]
-                     [quantum.core.vars                 :as var
-                       :refer [defalias]                            ]))
+  (:refer-clojure :exclude
+    [extend second - + < <= > >= format])
+  (:require
+    [clojure.core                   :as core]
+#?@(:clj
+    [[clj-time.core   ]]
+    :cljs
+    [[cljs-time.core :as time]
+     [cljs-time.extend] ; To test for equality
+     [cljs-time.instant] ; To make dates serializable with pr-str
+     [cljs-time.coerce :as coerce]
+     [cljsjs.js-joda]])
+    [quantum.core.error             :as err
+      :refer [->ex TODO throw-unless]]
+    [quantum.core.fn                :as fn
+      :refer [fn1 <-]]
+    [quantum.core.logic             :as logic
+      :refer [fn-or whenc]]
+    [quantum.core.macros            :as macros
+      :refer [defnt]]
+    [quantum.core.numeric           :as num]
+    [quantum.core.collections       :as coll
+      :refer [ifor]]
+    [quantum.measure.convert        :as uconv
+      :refer [convert]]
+    [quantum.core.convert.primitive :as pconv]
+    [quantum.core.vars              :as var
+      :refer [defalias]])
   (:import
-    #?@(:clj  [[java.util Date Calendar]
-               [java.time LocalDate]
-               [java.time.format DateTimeFormatter]
-               [java.time.temporal Temporal TemporalAccessor]]
-        :cljs [[goog.date DateTime UtcDateTime]]
-        )))
+#?@(:clj
+   [[java.util Date Calendar]
+    [java.time LocalDate]
+    [java.time.format DateTimeFormatter]
+    [java.time.temporal Temporal TemporalAccessor]]
+   :cljs
+   [[goog.date DateTime UtcDateTime]])))
 
-#?(:cljs (println "JSJoda" js/JSJoda))
+; js/JSJoda
 
 ; ===== ABOUT =====
 ; https://www.npmjs.com/package/js-joda
@@ -80,10 +70,10 @@
 ; 1 nanoday = 1.44 minutes
 
 ; Negative is for BC
-(def ^:const strange-leap-years
+(defonce strange-leap-years
   #{-45 -42 -39 -36 -33 -30 -27 -24 -21 -18 -15 -12 -9 -8 12})
-(def ^:const first-normal-leap-year 12)
-(def ^:const gregorian-calendar-decree-year 1582)
+(defonce first-normal-leap-year 12)
+(defonce gregorian-calendar-decree-year 1582)
 
 #?(:clj
 (defnt leap-year?
