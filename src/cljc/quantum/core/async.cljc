@@ -1,7 +1,6 @@
 (ns
   ^{:doc "Asynchronous things."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referencing? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.async
   (:refer-clojure :exclude [promise realized? future])
            (:require [#?(:clj  clojure.core
@@ -34,9 +33,7 @@
   #?(:cljs (:require-macros
                      [servant.macros                   :as servant
                        :refer [defservantfn]                        ]
-                     [cljs.core.async.macros           :as asyncm   ]
-                     [quantum.core.async
-                       :refer [go]                                  ]))
+                     [cljs.core.async.macros           :as asyncm   ]))
   #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
                    (java.util.concurrent TimeUnit)
                    quantum.core.data.queue.LinkedBlockingQueue
@@ -335,7 +332,7 @@
                    #(do (println "B") (Thread/sleep 2000)))}
   [& fs]
   (->> fs
-       (mapv (fn [f] (go (f))))
+       (mapv (fn [f] (#?(:clj go :cljs asyncm/go) (f))))
        (mapv #(#?(:clj  async/<!!
                   :cljs async/<!) %))))
 

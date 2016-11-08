@@ -1,39 +1,35 @@
 (ns
   ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
           Also some plumbing macros for |for| loops and the like."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.macros
-           (:refer-clojure
-             :exclude [macroexpand macroexpand-all])
-           (:require
-             [clojure.walk
-               :refer [postwalk]]
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )    :as core]
-             [quantum.core.error        :as err
-               :refer [->ex]]
-             [quantum.core.fn           :as fn
-               :refer        [#?@(:clj [fn->])]
-               :refer-macros [          fn->]]
-             [quantum.core.log          :as log
-               :include-macros true]
-             [quantum.core.logic        :as logic
-               :refer        [nnil?
-                              #?@(:clj [fn-and whenc whenf1])]
-               :refer-macros [          fn-and whenc whenf1]]
-             [quantum.core.macros.core  :as cmacros
-               :refer        [#?(:clj if-cljs)]
-               :refer-macros [        if-cljs]]
-             [quantum.core.macros.defnt :as defnt]
-             [quantum.core.macros.fn    :as mfn]
-             [quantum.core.print        :as pr]
-             [quantum.core.vars         :as var
-               :refer        [#?@(:clj [defalias defmalias])]
-               :refer-macros [          defalias defmalias]])
-  #?(:cljs (:require-macros
-             [quantum.core.macros
-               :refer [assert-args]])))
+  (:refer-clojure
+    :exclude [macroexpand macroexpand-all])
+  (:require
+    [clojure.walk
+      :refer [postwalk]]
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )    :as core]
+    [quantum.core.error        :as err
+      :refer [->ex]]
+    [quantum.core.fn           :as fn
+      :refer        [#?@(:clj [fn->])]
+      :refer-macros [          fn->]]
+    [quantum.core.log          :as log
+      :include-macros true]
+    [quantum.core.logic        :as logic
+      :refer        [nnil?
+                     #?@(:clj [fn-and whenc whenf1])]
+      :refer-macros [          fn-and whenc whenf1]]
+    [quantum.core.macros.core  :as cmacros
+      :refer        [#?(:clj if-cljs)]
+      :refer-macros [        if-cljs]]
+    [quantum.core.macros.defnt :as defnt]
+    [quantum.core.macros.fn    :as mfn]
+    [quantum.core.print        :as pr]
+    [quantum.core.vars         :as var
+      :refer        [#?@(:clj [defalias defmalias])]
+      :refer-macros [          defalias defmalias]]))
 
 #?(:clj
 (defmacro maptemplate
@@ -212,9 +208,8 @@
   {:attribution "clojure.core, via Christophe Grand - https://gist.github.com/cgrand/5643767"
    :todo ["Transientize the |reduce|s"]}
   [&form {:keys [emit-other emit-inner]} seq-exprs body-expr]
-  (assert-args
-     (vector? seq-exprs) "a vector for its binding"
-     (even? (count seq-exprs)) "an even number of forms in binding vector")
+  (assert (vector? seq-exprs) "This function requires a vector for its binding")
+  (assert (even? (count seq-exprs)) "This function requires an even number of forms in binding vector")
   (let [groups (reduce (fn [groups [k v]]
                          (if (keyword? k)
                               (conj (pop groups) (conj (peek groups) [k v]))

@@ -7,8 +7,7 @@
       gleaned from the far reaches of the internet. Some of them have
       unexpectedly great performance."
       :author       "Rich Hickey"
-      :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}
-      :cljs-self-referring? true}
+      :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers.reduce
           (:refer-clojure :exclude [reduce into])
           (:require [#?(:clj  clojure.core
@@ -36,8 +35,6 @@
                     [quantum.core.vars             :as var
                       :refer [#?(:clj defalias)]             ])
   #?(:cljs (:require-macros
-                    [quantum.core.reducers.reduce
-                      :refer [reduce]                        ]
                     [quantum.core.macros           :as macros
                       :refer [defnt]                         ]
                     [quantum.core.type             :as type
@@ -139,6 +136,23 @@
    :todo ["definline"]}
   ([f coll]      `(reduce ~f (~f) ~coll))
   ([f init coll] `(reduce* ~coll ~f ~init))))
+
+#?(:clj
+(defmacro reducei-
+  [should-extern? f ret-i coll & args]
+  (let [f-final
+         `(~(if (and should-extern? @qcore/externs?)
+                `quantum.core.macros/extern+
+                `quantum.core.macros.optimization/identity*)
+           (let [i# (volatile! (long -1))]
+             (fn ([ret# elem#]
+                   (vswap! i# quantum.core.core/unchecked-inc-long)
+                   (~f ret# elem# @i#))
+                 ([ret# k# v#]
+                   (vswap! i# quantum.core.core/unchecked-inc-long)
+                   (~f ret# k# v# @i#)))))
+        code `(reduce ~f-final ~ret-i ~coll)]
+  code)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
@@ -165,12 +179,12 @@
   ([ret k v] (conj! ret [k v])))
 
 (defn transient-into [to from]
-  (-> (reduce conj!-red (transient to) from)
+  (-> (reduce* from conj!-red (transient to))
       persistent!
       (with-meta (meta to))))
 
 (defn persistent-into [to from]
-  (reduce conj-red to from))
+  (reduce* from conj-red to))
 
 (defnt joinl
   "Join, left.
@@ -196,8 +210,8 @@
                                        (transient-into to from))
                              :cljs (transient-into to from)))
   ([^sorted-map? to from] (persistent-into to from))
-  ([^string?     to from] (str #?(:clj  (reduce #(.append ^StringBuilder %1 %2) (StringBuilder. to) from)
-                                  :cljs (reduce #(.append ^StringBuffer  %1 %2) (StringBuffer.  to) from))))
+  ([^string?     to from] (str #?(:clj  (reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
+                                  :cljs (reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
   ([             to from] (if (nil? to) from (persistent-into to from))))
 
 #_(defn joinl
@@ -222,12 +236,12 @@
   "Applies `f` to `coll`, pairwise, using `reduce`."
   [f coll]
   (let [first? (volatile! true)]
-    (reduce (fn [ret x]
-              (if @first?
-                  (do (vreset! first? false) (f x))
-                  (f ret x)))
-            nil
-            coll)))
+    (reduce* coll
+             (fn [ret x]
+               (if @first?
+                   (do (vreset! first? false) (f x))
+                   (f ret x)))
+             nil)))
 
 (defn first-non-nil-reducer
   "A reducing function that simply returns the first non-nil element in the

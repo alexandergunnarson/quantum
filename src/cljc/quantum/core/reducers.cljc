@@ -7,48 +7,45 @@
       gleaned from the far reaches of the internet. Some of them have
       unexpectedly great performance."
       :author       "Rich Hickey"
-      :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}
-      :cljs-self-referring? true}
+      :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers
-           (:refer-clojure :exclude [reduce Range ->Range])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )        :as core]
-             [quantum.core.collections.base :as cbase]
-             [quantum.core.data.map         :as map]
-             [quantum.core.data.set         :as set]
-             [quantum.core.data.vector      :as vec
-               :refer [catvec subvec+]]
-             [quantum.core.error            :as err
-               :refer [->ex]]
-             [quantum.core.fn               :as fn
-               :refer        [call firsta aritoid
-                              #?@(:clj [fn1 fn-> fn->> rcomp defcurried])]
-               :refer-macros [          fn1 fn-> fn->> rcomp defcurried]]
-             [quantum.core.logic            :as logic
-               :refer        [nnil?
-                              #?@(:clj [fn-not fn-or fn-and whenf whenf1 ifn condf condf1])]
-               :refer-macros [          fn-not fn-or fn-and whenf whenf1 ifn condf condf1]                                       ]
-             [quantum.core.macros           :as macros
-               :refer        [#?@(:clj [defnt])]
-               :refer-macros [          defnt]]
-             [quantum.core.numeric          :as num
-               :include-macros true]
-             [quantum.core.type             :as type
-               :refer        [instance+?
-                              #?@(:clj [array-list? lseq?])]
-               :refer-macros [          array-list? lseq?]]
-             [quantum.core.reducers.reduce  :as red
-               :refer [reducer first-non-nil-reducer]]
-             [quantum.core.reducers.fold    :as fold
-               :refer [folder coll-fold CollFold
-                       fjinvoke fjtask fjfork fjjoin]]
-             [quantum.core.vars             :as var
-               :refer        [#?(:clj defalias)]
-               :refer-macros [        defalias]])
-  #?(:cljs (:require-macros
-             [quantum.core.reducers
-               :refer [reduce join]])))
+  (:refer-clojure :exclude [reduce Range ->Range])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )        :as core]
+    [quantum.core.collections.base :as cbase]
+    [quantum.core.data.map         :as map]
+    [quantum.core.data.set         :as set]
+    [quantum.core.data.vector      :as vec
+      :refer [catvec subvec+]]
+    [quantum.core.error            :as err
+      :refer [->ex]]
+    [quantum.core.fn               :as fn
+      :refer        [call firsta aritoid
+                     #?@(:clj [fn1 fn-> fn->> rcomp defcurried])]
+      :refer-macros [          fn1 fn-> fn->> rcomp defcurried]]
+    [quantum.core.logic            :as logic
+      :refer        [nnil?
+                     #?@(:clj [fn-not fn-or fn-and whenf whenf1 ifn condf condf1])]
+      :refer-macros [          fn-not fn-or fn-and whenf whenf1 ifn condf condf1]                                       ]
+    [quantum.core.macros           :as macros
+      :refer        [#?@(:clj [defnt])]
+      :refer-macros [          defnt]]
+    [quantum.core.numeric          :as num
+      :include-macros true]
+    [quantum.core.type             :as type
+      :refer        [instance+?
+                     #?@(:clj [array-list? lseq?])]
+      :refer-macros [          array-list? lseq?]]
+    [quantum.core.reducers.reduce  :as red
+      :refer [reducer first-non-nil-reducer]
+      :include-macros true]
+    [quantum.core.reducers.fold    :as fold
+      :refer [folder coll-fold CollFold
+              fjinvoke fjtask fjfork fjjoin]]
+    [quantum.core.vars             :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]))
 
 #?(:clj (defalias join      red/join     ))
 #?(:clj (defalias joinl'    red/joinl'   ))
@@ -264,7 +261,7 @@
    :performance "On non-counted collections, |count| is 71.542581 ms, whereas
                  |count*| is 36.824665 ms - twice as fast!!"}
   [coll]
-  (reduce (rcomp firsta inc) 0 coll))
+  (red/reduce (rcomp firsta inc) 0 coll))
 
 (defn fold-count
   {:attribution "parkour.reducers"
@@ -297,7 +294,7 @@
   CollFold
     (coll-fold
      [#?(:clj _ :cljs this) n combinef reducef]
-      #?(:cljs (reduce this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
+      #?(:cljs (red/reduce this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
          :clj
          (fjinvoke
            (fn []
@@ -350,7 +347,7 @@
   [f coll]
   (folder coll (core/mapcat f)))
 
-(defn concat+ [& args] (reduce cat+ args))
+(defn concat+ [& args] (red/reduce cat+ args))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        REDUCTIONS        }=====================================================
 ;=================================================={                          }=====================================================
@@ -404,7 +401,7 @@
      (fn ([] (reducer-))
          ([ret v]
             (if (sequential? v)
-                (reduce reducer- ret (flatten+ v))
+                (red/reduce reducer- ret (flatten+ v))
                 (reducer- ret v)))))))
 
 (def flatten-1+ (fn->> (mapcat+ identity)))
@@ -579,7 +576,7 @@
   [f coll]
   (fold*
     (partial merge-with ; merge-with is why...
-      (fn [v1 v2] (->> (concat+ v1 v2) (join []))))
+      (fn [v1 v2] (->> (concat+ v1 v2) (red/join []))))
     (fn ([ret] ret)
         ([groups a]
           (let [k (f a)]
@@ -758,13 +755,13 @@
   "|doseq| but based on reducers."
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"}
   [bindings & body]
- `(reduce (constantly nil) (for+ ~bindings (do ~@body)))))
+ `(red/reduce (constantly nil) (for+ ~bindings (do ~@body)))))
 
 (defcurried each ; like doseq
   "Applies f to each item in coll, returns nil"
   {:attribution "transduce.reducers"}
   [f coll]
-  (reduce (fn [_ x] (f x) nil) nil coll))
+  (red/reduce (fn [_ x] (f x) nil) nil coll))
 
 (defn sample+ [prob coll] (folder coll (core/random-sample prob)))
 
@@ -1104,3 +1101,29 @@
            ~(str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")
            ([f#] (fn [coll#] (~parallel-quoted-sym f# coll#)))
            ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))
+
+#?(:clj
+(defmacro doseq*
+  "A lighter version of |doseq| based on |reduce|.
+   Optimized for one destructured coll."
+  {:attribution "Alex Gunnarson"}
+  [should-extern? bindings & body]
+  (assert (vector? bindings) "`doseq` takes a vector for its bindings")
+  (condp = (count bindings)
+    3
+      (let [[k v coll] bindings]
+        `(red/reduce
+           (fn [_# ~k ~v]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    2
+      (let [[elem coll] bindings]
+        `(red/reduce
+           (fn [_# ~elem]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    (throw (->ex nil (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))

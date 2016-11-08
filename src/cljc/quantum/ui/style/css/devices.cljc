@@ -1,22 +1,17 @@
-(ns ^{:doc "Taken from gardener.respond"
-      :cljs-self-referencing? true}
-  quantum.ui.style.css.devices
+(ns quantum.ui.style.css.devices
+  "Taken from gardener.respond"
   (:refer-clojure :exclude [+ - * / rem])
-  (:require [garden.core                 :refer [css]]
-            [garden.units      :as units :refer [px pt em rem dpi]]
-            [garden.color      :as color :refer [hsl rgb]]
-            [garden.arithmetic           :refer [+ - * /]]
-            [garden.stylesheet           :refer [at-media]])
-  #?(:cljs
-  (:require-macros
-            [quantum.ui.style.css.devices :refer [defbreakpoint]])))
+  (:require
+    [garden.core                 :refer [css]]
+    [garden.units      :as units :refer [px pt em rem dpi]]
+    [garden.color      :as color :refer [hsl rgb]]
+    [garden.arithmetic           :refer [+ - * /]]
+    [garden.stylesheet           :refer [at-media]]
+    [quantum.ui.style.css.devices
+      :refer        [#?@(:clj [defbreakpoint])]
+      :refer-macros [          defbreakpoint]]))
 
 ;; Generic
-
-#?(:clj
-(defmacro defbreakpoint [name media-params]
-  `(defn ~name [& rules#]
-     (at-media ~media-params [:& rules#]))))
 
 (def breakpoints
   {:mobile  (px 320)

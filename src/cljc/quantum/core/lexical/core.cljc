@@ -1,11 +1,8 @@
-(ns ^{:cljs-self-referencing? true}
-  quantum.core.lexical.core
-           (:require [quantum.core.data.set     :as set]
-                     [quantum.core.error        :as err
-                       :refer [->ex]                   ])
-  #?(:cljs (:require-macros
-                     [quantum.core.lexical.core :as self
-                       :refer [forward]])))
+(ns quantum.core.lexical.core
+  (:require
+    [quantum.core.data.set     :as set]
+    [quantum.core.error        :as err
+      :refer [->ex]                   ]))
 
 ; ============ FROM re-rand.parser.tools ============
 ; Generic functions for creating a LL recursive descent parser.
@@ -27,7 +24,7 @@
   [re]
   (let [f (match re)]
     (fn [src]
-      (let [[m _] (f src)] 
+      (let [[m _] (f src)]
         [m src]))))
 
 (defn attach
@@ -211,7 +208,7 @@
   (attach
     (series
       (match #"\(")
-      (forward pattern)
+      (fn [src#] (pattern src#)) ; `forward`
       (match #"\)"))
     (fn [[_ f _]]
       #(let [s (f)]

@@ -7,8 +7,15 @@
   (:refer-clojure :exclude [extend second - + < <= > >= format])
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )            :as core    ]
+            #?@(:clj  [[clj-time.core   ]]
+                :cljs
+                      [[cljs-time.core :as time]
+                       [cljs-time.extend] ; To test for equality
+                       [cljs-time.instant] ; To make dates serializable with pr-str
+                       [cljs-time.coerce :as coerce]
+                       [cljsjs.js-joda]])
                      [quantum.core.error                :as err
-                       :refer [->ex #?(:clj throw-unless)]          ]
+                       :refer [->ex TODO #?(:clj throw-unless)]     ]
                      [quantum.core.fn                   :as fn
                        :refer [#?@(:clj [fn1 <-])]                  ]
                      [quantum.core.logic                :as logic
@@ -36,10 +43,21 @@
                        :refer [ifor]                                 ]
                      [quantum.core.vars                 :as var
                        :refer [defalias]                            ]))
-  #?(:clj (:import [java.util Date Calendar]
-            (java.time LocalDate)
-            (java.time.format DateTimeFormatter)
-            (java.time.temporal Temporal TemporalAccessor))))
+  (:import
+    #?@(:clj  [[java.util Date Calendar]
+               [java.time LocalDate]
+               [java.time.format DateTimeFormatter]
+               [java.time.temporal Temporal TemporalAccessor]]
+        :cljs [[goog.date DateTime UtcDateTime]]
+        )))
+
+#?(:cljs (println "JSJoda" js/JSJoda))
+
+; ===== ABOUT =====
+; https://www.npmjs.com/package/js-joda
+; js-joda is fast. It is about 2 to 10 times faster than other javascript date libraries.
+; js-joda is robust and stable.
+; =================
 
 ; Static start nano counter and then get an offset
 ; System.nanoTime();
@@ -183,16 +201,17 @@
 #?(:clj (defn + [^Instant a ^Duration b]
   (Instant. (core/+ (:nanos a) (:nanos b)))))
 
-#?(:clj
+
 (defnt ->unix-millis
-  ([^java.time.Instant       x] (-> x (.toEpochMilli)))
-  ([^java.util.Date          x] (-> x (.getTime)     ))
-  ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis)))
-  ([^java.time.LocalTime     x] (-> x (.toNanoOfDay) (convert :nanos :millis)))
-  ([^java.time.LocalDateTime x] (core/+ (-> x (.toLocalDate) ->unix-millis)
-                                        (-> x (.toLocalTime) ->unix-millis)))
-  ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
-  ([^java.util.Calendar      x] (-> x (.getTimeInMillis)))))
+  #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMillis)))
+             ([^java.util.Date          x] (-> x (.getTime)     ))
+             ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis)))
+             ([^java.time.LocalTime     x] (-> x (.toNanoOfDay) (convert :nanos :millis)))
+             ([^java.time.LocalDateTime x] (core/+ (-> x (.toLocalDate) ->unix-millis)
+                                                   (-> x (.toLocalTime) ->unix-millis)))
+             ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
+             ([^java.util.Calendar      x] (-> x (.getTimeInMillis)))]
+      :cljs [([                         x] (coerce/to-epoch x))]))
 
 #?(:clj
 (defnt ->duration
@@ -208,41 +227,48 @@
   ([^java.time.Year                 x] (-> x (.getValue) year->nanos nanos->instant))
   ([#{java.time.Instant
       java.util.Date
-      org.joda.time.DateTime} x]
-    (-> x ->unix-millis unix-millis->instant))
-  ([^string? s k]
-    (-> s (->local-date-time-protocol k) ->instant))
+      org.joda.time.DateTime}       x] (-> x ->unix-millis unix-millis->instant))
+  ([^string? s k] (-> s (->local-date-time-protocol k) ->instant))
   #_([^java.time.ZonedDateTime x])
   #_([^java.time.YearMonth     x])
   #_([^java.util.Date$ZonedDateTime x])))
 
 #?(:clj
-(defnt ^java.time.Instant ->jinstant
+(defnt ^java.time.Instant ->platform-instant
+  "Coerces to an instantaneous point on an imaginary timeline."
   ([#{long? bigint?} x] (-> x pconv/->long (java.time.Instant/ofEpochMilli)))
-  ([x] (-> x ->unix-millis-protocol ->jinstant))))
+  ([x] (-> x ->unix-millis-protocol ->platform-instant))))
 
-#?(:clj
-(defnt ^java.util.Date ->jdate
-  ([^java.time.Instant t]
-    (Date/from t))
-  ([^quantum.core.time.core.Instant t]
-    (-> t ->jinstant ->jdate))))
+; ===== DATE ===== ;
 
-#?(:clj
+(defnt ->platform-date
+  "Returns a platform date (java.util.Date for Java, js/Date for JS)."
+  #?@(:clj  [(^java.util.Date [^java.time.Instant              t] (Date/from t))
+             (^java.util.Date [^quantum.core.time.core.Instant t] (-> t ->platform-instant ->platform-date))]
+      :cljs [(^js/Date        [                                x] (coerce/to-date x))]))
+
+#_(defnt ->local-date
+  "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
+  #?@(:clj  [()]
+      :cljs [()]))
+
 (defnt ->local-date-time
-  ([^string? s k]
-    (let [^String pattern
-           (condp = k
-             :http "EEE, dd MMM yyyy HH:mm:ss zzz"
-              k)]
-      (-> (java.time.format.DateTimeFormatter/ofPattern pattern)
-          (.parse s)
-          (java.time.LocalDateTime/from))))
-  ([t-0]
-    (let [^java.time.Instant t (-> t-0 ->jinstant) ]
-      (-> t
-          (.atZone (java.time.ZoneId/of "UTC"))
-          (java.time.LocalDateTime/from))))))
+  "Coerces to a date-time without a time-zone in the ISO-8601 calendar system, such as 2007-12-03T10:15:30."
+  #?@(:clj  [(^java.time.LocalDateTime [^string? s k]
+               (let [^String pattern
+                      (condp = k
+                        :http "EEE, dd MMM yyyy HH:mm:ss zzz"
+                         k)]
+                 (-> (java.time.format.DateTimeFormatter/ofPattern pattern)
+                     (.parse s)
+                     (java.time.LocalDateTime/from))))
+             (^java.time.LocalDateTime [t-0]
+               (let [^java.time.Instant t (-> t-0 ->platform-instant) ]
+                 (-> t
+                     (.atZone (java.time.ZoneId/of "UTC"))
+                     (java.time.LocalDateTime/from))))]
+      :cljs [(^DateTime    [x k] (coerce/to-local-date-time x))
+             (^UtcDateTime [x  ] (coerce/to-date-time       x))]))
 
 ; (ann keyword->timeunit [Keyword -> TimeUnit])
 ; (defn- ^TimeUnit keyword->timeunit
@@ -311,9 +337,16 @@
                         (throw (Exception. "Formatter not found")))]
               (.format formatter ^java.time.LocalDateTime (->local-date-time date))))))
 
-#?(:clj
-(defn ->string [date formatting]
-  (->string* formatting date)))
+
+(defn ->string
+  ^{:doc "Returns a string representation of `x` in UTC time-zone
+          using \"yyyy-MM-dd'T'HH:mm:ss.SSSZZ\" date-time representation."}
+  ([x]
+    #?(:clj  (TODO)
+       :cljs (coerce/to-string x)))
+  ([date formatting]
+    #?(:clj  (->string* formatting date)
+       :cljs (TODO))))
 
 ; #?(:clj (defn str-now [] (now-formatted "MM-dd-yyyy HH:mm::ss")))
 ; #?(:clj (def timestamp str-now))
@@ -427,7 +460,7 @@
 
 #?(:clj
 (defnt ^java.sql.Time ->sql-time
-  ; The string must be formatted as JDBC_TIME_FORMAT
+  ; TODO The string must be formatted as JDBC_TIME_FORMAT
   ([^integer?           x] (java.sql.Time. x))
   ([^string?            x] (java.sql.Time/valueOf x))
   #_([^String x ^TimeZone timeZone]
@@ -445,7 +478,7 @@
 #?(:clj
 (defnt ^java.sql.Time ->sql-date
   ([^integer?           x] (java.sql.Date. x))
-  ; The string must be formatted as JDBC_DATE_FORMAT
+  ; TODO The string must be formatted as JDBC_DATE_FORMAT
   ([^string?            x] (java.sql.Date/valueOf x))
   #_([^String x ^java.util.TimeZone timeZone]
     (-> timeZone ->DateFormat (.parse x) ->unix-millis ->sql-date))
@@ -569,7 +602,7 @@
 
 
 ;  date->str
-;  (defn
+;  (defnTODO
 ;   convert
 ;   [^Date obj ^Locale locale ^TimeZone timeZone ^String formatString]
 ;   (let
@@ -626,3 +659,7 @@
 ;   (-> (or formatString CALENDAR_FORMAT)
 ;       (->DateTimeFormat timeZone locale)
 ;       (.parse obj)))
+
+
+; ===== DAYS OF WEEK ===== ;
+

@@ -334,3 +334,35 @@
    :cljs (defnt abs' ([x] (TODO "incomplete") (js/Math.abs x))))
 
 #?(:clj (defalias abs abs'))
+
+#?(:clj (defmacro int-nil [x] `(let [x# ~x] (if (nil? x#) 0 x#))))
+
+#?(:clj
+(defmacro zeros-op
+  "Treats nils like 0"
+  [op]
+  (let [op'     (if (= op '/) '-div op)
+        sym     (symbol (str "zeros" op'))
+        core-op (symbol "core" (str op))]
+    `(defn ~sym
+       ([a#      ] (~core-op (int-nil a#)))
+       ([a# b#   ] (~core-op (int-nil a#) (int-nil b#)))
+       ([a# b# c#] (~core-op (int-nil a#) (int-nil b#) (int-nil c#)))
+       ([a# b# c# & args#] (->> (conj args# c# b# a#)
+                                (clojure.core.reducers/map #(int-nil %))
+                                (core/reduce ~core-op)))))))
+
+#?(:clj
+(defmacro nils-op
+  "If any nils are present, returns nil"
+  [op]
+  (let [op'     (if (= op '/) '-div op)
+        sym     (symbol (str "nils" op'))
+        core-op (symbol "core" (str op))]
+    `(defn ~sym
+       ([a#      ] (when a# (~core-op a#)))
+       ([a# b#   ] (when (and a# b#) (~core-op a# b#)))
+       ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
+       ([a# b# c# & args#]
+         (let [argsf# (conj args# c# b# a#)]
+           (when (every? some? argsf#) (core/reduce ~core-op argsf#))))))))

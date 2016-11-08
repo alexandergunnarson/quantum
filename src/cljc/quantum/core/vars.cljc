@@ -1,14 +1,10 @@
-(ns ^{:doc "Var- and namespace-related functions."
-      :cljs-self-referring? true}
-  quantum.core.vars
-           (:refer-clojure :exclude [defonce])
-           (:require
-             [quantum.core.macros.core :as cmacros
-               :refer        [#?@(:clj [if-cljs when-cljs])]
-               :refer-macros [if-cljs when-cljs]])
-  #?(:cljs (:require-macros
-             [quantum.core.vars
-               :refer [defalias]])))
+(ns quantum.core.vars
+  "Var- and namespace-related functions."
+  (:refer-clojure :exclude [defonce])
+  (:require
+    [quantum.core.macros.core :as cmacros
+      :refer        [#?@(:clj [if-cljs when-cljs])]
+      :refer-macros [if-cljs when-cljs]]))
 
 ; ============ DECLARATION ============
 
@@ -204,7 +200,7 @@
 
 (defn unqualify [sym] (-> sym name symbol))
 
-(defalias update-meta vary-meta)
+(def update-meta vary-meta)
 
 (defn merge-meta   [from to] (with-meta to (merge (meta from) (meta to))))
 (defn replace-meta [from to] (with-meta to (meta from)))

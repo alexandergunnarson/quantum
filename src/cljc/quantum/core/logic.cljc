@@ -2,25 +2,21 @@
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
           ifn, whenf1, rcomp, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
-    :attribution "Alex Gunnarson"
-    :figwheel-no-load true
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.logic
-           (:refer-clojure :exclude [if-let when-let])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )   :as core   ]
-                     [quantum.core.fn          :as fn
-                       :refer        [#?@(:clj [fn1 fn->])]
-                       :refer-macros [          fn1 fn->]]
-                     [quantum.core.vars        :as var
-                       :refer        [#?(:clj defalias)]
-                       :refer-macros [        defalias]]
-                     [quantum.core.macros.core :as cmacros
-                       :refer        [#?(:clj if-cljs)]
-                       :refer-macros [        if-cljs]])
-  #?(:cljs (:require-macros
-                     [quantum.core.logic       :as logic
-                       :refer [fn-or]])))
+  (:refer-clojure :exclude [if-let when-let])
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )   :as core   ]
+    [quantum.core.fn          :as fn
+      :refer        [#?@(:clj [fn1 fn->])]
+      :refer-macros [          fn1 fn->]]
+    [quantum.core.vars        :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]
+    [quantum.core.macros.core :as cmacros
+      :refer        [#?(:clj if-cljs)]
+      :refer-macros [        if-cljs]]))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.
@@ -66,7 +62,7 @@
 #?(:clj (defmacro fn-and [& preds] `(fn-logic-base and ~@preds)))
 #?(:clj (defmacro fn-not [pred]    `(fn-logic-base not ~pred  )))
 
-(def falsey? (fn-or false? nil?))
+(def falsey? (some-fn false? nil?))
 (def truthy? identity)
 
 (defn splice-or  [obj compare-fn & coll]

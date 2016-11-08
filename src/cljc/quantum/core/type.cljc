@@ -1,35 +1,33 @@
 (ns
   ^{:doc "Type-checking predicates, 'transientization' checks, class aliases, etc."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.type
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? string? keyword? fn? map-entry? boolean?
      indexed? nil? list? coll? char? symbol? record? number? integer? float?
      double? decimal? array?
      identity class])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )       :as core]
-             [quantum.core.classes         :as classes]
-             [quantum.core.fn              :as fn
-               :refer        [#?@(:clj [fn1 mfn fn->])]
-               :refer-macros [          fn1 mfn fn->]]
-             [quantum.core.logic           :as logic
-               :refer        [#?@(:clj [fn-and whenf1])]
-               :refer-macros [          fn-and whenf1]]
-             [quantum.core.data.vector     :as vec    ]
-             [quantum.core.macros          :as macros
-               :refer        [#?@(:clj [defnt defnt'])]
-               :refer-macros [          defnt defnt']]
-             [quantum.core.type.core       :as tcore  ]
-             [quantum.core.type.predicates :as tpred  ]
-             [quantum.core.vars            :as var
-               :refer        [#?(:clj defalias)]
-               :refer-macros [        defalias]])
-  #?(:cljs (:require-macros
-             [quantum.core.type
-               :refer [should-transientize?]])))
+  (:require
+    [#?(:clj  clojure.core
+        :cljs cljs.core   )       :as core]
+    [quantum.core.classes         :as classes]
+    [quantum.core.fn              :as fn
+      :refer        [#?@(:clj [fn1 mfn fn->])]
+      :refer-macros [          fn1 mfn fn->]]
+    [quantum.core.logic           :as logic
+      :refer        [#?@(:clj [fn-and whenf1])]
+      :refer-macros [          fn-and whenf1]]
+    [quantum.core.data.vector     :as vec    ]
+    [quantum.core.macros          :as macros
+      :refer        [#?@(:clj [defnt defnt'])]
+      :refer-macros [          defnt defnt']]
+    [quantum.core.type.core       :as tcore  ]
+    [quantum.core.type.predicates :as tpred  ]
+    [quantum.core.type.macros     :as this
+      :include-macros? true]
+    [quantum.core.vars            :as var
+      :refer        [#?(:clj defalias)]
+      :refer-macros [        defalias]]))
 
 ; TODO: Should include typecasting? (/cast/)
 
@@ -155,14 +153,8 @@
 ; ; TODO this is just intuition. Better to |bench| it
 ; ; TODO move these vars
 (def transient-threshold 3)
-; macro because it will probably be heavily used
-#?(:clj
-(defmacro should-transientize? [coll]
-  `(and (editable? ~coll)
-        (counted?  ~coll)
-        (-> ~coll count (> transient-threshold)))))
 
-
+#?(:clj (defalias should-transientize? this/should-transientize?))
 ; (make-array Boolean/TYPE 1)
 
 
@@ -250,7 +242,7 @@
   (get transient-persistent-fns (editable? coll)))
 
 (defn recommended-transient-fns [coll]
-  (get transient-persistent-fns (should-transientize? coll)))
+  (get transient-persistent-fns (this/should-transientize? coll)))
 
 (defnt ->joinable
   ([#{vector? hash-map? hash-set?} x] x)

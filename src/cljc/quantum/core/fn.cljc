@@ -2,26 +2,21 @@
   ^{:doc "Useful function-related functions (one could say 'metafunctions').
 
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referencing? true
-    :figwheel-no-load       true}
+    :attribution "Alex Gunnarson"}
   quantum.core.fn
-           (:refer-clojure :exclude [constantly])
-           (:require
-             [clojure.walk                        ]
-             [quantum.core.core        :as qcore  ]
-             [quantum.core.data.map    :as map    ]
-             [quantum.core.macros.core :as cmacros
-               :refer        [#?@(:clj [when-cljs compile-if])]
-               :refer-macros [when-cljs]]
-             [quantum.core.vars        :as var
-               :refer        [#?(:clj defalias)]
-               :refer-macros [defalias]]
-     #?(:clj [clojure.pprint           :as pprint
-               :refer [pprint]                    ]))
-  #?(:cljs (:require-macros
-             [quantum.core.fn          :as fn
-               :refer [fn1]                       ])))
+       (:refer-clojure :exclude [constantly])
+       (:require
+         [clojure.walk                        ]
+         [quantum.core.core        :as qcore  ]
+         [quantum.core.data.map    :as map    ]
+         [quantum.core.macros.core :as cmacros
+           :refer        [#?@(:clj [when-cljs compile-if])]
+           :refer-macros [when-cljs]]
+         [quantum.core.vars        :as var
+           :refer        [#?(:clj defalias)]
+           :refer-macros [defalias]]
+ #?(:clj [clojure.pprint           :as pprint
+           :refer [pprint]                    ])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -160,9 +155,9 @@
 
 (defn fn-bi [arg] #(arg %1 %2))
 (defn unary [pred]
-  (fn ([a    ] (fn1 pred a))
-      ([a b  ] (fn1 pred a b))
-      ([a b c] (fn1 pred a b c))))
+  (fn ([a    ] #(pred % a))
+      ([a b  ] #(pred % a b))
+      ([a b c] #(pred % a b c))))
 
 #?(:clj
 (defmacro fn->

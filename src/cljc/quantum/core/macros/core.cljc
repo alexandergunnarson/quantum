@@ -1,6 +1,5 @@
-(ns ^{:doc "Macro-building helper functions."
-      :cljs-self-referring? true}
-  quantum.core.macros.core
+(ns quantum.core.macros.core
+  "Macro-building helper functions."
   (:refer-clojure :exclude [macroexpand macroexpand-1])
   (:require  [#?(:clj  clojure.core
                  :cljs cljs.core   ) :as core]
@@ -13,10 +12,8 @@
              [clojure.tools.analyzer.jvm         ]
              [riddley.walk                       ]
              [clojure.tools.reader :as r]])
-             [quantum.core.core])
-  #?(:cljs (:require-macros
-             [quantum.core.macros.core
-               :refer [env]])))
+             [quantum.core.core      :as qcore
+               :include-macros true]))
 
 ; ===== ENVIRONMENT =====
 
@@ -52,18 +49,7 @@
            (red/map (fn [[sym _]] [`(quote ~sym) sym]))
            (into {}))))))
 
-#?(:clj
-(defmacro env
-  "Retrieves the (sanitized) macroexpansion environment."
-  []
-  `(identity
-     '~(->> &env
-            (clojure.walk/postwalk
-              (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
-                             (.name ^clojure.lang.Compiler$LocalBinding x#)
-                             (nil? x#)
-                             []
-                             :else x#)))))))
+
 
 ; ===== LOCAL EVAL & RESOLVE =====
 
@@ -133,7 +119,7 @@
 
 (defn cljs-macroexpand
   {:adapted-from 'com.rpl.specter/cljs-macroexpand}
-  ([form] (cljs-macroexpand (env)))
+  ([form] (cljs-macroexpand (qcore/env)))
   ([form env-]
     (let [mform (cljs.analyzer/macroexpand-1 env- form)]
       (cond (identical? form mform) mform
@@ -145,7 +131,7 @@
 
 (defn cljs-macroexpand-all
   {:adapted-from 'com.rpl.specter/cljs-macroexpand-all}
-  ([form] (cljs-macroexpand-all (env)))
+  ([form] (cljs-macroexpand-all (qcore/env)))
   ([form env-]
     (if (and (seq? form)
              (#{'fn 'fn* 'cljs.core/fn} (first form)))
@@ -185,7 +171,7 @@
         attr (if (meta name) (conj (meta name) attr)   attr)]
     [(with-meta name attr) macro-args]))
 
-; ===== USEFUL =====
+; ===== ALIASING =====
 
 ;#?(:clj (def mfn reg/mfn))
 
@@ -209,6 +195,8 @@
               _# (when (= ~orig-sym-f 'nil)
                    (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))]
           (cons ~orig-sym-f ~args-sym)))))))
+
+#?(:clj (defmalias env qcore/env))
 
 ; ------------- SYNTAX QUOTE; QUOTE+ -------------
 

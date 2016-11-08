@@ -33,63 +33,17 @@
                    java.io.StringReader
                    java.util.Iterator)))
 
+; TODO use some non-lazy XML library
+
 ; ENTIRE FILE IS CLJ-ONLY (for now)
-; Commented out temporarily
 #?(:clj (do
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
 ;=================================================={                          }=====================================================
-; (def brs-open  #(str "<" % ">"))
-; (def brs-close #(str "</" % ">"))
-
-; (defn ^String tag-wrap
-;   "Wraps @body in XML tags specified by @tag."
-;   {:in [":tag" "body"]
-;    :out "\"<tag>body</tag>\""}
-;   ([^Keyword tag body] ; as in, XML wise
-;     (tag-wrap tag nil body))
-;   ([^Keyword tag opts body]
-;     (let [^String open-tag
-;             (-> tag name
-;                 (whenf (constantly (nnil? opts))
-;                   (fn1 str " " opts))
-;                 brs-open)
-;           ^String flattened-str-body
-;             (whenf body coll?
-;               (partial apply str))
-;           ^String close-tag
-;             (-> tag name (take-untili+ " ") brs-close)]
-;     (str open-tag flattened-str-body close-tag))))
-
-; (defn ^String opt
-;   "Stringifies options with corresponding tags."
-;   [tag & options]
-;   (->> (cons (name tag) options)
-;        (interpose " ")
-;        (apply str)))
-
-; (defn ^String into-xml
-;   "Parses a map structure into string XML."
-;   {:todo ["Could find a more efficient way of doing the recursion,
-;            even parallelizably."]}
-;   [^OrderedMap m0]
-;   (letfn [(into-xml-fn [^OrderedMap m]
-;             (reduce
-;               (fn [ret ^Keyword tag v]
-;                 (log/pr :alert "Tag:" tag "v class:" (class v))
-;                 (conj ret
-;                   (if (map? v)
-;                       (tag-wrap tag
-;                          (into-xml-fn v)) ; Could probably find a more efficient way of doing this
-;                       (tag-wrap
-;                         tag
-;                         v))))
-;               []
-;               m))]
-;     (->> m0 into-xml-fn first)))
-; ;___________________________________________________________________________________________________________________________________
-; ;=================================================={       XML PARSING        }=====================================================
-; ;=================================================={                          }=====================================================
+; TODO use some non-lazy XML library
+;___________________________________________________________________________________________________________________________________
+;=================================================={       XML PARSING        }=====================================================
+;=================================================={                          }=====================================================
 ; ALSO APPLIES TO HTML
 
 (defrecord XMLAttr [name val])

@@ -21,7 +21,7 @@
     (transpile-from* (conv/->file from-src) from to))
   ([^java.io.File from-src from to]
     (transpile-from*
-      (io/get {:path (str from-src) :read-method :str})
+      (io/get {:path (str from-src) :method :str})
       from to))
   ([^string? from-src from to]
     (cond

@@ -11,7 +11,7 @@
   (util/bracket (str/sp (name access) "class" class-name) contents))
 
 (def ks
-  {:java   
+  {:java
     {:file-ext "java"
      :ns-fn    javac/package}
    :c-sharp
@@ -24,7 +24,7 @@
    :in '[[:test "in.clj"] [:resources "out"]]}
   [in-path-vec out-path-vec lang]
 
-  (let [^String in-str         (io/get {:path in-path-vec :read-method :str})
+  (let [^String in-str         (io/get {:path in-path-vec :method :str})
         ^String in-str-wrapped (str "(do \n" in-str "\n)") ; Wrapped because otherwise |read-str| fails
                 in-code        (read-string in-str-wrapped)
 

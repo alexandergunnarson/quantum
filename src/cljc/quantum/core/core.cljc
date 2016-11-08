@@ -164,3 +164,16 @@
   (print "\n/* " )
   (apply println args)
   (println "*/"))
+
+#?(:clj
+(defmacro env
+  "Retrieves the (sanitized) macroexpansion environment."
+  []
+  `(identity
+     '~(->> &env
+            (clojure.walk/postwalk
+              (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
+                             (.name ^clojure.lang.Compiler$LocalBinding x#)
+                             (nil? x#)
+                             []
+                             :else x#)))))))

@@ -1,7 +1,6 @@
 (ns
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.numeric
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
@@ -36,14 +35,13 @@
                :refer-macros [          defalias defaliases]]
              [quantum.core.numeric.convert   ]
              [quantum.core.numeric.misc      ]
-             [quantum.core.numeric.operators ]
+             [quantum.core.numeric.operators  :as op
+               :include-macros true]
              [quantum.core.numeric.predicates]
              [quantum.core.numeric.trig      ]
-             [quantum.core.numeric.truncate  ]
+             [quantum.core.numeric.truncate   :as trunc
+               :include-macros true]
              [quantum.core.numeric.types :as ntypes])
-  #?(:cljs (:require-macros
-             [quantum.core.numeric
-               :refer [+ - * / floor abs zeros-op nils-op]]))
   #?(:clj  (:import
              [java.nio ByteBuffer]
              [quantum.core Numeric] ; loops?
@@ -293,48 +291,20 @@
 ;==============={        OTHER OPERATIONS          }==================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-#?(:clj
-(defmacro zeros-op
-  "Treats nils like 0"
-  [op]
-  (let [op'     (if (= op '/) '-div op)
-        sym     (symbol (str "zeros" op'))
-        core-op (symbol "core" (str op))]
-    `(defn ~sym
-       ([a#      ] (~core-op (int-nil a#)))
-       ([a# b#   ] (~core-op (int-nil a#) (int-nil b#)))
-       ([a# b# c#] (~core-op (int-nil a#) (int-nil b#) (int-nil c#)))
-       ([a# b# c# & args#] (->> (conj args# c# b# a#) (map int-nil) (reduce ~core-op)))))))
+(op/zeros-op +)
+(op/zeros-op -)
+(op/zeros-op *)
+(op/zeros-op /)
 
-(zeros-op +)
-(zeros-op -)
-(zeros-op *)
-(zeros-op /)
+(op/nils-op +)
+(op/nils-op -)
+(op/nils-op *)
+(op/nils-op /)
 
-#?(:clj
-(defmacro nils-op
-  "If any nils are present, returns nil"
-  [op]
-  (let [op'     (if (= op '/) '-div op)
-        sym     (symbol (str "nils" op'))
-        core-op (symbol "core" (str op))]
-    `(defn ~sym
-       ([a#      ] (when a# (~core-op a#)))
-       ([a# b#   ] (when (and a# b#) (~core-op a# b#)))
-       ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
-       ([a# b# c# & args#]
-         (let [argsf# (conj args# c# b# a#)]
-           (when (every? nnil? argsf#) (reduce ~core-op argsf#))))))))
-
-(nils-op +)
-(nils-op -)
-(nils-op *)
-(nils-op /)
-
-(def ^:dynamic *+*   (aritoid (fn [] 0) #(+ %) #(+ %1 %2)))
-(def ^:dynamic *-*   (aritoid (fn [] 0) #(- %) #(- %1 %2)))
-(def ^:dynamic ***   (aritoid (fn [] 1) #(* %) #(* %1 %2)))
-(def ^:dynamic *div* (aritoid (fn [] 1) #(/ %) #(/ %1 %2)))
+(def ^:dynamic *+*   (aritoid (fn [] 0) #(op/+ %) #(op/+ %1 %2)))
+(def ^:dynamic *-*   (aritoid (fn [] 0) #(op/- %) #(op/- %1 %2)))
+(def ^:dynamic ***   (aritoid (fn [] 1) #(op/* %) #(op/* %1 %2)))
+(def ^:dynamic *div* (aritoid (fn [] 1) #(op// %) #(op// %1 %2)))
 
 #?(:clj
 (defmacro with-ops [k & body]
@@ -347,7 +317,7 @@
       (throw (->ex nil "Numeric operation not recognized" {:op k#}))))))
 
 (defn whole-number? [n]
-  (= n (floor n))) ; TODO use ==
+  (= n (trunc/floor n))) ; TODO use ==
 
 ; (defn whole? [n]
 ;   (assert (instance? Double n))
@@ -411,8 +381,8 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         MUTATION         }=====================================================
 ;=================================================={                          }=====================================================
-#?(:clj (defmacro += [x a] `(~'set! ~x (+ ~x ~a))))
-#?(:clj (defmacro -= [x a] `(~'set! ~x (- ~x ~a))))
+#?(:clj (defmacro += [x a] `(~'set! ~x (op/+ ~x ~a))))
+#?(:clj (defmacro -= [x a] `(~'set! ~x (op/- ~x ~a))))
 #?(:clj (defmacro ++ [x  ] `(~'set! ~x (inc ~x))))
 #?(:clj (defmacro -- [x  ] `(~'set! ~x (dec ~x))))
 #?(:clj (defalias inc! ++))
@@ -430,4 +400,4 @@
     (throw (->ex nil "Unrecognized format" type))))
 
 (defn percentage-of [of total-n]
-  (-> of (/ total-n) double (core/* 100) display-num (str "%"))) ; TODO use *-2
+  (-> of (op// total-n) double (core/* 100) display-num (str "%"))) ; TODO use *-2

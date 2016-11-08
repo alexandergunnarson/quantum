@@ -133,10 +133,10 @@
     (write-page! (.getPageSource driver) (str "Page " (time/now) ".html")))
   ([^String page ^String page-name]
     (io/assoc!
-      {:path         [:resources "Pages" page-name]
-       :type         "html"
-       :write-method :print
-       :data         page}))))
+      {:path   [:resources "Pages" page-name]
+       :type   :html
+       :method :print
+       :data   page}))))
 
 #?(:clj
 (defn send-keys! [^RemoteWebElement input ^String ks]

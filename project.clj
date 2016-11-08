@@ -20,7 +20,9 @@
                     :checksum   :warn}}
   :plugins [[lein-environ  "1.0.3" ]
             [lein-essthree "0.2.1"
-              :exclusions [org.clojure/tools.reader]]]
+              :exclusions [org.clojure/tools.reader]]
+            ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
+            #_[lein-npm      "0.6.2"]]
   :dependencies
     [[org.clojure/clojure                       "1.8.0"] ; 1.9.0-alpha* has some problems
      [clojure-future-spec                       "1.9.0-alpha12-2"]
@@ -116,9 +118,10 @@
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====
-         #_[clj-time                            "0.7.0"           ] ; similar to JODA time
+         [clj-time                              "0.12.2"          ] ; similar to JODA time
          [com.andrewmcveigh/cljs-time           "0.4.0"
            :exclusions [org.json/json]                            ]
+         [quantum/js-joda                       "1.1.13-0"        ] ; transition to this
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
@@ -314,7 +317,8 @@
      ; gorillalabs/sparkling
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
      [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
-   :profiles
+  ;:npm {:dependencies [[js-joda "1.1.12"]]}
+  :profiles
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []

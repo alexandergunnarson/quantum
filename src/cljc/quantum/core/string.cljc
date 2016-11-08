@@ -5,8 +5,7 @@
           val (reading a number of a string), keyword+
           (for joining strings and keywords into one
           keyword), etc."
-    :attribution "Alex Gunnarson"
-    :cljs-self-referring? true}
+    :attribution "Alex Gunnarson"}
   quantum.core.string
            (:refer-clojure :exclude
              [reverse replace remove val re-find reduce boolean?])
@@ -43,9 +42,6 @@
              [quantum.core.type          :as type
                :refer        [#?(:clj boolean?)]
                :refer-macros [        boolean?]])
-  #?(:cljs (:require-macros
-             [quantum.core.string
-               :refer [ends-with?]]))
   #?(:clj (:import
              java.net.IDN
              java.util.regex.Pattern)))
@@ -201,7 +197,7 @@
   (reduce
     (fn [s1 s2]
       (let [s1 (str s1) s2 (str s2)]
-        (if (ends-with? s1 separator)
+        (if (str/ends-with? s1 separator) ; could use ends-with? but would be self-referring
             (if (starts-with? s2 separator)
                 (str s1 (.substring s2 1))
                 (str s1 s2))

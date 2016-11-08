@@ -1,5 +1,5 @@
 (ns quantum.core.io.core
-           (:refer-clojure :exclude [get assoc! dissoc! assert contains?])
+           (:refer-clojure :exclude [get assoc! dissoc! contains?])
            (:require
              [#?(:clj  clojure.core
                  :cljs cljs.core   )     :as core]
@@ -11,13 +11,13 @@
              [quantum.core.convert       :as conv
                :refer        [->name ->str]]
              [quantum.core.error         :as err
-               :refer        [->ex
+               :refer        [->ex TODO
                               #?@(:clj [throw-unless])]
                :refer-macros [          throw-unless]]
              [quantum.core.fn            :as fn
                :refer        [firsta
-                              #?@(:clj [fn->])]
-               :refer-macros [          fn->]]
+                              #?@(:clj [fn-> fn$])]
+               :refer-macros [          fn-> fn$]]
              [quantum.core.log           :as log
                :include-macros true]
              [quantum.core.logic         :as logic
@@ -26,7 +26,8 @@
                :refer-macros [          whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
              [quantum.core.collections   :as coll
-               :refer        [postwalk]]
+               :refer          [postwalk]
+               :include-macros true]
              [quantum.core.io.utils      :as u]
              [quantum.core.paths         :as p
                :refer        [path]]
@@ -61,7 +62,8 @@
 #?(:clj
 (defn- stream->assoc!
   {:todo ["Reflection"
-          "Look over Java implementation — probably better"]}
+          "Look over Java implementation — probably better"
+          "Look at quantum.convert"]}
   [^String out-path ^InputStream in-stream]
   (let [^FileOutputStream out-stream
           (FileOutputStream. (File. out-path))
@@ -75,154 +77,108 @@
     (.close out-stream))))
 
 #?(:clj
-(defn assoc-unserialized!
-  {:todo ["Decomplicate"]}
-  ([^String path- data] (assoc-unserialized! path- data nil))
-  ([^String path- data {:keys [type] :or {type :string}}]
-    (throw-unless
-      (or (and (instance? InputStream data)
-               (= type :binary))
-          (not (instance? InputStream data)))
-      (->ex :err/io "InputStream cannot be written to output type" type))
-    (condpc = type
-      (coll-or :str :string :txt)
-        (spit path- data)
-      :binary
-        (if (instance? InputStream data)
-            (stream->assoc! path- data)
-            (let [^FileOutputStream out-stream
-                    (FileOutputStream. ^File (io/as-file path-))]
-              (.write out-stream ^"[B" data)
-              (.close out-stream)))
-      ;:csv  (with-open [out-file   (io/writer path-)]  ;  :append true... hmm...
+(defn bytes->assoc! [path ^"[B" data]
+  (with-open [^OutputStream write-file (io/output-stream path)]
+    (.write write-file data))))
+
+(defmulti assoc-unserialized! firsta)
+
+#?(:clj (defmethod assoc-unserialized! :str    [_ path data] (spit path data)))
+#?(:clj (defmethod assoc-unserialized! :string [_ path data] (spit path data)))
+#?(:clj (defmethod assoc-unserialized! :txt    [_ path data] (spit path data)))
+
+#?(:clj
+ (defmethod assoc-unserialized! :csv [_ path data]
+  ;:csv  (with-open [out-file   (io/writer path-)]  ;  :append true... hmm...
       ;        (csv/write-csv out-file data))
-      (coll-or :xls :xlsx)
-        (with-open [^OutputStream write-file (io/output-stream path-)]
-          (.write write-file ^"[B" data))))))
+  (TODO)))
+
+#?(:clj
+(defmethod assoc-unserialized! :binary [_ path data]
+  (if (instance? InputStream data)
+      (stream->assoc! path data)
+      (let [^FileOutputStream out-stream
+              (FileOutputStream. ^File (io/as-file path))]
+        (.write out-stream ^"[B" data)
+        (.close out-stream)))))
+
+#?(:clj (defmethod assoc-unserialized! :xls  [_ path data] (bytes->assoc! path data)))
+#?(:clj (defmethod assoc-unserialized! :xlsx [_ path data] (bytes->assoc! path data)))
 
 #?(:clj
 (defn assoc-serialized! ; can encrypt :encrypt-with :....
-  ([path-0 data] (assoc-serialized! path-0 data nil))
-  ([path-0 data {:keys [compress?
-                        unfreezable-caught?]}]
-    (with-open [write-file (io/output-stream path-0)]
-      (let [data-f (whenf data vector+? ; Because "unfreezable type: rrbt Vector"
-                     (partial core/into []))]
-        (try (nippy/freeze-to-out!
-               (DataOutputStream. write-file)
-               (if compress?
-                   (nippy/freeze data-f)
-                   data-f))
-          (catch Throwable e
-            (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector))
-                     (not unfreezable-caught?))
-                (->> data
-                     (postwalk (whenf1 vector+?
-                                 (partial core/into [])))
-                     #((assoc-serialized! path-0 %
-                         (assoc :unfreezable-caught? true))))
-                (throw e)))))))))
-
-#?(:clj
-(defn try-assoc!
-  {:todo ["rewrite"]}
-  [n successful? file-name-f directory-f
-   file-path-f method data-formatted file-type]
-  (cond successful? (log/pr " complete.\n")
-        (> n 2)     (log/pr "Maximum tries exceeded.")
-        :else
-        (try
-          (log/pr :debug "Writing" file-name-f "to" directory-f (str "(try " n ")..."))
-          (condpc = method
-            :print  (assoc-unserialized! file-path-f data-formatted {:type :string})
-            :pretty (clojure.pprint/pprint data-formatted (io/writer file-path-f)) ; is there a better way to do this?
-
-            (coll-or :serialize :compress :binary)
-              (if (or ;(= method :binary)
-                      (splice-or file-type = "csv" "xls" "xlsx" "txt" :binary))
-                  (assoc-unserialized! file-path-f data-formatted {:type (keyword file-type)})
-                  (assoc-serialized!   file-path-f data-formatted method))
-            (throw (->ex :illegal-arg "Unknown method requested." method)))
-          #(try-assoc! (inc n) true file-name-f directory-f
-             file-path-f method data-formatted file-type)
-          (catch FileNotFoundException _
-            (u/create-dir! directory-f)
-            #(try-assoc! (inc n) false file-name-f directory-f
-               file-path-f method data-formatted file-type))))))
+  ([path data] (assoc-serialized! path data nil))
+  ([path data {:keys [compress? unfreezable-caught?]}]
+    (with-open [write-file (io/output-stream path)] ; TODO more efficient way to write?
+      (try (nippy/freeze-to-out!
+             (DataOutputStream. write-file)
+             (if compress? (nippy/freeze data) data))
+        (catch Throwable e
+          (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector)) ; Because "unfreezable type: rrbt Vector"
+                   (not unfreezable-caught?))
+              (->> data
+                   (postwalk (whenf1 vector+?
+                               (partial core/into [])))
+                   (#(assoc-serialized! path %
+                       (assoc :unfreezable-caught? true))))
+              (throw e))))))))
 
 ; Currently, Breeze supports IO for Matrices in two ways: Java serialization and csv.
 ; The latter comes from two functions: breeze.linalg.csvread and
 ; breeze.linalg.csvwrite
-#?(:clj
-(defn assoc!- ; can have list of file-types ; should detect file type from data... ; create the directory if it doesn't exist
-  "@file-types : Should be a vector of keywords"
-  {:todo ["Apparently has problems with using the :directory key"
-          "Decomplicate"
-          "Rewrite"
-          "|time/now-formatted| needs to be not crossed out"
-          "|next-file-copy-num| needs to be not crossed out"]}
-  ([opts] (assoc!- nil (:data opts) opts))
-  ([path- data] (assoc!- path- data nil))
-  ([path- data- {file-name :name file-path :path
-                :keys [data directory file-type file-types
-                       method overwrite formatting-func]
-                :or   {directory       :resources
-                       file-name       "Untitled"
-                       file-types      [:clj]
-                       method          :serialize ; can encrypt :encrypt-with :....
-                       overwrite       true  ; :date, :num :num-0
-                       formatting-func identity}
-                :as   options}]
-  (validate method #{:compress :pretty :serialize :print})
-  (doseq [file-type-n file-types]
-    (let [data data-
-          file-path (p/parse-dir path-)
-          _ (validate file-path string?)
-          file-path-parsed file-path
-          directory-parsed (p/parse-dir directory)
-          directory-f
-            (or (-> file-path-parsed p/up-dir   (whenc empty? nil))
-                directory-parsed)
-          extension
-            (or (-> file-path-parsed p/file-ext (whenc empty? nil))
-                (p/file-ext file-name)
-                file-type)
-          file-name-0
-            (or (-> file-path-parsed p/path->file-name u/escape-illegal-chars (whenc empty? nil))
-                (-> file-name u/escape-illegal-chars p/path-without-ext (str "." extension)))
-          file-name-00
-            (or (-> file-path-parsed p/path->file-name u/escape-illegal-chars (whenc empty? nil)
-                    (whenf nnil? (fn-> p/path-without-ext (str " 00." extension))))
-                (-> file-name u/escape-illegal-chars p/path-without-ext (str " 00." extension)))
-          file-path-0  (path directory-f file-name-0)
-          date-spaced
-            (when (and (= overwrite :date) (contains? file-path-0))
-              (str " " (identity #_time/now-formatted "MM-dd-yyyy HH|mm")))
-          file-num
-            (cond
-              (and (splice-or overwrite = :num :num-0)
-                   (some #(contains? %1) [file-path-0 (path directory-f file-name-00)]))
-              "00_FIX" #_(next-file-copy-num file-path-0)
-              (and (= overwrite :num-0) ((fn-not contains?) file-path-0))
-              "00"
-              :else nil)
-          file-name-f
-            (-> file-name-0 p/path-without-ext
-                (str (or date-spaced
-                         (whenf file-num nnil? (partial str " ")))
-                     (when (nempty? extension)
-                       (str "." extension))))
-          file-path-f (path directory-f file-name-f)
-          data-formatted
-            (case file-type
-              "html" data ; (.asXml data) ; should be less naive than this
-              "csv" (formatting-func data)
-              data)]
-            (log/pr :debug file-num)
-            (log/pr :debug file-name-f)
-            (log/pr :debug directory-f)
-      (trampoline try-assoc! 1 false
-        file-name-f directory-f file-path-f method data-formatted file-type))))))
+
+(defn assoc!
+  "For CLJ and CLJS.
+
+   In CLJS:
+   Persists @x between page reloads.
+   Assocs @x to @k in js/localStorage.
+
+   Note, according to OWASP:
+   It's recommended not to use js/localStorage, IndexedDB, or the Filesystem API
+   (including for session identifiers) because:
+   1) Any authentication your application requires can be bypassed by a
+      user with local privileges to the machine on which the data is stored
+   2) A single Cross Site Scripting can be used to steal all the data
+      in these objects
+   3) A single Cross Site Scripting can be used to load malicious data
+      into these objects too, so don't consider objects in these to be trusted.
+
+   Cookies can mitigate this risk using the |httpOnly| flag."
+  {:todo ["|path| is OS-naive"
+          "Technically file structures can be like nested keys in a map,
+           so it would be |assoc-in!|"
+          "detect file type from data"
+          "(only optionally) create the directory recursively if it doesn't exist"
+          "add a pluggable overwrite strategy using `next-file-copy-num`"]}
+  ([opts] (assoc! (:path opts) (:data opts) opts))
+  ([path data] (assoc! path data {:method :print}))
+  ([path data {:keys [type method overwrite? formatter max-tries]
+               :or   {method     :serialize ; can encrypt :encrypt-with :....
+                      overwrite? false
+                      max-tries  2}
+               :as   opts}]
+    (validate method #{:compress :pretty :serialize :print})
+    (assert (not (and path (:path opts))))
+    (assert (not (and data (:data opts))))
+    #?(:cljs (js/localStorage.setItem (apply quantum.core.paths/path path) (->str data))
+       :clj  (let [path-f (p/parse-dir path)]
+               (validate path-f string?)
+               (err/try-times max-tries 500
+                 (try
+                   (condpc = method
+                     :print  (assoc-unserialized! :string path data)
+                     :pretty (clojure.pprint/pprint data (io/writer path)) ; is there a better way to do this?
+                     (coll-or :serialize :compress :binary)
+                       (if (or ;(= method :binary)
+                               (coll/contains? #{:csv :xls :xlsx :txt :binary} type))
+                           (assoc-unserialized! (keyword type) path data)
+                           (assoc-serialized!   path data method))
+                     (throw (->ex :illegal-arg "Unknown write method requested." method)))
+                   [true]
+                   (catch FileNotFoundException e
+                     (u/create-dir! (-> path p/up-dir)) ; TODO need to do this recursively, and only as an option
+                     (throw e))))))))
 
 #_(defn dissoc!
   {:todo ["Implement recycle bin functionality for Windows" "Decomplicate"]}
@@ -258,75 +214,48 @@
 
 #?(:clj (def create-file! (fn-> io/as-file (.createNewFile))))
 
-(defn assoc!
-  "For CLJ and CLJS.
-
-   In CLJS:
-   Persists @x between page reloads.
-   Assocs @x to @k in js/localStorage.
-
-   Note, according to OWASP:
-   It's recommended not to use js/localStorage, IndexedDB, or the Filesystem API
-   (including for session identifiers) because:
-   1) Any authentication your application requires can be bypassed by a
-      user with local privileges to the machine on which the data is stored
-   2) A single Cross Site Scripting can be used to steal all the data
-      in these objects
-   3) A single Cross Site Scripting can be used to load malicious data
-      into these objects too, so don't consider objects in these to be trusted.
-
-   Cookies can mitigate this risk using the |httpOnly| flag."
-  {:todo ["|path| is OS-naive"
-          "Technically file structures can be like nested keys in a map,
-           so it would be |assoc-in!|"]}
-  [k x & [opts]]
-  #?(:clj  (assoc!- k x opts)
-     :cljs (js/localStorage.setItem (apply path k) (->str x))))
-
 ; TODO replace
 #?(:clj
 (defn byte-array? [x]
   (= (type x) (type (byte-array 0)))))
 
+(defmulti get* firsta)
+
+#?(:clj (defmethod get* :str-seq   [_ path] (iota/seq  path)))
+#?(:clj (defmethod get* :str-vec   [_ path] (iota/vec  path)))
+#?(:clj (defmethod get* :str       [_ path] (slurp     path))) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
+#?(:clj (defmethod get* :load-file [_ path] (load-file path)))  ; TODO don't do this; validate it first
+
 (defn get
   "Reads/'gets' a file from the filesystem.
 
    In the case of CLJS, it gets it from local storage."
-  {:todo        ["Decomplicate" "Rewrite" "|path| is naive"]
+  {:todo        ["|path| is naive"]
    :attribution "Alex Gunnarson"}
-  ([unk] (cond (string? unk)
-               (get nil {:path unk})
-               (map? unk)
-               (get nil unk)
-               :else (throw (->ex :unknown-argument nil unk))))
-  ([_ {file-name :name file-path :path
-      :keys [directory file-type method]
-      :or   {directory   :resources
-             method :unserialize} ; :uncompress is automatic
-      :as options}] ; :string??
-  #?(:cljs (js/localStorage.getItem file-path)
-     :clj  (let [^String directory-f (-> directory p/parse-dir)
-                 ^String file-path-f
-                   (or (-> file-path p/parse-dir (whenc empty? nil))
-                       (path directory-f file-name))
-                 extension (keyword (or file-type (p/file-ext file-path-f)))]
-             (condpc = method
-               :str-seq   (iota/seq  file-path-f)
-               :str-vec   (iota/vec  file-path-f)
-               :str       (slurp     file-path-f) ; because it doesn't leave open FileInputStreams  ; (->> file-path-f iota/vec (apply str))
-               :load-file (load-file file-path-f) ; don't do this; validate it first
+  ([unk] ; :string??
+    (let [{:keys [type method path]
+           :or   {method :unserialize} ; :uncompress is automatic
+           :as opts}
+          (cond (string? unk) {:path unk}
+                (map?    unk) unk
+                :else         (throw (->ex :unknown-argument nil unk)))]
+  #?(:cljs (js/localStorage.getItem path)
+     :clj  (let [^String path-f (-> path p/parse-dir (whenc empty? nil))
+                 ext (keyword (or type (p/file-ext path-f)))]
+             (case method
                :unserialize
-                 (condpc = extension
+                 (condpc = ext
                    (coll-or :txt :xml)
-                     (iota/vec file-path-f) ; default is FileVec
+                     (iota/vec path-f) ; default is FileVec
                    (coll-or :xls :xlsx)
-                     (io/input-stream file-path-f)
+                     (io/input-stream path-f)
                    ;"csv"
-                   ;(-> file-path-f io/reader csv/read-csv)
-                   (whenf (with-open [read-file (io/input-stream file-path-f)] ; Clojure object
+                   ;(-> path-f io/reader csv/read-csv)
+                   (whenf (with-open [read-file (io/input-stream path-f)] ; Clojure object
                           (nippy/thaw-from-in! (DataInputStream. read-file)))
                      byte-array? nippy/thaw))
-               (throw (->ex nil "Unknown read method requested." method)))))))
+               nil (slurp path-f)
+               (get* method path)))))))
 
 (defmulti persist! firsta)
 
