@@ -26,21 +26,19 @@
                     [quantum.core.logic            :as logic
                       :refer [nnil?]                         ]
                     [quantum.core.macros           :as macros
-                      :refer [#?@(:clj [defnt])]             ]
+                      :refer [defnt]]
                     [quantum.core.type             :as type
                       :refer [#?@(:clj [editable? hash-set?
                                         hash-map?])]         ]
                     [quantum.core.type.defs
                       #?@(:cljs [:refer [Reducer Folder]])]
                     [quantum.core.vars             :as var
-                      :refer [#?(:clj defalias)]             ])
+                      :refer [defalias]])
   #?(:cljs (:require-macros
-                    [quantum.core.macros           :as macros
-                      :refer [defnt]                         ]
                     [quantum.core.type             :as type
                       :refer [editable? hash-set? hash-map?] ]
-                    [quantum.core.vars             :as var
-                      :refer [defalias]                      ]))
+                    [quantum.core.reducers.reduce
+                      :refer [reduce]]))
   (:import #?(:clj  [quantum.core.type.defs Reducer Folder]
               :cljs [goog.string StringBuffer])))
 
@@ -137,22 +135,6 @@
   ([f coll]      `(reduce ~f (~f) ~coll))
   ([f init coll] `(reduce* ~coll ~f ~init))))
 
-#?(:clj
-(defmacro reducei-
-  [should-extern? f ret-i coll & args]
-  (let [f-final
-         `(~(if (and should-extern? @qcore/externs?)
-                `quantum.core.macros/extern+
-                `quantum.core.macros.optimization/identity*)
-           (let [i# (volatile! (long -1))]
-             (fn ([ret# elem#]
-                   (vswap! i# quantum.core.core/unchecked-inc-long)
-                   (~f ret# elem# @i#))
-                 ([ret# k# v#]
-                   (vswap! i# quantum.core.core/unchecked-inc-long)
-                   (~f ret# k# v# @i#)))))
-        code `(reduce ~f-final ~ret-i ~coll)]
-  code)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================

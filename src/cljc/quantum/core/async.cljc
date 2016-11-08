@@ -3,42 +3,43 @@
     :attribution "Alex Gunnarson"}
   quantum.core.async
   (:refer-clojure :exclude [promise realized? future])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )           :as core     ]
-                     [com.stuartsierra.component       :as component]
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async)        :as async    ]
-          ;#?@(:clj [[co.paralleluniverse.pulsar.async :as async+   ]
-          ;          [co.paralleluniverse.pulsar.core  :as pasync   ]])
-            #?(:cljs [servant.core                     :as servant  ])
-                     [quantum.core.error               :as err
-                       :refer        [->ex TODO #?(:clj catch-all)]
-                       :refer-macros [catch-all]]
-                     [quantum.core.collections         :as coll
-                       :refer [#?@(:clj [nempty? seq-loop]) break]           ]
-                     [quantum.core.log                 :as log
-                       :include-macros true                         ]
-                     [quantum.core.logic               :as logic
-                       :refer        [#?@(:clj [fn-and fn-or fn-not condpc whenc]) nnil?]
-                       :refer-macros [fn-and fn-or fn-not condpc]   ]
-                     [quantum.core.macros.core         :as cmacros
-                       :refer [#?@(:clj [if-cljs])]                 ]
-                     [quantum.core.macros              :as macros
-                       :refer        [#?(:clj defnt)]
-                       :refer-macros [defnt]                        ]
-                     [quantum.core.system              :as sys      ]
-                     [quantum.core.vars                :as var
-                       :refer        [#?@(:clj [defalias defmalias])]
-                       :refer-macros [defalias defmalias]           ])
-  #?(:cljs (:require-macros
-                     [servant.macros                   :as servant
-                       :refer [defservantfn]                        ]
-                     [cljs.core.async.macros           :as asyncm   ]))
-  #?(:clj (:import clojure.core.async.impl.channels.ManyToManyChannel
-                   (java.util.concurrent TimeUnit)
-                   quantum.core.data.queue.LinkedBlockingQueue
-                   #_co.paralleluniverse.fibers.Fiber
-                   #_co.paralleluniverse.strands.Strand)))
+  (:require
+    [clojure.core                     :as core]
+    [com.stuartsierra.component       :as component]
+    [clojure.core.async               :as async]
+#?@(#_:clj
+ #_[[co.paralleluniverse.pulsar.async :as async+]
+    [co.paralleluniverse.pulsar.core  :as pasync]]
+    :cljs
+   [[servant.core                     :as servant]])
+    [quantum.core.error               :as err
+      :refer [->ex TODO catch-all]]
+    [quantum.core.collections         :as coll
+      :refer [nempty? seq-loop break]]
+    [quantum.core.log                 :as log
+      :include-macros true]
+    [quantum.core.logic               :as logic
+      :refer [fn-and fn-or fn-not condpc whenc nnil?]]
+    [quantum.core.macros.core         :as cmacros
+      :refer [if-cljs]]
+    [quantum.core.macros              :as macros
+      :refer [defnt]]
+    [quantum.core.system              :as sys]
+    [quantum.core.vars                :as var
+      :refer  [defalias defmalias]])
+  (:require-macros
+    [servant.macros                   :as servant
+      :refer [defservantfn]                        ]
+    [cljs.core.async.macros           :as asyncm   ]
+    [quantum.core.async               :as self
+      :refer [go]])
+#?(:clj
+  (:import
+    clojure.core.async.impl.channels.ManyToManyChannel
+    (java.util.concurrent TimeUnit)
+    quantum.core.data.queue.LinkedBlockingQueue
+    #_co.paralleluniverse.fibers.Fiber
+    #_co.paralleluniverse.strands.Strand)))
 
 (log/this-ns)
 
@@ -48,8 +49,8 @@
           "clojure.core.async.pool-size"
           (str (.. Runtime getRuntime availableProcessors))))
 
-#?(:clj (defmalias go clojure.core.async/go cljs.core.async.macros/go))
-#?(:clj (defalias async go))
+#?(:clj (defmalias go    clojure.core.async/go cljs.core.async.macros/go))
+#?(:clj (defalias  async go))
 
 #?(:clj
 (defmacro <?
@@ -332,7 +333,7 @@
                    #(do (println "B") (Thread/sleep 2000)))}
   [& fs]
   (->> fs
-       (mapv (fn [f] (#?(:clj go :cljs asyncm/go) (f))))
+       (mapv (fn [f] (go (f))))
        (mapv #(#?(:clj  async/<!!
                   :cljs async/<!) %))))
 

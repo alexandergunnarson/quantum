@@ -4,28 +4,31 @@
     :attribution "Alex Gunnarson"}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce dotimes])
-  (:require [#?(:clj  clojure.core
-                :cljs cljs.core   )           :as core   ]
-    #?(:clj [proteus
-              :refer [let-mutable]                       ])
-            [quantum.core.core                :as qcore  ]
-            [quantum.core.error               :as err
-              :refer [->ex]                              ]
-            [quantum.core.log                 :as log
-              :include-macros true]
-            [quantum.core.macros.core         :as cmacros
-              :refer [#?@(:clj [if-cljs])]               ]
-            [quantum.core.macros              :as macros
-              :refer [#?@(:clj [assert-args])]           ]
-            [quantum.core.reducers            :as red
-              :include-macros true]
-            [quantum.core.fn
-              :refer [#?@(:clj [rfn])]]
-            [quantum.core.macros.optimization :as opt    ]
-            [quantum.core.type                :as type   ]
-            [quantum.core.vars             :as var
-              :refer        [#?(:clj defalias)]
-              :refer-macros [        defalias]]))
+  (:require
+    [clojure.core                     :as core]
+#?@(:clj
+   [[proteus
+      :refer [let-mutable]]])
+    [quantum.core.core                :as qcore]
+    [quantum.core.error               :as err
+      :refer [->ex]]
+    [quantum.core.log                 :as log
+      :include-macros true]
+    [quantum.core.macros.core         :as cmacros
+      :refer [if-cljs]]
+    [quantum.core.macros              :as macros
+      :refer [assert-args]]
+    [quantum.core.reducers            :as red
+      :include-macros true]
+    [quantum.core.fn
+      :refer [rfn]]
+    [quantum.core.macros.optimization :as opt]
+    [quantum.core.type                :as type]
+    [quantum.core.vars                :as var
+      :refer [defalias]])
+  (:require-macros
+    [quantum.core.loops :as self
+      :refer [reduce doseq]]))
 
 #?(:clj (set! *unchecked-math* true))
 
@@ -62,6 +65,23 @@
   `(reduce- ~(if-cljs &env :cljs :clj) ~@args)))
 
 #?(:clj
+(defmacro reducei-
+  [should-extern? f ret-i coll & args]
+  (let [f-final
+         `(~(if (and should-extern? @quantum.core.core/externs?)
+                `quantum.core.macros/extern+
+                `quantum.core.macros.optimization/identity*)
+           (let [i# (volatile! (long -1))]
+             (fn ([ret# elem#]
+                   (vswap! i# quantum.core.core/unchecked-inc-long)
+                   (~f ret# elem# @i#))
+                 ([ret# k# v#]
+                   (vswap! i# quantum.core.core/unchecked-inc-long)
+                   (~f ret# k# v# @i#)))))
+        code `(reduce ~f-final ~ret-i ~coll)]
+  code)))
+
+#?(:clj
 (defmacro reducei
   "|reduce|, indexed.
 
@@ -72,7 +92,7 @@
   {:attribution "Alex Gunnarson"
    :todo ["Make this an inline function, not a macro."]}
   [f ret coll]
-  `(red/reducei- false ~f ~ret ~coll)))
+  `(reducei- false ~f ~ret ~coll)))
 
 (defn reduce-2
   "Like |reduce|, but reduces over two items in a collection at a time.
@@ -139,7 +159,32 @@
   [args]
   `(do ~@args)))
 
-#?(:clj (defalias doseq* red/doseq*))
+#?(:clj
+(defmacro doseq*
+  "A lighter version of |doseq| based on |reduce|.
+   Optimized for one destructured coll."
+  {:attribution "Alex Gunnarson"
+   :see-also "Timothy Baldridge, http://dev.clojure.org/jira/browse/CLJ-1658"}
+  [should-extern? bindings & body]
+  (assert (vector? bindings) "`doseq` takes a vector for its bindings")
+  (condp = (count bindings)
+    3
+      (let [[k v coll] bindings]
+        `(reduce
+           (fn [_# ~k ~v]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    2
+      (let [[elem coll] bindings]
+        `(reduce
+           (fn [_# ~elem]
+                 ~@body
+                 nil)
+           nil
+           ~coll))
+    (throw (->ex nil (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
 
 #?(:clj
 (defmacro doseq-
@@ -283,8 +328,6 @@
 ;        nil ~coll)
 ;      (persistent! ret#)))
 
-
-
 #?(:clj
 (defmacro dotimes
   "Hopefully an improvement on |dotimes|, via a few optimizations
@@ -314,37 +357,6 @@
            (set! ~i (unchecked-inc ~i))
            (recur)))))))
 
-
-
-; (defmacro doseq+
-;   "Repeatedly executes body (presumably for side-effects) with
-;   bindings and filtering as provided by \"for\".  Does not retain
-;   the head of the sequence. Returns nil.
-
-;   Timothy Baldridge: 'The net effect is about a 3x performance boost for vectors, with no impact on code for seqs.'"
-;   {:attribution "Timothy Baldridge, http://dev.clojure.org/jira/browse/CLJ-1658"}
-;   [seq-exprs & body]
-;   (assert-args
-;     (vector? seq-exprs)       "a vector for its binding"
-;     (even? (count seq-exprs)) "an even number of forms in binding vector")
-;   (let [step (fn step [[k v & seqs] body]
-;                (let [body (if seqs
-;                               (step seqs body)
-;                               body)]
-;                  (if k
-;                      (if (keyword? k)
-;                          (cond
-;                            (= k :let)   `(let ~v ~body)
-;                            (= k :when)  `(when ~v ~body)
-;                            (= k :while) `(if ~v ~body (reduced nil)))
-;                          `(reduce
-;                             (fn [_# ~k]
-;                               ~body)
-;                             nil
-;                             ~v))
-;                      body)))]
-;     `(do ~(step seq-exprs `(do ~@body nil)) nil)))
-
 #?(:clj
 (defmacro while-let
   "Repeatedly executes body while test expression is true, evaluating the body
@@ -352,14 +364,14 @@
   {:source "markmandel/while-let"}
   [[form test] & body]
   `(loop [~form ~test]
-       (when ~form
-           ~@body
-           (recur ~test)))))
+     (when ~form
+         ~@body
+         (recur ~test)))))
 
 (defn doeach
   "Like |run!|, but returns @coll.
    Like an in-place |doseq|."
-  [f coll] (red/doseq* false [x coll] (f x)) coll)
+  [f coll] (doseq [x coll] (f x)) coll)
 
 (defn each
   "Same as |core/run!| but uses reducers' reduce"
@@ -370,7 +382,7 @@
 (defn eachi
   "eachi : each :: fori : for"
   [f coll]
-  (red/reducei- false (fn [_ x i] (f x i)) nil coll)
+  (reducei- false (fn [_ x i] (f x i)) nil coll)
   nil)
 
 #?(:clj (set! *unchecked-math* false))

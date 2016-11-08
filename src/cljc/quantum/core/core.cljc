@@ -1,12 +1,11 @@
 (ns quantum.core.core
   (:refer-clojure :exclude [seqable? boolean? get set])
-  (:require #?(:clj  [clojure.core  :as core ]
-               :cljs [cljs.core     :as core
-                       :refer [IDeref IAtom]])
-            #?(:clj  [environ.core
-                       :refer [env]]))
-  #?(:clj (:import [clojure.lang IDeref
-                                 IAtom])))
+  (:require [clojure.core :as core
+             #?@(:cljs [:refer [IDeref IAtom]])]
+   #?(:clj  [environ.core :as env]))
+  #?(:clj (:import [clojure.lang IDeref IAtom])))
+
+#?(:clj (do (in-ns 'clojure.core) (defn require-macros [& args]) (in-ns 'quantum.core.core)))
 
 #?(:clj
 (defn pid []
@@ -15,8 +14,8 @@
 
 #?(:clj
 (binding [*out* *err*]
-  (when (:print-pid?          env) (println "PID:" (pid)))
-  (when (:print-java-version? env) (println "Java version:" (System/getProperty "java.version")))
+  (when (:print-pid?          env/env) (println "PID:" (pid)))
+  (when (:print-java-version? env/env) (println "Java version:" (System/getProperty "java.version")))
   (flush)))
 
 (def lang #?(:clj :clj :cljs :cljs))
@@ -164,16 +163,3 @@
   (print "\n/* " )
   (apply println args)
   (println "*/"))
-
-#?(:clj
-(defmacro env
-  "Retrieves the (sanitized) macroexpansion environment."
-  []
-  `(identity
-     '~(->> &env
-            (clojure.walk/postwalk
-              (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
-                             (.name ^clojure.lang.Compiler$LocalBinding x#)
-                             (nil? x#)
-                             []
-                             :else x#)))))))

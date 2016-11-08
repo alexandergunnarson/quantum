@@ -26,7 +26,7 @@
   :dependencies
     [[org.clojure/clojure                       "1.8.0"] ; 1.9.0-alpha* has some problems
      [clojure-future-spec                       "1.9.0-alpha12-2"]
-     [org.clojure/clojurescript                 "1.9.216" #_"1.9.93"         ] ; Latest (as of 7/28/2016)
+     [org.clojure/clojurescript                 "1.9.293" #_"1.9.93"         ] ; Latest (as of 7/28/2016)
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
@@ -400,6 +400,18 @@
                              :main                 quantum.test
                              :asset-path           "js/test-compiled/out"
                              :cache-analysis       true}}
+       :no-reload {:figwheel {:autoload false}
+                   :source-paths ["src/cljs"  "src/cljc"
+                                  "dev/cljs"  "dev/cljc"
+                                  "test/cljs" "test/cljc"]
+                   :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
+                              :output-dir           "dev-resources/public/js/compiled/out"
+                              :optimizations        :none
+                              :main                 quantum.dev
+                              :asset-path           "js/compiled/out"
+                              :source-map           true
+                              :source-map-timestamp true
+                              :cache-analysis       true}}
        :dev {:figwheel true
              :source-paths ["src/cljs"  "src/cljc"
                             "dev/cljs"  "dev/cljc"

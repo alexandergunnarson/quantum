@@ -6,17 +6,14 @@
   quantum.core.logic
   (:refer-clojure :exclude [if-let when-let])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )   :as core   ]
+    [clojure.core             :as core]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [fn1 fn->])]
-      :refer-macros [          fn1 fn->]]
+      :refer        [fn1 fn->]]
     [quantum.core.vars        :as var
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]
+      :refer        [defalias]]
     [quantum.core.macros.core :as cmacros
-      :refer        [#?(:clj if-cljs)]
-      :refer-macros [        if-cljs]]))
+      :refer        [if-cljs]])
+  #?(:cljs (:require-macros [quantum.core.logic :as self])))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.

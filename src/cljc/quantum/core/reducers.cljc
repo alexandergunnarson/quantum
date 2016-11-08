@@ -1101,29 +1101,3 @@
            ~(str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")
            ([f#] (fn [coll#] (~parallel-quoted-sym f# coll#)))
            ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))
-
-#?(:clj
-(defmacro doseq*
-  "A lighter version of |doseq| based on |reduce|.
-   Optimized for one destructured coll."
-  {:attribution "Alex Gunnarson"}
-  [should-extern? bindings & body]
-  (assert (vector? bindings) "`doseq` takes a vector for its bindings")
-  (condp = (count bindings)
-    3
-      (let [[k v coll] bindings]
-        `(red/reduce
-           (fn [_# ~k ~v]
-                 ~@body
-                 nil)
-           nil
-           ~coll))
-    2
-      (let [[elem coll] bindings]
-        `(red/reduce
-           (fn [_# ~elem]
-                 ~@body
-                 nil)
-           nil
-           ~coll))
-    (throw (->ex nil (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))

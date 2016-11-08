@@ -7,9 +7,11 @@
     [garden.color      :as color :refer [hsl rgb]]
     [garden.arithmetic           :refer [+ - * /]]
     [garden.stylesheet           :refer [at-media]]
-    [quantum.ui.style.css.devices
-      :refer        [#?@(:clj [defbreakpoint])]
-      :refer-macros [          defbreakpoint]]))
+    [quantum.core.core])
+#?(:cljs
+  (:require-macros
+    [quantum.ui.style.css.devices :as self
+      :refer [defbreakpoint]])))
 
 ;; Generic
 
@@ -19,6 +21,11 @@
    :tablet  (px 768)
    :laptop  (px 1024)
    :desktop (px 1440)})
+
+#?(:clj
+(defmacro defbreakpoint [name media-params]
+  `(defn ~name [& rules#]
+     (at-media ~media-params [:& rules#]))))
 
 (defbreakpoint mobile
   {:screen true

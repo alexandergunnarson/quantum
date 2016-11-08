@@ -3,8 +3,8 @@
   (:refer-clojure :exclude [defonce])
   (:require
     [quantum.core.macros.core :as cmacros
-      :refer        [#?@(:clj [if-cljs when-cljs])]
-      :refer-macros [if-cljs when-cljs]]))
+      :refer [if-cljs when-cljs]])
+  #?(:cljs (:require-macros [quantum.core.vars :as self])))
 
 ; ============ DECLARATION ============
 

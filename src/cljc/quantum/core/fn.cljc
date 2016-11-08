@@ -16,7 +16,8 @@
            :refer        [#?(:clj defalias)]
            :refer-macros [defalias]]
  #?(:clj [clojure.pprint           :as pprint
-           :refer [pprint]                    ])))
+           :refer [pprint]                    ]))
+ #?(:cljs (:require-macros [quantum.core.fn :as self])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])

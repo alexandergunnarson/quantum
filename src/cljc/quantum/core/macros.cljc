@@ -8,28 +8,24 @@
   (:require
     [clojure.walk
       :refer [postwalk]]
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )    :as core]
+    [clojure.core              :as core]
     [quantum.core.error        :as err
       :refer [->ex]]
     [quantum.core.fn           :as fn
-      :refer        [#?@(:clj [fn->])]
-      :refer-macros [          fn->]]
+      :refer [fn->]]
     [quantum.core.log          :as log
       :include-macros true]
     [quantum.core.logic        :as logic
-      :refer        [nnil?
-                     #?@(:clj [fn-and whenc whenf1])]
-      :refer-macros [          fn-and whenc whenf1]]
+      :refer [nnil? fn-and whenc whenf1]]
     [quantum.core.macros.core  :as cmacros
-      :refer        [#?(:clj if-cljs)]
-      :refer-macros [        if-cljs]]
+      :refer [if-cljs]]
     [quantum.core.macros.defnt :as defnt]
     [quantum.core.macros.fn    :as mfn]
     [quantum.core.print        :as pr]
     [quantum.core.vars         :as var
-      :refer        [#?@(:clj [defalias defmalias])]
-      :refer-macros [          defalias defmalias]]))
+      :refer [defalias #?(:clj defmalias)]])
+  (:require-macros
+    [quantum.core.macros       :as self]))
 
 #?(:clj
 (defmacro maptemplate
@@ -47,8 +43,7 @@
 #?(:clj
 (defmacro let-alias
   {:todo ["Deal with closures"]}
-  [bindings & body]
-  (let-alias* (apply hash-map bindings) body)))
+  [bindings & body] (let-alias* (apply hash-map bindings) body)))
 
 ; TODO move to conversion
 
