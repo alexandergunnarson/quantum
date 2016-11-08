@@ -9,7 +9,7 @@
   (:require
     [clojure.core                   :as core]
 #?@(:clj
-    [[clj-time.core   ]]
+    [[clj-time.core]]
     :cljs
     [[cljs-time.core :as time]
      [cljs-time.extend] ; To test for equality
@@ -29,13 +29,17 @@
       :refer [ifor]]
     [quantum.measure.convert        :as uconv
       :refer [convert]]
-    [quantum.core.convert.primitive :as pconv]
+    [quantum.core.convert.primitive :as pconv
+      :refer [->long]]
     [quantum.core.vars              :as var
       :refer [defalias]])
+  (:require-macros
+    [quantum.core.time.core         :as self
+      :refer [->local-date]])
 #?(:clj
   (:import
     [java.util Date Calendar]
-    [java.time LocalDate]
+    [java.time Month LocalDate ZoneId]
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor])))
 
@@ -74,7 +78,7 @@
 (defonce gregorian-calendar-decree-year 1582)
 
 #?(:clj
-(defnt leap-year?
+(defnt leap-year?*
   "Using Gregorian calendar 3 criteria."
   {:source "Wikipedia"
    :todo ["Implement Julian calendar, etc."]}
@@ -122,7 +126,7 @@
 (do (aset nanos-at-beg-of-year 0 beg-of-time-to-calendar-begin)
     (ifor [n 1 (core/< n (alength nanos-at-beg-of-year)) (inc n)]
       (when-let [year (nanos-arr-index->year n)]
-        (let [year-nanos (convert (if (leap-year? year) 366 365) :days :nanos)
+        (let [year-nanos (convert (if (leap-year?* year) 366 365) :days :nanos)
               prev-i (if (= n 10001) 9999 (dec n))
               nanos-f (core/+ year-nanos (aget nanos-at-beg-of-year prev-i))]
           (aset nanos-at-beg-of-year n nanos-f))))))
@@ -147,8 +151,8 @@
       (let [last-i (-> nanos-at-beg-of-year alength dec)
             last-year (nanos-arr-index->year last-i)]
         (core/+ (aget nanos-at-beg-of-year last-i)
-          (->> (range (inc last-year) y) (filter #(leap-year? %1)) count (* 366) (<- convert :days :nanos))
-          (->> (range (inc last-year) y) (remove #(leap-year? %1)) count (* 365) (<- convert :days :nanos))))))))
+          (->> (range (inc last-year) y) (filter #(leap-year?* %1)) count (* 366) (<- convert :days :nanos))
+          (->> (range (inc last-year) y) (remove #(leap-year?* %1)) count (* 365) (<- convert :days :nanos))))))))
 
 (defn nanos->instant [n] (Instant. n))
 
@@ -190,8 +194,8 @@
   (Instant. (core/+ (:nanos a) (:nanos b)))))
 
 
-(defnt ->unix-millis
-  #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMillis)))
+(defnt ^long ->unix-millis
+  #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMilli)))
              ([^java.util.Date          x] (-> x (.getTime)     ))
              ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis)))
              ([^java.time.LocalTime     x] (-> x (.toNanoOfDay) (convert :nanos :millis)))
@@ -199,7 +203,8 @@
                                                    (-> x (.toLocalTime) ->unix-millis)))
              ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
              ([^java.util.Calendar      x] (-> x (.getTimeInMillis)))]
-      :cljs [([                         x] (coerce/to-epoch x))]))
+      :cljs [([^number?                 x] (->long x))
+             ([^js/Date                 x] (.getTime x))]))
 
 #?(:clj
 (defnt ->duration
@@ -224,7 +229,7 @@
 #?(:clj
 (defnt ^java.time.Instant ->platform-instant
   "Coerces to an instantaneous point on an imaginary timeline."
-  ([#{long? bigint?} x] (-> x pconv/->long (java.time.Instant/ofEpochMilli)))
+  ([#{long? bigint?} x] (-> x ->long (java.time.Instant/ofEpochMilli)))
   ([x] (-> x ->unix-millis-protocol ->platform-instant))))
 
 ; ===== DATE ===== ;
@@ -235,39 +240,29 @@
              (^java.util.Date [^quantum.core.time.core.Instant t] (-> t ->platform-instant ->platform-date))]
       :cljs [(^js/Date        [                                x] (TODO))]))
 
-; // obtain the current date in the utc timezone, e.g. 2016-02-23
-; LocalDate.now(ZoneOffset.UTC);
+(defnt ^{:tag #?(:clj LocalDate :cljs js/JSJoda.LocalDate)} ->local-date*
+  "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
+  ^{:doc "Obtain the current date in the utc timezone, e.g. 2016-02-23"}
+  ([#?(:clj ^ZoneId x :cljs ^js/JSJoda.ZoneOffset x)]
+                    (#?(:clj LocalDate/now   :cljs js/JSJoda.LocalDate.now  ) x))
+  ^{:doc "Obtain an instance of LocalDate from an ISO8601 formatted text string"}
+  ([^string? x    ] (#?(:clj LocalDate/parse :cljs js/JSJoda.LocalDate.parse) x))
+  #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.LocalTime.from)))
+  ^{:doc "Obtain an instance of LocalDate from a year, month, and dayOfMonth value"}
+  ([#?(:cljs ^number? y
+       :clj           y) m d]
+    (#?(:clj LocalDate/of :cljs js/JSJoda.LocalDate.of) (->long y) (->long m) (->long d))))
 
-; // obtain an instance of LocalDate from an ISO8601 formatted text string
-; LocalDate.parse('2016-02-23');
+#?(:clj
+(defmacro ->local-date
+  "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
+  ^{:doc "Obtain the current date in the system default timezone"}
+  ([] `(if-cljs &env (js/JSJoda.LocalDate.now) (LocalDate/now)))
+  ([x & args] `(->local-date* ~x ~@args))))
 
-; // obtain an instance of LocalDate from a year, month, and dayOfMonth value
-; LocalDate.of(2016, 2, 23) // 2016-02-23
-
-; // obtain an instance of LocalDate from a year, month, and dayOfMonth value
-; LocalDate.of(2016, Month.FEBRUARY, 23) // 2016-02-23
-
-; // obtain an instance of LocalDate from am epochDay where day 0 is 1970-01-01
-; LocalDate.ofEpochDay(-1) // 1969-12-31
-
-; // obtain an instance of LocalDate from am epochDay where day 0 is 1970-01-01
-; LocalDate.ofYearDay(2016, 42) // 2016-02-11
-
-
-; (defnt ->local-date*
-;   #?@(:clj  [()]
-;       :cljs [^{:doc "Obtain the current date in the utc timezone, e.g. 2016-02-23"}
-;              (^LocalDate [^js/JSJoda.ZoneOffset x] (js/JSJoda.LocalDate.now x))
-;              ^{:doc "Obtain an instance of LocalDate from an ISO8601 formatted text string"}
-;              (^LocalDate [^js/JSJoda.ZoneOffset x] (js/JSJoda.LocalDate.now x))]))
-
-; #?(:clj
-; (defmacro ->local-date
-;   "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
-;   ^{:doc "Obtain the current date in the system default timezone"}
-;   ([] `(if-cljs &env (js/JSJoda.LocalDate.now)
-;                      (LocalDate/now)))
-;   ([x & args] `(->local-date* ~x ~@args))))
+#?(:cljs
+(defnt ->local-time
+  ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.LocalTime.from))))
 
 (defnt ->local-date-time
   "Coerces to a date-time without a time-zone in the ISO-8601 calendar system, such as 2007-12-03T10:15:30."
@@ -369,18 +364,9 @@
 ; #?(:clj (def timestamp str-now))
 
 ; #?(:clj
-; (defn day [y m d] (LocalDate/of y m d)))
-
-; #?(:clj
 ; (defn beg-of-day
 ;   ([^LocalDate date] (.atStartOfDay date))
 ;   ([y m d] (beg-of-day (day y m d)))))
-
-; (defn ymd [date]
-;   (vector
-;     (time/year  date)
-;     (time/month date)
-;     (time/day   date)))
 
 ; (defn beg-of-day
 ;   ([date]
@@ -414,14 +400,6 @@
     ^{:attribution "clojuredocs.org, |print-dup|"}
     [o w]
     (print-ctor o (fn [o w] (print-dup (.getTime ^java.util.Date o) w)) w)) )
-
-#?(:clj
-  (defmethod print-dup org.joda.time.DateTime
-    ^{:todo ["Fix this... only prints out current date"]}
-    [d ^java.io.StringWriter stream]
-    (.write stream "#=(list \"A date should go here\" ")
-    (.write stream "")
-    (.write stream ")")))
 
 ; (defn ^Delay for-days-between
 ;   [date-a date-b f]
@@ -527,6 +505,56 @@
 #?(:clj
   (defnt ^java.util.TimeZone ->timezone
   ([^string? x]  (java.util.TimeZone/getTimeZone x))))
+
+(defnt ^long ->day
+  "The day of the month."
+  #?(:clj  ([^LocalDate           x] (.getDayOfMonth x))
+     :cljs ([^js/JSJoda.LocalDate x] (.dayOfMonth    x))))
+
+#?(:clj (defalias ->month-day ->day))
+
+(defnt ->week-day
+  "The day of the week."
+  #?(:clj  ([^LocalDate           x] (.getValue (.getDayOfWeek x)))
+     :cljs ([^js/JSJoda.LocalDate x] (.value (.dayOfWeek    x)))))
+
+(defnt ->week-day-enum
+  "The day of the week."
+  #?(:clj  ([^LocalDate           x] (.getDayOfWeek x))
+     :cljs ([^js/JSJoda.LocalDate x] (.dayOfWeek    x))))
+
+(defnt ->year-day
+  "The day of the year."
+  #?(:clj  ([^LocalDate           x] (.getDayOfYear x))
+     :cljs ([^js/JSJoda.LocalDate x] (.dayOfYear    x))))
+
+(defnt ->month-enum
+  #?(:clj  (^Month           [^LocalDate           x] (.getMonth x))
+     :cljs (^js/JSJoda.Month [^js/JSJoda.LocalDate x] (.month    x))))
+
+(defnt ^long ->month
+  #?(:clj  ([^LocalDate           x] (.getMonthValue x))
+     :cljs ([^js/JSJoda.LocalDate x] (.monthValue    x))))
+
+(defnt ^long ->year
+  #?(:clj  ([^LocalDate           x] (.getYear x))
+     :cljs ([^js/JSJoda.LocalDate x] (.year    x))))
+
+; ===== PREDICATES ===== ;
+
+(defnt ^boolean leap-year?
+  #?(:clj  ([^LocalDate           x] (.isLeapYear x))
+     :cljs ([^js/JSJoda.LocalDate x] (.isLeapYear x))))
+
+
+(extend-protocol quantum.core.collections.core/AssocProtocol
+  #?(:clj LocalDate :cljs js/JSJoda.LocalDate)
+  (#?(:clj assoc-protocol :cljs assoc) [x k v]
+    (case k :day       (.withDayOfMonth x v)
+            :month-day (.withDayOfMonth x v)
+            :year-day  (.withDayOfYear  x v)
+            :month     (.withMonth      x v)
+            :year      (.withYear       x v))))
 
 
 

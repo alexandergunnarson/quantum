@@ -134,13 +134,15 @@
 
 (defn defnt-gen-protocol-names
   "Generates |defnt| protocol names"
-  [{:keys [sym strict? lang]}]
+  [{:keys [sym sym-with-meta strict? lang]}]
   (let [genned-protocol-name
           (when-not strict? (-> sym name cbase/camelcase (str "Protocol") munge symbol))
         genned-protocol-method-name
-          (if (= lang :clj)
-              (-> sym name (str "-protocol") symbol)
-              sym)
+          (with-meta
+            (if (= lang :clj)
+                (-> sym name (str "-protocol") symbol)
+                sym)
+            (meta sym-with-meta))
         genned-protocol-method-name-qualified
           (symbol (name (ns-name *ns*))
             (name genned-protocol-method-name))]
@@ -218,7 +220,7 @@
   {:tests '{'[[Func [#{String} #{vector?}       ] long]]
             '[[Func [String    IPersistentVector] long]
               [Func [String    ITransientVector ] long]]}}
-  [{:keys [lang
+  [{:keys [lang ns-
            gen-interface-code-body-unexpanded
            available-default-types]
     :as env}]
@@ -247,8 +249,10 @@
                                             #?@(:clj
                                            [(= ret-type-0 'auto-promote)
                                               (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
-                                            :else (or (-> ret-type-0 (classes-for-type-predicate lang) first)
-                                                      ret-type-0
+                                            :else (or (get-qualified-class-name lang ns-
+                                                        (-> ret-type-0 (classes-for-type-predicate lang) first))
+                                                      (get-qualified-class-name lang ns-
+                                                        ret-type-0)
                                                       (get trans/default-hint lang)))
                                  arity-hinted (assoc arity 0 arglist-hinted)]
                              [[method-name hints-v ret-type] (seq arity-hinted)]))]
@@ -415,25 +419,27 @@
    - Macro (helper), if a Clojure environment
    - Protocol alias, if a ClojureScript environment"
   [{:keys [lang sym strict? externs genned-protocol-method-names
-           gen-interface-def
+           gen-interface-def tag
            reify-def reified-sym
            helper-macro-def
            protocol-def extend-protocol-def]}]
   {:post [(log/ppr-hints :macro-expand "DEFNT FINAL" %)]}
-  (concat (list* 'do @externs)
-    [(when (= lang :clj) gen-interface-def)
-     (when-not strict?
-       (list* 'declare genned-protocol-method-names)) ; For recursion
-     (when (= lang :clj) (list 'declare reified-sym)) ; For recursion
-     (when (= lang :clj) helper-macro-def)
-     (when (= lang :clj) reify-def)
-     protocol-def
-     extend-protocol-def
-     (when (= lang :cljs)
-       (list `defalias (-> sym name
-                               (str "-protocol")
-                               symbol)
-             sym))]))
+  (let [primary-protocol-sym (-> sym name (str "-protocol") symbol)]
+    (concat (list* 'do @externs)
+      [(when (= lang :clj) gen-interface-def)
+       (when-not strict?
+         (list* 'declare genned-protocol-method-names)) ; For recursion
+       (when (= lang :clj) (list 'declare reified-sym)) ; For recursion
+       (when (= lang :clj) helper-macro-def)
+       (when (= lang :clj) reify-def)
+       protocol-def
+       extend-protocol-def
+       (when (= lang :cljs)
+         (list `defalias primary-protocol-sym sym))
+       (when-not strict?
+         `(alter-meta! (var ~primary-protocol-sym)
+                       (fn [m#] (assoc m# :tag '~tag))))
+       true])))
 
 #?(:clj
 (defn defnt*-helper
@@ -453,9 +459,10 @@
      :keys [strict? relaxed?]} lang ns- sym doc- meta- body]
     (log/ppr :debug (kmap opts lang ns- sym doc- meta- body))
     (let [externs       (atom [])
-          sym-with-meta (with-meta sym (merge {:doc doc-} meta-))
+          sym-with-meta (with-meta sym (merge {:doc doc-} meta- (-> sym meta (dissoc :tag))))
+          tag           (-> sym meta :tag)
           body          (mfn/optimize-defn-variant-body! body externs)
-          env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs)
+          env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs tag)
                   (merge-call defnt-arities
                               defnt-arglists
                               defnt-gen-protocol-names

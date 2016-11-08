@@ -1,20 +1,17 @@
 (ns quantum.core.convert.primitive
-           (:require #_(:cljs [com.gfredericks.goog.math.Integer :as int])
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )   :as core  ]
-                     [quantum.core.data.binary :as bin
-                       :refer [&&]                       ]
-                     [quantum.core.error       :as err
-                       :refer [->ex]                     ]
-                     [quantum.core.macros      :as macros
-                       :refer [#?@(:clj [defnt defnt'])] ]
-                     [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]        ])
-  #?(:cljs (:require-macros
-                     [quantum.core.macros      :as macros
-                       :refer [defnt defnt']             ]
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                 ]))
+  (:require
+  #_(:cljs [com.gfredericks.goog.math.Integer :as int])
+    [clojure.core             :as core]
+    [quantum.core.data.binary :as bin
+      :refer [&&]]
+    [quantum.core.error       :as err
+      :refer [->ex]]
+    [quantum.core.macros      :as macros
+      :refer [defnt #?@(:clj [defnt'])]]
+    [quantum.core.vars        :as var
+      :refer [defalias]])
+  (:require-macros
+    [quantum.core.convert.primitive])
   #?(:clj  (:import java.nio.ByteBuffer [quantum.core Numeric])))
 
 ;_____________________________________________________________________
@@ -53,8 +50,13 @@
       (^long [^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
                                                 :cljs (-> x int/fromString ->long)))
     #?(:clj
-      (^long [^string?                    x radix] (Long/parseLong x radix))))
-   :cljs (defalias ->long core/long))
+      (^long [^string?                    x radix] (Long/parseLong x radix)))
+      (^long [                            x] (->long-protocol x)))
+   :cljs
+     (defnt ->long
+       ([^number?  x] (js/Math.trunc x))
+       ([^string?  x] (js/parseInt   x))
+       ([^boolean? x] (if x 1 0))))
 
 #?(:clj
 (defmacro cast-via-long [class- x]
