@@ -32,14 +32,12 @@
     [quantum.core.convert.primitive :as pconv]
     [quantum.core.vars              :as var
       :refer [defalias]])
+#?(:clj
   (:import
-#?@(:clj
-   [[java.util Date Calendar]
+    [java.util Date Calendar]
     [java.time LocalDate]
     [java.time.format DateTimeFormatter]
-    [java.time.temporal Temporal TemporalAccessor]]
-   :cljs
-   [[goog.date DateTime UtcDateTime]])))
+    [java.time.temporal Temporal TemporalAccessor])))
 
 ; js/JSJoda
 
@@ -235,12 +233,41 @@
   "Returns a platform date (java.util.Date for Java, js/Date for JS)."
   #?@(:clj  [(^java.util.Date [^java.time.Instant              t] (Date/from t))
              (^java.util.Date [^quantum.core.time.core.Instant t] (-> t ->platform-instant ->platform-date))]
-      :cljs [(^js/Date        [                                x] (coerce/to-date x))]))
+      :cljs [(^js/Date        [                                x] (TODO))]))
 
-#_(defnt ->local-date
-  "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
-  #?@(:clj  [()]
-      :cljs [()]))
+; // obtain the current date in the utc timezone, e.g. 2016-02-23
+; LocalDate.now(ZoneOffset.UTC);
+
+; // obtain an instance of LocalDate from an ISO8601 formatted text string
+; LocalDate.parse('2016-02-23');
+
+; // obtain an instance of LocalDate from a year, month, and dayOfMonth value
+; LocalDate.of(2016, 2, 23) // 2016-02-23
+
+; // obtain an instance of LocalDate from a year, month, and dayOfMonth value
+; LocalDate.of(2016, Month.FEBRUARY, 23) // 2016-02-23
+
+; // obtain an instance of LocalDate from am epochDay where day 0 is 1970-01-01
+; LocalDate.ofEpochDay(-1) // 1969-12-31
+
+; // obtain an instance of LocalDate from am epochDay where day 0 is 1970-01-01
+; LocalDate.ofYearDay(2016, 42) // 2016-02-11
+
+
+; (defnt ->local-date*
+;   #?@(:clj  [()]
+;       :cljs [^{:doc "Obtain the current date in the utc timezone, e.g. 2016-02-23"}
+;              (^LocalDate [^js/JSJoda.ZoneOffset x] (js/JSJoda.LocalDate.now x))
+;              ^{:doc "Obtain an instance of LocalDate from an ISO8601 formatted text string"}
+;              (^LocalDate [^js/JSJoda.ZoneOffset x] (js/JSJoda.LocalDate.now x))]))
+
+; #?(:clj
+; (defmacro ->local-date
+;   "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
+;   ^{:doc "Obtain the current date in the system default timezone"}
+;   ([] `(if-cljs &env (js/JSJoda.LocalDate.now)
+;                      (LocalDate/now)))
+;   ([x & args] `(->local-date* ~x ~@args))))
 
 (defnt ->local-date-time
   "Coerces to a date-time without a time-zone in the ISO-8601 calendar system, such as 2007-12-03T10:15:30."
