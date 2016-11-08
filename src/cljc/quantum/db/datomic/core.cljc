@@ -1,50 +1,43 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
     ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
-           (:refer-clojure :exclude [assoc assoc! dissoc dissoc! conj conj! disj disj!
-                                     update merge if-let for])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )     :as c              ]
-            #?(:cljs [cljs-uuid-utils.core       :as uuid           ])
-            #?(:clj  [datomic.api                :as db             ])
-                     [datascript.core            :as mdb            ]
-            ;#?(:clj [quantum.deploy.amazon      :as amz            ])
-                     [com.stuartsierra.component :as component      ]
-                     [quantum.core.collections   :as coll
-                       :refer [#?@(:clj [join for kmap])
-                               filter-vals+ remove-vals+ map+ remove+
-                               group-by+ postwalk merge-deep dissoc-in+]
-                       #?@(:cljs [:refer-macros [join for kmap]])]
-                     [quantum.core.error         :as err
-                       :refer        [->ex]]
-                     [quantum.core.fn            :as fn
-                       :refer        [#?@(:clj [<- fn-> fn->> fn1])]
-                       :refer-macros [<- fn-> fn->> fn1]            ]
-                     [quantum.core.log           :as log
-                       :include-macros true                         ]
-                     [quantum.core.logic         :as logic
-                       :refer        [#?@(:clj [fn-not fn-and fn-or whenf
-                                                whenf1 ifn ifn1 if-let])
-                                      nnil? nempty?]
-                       :refer-macros [fn-not fn-and fn-or
-                                      whenf whenf1 ifn ifn1 if-let]]
-                     [quantum.core.print         :as pr             ]
-                     [quantum.core.resources     :as res            ]
-             #?(:clj [quantum.core.process       :as proc           ])
-                     [quantum.core.type          :as type
-                       :refer [atom?]                               ]
-                     [quantum.core.vars          :as var
-                       :refer        [#?@(:clj [defalias])]
-                       :refer-macros [defalias]                     ]
-                     [quantum.core.validate      :as v
-                       :refer        [#?(:clj validate)]
-                       :refer-macros [        validate]])
-  #?(:cljs (:require-macros
-                     [datomic-cljs.macros
-                       :refer [<?]                                  ]))
-  #?(:clj (:import datomic.Peer
-                   [datomic.peer LocalConnection Connection]
-                   java.util.concurrent.ConcurrentHashMap)))
+  (:refer-clojure :exclude
+    [assoc assoc! dissoc dissoc! conj conj! disj disj!
+     update merge if-let for])
+  (:require
+    [clojure.core               :as c]
+#?@(:clj
+   [[datomic.api                :as db]])
+    [datascript.core            :as mdb]
+    [com.stuartsierra.component :as component]
+    [quantum.core.collections   :as coll
+      :refer [join for kmap
+              filter-vals+ remove-vals+ map+ remove+
+              group-by+ postwalk merge-deep dissoc-in+]]
+    [quantum.core.error         :as err
+      :refer [->ex]]
+    [quantum.core.fn            :as fn
+      :refer [<- fn-> fn->> fn1]]
+    [quantum.core.log           :as log
+      :include-macros true]
+    [quantum.core.logic         :as logic
+      :refer [fn-not fn-and fn-or whenf
+              whenf1 ifn ifn1 if-let
+              nnil? nempty?]]
+    [quantum.core.print         :as pr]
+    [quantum.core.resources     :as res]
+    [quantum.core.process       :as proc]
+    [quantum.core.type          :as type
+      :refer [atom?]]
+    [quantum.core.vars          :as var
+      :refer [defalias]]
+    [quantum.core.validate      :as v
+      :refer [validate]])
+#?(:clj
+    (:import
+      datomic.Peer
+      [datomic.peer LocalConnection Connection]
+      java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj (swap! pr/blacklist c/conj datomic.db.Db datascript.db.DB))
 

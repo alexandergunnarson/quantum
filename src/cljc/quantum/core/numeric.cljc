@@ -6,48 +6,44 @@
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
      min max quot mod format
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )            :as core]
-    #?(:cljs [com.gfredericks.goog.math.Integer :as int])
-             [quantum.core.convert.primitive    :as pconvert
-               :refer [#?(:clj ->long)]]
-             [quantum.core.error                :as err
-               :refer        [->ex TODO]]
-             [quantum.core.fn
-               :refer        [aritoid
-                              #?@(:clj [fn1 fn->])]
-               :refer-macros [          fn1 fn->]]
-             [quantum.core.log :as log
-               :include-macros true]
-             [quantum.core.logic                :as logic
-               :refer        [nnil?
-                              #?@(:clj [fn-and whenf1])]
-               :refer-macros [          fn-and whenf1]]
-             [quantum.core.macros               :as macros
-               :refer        [#?@(:clj [defnt defnt'])]
-               :refer-macros [          defnt defnt']]
-             [quantum.core.macros.core          :as cmacros
-               :refer        [#?@(:clj [if-cljs])]
-               :refer-macros [          if-cljs]]
-             [quantum.core.vars                 :as var
-               :refer        [#?@(:clj [defalias defaliases])]
-               :refer-macros [          defalias defaliases]]
-             [quantum.core.numeric.convert   ]
-             [quantum.core.numeric.misc      ]
-             [quantum.core.numeric.operators  :as op
-               :include-macros true]
-             [quantum.core.numeric.predicates]
-             [quantum.core.numeric.trig      ]
-             [quantum.core.numeric.truncate   :as trunc
-               :include-macros true]
-             [quantum.core.numeric.types :as ntypes])
-  #?(:clj  (:import
-             [java.nio ByteBuffer]
-             [quantum.core Numeric] ; loops?
-             [net.jafama FastMath]
-             clojure.lang.BigInt
-             java.math.BigDecimal)))
+  (:require
+    [clojure.core                      :as core]
+#?@(:cljs
+   [[com.gfredericks.goog.math.Integer :as int]])
+    [quantum.core.convert.primitive    :as pconvert
+      :refer [#?(:clj ->long)]]
+    [quantum.core.error                :as err
+      :refer [->ex TODO]]
+    [quantum.core.fn
+      :refer [aritoid fn1 fn->]]
+    [quantum.core.log :as log
+      :include-macros true]
+    [quantum.core.logic                :as logic
+      :refer [nnil? fn-and whenf1]]
+    [quantum.core.macros               :as macros
+      :refer [defnt #?@(:clj [defnt'])]]
+    [quantum.core.macros.core          :as cmacros
+      :refer [if-cljs]]
+    [quantum.core.vars                 :as var
+      :refer [defalias defaliases]]
+    [quantum.core.numeric.convert   ]
+    [quantum.core.numeric.misc      ]
+    [quantum.core.numeric.operators    :as op
+      :include-macros true]
+    [quantum.core.numeric.predicates]
+    [quantum.core.numeric.trig      ]
+    [quantum.core.numeric.truncate     :as trunc
+      :include-macros true]
+    [quantum.core.numeric.types        :as ntypes])
+  (:require-macros
+    [quantum.core.numeric              :as self])
+  #?(:clj
+  (:import
+    [java.nio ByteBuffer]
+    [quantum.core Numeric] ; loops?
+    [net.jafama FastMath]
+    clojure.lang.BigInt
+    java.math.BigDecimal)))
 
 (log/this-ns)
 

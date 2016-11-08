@@ -5,32 +5,32 @@
 (ns quantum.dev
   (:refer-clojure :exclude [reduce for])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )   :as core]
-    [clojure.tools.namespace.repl
-      :refer [refresh]]
-    [quantum.core.collections :as coll]
-    [quantum.core.numeric     :as num]
-    [quantum.core.fn          :as fn]
-    [quantum.core.error
+    [clojure.core                         :as core]
+ #?@(:clj
+   [[clojure.tools.namespace.repl
+      :refer [refresh]]])
+    [quantum.core.collections             :as coll]
+    [quantum.core.numeric                 :as num]
+    [quantum.core.fn                      :as fn]
+    [quantum.core.error                   :as err
       :refer [->ex]]
     [quantum.core.logic]
-    [quantum.core.log                     :as log     ]
-    [quantum.core.resources               :as res     ]
-    [quantum.core.string                  :as str     ]
-    [quantum.system                       :as gsys    ]
-    [quantum.core.process                 :as proc    ]
-    [quantum.net.websocket                :as conn    ]
-    [quantum.core.convert                 :as conv    ]
-    [quantum.core.paths                   :as path    ]
-    [quantum.net.http                     :as http    ]
-    [quantum.net.server.middleware        :as mid     ]
-    [quantum.db.datomic                   :as db      ]
+    [quantum.core.log                     :as log]
+    [quantum.core.resources               :as res]
+    [quantum.core.string                  :as str]
+    [quantum.system                       :as gsys]
+    [quantum.core.process                 :as proc]
+    [quantum.net.websocket                :as conn]
+    [quantum.core.convert                 :as conv]
+    [quantum.core.paths                   :as path]
+    [quantum.net.http                     :as http]
+    [quantum.net.server.middleware        :as mid]
+    [quantum.db.datomic                   :as db]
     [quantum.db.datomic.core              :as dbc]
     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
-    [quantum.auth.core                    :as auth    ]
-    [quantum.core.io.core                 :as io      ]
-    [quantum.security.core                :as sec     ]
+    [quantum.auth.core                    :as auth]
+    [quantum.core.io.core                 :as io]
+    [quantum.security.core                :as sec]
     [quantum.security.cryptography        :as crypto]
     [quantum.core.data.complex.xml        :as xml]
     [quantum.core.ns                      :as ns]

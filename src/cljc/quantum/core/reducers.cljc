@@ -11,8 +11,7 @@
   quantum.core.reducers
   (:refer-clojure :exclude [reduce Range ->Range])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [quantum.core.collections.base :as cbase]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
@@ -21,22 +20,16 @@
     [quantum.core.error            :as err
       :refer [->ex]]
     [quantum.core.fn               :as fn
-      :refer        [call firsta aritoid
-                     #?@(:clj [fn1 fn-> fn->> rcomp defcurried])]
-      :refer-macros [          fn1 fn-> fn->> rcomp defcurried]]
+      :refer [call firsta aritoid
+              fn1 fn-> fn->> rcomp defcurried]]
     [quantum.core.logic            :as logic
-      :refer        [nnil?
-                     #?@(:clj [fn-not fn-or fn-and whenf whenf1 ifn condf condf1])]
-      :refer-macros [          fn-not fn-or fn-and whenf whenf1 ifn condf condf1]                                       ]
+      :refer [nnil? fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer [defnt]]
     [quantum.core.numeric          :as num
       :include-macros true]
     [quantum.core.type             :as type
-      :refer        [instance+?
-                     #?@(:clj [array-list? lseq?])]
-      :refer-macros [          array-list? lseq?]]
+      :refer [instance+? array-list? lseq?]]
     [quantum.core.reducers.reduce  :as red
       :refer [reducer first-non-nil-reducer]
       :include-macros true]
@@ -44,8 +37,10 @@
       :refer [folder coll-fold CollFold
               fjinvoke fjtask fjfork fjjoin]]
     [quantum.core.vars             :as var
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]))
+      :refer [defalias]])
+  (:require-macros
+    [quantum.core.reducers
+      :refer [reduce join]]))
 
 #?(:clj (defalias join      red/join     ))
 #?(:clj (defalias joinl'    red/joinl'   ))

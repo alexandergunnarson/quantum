@@ -27,8 +27,10 @@
     [quantum.core.vars                :as var
       :refer [defalias]])
   (:require-macros
-    [quantum.core.loops :as self
-      :refer [reduce doseq]]))
+    [quantum.core.loops               :as self
+      :refer [reduce reducei doseq]]))
+
+(log/this-ns)
 
 #?(:clj (set! *unchecked-math* true))
 
@@ -382,7 +384,7 @@
 (defn eachi
   "eachi : each :: fori : for"
   [f coll]
-  (reducei- false (fn [_ x i] (f x i)) nil coll)
+  (reducei (fn [_ x i] (f x i)) nil coll)
   nil)
 
 #?(:clj (set! *unchecked-math* false))

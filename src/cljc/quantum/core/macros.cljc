@@ -27,6 +27,8 @@
   (:require-macros
     [quantum.core.macros       :as self]))
 
+(log/this-ns)
+
 #?(:clj
 (defmacro maptemplate
   [template-fn coll]

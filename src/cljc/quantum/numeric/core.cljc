@@ -1,27 +1,24 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
-  (:refer-clojure :exclude [reduce mod count *' +'])
+  (:refer-clojure :exclude
+    [reduce mod count *' +'])
   (:require
-    [quantum.core.numeric     :as num
-      :refer        [*+* *-* *** *div* mod
-                     #?@(:clj [sqrt pow *' +' exactly])]
-      :refer-macros [          sqrt pow *' +' exactly]]
-    [quantum.core.data.binary :as bin
-      :refer        [>>]]
-    [quantum.core.error       :as err
-      :refer        [->ex TODO]]
+    [quantum.core.numeric      :as num
+      :refer [*+* *-* *** *div* mod
+              sqrt pow *' +' exactly]]
+    [quantum.core.data.binary  :as bin
+      :refer [>>]]
+    [quantum.core.error        :as err
+      :refer [->ex TODO]]
     [quantum.core.fn
-      :refer        [#?@(:clj [fn-> <- fn& fn&2])]
-      :refer-macros [          fn-> <- fn& fn&2]]
-    [quantum.core.log :as log
+      :refer [fn-> <- fn& fn&2]]
+    [quantum.core.log          :as log
       :include-macros true]
-    [quantum.core.collections :as coll
-      :refer        [map+ range+ filter+ mapcat+
-                     #?@(:clj [reduce join count kmap])]
-      :refer-macros [          reduce join count kmap]]
+    [quantum.core.collections  :as coll
+      :refer [map+ range+ filter+ mapcat+
+              reduce join count kmap]]
     [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
+      :refer [defalias]]
     [quantum.core.numeric.misc :as misc]))
 
 (log/this-ns)

@@ -4,17 +4,14 @@
     :attribution "Alex Gunnarson"}
   quantum.core.type.defs
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )               :as core]
-    [quantum.core.data.map                :as map
+    [clojure.core          :as core]
+    [quantum.core.data.map :as map
       :refer [map-entry]]
-    [quantum.core.data.set                :as set]
-    [quantum.core.fn                      :as fn
-      :refer        [#?@(:clj [fn->])]
-      :refer-macros [          fn->]]
-    [quantum.core.logic                   :as logic
-      :refer        [#?@(:clj [fn-and condf1])]
-      :refer-macros [          fn-and condf1]]))
+    [quantum.core.data.set :as set]
+    [quantum.core.fn       :as fn
+      :refer [fn->]]
+    [quantum.core.logic    :as logic
+      :refer [fn-and condf1]]))
 
 (defrecord Folder  [coll transform])
 (defrecord Reducer [coll transform])

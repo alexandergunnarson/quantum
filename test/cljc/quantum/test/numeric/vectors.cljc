@@ -1,5 +1,5 @@
-(ns quantum.test.numeric.vectors
-  (:require [quantum.numeric.vectors :as ns]))
+(ns quantum.test.numeric.arrays
+  (:require [quantum.numeric.arrays :as ns]))
 
 (defn test:vlength [v])
 

@@ -1,5 +1,5 @@
-(ns quantum.test.ir.classify
-  (:require [quantum.ir.classify :as ns]))
+(ns quantum.test.ai.ml.classify
+  (:require [quantum.ai.ml.classify :as ns]))
 
 (defn test:C ([D]))
 
@@ -56,7 +56,7 @@
   ([t D w]  )
   ([t D ŵ _]))
 
-(defn test:P:c|w 
+(defn test:P:c|w
   ([t D c w]  )
   ([t D c ŵ _]))
 

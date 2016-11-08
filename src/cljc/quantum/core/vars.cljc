@@ -4,7 +4,8 @@
   (:require
     [quantum.core.macros.core :as cmacros
       :refer [if-cljs when-cljs]])
-  #?(:cljs (:require-macros [quantum.core.vars :as self])))
+  (:require-macros
+    [quantum.core.vars        :as self]))
 
 ; ============ DECLARATION ============
 

@@ -5,18 +5,17 @@
   (:require
     [clojure.string                :as str]
     [quantum.core.collections.base :as cbase
-      :refer        [#?(:clj kmap)]
-      :refer-macros [        kmap]]
+      :refer [kmap]]
     [quantum.core.data.map         :as map]
     [slingshot.slingshot           :as try]
     [quantum.core.macros.core      :as cmacros
-      :refer        [#?(:clj if-cljs)]
-      :refer-macros [        if-cljs]]
+      :refer [if-cljs]]
     [quantum.core.log              :as log
       :include-macros true]
     [quantum.core.vars             :as var
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]))
+      :refer [defalias]])
+  (:require-macros
+    [quantum.core.error            :as self]))
 
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))

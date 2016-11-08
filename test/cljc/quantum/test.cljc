@@ -5,7 +5,7 @@
             [environ.core
               :refer [env]]])
             [quantum.core.print :as pr]
-            [quantum.test.ai.ml.classify]
+            [quantum.test.ai.core]
             [quantum.test.apis.amazon.cloud-drive.auth]
             [quantum.test.apis.amazon.cloud-drive.core]
             [quantum.test.apis.google.auth]
@@ -141,7 +141,7 @@
             [quantum.test.net.url]
             [quantum.test.net.websocket]
             [quantum.test.nlp.core]
-            [quantum.test.nlp.stemmers.porter]
+            [quantum.test.nlp.stem.porter]
             [quantum.test.numeric.core]
           #_[quantum.test.numeric.statistics]
             [quantum.test.numeric.vectors]

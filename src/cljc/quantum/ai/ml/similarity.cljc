@@ -9,29 +9,22 @@
   (:refer-clojure :exclude [get])
   (:require
     [quantum.core.logic
-      :refer        [#?@(:clj [fn-or])]
-      :refer-macros [          fn-or]]
+      :refer [fn-or]]
     [quantum.core.fn
-      :refer        [#?@(:clj [<- fn1 fn->])]
-      :refer-macros [          <- fn1 fn->]]
+      :refer [<- fn1 fn->]]
     [quantum.core.collections :as coll
       :refer [map+ remove+ red-apply range+
               mutable! eq! aset-in!
-              #?@(:clj [kmap aget-in aget-in*
-                        ifor get reducei])]
-      :refer-macros [   kmap aget-in aget-in*
-                        ifor get reducei]]
+              kmap aget-in aget-in* ifor get reducei]]
     [quantum.core.error
-      :refer        [ ->ex TODO]]
+      :refer [ ->ex TODO]]
     [quantum.core.numeric :as cnum
-      :refer        [#?@(:clj [+* inc* pow abs sqrt])]
-      :refer-macros [          +* inc* pow abs sqrt]]
+      :refer [+* inc* pow abs sqrt]]
     [quantum.numeric.core :as num
       :refer [sum sq]]
-    [quantum.numeric.vectors :as v]
+    [quantum.numeric.arrays :as a]
     [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
+      :refer [defalias]]
     [quantum.core.string :as str]))
 
 (defn levenshtein-matrix
@@ -176,7 +169,7 @@
 #_(defalias dist      l-2) ; TODO this is fine
 
 (defn cosine-similarity [a b]
-  (/ (v/dot a b)
+  (/ (a/dot a b)
      (* (l-2 a) (l-2 b))))
 
 (defn dist* [v1 v2] ; TODO I assume this is L-2 between n-dimensional vectors

@@ -5,7 +5,7 @@
       :refer-macros [          defalias]]
     [quantum.core.error
       :refer [->ex TODO]]
-    [quantum.ai.ml.projection :as proj]
+    [quantum.ai.ml.feature.extraction :as extract]
     [quantum.core.log :as log
       :include-macros true]))
 
@@ -15,8 +15,8 @@
 ; - <org.apache.commons.math3.ml.neuralnet.*>
 ; ================
 
-(defalias som         proj/som)
-(defalias kohonen-map proj/kohonen-map)
+(defalias som         extract/som)
+(defalias kohonen-map extract/kohonen-map)
 
 (defn neural-gas
   "Neural Gas soft competitive learning algorithm.

@@ -2,36 +2,38 @@
   "1D array: vector
    2D array: matrix
    3D array: (no special name)"
-  (:refer-clojure :exclude [reduce max for count get subvec swap!])
-           (:require
-   #?@(:clj [[uncomplicate.neanderthal
-               [real   :as real]
-               [native :as nat]
-               [opencl :as cl]
-               [core   :as fnum]] ; fast num
-             [uncomplicate.neanderthal.impl.fluokitten :as fluo]])
-             [clojure.core.matrix      :as mat]
-             [quantum.core.collections :as c
-               :refer        [map+ range+
-                              #?@(:clj [for lfor reduce join count])]
-               :refer-macros [          for lfor reduce join count]]
-             [quantum.core.compare
-               :refer        [max]]
-             [quantum.core.numeric :as cnum
-               :refer        [#?@(:clj [sqrt])]
-               :refer-macros [          sqrt]]
-             [quantum.core.fn      :as fn
-               :refer        [#?@(:clj [fn1 <- fn-> fn->>])]
-               :refer-macros [          fn1 <- fn-> fn->>]]
-             [quantum.core.error   :as err
-               :refer [->ex TODO]]
-             [quantum.numeric.core :as num
-               :refer [pi* sigma sq]]
-             [quantum.core.vars
-               :refer        [#?(:clj defalias)]
-               :refer-macros [        defalias]])
-  #?(:clj (:import [org.apache.spark.mllib.linalg BLAS DenseVector]
-                   [uncomplicate.neanderthal.protocols RealVector RealMatrix RealChangeable])))
+  (:refer-clojure :exclude
+    [reduce max for count get subvec swap! last])
+  (:require
+#?@(:clj
+   [[uncomplicate.neanderthal
+      [real   :as real]
+      [native :as nat]
+      [opencl :as cl]
+      [core   :as fnum]] ; fast num
+    [uncomplicate.neanderthal.impl.fluokitten :as fluo]])
+    [clojure.core.matrix                      :as mat]
+    [quantum.core.collections                 :as c
+      :refer [map+ range+
+              for lfor reduce join count]]
+    [quantum.core.compare
+      :refer [max]]
+    [quantum.core.numeric                     :as cnum
+      :refer [sqrt]]
+    [quantum.core.fn                          :as fn
+      :refer [fn1 <- fn-> fn->>]]
+    [quantum.core.error                       :as err
+      :refer [->ex TODO]]
+    [quantum.numeric.core                     :as num
+      :refer [pi* sigma sq]]
+    [quantum.core.macros
+      :refer [defnt]]
+    [quantum.core.vars
+      :refer [defalias]])
+  #?(:clj
+    (:import
+      [org.apache.spark.mllib.linalg BLAS DenseVector]
+      [uncomplicate.neanderthal.protocols Vector RealVector RealMatrix RealChangeable])))
 
 ; TODO probably use core.matrix API
 
@@ -95,7 +97,7 @@
   #?(:clj (^double [^RealMatrix X ^long a ^long b] (real/entry X a b)))
           (        [            X       a       b] (TODO)))
 
-(defn set!
+(defnt set!
   "Sets the i-th entry of vector x,
    or ij-th entry of matrix m."
   {:implemented-by '#{smile.math.matrix.Matrix}}

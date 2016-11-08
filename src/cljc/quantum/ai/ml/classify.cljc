@@ -1,43 +1,36 @@
-(ns ^{:cljs-self-referring? true}
-  quantum.ai.ml.classify
+(ns quantum.ai.ml.classify
   "In machine learning and pattern recognition, classification refers to an
    algorithmic procedure for assigning a given input object into one of a
    given number of categories."
-           (:refer-clojure :exclude [reduce for])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )   :as core   ]
-             [quantum.core.collections :as coll
-               :refer        [#?@(:clj [for for* fori lfor reduce join kmap])
-                              pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
-                              flatten-1+ range+ ffilter
-                              reduce-count]
-               :refer-macros [for lfor reduce join kmap]]
-             [quantum.core.numeric          :as num]
-             [quantum.numeric.vectors       :as v]
-             [quantum.core.fn               :as fn
-               :refer        [#?@(:clj [<- fn-> fn->>])]
-               :refer-macros [          <- fn-> fn->>]]
-             [quantum.core.cache            :as cache
-               :refer        [#?(:clj defmemoized)]
-               :refer-macros [        defmemoized]]
-             [quantum.core.error
-               :refer        [->ex TODO]]
-             [quantum.core.logic
-               :refer        [nnil?
-                              #?@(:clj [coll-or condpc fn-and])]
-               :refer-macros [          coll-or condpc fn-and]]
-             [quantum.core.nondeterministic :as rand]
-             [quantum.core.thread           :as thread
-               :refer        [#?@(:clj [async])]
-               :refer-macros [          async]]
-             [quantum.numeric.core          :as num*
-               :refer        [pi* sigma sum]]
-    #?(:clj  [taoensso.timbre.profiling     :as prof
-               :refer        [profile defnp p]]))
-  #?(:cljs (:require-macros
-             [quantum.ai.ml.classify
-               :refer        [N N*]])))
+  (:refer-clojure :exclude [reduce for])
+  (:require
+    [clojure.core                     :as core]
+#?@(:clj
+    [[taoensso.timbre.profiling       :as prof
+      :refer [profile defnp p]]])
+    [quantum.core.collections         :as coll
+      :refer [for for* fori lfor reduce join kmap
+              pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
+              flatten-1+ range+ ffilter
+              reduce-count]]
+    [quantum.core.numeric             :as num]
+    [quantum.numeric.arrays           :as a]
+    [quantum.core.fn                  :as fn
+      :refer [<- fn-> fn->>]]
+    [quantum.core.cache               :as cache
+      :refer [defmemoized]]
+    [quantum.core.error
+      :refer [->ex TODO]]
+    [quantum.core.logic
+      :refer [nnil? coll-or condpc fn-and]]
+    [quantum.core.nondeterministic    :as rand]
+    [quantum.core.thread              :as thread
+      :refer [async]]
+    [quantum.numeric.core             :as num*
+      :refer [pi* sigma sum]])
+  (:require-macros
+    [quantum.ai.ml.classify
+      :refer [N N*]]))
 
 (defn boolean-value [x] (if x 1 0)) ; TODO move
 

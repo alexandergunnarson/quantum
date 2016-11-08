@@ -4,7 +4,8 @@
           and used everywhere in the quantum library."
     :attribution "Alex Gunnarson"}
   quantum.core.logic
-  (:refer-clojure :exclude [if-let when-let])
+  (:refer-clojure :exclude
+    [if-let when-let])
   (:require
     [clojure.core             :as core]
     [quantum.core.fn          :as fn
@@ -13,7 +14,8 @@
       :refer        [defalias]]
     [quantum.core.macros.core :as cmacros
       :refer        [if-cljs]])
-  #?(:cljs (:require-macros [quantum.core.logic :as self])))
+  (:require-macros
+    [quantum.core.logic       :as self]))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.

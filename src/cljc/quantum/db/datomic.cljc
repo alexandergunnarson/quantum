@@ -1,66 +1,54 @@
 (ns ^{:doc "The top level Datomic (and friends, e.g. DataScript) namespace"}
   quantum.db.datomic
-          (:refer-clojure :exclude [conj conj! disj disj!
-                                    assoc assoc! dissoc dissoc! update merge
-                                    boolean?])
-          (:require [#?(:clj  clojure.core
-                        :cljs cljs.core   )           :as c        ]
-                    [#?(:clj  clojure.core.async
-                        :cljs cljs.core.async)
-                       :refer [#?(:clj go)]                        ]
-           #?(:cljs [cljs-uuid-utils.core             :as uuid     ]) ; TODO have a quantum UUID ns
-           #?(:clj  [datomic.api                      :as bdb      ]
-              :cljs [datomic-cljs.api                 :as bdb      ])
-                    [datascript.core                  :as mdb      ]
-                    [quantum.db.datomic.core          :as dbc      ]
-           #?(:cljs [posh.core                        :as rx-db    ])
-           ;#?(:clj [quantum.deploy.amazon            :as amz      ])
-                    [com.stuartsierra.component       :as component]
-                    [quantum.core.collections         :as coll
-                      :refer        [#?@(:clj [kmap containsv?])]
-                      :refer-macros [          kmap containsv?]]
-                    [quantum.core.error               :as err
-                      :refer        [->ex #?(:clj try-times)]
-                      :refer-macros [             try-times]]
-                    [quantum.core.fn                  :as fn
-                      :refer        [#?@(:clj [fn1 fn->])]
-                      :refer-macros [          fn1 fn->]]
-                    [quantum.core.log                 :as log
-                      :include-macros true]
-                    [quantum.core.logic               :as logic
-                      :refer        [#?@(:clj [fn-and fn-or whenf
-                                               condf])
-                                     nnil? nempty?]
-                      :refer-macros [fn-and fn-or whenf condf]]
-                    [quantum.core.resources           :as res      ]
-                    [quantum.core.string              :as str      ]
-            #?(:clj [quantum.core.process             :as proc     ])
-                    [quantum.core.async               :as async
-                      :include-macros true                         ]
-                    [quantum.core.type                :as type
-                      :refer        [atom? #?(:clj boolean?)]
-                      :refer-macros [boolean?]                     ]
-                    [quantum.core.vars                :as var
-                      :refer        [#?(:clj defalias)]
-                      :refer-macros [defalias]                     ]
-                    [quantum.core.io.core             :as io       ]
-                    [quantum.core.convert             :as conv
-                      :refer [->name]                              ]
-                    [quantum.core.paths               :as path     ]
-                    [quantum.parse.core               :as parse    ]
-                    [quantum.core.validate            :as v
-                      :refer        [#?(:clj validate)]
-                      :refer-macros [        validate]]
-                    [quantum.validate.core
-                      :refer        [no-blanks?]])
-  #?(:cljs (:require-macros
-                    [cljs.core.async.macros
-                       :refer [go]                                 ]
-                    [datomic-cljs.macros
-                      :refer [<?]                                  ]))
-  #?(:clj  (:import datomic.Peer
-                    [datomic.peer LocalConnection Connection]
-                    java.util.concurrent.ConcurrentHashMap)))
+  (:refer-clojure :exclude
+    [conj conj! disj disj!
+     assoc assoc! dissoc dissoc! update merge
+     boolean?])
+  (:require
+    [clojure.core                     :as c]
+#?@(:clj
+   [[datomic.api                      :as bdb]
+  #_[quantum.deploy.amazon            :as amz]]
+    :cljs
+   [[datomic-cljs.api                 :as bdb]
+    [cljs-uuid-utils.core             :as uuid] ; TODO have a quantum UUID ns
+    [posh.core                        :as rx-db]])
+    [datascript.core                  :as mdb]
+    [quantum.db.datomic.core          :as dbc]
+    [com.stuartsierra.component       :as component]
+    [quantum.core.collections         :as coll
+      :refer [kmap containsv?]]
+    [quantum.core.error               :as err
+      :refer [->ex try-times]]
+    [quantum.core.fn                  :as fn
+      :refer [fn1 fn->]]
+    [quantum.core.log                 :as log
+      :include-macros true]
+    [quantum.core.logic               :as logic
+      :refer [fn-and fn-or whenf condf nnil? nempty?]]
+    [quantum.core.process             :as proc]
+    [quantum.core.resources           :as res]
+    [quantum.core.string              :as str]
+    [quantum.core.async               :as async
+      :refer [go <?]]
+    [quantum.core.type                :as type
+      :refer [atom? boolean?]]
+    [quantum.core.vars                :as var
+      :refer [defalias]]
+    [quantum.core.io.core             :as io]
+    [quantum.core.convert             :as conv
+      :refer [->name]]
+    [quantum.core.paths               :as path]
+    [quantum.parse.core               :as parse]
+    [quantum.core.validate            :as v
+      :refer [validate]]
+    [quantum.validate.core
+      :refer [no-blanks?]])
+#?(:clj
+  (:import
+    datomic.Peer
+    [datomic.peer LocalConnection Connection]
+    java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj (ns-unmap 'quantum.db.datomic 'with))
 
