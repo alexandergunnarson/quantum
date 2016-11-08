@@ -55,14 +55,6 @@
   [expr]
   (expr-info* `(fn [] ~expr))))
 
-#?(:clj
-(defmacro static-cast
-  "Performs a static type cast"
-  {:attribution 'clisk.util}
-  [class-sym expr]
-  (let [sym (gensym "cast")]
-    `(let [~(with-meta sym {:tag class-sym}) ~expr] ~sym))))
-
 #?(:clj (defmacro typeof     {:attribution 'clisk.util}
           ([expr] (-> expr expr-info :class     ))))
 #?(:clj (defmacro primitive? {:attribution 'clisk.util}

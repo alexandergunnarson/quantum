@@ -43,6 +43,14 @@
 (def arr-types       tcore/arr-types      )
 (def types           tcore/types          )
 
+#?(:clj
+(defmacro static-cast
+  "Performs a static type cast"
+  {:attribution 'clisk.util}
+  [class-sym expr]
+  (let [sym (gensym "cast")]
+    `(let [~(with-meta sym {:tag class-sym}) ~expr] ~sym))))
+
 ; TODO takes way too long to compile. Fix this
 #_#?(:clj
 (eval
