@@ -2,23 +2,18 @@
   quantum.core.analyze.clojure.predicates
   (:refer-clojure :exclude [name])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )            :as core]
+    [clojure.core                      :as core]
     [clojure.string                    :as str]
 #?(:clj
     [clojure.jvm.tools.analyzer        :as tana])
     [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.fn                   :as fn
-      :refer        [#?@(:clj [fn$ <- fn-> fn->>])]
-      :refer-macros [          fn$ <- fn-> fn->>]]
+      :refer [fn$ <- fn-> fn->>]]
     [quantum.core.logic                :as logic
-      :refer        [splice-or
-                     #?@(:clj [eq? fn-or fn-and fn-not whenc ifn ifn1])]
-      :refer-macros [          eq? fn-or fn-and fn-not whenc ifn ifn1]]
+      :refer [splice-or eq? fn-or fn-and fn-not whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
     [quantum.core.vars                 :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [defalias]]))
 
 (defn safe-mapcat
   "Like |mapcat|, but works if the returned values aren't sequences."
