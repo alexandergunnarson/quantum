@@ -75,6 +75,39 @@
 ; 54.4 ms (48.9 ms - 73.5 ms) (-> (r/for+ [elem v1] nil)      )
 ; 24.8 ms (22.9 ms - 35.0 ms) (-> (for++  [elem v1] nil)      )
 
+; ===== CONCAT+ ===== ;
+
+; SMALL
+
+; 547.238654 ns
+(let [a [1 2 3 4 5] b [6 7 8 9 10]]
+  (bench (doall (core/concat a b))))
+
+; 579.297970 ns
+(let [a [1 2 3 4 5] b [6 7 8 9 10]]
+  (bench (join [] (concat+ a b))))
+
+; 794.786661 ns
+(let [a [1 2 3 4 5] b [6 7 8 9 10]]
+  (bench (->> (concat+ a b) (map+ inc) (join []))))
+
+; 999.692684 ns
+(let [a [1 2 3 4 5] b [6 7 8 9 10]]
+  (bench (->> (core/concat a b) (core/map inc) doall)))
+
+; LARGE
+
+; 607.708690 µs
+; 6.566253 ms for 100,000
+(let [a (vec (range 10000)) b (vec (range 10000))]
+  (bench (->> (concat+ a b) (map+ inc) (join []))))
+; 864.631230 µs
+; 9.800011 ms for 100,000
+; The price for laziness and for cons cell creation,
+; not intermediate collections as mapv would produce
+(let [a (vec (range 10000)) b (vec (range 10000))]
+  (bench (->> (core/concat a b) (core/map inc) (doall))))
+
 ; ===== ARRAYS ===== ;
 
 (def arr** (long-array (range 0 10000)))
