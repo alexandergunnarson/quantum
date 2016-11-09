@@ -264,7 +264,7 @@
 #?(:clj (defalias loopr    loops/seq-loop))
 ;#?(:clj(defalias for+     red/for+      )) ; TODO have this
 #?(:clj (defalias ifor     loops/ifor    ))
-#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) assoc :macro true))
+#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) core/assoc :macro true))
 #?(:clj (defalias for*     loops/for*    ))
 #?(:clj (defalias fori     loops/fori    ))
 #?(:clj (defalias fori*    loops/fori*   ))

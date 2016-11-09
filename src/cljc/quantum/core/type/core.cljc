@@ -13,8 +13,7 @@
           [quantum.core.error               :as err
             :refer [->ex]                           ]
           [quantum.core.vars                :as var
-            :refer        [#?@(:clj [defalias])]
-            :refer-macros [defalias]                ]))
+            :refer [defalias]]))
 
 (def class #?(:clj clojure.core/class :cljs type))
 
@@ -117,6 +116,9 @@
   (zipmap (vals boxed-type-map) (keys boxed-type-map))))
 
 #?(:clj (def primitive-types (-> types-unevaled :clj (get 'primitive?))))
+
+#?(:clj (def primitive-array-types '#{bytes shorts chars ints longs floats doubles}))
+
 (def primitive? (partial contains? primitive-types))
 #?(:clj  (def auto-unboxable? primitive?)
    :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))

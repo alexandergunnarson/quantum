@@ -1,48 +1,37 @@
 (ns quantum.core.io.core
            (:refer-clojure :exclude [get assoc! dissoc! contains?])
            (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )     :as core]
+             [clojure.core               :as core]
              [com.stuartsierra.component :as component]
              [datascript.core            :as mdb]
     #?(:clj  [taoensso.nippy             :as nippy])
     #?(:clj  [clojure.java.io            :as io])
     #?(:clj  [iota                       :as iota])
              [quantum.core.convert       :as conv
-               :refer        [->name ->str]]
+               :refer [->name ->str]]
              [quantum.core.error         :as err
-               :refer        [->ex TODO
-                              #?@(:clj [throw-unless])]
-               :refer-macros [          throw-unless]]
+               :refer [->ex TODO throw-unless]]
              [quantum.core.fn            :as fn
-               :refer        [firsta
-                              #?@(:clj [fn-> fn$])]
-               :refer-macros [          fn-> fn$]]
+               :refer [firsta fn-> fn$]]
              [quantum.core.log           :as log
                :include-macros true]
              [quantum.core.logic         :as logic
-               :refer        [splice-or nnil? nempty?
-                              #?@(:clj [whenf whenf1 whenc condpc coll-or fn-not])]
-               :refer-macros [          whenf whenf1 whenc condpc coll-or fn-not]]
+               :refer [splice-or nnil? nempty? whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
              [quantum.core.collections   :as coll
-               :refer          [postwalk]
-               :include-macros true]
+               :refer [postwalk]]
              [quantum.core.io.utils      :as u]
              [quantum.core.paths         :as p
-               :refer        [path]]
+               :refer [path]]
              [quantum.core.resources     :as res]
              [quantum.core.type          :as type
-               :refer        [vector+?]]
+               :refer [vector+?]]
              [quantum.core.vars          :as var
-               :refer        [#?@(:clj [defalias])]
-               :refer-macros [          defalias]]
+               :refer [defalias]]
              [quantum.core.validate      :as v
-              :refer        [#?(:clj validate)]
-              :refer-macros [        validate]]
+               :refer [validate]]
              [quantum.core.macros        :as macros
-               :refer        [#?@(:clj [defnt])]
-               :refer-macros [          defnt]])
+               :refer [defnt]])
   #?(:cljs (:require-macros
              [cljs.core.async.macros
                :refer [go]                             ]))

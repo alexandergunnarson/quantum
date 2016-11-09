@@ -18,7 +18,7 @@
     [quantum.core.logic             :as logic
       :refer [fn-or whenc]]
     [quantum.core.macros            :as macros
-      :refer [defnt]]
+      :refer [defnt if-cljs]]
     [quantum.core.numeric           :as num]
     [quantum.core.collections       :as coll
       :refer [ifor]]
@@ -35,7 +35,7 @@
   (:import
     [java.util Date Calendar]
     [java.util.concurrent TimeUnit]
-    [java.time Month LocalDate LocalTime LocalDateTime ZoneId]
+    [java.time Month LocalDate LocalTime LocalDateTime ZonedDateTime ZoneId]
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor ChronoField])))
 
@@ -286,7 +286,7 @@
 (defmacro ->local-date
   "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
   (^{:doc "Obtain the current date in the system default timezone"}
-   [] `(if-cljs &env (js/JSJoda.LocalDate.now) (LocalDate/now)))
+   [] (if-cljs &env `(js/JSJoda.LocalDate.now) `(LocalDate/now)))
   ([x & args] `(->local-date* ~x ~@args))))
 
 
@@ -315,7 +315,7 @@
 (defmacro ->local-time
   "Coerces to a time without a time-zone in the ISO-8601 calendar system, such as ‘10:15:30’."
   ^{:doc "Obtain the current time in the system default timezone"}
-  ([] `(if-cljs &env (js/JSJoda.LocalTime.now) (LocalTime/now)))
+  ([] (if-cljs &env `(js/JSJoda.LocalTime.now) `(LocalTime/now)))
   ([x & args] `(->local-time* ~x ~@args))))
 
 (defnt ^{:tag #?(:clj LocalDateTime :cljs js/JSJoda.LocalDateTime)} ->local-date-time*
@@ -348,14 +348,40 @@
    [#?(:cljs ^number? y
        :clj           y) mo d h m s n]
     (#?(:clj LocalDateTime/of :cljs js/JSJoda.LocalDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n))))
+      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) )))
 
 #?(:clj
 (defmacro ->local-date-time
   "Coerces to a date and time without a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30.’."
   ^{:doc "Obtain the current date and time in the system default timezone"}
-  ([] `(if-cljs &env (js/JSJoda.LocalDateTime.now) (LocalDateTime/now)))
+  ([] (if-cljs &env `(js/JSJoda.LocalDateTime.now) `(LocalDateTime/now)))
   ([x & args] `(->local-date-time* ~x ~@args))))
+
+(defnt ^{:tag #?(:clj ZonedDateTime :cljs js/JSJoda.ZonedDateTime)} ->zoned-date-time*
+  "Coerces to a date and time with a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30+01:00’."
+  (^{:doc "Obtain the current date and time in the given timezone, e.g. 2007-12-03T10:15:30"}
+   [#?(:clj ^ZoneId x :cljs ^js/JSJoda.ZoneOffset x)]
+                    (#?(:clj ZonedDateTime/now   :cljs js/JSJoda.ZonedDateTime.now  ) x))
+  (^{:doc "Obtain an instance of ZonedDateTime from an ISO8601 formatted text string"}
+   [^string? x    ] (#?(:clj ZonedDateTime/parse :cljs js/JSJoda.ZonedDateTime.parse) x))
+  #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.ZonedDateTime.from)))
+  (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, and minute value"}
+   [#?(:cljs ^js/JSJoda.ZonedDateTime t
+       :clj  ^LocalDateTime           t) zone]
+  (#?(:clj ZonedDateTime/of :cljs js/JSJoda.ZonedDateTime.of)
+      t zone))
+  (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, minute, second, and nano value"}
+   [#?(:cljs ^number? y
+       :clj           y) mo d h m s n zone]
+    (#?(:clj ZonedDateTime/of :cljs js/JSJoda.ZonedDateTime.of)
+      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) zone)))
+
+#?(:clj
+(defmacro ->zoned-date-time
+  "Coerces to a date and time with a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30+01:00.’."
+  ^{:doc "Obtain the current date and time in the system default timezone"}
+  ([] (if-cljs &env `(js/JSJoda.ZonedDateTime.now) `(ZonedDateTime/now)))
+  ([x & args] `(->zoned-date-time* ~x ~@args))))
 
 #?(:clj
 (defnt ^TimeUnit ->timeunit

@@ -1,7 +1,8 @@
 #_(do (require '[clojure.tools.namespace.repl :refer [refresh clear]])
             #_(clear)
             (refresh))
-
+#_(load-file "./dev/cljc/quantum/dev.cljc")
+#?(:clj (require 'quantum.core.core))
 (ns quantum.dev
   (:refer-clojure :exclude [reduce for])
   (:require
@@ -16,15 +17,20 @@
     [quantum.core.fn                      :as fn]
     [quantum.core.convert                 :as conv]
     [quantum.core.data.complex.xml        :as xml]
-    [quantum.core.log                     :as log]
-    [quantum.core.logic]
+    [quantum.core.log                     :as log
+      :refer [prl]]
+    [quantum.core.logic
+      :refer [whenp whenf whenc]]
+    [quantum.core.meta.repl
+      :refer [#?@(:clj [source doc])]]
+    [quantum.core.macros                  :as macros]
     [quantum.core.ns                      :as ns]
     [quantum.core.numeric                 :as num]
     [quantum.core.process                 :as proc]
     [quantum.core.resources               :as res]
     [quantum.core.string                  :as str]
+    [quantum.core.system                  :as sys]
     [quantum.net.websocket                :as conn]
-
     [quantum.core.io.core                 :as io]
     [quantum.core.paths                   :as path]
     [quantum.core.print                   :as pr
@@ -43,3 +49,9 @@
 (println "Hey console!")
 
 #?(:clj (clojure.spec/check-asserts true))
+
+#?(:clj
+(def ret (doall (xml/lparse
+       (conv/->file
+       "/Users/alexandergunnarson/Downloads/iTunes Library.xml")
+      {:keywordize? true}))))

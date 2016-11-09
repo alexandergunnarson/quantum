@@ -4,30 +4,22 @@
   (:refer-clojure :exclude [merge])
   (:require
     [quantum.core.collections.base           :as cbase
-      :refer        [merge-call update-first update-val ensure-set reducei
-                     #?(:clj kmap)]
-      :refer-macros [        kmap]]
+      :refer [merge-call update-first update-val ensure-set reducei kmap]]
     [quantum.core.data.map                   :as map
       :refer [merge]]
     [quantum.core.data.set                   :as set]
     [quantum.core.data.vector                :as vec
       :refer [catvec]]
     [quantum.core.error                      :as err
-      :refer        [->ex
-                     #?@(:clj [throw-unless assertf->>])]
-      :refer-macros [          throw-unless assertf->>]]
+      :refer [->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- fn-> fn->> fn1])]
-      :refer-macros [          <- fn-> fn->> fn1]]
+      :refer [<- fn-> fn->> fn1]]
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer        [nempty? nnil?
-                     #?@(:clj [eq? fn-not fn-or whenc whenf whenc1 ifn1 condf])
-                                                  ]
-      :refer-macros [          eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
+      :refer [nempty? nnil? eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
-      :refer [#?@(:clj [when-cljs if-cljs])]]
+      :refer [when-cljs if-cljs]]
     [quantum.core.macros.fn                  :as mfn]
     [quantum.core.analyze.clojure.predicates :as anap
       :refer [type-hint]]
@@ -39,8 +31,7 @@
     [quantum.core.type.defs                  :as tdefs]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.vars                       :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [defalias]]))
 
 ; TODO reorganize this namespace and move into other ones as necessary
 ; TODO allow for ^:inline on certain `defnt` arities
@@ -56,7 +47,7 @@
   (contains? special-defnt-keywords x))
 
 (def qualified-class-name-map
-  (->> tcore/primitive-types
+  (->> (set/union tcore/primitive-types #?(:clj tcore/primitive-array-types))
        (repeat 2)
        (apply zipmap)))
 
@@ -456,9 +447,10 @@
     (apply mfn/defn-variant-organizer
       [defnt*-helper opts lang ns- sym doc- meta- body (cons unk rest-unk)]))
   ([{:as opts
-     :keys [strict? relaxed?]} lang ns- sym doc- meta- body]
-    (log/ppr :debug (kmap opts lang ns- sym doc- meta- body))
+     :keys [strict? relaxed?]} lang ns- sym-0 doc- meta- body]
+    (log/ppr :debug (kmap opts lang ns- sym-0 doc- meta- body))
     (let [externs       (atom [])
+          sym           (with-meta sym-0 (-> sym-0 meta (dissoc :inline)))
           sym-with-meta (with-meta sym (merge {:doc doc-} meta- (-> sym meta (dissoc :tag))))
           tag           (-> sym meta :tag)
           body          (mfn/optimize-defn-variant-body! body externs)

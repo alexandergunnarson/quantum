@@ -1,7 +1,9 @@
 (ns quantum.numeric.transforms
   (:require
     [quantum.core.error :as err
-      :refer [TODO]]))
+      :refer [TODO]]
+    [quantum.core.vars  :as var
+      :refer [defalias]]))
 
 (defn fast-cosine
   "Fast Cosine Transform for transformation of one-dimensional real data sets."

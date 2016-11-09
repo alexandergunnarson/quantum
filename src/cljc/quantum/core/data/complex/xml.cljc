@@ -7,17 +7,22 @@
 #?@(:clj
    [[clojure.data.xml              :as cxml]])
     [quantum.core.collections      :as coll
-      :refer [lasti]]
+      :refer [lasti map+ partition-all+ join]]
     [quantum.core.error            :as err
-      :refer [->ex]]
+      :refer [->ex TODO]]
     [quantum.core.fn               :as fn
       :refer [fn->]]
+    [quantum.core.log              :as log
+      :refer [prl]]
+    [quantum.core.logic
+      :refer [whenp]]
     [quantum.core.string           :as str   ]
     [quantum.security.cryptography :as crypto]
     [quantum.core.macros           :as macros
       :refer [defnt]]
+    [quantum.core.time.core        :as time]
     [quantum.core.vars             :as var
-      :refer [def-]])
+      :refer [def- defalias]])
   (:require-macros
     [quantum.core.data.complex.xml :as self])
   #?(:clj
@@ -31,8 +36,6 @@
 
 ; TODO use some non-lazy XML library
 
-; ENTIRE FILE IS CLJ-ONLY (for now)
-#?(:clj (do
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={       XML CREATION       }=====================================================
 ;=================================================={                          }=====================================================
@@ -42,9 +45,10 @@
 ;=================================================={                          }=====================================================
 ; ALSO APPLIES TO HTML
 
-(defrecord XMLAttr [name val])
-(defrecord XMLElem [name attrs val children])
+#?(:clj (defrecord XMLAttr [name val]))
+#?(:clj (defrecord XMLElem [name attrs val children]))
 
+#?(:clj
 (defn xml-attr-vec [^Iterator iter]
   (when (.hasNext iter)
     (let [vec-f (transient [])]
@@ -52,8 +56,9 @@
         (let [^Attribute attr-n (.next iter)]
           (conj! vec-f (XMLAttr. (.getLocalPart ^QName (.getName attr-n))
                                  (-> attr-n .getValue)))))
-      (persistent! vec-f))))
+      (persistent! vec-f)))))
 
+#?(:clj
 (defn xml-attr-map [^Iterator iter keywordize?]
   (when (.hasNext iter)
     (let [map-f (transient {})]
@@ -68,12 +73,13 @@
             (if (and keywordize? (= k "type"))
                 (keyword v)
                 v))))
-      (persistent! map-f))))
+      (persistent! map-f)))))
 
 ; TODO this isn't right and you need to fix it...
 (def down           (fn-> first :children))
 (def- first-content (fn-> :content first))
 
+#?(:clj
 (defn start-elem-handler
   [^StartElement obj start-elem e-ct stack xml-f
    aggregate-props? keywordize-attrs? keywordize-names?]
@@ -86,13 +92,15 @@
                              (-> obj .getAttributes (xml-attr-map keywordize-attrs?))
                              (-> obj .getAttributes xml-attr-vec))
                          nil
-                         nil)))
+                         nil))))
 
+#?(:clj
 (defn chars-handler [^Characters obj chars e-ct stack xml-f]
   ((or chars :null) obj)
   (assoc! stack (lasti stack)
-    (assoc (peek stack) :val (.getData obj))))
+    (assoc (peek stack) :val (.getData obj)))))
 
+#?(:clj
 (defn end-elem-handler [^EndElement obj end-elem e-ct stack xml-f]
   ((or end-elem :null) obj)
   (vreset! e-ct (unchecked-inc (long @e-ct)))
@@ -103,10 +111,11 @@
           (conj! @xml-f (peek stack))
           (pop! stack))
       (do (conj! @xml-f (peek stack)) ; Add curr to temp elem-container
-          (pop! stack))))
+          (pop! stack)))))
 
 (def default-handler (fn [obj]))
 
+#?(:clj
 (defn parse
   {:performance "360 µs vs. clojure.data.xml's 865 µs! :D
                  268 µs vs. 402 µs
@@ -150,43 +159,44 @@
                       (do (end-doc-handler    xml-event)
                           (recur (.nextEvent xer)))
                     :else
-                      (do (unk-elem-handler   xml-event))))))))
+                      (do (unk-elem-handler   xml-event)))))))))
 
 ; ==== PLIST PARSING ====
 
-(defmulti parse-plist (fn [c] (:tag c)))
+(def ^:dynamic *keywordize?* false)
 
-(defmethod parse-plist :array [c]
-  (for [item (:content c)] (parse-plist item)))
+(defmulti parse-plist (fn [x] (:tag x)))
+
+(defmethod parse-plist :array [x]
+  (->> x :content (map+ parse-plist) (join [])))
 
 #_(defmethod parse-plist :data [c]
   (-> c first-content (crypto/decode :base64)))
 
-#_(defmethod parse-plist :date [c]
-  (-> c first-content (org.joda.time.DateTime.) time/->instant))
+(defmethod parse-plist :date [x]
+  (-> x first-content time/->zoned-date-time))
 
-(defmethod parse-plist :dict [c]
-  (apply hash-map (for [item (:content c)] (parse-plist item))))
+(defmethod parse-plist :dict [x]
+  (->> x :content (map+ parse-plist) (partition-all+ 2) (join {})))
 
-(defmethod parse-plist :true [c] true)
-(defmethod parse-plist :false [c] false)
+(defmethod parse-plist :true    [x] true)
+(defmethod parse-plist :false   [x] false)
 
-(defmethod parse-plist :key [c] (first-content c))
+(defmethod parse-plist :key     [x] (-> x first-content (whenp *keywordize?* keyword)))
 
-(defmethod parse-plist :integer [c] (str/val (first-content c)))
-(defmethod parse-plist :real    [c] (str/val (first-content c)))
+(defmethod parse-plist :integer [x] (str/val (first-content x)))
+(defmethod parse-plist :real    [x] (str/val (first-content x)))
 
-(defmethod parse-plist :string [c] (first-content c))
+(defmethod parse-plist :string  [x] (first-content x))
 
+#?(:clj
 (defnt lparse
-  ([^string? x]
-    (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
-  ([^file?   x]
-    (-> x (java.io.FileReader.)   (java.io.BufferedReader.) cxml/parse))
+  ([^string? x     ] (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
+  ([^file?   x     ] (-> x (java.io.FileReader.)   (java.io.BufferedReader.) cxml/parse))
+  ([x opts] (binding [*keywordize?* (:keywordize? opts)] (println "yay") #_(lparse-protocol x)))
   #_([#{string? file?} data k]
     (throw-unless (contains? #{:plist} k) (->ex nil "Parser option not recognized" k))
     (condp = k
-      :plist (->> data lparse first-content parse-plist))))
+      :plist (->> data lparse first-content parse-plist)))))
 
-))
-
+#?(:clj (defalias lparse** lparse))

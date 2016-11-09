@@ -17,8 +17,7 @@
       :include-macros true]
     [quantum.core.logic        :as logic
       :refer [nnil? fn-and whenc whenf1]]
-    [quantum.core.macros.core  :as cmacros
-      :refer [if-cljs]]
+    [quantum.core.macros.core  :as cmacros]
     [quantum.core.macros.defnt :as defnt]
     [quantum.core.macros.fn    :as mfn]
     [quantum.core.print        :as pr]
@@ -28,6 +27,10 @@
     [quantum.core.macros       :as self]))
 
 (log/this-ns)
+
+#?(:clj (defalias env cmacros/env))
+#?(:clj (defalias when-cljs cmacros/when-cljs))
+#?(:clj (defalias if-cljs   cmacros/if-cljs  ))
 
 #?(:clj
 (defmacro maptemplate
@@ -117,8 +120,6 @@
              (if-cljs ~'&env
                (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
                (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
-
-#?(:clj (defalias env cmacros/env))
 
 ; #?(:clj
 ; (defn param-arg-match

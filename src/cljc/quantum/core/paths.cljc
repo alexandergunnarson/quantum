@@ -69,8 +69,11 @@
   ([              x] (-> x ->uri ->url))))
 
 #?(:clj
-(defnt contains?
-  "Does the filesystem contain @x?"
+(defnt ^boolean contains?
+  "Does the filesystem contain @`x`?
+   Note that on a Mac, if there is a mountable external drive such as a Time Capsule,
+   you must mount it first (go to it in Finder) before it is considered accessible by
+   Java."
   ([^java.io.File x] (.exists x))
   ([^string?      x] (-> x ->file contains?))))
 

@@ -559,8 +559,8 @@
      (let [f (fn ([] init) ([acc x] (f acc x)))]
        (reduce-by+ keyfn f coll))))
 
-(defn partition-by+  [coll f] (folder coll (core/partition-by  f)))
-(defn partition-all+ [coll n] (folder coll (core/partition-all n)))
+(defn partition-by+  [f coll] (folder coll (core/partition-by  f)))
+(defn partition-all+ [n coll] (folder coll (core/partition-all n)))
 
 (defn group-by+ ; Yes, but folds a lazy sequence... hmm...
   "Reducers version. Possibly slower than |core/group-by|.
