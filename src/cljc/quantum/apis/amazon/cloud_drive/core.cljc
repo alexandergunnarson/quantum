@@ -1,29 +1,31 @@
 (ns quantum.apis.amazon.cloud-drive.core
-           (:refer-clojure :exclude [meta reduce val])
-           (:require [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )         :as async
-                       :refer [<!]                                     ]
-                     [quantum.auth.core                    :as auth    ]
-                     [quantum.core.convert                 :as conv    ]
+           (:refer-clojure :exclude [meta reduce val assoc!])
+           (:require [clojure.core.async                   :as async
+                       :refer [<!]]
+                     [quantum.auth.core                    :as auth]
+                     [quantum.core.convert                 :as conv]
                      [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
-                     [quantum.core.string                  :as str     ]
-                     [quantum.net.http                     :as http    ]
-                     [quantum.core.paths                   :as paths   ]
+                     [quantum.core.string                  :as str]
+                     [quantum.net.http                     :as http]
+                     [quantum.core.paths                   :as paths]
                      [quantum.core.collections             :as coll
-                       :refer        [#?@(:clj [kmap join reduce]) map+ val]
-                       :refer-macros [kmap join reduce]                ]
+                       :refer [kmap join reduce map+ val assoc-if]]
+                     [quantum.core.error
+                       :refer [TODO ->ex]]
                      [quantum.core.fn                      :as fn
-                       :refer        [#?@(:clj [<-])]
-                       :refer-macros [<-]                              ]
+                       :refer [<- fn-> fn->>]]
                      [quantum.core.logic                   :as logic
-                       :refer [nnil?]                                  ]
+                       :refer [nnil? eq?]]
                      [quantum.core.log                     :as log
-                       :include-macros true                            ])
+                       :include-macros true]
+                     [quantum.core.validate                :as v
+                       :refer [validate]])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
                        :refer [go]                                     ]))
   #?(:clj  (:import  [java.nio.file Files Paths])))
 
+; (http/request! {:url "https://drive.amazonaws.com/drive/v1/account/endpoint" :oauth-token ...})
 (def base-urls
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"
    :content "https://content-na.drive.amazonaws.com/cdproxy/"})
@@ -34,18 +36,22 @@
     :account/info
     :account/quota
     :account/endpoint
-    :account/usage"
-  ([k url-type] (request! (str/->path (namespace k) (name k)) :meta nil))
-  ([k url-type {:keys [append method query-params]
+    :account/usage
+    :nodes"
+  ([url-type k] (request! :meta (str/->path (namespace k) (name k)) nil))
+  ([url-type k {:keys [append method query-params body]
        :or {method :get
             query-params {}}}]
    (log/pr ::debug "AMAZON REQUEST:" (kmap k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
       (->> (http/request!
-            {:url (str/->path (get base-urls url-type) (name k) append)
+            {:url (if append
+                      (str/->path (get base-urls url-type) (name k) append)
+                      (str/->path (get base-urls url-type) (name k)))
              :method method
              :query-params query-params
+             :body (when body (conv/->json body))
              :handlers
               {401 (fn [req resp]
                      (amz-auth/refresh-token! username)
@@ -55,15 +61,14 @@
              :oauth-token (let [token (auth/access-token :amazon :cloud-drive)]
                              (assert (nnil? token))
                              token)})
-          #?(:cljs <!)
-          :body))))
+          #?(:cljs <!)))))
 
-(defn ^:cljs-async used-gb []
+(defn ^:cljs-async used-bytes []
   (#?(:clj  identity
       :cljs go)
-    (->> (request! :account/usage :meta)
-         #?(:cljs <!)
-         (<- dissoc :lastCalculated)
+    (->> (request! :meta :account/usage)
+         #?(:cljs <!) :body
+         (<- select-keys [:other :doc :photo :video])
          (map+ val)
          (map+ :total)
          (map+ :bytes)
@@ -78,7 +83,7 @@
 ; )
 
 (defn download! [id]
-  (request! :nodes :content {:method :get  :append (conv/->path id "content")}))
+  (request! :content :nodes {:method :get :append (conv/->path id "content")}))
 
 #?(:clj
 (defn download-to-file!
@@ -98,32 +103,67 @@
 (defn ^:cljs-async root-folder []
   (#?(:clj  identity
       :cljs go)
-   (-> (request! :nodes :meta
+   (-> (request! :meta :nodes
          {:method :get
           :query-params {:filters "isRoot:true"}})
-       #?(:cljs <!)
+       #?(:cljs <!) :body
        :data
        first))) ; :id
 
-(defn trashed-items []
-  (request! :trash :meta {:method :get}))
+(defn ^:cljs-async trashed-items []
+  (#?(:clj  identity
+      :cljs go)
+    (-> (request! :meta :trash {:method :get})
+        #?(:cljs <!) :body)))
 
 (defn ^:cljs-async children
   "Gets the children of an Amazon Cloud Drive @id."
   [id]
   (#?(:clj  identity
       :cljs go)
-    (-> (request! :nodes :meta {:append (conv/->path id "children")})
-        #?(:cljs <!)
+    (-> (request! :meta :nodes {:append (conv/->path id "children")})
+        #?(:cljs <!) :body
         :data)))
 
 ; #_(->> (root-folder) :id children (map (juxt :id :name)))
 
-(defn meta [id]
-  (request! :nodes :meta
-    {:append id
-     :method :get
-     :query-params {"tempLink" true}}))
+(defn ^:cljs-async meta [id]
+  (#?(:clj  identity
+      :cljs go)
+    (-> (request! :meta :nodes
+          {:append id
+           :method :get
+           :query-params {"tempLink" true}})
+        #?(:cljs <!) :body)))
+
+(defn ^:cljs-async assoc!
+  {:usage `(assoc! {:path ["hab497rtds-d_a2gneg" "MyFolderName"] :type :folder})}
+  ([opts] (assoc! (:path opts) (:data opts) opts))
+  ([path data] (assoc! path data nil))
+  ([path data {:keys [type overwrite? deduplication?]
+               :or   {overwrite? false deduplication? true}
+               :as   opts}]
+    (validate overwrite? not) ; TODO for now
+    (let [_ (validate type (v/or* nil? (eq? :folder)))
+          _ (validate path   (v/and vector? (fn-> count (= 2))))
+          [parent node-name] path
+          _ (validate node-name string?
+                      parent    (v/or* string? nil? (eq? :root)))
+          meta- (-> {:kind (if (= type :folder) "FOLDER" "FILE")
+                     :name node-name}
+                    (assoc-if (constantly (string? parent)) :parents [parent]))]
+      (request! :meta :nodes
+        (-> {:method :post}
+            (merge
+              (if (= type :folder)
+                  {:body meta-}
+                  {:query-params (when (false? deduplication?) {:suppress "deduplication"})
+                   :multipart
+                    [{:name "metadata" :mime-type :json :encoding :utf-8
+                      :content (conv/->json meta-)}
+                     {:name      "content"
+                      :mime-type "application/octet-stream"
+                      :content   (conv/->input-stream data)}]})))))))
 
 ; ; The ice-cast stream doesn't include a Content-Length header
 ; ; (because you know, it's a stream), so this was causing libfxplugins

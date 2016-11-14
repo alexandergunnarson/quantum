@@ -58,8 +58,7 @@
       :refer        [#?@(:clj [defnt])]
       :refer-macros [          defnt]]
     [quantum.core.reducers         :as red
-      :refer        [#?@(:clj [reduce join])]
-      :refer-macros [          reduce join]]
+      :refer        [reduce join partition-all+]]
     [quantum.core.type             :as type
       :refer        [transient!* persistent!*
                      #?@(:clj [transient? editable?])]
@@ -124,7 +123,7 @@
           ([ret [k-n v-n]]
             (assoc-if ret pred k-n v-n)))
       (assoc-if m pred k v)
-      (partition-all 2 kvs))))
+      (partition-all+ 2 kvs))))
 
 (defn assoc-when-none
   "assoc's @args to @m only when the respective keys are not present in @m."

@@ -29,6 +29,10 @@
 
 (log/this-ns)
 
+; IMPROVEMENTS
+; - This whole ns lends itself to use with a subset of `clojure.spec` (via a modified `ValidatedMap`)
+; =================
+
 ; =========== GENERAL =========== ;
 
 (defrecord Schema [])
@@ -320,18 +324,18 @@
 
 (defentity :media:track
   {:doc "video or audio"}
-  {:data:title          nil
-   :time:duration       nil
-   :date:created        nil ; sample-date
-   :date:last-accessed  nil
-   :date:last-modified  nil
-   :cloud:amazon:id     nil
-   :date:purchased      [:one :ref {:ref-to :time:instant}]
+  {:data:title               nil
+   :time:duration            nil
+   :date:created             nil ; sample-date
+   :date:last-accessed       nil
+   :date:last-modified       nil
+   :cloud:amazon:id          nil
+   :date:purchased           [:one :ref {:ref-to :time:instant}]
    ; Date Added ; get from first transaction
    ; Date Modified ; get from transactions
-   :opinion:rating:many nil
-   :data:audio:bit-rate nil
-   :data:video:bit-rate nil
+   :opinion:rating:many      nil
+   :data:audio:bit-rate      nil
+   :data:video:bit-rate      nil
    :data:audio:sample-rate   nil
    :data:media:genre         nil ; ambiguous
    :data:media:sub-genre     nil ; from grouping; ambiguous ; mood / sub-category
@@ -342,18 +346,18 @@
      [:many :ref {:ref-to :media:agent+plays}]
    :data:media:skipped-dates
      [:many :ref {:ref-to :time:instant :doc "Instants when the track was skipped"}]
-   :art:creator            nil
-   :data:creator           nil
+   :art:creator                 nil
+   :data:creator                nil
    ; producer?
    ; collaborators?
-   :user-owns?             [:one :boolean]
-   :data:bytes-size        nil
+   :user-owns?                  [:one :boolean]
+   :data:bytes-size             nil
    :data:image:height           nil
    :data:image:width            nil
    :data:audio:beats-per-minute [:one :ref {:ref-to :unit:beats-per-minute}]
    ; :audio:equalizer ; Not sure what this would consist of
    :data:media:release-date     [:one :ref {:ref-to :time:instant}] ; for album?
-   :opinion:comment:many   nil})
+   :opinion:comment:many        nil})
 
 ; If a transaction specifies a unique identity for a temporary id,
 ; and that unique identity already exists in the database, then that temporary id

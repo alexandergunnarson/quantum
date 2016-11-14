@@ -48,7 +48,7 @@
           {:path [:keys
                    (str (core/get @auth-source-table auth-source) ".cljd")]})))     ; CLJD = Clojure Data
   ([auth-source k]
-    (core/get (get auth-source) k))) 
+    (core/get (get auth-source) k)))
 
 (defn get-in
   {:usage `(get-in :google ["alex" :password])
@@ -65,7 +65,7 @@
         [:keys
          (str (core/get @auth-source-table auth-source) ".cljd")]
         map-f
-        {:overwrite? false})))
+        {:overwrite? false :method :serialize})))
 
 (defn assoc-in! [auth-source & kvs]
   (assoc! auth-source

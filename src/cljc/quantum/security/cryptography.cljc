@@ -4,49 +4,37 @@
           Possibly should just alias some better library for this."
     :attribution "Alex Gunnarson"}
   quantum.security.cryptography
-           (:refer-clojure :exclude [hash])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core   ]
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )  :as async  ]
-             #?(:clj [byte-transforms               :as bt     ])
-                     [quantum.core.data.array       :as arr
-                       :refer [#?(:clj ->bytes)]               ]
-                     [quantum.core.data.bytes       :as bytes  ]
-                     [quantum.core.data.hex         :as hex    ]
-                     [quantum.core.data.set         :as set    ]
-                     [quantum.core.collections      :as coll
-                       :refer [#?(:clj kmap)]                  ]
-                     [quantum.core.error            :as err
-                       :refer [->ex #?(:clj throw-unless)]     ]
-                     [quantum.core.fn               :as fn
-                       :refer [#?@(:clj [fn-> <-])]            ]
-                     [quantum.core.log :as log
-                       :include-macros true]
-                     [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [whenp condpc])
-                               nnil? splice-or]                ]
-                     [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt])]              ]
-                     [quantum.core.nondeterministic :as rand   ]
-                     [quantum.core.numeric          :as num    ]
-                     [quantum.core.convert          :as conv   ]
-                     [quantum.core.string           :as str    ]
-                     [quantum.core.vars             :as var
-                       :refer [#?(:clj defalias)]              ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections      :as coll
-                       :refer [kmap]]
-                     [quantum.core.error            :as err
-                       :refer [throw-unless]                   ]
-                     [quantum.core.fn               :as fn
-                       :refer [fn-> <-]                        ]
-                     [quantum.core.logic            :as logic
-                       :refer [whenp condpc]                   ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt]                          ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                       ]))
+  (:refer-clojure :exclude [hash])
+  (:require
+#?(:clj
+    [byte-transforms               :as bt])
+    [clojure.core                  :as core]
+    [clojure.core.async            :as async]
+    [quantum.core.data.array       :as arr
+      :refer [#?(:clj ->bytes)]]
+    [quantum.core.data.bytes       :as bytes]
+    [quantum.core.data.hex         :as hex]
+    [quantum.core.data.set         :as set]
+    [quantum.core.collections      :as coll
+      :refer [kmap]]
+    [quantum.core.error            :as err
+      :refer [->ex throw-unless]]
+    [quantum.core.fn               :as fn
+      :refer [fn-> <-]]
+    [quantum.core.log :as log
+      :include-macros true]
+    [quantum.core.logic            :as logic
+      :refer [whenp condpc nnil? splice-or]]
+    [quantum.core.macros           :as macros
+      :refer [defnt]]
+    [quantum.core.nondeterministic :as rand]
+    [quantum.core.numeric          :as num]
+    [quantum.core.convert          :as conv]
+    [quantum.core.string           :as str]
+    [quantum.core.validate         :as v
+      :refer [validate]]
+    [quantum.core.vars             :as var
+      :refer [defalias]])
 #?(:clj
   (:import
     [java.security     MessageDigest DigestInputStream SecureRandom AlgorithmParameters]
@@ -58,6 +46,7 @@
     [org.apache.commons.codec.binary Base32 Base64] ; Unnecessary
     org.mindrot.jbcrypt.BCrypt
     [com.lambdaworks.crypto SCryptUtil SCrypt]
+    [org.bouncycastle.crypto.digests SHA3Digest]
     org.bouncycastle.crypto.engines.ThreefishEngine
     org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher
     [org.bouncycastle.crypto BlockCipher BufferedBlockCipher])))
@@ -197,20 +186,20 @@
 
 #?(:cljs
 (defn msg-digest [type]
-  (condp = type
+  (case type
     :SHA-1    (forge-unsupported!)
     :SHA-256  (forge-unsupported!)
     :SHA-385  (forge-unsupported!)
     :SHA-512  (forge-unsupported!)
     :MD5      (forge-unsupported!)
     :HMAC     (forge-unsupported!)
-    :else (->ex :not-implemented nil type))))
+    (->ex :not-implemented nil type))))
 
 ; ===== DIGEST =====
 
 #?(:clj
 (defn ^bytes digest
-  "Creates a byte digest of the string @s according to the @md-type algorithm.
+  "Creates a byte digest of the input-streamable @`in-0` according to the @md-type algorithm.
    Assumes UTF-8 encoding for string passed.
 
    WARNINGS:
@@ -221,7 +210,7 @@
      Most U.S. government applications now require the SHA-2
      family of hash functions.
 
-     As for SHA-3, attackers can crack SHA-3 hashed passswords 8 times
+     As for SHA-3, attackers can crack SHA-3 hashed passwords 8 times
      faster than SHA-2 hashed passwords -
      2 times faster because we need to halve the number of hash iterations
      and 4 times faster because of SHA-3 hardware being faster than SHA-2 hardware.
@@ -231,13 +220,13 @@
      Don't encrypt passwords symmetrically. Other things, maybe, but not passwords.
      Anything that can be asymmetrically encrypted instead of symmetrically, do it."
   {:todo "Allow more hashing functions"}
-  [hash-type ^String s]
-  {:pre [(splice-or hash-type = :md5 :sha-256)]}
-  (let [^String            hash-type-str
-          (-> hash-type name str/->upper)
+  [algo in-0]
+  (validate algo #{:md2 :md5 :sha-1 :sha-224 :sha-256 :sha-384 :sha-512})
+  (let [^String            algo-str
+          (-> algo name str/->upper)
         ^MessageDigest     md
-          (MessageDigest/getInstance hash-type-str)
-        ^InputStream       in (conv/->input-stream s)
+          (MessageDigest/getInstance algo-str)
+        ^InputStream       in (conv/->input-stream in-0)
         ^DigestInputStream dis
           (DigestInputStream. in md)
         ^bytes             digested (.digest md)]
@@ -246,13 +235,13 @@
     digested)))
 
 #?(:clj
-  (defn ^String hex-digest
-    "Gets the digest of a string in hexadecimal.
-     Assumes UTF-8 encoding for string passed."
-    [hash-type ^String s]
-    (->> s
-         (digest hash-type)
-         bytes/bytes-to-hex)))
+(defn ^String hex-digest
+  "Gets the digest of an input-streamable object in hexadecimal.
+   Assumes UTF-8 encoding for string passed."
+  [hash-type in]
+  (->> in
+       (digest hash-type)
+       bytes/bytes-to-hex)))
 
 ; Fast hashes kill security.
 #?(:clj
@@ -261,30 +250,40 @@
     #{:crc32 :crc64
       :md2 ; 1989
       ; md4
-      :md5 ; 1992
+      ; 1992
+      :md5     :md5-hmac
       ; md6
       ; As of 2015, no example of a SHA-1 collision has been published yet — Wikipedia
-      :sha1   :sha-1-hmac
-      :sha256 :sha-256-hmac
-      :sha384
-      :sha512
+      :sha-1   :sha-1-hmac
+      :sha-224 :sha-224-hmac
+      :sha-256 :sha-256-hmac
+      :sha-384 :sha-384-hmac
+      :sha-512 :sha-512-hmac
       :murmur32 :murmur64 :murmur128
       :adler32
       :pbkdf2
       :bcrypt
       :scrypt}
-    (into #{} (bt/available-hash-functions)))))
+    #_(into #{} (bt/available-hash-functions)))))
+
+(def hmac-key->impl-string
+  {:md5-hmac     "HmacMD5"
+   :sha-1-hmac   "HmacSHA1"
+   :sha-224-hmac "HmacSHA224"
+   :sha-256-hmac "HmacSHA256"
+   :sha-384-hmac "HmacSHA384"
+   :sha-512-hmac "HmacSHA512"})
 
 #?(:clj
-(defn sha-hmac ^"[B" [instance-str message secret]
-  (throw-unless (and message secret)
-    (->ex nil "Neither message nor secret can be nil" (kmap message secret)))
-  (let [^Mac algo-instance (Mac/getInstance instance-str)
-        ^SecretKey secret-key (SecretKeySpec. (->bytes secret) instance-str)]
+(defn hmac ^"[B" [impl message secret]
+  (validate impl hmac-key->impl-string
+            message nnil?
+            secret  nnil?)
+  (let [^String algo-str (hmac-key->impl-string impl)
+        ^Mac algo-instance (Mac/getInstance algo-str)
+        ^SecretKey secret-key (SecretKeySpec. (->bytes secret) algo-str)]
     (.init    algo-instance secret-key)
     (.doFinal algo-instance (->bytes message)))))
-
-#?(:clj (def sha-hmac identity))
 
 #?(:clj
 (defn pbkdf2
@@ -376,22 +375,29 @@
 
 #?(:clj
 (defn hash
+  ; AKA Message digest, one-way/asymmetric hash
   ; Many have switched from MurmurHash3 to SipHash to prevent DoS collision attack (hash flooding)
   ; http://dev.clojure.org/jira/browse/CLJ-1431
   ; Python, Ruby, JRuby, Haskell, Rust, Perl, Redis, etc have all switched to SipHash
   ; https://en.wikipedia.org/wiki/SipHash
   ([obj] (hash :murmur64 obj)) ; murmur64 is Clojure's implementation ; TODO look at clojure.lang.Murmur3.java
-  ([algorithm obj & [opts]]
-    (condp = algorithm
+  ([algo obj & [opts]]
+    (case algo
       :clojure      (core/hash obj) ; TODO check whether it does what is claimed
-      :sha-1-hmac   (sha-hmac "HmacSHA1"   obj (:secret opts))
-      :sha-256-hmac (sha-hmac "HmacSHA256" obj (:secret opts))
+      (:md2 :md5 :sha-1 :sha-224 :sha-256 :sha-384 :sha-512)
+        (digest algo obj)
+      (:md5-hmac :sha-1-hmac :sha-224-hmac
+       :sha-256-hmac :sha-384-hmac :sha-512-hmac)
+        (hmac algo obj (:secret opts))
+      ;:sha3-512    (doto (SHA3Digest. 512)
+      ;                   (.update (->bytes obj) 0 32)
+      ;                   (.doFinal (->bytes obj) 0))
       :pbkdf2 (pbkdf2 obj (:salt        opts)
                           (:iterations  opts)
                           (:key-length  opts))
       :bcrypt (bcrypt obj (:work-factor opts))
       :scrypt (scrypt obj opts)
-      (bt/hash obj algorithm opts)))))
+      (bt/hash obj algo opts)))))
 
 ; ===== HASH COMPARE =====
 

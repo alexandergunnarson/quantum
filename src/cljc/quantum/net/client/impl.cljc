@@ -114,7 +114,7 @@
    {:keys [^String name mime-type encoding content]}]
   (let [^String mime-type-f (net/mime-type->str            mime-type)
         ^String encoding-f  (net/normalize-encoding-type   encoding)
-        content-f           (net/normalize-content content mime-type encoding)]
+        content-f           (net/normalize-content content mime-type)]
     (cond
     (string? content-f)
       (.addTextBody meb
@@ -211,6 +211,7 @@
     :or {as :auto
          max-tries 3
          tries     0}}]
+  (log/ppr :http req)
   (if (= tries max-tries)
       (throw (->ex :error/http
                    (str "HTTP exception, status " (:status req) ". Maximum tries (3) exceeded.")

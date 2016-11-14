@@ -11,10 +11,12 @@
    [[clojure.tools.namespace.repl
       :refer [refresh]]
     [quantum.net.server.middleware        :as mid]])
-    [quantum.core.collections             :as coll]
+    [quantum.core.collections             :as coll
+      :refer [join]]
     [quantum.core.error                   :as err
       :refer [->ex]]
-    [quantum.core.fn                      :as fn]
+    [quantum.core.fn                      :as fn
+      :refer [<- fn1]]
     [quantum.core.convert                 :as conv]
     [quantum.core.data.complex.xml        :as xml]
     [quantum.core.log                     :as log
@@ -34,13 +36,15 @@
     [quantum.core.io.core                 :as io]
     [quantum.core.paths                   :as path]
     [quantum.core.print                   :as pr
-      :refer        [!]]
+      :refer [!]]
     [quantum.core.time.core               :as time]
     [quantum.db.datomic                   :as db]
     [quantum.db.datomic.core              :as dbc]
+    [quantum.apis.amazon.cloud-drive.core :as amz]
     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
     [quantum.auth.core                    :as auth]
     [quantum.net.http                     :as http]
+    [quantum.measure.convert              :as uconv]
     [quantum.security.core                :as sec]
     [quantum.security.cryptography        :as crypto]
     [quantum.system                       :as gsys]))
@@ -49,9 +53,3 @@
 (println "Hey console!")
 
 #?(:clj (clojure.spec/check-asserts true))
-
-#?(:clj
-(def ret (doall (xml/lparse
-       (conv/->file
-       "/Users/alexandergunnarson/Downloads/iTunes Library.xml")
-      {:keywordize? true}))))

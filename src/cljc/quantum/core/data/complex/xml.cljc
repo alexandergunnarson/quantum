@@ -164,14 +164,19 @@
 ; ==== PLIST PARSING ====
 
 (def ^:dynamic *keywordize?* false)
+(def ^:dynamic *skip-unparseable* #{})
 
 (defmulti parse-plist (fn [x] (:tag x)))
 
 (defmethod parse-plist :array [x]
   (->> x :content (map+ parse-plist) (join [])))
 
-#_(defmethod parse-plist :data [c]
-  (-> c first-content (crypto/decode :base64)))
+(defmethod parse-plist :data [x]
+  (try
+    (->> x first-content (crypto/decode :base64))
+    (catch Throwable e
+      (when-not (contains? *skip-unparseable* :data)
+        (throw e)))))
 
 (defmethod parse-plist :date [x]
   (-> x first-content time/->zoned-date-time))
@@ -191,12 +196,9 @@
 
 #?(:clj
 (defnt lparse
-  ([^string? x     ] (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
-  ([^file?   x     ] (-> x (java.io.FileReader.)   (java.io.BufferedReader.) cxml/parse))
-  ([x opts] (binding [*keywordize?* (:keywordize? opts)] (println "yay") #_(lparse-protocol x)))
-  #_([#{string? file?} data k]
-    (throw-unless (contains? #{:plist} k) (->ex nil "Parser option not recognized" k))
-    (condp = k
-      :plist (->> data lparse first-content parse-plist)))))
-
-#?(:clj (defalias lparse** lparse))
+  ([^string? x] (-> x (java.io.StringReader.) (java.io.BufferedReader.) cxml/parse))
+  ([^file?   x] (-> x (java.io.FileReader.)   (java.io.BufferedReader.) cxml/parse))
+  ; TODO Just [x opts] gives `clojure.lang.ArityException: Wrong number of args (2)` when you pass a `file?` or `string?`
+  ; This is because in the protocol, the function relating to `file?` or `string?` is found, but only has one argument,
+  ; rather than trying to first find by arity, then by class
+  ([#{string? file?} x opts] (binding [*keywordize?* (:keywordize? opts)] (lparse x)))))

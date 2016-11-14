@@ -1,24 +1,21 @@
 (ns
   ^{:doc "URL decoding, encoding, and URL <-> map.
-          
+
           Possibly should deprecate this in favor of some other
           better library.
 
           Call this quantum.http.transcode"
     :attribution "Alex Gunnarson"}
   quantum.net.url
-  (:require [quantum.net.http    :as http]
-            [quantum.core.string :as str ]
-            [quantum.core.fn
-                         :refer        [#?@(:clj [<-])]
-              #?@(:cljs [:refer-macros [<-]])]
-            [quantum.core.macros
-                         :refer        [#?@(:clj [defnt])]
-              #?@(:cljs [:refer-macros [defnt]])]
-            [quantum.core.collections :as coll
-                         :refer [#?@(:clj [join reducei])
-                                 mergel map+]
-              #?@(:cljs [:refer-macros [join reducei]])]))
+  (:require
+    [quantum.net.http         :as http]
+    [quantum.core.string      :as str]
+    [quantum.core.fn
+      :refer [<- rfn]]
+    [quantum.core.macros
+      :refer [defnt]]
+    [quantum.core.collections :as coll
+      :refer [join reducei mergel map+]]))
 
 (def url-percent-codes
   {:common
@@ -40,8 +37,8 @@
       "%7D" "}"
       "%7E" "~"}
    :reserved
-     {"%21" "!" 
-      "%23" "#" 
+     {"%21" "!"
+      "%23" "#"
       "%24" "$"
       "%26" "&"
       "%27" "'"
@@ -81,7 +78,7 @@
                 :url-common   (-> url-percent-codes :common)
                 :xml          xml-codes)]
         (reduce
-          (fn [ret percent-code assoc-char]
+          (rfn [ret percent-code assoc-char]
             (str/replace ret percent-code assoc-char))
           s
           code-map))))
@@ -93,7 +90,7 @@
                (coll/reverse-kvs (:reserved url-percent-codes)))
              (dissoc "." "-" "%"))]
     (reduce
-      (fn [ret char-n percent-code]
+      (rfn [ret char-n percent-code]
         (str/replace ret char-n percent-code))
       (str/replace s "%" "%25") ; pre-replace all %
       encoding-map)))
@@ -114,10 +111,10 @@
              (->> param
                   (coll/split-remove "="))))
          join)))
-  
+
 (defn embedded-url->map
   [^String embedded-url]
-  (->> embedded-url 
+  (->> embedded-url
        (decode :xml)
        (<- url-params->map true)))
 

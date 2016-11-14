@@ -226,9 +226,11 @@
         (defalias ldropl         diff/ldropl       )
         (defalias ldrop          diff/ldropl       )
         (defalias drop-while+    red/drop-while+   )
+        (defalias dropl-while-matches diff/dropl-while-matches)
         (defalias dropr          diff/dropr        )
 #?(:clj (defalias dropr+         diff/dropr+       ))
         (defalias dropr-until    diff/dropr-until  )
+        (defalias dropr-while-matches diff/dropr-while-matches)
         (defalias ldrop-at       diff/ldrop-at     )
         (defalias group-by+      red/group-by+     )
         (defalias flatten+       red/flatten+      )
@@ -339,6 +341,7 @@
         (defalias update-val+     soc/update-val+    )
         (defalias assoc-when-none soc/assoc-when-none)
         (defalias assoc-with      soc/assoc-with     )
+        (defalias assoc-if        soc/assoc-if       )
 
 (defn ->multi-array
   "Creates an n-dimensional array.

@@ -141,7 +141,7 @@
           "(only optionally) create the directory recursively if it doesn't exist"
           "add a pluggable overwrite strategy using `next-file-copy-num`"]}
   ([opts] (assoc! (:path opts) (:data opts) opts))
-  ([path data] (assoc! path data {:method :print}))
+  ([path data] (assoc! path data nil))
   ([path data {:keys [type method overwrite? formatter max-tries]
                :or   {method     :serialize ; can encrypt :encrypt-with :....
                       overwrite? false
@@ -156,17 +156,17 @@
                (err/try-times max-tries 500
                  (try
                    (condpc = method
-                     :print  (assoc-unserialized! :string path data)
-                     :pretty (clojure.pprint/pprint data (io/writer path)) ; is there a better way to do this?
+                     :print  (assoc-unserialized! :string path-f data)
+                     :pretty (clojure.pprint/pprint data (io/writer path-f)) ; is there a better way to do this?
                      (coll-or :serialize :compress :binary)
                        (if (or ;(= method :binary)
                                (coll/contains? #{:csv :xls :xlsx :txt :binary} type))
-                           (assoc-unserialized! (keyword type) path data)
-                           (assoc-serialized!   path data method))
+                           (assoc-unserialized! (keyword type) path-f data)
+                           (assoc-serialized!   path-f data method))
                      (throw (->ex :illegal-arg "Unknown write method requested." method)))
                    [true]
                    (catch FileNotFoundException e
-                     (u/create-dir! (-> path p/up-dir)) ; TODO need to do this recursively, and only as an option
+                     (u/create-dir! (-> path-f p/up-dir)) ; TODO need to do this recursively, and only as an option
                      (throw e))))))))
 
 #_(defn dissoc!
