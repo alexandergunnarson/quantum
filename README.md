@@ -36,7 +36,7 @@ In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/22
 
 Summary
 -
-Less magically put, quantum is like Google Guava for Clojure. It's an all-purpose Clojure library similar to [Prismatic/plumbing](https://github.com/Prismatic/plumbing), [weavejester/medley](https://github.com/weavejester/medley), [mikera/clojure-utils](https://github.com/mikera/clojure-utils), [ptaoussanis/encore](https://github.com/ptaoussanis/encore), [ztellman/potemkin](https://github.com/ztellman/potemkin), [zcaudate/hara](https://github.com/zcaudate/hara), and others. It aims to unify and abstract away conceptually irrelevant implementation details while providing great performance, often exceeding that of clojure.core (see benchmarks for more information).
+Less magically put, quantum is like Google Guava for Clojure(Script). It's an all-purpose Clojure(Script) library similar to [Prismatic/plumbing](https://github.com/Prismatic/plumbing), [weavejester/medley](https://github.com/weavejester/medley), [mikera/clojure-utils](https://github.com/mikera/clojure-utils), [ptaoussanis/encore](https://github.com/ptaoussanis/encore), [ztellman/potemkin](https://github.com/ztellman/potemkin), [zcaudate/hara](https://github.com/zcaudate/hara), and others. It aims to unify and abstract away conceptually irrelevant implementation details while providing great performance, often exceeding that of clojure.core (see benchmarks for more information).
 
 It adapts, in the author's opinion, the best and most useful functions from existing libraries (in accordance with their respective copyrights) and adds much more of its own.
 
