@@ -41,6 +41,7 @@
 
 #?(:clj (defmacro fn&  [f & args] `(fn&* nil ~f ~@args)))
 #?(:clj (defmacro fn&2 [f & args] `(fn&* 2   ~f ~@args)))
+#?(:clj (defmacro fn&3 [f & args] `(fn&* 3   ~f ~@args)))
 
 (defn constantly
   {:from 'com.rpl.specter.impl}

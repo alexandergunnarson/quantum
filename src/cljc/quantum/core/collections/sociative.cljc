@@ -33,38 +33,30 @@
      select-keys
      zipmap
      reverse
-     conj
-     conj! assoc! dissoc! disj!
+     conj conj! assoc! dissoc dissoc! disj!
      boolean?])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [quantum.core.data.map         :as map
-      :refer        [map-entry]]
+      :refer [map-entry]]
     [quantum.core.data.vector      :as vec
-      :refer        [catvec subvec+]]
+      :refer [catvec subvec+]]
     [quantum.core.collections.core :as coll
-      :refer        [#?@(:clj [first second rest get count conj! assoc! assoc!* empty? contains? containsk?])]
-      :refer-macros [          first second rest get count conj! assoc! assoc!* empty? contains? containsk?]]
+      :refer [first second rest get count conj! dissoc assoc! assoc!* empty? contains? containsk?]]
     [quantum.core.collections.generative
-      :refer        [range]]
+      :refer [range]]
     [quantum.core.fn               :as fn
-      :refer        [#?@(:clj [fn1 fn->])]
-      :refer-macros [          fn1 fn->]]
+      :refer [rfn fn1 fn-> fn&2]]
     [quantum.core.logic            :as logic
-      :refer        [#?@(:clj [fn-or whenf])]
-      :refer-macros [          fn-or whenf]]
+      :refer [fn-or whenf]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer [defnt]]
     [quantum.core.reducers         :as red
-      :refer        [reduce join partition-all+]]
+      :refer [reduce join partition-all+]]
     [quantum.core.type             :as type
-      :refer        [transient!* persistent!*
-                     #?@(:clj [transient? editable?])]
-      :refer-macros [          transient? editable?]]
+      :refer [transient!* persistent!* transient? editable?]]
     [quantum.core.loops            :as loops
-      :refer        [reduce-2]]))
+      :refer [reduce-2 reduce]]))
 
 ;_._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._._
 ;=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*{        ASSOCIATIVE       }=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=
@@ -83,7 +75,7 @@
       (let [[trans-fn pers-fn]
              (if (transient? coll-0) [identity identity] [transient persistent!])]
         (pers-fn
-          (loops/reduce
+          (reduce
             (fn [coll-n _] (conj! coll-n nil)) ; extend-vec part
             (trans-fn coll-0)
             (range (count coll-0) (inc k)))))
@@ -95,7 +87,6 @@
           "Stop the assoc things"]}
   ([coll-0 k v]
     (assoc (extend-coll-to coll-0 k) k v))
-    ; once probably gives no performance benefit from transience
   ([coll-0 k v & kvs-0]
     (loop [kvs-n  kvs-0
            coll-f (-> coll-0 transient!*
@@ -113,15 +104,10 @@
   {:from "macourtney/clojure-tools"
    :contributors ["Alex Gunnarson"]}
   ([m pred k v]
-    (if (pred m k v)
-        (assoc m k v)
-        m))
+    (if (pred m k v) (assoc m k v) m))
   ([m pred k v & kvs]
     (reduce
-      (fn ([ret k-n v-n]
-            (assoc-if ret pred k-n v-n))
-          ([ret [k-n v-n]]
-            (assoc-if ret pred k-n v-n)))
+      (rfn ([ret k-n v-n] (assoc-if ret pred k-n v-n)))
       (assoc-if m pred k v)
       (partition-all+ 2 kvs))))
 
@@ -246,68 +232,40 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================
-(defn dissoc+
-  {:todo ["Protocolize"]}
-  ([coll key-0]
-    (try
-      (cond ; probably use tricks to see which subvec is longer to into is less consumptive
-        (vector? coll)
-          (catvec (subvec+ coll 0 key-0)
-                  (subvec+ coll (inc key-0) (count coll)))
-        (editable? coll)
-          (-> coll transient (core/dissoc! coll key-0) persistent!)
-        :else
-          (dissoc coll key-0))))
-  ([coll key-0 & keys-0]
-    (loops/reduce dissoc+ coll (cons key-0 keys-0))))
 
 (defn dissocs+ [coll & ks]
-  (loops/reduce
-    (fn [ret k]
-      (dissoc+ ret k))
-    coll
-    ks))
+  (reduce (fn&2 dissoc) coll ks))
 
 (defn dissoc-if+ [coll pred k] ; make dissoc-ifs+
   (whenf coll (fn-> (get k) pred)
-    (fn1 dissoc+ k)))
-
-(defnt dissoc++
-  {:todo ["Move to collections.core"
-          "Implement for vector"]}
-  ([#{map?} coll obj] (dissoc coll obj))
-  ([^:obj   coll obj] (dissoc coll obj))
-  ([^set?   coll obj] (disj   coll obj)))
+    (fn1 dissoc k)))
 
 (defn dissoc-in+
   "Dissociate a value in a nested assocative structure, identified by a sequence
   of keys. Any collections left empty by the operation will be dissociated from
   their containing structures.
   This implementation was adapted from clojure.core.contrib"
-  {:attribution "weavejester.medley"
-   :todo ["Transientize"]}
+  {:attribution "weavejester.medley"}
   [m ks]
   (if-let [[k & ks] (seq ks)]
     (if (empty? ks)
-        (dissoc++ m k)
-        (let [new-n (dissoc-in+ (get m k) ks)] ; this is terrible
+        (dissoc m k)
+        (let [new-n (dissoc-in+ (get m k) ks)] ; recursion *may* be better than `reduce` and destructuring
           (if (empty? new-n) ; dissoc's empty ones
-              (dissoc++ m k)
+              (dissoc m k)
               (assoc m k new-n))))
     m))
 
 (defn updates-in+
   [coll & kfs]
   (reduce-2 ; Inefficient
-    (fn [ret k-n f-n] (update-in+ ret k-n f-n))
-    coll
-    kfs))
+    update-in+ coll kfs))
 
 (defn re-assoc+ [coll k-0 k-f]
   (if (containsk? coll k-0)
       (-> coll
          (assoc+  k-f (get coll k-0))
-         (dissoc+ k-0))
+         (dissoc k-0))
       coll))
 
 (defn re-assocs+ [coll & kfs]

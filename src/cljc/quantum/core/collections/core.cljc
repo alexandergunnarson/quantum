@@ -36,7 +36,7 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer [fn1 rfn]]
+              :refer [fn1 fn&2 rfn]]
             [quantum.core.logic             :as logic
               :refer [nnil? nempty?
                       eq? fn-eq? whenc whenf ifn1]]
@@ -535,20 +535,21 @@
   {:imported "clojure.lang.RT/assoc"}
   #?(:clj  ([^clojure.lang.Associative x k v] (.assoc x k v)))
   #?(:cljs ([#{vec? map?}              x k v] (cljs.core/-assoc x k v)))
-           ([                          x k v] (core/assoc x k v)))
+           ([^nil?                     x k v] {k v}))
 
 (defnt dissoc
   {:imported "clojure.lang.RT/dissoc"}
   #?(:clj  ([^clojure.lang.IPersistentMap coll k] (.without coll k)))
-  #?(:cljs ([^map?                        coll k] (core/dissoc coll k)))
-           ([coll k]
-             (if (nil? coll)
-                 nil
-                 (throw (->ex :not-supported (str "|dissoc| not supported on" (class coll)))))))
+  #?(:cljs ([^map?                        coll k] (-dissoc  coll k)))
+  #?(:clj  ([^clojure.lang.IPersistentSet coll x] (.disjoin coll x)))
+  #?(:cljs ([^set?                        coll x] (-disjoin coll x)))
+           ([^vector?                     coll i]
+             (catvec (subvec coll 0 i) (subvec coll (inc i) (count coll))))
+           ([^nil?                        coll k] nil))
 
 (defnt dissoc!
   ([^transient? coll k  ] (core/dissoc! coll k))
-  ([^atom?      coll k  ] (swap! coll (fn [m k-n] (dissoc m k-n)) k)))
+  ([^atom?      coll k  ] (swap! coll (fn&2 dissoc) k)))
 
 (defnt conj!
   ([^transient? coll obj] (core/conj! coll obj))

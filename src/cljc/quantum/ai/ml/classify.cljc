@@ -10,7 +10,8 @@
       :refer [profile defnp p]]])
     [quantum.core.collections         :as coll
       :refer [for for* fori lfor reduce join kmap
-              pjoin in? map+ vals+ filter+ remove+ take+ map-vals+ filter-vals+
+              pjoin in? map+ vals+ filter+ partition-all+
+              remove+ take+ map-vals+ filter-vals+
               flatten-1+ range+ ffilter
               reduce-count]]
     [quantum.core.numeric             :as num]
@@ -89,10 +90,8 @@
   ([D] `(N- ~D))
   ([D arg & args] ; TODO code pattern
     (assert (-> (cons arg args) count even?))
-    (let [partitioned (->> (cons arg args)
-                           (partition-all 2))
-          pred-syms   (->> partitioned (map+ first ) (join []))
-          pred-vals   (->> partitioned (map+ second) (join []))]
+    (let [pred-syms   (->> (cons arg args) (partition-all+ 2) (map+ first ) (join []))
+          pred-vals   (->> (cons arg args) (partition-all+ 2) (map+ second) (join []))]
       (condp = pred-syms
         '[c]   `(N:c   ~D ~@pred-vals)
         '[w]   `(N:w   ~D ~@pred-vals)
