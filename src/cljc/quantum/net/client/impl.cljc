@@ -43,7 +43,7 @@
                       org.apache.http.entity.ContentType
                       org.apache.http.client.methods.HttpPost
                       org.apache.http.client.methods.HttpEntityEnclosingRequestBase
-                      org.apache.http.impl.client.DefaultHttpClient
+                      (org.httpkit.client HttpClient)
                       java.io.File)))
 
 (def ^{:doc "According to OWASP, these are important and
@@ -107,6 +107,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;================================================={       NORMALIZE PARAMS        }=================================================
 ;================================================={                               }=================================================
+; Somehow, it always results in SerializationException if I try to use the built-in CLJ-HTTP multipart
 #?(:clj
 (defn add-part!
   {:todo []}
@@ -152,7 +153,7 @@
   [{:keys [^String url ^Vec multipart ; vector of maps
            ^String oauth-token
                    headers]}]
-  (let [^DefaultHttpClient client (DefaultHttpClient.)
+  (let [^HttpClient client @http/default-client
         ^HttpEntityEnclosingRequestBase req (HttpPost. url)
         ^MultipartEntityBuilder meb
           (org.apache.http.entity.mime.MultipartEntityBuilder/create)]
@@ -165,12 +166,21 @@
       ;(.getEntity)
       ))))
 
+ (let [entities (into (map (fn [{:keys [name content filename content-type]}]
+                                  (MultipartEntity. name content filename content-type)) multipart)
+                      (map (fn [[k v]] (MultipartEntity. k v nil nil)) form-params))
+            boundary (MultipartEntity/genBoundary entities)]
+        (-> r
+            (assoc-in [:headers "Content-Type"]
+                      (str "multipart/form-data; boundary=" boundary))
+            (assoc :body (MultipartEntity/encode boundary entities))))
+
 #?(:clj
 (defn request!*
   {:todo ["Integrate this with the rest of clj-http"]}
-  [{:keys [^Key method ^Map multipart] :as req}]
-  (if (nnil? multipart)
-      (condp = method
+  [{:keys [method multipart] :as req}]
+  (if multipart
+      (case method
         :post (post-multipart! req)
         (throw (->ex :invalid-request-type
                       "Method not a valid HTTP request type."
@@ -220,7 +230,7 @@
             status          (:status response)
             parse-middleware (whenf1 (fn-and (constantly (not raw?))
                                               (fn-> :headers :content-type (containsv? "application/json")))
-                               (fn-> (update :body (fn1 json-> (or keys-fn str/keywordize)))))]
+                               (fn-> (update :body (fn1 json-> keys-fn))))]
         (if (or (= status 200) (= status 201))
             ((or (get handlers status) fn/seconda) req (parse-middleware response))
             (let [status-handler

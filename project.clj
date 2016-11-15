@@ -178,7 +178,7 @@
      ; ==== HTTP ====
        [com.taoensso/sente                      "1.8.1"             ; WebSockets
          :exclusions [com.taoensso/encore]                        ]
-       [clj-http                                "3.1.0"
+       [clj-http                                "3.3.0"
          :exclusions [riddley
                       cheshire
                       org.json/json

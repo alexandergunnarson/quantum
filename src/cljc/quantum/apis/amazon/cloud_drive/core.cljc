@@ -22,7 +22,7 @@
                        :refer [validate]])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
-                       :refer [go]                                     ]))
+                       :refer [go]]))
   #?(:clj  (:import  [java.nio.file Files Paths])))
 
 ; (http/request! {:url "https://drive.amazonaws.com/drive/v1/account/endpoint" :oauth-token ...})
@@ -39,28 +39,29 @@
     :account/usage
     :nodes"
   ([url-type k] (request! :meta (str/->path (namespace k) (name k)) nil))
-  ([url-type k {:keys [append method query-params body]
+  ([url-type k {:keys [append method query-params body multipart]
        :or {method :get
             query-params {}}}]
    (log/pr ::debug "AMAZON REQUEST:" (kmap k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
-      (->> (http/request!
-            {:url (if append
-                      (str/->path (get base-urls url-type) (name k) append)
-                      (str/->path (get base-urls url-type) (name k)))
-             :method method
-             :query-params query-params
-             :body (when body (conv/->json body))
-             :handlers
-              {401 (fn [req resp]
-                     (amz-auth/refresh-token! username)
-                     (http/request!
-                       (assoc req :oauth-token
-                         (auth/access-token :amazon :cloud-drive))))}
-             :oauth-token (let [token (auth/access-token :amazon :cloud-drive)]
-                             (assert (nnil? token))
-                             token)})
+      (-> {:url (if append
+                    (str/->path (get base-urls url-type) (name k) append)
+                    (str/->path (get base-urls url-type) (name k)))
+           :method method
+           :query-params query-params
+           :handlers
+            {401 (fn [req resp]
+                   (amz-auth/refresh-token! username)
+                   (http/request!
+                     (assoc req :oauth-token
+                       (auth/access-token :amazon :cloud-drive))))}
+           :oauth-token (let [token (auth/access-token :amazon :cloud-drive)]
+                           (assert (nnil? token))
+                           token)}
+           (merge (when body      {:body      (conv/->json body)})
+                  (when multipart {:multipart multipart}))
+           http/request!
           #?(:cljs <!)))))
 
 (defn ^:cljs-async used-bytes []
@@ -137,7 +138,8 @@
         #?(:cljs <!) :body)))
 
 (defn ^:cljs-async assoc!
-  {:usage `(assoc! {:path ["hab497rtds-d_a2gneg" "MyFolderName"] :type :folder})}
+  {:usage `[(assoc! {:path ["hab497rtds-d_a2gneg" "MyFolderName"] :type :folder})
+            (assoc! ["hab497rtds-d_a2gneg" "File.mp3"] (->file "~/abcde.mp3") {:deduplication? false})]}
   ([opts] (assoc! (:path opts) (:data opts) opts))
   ([path data] (assoc! path data nil))
   ([path data {:keys [type overwrite? deduplication?]
@@ -159,8 +161,10 @@
                   {:body meta-}
                   {:query-params (when (false? deduplication?) {:suppress "deduplication"})
                    :multipart
-                    [{:name "metadata" :mime-type :json :encoding :utf-8
-                      :content (conv/->json meta-)}
+                    [{:name      "metadata"
+                      :mime-type "application/json"
+                      ;:encoding  :utf-8
+                      :content   (conv/->json meta-)}
                      {:name      "content"
                       :mime-type "application/octet-stream"
                       :content   (conv/->input-stream data)}]})))))))

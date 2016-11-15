@@ -75,11 +75,9 @@
   (assoc! auth-source
     (apply coll/dissoc-in+ (get auth-source) ks)))
 
-; TODO temp change
 (defn access-token
   "Retrieves the current access token for @auth-source."
   [auth-source service]
-  (-> (get auth-source) (core/get service)
-      :access-tokens :current :access-token))
+  (get-in :amazon [:cloud-drive :access-tokens :current :access-token]))
 
 
