@@ -26,10 +26,15 @@
                                                         wrap-forwarded-scheme  ]]
             [ring.middleware.defaults   :as defaults]
             ; QUANTUM
-            [quantum.core.string        :as str      ]
+            [quantum.core.string        :as str]
+            [quantum.core.logic
+              :refer [whenp]]
+            [quantum.core.fn
+              :refer [fn1 fn->]]
             [quantum.core.collections   :as coll
               :refer [containsv? assocs-in+ flatten-1]]
-            [quantum.core.log           :as log]))
+            [quantum.core.log           :as log]
+            [quantum.core.convert       :as conv]))
 
 (def cors? (atom true))
 
@@ -109,10 +114,25 @@
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
 
+(defmulti coerce-from-content-type (fn-> :headers :content-type))
+
+(defmethod coerce-from-content-type :default [req] req)
+
+(defmethod coerce-from-content-type "application/text" [req] (update req :body (fn1 conv/->str)))
+(defmethod coerce-from-content-type "text/html"        [req] (update req :body (fn1 conv/->str)))
+
+(defn wrap-coerce-from-content-type
+  [handler]
+  (fn [request]
+    (handler (coerce-from-content-type request))))
+
 (defn wrap-middleware [routes & [opts]]
   (-> routes
+      (whenp (:resp-content-type opts) wrap-content-type)
+      (whenp (:req-content-type opts) wrap-coerce-from-content-type)
       wrap-uid
-      (wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))})
+      (whenp (-> opts :anti-forgery false? not)
+        (fn1 wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))}))
       (defaults/wrap-defaults
         (apply assocs-in+ defaults/secure-site-defaults
           [:security :anti-forgery] false
