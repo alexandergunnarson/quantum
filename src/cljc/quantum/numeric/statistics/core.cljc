@@ -512,7 +512,8 @@
 (defalias wilcoxon-rank-sum-test mann-whitney-u-test)
 
 (defn one-way-anova-test
-  "One-way ANOVA (analysis of variance) statistics."
+  "One-way ANOVA (analysis of variance) statistics.
+   ANOVA is used when there is a continuous response and categorical predictors."
   {:implemented-by '#{org.apache.commons.math3.stat.inference.OneWayAnova}}
   [?] (TODO))
 
