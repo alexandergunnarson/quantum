@@ -1,34 +1,29 @@
 (ns quantum.net.http
   (:require [com.stuartsierra.component              :as component]
-            [taoensso.sente                          :as ws       ]
-  #?@(:clj [[immutant.web                            :as imm      ]
-            [aleph.http                              :as aleph    ]
-            [taoensso.sente.server-adapters.immutant :as a-imm    ]
-            [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-            [#?(:clj  clojure.core.async
-                :cljs cljs.core.async   )            :as async    ]
+            [taoensso.sente                          :as ws]
+  #?@(:clj [[immutant.web                            :as imm]
+            [aleph.http                              :as aleph]
+            [taoensso.sente.server-adapters.immutant :as a-imm]
+            [taoensso.sente.server-adapters.aleph    :as a-aleph]])
+            [clojure.core.async                      :as async]
             [quantum.core.collections                :as coll
-              :refer        [#?@(:clj [kmap join]) remove-vals+]
-              :refer-macros [kmap join]]
-            [quantum.core.string                     :as str      ]
-            [quantum.net.client.impl                 :as impl     ]
-            [quantum.net.core                        :as net      ]
-            [quantum.core.paths                      :as path    ]
-    #?(:clj [quantum.net.server.router               :as router   ])
+              :refer [kmap join remove-vals+]]
+            [quantum.core.string                     :as str]
+            [quantum.net.client.impl                 :as impl]
+            [quantum.net.core                        :as net]
+            [quantum.core.paths                      :as path]
+    #?(:clj [quantum.net.server.router               :as router])
             [quantum.core.error                      :as err]
             [quantum.core.validate                   :as v
-              :refer        [#?(:clj validate)]
-              :refer-macros [        validate]]
+              :refer [validate]]
             [quantum.core.fn
-              :refer [fn-nil]                                     ]
+              :refer [fn-nil]]
             [quantum.core.log                        :as log
               :include-macros true]
             [quantum.core.logic                      :as logic
-              :refer [nnil?]                                      ]
+              :refer [nnil?]]
             [quantum.core.vars                       :as var
-              :refer        [#?@(:clj [defalias])]
-              :refer-macros [defalias]])
-  #?(:cljs (:require-macros [quantum.core.vars :refer [defalias]])))
+              :refer [defalias]]))
 
 (def request! impl/request!)
 
@@ -60,7 +55,7 @@
           (validate port       net/valid-port?
                     type       #{:aleph :immutant #_:http-kit}
                     routes-var var?
-                    routes-fn  fn?)
+                    routes-fn  (v/or* fn? var?))
           (let [opts (->> (merge
                             {:host           (or host     "localhost")
                              :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
@@ -96,16 +91,16 @@
                 _ (alter-var-root routes-var ; TODO reset-var
                     (constantly (router/make-routes (merge this opts))))
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
-                server (condp = type
+                server (case type
                          :aleph    (aleph/start-server routes-var opts)
                          :immutant (imm/run            routes-var opts)
                          ;:http-kit (http-kit/run-server routes opts)
                          )
                 _ (reset! stop-fn-f
                     (condp = type
-                      :aleph    #(do (when (nnil? server)
+                      :aleph    #(do (when server
                                        (.close ^java.io.Closeable server)))
-                      :immutant #(do (when (nnil? server)
+                      :immutant #(do (when server
                                        (imm/stop server)))
                       :http-kit server))]
             (log/pr :debug "Server launched.")
@@ -127,10 +122,11 @@
           (throw e)))))
     (stop [this]
       (try
-        (condp = type
-          :aleph    (stop-fn)
-          :immutant (stop-fn)
-          :http-kit (stop-fn :timeout (or stop-timeout 100)))
+        (when stop-fn
+          (case type
+            :aleph    (stop-fn)
+            :immutant (stop-fn)
+            :http-kit (stop-fn :timeout (or stop-timeout 100))))
         (catch Throwable e
           (err/warn! e)))
       (assoc this
@@ -152,7 +148,6 @@
   [xhr on-up on-down]
   (let [check-status
          (fn []
-          (println "Check status" (.-status xhr) )
            (if (and (.-status xhr) (< (.-status xhr) 12000))
                (on-up)
                (on-down)))
@@ -164,22 +159,18 @@
         ; TODO derepetitivize
         (do (set! (.-onerror xhr)
               (fn [& args]
-                (println "Error")
                 (on-down)
                 (apply (or on-error-0 fn-nil) args)))
             (set! (.-ontimeout xhr)
               (fn [& args]
-                (println "Timeout")
                 (on-down)
                 (apply (or on-timeout-0 fn-nil) args)))
             (set! (.-onload xhr)
               (fn [& args]
-                (println "Load")
                 (check-status)
                 (apply (or on-load-0 fn-nil) args))))
         (do (set! (.-onreadystatechange xhr)
               (fn [& args]
-                (println "State change")
                 (condp = (.-readyState xhr)
                   4 (check-status)
                   0 (on-down)
