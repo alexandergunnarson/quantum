@@ -49,7 +49,7 @@
         js-source-file-f (or js-source-file "system")
         frontend-init    (-> config :frontend :init)]
   {:log
-     {:levels                   #{:debug :warn}}
+     {:levels                       (or (-> config :log :levels) #{:debug :warn})}
    #?@(:clj
   [:server
      (when server
