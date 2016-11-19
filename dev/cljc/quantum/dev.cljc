@@ -18,6 +18,7 @@
     [quantum.core.fn                      :as fn
       :refer [<- fn1]]
     [quantum.core.convert                 :as conv]
+    [quantum.net.url                      :as url]
     [quantum.core.data.complex.xml        :as xml]
     [quantum.core.log                     :as log
       :refer [prl]]

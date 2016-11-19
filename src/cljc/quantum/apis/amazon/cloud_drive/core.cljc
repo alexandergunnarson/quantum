@@ -155,7 +155,7 @@
           meta- (-> {:kind (if (= type :folder) "FOLDER" "FILE")
                      :name node-name}
                     (assoc-if (constantly (string? parent)) :parents [parent]))]
-      (request! :meta :nodes
+      (request! :content :nodes
         (-> {:method :post}
             (merge
               (if (= type :folder)
@@ -164,9 +164,9 @@
                    :multipart
                     [{:name      "metadata"
                       :mime-type "application/json"
-                      ;:encoding  :utf-8
+                      :encoding  "UTF-8"
                       :content   (conv/->json meta-)}
-                     {:name      "content"
+                     {:name      "content" :filename node-name
                       :mime-type "application/octet-stream"
                       :content   (conv/->input-stream data)}]})))))))
 

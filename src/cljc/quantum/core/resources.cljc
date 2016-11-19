@@ -5,28 +5,22 @@
              #?(:clj [clojure.tools.namespace.repl :as repl
                        :refer [refresh refresh-all
                                set-refresh-dirs]                ])
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   ) :as casync   ]
+                     [clojure.core.async           :as casync]
                      [quantum.core.error           :as err
-                       :refer [->ex]                            ]
+                       :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.logic           :as logic
-                       :refer [#?@(:clj [fn-not fn-or]) nnil?]  ]
+                       :refer [fn-not fn-or nnil?]]
                      [quantum.core.macros          :as macros
-                       :refer [#?@(:clj [defnt])]               ]
+                       :refer [defnt]]
                      [quantum.core.async           :as async    ]
                      [quantum.core.type            :as type
                        :refer [atom?]                           ])
-  #?(:cljs (:require-macros
-                     [quantum.core.logic           :as logic
-                       :refer [fn-not fn-or]                    ]
-                     [quantum.core.macros          :as macros
-                       :refer [defnt]                           ]
-                     [quantum.core.log             :as log      ]))
   #?(:clj  (:import org.openqa.selenium.WebDriver
                     (java.lang ProcessBuilder Process StringBuffer)
                     (java.io InputStream Reader Writer
                       IOException)
+                    com.stuartsierra.component.Lifecycle
                     (java.util.concurrent TimeUnit)
                     ;quantum.core.data.queue.LinkedBlockingQueue
                     clojure.core.async.impl.channels.ManyToManyChannel)))
@@ -60,17 +54,21 @@
   ([^java.io.Closeable x] true)
   ([x] false)))
 
-#?(:clj
 (defnt cleanup!
   #?@(:clj
- [([^org.openqa.selenium.WebDriver obj] (.quit  obj))
-  ([^java.io.Closeable             obj] (.close obj))])))
+ [([^org.openqa.selenium.WebDriver x] (.quit  x))
+  ([^java.io.Closeable             x] (.close x))
+  ([^Lifecycle                     x] (component/stop x))]
+   :cljs
+ [([x] (if (satisfies? component/Lifecycle x)
+           (component/stop x)
+           (throw (->ex nil "Cleanup not implemented for type" {:type (type x)}))))]))
 
 (defn with-cleanup [obj cleanup-seq]
   (swap! cleanup-seq conj #(close! obj))
   obj)
 
-(defonce systems (atom nil))
+(defonce systems (atom nil)) ; TODO cache
 
 (defn start!
   ([] (start! (:global @systems)))
@@ -87,8 +85,10 @@
      (try
        ~@body
        (finally
-         (doseq [resource# ~(->> bindings (apply array-map) keys (into []))]
-           (cleanup! resource#)))))))
+         ; Release resources in reverse order of acquisition
+         (doseq [resource# ~(->> bindings (partition-all 2) (map first) reverse vec)]
+           (catch-all (cleanup! resource#) e
+             (log/ppr :warn "Failed attempting to release resource" {:resource resource#}))))))))
 
 ; ======= SYSTEM ========
 
