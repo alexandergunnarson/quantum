@@ -1,6 +1,6 @@
 (ns quantum.net.core
            (:refer-clojure :exclude [when-let])
-           (:require 
+           (:require
             #?(:cljs [goog.userAgent           :as agent      ])
             #?(:cljs [goog.Uri                 :as uri        ])
                      [quantum.core.error       :as err
@@ -146,7 +146,7 @@
            (if-not (str/blank? (:fragment m))
              (str "#" (:fragment m)))))))
 
-#?(:clj
+#_(:clj
 (defn parse-url
   "Parse the url `s` and return a Ring compatible map."
   {:from "r0man/noencore"}
@@ -174,7 +174,7 @@
       {:scheme (keyword (.getScheme uri))
        :server-name (.getDomain uri)
        :server-port (when-let [p (.getPort uri)
-                               _ (pos? p)] 
+                               _ (pos? p)]
                       p)
        :uri         (.getPath uri)
        :query-string (if-not (.isEmpty query-data)
@@ -212,8 +212,8 @@
 
 
 
- ; Success (2xx)  
- ; Redirection (3xx)  
+ ; Success (2xx)
+ ; Redirection (3xx)
  ; Server errors (5xx)
  ; Client errors (4xx)
 
@@ -228,7 +228,7 @@
           (or out (FileOutputStream. ^File (io/file file-str)))
         buffer (byte-array 1024000)] ; ~1 MB buffer
     (let-mutable [len (int 0)]
-      (set! len (.read is buffer)) 
+      (set! len (.read is buffer))
       (while (not= len (unchecked-int -1))
         (.write os buffer 0 len)
         (set! len (.read is buffer))))

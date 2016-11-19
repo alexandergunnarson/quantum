@@ -43,6 +43,7 @@
                       org.apache.http.entity.ContentType
                       org.apache.http.client.methods.HttpPost
                       org.apache.http.client.methods.HttpEntityEnclosingRequestBase
+                      org.apache.http.impl.client.DefaultHttpClient
                       (org.httpkit.client HttpClient)
                       java.io.File)))
 
@@ -107,86 +108,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;================================================={       NORMALIZE PARAMS        }=================================================
 ;================================================={                               }=================================================
-; Somehow, it always results in SerializationException if I try to use the built-in CLJ-HTTP multipart
-#?(:clj
-(defn add-part!
-  {:todo []}
-  [^MultipartEntityBuilder meb
-   {:keys [^String name mime-type encoding content]}]
-  (let [^String mime-type-f (net/mime-type->str            mime-type)
-        ^String encoding-f  (net/normalize-encoding-type   encoding)
-        content-f           (net/normalize-content content mime-type)]
-    (cond
-    (string? content-f)
-      (.addTextBody meb
-        name
-        ^String content
-        (ContentType/create mime-type-f encoding-f))
-    (instance? File content-f)
-      (.addBinaryBody meb
-        name
-        ^File content)
-    :else
-      (throw (->ex :unknown-content-type nil (class content)))))))
-
-#?(:clj
-(defn add-header!
-  [^HttpEntityEnclosingRequestBase req [header-name ^String content]]
-  (condp = header-name
-    :oauth-token
-      (.addHeader req
-        (org.apache.http.message.BasicHeader.
-          "authorization"
-          (str "Bearer " content)))
-    (throw (->ex :unknown-header-type header-name)))))
-
-#?(:clj
-(defn add-headers!
-  {:todo ["Add support for all headers"]}
-  [^HttpEntityEnclosingRequestBase req headers]
-  (core/doseq [header headers]
-    (add-header! req header))))
-
-#?(:clj
-(defn post-multipart!
-  {:todo ["Integrate this with the rest of clj-http"]}
-  [{:keys [^String url ^Vec multipart ; vector of maps
-           ^String oauth-token
-                   headers]}]
-  (let [^HttpClient client @http/default-client
-        ^HttpEntityEnclosingRequestBase req (HttpPost. url)
-        ^MultipartEntityBuilder meb
-          (org.apache.http.entity.mime.MultipartEntityBuilder/create)]
-    (doseq [part multipart]
-      (add-part! meb part))
-    (.setEntity req (.build meb))
-    (add-headers! req (merge headers (kmap oauth-token)))
-
-    (-> client (.execute req)
-      ;(.getEntity)
-      ))))
-
- (let [entities (into (map (fn [{:keys [name content filename content-type]}]
-                                  (MultipartEntity. name content filename content-type)) multipart)
-                      (map (fn [[k v]] (MultipartEntity. k v nil nil)) form-params))
-            boundary (MultipartEntity/genBoundary entities)]
-        (-> r
-            (assoc-in [:headers "Content-Type"]
-                      (str "multipart/form-data; boundary=" boundary))
-            (assoc :body (MultipartEntity/encode boundary entities))))
-
-#?(:clj
-(defn request!*
-  {:todo ["Integrate this with the rest of clj-http"]}
-  [{:keys [method multipart] :as req}]
-  (if multipart
-      (case method
-        :post (post-multipart! req)
-        (throw (->ex :invalid-request-type
-                      "Method not a valid HTTP request type."
-                      method)))
-      @(http/request req)))) ; |deref| because it's a |promise|
-
 #?(:clj
 (defn request!
   "'Safe' because it handles various HTTP errors (401, 403, 500, etc.),
@@ -226,7 +147,7 @@
       (throw (->ex :error/http
                    (str "HTTP exception, status " (:status req) ". Maximum tries (3) exceeded.")
                    {:status (:status req)}))
-      (let [response        (request!* (dissoc req :status :log))
+      (let [response        @(http/request (dissoc req :status :log))
             status          (:status response)
             parse-middleware (whenf1 (fn-and (constantly (not raw?))
                                               (fn-> :headers :content-type (containsv? "application/json")))
@@ -237,7 +158,7 @@
                    (or (get handlers status)
                        (get handlers :default)
                        (constantly
-                         (do (log/pr :warn "unhandled HTTP status:" status) response)))
+                         (do (log/pr :http/warn "unhandled HTTP status:" status) response)))
                   req-n+1
                     (assoc req
                       :tries (inc tries)
