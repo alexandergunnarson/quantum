@@ -25,6 +25,7 @@
                        :refer [go]]))
   #?(:clj  (:import  [java.nio.file Files Paths])))
 
+; AMZ says: The response to the getEndpoint request for each customer should be cached for three to five days. You should not send a getEndpoint method request daily.
 ; (http/request! {:url "https://drive.amazonaws.com/drive/v1/account/endpoint" :oauth-token ...})
 (def base-urls
   {:meta    "https://cdws.us-east-1.amazonaws.com/drive/v1/"
