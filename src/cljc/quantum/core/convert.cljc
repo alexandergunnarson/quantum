@@ -3,14 +3,12 @@
                          :cljs cljs.core   )             :as core   ]
                      [cognitect.transit                  :as t      ]
              #?(:clj [clojure.tools.emitter.jvm                     ])
-                     [#?(:clj  clojure.tools.reader
-                         :cljs cljs.tools.reader       ) :as r      ]
-                     [#?(:clj  clojure.tools.reader.edn
-                         :cljs cljs.tools.reader.edn   ) :as r-edn  ]
-                     [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async         ) :as async  ]
-            #?(:cljs [cljs.reader                        :as core-r ])
-            #?(:cljs [goog.crypt.base64                  :as base64 ])
+                     [clojure.tools.reader               :as r]
+                     [clojure.tools.reader.edn           :as r-edn]
+                     [clojure.core.async                 :as async]
+            #?(:cljs [cljs.reader                        :as core-r])
+            #?(:cljs [goog.crypt.base64                  :as base64])
+                     [datascript.transit                 :as dt]
                      ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
                    ; [gloss.core.formats                 :as gforms ]
            #?@(:clj [[clojure.java.io                    :as io     ]
@@ -22,18 +20,23 @@
                      [byte-streams.pushback-stream       :as ps     ]
                      [byte-streams.char-sequence         :as cs     ]])
                      [quantum.core.data.array            :as arr    ]
-                     [quantum.core.numeric               :as num    ]
-                     [quantum.core.string                :as str    ]
-                     [quantum.core.convert.core          :as conv   ]
-                     [quantum.core.data.complex.json     :as json   ]
+                     [quantum.core.error                 :as err
+                       :refer [TODO]]
+                     [quantum.core.numeric               :as num]
+                     [quantum.core.string                :as str]
+                     [quantum.core.convert.core          :as conv]
+                     [quantum.core.convert.primitive     :as pconv
+                       :refer [->byte]]
+                     [quantum.core.data.complex.json     :as json]
                      [quantum.core.macros                :as macros
-                       :refer        [#?(:clj defnt)]
-                       :refer-macros [defnt]                        ]
+                       :refer [defnt #?(:clj defnt')]]
                      [quantum.core.paths                 :as path   ]
                      [quantum.core.fn                    :as fn     ]
                      [quantum.core.vars                  :as var
-                       :refer        [#?(:clj defalias)]
-                       :refer-macros [defalias]                     ])
+                       :refer [defalias]]
+                     [quantum.core.log                   :as log]
+                     [quantum.core.type
+                       :refer [static-cast]])
   #?(:clj (:import
             [org.apache.commons.codec.binary Base64]
             [quantum.core.data.streams    ByteBufferInputStream]
@@ -50,6 +53,7 @@
                                          ByteArrayInputStream ByteArrayOutputStream
                                          PipedOutputStream PipedInputStream
                                          BufferedInputStream BufferedOutputStream
+                                         StringWriter
                                          DataInputStream
                                          InputStream OutputStream
                                          IOException EOFException
@@ -67,19 +71,17 @@
             [javafx.collections          FXCollections]
             [java.sql                    Blob Clob])))
 
-(defalias ->name        conv/->name       )
-(defalias ->symbol      conv/->symbol     )
-(defalias ->str         conv/->str        )
-(defalias ->mdb         conv/->mdb        )
+; TO EXPLORE
+; http://java-performance.info/various-methods-of-binary-serialization-in-java/
+; Look at this to learn more about writing and reading byte-buffers
+; ===================
+
+(log/this-ns)
+
 (defalias utf8-string   conv/utf8-string  )
 (defalias base64-encode conv/base64-encode)
 (defalias base64-decode conv/base64-decode)
 (defalias base64->bytes base64-decode     ) ; kind of
-(defalias parse-bytes   conv/parse-bytes  )
-(defalias parse-integer conv/parse-integer)
-(defalias parse-long    conv/parse-long   )
-(defalias parse-float   conv/parse-float  )
-(defalias parse-double  conv/parse-double )
 
 (defnt ->regex
   ([^string? s] (-> s str/conv-regex-specials re-pattern))
@@ -216,12 +218,6 @@
 
 ; TODO incorporate conversion functions at end of (clojure|cljs).tools.reader.reader-types
 
-(defn ->char
-  "like |char| but doesn't throw"
-  [x]
-  (when-not (nil? x)
-    (core/char x)))
-
 #?(:clj
 (defn ^long read-byte
   {:from "clojure.tools.nrepl.bencode"}
@@ -356,318 +352,334 @@
 
 ; TODO UNCOMMENT THIS — IT'S GOOD
 
-; (defnt ^java.io.DataInputStream ->data-input-stream
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   ([^java.io.DataInputStream x options] x)
-;   ([x options]
-;    (-> x (->input-stream options) (DataInputStream.))))
+#?(:clj
+(defnt ^DataInputStream ->data-input-stream
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  ([^DataInputStream x options] x)
+  ([x options]
+   (-> x (->input-stream options) (DataInputStream.)))))
 
-; (defnt ^java.io.OutputStream ->output-stream
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   (^{:cost 0} [^java.nio.channels.WritableByteChannel channel]
-;     (Channels/newOutputStream channel)))
+#?(:clj
+(defnt ^OutputStream ->output-stream
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^WritableByteChannel channel]
+    (Channels/newOutputStream channel))))
 
-; (declare ->str)
+(declare ->str)
 
-; ; http://java-performance.info/various-methods-of-binary-serialization-in-java/
-; ; Look at this to learn more about writing and reading byte-buffers
-; (defnt ^java.nio.ByteBuffer ->byte-buffer
-;   {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   ; ===== ztellman/byte-streams =====
-;   (^{:cost 0} [^java.nio.ByteBuffer x] x)
-;   (^{:cost 0} [^bytes? ary] (->byte-buffer ary nil))
-;   (^{:cost 0} [^bytes? ary opts]
-;     (if (or (:direct? opts) false)
-;         (let [len (Array/getLength ary)
-;               ^ByteBuffer buf (ByteBuffer/allocateDirect len)]
-;           (.put buf ary 0 len)
-;           (.position buf 0)
-;           buf)
-;         (ByteBuffer/wrap ary)))
-;   (^{:cost 1} [^String x] (->byte-buffer x nil))
-;   (^{:cost 1} [^String x options]
-;     (-> x (arr/->bytes options) (->byte-buffer options)))
-;   #_(^{:cost 1} [(vector-of ByteBuffer) bufs {:keys [direct?] :or {direct? false}}]
-;     (cond
-;       (empty? bufs)
-;         (ByteBuffer/allocate 0)
-;       (and (empty? (rest bufs)) (not (proto/closeable? bufs)))
-;         (first bufs)
-;       :else
-;         (let [len (reduce + (map #(.remaining ^ByteBuffer %) bufs))
-;               buf (if direct?
-;                     (ByteBuffer/allocateDirect len)
-;                     (ByteBuffer/allocate len))]
-;           (doseq [^ByteBuffer b bufs]
-;             (.mark b)
-;             (.put buf b)
-;             (.reset b))
-;           (when (proto/closeable? bufs)
-;             (proto/close bufs))
-;           (.flip buf))))
-;   ; ===== ztellman/gloss.core.formats =====
-;   ; Costs unknown
-;   ; TODO add 'sequential?' to types
-;   #_([^sequential? x] (-> x (map ->byte-buffer) ->byte-buffer))
-;   ([^char?       x] (-> x ->str ->byte-buffer))
-;   ([^number?     x] (-> x ->byte byte-array ->byte-buffer)))
+#?(:clj
+(defnt ^ByteBuffer ->byte-buffer
+  {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  ; ===== ztellman/byte-streams =====
+  (^{:cost 0} [^ByteBuffer x] x)
+  (^{:cost 0} [^bytes? ary] (->byte-buffer ary nil))
+  (^{:cost 0} [^bytes? ary opts]
+    (if (or (:direct? opts) false)
+        (let [len (Array/getLength ary)
+              ^ByteBuffer buf (ByteBuffer/allocateDirect len)]
+          (.put buf ary 0 len)
+          (.position buf 0)
+          buf)
+        (ByteBuffer/wrap ary)))
+  (^{:cost 1} [^string? x] (->byte-buffer x nil))
+  (^{:cost 1} [^string? x options]
+    (-> x (arr/->bytes options) (->byte-buffer options)))
+  #_(^{:cost 1} [(vector-of ByteBuffer) bufs {:keys [direct?] :or {direct? false}}]
+    (cond
+      (empty? bufs)
+        (ByteBuffer/allocate 0)
+      (and (empty? (rest bufs)) (not (proto/closeable? bufs)))
+        (first bufs)
+      :else
+        (let [len (reduce + (map #(.remaining ^ByteBuffer %) bufs))
+              buf (if direct?
+                    (ByteBuffer/allocateDirect len)
+                    (ByteBuffer/allocate len))]
+          (doseq [^ByteBuffer b bufs]
+            (.mark b)
+            (.put buf b)
+            (.reset b))
+          (when (proto/closeable? bufs)
+            (proto/close bufs))
+          (.flip buf))))
+  ; ===== ztellman/gloss.core.formats =====
+  ; Costs unknown
+  ; TODO add 'sequential?' to types
+  #_([^sequential? x] (-> x (map ->byte-buffer) ->byte-buffer))
+  ([^char?       x] (-> x ->str ->byte-buffer))
+  ([^number?     x] (-> x ->byte byte-array ->byte-buffer))))
 
 ; ;; byte-buffer => vector of byte-buffers
-; (defn ->byte-buffers [buf opts])
-; #_(defnt ->byte-buffers
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;     ;ClassCastException   [trace missing] ; Because of destructuring
-;   (^{:cost 0} [^java.nio.ByteBuffer buf opts]
-;     (let [{:keys [chunk-size]} opts]
-;       (if chunk-size
-;           (let [lim (.limit buf)
-;                 indices (range (.position buf) lim chunk-size)]
-;             (mapv
-;               #(-> buf
-;                  .duplicate
-;                  (.position %)
-;                  ^ByteBuffer (.limit (min lim (+ % chunk-size)))
-;                  .slice)
-;               indices))
-;           [buf]))))
+#?(:clj
+(defnt ->byte-buffers
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^ByteBuffer buf opts]
+    (let [chunk-size (int (:chunk-size opts))]
+      (if chunk-size
+          (let [lim     (.limit buf)
+                indices (range (.position buf) lim chunk-size)]
+            (mapv
+              (fn [^long i]
+                (-> buf
+                    .duplicate
+                    (.position i)
+                    ^ByteBuffer (.limit (min lim (+ i chunk-size)))
+                    ; TODO fix this slicing
+                    .slice))
+              indices))
+          [buf])))))
 
-; (defn ->lbyte-buffers [channel opts])
-; #_(defnt ->lbyte-buffers
-;   "To lazy sequence of byte-buffers"
-;   {:attribution ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;    ;ClassCastException   [trace missing] ; Because of destructuring
-;   (^{:cost 1} [^ReadableByteChannel channel opts]
-;     (when (.isOpen channel)
-;       (let [{:keys [chunk-size direct?] :or {chunk-size 4096 direct? false}} opts]
-;         (lazy-seq
-;           (when-let [b (proto/take-bytes! channel chunk-size opts)]
-;             (cons b (convert channel (seq-of ByteBuffer) opts)))))))
-;   #_(^{:cost 0} [^File file opts]
-;     (let [{:keys [chunk-size writable?]
-;            :or {chunk-size (int 2e9), writable? false}} opts
-;           ^RandomAccessFile raf (RandomAccessFile. file (if writable? "rw" "r"))
-;           ^FileChannel fc (.getChannel raf)
-;           buf-seq (fn buf-seq [offset]
-;                     (when-not (<= (.size fc) offset)
-;                       (let [remaining (- (.size fc) offset)]
-;                         (lazy-seq
-;                           (cons
-;                             (.map fc
-;                               (if writable?
-;                                 FileChannel$MapMode/READ_WRITE
-;                                 FileChannel$MapMode/READ_ONLY)
-;                               offset
-;                               (min remaining chunk-size))
-;                             (buf-seq (+ offset chunk-size)))))))]
-;       (g/closeable-seq
-;         (buf-seq 0)
-;         false
-;         #(do
-;            (.close raf)
-;            (.close fc)))))
-;   ; Cost unknown; probably not 1
-;   #_([x] (gformats/to-buf-seq x)))
+#?(:clj
+(defnt ->lbyte-buffers
+  "To lazy sequence of byte-buffers"
+  {:attribution ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  #_(^{:cost 1} [^ReadableByteChannel channel opts]
+    (when (.isOpen channel)
+      (let [chunk-size (or (:chunk-size opts) 4096)
+            direct?    (or (:direct?    opts) false)]
+        (lazy-seq
+          (when-let [b (proto/take-bytes! channel chunk-size opts)]
+            (cons b (convert channel (seq-of ByteBuffer) opts)))))))
+  (^{:cost 0} [^File file opts]
+    (let [chunk-size (or (:chunk-size opts) (int 2e9))
+          writable?  (or (:writable?  opts) false)
+          ^RandomAccessFile raf (RandomAccessFile. file (if writable? "rw" "r"))
+          ^FileChannel fc (.getChannel raf)
+          buf-seq (fn buf-seq [offset]
+                    (when-not (<= (.size fc) offset)
+                      (let [remaining (- (.size fc) offset)]
+                        (lazy-seq
+                          (cons
+                            (.map fc
+                              (if writable?
+                                FileChannel$MapMode/READ_WRITE
+                                FileChannel$MapMode/READ_ONLY)
+                              offset
+                              (min remaining chunk-size))
+                            (buf-seq (+ offset chunk-size)))))))]
+      (g/closeable-seq
+        (buf-seq 0)
+        false
+        #(do (.close raf)
+             (.close fc)))))
+  ; Cost unknown; probably not 1
+  #_([x] (gformats/to-buf-seq x))))
 
-; (defnt' in-stream->out-stream
-;   {:source "https://thomaswabner.wordpress.com/2007/10/09/fast-stream-copy-using-javanio-channels/"}
-;   (^java.nio.channels.WritableByteChannel
-;     [^java.nio.channels.ReadableByteChannel in ^java.nio.channels.WritableByteChannel out]
-;     (let [^ByteBuffer buffer (ByteBuffer/allocateDirect (* 16 1024))]
-;       (while (not= -1 (.read in buffer))
-;         (.flip buffer)
-;         (.write out buffer)
-;         (.compact buffer))
-;       (.flip buffer)
-;       (while (.hasRemaining buffer)
-;         (.write out buffer))
-;       ; TODO must close out channel in order to flush the data.
-;       )))
+#?(:clj
+(defnt' in-stream->out-stream
+  {:source "https://thomaswabner.wordpress.com/2007/10/09/fast-stream-copy-using-javanio-channels/"}
+  (^WritableByteChannel
+    [^ReadableByteChannel in ^WritableByteChannel out]
+    (let [^ByteBuffer buffer (ByteBuffer/allocateDirect (* 16 1024))]
+      (while (not= -1 (.read in buffer))
+        (.flip buffer)
+        (.write out buffer)
+        (.compact buffer))
+      (.flip buffer)
+      (while (.hasRemaining buffer)
+        (.write out buffer))
+      ; TODO must close out channel in order to flush the data.
+      ))))
 
-; (defnt ->byte-channel
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   (^{:cost 0} [^java.io.InputStream input-stream]
-;     (Channels/newChannel input-stream))
-;   (^{:cost 0} [^java.io.OutputStream output-stream]
-;     (Channels/newChannel output-stream))
-;   #_(^{:cost 1.5} [(seq-of byte-buffer) bufs]
-;     (let [pipe (Pipe/open)
-;           ^WritableByteChannel sink (.sink pipe)
-;           source (doto ^AbstractSelectableChannel (.source pipe)
-;                    (.configureBlocking true))]
-;       (future
-;         (try
-;           (loop [s bufs]
-;             (when (and (not (empty? s)) (.isOpen sink))
-;               (let [buf (.duplicate ^ByteBuffer (first s))]
-;                 (.write sink buf)
-;                 (recur (rest s)))))
-;           (finally
-;             (.close sink))))
-;       source)))
+#?(:clj
+(defnt ->byte-channel
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^InputStream input-stream]
+    (Channels/newChannel input-stream))
+  (^{:cost 0} [^OutputStream output-stream]
+    (Channels/newChannel output-stream))
+  #_(^{:cost 1.5} [(seq-of byte-buffer) bufs]
+    (let [pipe (Pipe/open)
+          ^WritableByteChannel sink (.sink pipe)
+          source (doto ^AbstractSelectableChannel (.source pipe)
+                   (.configureBlocking true))]
+      (future
+        (try
+          (loop [s bufs]
+            (when (and (not (empty? s)) (.isOpen sink))
+              (let [buf (.duplicate ^ByteBuffer (first s))]
+                (.write sink buf)
+                (recur (rest s)))))
+          (finally
+            (.close sink))))
+      source))))
 
-; ; ByteSource : generic byte-source
-; (defnt ^CharSequence ->char-seq
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   (^{:cost 0} [^CharSequence x] x)
-;   #_(^{:cost 2} [^proto/ByteSource source options]
-;     (cs/decode-byte-source
-;       #(when-let [bytes (proto/take-bytes! source % options)]
-;          (->byte-array bytes options))
-;       #(when (proto/closeable? source)
-;          (proto/close source))
-;       options))
-;   #_(^{:cost 1.5} [^java.io.Reader reader opts]
-;     (let [{:keys [chunk-size] :or {chunk-size 2048}} opts
-;           ary (char-array chunk-size)
-;           sb (StringBuilder.)]
-;       (loop []
-;         (let [n (.read reader ary 0 chunk-size)]
-;           (if (pos? n)
-;             (do
-;               (.append sb ary 0 n)
-;               (recur))
-;             (.toString sb)))))))
+; ByteSource : generic byte-source
+#?(:clj
+(defnt ^CharSequence ->char-seq
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^CharSequence x] x)
+  #_(^{:cost 2} [^proto/ByteSource source options]
+    (cs/decode-byte-source
+      #(when-let [bytes (proto/take-bytes! source % options)]
+         (->byte-array bytes options))
+      #(when (proto/closeable? source)
+         (proto/close source))
+      options))
+  (^{:cost 1.5} [^Reader reader opts]
+    (let [chunk-size (or (:chunk-size opts) 2048)
+          ary (char-array chunk-size)
+          sb (StringBuilder.)]
+      (loop []
+        (let [n (.read reader ary 0 chunk-size)]
+          (if (pos? n)
+            (do
+              (.append sb ary 0 n)
+              (recur))
+            (.toString sb))))))))
 
-; (defnt ->char-buffer
-;   {:attribution "ztellman/gloss.core.formats"}
-;   ([^java.nio.CharBuffer x] x)
-;   ([            x] (when x (-> x ->char-seq CharBuffer/wrap))))
+#?(:clj
+(defnt ->char-buffer
+  {:attribution "ztellman/gloss.core.formats"}
+  ([^java.nio.CharBuffer x] x)
+  ([            x] (when x (-> x ->char-seq CharBuffer/wrap)))))
 
+(defnt ^String ->str
+  {:contributors {"Alex Gunnarson"        "defnt-ed"
+                  "ztellman/byte-streams" nil
+                  "funcool/octet"         nil}
+   :todo ["Test these against ->bytes"]}
+           ([^string? x        ] x)
+           ([^string? x options] x)
+           ([^datascript.db.DB x] (dt/write-transit-str x))
+  #?(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
+  #?(:clj  ([#{boolean char int long float double} x] (String/valueOf x)))
+  #?(:clj  ([^integer? n radix]
+             #?(:clj  (.toString (biginteger n) radix)
+                :cljs (.toString n radix))))
+           ([^bytes?  x        ] (->str x nil))
+           ([^bytes?  x options]
+             #?(:clj
+                  (let [encoding (get options :encoding "UTF-8")]
+                    (String. x ^String (name encoding)))
+                :cljs ; funcool/octet.spec.string
+                  (let [view     (js/Uint8Array. (.subarray input 0 (lasti x))) ; TODO maybe just copy it?
+                        encoding (.-fromCharCode js/String)]
+                    (.apply encoding nil view))))
+           ([^keyword? k] (->str k "/"))
+           ([^keyword? k joiner]
+             (->> [(namespace k) (name k)]
+                  (core/remove empty?)
+                  (str/join joiner)))
+  #?(:clj  ([^java.net.InetAddress x]
+             (if-let [hostName (.getHostName x)]
+               hostName
+               (.getHostAddress x)))
+  #?(:clj  (^{:cost 1} [^CharSequence char-sequence]
+             (.toString char-sequence)))
+  #?(:clj  ([^java.nio.charset.Charset x] (.name x)))
+           ; Look at Apache Commons Convert to fill in the below code
+           ;([^java.sql.Blob x])
+           ;([^java.sql.Clob x])
+  #?(:clj  ([^java.util.Date x]
+             (-> (java.text.SimpleDateFormat. (:calendar time/formats))
+                 (.format x))))
+  #?(:clj  ([#{java.sql.Date
+               java.sql.Timestamp
+               java.sql.Time}    x] (.toString x)))
+  #?(:clj  ([^java.util.TimeZone x] (.getID x)))
+  ; The returned string is referenced to the default time zone.
+  #?(:clj  ([^java.util.Calendar x]
+             (let [df (java.text.SimpleDateFormat. (:calendar time/formats))]
+               (.setCalendar df x)
+               (.format df (.getTime x))))))
+#_(^{:cost 1} [(vector-of String) strings]
+    (let [sb (StringBuilder.)]
+      (doseq [s strings]
+        (.append sb s))
+      (.toString sb)))
+  #?(:clj  ; CANDIDATE 0
+           ([^InputStream in]
+             (->str in (->str (Charset/defaultCharset)))))
+  #?(:clj  ([^InputStream in enc]
+             (with-open [bout (StringWriter.)]
+               (io/copy in bout :encoding enc)
+               (.toString bout))))
+           ; CANDIDATE 1
+           #_([^java.io.InputStream is]
+             (let [^java.util.Scanner s
+                     (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
+               (if (.hasNext s) (.next s) "")))
+  #?(:clj  ([^ByteArrayInputStream in-stream]
+             (let [n   (.available in-stream)
+                   arr (byte-array n)]
+               (.read in-stream arr, 0 n)
+               (String. arr java.nio.charset.StandardCharsets/UTF_8))))
+  ; Port this
+#_([x options] (streams/convert x String options))
+           ([:else x] (str x)))
 
-; (defnt ^String ->str
-;   {:contributors {"Alex Gunnarson"        "defnt-ed"
-;                   "ztellman/byte-streams" nil
-;                   "funcool/octet"         nil}
-;    :todo ["Test these against ->bytes"]}
-;   ([^string? x        ] x)
-;   ([^string? x options] x)
-;   ([#{boolean char int long float double} x] (String/valueOf x))
-;   #?(:clj
-;   ([^integer? n radix]
-;     #?(:clj  (.toString (biginteger n) radix)
-;        :cljs (.toString n radix))))
+#?(:clj
+(defnt ->charset
+  ([^string? x] (Charset/forName x))))
 
-;   ([^bytes?  x        ] (->str x nil))
-;   ([^bytes?  x options]
-;     #?(:clj
-;          (let [encoding (get options :encoding "UTF-8")]
-;            (String. x ^String (name encoding)))
-;        :cljs ; funcool/octet.spec.string
-;          (let [view     (js/Uint8Array. (.subarray input 0 (lasti x))) ; TODO maybe just copy it?
-;                encoding (.-fromCharCode js/String)]
-;            (.apply encoding nil view))))
-;   ([^keyword? k] (->str k "/"))
-;   ([^keyword? k joiner]
-;     (->> [(namespace k) (name k)]
-;          (core/remove empty?)
-;          (str/join joiner)))
-; #?(:clj
-;   ([^java.net.InetAddress x]
-;     (if-let [hostName (.getHostName x)]
-;       hostName
-;       (.getHostAddress x)))
-;   (^{:cost 1} [^CharSequence char-sequence]
-;     (.toString char-sequence))
-;   ([^java.nio.charset.Charset x] (.name x))
-;   ; Look at Apache Commons Convert to fill in the below code
-;   ;([^java.sql.Blob x])
-;   ;([^java.sql.Clob x])
-;   ([^java.util.Date x]
-;     (-> (java.text.SimpleDateFormat. (:calendar time/formats))
-;         (.format x)))
-;   ([#{java.sql.Date
-;       java.sql.Timestamp
-;       java.sql.Time}    x] (.toString x))
-;   ([^java.util.TimeZone x] (.getID x))
-;   ; The returned string is referenced to the default time zone.
-;   ([^java.util.Calendar x]
-;     (let [df (java.text.SimpleDateFormat. (:calendar time/formats))]
-;       (.setCalendar df x)
-;       (.format df (.getTime x))))
-;   )
-; #_(^{:cost 1} [(vector-of String) strings]
-;     (let [sb (StringBuilder.)]
-;       (doseq [s strings]
-;         (.append sb s))
-;       (.toString sb)))
-; #?(:clj
-;   ; CANDIDATE 0
-;   ([^java.io.InputStream in]
-;     (->str in (.name (Charset/defaultCharset))))
-;   ([^java.io.InputStream in enc]
-;     (with-open [bout (StringWriter.)]
-;       (io/copy in bout :encoding enc)
-;       (.toString bout)))
-;   ; CANDIDATE 1
-;   #_([^java.io.InputStream is]
-;     (let [^java.util.Scanner s
-;             (-> is (java.util.Scanner.) (.useDelimiter "\\A"))]
-;       (if (.hasNext s) (.next s) "")))
-;   ([^java.io.ByteArrayInputStream in-stream]
-;     (let [n   (.available in-stream)
-;           arr (byte-array n)]
-;       (.read in-stream arr, 0 n)
-;       (String. arr java.nio.charset.StandardCharsets/UTF_8))))
-;   ; Port this
-; #_([x options] (streams/convert x String options))
-;   ([:else x] (str x)))
+(defnt ->name
+  ([#{string? symbol? keyword?} x] (name x))
+  ([^:obj                       x] (str  x)))
 
-; (defnt ->charset
-;   ([^string? x] (Charset/forName x)))
+(defnt ->symbol
+          ([^string?          x] (symbol x))
+  #?(:clj ([^clojure.lang.Var x] (symbol (str (ns-name (.ns x)))
+                                         (str (.sym x)))))
+          ([^:obj x] (-> x ->name ->symbol)))
 
-; (defnt ->symbol
-;   ([^string? x] (symbol x))
-;   ([:else x] (-> x ->str ->symbol)))
+(defnt ->hex
+  #?(:cljs ([^js/forge.util.ByteStringBuffer x] (.toHex x)))
+  #?(:clj  ([                                x] (TODO))))
 
-; (defn ->reader [is opts])
-; #_(defnt ^Reader ->reader
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   (^{:cost 1.5} [^java.io.InputStream is {:keys [encoding] :or {encoding "UTF-8"}}]
-;     (BufferedReader. (InputStreamReader. is ^String encoding))))
+#?(:clj
+(defnt ^Reader ->reader
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 1.5} [^InputStream is opts]
+    (BufferedReader. (InputStreamReader. is (static-cast String (or (:encoding opts) "UTF-8")))))))
 
-; (defnt ->read-channel
-;   {:attribution "ztellman/byte-streams"
-;    :contributors {"Alex Gunnarson" "defnt-ed"}}
-;   (^{:cost 0} [^java.io.File x]
-;     (let [^FileInputStream in (->input-stream x)]
-;       (.getChannel in))))
+#?(:clj
+(defnt ->read-channel
+  {:attribution "ztellman/byte-streams"
+   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  (^{:cost 0} [^File x]
+    (let [^FileInputStream in (->input-stream x)]
+      (.getChannel in)))))
 
-; (defnt ->write-channel
-;   #_(^{:cost 0} [^File file {:keys [append?] :or {append? true}}]
-;     (.getChannel (FileOutputStream. file (boolean append?))))
-;   (^{:cost 0} [^java.io.OutputStream output-stream]
-;     (Channels/newChannel output-stream)))
+#?(:clj
+(defnt ->write-channel
+  (^{:cost 0} [^File file opts]
+    (.getChannel (FileOutputStream. file (boolean (or (:append? opts) true)))))
+  (^{:cost 0} [^OutputStream output-stream]
+    (Channels/newChannel output-stream))))
 
-; (defnt ->channel
-;   "Writable or readable."
-;   (^{:cost 0} [^java.io.File x] (->read-channel x)))
+#?(:clj
+(defnt ->channel
+  "Writable or readable."
+  (^{:cost 0} [^File x] (->read-channel x))))
 
-; #?(:clj
-; (defnt ^java.util.Locale ->locale
-;   ([^string? x] (Locale. x))))
+#?(:clj
+(defnt ^Locale ->locale
+  ([^string? x] (Locale. x))))
 
-; (defn ->line-seq
-;   "Converts the object to a lazy sequence of newline-delimited strings."
-;   {:attribution "ztellman/byte-streams"}
-;   ([x options]
-;      (let [reader (->reader x options)
-;            reader (BufferedReader. ^Reader reader)
-;            line! (fn line! []
-;                    (lazy-seq
-;                      (when-let [l (try
-;                                     (.readLine reader)
-;                                     (catch IOException e
-;                                       nil))]
-;                        (cons l (line!)))))]
-;        (line!))))
+#?(:clj
+(defn ->line-seq
+  "Converts the object to a lazy sequence of newline-delimited strings."
+  {:attribution "ztellman/byte-streams"}
+  ([x options]
+     (let [reader (->reader x options)
+           reader (BufferedReader. ^Reader reader)
+           line! (fn line! []
+                   (lazy-seq
+                     (when-let [l (try
+                                    (.readLine reader)
+                                    (catch IOException e
+                                      nil))]
+                       (cons l (line!)))))]
+       (line!)))))
 
 ; (defn ->byte-source
 ;   "Converts the object to something that satisfies |ByteSource|."
@@ -792,3 +804,5 @@
               (async/close! ch))))
     (.readAsArrayBuffer file-reader file)
     ch)))
+
+(defnt ->mdb [^string? x] (dt/read-transit-str x))

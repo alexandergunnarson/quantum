@@ -83,7 +83,9 @@
       ([^byte                          x] x)
       ([^Byte                          x] (.byteValue x))
       ([#{short int long float double} x] (clojure.lang.RT/byteCast x))
-      ([#{boolean}                     x] (-> x ->long ->byte)))
+      ([#{boolean}                     x] (-> x ->long ->byte))
+      ; TODO do other numbers
+      ([                               x] (clojure.lang.RT/byteCast x)))
    :cljs (defalias ->byte core/byte))
 
 ; Doesn't autocast
