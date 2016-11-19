@@ -535,7 +535,11 @@
   {:imported "clojure.lang.RT/assoc"}
   #?(:clj  ([^clojure.lang.Associative x k v] (.assoc x k v)))
   #?(:cljs ([#{vec? map?}              x k v] (cljs.core/-assoc x k v)))
-           ([^nil?                     x k v] {k v}))
+  #?(:cljs ([^nil?                     x k v] {k v}))
+  #?(:clj  ([                          x k v]
+             (if (nil? x)
+                 {k v}
+                 (throw (->ex nil "`assoc` not supported on this object" {:type (type x)}))))))
 
 (defnt dissoc
   {:imported "clojure.lang.RT/dissoc"}
@@ -545,7 +549,11 @@
   #?(:cljs ([^set?                        coll x] (-disjoin coll x)))
            ([^vector?                     coll i]
              (catvec (subvec coll 0 i) (subvec coll (inc i) (count coll))))
-           ([^nil?                        coll k] nil))
+  #?(:cljs ([^nil?                        coll x] nil))
+  #?(:clj  ([                             coll x]
+             (if (nil? coll)
+                 nil
+                 (throw (->ex nil "`dissoc` not supported on this object" {:type (type coll)}))))))
 
 (defnt dissoc!
   ([^transient? coll k  ] (core/dissoc! coll k))

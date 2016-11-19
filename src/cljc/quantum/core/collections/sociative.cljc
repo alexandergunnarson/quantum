@@ -52,7 +52,7 @@
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.reducers         :as red
-      :refer [reduce join partition-all+]]
+      :refer [join partition-all+]]
     [quantum.core.type             :as type
       :refer [transient!* persistent!* transient? editable?]]
     [quantum.core.loops            :as loops
@@ -107,7 +107,7 @@
     (if (pred m k v) (assoc m k v) m))
   ([m pred k v & kvs]
     (reduce
-      (rfn ([ret k-n v-n] (assoc-if ret pred k-n v-n)))
+      (rfn [ret k-n v-n] (assoc-if ret pred k-n v-n))
       (assoc-if m pred k v)
       (partition-all+ 2 kvs))))
 
