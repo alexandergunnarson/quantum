@@ -315,6 +315,7 @@
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
      [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
   ;:npm {:dependencies [[js-joda "1.1.12"]]}
+  :injections [(require 'quantum.core.core)] ; To get around 'No such var: clojure.core/require-macros'
   :profiles
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
@@ -327,7 +328,10 @@
                                    org.clojure/clojurescript
                                    org.clojure/core.async
                                    org.clojure/core.cache]]
+                    ; Linting
                     [jonase/eastwood                   "0.2.1"]
+                    [lein-kibit                        "0.1.2"]
+                    [lein-bikeshed                     "0.4.1"]
                     [lein-cloverage                    "1.0.6"]
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     [lein-ancient                      "0.6.10"
