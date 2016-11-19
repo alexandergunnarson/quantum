@@ -57,7 +57,6 @@
   [path & [options]]
   (GET (@#'compojure.route/add-wildcard path) {{resource-path :*} :route-params :as req}
     (let [root (get options :root "public")
-          _ (println "RESOURCE PATH" resource-path)
           body (->> resource-path
                     (<- str/remove "..") ; to prevent insecure access
                     ^String (paths/url-path root)
@@ -89,17 +88,20 @@
 
 (defn routes
   [{:keys [ws-uri csp-report-uri
-           root-path]
+           root-path serve-files routes-fn]
     :as opts}]
+  (validate routes-fn (v/or* fn? var?))
   (concat (when ws-uri (ws-routes opts))
-          ((:routes-fn opts) opts)
+          (routes-fn opts)
           (when csp-report-uri (csp-report-route opts))
-          [(resources "/" {:root root-path}) ; static files
-           (not-found-route opts)]))
+          (when serve-files
+            [(resources "/" {:root root-path})]) ; static files
+          [(not-found-route opts)]))
 
 (defn make-routes
   [{:keys [middleware]
     :as opts}]
+  (validate middleware (v/or* fn? var?))
   (middleware
     (apply route/routes (routes opts))))
 
