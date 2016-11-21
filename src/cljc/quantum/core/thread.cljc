@@ -4,52 +4,35 @@
     :attribution "Alex Gunnarson"}
   quantum.core.thread
              (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
-             (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )                  :as core            ]
+             (:require [clojure.core                          :as core]
            #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
                      [clojure.core.async.impl.exec.threadpool :as async-threadpool]
                    #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
                    #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
+                     [com.stuartsierra.component              :as component]
                      [quantum.core.string                     :as str             ]
                      [quantum.core.collections                :as coll
-                       :refer [in? #?@(:clj [conj! assoc! empty? nempty?])]]
-                     [quantum.core.numeric                    :as num             ]
+                       :refer [in? conj! assoc! empty? nempty? doseq dissoc-in+]]
+                     [quantum.core.numeric                    :as num]
                      #?(:clj [clojure.core.async :as casync])
                      [quantum.core.async                      :as async
-                       :refer [put!! chan buffer #?(:clj go)]                     ]
-                     [quantum.core.collections
-                       :refer [#?@(:clj [doseq]) dissoc-in+]                      ]
+                       :refer [put!! chan buffer go]]
                      [quantum.core.error                      :as err
-                       :refer [#?(:clj throw-unless) ->ex]                        ]
+                       :refer [throw-unless ->ex]]
                      [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> fn1 rcomp]) call fn-nil]                ]
-                     [quantum.core.log                        :as log             ]
+                       :refer [<- fn-> fn1 rcomp call fn-nil fn$]]
+                     [quantum.core.log                        :as log]
                      [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [fn-or fn-not eq? whenf whenp whenf1 ifn1])
-                               nnil?]                                             ]
+                       :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1 nnil?]                                             ]
                      [quantum.core.macros                     :as macros
-                       :refer [#?(:clj defnt)]                                    ]
+                       :refer [defnt]]
+                     [quantum.core.validate                   :as v
+                       :refer [validate]]
                      [quantum.core.type                       :as type
-                       :refer [boolean?]                                          ]
-                     [quantum.core.time.core                  :as time            ]
+                       :refer [boolean?]]
+                     [quantum.core.time.core                  :as time]
                      [quantum.core.cache
                        :refer [memoize]])
-  #?(:cljs (:require-macros
-                     [quantum.core.async                      :as async
-                       :refer [go]                                                ]
-                     [quantum.core.collections                :as coll
-                       :refer [doseq]                                             ]
-                     [quantum.core.error                      :as err
-                       :refer [throw-unless]                                      ]
-                     [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn1 rcomp]                                 ]
-                     [quantum.core.log                        :as log             ]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1]         ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]                                             ]
-                     [quantum.core.type                       :as type
-                       :refer [boolean?]                                          ]))
   #?(:clj  (:import
              (java.lang Thread Process)
              (java.util.concurrent Future Executor Executors
@@ -806,7 +789,9 @@
    threadpool
    distributor-fn
    interrupted?
-   log])
+   logging-key
+   log]
+  component/Lifecycle (stop [this] (reset! interrupted? true) this))
 
 ; TODO move
 #?(:clj
@@ -823,13 +808,13 @@
           "Add validators to component atoms"
           "Register distributor and ensure uniquity"]}
   [f {:keys [cache memoize-only-first-arg? threadpool max-threads
-             max-work-queue-size name] :as opts}]
-  (assert ((fn-or nil? integer?) max-threads        ) #{max-threads})
-  (assert ((fn-or nil? integer?) max-work-queue-size) #{max-work-queue-size})
-  (assert ((fn-or nil? string? ) name               ) #{name})
-  (assert (or (nil? threadpool)
-              (instance? java.util.concurrent.ThreadPoolExecutor threadpool)) #{threadpool})
-  (assert (fn? f) #{f})
+             max-work-queue-size name logging-key] :as opts}]
+  (validate max-threads         (v/or* nil? integer?)
+            max-work-queue-size (v/or* nil? integer?)
+            name                (v/or* nil? string? )
+            threadpool          (v/or* nil? (fn$ instance? ThreadPoolExecutor))
+            f                   fn?
+            logging-key         (v/or* nil? keyword?))
   (let [cache-f        (if (true? cache)
                            (atom {})
                            cache) ; TODO bounded or auto-invalidating cache?
@@ -860,13 +845,14 @@
                          threadpool-f
                          distributor-fn
                          threadpool-interrupted?
+                         logging-key
                          log)]
     (dotimes [i max-threads-f]
       (let [thread-name  (keyword (str (core/name name-f) "-" i))
             interrupted? (atom false)]
         (assoc! thread-registrar thread-name {:interrupted? interrupted?})
-        (async-loop {:type :thread
-                     :id   thread-name
+        (async-loop {:type       :thread
+                     :id         thread-name
                      :threadpool @threadpool-f}
           []
           (logic/when-let
@@ -874,22 +860,25 @@
              [timestamp work] val-]
             (try (apply @distributor-fn work)
               (catch Throwable e ; err/suppress doesn't yet work
+                (log/ppr logging-key e)
                 (conj! log [(time/now-instant) thread-name e])))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
           (when-not (or @threadpool-interrupted? @interrupted?)
             (recur)))))
     distributor-f)))
 
 #?(:clj
-(defn distribute
-  {:usage '(distribute (->distributor) [1 2 3 5 6] {:cache? true})}
-  [distributor & inputs]
-  (assert (instance? Distributor distributor) #{distributor})
+(defn distribute!*
+  {:usage '(distribute!* offer! (->distributor) [1 2 3 5 6] {:cache? true})}
+  [enqueue-fn distributor & inputs]
+  (validate distributor (fn$ instance? Distributor))
+  (enqueue-fn (:work-queue distributor) [(time/now-instant) inputs])))
 
-  (casync/offer! (:work-queue distributor) [(time/now-instant) inputs])))
+#?(:clj (defn distribute!  [distributor & inputs] (apply distribute!* async/offer! distributor inputs)))
+#?(:clj (defn distribute>! [distributor & inputs] (apply distribute!* async/>!!    distributor inputs)))
 
 #?(:clj
-(defn distribute-all [distributor inputs-set & [apply?]]
+(defn distribute-all! [distributor inputs-set & [apply?]]
   (for [inputs inputs-set]
     (if apply?
-        (apply distribute distributor inputs)
-        (distribute distributor inputs)))))
+        (apply distribute! distributor inputs)
+        (distribute! distributor inputs)))))
