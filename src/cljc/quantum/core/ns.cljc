@@ -108,7 +108,7 @@
                ns-sym)))))
 
 #?(:clj
-(defmacro load-deps [deps]
-  `(alembic.still/distill ~deps)))
+(defmacro load-lib [lib]
+  `(alembic.still/distill ~lib)))
 
 #_(:clj (defalias lein alembic.still/lein))
