@@ -28,9 +28,9 @@
             ; QUANTUM
             [quantum.core.string        :as str]
             [quantum.core.logic
-              :refer [whenp]]
+              :refer [whenp fn-or]]
             [quantum.core.fn
-              :refer [fn1 fn->]]
+              :refer [fn1 fn-> rcomp]]
             [quantum.core.collections   :as coll
               :refer [containsv? assocs-in+ flatten-1]]
             [quantum.core.log           :as log]
@@ -101,7 +101,7 @@
   [handler]
   (fn [request]
     (when-let [response (handler request)]
-      (resp/header response "Server" "nil"))))
+      (resp/header response "Server" ""))))
 
 (defn wrap-exception-handling
   [handler]
@@ -114,22 +114,38 @@
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
 
-(defmulti coerce-from-content-type (fn-> :headers :content-type))
+; ===== REQUEST CONTENT TYPE COERCION ===== ;
+; TODO move this?
 
-(defmethod coerce-from-content-type :default [req] req)
+(def ->content-type
+  (rcomp :headers
+    (fn-or :content-type (fn1 get "Content-Type") (fn1 get "content-type"))))
 
-(defmethod coerce-from-content-type "application/text" [req] (update req :body (fn1 conv/->str)))
-(defmethod coerce-from-content-type "text/html"        [req] (update req :body (fn1 conv/->str)))
+(defmulti  coerce-request-content-type ->content-type)
+(defmethod coerce-request-content-type :default           [req] req)
+(defmethod coerce-request-content-type "application/text" [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-request-content-type "text/html"        [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-request-content-type "application/json" [req] (update req :body (fn-> conv/->text conv/json->)))
 
-(defn wrap-coerce-from-content-type
-  [handler]
-  (fn [request]
-    (handler (coerce-from-content-type request))))
+(defn wrap-coerce-request-content-type
+  [handler] (fn [request] (handler (coerce-request-content-type request))))
+
+; ===== RESPONSE CONTENT TYPE COERCION ===== ;
+
+(defmulti  coerce-response-content-type ->content-type)
+(defmethod coerce-response-content-type :default           [req] req)
+(defmethod coerce-response-content-type "application/text" [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-response-content-type "application/json" [req] (update req :body (fn1 conv/->json)))
+
+(defn wrap-coerce-response-content-type
+  [handler] (fn [request] (coerce-response-content-type (handler request))))
+
+; ===== MIDDLEWARE ===== ;
 
 (defn wrap-middleware [routes & [opts]]
   (-> routes
-      (whenp (:resp-content-type opts) wrap-content-type)
-      (whenp (:req-content-type opts) wrap-coerce-from-content-type)
+      (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
+      (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
       wrap-uid
       (whenp (-> opts :anti-forgery false? not)
         (fn1 wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))}))
