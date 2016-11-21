@@ -1,14 +1,13 @@
 (ns quantum.apis.amazon.cloud-drive.auth
-           (:require [#?(:clj  clojure.core.async
-                         :cljs cljs.core.async   )   :as async   
-                       :refer [<!]                            ]
-                     [quantum.net.http               :as http ]
-                     [quantum.auth.core              :as auth ]
-                     [quantum.core.data.complex.json
-                       :refer [->json json->]                 ])
-  #?(:cljs (:require-macros 
-                     [cljs.core.async.macros
-                       :refer [go]                            ])))
+  (:require
+    [quantum.core.async   :as async
+      :refer [<! go]]
+    [quantum.core.fn
+      :refer [fn1]]
+    [quantum.net.http     :as http]
+    [quantum.core.string  :as str]
+    [quantum.auth.core    :as auth]
+    [quantum.core.convert :as conv]))
 
 ; (defn driver []
 ;   (-> res/system :quantum.web.core :web-driver))
@@ -43,6 +42,7 @@
       {:url     "https://api.amazon.com/auth/o2/token"
        :method  :post
        :headers {"Content-Type" "application/x-www-form-urlencoded"}
+       :middleware (fn1 update :body (fn1 conv/json-> str/keywordize))
        :form-params
          {"grant_type"    "authorization_code"
           "code"          code
@@ -60,6 +60,7 @@
              {:url "https://api.amazon.com/auth/o2/token"
               :method :post
               :headers {"Content-Type" "application/x-www-form-urlencoded"}
+              :middleware        (fn1 update :body (fn1 conv/json-> str/keywordize))
               :form-params
                 {"grant_type"    "refresh_token"
                  "refresh_token" (-> auth-ks :access-tokens :offline :refresh-token)

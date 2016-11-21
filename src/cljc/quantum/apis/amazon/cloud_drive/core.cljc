@@ -13,7 +13,7 @@
                      [quantum.core.error
                        :refer [TODO ->ex]]
                      [quantum.core.fn                      :as fn
-                       :refer [<- fn-> fn->>]]
+                       :refer [<- fn-> fn->> fn1]]
                      [quantum.core.logic                   :as logic
                        :refer [nnil? eq?]]
                      [quantum.core.log                     :as log
@@ -46,11 +46,12 @@
    (log/pr ::debug "AMAZON REQUEST:" (kmap k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
-      (-> {:url (if append
-                    (str/->path (get base-urls url-type) (name k) append)
-                    (str/->path (get base-urls url-type) (name k)))
-           :method method
+      (-> {:url          (if append
+                             (str/->path (get base-urls url-type) (name k) append)
+                             (str/->path (get base-urls url-type) (name k)))
+           :method       method
            :query-params query-params
+           :middleware   (fn1 update :body (fn1 conv/json-> str/keywordize))
            :handlers
             {401 (fn [req resp]
                    (amz-auth/refresh-token! username)
