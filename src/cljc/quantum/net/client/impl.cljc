@@ -1,10 +1,9 @@
 (ns ^{:doc "HTTP request processing with error handling, log writing, etc."}
   quantum.net.client.impl
-           (:require  [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core  ]
+           (:require  [clojure.core                 :as core]
              #?(:cljs [goog.userAgent               :as agent ])
                       [cognitect.transit            :as t     ]
-                      [#?(:clj org.httpkit.client
+                      [#?(:clj  org.httpkit.client
                           :cljs cljs-http.client)   :as http  ]
              #?(:cljs [cljs.reader
                         :refer [read-string]                  ])
@@ -19,26 +18,15 @@
                       [quantum.core.string          :as str   ]
                       [quantum.net.core             :as net   ]
                       [quantum.core.fn              :as fn
-                        :refer [#?@(:clj [fn-> fn1])]         ]
+                        :refer [fn-> fn1]]
                       [quantum.core.logic           :as logic
-                        :refer [#?@(:clj [fn-and whenf1])
-                                nnil?]                        ]
+                        :refer [fn-and whenf1 nnil?]]
                       [quantum.core.collections     :as coll
-                        :refer [#?@(:clj [kmap containsv?])]  ]
+                        :refer [kmap containsv?]]
+                      [quantum.core.async           :as async
+                        :refer [go]]
                       [quantum.core.vars            :as var
-                        :refer [#?(:clj def-)]                ])
-  #?(:cljs (:require-macros
-                      [cljs.core.async.macros
-                        :refer [go]                           ]
-                      [quantum.core.collections     :as coll
-                        :refer [kmap containsv?]              ]
-                      [quantum.core.fn              :as fn
-                        :refer [fn-> fn1]                     ]
-                      [quantum.core.log             :as log   ]
-                      [quantum.core.logic           :as logic
-                        :refer [fn-and whenf1]               ]
-                      [quantum.core.vars            :as var
-                        :refer [def-]                         ]))
+                        :refer [def-]])
   #?(:clj  (:import   org.apache.http.entity.mime.MultipartEntityBuilder
                       org.apache.http.entity.ContentType
                       org.apache.http.client.methods.HttpPost
@@ -138,8 +126,9 @@
                  [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])}]})
     :attribution "Alex Gunnarson"}
   [{:as req
-    :keys [handlers log? log tries max-tries keys-fn raw?]
+    :keys [handlers log? log tries max-tries keys-fn raw? middleware]
     :or {as :auto
+         middleware identity
          max-tries 3
          tries     0}}]
   (log/ppr :http req)
@@ -148,12 +137,9 @@
                    (str "HTTP exception, status " (:status req) ". Maximum tries (3) exceeded.")
                    {:status (:status req)}))
       (let [response        @(http/request (dissoc req :status :log))
-            status          (:status response)
-            parse-middleware (whenf1 (fn-and (constantly (not raw?))
-                                              (fn-> :headers :content-type (containsv? "application/json")))
-                               (fn-> (update :body (fn1 json-> keys-fn))))]
+            status          (:status response)]
         (if (or (= status 200) (= status 201))
-            ((or (get handlers status) fn/seconda) req (parse-middleware response))
+            ((or (get handlers status) fn/seconda) req (middleware response))
             (let [status-handler
                    (or (get handlers status)
                        (get handlers :default)
@@ -163,4 +149,4 @@
                     (assoc req
                       :tries (inc tries)
                       :max-tries max-tries)]
-              (status-handler req-n+1 (parse-middleware response))))))))
+              (status-handler req-n+1 (middleware response))))))))

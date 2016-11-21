@@ -18,8 +18,7 @@
               :refer [validate]]
             [quantum.core.fn
               :refer [fn-nil]]
-            [quantum.core.log                        :as log
-              :include-macros true]
+            [quantum.core.log                        :as log]
             [quantum.core.logic                      :as logic
               :refer [nnil?]]
             [quantum.core.vars                       :as var
