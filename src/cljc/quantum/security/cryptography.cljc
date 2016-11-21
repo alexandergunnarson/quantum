@@ -226,10 +226,11 @@
           (-> algo name str/->upper)
         ^MessageDigest     md
           (MessageDigest/getInstance algo-str)
-        ^InputStream       in (conv/->input-stream in-0)
+        ^InputStream       in (conv/->buffered-input-stream in-0)
         ^DigestInputStream dis
           (DigestInputStream. in md)
-        ^bytes             digested (.digest md)]
+        _ (while (pos? (.available dis)) (.read dis))
+        ^bytes             digested (-> dis .getMessageDigest .digest)]
     (.close in)
     (.close dis)
     digested)))
