@@ -8,12 +8,15 @@
     :attribution "Alex Gunnarson"}
   quantum.net.url
   (:require
+    [cuerdas.core             :as str+]
     [quantum.net.http         :as http]
     [quantum.core.string      :as str]
     [quantum.core.fn
       :refer [<- rfn]]
     [quantum.core.macros
       :refer [defnt]]
+    [quantum.core.vars        :as var
+      :refer [defalias]]
     [quantum.core.collections :as coll
       :refer [join reducei mergel map+]]))
 
@@ -140,3 +143,8 @@
 
 (defn map->url [url m]
   (str url "?" (map->str m)))
+
+; Transform text into a URL slug.
+(defalias ->slug         str+/slug )
+; Unicode-friendly version of `->slug`.
+(defalias ->slug-unicode str+/uslug)

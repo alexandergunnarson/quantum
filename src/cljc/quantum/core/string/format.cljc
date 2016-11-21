@@ -2,31 +2,22 @@
   ^{:doc "Useful string utils for formatting strings."
     :attribution "Alex Gunnarson"}
   quantum.core.string.format
-           (:refer-clojure :exclude [replace reduce])
-           (:require [frak]
-                     [clojure.string                :as str   ]
-                     [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core  ]
-                     [quantum.core.collections.base :as cbase ]
-            #?(:cljs [goog.string                   :as gstr  ])
-                     [quantum.core.fn               :as fn
-                       :refer [#?@(:clj [fn->>])]             ]
-                     [quantum.core.loops            :as loops
-                       :refer [#?@(:clj [reduce])]            ]
-                     [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt])]             ]
-                     [quantum.core.string.regex     :as regex ]
-                     [quantum.core.vars             :as var
-                       :refer [#?@(:clj [defalias])]          ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn               :as fn
-                       :refer [fn->>]                         ]
-                     [quantum.core.loops            :as loops
-                       :refer [reduce]                        ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt]                         ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                      ]))
+          (:refer-clojure :exclude [replace reduce])
+          (:require [frak]
+                    [cuerdas.core                  :as str+]
+                    [clojure.string                :as str]
+                    [clojure.core                  :as core]
+                    [quantum.core.collections.base :as cbase]
+           #?(:cljs [goog.string                   :as gstr])
+                    [quantum.core.fn               :as fn
+                      :refer [fn->>]]
+                    [quantum.core.loops            :as loops
+                      :refer [reduce]]
+                    [quantum.core.macros           :as macros
+                      :refer [defnt]]
+                    [quantum.core.string.regex     :as regex]
+                    [quantum.core.vars             :as var
+                      :refer [defalias]])
   #?(:clj (:import java.net.IDN)))
 
 (defnt replace* ; TODO .replace may try to compile a pattern instead of replacing the actual string
@@ -66,147 +57,61 @@
   #?(:clj ([^char?   c] (Character/toUpperCase c))))
 (defalias ->upper ->upper-case)
 
-; CANDIDATE 0
-(def capitalize  str/capitalize)
-
 (defn capitalize-each-word [string]
   (str/join " "
     (map str/capitalize
          (str/split string #" "))))
 
-(def hump-pattern #"[a-z0-9][A-Z]")
-(def non-camel-separator-pattern #"[_| |\-][A-Za-z]")
-(def non-snake-separator-pattern #"[ |\-]")
-(def non-spear-separator-pattern #"[ |\_]")
+; Uppercases the first character.
+(defalias ->capital-case str+/capital  )
+(defalias capitalize     ->capital-case)
+; Output will be: lowerUpperUpperNoSpaces.
+(defalias ->camel-case   str+/camel    )
+; Output will be: lower_cased_and_underscore_separated.
+(defalias ->snake-case   str+/snake    )
+; Output will be: Space separated with the first letter capitalized.
+(defalias ->phrase-case  str+/phrase   )
+; Output will be: lower cased and space separated
+(defalias ->human-case   str+/human    )
+; Output will be: Each Word Capitalized And Separated With Spaces
+(defalias ->title-case   str+/title    )
+; Output will be: CapitalizedAndTouchingTheNext
+(defalias ->pascal-case  str+/pascal   )
+; Output will be: lower-cased-and-separated-with-dashes
+(defalias ->kebab-case   str+/kebab    )
+(defalias ->spear-case   ->kebab-case  )
+(defalias ->lisp-case    ->kebab-case  )
 
-(defalias camelcase cbase/camelcase)
+(defn java->clojure
+  {:source "zcaudate/hara.object.util"}
+  [^String name]
+  (let [nname (cond (re-find #"(^get)|(^set)[A-Z].+" name)
+                    (subs name 3)
 
-(defn un-camelcase
-  {:todo ["Find more efficient algorithm"]}
-  [sym]
-  (let [str-0 (str sym)
-        matches (->> str-0 (re-seq #"[a-z0-1][A-Z]") distinct)]
-    (-> (reduce
-          (fn [ret [char1 char2 :as match]]
-            (replace ret match (str char1 "-" (->lower-case char2))))
-          str-0 matches)
-        ->lower-case)))
+                    (re-find #"^is[A-Z].+" name)
+                    (str (subs name 2) "?")
 
-(declare gsub)
+                    (re-find #"^has[A-Z].+" name)
+                    (str (subs name 3) "!")
 
-(defn separate-camel-humps
-  {:attribution "zcaudate/hara"}
-  [value]
-  (gsub value hump-pattern
-    #(fn->> seq (str/join " "))))
+                    :else name)]
+    (->lisp-case nname)))
 
-; CANDIDATE 0
-(defn ->title-case
-  "Human readable."
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "Hello World"}}
-  [value]
-  (str/join " "
-    (map capitalize
-      (str/split (separate-camel-humps value) #"[ |\-|_]"))))
+(defn clojure->java
+  {:source "zcaudate/hara.object.util"}
+  ([name] (clojure->java name :get))
+  ([^String name suffix]
+   (let [nname (cond (ends-with? name "?")
+                     (str "is-" (.substring name 0 (.length name)))
 
-; CANDIDATE 1
-#?(:clj
-(defn ->title-case*
-  "Converts a string into TitleCase."
-  ([s] (->title-case* s nil))
-  ([s delimeters-0]
-    (when-not (nil? s)
-      (let [delimeters (if delimeters-0
-                         (regex/escape delimeters-0)
-                         "\\s")
-            delimeters (str "|[" delimeters "]+")
-            rx         (re-pattern (str "(^" delimeters ")([a-z])"))]
-        (replace s rx (fn [[c1 _]]
-                        (->upper c1))))))))
+                     (ends-with? name "!")
+                     (str "has-" (.substring name 0 (.length name)))
 
-; CANDIDATE 1
-#?(:cljs
-(defn ->title-case*
-  "Converts a string into TitleCase."
-  ([s]
-    (when (string? s)
-      (gstr/toTitleCase s)))
-  ([s delimiters]
-    (gstr/toTitleCase s delimiters))))
+                     :else
+                     (str (clojure.core/name suffix) "-" name))]
+     (->camel-case nname))))
 
-(defn ->camel-case
-  "Java, JavaScript, etc."
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "helloWorld"}}
-  [value]
-  (gsub value non-camel-separator-pattern
-    #(->upper-case (apply str (rest %)))))
-
-; CANDIDATE 0
-(defn ->capital-camel-case
-  "C#, Java classes"
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "HelloWorld"}}
-  [value]
-  (let [^String camel (->camel-case value)]
-   (str (->upper-case (.substring camel 0 1))
-     (.substring camel 1 (.length camel)))))
-
-; CANDIDATE 1
-#_(defn ->capital-camel-case ;'classify'
-  "Converts string to camelized class name. First letter is always upper case."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (str)
-          (replace #"[\W_]" " ")
-          (camelize)
-          (replace #"\s" "")
-          (capitalize)))
-
-; CANDIDATE 0
-(defn ->snake-case
-  "Python, C, some C++"
-  {:attribution "zcaudate/hara"
-   :tests {["hello-world"] "hello_world"}}
-  [value]
-  (replace
-    (->lower-case (separate-camel-humps value))
-    non-snake-separator-pattern
-    "_"))
-
-; CANDIDATE 1
-#_(defn ->snake-case
-  "Converts a camelized or dasherized string
-  into an underscored one."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (trim)
-          (replace #?(:clj  #"([a-z\d])([A-Z]+)"
-                      :cljs (->regexp #"([a-z\d])([A-Z]+)" "g"))"$1_$2")
-          (replace #?(:clj  #"[-\s]+"
-                      :cljs (->regexp #"[-\s]+", "g")) "_")
-          (lower)))
-
-(defn ->spear-case
-  "Lisps"
-  {:attribution "zcaudate/hara"
-   :tests {["Hello World"] "hello-world"}}
-  [value]
-  (replace
-    (->lower-case (separate-camel-humps value))
-    non-spear-separator-pattern
-    "-"))
-
-(defn ->human-case
-  "Converts an underscored, camelized, or
-  dasherized string into a humanized one."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          ->snake-case
-          (replace #"_id$", "")
-          (replace #?(:clj "_" :cljs (->regexp "_" "g")) " ")
-          (capitalize)))
+; Unindent multiline text.
+; Uses either a supplied regex or the shortest
+; beginning-of-line to non-whitespace distance.
+(defalias unindent str+/<<-)

@@ -1,11 +1,13 @@
 (ns quantum.core.string.semantic
   (:require
-    [clojure.set         :as set  ]
+    [clojure.set         :as set]
+    [cuerdas.core        :as str+]
     [quantum.core.logic  :as logic
-      :refer        [nempty?]]
+      :refer [nempty?]]
     [quantum.core.macros :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]))
+      :refer [defnt]]
+    [quantum.core.vars   :as var
+      :refer [defalias]]))
 
 (def vowels
   #{\a \e \i \o \u
@@ -26,3 +28,6 @@
 (def ^{:doc "Specifically in English"} punctuation
   #{\[ \] \( \) \{ \} \< \> \:
     \, \; \- \– \— \! \? \. \… \` \' \" \/})
+
+; Returns a vector of the words in the string.
+(defalias words str+/words)

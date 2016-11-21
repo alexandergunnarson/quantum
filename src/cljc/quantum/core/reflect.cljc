@@ -34,7 +34,7 @@
                (map+ :name)
                (join []))]
     (for* {} [name-n field-names]
-      [(-> name-n strf/un-camelcase keyword)
+      [(-> name-n strf/->lisp-case keyword)
        (java/field obj (name name-n))]))))
 
 #?(:clj

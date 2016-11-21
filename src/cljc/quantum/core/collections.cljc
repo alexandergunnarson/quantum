@@ -1565,7 +1565,7 @@
    Based on the limitations of |defrecord|, multi-arity
    functions are declared separately."
   [name- fields constructor & fns]
-  (let [constructor-sym (->> name- name sform/un-camelcase (str "->") symbol)
+  (let [constructor-sym (->> name- name sform/->lisp-case (str "->") symbol)
         protocol-sym    (-> name- name (str "Functions") symbol)
         fns-signatures  (->> fns
                              (map (juxt #(first  %1)

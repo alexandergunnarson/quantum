@@ -16,8 +16,10 @@
              [cuerdas.core               :as str+]
              [quantum.core.data.map      :as map]
              [quantum.core.data.set      :as set]
+             [quantum.core.error
+               :refer [->ex]]
              [quantum.core.fn            :as fn
-               :refer [fn-> fn1]]
+               :refer [fn-> fn1 rfn]]
              [quantum.core.logic         :as logic
                :refer [nempty? fn-and whenc whenc1 ifn condf]]
              [quantum.core.loops         :as loops
@@ -34,6 +36,9 @@
                :refer [defalias]]
              [quantum.core.type          :as type
                :refer [boolean?]])
+           (:require-macros
+             [quantum.core.string
+               :refer [starts-with? ends-with? remove*]])
   #?(:clj (:import
              java.net.IDN
              java.util.regex.Pattern)))
@@ -41,9 +46,6 @@
 ; TO EXPLORE
 ; - https://github.com/expez/superstring
 ; ==================
-
-#_(defn contains? [s sub]
-  (not= (.indexOf ^String s sub) -1))
 
 ; http://www.regular-expressions.info
 ; What about structural sharing with strings? Wouldn't there have to be some sort
@@ -78,12 +80,22 @@
   ([^char?   c] (contains? num-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? num-chars     )) s))))
 
+(defnt numeric-readable?
+#?(:clj
+  ([^char?   x] (numeric? x)))
+  ([^string? x] (str+/numeric? x)))
+
 (defnt upper?
 #?(:clj
   ([^char?   c] (contains? upper-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? upper-chars   )) s))))
 
 (defalias ->upper form/->upper)
+; Converts string to all upper-case respecting
+; the current system locale.
+; On the JVM you can provide a concrete locale to
+; use as the second optional argument.
+(defalias ->locale-upper str+/locale-upper)
 
 (defnt lower?
 #?(:clj
@@ -91,6 +103,11 @@
   ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? lower-chars   )) s))))
 
 (defalias ->lower form/->lower)
+; Converts string to all lower-case respecting
+; the current system locale.
+; On the JVM you can provide a concrete locale to
+; use as the second optional argument.
+(defalias ->locale-lower str+/locale-lower)
 
 (defnt alpha?
 #?(:clj
@@ -101,6 +118,16 @@
 #?(:clj
   ([^char?   c] (contains? alphanum-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? alphanum-chars)) s))))
+
+(defnt letters?
+  "Checks if string contains only letters.
+   This function will use all the unicode range."
+  ([^string x] (str+/letters? x)))
+
+(defnt word?
+  "Checks if a string contains only the word characters.
+   This function will use all the unicode range."
+  ([^string x] (str+/word? x)))
 
 (defnt blank?
 #?(:clj
@@ -149,7 +176,21 @@
 
 ; ===== SPLIT/JOIN =====
 
-(def split       str/split)
+(defnt split*
+  #?(:cljs ([^nil?    sep x  ] x))
+  #?(:cljs ([^nil?    sep x n] x))
+           ([^string? sep x  ] (str/split x sep  ))
+           ([^string? sep x n] (str/split x sep n))
+           ([^regex?  sep x  ] (str/split x (re-pattern (regex/escape sep))  ))
+           ([^regex?  sep x n] (str/split x (re-pattern (regex/escape sep)) n))
+   #?(:clj ([         sep x n] (if (nil? sep) x (throw (->ex "`split*` not supported for type" {:type (type sep)}))))))
+
+(defnt split
+  #?(:cljs ([^nil?             x sep  ] x))
+  #?(:cljs ([^nil?             x sep n] x))
+           ([#{string? regex?} x sep  ] (split* sep x  ))
+           ([#{string? regex?} x sep n] (split* sep x n))
+   #?(:clj ([                  x sep n] (if (nil? x) x (throw (->ex "`split` not supported for type" {:type (type x)}))))))
 
 (defn split-by-regex
   "Split the string `s` by the regex `pattern`."
@@ -164,18 +205,13 @@
   "Split the string `s` by comma."
   [s] (split-by-regex s #"\s*,\s*"))
 
+(defn split-by-lines
+  "Return a list of the lines in the string."
+  [s] (split-by-regex s #"\n|\r\n"))
+
 ; a form of |concat| - "concat-with"
 ; CANDIDATE 0
-(def join        str/join)
-
-; CANDIDATE 1
-#_(defn join
-  "Joins strings together with given separator."
-  {:attribution "funcool/cuerdas"}
-  ([coll]
-   (apply str coll))
-  ([separator coll]
-   (apply str (interpose separator coll))))
+(defalias join str+/join)
 
 (defn join-once
   "Like /clojure.string/join/ but ensures no double separators."
@@ -184,7 +220,7 @@
   (reduce
     (fn [s1 s2]
       (let [s1 (str s1) s2 (str s2)]
-        (if (str/ends-with? s1 separator) ; could use ends-with? but would be self-referring
+        (if (ends-with? s1 separator) ; could use ends-with? but would be self-referring
             (if (starts-with? s2 separator)
                 (str s1 (.substring s2 1))
                 (str s1 s2))
@@ -206,19 +242,19 @@
 (defn replace-with
   "Replace all."
   {:in '["and" (om "a" "abc")]
-   :out "abcnd"
-   :todo "FIX reduce-kv to just normal reduce..."}
+   :out "abcnd"}
   [s m]
-  (core/reduce-kv
-    (fn [ret old-n new-n]
-      (replace ret old-n new-n))
-    s
-    m))
+  (reduce
+    (rfn [ret old-n new-n]
+      (replace ret old-n new-n)) s m))
+
+; Replaces first instance of match with replacement in s.
+(defalias replace-first str+/replace-first)
 
 (def replace-uchars ; TODO much more to this
   (fn-> (str/replace "\\u0026" "&")))
 
-; ===== TRIMMING =====
+; ===== WHITESPACE =====
 
 (defalias trim   str+/trim )
 (defalias strip  trim      )
@@ -227,31 +263,23 @@
 (defalias trimr  str+/rtrim)
 (defalias stripr trimr     )
 
-; CANDIDATE 0
-(defn collapse-whitespace
-  "Converts all adjacent whitespace characters
-  to a single space."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (some-> s
-          (replace #"[\s\xa0]+" " ")
-          (replace #"^\s+|\s+$" "")))
+(defalias strip-prefix str+/strip-prefix)
+(defalias strip-suffix str+/strip-suffix)
 
-; CANDIDATE 1
-#_(defn collapse-whitespace [string-0]
-  (loop [string-n string-0]
-    (if (= string-n (str/replace string-n "  " " "))
-        string-n
-        (recur (str/replace string-n "  " " ")))))
+; Takes a string and replaces newlines with a space.
+; Multiple lines are replaced with a single space.
+(defalias newlines->space str+/strip-newlines)
 
-(defn clean
-  "Trim and collapse whitespace."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (-> s trim
-      (replace #"\s+" " "))) ; should it be |collapse-whitespace| instead?
+; Converts all adjacent whitespace characters to a single space.
+(defalias collapse-whitespace str+/collapse-whitespace)
+; Trim and collapse whitespace.
+(defalias clean               str+/clean)
 
-(def  str-nil (whenc1 nil? ""))
+; Truncates a string to a certain length based on word boundary
+; and adds '...' if necessary.
+(defalias ellipsize           str+/prune)
+
+(def str-nil (whenc1 nil? ""))
 
 ; ===== COERCION =====
 
@@ -323,15 +351,14 @@
   (reduce #(replace %1 %2 "") str-0 to-remove))
 
 (defnt remove*
-  ([^string? to-remove ^String str-0]
-    (.replaceAll str-0 (conv-regex-specials to-remove) ""))
+  ([^string? to-remove str-0]
+    (.replaceAll ^String str-0 (conv-regex-specials to-remove) ""))
   ([^regex?  to-remove str-0]
     (replace str-0 to-remove "")))
 
 (defnt remove
-  {:todo ["Port to cljs"]}
   ([^string? str-0 to-remove]
-    (remove*-protocol to-remove str-0)))
+    (remove* to-remove str-0)))
 
 (defn remove-from-end [^String string ^String end]
   (if (ends-with? string end)
@@ -341,15 +368,9 @@
 
 ; ===== KEYWORDIZATION =====
 
-(defn keywordize
-  "Transforms string @x to a dash-case keyword."
-  [^String x]
-  (if (string? x)
-      (-> x
-          (replace " " "-")
-          (replace "_" "-")
-          form/->lower keyword)
-      x))
+(defnt keywordize
+  "Transforms string @`x` to a lisp-case keyword."
+  [^string? x] (-> x form/->lisp-case keyword))
 
 (def properize-keyword
   (fn-> (ifn nil? str-nil name) (replace #"\-" " ") form/capitalize-each-word))
@@ -360,11 +381,6 @@
                 (keyword+ k-0 "?")
                 k-0)]
     k-f))
-
-
-(defnt unkeywordize
-  ([^keyword? k]
-    (-> k name (replace "-" " ") form/capitalize-each-word)))
 
 ; ===== PUNCTUATION =====
 
@@ -428,6 +444,11 @@
     ""
     args))
 
+; Pads the str with characters until the total string
+; length is equal to the passed length parameter. By
+; default, pads on the left with the space char.
+(defalias pad str+/pad)
+
 ; ===== REGEX =====
 (defn re-find [pat ^String in-str]
   (try (core/re-find (re-pattern pat) in-str)
@@ -483,16 +504,16 @@
 (defn conv-regex-specials [^String str-0]
   (-> str-0
       (replace "\\" "\\\\")
-      (replace "$" "\\$")
-      (replace "^" "\\^")
-      (replace "." "\\.")
-      (replace "|" "\\|")
-      (replace "*" "\\*")
-      (replace "+" "\\+")
-      (replace "(" "\\(")
-      (replace ")" "\\)")
-      (replace "[" "\\[")
-      (replace "{" "\\{")))
+      (replace "$" "\\$"  )
+      (replace "^" "\\^"  )
+      (replace "." "\\."  )
+      (replace "|" "\\|"  )
+      (replace "*" "\\*"  )
+      (replace "+" "\\+"  )
+      (replace "(" "\\("  )
+      (replace ")" "\\)"  )
+      (replace "[" "\\["  )
+      (replace "{" "\\{"  )))
 
 (defn re-index
   "Indexed matches."
@@ -598,7 +619,6 @@
                          (-> tmpLen dec core/int))))
             true)))))
 
-
 ; ===== STRING VALUES =====
 
 ; (def from-string-chart
@@ -615,6 +635,8 @@
 ;    :ref     (fn [v] (read-ref v))})
 
 (defn val [obj]
+  ; TODO maybe use (edn/read-string s)
+  ; TODO Should we use NaN?
   (if (string? obj)
       #?(:clj
         (try (Integer/parseInt obj)
@@ -628,532 +650,51 @@
           obj))
       obj))
 
-; ===== LANGUAGE STYLE REPLACEMENTS =====
-
-; TODO MOVE NAMESPACE
-(defn java->clojure
-  {:source "zcaudate/hara.object.util"}
-  [^String name]
-  (let [nname (cond (re-find #"(^get)|(^set)[A-Z].+" name)
-                    (subs name 3)
-
-                    (re-find #"^is[A-Z].+" name)
-                    (str (subs name 2) "?")
-
-                    (re-find #"^has[A-Z].+" name)
-                    (str (subs name 3) "!")
-
-                    :else name)]
-    (form/->spear-case nname)))
-
-; TODO MOVE NAMESPACE
-(defn clojure->java
-  {:source "zcaudate/hara.object.util"}
-  ([name] (clojure->java name :get))
-  ([^String name suffix]
-   (let [nname (cond (ends-with? name "?")
-                     (str "is-" (.substring name 0 (.length name)))
-
-                     (ends-with? name "!")
-                     (str "has-" (.substring name 0 (.length name)))
-
-                     :else
-                     (str (clojure.core/name suffix) "-" name))]
-     (form/->camel-case nname))))
-
 ; ===== MISCELLANEOUS =====
 
-(defn reverse
-  "Return string reversed."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (when-not (nil? s)
-    #?(:clj (let [sb (StringBuilder. ^String s)]
-              (str (.reverse sb)))
-       :cljs (-> s (.split "") (.reverse) (.join "")))))
-
-; ___________________________________________
-; ================ TO IMPORT ================
-; -------------------------------------------
-
-; (ns cuerdas.core
-;   (:refer-clojure :exclude [contains? empty? repeat replace reverse chars
-;     #?@(:clj [unquote format])])
-;   (:require #?(:cljs [goog.string :as gstr])
-;             [clojure.set  :refer [map-invert]]
-;             [clojure.walk :refer [stringify-keys]]))
-
-; #?(:clj (declare slice))
-
-; #?(:cljs
-; (defn- regexp
-;   "Build or derive regexp instance."
-;   {:attribution "funcool/cuerdas"}
-;   ([s]
-;    (if (regexp? s)
-;      s
-;      (js/RegExp. s)))
-;   ([s flags]
-;    (if (regexp? s)
-;      (js/RegExp. (.-source s) flags)
-;      (js/RegExp. s flags)))))
-
-; (declare escape-regexp)
-; (declare replace)
-
-; (defn strip-prefix
-;   "Strip prefix in more efficient way."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s ^String prefix]
-;   (if (starts-with? s prefix)
-;     (slice s (count prefix) (count s))
-;     s))
-
-; (defn strip-suffix
-;   "Strip suffix in more efficient way."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s ^String prefix]
-;   (if (ends-with? s prefix)
-;     (slice s 0 (- (count s) (count prefix)))
-;     s))
-
-; (declare join)
-
-; (defn repeat
-;   "Repeats string n times."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (repeat s 1))
-;   ([s n]
-;    (when-not (nil? s)
-;      #?(:clj  (join (clojure.core/repeat n s))
-;         :cljs (gstr/repeat s n)))))
-
-; (defn slice
-;   "Extracts a section of a string and returns a new string."
-;   {:attribution "funcool/cuerdas"}
-;   ([s begin]
-;     #?(:clj  (slice s begin (count s))
-;        :cljs (when-not (nil? s)
-;                (.slice s begin))))
-;   ([s #?@(:clj [^long begin ^long end] :cljs [begin end])]
-;    #?(:clj (if (nil? s)
-;                s
-;                (let [end   (if (< end 0) (+ (count s) end) end)
-;                      begin (if (< begin 0) (+ (count s) begin) begin)
-;                      end   (if (> end (count s)) (count s) end)]
-;                  (if (> begin end)
-;                    ""
-;                    (let [begin (if (< begin 0) 0 begin)
-;                          end (if (< end 0) 0 end)]
-;                      (.substring ^String s begin end)))))
-;       :cljs (when-not (nil? s)
-;               (.slice s begin end)))))
-
-; (defn replace
-;   "Replaces all instance of match with replacement in s.
-;   The replacement is literal (i.e. none of its characters are treated
-;   specially) for all cases above except pattern / string.
-;   In match is pattern instance, replacement can contain $1, $2, etc.
-;   will be substituted with string that matcher the corresponding
-;   parenthesized group in pattern.
-;   If you wish your replacement string to be used literary,
-;   use `(escape-regexp replacement)`.
-;   Example:
-;     (replace \"Almost Pig Latin\" #\"\\b(\\w)(\\w+)\\b\" \"$2$1ay\")
-;     ;; => \"lmostAay igPay atinLay\"
-;   "
-
-;   [s match replacement]
-;   (when-not (nil? s)
-;     #?(:clj  (str/replace s match replacement)
-;        :cljs (.replace s (regexp match "g") replacement))))
-
-; #?(:cljs
-; (defn ireplace
-;   "Replaces all instances of match with replacement in s."
-;   {:attribution "funcool/cuerdas"}
-;   [s match replacement]
-;   (when-not (nil? s)
-;     (.replace s (regexp match "ig") replacement))))
-
-; (defn replace-first
-;   "Replaces first instance of match with replacement in s."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s match replacement]
-;   (when-not (nil? s)
-;     #?(:clj  (str/replace-first s match replacement)
-;        :cljs (.replace s (regexp match) replacement))))
-
-; #?(:cljs
-; (defn ireplace-first
-;   "Replaces first instance of match with replacement in s."
-;   {:attribution "funcool/cuerdas"}
-;   [s match replacement]
-;   (when-not (nil? s)
-;     (.replace s (regexp match "i") replacement))))
-
-
-; (defn prune
-;   "Truncates a string to a certain length and adds '...'
-;   if necessary."
-;   {:attribution "funcool/cuerdas"}
-;   ([s num] (prune s num "..."))
-;   ([s num subs]
-;    (if (< (count s) num)
-;      s
-;      (let [tmpl (fn [c] (if (not= (upper c) (lower c)) "A" " "))
-;            template (-> (slice s 0 (inc (count s)))
-;                         (replace #".(?=\W*\w*$)" tmpl))
-;            tmp (slice template (- (count template) 2))
-;            template (if #?(:clj  (.matches ^String tmp "\\w\\w")
-;                            :cljs (.match (slice template (- (count template) 2)) #"\w\w"))
-;                       (replace-first template #"\s*\S+$" "")
-;                       (rtrim (slice template 0 (dec (count template)))))]
-;        (if (> (count (str template subs)) (count s))
-;          s
-;          (str (slice s 0 (count template)) subs))))))
-
-; (defn strip-newlines
-;   "Takes a string and replaces newlines with a space.
-;   Multiple lines are replaced with a single space."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s]
-;   (replace s #?(:clj #"[\n\r|\n]+" :cljs #"(\r\n|\r|\n)+") " "))
-
-; (defn split
-;   "Splits a string on a separator a limited
-;   number of times. The separator can be a string
-;   or Pattern (clj) / RegExp (cljs) instance."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (split s #"\s" #?(:cljs nil)))
-;   ([s sep]
-;    #?(:clj  (cond
-;               (nil? s) s
-;               (instance? Pattern sep) (str/split s sep)
-;               :else (str/split s (re-pattern sep)))
-;       :cljs (split s sep nil)))
-;   ([s sep num]
-;    (cond
-;      (nil? s) s
-;      #?(:clj  (instance? Pattern sep)
-;         :cljs (regexp?           sep)) (str/split s sep num)
-;      :else (str/split s (re-pattern sep) num))))
-
-
-
-
-; (defn lines
-;   "Return a list of the lines in the string."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (split s #"\n|\r\n"))
-
-; (defn unlines
-;   "Returns a new string joining a list of strings with a newline char (\\n)."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (if (nil? s)
-;     s
-;     (str/join "\n" s)))
-
-; (defn format
-;   "Simple string interpolation."
-;   {:attribution "funcool/cuerdas"}
-;   [s & args]
-;   (if (and (= (count args) 1) (map? (first args)))
-;     (let [params (#?(:clj stringify-keys :cljs clj->js) (first args))]
-;       (replace s #"%\(\w+\)s"
-;                (fn [match]
-;                  (str (#?(:clj get :cljs aget) params (slice match 2 -2))))))
-;     (let [params #?(:clj (java.util.ArrayList. ^List args) :cljs (clj->js args))]
-;       (replace s #?(:clj #"%s" :cljs (regexp "%s" "g"))
-;         (fn [_] (str #?(:clj  (.remove params 0)
-;                         :cljs (.shift  params))))))))
-
-
-
-; (defn surround
-;   "Surround a string with another string."
-;   {:attribution "funcool/cuerdas"}
-;   [s wrap]
-;   (when-not (nil? s)
-;     (join #?(:cljs "") [wrap s wrap])))
-
-; (defn unsurround
-;   "Unsurround a string surrounded by another."
-;   {:attribution "funcool/cuerdas"}
-;   [s surrounding]
-;   (let [length (count surrounding)
-;         fstr (slice s 0 length)
-;         slength (count s)
-;         rightend (- slength length)
-;         lstr (slice s rightend slength)]
-;     (if (and (= fstr surrounding) (= lstr surrounding))
-;       (slice s length rightend)
-;       s)))
-
-; (defn quote
-;   "Quotes a string."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (surround s "\""))
-;   ([s qchar] (surround s qchar)))
-
-; (defn unquote
-;   "Unquote a string."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (unsurround s "\""))
-;   ([s qchar]
-;    (unsurround s qchar)))
-
-; (defn slugify
-;   "Transform text into a URL slug."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (when s
-;     (let [from  "ąàáäâãåæăćčĉęèéëêĝĥìíïîĵłľńňòóöőôõðøśșšŝťțŭùúüűûñÿýçżźž"
-;           to    "aaaaaaaaaccceeeeeghiiiijllnnoooooooossssttuuuuuunyyczzz"
-;           regex (re-pattern (str "[" (escape-regexp from) "]"))]
-;       (-> (lower s)
-;           (replace regex (fn [^String c]
-;                            (let [index (.indexOf from c)
-;                                  res   #?(:clj  (String/valueOf (.charAt to index))
-;                                           :cljs (.charAt to index))]
-;                              (if (empty? res) "-" res))))
-;           (replace #"[^\w\s-]" "")
-;           (spear-case)))))
-
-; ;; (defn pad
-; ;;   "Pads the str with characters until the total string
-; ;;   length is equal to the passed length parameter. By
-; ;;   default, pads on the left with the space char."
-; ;;   [s & [{:keys [length padding type]
-; ;;          :or {length 0 padding " " type :left}}]]
-; ;;   (let [padding (aget padding 0)
-; ;;         padlen  (- length (count s))]
-; ;;     (condp = type
-; ;;       :right (str s (repeat padding padlen))
-; ;;       :both  (let [first (repeat padding (js/Math.ceil (/ padlen 2)))
-; ;;                    second (repeat padding (js/Math.floor (/ padlen 2)))]
-; ;;                (str first s second))
-; ;;       :left  (str (repeat padding padlen) s))))
-
-; #?(:cljs
-; (defn pad
-;   "Pads the str with characters until the total string
-;   length is equal to the passed length parameter. By
-;   default, pads on the left with the space char."
-;   {:attribution "funcool/cuerdas"}
-;   [s & [{:keys [length padding type]
-;          :or {length 0 padding " " type :left}}]]
-;   (when-not (nil? s)
-;     (let [padding (aget padding 0)
-;           padlen  (- length (count s))]
-;       (condp = type
-;         :right (str s (repeat padding padlen))
-;         :both  (let [first (repeat padding (js/Math.ceil (/ padlen 2)))
-;                      second (repeat padding (js/Math.floor (/ padlen 2)))]
-;                  (str first s second))
-;         :left  (str (repeat padding padlen) s))))))
-
-; (defn camelize
-;   "Converts a string from selector-case to camelCase."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (some-> s
-;           (trim)
-;           (replace #?(:clj  #"[-_\s]+(.)?"
-;                       :cljs (regexp #"[-_\s]+(.)?" "g"))
-;             (fn [[match c]] (if c (upper c) "")))))
-
-(defn camelize
-  "Returns dash separated string @s in camel case."
-  [s]
-  (->> (str/split (str s) #"-")
-       (map str/capitalize)
-       (str/join "-")))
-
-(defn kebabize [s]
-  (-> s
-      str/lower-case
-      (str/replace #"_" "-")))
-
-; #?(:cljs
-; (defn- parse-number-impl
-;   [source]
-;   (or (* source 1) 0)))
-
-; #?(:cljs
-; (defn parse-number
-;   "General purpose function for parse number like
-;   string to number. It works with both integers
-;   and floats."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (parse-number s 0))
-;   ([s precision]
-;    (if (nil? s)
-;      0
-;      (let [s  (trim s)
-;            rx #"^-?\d+(?:\.\d+)?$"]
-;        (if (.match s rx)
-;          (parse-number-impl (.toFixed (parse-number-impl s) precision))
-;          NaN))))))
-
-; #?(:cljs
-; (defn parse-float
-;   "Return the float value, wraps parseFloat."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (js/parseFloat s))
-;   ([s precision]
-;    (if (nil? precision)
-;      (js/parseFloat s)
-;      (-> (js/parseFloat s)
-;          (.toFixed precision)
-;          (js/parseFloat))))))
-
-; (defn parse-double
-;   "Return the double value from string."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s]
-;   (cond
-;     (nil? s) Double/NaN
-;     :else (Double/parseDouble s)))
-
-; #?(:cljs
-; (defn parse-int
-;   "Return the number value in integer form."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (let [rx (regexp "^\\s*-?0x" "i")]
-;     (if (.test rx s)
-;       (js/parseInt s 16)
-;       (js/parseInt s 10)))))
-
-; (defn parse-long
-;   "Return the long value from string."
-;   {:attribution "funcool/cuerdas"}
-;   [^String s]
-;   (cond
-;     (nil? s) Double/NaN
-;     :else (let [r (Double. (Double/parseDouble s))]
-;             (.longValue ^java.lang.Double r))))
-
-; (defn pad
-;   "Pads the str with characters until the total string
-;   length is equal to the passed length parameter. By
-;   default, pads on the left with the space char."
-;   {:attribution "funcool/cuerdas"}
-;   [s & [{:keys [length padding type]
-;          :or {length 0 padding " " type :left}}]]
-;   (when-not (nil? s)
-;     (let [padding (slice padding 0 1)
-;           padlen  (- length (count s))]
-;       (condp = type
-;         :right (str s (repeat padding padlen))
-;         :both  (let [first (repeat padding (Math/ceil (/ padlen 2)))
-;                      second (repeat padding (Math/floor (/ padlen 2)))]
-;                  (str first s second))
-;         :left  (str (repeat padding padlen) s)))))
-
-
-
-; #?(:cljs
-; (def html-escape-chars
-;   {"lt" "<"
-;    "gt" ">"
-;    "quot" "\""
-;    "amp" "&"
-;    "apos" "'"}))
-
-; #?(:cljs
-; (def reversed-html-escape-chars
-;   (map-invert html-escape-chars)))
-
-; ;; reversedEscapeChars["'"] = '#39';
-
-; #?(:cljs
-; (defn escape-html
-; {:attribution "funcool/cuerdas"}
-;   [s]
-;   "Converts HTML special characters to their entity equivalents."
-;   (let [escapechars (assoc reversed-html-escape-chars "'" "#39")
-;         rx (re-pattern "[&<>\"']")]
-;     (replace s rx (fn [x]
-;                     (str "&" (get escapechars x) ";"))))))
-
-; ;; Complete logic for unescape-html
-; ;;   if (entityCode in escapeChars) {
-; ;;     return escapeChars[entityCode];
-; ;;   } else if (match = entityCode.match(/^#x([\da-fA-F]+)$/)) {
-; ;;     return String.fromCharCode(parseInt(match[1], 16));
-; ;;   } else if (match = entityCode.match(/^#(\d+)$/)) {
-; ;;     return String.fromCharCode(~~match[1]);
-; ;;   } else {
-; ;;     return entity;
-; ;;   }
-
-; ;; TODO: basic implementation
-
-; #?(:cljs
-; (defn unescape-html
-;   "Converts entity characters to HTML equivalents."
-;   {:attribution "funcool/cuerdas"}
-;   [s]
-;   (replace s #"\&(\w+);" (fn [x y]
-;                            (cond
-;                              (cljs.core/contains? html-escape-chars y)
-;                              (get html-escape-chars y)
-;                              :else y)))))
-
-; (defn- strip-tags-impl
-; {:attribution "funcool/cuerdas"}
-;   [s tags mappings]
-;   (let [kwdize (comp keyword lower name)
-;         tags (cond
-;                (nil? tags) tags
-;                (string? tags) (hash-set (kwdize tags))
-;                (sequential? tags) (set (map kwdize tags)))
-;         rx   (re-pattern "<\\/?([^<>]*)>")
-;         replacer (if (nil? tags)
-;                    (fn #?(:clj [[match tag]] :cljs [match tag])
-;                      (let [tag (kwdize tag)]
-;                        (get mappings tag "")))
-;                    (fn #?(:clj [[match tag]] :cljs [match tag])
-;                      (let [tag (kwdize tag)]
-;                        (if (tags tag)
-;                          (get mappings tag "")
-;                          match))))]
-;     (replace s rx replacer)))
-
-; (defn strip-tags
-;   "Remove html tags from string."
-;   {:attribution "funcool/cuerdas"}
-;   ([s] (strip-tags-impl s nil {}))
-;   ([s tags]
-;    (if (map? tags)
-;        (strip-tags-impl s nil  tags)
-;        (strip-tags-impl s tags {}  )))
-;   ([s tags mapping]
-;    (strip-tags-impl s tags mapping)))
-
-; (defn substr-between
-;   "Find string that is nested in between two strings. Return first match"
-;   {:attribution "funcool/cuerdas"}
-;   [s prefix suffix]
-;   (cond
-;     (nil? s) nil
-;     (nil? prefix) nil
-;     (nil? suffix) nil
-;     (not (contains? s prefix)) nil
-;     (not (contains? s suffix)) nil
-;     :else
-;     (some-> s
-;             (split prefix)
-;             second
-;             (split suffix)
-;             first)))
+(defalias reverse str+/reverse)
 
 #?(:clj
 (defn remove-accents [^String s]
   {:attribution "github.com/jkk/sundry/string"}
   (-> (java.text.Normalizer/normalize s java.text.Normalizer$Form/NFD)
       (.replaceAll "[^\\p{ASCII}]" ""))))
+
+#?(:clj
+(defmacro istr
+  "'Interpolated string.' Accepts one or more strings; emits a `str` invocation that
+  concatenates the string data and evaluated expressions contained
+  within that argument.  Evaluation is controlled using ~{} and ~()
+  forms. The former is used for simple value replacement using
+  clojure.core/str; the latter can be used to embed the results of
+  arbitrary function invocation into the produced string.
+  Examples:
+      user=> (def v 30.5)
+      #'user/v
+      user=> (istr \"This trial required ~{v}ml of solution.\")
+      \"This trial required 30.5ml of solution.\"
+      user=> (istr \"There are ~(int v) days in November.\")
+      \"There are 30 days in November.\"
+      user=> (def m {:a [1 2 3]})
+      #'user/m
+      user=> (istr \"The total for your order is $~(->> m :a (apply +)).\")
+      \"The total for your order is $6.\"
+      user=> (istr \"Just split a long interpolated string up into ~(-> m :a (get 0)), \"
+               \"~(-> m :a (get 1)), or even ~(-> m :a (get 2)) separate strings \"
+               \"if you don't want a << expression to end up being e.g. ~(* 4 (int v)) \"
+               \"columns wide.\")
+      \"Just split a long interpolated string up into 1, 2, or even 3 separate strings if you don't want a << expression to end up being e.g. 120 columns wide.\"
+  Note that quotes surrounding string literals within ~() forms must be
+  escaped."
+  [& args] `(str+/istr ~@args)))
+
+; ===== EQUALITY ===== ;
+
+; Compare strings in a case-insensitive manner.
+; This function is locale independent.
+(defalias caseless= str+/caseless=)
+; Compare strings in a case-insensitive manner
+; respecting the current locale.
+; An optional locale can be passed as third
+; argument (only on JVM).
+(defalias locale-caseless= str+/locale-caseless=)

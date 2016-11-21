@@ -16,26 +16,3 @@
 (defn test:capitalize [s])
 
 (defn test:capitalize-each-word [string])
-
-(defn test:un-camelcase
-  [sym])
-
-(defn test:separate-camel-humps
-  [value])
-
-(defn test:->title-case
-  [value])
-
-(defn test:->camel-case [value])
-
-(defn test:->capital-camel-case
-  [value])
-
-(defn test:->snake-case
-  [value])
-
-(defn test:->spear-case
-  [value])
-
-(defn test:->human-case
-  [s])
