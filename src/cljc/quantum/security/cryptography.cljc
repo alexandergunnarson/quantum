@@ -312,7 +312,7 @@
            (->> (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA1")
                 (<- .generateSecret k)
                 (.getEncoded))
-         salt (conv/->str salt)
+         salt (conv/->text salt)
          ;(->> iterations (encode :base64) ->str)
          ]
      (kmap hashed salt iterations)))))
@@ -620,7 +620,7 @@
                  :cljs [_   (.update  decipher in-f)
                         _   (.finish  decipher)
                         out (.-output decipher)])]
-          (whenp out ->str? conv/->str)))))
+          (whenp out ->str? conv/->text)))))
 
 (defn encrypt
   {:tests '[(let [opts {:password "Alex"}

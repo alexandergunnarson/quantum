@@ -3,17 +3,14 @@
     :attribution "Alex Gunnarson"}
   quantum.core.data.complex.json
   (:require
-    [cognitect.transit        :as t    ]
 #?(:clj
-    [cheshire.core            :as json ])
-    [quantum.core.collections :as coll ]
+    [cheshire.core            :as json])
+    [cognitect.transit        :as t]
+    [quantum.core.collections :as coll]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [<- fn1])]
-      :refer-macros [          <- fn1]]
-    [quantum.core.logic       :as logic
-      :refer        [nnil?
-                     #?@(:clj [whenp])]
-      :refer-macros [whenp]]))
+      :refer [<- fn1]]
+    [quantum.core.logic
+      :refer [nnil? whenp]]))
 
 ; 2.888831 ms for Cheshire (on what?) vs. clojure.data.json : 7.036831 ms
 

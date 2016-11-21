@@ -285,13 +285,6 @@
   ; unaccounted-for arities from ->uri
 
 #?(:clj
-(defnt ->buffered
-  ([^java.io.BufferedInputStream  x] x)
-  ([^java.io.BufferedOutputStream x] x)
-  ([^java.io.InputStream          x] (BufferedInputStream.  x))
-  ([^java.io.OutputStream         x] (BufferedOutputStream. x))))
-
-#?(:clj
 (defnt ->observable ; O(1) ; TODO Reflection on clojure.lang.IndexedSeq
   ([^vector? v] (FXCollections/observableArrayList v))
   ([^listy?  l] (FXCollections/observableArrayList l))))
@@ -308,18 +301,18 @@
     (keyword (namespace x) (name x))))
 
 #?(:clj
-(defnt ^java.io.InputStream ->input-stream
+(defnt ^InputStream ->input-stream
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed and added to"}}
   (^{:cost 0} [^bytes? ary]
     (ByteArrayInputStream. ary))
   ([^String x]
     (-> x arr/->bytes ->input-stream))
-  (^{:cost 0} [^java.nio.ByteBuffer buf]
+  (^{:cost 0} [^ByteBuffer buf]
     (ByteBufferInputStream. (.duplicate buf))) ; in a different function, .duplicate is not used.
-  (^{:cost 0} [^java.nio.channels.ReadableByteChannel channel]
+  (^{:cost 0} [^ReadableByteChannel channel]
     (Channels/newInputStream channel))
-  (^{:cost 0} [^java.io.File x] (FileInputStream. x))
+  (^{:cost 0} [^File x] (FileInputStream. x))
   #_(^{:cost 0} [(stream-of bytes) s options]
     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
       (s/consume
@@ -367,7 +360,21 @@
   (^{:cost 0} [^WritableByteChannel channel]
     (Channels/newOutputStream channel))))
 
-(declare ->str)
+#?(:clj
+(defnt ^BufferedInputStream ->buffered-input-stream
+  ([^BufferedInputStream x] x)
+  ([^InputStream         x] (BufferedInputStream. x))
+  ([                     x] (-> x ->input-stream-protocol ->buffered-input-stream))))
+
+#?(:clj
+(defnt ->buffered
+  "Convert @`x` to a buffered InputStream or OutputStream."
+  ([^BufferedInputStream  x] x)
+  ([^BufferedOutputStream x] x)
+  ([^InputStream          x] (->buffered-input-stream  x))
+  ([^OutputStream         x] (BufferedOutputStream. x)))) ; TODO
+
+(declare ->text)
 
 #?(:clj
 (defnt ^ByteBuffer ->byte-buffer
@@ -409,7 +416,7 @@
   ; Costs unknown
   ; TODO add 'sequential?' to types
   #_([^sequential? x] (-> x (map ->byte-buffer) ->byte-buffer))
-  ([^char?       x] (-> x ->str ->byte-buffer))
+  ([^char?       x] (-> x ->text ->byte-buffer))
   ([^number?     x] (-> x ->byte byte-array ->byte-buffer))))
 
 ; ;; byte-buffer => vector of byte-buffers
@@ -541,7 +548,7 @@
   ([^java.nio.CharBuffer x] x)
   ([            x] (when x (-> x ->char-seq CharBuffer/wrap)))))
 
-(defnt ^String ->str
+(defnt ^String ->text
   {:contributors {"Alex Gunnarson"        "defnt-ed"
                   "ztellman/byte-streams" nil
                   "funcool/octet"         nil}
@@ -554,7 +561,7 @@
   #?(:clj  ([^integer? n radix]
              #?(:clj  (.toString (biginteger n) radix)
                 :cljs (.toString n radix))))
-           ([^bytes?  x        ] (->str x nil))
+           ([^bytes?  x        ] (->text x nil))
            ([^bytes?  x options]
              #?(:clj
                   (let [encoding (get options :encoding "UTF-8")]
@@ -563,7 +570,7 @@
                   (let [view     (js/Uint8Array. (.subarray input 0 (lasti x))) ; TODO maybe just copy it?
                         encoding (.-fromCharCode js/String)]
                     (.apply encoding nil view))))
-           ([^keyword? k] (->str k "/"))
+           ([^keyword? k] (->text k "/"))
            ([^keyword? k joiner]
              (->> [(namespace k) (name k)]
                   (core/remove empty?)
@@ -597,7 +604,7 @@
       (.toString sb)))
   #?(:clj  ; CANDIDATE 0
            ([^InputStream in]
-             (->str in (->str (Charset/defaultCharset)))))
+             (->text in (->text (Charset/defaultCharset)))))
   #?(:clj  ([^InputStream in enc]
              (with-open [bout (StringWriter.)]
                (io/copy in bout :encoding enc)
@@ -612,6 +619,7 @@
                    arr (byte-array n)]
                (.read in-stream arr, 0 n)
                (String. arr java.nio.charset.StandardCharsets/UTF_8))))
+  #?(:clj  ([^File f] (-> f ->buffered-input-stream ->text)))
   ; Port this
 #_([x options] (streams/convert x String options))
            ([:else x] (str x)))

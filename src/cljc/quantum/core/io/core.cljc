@@ -8,7 +8,7 @@
     #?(:clj  [clojure.java.io            :as io])
     #?(:clj  [iota                       :as iota])
              [quantum.core.convert       :as conv
-               :refer [->name ->str]]
+               :refer [->name]]
              [quantum.core.error         :as err
                :refer [->ex TODO throw-unless]]
              [quantum.core.fn            :as fn
@@ -150,7 +150,7 @@
     (validate method #{:compress :pretty :serialize :print})
     (assert (not (and path (:path opts))))
     (assert (not (and data (:data opts))))
-    #?(:cljs (js/localStorage.setItem (apply quantum.core.paths/path path) (->str data))
+    #?(:cljs (js/localStorage.setItem (apply quantum.core.paths/path path) (conv/->text data))
        :clj  (let [path-f (p/parse-dir path)]
                (validate path-f string?)
                (err/try-times max-tries 500

@@ -3,7 +3,7 @@
             [com.stuartsierra.component  :as component]
     #?(:clj [clojure.java.io             :as io])
             [quantum.core.convert        :as conv
-              :refer        [->name ->str]]
+              :refer        [->name]]
             [quantum.core.collections    :as coll
               :refer        [#?(:clj kmap)]
               :refer-macros [        kmap]]
