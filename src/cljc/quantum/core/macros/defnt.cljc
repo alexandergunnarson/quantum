@@ -452,7 +452,7 @@
     (let [externs       (atom [])
           sym           (with-meta sym-0 (-> sym-0 meta (dissoc :inline)))
           sym-with-meta (with-meta sym (merge {:doc doc-} meta- (-> sym meta (dissoc :tag))))
-          tag           (-> sym meta :tag)
+          tag           (get-qualified-class-name lang ns- (-> sym meta :tag))
           body          (mfn/optimize-defn-variant-body! body externs)
           env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs tag)
                   (merge-call defnt-arities
