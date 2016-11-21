@@ -55,6 +55,7 @@
       "%40" "@"
       "%5B" "["
       "%5D" "]"}})
+  ; TODO there are quite a few more codes than this...
 
 
 ; TODO extend this
@@ -66,7 +67,9 @@
 
 (defn decode
   {:todo ["Determine whether it's been double-encoded"]}
-  [code-map-key s]
+  ([s] #?(:clj  (java.net.URLDecoder/decode ^String s)
+          :cljs (js/decodeURIComponent              s)))
+  ([code-map-key s]
   (if (= code-map-key :all)
       (->> s
            (decode :url-reserved)
@@ -81,19 +84,11 @@
           (rfn [ret percent-code assoc-char]
             (str/replace ret percent-code assoc-char))
           s
-          code-map))))
+          code-map)))))
 
 (defn encode [s]
-  (let [encoding-map
-         (-> (mergel
-               (coll/reverse-kvs (:common   url-percent-codes))
-               (coll/reverse-kvs (:reserved url-percent-codes)))
-             (dissoc "." "-" "%"))]
-    (reduce
-      (rfn [ret char-n percent-code]
-        (str/replace ret char-n percent-code))
-      (str/replace s "%" "%25") ; pre-replace all %
-      encoding-map)))
+  #?(:clj  (java.net.URLEncoder/encode ^String s)
+     :cljs (js/encodeURIComponent              s)))
 
 (defn url-params->map
   [str-params & [decode?]]
