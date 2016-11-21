@@ -137,12 +137,11 @@
 (defmethod coerce-response-content-type "application/json" [req] (update req :body (fn1 conv/->json)))
 (defmethod coerce-response-content-type "application/text" [req]
   (update req :body
-    #(if (or #?@(:clj  [(instance? java.io.InputStream %)
-                        (instance? java.nio.Buffer     %)
-                        (instance? java.io.File        %)]
-                 :cljs [false]))
+    #(if (or (instance? java.io.InputStream %)
+             (instance? java.nio.Buffer     %)
+             (instance? java.io.File        %))
          %
-         :else (conv/->text %))))
+         (conv/->text %))))
 
 (defn wrap-coerce-response-content-type
   [handler] (fn [request] (coerce-response-content-type (handler request))))
