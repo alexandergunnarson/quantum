@@ -134,7 +134,7 @@
 
 ;(defalias <!! take!!)
 
-(declare <!!)
+#?(:clj (defalias <!! async/<!!))
 
 (defalias take! async/take!)
 
@@ -153,7 +153,7 @@
 
 (declare put!!)
 
-(declare >!!)
+#?(:clj (defalias >!! async/>!!))
 
 (defalias offer! async/offer!)
 
