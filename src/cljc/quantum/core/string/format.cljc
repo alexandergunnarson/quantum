@@ -51,28 +51,23 @@
 ; ====== CASES ======
 
 (defnt ->lower-case
+  "Converts string to all lower-case.
+   Works in strictly locale independent way.
+   If you want a localized version, use `->locale-lower`."
           ([^string? s] (.toLowerCase s))
   #?(:clj ([^char?   c] (Character/toLowerCase c))))
 (defalias ->lower ->lower-case)
 
 (defnt ->upper-case
+  "Converts string to all upper-case.
+   Works in strictly locale independent way.
+   If you want a localized version, use `->locale-upper`."
           ([^string? s] (.toUpperCase s))
   #?(:clj ([^char?   c] (Character/toUpperCase c))))
 (defalias ->upper ->upper-case)
 
 ; CANDIDATE 0
 (def capitalize  str/capitalize)
-
-; CANDIDATE 1
-#_(defn capitalize
-  "Converts first letter of the string to uppercase."
-  {:attribution "funcool/cuerdas"}
-  [s]
-  (when-not (nil? s)
-    (-> (.charAt ^String s 0)
-        #?(:clj (String/valueOf))
-        ->upper
-        (str (slice s 1)))))
 
 (defn capitalize-each-word [string]
   (str/join " "

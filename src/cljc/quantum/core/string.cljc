@@ -10,38 +10,30 @@
            (:refer-clojure :exclude
              [reverse replace remove val re-find reduce boolean?])
            (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )     :as core]
+             [clojure.core               :as core]
              [clojure.string             :as str]
              [frak]
+             [cuerdas.core               :as str+]
              [quantum.core.data.map      :as map]
              [quantum.core.data.set      :as set]
              [quantum.core.fn            :as fn
-               :refer        [#?@(:clj [fn-> fn1])]
-               :refer-macros [          fn-> fn1]]
+               :refer [fn-> fn1]]
              [quantum.core.logic         :as logic
-               :refer        [nempty?
-                              #?@(:clj [fn-and whenc whenc1 ifn condf])]
-               :refer-macros [          fn-and whenc whenc1 ifn condf] ]
+               :refer [nempty? fn-and whenc whenc1 ifn condf]]
              [quantum.core.loops         :as loops
-               :refer        [#?@(:clj [reduce reducei])]
-               :refer-macros [          reduce reducei]]
+               :refer [reduce reducei]]
              [quantum.core.macros        :as macros
-               :refer        [#?@(:clj [defnt defnt'])]
-               :refer-macros [          defnt defnt']]
+               :refer [defnt defnt']]
              [quantum.core.collections.core
-               :refer        [#?@(:clj [containsv?])]
-               :refer-macros [          containsv?]]
+               :refer [containsv?]]
              [quantum.core.collections.logic
-               :refer        [seq-and]]
+               :refer [seq-and]]
              [quantum.core.string.format :as form]
              [quantum.core.string.regex  :as regex]
              [quantum.core.vars          :as var
-               :refer        [#?@(:clj [defalias])]
-               :refer-macros [          defalias]]
+               :refer [defalias]]
              [quantum.core.type          :as type
-               :refer        [#?(:clj boolean?)]
-               :refer-macros [        boolean?]])
+               :refer [boolean?]])
   #?(:clj (:import
              java.net.IDN
              java.util.regex.Pattern)))
@@ -127,19 +119,14 @@
 ; ===== PARTIAL PREDICATES =====
 
 (defnt starts-with?
-  {:todo ["Make more portable by looking at java.lang.String/startsWith"]}
-  ([^string? super sub]
-    #?(:clj  (.startsWith super ^String sub)
-       :cljs (zero? (.indexOf super sub)))) ; .startsWith is not implemented everywhere
+  "Check if the string starts with prefix."
+  ([^string? super sub] (str+/starts-with? super sub))
   ([^keyword? super sub]
     (starts-with? (name super) sub)))
 
-(declare ends-with?-protocol)
 (defnt ends-with?
-  {:todo ["Make more portable by looking at java.lang.String/endsWith"]}
-  ([^string? super sub]
-    #?(:clj  (.endsWith super ^String sub)
-       :cljs (str/ends-with? super sub))) ; .endsWith is not implemented everywhere
+  "Check if the string ends with suffix."
+  ([^string? super sub] (str+/ends-with? super sub))
   ([^keyword? super sub]
     (ends-with? (name super) sub)))
 
@@ -228,58 +215,17 @@
     s
     m))
 
-(def replace-uchars
+(def replace-uchars ; TODO much more to this
   (fn-> (str/replace "\\u0026" "&")))
 
 ; ===== TRIMMING =====
 
-; CANDIDATE 0
-(def trim        str/trim)
-; CANDIDATE 1
-#_(defn trim
-  "Removes whitespace or specified characters
-  from both ends of string."
-  {:attribution "funcool/cuerdas"}
-  ([s] (trim s " "))
-  ([s chs]
-   (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
-           rxstr (str "^" rxstr "+|" rxstr "+$")]
-       (as-> (re-pattern rxstr) rx
-             (replace s rx ""))))))
-
-; CANDIDATE 0
-(def triml       str/triml)
-; CANDIDATE 1
-#_(defn ltrim
-  "Removes whitespace or specified characters
-  from left side of string."
-  {:attribution "funcool/cuerdas"}
-  ([s] (ltrim s " "))
-  ([s chs]
-   (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
-           rxstr (str "^" rxstr "+")]
-       (as-> (re-pattern rxstr) rx
-             (replace s rx ""))))))
-
-; CANDIDATE 0
-(def trimr       str/trimr)
-; CANDIDATE 1
-#_(defn rtrim
-  "Removes whitespace or specified characters
-  from right side of string."
-  ([s] (rtrim s " "))
-  ([s chs]
-   (when-not (nil? s)
-     (let [rxstr (str "[" #?(:clj chs :cljs (regex/escape chs)) "]")
-           rxstr (str rxstr "+$")]
-       (as-> (re-pattern rxstr) rx
-             (replace s rx ""))))))
-
-(defalias strip  trim)
-(defalias stripr trimr)
-(defalias stripl triml)
+(defalias trim   str+/trim )
+(defalias strip  trim      )
+(defalias triml  str+/ltrim)
+(defalias stripl triml     )
+(defalias trimr  str+/rtrim)
+(defalias stripr trimr     )
 
 ; CANDIDATE 0
 (defn collapse-whitespace
