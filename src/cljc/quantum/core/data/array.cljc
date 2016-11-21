@@ -7,36 +7,28 @@
     [== reverse boolean-array byte-array char-array short-array
      int-array long-array float-array double-array
      doseq])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )        :as core  ]
-             #?(:clj [loom.alg-generic              :as alg   ]) ; temporarily
+           (:require [clojure.core                  :as core]
+             #?(:clj [loom.alg-generic              :as alg]) ; temporarily
                      [quantum.core.collections.base :as cbase
                        :refer [reducei]]
-                     [quantum.core.type.core        :as tcore ]
+                     [quantum.core.type.core        :as tcore]
                      [quantum.core.core             :as qcore
-                       :refer [name+]                        ]
+                       :refer [name+]]
                      [quantum.core.fn               :as fn
-                       :refer        [#?@(:clj [<- fn->])]
-                       :refer-macros [          <- fn->]]
+                       :refer [<- fn->]]
                      [quantum.core.logic            :as logic
-                       :refer [#?@(:clj [whenc])]            ]
+                       :refer [whenc]]
                      [quantum.core.loops            :as loops
-                       :refer [#?@(:clj [doseqi doseq])]     ]
+                       :refer [doseqi doseq]]
                      [quantum.core.macros           :as macros
-                       :refer [#?@(:clj [defnt defnt'])]     ]
+                       :refer [defnt defnt']]
                      [quantum.core.compare :as comp]
                      [quantum.core.numeric :as num]
+                     [quantum.core.type
+                       :refer [static-cast]]
                      [quantum.core.vars             :as var
-                       :refer [#?(:clj defalias)]            ])
+                       :refer [defalias]])
   #?(:cljs (:require-macros
-                     [quantum.core.logic            :as logic
-                       :refer [whenc]                        ]
-                     [quantum.core.loops            :as loops
-                       :refer [doseqi doseq]                 ]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt defnt']                 ]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]                     ]
                      [quantum.core.data.array
                        :refer [gen-typed-array-defnts]]))
   #?(:clj  (:import  [java.io ByteArrayOutputStream]
@@ -229,7 +221,7 @@
         (let [^bytes arr (byte-array (.remaining buf))]
           (doto buf .mark (.get arr) .reset)
           arr)))
-  (^{:cost 1.5} [^java.io.InputStream in options]
+  (^{:cost 1.5} [^java.io.InputStream in]
     (let [out (ByteArrayOutputStream. (comp/max 64 (.available in)))
           buf (byte-array 16384)]
       (loop []
@@ -238,6 +230,9 @@
             (.write out buf 0 len)
             (recur))))
       (.toByteArray out)))
+  ([^java.io.File x]
+    (let [in (java.io.FileInputStream. x)]
+      (->bytes (static-cast java.io.InputStream (java.io.BufferedInputStream. in)))))
   #_(^{:cost 2} [#'proto/ByteSource src options]
     (let [os (ByteArrayOutputStream.)]
       (transfer src os)
