@@ -115,6 +115,7 @@
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ]
        ; ==== STRING ====
+         [funcool/cuerdas                       "2.0.1"           ]
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====
@@ -178,13 +179,6 @@
      ; ==== HTTP ====
        [com.taoensso/sente                      "1.8.1"             ; WebSockets
          :exclusions [com.taoensso/encore]                        ]
-       [clj-http                                "3.3.0"
-         :exclusions [riddley
-                      cheshire
-                      org.json/json
-                      com.fasterxml.jackson.core/jackson-core
-                      commons-codec
-                      potemkin]                                   ]
        [cljs-http                               "0.1.41"
          :exclusions [com.cognitect/transit-cljs]]
        [less-awful-ssl                          "1.0.1"           ]
@@ -199,8 +193,7 @@
        [compojure                               "1.5.0"
          :exclusions [org.eclipse.jetty/jetty-server
                       org.eclipse.jetty/jetty-servlet
-                      javax.servlet/servlet-api
-                      clj-http]                                   ]
+                      javax.servlet/servlet-api]]
        [org.eclipse.jetty/jetty-server          "9.4.0.M0"        ]
        [org.immutant/web                        "2.1.4"
          :exclusions [clj-tuple
