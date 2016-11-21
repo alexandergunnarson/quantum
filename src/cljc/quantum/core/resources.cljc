@@ -88,7 +88,7 @@
          ; Release resources in reverse order of acquisition
          (doseq [resource# ~(->> bindings (partition-all 2) (map first) reverse vec)]
            (catch-all (cleanup! resource#) e#
-             (log/ppr :warn "Failed attempting to release resource" {:resource resource#}))))))))
+             (log/ppr :warn "Failed attempting to release resource" {:resource resource# :error e#}))))))))
 
 ; ======= SYSTEM ========
 
