@@ -122,12 +122,12 @@
 (defnt letters?
   "Checks if string contains only letters.
    This function will use all the unicode range."
-  ([^string x] (str+/letters? x)))
+  ([^string? x] (str+/letters? x)))
 
 (defnt word?
   "Checks if a string contains only the word characters.
    This function will use all the unicode range."
-  ([^string x] (str+/word? x)))
+  ([^string? x] (str+/word? x)))
 
 (defnt blank?
 #?(:clj
@@ -179,10 +179,10 @@
 (defnt split*
   #?(:cljs ([^nil?    sep x  ] x))
   #?(:cljs ([^nil?    sep x n] x))
-           ([^string? sep x  ] (str/split x sep  ))
-           ([^string? sep x n] (str/split x sep n))
-           ([^regex?  sep x  ] (str/split x (re-pattern (regex/escape sep))  ))
-           ([^regex?  sep x n] (str/split x (re-pattern (regex/escape sep)) n))
+           ([^string? sep x  ] (str/split x (re-pattern (regex/escape sep))  ))
+           ([^string? sep x n] (str/split x (re-pattern (regex/escape sep)) n))
+           ([^regex?  sep x  ] (str/split x sep  ))
+           ([^regex?  sep x n] (str/split x sep n))
    #?(:clj ([         sep x n] (if (nil? sep) x (throw (->ex "`split*` not supported for type" {:type (type sep)}))))))
 
 (defnt split

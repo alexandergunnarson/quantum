@@ -101,10 +101,10 @@
   {:source "zcaudate/hara.object.util"}
   ([name] (clojure->java name :get))
   ([^String name suffix]
-   (let [nname (cond (ends-with? name "?")
+   (let [nname (cond (str/ends-with? name "?")
                      (str "is-" (.substring name 0 (.length name)))
 
-                     (ends-with? name "!")
+                     (str/ends-with? name "!")
                      (str "has-" (.substring name 0 (.length name)))
 
                      :else
