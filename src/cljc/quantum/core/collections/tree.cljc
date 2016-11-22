@@ -137,7 +137,7 @@
   "Recursively transforms all map keys from strings to proper keywords."
   {:attribution "Alex Gunnarson"}
   [x]
-  (apply-to-keys x str/keywordize))
+  (apply-to-keys x (fn1 str/keywordize)))
 
 (defn keywordify-keys
   "Recursively transforms all map keys from strings to keywords."

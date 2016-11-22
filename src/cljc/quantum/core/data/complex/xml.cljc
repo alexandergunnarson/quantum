@@ -2,12 +2,12 @@
   ^{:doc "Useful XML functions."
     :attribution "Alex Gunnarson"}
   quantum.core.data.complex.xml
-  (:refer-clojure :exclude [split])
+  (:refer-clojure :exclude [reduce split])
   (:require
 #?@(:clj
    [[clojure.data.xml              :as cxml]])
     [quantum.core.collections      :as coll
-      :refer [lasti map+ partition-all+ join]]
+      :refer [lasti map+ partition-all+ join reduce unique-conj]]
     [quantum.core.error            :as err
       :refer [->ex TODO]]
     [quantum.core.fn               :as fn
@@ -163,7 +163,7 @@
 
 ; ==== PLIST PARSING ====
 
-(def ^:dynamic *keywordize?* false)
+(def ^:dynamic *keywordize* identity)
 (def ^:dynamic *skip-unparseable* #{})
 
 (defmulti parse-plist (fn [x] (:tag x)))
@@ -182,12 +182,12 @@
   (-> x first-content time/->zoned-date-time))
 
 (defmethod parse-plist :dict [x]
-  (->> x :content (map+ parse-plist) (partition-all+ 2) (join {})))
+  (->> x :content (map+ parse-plist) (partition-all+ 2) (reduce unique-conj {})))
 
 (defmethod parse-plist :true    [x] true)
 (defmethod parse-plist :false   [x] false)
 
-(defmethod parse-plist :key     [x] (-> x first-content (whenp *keywordize?* keyword)))
+(defmethod parse-plist :key     [x] (-> x first-content *keywordize*))
 
 (defmethod parse-plist :integer [x] (str/val (first-content x)))
 (defmethod parse-plist :real    [x] (str/val (first-content x)))
@@ -201,4 +201,4 @@
   ; TODO Just [x opts] gives `clojure.lang.ArityException: Wrong number of args (2)` when you pass a `file?` or `string?`
   ; This is because in the protocol, the function relating to `file?` or `string?` is found, but only has one argument,
   ; rather than trying to first find by arity, then by class
-  ([#{string? file?} x opts] (binding [*keywordize?* (:keywordize? opts)] (lparse x)))))
+  ([#{string? file?} x opts] (binding [*keywordize* (:keywordize opts)] (lparse x)))))

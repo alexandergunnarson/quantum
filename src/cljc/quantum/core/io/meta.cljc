@@ -35,11 +35,11 @@
 (def- parsers
   (let [bit-rate-parser (fn-> (str/remove "Kbps") str/trim str/val)]
     {:frame-rate       (fn->> (dropr 4) str/val)
-     :format           str/keywordize
+     :format           (fn1 str/keywordize)
      :maximum-bit-rate bit-rate-parser
      :bit-rate         bit-rate-parser
      :nominal-bit-rate bit-rate-parser
-     :bit-rate-mode    str/keywordize
+     :bit-rate-mode    (fn1 str/keywordize)
      :channels         (fn-> (str/remove "channels") str/trim str/val)}))
 
 (def- rekey-map {(keyword "bits/(pixel*frame)") :bits-per-pixel*frame

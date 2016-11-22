@@ -42,7 +42,7 @@
       {:url     "https://api.amazon.com/auth/o2/token"
        :method  :post
        :headers {"Content-Type" "application/x-www-form-urlencoded"}
-       :middleware (fn1 update :body (fn1 conv/json-> str/keywordize))
+       :middleware (fn1 update :body (fn1 conv/json-> (fn1 str/keywordize)))
        :form-params
          {"grant_type"    "authorization_code"
           "code"          code
@@ -60,7 +60,7 @@
              {:url "https://api.amazon.com/auth/o2/token"
               :method :post
               :headers {"Content-Type" "application/x-www-form-urlencoded"}
-              :middleware        (fn1 update :body (fn1 conv/json-> str/keywordize))
+              :middleware        (fn1 update :body (fn1 conv/json-> (fn1 str/keywordize)))
               :form-params
                 {"grant_type"    "refresh_token"
                  "refresh_token" (-> auth-ks :access-tokens :offline :refresh-token)

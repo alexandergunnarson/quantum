@@ -51,7 +51,7 @@
                              (str/->path (get base-urls url-type) (name k)))
            :method       method
            :query-params query-params
-           :middleware   (fn1 update :body (fn1 conv/json-> str/keywordize))
+           :middleware   (fn1 update :body (fn1 conv/json-> (fn1 str/keywordize)))
            :handlers
             {401 (fn [req resp]
                    (amz-auth/refresh-token! username)
