@@ -65,7 +65,7 @@
              [quantum.core.error                      :as err
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
-               :refer        [fn-nil juxt-kv withf->>
+               :refer        [rfn fn-nil juxt-kv withf->>
                               #?@(:clj [rcomp <- fn-> fn->> fn1])]
                :refer-macros [          rcomp <- fn-> fn->> fn1]]
              [quantum.core.log                        :as log
@@ -511,6 +511,12 @@
   "Like into, but for transients"
   [^transient? x coll]
   (doseq [elem coll] (conj! x elem)) x)
+
+(def unique-conj
+  (rfn [ret k v]
+    (if (contains? ret k)
+        (throw (->ex nil "Duplicate key not allowed" (kmap k)))
+        (assoc ret k v))))
 
 (defn butlast+last
   "Returns same value as (juxt butlast last), but slightly more

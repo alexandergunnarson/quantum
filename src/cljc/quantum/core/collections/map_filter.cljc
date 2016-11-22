@@ -77,8 +77,8 @@
 (defeager map-indexed red/map-indexed+)
 
 ; TODO do eager versions
-(defn map-keys+ [f coll] (->> coll (map+ (rcomp key f))))
-(defn map-vals+ [f coll] (->> coll (map+ (rcomp val f))))
+(defn map-keys+ [f coll] (->> coll (map+ (juxt (rcomp key f) val))))
+(defn map-vals+ [f coll] (->> coll (map+ (juxt key (rcomp val f)))))
 
 ; ============================ FILTER ============================ ;
 

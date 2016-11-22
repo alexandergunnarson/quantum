@@ -173,7 +173,7 @@
     3
       (let [[k v coll] bindings]
         `(reduce
-           (fn [_# ~k ~v]
+           (rfn [_# ~k ~v]
                  ~@body
                  nil)
            nil
@@ -181,7 +181,7 @@
     2
       (let [[elem coll] bindings]
         `(reduce
-           (fn [_# ~elem]
+           (rfn [_# ~elem]
                  ~@body
                  nil)
            nil
