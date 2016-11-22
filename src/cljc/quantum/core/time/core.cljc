@@ -35,7 +35,7 @@
   (:import
     [java.util Date Calendar]
     [java.util.concurrent TimeUnit]
-    [java.time Month LocalDate LocalTime LocalDateTime ZonedDateTime ZoneId]
+    [java.time Month LocalDate LocalTime LocalDateTime ZonedDateTime ZoneId ZoneOffset]
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor ChronoField])))
 
@@ -223,14 +223,12 @@
 #?(:clj (defn + [^Instant a ^Duration b]
   (Instant. (core/+ (:nanos a) (:nanos b)))))
 
-
 (defnt ^long ->unix-millis
   #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMilli)))
              ([^java.util.Date          x] (-> x (.getTime)     ))
              ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis)))
-             ([^java.time.LocalTime     x] (-> x (.toNanoOfDay) (convert :nanos :millis)))
-             ([^java.time.LocalDateTime x] (core/+ (-> x (.toLocalDate) ->unix-millis)
-                                                   (-> x (.toLocalTime) ->unix-millis)))
+             ([^java.time.LocalDateTime x] (-> x (.toInstant ZoneOffset/UTC) ->unix-millis))
+             ([^java.time.ZonedDateTime x] (-> x .toInstant ->unix-millis))
              ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
              ([^java.util.Calendar      x] (-> x (.getTimeInMillis)))]
       :cljs [([^number?                 x] (->long x))
@@ -356,6 +354,9 @@
   ^{:doc "Obtain the current date and time in the system default timezone"}
   ([] (if-cljs &env `(js/JSJoda.LocalDateTime.now) `(LocalDateTime/now)))
   ([x & args] `(->local-date-time* ~x ~@args))))
+
+(defonce min-local-date-time
+  (quantum.core.time.core/->local-date-time -999999999 1 1 0 0))
 
 (defnt ^{:tag #?(:clj ZonedDateTime :cljs js/JSJoda.ZonedDateTime)} ->zoned-date-time*
   "Coerces to a date and time with a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30+01:00’."

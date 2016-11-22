@@ -5,12 +5,10 @@
                      [quantum.core.core
                        :refer        [deref* lens]                  ]
                      [quantum.core.fn                  :as fn
-                       :refer        [#?@(:clj [fn-> with-do])]
-                       :refer-macros [fn-> with-do]]
-                     [quantum.core.log                 :as log
-                       :include-macros true                         ]
+                       :refer        [fn-> with-do]]
+                     [quantum.core.log                 :as log]
                      [quantum.core.macros.core         :as cmacros
-                       :refer        [#?@(:clj [if-cljs])]          ]
+                       :refer        [if-cljs]]
                      [quantum.core.resources           :as res      ]
                      [quantum.core.async               :as async    ]
                      [quantum.db.datomic               :as db       ]
