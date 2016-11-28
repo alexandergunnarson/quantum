@@ -85,7 +85,7 @@
          (defnt regex?      ([^regex?      obj] true) ([obj] false))
          (defnt editable?   ([^editable?   obj] true) ([#?(:cljs :else) obj] false))
          (defnt transient?  ([^transient?  obj] true) ([obj] false))
-
+         (defnt bytes?      ([^bytes?      obj] true) ([obj] false))
          (defnt array?
            ([^array? x] true)
            ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* array types in `defnt`
@@ -108,11 +108,10 @@
 (defalias map-entry? tpred/map-entry?)
 (defalias atom?      tpred/atom?)
 
-#?(:clj  (defnt double? ([^double? obj] true) ([obj] false))
-   :cljs (def double?
-           (fn-and
-             core/number?
-             #(not (zero? (rem % 1))))))
+#?(:clj  (defnt    double? ([^double? obj] true) ([obj] false))
+   :cljs (defalias double? core/number?))
+#?(:clj  (defnt    float?  ([^float?  obj] true) ([obj] false))
+   :cljs (defalias float?  core/number?))
          (defalias vector+? vec/vector+?)
 #?(:clj  (def indexed?   (partial instance+? clojure.lang.Indexed)))
 #?(:clj  (def throwable? (partial instance+? java.lang.Throwable )))
@@ -127,6 +126,7 @@
 (defnt abstract?
   [^java.lang.Class class-]
   (java.lang.reflect.Modifier/isAbstract (.getModifiers class-))))
+
 
 #?(:clj (def multimethod? (partial instance? clojure.lang.MultiFn)))
 
