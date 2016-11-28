@@ -288,3 +288,6 @@
 #?(:clj (def descendant-leaves (fn->> ->file file-seq (remove directory-?))))
 #?(:clj (def internal-nodes    (fn->> ->file file-seq (filter directory-?))))
 #?(:clj (def descendant-dirs internal-nodes))
+
+; TODO
+#?(:cljs (defrecord URI [path]))
