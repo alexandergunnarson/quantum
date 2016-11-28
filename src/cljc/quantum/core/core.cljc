@@ -150,9 +150,10 @@
 
 (defn name+ [x] (if (nil? x) x (name x)))
 
+(defn ns-keyword? [x] (boolean (and (keyword? x) (namespace x))))
+
 ; Nested |let-mutable| :
     ; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
-
 
 #?(:cljs
 (defn ensure-println [& args]
