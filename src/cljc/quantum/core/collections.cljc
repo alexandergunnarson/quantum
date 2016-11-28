@@ -515,7 +515,7 @@
 (def unique-conj
   (rfn [ret k v]
     (if (contains? ret k)
-        (throw (->ex nil "Duplicate key not allowed" (kmap k)))
+        (throw (->ex nil "Duplicate key not allowed" {:k k}))
         (assoc ret k v))))
 
 (defn butlast+last
