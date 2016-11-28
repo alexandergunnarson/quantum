@@ -3,7 +3,7 @@
   quantum.db.datomic.core
   (:refer-clojure :exclude
     [assoc assoc! dissoc dissoc! conj conj! disj disj!
-     update merge if-let for])
+     update merge if-let for float? double?])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -17,9 +17,8 @@
     [quantum.core.error         :as err
       :refer [->ex]]
     [quantum.core.fn            :as fn
-      :refer [<- fn-> fn->> fn1]]
-    [quantum.core.log           :as log
-      :include-macros true]
+      :refer [<- fn-> fn->> fn1 fn$ rfn]]
+    [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
       :refer [fn-not fn-and fn-or whenf
               whenf1 ifn ifn1 if-let
@@ -27,12 +26,14 @@
     [quantum.core.print         :as pr]
     [quantum.core.resources     :as res]
     [quantum.core.process       :as proc]
-    [quantum.core.type          :as type
-      :refer [atom?]]
+    [quantum.core.type        :as type
+      :refer [#?@(:clj [float? double? bigint?]) atom? boolean? bytes?]]
     [quantum.core.vars          :as var
       :refer [defalias]]
+    [quantum.core.data.validated
+      :refer [def-validated def-validated-map]]
     [quantum.core.validate      :as v
-      :refer [validate]])
+      :refer [validate defspec]])
 #?(:clj
     (:import
       datomic.Peer
@@ -242,7 +243,8 @@
 
 ; ===== SCHEMAS =====
 
-(def allowed-types
+(def ^{:doc "See also |quantum.db.datomic.core/allowed-types|."}
+  allowed-types
  #{:keyword
    :string
    :boolean
@@ -256,6 +258,31 @@
    :uuid
    :uri
    :bytes})
+
+; TODO
+; :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
+; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
+; :uuid    (fn$ instance? db/SQUUID)
+(def-validated -schema  (constantly true)) ; TODO not correct but whatever
+(def-validated -any     (constantly true))
+(def-validated -keyword keyword?)
+(def-validated -string  string?)
+(def-validated -boolean (fn1 boolean?))
+(def-validated -long    #?(:clj  (fn-or (fn$ instance? Long   )
+                                        (fn$ instance? Integer)
+                                        (fn$ instance? Short  )) #_long?
+                           :cljs integer?)) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
+(def-validated -bigint  #?(:clj  (fn1 bigint?)
+                           :cljs integer?)) ; TODO CLJS |bigint?|
+(def-validated -float   #?(:clj  (fn1 float?)
+                           :cljs number?))  ; TODO CLJS |float?|
+(def-validated -double  #?(:clj  (fn1 double?)
+                           :cljs number?))
+(def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
+                           :cljs number?)) ; TODO CLJS |bigdec?|
+(def-validated -instant (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )))
+(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs paths/URI)))
+(def-validated -bytes   (fn1 bytes?))
 
 ; ===== QUERIES =====
 
@@ -315,66 +342,56 @@
            [:db/add :db.part/db
             :db.install/partition id]]))))
 
+(def-validated-map intermediate-schema
+  :invariant #(if (:datomic:schema/component? %)
+                  (-> % datomic:schema/type (= :ref))
+                  true)
+  :req-un [(def :datomic:schema/ident       keyword?)
+           (def :datomic:schema/type        allowed-types)
+           (def :datomic:schema/cardinality #{:one :many})]
+  :opt-un [(def :datomic:schema/doc         string?)
+           (def :datomic:schema/component?  (fn1 boolean?))
+           (def :datomic:schema/index?      (fn1 boolean?))
+           (def :datomic:schema/full-text?  (fn1 boolean?))
+           (def :datomic:schema/unique      #{:identity :value})])
+
+; TODO for datascript:
+#_(fn->> (map+ (juxt :db/ident identity))
+         (join {}))
+
 (defn ->schema
-  "Defines, but does not transact, a new database schema.
-   Takes the pain out of schema creation."
-  {:usage '(->schema :person.name/family-name :string :one {:doc "nodoc"})}
-  ([ident cardinality val-type]
-    (->schema ident cardinality val-type nil))
-  ([ident cardinality val-type {:keys [conn part] :as opts}]
-    (validate val-type allowed-types)
-    (let [conn-f (or conn @conn*)
-          part-f (when-not (mconn? conn-f)
-                   (or part
-                       :db.part/db))]
+  "Defines, but does not transact, a new database schema."
+  {:usage '(->schema {:ident       :person.name/family-name
+                      :type        :string
+                      :cardinality :one
+                      :doc         "nodoc"})}
+  ([schema-0] (->schema schema-0 nil))
+  ([schema-0 {:keys [conn part datascript?] :as opts}]
+    (let [schema      (->intermediate-schema schema-0)
+          conn-f      (or conn @conn*)
+          datascript? (or datascript? (mconn? conn-f))
+          part-f      (when-not datascript?
+                        (or part :db.part/db))]
       ; Partitions are not supported in DataScript (yet)
-      (when-not ((fn-or mconn? nil?) conn-f)
-        (validate part-f nnil?))
-
-      (let [cardinality-f
-              (condp = cardinality
-                :one  :db.cardinality/one
-                :many :db.cardinality/many
-                (throw (->ex :unrecognized-cardinality
-                             "Cardinality not recognized:"
-                             cardinality)))]
-        (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
-                                       (tempid part-f))
-              :db/ident              ident
-              :db/valueType          (keyword "db.type" (name val-type))
-              :db/cardinality        cardinality-f
-              :db/doc                (:doc        opts)
-              :db/fulltext           (:full-text? opts)
-              :db/unique             (when (:unique opts)
-                                       (->> opts :unique name
-                                            (str "db.unique/") keyword))
-              :db/isComponent        (:component? opts)
-              :db/index              (:index?     opts)
-              :db.install/_attribute part-f}
-             (filter-vals+ nnil?)
-             (join {}))))))
-
-(defn block->schemas
-  "Transforms a schema-block @block into a vector of individual schemas."
-  {:usage '(block->schemas
-             {:todo/text       [:one :string ]
-              :todo/completed? [:one :boolean {:index? true}]
-              :todo/id         [:one :long    {:index? true}]})}
-  [block & [{:keys [datascript?] :as opts}]]
-  (let [not-ref? (fn-> :db/valueType (not= :db.type/ref))
-        post (if datascript?
-                 (fn->> (remove+ (fn-and :db/isComponent not-ref?))
-                        (map+    (whenf1
-                                   (fn-and :db/valueType not-ref?)
-                                   (fn1 c/dissoc :db/valueType)))
-                        (map+    (juxt :db/ident identity))
-                        (join {}))
-                 (fn->> (join [])))]
-    (->> block
-         (map+ (fn [ident [cardinality val-type opts-n]]
-                 (->schema ident cardinality val-type
-                   (c/merge {} opts opts-n))))
-         post)))
+      (when datascript? (validate part-f nnil?))
+      (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
+                                     (tempid part-f))
+            :db/ident              (:datomic:schema/ident schema)
+            :db/valueType          (c/keyword "db.type"        (name (:datomic:schema/type        schema)))
+            :db/cardinality        (c/keyword "db.cardinality" (name (:datomic:schema/cardinality schema)))
+            :db/doc                (:datomic:schema/doc        schema)
+            :db/fulltext           (:datomic:schema/full-text? schema)
+            :db/unique             (when-let [unique (:datomic:schema/unique schema)]
+                                     (c/keyword "db.unique" (name unique)))
+            :db/isComponent        (:datomic:schema/component? schema)
+            :db/index              (:datomic:schema/index?     schema)
+            :db.install/_attribute part-f}
+           (filter-vals+ nnil?)
+           (join {})
+           (#(if (and datascript? ; DataScript only allows ref value-types
+                      (-> % :db/valueType (not= :db.type/ref)))
+                 (c/dissoc % :db/valueType)
+                 %))))))
 
 (defn update-schemas
   {:see-also "metasoarous/datsync.client"}
@@ -673,7 +690,7 @@
   [sym requires arglist & body]
   `(transact!
      [(conj @conn* :db.part/fn true
-        {:db/ident (keyword "fn" (name '~sym))
+        {:db/ident (c/keyword "fn" (name '~sym))
          :db/fn
            (dbfn ~requires ~arglist ~@body)})])))
 
@@ -789,7 +806,7 @@
 ;     (transact! [q])))
 
 ; (defn update! [id f-key & args]
-;   (transact! (apply vector (keyword "fn" (name f-key)) id args)))
+;   (transact! (apply vector (c/keyword "fn" (name f-key)) id args)))
 
 ; (defn+ entity-query [q]
 ;   (->> (query q)
@@ -902,8 +919,8 @@
 ;       (if entity?
 ;           (let [{:keys [encrypted salt key]} result]
 ;             {schema             (->> encrypted (crypto/encode :base64-string))
-;              (keyword schema-ns (str schema-name ".k1")) key
-;              (keyword schema-ns (str schema-name ".k2")) salt})
+;              (c/keyword schema-ns (str schema-name ".k1")) key
+;              (c/keyword schema-ns (str schema-name ".k2")) salt})
 ;           result))))
 
 ; (defn ->decrypted
@@ -914,10 +931,10 @@
 ;           schema-name (name      schema)
 ;           ;schema-key
 ;           key- (if entity?
-;                    (get encrypted (keyword schema-ns (str schema-name ".k1")))
+;                    (get encrypted (c/keyword schema-ns (str schema-name ".k1")))
 ;                    (:key encrypted))
 ;           salt (if entity?
-;                    (get encrypted (keyword schema-ns (str schema-name ".k2")))
+;                    (get encrypted (c/keyword schema-ns (str schema-name ".k2")))
 ;                    (:salt encrypted))
 ;           ^"[B" result
 ;             (crypto/decrypt :aes
@@ -1185,12 +1202,12 @@
 ;                      (let [failed# (->> ~cache-sym filter-realized-delays+ (coll/filter-vals+ error?) redm)]
 ;                        (doseq [from-val# to-val# failed#]
 ;                          (.remove ^ConcurrentHashMap ~cache-sym from-val#))))
-;                    (log/pr (keyword (-> ~*ns* ns-name name) "debug") "Completed caching."))
+;                    (log/pr (c/keyword (-> ~*ns* ns-name name) "debug") "Completed caching."))
 ;                  (defonce
 ;                    ^{:doc "Spawns cacher thread."}
 ;                    ~cacher-sym
 ;                    (quantum.db.datomic/gen-cacher
-;                      (keyword (name (ns-name ~*ns*))
+;                      (c/keyword (name (ns-name ~*ns*))
 ;                               (name '~cacher-sym))
 ;                      (var ~cache-fn-sym))))))
 ;         (throw+ (Err. nil "Memoization type not recognized." ~memo-type))))))
@@ -1205,19 +1222,19 @@
 ;   "Restarts the cacher for the |defmemoized| fn."
 ;   [base-sym]
 ;   (let [cacher-sym (gen-cacher-sym base-sym)
-;         cacher-kw  (keyword (namespace cacher-sym) (name cacher-sym))]
+;         cacher-kw  (c/keyword (namespace cacher-sym) (name cacher-sym))]
 ;     (if (or (not (contains? @thread/reg-threads cacher-kw))
 ;             (first (thread/force-close-threads! (eq? cacher-kw))))
 ;         (do (reset-var! (resolve cacher-sym)
 ;               (gen-cacher
-;                 (keyword (name (ns-name *ns*))
+;                 (c/keyword (name (ns-name *ns*))
 ;                          (name cacher-sym))
 ;                 (resolve (gen-cache-fn-sym base-sym))))
 ;             true)
 ;         false)))
 
 ; (defn ->hidden-key [k]
-;   (keyword (namespace k)
+;   (c/keyword (namespace k)
 ;            (-> k name (str ".hidden?"))))
 
 ; FOR DATASCRIPT:

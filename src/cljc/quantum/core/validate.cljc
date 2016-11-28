@@ -70,6 +70,7 @@
                    (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
 #?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
+#?(:clj (quantum.core.vars/defmalias tuple   clojure.spec/tuple   cljs.spec/tuple  ))
 #?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
 #?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def     cljs.spec/def    ))
 #?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys    cljs.spec/keys   ))
