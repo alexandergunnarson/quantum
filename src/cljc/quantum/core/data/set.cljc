@@ -1,5 +1,5 @@
 (ns
-  ^{:doc "Useful set-related functions. Includes a dispatch function, |xset?|, 
+  ^{:doc "Useful set-related functions. Includes a dispatch function, |xset?|,
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "Alex Gunnarson"}
   quantum.core.data.set
@@ -7,7 +7,7 @@
                      [clojure.data.avl         :as avl  ]
                      [quantum.core.vars        :as var
                        :refer [#?(:clj defalias)]       ]
-                     [quantum.core.error       :as err 
+                     [quantum.core.error       :as err
                        :refer [->ex]                    ]
            #?@(:clj [[clojure.data.finger-tree :as ftree]
                      [flatland.ordered.set     :as oset ]
@@ -35,7 +35,7 @@
   {:attribution "Alex Gunnarson"
    :todo ["A cool idea... but improve performance"]}
   [fn-key set1 set2]
-  (let [funcs 
+  (let [funcs
          (case fn-key
            :sub          {:eq <= :fn #(vector (partial contains? %2) %1)}
            :super        {:eq >= :fn #(vector (partial contains? %1) %2)}
@@ -91,3 +91,4 @@
 
 (defalias intersection set/intersection)
 (defalias difference   set/difference  )
+(defalias rename-keys  set/rename-keys )
