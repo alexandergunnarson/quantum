@@ -3,16 +3,14 @@
     [string? keyword? set? number? fn?
      assert keys + * cat and or])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )   :as core]
-    [#?(:clj  clojure.spec
-        :cljs cljs.spec   )   :as s]
+    [clojure.core      :as core]
+    [clojure.spec      :as s]
+    [quantum.core.logic
+      :refer [nnil?]]
     [quantum.core.macros.core
-      :refer        [#?@(:clj [if-cljs locals])]
-      :refer-macros [locals]]
-    [quantum.core.vars        :as var
-      :refer        [#?@(:clj [defalias defmalias])]
-      :refer-macros [          defalias defmalias]]))
+      :refer [if-cljs locals]]
+    [quantum.core.vars :as var
+      :refer [defalias defmalias]]))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
 
@@ -72,6 +70,7 @@
 #?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
 #?(:clj (quantum.core.vars/defmalias tuple   clojure.spec/tuple   cljs.spec/tuple  ))
 #?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
+#?(:clj (defmacro set-of [x & args] `(coll-of ~x :kind core/set? ~@args)))
 #?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def     cljs.spec/def    ))
 #?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys    cljs.spec/keys   ))
 #?(:clj (quantum.core.vars/defmalias alt     clojure.spec/alt     cljs.spec/alt    ))
@@ -81,6 +80,7 @@
 #?(:clj (quantum.core.vars/defmalias ?       clojure.spec/?       cljs.spec/?      ))
 #?(:clj (quantum.core.vars/defmalias and     clojure.spec/and     cljs.spec/and    ))
 #?(:clj (quantum.core.vars/defmalias or      clojure.spec/or      cljs.spec/or     ))
+#?(:clj (defmacro nnil [& args] `(validate ~@(interleave args (repeat `nnil?)))))
 
 #?(:clj
 (defmacro or*
