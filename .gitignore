@@ -35,3 +35,5 @@ pom.xml.asc
 
 .DS_Store
 .lein-repl-history
+
+*.class
