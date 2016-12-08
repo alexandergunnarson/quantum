@@ -69,7 +69,7 @@
          ; CORE
        ; ==== CONVERT ====
          [byte-streams                          "0.2.2"           ]
-         [org.clojure/tools.reader              "1.0.0-beta3"    ]
+         [org.clojure/tools.reader              "1.0.0-beta3"     ]
          #_[gloss                               "0.2.5"           ]
        ; ==== CRYPTOGRAPHY ====
          [com.lambdaworks/scrypt                "1.4.0"           ]
