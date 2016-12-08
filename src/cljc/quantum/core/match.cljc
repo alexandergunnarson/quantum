@@ -4,15 +4,15 @@
  #?(:clj
      [net.cgrand.seqexp            :as se])
      [quantum.core.fn              :as fn
-       :refer        [#?@(:clj [fn-> fn$])]
-       :refer-macros [          fn-> fn$]]
+       :refer [<- fn-> fn$]]
      [quantum.core.vars            :as var
-       :refer        [#?@(:clj [defalias])]
-       :refer-macros [          defalias]]
+       :refer [defalias]]
      [quantum.core.logic
-       :refer        [#?@(:clj [fn-not fn-and fn-or whenf1 condf1])]
-       :refer-macros [          fn-not fn-and fn-or whenf1 condf1]]
-     [quantum.core.collections      :as coll]
+       :refer [fn-not fn-and fn-or whenf1 condf1]]
+     [quantum.core.collections      :as coll
+       :refer [postwalk map-vals+ join]]
+     [quantum.core.macros.core
+       :refer [macroexpand-all]]
      [quantum.core.collections.tree :as tree]
      [quantum.core.collections.zip  :as zip]))
 
@@ -25,21 +25,21 @@
                     (fn [x] #(= % x))) ; non-fns are wrapped in =
                   args))))
 
-#?(:clj (def &      (wrap-eq se/cat )))
-#?(:clj (def ?      (wrap-eq se/?   )))
-#?(:clj (def |      (wrap-eq se/|   )))
-#?(:clj (def +      (wrap-eq se/+   )))
-#?(:clj (def *      (wrap-eq se/*   )))
-#?(:clj (def ?=     (wrap-eq se/?=  )))
-#?(:clj (def ?!     (wrap-eq se/?!  )))
-#?(:clj (defalias   re-match se/exec))
-#?(:clj (defalias   _        se/_   ))
-#?(:clj (defalias   as       se/as  ))
+#?(:clj (def &      (wrap-eq  se/cat )))
+#?(:clj (def ?      (wrap-eq  se/?   )))
+#?(:clj (def |      (wrap-eq  se/|   )))
+#?(:clj (def +      (wrap-eq  se/+   )))
+#?(:clj (def *      (wrap-eq  se/*   )))
+#?(:clj (def ?=     (wrap-eq  se/?=  )))
+#?(:clj (def ?!     (wrap-eq  se/?!  )))
+#?(:clj (defalias   re-match* se/exec))
+#?(:clj (defalias   _         se/_   ))
+#?(:clj (defalias   as        se/as  ))
 
 
 #?(:clj
-(defn re-match-whole [preds x]
-  (let [ret (re-match preds x)]
+(defn re-match-whole* [preds x]
+  (let [ret (re-match* preds x)]
     (when (empty? (:rest ret)) ret))))
 
 (def defs
@@ -48,6 +48,34 @@
                  (mapv (fn$ var/qualify 'quantum.core.match) defs-syms))
          (apply concat) vec)))
 
-#?(:clj (defmacro re-match*       [x preds] `(re-match       (let ~defs ~preds) ~x)))
-#?(:clj (defmacro re-match-whole* [x preds] `(re-match-whole (let ~defs ~preds) ~x)))
+#?(:clj
+(defn re-match-whole-with-found*
+  [found preds x]
+  (let [matched (re-match-whole* preds x)]
+    (when matched (swap! found merge (-> matched (dissoc :rest :match))))
+    matched)))
 
+(defn replace-cats [found-sym pattern]
+  (let [cat? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "&")))
+        replace-inner-cats
+         (fn$ postwalk (whenf1 cat? (fn$ list 'partial `re-match-whole-with-found* found-sym)))]
+    (if (cat? pattern)
+        (list* (first pattern) (map replace-inner-cats (rest pattern)))
+        (replace-inner-cats pattern))))
+
+#?(:clj
+(defmacro re-match-variant [f x preds]
+  (let [found    (gensym "found")
+        expanded (macroexpand-all preds)]
+    `(let [~found   (atom {})
+           matched# (~f (let ~defs ~(replace-cats found expanded)) ~x)
+           merged#  (merge @~found matched#)]
+       (->> merged#
+            (<- dissoc :rest :match)
+            (map-vals+ first)
+            (join {})
+            (<- merge (select-keys merged# [:rest :match])))))))
+
+#?(:clj (defmacro re-match       [x preds] `(re-match-variant ~`re-match*       ~x ~preds)))
+#?(:clj (defmacro re-match-whole [x preds] `(re-match-variant ~`re-match-whole* ~x ~preds)))
+#?(:clj (defalias match re-match-whole))
