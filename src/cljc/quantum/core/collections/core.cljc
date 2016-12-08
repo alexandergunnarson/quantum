@@ -6,7 +6,7 @@
   quantum.core.collections.core
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
-     conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse
+     conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse subseq
      empty? empty class reduce
      #?@(:cljs [array])])
   (:require [clojure.core                   :as core]
@@ -56,7 +56,7 @@
       :refer [assoc]])
  #?(:clj (:import
            quantum.core.data.Array
-           [java.util List]
+           [java.util List Collection]
            clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
@@ -194,36 +194,45 @@
 
 (declare array)
 
-(defnt count ; TODO incorporate clojure.lang.RT/count
+(defnt count
+  {:todo #{"incorporate clojure.lang.RT/count"
+           "Ensure that lazy-seqs aren't realized/consumed?"
+           "handle persistent maps"}}
   #?(:cljs (^long [^array?            x] (.-length x)))
   #?(:clj  (^long [^any-array?        x] (Array/count x)))
            (^long [^string?           x] (#?(:clj .length :cljs .-length) x))
+  #?(:clj  (^long [^StringBuilder     x] (.length x)))
            (^long [^keyword?          x] (count ^String (name x)))
-         #?(:clj
-           (^long [^ManyToManyChannel x] (count (.buf x))))
+  #?(:clj  (^long [^ManyToManyChannel x] (count (.buf x))))
            (^long [^vector?           x] (#?(:clj .count :cljs core/count) x))
+  #?(:clj  (^long [^Collection        x] (.size x)))
            (^long [                   x] (core/count x))
            (^long [^reducer?          x] (red/reduce-count x))
            ; Debatable whether this should be allowed
            (^long [:else              x] 0))
 
 (defnt empty?
-  ([#{array? string? keyword? #?(:clj ManyToManyChannel)} x] (zero? (count x)))
-  ([        x] (core/empty? x)  ))
+          ([#{#?(:cljs array? :clj any-array?) ; TODO anything that `count` accepts
+              string? #?(:clj StringBuilder) keyword?
+              #?(:clj ManyToManyChannel)
+              vector?} x] (zero? (count x)))
+  #?(:clj ([#{Collection Map} x] (.isEmpty x)))
+          ([            x] (core/empty? x)  ))
 
 (defnt empty
-  {:todo ["Most of this should be in some static map somewhere"]}
-           ([^boolean?  x] false         )
-  #?(:clj  ([^char?     x] (char   0)    ))
-  #?(:clj  ([^byte?     x] (byte   0)    ))
-  #?(:clj  ([^short?    x] (short  0)    ))
-  #?(:clj  ([^int?      x] (int    0)    ))
-  #?(:clj  ([^long?     x] (long   0)    ))
-  #?(:clj  ([^float?    x] (short  0)    ))
-  #?(:clj  ([^double?   x] (double 0)    ))
-  #?(:cljs ([^num?      x] 0             ))
-           ([^string?   x] ""            )
-           ([           x] (core/empty x)))
+  {:todo #{"Most of this should be in some static map somewhere for efficiency"
+           "implement core/empty"}}
+           (^boolean [^boolean?  x] false         )
+  #?(:clj  (^char    [^char?     x] (->char   0)  ))
+  #?(:clj  (^byte    [^byte?     x] (->byte   0)  ))
+  #?(:clj  (^short   [^short?    x] (->short  0)  ))
+  #?(:clj  (^int     [^int?      x] (->int    0)  ))
+  #?(:clj  (^long    [^long?     x] (->long   0)  ))
+  #?(:clj  (^float   [^float?    x] (->float  0)  ))
+  #?(:clj  (^double  [^double?   x] (->double 0)  ))
+  #?(:cljs (         [^num?      x] 0             ))
+           (^String  [^string?   x] ""            )
+           (         [           x] (core/empty x)))
 
 (defnt #?(:clj  ^long lasti
           :cljs       lasti)
@@ -254,15 +263,29 @@
   #?(:clj (^double-array?  [^double?         t ^pinteger? ct] (double-array  ct)))
   #?(:clj (                [^java.lang.Class c ^pinteger? ct] (make-array c  ct)))) ; object-array is subsumed into this
 
+(defnt subseq
+  "Returns a view of @`coll` from @`a` to @`b` in O(1) time."
+          ([^vec?        coll ^pinteger? a             ] (subvec coll a  ))
+          ([^vec?        coll ^pinteger? a ^pinteger? b] (subvec coll a b))
+  #?(:clj ([^array-list? coll ^pinteger? a             ] (.subList coll a (lasti coll))))
+  #?(:clj ([^array-list? coll ^pinteger? a ^pinteger? b] (.subList coll a b)))
+  #?(:clj ([^string?     coll ^pinteger? a             ] (.subSequence coll a (count coll))))
+  #?(:clj ([^string?     coll ^pinteger? a ^pinteger? b] (.subSequence coll a b)))
+          ([^reducer?    coll ^pinteger? a             ] (->> coll (drop+ a)))
+          ([^reducer?    coll ^pinteger? a ^pinteger? b] (->> coll (drop+ a) (take+ b))))
+
 (defnt getr
-  {:todo "Differentiate between |subseq| and |slice|"}
-  ; inclusive range
+  "AKA slice.
+   Makes a subcopy of @`coll` from @`a` to @`b` in the most efficient way possible.
+   Differs from `subseq` in that it does not simply return a view in O(1) time."
+  {:todo {0 "Slice for CLJS arrays"}}
+  ; Inclusive range
+          ([^string?     coll ^pinteger? a             ] (.substring coll a (count coll)))
           ([^string?     coll ^pinteger? a ^pinteger? b] (.substring coll a (inc b)))
           ([^reducer?    coll ^pinteger? a ^pinteger? b] (->> coll (take+ b) (drop+ a)))
-  #?(:clj ([^array-list? coll ^pinteger? a ^pinteger? b] (.subList coll a b)))
+          ([^vec?        coll ^pinteger? a             ] (subvec+ coll a (count coll)))
           ([^vec?        coll ^pinteger? a ^pinteger? b] (subvec+ coll a (inc b)))
-          ([^vec?        coll ^pinteger? a             ] (subvec+ coll a (-> coll count)))
-  ; TODO slice for CLJS arrays
+  ; TODO 0
   #?(:clj (^first [^array?      coll ^pinteger? a ^pinteger? b]
             (let [arr-f (array-of-type coll (core/long (inc (- b a))))] ; TODO make long cast unnecessary
               (System/arraycopy coll a arr-f 0
@@ -294,7 +317,7 @@
           (whenc (.indexOf coll (str elem)) neg-1? nil)
           (pattern? elem)
           #?(:clj  (let [^java.util.regex.Matcher matcher
-                          (re-matcher (re-pattern elem) coll)]
+                          (re-matcher elem coll)]
                      (when (.find matcher)
                        (.start matcher)))
              :cljs (throw (->ex :unimplemented
@@ -696,11 +719,13 @@
                    {:coll kv :ct (count kv)}))))
 
 (defnt key*
+  {:todo #{"Implement core/key"}}
   #?@(:clj  [([^map-entry? kv] (core/key kv))
              ([^List       kv] (handle-kv kv #(first kv)))]
       :cljs [([#{vec? array?} kv] (handle-kv kv #(first kv)))]))
 
 (defnt val*
+  {:todo #{"Implement core/val"}}
   #?@(:clj  [([^map-entry? kv] (core/val kv))
              ([^List       kv] (handle-kv kv #(second kv)))]
       :cljs [([#{vec? array?} kv] (handle-kv kv #(second kv)))]))

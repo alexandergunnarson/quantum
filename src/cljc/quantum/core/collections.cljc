@@ -145,8 +145,8 @@
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias getr          coll/getr         ))
-#?(:clj (defalias subseq        getr              ))
-        (defalias lsubseq       core/subseq       )
+        (defalias subseq        coll/subseq       )
+        (defalias subseq-where  core/subseq       )
 #?(:clj (defalias get           coll/get          ))
         (defalias gets          coll/gets         )
         (defalias getf          coll/getf         )
@@ -324,9 +324,11 @@
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias postwalk        tree/postwalk      )
-        (defalias prewalk         tree/prewalk       )
-        (defalias apply-to-keys   tree/apply-to-keys )
+        (defalias prewalk         tree/prewalk        )
+        (defalias postwalk        tree/postwalk       )
+        (defalias prewalk-filter  tree/prewalk-filter )
+        (defalias postwalk-filter tree/postwalk-filter)
+        (defalias apply-to-keys   tree/apply-to-keys  )
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -1564,30 +1566,6 @@
           (->> class-name (str "map->") symbol eval)]
     map-constructor-fn)))
 
-
-#?(:clj
-(defmacro deficlass
-  "Define an immutable class.
-   Based on the limitations of |defrecord|, multi-arity
-   functions are declared separately."
-  [name- fields constructor & fns]
-  (let [constructor-sym (->> name- name sform/->lisp-case (str "->") symbol)
-        protocol-sym    (-> name- name (str "Functions") symbol)
-        fns-signatures  (->> fns
-                             (map (juxt #(first  %1)
-                                        #(second %1)))
-                             (group-by #(first %1))
-                             (map-vals+ (fn->> (map (fn-> rest)) flatten-1))
-                             (map+ (fn [x] (cons (first x) (second x))))
-                             (join [])) ]
-    (log/pr :macro-expand "FNS-SIGNATURES" fns-signatures)
-   `(do (defprotocol ~protocol-sym ~@fns-signatures)
-        (declare ~constructor-sym)
-        (defrecord ~name- ~fields ~protocol-sym
-          ~@fns)
-        ~(concat (list 'defn constructor-sym)
-                 constructor)))))
-
 (defn into-map-by [m k ms]
   (reduce (fn [ret elem] (assoc ret (k elem) elem)) m ms))
 
@@ -1734,10 +1712,18 @@
      :cljs cljs.core/IDeref)
   (#?(:clj deref :cljs -deref) [this] val))
 
-(defnt eq! ; |set!| was taken, just like |fn*|
-  ([^quantum.core.collections.MutableContainer x v] (.set x v) v))
+#?(:clj (definterface IDoubleMutable (^double get []) (set [^double x])))
 
-(defn mutable! [x] (MutableContainer. x))
+#?(:clj
+(deftype MutableDoubleContainer [^:unsynchronized-mutable ^double val]
+  IDoubleMutable      (^double get [this] val) (set [this ^double x] (set! val x))
+  clojure.lang.IDeref (deref [this] val)))
+
+(defnt eq! ; |set!| was taken, just like |fn*|
+  ([^MutableContainer x v] (.set x v) v))
+
+        (defn mutable        "Creates a mutable reference to an Object."           [x] (MutableContainer.       x))
+#?(:clj (defn mutable-double "Creates a mutable reference to a primitive double."  [x] (MutableDoubleContainer. x)))
 
 ; ====== NUMERIC ======
 
