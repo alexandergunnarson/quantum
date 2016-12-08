@@ -7,7 +7,7 @@
             [taoensso.sente.server-adapters.aleph    :as a-aleph]])
             [clojure.core.async                      :as async]
             [quantum.core.collections                :as coll
-              :refer [kmap join remove-vals+]]
+              :refer [kmap join remove-vals+ red-for break]]
             [quantum.core.string                     :as str]
             [quantum.net.client.impl                 :as impl]
             [quantum.net.core                        :as net]
@@ -25,6 +25,20 @@
               :refer [defalias]]))
 
 (def request! impl/request!)
+
+#?(:clj
+(defn create-socket-on-first-available-port!
+  "Creates a socket on the first available port, starting at port 49152 (the minimum recommended
+   available port, according to https://en.wikipedia.org/wiki/Ephemeral_port)."
+  []
+  (let [; According to https://en.wikipedia.org/wiki/Ephemeral_port
+        min-recommended-available-port 49152
+        max-recommended-available-port 65535]
+    (red-for [ret  nil
+              port min-recommended-available-port]
+      (try (let [conn (java.net.ServerSocket. port)]
+        (break conn)
+        (catch java.net.BindException e nil)))))))
 
 #?(:clj
 (defrecord
