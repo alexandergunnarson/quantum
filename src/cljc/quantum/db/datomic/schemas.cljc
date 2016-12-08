@@ -13,8 +13,8 @@
     [quantum.core.string            :as str]
     [quantum.core.error             :as err
       :refer [->ex TODO]]
-    [quantum.core.data.validated
-      :refer [def-validated def-validated-map]]
+    [quantum.core.data.validated    :as dv
+      :refer [def-validated def-validated-map declare-spec]]
     [quantum.core.validate          :as v]
     [quantum.db.datomic             :as db]
     [quantum.core.convert.primitive :as pconv]
@@ -40,14 +40,27 @@
   annotation :db/string)
 
 (def-validated-map ^:db?
-  ^{:doc "A ratio specifically using longs instead of bigints."}
+  ^{:doc  "A ratio specifically using longs instead of bigints."
+    :todo #{"Throw on overflow from long"}
+    :tests `{(->ratio:long {:ratio:long:numerator   2
+                            :ratio:long:denominator 4})
+             {:ratio:long:numerator   1
+              :ratio:long:denominator 2}}}
   ratio:long
-  :req [(def :this/numerator   :db/long)
-        (def :this/denominator :db/long)])
+  #?@(:clj [:conformer (fn [x] (let [n          (:this/numerator x)
+                                     d          (:this/denominator x)
+                                     simplified (/ n d)
+                                     n'         (long (numerator   simplified))
+                                     d'         (long (denominator simplified))]
+                                 (if (and (= n n') (= d d'))
+                                     x
+                                     (assoc x :this/numerator   n'
+                                              :this/denominator d'))))])
+  :req-un [(def :this/numerator   :db/long)
+           (def :this/denominator :db/long)])
 
 ; =========== LOCATION =========== ;
 
-(comment
 (def-validated ^:db?
   ^{:doc  "When dealing with locations, one
            uses the most restrictive area possible.
@@ -59,6 +72,7 @@
     :todo #{"Finish"}}
   location :db/keyword)
 
+; TODO should this mean :location:country is a :ref or a :db/keyword ?
 (def-validated ^:db? location:country :location)
 
 ; =========== LINGUISTICS =========== ;
@@ -69,13 +83,14 @@
     :unique :value
     :todo   #{"Finish"}}
   linguistics:language
-  :req [(def :this/iso-639-3-value :db/keyword))
+  :req [(def :this/iso-639-3-value :db/keyword)])
 
 ; The possible values are taken from the ISO 15924 standard.
 (def-validated-map ^:db?
-  ^{:todo  ["Finish"]}
+  ^{:todo  #{"Finish"}}
   linguistics:script
-  :req {:iso-15924-value ^{:unique :value} (value :db/keyword)})
+  :req [^{:unique :value}
+        (def :this/iso-15924-value :db/keyword)])
 
 ; =========== UNITS =========== ;
 
@@ -104,7 +119,7 @@
   :req [(def :this/from :time:instant)
         (def :this/to   :time:instant)])
 
-(def-validated-map :^db?
+(def-validated-map ^:db?
   ^{:doc "A range starting from and ending on relative instants"}
   time:relative-range
   :req [(def :this/from :time:relative-instant)
@@ -134,38 +149,42 @@
 
 ; Many of these are keywords because the same names happen over and over again
 
+
 (def-validated-map ^:db? ^:component?
   ^{:todo #{"Support hyphenated and maiden names"}}
   agent:person:name
   :invariant (fn [x] (contains? x (:this/called-by x)))
-  :req [^{:doc "refers to a schema, e.g. \":agent:person:name:middle\" if they go by middle name"}
-        (def :this/called-by :db/schema)]
-  :opt [(def :this/legal-in  (v/set-of :location:country))
-        ^{:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}
-        (def :this/prefix    (v/set-of :db/keyword))
-        ^{:doc "e.g. \"José\" in \"José Maria Gutierrez de Santos\""}
-        (def :this/first     :db/keyword)
-        ^{:doc "e:g. \"Maria\" in \"José Maria Gutierrez de Santos\""}
-        (def :this/middle    :db/keyword)
-        ^{:doc "E:g. \"Gutierrez de Santos, III\""}
-        (def :this/last
-          :opt [^{:doc "refers to a schema, e.g. \":agent:person:name:surname\" if it's a
-                        simple one like \"Smith\""}
-                (def :this/primary  :db/schema ) ; Lexical scoping of "this"
-                ^{:doc "e.g. \"Smith\", or a complex non-paternal-maternal name"}
-                (def :this/surname  :db/keyword)
-                ^{:doc "e.g. \"Gutierrez\" in \"Gutierrez de Santos\""}
-                (def :this/maternal :db/keyword)
-                ^{:doc "e.g. \"de Santos\" in \"Gutierrez de Santos\""}
-                (def :this/paternal :db/keyword)
-                ^{:doc "e.g. \"Jr., Sr., III\""}
-                (def :agent:person:name:suffix :db/keyword)])])
+  :req-un [^{:doc "The preferred name (some go by prefix, some first, some middle)"}
+           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))]
+  :opt-un [(def :this/legal-in  (v/set-of :location:country))
+           ^{:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}
+           (def :this/prefix    (v/set-of :db/keyword))
+           ^{:doc "e.g. \"José\" in \"José Maria Gutierrez de Santos\""}
+           (def :this/first     :db/keyword)
+           ^{:doc "e:g. \"Maria\" in \"José Maria Gutierrez de Santos\""}
+           (def :this/middle    :db/keyword)
+           ^{:doc "E:g. \"Gutierrez de Santos, III\""}
+           (def :this/last
+             :opt-un
+             [^{:doc "refers to a schema, e.g. \":agent:person:name:surname\" if it's a
+                      simple one like \"Smith\""}
+              (def :this/primary  :db/schema ) ; Lexical scoping of "this"
+              ^{:doc "e.g. \"Smith\", or a complex non-paternal-maternal name"}
+              (def :this/surname  :db/keyword)
+              ^{:doc "e.g. \"Gutierrez\" in \"Gutierrez de Santos\""}
+              (def :this/maternal :db/keyword)
+              ^{:doc "e.g. \"de Santos\" in \"Gutierrez de Santos\""}
+              (def :this/paternal :db/keyword)
+              ^{:doc "e.g. \"Jr., Sr., III\""}
+              (def :agent:person:name:suffix :db/keyword)])])
 
 (def-validated ^:db?
   ^{:doc "AKA nickname"}
   agent:person:name:alias :db/keyword)
 
 ; =========== REGISTRATION =========== ;
+
+(declare-spec ^:db? agent:organization)
 
 (def-validated-map ^:db? ^:component?
   agent:registration
@@ -177,21 +196,21 @@
 
 (def-validated-map ^:db? ^{:unique :value}
   network:domain
-  :req [^{:unique :value
-          :doc    "Multiple domain names can point to the same IP address"}
-        (def :this/ip-address :db/string)
-        ^{:doc "Keyword because it's short and universal"}
-        (def :this/prefix     :db/keyword)])
+  :req-un [^{:unique :value
+             :doc    "Multiple domain names can point to the same IP address"}
+           (def :this/ip-address :db/string) ; technically it's more complex than just a string
+           ^{:doc "Keyword because it's short and universal"}
+           (def :this/prefix     :db/keyword)])
 
 (def-validated-map ^:db? ^{:unique :value}
   agent:email
-  :req [^{:doc "E.g. alexandergunnarson"}
-        (def :this/username :db/keyword)
-        :network:domain]
-  :opt [^{:doc "E.g. company, email validation service, etc."}
-        (def :this/validated-by :agent:organization)
-        ^{:doc "Who/what provided the email information"}
-        (def :this/source (v/or* :agent:organization :agent:person))])
+  :req-un [^{:doc "E.g. alexandergunnarson"}
+           (def :this/username :db/keyword)
+           :network:domain]
+  :opt-un [^{:doc "E.g. company, email validation service, etc."}
+           (def :this/validated-by :agent:organization)
+           ^{:doc "Who/what provided the email information"}
+           (def :this/source (v/or* :agent:organization :agent:person))])
 
 ; =========== AGENT =========== ;
 
@@ -218,46 +237,42 @@
              of contributors to media content."}
   agent:isni :db/string)
 
-; TODO
 (def-validated-map ^:db? agent:organization
   :opt [(def :this/name:many (v/set-of :this/name))
-        :this/types
-        [:many :keyword {:enum #{[:group     {:doc "A group of people that may or may not have a distinctive name."}]
-                              [:orchestra {:doc "A large instrumental ensemble."}]
-                              [:choir     {:doc "A choir/chorus/chorale (a large vocal ensemble)."}]}}]
+        ^{:doc "#{[:group     {:doc \"A group of people that may or may not have a distinctive name.\"}]
+                  [:orchestra {:doc \"A large instrumental ensemble.\"}]
+                  [:choir     {:doc \"A choir/chorus/chorale (a large vocal ensemble).\"}]}"}
+        (def :this/types     (v/set-of #{:group :orchestra :choir}))
         :agent:isni
         :musicbrainz:id])
 
-; TODO
 (def-validated ^:db? art:creator
   ^{:doc "In the instance of music, composer. For images, artist.
           Includes producers and engineers, photographers, illustrators, poets, etc."}
   (v/or* :agent:person :agent:organization))
 
-; TODO
 (def-validated ^:db? art:creator-group
   (v/or* :agent:person :agent:organization))
 
-Area
-The artist area, as the name suggests, indicates the area with which an artist is primarily identified with. It is often, but not always, his/her/their birth/formation country.
-
-Begin and end dates
-The begin and end dates indicate when an artist started and finished its existence. Its exact meaning depends on the type of artist:
-
-For a person
-Begin date represents date of birth, and end date represents date of death.
-For a group (or orchestra/choir)
-Begin date represents the date when the group first formed: if a group dissolved and then reunited, the date is still that of when they first formed. End date represents the date when the group last dissolved: if a group dissolved and then reunited, the date is that of when they last dissolved (if they are together, it should be blank!). For listing other inactivity periods, just use the annotation and the "member of" relationships.
-For a character
-Begin date represents the date (in real life) when the character concept was created. The End date should not be set, since new media featuring a character can be created at any time. In particular, the Begin and End date fields should not be used to hold the fictional birth or death dates of a character. (This information can be put in the annotation.)
-For others
-There are no clear indications about how to use dates for artists of the type Other at the moment.
-IPI code
-An IPI (interested party information) code is an identifying number assigned by the CISAC database for musical rights management. See IPI for more information, including how to find these codes.
-
-Alias
-Aliases are used to store alternate names or misspellings. For more information and examples, see the page about aliases.
-
+; Area
+; The artist area, as the name suggests, indicates the area with which an artist is primarily identified with. It is often, but not always, his/her/their birth/formation country.
+;
+; Begin and end dates
+; The begin and end dates indicate when an artist started and finished its existence. Its exact meaning depends on the type of artist:
+;
+; For a person
+; Begin date represents date of birth, and end date represents date of death.
+; For a group (or orchestra/choir)
+; Begin date represents the date when the group first formed: if a group dissolved and then reunited, the date is still that of when they first formed. End date represents the date when the group last dissolved: if a group dissolved and then reunited, the date is that of when they last dissolved (if they are together, it should be blank!). For listing other inactivity periods, just use the annotation and the "member of" relationships.
+; For a character
+; Begin date represents the date (in real life) when the character concept was created. The End date should not be set, since new media featuring a character can be created at any time. In particular, the Begin and End date fields should not be used to hold the fictional birth or death dates of a character. (This information can be put in the annotation.)
+; For others
+; There are no clear indications about how to use dates for artists of the type Other at the moment.
+; IPI code
+; An IPI (interested party information) code is an identifying number assigned by the CISAC database for musical rights management. See IPI for more information, including how to find these codes.
+;
+; Alias
+; Aliases are used to store alternate names or misspellings. For more information and examples, see the page about aliases.
 
 (def-validated ^:db?
   ^{:doc "E.g. software, process, person, organization."
@@ -303,47 +318,37 @@ Aliases are used to store alternate names or misspellings. For more information 
   :req [(def :opinion:opiner (v/or* :agent:person :agent:organization))
         :opinion:rating])
 
-; TODO
-(defentity :opinion:rating:many
-  {:opinion:entity+rating:many
-     [:many :ref {:ref-to :opinion:entity+rating}]})
+(def-validated-map ^:db? opinion:rating:many
+  :req [(def :opinion:entity+rating:many
+             (v/set-of :opinion:entity+rating))])
 
 (def-validated ^:db? agent
   (v/or* :this/person :this/organization))
 
-; TODO
-(defentity :media:agent+plays
-  {:component? true}
-  {:agent nil
-   :media:plays
-     [:many :ref {:ref-to :time:instant :doc "Dates played"}]})
+(def-validated-map ^:db? ^:component?
+  media:agent+plays
+  :req [:agent
+        ^{:doc "Dates played"}
+        (def :media:plays (v/set-of :time:instant))])
 
 (def-validated ^:db?
   ^{:doc "E.g. 44100 kHz"}
   data:audio:sample-rate :db/double)
 
-(defunit :data:audio:bit-rate         :unit:kb-per-s)
-(defunit :data:audio:max-bit-rate     :unit:kb-per-s)
-(defunit :data:audio:nominal-bit-rate :unit:kb-per-s)
-(defunit :data:video:bit-rate         :unit:kb-per-s)
-(defunit :data:image:height           :unit:pixels  )
-(defunit :data:image:width            :unit:pixels  )
+#_(defunit :data:audio:bit-rate         :unit:kb-per-s)
+#_(defunit :data:audio:max-bit-rate     :unit:kb-per-s)
+#_(defunit :data:audio:nominal-bit-rate :unit:kb-per-s)
+#_(defunit :data:video:bit-rate         :unit:kb-per-s)
+#_(defunit :data:image:height           :unit:pixels  )
+#_(defunit :data:image:width            :unit:pixels  )
 
 #_(defentity :media:track-num+track
   {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS
    :media:track nil})
 
-#_(defentity :media/grouping
-  {:doc "E:g. album / series/show"}
-  {:data:title nil
-   :media:track:many
-     [:many :ref {:ref-to :media:track}]
-   :media:track-num+track:many
-     [:many :ref {:ref-to :media:track-num+track}]
-   :opinion:rating:many nil})
-
 (def-validated ^:db? data:bytes-size :db/long)
 
+; TODO are IDs unique per user or universally unique?
 (def-validated ^:db? ^{:unique :value} cloud:amazon:id :db/string)
 
 ; If a transaction specifies a unique identity for a temporary id,
@@ -356,109 +361,113 @@ Aliases are used to store alternate names or misspellings. For more information 
         ^{:doc "Needs to correspond with its mime-type"}
         (def :data:appropriate-extension:many (v/set-of :db/keyword))])
 
+(def-validated ^:db? cloud:s3:uri :db/uri)
+
 (def-validated-map ^:db?
   ^{:doc  "A file's metadata."
     :todo #{"figure out all of valid file metadata"}}
   byte-entity
   :opt [^{:unique :value}
         (def :sha-512                             :db/string)
-        (def :in-collection-of:many               (v/set-of :agent:person))
+        (def :this/mediainfo                      :db/string) ; TODO extract the unstructured data later
+        (def :data:fingerprint:fpcalc             :db/string )
+        :cloud:s3:uri
         :cloud:amazon:id
         :data:format
         ; sample-date
         :date:created
         :date:last-modified
         :data:title
-        (def :data:audio:beats-per-minute         :unit:beats-per-minute)
-        (def :data:audio:codec-id                 :db/keyword)
-        (def :data:audio:format-profile           :db/string )
-        (def :data:audio:format:info              :db/string )
-        (def :data:audio:id:mediainfo             :db/string )
-        (def :data:audio:stream-size              :db/string )
-        (def :data:audio:channels                 :db/long   )
-        (def :data:audio:channel-positions        :db/string )
-        (def :data:audio:compression-mode         :db/string )
-        (def :data:audio:compressor               :db/string )
-        (def :data:audio:format-version:tika      :db/string )
-        (def :data:audio:format-version           :db/long   )
-        (def :data:audio:mode                     :db/string )
-        (def :data:audio:mode-extension           :db/string )
-        (def :data:audio:writing-library          :db/string )
-        (def :data:audio:date-tagged:mediainfo    :db/string )
-        (def :data:audio:tagged-date:mediainfo    :db/string )
-        (def :data:tagged-date:mediainfo          :db/string )
+        ; (def :data:audio:beats-per-minute         :unit:beats-per-minute)
+        ; (def :data:audio:codec-id                 :db/keyword)
+        ; (def :data:audio:format-profile           :db/string )
+        ; (def :data:audio:format:info              :db/string )
+        ; (def :data:audio:id:mediainfo             :db/string )
+        ; (def :data:audio:stream-size              :db/string )
+        ; (def :data:audio:channels                 :db/long   )
+        ; (def :data:audio:channel-positions        :db/string )
+        ; (def :data:audio:compression-mode         :db/string )
+        ; (def :data:audio:compressor               :db/string )
+        ; (def :data:audio:format-version:tika      :db/string )
+        ; (def :data:audio:format-version           :db/long   )
+        ; (def :data:audio:mode                     :db/string )
+        ; (def :data:audio:mode-extension           :db/string )
+        ; (def :data:audio:writing-library          :db/string )
+        ; (def :data:audio:date-tagged:mediainfo    :db/string )
+        ; (def :data:audio:tagged-date:mediainfo    :db/string )
+        ; (def :data:tagged-date:mediainfo          :db/string )
 
-        :data:audio:sample-rate
+        ; :data:audio:sample-rate
 
-        :data:audio:bit-rate
-        :data:audio:max-bit-rate
-        :data:audio:nominal-bit-rate
+        ; :data:audio:bit-rate
+        ; :data:audio:max-bit-rate
+        ; :data:audio:nominal-bit-rate
 
         :data:bytes-size
-        (def :data:codec-id                       :db/keyword)
-        :data:creator
+        ; (def :data:codec-id                       :db/keyword)
+        ; :data:creator
 
-        (def :data:audio:encoding-settings        :db/string )
-        (def :data:audio:encoded-date:mediainfo   :db/string )
-        (def :data:audio:date-encoded:mediainfo   :db/string )
-        (def :data:date-encoded:mediainfo         :db/string )
-        (def :media:encoding-params               :db/string )
-        (def :data:fingerprint:fpcalc             :db/string )
+        ; (def :data:audio:encoding-settings        :db/string )
+        ; (def :data:audio:encoded-date:mediainfo   :db/string )
+        ; (def :data:audio:date-encoded:mediainfo   :db/string )
+        ; (def :data:date-encoded:mediainfo         :db/string )
+        ; (def :media:encoding-params               :db/string )
         :data:image:height
         :data:image:width
-        (def :data:media:compatible-brands        :db/string )
-        (def :data:media:major-brand              :db/string )
-        (def :media:part:position                 :db/long   )
-        (def :media:part:total                    :db/long   )
+        ; (def :data:media:compatible-brands        :db/string )
+        ; (def :data:media:major-brand              :db/string )
+        ; (def :media:part:position                 :db/long   )
+        ; (def :media:part:total                    :db/long   )
 
-        (def :media:track:position                :db/long   )
-        (def :media:track:position:itunes         :db/long   )
+        ; (def :media:track:position                :db/long   )
+        ; (def :media:track:position:itunes         :db/long   )
 
-        (def :media:track:total                   :db/long   )
-        (def :media:album-art:type:mediainfo      :db/string )
-        (def :media:album-art:format              :data:format)
-        (def :media:has-album-art?                :db/boolean)
-        (def :media:date-recorded:mediainfo       :db/string )
-        (def :media:itunes-cddb-1                 :db/string )
-        (def :data:media:source-data:mediainfo    :db/string )
-        (def :data:media:album:mediainfo          :db/string )
-        (def :data:media:album:artist:mediainfo   :db/string )
-        (def :data:media:artist:mediainfo         :db/string ) ; = performer
-        (def :data:media:bit-rate-mode            :db/string )
-        (def :data:media:codec-id:mediainfo       :db/string )
-        (def :data:media:compilation?             :db/boolean)
-        (def :data:media:compilation:tika         :db/long   )
-        (def :data:media:composer:mediainfo       :db/string )
-        (def :data:media:format-profile           :db/string )
-        (def :data:minor-version:mediainfo        :db/string )
-        (def :data:writing-library                :db/string )
-        (def :data:writing-application            :db/string )
+        ; (def :media:track:total                   :db/long   )
+        ; (def :media:album-art:type:mediainfo      :db/string )
+        ; (def :media:album-art:format              :data:format)
+        ; (def :media:has-album-art?                :db/boolean)
+        ; (def :media:date-recorded:mediainfo       :db/string )
+        ; (def :media:itunes-cddb-1                 :db/string )
+        ; (def :data:media:source-data:mediainfo    :db/string )
+        ; (def :data:media:album:mediainfo          :db/string )
+        ; (def :data:media:album:artist:mediainfo   :db/string )
+        ; (def :data:media:artist:mediainfo         :db/string ) ; = performer
+        ; (def :data:media:bit-rate-mode            :db/string )
+        ; (def :data:media:codec-id:mediainfo       :db/string )
+        ; (def :data:media:compilation?             :db/boolean)
+        ; (def :data:media:compilation:tika         :db/long   )
+        ; (def :data:media:composer:mediainfo       :db/string )
+        ; (def :data:media:format-profile           :db/string )
+        ; (def :data:minor-version:mediainfo        :db/string )
+        ; (def :data:writing-library                :db/string )
+        ; (def :data:writing-application            :db/string )
 
-        (def :data:video:frame-rate               :db/double )
-        (def :data:frame-rate:mediainfo           :db/string )
-        (def :data:video:frame-rate-mode          :db/string )
+        ; (def :data:video:frame-rate               :db/double )
+        ; (def :data:frame-rate:mediainfo           :db/string )
+        ; (def :data:video:frame-rate-mode          :db/string )
 
-        (def :data:video:format-settings:gop      :db/string )
-        (def :data:video:aspect-ratio             :db/string )
-        (def :data:video:bit-depth                :db/double )
-        (def :data:video:bits-per-pixel*frame     :db/double )
-        (def :data:video:chroma-subsampling       :db/string )
-        (def :data:video:format                   :db/keyword)
-        (def :data:video:format-settings:reframes :db/string )
-        (def :data:video:format-settings:cabac    :db/string )
-        (def :data:video:format-profile           :db/string )
-        (def :data:video:format:info              :db/string )
-        (def :data:video:scan-type                :db/string )
-        (def :data:video:stream-size              :db/string )
-        :data:video:bit-rate
-        (def :data:video:id:mediainfo             :db/string )
-        (def :data:video:color-space              :db/string )
-        (def :data:video:codec-id                 :db/keyword)
-        (def :data:video:codec-id:info            :db/string )
+        ; (def :data:video:format-settings:gop      :db/string )
+        ; (def :data:video:aspect-ratio             :db/string )
+        ; (def :data:video:bit-depth                :db/double )
+        ; (def :data:video:bits-per-pixel*frame     :db/double )
+        ; (def :data:video:chroma-subsampling       :db/string )
+        ; (def :data:video:format                   :db/keyword)
+        ; (def :data:video:format-settings:reframes :db/string )
+        ; (def :data:video:format-settings:cabac    :db/string )
+        ; (def :data:video:format-profile           :db/string )
+        ; (def :data:video:format:info              :db/string )
+        ; (def :data:video:scan-type                :db/string )
+        ; (def :data:video:stream-size              :db/string )
+        ; :data:video:bit-rate
+        ; (def :data:video:id:mediainfo             :db/string )
+        ; (def :data:video:color-space              :db/string )
+        ; (def :data:video:codec-id                 :db/keyword)
+        ; (def :data:video:codec-id:info            :db/string )
 
         :time:duration
 
-        :opinion:comment:many]                )
+        :opinion:comment:many
+        ]                )
 
 ; There are probably infinite types of ways to group a musical artwork.
 ; For instance, what would the Wohltemperierte Klavier be considered?
@@ -469,57 +478,57 @@ Aliases are used to store alternate names or misspellings. For more information 
 ; Of course, modern works are much simpler. It's mainly in classical music that
 ; one runs into these problems.
 
-; These are all ambiguous and are subsumed by tags
-; :data:media:genre
-; :data:media:sub-genre
-; :data:media:kind
-; :data:media:category
+#_(def-validated-map ^:db? ^:component?
+  ^{:doc "The following are all ambiguous and are subsumed by this schema:
+          - genre
+          - sub-genre
+          - kind
+          - category"}
+  data:tag
+  :req-un [^{:unique :value}
+           (def :this/value :db/keyword)])
 
-(defentity :data:tag
-  {:component? true}
-  {:tag:value [:one :keyword {:unique :value}]})
-
-
-(def-validated-map ^:db?
+#_(def-validated-map ^:db?
   ^{:doc "A distinct intellectual or artistic creation.
           A work could be a piece of music, a movie, or even a novel,
           play, poem or essay, possibly, but not necessarily, later
           recorded as an oratory or audiobook."}
   work
-  :opt [:musicbrainz:id])
+  :opt-un [:musicbrainz:id])
 
-(defentity :work:discrete
-  {:doc "A discrete, individual :work.
-         E.g. an individual song, musical number or movement.
-         This includes recitatives, arias, choruses, duos, trios, etc.
-         In many cases, discrete works are a part of larger, aggregate works."}
-  {:work:discrete:name
-    [:one :string {:doc "The canonical title of the work, expressed in
-                         the language it was originally written."}]
-   :work:discrete:type
-     [:one :keyword]
-   :work:discrete:alias:many
-     [:many :string {:doc "If a discrete work is known by name(s) or
-                           in language(s) other than its canonical name,
-                           these are specified in the work’s aliases."}]
-   :work:discrete:iswc
-     [:one :keyword {:doc "The International Standard Musical Work Code
-                           assigned to the work by copyright collecting agencies."}]
-   :musicbrainz:id nil})
+#_(def-validated-map ^:db?
+  ^{:doc "A discrete, individual :work.
+          E.g. an individual song, musical number or movement.
+          This includes recitatives, arias, choruses, duos, trios, etc.
+          In many cases, discrete works are a part of larger, aggregate works."}
+  work:discrete
+  :req-un [^{:doc "The canonical title of the work, expressed in
+                   the language it was originally written."}
+           (def :work:discrete:name :db/string)]
+  :opt-un [(def :work:discrete:type :db/keyword)
+           ^{:doc "If a discrete work is known by name(s) or
+                   in language(s) other than its canonical name,
+                   these are specified in the work’s aliases."}
+           (def :work:discrete:alias:many (v/set-of :db/string))
+           ^{:doc "The International Standard Musical Work Code
+                   assigned to the work by copyright collecting agencies."}
+           (def :work:discrete:iswc :db/keyword)
+           :musicbrainz:id])
 
-(defentity :work:aggregate
-  {:doc "An ordered sequence of one or more `work:discrete`s.
-         Could be e.g. songs, numbers or movements, such as:
-         - Symphony
-         - Opera
-         - Theatre work
-         - Concerto
-         - Concept album
-         - Etc.
-         A popular music album is not considered a distinct aggregate
-         work unless it is evident that such an album was written with
-         intent to have a specifically ordered sequence of related songs
-         (i.e. a “concept album”)."}
+#_(def-validated-map ^:db?
+  ^{:doc "An ordered sequence of one or more `work:discrete`s.
+          Could be e.g. songs, numbers or movements, such as:
+          - Symphony
+          - Opera
+          - Theatre work
+          - Concerto
+          - Concept album
+          - Etc.
+          A popular music album is not considered a distinct aggregate
+          work unless it is evident that such an album was written with
+          intent to have a specifically ordered sequence of related songs
+          (i.e. a “concept album”)."}
+  work:aggregate
   {})
 
 ; Work-to-Artist relationship
@@ -542,7 +551,7 @@ Aliases are used to store alternate names or misspellings. For more information 
 ; linked to a work (e.g. composers, lyricists). Any works linked to the artist's
 ; recordings will also be shown there.
 
-(defentity :work:discrete:playable
+#_(defentity :work:discrete:playable
   {:doc "A :work which can be expressed in the form of one or more
          audio/video recordings.
          Something that an :agent can play back.
@@ -571,7 +580,7 @@ Aliases are used to store alternate names or misspellings. For more information 
    })
 
 ; TODO
-(def-validated-map :media:release
+#_(def-validated-map :media:release
   {:doc "Represents the unique release (i.e. issuing) of a product on a specific
          date with specific release information such as the country, label, barcode,
          packaging, etc. If you walk into a store and purchase an album or single,
@@ -642,20 +651,20 @@ Aliases are used to store alternate names or misspellings. For more information 
                 to prove (but it's not clearly fake)."}
    (def :this/data-quality (v/and :db/long (fn1 <= 0 1)))})
 
-Status
-The status describes how "official" a release is. Possible values are:
+; Status
+; The status describes how "official" a release is. Possible values are:
 
-official
-Any release officially sanctioned by the artist and/or their record company. Most releases will fit into this category.
-promotional
-A give-away release or a release intended to promote an upcoming official release (e.g. pre-release versions, releases included with a magazine, versions supplied to radio DJs for air-play).
-bootleg
-An unofficial/underground release that was not sanctioned by the artist and/or the record company. This includes unofficial live recordings and pirated releases.
-pseudo-release
-An alternate version of a release where the titles have been changed. These don't correspond to any real release and should be linked to the original release using the transl(iter)ation relationship.
+; official
+; Any release officially sanctioned by the artist and/or their record company. Most releases will fit into this category.
+; promotional
+; A give-away release or a release intended to promote an upcoming official release (e.g. pre-release versions, releases included with a magazine, versions supplied to radio DJs for air-play).
+; bootleg
+; An unofficial/underground release that was not sanctioned by the artist and/or the record company. This includes unofficial live recordings and pirated releases.
+; pseudo-release
+; An alternate version of a release where the titles have been changed. These don't correspond to any real release and should be linked to the original release using the transl(iter)ation relationship.
 
 
-(defentity :media:release-group
+#_(defentity :media:release-group
   {:doc "Used to group several different releases into a single logical entity.
          Every release belongs to one, and only one release group.
          Both release groups and releases are \"albums\" in a general sense,
@@ -683,72 +692,70 @@ An alternate version of a release where the titles have been changed. These don'
                         In MusicBrainz, multiple artists can be linked using artist
                         credits."}]})
 
-Description
-The type of a release group describes what kind of release group it is. It is divided in two: a release group can have a "main" type and an unspecified number of extra types.
+; Description
+; The type of a release group describes what kind of release group it is. It is divided in two: a release group can have a "main" type and an unspecified number of extra types.
 
 
 
-Primary types
-Album
-An album, perhaps better defined as a "Long Play" (LP) release, generally consists of previously unreleased material (unless this type is combined with secondary types which change that, such as "Compilation").
+; Primary types
+; Album
+; An album, perhaps better defined as a "Long Play" (LP) release, generally consists of previously unreleased material (unless this type is combined with secondary types which change that, such as "Compilation").
 
-Single
-A single has different definitions depending on the market it is released for.
+; Single
+; A single has different definitions depending on the market it is released for.
 
-In the US market, a single typically has one main song and possibly a handful of additional tracks or remixes of the main track; the single is usually named after its main song; the single is primarily released to get radio play and to promote release sales.
-The U.K. market (also Australia and Europe) is similar to the US market, however singles are often released as a two disc set, with each disc sold separately. They also sometimes have a longer version of the single (often combining the tracks from the two disc version) which is very similar to the US style single, and this is referred to as a "maxi-single". (In some cases the maxi-single is longer than the release the single comes from!)
-The Japanese market is much more single driven. The defining factor is typically the length of the single and the price it is sold at. Up until 1995 it was common that these singles would be released using a mini-cd format, which is basically a much smaller CD typically 8 cm in diameter. Around 1995 the 8cm single was phased out, and the standard 12cm CD single is more common now; generally re-releases of singles from pre-1995 will be released on the 12cm format, even if they were originally released on the 8cm format. Japanese singles often come with instrumental versions of the songs and also have maxi-singles like the UK with remixed versions of the songs. Sometimes a maxi-single will have more tracks than an EP but as it's all alternate versions of the same 2-3 songs it is still classified as a single.
-There are other variations of the single called a "split single" where songs by two different artists are released on the one disc, typically vinyl. The term "B-Side" comes from the era when singles were released on 7 inch (or sometimes 12 inch) vinyl with a song on each side, and so side A is the track that the single is named for, and the other side - side B - would contain a bonus song, or sometimes even the same song.
+; In the US market, a single typically has one main song and possibly a handful of additional tracks or remixes of the main track; the single is usually named after its main song; the single is primarily released to get radio play and to promote release sales.
+; The U.K. market (also Australia and Europe) is similar to the US market, however singles are often released as a two disc set, with each disc sold separately. They also sometimes have a longer version of the single (often combining the tracks from the two disc version) which is very similar to the US style single, and this is referred to as a "maxi-single". (In some cases the maxi-single is longer than the release the single comes from!)
+; The Japanese market is much more single driven. The defining factor is typically the length of the single and the price it is sold at. Up until 1995 it was common that these singles would be released using a mini-cd format, which is basically a much smaller CD typically 8 cm in diameter. Around 1995 the 8cm single was phased out, and the standard 12cm CD single is more common now; generally re-releases of singles from pre-1995 will be released on the 12cm format, even if they were originally released on the 8cm format. Japanese singles often come with instrumental versions of the songs and also have maxi-singles like the UK with remixed versions of the songs. Sometimes a maxi-single will have more tracks than an EP but as it's all alternate versions of the same 2-3 songs it is still classified as a single.
+; There are other variations of the single called a "split single" where songs by two different artists are released on the one disc, typically vinyl. The term "B-Side" comes from the era when singles were released on 7 inch (or sometimes 12 inch) vinyl with a song on each side, and so side A is the track that the single is named for, and the other side - side B - would contain a bonus song, or sometimes even the same song.
 
-EP
-An EP is a so-called "Extended Play" release and often contains the letters EP in the title. Generally an EP will be shorter than a full length release (an LP or "Long Play") and the tracks are usually exclusive to the EP, in other words the tracks don't come from a previously issued release. EP is fairly difficult to define; usually it should only be assumed that a release is an EP if the artist defines it as such.
+; EP
+; An EP is a so-called "Extended Play" release and often contains the letters EP in the title. Generally an EP will be shorter than a full length release (an LP or "Long Play") and the tracks are usually exclusive to the EP, in other words the tracks don't come from a previously issued release. EP is fairly difficult to define; usually it should only be assumed that a release is an EP if the artist defines it as such.
 
-Broadcast
-An episodic release that was originally broadcast via radio, television, or the Internet, including podcasts.
+; Broadcast
+; An episodic release that was originally broadcast via radio, television, or the Internet, including podcasts.
 
-Other
-Any release that does not fit or can't decisively be placed in any of the categories above.
+; Other
+; Any release that does not fit or can't decisively be placed in any of the categories above.
 
-Secondary types
-Compilation
-A compilation, for the purposes of the MusicBrainz database, covers the following types of releases:
+; Secondary types
+; Compilation
+; A compilation, for the purposes of the MusicBrainz database, covers the following types of releases:
 
-a collection of recordings from various old sources (not necessarily released) combined together. For example a "best of", retrospective or rarities type release.
-a various artists song collection, usually based on a general theme ("Songs for Lovers"), a particular time period ("Hits of 1998"), or some other kind of grouping ("Songs From the Movies", the "Café del Mar" series, etc).
-The MusicBrainz project does not generally consider the following to be compilations:
+; a collection of recordings from various old sources (not necessarily released) combined together. For example a "best of", retrospective or rarities type release.
+; a various artists song collection, usually based on a general theme ("Songs for Lovers"), a particular time period ("Hits of 1998"), or some other kind of grouping ("Songs From the Movies", the "Café del Mar" series, etc).
+; The MusicBrainz project does not generally consider the following to be compilations:
 
-a reissue of an album, even if it includes bonus tracks.
-a tribute release containing covers of music by another artist.
-a classical release containing new recordings of works by a classical artist.
-Compilation should be used in addition to, not instead of, other types: for example, a various artists soundtrack using pre-released music should be marked as both a soundtrack and a compilation. As a general rule, always select every secondary type that applies.
+; a reissue of an album, even if it includes bonus tracks.
+; a tribute release containing covers of music by another artist.
+; a classical release containing new recordings of works by a classical artist.
+; Compilation should be used in addition to, not instead of, other types: for example, a various artists soundtrack using pre-released music should be marked as both a soundtrack and a compilation. As a general rule, always select every secondary type that applies.
 
-Soundtrack
-A soundtrack is the musical score to a movie, TV series, stage show, computer game etc. In the specific cases of computer games, a game CD with audio tracks should be classified as a soundtrack: the musical properties of the CD are more interesting to MusicBrainz than the data properties.
+; Soundtrack
+; A soundtrack is the musical score to a movie, TV series, stage show, computer game etc. In the specific cases of computer games, a game CD with audio tracks should be classified as a soundtrack: the musical properties of the CD are more interesting to MusicBrainz than the data properties.
 
-Spokenword
-Non-music spoken word releases.
+; Spokenword
+; Non-music spoken word releases.
 
-Interview
-An interview release contains an interview, generally with an artist.
+; Interview
+; An interview release contains an interview, generally with an artist.
 
-Audiobook
-An audiobook is a book read by a narrator without music.
+; Audiobook
+; An audiobook is a book read by a narrator without music.
 
-Live
-A release that was recorded live.
+; Live
+; A release that was recorded live.
 
-Remix
-A release that primarily contains remixed material.
+; Remix
+; A release that primarily contains remixed material.
 
-DJ-mix
-A DJ-mix is a sequence of several recordings played one after the other, each one modified so that they blend together into a continuous flow of music. A DJ mix release requires that the recordings be modified in some manner, and the DJ who does this modification is usually (although not always) credited in a fairly prominent way.
+; DJ-mix
+; A DJ-mix is a sequence of several recordings played one after the other, each one modified so that they blend together into a continuous flow of music. A DJ mix release requires that the recordings be modified in some manner, and the DJ who does this modification is usually (although not always) credited in a fairly prominent way.
 
-Mixtape/Street
-Promotional in nature (but not necessarily free), mixtapes and street albums are often released by artists to promote new artists, or upcoming studio albums by prominent artists. They are also sometimes used to keep fans' attention between studio releases and are most common in rap & hip hop genres. They are often not sanctioned by the artist's label, may lack proper sample or song clearances and vary widely in production and recording quality. While mixtapes are generally DJ-mixed, they are distinct from commercial DJ mixes (which are usually deemed compilations) and are defined by having a significant proportion of new material, including original production or original vocals over top of other artists' instrumentals. They are distinct from demos in that they are designed for release directly to the public and fans; not to labels.
+; Mixtape/Street
+; Promotional in nature (but not necessarily free), mixtapes and street albums are often released by artists to promote new artists, or upcoming studio albums by prominent artists. They are also sometimes used to keep fans' attention between studio releases and are most common in rap & hip hop genres. They are often not sanctioned by the artist's label, may lack proper sample or song clearances and vary widely in production and recording quality. While mixtapes are generally DJ-mixed, they are distinct from commercial DJ mixes (which are usually deemed compilations) and are defined by having a significant proportion of new material, including original production or original vocals over top of other artists' instrumentals. They are distinct from demos in that they are designed for release directly to the public and fans; not to labels.
 
-
-
-(defentity :media:medium
+#_(defentity :media:medium
   {:doc "The actual physical medium the content is stored upon.
          One of the physical, separate things you would get when you buy something in
          e.g. a record store. They are the individual CDs, vinyls, etc. contained
@@ -782,7 +789,7 @@ Promotional in nature (but not necessarily free), mixtapes and street albums are
   {:media:medium:name   [:one :string {:doc "The name/title of this particular medium."}]
    :media:medium:format [:one :string {:doc "The format of the medium."}]})
 
-(defentity :alias
+#_(defentity :alias
   {:doc "Localised names are used to store the official names used in different languages and countries.
          Search hints are used to help both users and the server when searching and can be a number of things
          including:
@@ -807,7 +814,7 @@ Promotional in nature (but not necessarily free), mixtapes and street albums are
    :alias:locale [:one :ref    {:ref-to :linguistics:language
                                 :doc    "Identifies which language or country the alias is for."}]})
 
-(defentity :media:series
+#_(defentity :media:series
   {:doc "A series is a sequence of separate release groups, releases, recordings, works or
          events with a common theme. The theme is usually prominent in the branding of the
          entities in the series and the individual entities will often have been given a
@@ -834,7 +841,7 @@ Promotional in nature (but not necessarily free), mixtapes and street albums are
    :this/name:alias:many
      [:many :ref    {:ref-to :alias}]})
 
-(defentity :gathering:agent:person
+#_(defentity :gathering:agent:person
   {:doc "A gathering or event, usually organized, which people can attend.
          Includes:
          - live performances
@@ -874,6 +881,3 @@ Promotional in nature (but not necessarily free), mixtapes and street albums are
 
 ; A track is the way a recording is represented on a particular release, on a particular medium.
 ; Every track has a title (see the guidelines for titles) and is credited to one or more artists.
-
-
-)
