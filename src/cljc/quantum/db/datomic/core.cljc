@@ -47,6 +47,7 @@
 ; Optimally one could have a per-thread binding via dynamic vars, but
 ; based on certain tests, somehow they don't work 100% in ClojureScript.
 ; So we can go with atoms for now
+; Also, this should be a connection pool
 (defonce db*   (atom nil))
 (defonce conn* (atom nil))
 (defonce part* (atom nil))
@@ -243,7 +244,7 @@
 
 ; ===== SCHEMAS =====
 
-(def ^{:doc "See also |quantum.db.datomic.core/allowed-types|."}
+(def ^{:doc "See also Datomic's documentation."}
   allowed-types
  #{:keyword
    :string
@@ -344,7 +345,7 @@
 
 (def-validated-map intermediate-schema
   :invariant #(if (:datomic:schema/component? %)
-                  (-> % datomic:schema/type (= :ref))
+                  (-> % :datomic:schema/type (= :ref))
                   true)
   :req-un [(def :datomic:schema/ident       keyword?)
            (def :datomic:schema/type        allowed-types)
