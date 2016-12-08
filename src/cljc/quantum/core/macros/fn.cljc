@@ -59,7 +59,7 @@
              (let [sym (gensym "externed")]
                (swap! externs conj (list 'def sym obj))
                sym))))
-       (doto->> log/ppr-hints :macro-expand "OPTIMIZED BODY:")))
+       (doto->> (log/ppr-hints :macro-expand "OPTIMIZED BODY:"))))
 
 #?(:clj
 (defmacro fn+*

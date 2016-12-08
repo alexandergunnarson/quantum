@@ -259,11 +259,11 @@
 ;                               obj))
 #?(:clj
 (defmacro doto->>
-  {:usage '(->> 1 inc (doto->> println "ABC"))}
-  [f & args]
-  (let [obj (last args)]
-    `(do (~f ~@(butlast args) ~obj)
-         ~obj))))
+  {:usage '(->> 1 inc (doto->> (println "ABC")))}
+  [[f & pre-args] obj]
+  `(let [obj# ~obj]
+     (do (~f ~@pre-args obj#)
+         obj#))))
 
 #?(:clj
 (defmacro doto-2
