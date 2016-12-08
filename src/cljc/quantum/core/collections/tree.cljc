@@ -102,17 +102,20 @@
   [smap form]
   (postwalk (whenf1 (fn1 in-k? smap) smap) form))
 
-(defn tree-filter
+(defn- walk-filter
   "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
    only the elements for which @pred is true."
   {:attribution "Alex Gunnarson"}
-  [pred tree]
+  [walk-fn pred tree]
   (let [results (transient [])]
-    (postwalk
+    (walk-fn
       (whenf1 pred
         (fn->> (withf->> #(conj! results %)))) ; keep it the same
       tree)
     (persistent! results)))
+
+(def postwalk-filter (partial walk-filter postwalk))
+(def prewalk-filter  (partial walk-filter prewalk ))
 
 #?(:clj (defn prewalk-find [pred x] ; can't find nil but oh well ; TODO clean
   (cond (try (pred x)
