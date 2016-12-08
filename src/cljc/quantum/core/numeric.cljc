@@ -258,6 +258,8 @@
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 
+; public static boolean isEven(Object x) { return (x & 1) == 0; }
+
 (defnt exactly
   #?@(:clj  [([#{decimal?} x]
                (-> x rationalize exactly))

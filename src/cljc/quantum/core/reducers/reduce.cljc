@@ -10,10 +10,8 @@
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers.reduce
           (:refer-clojure :exclude [reduce into])
-          (:require [#?(:clj  clojure.core
-                        :cljs cljs.core   )        :as core  ]
-                    [#?(:clj  clojure.core.async
-                        :cljs cljs.core.async)     :as async]
+          (:require [clojure.core                  :as core]
+                    [clojure.core.async            :as async]
                     [quantum.core.collections.base :as cbase ]
                     [quantum.core.data.vector      :as vec
                       :refer [catvec]                        ]
@@ -175,8 +173,10 @@
    based on the input types."
   {:attribution "Alex Gunnarson"
    :todo ["Shorten this code using type differences and type unions with |editable?|"
-          "Handle arrays"]}
+          "Handle arrays"
+          "Handle one-arg"]}
   ([to] to)
+  ([^reducer?    from] (joinl [] from))
   ([^vector?     to from] (if (vector?   from)
                               (catvec         to from)
                               (transient-into to from)))
