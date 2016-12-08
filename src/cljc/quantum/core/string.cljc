@@ -54,12 +54,25 @@
 
 ; ===== CHARS =====
 
-(def num-chars      #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9})
+(def int->num-char
+  (#?@(:clj [vector-of :char] :cljs [vector])
+    \0 \1 \2 \3 \4 \5 \6 \7 \8 \9))
+(def num-char->int (zipmap int->num-char (range)))
+(def num-chars (set int->num-char))
 
-(def upper-chars    #{\A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z})
-(def lower-chars    #{\a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y \z})
+(def int->upper-char
+  (#?@(:clj [vector-of :char] :cljs [vector])
+    \A \B \C \D \E \F \G \H \I \J \K \L \M \N \O \P \Q \R \S \T \U \V \W \X \Y \Z))
+(def upper-char->int (zipmap int->upper-char (range)))
+(def upper-chars (set int->upper-char))
+
+(def int->lower-char
+  (#?@(:clj [vector-of :char] :cljs [vector])
+    \a \b \c \d \e \f \g \h \i \j \k \l \m \n \o \p \q \r \s \t \u \v \w \x \y \z))
+(def lower-char->int (zipmap int->lower-char (range)))
+(def lower-chars (set int->lower-char))
+
 (def alpha-chars    (set/union upper-chars lower-chars))
-
 (def alphanum-chars (set/union alpha-chars num-chars))
 
 (def line-terminator-chars
