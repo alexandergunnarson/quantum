@@ -200,7 +200,7 @@
 #?(:clj
     (defnt ^double ->double
       {:source "clojure.lang.RT/doubleCast"
-       :todo "Check for overflow"}
+       :todo #{"Check for overflow}"}
       ([^Number                 x] (.doubleValue x))
       ([^double                 x] x)
       ([#{byte short int float} x] (->double* x))

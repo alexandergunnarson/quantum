@@ -90,5 +90,9 @@
     (reduce punion (punion s0 s1) ss))))
 
 (defalias intersection set/intersection)
+
 (defalias difference   set/difference  )
+(defalias differencel  difference      )
+(defn differencer [a b] (differencel b a))
+
 (defalias rename-keys  set/rename-keys )
