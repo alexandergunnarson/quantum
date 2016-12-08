@@ -1,18 +1,13 @@
 (ns ^{:doc "Helper functions for macros which provide optimization."}
   quantum.core.macros.optimization
-           (:require [quantum.core.core        :as qcore]
-                     [quantum.core.fn          :as fn
-                       :refer [#?@(:clj [fn->])]        ]
-                     [quantum.core.log         :as log  ]
-                     [quantum.core.logic       :as logic
-                       :refer [#?@(:clj [fn-and])]      ]
-                     [quantum.core.vars        :as var  ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn          :as fn
-                       :refer [fn->]                    ]
-                     [quantum.core.log         :as log  ]
-                     [quantum.core.logic       :as logic
-                       :refer [fn-and]                  ])))
+  (:require
+    [quantum.core.core  :as qcore]
+    [quantum.core.fn    :as fn
+      :refer [fn->]]
+    [quantum.core.log   :as log  ]
+    [quantum.core.logic :as logic
+      :refer [fn-and]]
+    [quantum.core.vars  :as var  ]))
 
 ; ===== EXTERN =====
 
