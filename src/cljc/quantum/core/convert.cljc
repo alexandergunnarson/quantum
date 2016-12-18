@@ -303,6 +303,8 @@
   ([^symbol? x]
     (keyword (namespace x) (name x))))
 
+(declare ->read-stream-protocol)
+
 #?(:clj
 (defnt ^BufferedInputStream ->buffered-read-stream
   ([^BufferedInputStream x] x)
@@ -312,6 +314,8 @@
   ([                     x] (-> x ->read-stream-protocol ->buffered-read-stream))))
 
 #?(:clj (defalias ->buffered-input-stream ->buffered-read-stream))
+
+(declare ->write-stream-protocol)
 
 #?(:clj
 (defnt ^BufferedOutputStream ->buffered-write-stream
