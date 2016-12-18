@@ -24,6 +24,8 @@
                        :refer [TODO]]
                      [quantum.core.numeric               :as num]
                      [quantum.core.string                :as str]
+                     [quantum.core.collections.core
+                       :refer [lasti]]
                      [quantum.core.convert.core          :as conv]
                      [quantum.core.convert.primitive     :as pconv
                        :refer [->byte]]
@@ -620,7 +622,7 @@
                   (let [encoding (get options :encoding "UTF-8")]
                     (String. x ^String (name encoding)))
                 :cljs ; funcool/octet.spec.string
-                  (let [view     (js/Uint8Array. (.subarray input 0 (lasti x))) ; TODO maybe just copy it?
+                  (let [view     (js/Uint8Array. (.subarray x 0 (lasti x)))
                         encoding (.-fromCharCode js/String)]
                     (.apply encoding nil view))))
            ([^keyword? k] (->text k "/"))

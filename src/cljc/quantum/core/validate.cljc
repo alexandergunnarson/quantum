@@ -10,7 +10,10 @@
     [quantum.core.macros.core
       :refer [if-cljs locals]]
     [quantum.core.vars :as var
-      :refer [defalias defmalias]]))
+      :refer [defalias defmalias]])
+  #?(:cljs
+  (:require-macros
+    [quantum.core.validate :as self])))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
 

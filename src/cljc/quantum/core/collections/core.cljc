@@ -7,7 +7,7 @@
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
      conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse subseq
-     empty? empty class reduce
+     empty? empty class reduce swap! reset!
      #?@(:cljs [array])])
   (:require [clojure.core                   :as core]
     #?(:clj [seqspert.vector                            ])

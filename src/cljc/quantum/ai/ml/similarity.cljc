@@ -14,7 +14,7 @@
       :refer [<- fn1 fn->]]
     [quantum.core.collections :as coll
       :refer [map+ remove+ red-apply range+
-              mutable! eq! aset-in!
+              mutable eq! aset-in!
               kmap aget-in aget-in* ifor get reducei]]
     [quantum.core.error
       :refer [ ->ex TODO]]

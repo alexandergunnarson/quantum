@@ -9,8 +9,7 @@
   (:require
     [clojure.core                   :as core]
 #?@(:cljs
-   [[cljs-time.instant] ; To make dates serializable with pr-str
-    [cljsjs.js-joda]])
+   [[cljsjs.js-joda]])
     [quantum.core.error             :as err
       :refer [->ex TODO throw-unless]]
     [quantum.core.fn                :as fn

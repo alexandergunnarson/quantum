@@ -358,7 +358,7 @@
   walk prewalk         postwalk
        prewalk-filter  postwalk-filter
        prewalk-replace postwalk-replace
-       prewalk-find  #_postwalk-find
+       #?(:clj prewalk-find)  #_postwalk-find
   apply-to-keys)
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================

@@ -318,7 +318,7 @@
   ([^array? a :first b]
     (java.util.Arrays/equals a b))))
 
-(def cljs-types
+(def cljs-types ; TODO take from type/defs.cljc
   '{js/Uint8Array        uint8
     js/Uint8ClampedArray uint8c
     js/Uint16Array       uint16
@@ -348,7 +348,7 @@
              `(defnt ~fn-sym
                 ([#{~ctor-sym} x#] x#)
                 ([~(into (get cljs-equivalence-classes ctor-sym)
-                         '#{array? number?}) x#] (new ~ctor-sym x#))
+                         '#{objects? number?}) x#] (new ~ctor-sym x#))
                 ([x#] (assert (coll? x#)) ; TODO maybe other acceptable datatypes?
                       (reducei (fn [buf# elem# i#] (aset buf# i# elem#) buf#)
                                (~fn-sym (count x#))
