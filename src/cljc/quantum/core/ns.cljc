@@ -112,3 +112,15 @@
   `(alembic.still/distill ~lib)))
 
 #_(:clj (defalias lein alembic.still/lein))
+
+#?(:clj
+(defn assert-ns-aliased
+  "Asserts that the provided namespace is aliased in the current namespace."
+  [ns-]
+  (let [there (->> (keys (ns-publics ns-))
+                   (remove #(->> % name (re-find #"([pP]rotocol)|-reified|externed")))
+                   set)
+        here  (set (keys (ns-publics *ns*)))]
+    (assert (set/subset? there here)
+            {:ns      ns-
+             :missing (set/difference there here)}))))
