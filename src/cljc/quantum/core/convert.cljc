@@ -56,6 +56,7 @@
                                          StringWriter
                                          DataInputStream
                                          InputStream OutputStream
+                                         ObjectInputStream ObjectOutputStream
                                          IOException EOFException
                                          RandomAccessFile
                                          Reader BufferedReader InputStreamReader]
@@ -78,14 +79,18 @@
 
 (log/this-ns)
 
-(defalias utf8-string   conv/utf8-string  )
-(defalias base64-encode conv/base64-encode)
-(defalias base64-decode conv/base64-decode)
-(defalias base64->bytes base64-decode     ) ; kind of
+        (defalias utf8-string   conv/utf8-string  )
+        (defalias base64-encode conv/base64-encode)
+        (defalias base64-decode conv/base64-decode)
+        (defalias base64->bytes base64-decode     ) ; kind of
+#?(:clj (defalias ->bytes       arr/->bytes       ))
+#?(:clj (defalias bytes->longs  arr/bytes->longs  ))
 
 (defnt ->regex
   ([^string? s] (-> s str/conv-regex-specials re-pattern))
   ([^regex?  r] r))
+
+; ===== (DE)SERIALIZATION ===== ;
 
 (defn transit->
   "Transit decode an object from @x."
@@ -108,12 +113,25 @@
        :cljs (-> (t/writer type opts)
                  (t/write x)))))
 
-(defn ->path
-  [& args]
-  (apply quantum.core.string/join-once "/" args))
-
 (defalias json-> json/json->)
 (defalias ->json json/->json)
+
+#?(:clj
+(defnt ->serialized
+  ([^OutputStream out obj]
+    (-> out ->buffered (ObjectOutputStream.) (.writeObject))
+    out)))
+
+#?(:clj
+(defnt serialized->
+  ([^bytes?              x]
+    (with-open [in (-> x ->read-stream (ObjectInputStream.))] (.readObject in)))
+  ([^InputStream         x] (-> x ->buffered (ObjectInputStream.) (.readObject)))
+  ([^BufferedInputStream x] (-> x))))
+
+(defn ->path
+  "Creates a forward-slash-delimited path from the @`args`."
+  [& args] (apply quantum.core.string/join-once "/" args))
 
 #?(:cljs
 (defn bytes->base64
@@ -281,8 +299,6 @@
 (defnt ^java.nio.file.Path ->java-path
   ([^java.nio.file.Path x] x)
   ([                    x] (Paths/get ^URI (->uri x)))))
-  ; TODO have a smart mechanism which adds arity based on
-  ; unaccounted-for arities from ->uri
 
 #?(:clj
 (defnt ->observable ; O(1) ; TODO Reflection on clojure.lang.IndexedSeq
@@ -301,18 +317,20 @@
     (keyword (namespace x) (name x))))
 
 #?(:clj
-(defnt ^InputStream ->input-stream
+(defnt ^BufferedInputStream ->read-stream
   {:attribution "ztellman/byte-streams"
-   :contributors {"Alex Gunnarson" "defnt-ed and added to"}}
+   :contributors {"Alex Gunnarson" "defnt-ed and added to"}
+   :todo         {0 "Is it necessary to buffer all streams?"}}
   (^{:cost 0} [^bytes? ary]
-    (ByteArrayInputStream. ary))
+    (-> ary (ByteArrayInputStream.) ->buffered))
   ([^String x]
-    (-> x arr/->bytes ->input-stream))
+    (-> x ->bytes ->read-stream))
   (^{:cost 0} [^ByteBuffer buf]
-    (ByteBufferInputStream. (.duplicate buf))) ; in a different function, .duplicate is not used.
+    (-> buf .duplicate (ByteBufferInputStream.) ->buffered)) ; in a different function, .duplicate is not used.
   (^{:cost 0} [^ReadableByteChannel channel]
-    (Channels/newInputStream channel))
-  (^{:cost 0} [^File x] (FileInputStream. x))
+    (-> channel Channels/newInputStream ->buffered))
+  ; Are FileInputStreams already buffered? Supposedly not: http://stackoverflow.com/questions/2882075/what-about-buffering-fileinputstream
+  (^{:cost 0} [^File x] (-> x (FileInputStream.) ->buffered))
   #_(^{:cost 0} [(stream-of bytes) s options]
     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
       (s/consume
@@ -320,7 +338,7 @@
           (ps/put-array ps ary 0 (alength ary)))
         s)
       (s/on-drained s #(ps/close ps))
-      (ps/->input-stream ps)))
+      (ps/->read-stream ps)))
   #_(^{:cost 0} [(stream-of ByteBuffer) s options]
     (let [ps (ps/pushback-stream (get options :buffer-size 65536))]
       (s/consume
@@ -328,7 +346,7 @@
           (ps/put-buffer ps (.duplicate buf)))
         s)
       (s/on-drained s #(ps/close ps))
-      (ps/->input-stream ps)))
+      (ps/->read-stream ps)))
   (^{:cost 1.5} [(seq-of #'proto/ByteSource) srcs options]
     (let [chunk-size (get options :chunk-size 65536)
           out (PipedOutputStream.)
@@ -341,45 +359,67 @@
               (recur (rest s))))
           (finally
             (.close out))))
-      in))))
+      (->buffered in)))))
 
-; TODO UNCOMMENT THIS — IT'S GOOD
+#?(:clj (defalias ->input-stream ->read-stream))
 
 #?(:clj
-(defnt ^DataInputStream ->data-input-stream
+(defnt ^DataInputStream ->data-read-stream
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed"}}
   ([^DataInputStream x options] x)
   ([x options]
-   (-> x (->input-stream options) (DataInputStream.)))))
+   (-> x (->read-stream options) (DataInputStream.)))))
+
+#?(:clj (defalias ->data-input-stream ->data-read-stream))
 
 #?(:clj
-(defnt ^OutputStream ->output-stream
+(defnt ^OutputStream ->write-stream
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed"}}
   (^{:cost 0} [^WritableByteChannel channel]
-    (Channels/newOutputStream channel))))
+    (Channels/newOutputStream channel))
+  (^{:cost 0} [^File x] (-> x (FileOutputStream.) ->buffered))))
+
+#?(:clj (defalias ->output-stream ->write-stream))
 
 #?(:clj
-(defnt ^BufferedInputStream ->buffered-input-stream
+(defnt ^BufferedInputStream ->buffered-read-stream
   ([^BufferedInputStream x] x)
-  ([^InputStream         x] (BufferedInputStream. x))
-  ([                     x] (-> x ->input-stream-protocol ->buffered-input-stream))))
+  ([^InputStream         x] (if (instance? BufferedInputStream x)
+                                x
+                                (BufferedInputStream. x)))
+  ([                     x] (-> x ->read-stream-protocol ->buffered-read-stream))))
+
+#?(:clj (defalias ->buffered-input-stream ->buffered-read-stream))
+
+#?(:clj
+(defnt ^BufferedOutputStream ->buffered-write-stream
+  ([^BufferedOutputStream x] x)
+  ([^OutputStream         x] (if (instance? BufferedOutputStream x)
+                                 x
+                                 (BufferedOutputStream. x)))
+  ([                      x] (-> x ->write-stream-protocol ->buffered-write-stream))))
+
+#?(:clj (defalias ->buffered-output-stream ->buffered-write-stream))
 
 #?(:clj
 (defnt ->buffered
   "Convert @`x` to a buffered InputStream or OutputStream."
   ([^BufferedInputStream  x] x)
   ([^BufferedOutputStream x] x)
-  ([^InputStream          x] (->buffered-input-stream  x))
-  ([^OutputStream         x] (BufferedOutputStream. x)))) ; TODO
+  ([^InputStream          x] (->buffered-read-stream  x))
+  ([^OutputStream         x] (->buffered-write-stream x))))
 
 (declare ->text)
 
 #?(:clj
 (defnt ^ByteBuffer ->byte-buffer
   {:attribution  ["ztellman/byte-streams" "ztellman/gloss.core.formats"]
-   :contributors {"Alex Gunnarson" "defnt-ed"}}
+   :contributors {"Alex Gunnarson" "defnt-ed"}
+   :todo         {0 "CLJS has byte buffers too"}
+   :performance  "In general it is best to allocate direct buffers only when they
+                  yield a measurable gain in program performance."}
   ; ===== ztellman/byte-streams =====
   (^{:cost 0} [^ByteBuffer x] x)
   (^{:cost 0} [^bytes? ary] (->byte-buffer ary nil))
@@ -394,6 +434,7 @@
   (^{:cost 1} [^string? x] (->byte-buffer x nil))
   (^{:cost 1} [^string? x options]
     (-> x (arr/->bytes options) (->byte-buffer options)))
+  (           [^InputStream] (TODO) #_(-> x ->buffered))
   #_(^{:cost 1} [(vector-of ByteBuffer) bufs {:keys [direct?] :or {direct? false}}]
     (cond
       (empty? bufs)
@@ -478,11 +519,11 @@
   #_([x] (gformats/to-buf-seq x))))
 
 #?(:clj
-(defnt' in-stream->out-stream
+(defnt' read-channel->write-channel
   {:source "https://thomaswabner.wordpress.com/2007/10/09/fast-stream-copy-using-javanio-channels/"}
   (^WritableByteChannel
     [^ReadableByteChannel in ^WritableByteChannel out]
-    (let [^ByteBuffer buffer (ByteBuffer/allocateDirect (* 16 1024))]
+    (let [^ByteBuffer buffer (ByteBuffer/allocateDirect (* 16 1024))] ; Recommended size
       (while (not= -1 (.read in buffer))
         (.flip buffer)
         (.write out buffer)
@@ -491,7 +532,7 @@
       (while (.hasRemaining buffer)
         (.write out buffer))
       ; TODO must close out channel in order to flush the data.
-      ))))
+      out))))
 
 #?(:clj
 (defnt ->byte-channel
@@ -549,15 +590,23 @@
   ([            x] (when x (-> x ->char-seq CharBuffer/wrap)))))
 
 (defnt ^String ->text
+  "Converts to the rawest String representation possible."
   {:contributors {"Alex Gunnarson"        "defnt-ed"
                   "ztellman/byte-streams" nil
                   "funcool/octet"         nil}
    :todo ["Test these against ->bytes"]}
            ([^string? x        ] x)
-           ([^string? x options] x)
+         #_([^string? x options] x)
+  #?(:clj  ([^boolean x] (Boolean/valueOf   x)))
+  #?(:clj  ([^char    x] (Character/valueOf x)))
+  #?(:clj  ([^short   x] (Short/valueOf     x)))
+  #?(:clj  ([^int     x] (Integer/valueOf   x)))
+  #?(:clj  ([^long    x] (Long/valueOf      x)))
+  #?(:clj  ([^float   x] (Float/valueOf     x)))
+  #?(:clj  ([^double  x] (Double/valueOf    x)))
+  #?(:clj  ([^Number  x] (String/valueOf    x)))
            ([^datascript.db.DB x] (dt/write-transit-str x))
   #?(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
-  #?(:clj  ([#{boolean char int long float double} x] (String/valueOf x)))
   #?(:clj  ([^integer? n radix]
              #?(:clj  (.toString (biginteger n) radix)
                 :cljs (.toString n radix))))
@@ -578,10 +627,11 @@
   #?(:clj  ([^java.net.InetAddress x]
              (if-let [hostName (.getHostName x)]
                hostName
-               (.getHostAddress x)))
+               (.getHostAddress x))))
+  #?(:clj  ([^ReadableByteChannel x] (-> x ->buffered-read-stream ->text)))
   #?(:clj  (^{:cost 1} [^CharSequence char-sequence]
              (.toString char-sequence)))
-  #?(:clj  ([^java.nio.charset.Charset x] (.name x)))
+  #?(:clj  ([^Charset x] (.name x)))
            ; Look at Apache Commons Convert to fill in the below code
            ;([^java.sql.Blob x])
            ;([^java.sql.Clob x])
@@ -596,16 +646,18 @@
   #?(:clj  ([^java.util.Calendar x]
              (let [df (java.text.SimpleDateFormat. (:calendar time/formats))]
                (.setCalendar df x)
-               (.format df (.getTime x))))))
+               (.format df (.getTime x)))))
 #_(^{:cost 1} [(vector-of String) strings]
     (let [sb (StringBuilder.)]
       (doseq [s strings]
         (.append sb s))
       (.toString sb)))
+  #?(:clj  ([^InputStream in    ] (-> in ->buffered-read-stream (->text))))
+  #?(:clj  ([^InputStream in enc] (-> in ->buffered-read-stream (->text enc))))
   #?(:clj  ; CANDIDATE 0
-           ([^InputStream in]
+           ([^BufferedInputStream in]
              (->text in (->text (Charset/defaultCharset)))))
-  #?(:clj  ([^InputStream in enc]
+  #?(:clj  ([^BufferedInputStream in enc]
              (with-open [bout (StringWriter.)]
                (io/copy in bout :encoding enc)
                (.toString bout))))
@@ -619,10 +671,17 @@
                    arr (byte-array n)]
                (.read in-stream arr, 0 n)
                (String. arr java.nio.charset.StandardCharsets/UTF_8))))
-  #?(:clj  ([^File f] (-> f ->buffered-input-stream ->text)))
+  #?(:clj  ([^File f] (-> f ->buffered-read-stream ->text)))
+  ; TODO make this better
+  #?(:clj  ([^URL x] (.toString x)))
   ; Port this
 #_([x options] (streams/convert x String options))
-           ([:else x] (str x)))
+          )
+
+(defnt ->represent
+  "Converts to a(n ostensibly) human-friendly String representation."
+  ([^string? x] x)
+  ([^:obj    x] x))
 
 #?(:clj
 (defnt ->charset
@@ -653,21 +712,19 @@
 (defnt ->read-channel
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed"}}
-  (^{:cost 0} [^File x]
-    (let [^FileInputStream in (->input-stream x)]
-      (.getChannel in)))))
+  (^FileChannel         ^{:cost 0} [^File x]
+    (let [^FileInputStream in (->read-stream x)] (.getChannel in)))
+  (^ReadableByteChannel ^{:cost 0} [^InputStream         x] (-> x ->buffered ->read-channel))
+  (^ReadableByteChannel ^{:cost 0} [^BufferedInputStream x] (Channels/newChannel x))))
 
 #?(:clj
 (defnt ->write-channel
-  (^{:cost 0} [^File file opts]
-    (.getChannel (FileOutputStream. file (boolean (or (:append? opts) true)))))
-  (^{:cost 0} [^OutputStream output-stream]
-    (Channels/newChannel output-stream))))
-
-#?(:clj
-(defnt ->channel
-  "Writable or readable."
-  (^{:cost 0} [^File x] (->read-channel x))))
+  (^WritableByteChannel            [#{string? bytes?}     x] (-> x ->read-stream ->read-channel))
+  (^FileChannel         ^{:cost 0} [^File                 x] (->write-channel x nil))
+  (^WritableByteChannel ^{:cost 0} [^File                 x opts]
+    (.getChannel (FileOutputStream. x (boolean (or (:append? opts) true)))))
+  (^WritableByteChannel ^{:cost 0} [^OutputStream         x] (-> x ->buffered ->write-channel))
+  (^WritableByteChannel ^{:cost 0} [^BufferedOutputStream x] (Channels/newChannel x))))
 
 #?(:clj
 (defnt ^Locale ->locale
@@ -790,9 +847,6 @@
 ;   "Returns true if the two byte streams are equivalent."
 ;   [a b]
 ;   (num/== 0 (compare-bytes a b)))
-
-#?(:clj (defalias ->bytes      arr/->bytes     ))
-#?(:clj (defalias bytes->longs arr/bytes->longs))
 
 #?(:cljs
 (defn arr->vec [arr]

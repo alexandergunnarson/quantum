@@ -31,7 +31,7 @@
   #?(:cljs (:require-macros
                      [quantum.core.data.array
                        :refer [gen-typed-array-defnts]]))
-  #?(:clj  (:import  [java.io ByteArrayOutputStream]
+  #?(:clj  (:import  [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
                      [java.nio ByteBuffer]
                      java.util.ArrayList)))
 
@@ -193,14 +193,15 @@
 
 #?(:clj
 (defnt ^"[B" ->bytes
-  {:attribution ["ztellman/byte-streams" "funcool/octet" "gloss.data.primitives"]
-   :contributors {"Alex Gunnarson" "defnt-ed"}}
+  {:attribution  ["ztellman/byte-streams" "funcool/octet" "gloss.data.primitives"]
+   :contributors {"Alex Gunnarson" "defnt-ed"}
+   :todo         {0 "make encoding more rigorous via (Charset/defaultCharset)"}}
   (^{:cost 0} [^bytes? x] x)
   ; "gloss.data.primitives"
   (           [^long?  x] (-> (ByteBuffer/allocate 8) (.putLong x) .array))
   (^{:cost 2} [^String s         ] (->bytes s nil))
   (^{:cost 2} [^String s encoding]
-    #?(:clj (let [^String encoding-f (whenc encoding (fn-> name+ nil?) "UTF-8")]
+    #?(:clj (let [^String encoding-f (whenc encoding (fn-> name+ nil?) "UTF-8")] ; TODO 0
               (.getBytes s encoding-f))
        ; funcool/octet.spec.string
        :cljs (let [buff (js/ArrayBuffer. (count s))
@@ -221,7 +222,8 @@
         (let [^bytes arr (byte-array (.remaining buf))]
           (doto buf .mark (.get arr) .reset)
           arr)))
-  (^{:cost 1.5} [^java.io.InputStream in]
+  (^{:cost 1.5} [^InputStream         in] (-> in (BufferedInputStream.) ->bytes))
+  (^{:cost 1.5} [^BufferedInputStream in]
     (let [out (ByteArrayOutputStream. (comp/max 64 (.available in)))
           buf (byte-array 16384)]
       (loop []
@@ -230,9 +232,9 @@
             (.write out buf 0 len)
             (recur))))
       (.toByteArray out)))
-  ([^java.io.File x]
-    (let [in (java.io.FileInputStream. x)]
-      (->bytes (static-cast java.io.InputStream (java.io.BufferedInputStream. in)))))
+  ([^File x]
+    (let [in (FileInputStream. x)]
+      (->bytes (BufferedInputStream. in))))
   #_(^{:cost 2} [#'proto/ByteSource src options]
     (let [os (ByteArrayOutputStream.)]
       (transfer src os)
