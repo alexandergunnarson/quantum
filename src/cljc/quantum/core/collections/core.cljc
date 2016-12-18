@@ -50,13 +50,15 @@
             [quantum.core.type              :as type
               :refer [class pattern?]]
             [quantum.core.vars              :as var
-              :refer [defalias]])
+              :refer [defalias def-]])
   (:require-macros
     [quantum.core.collections.core
       :refer [assoc]])
  #?(:clj (:import
            quantum.core.data.Array
-           [java.util List Collection]
+           [clojure.lang IAtom]
+           [java.util List Collection Map]
+           [java.util.concurrent.atomic AtomicReference]
            clojure.core.async.impl.channels.ManyToManyChannel)))
 
 ; FastUtil is the best
@@ -93,7 +95,7 @@
 
 ; Arbitrary.
 ; TODO test this on every permutation for inflection point.
-(def parallelism-threshold 10000)
+(def- parallelism-threshold 10000)
 
 ; https://github.com/JulesGosnell/seqspert
 ; Very useful sequence and data structure info.
@@ -306,15 +308,13 @@
 
 #?(:clj (defalias popl rest))
 
-(def neg-1? (eq? -1))
-
 (defnt index-of
   {:todo ["Reflection on short, bigint"
           "Add 3-arity for |index-of-from|"]}
-  ([^vec?    coll elem] (whenc (.indexOf coll elem) neg-1? nil))
+  ([^vec?    coll elem] (let [i (.indexOf coll elem)] (if (= i -1) nil i)))
   ([^string? coll elem]
     (cond (string? elem)
-          (whenc (.indexOf coll (str elem)) neg-1? nil)
+          (let [i (.indexOf coll ^String elem)] (if (= i -1) nil i))
           (pattern? elem)
           #?(:clj  (let [^java.util.regex.Matcher matcher
                           (re-matcher elem coll)]
@@ -322,10 +322,10 @@
                        (.start matcher)))
              :cljs (throw (->ex :unimplemented
                                 (str "|index-of| not implemented for " (class coll) " on " (class elem))
-                                (kmap coll elem))))))
-  #_([coll elem] (throw (->ex :unimplemented
-                            (str "|index-of| not implemented for " (class coll) " on " (class elem))
-                            (kmap coll elem)))))
+                                (kmap coll elem))))
+          :else (throw (->ex :unimplemented
+                             (str "|last-index-of| not implemented for String on" (class elem))
+                             (kmap coll elem))))))
 
 ; Spent too much time on this...
 ; (defn nth-index-of [super sub n]
@@ -348,11 +348,13 @@
 
 (defnt last-index-of
   {:todo ["Reflection on short, bigint"]}
-  ([^vec?    coll elem] (whenc (.lastIndexOf coll elem      ) neg-1? nil))
-  ([^string? coll elem] (whenc (.lastIndexOf coll (str elem)) neg-1? nil))
-  #_([coll elem] (throw (->ex :unimplemented
-                            (str "|last-index-of| not implemented for " (class coll) " on " (class elem))
-                            (kmap coll elem)))))
+  ([^vec?    coll elem] (let [i (.lastIndexOf coll elem)] (if (= i -1) nil i)))
+  ([^string? coll elem]
+    (cond (string? elem)
+          (let [i (.lastIndexOf coll ^String elem)] (if (= i -1) nil i))
+          :else (throw (->ex :unimplemented
+                             (str "|last-index-of| not implemented for String on" (class elem))
+                             (kmap coll elem))))))
 
 (defnt containsk?
   {:imported "clojure.lang.RT.contains"}
@@ -502,12 +504,26 @@
      0 (throw (->ex "Indices can't be empty"))
      :else (throw (->ex "Indices count can't be >10")))))
 
+#?(:clj  (defnt swap!
+           ([^IAtom x f      ] (.swap x f      ))
+           ([^IAtom x f a0   ] (.swap x f a0   ))
+           ([^IAtom x f a0 a1] (.swap x f a0 a1)))
+   :cljs (defalias swap! core/swap!))
+
 (defalias doto! swap!)
+
+#?(:clj  (defnt reset!
+           {:todo #{"add support for primitive atomics"}}
+           ([^IAtom           x v] (.reset x v) v)
+           ([^AtomicReference x v] (.set   x v) v)
+           )
+   :cljs (defalias reset! core/reset!))
 
 (defnt aset!
   "Yay, |aset| no longer causes reflection or needs type hints!"
-  {:performance"|java.lang.reflect.Array/set| is 26 times faster
-                 than 'normal' reflection"}
+  {:performance "|java.lang.reflect.Array/set| is 26 times faster
+                  than 'normal' reflection"
+   :todo #{"have the semantics such that (aset! arr v i0 i1 i2) is possible"}}
   #?(:cljs (^first [^array?         coll            i          v] (aset coll i v             ) coll))
   #?(:clj  (^first [^boolean-array? coll ^pinteger? i ^boolean v] (aset coll i v             ) coll))
   #?(:clj  (^first [^byte-array?    coll ^pinteger? i ^byte    v] (aset coll i (core/byte  v)) coll)) ; TODO make this not required
@@ -526,32 +542,32 @@
 ; TODO assoc-in and assoc-in! for files
 (defnt assoc!
   {:todo ["Remove reflection for |aset!|."]}
-  #?(:cljs (^first [^array?         coll            k          v] (aset coll k v             )))
-  #?(:clj  (^first [^boolean-array? coll ^pinteger? k ^boolean v] (aset coll k v             )))
-  #?(:clj  (^first [^byte-array?    coll ^pinteger? k ^byte    v] (aset coll k (core/byte  v)))) ; TODO make this not required
-  #?(:clj  (^first [^char-array?    coll ^pinteger? k ^char    v] (aset coll k v             )))
-  #?(:clj  (^first [^short-array?   coll ^pinteger? k ^short   v] (aset coll k (core/short v)))) ; TODO make this not required
-  #?(:clj  (^first [^int-array?     coll ^pinteger? k ^int     v] (aset coll k v             )))
-  #?(:clj  (^first [^long-array?    coll ^pinteger? k ^long    v] (aset coll k v             )))
-  #?(:clj  (^first [^float-array?   coll ^pinteger? k ^float   v] (aset coll k v             )))
-  #?(:clj  (^first [^double-array?  coll ^pinteger? k ^double  v] (aset coll k v             )))
-  #?(:clj  (^first [^object-array?  coll ^pinteger? k          v] (aset coll k v             )))
+  #?(:cljs (^first [^array?         coll            k          v] (aset!       coll k v)))
+  #?(:clj  (^first [^boolean-array? coll ^pinteger? k ^boolean v] (aset!       coll k v)))
+  #?(:clj  (^first [^byte-array?    coll ^pinteger? k ^byte    v] (aset!       coll k v)))
+  #?(:clj  (^first [^char-array?    coll ^pinteger? k ^char    v] (aset!       coll k v)))
+  #?(:clj  (^first [^short-array?   coll ^pinteger? k ^short   v] (aset!       coll k v)))
+  #?(:clj  (^first [^int-array?     coll ^pinteger? k ^int     v] (aset!       coll k v)))
+  #?(:clj  (^first [^long-array?    coll ^pinteger? k ^long    v] (aset!       coll k v)))
+  #?(:clj  (^first [^float-array?   coll ^pinteger? k ^float   v] (aset!       coll k v)))
+  #?(:clj  (^first [^double-array?  coll ^pinteger? k ^double  v] (aset!       coll k v)))
+  #?(:clj  (^first [^object-array?  coll ^pinteger? k          v] (aset!       coll k v)))
            (^first [^transient?     coll            k          v] (core/assoc! coll k v))
            (       [^atom?          coll            k          v] (swap! coll core/assoc k v)))
 
 (defnt assoc!*
-  #?(:cljs (^first [^array?         coll            k          v] (assoc! coll k v)))
-  #?(:clj  (^first [^boolean-array? coll ^pinteger? k ^boolean v] (assoc! coll k v)))
-  #?(:clj  (^first [^byte-array?    coll ^pinteger? k ^byte    v] (assoc! coll k v)))
-  #?(:clj  (^first [^char-array?    coll ^pinteger? k ^char    v] (assoc! coll k v)))
-  #?(:clj  (^first [^short-array?   coll ^pinteger? k ^short   v] (assoc! coll k v)))
-  #?(:clj  (^first [^int-array?     coll ^pinteger? k ^int     v] (assoc! coll k v)))
-  #?(:clj  (^first [^long-array?    coll ^pinteger? k ^long    v] (assoc! coll k v)))
-  #?(:clj  (^first [^float-array?   coll ^pinteger? k ^float   v] (assoc! coll k v)))
-  #?(:clj  (^first [^double-array?  coll ^pinteger? k ^double  v] (assoc! coll k v)))
-  #?(:clj  (^first [^object-array?  coll ^pinteger? k          v] (assoc! coll k v)))
-           (^first [^transient?     coll            k          v] (assoc! coll k v))
-           (       [^atom?          coll            k          v] (assoc! coll k v))
+  #?(:cljs (^first [^array?         coll            k          v] (assoc!     coll k v)))
+  #?(:clj  (^first [^boolean-array? coll ^pinteger? k ^boolean v] (assoc!     coll k v)))
+  #?(:clj  (^first [^byte-array?    coll ^pinteger? k ^byte    v] (assoc!     coll k v)))
+  #?(:clj  (^first [^char-array?    coll ^pinteger? k ^char    v] (assoc!     coll k v)))
+  #?(:clj  (^first [^short-array?   coll ^pinteger? k ^short   v] (assoc!     coll k v)))
+  #?(:clj  (^first [^int-array?     coll ^pinteger? k ^int     v] (assoc!     coll k v)))
+  #?(:clj  (^first [^long-array?    coll ^pinteger? k ^long    v] (assoc!     coll k v)))
+  #?(:clj  (^first [^float-array?   coll ^pinteger? k ^float   v] (assoc!     coll k v)))
+  #?(:clj  (^first [^double-array?  coll ^pinteger? k ^double  v] (assoc!     coll k v)))
+  #?(:clj  (^first [^object-array?  coll ^pinteger? k          v] (assoc!     coll k v)))
+           (^first [^transient?     coll            k          v] (assoc!     coll k v))
+           (       [^atom?          coll            k          v] (assoc!     coll k v))
            (       [                coll            k          v] (core/assoc coll k v)))
 
 (defnt assoc
@@ -595,12 +611,14 @@
   `(assoc! ~coll ~i (~f (get ~coll ~i)))))
 
 (defnt first
-  ([#{string? #?(:clj array-list?) array?} coll] (get coll 0))
-  ([^vec?                                  coll] (get coll #?(:clj (Long. 0) :cljs 0))) ; to cast it...
+  {:todo #{"Return first element type"}}
+  ([#{string? #?(:clj array-list?)
+      #?(:clj any-array? :cljs array?)} coll] (get coll 0))
+  ([^vec?                               coll] (get coll #?(:clj (Long. 0) :cljs 0))) ; to cast it...
   ; TODO is this wise?
-  ([^integral?                             coll] coll)
-  ([^reducer?                              coll] (reduce (rfn [_ x] (reduced x)) nil coll))
-  ([:else                                  coll] (core/first coll)))
+  ([^integral?                          coll] coll)
+  ([^reducer?                           coll] (reduce (rfn [_ x] (reduced x)) nil coll))
+  ([:else                               coll] (core/first coll)))
 
 (defalias firstl first) ; TODO not always true
 
@@ -648,8 +666,6 @@
   (->> indices (red/map+ #(get coll %)) (red/join [])))
 
 (def third (fn1 get 2))
-
-(defn getf [n] (fn1 get n))
 
 ;--------------------------------------------------{           CONJL          }-----------------------------------------------------
 ; This will take AGES to compile if you try to allow primitives
@@ -718,13 +734,13 @@
       (throw (->ex nil "`key/val` not supported on collections of count != 2"
                    {:coll kv :ct (count kv)}))))
 
-(defnt key*
+(defnt ^:private key*
   {:todo #{"Implement core/key"}}
   #?@(:clj  [([^map-entry? kv] (core/key kv))
              ([^List       kv] (handle-kv kv #(first kv)))]
       :cljs [([#{vec? array?} kv] (handle-kv kv #(first kv)))]))
 
-(defnt val*
+(defnt ^:private val*
   {:todo #{"Implement core/val"}}
   #?@(:clj  [([^map-entry? kv] (core/val kv))
              ([^List       kv] (handle-kv kv #(second kv)))]

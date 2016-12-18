@@ -22,7 +22,8 @@
               interpose mapcat
               reductions
               range
-              map
+              map pmap map-indexed
+              remove filter
               take take-while
               drop  drop-while
               subseq
@@ -80,6 +81,7 @@
              [quantum.core.macros                     :as macros
                :refer        [#?@(:clj [defnt])]
                :refer-macros [defnt]                             ]
+             [quantum.core.ns                         :as ns]
              [quantum.core.numeric                    :as num
                :refer        [#?@(:clj [-])]
                :refer-macros [-]]
@@ -138,121 +140,146 @@
 (defn wrap-delay [f]
   (if (delay? f) f (delay ((or f fn-nil)))))
 
-; ; ====== COLLECTIONS ======
+; ====== COLLECTIONS ====== ;
 
-#?(:clj (defalias index-of      coll/index-of     ))
-#?(:clj (defalias last-index-of coll/last-index-of))
-#?(:clj (defalias count         coll/count        ))
-#?(:clj (defalias lasti         coll/lasti        ))
-#?(:clj (defalias getr          coll/getr         ))
-        (defalias subseq        coll/subseq       )
-        (defalias subseq-where  core/subseq       )
-#?(:clj (defalias get           coll/get          ))
-        (defalias gets          coll/gets         )
-        (defalias getf          coll/getf         )
-#?(:clj (defalias nth           coll/nth          ))
 
-; ; If not |defalias|ed, "ArityException Wrong number of args (2) passed to: core/eval36441/fn--36457/G--36432--36466"
+        (defalias gets            coll/gets         ) ; ?
+; ===== SINGLETON RETRIEVAL ===== ;
+#?(:clj (defalias get             coll/get          ))
+#?(:clj (defalias nth             coll/nth          ))
+#?(:clj (defalias aget            coll/aget         ))
+#?(:clj (defalias peek            coll/peek         ))
+#?(:clj (defalias first           coll/first        ))
+#?(:clj (defalias firstl          coll/firstl       ))
+#?(:clj (defalias firstr          coll/firstr       ))
+#?(:clj (defalias second          coll/second       ))
+        (defalias third           coll/third        )
+#?(:clj (defalias last            coll/last         ))
+; ===== BULK RETRIEVAL ===== ;
+#?(:clj (defalias rest            coll/rest         ))
+        (defalias lrest           core/rest         )
+#?(:clj (defalias butlast         coll/butlast      ))
+#?(:clj (defalias getr            coll/getr         ))
+        (defalias subseq          coll/subseq       )
+        (defalias subseq-where    core/subseq       )
+; ===== ASSOCIATIVE MODIFICATION ===== ;
+#?(:clj (defalias assoc           coll/assoc        ))
+#?(:clj (defalias assoc!          coll/assoc!       ))
+#?(:clj (defalias assoc!*         coll/assoc!*      )) ; ?
+#?(:clj (defalias aset!           coll/aset!        ))
+#?(:clj (defalias dissoc          coll/dissoc       ))
+#?(:clj (defalias dissoc!         coll/dissoc!      ))
+        (defalias conj            coll/conj         )
+#?(:clj (defalias conj!           coll/conj!        ))
+#?(:clj (defalias disj!           coll/disj!        ))
+#?(:clj (defalias update!         coll/update!      ))
+
+        (defalias assoc+          soc/assoc+         )
+        (defalias assocs-in+      soc/assocs-in+     )
+        (defalias dissoc-in+      soc/dissoc-in+     )
+        (defalias update-val+     soc/update-val+    )
+        (defalias assoc-when-none soc/assoc-when-none)
+        (defalias assoc-with      soc/assoc-with     )
+        (defalias assoc-if        soc/assoc-if       )
+
+; ===== ENDIAN MODIFICATION ===== ;
 #?(:clj (defalias conjl         coll/conjl        ))
 #?(:clj (defalias conjr         coll/conjr        ))
 #?(:clj (defalias pop           coll/pop          ))
 #?(:clj (defalias popl          coll/popl         ))
 #?(:clj (defalias popr          coll/popr         ))
-#?(:clj (defalias peek          coll/peek         ))
-#?(:clj (defalias first         coll/first        ))
-#?(:clj (defalias second        coll/second       ))
-        (defalias third         coll/third        )
-#?(:clj (defalias rest          coll/rest         ))
-        (defalias lrest         core/rest         )
-#?(:clj (defalias butlast       coll/butlast      ))
-#?(:clj (defalias last          coll/last         ))
-#?(:clj (defalias aset!         coll/aset!        ))
-#?(:clj (defalias aget          coll/aget         ))
-#?(:clj (defalias assoc         coll/assoc        ))
-#?(:clj (defalias assoc!        coll/assoc!       ))
-#?(:clj (defalias assoc!*       coll/assoc!*      ))
-#?(:clj (defalias dissoc        coll/dissoc       ))
-#?(:clj (defalias dissoc!       coll/dissoc!      ))
-        (defalias conj          coll/conj         )
-#?(:clj (defalias conj!         coll/conj!        ))
-#?(:clj (defalias disj!         coll/disj!        ))
-#?(:clj (defalias update!       coll/update!      ))
+; ===== MODIFICATION ===== ;
+#?(:clj (defalias doto!         coll/doto!        ))
+; ===== CONTAINMENT PREDICATES ===== ;
 #?(:clj (defalias contains?     coll/contains?    ))
 #?(:clj (defalias containsk?    coll/containsk?   ))
 #?(:clj (defalias containsv?    coll/containsv?   ))
+#?(:clj (defalias index-of      coll/index-of     ))
+#?(:clj (defalias last-index-of coll/last-index-of))
+; ===== SIZE + INDICES ===== ;
 #?(:clj (defalias empty?        coll/empty?       ))
         (def      nempty?       (fn-not empty?)   )
+#?(:clj (defalias count         coll/count        ))
+#?(:clj (defalias lasti         coll/lasti        ))
+; ===== CREATION ===== ;
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias array         coll/array        ))
+#?(:clj (defalias array-of-type coll/array-of-type))
+#?(:clj (defalias ->vec         coll/->vec        ))
+
+; ===== CONCATENATION ===== ;
 #?(:clj (defalias join          red/join          ))
 #?(:clj (defalias joinl         red/join          ))
 #?(:clj (defalias join'         red/join'         ))
 #?(:clj (defalias joinl'        red/joinl'        ))
         (defalias pjoin         red/pjoin         )
         (defalias pjoinl        red/pjoin         )
+; ===== REDUCTION ===== ;
         (defalias red-apply     red/red-apply     )
-
         (defalias fold          red/fold*         )
         (defalias cat+          red/cat+          )
         (defalias foldcat+      red/foldcat+      )
-        (defalias indexed+      red/indexed+      )
 
-        (defn indexed
-          "Returns a lazy sequence of pairs of index and item."
-          [coll] (map-indexed pair coll))
+        (defnt into! ; TODO delete
+          "Like into, but for mutable collections"
+          [^transient? x coll] (loops/doseq [elem coll] (conj! x elem)) x)
 
-        (defalias ltake         diff/ltake        )
-        (defalias take          diff/takel        )
-        (defalias takel         diff/takel        )
-        (defalias take+         diff/take+        )
-        (defalias takel+        take+             )
-        (defalias taker         diff/taker        )
-#?(:clj (defalias taker+        diff/taker+       ))
-        (defalias take-nth+     diff/take-nth+    )
-        (defalias takel-nth+    diff/takel-nth+   )
-        (defalias take-while    diff/take-while   )
-        (defalias take-while+   diff/take-while+  )
-        (defalias take-after    diff/take-after   )
-        (defalias takel-while+  take-while+       )
-        (defalias takel-after   diff/takel-after  )
+        (defalias take                diff/takel              )
+        (defalias take+               diff/take+              )
+        (defalias ltake               diff/ltake              )
+        (defalias takel               diff/takel              )
+        (defalias takel+              take+                   )
+        (defalias taker               diff/taker              )
+#?(:clj (defalias taker+              diff/taker+             ))
+        (defalias take-nth+           diff/take-nth+          )
+        (defalias takel-nth+          diff/takel-nth+         )
+        (defalias take-while          diff/take-while         )
+        (defalias take-while+         diff/take-while+        )
+        (defalias take-after          diff/take-after         )
+        (defalias takel-while+        take-while+             )
+        (defalias takel-after         diff/takel-after        )
         (defalias takel-after-matches diff/takel-after-matches)
-        (defalias taker-after   diff/taker-after  )
-        (defalias take-until    diff/take-until   )
+        (defalias taker-after         diff/taker-after        )
+        (defalias take-until          diff/take-until         )
         (defalias takel-until-matches diff/takel-until-matches)
-#?(:clj (defalias taker-until    diff/taker-until  ))
-        (defalias drop           diff/drop         )
-        (defalias drop+          diff/drop+        )
-        (defalias dropl          diff/dropl        )
-        (defalias ldropl         diff/ldropl       )
-        (defalias ldrop          diff/ldropl       )
-        (defalias drop-while+    red/drop-while+   )
+#?(:clj (defalias taker-until         diff/taker-until        ))
+
+        (defalias drop                diff/drop               )
+        (defalias drop+               diff/drop+              )
+        (defalias dropl               diff/dropl              )
+        (defalias ldropl              diff/ldropl             )
+        (defalias ldrop               diff/ldropl             )
+        (defalias drop-while+         red/drop-while+         )
         (defalias dropl-while-matches diff/dropl-while-matches)
-        (defalias dropr          diff/dropr        )
-#?(:clj (defalias dropr+         diff/dropr+       ))
-        (defalias dropr-until    diff/dropr-until  )
+        (defalias dropr               diff/dropr              )
+#?(:clj (defalias dropr+              diff/dropr+             ))
+        (defalias dropr-until         diff/dropr-until        )
         (defalias dropr-while-matches diff/dropr-while-matches)
-        (defalias ldrop-at       diff/ldrop-at     )
-        (defalias group-by+      red/group-by+     )
-        (defalias flatten+       red/flatten+      )
-        (defalias flatten-1+     red/flatten-1+    )
-        (defalias iterate+       red/iterate+      )
-        (defalias reduce-by+     red/reduce-by+    )
-        (defalias distinct+      red/distinct+     )
-        (defalias distinct-by+   red/distinct-by+  )
-        (defalias replace+       red/replace+      )
-        (defalias partition-by+  red/partition-by+ )
-        (defalias partition-all+ red/partition-all+)
-        (defalias interpose+     red/interpose+    )
-        (defalias zipvec+        red/zipvec+       )
-        (defalias random-sample+ red/random-sample+)
-        (defalias sample+        red/sample+       )
-        (defalias reduce-count   red/reduce-count  )
-#?(:clj (defalias for+           red/for+          ))
-        ; doseq+
+        (defalias ldrop-at            diff/ldrop-at           )
 
-        (def flatten-1 (partial apply concat)) ; TODO more efficient
+        (defalias group-by+           red/group-by+           )
+        (defalias flatten+            red/flatten+            )
+        (defalias flatten-1+          red/flatten-1+          )
+        (def      flatten-1           (partial apply concat)) ; TODO more efficient
+        (defalias iterate+            red/iterate+            )
+        (defalias reduce-by+          red/reduce-by+          )
 
-#?(:clj (defalias ->array       coll/->array      ))
+        (defalias distinct+           red/distinct+           )
+        (defalias distinct-by+        red/distinct-by+        )
+        (defalias ldistinct-by        mf/ldistinct-by         )
+#?(:clj (defalias ldistinct-by-java   mf/ldistinct-by-java    ))
+
+        (defalias replace+            red/replace+            )
+        (defalias partition-by+       red/partition-by+       )
+        (defalias partition-all+      red/partition-all+      )
+        (defalias interpose+          red/interpose+          )
+        (defalias zipvec+             red/zipvec+             )
+        (defalias random-sample+      red/random-sample+      )
+        (defalias sample+             red/sample+             )
+        (defalias reduce-count        red/reduce-count        )
+
+#?(:clj (defalias ->array             coll/->array            ))
+#?(:clj (defalias ->arr               coll/->arr              ))
 
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
@@ -264,56 +291,59 @@
         (defalias reduce-2 loops/reduce-2)
 #?(:clj (defalias seq-loop loops/seq-loop))
 #?(:clj (defalias loopr    loops/seq-loop))
-;#?(:clj(defalias for+     red/for+      )) ; TODO have this
 #?(:clj (defalias ifor     loops/ifor    ))
+; ===== COLLECTION COMPREHENSION ===== ;
 #?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) core/assoc :macro true))
 #?(:clj (defalias for*     loops/for*    ))
+#?(:clj (defalias for+     red/for+      ))
 #?(:clj (defalias fori     loops/fori    ))
 #?(:clj (defalias fori*    loops/fori*   ))
-#?(:clj (defalias until    loops/until   ))
-#?(:clj (defmacro lfor   [& args] `(loops/lfor   ~@args)))
+#?(:clj (defmacro lfor [& args] `(loops/lfor   ~@args)))
+
+
+
+
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
+#?(:clj (defalias until     loops/until   ))
 #?(:clj (defalias while-let loops/while-let))
-        (defalias doeach  loops/doeach)
-        (defalias each    loops/each)
-        (defalias eachi   loops/eachi)
-        (defalias break   reduced)
+        (defalias doeach    loops/doeach)
+        (defalias each      loops/each)
+        (defalias eachi     loops/eachi)
+        (defalias break     reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias repeat        gen/repeat        )
-        (defalias lrepeat       gen/lrepeat       )
-#?(:clj (defalias repeatedly    gen/repeatedly    ))
-        (defalias lrepeatedly   gen/lrepeatedly   )
-        (defalias range         gen/range         )
-        (defalias rrange        gen/rrange        )
-        (defalias range+        gen/range+        )
-        (defalias lrange        gen/lrange        )
-        (defalias lrrange       gen/lrrange       )
+(defaliases gen
+  repeat lrepeat #?(:clj repeatedly) lrepeatedly
+  range range+ lrange rrange lrrange)
 ; _______________________________________________________________
 ; ================== FULL-SEQUENCE TRANSFORMS ===================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias map             mf/map             )
-        (defalias map+            mf/map+            )
-        (defalias lmap            mf/lmap            )
-        (defalias map-indexed+    mf/map-indexed+    )
-        (defalias map-keys+       mf/map-keys+       )
-        (defalias map-vals+       mf/map-vals+       )
-        (defalias filter+         mf/filter+         )
-        (defalias filter-keys+    mf/filter-keys+    )
-        (defalias filter-vals+    mf/filter-vals+    )
-        (defalias lfilter         mf/lfilter         )
-        (defalias ffilter         mf/ffilter         )
-        (defalias remove+         mf/remove+         )
-        (defalias remove-keys+    mf/remove-keys+    )
-        (defalias remove-vals+    mf/remove-vals+    )
-        (defalias lremove         mf/lremove         )
-        (defalias remove-surrounding diff/remove-surrounding)
+(defaliases mf
+  map map' map+ lmap
+  map-indexed map-indexed' map-indexed+ lmap-indexed
+  map-keys+ map-vals+
+  #?@(:clj [pmap pmap' pmap-indexed pmap-indexed'])
+  filter filter' filter+ lfilter
+  filteri ffilter ffilteri last-filteri
+  filter-keys+ filter-vals+
+  #?@(:clj [pfilter pfilter'])
+  remove remove' remove+ lremove
+  remove-keys+ remove-vals+
+  #?@(:clj [premove premove']))
+
+        (defalias indexed+      red/indexed+      )
+        (defn indexed
+          "Returns a sequence of pairs of index and item."
+          [coll] (map-indexed pair coll))
+        (defn indexed' [coll] (map-indexed' pair coll))
+        (defn lindexed [coll] (lmap-indexed pair coll))
+
         (defalias keep+           red/keep+          )
         (defalias keep-indexed+   red/keep-indexed+  )
         (defeager mapcat          red/mapcat+        )
-
+        (defalias remove-surrounding diff/remove-surrounding)
         (defalias lreductions core/reductions)
         (defn reductions
           [f init coll]
@@ -324,26 +354,17 @@
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias prewalk         tree/prewalk        )
-        (defalias postwalk        tree/postwalk       )
-        (defalias prewalk-filter  tree/prewalk-filter )
-        (defalias postwalk-filter tree/postwalk-filter)
-        (defalias apply-to-keys   tree/apply-to-keys  )
+(defaliases tree
+  walk prewalk         postwalk
+       prewalk-filter  postwalk-filter
+       prewalk-replace postwalk-replace
+       prewalk-find  #_postwalk-find
+  apply-to-keys)
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
         (defalias zipmap          core/zipmap        )
         (defalias merge           map/merge          )
-; _______________________________________________________________
-; ========================== SOCIATIVE ==========================
-; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias assoc+          soc/assoc+         )
-        (defalias assocs-in+      soc/assocs-in+     )
-        (defalias dissoc-in+      soc/dissoc-in+     )
-        (defalias update-val+     soc/update-val+    )
-        (defalias assoc-when-none soc/assoc-when-none)
-        (defalias assoc-with      soc/assoc-with     )
-        (defalias assoc-if        soc/assoc-if       )
 
 (defn ->multi-array
   "Creates an n-dimensional array.
@@ -509,10 +530,7 @@
   (let [orig-meta (meta obj)]
     (with-meta obj (merge m (dissoc orig-meta :source)))))
 
-(defnt into!
-  "Like into, but for transients"
-  [^transient? x coll]
-  (doseq [elem coll] (conj! x elem)) x)
+
 
 (def unique-conj
   (rfn [ret k v]
@@ -531,21 +549,6 @@
     (if-let [xs (next s)]
       (recur (conj! butlast (first s)) xs)
       [(seq (persistent! butlast)) (first s)])))
-
-(defn update-vals
-  "Applies f to all the vals in the map"
-  [m f]
-  (reduce-kv (fn [m k v] (assoc m k (f v))) {} (or m {})))
-
-(defn update-keys
-  "Applies f to all the keys in the map"
-  [m f]
-  (reduce-kv (fn [m k v] (assoc m (f k) v)) {} (or m {})))
-
-(defn update-kv
-  "Applies f to all the keys and vals in the map"
-  [m f]
-  (reduce-kv (fn [m k v] (assoc m (f k) (f v))) {} (or m {})))
 
 (def mmerge
   "Same as (fn [m1 m2] (merge-with merge m2 m1))"
@@ -704,19 +707,7 @@
         [left]
         [left (takel-after-matches split-at-obj coll)])))
 
-#_(defn zipmap
-  ([ks vs] (zipmap hash-map ks vs))
-  ([map-gen-fn ks-0 vs-0]
-    (loop [map (map-gen-fn)
-           ks (seq ks-0)
-           vs (seq vs-0)]
-      (if (and ks vs)
-        (recur (assoc map (first ks) (first vs))
-               (next ks)
-               (next vs))
-        map))))
-
-#?(:clj (defalias kmap base/kmap))
+#?(:clj (defalias kmap     base/kmap    ))
 #?(:clj (defalias eval-map base/eval-map))
 
 (defn select
@@ -797,27 +788,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  POSITION IN COLLECTION  }=====================================================
 ;=================================================={ first, rest, nth, get ...}=====================================================
-; (defn- nth-red
-;   "|nth| implemented in terms of |reduce|."
-;   {:deprecated  true
-;    :attribution "Alex Gunnarson"
-;    :performance "Twice as slow as |nth|"}
-;   [coll n]
-;   (let [nn (volatile! 0)]
-;     (->> coll
-;          (reduce
-;            (fn
-;              ([ret elem]
-;               (if (= n @nn)
-;                   (reduced elem)
-;                   (do (vswap! nn inc) ret)))
-;              ([ret k v]
-;                (if (= n @nn)
-;                    (reduced [k v])
-;                    (do (vswap! nn inc) ret))))
-;            []))))
-
-
 (def fkey (fn-> first key))
 (def fval (fn-> first val))
 
@@ -879,16 +849,11 @@
 
 (def single?
   "Does coll have only one element?"
-  (fn-and seq (fn-not next)))
+  (fn-and nempty? (fn-not next)))
 
 ; ===== ZIPPERS ===== ;
 
-(defalias up    zip/up   )
-(defalias down  zip/down )
-(defalias right zip/right)
-(defalias left  zip/left )
-
-(defalias zipper qzip/zipper)
+(defalias zipper          qzip/zipper         )
 (defalias zip-mapv        qzip/zip-mapv       )
 (defalias zip-map-with    qzip/zip-map-with   )
 (defalias zip-walk        tree/zip-walk       )
@@ -903,29 +868,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MERGE          }=====================================================
 ;=================================================={      zipmap, zipvec      }=====================================================
-; A better zipvec...
-;(defn zipvec+ [& colls-0] ; (map vector [] [] [] []) ; 1.487238 ms for zipvec+ vs. 1.628670 ms for doall + map-vector.
-;   (let [colls (->> colls-0 (map+ fold+) fold+)]
-;     (for+ [n (range 0 (count (get colls 0)))] ; should be easy, because count will be O(1) with folded colls
-;       (->> colls
-;            (map (fn1 get+ n)))))) ; get+ doesn't take long at all; also, apparently can't use map+ within for+...
-;                                   ; 234.462665 ms if you realize them
-; (defn zipfor- [& colls-0] ;  [[1 2 3] [4 5 6] [7 8 9]]
-;   (let [colls (->> colls-0 (map+ fold+) fold+) ; nested /for/s, no
-;         rng   (range 0 (-> colls count dec))]
-;     (for   [n  rng] ; [[1 2 3] [4 5 6] [7 8 9]]
-;       (for [cn rng] ; ((1 4 7) (4 5 6) ...)
-;         (-> colls (get cn) (get n))))))
-;; (zipvec-- [[1 2 3] [4 5 6] [7 8 9]])
-;(defn zipvec-- [& colls-0] ; nested /map/s, no
-;  (let [colls (vec+ colls-0)]
-;    (map+
-;      (fn [n]
-;        (map+ (getf+ n) colls))
-;      (range 0 (inc 2)))))
-
-; ; a better merge-with?
-
 (defn merge-with+
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
@@ -974,18 +916,6 @@
       (transient left)
       right)))
 ;___________________________________________________________________________________________________________________________________
-;=================================================={      CONCATENATION       }=====================================================
-;=================================================={ cat, fold, (map|con)cat  }=====================================================
-; (defn- concat++
-;   {:todo ["Needs optimization"]}
-;   ([coll]
-;     (try (loops/reduce catvec coll)
-;       (catch Exception e (loops/reduce (zeroid into []) coll))))
-;   ([coll & colls]
-;     (try (apply catvec coll colls)
-;       (catch Exception e (into [] coll colls)))))
-;  Use original vectors until they are split. Subvec-orig below a certain range? Before the inflection point of log-n
-;___________________________________________________________________________________________________________________________________
 ;=================================================={  FINDING IN COLLECTION   }=====================================================
 ;=================================================={  in?, index-of, find ... }=====================================================
 (defalias in?          sel/in?         )
@@ -999,24 +929,7 @@
 (defalias vals+        sel/vals+       )
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
-;=================================================={       incl. slice        }=====================================================
-; slice-from [o start] - like slice, but until the end of o
-; slice-to [o end] - like slice, but from the beginning of o
-#_(defn slice ; TODO commented only for now
-  "Divide coll into n approximately equal slices.
-   Like partition."
-  {:attribution "flatland.useful.seq"
-   :todo ["Optimize" "Use transients"]}
-  [n-0 coll]
-  (loop [n-n n-0 slices [] items (core/vec coll)]
-    (if (empty? items)
-      slices
-      (let [size (num/ceil (/ (count items) n-n))]
-        (recur (dec n-n)
-               (conj slices (subvec+ items 0 size))
-               (subvec+ items size (lasti items)))))))
-
-
+;=================================================={                          }=====================================================
 (defn select-as+
   {:todo ["Name this function more appropriately"]
    :attribution "Alex Gunnarson"
@@ -1062,14 +975,6 @@
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
-; (defn interleave+ [& args] ; 4.307220 ms vs. 1.424329 ms normal interleave :/ because of zipvec...
-;   (reduce
-;     (fn ([]      [])
-;         ([a]     (conj [] a))
-;         ([a b]   (conj    a b))
-;         ([a b c] (conj    a b c)))
-;     (apply zipvec+ args)))
-
 ; ; /partition-by/
 ; ; splits the coll each time f returns a new value
 ; ; (partition-by odd? [1 1 1 2 2 3 3])
@@ -1112,34 +1017,10 @@
          (map+ merge-like-elems)
          flatten+)))
 
-(defn merge-left
-  ([alert-level] ; Keyword
-    (fn [k v1 v2]
-      (when (not= v1 v2)
-        (log/pr alert-level
-          "Values do not match for merge key"
-          (str (str/squote k) ":")
-          (str/squote v1) "|" (str/squote v2)))
-      v1))
-  ([k v1 v2] v1))
-
-(defn merge-right
-  ([alert-level] ; Keyword
-    (fn [k v1 v2]
-      (when (not= v1 v2)
-        (log/pr alert-level
-          "Values do not match for merge key"
-          (str (str/squote k) ":")
-          (str/squote v1) "|" (str/squote v2)))
-      v1))
-  ([k v1 v2] v2))
-
 (defn first-uniques-by+ [k coll]
   (->> coll
        (group-by+ k)
        (map+ (update-val+ #(first %1)))))
-
-
 
 ; ===== SORTING ===== ;
 
@@ -1536,8 +1417,6 @@
            (map+ (fn->> (get l-grouped)))
            (reduce #(join %1 %2) #{})))))
 
-
-
 ;; find rank of element as primitive long, -1 if not found
 ; (doc avl/rank-of)
 ; ;; find element closest to the given key and </<=/>=/> according
@@ -1719,11 +1598,11 @@
   IDoubleMutable      (^double get [this] val) (set [this ^double x] (set! val x))
   clojure.lang.IDeref (deref [this] val)))
 
-(defnt eq! ; |set!| was taken, just like |fn*|
+(defnt eq! ; |set!| was taken
   ([^MutableContainer x v] (.set x v) v))
 
-        (defn mutable        "Creates a mutable reference to an Object."           [x] (MutableContainer.       x))
-#?(:clj (defn mutable-double "Creates a mutable reference to a primitive double."  [x] (MutableDoubleContainer. x)))
+        (defn mutable        "Creates a mutable reference to an Object."           [        x] (MutableContainer.       x))
+#?(:clj (defn mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDoubleContainer. x)))
 
 ; ====== NUMERIC ======
 
@@ -1775,3 +1654,14 @@
        (map-indexed+ (fn [i x]
                        (log/pr-opts topic {:stack -4} (report-fn i x))
                        x)))))
+
+(map ns/assert-ns-aliased
+  '[quantum.core.collections.core
+    ;quantum.core.collections.sociative
+    ;quantum.core.collections.differential
+    quantum.core.collections.generative
+    quantum.core.collections.map-filter
+    quantum.core.collections.selective
+    ;quantum.core.collections.tree
+    ;quantum.core.collections.zip
+    quantum.core.collections.logic])

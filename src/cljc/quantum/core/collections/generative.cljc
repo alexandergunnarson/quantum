@@ -69,7 +69,7 @@
 ; ===== REPEATEDLY ===== ;
 
 #?(:clj
-(defmacro repeatedly-into
+(defmacro ^:private repeatedly-into
   {:todo ["Best to just inline this. Makes no sense to have a macro."]}
   [coll n & body]
   `(let [coll# ~coll
