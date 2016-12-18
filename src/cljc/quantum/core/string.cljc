@@ -472,9 +472,8 @@
 #?(:clj
 (defn re-find-all
   "Returns a lazy sequence of successive matches of pattern in string,
-  using java.util.regex.Matcher.find().
-
-  TODO: Document how this differs from |re-find|."
+   using java.util.regex.Matcher.find().
+   `re-find` just finds one match; this finds all of them."
   [re s]
   (let [m (re-matcher (->pattern re) s)]
     ((fn step []
