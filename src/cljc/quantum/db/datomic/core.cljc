@@ -21,8 +21,7 @@
     [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
       :refer [fn-not fn-and fn-or whenf
-              whenf1 ifn ifn1 if-let
-              nnil? nempty?]]
+              whenf1 ifn ifn1 if-let nnil? nempty?]]
     [quantum.core.print         :as pr]
     [quantum.core.resources     :as res]
     [quantum.core.process       :as proc]
@@ -53,27 +52,21 @@
 (defonce part* (atom nil))
 
 (defn unhandled-type [type obj]
-  (condp = type
-    :conn   (->ex :unhandled-predicate
-                  "Object is not mconn, conn, or db"
-                  obj)
-    :db     (->ex :unhandled-predicate
-                  "Object is not mdb or db"
-                  obj)
-    :entity (->ex :unhandled-predicate
-                  "Object is not mentity or entity"
-                  obj)))
+  (case type
+    :conn   (->ex :unhandled-predicate "Object is not mconn, conn, or db" obj)
+    :db     (->ex :unhandled-predicate "Object is not mdb or db"          obj)
+    :entity (->ex :unhandled-predicate "Object is not mentity or entity"  obj)))
 
 ; PREDICATES
 
 #?(:clj (def entity? (partial instance? datomic.query.EntityMap)))
 (defalias mentity? datascript.impl.entity/entity?)
 
-#?(:clj (def tempid? #(instance? datomic.db.DbId           %)))
-#?(:clj (def dbfn?   #(instance? datomic.function.Function %)))
+#?(:clj (def tempid? (fn$ instance? datomic.db.DbId          )))
+#?(:clj (def dbfn?   (fn$ instance? datomic.function.Function)))
 #?(:clj (def tempid-like? (fn-or tempid? integer?)))
 
-#?(:clj (def db? (partial instance? datomic.db.Db)))
+#?(:clj (def db?     (fn$ instance? datomic.db.Db)))
 
 (def ^{:doc "'mdb' because checks if it is an in-*mem*ory database."}
   mdb? (partial instance? datascript.db.DB))
