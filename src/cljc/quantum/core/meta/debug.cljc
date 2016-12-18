@@ -111,10 +111,3 @@
 ;      (if-let [as (seq alternatives)]
 ;        `(or (try ~exp (catch Throwable t# (try-or ~@as))))
 ;        exp)))
-
-#?(:clj
-(defmacro rescue
-  "Evaluate form, returning error-form on any Exception."
-  ^{:attribution "flatland.useful.exception"}
-  [form error-form]
-  `(try ~form (catch Exception e# ~error-form))))
