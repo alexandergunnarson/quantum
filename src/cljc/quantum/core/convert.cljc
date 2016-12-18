@@ -116,19 +116,6 @@
 (defalias json-> json/json->)
 (defalias ->json json/->json)
 
-#?(:clj
-(defnt ->serialized
-  ([^OutputStream out obj]
-    (-> out ->buffered (ObjectOutputStream.) (.writeObject))
-    out)))
-
-#?(:clj
-(defnt serialized->
-  ([^bytes?              x]
-    (with-open [in (-> x ->read-stream (ObjectInputStream.))] (.readObject in)))
-  ([^InputStream         x] (-> x ->buffered (ObjectInputStream.) (.readObject)))
-  ([^BufferedInputStream x] (-> x))))
-
 (defn ->path
   "Creates a forward-slash-delimited path from the @`args`."
   [& args] (apply quantum.core.string/join-once "/" args))
@@ -317,6 +304,34 @@
     (keyword (namespace x) (name x))))
 
 #?(:clj
+(defnt ^BufferedInputStream ->buffered-read-stream
+  ([^BufferedInputStream x] x)
+  ([^InputStream         x] (if (instance? BufferedInputStream x)
+                                x
+                                (BufferedInputStream. x)))
+  ([                     x] (-> x ->read-stream-protocol ->buffered-read-stream))))
+
+#?(:clj (defalias ->buffered-input-stream ->buffered-read-stream))
+
+#?(:clj
+(defnt ^BufferedOutputStream ->buffered-write-stream
+  ([^BufferedOutputStream x] x)
+  ([^OutputStream         x] (if (instance? BufferedOutputStream x)
+                                 x
+                                 (BufferedOutputStream. x)))
+  ([                      x] (-> x ->write-stream-protocol ->buffered-write-stream))))
+
+#?(:clj (defalias ->buffered-output-stream ->buffered-write-stream))
+
+#?(:clj
+(defnt ->buffered
+  "Convert @`x` to a buffered InputStream or OutputStream."
+  ([^BufferedInputStream  x] x)
+  ([^BufferedOutputStream x] x)
+  ([^InputStream          x] (->buffered-read-stream  x))
+  ([^OutputStream         x] (->buffered-write-stream x))))
+
+#?(:clj
 (defnt ^BufferedInputStream ->read-stream
   {:attribution "ztellman/byte-streams"
    :contributors {"Alex Gunnarson" "defnt-ed and added to"}
@@ -384,32 +399,17 @@
 #?(:clj (defalias ->output-stream ->write-stream))
 
 #?(:clj
-(defnt ^BufferedInputStream ->buffered-read-stream
-  ([^BufferedInputStream x] x)
-  ([^InputStream         x] (if (instance? BufferedInputStream x)
-                                x
-                                (BufferedInputStream. x)))
-  ([                     x] (-> x ->read-stream-protocol ->buffered-read-stream))))
-
-#?(:clj (defalias ->buffered-input-stream ->buffered-read-stream))
+(defnt ->serialized
+  ([^OutputStream out obj]
+    (-> out ->buffered (ObjectOutputStream.) (.writeObject))
+    out)))
 
 #?(:clj
-(defnt ^BufferedOutputStream ->buffered-write-stream
-  ([^BufferedOutputStream x] x)
-  ([^OutputStream         x] (if (instance? BufferedOutputStream x)
-                                 x
-                                 (BufferedOutputStream. x)))
-  ([                      x] (-> x ->write-stream-protocol ->buffered-write-stream))))
-
-#?(:clj (defalias ->buffered-output-stream ->buffered-write-stream))
-
-#?(:clj
-(defnt ->buffered
-  "Convert @`x` to a buffered InputStream or OutputStream."
-  ([^BufferedInputStream  x] x)
-  ([^BufferedOutputStream x] x)
-  ([^InputStream          x] (->buffered-read-stream  x))
-  ([^OutputStream         x] (->buffered-write-stream x))))
+(defnt serialized->
+  ([^bytes?              x]
+    (with-open [in (-> x ->read-stream (ObjectInputStream.))] (.readObject in)))
+  ([^InputStream         x] (-> x ->buffered (ObjectInputStream.) (.readObject)))
+  ([^BufferedInputStream x] (-> x))))
 
 (declare ->text)
 
@@ -434,7 +434,7 @@
   (^{:cost 1} [^string? x] (->byte-buffer x nil))
   (^{:cost 1} [^string? x options]
     (-> x (arr/->bytes options) (->byte-buffer options)))
-  (           [^InputStream] (TODO) #_(-> x ->buffered))
+  (           [^InputStream x] (TODO) #_(-> x ->buffered))
   #_(^{:cost 1} [(vector-of ByteBuffer) bufs {:keys [direct?] :or {direct? false}}]
     (cond
       (empty? bufs)
@@ -635,7 +635,7 @@
            ; Look at Apache Commons Convert to fill in the below code
            ;([^java.sql.Blob x])
            ;([^java.sql.Clob x])
-  #?(:clj  ([^java.util.Date x]
+  #_(:clj  ([^java.util.Date x]
              (-> (java.text.SimpleDateFormat. (:calendar time/formats))
                  (.format x))))
   #?(:clj  ([#{java.sql.Date
@@ -643,7 +643,7 @@
                java.sql.Time}    x] (.toString x)))
   #?(:clj  ([^java.util.TimeZone x] (.getID x)))
   ; The returned string is referenced to the default time zone.
-  #?(:clj  ([^java.util.Calendar x]
+  #_(:clj  ([^java.util.Calendar x]
              (let [df (java.text.SimpleDateFormat. (:calendar time/formats))]
                (.setCalendar df x)
                (.format df (.getTime x)))))

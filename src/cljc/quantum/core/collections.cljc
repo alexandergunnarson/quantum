@@ -1655,7 +1655,7 @@
                        (log/pr-opts topic {:stack -4} (report-fn i x))
                        x)))))
 
-(map ns/assert-ns-aliased
+#_(map ns/assert-ns-aliased
   '[quantum.core.collections.core
     ;quantum.core.collections.sociative
     ;quantum.core.collections.differential
