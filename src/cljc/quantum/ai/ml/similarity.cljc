@@ -52,7 +52,7 @@
         ^"[[I" m    (coll/->multi-array (int 0)
                       [(-> s1 count inc)
                        (-> s2 count inc)])
-        cost (mutable! 0)]
+        cost (mutable 0)]
     (ifor [i 0 (< i s1-ct+1) (inc* i)]
       (aset-in! m [i 0] i))
     (ifor [j 0 (< j s2-ct+1) (inc* j)]
