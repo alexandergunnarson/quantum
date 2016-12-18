@@ -1,37 +1,28 @@
-(ns ^{:doc "Paths-related things — resource locators. URIs, URLs, directories, files, etc."}
-  quantum.core.paths
+(ns quantum.core.paths
+  "Paths-related things — resource locators. URIs, URLs, File, Path, directories, etc."
            (:refer-clojure :exclude [descendants contains?])
            (:require
-     #?(:clj [clojure.java.io          :as io                ])
+     #?(:clj [clojure.java.io          :as io])
              [quantum.core.collections :as coll
-               :refer        [#?@(:clj [getr index-of containsv?
-                                        popr reducei])
-                              dropr-until]
-               :refer-macros [getr index-of containsv? popr
-                              reducei]                       ]
+               :refer [getr index-of containsv? popr reducei dropr-until]]
              [quantum.core.error       :as err
-               :refer [->ex TODO]                            ]
+               :refer [->ex TODO]]
              [quantum.core.fn          :as fn
-               :refer        [#?@(:clj [<- fn-> fn->> fn1 mfn])]
-               :refer-macros [<- fn-> fn->> fn1 mfn]         ]
+               :refer [<- fn-> fn->> fn1 mfn]]
              [quantum.core.logic       :as logic
-               :refer        [#?@(:clj [fn-not fn-and fn-eq?
-                                        whenf whenc ifn])]
-               :refer-macros [fn-not fn-and fn-eq? whenf
-                              whenc ifn]                     ]
+               :refer [fn-not fn-and fn-eq? whenf whenc ifn]]
              [quantum.core.macros      :as macros
-               :refer        [#?@(:clj [defnt])]
-               :refer-macros [defnt]                         ]
-             [quantum.core.system      :as sys               ]
+               :refer [defnt]]
+             [quantum.core.system      :as sys]
              [quantum.core.vars        :as var
-               :refer        [#?@(:clj [defalias def-])]
-               :refer-macros [defalias def-]                 ]
-             [quantum.core.string      :as str               ])
+               :refer [defalias def-]]
+             [quantum.core.string      :as str])
   #?(:cljs (:require-macros
              [quantum.core.paths
                :refer [->file exists?]]))
   #?(:clj  (:import
-             java.io.File
+             [java.io File]
+             [java.nio.file Path Paths]
              [java.net URI URL URLEncoder])))
 
 ; TODO validate this
@@ -44,29 +35,35 @@
 (defnt #?(:clj ^java.io.File ->file
           :cljs              ->file)
   {:todo "Eliminate reflection"}
-  #?(:cljs ([x] (TODO)))
-  #?(:clj ([^java.io.File           x] x          ))
-  #?(:clj ([^java.nio.file.Path     x] (.toFile x)))
-  #?(:clj ([#{string? java.net.URI} x] (File.   x)))
-  #?(:clj ([^java.net.URL           x] (-> x ->uri-protocol ->file)))
-  #?(:clj ([#{vector? keyword?}     x] (-> x parse-dir-protocol ->file)))
-  #?(:clj ([                        x] (io/file x))))
+  #?(:cljs ([                    x] (TODO)))
+  #?(:clj  ([^File               x] x          ))
+  #?(:clj  ([^java.nio.file.Path x] (.toFile x)))
+  #?(:clj  ([#{string? URI}      x] (File.   x)))
+  #?(:clj  ([^URL                x] (-> x ->uri-protocol ->file)))
+  #?(:clj  ([#{vector? keyword?} x] (-> x parse-dir-protocol ->file)))
+  #?(:clj  ([                    x] (io/file x))))
 
 #?(:clj
 (defnt ^java.net.URI ->uri
   {:todo "Eliminate reflection"}
-  ([^java.net.URI                x] x)
-  ([^java.nio.file.Path          x] (.toUri x))
-  ([#{java.io.File java.net.URL} x] (.toURI x))
-  ([^string?                     x] (-> x (str/replace " " "+") (URI.)))
-  ([                             x] (-> x ->file ->uri))))
+  ([^URI        x] x)
+  ([^Path       x] (.toUri x))
+  ([#{File URL} x] (.toURI x))
+  ([^string?    x] (-> x (str/replace " " "+") (URI.)))
+  ([            x] (-> x ->file ->uri))))
 
 #?(:clj
 (defnt ^java.net.URL ->url
-  ([^string?      x] (URL. x))
-  ([^java.net.URL x] x)
-  ([^java.net.URI x] (.toURL x))
-  ([              x] (-> x ->uri ->url))))
+  ([^URL     x] x)
+  ([^string? x] (URL. x))
+  ([^URI     x] (.toURL x))
+  ([         x] (-> x ->uri ->url))))
+
+#?(:clj
+(defnt ^java.nio.file.Path ->java-path
+  ([^Path               x] x)
+  ([#{File string? URL} x] (-> x ->uri ->java-path))
+  ([^URI                x] (Paths/get x))))
 
 #?(:clj
 (defnt ^boolean contains?
@@ -74,8 +71,8 @@
    Note that on a Mac, if there is a mountable external drive such as a Time Capsule,
    you must mount it first (go to it in Finder) before it is considered accessible by
    Java."
-  ([^java.io.File x] (.exists x))
-  ([^string?      x] (-> x ->file contains?))))
+  ([^File    x] (.exists x))
+  ([^string? x] (-> x ->file contains?))))
 
 ;#?(:clj
 ;(def paths
