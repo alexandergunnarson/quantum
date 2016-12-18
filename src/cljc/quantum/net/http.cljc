@@ -37,8 +37,8 @@
     (red-for [ret  nil
               port min-recommended-available-port]
       (try (let [conn (java.net.ServerSocket. port)]
-        (break conn)
-        (catch java.net.BindException e nil)))))))
+             (break conn))
+        (catch java.net.BindException e nil))))))
 
 #?(:clj
 (defrecord

@@ -19,7 +19,7 @@
     [quantum.core.collections         :as coll
       :refer [kmap containsv?]]
     [quantum.core.error               :as err
-      :refer [->ex try-times]]
+      :refer [->ex try-times TODO]]
     [quantum.core.fn                  :as fn
       :refer [fn1 fn->]]
     [quantum.core.log                 :as log
@@ -77,7 +77,7 @@
 (defalias merge!           dbc/merge!   )
 
 (defalias history->seq     dbc/history->seq  )
-(defalias block->schemas   dbc/block->schemas)
+#_(defalias block->schemas   dbc/block->schemas)
 (defalias replace-schemas! dbc/replace-schemas!)
 (defalias db->seq          dbc/db->seq       )
 
@@ -108,7 +108,7 @@
   ([conn tx-data] (rx-db/transact! conn tx-data))))
 
 ; TODO this fn is unnecessary
-#?(:clj
+#_(:clj
 (defn init-schemas!
   "Transacts @schemas to the partition @part on the database connection @conn.
    Expects @schemas to be in block-format (see |dbc/block->schemas|)."
@@ -148,6 +148,7 @@
    post]
   component/Lifecycle
     (start [this]
+      (TODO "Finish block schemas patch")
       (try
         (log/pr ::debug "Starting Ephemeral database...")
         (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
@@ -155,17 +156,18 @@
               history (when (pos? history-limit) (atom []))
               default-schemas {:db/ident {:db/unique :db.unique/identity}}
               default-partition-f (or default-partition :db.part/test)
-              block-schemas (when schemas
+              #_block-schemas #_(when schemas
                                (dbc/block->schemas schemas
                                  {:datascript? true
                                   :part        default-partition-f}))
+
               db        (mdb/empty-db {})
               conn-f    (atom db :meta
                           (c/merge {:listeners (atom {})}
                             (when evented?
                               {:subs         (atom {})
                                :transformers (atom {})})))
-              schemas-f (c/merge default-schemas block-schemas)
+              schemas-f (c/merge default-schemas #_block-schemas)
               _ (replace-schemas! conn-f schemas-f)
               _ (log/pr ::debug "Ephemeral database and connection created.")
               _ (when (pos? history-limit)
@@ -318,7 +320,8 @@
             _ (log/pr :debug "Connected.")
             _ (reset! conn conn-f)
             default-partition-f (or default-partition :db.part/test)
-            _ (when schemas #?(:clj (init-schemas! conn-f schemas)))]
+            ;_ (when schemas #?(:clj (init-schemas! conn-f schemas)))
+            ]
       (log/pr ::debug "Datomic database initialized.")
       (c/assoc this
         :uri               uri-f
