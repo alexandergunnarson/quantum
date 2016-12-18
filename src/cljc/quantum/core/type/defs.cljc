@@ -428,24 +428,24 @@
                               :cljs (->> array-types :cljs vals set)}
 
            'boolean-array?   {:clj #{(-> array-types :clj :boolean)}}
-           'byte-array?      {:clj #{(-> array-types :clj :byte   )} :cljs #{(-> array-types :clj :byte   )}}
-           'char-array?      {:clj #{(-> array-types :clj :char   )} :cljs #{(-> array-types :clj :char   )}}
-           'short-array?     {:clj #{(-> array-types :clj :short  )} :cljs #{(-> array-types :clj :short  )}}
-           'int-array?       {:clj #{(-> array-types :clj :int    )} :cljs #{(-> array-types :clj :int    )}}
-           'long-array?      {:clj #{(-> array-types :clj :long   )} :cljs #{(-> array-types :clj :long   )}}
-           'float-array?     {:clj #{(-> array-types :clj :float  )} :cljs #{(-> array-types :clj :float  )}}
-           'double-array?    {:clj #{(-> array-types :clj :double )} :cljs #{(-> array-types :clj :double )}}
-           'object-array?    {:clj #{(-> array-types :clj :object )} :cljs #{(-> array-types :clj :object )}}
+           'byte-array?      {:clj #{(-> array-types :clj :byte   )} :cljs #{(-> array-types :cljs :byte   )}}
+           'char-array?      {:clj #{(-> array-types :clj :char   )} :cljs #{(-> array-types :cljs :char   )}}
+           'short-array?     {:clj #{(-> array-types :clj :short  )} :cljs #{(-> array-types :cljs :short  )}}
+           'int-array?       {:clj #{(-> array-types :clj :int    )} :cljs #{(-> array-types :cljs :int    )}}
+           'long-array?      {:clj #{(-> array-types :clj :long   )} :cljs #{(-> array-types :cljs :long   )}}
+           'float-array?     {:clj #{(-> array-types :clj :float  )} :cljs #{(-> array-types :cljs :float  )}}
+           'double-array?    {:clj #{(-> array-types :clj :double )} :cljs #{(-> array-types :cljs :double )}}
+           'object-array?    {:clj #{(-> array-types :clj :object )} :cljs #{(-> array-types :cljs :object )}}
 
            'booleans?        {:clj #{(-> array-types :clj :boolean)}}
-           'bytes?           {:clj #{(-> array-types :clj :byte   )} :cljs #{(-> array-types :clj :byte   )}}
-           'chars?           {:clj #{(-> array-types :clj :char   )} :cljs #{(-> array-types :clj :char   )}}
-           'shorts?          {:clj #{(-> array-types :clj :short  )} :cljs #{(-> array-types :clj :short  )}}
-           'ints?            {:clj #{(-> array-types :clj :int    )} :cljs #{(-> array-types :clj :int    )}}
-           'longs?           {:clj #{(-> array-types :clj :long   )} :cljs #{(-> array-types :clj :long   )}}
-           'floats?          {:clj #{(-> array-types :clj :float  )} :cljs #{(-> array-types :clj :float  )}}
-           'doubles?         {:clj #{(-> array-types :clj :double )} :cljs #{(-> array-types :clj :double )}}
-           'objects?         {:clj #{(-> array-types :clj :object )} :cljs #{(-> array-types :clj :object )}}
+           'bytes?           {:clj #{(-> array-types :clj :byte   )} :cljs #{(-> array-types :cljs :byte   )}}
+           'chars?           {:clj #{(-> array-types :clj :char   )} :cljs #{(-> array-types :cljs :char   )}}
+           'shorts?          {:clj #{(-> array-types :clj :short  )} :cljs #{(-> array-types :cljs :short  )}}
+           'ints?            {:clj #{(-> array-types :clj :int    )} :cljs #{(-> array-types :cljs :int    )}}
+           'longs?           {:clj #{(-> array-types :clj :long   )} :cljs #{(-> array-types :cljs :long   )}}
+           'floats?          {:clj #{(-> array-types :clj :float  )} :cljs #{(-> array-types :cljs :float  )}}
+           'doubles?         {:clj #{(-> array-types :clj :double )} :cljs #{(-> array-types :cljs :double )}}
+           'objects?         {:clj #{(-> array-types :clj :object )} :cljs #{(-> array-types :cljs :object )}}
 
            'array-2d?        array-2d-types
            'array-3d?        array-3d-types

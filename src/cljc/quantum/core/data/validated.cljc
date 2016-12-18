@@ -25,7 +25,10 @@
     [quantum.core.validate  :as v
       :refer [validate defspec]]
     [quantum.core.vars      :as var
-      :refer [update-meta]]))
+      :refer [update-meta]])
+  #?(:cljs
+  (:require-macros
+    [quantum.core.data.validated :as self])))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]

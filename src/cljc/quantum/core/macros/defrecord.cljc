@@ -1,7 +1,10 @@
 (ns quantum.core.macros.defrecord
   (:require
     [#?(:clj  clojure.core
-        :cljs cljs.core   ) :as core]))
+        :cljs cljs.core   ) :as core])
+  #?(:cljs
+  (:require-macros
+    [quantum.core.macros.defrecord :as self])))
 
 (def ns-correct
   (memoize
