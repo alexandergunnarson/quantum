@@ -52,7 +52,7 @@
   (db/transact! [(db/conj {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns!))
   #?(:clj (dbe/transact-schemas!))
-  (db/conj! (dbs/->globals {:db/ident :globals*}))
+  #_(db/conj! (dbs/->globals {:db/ident :globals*}))
 
   #?(:clj
     (when mime-types?

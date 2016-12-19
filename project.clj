@@ -242,6 +242,8 @@
      ; DATAGRID
      [org.apache.poi/poi                        "3.14"            ]
      [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
+     ; PDF
+     [org.apache.pdfbox/pdfbox                  "2.0.3"           ]
      ; AUDIO
      ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"            ] ; Creating audio plugin
      ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"            ] ; Creating audio plugin
@@ -313,6 +315,7 @@
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
+          :jvm-opts       ["-Dquantum.core.log:out-file=./out.log"]
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.4" ]
@@ -329,12 +332,12 @@
                     [quantum/lein-vanity               "0.3.0-quantum"]
                     [lein-ancient                      "0.6.10"
                       :exclusions [com.amazonaws/aws-java-sdk-s3]]
-                    [lein-nodisassemble "0.1.3"]]
+                    [lein-nodisassemble "0.1.3"]]}
     :fibers
        {:java-agents [[co.paralleluniverse/quasar-core "0.7.6"]]}
     :auto-instrument
        {:jvm-opts ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
-        :java-agents [[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}}
+        :java-agents [[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}
     :test {:jvm-opts ["-Xms4g"
                       "-Xmx4g"
                       "-XX:+UseSuperWord"
@@ -349,9 +352,10 @@
             "deploy-test-dev"        ["do" "clean,"
                                            "cljsbuild" "once" "dev"]
             "cljs:autobuilder"       ["do" "clean,"
+                                           "with-profile" "+dev"
                                            "figwheel" "dev"]
             "cljs:debug:autobuilder" ["do" "clean,"
-                                           "cljsbuild" "auto" "debug"]
+                                           "cljsbuild" "auto" "no-reload"]
             "test:clj"               ["with-profile" "+test"
                                       "test"]
             "test:cljs"              ["with-profile" "+test"
@@ -363,12 +367,14 @@
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
-                                    [:cljsbuild :builds :test :compiler :output-dir]
-                                    [:cljsbuild :builds :test :compiler :output-to ]
-                                    [:cljsbuild :builds :dev  :compiler :output-dir]
-                                    [:cljsbuild :builds :dev  :compiler :output-to ]
-                                    [:cljsbuild :builds :min  :compiler :output-dir]
-                                    [:cljsbuild :builds :min  :compiler :output-to ]]
+                                    [:cljsbuild :builds :test      :compiler :output-dir]
+                                    [:cljsbuild :builds :test      :compiler :output-to ]
+                                    [:cljsbuild :builds :no-reload :compiler :output-dir]
+                                    [:cljsbuild :builds :no-reload :compiler :output-to ]
+                                    [:cljsbuild :builds :dev       :compiler :output-dir]
+                                    [:cljsbuild :builds :dev       :compiler :output-to ]
+                                    [:cljsbuild :builds :min       :compiler :output-dir]
+                                    [:cljsbuild :builds :min       :compiler :output-to ]]
   :java-source-paths ["src/java"]
   :source-paths      ["src/clj"
                       "src/cljc"]
@@ -398,11 +404,11 @@
                    :source-paths ["src/cljs"  "src/cljc"
                                   "dev/cljs"  "dev/cljc"
                                   "test/cljs" "test/cljc"]
-                   :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
-                              :output-dir           "dev-resources/public/js/compiled/out"
+                   :compiler {:output-to            "dev-resources/public/js/nr-compiled/quantum.js"
+                              :output-dir           "dev-resources/public/js/nr-compiled/out"
                               :optimizations        :none
                               :main                 quantum.dev
-                              :asset-path           "js/compiled/out"
+                              :asset-path           "js/nr-compiled/out"
                               :source-map           true
                               :source-map-timestamp true
                               :cache-analysis       true}}
@@ -417,7 +423,8 @@
                         :asset-path           "js/compiled/out"
                         :source-map           true
                         :source-map-timestamp true
-                        :cache-analysis       true}}
+                        :cache-analysis       true
+                        :warnings {:redef-in-file false}}}
        :min {:source-paths ["src/cljc" "dev/cljc"]
              :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                         :output-dir     "dev-resources/public/js/min-compiled/out"
