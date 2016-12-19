@@ -179,13 +179,13 @@
                    'ICloneable
                    `(~'-clone [this#] (new ~tagname ~@fields*))
                    'IHash
-                   `(~'-hash [this#] (caching-hash this# ~'hash-imap ~'__hash))
+                   `(~'-hash [this#] (~'caching-hash this# ~'hash-imap ~'__hash))
                    'IEquiv
                    `(~'-equiv [this# other#]
                       (if (and other#
                             (identical? (.-constructor this#)
                               (.-constructor other#))
-                            (equiv-map this# other#))
+                            (~'equiv-map this# other#))
                         true
                         false))
                    'IMeta
@@ -193,7 +193,7 @@
                    'IWithMeta
                    `(~'-with-meta [this# ~gs] (new ~tagname ~@(replace {'__meta gs} fields*)))
                    'ILookup
-                   `(~'cljs.core/-lookup [this# k#] (cljs.core/-lookup this# k# nil))
+                   `(~'cljs.core/-lookup [this# k#] (~'-lookup this# k# nil))
                    `(~'cljs.core/-lookup [this# ~ksym else#]
                       (case ~ksym
                         ~@(mapcat (core/fn [f] [(keyword f) (ns-correct f)]) base-fields)
@@ -203,25 +203,25 @@
                    'ICollection
                    `(~'-conj [this# entry#]
                       (if (vector? entry#)
-                        (-assoc this# (-nth entry# 0) (-nth entry# 1))
-                        (reduce -conj
+                        (~'-assoc this# (~'-nth entry# 0) (~'-nth entry# 1))
+                        (reduce ~'-conj
                           this#
                           entry#)))
                    'IAssociative
                    `(~'-assoc [this# k# ~gs]
-                      (condp keyword-identical? k#
+                      (condp ~'keyword-identical? k#
                         ~@(mapcat (core/fn [fld]
                                     [(keyword fld) (list* `new tagname (replace {(ns-correct fld) gs '__hash nil} fields*))])
                             base-fields)
                         (new ~tagname ~@(remove #{'__extmap '__hash} fields*) (assoc ~'__extmap k# ~gs) nil)))
                    'IMap
-                   `(~'-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
+                   `(cljs.core/-dissoc [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                             (dissoc (with-meta (into {} this#) ~'__meta) k#)
                                             (new ~tagname ~@(remove #{'__extmap '__hash} fields*)
                                               (not-empty (dissoc ~'__extmap k#))
                                               nil)))
                    'ISeqable
-                   `(~'-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                   `(cljs.core/-seq [this#] (seq (concat [~@(map #(core/list `vector (keyword %) (ns-correct %)) base-fields)]
                                            ~'__extmap)))
 
                    'IIterable
@@ -232,10 +232,10 @@
 
                    'IPrintWithWriter
                    `(~'-pr-writer [this# writer# opts#]
-                      (let [pr-pair# (fn [keyval#] (cljs.core/pr-sequential-writer writer# cljs.core/pr-writer "" " " "" opts# keyval#))]
+                      (let [pr-pair# (fn [keyval#] (cljs.core/pr-sequential-writer writer# ~'pr-writer "" " " "" opts# keyval#))]
                         (cljs.core/pr-sequential-writer
                           writer# pr-pair# ~pr-open ", " "}" opts#
-                          (concat [~@(map #(core/list `vector (keyword %) %) base-fields)]
+                          (concat [~@(map #(core/list `vector (keyword %) (ns-correct %)) base-fields)]
                             ~'__extmap))))
                    ])
                [fpps pmasks] (#'cljs.core/prepare-protocol-masks env impls)
@@ -261,7 +261,7 @@
                 (set! (.-getBasis ~r) (fn [] '[~@fields]))
                 (set! (.-cljs$lang$type ~r) true)
                 (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (cljs.core/list ~(str r))))
-                (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (-write writer# ~(str r))))
+                (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (~'-write writer# ~(str r))))
                 ~(@#'cljs.core/build-positional-factory rsym r corrected-fields)
                 ~(@#'cljs.core/build-map-factory rsym r corrected-fields)
                 ~r)]

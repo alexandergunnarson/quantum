@@ -275,7 +275,7 @@
 (def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
                            :cljs number?)) ; TODO CLJS |bigdec?|
 (def-validated -instant (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )))
-(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs paths/URI)))
+(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs nil #_paths/URI)))
 (def-validated -bytes   (fn1 bytes?))
 
 ; ===== QUERIES =====

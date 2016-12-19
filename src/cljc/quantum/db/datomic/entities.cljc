@@ -4,44 +4,32 @@
     [boolean? double? numerator denominator ratio?])
   (:require
     [quantum.core.error       :as err
-      :refer [->ex]
-      :include-macros true              ]
+      :refer [->ex]]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [fn1 fn$ <- fn-> fn->>])]
-      :refer-macros [          fn1 fn$ <- fn-> fn->>]     ]
-    [quantum.core.log         :as log
-      :include-macros true              ]
+      :refer [fn1 fn$ <- fn-> fn->>]]
+    [quantum.core.log         :as log]
     [quantum.core.logic       :as logic
-      :refer        [#?@(:clj [fn-or fn-and])
-                     nnil? nempty?]
-      :refer-macros [fn-or fn-and]      ]
+      :refer [fn-or fn-and
+              nnil? nempty?]]
     [quantum.core.macros.core
-      :refer        [#?@(:clj [if-cljs])]
-      :refer-macros [if-cljs]           ]
+      :refer [if-cljs]]
     [quantum.db.datomic       :as db    ]
     [quantum.db.datomic.core  :as dbc
       :refer [dbfn-call?]               ]
     [quantum.core.string      :as str   ]
     [quantum.core.collections :as coll
-      :refer        [#?@(:clj [join])]
-      :refer-macros [join]              ]
+      :refer [join]]
     [quantum.core.type        :as type
-      :refer        [#?@(:clj [boolean? double?
-                               bigint?])]
-      :refer-macros [boolean?]          ]
+      :refer [#?@(:clj [double? bigint?]) boolean?]]
     [quantum.core.numeric.types
-      :refer        [#?@(:clj [numerator denominator])
-                     ratio?                ]
-      :refer-macros [numerator denominator]]
+      :refer [numerator denominator ratio?]]
     [quantum.core.numeric.convert :as nconv
-      :refer        [->ratio]              ]
-    [quantum.core.validate            :as v
-      :refer        [#?(:clj validate)]
-      :refer-macros [        validate]])
-  #?(:cljs
+      :refer [->ratio]              ]
+    [quantum.core.validate        :as v
+      :refer [validate]])
   (:require-macros
     [quantum.db.datomic.entities
-      :refer [defentity defattribute]])))
+      :refer [defentity defattribute]]))
 
 (def schemas    (atom  {}))
 (def attributes (atom #{}))

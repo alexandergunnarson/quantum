@@ -591,7 +591,7 @@
          and the same tracklist can appear on more than one release. For example,
          a boxset compilation that contains previously released CDs would share the
          same tracklists as the separate releases."}
-  {(def :this/title :db/string)
+  (def :this/title :db/string)
    ^{:doc "The artist(s) that the release is primarily
            credited to, as credited on the release."}
    (def :this/artist:many (v/set-of :artist))
@@ -649,7 +649,7 @@
                 the quality has never been modified; \"normal\" if it has.
            0:   The release needs serious fixes, or its existence is hard
                 to prove (but it's not clearly fake)."}
-   (def :this/data-quality (v/and :db/long (fn1 <= 0 1)))})
+   (def :this/data-quality (v/and :db/long (fn1 <= 0 1))))
 
 ; Status
 ; The status describes how "official" a release is. Possible values are:
