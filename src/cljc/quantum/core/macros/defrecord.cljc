@@ -263,7 +263,7 @@
                 (set! (.-cljs$lang$ctorPrSeq ~r) (fn [this#] (cljs.core/list ~(str r))))
                 (set! (.-cljs$lang$ctorPrWriter ~r) (fn [this# writer#] (~'-write writer# ~(str r))))
                 ~(@#'cljs.core/build-positional-factory rsym r corrected-fields)
-                ~(@#'cljs.core/build-map-factory rsym r corrected-fields)
+                ~(@#'cljs.core/build-map-factory rsym r fields)
                 ~r)]
     (prl ::debug code)
     code)))

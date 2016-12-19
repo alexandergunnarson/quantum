@@ -1,0 +1,3944 @@
+(ns quantum.scratch)
+
+; TODO EXPLORE CLOJURE CORE ; https://github.com/clojure/clojure/blob/7aad2f7dbb3a66019e5cef3726d52d721e9c60df/src/clj/clojure/core.clj
+
+(require 'clojure.tools.namespace.repl) (clojure.tools.namespace.repl/refresh)
+
+#?(:clj
+(defn throw-on-test-fail [ns-sym]
+  (when-let [{:keys [fail error] :as tested} (test/run-tests ns-sym)
+             fail? (or (pos? fail) (pos? error))]
+    (throw (->ex :tests-failed "Failed tests" tested)))))
+
+(defn pr*
+  "`pprint`s a collection, optionally preceded by a `println`-ed message."
+  ([coll]   (pprint coll))
+  ([x coll] (println x)
+            (pprint coll)))
+
+; Overrides clojure.test/report for prettier / easier-to-read-and-debug messages. Yay!
+#?(:clj
+(defmethod test/report :fail [m]
+  (test/with-test-out
+    (test/inc-report-counter :fail)
+    (println "\nFAIL in" (test/testing-vars-str m))
+    (when (seq test/*testing-contexts*)
+      (println (->> test/*testing-contexts*
+                    (interpose " > ")
+                    (apply str))))
+    (when-let [message (:message m)] (println message))
+    (pr* "----- expected: -----" (:expected m))
+    (pr* "----- actual: -----"   (:actual   m)))
+    #_(pr* "----- diff: -----"     (diff (:expected m) (:actual m)))
+    (println "==========")))
+
+#?(:clj
+(defn retest []
+  (try #_(quantum.core.log/enable! :macro-expand-protocol)
+       (remove-ns 'quantum.test.core.error)
+       (load-file "./test/cljc/quantum/test/core/error.cljc")
+       (throw-on-test-fail 'quantum.test.core.error)
+
+       (remove-ns 'quantum.core.macros.protocol)
+       (load-file "./src/cljc/quantum/core/macros/protocol.cljc")
+       (remove-ns 'quantum.test.core.macros.protocol)
+       (load-file "./test/cljc/quantum/test/core/macros/protocol.cljc")
+       (throw-on-test-fail 'quantum.test.core.macros.protocol)
+
+       (remove-ns 'quantum.core.macros.transform)
+       (load-file "./src/cljc/quantum/core/macros/transform.cljc")
+       (remove-ns 'quantum.test.core.macros.transform)
+       (load-file "./test/cljc/quantum/test/core/macros/transform.cljc")
+       (throw-on-test-fail 'quantum.test.core.macros.transform)
+
+       (remove-ns 'quantum.core.macros.defnt)
+       (load-file "./src/cljc/quantum/core/macros/defnt.cljc")
+       (remove-ns 'quantum.test.core.macros.defnt)
+       (load-file "./test/cljc/quantum/test/core/macros/defnt.cljc")
+       (throw-on-test-fail 'quantum.test.core.macros.defnt)
+    (catch Throwable e (clj-stacktrace.repl/pst e)))))
+
+#_(retest)
+
+
+
+
+
+
+
+
+
+
+
+
+
+; ========= COLL =========
+
+(defn update-indexed [xs idxs f]
+  (reduce #(assoc %1 %2 (f %2 (get %1 %2))) xs idxs))
+
+
+(defn index-of
+  "Returns the index of a value in a vector, or nil if not present"
+  ([^IPersistentVector v value]
+    (let [n (.count v)]
+      (loop [i 0]
+        (when (< i n)
+          (if (= value (.nth v i))
+            i
+            (recur (inc i))))))))
+
+; ========= ARRAY =========
+
+(defn copy-double-array
+  "Returns a copy of a double array"
+  (^doubles [^doubles arr]
+  #?(:clj (Arrays/copyOf arr (int (alength arr)))
+     :cljs (.slice arr 0))))
+
+(defn copy-long-array
+  "Returns a copy of a long array"
+  (^longs [^longs arr]
+  #?(:clj (Arrays/copyOf arr (int (alength arr)))
+     :cljs (.slice arr 0))))
+
+(defn copy-object-array
+  "Returns a copy of an object array"
+  (^objects [^objects arr]
+  #?(:clj (Arrays/copyOf arr (int (alength arr)))
+     :cljs (.slice arr 0))))
+
+(defn long-range
+  "Returns a range of longs in a long[] array"
+  ([end]
+    (let [end (int end)
+          ^longs arr (long-array end)]
+      (dotimes [i end]
+        (aset arr i (long i)))
+      arr)))
+
+#?(:clj
+(defn to-long-array
+  ([data]
+    (if (is-long-array? data)
+      data
+      (long-array data))))
+)
+
+(defn long-array-of
+  "Creates a long array with the specified values."
+  ([] (long-array 0))
+  ([a]
+    (let [arr (long-array 1)]
+      (aset arr 0 (long a))
+      arr))
+  ([a b]
+    (let [arr (long-array 2)]
+      (aset arr 0 (long a))
+      (aset arr 1 (long b))
+      arr))
+  ([a b & more]
+    (let [arr (long-array (+ 2 (count more)))]
+      (aset arr 0 (long a))
+      (aset arr 1 (long b))
+      (doseq-indexed [x more i] (aset arr (+ 2 i) (long x)))
+      arr)))
+
+(defn object-array-of
+  "Creates a long array with the specified values."
+  ([] (object-array 0))
+  ([a]
+    (let [arr (object-array 1)]
+      (aset arr 0 a)
+      arr))
+  ([a b]
+    (let [arr (object-array 2)]
+      (aset arr 0 a)
+      (aset arr 1 b)
+      arr))
+  ([a b & more]
+    (let [arr (object-array (+ 2 (count more)))]
+      (aset arr 0 a)
+      (aset arr 1 b)
+      (doseq-indexed [x more i] (aset arr (+ 2 i) x))
+      arr)))
+
+; CLJS
+
+(defmacro abutnth [i xs]
+  `(let [n# (alength ~xs)
+         length# (int (dec n#))
+         new-xs# (.slice ~xs 0 length#)]
+     (c-for [j# (int ~i) (< j# (dec n#)) (inc j#)]
+       (aset new-xs# (int j#) (aget ~xs (int (inc j#)))))
+     new-xs#))
+
+(defmacro areverse [xs]
+  `(let [n# (alength ~xs)
+         new-xs# (.slice ~xs 0 n#)]
+     (c-for [i# (int 0) (< i# (quot n# 2)) (inc i#)]
+       (let [j# (- (- n# 1) i#)
+             t# (aget new-xs# j#)]
+         (aset new-xs# j# (aget new-xs# i#))
+         (aset new-xs# i# t#)))
+     new-xs#))
+
+(defmacro eps== [a b eps]
+  `(<= (js/Math.abs (- (double ~a) (double ~b))) (double ~eps) ))
+
+(defmacro native-array? [m]
+  `(identical? js/Array (.-constructor ~m)))
+
+; CLJ
+
+(defmacro abutnth [i xs]
+  `(let [n# (alength ~xs)
+         length# (int (dec n#))
+         new-xs# (Arrays/copyOf ~xs length#)]
+     (c-for [j# (int ~i) (< j# (dec n#)) (inc j#)]
+       (aset new-xs# (int j#) (aget ~xs (int (inc j#)))))
+     new-xs#))
+
+(defmacro areverse [xs]
+  `(let [n# (alength ~xs)
+         new-xs# (Arrays/copyOf ~xs (int n#))]
+     (c-for [i# (int 0) (< i# (quot n# 2)) (inc i#)]
+       (let [j# (- (- n# 1) i#)
+             t# (aget new-xs# j#)]
+         (aset new-xs# j# (aget new-xs# i#))
+         (aset new-xs# i# t#)))
+     new-xs#))
+
+(defmacro eps== [a b eps]
+  `(<= (Math/abs (- (double ~a) (double ~b))) (double ~eps) ))
+
+(defmacro native-array? [m]
+  `(.isArray (.getClass ~m)))
+
+
+
+(defmacro acopy
+  [x] `(let [x# ~x] (agetr x# 0 (dec* (acount x#)))))
+
+(defmacro acopy-2
+  [x] (let [ret (hint (gensym) #?(:clj "[[D" :cljr "System.double[][]"))]
+        `(let [x# ~x
+               cy# (acount x#)
+               cx# (acount (afirst x#))
+               #?@(:clj  [~ret (make-array Double/TYPE             cy# cx#)]
+                   :cljr [~ret (ClojureBridge/newJaggedDoubleArray cy# cx#)])]
+           (dotimes [iy# cy#]
+             (aset! ~ret (acopy (aget x# iy#)) iy#))
+           ~ret)))
+
+; ===== LOOPS ===== ;
+
+(defmacro dorange
+  "Like `(doseq [i (range a b)])` but (significantly) faster."
+  [[i a b] & body]
+ `(let [b# (long ~b)]
+    (loop [~i (long ~a)]
+      (when (tsp.core/<* ~i b#)
+        ~@body
+        (recur (tsp.core/inc* ~i))))))
+
+(defmacro dotimes [[i n] & body] `(tsp.core/dorange [~i 0 ~n] ~@body))
+
+(def ^:const  ∞ #?(:clj Double/MAX_VALUE :cljr Double/MaxValue))
+(def ^:const  inf ∞)
+
+(def ^:const  -∞ #?(:clj Double/MIN_VALUE :cljr Double/MinValue))
+(def ^:const -inf -∞)
+
+(defmacro accum-times [[i' i & kvs] & body]
+  (let [partitioned (partition 2 kvs)
+        syms  (map first  partitioned)
+        vals' (map second partitioned)]
+    `(let [i# ~i]
+       (loop [~i' 0
+              ~@(if (= 2 (count kvs))
+                    kvs
+                    `[[~@syms] [~@vals']])]
+         (if (>=* ~i' i#)
+             ~(if (= 2 (count kvs))
+                  (first kvs)
+                  `[~@syms])
+             (recur (inc* ~i') (do ~@body)))))))
+
+(defmacro aupdate!
+  {:usage `(aupdate! vs [iy ix] e (-* e min'))}
+  [arr [& is] sym expr]
+  `(let [arr# ~arr
+         ~sym (aget arr# ~@is)]
+     (aset! arr# ~expr ~@is)))
+
+#_(defn atake [n seq-]
+  (let [arr (object-array (count seq-))]
+    (doseqi [elem seq- i] (aset arr i elem))
+    arr))
+
+#_(defn adrop [n seq-]
+  (let [arr (object-array (count seq-))]
+    (doseqi [elem seq- i] (aset arr i elem))
+    arr))
+
+(defn ^|System.Object[]| array*
+  ([arg0]
+    (let [ret (object-array 1)]
+      (aset ret 0 arg0)
+      ret))
+  ([arg0 arg1]
+    (let [ret (object-array 2)]
+      (aset ret 0 arg0)
+      (aset ret 1 arg1)
+      ret)))
+
+(defn ^|System.Object[]| getr
+  "Get range, inclusive"
+  [^|System.Object[]| x a b]
+  (let [ret (object-array (int (inc (- b a))))]
+    (Array/Copy x (int a) ret (int 0) (int (inc (- b a))))
+    ret))
+
+(defmacro agetr
+  "Get range, inclusive"
+  [x a b]
+  `(let [a#   ~a
+         b#   ~b
+         ret# (double-array (inc* (-* b# a#)))] ; TODO optimize
+    (#?(:clj  System/arraycopy
+        :cljr Array/Copy) ~x a# ret# 0 (inc* (-* b# a#)))
+    ret#))
+
+
+
+(defn slicev
+  "Inclusive range"
+  [x from to]
+  (if (> from to)
+      (concatv (subvec x from (count x)) (subvec x 0 (inc to)))
+      (subvec x from (inc to))))
+
+(defn aslice
+  "Inclusive range"
+  [^|System.Object[]| x from to]
+  (if (> from to)
+      (aconcat (getr x from (dec (alength x))) (getr x 0 to))
+      (getr x from to)))
+
+#?(:cljr
+(defn ^|System.Object[]| array*
+  ([arg0]
+    (let [ret (object-array 1)]
+      (aset ret 0 arg0)
+      ret))
+  ([arg0 arg1]
+    (let [ret (object-array 2)]
+      (aset ret 0 arg0)
+      (aset ret 1 arg1)
+      ret))))
+
+
+#?(:cljr
+(defn ^|System.Object[]| aconcat ; join
+  [^|System.Object[]| a ^|System.Object[]| b]
+    (let [al (int (alength a))
+          bl (int (alength b))
+          n  (int (+ al bl))
+          ret (object-array n)]
+      (Array/Copy a (int 0) ret (int 0) al)
+      (Array/Copy b (int 0) ret (int al) bl)
+      ret)))
+
+(defn slicev
+  "Inclusive range"
+  [x from to]
+  (if (> from to)
+      (concatv (subvec x from (count x)) (subvec x 0 (inc to)))
+      (subvec x from (inc to))))
+
+#?(:cljr
+(defn aslice
+  "Inclusive range"
+  [^|System.Object[]| x from to]
+  (if (> from to)
+      (aconcat (getr x from (dec (alength x))) (getr x 0 to))
+      (getr x from to))))
+
+#_(defn atake [n seq-]
+  (let [arr (object-array (count seq-))]
+    (doseqi [elem seq- i] (aset arr i elem))
+    arr))
+
+#_(defn adrop [n seq-]
+  (let [arr (object-array (count seq-))]
+    (doseqi [elem seq- i] (aset arr i elem))
+    arr))
+
+(defn rrest [x] (-> x rest rest))
+
+(defn gen-ifs [ret aux cf comparees body]
+  (assert (seq comparees))
+  (let [[[a a-rets :as a'] [b _ :as b']] comparees]
+    (if (-> comparees count (= 1))
+        `(let [~ret ~a ~@(interleave aux a-rets)] ~@body)
+        `(if (~cf ~a ~b)
+             ~(gen-ifs ret aux cf (cons a' (rrest comparees)) body)
+             ~(gen-ifs ret aux cf (cons b' (rrest comparees)) body)))))
+
+(defmacro let-compare
+  "`cf` is the comparator function"
+  {:example `[(let-compare
+                [v [p] < a [-1] b [-2] c [-3] d [-4]]
+                (println v p))
+              (let [substitution 1
+                    insertion    2
+                    deletion     3]
+                (let-compare
+                  [v [p] <* substitution [DIAG]
+                            insertion    [LEFT]
+                            deletion     [UP  ]]
+                  (aset* D v i j v&)
+                  (aset* D p i j p&)))]}
+  [[ret aux cf & args] & body]
+  (let [pairs     (partition-all 2 args)
+        syms      (map first pairs)
+        rets      (map second pairs)
+        gensyms   (vec (repeatedly (count syms) #(gensym)))
+        comparees (->> (interleave gensyms rets) (partition-all 2))]
+    `(let [~@(interleave gensyms syms)]
+       ~(gen-ifs ret aux cf comparees body))))
+
+
+
+
+(defn base-index-seq-for-shape
+  "Returns a sequence of all possible index vectors for a given shape, in row-major order"
+  [sh]
+  (let [gen (fn gen [prefix rem]
+              (if rem
+                (let [nrem (next rem)]
+                  (mapcat #(gen (conj prefix %) nrem) (range (first rem))))
+                (list prefix)))]
+    (gen [] (seq sh))))
+
+(defn- broadcast-shape*
+  "Returns the smallest shape that both shapes a and b can broadcast to, or nil if the the shapes
+   are not compatible."
+  ([a b]
+    (cond
+      (empty? a) (or b '())
+      (empty? b) a
+      (== 1 (first a)) (broadcast-shape* (first b) (next a) (next b))
+      (== 1 (first b)) (broadcast-shape* (first a) (next a) (next b))
+      (== (first a) (first b)) (broadcast-shape* (first a) (next a) (next b))
+      :else nil))
+  ([prefix a b]
+    (if (or a b)
+      (let [r (broadcast-shape* a b)]
+        (if r (cons prefix r) nil))
+      (cons prefix nil))))
+
+(defn broadcast-shape
+  "Returns the smallest compatible shape that a set of shapes can all broadcast to.
+   Returns nil if this is not possible (i.e. the shapes are incompatible).
+   Returns an empty list if both shape sequences are empty (i.e. represent scalars)"
+  ([a] a)
+  ([a b]
+    (let [a (seq (reverse a))
+          b (seq (reverse b))
+          r (broadcast-shape* a b)]
+      (if r (reverse r) nil))))
+
+;; utilities for protocol introspection
+
+#?(:clj
+(defn extends-deep?
+  "This functions differs from ordinary `extends?` by using `extends?`
+   on all ancestors of given type instead of just type itself. It also
+   skips `java.lang.Object` that serves as a default implementation
+   for all protocols"
+  [proto cls]
+  ;; Here we need a special case to avoid reflecting on primitive type
+  ;; (it will cause an exception)
+  (if (= (Class/forName "[D") cls)
+    (extends? proto cls)
+    (let [bases (-> cls (r/type-reflect :ancestors true) :ancestors)]
+      (->> bases
+           (filter (complement #{'Object 'java.lang.Object}))
+           (map resolve)
+           (cons cls)
+           (map (partial extends? proto))
+           (some true?))))))
+
+; ====== STD DEV ========
+
+(defn sum
+  "Calculates the sum of a collection of values.
+   Values may be:
+    - A vector, in which case the result is a single scalar
+    - A higher-dimensional array, in which case the result is the sum of all slices."
+  ([values]
+    (if (== 1 (m/dimensionality values))
+      (m/esum values)
+      (let [values (m/slices values)
+            result (m/mutable (first values))]
+        (doseq [v (next values)]
+          (m/add! result v))
+        result))))
+
+(defn sum-of-squares
+  "Calculates the sum of squares of a collection of values.
+   Values may be:
+   - A vector, in which case the result is a single scalar
+   - A higher-dimensional array, in which case the result is the sum of squares in all slices."
+  ([values]
+    (if (== 1 (m/dimensionality values))
+      (m/inner-product values values)
+      (let [values (m/slices values)
+            fv (first values)
+            result (m/mutable (m/mul fv fv))]
+        (doseq [v (next values)]
+          (m/add! result (m/mul v v))
+          ;; (add-product! result v v)
+        ) ;; TODO: convert to add-product! when fixed in core.matrix NDArray
+        result))))
+
+(defn mean
+  "Calculates the mean of a collection of values.
+   Values may be:
+   - A vector, in which case the result is a single scalar
+   - A higher-dimensional array, in which case the result is the mean of all slices."
+  ([values]
+    (let [values (m/slices values)
+          n (m/dimension-count values 0)
+          s (sum values)]
+      (if (number? s)
+        (/ s n)
+        (m/scale! s (/ 1.0 n)) ;; abuse the fact that s must be a new mutable matrix....
+        ))))
+
+(defn variance
+  "Calculates the unbiased sample variance of a set of values.
+  Values may be scalars, vectors or higher-dimensional matrices."
+  ([values]
+   (let [n (m/dimension-count values 0)
+         u (mean values)
+         ss (sum-of-squares values)
+         nuu (m/mul n (m/mul u u))]
+     (if (number? ss)
+       (* (- ss nuu) (/ 1.0 (dec n)))
+       (do ;; must be a new mutable matrix, so we abuse this fact to use it as an accumulator...
+           (m/sub! ss nuu)
+           (m/scale! ss (/ 1.0 (dec n)))
+           ss)))))
+
+(defn sd
+  "Calculates the sample standard deviation of a set of values.
+   Values may be scalars, vectors or higher-dimensional matrices."
+  ([values]
+    (m/sqrt (variance values))))
+
+(defn normalise-probabilities
+  "Normalises a numerical probability vector, i.e. to a vector where all elements sum to 1.0.
+   A zero vector will be set set to [1/n .... 1/n]."
+  ([v]
+    (let [len (double (m/esum v))]
+      (cond
+        (== len 1.0) v
+        (== len 0.0) (m/assign v (/ 1.0 (m/dimension-count v 0)))
+        :else (m/scale v (/ 1.0 len))))))
+
+clojure.core.matrix.impl.ndarray is an implementation of strided N-Dimensional array (or NDArray for short).
+
+ {:object {:regname :ndarray
+           :fn-suffix nil
+           :typename 'NDArray
+           :array-tag 'objects
+           :array-cast 'object-array
+           :type-cast 'identity
+           :type-object java.lang.Object}
+  :long   {:regname :ndarray-long
+           :fn-suffix 'long
+           :typename 'NDArrayLong
+           :array-tag 'longs
+           :array-cast 'long-array
+           :type-cast 'long
+           :type-object Long/TYPE}
+  :float  {:regname :ndarray-float
+           :fn-suffix 'float
+           :typename 'NDArrayFloat
+           :array-tag 'floats
+           :array-cast 'float-array
+           :type-cast 'float
+           :type-object Float/TYPE}
+  :double {:regname :ndarray-double
+           :fn-suffix 'double
+           :typename 'NDArrayDouble
+           :array-tag 'doubles
+           :array-cast 'double-array
+           :type-cast 'double
+           :type-object Double/TYPE}}
+
+; Even for very small matrices (except for matrices smaller than 5x5),
+; Neanderthal is faster than pure Java library Vectorz
+
+org.apache.commons.math3.special Gamma Beta Erf
+
+
+(defn ndarray ; thinktopic.aljabr.core for CLJS and CLJ
+  ([type data]
+   (ndarray type data [(count data)]))
+  ([type data shape]
+   (let [{:keys [ctor data-ctor]} (get-in @ctor-registry [(count shape) type])]
+     (if ctor
+       (ctor (if (sequential? data) (data-ctor data) data) 0 (shape->stride shape) shape)
+       (throw (new #?(:clj IllegalArgumentException :cljs js/Error)
+                   (str "Can't create ndarray for: " type " " data)))))))
+
+(defn zeros ; thinktopic.aljabr.core for CLJS and CLJ
+  [shape]
+  (let [size (apply * shape)
+        ary (double-array size)]
+    #?(:clj (java.util.Arrays/fill ary 0.0)
+       :cljs (dotimes [i size] (aset ary i 0.0)))
+    (ndarray :float64 ary shape)))
+
+;  flatland.useful.fn
+(defn ignoring-nils
+  "Create a new version of a function which ignores all nils in its arguments:
+  ((ignoring-nils +) 1 nil 2 3 nil) yields 6."
+  [f]
+  (fn
+    ([] (f))
+    ([a] (if (nil? a)
+           (f)
+           (f a)))
+    ([a b]
+       (if (nil? a)
+         (if (nil? b)
+           (f)
+           (f b))
+         (if (nil? b)
+           (f a)
+           (f a b))))
+    ([a b & more]
+       (when-let [items (seq (remove nil? (list* a b more)))]
+         (apply f items)))))
+; flatland.useful.fn
+(defn rate-limited
+  "Create a version of a function which 'refuses' to be called too
+  frequently. If it has successfully been called in the last N milliseconds,
+  calls to it will return nil; if no calls have succeeded in that period, args
+  will be passed along to the base function."
+  [f ms-period]
+  (let [tracker (atom {:last-sent 0})]
+    (fn [& args]
+      (when (:accepted (swap! tracker
+                              (fn [{:keys [last-sent]}]
+                                (let [now (System/currentTimeMillis)
+                                      ok (< ms-period (- now last-sent))]
+                                  {:accepted ok
+                                   :last-sent (if ok now last-sent)}))))
+        (apply f args)))))
+
+
+; flatland.useful.io
+(defn bytes->long
+  "Read the first eight bytes of a byte-array and convert them to a Long using the standard
+   network order (by delegating to DataInputStream)."
+  [bytes]
+  (-> bytes (ByteArrayInputStream.) (DataInputStream.) (.readLong)))
+; flatland.useful.io
+(defn long->bytes
+  "Create an eight-byte array from a Long, using the standard
+   network order (by delegating to DataOutputStream)."
+  [long]
+  (-> (ByteArrayOutputStream. 8)
+      (doto (-> (DataOutputStream.) (.writeLong long)))
+      (.toByteArray)))
+; flatland.useful.io
+(defn compare-bytes [^"[B" a ^"[B" b]
+  (let [alen (alength a)
+        blen (alength b)
+        len (int (min alen blen))]
+    (loop [idx (int 0)]
+      (if (= idx len)
+        (compare alen blen)
+        (let [ai (long (aget a idx))
+              bi (long (aget b idx))
+              neg-ai? (neg? ai)
+              diff (if (= neg-ai? (neg? bi))
+                     (unchecked-subtract ai bi)
+                     (if neg-ai? 1 -1))] ;; cannot subtract if signs are different
+          (if (zero? diff)
+            (recur (unchecked-inc-int idx))
+            diff))))))
+
+
+
+; flatland.useful.java
+(defn ^{:dont-test "Can't test killing the JVM"} abort
+  "Print message then exit."
+  [& message]
+  (apply println message)
+  (System/exit 1))
+
+; flatland.useful.java
+(defn ^{:dont-test "Can't send a signal in order to catch it!"} trap
+  "Register signal handling function."
+  [signal f]
+  (sun.misc.Signal/handle
+   (sun.misc.Signal. signal)
+   (proxy [sun.misc.SignalHandler] []
+     (handle [sig] (f sig)))))
+
+; flatland.useful.java
+(defn construct
+  "Construct a new instance of class using reflection."
+  [class & args]
+  (clojure.lang.Reflector/invokeConstructor class (into-array Object args)))
+
+; flatland.useful.java
+(defn invoke-private
+  "Invoke a private or protected Java method. Be very careful when using this!
+   I take no responsibility for the trouble you get yourself into."
+  [instance method & params]
+  (let [signature (into-array Class (map class params))
+        c (class instance)]
+    (when-let [^Method method (some #(try
+                                       (.getDeclaredMethod ^Class % method signature)
+                                       (catch NoSuchMethodException e))
+                                    (conj (ancestors c) c))]
+      (let [accessible (.isAccessible method)]
+        (.setAccessible method true)
+        (let [result (.invoke method instance (into-array params))]
+          (.setAccessible method accessible)
+          result)))))
+
+; flatland.useful.java
+(defn ^{:dont-test "Can't test shutting down JVM"} on-shutdown
+  "Execute the given function on jvm shutdown."
+  [^Runnable f]
+  (.addShutdownHook
+   (Runtime/getRuntime)
+   (Thread. f)))
+
+; clojure.tools.macro/macrolet
+
+; flatland.useful.parallel
+(defn pmemoize
+  "Memoizes the function f, using the same approach as
+  clojure.core/memoize. The practical difference is that this function
+  provides the gurantee that in spite of parallel invocations of the
+  memoized function each input to f will only ever be memoized
+  once. This resolves an implementation detail in clojure.core/memoize
+  which allows f to be applied to args without locking the cache to
+  prevent other threads duplicating the work."
+
+  [f]
+  (let [mem (atom {})]
+    (fn [ & args ]
+      (if-let [e (find @mem args)]
+        (deref (val e))
+        (-> (swap! mem assoc-noclobber
+                   args (delay (apply f args)))
+            (get args)
+            (deref))))))
+
+; flatland.useful.seq
+(defn extract
+  "Extracts the first item that matches pred from coll, returning a vector of that item
+   followed by coll with the item removed."
+  [pred coll]
+  (let [[head [item & tail]] (split-with (complement pred) coll)]
+    [item (concat head tail)]))
+
+; flatland.useful.seq
+(defn separate
+  "Split coll into two sequences, one that matches pred and one that doesn't. Unlike the
+  version in clojure.contrib.seq-utils, pred is only called once per item."
+  [pred coll]
+  (let [pcoll (map (decorate pred) coll)]
+    (vec (for [f [filter remove]]
+           (map first (f second pcoll))))))
+
+; flatland.useful.seq
+(defn containsv?
+  "Check if val exists in coll."
+  [val coll]
+  (some (partial = val) coll))
+
+; flatland.useful.seq
+(defn zip
+  "Returns a lazy sequence of vectors of corresponding items from each collection. If one collection
+   is longer than the others, the missing items will be filled in with nils."
+  [& colls]
+  (lazy-seq
+   (when (some seq colls)
+     (cons (vec (map first colls))
+           (apply zip (map rest colls))))))
+
+; flatland.useful.seq
+(defn insert
+  "Inserts a seq of items into coll at position n."
+  [items n coll]
+  (let [[before after] (split-at n coll)]
+    (concat before items after)))
+
+; flatland.useful.seq
+(defn slice
+  "Divide coll into n approximately equal slices."
+  [n coll]
+  (loop [num n slices [] items (vec coll)]
+    (if (empty? items)
+      slices
+      (let [size (Math/ceil (/ (count items) num))]
+        (recur (dec num) (conj slices (subvec items 0 size)) (subvec items size))))))
+
+; flatland.useful.seq
+(defn cross
+  "Computes the cartesian-product of the provided seqs. In other words, compute the set of all
+  possible combinations of ways you can choose one item from each seq."
+  [& seqs]
+  (if (seq (rest seqs))
+    (for [x (first seqs)
+          y (apply cross (rest seqs))]
+      (cons x y))
+    (map list (first seqs))))
+
+; flatland.useful.seq
+(defn lazy-cross
+  "Compute a lazy cartesian-product of the provided seqs. The provided seqs can be lazy or even
+   infinite, and lazy-cross will consume all sequences equally, only consuming more of any sequence
+   when all possible combinations at the current level have been exhausted. This can be thought of
+   intuitively as a breadth-first search of the cartesian product set."
+  [& seqs]
+  (letfn [(step [heads tails dim]
+            (lazy-seq
+             (when (< dim (count tails))
+               (let [tail (get tails dim)]
+                 (concat (apply cross (assoc heads dim tail))
+                         (step (update-in heads [dim] concat tail)
+                               tails (inc dim)))))))
+          (lazy-cross [seqs level]
+            (lazy-seq
+             (let [heads (vec (map #(take level %) seqs))
+                   tails (vec (map #(take 1 (drop level %)) seqs))]
+               (when-not (every? empty? tails)
+                 (concat (step heads tails 0)
+                         (lazy-cross seqs (inc level)))))))]
+    (lazy-cross seqs 0)))
+
+; flatland.useful.seq
+(defn alternates
+  "Split coll into 'threads' subsequences (defaults to 2), feeding
+  each alternately from the input sequence. Effectively the inverse of
+  interleave:
+  (alternates 3 (range 9))
+  ;=> ((0 3 6) (1 4 7) (2 5 8))"
+  ([coll] (alternates 2 coll))
+  ([threads coll]
+     (lazy-seq
+      (when (seq coll)
+        (apply map list (partition threads coll))))))
+
+; flatland.useful.seq
+(defmacro lazy-loop
+  "Provide a simplified version of lazy-seq to eliminate
+  boilerplate. Arguments are as to the built-in (loop...recur),
+  and (lazy-recur) will be defined for you. However, instead of doing
+  actual tail recursion, lazy-recur trampolines through lazy-seq. In
+  addition to enabling laziness, this means you can call lazy-recur
+  when not in the tail position.
+  Regular recurs are also supported, if they are in tail position and don't
+  need any laziness."
+  [bindings & body]
+  (let [f 'lazy-recur
+        [names values] (alternates bindings)]
+    `(letfn [(~f [~@names]
+               (lazy-seq
+                 (iter# ~@names)))
+             (iter# [~@names]
+               ~@body)]
+       (~f ~@values))))
+
+
+
+
+
+
+
+(defn unfold
+  "Traditionally unfold is the 'opposite of reduce': it turns a single
+  seed value into a (possibly infinite) lazy sequence of output
+  values.
+  Next is a function that operates on a seed: it should
+  return a pair, [value new-seed]; the value half of the pair is
+  inserted into the resulting list, while the new seed is used to
+  continue unfolding. Notably, the value is never passed as an
+  argument to next. If nil is returned instead of a pair, the resulting
+  sequence will terminate.
+  (defn fibs []
+    (unfold (fn [[a b]]
+              [a [b (+ a b)]])
+            [0 1]))"
+  [next seed]
+  (lazy-loop [seed seed]
+    (when-let [[val seed] (next seed)]
+      (cons val (lazy-recur seed)))))
+
+(defn ltake-shuffled
+  "Lazily take (at most) n elements at random from coll, without
+  replacement. For n=1, this is equivalent to rand-nth; for n>=(count
+  coll) it is equivalent to shuffle.
+  Clarification of \"without replacement\": each index in the original
+  collection is chosen at most once. Thus if the original collection
+  contains no duplicates, neither will the result of this
+  function. But if the original collection contains duplicates, this
+  function may include them in its output: it does not do any
+  uniqueness checking aside from being careful not to use the same
+  index twice."
+  [n coll]
+  (let [coll (vec coll)
+        n (min n (count coll))]
+    (take n
+          (lazy-loop [coll coll]
+            (let [idx (rand-int (count coll))
+                  val (coll idx)
+                  coll (-> coll
+                           (assoc idx (peek coll))
+                           pop)]
+              (cons val (lazy-recur coll)))))))
+
+(defn glue
+  "Walk over an input sequence, \"gluing\" together elements to create batches.
+   Batches may be of any type you like, and are computed as follows:
+   - Each batch is initialized by combining init (default false) with next-item.
+   - For each additional item in coll, functions glue? and unglue? are consulted to
+     decide whether the next item should be included into the current batch.
+     - If (glue? current-batch next-item) returns truthy, then a prospective
+       updated-batch is computed, as (combine current-batch next-item). If
+       (unglue? updated-batch) returns falsey, then updated-batch is accepted and
+       may be used as the target for further gluing.
+     - If glue? returned falsey, or unglue? returned truthy, then the current batch
+       is inserted into the output sequence, and a new batch is started as
+       (combine init next-item)."
+  ([combine glue? coll]
+     (glue combine nil glue? coll))
+  ([combine init glue? coll]
+     (glue combine init glue? (constantly false) coll))
+  ([combine init glue? unglue? coll]
+     (lazy-seq
+       (when-let [coll (seq coll)]
+         (lazy-loop [glob (combine init (first coll)), coll (rest coll)]
+           (if-let [coll (seq coll)]
+             (let [x (first coll)
+                   more (rest coll)
+                   glued (delay (combine glob x))]
+               (if (and (glue? glob x)
+                        (not (unglue? @glued)))
+                 (recur @glued more)
+                 (cons glob (lazy-recur (combine init x) more))))
+             (list glob)))))))
+
+(defn partition-between
+  "Partition an input seq into multiple sequences, as with partition-by.
+   Walks the collection two at a time, calling (split? [a b]) for each pair.
+   Any time split? returns truthy, the partition containing a ends, and a new
+   one containing b begins. Note that the split? predicate should not take two
+   arguments, but instead a single argument, a pair.
+   Like partition-by, a lazy sequence of partitions is returned, but the
+   partitions themselves are eager.
+   For example, to cause each nil to be folded into the next partition:
+   (partition-between (fn [[a b]] (not (nil? a))) '[1 nil nil 2 nil 3])
+   => ([1] [nil nil 2] [nil 3])"
+  [split? coll]
+  (glue conj []
+        (fn [v x]
+          (not (split? [(peek v) x])))
+        (constantly false)
+        coll))
+
+(defn remove-prefix
+  "Remove prefix from coll, returning the remaining suffix. Returns nil if prefix does not
+  match coll."
+  [prefix coll]
+  (if (seq prefix)
+    (and (seq coll)
+         (= (first prefix) (first coll))
+         (recur (rest prefix) (rest coll)))
+    coll))
+
+(defn prefix-of?
+  "Given prefix is N elements long, are the first N elements of coll equal to prefix?"
+  [coll prefix]
+  (boolean (remove-prefix prefix coll)))
+
+(defn merge-sorted
+  "Merge N sorted sequences together, as in the merge phase of a merge-sort.
+   Comparator should be a two-argument predicate like `<`, which returns true if
+   its first argument belongs before its second element in the merged sequence.
+   The collections themselves should already be sorted in the order your
+   comparator would put them; otherwise ordering is undefined."
+  ([comparator]
+     nil)
+  ([comparator xs]
+     xs)
+  ([comparator xs ys]
+     (lazy-loop [xs xs, ys ys]
+       (if-let [xs (seq xs)]
+         (if-let [ys (seq ys)]
+           (let [x (first xs), y (first ys)]
+             (if (comparator x y)
+               (cons x (lazy-recur (rest xs) ys))
+               (cons y (lazy-recur xs (rest ys)))))
+           xs)
+         ys)))
+  ([comparator xs ys & more]
+     (apply merge-sorted comparator
+            (merge-sorted comparator xs ys)
+            more)))
+
+(defn map-nth
+  "Calls f on every nth element of coll. If start is passed, starts
+   at that element (counting from zero), otherwise starts with zero."
+  ([f nth coll] (map-nth f 0 nth coll))
+  ([f start nth coll]
+     (map #(% %2)
+          (concat (repeat start identity)
+                  (cycle (cons f (repeat (dec nth) identity))))
+          coll)))
+
+(defn update-first
+  "Returns a lazy-seq that is a version of coll with the first item matching
+  pred updated by calling f on it with the supplied args."
+  ([coll pred f]
+     (lazy-seq
+      (if-let [coll (seq coll)]
+        (let [x (first coll)
+              xs (rest coll)]
+          (if (pred x)
+            (cons (f x) xs)
+            (cons x (update-first xs pred f))))
+        (list (f nil)))))
+  ([coll pred f & args]
+     (update-first coll pred #(apply f % args))))
+
+(defn assert-length
+  "Assert, as a side effect, that coll has exactly len elements, and then
+   return coll."
+  [len coll]
+  (if (zero? len)
+    (assert (empty? coll) "Too many elements")
+    (let [last-expected (nthnext coll (dec len))]
+      (assert last-expected "Too few elements")
+      (assert (not (next last-expected)) "Too many elements")))
+  coll)
+
+(defn flatten-all
+  "Takes a nested collection and flattens it into one flat collection.
+   Like clojure.core/flatten, but also works with maps and collections
+   containing nested maps."
+  [form] (remove coll? (tree-seq coll? seq form)))
+
+(defn groupings
+  "Similar to clojure.core/group-by, but allowing you to specify how to add items to each group.
+   For example, if you are grouping by :name, you may want to remove the :name key from each map
+   before adding it to the list. So, you can specify #(dissoc % :name) as your transform.
+   If you need finer-grained control, you can specify a reduce function for accumulating each group,
+   rather than mapping over the items in it. For example, (groupings even? + 0 coll) finds you the
+   sum of all odd numbers in coll and the sum of all even numbers in coll."
+  ([group transform coll]
+     (groupings group #(conj %1 (transform %2)) [] coll))
+  ([group reductor init coll]
+     (loop [ret {}, coll (seq coll)]
+       (if-not coll
+         ret
+         (let [x (first coll)
+               category (group x)]
+           (recur (assoc ret category (reductor (get ret category init) x))
+                  (next coll)))))))
+
+(defn increasing*
+  "Scans through a collection, comparing items via (comp (keyfn x) (keyfn y)), and finding those
+  which are in increasing order. Each input item x is output once, as part of a pair, [included?
+  x]. Those items which are part of an increasing sequence will have included? true, while any that
+  go \"backwards\" from the current max will have included? false."
+  [keyfn comp coll]
+  (lazy-seq
+    (when-first [x coll]
+      (let [max (keyfn x)]
+        (cons [true x]
+              (lazy-loop [max max, coll (rest coll)]
+                (when-first [x coll]
+                  (let [key (keyfn x)]
+                    (if (neg? (comp key max))
+                      (cons [false x] (lazy-recur max (rest coll)))
+                      (cons [true x] (lazy-recur key (rest coll))))))))))))
+
+(defn increasing
+  "Throw away any elements from coll which are not in increasing order, according to keyfn and
+   comp (used similarly to the arguments to sort-by)."
+  ([coll]
+     (increasing identity compare coll))
+  ([keyfn coll]
+     (increasing keyfn compare coll))
+  ([keyfn comp coll]
+     (map second (filter first (increasing* keyfn comp coll)))))
+
+
+
+; flatland.useful.state
+(let [executor (ScheduledThreadPoolExecutor. 1 (reify ThreadFactory
+                                                 (newThread [this r]
+                                                   (doto (Thread. r)
+                                                     (.setDaemon true)))))]
+  (defn periodic-recompute
+    "Takes a thunk and a duration (from flatland.useful.time), and yields a function
+   that attempts to pre-cache calls to that thunk. The first time you call
+   the returned function, it starts a background thread that re-computes the
+   thunk's result according to the requested duration.
+   If you call the returned function with no arguments, it blocks until
+   some cached value is available; with one not-found argument, it returns
+   the not-found value if no cached value has yet been computed.
+   Take care: if the duration you specify causes your task to be scheduled
+   again while it is still running, the task will wait in a queue. That queue
+   will continue to grow unless your task is able to complete more quickly
+   than the duration you specified."
+    [f duration]
+    (let [{:keys [unit num]} duration
+          cache (agent {:ready false})
+          task (delay (.scheduleAtFixedRate executor
+                                            (fn []
+                                              (send cache
+                                                    (fn [_]
+                                                      {:ready true
+                                                       :value (f)})))
+                                            0, num unit))
+          get-ready (fn [] (do @task nil))]
+      (fn
+        ([]
+           (do (get-ready)
+               (:value (wait-until cache :ready))))
+        ([not-found]
+           (do (get-ready)
+               (let [{:keys [ready value]} @cache]
+                 (if ready
+                   value
+                   not-found))))))))
+
+
+
+
+(ns
+  (:import [java.util.concurrent TimeUnit]))
+
+(def ^{:doc "Convert a Clojure keyword into a java.util.concurrent.TimeUnit"
+       :attribution "I stole this from my Clojail implementation"}
+  unit
+  (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
+                                 TimeUnit/MICROSECONDS [:us :microseconds]
+                                 TimeUnit/MILLISECONDS [:ms :milliseconds]
+                                 TimeUnit/SECONDS [:s :sec :seconds]
+                                 TimeUnit/MINUTES [:m :min :minutes]
+                                 TimeUnit/HOURS [:h :hr :hours]
+                                 TimeUnit/DAYS [:d :day :days]}
+                 alias aliases]
+             {alias enum})))
+
+(defn duration [num unit-keyword]
+  {:num num, :unit (unit unit-keyword)})
+
+
+
+
+; flatland.useful.utils
+(defn memoize-deref
+  "Returns a memoized version a non-referentially transparent function, calling deref on each
+   provided var (or ref or atom) and using that in the cache key to prevent cross-contamination if
+   any of the values change."
+  [vars f]
+  (let [mem (memoize
+             (fn [args vals]
+               (apply f args)))]
+    (fn [& args]
+      (mem args (doall (map deref vars))))))
+
+; flatland.useful.utils
+(defn syntax-quote ;; from leiningen.core/unquote-project
+  "Syntax quote the given form, wrapping all seqs and symbols in quote."
+  [form]
+  (walk (fn [form]
+          (cond (and (seq? form) (= `unquote (first form))) (second form)
+                (or (seq? form) (symbol? form)) (list 'quote form)
+                :else (syntax-quote form)))
+        identity
+        form))
+
+; flatland.useful.utils
+(defmacro with-timing
+  "Same as clojure.core/time but returns a vector of the result of
+   the code and the milliseconds rather than printing a string. Runs
+   the code in an implicit do."
+  [& body]
+  `(let [start# (System/nanoTime)
+         ret# ~(cons 'do body)]
+     [ret# (/ (double (- (System/nanoTime) start#)) 1000000.0)]))
+
+
+∮ map-entry
+! complement
+∘ comp
+φ partial
+
+
+; flatland.useful.string
+(defn pluralize
+  "Return a pluralized phrase, appending an s to the singular form if no plural is provided.
+  For example:
+     (pluralize 5 \"month\") => \"5 months\"
+     (pluralize 1 \"month\") => \"1 month\"
+     (pluralize 1 \"radius\" \"radii\") => \"1 radius\"
+     (pluralize 9 \"radius\" \"radii\") => \"9 radii\""
+  [num singular & [plural]]
+  (str num " " (if (= 1 num) singular (or plural (str singular "s")))))
+
+
+
+
+
+
+; qbits.commons.enum
+(defmacro case-enum
+  "Like `case`, but explicitly dispatch on Java enum ordinals."
+  [e & clauses]
+  (letfn [(enum-ordinal [e] `(let [^Enum e# ~e] (.ordinal e#)))]
+    `(case ~(enum-ordinal e)
+       ~@(concat
+          (mapcat (fn [[test result]]
+                    [(eval (enum-ordinal test)) result])
+                  (partition 2 clauses))
+          (when (odd? (count clauses))
+            (list (last clauses)))))))
+
+
+
+
+
+Features of Wolfram Mathematica include:[10]
+
+Elementary and Special mathematical function libraries
+Support for complex number, arbitrary precision, interval arithmetic and symbolic computation
+Matrix and data manipulation tools including support for sparse arrays
+2D and 3D data, function and geo visualization and animation tools
+Solvers for systems of equations, diophantine equations, ODEs, PDEs, DAEs, DDEs, SDEs and recurrence relations
+Finite element analysis including 2D and 3D adaptive mesh generation
+Numeric and symbolic tools for discrete and continuous calculus including continuous and discrete integral transforms
+Constrained and unconstrained local and global optimization
+Multivariate statistics libraries including fitting, hypothesis testing, and probability and expectation calculations on over 160 distributions.
+Support for censored data, temporal data, time-series and unit based data
+Calculations and simulations on random processes and queues
+Supervised and unsupervised machine learning tools for data, images and sounds including Neural Networks
+Tools for text mining including regular expressions and semantic analysis
+Data mining tools such as cluster analysis, sequence alignment and pattern matching
+Computational geometry in 2D, 3D and higher dimensions
+Libraries for signal processing including wavelet analysis on sounds, images and data
+Linear and non-linear Control systems libraries
+Tools for 2D and 3D image processing[11] and morphological image processing including image recognition
+Tools for visualizing and analysing directed and undirected graphs
+Tools for combinatoric problems
+Number theory function library
+Tools for financial calculations including bonds, annuities, derivatives, options etc.
+Group theory and symbolic tensor functions
+Import and export filters for data, images, video, sound, CAD, GIS,[12] document and biomedical formats
+Database collection for mathematical, scientific, and socio-economic information and access to WolframAlpha data and computations
+Technical word processing including formula editing and automated report generating
+Programming language supporting procedural, functional and object oriented constructs
+Toolkit for adding user interfaces to calculations and applications
+Tools for connecting to DLL, SQL, Java, .NET, C++, Fortran, CUDA, OpenCL, and http based systems
+Tools for parallel programming
+Using both "free-form linguistic input" (a natural language user interface)[13][14] and Wolfram Language in notebook when connected to the Internet
+
+
+
+
+
+; notice the double ## to be used with nested ``
+ `(let [val## ~value
+        pred## ~predicate]
+       (cond
+         ~@(->> cases
+             (partition 2)
+             (map
+               (fn [[vals expr]]
+                 `(~(if (sequential? vals)
+                      `(or ~@(map (fn [x] `(pred## val## ~x)) vals))
+                      `(pred## val## ~vals))
+                   ~expr)))
+             (apply concat))
+
+
+
+
+
+
+
+
+; TODO revisit this
+;;; fast-memoize
+; potemkin.utils
+
+(definline re-nil [x] `(let [x# ~x] (if (identical? ::nil x#) nil x#)))
+
+(definline de-nil [x] `(let [x# ~x] (if (nil? x#) ::nil x#)))
+
+(defmacro memoize-form [m f & args]
+  `(let [k# (t/vector ~@args)]
+     (let [v# (.get ~m k#)]
+       (if-not (nil? v#)
+         (re-nil v#)
+         (let [v# (de-nil (~f ~@args))]
+           (or (.putIfAbsent ~m k# v#) v#))))))
+
+(defn fast-memoize
+  "A version of `memoize` which has equivalent behavior, but is faster."
+  [f]
+  (let [m (ConcurrentHashMap.)]
+    (fn
+      ([]
+         (memoize-form m f))
+      ([x]
+         (memoize-form m f x))
+      ([x y]
+         (memoize-form m f x y))
+      ([x y z]
+         (memoize-form m f x y z))
+      ([x y z w]
+         (memoize-form m f x y z w))
+      ([x y z w u]
+         (memoize-form m f x y z w u))
+      ([x y z w u v]
+         (memoize-form m f x y z w u v))
+      ([x y z w u v & rest]
+         (let [k (list* x y z w u v rest)]
+           (let [v (.get ^ConcurrentHashMap m k)]
+             (if-not (nil? v)
+               (re-nil v)
+               (let [v (de-nil (apply f k))]
+                 (or (.putIfAbsent m k v) v)))))))))
+
+
+
+
+
+;;;
+; potemkin.utils
+
+(defmacro doit
+  "A version of doseq that doesn't emit all that inline-destroying chunked-seq code."
+  [[x it] & body]
+  (let [it-sym (gensym "iterable")]
+    `(let [~it-sym ~it
+           it# (.iterator ~(with-meta it-sym {:tag "Iterable"}))]
+       (loop []
+         (when (.hasNext it#)
+           (let [~x (.next it#)]
+            ~@body)
+           (recur))))))
+
+; TODO move into analyzer preds
+
+; potemkin.template
+(defn- unquote? [x]
+  (and (seq? x) (= 'clojure.core/unquote (first x))))
+; potemkin.template
+(defn- splice? [x]
+  (and (seq? x) (= 'clojure.core/unquote-splicing (first x))))
+
+
+
+
+; potemkin.macros
+(defn safe-resolve [x]
+  (try
+    (resolve x)
+    (catch Exception _
+      nil)))
+; potemkin.macros
+(def unified-gensym-regex #"([a-zA-Z0-9\-\'\*]+)#__\d+__auto__$")
+; potemkin.macros
+(def gensym-regex #"(_|[a-zA-Z0-9\-\'\*]+)#?_+(\d+_*#?)+(auto__)?$")
+; potemkin.macros
+(defn unified-gensym? [s]
+  (and
+    (symbol? s)
+    (re-find unified-gensym-regex (str s))))
+; potemkin.macros
+(defn gensym? [s]
+  (and
+    (symbol? s)
+    (re-find gensym-regex (str s))))
+; potemkin.macros
+(defn un-gensym [s]
+  (second (re-find gensym-regex (str s))))
+; potemkin.macros
+(defn unify-gensyms
+  "All gensyms defined using two hash symbols are unified to the same
+   value, even if they were defined within different syntax-quote scopes."
+  [body]
+  (let [gensym* (memoize gensym)]
+    (postwalk
+      #(if (unified-gensym? %)
+         (symbol (str (gensym* (str (un-gensym %) "__")) "__auto__"))
+         %)
+      body)))
+; potemkin.macros
+(defn normalize-gensyms
+  [body]
+  (let [cnt (atom 0)
+        gensym* #(str % "__norm__" (swap! cnt inc))]
+    (postwalk
+      #(if (gensym? %)
+         (symbol (gensym* (un-gensym %)))
+         %)
+      body)))
+; potemkin.macros
+(defn equivalent?
+  [a b]
+  (if-not (and a b)
+    (= a b)
+    (=
+      (->> a r/macroexpand-all normalize-gensyms)
+      (->> b r/macroexpand-all normalize-gensyms))))
+
+
+
+
+
+
+
+"vividsolutions JTS spatial library. Constructors for points,
+ coordinate sequences, rings, polygons, multipolygons, and so on."
+com.vividsolutions.jts.geom
+
+ch.hsr.geohash
+
+com.spatial4j
+
+
+
+bigmlcom/sketchy
+
+cern.jet.random.tdouble.engine MersenneTwister64
+
+
+TODO
+; Instead of `send-message!` or `dispatch!` etc., treat it exactly like
+; an async chan in every way. Can offer, take, reduce, etc. for streaming data,
+; and acts like a promise chan otherwise. Never touch HTTP or WebSockets or
+; whatever other implementation detail ever again.
+
+; I mean yes, you might do (<>! <uri> <...args>)
+; Figure out how headers even matter anymore
+
+
+
+
+
+
+
+
+
+
+
+; bigml.sampling.random
+(defn- make-mersenne-rng [^long seed]
+  (let [m (MersenneTwister64. seed)]
+    (proxy [java.util.Random] []
+      (nextInt
+        ([] (.nextInt m))
+        ([i] (int (* i (.nextDouble m)))))
+      (nextDouble [] (.nextDouble m))
+      (nextFloat [] (.nextFloat m)))))
+; bigml.sampling.random
+(defn create
+  "Creates a random number generator with an optional seed and
+   generator.
+   Options:
+    :seed - Any hashable value, defaults to a random seed.
+    :generator - Either lcg (linear congruential) or twister (Mersenne
+                 twister), defaults to lcg."
+  [& {:keys [seed generator]}]
+  (let [seed (hash (or seed (rand)))
+        generator (or generator :lcg)]
+    (case (keyword generator)
+      :lcg (Random. seed)
+      :twister (make-mersenne-rng seed)
+      (throw (Exception. "Generator must be lcg or twister.")))))
+; bigml.sampling.random
+(defn next-double!
+  "Returns a double given a random number generator and an optional
+   range."
+  ([^Random rnd] (.nextDouble rnd))
+  ([rnd range] (* range (next-double! rnd))))
+; bigml.sampling.random
+(defn next-long!
+  "Returns a new seed given a random number generator."
+  ([^Random rnd] (.nextLong rnd))
+  ([rnd ^long range] (long (* range (next-double! rnd)))))
+; bigml.sampling.random
+(defn next-int!
+  "Returns an integer given a random number generator and an optional
+  range."
+  ([^Random rnd] (.nextInt rnd))
+  ([^Random rnd ^long range] (.nextInt rnd range)))
+; bigml.sampling.random
+(defn shuffle!
+  "Shuffles a collection given a random number generator.  Adapted
+   from the clojure.core/shuffle."
+  [^java.util.Collection coll ^Random rnd]
+  (let [al (java.util.ArrayList. coll)]
+    (java.util.Collections/shuffle al rnd)
+
+
+
+; STATS
+
+; criterium.core
+(defn outlier-significance
+  "Find the significance of outliers given boostrapped mean and variance
+estimates.
+See http://www.ellipticgroup.com/misc/article_supplement.pdf, p17."
+  [mean-estimate variance-estimate n]
+  (progress "Checking outlier significance")
+  (let [mean-block (point-estimate mean-estimate)
+        variance-block (point-estimate variance-estimate)
+        std-dev-block (Math/sqrt variance-block)
+        mean-action (/ mean-block n)
+        mean-g-min (/ mean-action 2)
+        sigma-g (min (/ mean-g-min 4) (/ std-dev-block (Math/sqrt n)))
+        variance-g (* sigma-g sigma-g)
+        c-max (fn [t-min]
+                (let [j0 (- mean-action t-min)
+                      k0 (- (* n n j0 j0))
+                      k1 (+ variance-block (- (* n variance-g)) (* n j0 j0))
+                      det (- (* k1 k1) (* 4 variance-g k0))]
+                  (Math/floor (/ (* -2 k0) (+ k1 (Math/sqrt det))))))
+        var-out (fn [c]
+                  (let [nmc (- n c)]
+                    (* (/ nmc n) (- variance-block (* nmc variance-g)))))
+        min-f (fn [f q r]
+                (min (f q) (f r)))
+        ]
+    (/ (min-f var-out 1 (min-f c-max 0 mean-g-min)) variance-block)))
+
+; criterium.core
+(defn outliers
+  "Find the outliers in the data using a boxplot technique."
+  [data]
+  (progress "Finding outliers ...")
+  (reduce (apply partial add-outlier
+                 (apply boxplot-outlier-thresholds
+                        ((juxt first last) (quartiles (sort data)))))
+          (outlier-count 0 0 0 0)
+          data))
+
+
+; criterium.core
+(defn benchmark-stats [times opts]
+  (let [outliers (outliers (:samples times))
+        tail-quantile (:tail-quantile opts)
+        stats (bootstrap-bca
+               (map double (:samples times))
+               (juxt
+                mean
+                variance
+                (partial quantile tail-quantile)
+                (partial quantile (- 1.0 tail-quantile)))
+               (:bootstrap-size opts) [0.5 tail-quantile (- 1.0 tail-quantile)]
+               criterium.well/well-rng-1024a)
+        analysis (outlier-significance (first stats) (second stats)
+                                       (:sample-count times))
+        sqr (fn [x] (* x x))
+        m (mean (map double (:samples times)))
+        s (Math/sqrt (variance (map double (:samples times))))]
+    (merge times
+           {:outliers outliers
+            :mean (scale-bootstrap-estimate
+                   (first stats) (/ 1e-9 (:execution-count times)))
+            :sample-mean (scale-bootstrap-estimate
+                          [m [(- m (* 3 s)) (+ m (* 3 s))]]
+                          (/ 1e-9 (:execution-count times)))
+            :variance (scale-bootstrap-estimate
+                       (second stats) (sqr (/ 1e-9 (:execution-count times))))
+            :sample-variance (scale-bootstrap-estimate
+                              [ (sqr s) [0 0]]
+                              (sqr (/ 1e-9 (:execution-count times))))
+            :lower-q (scale-bootstrap-estimate
+                       (nth stats 2) (/ 1e-9 (:execution-count times)))
+            :upper-q (scale-bootstrap-estimate
+                       (nth stats 3) (/ 1e-9 (:execution-count times)))
+            :outlier-variance analysis
+            :tail-quantile (:tail-quantile opts)
+            :os-details (os-details)
+            :options opts
+            :runtime-details (->
+                              (runtime-details)
+                              (update-in [:input-arguments] vec))})))
+
+; criterium.core
+(defn scale-time
+  "Determine a scale factor and unit for displaying a time."
+  [measurement]
+  (cond
+   (> measurement 60) [(/ 60) "min"]
+   (< measurement 1e-6) [1e9 "ns"]
+   (< measurement 1e-3) [1e6 "µs"]
+   (< measurement 1) [1e3 "ms"]
+   :else [1 "sec"]))
+
+
+
+(ns criterium.well)
+
+;;; Macros to help convert unsigned algorithm to our implementation with signed
+;;; integers.
+;;; unsign is used to convert the [0.5,-0.5] range back onto [1,0]
+(defmacro bit-shift-right-ns
+  "A bit shift that doesn't do sign extension."
+  [a b]
+  `(let [n# ~b]
+     (if (neg? n#)
+       (bit-shift-left ~a (- n#))
+       (bit-and
+        (bit-shift-right Integer/MAX_VALUE (dec n#))
+        (bit-shift-right ~a n#)))))
+
+(defmacro unsign
+  "Convert a result based on a signed integer, and convert it to what it would
+   have been for an unsigned integer."
+  [x]
+  `(let [v# ~x]
+     (if (neg? v#) (+ 1 v#) v#)))
+
+(def unsigned-int-max (bit-or (bit-shift-left Integer/MAX_VALUE 1) 1))
+
+(defmacro limit-bits [x]
+  `(bit-and unsigned-int-max ~x))
+
+(defmacro mat0-pos [t v]
+  `(let [v# ~v] (bit-xor v# (bit-shift-right v# ~t))))
+
+(defmacro mat0-neg [t v]
+  `(let [v# ~v]
+     (long (bit-xor v# (limit-bits (bit-shift-left v# (- ~t)))))))
+
+(defmacro add-mod-32 [a b]
+  `(long (bit-and (+ ~a ~b) 0x01f)))
+
+(defn well-rng-1024a
+  "Well RNG 1024a
+See: Improved Long-Period Generators Based on Linear Recurrences Modulo 2
+F. Panneton, P. L'Ecuyer and M. Matsumoto
+http://www.iro.umontreal.ca/~panneton/WELLRNG.html"
+  ([] (well-rng-1024a
+       (long-array 32 (repeatedly 32 #(rand-int Integer/MAX_VALUE)))
+       (rand-int 32)))
+  ([^longs state ^long index]
+     {:pre [(<= 0 index 32)]}
+     (let [m1 3
+           m2 24
+           m3 10
+           fact 2.32830643653869628906e-10
+           new-index (add-mod-32 index 31)
+           z0 (aget state new-index)
+           z1 (bit-xor (aget state index)
+                 (mat0-pos 8 (aget state (add-mod-32 index m1))))
+           z2 (bit-xor (mat0-neg -19 (aget state (add-mod-32 index m2)))
+                       (mat0-neg -14 (aget state (add-mod-32 index m3))))]
+       (aset state index (bit-xor z1 z2))
+       (aset state new-index
+             (bit-xor (bit-xor (mat0-neg -11 z0) (mat0-neg -7 z1))
+                      (mat0-neg -13 z2)))
+       (let  []
+         (lazy-seq
+          (cons (unsign (* (aget state new-index) fact))
+                (well-rng-1024a state new-index)))))))
+
+
+
+
+;;; Implementation of ZIGNOR
+;;; An improved Ziggurat method to generate normal random samples, Doornik, 2005
+
+(ns criterium.ziggurat
+  (:require criterium.well))
+
+(def ^:dynamic *zignor-c* 128 ) ; "Number of blocks."
+ ; "Start of the right tail" (R * phi(R) + Pr(X>=R)) * sqrt(2\pi)
+(def ^:dynamic *zignor-r* 3.442619855899e0)
+(def ^:dynamic *zignor-v* 9.91256303526217e-3)
+
+(defn- sqr [x] (* x x))
+
+(defn zignor-init
+  "Initialise tables."
+  [c r v]
+  (let [c (int c)
+        r (double r)
+        v (double v)
+        #^doubles s-adzigx (double-array (inc c))
+        #^doubles s-adzigr (double-array c)
+        f (Math/exp (* -0.5e0 r r))]
+    (aset s-adzigx 0 (/ v f)) ;; [0] is bottom block: V / f(R)
+    (aset s-adzigx 1 r)
+    (aset s-adzigx c (double 0.0))
+    (loop [i (int 2)
+           f f]
+      (aset s-adzigx i
+            (Math/sqrt (* -2e0 (Math/log (+ (/ v (aget s-adzigx (dec i))) f)))))
+      (when (< i c)
+        (recur
+         (inc i)
+         (Math/exp (* -0.5e0 (aget s-adzigx i) (aget s-adzigx i))))))
+
+    (for [#^Integer i (range c)]
+      (let [j (int i)]
+        (aset s-adzigr j (/ (aget s-adzigx (inc j)) (aget s-adzigx j)))))
+    [s-adzigr s-adzigx r (dec c)]))
+
+
+(defn random-normal-zig
+  "Pseudo-random normal variates.
+An implementation of ZIGNOR
+See:
+ An improved Ziggurat method to generate normal random samples, Doornik, 2005"
+  ([]
+     (random-normal-zig (criterium.well/well-rng-1024a)
+                        (zignor-init *zignor-c* *zignor-r* *zignor-v*)))
+  ([rng-seq]
+     (random-normal-zig rng-seq (zignor-init *zignor-c* *zignor-r* *zignor-v*)))
+  ([rng-seq c r v] (random-normal-zig rng-seq (zignor-init c r v)))
+  ([c r v]
+     (random-normal-zig (criterium.well/well-rng-1024a) (zignor-init c r v)))
+  ([rng-seq [#^doubles s-adzigr #^doubles s-adzigx zignor-r mask]]
+     (letfn [(random-normal-tail
+               [min negative rng-seq]
+               (loop [rng-seq rng-seq]
+                 (let [x (/ (Math/log (first rng-seq)) min)
+                       y (Math/log (first (next rng-seq)))]
+                   (if (>= (* -2e0 y) (* x x))
+                     (if negative
+                       [(- x min) (drop 2 rng-seq)]
+                       [(- min x) (drop 2 rng-seq)])
+                     (recur (drop 2 rng-seq))))))]
+       (let [[deviate rng-seq]
+             (loop [rng-seq rng-seq]
+               (let [r  (first rng-seq)
+                     u  (double (- (* 2e0 r) 1e0))
+                     i  (bit-and
+                         (int (* Integer/MAX_VALUE (first (drop 1 rng-seq))))
+                         mask)]
+                 ;; first try the rectangular boxes
+                 (if (< (Math/abs u) (nth s-adzigr i))
+                   [(* u (nth s-adzigx i)) (drop 2 rng-seq)]
+
+                   ;; bottom box: sample from the tail
+                   (if (zero? i)
+                     (random-normal-tail zignor-r (neg? u) (drop 2 rng-seq))
+
+                     ;; is this a sample from the wedges?
+                     (let [x (* u (nth s-adzigx i))
+                           f0 (Math/exp
+                               (* -0.5e0
+                                  (- (Math/pow (nth s-adzigx i) 2) (sqr x))))
+                           f1 (Math/exp
+                               (* -0.5e0
+                                  (- (Math/pow (nth s-adzigx (inc i)) 2)
+                                     (sqr x))))]
+                       (if  (< (+ f1 (* (first (drop 2 rng-seq) ) (- f0 f1)))
+                               1.0)
+                         [x (drop 3 rng-seq)]
+                         (recur (drop 3 rng-seq) )))))))]
+         (lazy-seq (cons deviate (random-normal-zig rng-seq)))))))
+
+
+
+
+; uncomplicate.neanderthal.math
+
+; (defn f=
+;   ([^double x ^double y ^double nepsilons]
+;    (Precision/equals x y (* Precision/EPSILON nepsilons)))
+;   ([^double x ^double y]
+;    (Precision/equals x y Precision/EPSILON)))
+
+; (defn f<
+;   ([^double x ^double y ^double nepsilons]
+;    (< (Precision/compareTo x y (* Precision/EPSILON nepsilons)) 0))
+;   ([^double x ^double y]
+;    (< (Precision/compareTo x y Precision/EPSILON))))
+
+; (defn f<=
+;   ([^double x ^double y ^double nepsilons]
+;    (<= (Precision/compareTo x y (* Precision/EPSILON nepsilons)) 0))
+;   ([^double x ^double y]
+;    (<= (Precision/compareTo x y Precision/EPSILON))))
+
+; (defn f>
+;   ([^double x ^double y ^double nepsilons]
+;    (> (Precision/compareTo x y (* Precision/EPSILON nepsilons)) 0))
+;   ([^double x ^double y]
+;    (> (Precision/compareTo x y Precision/EPSILON))))
+
+; (defn f>=
+;   ([^double x ^double y ^double nepsilons]
+;    (>= (Precision/compareTo x y (* Precision/EPSILON nepsilons)) 0))
+;   ([^double x ^double y]
+;    (>= (Precision/compareTo x y Precision/EPSILON))))
+
+; (defn power-of-2? [^long n]
+;   (= 0 (bit-and n (- n 1))))
+
+; (defn round ^double [^double x]
+;   (Math/floor (+ 0.5 x)))
+
+; (defn round?
+;   ([^double x]
+;    (f= x (Math/floor (+ 0.5 x))))
+;   ([^double x ^double nepsilons]
+;    (f= x (Math/floor (+ 0.5 x)) nepsilons)))
+
+; (defn magnitude
+;   (^double [^double range-]
+;    (pow 10 (floor (log10 range-))))
+;   (^double [^double lower ^double upper]
+;    (magnitude (- upper lower))))
+
+
+
+
+
+
+; criterium.stats
+
+(defn bca-nonparametric-eval
+  "Calculate bootstrap values for given estimate and samples"
+  [n size data z-alpha estimate samples jack-samples]
+  (let [z0 (normal-quantile
+            (/ (count (filter (partial > estimate) samples)) size))
+        jack-mean (mean jack-samples)
+        jack-deviation (map #(- jack-mean %1) jack-samples)
+        acc (/ (reduce + 0.0 (map cube jack-deviation))
+               (* 6.0 (Math/pow (reduce + 0.0 (map sqr jack-deviation)) 1.5)))
+        tt (map
+            #(normal-cdf (+ z0 (/ (+ z0 %1) (- 1.0 (* acc (+ z0 %1))))))
+            z-alpha)
+        ooo (map #(trunc (* %1 size)) tt)
+        sorted-samples (sort samples)
+        confpoints (map (partial nth sorted-samples) ooo)]
+    [confpoints z0 acc jack-mean jack-samples]))
+
+(defn bca-nonparametric
+  "Non-parametric BCa estimate of a statistic on data. Size bootstrap samples
+  are used. Confidence values are returned at the alpha normal
+  quantiles. rng-factory is a method that returns a random number generator to
+  use for the sampling.
+  An introduction to the bootstrap.  Efron, B., & Tibshirani, R. J. (1993).
+  See http://lib.stat.cmu.edu/S/bootstrap.funs for Efron's original
+   implementation."
+  [data statistic size alpha rng-factory]
+  (let [n (count data)
+        data (sort data)
+        estimate (statistic data)
+        samples (bootstrap-sample data statistic size rng-factory)
+        jack-samples (jacknife data statistic)
+        alpha (if (vector? alpha) alpha [alpha])
+        z-alpha (map normal-quantile alpha)]
+    (if (vector? estimate)
+      (map
+       (partial bca-nonparametric-eval n size data z-alpha)
+       estimate samples jack-samples)
+      (bca-nonparametric-eval
+       n size data z-alpha estimate samples jack-samples))))
+
+(defn bca-to-estimate [alpha bca-estimate]
+  [(first (first bca-estimate)) (next (first bca-estimate))])
+
+
+
+;;; Nonparametric assessment of multimodality for univariate data.
+;;; Salgado-Ugarte IH, Shimizu M. 1998
+
+;;; Maximum likelihood kernel density estimation: On the potential of convolution sieves.
+;;; Jones and Henderson. Computational Statistics and Data Analysis (2009)
+
+(defn modal-estimation-constant
+  "Kernel function for estimation of multi-modality.
+  h-k is the critical bandwidth, sample-variance is the observed sample variance.
+  Equation 7, Nonparametric assessment of multimodality for univariate
+  data. Salgado-Ugarte IH, Shimizu M"
+  [h-k sample-variance]
+  (Math/sqrt (+ 1 (/ (sqr h-k) sample-variance))))
+
+(defn smoothed-sample
+  "Smoothed estimation function."
+  [c-k h-k data deviates]
+  (lazy-seq
+    (cons
+     (* c-k (+ (take 1 data) (* h-k (take 1 deviates))))
+     (if-let [n (next data)]
+       (smoothed-sample c-k h-k n (next deviates))))))
+
+(defn gaussian-weight
+  "Weight function for gaussian kernel."
+  [t]
+  (let [k (Math/pow (* 2 Math/PI) -0.5)]
+    (* k (Math/exp (/ (* t t) -2)))))
+
+(defn kernel-density-estimator
+  "Kernel density estimator for x, given n samples X, weights K and width h."
+  [h K n X x]
+  (/ (reduce #(+ %1 (K (/ (- x %2) h))) 0 X) (* n h)))
+
+
+
+
+
+
+; weathergen.cljs.macros
+(defmacro with-time
+  [timer & body]
+  `(let [timer-name# ~timer
+         ignore#     (.time js/console timer-name#)
+         result#     ~@body]
+     (.timeEnd js/console timer-name#)
+     result#))
+
+; weathergen.fmap
+(defn get-bytes
+  [^InputStream is size]
+  (let [bb  (ByteBuffer/allocate size)
+        buf (byte-array size)]
+    (loop [remaining size]
+      (if (zero? remaining)
+        (do
+          (.put bb ^bytes buf 0 size)
+          (.position bb 0))
+        (let [read (.read is buf (- size remaining) remaining)]
+          (if (neg? read)
+            nil
+            (recur (- remaining read))))))))
+
+
+; weathergen.fmap
+(defn byte-writer
+  [size]
+  (let [ab (js/ArrayBuffer. size)
+        dv (js/DataView. ab)]
+   {:size size
+    :array-buffer ab
+    :data-view dv
+    :position (atom 0)}))
+
+(defn write-int32
+  [{:keys [data-view position]} x]
+  (.setInt32 data-view @position x true)
+  (swap! position #(+ % 4)))
+
+(defn write-float32
+  [{:keys [data-view position]} x]
+  (.setFloat32 data-view @position x true)
+  (swap! position #(+ % 4)))
+
+(defn blob
+  [bw]
+  (js/Blob. #js [(:array-buffer bw)] #js {:type "application/x-falcon-bms-fmap"}))
+
+
+
+
+
+
+(ns
+  "Functions for generating pseudorandom noise fields")
+
+(defn low-bits
+  {:adapted-from 'weathergen.math}
+  [^long x n]
+  (bit-and x (dec (bit-shift-left 1 n))))
+
+(defn high-bits
+  [^long x n]
+  (bit-shift-right x (- 32 n)))
+
+(defn bit-rotate-right
+  [^long x n]
+  (unchecked-add (high-bits x (- 32 n))
+                 (bit-shift-left (low-bits x n) (- 32 n))))
+
+(defn bit-rotate-left
+  [^long x n]
+  (unchecked-add (high-bits x n) (bit-shift-left (low-bits x (- 32 n)) n)))
+
+(defn frac
+  ^double [^double x]
+  (- x (long x)))
+
+(def whole long)
+
+(defn mean
+  [x y]
+  (/ (+ x y) 2.0))
+
+
+(defn vector-add
+  [& vs]
+  (apply mapv + vs))
+
+(defn interpolate
+  [x y f]
+  (+ (* (- 1.0 f) x)
+     (* f y)))
+
+(defn vector-interpolate
+  [v1 v2 x x1 x2]
+  (let [f      (/ (- x x1) (double (- x2 x1)))
+        interp (fn [a b] (+ (* (- 1 f) a) (* f b)))]
+    (mapv interp v1 v2)))
+
+
+(defn scramble
+  (^double [^long x] (scramble x 1))
+  (^double [^long x ^double seed]
+   (let [a (-> x (* seed) Math/sin Math/abs)
+         b (* a 1E5)]
+     (frac b))))
+
+(defn discrete-noise-field
+  (^double [^long x ^long y] (discrete-noise-field x y 1))
+  (^double [^long x ^long y seed]
+   (-> x (* 65521) (+ y) (scramble seed))))
+
+(defn continuous-noise-field
+  (^double [^double x ^double y] (continuous-noise-field x y 1.0))
+  (^double [^double x ^double y seed]
+   (let [x-frac (mod (frac x) 1.0)
+         y-frac (mod (frac y) 1.0)
+         x-whole (Math/floor x)
+         y-whole (Math/floor y)]
+     (interpolate (interpolate (discrete-noise-field x-whole y-whole seed)
+                               (discrete-noise-field (inc x-whole) y-whole seed)
+                               x-frac)
+                  (interpolate (discrete-noise-field x-whole (inc y-whole) seed)
+                               (discrete-noise-field (inc x-whole) (inc y-whole) seed)
+                               x-frac)
+                  y-frac))))
+
+(defn fractal-field
+  ([x y zoom] (fractal-field x y zoom 1 1.0))
+  ([x y zoom seed floor]
+   (loop [result 0
+          z zoom]
+     (if (< z floor)
+       result
+       (recur (+ result (* (continuous-noise-field (/ x z) (/ y z) seed)
+                           (/ z zoom 2.0)))
+              (/ z 2))))))
+
+
+(defn magnitude
+  [[x y]]
+  (Math/sqrt (+ (* x x) (* y y))))
+
+(defn heading
+  [[x y]]
+  (-> (Math/atan2 x y) (* 180.0) (/ Math/PI) (mod 360)))
+
+(defn gradient
+  ([x y field delta] (gradient x y field delta (field x y)))
+  ([x y field delta f0]
+   (let [fx (field (+ x delta) y)
+         fy (field x (+ y delta))
+         dfdx (/ (- fx f0) delta)
+         dfdy (/ (- fy f0) delta)]
+     [dfdx dfdy])))
+
+
+(defn rotate
+  [deg [x y]]
+  (let [rad (deg->rad (- deg))
+        cs (Math/cos rad)
+        sn (Math/sin rad)]
+    [(- (* x cs) (* y sn))
+     (+ (* x sn) (* y cs))]))
+
+(defn normalize
+  [v]
+  (let [m (magnitude v)]
+    (if (zero? m)
+      v
+      (mapv #(/ % m) v))))
+
+(defn distribute
+  "Map x via a sort of gamma-shaped distribution. Shape determines how
+  close to the mean the values will cluster - lower values spread them
+  out more. Values below one will actually make a U-shaped
+  distribution, with values towards the min and max more likely."
+  [x min mean max shape]
+  ;; (println :x x :min min :mean mean :max max :shape shape)
+  (let [x1 (-> x (* 2) (- 1))
+        x2 (Math/pow (Math/abs x1) shape)]
+    (if (neg? x1)
+      (-> (- 1 x2) (* (- mean min)) (+ min))
+      (-> x2 (* (- max mean)) (+ mean)))))
+
+(defn reject-tails
+  "Take a number in the range [0,1], presumably normally distributed
+  with a mean of 0.5, and 'spread' it so that the tails are thrown
+  away and the remainder of the distribution stretched into it.
+  `spread` determins the amount - zero does not change the
+  distribution and 1 throws away all but the mean."
+  [spread x]
+  (let [x1 (-> x (- 1/2) (* 2) (* (/ 1 (- 1 spread))))]
+    (-> (trunc/clamp -1 1 x1) (/ 2) (+ 1/2))))
+
+
+
+
+;;; Browser detection
+
+(def agents (let [is-agent? (fn [agent]
+                              (-> js/navigator
+                                  .-userAgent
+                                  (.indexOf agent)
+                                  neg?
+                                  not))
+                  agent-props {:chrome  "Chrome"
+                               :ie      "MSIE"
+                               :firefox "Firefox"
+                               :safari  "Safari"
+                               :opera   "op"}]
+              (zipmap (keys agent-props)
+                      (map is-agent? (vals agent-props)))))
+
+; WORKER
+(defn main
+  []
+  (set! js/onmessage
+        (fn [msg]
+          (let [val (->> msg .-data decode)]
+            (js/postMessage
+             (with-time "Compute weather grid"
+               (encode (model/weather-grid val))))))))
+
+; NOT WORKER
+(def worker (js/Worker. "worker.js"))
+
+(-> worker
+    .-onmessage
+    (set! #(go (async/>! worker-ch (->> % .-data decode)))))
+
+
+
+
+(defn remove-nth
+  [coll n]
+  (vec (concat (take n coll) (drop (inc n) coll))))
+
+(defn invert-map
+  [m]
+  (zipmap (vals m) (keys m)))
+
+
+
+
+
+
+
+
+
+
+(def uuid-regex #"[0-9A-Fa-f]{8}(-[0-9A-Fa-f]{4}){3}-[0-9A-Fa-f]{12}")
+
+(defn uuid-coercible? [x]
+  (or (instance? UUID x)
+      (and (string? x) (re-matches uuid-rx x))))
+
+Nathan Marz (of Specter fame) claims `reduce-kv` to be much faster than doing r/map through call to (into ...) on maps. Bench this
+
+
+; 6,869,307
+; 30.648 sec for only-dictionary 'y'
+;
+; 1765.54 ms Spark RDD to count
+; 8983.177522 msecs  Iota  to do everything
+; 297.956581 msecs for Spark DS 1000
+; io/get :str-seq is WAYYY slower than Spark because it realizes it all in memory
+; io/get :str-vec is faster — 588.535272 ms to 16,109 ms single-thread; 368,361.193249 ms (6.14 minutes) for pjoin for some reason
+
+; EFFICIENT CODE TRASFORMATION:
+(def fibs (lazy-cat [0 1] (lmap + fibs (rest fibs))))
+(def fib [n] (nth fibs n))
+
+-> (defn fib2 [n] (second (nth (iterate (fn [[i1 i2]] [i2 (+ i1 i2)]) [0 1]) n)))
+
+(map+ (fn1 * v) v)
+-> JBLAS implementation
+; or other naive algorithms
+
+->ex
+
+
+
+; https://brucebcampbell.wordpress.com/2014/12/04/setting-up-native-atlas-with-netlib-java/
+; OS X requires no further setup because OS X ships with the veclib framework,
+; Linux and Windows requires setup (see here how: https://github.com/fommil/netlib-java#machine-optimised-system-libraries)
+
+When you compare ATLAS-optimized to pre-compiled BLAS operations
+(irrespective of the language they were pre-compiled from), the
+difference can be staggering, far more than you can get by manual
+fiddling and experimenting with compiler flags, and often better
+than vendor-supplied libraries.
+This, by the way, explains why JVM-based matrix math performance
+is so crappy. With the hard constraint of doing optimization
+just-in-time, there's no way to compete with someone who had hours to do it.
+
+Another approach to linear algebra optimization is taken by the Eigen
+template library for C++. The advantage comes from template metaprogramming,
+
+
+
+
+Here's what I'm thinking:
+- Clojure: wrap mllib and DO TRY to use Spark without distribution or parallelization; benchmark this
+- JavaScript uses the non-native (semi-naive) implementation
+- Clojure can use the SNI if it wants to (not sure why you'd want to but it's okay)
+
+
+
+
+
+(ns user
+  (:require [quantum.core.string :as str]))
+
+(import 'org.apache.spark.ml.feature.Word2Vec)
+(import 'org.apache.spark.ml.feature.Word2VecModel)
+(import 'org.apache.spark.sql.Dataset)
+(import 'org.apache.spark.sql.Row)
+(import 'org.apache.spark.sql.RowFactory)
+(import 'org.apache.spark.sql.SparkSession)
+(import 'org.apache.spark.sql.types.StructType)
+(import 'org.apache.spark.sql.types.StructField)
+(import 'org.apache.spark.sql.types.ArrayType)
+(import 'org.apache.spark.sql.types.DataTypes)
+(import 'org.apache.spark.sql.types.Metadata)
+
+createDataFrame on org.apache.spark.sql.SparkSession can't be resolved (argument types: clojure.lang.IPersistentVector, org.apache.spark.sql.types.StructType).
+fit on org.apache.spark.ml.feature.Word2Vec can't be resolved (argument types: unknown).
+transform can't be resolved (target class is unknown).
+select can't be resolved (target class is unknown).
+takeAsList can't be resolved (target class is unknown).
+
+(def ^SparkSession spark
+  (-> (SparkSession/builder)
+      (.master "local")
+      (.appName "Spark SQL basic example")
+      ;(.config "spark.some.config.option", "some-value")
+      (.getOrCreate)))
+
+; Input data: Each row is a bag of words from a sentence or document.
+(let [data [(RowFactory/create (object-array [(str/split "Hi I heard about Spark"              #" ")]))
+            (RowFactory/create (object-array [(str/split "I wish Java could use case classes"  #" ")]))
+            (RowFactory/create (object-array [(str/split "Logistic regression models are neat" #" ")]))]
+      schema (StructType.
+               (into-array
+                 [(StructField. "text" (ArrayType. DataTypes/StringType true)
+                                       false
+                                       (Metadata/empty))]))
+      documentDF (.createDataFrame spark ^List data schema)
+      ; Learn a mapping from words to Vectors.
+      word2Vec (-> (Word2Vec.)
+                   (.setInputCol   "text")
+                   (.setOutputCol  "result")
+                   (.setVectorSize 3)
+                   (.setMinCount   0))
+      model  (.fit word2Vec documentDF)
+      ^Dataset result (.transform model documentDF)]
+      result
+  (-> result
+      (.select "result" ^"[Ljava.lang.String;" (into-array String []))
+      (.takeAsList 3)))
+
+
+
+
+
+
+A Ring is a set with multiplication and addition.
+A Field is a ring where multiplication is commutative (a.b=b.a) and nonzero elements have an inverse (a.a−1=1).
+A Vector Space has elements from a Field (scalars) and a set (vectors) with vector addition (v+m) and scaling (α.b)
+A Basis of vectors v1,v2,…,vn defines a coordinate system under which all other vectors can be represented: a1v1+a2v2+…+anvn
+A Matrix encodes mappings between bases
+
+Scalar  , numbers, e.g. an eigenvalue
+Vector  , e.g. the solution x of system Ax=b
+Matrix  , e.g. matrix inverse A−1
+Subspace, e.g. space spanned by eigenvectors
+
+
+
+Netlib-java will attempt to load system optimised BLAS/LAPACK
+if they are installed, falling back to the reference natives,
+falling back to pure Java. Set your logger settings to ALL for
+the com.github.fommil.netlib package to check the status, and
+to com.github.fommil.jniloader for a more detailed breakdown.
+Read the netlib-java project page for more details.
+
+
+Any caching strategy should involve caching to/reading from a central database,
+if doing so is cheaper than just computing it.
+
+
+
+org.apache.commons.math3.util.CombinatoricsUtils.binomialCoefficient(int n, int k)
+Returns an exact representation of the Binomial Coefficient, "n choose k", the number of k-element subsets that can be selected from an n-element set.
+org.apache.commons.math3.util.CombinatoricsUtils.stirlingS2(int n, int k)
+Returns the Stirling number of the second kind, "S(n,k)", the number of ways of partitioning an n-element set into k non-empty subsets.
+
+
+(defn monotonic-by?
+  "Does `x` monotonically increase according to `compare-f`?"
+  [compare-f x]
+  (first (reduce ; TODO fix the logic, but this is the general idea
+           (fn [[_ prev :as accum] x]
+             (if (compare-f x prev)
+                 [true x]
+                 (reduced [false nil])))
+           [true nil]
+           x)))
+
+org.apache.commons.math3.util.MathArrays
+static double[] convolve(double[] x, double[] h)
+Calculates the convolution between two sequences.
+
+org.apache.commons.math3.util.MathArrays
+static double linearCombination(double[] a, double[] b)
+Compute a linear combination accurately.
+static double linearCombination(double a1, double b1, double a2, double b2)
+Compute a linear combination accurately.
+static double linearCombination(double a1, double b1, double a2, double b2, double a3, double b3)
+Compute a linear combination accurately.
+static double linearCombination(double a1, double b1, double a2, double b2, double a3, double b3, double a4, double b4)
+Compute a linear combination accurately.
+static int[]  natural(int n)
+Returns an array representing the natural number n.
+static double[] normalizeArray(double[] values, double normalizedSum)
+Normalizes an array to make it sum to a specified value.
+static double safeNorm(double[] v)
+Returns the Cartesian norm (2-norm), handling both overflow and underflow.
+
+org.apache.commons.math3.util.MathArrays
+static void shuffle(int[] list, int start, MathArrays.Position pos, RandomGenerator rng)
+Shuffle the entries of the given array, using the Fisher–Yates algorithm.
+static void shuffle(int[] list, RandomGenerator rng)
+Shuffle the entries of the given array.
+
+
+
+
+
+
+
+org.apache.commons.math3.stat.StatUtils
+
+static double geometricMean(double[] values, int begin, int length)
+Returns the geometric mean of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+
+static double meanDifference(double[] sample1, double[] sample2)
+Returns the mean of the (signed) differences between corresponding elements of the input arrays -- i.e., sum(sample1[i] - sample2[i]) / sample1.length.
+static double[] normalize(double[] sample)
+Normalize (standardize) the sample, so it is has a mean of 0 and a standard deviation of 1.
+static double percentile(double[] values, double p)
+Returns an estimate of the pth percentile of the values in the values array.
+static double percentile(double[] values, int begin, int length, double p)
+Returns an estimate of the pth percentile of the values in the values array, starting with the element in (0-based) position begin in the array and including length values.
+static double populationVariance(double[] values)
+Returns the population variance of the entries in the input array, or Double.NaN if the array is empty.
+static double populationVariance(double[] values, double mean)
+Returns the population variance of the entries in the input array, using the precomputed mean value.
+static double populationVariance(double[] values, double mean, int begin, int length)
+Returns the population variance of the entries in the specified portion of the input array, using the precomputed mean value.
+static double populationVariance(double[] values, int begin, int length)
+Returns the population variance of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double product(double[] values)
+Returns the product of the entries in the input array, or Double.NaN if the array is empty.
+static double product(double[] values, int begin, int length)
+Returns the product of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double sum(double[] values)
+Returns the sum of the values in the input array, or Double.NaN if the array is empty.
+static double sum(double[] values, int begin, int length)
+Returns the sum of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double sumDifference(double[] sample1, double[] sample2)
+Returns the sum of the (signed) differences between corresponding elements of the input arrays -- i.e., sum(sample1[i] - sample2[i]).
+static double sumLog(double[] values)
+Returns the sum of the natural logs of the entries in the input array, or Double.NaN if the array is empty.
+static double sumLog(double[] values, int begin, int length)
+Returns the sum of the natural logs of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double sumSq(double[] values)
+Returns the sum of the squares of the entries in the input array, or Double.NaN if the array is empty.
+static double sumSq(double[] values, int begin, int length)
+Returns the sum of the squares of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double variance(double[] values)
+Returns the variance of the entries in the input array, or Double.NaN if the array is empty.
+static double variance(double[] values, double mean)
+Returns the variance of the entries in the input array, using the precomputed mean value.
+static double variance(double[] values, double mean, int begin, int length)
+Returns the variance of the entries in the specified portion of the input array, using the precomputed mean value.
+static double variance(double[] values, int begin, int length)
+Returns the variance of the entries in the specified portion of the input array, or Double.NaN if the designated subarray is empty.
+static double varianceDifference(double[] sample1, double[] sample2, double meanDifference)
+Returns the variance of the (signed) differences between corresponding elements of the input arrays -- i.e., var(sample1[i] - sample2[i]).
+
+
+
+
+
+
+
+; Methods
+; Modifier and Type Method and Description
+; double  abs()
+; Return the absolute value of this complex number.
+; Complex acos()
+; Compute the inverse cosine of this complex number.
+; Complex add(Complex addend)
+; Returns a Complex whose value is (this + addend).
+; Complex add(double addend)
+; Returns a Complex whose value is (this + addend), with addend interpreted as a real number.
+; Complex asin()
+; Compute the inverse sine of this complex number.
+; Complex atan()
+; Compute the inverse tangent of this complex number.
+; Complex conjugate()
+; Return the conjugate of this complex number.
+; Complex cos()
+; Compute the cosine of this complex number.
+; Complex cosh()
+; Compute the hyperbolic cosine of this complex number.
+; protected Complex createComplex(double realPart, double imaginaryPart)
+; Create a complex number given the real and imaginary parts.
+; Complex divide(Complex divisor)
+; Returns a Complex whose value is (this / divisor).
+; Complex divide(double divisor)
+; Returns a Complex whose value is (this / divisor), with divisor interpreted as a real number.
+; static boolean  equals(Complex x, Complex y)
+; Returns true iff the values are equal as defined by equals(x, y, 1).
+; static boolean  equals(Complex x, Complex y, double eps)
+; Returns true if, both for the real part and for the imaginary part, there is no double value strictly between the arguments or the difference between them is within the range of allowed error (inclusive).
+; static boolean  equals(Complex x, Complex y, int maxUlps)
+; Test for the floating-point equality between Complex objects.
+; boolean equals(Object other)
+; Test for equality with another object.
+; static boolean  equalsWithRelativeTolerance(Complex x, Complex y, double eps)
+; Returns true if, both for the real part and for the imaginary part, there is no double value strictly between the arguments or the relative difference between them is smaller or equal to the given tolerance.
+; Complex exp()
+; Compute the exponential function of this complex number.
+; double  getArgument()
+; Compute the argument of this complex number.
+; ComplexField  getField()
+; Get the Field to which the instance belongs.
+; double  getImaginary()
+; Access the imaginary part.
+; double  getReal()
+; Access the real part.
+; int hashCode()
+; Get a hashCode for the complex number.
+; boolean isInfinite()
+; Checks whether either the real or imaginary part of this complex number takes an infinite value (either Double.POSITIVE_INFINITY or Double.NEGATIVE_INFINITY) and neither part is NaN.
+; boolean isNaN()
+; Checks whether either or both parts of this complex number is NaN.
+; Complex log()
+; Compute the natural logarithm of this complex number.
+; Complex multiply(Complex factor)
+; Returns a Complex whose value is this * factor.
+; Complex multiply(double factor)
+; Returns a Complex whose value is this * factor, with factor interpreted as a real number.
+; Complex multiply(int factor)
+; Returns a Complex whose value is this * factor, with factor interpreted as a integer number.
+; Complex negate()
+; Returns a Complex whose value is (-this).
+; List<Complex> nthRoot(int n)
+; Computes the n-th roots of this complex number.
+; Complex pow(Complex x)
+; Returns of value of this complex number raised to the power of x.
+; Complex pow(double x)
+; Returns of value of this complex number raised to the power of x.
+; protected Object  readResolve()
+; Resolve the transient fields in a deserialized Complex Object.
+; Complex reciprocal()
+; Returns the multiplicative inverse of this element.
+; Complex sin()
+; Compute the sine of this complex number.
+; Complex sinh()
+; Compute the hyperbolic sine of this complex number.
+; Complex sqrt()
+; Compute the square root of this complex number.
+; Complex sqrt1z()
+; Compute the square root of 1 - this2 for this complex number.
+; Complex subtract(Complex subtrahend)
+; Returns a Complex whose value is (this - subtrahend).
+; Complex subtract(double subtrahend)
+; Returns a Complex whose value is (this - subtrahend).
+; Complex tan()
+; Compute the tangent of this complex number.
+; Complex tanh()
+; Compute the hyperbolic tangent of this complex number.
+
+
+
+
+
+
+; org.apache.commons.math3.Field
+; BigFractionField, BigRealField, ComplexField, Decimal64Field, DfpField, FractionField
+(defrecord Field [])
+; additive identity `getZero()`
+; The additive identity is the element e0 of the field such that for all elements a of the field, the equalities a + e0 = e0 + a = a hold.
+; multiplicative identity `getOne()`
+; The multiplicative identity is the element e1 of the field such that for all elements a of the field, the equalities a × e1 = e1 × a = a hold.
+
+; org.apache.commons.math3.FieldElement
+; BigFraction, BigReal, Complex, Decimal64, DerivativeStructure, Dfp, DfpDec, Fraction, SparseGradient
+(defrecord FieldElement [])
+; add(T a)
+; Compute this + a.
+; T   divide(T a)
+; Compute this ÷ a.
+; Field<T>    getField()
+; Get the Field to which the instance belongs.
+; T   multiply(int n)
+; Compute n × this.
+; T   multiply(T a)
+; Compute this × a.
+; T   negate()
+; Returns the additive inverse of this element.
+; T   reciprocal()
+; Returns the multiplicative inverse of this element.
+; T   subtract(T a)
+; Compute this - a.
+
+; org.apache.commons.math3.RealFieldElement
+(defrecord RealFieldElement []) ; + FieldElement
+; T   abs()
+; absolute value.
+; T   acos()
+; Arc cosine operation.
+; T   acosh()
+; Inverse hyperbolic cosine operation.
+; T   add(double a)
+; '+' operator.
+; T   asin()
+; Arc sine operation.
+; T   asinh()
+; Inverse hyperbolic sine operation.
+; T   atan()
+; Arc tangent operation.
+; T   atan2(T x)
+; Two arguments arc tangent operation.
+; T   atanh()
+; Inverse hyperbolic tangent operation.
+; T   cbrt()
+; Cubic root.
+; T   ceil()
+; Get the smallest whole number larger than instance.
+; T   copySign(double sign)
+; Returns the instance with the sign of the argument.
+; T   copySign(T sign)
+; Returns the instance with the sign of the argument.
+; T   cos()
+; Cosine operation.
+; T   cosh()
+; Hyperbolic cosine operation.
+; T   divide(double a)
+; '÷' operator.
+; T   exp()
+; Exponential.
+; T   expm1()
+; Exponential minus 1.
+; T   floor()
+; Get the largest whole number smaller than instance.
+; double  getReal()
+; Get the real value of the number.
+; T   hypot(T y)
+; Returns the hypotenuse of a triangle with sides this and y - sqrt(this2 +y2)
+; avoiding intermediate overflow or underflow.
+; T   linearCombination(double[] a, T[] b)
+; Compute a linear combination.
+; T   linearCombination(double a1, T b1, double a2, T b2)
+; Compute a linear combination.
+; T   linearCombination(double a1, T b1, double a2, T b2, double a3, T b3)
+; Compute a linear combination.
+; T   linearCombination(double a1, T b1, double a2, T b2, double a3, T b3, double a4, T b4)
+; Compute a linear combination.
+; T   linearCombination(T[] a, T[] b)
+; Compute a linear combination.
+; T   linearCombination(T a1, T b1, T a2, T b2)
+; Compute a linear combination.
+; T   linearCombination(T a1, T b1, T a2, T b2, T a3, T b3)
+; Compute a linear combination.
+; T   linearCombination(T a1, T b1, T a2, T b2, T a3, T b3, T a4, T b4)
+; Compute a linear combination.
+; T   log()
+; Natural logarithm.
+; T   log1p()
+; Shifted natural logarithm.
+; T   multiply(double a)
+; '×' operator.
+; T   pow(double p)
+; Power operation.
+; T   pow(int n)
+; Integer power operation.
+; T   pow(T e)
+; Power operation.
+; T   reciprocal()
+; Returns the multiplicative inverse of this element.
+; T   remainder(double a)
+; IEEE remainder operator.
+; T   remainder(T a)
+; IEEE remainder operator.
+; T   rint()
+; Get the whole number that is the nearest to the instance, or the even one if x is exactly half way between two integers.
+; T   rootN(int n)
+; Nth root.
+; long    round()
+; Get the closest long to instance value.
+; T   scalb(int n)
+; Multiply the instance by a power of 2.
+; T   signum()
+; Compute the signum of the instance.
+; T   sin()
+; Sine operation.
+; T   sinh()
+; Hyperbolic sine operation.
+; T   sqrt()
+; Square root.
+; T   subtract(double a)
+; '-' operator.
+; T   tan()
+; Tangent operation.
+; T   tanh()
+; Hyperbolic tangent operation.
+
+
+
+
+
+; ===== GENERAL ===== ;
+
+; Abs
+; Absolute value function.
+; Acos
+; Arc-cosine function.
+; Acosh
+; Hyperbolic arc-cosine function.
+; Add
+; Add the two operands.
+; Asin
+; Arc-sine function.
+; Asinh
+; Hyperbolic arc-sine function.
+; Atan
+; Arc-tangent function.
+; Atan2
+; Arc-tangent function.
+; Atanh
+; Hyperbolic arc-tangent function.
+; Cbrt
+; Cube root function.
+; Ceil
+; ceil function.
+; Constant
+; Constant function.
+; Cos
+; Cosine function.
+; Cosh
+; Hyperbolic cosine function.
+; Divide
+; Divide the first operand by the second.
+; Exp
+; Exponential function.
+; Expm1
+; ex-1 function.
+; Floor
+; floor function.
+; Gaussian
+; Gaussian function.
+; Gaussian.Parametric
+; Parametric function where the input array contains the parameters of the Gaussian, ordered as follows: Norm Mean Standard deviation
+; HarmonicOscillator
+; simple harmonic oscillator function.
+; HarmonicOscillator.Parametric
+; Parametric function where the input array contains the parameters of the harmonic oscillator function, ordered as follows: Amplitude Angular frequency Phase
+; Identity
+; Identity function.
+; Inverse
+; Inverse function.
+; Log
+; Natural logarithm function.
+; Log10
+; Base 10 logarithm function.
+; Log1p
+; log(1 + p) function.
+; Logistic
+; Generalised logistic function.
+; Logistic.Parametric
+; Parametric function where the input array contains the parameters of the logistic function, ordered as follows: k m b q a n
+; Logit
+; Logit function.
+; Logit.Parametric
+; Parametric function where the input array contains the parameters of the logit function, ordered as follows: Lower bound Higher bound
+; Max
+; Maximum function.
+; Min
+; Minimum function.
+; Minus
+; Minus function.
+; Multiply
+; Multiply the two operands.
+; Pow
+; Power function.
+; Power
+; Power function.
+; Rint
+; rint function.
+; Sigmoid
+; Sigmoid function.
+; Sigmoid.Parametric
+; Parametric function where the input array contains the parameters of the sigmoid function, ordered as follows: Lower asymptote Higher asymptote
+; Signum
+; signum function.
+; Sin
+; Sine function.
+; Sinc
+; Sinc function, defined by
+; Sinh
+; Hyperbolic sine function.
+; Sqrt
+; Square-root function.
+; StepFunction
+; Step function.
+; Subtract
+; Subtract the second operand from the first.
+; Tan
+; Tangent function.
+; Tanh
+; Hyperbolic tangent function.
+; Ulp
+; ulp function.
+
+
+
+
+(see https://github.com/scalanlp/breeze/wiki/Linear-Algebra-Cheat-Sheet)
+Numeric functions
+
+Breeze contains a fairly comprehensive set of special functions under the breeze.numerics._ import. These functions can be applied to single elements, vectors or matrices of Doubles. This includes versions of the special functions from scala.math that can be applied to vectors and matrices. Any function acting on a basic numeric type can “vectorized”, to a UFunc function, which can act elementwise on vectors and matrices:
+
+val v = DenseVector(1.0,2.0,3.0)
+exp(v) // == DenseVector(2.7182818284590455, 7.38905609893065, 20.085536923187668)
+UFuncs can also be used in-place on Vectors and Matrices:
+
+val v = DenseVector(1.0,2.0,3.0)
+exp.inPlace(v) // == DenseVector(2.7182818284590455, 7.38905609893065, 20.085536923187668)
+See Universal Functions for more information.
+
+Here is a (non-exhaustive) list of UFuncs in Breeze:
+
+Trigonometry
+
+sin, sinh, asin, asinh
+cos, cosh, acos, acosh
+tan, tanh, atan, atanh
+atan2
+sinc(x) == sin(x)/x
+sincpi(x) == sinc(x * Pi)
+Logarithm, Roots, and Exponentials
+
+log, exp log10
+log1p, expm1
+sqrt, sbrt
+pow
+
+
+
+
+
+
+
+
+
+
+
+
+; public class Util
+
+(defn instance-of-class?
+  "Tests if @objectClass is the same class as, or sub-class of,
+   or implements @typeClass."
+  {:source "Util/instanceOf"
+   :todo   ["Probably should be memoized or something"]}
+  [^Class objectClass ^Class typeClass]
+  (or (= objectClass typeClass)
+      (if (.isInterface objectClass)
+          (if (.isInterface typeClass)
+              (ffilter (eq? iface typeClass  ) (.getInterfaces objectClass))
+              (ffilter (eq? iface objectClass) (.getInterfaces typeClass  )))
+          (if (.isInterface typeClass)
+              (while (nnil? objectClass)
+                (doseq
+                  [iface (.getInterfaces objectClass)]
+                  (when (= iface typeClass) (return true)))
+                (swap! objectClass (.getSuperclass objectClass)))
+              (while (nnil? objectClass)
+                (when (= objectClass typeClass) (return true))
+                (swap! objectClass (.getSuperclass objectClass)))))))
+
+
+
+TODO
+lowest common ancestor in tree
+
+ A taxonomy is a tree of terms (concepts) where leaves
+ * must be named but intermediary nodes can be anonymous.
+ * Concept is a set of synonyms, i.e. group of words that are roughly
+ * synonymous in a given context.
+ * The distance between two concepts a and b is defined by the length of the
+ * path from a to their lowest common ancestor and then to b.
+
+
+(defn memoize-when
+  {:usage `(memoize-when number? (fn [x] (when x (rand))))}
+  [pred f]
+  (let [mem (atom {})]
+    (fn [& args]
+      (if-let [e (find @mem args)]
+        (val e)
+        (let [ret (apply f args)]
+          (when (pred ret) (swap! mem assoc args ret))
+          ret)))))
+
+
+
+; VENDORS ;
+StanfordNLP
+Apache OpenNLP
+
+https://algorithmia.com/algorithms
+
+Available on Algorithmia
+
+Colorful Image Colorization
+Colorizes given black & white images.
+
+; CREATIVITY/GENERATION ;
+
+Quadtree Art Generator
+Computer art based on quadtrees.
+
+; RECOMMENDATION ;
+
+Product Hunt Recommender
+Takes a post id from Product Hunt and returns up to five recommended posts.
+
+; SUMMARIZATION ;
+
+Summarizer
+Summarize english text
+
+Summarizer
+Advanced Content Summarizer
+
+Summarize URL
+This is a algorithm for summarizing content in webpages
+
+; TRANSLATION ;
+
+Yandex Translate
+This algorithm uses Yandex API to translate your text.
+
+; TEXTUAL ANALYSIS ;
+
+Lemmatizer
+Maps all words to their canonical forms for easier analysis.
+
+ExtractDependencies
+For each sentence, a List of the dependencies we think might be useful
+
+GetNGramFrequencies
+Gets lists of N grams from an input text.
+
+; SENTIMENT ;
+
+Sentiment Analysis
+Determine positive or negative sentiment from text
+
+Social Sentiment Analysis
+Gives the positive, negative and neutral sentiment of an English sentence.
+
+Sentiment By Term
+Find the sentiment associated with particular words in a document
+
+; TAGGING ;
+
+Auto-Tag URL
+Automatically generate keyword tags for a URL
+
+AutoTag
+Automatically extract tags from text
+
+; CLASSIFIERS ;
+
+RandomForest
+This is the RandomForest classifier, as implemented in Weka: http://weka.sourceforge.net/doc.stable/weka/classifiers/trees/RandomForest.html
+
+; CLASSIFICATION ;
+
+Nudity Detection
+Detect nudity in pictures
+
+Named Entity Recognition
+The Name Finder can detect named entities and numbers in text.
+
+; EXTRACTION ;
+
+Html 2 Text
+Extract main text content from a URL
+
+Get Links
+Extract links from a URL
+
+Url Link List
+Link extractor.
+
+
+
+Count Social Shares
+Retrieve the current Facebook, LinkedIn, and Pinterest share counts
+
+LDA
+LDA is a generative topic model extractor.
+
+Analyze URL
+Get content and metadata for a URL
+ deeplearning
+Places365 Classifier
+A classifier that classifies various places.
+ web
+
+
+Face Detection
+Detect faces in images
+
+Image Similarity
+compare two images for similarity
+
+Parsey McParseface
+Parse sentences with ease.
+
+Illustration Tagger
+Automagically tag your images.
+
+Keywords For Document Set
+Compute relevant keywords for a set of documents
+
+Url 2 Text
+Extract main text content from a URL
+
+
+
+Site Map
+Crawls a website and returns a site map
+
+Scrape RSS
+Return title, link and comments for each item in an RSS feed
+
+OCR
+Use character recognition to extract text from an image
+
+Named Entity Recognition
+Identifies named (PERSON,LOCATION,ORGANIZATION,MISC) and numerical (MONEY,NUMBER,DATA,TIME,DURATION,SET) in text, outputs the text of each entity along with its identifier.
+ paranoia
+FpGrowth
+Java implementation of the Frequent Pattern Growth ( FP-Growth ) algorithm, which is a scalable method for finding frequ...
+ nus
+SearchEngineAggregator
+Search across multiple Search engines at once
+ matching
+Taxi Matching
+A taxi - customer matching algorithm
+
+Speech Recognition
+This algorithm uses CMU Sphinx open source library to recognize speech in audio files that are uploaded to the Data API or Youtube videos that are licensed under Creative Commons.
+
+Geographic Spectral Clustering
+Spectral clustering for geographic (lat/long) data.
+
+DeepFilter
+Apply artistic and stylish filters to your images
+
+Analyze Tweets
+Searches Twitter by keyword and analyzes tweets for sentiment and LDA topics
+
+Sentiment Analysis
+Sentiment analysis (also known as opinion mining) refers to the use of natural language processing, text analysis and computational linguistics to identify and extract subjective i...
+ PetiteProgrammer
+Programming Language Identification
+Detect the programming language of source code
+ opencv
+Smart Thumbnail
+Create a thumbnail based on the most relevant part of an image
+ web
+Get Recommendations
+This algorithm provides page recommendations for a domain.
+ opencv
+Censor Face
+Censors faces in given photo.
+ deeplearning
+Gender Classification
+Classifies the gender of a person in a given image.
+ Geo
+GeosPy: Geolocation Inference Made Easy
+Helps you infer geo-location data.
+ util
+Extract Text
+Extracts text from a given file.
+ web
+Web Page Recommender
+Recommend similar pages for any domain
+ TimeSeries
+Time Series Summary
+Calculate various statistics of a time series
+ Geo
+GeoHash
+This algorithm provides a unique identifier for a given coordinate.
+ web
+Wikipedia Parser
+Search Wikipedia, get article summaries, links, and images from a page, and more.
+ nlp
+Profanity Detection
+detect profanity in text automatically
+ alixaxel
+CoordinatesToTimezone
+Timezone information for a latitude-longitude location
+ ANaimi
+Tech Events Finder
+Returns a list of future tech events from from Meetup and Eventbrite.
+ diego
+Retrieve Tweets With Keyword
+Search twitter for keyword and return tweets
+ deeplearning
+Age Classification
+Classifies the age range of a person in a given image.
+ web
+404 Error Scanner
+Finds broken links in any given URL
+ sfw
+NudityDetectioni2v
+Detect nudity in pictures.
+ matching
+Dating Algorithm
+A dating algorithm
+ twitter
+Retrieve Tweets With Keyword
+Retrieve tweets that include keyword anywhere in their text.
+ mtman
+SentimentAnalysis
+Sentiment analysis based on Apache Open NLP and SentiWordNet.
+ Aluxian
+Affinity Analysis for Market Basket Recommendation (FP-Growth)
+Affinity analysis is an analytical technique that aims to discover relationships between activities and preferences that pertain to specific individuals.
+ util
+For Each
+An algorithm to run another algorithm on a list of inputs.
+ nlp
+Keyword Set Similarity
+Determines similarity between sets of weighted keywords
+ thatguy2048
+PageRank
+This is a simple implementation of the PageRank algorithm.
+ deeplearning
+Emotion Recognition in the Wild via Convolutional Neural Networks and Mapped Binary Patterns
+Autodetects emotions in the given image.
+ infotrie
+Sentiment History (Company)
+Equity news sentiment for smarter investment decisions. News Sentiment is derived from millions of web sources.
+ TimeSeries
+Forecast
+Forecast Gives a forecast the next   n   steps of a given time series based on extrapolation of linear and periodic tren...
+ legeorges
+reddit image grabber
+Automatically grab images from any Reddit subreddit
+ ocr
+Smart OCR
+OCR with Image Processing for Higher Accuracies
+ Geo
+Geo Distance
+Gives the distance between two coordinates.
+ outofstep
+ScrapeRedditByDomainName
+Get all links for a top-level domain on Reddit
+ opencv
+Object Detection With Models
+Introduction Core algorithm for taking in an image and a pretrained model and detecting objects for several OpenCV...
+ bkyan
+Resize Image (Open Source)
+This algorithm lets you resize an image in your data collection.
+ Geo
+ZipData
+Takes a zip code, returns various pieces of relevant data for that zipcode.
+ douglarocca
+Connected Graphs with Restricted Number of Edges
+The algorithm gives the number of connected labeled graphs on `n` vertices restricted to `k` edges.
+ ApacheOpenNLP
+
+
+
+Analyze Github Readme
+An algorithm for analyzing GitHub readmes and making recommendations for improving it.
+
+Receipt Recognition
+This algorithm reads a computer printed or handwritten receipt (containing only the total or tip portions) and returns the value written.
+
+CatSexClassifier
+A convolutional neural network that identifies the gender of cats
+
+
+Arbitrage Detection
+Consider a market for financial transactions that is based on trading commodities.
+
+sat
+Boolean Satisfiability (SAT) Finds a mapping from variable names to boolean values such that the expression evaluates to true, or proves that the expression is always false.
+
+Chartie
+See beyond the numbers The new free web API that finds the  trend event  from your  numerical arrays For more detail : w...
+
+ArtsyNetworks
+Generate Art with Machine Learning
+
+InceptionNet
+Going deeper with covolutions
+
+Smart Image Downloader
+A fast and easy way to parse image links
+
+Skin Color Detection
+Gets possible values of skin color for the detected people in a picture using nose detection and face detection.
+
+ScrapeSubReddit
+Given a name of a subreddit, scrapes and returns it's RSS feed including post title, link and publish timestamp,
+
+Recommendation
+Eventually we will expand this to allow different parameters and options for neighborhood and similarity functi...
+
+
+
+Color Palette from Image
+Introduction Uses  https://github.com/fengsp/color-thief-py to extract color palette from a given image.
+
+
+
+
+
+
+
+(let-compare
+  [v [p] < a [-1] b [-2] c [-3] d [-4]]
+  (println v p))
+
+(let [a 1 b 2 c 3 d 4]
+  (if (< a b)
+      (if (< a c)
+          (if (< a d)
+              (let [v a p -1] (println v p))
+              (let [v d p -4] (println v p)))
+          (if (< c d)
+              (let [v c p -3] (println v p))
+              (let [v d p -4] (println v p))))
+      (if (< b c)
+          (if (< b d)
+              (let [v b p -2] (println v p))
+              (let [v d p -4] (println v p)))
+          (if (< c d)
+              (let [v c p -3] (println v p))
+              (let [v d p -4] (println v p))))))
+
+https://github.com/scalanlp/breeze/wiki/Algebraic-Hierarchy
+
+ The NIST Reference on Constants, Units and Uncertainty (2010), and are in SI units. Selected constants are available directly, the other NIST constants are available via database search.
+ https://github.com/scalanlp/breeze/wiki/Constants
+
+ TODO unicode so can do
+(≠ a 1)
+|| -> count, like |V|
+
+
+
+Zimmermann is a cryptologist. His company, Silent Circle, encrypts voice calls, text messages, and any file attachments. If you use Silent Circle, your calls to other users are sent through the company’s servers and decrypted on the other phone. It can block eavesdropping and prevent the snooper from knowing the number of the person you are calling or texting.
+
+
+A highly secure smartphone, called Blackphone. Now being manufactured by a joint venture that includes Silent Circle, it uses Zimmermann’s encryption tools and adds other protections. It runs a special version of the Android operating system—PrivatOS—that blocks many of the ways phones leak data about your activities. While custom security phones have long been in the hands of military and government leaders, this effort may signal a shift toward mass-market phones that are far more private and secure.
+
+“Personally, I really would like to have a phone with a much more hardened and privacy-friendly configuration,” he says.
+
+He eventually came up with something new for applications like e-mail. Now known as PGP, for “pretty good privacy,” it built on public-key cryptography with a few new tricks, using speedier algorithms and binding things like usernames and e-mail addresses to public keys.
+
+secure telephony.
+telephone companies and carriers do encrypt calls—but they hold the crypto keys in their servers, and “phone companies have historically been very coöperative with wiretapping,” he says. Zimmermann’s protocols instead kept the keys only at endpoints—preventing the carriers and even his own servers from decrypting the content of a call.
+
+Together they created ­PrivatOS, which gives more control over what data apps can see, encrypts data stored on the phone, and allows you to get wireless security updates directly from Blackphone, rather than relying on carriers. one blocks tracking companies from seeing the websites you visit and the searches you make.
+
+my phone’s automatic process of seeking wifi signals meant it was notifying those routers of my phone’s ID number. This is already being exploited by retailers, who use Wi-Fi probes to track customers’ habits. And because information from apps is merged with data from Web browsers, shopping sites, and other sources, dozens of companies can use that ID number to keep tabs on me.
+
+the phone Blackphone not to search for Wi-Fi signals unless it is in a predefined geographical area, such as one around your home or office. So as we ate tapas, I was the only person at the table leaving digital breadcrumbs. The others had tools to prevent browsing history and search terms from being tied to their identity; I didn’t. They had fine-grained control over app permissions; I didn’t.
+
+Galaxy 5 phones were loaded with Android configured largely the way Google likes it: to gather data. “They’ve got a pretty big booth,” Zimmermann deadpanned.
+
+
+
+ “I very much like Silent Circle’s solutions,” says Bruce Schneier, a cryptologist who has been calling for more security in communication technologies and wider use of encryption.
+
+The company concedes that it’s not NSA-proof, and it could have an Achilles’ heel: the apps that its users will inevitably download. That’s how devices acquire many of their vulnerabilities. Blackphone also doesn’t protect e-mail on its own; whether your e-mail uses encryption technology such as PGP depends on your e-mail provider.
+
+
+
+
+
+
+
+Algorithms usually need thousands of examples to learn something.
+Researchers at Google DeepMind now have a way around this.
+https://arxiv.org/pdf/1606.04080v1.pdf
+
+today’s personal-assistant services, such as Apple’s Siri and Google Now, are limited because they must call out to the cloud for more powerful computers to answer or anticipate queries.
+
+
+ Trying to emulate the brain just by using special software on conventional processors—the way Google did in its cat experiment—is way too inefficient to be the basis of machines with still greater intelligence, says Jeff Hawkins, a leading thinker on AI who created the Palm Pilot before cofounding Numenta, a maker of brain-inspired software. “There’s no way you can build it [only] in software,” he says of effective AI. “You have to build this in silicon.”
+ thus Qualcomm's neuromorphic chips
+ Qualcomm's market capitalization now tops Intel’s
+ It will take programmers time to figure out the best way to exploit the hardware.
+
+
+
+
+
+ ne afternoon last fall, David Levine took the subway from his office in lower Manhattan to a meeting at Rockefeller Center in midtown. The 35-year-old CIO of the startup investment firm Artivest was working on a blog post with colleagues and with freelancers in Boston and Crete. Levine used a new app called Quip to type the post on his iPhone, his wireless connection waxing and waning as the F train clattered through the tunnels. Quip let the team make changes, add comments, and chat via text, all presented in a Facebook-style news feed. Whenever Levine’s connection returned, the app synchronized his contributions with everyone else’s, so they all were working on the same version.
+
+
+
+Services that make it fruitful to create and edit documents on mobile devices.
+Why It Matters
+Much of today’s office work is done outside an office.
+Key Players
+Quip
+Quickoffice
+Box
+Dropbox
+Microsoft
+Google
+CloudOn
+Had they been working with a traditional word-processing program, the process would probably have been a drawn-out round-robin of e-mail messages, proliferating attachments, and manual collation of disparate contributions. Instead, “by the time I got out of the subway, the post was done,” Levine recalls, “and by the time I got out of the meeting, it was on the website.”
+
+Cloud-based file storage services, including Box, Dropbox, Google Drive, and Microsoft’s ­OneDrive—which have plunged in cost and soared in usage—help keep the results in sync even as multiple users work on the same file simultaneously. Some cloud services do this by separating what look to users like unified files into separate entries—paragraphs, words, even individual characters—in easily manipulated databases. That lets them smoothly track and merge changes made by different people at different times.
+
+They highlight an aspect of group work that received scant attention in the days when coworkers gathered together in offices: the communication that is part and parcel of collaboration. That back-and-forth can have as much value as the content itself. It can keep the team on track, inform participants who join the process late, and spark new ideas.
+
+In traditional word-processing software, much of that conversation gets lost in “notes,” comments, or e-mail. New document-­editing apps capture the stream of collaborative communication and put it on equal footing with the nominal output of the process. Box’s document-­collaboration service Box Notes displays avatar icons along the left-hand margin to show who contributed what; CloudOn, a mobile editor for Microsoft Office documents, gives prime placement to both conversations (comments, messages) and tasks (editing, approvals, permissions); and Quip displays a running text-message thread.
+
+By incorporating streams of messages about the work being created, these apps reflect the fact that many communications are now brief, informal, and rapid.
+
+
+
+
+With massive amounts of computational power, machines can now recognize objects and translate speech in real time. Artificial intelligence is finally getting smart.
+
+
+In October, Microsoft chief research officer Rick Rashid wowed attendees at a lecture in China with a demonstration of speech software that transcribed his spoken words into English text with an error rate of 7 percent, translated them into Chinese-language text, and then simulated his own voice uttering them in Mandarin.
+
+
+ Numenta is developing a machine-learning system that is biologically inspired but does not use deep learning. Hawkins says deep learning fails to account for the concept of time.   “Google’s attitude is: lots of data makes up for everything,” Hawkins says.
+
+ IBM’s Watson has an ability to understand Jeopardy! queries as quirky as “a long, tiresome speech delivered by a frothy pie topping.” (Watson’s correct answer: “What is a meringue harangue?”)
+
+
+ Kurzweil wants to model the actual meaning of words, phrases, and sentences, including ambiguities that usually trip up computers. “I have an idea in mind of a graphical way to represent the semantic meaning of language,” he says.
+
+That in turn will require a more comprehensive way to graph the syntax of sentences. Google is already using this kind of analysis to improve grammar in translations. Natural-language understanding will also require computers to grasp what we humans think of as common-sense meaning. For that, Kurzweil will tap into the Knowledge Graph, Google’s catalogue of some 700 million topics, locations, people, and more, plus billions of relationships among them. It was introduced last year as a way to provide searchers with answers to their queries, not just links.
+
+
+
+One essential aspect of privacy is the ability to control how much we disclose to others. Unfortunately, we’ve lost much of that control now that every photo, chat, or status update posted on a social-media site can be stored in the cloud: even though we intended to share that information with someone, we don’t necessarily want it to stay available, out of context, forever. The weight of our digital pasts is emerging as the central privacy challenge of our time.
+
+100 million photos and videos exchanged on Snapchat every day. And Mark ­Zuckerberg must worry that Snapchat addresses some misgivings people have about privacy on Facebook; in December, Facebook launched a Snapchat copycat app called Poke.
+
+What makes temporary social media so appealing? Snapchat’s founders often remark that they wanted to give people a way to express themselves through something besides the idealized self-­portraits many feel required to maintain on social-media sites. Snapchats might be more exciting to send and receive than other social-media posts because they are ephemeral, but they are also arguably a more natural way to communicate. Facebook and Twitter record and store your every offhand observation and casual interaction, interactions in temporary social media can be something like brief, in-person conversations: you can speak your mind without worrying that what you say will be part of your digital dossier forever.
+
+Snapchat contains an obvious technological vulnerability: images that were meant to vanish can still be saved if the recipient uses a screen-capture feature to take a picture of the message during the seconds it appears. (If the recipient does this, Snapchat notifies the sender, but by then it’s too late to stop the image from being preserved and shared.) Moreover, while Snapchat promises to erase photos from its servers, the company’s privacy policy adds that it “cannot guarantee that the message data will be deleted in every case."
+
+The idea of temporary social media is important because the ability to be candid and spontaneous—and to be that way with only some people and not others—is the essence of friendship, individuality, and creativity.
+Facebook and Twitter do make it possible for their members to wall off posts from the wider world and share them only with trusted people in certain circles. But since those posts still last forever, this capacity for limited sharing is technologically insecure.
+
+
+
+
+Google’s Home is otherwise a preternaturally smarter speaker than its closest rival, Amazon’s Echo.
+
+Early reviews suggest that advantage is already apparent. People who compared Echo, and its Alexa assistant, with Google Home found the latter to be significantly better at understanding language and answering questions.
+
+The New York Times’ reviewer describes Google Home as “preternaturally smarter.” The Verge’s sums it up like this: “Home has something that the Echo doesn’t: a wealth of knowledge about the world, my personal preferences, and my habits.”
+
+That doesn’t mean Google is about to prove the thesis that an intelligent speaker can become a universal helper and companion.
+
+Like Echo, Google Home performs well at only certain things, like controlling music. It doesn’t plug into many other devices or services yet. And just like Amazon’s product, it is limited by being tied to a single account and unable to recognize individuals, preventing customized responses that draw on a person’s other data.
+
+Google’s determination to make its assistant the future of search on mobile, too, and its investments in machine learning give it a better shot at solving those limitations. And Amazon knows it. The company is investing in machine learning research and is even considering unusual ideas such as giving Alexa the ability to recognize emotions.
+
+The contest between the two companies—perhaps to be joined by Apple—could produce a much needed jump in the power of virtual assistants. They have become much more polished since Siri was first launched in 2009, but have yet to attain the power and flexibility needed to make them a dominant way to interact with computers.
+
+(Read more: “10 Breakthrough Technologies 2016: Conversational Interfaces,” “Amazon Working to Make Alexa Recognize Your Emotions,” “Assistant Could End Up Eating Google’s Lunch,”)
+
+
+TO get an idea of how annoying it can be to say “O.K., Google” multiple times a day, try replacing the word Google with another brand.
+
+O.K., Pepsi. O.K., Chipotle. O.K., Skittles. You get the picture. It’s difficult to utter “O.K., Google,” the phrase used to control Google’s new Home smart speaker, without sounding like a marketing tool.
+
+Google’s Assistant is smarter than Alexa.
+When Google could confidently answer a question, Home would respond appropriately. But when it is less certain, it won’t offer a guess. “We don’t want to presume an answer that may not be right,” he said. “We’re being really cautious with this feature.”
+
+
+
+
+For over a decade, Google search has been indispensable. It’s the first place we go whenever we need to find information on virtually anything. Using Google search has become second nature.
+
+Our interactions with Google have always revolved around screens. But if you ask futurists what the next platform for interaction is, chances are they’ll say there’s no screen involved. In the future, we’ll be able to access information without having to type on keyboards, tap on screens, or even hold anything in our hands. It’s not surprising that Google is making a massive effort to make its services accessible via voice, for all those times when you don’t have a screen in front of you.
+
+And the most obvious way it’s doing that is with the Google Home.
+The Home has something that the Echo doesn’t: a wealth of knowledge about the world, my personal preferences, and my habits. In other words, it has Google.
+
+The Home comes to life with a wake word, which is either the familiar-to-Android users "OK Google" or the easier-to-say "Hey Google." Neither are particularly natural to speak out loud, and both make it feel like you’re talking to a brand instead of a human assistant. Google says it is looking at and testing different wake words and phrases, but it would not commit to offering a fully customizable option when I asked. (Selfishly, I want to set the wake word to "Computer," so I can pretend that I’m living on the Starship Enterprise every day.)
+
+This always-listening feature is what makes the Home (and Echo) so useful, but raises a number of privacy concerns you might not be comfortable with. In order to perform actions and provide responses, the Home sends its information to Google’s cloud for processing. The company insists that it only does so after it’s heard the wake word, so it’s not constantly recording every sound and conversation around it. There’s also a mute button on the back of the device that turns off the listening feature entirely.
+
+The data that the Home does send back to Google is stored with all of the other data in your Google account, and can be reviewed anytime at myactivity.google.com. Still, you might not feel comfortable with an always-listening Google device in your home, and that’s perfectly understandable. (For what it’s worth, this is the same policy Amazon has with the Echo, but some might feel more comfortable with the Echo always listening and collecting data versus the Google Home, which touches many more parts of their lives and thus collects substantially more data.)
+
+It’s also smart enough to remember the context of prior questions, so I can use pronouns with follow ups, which is something Alexa on the Echo cannot do. An example is asking "Who is the president of the United States?" and then asking "When was he born?" or "When did he take office?" and so on. It will even tell jokes. The only thing that really spoils this conversational experience is the fact that I have to say "OK Google" before each and every question.
+
+ As smart as the Home and Google Assistant is, none of the things it does are proactive — at least, not yet. They all require me to ask it to do something. A true assistant would know when I need to wake up in the morning based on my schedule, or know when I need to leave for my next meeting. It would know that I typically go grocery shopping on Sundays and would have a list of usual things I buy ready to go in the morning and ask me if there’s anything I’d like to add. Even better, it’d place an order for those groceries for me, so they’d be delivered to my door automatically.
+
+ Further, the Home’s virtual assistant can’t do a lot of the things I’d expect it to. It can’t add appointments to my calendar, it can’t set reminders, it can’t send messages, and it can’t place phone calls. It can’t even see appointments on a shared calendar on my account. I can do all of those things with the Google Assistant on the Pixel, so why can’t I do them with the same Google Assistant on the Home?
+
+THE MOST LIMITING FACTOR IS THE HOME ONLY WORKS WITH ONE ACCOUNT AT A TIME
+Perhaps the most limiting factor is the fact that the Home only works with one Google account at a time. I have a personal Google account that has all of my search history, music tastes, purchase history, communications, and whatever else Google has saved on me, and a work account that has most of my calendar appointments, contacts, and flight reservations. The Home is most useful when it’s linked to my personal account, but then it doesn’t have any of the critical information from my work account, so most of the time it just thinks my calendar is empty or that I have no upcoming travel itineraries.
+
+The single account limitation also makes it very difficult to use the Home in a family setting — the precise way that Google advertises it in its marketing. If my spouse asks the Home to add something to a to-do list, it gets added to my account, my to-do list, my devices, etc., not hers. (My wife would probably argue that this is exactly how it should work.) The Home has no idea what her schedule is like, nor does it know her personal preferences for music and other things. All of this is fine when a virtual assistant is baked into a phone, which is primarily used by a single person. But the Home is supposed to be a center-point in the modern home, accessible and useful to everyone that lives there.
+
+Google says that it is well aware of these issues and it is working through ways to resolve them. Company representatives wouldn’t say exactly how it’s going to make multi-account support on the Home work, nor would they commit to a time frame for when it will be available. The fact is that as it stands right now, like the Pixel, the Google Assistant on the Home is not great, though it may be one day.
+
+But for the Home — and by extension, Google Assistant — to be as indispensable as Google is everywhere else, it needs to do a lot more. It needs to be a lot smarter; it needs to know a lot more about me, my family, and our habits; and it needs to be more proactive with its assistance. Google says this is just its first effort, and it has a lot more planned for the Home, including addressing many of the specific shortcomings I’ve pointed out.
+
+If Google succeeds with its ambitions for Home, the question will not be whether or not the Home is ready to do everything you need it to, it will be are you ready to have an always-listening Google bot in your home?
+
+
+
+
+**
+ * Originally used for data compression, Vector quantization (VQ)
+ * allows the modeling of probability density functions by
+ * the distribution of prototype vectors. It works by dividing a large set of points
+ * (vectors) into groups having approximately the same number of
+ * points closest to them. Each group is represented by its centroid
+ * point, as in K-Means and some other clustering algorithms.
+ * <p>
+ * Vector quantization is is based on the competitive learning paradigm,
+ * and also closely related to sparse coding models
+ * used in deep learning algorithms such as autoencoder.
+ * <p>
+
+
+
+   Note that a distributed database system does not have to drop consistency. For instance, TeraData, Google’s F1, and Apache Trafodion are ACID-compliant. Correspondingly, these systems are much more complicated.
+
+To keep even large queries fast, Nubank has deployed a Spark cluster that supports batch and streaming workloads. Every node in the cluster includes a library for querying multiple Datomic databases, and queries can be sharded* across the cluster to parallelize the computation, and store the result in a resilient distributed dataset (RDD)
+
+* does this mean, A takes datoms 1-100K, B takes datoms 100K+-200K, and so on, and each queries in parallel? That sounds like a good idea at least.
+
+BLOB storage: https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-muralidhar.pdf
+oring data efficiently has become
+increasingly important. An important class of data that
+Facebook stores is Binary Large OBjects (BLOBs),
+which are immutable binary data. BLOBs are created
+once, read many times, never modified, and sometimes
+deleted. BLOB types at Facebook include photos, videos,
+documents, traces, heap dumps, and source code. The
+storage footprint of BLOBs is large. As of February 2014,
+Facebook stored over 400 billion photos
+
+Zomato:
+We’d have continued to use Redis if it could also support distributed instances for high availability and load distribution; we even tried creating our own wrappers around Redis, but we couldn’t be 100% sure that the system was fail-proof. We could have avoided outages by incurring some data loss, but that was something we simply didn’t want to do. To ensure that our system was highly available, we had to move on from Redis, and we chose Cassandra as the replacement.
+
+It's entirely inappropriate to try to serve images from elasticache. It's a cache. It's volatile by definition.
+The standard way to cache images is to use a CDN such as CloudFront, CloudFlare or MaxCDN.
+
+"
+
+Classification: instead of continuous, it's discrete
+
+
+
+
+
+
+
+; TIME
+
+d.plusYears(1)
+
+// get the epoch day where 0 is 1970-01-01
+d.toEpochDay(); // 17159
+
+// get range of month
+d.lengthOfMonth() // 31
+d.range(ChronoField.DAY_OF_MONTH); // ValueRange(1 - 31)
+
+// get range of year
+d.lengthOfYear() // 366
+d.range(ChronoField.DAY_OF_YEAR);  // ValueRange(1 - 366)
+
+// get other date based field like the aligned week of year
+d.get(ChronoField.ALIGNED_WEEK_OF_YEAR); // 52
+
+// or the day of week aligned to the first day of month
+d.get(ChronoField.ALIGNED_DAY_OF_WEEK_IN_MONTH); // 3
+
+
+
+
+
+
+
+Get weeks of week based year, get year quarters and the day of quarter
+
+// get week of week based year as defined by ISO 8601 with a monday based week
+d.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);   // 51
+
+d.isoWeekOfWeekyear();   // 51, is the same as above
+d.isoWeekyear();         // 2016
+
+LocalDate.of(2017,1,1).isoWeekOfWeekyear(); // 52
+LocalDate.of(2017,1,1).isoWeekyear();       // 2016
+
+// set the date to week 52 of week based year with the same day of week
+d.with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 52);   // 2016-12-31
+
+// get the quarter of the year
+d.get(IsoFields.QUARTER_OF_YEAR);   // 4
+d.get(IsoFields.DAY_OF_QUARTER);    // 85
+
+// set the date to 15th day of the third quarter
+d.with(IsoFields.QUARTER_OF_YEAR, 3).with(IsoFields.DAY_OF_QUARTER, 15) // 2016-07-15
+
+
+// add/ subtract 366 days
+d.plusDays(366); // '2017-02-23'
+d.minusDays(366); // '2015-02-22'
+
+// add/ subtract 12 months
+d.plusMonths(12); // '2017-02-23'
+d.minusMonths(12); // '2015-02-23'
+
+// add/ subtract 4 weeks
+d.plusWeeks(4); // '2016-03-22'
+d.minusWeeks(4); // '2016-01-26'
+
+// add/ subtract 1 year to the parsed LocalDate and returns a new instance
+d.plusYears(1); // '2017-02-23'
+d.minusYears(1); // '2015-02-23'
+
+// add/ subtract 30 years
+d.plus(3, ChronoUnit.DECADES); // '2046-02-23'
+d.minus(3, ChronoUnit.DECADES); // '1986-02-23'
+
+// add subtract a Period of 3 Months and 3 Days
+d.plus(Period.ofMonths(3).plusDays(3))  // '2016-05-26'
+d.minus(Period.ofMonths(3).plusDays(3)) // '2015-11-20'
+
+Alter certain fields of a LocalDate
+
+var d = LocalDate.parse('2016-12-24');
+
+
+
+// get the last day of the current month
+LocalDate.now().plusMonths(1).withDayOfMonth(1).minusDays(1);
+
+// set the WEEK_OF_WEEK_BASED_YEAR to 52
+d.with(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 52) // 2016-12-31
+
+Compare LocalDates
+
+var d1 = LocalDate.parse('2016-12-24');
+var d2 = d1.plusDays(2);
+
+d1.isAfter(d2);  // false
+d1.isBefore(d2); // true
+
+d1.equals(d2);   // false
+d1.equals(d1.plusDays(0));   // true
+d1.equals(d1.plusDays(1));   // false
+
+d1.compareTo(d1) === 0; // true
+d1.compareTo(d2) < 0;   // true
+d2.compareTo(d1) > 0;   // true
+
+d1.hashCode(); // 4129560
+d2.hashCode(); // 4129562
+d1.hashCode() !== d2.hashCode(); // true
+
+Distance on the timeline
+
+var d1 = LocalDate.parse('2016-12-24');
+var d2 = d1.plusMonths(13).plusDays(42);
+
+// obtain the Period between the two dates
+d1.until(d2).toString();      // 'P1Y2M11D', output in ISO-8601 period format
+d1.until(d2).toTotalMonths(); // 14
+
+// obtain the distance between the two dates with a certain precision
+d1.until(d2, ChronoUnit.MONTHS); // 14, returns the distance in total months.
+d1.until(d2, ChronoUnit.DAYS); // 438, returns the distance in total days.
+
+Converting from and to other temporals
+
+// obtain a LocalDate from a LocalDateTime instance
+LocalDate.from(LocalDateTime.now()); // current LocalDate e.g. 2016-02-25
+LocalDateTime.now().toLocalDate(); // same
+
+var d1 = LocalDate.parse('2016-02-25');
+
+// obtain a LocalDateTime at a certain LocalTime
+d1.atStartOfDay(); // '2016-02-25T00:00'
+d1.atTime(LocalTime.of(11, 55)); // '2016-02-25T11:55'
+d1.atTime(LocalTime.NOON); // '2016-02-25T12:00'
+
+// obtain a LocalDate from a JavaScript Date
+// the manual way
+var d = LocalDate.ofInstant(Instant.ofEpochMilli(new Date().getTime()));
+
+
+Adjust a date to another date
+TemporalAdjusters provide compact business logic for date based temporals such as LocalDate, LocalDateTime or ZonedDateTime.
+
+
+// get first/ last day of month
+d.with(TemporalAdjusters.firstDayOfMonth()) // 2016-12-01
+d.with(TemporalAdjusters.lastDayOfMonth())  // 2016-12-31
+
+// get the next specified weekday
+d.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY))   // 2016-12-25
+d.with(TemporalAdjusters.nextOrSame(DayOfWeek.SATURDAY)) // 2016-12-24
+d.with(TemporalAdjusters.next(DayOfWeek.SATURDAY))       // 2016-12-31
+
+// get the first/last weekday of month
+d.with(TemporalAdjusters.lastInMonth(DayOfWeek.SATURDAY)) // 2016-12-31
+d.with(TemporalAdjusters.firstInMonth(DayOfWeek.SATURDAY)) // 2016-12-03
+
+Find more adjusters in the TemporalAdjusters API documentation.
+
+
+
+// obtain an instance of LocalTime from  second of day
+LocalTime.ofSecondOfDay(3666) // '01:01:06'
+
+
+; LOCALTIME ;
+t.toString();   // '23:55:42.123' ISO8601 format
+
+
+Adding to/ subtracting from a LocalTime instance
+
+// add/ subtract 12 hours
+t.plusHours(12); // '23:55:42'
+t.minusHours(12); // '23:55:42'
+
+// add/ subtract 30 minutes
+t.plusMinutes(30); // '12:25:42'
+t.minusMinutes(30); // '11:25:42'
+
+// add/ subtract 30 seconds
+t.plusSeconds(30); // '11:56:12'
+t.minusSeconds(30); // '11:55:12'
+
+// add/ subtract 1.000.000 nanos (1 milli second)
+t.plusNanos(1000000); // '11:56:42.001'
+t.minusNanos(1000000); // '11:55:41.999'
+
+// add/ subtract a time based unit
+t.plus(1, ChronoUnit.MILLIS); // '11:55:42.001'
+t.plus(1, ChronoUnit.HALF_DAYS); // '23:55:42'
+
+// add/ subtract a duration of 15 minutes
+t.plus(Duration.ofMinutes(15)); // '12:10:42'
+t.minus(Duration.ofMinutes(15)); // '11:40:42'
+
+
+
+// set by a custom  TemporalAdjusters
+// sample of a custom adjuster that adjust to the next even second
+nextEvenSecond = { adjustInto: function(t){ return t.second() % 2 === 0 ? t.plusSeconds(2) : t.plusSeconds(1); } }
+t.with(nextEvenSecond) // '11:55:44'
+t.plusSeconds(1).with(nextEvenSecond) // '11:55:44'
+
+Truncate a LocalTime instance
+
+t.truncatedTo(ChronoUnit.SECONDS); // '23:55:42'
+t.truncatedTo(ChronoUnit.MINUTES); // '23:55:00'
+t.truncatedTo(ChronoUnit.HOURS);   // '23:00'
+t.truncatedTo(ChronoUnit.HALF_DAYS); // '12:00'
+t.truncatedTo(ChronoUnit.DAYS);      // '00:00'
+
+Compare LocalTime instances
+
+var t2 = t1.plusHours(2);
+
+t1.isAfter(t2);  // false
+t1.isBefore(t2); // true
+
+t1.equals(t1.plusHours(0));   // true
+t1.equals(t1.plusHours(1));   // false
+
+t1.compareTo(t1) === 0; // true
+t1.compareTo(t2) < 0;   // true
+t2.compareTo(t1) > 0;   // true
+
+t1.hashCode(); // 916974646
+t2.hashCode(); // -1743180648
+t1.hashCode() !== t2.hashCode(); // true
+
+Distance between times
+
+var t2 = t1.plusHours(2).plusMinutes(42).plusSeconds(12);
+
+// obtain the duration between the two dates
+t1.until(t2, ChronoUnit.HOURS);    // 2
+t1.until(t2, ChronoUnit.MINUTES);  // 162
+t1.until(t2, ChronoUnit.SECONDS);  // 9732
+
+Convert a LocalTime from a javascript Date or moment
+
+// obtain a LocalTime instance from a JavaScript Date
+// the manual way
+var t = LocalTime.ofInstant(Instant.ofEpochMilli(new Date().getTime()));
+
+
+; ===== LocalDateTime ===== ;
+// obtain an instance of LocalDateTime from epoch seconds and a ZoneOffset
+LocalDateTime.ofEpochSecond(0, ZoneOffset.UTC) //  "1970-01-01T00:00"
+LocalDateTime.ofInstant(Instant.now()) // current local date-time
+LocalDateTime.ofInstant(Instant.now(), ZoneOffset.UTC) // current local utc date-time
+
+Get values from LocalDateTime
+
+dt.toLocalDate().isLeapYear(); // true 2016 is a leap year
+
+// obtain the LocalDate of the LocalDateTime
+dt.toLocalDate()
+// obtain the LocalTime of the LocalDateTime
+dt.toLocalTime()
+
+// get range of month
+dt.toLocalDate().lengthOfMonth()    // 29
+dt.range(ChronoField.DAY_OF_MONTH); // ValueRange(1 - 29)
+
+// get range of year
+dt.toLocalDate().lengthOfYear() // 366
+dt.range(ChronoField.DAY_OF_YEAR);  // ValueRange(1 - 366)
+
+// get other date based field like the aligned week of year
+dt.get(ChronoField.ALIGNED_WEEK_OF_YEAR); // 9
+
+// get week of week based year
+dt.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);   // 8
+dt.toLocalDate().isoWeekOfWeekyear();
+
+// get other time based fields
+dt.get(ChronoField.SECOND_OF_DAY);   // 86142
+dt.get(ChronoField.MILLI_OF_SECOND);   // 123
+dt.get(ChronoField.HOUR_OF_AMPM);      // 11
+// any other date or time based ChronoField is allowed as param for get
+
+Adding to/ subtracting from a LocalDateTime instance
+
+var dt = LocalDateTime.parse('2016-02-26T23:55:42.123');
+
+// add/ subtract 366 days
+dt.plusDays(366); // '2017-02-26T23:55:42.123'
+dt.minusDays(366); // '2015-02-25T23:55:42.123'
+
+// add/ subtract 12 months
+dt.plusMonths(12); // '2017-02-26'
+dt.minusMonths(12); // '2015-02-26'
+
+// add/ subtract 4 weeks
+dt.plusWeeks(4); // '2016-03-25T23:55:42.123'
+dt.minusWeeks(4); // '2016-01-29T23:55:42.123'
+
+// add/ subtract 1 year to the parsed LocalDate and returns a new instance
+dt.plusYears(1); // '2017-02-26T23:55:42.123'
+dt.minusYears(1); // '2015-02-26T23:55:42.123'
+
+// add/ subtract 30 years
+dt.plus(3, ChronoUnit.DECADES); // '2046-02-26T23:55:42.123'
+dt.minus(3, ChronoUnit.DECADES); // '1986-02-26T23:55:42.123'
+
+// add subtract a Period of 3 Months and 3 Days
+dt.plus(Period.ofMonths(3).plusDays(3))  // '2016-05-29T23:55:42.123'
+dt.minus(Period.ofMonths(3).plusDays(3)) // '2015-11-23T23:55:42.123'
+
+// add/ subtract 12 hours
+dt.plusHours(12); // '2016-02-27T11:55:42.123'
+dt.minusHours(12); // '2016-02-26T11:55:42.123'
+
+// add/ subtract 30 minutes
+dt.plusMinutes(30); // '2016-02-27T00:25:42.123'
+dt.minusMinutes(30); // '2016-02-26T23:25:42.123'
+
+// add/ subtract 30 seconds
+dt.plusSeconds(30); // '2016-02-26T23:56:12.123'
+dt.minusSeconds(30); // '2016-02-26T23:55:12.123'
+
+// add/ subtract 1.000.000 nanos (1 milli second)
+dt.plusNanos(1000000); // '2016-02-26T23:55:42.124'
+dt.minusNanos(1000000); // '2016-02-26T23:55:42.122'
+
+// add/ subtract a time based unit
+dt.plus(1, ChronoUnit.MILLIS); // '2016-02-26T23:55:42.124'
+dt.plus(1, ChronoUnit.HALF_DAYS); // '2016-02-26T11:55:42.123'
+
+// add/ subtract a duration of 30 hours and 45 minutes
+dt.plus(Duration.ofHours(30).plusMinutes(45)); // '2016-02-28T06:40:42.123'
+dt.minus(Duration.ofHours(30).plusMinutes(45)); // '2016-02-25T17:10:42.123'
+
+Alter certain fields of a LocalDateTime instance
+
+var dt = LocalDateTime.parse('2016-02-26T23:55:42.123');
+
+// set the hour of day to 1
+dt.withHour(1); // '2016-02-26T01:55:42.123'
+
+// set the minute of hour to 1
+dt.withMinute(1); // '2016-02-26T23:01:42.123'
+
+// set the second of minute to 1
+dt.withSecond(1); // '2016-02-26T23:55:01.123'
+
+// set the nano of second to 1
+dt.withNano(0); // '2016-02-26T23:55:42'
+
+// set the MILLI_OF_SECOND to 51
+dt.with(ChronoField.MILLI_OF_SECOND, 51) // '2016-02-26T23:55:42.051'
+
+// set by a custom  TemporalAdjusters
+// sample of a custom adjuster that adjust to the next even second
+var nextEvenSecond = { adjustInto: function(t){ return t.second() % 2 === 0 ? t.plusSeconds(2) : t.plusSeconds(1); } }
+dt.with(nextEvenSecond) // '2016-02-26T23:55:44.123'
+dt.plusSeconds(1).with(nextEvenSecond) // '2016-02-26T23:55:44.123'
+
+Truncate a LocalDateTime instance
+
+var dt = LocalDateTime.parse('2016-02-26T23:55:42.123');
+
+dt.truncatedTo(ChronoUnit.SECONDS); // '2016-02-26T23:55:42'
+dt.truncatedTo(ChronoUnit.MINUTES); // '2016-02-26T23:55:00'
+dt.truncatedTo(ChronoUnit.HOURS);   // '2016-02-26T23:00'
+dt.truncatedTo(ChronoUnit.HALF_DAYS); // '2016-02-26T12:00'
+dt.truncatedTo(ChronoUnit.DAYS);      // '2016-02-26T00:00'
+
+Compare LocalDateTime instances
+
+var dt1 = LocalDateTime.parse('2016-02-26T23:55:42.123');
+var dt2 = dt1.plusHours(2);
+
+dt1.isAfter(dt2);  // false
+dt1.isBefore(dt2); // true
+
+dt1.equals(dt1.plusHours(0));   // true
+dt1.equals(dt1.plusHours(1));   // false
+
+dt1.compareTo(dt1) === 0; // true
+dt1.compareTo(dt2) < 0;   // true
+dt2.compareTo(dt1) > 0;   // true
+
+dt1.hashCode(); // -2036645668
+dt2.hashCode(); // 1459191821
+dt1.hashCode() !== dt2.hashCode(); // true
+
+Distance between local dates and times
+
+var dt1 = LocalDateTime.parse('2016-02-26T23:55:42.123');
+var dt2 = dt1.plusYears(6).plusMonths(12).plusHours(2).plusMinutes(42).plusSeconds(12);
+
+// obtain the duration between the two dates
+dt1.until(dt2, ChronoUnit.YEARS);   // 7
+dt1.until(dt2, ChronoUnit.MONTHS);  // 84
+dt1.until(dt2, ChronoUnit.WEEKS);   // 356
+dt1.until(dt2, ChronoUnit.DAYS);    // 2557
+dt1.until(dt2, ChronoUnit.HOURS);   // 61370
+dt1.until(dt2, ChronoUnit.MINUTES); // 3682242
+dt1.until(dt2, ChronoUnit.SECONDS); // 220934532
+
+Convert from a javascript Date or moment
+
+// obtain a LocalTime instance from a JavaScript Date
+// the manual way
+var t = LocalDateTime.ofInstant(Instant.ofEpochMilli(new Date().getTime()));
+
+// the recommended way with the javascript temporal
+t = LocalDateTime.from(nativeJs(new Date()));
+
+ZonedDateTime
+
+ZonedDateTime represents a date-time with a time-zone in the ISO-8601 calendar system. Without support for loading iana time-zone databases, ZonedDateTime currently only supports time-zones with a fixed Offset such as UTC or UTC+02:00 and the system default time-zone SYSTEM.
+
+The system default time zone
+The SYSTEM time-zone is a NON standard zone-id, that is introduced by js-joda because the javascript spec does not provide an API for the system default zone-id. The javascript spec only provides the system default time-zone offset for a point in the timeline (Date.prototype.getTimezoneOffset()).
+
+It is not recommended to exchange zoned-date-times with the SYSTEM zone-id between javascript engines, because the default time-zone may differ on other machines. Before a ZonedDateTime is exchanged, it should be converted to a fixed offset zone.
+
+
+// get now with the default system time-zone
+ZonedDateTime.now().toString(); // e.g. 2016-03-18T12:38:23.561+01:00[SYSTEM]
+
+// convert it to ZonedDateTime with a fixed offset
+ZonedDateTime.now().withFixedOffsetZone().toString(); // e.g. 2016-03-18T12:38:23.561+01:00
+
+Create a ZonedDateTime
+
+// get now with the default system time-zone
+ZonedDateTime.now().toString(); // e.g. 2016-03-18T12:38:23.561+01:00[SYSTEM]
+
+// get now with the UTC time-zone
+ZonedDateTime.now(ZoneOffset.UTC).toString(); // e.g. 2016-03-18T11:38:23.561Z
+
+// get now with a fixed offset time-zone
+ZonedDateTime.now(ZoneId.of('UTC-05:00')).toString(); // e.g. 2016-03-18T06:38:23.561-05:00[UTC-05:00]
+
+// parse a date time with a time zone ISO String
+ZonedDateTime.parse('2016-03-18T12:38:23.561+01:00[SYSTEM]');
+ZonedDateTime.parse('2016-03-18T12:38:23.561+01:00');
+ZonedDateTime.parse('2016-03-18T11:38:23.561Z');
+ZonedDateTime.parse('2016-03-18T06:38:23.561-05:00[UTC-05:00]');
+
+// create from a LocalDate(Time)
+LocalDate.parse('2012-06-06').atStartOfDay().atZone(ZoneId.SYSTEM); // 2012-06-06T00:00+02:00[SYSTEM]
+ZonedDateTime.of(LocalDateTime.parse('2012-06-06T00:00'), ZoneId.SYSTEM) // 2012-06-06T00:00+02:00[SYSTEM]
+ZonedDateTime.of(LocalDate.parse('2012-06-06'), LocalTime.MIDNIGHT, ZoneId.SYSTEM) // 2012-06-06T00:00+02:00[SYSTEM]
+
+// create by Instant
+ZonedDateTime.ofInstant(Instant.now(), ZoneId.SYSTEM) // current system time
+
+Switch timezones
+
+var d = LocalDate.of(2016, 3, 18)
+var zdt = d.atTime(LocalTime.NOON).atZone(ZoneId.of('UTC-05:00')) // 2016-03-18T12:00-05:00[UTC-05:00]
+
+// switch timezone retaining the local date-time if possible
+zdt.withZoneSameLocal(ZoneId.UTC); // 2016-03-18T12:00Z
+
+// switch timezone and retain the instant
+zdt.withZoneSameInstant(ZoneId.UTC); // 2016-03-18T17:00Z
+
+
+Get and manipulate values from a ZonedDateTime
+Check the examples for LocalDate and LocalDateTime. ZonedDateTime implements the same methods as LocalDateTime for getting or setting values.
+
+The calculation for date and time units differ. Date units operate on the local time-line. Time units operate on the instant time-line. The following example shows the difference for a daylight saving transition.
+
+
+// assume the system default time zone is CET and its 2016-03-18 at noon local time.
+var zdt = ZonedDateTime.now();  // 2016-03-18T12:00+01:00[SYSTEM]
+
+// adding a date unit of 2 weeks  (crossing a daylight saving transition)
+zdt.plusWeeks(2); // still noon: 2016-04-01T12:00+02:00[SYSTEM]
+
+// adding a time unit of 2 weeks (2 * 7 * 24)
+zdt.plusHours(2 * 7 * 24); // 1 pm: 2016-04-01T13:00+02:00[SYSTEM]
+
+Period
+
+Period is a date-based amount of time in the ISO-8601 calendar system, such as ‘2 years, 3 months and 4 days’.
+
+
+// parse and format ISO8601 period strings
+Period.parse('P1Y10M').toString(); // 'P1Y10M'
+
+// obtain a Period of 10 years, 5 month and 30 days
+Period.of(10, 5, 30).toString(); // "P10Y5M30D"
+
+// 10 years
+Period.ofYears(10).toString(); // "P10Y"
+
+// add 45 days to a Period
+Period.ofYears(10).plusDays(45).toString(); // "P10Y45D"
+
+// normalize a Period of years and month
+Period.of(1, 37, 0).normalized().toString(); // "P4Y1M"
+
+// add/ subtract from a Period
+Period.ofYears(10).plusMonths(10).minusDays(42).toString(); // "P10Y10M-42D"
+
+// add a Period to LocalDate
+var p = Period.ofMonths(1);
+LocalDate.parse('2012-12-12').plus(p); // '2013-01-12';
+LocalDate.parse('2012-01-31').plus(p); // '2012-02-29';
+LocalDateTime.parse('2012-05-31T12:00').plus(p); // '2012-06-30T12:00';
+
+// calculate the Period between two Dates
+Period.between(LocalDate.parse('2012-06-30'), LocalDate.parse('2012-08-31')); // "P2M1D"
+
+Duration
+
+Duration is a time-based amount of time, such as ‘34.5 seconds’.
+
+
+// obtain a Duration of 10 hours
+Duration.ofHours(10).toString(); // "PT10H"
+
+// obtain a Duration of 10 days (10 x 24 hours)
+Duration.ofDays(10).toString(); // "PT240H"
+
+
+// add/ subtract a duration from a LocalDateTime
+var dt = LocalDateTime.parse('2012-12-24T12:00');
+
+dt.plus(Duration.ofHours(10).plusMinutes(30)).toString(); // '2012-12-24T22:30'
+dt.minus(Duration.ofHours(12).multipliedBy(10)).toString() // '2012-12-19T12:00'
+
+// calculate the durations beetween to time based temporals
+
+Duration.between(dt1, dt1.plusHours(10)).toString(); // "PT10H"
+
+
+DateTimeFormatter.ofPattern("yyyy-MM-dd['T'HH:mm[:ss]]")
+
+(require '[no.disassemble :refer [disassemble]])
+
+The geographical origin of a time specification is in practice necessary to understand it
+
+Unfortunately, there is no widely adopted standard for geographical locations. Those equipped with GPS units may use ICBM or grid coordinates, but this is almost as devoid of meaning as raw IP addresses on the Internet. Above all, geography is even more rife with names and naming rules that suffer from translation than any other information that cries for a precise standard.
+Time zones therefore double as indicators of geographical location
+
+
+
+; TODO use :inline meta instead of `defmacro` for defnt
+(defn ^{:inline (fn [x] `(do (println "inline") (+ ~@x)))} abc ([x] (println "fn") x))

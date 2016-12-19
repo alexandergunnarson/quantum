@@ -16,7 +16,7 @@
       :refer [fn-> fn->> fn1 fn$ <-]]
     [quantum.core.logic
       :refer [eq? fn-and fn-or whenf1 whenf whenp nnil? nempty?]]
-    [quantum.core.log
+    [quantum.core.log       :as log
       :refer [prl]]
     [quantum.core.macros.defrecord
       :refer [defrecord+]]
@@ -30,6 +30,8 @@
   (:require-macros
     [quantum.core.data.validated :as self
       :refer [def-validated-map def-validated]])))
+
+; TODO un-namespaced (req-un) should accept namespaced as well
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
@@ -414,18 +416,3 @@
 ; TODO validated vector, set, and (maybe) list
 ; Not sure what else might be useful to create a validated wrapper for... I mean, queues I guess
 
-(def ^{:doc "See also Datomic's documentation."}
-  allowed-types
- #{:keyword
-   :string
-   :boolean
-   :long
-   :bigint
-   :float
-   :double
-   :bigdec
-   :ref
-   :instant
-   :uuid
-   :uri
-   :bytes})
