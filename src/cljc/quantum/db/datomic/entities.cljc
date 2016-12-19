@@ -285,6 +285,4 @@
   "Clojure only because schemas can only be added upon creation of the DataScript
    connection; they cannot be transacted."
   []
-  (-> @schemas
-      quantum.db.datomic.core/block->schemas
-      db/transact!)))
+  (-> @schemas db/transact!)))

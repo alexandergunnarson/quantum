@@ -612,7 +612,8 @@
   #?(:clj  ([^double  x] (Double/valueOf    x)))
   #?(:clj  ([^Number  x] (String/valueOf    x)))
            ([^datascript.db.DB x] (dt/write-transit-str x))
-  #?(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
+           ; Commented only until we decide forge is worth keeping
+  #_(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
   #?(:clj  ([^integer? n radix]
              #?(:clj  (.toString (biginteger n) radix)
                 :cljs (.toString n radix))))
@@ -703,7 +704,8 @@
                                          (str (.sym x)))))
           ([^:obj x] (-> x ->name ->symbol)))
 
-(defnt ->hex
+; Commented only until we decide forge is worth keeping
+#_(defnt ->hex
   #?(:cljs ([^js/forge.util.ByteStringBuffer x] (.toHex x)))
   #?(:clj  ([                                x] (TODO))))
 

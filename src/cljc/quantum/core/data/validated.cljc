@@ -429,18 +429,3 @@
    :uuid
    :uri
    :bytes})
-
-(quantum.core.log/enable! ::debug)
-(quantum.core.log/disable! :quantum.core.macros.defrecord/debug)
-
-(def-validated-map intermediate-schema1111
-  #_:invariant
-  #_#(if (:datomic:schema1111/component? %)
-                  (-> % :datomic:schema1111/type (= :ref))
-                  true)
-
-  :req-un [(def :datomic:schema1111/ident       keyword?)
-           (def :datomic:schema1111/type        allowed-types)
-           (def :datomic:schema1111/cardinality #{:one :many})])
-
-#?(:cljs (throw (->ex nil "Done" nil)))
