@@ -8,17 +8,13 @@
                      [quantum.core.fn         :as fn
                        :refer [#?@(:clj [fn1])]]
                      [quantum.core.logic
-                       :refer [#?@(:clj [whenc1])]]
+                       :refer [whenc1]]
                      [quantum.core.vars       :as var
-                        :refer [#?(:clj defalias)]    ]
+                       :refer [defalias]]
              #?(:clj [taoensso.timbre.profiling :as p])
                      [quantum.core.macros.core  :as cmacros
                        :refer [#?(:clj if-cljs)]])
-  #?(:cljs (:require-macros
-                     [quantum.core.logic
-                       :refer [whenc1]              ]
-                     [quantum.core.vars       :as var
-                       :refer [defalias]              ]))
+  (:require-macros [quantum.core.cache :as self])
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj
