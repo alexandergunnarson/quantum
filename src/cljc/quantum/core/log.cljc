@@ -22,6 +22,17 @@
 
 #?(:cljs (enable-console-print!))
 
+(defonce outs
+  (atom #?(:clj  (if-let [out-path (System/getProperty "quantum.core.log:out-file")]
+                     (let [_   (binding [*out* *err*] (println "Logging to" out-path))
+                           fos (-> out-path
+                                   (java.io.FileOutputStream.  )
+                                   (java.io.OutputStreamWriter.)
+                                   (java.io.BufferedWriter.    ))]
+                       (fn [] [*err* fos]))
+                     (fn [] [*err*])) ; in order to not print to file
+           :cljs (fn [] [*out*]))))
+
 ; TODO maybe use Timbre?
 
 (defrecord
@@ -123,7 +134,7 @@
                         (apply print-fn args-f)))
                 (when (= pr-type :macro-expand) (print " */\n")))]
 
-#?(:clj  (binding [*out* *err*] (print out-str) (flush)) ; in order to not print to file
+#?(:clj  (doseq [out (@outs)] (binding [*out* out] (print out-str) (flush)))
    :cljs (let [console-print-fn
                 (or (aget js/console (name pr-type)) println)]
            (console-print-fn out-str)))

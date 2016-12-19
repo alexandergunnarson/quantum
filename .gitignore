@@ -2,6 +2,8 @@
 /resources/
 /dev-resources/public/Fonts
 /dev-resources/public/js/compiled
+/dev-resources/public/js/dev-compiled
+/dev-resources/public/js/nr-compiled
 /dev-resources/public/js/min-compiled
 /dev-resources/public/js/debug-compiled
 /dev-resources/public/js/test-compiled
@@ -12,6 +14,7 @@
 subprojects/quantum-ns/target/quantum-ns-dep.jar
 
 figwheel_server.log
+out.log
 *-init.clj
 .lein-env
 

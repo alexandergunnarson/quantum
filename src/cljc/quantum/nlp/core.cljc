@@ -9,7 +9,7 @@
                :refer-macros [          <- fn1]]
              [quantum.core.collections :as coll
                :refer [map+ remove+
-                       mutable! eq! aset-in!
+                       mutable eq! aset-in!
                        #?@(:clj [kmap aget-in aget-in*
                                  ifor get reducei])]
                :refer-macros [   kmap aget-in aget-in*

@@ -28,7 +28,8 @@
       :refer [update-meta]])
   #?(:cljs
   (:require-macros
-    [quantum.core.data.validated :as self])))
+    [quantum.core.data.validated :as self
+      :refer [def-validated-map def-validated]])))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
@@ -209,23 +210,24 @@
                                                keyword? (fn-> namespace nil?))
                                        dbify-keyword))
           conformer-sym (gensym "conformer")
-          schema        (when db-mode? (spec->schema sym-0 spec))]
-      (prl ::debug db-mode? sym-0 sym spec-name spec schema)
-      `(do (defspec ~spec-name ~spec)
-           ~(when db-mode?  `(swap! db-schemas assoc ~spec-name ~schema))
-           ~(when conformer `(def ~conformer-sym ~conformer))
-           (deftype-compatible ~sym ~'[v]
-             {~'?Object
-               {~'hash     ([_#] (.hashCode ~'v))
-                ~'equals   ~(std-equals sym other '=)}
-              ~'?HashEq
-                {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '.-hash '.hashEq) ~'v))))}
-              quantum.core.core/IValue
-                {get       ([_#] ~'v)
-                 set       ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
-                                                     (v/validate ~spec-name))))}})
-           (defn ~(symbol (str "->" sym)) [v#]
-             (new ~sym (v/validate v# ~spec-name))))))))
+          schema        (when db-mode? (spec->schema sym-0 spec))
+          code `(do (defspec ~spec-name ~spec)
+                    ~(when db-mode?  `(swap! db-schemas assoc ~spec-name ~schema))
+                    ~(when conformer `(def ~conformer-sym ~conformer))
+                    (deftype-compatible ~sym ~'[v]
+                      {~'?Object
+                        {~'hash     ([_#] (.hashCode ~'v))
+                         ~'equals   ~(std-equals sym other '=)}
+                       ~'?HashEq
+                         {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
+                       quantum.core.core/IValue
+                         {~'get     ([_#] ~'v)
+                          ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
+                                                            (v/validate ~spec-name))))}})
+                    (defn ~(symbol (str "->" sym)) [v#]
+                      (new ~sym (v/validate v# ~spec-name))))]
+      (prl ::debug db-mode? sym-0 sym spec-name spec schema code)
+      code))))
 
 #?(:clj
 (defmacro def-validated-map
@@ -298,7 +300,7 @@
           k-gen                (gensym "k")
           v-gen                (gensym "v")]
      (prl ::debug invariant conformer req-ks un-ks all-ks to-prepend)
-     `(do (declare-spec ~sym-0)
+     (let [code `(do (declare-spec ~sym-0)
           ~@to-prepend
           (defrecord+ ~req-record-sym ~req-ks-syms)
           (defrecord+ ~un-record-sym  ~un-ks-syms )
@@ -320,20 +322,20 @@
               {~'seq          ([_#] (seq ~'v))}
              ~'?Record        true
              ~'?Sequential    true
-             ; ?Cloneable     ([_] (#?(:clj .clone :cljs .-clone) m))
+             ; ?Cloneable     ([_] (#?(:clj .clone :cljs -clone) m))
              ~'?Counted
-               {~'count       ([_#] (~(if-cljs &env '.-count '.count) ~'v))}
+               {~'count       ([_#] (~(if-cljs &env '-count '.count) ~'v))}
              ~'?Collection
-               {~'empty       ([_#] (~(if-cljs &env '.-empty '.empty) ~'v))
+               {~'empty       ([_#] (~(if-cljs &env '-empty '.empty) ~'v))
                 ~'empty!      ([_#] (throw (UnsupportedOperationException.)))
                 ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'v))
-                ~'equals      ~(std-equals sym other (if-cljs &env '.-equiv '.equiv))
+                ~'equals      ~(std-equals sym other (if-cljs &env '-equiv '.equiv))
                 ~'conj        ([_# [k0# v0#]]
                                 (let [~k-gen (or (get ~all-keys-record k0#)
                                                  (get ~un-ks-to-ks     k0#)
                                                  (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
-                                  (-> (new ~sym (~(if-cljs &env '.-assoc '.assoc) ~'v ~k-gen ~v-gen))
+                                  (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
                                       ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))}
              ~'?Associative
@@ -342,7 +344,7 @@
                                                  (get ~un-ks-to-ks     k0#)
                                                  (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
-                                  (-> (new ~sym (~(if-cljs &env '.-assoc '.assoc) ~'v ~k-gen ~v-gen))
+                                  (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
                                       ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))
                 ~'assoc!      ([_# _# _#] (throw (UnsupportedOperationException.)))
@@ -353,7 +355,7 @@
                                              :cljs [contains? ~required-keys-record]) ~k-gen)
                                     (throw (->ex nil "Key is in ValidatedMap's required keys and cannot be dissoced"
                                                      {:class ~sym :k ~k-gen :keyspec ~spec-sym})))
-                                   (-> (new ~sym (~(if-cljs &env '.-dissoc '.without) ~'v ~k-gen))
+                                   (-> (new ~sym (~(if-cljs &env '-dissoc '.without) ~'v ~k-gen))
                                        ~(if-not conformer `identity* conformer-sym)
                                        ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))
                 ~'dissoc!     ([_# _#] (throw (UnsupportedOperationException.)))
@@ -367,9 +369,9 @@
                 ; Currently fully unrestricted `get`s: all "fields"/key-value pairs are public.
                 ~'get        [([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
-                                (or (~(if-cljs &env '.-lookup '.valAt) ~'v k#)
-                                    (~(if-cljs &env '.-lookup '.valAt) ~'v (get ~un-ks-to-ks k#))))
-                              #_([_# k# else#] (~(if-cljs &env '.-lookup '.valAt) ~'v k# else#))]
+                                (or (~(if-cljs &env '-lookup '.valAt) ~'v k#)
+                                    (~(if-cljs &env '-lookup '.valAt) ~'v (get ~un-ks-to-ks k#))))
+                              #_([_# k# else#] (~(if-cljs &env '-lookup '.valAt) ~'v k# else#))]
                 ~'kw-get      ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                                 (reify clojure.lang.ILookupThunk
@@ -385,17 +387,17 @@
                {~'hash        ([_#] (.hashCode ~'v))
                 ~'equals      ~(std-equals sym other (if-cljs &env '.equiv '.equiv))}
              ~'?Iterable
-               {~'iterator    ([_#] (~(if-cljs &env '.-iterator '.iterator) ~'v))}
+               {~'iterator    ([_#] (~(if-cljs &env '-iterator '.iterator) ~'v))}
              ~'?Meta
                {~'meta        ([_#] (meta ~'v))
                 ~'with-meta   ([_# new-meta#] (new ~sym (with-meta ~'v new-meta#)))}
              ~'?Print
-               {~'pr          ([_# w# opts#] (.-pr-writer ~'v w# opts#))}
+               {~'pr          ([_# w# opts#] (-pr-writer ~'v w# opts#))}
              ~'?HashEq
-               {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '.-hash '.hashEq) ~'v))))}
+               {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
              quantum.core.core/IValue
-               {get           ([_#] ~'v)
-                set           ([_# v#] (new ~sym (v/validate v# ~spec-name)))}})
+               {~'get         ([_#] ~'v)
+                ~'set         ([_# v#] (new ~sym (v/validate v# ~spec-name)))}})
           (defn ~(symbol (str "->" sym)) [m#]
             (let [m-f# (if (instance? ~qualified-record-sym m#)
                            m# ; no coercion needed
@@ -405,7 +407,324 @@
                                 (v/validate ~spec-name)
                                 (set/rename-keys ~un-ks-to-ks))))]
               (new ~qualified-sym m-f#)))
-          ~(if-cljs &env ~qualified-sym `(import (quote ~qualified-sym))))))))
+          ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
+     (prl ::debug code)
+     code)))))
 
 ; TODO validated vector, set, and (maybe) list
 ; Not sure what else might be useful to create a validated wrapper for... I mean, queues I guess
+
+(def ^{:doc "See also Datomic's documentation."}
+  allowed-types
+ #{:keyword
+   :string
+   :boolean
+   :long
+   :bigint
+   :float
+   :double
+   :bigdec
+   :ref
+   :instant
+   :uuid
+   :uri
+   :bytes})
+
+(quantum.core.log/enable! ::debug)
+(quantum.core.log/enable! :quantum.core.macros.defrecord/debug)
+
+(quantum.core.macros.defrecord/defrecord+
+        intermediate-schema1111__
+        [datomic:schema1111/ident
+         datomic:schema1111/type
+         datomic:schema1111/cardinality])
+
+#_(do
+       (quantum.core.data.validated/declare-spec
+        intermediate-schema1111)
+       #_(quantum.core.data.validated/def-validated
+        datomic:schema1111/ident
+        keyword?)
+       #_(quantum.core.data.validated/def-validated
+        datomic:schema1111/type
+        allowed-types)
+       #_(quantum.core.data.validated/def-validated
+        datomic:schema1111/cardinality
+        #{:one :many})
+
+       (quantum.core.macros.defrecord/defrecord+
+        G__130859
+        [ident type cardinality])
+       (quantum.core.macros.defrecord/defrecord+
+        G__130860
+        [datomic:schema1111/cardinality
+         datomic:schema1111/type
+         datomic:schema1111/ident])
+       (quantum.core.validate/defspec
+        :quantum.core.data.validated/intermediate-schema1111
+        (quantum.core.validate/keys
+         :req-un
+         [:datomic:schema1111/ident
+          :datomic:schema1111/type
+          :datomic:schema1111/cardinality]))
+       nil
+       nil
+       nil
+       (def
+        required-keys-record130863
+        (map->intermediate-schema1111__
+         {:datomic:schema1111/ident :datomic:schema1111/ident,
+          :datomic:schema1111/type :datomic:schema1111/type,
+          :datomic:schema1111/cardinality :datomic:schema1111/cardinality}))
+       (def
+        un-keys-record130864
+        (map->G__130859
+         {:ident :ident, :type :type, :cardinality :cardinality}))
+       (def
+        all-keys-record130865
+        (map->G__130860
+         {:datomic:schema1111/cardinality :datomic:schema1111/cardinality,
+          :datomic:schema1111/type :datomic:schema1111/type,
+          :datomic:schema1111/ident :datomic:schema1111/ident}))
+       (def
+        G__130861
+        {:ident :datomic:schema1111/ident,
+         :type :datomic:schema1111/type,
+         :cardinality :datomic:schema1111/cardinality})
+       (def
+        keyspec130868
+        [:req-un
+         [:datomic:schema1111/ident
+          :datomic:schema1111/type
+          :datomic:schema1111/cardinality]])
+       (quantum.core.macros.deftype/deftype-compatible
+        intermediate-schema1111
+        [v]
+        {?Associative {dissoc ([___130431__auto__ k0__130436__auto__]
+                               (clojure.core/let
+                                [k130869 k0__130436__auto__]
+                                (clojure.core/when
+                                 (.containsKey
+                                  required-keys-record130863
+                                  k130869)
+                                 (throw
+                                  (quantum.core.error/->ex
+                                   nil
+                                   "Key is in ValidatedMap's required keys and cannot be dissoced"
+                                   {:keyspec keyspec130868,
+                                    :k k130869,
+                                    :class intermediate-schema1111})))
+                                (clojure.core/->
+                                 (new
+                                  intermediate-schema1111
+                                  (.-dissoc v k130869))
+                                 quantum.core.macros.optimization/identity*
+                                 quantum.core.macros.optimization/identity*))),
+                       merge! ([___130431__auto__ ___130431__auto__]
+                               (throw
+                                (java.lang.UnsupportedOperationException.))),
+                       entries ([___130431__auto__] (.entrySet v)),
+                       dissoc! ([___130431__auto__ ___130431__auto__]
+                                (throw
+                                 (java.lang.UnsupportedOperationException.))),
+                       assoc! ([___130431__auto__
+                                ___130431__auto__
+                                ___130431__auto__]
+                               (throw
+                                (java.lang.UnsupportedOperationException.))),
+                       vals ([___130431__auto__] (.values v)),
+                       keys ([___130431__auto__] (.keySet v)),
+                       assoc ([___130431__auto__
+                               k0__130436__auto__
+                               v0__130437__auto__]
+                              (clojure.core/let
+                               [k130869
+                                (clojure.core/or
+                                 (clojure.core/get
+                                  all-keys-record130865
+                                  k0__130436__auto__)
+                                 (clojure.core/get
+                                  G__130861
+                                  k0__130436__auto__)
+                                 (throw
+                                  (quantum.core.error/->ex
+                                   nil
+                                   "Key not in validated map spec"
+                                   {:k k0__130436__auto__,
+                                    :class (quote
+                                            quantum.core.data.validated.intermediate-schema1111__)})))
+                                v130870
+                                (quantum.core.validate/validate
+                                 v0__130437__auto__
+                                 k130869)]
+                               (clojure.core/->
+                                (new
+                                 intermediate-schema1111
+                                 (.-assoc v k130869 v130870))
+                                quantum.core.macros.optimization/identity*
+                                quantum.core.macros.optimization/identity*)))},
+         ?Counted {count ([___130431__auto__] (.-count v))},
+         ?Collection {conj ([___130431__auto__
+                             [k0__130436__auto__ v0__130437__auto__]]
+                            (clojure.core/let
+                             [k130869
+                              (clojure.core/or
+                               (clojure.core/get
+                                all-keys-record130865
+                                k0__130436__auto__)
+                               (clojure.core/get
+                                G__130861
+                                k0__130436__auto__)
+                               (throw
+                                (quantum.core.error/->ex
+                                 nil
+                                 "Key not in validated map spec"
+                                 {:k k0__130436__auto__,
+                                  :class (quote
+                                          quantum.core.data.validated.intermediate-schema1111__)})))
+                              v130870
+                              (quantum.core.validate/validate
+                               v0__130437__auto__
+                               k130869)]
+                             (clojure.core/->
+                              (new
+                               intermediate-schema1111
+                               (.-assoc v k130869 v130870))
+                              quantum.core.macros.optimization/identity*
+                              quantum.core.macros.optimization/identity*))),
+                      #_empty? #_([___130431__auto__] (nil v)),
+                      empty ([___130431__auto__] (.-empty v)),
+                      equals ([this__130279__auto__ other130862]
+                              (clojure.core/and
+                               (clojure.core/not
+                                (clojure.core/nil? other130862))
+                               (clojure.core/or
+                                (clojure.core/identical?
+                                 this__130279__auto__
+                                 other130862)
+                                (clojure.core/and
+                                 (clojure.core/instance?
+                                  intermediate-schema1111
+                                  other130862)
+                                 (.-equiv v (.-v other130862)))))),
+                      empty! ([___130431__auto__]
+                              (throw
+                               (java.lang.UnsupportedOperationException.)))},
+         ?Lookup {#_contains? #_([___130431__auto__ k__130432__auto__]
+                             (clojure.core/or
+                              (nil v k__130432__auto__)
+                              (nil
+                               v
+                               (clojure.core/get
+                                G__130861
+                                k__130432__auto__)))),
+                  get [([___130431__auto__ k__130432__auto__]
+                        (clojure.core/or
+                         (.-lookup v k__130432__auto__)
+                         (.-lookup
+                          v
+                          (clojure.core/get
+                           G__130861
+                           k__130432__auto__))))],
+                  #_containsv? #_([___130431__auto__ v__130433__auto__]
+                              (nil v v__130433__auto__)),
+                  kw-get ([___130431__auto__ k__130432__auto__]
+                          (clojure.core/reify
+                           clojure.lang.ILookupThunk
+                           (clojure.core/get
+                            [this__130434__auto__
+                             target__130435__auto__]
+                            (if
+                             (clojure.core/identical?
+                              (clojure.core/class
+                               target__130435__auto__)
+                              intermediate-schema1111)
+                             (clojure.core/or
+                              (.valAt v k__130432__auto__)
+                              (.valAt
+                               v
+                               (clojure.core/get
+                                G__130861
+                                k__130432__auto__)))
+                             this__130434__auto__)))),
+                  #_get-entry #_([___130431__auto__ k__130432__auto__]
+                             (nil v k__130432__auto__))},
+         ?Print {pr ([___130431__auto__
+                      w__130439__auto__
+                      opts__130440__auto__]
+                     (.-pr-writer
+                      v
+                      w__130439__auto__
+                      opts__130440__auto__))},
+         ?Object {hash ([___130431__auto__] (.hashCode v)),
+                  equals ([this__130279__auto__ other130862]
+                          (clojure.core/and
+                           (clojure.core/not
+                            (clojure.core/nil? other130862))
+                           (clojure.core/or
+                            (clojure.core/identical?
+                             this__130279__auto__
+                             other130862)
+                            (clojure.core/and
+                             (clojure.core/instance?
+                              intermediate-schema1111
+                              other130862)
+                             (.equiv v (.-v other130862))))))},
+         ?Meta {meta ([___130431__auto__] (clojure.core/meta v)),
+                with-meta ([___130431__auto__
+                            new-meta__130438__auto__]
+                           (new
+                            intermediate-schema1111
+                            (clojure.core/with-meta
+                             v
+                             new-meta__130438__auto__)))},
+         ?Sequential true,
+         quantum.core.core/IValue {set ([___130431__auto__
+                                         v__130433__auto__]
+                                        (new
+                                         intermediate-schema1111
+                                         (quantum.core.validate/validate
+                                          v__130433__auto__
+                                          :quantum.core.data.validated/intermediate-schema1111))),
+                                   get ([___130431__auto__] v)},
+         ?Record true,
+         ?Iterable {iterator ([___130431__auto__] (.-iterator v))},
+         ?HashEq {hash-eq ([___130431__auto__]
+                           (clojure.core/int
+                            (clojure.core/bit-xor
+                             -805031456
+                             (.-hash v))))},
+         ?Seqable {seq ([___130431__auto__] (clojure.core/seq v))}})
+       (clojure.core/defn
+        ->intermediate-schema1111
+        [m__130441__auto__]
+        (clojure.core/let
+         [m-f__130442__auto__
+          (if
+           (clojure.core/instance?
+            quantum.core.data.validated.intermediate-schema1111__
+            m__130441__auto__)
+           m__130441__auto__
+           (map->intermediate-schema1111__
+            (clojure.core/->
+             m__130441__auto__
+             quantum.core.macros.optimization/identity*
+             (quantum.core.validate/validate
+              :quantum.core.data.validated/intermediate-schema1111)
+             (quantum.core.data.set/rename-keys G__130861))))]
+         (new
+          quantum.core.data.validated.intermediate-schema1111
+          m-f__130442__auto__)))
+       quantum.core.data.validated.intermediate-schema1111)
+
+(def-validated-map intermediate-schema1111
+  #_:invariant
+  #_#(if (:datomic:schema1111/component? %)
+                  (-> % :datomic:schema1111/type (= :ref))
+                  true)
+
+  :req-un [(def :datomic:schema1111/ident       keyword?)
+           (def :datomic:schema1111/type        allowed-types)
+           (def :datomic:schema1111/cardinality #{:one :many})])
+
+#?(:cljs (throw (->ex nil "Done" nil)))
