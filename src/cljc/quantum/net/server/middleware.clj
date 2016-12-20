@@ -146,10 +146,18 @@
 (defn wrap-coerce-response-content-type
   [handler] (fn [request] (coerce-response-content-type (handler request))))
 
+(defn wrap-logging [handler]
+  (fn [request]
+    (log/ppr ::debug "Request" request)
+    (let [resp (handler request)]
+      (log/ppr ::debug "Response" resp)
+      resp)))
+
 ; ===== MIDDLEWARE ===== ;
 
 (defn wrap-middleware [routes & [opts]]
   (-> routes
+      #_wrap-logging
       (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
       (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
       wrap-uid
@@ -173,4 +181,5 @@
       wrap-gzip
       compojure.handler/site ; ?
       #_(friend/requires-scheme :https)
+      wrap-logging
       wrap-exception-handling))
