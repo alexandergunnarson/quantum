@@ -11,15 +11,15 @@
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
   ; :signing          {:gpg-key "72F3C25A"}
-  :env {:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
-        :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
+  #_:env #_{:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
+            :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
   #_:repositories #_{"repo-s3-releases" ; this has problems with lein-ancient
                    {:url        "s3://repo.quantum/releases/"
                     :username   :env/public-repo-s3-username
                     :passphrase :env/public-repo-s3-password
                     :checksum   :warn}}
   :plugins [[lein-environ  "1.0.3" ]
-            [lein-essthree "0.2.1"
+            #_[lein-essthree "0.2.1"
               :exclusions [org.clojure/tools.reader]]
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
@@ -130,6 +130,7 @@
          [debugger                              "0.2.0"           ]
          ; REPL
          [figwheel                              "0.5.8"           ]
+         [figwheel-sidecar                      "0.5.8"           ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====

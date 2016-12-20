@@ -151,11 +151,18 @@
 (defn wrap-coerce-response-content-type
   [handler] (fn [request] (coerce-response-content-type (handler request))))
 
-(defn wrap-logging [handler]
+(defn wrap-in-logging [handler]
   (fn logging [request]
-    (log/ppr ::debug "Request" request)
+    (log/ppr ::debug "Initial Request" request)
     (let [resp (handler request)]
-      (log/ppr ::debug "Response" resp)
+      (log/ppr ::debug "Final Response" resp)
+      resp)))
+
+(defn wrap-out-logging [handler]
+  (fn logging [request]
+    (log/ppr ::debug "Final Request" request)
+    (let [resp (handler request)]
+      (log/ppr ::debug "Initial Response" resp)
       resp)))
 
 ; ===== MIDDLEWARE ===== ;
@@ -191,6 +198,7 @@
 (defn wrap-middleware [routes & [opts]]
   (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
     (-> routes
+        wrap-out-logging
         (whenp static-resources-path
           (fn1 wrap-resource static-resources-path))
         (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
@@ -217,5 +225,5 @@
                               :workflows [(workflows/interactive-form)]})
         wrap-gzip
         #_(friend/requires-scheme :https)
-        wrap-logging
+        wrap-in-logging
         wrap-exception-handling)))
