@@ -14,11 +14,11 @@
             [ring.middleware.multipart-params   :refer [wrap-multipart-params]     ]
             [ring.middleware.params             :refer [wrap-params]               ]
             [ring.middleware.cookies            :refer [wrap-cookies]              ]
-            [ring.middleware.resource           :refer [wrap-resource]             ]
             [ring.middleware.file               :refer [wrap-file]                 ]
             [ring.middleware.not-modified       :refer [wrap-not-modified]         ]
             [ring.middleware.content-type       :refer [wrap-content-type]         ]
             [ring.middleware.default-charset    :refer [wrap-default-charset]      ]
+            [ring.middleware.resource           :refer [wrap-resource]             ]
             [ring.middleware.absolute-redirects :refer [wrap-absolute-redirects]   ]
             [ring.middleware.proxy-headers      :refer [wrap-forwarded-remote-addr]]
             [ring.middleware.ssl                :refer [wrap-ssl-redirect
@@ -65,8 +65,8 @@
       (app (assoc-in req [:session :uid] (uuid/v1)))
       (app req))))
 
-(defn content-security-policy [report-uri]
-  (str/sp "default-src https: data: gap: https://ssl.gstatic.com;"
+(defn content-security-policy [report-uri & [{:keys [whitelist]}]]
+  (str/sp "default-src https: wss: data: gap: " (apply str/sp whitelist) ";"
           "style-src    'self' 'unsafe-inline';"
           "script-src   'self' 'unsafe-inline';"
           "font-src     'self';"
@@ -99,13 +99,13 @@
 
 (defn wrap-hide-server
   [handler]
-  (fn [request]
+  (fn hide-server [request]
     (when-let [response (handler request)]
       (resp/header response "Server" ""))))
 
 (defn wrap-exception-handling
   [handler]
-  (fn [request]
+  (fn exception-handling [request]
     (try
       (handler request)
       (catch Throwable e
@@ -122,20 +122,18 @@
     (fn-or :content-type (fn1 get "Content-Type") (fn1 get "content-type"))))
 
 (defmulti  coerce-request-content-type ->content-type)
-(defmethod coerce-request-content-type :default           [req] req)
-(defmethod coerce-request-content-type "application/text" [req] (update req :body (fn1 conv/->text)))
-(defmethod coerce-request-content-type "text/html"        [req] (update req :body (fn1 conv/->text)))
-(defmethod coerce-request-content-type "application/json" [req] (update req :body (fn-> conv/->text conv/json->)))
+(defmethod coerce-request-content-type :default                 [req] req)
+(defmethod coerce-request-content-type "application/text"       [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-request-content-type "text/html"              [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-request-content-type "application/csp-report" [req] (update req :body (fn1 conv/->text)))
+(defmethod coerce-request-content-type "application/json"       [req] (update req :body (fn-> conv/->text conv/json->)))
 
 (defn wrap-coerce-request-content-type
   [handler] (fn [request] (handler (coerce-request-content-type request))))
 
 ; ===== RESPONSE CONTENT TYPE COERCION ===== ;
 
-(defmulti  coerce-response-content-type ->content-type)
-(defmethod coerce-response-content-type :default           [req] req)
-(defmethod coerce-response-content-type "application/json" [req] (update req :body (fn1 conv/->json)))
-(defmethod coerce-response-content-type "application/text" [req]
+(defn update-to-text [req]
   (update req :body
     #(if (or (instance? java.io.InputStream %)
              (instance? java.nio.Buffer     %)
@@ -143,11 +141,18 @@
          %
          (conv/->text %))))
 
+(defmulti  coerce-response-content-type ->content-type)
+(defmethod coerce-response-content-type :default                         [req] req)
+(defmethod coerce-response-content-type "application/json"               [req] (update req :body (fn1 conv/->json)))
+(defmethod coerce-response-content-type "text/javascript"                [req] (update-to-text req))
+(defmethod coerce-response-content-type "text/javascript; charset=utf-8" [req] (update-to-text req)) ; TODO fix this to be more dynamic
+(defmethod coerce-response-content-type "application/text"               [req] (update-to-text req))
+
 (defn wrap-coerce-response-content-type
   [handler] (fn [request] (coerce-response-content-type (handler request))))
 
 (defn wrap-logging [handler]
-  (fn [request]
+  (fn logging [request]
     (log/ppr ::debug "Request" request)
     (let [resp (handler request)]
       (log/ppr ::debug "Response" resp)
@@ -155,31 +160,62 @@
 
 ; ===== MIDDLEWARE ===== ;
 
+(defn wrap-log-middleware [handler k]
+  (fn [req] (log/ppr ::debug "In" k)
+            (let [resp (handler req)]
+              (log/ppr ::debug "Out" k)
+              resp)))
+
+; TODO this is a hotfix for a particular version of anti-forgery
+(in-ns 'ring.middleware.anti-forgery)
+
+(defn wrap-anti-forgery
+  {:arglists '([handler] [handler options])}
+  [handler & [{:keys [read-token whitelisted?]
+               :or   {read-token default-request-token
+                      whitelisted? (constantly false)}
+               :as   options}]]
+  {:pre [(not (and (:error-response options)
+                   (:error-handler options)))]}
+  (fn [request]
+    (binding [*anti-forgery-token* (or (session-token request) (new-token))]
+      (if (and (not (whitelisted? request))
+               (not (get-request? request))
+               (not (valid-request? request read-token)))
+        (handle-error options request)
+        (if-let [response (handler request)]
+          (assoc-session-token response request *anti-forgery-token*))))))
+
+(in-ns 'quantum.net.server.middleware)
+
 (defn wrap-middleware [routes & [opts]]
-  (-> routes
-      #_wrap-logging
-      (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
-      (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
-      wrap-uid
-      (whenp (-> opts :anti-forgery false? not)
-        (fn1 wrap-anti-forgery {:read-token (fn [req] (-> req :params :csrf-token))}))
-      (defaults/wrap-defaults
-        (apply assocs-in+ defaults/secure-site-defaults
-          [:security :anti-forgery] false
-          [:static   :resources   ] false
-          [:static   :files       ] false
-          (-> opts
-              :override-secure-site-defaults
-              flatten-1)))
-      wrap-strictest-transport-security
-      wrap-x-permitted-cross-domain-policies
-      wrap-x-download-options
-      wrap-hide-server
-      #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
-                            :workflows [(workflows/interactive-form)]})
-      ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
-      wrap-gzip
-      compojure.handler/site ; ?
-      #_(friend/requires-scheme :https)
-      wrap-logging
-      wrap-exception-handling))
+  (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
+    (-> routes
+        (whenp static-resources-path
+          (fn1 wrap-resource static-resources-path))
+        (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
+        (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
+        wrap-uid
+        (whenp (-> opts :anti-forgery false? not)
+          (fn1 wrap-anti-forgery (merge {:read-token (fn [req] (-> req :params :csrf-token))}
+                                   (:anti-forgery opts))))
+        ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
+        (defaults/wrap-defaults
+          (apply assocs-in+ defaults/secure-site-defaults
+            [:security :anti-forgery] false
+            [:static   :resources   ] false ; This short-circuits the rest of the middleware when placed here
+            [:static   :files       ] false
+            (-> opts
+                :override-secure-site-defaults
+                (dissoc [:static :resources])
+                flatten-1)))
+        wrap-strictest-transport-security
+        wrap-x-permitted-cross-domain-policies
+        wrap-x-download-options
+        wrap-hide-server
+        #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
+                              :workflows [(workflows/interactive-form)]})
+        wrap-gzip
+        #_(friend/requires-scheme :https)
+        wrap-logging
+        wrap-exception-handling)))
