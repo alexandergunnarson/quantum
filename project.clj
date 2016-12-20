@@ -129,7 +129,7 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.2.0"           ]
          ; REPL
-         [figwheel                              "0.5.4-7"         ]
+         [figwheel                              "0.5.8"           ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====
@@ -319,7 +319,7 @@
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.4" ]
-                    [lein-figwheel "0.5.4-7"
+                    [lein-figwheel "0.5.8"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
                                    org.clojure/core.async
