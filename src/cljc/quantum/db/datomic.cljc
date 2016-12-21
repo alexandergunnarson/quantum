@@ -322,7 +322,9 @@
                                 :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
                              (log/pr ::debug "Done.")))
               conn-f  (try
-                        (try-times (validate (or connection-retries 5) integer?) 1000
+                        (try-times (validate (or connection-retries
+                                                 (if (= type :dynamo) 1 5)) integer?)
+                                   1000
                           (try (connect)
                             (catch #?(:clj Throwable :cljs js/Error) e
                               (log/pr :warn "Error while trying to connect:" e)
