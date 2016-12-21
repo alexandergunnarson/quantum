@@ -13,12 +13,12 @@
     [co.paralleluniverse.pulsar.core  :as pasync]]
     :cljs
    [[servant.core                     :as servant]])
+    [quantum.core.core                :as qcore]
     [quantum.core.error               :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.collections         :as coll
       :refer [nempty? seq-loop break]]
-    [quantum.core.log                 :as log
-      :include-macros true]
+    [quantum.core.log                 :as log]
     [quantum.core.logic               :as logic
       :refer [fn-and fn-or fn-not condpc whenc nnil?]]
     [quantum.core.macros.core         :as cmacros
@@ -27,7 +27,9 @@
       :refer [defnt]]
     [quantum.core.system              :as sys]
     [quantum.core.vars                :as var
-      :refer  [defalias defmalias]])
+      :refer  [defalias defmalias]]
+    [quantum.core.validate            :as v
+      :refer [validate]])
   (:require-macros
     [servant.macros                   :as servant
       :refer [defservantfn]                        ]
@@ -358,21 +360,24 @@
   component/Lifecycle
     (start [this]
       ; Bootstrap the web workers if that hasn't been done already
-      (when (and (web-worker?)
-                 ((fn-and number? pos?) thread-ct)
-                 (not @web-workers-set-up?))
-        (log/pr :user "Bootstrapping web workers")
-        ; Run the setup code for the web workers
-        (bootstrap-worker)
-        (reset! web-workers-set-up? true))
+      (let [thread-ct (or thread-ct 2)]
+        (when (and (web-worker?)
+                   ((fn-and integer? pos?) thread-ct)
+                   (not @web-workers-set-up?))
+          (log/pr :user "Bootstrapping web workers")
+          ; Run the setup code for the web workers
+          (bootstrap-worker)
+          (reset! web-workers-set-up? true))
 
-      ; We need to make sure that only the main thread/script will spawn the servants.
-      (if (servant/webworker?)
-          this
-          (do (log/pr :debug "Spawning" thread-ct "-thread web-worker threadpool")
-              (assoc this
-                ; Returns a buffered channel of web workers
-                :threads (servant/spawn-servants thread-ct script-src)))))
+        ; We need to make sure that only the main thread/script will spawn the servants.
+        (if (servant/webworker?)
+            this
+            (do (log/pr :debug "Spawning" thread-ct "-thread web-worker threadpool")
+                (validate script-src string?
+                          thread-ct  (v/and integer? pos?))
+                (assoc this
+                  ; Returns a buffered channel of web workers
+                  :threads (servant/spawn-servants thread-ct script-src))))))
     (stop  [this]
       (when threads
         (log/pr :debug "Destroying" thread-ct "-thread web-worker threadpool")
@@ -387,6 +392,9 @@
 
   (when (pos? thread-ct)
     (map->Threadpool opts))))
+
+#?(:cljs (swap! qcore/registered-components assoc ::threadpool
+            #(component/using (->threadpool %) [::log/log])))
 
 #?(:cljs (defservantfn dispatch "The global web worker dispatch fn" [f] (f)))
 

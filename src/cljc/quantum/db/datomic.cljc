@@ -336,14 +336,21 @@
       this))
 
 (defn ->backend-db
-  [{:keys [type name host port txr-alias create-if-not-present?]
+  [{:keys [type name host port txr-alias create-if-not-present?
+           default-partition]
+    :or   {type :free name "test"
+           host "0.0.0.0" port 4334
+           create-if-not-present? true
+           txr-alias         "local"
+           default-partition :db.part/test}
     :as config}]
   (validate type                   #{:free :http}  ; TODO for now
             name                   (v/and string? nempty?)
             host                   (v/and string? nempty?)
-            port                   (v/or* nil? integer?)
-            txr-alias              (v/or* nil? string?)
-            create-if-not-present? (v/or* nil? (fn1 boolean?)))
+            port                   integer? ; TODO `net/valid-port?`
+            txr-alias              string?
+            create-if-not-present? (fn1 boolean?)
+            default-partition      (v/and keyword? (fn-> namespace (= "db.part"))))
   (map->BackendDatabase
     (c/assoc config :uri  (atom nil)
                     :conn (atom nil))))
@@ -394,6 +401,20 @@
           :ephemeral  ephemeral-f
           :reconciler reconciler-f
           :backend    backend-f))))
+
+::db/db
+     {:backend
+
+      #?@(:cljs
+         [:ephemeral (when ephemeral
+                       (merge ephemeral
+                         {:history-limit  js/Number.MAX_SAFE_INTEGER
+                          :reactive?      true
+                          :set-main-conn? true
+                          :set-main-part? true
+                          :schemas        schemas}))])}
+
+(res/register-component! ::db ->db [::log/log]) ; TODO maybe for :cljs need ::async/threadpool ?
 
 (defn ->db
   "Constructor for |Database|."

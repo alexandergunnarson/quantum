@@ -6,16 +6,21 @@
                        :refer [refresh refresh-all
                                set-refresh-dirs]                ])
                      [clojure.core.async           :as casync]
+                     [quantum.core.core            :as qcore]
                      [quantum.core.error           :as err
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
+                     [quantum.core.fn
+                       :refer [fn$ with-do]]
                      [quantum.core.logic           :as logic
                        :refer [fn-not fn-or nnil?]]
                      [quantum.core.macros          :as macros
                        :refer [defnt]]
                      [quantum.core.async           :as async    ]
                      [quantum.core.type            :as type
-                       :refer [atom?]                           ])
+                       :refer [atom?]                           ]
+                     [quantum.core.validate        :as v
+                       :refer [validate]])
   #?(:clj  (:import org.openqa.selenium.WebDriver
                     (java.lang ProcessBuilder Process StringBuffer)
                     (java.io InputStream Reader Writer
@@ -69,6 +74,16 @@
   obj)
 
 (defonce systems (atom nil)) ; TODO cache
+
+(defonce components qcore/registered-components) ; TODO cache
+
+(defn register-component! [k constructor & [deps]]
+  (validate k           qcore/ns-keyword?
+            constructor fn?
+            deps        (v/or* nil? (v/coll-of keyword? :distinct true)))
+  (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
+  (swap! components assoc k (if deps (fn [config] (component/using (constructor config) deps))
+                                     constructor)))
 
 (defn start!
   ([] (start! (:global @systems)))
@@ -206,8 +221,17 @@
 
 (defn register-system!
   "Registers a system with the global system registry."
-  [ident config make-system]
-  (swap! systems assoc ident (->system config make-system)))
+  ([k config]
+    (register-system! k config
+      (fn [config']
+        (->> config' (map (fn [[k v]] [k (if-let [f (get @components k)] (f v) v)]))
+             seq flatten
+             (apply component/system-map)))))
+  ([k config make-system]
+    (log/pr ::debug "Registering system...")
+    (when (contains? @systems k) (log/pr :warn "Overwriting registered system" k))
+    (with-do (swap! systems assoc k (->system config make-system))
+             (log/pr ::debug "Registered system."))))
 
 
 #?(:clj

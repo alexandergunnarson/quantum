@@ -76,10 +76,10 @@
   [levels]
   component/Lifecycle
   (start [this]
-    (apply enable! levels)
+    (apply enable! (or levels #{:debug :warn}))
     this)
   (stop  [this]
-    #_(apply disable! levels) ; we don't necessarily want this logic
+    #_(apply disable! levels) ; we don't necessarily want this logic (?)
     this))
 
 (defn ->log-initializer [{:keys [levels] :as opts}]
@@ -87,6 +87,8 @@
     (throw (new #?(:clj Exception :cljs js/Error) "@levels is not seqable")))
 
   (LogInitializer. levels))
+
+(swap! qcore/registered-components assoc ::log ->log-initializer)
 
 (defn pr*
   "Prints to |System/out| if the print alert type @pr-type
@@ -125,7 +127,7 @@
                   (print #?(:clj (.getName (Thread/currentThread)))
                          ":"
                          curr-fn "»"
-                         (str (-> pr-type name) "] ")))
+                         (str pr-type "] ")))
                 (if (and pretty? (-> args-f first string?))
                     (do (print (first args-f) " ")
                         (println)

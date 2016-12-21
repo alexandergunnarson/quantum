@@ -5,22 +5,20 @@
             [taoensso.sente.server-adapters.immutant :as a-imm    ]
             [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
             [quantum.core.core
-              :refer        [lens deref*]]
+              :refer [lens deref*]]
             [quantum.core.error                      :as err
-              :refer        [->ex #?(:clj try-times)]
-              :refer-macros [try-times]]
+              :refer [->ex try-times]]
             [quantum.core.fn                         :as fn
-              :refer        [#?@(:clj [fn->])]
-              :refer-macros [fn->]]
-            [quantum.core.log                        :as log
-              :include-macros true]
+              :refer [fn->]]
+            [quantum.core.log                        :as log]
             [quantum.core.logic                      :as logic
-              :refer [nnil?]                                      ]
+              :refer [nnil?]]
             [quantum.core.async                      :as async
-              :refer        [promise-chan offer! #?@(:clj [go])]
-              :refer-macros [go]]
-            [quantum.core.resources                  :as res      ]
-    #?(:clj [quantum.net.server.router               :as router   ])))
+              :refer [promise-chan offer! go]]
+            [quantum.core.validate                   :as v
+              :refer [validate]]
+            [quantum.core.resources                  :as res]
+    #?(:clj [quantum.net.server.router               :as router])))
 
 (defmulti event-msg-handler :id) ; Dispatch on event-id
 (def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))
@@ -115,22 +113,26 @@
   [endpoint host chan chan-recv send-fn chan-state type packer
    stop-fn post-fn get-fn msg-handler
    connected-uids
-   #?@(:clj  [server]
-       :cljs [port  ])]
+   #?@(:cljs [port])]
   component/Lifecycle
     (start [this]
-      (let [stop-fn-f (atom (fn []))]
+      (let [stop-fn-f (atom (fn []))
+            server    (:quantum.net.http/server this)
+            endpoint  (or endpoint "/chan")]
         (try
           (log/pr ::debug "Starting channel-socket with:" this)
-          ; TODO for all these assertions, use clojure.spec!
-          (assert (string? endpoint) #{endpoint})
-          (assert (fn? msg-handler))
-          (assert (or (nil? type) (contains? #{:auto :ajax :ws} type)))
+          (validate endpoint    string?)
+          (validate msg-handler fn?)
+          (validate type        (v/or* nil? #{:auto :ajax :ws}))
+          #?(:clj  (do (validate server nnil?)
+                       (validate (:type server) #{:aleph :immutant}))
+             :cljs (do (validate host string?) ; technically, valid hostname
+                       (validate port integer?))) ; technically, valid port
 
           (let [packer (or packer :edn)
                 {:keys [chsk ch-recv send-fn state] :as socket}
                  (ws/make-channel-socket!
-                   #?(:clj (condp = (:type server)
+                   #?(:clj (case (:type server)
                              ;:http-kit a-http-kit/sente-web-server-adapter
                              :aleph    a-aleph/sente-web-server-adapter
                              :immutant a-imm/sente-web-server-adapter)
@@ -163,3 +165,5 @@
           (err/warn! e)))
       ; TODO should assoc other vals as nil?
       this))
+
+(res/register-component! ::connection map->ChannelSocket [::log/log #?(:clj :quantum.net.http/server)])

@@ -11,6 +11,7 @@
             [quantum.core.string                     :as str]
             [quantum.net.client.impl                 :as impl]
             [quantum.net.core                        :as net]
+            [quantum.core.resources                  :as res]
             [quantum.core.paths                      :as path]
     #?(:clj [quantum.net.server.router               :as router])
             [quantum.core.error                      :as err]
@@ -63,19 +64,21 @@
    epoll?]
   component/Lifecycle
     (start [this]
-      (let [stop-fn-f (atom (fn []))]
+      (let [stop-fn-f (atom (fn []))
+            type      (or type :aleph)
+            port      (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
+                          port 80)]
         (try
           (validate port       net/valid-port?
                     type       #{:aleph :immutant #_:http-kit}
                     routes-var var?
                     routes-fn  (v/or* fn? var?))
           (let [opts (->> (merge
-                            {:host           (or host     "localhost")
-                             :port           (or (when (= type :aleph) ssl-port) ; For Aleph, prefer SSL port
-                                                 port 80)
+                            {:host           (or host "0.0.0.0")
+                             :port           port
                              :ssl-port       (when-not (= type :aleph) ; SSL port ignored for Aleph
                                                (or ssl-port 443))
-                             :http2?         (or http2?   false)
+                             :http2?         (if (false? http2?) false true)
                              :keystore       key-store-path
                              :truststore     trust-store-path
 
@@ -144,6 +147,8 @@
           (err/warn! e)))
       (assoc this
         :stop-fn nil))))
+
+#?(:clj (res/register-component! ::server map->Server [::log/log]))
 
 ; UTILS
 

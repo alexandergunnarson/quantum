@@ -241,6 +241,8 @@
           (recur))))))
 
 ; Adapted from figwheel-sidecar 0.5.8
+; TODO expects an Aleph request; not currently extensible to other backends
+; Using the built-in figwheel-sidecar uses httpkit
 (defn reload-handler [server-state]
   (fn [req]
     (let [manifold @(aleph.http/websocket-connection req)
@@ -255,7 +257,6 @@
 (defn websocket-request? [req]
   (-> req :headers (get "upgrade") (= "websocket")))
 
-; TODO expects an Aleph request
 (defn websocket* [{:keys [uri] :as req} handler websocket-handler]
   (if (and (websocket-request? req)
            (-> req :request-method (= :get)))
@@ -287,7 +288,7 @@
         (whenp (-> opts :anti-forgery false? not)
           (fn1 wrap-anti-forgery (merge {:read-token (fn [req] (-> req :params :csrf-token))}
                                    (:anti-forgery opts))))
-        ; Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
+        ; NOTE: Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
         (defaults/wrap-defaults
           (apply assocs-in+ defaults/secure-site-defaults
             [:security :anti-forgery] false

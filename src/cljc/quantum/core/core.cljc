@@ -23,6 +23,8 @@
 (defonce debug?   (atom false))
 (defonce externs? (atom true ))
 
+(defonce registered-components (atom {}))
+
 ; ===== TYPE PREDICATES =====
 
 (defn atom?    [x] (#?(:clj  instance?
