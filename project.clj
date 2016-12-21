@@ -11,8 +11,6 @@
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
   ; :signing          {:gpg-key "72F3C25A"}
-  #_:env #_{:public-repo-s3-username "AKIAJEMTOQDDRFSPJGNQ"
-            :public-repo-s3-password "uRqmUmRKq+rYpKPCXHhRH4kh8ZTZ7Lkm6HcBOe14"}
   #_:repositories #_{"repo-s3-releases" ; this has problems with lein-ancient
                    {:url        "s3://repo.quantum/releases/"
                     :username   :env/public-repo-s3-username
