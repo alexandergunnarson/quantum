@@ -152,7 +152,8 @@
        [quantum/datsync                         "0.0.1-4-11-2016"
          :exclusions [org.slf4j/slf4j-nop
                       org.clojure/core.match
-                      io.netty/netty]]
+                      io.netty/netty
+                      com.datomic/datomic-free]]
        [re-frame                                "0.8.0-alpha11"   ]
      ; ==== HTML ====
        [hickory                                 "0.6.0"           ]

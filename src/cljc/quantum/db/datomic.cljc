@@ -148,18 +148,15 @@
    post]
   component/Lifecycle
     (start [this]
-      (let [history-limit (do #?(:clj  Integer/MAX_VALUE
-                                 :cljs js/Number.MAX_SAFE_INTEGER))
-            reactive?      (if (false? reactive?     ) false (or reactive?      true))
-            set-main-conn? (if (false? set-main-conn?) false (or set-main-conn? true))
-            set-main-part? (if (false? set-main-part?) false (or set-main-part? true))]
+      (log/pr ::debug "Starting Ephemeral database...")
+      (let [history-limit  (validate (or history-limit
+                                         #?(:clj  Integer/MAX_VALUE
+                                             :cljs js/Number.MAX_SAFE_INTEGER)) integer?)
+            reactive?      (validate (if (false? reactive?     ) false (or reactive?      true)) (fn1 boolean?))
+            set-main-conn? (validate (if (false? set-main-conn?) false (or set-main-conn? true)) (fn1 boolean?))
+            set-main-part? (validate (if (false? set-main-part?) false (or set-main-part? true)) (fn1 boolean?))]
         (TODO "Finish block schemas patch")
         (try
-          (log/pr ::debug "Starting Ephemeral database...")
-          (validate history-limit  integer?
-                    reactive?      (fn1 boolean?)
-                    set-main-conn? (fn1 boolean?)
-                    set-main-part? (fn1 boolean?))
           (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
           (let [; Maintain DB history.
                 history (when (pos? history-limit) (atom []))
@@ -261,77 +258,88 @@
     :todo ["Decompose this"]}
   BackendDatabase
   [type
-   name table-name instance-name ; <- TODO disambiguate these three
+   name auth
    host port rest-port uri conn create-if-not-present?
    txr-props txr-process
+   connection-retries
    init-partitions? partitions
    default-partition
    schemas]
   component/Lifecycle
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
-      ; Set all transactor logs to WARN
-      #?(:clj (try
-                (doseq [^ch.qos.logback.classic.Logger logger
-                          (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
-                               (.getContextSelector)
-                               (.getLoggerContext)
-                               (.getLoggerList))]
-                  (.setLevel logger ch.qos.logback.classic.Level/WARN))
-                (catch NullPointerException e)))
-      (let [uri-f (condp = type
-                            :free
-                              (str "datomic:" (c/name type)
-                                   "://" host ":" port "/" name)
-                            :mem
-                              (str "datomic:" (c/name type)
-                                   "://" name)
-                            :http
-                              (str "http://" host ":" rest-port "/" (:alias txr-props) "/" name)
-                            :dynamo nil
-                              #_(str "datomic:ddb://"    (amz/get-server-region instance-name)
-                                   "/" name
-                                   "/" table-name
-                                   "?aws_access_key_id=" (amz/get-aws-id     instance-name)
-                                   "&aws_secret_key="    (amz/get-aws-secret instance-name))
-                            (throw (->ex :illegal-argument
-                                         "Database type not supported"
-                                         type)))
-            txr-process-f
-              (when (:start? txr-props)
-                #?(:clj (start-transactor! (kmap type host port) txr-props)))
-            connect (fn [] (log/pr ::debug "Trying to connect with" uri-f)
-                           (let [conn-f (do #?(:clj  (bdb/connect uri-f)
-                                               :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
-                             (log/pr ::debug "Connection successful.")
-                             conn-f))
-            create-db! (fn []
-                         (when create-if-not-present?
-                           (log/pr ::debug "Creating database...")
-                           #?(:clj  (Peer/createDatabase uri-f)
-                              :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
-                           (log/pr ::debug "Done.")))
-            conn-f  (try
-                      (try-times 5 1000
-                        (try (connect)
-                          (catch #?(:clj Throwable :cljs js/Error) e
-                            (log/pr :warn "Error while trying to connect:" e)
-                            #?(:clj (when (-> e .getMessage (containsv? #"Could not find .* in catalog"))
-                                      (create-db!)))
-                            (throw e))))
-                      (catch #?(:clj Throwable :cljs js/Error) e
-                        (log/pr :warn "Failed to connect:" e)
-                        (throw e)))
-            _ (log/pr :debug "Connected.")
-            _ (reset! conn conn-f)
-            default-partition-f (or default-partition :db.part/test)
-            ;_ (when schemas #?(:clj (init-schemas! conn-f schemas)))
-            ]
-      (log/pr ::debug "Datomic database initialized.")
-      (c/assoc this
-        :uri               uri-f
-        :txr-process       txr-process-f
-        :default-partition default-partition-f)))
+      (let [type                   (validate (or type :free)       #{:free :http :dynamo}) ; TODO for now
+            name                   (validate (or name "test")      (v/and string? nempty?))
+            host                   (validate (or host "localhost") (v/and string? nempty?))
+            port                   (validate (or port 4334)        integer?) ; TODO `net/valid-port?`
+            txr-alias              (validate (or (:alias txr-props) "local") string?)
+            create-if-not-present? (validate (if (false? create-if-not-present?) false (or create-if-not-present? true))
+                                             (fn1 boolean?))
+            default-partition      (validate (or default-partition :db.part/test)
+                                             (v/and keyword? (fn-> namespace (= "db.part"))))
+            conn                   (validate (or conn (atom nil)) atom?)
+            uri (case type
+                      :free
+                        (str "datomic:" (c/name type)
+                             "://" host ":" port "/" name)
+                      :mem
+                        (str "datomic:" (c/name type)
+                             "://" name)
+                      :http
+                        (str "http://" host ":" rest-port "/" (:alias txr-props) "/" name)
+                      :dynamo
+                        (str "datomic:ddb://"      (validate (or (:server-region auth) "us-east-1") string?) ; TODO validate server regions better
+                             "/"                   name
+                             "/"                   (validate (:table-name auth) string?)
+                             "?aws_access_key_id=" (validate (:id         auth) string?)
+                             "&aws_secret_key="    (validate (:secret     auth) string?))
+                      (throw (->ex :illegal-argument
+                                   "Database type not supported"
+                                   type)))]
+        ; Set all transactor logs to WARN
+        #?(:clj (try
+                  (doseq [^ch.qos.logback.classic.Logger logger
+                            (->> (ch.qos.logback.classic.util.ContextSelectorStaticBinder/getSingleton)
+                                 (.getContextSelector)
+                                 (.getLoggerContext)
+                                 (.getLoggerList))]
+                    (.setLevel logger ch.qos.logback.classic.Level/WARN))
+                  (catch NullPointerException e)))
+        (log/prl ::debug type name host port default-partition uri)
+        (let [
+              txr-process-f
+                (when (:start? txr-props)
+                  #?(:clj (start-transactor! (kmap type host port) txr-props)))
+              connect (fn [] (log/pr ::debug "Trying to connect with" uri)
+                             (let [conn-f (do #?(:clj  (bdb/connect uri)
+                                                 :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
+                               (log/pr ::debug "Connection successful.")
+                               conn-f))
+              create-db! (fn []
+                           (when create-if-not-present?
+                             (log/pr ::debug "Creating database...")
+                             #?(:clj  (Peer/createDatabase uri)
+                                :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
+                             (log/pr ::debug "Done.")))
+              conn-f  (try
+                        (try-times (validate (or connection-retries 5) integer?) 1000
+                          (try (connect)
+                            (catch #?(:clj Throwable :cljs js/Error) e
+                              (log/pr :warn "Error while trying to connect:" e)
+                              #?(:clj (when (-> e .getMessage (containsv? #"Could not find .* in catalog"))
+                                        (create-db!)))
+                              (throw e))))
+                        (catch #?(:clj Throwable :cljs js/Error) e
+                          (log/pr :warn "Failed to connect:" e)
+                          (throw e)))
+              _ (log/pr :debug "Connected.")
+              _ (reset! conn conn-f)
+              ;_ (when schemas #?(:clj (init-schemas! conn-f schemas)))
+              ]
+        (log/pr ::debug "Datomic database initialized.")
+        (c/merge ; TODO add txr-alias
+          (c/assoc this :txr-process txr-process-f)
+          (kmap type uri name host port create-if-not-present? default-partition conn)))))
     (stop [this]
       (when (and (atom? conn) (nnil? @conn))
         #?(:clj (bdb/release @conn))
@@ -343,19 +351,9 @@
 (defn ->backend-db
   [{:keys [type name host port txr-alias create-if-not-present?
            default-partition]
-    :or   {type :free name "test"
-           host "0.0.0.0" port 4334
-           create-if-not-present? true
-           txr-alias         "local"
-           default-partition :db.part/test}
+
     :as config}]
-  (validate type                   #{:free :http}  ; TODO for now
-            name                   (v/and string? nempty?)
-            host                   (v/and string? nempty?)
-            port                   integer? ; TODO `net/valid-port?`
-            txr-alias              string?
-            create-if-not-present? (fn1 boolean?)
-            default-partition      (v/and keyword? (fn-> namespace (= "db.part"))))
+
   (map->BackendDatabase
     (c/assoc config :uri  (atom nil)
                     :conn (atom nil))))
@@ -415,6 +413,8 @@
     (whenf ephemeral nnil? ->ephemeral-db)
     reconciler
     (whenf backend   nnil? ->backend-db  )))
+
+(res/register-component! ::db ->db [::log/log])
 
 (defmethod io/persist! EphemeralDatabase
   [_ persist-key
