@@ -17,7 +17,7 @@
                     :passphrase :env/public-repo-s3-password
                     :checksum   :warn}}
   :plugins [[lein-environ  "1.0.3" ]
-            #_[lein-essthree "0.2.1"
+            #_[lein-essthree "0.2.1" ; Conflicts with alembic.still
               :exclusions [org.clojure/tools.reader]]
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]

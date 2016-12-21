@@ -25,6 +25,7 @@
                                                         wrap-hsts
                                                         wrap-forwarded-scheme  ]]
             [ring.middleware.defaults   :as defaults]
+            [figwheel-sidecar.components.figwheel-server :as fig]
             ; QUANTUM
             [quantum.core.string        :as str]
             [quantum.core.logic
@@ -33,8 +34,10 @@
               :refer [fn1 fn-> rcomp]]
             [quantum.core.collections   :as coll
               :refer [containsv? assocs-in+ flatten-1]]
-            [quantum.core.log           :as log]
-            [quantum.core.convert       :as conv]))
+            [quantum.core.log           :as log
+              :refer [prl]]
+            [quantum.core.convert       :as conv]
+            [quantum.core.async         :as async]))
 
 (def cors? (atom true))
 
@@ -195,10 +198,87 @@
 
 (in-ns 'quantum.net.server.middleware)
 
+; From figwheel-sidecar 0.5.8
+(defn setup-file-change-sender [{:keys [file-change-atom compile-wait-time connection-count] :as server-state}
+                                {:keys [desired-build-id] :as params}
+                                in out]
+  (let [watch-key (keyword (gensym "message-watch-"))]
+    (fig/update-connection-count connection-count desired-build-id inc)
+    (add-watch
+     file-change-atom
+     watch-key
+     (fn [_ _ o n]
+       (let [msg (first n)]
+         (when (and msg
+                    (or
+                     ;; broadcast all css messages
+                     (= ::broadcast (:build-id msg))
+                     ;; if its nil you get it all
+                     (nil? desired-build-id)
+                     ;; otherwise you only get messages for your build id
+                     (= desired-build-id (:build-id msg))))
+           (async/<!! (async/timeout compile-wait-time))
+           (when-not (async/closed? out)
+             (async/put! out (prn-str msg)))))))
+
+    (async/go
+      (loop []
+        (if-let [data (async/<! in)]
+          (do (#'fig/handle-client-msg server-state data)
+              (recur))
+          (do (fig/update-connection-count connection-count desired-build-id dec)
+              (remove-watch file-change-atom watch-key)
+              ; TODO close both chans when?
+              ))))
+
+    ;; Keep alive!!
+    (async/go
+      (loop []
+        (async/<! (async/timeout 5000))
+        (when-not (async/closed? out)
+          (async/put! out (prn-str {:msg-name :ping
+                                    :project-id (:unique-id server-state)}))
+          (recur))))))
+
+; Adapted from figwheel-sidecar 0.5.8
+(defn reload-handler [server-state]
+  (fn [req]
+    (let [manifold @(aleph.http/websocket-connection req)
+          in  (async/chan)
+          _   (manifold.stream/connect manifold in)
+          out (async/chan)
+          _   (manifold.stream/connect out      manifold)]
+      (prl ::debug in out manifold)
+      (#'setup-file-change-sender server-state (:params req) in out)
+      {:body "Accepted websocket" :status 200})))
+
+(defn websocket-request? [req]
+  (-> req :headers (get "upgrade") (= "websocket")))
+
+; TODO expects an Aleph request
+(defn websocket* [{:keys [uri] :as req} handler websocket-handler]
+  (if (and (websocket-request? req)
+           (-> req :request-method (= :get)))
+      (cond
+         (= uri "/figwheel-ws")
+         (websocket-handler req)
+
+         (fig/parse-build-id uri)
+         (websocket-handler
+           (assoc-in req [:params :desired-build-id] (fig/parse-build-id uri)))
+
+         :else (handler req))
+      (handler req)))
+
+(defn wrap-figwheel-websocket [handler & [opts]]
+  (let [websocket-handler (reload-handler (fig/create-initial-state opts))]
+    (fn [req] (#'websocket* req handler websocket-handler))))
+
 (defn wrap-middleware [routes & [opts]]
   (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
     (-> routes
         wrap-out-logging
+        (whenp (:figwheel-ws opts) (fn1 wrap-figwheel-websocket (:figwheel-ws opts)))
         (whenp static-resources-path
           (fn1 wrap-resource static-resources-path))
         (whenp (:resp-content-type opts) wrap-coerce-response-content-type)

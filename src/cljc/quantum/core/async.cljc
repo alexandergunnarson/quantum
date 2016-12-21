@@ -7,6 +7,7 @@
     [clojure.core                     :as core]
     [com.stuartsierra.component       :as component]
     [clojure.core.async               :as async]
+    [clojure.core.async.impl.protocols :as asyncp]
 #?@(#_:clj
  #_[[co.paralleluniverse.pulsar.async :as async+]
     [co.paralleluniverse.pulsar.core  :as pasync]]
@@ -138,7 +139,7 @@
 
 (defalias take! async/take!)
 
-(defalias <! async/<!)
+#?(:clj (defmacro <! [& args] `(async/<! ~@args)))
 
 (declare empty!)
 
@@ -214,8 +215,8 @@
   ([#{java.util.concurrent.Future
       java.util.concurrent.FutureTask} x] (.cancel x true))
   ([                             x] (if (nil? x) true (throw :not-implemented)))
-  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.close q))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw (->ex :unimplemented)))
+  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.close x))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (asyncp/close! x))
   ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
   ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x)))))
 
@@ -230,7 +231,7 @@
       java.util.concurrent.FutureTask
       #_co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
   ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (throw (->ex :unimplemented)))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (asyncp/closed? x))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
   ([^boolean? x] x)
   ([x] (if (nil? x) true (throw (->ex :not-implemented))))))
