@@ -148,62 +148,67 @@
    post]
   component/Lifecycle
     (start [this]
-      (TODO "Finish block schemas patch")
-      (try
-        (log/pr ::debug "Starting Ephemeral database...")
-        (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
-        (let [; Maintain DB history.
-              history (when (pos? history-limit) (atom []))
-              default-schemas {:db/ident {:db/unique :db.unique/identity}}
-              default-partition-f (or default-partition :db.part/test)
-              #_block-schemas #_(when schemas
-                               (dbc/block->schemas schemas
-                                 {:datascript? true
-                                  :part        default-partition-f}))
+      (let [history-limit (do #?(:clj  Integer/MAX_VALUE
+                                 :cljs js/Number.MAX_SAFE_INTEGER))
+            reactive?      (if (false? reactive?     ) false (or reactive?      true))
+            set-main-conn? (if (false? set-main-conn?) false (or set-main-conn? true))
+            set-main-part? (if (false? set-main-part?) false (or set-main-part? true))]
+        (TODO "Finish block schemas patch")
+        (try
+          (log/pr ::debug "Starting Ephemeral database...")
+          (validate history-limit  integer?
+                    reactive?      (fn1 boolean?)
+                    set-main-conn? (fn1 boolean?)
+                    set-main-part? (fn1 boolean?))
+          (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
+          (let [; Maintain DB history.
+                history (when (pos? history-limit) (atom []))
+                default-schemas {:db/ident {:db/unique :db.unique/identity}}
+                default-partition-f (or default-partition :db.part/test)
+                #_block-schemas #_(when schemas
+                                 (dbc/block->schemas schemas
+                                   {:datascript? true
+                                    :part        default-partition-f}))
 
-              db        (mdb/empty-db {})
-              conn-f    (atom db :meta
-                          (c/merge {:listeners (atom {})}
-                            (when evented?
-                              {:subs         (atom {})
-                               :transformers (atom {})})))
-              schemas-f (c/merge default-schemas #_block-schemas)
-              _ (replace-schemas! conn-f schemas-f)
-              _ (log/pr ::debug "Ephemeral database and connection created.")
-              _ (when (pos? history-limit)
-                  (log/pr ::debug "Ephemeral database history set up.")
-                  (mdb/listen! conn-f :history1 ; just ":history" doesn't work
-                    (fn [tx-report]
-                      (log/pr ::debug "Adding to history")
-                      (let [{:keys [db-before db-after]} tx-report]
-                        (when (and db-before db-after)
-                          (swap! history
-                            (fn-> (coll/drop-tail #(identical? % db-before))
-                                  (c/conj db-after)
-                                  (coll/trim-head history-limit))))))))
-              ; Sets up the tx-report listener for a conn
-              #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
-              _ (log/pr ::debug "Ephemeral database reactivity set up. Conn's meta keys:" (-> conn-f meta keys))]
-          (when set-main-conn? (reset! conn* conn-f))
-          (when set-main-part? (reset! part* default-partition-f))
-          (when post (post))
-          (c/assoc this :conn              conn-f
-                        :history           history
-                        :default-partition default-partition-f))
-        (catch #?(:clj Throwable :cljs :default) e
-          (log/ppr :warn "Error in starting EphemeralDatabase"
-            {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
-          e)))
+                db        (mdb/empty-db {})
+                conn-f    (atom db :meta
+                            (c/merge {:listeners (atom {})}
+                              (when evented?
+                                {:subs         (atom {})
+                                 :transformers (atom {})})))
+                schemas-f (c/merge default-schemas #_block-schemas)
+                _ (replace-schemas! conn-f schemas-f)
+                _ (log/pr ::debug "Ephemeral database and connection created.")
+                _ (when (pos? history-limit)
+                    (log/pr ::debug "Ephemeral database history set up.")
+                    (mdb/listen! conn-f :history1 ; just ":history" doesn't work
+                      (fn [tx-report]
+                        (log/pr ::debug "Adding to history")
+                        (let [{:keys [db-before db-after]} tx-report]
+                          (when (and db-before db-after)
+                            (swap! history
+                              (fn-> (coll/drop-tail #(identical? % db-before))
+                                    (c/conj db-after)
+                                    (coll/trim-head history-limit))))))))
+                ; Sets up the tx-report listener for a conn
+                #?@(:cljs [_ (when reactive? (rx-db/posh! conn-f))]) ; Is this enough? See also quantum.system
+                _ (log/pr ::debug "Ephemeral database reactivity set up. Conn's meta keys:" (-> conn-f meta keys))]
+            (when set-main-conn? (reset! conn* conn-f))
+            (when set-main-part? (reset! part* default-partition-f))
+            (when post (post))
+            (c/assoc this :conn              conn-f
+                          :history           history
+                          :default-partition default-partition-f))
+          (catch #?(:clj Throwable :cljs :default) e
+            (log/ppr :warn "Error in starting EphemeralDatabase"
+              {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
+            e))))
     (stop [this]
       (when (atom? conn)
         (reset! conn nil)) ; TODO is this wise?
       this))
 
-(defn ->ephemeral-db
-  [{:keys [history-limit] :as config}]
-  (validate history-limit (v/or* nil? integer?))
-  (map->EphemeralDatabase
-    (c/assoc config :history-limit (or history-limit 0))))
+(def ->ephemeral-db map->EphemeralDatabase)
 
 #?(:clj
 (defn start-transactor!
@@ -401,20 +406,6 @@
           :ephemeral  ephemeral-f
           :reconciler reconciler-f
           :backend    backend-f))))
-
-::db/db
-     {:backend
-
-      #?@(:cljs
-         [:ephemeral (when ephemeral
-                       (merge ephemeral
-                         {:history-limit  js/Number.MAX_SAFE_INTEGER
-                          :reactive?      true
-                          :set-main-conn? true
-                          :set-main-part? true
-                          :schemas        schemas}))])}
-
-(res/register-component! ::db ->db [::log/log]) ; TODO maybe for :cljs need ::async/threadpool ?
 
 (defn ->db
   "Constructor for |Database|."

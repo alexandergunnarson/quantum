@@ -271,9 +271,8 @@
          :else (handler req))
       (handler req)))
 
-(defn wrap-figwheel-websocket [handler & [opts]]
-  (let [websocket-handler (reload-handler (fig/create-initial-state opts))]
-    (fn [req] (#'websocket* req handler websocket-handler))))
+(defn wrap-figwheel-websocket [handler figwheel-ws-state]
+  (fn [req] (#'websocket* req handler (reload-handler @figwheel-ws-state))))
 
 (defn wrap-middleware [routes & [opts]]
   (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
