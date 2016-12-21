@@ -141,7 +141,7 @@
 
 (defalias take! async/take!)
 
-#?(:clj (defmacro <! [& args] `(async/<! ~@args)))
+#?(:clj (defmacro <! [& args] `(~(if-cljs &env 'cljs.core.async/<! 'clojure.core.async/<!) ~@args)))
 
 (declare empty!)
 
