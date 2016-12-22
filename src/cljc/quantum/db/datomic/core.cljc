@@ -1340,7 +1340,7 @@
   "Clojure only because schemas can only be added upon creation of the DataScript
    connection; they cannot be transacted."
   []
-  (-> @dv/db-schemas transact!)))
+  (-> @dv/db-schemas vals transact!)))
 
 ; (defn changes-affecting
 ;   {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"
