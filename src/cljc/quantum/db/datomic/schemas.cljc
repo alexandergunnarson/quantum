@@ -78,7 +78,7 @@
 (def-validated-map ^:db?
   ^{:doc    "An ISO 639-3 value?
              There is also ISO 639-1, 639-2, 639-4, 639-5"
-    :unique :value
+    ;:unique :value ; TODO enforce in other ways
     :todo   #{"Finish"}}
   linguistics:language
   :req [(def :this/iso-639-3-value :db/keyword)])
@@ -125,7 +125,8 @@
 
 (def-validated ^:db?
   ^{:doc    "Not the sum of a year's time, but a particular year."
-    :unique :value}
+    ;:unique :value ; TODO enforce in other ways
+  }
   time:year :time:range)
 
 (def-validated ^:db?
@@ -192,7 +193,7 @@
 
 ; =========== NETWORK =========== ;
 
-(def-validated-map ^:db? ^{:unique :value}
+(def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
   network:domain
   :req-un [^{:unique :value
              :doc    "Multiple domain names can point to the same IP address"}
@@ -200,7 +201,7 @@
            ^{:doc "Keyword because it's short and universal"}
            (def :this/prefix     :db/keyword)])
 
-(def-validated-map ^:db? ^{:unique :value}
+(def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
   agent:email
   :req-un [^{:doc "E.g. alexandergunnarson"}
            (def :this/username :db/keyword)

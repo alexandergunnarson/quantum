@@ -435,13 +435,12 @@
                                 (or (~(if-cljs &env '-lookup '.valAt) ~'v k#)
                                     (~(if-cljs &env '-lookup '.valAt) ~'v (get ~un-ks-to-ks k#))))
                               #_([_# k# else#] (~(if-cljs &env '-lookup '.valAt) ~'v k# else#))]
-                ~'kw-get      ([_# k#]
-                                #_(enforce-get ~empty-record ~sym ~spec-sym k#)
+                ~'kw-get      ([this# k#]
                                 (reify clojure.lang.ILookupThunk
-                                  (get [this# target#]
-                                    (if (identical? (class target#) ~sym)
-                                        (or (.valAt ~'v k#)
-                                            (.valAt ~'v (get ~un-ks-to-ks k#)))
+                                  (get [this# ~v-gen]
+                                    (if (identical? (class ~v-gen) ~sym)
+                                        (or (.valAt ~(with-meta v-gen {:tag sym}) k#)
+                                            (.valAt ~(with-meta v-gen {:tag sym}) (get ~un-ks-to-ks k#)))
                                         this#))))
                 ~'get-entry   ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)

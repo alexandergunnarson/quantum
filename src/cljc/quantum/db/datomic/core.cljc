@@ -376,7 +376,6 @@
           unique      (name+ (:datomic:schema/unique schema))]
       ; Partitions are not supported in DataScript (yet)
       (when datascript? (validate part-f nnil?))
-       (log/prl :user schema-0 schema)
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
                                      (tempid part-f))
             :db/ident              (:datomic:schema/ident schema)

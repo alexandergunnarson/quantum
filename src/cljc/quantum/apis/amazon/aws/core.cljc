@@ -4,6 +4,10 @@
               :refer        [map+ #?@(:clj [join])]
               :refer-macros [join]]
             [quantum.deploy.amazon :as deploy]
+            [quantum.core.validate :as v
+              :refer [validate]]
+            [quantum.core.data.validated
+              :refer [def-validated def-validated-map]]
     #?(:clj [quantum.core.reflect
               :refer [obj->map]]))
   #?(:clj (:import
@@ -38,3 +42,18 @@
        (map+ obj->map)
        (map+ (fn-> (dissoc :instances)))
        join)))
+
+
+; From http://docs.aws.amazon.com/ElasticMapReduce/latest/DeveloperGuide/emr-plan-region.html
+; TODO get more effectively
+(def aws-regions #{:us-west-1 :us-west-2 :us-east-1 :us-gov-west-1
+                   :eu-west-1 :eu-central-1
+                   :ap-southeast-1 :ap-southeast-2 :ap-northeast-1 :ap-northeast-2
+                   :cn-north-1
+                   :sa-east-1})
+
+(def-validated-map ^:db? ^:sensitive? ^:no-history? credential>aws
+  :req-un [(def :this/service
+             :req-un [(def :this/name (v/and :db/keyword #{:cloud-drive}))])] ; TODO others
+  :opt-un [(def :this/region (v/and :db/keyword aws-regions))
+           :oauth2-keys])
