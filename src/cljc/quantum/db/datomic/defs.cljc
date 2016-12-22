@@ -8,7 +8,6 @@
                      [quantum.db.datomic          :as db   ]
                      [quantum.db.datomic.core     :as dbc  ]
                      [quantum.db.datomic.schemas  :as dbs  ]
-                     [quantum.db.datomic.entities :as dbe  ]
                      [quantum.db.datomic.fns      :as fns  ])
   #?(:cljs (:require-macros
                      [quantum.core.collections    :as c    ])))
@@ -51,7 +50,7 @@
   (db/transact! (dbc/->partition :db.part/fn  ))
   (db/transact! [(db/conj {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns!))
-  #?(:clj (dbe/transact-schemas!))
+  #?(:clj (dbc/transact-schemas!))
   #_(db/conj! (dbs/->globals {:db/ident :globals*}))
 
   #?(:clj

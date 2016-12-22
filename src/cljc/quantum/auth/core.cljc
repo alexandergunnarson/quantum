@@ -8,11 +8,21 @@
   (:require [#?(:clj  clojure.core
                 :cljs cljs.core   )   :as core]
             [quantum.core.io.core     :as io  ]
-            [quantum.core.collections :as coll]))
+            [quantum.core.collections :as coll]
+            [quantum.core.validate    :as v
+              :refer [validate]]
+            [quantum.core.data.validated
+              :refer [def-validated def-validated-map]]))
 
-; TODO: /assoc/ for file; /update/ for file; overarching syntax
-; https://developer.mozilla.org/docs/Security/Weak_Signature_Algorithm
-; "This site makes use of a SHA-1 Certificate; it's recommended you use certificates with signature algorithms that use hash functions stronger than SHA-1."
+(def-validated-map ^:db? ^:sensitive? ^:no-history? oauth2-keys
+  :req-un [(def :this/redirect-uri  :db/string) ; TODO validate uri?
+           (def :this/client-id     :db/string) ; TODO validate uniquity?
+           (def :this/client-secret :db/string)
+           (def :this/scopes        (v/set-of :db/keyword))]
+  :opt-un [(def :this/access-token
+             :req-un [(def :this/value   :db/string )]
+             :opt-un [(def :this/expires :db/instant)])
+           (def :this/refresh-token :db/string)])
 
 (def auth-source-table
   (atom {:google    "Google"
@@ -30,6 +40,10 @@
          :fin       "Financial"
          :plaid     "Plaid"
          :pinterest "Pinterest"}))
+
+; TODO pluggable auth provider
+; Files are considered deprecated
+; Use DataScript write-to-file instead, or Datomic
 
 (defonce auths (atom {}))
 

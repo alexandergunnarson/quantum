@@ -32,6 +32,38 @@
       :refer [def-validated-map def-validated]])))
 
 ; TODO un-namespaced (req-un) should accept namespaced as well
+; TODO Every entity can have an :db/ident or :db/conforms-to
+; That way if we want to look for all providers we can just do a lookup on :conforms-to
+
+; For database-based validated objects, here is the responsibility of each:
+; Peer/client:
+; - All single/per-attribute validation (unless explicitly assigned to transactor as well)
+; - :conformer (unless explicitly assigned to transactor as well)
+; Transactor
+; - Cross-attribute validation (as defined by :invariant)
+; - Cross-entity validation (as defined by :db-invariant)
+
+; TODO get to this when possible
+
+; ; FOR ENTITIES
+;   (if (or (instance? ~class-name ~args-sym)
+;                     (identifier? ~args-sym)
+;                     (lookup?     ~args-sym)
+;                     (dbfn-call?  ~args-sym))
+;                 ~args-sym
+;                 )
+; ; FOR ATTRIBUTES
+;                 (or (instance? ~class-name ~v-0)
+;                     (and ~(= type :ref) (identifier? ~v-0))
+;                     (lookup?    ~v-0)
+;                     (dbfn-call? ~v-0)
+;                     (nil?       ~v-0))
+;                 ~v-0
+
+;                 (def identifier? (fn-or keyword? integer?
+;                         #?(:clj #(instance? datomic.db.DbId %))))
+
+; (def lookup? (fn-and vector? (fn->  first keyword?)))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
@@ -111,11 +143,12 @@
                                      spec)
                                     :many
                                     :one)
-                  :doc         ~(-> sym meta :doc       )
-                  :component?  ~(-> sym meta :component?)
-                  :index?      ~(-> sym meta :index?    )
-                  :full-text?  ~(-> sym meta :full-text?)
-                  :unique      ~(-> sym meta :unique    )}
+                  :doc         ~(-> sym meta :doc        )
+                  :component?  ~(-> sym meta :component? )
+                  :index?      ~(-> sym meta :index?     )
+                  :full-text?  ~(-> sym meta :full-text? )
+                  :unique      ~(-> sym meta :unique     )
+                  :no-history? ~(-> sym meta :no-history?)}
                  (remove (fn [[k v]] (nil? v)))
                  (into {}))
           (remove (fn [[k# v#]] (nil? v#)))
@@ -138,14 +171,16 @@
 
    Out: {:pre-code <Code to be prepended>
          :spec     <Final spec with inner defs replaced with keywords>}"
-  {:todo #{"handle DB schema caching, metadata, etc."
-           "more clearly handle namespaced keywords"}
+  {:todo #{"handle DB schema caching, schema metadata, etc."
+           "more clearly handle namespaced keywords"
+           "warn when non-inner-defs (normal spec-keys) retain history while
+            the parent sym doesn't"}
    :args-doc '{db-mode?   "Whether in db mode or not"
                kw-context {:doc     "Used for expanding :this/<x> keywords"
                            :example :whatever}
                spec       {:example '{:req [(def :this/numerator   ::a)
                                             (def :this/denominator ::a)]}}}}
-  [spec db-mode? kw-context]
+  [spec parent-sym db-mode? kw-context]
   (validate (-> spec keys set) (fn1 set/subset? #{:req :opt :req-un :opt-un}))
   (let [to-prepend (atom [])
         inner-def? (fn-and seq? (fn-> first (= 'def)))
@@ -158,7 +193,9 @@
                             inner-name (contextualize-keyword inner-name kw-context)
                             inner-name-sym
                               (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents
-                                 (assoc (meta x) :db? db-mode?))
+                                 (assoc (meta x)
+                                   :db?         db-mode?
+                                   :no-history? (-> parent-sym meta :no-history?)))
                             inner-spec (if (-> inner-spec-args count (= 1))
                                            `(def-validated ~inner-name-sym
                                               ~@(contextualize-keywords kw-context inner-spec-args))
@@ -236,29 +273,32 @@
   "Defines a validated associative structure.
    Same semantics of `clojure.spec/keys`.
    Basically a validator on a record."
-  {:usage `(do (def-validated-map MyTypeOfValidatedMap
-                 :invariant #(= 5 (+ (::a %) (::b %)))
-                 :conformer (fn [m] m)
+  {:usage `(do (def-validated-map  ^:db? MyTypeOfValidatedMap
+                 :invariant    #(= 5 (+ (::a %) (::b %)))
+                 :db-invariant ([db m] m)
+                 :conformer    (fn [m] (assoc m ::a 6))
                  :req [::a ::b ::c ::d] :opt [::e])
                (defspec ::a number?) (defspec ::b number?) (defspec ::c number?) (defspec ::d number?)
                (assoc (->MyTypeOfValidatedMap {::a 1 ::b 2 ::c 3 ::d 4}) ::a 3))
    :todo {1 "Break this macro up"
           2 ".assoc may call .conj, in which case it's inefficient with double validation"
           3 "allow transactional manipulation, in which multiple values can be updated at once"
-          4 "incorporate invariant and conformer into schema"}}
-  [sym-0 & {:keys [req opt req-un opt-un invariant conformer] :as spec-0}]
-  (validate (-> spec-0 keys set) (fn1 set/subset? #{:req :opt :req-un :opt-un :invariant :conformer}))
+          4 "incorporate invariant (and conformer?) into schema"
+          5 "add db-invariant into schema and used with `defn!`"}}
+  [sym-0 & {:keys [req opt req-un opt-un invariant db-invariant conformer] :as spec-0}]
+  (validate (-> spec-0 keys set) (fn1 set/subset? #{:req :opt :req-un :opt-un :invariant :db-invariant :conformer}))
   (validate
     sym-0 symbol?
     req (v/or* nil? vector?) req-un (v/or* nil? vector?)
     opt (v/or* nil? vector?) opt-un (v/or* nil? vector?))
   (let [db-mode?   (-> sym-0 meta :db?)
+        _          (when db-invariant (assert db-mode?))
         kw-context (-> sym-0 name keyword)
         {{:keys [req opt req-un opt-un] :as spec} :spec to-prepend :to-prepend}
           (-> spec-0
-              (dissoc :invariant :conformer)
+              (dissoc :invariant :db-invariant :conformer)
               (whenp db-mode? replace-value-types)
-              (extract-inner-defs db-mode? kw-context))
+              (extract-inner-defs sym-0 db-mode? kw-context))
         invariant (contextualize-keywords kw-context invariant)
         conformer (contextualize-keywords kw-context conformer)]
     (validate
@@ -268,29 +308,34 @@
       opt-un                         (v/or* nil? (v/coll-of ns-keyword? :distinct true))
       (concat req opt req-un opt-un) (v/coll-of ns-keyword? :distinct true))
     (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 *ns*)
-          schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4
+          schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4, #5
           qualified-sym        (var/qualify-class sym)
           req-record-sym       (symbol (str (name sym) "__"))
           qualified-record-sym (var/qualify-class req-record-sym)
           un-record-sym        (gensym)
+          all-mod-record-sym   (gensym)
           all-record-sym       (gensym)
           un-ks-to-ks          (gensym)
           other                (gensym "other")
           ns-str               (str (ns-name *ns*))
           required-keys-record (with-meta (gensym "required-keys-record")
                                           {:tag qualified-record-sym})
-          un-keys-record       (gensym "un-keys-record" )
-          all-keys-record      (gensym "all-keys-record")
+          un-keys-record       (gensym "un-keys-record"     )
+          all-mod-keys-record  (gensym "all-mod-keys-record")
+          all-keys-record      (gensym "all-keys-record"    )
           req-un'              (mapv #(keyword (name %)) req-un)
           opt-un'              (mapv #(keyword (name %)) opt-un)
+          special-ks           (when db-mode? #{:schema/type :db/id :db/ident})
           req-ks               (concat req     req-un )
           opt-ks               (concat opt     opt-un )
           un-ks                (concat req-un' opt-un')
           un-ks-qualified      (concat req-un  opt-un )
-          all-ks               (set (concat req opt req-un opt-un))
-          req-ks-syms          (mapv #(symbol (namespace %) (name %)) req-ks)
-          un-ks-syms           (mapv #(symbol               (name %)) un-ks )
-          all-ks-syms          (mapv #(symbol (namespace %) (name %)) all-ks)
+          all-mod-ks           (set (concat req opt req-un opt-un))
+          special-ks-syms      (mapv #(symbol (namespace %) (name %)) special-ks)
+          req-ks-syms          (mapv #(symbol (namespace %) (name %)) req-ks    )
+          un-ks-syms           (mapv #(symbol               (name %)) un-ks     )
+          all-mod-ks-syms      (mapv #(symbol (namespace %) (name %)) all-mod-ks)
+          concatv              #(when-let [v (concat %1 %2)] (vec v))
           keyspec              (vec (remove nil? [(when req    :req   ) req
                                                   (when opt    :opt   ) opt
                                                   (when req-un :req-un) req-un
@@ -300,24 +345,40 @@
           spec-sym             (gensym "keyspec")
           type-hash            (hash-classname sym)
           k-gen                (gensym "k")
-          v-gen                (gensym "v")]
-     (prl ::debug invariant conformer req-ks un-ks all-ks to-prepend)
+          v-gen                (gensym "v")
+          create               (gensym "create")]
+     (prl ::debug invariant conformer req-ks un-ks all-mod-ks to-prepend)
      (let [code `(do (declare-spec ~sym-0)
           ~@to-prepend
-          (defrecord+ ~req-record-sym ~req-ks-syms)
-          (defrecord+ ~un-record-sym  ~un-ks-syms )
-          (defrecord+ ~all-record-sym ~all-ks-syms)
+          (defrecord+ ~req-record-sym     ~(into req-ks-syms     special-ks-syms))
+          (defrecord+ ~un-record-sym      ~un-ks-syms )
+          (defrecord+ ~all-mod-record-sym ~all-mod-ks-syms)
+          (defrecord+ ~all-record-sym     ~(into all-mod-ks-syms special-ks-syms))
           (defspec ~spec-name ~(if invariant
                                    `(v/and (v/keys ~@keyspec) ~invariant)
                                    `(v/keys ~@keyspec)))
           ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
           ~(when invariant `(defspec ~invariant-spec-name ~invariant))
           ~(when conformer `(def ~conformer-sym ~conformer))
-          (def ~required-keys-record (~(symbol (str "map->" req-record-sym)) ~(zipmap req-ks req-ks)))
-          (def ~un-keys-record       (~(symbol (str "map->" un-record-sym )) ~(zipmap un-ks  un-ks )))
-          (def ~all-keys-record      (~(symbol (str "map->" all-record-sym)) ~(zipmap all-ks all-ks)))
+          (def ~required-keys-record (~(symbol (str "map->" req-record-sym    )) ~(merge (zipmap req-ks     req-ks    ) (zipmap special-ks special-ks))))
+          (def ~un-keys-record       (~(symbol (str "map->" un-record-sym     )) ~(zipmap un-ks      un-ks)))
+          (def ~all-mod-keys-record  (~(symbol (str "map->" all-mod-record-sym)) ~(zipmap all-mod-ks all-mod-ks)))
+          (def ~all-keys-record      (~(symbol (str "map->" all-record-sym    )) ~(merge (zipmap all-mod-ks all-mod-ks) (zipmap special-ks special-ks))))
           (def ~un-ks-to-ks          ~(zipmap un-ks un-ks-qualified))
           (def ~spec-sym             ~keyspec)
+          (defn ~create [m#]
+            (if (instance? ~qualified-record-sym m#)
+                m#
+                (~(symbol (str "map->" req-record-sym))
+                  (let [m# (-> m#
+                               ~(if-not db-mode?  `identity* `(assoc :schema/type ~spec-name))
+                               ~(if-not conformer `identity* conformer-sym)
+                               (v/validate ~spec-name)
+                               (set/rename-keys ~un-ks-to-ks))
+                        _# (v/validate (:db/id    m#) (v/or* nil? :db/id   ))
+                        _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
+                    (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
+                    m#))))
           (deftype-compatible ~sym
             [~(with-meta 'v {:tag req-record-sym})]
             {~'?Seqable
@@ -333,8 +394,8 @@
                 ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'v))
                 ~'equals      ~(std-equals sym other (if-cljs &env '-equiv '.equiv))
                 ~'conj        ([_# [k0# v0#]]
-                                (let [~k-gen (or (get ~all-keys-record k0#)
-                                                 (get ~un-ks-to-ks     k0#)
+                                (let [~k-gen (or (get ~all-mod-keys-record k0#)
+                                                 (get ~un-ks-to-ks         k0#)
                                                  (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
@@ -342,8 +403,8 @@
                                       ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))}
              ~'?Associative
                {~'assoc       ([_# k0# v0#]
-                                (let [~k-gen (or (get ~all-keys-record k0#)
-                                                 (get ~un-ks-to-ks     k0#)
+                                (let [~k-gen (or (get ~all-mod-keys-record k0#)
+                                                 (get ~un-ks-to-ks         k0#)
                                                  (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
@@ -399,20 +460,11 @@
                {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
              quantum.core.core/IValue
                {~'get         ([_#] ~'v)
-                ~'set         ([_# v#] (new ~sym (v/validate v# ~spec-name)))}})
-          (defn ~(symbol (str "->" sym)) [m#]
-            (let [m-f# (if (instance? ~qualified-record-sym m#)
-                           m# ; no coercion needed
-                           (~(symbol (str "map->" req-record-sym))
-                            (-> m#
-                                ~(if-not conformer `identity* conformer-sym)
-                                (v/validate ~spec-name)
-                                (set/rename-keys ~un-ks-to-ks))))]
-              (new ~qualified-sym m-f#)))
+                ~'set         ([_# v#] (new ~sym (~create v#)))}})
+          (defn ~(symbol (str "->" sym)) [m#] (new ~qualified-sym (~create m#)))
           ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
      (prl ::debug code)
      code)))))
 
 ; TODO validated vector, set, and (maybe) list
 ; Not sure what else might be useful to create a validated wrapper for... I mean, queues I guess
-

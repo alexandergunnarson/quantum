@@ -9,7 +9,7 @@
     [quantum.core.collections      :as coll
       :refer [lasti map+ partition-all+ join reduce unique-conj]]
     [quantum.core.error            :as err
-      :refer [->ex TODO]]
+      :refer [->ex TODO catch-all]]
     [quantum.core.fn               :as fn
       :refer [fn->]]
     [quantum.core.log              :as log
@@ -172,11 +172,11 @@
   (->> x :content (map+ parse-plist) (join [])))
 
 (defmethod parse-plist :data [x]
-  (try
+  (catch-all
     (->> x first-content (crypto/decode :base64))
-    (catch Throwable e
-      (when-not (contains? *skip-unparseable* :data)
-        (throw e)))))
+    e
+    (when-not (contains? *skip-unparseable* :data)
+      (throw e))))
 
 (defmethod parse-plist :date [x]
   (-> x first-content time/->zoned-date-time))

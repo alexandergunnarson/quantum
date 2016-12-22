@@ -177,6 +177,7 @@
               resp)))
 
 ; TODO this is a hotfix for a particular version of anti-forgery
+; It allows for a whitelist of endpoints even when anti-forgery validation fails
 (in-ns 'ring.middleware.anti-forgery)
 
 (defn wrap-anti-forgery

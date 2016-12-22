@@ -8,6 +8,7 @@
              #?(:clj [debugger.core                     ])
              #?(:clj [clj-stacktrace.repl      :as trace])
              #?(:clj [fipp.edn                          ])
+                     [taoensso.timbre          :as timbre]
                      [quantum.core.core        :as qcore]
                      [quantum.core.vars        :as var
                        :refer [#?(:clj defalias)]       ])
@@ -38,33 +39,10 @@
 
 #?(:clj (defonce pretty-printer (atom fipp.edn/pprint)))
 
-#?(:clj
-(defn trace-on [on color? e]
-  "Prints to the given Writer on a pretty stack trace for e which can be an exception
-  or already parsed exception (clj-stacktrace.core/parse-exception).
-  ANSI colored if color? is true."
-  {:modified-from 'clj-stacktrace.repl/pst-on}
-  (let [exec (if (instance? Throwable e)
-                 (clj-stacktrace.core/parse-exception e)
-                 e)
-        source-width (trace/find-source-width exec)]
-    (@#'trace/pst-class-on on color? (:class exec))
-    (@#'trace/pst-message-on on color? (:message exec))
-    (when (instance? clojure.lang.ExceptionInfo e)
-      (println "Data:")
-      (@pretty-printer (ex-data e)))
-    (println "Trace:")
-    (@#'trace/pst-elems-on on color? (:trace-elems exec) source-width)
-    (if-let [cause (:cause exec)]
-      (@#'trace/pst-cause-on on color? cause source-width)))))
-
-; TODO port to CLJS
-#?(:clj
 (defn trace
   "Print to *out* a pretty stack trace for a (parsed) exception, by default *e."
-  {:from 'clj-stacktrace.repl/pst}
   [& [e]]
-  (trace-on *out* false (or e *e))))
+  (taoensso.timbre/error (or e *e)))
 
 #?(:clj
 (def default-exception-handler

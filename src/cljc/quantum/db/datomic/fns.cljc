@@ -1,6 +1,6 @@
 (ns quantum.db.datomic.fns
   (:require [quantum.db.datomic.core :as db
-              :refer [#?(:clj defn!)]      ]))
+              :refer [#?(:clj defn!)]]))
 
 #?(:clj
 (defn define-std-db-fns!
@@ -9,17 +9,16 @@
 
   (db/transact! (db/->partition :db.part/fn))
 
-  (defn! q      [[datomic.api :as api]] [db query] (api/q query db))
-  (defn! fq     [[datomic.api :as api]] [db query] (ffirst (api/q query db)))
-  (defn! first  []                      [db coll ] (first  coll))
-  (defn! ffirst []                      [db coll ] (ffirst coll))
-  (defn! nil?   []                      [db expr ] (nil? expr))
-  (defn! nnil?  []                      [db expr ] (not (nil? expr)))
+  (defn! q      [db query] (api/q query db))
+  (defn! fq     [db query] (ffirst (api/q query db)))
+  (defn! first  [db coll ] (first  coll))
+  (defn! ffirst [db coll ] (ffirst coll))
+  (defn! nil?   [db expr ] (nil? expr))
+  (defn! nnil?  [db expr ] (not (nil? expr)))
 
   ; MACROS
 
   (defn! apply-or
-    [[datomic.api :as api]]
     ^{:macro? true
       :doc "Variadic |or|."}
     [db args]
@@ -29,7 +28,6 @@
         (recur (rest args-n)))))
 
   (defn! or
-    [[datomic.api :as api]]
     ^{:macro? true
       :doc "2-arity |or|."}
     [db alt0 alt1]
@@ -40,7 +38,6 @@
     ^{:macro? true
       :doc    "|eval|s @expr. If the result satisifies @pred, returns @expr.
                Otherwise, throws an assertion error."}
-    [[datomic.api :as api]]
     [db pred expr]
     (let [expr-eval (api/invoke db :fn/eval db expr)]
       (if (api/invoke db pred db expr-eval)
@@ -48,23 +45,20 @@
           (throw (ex-info (str "Assertion not met: " pred)
                    {:pred pred :expr expr :expr-eval expr-eval})))))
 
-  (defn! throw [] [db expr] (throw (Exception. expr)))
+  (defn! throw [db expr] (throw (Exception. expr)))
 
   (defn! when
-    []
     [db pred then]
     (when (datomic.api/invoke db :fn/eval db pred)
           (datomic.api/invoke db :fn/eval db then)))
 
   (defn! if
-    []
     [db pred then else]
     (if (datomic.api/invoke db :fn/eval db pred)
         (datomic.api/invoke db :fn/eval db then)
         (datomic.api/invoke db :fn/eval db else)))
 
   (defn! apply-or
-    [[datomic.api :as api]]
     ^{:macro? true
       :doc "Variadic |or|."}
     [db args]
@@ -74,7 +68,6 @@
         (recur (rest args-n)))))
 
   (defn! or
-    [[datomic.api :as api]]
     ^{:macro? true
       :doc "2-arity |or|."}
     [db alt0 alt1]
@@ -82,7 +75,6 @@
         (api/invoke db :fn/eval db alt1)))
 
   (defn! lookup
-    [[datomic.api :as api]]
     [db a v]
     (ffirst
       (api/q '[:find  ?e
@@ -91,7 +83,6 @@
         db a v)))
 
   (defn! lookup-nnil
-    [[datomic.api :as api]]
     [db a v]
     (api/invoke db :fn/eval db
       `(:fn/validate :fn/nnil?
@@ -114,7 +105,7 @@
                   (apply datomic.api/invoke db f db args)
                   (apply datomic.api/invoke db f db
                     (mapv db-eval args)))) ; args are evaluated in order unless is a macro
-            
+
             (instance? clojure.lang.IMapEntry expr) (vec (map db-eval expr))
             (seq? expr) (doall (map db-eval expr))
             (instance? clojure.lang.IRecord expr)
@@ -125,7 +116,6 @@
             expr)))
 
   (defn! fail-when-found
-    [[datomic.api :as api]]
     [db query err-msg else]
     (let [result (api/q query db)]
       (if (not (empty? result))
@@ -136,13 +126,11 @@
           (api/invoke db :fn/eval db else))))
 
   (defn! skip-when-found
-    [[datomic.api :as api]]
     [db query else]
     (when (empty? (api/q query db))
       (api/invoke db :fn/eval db else)))
 
   (defn! skip-when-lookup
-    [[datomic.api :as api]]
     [db attr-val else]
     (if (empty? (apply api/q '[:find [?e]
                                :in $ ?a ?v
@@ -152,7 +140,6 @@
         {:db/id :dummy})) ; can't transact nil
 
   (defn! ct-within-tolerance?
-    []
     [db w1 w2 tolerance]
     (let [abs #(if (pos? %) % (- %))]
       (<= (abs
@@ -161,7 +148,6 @@
           tolerance)))
 
   (defn! get-if
-    [[datomic.api :as api]]
     ^{:usage `(get-if db
                 :word:text <?text>
                 :word:in-dictionary? false
@@ -214,12 +200,11 @@
          vector))
 
   (defn! retract-except
-    [[datomic.api]]
     ^{:doc "This will work for cardinality-many attributes as well as
             cardinality-one.
-          
+
             To make sure Alex loves pizza and ice cream but nothing else
-            that might or might not have asserted earlier: 
+            that might or might not have asserted earlier:
 
             [[:assertWithRetracts :alex :loves [:pizza :ice-cream]]]
 
@@ -235,7 +220,7 @@
             change to an enum entity ref."
       :usage '(db/transact!
                 [[:fn/retract-except 466192930238332 :twitter/user.followers []]])
-      :from "https://groups.google.com/forum/#!msg/datomic/MgsbeFzBilQ/s8Ze4JPKG6YJ"} 
+      :from "https://groups.google.com/forum/#!msg/datomic/MgsbeFzBilQ/s8Ze4JPKG6YJ"}
     [db e a vs]
     (vals (into (->> (datomic.api/q [:find '?v :where [e a '?v]] db)
                      (map (comp #(vector % [:db/retract e a %]) first))
@@ -245,7 +230,6 @@
                      (join {})))))
 
   (defn! ->fn
-    [[datomic.api :as api]]
     [db ident]
     (->> (api/q '[:find ?e
                   :in   $ ?ident

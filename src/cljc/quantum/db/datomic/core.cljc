@@ -14,6 +14,8 @@
       :refer [join for kmap
               filter-vals+ remove-vals+ map+ remove+
               group-by+ postwalk merge-deep dissoc-in+]]
+    [quantum.core.core          :as qcore
+      :refer [name+]]
     [quantum.core.error         :as err
       :refer [->ex]]
     [quantum.core.fn            :as fn
@@ -29,7 +31,7 @@
       :refer [#?@(:clj [float? double? bigint?]) atom? boolean? bytes?]]
     [quantum.core.vars          :as var
       :refer [defalias]]
-    [quantum.core.data.validated
+    [quantum.core.data.validated :as dv
       :refer [def-validated def-validated-map]]
     [quantum.core.validate      :as v
       :refer [validate defspec]])
@@ -119,10 +121,11 @@
           db-new  (->db conn*-f)]
       (if (= db*-f db-new) db*-f (reset! db* db-new))))
   ([arg]
-    (cond (mconn? arg)
-            @arg
- #?@(:clj [(conn? arg)
-           (db/db arg)])
+    (cond
+ #?@(:clj [(db?    arg) arg])
+           (mdb?   arg) arg
+           (mconn? arg) @arg
+ #?@(:clj [(conn?  arg) (db/db arg)])
           :else
             (throw (->ex nil "Object cannot be transformed into database" arg)))))
 
@@ -259,6 +262,8 @@
 ; :uuid    (fn$ instance? db/SQUUID)
 (def-validated -schema  (constantly true)) ; TODO not correct but whatever
 (def-validated -any     (constantly true))
+(v/defspec :db/id    integer?) ; TODO check these
+(v/defspec :db/ident keyword?) ; TODO check these
 (def-validated -keyword keyword?)
 (def-validated -string  string?)
 (def-validated -boolean (fn1 boolean?))
@@ -275,7 +280,7 @@
 (def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
                            :cljs number?)) ; TODO CLJS |bigdec?|
 (def-validated -instant (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )))
-(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs nil #_paths/URI)))
+(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI)))
 (def-validated -bytes   (fn1 bytes?))
 
 ; ===== QUERIES =====
@@ -347,6 +352,7 @@
            (def :datomic:schema/component?  (fn1 boolean?))
            (def :datomic:schema/index?      (fn1 boolean?))
            (def :datomic:schema/full-text?  (fn1 boolean?))
+           (def :datomic:schema/no-history? (fn1 boolean?))
            (def :datomic:schema/unique      #{:identity :value})])
 
 ; TODO for datascript:
@@ -365,21 +371,28 @@
           conn-f      (or conn @conn*)
           datascript? (or datascript? (mconn? conn-f))
           part-f      (when-not datascript?
-                        (or part :db.part/db))]
+                        (or part :db.part/db))
+          type        (name  (:datomic:schema/type   schema))
+          unique      (name+ (:datomic:schema/unique schema))]
       ; Partitions are not supported in DataScript (yet)
       (when datascript? (validate part-f nnil?))
+       (log/prl :user schema-0 schema)
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
                                      (tempid part-f))
             :db/ident              (:datomic:schema/ident schema)
-            :db/valueType          (c/keyword "db.type"        (name (:datomic:schema/type        schema)))
+            :db/valueType          (c/keyword "db.type"        type)
             :db/cardinality        (c/keyword "db.cardinality" (name (:datomic:schema/cardinality schema)))
             :db/doc                (:datomic:schema/doc        schema)
-            :db/fulltext           (:datomic:schema/full-text? schema)
-            :db/unique             (when-let [unique (:datomic:schema/unique schema)]
-                                     (c/keyword "db.unique" (name unique)))
-            :db/isComponent        (:datomic:schema/component? schema)
+            :db/fulltext           (when-let [v (:datomic:schema/full-text? schema)]
+                                     (validate type (fn1 = "string")) v)
+            :db/unique             (when unique
+                                     (validate type (fn1 not= "ref"))
+                                     (c/keyword "db.unique" unique))
+            :db/isComponent        (when-let [v (:datomic:schema/component? schema)]
+                                     (validate type (fn1 = "ref")) v)
             :db/index              (:datomic:schema/index?     schema)
-            :db.install/_attribute part-f}
+            :db.install/_attribute part-f
+            :db/noHistory          (:datomic:schema/no-history? schema)}
            (filter-vals+ nnil?)
            (join {})
            (#(if (and datascript? ; DataScript only allows ref value-types
@@ -465,23 +478,23 @@
      (:fn/fq ~query)
      ~(tempid))))
 
-(def attribute?
-  (fn-and (fn1 coll/containsk? :v)
-          (fn-> count (= 1))))
+(def attribute? #(-> @dv/db-schemas (get :type) ))
 
 (def dbfn-call? (fn-and seq?
                         (fn-> first keyword?)
                         (fn-> first namespace (= "fn"))))
 
 (defn transform-validated [x]
-  (postwalk
-    (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
-                                             (fn-not dbfn?  ))))
-      (ifn1 attribute?
-            :v
-            (fn->> (remove-vals+ nil?)
-                   (join {}))))
-    x))
+  (let [value-type #(-> @dv/db-schemas (get (:type %)) :db/valueType)]
+    (postwalk
+      (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
+                                              (fn-not dbfn?  ))))
+        #(case (value-type %)
+           :db.type/ref (->> % qcore/get (remove-vals+ nil?)
+                                         (join {}))
+           nil (throw (->ex nil "Object's schema not found in registry" {:object %}))
+           (qcore/get %)))
+      x)))
 
 (defn validated->txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction component.
@@ -667,13 +680,21 @@
 (defmacro dbfn
   "Used for defining, but not transacting, a database function.
 
-   Is not supported by DataScript."
-  [requires arglist & body]
-  `(db/function
-     '{:lang     :clojure
-       :params   ~arglist
-       :requires ~requires
-       :code     (do ~@body)})))
+   Is not supported by DataScript (is Datomic specific)."
+  [& args]
+  (let [[prelists body] [(take-while vector? args) (drop-while vector? args)]
+        [requires imports arglist]
+         (case (count prelists)
+           1 [[] [] (get prelists 0)]
+           2 [(get prelists 0) [] (get prelists 1)]
+           3 prelists
+           (throw (->ex nil "More vectors than [requires, imports, arglist] found for dbfn" (kmap args))))]
+    `(db/function
+       '{:lang     :clojure
+         :requires ~(into ['[datomic.api :as api]] requires)
+         :imports  ~imports
+         :params   ~arglist
+         :code     (do ~@body)}))))
 
 #?(:clj
 (defmacro defn!
@@ -681,12 +702,11 @@
 
    Is not supported by DataScript."
   {:usage '(defn! inc [n] (inc n))}
-  [sym requires arglist & body]
+  [sym & args]
   `(transact!
      [(conj @conn* :db.part/fn true
         {:db/ident (c/keyword "fn" (name '~sym))
-         :db/fn
-           (dbfn ~requires ~arglist ~@body)})])))
+         :db/fn    (dbfn ~@args)})])))
 
 #?(:clj
 (defn entity-history [e]
@@ -1315,6 +1335,13 @@
              (assoc :successful? false))
          ; Throws if there was a different problem unrelated to the expected exception constraint
          (throw e))))))
+
+#?(:clj
+(defn transact-schemas!
+  "Clojure only because schemas can only be added upon creation of the DataScript
+   connection; they cannot be transacted."
+  []
+  (-> @dv/db-schemas transact!)))
 
 ; (defn changes-affecting
 ;   {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"

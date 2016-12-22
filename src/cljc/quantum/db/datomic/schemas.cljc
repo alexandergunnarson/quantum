@@ -3,8 +3,6 @@
    after the fact."
   (:refer-clojure :exclude [type agent ref])
   (:require
-    [quantum.db.datomic.entities
-      :refer [defunit schemas attributes]]
     [quantum.core.fn                :as fn
       :refer [fn1]]
     [quantum.core.log               :as log]

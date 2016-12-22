@@ -29,6 +29,8 @@
 
 (declare put!)
 
+; ===== DEFAULT HANDLERS ===== ;
+
 #?(:clj
 (defmethod event-msg-handler :default ; Fallback
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
@@ -55,6 +57,8 @@
   [ev-msg]
   ; Do nothing
   ))
+
+; ===== `PUT!` ===== ;
 
 (defn put!
   "Sends a message @msg across via a WebSocket connection."

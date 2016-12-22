@@ -9,15 +9,12 @@
   (:require
     [quantum.core.core        :as qcore]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [fn-> fn->>])]
-      :refer-macros [          fn-> fn->>]]
+      :refer [fn-> fn->>]]
     [quantum.core.logic       :as logic
-      :refer        [#?@(:clj [condf])]
-      :refer-macros [          condf]]
+      :refer [condf]]
     [quantum.core.data.vector :as vec]  ; To work around CLJS non-spliceability of Tuples
     [quantum.core.vars        :as var
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]
+      :refer [defalias]]
     [quantum.core.meta.debug  :as debug]
 #?(:clj [clojure.core.matrix.impl.pprint :as mpprint])
 #?(:clj
@@ -27,7 +24,7 @@
       :include-macros true])))
 
 (defonce ^{:doc "A set of classes not to print"}
-  blacklist  (atom #{}))
+  blacklist (atom #{}))
 
 (defalias js-println qcore/js-println)
 
@@ -39,10 +36,8 @@
   ([] (println))
   ([obj]
     (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
-      (if #?(:clj  (instance? Throwable obj)
-             :cljs false)
-          #?(:clj  (debug/trace obj)
-             :cljs false)
+      (if (instance? #?(:clj Throwable :cljs js/Error) obj)
+          (debug/trace obj)
           (do
             (cond
               (and (string? obj) (> (count obj) *print-length*))

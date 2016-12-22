@@ -26,7 +26,7 @@
   {:from 'taoensso.truss.impl/catching
    :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
   ; TODO js/Error instead of :default as temp workaround for http://goo.gl/UW7773
-  ([try-expr                     ] `(catching ~try-expr ~'_ nil))
+  ([try-expr                     ] `(catch-all ~try-expr ~'_ nil))
   ([try-expr error-sym catch-expr]
    `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
   ([try-expr error-sym catch-expr finally-expr]
