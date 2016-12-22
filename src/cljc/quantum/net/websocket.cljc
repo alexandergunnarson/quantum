@@ -21,7 +21,7 @@
     #?(:clj [quantum.net.server.router               :as router])))
 
 (defmulti event-msg-handler :id) ; Dispatch on event-id
-(def send-msg! (lens res/systems (fn-> :global :sys-map deref* :connection :send-fn)))
+(def send-msg! (lens res/systems (fn-> :global :sys-map deref* ::connection :send-fn)))
 
 ; Wrap for logging, catching, etc.:
 (defn event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
@@ -110,17 +110,16 @@
             current browsers is RFC 6455 (supported by Firefox 11+, Chrome 16+,
             Safari 6, Opera 12.50, and IE10). Don't use previous versions."]}
   ChannelSocket
-  [endpoint host chan chan-recv send-fn chan-state type packer
+  [endpoint host #?(:cljs port) chan chan-recv send-fn chan-state type packer
    stop-fn post-fn get-fn msg-handler
-   connected-uids
-   #?@(:cljs [port])]
+   connected-uids]
   component/Lifecycle
     (start [this]
       (let [stop-fn-f (atom (fn []))
             server    (:quantum.net.http/server this)
             endpoint  (or endpoint "/chan")]
         (try
-          (log/pr ::debug "Starting channel-socket with:" this)
+          (log/prl ::debug "Starting channel-socket with:" endpoint host #?(:cljs port) type packer connected-uids)
           (validate endpoint    string?)
           (validate msg-handler fn?)
           (validate type        (v/or* nil? #{:auto :ajax :ws}))

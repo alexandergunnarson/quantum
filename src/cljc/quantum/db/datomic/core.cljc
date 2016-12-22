@@ -330,7 +330,7 @@
   ([conn part]
     (if (mconn? conn)
         (throw (partitions-ex))
-        (let [id (tempid conn :db.part/db)]
+        (let [id (tempid (->db conn) :db.part/db)]
           [{:db/id    id
             :db/ident part}
            [:db/add :db.part/db
@@ -635,7 +635,7 @@
   ([db part no-transform? x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
                   (whenf (fn-not dbfn-call?)
-                    (fn1 coll/assoc-when-none :db/id (tempid db part))))]
+                    (fn1 coll/assoc-when-none :db/id (tempid (->db db) part))))]
       (if no-transform? txn (wrap-transform txn)))))
 
 (defn conj!
