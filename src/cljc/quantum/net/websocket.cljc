@@ -20,19 +20,19 @@
             [quantum.core.resources                  :as res]
     #?(:clj [quantum.net.server.router               :as router])))
 
-(defmulti event-msg-handler :id) ; Dispatch on event-id
+(defmulti handle :id) ; Dispatch on event-id
 (def send-msg! (lens res/systems (fn-> :global :sys-map deref* ::connection :send-fn)))
 
 ; Wrap for logging, catching, etc.:
-(defn event-msg-handler* [{:as ev-msg :keys [id ?data event]}]
-  (event-msg-handler ev-msg))
+(defn handle* [{:as ev-msg :keys [id ?data event]}]
+  (handle ev-msg))
 
 (declare put!)
 
 ; ===== DEFAULT HANDLERS ===== ;
 
 #?(:clj
-(defmethod event-msg-handler :default ; Fallback
+(defmethod handle :default ; Fallback
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
         uid     (:uid     session)]
@@ -43,17 +43,17 @@
       (?reply-fn {:unhandled-event event})))))
 
 #?(:clj
-(defmethod event-msg-handler :chsk/uidport-open
+(defmethod handle :chsk/uidport-open
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (log/pr :debug "uidport-open")))
 
 #?(:clj
-(defmethod event-msg-handler :chsk/uidport-close
+(defmethod handle :chsk/uidport-close
   [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
   (log/pr :debug "uidport-close")))
 
 #?(:clj
-(defmethod event-msg-handler :chsk/ws-ping
+(defmethod handle :chsk/ws-ping
   [ev-msg]
   ; Do nothing
   ))
@@ -103,30 +103,31 @@
           Creates a Sente WebSocket channel and Sente WebSocket channel
           message router.
 
-          @chan-recv  : ChannelSocket's receive channel
+          @chan-recv  : ChannelSocket's handle channel
           @chan-send! : ChannelSocket's send API fn
           @chan-state : Watchable, read-only atom
           @packer     : Client<->server serialization format"
     :usage '(map->ChannelSocket {:uri         "/chan"
                                  :packer      :edn
-                                 :msg-handler my-msg-handler})
+                                 :handler     my-msg-handler})
     :todo ["The recommended version supported in latest versions of all
             current browsers is RFC 6455 (supported by Firefox 11+, Chrome 16+,
             Safari 6, Opera 12.50, and IE10). Don't use previous versions."]}
   ChannelSocket
   [endpoint host #?(:cljs port) chan chan-recv send-fn chan-state type packer
-   stop-fn post-fn get-fn msg-handler
+   stop-fn post-fn get-fn handler
    connected-uids]
   component/Lifecycle
     (start [this]
       (let [stop-fn-f (atom (fn []))
             server    (:quantum.net.http/server this)
-            endpoint  (or endpoint "/chan")]
+            endpoint  (or endpoint "/chan")
+            handler   (or handler  #'handle*)]
         (try
           (log/prl ::debug "Starting channel-socket with:" endpoint host #?(:cljs port) type packer connected-uids)
-          (validate endpoint    string?)
-          (validate msg-handler fn?)
-          (validate type        (v/or* nil? #{:auto :ajax :ws}))
+          (validate endpoint string?)
+          (validate handler  (v/or* fn?  (v/and var? (fn-> deref fn?))))
+          (validate type     (v/or* nil? #{:auto :ajax :ws}))
           #?(:clj  (do (validate server nnil?)
                        (validate (:type server) #{:aleph :immutant}))
              :cljs (do (validate host string?) ; technically, valid hostname
@@ -143,7 +144,7 @@
                    {:type   (or type :auto)
                     :packer packer
          #?@(:cljs [:host   (str host ":" port)])})
-                _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv msg-handler))
+                _ (reset! stop-fn-f (ws/start-chsk-router! ch-recv handler))
                 this' (assoc this
                         :chan           chsk
                         :chan-recv      ch-recv
