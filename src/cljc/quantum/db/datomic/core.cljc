@@ -3,7 +3,7 @@
   quantum.db.datomic.core
   (:refer-clojure :exclude
     [assoc assoc! dissoc dissoc! conj conj! disj disj!
-     update merge if-let for float? double?])
+     update merge if-let for float? double? doseq])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -11,19 +11,19 @@
     [datascript.core            :as mdb]
     [com.stuartsierra.component :as component]
     [quantum.core.collections   :as coll
-      :refer [join for kmap
-              filter-vals+ remove-vals+ map+ remove+
-              group-by+ postwalk merge-deep dissoc-in+]]
+      :refer [join for kmap nnil? nempty?
+              filter-vals+ remove-vals+ map+ remove+ remove'
+              group-by+ postwalk merge-deep dissoc-in+ doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
+    [quantum.core.data.set      :as set]
     [quantum.core.error         :as err
-      :refer [->ex]]
+      :refer [->ex TODO]]
     [quantum.core.fn            :as fn
       :refer [<- fn-> fn->> fn1 fn$ rfn]]
     [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
-      :refer [fn-not fn-and fn-or whenf
-              whenf1 ifn ifn1 if-let nnil? nempty?]]
+      :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let]]
     [quantum.core.print         :as pr]
     [quantum.core.resources     :as res]
     [quantum.core.process       :as proc]
@@ -399,24 +399,77 @@
                  (c/dissoc % :db/valueType)
                  %))))))
 
+(defn ensure-schema-changes-valid!
+  "For DataScript db.
+   Will not change any user data as a result of schema alteration.
+   Assumes EAVT-indexed datoms."
+  {:performance "At least O(d•s), where d = # datoms and s = # schemas to be changed"
+   :todo {0 "[:index true] -> [:index false] needs to take effect"
+          1 ":many -> :one needs to be validated but allowed"
+          2 "non-unique -> unique needs to be validated but allowed"}}
+  [schemas schemas' datoms]
+  (let [deleted       (set/differencel (-> schemas keys set) (-> schemas' keys set))
+        changed+added (->> schemas' (remove' (rfn [k v] (= (get schemas k) v))))
+        illegal-schema-change
+          (fn [k v v'] (throw (->ex nil "Illegal schema change attempted" (kmap k v v'))))
+        unclear-validation
+          (fn [k v v'] (log/pr ::warn "Unclear whether DataScript will validate" k v "->" v'))]
+    ; Ensure that no datoms are affected by deleted schemas
+    (doseq [schema-name schema deleted]
+      (doseq [[_ a _ _] datoms]
+        (validate a #(not= % schema-name))))
+    ; Ensure changed and added schemas are valid
+    (doseq [schema-name' schema' changed+added]
+      (let [schema (get schemas schema-name')]
+        (doseq [k v' schema']
+          (let [v (get schema k)]
+            (case k
+              :db/cardinality
+              (when (= [v v'] [:db.cardinality/many :db.cardinality/one])
+                (illegal-schema-change)) ; TODO 1
+              :db/index
+              (when (and (true? v) (not v'))
+                (log/pr ::warn "Unindexing" k "won't take effect in previous datoms")) ; TODO 0
+              :db/valueType
+              (cond (and schema (not= v v'))
+                    (illegal-schema-change)
+                    (not schema)
+                    (unclear-validation))
+              :db/unique
+              (cond
+                (and (not v) v)
+                (illegal-schema-change) ; TODO 2
+                (= [v v'] [:db.unique/value :db.unique/identity])
+                (unclear-validation)
+                (= [v v'] [:db.unique/identity :db.unique/value])
+                (unclear-validation))
+              :db/isComponent
+              (TODO)
+              ; Doesn't validate other schema changes
+              )))))))
+
 (defn update-schemas
-  {:see-also "metasoarous/datsync.client"}
+  "For DataScript db"
+  {:see-also #{"metasoarous/datsync.client"
+               "http://docs.datomic.com/schema.html#Schema-Alteration"}}
   ([f] (update-schemas (->db)))
   ([x f]
-    (let [for-mdb (fn [mdb]
-                    (validate mdb mdb?)
-                    (let [schemas (f (:schema mdb))]
-                      (log/pr ::debug (kmap schemas))
-                      (-> (mdb/init-db
-                            (mdb/datoms mdb :eavt)
-                            schemas)
-                          (mdb/db-with
-                            [{:db/ident  :type  }
-                             {:db/ident  :schema}])
-                          (mdb/db-with
-                            (for [schema (keys schemas)]
-                              {:db/ident schema
-                               :type     [:db/ident :schema]})))))]
+    (let [for-mdb
+           (fn [mdb]
+             (validate mdb mdb?)
+             (let [schemas  (:schema mdb)
+                   schemas' (f schemas)
+                   datoms   (mdb/datoms mdb :eavt)]
+               (log/prl ::debug schemas schemas')
+               (ensure-schema-changes-valid! schemas schemas' datoms)
+               (-> (mdb/init-db datoms schemas')
+                   (mdb/db-with
+                     [{:db/ident  :type  }
+                      {:db/ident  :schema}])
+                   (mdb/db-with
+                     (for [schema (keys schemas')]
+                       {:db/ident schema
+                        :type     [:db/ident :schema]})))))]
       (cond (mdb? x)
             (for-mdb x)
             (mconn? x)
