@@ -148,7 +148,7 @@
        [datascript-transit                      "0.2.0"
          :exclusions [com.cognitect/transit-cljs]                 ]
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ]
-       [posh                                    "0.3.5"           ]
+       [posh                                    "0.5.5"           ]
        [quantum/datsync                         "0.0.1-4-11-2016"
          :exclusions [org.slf4j/slf4j-nop
                       org.clojure/core.match
@@ -245,8 +245,7 @@
      ; PDF
      [org.apache.pdfbox/pdfbox                  "2.0.3"           ]
      ; AUDIO
-     ; [net.sourceforge.jvstwrapper/jVSTwRapper "0.9g"            ] ; Creating audio plugin
-     ; [net.sourceforge.jvstwrapper/jVSTsYstem  "0.9g"            ] ; Creating audio plugin
+     [uk.co.xfactory-librarians/coremidi4j      "0.9"             ] ; Improved MIDI
      ; TESTING
      [org.clojure/test.generative               "0.5.2"           ]
      [org.clojure/test.check                    "0.9.0"           ]
