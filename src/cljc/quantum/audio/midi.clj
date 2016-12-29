@@ -470,7 +470,7 @@
                 args (concat args [midi-timestamp])
                 std-op  (fn [f]
                           (if scheduler-type
-                              (schedule! scheduler at-f (log-error #(apply f chan args)))
+                              (sched/schedule! scheduler at-f (log-error #(apply f chan args)))
                               (apply f chan args)))]
             (case opcode :on   (std-op on!)
                          :off  (std-op off!)
@@ -481,7 +481,7 @@
                                  (swap! at update i-line (fn [x] (+ (or x start-time) offset))))))))) ; wait?
     ; No more things allowed to be scheduled
     ; Wait for everything to play
-    (when scheduler-type (await-termination! scheduler))
+    (when scheduler-type (sched/await-termination! scheduler))
     (log/pr ::debug "Terminated scheduler.")
     (release-all! (if scheduler-type 1000 0)) ; TODO fix the 1000
     (reset! stop? false)
