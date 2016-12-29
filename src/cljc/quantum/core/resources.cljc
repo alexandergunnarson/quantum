@@ -13,7 +13,7 @@
                      [quantum.core.fn
                        :refer [fn$ with-do]]
                      [quantum.core.logic           :as logic
-                       :refer [fn-not fn-or nnil?]]
+                       :refer [whenf whenf1 fn-not fn-or nnil?]]
                      [quantum.core.macros          :as macros
                        :refer [defnt]]
                      [quantum.core.async           :as async    ]
@@ -83,7 +83,8 @@
             deps        (v/or* nil? (v/coll-of keyword? :distinct true)))
   (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
   (swap! components assoc k (if deps (fn [config] (component/using (constructor config) deps))
-                                     constructor)))
+                                     constructor))
+  true)
 
 (defn start!
   ([] (start! (:global @systems)))
@@ -156,7 +157,6 @@
          (component/update-system-reverse thrown-system started-keys stop-with-pred))
        (throw e)))))
 
-
 (defn stop-system!
   "Recursively stops components in the system, in reverse dependency
   order. component-keys is a collection of keys (order doesn't matter)
@@ -169,70 +169,72 @@
    (component/update-system-reverse system component-keys stop-with-pred)))
 
 (defprotocol ISystem
-  (init!   [this])
-  (go!     [this])
   (reload! [this] [this ns-]))
 
-(defrecord System [config sys-map make-system running?]
+(defrecord System [name config sys-map running?]
   component/Lifecycle
     (start [this]
-      (if @running?
-          (log/pr :warn "System already running.")
-          (try (log/pr :user "======== STARTING SYSTEM ========")
-               (let [sys-map' (start-system! @sys-map)]
-                 (reset! sys-map sys-map')) ; TODO fix this to be immutable
-               (reset! running? true) ; TODO fix this to be immutable
-               (log/pr :user "System started.")
+      (if running?
+          (do (log/pr :warn "System" name "already running.")
+              this)
+          (try (log/pr :user "======== STARTING SYSTEM" name "========")
+               (let [sys-map' (start-system! sys-map)]
+                 (log/pr :user "System" name "started.")
+                 (assoc this :sys-map sys-map' :running? true))
             (catch #?(:clj Throwable :cljs :default) t
-              (log/pr :warn "System failed to start:" t #?(:cljs {:stack (.-stack t)}))))))
+              (log/pr :warn "System" name "failed to start:" t #?(:cljs {:stack (.-stack t)}))
+              this))))
     (stop [this]
-      (if (and @sys-map @running?)
-          (let [_ (log/pr :user "======== STOPPING SYSTEM ========")
-                sys-map' (stop-system! @sys-map)]
-            (reset! sys-map sys-map')
-            (reset! running? false)
-            (log/pr :user "System stopped."))
-          (log/pr :warn "System cannot be stopped; system is not running.")))
+      (if (and sys-map running?)
+          (let [_ (log/pr :user "======== STOPPING SYSTEM" name "========")
+                sys-map' (stop-system! sys-map)]
+            (log/pr :user "System" name "stopped.")
+            (assoc this :sys-map sys-map' :running? false))
+          (do (log/pr :warn "System" name "cannot be stopped; system is not running.")
+              this)))
   ISystem
-    (init! [this]
-      (if @sys-map
-          (log/pr :warn "System already created.")
-          (let [sys-map' (make-system config)]
-            (reset! sys-map sys-map')
-            (log/pr :user "System created."))))
-    (go! [this]
-      (init!  this)
-      (start! this))
     (reload! [this]
       (reload! this nil))
     (reload! [this ns-]
-      (stop! this)
-      #?(:clj (when ns-
-                (refresh :after ns-)))
-      (go! this)))
+      (let [this' (stop! this)]
+        #?(:clj (when ns- (refresh :after ns-)))
+        (start! this'))))
 
 (defn ->system
   "Constructor for |System|."
-  [config make-system]
-  (assert ((fn-or atom? map?) config) #{config})
-  (assert (fn? make-system) #{make-system})
+  [name config make-system]
+  (validate name        qcore/ns-keyword?
+            config      map?
+            make-system fn?)
+  (System. name config (make-system config) false))
 
-  (System. config (atom nil) make-system (atom false)))
+(defn default-make-system [config']
+  (->> config' (map (fn [[k v]] [k (if-let [f (get @components k)] (f v) v)]))
+       seq flatten
+       (apply component/system-map)))
 
 (defn register-system!
   "Registers a system with the global system registry."
   ([k config]
-    (register-system! k config
-      (fn [config']
-        (->> config' (map (fn [[k v]] [k (if-let [f (get @components k)] (f v) v)]))
-             seq flatten
-             (apply component/system-map)))))
+    (register-system! k config default-make-system))
   ([k config make-system]
     (log/pr ::debug "Registering system...")
     (when (contains? @systems k) (log/pr :warn "Overwriting registered system" k))
-    (with-do (swap! systems assoc k (->system config make-system))
+    (with-do (swap! systems assoc k (->system k config make-system))
              (log/pr ::debug "Registered system."))))
 
+(defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 nnil? stop!)))
+
+(defn default-main
+  [system-kw re-register? config]
+  (when-not (async/web-worker?)
+    (let [system (get @systems system-kw)
+          system (whenf system nnil? stop!)
+          system (if (or re-register? (nil? system))
+                     (get (register-system! system-kw config) system-kw)
+                     system)
+          system (swap! systems assoc system-kw (start! system))]
+      true)))
 
 #?(:clj
 (defn reload-namespaces
