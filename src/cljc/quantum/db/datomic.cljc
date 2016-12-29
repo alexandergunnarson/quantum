@@ -17,7 +17,7 @@
     [quantum.db.datomic.core          :as dbc]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
-      :refer [kmap containsv?]]
+      :refer [kmap containsv? nnil? nempty?]]
     [quantum.core.error               :as err
       :refer [->ex try-times TODO]]
     [quantum.core.fn                  :as fn
@@ -25,7 +25,7 @@
     [quantum.core.log                 :as log
       :include-macros true]
     [quantum.core.logic               :as logic
-      :refer [fn-and fn-or whenf condf nnil? nempty?]]
+      :refer [fn-and fn-or whenf condf default]]
     [quantum.core.process             :as proc]
     [quantum.core.resources           :as res]
     [quantum.core.string              :as str]
@@ -107,20 +107,6 @@
   ([tx-data]      (rx-transact! @conn* tx-data))
   ([conn tx-data] (rx-db/transact! conn tx-data))))
 
-; TODO this fn is unnecessary
-#_(:clj
-(defn init-schemas!
-  "Transacts @schemas to the partition @part on the database connection @conn.
-   Expects @schemas to be in block-format (see |dbc/block->schemas|)."
-  ([schemas] (init-schemas! @conn* schemas))
-  ([conn schemas]
-    (when schemas
-      (log/pr :debug "Initializing database with schemas...")
-
-      (fn/with (dbc/transact! conn (dbc/block->schemas schemas))
-        (log/pr :debug "Schema initialization complete."))))))
-
-
 ; RECORDS / RESOURCES (TODO: MOVE)
 
 (defrecord
@@ -138,7 +124,8 @@
 
           Likewise, e.g. DataScript has no built-in partitions, but they are nevertheless
           required for Datomic, and so for syncing purposes @default-partition is required
-          to initialize @schemas."}
+          to initialize @schemas."
+    :todo {0 "Make the history recording *much* more efficient"}}
   EphemeralDatabase
   [conn history history-limit reactive? evented?
    default-partition
@@ -151,29 +138,24 @@
       (log/pr ::debug "Starting Ephemeral database...")
       (let [history-limit  (validate (or history-limit
                                          #?(:clj  Integer/MAX_VALUE
-                                             :cljs js/Number.MAX_SAFE_INTEGER)) integer?)
-            reactive?      (validate (if (false? reactive?     ) false (or reactive?      true)) (fn1 boolean?))
-            set-main-conn? (validate (if (false? set-main-conn?) false (or set-main-conn? true)) (fn1 boolean?))
-            set-main-part? (validate (if (false? set-main-part?) false (or set-main-part? true)) (fn1 boolean?))]
-        (TODO "Finish block schemas patch")
+                                            :cljs js/Number.MAX_SAFE_INTEGER)) integer?)
+            reactive?      (validate (default reactive?      true) (fn1 boolean?))
+            set-main-conn? (validate (default set-main-conn? true) (fn1 boolean?))
+            set-main-part? (validate (default set-main-part? true) (fn1 boolean?))
+            _              (validate conn nil?)]
         (try
           (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
           (let [; Maintain DB history.
                 history (when (pos? history-limit) (atom []))
                 default-schemas {:db/ident {:db/unique :db.unique/identity}}
                 default-partition-f (or default-partition :db.part/test)
-                #_block-schemas #_(when schemas
-                                 (dbc/block->schemas schemas
-                                   {:datascript? true
-                                    :part        default-partition-f}))
-
                 db        (mdb/empty-db {})
                 conn-f    (atom db :meta
                             (c/merge {:listeners (atom {})}
-                              (when evented?
+                              (when evented? ; The re-frame + posh abstraction
                                 {:subs         (atom {})
                                  :transformers (atom {})})))
-                schemas-f (c/merge default-schemas #_block-schemas)
+                schemas-f (c/merge default-schemas schemas)
                 _ (replace-schemas! conn-f schemas-f)
                 _ (log/pr ::debug "Ephemeral database and connection created.")
                 _ (when (pos? history-limit)
@@ -182,7 +164,7 @@
                       (fn [tx-report]
                         (log/pr ::debug "Adding to history")
                         (let [{:keys [db-before db-after]} tx-report]
-                          (when (and db-before db-after)
+                          (when (and db-before db-after) ; TODO 0
                             (swap! history
                               (fn-> (coll/drop-tail #(identical? % db-before))
                                     (c/conj db-after)
@@ -199,13 +181,15 @@
           (catch #?(:clj Throwable :cljs :default) e
             (log/ppr :warn "Error in starting EphemeralDatabase"
               {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
-            e))))
+            this))))
     (stop [this]
       (when (atom? conn)
-        (reset! conn nil)) ; TODO is this wise?
+        (reset! conn nil)) ; TODO is this wise? ; TODO unregister all listeners?
       this))
 
 (def ->ephemeral-db map->EphemeralDatabase)
+
+(res/register-component! ::ephemeral ->ephemeral-db [::log/log])
 
 #?(:clj
 (defn start-transactor!
@@ -254,30 +238,47 @@
   ^{:doc "Datomic database.
 
           @start-txr? is a boolean which defines whether the transactor should be started.
-          @partitions is a seq (preferably set) of keywords identifying partitions"
+          @partitions is a seq (preferably set) of keywords identifying partitions
+
+          Can be one of three things:
+            1) A direct connection to a Datomic database using the Datomic Peer API
+               - This option is for Clojure (e.g. server) only, not ClojureScript
+            2) A direct connection to a Datomic database using the Datomic HTTP API
+               - This option is currently not proven to be secure and is awaiting
+                 further developments by the Cognitect team.
+            3) A REST endpoint pair:
+               - One for pushing, e.g. 'POST /db'
+               - One for pulling, e.g. 'GET  /db'
+               - This way the Datomic database is not directly exposed to the client,
+                 but rather the server is able to use access control and other
+                 security measures when handling queries from the client.
+                 This is the (currently) recommended option."
     :todo ["Decompose this"]}
   BackendDatabase
   [type
    name auth
-   host port rest-port uri conn create-if-not-present?
+   host port rest-port uri conn
+   set-main-conn? set-main-part? create? create-if-not-present?
    txr-props txr-process
    connection-retries
-   init-partitions? partitions
+   partitions
    default-partition
    schemas]
   component/Lifecycle
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
-      (let [type                   (validate (or type :free)       #{:free :http :dynamo}) ; TODO for now
-            name                   (validate (or name "test")      (v/and string? nempty?))
-            host                   (validate (or host "localhost") (v/and string? nempty?))
-            port                   (validate (or port 4334)        integer?) ; TODO `net/valid-port?`
-            txr-alias              (validate (or (:alias txr-props) "local") string?)
-            create-if-not-present? (validate (if (false? create-if-not-present?) false (or create-if-not-present? true))
-                                             (fn1 boolean?))
-            default-partition      (validate (or default-partition :db.part/test)
-                                             (v/and keyword? (fn-> namespace (= "db.part"))))
-            conn                   (validate (or conn (atom nil)) atom?)
+      (let [type                   (validate (or type :free)                       #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
+            name                   (validate (or name "test")                      (v/and string? nempty?))
+            host                   (validate (or host "localhost")                 (v/and string? nempty?))
+            port                   (validate (or port 4334)                        integer?) ; TODO `net/valid-port?`
+            txr-alias              (validate (or (:alias txr-props) "local")       string?)
+            create?                (validate create?                               (fn1 boolean?))
+            create-if-not-present? (validate (default create-if-not-present? true) (fn1 boolean?))
+            set-main-conn?         (validate (default set-main-conn?         true) (fn1 boolean?))
+            set-main-part?         (validate (default set-main-part?         true) (fn1 boolean?))
+            default-partition      (validate (or default-partition :db.part/test)  (v/and keyword? (fn-> namespace (= "db.part"))))
+            conn                   (validate (or conn (atom nil))                  atom?)
+            connection-retries     (validate (or (if (= type :dynamo) 1 5))        integer?) ; DynamoDB auto-retries
             uri (case type
                       :free
                         (str "datomic:" (c/name type)
@@ -292,10 +293,7 @@
                              "/"                   name
                              "/"                   (validate (:table-name auth) string?)
                              "?aws_access_key_id=" (validate (:id         auth) string?)
-                             "&aws_secret_key="    (validate (:secret     auth) string?))
-                      (throw (->ex :illegal-argument
-                                   "Database type not supported"
-                                   type)))]
+                             "&aws_secret_key="    (validate (:secret     auth) string?)))]
         ; Set all transactor logs to WARN
         #?(:clj (try
                   (doseq [^ch.qos.logback.classic.Logger logger
@@ -306,9 +304,9 @@
                     (.setLevel logger ch.qos.logback.classic.Level/WARN))
                   (catch NullPointerException e)))
         (log/prl ::debug type name host port default-partition uri)
-        (let [
-              txr-process-f
-                (when (:start? txr-props)
+        (let [txr-process-f
+                (when (and (:start? txr-props)
+                           (not= type :mem))
                   #?(:clj (start-transactor! (kmap type host port) txr-props)))
               connect (fn [] (log/pr ::debug "Trying to connect with" uri)
                              (let [conn-f (do #?(:clj  (bdb/connect uri)
@@ -316,19 +314,19 @@
                                (log/pr ::debug "Connection successful.")
                                conn-f))
               create-db! (fn []
-                           (when create-if-not-present?
-                             (log/pr ::debug "Creating database...")
-                             #?(:clj  (Peer/createDatabase uri)
-                                :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
-                             (log/pr ::debug "Done.")))
+                           (log/pr ::debug "Creating database...")
+                           #?(:clj  (bdb/create-database uri)
+                              :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
+                           (log/pr ::debug "Done."))
+              _          (when create? (create-db!))
               conn-f  (try
-                        (try-times (validate (or connection-retries
-                                                 (if (= type :dynamo) 1 5)) integer?)
-                                   1000
+                        (try-times connection-retries 1000
                           (try (connect)
                             (catch #?(:clj Throwable :cljs js/Error) e
                               (log/pr :warn "Error while trying to connect:" e)
-                              #?(:clj (when (-> e .getMessage (containsv? #"Could not find .* in catalog"))
+                              #?(:clj (when (and create-if-not-present?
+                                                 (not create?)
+                                                 (-> e .getMessage (containsv? #"Could not find .* in catalog")))
                                         (create-db!)))
                               (throw e))))
                         (catch #?(:clj Throwable :cljs js/Error) e
@@ -338,6 +336,8 @@
               _ (reset! conn conn-f)
               ;_ (when schemas #?(:clj (init-schemas! conn-f schemas)))
               ]
+        (when set-main-conn? (reset! conn* conn-f))
+        (when set-main-part? (reset! part* default-partition))
         (log/pr ::debug "Datomic database initialized.")
         (c/merge ; TODO add txr-alias
           (c/assoc this :txr-process txr-process-f)
@@ -345,9 +345,13 @@
     (stop [this]
       (when (and (atom? conn) (nnil? @conn))
         #?(:clj (bdb/release @conn))
+        (swap! conn* #(if (identical? % @conn) nil %))
         (reset! conn nil))
       (when txr-process
         (res/stop! txr-process))
+      (when (= type :mem)
+        (when-not (bdb/delete-database uri)
+          (log/pr :warn "Failed to delete in-memory database at" uri)))
       this))
 
 (defn ->backend-db
@@ -360,63 +364,7 @@
     (c/assoc config :uri  (atom nil)
                     :conn (atom nil))))
 
-(defrecord
-  ^{:doc "Database-system consisting of an EphemeralDatabase (e.g. DataScript),
-          BackendDatabase (e.g. Datomic), and a reconciler which constantly
-          pushes diffs from the EphemeralDatabase to the BackendDatabase
-          and pulls new data from the BackendDatabase.
-
-          A Datomic subscription model would be really nice for performance
-          (ostensibly) to avoid the constant backend polling of the reconciler,
-          but unfortunately Datomic does not have this.
-
-          @backend
-            Can be one of three things:
-              1) A direct connection to a Datomic database using the Datomic Peer API
-                 - This option is for Clojure (e.g. server) only, not ClojureScript
-              2) A direct connection to a Datomic database using the Datomic HTTP API
-                 - This option is currently not proven to be secure and is awaiting
-                   further developments by the Cognitect team.
-              3) A REST endpoint pair:
-                 - One for pushing, e.g. 'POST /db'
-                 - One for pulling, e.g. 'GET  /db'
-                 - This way the Datomic database is not directly exposed to the client,
-                   but rather the server is able to use access control and other
-                   security measures when handling queries from the client.
-                   This is the (currently) recommended option.
-          @reconciler
-            is"}
-  Database
-  [ephemeral reconciler backend]
-  ; TODO code pattern here
-  component/Lifecycle
-    (start [this]
-      (let [ephemeral-f  (when ephemeral  (res/start! ephemeral ))
-            backend-f    (when backend    (res/start! backend   ))
-            reconciler-f (when reconciler (res/start! reconciler))]
-        (c/assoc this
-          :ephemeral  ephemeral-f
-          :reconciler reconciler-f
-          :backend    backend-f)))
-    (stop [this]
-      (let [reconciler-f (when reconciler (res/stop! reconciler))
-            ephemeral-f  (when ephemeral  (res/stop! ephemeral ))
-            backend-f    (when backend    (res/stop! backend   ))]
-        (c/assoc this
-          :ephemeral  ephemeral-f
-          :reconciler reconciler-f
-          :backend    backend-f))))
-
-(defn ->db
-  "Constructor for |Database|."
-  [{:keys [backend reconciler ephemeral] :as config}]
-  (log/pr ::resources (kmap config))
-  (Database.
-    (whenf ephemeral nnil? ->ephemeral-db)
-    reconciler
-    (whenf backend   nnil? ->backend-db  )))
-
-(res/register-component! ::db ->db [::log/log])
+(res/register-component! ::backend ->backend-db [::log/log])
 
 (defmethod io/persist! EphemeralDatabase
   [_ persist-key
