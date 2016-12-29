@@ -395,17 +395,19 @@
           {:measure-ties bar-ties
            :measure-ops  (concatv measure-ops [[:wait chan duration]])}
           (let [note-genned (gen-ops-for-note (assoc (kmap chan velocity duration tie? measure-ties scheduler) :pitch @pitch-int))
+                note-duration-difference-op ; E.g. for staccatos
+                 (let [diff (- duration note-duration)]
+                   (cond (zero? diff)
+                         nil
+                         (neg? diff)
+                         [[:wait chan (- diff)]]
+                         (pos? diff)
+                         (throw (TODO "Doesn't handle lengthening difference (e.g. tenuto)"))))
                 note-ops
                   (concatv
                     (when modwheel [[:mod chan modwheel]])
-                    (let [diff (- duration note-duration)]
-                      (cond (zero? diff)
-                            nil
-                            (neg? diff)
-                            [[:wait chan (- diff)]]
-                            (pos? diff)
-                            (throw (TODO "Doesn't handle lengthening difference (e.g. tenuto)"))))
-                    (:note-ops note-genned))]
+                    (:note-ops note-genned)
+                    note-duration-difference-op)]
             {:measure-ties (:note-ties note-genned) ; overwritten
              :measure-ops  (concatv measure-ops note-ops)})))))
 
