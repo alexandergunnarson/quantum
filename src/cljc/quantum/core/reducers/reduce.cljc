@@ -159,9 +159,8 @@
   ([ret k v] (conj! ret [k v])))
 
 (defn transient-into [to from]
-  (-> (reduce* from conj!-red (transient to))
-      persistent!
-      (with-meta (meta to))))
+  (when-let [ret (reduce* from conj!-red (transient to))]
+    (-> ret  persistent! (with-meta (meta to)))))
 
 (defn persistent-into [to from]
   (reduce* from conj-red to))
