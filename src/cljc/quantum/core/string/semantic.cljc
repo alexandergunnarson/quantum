@@ -2,7 +2,7 @@
   (:require
     [clojure.set         :as set]
     [cuerdas.core        :as str+]
-    [quantum.core.logic  :as logic
+    [quantum.core.collections.base
       :refer [nempty?]]
     [quantum.core.macros :as macros
       :refer [defnt]]

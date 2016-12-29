@@ -1,39 +1,25 @@
 (ns quantum.compile.transpile.to.core
-           (:require [quantum.compile.transpile.util          :as util ]
-                     [quantum.core.analyze.clojure.predicates :as anap ]
-                     [quantum.core.data.map                   :as map  ]
-                     [quantum.core.collections                :as coll
-                       :refer [#?@(:clj [containsv? kmap popr popl])
-                               in? dropl]                              ]
-                     [quantum.core.convert                    :as conv
-                       :refer [->name]]
-                     [quantum.core.error                      :as err
-                       :refer [#?(:clj throw-unless) ->ex]             ]
-                     [quantum.core.log                        :as log  ]
-                     [quantum.core.compare                    :as comp ]
-                     [quantum.core.string                     :as str  ]
-                     [quantum.core.string.format              :as strf ]
-                     [quantum.core.fn                         :as fn
-                       :refer [#?@(:clj [<- fn-> fn->> fn1])]          ]
-                     [quantum.core.logic                      :as logic
-                       :refer [#?@(:clj [eq? fn-not fn-or fn-and whenf
-                                         whenf1 whenc ifn condfc condpc
-                                         coll-or]) nempty? nnil?]      ]
-                     [quantum.core.macros                     :as macros
-                       :refer [#?(:clj defnt)]                         ])
-  #?(:cljs (:require-macros
-                     [quantum.core.error                      :as err
-                       :refer [throw-unless]                           ]
-                     [quantum.core.log                        :as log  ]
-                     [quantum.core.collections                :as coll
-                       :refer [containsv? kmap popr popl]              ]
-                     [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn->> fn1]                      ]
-                     [quantum.core.logic                      :as logic
-                       :refer [eq? fn-not fn-or fn-and whenf whenf1
-                               whenc ifn condfc condpc coll-or]        ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]                                  ])))
+  (:require
+    [quantum.compile.transpile.util          :as util ]
+    [quantum.core.analyze.clojure.predicates :as anap ]
+    [quantum.core.data.map                   :as map  ]
+    [quantum.core.collections                :as coll
+      :refer [containsv? kmap popr popl nempty? nnil? in? dropl]]
+    [quantum.core.convert                    :as conv
+      :refer [->name]]
+    [quantum.core.error                      :as err
+      :refer [throw-unless ->ex]]
+    [quantum.core.log                        :as log  ]
+    [quantum.core.compare                    :as comp ]
+    [quantum.core.string                     :as str  ]
+    [quantum.core.string.format              :as strf ]
+    [quantum.core.fn                         :as fn
+      :refer [<- fn-> fn->> fn1]]
+    [quantum.core.logic                      :as logic
+      :refer [eq? fn-not fn-or fn-and whenf
+              whenf1 whenc ifn condfc condpc coll-or]]
+    [quantum.core.macros                     :as macros
+      :refer [defnt]]))
 
 ; special-symbol? is a clojure thing
 

@@ -3,36 +3,36 @@
           Aliases core.async for convenience."
     :attribution "Alex Gunnarson"}
   quantum.core.thread
-             (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
-             (:require [clojure.core                          :as core]
-           #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
-                     [clojure.core.async.impl.exec.threadpool :as async-threadpool]
-                   #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
-                   #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
-                     [com.stuartsierra.component              :as component]
-                     [quantum.core.string                     :as str             ]
-                     [quantum.core.collections                :as coll
-                       :refer [in? conj! assoc! empty? nempty? doseq dissoc-in+]]
-                     [quantum.core.numeric                    :as num]
-                     #?(:clj [clojure.core.async :as casync])
-                     [quantum.core.async                      :as async
-                       :refer [put!! chan buffer go]]
-                     [quantum.core.error                      :as err
-                       :refer [throw-unless ->ex]]
-                     [quantum.core.fn                         :as fn
-                       :refer [<- fn-> fn1 rcomp call fn-nil fn$]]
-                     [quantum.core.log                        :as log]
-                     [quantum.core.logic                      :as logic
-                       :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1 nnil?]                                             ]
-                     [quantum.core.macros                     :as macros
-                       :refer [defnt]]
-                     [quantum.core.validate                   :as v
-                       :refer [validate]]
-                     [quantum.core.type                       :as type
-                       :refer [boolean?]]
-                     [quantum.core.time.core                  :as time]
-                     [quantum.core.cache
-                       :refer [memoize]])
+            (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
+            (:require [clojure.core                          :as core]
+            #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
+                      [clojure.core.async.impl.exec.threadpool :as async-threadpool]
+                    #_[co.paralleluniverse.pulsar.core         :as pulsar          ]
+                    #_[co.paralleluniverse.pulsar.async        :as pasync          ]])
+                      [com.stuartsierra.component              :as component]
+                      [quantum.core.string                     :as str             ]
+                      [quantum.core.collections                :as coll
+                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in+ nnil?]]
+                      [quantum.core.numeric                    :as num]
+                      #?(:clj [clojure.core.async :as casync])
+                      [quantum.core.async                      :as async
+                        :refer [put!! chan buffer go]]
+                      [quantum.core.error                      :as err
+                        :refer [throw-unless ->ex]]
+                      [quantum.core.fn                         :as fn
+                        :refer [<- fn-> fn1 rcomp call fn-nil fn$]]
+                      [quantum.core.log                        :as log]
+                      [quantum.core.logic                      :as logic
+                        :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1]                                             ]
+                      [quantum.core.macros                     :as macros
+                        :refer [defnt]]
+                      [quantum.core.validate                   :as v
+                        :refer [validate]]
+                      [quantum.core.type                       :as type
+                        :refer [boolean?]]
+                      [quantum.core.time.core                  :as time]
+                      [quantum.core.cache
+                        :refer [memoize]])
   #?(:clj  (:import
              (java.lang Thread Process)
              (java.util.concurrent Future Executor Executors

@@ -17,10 +17,10 @@
     [quantum.core.error               :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.collections         :as coll
-      :refer [nempty? seq-loop break]]
+      :refer [nempty? seq-loop break nnil?]]
     [quantum.core.log                 :as log]
     [quantum.core.logic               :as logic
-      :refer [fn-and fn-or fn-not condpc whenc nnil?]]
+      :refer [fn-and fn-or fn-not condpc whenc]]
     [quantum.core.macros.core         :as cmacros
       :refer [if-cljs]]
     [quantum.core.macros              :as macros
@@ -211,7 +211,6 @@
 
 #?(:clj
 (defnt close!
-#?(:clj
   ([^Thread                      x] (.stop    x))
   ([^Process                     x] (.destroy x))
   ([#{java.util.concurrent.Future
@@ -220,7 +219,7 @@
   ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.close x))
   ([^clojure.core.async.impl.channels.ManyToManyChannel x] (asyncp/close! x))
   ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
-  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x)))))
+  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x))))
 
 (declare closed?)
 

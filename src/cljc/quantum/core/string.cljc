@@ -21,7 +21,7 @@
              [quantum.core.fn            :as fn
                :refer [fn-> fn1 rfn]]
              [quantum.core.logic         :as logic
-               :refer [nempty? fn-and whenc whenc1 ifn condf]]
+               :refer [fn-and whenc whenc1 ifn condf]]
              [quantum.core.loops         :as loops
                :refer [reduce reducei]]
              [quantum.core.macros        :as macros
@@ -30,6 +30,8 @@
                :refer [containsv?]]
              [quantum.core.collections.logic
                :refer [seq-and]]
+             [quantum.core.collections.base
+               :refer [nempty? nnil?]]
              [quantum.core.string.format :as form]
              [quantum.core.string.regex  :as regex]
              [quantum.core.vars          :as var

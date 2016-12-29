@@ -24,8 +24,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
 ;==================================================={                         }=====================================================
-(def  nnil?   core/some?)
-(def  nempty? (comp not empty?)) ; TODO fix this performance-wise
+#?(:clj (defmacro default [v else] `(let [v# ~v] (if (nil? v#) ~else v#))))
 
 ; Otherwise ExceptionInInitializerError if not macro
 #?(:clj (defmacro eq?  [x] `(fn-> (=    ~x))))
@@ -208,25 +207,29 @@
 #?(:clj
 (defmacro if-let
  "An alternative to if-let where more bindings can be added"
- {:source "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
+ {:adapted-from "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
   ([bindings then]
     `(if-let ~bindings ~then nil))
   ([[bnd expr & more] then else]
-    `(clojure.core/if-let [~bnd ~expr]
-        ~(if more
-            `(if-let [~@more] ~then ~else)
-            then)
-         ~else))))
+    `(let [temp# ~expr
+           ~bnd  temp#]
+       (if temp#
+           ~(if more
+               `(if-let [~@more] ~then ~else)
+               then)
+           ~else)))))
 
 #?(:clj
 (defmacro when-let
  "An alternative to when-let where more bindings can be added"
  {:attribution "Alex Gunnarson"}
-  ([[var- expr & more] & body]
-    `(clojure.core/when-let [~var- ~expr]
-      ~@(if more
-            (list `(when-let [~@more] ~@body))
-            body)))))
+  ([[bnd expr & more] & body]
+    `(let [temp# ~expr
+           ~bnd  temp#]
+       (when temp#
+         ~(if more
+              `(when-let [~@more] ~@body)
+              ~@body))))))
 
 #?(:clj
 (defmacro cond-let

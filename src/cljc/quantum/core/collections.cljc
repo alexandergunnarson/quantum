@@ -23,6 +23,7 @@
               reductions
               range
               map pmap map-indexed
+              partition-all
               remove filter
               take take-while
               drop  drop-while
@@ -66,56 +67,44 @@
              [quantum.core.error                      :as err
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
-               :refer        [rfn fn-nil juxt-kv withf->>
-                              #?@(:clj [rcomp <- fn-> fn->> fn1])]
-               :refer-macros [          rcomp <- fn-> fn->> fn1]]
-             [quantum.core.log                        :as log
-               :include-macros true                              ]
+               :refer [rfn fn-nil juxt-kv withf->>
+                       rcomp <- fn-> fn->> fn1]]
+             [quantum.core.log                        :as log]
              [quantum.core.logic                      :as logic
-               :refer         [#?@(:clj [fn-not fn-or fn-and whenf
-                                         whenf1 ifn ifn1 condf
-                                         condf1])
-                               nnil? splice-or]
-               :refer-macros [fn-not fn-or fn-and whenf whenf1
-                              ifn ifn1 condf condf1]            ]
+               :refer [fn-not fn-or fn-and whenf
+                       whenf1 ifn ifn1 condf
+                       condf1 splice-or]]
              [quantum.core.macros                     :as macros
-               :refer        [#?@(:clj [defnt])]
-               :refer-macros [defnt]                             ]
+               :refer [defnt]]
              [quantum.core.ns                         :as ns]
              [quantum.core.numeric                    :as num
-               :refer        [#?@(:clj [-])]
-               :refer-macros [-]]
+               :refer [-]]
              [quantum.core.reducers                   :as red
-               :refer        [#?@(:clj [defeager])]
-               :refer-macros [          defeager]]
+               :refer [defeager]]
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
              [quantum.core.type                       :as type
-               :refer        [transient!* persistent!*
-                              #?@(:clj [lseq? transient? editable?
-                                        boolean? should-transientize?])
-                              class]
-               :refer-macros [lseq? transient? editable? boolean?
-                              should-transientize?]              ]
+               :refer [transient!* persistent!*
+                       lseq? transient? editable?
+                       boolean? should-transientize?
+                       class]]
              [quantum.core.analyze.clojure.predicates :as anap]
              [quantum.core.type.predicates            :as tpred]
              [clojure.walk                            :as walk]
-             [quantum.core.loops                      :as loops
-               :include-macros true]
+             [quantum.core.loops                      :as loops]
              [quantum.core.vars                       :as var
-               :refer        [#?@(:clj [defalias defaliases])]
-               :refer-macros [          defalias defaliases]])
-  #?(:cljs (:require-macros
-             [quantum.core.collections
-               :refer [for for* lfor doseq doseqi reduce reducei
-                       seq-loop
-                       count lasti
-                       subseq
-                       contains? containsk? containsv?
-                       index-of last-index-of
-                       first second rest last butlast get aget pop peek nth
-                       conjl conj! assoc assoc! assoc!* dissoc dissoc! disj! aset!
-                       map-entry join empty? update! empty? ->array]]))
+               :refer [defalias defaliases]])
+  (:require-macros
+    [quantum.core.collections
+      :refer [for for* lfor doseq doseqi reduce reducei
+              seq-loop
+              count lasti
+              subseq
+              contains? containsk? containsv?
+              index-of last-index-of
+              first second rest last butlast get aget pop peek nth
+              conjl conj! assoc assoc! assoc!* dissoc dissoc! disj! aset!
+              map-entry join empty? update! empty? ->array]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
 (defaliases clog
@@ -196,9 +185,12 @@
 #?(:clj (defalias containsv?    coll/containsv?   ))
 #?(:clj (defalias index-of      coll/index-of     ))
 #?(:clj (defalias last-index-of coll/last-index-of))
+#?(:clj (defalias index-of-pred      diff/index-of-pred     ))
+#?(:clj (defalias last-index-of-pred diff/last-index-of-pred))
 ; ===== SIZE + INDICES ===== ;
 #?(:clj (defalias empty?        coll/empty?       ))
         (def      nempty?       (fn-not empty?)   )
+        (defalias nnil?         base/nnil?        )
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias lasti         coll/lasti        ))
 ; ===== CREATION ===== ;
@@ -260,7 +252,8 @@
         (defalias group-by+           red/group-by+           )
         (defalias flatten+            red/flatten+            )
         (defalias flatten-1+          red/flatten-1+          )
-        (def      flatten-1           (partial apply concat)) ; TODO more efficient
+        (def      lflatten-1          (partial apply concat)  )
+        (def      flatten-1           (fn->> flatten-1+ join) )
         (defalias iterate+            red/iterate+            )
         (defalias reduce-by+          red/reduce-by+          )
 
@@ -271,7 +264,6 @@
 
         (defalias replace+            red/replace+            )
         (defalias partition-by+       red/partition-by+       )
-        (defalias partition-all+      red/partition-all+      )
         (defalias interpose+          red/interpose+          )
         (defalias zipvec+             red/zipvec+             )
         (defalias random-sample+      red/random-sample+      )
@@ -351,6 +343,7 @@
             (reduce (fn [ret in] (conj! ret (f (last ret) in)))
                     (conj! (transient []) init)
                     coll)))
+        (defeager partition-all   red/partition-all+ )
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -489,6 +482,9 @@
 ; TODO generalize concat
 (defalias lconcat core/concat)
 
+(defn lzip [& args] (->> args (apply interleave) (lpartition-all (count args))))
+(defn zip  [& args] (->> args (apply interleave) (partition-all  (count args))))
+
 (defn dezip
   "The inverse of zip. — Unravels a seq of m n-tuples into a
   n-tuple of seqs of length m.
@@ -600,7 +596,8 @@
   (nnil? (index-of super sub)))
 
 (defn indices-of-elem
-  {:todo ["Make parallizeable"]}
+  {:todo #{"Make parallizeable"
+           "Transientize more elegantly"}}
   [coll elem-0]
   (if (should-transientize? coll)
       (persistent!
@@ -633,6 +630,28 @@
             (+ i (if-let [li (last indices)]
                    (+ li (count elem-0))
                    0))))))))
+
+(defn indices-of-matches
+  {:tests `{(indices-of-matches "1e  3 f" #(not= % \space))
+            [[0 1] [4 4] [6 6]]}}
+  [in pred]
+  (let [i-max (long (lasti in))]
+    (loop [accum     []
+           i         0
+           i-start   -1
+           matching? false]
+      (if (> i i-max)
+          (if matching?
+              (conj accum [i-start (dec i)])
+              accum)
+          (let [elem (get in i)]
+            (if matching?
+                (if (pred elem)
+                    (recur accum                          (inc i) i-start matching?)
+                    (recur (conj accum [i-start (dec i)]) (inc i) -1      false    ))
+                (if (pred elem)
+                    (recur accum                          (inc i) i       true     )
+                    (recur accum                          (inc i) i-start matching?))))))))
 
 (defn lindices-of
   "Lazy |indices-of|."

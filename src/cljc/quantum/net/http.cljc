@@ -35,8 +35,8 @@
   (let [; According to https://en.wikipedia.org/wiki/Ephemeral_port
         min-recommended-available-port 49152
         max-recommended-available-port 65535]
-    (red-for [ret  nil
-              port min-recommended-available-port]
+    (red-for [port min-recommended-available-port
+              ret  nil]
       (try (let [conn (java.net.ServerSocket. port)]
              (break conn))
         (catch java.net.BindException e nil))))))

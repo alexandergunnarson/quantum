@@ -4,20 +4,20 @@
   quantum.core.collections.base
   (:refer-clojure :exclude [name])
   (:require
-    [fast-zip.core              :as zip  ]
-    [clojure.string             :as str  ]
+    [fast-zip.core              :as zip]
+    [clojure.string             :as str]
     [clojure.walk
-      :refer [postwalk prewalk]          ]
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )     :as core ]
+      :refer [postwalk prewalk]]
+    [clojure.core               :as core]
     [quantum.core.fn            :as fn
-      :refer        [#?@(:clj [fn->])]
-      :refer-macros [          fn->]]
+      :refer [fn->]]
     [quantum.core.logic         :as logic
-      :refer        [#?@(:clj [condf1 fn-not])]
-      :refer-macros [          condf1 fn-not]]))
+      :refer [condf1 fn-not]]))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
+
+(def nnil?   core/some?)
+(def nempty? (comp not empty?)) ; TODO fix this performance-wise
 
 (defn default-zipper [coll]
   (zip/zipper coll? seq (fn [_ c] c) coll))

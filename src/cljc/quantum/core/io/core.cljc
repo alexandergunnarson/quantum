@@ -16,10 +16,10 @@
              [quantum.core.log           :as log
                :include-macros true]
              [quantum.core.logic         :as logic
-               :refer [splice-or nnil? nempty? whenf whenf1 whenc condpc coll-or fn-not]]
+               :refer [splice-or whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
              [quantum.core.collections   :as coll
-               :refer [postwalk]]
+               :refer [postwalk nnil? nempty?]]
              [quantum.core.io.utils      :as u]
              [quantum.core.paths         :as p
                :refer [path]]

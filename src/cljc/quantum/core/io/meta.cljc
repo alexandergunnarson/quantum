@@ -1,31 +1,26 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
-           (:refer-clojure :exclude [reduce])
-           (:require [quantum.core.io.utils          :as iou  ]
-                     [quantum.core.process           :as proc ]
-                     [quantum.core.string            :as str  ]
-                     [quantum.core.log               :as log  ]
-                     [quantum.core.paths             :as paths]
-                     [quantum.core.error             :as err
-                       :refer        [->ex]                   ]
-                     [quantum.core.collections       :as coll
-                       :refer        [map+ dropr in? #?@(:clj [kmap reduce])]
-                       :refer-macros [kmap reduce]            ]
-                     [quantum.core.convert           :as conv
-                       :refer        [#?@(:clj [->keyword])]
-                       :refer-macros [->keyword]              ]
-                     [quantum.core.fn                :as fn
-                       :refer        [#?@(:clj [<- fn-> fn->> fn1 doto->>])]
-                       :refer-macros [<- fn-> fn->> fn1]]
-                     [quantum.core.logic             :as logic
-                       :refer        [#?@(:clj [whenf]) nempty?]
-                       :refer-macros [whenf]                  ]
-                     [quantum.core.resources         :as res
-                       :refer        [#?(:clj with-resources)]
-                       :refer-macros [with-resources]         ]
-                     [quantum.core.vars              :as var
-                       :refer        [#?@(:clj [defalias def-])]
-                       :refer-macros [defalias def-]          ])
+        (:refer-clojure :exclude [reduce])
+        (:require
+          [quantum.core.io.utils          :as iou  ]
+          [quantum.core.process           :as proc ]
+          [quantum.core.string            :as str  ]
+          [quantum.core.log               :as log  ]
+          [quantum.core.paths             :as paths]
+          [quantum.core.error             :as err
+            :refer [->ex]]
+          [quantum.core.collections       :as coll
+            :refer [map+ dropr in? kmap reduce nempty?]]
+          [quantum.core.convert           :as conv
+            :refer [->keyword]]
+          [quantum.core.fn                :as fn
+            :refer [<- fn-> fn->> fn1 doto->>]]
+          [quantum.core.logic             :as logic
+            :refer [whenf]]
+          [quantum.core.resources         :as res
+            :refer [with-resources]]
+          [quantum.core.vars              :as var
+            :refer [defalias def-]])
 #?(:clj (:import
           (java.io                  File FileInputStream)
           (org.apache.tika.parser   AutoDetectParser    )

@@ -11,36 +11,29 @@
   quantum.core.reducers.fold
   (:refer-clojure :exclude [reduce into])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core  ]
-    [quantum.core.collections.base :as cbase ]
-    [quantum.core.data.map         :as map   ]
-    [quantum.core.data.set         :as set   ]
+    [clojure.core                  :as core]
+    [quantum.core.collections.base :as cbase
+      :refer [nnil?]]
+    [quantum.core.data.map         :as map]
+    [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
-      :refer [subvec+]                       ]
+      :refer [subvec+]]
 #?@(:clj
-   [[seqspert.hash-set                       ]
-    [seqspert.hash-map                       ]])
+   [[seqspert.hash-set]
+    [seqspert.hash-map]])
     [quantum.core.error
-      :refer        [TODO]]
+      :refer [TODO]]
     [quantum.core.fn               :as fn
-      :refer        [aritoid
-                     #?@(:clj [fn1 fn-> rcomp])]
-      :refer-macros [          fn1 fn-> rcomp]]
+      :refer [aritoid fn1 fn-> rcomp]]
     [quantum.core.logic            :as logic
-      :refer        [nnil?
-                     #?@(:clj [fn-or fn-and whenf condf1])]
-      :refer-macros [          fn-or fn-and whenf condf1]]
+      :refer [fn-or fn-and whenf condf1]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer [defnt]]
     [quantum.core.reducers.reduce  :as red
-      :refer        [#?@(:clj [reduce joinl])]
-      :refer-macros [          reduce joinl]]
+      :refer [reduce joinl]]
     [quantum.core.type             :as type
-      :refer        [transient!* persistent!*
-                     #?@(:clj [lseq? editable? hash-set? hash-map? ->joinable])]
-      :refer-macros [          lseq? editable? hash-set? hash-map? ->joinable]]
+      :refer [transient!* persistent!* lseq? editable?
+              hash-set? hash-map? ->joinable]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])])
   #?(:clj (:import [quantum.core.type.defs Reducer Folder])))

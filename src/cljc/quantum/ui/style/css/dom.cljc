@@ -2,16 +2,14 @@
   (:require
     [clojure.string        :as str]
     [quantum.core.error    :as err]
+    [quantum.core.collections.base
+      :refer [nnil?]]
     [quantum.core.fn       :as fn
-      :refer        [#?@(:clj [fn->])]
-      :refer-macros [          fn->]]
+      :refer [fn->]]
     [quantum.core.logic    :as logic
-      :refer        [nnil?
-                     #?@(:clj [fn-and])]
-      :refer-macros [          fn-and]]
+      :refer [fn-and]]
     [quantum.core.validate :as v
-      :refer        [#?(:clj validate)]
-      :refer-macros [        validate]]))
+      :refer [validate]]))
 
 #?(:cljs
 (defn add-link! [link]

@@ -16,7 +16,7 @@
     [quantum.core.data.hex         :as hex]
     [quantum.core.data.set         :as set]
     [quantum.core.collections      :as coll
-      :refer [kmap]]
+      :refer [kmap nnil?]]
     [quantum.core.error            :as err
       :refer [->ex throw-unless]]
     [quantum.core.fn               :as fn
@@ -24,7 +24,7 @@
     [quantum.core.log :as log
       :include-macros true]
     [quantum.core.logic            :as logic
-      :refer [whenp condpc nnil? splice-or]]
+      :refer [whenp condpc splice-or]]
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.nondeterministic :as rand]

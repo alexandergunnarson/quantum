@@ -1,8 +1,7 @@
 (ns quantum.core.convert ; perhaps coerce?
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )             :as core   ]
-                     [cognitect.transit                  :as t      ]
-             #?(:clj [clojure.tools.emitter.jvm                     ])
+           (:require [clojure.core                       :as core]
+                     [cognitect.transit                  :as t]
+             #?(:clj [clojure.tools.emitter.jvm])
                      [clojure.tools.reader               :as r]
                      [clojure.tools.reader.edn           :as r-edn]
                      [clojure.core.async                 :as async]
@@ -10,16 +9,16 @@
             #?(:cljs [goog.crypt.base64                  :as base64])
                      [datascript.transit                 :as dt]
                      ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
-                   ; [gloss.core.formats                 :as gforms ]
-           #?@(:clj [[clojure.java.io                    :as io     ]
-                     [manifold.stream                    :as s      ]
-                     [manifold.deferred                  :as d      ]
+                   ; [gloss.core.formats                 :as gforms]
+           #?@(:clj [[clojure.java.io                    :as io]
+                     [manifold.stream                    :as s]
+                     [manifold.deferred                  :as d]
                      [byte-streams                       :as streams]
-                     [byte-streams.graph                 :as g      ]
-                     [byte-streams.protocols             :as proto  ]
-                     [byte-streams.pushback-stream       :as ps     ]
-                     [byte-streams.char-sequence         :as cs     ]])
-                     [quantum.core.data.array            :as arr    ]
+                     [byte-streams.graph                 :as g]
+                     [byte-streams.protocols             :as proto]
+                     [byte-streams.pushback-stream       :as ps]
+                     [byte-streams.char-sequence         :as cs]])
+                     [quantum.core.data.array            :as arr]
                      [quantum.core.error                 :as err
                        :refer [TODO]]
                      [quantum.core.numeric               :as num]
@@ -32,8 +31,8 @@
                      [quantum.core.data.complex.json     :as json]
                      [quantum.core.macros                :as macros
                        :refer [defnt #?(:clj defnt')]]
-                     [quantum.core.paths                 :as path   ]
-                     [quantum.core.fn                    :as fn     ]
+                     [quantum.core.paths                 :as path]
+                     [quantum.core.fn                    :as fn]
                      [quantum.core.vars                  :as var
                        :refer [defalias]]
                      [quantum.core.log                   :as log]

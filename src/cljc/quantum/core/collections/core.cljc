@@ -14,7 +14,7 @@
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
             [quantum.core.collections.base
-              :refer [kmap]]
+              :refer [kmap nempty? nnil?]]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte
@@ -38,8 +38,7 @@
             [quantum.core.fn                :as fn
               :refer [fn1 fn&2 rfn]]
             [quantum.core.logic             :as logic
-              :refer [nnil? nempty?
-                      eq? fn-eq? whenc whenf ifn1]]
+              :refer [eq? fn-eq? whenc whenf ifn1]]
             [quantum.core.collections.logic
               :refer [seq-or]]
             [quantum.core.macros            :as macros

@@ -5,6 +5,8 @@
       :refer [postwalk]]
     [quantum.core.core
       :refer [ns-keyword?]]
+    [quantum.core.collections.base
+      :refer [nnil? nempty?]]
     [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
       :refer [->ex TODO]]
@@ -15,7 +17,7 @@
     [quantum.core.fn
       :refer [fn-> fn->> fn1 fn$ <-]]
     [quantum.core.logic
-      :refer [eq? fn-and fn-or whenf1 whenf whenp nnil? nempty?]]
+      :refer [eq? fn-and fn-or whenf1 whenf whenp]]
     [quantum.core.log       :as log
       :refer [prl]]
     [quantum.core.macros.defrecord
@@ -250,9 +252,7 @@
                                        dbify-keyword))
           conformer-sym (gensym "conformer")
           schema        (when db-mode? (spec->schema sym-0 spec))
-          code `(do (defspec ~spec-name ~spec)
-                    ~(when db-mode?  `(swap! db-schemas assoc ~spec-name ~schema))
-                    ~(when conformer `(def ~conformer-sym ~conformer))
+          code `(do ~(when conformer `(def ~conformer-sym ~conformer))
                     (deftype-compatible ~sym ~'[v]
                       {~'?Object
                         {~'hash     ([_#] (.hashCode ~'v))
@@ -263,6 +263,8 @@
                          {~'get     ([_#] ~'v)
                           ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
                                                             (v/validate ~spec-name))))}})
+                    (defspec ~spec-name (v/or* (fn [m#] (instance? ~sym m#)) ~spec))
+                    ~(when db-mode?  `(swap! db-schemas assoc ~spec-name ~schema))
                     (defn ~(symbol (str "->" sym)) [v#]
                       (new ~sym (v/validate v# ~spec-name))))]
       (prl ::debug db-mode? sym-0 sym spec-name spec schema code)
@@ -354,10 +356,6 @@
           (defrecord+ ~un-record-sym      ~un-ks-syms )
           (defrecord+ ~all-mod-record-sym ~all-mod-ks-syms)
           (defrecord+ ~all-record-sym     ~(into all-mod-ks-syms special-ks-syms))
-          (defspec ~spec-name ~(if invariant
-                                   `(v/and (v/keys ~@keyspec) ~invariant)
-                                   `(v/keys ~@keyspec)))
-          ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
           ~(when invariant `(defspec ~invariant-spec-name ~invariant))
           ~(when conformer `(def ~conformer-sym ~conformer))
           (def ~required-keys-record (~(symbol (str "map->" req-record-sym    )) ~(merge (zipmap req-ks     req-ks    ) (zipmap special-ks special-ks))))
@@ -461,6 +459,10 @@
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (new ~sym (~create v#)))}})
           (defn ~(symbol (str "->" sym)) [m#] (new ~qualified-sym (~create m#)))
+          (defspec ~spec-name ~(if invariant
+                                   `(v/or* (fn [m#] (instance? ~qualified-sym m#)) (v/and (v/keys ~@keyspec) ~invariant))
+                                   `(v/or* (fn [m#] (instance? ~qualified-sym m#)) (v/keys ~@keyspec))))
+          ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
           ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
      (prl ::debug code)
      code)))))

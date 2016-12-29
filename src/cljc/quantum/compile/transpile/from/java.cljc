@@ -6,9 +6,8 @@
     [quantum.core.string                     :as str  ]
     [quantum.core.collections.zip            :as zip]
     [quantum.core.collections                :as coll
-      :refer        [postwalk prewalk zip-prewalk take-until update-last seq-nor
-                     #?@(:clj [containsv? popl popr kmap])]
-      :refer-macros [          containsv? popl popr kmap]]
+      :refer [postwalk prewalk zip-prewalk take-until update-last seq-nor
+              containsv? popl popr kmap nnil? nempty?]]
     [quantum.core.convert                    :as conv
       :refer [->name]                                 ]
     [quantum.core.convert.primitive          :as pconv]
@@ -17,12 +16,9 @@
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn-> fn->> fn1 rcomp <-])]
-      :refer-macros [          fn-> fn->> fn1 rcomp <-]]
+      :refer [fn-> fn->> fn1 rcomp <-]]
     [quantum.core.logic                      :as logic
-      :refer        [nnil? nempty?
-                     #?@(:clj [eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let])]
-      :refer-macros [          eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
+      :refer [eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
       :refer        [#?@(:clj [re-match re-match* re-match-whole*])]])

@@ -3,14 +3,10 @@
   (:refer-clojure :exclude [get count reduce when-let])
   (:require
     [quantum.core.logic           :as logic
-      :refer        [nempty?
-                     #?@(:clj [when-let])]
-      :refer-macros [          when-let]]
+      :refer [when-let]]
     [quantum.core.string          :as str  ]
     [quantum.core.collections     :as coll
-      :refer        [in? dropr seq-or
-                     #?@(:clj [reduce get count])]
-      :refer-macros [          reduce get count]]
+      :refer [in? dropr seq-or nempty? reduce get count]]
     [quantum.core.string.semantic :as sem]))
 
 (defn ends-with-doubled-consonant? [s]

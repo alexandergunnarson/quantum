@@ -6,17 +6,12 @@
       :refer [unhint]]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn1 fn-> fn->>])]
-      :refer-macros [          fn1 fn-> fn->>]]
-    [quantum.core.log                        :as log
-      :include-macros true]
+      :refer [fn1 fn-> fn->>]]
+    [quantum.core.log                        :as log]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [whenp]) nempty? nnil?]
-      :refer-macros [whenp]]
+      :refer [whenp]]
     [quantum.core.collections.base           :as cbase
-      :refer        [#?(:clj kmap) update-first update-val
-                     ensure-set]
-      :refer-macros [kmap]]
+      :refer [kmap update-first update-val nempty? nnil? ensure-set]]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 

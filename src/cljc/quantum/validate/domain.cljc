@@ -1,10 +1,8 @@
 (ns quantum.validate.domain
   (:require [quantum.validate.regex     :as v.regex]
             [quantum.core.collections   :as coll
-              :refer [in?]                         ]
+              :refer [in? nempty?]]
             [quantum.core.string        :as str    ]
-            [quantum.core.logic         :as logic
-              :refer [nempty?]                     ]
             [quantum.core.string.encode :as encode ])
   #?(:clj (:import java.util.regex.Matcher
                    java.net.IDN
@@ -51,10 +49,10 @@
 ; .um  country-code    Not assigned
 
 (def infrastructure-tlds #{"arpa"})
-  
+
 (def generic-tlds
   #{; Taken from Version 2015082801, Last Updated Sat Aug 29 07:07:01 2015 UTC
-    ; TODO dynamically get this 
+    ; TODO dynamically get this
     "aaa"            ; aaa American Automobile Association, Inc.
     "aarp"           ; aarp AARP
     "abb"            ; abb ABB Ltd
@@ -1159,7 +1157,7 @@
 (def local-tlds
   #{"localdomain" ; Also widely used as localhost.localdomain
     "localhost"}) ; RFC2606 defined
-    
+
 (declare valid-tld?)
 (declare valid-local-tld?)
 (declare valid-infrastructure-tld?)
@@ -1180,7 +1178,7 @@
    Domain names are evaluated according
    to the standards RFC1034 (http://www.ietf.org/rfc/rfc1034.txt)
    section 3, and RFC1123 (http://www.ietf.org/rfc/rfc1123.txt),
-   section 2.1. 
+   section 2.1.
 
    Validation is also provided for top-level domains (TLDs) as defined and
    maintained by the Internet Assigned Numbers Authority (IANA).

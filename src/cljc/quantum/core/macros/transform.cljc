@@ -9,18 +9,15 @@
       :refer [unhint]]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set
-              zip-reduce* default-zipper]]
+              zip-reduce* default-zipper nnil?]]
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [<- fn1 fn->])]
-      :refer-macros [          <- fn1 fn->]]
+      :refer [<- fn1 fn->]]
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer        [nnil?
-                     #?@(:clj [fn-not fn-or fn-and whenc condf1])]
-      :refer-macros [          fn-not fn-or fn-and whenc condf1]]
+      :refer [fn-not fn-or fn-and whenc condf1]]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 

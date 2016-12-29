@@ -6,44 +6,31 @@
   (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle])
   (:require
     #?(:clj [loom.gen                  :as g-gen])  ; for now
-            [#?(:clj  clojure.core
-                :cljs cljs.core)       :as core  ]
-            [quantum.core.convert      :as conv
-              :include-macros true               ]
-            [quantum.core.lexical.core :as lex   ]
+            [clojure.core              :as core]
+            [quantum.core.convert      :as conv]
+            [quantum.core.lexical.core :as lex]
             [quantum.core.data.set     :as set
-              :refer [sorted-set+]               ]
+              :refer [sorted-set+]]
             [quantum.core.collections  :as coll
-              :refer        [#?@(:clj [fori reduce
-                             for join last lasti nth])
-                             map+ map-vals+ map-indexed+
-                             indices+]
-              :refer-macros [fori reduce for join
-                             last lasti nth]]
+              :refer [fori reduce nempty?
+                      for join last lasti nth
+                      map+ map-vals+ map-indexed+
+                      indices+]]
             [quantum.core.error        :as err
-              :refer [->ex TODO
-                      #?(:clj throw-unless)]
-              :refer-macros [throw-unless]      ]
+              :refer [->ex TODO throw-unless]]
             [quantum.core.macros       :as macros
-              :refer        [#?@(:clj [defnt])]
-              :refer-macros [defnt]              ]
+              :refer [defnt]]
             [quantum.core.type         :as type
-              :refer [#?(:clj regex?)]
-              :refer-macros [regex?]             ]
+              :refer [regex?]]
             [quantum.core.logic        :as logic
-              :refer        [splice-or nempty?
-                             #?@(:clj [condf1])]
-              :refer-macros [condf1]            ]
-            [quantum.core.log :as log
-              :include-macros true]
-            [quantum.core.numeric      :as num   ]
+              :refer [splice-or condf1]]
+            [quantum.core.log          :as log]
+            [quantum.core.numeric      :as num]
             [quantum.core.fn           :as fn
-              :refer        [#?(:clj <-)]
-              :refer-macros [<-]                 ]
+              :refer [<-]]
             [quantum.core.data.array   :as arr   ]
             [quantum.core.vars
-              :refer        [#?(:clj defalias)]
-              :refer-macros [defalias]           ])
+              :refer [defalias]])
   (:import
     #?@(:clj  [java.util.Random
                java.security.SecureRandom

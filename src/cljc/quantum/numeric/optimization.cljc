@@ -31,8 +31,8 @@
    and the total value is as large as possible."
   {:time-complexity '(* (count table) W)}
   [W table]
-  (red-for [K [[[] 0]]
-            w (range 1 (inc W))]
+  (red-for [w (range 1 (inc W))
+            K [[[] 0]]]
     (conj K (->> (for+ [{ii :item wi :weight vi :value}
                          (filter+ #(<= (:weight %) w) table)]
                    (let [[items value] (get K (- w wi))]
@@ -43,10 +43,10 @@
   "A solution to the knapsack problem where repetitions are not allowed."
   {:time-complexity '(* (count table) W)}
   [W table]
-  (red-for [K (for [w (range 0 (inc W))]
-                (for [j (range 0 (inc (count table)))] [0 []]))
-            j (range 1 (inc (count table)))]
-    (red-for [K K w (range 1 (inc W))]
+  (red-for [j (range 1 (inc (count table)))
+            K (for [w (range 0 (inc W))]
+                (for [j (range 0 (inc (count table)))] [0 []]))]
+    (red-for [w (range 1 (inc W)) K K]
       (let [{ij :item wj :weight vj :value} (get table (dec j))]
         (assoc-in K [w j]
           (max-key first

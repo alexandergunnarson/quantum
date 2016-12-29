@@ -133,14 +133,14 @@
 #?(:clj
 (defmacro red-for
   "Like `reduce`, but with a similar syntax to `for`."
-  {:equivalent {`(red-for [ret {}
-                           m   [{1 2} {3 4}]]
+  {:equivalent {`(red-for [m   [{1 2} {3 4}]
+                           ret {}]
                    (merge-with + ret m))
                 `(reduce
                    (rfn [ret m] (merge-with + ret m))
                    {}
                    [{1 2} {3 4}])}}
-  [[ret-sym init x-sym coll] & body]
+  [[x-sym coll ret-sym init] & body]
   `(reduce
      (rfn ~[ret-sym x-sym] ~@body)
      ~init

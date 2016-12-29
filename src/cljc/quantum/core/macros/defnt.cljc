@@ -4,7 +4,7 @@
   (:refer-clojure :exclude [merge])
   (:require
     [quantum.core.collections.base           :as cbase
-      :refer [merge-call update-first update-val ensure-set reducei kmap]]
+      :refer [merge-call update-first update-val ensure-set reducei kmap nempty? nnil?]]
     [quantum.core.data.map                   :as map
       :refer [merge]]
     [quantum.core.data.set                   :as set]
@@ -17,7 +17,7 @@
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer [nempty? nnil? eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
+      :refer [eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
       :refer [when-cljs if-cljs]]
     [quantum.core.macros.fn                  :as mfn]
