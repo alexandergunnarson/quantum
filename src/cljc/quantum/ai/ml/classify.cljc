@@ -13,7 +13,7 @@
               pjoin in? map+ vals+ filter+ partition-all+
               remove+ take+ map-vals+ filter-vals+
               flatten-1+ range+ ffilter
-              reduce-count]]
+              reduce-count nnil?]]
     [quantum.core.numeric             :as num]
     [quantum.numeric.arrays           :as a]
     [quantum.core.fn                  :as fn
@@ -23,7 +23,7 @@
     [quantum.core.error
       :refer [->ex TODO]]
     [quantum.core.logic
-      :refer [nnil? coll-or condpc fn-and]]
+      :refer [coll-or condpc fn-and]]
     [quantum.core.nondeterministic    :as rand]
     [quantum.core.thread              :as thread
       :refer [async]]

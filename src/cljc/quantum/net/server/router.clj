@@ -17,13 +17,13 @@
     [quantum.core.validate            :as v
       :refer [validate]]
     [quantum.core.string              :as str]
+    [quantum.core.collections.base
+      :refer [nnil?]]
     [quantum.core.log                 :as log]
     [quantum.core.resources           :as res]
     [quantum.core.paths               :as paths]
     [quantum.core.core                :as qcore
       :refer [lens]]
-    [quantum.core.logic               :as logic
-      :refer [nnil?]]
     [quantum.core.fn                  :as fn
       :refer [<- fn->]]))
 

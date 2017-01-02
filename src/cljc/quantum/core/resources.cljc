@@ -7,13 +7,15 @@
                                set-refresh-dirs]                ])
                      [clojure.core.async           :as casync]
                      [quantum.core.core            :as qcore]
+                     [quantum.core.collections.base
+                       :refer [nnil?]]
                      [quantum.core.error           :as err
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.fn
                        :refer [fn$ with-do]]
                      [quantum.core.logic           :as logic
-                       :refer [whenf whenf1 fn-not fn-or nnil?]]
+                       :refer [whenf whenf1 fn-not fn-or]]
                      [quantum.core.macros          :as macros
                        :refer [defnt]]
                      [quantum.core.async           :as async    ]
@@ -21,6 +23,8 @@
                        :refer [atom?]                           ]
                      [quantum.core.validate        :as v
                        :refer [validate]])
+           (:require-macros
+             [quantum.core.resources :as self])
   #?(:clj  (:import org.openqa.selenium.WebDriver
                     (java.lang ProcessBuilder Process StringBuffer)
                     (java.io InputStream Reader Writer
@@ -87,11 +91,11 @@
   true)
 
 (defn start!
-  ([] (start! (:global @systems)))
+  ([] (start! (::global @systems)))
   ([c] (component/start c)))
 
 (defn stop!
-  ([] (stop! (:global @systems)))
+  ([] (stop! (::global @systems)))
   ([c] (component/stop c)))
 
 #?(:clj

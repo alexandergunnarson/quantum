@@ -229,7 +229,7 @@
        (when temp#
          ~(if more
               `(when-let [~@more] ~@body)
-              ~@body))))))
+              `(do ~@body)))))))
 
 #?(:clj
 (defmacro cond-let

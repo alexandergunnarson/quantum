@@ -12,7 +12,8 @@
   (:refer-clojure :exclude [reduce Range ->Range])
   (:require
     [clojure.core                  :as core]
-    [quantum.core.collections.base :as cbase]
+    [quantum.core.collections.base :as cbase
+      :refer [nnil?]]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
@@ -23,7 +24,7 @@
       :refer [call firsta aritoid
               fn1 fn-> fn->> rcomp defcurried]]
     [quantum.core.logic            :as logic
-      :refer [nnil? fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
+      :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.numeric          :as num
@@ -31,8 +32,7 @@
     [quantum.core.type             :as type
       :refer [instance+? array-list? lseq?]]
     [quantum.core.reducers.reduce  :as red
-      :refer [reducer first-non-nil-reducer]
-      :include-macros true]
+      :refer [reducer first-non-nil-reducer]]
     [quantum.core.reducers.fold    :as fold
       :refer [folder coll-fold CollFold
               fjinvoke fjtask fjfork fjjoin]]

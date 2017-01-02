@@ -56,4 +56,4 @@
     ; removing the ID, which is not a desired or reasonable outcome.
     this))
 
-#?(:cljs (res/register-component! ::renderer map->Renderer [::log/log ::quantum.db.datomic/db]))
+#?(:cljs (res/register-component! ::renderer map->Renderer [::log/log :quantum.db.datomic/db]))

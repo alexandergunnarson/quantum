@@ -12,7 +12,8 @@
           (:refer-clojure :exclude [reduce into])
           (:require [clojure.core                  :as core]
                     [clojure.core.async            :as async]
-                    [quantum.core.collections.base :as cbase ]
+                    [quantum.core.collections.base :as cbase
+                      :refer [nnil?]]
                     [quantum.core.data.vector      :as vec
                       :refer [catvec]                        ]
           #?@(:clj [[seqspert.hash-set                       ]
@@ -21,20 +22,15 @@
                     [quantum.core.data.map         :as map   ]
                     [quantum.core.error            :as err
                       :refer [->ex]                          ]
-                    [quantum.core.logic            :as logic
-                      :refer [nnil?]                         ]
                     [quantum.core.macros           :as macros
                       :refer [defnt]]
                     [quantum.core.type             :as type
-                      :refer [#?@(:clj [editable? hash-set?
-                                        hash-map?])]         ]
+                      :refer [editable? hash-set? hash-map?]]
                     [quantum.core.type.defs
                       #?@(:cljs [:refer [Reducer Folder]])]
                     [quantum.core.vars             :as var
                       :refer [defalias]])
   #?(:cljs (:require-macros
-                    [quantum.core.type             :as type
-                      :refer [editable? hash-set? hash-map?] ]
                     [quantum.core.reducers.reduce
                       :refer [reduce]]))
   (:import #?(:clj  [quantum.core.type.defs Reducer Folder]

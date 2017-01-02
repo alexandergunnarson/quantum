@@ -81,16 +81,19 @@
 #?(:clj (res/register-component! ::busy-wait-scheduler map->BusyWaitScheduler []))
 
 
+#?(:clj
 (defnt shut-down!
   ([^ScheduledExecutorService x] (.shutdown x))
   ([^JavaScheduler            x] (-> x :pool shut-down!))
-  ([^BusyWaitScheduler        x] (-> x :shut-down? (reset! true))))
+  ([^BusyWaitScheduler        x] (-> x :shut-down? (reset! true)))))
 
+#?(:clj
 (defnt await-termination! ; TODO include timeouts
   ([^ScheduledExecutorService x] (shut-down! x) (.awaitTermination x Integer/MAX_VALUE (time/->timeunit :millis)))
   ([^JavaScheduler            x] (shut-down! x) (-> x :pool await-termination!))
-  ([^BusyWaitScheduler        x] (shut-down! x) @(:busy-waiter x)))
+  ([^BusyWaitScheduler        x] (shut-down! x) @(:busy-waiter x))))
 
+#?(:clj
 (defnt schedule!
   ([^JavaScheduler scheduler at f]
     (validate at (v/and number? (fn1 >= 0))
@@ -109,4 +112,4 @@
       (if shut-down?
           false
           (do (swap! queue update (long at) (fn-> (coll/ensurec []) (conj f)))
-              true)))))
+              true))))))

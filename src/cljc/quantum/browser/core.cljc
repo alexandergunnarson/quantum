@@ -6,34 +6,24 @@
           (:require
             [com.stuartsierra.component     :as comp ]
             [quantum.core.validate
-              :refer        [#?(:clj validate) spec]
-              :refer-macros [validate]]
-            [quantum.auth.core              :as auth ]
-            [quantum.core.log               :as log
-              :include-macros true]
-            [quantum.core.resources         :as res
-              :include-macros true]
+              :refer [validate spec]]
+            [quantum.auth.core              :as auth]
+            [quantum.core.log               :as log]
+            [quantum.core.resources         :as res]
             [quantum.core.time.core         :as time ]
             [quantum.core.io                :as io   ]
             [quantum.core.convert           :as conv ]
             [quantum.core.data.complex.json :as json ]
             [quantum.core.string            :as str  ]
             [quantum.core.async             :as async]
-            [quantum.core.logic
-              :refer [nnil?]]
             [quantum.core.fn
-              :refer        [#?@(:clj [fn->]) juxtk]
-              :refer-macros [fn->]]
+              :refer [fn-> juxtk]]
             [quantum.core.error             :as err
-              :refer        [#?@(:clj [try+ try-times]) ->ex]
-              :refer-macros [try+ try-times]]
+              :refer [try+ try-times ->ex]]
             [quantum.core.collections :as coll
-              :refer        [#?@(:clj [join])
-                             map+]
-              :refer-macros [join]]
+              :refer [join map+ nnil?]]
             [quantum.core.macros
-              :refer        [#?@(:clj [defnt])]
-              :refer-macros [defnt]])
+              :refer [defnt]])
   #?(:clj (:import
            ;(com.teamdev.jxbrowser.chromium.javafx BrowserView)
            ;(com.teamdev.jxbrowser.chromium Browser)

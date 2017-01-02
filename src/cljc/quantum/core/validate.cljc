@@ -5,7 +5,7 @@
   (:require
     [clojure.core      :as core]
     [clojure.spec      :as s]
-    [quantum.core.logic
+    [quantum.core.collections.base
       :refer [nnil?]]
     [quantum.core.macros.core
       :refer [if-cljs locals]]

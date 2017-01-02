@@ -8,20 +8,15 @@
      #?(:clj [criterium.core           :as bench])
              [quantum.core.core        :as qcore]
              [quantum.core.collections :as coll
-               :refer        [#?(:clj containsv?)]
-               :refer-macros [containsv?]]
+               :refer [containsv?]]
              [quantum.core.logic       :as logic
-               :refer        [#?@(:clj [condpc coll-or])]
-               :refer-macros [condpc coll-or]]
-             [quantum.core.log         :as log
-               :include-macros true]
+               :refer [condpc coll-or]]
+             [quantum.core.log         :as log]
              [quantum.core.string      :as str]
-             [quantum.core.error       :as err
-               :include-macros true]
+             [quantum.core.error       :as err]
              [quantum.core.reflect     :as refl]
              [quantum.core.vars
-               :refer        [#?(:clj defalias)]
-               :refer-macros [        defalias]])
+               :refer [defalias]])
   #?(:clj (:import (java.io   File)
                    (java.util Map Collections)
                    (java.lang.reflect Field)

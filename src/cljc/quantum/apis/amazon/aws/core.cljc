@@ -1,8 +1,7 @@
 (ns quantum.apis.amazon.aws.core
           (:require
             [quantum.core.collections
-              :refer        [map+ #?@(:clj [join])]
-              :refer-macros [join]]
+              :refer [map+ join]]
             [quantum.deploy.amazon :as deploy]
             [quantum.core.validate :as v
               :refer [validate]]

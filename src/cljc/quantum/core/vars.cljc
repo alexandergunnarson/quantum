@@ -17,14 +17,12 @@
   {:attribution "clojure.contrib.def/defalias"
    :contributors ["Alex Gunnarson"]}
   ([name orig]
-     `(do
-        (let [orig-var# (var ~orig)]
-          (if true ; Can't have different clj-cljs things within macro...  ;#?(:clj (-> orig-var# .hasRoot) :cljs true)
+     `(do (if ~(if-cljs &env true `(-> (var ~orig) .hasRoot))
               (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
                   ; for some reason, the :macro metadata doesn't really register unless you do it manually
-                  (when (-> orig-var# meta :macro true?)
+                  (when (-> (var ~orig) meta :macro true?)
                     (alter-meta! #'~name assoc :macro true)))
-              (def ~name)))
+              (def ~name))
         (var ~name)))
   ([name orig doc]
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))

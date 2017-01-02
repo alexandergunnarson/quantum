@@ -2,9 +2,9 @@
   ^{:doc "Useful namespace and var-related functions."
     :attribution "Alex Gunnarson"}
   quantum.core.ns
-  (:require [clojure.set    :as set]
-            [clojure.string :as str]
-    #?(:clj [alembic.still])))
+  (:require
+    [clojure.set    :as set]
+    [clojure.string :as str]))
 
 #?(:clj
 (defmacro search-var
@@ -109,7 +109,8 @@
 
 #?(:clj
 (defmacro load-lib [lib]
-  `(alembic.still/distill ~lib)))
+  `(do (require 'alembic.still)
+       (alembic.still/distill ~lib))))
 
 #_(:clj (defalias lein alembic.still/lein))
 

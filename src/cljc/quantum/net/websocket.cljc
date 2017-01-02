@@ -11,13 +11,13 @@
             [quantum.core.fn                         :as fn
               :refer [fn->]]
             [quantum.core.log                        :as log]
-            [quantum.core.logic                      :as logic
-              :refer [nnil?]]
             [quantum.core.async                      :as async
               :refer [promise-chan offer! go]]
             [quantum.core.validate                   :as v
               :refer [validate]]
             [quantum.core.resources                  :as res]
+            [quantum.core.collections.base
+              :refer [nnil?]]
     #?(:clj [quantum.net.server.router               :as router])))
 
 (defmulti handle :id) ; Dispatch on event-id

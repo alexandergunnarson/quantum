@@ -7,14 +7,13 @@
            (:require
              #?(:clj [clojure.java.io          :as io])
                      [quantum.core.data.array  :as arr
-                       :refer        [#?(:clj byte-array+) aset!]]
+                       :refer [#?(:clj byte-array+) aset!]]
                      [quantum.core.data.binary :as bin
-                       :refer        [&& >>>]]
+                       :refer [&& >>>]]
+                     [quantum.core.collections.base
+                       :refer [nnil?]]
                      [quantum.core.fn          :as fn
-                       :refer        [#?@(:clj [fn1])]
-                       :refer-macros [          fn1]]
-                     [quantum.core.logic       :as logic
-                       :refer        [nnil?]])
+                       :refer [fn1]])
   #?(:clj  (:import  java.util.Arrays)))
 
 #?(:clj (set! *unchecked-math* true))

@@ -6,11 +6,12 @@
 #?(:clj
     [cheshire.core            :as json])
     [cognitect.transit        :as t]
-    [quantum.core.collections :as coll]
+    [quantum.core.collections :as coll
+      :refer [nnil?]]
     [quantum.core.fn          :as fn
       :refer [<- fn1]]
     [quantum.core.logic
-      :refer [nnil? whenp]]))
+      :refer [whenp]]))
 
 ; 2.888831 ms for Cheshire (on what?) vs. clojure.data.json : 7.036831 ms
 

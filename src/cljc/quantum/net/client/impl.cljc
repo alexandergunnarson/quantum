@@ -1,28 +1,27 @@
 (ns ^{:doc "HTTP request processing with error handling, log writing, etc."}
   quantum.net.client.impl
            (:require  [clojure.core                 :as core]
-             #?(:cljs [goog.userAgent               :as agent ])
-                      [cognitect.transit            :as t     ]
+             #?(:cljs [goog.userAgent               :as agent])
+                      [cognitect.transit            :as t]
                       [#?(:clj  org.httpkit.client
-                          :cljs cljs-http.client)   :as http  ]
+                          :cljs cljs-http.client)   :as http]
              #?(:cljs [cljs.reader
-                        :refer [read-string]                  ])
-                      [#?(:clj  clojure.core.async
-                          :cljs cljs.core.async   ) :as casync]
+                        :refer [read-string]])
+                      [clojure.core.async           :as casync]
                       [quantum.core.convert
                         :refer [base64-encode ->json json->
-                                ->transit transit->]          ]
+                                ->transit transit->]]
                       [quantum.core.error           :as err
-                        :refer [->ex]                         ]
-                      [quantum.core.log             :as log   ]
-                      [quantum.core.string          :as str   ]
-                      [quantum.net.core             :as net   ]
+                        :refer [->ex]]
+                      [quantum.core.log             :as log]
+                      [quantum.core.string          :as str]
+                      [quantum.net.core             :as net]
                       [quantum.core.fn              :as fn
                         :refer [fn-> fn1]]
                       [quantum.core.logic           :as logic
-                        :refer [fn-and whenf1 nnil?]]
+                        :refer [fn-and whenf1]]
                       [quantum.core.collections     :as coll
-                        :refer [kmap containsv?]]
+                        :refer [kmap containsv? nnil?]]
                       [quantum.core.async           :as async
                         :refer [go]]
                       [quantum.core.vars            :as var

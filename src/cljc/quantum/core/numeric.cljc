@@ -16,10 +16,11 @@
       :refer [->ex TODO]]
     [quantum.core.fn
       :refer [aritoid fn1 fn->]]
-    [quantum.core.log :as log
-      :include-macros true]
+    [quantum.core.log                  :as log]
+    [quantum.core.collections.base
+      :refer [nnil?]]
     [quantum.core.logic                :as logic
-      :refer [nnil? fn-and whenf1]]
+      :refer [fn-and whenf1]]
     [quantum.core.macros               :as macros
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.macros.core          :as cmacros

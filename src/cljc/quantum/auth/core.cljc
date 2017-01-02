@@ -12,7 +12,8 @@
             [quantum.core.validate    :as v
               :refer [validate]]
             [quantum.core.data.validated
-              :refer [def-validated def-validated-map]]))
+              :refer [def-validated def-validated-map]]
+            [quantum.db.datomic.core  :as dbc]))
 
 (def-validated-map ^:db? ^:sensitive? ^:no-history? oauth2-keys
   :req-un [(def :this/redirect-uri  :db/string) ; TODO validate uri?

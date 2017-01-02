@@ -4,7 +4,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.macros
   (:refer-clojure
-    :exclude [macroexpand macroexpand-all])
+    :exclude [macroexpand macroexpand-1 macroexpand-all])
   (:require
     [clojure.walk
       :refer [postwalk]]
@@ -16,7 +16,9 @@
     [quantum.core.log          :as log
       :include-macros true]
     [quantum.core.logic        :as logic
-      :refer [nnil? fn-and whenc whenf1]]
+      :refer [fn-and whenc whenf1]]
+    [quantum.core.collections.base
+      :refer [nnil?]]
     [quantum.core.macros.core  :as cmacros]
     [quantum.core.macros.defnt :as defnt]
     [quantum.core.macros.fn    :as mfn]

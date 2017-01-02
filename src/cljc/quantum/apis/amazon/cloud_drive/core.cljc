@@ -9,13 +9,13 @@
                      [quantum.net.http                     :as http]
                      [quantum.core.paths                   :as paths]
                      [quantum.core.collections             :as coll
-                       :refer [kmap join reduce map+ val assoc-if]]
+                       :refer [kmap join reduce map+ val assoc-if nnil?]]
                      [quantum.core.error
                        :refer [TODO ->ex]]
                      [quantum.core.fn                      :as fn
                        :refer [<- fn-> fn->> fn1]]
                      [quantum.core.logic                   :as logic
-                       :refer [nnil? eq?]]
+                       :refer [eq?]]
                      [quantum.core.log                     :as log
                        :include-macros true]
                      [quantum.core.validate                :as v

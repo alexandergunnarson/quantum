@@ -3,39 +3,34 @@
           with |defcomponent|."
     :attribution "Alex Gunnarson"}
   quantum.ui.components
-           (:refer-clojure :exclude [for reduce])
-           (:require
-    #?(:cljs [cljs.core.async     :as async])
-    #?(:cljs [reagent.core        :as rx   ])
-    #?(:cljs [re-frame.core
-               :refer [subscribe dispatch dispatch-sync reg-event reg-sub]])
-             [quantum.ui.revision :as rev  ]
-             [quantum.core.fn     :as fn
-               :refer        [#?@(:clj [fn-> fn->> <-])]
-               :refer-macros [fn-> fn->> <-]]
-             [quantum.core.logic
-               :refer        [#?@(:clj [whenf]) nnil?]
-               :refer-macros [whenf]]
-             [quantum.core.error  :as err
-               :include-macros true]
-             [quantum.core.log    :as log
-               :include-macros true]
-             [quantum.db.datomic  :as db   ]
-             [quantum.core.system :as sys
-               :refer        [#?@(:cljs [ReactNative])]]
-             [quantum.core.collections :as coll
-               :refer        [#?@(:clj [for fori join kmap reduce])
-                              map-vals+ ensurec merge-deep]
-               :refer-macros [for fori join kmap reduce]]
-             [quantum.ui.style.core
-               :refer [layout-x layout-y layout layout-perp
-                       layout-direction layout-fit autofit
-                       layout-wrap scaled]])
-  #?(:cljs (:require-macros
-             [reagent.ratom
-               :refer [reaction]]
-             [cljs.core.async.macros
-               :refer [go]])))
+  (:refer-clojure :exclude [for reduce])
+  (:require
+  #?@(:cljs
+   [[reagent.core        :as rx]
+    [re-frame.core
+      :refer [subscribe dispatch dispatch-sync reg-event reg-sub]]])
+    [quantum.ui.revision :as rev]
+    [quantum.core.fn     :as fn
+      :refer [fn-> fn->> <-]]
+    [quantum.core.logic
+      :refer [whenf]]
+    [quantum.core.error  :as err]
+    [quantum.core.log    :as log]
+    [quantum.db.datomic  :as db]
+    [quantum.core.system :as sys
+      :refer  [#?@(:cljs [ReactNative])]]
+    [quantum.core.collections :as coll
+      :refer [for fori join kmap reduce
+              map-vals+ ensurec merge-deep nnil?]]
+    [quantum.core.async  :as async
+      :refer [go]]
+    [quantum.ui.style.core
+      :refer [layout-x layout-y layout layout-perp
+              layout-direction layout-fit autofit
+              layout-wrap scaled]])
+  (:require-macros
+    [reagent.ratom
+      :refer [reaction]]))
 
 (log/this-ns)
 

@@ -4,21 +4,18 @@
           within a REPL."
     :attribution "Alex Gunnarson"}
   quantum.core.process
-           (:require [com.stuartsierra.component :as comp ]
-           #?@(:clj [[clojure.java.io            :as io   ]
+           (:require [com.stuartsierra.component :as comp]
+           #?@(:clj [[clojure.java.io            :as io]
                      [clojure.java.shell         :as shell]])
                      [quantum.core.error
-                       :refer [->ex]                      ]
+                       :refer [->ex]]
                      [quantum.core.paths         :as paths]
                      [quantum.core.resources     :as res
-                       :refer [closed?]                   ]
+                       :refer [closed?]]
                      [quantum.core.async
                        :refer [close-req? message?]]
                     [quantum.core.vars           :as var
-                       :refer [#?@(:clj [defalias])]      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars          :as var
-                       :refer [defalias]                  ]))
+                       :refer [defalias]])
   #?(:clj (:import (java.lang ProcessBuilder StringBuffer)
                    (java.io InputStreamReader BufferedReader
                      OutputStreamWriter BufferedWriter

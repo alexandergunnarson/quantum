@@ -172,7 +172,7 @@
         initial-measure-ct 2
         start-measure (- (or (-> lines-then-measures first
                                  (index-of-pred empty?))
-                             0)
+                             initial-measure-ct)
                          initial-measure-ct)
         lines-then-measures (->> lines-then-measures (mapv (remove empty?)))
         num-all-measures (-> lines-then-measures first count)]
