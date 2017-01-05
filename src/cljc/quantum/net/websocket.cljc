@@ -21,7 +21,7 @@
     #?(:clj [quantum.net.server.router               :as router])))
 
 (defmulti handle :id) ; Dispatch on event-id
-(def send-msg! (lens res/systems (fn-> :global :sys-map deref* ::connection :send-fn)))
+(def send-msg! (lens res/systems (fn-> ::res/global :sys-map deref* ::connection :send-fn)))
 
 ; Wrap for logging, catching, etc.:
 (defn handle* [{:as ev-msg :keys [id ?data event]}]
