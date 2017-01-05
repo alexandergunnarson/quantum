@@ -144,7 +144,7 @@
          :exclusions [org.slf4j/slf4j-nop
                       org.slf4j/log4j-over-slf4j
                       org.jboss.logging/jboss-logging]]
-       [datascript                              "0.15.0"          ]
+       [datascript                              "0.15.5"          ]
        [datascript-transit                      "0.2.0"
          :exclusions [com.cognitect/transit-cljs]                 ]
        [com.zachallaun/datomic-cljs             "0.0.1-alpha-1"   ]
