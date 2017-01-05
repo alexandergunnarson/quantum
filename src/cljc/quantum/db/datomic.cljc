@@ -12,7 +12,7 @@
     :cljs
    [[datomic-cljs.api                 :as bdb]
     [cljs-uuid-utils.core             :as uuid] ; TODO have a quantum UUID ns
-    [posh.core                        :as rx-db]])
+    [posh.reagent                     :as rx-db]])
     [datascript.core                  :as mdb]
     [quantum.db.datomic.core          :as dbc]
     [com.stuartsierra.component       :as component]
@@ -89,7 +89,7 @@
    update the component whenever the data it is querying has changed."
   {:todo ["Add Clojure support"]}
   ([query] (rx-q query @conn*))
-  ([query conn & args] (apply rx-db/q conn query args))))
+  ([query conn & args] (apply rx-db/q query conn args))))
 
 #?(:cljs
 (defn rx-pull
@@ -267,18 +267,18 @@
   component/Lifecycle
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
-      (let [type                   (validate (or type :free)                       #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
-            name                   (validate (or name "test")                      (v/and string? nempty?))
-            host                   (validate (or host "localhost")                 (v/and string? nempty?))
-            port                   (validate (or port 4334)                        integer?) ; TODO `net/valid-port?`
-            txr-alias              (validate (or (:alias txr-props) "local")       string?)
-            create?                (validate create?                               (fn1 boolean?))
-            create-if-not-present? (validate (default create-if-not-present? true) (fn1 boolean?))
-            set-main-conn?         (validate (default set-main-conn?         true) (fn1 boolean?))
-            set-main-part?         (validate (default set-main-part?         true) (fn1 boolean?))
-            default-partition      (validate (or default-partition :db.part/test)  (v/and keyword? (fn-> namespace (= "db.part"))))
-            conn                   (validate (or conn (atom nil))                  atom?)
-            connection-retries     (validate (or (if (= type :dynamo) 1 5))        integer?) ; DynamoDB auto-retries
+      (let [type                   (validate (or type :free)                        #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
+            name                   (validate (or name "test")                       (v/and string? nempty?))
+            host                   (validate (or host "localhost")                  (v/and string? nempty?))
+            port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
+            txr-alias              (validate (or (:alias txr-props) "local")        string?)
+            create?                (validate (default create?                false) (fn1 boolean?))
+            create-if-not-present? (validate (default create-if-not-present? true)  (fn1 boolean?))
+            set-main-conn?         (validate (default set-main-conn?         true)  (fn1 boolean?))
+            set-main-part?         (validate (default set-main-part?         true)  (fn1 boolean?))
+            default-partition      (validate (or default-partition :db.part/test)   (v/and keyword? (fn-> namespace (= "db.part"))))
+            conn                   (validate (or conn (atom nil))                   atom?)
+            connection-retries     (validate (or (if (= type :dynamo) 1 5))         integer?) ; DynamoDB auto-retries
             uri (case type
                       :free
                         (str "datomic:" (c/name type)
