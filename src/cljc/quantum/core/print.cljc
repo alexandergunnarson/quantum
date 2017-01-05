@@ -7,6 +7,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.print
   (:require
+    [clojure.string           :as str]
     [quantum.core.core        :as qcore]
     [quantum.core.fn          :as fn
       :refer [fn-> fn->>]]
@@ -37,7 +38,16 @@
   ([obj]
     (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
       (if (instance? #?(:clj Throwable :cljs js/Error) obj)
-          (debug/trace obj)
+          #?(:clj  (debug/trace obj)
+             :cljs (let [obj' (if (instance? ExceptionInfo obj)
+                                  {:type    'cljs.core/ExceptionInfo
+                                   :stack   (-> obj .-stack str/split-lines)
+                                   :message (.-message obj)
+                                   :data    (ex-data obj)}
+                                  {:type    'js/Error
+                                   :stack   (-> obj .-stack str/split-lines)
+                                   :message (.-message obj)})]
+                     (cljs.pprint/pprint obj')))
           (do
             (cond
               (and (string? obj) (> (count obj) *print-length*))

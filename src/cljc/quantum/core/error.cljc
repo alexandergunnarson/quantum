@@ -43,7 +43,7 @@
   ([type]          (if (map? type)
                        (map->Err type)
                        (Err. type nil nil)))
-  ([type msg]      (Err. type msg nil))
+  ([type msg]      (Err. type msg nil ))
   ([type msg objs] (Err. type msg objs)))
 
 (defn ->ex
@@ -58,16 +58,16 @@
   #?(:clj (let [^Throwable e e
                 m {:name    (-> e class .getName)
                    :message (-> e .getMessage)
-                   :trace   (-> e clj-stacktrace.repl/pst with-out-str clojure.string/split-lines)}]
+                   :trace   (-> e clj-stacktrace.repl/pst with-out-str str/split-lines)}]
             (if (instance? clojure.lang.ExceptionInfo e)
-                (assoc m :ex-data (ex-data e))
+                (assoc m :data (ex-data e))
                 m))
      :cljs (if (instance? js/Error e)
                (let [m {:name nil
                         :message (.-message e)
                         :trace   (.-trace   e)}]
                  (if (instance? cljs.core.ExceptionInfo e)
-                     (assoc m :ex-data (ex-data e))
+                     (assoc m :data (ex-data e))
                      m))
                {:ex-data e})))
 
