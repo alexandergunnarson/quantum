@@ -1,5 +1,6 @@
 (ns quantum.core.macros.deftype
   (:require
+    [cljs.analyzer]
     [quantum.core.collections.base
       :refer [update-first update-val ensure-set]]
     [quantum.core.macros.core
@@ -187,6 +188,47 @@
            (for [[name- arities] impls] (p-arity name- arities)))])))
 
 #?(:clj
+(defn deftype+:cljs [env t fields & impls]
+  (@#'cljs.core/validate-fields "deftype" t fields)
+  (let [r (:name (cljs.analyzer/resolve-var (dissoc env :locals) t))
+        [fpps pmasks] (@#'cljs.core/prepare-protocol-masks env impls)
+        protocols (@#'cljs.core/collect-protocols impls env)
+        t (vary-meta t assoc
+            :protocols protocols
+            :skip-protocol-flag fpps) ]
+    `(do
+       (deftype* ~t ~fields ~pmasks
+         ~(if (seq impls)
+            `(extend-type ~t ~@(@#'cljs.core/dt->et t impls fields))))
+       (set! (.-getBasis ~t) (fn [] '[~@fields]))
+       (set! (.-cljs$lang$type ~t) true)
+       (set! (.-cljs$lang$ctorStr ~t) ~(str r))
+       (set! (.-cljs$lang$ctorPrWriter ~t) (fn [this# writer# opt#] (cljs.core/-write writer# ~(str r))))
+
+       ~(when-not (-> t meta :no-factory?)
+          (@#'cljs.core/build-positional-factory t r fields))
+       ~t))))
+
+#?(:clj
+(defn deftype+:clj [env name fields & opts+specs]
+  (@#'clojure.core/validate-fields fields name)
+  (let [gname name
+        [interfaces methods opts] (@#'clojure.core/parse-opts+specs opts+specs)
+        ns-part                   (namespace-munge *ns*)
+        classname                 (symbol (str ns-part "." gname))
+        hinted-fields             fields
+        fields                    (vec (map #(with-meta % nil) fields))
+        [field-args over]         (split-at 20 fields)]
+    `(let []
+       ~(@#'clojure.core/emit-deftype* name gname (vec hinted-fields) (vec interfaces) methods opts)
+       (import ~classname)
+       ~(when-not (-> name meta :no-factory?)
+          (@#'clojure.core/build-positional-factory gname classname fields))
+       ~classname))))
+
+#?(:clj (defmacro deftype+ [& args] (apply (if-cljs &env deftype+:cljs deftype+:clj) &env args)))
+
+#?(:clj
 (defmacro deftype-compatible
   "Creates a `deftype` which is cross-platform in its declaration of core
    protocols. Also catches and logs duplicate class definition errors for
@@ -200,9 +242,9 @@
   [sym arglist skel]
   (let [lang (if-cljs &env :cljs :clj)
         qualified-sym (var/qualify-class sym)
-        code `(do (deftype ~sym ~arglist
+        code `(do (deftype+ ~sym ~arglist
                     ~@(apply concat (deftype-compatible-helper skel lang)))
-                  ~(when (= lang :clj) `(import (quote ~qualified-sym))))]
+                  ~(when (= lang :clj) `(import (quote ~qualified-sym))))] ; TODO doesn't this already happen?
     (if-cljs &env
       code
       ; To avoid duplicate class errors

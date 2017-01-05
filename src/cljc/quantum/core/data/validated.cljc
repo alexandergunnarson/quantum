@@ -253,7 +253,7 @@
           conformer-sym (gensym "conformer")
           schema        (when db-mode? (spec->schema sym-0 spec))
           code `(do ~(when conformer `(def ~conformer-sym ~conformer))
-                    (deftype-compatible ~sym ~'[v]
+                    (deftype-compatible ~(with-meta sym {:no-factory? true}) ~'[v]
                       {~'?Object
                         {~'hash     ([_#] (.hashCode ~'v))
                          ~'equals   ~(std-equals sym other '=)}
@@ -377,7 +377,7 @@
                         _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
                     (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
                     m#))))
-          (deftype-compatible ~sym
+          (deftype-compatible ~(with-meta sym {:no-factory? true})
             [~(with-meta 'v {:tag req-record-sym})]
             {~'?Seqable
               {~'seq          ([_#] (seq ~'v))}
