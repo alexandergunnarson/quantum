@@ -426,23 +426,23 @@
             (case k
               :db/cardinality
               (when (= [v v'] [:db.cardinality/many :db.cardinality/one])
-                (illegal-schema-change)) ; TODO 1
+                (illegal-schema-change k v v')) ; TODO 1
               :db/index
               (when (and (true? v) (not v'))
                 (log/pr ::warn "Unindexing" k "won't take effect in previous datoms")) ; TODO 0
               :db/valueType
               (cond (and schema (not= v v'))
-                    (illegal-schema-change)
+                    (illegal-schema-change k v v')
                     (not schema)
-                    (unclear-validation))
+                    (unclear-validation k v v'))
               :db/unique
               (cond
                 (and (not v) v)
-                (illegal-schema-change) ; TODO 2
+                (illegal-schema-change k v v') ; TODO 2
                 (= [v v'] [:db.unique/value :db.unique/identity])
-                (unclear-validation)
+                (unclear-validation k v v')
                 (= [v v'] [:db.unique/identity :db.unique/value])
-                (unclear-validation))
+                (unclear-validation k v v'))
               :db/isComponent
               (TODO)
               ; Doesn't validate other schema changes
@@ -530,7 +530,7 @@
      (:fn/fq ~query)
      ~(tempid))))
 
-(def attribute? #(-> @dv/db-schemas (get :type) ))
+(def attribute? #(-> @dv/db-schemas (get (:type %)))) ; TODO fix
 
 (def dbfn-call? (fn-and seq?
                         (fn-> first keyword?)
@@ -650,7 +650,7 @@
                          [(->db arg) (first args) (rest args)]
                          [(->db)     arg          args       ])
         retract-fn (if (mdb? db)
-                       :db.fn/retractEntity
+                       :db.fn/retractEntity  ; TODO these are different things
                        :db/retract)]
     (wrap-transform
       (concat (list retract-fn eid) kvs))))

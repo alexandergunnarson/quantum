@@ -349,9 +349,10 @@
         (reset! conn nil))
       (when txr-process
         (res/stop! txr-process))
+      #?(:clj
       (when (= type :mem)
         (when-not (bdb/delete-database uri)
-          (log/pr :warn "Failed to delete in-memory database at" uri)))
+          (log/pr :warn "Failed to delete in-memory database at" uri))))
       this))
 
 (defn ->backend-db
