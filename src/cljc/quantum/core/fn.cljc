@@ -181,6 +181,12 @@
   [expr & exprs]
   `(let [ret# ~expr] ~@exprs ret#)))
 
+#?(:clj
+(defmacro let-with-do
+  "Like aprog1 or prog1-bind in Common Lisp."
+  [[sym retn] & body]
+  `(let [~sym ~retn] ~@body ~sym)))
+
 
 ; TODO: deprecate these... likely they're not useful
 (defn call->   [arg & [func & args]] ((apply func args) arg))
