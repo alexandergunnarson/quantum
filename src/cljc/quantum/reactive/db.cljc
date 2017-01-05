@@ -9,18 +9,22 @@
     [quantum.core.fn
       :refer [fn$]]
     [quantum.core.error      :as err
-      :refer [->ex TODO]]
+      :refer [->ex TODO catch-all]]
     [quantum.core.validate   :as v
-      :refer [validate]]
-    [quantum.core.async      :as async
-      :refer [go]]))
+      :refer [validate]])
+  (:require-macros
+    [reagent.ratom
+      :refer [reaction]]))
 
 (defn- do-when-global-mconn! [register-fn type k f]
-  (add-watch db/conn* (keyword (str (name type) ":" (name k)))
-    (fn [_ _ _ conn]
-      (when (and (dbc/mconn? conn) (-> conn meta (get type)))
-        (go (log/pr :debug "Registering" type k)
-            (register-fn conn k f))))))
+  (let [watch (fn [_ _ _ conn]
+                (when (and (dbc/mconn? conn) (-> conn meta (get type)))
+                  (catch-all
+                    (do (log/pr ::debug "Registering" type k)
+                        (register-fn conn k f))
+                    e (log/pr :warn "Failed to register" k e))))]
+    (watch nil nil nil @db/conn*)
+    (add-watch db/conn* (keyword (str (name type) ":" (name k))) watch)))
 
 (defn register-sub!
   "Like re-frame's `reg-sub`."
@@ -49,8 +53,11 @@
       (fn this
         ([k args] (this k args nil))
         ([k args opts]
-          (db/rx-q (f k args) conn
-            (when-not (:no-cache? opts) {:cache :forever}))))))))
+          (let [rx (db/rx-q (f k args) conn
+                     (when-not (:no-cache? opts) {:cache :forever}))]
+            (if-let [post (-> f meta :post)]
+              (reaction (post @rx))
+              rx))))))))
 
 #?(:cljs
 (defn register-transformer!
@@ -77,7 +84,7 @@
     (validate @db/conn* dbc/mconn?)
     (sub @db/conn* k nil nil))
   ([conn k args opts]
-    (log/pr :debug "sub" k)
+    (log/pr ::debug "sub" k)
     (if-let [subscriber (-> conn meta :subs deref* (get k))]
       (subscriber k args opts)
       (throw (->ex :no-subscription-found {:k k}))))))
@@ -91,16 +98,16 @@
     (validate @db/conn* dbc/mconn?)
     (transform!* @db/conn* k args))
   ([conn k args]
-    (log/pr :debug "transform" k)
+    (log/pr ::debug "transform" k)
     (if-let [transformer (-> conn meta :transformers deref* (get k))]
       (let [report (atom nil)]
         (swap! conn (fn [db] ; TODO take this out of the swap, because we need side effects to be run no more than once
                       (let [r (transformer db k args)]
-                        (log/pr :debug "Pure transformer" k "applied")
+                        (log/pr ::debug "Pure transformer" k "applied")
                         (validate r (fn$ instance? datascript.db.TxReport))
                         (reset! report r)
                         (:db-after r))))
-        (log/pr :debug "Transacted")
+        (log/pr ::debug "Transacted")
         (doseq [[_ callback] (-> conn meta :listeners deref)]
           (callback @report))
         @report)
