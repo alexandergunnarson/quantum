@@ -2,19 +2,19 @@
   (:refer-clojure :exclude [+ * cat])
   (:require
  #?(:clj
-     [net.cgrand.seqexp            :as se])
-     [quantum.core.fn              :as fn
+     [net.cgrand.seqexp                :as se])
+     [quantum.core.fn                  :as fn
        :refer [<- fn-> fn$]]
-     [quantum.core.vars            :as var
+     [quantum.core.vars                :as var
        :refer [defalias]]
      [quantum.core.logic
        :refer [fn-not fn-and fn-or whenf1 condf1]]
-     [quantum.core.collections      :as coll
+     [quantum.core.collections         :as coll
        :refer [postwalk map-vals+ join]]
      [quantum.core.macros.core
        :refer [macroexpand-all]]
-     [quantum.core.collections.tree :as tree]
-     [quantum.core.collections.zip  :as zip]))
+     [quantum.core.collections.tree    :as tree]
+     [quantum.core.collections.zippers :as zip]))
 
 ; Regex seq matching
 

@@ -37,16 +37,15 @@
      conj! assoc! dissoc! disj!
      boolean?])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )             :as core]
+    [clojure.core                       :as core]
     [quantum.core.collections.core :as coll
       :refer        [#?@(:clj [first conj!])]
       :refer-macros [          first conj!]]
-    [quantum.core.collections.map-filter     :as mf
+    [quantum.core.collections.map-filter :as mf
       :refer        [map-keys+]]
     [quantum.core.collections.selective :as sel
       :refer        [in-k?]]
-    [quantum.core.collections.zip       :as zip
+    [quantum.core.collections.zippers   :as zip
       :refer        [#?@(:clj [walking])]
       :refer-macros [walking]]
     [quantum.core.fn                    :as fn

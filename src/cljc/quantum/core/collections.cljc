@@ -62,7 +62,7 @@
              [quantum.core.collections.map-filter     :as mf     ]
              [quantum.core.collections.selective      :as sel    ]
              [quantum.core.collections.tree           :as tree   ]
-             [quantum.core.collections.zip            :as qzip   ]
+             [quantum.core.collections.zippers        :as qzip   ]
              [quantum.core.collections.logic          :as clog   ]
              [quantum.core.error                      :as err
                :refer [->ex TODO]]

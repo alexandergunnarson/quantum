@@ -13,7 +13,7 @@
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
     :attribution "Alex Gunnarson"}
-  quantum.core.collections.zip
+  quantum.core.collections.zippers
   (:refer-clojure :exclude
     [for doseq reduce
      contains?

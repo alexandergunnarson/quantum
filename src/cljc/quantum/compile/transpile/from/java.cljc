@@ -4,7 +4,7 @@
     [quantum.core.analyze.clojure.predicates :as anap ]
     [quantum.core.analyze.clojure.core       :as ana  ]
     [quantum.core.string                     :as str  ]
-    [quantum.core.collections.zip            :as zip]
+    [quantum.core.collections.zippers        :as zip]
     [quantum.core.collections                :as coll
       :refer [postwalk prewalk zip-prewalk take-until update-last seq-nor
               containsv? popl popr kmap nnil? nempty?]]
