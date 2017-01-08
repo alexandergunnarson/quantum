@@ -238,6 +238,12 @@
       ; |delay| to avoid printing out the entire database
       [true (delay txn)]))))
 
+(defn db-with [txn-f] (fn [db _ args] (with db (apply txn-f args))))
+
+(defn av->e [db a v] (first (q [:find ['?e] :where ['?e a v]] db)))
+(defn ea->v [db e a] (first (q [:find ['?v] :where [e a '?v]] db)))
+(defn kq [k a] [:find ['?v] :where ['?e :db/key k] ['?e a '?v]])
+
 ; ===== SCHEMAS =====
 
 (def ^{:doc "See also Datomic's documentation."}
