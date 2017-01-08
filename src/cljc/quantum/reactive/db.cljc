@@ -59,6 +59,20 @@
               (reaction (post @rx))
               rx))))))))
 
+#?(:cljs ; TODO merge this with `register-q!`
+(defn register-q!*
+  [k f & [post]]
+  (register-q! k (with-meta (fn [_ args] (apply f args)) {:post post}))))
+
+#?(:cljs
+(defn register-kq! [k & [post]]
+  (register-q! k (with-meta (fn [_ _] (dbc/kq k :value)) {:post post}))))
+
+#?(:cljs
+(defn register-kqa! [k a & [post]]
+  (register-q! (keyword (str (name k) ":" (name a)))
+    (with-meta (fn [_ _] (dbc/kq k a)) {:post post}))))
+
 #?(:cljs
 (defn register-transformer!
   "Registers a transformer function on @`conn` to @`k`.
@@ -72,6 +86,8 @@
     ; TODO add in event log call
     (validate conn dbc/mconn?)
     (swap! (-> conn meta :transformers) assoc k f))))
+
+#?(:cljs (defn register-txn-transformer! [k f] (register-transformer! k (dbc/db-with f))))
 
 #?(:cljs
 (defn sub
