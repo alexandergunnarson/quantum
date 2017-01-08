@@ -15,7 +15,7 @@
       :refer [defalias]])
   (:require-macros
     [quantum.core.error            :as self
-      :refer [catch-all]]))
+      :refer [with-log-errors]]))
 
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))
@@ -198,12 +198,15 @@
            ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg)))))
 (defalias TODO todo)
 
-(defn wrap-log-error [f] ; TODO find a cleaner way to do this
-  (fn ([]                       (catch-all (f)                            e (log/ppr :warn e)))
-      ([a0]                     (catch-all (f a0)                         e (log/ppr :warn e)))
-      ([a0 a1]                  (catch-all (f a0 a1)                      e (log/ppr :warn e)))
-      ([a0 a1 a2]               (catch-all (f a0 a1 a2)                   e (log/ppr :warn e)))
-      ([a0 a1 a2 a3]            (catch-all (f a0 a1 a2 a3)                e (log/ppr :warn e)))
-      ([a0 a1 a2 a3 a4]         (catch-all (f a0 a1 a2 a3 a4)             e (log/ppr :warn e)))
-      ([a0 a1 a2 a3 a4 a5]      (catch-all (f a0 a1 a2 a3 a4 a5)          e (log/ppr :warn e)))
-      ([a0 a1 a2 a3 a4 a5 & as] (catch-all (apply f a0 a1 a2 a3 a4 a5 as) e (log/ppr :warn e)))))
+#?(:clj
+(defmacro with-log-errors [k & args] `(catch-all (do ~@args) e# (log/ppr ~k e#))))
+
+(defn wrap-log-errors [k f] ; TODO find a cleaner way to do this
+  (fn ([]                       (with-log-errors k (f)                           ))
+      ([a0]                     (with-log-errors k (f a0)                        ))
+      ([a0 a1]                  (with-log-errors k (f a0 a1)                     ))
+      ([a0 a1 a2]               (with-log-errors k (f a0 a1 a2)                  ))
+      ([a0 a1 a2 a3]            (with-log-errors k (f a0 a1 a2 a3)               ))
+      ([a0 a1 a2 a3 a4]         (with-log-errors k (f a0 a1 a2 a3 a4)            ))
+      ([a0 a1 a2 a3 a4 a5]      (with-log-errors k (f a0 a1 a2 a3 a4 a5)         ))
+      ([a0 a1 a2 a3 a4 a5 & as] (with-log-errors k (apply f a0 a1 a2 a3 a4 a5 as)))))
