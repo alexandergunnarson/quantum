@@ -10,12 +10,12 @@
     [slingshot.slingshot           :as try]
     [quantum.core.macros.core      :as cmacros
       :refer [if-cljs]]
-    [quantum.core.log              :as log
-      :include-macros true]
+    [quantum.core.log              :as log]
     [quantum.core.vars             :as var
       :refer [defalias]])
   (:require-macros
-    [quantum.core.error            :as self]))
+    [quantum.core.error            :as self
+      :refer [catch-all]]))
 
 (defn generic-error [env]
   (if-cljs env 'js/Error 'Throwable))
@@ -197,3 +197,13 @@
 (defn todo ([]    (throw (->ex :todo "This feature has not yet been implemented.")))
            ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg)))))
 (defalias TODO todo)
+
+(defn wrap-log-error [f] ; TODO find a cleaner way to do this
+  (fn ([]                       (catch-all (f)                            e (log/ppr :warn e)))
+      ([a0]                     (catch-all (f a0)                         e (log/ppr :warn e)))
+      ([a0 a1]                  (catch-all (f a0 a1)                      e (log/ppr :warn e)))
+      ([a0 a1 a2]               (catch-all (f a0 a1 a2)                   e (log/ppr :warn e)))
+      ([a0 a1 a2 a3]            (catch-all (f a0 a1 a2 a3)                e (log/ppr :warn e)))
+      ([a0 a1 a2 a3 a4]         (catch-all (f a0 a1 a2 a3 a4)             e (log/ppr :warn e)))
+      ([a0 a1 a2 a3 a4 a5]      (catch-all (f a0 a1 a2 a3 a4 a5)          e (log/ppr :warn e)))
+      ([a0 a1 a2 a3 a4 a5 & as] (catch-all (apply f a0 a1 a2 a3 a4 a5 as) e (log/ppr :warn e)))))
