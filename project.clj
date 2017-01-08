@@ -1,5 +1,13 @@
 ; TODO lazy-load jars based on desired features (or optionally force load all)
-(defproject quantum/core "0.3.0-01043fd"
+(defproject quantum/core
+  ; Would move it outside of the project but might cause problems?
+  (let [git-hash (let [{:keys [exit out]}
+                         (clojure.java.shell/sh
+                           "git" "rev-parse" "--short" "HEAD")]
+                   (when (= exit 0)
+                     (subs out 0 (-> out count dec))))
+        version (str "0.3.0-" (or git-hash "UNKNOWN"))]
+    version)
   :description      "Some quanta of computational abstraction, assembled."
   :jvm-opts ^:replace
     ["-XX:-OmitStackTraceInFastThrow"
