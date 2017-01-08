@@ -12,7 +12,7 @@
     [quantum.net.http         :as http]
     [quantum.core.string      :as str]
     [quantum.core.fn
-      :refer [<- rfn]]
+      :refer [<- rfn fn1]]
     [quantum.core.macros
       :refer [defnt]]
     [quantum.core.vars        :as var
@@ -107,8 +107,8 @@
          (map+
            (fn [param]
              (->> param
-                  (coll/split-remove "="))))
-         join)))
+                  (coll/split-remove-match "="))))
+         (join {}))))
 
 (defn embedded-url->map
   [^String embedded-url]
@@ -120,16 +120,16 @@
   (let [[url str-params]
           (->> url
                (decode :all)
-               (coll/split-remove "?"))
-        params
-         (-> str-params (url-params->map true))]
+               (coll/split-remove-match "?"))
+        params (some-> str-params (url-params->map true))]
     {:url          url
      :query-params params}))
 
 (defnt normalize-param
   ([^keyword? x] (-> x name normalize-param))
   ([^string?  x] (-> x encode))
-  ([^number?  x] (-> x str normalize-param)))
+  ([^number?  x] (-> x str normalize-param))
+  ([^boolean? x] (-> x str)))
 
 (defn map->str [m]
   (reducei
