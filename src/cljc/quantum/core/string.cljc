@@ -45,6 +45,9 @@
              java.net.IDN
              java.util.regex.Pattern)))
 
+; TODO rename/move/delete
+#?(:clj (defn upper-first [s] (apply str (.toUpperCase (str (first s))) (rest s))))
+
 ; TO EXPLORE
 ; - https://github.com/expez/superstring
 ; ==================
