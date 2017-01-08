@@ -711,7 +711,7 @@
 (defn split-remove
   {:todo ["Slightly inefficient — two |index-of| implicit."]}
   [split-at-obj coll]
-  (let [left  (take-until split-at-obj coll)]
+  (let [left  (take-until split-at-obj coll)] ; TODO need to make a non-predicate `take-until`
     (if (= left coll)
         [left]
         [left (take-after split-at-obj coll)])))
@@ -1622,6 +1622,41 @@
 
         (defn mutable        "Creates a mutable reference to an Object."           [        x] (MutableContainer.       x))
 #?(:clj (defn mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDoubleContainer. x)))
+
+#?(:clj
+(defmacro getm
+  "Get mutable"
+  [x]
+  (if-cljs &env x
+                `(.get ~(with-meta x {:tag 'quantum.core.collections.Mutable})))))
+
+#?(:clj
+(defmacro setm!
+  "Set mutable"
+  [x v]
+  (if-cljs &env `(set!            ~x                                           ~v)
+                `(.set ~(with-meta x {:tag 'quantum.core.collections.Mutable}) ~v))))
+
+#?(:clj
+(defmacro getf
+  "Get field"
+  [x field]
+  (let [accessor (symbol
+                   (str "."
+                     (if-cljs &env (str "-" (name field))
+                                   (str "get" (str/upper-first (name field))))))]
+    `(~accessor ~x))))
+
+#?(:clj
+(defmacro setf!
+  "Set field"
+  [x field v]
+  (let [accessor (symbol
+                   (str "."
+                     (if-cljs &env (str "-" (name field))
+                                   (str "set" (str/upper-first (name field))))))]
+    (if-cljs &env `(set! (~accessor ~x) ~v)
+                  `(~accessor ~x ~v)))))
 
 ; ====== NUMERIC ======
 
