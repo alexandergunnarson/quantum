@@ -90,8 +90,6 @@
 ; reduce-kv-reverse [f init o] - like reduce-kv but in reverse order
 ; reduce2-kv-reverse [f o] - like reduce-kv but in reverse order
 
-; TODO use set/map-invert instead of |reverse-keys|
-
 ; Arbitrary.
 ; TODO test this on every permutation for inflection point.
 (def- parallelism-threshold 10000)

@@ -89,8 +89,6 @@
                        boolean? should-transientize?
                        class]]
              [quantum.core.analyze.clojure.predicates :as anap]
-             [quantum.core.type.predicates            :as tpred]
-             [clojure.walk                            :as walk]
              [quantum.core.loops                      :as loops]
              [quantum.core.vars                       :as var
                :refer [defalias defaliases]])
@@ -1165,8 +1163,8 @@
 ; TODO fix
 (def map->record hash-map)
 
-(defn reverse-kvs [m]
-  (zipmap (vals m) (keys m)))
+(defnt invert [^map? m]
+  (reduce (rfn [m' k v] (assoc m' v k)) (empty m) m))
 
 (defn- update-nth-list*
   [x n f]
