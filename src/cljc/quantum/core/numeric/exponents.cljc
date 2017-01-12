@@ -1,20 +1,17 @@
 (ns quantum.core.numeric.exponents
-          (:refer-clojure :exclude [+ *])
-          (:require
-            [#?(:clj  clojure.core
-                :cljs cljs.core   )     :as core  ]
-            [quantum.core.error :as err
-              :refer [TODO]            ]
-            [quantum.core.macros
-              :refer        [#?@(:clj [defnt defnt'])]
-              :refer-macros [defnt]]
-            [quantum.core.vars
-              :refer        [#?@(:clj [defalias defmalias])]
-              :refer-macros [defalias]]
-            [quantum.core.numeric.operators
-              :refer        [#?@(:clj [+ * dec* div*])]
-              :refer-macros [+ * dec* div*]])
-  #?(:clj (:import [net.jafama FastMath])))
+  (:refer-clojure :exclude [+ *])
+  (:require
+    [clojure.core       :as core]
+    [quantum.core.error :as err
+      :refer [TODO]]
+    [quantum.core.macros
+      :refer [defnt #?@(:clj [defnt'])]]
+    [quantum.core.vars
+      :refer [defalias #?@(:clj [defmalias])]]
+    [quantum.core.numeric.operators
+      :refer [+ * dec* div*]])
+#?(:clj
+  (:import [net.jafama FastMath])))
 
 ; ===== EXPONENTS ===== ;
 
@@ -37,12 +34,16 @@
   #?(:clj (^double             [#{byte short int long float} x y]
                                  (pow (core/double x) (core/double y)))))
 
+#?(:clj (defalias expt pow))
+
 #?(:clj
 (defnt' pow*
   "x ^ y"
   {:performance ["2.7 times faster than java.lang.Math"
                  "Worst case 1E-11 difference"]}
   (^double [^double x ^double y] (FastMath/pow x y))))
+
+#?(:clj (defalias expt* pow*))
 
 #?(:clj
 (defnt' expm1*
