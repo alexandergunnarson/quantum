@@ -10,6 +10,7 @@
   (:require
     [clojure.core                 :as core]
     [quantum.core.classes         :as classes]
+    [quantum.core.core            :as qcore]
     [quantum.core.fn              :as fn
       :refer [fn1 mfn fn->]]
     [quantum.core.logic           :as logic
@@ -18,7 +19,6 @@
     [quantum.core.macros          :as macros
       :refer        [defnt #?(:clj defnt')]]
     [quantum.core.type.core       :as tcore  ]
-    [quantum.core.type.predicates :as tpred  ]
     [quantum.core.vars            :as var
       :refer        [defalias]])
   (:require-macros
@@ -27,17 +27,17 @@
 
 ; TODO: Should include typecasting? (/cast/)
 
-(def class #?(:clj clojure.core/class :cljs type))
+(def class #?(:clj core/class :cljs type))
 
 #?(:clj (def instance+? instance?)
    :cljs
      (defn instance+?
-       {:todo ["try-catch in something this basic is a performance issue"]}
-       [class-0 obj] ; inline this?
+       {:todo #{"try-catch in something this basic is a performance issue"}}
+       [c x] ; inline this?
        (try
-         (instance? class-0 obj)
+         (instance? c x)
          (catch js/TypeError _
-           (try (satisfies? class-0 obj))))))
+           (try (satisfies? c x))))))
 
 (def name-from-class tcore/name-from-class)
 (def arr-types       tcore/arr-types      )
@@ -81,6 +81,7 @@
          (defnt array-list? ([^array-list? obj] true) ([obj] false))
          (defnt queue?      ([^queue?      obj] true) ([obj] false))
          (defnt lseq?       ([^lseq?       obj] true) ([obj] false))
+         (defalias seqable? qcore/seqable? )
          (defnt pattern?    ([^pattern?    obj] true) ([obj] false))
          (defnt regex?      ([^regex?      obj] true) ([obj] false))
          (defnt editable?   ([^editable?   obj] true) ([#?(:cljs :else) obj] false))
@@ -100,15 +101,17 @@
 ;   [x]
 ;   (instance? com.gfredericks.goog.math.Integer x)))
 
+(def map-entry? #?(:clj  core/map-entry?
+                   :cljs (fn-and vector? (fn-> count (= 2)))))
+(defalias atom? qcore/atom?)
 
-; #?(:cljs
-; (defn ratio? [x]
-;   (instance? quantum.core.numeric.types.Ratio x)))
+(defn derefable? [obj]
+  #?(:clj  (instance?  clojure.lang.IDeref obj)
+     :cljs (satisfies? cljs.core/IDeref    obj)))
 
-(defalias map-entry? tpred/map-entry?)
-(defalias atom?      tpred/atom?)
-
-#?(:clj  (defnt    integer? ([^integer? obj] true) ([obj] false))
+#?(:clj  (defnt    integer?
+           "Whether x is integer-like (primitive/boxed integer, BigInteger, etc.)."
+           ([^integer? obj] true) ([obj] false))
    :cljs (defalias integer? core/integer?))
 #?(:clj  (defnt    double?  ([^double?  obj] true) ([obj] false))
    :cljs (defalias double?  core/number?))

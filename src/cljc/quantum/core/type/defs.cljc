@@ -169,12 +169,13 @@
            :cljs #{cljs.core/PersistentTreeMap   }}
         map-types
           (cond-union
-            hash-map-types
-            array-map-types
-            tree-map-types
-            '{:clj #{flatland.ordered.map.OrderedMap}}
-            #_'{:clj #{clojure.lang.IPersistentMap ; For records
-                       java.util.Map}})
+            {:cljs (:cljs hash-map-types )}
+            {:cljs (:cljs array-map-types)}
+            {:cljs (:cljs tree-map-types )}
+            '{:clj #{clojure.lang.ITransientMap
+                     clojure.lang.IPersistentMap
+                     java.util.Map}}
+            #_'{:clj #{java.util.Map}})
         array-list-types
          '{:clj  #{java.util.ArrayList java.util.Arrays$ArrayList}
            :cljs #{cljs.core.ArrayList                           }
