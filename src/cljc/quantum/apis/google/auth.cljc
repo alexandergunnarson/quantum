@@ -5,9 +5,16 @@
   quantum.apis.google.auth
   (:refer-clojure :exclude [empty?])
   (:require
-    [quantum.core.validate
-      :refer        [#?(:clj validate) spec]
-      :refer-macros [validate]]
+    [quantum.core.validate :as v
+      :refer [validate]]
+    [quantum.core.fn
+      :refer [fn1 fn$]]
+    [quantum.core.logic
+      :refer [default]]
+    [quantum.core.log      :as log
+      :refer [prl]]
+    [quantum.core.async
+      :refer [go <!]]
     [quantum.net.http      :as http]
     [quantum.net.url       :as url ]
     [quantum.auth.core     :as auth]
@@ -15,15 +22,10 @@
     [quantum.core.error    :as err
       :refer [->ex]                ]
     [quantum.core.collections :as coll
-      :refer        [#?@(:clj [reducei empty? containsk?])
-                     in?]
-      :refer-macros [reducei empty? containsk?]]
+      :refer [reducei empty?]]
     [quantum.core.paths
       :refer [url-path]])
-  #_(:require
-    [quantum.web.core    :as web :refer
-      [send-keys! click! click-load! find-element write-page! default-capabilities]]
-    #_[quantum.apis.google.core :as goog]))
+  #?(:cljs (:import goog.history.Html5History)))
 
 (def urls
   {:oauth-access-token "https://www.googleapis.com/oauth2/v3/token"
@@ -36,34 +38,30 @@
           {:email   (url-path (:api-auth urls) "userinfo.email")
            :profile (url-path (:api-auth urls) "userinfo.profile")}}))
 
-(defn assert-email [auth-keys email]
-  (or (in? email auth-keys)
-      (throw (->ex nil "Email not found in auth keys" email))))
+(swap! scopes assoc :gmail
+  {:read-only "https://www.googleapis.com/auth/gmail.readonly"})
 
 (def access-types #{:online :offline})
 
-(defonce error-log (atom []))
-
 (defn scopes-string [scopes-]
-  (validate (spec set?) scopes-) ; TODO no runtime spec decl
+  (validate scopes- set?)
   (reducei
-    (fn [s scope-key n]
-      (validate (spec keyword?) scope-key) ; TODO no runtime spec decl
-      (let [space* (when (> n 0) " ")  ; join spaces
+    (fn [s scope-key i]
+      (validate scope-key keyword?)
+      (let [space* (when (> i 0) " ") ; join spaces
             ns-   (-> scope-key namespace keyword)
             name- (-> scope-key name keyword)
             scope (get-in @scopes [ns- name-])]
-        (when (empty? scope) (throw (->ex :scope-not-found nil scope-key)))
+        (validate scope string?)
         (str s space* scope)))
     ""
     scopes-))
 
 (defn oauth-params [{:keys [email scopes access-type]}]
   (let [auth-keys (auth/get :google)
-        _ (assert-email auth-keys email)
+        _ (validate email (fn$ contains? auth-keys))
+        _ (validate access-type (v/or* nil? access-types))
         access-type (or access-type :offline)]
-    (when-not (containsk? access-types access-type)
-      (throw (->ex :access-type-invalid nil access-type)))
     (map/om ; must be in this order
       "access_type"   (name access-type) ; must be string, not keyword for some reason
       "client_id"     (-> auth-keys (get email) :client-id   )
@@ -79,6 +77,23 @@
     {:url (:oauth urls)
      :query-params (oauth-params opts)}))
 
+(defn authenticate
+  #_(set! js/location.hostname (let [{:keys [url query-params] :as url*} (authenticate ...)]
+                                 (url/map->url url query-params)))
+  {:usage `(authenticate {:email        "anemail@gmail.com"
+                          :client-id    "3832713he.apps.googleusercontent.com"
+                          :redirect-uri "https://example.com"
+                          :scopes       #{:gmail/read-only}})}
+  [{:keys [email client-id redirect-uri scopes include-granted-scopes?]}]
+  (identity #_http/request!
+    {:url (:oauth urls)
+     :query-params (map/om
+                     "response_type" "token"
+                     "client_id"     client-id
+                     "redirect_uri"  redirect-uri
+                     "scope"         (scopes-string scopes)
+                     "login_hint"    email
+                     "include_granted_scopes" (default include-granted-scopes? true))}))
 
 ; ===== LOGIN =====
 
@@ -175,7 +190,6 @@
         ^RemoteWebElement accept-btn
           (try+ (find-element driver (By/id "submit_approve_access"))
             (catch [:type :not-found] e
-              (conj! error-log [(time/now-instant) (.getPageSource driver)])
               (throw+)))
         approve-click! (click-load! accept-btn)]))
 
