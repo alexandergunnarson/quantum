@@ -7,7 +7,7 @@
      min max quot mod format
      #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
   (:require
-    [clojure.core                      :as core]
+    [clojure.core                      :as c]
 #?@(:cljs
    [[com.gfredericks.goog.math.Integer :as int]])
     [quantum.core.convert.primitive    :as pconvert
@@ -100,9 +100,9 @@
 ; 2.703028 µs
 ; (criterium.core/quick-bench (dotimes [n 100000] (Numeric/multiply 0.5 0.5)))
 ; 38.357842 µs
-; (criterium.core/quick-bench (dotimes [n 100000] (core/* 0.5 0.5)))
+; (criterium.core/quick-bench (dotimes [n 100000] (c/* 0.5 0.5)))
 ; 16.643150 ms
-; (criterium.core/quick-bench (dotimes [n 100000] (core/* 1/2 1/2)))
+; (criterium.core/quick-bench (dotimes [n 100000] (c/* 1/2 1/2)))
 
 ; TODO Configurable isNaN
 ; TODO ^:inline
@@ -224,7 +224,8 @@
 (defaliases quantum.core.numeric.misc
   rem mod
   #?@(:clj [ieee-rem quot hypot hypot* sign sign'
-            with-sign scalb ulp leading-zeros native-integer? gcd]))
+            with-sign scalb ulp leading-zeros native-integer?])
+  gcd gcf lcm)
 ;_____________________________________________________________________
 ;================={          CONSTANTS           }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -245,11 +246,11 @@
 (defonce ^:const trillion         (#?(:clj ->long :cljs int)   1E12  ))
 (defonce ^:const quadrillion      (#?(:clj ->long :cljs int)   1E15  ))
 (defonce ^:const quintillion      (#?(:clj ->long :cljs int)   1E18  )) ; + exa | - atto
-(defonce ^:const sextillion       #?(:clj (core/bigint 1E21  ) :cljs 0))
-(defonce ^:const septillion       #?(:clj (core/bigint 1E24  ) :cljs 0))
-(defonce ^:const octillion        #?(:clj (core/bigint 1E27  ) :cljs 0))
-(defonce ^:const nonillion        #?(:clj (core/bigint 1E30  ) :cljs 0))
-(defonce ^:const decillion        #?(:clj (core/bigint 1E33  ) :cljs 0))
+(defonce ^:const sextillion       #?(:clj (c/bigint 1E21  ) :cljs 0))
+(defonce ^:const septillion       #?(:clj (c/bigint 1E24  ) :cljs 0))
+(defonce ^:const octillion        #?(:clj (c/bigint 1E27  ) :cljs 0))
+(defonce ^:const nonillion        #?(:clj (c/bigint 1E30  ) :cljs 0))
+(defonce ^:const decillion        #?(:clj (c/bigint 1E33  ) :cljs 0))
 
 ;_____________________________________________________________________
 ;================={   MORE COMPLEX OPERATIONS    }====================
@@ -330,15 +331,15 @@
   [num div]
   (not (divisible? num div)))
 
-(def percent? (fn-and (fn1 core/>= 0) (fn1 core/<= 1))) ; TODO use >= and <=
+(def percent? (fn-and (fn1 c/>= 0) (fn1 c/<= 1))) ; TODO use >= and <=
 
 ; PROPERTIES OF NUMERIC FUNCTIONS
 
 (def ^:const inverse-map ; some better way of doing this?
-  {core/+ core/-
-   core/- core/+
-   core// core/*
-   core/* core//})
+  {c/+ c/-
+   c/- c/+
+   c/* c//
+   c// c/*})
 
 (defn inverse
   "Gets the inverse of the function @f."
@@ -352,21 +353,17 @@
 
 (def ^{:doc "Base values for operators." :const true}
   base-map
-  {core/+ 0
-   core/- 0
-   core// 1
-   core/* 1
-   '+ 0
-   '- 0
-   '/ 1
-   '* 1})
+  {c/+ (c/+)
+   c/- (c/- (c/+))
+   c/* (c/*)
+   c// (c// (c/*))})
 
 (defn base
   "Gets the identity-base for the given function `f`.
 
    For instance:
-   The identity-base of the `+` function is 0: (= x (+ x 0)).
-   By contrast, that of the `*` function is 1: (= x (* x 0))"
+   The identity-base of the `+` function is 0: (= x (+ x (+))).
+   By contrast, that of the `*` function is 1: (= x (* x (*)))"
   {:tests '{(base +) 0
             (base *) 1}}
   [f]
@@ -376,7 +373,7 @@
 (defn range?
   {:tests `{((range? 1 4) 3)
             true}}
-  [a b] #(and (core/>= % a) (core/< % b)))
+  [a b] #(and (c/>= % a) (c/< % b)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         MUTATION         }=====================================================
 ;=================================================={                          }=====================================================
@@ -392,11 +389,11 @@
 (def display-num (fn-> double (round :to 2)))
 
 (defn format [n type]
-  (condp core/= type
+  (condp c/= type
     :dollar
       (->> n display-num (str "$"))
     ;:accounting
     (throw (->ex nil "Unrecognized format" type))))
 
 (defn percentage-of [of total-n]
-  (-> of (op// total-n) double (core/* 100) display-num (str "%"))) ; TODO use *-2
+  (-> of (op// total-n) double (c/* 100) display-num (str "%"))) ; TODO use *-2
