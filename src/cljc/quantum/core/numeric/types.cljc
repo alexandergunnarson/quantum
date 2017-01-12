@@ -1,18 +1,21 @@
 (ns quantum.core.numeric.types
   (:refer-clojure :exclude
-    [denominator numerator ratio? #?@(:cljs [-compare])])
-   (:require [#?(:clj  clojure.core
-                 :cljs cljs.core   )            :as core  ]
-    #?(:cljs [com.gfredericks.goog.math.Integer :as int   ])
-             [quantum.core.macros
-               :refer        [#?@(:clj [defnt])]
-               :refer-macros [defnt]]
-             [quantum.core.logic
-               :refer        [#?@(:clj [whenf fn-not])]
-               :refer-macros [whenf fn-not]]
-             [quantum.core.vars
-               :refer        [#?@(:clj [defalias])]
-               :refer-macros [defalias]]))
+    [denominator numerator ratio? #?@(:cljs [-compare]) read-string])
+   (:require
+     [clojure.core                      :as core]
+     [clojure.string                    :as str]
+     [clojure.tools.reader
+       :refer [read-string]]
+  #?(:cljs
+     [com.gfredericks.goog.math.Integer :as int])
+     [quantum.core.macros
+       :refer [defnt]]
+     [quantum.core.logic
+       :refer [whenf fn-not fn=]]
+     [quantum.core.vars
+       :refer [defalias]]
+     [quantum.core.error
+       :refer [->ex]]))
 
 #?(:clj
 (defnt ^java.math.BigInteger ->big-integer
@@ -163,3 +166,24 @@
 
 #?(:clj  (defalias ratio? core/ratio?)
    :cljs (defn ratio? [x] (instance? Ratio x)))
+
+(defn read-rational
+  "Create cross-platform literal rational numbers from decimal, without intermediate inexact
+   (e.g. float/double) representation.
+   #r 2.712 -> (rationalize 2.712M)"
+  {:todo #{"Support exponent notation e.g. 2.313E7 | 2.313e7"}}
+  [^String r-str]
+  (assert (string? r-str))
+  (let [[integral-str decimal-str :as split] (str/split r-str #"\.")
+        _ (when (-> split count (> 2))
+            (throw (->ex "Number cannot have more than one decimal point" {:num r-str})))
+        _ (doseq [s split]
+            (when-not (every? #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} s)
+              (throw (->ex "Number must have only numeric characters" {:num s}))))
+        integral (read-string integral-str)
+        decimal  (read-string decimal-str)
+        scale    (if decimal
+                     (#?(:clj Math/pow :cljs js/Math.pow) 10 (count decimal-str))
+                     1)]
+    (->ratio (+ (* scale integral) (or decimal 0))
+             scale)))
