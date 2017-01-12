@@ -1,34 +1,31 @@
 (ns quantum.core.numeric.operators
-           (:refer-clojure :exclude
-             [+ +' - -' * *' /
-              inc inc' dec dec'
-              numerator denominator])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )            :as core    ]
-    #?(:cljs [com.gfredericks.goog.math.Integer :as int     ])
-             [quantum.core.error :as err
-               :refer [TODO]]
-             [quantum.core.log :as log
-               :include-macros true]
-             [quantum.core.macros
-               :refer        [#?@(:clj [defnt defntp defnt' variadic-proxy])]
-               :refer-macros [defnt defntp]]
-             [quantum.core.vars
-               :refer        [#?@(:clj [defalias defmalias])]
-               :refer-macros [defalias]]
-             [quantum.core.numeric.types :as ntypes
-               :refer [numerator denominator]]
-             [quantum.core.numeric.convert
-               :refer        [#?@(:clj [->bigint ->big-integer])]
-               :refer-macros [->bigint]])
-  #?(:cljs (:require-macros
-             [quantum.core.numeric.operators
-               :refer [+ * -]]))
-  #?(:clj  (:import
-             java.math.BigInteger
-             java.math.BigDecimal
-             clojure.lang.BigInt)))
+  (:refer-clojure :exclude
+    [+ +' - -' * *' /
+     inc inc' dec dec'
+     numerator denominator])
+  (:require
+    [clojure.core                      :as core]
+  #?(:cljs
+    [com.gfredericks.goog.math.Integer :as int])
+    [quantum.core.error :as err
+      :refer [TODO]]
+    [quantum.core.log :as log]
+    [quantum.core.macros
+      :refer [defnt defntp #?@(:clj [defnt' variadic-proxy])]]
+    [quantum.core.vars
+      :refer [defalias #?@(:clj [defmalias])]]
+    [quantum.core.numeric.types :as ntypes
+      :refer [numerator denominator]]
+    [quantum.core.numeric.convert
+      :refer [->bigint #?@(:clj [->big-integer])]])
+  (:require-macros
+    [quantum.core.numeric.operators :as self
+      :refer [+ * -]])
+  #?(:clj
+  (:import
+    java.math.BigInteger
+    java.math.BigDecimal
+    clojure.lang.BigInt)))
 
 (log/this-ns)
 
