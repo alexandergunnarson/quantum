@@ -1,19 +1,20 @@
 (ns quantum.core.numeric.convert
-          (:refer-clojure :exclude [bigdec])
-          (:require
-            [#?(:clj  clojure.core
-                :cljs cljs.core   )     :as core  ]
-            [quantum.core.error :as err
-              :refer [TODO]]
-            [quantum.core.macros
-              :refer        [#?@(:clj [defnt defnt'])]
-              :refer-macros [defnt]]
-            [quantum.core.vars
-              :refer        [#?@(:clj [defalias])]
-              :refer-macros [defalias]]
-            [quantum.core.numeric.types :as ntypes])
-  #?(:clj (:import java.math.BigInteger
-                   clojure.lang.BigInt)))
+  (:refer-clojure :exclude [bigdec])
+  (:require
+    [clojure.core                 :as core]
+    [quantum.core.error           :as err
+      :refer [TODO]]
+    [quantum.core.macros
+      :refer        [defnt #?@(:clj [defnt'])]]
+    [quantum.core.vars
+      :refer        [defalias]]
+    [quantum.core.numeric.types   :as ntypes])
+  (:require-macros
+    [quantum.core.numeric.convert :as self])
+  #?(:clj
+  (:import
+    java.math.BigInteger
+    clojure.lang.BigInt)))
 
 #?(:clj (defalias ->big-integer ntypes/->big-integer))
 
