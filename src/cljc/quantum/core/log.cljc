@@ -8,14 +8,13 @@
   (:refer-clojure :exclude [pr seqable?])
   (:require
     [com.stuartsierra.component   :as component]
-    [quantum.core.core            :as qcore    ]
+    [quantum.core.core            :as qcore
+      :refer [seqable?]]
     [quantum.core.macros.core     :as cmacros
       :refer [#?(:clj compile-if)]]
     [quantum.core.fn              :as fn       ]
     [quantum.core.meta.debug      :as debug    ]
-    [quantum.core.print           :as pr       ]
-    [quantum.core.type.predicates
-      :refer [seqable?]])
+    [quantum.core.print           :as pr       ])
 #?(:cljs
   (:require-macros
     [quantum.core.log :as self])))

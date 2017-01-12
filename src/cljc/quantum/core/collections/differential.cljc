@@ -190,7 +190,7 @@
 (def take-after takel-after)
 
 (defn takel-while
-  {:tests '{(takel-while (eq? \=) "===abc=")
+  {:tests '{(takel-while (fn= \=) "===abc=")
             "==="}}
   [pred super]
   (let [not-i (index-of-pred super (fn-not pred))]
@@ -207,7 +207,7 @@
 
 (defn takel-until
   "Take from coll up to and including the first item that satisfies pred."
-  {:tests '{(takel-until (eq? \=) "!===abc=")
+  {:tests '{(takel-until (fn= \=) "!===abc=")
             "!"}}
   [pred super]
   (takel-while (fn-not pred) super))

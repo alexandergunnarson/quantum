@@ -85,7 +85,7 @@
   (->> contact :content
        (ffilter (fn-> :tag (= :id)))
        :content first
-       (coll/taker-until (eq? \/))))
+       (coll/taker-until (fn= \/))))
 
 #_(defn update-contact!
   {:todo ["Some etag troubles"]}

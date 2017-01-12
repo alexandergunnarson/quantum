@@ -9,13 +9,14 @@
   (:require
     [clojure.core             :as core]
     [quantum.core.fn          :as fn
-      :refer        [fn1 fn->]]
+      :refer [fn1 fn->]]
     [quantum.core.vars        :as var
-      :refer        [defalias]]
+      :refer [defalias]]
     [quantum.core.macros.core :as cmacros
-      :refer        [if-cljs]])
+      :refer [if-cljs]])
   (:require-macros
-    [quantum.core.logic       :as self]))
+    [quantum.core.logic       :as self
+      :refer [fn-not]]))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.
@@ -26,14 +27,9 @@
 ;==================================================={                         }=====================================================
 #?(:clj (defmacro default [v else] `(let [v# ~v] (if (nil? v#) ~else v#))))
 
-; Otherwise ExceptionInInitializerError if not macro
-#?(:clj (defmacro eq?  [x] `(fn-> (=    ~x))))
-
-#?(:clj (defalias fn=     eq?))
-#?(:clj (defalias fn-eq?  eq?))
-
-#?(:clj (defmacro neq? [x] `(fn-> (not= ~x))))
-#?(:clj (defalias fn-neq?  neq?))
+; =    tests value-equivalence
+; ref= tests identity-equivalence
+(defalias ref= identical?)
 
 #?(:clj
 (defmacro xor
@@ -44,24 +40,29 @@
   ([x y & next]
     `(if ~x (when-not (and ~y ~@next) ~x) (xor ~y ~@next)))))
 
+#?(:clj (defmacro nand     [& args] `(not (and ~@args))))
+#?(:clj (defmacro nor      [& args] `(not (or  ~@args))))
+#?(:clj (defmacro implies? [a b] `(if ~a ~b true)))
+
 #?(:clj
 (defmacro fn-logic-base
   [oper & preds]
-  (let [arg (gensym)]
-   `(fn [~arg]
-      (~oper ~@(for [pred preds] `(~pred ~arg)
-                 #_(if (and (if-cljs &env false true) (seq? pred))
-                     ; Tries to extern it
-                     `(~(try (eval pred)
-                          (catch java.lang.Throwable _ pred)) ~arg)
-                     `(~pred ~arg))))))))
+  (let [arg (gensym "arg")]
+   `(fn [~arg] (~oper ~@(for [pred preds] `(~pred ~arg)))))))
 
-#?(:clj (defmacro fn-or  [& preds] `(fn-logic-base or  ~@preds)))
-#?(:clj (defmacro fn-and [& preds] `(fn-logic-base and ~@preds)))
-#?(:clj (defmacro fn-not [pred]    `(fn-logic-base not ~pred  )))
+#?(:clj (defmacro fn-not      [pred]    `(fn-logic-base not  ~pred  )))
+#?(:clj (defmacro fn-or       [& preds] `(fn-logic-base or   ~@preds)))
+#?(:clj (defmacro fn-nor      [& preds] `(fn-logic-base nor  ~@preds)))
+#?(:clj (defmacro fn-xor      [& preds] `(fn-logic-base xor  ~@preds)))
+#?(:clj (defmacro fn-and      [& preds] `(fn-logic-base and  ~@preds)))
+#?(:clj (defmacro fn-nand     [& preds] `(fn-logic-base nand ~@preds)))
+#?(:clj (defmacro fn-implies? [a b]     `(fn-logic-base implies? ~a ~b)))
+
+(defn fn=     [x] (fn [y] (=    x y)))
+(defn fn-not= [x] (fn [y] (not= x y)))
 
 (def falsey? (some-fn false? nil?))
-(def truthy? identity)
+(def truthy? (fn-not falsey?))
 
 (defn splice-or  [obj compare-fn & coll]
   (some   #_seq-or  (partial compare-fn obj) coll))

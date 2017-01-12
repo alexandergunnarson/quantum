@@ -10,7 +10,7 @@
              [quantum.core.fn          :as fn
                :refer [<- fn-> fn->> fn1 mfn]]
              [quantum.core.logic       :as logic
-               :refer [fn-not fn-and fn-eq? whenf whenc ifn]]
+               :refer [fn= fn-not fn-and whenf whenc ifn]]
              [quantum.core.macros      :as macros
                :refer [defnt]]
              [quantum.core.system      :as sys]
@@ -156,7 +156,7 @@
   (condp = sys/os
     :windows
       (whenc (getr root-dir 0
-               (whenc (index-of root-dir "\\") (fn-eq? -1) 0))
+               (whenc (index-of root-dir "\\") (fn= -1) 0))
              empty?
         "C:\\") ; default drive
     sys/separator)))

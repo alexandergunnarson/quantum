@@ -15,7 +15,7 @@
                      [quantum.core.fn                      :as fn
                        :refer [<- fn-> fn->> fn1]]
                      [quantum.core.logic                   :as logic
-                       :refer [eq?]]
+                       :refer [fn=]]
                      [quantum.core.log                     :as log
                        :include-macros true]
                      [quantum.core.validate                :as v
@@ -148,11 +148,11 @@
                :or   {overwrite? false deduplication? true}
                :as   opts}]
     (validate overwrite? not) ; TODO for now
-    (let [_ (validate type (v/or* nil? (eq? :folder)))
+    (let [_ (validate type (v/or* nil? (fn= :folder)))
           _ (validate path   (v/and vector? (fn-> count (= 2))))
           [parent node-name] path
           _ (validate node-name string?
-                      parent    (v/or* string? nil? (eq? :root)))
+                      parent    (v/or* string? nil? (fn= :root)))
           meta- (-> {:kind (if (= type :folder) "FOLDER" "FILE")
                      :name node-name}
                     (assoc-if (constantly (string? parent)) :parents [parent]))]

@@ -23,7 +23,7 @@
                         :refer [<- fn-> fn1 rcomp call fn-nil fn$]]
                       [quantum.core.log                        :as log]
                       [quantum.core.logic                      :as logic
-                        :refer [fn-or fn-not eq? whenf whenp whenf1 ifn1]                                             ]
+                        :refer [fn-or fn-not fn= whenf whenp whenf1 ifn1]                                             ]
                       [quantum.core.macros                     :as macros
                         :refer [defnt]]
                       [quantum.core.validate                   :as v
@@ -222,7 +222,7 @@
 (defn close-all-alt!
   "An alternative version of |close-all|. Test both."
   []
-  (doseq [[k v] (->> @reg (remove (rcomp key (eq? :thread-reaper))) (into {}))]
+  (doseq [[k v] (->> @reg (remove (rcomp key (fn= :thread-reaper))) (into {}))]
     (when-let [close-reqs (:close-reqs v)]
       (put!! close-reqs :req))
     (when-let [thread- (:thread v)]
@@ -734,7 +734,7 @@
 ;         (swap! out-str conj
 ;           (str/subs+ baos-str-f
 ;                (whenf (+ 2 (last-index-of+ "\r\n" baos-str-f))
-;                  (eq? 1) (constantly 0)))))))) ; if it's the same, keep it
+;                  (fn= 1) (constantly 0)))))))) ; if it's the same, keep it
 ; (defmacro with-capture-sys-out [expr out-str & [millis n-times]]
 ;   `(let [baos# (java.io.ByteArrayOutputStream.)
 ;          ps#   (java.io.OutputStreamWriter. baos#)]

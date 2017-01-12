@@ -1,7 +1,7 @@
 (ns quantum.core.io.filesystem
   (:require [quantum.core.convert :as convert])
 #?(:clj
-  (:import 
+  (:import
     com.sun.nio.file.SensitivityWatchEventModifier ; On a Mac...
     (java.nio.file FileSystems WatchService WatchEvent WatchKey
      StandardWatchEventKinds
@@ -30,12 +30,12 @@
                   (let [path-str (-> event (.context) str)]
                     (when (->> @watch-files
                                (map io/file-str)
-                               (ffilter (eq? path-str)))
+                               (ffilter (fn= path-str)))
                       ((or @callback fn-nil) path-str))))
               ; Necessary to receive more watches
               (.reset watch-key)))))))))
 
-#_(:clj 
+#_(:clj
 (defn file-watcher
   [{:as opts :keys [file]
     {:keys [modified]} :handlers}
@@ -180,7 +180,7 @@
 ;       (delete-dir path)))
 ;   (delete root))
 
-; (defmacro ^:private include-java-7-fns 
+; (defmacro ^:private include-java-7-fns
 ;  {:source "me.raynes/fs"}
 ;   []
 ;   (when (try (import '[java.nio.file Files Path LinkOption]

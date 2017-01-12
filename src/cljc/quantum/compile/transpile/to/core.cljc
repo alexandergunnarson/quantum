@@ -16,7 +16,7 @@
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1]]
     [quantum.core.logic                      :as logic
-      :refer [eq? fn-not fn-or fn-and whenf
+      :refer [fn= fn-not fn-or fn-and whenf
               whenf1 whenc ifn condfc condpc coll-or]]
     [quantum.core.macros                     :as macros
       :refer [defnt]]))
@@ -196,13 +196,13 @@
 
 (defn line-height
   [s]
-  (->> s (countif (eq? \newline))))
+  (->> s (countif (fn= \newline))))
 
 (defn vertical-spacing-from [prev-block]
   (if (empty? prev-block)
       ""
       (condfc (-> prev-block line-height)
-        (eq? 0)    "\n"
+        (fn= 0)    "\n"
         (fn1 <= 2) "\n"
         "\n\n")))
 
@@ -729,7 +729,7 @@
      (log/pr :debug "IN SYM WITH" (str obj))
      (if (anap/qualified? obj)
          (do (log/pr :debug "QUALIFIED SYMBOL:" (str obj))
-             (if (->> obj str (filter (eq? \/)) count (<- > 1))
+             (if (->> obj str (filter (fn= \/)) count (<- > 1))
                (throw (->ex (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
                (->> obj str (<- str/replace backslash-regex ".") symbol eval-form)))
          (->> obj str replace-specials)))

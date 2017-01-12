@@ -10,7 +10,7 @@
     [quantum.core.fn                   :as fn
       :refer [fn$ <- fn-> fn->>]]
     [quantum.core.logic                :as logic
-      :refer [splice-or eq? fn-or fn-and fn-not whenc ifn ifn1]]
+      :refer [splice-or fn= fn-or fn-and fn-not whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
     [quantum.core.vars                 :as var
       :refer [defalias]]))
@@ -74,7 +74,7 @@
 (defn form-and-begins-with? [sym] (fn-and seq? (fn-> first (= sym))))
 (defn form-and-begins-with-any? [set-n]
   (fn-and seq? (fn [x] (apply splice-or (first x) = set-n))))
-(def else-pred?         (fn-or (eq? :else) (eq? true)))
+(def else-pred?         (fn-or (fn= :else) (fn= true))) ; TODO this is wrong
 (def str-expression?    (fn-and seq? (fn-> first (= 'str))))
 (def string-concatable? (fn-or string? str-expression?))
 

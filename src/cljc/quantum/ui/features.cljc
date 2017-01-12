@@ -1,13 +1,11 @@
 (ns ^{:doc "A namespace that checks for availability of CSS features."
       :todo ["Possibly rename 'quantum.ui.platform'?"]}
   quantum.ui.features
-           (:require [quantum.core.data.map :as map 
-                       :refer [map-entry]            ]
-                     [quantum.core.logic    :as logic
-                       :refer [#?@(:clj [whenc eq?])]])
-  #?(:cljs (:require-macros 
-                     [quantum.core.logic    :as logic
-                       :refer [eq? whenc]            ])))
+  (:require
+    [quantum.core.data.map :as map
+      :refer [map-entry]            ]
+    [quantum.core.logic    :as logic
+      :refer [whenc fn=]]))
 
 #?(:cljs
 (defn flex-test [elem flex-name]
@@ -27,7 +25,7 @@
               :safari  "-webkit-flex"
               :safari- "-webkit-box" ; (Older)
               :ie      "-ms-flexbox"}
-             (map (fn [browser s] (map-entry (whenc browser (eq? :safari-) :safari) (flex-test div s))))
+             (map (fn [browser s] (map-entry (whenc browser (fn= :safari-) :safari) (flex-test div s))))
              (into {})))))
 
 #?(:cljs
@@ -48,7 +46,7 @@
       ; Firefox 1.0+
       (try (when js/InstallTrigger true)
         (catch js/Error e false))
-      :firefox 
+      :firefox
       ; At least Safari 3+: "[object HTMLElementConstructor]"
       (-> js/Object .-prototype .-toString
           (.call (.-HTMLElement js/window))
@@ -72,7 +70,7 @@
 
 
 #?(:cljs
-(def touch-events  
+(def touch-events
   (delay (let [events (cond
                         @touchable?
                         ["touchstart"
@@ -115,10 +113,10 @@
              (-> e .-originalEvent .-touches)
              (-> e .-originalEvent .-touches .-length))
         (-> e .-originalEvent .-touches (aget 0))
-        
+
         (and (.-touches e) (-> e .-touches .-length))
         (aget (.-touches e) 0)
-        
+
         :else e)))
 
 ; END EVENT UTILS
@@ -172,14 +170,14 @@
                                      (.removeEventListener preventDefault*)))]
                           (-> real-e .-target
                               (.addEventListener "click" preventDefault* false))))
-              
+
                       (.preventDefault real-e))
-              
+
                     (reset! coords {})))
    :click       (fn [e]
                   (when-not (fireFakeEvent e (:eventName options))
                      (.preventDefault e)))
-   :emulatedTap (fn [e] 
+   :emulatedTap (fn [e]
                   (when (:offset coords)
                      (fireFakeEvent e (:eventName options) ))
                   (.preventDefault e))}))

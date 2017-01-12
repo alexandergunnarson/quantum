@@ -292,7 +292,7 @@
 #_(defn switch-window! [driver]
   (let [popup-handle
           (->> (.getWindowHandles driver)
-               (remove (eq? (.getWindowHandle driver))) first)]
+               (remove (fn= (.getWindowHandle driver))) first)]
     (-> driver .switchTo (.window popup-handle))))
 
 #?(:clj

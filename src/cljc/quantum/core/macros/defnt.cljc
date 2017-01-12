@@ -17,7 +17,7 @@
     [quantum.core.log                        :as log
       :include-macros true]
     [quantum.core.logic                      :as logic
-      :refer [eq? fn-not fn-or whenc whenf whenc1 ifn1 condf]]
+      :refer [fn= fn-not fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
       :refer [when-cljs if-cljs]]
     [quantum.core.macros.fn                  :as mfn]
@@ -190,7 +190,7 @@
   [kw {:keys [type-hints type-arglist available-default-types hint inner-type-n]}]
   (condp = kw
     :first (->> type-arglist
-                (map (whenc1 (eq? :first) (first type-arglist))))
+                (map (whenc1 (fn= :first) (first type-arglist))))
     :elem  (if (= hint :elem)
                inner-type-n
                hint)

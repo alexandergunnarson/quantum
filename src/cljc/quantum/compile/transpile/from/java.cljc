@@ -18,7 +18,7 @@
     [quantum.core.fn                         :as fn
       :refer [fn-> fn->> fn1 rcomp <-]]
     [quantum.core.logic                      :as logic
-      :refer [eq? fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
+      :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
       :refer        [#?@(:clj [re-match re-match* re-match-whole*])]])
@@ -134,7 +134,7 @@
                       (ModifierSet/getAccessSpecifier)
                       str clojure.string/lower-case
                       (str "^:"))]
-    (when (seq-nor (eq? all-mods)
+    (when (seq-nor (fn= all-mods)
                    #{"^:default"
                      "^:public"})
       (symbol all-mods)))))
@@ -426,7 +426,7 @@
              (fn-> second second (= 'System)))
            (fn->> rest rest (cons 'println))
 
-           (eq? '.equals)
+           (fn= '.equals)
            (constantly '=)
 
            identity))

@@ -1,25 +1,19 @@
 (ns quantum.measure.core
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )   :as core    ]
+    [clojure.core             :as core    ]
     [quantum.core.error       :as err
-      :refer        [->ex
-                     #?(:clj throw-unless)]
-      :refer-macros [        throw-unless]]
+      :refer [->ex throw-unless]]
     [quantum.core.numeric     :as num     ]
     [quantum.core.string      :as str     ]
     [quantum.core.graph       :as g
-      :refer        [#?@(:clj [->graph ->digraph ->weighted-digraph])]]
+      :refer [#?@(:clj [->graph ->digraph ->weighted-digraph])]]
     [quantum.core.fn          :as fn
-      :refer        [#?@(:clj [fn1])]
-      :refer-macros [          fn1]]
+      :refer [fn1]]
     [quantum.core.logic       :as logic
-      :refer        [#?@(:clj [eq? whenc ifn])]
-      :refer-macros [          eq? whenc ifn]]
+      :refer [fn= whenc ifn]]
     [quantum.measure.reg                 ]
     [quantum.core.macros.core :as cmacros
-      :refer        [#?@(:clj [if-cljs])]
-      :refer-macros [          if-cljs]]))
+      :refer [if-cljs]]))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}
@@ -56,7 +50,7 @@
               conversion-map
                 (when (= emit-type :map)
                   (reduce (fn [m [[from to] multiplier]]
-                            (let [multiplier-f (whenc (num-cast (/ 1 multiplier)) (eq? 1) 1)]
+                            (let [multiplier-f (whenc (num-cast (/ 1 multiplier)) (fn= 1) 1)]
                               (assoc-in m [from to] multiplier-f)))
                     {}
                     fn-chart))]

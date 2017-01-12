@@ -1286,7 +1286,7 @@
 
 ; (defn potential-problems-in-cache [cache]
 ;   (->> cache
-;        (coll/remove-vals+ (eq? :db))
+;        (coll/remove-vals+ (fn= :db))
 ;        filter-realized-delays+
 ;        redv))
 
@@ -1296,7 +1296,7 @@
 ;   (let [cacher-sym (gen-cacher-sym base-sym)
 ;         cacher-kw  (c/keyword (namespace cacher-sym) (name cacher-sym))]
 ;     (if (or (not (contains? @thread/reg-threads cacher-kw))
-;             (first (thread/force-close-threads! (eq? cacher-kw))))
+;             (first (thread/force-close-threads! (fn= cacher-kw))))
 ;         (do (reset-var! (resolve cacher-sym)
 ;               (gen-cacher
 ;                 (c/keyword (name (ns-name *ns*))
