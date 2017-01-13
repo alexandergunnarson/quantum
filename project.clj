@@ -185,7 +185,7 @@
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ]
        [danlentz/clj-uuid                       "0.1.6"           ]
      ; ==== HTTP ====
-       [com.taoensso/sente                      "1.8.1"             ; WebSockets
+       [com.taoensso/sente                      "1.11.0"             ; WebSockets
          :exclusions [com.taoensso/encore]                        ]
        [cljs-http                               "0.1.41"
          :exclusions [com.cognitect/transit-cljs]]
