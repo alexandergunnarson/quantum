@@ -94,6 +94,17 @@
   [& preds]
   `(or ~@(->> preds (map #(vector (keyword (str %)) %)) (apply concat)))))
 
+(defn invalid? ; TODO temporary
+  "tests the validity of a conform return value"
+  [ret] (#?(:clj identical? :cljs keyword-identical?) ::s/invalid ret))
+
+(defn- pvalid? ; TODO temporary
+  "internal helper function that returns true when x is valid for spec."
+  ([pred x]
+   (not (invalid? (@#'s/dt pred x ::s/unknown))))
+  ([pred x form]
+   (not (invalid? (@#'s/dt pred x form)))))
+
 (defn or*-spec-impl
   [keys forms preds gfn]
   (let [id (#?(:clj java.util.UUID/randomUUID :cljs random-uuid))
@@ -103,20 +114,20 @@
                     2 (fn [x]
                         (let [specs @specs
                               ret (s/conform* (specs 0) x)]
-                          (if (s/invalid? ret)
+                          (if (invalid? ret)
                             (let [ret (s/conform* (specs 1) x)]
-                              (if (s/invalid? ret)
+                              (if (invalid? ret)
                                 ::s/invalid
                                 ret))
                             ret)))
                     3 (fn [x]
                         (let [specs @specs
                               ret (s/conform* (specs 0) x)]
-                          (if (s/invalid? ret)
+                          (if (invalid? ret)
                             (let [ret (s/conform* (specs 1) x)]
-                              (if (s/invalid? ret)
+                              (if (invalid? ret)
                                 (let [ret (s/conform* (specs 2) x)]
-                                  (if (s/invalid? ret)
+                                  (if (invalid? ret)
                                     ::s/invalid
                                     ret))
                                 ret))
@@ -140,10 +151,10 @@
      (conform* [_ x] (cform x))
      (unform* [_ [k x]] (s/unform (kps k) x))
      (explain* [this path via in x]
-               (when-not (@#'s/pvalid? this x)
+               (when-not (@#'pvalid? this x)
                  (apply concat
                         (map (fn [k form pred]
-                               (when-not (@#'s/pvalid? pred x)
+                               (when-not (@#'pvalid? pred x)
                                  (@#'s/explain-1 form pred (conj path k) via in x)))
                              keys forms preds))))
      (gen* [_ overrides path rmap] ; TODO this may need to fixed? Untested
