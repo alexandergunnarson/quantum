@@ -137,8 +137,8 @@
                  (ws/make-channel-socket!
                    #?(:clj (case (:type server)
                              ;:http-kit a-http-kit/sente-web-server-adapter
-                             :aleph    a-aleph/sente-web-server-adapter
-                             :immutant a-imm/sente-web-server-adapter)
+                             :aleph    (a-aleph/get-sch-adapter)
+                             :immutant (a-imm/get-sch-adapter))
                       :cljs endpoint)
                    {:type   (or type :auto)
                     :packer packer
