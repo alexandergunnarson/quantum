@@ -105,6 +105,14 @@
   ([pred x form]
    (not (invalid? (@#'s/dt pred x form)))))
 
+#?(:clj
+(defn- res-cljs [env form] ; TODO temporary
+  (cond
+    (keyword? form) form
+    (symbol? form) (clojure.core/or (->> form (resolve env) @#'s/->sym) form)
+    (sequential? form) (clojure.walk/postwalk #(if (symbol? %) (res-cljs env %) %) (@#'s/unfn form))
+    :else form)))
+
 (defn or*-spec-impl
   [keys forms preds gfn]
   (let [id (#?(:clj java.util.UUID/randomUUID :cljs random-uuid))
@@ -143,9 +151,9 @@
                                   ret)))
                             ::s/invalid)))))]
     (reify
-     s/Specize
-     (specize* [s] s)
-     (specize* [s _] s)
+     #_s/Specize
+     #_(specize* [s] s)
+     #_(specize* [s _] s)
 
      s/Spec
      (conform* [_ x] (cform x))
@@ -177,6 +185,6 @@
    (s/or* even? #(< % 42))
    Returns a spec that returns the first matching pred's value."
   [& pred-forms]
-  (let [pf (mapv (if-cljs &env (@#'cljs.spec/res &env pred-forms)
+  (let [pf (mapv (if-cljs &env (@#'res-cljs &env pred-forms)
                                (@#'clojure.spec/res pred-forms)))]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
