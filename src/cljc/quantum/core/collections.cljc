@@ -75,7 +75,7 @@
                        whenf1 ifn ifn1 condf
                        condf1 splice-or]]
              [quantum.core.macros                     :as macros
-               :refer [defnt]]
+               :refer [defnt if-cljs]]
              [quantum.core.ns                         :as ns]
              [quantum.core.numeric                    :as num
                :refer [-]]

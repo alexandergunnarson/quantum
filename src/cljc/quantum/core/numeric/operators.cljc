@@ -10,6 +10,8 @@
     [quantum.core.error :as err
       :refer [TODO]]
     [quantum.core.log :as log]
+    [quantum.core.macros.core
+      :refer [#?(:clj core-symbol)]]
     [quantum.core.macros
       :refer [defnt defntp #?@(:clj [defnt' variadic-proxy])]]
     [quantum.core.vars
@@ -340,14 +342,14 @@
   [op]
   (let [op'     (if (= op '/) '-div op)
         sym     (symbol (str "zeros" op'))
-        core-op (symbol "core" (str op))]
+        core-op (core-symbol &env op)]
     `(defn ~sym
        ([a#      ] (~core-op (int-nil a#)))
        ([a# b#   ] (~core-op (int-nil a#) (int-nil b#)))
        ([a# b# c#] (~core-op (int-nil a#) (int-nil b#) (int-nil c#)))
        ([a# b# c# & args#] (->> (conj args# c# b# a#)
                                 (clojure.core.reducers/map #(int-nil %))
-                                (core/reduce ~core-op)))))))
+                                (reduce ~core-op)))))))
 
 #?(:clj
 (defmacro nils-op
@@ -355,11 +357,11 @@
   [op]
   (let [op'     (if (= op '/) '-div op)
         sym     (symbol (str "nils" op'))
-        core-op (symbol "core" (str op))]
+        core-op (core-symbol &env op)]
     `(defn ~sym
        ([a#      ] (when a# (~core-op a#)))
        ([a# b#   ] (when (and a# b#) (~core-op a# b#)))
        ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
        ([a# b# c# & args#]
          (let [argsf# (conj args# c# b# a#)]
-           (when (every? some? argsf#) (core/reduce ~core-op argsf#))))))))
+           (when (every? some? argsf#) (reduce ~core-op argsf#))))))))

@@ -50,8 +50,6 @@
     [datomic.peer LocalConnection Connection]
     java.util.concurrent.ConcurrentHashMap)))
 
-#?(:clj (ns-unmap 'quantum.db.datomic 'with))
-
 ; TODO take out repetition
 (defonce db*   dbc/db*  )
 (defonce conn* dbc/conn*)

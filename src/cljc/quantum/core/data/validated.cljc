@@ -17,7 +17,7 @@
     [quantum.core.fn
       :refer [fn-> fn->> fn1 fn$ <-]]
     [quantum.core.logic
-      :refer [eq? fn-and fn-or whenf1 whenf whenp]]
+      :refer [fn= fn-and fn-or whenf1 whenf whenp]]
     [quantum.core.log       :as log
       :refer [prl]]
     [quantum.core.macros.defrecord

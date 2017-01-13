@@ -35,6 +35,9 @@
   ([env then] `(when (cljs-env? ~env) ~then))))
 
 #?(:clj
+(defn core-symbol [env sym] (symbol (str (if-cljs env "cljs" "clojure") ".core") (name sym))))
+
+#?(:clj
 (defmacro locals
   "Returns a map of the local variables in scope of wherever
    this macro is expanded, from symbols to values.

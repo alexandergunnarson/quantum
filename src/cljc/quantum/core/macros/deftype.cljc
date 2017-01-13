@@ -1,6 +1,7 @@
 (ns quantum.core.macros.deftype
   (:require
     [cljs.analyzer]
+    [cljs.core]
     [quantum.core.collections.base
       :refer [update-first update-val ensure-set]]
     [quantum.core.macros.core
