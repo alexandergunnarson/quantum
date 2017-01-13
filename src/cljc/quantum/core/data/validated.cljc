@@ -94,14 +94,16 @@
     spec))
 
 (defn dbify-keyword [k]
-  (validate k             keyword?
-            (namespace k) nil?)
-  (keyword "schema" (name k)))
+  (validate k keyword?)
+  (if (namespace k) k (keyword "schema" (name k))))
 
 (defn contextualize-keyword [k kw-context]
   (validate k keyword?)
   (cond (= (namespace k) "this")
-        (keyword (str (name kw-context) ":" (name k)))
+        (if (namespace kw-context)
+            (keyword (str (namespace kw-context) ":" (name kw-context)) ; would be a "." but no, to avoid classname clashes
+                     (name k))
+            (keyword (name kw-context) (name k)))
         (and (-> k namespace nil?)
              (= (name k) "this"))
         kw-context
@@ -131,7 +133,7 @@
                           (fn->> name keyword db-value-types))
                   (fn-and (fn->> namespace (= "quantum.db.datomic.core"))
                           (fn->> name rest (apply str) keyword db-value-types))))
-         (fn-and seq? (fn-> first symbol?) (fn-> first name (= "and")) ; TODO really this is core.validate/and
+         (fn-and seq? (fn-> first symbol?) (fn-> first name (= "and")) ; TODO really this should check for core.validate/and
            (fn->> rest (filter db-type) first db-type))
          (constantly :ref)))
 
@@ -220,7 +222,7 @@
                                (if db-mode? "schema" (str (ns-name ns-))))
                            (name sym))]
     {:spec-name spec-name
-     :sym       (-> (symbol (if (or (#{(str (ns-name ns-)) "schema"} (namespace spec-name)))
+     :sym       (-> (symbol (if (#{(str (ns-name ns-)) "schema"} (namespace spec-name))
                                 (name spec-name)
                                 (str (namespace spec-name) ":" (name spec-name))))
                     (with-meta (meta sym)))}))
@@ -275,13 +277,13 @@
   "Defines a validated associative structure.
    Same semantics of `clojure.spec/keys`.
    Basically a validator on a record."
-  {:usage `(do (def-validated-map  ^:db? MyTypeOfValidatedMap
-                 :invariant    #(= 5 (+ (::a %) (::b %)))
+  {:usage `(do (def-validated-map  ^:db? my-type-of-validated-map
+                 :invariant    #(= 7 (+ (::a %) (::b %)))
                  :db-invariant ([db m] m)
                  :conformer    (fn [m] (assoc m ::a 6))
                  :req [::a ::b ::c ::d] :opt [::e])
                (defspec ::a number?) (defspec ::b number?) (defspec ::c number?) (defspec ::d number?)
-               (assoc (->MyTypeOfValidatedMap {::a 1 ::b 2 ::c 3 ::d 4}) ::a 3))
+               (assoc (->my-type-of-validated-map {::a 2 ::b 1 ::c 3 ::d 4}) ::a 3))
    :todo {1 "Break this macro up"
           2 ".assoc may call .conj, in which case it's inefficient with double validation"
           3 "allow transactional manipulation, in which multiple values can be updated at once"
@@ -338,10 +340,15 @@
           un-ks-syms           (mapv #(symbol               (name %)) un-ks     )
           all-mod-ks-syms      (mapv #(symbol (namespace %) (name %)) all-mod-ks)
           concatv              #(when-let [v (concat %1 %2)] (vec v))
-          keyspec              (vec (remove nil? [(when req    :req   ) req
-                                                  (when opt    :opt   ) opt
-                                                  (when req-un :req-un) req-un
-                                                  (when opt-un :opt-un) opt-un]))
+          keyspec              (vec (apply concat
+                                      [(cond (and db-mode? req-un) [:req (vec (concat req req-un))]
+                                             req                   [:req req])
+                                       (cond (and db-mode? opt-un) [:opt (vec (concat opt opt-un))]
+                                             opt                   [:opt opt])
+                                       (when (and req-un (not db-mode?))
+                                         [:req-un req-un])
+                                       (when (and opt-un (not db-mode?))
+                                         [:opt-un opt-un])]))
           conformer-sym        (gensym "conformer")
           invariant-spec-name  (keyword ns-str (name (gensym "invariant")))
           spec-sym             (gensym "keyspec")
@@ -371,8 +378,8 @@
                   (let [m# (-> m#
                                ~(if-not db-mode?  `identity* `(assoc :schema/type ~spec-name))
                                ~(if-not conformer `identity* conformer-sym)
-                               (v/validate ~spec-name)
-                               (set/rename-keys ~un-ks-to-ks))
+                               (set/rename-keys ~un-ks-to-ks) ; All :*-un keys -> namespaced
+                               (v/validate ~spec-name))
                         _# (v/validate (:db/id    m#) (v/or* nil? :db/id   ))
                         _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
                     (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
