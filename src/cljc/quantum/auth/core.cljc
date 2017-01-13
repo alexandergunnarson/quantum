@@ -13,17 +13,7 @@
               :refer [validate]]
             [quantum.core.data.validated
               :refer [def-validated def-validated-map]]
-            [quantum.db.datomic.core  :as dbc]))
-
-(def-validated-map ^:db? ^:sensitive? ^:no-history? oauth2-keys
-  :req-un [(def :this/redirect-uri  :db/string) ; TODO validate uri?
-           (def :this/client-id     :db/string) ; TODO validate uniquity?
-           (def :this/client-secret :db/string)
-           (def :this/scopes        (v/set-of :db/keyword))]
-  :opt-un [(def :this/access-token
-             :req-un [(def :this/value   :db/string )]
-             :opt-un [(def :this/expires :db/instant)])
-           (def :this/refresh-token :db/string)])
+            [quantum.db.datomic.schemas :as sc]))
 
 (def auth-source-table
   (atom {:google    "Google"

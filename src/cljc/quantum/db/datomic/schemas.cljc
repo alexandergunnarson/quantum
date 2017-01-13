@@ -71,7 +71,7 @@
   location :db/keyword)
 
 ; TODO should this mean :location:country is a :ref or a :db/keyword ?
-(def-validated ^:db? location:country :location)
+(def-validated ^:db? location/country :location)
 
 ; =========== LINGUISTICS =========== ;
 
@@ -154,8 +154,8 @@
   agent:person/name
   ;:invariant (fn [x] (contains? x (:this/called-by x)))
   :req-un [^{:doc "The preferred name (some go by prefix, some first, some middle)"}
-           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))] ; TODO issue: the second of the `and` is receiving a vector, e.g. `[:(constantly true) :agent:person:name/prefix]`
-  :opt-un [(def :this/legal-in  (v/set-of :location:country))
+           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))]
+  :opt-un [(def :this/legal-in  (v/set-of :location/country))
            ^{:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}
            (def :this/prefix    (v/set-of :db/keyword))
            ^{:doc "e.g. \"José\" in \"José Maria Gutierrez de Santos\""}
@@ -167,7 +167,7 @@
              :opt-un
              [^{:doc "refers to a schema, e.g. \":agent:person:name:surname\" if it's a
                       simple one like \"Smith\""}
-              (def :this/primary  :db/schema ) ; Lexical scoping of "this"
+              (def :this/primary  :db/schema )
               ^{:doc "e.g. \"Smith\", or a complex non-paternal-maternal name"}
               (def :this/surname  :db/keyword)
               ^{:doc "e.g. \"Gutierrez\" in \"Gutierrez de Santos\""}
@@ -183,6 +183,16 @@
 
 ; =========== REGISTRATION =========== ;
 
+(def-validated-map ^:db? ^:sensitive? ^:no-history? auth/credential:oauth2
+  :req-un [(def :this/redirect-uri  :db/string) ; TODO validate uri?
+           (def :this/client-id     :db/string) ; TODO validate uniquity?
+           (def :this/client-secret :db/string)
+           (def :this/scopes        (v/set-of :db/keyword))] ; TODO validate for different providers e.g. Google
+  :opt-un [(def :this/access-token
+             :req-un [(def :this/value   :db/string )]
+             :opt-un [(def :this/expires :db/instant)])
+           (def :this/refresh-token :db/string)])
+
 (declare-spec ^:db? agent:organization)
 
 (def-validated-map ^:db? ^:component?
@@ -194,18 +204,20 @@
 ; =========== NETWORK =========== ;
 
 (def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
-  network:domain
-  :req-un [^{:unique :value
+  network/domain
+  :req-un [(def :this/name       :db/string)
+           ^{:doc "Keyword because it's short and universal"}
+           (def :this/tld        :db/keyword)]
+  :opt-un [^{:unique :value
              :doc    "Multiple domain names can point to the same IP address"}
            (def :this/ip-address :db/string) ; technically it's more complex than just a string
-           ^{:doc "Keyword because it's short and universal"}
-           (def :this/prefix     :db/keyword)])
+           ])
 
 (def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
   agent/email
   :req-un [^{:doc "E.g. alexandergunnarson"}
            (def :this/username :db/keyword)
-           :network:domain]
+           :network/domain]
   :opt-un [^{:doc "E.g. company, email validation service, etc."}
            (def :this/validated-by :agent:organization)
            ^{:doc "Who/what provided the email information"}
@@ -213,13 +225,16 @@
 
 ; =========== AGENT =========== ;
 
-(def-validated-map ^:db? agent:person
+(def-validated agent/auth:many (v/set-of :auth/credential:oauth2))
+
+(def-validated-map ^:db? agent/person
   :opt-un [(def :this/name:many         (v/set-of :agent:person/name))
            (def :this/name:alias:many  (v/set-of :agent:person/name:alias))
            ^{:doc "What gender a person identifies as: male, female or other."}
            (def :this/gender             (v/and :db/keyword #{:male :female :other}))
-           (def :agent/emails            (v/set-of :agent/email))
+           (def :agent/email:many        (v/set-of :agent/email))
            (def :agent/registration:many (v/set-of :agent/registration))
+           :agent/auth:many
            :musicbrainz:id])
 
 (def-validated-map ^:db?
