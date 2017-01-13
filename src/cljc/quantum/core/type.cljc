@@ -3,7 +3,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.type
   (:refer-clojure :exclude
-    [vector? map? set? associative? seq? string? keyword? fn? map-entry? boolean?
+    [vector? map? set? associative? seq? seqable? string? keyword? fn? map-entry? boolean?
      indexed? nil? list? coll? char? symbol? record? number? integer? float?
      double? decimal? array?
      identity class])

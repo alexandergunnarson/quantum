@@ -102,7 +102,7 @@
               index-of last-index-of
               first second rest last butlast get aget pop peek nth
               conjl conj! assoc assoc! assoc!* dissoc dissoc! disj! aset!
-              map-entry join empty? update! empty? ->array]])
+              map-entry join empty? empty update! empty? ->array]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
 (defaliases clog
