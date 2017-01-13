@@ -341,14 +341,8 @@
           all-mod-ks-syms      (mapv #(symbol (namespace %) (name %)) all-mod-ks)
           concatv              #(when-let [v (concat %1 %2)] (vec v))
           keyspec              (vec (apply concat
-                                      [(cond (and db-mode? req-un) [:req (vec (concat req req-un))]
-                                             req                   [:req req])
-                                       (cond (and db-mode? opt-un) [:opt (vec (concat opt opt-un))]
-                                             opt                   [:opt opt])
-                                       (when (and req-un (not db-mode?))
-                                         [:req-un req-un])
-                                       (when (and opt-un (not db-mode?))
-                                         [:opt-un opt-un])]))
+                                      [(when (or req req-un) [:req (vec (concat req req-un))])
+                                       (when (or opt opt-un) [:opt (vec (concat opt opt-un))])]))
           conformer-sym        (gensym "conformer")
           invariant-spec-name  (keyword ns-str (name (gensym "invariant")))
           spec-sym             (gensym "keyspec")

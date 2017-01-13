@@ -5,6 +5,7 @@
   (:require
     [clojure.core      :as core]
     [clojure.spec      :as s]
+    [cljs.spec]
     [clojure.spec.gen  :as gen]
     [quantum.core.collections.base
       :refer [nnil?]]
