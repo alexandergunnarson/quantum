@@ -430,8 +430,7 @@
                         :asset-path           "js/compiled/out"
                         :source-map           true
                         :source-map-timestamp true
-                        :cache-analysis       true
-                        :warnings {:redef-in-file false}}}
+                        :cache-analysis       true}}
        :min {:source-paths ["src/cljc" "dev/cljc"]
              :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                         :output-dir     "dev-resources/public/js/min-compiled/out"
