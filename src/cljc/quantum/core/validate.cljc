@@ -6,7 +6,8 @@
     [clojure.core      :as core]
     [clojure.spec      :as s]
     [cljs.spec]
-    [clojure.spec.gen  :as gen]
+    [#?(:clj  clojure.spec.gen
+        :cljs cljs.spec.gen)  :as gen]
     [quantum.core.collections.base
       :refer [nnil?]]
     [quantum.core.macros.core
