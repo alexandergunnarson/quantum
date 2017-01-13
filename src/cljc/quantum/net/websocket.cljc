@@ -66,22 +66,21 @@
                               :my-key2 "Data2"}]
                  (fn [resp] (println "Response is" resp))
                  100)}
-  ([#?(:clj uid) msg-pack callback]
-    (put! #?(:clj uid) msg-pack callback 200))
-  ([#?(:clj uid) msg-pack callback timeout]
-    (let [f @send-msg!]
-      (assert (nnil? f))
-      (@send-msg! #?(:clj uid) msg-pack timeout (or callback (fn [_])))))) ; to ensure no auto-close
+  #?(:cljs ([msg-pack] (put! msg-pack (fn [_]))))
+  #?(:cljs ([msg-pack callback] (put! msg-pack callback 200)))
+           ([#?(:clj uid) msg-pack #?(:cljs callback) #?(:cljs timeout)]
+             (let [f @send-msg!]
+               (assert (nnil? f))
+               (@send-msg! #?(:clj uid) msg-pack #?(:cljs timeout) #?(:cljs (or callback (fn [_]))))))) ; to ensure no auto-close
 
 (defn put-chan!
-  ([#?(:clj uid) msg-pack]
-    (put-chan! #?(:clj uid) msg-pack nil))
-  ([#?(:clj uid) msg-pack timeout]
-    (let [ret (promise-chan)]
-      (put! #?(:clj uid) msg-pack
-        (fn [resp] (offer! ret resp))
-        timeout)
-      ret)))
+  #?(:cljs ([msg-pack] (put-chan! msg-pack nil)))
+           ([#?(:clj uid) msg-pack #?(:cljs timeout)]
+             (let [ret (promise-chan)]
+               (put! #?(:clj uid) msg-pack
+                 #?(:cljs (fn [resp] (offer! ret resp)))
+                 #?(:cljs timeout))
+               ret)))
 
 (defn try-put!
   "Try to send messsage @?times times with intervals of @?sleep
