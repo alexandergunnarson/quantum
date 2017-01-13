@@ -177,12 +177,6 @@
    (s/or* even? #(< % 42))
    Returns a spec that returns the first matching pred's value."
   [& pred-forms]
-  (if-cljs &env
-    (try (println (@#'cljs.spec/res &env pred-forms))
-      (catch Throwable t (throw (ex-info (str "Issue 1: " t)))))
-    (try (println (@#'cljs.spec/res pred-forms))
-      (catch Throwable t (throw (ex-info (str "Issue 2: " t)))))
-    nil)
-  (let [pf (mapv (if-cljs &env (@#'cljs.spec/res &env pred-forms)
-                               (@#'clojure.spec/res pred-forms)))]
+  (let [pf (mapv (if-cljs &env #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
+                 pred-forms)]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
