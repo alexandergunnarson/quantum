@@ -38,7 +38,7 @@
             [quantum.core.fn                :as fn
               :refer [fn1 fn&2 rfn]]
             [quantum.core.logic             :as logic
-              :refer [eq? fn-eq? whenc whenf ifn1]]
+              :refer [fn= whenc whenf ifn1]]
             [quantum.core.collections.logic
               :refer [seq-or]]
             [quantum.core.macros            :as macros
@@ -373,7 +373,7 @@
   ([^pattern? coll elem]
     (nnil? (re-find elem coll)))
   ([          coll elem]
-    (seq-or (fn-eq? elem) coll)))
+    (seq-or (fn= elem) coll)))
 
 ; static Object getFrom(Object coll, Object key, Object notFound){
 ;   else if(coll instanceof Map) {
