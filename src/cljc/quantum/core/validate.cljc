@@ -7,7 +7,7 @@
     [clojure.spec      :as s]
     [cljs.spec]
     [#?(:clj  clojure.spec.gen
-        :cljs cljs.spec.gen)  :as gen]
+        :cljs cljs.spec.impl.gen)  :as gen]
     [quantum.core.collections.base
       :refer [nnil?]]
     [quantum.core.macros.core
