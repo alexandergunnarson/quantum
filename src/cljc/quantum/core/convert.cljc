@@ -209,18 +209,15 @@
 
     :else (eval x))))
 
-#?(:clj
-(defn ->form ; Not just for Clojure
+(defn ->form
   [x & [opts]]
   (cond
     (string? x)
     (r-edn/read-string opts x)
-
-    (or (instance? IPushbackReader        x)
-        (instance? java.io.PushbackReader x))
-    (r-edn/read opts x)
-
-    :else x)))
+    #?@(:clj [(or (instance? IPushbackReader        x)
+                  (instance? java.io.PushbackReader x))
+              (r-edn/read opts x)])
+    :else x))
 
 ; TODO incorporate conversion functions at end of (clojure|cljs).tools.reader.reader-types
 
