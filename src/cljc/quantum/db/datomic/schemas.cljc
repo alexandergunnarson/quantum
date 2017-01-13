@@ -40,12 +40,12 @@
 (def-validated-map ^:db?
   ^{:doc  "A ratio specifically using longs instead of bigints."
     :todo #{"Throw on overflow from long"}
-    :tests `{(->ratio:long {:ratio:long:numerator   2
-                            :ratio:long:denominator 4})
-             {:ratio:long:numerator   1
-              :ratio:long:denominator 2}}}
+    :tests `{(->ratio:long {:numerator   2
+                            :denominator 4})
+             {:numerator   1
+              :denominator 2}}}
   ratio:long
-  #?@(:clj [:conformer (fn [x] (let [n          (:this/numerator x)
+  #?@(:clj [:conformer (fn [x] (let [n          (:this/numerator   x)
                                      d          (:this/denominator x)
                                      simplified (/ n d)
                                      n'         (long (numerator   simplified))
@@ -151,7 +151,7 @@
 
 (def-validated-map ^:db? ^:component?
   ^{:todo #{"Support hyphenated and maiden names"}}
-  agent:person:name
+  agent:person/name
   ;:invariant (fn [x] (contains? x (:this/called-by x)))
   :req-un [^{:doc "The preferred name (some go by prefix, some first, some middle)"}
            (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))] ; TODO issue: the second of the `and` is receiving a vector, e.g. `[:(constantly true) :agent:person:name/prefix]`
@@ -202,7 +202,7 @@
            (def :this/prefix     :db/keyword)])
 
 (def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
-  agent:email
+  agent/email
   :req-un [^{:doc "E.g. alexandergunnarson"}
            (def :this/username :db/keyword)
            :network:domain]
@@ -214,20 +214,20 @@
 ; =========== AGENT =========== ;
 
 (def-validated-map ^:db? agent:person
-  :opt [(def :this/name:many          (v/set-of :agent:person:name))
-        (def :this/name:alias:many    (v/set-of :agent:person:name:alias))
-        ^{:doc "What gender a person identifies as: male, female or other."}
-        (def :this/gender             (v/and :db/keyword #{:male :female :other}))
-        (def :agent:emails            (v/set-of :agent:email))
-        (def :agent:registration:many (v/set-of :agent:registration))
-        :musicbrainz:id])
+  :opt-un [(def :this/name:many         (v/set-of :agent:person/name))
+           (def :this/name:alias:many  (v/set-of :agent:person/name:alias))
+           ^{:doc "What gender a person identifies as: male, female or other."}
+           (def :this/gender             (v/and :db/keyword #{:male :female :other}))
+           (def :agent/emails            (v/set-of :agent/email))
+           (def :agent/registration:many (v/set-of :agent/registration))
+           :musicbrainz:id])
 
 (def-validated-map ^:db?
   ^{:component? true
     :doc "The official name of an organization"
     :todo #{"Finish"}}
   agent:organization:name
-  :opt [(def :this/legal-in (v/set-of :location:country))])
+  :opt-un [(def :this/legal-in (v/set-of :location:country))])
 
 (def-validated ^:db?
   ^{:unique :value
@@ -237,13 +237,13 @@
   agent:isni :db/string)
 
 (def-validated-map ^:db? agent:organization
-  :opt [(def :this/name:many (v/set-of :this/name))
-        ^{:doc "#{[:group     {:doc \"A group of people that may or may not have a distinctive name.\"}]
-                  [:orchestra {:doc \"A large instrumental ensemble.\"}]
-                  [:choir     {:doc \"A choir/chorus/chorale (a large vocal ensemble).\"}]}"}
-        (def :this/types     (v/set-of #{:group :orchestra :choir}))
-        :agent:isni
-        :musicbrainz:id])
+  :opt-un [(def :this/name:many (v/set-of :this/name))
+           ^{:doc "#{[:group     {:doc \"A group of people that may or may not have a distinctive name.\"}]
+                     [:orchestra {:doc \"A large instrumental ensemble.\"}]
+                     [:choir     {:doc \"A choir/chorus/chorale (a large vocal ensemble).\"}]}"}
+           (def :this/types     (v/set-of #{:group :orchestra :choir}))
+           :agent:isni
+           :musicbrainz:id])
 
 (def-validated ^:db? art:creator
   ^{:doc "In the instance of music, composer. For images, artist.

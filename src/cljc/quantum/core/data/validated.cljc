@@ -246,7 +246,7 @@
           {:keys [spec-name sym]} (sym->spec-name+sym sym-0 *ns*)
           type-hash     (hash-classname sym-0)
           db-mode?      (-> sym-0 meta :db?)
-          kw-context    (-> sym-0 name keyword)
+          kw-context    (keyword (namespace sym-0) (name sym-0))
           spec          (->> spec-0
                              (<- whenp db-mode? replace-value-types)
                              (<- whenf (fn-and (constantly db-mode?)
@@ -297,7 +297,7 @@
     opt (v/or* nil? vector?) opt-un (v/or* nil? vector?))
   (let [db-mode?   (-> sym-0 meta :db?)
         _          (when db-invariant (assert db-mode?))
-        kw-context (-> sym-0 name keyword)
+        kw-context (keyword (namespace sym-0) (name sym-0))
         {{:keys [req opt req-un opt-un] :as spec} :spec to-prepend :to-prepend}
           (-> spec-0
               (dissoc :invariant :db-invariant :conformer)
@@ -346,6 +346,7 @@
           conformer-sym        (gensym "conformer")
           invariant-spec-name  (keyword ns-str (name (gensym "invariant")))
           spec-sym             (gensym "keyspec")
+          spec-base            (gensym "spec-base")
           type-hash            (hash-classname sym)
           k-gen                (gensym "k")
           v-gen                (gensym "v")
@@ -365,6 +366,9 @@
           (def ~all-keys-record      (~(symbol (str "map->" all-record-sym    )) ~(merge (zipmap all-mod-ks all-mod-ks) (zipmap special-ks special-ks))))
           (def ~un-ks-to-ks          ~(zipmap un-ks un-ks-qualified))
           (def ~spec-sym             ~keyspec)
+          (def ~spec-base            ~(if invariant
+                                          `(v/and (v/keys ~@keyspec) ~invariant)
+                                          `(v/keys ~@keyspec)))
           (defn ~create [m#]
             (if (instance? ~qualified-record-sym m#)
                 m#
@@ -373,7 +377,7 @@
                                ~(if-not db-mode?  `identity* `(assoc :schema/type ~spec-name))
                                ~(if-not conformer `identity* conformer-sym)
                                (set/rename-keys ~un-ks-to-ks) ; All :*-un keys -> namespaced
-                               (v/validate ~spec-name))
+                               (v/validate ~spec-base))
                         _# (v/validate (:db/id    m#) (v/or* nil? :db/id   ))
                         _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
                     (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
@@ -458,11 +462,12 @@
                {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
              quantum.core.core/IValue
                {~'get         ([_#] ~'v)
-                ~'set         ([_# v#] (new ~sym (~create v#)))}})
+                ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
           (defn ~(symbol (str "->" sym)) [m#] (new ~qualified-sym (~create m#)))
-          (defspec ~spec-name ~(if invariant
-                                   `(v/or* (fn [m#] (instance? ~qualified-sym m#)) (v/and (v/keys ~@keyspec) ~invariant))
-                                   `(v/or* (fn [m#] (instance? ~qualified-sym m#)) (v/keys ~@keyspec))))
+          (defspec ~spec-name (v/conformer
+                                (fn [x#] (if (instance? ~qualified-sym x#)
+                                             x#
+                                             (new ~qualified-sym (~create x#))))))
           ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
           ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
      (prl ::debug code)

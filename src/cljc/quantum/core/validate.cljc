@@ -50,18 +50,20 @@
   (if-cljs &env
    `(if cljs.spec/*compile-asserts* ; TODO should probably be outside quote like this
         (if cljs.spec/*runtime-asserts*
-            (let [spec# ~spec x# ~x]
-              (if (cljs.spec/valid? spec# x#)
-                  x#
-                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))))
+            (let [spec# ~spec x# ~x
+                  conformed# (cljs.spec/conform spec# x#)]
+              (if (= conformed# :cljs.spec/invalid)
+                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
+                  conformed#))
            ~x)
        ~x)
     (if clojure.spec/*compile-asserts*
        `(if (clojure.spec/check-asserts?) #_clojure.lang.RT/checkSpecAsserts
-            (let [spec# ~spec x# ~x]
-              (if (clojure.spec/valid? spec# x#)
-                  x#
-                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))))
+            (let [spec# ~spec x# ~x
+                  conformed# (clojure.spec/conform spec# x#)]
+              (if (= conformed# :clojure.spec/invalid)
+                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
+                  conformed#))
            ~x)
         x))))
 #?(:clj
@@ -73,20 +75,22 @@
   `(do ~@(->> args (partition-all 2)
                    (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
-#?(:clj (quantum.core.vars/defmalias spec    clojure.spec/spec    cljs.spec/spec   ))
-#?(:clj (quantum.core.vars/defmalias tuple   clojure.spec/tuple   cljs.spec/tuple  ))
-#?(:clj (quantum.core.vars/defmalias coll-of clojure.spec/coll-of cljs.spec/coll-of))
+#?(:clj (quantum.core.vars/defmalias spec      clojure.spec/spec      cljs.spec/spec     ))
+#?(:clj (quantum.core.vars/defmalias tuple     clojure.spec/tuple     cljs.spec/tuple    ))
+#?(:clj (quantum.core.vars/defmalias coll-of   clojure.spec/coll-of   cljs.spec/coll-of  ))
 #?(:clj (defmacro set-of [x & args] `(coll-of ~x :kind core/set? ~@args)))
-#?(:clj (quantum.core.vars/defmalias defspec clojure.spec/def     cljs.spec/def    ))
-#?(:clj (quantum.core.vars/defmalias keys    clojure.spec/keys    cljs.spec/keys   ))
-#?(:clj (quantum.core.vars/defmalias alt     clojure.spec/alt     cljs.spec/alt    ))
-#?(:clj (quantum.core.vars/defmalias cat     clojure.spec/cat     cljs.spec/cat    ))
-#?(:clj (quantum.core.vars/defmalias +       clojure.spec/+       cljs.spec/+      ))
-#?(:clj (quantum.core.vars/defmalias *       clojure.spec/*       cljs.spec/*      ))
-#?(:clj (quantum.core.vars/defmalias ?       clojure.spec/?       cljs.spec/?      ))
-#?(:clj (quantum.core.vars/defmalias and     clojure.spec/and     cljs.spec/and    ))
-#?(:clj (quantum.core.vars/defmalias or      clojure.spec/or      cljs.spec/or     ))
+#?(:clj (quantum.core.vars/defmalias defspec   clojure.spec/def       cljs.spec/def      ))
+#?(:clj (quantum.core.vars/defmalias keys      clojure.spec/keys      cljs.spec/keys     ))
+#?(:clj (quantum.core.vars/defmalias alt       clojure.spec/alt       cljs.spec/alt      ))
+#?(:clj (quantum.core.vars/defmalias cat       clojure.spec/cat       cljs.spec/cat      ))
+#?(:clj (quantum.core.vars/defmalias +         clojure.spec/+         cljs.spec/+        ))
+#?(:clj (quantum.core.vars/defmalias *         clojure.spec/*         cljs.spec/*        ))
+#?(:clj (quantum.core.vars/defmalias ?         clojure.spec/?         cljs.spec/?        ))
+#?(:clj (quantum.core.vars/defmalias and       clojure.spec/and       cljs.spec/and      ))
+#?(:clj (quantum.core.vars/defmalias or        clojure.spec/or        cljs.spec/or       ))
 #?(:clj (defmacro nnil [& args] `(validate ~@(interleave args (repeat `nnil?)))))
+#?(:clj (quantum.core.vars/defmalias conformer clojure.spec/conformer cljs.spec/conformer))
+(defalias conform s/conform)
 
 #?(:clj
 (defmacro or-auto
