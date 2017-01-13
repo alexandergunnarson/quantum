@@ -5,6 +5,7 @@
   (:require
     [clojure.core      :as core]
     [clojure.spec      :as s]
+    [clojure.spec.gen  :as gen]
     [quantum.core.collections.base
       :refer [nnil?]]
     [quantum.core.macros.core
@@ -86,7 +87,82 @@
 #?(:clj (defmacro nnil [& args] `(validate ~@(interleave args (repeat `nnil?)))))
 
 #?(:clj
-(defmacro or*
-  "Like `spec/or`, except labels aren't required for preds."
+(defmacro or-auto
+  "Like `spec/or`, except labels aren't required for preds ('auto-labels' preds)."
   [& preds]
   `(or ~@(->> preds (map #(vector (keyword (str %)) %)) (apply concat)))))
+
+(defn or*-spec-impl
+  [keys forms preds gfn]
+  (let [id (#?(:clj java.util.UUID/randomUUID :cljs random-uuid))
+        kps (zipmap keys preds)
+        specs (delay (mapv @#'s/specize preds forms))
+        cform (case (count preds)
+                    2 (fn [x]
+                        (let [specs @specs
+                              ret (s/conform* (specs 0) x)]
+                          (if (s/invalid? ret)
+                            (let [ret (s/conform* (specs 1) x)]
+                              (if (s/invalid? ret)
+                                ::s/invalid
+                                ret))
+                            ret)))
+                    3 (fn [x]
+                        (let [specs @specs
+                              ret (s/conform* (specs 0) x)]
+                          (if (s/invalid? ret)
+                            (let [ret (s/conform* (specs 1) x)]
+                              (if (s/invalid? ret)
+                                (let [ret (s/conform* (specs 2) x)]
+                                  (if (s/invalid? ret)
+                                    ::s/invalid
+                                    ret))
+                                ret))
+                            ret)))
+                    (fn [x]
+                      (let [specs @specs]
+                        (loop [i 0]
+                          (if (< i (count specs))
+                            (let [spec (specs i)]
+                              (let [ret (s/conform* spec x)]
+                                (if (s/invalid? ret)
+                                  (recur (inc i))
+                                  ret)))
+                            ::s/invalid)))))]
+    (reify
+     s/Specize
+     (specize* [s] s)
+     (specize* [s _] s)
+
+     s/Spec
+     (conform* [_ x] (cform x))
+     (unform* [_ [k x]] (s/unform (kps k) x))
+     (explain* [this path via in x]
+               (when-not (@#'s/pvalid? this x)
+                 (apply concat
+                        (map (fn [k form pred]
+                               (when-not (@#'s/pvalid? pred x)
+                                 (@#'s/explain-1 form pred (conj path k) via in x)))
+                             keys forms preds))))
+     (gen* [_ overrides path rmap] ; TODO this may need to fixed? Untested
+           (if gfn
+             (gfn)
+             (let [gen (fn [k p f]
+                         (let [rmap (@#'s/inck rmap id)]
+                           (when-not (@#'s/recur-limit? rmap id path k)
+                             (gen/delay
+                              (@#'s/gensub p overrides (conj path k) rmap f)))))
+                   gs (remove nil? (map gen keys preds forms))]
+               (when-not (empty? gs)
+                 (gen/one-of gs)))))
+     (with-gen* [_ gfn] (or*-spec-impl keys forms preds gfn))
+     (describe* [_] `(or* ~@forms)))))
+
+#?(:clj
+(defmacro or*
+  "Takes preds, e.g.
+   (s/or* even? #(< % 42))
+   Returns a spec that returns the first matching pred's value."
+  [& pred-forms]
+  (let [pf (mapv (if-cljs &env @#'cljs.spec/res @#'clojure.spec/res) pred-forms)]
+    `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))

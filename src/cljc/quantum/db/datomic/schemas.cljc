@@ -152,9 +152,9 @@
 (def-validated-map ^:db? ^:component?
   ^{:todo #{"Support hyphenated and maiden names"}}
   agent:person:name
-  :invariant (fn [x] (contains? x (:this/called-by x)))
+  ;:invariant (fn [x] (contains? x (:this/called-by x)))
   :req-un [^{:doc "The preferred name (some go by prefix, some first, some middle)"}
-           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))]
+           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))] ; TODO issue: the second of the `and` is receiving a vector, e.g. `[:(constantly true) :agent:person:name/prefix]`
   :opt-un [(def :this/legal-in  (v/set-of :location:country))
            ^{:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}
            (def :this/prefix    (v/set-of :db/keyword))
@@ -175,7 +175,7 @@
               ^{:doc "e.g. \"de Santos\" in \"Gutierrez de Santos\""}
               (def :this/paternal :db/keyword)
               ^{:doc "e.g. \"Jr., Sr., III\""}
-              (def :agent:person:name:suffix :db/keyword)])])
+              (def :agent:person:name/suffix :db/keyword)])])
 
 (def-validated ^:db?
   ^{:doc "AKA nickname"}
