@@ -18,7 +18,7 @@
                :txr-props
                  {:start?            true
                   :kill-on-shutdown? true
-                  :datomic-path      (path/path 
+                  :datomic-path      (path/path
                                        "/usr" "local" "datomic" ; TODO dynamically determine where it is
                                        "datomic-free-0.9.5344")
                   :resources-path    (path/path

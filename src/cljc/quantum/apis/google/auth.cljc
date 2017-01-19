@@ -32,7 +32,7 @@
    :oauth              "https://accounts.google.com/o/oauth2/auth"
    :api-auth           "https://www.googleapis.com/auth/"})
 
-; The keys of this atom are all of Google's services supported by the Quantum API
+; The keys of this atom will be all of Google's services supported by the Quantum API
 (defonce scopes
   (atom {:general
           {:email   (url-path (:api-auth urls) "userinfo.email")
@@ -57,6 +57,8 @@
     ""
     scopes-))
 
+; From https://developers.google.com/identity/protocols/OAuth2UserAgent
+; TODO incomplete
 (defn oauth-params [{:keys [email scopes access-type]}]
   (let [auth-keys (auth/get :google)
         _ (validate email (fn$ contains? auth-keys))
