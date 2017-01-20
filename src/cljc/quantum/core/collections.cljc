@@ -516,16 +516,6 @@
 
 ; ----- META ----- ;
 
-(defn merge-meta
-  "Returns an object of the same type and value as `obj`, with its
-   metadata merged over `m`."
-  {:from "cljs.tools/reader"}
-  [obj m]
-  (let [orig-meta (meta obj)]
-    (with-meta obj (merge m (dissoc orig-meta :source)))))
-
-
-
 (def unique-conj
   (rfn [ret k v]
     (if (contains? ret k)
