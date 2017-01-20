@@ -133,7 +133,7 @@
              (map (fn [k] (keyword (str (name k) octave)))))))
     (range 0 #_21 (inc 108))))
 
-(def <-pitches (coll/reverse-kvs pitches))
+(def <-pitches (coll/invert pitches))
 
 (defn str->music
   {:usage `{(str->music
