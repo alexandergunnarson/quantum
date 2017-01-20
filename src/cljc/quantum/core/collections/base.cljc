@@ -6,13 +6,13 @@
   (:require
     [fast-zip.core              :as zip]
     [clojure.string             :as str]
-    [clojure.walk
-      :refer [postwalk prewalk]]
     [clojure.core               :as core]
     [quantum.core.fn            :as fn
       :refer [fn->]]
     [quantum.core.logic         :as logic
-      :refer [condf1 fn-not]]))
+      :refer [condf1 fn-not]]
+    [quantum.core.vars             :as var
+      :refer [replace-meta-from]]))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -112,6 +112,23 @@
 (defmacro eval-map [& ks]
  `(zipmap (quote ~ks) (list ~@ks))))
 
+; ----- WALK ----- ;
+
+(defn walk
+  "Like `clojure.walk`, but ensures preservation of metadata."
+  [inner outer form]
+  (cond
+              (list?      form) (outer (replace-meta-from (apply list (map inner form))                    form))
+    #?@(:clj [(map-entry? form) (outer (replace-meta-from (vec        (map inner form))                    form))])
+              (seq?       form) (outer (replace-meta-from (doall      (map inner form))                    form))
+              (record?    form) (outer (replace-meta-from (reduce (fn [r x] (conj r (inner x))) form form) form))
+              (coll?      form) (outer (replace-meta-from (into (empty form) (map inner form))             form))
+              :else (outer form)))
+
+(defn postwalk [f form] (walk (partial postwalk f) f form))
+(defn prewalk  [f form] (walk (partial prewalk  f) identity (f form)))
+
+; ----- COLLECTIONS ----- ;
 
 (defn appears-within?
   "Returns true if x appears within coll at any nesting depth.."
@@ -120,7 +137,7 @@
   [x coll]
   (let [result (atom false)]
     (try
-      (clojure.walk/postwalk
+      (postwalk
         (fn [t]
           (when (= x t)
             (reset! result true)
@@ -146,3 +163,4 @@
               (dissoc m k)
               (assoc m k new-n))))
     m))
+
