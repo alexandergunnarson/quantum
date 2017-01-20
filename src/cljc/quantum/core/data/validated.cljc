@@ -1,12 +1,10 @@
 (ns quantum.core.data.validated
   (:require
     [clojure.core           :as core]
-    [clojure.walk
-      :refer [postwalk]]
     [quantum.core.core
       :refer [ns-keyword?]]
     [quantum.core.collections.base
-      :refer [nnil? nempty?]]
+      :refer [nnil? nempty? postwalk]]
     [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
       :refer [->ex TODO]]
@@ -90,12 +88,12 @@
   [spec]
   (postwalk
     (whenf1 (fn-and keyword? (fn-> namespace (= "db")))
-      #(keyword "quantum.db.datomic.core" (str "-" (name %))))
+            #(keyword "quantum.db.datomic.core" (str "-" (name %))))
     spec))
 
-(defn dbify-keyword [k]
+(defn dbify-keyword [k ns-name-str]
   (validate k keyword?)
-  (if (namespace k) k (keyword "schema" (name k))))
+  (if (namespace k) k (keyword ns-name-str (name k))))
 
 (defn contextualize-keyword [k kw-context]
   (validate k keyword?)
@@ -141,7 +139,7 @@
   {:todo #{"Enforce validators/specs using database transaction functions"}}
   [sym spec]
   `(quantum.db.datomic.core/->schema
-     (->> ~(->> `{:ident       ~(-> sym name keyword)
+     (->> ~(->> `{:ident       ~(keyword (namespace sym) (name sym))
                   :type        ~(db-type spec)
                   :cardinality ~(if ((fn-and seq? (fn-> first symbol?) (fn-> first name (= "set-of")))
                                      spec)
@@ -184,45 +182,45 @@
                            :example :whatever}
                spec       {:example '{:req [(def :this/numerator   ::a)
                                             (def :this/denominator ::a)]}}}}
-  [spec parent-sym db-mode? kw-context]
+  [spec parent-sym db-mode? kw-context ns-name-str]
   (validate (-> spec keys set) (fn1 set/subset? #{:req :opt :req-un :opt-un}))
   (let [to-prepend (atom [])
         inner-def? (fn-and seq? (fn-> first (= 'def)))
         ; TODO do inner validated maps too, which can have infinitely nested ones
         extract-inner-def
-          (fn [x] (if (inner-def? x)
-                      (let [[_ inner-name & inner-spec-args] x
-                            _ (validate inner-name keyword?
-                                        inner-spec-args nempty?)
-                            inner-name (contextualize-keyword inner-name kw-context)
-                            inner-name-sym
-                              (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents
-                                 (assoc (meta x)
-                                   :db?         db-mode?
-                                   :no-history? (-> parent-sym meta :no-history?)))
-                            inner-spec (if (-> inner-spec-args count (= 1))
-                                           `(def-validated ~inner-name-sym
-                                              ~@(contextualize-keywords kw-context inner-spec-args))
-                                           `(def-validated-map ~inner-name-sym
-                                              ~@inner-spec-args))]
-                        (swap! to-prepend conj inner-spec)
-                        ; only left with processed keyword name of the inner def
-                        (whenp inner-name db-mode? dbify-keyword))
-                      ; if not inner def, assume keyword (and validate later)
-                      (whenp x db-mode? dbify-keyword)))
+          (fn [x]
+            (if (inner-def? x)
+                (let [[_ inner-name & inner-spec-args] x
+                      _ (validate inner-name keyword?
+                                  inner-spec-args nempty?)
+                      inner-name (contextualize-keyword inner-name kw-context)
+                      inner-name-sym
+                        (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents
+                           (assoc (meta x)
+                             :db?         db-mode?
+                             :no-history? (-> parent-sym meta :no-history?)))
+                      inner-spec (if (-> inner-spec-args count (= 1))
+                                     `(def-validated ~inner-name-sym
+                                        ~@(contextualize-keywords kw-context inner-spec-args))
+                                     `(def-validated-map ~inner-name-sym
+                                        ~@inner-spec-args))]
+                  (swap! to-prepend conj inner-spec)
+                  ; only left with processed keyword name of the inner def
+                  (whenp inner-name db-mode? (fn1 dbify-keyword ns-name-str)))
+                ; if not inner def, assume keyword (and validate later)
+                (whenp x db-mode? (fn1 dbify-keyword ns-name-str))))
         spec-f (->> spec
                     (map (fn [[k v]] [k (->> v (mapv extract-inner-def))]))
                     (into {}))]
     {:to-prepend @to-prepend
      :spec       spec-f}))
 
-(defn sym->spec-name+sym [sym ns-]
+(defn sym->spec-name+sym [sym ns-name-str]
   (let [db-mode?  (-> sym meta :db?)
-        spec-name (keyword (or (namespace sym)
-                               (if db-mode? "schema" (str (ns-name ns-))))
+        spec-name (keyword (or (namespace sym) ns-name-str)
                            (name sym))]
     {:spec-name spec-name
-     :sym       (-> (symbol (if (#{(str (ns-name ns-)) "schema"} (namespace spec-name))
+     :sym       (-> (symbol (if (= ns-name-str (namespace spec-name))
                                 (name spec-name)
                                 (str (namespace spec-name) ":" (name spec-name))))
                     (with-meta (meta sym)))}))
@@ -233,7 +231,7 @@
 
 #?(:clj
 (defmacro declare-spec [sym]
-  (let [{:keys [spec-name]} (sym->spec-name+sym sym *ns*)]
+  (let [{:keys [spec-name]} (sym->spec-name+sym sym (ns-name *ns*))]
     `(defspec ~spec-name (fn [x#] (TODO))))))
 
 #?(:clj
@@ -243,7 +241,8 @@
   ([sym-0 spec-0 conformer]
     (v/validate sym-0 symbol?)
     (let [other         (gensym "other")
-          {:keys [spec-name sym]} (sym->spec-name+sym sym-0 *ns*)
+          ns-name-str   (str (ns-name *ns*))
+          {:keys [spec-name sym]} (sym->spec-name+sym sym-0 ns-name-str)
           type-hash     (hash-classname sym-0)
           db-mode?      (-> sym-0 meta :db?)
           kw-context    (keyword (namespace sym-0) (name sym-0))
@@ -251,7 +250,7 @@
                              (<- whenp db-mode? replace-value-types)
                              (<- whenf (fn-and (constantly db-mode?)
                                                keyword? (fn-> namespace nil?))
-                                       dbify-keyword))
+                                       (fn1 dbify-keyword ns-name-str)))
           conformer-sym (gensym "conformer")
           schema        (when db-mode? (spec->schema sym-0 spec))
           code `(do ~(when conformer `(def ~conformer-sym ~conformer))
@@ -295,14 +294,15 @@
     sym-0 symbol?
     req (v/or* nil? vector?) req-un (v/or* nil? vector?)
     opt (v/or* nil? vector?) opt-un (v/or* nil? vector?))
-  (let [db-mode?   (-> sym-0 meta :db?)
-        _          (when db-invariant (assert db-mode?))
-        kw-context (keyword (namespace sym-0) (name sym-0))
+  (let [db-mode?    (-> sym-0 meta :db?)
+        _           (when db-invariant (assert db-mode?))
+        kw-context  (keyword (namespace sym-0) (name sym-0))
+        ns-name-str (str (ns-name *ns*))
         {{:keys [req opt req-un opt-un] :as spec} :spec to-prepend :to-prepend}
           (-> spec-0
               (dissoc :invariant :db-invariant :conformer)
               (whenp db-mode? replace-value-types)
-              (extract-inner-defs sym-0 db-mode? kw-context))
+              (extract-inner-defs sym-0 db-mode? kw-context ns-name-str))
         invariant (contextualize-keywords kw-context invariant)
         conformer (contextualize-keywords kw-context conformer)]
     (validate
@@ -311,7 +311,7 @@
       req-un                         (v/or* nil? (v/coll-of ns-keyword? :distinct true))
       opt-un                         (v/or* nil? (v/coll-of ns-keyword? :distinct true))
       (concat req opt req-un opt-un) (v/coll-of ns-keyword? :distinct true))
-    (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 *ns*)
+    (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 ns-name-str)
           schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4, #5
           qualified-sym        (var/qualify-class sym)
           req-record-sym       (symbol (str (name sym) "__"))
@@ -321,7 +321,6 @@
           all-record-sym       (gensym)
           un-ks-to-ks          (gensym)
           other                (gensym "other")
-          ns-str               (str (ns-name *ns*))
           required-keys-record (with-meta (gensym "required-keys-record")
                                           {:tag qualified-record-sym})
           un-keys-record       (gensym "un-keys-record"     )
@@ -344,7 +343,7 @@
                                       [(when (or req req-un) [:req (vec (concat req req-un))])
                                        (when (or opt opt-un) [:opt (vec (concat opt opt-un))])]))
           conformer-sym        (gensym "conformer")
-          invariant-spec-name  (keyword ns-str (name (gensym "invariant")))
+          invariant-spec-name  (keyword ns-name-str (name (gensym "invariant")))
           spec-sym             (gensym "keyspec")
           spec-base            (gensym "spec-base")
           type-hash            (hash-classname sym)

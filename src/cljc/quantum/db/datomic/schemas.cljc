@@ -32,10 +32,10 @@
 
 ; =========== CORE TYPES =========== ;
 
-(def-validated ^:db? type :db/schema)
+(def-validated ^:db? schema/type :db/schema)
 
 (def-validated ^:db? ^{:doc "Any unstructured data associated with an entity"}
-  annotation :db/string)
+  schema/annotation :db/string)
 
 (def-validated-map ^:db?
   ^{:doc  "A ratio specifically using longs instead of bigints."
@@ -44,7 +44,7 @@
                             :denominator 4})
              {:numerator   1
               :denominator 2}}}
-  ratio:long
+  schema/ratio:long
   #?@(:clj [:conformer (fn [x] (let [n          (:this/numerator   x)
                                      d          (:this/denominator x)
                                      simplified (/ n d)
@@ -68,7 +68,7 @@
            ISO 3166 codes
            The ISO 3166 codes are the codes assigned by ISO to countries and subdivisions."
     :todo #{"Finish"}}
-  location :db/keyword)
+  schema/location :db/keyword)
 
 ; TODO should this mean :location:country is a :ref or a :db/keyword ?
 (def-validated ^:db? location/country :location)
@@ -80,13 +80,13 @@
              There is also ISO 639-1, 639-2, 639-4, 639-5"
     ;:unique :value ; TODO enforce in other ways
     :todo   #{"Finish"}}
-  linguistics:language
+  linguistics/language
   :req [(def :this/iso-639-3-value :db/keyword)])
 
 ; The possible values are taken from the ISO 15924 standard.
 (def-validated-map ^:db?
   ^{:todo  #{"Finish"}}
-  linguistics:script
+  linguistics/script
   :req [^{:unique :value}
         (def :this/iso-15924-value :db/keyword)])
 
@@ -94,11 +94,11 @@
 
 (def units (atom #{}))
 
-(def-validated ^:db? unit :db/keyword)
+(def-validated ^:db? schema/unit :db/keyword)
 
-(def-validated ^:db? unit:kb-per-s         :db/double)
-(def-validated ^:db? unit:pixels           :db/long  )
-(def-validated ^:db? unit:beats-per-minute :db/double)
+(def-validated ^:db? unit/kb-per-s         :db/double)
+(def-validated ^:db? unit/pixels           :db/long  )
+(def-validated ^:db? unit/beats-per-minute :db/double)
 
 ; TODO Currency
 ; ISO 4217 delineates currency designators, country codes (alpha and numeric)
@@ -107,42 +107,42 @@
 
 (def-validated ^:db?
   ^{:doc "Milliseconds from Unix epoch"}
-  time:instant :db/long)
+  time/instant :db/long)
 
 (def-validated ^:db?
   ^{:doc "Milliseconds from beginning; offset"}
-  time:relative-instant :db/long)
+  time/relative-instant :db/long)
 
-(def-validated-map ^:db? time:range
-  :req [(def :this/from :time:instant)
-        (def :this/to   :time:instant)])
+(def-validated-map ^:db? time/range
+  :req [(def :this/from :time/instant)
+        (def :this/to   :time/instant)])
 
 (def-validated-map ^:db?
   ^{:doc "A range starting from and ending on relative instants"}
-  time:relative-range
-  :req [(def :this/from :time:relative-instant)
-        (def :this/to   :time:relative-instant)])
+  time/relative-range
+  :req [(def :this/from :time/relative-instant)
+        (def :this/to   :time/relative-instant)])
 
 (def-validated ^:db?
   ^{:doc    "Not the sum of a year's time, but a particular year."
     ;:unique :value ; TODO enforce in other ways
   }
-  time:year :time:range)
+  time/year :time/range)
 
 (def-validated ^:db?
   ^{:doc "In milliseconds"}
-  time:duration :db/long)
+  time/duration :db/long)
 
 ; ; =========== META =========== ;
 
-(def-validated ^:db? date               :time:instant)
-(def-validated ^:db? date:created       :time:instant)
-(def-validated ^:db? date:last-modified :time:instant)
+(def-validated ^:db? schema/date        :time/instant)
+(def-validated ^:db? date/created       :time/instant)
+(def-validated ^:db? date/last-modified :time/instant)
 
 (def-validated ^:db?
   ^{:doc "For media tracks, date last played.
           For other things, date last accessed/opened/viewed."}
-  date:last-accessed :time:instant)
+  date/last-accessed :time/instant)
 
 ; =========== PERSON NAME =========== ;
 
@@ -179,7 +179,7 @@
 
 (def-validated ^:db?
   ^{:doc "AKA nickname"}
-  agent:person:name:alias :db/keyword)
+  agent:person:name/alias :db/keyword)
 
 ; =========== REGISTRATION =========== ;
 
@@ -193,11 +193,11 @@
              :opt-un [(def :this/expires :db/instant)])
            (def :this/refresh-token :db/string)])
 
-(declare-spec ^:db? agent:organization)
+(declare-spec ^:db? agent/organization)
 
 (def-validated-map ^:db? ^:component?
-  agent:registration
-  :req [(def :this/provider :agent:organization)]
+  agent/registration
+  :req [(def :this/provider :agent/organization)]
   :opt [^{:doc "Reference to a set of Twitter, Facebook, etc. facts"}
         (def :this/detail (v/set-of :db/any))])
 
@@ -219,9 +219,9 @@
            (def :this/username :db/keyword)
            :network/domain]
   :opt-un [^{:doc "E.g. company, email validation service, etc."}
-           (def :this/validated-by :agent:organization)
+           (def :this/validated-by :agent/organization)
            ^{:doc "Who/what provided the email information"}
-           (def :this/source (v/or* :agent:organization :agent:person))])
+           (def :this/source (v/or* :agent/organization :agent/person))])
 
 ; =========== AGENT =========== ;
 
@@ -235,38 +235,38 @@
            (def :agent/email:many        (v/set-of :agent/email))
            (def :agent/registration:many (v/set-of :agent/registration))
            :agent/auth:many
-           :musicbrainz:id])
+           :musicbrainz/id])
 
 (def-validated-map ^:db?
   ^{:component? true
     :doc "The official name of an organization"
     :todo #{"Finish"}}
-  agent:organization:name
-  :opt-un [(def :this/legal-in (v/set-of :location:country))])
+  agent:organization/name
+  :opt-un [(def :this/legal-in (v/set-of :location/country))])
 
 (def-validated ^:db?
   ^{:unique :value
     :doc    "The International Standard Name Identifier for an agent.
              An ISO standard for uniquely identifying the public identities
              of contributors to media content."}
-  agent:isni :db/string)
+  agent/isni :db/string)
 
-(def-validated-map ^:db? agent:organization
+(def-validated-map ^:db? agent/organization
   :opt-un [(def :this/name:many (v/set-of :this/name))
            ^{:doc "#{[:group     {:doc \"A group of people that may or may not have a distinctive name.\"}]
                      [:orchestra {:doc \"A large instrumental ensemble.\"}]
                      [:choir     {:doc \"A choir/chorus/chorale (a large vocal ensemble).\"}]}"}
            (def :this/types     (v/set-of #{:group :orchestra :choir}))
-           :agent:isni
-           :musicbrainz:id])
+           :agent/isni
+           :musicbrainz/id])
 
-(def-validated ^:db? art:creator
+(def-validated ^:db? art/creator
   ^{:doc "In the instance of music, composer. For images, artist.
           Includes producers and engineers, photographers, illustrators, poets, etc."}
-  (v/or* :agent:person :agent:organization))
+  (v/or* :agent/person :agent/organization))
 
-(def-validated ^:db? art:creator-group
-  (v/or* :agent:person :agent:organization))
+(def-validated ^:db? art/creator-group
+  (v/or* :agent/person :agent/organization))
 
 ; Area
 ; The artist area, as the name suggests, indicates the area with which an artist is primarily identified with. It is often, but not always, his/her/their birth/formation country.
@@ -291,13 +291,13 @@
 (def-validated ^:db?
   ^{:doc "E.g. software, process, person, organization."
     :todo #{"Extend to non-agent causers"}}
-  data:creator (v/or* :agent:person :agent:organization))
+  data/creator (v/or* :agent/person :agent/organization))
 
 (def-validated ^:db? ^:component?
   ^{:doc "Where the data was retrieved from."}
-  data:source :db/any)
+  data/source :db/any)
 
-(def-validated-map ^:db? ^:component? data:certainty
+(def-validated-map ^:db? ^:component? data/certainty
   :opt [^{:doc  "From what source do you get your certainty?"
           :todo #{"Make into a logical proposition, not just a source entity"}}
         (def :this/source :data:source)]
@@ -306,48 +306,48 @@
 
 ; =========== MEDIA =========== ;
 
-(def-validated ^:db? data:title       :db/string)
+(def-validated ^:db? data/title       :db/string)
 
-(def-validated ^:db? data:description :db/string)
+(def-validated ^:db? data/description :db/string)
 
-(def-validated-map ^:db? opinion:comment
+(def-validated-map ^:db? opinion/comment
   :req [^{:doc "Can be in any format — markdown, HTML, plain, etc."}
         (def :this/text           :db/string)]
-  :opt [(def :this/created-by     (v/or* :agent:organization :agent:person))
+  :opt [(def :this/created-by     (v/or* :agent/organization :agent/person))
         (def :this/in-response-to :this)])
 
 (def-validated ^:db?
   ^{:doc "The comment chain is dynamically created from the list of comments"}
-  opinion:comment:many
-  (v/set-of :opinion:comment))
+  opinion/comment:many
+  (v/set-of :opinion/comment))
 
 (def-validated-map ^:db?
   ^{:doc "The rating that a particular person gave"}
-  opinion:rating
+  opinion/rating
   :req [^{:doc "Can be any range"}
         (def :this/values      :db/double)]
   :opt [(def :this/explanation :db/string)])
 
-(def-validated-map ^:db? ^:component? opinion:entity+rating
-  :req [(def :opinion:opiner (v/or* :agent:person :agent:organization))
-        :opinion:rating])
+(def-validated-map ^:db? ^:component? opinion/entity+rating
+  :req [(def :opinion/opiner (v/or* :agent/person :agent/organization))
+        :opinion/rating])
 
-(def-validated-map ^:db? opinion:rating:many
-  :req [(def :opinion:entity+rating:many
-             (v/set-of :opinion:entity+rating))])
+(def-validated-map ^:db? opinion/rating:many
+  :req [(def :opinion/entity+rating:many
+             (v/set-of :opinion/entity+rating))])
 
-(def-validated ^:db? agent
+(def-validated ^:db? schema/agent
   (v/or* :this/person :this/organization))
 
 (def-validated-map ^:db? ^:component?
-  media:agent+plays
+  media/agent+plays
   :req [:agent
         ^{:doc "Dates played"}
-        (def :media:plays (v/set-of :time:instant))])
+        (def :media/plays (v/set-of :time/instant))])
 
 (def-validated ^:db?
   ^{:doc "E.g. 44100 kHz"}
-  data:audio:sample-rate :db/double)
+  data:audio/sample-rate :db/double)
 
 #_(defunit :data:audio:bit-rate         :unit:kb-per-s)
 #_(defunit :data:audio:max-bit-rate     :unit:kb-per-s)
@@ -360,38 +360,38 @@
   {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS
    :media:track nil})
 
-(def-validated ^:db? data:bytes-size :db/long)
+(def-validated ^:db? data/bytes-size :db/long)
 
 ; TODO are IDs unique per user or universally unique?
-(def-validated ^:db? ^{:unique :value} cloud:amazon:id :db/string)
+(def-validated ^:db? ^{:unique :value} cloud:amazon/id :db/string)
 
 ; If a transaction specifies a unique identity for a temporary id,
 ; and that unique identity already exists in the database, then that temporary id
 ; will resolve to the existing entity in the system.
-(def-validated-map ^:db? data:format
+(def-validated-map ^:db? data/format
   :req [^{:unique :value}
         ^{:doc "Refer to http://www.sitepoint.com/web-foundations/mime-types-complete-list/"}
-        (def :data:mime-type :db/keyword)
+        (def :data/mime-type :db/keyword)
         ^{:doc "Needs to correspond with its mime-type"}
-        (def :data:appropriate-extension:many (v/set-of :db/keyword))])
+        (def :data/appropriate-extension:many (v/set-of :db/keyword))])
 
-(def-validated ^:db? cloud:s3:uri :db/uri)
+(def-validated ^:db? cloud:s3/uri :db/uri)
 
 (def-validated-map ^:db?
   ^{:doc  "A file's metadata."
     :todo #{"figure out all of valid file metadata"}}
-  byte-entity
+  schema/byte-entity
   :opt [^{:unique :value}
-        (def :sha-512                             :db/string)
+        (def :schema/sha-512                      :db/string)
         (def :this/mediainfo                      :db/string) ; TODO extract the unstructured data later
-        (def :data:fingerprint:fpcalc             :db/string )
-        :cloud:s3:uri
-        :cloud:amazon:id
-        :data:format
+        (def :data:fingerprint/fpcalc             :db/string )
+        :cloud:s3/uri
+        :cloud:amazon/id
+        :data/format
         ; sample-date
-        :date:created
-        :date:last-modified
-        :data:title
+        :date/created
+        :date/last-modified
+        :data/title
         ; (def :data:audio:beats-per-minute         :unit:beats-per-minute)
         ; (def :data:audio:codec-id                 :db/keyword)
         ; (def :data:audio:format-profile           :db/string )
@@ -417,7 +417,7 @@
         ; :data:audio:max-bit-rate
         ; :data:audio:nominal-bit-rate
 
-        :data:bytes-size
+        :data/bytes-size
         ; (def :data:codec-id                       :db/keyword)
         ; :data:creator
 
@@ -426,8 +426,8 @@
         ; (def :data:audio:date-encoded:mediainfo   :db/string )
         ; (def :data:date-encoded:mediainfo         :db/string )
         ; (def :media:encoding-params               :db/string )
-        :data:image:height
-        :data:image:width
+        :data:image/height
+        :data:image/width
         ; (def :data:media:compatible-brands        :db/string )
         ; (def :data:media:major-brand              :db/string )
         ; (def :media:part:position                 :db/long   )
@@ -478,9 +478,9 @@
         ; (def :data:video:codec-id                 :db/keyword)
         ; (def :data:video:codec-id:info            :db/string )
 
-        :time:duration
+        :time/duration
 
-        :opinion:comment:many
+        :opinion/comment:many
         ]                )
 
 ; There are probably infinite types of ways to group a musical artwork.
