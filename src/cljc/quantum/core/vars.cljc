@@ -201,5 +201,9 @@
 
 (def update-meta vary-meta)
 
-(defn merge-meta   [from to] (with-meta to (merge (meta from) (meta to))))
-(defn replace-meta [from to] (with-meta to (meta from)))
+(defn merge-meta
+  "See also `cljs.tools.reader/merge-meta`."
+  [x m] (update-meta x merge m))
+
+(defn merge-meta-from   [to from] (update-meta to merge (meta from)))
+(defn replace-meta-from [to from] (with-meta to (meta from)))

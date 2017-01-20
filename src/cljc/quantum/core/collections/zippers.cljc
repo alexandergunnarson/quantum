@@ -38,31 +38,23 @@
      boolean?
      replace remove update])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
     [quantum.core.data.map         :as map
-      :refer        [map-entry]]
+      :refer [map-entry]]
     [quantum.core.data.vector      :as vec
-      :refer        [vec+]]
+      :refer [vec+]]
     [quantum.core.collections.base :as base]
     [quantum.core.collections.core :as coll
-      :refer        [key val
-                     #?@(:clj [first second conj conj! empty])]
-      :refer-macros [          first second conj conj! empty]]
+      :refer [key val first second conj conj! empty]]
     [quantum.core.fn               :as fn
-      :refer        [#?@(:clj [with-do])]
-      :refer-macros [          with-do]]
+      :refer [with-do]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer [defnt]]
     [quantum.core.reducers         :as red
-      :refer        [#?@(:clj [join])]
-      :refer-macros [          join]]
+      :refer [join]]
     [quantum.core.vars             :as var
-      :refer        [replace-meta
-                     #?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [replace-meta-from defalias] ]))
 
 ; Stuart Sierra: "In my tests, clojure.walk2 is about 2 times faster than clojure.walk."
 (defnt walking
@@ -74,50 +66,52 @@
    as a sorted-map with the same comparator."
   {:todo ["Fix class overlap" "fix clojure.lang.PersistentList$EmptyList"]}
   ; Special case to preserve type
-  ([^list? coll f        ] (replace-meta coll (apply list (map f coll))))
-  ([^list? coll _ to-join] (replace-meta coll (apply list to-join)))
+  ([^list? coll f        ] (replace-meta-from (apply list (map f coll)) coll))
+  ([^list? coll _ to-join] (replace-meta-from (apply list to-join     ) coll))
   ([^transientizable? coll f]
-     (replace-meta coll
+     (replace-meta-from
        (persistent!
          (core/reduce
            (fn [r x] (core/conj! r (f x)))
-           (transient (empty coll)) coll))))
+           (transient (empty coll)) coll))
+       coll))
   ([^transientizable? coll _ to-join]
-     (replace-meta coll (join (empty coll) to-join)))
+     (replace-meta-from (join (empty coll) to-join) coll))
   ; generic sequence fallback
   ; TODO add any seq in general
   ; TODO fix queue?
   ([#{cons? lseq? misc-seq? queue?} coll f        ]
-    (replace-meta coll (map f coll)))
+    (replace-meta-from (map f coll) coll))
   ([#{cons? lseq? misc-seq? queue?} coll _ to-join]
-    (replace-meta coll (seq to-join)))
+    (replace-meta-from (seq to-join) coll))
   ([^vec+? coll f        ]
-    (replace-meta coll (vec+ (mapv f coll))))
+    (replace-meta-from (vec+ (mapv f coll)) coll))
   ([^vec+? coll _ to-join]
-    (replace-meta coll (vec+ to-join)))
+    (replace-meta-from (vec+ to-join) coll))
   ; Persistent collections that don't support transients
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
                clojure.lang.PersistentTreeSet} coll f]
-             (replace-meta coll
-              (core/reduce (fn [r x] (conj r (f x))) (empty coll) coll))))
+             (replace-meta-from
+               (core/reduce (fn [r x] (conj r (f x))) (empty coll) coll)
+               coll)))
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap
                clojure.lang.PersistentTreeSet} coll _ to-join]
-             (replace-meta coll (core/reduce conj (empty coll) to-join))))
+             (replace-meta-from (core/reduce conj (empty coll) to-join) coll)))
   #?(:clj  ([^map-entry? coll f        ]
              (map-entry (f (key coll)) (f (val coll)))))
   #?(:clj  ([^map-entry? coll _ to-join]
              (map-entry (first to-join) (second to-join))))
   #?(:clj  ([^record?    coll f]
-             (replace-meta coll (core/reduce (fn [r x] (conj r (f x))) coll coll))))
+             (replace-meta-from (core/reduce (fn [r x] (conj r (f x))) coll coll) coll)))
   #?(:clj  ([^record?    coll _ to-join]
-             (replace-meta coll (core/reduce conj coll to-join))))
+             (replace-meta-from (core/reduce conj coll to-join) coll)))
   #?(:clj  ([:else       x    f] x))
   #?(:cljs ([:else       x    f]
-             (if (coll? x) (replace-meta x (join (empty x) (map f x))) x)))
+             (if (coll? x) (replace-meta-from (join (empty x) (map f x)) x) x)))
   #?(:cljs ([:else       x    _ to-join]
-             (if (coll? x) (replace-meta x (join (empty x) to-join))))))
+             (if (coll? x) (replace-meta-from (join (empty x) to-join) x)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     ZIPPERS     }=====================================================
 ;=================================================={                 }=====================================================
