@@ -74,5 +74,3 @@
         (let [result (.invoke method instance (into-array params))]
           (.setAccessible method accessible)
           result))))))
-
-123
