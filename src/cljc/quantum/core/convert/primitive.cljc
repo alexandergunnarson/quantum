@@ -44,8 +44,8 @@
       (^long [^Character                  x] (->long (.charValue       x)))
       (^long [#{Double Float}             x] (->long (.doubleValue     x)))
       (^long [#{char byte short int long} x] (->long* x))
-      (^long [#{float}                    x] (clojure.lang.RT/longCast x))  ; Because primitive casting in Clojure is not supported
-      (^long [#{double}                   x] (Double/doubleToRawLongBits x)) ; TODO is this safe?
+      (^long [#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
+      (^long [#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
       (^long [#{boolean}                  x] (if x 1 0))
       (^long [^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
                                                 :cljs (-> x int/fromString ->long)))
