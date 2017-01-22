@@ -48,8 +48,8 @@
       :refer-macros [          kmap]]
     [quantum.core.collections.core :as coll
       :refer        [reverse key val
-                     #?@(:clj [first rest getr count lasti index-of last-index-of empty?])]
-      :refer-macros [          first rest getr count lasti index-of last-index-of empty?]]
+                     #?@(:clj [first rest get getr count lasti index-of last-index-of empty?])]
+      :refer-macros [          first rest get getr count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
       :refer        [->ex]]
     [quantum.core.fn               :as fn]
@@ -66,6 +66,8 @@
     [quantum.core.vars             :as var
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
+    [quantum.core.type
+      :refer [indexed?]]
     [quantum.core.collections.map-filter
       :refer        [ffilteri last-filteri]]))
 ;___________________________________________________________________________________________________________________________________
@@ -365,10 +367,18 @@
   [n coll]
   (getr coll 0 (-> coll lasti long (- (long n)))))
 
-(defn dropr-while [pred super]
-  (getr super 0
-    (dec (or (last-index-of-pred super pred)
-             (count super)))))
+(defn dropr-while
+  {:todo #{"use `rreduce`"}
+   :tests `{(dropr-while nil? [0 1 2 3 nil 4 5 nil nil])
+            [0 1 2 3 nil 4 5]}}
+  [pred super]
+  (assert (or (indexed? super) (string? super))) ; TODO for now, until `rreduce`
+  (loop [i (lasti super)]
+    (if (= i -1)
+        (getr super 0 -1)
+        (if (pred (get super i))
+            (recur (dec i))
+            (getr super 0 i)))))
 
 (defnt dropr-until
   "Until right index of."
