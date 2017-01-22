@@ -13,7 +13,7 @@
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.fn
-                       :refer [fn$ with-do]]
+                       :refer [fn$ with-do fn->]]
                      [quantum.core.logic           :as logic
                        :refer [whenf whenf1 fn-not fn-or]]
                      [quantum.core.macros          :as macros
@@ -229,6 +229,8 @@
 
 (defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 nnil? stop!)))
 
+(defn deregister-system! [system-kw] (swap! systems (fn-> (update system-kw (whenf1 nnil? stop!)) (dissoc system-kw))))
+
 (defn default-main
   [system-kw re-register? config]
   (when-not (async/web-worker?)
@@ -238,7 +240,7 @@
                      (get (register-system! system-kw config) system-kw)
                      system)
           system (swap! systems assoc system-kw (start! system))]
-      true)))
+      system)))
 
 #?(:clj
 (defn reload-namespaces
