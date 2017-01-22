@@ -13,7 +13,7 @@
 
 ; ===== REFS AND ATOMS =====
 
-(defn test:deref* [a])
+(defn test:?deref [a])
 
 (defn test:lens [x getter])
 

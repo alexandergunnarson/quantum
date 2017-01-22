@@ -5,7 +5,7 @@
     [quantum.db.datomic.core :as dbc]
     [quantum.core.log        :as log]
     [quantum.core.core
-      :refer [deref*]]
+      :refer [?deref]]
     [quantum.core.fn
       :refer [fn$]]
     [quantum.core.error      :as err
@@ -101,7 +101,7 @@
     (sub @db/conn* k nil nil))
   ([conn k args opts]
     (log/pr ::debug "sub" k)
-    (if-let [subscriber (-> conn meta :subs deref* (get k))]
+    (if-let [subscriber (-> conn meta :subs ?deref (get k))]
       (subscriber k args opts)
       (throw (->ex :no-subscription-found {:k k}))))))
 
@@ -115,7 +115,7 @@
     (transform!* @db/conn* k args))
   ([conn k args]
     (log/pr ::debug "transform" k)
-    (if-let [transformer (-> conn meta :transformers deref* (get k))]
+    (if-let [transformer (-> conn meta :transformers ?deref (get k))]
       (let [report (atom nil)]
         (swap! conn (fn [db] ; TODO take this out of the swap, because we need side effects to be run no more than once
                       (let [r (transformer db k args)]

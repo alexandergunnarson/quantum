@@ -53,7 +53,7 @@
 
 ; ===== REFS AND ATOMS =====
 
-(defn deref* [a] (if (nil? a) nil (deref a)))
+(defn ?deref [a] (if (nil? a) nil (deref a)))
 
 (defn lens [x getter]
   (when-not (#?(:clj  instance?

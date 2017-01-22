@@ -3,7 +3,7 @@
            (:require [com.stuartsierra.component       :as component]
             #?(:cljs [reagent.core                     :as rx       ])
                      [quantum.core.core
-                       :refer        [deref* lens]                  ]
+                       :refer        [?deref lens]                  ]
                      [quantum.core.fn                  :as fn
                        :refer        [<- fn-> with-do]]
                      [quantum.core.log                 :as log]

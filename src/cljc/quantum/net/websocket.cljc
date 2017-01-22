@@ -5,7 +5,7 @@
             [taoensso.sente.server-adapters.immutant :as a-imm    ]
             [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
             [quantum.core.core
-              :refer [lens deref*]]
+              :refer [lens ?deref]]
             [quantum.core.error                      :as err
               :refer [->ex try-times]]
             [quantum.core.fn                         :as fn
