@@ -38,32 +38,22 @@
      conj! assoc! dissoc! disj!
      boolean?])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [quantum.core.data.map         :as map
       :refer [map-entry]]
     [quantum.core.collections.core :as coll
-      :refer        [key val conj
-                     #?@(:clj [first rest conj! lasti contains?])]
-      :refer-macros [          first rest conj! lasti contains?]]
+      :refer [key val conj first rest conj! lasti contains?]]
     [quantum.core.fn               :as fn
-      :refer        [juxt-kv
-                     #?@(:clj [<- rcomp defcurried])]
-      :refer-macros [          <- rcomp defcurried]]
+      :refer [juxt-kv <- rcomp defcurried]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer[defnt]]
     [quantum.core.reducers         :as red
-      :refer        [indexed+
-                     #?@(:clj [join' reduce defeager])]
-      :refer-macros [          join' reduce defeager]]
+      :refer[indexed+ join' reduce defeager]]
     [quantum.core.type             :as type]
     [quantum.core.loops            :as loops
-      :refer        [#?@(:clj [reducei doseqi lfor])]
-      :refer-macros [          reducei doseqi lfor]]
+      :refer [reducei doseqi lfor]]
     [quantum.core.vars             :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [defalias]]))
 
 (defcurried each ; like doseq
   "Applies f to each item in coll, returns nil"
@@ -76,9 +66,17 @@
 (defeager map         red/map+)
 (defeager map-indexed red/map-indexed+)
 
-; TODO do eager versions
-(defn map-keys+ [f coll] (->> coll (map+ (juxt (rcomp key f) val))))
-(defn map-vals+ [f coll] (->> coll (map+ (juxt key (rcomp val f)))))
+(defn map-keys* [f-coll] (fn [f coll] (->> coll (f-coll (juxt (rcomp key f) val)))))
+(def  map-keys+ (map-keys* map+))
+(def  map-keys' (map-keys* map'))
+(def  map-keys  (map-keys* map ))
+(def  lmap-keys (map-keys* lmap))
+
+(defn map-vals* [f-coll] (fn [f coll] (->> coll (f-coll (juxt key (rcomp val f))))))
+(def  map-vals+ (map-vals* map+))
+(def  map-vals' (map-vals* map'))
+(def  map-vals  (map-vals* map ))
+(def  lmap-vals (map-vals* lmap))
 
 ; ============================ FILTER ============================ ;
 
@@ -140,11 +138,30 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
-; TODO do eager versions
-(defn filter-keys+ [pred coll] (->> coll (filter+ (rcomp key pred))))
-(defn remove-keys+ [pred coll] (->> coll (remove+ (rcomp key pred))))
-(defn filter-vals+ [pred coll] (->> coll (filter+ (rcomp val pred))))
-(defn remove-vals+ [pred coll] (->> coll (remove+ (rcomp val pred))))
+; TODO remove duplication
+(defn filter-keys* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp key pred)))))
+(def  filter-keys+ (filter-keys* filter+))
+(def  filter-keys' (filter-keys* filter'))
+(def  filter-keys  (filter-keys* filter ))
+(def  lfilter-keys (filter-keys* lfilter))
+
+(defn filter-vals* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp val pred)))))
+(def  filter-vals+ (filter-vals* filter+))
+(def  filter-vals' (filter-vals* filter'))
+(def  filter-vals  (filter-vals* filter ))
+(def  lfilter-vals (filter-vals* lfilter))
+
+(defn remove-keys* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp key pred)))))
+(def  remove-keys+ (remove-keys* remove+))
+(def  remove-keys' (remove-keys* remove'))
+(def  remove-keys  (remove-keys* remove ))
+(def  lremove-keys (remove-keys* lremove))
+
+(defn remove-vals* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp val pred)))))
+(def  remove-vals+ (remove-vals* remove+))
+(def  remove-vals' (remove-vals* remove'))
+(def  remove-vals  (remove-vals* remove ))
+(def  lremove-vals (remove-vals* lremove))
 
 ; Distinct can be seen as sort of a filter
 
