@@ -2,8 +2,8 @@
     ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
   (:refer-clojure :exclude
-    [assoc assoc! dissoc dissoc! conj conj! disj disj!
-     update merge if-let for float? double? doseq])
+    [assoc assoc! dissoc dissoc! conj conj! disj disj! integer?
+     update merge if-let for float? double? doseq nth])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -12,8 +12,8 @@
     [com.stuartsierra.component :as component]
     [quantum.core.collections   :as coll
       :refer [join for kmap nnil? nempty?
-              filter-vals+ remove-vals+ map+ remove+ remove'
-              group-by+ postwalk merge-deep dissoc-in+ doseq]]
+              filter-vals+ remove-vals+ map+ remove+ remove' nth
+              group-by+ prewalk postwalk merge-deep dissoc-in+ doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
     [quantum.core.data.set      :as set]
@@ -27,8 +27,10 @@
     [quantum.core.print         :as pr]
     [quantum.core.resources     :as res]
     [quantum.core.process       :as proc]
+    [quantum.core.convert.primitive :as pconv
+      :refer [->long]]
     [quantum.core.type        :as type
-      :refer [#?@(:clj [float? double? bigint?]) atom? boolean? bytes?]]
+      :refer [#?@(:clj [float? double? bigint?]) integer? atom? boolean? bytes?]]
     [quantum.core.vars          :as var
       :refer [defalias]]
     [quantum.core.data.validated :as dv
@@ -66,7 +68,7 @@
 
 #?(:clj (def tempid? (fn$ instance? datomic.db.DbId          )))
 #?(:clj (def dbfn?   (fn$ instance? datomic.function.Function)))
-#?(:clj (def tempid-like? (fn-or tempid? integer?)))
+#?(:clj (def tempid-like? (fn-or tempid? c/integer?)))
 
 #?(:clj (def db?     (fn$ instance? datomic.db.Db)))
 
@@ -137,16 +139,16 @@
 (defn q
   ([query] (q query (->db)))
   ([query db & args]
-    (cond           (mdb? db) (apply mdb/q query db args)
-          #?@(:clj [(db?  db) (apply db/q  query db args)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (apply mdb/q query db args)
+            #?@(:clj [(db?  db) (apply db/q  query db args)])))))
 
 (defn entity
   ([eid] (entity (->db) eid))
   ([db eid]
-    (cond           (mdb? db) (mdb/entity db eid)
-          #?@(:clj [(db?  db) (db/entity  db eid)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/entity db eid)
+            #?@(:clj [(db?  db) (db/entity  db eid)])))))
 
 (defn entity-db
   ([entity]
@@ -161,63 +163,61 @@
   ([] (tempid (or @part* #?(:cljs :db.part/test)))) ; because DataScript doesn't really care about partitions
   ([part] (tempid (->db) part))
   ([db part]
-    (validate part nnil?)
-    (cond            (mdb? db) (mdb/tempid part)
-          #?@(:clj  [(db?  db) (db/tempid  part)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (validate part nnil?)
+      (cond            (mdb? db) (mdb/tempid part)
+            #?@(:clj  [(db?  db) (db/tempid  part)])))))
 
 (defn pull
   ([selector eid] (pull (->db) selector eid))
   ([db selector eid]
-    (cond           (mdb? db) (mdb/pull db selector eid)
-          #?@(:clj [(db?  db) (db/pull  db selector eid)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/pull db selector eid)
+            #?@(:clj [(db?  db) (db/pull  db selector eid)])))))
 
 
 (defn pull-many
   ([selector eids] (pull-many (db*) selector eids))
   ([db selector eids]
-    (cond           (mdb? db) (mdb/pull-many db selector eids)
-          #?@(:clj [(db?  db) (db/pull-many  db selector eids)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/pull-many db selector eids)
+            #?@(:clj [(db?  db) (db/pull-many  db selector eids)])))))
 
 (defn is-filtered
   ([] (is-filtered (->db)))
   ([db]
     (or (instance? datascript.db.FilteredDB db)
-        #?(:clj (db/is-filtered db))
-        )))
+        #?(:clj (db/is-filtered db)))))
 
 (defalias filtered? is-filtered)
 
 (defn with
   ([tx-data] (with (->db) tx-data))
-  ([db tx-data] (with db tx-data nil))
-  ([db tx-data tx-meta]
-    (cond           (mdb? db) (mdb/with db tx-data tx-meta)
-          #?@(:clj [(db?  db) (db/with  db tx-data tx-meta)])
-          :else (throw (unhandled-type :db db)))))
+  ([db tx-data]
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/with db tx-data)
+            #?@(:clj [(db?  db) (db/with  db tx-data)])))))
 
 (defn datoms
   ; TODO add @db* arity
   ([db index & args]
-    (cond           (mdb? db) (apply mdb/datoms db index args)
-          #?@(:clj [(db?  db) (apply db/datoms  db index args)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (apply mdb/datoms db index args)
+            #?@(:clj [(db?  db) (apply db/datoms  db index args)])))))
 
 (defn seek-datoms
   ; TODO add @db* arity
   ([db index & args]
-    (cond           (mdb? db) (apply mdb/seek-datoms db index args)
-          #?@(:clj [(db?  db) (apply db/seek-datoms  db index args)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (apply mdb/seek-datoms db index args)
+            #?@(:clj [(db?  db) (apply db/seek-datoms  db index args)])))))
 
 (defn index-range
   ([attr start end] (index-range (->db) attr start end))
   ([db attr start end]
-    (cond           (mdb? db) (mdb/index-range db attr start end)
-          #?@(:clj [(db?  db) (db/index-range  db attr start end)])
-          :else (throw (unhandled-type :db db)))))
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/index-range db attr start end)
+            #?@(:clj [(db?  db) (db/index-range  db attr start end)])))))
 
 (defn transact!
   ([tx-data]      (transact! @conn* tx-data))
@@ -268,7 +268,7 @@
 ; :uuid    (fn$ instance? db/SQUUID)
 (def-validated -schema  (constantly true)) ; TODO not correct but whatever
 (def-validated -any     (constantly true))
-(v/defspec :db/id    integer?) ; TODO check these
+(v/defspec :db/id    c/integer?) ; TODO check these
 (v/defspec :db/ident keyword?) ; TODO check these
 (def-validated -keyword keyword?)
 (def-validated -string  string?)
@@ -276,16 +276,18 @@
 (def-validated -long    #?(:clj  (fn-or (fn$ instance? Long   )
                                         (fn$ instance? Integer)
                                         (fn$ instance? Short  )) #_long?
-                           :cljs integer?)) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
+                           :cljs c/integer?)) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
 (def-validated -bigint  #?(:clj  (fn1 bigint?)
-                           :cljs integer?)) ; TODO CLJS |bigint?|
+                           :cljs c/integer?)) ; TODO CLJS |bigint?|
 (def-validated -float   #?(:clj  (fn1 float?)
                            :cljs number?))  ; TODO CLJS |float?|
 (def-validated -double  #?(:clj  (fn1 double?)
                            :cljs number?))
 (def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
                            :cljs number?)) ; TODO CLJS |bigdec?|
-(def-validated -instant (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )))
+(def-validated -instant (v/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
+                               (v/and string?        (v/conformer clojure.instant/read-instant-date))
+                               (v/and (fn1 integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))))
 (def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI)))
 (def-validated -bytes   (fn1 bytes?))
 
@@ -341,13 +343,13 @@
   ([conn part]
     (if (mconn? conn)
         (throw (partitions-ex))
-        (let [id (tempid (->db conn) :db.part/db)]
+        (let [id (tempid conn :db.part/db)]
           [{:db/id    id
             :db/ident part}
            [:db/add :db.part/db
             :db.install/partition id]]))))
 
-(def-validated-map intermediate-schema
+(def-validated-map schema/intermediate-schema
   :invariant #(if (:datomic:schema/component? %)
                   (-> % :datomic:schema/type (= :ref))
                   true)
@@ -383,7 +385,7 @@
       ; Partitions are not supported in DataScript (yet)
       (when-not datascript? (validate part-f nnil?))
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
-                                     (tempid part-f))
+                                     (tempid conn-f part-f))
             :db/ident              (:datomic:schema/ident schema)
             :db/valueType          (c/keyword "db.type"        type)
             :db/cardinality        (c/keyword "db.cardinality" (name (:datomic:schema/cardinality schema)))
@@ -405,122 +407,6 @@
                  (c/dissoc % :db/valueType)
                  %))))))
 
-(defn ensure-schema-changes-valid!
-  "For DataScript db.
-   Will not change any user data as a result of schema alteration.
-   Assumes EAVT-indexed datoms."
-  {:performance "At least O(d•s), where d = # datoms and s = # schemas to be changed"
-   :todo {0 "[:index true] -> [:index false] needs to take effect"
-          1 ":many -> :one needs to be validated but allowed"
-          2 "non-unique -> unique needs to be validated but allowed"}}
-  [schemas schemas' datoms]
-  (let [deleted       (set/differencel (-> schemas keys set) (-> schemas' keys set))
-        changed+added (->> schemas' (remove' (rfn [k v] (= (get schemas k) v))))
-        illegal-schema-change
-          (fn [k v v'] (throw (->ex nil "Illegal schema change attempted" (kmap k v v'))))
-        unclear-validation
-          (fn [k v v'] (log/pr ::warn "Unclear whether DataScript will validate" k v "->" v'))]
-    ; Ensure that no datoms are affected by deleted schemas
-    (doseq [schema-name schema deleted]
-      (doseq [[_ a _ _] datoms]
-        (validate a #(not= % schema-name))))
-    ; Ensure changed and added schemas are valid
-    (doseq [schema-name' schema' changed+added]
-      (let [schema (get schemas schema-name')]
-        (doseq [k v' schema']
-          (let [v (get schema k)]
-            (case k
-              :db/cardinality
-              (when (= [v v'] [:db.cardinality/many :db.cardinality/one])
-                (illegal-schema-change k v v')) ; TODO 1
-              :db/index
-              (when (and (true? v) (not v'))
-                (log/pr ::warn "Unindexing" k "won't take effect in previous datoms")) ; TODO 0
-              :db/valueType
-              (cond (and schema (not= v v'))
-                    (illegal-schema-change k v v')
-                    (not schema)
-                    (unclear-validation k v v'))
-              :db/unique
-              (cond
-                (and (not v) v)
-                (illegal-schema-change k v v') ; TODO 2
-                (= [v v'] [:db.unique/value :db.unique/identity])
-                (unclear-validation k v v')
-                (= [v v'] [:db.unique/identity :db.unique/value])
-                (unclear-validation k v v'))
-              :db/isComponent
-              (TODO)
-              ; Doesn't validate other schema changes
-              )))))))
-
-(defn update-schemas
-  "For DataScript db"
-  {:see-also #{"metasoarous/datsync.client"
-               "http://docs.datomic.com/schema.html#Schema-Alteration"}}
-  ([f] (update-schemas (->db)))
-  ([x f]
-    (let [for-mdb
-           (fn [mdb]
-             (validate mdb mdb?)
-             (let [schemas  (:schema mdb)
-                   schemas' (f schemas)
-                   datoms   (mdb/datoms mdb :eavt)]
-               (log/prl ::debug schemas schemas')
-               (ensure-schema-changes-valid! schemas schemas' datoms)
-               (-> (mdb/init-db datoms schemas')
-                   (mdb/db-with
-                     [{:db/ident  :type  }
-                      {:db/ident  :schema}])
-                   (mdb/db-with
-                     (for [schema (keys schemas')]
-                       {:db/ident schema
-                        :type     [:db/ident :schema]})))))]
-      (cond (mdb? x)
-            (for-mdb x)
-            (mconn? x)
-            (for-mdb @x)
-            :else (throw (unhandled-type :conn x))))))
-
-(defn update-schemas!
-  ([f] (update-schemas! @conn* f))
-  ([conn f]
-    (validate conn mconn?)
-    (swap! conn update-schemas f)))
-
-(defn merge-schemas
-  "Merges schemas and/or schema attributes (@schemas) into the database @db."
-  {:usage '(merge-schemas {:task:estimated-duration {:db/valueType :db.type/long}})}
-  ([schemas] (merge-schemas #?(:clj nil :cljs (->db)) schemas))
-  ([#?(:clj _ :cljs db) schemas]
-  #?(:clj  (for [schema kvs schemas]
-             [:fn/transform
-               (c/merge
-                 {:db/id               schema
-                  :db.alter/_attribute :db.part/db}
-                 kvs)])
-     :cljs (update-schemas db (fn1 merge-deep schemas)))))
-
-(defn merge-schemas!
-  ([schemas] (merge-schemas! @conn* schemas))
-  ([conn schemas]
-  #?(:clj  (transact! conn (merge-schemas schemas))
-     :cljs (swap! conn merge-schemas schemas))))
-
-(defn replace-schemas!
-  ([schemas] (replace-schemas! @conn* schemas))
-  ([conn schemas]
-    (validate conn mconn?)
-    (swap! conn update-schemas (constantly schemas))))
-
-(defn dissoc-schema!
-  ([s k v] (dissoc-schema! @conn* s k v))
-  ([conn s k #?(:clj v :cljs _)]
-  #?(:clj  (transact! conn
-             [[:db/retract s k v]
-              [:db/add :db.part/db :db.alter/attribute k]])
-     :cljs (update-schemas! conn (fn1 dissoc-in+ [s k])))))
-
 (defn rename-schemas [mapping]
   (for [oldv newv mapping]
     {:db/id oldv :db/ident newv}))
@@ -529,28 +415,26 @@
   "Creates a new id if the one specified by the key-value pairs, @attrs,
    is not found in the database."
   [attrs]
-  (let [query (join [:find '?e :where]
+  (let [query (join [:find '?e '. :where]
                 (for [k v attrs]
                   ['?e k v]))]
-  `(:fn/or
-     (:fn/fq ~query)
-     ~(tempid))))
+  `(:fn/or (:fn/q ~query) ~(tempid))))
 
-(def attribute? #(-> @dv/db-schemas (get (:type %)))) ; TODO fix
+(def attribute? #(-> @dv/db-schemas (get (:schema/type %)))) ; TODO fix
 
 (def dbfn-call? (fn-and seq?
                         (fn-> first keyword?)
                         (fn-> first namespace (= "fn"))))
 
 (defn transform-validated [x]
-  (let [value-type #(-> @dv/db-schemas (get (:type %)) :db/valueType)]
-    (postwalk
+  (let [value-type #(-> @dv/db-schemas (get (:schema/type %)) :db/valueType)]
+    (prewalk ; prewalk, not postwalk, is important because then you're not reassembling validated maps, which is expensive and possibly won't work
       (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
                                               (fn-not dbfn?  ))))
         #(case (value-type %)
-           :db.type/ref (->> % qcore/get (remove-vals+ nil?)
+           :db.type/ref (->> % qcore/get (remove-vals+ nil?) ; Because can't assert nil in DB
                                          (join {}))
-           nil (throw (->ex nil "Object's schema not found in registry" {:object %}))
+           nil (throw (->ex nil "Object's schema not found in registry" {:object % :type (c/type %)}))
            (qcore/get %)))
       x)))
 
@@ -588,35 +472,15 @@
 (defn queried->maps [db queried]
   (map #(->> % first entity (join {})) queried))
 
-#?(:clj
-(defn entity->map
-  "'Unrolls' entities into maps.
-   If a second argument is used, unrolling will be applied once.
-   If it is not used, unrolling will be applied until there are no more entity maps."
-  {:todo ["Code pattern here"]}
-  ([m] (touch m))
-  ([m n]
-    (loop [m-n m
-           n-n 0]
-      (if (= n-n n)
-          m-n
-          (let [m-n+1 (postwalk
-                        (whenf1 (partial instance? datomic.query.EntityMap)
-                          #(join {} %))
-                        m-n)]
-            (recur m-n+1 (inc n-n))))))))
-
 (defn lookup
-  [attr v]
-  (-> (q [:find '?e :where ['?e attr v]]) ; TODO use parameterized queries
-      ffirst
-      entity))
+  ([attr v]    (lookup (->db) attr v))
+  ([db attr v] (pull (->db db) '[*] [attr v])))
 
 (def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
 
 (def ^:dynamic *transform?* false)
 
-(defn wrap-transform [x & [force?]]
+(defn ?wrap-transform [x & [force?]] ; i.e., possibly wrap transform, dep. on if needed
   #?(:clj  (if (or force? *transform?*)
                (if (has-transform? x)
                    x
@@ -703,11 +567,11 @@
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   ([x]      (conj (->db) (or @part* #?(:cljs :db.part/test)) false x))
   ([part x] (conj (->db) part false x))
-  ([db part no-transform? x] ; TODO no-txr-transform? no-client-transform?
+  ([db part x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
                   (whenf (fn-not dbfn-call?)
-                    (fn1 coll/assoc-when-none :db/id (tempid (->db db) part))))]
-      (if no-transform? txn (wrap-transform txn)))))
+                    (fn1 coll/assoc-when-none :db/id (tempid db part))))]
+      (wrap-transform txn))))
 
 (defn conj!
   "Creates and transacts an entity from the supplied attribute-map."
@@ -743,8 +607,8 @@
   (let [[prelists body] [(take-while vector? args) (drop-while vector? args)]
         [requires imports arglist]
          (case (count prelists)
-           1 [[] [] (get prelists 0)]
-           2 [(get prelists 0) [] (get prelists 1)]
+           1 [[] [] (nth prelists 0)]
+           2 [(nth prelists 0) [] (nth prelists 1)]
            3 prelists
            (throw (->ex nil "More vectors than [requires, imports, arglist] found for dbfn" (kmap args))))]
     `(db/function
@@ -760,11 +624,12 @@
 
    Is not supported by DataScript."
   {:usage '(defn! inc [n] (inc n))}
-  [sym & args]
-  `(transact!
-     [(conj @conn* :db.part/fn true
-        {:db/ident (c/keyword "fn" (name '~sym))
-         :db/fn    (dbfn ~@args)})])))
+  [conn sym & args]
+  `(let [conn# ~conn]
+     (transact! conn#
+       [(conj conn# :db.part/fn
+          {:db/ident (c/keyword "fn" (name '~sym))
+           :db/fn    (dbfn ~@args)})]))))
 
 #?(:clj
 (defn entity-history [e]
@@ -1396,10 +1261,25 @@
 
 #?(:clj
 (defn transact-schemas!
-  "Clojure only because schemas can only be added upon creation of the DataScript
-   connection; they cannot be transacted."
-  []
-  (-> @dv/db-schemas vals transact!)))
+  "Clojure-only, because schemas can only be added upon creation of the DataScript
+   connection; they cannot be transacted.
+
+   Schema changes to Datomic happen asynchronously.
+   This waits until the schemas are available."
+  {:todo #{"Make waiting more robust"}}
+  ([] (transact-schemas! nil))
+  ([{:keys [conn schemas]}]
+    (let [conn       (or conn @conn*)
+          _          (validate conn conn?)
+          schemas-tx (->> (or schemas (vals @dv/db-schemas))
+                          (mapv (fn1 c/assoc :db/id (tempid (->db conn) :db.part/db))))
+          tx-report  @(datomic.api/transact conn schemas-tx)
+          tx-id      (-> tx-report :tx-data ^datomic.Datom first (.tx))
+          _ #_(deref (d/sync (->conn conn) (java.util.Date. (System/currentTimeMillis))) 500 nil)
+              (deref (datomic.api/sync-schema conn (inc tx-id)) 500 nil)] ; frustratingly, doesn't even work with un-`inc`ed txn-id
+      tx-report))))
+
+(declare replace-schemas!) ; TODO
 
 ; (defn changes-affecting
 ;   {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"
