@@ -112,11 +112,14 @@
 #?(:clj  (defnt    integer?
            "Whether x is integer-like (primitive/boxed integer, BigInteger, etc.)."
            ([^integer? obj] true) ([obj] false))
-   :cljs (defalias integer? core/integer?))
+   :cljs (do (defalias integer? core/integer?)
+             (defalias integer?-protocol integer?)))
 #?(:clj  (defnt    double?  ([^double?  obj] true) ([obj] false))
-   :cljs (defalias double?  core/number?))
+   :cljs (do (defalias double? core/number?)
+             (defalias double?-protocol number?)))
 #?(:clj  (defnt    float?   ([^float?  obj] true) ([obj] false))
-   :cljs (defalias float?   core/number?))
+   :cljs (do (defalias float? core/number?)
+             (defalias float?-protocol number?)))
          (defalias vector+? vec/vector+?)
 #?(:clj  (def indexed?   (partial instance+? clojure.lang.Indexed)))
 #?(:clj  (def throwable? (partial instance+? java.lang.Throwable )))

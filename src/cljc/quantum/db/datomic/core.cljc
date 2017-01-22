@@ -286,7 +286,7 @@
 (def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
                            :cljs number?)) ; TODO CLJS |bigdec?|
 (def-validated -instant (v/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
-                               (v/and string?        (v/conformer clojure.instant/read-instant-date))
+                       #?(:clj (v/and string?        (v/conformer clojure.instant/read-instant-date)))
                                (v/and (fn1 integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))))
 (def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI)))
 (def-validated -bytes   (fn1 bytes?))
@@ -375,7 +375,7 @@
                       :doc         "nodoc"})}
   ([schema-0] (->schema schema-0 nil))
   ([schema-0 {:keys [conn part datascript?] :as opts}]
-    (let [schema      (->intermediate-schema schema-0)
+    (let [schema      (->schema:intermediate-schema schema-0)
           conn-f      (or conn @conn*)
           datascript? (or datascript? (mconn? conn-f))
           part-f      (when-not datascript?
@@ -488,7 +488,7 @@
                x)
      :cljs x))
 
-(def transform (fn-> validated->txn wrap-transform))
+(def transform (fn-> validated->txn ?wrap-transform))
 
 (defn rename [old new-]
   {:db/id    old
@@ -499,7 +499,7 @@
    associated with entity id @id."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [eid & kvs]
-  (wrap-transform
+  (?wrap-transform
     (apply hash-map :db/id eid kvs)))
 
 (defn assoc! [& args]
@@ -522,7 +522,7 @@
         retract-fn (if (mdb? db)
                        :db.fn/retractEntity  ; TODO these are different things
                        :db/retract)]
-    (wrap-transform
+    (?wrap-transform
       (concat (list retract-fn eid) kvs))))
 
 (defn dissoc! [& args]
@@ -531,7 +531,7 @@
 (defn merge
   "Merges in @props to @eid."
   [eid props]
-  (-> props (c/assoc :db/id eid) validated->txn wrap-transform))
+  (-> props (c/assoc :db/id eid) validated->txn ?wrap-transform))
 
 (defn merge!
   "Merges in @props to @eid and transacts."
@@ -565,13 +565,13 @@
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
   {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  ([x]      (conj (->db) (or @part* #?(:cljs :db.part/test)) false x))
-  ([part x] (conj (->db) part false x))
+  ([x]      (conj (->db) (or @part* #?(:cljs :db.part/test)) x))
+  ([part x] (conj (->db) part x))
   ([db part x] ; TODO no-txr-transform? no-client-transform?
     (let [txn (-> x transform-validated
                   (whenf (fn-not dbfn-call?)
                     (fn1 coll/assoc-when-none :db/id (tempid db part))))]
-      (wrap-transform txn))))
+      (?wrap-transform txn))))
 
 (defn conj!
   "Creates and transacts an entity from the supplied attribute-map."
@@ -581,7 +581,7 @@
 (defn disj
   ([eid] (disj @conn* eid))
   ([conn eid]
-    (wrap-transform `(:db.fn/retractEntity ~eid))))
+    (?wrap-transform `(:db.fn/retractEntity ~eid))))
 
 (defn disj! [& args]
   (transact! [(apply disj args)]))
