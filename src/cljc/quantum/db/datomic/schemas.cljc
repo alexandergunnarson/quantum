@@ -32,7 +32,7 @@
 
 ; =========== CORE TYPES =========== ;
 
-(def-validated ^:db? schema/type :db/schema)
+(def-validated ^:db? ^:index? schema/type :db/schema)
 
 (def-validated ^:db? ^{:doc "Any unstructured data associated with an entity"}
   schema/annotation :db/string)
