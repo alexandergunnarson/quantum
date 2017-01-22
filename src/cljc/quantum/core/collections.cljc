@@ -240,10 +240,10 @@
         (defalias ldropl              diff/ldropl             )
         (defalias ldrop               diff/ldropl             )
         (defalias drop-while+         red/drop-while+         )
-        (defalias dropl-while-matches diff/dropl-while-matches)
         (defalias dropr               diff/dropr              )
 #?(:clj (defalias dropr+              diff/dropr+             ))
         (defalias dropr-until         diff/dropr-until        )
+        (defalias dropr-while         diff/dropr-while        )
         (defalias dropr-while-matches diff/dropr-while-matches)
         (defalias ldrop-at            diff/ldrop-at           )
 
@@ -313,14 +313,17 @@
 (defaliases mf
   map map' map+ lmap
   map-indexed map-indexed' map-indexed+ lmap-indexed
-  map-keys+ map-vals+
+  map-keys map-keys' map-keys+ lmap-keys
+  map-vals map-vals' map-vals+ lmap-vals
   #?@(:clj [pmap pmap' pmap-indexed pmap-indexed'])
   filter filter' filter+ lfilter
   filteri ffilter ffilteri last-filteri
-  filter-keys+ filter-vals+
+  filter-keys filter-keys' filter-keys+ filter-keys
+  filter-vals filter-vals' filter-vals+ filter-vals
   #?@(:clj [pfilter pfilter'])
   remove remove' remove+ lremove
-  remove-keys+ remove-vals+
+  remove-keys remove-keys' remove-keys+ lremove-keys
+  remove-vals remove-vals' remove-vals+ lremove-vals
   #?@(:clj [premove premove']))
 
         (defalias indexed+      red/indexed+      )
