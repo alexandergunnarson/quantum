@@ -60,6 +60,8 @@
 (defalias with             dbc/with     )
 (defalias entity           dbc/entity   )
 (defalias touch            dbc/touch    )
+(defalias pull             dbc/pull     )
+(defalias pull-many        dbc/pull-many)
 
 (defalias conj             dbc/conj     )
 (defalias conj!            dbc/conj!    )
@@ -137,9 +139,9 @@
       (let [history-limit  (validate (or history-limit
                                          #?(:clj  Integer/MAX_VALUE
                                             :cljs js/Number.MAX_SAFE_INTEGER)) integer?)
-            reactive?      (validate (default reactive?      true) (fn1 boolean?))
-            set-main-conn? (validate (default set-main-conn? true) (fn1 boolean?))
-            set-main-part? (validate (default set-main-part? true) (fn1 boolean?))
+            reactive?      (validate (default reactive?      true ) (fn1 boolean?))
+            set-main-conn? (validate (default set-main-conn? false) (fn1 boolean?))
+            set-main-part? (validate (default set-main-part? false) (fn1 boolean?))
             _              (validate conn nil?)]
         (try
           (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
@@ -271,9 +273,9 @@
             port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
             txr-alias              (validate (or (:alias txr-props) "local")        string?)
             create?                (validate (default create?                false) (fn1 boolean?))
-            create-if-not-present? (validate (default create-if-not-present? true)  (fn1 boolean?))
-            set-main-conn?         (validate (default set-main-conn?         true)  (fn1 boolean?))
-            set-main-part?         (validate (default set-main-part?         true)  (fn1 boolean?))
+            create-if-not-present? (validate (default create-if-not-present? true ) (fn1 boolean?))
+            set-main-conn?         (validate (default set-main-conn?         false) (fn1 boolean?))
+            set-main-part?         (validate (default set-main-part?         false) (fn1 boolean?))
             default-partition      (validate (or default-partition :db.part/test)   (v/and keyword? (fn-> namespace (= "db.part"))))
             conn                   (validate (or conn (atom nil))                   atom?)
             connection-retries     (validate (or (if (= type :dynamo) 1 5))         integer?) ; DynamoDB auto-retries
