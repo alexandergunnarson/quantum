@@ -7,7 +7,7 @@
       :refer [nnil? nempty? postwalk]]
     [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
-      :refer [->ex TODO]]
+      :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
       :refer [if-cljs]]
     [quantum.core.macros.deftype
@@ -139,20 +139,22 @@
   {:todo #{"Enforce validators/specs using database transaction functions"}}
   [sym spec]
   `(quantum.db.datomic.core/->schema
-     (->> ~(->> `{:ident       ~(keyword (namespace sym) (name sym))
-                  :type        ~(db-type spec)
-                  :cardinality ~(if ((fn-and seq? (fn-> first symbol?) (fn-> first name (= "set-of")))
+     (->> ~(let [type (db-type spec)]
+             (->> {:ident       (keyword (namespace sym) (name sym))
+                   :type        type
+                   :cardinality (if ((fn-and seq? (fn-> first symbol?) (fn-> first name (= "set-of")))
                                      spec)
                                     :many
                                     :one)
-                  :doc         ~(-> sym meta :doc        )
-                  :component?  ~(-> sym meta :component? )
-                  :index?      ~(-> sym meta :index?     )
-                  :full-text?  ~(-> sym meta :full-text? )
-                  :unique      ~(-> sym meta :unique     )
-                  :no-history? ~(-> sym meta :no-history?)}
-                 (remove (fn [[k v]] (nil? v)))
-                 (into {}))
+                   :doc         (-> sym meta :doc        )
+                   :component?  (and (-> sym meta :component?)
+                                     (= type :ref))
+                   :index?      (-> sym meta :index?     )
+                   :full-text?  (-> sym meta :full-text? )
+                   :unique      (-> sym meta :unique     )
+                   :no-history? (-> sym meta :no-history?)}
+                  (remove (fn [[k v]] (nil? v)))
+                  (into {})))
           (remove (fn [[k# v#]] (nil? v#)))
           (into {}))))
 
@@ -198,7 +200,8 @@
                         (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents
                            (assoc (meta x)
                              :db?         db-mode?
-                             :no-history? (-> parent-sym meta :no-history?)))
+                             ;:no-history? (-> parent-sym meta :no-history?)
+                             :component?  (or (-> x meta :component?) db-mode?))) ; all inner defs which are of type :ref are components
                       inner-spec (if (-> inner-spec-args count (= 1))
                                      `(def-validated ~inner-name-sym
                                         ~@(contextualize-keywords kw-context inner-spec-args))
@@ -231,7 +234,7 @@
 
 #?(:clj
 (defmacro declare-spec [sym]
-  (let [{:keys [spec-name]} (sym->spec-name+sym sym (ns-name *ns*))]
+  (let [{:keys [spec-name]} (sym->spec-name+sym sym (str (ns-name *ns*)))]
     `(defspec ~spec-name (fn [x#] (TODO))))))
 
 #?(:clj
@@ -260,6 +263,8 @@
                          ~'equals   ~(std-equals sym other '=)}
                        ~'?HashEq
                          {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
+                       ~'?Deref
+                         {~'deref   ([_#] ~'v)}
                        quantum.core.core/IValue
                          {~'get     ([_#] ~'v)
                           ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
@@ -349,7 +354,8 @@
           type-hash            (hash-classname sym)
           k-gen                (gensym "k")
           v-gen                (gensym "v")
-          create               (gensym "create")]
+          create               (symbol (str "create-" sym))
+          invalid              (if-cljs &env :cljs.spec/invalid :clojure.spec/invalid)]
      (prl ::debug invariant conformer req-ks un-ks all-mod-ks to-prepend)
      (let [code `(do (declare-spec ~sym-0)
           ~@to-prepend
@@ -365,22 +371,20 @@
           (def ~all-keys-record      (~(symbol (str "map->" all-record-sym    )) ~(merge (zipmap all-mod-ks all-mod-ks) (zipmap special-ks special-ks))))
           (def ~un-ks-to-ks          ~(zipmap un-ks un-ks-qualified))
           (def ~spec-sym             ~keyspec)
-          (def ~spec-base            ~(if invariant
-                                          `(v/and (v/keys ~@keyspec) ~invariant)
-                                          `(v/keys ~@keyspec)))
+          (def ~spec-base            (v/and (v/keys ~@keyspec) ~@(when invariant [invariant])))
           (defn ~create [m#]
             (if (instance? ~qualified-record-sym m#)
                 m#
-                (~(symbol (str "map->" req-record-sym))
-                  (let [m# (-> m#
-                               ~(if-not db-mode?  `identity* `(assoc :schema/type ~spec-name))
-                               ~(if-not conformer `identity* conformer-sym)
-                               (set/rename-keys ~un-ks-to-ks) ; All :*-un keys -> namespaced
-                               (v/validate ~spec-base))
-                        _# (v/validate (:db/id    m#) (v/or* nil? :db/id   ))
-                        _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
-                    (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
-                    m#))))
+                (let [_# (v/validate m# map?)
+                      m# (-> m#
+                             ~(if-not db-mode?  `identity* `(assoc :schema/type ~spec-name))
+                             ~(if-not conformer `identity* conformer-sym)
+                             (set/rename-keys ~un-ks-to-ks) ; All :*-un keys -> namespaced
+                             (v/validate ~spec-base))
+                      _# (v/validate (:db/id    m#) (v/or* nil? :db/id   ))
+                      _# (v/validate (:db/ident m#) (v/or* nil? :db/ident))]
+                  (v/validate (keys m#) (fn1 set/subset? ~all-keys-record))
+                  (~(symbol (str "map->" req-record-sym)) m#))))
           (deftype-compatible ~(with-meta sym {:no-factory? true})
             [~(with-meta 'v {:tag req-record-sym})]
             {~'?Seqable
@@ -466,7 +470,9 @@
           (defspec ~spec-name (v/conformer
                                 (fn [x#] (if (instance? ~qualified-sym x#)
                                              x#
-                                             (new ~qualified-sym (~create x#))))))
+                                             (new ~qualified-sym (~create x#))
+                                             #_(catch-all (new ~qualified-sym (~create x#))
+                                               e# ~invalid))))) ; TODO avoid semi-expensive try-catch here by using conformers all the way down the line
           ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
           ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
      (prl ::debug code)
