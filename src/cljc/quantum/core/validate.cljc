@@ -10,6 +10,8 @@
         :cljs cljs.spec.impl.gen)  :as gen]
     [quantum.core.collections.base
       :refer [nnil?]]
+    [quantum.core.error :as err
+      :refer [catch-all]]
     [quantum.core.macros.core
       :refer [if-cljs locals]]
     [quantum.core.vars :as var
@@ -117,20 +119,20 @@
         cform (case (count preds)
                     2 (fn [x]
                         (let [specs @specs
-                              ret (s/conform* (specs 0) x)]
+                              ret (catch-all (s/conform* (specs 0) x) _ ::s/invalid)]
                           (if (invalid? ret)
-                            (let [ret (s/conform* (specs 1) x)]
+                            (let [ret (catch-all (s/conform* (specs 1) x) _ ::s/invalid)]
                               (if (invalid? ret)
                                 ::s/invalid
                                 ret))
                             ret)))
                     3 (fn [x]
                         (let [specs @specs
-                              ret (s/conform* (specs 0) x)]
+                              ret (catch-all (s/conform* (specs 0) x) _ ::s/invalid)]
                           (if (invalid? ret)
-                            (let [ret (s/conform* (specs 1) x)]
+                            (let [ret (catch-all (s/conform* (specs 1) x) _ ::s/invalid)]
                               (if (invalid? ret)
-                                (let [ret (s/conform* (specs 2) x)]
+                                (let [ret (catch-all (s/conform* (specs 2) x) _ ::s/invalid)]
                                   (if (invalid? ret)
                                     ::s/invalid
                                     ret))
@@ -141,7 +143,7 @@
                         (loop [i 0]
                           (if (< i (count specs))
                             (let [spec (specs i)]
-                              (let [ret (s/conform* spec x)]
+                              (let [ret (catch-all (s/conform* spec x) _ ::s/invalid)]
                                 (if (invalid? ret)
                                   (recur (inc i))
                                   ret)))
