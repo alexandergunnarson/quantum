@@ -45,19 +45,20 @@
           :line       (fn ([] nil) ([line] line))})
        delay)))
 
-(defn transact-std-definitions! [& [{:as opts :keys [mime-types?]}]]
-  (db/transact! (dbc/->partition :db.part/test))
-  (db/transact! (dbc/->partition :db.part/fn  ))
-  (db/transact! [(db/conj {:db/ident :dummy})])
-  #?(:clj (fns/define-std-db-fns!))
-  #?(:clj (dbc/transact-schemas!))
+(defn transact-std-definitions! [conn & [{:as opts :keys [mime-types?]}]]
+  (db/transact! conn (dbc/->partition conn :db.part/test))
+  (db/transact! conn (dbc/->partition conn :db.part/fn  ))
+  (db/transact! conn [(db/conj conn :db.part/db {:db/ident :dummy})])
+  #?(:clj (fns/define-std-db-fns! conn))
+  #?(:clj (dbc/transact-schemas! {:conn conn}))
   #_(db/conj! (dbs/->globals {:db/ident :globals*}))
 
   #?(:clj
     (when mime-types?
-      (db/transact!
+      (db/transact! conn
         (->> mime-types force
-             (mapv (fn [[k v]] (db/conj (dbs/->data:format
-                                          {:data:mime-type                  k
-                                           :data:appropriate-extension:many v})))))))))
+             (mapv (fn [[k v]] (db/conj conn :db.part/defs
+                                 (dbs/->data:format
+                                   {:data:mime-type                  k
+                                    :data:appropriate-extension:many v})))))))))
 
