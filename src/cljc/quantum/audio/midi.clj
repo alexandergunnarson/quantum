@@ -31,7 +31,7 @@
     [quantum.core.type
       :refer [integer?]]
     [quantum.core.async.scheduling :as sched]
-    [quantum.db.datomic.core  :as dbc]) ; TODO just for the spec
+    [quantum.db.datomic.core       :as dbc]) ; TODO just for the spec
   (:import
     (javax.sound.midi MidiSystem MidiDevice MidiMessage ShortMessage MidiDevice$Info Receiver)
     (uk.co.xfactorylibrarians.coremidi4j
