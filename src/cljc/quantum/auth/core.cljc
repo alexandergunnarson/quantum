@@ -5,10 +5,10 @@
     :attribution "Alex Gunnarson"}
   quantum.auth.core
   (:refer-clojure :exclude [get get-in assoc!])
-  (:require [#?(:clj  clojure.core
-                :cljs cljs.core   )   :as core]
+  (:require [clojure.core             :as core]
             [quantum.core.io.core     :as io  ]
-            [quantum.core.collections :as coll]
+            [quantum.core.collections :as coll
+              :refer [dissoc-in]]
             [quantum.core.validate    :as v
               :refer [validate]]
             [quantum.core.data.validated
@@ -78,7 +78,7 @@
 
 (defn dissoc-in! [auth-source & ks]
   (assoc! auth-source
-    (apply coll/dissoc-in+ (get auth-source) ks)))
+    (apply dissoc-in (get auth-source) ks)))
 
 (defn access-token
   "Retrieves the current access token for @auth-source."

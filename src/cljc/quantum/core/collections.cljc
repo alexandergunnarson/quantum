@@ -45,8 +45,7 @@
               class
               -])
            (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )                  :as core   ]
+             [clojure.core                            :as core   ]
              [fast-zip.core                           :as zip    ]
              [quantum.core.data.map                   :as map    ]
              [quantum.core.data.set                   :as set    ]
@@ -152,7 +151,7 @@
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
 #?(:clj (defalias assoc!          coll/assoc!       ))
-#?(:clj (defalias assoc!*         coll/assoc!*      )) ; ?
+#?(:clj (defalias assoc!*         coll/assoc!*      ))
 #?(:clj (defalias aset!           coll/aset!        ))
 #?(:clj (defalias dissoc          coll/dissoc       ))
 #?(:clj (defalias dissoc!         coll/dissoc!      ))
@@ -161,10 +160,10 @@
 #?(:clj (defalias disj!           coll/disj!        ))
 #?(:clj (defalias update!         coll/update!      ))
 
-        (defalias assoc+          soc/assoc+         )
-        (defalias assocs-in+      soc/assocs-in+     )
-        (defalias dissoc-in+      soc/dissoc-in+     )
-        (defalias update-val+     soc/update-val+    )
+        (defalias assoc-extend    soc/assoc-extend   )
+        (defalias assocs-in       soc/assocs-in      )
+        (defalias dissoc-in       soc/dissoc-in      )
+        (defalias update-val      soc/update-val     )
         (defalias assoc-when-none soc/assoc-when-none)
         (defalias assoc-with      soc/assoc-with     )
         (defalias assoc-if        soc/assoc-if       )
@@ -947,11 +946,11 @@
   ([coll kfs]
     (->> (loops/reduce
            (fn [ret k f]
-             (assoc+ ret k (f coll)))
+             (assoc ret k (f coll)))
            {}
            kfs)))
   ([coll k1 f1 & {:as kfs}]
-    (select-as+ coll (assoc+ kfs k1 f1))))
+    (select-as+ coll (assoc kfs k1 f1))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -1030,7 +1029,7 @@
 (defn first-uniques-by+ [k coll]
   (->> coll
        (group-by+ k)
-       (map+ (update-val+ #(first %1)))))
+       (map+ (update-val (fn1 first)))))
 
 ; ===== SORTING ===== ;
 

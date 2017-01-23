@@ -32,7 +32,7 @@
             [quantum.core.fn
               :refer [fn1 fn-> rcomp]]
             [quantum.core.collections   :as coll
-              :refer [containsv? assocs-in+ flatten-1]]
+              :refer [containsv? assocs-in flatten-1]]
             [quantum.core.log           :as log
               :refer [prl]]
             [quantum.core.convert       :as conv]
@@ -217,7 +217,7 @@
                                    (:anti-forgery opts))))
         ; NOTE: Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
         (defaults/wrap-defaults
-          (apply assocs-in+ defaults/secure-site-defaults
+          (apply assocs-in defaults/secure-site-defaults
             [:security :anti-forgery] false
             [:static   :resources   ] false ; This short-circuits the rest of the middleware when placed here
             [:static   :files       ] false
