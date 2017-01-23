@@ -21,7 +21,7 @@
       :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
-      :refer        [#?@(:clj [re-match re-match* re-match-whole*])]])
+      :refer        [#?@(:clj [re-match re-match* re-match-whole])]])
 #?(:clj
     (:import
       com.github.javaparser.JavaParser
@@ -464,23 +464,23 @@
            anap/sym-call?
            (fn [x] (cond-let
                      [{[form] :form [oper] :oper}
-                      (re-match-whole* x
+                      (re-match-whole x
                         (& (m/as :oper (| '+ '-))
                            (| (& 1 (m/as :form _))
                               (& (m/as :form _) 1))))]
                      (list ('{+ inc* - dec*} oper) form)
                      [{[form] :form}
-                      (re-match-whole* x
+                      (re-match-whole x
                         (& '=
                            (| (& 0 (m/as :form _))
                               (& (m/as :form _) 0))))]
                      (list 'zero? form)
                      [{[form] :form}
-                      (re-match-whole* x
+                      (re-match-whole x
                         (& '> (& (m/as :form _) 0)))]
                      (list 'pos? form)
                      [{[form] :form}
-                      (re-match-whole* x
+                      (re-match-whole x
                         (& '*
                            (| (& 2 (m/as :form _))
                               (& (m/as :form _) 2))))]
