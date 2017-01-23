@@ -15,6 +15,7 @@
     [posh.reagent                     :as rx-db]])
     [datascript.core                  :as mdb]
     [quantum.db.datomic.core          :as dbc]
+    [quantum.db.datomic.schema        :as schema]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
       :refer [kmap containsv? nnil? nempty?]]
@@ -78,7 +79,7 @@
 
 (defalias history->seq     dbc/history->seq  )
 #_(defalias block->schemas   dbc/block->schemas)
-(defalias replace-schemas! dbc/replace-schemas!)
+(defalias replace-schemas! schema/replace-schemas!)
 (defalias db->seq          dbc/db->seq       )
 
 ; CORE FUNCTIONS

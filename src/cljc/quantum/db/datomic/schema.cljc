@@ -6,7 +6,10 @@
             [quantum.core.collections :as coll
               :refer [dissoc-in merge-deep]]
             [quantum.core.data.set    :as set]
-            [quantum.db.datomic.core  :as dbc]))
+            [quantum.db.datomic.core  :as dbc]
+            [quantum.core.validate    :as v
+              :refer [validate]]
+            [quantum.core.data.validated :as dv]))
 
 (defn ensure-schema-changes-valid
   "For DataScript db.
@@ -122,3 +125,23 @@
                        [:db/add :db.part/db :db.alter/attribute k]])]
             :cljs [false false]))
         (update-schemas! conn #(dissoc-in % [s k])))
+
+#?(:clj
+(defn transact-schemas!
+  "Clojure-only, because schemas can only be added upon creation of the DataScript
+   connection; they cannot be transacted.
+
+   Schema changes to Datomic happen asynchronously.
+   This waits until the schemas are available."
+  {:todo #{"Make waiting more robust"}}
+  ([] (transact-schemas! nil))
+  ([{:keys [conn schemas]}]
+    (let [conn       (or conn @dbc/conn*)
+          _          (validate conn dbc/conn?)
+          schemas-tx (->> (or schemas (vals @dv/db-schemas))
+                          (mapv #(assoc % :db/id (dbc/tempid (dbc/->db conn) :db.part/db))))
+          tx-report  @(dat/transact conn schemas-tx)
+          tx-id      (-> tx-report :tx-data ^datomic.Datom first (.tx))
+          _ #_(deref (d/sync (->conn conn) (java.util.Date. (System/currentTimeMillis))) 500 nil)
+              (deref (dat/sync-schema conn (inc tx-id)) 500 nil)] ; frustratingly, doesn't even work with un-`inc`ed txn-id
+      tx-report))))

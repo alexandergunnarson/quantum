@@ -1235,28 +1235,6 @@
          ; Throws if there was a different problem unrelated to the expected exception constraint
          (throw e))))))
 
-#?(:clj
-(defn transact-schemas!
-  "Clojure-only, because schemas can only be added upon creation of the DataScript
-   connection; they cannot be transacted.
-
-   Schema changes to Datomic happen asynchronously.
-   This waits until the schemas are available."
-  {:todo #{"Make waiting more robust"}}
-  ([] (transact-schemas! nil))
-  ([{:keys [conn schemas]}]
-    (let [conn       (or conn @conn*)
-          _          (validate conn conn?)
-          schemas-tx (->> (or schemas (vals @dv/db-schemas))
-                          (mapv (fn1 c/assoc :db/id (tempid (->db conn) :db.part/db))))
-          tx-report  @(datomic.api/transact conn schemas-tx)
-          tx-id      (-> tx-report :tx-data ^datomic.Datom first (.tx))
-          _ #_(deref (d/sync (->conn conn) (java.util.Date. (System/currentTimeMillis))) 500 nil)
-              (deref (datomic.api/sync-schema conn (inc tx-id)) 500 nil)] ; frustratingly, doesn't even work with un-`inc`ed txn-id
-      tx-report))))
-
-(declare replace-schemas!) ; TODO
-
 ; (defn changes-affecting
 ;   {:from "http://dbs-are-fn.com/2013/datomic_history_of_an_entity/"
 ;    :todo ["Replace |postwalk| with |prewalk|"
