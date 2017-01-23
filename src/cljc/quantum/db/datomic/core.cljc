@@ -13,7 +13,7 @@
     [quantum.core.collections   :as coll
       :refer [join for kmap nnil? nempty?
               filter-vals+ remove-vals+ map+ remove+ remove' nth
-              group-by+ prewalk postwalk merge-deep dissoc-in+ doseq]]
+              group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
     [quantum.core.data.set      :as set]
@@ -707,18 +707,6 @@
             (when-not (= k :history) ; Don't notify history of undos
               (l (datascript.core.TxReport. after before tx-data))))))))))
 
-; (defn read-transact! [path] (-> path io/file-str transact!))
-
-; (def entity? (partial instance? datomic.query.EntityMap))
-
-; (defn ^datomic.query.EntityMap entity
-;   "Retrieves the data associated with a (long) @id
-;    or db/ident such as a schema keyword."
-;   {:usage '[(db/entity :person/email)
-;             (db/entity 123)]}
-;   [id]
-;   (d/entity (db*) id))
-
 ; (defn txns
 ;   "Returns all Datomic database transactions in the log."
 ;   [^Database db]
@@ -726,21 +714,9 @@
 ;        (<- db/tx-range nil nil)
 ;        seq))
 
-; (defn add-partition [part]
-;   {:db/id                 (d/tempid :db.part/db)
-;    :db/ident              part
-;    :db.install/_partition :db.part/db})
-
-
 ; (defn dissoc+
 ;   [id k] ; TODO fix to be more like clojure.core/dissoc
 ;   [:fn/retract-except id k []])
-
-; (defn dissoc!
-;   "Dissociates the attribute @k from @id in database."
-;   [id k] ; TODO fix to be more like clojure.core/dissoc
-;   (let [q (dissoc+ id k)]
-;     (transact! [q])))
 
 ; (defn update! [id f-key & args]
 ;   (transact! (apply vector (c/keyword "fn" (name f-key)) id args)))
