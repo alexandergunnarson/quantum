@@ -1,16 +1,14 @@
 (ns quantum.db.datomic.defs
-           (:refer-clojure :exclude [reduce])
-           (:require [quantum.core.collections    :as c
-                       :refer        [remove+ #?@(:clj [reduce])]
-                       :refer-macros [reduce]]
-                     [quantum.net.http            :as http ]
-             #?(:clj [instaparse.core             :as insta])
-                     [quantum.db.datomic          :as db   ]
-                     [quantum.db.datomic.core     :as dbc  ]
-                     [quantum.db.datomic.schemas  :as dbs  ]
-                     [quantum.db.datomic.fns      :as fns  ])
-  #?(:cljs (:require-macros
-                     [quantum.core.collections    :as c    ])))
+  (:refer-clojure :exclude [reduce])
+  (:require [quantum.core.collections  :as c
+              :refer [remove+ reduce]]
+            [quantum.net.http          :as http]
+    #?(:clj [instaparse.core           :as insta])
+            [quantum.db.datomic        :as db]
+            [quantum.db.datomic.core   :as dbc]
+            [quantum.db.datomic.schema :as dbs]
+            [quantum.validate.specs    :as sp]
+            [quantum.db.datomic.fns    :as fns]))
 
 (def mime-types-source "http://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types")
 
@@ -50,7 +48,7 @@
   (db/transact! conn (dbc/->partition conn :db.part/fn  ))
   (db/transact! conn [(db/conj conn :db.part/db {:db/ident :dummy})])
   #?(:clj (fns/define-std-db-fns! conn))
-  #?(:clj (dbc/transact-schemas! {:conn conn}))
+  #?(:clj (dbs/transact-schemas! {:conn conn}))
   #_(db/conj! (dbs/->globals {:db/ident :globals*}))
 
   #?(:clj
@@ -58,7 +56,7 @@
       (db/transact! conn
         (->> mime-types force
              (mapv (fn [[k v]] (db/conj conn :db.part/defs
-                                 (dbs/->data:format
+                                 (sp/->data:format
                                    {:data:mime-type                  k
                                     :data:appropriate-extension:many v})))))))))
 
