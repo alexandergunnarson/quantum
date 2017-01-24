@@ -15,7 +15,7 @@
     [posh.reagent                     :as rx-db]])
     [datascript.core                  :as mdb]
     [quantum.db.datomic.core          :as dbc]
-    [quantum.db.datomic.schema        :as schema]
+    [quantum.db.datomic.schema        :as dbs]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
       :refer [kmap containsv? nnil? nempty?]]
@@ -35,7 +35,7 @@
     [quantum.core.type                :as type
       :refer [atom? boolean?]]
     [quantum.core.vars                :as var
-      :refer [defalias]]
+      :refer [defalias defaliases]]
     [quantum.core.io.core             :as io]
     [quantum.core.convert             :as conv
       :refer [->name]]
@@ -51,36 +51,17 @@
     [datomic.peer LocalConnection Connection]
     java.util.concurrent.ConcurrentHashMap)))
 
-; TODO take out repetition
 (defonce db*   dbc/db*  )
 (defonce conn* dbc/conn*)
 (defonce part* dbc/part*)
 
-(defalias q                dbc/q        )
-(defalias transact!        dbc/transact!)
-(defalias with             dbc/with     )
-(defalias entity           dbc/entity   )
-(defalias touch            dbc/touch    )
-(defalias pull             dbc/pull     )
-(defalias pull-many        dbc/pull-many)
+(defaliases dbc
+  q transact! with entity touch pull pull-many
+  conj conj! disj disj! assoc assoc! dissoc dissoc!
+  update update! merge merge!
+  history->seq db->seq ->db)
 
-(defalias conj             dbc/conj     )
-(defalias conj!            dbc/conj!    )
-(defalias disj             dbc/disj     )
-(defalias disj!            dbc/disj!    )
-(defalias assoc            dbc/assoc    )
-(defalias assoc!           dbc/assoc!   )
-(defalias dissoc           dbc/dissoc   )
-(defalias dissoc!          dbc/dissoc!  )
-(defalias update           dbc/update   )
-(defalias update!          dbc/update!  )
-(defalias merge            dbc/merge    )
-(defalias merge!           dbc/merge!   )
-
-(defalias history->seq     dbc/history->seq  )
-#_(defalias block->schemas   dbc/block->schemas)
-(defalias replace-schemas! schema/replace-schemas!)
-(defalias db->seq          dbc/db->seq       )
+(defalias replace-schemas! dbs/replace-schemas!)
 
 ; CORE FUNCTIONS
 
@@ -204,7 +185,7 @@
                                            (fn [_]
                                              (path/path resources-path
                                                (str (-> "generated" gensym name) ".properties"))))
-                            #(throw (->ex nil "Invalid transactor props" %)))
+                            #(throw (->ex "Invalid transactor props" %)))
         write-props! (fn write-props! []
                        (let [internal-props-f
                               (c/merge {:protocol               (name type)
