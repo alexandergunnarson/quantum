@@ -105,7 +105,7 @@
                          :v     (:v     d)
                          :tx    (:tx    d)
                          :added (:added d)})))
-      (throw (->ex nil "Not supported for" db))))
+      (throw (->ex :not-supported "Not supported for" db))))
 
 (defn history->seq
   "Assumes @history is a seq of DataScript DBs."
@@ -129,7 +129,7 @@
            (mconn? arg) @arg
  #?@(:clj [(conn?  arg) (db/db arg)])
           :else
-            (throw (->ex nil "Object cannot be transformed into database" arg)))))
+            (throw (->ex "Object cannot be transformed into database" arg)))))
 
 (defn touch [entity]
   (cond           (mentity? entity) (mdb/touch entity)
@@ -266,7 +266,7 @@
 ; :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
 ; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
 ; :uuid    (fn$ instance? db/SQUUID)
-(def-validated -schema  (constantly true)) ; TODO not correct but whatever
+(def-validated -schema  keyword?) ; TODO check this
 (def-validated -any     (constantly true))
 (v/defspec :db/id    c/integer?) ; TODO check these
 (v/defspec :db/ident keyword?) ; TODO check these
@@ -420,21 +420,21 @@
                   ['?e k v]))]
   `(:fn/or (:fn/q ~query) ~(tempid))))
 
-(def attribute? #(-> @dv/db-schemas (get (:schema/type %)))) ; TODO fix
+(def attribute? #(-> @dv/spec-infos (get (:schema/type %)))) ; TODO fix
 
 (def dbfn-call? (fn-and seq?
                         (fn-> first keyword?)
                         (fn-> first namespace (= "fn"))))
 
 (defn transform-validated [x]
-  (let [value-type #(-> @dv/db-schemas (get (:schema/type %)) :db/valueType)]
+  (let [value-type #(-> @dv/spec-infos (get (:schema/type %)) :schema :db/valueType)]
     (prewalk ; prewalk, not postwalk, is important because then you're not reassembling validated maps, which is expensive and possibly won't work
       (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
                                               (fn-not dbfn?  ))))
         #(case (value-type %)
            :db.type/ref (->> % qcore/get (remove-vals+ nil?) ; Because can't assert nil in DB
                                          (join {}))
-           nil (throw (->ex nil "Object's schema not found in registry" {:object % :type (c/type %)}))
+           nil (throw (->ex "Object's schema not found in registry" {:object % :type (c/type %)}))
            (qcore/get %)))
       x)))
 
@@ -610,7 +610,7 @@
            1 [[] [] (nth prelists 0)]
            2 [(nth prelists 0) [] (nth prelists 1)]
            3 prelists
-           (throw (->ex nil "More vectors than [requires, imports, arglist] found for dbfn" (kmap args))))]
+           (throw (->ex "More vectors than [requires, imports, arglist] found for dbfn" (kmap args))))]
     `(db/function
        '{:lang     :clojure
          :requires ~(into ['[datomic.api :as api]] requires)
