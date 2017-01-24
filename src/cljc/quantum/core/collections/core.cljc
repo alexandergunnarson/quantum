@@ -43,6 +43,8 @@
               :refer [seq-or]]
             [quantum.core.macros            :as macros
               :refer [defnt]]
+            [quantum.core.macros.optimization
+              :refer [identity*]]
             [quantum.core.reducers          :as red
               :refer [drop+ take+ reduce
                       #?@(:clj [dropr+ taker+])]]
@@ -575,7 +577,7 @@
   #?(:clj  ([                          x k v]
              (if (nil? x)
                  {k v}
-                 (throw (->ex nil "`assoc` not supported on this object" {:type (type x)}))))))
+                 (throw (->ex :not-supported "`assoc` not supported on this object" {:type (type x)}))))))
 
 (defnt dissoc
   {:imported "clojure.lang.RT/dissoc"}
@@ -584,12 +586,12 @@
   #?(:clj  ([^clojure.lang.IPersistentSet coll x] (.disjoin coll x)))
   #?(:cljs ([^set?                        coll x] (-disjoin coll x)))
            ([^vector?                     coll i]
-             (catvec (subvec coll 0 i) (subvec coll (inc i) (count coll))))
+             (catvec (subvec coll 0 i) (subvec coll (inc (#?(:clj identity* :cljs long) i)) (count coll))))
   #?(:cljs ([^nil?                        coll x] nil))
   #?(:clj  ([                             coll x]
              (if (nil? coll)
                  nil
-                 (throw (->ex nil "`dissoc` not supported on this object" {:type (type coll)}))))))
+                 (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type coll)}))))))
 
 (defnt dissoc!
   ([^transient? coll k  ] (core/dissoc! coll k))
@@ -642,6 +644,7 @@
 
 (defnt last
           ([^string?          coll] (get coll (lasti coll)))
+          ([#{symbol? keyword?} x] (-> x name last))
   #?(:clj ([^reducer?         coll] (taker+ 1 coll)))
           ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^vec?             coll] (#?(:clj .peek :cljs .-peek) coll)) ; because |peek| works on lists too
@@ -728,7 +731,7 @@
   [kv f]
   (if (-> kv count (= 2))
       (f)
-      (throw (->ex nil "`key/val` not supported on collections of count != 2"
+      (throw (->ex :not-supported "`key/val` not supported on collections of count != 2"
                    {:coll kv :ct (count kv)}))))
 
 (defnt ^:private key*
