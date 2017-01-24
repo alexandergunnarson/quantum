@@ -1,29 +1,21 @@
 (ns quantum.test.core.data.validated
   (:require
-    [#?(:clj clojure.test
-        :cljs cljs.test)
-      :refer        [#?@(:clj [deftest is testing])]
-      :refer-macros [deftest is testing]]
+    [clojure.test
+      :refer [deftest is testing]]
     [quantum.core.data.validated :as ns]
     [quantum.core.print          :as pr
-      :refer        [!]]
-    [quantum.core.log            :as log
-      :include-macros true]
+      :refer [!]]
+    [quantum.core.log            :as log]
     [quantum.core.logic
-      :refer        [#?@(:clj [eq?])]
-      :refer-macros [          eq?]]
+      :refer [fn=]]
     [quantum.core.fn
-      :refer        [#?@(:clj [fn->])]
-      :refer-macros [          fn->]]
+      :refer [fn->]]
     [quantum.core.error
-      :refer        [#?@(:clj [catch-all])]
-      :refer-macros [          catch-all]]
+      :refer [catch-all]]
     [quantum.core.validate       :as v
-      :refer        [#?@(:clj [validate defspec])]
-      :refer-macros [          validate defspec]]
+      :refer [validate defspec]]
     [quantum.core.macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]))
+      :refer [defnt]]))
 
 ; s/cat conforms to a map
 

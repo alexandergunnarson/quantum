@@ -11,8 +11,8 @@
     [quantum.core.logic
       :refer        [#?@(:clj [condf])]
       :refer-macros [condf]]
-    [quantum.core.collections.tree :as ns]
-    [quantum.core.collections.zip  :as qzip]))
+    [quantum.core.collections.tree    :as ns]
+    [quantum.core.collections.zippers :as qzip]))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================

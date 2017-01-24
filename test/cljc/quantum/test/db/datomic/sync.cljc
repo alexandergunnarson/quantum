@@ -1,6 +1,8 @@
 (ns quantum.test.db.datomic.sync
   (:require
-    #_[quantum.db.datomic.sync :as ns]
+    [clojure.test
+      #?(:clj :refer :cljs :refer-macros) [deftest is testing]]
+  #_[quantum.db.datomic.sync :as ns]
     [quantum.db.datomic      :as db]
     [quantum.core.resources  :as res]
     [quantum.core.log        :as log]))
