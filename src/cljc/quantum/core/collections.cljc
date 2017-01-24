@@ -521,7 +521,7 @@
 (def unique-conj
   (rfn [ret k v]
     (if (contains? ret k)
-        (throw (->ex nil "Duplicate key not allowed" {:k k}))
+        (throw (->ex "Duplicate key not allowed" {:k k}))
         (assoc ret k v))))
 
 (defn butlast+last
@@ -877,7 +877,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MERGE          }=====================================================
 ;=================================================={      zipmap, zipvec      }=====================================================
-(defn merge-with+
+(defn merge-with-k
   "Like merge-with, but the merging function takes the key being merged
    as the first argument"
    {:attribution  "prismatic.plumbing"
@@ -920,7 +920,7 @@
          (if (nil? v-left)
              left-f
              (let [merged-vs
-                   (merge-with+ f v-left v-right)]
+                   (merge-with-k f v-left v-right)]
                (assoc! left-f k-right merged-vs)))))
       (transient left)
       right)))
@@ -1002,7 +1002,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
-(defn group-merge-with+
+(defn group-merge-with-k+
   {:attribution "Alex Gunnarson"
    :todo ["Can probably make the |merge| process parallel."]
    :in [":a"
@@ -1017,7 +1017,7 @@
                grouped-elems
                (loops/reduce
                  (fn [ret elem]
-                   (merge-with+ merge-with-f ret elem))
+                   (merge-with-k merge-with-f ret elem))
                  (first grouped-elems)
                  (rest  grouped-elems))))]
     (->> coll
@@ -1677,7 +1677,7 @@
           (splice-or *flow = 1 -1) ; TODO fix
           (update allocated (-> sorted last first) (fn1 - *flow))
           (-> *flow num/abs (> 1))
-          (throw (->ex nil "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
+          (throw (->ex "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
 
 #?(:cljs
 (defn jsx->clj
