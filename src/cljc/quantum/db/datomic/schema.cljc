@@ -3,6 +3,8 @@
    Like the forthcoming `posh.lib.schemas`."
   (:require [datascript.core          :as ds]
     #?(:clj [datomic.api              :as dat])
+            [quantum.core.fn
+              :refer [fn->]]
             [quantum.core.collections :as coll
               :refer [dissoc-in merge-deep]]
             [quantum.core.data.set    :as set]
@@ -138,7 +140,7 @@
   ([{:keys [conn schemas]}]
     (let [conn       (or conn @dbc/conn*)
           _          (validate conn dbc/conn?)
-          schemas-tx (->> (or schemas (vals @dv/db-schemas))
+          schemas-tx (->> (or schemas (->> @dv/spec-infos (map (fn-> val :schema))))
                           (mapv #(assoc % :db/id (dbc/tempid (dbc/->db conn) :db.part/db))))
           tx-report  @(dat/transact conn schemas-tx)
           tx-id      (-> tx-report :tx-data ^datomic.Datom first (.tx))
