@@ -162,14 +162,14 @@
               (if (= type :folder)
                   {:body meta-}
                   {:query-params (when (false? deduplication?) {:suppress "deduplication"})
-                   :multipart
+                   :multipart ; TODO CLJS doesn't handle multipart the same way
                     [{:name      "metadata"
                       :mime-type "application/json"
                       :encoding  "UTF-8"
                       :content   (conv/->json meta-)}
                      {:name      "content" :filename node-name
                       :mime-type "application/octet-stream"
-                      :content   (conv/->input-stream data)}]})))))))
+                      :content   (#?(:clj conv/->input-stream :cljs identity) data)}]})))))))
 
 ; ; The ice-cast stream doesn't include a Content-Length header
 ; ; (because you know, it's a stream), so this was causing libfxplugins
