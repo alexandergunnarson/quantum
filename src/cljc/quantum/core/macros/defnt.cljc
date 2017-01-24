@@ -90,7 +90,7 @@
                      (into #{}))
       string? (fn-> symbol hash-set)
       ;nil?    (constantly #{'Object})
-      #(throw (->ex nil "Not a type hint." %)))))
+      #(throw (->ex "Not a type hint." %)))))
 
 (defn hint-arglist-with
   [arglist hints]
@@ -112,7 +112,7 @@
     (condf body
       (fn-> first vector?) (fn->> defnt-remove-hints vector)
       (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
-      #(throw (->ex nil "Unexpected form when trying to parse arities." %)))})
+      #(throw (->ex "Unexpected form when trying to parse arities." %)))})
 
 (defn defnt-arglists
   {:out '[[^string? x] [^vector? x]]}
@@ -121,7 +121,7 @@
     (condf body
       (fn-> first vector?) (fn->> first vector)
       (fn-> first seq?   ) (fn->> (mapv first))
-      #(throw (->ex nil "Unexpected form when trying to parse arglists." %)))})
+      #(throw (->ex "Unexpected form when trying to parse arglists." %)))})
 
 (defn defnt-gen-protocol-names
   "Generates |defnt| protocol names"
@@ -201,7 +201,7 @@
                        (cond
                          (= type-hint #{:else}); because expanded
                            (whenc (get available-default-types n) empty?
-                             (throw (->ex nil (str "Available default types for :else type hint are empty for position " n))))
+                             (throw (->ex (str "Available default types for :else type hint are empty for position " n))))
                          :else type-hint)))))))
 
 (defn defnt-gen-interface-expanded
@@ -316,7 +316,7 @@
             (fn [first-hints-set]
               (let [hints-set-ensured (ensure-set first-hints-set)]
                 (if (contains? hints-set-ensured first-hint)
-                    (throw (->ex nil "Not allowed same arity and same first hint:" arglist))
+                    (throw (->ex "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
 
 
@@ -419,7 +419,7 @@
     (concat (list* 'do @externs)
       [(when (= lang :clj) gen-interface-def)
        (when-not strict?
-         (list* 'declare genned-protocol-method-names)) ; For recursion
+         (list* 'declare (cons primary-protocol-sym genned-protocol-method-names))) ; For recursion
        (when (= lang :clj) (list 'declare reified-sym)) ; For recursion
        (when (= lang :clj) helper-macro-def)
        (when (= lang :clj) reify-def)
