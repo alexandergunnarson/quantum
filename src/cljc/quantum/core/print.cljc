@@ -69,6 +69,10 @@
     (doseq [obj-n (cons obj objs)]
       (! obj-n))))
 
+(defn ppr-str
+  "Like `pr-str`, but pretty-prints."
+  [x] (with-out-str (! x)))
+
 #?(:clj (reset! debug/pretty-printer !))
 
 (def suppress (partial (constantly nil)))
