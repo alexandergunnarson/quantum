@@ -68,7 +68,7 @@
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
                  :cljs [contains? base-record]) k)
-    (throw (->ex nil "Key is not present in ValidatedMap's spec" {:class c :k k :keyspec ks}))))
+    (throw (->ex "Key is not present in ValidatedMap's spec" {:class c :k k :keyspec ks}))))
 
 #?(:clj
 (defn hash-classname [cname]
@@ -230,7 +230,9 @@
 
 ; ===== TOP-LEVEL MACROS ===== ;
 
-(defonce db-schemas (atom {}))
+(defonce spec-infos (atom {}))
+
+(defrecord SpecInfo [constructor conformer invariant req-all un-all un-> schema])
 
 #?(:clj
 (defmacro declare-spec [sym]
@@ -255,8 +257,9 @@
                                                keyword? (fn-> namespace nil?))
                                        (fn1 dbify-keyword ns-name-str)))
           conformer-sym (gensym "conformer")
+          constructor-sym (symbol (str "->" sym))
           schema        (when db-mode? (spec->schema sym-0 spec))
-          code `(do ~(when conformer `(def ~conformer-sym ~conformer))
+          code `(do (def ~conformer-sym ~conformer)
                     (deftype-compatible ~(with-meta sym {:no-factory? true}) ~'[v]
                       {~'?Object
                         {~'hash     ([_#] (.hashCode ~'v))
@@ -268,11 +271,13 @@
                        quantum.core.core/IValue
                          {~'get     ([_#] ~'v)
                           ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
-                                                            (v/validate ~spec-name))))}})
+                                                           (v/validate ~spec-name))))}})
                     (defspec ~spec-name (v/or* (fn [m#] (instance? ~sym m#)) ~spec))
-                    ~(when db-mode?  `(swap! db-schemas assoc ~spec-name ~schema))
-                    (defn ~(symbol (str "->" sym)) [v#]
-                      (new ~sym (v/validate v# ~spec-name))))]
+                    (defn ~constructor-sym [v#]
+                      (new ~sym (v/validate v# ~spec-name)))
+                    (swap! spec-infos assoc ~spec-name
+                      (map->SpecInfo {:conformer ~conformer-sym :schema ~schema :constructor ~constructor-sym}))
+                    ~sym)]
       (prl ::debug db-mode? sym-0 sym spec-name spec schema code)
       code))))
 
@@ -351,6 +356,7 @@
           invariant-spec-name  (keyword ns-name-str (name (gensym "invariant")))
           spec-sym             (gensym "keyspec")
           spec-base            (gensym "spec-base")
+          constructor-sym      (symbol (str "->" sym))
           type-hash            (hash-classname sym)
           k-gen                (gensym "k")
           v-gen                (gensym "v")
@@ -364,7 +370,7 @@
           (defrecord+ ~all-mod-record-sym ~all-mod-ks-syms)
           (defrecord+ ~all-record-sym     ~(into all-mod-ks-syms special-ks-syms))
           ~(when invariant `(defspec ~invariant-spec-name ~invariant))
-          ~(when conformer `(def ~conformer-sym ~conformer))
+          (def ~conformer-sym ~conformer)
           (def ~required-keys-record (~(symbol (str "map->" req-record-sym    )) ~(merge (zipmap req-ks     req-ks    ) (zipmap special-ks special-ks))))
           (def ~un-keys-record       (~(symbol (str "map->" un-record-sym     )) ~(zipmap un-ks      un-ks)))
           (def ~all-mod-keys-record  (~(symbol (str "map->" all-mod-record-sym)) ~(zipmap all-mod-ks all-mod-ks)))
@@ -402,7 +408,7 @@
                 ~'conj        ([_# [k0# v0#]]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
-                                                 (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
+                                                 (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
@@ -411,7 +417,7 @@
                {~'assoc       ([_# k0# v0#]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
-                                                 (throw (->ex nil "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
+                                                 (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
@@ -422,8 +428,8 @@
                                 (let [~k-gen k0#]
                                   (when (#?@(:clj  [.containsKey ~required-keys-record]
                                              :cljs [contains? ~required-keys-record]) ~k-gen)
-                                    (throw (->ex nil "Key is in ValidatedMap's required keys and cannot be dissoced"
-                                                     {:class ~sym :k ~k-gen :keyspec ~spec-sym})))
+                                    (throw (->ex "Key is in ValidatedMap's required keys and cannot be dissoced"
+                                                 {:class ~sym :k ~k-gen :keyspec ~spec-sym})))
                                    (-> (new ~sym (~(if-cljs &env '-dissoc '.without) ~'v ~k-gen))
                                        ~(if-not conformer `identity* conformer-sym)
                                        ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))
@@ -466,14 +472,19 @@
              quantum.core.core/IValue
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
-          (defn ~(symbol (str "->" sym)) [m#] (new ~qualified-sym (~create m#)))
+          (defn ~constructor-sym [m#] (new ~qualified-sym (~create m#)))
           (defspec ~spec-name (v/conformer
                                 (fn [x#] (if (instance? ~qualified-sym x#)
                                              x#
                                              (new ~qualified-sym (~create x#))
                                              #_(catch-all (new ~qualified-sym (~create x#))
                                                e# ~invalid))))) ; TODO avoid semi-expensive try-catch here by using conformers all the way down the line
-          ~(when db-mode? `(swap! db-schemas assoc ~spec-name ~schema))
+          (swap! spec-infos assoc ~spec-name
+            (map->SpecInfo {:conformer ~conformer-sym :invariant ~invariant
+                            :schema    ~schema :constructor ~constructor-sym
+                            :req-all   ~required-keys-record
+                            :un-all    ~un-keys-record
+                            :un->      ~un-ks-to-ks}))
           ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
      (prl ::debug code)
      code)))))
