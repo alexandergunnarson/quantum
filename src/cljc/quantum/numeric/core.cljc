@@ -5,15 +5,15 @@
   (:require
     [quantum.core.numeric      :as num
       :refer [*+* *-* *** *div* mod
-              sqrt pow *' +' exactly]]
+              sqrt pow *' +' exactly]
+      #?@(:cljs [:refer-macros [*']])]
     [quantum.core.data.binary  :as bin
       :refer [>>]]
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
       :refer [fn-> <- fn& fn&2]]
-    [quantum.core.log          :as log
-      :include-macros true]
+    [quantum.core.log          :as log]
     [quantum.core.collections  :as coll
       :refer [map+ range+ filter+ mapcat+
               reduce join count kmap]]
