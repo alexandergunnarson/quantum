@@ -94,7 +94,7 @@
                      :else             (concat (list ?times ?sleep) args))]
     (go (try-times (or times 3) (or sleep 500)
           (when (nil? (apply put! args-f))
-            (throw (->ex nil "WebSocket apparently not open for message")))))))
+            (throw (->ex "WebSocket apparently not open for message")))))))
 
 (defrecord
   ^{:doc "A WebSocket-channel abstraction of Sente's functionality.

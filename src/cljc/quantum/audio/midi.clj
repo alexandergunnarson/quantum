@@ -464,7 +464,7 @@
       ; TODO lazily schedule measures
       (doseqi [line measure-ops i-line]
         (doseq [[opcode chan & args] line]
-          (when @stop? (throw (->ex nil "Stopped" {::stopped? true})))
+          (when @stop? (throw (->ex "Stopped" {::stopped? true})))
           (let [at-f (or (@at i-line) start-time)
                 midi-timestamp (if scheduler 0 at-f)
                 args (concat args [midi-timestamp])

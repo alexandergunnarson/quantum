@@ -425,7 +425,7 @@
              (drop-while #(< (second %) random-percent))
              first
              first)
-        (throw (->ex nil "element distribution requires percent clauses sum to 100")))))
+        (throw (->ex "element distribution requires percent clauses sum to 100")))))
 
 (defn probability? [p] (<= 0 p 1))
 

@@ -1,28 +1,21 @@
 (ns quantum.nlp.core
-           (:refer-clojure :exclude [assert get])
-           (:require
-             [quantum.core.logic
-               :refer        [#?@(:clj [fn-or])]
-               :refer-macros [          fn-or]]
-             [quantum.core.fn
-               :refer        [#?@(:clj [<- fn1])]
-               :refer-macros [          <- fn1]]
-             [quantum.core.collections :as coll
-               :refer [map+ remove+
-                       mutable eq! aset-in!
-                       #?@(:clj [kmap aget-in aget-in*
-                                 ifor get reducei])]
-               :refer-macros [   kmap aget-in aget-in*
-                                 ifor get reducei]]
-             [quantum.core.error
-               :refer        [->ex]]
-             [quantum.core.numeric :as num
-               :refer        [#?@(:clj [+* inc*])]
-               :refer-macros [inc* +*]]
-             [quantum.core.string   :as str]
-             [quantum.core.validate :as v
-               :refer        [#?(:clj validate)]
-               :refer-macros [        validate]])
+  (:refer-clojure :exclude [assert get])
+  (:require
+    [quantum.core.logic
+      :refer [fn-or]]
+    [quantum.core.fn
+      :refer [<- fn1]]
+    [quantum.core.collections :as coll
+      :refer [map+ remove+
+              mutable eq! aset-in!
+              kmap aget-in aget-in* ifor get reducei]]
+    [quantum.core.error
+      :refer [->ex]]
+    [quantum.core.numeric :as num
+      :refer [+* inc*]]
+    [quantum.core.string   :as str]
+    [quantum.core.validate :as v
+      :refer [validate]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
 ; TO EXPLORE
@@ -54,9 +47,7 @@
                        #{\l}                      \4
                        #{\m \n}                   \5
                        #{\r}                      \6
-                       (throw (->ex nil
-                                    "Not a soundex-able word"
-                                    (kmap w))))))
+                       (throw (->ex "Not a soundex-able word" (kmap w))))))
        (coll/distinct-by+ identity (fn [x y] (and (= x y) (str/numeric? x))))
        (remove+ (fn1 = \-))
        (reducei (fn [^StringBuilder s c i]

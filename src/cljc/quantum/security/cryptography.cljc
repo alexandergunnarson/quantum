@@ -18,11 +18,10 @@
     [quantum.core.collections      :as coll
       :refer [kmap nnil?]]
     [quantum.core.error            :as err
-      :refer [->ex throw-unless]]
+      :refer [->ex throw-unless TODO]]
     [quantum.core.fn               :as fn
       :refer [fn-> <-]]
-    [quantum.core.log :as log
-      :include-macros true]
+    [quantum.core.log :as log]
     [quantum.core.logic            :as logic
       :refer [whenp condpc splice-or]]
     [quantum.core.macros           :as macros
@@ -137,13 +136,15 @@
     :base64        (decode64 obj)
     :base64-string (let [^"[B" decoded (decode64 obj)]
                      (String. decoded StandardCharsets/ISO_8859_1))
-    (throw (->ex nil "Unrecognized codec" k)))))
+    (throw (->ex "Unrecognized codec" k)))))
+
+#?(:cljs (defn decode [& args] (TODO)))
 
 #?(:clj
 (defn ^"[B" decode-int [k obj]
   (condp = k
     :base64 (decode64-int obj)
-    (throw (->ex nil "Unrecognized codec" k)))))
+    (throw (->ex "Unrecognized codec" k)))))
 
 ; (:clj (defalias decode bt/decode))
 
@@ -178,7 +179,7 @@
       [:base32        (encode32 obj)
        :base64        (encode64 obj)])
        :base64-string (encode64-string obj)
-       (throw (->ex nil "Unrecognized codec" k))))
+       (throw (->ex "Unrecognized codec" k))))
 
 ; __________________________________________
 ; =========== HASH / MSG DIGEST ============
@@ -445,10 +446,10 @@
             (condp = type
               :encrypt true
               :decrypt false
-              (throw (->ex nil "Invalid encryption param" type)))
+              (throw (->ex "Invalid encryption param" type)))
           _ (when (= type :decrypt)
               (throw-unless (and key- tweak)
-                (->ex nil "Missing required parameters:" {:key key- :tweak tweak})))]
+                (->ex "Missing required parameters:" {:key key- :tweak tweak})))]
       encrypt-param)))
 
 (def sensitivity-map

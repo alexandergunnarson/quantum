@@ -59,7 +59,7 @@
                 {:get-fn   (or get-fn-0   (fn [m1 k1   ] (.get         ^ConcurrentHashMap m1 k1   )))
                  :assoc-fn (or assoc-fn-0 (fn [m1 k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1)))}
               :else
-                (throw (->ex nil "No get-fn or assoc-fn defined for" m)))]
+                (throw (->ex "No get-fn or assoc-fn defined for" m)))]
       {:m m
        :f (fn
             ([                  ] (memoize-form m f get-fn assoc-fn first? n-args false                 ))

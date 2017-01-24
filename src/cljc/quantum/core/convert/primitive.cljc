@@ -114,7 +114,7 @@
   ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedCharCast x))
   ([^string?   x] (if (->> x .length (= 1))
                       (.charAt x 0)
-                      (throw (->ex nil "Cannot cast non-singleton string to char." x))))))
+                      (throw (->ex "Cannot cast non-singleton string to char." x))))))
 ;_____________________________________________________________________
 ;==================={           SHORT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

@@ -37,35 +37,26 @@
      conj! assoc! dissoc! disj!
      boolean?])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [quantum.core.data.map         :as map
-      :refer        [split-at]]
+      :refer [split-at]]
     [quantum.core.data.vector      :as vec
-      :refer        [subvec+]]
+      :refer [subvec+]]
     [quantum.core.collections.base :as base
-      :refer        [#?@(:clj [kmap])]
-      :refer-macros [          kmap]]
+      :refer [kmap]]
     [quantum.core.collections.core :as coll
-      :refer        [reverse key val
-                     #?@(:clj [first rest get getr count lasti index-of last-index-of empty?])]
-      :refer-macros [          first rest get getr count lasti index-of last-index-of empty?]]
+      :refer [reverse key val first rest get getr count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
-      :refer        [->ex]]
+      :refer [->ex]]
     [quantum.core.fn               :as fn]
     [quantum.core.logic
-      :refer        [#?@(:clj [fn-not])]
-      :refer-macros [          fn-not]]
+      :refer [fn-not]]
     [quantum.core.macros           :as macros
-      :refer        [#?@(:clj [defnt])]
-      :refer-macros [          defnt]]
+      :refer [defnt]]
     [quantum.core.reducers         :as red
-      :refer        [map+
-                     #?@(:clj [reduce])]
-      :refer-macros [          reduce]]
+      :refer [map+ reduce]]
     [quantum.core.vars             :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
+      :refer [defalias]]
     [quantum.core.type
       :refer [indexed?]]
     [quantum.core.collections.map-filter

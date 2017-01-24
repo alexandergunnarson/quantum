@@ -71,7 +71,7 @@
    :cljs
  [([x] (if (satisfies? component/Lifecycle x)
            (component/stop x)
-           (throw (->ex nil "Cleanup not implemented for type" {:type (type x)}))))]))
+           (throw (->ex "Cleanup not implemented for type" {:type (type x)}))))]))
 
 (defn with-cleanup [obj cleanup-seq]
   (swap! cleanup-seq conj #(close! obj))

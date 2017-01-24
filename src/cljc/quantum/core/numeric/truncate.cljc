@@ -53,7 +53,7 @@
 ; http://stackoverflow.com/questions/2808535/round-a-double-to-2-decimal-places
 #_(:clj
 (defn ^double round [^double value ^long places]
-  (when (neg? places) (throw (->ex nil "|places| must be positive" places)))
+  (when (neg? places) (throw (->ex "|places| must be positive" places)))
 
   (-> value
       (java.math.BigDecimal.)

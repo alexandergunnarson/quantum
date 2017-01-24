@@ -85,7 +85,7 @@
           (and (hash-set? s0) (hash-set? s1))
             (#?(:clj  seqspert.hash-set/parallel-splice-hash-sets
                 :cljs seqspert.hash-set/sequential-splice-hash-sets) s0 s1)
-          :else (throw (->ex nil "Could not perform parallel union; can try sequential."))))
+          :else (throw (->ex "Could not perform parallel union; can try sequential."))))
   ([s0 s1 & ss]
     (reduce punion (punion s0 s1) ss))))
 

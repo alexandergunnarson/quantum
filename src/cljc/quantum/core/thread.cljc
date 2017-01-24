@@ -12,7 +12,7 @@
                       [com.stuartsierra.component              :as component]
                       [quantum.core.string                     :as str             ]
                       [quantum.core.collections                :as coll
-                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in+ nnil?]]
+                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in nnil?]]
                       [quantum.core.numeric                    :as num]
                       #?(:clj [clojure.core.async :as casync])
                       [quantum.core.async                      :as async
@@ -58,7 +58,7 @@
 (defn add-child-proc! [parent id] ; really should lock reg-threads and reg
   {:pre [(throw-unless
            (contains? @reg parent)
-           (->ex nil "Parent thread does not exist." parent))]}
+           (->ex "Parent thread does not exist." parent))]}
   (log/pr ::debug "Adding child proc" id "to parent" parent)
   ; Add to tree
   #_(let [reg-view      @reg
@@ -92,8 +92,8 @@
         (log/pr ::debug "DEREGISTERING THREAD" id)
         (swap! reg
           (fn-> (dissoc id)
-                (whenp parent (fn1 dissoc-in+ [parent :children id]))))
-        (swap! reg-tree dissoc-in+ [parents id])))
+                (whenp parent (fn1 dissoc-in [parent :children id]))))
+        (swap! reg-tree dissoc-in [parents id])))
       (log/pr ::warn "Attempted to deregister nonexistent thread:" id)))
 
 #?(:clj (def thread-num (.. Runtime getRuntime availableProcessors)))
@@ -131,7 +131,7 @@
                      (deregister-thread! ~id)
                      (log/pr :user "Thread" ~id "finished running.")))))]
        (.start thread#)
-       (swap! reg coll/assocs-in+
+       (swap! reg coll/assocs-in
           [~id :thread] thread#
           [~id :handlers] ~handlers)
        result#)))
@@ -211,7 +211,7 @@
               (catch [:type :nonexistent-thread] {:keys [type]}
                 (when-not (= type :nonexistent-thread) (throw+))))
             (if traversal-keys
-                (swap! reg-tree dissoc-in+ [traversal-keys id])
+                (swap! reg-tree dissoc-in [traversal-keys id])
                 (swap! reg-tree dissoc id))
           ))
         @reg-tree))
@@ -422,10 +422,10 @@
           id#              (:id          ~opts-f)
           type#        (or (:type        ~opts-f) #_:fiber :thread) ; Heavyweightness should be explicit
           _#           (throw-unless (in? type# #{#_:fiber :thread})
-                         (->ex nil ":type must be in #{:fiber :thread}" type#))
+                         (->ex ":type must be in #{:fiber :thread}" type#))
           ret#         (or (:ret         ~opts-f) :chan)
           _#           (throw-unless (in? ret# #{:chan :future})
-                         (->ex nil ":ret must be in #{:chan :future}" ret#))
+                         (->ex ":ret must be in #{:chan :future}" ret#))
           parent#          (:parent      ~opts-f)
           name#            (:name        ~opts-f)
           cleanup-seq#     (:cleanup-seq ~opts-f)
@@ -451,7 +451,7 @@
                              (fn [] ~@body)
                              #_(pulsar/suspendable! (fn [] ~@body))
                              (fn [] ~@body))
-          ~opts-f    (coll/assocs-in+         ~opts-f
+          ~opts-f    (coll/assocs-in          ~opts-f
                        [:close-reqs         ] ~close-reqs
                        [:id                 ] ~proc-id
                        [:handlers :close-req] ~close-req-call
@@ -515,7 +515,7 @@
    `(let [opts-f# ~opts
           ~close-reqs-f   (or (:close-reqs opts-f#) (async/chan :queue))
           ~close-req-call (wrap-delay (-> opts-f# :handlers :close-req))]
-      (async (coll/assocs-in+ ~opts
+      (async (coll/assocs-in ~opts
                 [:close-reqs         ] ~close-reqs-f
                 [:handlers :close-req] ~close-req-call)
         (try

@@ -114,7 +114,7 @@
   ([^integer? y]
     ; 46 BC is 708 AUC
     (if (= y 0)
-        (throw (->ex nil "Year does not exist."))
+        (throw (->ex "Year does not exist."))
         (or (contains? strange-leap-years y)
             (and (core/> y first-normal-leap-year)
                  (num/evenly-divisible-by? y 4)
@@ -176,7 +176,7 @@
   [y]
   (if-let [i (year->nanos-arr-index y)]
     (aget nanos-at-beg-of-year i)
-    (do (throw-unless (pos? y) (->ex nil "Year not valid" y))
+    (do (throw-unless (pos? y) (->ex "Year not valid" y))
       (let [last-i (-> nanos-at-beg-of-year alength dec)
             last-year (nanos-arr-index->year last-i)]
         (core/+ (aget nanos-at-beg-of-year last-i)

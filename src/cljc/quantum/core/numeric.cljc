@@ -314,7 +314,7 @@
                ~@body)
       :nils  (binding [*+* nils+  *-* nils-  *** nils*  *div* nils-div ]
                ~@body)
-      (throw (->ex nil "Numeric operation not recognized" {:op k#}))))))
+      (throw (->ex "Numeric operation not recognized" {:op k#}))))))
 
 (defn whole-number? [n]
   (= n (trunc/floor n))) ; TODO use ==
@@ -393,7 +393,7 @@
     :dollar
       (->> n display-num (str "$"))
     ;:accounting
-    (throw (->ex nil "Unrecognized format" type))))
+    (throw (->ex "Unrecognized format" type))))
 
 (defn percentage-of [of total-n]
   (-> of (op// total-n) double (c/* 100) display-num (str "%"))) ; TODO use *-2

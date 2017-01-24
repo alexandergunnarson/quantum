@@ -83,7 +83,7 @@
              :cljs (let [last-index (-> s count unchecked-dec long)]
                      (cond
                        (> last-index js/Number.MAX_SAFE_INTEGER)
-                         (throw (->ex nil "String too large to reduce over (at least, efficiently)."))
+                         (throw (->ex "String too large to reduce over (at least, efficiently)."))
                        (= last-index -1)
                          (f init nil)
                        :else

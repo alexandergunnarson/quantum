@@ -9,15 +9,12 @@
     [quantum.core.error               :as err
       :refer [->ex]]
     [quantum.core.fn                  :as fn
-      :refer        [#?@(:clj [doto->>])]
-      :refer-macros [          doto->>]]
-    [quantum.core.log                 :as log
-      :include-macros true]
+      :refer [doto->>]]
+    [quantum.core.log                 :as log]
     [quantum.core.logic               :as logic
-      :refer        [#?@(:clj [fn-or whenf1])]
-      :refer-macros [          fn-or whenf1]]
+      :refer [fn-or whenf1]]
     [quantum.core.macros.core         :as cmacros
-      :refer [#?(:clj if-cljs)]]
+      :refer [if-cljs]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]))
 
@@ -64,7 +61,7 @@
 #?(:clj
 (defmacro fn+*
   ([sym doc- meta- arglist body [unk & rest-unk]]
-    (throw (->ex nil "Should not use |fn+*| yet"))
+    (throw (->ex "Should not use |fn+*| yet"))
     (if unk
         (cond
           (string? unk)

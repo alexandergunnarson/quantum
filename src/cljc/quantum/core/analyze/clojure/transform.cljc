@@ -1,22 +1,18 @@
 (ns quantum.core.analyze.clojure.transform
   (:refer-clojure :exclude [destructure])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )                  :as core]
+    [clojure.core                            :as core]
     [quantum.core.analyze.clojure.predicates
       :refer [if-statement? cond-statement?
               when-statement?]]
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
-      :refer        [#?@(:clj [fn-> fn->>])]
-      :refer-macros [          fn-> fn->>]]
+      :refer [fn-> fn->>]]
     [quantum.core.logic                      :as logic
-      :refer        [#?@(:clj [fn-or ifn1 condf1])]
-      :refer-macros [          fn-or ifn1 condf1]]
+      :refer [fn-or ifn1 condf1]]
     [quantum.core.vars                       :as var
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]))
+      :refer [defalias]]))
 
 (defn unhint [x]
   (with-meta x (-> x meta (dissoc :tag))))  ; TODO update-meta
@@ -75,7 +71,7 @@
                                                    true)
                                    (= firstb :as) (pb ret (second bs) gvec)
                                    :else (if seen-rest?
-                                           (throw (->ex nil "Unsupported binding form, only :as can follow & parameter"))
+                                           (throw (->ex "Unsupported binding form, only :as can follow & parameter"))
                                            (recur (pb ret firstb (core/list `nth gvec n nil))
                                                   (core/inc n)
                                                   (next bs)
@@ -113,7 +109,7 @@
                       (core/keyword? b) (-> bvec (conj (symbol (name b))) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
-                      :else (throw (->ex nil (core/str "Unsupported binding form: " b))))))
+                      :else (throw (->ex (core/str "Unsupported binding form: " b))))))
          process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
         (if (every? core/symbol? (map first bents))
           bindings

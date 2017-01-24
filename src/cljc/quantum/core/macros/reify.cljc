@@ -56,7 +56,7 @@
         _ (when (nempty? duplicate-methods)
             (log/pr        :user "Duplicate methods for" sym ":")
             (log/ppr-hints :user duplicate-methods)
-            (throw (->ex nil "Duplicate methods.")))]
+            (throw (->ex "Duplicate methods")))]
     reify-body))
 
 (defn gen-reify-body

@@ -48,9 +48,9 @@
 
 (defn ->ex
   "Creates an exception."
-  ([type]          (ex-info (name type) (->err type)))
-  ([type msg]      (ex-info msg  (->err type msg)))
-  ([type msg objs] (ex-info msg  (->err type msg objs))))
+  ([type]          (ex-info (name type) (->err type type)))
+  ([msg objs]      (ex-info msg         (->err nil  msg)))
+  ([type msg objs] (ex-info msg         (->err type msg objs))))
 
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."

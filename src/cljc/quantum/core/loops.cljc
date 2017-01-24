@@ -186,7 +186,7 @@
                  nil)
            nil
            ~coll))
-    (throw (->ex nil (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
+    (throw (->ex (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
 
 #?(:clj
 (defmacro doseq-

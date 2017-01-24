@@ -96,7 +96,7 @@
         '[c]   `(N:c   ~D ~@pred-vals)
         '[w]   `(N:w   ~D ~@pred-vals)
         '[ŵ]   `(N:w   ~D ~@pred-vals nil)
-        (throw (->ex nil "No matching predicate pairs:" pred-syms)))))))
+        (throw (->ex "No matching predicate pairs:" pred-syms)))))))
 
 #?(:clj
 (defmacro N [D & args] ; TODO code pattern
@@ -116,7 +116,7 @@
             frequencies))
   (^{:doc "the number of documents in doc collection @D labeled as @c"}
    [D c] (or ((Nd:c D) c)
-             (throw (->ex nil "Class does not exist in doc collection" c)))))
+             (throw (->ex "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:c {}
   "Total number of occurrences of words in doc collection @D of class @c."
@@ -127,7 +127,7 @@
             (map+ vector)
             (reduce (partial merge-with +) {})))
   ([D c] (or ((Nt:c D) c)
-             (throw (->ex nil "Class does not exist in doc collection" c)))))
+             (throw (->ex "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:w+d {}
   "word @w :: Number of occurrences of @w in document @d"
@@ -147,7 +147,7 @@
             (reduce (partial merge-with +) {})))
   (^{:doc "The number of documents in corpus @C in which @w occurs"}
    [D w] (or ((Nd:w D) w)
-             (throw (->ex nil "Word does not exist" w))))
+             (throw (->ex "Word does not exist" w))))
   (^{:doc "The number of documents in corpus @C in which @w does not occur"}
    [D ŵ _] (- (N D) (Nd:w D ŵ))))
 

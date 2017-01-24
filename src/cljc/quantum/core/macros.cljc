@@ -13,8 +13,7 @@
       :refer [->ex]]
     [quantum.core.fn           :as fn
       :refer [fn->]]
-    [quantum.core.log          :as log
-      :include-macros true]
+    [quantum.core.log          :as log]
     [quantum.core.logic        :as logic
       :refer [fn-and whenc whenf1]]
     [quantum.core.collections.base
@@ -181,7 +180,7 @@
 ;     keyword?        default-hint
 ;     set?            default-hint
 ;     map?            default-hint
-;     :else           (constantly (->ex nil "Don't know how to make hint from" x)))))
+;     :else           (constantly (->ex "Don't know how to make hint from" x)))))
 
 
 ; #?(:clj (defalias quote+ deps/quote+))
@@ -223,7 +222,7 @@
     (reduce emit-other (emit-inner body-expr inner-group) other-groups)))
 
 (defn do-mod [mod-pairs cont & {:keys [skip stop]}]
-  (let [err (fn [& msg] (throw (->ex nil (apply str msg))))]
+  (let [err (fn [& msg] (throw (->ex (apply str msg))))]
     (reduce
       (fn [cont [k v]]
         (cond

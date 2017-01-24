@@ -30,7 +30,7 @@
   (if-cljs env
     (println "/* CLJS quantum.measure.* graph algorithm is broken — causes infinite loop. */")
     (do (println "/* CLJ quantum.measure.* graph algorithm */")
-        (throw-unless (contains? #{:map :code} emit-type) (->ex nil "Emit type not recognized" emit-type))
+        (throw-unless (contains? #{:map :code} emit-type) (->ex "Emit type not recognized" emit-type))
         (let [num-cast (if-cljs env double identity)
               units-graph
                 (->> (core/for [[unit [[rate conv-unit] & [aliases]]] unit-pairs]

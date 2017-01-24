@@ -299,7 +299,7 @@
                 (fjjoin rt))))))))
 
 (defn cat+
-  ([] (throw (->ex nil "Not supported"))) ; TODO fix this arity that CLJS is complaining about
+  ([] (throw (->ex :not-supported))) ; TODO fix this arity that CLJS is complaining about
   ([f] (core/cat f))
   ([f coll] (folder coll (core/cat f))))
 

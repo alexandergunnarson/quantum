@@ -42,7 +42,7 @@
   (let [^Fn camelcase-if-needed
           (fn [s-n]
             (if (camel-lang?)
-                (strf/camelcase s-n (if upper? nil :lower))
+                (strf/->camel-case s-n (if upper? nil :lower))
                 s-n))
         ^Fn spear-case-if-needed
           (fn [s-n]
@@ -742,7 +742,7 @@
    ([:else obj]
      (if (nil? obj)
          "null"
-         (throw (->ex (type obj) ["Unrecognized form:" obj])))))
+         (throw (->ex (type obj) "Unrecognized form" {:obj obj})))))
 
 (defn ^String eval-form [obj]
   (println "Evaluating" obj "class" (type obj))

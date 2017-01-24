@@ -73,7 +73,7 @@
       (defn fold [f x] (TODO))
       (defn collect [^Dataset x] (.collect x)))
   (do (defn- requires-spark>=2 [& _]
-        (throw (->ex nil "Requires Spark >= 2.0" (kmap version))))
+        (throw (->ex "Requires Spark >= 2.0" (kmap version))))
 
       (doseq [sym '#{map filter group-by take flat-map fold collect}]
         (intern *ns* sym requires-spark>=2)))))

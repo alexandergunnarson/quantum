@@ -73,7 +73,7 @@
   (let [{:as result :keys [err out]} (proc/exec! "mediainfo" file)]
     (log/pr ::debug "Path:" file "Mediainfo result:" result)
     (if (nempty? err)
-        (throw (->ex nil "Mediainfo error" {:mediainfo-message err})))
+        (throw (->ex "Mediainfo error" {:mediainfo-message err})))
         (-> out parse-media-metadata))))
 
 (def media-exts #{:mp4})
