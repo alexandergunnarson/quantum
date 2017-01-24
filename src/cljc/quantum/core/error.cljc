@@ -4,10 +4,12 @@
   quantum.core.error
   (:require
     [clojure.string                :as str]
+    [slingshot.slingshot           :as try]
     [quantum.core.collections.base :as cbase
       :refer [kmap]]
     [quantum.core.data.map         :as map]
-    [slingshot.slingshot           :as try]
+    [quantum.core.fn
+      :refer [fn$]]
     [quantum.core.macros.core      :as cmacros
       :refer [if-cljs]]
     [quantum.core.log              :as log]
@@ -22,10 +24,11 @@
 
 #?(:clj
 (defmacro catch-all
-  "Cross-platform try/catch/finally."
+  "Cross-platform try/catch/finally.
+
+   Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
   {:from 'taoensso.truss.impl/catching
    :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
-  ; TODO js/Error instead of :default as temp workaround for http://goo.gl/UW7773
   ([try-expr                     ] `(catch-all ~try-expr ~'_ nil))
   ([try-expr error-sym catch-expr]
    `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
@@ -33,8 +36,7 @@
    `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
 
 
-(def error?  (partial instance? #?(:clj  Throwable
-                                   :cljs js/Error)))
+(def error? (fn$ instance? #?(:clj Throwable :cljs js/Error)))
 
 (defrecord Err [type msg objs])
 
@@ -49,7 +51,7 @@
 (defn ->ex
   "Creates an exception."
   ([type]          (ex-info (name type) (->err type type)))
-  ([msg objs]      (ex-info msg         (->err nil  msg)))
+  ([msg objs]      (ex-info (str msg)   (->err msg  msg)))
   ([type msg objs] (ex-info msg         (->err type msg objs))))
 
 (defn ex->map

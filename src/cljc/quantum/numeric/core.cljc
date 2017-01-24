@@ -5,7 +5,7 @@
   (:require
     [quantum.core.numeric      :as num
       :refer [*+* *-* *** *div* mod
-              sqrt pow *' +' exactly]
+              sqrt pow #?(:clj *') +' exactly]
       #?@(:cljs [:refer-macros [*']])]
     [quantum.core.data.binary  :as bin
       :refer [>>]]

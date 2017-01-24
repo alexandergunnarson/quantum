@@ -176,8 +176,8 @@
 #?(:clj
 (defmacro num-literals
   "Allows BigInts and ratio literals, converting them to calls to the
-  appropriate constructors. Converts any Long to a bigint, so if you
-  need a double use e.g. `42.0` instead of `42`."
+   appropriate constructors. Converts any Long to a bigint, so if you
+   need a double use e.g. `42.0` instead of `42`."
   ([form]
      (type-convert-form form))
   ([form1 form2 & more]
