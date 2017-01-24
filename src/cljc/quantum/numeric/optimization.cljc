@@ -2,18 +2,17 @@
   "Minimization and maximization"
   (:refer-clojure :exclude [for reduce repeat max-key])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   ) :as core]
+    [clojure.core :as core]
     [quantum.core.compare
       :refer [max-key]]
     [quantum.core.fn
-      :refer        [#?@(:clj [fn&])]
-      :refer-macros [          fn&]]
+      :refer [fn&]]
     [quantum.core.collections
-      :refer        [repeat take+ filter+ for+ red-apply
-                     #?@(:clj [for reduce red-for join])]
-      :refer-macros [          for reduce red-for join]]
-    [quantum.core.log :as log]))
+      :refer [repeat take+ filter+ for+ red-apply
+              for reduce red-for join]]
+    [quantum.core.log :as log])
+  (:require-macros
+    [quantum.numeric.optimization :as self]))
 
 ; TO EXPLORE
 ; - Mathematica
