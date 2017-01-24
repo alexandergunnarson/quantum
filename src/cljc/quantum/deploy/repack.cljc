@@ -6,7 +6,7 @@
             [quantum.db.datomic     :as db  ]
             [quantum.core.resources :as res ]))
 
-#?(:clj
+#_(:clj
 (defonce db
   (db/->db
     {:backend {:type                   :free
@@ -28,6 +28,7 @@
                   :internal-props    {"memory-index-threshold" "32m"
                                       "memory-index-max"       "512m"
                                       "object-cache-max"       "1g"}}}})))
+(def db nil)
 
 #?(:clj
 (defn repack!
