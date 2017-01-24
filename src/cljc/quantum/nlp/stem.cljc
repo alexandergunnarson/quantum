@@ -10,7 +10,7 @@
       :refer [->ex TODO]]
     [quantum.core.log :as log
       :include-macros true]
-    [quantum.nlp.stem.porter :as porter]))
+    [quantum.nlp.stem.impl.porter :as porter]))
 
 (log/this-ns)
 

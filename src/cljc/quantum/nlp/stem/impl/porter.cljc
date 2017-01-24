@@ -1,5 +1,5 @@
 (ns ^{:original-java "Rajiv Yerra"}
-  quantum.nlp.stem.porter
+  quantum.nlp.stem.impl.porter
   (:refer-clojure :exclude [get count reduce when-let])
   (:require
     [quantum.core.logic           :as logic

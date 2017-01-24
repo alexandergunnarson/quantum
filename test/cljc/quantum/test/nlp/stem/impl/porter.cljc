@@ -1,5 +1,5 @@
-(ns quantum.test.nlp.stem.porter
-  (:require [quantum.nlp.stem.porter :as ns]))
+(ns quantum.test.nlp.stem.impl.porter
+  (:require [quantum.nlp.stem.impl.porter :as ns]))
 
 (defn test:ends-with-doubled-consonant? [s])
 
