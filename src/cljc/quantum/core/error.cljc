@@ -196,8 +196,8 @@
 
 #?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
 
-(defn todo ([]    (throw (->ex :todo "This feature has not yet been implemented.")))
-           ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg)))))
+(defn todo ([]    (throw (->ex :todo "This feature has not yet been implemented." nil)))
+           ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg) nil))))
 (defalias TODO todo)
 
 #?(:clj

@@ -1158,6 +1158,13 @@
 (defnt invert [^map? m]
   (reduce (rfn [m' k v] (assoc m' v k)) (empty m) m))
 
+(declare ensurec)
+
+(defn invert->multimap
+  {:tests `{(invert->multimap {:a 1 :b 1 :c 2})
+            {1 #{:a :b} 2 #{:c}}}}
+  [m] (reduce (rfn [ret k v] (update ret v #(conj (ensurec % #{}) k))) {} m))
+
 (defn- update-nth-list*
   [x n f]
   (if (= n 0)
@@ -1390,9 +1397,9 @@
    :todo ["Replace |merge-with| with a more performant version which uses |map/merge|."]}
   [f & maps]
   (apply
-    (fn m [& maps]
+    (fn merge* [& maps]
       (if (seq-and map? maps)
-          (apply merge-with m maps)
+          (apply merge-with merge* maps)
           (apply f maps)))
     maps))
 
@@ -1400,6 +1407,35 @@
   (partial merge-deep-with
     (fn ([x]   (second x))
         ([x y] y))))
+
+(defn join-deep
+  "Like `merge-deep`, but `join`s collections instead of replacing them."
+  {:tests `{(join-deep {:a [1]
+                        :b 2 :e 5
+                        :c {:d 3
+                            :e 4
+                            :f #{1 2 3}
+                            :g {:h 5}}}
+                       {:a [2 "3"]
+                        :b 4 :d 6
+                        :c {:d "3"
+                            :f #{1 "2" 3}
+                            :g {:h "6" :i "x"}}})
+             {:a [1 2 "3"]
+              :b 4 :d 6 :e 5
+              :c {:d "3" :e 4
+                  :f #{1 3 2 "2"}
+                  :g {:h "6", :i "x"}}}}}
+  ([x0 x1]
+    (cond (and (map? x0) (map? x1))
+          (merge-with join-deep x0 x1)
+          (and (coll? x0) (coll? x1))
+          (join x0 x1)
+          (nil? x1)
+          x0
+          :else x1))
+  ([x0 x1 & args] (reduce join-deep (join-deep x0 x1) args)))
+
 ; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
 
 
