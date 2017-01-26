@@ -172,9 +172,20 @@
    (e.g. float/double) representation.
    #r 2.712 -> (rationalize 2.712M)"
   {:todo #{"Support exponent notation e.g. 2.313E7 | 2.313e7"}}
-  [^String r-str]
-  (assert (string? r-str))
-  (let [[integral-str decimal-str :as split] (str/split r-str #"\.")
+  [^String r]
+  (let [r-str (cond (string? r)
+                    r
+                    (symbol? r)
+                    (do (assert (-> r namespace nil?))
+                        (assert (-> r name first (= \r)))
+                        (->> r name rest (apply str))))
+        minus-ct (->> r-str (filter #(= % \-)) count)
+        _        (assert (#{0 1} minus-ct))
+        r-str    (case minus-ct
+                   0 r-str
+                   1 (do (assert (-> r-str first (= \-)))
+                         (->> r-str rest (apply str))))
+        [integral-str decimal-str :as split] (str/split r-str #"\.")
         _ (when (-> split count (> 2))
             (throw (->ex "Number cannot have more than one decimal point" {:num r-str})))
         _ (doseq [s split]
@@ -185,5 +196,7 @@
         scale    (if decimal
                      (#?(:clj Math/pow :cljs js/Math.pow) 10 (count decimal-str))
                      1)]
-    (->ratio (+ (* scale integral) (or decimal 0))
-             scale)))
+    (* (if (= minus-ct 1) -1 1)
+       (->ratio (+ (* scale integral) (or decimal 0))
+                scale))))
+
