@@ -12,6 +12,8 @@
       :refer [nnil?]]
     [quantum.core.error :as err
       :refer [catch-all]]
+    [quantum.core.fn
+      :refer [fn$]]
     [quantum.core.macros.core
       :refer [if-cljs locals]]
     [quantum.core.vars :as var
@@ -80,7 +82,6 @@
 #?(:clj (quantum.core.vars/defmalias spec      clojure.spec/spec      cljs.spec/spec     ))
 #?(:clj (quantum.core.vars/defmalias tuple     clojure.spec/tuple     cljs.spec/tuple    ))
 #?(:clj (quantum.core.vars/defmalias coll-of   clojure.spec/coll-of   cljs.spec/coll-of  ))
-#?(:clj (defmacro set-of [x & args] `(coll-of ~x :kind core/set? ~@args)))
 #?(:clj (quantum.core.vars/defmalias defspec   clojure.spec/def       cljs.spec/def      ))
 #?(:clj (quantum.core.vars/defmalias keys      clojure.spec/keys      cljs.spec/keys     ))
 #?(:clj (quantum.core.vars/defmalias alt       clojure.spec/alt       cljs.spec/alt      ))
@@ -186,3 +187,9 @@
   (let [pf (mapv (if-cljs &env #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
                  pred-forms)]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
+
+#?(:clj
+(defmacro set-of [spec]
+  `(let [spec# ~spec]
+     (or* (and core/set? (coll-of spec#))
+          (coll-of spec# :distinct true :into #{})))))
