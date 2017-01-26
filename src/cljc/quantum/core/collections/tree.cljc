@@ -184,13 +184,13 @@
 (defn zip-postwalk
   "|postwalk| with zippers.
    @f must return a non-zipper."
-  ([f form    ] (zip/node* (zip-postwalk f nil (zip/zipper form))))
+  ([f form    ] (zip/?node (zip-postwalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
 
 (defn zip-prewalk
   "|prewalk| with zippers.
    @f must return a non-zipper."
-  ([f form    ] (zip/node* (zip-prewalk f nil (zip/zipper form))))
+  ([f form    ] (zip/?node (zip-prewalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-prewalk f nil %)) zip/node nil
                   #_(zip/update f loc)
                   (zip/replace loc (f loc)))))

@@ -118,7 +118,7 @@
 
 (defalias node    zip/node   )
 
-(defn node* [x] (if (instance? fast_zip.core.ZipperLocation x) (node x) x))
+(defn ?node [x] (if (instance? fast_zip.core.ZipperLocation x) (node x) x))
 
 (defalias up      zip/up     )
 (defalias down    zip/down   )
