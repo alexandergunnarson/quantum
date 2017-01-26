@@ -35,6 +35,8 @@
               :refer [containsv? assocs-in flatten-1]]
             [quantum.core.log           :as log
               :refer [prl]]
+            [quantum.core.print         :as pr
+              :refer [!]]
             [quantum.core.convert       :as conv]
             [quantum.core.async         :as async]))
 
@@ -105,9 +107,9 @@
     (when-let [response (handler request)]
       (resp/header response "Server" ""))))
 
-(defn wrap-exception-handling
+(defn wrap-handle-exception
   [handler]
-  (fn exception-handling [request]
+  (fn handle-exception [request]
     (try
       (handler request)
       (catch Throwable e
@@ -115,6 +117,15 @@
         {:status 500
          :headers {"Content-Type" "text/html"}
          :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
+
+(defn wrap-show-exception [handler k] ; TODO move?
+  (fn [req]
+    (try (handler req)
+         (catch Throwable e
+           (log/ppr k "Error in HTTP handler:" e)
+           {:status  500
+            :headers {"Content-Type" "application/text"}
+            :body    (with-out-str (! e))}))))
 
 ; ===== REQUEST CONTENT TYPE COERCION ===== ;
 ; TODO move this?
@@ -234,4 +245,4 @@
         wrap-gzip
         #_(friend/requires-scheme :https)
         wrap-in-logging
-        wrap-exception-handling)))
+        wrap-handle-exception)))
