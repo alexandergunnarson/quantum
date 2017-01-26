@@ -20,10 +20,10 @@
     [quantum.core.error         :as err
       :refer [->ex TODO]]
     [quantum.core.fn            :as fn
-      :refer [<- fn-> fn->> fn1 fn$ rfn]]
+      :refer [<- fn-> fn->> fn1 fn$ rfn with-do]]
     [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
-      :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let]]
+      :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let condf1]]
     [quantum.core.print         :as pr]
     [quantum.core.resources     :as res]
     [quantum.core.process       :as proc]
@@ -262,34 +262,44 @@
    :uri
    :bytes})
 
+(defalias dbfn-call? dv/dbfn-call?)
+
+; TODO check the dbfn-call to make sure that it's spec-safe
 ; TODO
 ; :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
 ; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
 ; :uuid    (fn$ instance? db/SQUUID)
-(def-validated -schema  keyword?) ; TODO check this
+(def-validated -schema  (v/or* keyword? dbfn-call?)) ; TODO look over this more
 (def-validated -any     (constantly true))
-(v/defspec :db/id    c/integer?) ; TODO check these
-(v/defspec :db/ident keyword?) ; TODO check these
-(def-validated -keyword keyword?)
-(def-validated -string  string?)
-(def-validated -boolean (fn1 boolean?))
-(def-validated -long    #?(:clj  (fn-or (fn$ instance? Long   )
-                                        (fn$ instance? Integer)
-                                        (fn$ instance? Short  )) #_long?
-                           :cljs c/integer?)) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
-(def-validated -bigint  #?(:clj  (fn1 bigint?)
-                           :cljs c/integer?)) ; TODO CLJS |bigint?|
-(def-validated -float   #?(:clj  (fn1 float?)
-                           :cljs number?))  ; TODO CLJS |float?|
-(def-validated -double  #?(:clj  (fn1 double?)
-                           :cljs number?))
-(def-validated -bigdec  #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
-                           :cljs number?)) ; TODO CLJS |bigdec?|
+(v/defspec :db/id    c/integer?) ; TODO look over these more
+(v/defspec :db/ident keyword?) ; TODO look over these more
+(def-validated -keyword (v/or* keyword? dbfn-call?))
+(def-validated -string  (v/or* string? dbfn-call?))
+(def-validated -boolean (v/or* (fn1 boolean?) dbfn-call?))
+(def-validated -long    (v/or* #?(:clj  (fn-or (fn$ instance? Long   )
+                                               (fn$ instance? Integer)
+                                               (fn$ instance? Short  )) #_long?
+                                  :cljs c/integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
+                               dbfn-call?))
+(def-validated -bigint  (v/or* #?(:clj  (fn1 bigint?)
+                                  :cljs c/integer?)
+                               dbfn-call?)) ; TODO CLJS |bigint?|
+(def-validated -float   (v/or* #?(:clj  (fn1 float?)
+                                  :cljs number?)
+                               dbfn-call?))  ; TODO CLJS |float?|
+(def-validated -double  (v/or* #?(:clj  (fn1 double?)
+                                  :cljs number?)
+                               dbfn-call?))
+(def-validated -bigdec  (v/or* #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
+                                  :cljs number?)
+                               dbfn-call?)) ; TODO CLJS |bigdec?|
 (def-validated -instant (v/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
                        #?(:clj (v/and string?        (v/conformer clojure.instant/read-instant-date)))
-                               (v/and (fn1 integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))))
-(def-validated -uri     (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI)))
-(def-validated -bytes   (fn1 bytes?))
+                               (v/and (fn1 integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
+                               dbfn-call?))
+(def-validated -uri     (v/or* (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
+                               dbfn-call?))
+(def-validated -bytes   (v/or* (fn1 bytes?) dbfn-call?))
 
 ; ===== QUERIES =====
 
@@ -422,33 +432,43 @@
 
 (def attribute? #(-> @dv/spec-infos (get (:schema/type %)))) ; TODO fix
 
-(def dbfn-call? (fn-and seq?
-                        (fn-> first keyword?)
-                        (fn-> first namespace (= "fn"))))
+(def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
 
+(defn ?wrap-transform [x] ; possibly wrap transform, dep. on if needed
+  #?(:clj  (if (has-transform? x)
+               x
+               [:fn/transform x])
+     :cljs x))
+
+; TODO make this optional?
 (defn transform-validated [x]
-  (let [value-type #(-> @dv/spec-infos (get (:schema/type %)) :schema :db/valueType)]
-    (prewalk ; prewalk, not postwalk, is important because then you're not reassembling validated maps, which is expensive and possibly won't work
-      (whenf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
-                                              (fn-not dbfn?  ))))
-        #(case (value-type %)
-           :db.type/ref (->> % qcore/get (remove-vals+ nil?) ; Because can't assert nil in DB
-                                         (join {}))
-           nil (throw (->ex "Object's schema not found in registry" {:object % :type (c/type %)}))
-           (qcore/get %)))
-      x)))
+  (let [value-type #(-> @dv/spec-infos (get (:schema/type %)) :schema :db/valueType)
+        has-dbfn-call? (atom false)
+        ret (prewalk ; prewalk, not postwalk, is important because then you're not reassembling validated maps, which is expensive and possibly won't work
+              (condf1 (fn-and record? #?(:clj (fn-and (fn-not tempid?)
+                                                      (fn-not dbfn?  ))))
+                      #(case (value-type %)
+                         :db.type/ref (->> % qcore/get (remove-vals+ nil?) ; Because can't assert nil in DB
+                                                       (join {}))
+                         nil (throw (->ex "Object's schema not found in registry" {:object % :type (c/type %)}))
+                         (qcore/get %))
+                      dbfn-call?
+                      #(with-do % (reset! has-dbfn-call? true))
+                      identity)
+              x)]
+    {:v ret :has-dbfn-call? @has-dbfn-call?}))
 
 (defn validated->txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction component.
    Assumes nested maps/records are component entities."
-  [x]
-  (whenf x (fn-and record? #?(:clj (fn-not dbfn?))) transform-validated))
+  [x] (let [{:keys [v has-dbfn-call?]} (transform-validated x)]
+        (if has-dbfn-call? (?wrap-transform v) v)))
 
 (defn validated->new-txn
   "Transforms a validated e.g. record into a valid Datomic/DataScript transaction.
    Assumes nested maps/records are separate entities which need to be transacted separately,
    and that the overarching map/record is to be created new."
-  [x part]
+  [x part] (TODO)
   (ifn x record?
     (fn [r]
       (let [txn-components (transient [])]
@@ -476,20 +496,6 @@
   ([attr v]    (lookup (->db) attr v))
   ([db attr v] (pull (->db db) '[*] [attr v])))
 
-(def has-transform? #(and (vector? %) (-> % first (= :fn/transform))))
-
-(def ^:dynamic *transform?* false)
-
-(defn ?wrap-transform [x & [force?]] ; i.e., possibly wrap transform, dep. on if needed
-  #?(:clj  (if (or force? *transform?*)
-               (if (has-transform? x)
-                   x
-                   [:fn/transform x])
-               x)
-     :cljs x))
-
-(def transform (fn-> validated->txn ?wrap-transform))
-
 (defn rename [old new-]
   {:db/id    old
    :db/ident new-})
@@ -497,10 +503,7 @@
 (defn assoc
   "Transaction function which asserts the attributes (@kvs)
    associated with entity id @id."
-  {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
-  [eid & kvs]
-  (?wrap-transform
-    (apply hash-map :db/id eid kvs)))
+  [eid & kvs] (validated->txn (apply hash-map :db/id eid kvs)))
 
 (defn assoc! [& args]
   (transact! [(apply assoc args)]))
@@ -513,7 +516,6 @@
 
    '|Retract| with no value supplied is on our list of possible future
     enhancements.' — Rich Hickey"
-  {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   [arg & args]
   (let [db-like? (fn-or mdb? #?(:clj db?) mconn? #?(:clj conn?))
         [db eid kvs] (if (db-like? arg)
@@ -522,8 +524,7 @@
         retract-fn (if (mdb? db)
                        :db.fn/retractEntity  ; TODO these are different things
                        :db/retract)]
-    (?wrap-transform
-      (concat (list retract-fn eid) kvs))))
+    (validated->txn (concat (list retract-fn eid) kvs))))
 
 (defn dissoc! [& args]
   (transact! [(apply dissoc args)]))
@@ -531,7 +532,7 @@
 (defn merge
   "Merges in @props to @eid."
   [eid props]
-  (-> props (c/assoc :db/id eid) validated->txn ?wrap-transform))
+  (-> props (c/assoc :db/id eid) validated->txn))
 
 (defn merge!
   "Merges in @props to @eid and transacts."
@@ -542,36 +543,37 @@
   "If @id-query does not find an id, creates a new entity with the supplied @attrs.
    Otherwise, merges in @attrs to the found id.
    Expects @id-query to return a single id."
-  [id-query attrs]
-  (c/assoc attrs :db/id
-    `(:fn/or (:fn/first (:fn/q ~id-query))
-             ~(tempid))))
+  ([        id-query attrs] (new-or-merge        @part* id-query attrs))
+  ([   part id-query attrs] (new-or-merge @conn* part   id-query attrs))
+  ([db part id-query attrs]
+    (c/assoc attrs :db/id
+      `(:fn/or (:fn/first (:fn/q ~id-query))
+               ~(tempid db part)))))
 
 #?(:clj
-(defn excise
-  ([eid attrs] (excise eid @part* attrs))
-  ([eid part attrs] (excise @conn* eid part attrs))
-  ([conn eid part attrs]
-    {:db/id           (tempid conn part)
+(defn excise ; TODO this isn't right — see http://docs.datomic.com/excision.html
+  ([        eid attrs] (excise        @part* eid attrs))
+  ([   part eid attrs] (excise @conn* part   eid attrs))
+  ([db part eid attrs]
+    {:db/id           (tempid db part)
      :db/excise       eid
      :db.excise/attrs attrs})))
 
 #?(:clj
 (defn excise!
-  ([eid attrs] (excise! eid @part* attrs))
-  ([eid part attrs] (excise! @conn* eid part attrs))
-  ([conn eid part attrs] (transact! (excise conn eid part attrs)))))
+  ([          eid attrs]                 (excise!        @part* eid attrs))
+  ([     part eid attrs]                 (excise! @conn* part   eid attrs))
+  ([conn part eid attrs] (transact! conn (excise  conn   part   eid attrs)))))
 
 (defn conj
   "Creates, but does not transact, an entity from the supplied attribute-map."
-  {:todo ["Determine whether :fn/transform can be elided or not to save transactor time"]}
   ([x]      (conj (->db) (or @part* #?(:cljs :db.part/test)) x))
   ([part x] (conj (->db) part x))
-  ([db part x] ; TODO no-txr-transform? no-client-transform?
-    (let [txn (-> x transform-validated
-                  (whenf (fn-not dbfn-call?)
-                    (fn1 coll/assoc-when-none :db/id (tempid db part))))]
-      (?wrap-transform txn))))
+  ([db part x]
+    (let [{:keys [v has-dbfn-call?]} (transform-validated x)
+          txn-op (whenf v (fn-not dbfn-call?)
+                   (fn1 coll/assoc-when-none :db/id (tempid db part)))]
+      (if has-dbfn-call? (?wrap-transform [txn-op]) txn-op))))
 
 (defn conj!
   "Creates and transacts an entity from the supplied attribute-map."
@@ -579,9 +581,10 @@
   (transact! [(apply conj args)]))
 
 (defn disj
-  ([eid] (disj @conn* eid))
-  ([conn eid]
-    (?wrap-transform `(:db.fn/retractEntity ~eid))))
+  ([x] (disj @conn* x))
+  ([conn x] ; x might be eid or query
+    (let [{:keys [v has-dbfn-call?]} (transform-validated x)]
+      ((if has-dbfn-call? ?wrap-transform identity) `(:db.fn/retractEntity ~v)))))
 
 (defn disj! [& args]
   (transact! [(apply disj args)]))
