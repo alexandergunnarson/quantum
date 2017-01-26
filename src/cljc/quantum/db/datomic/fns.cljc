@@ -179,10 +179,10 @@
         :example
           '(transact! conn
              [[:fn/transform
-                {:db/id (tempid :db.part/test)
-                 :agent:person:name:last:maternal
-                   '(:fn/q [:find ?surname .
-                            :where [_ :agent:person:name:last:surname ?surname]])}]])}
+                [{:db/id (tempid :db.part/test)
+                  :agent:person:name:last:maternal
+                    '(:fn/q [:find ?surname .
+                             :where [_ :agent:person:name:last:surname ?surname]])}]]])}
       [db m]
       (->> m
            (walk/prewalk ; Get rid of weird ArrayLists in order to walk correctly
@@ -194,8 +194,7 @@
                            (instance? java.util.Set x))
                       (into #{} x)
                       :else x)))
-           (datomic.api/invoke db :fn/eval db)
-           vector))
+           (datomic.api/invoke db :fn/eval db)))
 
     (defn! conn retract-except
       ^{:doc "This will work for cardinality-many attributes as well as
@@ -238,12 +237,12 @@
 
     (defn! conn
       ^{:usage `(:fn/for-q {:find [[?e ...]] :where [[?e :user/username]]}
-                           [[:db/assert ~'? :user/name "Jane Doe"]])}
+                           [[:db/add ~'? :user/name "Jane Doe"]])}
       for-q
       [[clojure.walk :as walk]]
       [db q clause]
       (assert (map? q))
-      (let [ret    (api/q q db)
+      (let [queried (api/q q db)
             make-m (fn [f x]
                      (let [var-ct (-> q :find f count)
                            vars   (->> var-ct range (map #(symbol (str "?" %))))]
@@ -252,15 +251,15 @@
                    (-> q :find first last symbol?))
               (if (-> q :find first last name (= "..."))
                   ; Collection
-                  (reduce into [] (for [x ret] (walk/postwalk-replace {'? x} clause)))
+                  (reduce into [] (for [x queried] (walk/postwalk-replace {'? x} clause)))
                   ; Single Tuple
-                  (let [m (make-m first ret)] (walk/postwalk-replace m clause)))
+                  (let [m (make-m first queried)] (walk/postwalk-replace m clause)))
               ; Scalar
               (and (-> q :find last symbol?)
                    (-> q :find last name (= ".")))
-              (walk/postwalk-replace {'? ret} clause)
+              (walk/postwalk-replace {'? queried} clause)
               ; Relation
               :else
-              (reduce into [] (for [x ret] (walk/postwalk-replace (make-m identity x) clause))))))
+              (reduce into [] (for [x queried] (walk/postwalk-replace (make-m identity x) clause))))))
 
     true)))
