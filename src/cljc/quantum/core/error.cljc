@@ -51,7 +51,7 @@
 (defn ->ex
   "Creates an exception."
   ([type]          (ex-info (name type) (->err type type)))
-  ([msg objs]      (ex-info (str msg)   (->err msg  msg)))
+  ([msg objs]      (ex-info (str msg)   (->err msg  msg objs)))
   ([type msg objs] (ex-info msg         (->err type msg objs))))
 
 (defn ex->map
