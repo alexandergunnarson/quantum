@@ -15,7 +15,7 @@
     [quantum.core.fn
       :refer [fn-> fn->> fn1 fn$ <-]]
     [quantum.core.logic
-      :refer [fn= fn-and fn-or whenf1 whenf whenp]]
+      :refer [fn= fn-and fn-or whenf1 whenf whenp default]]
     [quantum.core.log       :as log
       :refer [prl]]
     [quantum.core.macros.defrecord
@@ -42,28 +42,6 @@
 ; Transactor
 ; - Cross-attribute validation (as defined by :invariant)
 ; - Cross-entity validation (as defined by :db-invariant)
-
-; TODO get to this when possible
-
-; ; FOR ENTITIES
-;   (if (or (instance? ~class-name ~args-sym)
-;                     (identifier? ~args-sym)
-;                     (lookup?     ~args-sym)
-;                     (dbfn-call?  ~args-sym))
-;                 ~args-sym
-;                 )
-; ; FOR ATTRIBUTES
-;                 (or (instance? ~class-name ~v-0)
-;                     (and ~(= type :ref) (identifier? ~v-0))
-;                     (lookup?    ~v-0)
-;                     (dbfn-call? ~v-0)
-;                     (nil?       ~v-0))
-;                 ~v-0
-
-;                 (def identifier? (fn-or keyword? integer?
-;                         #?(:clj #(instance? datomic.db.DbId %))))
-
-; (def lookup? (fn-and vector? (fn->  first keyword?)))
 
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
@@ -124,6 +102,10 @@
    :uuid
    :uri
    :bytes})
+
+(def dbfn-call? (fn-and seq?
+                        (fn-> first keyword?)
+                        (fn-> first namespace (= "fn"))))
 
 (def db-type
   (fn-or (fn-and keyword?
@@ -200,8 +182,8 @@
                         (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents
                            (assoc (meta x)
                              :db?         db-mode?
-                             ;:no-history? (-> parent-sym meta :no-history?)
-                             :component?  (or (-> x meta :component?) db-mode?))) ; all inner defs which are of type :ref are components
+                             :no-history? (-> parent-sym meta :no-history?) ; Datomic requires this
+                             :component?  (default (-> x meta :component?) db-mode?))) ; all inner defs which are of type :ref, which are not marked `:component? false`, are components
                       inner-spec (if (-> inner-spec-args count (= 1))
                                      `(def-validated ~inner-name-sym
                                         ~@(contextualize-keywords kw-context inner-spec-args))
@@ -474,9 +456,11 @@
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
           (defn ~constructor-sym [m#] (new ~qualified-sym (~create m#)))
           (defspec ~spec-name (v/conformer
-                                (fn [x#] (if (instance? ~qualified-sym x#)
-                                             x#
-                                             (new ~qualified-sym (~create x#))
+                                (fn [x#] (cond (instance? ~qualified-sym x#)
+                                               x#
+                                               (dbfn-call? x#)
+                                               x#
+                                               :else (new ~qualified-sym (~create x#))
                                              #_(catch-all (new ~qualified-sym (~create x#))
                                                e# ~invalid))))) ; TODO avoid semi-expensive try-catch here by using conformers all the way down the line
           (swap! spec-infos assoc ~spec-name
