@@ -450,23 +450,22 @@
 
 (defnt get
   {:imported "clojure.lang.RT/get"}
-  #?(:clj  ([^clojure.lang.ILookup coll            k             ] (.valAt coll k)))
-  #?(:clj  ([^clojure.lang.ILookup coll            k if-not-found] (.valAt coll k if-not-found)))
+  #?(:clj  ([^clojure.lang.ILookup           x            k             ] (.valAt x k)))
+  #?(:clj  ([^clojure.lang.ILookup           x            k if-not-found] (.valAt x k if-not-found)))
   #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
-                                   coll            k             ] (.get coll k)))
-           ([^string?              coll ^pinteger? n             ] (.charAt  coll n             ))
-  #?(:clj  ([^array-list?          coll ^pinteger? n             ] (get      coll n nil         )))
-  #?(:clj  ([^array-list?          coll ^pinteger? n if-not-found]
-             (try (.get coll n)
-               (catch ArrayIndexOutOfBoundsException e# if-not-found))))
-           ([^array?               coll ^pinteger? n             ] (aget     coll n             ))
-           ([^listy?               coll            n             ] (core/nth coll n nil         ))
-           ([^listy?               coll            n if-not-found] (core/nth coll n if-not-found))
+                                             x            k             ] (.get x k)))
+           ([^string?                        x ^pinteger? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
+  #?(:clj  ([^array-list?                    x ^pinteger? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
+           ([#{string? #?(:clj array-list?)} x ^pinteger? i             ] (get      x i nil))
+
+           ([^array?                         x ^pinteger? i             ] (aget     x i             ))
+           ([^listy?                         x            i             ] (core/nth x i nil         ))
+           ([^listy?                         x            i if-not-found] (core/nth x i if-not-found))
            ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
-  #?(:cljs ([^nil?                 coll            n             ] (core/get coll n nil         )))
-  #?(:cljs ([^nil?                 coll            n if-not-found] (core/get coll n if-not-found)))
-           ([                      coll            n             ] (core/get coll n nil         ))
-           ([                      coll            n if-not-found] (core/get coll n if-not-found)))
+  #?(:cljs ([^nil?                           x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                           x            i if-not-found] (core/get x i if-not-found)))
+           ([                                x            i             ] (core/get x i nil         ))
+           ([                                x            i if-not-found] (core/get x i if-not-found)))
 
 (defnt nth
   ; TODO import clojure.lang.RT/nth
@@ -611,23 +610,26 @@
 
 (defnt first
   {:todo #{"Return first element type"}}
-  ([#{string? #?(:clj array-list?)
-      #?(:clj any-array? :cljs array?)} coll] (get coll 0))
-  ([^vec?                               coll] (get coll #?(:clj (Long. 0) :cljs 0))) ; to cast it...
+  ([#{
+      #?(:clj any-array? :cljs array?)} x] (get x 0))
+  ([#{string? #?(:clj array-list?)}     x] (get x 0 nil))
+  ([#{symbol? keyword?}                 x] (if (namespace x) (-> x namespace first) (-> x name first)))
+  ([^vec?                               x] (get x #?(:clj (Long. 0) :cljs 0))) ; to cast it...
   ; TODO is this wise?
-  ([^integral?                          coll] coll)
-  ([^reducer?                           coll] (reduce (rfn [_ x] (reduced x)) nil coll))
-  ([:else                               coll] (core/first coll)))
+  ([^integral?                          x] x)
+  ([^reducer?                           x] (reduce (rfn [_ x'] (reduced x')) nil x))
+  ([:else                               x] (core/first x)))
 
 (defalias firstl first) ; TODO not always true
 
 (defnt second
-  ([#{string? #?(:clj array-list?)} coll] (get coll 1))
+  ([#{string? #?(:clj array-list?)} x] (get x 1 nil))
+  ([#{symbol? keyword?}             x] (if (namespace x) (-> x namespace second) (-> x name second)))
   ; 2.8  nanos to (.cast Long _)
   ; 1.26 nanos to (Long. _)
-  ([^vec?                           coll] (get coll #?(:clj (Long. 1) :cljs 1))) ; to cast it...
-  ([^reducer?                       coll] (nth coll 1))
-  ([:else                           coll] (core/second coll)))
+  ([^vec?                           x] (get x #?(:clj (Long. 1) :cljs 1))) ; to cast it...
+  ([^reducer?                       x] (nth x 1))
+  ([:else                           x] (core/second x)))
 
 (defnt butlast
   {:todo ["Add support for arrays"
