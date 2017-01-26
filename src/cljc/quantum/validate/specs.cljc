@@ -32,7 +32,8 @@
 
 ; =========== CORE TYPES =========== ;
 
-(def-validated ^:db? ^:index? schema/type :db/schema)
+; should be schema, but keyword for easier pull; will have to txn-fn check to make sure the keyword is a valid schema
+(def-validated ^:db? ^:index? schema/type :db/keyword #_:db/schema)
 
 (def-validated ^:db? ^{:doc "Any unstructured data associated with an entity"}
   schema/annotation :db/string)
