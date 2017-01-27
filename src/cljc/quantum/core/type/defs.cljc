@@ -10,7 +10,10 @@
     [quantum.core.fn       :as fn
       :refer [fn->]]
     [quantum.core.logic    :as logic
-      :refer [fn-and condf1]]))
+      :refer [fn-and condf1]])
+  (:require-macros
+    [quantum.core.type.defs :as self
+      :refer [array-nd-types]]))
 
 (defrecord Folder  [coll transform])
 (defrecord Reducer [coll transform])

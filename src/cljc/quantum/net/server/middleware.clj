@@ -124,8 +124,8 @@
          (catch Throwable e
            (log/ppr k "Error in HTTP handler:" e)
            {:status  500
-            :headers {"Content-Type" "application/text"}
-            :body    (with-out-str (! e))}))))
+            :headers {"Content-Type" "application/json"}
+            :body    (conv/->json {:error (with-out-str (! e))})}))))
 
 ; ===== REQUEST CONTENT TYPE COERCION ===== ;
 ; TODO move this?
