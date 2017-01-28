@@ -13,6 +13,7 @@ dependencies:
     - ./dev-resources/cache/opencl-sdk
     - ./dev-resources/cache/opencl-code-builder
   pre:
+    - sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     - sudo apt-get update
     - sudo apt install gcc-4.9 -y
     - sudo apt install g++-4.9 -y
