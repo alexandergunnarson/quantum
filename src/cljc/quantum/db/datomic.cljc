@@ -2,16 +2,14 @@
   quantum.db.datomic
   (:refer-clojure :exclude
     [conj conj! disj disj!
-     assoc assoc! dissoc dissoc! update merge
-     boolean?])
+     assoc assoc! dissoc dissoc! update merge])
   (:require
     [clojure.core                     :as c]
 #?@(:clj
    [[datomic.api                      :as bdb]
   #_[quantum.deploy.amazon            :as amz]]
     :cljs
-   [[datomic-cljs.api                 :as bdb]
-    [cljs-uuid-utils.core             :as uuid] ; TODO have a quantum UUID ns
+   [[cljs-uuid-utils.core             :as uuid] ; TODO have a quantum UUID ns
     [posh.reagent                     :as rx-db]])
     [datascript.core                  :as mdb]
     [quantum.db.datomic.core          :as dbc]
@@ -32,8 +30,7 @@
     [quantum.core.string              :as str]
     [quantum.core.async               :as async
       :refer [go <?]]
-    [quantum.core.type                :as type
-      :refer [atom? boolean?]]
+    [quantum.core.type                :as t]
     [quantum.core.vars                :as var
       :refer [defalias defaliases]]
     [quantum.core.io.core             :as io]
@@ -121,9 +118,9 @@
       (let [history-limit  (validate (or history-limit
                                          #?(:clj  Integer/MAX_VALUE
                                             :cljs js/Number.MAX_SAFE_INTEGER)) integer?)
-            reactive?      (validate (default reactive?      true ) (fn1 boolean?))
-            set-main-conn? (validate (default set-main-conn? false) (fn1 boolean?))
-            set-main-part? (validate (default set-main-part? false) (fn1 boolean?))
+            reactive?      (validate (default reactive?      true ) (fn1 t/boolean?))
+            set-main-conn? (validate (default set-main-conn? false) (fn1 t/boolean?))
+            set-main-part? (validate (default set-main-part? false) (fn1 t/boolean?))
             _              (validate conn nil?)]
         (try
           (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
@@ -165,7 +162,7 @@
               {:this this :err {:e e :stack #?(:clj (.getStackTrace e) :cljs (.-stack e))}})
             this))))
     (stop [this]
-      (when (atom? conn)
+      (when (t/atom? conn)
         (reset! conn nil)) ; TODO is this wise? ; TODO unregister all listeners?
       this))
 
@@ -253,13 +250,12 @@
             name                   (validate (or name "test")                       (v/and string? nempty?))
             host                   (validate (or host "localhost")                  (v/and string? nempty?))
             port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
-            txr-alias              (validate (or (:alias txr-props) "local")        string?)
-            create?                (validate (default create?                false) (fn1 boolean?))
-            create-if-not-present? (validate (default create-if-not-present? true ) (fn1 boolean?))
-            set-main-conn?         (validate (default set-main-conn?         false) (fn1 boolean?))
-            set-main-part?         (validate (default set-main-part?         false) (fn1 boolean?))
+            create?                (validate (default create?                false) (fn1 t/boolean?))
+            create-if-not-present? (validate (default create-if-not-present? true ) (fn1 t/boolean?))
+            set-main-conn?         (validate (default set-main-conn?         false) (fn1 t/boolean?))
+            set-main-part?         (validate (default set-main-part?         false) (fn1 t/boolean?))
             default-partition      (validate (or default-partition :db.part/test)   (v/and keyword? (fn-> namespace (= "db.part"))))
-            conn                   (validate (or conn (atom nil))                   atom?)
+            conn                   (validate (or conn (atom nil))                   t/atom?)
             connection-retries     (validate (or (if (= type :dynamo) 1 5))         integer?) ; DynamoDB auto-retries
             uri (case type
                       :free
@@ -291,14 +287,12 @@
                            (not= type :mem))
                   #?(:clj (start-transactor! (kmap type host port) txr-props)))
               connect (fn [] (log/pr ::debug "Trying to connect with" uri)
-                             (let [conn-f (do #?(:clj  (bdb/connect uri)
-                                                 :cljs (bdb/connect host rest-port (:alias txr-props) name)))]
+                             (let [conn-f (do #?(:clj (bdb/connect uri)))]
                                (log/pr ::debug "Connection successful.")
                                conn-f))
               create-db! (fn []
                            (log/pr ::debug "Creating database...")
-                           #?(:clj  (bdb/create-database uri)
-                              :cljs (go (<? (bdb/create-database host rest-port (:alias txr-props) name))))
+                           #?(:clj (bdb/create-database uri))
                            (log/pr ::debug "Done."))
               _          (when create? (create-db!))
               conn-f  (try
@@ -321,11 +315,11 @@
         (when set-main-conn? (reset! conn* conn-f))
         (when set-main-part? (reset! part* default-partition))
         (log/pr ::debug "Datomic database initialized.")
-        (c/merge ; TODO add txr-alias
+        (c/merge
           (c/assoc this :txr-process txr-process-f)
           (kmap type uri name host port create-if-not-present? default-partition conn)))))
     (stop [this]
-      (when (and (atom? conn) (nnil? @conn))
+      (when (and (t/atom? conn) (nnil? @conn))
         #?(:clj (bdb/release @conn))
         (swap! conn* #(if (identical? % @conn) nil %))
         (reset! conn nil))
@@ -338,7 +332,7 @@
       this))
 
 (defn ->backend-db
-  [{:keys [type name host port txr-alias create-if-not-present?
+  [{:keys [type name host port create-if-not-present?
            default-partition]
 
     :as config}]

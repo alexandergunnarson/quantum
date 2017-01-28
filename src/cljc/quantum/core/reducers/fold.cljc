@@ -17,7 +17,7 @@
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
-      :refer [subvec+]]
+      :refer [subsvec]]
 #?@(:clj
    [[seqspert.hash-set]
     [seqspert.hash-map]])
@@ -31,9 +31,8 @@
       :refer [defnt]]
     [quantum.core.reducers.reduce  :as red
       :refer [reduce joinl]]
-    [quantum.core.type             :as type
-      :refer [transient!* persistent!* lseq? editable?
-              hash-set? hash-map? ->joinable]]
+    [quantum.core.type             :as t
+      :refer [transient!* persistent!* lseq? editable? ->joinable]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])])
   #?(:clj (:import [quantum.core.type.defs Reducer Folder])))
@@ -125,8 +124,8 @@
       (fold-by-halves
         (fn [coll-0 ct]
           (let [split-ind (quot ct 2)]
-            [(subvec+ coll-0 0 split-ind) ; test subvec against subvec+
-             (subvec+ coll-0   split-ind ct)]))
+            [(subsvec coll-0 0 split-ind) ; test subvec against subsvec
+             (subsvec coll-0   split-ind ct)]))
           coll n combinef reducef))
   #?@(:clj
     [clojure.lang.PersistentHashMap
@@ -216,7 +215,7 @@
   [to from]
   (let [red-fn (if (editable? to) red/conj!-red red/conj-red)]
     (fold (aritoid nil                             persistent!* #(joinl %1 %2))
-          (aritoid #(transient!* (type/->base to)) persistent!* red-fn red-fn)
+          (aritoid #(transient!* (t/->base to)) persistent!* red-fn red-fn)
           from)))
 
 (defnt pjoinl*
@@ -224,15 +223,15 @@
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([to] to)
-  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)
-                                       (seqspert.hash-set/parallel-splice-hash-sets to from)
-                                       (pjoinl-fold to from))
-                             :cljs (pjoinl-fold to from)))
-  ([^hash-map?   to from] #?(:clj  (if (hash-map? from)
-                                       (seqspert.hash-map/parallel-splice-hash-maps to from)
-                                       (pjoinl-fold to from))
-                             :cljs (pjoinl-fold to from)))
-  ([             to from] (if (nil? to) from (pjoinl-fold to from))))
+  ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
+                                          (seqspert.hash-set/parallel-splice-hash-sets to from)
+                                          (pjoinl-fold to from))
+                                :cljs (pjoinl-fold to from)))
+  ([^+hash-map?     to from] #?(:clj  (if (t/+hash-map? from)
+                                          (seqspert.hash-map/parallel-splice-hash-maps to from)
+                                          (pjoinl-fold to from))
+                                :cljs (pjoinl-fold to from)))
+  ([                to from] (if (nil? to) from (pjoinl-fold to from))))
 
 (defn pjoinl
   "Parallel join, left.
@@ -252,8 +251,8 @@
 
 ; TODO move
 (defnt ->vec
-  ([^vector? x] x)
-  ([#{map? list? set? array-list? Folder
+  ([^+vec? x] x)
+  ([#{+map? +list? +set? array-list? Folder
       #?(:clj  clojure.core.protocols.CollReduce
          :cljs cljs.core/IReduce)} x] (joinl [] x))
   ([x] (if (nil? x) [] [x])))

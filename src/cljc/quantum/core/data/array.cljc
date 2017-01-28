@@ -57,7 +57,7 @@
     (let [arr-sym (symbol (str (name package) "-array"))
           fn-sym (-> arr-sym (macros/hint-meta (get tcore/type-casts-map arr-sym)))
           core-sym (symbol "clojure.core" (name fn-sym))
-          n-sym (-> 'n gensym (macros/hint-meta 'pinteger?))]
+          n-sym (-> 'n gensym (macros/hint-meta 'nat-int?))]
       `(defnt ~fn-sym ([~n-sym] (core-sym ~n-sym)))))))
 
 ; ----- BOOLEAN ARRAY ----- ;
@@ -254,23 +254,18 @@
 
 #?(:clj
 (defnt' copy
-  ([^bytes? input ^bytes? output ^pinteger? length]
+  ([^bytes? input ^bytes? output ^nat-int? length]
     (System/arraycopy input 0 output 0 length)
     output)))
 
-; TODO fix type-hint-predicates of CLJS version
-(def copy identity)
+; TODO fix type-hint-predicates of CLJS version?
+#?(:cljs
+(defnt copy
+  ([^bytes? input ^bytes? output ^nat-int? length]
+    (dotimes [i (.-length input)]
+      (aset output i (aget input i))))))
 
-; #?(:cljs
-; (defnt copy
-;   ([^bytes? input ^bytes? output ^pinteger? length]
-;     (reduce ; TODO implement with |dotimes|
-;       (fn [_ i]
-;         (aset output i (aget input i)))
-;       nil
-;       (range (.-length input))))))
-
-#?(:clj
+#?(:clj ; TODO move
 (defn array-list [& args]
   (reduce (fn [ret elem] (.add ^ArrayList ret elem)
           ret)

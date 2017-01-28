@@ -41,7 +41,7 @@
     [quantum.core.data.map         :as map
       :refer [split-at]]
     [quantum.core.data.vector      :as vec
-      :refer [subvec+]]
+      :refer [subsvec]]
     [quantum.core.collections.base :as base
       :refer [kmap]]
     [quantum.core.collections.core :as coll
@@ -57,8 +57,7 @@
       :refer [map+ reduce]]
     [quantum.core.vars             :as var
       :refer [defalias]]
-    [quantum.core.type
-      :refer [indexed?]]
+    [quantum.core.type             :as t]
     [quantum.core.collections.map-filter
       :refer        [ffilteri last-filteri]]))
 ;___________________________________________________________________________________________________________________________________
@@ -89,8 +88,8 @@
 ; sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
 (defn split [ind coll-0]
   (if (vector? coll-0)
-      [(subvec+ coll-0 0   ind)
-       (subvec+ coll-0 ind (count coll-0))]
+      [(subsvec coll-0 0   ind)
+       (subsvec coll-0 ind (count coll-0))]
       (split-at coll-0 ind)))
 (defn split-with-v+ [pred coll-0] ; IMPROVE
   (->> coll-0
@@ -363,7 +362,7 @@
    :tests `{(dropr-while nil? [0 1 2 3 nil 4 5 nil nil])
             [0 1 2 3 nil 4 5]}}
   [pred super]
-  (assert (or (indexed? super) (string? super))) ; TODO for now, until `rreduce`
+  (assert (t/indexed? super)) ; TODO for now, until `rreduce`
   (loop [i (lasti super)]
     (if (= i -1)
         (getr super 0 -1)

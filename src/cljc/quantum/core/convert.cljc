@@ -287,8 +287,8 @@
 
 #?(:clj
 (defnt ->observable ; O(1) ; TODO Reflection on clojure.lang.IndexedSeq
-  ([^vector? v] (FXCollections/observableArrayList v))
-  ([^listy?  l] (FXCollections/observableArrayList l))))
+  ([^+vec? v] (FXCollections/observableArrayList v))
+  ([^seq?  l] (FXCollections/observableArrayList l))))
 
 #?(:clj (defalias ->predicate fn/->predicate))
 

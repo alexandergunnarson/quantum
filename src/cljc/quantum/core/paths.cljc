@@ -40,7 +40,7 @@
   #?(:clj  ([^java.nio.file.Path x] (.toFile x)))
   #?(:clj  ([#{string? URI}      x] (File.   x)))
   #?(:clj  ([^URL                x] (-> x ->uri-protocol ->file)))
-  #?(:clj  ([#{vector? keyword?} x] (-> x parse-dir-protocol ->file)))
+  #?(:clj  ([#{+vec? keyword?}   x] (-> x parse-dir-protocol ->file)))
   #?(:clj  ([                    x] (io/file x))))
 
 #?(:clj
@@ -199,7 +199,7 @@
      :cljs (atom {})))
 
 (defnt #?(:clj ^String parse-dir :cljs parse-dir)
-  ([^vector? keys-n]
+  ([^+vec? keys-n]
     (reducei
       (fn [path-n key-n n]
         (let [first-key-not-root?
@@ -263,7 +263,7 @@
 
 (defnt #?(:clj ^String up-dir :cljs up-dir)
   ([^string? dir ] (-> dir up-dir-str))
-  ([^vec?    dir ] (-> dir parse-dir up-dir))
+  ([^+vec?   dir ] (-> dir parse-dir up-dir))
   #?(:clj ([^file?   file] (.getParent file))))
 
 #?(:clj (defalias parent up-dir))

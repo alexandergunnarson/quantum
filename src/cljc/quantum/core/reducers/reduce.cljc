@@ -26,8 +26,8 @@
       :refer [->ex]]
     [quantum.core.macros           :as macros
       :refer [defnt]]
-    [quantum.core.type             :as type
-      :refer [editable? hash-set? hash-map?]]
+    [quantum.core.type             :as t
+      :refer [editable?]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])]
     [quantum.core.vars             :as var
@@ -68,10 +68,12 @@
                  (f ret (first coll-n)))))))
 
 (defnt reduce*
-  {:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"
+   :todo        #{"Mutable collections, etc."
+                  "n-d arrays"}}
         ([^fast_zip.core.ZipperLocation z f init]
           (cbase/zip-reduce* f init z))
-        ([^array? arr f init] ; Taken from `areduce`
+        ([^array-1d? arr f init] ; Taken from `areduce`
           #?(:clj  (let [ct (alength arr)]
                      (loop  [i 0 ret init]
                        (if (< i ct)
@@ -97,15 +99,15 @@
         ([^reducer? x f init]
           (reduce* (:coll x) ((:transform x) f) init))
         ([^chan?   x    f init] (async/reduce f init x))
-        ([^map?    coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
+        ([^+map?   coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
                                     :cljs -kv-reduce) ; in order to use transducers...
                                  #?(:clj  clojure.core.protocols/coll-reduce
                                     :cljs -reduce-seq)
                                   coll f init))
-        ([^set?    coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
+        ([^+set?   coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
                                     :cljs -reduce-seq)
                                   coll f init))
-        ([#{#?(:clj integer? :cljs number?)} i f init]
+        ([#{#?(:clj integer? :cljs double?)} i f init]
           (if (< i 0)
               init
               (loop [i'  0
@@ -174,27 +176,28 @@
   {:attribution "Alex Gunnarson"
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"
-          "Handle one-arg"]}
+          "Handle one-arg"
+          "Handle mutable collections"]}
   ([to] to)
-  ([^reducer?    from] (joinl [] from))
-  ([^vector?     to from] (if (vector?   from)
-                              (catvec         to from)
-                              (transient-into to from)))
-  ([^hash-set?   to from] #?(:clj  (if (hash-set? from)
-                                       (seqspert.hash-set/sequential-splice-hash-sets to from)
-                                       (transient-into to from))
+  ([^reducer?       from] (joinl [] from))
+  ([^+vec?          to from] (if (vector?   from)
+                                 (catvec         to from)
+                                 (transient-into to from)))
+  ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
+                                          (seqspert.hash-set/sequential-splice-hash-sets to from)
+                                          (transient-into to from))
                              :cljs (transient-into to from)))
-  ([^sorted-set? to from] (if (set?      from)
-                              (clojure.set/union to from)
-                              (persistent-into   to from)))
-  ([^hash-map?   to from] #?(:clj  (if (hash-map? from)
-                                       (seqspert.hash-map/sequential-splice-hash-maps to from)
-                                       (transient-into to from))
-                             :cljs (transient-into to from)))
-  ([^sorted-map? to from] (persistent-into to from))
-  ([^string?     to from] (str #?(:clj  (reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
-                                  :cljs (reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
-  ([             to from] (if (nil? to) from (persistent-into to from))))
+  ([^+sorted-set?   to from] (if (t/+set?           from)
+                                 (clojure.set/union to from)
+                                 (persistent-into   to from)))
+  ([^+hash-map?     to from] #?(:clj  (if (t/+hash-map? from)
+                                          (seqspert.hash-map/sequential-splice-hash-maps to from)
+                                          (transient-into to from))
+                                :cljs (transient-into to from)))
+  ([^+sorted-map?   to from] (persistent-into to from))
+  ([^string?        to from] (str #?(:clj  (reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
+                                     :cljs (reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
+  ([                to from] (if (nil? to) from (persistent-into to from))))
 
 #_(defn joinl
   ([] nil)
@@ -208,7 +211,7 @@
    collection passed."
   ([^reducer?     from] (joinl' (empty (:coll from)) from))
   ([              from] (joinl' (empty        from ) from))
-  ([^list?     to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
+  ([^+list?    to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
   ([           to from] (joinl to from)))
 
 #?(:clj (defalias join  joinl ))

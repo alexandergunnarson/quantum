@@ -12,9 +12,8 @@
              [quantum.core.error         :as err
                :refer [->ex TODO throw-unless]]
              [quantum.core.fn            :as fn
-               :refer [firsta fn-> fn$]]
-             [quantum.core.log           :as log
-               :include-macros true]
+               :refer [firsta fn-> fn$ fn1]]
+             [quantum.core.log           :as log]
              [quantum.core.logic         :as logic
                :refer [splice-or whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
@@ -25,7 +24,7 @@
                :refer [path]]
              [quantum.core.resources     :as res]
              [quantum.core.type          :as type
-               :refer [vector+?]]
+               :refer [svector?]]
              [quantum.core.vars          :as var
                :refer [defalias]]
              [quantum.core.validate      :as v
@@ -106,7 +105,7 @@
           (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector)) ; Because "unfreezable type: rrbt Vector"
                    (not unfreezable-caught?))
               (->> data
-                   (postwalk (whenf1 vector+?
+                   (postwalk (whenf1 (fn1 svector?)
                                (partial core/into [])))
                    (#(assoc-serialized! path %
                        (assoc :unfreezable-caught? true))))

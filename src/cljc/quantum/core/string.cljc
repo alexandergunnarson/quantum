@@ -8,7 +8,7 @@
     :attribution "Alex Gunnarson"}
   quantum.core.string
            (:refer-clojure :exclude
-             [reverse replace remove val re-find reduce boolean?])
+             [reverse replace remove val re-find reduce])
            (:require
              [clojure.core               :as core]
              [clojure.string             :as str]
@@ -36,8 +36,7 @@
              [quantum.core.string.regex  :as regex]
              [quantum.core.vars          :as var
                :refer [defalias]]
-             [quantum.core.type          :as type
-               :refer [boolean?]])
+             [quantum.core.type          :as t])
            (:require-macros
              [quantum.core.string
                :refer [starts-with? ends-with? remove*]])
@@ -395,7 +394,7 @@
 
 (defn properize-key [k v]
   (let [k-0 (keywordize k)
-        k-f (if (boolean? v)
+        k-f (if (t/boolean? v)
                 (keyword+ k-0 "?")
                 k-0)]
     k-f))

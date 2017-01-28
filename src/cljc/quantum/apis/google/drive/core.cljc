@@ -11,6 +11,7 @@
   quantum.apis.google.drive.core
   #_(:require-quantum [:lib http auth])
   (:require
+    [quantum.core.type        :as t]
     [quantum.apis.google.auth :as gauth]))
 ;___________________________________________________________________________________________________________________________________
 ;======================================================{     UNIVERSAL      }=======================================================
@@ -237,7 +238,7 @@
 ;       #(and (vector?   %)
 ;             (= 2       (count %))
 ;             (keyword?  (first %)) ; id
-;             (map?      (second %)) ; id-meta
+;             (t/+map?   (second %)) ; id-meta
 ;             (contains? (second %) :title))
 ;       #(func (second %))
 ;       drive-dir))

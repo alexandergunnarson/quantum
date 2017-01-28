@@ -76,9 +76,9 @@
 
 #?(:cljs
 (defnt ^com.gfredericks.goog.math.Integer ->bigint
-  ([^com.gfredericks.goog.math.Integer x] x)
-  ([^string?                           x] (int/fromString x))
-  ([^number?                           x] (-> x str ->bigint))))
+  ([^bigint? x] x)
+  ([^string? x] (int/fromString x))
+  ([^double? x] (-> x str ->bigint))))
 
 #?(:cljs
 (deftype Ratio [n d]
@@ -158,11 +158,11 @@
 
 #?(:clj  (defalias numerator core/numerator)
    :cljs (defnt numerator
-           ([^quantum.core.numeric.types.Ratio x] (.-n x))))
+           ([^ratio? x] (.-n x))))
 
 #?(:clj  (defalias denominator core/denominator)
    :cljs (defnt denominator
-           ([^quantum.core.numeric.types.Ratio x] (.-d x))))
+           ([^ratio? x] (.-d x))))
 
 #?(:clj  (defalias ratio? core/ratio?)
    :cljs (defn ratio? [x] (instance? Ratio x)))

@@ -2,8 +2,8 @@
     ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
   (:refer-clojure :exclude
-    [assoc assoc! dissoc dissoc! conj conj! disj disj! integer?
-     update merge if-let for float? double? doseq nth])
+    [assoc assoc! dissoc dissoc! conj conj! disj disj!
+     update merge if-let for doseq nth])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -29,8 +29,7 @@
     [quantum.core.process       :as proc]
     [quantum.core.convert.primitive :as pconv
       :refer [->long]]
-    [quantum.core.type        :as type
-      :refer [#?@(:clj [float? double? bigint?]) integer? atom? boolean? bytes?]]
+    [quantum.core.type          :as t]
     [quantum.core.vars          :as var
       :refer [defalias]]
     [quantum.core.data.validated :as dv
@@ -76,7 +75,7 @@
   mdb? (partial instance? datascript.db.DB))
 
 #?(:clj (def conn? (partial instance? datomic.Connection)))
-(defn mconn? [x] (and (atom? x) (mdb? @x)))
+(defn mconn? [x] (and (t/atom? x) (mdb? @x)))
 
 (defn ->uri-string
   [{:keys [type host port db-name]
@@ -275,19 +274,18 @@
 (v/defspec :db/ident keyword?) ; TODO look over these more
 (def-validated -keyword (v/or* keyword? dbfn-call?))
 (def-validated -string  (v/or* string? dbfn-call?))
-(def-validated -boolean (v/or* (fn1 boolean?) dbfn-call?))
+(def-validated -boolean (v/or* (fn1 t/boolean?) dbfn-call?))
 (def-validated -long    (v/or* #?(:clj  (fn-or (fn$ instance? Long   )
                                                (fn$ instance? Integer)
                                                (fn$ instance? Short  )) #_long?
                                   :cljs c/integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
                                dbfn-call?))
-(def-validated -bigint  (v/or* #?(:clj  (fn1 bigint?)
-                                  :cljs c/integer?)
-                               dbfn-call?)) ; TODO CLJS |bigint?|
-(def-validated -float   (v/or* #?(:clj  (fn1 float?)
+(def-validated -bigint  (v/or* (fn1 t/bigint?)
+                               dbfn-call?))
+(def-validated -float   (v/or* #?(:clj  (fn1 t/float?)
                                   :cljs number?)
                                dbfn-call?))  ; TODO CLJS |float?|
-(def-validated -double  (v/or* #?(:clj  (fn1 double?)
+(def-validated -double  (v/or* #?(:clj  (fn1 t/double?)
                                   :cljs number?)
                                dbfn-call?))
 (def-validated -bigdec  (v/or* #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
@@ -295,11 +293,11 @@
                                dbfn-call?)) ; TODO CLJS |bigdec?|
 (def-validated -instant (v/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
                        #?(:clj (v/and string?        (v/conformer clojure.instant/read-instant-date)))
-                               (v/and (fn1 integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
+                               (v/and (fn1 t/integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
                                dbfn-call?))
 (def-validated -uri     (v/or* (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
                                dbfn-call?))
-(def-validated -bytes   (v/or* (fn1 bytes?) dbfn-call?))
+(def-validated -bytes   (v/or* (fn1 t/bytes?) dbfn-call?))
 
 ; ===== QUERIES =====
 
@@ -367,10 +365,10 @@
            (def :datomic:schema/type        allowed-types)
            (def :datomic:schema/cardinality #{:one :many})]
   :opt-un [(def :datomic:schema/doc         string?)
-           (def :datomic:schema/component?  (fn1 boolean?))
-           (def :datomic:schema/index?      (fn1 boolean?))
-           (def :datomic:schema/full-text?  (fn1 boolean?))
-           (def :datomic:schema/no-history? (fn1 boolean?))
+           (def :datomic:schema/component?  (fn1 t/boolean?))
+           (def :datomic:schema/index?      (fn1 t/boolean?))
+           (def :datomic:schema/full-text?  (fn1 t/boolean?))
+           (def :datomic:schema/no-history? (fn1 t/boolean?))
            (def :datomic:schema/unique      #{:identity :value})])
 
 ; TODO for datascript:
@@ -694,7 +692,7 @@
   ([^Database db]
     (let [history (-> db :ephemeral :history)
           conn    (-> db :ephemeral :conn   )]
-      (validate history atom?)
+      (validate history t/atom?)
       (when (nempty? @history)
         (let [prev   (peek @history)
               before (:db-before prev)

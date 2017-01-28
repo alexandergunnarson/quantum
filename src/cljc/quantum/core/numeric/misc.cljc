@@ -1,36 +1,30 @@
 (ns quantum.core.numeric.misc
           (:refer-clojure :exclude [quot rem mod neg? zero? <= -'])
           (:require
-            [#?(:clj  clojure.core
-                :cljs cljs.core   )     :as core  ]
-            [quantum.core.error         :as err
+            [clojure.core       :as core  ]
+            [quantum.core.error :as err
               :refer [TODO]]
             [quantum.core.macros
-              :refer        [#?@(:clj [defnt defnt'])]
-              :refer-macros [defnt]]
+              :refer [defnt #?@(:clj [defnt'])]]
             [quantum.core.vars
-              :refer        [#?@(:clj [defalias def-])]
-              :refer-macros [defalias def-]]
+              :refer [defalias def-]]
             [quantum.core.compare
-              :refer [#?@(:clj [<=])]
-              :refer-macros [<=]]
+              :refer [<=]]
             [quantum.core.numeric.operators
-              :refer        [#?@(:clj [-' abs'])]
-              :refer-macros [-' abs']]
+              :refer [-' abs']]
             [quantum.core.numeric.predicates
-              :refer        [#?@(:clj [neg? zero?])]
-              :refer-macros [neg? zero?]])
+              :refer [neg? zero?]])
   #?(:clj (:import [net.jafama FastMath])))
 
 #?(:clj  (defmacro rem [n div] `(Numeric/rem ~n ~div))
    :cljs (defnt rem
-           ([^number?                           x n] (core/rem x n))
-           ([^com.gfredericks.goog.math.Integer x n] (.modulo  x n))))
+           ([^double? x n] (core/rem x n))
+           ([^bigint? x n] (.modulo  x n))))
 
 #?(:clj  (defalias mod core/mod) ; TODO fix
    :cljs (defnt mod
-           ([^number? x n] (core/mod x n))
-           ([^com.gfredericks.goog.math.Integer x n]
+           ([^double? x n] (core/mod x n))
+           ([^bigint? x n]
              (let [y (rem x n)]
                (cond-> y (.isNegative y) (.add n))))))
 
@@ -65,7 +59,7 @@
            -1.0 if the argument is less than zero."
           (^double [^double x] (Math/signum x))
           (^float  [^float  x] (Math/signum x)))
-   :cljs (defnt sign' [^number? x] (js/Math.sign x)))
+   :cljs (defnt sign' [^double? x] (js/Math.sign x)))
 
 #?(:clj
 (defnt' with-sign "Returns @x with the sign of @y."

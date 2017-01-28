@@ -17,7 +17,7 @@
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
-      :refer [catvec subvec+]]
+      :refer [catvec subsvec]]
     [quantum.core.error            :as err
       :refer [->ex]]
     [quantum.core.fn               :as fn
@@ -26,9 +26,8 @@
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
-      :refer [defnt]]
-    [quantum.core.numeric          :as num
-      :include-macros true]
+      :refer [defnt if-cljs]]
+    [quantum.core.numeric          :as num]
     [quantum.core.type             :as type
       :refer [instance+? array-list? lseq?]]
     [quantum.core.reducers.reduce  :as red
@@ -1078,7 +1077,7 @@
         quoted-sym          (symbol (str sym "'"))
         parallel-sym        (symbol (str "p" sym))
         parallel-quoted-sym (symbol (str "p" sym "'"))]
-    `(do (defalias ~lazy-sym ~(symbol "core" (name sym)))
+    `(do (defalias ~lazy-sym ~(symbol (if-cljs &env "cljs.core" "clojure.core") (name sym)))
          (defalias ~(var/unqualify plus-sym) ~plus-sym)
          (defn ~sym
            ~(str "Like `core/" sym "`, but eager. Reduces into vector.")

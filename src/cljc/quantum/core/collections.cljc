@@ -45,12 +45,12 @@
               class
               -])
            (:require
-             [clojure.core                            :as core   ]
+             [clojure.core                            :as c      ]
              [fast-zip.core                           :as zip    ]
              [quantum.core.data.map                   :as map    ]
              [quantum.core.data.set                   :as set    ]
              [quantum.core.data.vector                :as vec
-               :refer [catvec subvec+]                           ]
+               :refer [catvec subsvec]]
              [quantum.core.collections.base           :as base   ]
              [quantum.core.collections.core           :as coll
                :include-macros true?                             ]
@@ -82,7 +82,7 @@
                :refer [defeager]]
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
-             [quantum.core.type                       :as type
+             [quantum.core.type                       :as t
                :refer [transient!* persistent!*
                        lseq? transient? editable?
                        boolean? should-transientize?
@@ -143,11 +143,11 @@
 #?(:clj (defalias last            coll/last         ))
 ; ===== BULK RETRIEVAL ===== ;
 #?(:clj (defalias rest            coll/rest         ))
-        (defalias lrest           core/rest         )
+        (defalias lrest           c/rest            )
 #?(:clj (defalias butlast         coll/butlast      ))
 #?(:clj (defalias getr            coll/getr         ))
         (defalias subseq          coll/subseq       )
-        (defalias subseq-where    core/subseq       )
+        (defalias subseq-where    c/subseq          )
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
 #?(:clj (defalias assoc!          coll/assoc!       ))
@@ -282,7 +282,7 @@
 #?(:clj (defalias loopr    loops/seq-loop))
 #?(:clj (defalias ifor     loops/ifor    ))
 ; ===== COLLECTION COMPREHENSION ===== ;
-#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) core/assoc :macro true))
+#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
 #?(:clj (defalias for*     loops/for*    ))
 #?(:clj (defalias for+     red/for+      ))
 #?(:clj (defalias fori     loops/fori    ))
@@ -336,7 +336,7 @@
         (defalias keep-indexed+   red/keep-indexed+  )
         (defeager mapcat          red/mapcat+        )
         (defalias remove-surrounding diff/remove-surrounding)
-        (defalias lreductions core/reductions)
+        (defalias lreductions c/reductions)
         (defn reductions
           [f init coll]
           (persistent!
@@ -356,7 +356,7 @@
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-        (defalias zipmap          core/zipmap        )
+        (defalias zipmap          c/zipmap           )
         (defalias merge           map/merge          )
 
 (defn ->multi-array
@@ -386,7 +386,7 @@
 #?(:clj
 (defn array->dimensionality
   "e.g. an array with the '[[[J' tag would be of 3 dimensionality."
-  [arr]
+  [arr] ; TODO ensure that it's an array
   (->> arr type str (drop 6) (take-while (fn1 = \[)) count)))
 
 #?(:clj
@@ -400,11 +400,11 @@
   ([^float?   x] :float  )
   ([^double?  x] :double )))
 
-#?(:clj (def array-managers @#'clojure.core/ams))
+#?(:clj (def array-managers @#'c/ams))
 
 #?(:clj
 (defnt array->vector*
-  ([#{array? Object} arr]
+  ([#{array-1d? Object} arr]
    (let [t  (array->array-manager-key (aget arr 0))
          ^clojure.core.ArrayManager am (get array-managers t)
          ct (int (count arr))
@@ -439,7 +439,7 @@
 
 (defnt padr
   "Pad, right."
-  ([#{#?(:clj StringBuilder :cljs StringBuffer)} x i add]
+  ([^!string? x i add]
     (dotimes [i' (- i (lasti x))] (.append x add))
     x)
   ([^string? x i add]
@@ -462,8 +462,8 @@
    (fn [m k]
      (let [v (get m k)]
        (if (or (nil? v)
-               (and (or (map? v)
-                        (sequential? v))
+               (and (or (t/+map? v)
+                        (c/sequential? v))
                     (empty? v)))
          (dissoc m k) m)))
    m (keys m)))
@@ -480,7 +480,7 @@
 
 (defalias concatv catvec)
 ; TODO generalize concat
-(defalias lconcat core/concat)
+(defalias lconcat c/concat)
 
 (defn lzip [& args] (->> args (apply interleave) (lpartition-all (count args))))
 (defn zip  [& args] (->> args (apply interleave) (partition-all  (count args))))
@@ -834,7 +834,7 @@
 
 (defn get-in
   [coll ks]
-  (if (type/array? coll)
+  (if (t/array? coll)
       (aget-in coll ks)
       (reduce get-in-f* coll ks)))
 
@@ -844,7 +844,7 @@
 
 (defn assoc-in! ; TODO |defnt|?
   [coll ks v]
-  (if (type/array? coll)
+  (if (t/array? coll)
       (aset-in! coll ks v)
       (assoc! (get-in coll (butlast ks)) (last ks) v)))
 
@@ -916,7 +916,7 @@
       (fn [left-f k-right v-right]
        ;(if ((fn-not contains?) left-f k-right) ; can't call |contains?| on a transient, apparently...
        ;    left-f)
-       (let [v-left (core/get left k-right)]
+       (let [v-left (c/get left k-right)]
          (if (nil? v-left)
              left-f
              (let [merged-vs
@@ -967,7 +967,7 @@
   ([^string? coll elem]
     (str/join elem coll))
   ([coll elem]
-    (core/interpose elem coll)))
+    (c/interpose elem coll)))
 
 (defn interpose
   {:todo ["|definline| this"]}
@@ -1137,7 +1137,7 @@
   ([xs x] (binary-search xs x 0 (unchecked-dec #_dec* (count xs)) false))
   ([xs x a b between?]
     (loop [l (long a) h (long b)]
-      (if (core/<= h (inc l))
+      (if (c/<= h (inc l))
           (cond
             (= x (get xs l)) l
             (= x (get xs h)) h
@@ -1146,7 +1146,7 @@
                         [(dec l) h]
                         [l       h])))
           (let [m (-> h (unchecked-subtract #_-* l) (bit-shift-right #_>> 1) (unchecked-add #_+* l))]
-            (if (core/< (get xs m) x) ; negative favors the left side in |compare|
+            (if (c/< (get xs m) x) ; negative favors the left side in |compare|
                 (recur (long (unchecked-inc #_inc* m)) (long h))
                 (recur (long l)        (long m))))))))
 ;___________________________________________________________________________________________________________________________________
@@ -1155,7 +1155,7 @@
 ; TODO fix
 (def map->record hash-map)
 
-(defnt invert [^map? m]
+(defnt invert [^+map? m]
   (reduce (rfn [m' k v] (assoc m' v k)) (empty m) m))
 
 (declare ensurec)
@@ -1172,17 +1172,14 @@
       (concat (ltake n x) (list (f (get x n))) (nthnext x (inc n)))))
 
 (defnt update-nth
-  {:todo ["Fix class overlap"]}
-          ([^vector? x n f] (update x n f))
-          #_([^cdlist? x n f] (if (= n (lasti x)) ; TODO ENABLE THIS
-                                (conj (.pop x) (f (last x)))
-                                (update-nth-list* x n f)))
-  #?(:clj ([^clojure.lang.Seqable #_listy?  x n f] (update-nth-list* x n f))))
+  ([^+vec? x n f] (update x n f))
+  #_([^cdlist? x n f] (if (= n (lasti x)) ; TODO ENABLE THIS
+                        (conj (.pop x) (f (last x)))
+                        (update-nth-list* x n f)))
+  ([^seq?  x n f] (update-nth-list* x n f)))
 
 (defn update-first [x f] (update-nth x 0         f))
 (defn update-last  [x f] (update-nth x (lasti x) f))
-
-
 
 (defn index-with-ids
   "Adds unique ids to each entry."
@@ -1218,7 +1215,7 @@
   {:source "zcaudate/hara.data.path"}
   ([m]
    (reduce-kv (fn [m k v]
-                (if (map/hash-map? v)
+                (if (t/+hash-map? v)
                     (reduce-kv (fn [m sk sv]
                                  (assoc m (path/join [k sk]) sv))
                                m
@@ -1236,8 +1233,8 @@
    (reduce-kv (fn [m k v]
                 (if (or (and (not (> 0 max))
                              (<= max 1))
-                        (not (#?(:clj  map/hash-map?
-                                 :cljs map?) v))
+                        (not (#?(:clj  t/+hash-map?
+                                 :cljs t/+map?) v))
                         (and keep-empty
                              (empty? v)))
                   (assoc m (conj arr k) v)
@@ -1293,7 +1290,7 @@
   {:source "zcaudate/hara.data.path"}
   [m]
   (reduce-kv (fn [m k v]
-               (if (and (map/hash-map? v) (not (empty? v)))
+               (if (and (t/+hash-map? v) (not (empty? v)))
                  (update-in m (path/split k) nested/merge-nested (treeify-keys-nested v))
                  (assoc-in m (path/split k) v)))
              {}
@@ -1334,12 +1331,12 @@
     (persistent! copy)))
 
 (defnt ensurec*
-  ([#{vector? set? map?} ensurer ensured]
-    (cond ((type/->pred ensurer) ensured)
+  ([#{+vec? +set? +map?} ensurer ensured]
+    (cond ((t/->pred ensurer) ensured)
           ensured
           (nil? ensured)
           ensurer
-          :else (conj (type/->base ensurer) ensured))))
+          :else (conj (t/->base ensurer) ensured))))
 
 (defn ensurec
   "ensure-collection.
@@ -1536,7 +1533,7 @@
   [xs n]
   (->> xs
        (ldropl (- (count xs) n))
-       core/vec))
+       c/vec))
 
 (defn take-until*
   {:from "mpdairy/posh.q-pattern-gen"}
@@ -1568,7 +1565,7 @@
   (cond (list? x) true
         (coll? x) (if (empty? x) false
                       (or (deep-list? (first x))
-                          (deep-list? (core/vec (rest x)))))))
+                          (deep-list? (c/vec (rest x)))))))
 
 (defn deep-find ; TODO this might be `postwalk-seq-or`?
   {:from "mpdairy/posh.core"}

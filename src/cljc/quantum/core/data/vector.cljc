@@ -3,40 +3,40 @@
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "Alex Gunnarson"}
   quantum.core.data.vector
-           (:require [clojure.core.rrb-vector  :as vec+  ]
-           #?@(:clj [[clojure.core.rrb-vector.protocols
-                       :refer [PSliceableVector  slicev
-                               PSpliceableVector splicev]]
-                     [clojure.core.rrb-vector.rrbt
-                       :refer [AsRRBT as-rrbt]]])
-                     [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]        ])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                 ])))
+  (:require
+    [clojure.core.rrb-vector  :as svec]
+#?@(:clj
+   [[clojure.core.rrb-vector.protocols
+      :refer [PSliceableVector  slicev
+              PSpliceableVector splicev]]
+    [clojure.core.rrb-vector.rrbt
+      :refer [AsRRBT as-rrbt]]])
+    [quantum.core.vars        :as var
+      :refer [defalias]]))
 
 ; TO EXPLORE
 ; - michalmarczyk/devec: double-ended vector
 ; =======================================
 
-(defalias vec+    vec+/vec)
-(defalias vector+ vec+/vector)
+; svec = "spliceable vector"
+(defalias svec    svec/vec)
+(defalias svector svec/vector)
 
 ; slice
 (defn catvec
   "|empty| checks to get around StackOverflowErrors inherent in |catvec|
    (At least in Clojure version)"
   {:attribution "Alex Gunnarson"}
-  ([] (vec+))
+  ([] (svector))
   ([a] a)
   ([a b]
     (if (empty? a)
         (if (empty? b)
-            (vector+)
-            (vec+ b))
+            (svector)
+            (svec b))
         (if (empty? b)
-            (vec+ a)
-            (vec+/catvec a b))))
+            (svec a)
+            (svec/catvec a b))))
   ([a b c]
     (catvec (catvec a b) c))
   ([a b c d]
@@ -48,21 +48,21 @@
   ([a b c d e f & more]
     (reduce catvec (catvec a b c d e f) more)))
 
-(defn subvec+
+(defn subsvec
   "Produces a new vector containing the appropriate subrange of the input vector in logarithmic time
    (in contrast to clojure.core/subvec, which returns a reference to the input vector)
    clojure.core/subvec is a constant-time operation that prevents the underlying vector
    from becoming eligible for garbage collection"
   {:attribution "Alex Gunnarson"}
   [coll a b]
-  (try (vec+/subvec coll a b)
+  (try (svec/subvec coll a b)
     (catch
       #?(:clj  IllegalArgumentException
          :cljs js/Error)
       _
-      (subvec coll a b))))
+      (subsvec coll a b))))
 
-(def vector+?
+(def svec?
   (partial instance?
     #?(:clj  clojure.core.rrb_vector.rrbt.Vector
        :cljs clojure.core.rrb-vector.rrbt.Vector)))
@@ -72,6 +72,6 @@
   ^{:doc "Creates a new vector capable of storing homogenous items of type t,
   which should be one of :object, :int, :long, :float, :double, :byte,
   :short, :char, :boolean. Primitives are stored unboxed."}
-  vector-of+ vec+/vector-of))
+  svector-of svec/vector-of))
 
 ; TODO use |vec+/vec| to convert a vector to an RRBT vector. Benchmark this

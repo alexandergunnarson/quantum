@@ -341,7 +341,7 @@
   ([^CastExpr x]
     (let [type (-> x .getType parse*)
           expr (-> x .getExpr parse*)]
-      (if (tcore/primitive? type)
+      (if (tcore/prim? type)
           (let [cast-fn (symbol (str "->" (->name type)))]
             (list cast-fn expr))
           (list 'cast type expr))))

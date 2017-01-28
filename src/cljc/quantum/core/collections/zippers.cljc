@@ -43,7 +43,7 @@
     [quantum.core.data.map         :as map
       :refer [map-entry]]
     [quantum.core.data.vector      :as vec
-      :refer [vec+]]
+      :refer [svec]]
     [quantum.core.collections.base :as base]
     [quantum.core.collections.core :as coll
       :refer [key val first second conj conj! empty]]
@@ -66,8 +66,8 @@
    as a sorted-map with the same comparator."
   {:todo ["Fix class overlap" "fix clojure.lang.PersistentList$EmptyList"]}
   ; Special case to preserve type
-  ([^list? coll f        ] (replace-meta-from (apply list (map f coll)) coll))
-  ([^list? coll _ to-join] (replace-meta-from (apply list to-join     ) coll))
+  ([^+list? coll f        ] (replace-meta-from (apply list (map f coll)) coll))
+  ([^+list? coll _ to-join] (replace-meta-from (apply list to-join     ) coll))
   ([^transientizable? coll f]
      (replace-meta-from
        (persistent!
@@ -80,14 +80,14 @@
   ; generic sequence fallback
   ; TODO add any seq in general
   ; TODO fix queue?
-  ([#{cons? lseq? misc-seq? queue?} coll f        ]
+  ([#{cons? lseq? misc-seq? +queue?} coll f        ]
     (replace-meta-from (map f coll) coll))
-  ([#{cons? lseq? misc-seq? queue?} coll _ to-join]
+  ([#{cons? lseq? misc-seq? +queue?} coll _ to-join]
     (replace-meta-from (seq to-join) coll))
-  ([^vec+? coll f        ]
-    (replace-meta-from (vec+ (mapv f coll)) coll))
-  ([^vec+? coll _ to-join]
-    (replace-meta-from (vec+ to-join) coll))
+  ([^svec? coll f        ]
+    (replace-meta-from (svec (mapv f coll)) coll))
+  ([^svec? coll _ to-join]
+    (replace-meta-from (svec to-join) coll))
   ; Persistent collections that don't support transients
   #?(:clj  ([#{clojure.lang.PersistentStructMap
                clojure.lang.PersistentTreeMap

@@ -22,8 +22,8 @@
                                             (-> x .lpart          neg?)
                                             (-> x .bipart .signum neg?))))
    :cljs (defnt neg?
-           ([^number?                           x] (core/neg? x))
-           ([^com.gfredericks.goog.math.Integer x] (.isNegative x))))
+           ([^double? x] (core/neg? x))
+           ([^bigint? x] (.isNegative x))))
 
 #?(:clj  (defnt ^boolean pos?
            ([#{byte char short int float double} x] (quantum.core.Numeric/isPos x))
@@ -34,7 +34,7 @@
                                             (-> x .lpart          pos?)
                                             (-> x .bipart .signum pos?))))
    :cljs (defnt pos?
-           ([^number?                           x] (core/pos? x))
+           ([^double?                           x] (core/pos? x))
            ([^com.gfredericks.goog.math.Integer x] (not (.isNegative x)))))
 
 #?(:clj  (defnt ^boolean zero?
@@ -47,8 +47,8 @@
            ([#{java.math.BigInteger
                java.math.BigDecimal} x] (-> x .signum zero?)))
    :cljs (defnt zero?
-           ([^number?                           x] (core/zero? x))
-           ([^com.gfredericks.goog.math.Integer x] (.isZero x))))
+           ([^double? x] (core/zero? x))
+           ([^bigint? x] (.isZero x))))
 
 #?(:clj  (defnt nan?
            ([^double? x] (Double/isNaN x))

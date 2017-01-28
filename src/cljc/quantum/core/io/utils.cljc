@@ -3,23 +3,19 @@
             [com.stuartsierra.component  :as component]
     #?(:clj [clojure.java.io             :as io])
             [quantum.core.convert        :as conv
-              :refer        [->name]]
+              :refer [->name]]
             [quantum.core.collections    :as coll
-              :refer        [#?(:clj kmap)]
-              :refer-macros [        kmap]]
+              :refer [kmap]]
             [quantum.core.error          :as err
-              :refer        [->ex]             ]
+              :refer [->ex]]
             [quantum.core.fn             :as fn
-              :refer        [#?@(:clj [fn1])]
-              :refer-macros [          fn1]]
+              :refer [fn1]]
             [quantum.core.system         :as sys]
             [quantum.core.string         :as str]
             [quantum.core.logic          :as logic
-              :refer        [#?@(:clj [fn-not fn-and ifn])]
-              :refer-macros [          fn-not fn-and ifn]]
+              :refer [fn-not fn-and ifn]]
             [quantum.core.macros         :as macros
-              :refer        [#?@(:clj [defnt])]
-              :refer-macros [         defnt]]
+              :refer [defnt]]
             [quantum.core.paths          :as paths
               :refer [#?(:clj ->file)]])
   #?(:clj (:import
@@ -49,7 +45,7 @@
          true
       (catch SecurityException _ false)))
   ([^file?   dir] (->> dir str       readable?))
-  ([^vec?    dir] (->> dir paths/parse-dir readable?))))
+  ([^+vec?   dir] (->> dir paths/parse-dir readable?))))
 
 #?(:clj
 (defnt writable?

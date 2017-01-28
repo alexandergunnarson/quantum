@@ -12,8 +12,6 @@
                      [garden.stylesheet :as css-style
                        :refer [at-keyframes at-font-face]]
                      [quantum.core.log  :as log          ])
-  #?(:cljs (:require-macros
-                     [quantum.core.log  :as log          ]))
   #?(:clj  (:import  garden.color.CSSColor)))
 
 ; TODO generate this in a more sane way
@@ -206,7 +204,7 @@
 #_(defnt normalize-prop-v
   ([^keyword? v k] (name v))
   ([^number?  v k] (if (contains? px-props k) (px v) (str v)))
-  ([^vector?  v k] (postwalk (fn1 normalize-prop-v k) v))
+  ([^+vec?    v k] (postwalk (fn1 normalize-prop-v k) v))
   ([:else     v k] (whenf v css-color? render-color)))
 
 #_(defn compatibilize

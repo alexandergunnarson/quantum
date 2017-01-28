@@ -39,8 +39,8 @@
                  (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
         (println "class" (class expr-ast ))
     (when (.hasJavaClass expr-ast)
-      {:class      (.getJavaClass expr-ast)
-       :primitive? (.isPrimitive (.getJavaClass expr-ast))}))))
+      {:class (.getJavaClass expr-ast)
+       :prim? (.isPrimitive (.getJavaClass expr-ast))}))))
 
 #?(:clj
 (defn expr-info
@@ -55,7 +55,7 @@
   [expr]
   (expr-info* `(fn [] ~expr))))
 
-#?(:clj (defmacro typeof     {:attribution 'clisk.util}
-          ([expr] (-> expr expr-info :class     ))))
-#?(:clj (defmacro primitive? {:attribution 'clisk.util}
-          ([expr] (-> expr expr-info :primitive?))))
+#?(:clj (defmacro typeof {:attribution 'clisk.util}
+          ([expr] (-> expr expr-info :class))))
+#?(:clj (defmacro prim?  {:attribution 'clisk.util}
+          ([expr] (-> expr expr-info :prim?))))

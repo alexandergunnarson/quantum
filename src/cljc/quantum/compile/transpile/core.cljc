@@ -17,7 +17,7 @@
 
 #?(:clj
 (defnt ^String transpile-from*
-  ([^vec? from-src from to]
+  ([^+vec? from-src from to]
     (transpile-from* (conv/->file from-src) from to))
   ([^java.io.File from-src from to]
     (transpile-from*

@@ -1,5 +1,5 @@
 (ns quantum.audio.midi
-  (:refer-clojure :exclude [map map-indexed butlast last for partition-all reduce remove drop integer?])
+  (:refer-clojure :exclude [map map-indexed butlast last for partition-all reduce remove drop])
   (:require
     [clojure.core.match
       :refer [match]]
@@ -28,8 +28,7 @@
     [quantum.core.convert     :as conv]
     [quantum.measure.convert
       :refer [convert]]
-    [quantum.core.type
-      :refer [integer?]]
+    [quantum.core.type :as t]
     [quantum.core.async.scheduling :as sched]
     [quantum.db.datomic.core       :as dbc]) ; TODO just for the spec
   (:import
@@ -311,7 +310,7 @@
          :or   {max-duration Long/MAX_VALUE}}
           (or (get-in instrument-name->chan [instrument articulation])
               (get-in instrument-name->chan [instrument :normal     ])) ; TODO warn if articulation not found
-        _             (validate chan (fn1 integer?))
+        _             (validate chan (fn1 t/integer?))
         d             base-duration
         note-duration (* relative-duration base-duration)
         ; Switch to normal config if note is too long for e.g. staccato, etc.
@@ -319,7 +318,7 @@
           (if (> note-duration max-duration)
               (get-in instrument-name->chan [instrument :normal])
               config)
-        _             (validate chan (fn1 integer?))
+        _             (validate chan (fn1 t/integer?))
         duration      (case articulation
                             :staccato (duration->apply-staccato note-duration max-duration)
                             :tenuto   (* note-duration (+ 1 1/5))
@@ -337,7 +336,7 @@
                                           (#(% duration)))
                             nil       nil)
         pitch         (keyword (str note octave'))
-        pitch-int     (delay (-> pitches (get pitch) (validate (fn1 integer?))))]
+        pitch-int     (delay (-> pitches (get pitch) (validate (fn1 t/integer?))))]
     (kmap note note-duration duration relative-duration octave' pitch pitch-int modwheel chan velocity tie?)))
 
 (defonce stop? (atom false))
@@ -347,9 +346,9 @@
          :keys [instrument
                 expr-0]} lines]
     (let [config      (get-in instrument-name->chan [instrument :normal])
-          normal-chan (-> config :chan (validate (fn1 integer?)))
+          normal-chan (-> config :chan (validate (fn1 t/integer?)))
           volume-0    (-> (get dynamics->volume expr-0)
-                          (validate (fn1 integer?)))]
+                          (validate (fn1 t/integer?)))]
       (swap! volumes assoc normal-chan volume-0)
       normal-chan)))
 
@@ -359,7 +358,7 @@
   (release-all! offset))
 
 (defn gen-ops-for-note [{:keys [chan pitch velocity duration tie-on? measure-ties scheduler]}]
-  (let [_          (validate measure-ties map?)
+  (let [_          (validate measure-ties (fn1 t/+map?))
         tied       (get measure-ties chan)
         prev-tied? (= tied pitch)]
     (cond prev-tied?
@@ -386,7 +385,7 @@
    {:as   line
     :keys [instrument expr-0 measures octave]}
    {:keys [base-duration scheduler normal-chan bar-ties]}]
-  (validate bar-ties map?)
+  (validate bar-ties (fn1 t/+map?))
   (red-for [note* measure
             {:keys [measure-ties measure-ops]} {:measure-ties bar-ties :measure-ops []}]
     (let [{:keys [note note-duration duration relative-duration octave' pitch-int modwheel chan velocity tie?] :as setup}
@@ -413,7 +412,7 @@
 
 (defn gen-ops-for-bar
   [{:keys [music base-duration scheduler normal-chans i-measure ties ops]}]
-  (validate ties map?)
+  (validate ties (fn1 t/+map?))
   (red-for [[i-line line] (coll/lindexed music)
             {:keys [bar-ties bar-ops]} {:bar-ties ties :bar-ops []}]
     (let [measure (-> line :measures (get i-measure))

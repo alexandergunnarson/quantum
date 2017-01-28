@@ -5,32 +5,19 @@
   quantum.core.type.core
   (:refer-clojure :exclude [class])
   (:require
+          [clojure.set :as set]
  #?(:clj  [clojure.tools.analyzer.jvm.utils :as ana])
  #?(:clj  [clojure.core.async.impl.protocols]
     :cljs [cljs.core.async.impl.channels])
-          [quantum.core.type.defs           :as defs
-            :include-macros true]
+          [quantum.core.type.defs           :as defs]
           [quantum.core.error               :as err
-            :refer [->ex]                           ]
+            :refer [->ex]]
           [quantum.core.vars                :as var
             :refer [defalias]]))
 
 (def class #?(:clj clojure.core/class :cljs type))
 
 (defs/def-types #?(:clj :clj :cljs :cljs))
-
-(defn name-from-class
-  [class-0]
-#?(:clj
-     (let [^String class-str (str class-0)]
-       (-> class-str
-           (subs (-> class-str (.indexOf " ") inc))
-           symbol))
-   :cljs
-     (if (-> types (get 'primitive?) (contains? class-0))
-         (or (get primitive-types class-0)
-             (throw (->ex (str "Class " (type->str class-0) " not found in primitive types."))))
-         (-> class-0 type->str symbol))))
 
 #?(:clj
 (def boxed-type-map
@@ -42,11 +29,6 @@
    short   java.lang.Short
    int     java.lang.Integer
    float   java.lang.Float}))
-
-; (def primitive?
-;   "Returns non-nil if the argument represents a primitive Class other than Void"
-;   #{Double/TYPE Character/TYPE Byte/TYPE Boolean/TYPE
-;     Short/TYPE Float/TYPE Long/TYPE Integer/TYPE})
 
 ; (def ^:private convertible-primitives
 ;   "If the argument is a primitive Class, returns a set of Classes
@@ -115,12 +97,14 @@
 (def unboxed-type-map
   (zipmap (vals boxed-type-map) (keys boxed-type-map))))
 
-#?(:clj (def primitive-types (-> types-unevaled :clj (get 'primitive?))))
+(def prim-types      (-> types-unevaled :clj (get 'prim?)))
+(def primitive-types (-> types-unevaled :clj (get 'primitive?)))
+(def primitive-boxed-types (set/difference primitive-types prim-types))
+(def primitive-array-types '#{bytes shorts chars ints longs floats doubles})
 
-#?(:clj (def primitive-array-types '#{bytes shorts chars ints longs floats doubles}))
-
-(def primitive? (partial contains? primitive-types))
-#?(:clj  (def auto-unboxable? primitive?)
+(def prim?      #(contains? prim-types %))
+(def primitive? #(contains? primitive-types %))
+#?(:clj  (def auto-unboxable? #(contains? primitive-boxed-types %))
    :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))
 
 (def compiler-lang #?(:clj :clj :cljs :cljs))

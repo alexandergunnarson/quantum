@@ -19,7 +19,8 @@
       :refer [fn= fn-not fn-or fn-and whenf
               whenf1 whenc ifn condfc condpc coll-or]]
     [quantum.core.macros                     :as macros
-      :refer [defnt]]))
+      :refer [defnt]]
+    [quantum.core.type                       :as t]))
 
 ; special-symbol? is a clojure thing
 
@@ -96,7 +97,7 @@
 (declare obj-class)
 
 ; TODO insert in quantum.core.type
-(def primitive? (partial (fn-not coll?)))
+(def primitive? (partial (fn-not coll?))) ; TODO this is definitely not right
 
 ; TODO use quantum.core.type
 (def primitives-map
@@ -562,7 +563,7 @@
                        (cond
                          (even? arg-ct)
                            (apply sorted-map arg-0 args) ; sorts the keys
-                         (and (= 1 arg-ct) (map? arg-0))
+                         (and (= 1 arg-ct) (t/+map? arg-0))
                            arg-0
                          (and (= 1 arg-ct) (nil? arg-0))
                            {}
@@ -690,12 +691,12 @@
     (special-form-fn form)))
 
 (defnt eval-form*
-  ([^map? obj]
+  ([^+map? obj]
     (log/pr :debug "IN MAP")
     (condp = *lang*
       :js   (eval-form (list 'Object. obj))
       (eval-form (cons 'map! (apply concat obj)))))
-  ([^listy? obj]
+  ([^seq? obj]
     (let [;[first-0 & rest-0 :as form] obj ; TODO destructuring in |defnt| not yet supported
           form obj
           first-0 (first obj)
@@ -717,12 +718,12 @@
             :else
               (apply fn-pos (eval-form first-0) rest-0))
           (apply fn-pos (eval-form 'list!) first-0 rest-0))))
-   ([^vec? obj]
+   ([^+vec? obj]
      (log/pr :debug "IN VEC")
      (condp = *lang*
        :js   (apply fn-pos (eval-form 'pvec) obj)
        (apply fn-pos (eval-form 'C/vector) obj)))
-   ([^set? obj]
+   ([^+set? obj]
      (log/pr :debug "IN SET")
      (apply fn-pos (eval-form 'hash-set!) obj))
    ([^symbol? obj]

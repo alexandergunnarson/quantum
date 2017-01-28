@@ -7,6 +7,7 @@
       :refer [type-hint]]
     [quantum.core.analyze.clojure.transform
       :refer [unhint]]
+    [quantum.core.macros.optimization        :as opt]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set
               zip-reduce* default-zipper nnil?]]
@@ -58,7 +59,7 @@
                 (fn [sym]
                   (let [[hinted hint] (find arglist-map sym)]
                     (if (and hinted
-                             (-> hint tcore/primitive? not)  ; Because "Can't type hint a primitive local"
+                             (-> hint tcore/prim? not)  ; Because "Can't type hint a primitive local"
                              (-> hint (not= 'Object))
                              (-> hint (not= 'java.lang.Object))
                              (-> sym type-hint not))
@@ -79,7 +80,7 @@
                 (list* 'let
                   (->> arglist ; to preserve order
                        (map (juxt unhint type-hint))
-                       (filter (fn-> second tcore/primitive?))
+                       (filter (fn-> second tcore/prim?))
                        (map (fn [[sym hint]]
                               [sym (list hint sym)])) ; add primitive type cast in let-binding
                        (apply concat)
@@ -139,7 +140,7 @@
         (vector? arg)
           ; Otherwise the tag meta is assumed to be
           ; clojure.lang.IPersistentVector, etc.
-          (cmacros/hint-meta (list 'identity arg)
+          (cmacros/hint-meta (list `quantum.core.macros.optimization/identity* arg)
             (or (get vec-classes-for-count (count arg))
                 (case lang
                   :clj  'clojure.lang.PersistentVector

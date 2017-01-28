@@ -40,7 +40,7 @@
     [quantum.core.data.map         :as map
       :refer [map-entry]]
     [quantum.core.data.vector      :as vec
-      :refer [catvec subvec+]]
+      :refer [catvec]]
     [quantum.core.collections.core :as coll
       :refer [first second rest get count conj! assoc dissoc assoc! assoc!* empty? contains? containsk?]]
     [quantum.core.collections.generative
