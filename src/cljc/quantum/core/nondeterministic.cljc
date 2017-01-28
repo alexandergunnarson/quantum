@@ -179,7 +179,7 @@
        :cljs (if secure?
                  (-> (js/forge.random.getBytesSync size)
                      js/forge.util.binary.raw.decode
-                     arr/->int8-array)
+                     arr/->byte-array)
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
 #?(:clj
