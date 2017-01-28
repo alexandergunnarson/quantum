@@ -1,24 +1,19 @@
 (ns quantum.test.core.collections.tree
   (:require
-    [#?(:clj clojure.test
-        :cljs cljs.test) :as test
-      :refer        [#?@(:clj [deftest is testing])]
-      :refer-macros [deftest is testing]]
-    [fast-zip.core                 :as zip]
+    [quantum.core.test
+      :refer [deftest is testing]]
     [quantum.core.fn
-      :refer        [#?@(:clj [rcomp fn1 fn->])]
-      :refer-macros [rcomp fn1 fn->]]
+      :refer [rcomp fn1 fn->]]
     [quantum.core.logic
-      :refer        [#?@(:clj [condf])]
-      :refer-macros [condf]]
+      :refer [condf]]
     [quantum.core.collections.tree    :as ns]
-    [quantum.core.collections.zippers :as qzip]))
+    [quantum.core.collections.zippers :as zip]))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
 ;=================================================={                          }=====================================================
 ; ------------------------------------------ WALK ----- ;
 
-(defn assert-same-zipper [arg] (qzip/node* arg))
+(defn assert-same-zipper [arg] (zip/?node arg))
 
 (defrecord Foo [a b c])
 
@@ -117,11 +112,11 @@
   (let [dirs (atom {})
         ret (ns/zip-prewalk
               (fn [x] (swap! dirs
-                        (fn-> (update :up    (rcomp conj vec) (-> x zip/up    qzip/node*))
-                              (update :at    (rcomp conj vec) (-> x           qzip/node*))
-                              (update :left  (rcomp conj vec) (-> x zip/left  qzip/node*))
-                              (update :right (rcomp conj vec) (-> x zip/right qzip/node*))
-                              (update :down  (rcomp conj vec) (-> x zip/down  qzip/node*))))
+                        (fn-> (update :up    (rcomp conj vec) (-> x zip/up    zip/?node))
+                              (update :at    (rcomp conj vec) (-> x           zip/?node))
+                              (update :left  (rcomp conj vec) (-> x zip/left  zip/?node))
+                              (update :right (rcomp conj vec) (-> x zip/right zip/?node))
+                              (update :down  (rcomp conj vec) (-> x zip/down  zip/?node))))
                       (zip/node x))
               walk-order-data)
         dirs-expected

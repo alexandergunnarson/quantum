@@ -14,8 +14,7 @@
       :refer [->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1]]
-    [quantum.core.log                        :as log
-      :include-macros true]
+    [quantum.core.log                        :as log]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-not fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
@@ -31,7 +30,9 @@
     [quantum.core.type.defs                  :as tdefs]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.vars                       :as var
-      :refer [defalias]]))
+      :refer [defalias]]
+    [quantum.core.validate                   :as v
+      :refer [validate]]))
 
 ; TODO reorganize this namespace and move into other ones as necessary
 ; TODO allow for ^:inline on certain `defnt` arities
@@ -74,7 +75,7 @@
       (->> tcore/types-unevaled
            (<- get lang)
            (<- get pred)
-           (assertf->> nempty? "No classes match the predicate provided.")
+           (<- validate nempty?)
            (into []))
     :else [pred])))
 

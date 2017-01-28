@@ -48,6 +48,11 @@
 ; MTJ=matrix-toolkits-java
 ; spark.mllib -> breeze -> netlib-java -> BLAS/LAPACK
 ;                MTJ    -> netlib-java -> BLAS/LAPACK
+; - Mathematica
+;   - Matrix and data manipulation tools including support for sparse arrays
+
+; =================================
+
 ; =================
 
 (def ^:dynamic *impl* :neanderthal) ; can be #{:neanderthal :mllib}

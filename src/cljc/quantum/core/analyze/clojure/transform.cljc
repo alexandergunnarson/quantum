@@ -3,8 +3,7 @@
   (:require
     [clojure.core                            :as core]
     [quantum.core.analyze.clojure.predicates
-      :refer [if-statement? cond-statement?
-              when-statement?]]
+      :refer [if-statement? cond-statement? when-statement?]]
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn

@@ -13,7 +13,7 @@
               :refer [validate]]
             [quantum.core.data.validated
               :refer [def-validated def-validated-map]]
-            [quantum.db.datomic.schemas :as sc]))
+            [quantum.validate.specs :as sp]))
 
 (def auth-source-table
   (atom {:google    "Google"

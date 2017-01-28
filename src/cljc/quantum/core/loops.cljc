@@ -12,8 +12,7 @@
     [quantum.core.core                :as qcore]
     [quantum.core.error               :as err
       :refer [->ex]]
-    [quantum.core.log                 :as log
-      :include-macros true]
+    [quantum.core.log                 :as log]
     [quantum.core.macros.core         :as cmacros
       :refer [if-cljs]]
     [quantum.core.macros              :as macros

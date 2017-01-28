@@ -15,7 +15,6 @@
                        :refer [map']]
                      [quantum.db.datomic               :as db       ]
                      [quantum.db.datomic.core          :as dbc      ]
-                     [quantum.db.datomic.reactive.core :as db-rx    ]
                      [quantum.net.http                 :as http     ]
                      [quantum.net.websocket            :as conn     ]
                      [quantum.ui.core                  :as ui       ]))

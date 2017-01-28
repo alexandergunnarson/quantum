@@ -2,11 +2,9 @@
   (:refer-clojure :exclude [identity get subvec last])
   (:require
     [clojure.core.matrix.linear :as mat]
-    [quantum.core.log :as log
-      :include-macros true]
+    [quantum.core.log :as log]
     [quantum.core.vars
-      :refer        [#?(:clj defalias)]
-      :refer-macros [        defalias]]
+      :refer [defalias]]
     [quantum.core.error :as err
       :refer [TODO]]))
 

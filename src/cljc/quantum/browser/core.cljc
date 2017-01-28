@@ -121,7 +121,7 @@
   {:attribution "Alex Gunnarson"}
   ([^org.openqa.selenium.WebDriver driver]
     (write-page! (.getPageSource driver) (str "Page " (time/now) ".html")))
-  ([^String page ^String page-name]
+  ([^string? page ^string? page-name]
     (io/assoc!
       {:path   [:resources "Pages" page-name]
        :type   :html

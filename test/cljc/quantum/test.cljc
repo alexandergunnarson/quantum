@@ -90,7 +90,6 @@
             [quantum.test.core.numeric]
             [quantum.test.core.numeric.convert]
             [quantum.test.core.numeric.exponents]
-            [quantum.test.core.numeric.matrix]
             [quantum.test.core.numeric.misc]
             [quantum.test.core.numeric.operators]
             [quantum.test.core.numeric.predicates]

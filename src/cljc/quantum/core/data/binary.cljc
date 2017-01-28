@@ -5,19 +5,14 @@
   (:refer-clojure :exclude
     [unsigned-bit-shift-right bit-shift-left bit-shift-right
      bit-or bit-and bit-xor bit-not])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   ) :as core  ]
-                     [quantum.core.macros    :as macros
-                       :refer [#?@(:clj [defnt])]      ]
-                     [quantum.core.vars      :as var
-                       :refer [#?(:clj defalias)]      ])
-  #?(:cljs (:require-macros
-                     [quantum.core.macros    :as macros
-                       :refer [defnt]                  ]
-                     [quantum.core.vars      :as var
-                       :refer [defalias]               ]))
-  #?(:clj  (:import #_[quantum.core Numeric]
-                    java.nio.ByteBuffer)))
+  (:require
+    [clojure.core        :as core  ]
+    [quantum.core.macros :as macros
+      :refer [defnt]]
+    [quantum.core.vars   :as var
+      :refer [defalias]])
+  #?(:clj (:import #_[quantum.core Numeric]
+                      java.nio.ByteBuffer)))
 
 ; Because "cannot resolve symbol 'import'"
 #?(:clj

@@ -2,10 +2,11 @@
   (:require
     [clojure.test       :as test]
     [quantum.core.print :as pr
-      :refer [ppr-str]
-      ]
+      :refer [ppr-str]]
     [quantum.core.vars
-      :refer [#?(:clj defmalias)]]))
+      :refer [#?(:clj defmalias)]])
+  (:require-macros
+    [quantum.core.test :as self]))
 
 ; TO EXPLORE
 ; - Generative testing

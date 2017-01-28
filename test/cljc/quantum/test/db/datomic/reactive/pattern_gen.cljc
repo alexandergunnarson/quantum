@@ -1,1 +1,0 @@
-(ns quantum.test.db.datomic.reactive.pattern-gen)

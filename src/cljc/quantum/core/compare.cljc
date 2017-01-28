@@ -1,27 +1,22 @@
 (ns quantum.core.compare
-           (:refer-clojure :exclude
-             [= not= < > <= >= max min max-key min-key neg? pos? zero? - +])
-           (:require
-             [#?(:clj  clojure.core
-                 :cljs cljs.core   )     :as core  ]
-             [quantum.core.error :as err
-              :refer [TODO]]
-             [quantum.core.macros
-               :refer        [#?@(:clj [defnt defnt' variadic-predicate-proxy])]
-               :refer-macros [defnt]]
-             [quantum.core.vars
-               :refer        [#?@(:clj [defalias])]
-               :refer-macros [defalias]]
-             [quantum.core.numeric.operators
-               :refer        [#?@(:clj [- + abs])]
-               :refer-macros [- + abs]]
-             [quantum.core.numeric.predicates
-               :refer        [#?@(:clj [neg? pos? zero?])]
-               :refer-macros [neg? pos? zero?]]
-             [quantum.core.numeric.types :as ntypes])
-  #?(:cljs (:require-macros
-             [quantum.core.compare
-               :refer [< > <= >=]])))
+  (:refer-clojure :exclude
+    [= not= < > <= >= max min max-key min-key neg? pos? zero? - +])
+  (:require
+    [clojure.core       :as core]
+    [quantum.core.error :as err
+      :refer [TODO]]
+    [quantum.core.macros
+      :refer [defnt #?@(:clj [defnt' variadic-predicate-proxy])]]
+    [quantum.core.vars
+      :refer [defalias]]
+    [quantum.core.numeric.operators
+      :refer [- + abs]]
+    [quantum.core.numeric.predicates
+      :refer [neg? pos? zero?]]
+    [quantum.core.numeric.types :as ntypes])
+  (:require-macros
+    [quantum.core.compare
+      :refer [< > <= >=]]))
 
 ; Some of the ideas here adapted from gfredericks/compare
 ; TODO include diffing

@@ -88,6 +88,7 @@
 ; TODO break it up
 
 (defn gen-extend-protocol-from-interface
+  {:todo #{"IMPORTANT: change `extend-protocol` to `extend-type` so that CLJS runs faster"}}
   ; Original Interface:         ([#{number?} x #{number?} y #{char? Object} z] ~@body)
   ; Expanded Interface Arity 1: ([^long      x ^int       y ^char           z] ~@body)
   ; Protocol Arity 1:           ([^long      x ^Integer   y ^Character      z]

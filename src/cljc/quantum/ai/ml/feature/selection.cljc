@@ -5,10 +5,8 @@
     [quantum.core.error :as err
       :refer [->ex TODO]]
     [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
-    [quantum.core.log :as log
-      :include-macros true]))
+      :refer [defalias]]
+    [quantum.core.log :as log]))
 
 (log/this-ns)
 
