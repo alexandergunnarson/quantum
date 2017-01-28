@@ -1,7 +1,10 @@
 dependencies:
   pre:
+    - sudo add-apt-repository ppa:ubuntu-toolchain-r/test
     - sudo apt-get update
-    - sudo apt install gcc-4.9 g++-4.9 ocl-icd-opencl-dev -y
+    - sudo apt install gcc-4.9 -y
+    - sudo apt install g++-4.9 -y
+    - sudo apt install ocl-icd-opencl-dev -y
 test:
   override:
     - case $CIRCLE_NODE_INDEX in 0) echo "lein test:clj" && lein test:clj ;; 1) echo "lein test:cljs" && lein test:cljs ;; esac:
