@@ -2,7 +2,7 @@ quantum
 ==========
 <img src="https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token"
      alt="CircleCI">
-<a href="https://gitter.im/alexandergunnarson/quantum">
+<a href="https://gitter.im/quantum-library">
   <img src="https://badges.gitter.im/Join%20Chat.svg"
        alt="Gitter chat">
 </a>
