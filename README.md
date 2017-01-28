@@ -2,8 +2,10 @@ quantum
 ==========
 <img src="https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token"
      alt="CircleCI">
-<img src="https://quantum-library.herokuapp.com/badge.svg"
-     alt="Join the conversation!">
+<a href="https://gitter.im/alexandergunnarson/quantum">
+  <img src="https://badges.gitter.im/Join%20Chat.svg"
+       alt="Gitter chat">
+</a>
 <a href="http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic">
   <img src="http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat"
        alt="Stack Share">
