@@ -1,10 +1,10 @@
 dependencies:
   cache_directories:
-    - opencl-sdk
-    - opencl-code-builder
+    - ./dev-resources/cache/opencl-sdk
+    - ./dev-resources/cache/opencl-code-builder
   pre:
-    - if [[ ! -e ./opencl-sdk/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64 ]]; then                 mkdir opencl-sdk          && cd opencl-sdk          && wget -c http://registrationcenter-download.intel.com/akdlm/irc_nas/8555/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz && tar -xzf intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz        && rm intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz        && cd ../; fi
-    - if [[ ! -e ./opencl-code-builder/intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64 ]]; then mkdir opencl-code-builder && cd opencl-code-builder && wget -c http://registrationcenter.intel.com/irc_nas/5193/intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz         && tar -xzf intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz && rm intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz && cd ../; fi
+    - if [[ ! -e ./opencl-sdk/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64 ]]; then                 (mkdir ./dev-resources/cache/opencl-sdk          || true) && cd ./dev-resources/cache/opencl-sdk          && wget -c http://registrationcenter-download.intel.com/akdlm/irc_nas/8555/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz && tar -xzf intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz        && rm intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz        && cd ../../../; fi
+    - if [[ ! -e ./opencl-code-builder/intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64 ]]; then (mkdir ./dev-resources/cache/opencl-code-builder || true) && cd ./dev-resources/cache/opencl-code-builder && wget -c http://registrationcenter.intel.com/irc_nas/5193/intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz         && tar -xzf intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz && rm intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz && cd ../../../; fi
     #- sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
     #- sudo apt-get update
     #- sudo apt install gcc-4.9 -y
