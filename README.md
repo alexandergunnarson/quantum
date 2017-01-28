@@ -12,13 +12,9 @@ quantum
 ![](http://pre03.deviantart.net/b712/th/pre/i/2012/267/e/3/bubble_chamber_by_deepbluerenegade-d5fssqg.jpg)
 *(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
 
-***"The career of a young theoretical physicist consists of treating the harmonic oscillator in ever-increasing levels of abstraction."*** *— Sidney Coleman*
-
 -
 
-In like manner, the aim of a computer scientist consists of treating the manipulation and processing of data (including procedures) in ever-increasing levels of abstraction.
-
-In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/224/):
+To paraphrase the [poet of xkcd](http://xkcd.com/224/):
 
 ***That syntax might fade,***
 
@@ -36,7 +32,24 @@ In accordance with this aim, to paraphrase the [poet of xkcd](http://xkcd.com/22
 
 Summary
 -
-Less magically put, quantum is like Google Guava for Clojure(Script). It's an all-purpose Clojure(Script) library similar to [Prismatic/plumbing](https://github.com/Prismatic/plumbing), [weavejester/medley](https://github.com/weavejester/medley), [mikera/clojure-utils](https://github.com/mikera/clojure-utils), [ptaoussanis/encore](https://github.com/ptaoussanis/encore), [ztellman/potemkin](https://github.com/ztellman/potemkin), [zcaudate/hara](https://github.com/zcaudate/hara), and others. It aims to unify and abstract away conceptually irrelevant implementation details while providing great performance, often exceeding that of clojure.core (see benchmarks for more information).
+
+```
+Java       -> Google Guava
+JavaScript -> Google Closure
+C++        -> Boost
+Clojure    -> quantum
+```
+
+`quantum` is an all-purpose Clojure(Script) library similar to:
+
+- [Prismatic/plumbing](https://github.com/Prismatic/plumbing)
+- [weavejester/medley](https://github.com/weavejester/medley)
+- [mikera/clojure-utils](https://github.com/mikera/clojure-utils)
+- [ptaoussanis/encore](https://github.com/ptaoussanis/encore)
+- [ztellman/potemkin](https://github.com/ztellman/potemkin)
+- [zcaudate/hara](https://github.com/zcaudate/hara) (possibly most similar)
+
+and others. It aims to unify and abstract away conceptually irrelevant implementation details while providing great performance, often exceeding that of clojure.core (see benchmarks for more information).
 
 It adapts, in the author's opinion, the best and most useful functions from existing libraries (in accordance with their respective copyrights) and adds much more of its own.
 
