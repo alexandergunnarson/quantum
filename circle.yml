@@ -1,6 +1,6 @@
 machine:
   environment:
-    CACHE_DIR: /home/ubuntu/quantum/dev-resources/cache
+    CACHE_DIR: /home/ubuntu/quantum/dev-resources/cache # doesn't like relative paths
     OPENCL_SDK: $CACHE_DIR/opencl-sdk/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64
     OPENCL_CODE_BUILDER: $CACHE_DIR/opencl-code-builder/intel_sdk_for_ocl_applications_2014_ubuntu_5.0.0.43_x64
     BASE_PKG: $OPENCL_CODE_BUILDER/rpm/opencl-1.2-base_5.0.0.43-2_amd64.deb
@@ -8,14 +8,17 @@ machine:
 
 dependencies:
   # http://yuleiming.com/install-intel-opencl-on-ubuntu-14-04/
+  # All this to get OpenCL to work with Ubuntu 14.04 on Intel
   cache_directories:
     - ./dev-resources/cache/opencl-sdk
     - ./dev-resources/cache/opencl-code-builder
   pre:
+    - sudo apt-get update
+    - sudo apt install gcc-4.9 -y
+    - sudo apt install g++-4.9 -y
+    - sudo apt-get install rpm alien libnuma1 clinfo -y
     - if [[ ! -e $OPENCL_SDK ]]; then          (mkdir -p $CACHE_DIR/opencl-sdk          || true) && cd $CACHE_DIR/opencl-sdk          && wget -c http://registrationcenter-download.intel.com/akdlm/irc_nas/8555/intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz && tar -xzf intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz        && rm intel_sdk_for_opencl_2016_ubuntu_6.0.0.1049_x64.tgz       ; fi
     - if [[ ! -e $OPENCL_CODE_BUILDER ]]; then (mkdir -p $CACHE_DIR/opencl-code-builder || true) && cd $CACHE_DIR/opencl-code-builder && wget -c http://registrationcenter.intel.com/irc_nas/5193/intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz         && tar -xzf intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz && rm intel_code_builder_for_opencl_2015_ubuntu_5.0.0.43_x64.tgz; fi
-    - sudo apt-get update
-    - sudo apt-get install rpm alien libnuma1 clinfo -y
     - cd $OPENCL_CODE_BUILDER && sudo rpm --import PUBLIC_KEY.PUB
     - if [[ ! -e $BASE_PKG ]]; then  cd $OPENCL_CODE_BUILDER/rpm && fakeroot alien --to-deb opencl-1.2-base-5.0.0.43-1.x86_64.rpm     ; fi
     - if [[ ! -e $INTEL_PKG ]]; then cd $OPENCL_CODE_BUILDER/rpm && fakeroot alien --to-deb opencl-1.2-intel-cpu-5.0.0.43-1.x86_64.rpm; fi
