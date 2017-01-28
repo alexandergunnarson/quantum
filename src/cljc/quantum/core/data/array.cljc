@@ -16,6 +16,7 @@
                        :refer [name+]]
                      [quantum.core.fn               :as fn
                        :refer [<- fn->]]
+                     [quantum.core.log              :as log]
                      [quantum.core.logic            :as logic
                        :refer [whenc]]
                      [quantum.core.loops            :as loops
@@ -34,6 +35,8 @@
   #?(:clj  (:import  [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
                      [java.nio ByteBuffer]
                      java.util.ArrayList)))
+
+(log/this-ns)
 
 (defalias aset! aset)
 
@@ -253,14 +256,14 @@
       longs-f))))
 
 #?(:clj
-(defnt' copy
+(defnt' copy!
   ([^bytes? input ^bytes? output ^nat-int? length]
     (System/arraycopy input 0 output 0 length)
     output)))
 
 ; TODO fix type-hint-predicates of CLJS version?
 #?(:cljs
-(defnt copy
+(defnt copy!
   ([^bytes? input ^bytes? output ^nat-int? length]
     (dotimes [i (.-length input)]
       (aset output i (aget input i))))))
@@ -313,16 +316,16 @@
   ([^array? a :first b]
     (java.util.Arrays/equals a b))))
 
-(def cljs-types ; TODO take from type/defs.cljc
-  '{js/Uint8Array        uint8
-    js/Uint8ClampedArray uint8c
-    js/Uint16Array       uint16
-    js/Uint32Array       uint32
-    js/Int8Array         int8
-    js/Int16Array        int16
-    js/Int32Array        int32
-    js/Float32Array      float32
-    js/Float64Array      float64})
+(def cljs-types ; TODO take automatically from type/defs.cljc
+  '{js/Uint8Array        ubyte
+    js/Uint8ClampedArray ubyte-clamped
+    js/Uint16Array       ushort
+    js/Uint32Array       uint
+    js/Int8Array         byte
+    js/Int16Array        short
+    js/Int32Array        int
+    js/Float32Array      float
+    js/Float64Array      double})
 
 (def cljs-equivalence-classes
   (->> cljs-types
