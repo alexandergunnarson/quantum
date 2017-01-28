@@ -1,5 +1,7 @@
 quantum
 ==========
+
+[![Join the chat at https://gitter.im/quantum-library/Lobby](https://badges.gitter.im/quantum-library/Lobby.svg)](https://gitter.im/quantum-library/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 <img src="https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token"
      alt="CircleCI">
 <a href="https://gitter.im/quantum-library">
