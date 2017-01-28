@@ -176,7 +176,7 @@ See [here](https://github.com/babel/babel/blob/master/doc/design/monorepo.md) an
 
 Copyright and License
 -
-*Copyright © 2015 Alex Gunnarson*
+*Copyright © 2017 Alex Gunnarson*
 
 *Distributed under the Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license.*
 
