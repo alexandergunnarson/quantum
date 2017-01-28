@@ -1,12 +1,10 @@
 quantum
 ==========
-
-[![Join the chat at https://gitter.im/quantum-library/Lobby](https://badges.gitter.im/quantum-library/Lobby.svg)](https://gitter.im/quantum-library/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 <img src="https://circleci.com/gh/alexandergunnarson/quantum.svg?style=shield&circle-token=:circle-token"
      alt="CircleCI">
-<a href="https://gitter.im/quantum-library">
-  <img src="https://badges.gitter.im/Join%20Chat.svg"
-       alt="Gitter chat">
+<a href="https://gitter.im/quantum-library/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge">
+  <img src="https://badges.gitter.im/quantum-library/Lobby.svg"
+       alt="Join the chat at https://gitter.im/quantum-library/Lobby">
 </a>
 <a href="http://stackshare.io/alexandergunnarson/clojure-clojurescript-datomic">
   <img src="http://img.shields.io/badge/tech-stack-0690fa.svg?style=flat"
