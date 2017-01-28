@@ -11,7 +11,7 @@ quantum
        alt="Stack Share">
 </a>
 
-![](http://pre03.deviantart.net/b712/th/pre/i/2012/267/e/3/bubble_chamber_by_deepbluerenegade-d5fssqg.jpg)
+![](./doc/readme-image.jpg)
 *(Image credit: @deviantart/deepbluerenegade, "Bubble Chamber")*
 
 -
