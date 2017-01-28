@@ -1,3 +1,6 @@
+dependencies:
+  pre:
+    - sudo apt-get update && sudo apt install ocl-icd-opencl-dev -y
 test:
   override:
     - case $CIRCLE_NODE_INDEX in 0) echo "lein test:clj" && lein test:clj ;; 1) echo "lein test:cljs" && lein test:cljs ;; esac:
