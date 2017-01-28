@@ -21,7 +21,7 @@ dependencies:
     - sudo dpkg -i $BASE_PKG
     - sudo dpkg -i $INTEL_PKG
     - sudo touch /etc/ld.so.conf.d/intelOpenCL.conf
-    - cd $OPENCL_SDK && sudo ./install.sh --silent # TODO fix this
+    - cd $OPENCL_SDK && (printf 'ACCEPT_EULA=accept\nINSTALL_MODE=NONRPM\nCONTINUE_WITH_OPTIONAL_ERROR=yes\nPSET_INSTALL_DIR=/opt\nCONTINUE_WITH_INSTALLDIR_OVERWRITE=yes\nCOMPONENTS=DEFAULTS\nPSET_MODE=install\nPHONEHOME_SEND_USAGE_DATA=no\nSIGNING_ENABLED=yes') > silent-final.config && sudo ./install.sh --silent silent-final.config
     - sudo ln /opt/intel/opencl-1.2-5.0.0.43/etc/intel64.icd /etc/OpenCL/vendors/intel64.icd
     - sudo printf '\nexport LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/intel/opencl-1.2-5.0.0.43/lib64 && export PATH=$PATH:/opt/intel/intel-opencl-1.2-6.0.0.1049/opencl-sdk/include\n' >> ~/.bashrc
     - sudo clinfo | grep Intel
