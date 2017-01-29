@@ -13,15 +13,15 @@
 (defrecord
   ^{:doc "An abstraction for a renderer.
 
-          @type      : The renderer type. Currently only Reagent is
-                       supported.
-          @init-fn   : An optional function used to initialize the
-                       UI or frontend in some (any) way.
-          @render-fn : A render function. Generally for e.g. Reagent
-                       this will be the root node's render function.
-          @root-id   : Used mainly by React and like frameworks (e.g.
-                       Reagent). The root ID of the node to which e.g.
-                       React mounts."}
+          ->`type`      : The renderer type. Currently only Reagent is
+                          supported.
+          ->`init-fn`   : An optional function used to initialize the
+                          UI or frontend in some (any) way.
+          ->`render-fn` : A render function. Generally for e.g. Reagent
+                          this will be the root node's render function.
+          ->`root-id`   : Used mainly by React and like frameworks (e.g.
+                          Reagent). The root ID of the node to which e.g.
+                          React mounts."}
   Renderer
   [type init-fn render-fn root-id]
   component/Lifecycle

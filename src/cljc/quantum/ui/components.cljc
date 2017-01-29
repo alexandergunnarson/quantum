@@ -117,7 +117,7 @@
 #?(:cljs (def ios-blur-view (when (= sys/os "ios")
                               (err/ignore
                                 (-> (js/require "react-native-fxblurview")
-                                    .-default
+                                    (aget "default")
                                     rx/adapt-react-class)))))
 
 #?(:cljs

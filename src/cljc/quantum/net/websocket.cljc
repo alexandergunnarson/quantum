@@ -61,7 +61,7 @@
 ; ===== `PUT!` ===== ;
 
 (defn put!
-  "Sends a message @msg across via a WebSocket connection."
+  "Sends a message ->`msg` across via a WebSocket connection."
   {:usage '(put! [:my/button {:my-key1 "Data1"
                               :my-key2 "Data2"}]
                  (fn [resp] (println "Response is" resp))
@@ -83,7 +83,7 @@
                ret)))
 
 (defn try-put!
-  "Try to send messsage @?times times with intervals of @?sleep
+  "Try to send messsage ->`?times` times with intervals of ->`?sleep`
    milliseconds. As soon as message send is successful, no further
    messages are tried to be sent."
   [?times ?sleep & args]
@@ -102,10 +102,10 @@
           Creates a Sente WebSocket channel and Sente WebSocket channel
           message router.
 
-          @chan-recv  : ChannelSocket's handle channel
-          @chan-send! : ChannelSocket's send API fn
-          @chan-state : Watchable, read-only atom
-          @packer     : Client<->server serialization format"
+          ->`chan-recv`  : ChannelSocket's handle channel
+          ->`chan-send!` : ChannelSocket's send API fn
+          ->`chan-state` : Watchable, read-only atom
+          ->`packer`     : Client<->server serialization format"
     :usage '(map->ChannelSocket {:uri         "/chan"
                                  :packer      :edn
                                  :handler     my-msg-handler})

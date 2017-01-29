@@ -168,7 +168,7 @@
 
 (defnt ^String encode64-string
   #?(:cljs ([#{ubytes? bytes? objects?} x]
-              (-> x arr/->uint8-array js/forge.util.binary.base64.encode))) ; Google Closure's implementation didn't work
+              (-> x arr/->ubyte-array js/forge.util.binary.base64.encode))) ; Google Closure's implementation didn't work
   #?(:clj  ([x]
              (let [encoded (encode64 x)]
                (String. ^"[B" encoded StandardCharsets/ISO_8859_1)))))

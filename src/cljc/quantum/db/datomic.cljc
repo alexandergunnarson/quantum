@@ -90,20 +90,20 @@
 
 (defrecord
   ^{:doc "Ephemeral (in-memory) database. Currently implemented as
-          DataScript database. Once the reference to @conn is lost,
+          DataScript database. Once the reference to ->`conn` is lost,
           the database is garbage-collected.
 
-          @conn, while also a 'connection', in the case of DataScript is really an atom
+          ->`conn`, while also a 'connection', in the case of DataScript is really an atom
           with the current DataScript DB value.
 
-          One can set @init-schemas? to be true and the |start| function will transact
-          @schemas to the database using |init-schemas!|. This is primarily useful
+          One can set ->`init-schemas?` to be true and the `start` function will transact
+          ->`schemas` to the database using `init-schemas!`. This is primarily useful
           for backend-syncing purposes where schemas are not just 'a good idea' but
           actually required.
 
           Likewise, e.g. DataScript has no built-in partitions, but they are nevertheless
-          required for Datomic, and so for syncing purposes @default-partition is required
-          to initialize @schemas."
+          required for Datomic, and so for syncing purposes ->`default-partition` is required
+          to initialize ->`schemas`."
     :todo {0 "Make the history recording *much* more efficient"}}
   EphemeralDatabase
   [conn history history-limit reactive? evented?
@@ -216,8 +216,8 @@
 (defrecord
   ^{:doc "Datomic database.
 
-          @start-txr? is a boolean which defines whether the transactor should be started.
-          @partitions is a seq (preferably set) of keywords identifying partitions
+          ->`start-txr?` is a boolean which defines whether the transactor should be started.
+          ->`partitions` is a seq (preferably set) of keywords identifying partitions
 
           Can be one of three things:
             1) A direct connection to a Datomic database using the Datomic Peer API

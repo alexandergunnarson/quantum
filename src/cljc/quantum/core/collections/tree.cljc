@@ -39,25 +39,19 @@
   (:require
     [clojure.core                       :as core]
     [quantum.core.collections.core :as coll
-      :refer        [#?@(:clj [first conj!])]
-      :refer-macros [          first conj!]]
+      :refer [first conj!]]
     [quantum.core.collections.map-filter :as mf
-      :refer        [map-keys+]]
+      :refer [map-keys+]]
     [quantum.core.collections.selective :as sel
-      :refer        [in-k?]]
+      :refer [in-k?]]
     [quantum.core.collections.zippers   :as zip
-      :refer        [#?@(:clj [walking])]
-      :refer-macros [walking]]
+      :refer [walking]]
     [quantum.core.fn                    :as fn
-      :refer        [withf->>
-                     #?@(:clj [fn1 fn->>])]
-      :refer-macros [          fn1 fn->>]]
+      :refer [withf->> fn1 fn->>]]
     [quantum.core.logic
-      :refer        [#?@(:clj [whenf1])]
-      :refer-macros [          whenf1]]
+      :refer [whenf1]]
     [quantum.core.reducers              :as red
-     :refer        [#?@(:clj [join])]
-     :refer-macros [          join]]
+     :refer [join]]
     [quantum.core.string                :as str]))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TREE STRUCTURES      }=====================================================
@@ -102,8 +96,8 @@
   (postwalk (whenf1 (fn1 in-k? smap) smap) form))
 
 (defn- walk-filter
-  "Like |filter|, but performs a |postwalk| on a treelike structure @tree, putting in a new vector
-   only the elements for which @pred is true."
+  "Like |filter|, but performs a |postwalk| on a treelike structure ->`tree`, putting in a new vector
+   only the elements for which ->`pred` is true."
   {:attribution "Alex Gunnarson"}
   [walk-fn pred tree]
   (let [results (transient [])]
@@ -157,7 +151,7 @@
 
 (defn zip-walk
   "|walk| for zippers.
-   @inner and @outer must both return a non-zipper."
+   ->`inner` and ->`outer` must both return a non-zipper."
   ([inner outer form] (zip/node (zip-walk inner outer nil (zip/zipper form))))
   ([inner outer _ loc-0]
     (let [[i loc] (loop [i    0
@@ -183,13 +177,13 @@
 
 (defn zip-postwalk
   "|postwalk| with zippers.
-   @f must return a non-zipper."
+   ->`f` must return a non-zipper."
   ([f form    ] (zip/?node (zip-postwalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
 
 (defn zip-prewalk
   "|prewalk| with zippers.
-   @f must return a non-zipper."
+   ->`f` must return a non-zipper."
   ([f form    ] (zip/?node (zip-prewalk f nil (zip/zipper form))))
   ([f _    loc] (zip-walk (comp zip/node #(zip-prewalk f nil %)) zip/node nil
                   #_(zip/update f loc)

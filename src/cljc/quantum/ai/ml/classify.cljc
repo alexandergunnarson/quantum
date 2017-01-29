@@ -57,7 +57,7 @@
          (filter+ nnil?)))
 
 (defmemoized C {}
-  "All the classes in doc collection @D."
+  "All the classes in doc collection ->`D`."
   {:performance "O(n)"
    :query `[:find  ?c
             :where [_ :document:class ?c]]}
@@ -72,7 +72,7 @@
 
 ; cached query
 (defmemoized V {}
-  "All the distinct non-stopwords of a corpus @C."
+  "All the distinct non-stopwords of a corpus ->`C`."
   {:performance "O(n^2)"
    :query `[:find ?w ; quicker to cache the whole corpus and manipulate it than to not
             :where [?doc   :document:corpus-id :ng20 ]
@@ -104,22 +104,22 @@
                            [arg arg])))))
 
 (defmemoized N- {}
-  (^{:doc "The total number of documents in doc collection @D."}
+  (^{:doc "The total number of documents in doc collection ->`D`."}
     [D] (count D)))
 
 ; cached query
 (defmemoized Nd:c {}
-  "class @c :: the number of documents in doc collection @D labeled as @c"
+  "class ->`c` :: the number of documents in doc collection ->`D` labeled as ->`c`"
   ([D] (->> D
             (map+ :document:class)
             (join [])
             frequencies))
-  (^{:doc "the number of documents in doc collection @D labeled as @c"}
+  (^{:doc "the number of documents in doc collection ->`D` labeled as ->`c`"}
    [D c] (or ((Nd:c D) c)
              (throw (->ex "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:c {}
-  "Total number of occurrences of words in doc collection @D of class @c."
+  "Total number of occurrences of words in doc collection ->`D` of class ->`c`."
   {:performance "O(n^2)"}
   ([D] (->> D
             (filter+ (fn-and :document:class :document:words))
@@ -130,7 +130,7 @@
              (throw (->ex "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:w+d {}
-  "word @w :: Number of occurrences of @w in document @d"
+  "word ->`w` :: Number of occurrences of ->`w` in document ->`d`"
   {:performance "O(n^2)"}
   ([d] (->> d doc->terms+
               (join [])
@@ -139,22 +139,22 @@
 
 ; cached query
 (defmemoized Nd:w {}
-  "word @w :: the number of documents in corpus @C in which @w occurs"
+  "word ->`w` :: the number of documents in corpus ->`C` in which ->`w` occurs"
   ([D] (->> D
             V+
             (map+ #(zipmap % (repeat 1)))
             (join [])
             (reduce (partial merge-with +) {})))
-  (^{:doc "The number of documents in corpus @C in which @w occurs"}
+  (^{:doc "The number of documents in corpus ->`C` in which ->`w` occurs"}
    [D w] (or ((Nd:w D) w)
              (throw (->ex "Word does not exist" w))))
-  (^{:doc "The number of documents in corpus @C in which @w does not occur"}
+  (^{:doc "The number of documents in corpus ->`C` in which ->`w` does not occur"}
    [D ŵ _] (- (N D) (Nd:w D ŵ))))
 
 ; cached query
 (defmemoized Nd:c+w {}
-  "class @c :: word @w :: The number of documents in corpus @D
-                          labeled as @c, in which @w occurs"
+  "class ->`c` :: word ->`w` :: The number of documents in corpus ->`D`
+                                labeled as ->`c`, in which ->`w` occurs"
   {:out-like `{:c1 {:ct    4
                     :words {:w1 1
                             :w2 3}}
@@ -167,13 +167,13 @@
                       (merge-with
                         (partial merge-with +)  ret elem))
                     {})))
-  (^{:doc "The number of documents in corpus @D labeled as @c, in which @w occurs"}
+  (^{:doc "The number of documents in corpus ->`D` labeled as ->`c`, in which ->`w` occurs"}
    [D c w] (or (get-in (Nd:c+w D) [c w]) 0))
-  (^{:doc "The number of documents in corpus @D labeled as @c, in which @w does not occur"}
+  (^{:doc "The number of documents in corpus ->`D` labeled as ->`c`, in which ->`w` does not occur"}
    [D c ŵ _] (- ((Nd:c D) c) (Nd:c+w D c ŵ))))
 
 (defmemoized N:w+c {}
-  "class @c :: word @w :: The number of occurrences of @w in @c"
+  "class ->`c` :: word ->`w` :: The number of occurrences of ->`w` in ->`c`"
   ([D] (->> D
             (filter+ (fn-and :document:class :document:words)) ; in case is nil
             (map+ (juxt :document:class Nt:w+d))
@@ -186,17 +186,17 @@
 ; =================================================
 
 (defmemoized P:c {}
-  "The probability of observing class @c"
+  "The probability of observing class ->`c`"
   #_([t D c] (P:c t D c (V D)))
   ([t D c V] (/ (Nd:c D c) (N D))))
 
 (defmemoized P:w {}
-  "The probability of observing word @w"
+  "The probability of observing word ->`w`"
   ([t D w]   (/ (Nd:w D w) (N D)))
   ([t D ŵ _] (/ (Nd:w D ŵ nil) (N D))))
 
 (defmemoized P:c|w {}
-  "The probability of a word @w being of class @c."
+  "The probability of a word ->`w` being of class ->`c`."
   ([t D c w]   (/ (Nd:c+w D c w) (Nd:w D w)))
   ([t D c ŵ _] (/ (Nd:c+w D c ŵ nil) (Nd:w D ŵ nil))))
 
@@ -209,7 +209,7 @@
                     (+ (Nd:c D c)   1))))
 
 #_(defmemoized P:w|c {}
-  "The probability of class @c containing word @w."
+  "The probability of class ->`c` containing word ->`w`."
   ([t D w c V]
     (laplacian-smoothed-estimate t D w c V) ; Weird memoization problem here! TODO FIX
     #_(condp = t
@@ -231,7 +231,7 @@
        boolean-value))
 
 (defmemoized P:d'|c {}
-  "The probability that document @d is observed, given that the class is known to be @c."
+  "The probability that document ->`d` is observed, given that the class is known to be ->`c`."
   #_([t D d' c] (P:d'|c t D d' c (V D)))
   ([t D d' c V]
     (condp = t
@@ -250,7 +250,7 @@
                                          (- 1 (delta w d')))))))))
 
 (defmemoized P:c|d' {}
-  "The probability that given document @d, it should be classified as class @c."
+  "The probability that given document ->`d`, it should be classified as class ->`c`."
   #_([t D c d'] (P:c|d' t D c d' (V D)))
   ([t D c d' V] (P:c|d' t D c d' V false))
   ([t D c d' V denom?]
@@ -276,9 +276,9 @@
        (join {})))
 
 (defmemoized max-classifier-score {}
-  "@D : set of training documents
-   @t : the type of probability, in #{:multinomial :bernoulli}
-   @d': test document"
+  "->`D` : set of training documents
+   ->`t` : the type of probability, in #{:multinomial :bernoulli}
+   ->`d`': test document"
   ([t D d'] (max-classifier-score t D d' (V D)))
   ([t D d' V]
     (->> (classifier-score+ t D d' V)
@@ -295,9 +295,9 @@
 ; ================================================
 
 (defmemoized information-gain {} ; 9 seconds
-  "The information gain of a vocabulary word @w.
-   @w : a term in the vocabulary.
-   @C : the set of distinct natural classes in DC"
+  "The information gain of a vocabulary word ->`w`.
+   ->`w` : a term in the vocabulary.
+   ->`C` : the set of distinct natural classes in DC"
   [t D w C V]
   (let [[ŵ] [w]
         self*log2 (fn [x] (if (= x 0) 0 (* x (identity #_num/exactly (num/log 2 x)))))] ; (num/log 2 0) => -infinity
@@ -308,7 +308,7 @@
           (sigma C (fn [c] (self*log2 (P:c|w t D c ŵ nil))))))))
 
 (defmemoized all-information-gains {}
-  "All the information gains from document collection @D."
+  "All the information gains from document collection ->`D`."
   ([t D V]
     (let [w-to-ig (->> V
                        (map+ (juxt identity #(information-gain t D % (C D) V)))
@@ -321,12 +321,12 @@
 (defn feature-selection
   "Determines the (sampled) words which should be chosen to represent
    documents in training set and test set based on the information gain (IG)
-   of each @w in |V|.
+   of each ->`w` in |V|.
 
-   @T : The DC training set to be used.
-   @M : A user-defined value, ≥ 1.
-        It denotes the number of words in the vocabulary that should be selected."
-  {:out-doc "A data structure with @M words (denoted |selected-features|).
+   ->`T` : The DC training set to be used.
+   ->`M` : A user-defined value, ≥ 1.
+           It denotes the number of words in the vocabulary that should be selected."
+  {:out-doc "A data structure with ->`M` words (denoted |selected-features|).
              They are the words in the vocabulary with IG values higher than
              the other words in the DC-training set and are used to represent
              each document in |training-set| and |test-set|."}
@@ -348,9 +348,9 @@
 
 (defn label
   "Assigns the most probable class for a particular document in |test-set|.
-   @D : The set of training document
-   @d : A document in |test-set|"
-  {:out-doc "the class @c that should be assigned to @d"}
+   ->`D` : The set of training document
+   ->`d` : A document in |test-set|"
+  {:out-doc "the class ->`c` that should be assigned to ->`d`"}
   [D d V']
   (multinomial-naive-bayes-classifier D d V'))
 
@@ -361,8 +361,8 @@
    as their pre-defined, i.e., original, labels over the total number of
    documents in test set.
 
-   @D  : the set of documents in training set
-   @D' : the set of documents in test set"
+   ->`D`  : the set of documents in training set
+   ->`D`' : the set of documents in test set"
   {:out-doc "The classification accuracy of the documents in test set"}
   [D D' V']
   (let [scores (->> D' (filter+ :document:class)

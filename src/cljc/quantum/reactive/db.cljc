@@ -75,7 +75,7 @@
 
 #?(:cljs
 (defn register-transformer!
-  "Registers a transformer function on @`conn` to @`k`.
+  "Registers a transformer function on ->`conn` to ->`k`.
    This fn immutably transitions/transforms the database e.g. using (db/with ...)."
   {:usage `(register-transformer! :add-title
              (fn [db k [title]]
@@ -91,8 +91,8 @@
 
 #?(:cljs
 (defn sub
-  "From the connection @`conn`, retrieves the subscription function associated
-   with the key @`k` and calls it with @`args` and @`opts` as params.
+  "From the connection ->`conn`, retrieves the subscription function associated
+   with the key ->`k` and calls it with ->`args` and ->`opts` as params.
    Kind of like Re-Frame's subscriptions."
   ([k          ] (sub k nil    ))
   ([k args     ] (sub k nil nil))
@@ -106,8 +106,8 @@
       (throw (->ex :no-subscription-found {:k k}))))))
 
 (defn transform!*
-  "Applies the pure transformer pointed to by @`k` to the database, with
-   @`args` as params. Calls all listeners associated with the connection,
+  "Applies the pure transformer pointed to by ->`k` to the database, with
+   ->`args` as params. Calls all listeners associated with the connection,
    and returns the transaction report.
    See also `datascript.core/transact!`"
   ([k args]
