@@ -8,7 +8,7 @@ machine:
 
 dependencies:
   # http://yuleiming.com/install-intel-opencl-on-ubuntu-14-04/
-  # All this to get OpenCL to work with Ubuntu 14.04 on Intel
+  # All this to get OpenCL to work with Ubuntu 14.04 on Intel :/
   cache_directories:
     - ./dev-resources/cache/opencl-sdk
     - ./dev-resources/cache/opencl-code-builder

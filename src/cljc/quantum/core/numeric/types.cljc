@@ -1,21 +1,23 @@
 (ns quantum.core.numeric.types
   (:refer-clojure :exclude
     [denominator numerator ratio? #?@(:cljs [-compare]) read-string])
-   (:require
-     [clojure.core                      :as core]
-     [clojure.string                    :as str]
-     [clojure.tools.reader
-       :refer [read-string]]
-  #?(:cljs
-     [com.gfredericks.goog.math.Integer :as int])
-     [quantum.core.macros
-       :refer [defnt]]
-     [quantum.core.logic
-       :refer [whenf fn-not fn=]]
-     [quantum.core.vars
-       :refer [defalias]]
-     [quantum.core.error
-       :refer [->ex]]))
+  (:require
+    [clojure.core                      :as core]
+    [clojure.string                    :as str]
+    [clojure.tools.reader
+      :refer [read-string]]
+ #?(:cljs
+    [com.gfredericks.goog.math.Integer :as int])
+    [quantum.core.macros
+      :refer [defnt]]
+    [quantum.core.logic
+      :refer [whenf fn-not fn=]]
+    [quantum.core.vars
+      :refer [defalias]]
+    [quantum.core.error
+      :refer [->ex]])
+  (:require-macros
+    [quantum.core.numeric.types :as self]))
 
 #?(:clj
 (defnt ^java.math.BigInteger ->big-integer
