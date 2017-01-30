@@ -6,11 +6,13 @@
   (:refer-clojure :exclude
     [== reverse boolean-array byte-array char-array short-array
      int-array long-array float-array double-array
-     doseq])
+     empty count get doseq])
            (:require [clojure.core                  :as core]
              #?(:clj [loom.alg-generic              :as alg]) ; temporarily
                      [quantum.core.collections.base :as cbase
                        :refer [reducei]]
+                     [quantum.core.collections.core :as ccoll
+                       :refer [empty count get aset!]]
                      [quantum.core.type.core        :as tcore]
                      [quantum.core.core             :as qcore
                        :refer [name+]]
@@ -19,6 +21,8 @@
                      [quantum.core.log              :as log]
                      [quantum.core.logic            :as logic
                        :refer [whenc]]
+                     [quantum.core.error
+                       :refer [TODO]]
                      [quantum.core.loops            :as loops
                        :refer [doseqi doseq]]
                      [quantum.core.macros           :as macros
@@ -30,15 +34,12 @@
                      [quantum.core.vars             :as var
                        :refer [defalias]])
   #?(:cljs (:require-macros
-                     [quantum.core.data.array
-                       :refer [gen-typed-array-defnts]]))
+                     [quantum.core.data.array       :as self]))
   #?(:clj  (:import  [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
                      [java.nio ByteBuffer]
                      java.util.ArrayList)))
 
 (log/this-ns)
-
-(defalias aset! aset)
 
 ; TODO look at http://fastutil.di.unimi.it to complete this namespace
 ; TODO move this to type
@@ -137,24 +138,24 @@
   (defn object-array-of
     "Creates an object array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
-    ([] (core/object-array 0))
+    ([] (ccoll/->object-array 0))
     ([a]
-      (let [arr (core/object-array 1)]
+      (let [arr (ccoll/->object-array 1)]
         (aset! arr 0 a)
         arr))
     ([a b]
-      (let [arr (core/object-array 2)]
+      (let [arr (ccoll/->object-array 2)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         arr))
     ([a b c]
-      (let [arr (core/object-array 3)]
+      (let [arr (ccoll/->object-array 3)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
         arr))
     ([a b c d]
-      (let [arr (core/object-array 4)]
+      (let [arr (ccoll/->object-array 4)]
         (aset! arr 0 a)
         (aset! arr 1 b)
         (aset! arr 2 c)
@@ -169,7 +170,7 @@
     ))
 
 #?(:clj
-(defmacro array [type n]
+(defmacro array [type n] ; TODO move
   (condp = type
     'boolean `(boolean-array ~n)
     'byte    `(byte-array    ~n)
@@ -214,7 +215,7 @@
                (js/Int8Array. buff))))
   (^{:cost 1} [^java.nio.ByteBuffer buf]
     (if (.hasArray buf)
-        (if (comp/= (alength (.array buf)) (.remaining buf))
+        (if (comp/= (int (count (.array buf))) (.remaining buf))
             (.array buf)
             (let [arr (byte-array (.remaining buf))]
               (doto buf
@@ -244,115 +245,83 @@
       (.toByteArray os)))))
 
 #?(:clj
-(defnt ^longs bytes->longs
+(defnt ^"[J" bytes->longs
   ([^bytes? b]
     (let [longs-ct (-> b count (/ 8) num/ceil int)
-          longs-f  (core/long-array longs-ct)
+          longs-f  (ccoll/->long-array longs-ct)
           ; Empty bytes are put at end
           buffer   (doto (ByteBuffer/allocate (* 8 longs-ct))
                          (.put b))]
       (doseq [i (range (count longs-f))]
-        (aset longs-f i (.getLong buffer (* i 8))))
+        (aset! longs-f i (.getLong buffer (* i 8))))
       longs-f))))
 
-#?(:clj
-(defnt' copy!
-  ([^bytes? input ^bytes? output ^nat-int? length]
-    (System/arraycopy input 0 output 0 length)
-    output)))
+; ===== COPY ===== ;
 
-; TODO fix type-hint-predicates of CLJS version?
-#?(:cljs
-(defnt copy!
-  ([^bytes? input ^bytes? output ^nat-int? length]
-    (dotimes [i (.-length input)]
-      (aset output i (aget input i))))))
+(#?(:clj defnt' :cljs defnt) copy! ; shallow copy
+  (^first [^array? in ^int? in-pos :first out ^int? out-pos ^int? length]
+    #?(:clj  (System/arraycopy in in-pos out out-pos length)
+       :cljs (dotimes [i (- (.-length in) in-pos)]
+               (aset out (+ i out-pos) (aget in i))))
+    out)
+  (^first [^array? in :first out ^nat-int? length]
+    (copy! in 0 out 0 length)))
 
-#?(:clj ; TODO move
-(defn array-list [& args]
-  (reduce (fn [ret elem] (.add ^ArrayList ret elem)
-          ret)
-          (ArrayList.) args)))
+#?(:clj (defalias shallow-copy! copy!))
 
-#?(:clj
-(defn reverse
-  {:attribution "mikera.cljutils.bytes"}
-  (^"[B" [^"[B" bs]
-    (let [n (alength bs)
-          res (core/byte-array n)]
-      (dotimes [i n]
-        (aset! res i (aget bs (- n (inc i)))))
-      res))))
+(defn deep-copy! [in out length] (TODO))
 
-; CANDIDATE 0
-#?(:clj
-(defn ^"[B" aconcat  ; join
-  {:attribution "mikera.cljutils.bytes"}
-  ([^"[B" a ^"[B" b]
-    (let [al (int (alength a))
-          bl (int (alength b))
-          n  (int (+ al bl))
-          ^"[B" res (core/byte-array n)]
-      (System/arraycopy a (int 0) res (int 0) al)
-      (System/arraycopy b (int 0) res (int al) bl)
-      res))))
+(defnt copy (^first [^array? in] #?(:clj (copy! in (empty in) (count in)) :cljs (.slice in))))
 
-#?(:clj
-(defn slice
-  "Slices a byte array with a given start and length"
-  {:attribution "mikera.cljutils.bytes"}
-  (^"[B" [a start]
-    (slice a start (- (alength ^"[B" a) start)))
-  (^"[B" [a start length]
-    (let [al (int (alength ^"[B" a))
-          ^"[B" res (core/byte-array length)]
-      (System/arraycopy a (int start) res (int 0) length)
-      res))))
+; ===== EDIT ===== ;
+
+(defnt reverse
+  {:adapted-from "mikera.cljutils.bytes"}
+  (^first [^array? x]
+    (let [n   (count x)
+          ret (empty x)]
+      (dotimes [i n] (aset! ret i (get x (- n (inc i)))))
+      ret)))
+
+#?(:cljs (defnt reverse! (^first [^array? x] (.reverse x))))
+
+(defnt aconcat  ; TODO join
+  {:adapted-from "mikera.cljutils.bytes"
+   :todo #{"cljs, probably use .concat"}}
+  (^first [^array? a :first b]
+    (let [al  (count a)
+          bl  (count b)
+          n   (+ al bl)
+          ret (ccoll/array-of-type a (int n))]
+      (copy! a 0 ret 0  al)
+      (copy! b 0 ret al bl)
+      ret)))
+
+(defnt slice
+  "Slices an array with a given start and length"
+  {:adapted-from "mikera.cljutils.bytes"
+   :todo #{"cljs, probably use .slice"}}
+  (^first [^array? a ^int? start]
+    (slice a start (- (count a) (int start))))
+  (^first [^array? a ^int? start ^int? n]
+    (let [al  (count a)
+          ret (ccoll/array-of-type a (int n))]
+      (copy! a start ret 0 n)
+      ret)))
 
 #?(:clj
 (defnt' ^boolean ==
-  "Compares two byte arrays for equality."
-  {:attribution "mikera.cljutils.bytes"}
+  "Compares two arrays for equality."
+  {:adapted-from "mikera.cljutils.bytes"}
   ([^array? a :first b]
     (java.util.Arrays/equals a b))))
 
-(def cljs-types ; TODO take automatically from type/defs.cljc
-  '{js/Uint8Array        ubyte
-    js/Uint8ClampedArray ubyte-clamped
-    js/Uint16Array       ushort
-    js/Uint32Array       uint
-    js/Int8Array         byte
-    js/Int16Array        short
-    js/Int32Array        int
-    js/Float32Array      float
-    js/Float64Array      double})
+; ===== GENERATION ===== ;
 
-(def cljs-equivalence-classes
-  (->> cljs-types
-       (reduce
-         (fn [ret [k v]]
-           (let [v' (->> v name (remove #{\u \c}))]
-             (assoc ret k (->> cljs-types
-                               (filter (fn [[k1 v1]] (->> v1 name (remove #{\u \c}) (= v'))))
-                               (map    key)
-                               set
-                               (<- disj k)))))
-         {})))
-
-#?(:clj
-(defmacro gen-typed-array-defnts []
-  `(do ~@(for [[ctor-sym sym] cljs-types]
-           (let [fn-sym (symbol (str "->" sym "-array"))]
-             `(defnt ~fn-sym
-                ([#{~ctor-sym} x#] x#)
-                ([~(into (get cljs-equivalence-classes ctor-sym)
-                         '#{objects? number?}) x#] (new ~ctor-sym x#))
-                ([x#] (assert (coll? x#)) ; TODO maybe other acceptable datatypes?
-                      (reducei (fn [buf# elem# i#] (aset buf# i# elem#) buf#)
-                               (~fn-sym (count x#))
-                               x#))))))))
-
-#?(:cljs (gen-typed-array-defnts))
+#?(:clj ; TODO move ; TODO CLJS
+(defn array-list [& args]
+  (reduce (fn [ret elem] (.add ^ArrayList ret elem) ret)
+          (ArrayList.) args)))
 
 
 ; TODO Compress
