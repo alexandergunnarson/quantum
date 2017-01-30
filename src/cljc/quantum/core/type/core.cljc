@@ -5,11 +5,14 @@
   quantum.core.type.core
   (:refer-clojure :exclude [class])
   (:require
-          [clojure.set :as set]
+          [clojure.set    :as set]
+          [clojure.string :as str]
  #?(:clj  [clojure.tools.analyzer.jvm.utils :as ana])
  #?(:clj  [clojure.core.async.impl.protocols]
     :cljs [cljs.core.async.impl.channels])
           [quantum.core.type.defs           :as defs]
+          [quantum.core.fn
+            :refer [<- fn->>]]
           [quantum.core.error               :as err
             :refer [->ex]]
           [quantum.core.vars                :as var
@@ -100,12 +103,31 @@
 (def prim-types      (-> types-unevaled :clj (get 'prim?)))
 (def primitive-types (-> types-unevaled :clj (get 'primitive?)))
 (def primitive-boxed-types (set/difference primitive-types prim-types))
-(def primitive-array-types '#{bytes shorts chars ints longs floats doubles})
 
 (def prim?      #(contains? prim-types %))
 (def primitive? #(contains? primitive-types %))
 #?(:clj  (def auto-unboxable? #(contains? primitive-boxed-types %))
    :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))
+
+; ===== ARRAYS ===== ;
+
+(def primitive-array-types ; TODO get from type/defs
+  '{:clj  #{                                    bytes shorts chars ints longs floats doubles}
+    :cljs #{ubytes ubytes-clamped ushorts uints bytes shorts       ints       floats doubles}})
+
+(def cljs-typed-array-convertible-classes
+  (let [cljs-typed-array-types (-> defs/array-1d-types :cljs (dissoc :object))
+        generalize-type (fn->> name str/lower-case (remove #{\u}))]
+    (->> cljs-typed-array-types
+         (reduce
+           (fn [ret [type-sym k]]
+             (let [type-sym' (generalize-type type-sym)]
+               (assoc ret k (->> cljs-typed-array-types
+                                 (filter (fn [[type-sym1 _]] (-> type-sym1 generalize-type (= type-sym'))))
+                                 (map    val)
+                                 set
+                                 (<- disj k)))))
+           {}))))
 
 (def compiler-lang #?(:clj :clj :cljs :cljs))
 (def default-types (-> types-unevaled (get compiler-lang) :any))

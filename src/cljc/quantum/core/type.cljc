@@ -3,9 +3,13 @@
     :attribution "Alex Gunnarson"}
   quantum.core.type
   (:refer-clojure :exclude
-    [vector? map? set? associative? seq? seqable? string? keyword? fn? map-entry? boolean?
-     indexed? nil? list? coll? char? symbol? record? number? integer? float?
-     double? decimal? array?
+    [vector? map? set? associative? seq? seqable? string? fn? map-entry? boolean?
+     double? decimal?
+     nil? char? number? integer? float?
+     sequential? indexed? list? coll?
+     symbol? keyword?
+     array?
+     record?
      identity class])
   (:require
     [clojure.core                 :as core]
@@ -62,6 +66,7 @@
 #?(:clj  (defnt    float?   ([^float?  obj] true) ([obj] false))
    :cljs (do (defalias float? core/number?) ; TODO fix
              (defalias float?-protocol float?)))
+         (defnt number?        ([^number?        x] true) ([x] false))
 
          (defnt boolean?       ([^boolean?       x] true) ([x] false))
 
@@ -69,6 +74,8 @@
 
          (defnt byte-array?    ([^byte-array?    x] true) ([x] false))
          (defnt bytes?         ([^bytes?         x] true) ([x] false))
+         (defnt double-array?  ([^double-array?  x] true) ([x] false))
+         (defnt doubles?       ([^doubles?       x] true) ([x] false))
          (defnt array?
            ([^array? x] true)
            ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* array types in `defnt`
@@ -101,6 +108,7 @@
          (defnt +queue?        ([^+queue?        x] true) ([x] false))
          (defnt queue?         ([^queue?         x] true) ([x] false))
          (defnt lseq?          ([^lseq?          x] true) ([x] false))
+         (defnt sequential?    ([^sequential?    x] true) ([x] false))
          (defalias seqable? qcore/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([x] false)))
