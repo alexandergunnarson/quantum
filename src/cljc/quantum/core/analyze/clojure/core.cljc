@@ -37,7 +37,6 @@
                 clojure.lang.Compiler$C/EXPRESSION expr)
         expr-ast ^clojure.lang.Compiler$BodyExpr
                  (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
-        (println "class" (class expr-ast ))
     (when (.hasJavaClass expr-ast)
       {:class (.getJavaClass expr-ast)
        :prim? (.isPrimitive (.getJavaClass expr-ast))}))))
@@ -49,7 +48,7 @@
   concluded about the return value of the expression.  Returns nil if
   no type info can be determined at compile-time.
 
-  Example: (expression-info '(+ (int 5) (float 10)))
+  Example: (expr-info '(+ (int 5) (float 10)))
   Returns: {:class float, :primitive? true}"
   {:attribution 'clisk.util}
   [expr]

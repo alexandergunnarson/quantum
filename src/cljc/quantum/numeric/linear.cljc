@@ -2,10 +2,10 @@
   (:refer-clojure :exclude [identity get subvec last])
   (:require
     [clojure.core.matrix.linear :as mat]
-    [quantum.core.log :as log]
+    [quantum.core.log           :as log]
     [quantum.core.vars
       :refer [defalias]]
-    [quantum.core.error :as err
+    [quantum.core.error         :as err
       :refer [TODO]]))
 
 (log/this-ns)

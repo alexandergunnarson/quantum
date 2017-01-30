@@ -45,7 +45,7 @@
 
 ; TODO abstract platform-dependent member calls
 
-(defn symbol-eq? [s1 s2] (= (name s1) (name s2)))
+(defn symbol-eq? [s1 s2] (= (name s1) (name s2))) ; TODO this isn't right
 
 (defn metaclass    [sym]
   (whenc (type-hint sym) (fn-> name empty?) nil))
