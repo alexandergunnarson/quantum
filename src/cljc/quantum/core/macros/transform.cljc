@@ -3,6 +3,7 @@
     [fast-zip.core                           :as zip]
     [clojure.walk
       :refer [postwalk]]
+    [quantum.core.analyze.clojure.core       :as ana]
     [quantum.core.analyze.clojure.predicates :as anap
       :refer [type-hint]]
     [quantum.core.analyze.clojure.transform
@@ -16,7 +17,7 @@
     [quantum.core.fn                         :as fn
       :refer [<- fn1 fn->]]
     [quantum.core.log                        :as log
-      :include-macros true]
+      :refer [prl]]
     [quantum.core.logic                      :as logic
       :refer [fn-not fn-or fn-and whenc condf1]]
     [quantum.core.macros.core                :as cmacros]
@@ -44,9 +45,9 @@
   ([args lang env]
     (some (fn-not #(hint-resolved? % lang env)) args)))
 
-
 (defn hint-body-with-arglist
-  "Hints a code body with the hints in the arglist."
+  "Hints a code body with the hints in the arglist.
+   Assumes code body is a seq of one or more expressions."
   ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
   ([body arglist lang body-type]
   (let [arglist-map (->> arglist
@@ -113,8 +114,8 @@
     (-> arglist default-zipper)))
 
 (defn extract-all-type-hints-from-arglist
-  [lang sym arglist]
-  (let [return-type-0 (or (type-hint arglist) (type-hint sym) (get default-hint lang))
+  [lang sym {:keys [arglist body]}]
+  (let [return-type-0 (or (type-hint arglist) (type-hint sym) #_(-> body ana/expr-info :class) #_(get default-hint lang))
         type-hints (->> arglist (extract-type-hints-from-arglist lang))]
     (vector type-hints return-type-0)))
 

@@ -14,12 +14,14 @@
       :refer [->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1]]
-    [quantum.core.log                        :as log]
+    [quantum.core.log                        :as log
+      :refer [prl]]
     [quantum.core.logic                      :as logic
-      :refer [fn= fn-not fn-or whenc whenf whenc1 ifn1 condf]]
+      :refer [fn= fn-not fn-and fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
       :refer [when-cljs if-cljs]]
     [quantum.core.macros.fn                  :as mfn]
+    [quantum.core.analyze.clojure.core       :as ana]
     [quantum.core.analyze.clojure.predicates :as anap
       :refer [type-hint]]
     [quantum.core.macros.protocol            :as proto]
@@ -109,11 +111,17 @@
   {:out '[[[^string? x] (println "A string!")]
           [[^vector? x] (println "A vector!")]]}
   [{:as env :keys [body]}]
-  {:arities
-    (condf body
-      (fn-> first vector?) (fn->> defnt-remove-hints vector)
-      (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
-      #(throw (->ex "Unexpected form when trying to parse arities." %)))})
+  {:full-arities
+     (condf body
+       (fn-> first vector?) (fn->> defnt-remove-hints vector)
+       (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
+       #(throw (->ex "Unexpected form when trying to parse arities." %)))
+   :arities
+     (let [split-arity (fn [body'] {:arglist (first body') :body (list* 'do (rest body'))})]
+       (condf body
+         (fn-> first vector?) (fn->> split-arity vector)
+         (fn-> first seq?   ) (fn->> (mapv (fn-> split-arity)))
+         #(throw (->ex "Unexpected form when trying to parse arglists." %))))})
 
 (defn defnt-arglists
   {:out '[[^string? x] [^vector? x]]}
@@ -155,9 +163,9 @@
               clojure.core.rrb_vector.rrbt.Vector}]
            Object]
             [[^vector? x] (println "A vector!")]}}
-  [{:keys [sym arities arglists-types lang ns-]}]
+  [{:keys [sym full-arities arglists-types lang ns-]}]
   {:post [(log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY UNEXP" %)]}
-  (assert (nempty? arities))
+  (assert (nempty? full-arities))
   (let [genned-method-name
           (-> sym name cbase/camelcase munge symbol)
         genned-interface-name
@@ -177,7 +185,7 @@
                             _ (log/pr :macro-expand "EXPANDED TYPE HINTS" type-hints-n)]
                         [type-hints-n return-type-n])))
                (map (partial into [genned-method-name]))
-               (<- zipmap arities))]
+               (<- zipmap full-arities))]
     (log/ppr-hints :macro-expand "gen-interface-code-body-unexpanded" gen-interface-code-body-unexpanded)
     (assert (nempty? gen-interface-code-body-unexpanded))
     (kmap genned-method-name
@@ -212,7 +220,7 @@
   {:tests '{'[[Func [#{String} #{vector?}       ] long]]
             '[[Func [String    IPersistentVector] long]
               [Func [String    ITransientVector ] long]]}}
-  [{:keys [lang ns-
+  [{:keys [sym lang ns-
            gen-interface-code-body-unexpanded
            available-default-types]
     :as env}]
@@ -226,26 +234,49 @@
                                                 (apply combo/cartesian-product))
                        assoc-arity-etc
                          (fn [hints]
-                           (let [inner-type-n (-> hints first tdefs/inner-type)
+                           (let [body         (list* 'do body)
+                                 inner-type-n (-> hints first tdefs/inner-type)
                                  hints-v (->> hints
                                               (map (fn [hint] (defnt-replace-kw :elem (kmap hint inner-type-n))))
                                               (into []))
                                  arglist-hinted (hint-arglist-with arglist hints-v)
                                  ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
                                  get-max-type (delay (->> arglist-hinted (map type-hint) tdefs/max-type))
-                                 ret-type (cond
-                                            (= ret-type-0 'first)
-                                              (->> arglist-hinted first type-hint)
-                                            (= ret-type-0 'largest)
-                                              @get-max-type
-                                            #?@(:clj
-                                           [(= ret-type-0 'auto-promote)
-                                              (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
-                                            :else (or (get-qualified-class-name lang ns-
-                                                        (-> ret-type-0 (classes-for-type-predicate lang) first))
-                                                      (get-qualified-class-name lang ns-
-                                                        ret-type-0)
-                                                      (get trans/default-hint lang)))
+                                 explicit-ret-type
+                                   (cond
+                                     (nil? ret-type-0)
+                                       ret-type-0
+                                     (= ret-type-0 'first)
+                                       (->> arglist-hinted first type-hint)
+                                     (= ret-type-0 'largest)
+                                       @get-max-type
+                                     #?@(:clj
+                                    [(= ret-type-0 'auto-promote)
+                                       (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
+                                     :else (or (get-qualified-class-name lang ns-
+                                                 (-> ret-type-0 (classes-for-type-predicate lang) first))
+                                               (get-qualified-class-name lang ns-
+                                                 ret-type-0)))
+                                 ; TODO cache the result of postwalking the body like this, for protocol purposes
+                                 contextualized-body (delay (list* 'fn (proto/ensure-protocol-appropriate-arglist :clj arglist-hinted)
+                                                                       (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol)))
+                                 non-recursive?      (->> body
+                                                          (cbase/prewalk-find
+                                                            (fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))))
+                                                          first not)
+                                 ;_ (prl :user (quantum.core.print/pprint-hints contextualized-body))
+                                 inferred-ret-type (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
+                                                        #?(:clj  (some->> @contextualized-body ana/expr-info* :class (#(.getName ^Class %)) symbol)
+                                                           :cljs nil)) ; TODO CLJS
+                                 ;_ (prl :user explicit-ret-type inferred-ret-type arglist-hinted)
+                                 _ (assert (or (nil? explicit-ret-type)
+                                               (and explicit-ret-type (nil? inferred-ret-type))
+                                               (= explicit-ret-type inferred-ret-type)
+                                               (and (tcore/prim? explicit-ret-type)
+                                                    (tcore/prim? inferred-ret-type)
+                                                    (= explicit-ret-type (tdefs/max-type #{explicit-ret-type inferred-ret-type})))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
+                                           (kmap explicit-ret-type inferred-ret-type contextualized-body))
+                                 ret-type (or explicit-ret-type inferred-ret-type (get trans/default-hint lang))
                                  arity-hinted (assoc arity 0 arglist-hinted)]
                              [[method-name hints-v ret-type] (seq arity-hinted)]))]
                    (->> expanded-hints-list
@@ -340,7 +371,7 @@
      {:helper-macro-def
        `(defmacro ~sym-with-meta [& ~args-sym]
           (let [~args-hinted-sym
-                  (quantum.core.macros.transform/try-hint-args
+                  (quantum.core.macros.transform/try-hint-args ; TODO use expr-info to get better type resolution
                     ~args-sym ~lang ~'&env)]
             (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta
                                   "|" ~args-hinted-sym
@@ -366,10 +397,10 @@
                  [[integer?] Object]
                  [[#{String StringBuilder} #{boolean char}] Object]
                  [[#{short byte} #{long int} #{double float}] Object])}}
-  [{:as env :keys [arglists lang sym]}]
+  [{:as env :keys [lang sym arities]}]
   {:post [(log/ppr-hints :macro-expand "TYPE HINTS EXTRACTED" %)]}
   {:arglists-types
-    (->> arglists
+    (->> arities
          (map #(trans/extract-all-type-hints-from-arglist lang sym %))
          doall)})
 

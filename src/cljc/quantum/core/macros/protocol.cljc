@@ -57,11 +57,11 @@
          [[Func [String ITransientVector ] long]]]}
   [{:keys [genned-protocol-name
            genned-protocol-method-name
-           arities]
+           full-arities]
     :as env}]
   {:post [(do (log/ppr-hints :macro-expand "PROTOCOL DEF" %)
               true)]}
-  (let [distinct-arities (->> arities
+  (let [distinct-arities (->> full-arities
                               (map (fn-> first trans/gen-arglist))
                               distinct
                               (sort-by count >))
@@ -69,14 +69,14 @@
           (->> (reductions conj '() distinct-arities)
                rest
                (map-indexed
-                 (fn [i arities]
+                 (fn [i arities']
                    (let [variant-identifier (- (count distinct-arities) i)
                          genned-protocol-method-name-variant
                           (if (= i (-> distinct-arities count dec))
                               genned-protocol-method-name
                               (append-variant-identifier genned-protocol-method-name
                                 variant-identifier))]
-                     (cons genned-protocol-method-name-variant arities))))
+                     (cons genned-protocol-method-name-variant arities'))))
                (list* 'defprotocol genned-protocol-name))
         genned-protocol-method-names
           (->> protocol-def
