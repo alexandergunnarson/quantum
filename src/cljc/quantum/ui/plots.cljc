@@ -28,3 +28,20 @@
 ; - smile.plot.*
 ; - smile.swing.*
 ; ==================
+
+
+#_"
+React
+
+https://github.com/recharts/recharts/
+https://github.com/FormidableLabs/victory
+
+React Native
+
+https://github.com/mdvacca/rn-d3-art-charts
+https://medium.com/the-react-native-log/animated-charts-in-react-native-using-d3-and-art-21cd9ccf6c58
+
+TODO https://formidable.com/open-source/victory/ Charting
+The idea of transitions between web pages is really cool!
+https://github.com/FormidableLabs/victory-native
+"
