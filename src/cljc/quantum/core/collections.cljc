@@ -351,7 +351,7 @@
   walk prewalk         postwalk
        prewalk-filter  postwalk-filter
        prewalk-replace postwalk-replace
-       #?(:clj prewalk-find)  #_postwalk-find
+       prewalk-find  #_"TODO postwalk-find"
   apply-to-keys)
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================

@@ -38,7 +38,8 @@
      boolean?])
   (:require
     [clojure.core                       :as core]
-    [quantum.core.collections.core :as coll
+    [quantum.core.collections.base      :as base]
+    [quantum.core.collections.core      :as coll
       :refer [first conj!]]
     [quantum.core.collections.map-filter :as mf
       :refer [map-keys+]]
@@ -110,14 +111,7 @@
 (def postwalk-filter (partial walk-filter postwalk))
 (def prewalk-filter  (partial walk-filter prewalk ))
 
-#?(:clj (defn prewalk-find [pred x] ; can't find nil but oh well ; TODO clean
-  (cond (try (pred x)
-          (catch Throwable _ false))
-        [true x]
-        (instance? clojure.lang.Seqable x) ;
-        (let [x' (first (filter #(first (prewalk-find pred %)) x))]
-          (if (nil? x') [false x'] [true x']))
-        :else [false nil])))
+(defalias prewalk-find base/prewalk-find) ; TODO use the new `walk` for this
 
 ; ===== Transform nested maps =====
 

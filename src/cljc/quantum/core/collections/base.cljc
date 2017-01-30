@@ -130,18 +130,19 @@
 
 ; ----- COLLECTIONS ----- ;
 
-(defn appears-within?
-  "Returns true if x appears within coll at any nesting depth.."
-  {:source "scgilardi/slingshot"
-   :contributors {"Alex Gunnarson" "Added termination on find"}}
-  [x coll]
-  (let [result (atom false)]
+(defn prewalk-find
+  "Returns true if ->`x` appears within ->`coll` at any nesting depth."
+  {:adapted-from "scgilardi/slingshot"
+   :contributors ["Alex Gunnarson"]}
+  [pred coll]
+  (let [result (atom [false nil])]
     (try
-      (postwalk
-        (fn [t]
-          (when (= x t)
-            (reset! result true)
-            (throw #?(:clj (Exception.) :cljs (js/Error.)))))
+      (prewalk
+        (fn [x]
+          (if (pred x)
+              (do (reset! result [true x])
+                  (throw #?(:clj (Exception.) :cljs (js/Error.))))
+              x))
         coll)
       @result
       (catch #?(:clj Exception :cljs js/Error) _ @result))))
