@@ -42,20 +42,34 @@
             [quantum.core.collections.logic
               :refer [seq-or]]
             [quantum.core.macros            :as macros
-              :refer [defnt]]
+              :refer [defnt if-cljs]]
             [quantum.core.macros.optimization
               :refer [identity*]]
+            [quantum.core.loops
+              :refer [reducei]]
             [quantum.core.reducers          :as red
               :refer [drop+ take+ reduce
                       #?@(:clj [dropr+ taker+])]]
             [quantum.core.type              :as type
               :refer [class pattern?]]
             [quantum.core.type.defs         :as tdef]
+            [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
               :refer [defalias def-]])
   (:require-macros
     [quantum.core.collections.core
-      :refer [assoc]])
+      :refer [assoc gen-typed-array-defnts
+              ->boolean-array
+              ->byte-array
+              ->ubyte-array
+              ->char-array
+              ->short-array
+              ->int-array
+              ->uint-array
+              ->long-array
+              ->float-array
+              ->double-array
+              ->object-array]])
  #?(:clj (:import
            quantum.core.data.Array
            [clojure.lang IAtom]
@@ -193,13 +207,11 @@
         clojure.lang.RT/EMPTY_ARRAY
         (throw (Util/runtimeException (str "Unable to convert: " (.getClass x) " to Object[]"))))))
 
-(declare array)
-
 (defnt count
   {:todo #{"incorporate clojure.lang.RT/count"
            "Ensure that lazy-seqs aren't realized/consumed?"
            "handle persistent maps"}}
-           (^long [^array?     x] (#?(:clj Array/count :cljs .-length) x))
+           (^int  [^array?     x] (#?(:clj Array/count :cljs .-length) x))
            (^long [^string?    x] (#?(:clj .length :cljs .-length  ) x))
            (^long [^!string?   x] (#?(:clj .length :cljs .getLength) x))
            (^long [^keyword?   x] (count ^String (name x)))
@@ -211,54 +223,90 @@
 
 (defnt empty?
           ([#{array? ; TODO anything that `count` accepts
-              string? !string? keyword? chan?
+              string? !string? keyword? m2m-chan?
               +vec?} x] (zero? (count x)))
   #?(:clj ([#{Collection Map} x] (.isEmpty x)))
           ([            x] (core/empty? x)  ))
 
+; ===== ARRAYS ===== ;
+
+#?(:clj
+(defmacro gen-typed-array-defnts []
+  (if-cljs &env
+    `(do ~@(for [[k type-sym] (-> tdef/array-1d-types :cljs (core/dissoc :object))]
+             (let [fn-sym (symbol (str "->" (name k) "-array"))]
+               `(defnt ~fn-sym
+                  ([#{~type-sym} x#] x#)
+                  ([~(into (core/get tcore/cljs-typed-array-convertible-classes type-sym)
+                           '#{objects? number?}) x#] (new ~type-sym x#))
+                  ([x#] (assert (coll? x#)) ; TODO maybe other acceptable datatypes? Reducibles?
+                        ; TODO compare `reducei` to `doseqi`
+                        (reducei (fn [buf# elem# i#] (core/aset buf# i# elem#) buf#)
+                                 (~fn-sym (count x#))
+                                 x#))))))
+    `(do ~@(for [k (-> tdef/array-1d-types :clj (core/dissoc :object) keys)]
+             (let [fn-sym (symbol (str "->" (name k) "-array"))]
+               `(defmacro ~fn-sym [& args#] (with-meta `(~~(symbol "core" (str (name k) "-array")) ~@args#) {:tag ~(str (name k) "s")}))))))))
+
+(gen-typed-array-defnts)
+
+#?(:clj (defalias ->booleans      ->boolean-array))
+#?(:clj (defalias ->bytes         ->byte-array   ))
+        ; TODO ubytes for CLJS
+#?(:clj (defalias ->chars         ->char-array   ))
+#?(:clj (defalias ->shorts        ->short-array  ))
+#?(:clj (defalias ->ints          ->int-array    ))
+        ; TODO uints for CLJS
+#?(:clj (defalias ->longs         ->long-array   ))
+#?(:clj (defalias ->floats        ->float-array  ))
+#?(:clj (defalias ->doubles       ->double-array ))
+        (defalias ->object-array    object-array )
+        (defalias ->objects       ->object-array )
+
+(defnt array-of-type ; TODO get this from `Arrays`
+  #?@(:clj  [(^first [^array?    x ^nat-long? n] (Array/arrayOfType x n))]
+      :cljs [(^first [^bytes?    x ^nat-long? n] (->byte-array    n))
+             (^first [^ubytes?   x ^nat-long? n] (->ubyte-array   n))
+             (^first [^shorts?   x ^nat-long? n] (->short-array   n))
+             (^first [^ints?     x ^nat-long? n] (->int-array     n))
+             (^first [^uints?    x ^nat-long? n] (->uint-array    n))
+             (^first [^longs?    x ^nat-long? n] (->long-array    n))
+             (^first [^floats?   x ^nat-long? n] (->float-array   n))
+             (^first [^doubles?  x ^nat-long? n] (->double-array  n))
+             (^first [^objects?  x ^nat-long? n] (->object-array  n))]))
+
+(defnt ->array
+  #?(:clj  (^boolean-array? [^boolean?        t ^nat-long? ct] (->boolean-array ct)))
+  #?(:clj  (^byte-array?    [^byte?           t ^nat-long? ct] (->byte-array    ct)))
+  #?(:clj  (^char-array?    [^char?           t ^nat-long? ct] (->char-array    ct)))
+  #?(:clj  (^short-array?   [^short?          t ^nat-long? ct] (->short-array   ct)))
+  #?(:clj  (^int-array?     [^int?            t ^nat-long? ct] (->int-array     ct)))
+  #?(:clj  (^long-array?    [^long?           t ^nat-long? ct] (->long-array    ct)))
+  #?(:clj  (^float-array?   [^float?          t ^nat-long? ct] (->float-array   ct)))
+           (^double-array?  [^double?         t ^nat-long? ct] (->double-array  ct))
+  #?(:cljs (                [                 x ^nat-long? ct] (->object-array  ct)))
+  #?(:clj  (                [^java.lang.Class c ^nat-long? ct] (make-array c    ct)))) ; object-array is subsumed into this
+
 (defnt empty
   {:todo #{"Most of this should be in some static map somewhere for efficiency"
            "implement core/empty"}}
-           (^boolean [^boolean?  x] false         )
-  #?(:clj  (^char    [^char?     x] (->char   0)  ))
-  #?(:clj  (^byte    [^byte?     x] (->byte   0)  ))
-  #?(:clj  (^short   [^short?    x] (->short  0)  ))
-  #?(:clj  (^int     [^int?      x] (->int    0)  ))
-  #?(:clj  (^long    [^long?     x] (->long   0)  ))
-  #?(:clj  (^float   [^float?    x] (->float  0)  ))
-  #?(:clj  (^double  [^double?   x] (->double 0)  ))
-  #?(:cljs (         [^pnum?     x] 0             ))
-           (^String  [^string?   x] ""            )
-           (         [           x] (core/empty x)))
+           (       [^boolean?  x] false         )
+  #?(:clj  (       [^char?     x] (->char   0)  ))
+  #?(:clj  (       [^byte?     x] (->byte   0)  ))
+  #?(:clj  (       [^short?    x] (->short  0)  ))
+  #?(:clj  (       [^int?      x] (->int    0)  ))
+  #?(:clj  (       [^long?     x] (->long   0)  ))
+  #?(:clj  (       [^float?    x] (->float  0)  ))
+  #?(:clj  (       [^double?   x] (->double 0)  ))
+  #?(:cljs (^first [^pnum?     x] 0             ))
+           (^first [^string?   x] ""            )
+           ; TODO
+           (^first [^array?    x] (array-of-type x (int (count x)))) ; TODO should it be `Array/cloneSizes`?
+           (^first [           x] (core/empty x)))
 
-(defnt #?(:clj  ^long lasti
-          :cljs       lasti)
+(defnt lasti
   "Last index of a coll."
-  [coll] (unchecked-dec (count coll)))
-
-#?(:clj
-(defnt array-of-type
-  (^first [^short-array?   obj ^nat-long? n] (short-array   n))
-  (^first [^long-array?    obj ^nat-long? n] (long-array    n))
-  (^first [^float-array?   obj ^nat-long? n] (float-array   n))
-  (^first [^int-array?     obj ^nat-long? n] (int-array     n))
-  (^first [^double-array?  obj ^nat-long? n] (double-array  n))
-  (^first [^boolean-array? obj ^nat-long? n] (boolean-array n))
-  (^first [^byte-array?    obj ^nat-long? n] (byte-array    n))
-  (^first [^char-array?    obj ^nat-long? n] (char-array    n))
-  (^first [^object-array?  obj ^nat-long? n] (object-array  n))))
-
-(defnt ->array
-  #?(:cljs ([x ct] (TODO)))
-  #?(:clj (^boolean-array? [^boolean?        t ^nat-long? ct] (boolean-array ct)))
-  #?(:clj (^byte-array?    [^byte?           t ^nat-long? ct] (byte-array    ct)))
-  #?(:clj (^char-array?    [^char?           t ^nat-long? ct] (char-array    ct)))
-  #?(:clj (^short-array?   [^short?          t ^nat-long? ct] (short-array   ct)))
-  #?(:clj (^int-array?     [^int?            t ^nat-long? ct] (int-array     ct)))
-  #?(:clj (^long-array?    [^long?           t ^nat-long? ct] (long-array    ct)))
-  #?(:clj (^float-array?   [^float?          t ^nat-long? ct] (float-array   ct)))
-  #?(:clj (^double-array?  [^double?         t ^nat-long? ct] (double-array  ct)))
-  #?(:clj (                [^java.lang.Class c ^nat-long? ct] (make-array c  ct)))) ; object-array is subsumed into this
+  [coll] (long (unchecked-dec (count coll))))
 
 (defnt subseq
   "Returns a view of @`coll` from @`a` to @`b` in O(1) time."
@@ -515,21 +563,21 @@
    :cljs (defalias reset! core/reset!))
 
 (defnt aset!
-  "Yay, |aset| no longer causes reflection or needs type hints!"
   {:performance "|java.lang.reflect.Array/set| is 26 times faster
                   than 'normal' reflection"
-   :todo #{"have the semantics such that (aset! arr v i0 i1 i2) is possible"}}
-  #?(:cljs (^first [^array-1d?      coll            i          v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^boolean-array? coll ^nat-long? i ^boolean v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^byte-array?    coll ^nat-long? i ^byte    v] (aset coll i (core/byte  v)) coll)) ; TODO make this not required
-  #?(:clj  (^first [^char-array?    coll ^nat-long? i ^char    v] (aset coll i v)              coll))
-  #?(:clj  (^first [^short-array?   coll ^nat-long? i ^short   v] (aset coll i (core/short v)) coll)) ; TODO make this not required
-  #?(:clj  (^first [^int-array?     coll ^nat-long? i ^int     v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^long-array?    coll ^nat-long? i ^long    v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^float-array?   coll ^nat-long? i ^float   v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^double-array?  coll ^nat-long? i ^double  v] (aset coll i v             ) coll))
-  #?(:clj  (^first [^object-array?  coll ^nat-long? i          v] (aset coll i v             ) coll))
-  #?(:clj  (^first [                coll ^nat-long? i          v] (java.lang.reflect.Array/set coll i v) coll)))
+   :todo #{"have the semantics such that (aset! arr v i0 i1 i2) is possible"
+           "`aset!` shallow for multidims"}}
+  #?(:cljs (^first [^array-1d?      coll ^int? i          v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^boolean-array? coll ^int  i ^boolean v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^byte-array?    coll ^int  i ^byte    v] (aset coll i (core/byte  v)) coll)) ; TODO make this not required
+  #?(:clj  (^first [^char-array?    coll ^int  i ^char    v] (aset coll i v)              coll))
+  #?(:clj  (^first [^short-array?   coll ^int  i ^short   v] (aset coll i (core/short v)) coll)) ; TODO make this not required
+  #?(:clj  (^first [^int-array?     coll ^int  i ^int     v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^long-array?    coll ^int  i ^long    v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^float-array?   coll ^int  i ^float   v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^double-array?  coll ^int  i ^double  v] (aset coll i v             ) coll))
+  #?(:clj  (^first [^object-array?  coll ^int  i          v] (aset coll i v             ) coll))
+  #?(:clj  (^first [                coll ^int  i          v] (java.lang.reflect.Array/set coll i v) coll)))
 
 ; TODO
 ; (defnt aset-in!)
