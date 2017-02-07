@@ -58,9 +58,10 @@
 
 ;  ===== SCOPE =====
 (defn shadows-var? [bindings v]
-  (->> bindings (apply hash-map) keys (map name)
+  (->> bindings (apply hash-map) keys (filter symbol?) (map name) ; TODO filtering by symbol because ignoring destructuring, but that's bad
        (into #{})
        (<- contains? (name v))))
+
 (def new-scope? (fn-and seq? (fn-> first symbol?)
    (fn-> first name (= "let"))))
 ; ===== ARGLISTS =====
