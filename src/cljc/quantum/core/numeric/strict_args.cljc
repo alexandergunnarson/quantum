@@ -1,0 +1,55 @@
+(ns
+  quantum.core.numeric.strict-args
+  "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc.
+   All vars in this namespace are strict-arg vars (i.e., are guaranteed
+   not to rely on protocol dispatch.)"
+  {:attribution "Alex Gunnarson"}
+  (:refer-clojure :exclude
+    [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
+     min max quot mod format
+     #?@(:clj  [bigint biginteger bigdec numerator denominator inc' dec'])])
+  (:require
+    [clojure.core                      :as c]
+    [quantum.core.vars                 :as var
+      :refer [defalias defaliases]]
+    [quantum.core.numeric.convert   ]
+    [quantum.core.numeric.misc      ]
+    [quantum.core.numeric.operators    :as op
+      :include-macros true]
+    [quantum.core.numeric.predicates]
+    [quantum.core.numeric.trig      ]
+    [quantum.core.numeric.truncate     :as trunc
+      :include-macros true]
+    [quantum.core.numeric.types        :as ntypes])
+  (:require-macros
+    [quantum.core.numeric.strict-args :as self])
+  #?(:clj
+  (:import
+    [java.nio ByteBuffer]
+    [quantum.core Numeric] ; loops?
+    [net.jafama FastMath]
+    clojure.lang.BigInt
+    java.math.BigDecimal)))
+;_____________________________________________________________________
+;==================={        OPERATORS         }======================
+;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
+#?(:clj (defalias +* op/+*&))
+#?(:clj (defalias +' op/+'&))
+#?(:clj (defalias +  op/+& ))
+
+#?(:clj (defalias -* op/-*&))
+#?(:clj (defalias -' op/-'&))
+#?(:clj (defalias -  op/-& ))
+
+#?(:clj (defalias ** op/**&))
+#?(:clj (defalias *' op/*'&))
+#?(:clj (defalias *  op/*& ))
+
+#_(defaliases quantum.core.numeric.operators
+  #?@(:clj [;div*$ div'$ div$
+            ;inc*$ #_inc' inc$
+            ;dec*$ #_dec' dec$
+            ; abs'$ abs$
+                 ])
+            ;inc'$ dec'$
+            )
