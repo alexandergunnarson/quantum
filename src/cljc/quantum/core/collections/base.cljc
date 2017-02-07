@@ -139,7 +139,7 @@
     (try
       (prewalk
         (fn [x]
-          (if (pred x)
+          (if (pred x) ; TODO fix — if there's an exception then this will misleadingly say it's not found instead of propagating the exception
               (do (reset! result [true x])
                   (throw #?(:clj (Exception.) :cljs (js/Error.))))
               x))
