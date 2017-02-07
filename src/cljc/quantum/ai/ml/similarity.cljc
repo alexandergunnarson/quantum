@@ -14,7 +14,7 @@
       :refer [<- fn1 fn->]]
     [quantum.core.collections :as coll
       :refer [map+ remove+ red-apply range+
-              mutable eq! aset-in!
+              mutable eq! assoc-in!
               kmap aget-in aget-in* ifor get reducei]]
     [quantum.core.error
       :refer [ ->ex TODO]]
@@ -41,7 +41,7 @@
         make a difference in performance"
        "|ifor| shaves about 20-40% off the time compared to
         |doseq| with |range|! pretty amazing"]
-    :todo ["Move from |aset-in!| to |aset-in!*|"
+    :todo ["Move from |assoc-in!| to |assoc-in!*|"
            "Eliminate boxed math"
            "Allow for n-dimensional, and weighted Levenshtein"
            "Improve |coll/->multi-array|"
@@ -54,16 +54,16 @@
                        (-> s2 count inc)])
         cost (mutable 0)]
     (ifor [i 0 (< i s1-ct+1) (inc* i)]
-      (aset-in! m [i 0] i))
+      (assoc-in! m [i 0] i))
     (ifor [j 0 (< j s2-ct+1) (inc* j)]
-      (aset-in! m [0 j] j))
+      (assoc-in! m [0 j] j))
     (ifor [i 1 (< i s1-ct+1) (inc* i)]
       (ifor [j 1 (< j s2-ct+1) (inc* j)]
         (if (= (get s1 (dec i))
                (get s2 (dec j)))
             (eq! cost 0)
             (eq! cost 1))
-        (aset-in! m [i j]
+        (assoc-in! m [i j]
           (min (inc     (aget-in* m (dec i) j      ))     ; deletion
                (inc     (aget-in* m i       (dec j)))     ; insertion
                (+ @cost (aget-in* m (dec i) (dec j))))))) ; substitution
