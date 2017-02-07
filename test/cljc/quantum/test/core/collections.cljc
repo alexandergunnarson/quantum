@@ -1,5 +1,8 @@
 (ns quantum.test.core.collections
-  (:require [quantum.core.collections :as ns]))
+  (:require
+    [quantum.core.test        :as test
+      :refer [deftest is ]]
+    [quantum.core.collections :as ns]))
 
 (defn test:map-entry [a b])
 
@@ -10,6 +13,24 @@
 (defn test:wrap-delay [f])
 
 ; ; ====== COLLECTIONS ======
+
+(deftest test:red-for
+  (let [ret (ns/red-for [elem [1 2 1 3 4 2]
+                         ret  {:a #{} :b []}]
+              (-> ret (update :a conj elem)
+                      (update :b conj elem)))]
+    (is (= ret {:a #{1 2 3 4}
+                :b [1 2 1 3 4 2]}))))
+
+(deftest test:red-fori
+  (let [ret (ns/red-fori [elem [1 2 1 3 4 2]
+                          ret  {:a #{} :b [] :c i} i]
+              (-> ret (update :a conj elem)
+                      (update :b conj elem)
+                      (update :c conj i)))]
+    (is (= ret {:a #{1 2 3 4}
+                :b [1 2 1 3 4 2]
+                :c [0 1 2 3 4 5]}))))
 
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
@@ -148,13 +169,8 @@
 (defn test:get-in
   [coll ks])
 
-(defn test:aset-in!
-  [coll ks v])
-
 (defn test:assoc-in!
   [coll ks v])
-
-(defn test:get-in+ [coll [iden :as keys-0]])
 
 (defn test:single? [x])
 

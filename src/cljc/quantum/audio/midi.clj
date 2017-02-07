@@ -16,7 +16,7 @@
     [quantum.core.async       :as async
       :refer [go <! <!! >! put! timeout]]
     [quantum.core.data.validated :as dv]
-    [quantum.core.validate    :as v
+    [quantum.core.spec           :as s
       :refer [validate]]
     [quantum.core.error       :as err
       :refer [catch-all ->ex TODO]]
@@ -84,12 +84,12 @@
   :conformer (fn [m] (if (-> m :this/chan nil?)
                          (assoc m :this/chan 0)
                          m))
-  :req-un    [(def :this/action   (v/and :db/long #(<= -127 (do (println "%" %) %) 256)))
+  :req-un    [(def :this/action   (s/and :db/long #(<= -127 (do (println "%" %) %) 256)))
               ; the lowest and highest keys on the piano correspond to MIDI note numbers 21 and 108
-              (def :this/pitch    (v/and :db/long #(<= 0    (do (println "%" %) %) 127)))
-              (def :this/velocity (v/and :db/long #(<= 0    (do (println "%" %) %) 127)))
-              (def :this/duration (v/and :db/long pos?))] ; yeah, maybe int...
-  :opt-un    [(def :this/chan     (v/and :db/long #(<= 0    (do (println "%" %) %) 127)))])
+              (def :this/pitch    (s/and :db/long #(<= 0    (do (println "%" %) %) 127)))
+              (def :this/velocity (s/and :db/long #(<= 0    (do (println "%" %) %) 127)))
+              (def :this/duration (s/and :db/long pos?))] ; yeah, maybe int...
+  :opt-un    [(def :this/chan     (s/and :db/long #(<= 0    (do (println "%" %) %) 127)))])
 
 (defonce volumes    (atom {}))
 (defonce curr-times (atom {}))
