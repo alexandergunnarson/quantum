@@ -12,26 +12,26 @@
       :refer [fn->]]
     [quantum.core.error
       :refer [catch-all]]
-    [quantum.core.validate       :as v
+    [quantum.core.spec           :as s
       :refer [validate defspec]]
     [quantum.core.macros
       :refer [defnt]]))
 
 ; s/cat conforms to a map
 
-(defspec ::odd?  (v/and integer? odd? ))
-(defspec ::even? (v/and integer? even?))
+(defspec ::odd?  (s/and integer? odd? ))
+(defspec ::even? (s/and integer? even?))
 (defspec ::a integer?)
 (defspec ::b integer?)
 (defspec ::c string?)
-(defspec ::d (v/and integer? odd?))
-(defspec ::e (v/and integer? even?))
-(defspec ::f (v/and string? (fn-> count (= 5))))
-#_(def shape1 (v/cat :forty-two #{42}
-              :odds (v/+ ::odd?)
-              :m (v/keys :req #_:req-un [::a ::b ::c])
-              :oes (v/* (v/cat :o ::odd? :e ::even?))
-              :ex (v/alt :odd ::odd? :even ::even?)))
+(defspec ::d (s/and integer? odd?))
+(defspec ::e (s/and integer? even?))
+(defspec ::f (s/and string? (fn-> count (= 5))))
+#_(def shape1 (s/cat :forty-two #{42}
+              :odds (s/+ ::odd?)
+              :m (s/keys :req #_:req-un [::a ::b ::c])
+              :oes (s/* (s/cat :o ::odd? :e ::even?))
+              :ex (s/alt :odd ::odd? :even ::even?)))
 ; (validate s
 ;   [42 11 13 15 {::a 1 ::b 2 ::c 3} 1 2 3 42 43 44 11])
 ; {:forty-two 42,
@@ -49,7 +49,7 @@
      (assert (= (.getMessage e#) ~msg) {:e e#}))))
 
 ; TODO Now what about unions, differences, etc? Do we just do new defrecords for each?
-(ns/def-validated-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
+(ns/def-map MyTypeOfValidatedMap :req [::a ::b ::c ::d] :opt [::e])
 
 (defnt trythis
           ([^MyTypeOfValidatedMap x] (assoc x ::e 41))
@@ -64,7 +64,7 @@
       (testing "optional"
         (! (assoc abc ::e 20)))
       (assert-message
-        v/spec-assertion-failed
+        s/spec-assertion-failed
         (! (assoc abc ::a "A"))))
     (testing "dissoc"
       (testing "required key"
@@ -84,7 +84,7 @@
         (! (trythis ^java.util.Map (.-v abc))))
       (testing "Invalid state is impossible when validated"
         (assert-message
-          v/spec-assertion-failed
+          s/spec-assertion-failed
           (! (trythis abc)))))
     (testing "equality"
       (is (= abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})))
@@ -106,7 +106,7 @@
       (is (= @(trythis2 abcde) "abcdf")))
     (testing "set"
       (assert-message
-        v/spec-assertion-failed
+        s/spec-assertion-failed
         (! (quantum.core.core/set abcde "abcdef"))))
     (testing "get"
       (= (quantum.core.core/get abcde) "abcde")))))
