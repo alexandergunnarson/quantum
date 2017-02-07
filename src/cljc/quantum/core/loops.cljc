@@ -17,8 +17,7 @@
       :refer [if-cljs]]
     [quantum.core.macros              :as macros
       :refer [assert-args]]
-    [quantum.core.reducers            :as red
-      :include-macros true]
+    [quantum.core.reducers.reduce     :as red]
     [quantum.core.fn
       :refer [rfn]]
     [quantum.core.macros.optimization :as opt]
@@ -44,56 +43,29 @@
   ([f ret coll]
    `(red/reduce ~f ~ret ~coll))))
 
-#?(:clj
-(defmacro reduce-
-  ([lang f coll]
-   `(reduce- ~lang ~f (~f) ~coll))
-  ([lang f ret coll]
-   (let [externed
-          (condp = lang
-            :clj  (if @qcore/externs?
-                      (try (opt/extern- f)
-                        (catch Throwable _
-                          (log/pr ::macro-expand "COULD NOT EXTERN" f)
-                          f))
-                      f)
-            :cljs f)
-         code `(red/reduce ~externed ~ret ~coll)]
-     code))))
-
-#?(:clj
-(defmacro reduce [& args]
-  `(reduce- ~(if-cljs &env :cljs :clj) ~@args)))
-
-#?(:clj
-(defmacro reducei-
-  [should-extern? f ret-i coll & args]
-  (let [f-final
-         `(~(if (and should-extern? @quantum.core.core/externs?)
-                `quantum.core.macros/extern+
-                `quantum.core.macros.optimization/identity*)
-           (let [i# (volatile! (long -1))]
-             (fn ([ret# elem#]
-                   (vswap! i# quantum.core.core/unchecked-inc-long)
-                   (~f ret# elem# @i#))
-                 ([ret# k# v#]
-                   (vswap! i# quantum.core.core/unchecked-inc-long)
-                   (~f ret# k# v# @i#)))))
-        code `(reduce ~f-final ~ret-i ~coll)]
-  code)))
+#?(:clj (defalias reduce red/reduce))
 
 #?(:clj
 (defmacro reducei
-  "|reduce|, indexed.
+   "`reduce`, indexed.
 
    This is a macro to eliminate the wrapper function call.
    Originally used a mutable counter on the inside just for fun...
    but the counter might be propagated via @f, so it's best to use
-   an atom instead."
+   an atomic value instead."
   {:attribution "Alex Gunnarson"
    :todo ["Make this an inline function, not a macro."]}
-  [f ret coll]
-  `(reducei- false ~f ~ret ~coll)))
+  [f ret-i coll & args]
+  (let [f-final
+         `(let [i# (volatile! (long -1))]
+            (fn ([ret# elem#]
+                  (vswap! i# quantum.core.core/unchecked-inc-long)
+                  (~f ret# elem# @i#))
+                ([ret# k# v#]
+                  (vswap! i# quantum.core.core/unchecked-inc-long)
+                  (~f ret# k# v# @i#))))
+        code `(reduce ~f-final ~ret-i ~coll)]
+    code)))
 
 (defn reduce-2
   "Like |reduce|, but reduces over two items in a collection at a time.
@@ -103,7 +75,7 @@
    2) The                next item in the collection being reduced over
    3) The item after the next item in the collection being reduced over
 
-   Doesn't use CollReduce... so not as fast as |reduce|."
+   Doesn't use `reduce`... so not as fast."
   {:todo        ["Possibly find a better way to do it?"]
    :attribution "Alex Gunnarson"}
   [func init coll]
@@ -142,6 +114,23 @@
   [[x-sym coll ret-sym init] & body]
   `(reduce
      (rfn ~[ret-sym x-sym] ~@body)
+     ~init
+     ~coll)))
+
+#?(:clj
+(defmacro red-fori
+  "Like `reducei`, but with a similar syntax to `for`."
+  {:equivalent {`(red-fori [m   [{1 2} {3 4}]
+                            ret {} i]
+                   (merge-with + ret m))
+                `(reducei
+                   (rfn [ret m i] (merge-with + ret m))
+                   {}
+                   [{1 2} {3 4}])}}
+  [[x-sym coll ret-sym init i-sym] & body]
+  `(reducei
+     (fn f# ( [ret# k# v# i#] (f# ret# [k# v#] i#))
+            (~[ret-sym x-sym i-sym] ~@body))
      ~init
      ~coll)))
 
