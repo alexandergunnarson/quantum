@@ -1,29 +1,31 @@
 (ns quantum.core.paths
   "Paths-related things — resource locators. URIs, URLs, File, Path, directories, etc."
-           (:refer-clojure :exclude [descendants contains?])
-           (:require
-     #?(:clj [clojure.java.io          :as io])
-             [quantum.core.collections :as coll
-               :refer [getr index-of containsv? popr reducei dropr-until]]
-             [quantum.core.error       :as err
-               :refer [->ex TODO]]
-             [quantum.core.fn          :as fn
-               :refer [<- fn-> fn->> fn1 mfn]]
-             [quantum.core.logic       :as logic
-               :refer [fn= fn-not fn-and whenf whenc ifn]]
-             [quantum.core.macros      :as macros
-               :refer [defnt]]
-             [quantum.core.system      :as sys]
-             [quantum.core.vars        :as var
-               :refer [defalias def-]]
-             [quantum.core.string      :as str])
-  #?(:cljs (:require-macros
-             [quantum.core.paths
-               :refer [->file exists?]]))
-  #?(:clj  (:import
-             [java.io File]
-             [java.nio.file Path Paths]
-             [java.net URI URL URLEncoder])))
+  (:refer-clojure :exclude [descendants contains?])
+  (:require
+  #?(:clj
+    [clojure.java.io          :as io])
+    [quantum.core.collections :as coll
+      :refer [slice index-of containsv? popr reducei dropr-until]]
+    [quantum.core.error       :as err
+      :refer [->ex TODO]]
+    [quantum.core.fn          :as fn
+      :refer [<- fn-> fn->> fn1 mfn]]
+    [quantum.core.logic       :as logic
+      :refer [fn= fn-not fn-and whenf whenc ifn]]
+    [quantum.core.macros      :as macros
+      :refer [defnt]]
+    [quantum.core.system      :as sys]
+    [quantum.core.vars        :as var
+      :refer [defalias def-]]
+    [quantum.core.string      :as str])
+  (:require-macros
+    [quantum.core.paths
+      :refer [->file exists?]])
+  #?(:clj
+  (:import
+    [java.io File]
+    [java.nio.file Path Paths]
+    [java.net URI URL URLEncoder])))
 
 ; TODO validate this
 (def paths-vecs
@@ -155,8 +157,8 @@
 #?(:clj (def- drive-dir
   (condp = sys/os
     :windows
-      (whenc (getr root-dir 0
-               (whenc (index-of root-dir "\\") (fn= -1) 0))
+      (whenc (slice root-dir 0
+               (inc (whenc (index-of root-dir "\\") (fn= -1) 0)))
              empty?
         "C:\\") ; default drive
     sys/separator)))
