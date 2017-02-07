@@ -1,6 +1,6 @@
 (ns
-  ^{:doc "An alias of the clj-time.core namespace. Also includes
-          useful functions such as |beg-of-day|, |end-of-day|,
+  ^{:doc "An alias ns of the Java 8 Time package on CLJ, and JSJoda on CLJS.
+          Also includes useful functions such as |beg-of-day|, |end-of-day|,
           |on?|, |for-days-between|, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.time.core
@@ -9,7 +9,8 @@
   (:require
     [clojure.core                   :as core]
 #?@(:cljs
-   [[cljsjs.js-joda]])
+   [[cljsjs.js-joda]
+    [cljsjs.js-joda-timezone]]) ; For IANA timezone support
     [quantum.core.error             :as err
       :refer [->ex TODO throw-unless]]
     [quantum.core.fn                :as fn
@@ -38,13 +39,16 @@
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor ChronoField])))
 
-; js/JSJoda
-
 ; ===== ABOUT =====
 ; https://www.npmjs.com/package/js-joda
 ; js-joda is fast. It is about 2 to 10 times faster than other javascript date libraries.
 ; js-joda is robust and stable.
 ; =================
+
+(def ^{:todos {0 {:desc     "Need to make JSJodaTimezone dep on cljsjs"
+                  :priority 0.5}
+               1 "Go through rest of JSJoda"}}
+  annotations nil)
 
 #?(:cljs
 (extend-type js/JSJoda.LocalDate
@@ -225,7 +229,7 @@
 (defnt ^long ->unix-millis
   #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMilli)))
              ([^java.util.Date          x] (-> x (.getTime)     ))
-             ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis)))
+             ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis) ->long))
              ([^java.time.LocalDateTime x] (-> x (.toInstant ZoneOffset/UTC) ->unix-millis))
              ([^java.time.ZonedDateTime x] (-> x .toInstant ->unix-millis))
              ([^org.joda.time.DateTime  x] (-> x (.getMillis)   ))
@@ -554,7 +558,7 @@
 
 
 #?(:clj
-(defnt ^java.sql.Time ->sql-date
+(defnt ^java.sql.Date ->sql-date
   ([^integer?           x] (java.sql.Date. x))
   ; TODO The string must be formatted as JDBC_DATE_FORMAT
   ([^string?            x] (java.sql.Date/valueOf x))
@@ -578,7 +582,7 @@
   ([#{java.sql.Timestamp java.sql.Date} x] (-> x ->unix-millis ->date))))
 
 #?(:clj
-(defnt ^java.sql.Time ->timestamp
+(defnt ^java.sql.Timestamp ->timestamp
   ([^integer?             x] (java.sql.Timestamp. x))
   ([^string?              x] (java.sql.Timestamp/valueOf x))
   ([#{java.util.Date
@@ -586,8 +590,8 @@
       java.util.Calendar} x] (-> x ->unix-millis ->timestamp))))
 
 #?(:clj
-  (defnt ^java.util.TimeZone ->timezone
-  ([^string? x]  (java.util.TimeZone/getTimeZone x))))
+(defnt ^java.util.TimeZone ->timezone
+  ([^string? x] (java.util.TimeZone/getTimeZone x))))
 
 ; ===== GETTING ===== ;
 
