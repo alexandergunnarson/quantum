@@ -10,11 +10,9 @@
       :refer [->ex]]
     [quantum.core.numeric :as num]
     [quantum.core.fn
-      :refer        [#?@(:clj [<- fn->>])]
-      :refer-macros [<- fn->>]]
+      :refer [<- fn->>]]
     [quantum.core.collections :as coll
-      :refer        [#?@(:clj [lfor for getr lasti join array])]
-      :refer-macros [lfor for getr lasti join]]
+      :refer [lfor for slice lasti join #?(:clj array)]]
     [quantum.core.nondeterministic :as rand]))
 
 (def syls
@@ -100,12 +98,12 @@
         (recur x 0 b)
       (< b 0)
         (throw (->ex "Out of bounds"))
-      :else (getr x a b))))
+      :else (slice x a (inc b)))))
 
 
 ; ===== HEROKU-ESQUE GENERATION =====
 
-(def haiku-adjs 
+(def haiku-adjs
   ["autumn" "hidden" "bitter" "misty" "silent" "empty" "dry" "dark"
    "summer" "icy" "delicate" "quiet" "white" "cool" "spring" "winter"
    "patient" "unlit" "dawn" "crimson" "wispy" "weathered" "blue"
@@ -122,7 +120,7 @@
   ["wave" "waters" "brook" "waterfall" "river" "lake" "surf" "sea" "pond"
    "breeze" "moon" "wind"
    "hill"  "meadow" "mountain"
-   "dust" "field" "fire" "flower" 
+   "dust" "field" "fire" "flower"
    "silhouette" "glitter"
    "resonance" "silence" "sound"
    "darkness" "shade" "shadow" "smoke" "haze"
@@ -135,7 +133,7 @@
    "sun" "dawn" "morning" "sunset" "night"
    "star"
    "youth" "majesty"])
-  
+
 (defn gen-haiku-name []
   (str (get haiku-adjs  (rand/rand-int-between true 0 (lasti haiku-adjs )))
        "-"

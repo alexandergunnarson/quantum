@@ -25,7 +25,7 @@
 (defn test:->array [x ct]))
 
 
-(defn test:getr
+(defn test:slice
   ([coll a b])
   ([coll a]))
 
@@ -66,8 +66,6 @@
 (defn test:nth
   ([coll i]))
 
-(defn test:aset! [coll i v])
-
 (defn test:assoc!
   ([coll k v]))
 
@@ -89,7 +87,7 @@
 (defn test:butlast [x])
 
 (defn test:last [x])
-    
+
 (defn test:array [& args])
 
 (defn test:gets [coll indices])
