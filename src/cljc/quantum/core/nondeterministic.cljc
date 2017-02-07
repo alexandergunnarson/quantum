@@ -1,6 +1,5 @@
 (ns
-  ^{:doc "A few functions copied from thebusby.bagotricks.
-          Not especially used at the moment."
+  ^{:doc "Functions centered around non-determinism (randomness)."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
   (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle])
@@ -27,7 +26,7 @@
             [quantum.core.log          :as log]
             [quantum.core.numeric      :as num]
             [quantum.core.fn           :as fn
-              :refer [<-]]
+              :refer [<- rfn]]
             [quantum.core.data.array   :as arr   ]
             [quantum.core.vars
               :refer [defalias]])
@@ -298,15 +297,12 @@
 (defn split
   "Randomly splits up a collection @coll according to the distributions @distrs-0 given,
    using the supplied predicate @pred."
-  {:tests `{[[1 2 3 4 5] [0.2 :test] [0.8 :training]]
-            {:test [4], :training [3 2 1 5]}
-            [[1 2 3 4]   [0.2 :test] [0.8 :training]]
-            {:test [2], :training [3 1 4]  }}}
+  {:todo #{"clean up"}}
   [coll & distrs-0]
   (assert (nempty? distrs-0))
   (let [coll        (vec coll) ; to be able to index
         to-distr    (condf1 vector? (juxt second first)
-                             number? (juxt #(gensym (str "split-" %)) identity))
+                            number? (juxt #(gensym (str "split-" %)) identity))
         distrs      (->> distrs-0
                          (map+ to-distr)
                          (join {}))
@@ -319,9 +315,9 @@
     ; TODO move
     (->> partitions
          (reduce
-           (fn [[result remaining-indices] assigned-category chunk-size]
+           (rfn [[result remaining-indices] assigned-category chunk-size]
              (reduce
-               (fn [[result' remaining-indices'] _]
+               (rfn [[result' remaining-indices'] _]
                  (let [_        (assert (nempty? remaining-indices'))
                        chosen-i (rand-nth remaining-indices')]
                     [(update result' assigned-category conj! (get coll chosen-i))
