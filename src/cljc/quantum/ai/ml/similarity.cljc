@@ -14,10 +14,10 @@
       :refer [<- fn1 fn->]]
     [quantum.core.collections :as coll
       :refer [map+ remove+ red-apply range+
-              mutable eq! assoc-in!
-              kmap aget-in aget-in* ifor get reducei]]
+              mutable setm! assoc-in!
+              kmap get-in* ifor get reducei]]
     [quantum.core.error
-      :refer [ ->ex TODO]]
+      :refer [->ex TODO]]
     [quantum.core.numeric :as cnum
       :refer [+* inc* pow abs sqrt]]
     [quantum.numeric.core :as num
@@ -61,12 +61,12 @@
       (ifor [j 1 (< j s2-ct+1) (inc* j)]
         (if (= (get s1 (dec i))
                (get s2 (dec j)))
-            (eq! cost 0)
-            (eq! cost 1))
+            (setm! cost 0)
+            (setm! cost 1))
         (assoc-in! m [i j]
-          (min (inc     (aget-in* m (dec i) j      ))     ; deletion
-               (inc     (aget-in* m i       (dec j)))     ; insertion
-               (+ @cost (aget-in* m (dec i) (dec j))))))) ; substitution
+          (min (inc     (get-in* m (dec i) j      ))     ; deletion
+               (inc     (get-in* m i       (dec j)))     ; insertion
+               (+ @cost (get-in* m (dec i) (dec j))))))) ; substitution
      m))
 
 
