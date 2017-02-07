@@ -48,3 +48,19 @@
    (println "expected:" (ppr-str (:expected m)))
    (print "  actual: ")
    (println (ppr-str (:actual m))))))
+
+#?(:clj
+(defn test-syms!
+  "Tests the provided syms, in order, deduplicating them."
+  [& syms]
+  (try
+    (let [test-syms (distinct syms)]
+      (doseq [test-sym test-syms]
+        (try
+          (println "=====" "Testing" test-sym "..." "=====" )
+          (let [v (find-var test-sym)]
+            (assert (some? v) (str "Test sym not found: " test-sym))
+            (clojure.test/test-var v))
+          (println "=====" "Done with" test-sym "=====" )
+          (catch Throwable t
+            (println "ERROR in test" test-sym t))))))))
