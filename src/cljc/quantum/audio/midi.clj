@@ -15,8 +15,7 @@
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
     [quantum.core.async       :as async
       :refer [go <! <!! >! put! timeout]]
-    [quantum.core.data.validated
-      :refer [def-validated-map]]
+    [quantum.core.data.validated :as dv]
     [quantum.core.validate    :as v
       :refer [validate]]
     [quantum.core.error       :as err
@@ -81,7 +80,7 @@
 (defn out-position [] (-> ^CoreMidiReceiver @out .getMidiDevice .getMicrosecondPosition))
 
 ; TODO maybe these validations are more restrictive
-#_(def-validated-map ^:db? event
+#_(dv/def-map ^:db? event
   :conformer (fn [m] (if (-> m :this/chan nil?)
                          (assoc m :this/chan 0)
                          m))

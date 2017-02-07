@@ -1,5 +1,10 @@
 (ns quantum.test.numeric.arrays
-  (:require [quantum.numeric.arrays :as ns]))
+  (:require
+    [quantum.core.test      :as test
+      :refer [deftest is testing]]
+    [quantum.numeric.arrays :as ns]
+    [quantum.core.collections :as coll
+      :refer [map+ join]]))
 
 (defn test:vlength [v])
 
@@ -31,3 +36,16 @@
 (defn test:dist* [v1 v2])
 
 (defn test:dist [v1 v2])
+
+#?(:clj
+(deftest test:->dmatrix
+  (is (= (->> [[1 2 3] [4 5 6]]
+              ns/->dmatrix
+              (map+ vec)
+              (join []))
+         (->> (to-array-2d [[1 2 3] [4 5 6]])
+              ns/->dmatrix
+              (map+ vec)
+              (join []))
+         [[1.0 2.0 3.0]
+          [4.0 5.0 6.0]]))))
