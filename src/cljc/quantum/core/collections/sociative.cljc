@@ -42,7 +42,7 @@
     [quantum.core.data.vector      :as vec
       :refer [catvec]]
     [quantum.core.collections.core :as coll
-      :refer [first second rest get count conj! assoc dissoc assoc! assoc!* empty? contains? containsk?]]
+      :refer [first second rest get count conj! assoc dissoc assoc! assoc?! empty? contains? containsk?]]
     [quantum.core.collections.generative
       :refer [range]]
     [quantum.core.fn               :as fn
@@ -85,13 +85,13 @@
     (loop [kvs-n  kvs-0
            coll-f (-> coll-0 transient!*
                       (extend-coll-to k)
-                      (assoc!* k v))]
+                      (assoc?! k v))]
       (if (empty? kvs-n)
           (persistent!* coll-f)
           (recur (-> kvs-n rest rest)
                  (let [k-n (first kvs-n)]
                    (-> coll-f (extend-coll-to k-n)
-                       (assoc!* k-n (second kvs-n)))))))))
+                       (assoc?! k-n (second kvs-n)))))))))
 
 (defn assoc-if
   "Works like assoc, but only associates if condition is true."
@@ -190,7 +190,7 @@
   in it, but if any levels do not exist, non-transient hash-maps will be created."
   {:attribution "flatland.useful"}
   [m [k & ks] f & args]
-  (assoc!* m k
+  (assoc?! m k
     (if ks
         (apply update-in! (get m k) ks f args)
         (apply f (get m k) args))))
