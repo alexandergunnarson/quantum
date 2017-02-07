@@ -31,27 +31,27 @@
 #?(:clj
     (defnt ^long ->long
       {:source "clojure.lang.RT.longCast"}
-      (^long [#{Integer Long Byte Short} x] (.longValue x))
-      (^long [^clojure.lang.BigInt x]
+      ([#{Integer Long Byte Short} x] (.longValue x))
+      ([^clojure.lang.BigInt x]
         (if (nil? (.bipart x))
             (.lpart x)
             (long-out-of-range x)))
-      (^long [^java.math.BigInteger x]
+      ([^java.math.BigInteger x]
         (if (< (.bitLength x) 64)
             (.longValue x)
             (long-out-of-range x)))
-      (^long [^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
-      (^long [^Character                  x] (->long (.charValue       x)))
-      (^long [#{Double Float}             x] (->long (.doubleValue     x)))
-      (^long [#{char byte short int long} x] (->long* x))
-      (^long [#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
-      (^long [#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
-      (^long [#{boolean}                  x] (if x 1 0))
-      (^long [^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
+      ([^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
+      ([^Character                  x] (->long (.charValue       x)))
+      ([#{Double Float}             x] (->long (.doubleValue     x)))
+      ([#{char byte short int long} x] (->long* x))
+      ([#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
+      ([#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
+      ([#{boolean}                  x] (if x 1 0))
+      ([^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
                                                 :cljs (-> x int/fromString ->long)))
     #?(:clj
-      (^long [^string?                    x radix] (Long/parseLong x radix)))
-      (^long [                            x] (->long-protocol x)))
+      ([^string?                    x radix] (Long/parseLong x radix)))
+      ([                            x] (->long-protocol x)))
    :cljs
      (defnt ->long
        ([^number?  x] (js/Math.trunc x))
@@ -72,7 +72,7 @@
       {:source "clojure.lang.RT.booleanCast"}
       ([^Boolean x] (.booleanValue x))
       ([^boolean x] x)
-      ([:else    x] (not= x nil)))
+      ([:else    x] (.booleanValue (not= x nil))))
    :cljs (defalias ->boolean core/boolean))
 ;_____________________________________________________________________
 ;==================={           BYTE           }======================
@@ -155,7 +155,7 @@
       ([^float                 x] (Float/floatToRawIntBits x))
       ([^string?               x] (-> x #?(:clj Integer/parseInt :cljs js/parseInt) ->int))
       ([^string?               x radix] (#?(:clj Integer/parseInt :cljs int/fromString) x radix))
-      ([:else                  x  (-> x ->long ->int)]))
+      ([:else                  x] (-> x ->long ->int)))
    :cljs (defalias ->int core/int))
 
 ; js/Math.trunc for CLJS
@@ -195,7 +195,8 @@
   {:source "clojure.lang.RT/uncheckedDoubleCast"}
   ([^Number                      x] (.doubleValue x))
   ([^double                      x] x)
-  ([#{byte short int long float} x] (clojure.lang.RT/uncheckedDoubleCast x))))
+  ([#{byte short int long float} x] (clojure.lang.RT/uncheckedDoubleCast x))
+  ([                             x] (clojure.lang.RT/uncheckedDoubleCast x))))
 
 #?(:clj
     (defnt ^double ->double
