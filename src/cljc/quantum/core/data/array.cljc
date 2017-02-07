@@ -6,13 +6,13 @@
   (:refer-clojure :exclude
     [== reverse boolean-array byte-array char-array short-array
      int-array long-array float-array double-array
-     empty count get doseq])
+     empty count get doseq assoc!])
            (:require [clojure.core                  :as core]
              #?(:clj [loom.alg-generic              :as alg]) ; temporarily
                      [quantum.core.collections.base :as cbase
                        :refer [reducei]]
                      [quantum.core.collections.core :as ccoll
-                       :refer [empty count get aset!]]
+                       :refer [empty count get assoc!]]
                      [quantum.core.type.core        :as tcore]
                      [quantum.core.core             :as qcore
                        :refer [name+]]
@@ -89,7 +89,7 @@
     ([size & args]
       (let [^"[B" arr (byte-array (long size))]
         (doseqi [arg args n]
-          (aset! arr n (-> arg first byte)))
+          (assoc! arr n (-> arg first byte)))
         arr))))
 
 ; ----- INT ARRAY ----- ;
@@ -105,7 +105,7 @@
     ([size & args]
       (let [^ints arr (core/int-array (long size))]
         (doseqi [arg args n]
-          (aset! arr (long n) (-> arg first int)))
+          (assoc! arr (long n) (-> arg first int)))
         arr))))
 
 ; TODO: Use a macro for this
@@ -116,18 +116,18 @@
     (^longs [] (core/long-array 0))
     (^longs [a]
       (let [arr (core/long-array 1)]
-        (aset! arr 0 (long a))
+        (assoc! arr 0 (long a))
         arr))
     ([a b]
       (let [arr (core/long-array 2)]
-        (aset! arr 0 (long a))
-        (aset! arr 1 (long b))
+        (assoc! arr 0 (long a))
+        (assoc! arr 1 (long b))
         arr))
     ; ([a b & more]
     ;   (let [arr (long-array (+ 2 (count more)))]
-    ;     (aset! arr 0 (long a))
-    ;     (aset! arr 1 (long b))
-    ;     (doseqi [x more i] (aset! arr (+ 2 i) (long x)))
+    ;     (assoc! arr 0 (long a))
+    ;     (assoc! arr 1 (long b))
+    ;     (doseqi [x more i] (assoc! arr (+ 2 i) (long x)))
     ;     arr))
     ))
 
@@ -141,48 +141,33 @@
     ([] (ccoll/->object-array 0))
     ([a]
       (let [arr (ccoll/->object-array 1)]
-        (aset! arr 0 a)
+        (assoc! arr 0 a)
         arr))
     ([a b]
       (let [arr (ccoll/->object-array 2)]
-        (aset! arr 0 a)
-        (aset! arr 1 b)
+        (assoc! arr 0 a)
+        (assoc! arr 1 b)
         arr))
     ([a b c]
       (let [arr (ccoll/->object-array 3)]
-        (aset! arr 0 a)
-        (aset! arr 1 b)
-        (aset! arr 2 c)
+        (assoc! arr 0 a)
+        (assoc! arr 1 b)
+        (assoc! arr 2 c)
         arr))
     ([a b c d]
       (let [arr (ccoll/->object-array 4)]
-        (aset! arr 0 a)
-        (aset! arr 1 b)
-        (aset! arr 2 c)
-        (aset! arr 3 d)
+        (assoc! arr 0 a)
+        (assoc! arr 1 b)
+        (assoc! arr 2 c)
+        (assoc! arr 3 d)
         arr))
     ; ([a b & more]
     ;   (let [arr (object-array (+ 2 (count more)))]
-    ;     (aset! arr 0 a)
-    ;     (aset! arr 1 b)
-    ;     (doseqi [x more i] (aset! arr (+ 2 i) x))
+    ;     (assoc! arr 0 a)
+    ;     (assoc! arr 1 b)
+    ;     (doseqi [x more i] (assoc! arr (+ 2 i) x))
     ;     arr))
     ))
-
-#?(:clj
-(defmacro array [type n] ; TODO move
-  (condp = type
-    'boolean `(boolean-array ~n)
-    'byte    `(byte-array    ~n)
-    'char    `(char-array    ~n)
-    'short   `(short-array   ~n)
-    'int     `(int-array     ~n)
-    'long    `(long-array    ~n)
-    'float   `(float-array   ~n)
-    'double  `(double-array  ~n)
-    'object  `(object-array  ~n)
-    'Object  `(object-array  ~n)
-    `(make-array ~type ~n))))
 
 ; ===== BITMAPS ===== ;
 
@@ -253,61 +238,8 @@
           buffer   (doto (ByteBuffer/allocate (* 8 longs-ct))
                          (.put b))]
       (doseq [i (range (count longs-f))]
-        (aset! longs-f i (.getLong buffer (* i 8))))
+        (assoc! longs-f i (.getLong buffer (* i 8))))
       longs-f))))
-
-; ===== COPY ===== ;
-
-(#?(:clj defnt' :cljs defnt) copy! ; shallow copy
-  (^first [^array? in ^int? in-pos :first out ^int? out-pos ^int? length]
-    #?(:clj  (System/arraycopy in in-pos out out-pos length)
-       :cljs (dotimes [i (- (.-length in) in-pos)]
-               (aset out (+ i out-pos) (aget in i))))
-    out)
-  (^first [^array? in :first out ^nat-int? length]
-    (copy! in 0 out 0 length)))
-
-#?(:clj (defalias shallow-copy! copy!))
-
-(defn deep-copy! [in out length] (TODO))
-
-(defnt copy (^first [^array? in] #?(:clj (copy! in (empty in) (count in)) :cljs (.slice in))))
-
-; ===== EDIT ===== ;
-
-(defnt reverse
-  {:adapted-from "mikera.cljutils.bytes"}
-  (^first [^array? x]
-    (let [n   (count x)
-          ret (empty x)]
-      (dotimes [i n] (aset! ret i (get x (- n (inc i)))))
-      ret)))
-
-#?(:cljs (defnt reverse! (^first [^array? x] (.reverse x))))
-
-(defnt aconcat  ; TODO join
-  {:adapted-from "mikera.cljutils.bytes"
-   :todo #{"cljs, probably use .concat"}}
-  (^first [^array? a :first b]
-    (let [al  (count a)
-          bl  (count b)
-          n   (+ al bl)
-          ret (ccoll/array-of-type a (int n))]
-      (copy! a 0 ret 0  al)
-      (copy! b 0 ret al bl)
-      ret)))
-
-(defnt slice
-  "Slices an array with a given start and length"
-  {:adapted-from "mikera.cljutils.bytes"
-   :todo #{"cljs, probably use .slice"}}
-  (^first [^array? a ^int? start]
-    (slice a start (- (count a) (int start))))
-  (^first [^array? a ^int? start ^int? n]
-    (let [al  (count a)
-          ret (ccoll/array-of-type a (int n))]
-      (copy! a start ret 0 n)
-      ret)))
 
 #?(:clj
 (defnt' ^boolean ==

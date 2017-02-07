@@ -3,11 +3,13 @@
           to-hex, to-CString, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.bytes
-  (:refer-clojure :exclude [reverse])
+  (:refer-clojure :exclude [reverse assoc!])
            (:require
              #?(:clj [clojure.java.io          :as io])
                      [quantum.core.data.array  :as arr
-                       :refer [#?(:clj byte-array+) aset!]]
+                       :refer [#?(:clj byte-array+)]]
+                     [quantum.core.collections.core
+                       :refer [assoc!]]
                      [quantum.core.data.binary :as bin
                        :refer [&& >>>]]
                      [quantum.core.collections.base
@@ -52,8 +54,8 @@
           (let [v           (-> digested (get i) (&& 0xFF))
                 bit-shifted (-> hex-arr  (get (>>> v 4   )) char)
                 bit-anded   (-> hex-arr  (get (&&   v 0x0F)) char)]
-                (aset hex-chars (char (* i 2))       bit-shifted)
-                (aset hex-chars (char (+ (* i 2) 1)) bit-anded)
+                (assoc! hex-chars (char (* i 2))       bit-shifted)
+                (assoc! hex-chars (char (+ (* i 2) 1)) bit-anded)
               (recur (inc i)))))
     (String. hex-chars))))
 
@@ -69,7 +71,7 @@
           bytes  0
           result 0
           (count bytes))
-        (aset result (-> result count dec) (byte 0))
+        (assoc! result (-> result count dec) (byte 0))
         result))))
 
 #?(:clj
