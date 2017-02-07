@@ -14,6 +14,7 @@
     [clojure.core                  :as core]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
+    [quantum.core.collections.core :as ccoll]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
@@ -41,9 +42,9 @@
     [quantum.core.reducers
       :refer [reduce join]]))
 
-#?(:clj (defalias join      red/join     ))
-#?(:clj (defalias joinl'    red/joinl'   ))
-#?(:clj (defalias join'     red/join'    ))
+#?(:clj (defalias join      ccoll/join     ))
+#?(:clj (defalias joinl'    ccoll/joinl'   ))
+#?(:clj (defalias join'     ccoll/join'    ))
         (defalias pjoin     fold/pjoin   )
         (defalias pjoin'    fold/pjoin'  )
 #?(:clj (defalias reduce    red/reduce   ))
@@ -250,12 +251,7 @@
     (fn ([coll f1     ] (reducer-n coll f1 (f1)))
         ([coll f1 init] (reducer-n coll f1 init)))})
 
-(defn reduce-count
-  {:attribution "parkour.reducers"
-   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
-                 |count*| is 36.824665 ms - twice as fast!!"}
-  [coll]
-  (red/reduce (rcomp firsta inc) 0 coll))
+(defalias reduce-count ccoll/reduce-count)
 
 (defn fold-count
   {:attribution "parkour.reducers"
@@ -478,8 +474,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
-(defn #_defcurried take+
-  [n coll] (reducer coll (core/take n)))
+(defalias take+ ccoll/take+)
 
 (defn #_defcurried take-while+
   [pred coll] (reducer coll (core/take-while pred)))
@@ -487,51 +482,16 @@
 (defn take-nth+
   [n coll] (reducer coll (core/take-nth n)))
 
-#?(:clj
-(defn taker+
-  {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n coll]
-   (reify
-     clojure.core.protocols.CollReduce
-     ;#+cljs cljs.core/IReduce
-     (coll-reduce [this f1]
-       (clojure.core.protocols/coll-reduce this f1 (f1)))
-     (coll-reduce [_ f1 init]
-       (clojure.core.protocols/coll-reduce
-         (clojure.core.protocols/coll-reduce
-           coll
-           (fn [^java.util.Deque q x]
-             (when (= (count q) n)
-               (.pop q))
-             (.add q x)
-             q)
-           (java.util.ArrayDeque. (int n)))
-         f1 init)))))
-
+#?(:clj (defalias taker+ ccoll/taker+))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     DROP, DROP-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
-(defn #_defcurried drop+
-  [n coll] (reducer coll (core/drop n)))
+(defalias drop+ ccoll/drop+)
 
 (defn #_defcurried drop-while+
   [pred coll] (reducer coll (core/drop-while pred)))
 
-#?(:clj
-(defn dropr+ ; This is extremely slow by comparison. About twice as slow
-  {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n coll]
-   (reducer coll
-     (fn [f1]
-       (let [buffer (java.util.ArrayDeque. (int n))]
-         (fn self
-           ([] (f1))
-           ([ret x]
-             (let [ret (if (= (count buffer) n) ; because Java object
-                         (f1 ret (.pop buffer))
-                         ret)]
-               (.add buffer x)
-               ret))))))))
+#?(:clj (defalias dropr+ ccoll/dropr+))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
 ;=================================================={       incl. slice        }=====================================================
@@ -570,7 +530,7 @@
   [f coll]
   (fold*
     (partial merge-with ; merge-with is why...
-      (fn [v1 v2] (->> (concat+ v1 v2) (red/join []))))
+      (fn [v1 v2] (->> (concat+ v1 v2) (join []))))
     (fn ([ret] ret)
         ([groups a]
           (let [k (f a)]
