@@ -16,15 +16,15 @@
     [quantum.core.classes         :as classes]
     [quantum.core.core            :as qcore]
     [quantum.core.fn              :as fn
-      :refer [fn1 mfn fn->]]
+      :refer [fn1 fn$ mfn fn->]]
     [quantum.core.logic           :as logic
-      :refer        [fn-and whenf1]]
+      :refer [fn-and whenf1]]
     [quantum.core.data.vector     :as vec    ]
     [quantum.core.macros          :as macros
-      :refer        [defnt #?(:clj defnt')]]
+      :refer [defnt #?(:clj defnt')]]
     [quantum.core.type.core       :as tcore  ]
     [quantum.core.vars            :as var
-      :refer        [defalias]])
+      :refer [defalias]])
   (:require-macros
     [quantum.core.type
       :refer [should-transientize? boolean?]]))
@@ -76,6 +76,7 @@
          (defnt bytes?         ([^bytes?         x] true) ([x] false))
          (defnt double-array?  ([^double-array?  x] true) ([x] false))
          (defnt doubles?       ([^doubles?       x] true) ([x] false))
+         (defnt array-2d?      ([^array-2d?      x] true) ([x] false))
          (defnt array?
            ([^array? x] true)
            ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* array types in `defnt`
@@ -142,12 +143,16 @@
   (java.lang.reflect.Modifier/isAbstract (.getModifiers class-))))
 
 
-#?(:clj (def multimethod? (partial instance? clojure.lang.MultiFn)))
+#?(:clj (def multimethod? (fn$ instance? clojure.lang.MultiFn)))
+#?(:clj (def unbound?     (fn$ instance? clojure.lang.Var$Unbound)))
+#?(:clj (def thread?      (fn$ instance? Thread)))
 
 #?(:clj
 (defn protocol?
-  "Returns true if an argument is a protocol'"
-  [x] (class? (:on-interface x))))
+  "Returns true if an argument is a protocol"
+  [x] (and (map? x) (-> x :on-interface class?))))
+
+#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
 
 #?(:clj
 (defn promise?
