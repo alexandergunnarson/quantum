@@ -18,6 +18,8 @@
           [quantum.core.vars                :as var
             :refer [defalias]]))
 
+(def compiler-lang #?(:clj :clj :cljs :cljs))
+
 (def class #?(:clj clojure.core/class :cljs type))
 
 (defs/def-types #?(:clj :clj :cljs :cljs))
@@ -129,7 +131,15 @@
                                  (<- disj k)))))
            {}))))
 
-(def compiler-lang #?(:clj :clj :cljs :cljs))
+#?(:clj
+(defn ->elem-type [x]
+  (when (and (or (string? x) (symbol? x))
+             (-> x name first (= \[)))
+    (or (defs/elem-types x)
+        (if (-> x name second (= \L))
+            (->> x name rest rest drop-last (replace {\/ \.}) (apply str) symbol) ; Object array
+            (->> x name rest                                  (apply str) symbol)))))) ; Primitive array
+
 (def default-types (-> types-unevaled (get compiler-lang) :any))
 
 (defn ->boxed   [t]
