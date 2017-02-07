@@ -125,7 +125,8 @@
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====
-         [quantum/js-joda                       "1.1.13-0"        ]
+         [quantum/js-joda                       "1.3.0-0"         ]
+         [quantum/js-joda-timezone              "1.0.0-0"         ]
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
