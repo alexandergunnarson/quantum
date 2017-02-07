@@ -2,18 +2,19 @@
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
     :attribution "Alex Gunnarson"}
   quantum.core.meta.bench
-           (:require
-             #?(:clj [criterium.core         :as bench])
-                     [quantum.core.string    :as str  ]
-                     [quantum.core.fn        :as fn
-                       :refer [#?@(:clj [fn->])]      ]
-                     [quantum.core.vars      :as var
-                       :refer [#?(:clj defalias)]     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn        :as fn
-                       :refer [fn->]                  ]
-                     [quantum.core.vars      :as var
-                       :refer [defalias]              ]))
+  (:refer-clojure :exclude [val reduce])
+  (:require
+    #?(:clj [criterium.core         :as bench])
+            [quantum.core.string    :as str  ]
+            [quantum.core.collections :as coll
+              :refer [map+ remove+ join reduce val]]
+            [quantum.core.fn        :as fn
+              :refer [fn-> rcomp]]
+            [quantum.core.logic
+              :refer [fn-or fn-and]]
+            [quantum.core.vars      :as var
+              :refer [defalias]]
+            [quantum.core.type      :as t])
   #?(:clj (:import com.carrotsearch.sizeof.RamUsageEstimator
                    quanta.ClassIntrospector)))
 
@@ -42,20 +43,12 @@
 ; FOR CLJS
 #?(:clj
 (defmacro profile [k & body]
-  ; if-cljs
+  ; TODO `if-cljs`
   `(let [k# ~k]
      (.time js/console k#)
      (let [res# (do ~@body)]
        (.timeEnd js/console k#)
        res#))))
-
-#?(:clj
-  (defn shoddy-benchmark [to-repeat func & args]
-    (let [times-list
-            (take to-repeat
-              (repeatedly (fn [] (num-from-timing
-                            (with-out-str (time-ms (apply func args)))))))]
-    (/ (apply + times-list) to-repeat)))) ; average
 
 #?(:clj (defalias bench bench/quick-bench))
 #?(:clj (defalias complete-bench bench/bench))
@@ -65,7 +58,9 @@
 #?(:clj (defn shallow-byte-size [obj] (RamUsageEstimator/sizeOf obj)))
 
 #?(:clj
-(defn deep-byte-size [obj]
+(defn deep-byte-size
+  "Warning: doesn't handle ref-cycles."
+  [obj]
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))
