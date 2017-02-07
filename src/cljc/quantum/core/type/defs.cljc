@@ -84,7 +84,7 @@
                        :unboxed    'Double/TYPE])}})
 
 #?(:clj
-(def inner-types
+(def elem-types
   (->> type-meta
        (map (fn [[k v]] [(:outer-type v) k]))
        (reduce
@@ -124,12 +124,6 @@
        (remove (fn-> first nil?))
        (into (core/sorted-map-by >))
        first val))
-
-(defn inner-type
-  {:todo ["Handle object arrays and multi-dimensional arrays"
-          "Throw exception if called on an integral ('uncuttable') type"]}
-  [type]
-  (or #?(:clj (get inner-types type) :cljs 'object) 'java.lang.Object))
 
 #?(:clj (def class->str (fn-> str (.substring 6))))
 
