@@ -3,7 +3,7 @@
    2D array: matrix
    3D array: (no special name)"
   (:refer-clojure :exclude
-    [reduce max for count get subvec swap! last])
+    [reduce max for count get subvec swap! first last empty])
   (:require
 #?@(:clj
    [[uncomplicate.neanderthal
@@ -13,9 +13,12 @@
       [core   :as fnum]] ; fast num
     [uncomplicate.neanderthal.impl.fluokitten :as fluo]])
     [clojure.core.matrix                      :as mat]
+    [quantum.core.collections.core            :as ccoll]
     [quantum.core.collections                 :as c
-      :refer [map+ range+
-              for lfor reduce join count]]
+      :refer [map+ range+ first nempty? red-for red-fori
+              for lfor reduce join count slice kmap]]
+    [quantum.core.convert.primitive
+      :refer [->int ->long ->double* ->double]]
     [quantum.core.compare
       :refer [max]]
     [quantum.core.numeric                     :as cnum
@@ -29,7 +32,10 @@
     [quantum.core.macros
       :refer [defnt]]
     [quantum.core.vars
-      :refer [defalias]])
+      :refer [defalias]]
+    [quantum.core.spec                        :as s
+      :refer [validate]]
+    [quantum.core.type                        :as t])
   #?(:clj
     (:import
       [org.apache.spark.mllib.linalg BLAS DenseVector]
@@ -62,7 +68,7 @@
 
 ; This takes after mllib/breeze's API
 
-; ============ CREATE ============
+; ============ CREATE ============ ;
 
 (defn ->sparse-matrix
   "A sparse matrix is a matrix populated primarily with zeros. Conceptually,
@@ -93,30 +99,29 @@
 
 #_"Creates a native-backed float vector from source."
 #?(:clj (defalias                                ->fvec           nat/sv ))
+#?(:clj (alter-meta! #'->fvec assoc :tag 'RealVector))
 #_"Creates a native-backed double vector from source."
 #?(:clj (defalias                                ->dvec           nat/dv ))
+#?(:clj (alter-meta! #'->dvec assoc :tag 'RealVector))
 #?(:clj (defalias                                ->cl-vec         cl/clv ))
 #?(:clj (defalias                                ->vec            fnum/create-vector)) ; TODO internal type dispatch can be improved
 
-#_"Creates a native-backed, dense, float mxn matrix from source.
-   If called with two arguments, creates a zero matrix with dimensions mxn."
-#?(:clj (defalias                                ->fmatrix        nat/sge))
-#_"Creates a native-backed, dense, double mxn matrix from source.
-   If called with two arguments, creates a zero matrix with dimensions mxn."
-#?(:clj (defalias                                ->dmatrix        nat/dge))
+; Creates an OpenCL matrix
 #?(:clj (defalias                                ->cl-matrix      cl/clge))
 #?(:clj (defalias                                ->matrix         fnum/create-ge-matrix)) ; TODO internal type dispatch can be improved
 
 #_"Returns an uninitialized instance of the same type and dimension(s) as x"
-#?(:clj (defalias                                ->raw            fnum/raw       ))
+#?(:clj (defalias                                empty            fnum/raw       ))
 #_"Returns an instance of the same type and dimension(s) as x"
 #?(:clj (defalias                                ->zeroed         fnum/zero      ))
 #?(:clj (defalias                                create           fnum/create    ))
 #?(:clj (defalias                                create-raw       fnum/create-raw))
 
-; ============ GET / SET ============
+; ============ GET / SET ============ ;
 
-(defnt get
+#?(:clj (alter-meta! #'real/entry assoc :tag 'double))
+
+(defnt get-in*
   "Returns the i-th entry of vector x,
    or ij-th entry of matrix m.
    Breeze: a(0,1)
@@ -129,18 +134,60 @@
   #?(:clj (^double [^RealMatrix X ^long a ^long b] (real/entry X a b)))
           (        [            X       a       b] (TODO)))
 
-(defnt set!
+#?(:clj (alter-meta! #'real/entry! assoc :tag 'double))
+
+(defnt set-in!*
   "Sets the i-th entry of vector x,
    or ij-th entry of matrix m."
   {:implemented-by '#{smile.math.matrix.Matrix}}
   #?(:clj (^double [^RealChangeable X ^double v ^long a        ] (real/entry! X a v  )))
           (        [                X         v       a        ] (TODO))
-  #?(:clj (^double [^RealMatrix     X ^double v ^long a ^long b] (real/entry! X a b v)))
-          (        [                X         v       a       b] (TODO)))
+  #?(:clj (^double [^RealMatrix     X ^double v ^long b ^long a] (real/entry! X a b v)))
+          (        [                X         v       b       a] (TODO)))
 
 #_"Returns the BOXED i-th entry of vector x, or ij-th entry of matrix m."
-#?(:clj (defalias                                boxed-get        fnum/entry ))
-#?(:clj (defalias                                boxed-set!       fnum/entry!))
+#?(:clj (defalias                                boxed-get-in*    fnum/entry ))
+#?(:clj (defalias                                boxed-set-in!*   fnum/entry!))
+
+; ============ CREATE ============ ;
+
+#_"Creates a native-backed, dense, float mxn matrix from source.
+   If called with two arguments, creates a zero matrix with dimensions mxn."
+#?(:clj (defalias                                ->fmatrix        nat/sge))
+
+#?(:clj (alter-meta! #'nat/dge assoc :tag 'RealMatrix))
+
+#?(:clj
+(defnt ^RealMatrix ->dmatrix
+  "Creates a native-backed, dense, double mxn matrix from source.
+   If called with two arguments, creates a zero matrix with dimensions mxn.
+   If called with one argument on a 2D array or 2D sequence, creates from it."
+  ([^long m ^long n source options] (nat/dge m n source options))
+  ([^long m ^long n arg           ] (nat/dge m n arg))
+  ([^long m ^long n               ] (nat/dge m n))
+  ([      x                       ] (nat/dge x))
+  ([^array-2d? x]
+    (let [width  (-> x c/first ccoll/count& ->long) ; TODO fix where type hints aren't showing up
+          height (c/count x)
+          ret    (->dmatrix width height)]
+      (dotimes [i height]
+        (dotimes [j width]
+          (set-in!* ret (-> x (c/get-in* (int i) (int j)) ->double) i j))) ; TODO figure out why `->int` instead of `int` creates verifyerror
+      ret))
+  ([^vec? x] ; TODO lists/seqs are okay too
+    (if (c/empty? x)
+        (->dmatrix 0 0)
+        (let [_      (validate x (fn-> c/first t/sequential?))
+              width  (-> x c/first c/count ->long)
+              height (c/count x)
+              ret    (->dmatrix width height)]
+          (red-fori [row  x
+                     ret' ret i]
+            ; All rows must be same width
+            (assert (-> row c/count (= width)) (kmap row width i)) ; TODO cheap `validate`
+            (red-fori [elem row _ nil j]
+              (set-in!* ret' (->double elem) i j)))
+          ret)))))
 
 #_"May take either a boxed or unboxed fn:
    (update! (dv 1 2 3) 2 (fn ^double [^double x] (inc x)))"
@@ -236,7 +283,7 @@
 #_"The index of the smallest value."
 #?(:clj (defalias ^{:time-complexity 'n}         index-of-min     fnum/imin  ))
 #_"Mutably computes x = ax"
-#?(:clj (defalias ^{:time-complexity 'n}         ax!              fnum/scal! ))
+#?(:clj (defalias ^{:time-complexity 'n}         scale!           fnum/scal! ))
 #_"Immutably computes x = ax"
 #?(:clj (defalias                                scale            fnum/ax    ))
 #_"Apply plane rotation"
@@ -258,13 +305,13 @@
 #?(:clj (defalias ^{:time-complexity '(pow n 3)} m*               fnum/mm    ))
 #_"Computes y = α*a*x + β*y. Matrix-vector multiply."
 #?(:clj (defalias ^{:time-complexity '(pow n 2)} v*!              fnum/mv!   ))
-#?(:clj (defalias v*               fnum/mv    ))
+#?(:clj (defalias                                v*               fnum/mv    ))
 #_"General rank-1 update.
    Computes a = alpha * x * y' + a"
 #?(:clj (defalias ^{:time-complexity '(pow n 2)} rank!            fnum/rank! ))
-#?(:clj (defalias rank             fnum/rank  ))
+#?(:clj (defalias                                rank             fnum/rank  ))
 #?(:clj (defalias ^{:time-complexity 'n}         copy!            fnum/copy! ))
-#?(:clj (defalias copy             fnum/copy  ))
+#?(:clj (defalias                                copy             fnum/copy  ))
 #_"Swaps the entries of containers x and y."
 #?(:clj (defalias ^{:time-complexity 'n}         swap!            fnum/swp!  ))
 
