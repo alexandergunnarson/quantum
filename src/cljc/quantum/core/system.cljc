@@ -141,7 +141,7 @@
 
 #?(:clj
 (defn merge-env!
-  {:from "http://stackoverflow.com/questions/318239/how-do-i-set-environment-variables-from-java"}
+  {:adapted-from "http://stackoverflow.com/questions/318239/how-do-i-set-environment-variables-from-java"}
   [^Map newenv]
   (try
     (let [newenv (->> newenv
@@ -199,17 +199,26 @@
 (defn mem-stats
   "Return stats about memory availability and usage, in MB. Calls
    System/gc before gathering stats when the :gc option is true."
-  {:attribution "github.com/jkk/sundry/jvm"
-   :todo ["Use |convert| package to convert gb to mb!"]}
+  {:todo {0 "Use |convert| package to convert gb to mb"}}
   [& {:keys [gc?]}]
-  (when gc?
-    (System/gc))
-  (let [r (Runtime/getRuntime)
-        mb #(int (/ % 1024 1024))]
-    {:max   (mb (.maxMemory r))
-     :total (mb (.totalMemory r))
-     :used  (mb (- (.totalMemory r) (.freeMemory r))) ; disclaimer: inconsistent snapshot
-     :free  (mb (.freeMemory r))})))
+  (when gc? (System/gc))
+  ; Warning: inconsistent snapshots here
+  (let [mem (java.lang.management.ManagementFactory/getMemoryMXBean)
+        mb #(double (/ % 1024 1024))]
+    {:heap     (let [used    (-> mem .getHeapMemoryUsage .getUsed mb)
+                     max-mem (-> mem .getHeapMemoryUsage .getMax  mb)]
+                 {:committed (-> mem .getHeapMemoryUsage .getCommitted mb)
+                  :init      (-> mem .getHeapMemoryUsage .getInit      mb)
+                  :used      used
+                  :max       max-mem
+                  :free      (- max-mem used)})
+     :off-heap (let [used    (-> mem .getNonHeapMemoryUsage .getUsed mb)
+                     max-mem (-> mem .getNonHeapMemoryUsage .getMax  mb)]
+                 {:committed (-> mem .getNonHeapMemoryUsage .getCommitted mb)
+                  :init      (-> mem .getNonHeapMemoryUsage .getInit      mb)
+                  :used      used
+                  :max       (when (pos? max-mem) max-mem)
+                  :free      (when (pos? max-mem) (- max-mem used))})})))
 
 #?(:clj (defalias force-gc! bench/force-gc))
 
@@ -237,10 +246,7 @@
 
 #?(:cljs
 (set! (-> js/console .-ignoredYellowBox)
-  #js ["re-frame: overwriting an event-handler for:"
-       "re-frame: overwriting  :event  handler for:"
-       "has been renamed"
-       "You are manually calling a React.PropTypes validation function for the"]))
+  #js ["You are manually calling a React.PropTypes validation function for the"]))
 
 #?(:cljs (def app-registry (when ReactNative (.-AppRegistry  ReactNative))))
 
