@@ -76,10 +76,10 @@
          (defnt bytes?         ([^bytes?         x] true) ([x] false))
          (defnt double-array?  ([^double-array?  x] true) ([x] false))
          (defnt doubles?       ([^doubles?       x] true) ([x] false))
-         (defnt array-2d?      ([^array-2d?      x] true) ([x] false))
+ #?(:clj (defnt array-2d?      ([^array-2d?      x] true) ([x] false)))
          (defnt array?
            ([^array? x] true)
-           ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* array types in `defnt`
+           ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* possible array types in a `defnt`
                    :cljs (-> x core/array?))))
 
          (defnt svector?       ([^svector?       x] true) ([x] false))

@@ -131,14 +131,13 @@
                                  (<- disj k)))))
            {}))))
 
-#?(:clj
-(defn ->elem-type [x]
+(defn ->elem-type-clj [x]
   (when (and (or (string? x) (symbol? x))
              (-> x name first (= \[)))
-    (or (defs/elem-types x)
+    (or (defs/elem-types-clj x)
         (if (-> x name second (= \L))
             (->> x name rest rest drop-last (replace {\/ \.}) (apply str) symbol) ; Object array
-            (->> x name rest                                  (apply str) symbol)))))) ; Primitive array
+            (->> x name rest                                  (apply str) symbol))))) ; Primitive array
 
 (def default-types (-> types-unevaled (get compiler-lang) :any))
 

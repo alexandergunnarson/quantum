@@ -83,14 +83,13 @@
                        :boxed      'java.lang.Double
                        :unboxed    'Double/TYPE])}})
 
-#?(:clj
-(def elem-types
+(def elem-types-clj
   (->> type-meta
        (map (fn [[k v]] [(:outer-type v) k]))
        (reduce
          (fn [m [k v]]
            (assoc m k v (symbol k) v))
-         {}))))
+         {})))
 
 #?(:clj
 (def boxed-types
@@ -587,15 +586,19 @@
 
    'indexed?         indexed-types
 
-   'boolean-array?   {:clj #{(-> array-1d-types :clj :boolean)}}
-   'byte-array?      {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
-   'char-array?      {:clj #{(-> array-1d-types :clj :char   )} :cljs #{(-> array-1d-types :cljs :char   )}}
-   'short-array?     {:clj #{(-> array-1d-types :clj :short  )} :cljs #{(-> array-1d-types :cljs :short  )}}
-   'int-array?       {:clj #{(-> array-1d-types :clj :int    )} :cljs #{(-> array-1d-types :cljs :int    )}}
-   'long-array?      {:clj #{(-> array-1d-types :clj :long   )} :cljs #{(-> array-1d-types :cljs :long   )}}
-   'float-array?     {:clj #{(-> array-1d-types :clj :float  )} :cljs #{(-> array-1d-types :cljs :float  )}}
-   'double-array?    {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
-   'object-array?    {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
+   'boolean-array?       {:clj #{(-> array-1d-types :clj :boolean)}}
+   'byte-array?          {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
+   'ubyte-array?         {                                          :cljs #{(-> array-1d-types :cljs :ubyte  )}}
+   'ubyte-array-clamped? {                                          :cljs #{(-> array-1d-types :cljs :ubyte-clamped)}}
+   'char-array?          {:clj #{(-> array-1d-types :clj :char   )} :cljs #{(-> array-1d-types :cljs :char   )}}
+   'short-array?         {:clj #{(-> array-1d-types :clj :short  )} :cljs #{(-> array-1d-types :cljs :short  )}}
+   'ushort-array?        {                                          :cljs #{(-> array-1d-types :cljs :ushort )}}
+   'int-array?           {:clj #{(-> array-1d-types :clj :int    )} :cljs #{(-> array-1d-types :cljs :int    )}}
+   'uint-array?          {                                          :cljs #{(-> array-1d-types :cljs :uint  )}}
+   'long-array?          {:clj #{(-> array-1d-types :clj :long   )} :cljs #{(-> array-1d-types :cljs :long   )}}
+   'float-array?         {:clj #{(-> array-1d-types :clj :float  )} :cljs #{(-> array-1d-types :cljs :float  )}}
+   'double-array?        {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
+   'object-array?        {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
 
    'booleans?        {:clj #{(-> array-1d-types :clj :boolean)}}
    'bytes?           {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
@@ -603,7 +606,9 @@
    'ubytes-clamped?  {                                          :cljs #{(-> array-1d-types :cljs :ubyte-clamped)}}
    'chars?           {:clj #{(-> array-1d-types :clj :char   )} :cljs #{(-> array-1d-types :cljs :char   )}}
    'shorts?          {:clj #{(-> array-1d-types :clj :short  )} :cljs #{(-> array-1d-types :cljs :short  )}}
+   'ushorts?         {                                          :cljs #{(-> array-1d-types :cljs :ushort )}}
    'ints?            {:clj #{(-> array-1d-types :clj :int    )} :cljs #{(-> array-1d-types :cljs :int    )}}
+   'uints?           {                                          :cljs #{(-> array-1d-types :cljs :uint  )}}
    'longs?           {:clj #{(-> array-1d-types :clj :long   )} :cljs #{(-> array-1d-types :cljs :long   )}}
    'floats?          {:clj #{(-> array-1d-types :clj :float  )} :cljs #{(-> array-1d-types :cljs :float  )}}
    'doubles?         {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}

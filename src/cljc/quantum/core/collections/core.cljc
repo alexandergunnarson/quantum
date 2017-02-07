@@ -52,26 +52,38 @@
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
-              :refer [defalias def-]])
+              :refer [defalias #?(:clj defmalias) def-]])
   (:require-macros
     [quantum.core.collections.core
       :refer [assoc gen-typed-array-defnts
               ->boolean-array
+              #_->boolean-array-cljs
               ->byte-array
+              #_->byte-array-cljs
               ->ubyte-array
+              #_->ubyte-array-cljs
               ->char-array
+              #_->char-array-cljs
               ->short-array
+              #_->short-array-cljs
+              ->ushort-array
+              #_->ushort-array-cljs
               ->int-array
+              #_->int-array-cljs
               ->uint-array
-              ->long-array
+              #_->uint-array-cljs
               ->float-array
+              #_->float-array-cljs
               ->double-array
+              #_->double-array-cljs
               ->object-array]])
- #?(:clj (:import
-           quantum.core.data.Array
-           [clojure.lang IAtom]
-           [java.util List Collection Map]
-           [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong])))
+ #?(:clj  (:import
+            quantum.core.data.Array
+            [clojure.lang IAtom]
+            [java.util List Collection Map]
+            [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong])
+    :cljs (:import
+            goog.string.StringBuffer)))
 
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
@@ -278,7 +290,7 @@
 (defmacro gen-typed-array-defnts []
   (if-cljs &env
     `(do ~@(for [[k type-sym] (-> tdef/array-1d-types :cljs (core/dissoc :object))]
-             (let [fn-sym (symbol (str "->" (name k) "-array"))]
+             (let [fn-sym (symbol (str "->" (name k) "-array-cljs"))]
                `(defnt ~fn-sym
                   ([#{~type-sym} x#] x#)
                   ([~(into (core/get tcore/cljs-typed-array-convertible-classes type-sym)
@@ -289,32 +301,45 @@
                                  (~fn-sym (count x#))
                                  x#))))))
     `(do ~@(for [k (-> tdef/array-1d-types :clj (core/dissoc :object) keys)]
-             (let [fn-sym (symbol (str "->" (name k) "-array"))]
+             (let [fn-sym (symbol (str "->" (name k) "-array-clj"))]
                `(defmacro ~fn-sym [& args#] (with-meta `(~~(symbol "core" (str (name k) "-array")) ~@args#) {:tag ~(str (name k) "s")}))))))))
 
 (gen-typed-array-defnts)
 
-#?(:clj (defalias ->booleans     ->boolean-array))
-#?(:clj (defalias ->bytes        ->byte-array   ))
-        ; TODO ubytes for CLJS
-#?(:clj (defalias ->chars        ->char-array   ))
-#?(:clj (defalias ->shorts       ->short-array  ))
-#?(:clj (defalias ->ints         ->int-array    ))
-        ; TODO uints for CLJS
-#?(:clj (defalias ->longs        ->long-array   ))
-#?(:clj (defalias ->floats       ->float-array  ))
-#?(:clj (defalias ->doubles      ->double-array ))
-        (defalias ->object-array   object-array )
-        (defalias ->objects      ->object-array )
+#?(:clj (defmalias ->boolean-array     quantum.core.collections.core/->boolean-array-clj quantum.core.collections.core/->boolean-array-cljs))
+#?(:clj (defalias  ->booleans ->boolean-array))
+#?(:clj (defmalias ->byte-array        quantum.core.collections.core/->byte-array-clj    quantum.core.collections.core/->byte-array-cljs   ))
+#?(:clj (defalias  ->bytes    ->byte-array))
+#?(:clj (defmalias ->ubyte-array       nil                                               quantum.core.collections.core/->ubyte-array-cljs  ))
+#?(:clj (defalias  ->ubytes   ->ubyte-array))
+#?(:clj (defmalias ->char-array        quantum.core.collections.core/->char-array-clj    nil))
+#?(:clj (defalias  ->chars    ->char-array))
+#?(:clj (defmalias ->ushort-array      nil                                               quantum.core.collections.core/->ushort-array-cljs ))
+#?(:clj (defalias  ->ushorts  ->ushort-array))
+#?(:clj (defmalias ->short-array       quantum.core.collections.core/->short-array-clj   quantum.core.collections.core/->short-array-cljs  ))
+#?(:clj (defalias  ->shorts   ->short-array))
+#?(:clj (defmalias ->int-array         quantum.core.collections.core/->int-array-clj     quantum.core.collections.core/->int-array-cljs    ))
+#?(:clj (defalias  ->ints     ->int-array))
+#?(:clj (defmalias ->uint-array        nil                                               quantum.core.collections.core/->uint-array-cljs   ))
+#?(:clj (defalias  ->uints    ->uint-array))
+#?(:clj (defmalias ->long-array        quantum.core.collections.core/->long-array-clj    nil))
+#?(:clj (defalias  ->longs    ->long-array))
+#?(:clj (defmalias ->float-array       quantum.core.collections.core/->float-array-clj   quantum.core.collections.core/->float-array-cljs  ))
+#?(:clj (defalias  ->floats   ->float-array))
+#?(:clj (defmalias ->double-array      quantum.core.collections.core/->double-array-clj  quantum.core.collections.core/->double-array-cljs ))
+#?(:clj (defalias  ->doubles  ->double-array))
+        (defalias  ->object-array   object-array)
+        (defalias  ->objects      ->object-array)
 
 (defnt array-of-type ; TODO get this from `Arrays`
   #?@(:clj  [(^first [^array?    x ^int n] (Array/arrayOfType x n))]
       :cljs [(^first [^bytes?    x ^int n] (->byte-array   n))
-             (^first [^ubytes?   x ^int n] (->ubyte-array  n))
+    #?(:cljs (^first [^ubytes?   x ^int n] (->ubyte-array  n)))
              (^first [^shorts?   x ^int n] (->short-array  n))
+    #?(:cljs (^first [^ushorts?  x ^int n] (->ushort-array n)))
              (^first [^ints?     x ^int n] (->int-array    n))
-             (^first [^uints?    x ^int n] (->uint-array   n))
-             (^first [^longs?    x ^int n] (->long-array   n))
+    #?(:cljs (^first [^uints?    x ^int n] (->uint-array   n)))
+     #?(:clj (^first [^longs?    x ^int n] (->long-array   n)))
              (^first [^floats?   x ^int n] (->float-array  n))
              (^first [^doubles?  x ^int n] (->double-array n))
              (^first [^objects?  x ^int n] (->object-array n))]))
@@ -359,7 +384,7 @@
   (^first [^array? in ^int? in-pos :first out ^int? out-pos ^int? length]
     #?(:clj  (System/arraycopy in in-pos out out-pos length)
        :cljs (dotimes [i (- (.-length in) in-pos)]
-               (aset out (+ i out-pos) (aget in i))))
+               (core/aset out (+ i out-pos) (core/aget in i))))
     out)
   (^first [^array? in :first out ^nat-int? length]
     (copy! in 0 out 0 length)))
@@ -719,7 +744,7 @@
 (defalias firstl first) ; TODO not always true
 
 (defnt second
-  ([#{string? #?(:clj array-list?)} x] (get& x 1 nil))
+  ([#{string? #?(:clj array-list?)} x] (#?(:clj get& :cljs get) x 1 nil))
   ([#{symbol? keyword?}             x] (if (namespace x) (-> x namespace second) (-> x name second)))
   ; 2.8  nanos to (.cast Long _)
   ; 1.26 nanos to (Long. _)
@@ -729,7 +754,7 @@
 
 (defnt butlast
   {:todo ["Add support for CLJS IPersistentStack"]}
-          ([#{string? array?}              x] (slice& x 0 (lasti& x)))
+          ([#{string? array?}              x] (#?(:clj slice& :cljs slice) x 0 (#?(:clj lasti& :cljs lasti) x)))
   #?(:clj ([^reducer?                      x] (dropr+ 1 x)))
           ; TODO reference to field pop on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^+vec?                         x] (if (empty? x) (#?(:clj .pop :cljs -pop) x) x))
@@ -739,7 +764,7 @@
 (defalias popr butlast)
 
 (defnt last
-          ([#{string? array?}   x] (get& x (lasti& x)))
+          ([#{string? array?}   x] (#?(:clj get& :cljs get) x (#?(:clj lasti& :cljs lasti) x)))
           ([#{symbol? keyword?} x] (-> x name last))
   #?(:clj ([^reducer?           x] (taker+ 1 x)))
           ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
@@ -878,14 +903,14 @@
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/sequential-splice-hash-sets to from)
                                           (red/transient-into to from))
-                             :cljs (transient-into to from)))
+                             :cljs (red/transient-into to from)))
   ([^+sorted-set?   to from] (if (t/+set? from)
                                  (clojure.set/union    to from)
                                  (red/persistent-into to from)))
   ([^+hash-map?     to from] #?(:clj  (if (t/+hash-map? from)
                                           (seqspert.hash-map/sequential-splice-hash-maps to from)
                                           (red/transient-into to from))
-                                :cljs (transient-into to from)))
+                                :cljs (red/transient-into to from)))
   ([^+sorted-map?   to from] (red/persistent-into to from))
   ([^string?        to from] (str #?(:clj  (red/reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
                                      :cljs (red/reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))

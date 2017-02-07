@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Useful array functions. Array creation, joining, reversal, etc."
     :attribution "Alex Gunnarson"
-    :todo ["Incorporate amap, areduce, aset-char, aset-boolean, etc."]}
+    :todo ["Incorporate amap, areduce, etc."]}
   quantum.core.data.array
   (:refer-clojure :exclude
     [== reverse boolean-array byte-array char-array short-array

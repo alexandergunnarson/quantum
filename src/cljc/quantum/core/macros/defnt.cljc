@@ -234,12 +234,13 @@
                                  first not)
         ; _ (prl :user non-recursive? (quantum.core.print/pprint-hints fn-expr))
         inferred-ret-type (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
-      #?(:clj  (let [info (ana/expr-info* fn-expr)]
-                 (when (contains? info :class)
-                   (if (-> info :class nil?)
-                       {:sym (symbol "nil")}
-                       {:sym (-> info :class (#(.getName ^Class %)) symbol)
-                        :class (:class info)})))
+      #?(:clj  (when (= lang :clj)
+                 (let [info (ana/expr-info* fn-expr)]
+                   (when (contains? info :class)
+                     (if (-> info :class nil?)
+                         {:sym (symbol "nil")}
+                         {:sym (-> info :class (#(.getName ^Class %)) symbol)
+                          :class (:class info)}))))
          :cljs nil)) ; TODO CLJS
         ; _ (prl :user explicit-ret-type inferred-ret-type arglist-hinted)
         _ (validate nil
@@ -283,7 +284,7 @@
                        assoc-arity-etc
                          (fn [hints]
                            (let [body         (list* 'do body)
-                                 elem-type-n  (-> hints first tcore/->elem-type)
+                                 elem-type-n  (-> hints first tcore/->elem-type-clj) ; TODO make this more general
                                  hints-v (->> hints
                                               (map (fn [hint] (defnt-replace-kw :elem (kmap hint elem-type-n))))
                                               (into []))
