@@ -35,7 +35,7 @@
               vec empty empty?
               every? some not-every? not-any?
               split-at
-              first second rest last butlast get aget nth pop peek
+              first second rest last butlast get nth pop peek
               select-keys get-in
               zipmap
               reverse
@@ -99,8 +99,8 @@
               subseq
               contains? containsk? containsv?
               index-of last-index-of
-              first second rest last butlast get aget pop peek nth
-              conjl conj! assoc assoc! assoc!* dissoc dissoc! disj! aset!
+              first second rest last butlast get pop peek nth
+              conjl conj! assoc assoc! assoc?! dissoc dissoc! disj!
               map-entry join empty? empty update! empty? ->array]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
@@ -128,12 +128,10 @@
 
 ; ====== COLLECTIONS ====== ;
 
-
-        (defalias gets            coll/gets         ) ; ?
 ; ===== SINGLETON RETRIEVAL ===== ;
 #?(:clj (defalias get             coll/get          ))
+#?(:clj (defalias get&            coll/get&         ))
 #?(:clj (defalias nth             coll/nth          ))
-#?(:clj (defalias aget            coll/aget         ))
 #?(:clj (defalias peek            coll/peek         ))
 #?(:clj (defalias first           coll/first        ))
 #?(:clj (defalias firstl          coll/firstl       ))
@@ -145,14 +143,14 @@
 #?(:clj (defalias rest            coll/rest         ))
         (defalias lrest           c/rest            )
 #?(:clj (defalias butlast         coll/butlast      ))
-#?(:clj (defalias getr            coll/getr         ))
+#?(:clj (defalias slice           coll/slice        ))
         (defalias subseq          coll/subseq       )
         (defalias subseq-where    c/subseq          )
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
 #?(:clj (defalias assoc!          coll/assoc!       ))
-#?(:clj (defalias assoc!*         coll/assoc!*      ))
-#?(:clj (defalias aset!           coll/aset!        ))
+#?(:clj (defalias assoc!&         coll/assoc!&      ))
+#?(:clj (defalias assoc?!         coll/assoc?!      ))
 #?(:clj (defalias dissoc          coll/dissoc       ))
 #?(:clj (defalias dissoc!         coll/dissoc!      ))
         (defalias conj            coll/conj         )
@@ -164,6 +162,7 @@
         (defalias assocs-in       soc/assocs-in      )
         (defalias dissoc-in       soc/dissoc-in      )
         (defalias update-val      soc/update-val     )
+        (defalias updates         soc/updates        )
         (defalias assoc-when-none soc/assoc-when-none)
         (defalias assoc-with      soc/assoc-with     )
         (defalias assoc-if        soc/assoc-if       )
@@ -189,9 +188,12 @@
         (def      nempty?       (fn-not empty?)   )
         (defalias nnil?         base/nnil?        )
 #?(:clj (defalias count         coll/count        ))
+#?(:clj (defalias count&        coll/count&       ))
 #?(:clj (defalias lasti         coll/lasti        ))
+#?(:clj (defalias lasti&        coll/lasti&       ))
 ; ===== CREATION ===== ;
 #?(:clj (defalias empty         coll/empty        ))
+#?(:clj (defalias empty&        coll/empty&       ))
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias array-of-type coll/array-of-type))
 #?(:clj (defalias ->vec         coll/->vec        ))
@@ -277,6 +279,7 @@
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reduce*  loops/reduce* ))
 #?(:clj (defalias red-for  loops/red-for ))
+#?(:clj (defalias red-fori loops/red-fori))
         (defalias reduce-2 loops/reduce-2)
 #?(:clj (defalias seq-loop loops/seq-loop))
 #?(:clj (defalias loopr    loops/seq-loop))
@@ -344,6 +347,8 @@
                     (conj! (transient []) init)
                     coll)))
         (defeager partition-all   red/partition-all+ )
+
+(defn gets [coll indices] (->> indices (map+ #(get coll %)) (join [])))
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -377,10 +382,10 @@
             super-arr  (->array sub-type super-dim)]
             (if last-dim?
                 super-arr
-                (do (aset! super-arr 0 sub-arr-0)
+                (do (assoc! super-arr 0 sub-arr-0)
                     (dotimes [i (dec super-dim)]
                       (let [sub-arr-n (->multi-array base-type (rest dims))]
-                        (aset! super-arr (inc i) sub-arr-n)))
+                        (assoc! super-arr (inc i) sub-arr-n)))
                     super-arr))))))
 
 #?(:clj
@@ -405,13 +410,13 @@
 #?(:clj
 (defnt array->vector*
   ([#{array-1d? Object} arr]
-   (let [t  (array->array-manager-key (aget arr 0))
+   (let [t  (array->array-manager-key (get arr 0))
          ^clojure.core.ArrayManager am (get array-managers t)
          ct (int (count arr))
          first-few-i (min 4 ct)
          arr-0 (.array am first-few-i)]
      (dotimes [i first-few-i]
-       (.aset am arr-0 i (aget arr (int i))))
+       (.aset am arr-0 i (get arr (int i))))
      (let [v (clojure.core.Vec. am first-few-i 5 EMPTY-NODE arr-0 nil)]
        (if (<= ct 4)
            v
@@ -419,7 +424,7 @@
                   i' (int 4)]
              (if (>= i' ct)
                  v'
-                 (recur (conj v' (aget arr (int i'))) (inc i'))))))))))
+                 (recur (conj v' (get arr (int i'))) (inc i'))))))))))
 
 #?(:clj
 (defn array->vector
@@ -431,7 +436,7 @@
         (when arr (array->vector* arr))
         (let [ret (transient [])]
           (dotimes [i (count arr)]
-            (conj! ret (array->vector (dec curr-dim) (aget arr i))))
+            (conj! ret (array->vector (dec curr-dim) (get arr i))))
           (persistent! ret))))
   ([arr]
     (let [dim (-> arr array->dimensionality)]
@@ -826,35 +831,17 @@
 
 ; ===== GET-IN ===== ;
 
-#?(:clj (defalias aget-in* coll/aget-in*))
+; TODO unify this
 
-(defn aget-in [arr ks] (apply coll/aget-in*-protocol arr ks))
+#?(:clj (defalias get-in* coll/get-in*))
 
 (def get-in-f* #(get %1 %2))
 
-(defn get-in
-  [coll ks]
-  (if (t/array? coll)
-      (aget-in coll ks)
-      (reduce get-in-f* coll ks)))
+(defnt get-in
+  ([^array? x ks] (apply coll/get-in*-protocol x ks))
+  ([        x ks] (reduce get-in-f* x ks)))
 
-(defn aset-in! ; TODO use the Array/aset fn; |defnt|?
-  [coll ks v]
-  (aset! (aget-in coll (butlast ks)) (last ks) v)) ; TODO |butlast| and |last| are not effective if not vecs
-
-(defn assoc-in! ; TODO |defnt|?
-  [coll ks v]
-  (if (t/array? coll)
-      (aset-in! coll ks v)
-      (assoc! (get-in coll (butlast ks)) (last ks) v)))
-
-
-
-; ; TODO: get-in from clojure, make it better
-(defn get-in+ [coll [iden :as keys-0]] ; implement recursively
-  (if (= iden identity)
-      coll
-      (get-in coll keys-0)))
+(defn assoc-in! ([x ks v] (assoc! (get-in x (butlast ks)) (last ks) v))) ; TODO is this the right behavior for all data structures?
 
 (def single?
   "Does coll have only one element?"
@@ -997,7 +984,7 @@
   ; TODO ensure `to` is map
   (persistent!*
     (reduce (fn [counts x]
-              (assoc!* counts x (inc (or (get counts x) 0))))
+              (assoc?! counts x (inc (or (get counts x) 0))))
       (transient!* to) x))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
@@ -1619,46 +1606,36 @@
 
 ; ===== MUTABILITY ===== ;
 
-(#?(:clj definterface :cljs defprotocol) IMutable
+(#?(:clj definterface :cljs defprotocol) IMutableReference
   (get [#?(:cljs this)])
   (set [#?(:cljs this) x]))
 
 ; TODO create for every primitive datatype as well
-(deftype MutableContainer [^:unsynchronized-mutable val]
-  IMutable
+(deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
+  IMutableReference
   (get [this] val)
-  (set [this x]
-    (set! val x))
+  (set [this x] (set! val x) this)
   #?(:clj  clojure.lang.IDeref
      :cljs cljs.core/IDeref)
   (#?(:clj deref :cljs -deref) [this] val))
 
-#?(:clj (definterface IDoubleMutable (^double get []) (set [^double x])))
+#?(:clj (definterface IMutableDouble (^double get []) (set [^double x])))
 
 #?(:clj
-(deftype MutableDoubleContainer [^:unsynchronized-mutable ^double val]
-  IDoubleMutable      (^double get [this] val) (set [this ^double x] (set! val x))
+(deftype MutableDouble [^:unsynchronized-mutable ^double val]
+  IMutableDouble      (^double get [this] val) (set [this ^double x] (set! val x))
   clojure.lang.IDeref (deref [this] val)))
 
-(defnt eq! ; |set!| was taken
-  ([^MutableContainer x v] (.set x v) v))
+#?(:clj (defnt setm!* ([#{IMutableReference IMutableDouble} x v] (.set x v) v)))
+#?(:clj (defnt getm*  ([#{IMutableReference IMutableDouble} x  ] (.get x))))
 
-        (defn mutable        "Creates a mutable reference to an Object."           [        x] (MutableContainer.       x))
-#?(:clj (defn mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDoubleContainer. x)))
+        (defnt mutable        "Creates a mutable reference to an Object."           [        x] (MutableReference. x))
+#?(:clj (defnt mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDouble.    x)))
 
-#?(:clj
-(defmacro getm
-  "Get mutable"
-  [x]
-  (if-cljs &env x
-                `(.get ~(with-meta x {:tag 'quantum.core.collections.Mutable})))))
-
-#?(:clj
-(defmacro setm!
-  "Set mutable"
-  [x v]
-  (if-cljs &env `(set!            ~x                                           ~v)
-                `(.set ~(with-meta x {:tag 'quantum.core.collections.Mutable}) ~v))))
+#?(:clj (defmacro setm!  "Set mutable" [x v] (if-cljs &env `(set! ~x ~v) `(setm!*  ~x ~v))))
+#?(:clj (defmacro setm!& "Set mutable" [x v] (if-cljs &env `(set! ~x ~v) `(setm!*& ~x ~v))))
+#?(:clj (defmacro getm   "Get mutable" [x  ] (if-cljs &env x             `(getm*   ~x))))
+#?(:clj (defmacro getm&  "Get mutable" [x  ] (if-cljs &env x             `(getm*&  ~x))))
 
 #?(:clj
 (defmacro getf
