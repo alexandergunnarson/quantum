@@ -18,9 +18,9 @@
 
 #?(:clj (defalias ->big-integer ntypes/->big-integer))
 
-#?(:clj  (defnt' ^clojure.lang.BigInt ->bigint
-           ([^clojure.lang.BigInt  x] x)
-           ([^java.math.BigInteger x] (BigInt/fromBigInteger x))
+#?(:clj  (defnt' ^BigInt ->bigint
+           ([^BigInt  x] x)
+           ([^BigInteger x] (BigInt/fromBigInteger x))
            ([^long   x] (-> x BigInt/fromLong))
            ([^string? x radix] (->bigint (BigInteger. x (int radix))))
            ([#{double? Number} x] (-> x BigInteger/valueOf ->bigint)))
@@ -59,4 +59,4 @@
   ([#{decimal?} x]
     (-> x rationalize exactly))
   ([#{int? long?} x] (->bigint x))
-  ([#{bigint? clojure.lang.Ratio} x] x)))
+  ([#{bigint? ratio?} x] x)))
