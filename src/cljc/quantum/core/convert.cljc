@@ -599,14 +599,7 @@
    :todo ["Test these against ->bytes"]}
            ([^string? x        ] x)
          #_([^string? x options] x)
-  #?(:clj  ([^boolean x] (Boolean/valueOf   x)))
-  #?(:clj  ([^char    x] (Character/valueOf x)))
-  #?(:clj  ([^short   x] (Short/valueOf     x)))
-  #?(:clj  ([^int     x] (Integer/valueOf   x)))
-  #?(:clj  ([^long    x] (Long/valueOf      x)))
-  #?(:clj  ([^float   x] (Float/valueOf     x)))
-  #?(:clj  ([^double  x] (Double/valueOf    x)))
-  #?(:clj  ([^Number  x] (String/valueOf    x)))
+  #?(:clj  ([^{prim? Number}  x] (String/valueOf    x)))
            ([^datascript.db.DB x] (dt/write-transit-str x))
            ; Commented only until we decide forge is worth keeping
   #_(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
