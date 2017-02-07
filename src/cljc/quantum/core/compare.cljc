@@ -40,9 +40,9 @@
            (^boolean
              [#{byte char short int long float double} x
               #{byte char short int long float double} y]
-             (not (=-bin x y))) ; TODO use primitive |not| fn
+             (quantum.core.Numeric/not (=-bin x y)))
            (^boolean [^clojure.lang.BigInt x ^clojure.lang.BigInt y]
-             (not (=-bin x y)))) ; TODO use primitive |not| fn
+             (quantum.core.Numeric/not (=-bin x y))))
    :cljs (defn not=-bin
            ([x] false)
            ([x y] (TODO "fix") (not (core/zero? (ntypes/-compare x y))))))
@@ -55,7 +55,8 @@
   ([x] true)
   ([x y] (core/< (compare x y) 0)))
 
-#?(:clj  (defmacro <-bin  [a b] `(quantum.core.Numeric/lt  ~a ~b)) ; TODO defnt this
+#?(:clj  (defalias <-bin <*)
+         #_(defmacro <-bin  [a b] `(quantum.core.Numeric/lt  ~a ~b)) ; TODO defnt this
    :cljs (defalias <-bin  <*))
 
 #?(:clj (variadic-predicate-proxy
