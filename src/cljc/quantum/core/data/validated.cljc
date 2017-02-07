@@ -189,7 +189,7 @@
                              :db?         db-mode?
                              :no-history? (-> parent-sym meta :no-history?) ; Datomic requires this
                              :component?  (default (-> x meta :component?) db-mode?))) ; all inner defs which are of type :ref, which are not marked `:component? false`, are components
-                      inner-spec (if (-> inner-spec-args first (set/subset? allowed-keys))
+                      inner-spec (if (-> inner-spec-args first allowed-keys)
                                      `(def-map ~inner-name-sym
                                         ~@inner-spec-args)
                                      `(quantum.core.data.validated/def ~inner-name-sym
