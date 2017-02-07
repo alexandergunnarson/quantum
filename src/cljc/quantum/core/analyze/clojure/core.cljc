@@ -38,8 +38,9 @@
         expr-ast ^clojure.lang.Compiler$BodyExpr
                  (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
     (when (.hasJavaClass expr-ast)
-      {:class (.getJavaClass expr-ast)
-       :prim? (.isPrimitive (.getJavaClass expr-ast))}))))
+      (let [c (.getJavaClass expr-ast)]
+        {:class c
+         :prim? (and c (.isPrimitive c))})))))
 
 #?(:clj
 (defn expr-info

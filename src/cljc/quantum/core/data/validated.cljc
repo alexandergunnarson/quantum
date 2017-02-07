@@ -1,11 +1,11 @@
 (ns quantum.core.data.validated
   (:require
     [clojure.core           :as core]
+    [clojure.set            :as set]
     [quantum.core.core
       :refer [qualified-keyword?]]
     [quantum.core.collections.base
       :refer [nnil? nempty? postwalk]]
-    [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
