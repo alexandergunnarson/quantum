@@ -68,7 +68,7 @@
 ; op* : Lax. Continues on overflow.
 ; op' : Strict. Throws on overflow.
 ; op  : Natural. Auto-promotes on overflow.
-; op& : Lax. Provides less-accurate results in much less time.
+; op$ : Fast. Provides less-accurate results in much less time.
 
 ; Unlike StrictMath, not all implementations of the equivalent
 ; functions of class Math are defined to return the bit-for-bit
@@ -301,10 +301,10 @@
 (op/nils-op *)
 (op/nils-op /)
 
-(def ^:dynamic *+*   (aritoid (fn [] 0) #(op/+ %) #(op/+ %1 %2)))
-(def ^:dynamic *-*   (aritoid (fn [] 0) #(op/- %) #(op/- %1 %2)))
-(def ^:dynamic ***   (aritoid (fn [] 1) #(op/* %) #(op/* %1 %2)))
-(def ^:dynamic *div* (aritoid (fn [] 1) #(op// %) #(op// %1 %2)))
+(def ^:dynamic *+*   (aritoid (fn [] 0) #(c/+ %) #(c/+ %1 %2)))
+(def ^:dynamic *-*   (aritoid (fn [] 0) #(c/- %) #(c/- %1 %2)))
+(def ^:dynamic ***   (aritoid (fn [] 1) #(c/* %) #(c/* %1 %2)))
+(def ^:dynamic *div* (aritoid (fn [] 1) #(c// %) #(c// %1 %2)))
 
 #?(:clj
 (defmacro with-ops [k & body]
