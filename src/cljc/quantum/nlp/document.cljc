@@ -8,7 +8,7 @@
     [quantum.core.collections :as coll
       :refer [containsv? in? map+ join]]
     [quantum.reducers.core    :as r]
-    [quantum.core.validate    :as v
+    [quantum.core.spec        :as s
       :refer [validate]]
     [quantum.net.http         :as http]))
 
@@ -487,7 +487,7 @@
   [doc-str & [post]]
   (validate
     doc-str string?
-    post    (v/or* nil? fn?))
+    post    (s/or* nil? fn?))
   (->> doc-str
        ; Normalize
        (<- str/replace undesirables-regex " ") ; How to do this distributively?

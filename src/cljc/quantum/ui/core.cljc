@@ -6,7 +6,7 @@
             [quantum.core.loops
               :refer  [until]]
             [quantum.core.async         :as async]
-            [quantum.core.validate      :as v
+            [quantum.core.spec          :as s
               :refer  [validate]]
             [quantum.core.resources     :as res]))
 

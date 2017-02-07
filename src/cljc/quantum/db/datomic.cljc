@@ -38,7 +38,7 @@
       :refer [->name]]
     [quantum.core.paths               :as path]
     [quantum.parse.core               :as parse]
-    [quantum.core.validate            :as v
+    [quantum.core.spec                :as s
       :refer [validate]]
     [quantum.validate.core
       :refer [no-blanks?]])
@@ -247,14 +247,14 @@
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
       (let [type                   (validate (or type :free)                        #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
-            name                   (validate (or name "test")                       (v/and string? nempty?))
-            host                   (validate (or host "localhost")                  (v/and string? nempty?))
+            name                   (validate (or name "test")                       (s/and string? nempty?))
+            host                   (validate (or host "localhost")                  (s/and string? nempty?))
             port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
             create?                (validate (default create?                false) (fn1 t/boolean?))
             create-if-not-present? (validate (default create-if-not-present? true ) (fn1 t/boolean?))
             set-main-conn?         (validate (default set-main-conn?         false) (fn1 t/boolean?))
             set-main-part?         (validate (default set-main-part?         false) (fn1 t/boolean?))
-            default-partition      (validate (or default-partition :db.part/test)   (v/and keyword? (fn-> namespace (= "db.part"))))
+            default-partition      (validate (or default-partition :db.part/test)   (s/and keyword? (fn-> namespace (= "db.part"))))
             conn                   (validate (or conn (atom nil))                   t/atom?)
             connection-retries     (validate (or (if (= type :dynamo) 1 5))         integer?) ; DynamoDB auto-retries
             uri (case type

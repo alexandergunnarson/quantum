@@ -27,7 +27,7 @@
                :refer [svector?]]
              [quantum.core.vars          :as var
                :refer [defalias]]
-             [quantum.core.validate      :as v
+             [quantum.core.spec          :as s
                :refer [validate]]
              [quantum.core.macros        :as macros
                :refer [defnt]])

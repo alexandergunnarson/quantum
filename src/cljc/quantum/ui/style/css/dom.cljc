@@ -8,7 +8,7 @@
       :refer [fn->]]
     [quantum.core.logic    :as logic
       :refer [fn-and]]
-    [quantum.core.validate :as v
+    [quantum.core.spec     :as s
       :refer [validate]]))
 
 #?(:cljs
@@ -34,7 +34,7 @@
 (defn replace-css-at! [id css-str]
   "Replaces CSS at a style node."
   (let [elem (.getElementById js/document id)
-        _ (validate elem (v/and nnil? (fn-> .-tagName str/lower-case (= "style"))))
+        _ (validate elem (s/and nnil? (fn-> .-tagName str/lower-case (= "style"))))
         text (.createTextNode js/document css-str)]
     (while (.-firstChild elem)
       (.removeChild elem (.-firstChild elem)))

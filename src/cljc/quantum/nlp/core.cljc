@@ -7,14 +7,14 @@
       :refer [<- fn1]]
     [quantum.core.collections :as coll
       :refer [map+ remove+
-              mutable eq! aset-in!
+              mutable eq!
               kmap aget-in aget-in* ifor get reducei]]
     [quantum.core.error
       :refer [->ex]]
-    [quantum.core.numeric :as num
+    [quantum.core.numeric  :as num
       :refer [+* inc*]]
     [quantum.core.string   :as str]
-    [quantum.core.validate :as v
+    [quantum.core.spec     :as s
       :refer [validate]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
@@ -36,7 +36,7 @@
             [:poiner]      :P560
             [:pointer]     :P536}}
   [w]
-  (validate w (v/or* keyword? string?))
+  (validate w (s/or* keyword? string?))
   (->> w name
        (coll/ldropl 1)
        (map+ (fn [c] (condp contains? c

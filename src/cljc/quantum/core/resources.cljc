@@ -21,7 +21,7 @@
                      [quantum.core.async           :as async    ]
                      [quantum.core.type            :as type
                        :refer [atom?]                           ]
-                     [quantum.core.validate        :as v
+                     [quantum.core.spec            :as s
                        :refer [validate]])
            (:require-macros
              [quantum.core.resources :as self])
@@ -82,9 +82,9 @@
 (defonce components qcore/registered-components) ; TODO cache
 
 (defn register-component! [k constructor & [deps]]
-  (validate k           qcore/ns-keyword?
+  (validate k           qcore/qualified-keyword?
             constructor fn?
-            deps        (v/or* nil? (v/coll-of keyword? :distinct true)))
+            deps        (s/or* nil? (s/coll-of keyword? :distinct true)))
   (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
   (swap! components assoc k (if deps (fn [config] (component/using (constructor config) deps))
                                      constructor))
@@ -207,7 +207,7 @@
 (defn ->system
   "Constructor for |System|."
   [name config make-system]
-  (validate name        qcore/ns-keyword?
+  (validate name        qcore/qualified-keyword?
             config      map?
             make-system fn?)
   (System. name config (make-system config) false))

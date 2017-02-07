@@ -28,7 +28,7 @@
     [quantum.core.system              :as sys]
     [quantum.core.vars                :as var
       :refer  [defalias defmalias]]
-    [quantum.core.validate            :as v
+    [quantum.core.spec                :as s
       :refer [validate]])
   (:require-macros
     [servant.macros                   :as servant
@@ -129,10 +129,10 @@
 ; TODO FIX THIS
 #?(:clj (defnt take!! ; receive
 #?@(:clj
- [([^quantum.core.data.queue.LinkedBlockingQueue        q  ] (.take q))
-  ([^quantum.core.data.queue.LinkedBlockingQueue        q n] (.poll q n TimeUnit/MILLISECONDS))])
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c  ] (async/take! c identity))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c n] (async/alts! [(async/timeout n) c]))
+ [([^LinkedBlockingQueue q  ] (.take q))
+  ([^LinkedBlockingQueue q n] (.poll q n TimeUnit/MILLISECONDS))])
+  ([^m2m-chan?           c  ] (async/take! c identity))
+  ([^m2m-chan?           c n] (async/alts! [(async/timeout n) c]))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c))))
 
 ;(defalias <!! take!!)
@@ -148,9 +148,8 @@
 #?(:clj
 (defnt empty!
 #?(:clj
-  ([^quantum.core.data.queue.LinkedBlockingQueue        q] (.clear q)))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel c] (throw (->ex :unimplemented)))))
-
+  ([^LinkedBlockingQueue q] (.clear q)))
+  ([^m2m-chan?           c] (throw (->ex :unimplemented)))))
 
 (defalias put! async/put!)
 
@@ -163,8 +162,8 @@
 #?(:clj
 (defnt put!! ; send
 #?(:clj
-  ([^quantum.core.data.queue.LinkedBlockingQueue        x obj] (.put x obj)))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x obj] (async/put! x obj))
+  ([^LinkedBlockingQueue x obj] (.put x obj)))
+  ([^m2m-chan?           x obj] (async/put! x obj))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj))))
 
 ;(defalias >!! put!!)
@@ -184,9 +183,9 @@
 (defnt peek!!
   "Blocking peek."
 #?@(:clj
- [([^quantum.core.data.queue.LinkedBlockingQueue q]         (.blockingPeek q))
-  ([^quantum.core.data.queue.LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
-  ([^clojure.core.async.impl.channels.ManyToManyChannel   c] (throw (->ex :not-implemented "Not yet implemented." nil)))))
+ [([^LinkedBlockingQueue q]         (.blockingPeek q))
+  ([^LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
+  ([^m2m-chan?           c] (throw (->ex :not-implemented "Not yet implemented." nil)))))
 
 (declare interrupt!)
 
@@ -288,7 +287,7 @@
 #?(:clj
 (defnt alts!!
   "Takes the first available value from a chan."
-  {:todo ["Implement timeout"]
+  {:todo #{"Implement timeout"}
    :attribution "Alex Gunnarson"}
   ([^keyword? type chans]
     (alts!! type chans nil))
@@ -373,7 +372,7 @@
             this
             (do (log/pr :debug "Spawning" thread-ct "-thread web-worker threadpool")
                 (validate script-src string?
-                          thread-ct  (v/and integer? pos?))
+                          thread-ct  (s/and integer? pos?))
                 (assoc this
                   ; Returns a buffered channel of web workers
                   :threads (servant/spawn-servants thread-ct script-src))))))

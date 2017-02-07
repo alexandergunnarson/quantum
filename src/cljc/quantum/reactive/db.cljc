@@ -10,7 +10,7 @@
       :refer [fn$]]
     [quantum.core.error      :as err
       :refer [->ex TODO catch-all]]
-    [quantum.core.validate   :as v
+    [quantum.core.spec       :as s
       :refer [validate]])
   (:require-macros
     [reagent.ratom

@@ -18,7 +18,7 @@
                        :refer [fn=]]
                      [quantum.core.log                     :as log
                        :include-macros true]
-                     [quantum.core.validate                :as v
+                     [quantum.core.spec                    :as s
                        :refer [validate]])
   #?(:cljs (:require-macros
                      [cljs.core.async.macros
@@ -148,11 +148,11 @@
                :or   {overwrite? false deduplication? true}
                :as   opts}]
     (validate overwrite? not) ; TODO for now
-    (let [_ (validate type (v/or* nil? (fn= :folder)))
-          _ (validate path   (v/and vector? (fn-> count (= 2))))
+    (let [_ (validate type (s/or* nil? (fn= :folder)))
+          _ (validate path   (s/and vector? (fn-> count (= 2))))
           [parent node-name] path
           _ (validate node-name string?
-                      parent    (v/or* string? nil? (fn= :root)))
+                      parent    (s/or* string? nil? (fn= :root)))
           meta- (-> {:kind (if (= type :folder) "FOLDER" "FILE")
                      :name node-name}
                     (assoc-if (constantly (string? parent)) :parents [parent]))]

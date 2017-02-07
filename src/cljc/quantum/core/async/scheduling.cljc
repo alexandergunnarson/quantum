@@ -6,17 +6,17 @@
       :refer [fn1 fn-> fn$]]
     [quantum.core.collections   :as coll
       :refer [nempty? kmap]]
-    [quantum.core.error    :as err
+    [quantum.core.error         :as err
       :refer [catch-all]]
-    [quantum.core.validate :as v
+    [quantum.core.spec          :as s
       :refer [validate]]
-    [quantum.core.resources :as res]
-    [quantum.core.log       :as log]
-    [quantum.core.data.map  :as map]
-    [quantum.core.time.core :as time]
+    [quantum.core.resources     :as res]
+    [quantum.core.log           :as log]
+    [quantum.core.data.map      :as map]
+    [quantum.core.time.core     :as time]
     [quantum.core.type
       :refer [atom? integer?]]
-    [quantum.core.macros    :as macros
+    [quantum.core.macros        :as macros
       :refer [defnt]])
   #?(:clj
   (:import
@@ -96,7 +96,7 @@
 #?(:clj
 (defnt schedule!
   ([^JavaScheduler scheduler at f]
-    (validate at (v/and number? (fn1 >= 0))
+    (validate at (s/and number? (fn1 >= 0))
               f  fn?)
     (let [wait (max 0 ; Negative delay goes to 0
                     (- at (System/nanoTime)))
@@ -105,7 +105,7 @@
       (.schedule ^ScheduledExecutorService scheduler* ^Callable f
                  (long wait) (time/->timeunit :ns))))
   ([^BusyWaitScheduler scheduler at f]
-    (validate at (v/and number? (fn1 >= 0))
+    (validate at (s/and number? (fn1 >= 0))
               f  fn?)
     (let [shut-down? (-> scheduler :shut-down? (validate atom?) deref)
           queue      (-> scheduler :queue      (validate atom?))]

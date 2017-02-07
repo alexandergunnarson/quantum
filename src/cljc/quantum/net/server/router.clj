@@ -14,7 +14,7 @@
     ; UTILS
     [com.stuartsierra.component       :as component]
     [quantum.net.server.middleware    :as mid]
-    [quantum.core.validate            :as v
+    [quantum.core.spec                :as s
       :refer [validate]]
     [quantum.core.string              :as str]
     [quantum.core.collections.base
@@ -90,7 +90,7 @@
   [{:keys [ws-uri csp-report-uri
            root-path serve-files routes-fn]
     :as opts}]
-  (validate routes-fn (v/or* fn? var?))
+  (validate routes-fn (s/or* fn? var?))
   (concat (when ws-uri (ws-routes opts))
           (routes-fn opts)
           (when csp-report-uri (csp-report-route opts))
@@ -101,7 +101,7 @@
 (defn make-routes
   [{:keys [middleware]
     :as opts}]
-  (validate middleware (v/or* fn? var?))
+  (validate middleware (s/or* fn? var?))
   (middleware
     (apply route/routes (routes opts))))
 

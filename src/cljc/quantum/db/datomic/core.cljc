@@ -29,12 +29,11 @@
     [quantum.core.process       :as proc]
     [quantum.core.convert.primitive :as pconv
       :refer [->long]]
-    [quantum.core.type          :as t]
-    [quantum.core.vars          :as var
+    [quantum.core.type           :as t]
+    [quantum.core.vars           :as var
       :refer [defalias]]
-    [quantum.core.data.validated :as dv
-      :refer [def-validated def-validated-map]]
-    [quantum.core.validate      :as v
+    [quantum.core.data.validated :as dv]
+    [quantum.core.spec           :as s
       :refer [validate defspec]])
 #?(:clj
     (:import
@@ -268,36 +267,34 @@
 ; :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
 ; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
 ; :uuid    (fn$ instance? db/SQUUID)
-(def-validated -schema  (v/or* keyword? dbfn-call?)) ; TODO look over this more
-(def-validated -any     (constantly true))
-(v/defspec :db/id    c/integer?) ; TODO look over these more
-(v/defspec :db/ident keyword?) ; TODO look over these more
-(def-validated -keyword (v/or* keyword? dbfn-call?))
-(def-validated -string  (v/or* string? dbfn-call?))
-(def-validated -boolean (v/or* (fn1 t/boolean?) dbfn-call?))
-(def-validated -long    (v/or* #?(:clj  (fn-or (fn$ instance? Long   )
+(dv/def -schema  (s/or* keyword? dbfn-call?)) ; TODO look over this more
+(dv/def -any     (constantly true))
+(dv/def -keyword (s/or* keyword? dbfn-call?))
+(dv/def -string  (s/or* string? dbfn-call?))
+(dv/def -boolean (s/or* (fn1 t/boolean?) dbfn-call?))
+(dv/def -long    (s/or* #?(:clj  (fn-or (fn$ instance? Long   )
                                                (fn$ instance? Integer)
                                                (fn$ instance? Short  )) #_long?
                                   :cljs c/integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
                                dbfn-call?))
-(def-validated -bigint  (v/or* (fn1 t/bigint?)
+(dv/def -bigint  (s/or* (fn1 t/bigint?)
                                dbfn-call?))
-(def-validated -float   (v/or* #?(:clj  (fn1 t/float?)
+(dv/def -float   (s/or* #?(:clj  (fn1 t/float?)
                                   :cljs number?)
                                dbfn-call?))  ; TODO CLJS |float?|
-(def-validated -double  (v/or* #?(:clj  (fn1 t/double?)
+(dv/def -double  (s/or* #?(:clj  (fn1 t/double?)
                                   :cljs number?)
                                dbfn-call?))
-(def-validated -bigdec  (v/or* #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
+(dv/def -bigdec  (s/or* #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
                                   :cljs number?)
                                dbfn-call?)) ; TODO CLJS |bigdec?|
-(def-validated -instant (v/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
-                       #?(:clj (v/and string?        (v/conformer clojure.instant/read-instant-date)))
-                               (v/and (fn1 t/integer?) (v/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
+(dv/def -instant (s/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
+                       #?(:clj (s/and string?        (s/conformer clojure.instant/read-instant-date)))
+                               (s/and (fn1 t/integer?) (s/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
                                dbfn-call?))
-(def-validated -uri     (v/or* (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
+(dv/def -uri     (s/or* (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
                                dbfn-call?))
-(def-validated -bytes   (v/or* (fn1 t/bytes?) dbfn-call?))
+(dv/def -bytes   (s/or* (fn1 t/bytes?) dbfn-call?))
 
 ; ===== QUERIES =====
 
@@ -357,7 +354,7 @@
            [:db/add :db.part/db
             :db.install/partition id]]))))
 
-(def-validated-map schema/intermediate-schema
+(dv/def-map schema/intermediate-schema
   :invariant #(if (:datomic:schema/component? %)
                   (-> % :datomic:schema/type (= :ref))
                   true)

@@ -1,15 +1,15 @@
 (ns quantum.db.datomic.schema
   "Schema syncing and schema alteration functions.
    Like the forthcoming `posh.lib.schemas`."
-  (:require [datascript.core          :as ds]
-    #?(:clj [datomic.api              :as dat])
+  (:require [datascript.core             :as ds]
+    #?(:clj [datomic.api                 :as dat])
             [quantum.core.fn
               :refer [fn->]]
-            [quantum.core.collections :as coll
+            [quantum.core.collections    :as coll
               :refer [dissoc-in merge-deep]]
-            [quantum.core.data.set    :as set]
-            [quantum.db.datomic.core  :as dbc]
-            [quantum.core.validate    :as v
+            [quantum.core.data.set       :as set]
+            [quantum.db.datomic.core     :as dbc]
+            [quantum.core.spec           :as s
               :refer [validate]]
             [quantum.core.data.validated :as dv]))
 

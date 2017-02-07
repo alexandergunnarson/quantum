@@ -15,7 +15,7 @@
             [quantum.core.paths                      :as path]
     #?(:clj [quantum.net.server.router               :as router])
             [quantum.core.error                      :as err]
-            [quantum.core.validate                   :as v
+            [quantum.core.spec                       :as s
               :refer [validate]]
             [quantum.core.fn
               :refer [fn-nil]]
@@ -70,7 +70,7 @@
           (validate port       net/valid-port?
                     type       #{:aleph :immutant #_:http-kit}
                     routes-var var?
-                    routes-fn  (v/or* fn? var?))
+                    routes-fn  (s/or* fn? var?))
           (let [opts (->> (merge
                             {:host           (or host "0.0.0.0")
                              :port           port

@@ -5,7 +5,7 @@
   quantum.browser.core
           (:require
             [com.stuartsierra.component     :as comp ]
-            [quantum.core.validate
+            [quantum.core.spec              :as s
               :refer [validate spec]]
             [quantum.auth.core              :as auth]
             [quantum.core.log               :as log]

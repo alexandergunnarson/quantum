@@ -26,7 +26,7 @@
                         :refer [fn-or fn-not fn= whenf whenp whenf1 ifn1]                                             ]
                       [quantum.core.macros                     :as macros
                         :refer [defnt]]
-                      [quantum.core.validate                   :as v
+                      [quantum.core.spec                       :as s
                         :refer [validate]]
                       [quantum.core.type                       :as type
                         :refer [boolean?]]
@@ -730,7 +730,7 @@
 ;   (let [baos-str-0 (str baos)]
 ;     (if (empty? baos-str-0)
 ;         nil
-;         (let [baos-str-f (getr+ baos-str-0 0 (-> baos-str-0 count+ dec dec))]
+;         (let [baos-str-f (slice baos-str-0 0 (-> baos-str-0 count dec))]
 ;         (swap! out-str conj
 ;           (str/subs+ baos-str-f
 ;                (whenf (+ 2 (last-index-of+ "\r\n" baos-str-f))
@@ -809,12 +809,12 @@
           "Register distributor and ensure uniquity"]}
   [f {:keys [cache memoize-only-first-arg? threadpool max-threads
              max-work-queue-size name logging-key] :as opts}]
-  (validate max-threads         (v/or* nil? integer?)
-            max-work-queue-size (v/or* nil? integer?)
-            name                (v/or* nil? string? )
-            threadpool          (v/or* nil? (fn$ instance? ThreadPoolExecutor))
+  (validate max-threads         (s/or* nil? integer?)
+            max-work-queue-size (s/or* nil? integer?)
+            name                (s/or* nil? string? )
+            threadpool          (s/or* nil? (fn$ instance? ThreadPoolExecutor))
             f                   fn?
-            logging-key         (v/or* nil? keyword?))
+            logging-key         (s/or* nil? keyword?))
   (let [cache-f        (if (true? cache)
                            (atom {})
                            cache) ; TODO bounded or auto-invalidating cache?

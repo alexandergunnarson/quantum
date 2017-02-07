@@ -9,11 +9,10 @@
             [quantum.core.io.core     :as io  ]
             [quantum.core.collections :as coll
               :refer [dissoc-in]]
-            [quantum.core.validate    :as v
+            [quantum.core.spec        :as s
               :refer [validate]]
-            [quantum.core.data.validated
-              :refer [def-validated def-validated-map]]
-            [quantum.validate.specs :as sp]))
+            [quantum.core.data.validated :as dv]
+            [quantum.validate.specs   :as sp]))
 
 (def auth-source-table
   (atom {:google    "Google"

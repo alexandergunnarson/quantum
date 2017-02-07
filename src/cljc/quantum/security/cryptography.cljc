@@ -30,7 +30,7 @@
     [quantum.core.numeric          :as num]
     [quantum.core.convert          :as conv]
     [quantum.core.string           :as str]
-    [quantum.core.validate         :as v
+    [quantum.core.spec             :as s
       :refer [validate]]
     [quantum.core.vars             :as var
       :refer [defalias]])

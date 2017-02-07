@@ -1,4 +1,4 @@
-(ns quantum.core.validate
+(ns quantum.core.spec
   (:refer-clojure :exclude
     [string? keyword? set? number? fn?
      assert keys + * cat and or])
@@ -18,9 +18,8 @@
       :refer [if-cljs locals]]
     [quantum.core.vars :as var
       :refer [defalias defmalias]])
-  #?(:cljs
   (:require-macros
-    [quantum.core.validate :as self])))
+    [quantum.core.spec :as self]))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
 
@@ -50,7 +49,10 @@
     (throw (ex-info spec-assertion-failed data))))
 
 #?(:clj
-(defmacro validate-one [spec x]
+(defmacro validate-one
+  {:todo {0 {:desc     "have a compile-time assert vs. a forced runtime assert"
+             :priority 1}}}
+  [spec x]
   (if-cljs &env
    `(if cljs.spec/*compile-asserts* ; TODO should probably be outside quote like this
         (if cljs.spec/*runtime-asserts*
@@ -70,6 +72,7 @@
                   conformed#))
            ~x)
         x))))
+
 #?(:clj
 (defmacro validate
   "Multiple validations performed.
@@ -187,6 +190,10 @@
   (let [pf (mapv (if-cljs &env #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
                  pred-forms)]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
+
+#?(:clj
+(defmacro constantly-or [& exprs]
+  `(or* ~@(map #(list 'fn [(gensym "_")] %) exprs))))
 
 #?(:clj
 (defmacro set-of [spec]

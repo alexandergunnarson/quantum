@@ -3,10 +3,9 @@
             [quantum.core.collections
               :refer [map+ join]]
             [quantum.deploy.amazon :as deploy]
-            [quantum.core.validate :as v
+            [quantum.core.spec     :as s
               :refer [validate]]
-            [quantum.core.data.validated
-              :refer [def-validated def-validated-map]]
+            [quantum.core.data.validated :as dv]
     #?(:clj [quantum.core.reflect
               :refer [obj->map]]))
   #?(:clj (:import
@@ -51,8 +50,8 @@
                    :cn-north-1
                    :sa-east-1})
 
-(def-validated-map ^:db? ^:sensitive? ^:no-history? credential>aws
+(dv/def-map ^:db? ^:sensitive? ^:no-history? credential>aws
   :req-un [(def :this/service
-             :req-un [(def :this/name (v/and :db/keyword #{:cloud-drive}))])] ; TODO others
-  :opt-un [(def :this/region (v/and :db/keyword aws-regions))
+             :req-un [(def :this/name (s/and :db/keyword #{:cloud-drive}))])] ; TODO others
+  :opt-un [(def :this/region (s/and :db/keyword aws-regions))
            :oauth2-keys])

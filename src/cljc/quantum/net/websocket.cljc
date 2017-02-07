@@ -13,7 +13,7 @@
             [quantum.core.log                        :as log]
             [quantum.core.async                      :as async
               :refer [promise-chan offer! go]]
-            [quantum.core.validate                   :as v
+            [quantum.core.spec                       :as s
               :refer [validate]]
             [quantum.core.resources                  :as res]
             [quantum.core.collections.base
@@ -125,8 +125,8 @@
         (try
           (log/prl ::debug "Starting channel-socket with:" endpoint host #?(:cljs port) type packer connected-uids)
           (validate endpoint string?)
-          (validate handler  (v/or* fn?  (v/and var? (fn-> deref fn?))))
-          (validate type     (v/or* nil? #{:auto :ajax :ws}))
+          (validate handler  (s/or* fn?  (s/and var? (fn-> deref fn?))))
+          (validate type     (s/or* nil? #{:auto :ajax :ws}))
           #?(:clj  (do (validate server nnil?)
                        (validate (:type server) #{:aleph :immutant}))
              :cljs (do (validate host string?) ; technically, valid hostname

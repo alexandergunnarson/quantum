@@ -12,8 +12,8 @@
     [quantum.core.error             :as err
       :refer [->ex TODO]]
     [quantum.core.data.validated    :as dv
-      :refer [def-validated def-validated-map declare-spec]]
-    [quantum.core.validate          :as v]
+      :refer [declare-spec]]
+    [quantum.core.spec              :as s]
     [quantum.db.datomic             :as db]
     [quantum.core.convert.primitive :as pconv]
     [quantum.core.numeric           :as num
@@ -33,12 +33,12 @@
 ; =========== CORE TYPES =========== ;
 
 ; should be schema, but keyword for easier pull; will have to txn-fn check to make sure the keyword is a valid schema
-(def-validated ^:db? ^:index? schema/type :db/keyword #_:db/schema)
+(dv/def ^:db? ^:index? schema/type :db/keyword #_:db/schema)
 
-(def-validated ^:db? ^{:doc "Any unstructured data associated with an entity"}
+(dv/def ^:db? ^{:doc "Any unstructured data associated with an entity"}
   schema/annotation :db/string)
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:doc  "A ratio specifically using longs instead of bigints."
     :todo #{"Throw on overflow from long"}
     :tests `{(->ratio:long {:numerator   2
@@ -60,7 +60,7 @@
 
 ; =========== LOCATION =========== ;
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc  "When dealing with locations, one
            uses the most restrictive area possible.
            the larger, enclosing areas are then inferred from it.
@@ -72,11 +72,11 @@
   schema/location :db/keyword)
 
 ; TODO should this mean :location:country is a :ref or a :db/keyword ?
-(def-validated ^:db? location/country :location)
+(dv/def ^:db? location/country :location)
 
 ; =========== LINGUISTICS =========== ;
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:doc    "An ISO 639-3 value?
              There is also ISO 639-1, 639-2, 639-4, 639-5"
     ;:unique :value ; TODO enforce in other ways
@@ -85,7 +85,7 @@
   :req [(def :this/iso-639-3-value :db/keyword)])
 
 ; The possible values are taken from the ISO 15924 standard.
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:todo  #{"Finish"}}
   linguistics/script
   :req [^{:unique :value}
@@ -95,52 +95,52 @@
 
 (def units (atom #{}))
 
-(def-validated ^:db? schema/unit :db/keyword)
+(dv/def ^:db? schema/unit :db/keyword)
 
-(def-validated ^:db? unit/kb-per-s         :db/double)
-(def-validated ^:db? unit/pixels           :db/long  )
-(def-validated ^:db? unit/beats-per-minute :db/double)
+(dv/def ^:db? unit/kb-per-s         :db/double)
+(dv/def ^:db? unit/pixels           :db/long  )
+(dv/def ^:db? unit/beats-per-minute :db/double)
 
 ; TODO Currency
 ; ISO 4217 delineates currency designators, country codes (alpha and numeric)
 
 ; ; =========== TIME =========== ;
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "Milliseconds from Unix epoch"}
   time/instant :db/long)
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "Milliseconds from beginning; offset"}
   time/relative-instant :db/long)
 
-(def-validated-map ^:db? time/range
+(dv/def-map ^:db? time/range
   :req [(def :this/from :time/instant)
         (def :this/to   :time/instant)])
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:doc "A range starting from and ending on relative instants"}
   time/relative-range
   :req [(def :this/from :time/relative-instant)
         (def :this/to   :time/relative-instant)])
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc    "Not the sum of a year's time, but a particular year."
     ;:unique :value ; TODO enforce in other ways
   }
   time/year :time/range)
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "In milliseconds"}
   time/duration :db/long)
 
 ; ; =========== META =========== ;
 
-(def-validated ^:db? schema/date        :time/instant)
-(def-validated ^:db? date/created       :time/instant)
-(def-validated ^:db? date/last-modified :time/instant)
+(dv/def ^:db? schema/date        :time/instant)
+(dv/def ^:db? date/created       :time/instant)
+(dv/def ^:db? date/last-modified :time/instant)
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "For media tracks, date last played.
           For other things, date last accessed/opened/viewed."}
   date/last-accessed :time/instant)
@@ -150,15 +150,15 @@
 ; Many of these are keywords because the same names happen over and over again
 
 
-(def-validated-map ^:db? ^:component?
+(dv/def-map ^:db? ^:component?
   ^{:todo #{"Support hyphenated and maiden names"}}
   agent:person/name
   ;:invariant (fn [x] (contains? x (:this/called-by x)))
   :req-un [^{:doc "The preferred name (some go by prefix, some first, some middle)"}
-           (def :this/called-by (v/and :db/schema #{:this/prefix :this/first :this/middle}))]
-  :opt-un [(def :this/legal-in  (v/set-of :location/country))
+           (def :this/called-by (s/and :db/schema #{:this/prefix :this/first :this/middle}))]
+  :opt-un [(def :this/legal-in  (s/set-of :location/country))
            ^{:doc "e.g. His Holiness, Dr., Sir. TODO: need to prefix"}
-           (def :this/prefix    (v/set-of :db/keyword))
+           (def :this/prefix    (s/set-of :db/keyword))
            ^{:doc "e.g. \"José\" in \"José Maria Gutierrez de Santos\""}
            (def :this/first     :db/keyword)
            ^{:doc "e:g. \"Maria\" in \"José Maria Gutierrez de Santos\""}
@@ -178,17 +178,17 @@
               ^{:doc "e.g. \"Jr., Sr., III\""}
               (def :agent:person:name/suffix :db/keyword)])])
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "AKA nickname"}
   agent:person:name/alias :db/keyword)
 
 ; =========== REGISTRATION =========== ;
 
-(def-validated-map ^:db? ^:sensitive? ^:no-history? auth/credential:oauth2
+(dv/def-map ^:db? ^:sensitive? ^:no-history? auth/credential:oauth2
   :req-un [(def :this/redirect-uri  :db/string) ; TODO validate uri?
            (def :this/client-id     :db/string) ; TODO validate uniquity?
            (def :this/client-secret :db/string)
-           (def :this/scopes        (v/set-of :db/keyword))] ; TODO validate for different providers e.g. Google
+           (def :this/scopes        (s/set-of :db/keyword))] ; TODO validate for different providers e.g. Google
   :opt-un [(def :this/access-token
              :req-un [(def :this/value   :db/string )]
              :opt-un [(def :this/expires :db/instant)])
@@ -196,15 +196,15 @@
 
 (declare-spec ^:db? agent/organization)
 
-(def-validated-map ^:db? ^:component?
+(dv/def-map ^:db? ^:component?
   agent/registration
   :req [(def :this/provider :agent/organization)]
   :opt [^{:doc "Reference to a set of Twitter, Facebook, etc. facts"}
-        (def :this/detail (v/set-of :db/any))])
+        (def :this/detail (s/set-of :db/any))])
 
 ; =========== NETWORK =========== ;
 
-(def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
+(dv/def-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
   network/domain
   :req-un [(def :this/name       :db/string)
            ^{:doc "Keyword because it's short and universal"}
@@ -214,7 +214,7 @@
            (def :this/ip-address :db/string) ; technically it's more complex than just a string
            ])
 
-(def-validated-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
+(dv/def-map ^:db? ; ^{:unique :value} ; TODO enforce other ways
   agent/email
   :req-un [^{:doc "E.g. alexandergunnarson"}
            (def :this/username :db/keyword)
@@ -222,52 +222,52 @@
   :opt-un [^{:doc "E.g. company, email validation service, etc."}
            (def :this/validated-by :agent/organization)
            ^{:doc "Who/what provided the email information"}
-           (def :this/source (v/or* :agent/organization :agent/person))])
+           (def :this/source (s/or* :agent/organization :agent/person))])
 
 ; =========== AGENT =========== ;
 
-(def-validated agent/auth:many (v/set-of :auth/credential:oauth2))
+(dv/def agent/auth:many (s/set-of :auth/credential:oauth2))
 
-(def-validated-map ^:db? agent/person
-  :opt-un [(def :this/name:many         (v/set-of :agent:person/name))
-           (def :this/name:alias:many  (v/set-of :agent:person/name:alias))
+(dv/def-map ^:db? agent/person
+  :opt-un [(def :this/name:many         (s/set-of :agent:person/name))
+           (def :this/name:alias:many  (s/set-of :agent:person/name:alias))
            ^{:doc "What gender a person identifies as: male, female or other."}
-           (def :this/gender             (v/and :db/keyword #{:male :female :other}))
-           (def :agent/email:many        (v/set-of :agent/email))
-           (def :agent/registration:many (v/set-of :agent/registration))
+           (def :this/gender             (s/and :db/keyword #{:male :female :other}))
+           (def :agent/email:many        (s/set-of :agent/email))
+           (def :agent/registration:many (s/set-of :agent/registration))
            :agent/auth:many
            :musicbrainz/id])
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:component? true
     :doc "The official name of an organization"
     :todo #{"Finish"}}
   agent:organization/name
-  :opt-un [(def :this/legal-in (v/set-of :location/country))])
+  :opt-un [(def :this/legal-in (s/set-of :location/country))])
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:unique :value
     :doc    "The International Standard Name Identifier for an agent.
              An ISO standard for uniquely identifying the public identities
              of contributors to media content."}
   agent/isni :db/string)
 
-(def-validated-map ^:db? agent/organization
-  :opt-un [(def :this/name:many (v/set-of :this/name))
+(dv/def-map ^:db? agent/organization
+  :opt-un [(def :this/name:many (s/set-of :this/name))
            ^{:doc "#{[:group     {:doc \"A group of people that may or may not have a distinctive name.\"}]
                      [:orchestra {:doc \"A large instrumental ensemble.\"}]
                      [:choir     {:doc \"A choir/chorus/chorale (a large vocal ensemble).\"}]}"}
-           (def :this/types     (v/set-of #{:group :orchestra :choir}))
+           (def :this/types     (s/set-of #{:group :orchestra :choir}))
            :agent/isni
            :musicbrainz/id])
 
-(def-validated ^:db? art/creator
+(dv/def ^:db? art/creator
   ^{:doc "In the instance of music, composer. For images, artist.
           Includes producers and engineers, photographers, illustrators, poets, etc."}
-  (v/or* :agent/person :agent/organization))
+  (s/or* :agent/person :agent/organization))
 
-(def-validated ^:db? art/creator-group
-  (v/or* :agent/person :agent/organization))
+(dv/def ^:db? art/creator-group
+  (s/or* :agent/person :agent/organization))
 
 ; Area
 ; The artist area, as the name suggests, indicates the area with which an artist is primarily identified with. It is often, but not always, his/her/their birth/formation country.
@@ -289,64 +289,64 @@
 ; Alias
 ; Aliases are used to store alternate names or misspellings. For more information and examples, see the page about aliases.
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "E.g. software, process, person, organization."
     :todo #{"Extend to non-agent causers"}}
-  data/creator (v/or* :agent/person :agent/organization))
+  data/creator (s/or* :agent/person :agent/organization))
 
-(def-validated ^:db? ^:component?
+(dv/def ^:db? ^:component?
   ^{:doc "Where the data was retrieved from."}
   data/source :db/any)
 
-(def-validated-map ^:db? ^:component? data/certainty
+(dv/def-map ^:db? ^:component? data/certainty
   :opt [^{:doc  "From what source do you get your certainty?"
           :todo #{"Make into a logical proposition, not just a source entity"}}
         (def :this/source :data:source)]
   :req [^{:doc "The certainty that the data is the case / true, [0,1]"}
-        (def :this/value  (v/and :db/double quantum.core.numeric/percent?))])
+        (def :this/value  (s/and :db/double quantum.core.numeric/percent?))])
 
 ; =========== MEDIA =========== ;
 
-(def-validated ^:db? data/title       :db/string)
+(dv/def ^:db? data/title       :db/string)
 
-(def-validated ^:db? data/description :db/string)
+(dv/def ^:db? data/description :db/string)
 
-(def-validated-map ^:db? opinion/comment
+(dv/def-map ^:db? opinion/comment
   :req [^{:doc "Can be in any format — markdown, HTML, plain, etc."}
         (def :this/text           :db/string)]
-  :opt [(def :this/created-by     (v/or* :agent/organization :agent/person))
+  :opt [(def :this/created-by     (s/or* :agent/organization :agent/person))
         (def :this/in-response-to :this)])
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "The comment chain is dynamically created from the list of comments"}
   opinion/comment:many
-  (v/set-of :opinion/comment))
+  (s/set-of :opinion/comment))
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:doc "The rating that a particular person gave"}
   opinion/rating
   :req [^{:doc "Can be any range"}
         (def :this/values      :db/double)]
   :opt [(def :this/explanation :db/string)])
 
-(def-validated-map ^:db? ^:component? opinion/entity+rating
-  :req [(def :opinion/opiner (v/or* :agent/person :agent/organization))
+(dv/def-map ^:db? ^:component? opinion/entity+rating
+  :req [(def :opinion/opiner (s/or* :agent/person :agent/organization))
         :opinion/rating])
 
-(def-validated-map ^:db? opinion/rating:many
+(dv/def-map ^:db? opinion/rating:many
   :req [(def :opinion/entity+rating:many
-             (v/set-of :opinion/entity+rating))])
+             (s/set-of :opinion/entity+rating))])
 
-(def-validated ^:db? schema/agent
-  (v/or* :this/person :this/organization))
+(dv/def ^:db? schema/agent
+  (s/or* :this/person :this/organization))
 
-(def-validated-map ^:db? ^:component?
+(dv/def-map ^:db? ^:component?
   media/agent+plays
   :req [:agent
         ^{:doc "Dates played"}
-        (def :media/plays (v/set-of :time/instant))])
+        (def :media/plays (s/set-of :time/instant))])
 
-(def-validated ^:db?
+(dv/def ^:db?
   ^{:doc "E.g. 44100 kHz"}
   data:audio/sample-rate :db/double)
 
@@ -361,24 +361,24 @@
   {:media:track-num [:one :long {:unique :value :doc "AKA episode-num"}] ; unique... FIX THIS
    :media:track nil})
 
-(def-validated ^:db? data/bytes-size :db/long)
+(dv/def ^:db? data/bytes-size :db/long)
 
 ; TODO are IDs unique per user or universally unique?
-(def-validated ^:db? ^{:unique :value} cloud:amazon/id :db/string)
+(dv/def ^:db? ^{:unique :value} cloud:amazon/id :db/string)
 
 ; If a transaction specifies a unique identity for a temporary id,
 ; and that unique identity already exists in the database, then that temporary id
 ; will resolve to the existing entity in the system.
-(def-validated-map ^:db? data/format
+(dv/def-map ^:db? data/format
   :req [^{:unique :value}
         ^{:doc "Refer to http://www.sitepoint.com/web-foundations/mime-types-complete-list/"}
         (def :data/mime-type :db/keyword)
         ^{:doc "Needs to correspond with its mime-type"}
-        (def :data/appropriate-extension:many (v/set-of :db/keyword))])
+        (def :data/appropriate-extension:many (s/set-of :db/keyword))])
 
-(def-validated ^:db? cloud:s3/uri :db/uri)
+(dv/def ^:db? cloud:s3/uri :db/uri)
 
-(def-validated-map ^:db?
+(dv/def-map ^:db?
   ^{:doc  "A file's metadata."
     :todo #{"figure out all of valid file metadata"}}
   schema/byte-entity
@@ -493,7 +493,7 @@
 ; Of course, modern works are much simpler. It's mainly in classical music that
 ; one runs into these problems.
 
-#_(def-validated-map ^:db? ^:component?
+#_(dv/def-map ^:db? ^:component?
   ^{:doc "The following are all ambiguous and are subsumed by this schema:
           - genre
           - sub-genre
@@ -503,7 +503,7 @@
   :req-un [^{:unique :value}
            (def :this/value :db/keyword)])
 
-#_(def-validated-map ^:db?
+#_(dv/def-map ^:db?
   ^{:doc "A distinct intellectual or artistic creation.
           A work could be a piece of music, a movie, or even a novel,
           play, poem or essay, possibly, but not necessarily, later
@@ -511,7 +511,7 @@
   work
   :opt-un [:musicbrainz:id])
 
-#_(def-validated-map ^:db?
+#_(dv/def-map ^:db?
   ^{:doc "A discrete, individual :work.
           E.g. an individual song, musical number or movement.
           This includes recitatives, arias, choruses, duos, trios, etc.
@@ -524,13 +524,13 @@
            ^{:doc "If a discrete work is known by name(s) or
                    in language(s) other than its canonical name,
                    these are specified in the work’s aliases."}
-           (def :work:discrete:alias:many (v/set-of :db/string))
+           (def :work:discrete:alias:many (s/set-of :db/string))
            ^{:doc "The International Standard Musical Work Code
                    assigned to the work by copyright collecting agencies."}
            (def :work:discrete:iswc :db/keyword)
            :musicbrainz:id])
 
-#_(def-validated-map ^:db?
+#_(dv/def-map ^:db?
   ^{:doc "An ordered sequence of one or more `work:discrete`s.
           Could be e.g. songs, numbers or movements, such as:
           - Symphony
@@ -595,7 +595,7 @@
    })
 
 ; TODO
-#_(def-validated-map :media:release
+#_(dv/def-map :media:release
   {:doc "Represents the unique release (i.e. issuing) of a product on a specific
          date with specific release information such as the country, label, barcode,
          packaging, etc. If you walk into a store and purchase an album or single,
@@ -609,7 +609,7 @@
   (def :this/title :db/string)
    ^{:doc "The artist(s) that the release is primarily
            credited to, as credited on the release."}
-   (def :this/artist:many (v/set-of :artist))
+   (def :this/artist:many (s/set-of :artist))
    ^{:doc "The date the release was issued (made available through
            some sort of distribution mechanism). For example, this
            may be via a retail store, being published as a free
@@ -664,7 +664,7 @@
                 the quality has never been modified; \"normal\" if it has.
            0:   The release needs serious fixes, or its existence is hard
                 to prove (but it's not clearly fake)."}
-   (def :this/data-quality (v/and :db/long (fn1 <= 0 1))))
+   (def :this/data-quality (s/and :db/long (fn1 <= 0 1))))
 
 ; Status
 ; The status describes how "official" a release is. Possible values are:
