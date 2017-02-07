@@ -148,9 +148,9 @@
 
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
 
-#?(:clj (defmacro fn0 [  & args] `(fn [f#] (f# ~@args))))
-#?(:clj (defmacro fn1 [f & args] `(fn [arg#] (~f arg# ~@args))))
-#?(:clj (defmacro fn$ [f & args] `(fn [arg#] (~f ~@args arg#))))
+#?(:clj (defmacro fn0 [  & args] `(fn fn0# [f#  ] (f# ~@args))))
+#?(:clj (defmacro fn1 [f & args] `(fn fn1# [arg#] (~f arg# ~@args))))
+#?(:clj (defmacro fn$ [f & args] `(fn fn$# [arg#] (~f ~@args arg#))))
 
 ; MWA: "Macro WorkAround"
 #?(:clj (defmacro MWA ([f] `(fn1 ~f)) ([n f] `(mfn ~n ~f))))
