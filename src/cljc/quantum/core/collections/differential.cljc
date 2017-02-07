@@ -45,7 +45,7 @@
     [quantum.core.collections.base :as base
       :refer [kmap]]
     [quantum.core.collections.core :as coll
-      :refer [reverse key val first rest get getr count lasti index-of last-index-of empty?]]
+      :refer [reverse key val first rest get slice count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
       :refer [->ex]]
     [quantum.core.fn               :as fn]
@@ -135,7 +135,7 @@
   {:tests '{(takel 2 "abcdefg")
             "ab"}}
   [i super]
-  (getr super 0 (-> i dec long)))
+  (slice super 0 (long i)))
 
         (def      take        takel          )
         (def      ltake       core/take      )
@@ -148,7 +148,7 @@
   {:tests '{(takel-fromi 2 "abcdefg")
             "cdefg"}}
   [i super]
-  (getr super i (lasti super)))
+  (slice super i (count super)))
 
 (def take-fromi takel-fromi)
 
@@ -166,7 +166,7 @@
   {:tests '{(takel-afteri 2 "abcdefg")
             "defg"}}
   [i super]
-  (getr super (-> i long inc) (lasti super)))
+  (slice super (-> i long inc) (count super)))
 
 (def take-afteri takel-afteri)
 
@@ -186,9 +186,9 @@
             "==="}}
   [pred super]
   (let [not-i (index-of-pred super (fn-not pred))]
-    (getr super 0 (dec (if (pred (first super))
-                           (or not-i (count super))
-                           (or not-i 0))))))
+    (slice super 0 (if (pred (first super))
+                       (or not-i (count super))
+                       (or not-i 0)))))
 
 (def take-while   takel-while    )
 (def ltakel-while core/take-while)
@@ -253,21 +253,21 @@
 ; ============ TAKE-RIGHT ============
 (defn taker
   [i super]
-  (getr super (- (count super) i) (lasti super)))
+  (slice super (- (count super) i) (count super)))
 
 (defn takeri
   "Take up to and including index, starting at the right."
   {:in  [2 "abcdefg"]
    :out "cdefg"}
   [i super]
-  (getr super i (lasti super)))
+  (slice super i (count super)))
 
 (defn taker-untili
   "Take until index, starting at the right."
   {:in  [2 "abcdefg"]
    :out "defg"}
   [i super]
-  (getr super (-> i long inc) (lasti super)))
+  (slice super (-> i long inc) (count super)))
 
 (defn taker-while
   {:todo ["Use rreduce (reversed reduce) instead of reverse. Possibly reversed-last-index-of"]}
@@ -278,7 +278,7 @@
               (if (pred elem) (dec i) (reduced i)))
             (count super)
             (reverse super))]
-    (getr super rindex (lasti super))))
+    (slice super rindex (count super))))
 
 (defnt taker-until
   "Take until index of, starting at the right."
@@ -297,7 +297,7 @@
    :out "abcdefg"}
   [sub super]
   (if-let [i (last-index-of super sub)]
-    (getr super 0 (-> i long dec))
+    (slice super 0 (long i))
     nil))
 
 (defalias take-nth+  red/take-nth+)
@@ -305,7 +305,7 @@
 
 ; ================================================ DROP ================================================
 
-(defn dropl [n coll] (getr coll n (lasti coll)))
+(defn dropl [n coll] (slice coll n (count coll)))
 
 (def      drop   dropl    )
 (defalias drop+  red/drop+)
@@ -316,9 +316,9 @@
 ; (let [index-r
 ;           (whenc (last-index-of super sub) (fn= -1)
 ;             (throw (str "Index of" (str/squote sub) "not found.")))])
-;   (getr super
+;   (count super
 ;     (inc (last-index-of super sub))
-;     (-> super lasti))
+;     (count super))
 
 (defn dropl-while-matches
   {:tests '{(dropl-while-matches "--" "---asddasd--")
@@ -348,14 +348,14 @@
   {:in  [3 "abcdefg"]
    :out "abcd"}
   [n coll]
-  (getr coll 0 (-> coll lasti long (- (long n)))))
+  (slice coll 0 (-> coll count long (- (long n)))))
 
 #?(:clj (defalias dropr+ red/dropr+))
 
 (defn ldropr
   {:attribution "Alex Gunnarson"}
   [n coll]
-  (getr coll 0 (-> coll lasti long (- (long n)))))
+  (slice coll 0 (-> coll count long (- (long n)))))
 
 (defn dropr-while
   {:todo #{"use `rreduce`"}
@@ -365,10 +365,10 @@
   (assert (t/indexed? super)) ; TODO for now, until `rreduce`
   (loop [i (lasti super)]
     (if (= i -1)
-        (getr super 0 -1)
+        (slice super 0 0)
         (if (pred (get super i))
             (recur (dec i))
-            (getr super 0 i)))))
+            (slice super 0 (inc i))))))
 
 (defnt dropr-until
   "Until right index of."
@@ -378,7 +378,7 @@
   ([^fn? pred super] (dropr-while super (fn-not pred)))
   ([sub super]
     (if-let [i (coll/last-index-of-protocol super sub)]
-      (getr super 0 (+ i (lasti sub)))
+      (slice super 0 (+ i (count sub)))
       super)))
 
 (defn dropr-after
@@ -388,7 +388,7 @@
    :out "ab"}
   ([sub super]
     (if (index-of super sub)
-        (getr super 0 (index-of super sub))
+        (slice super 0 (inc (index-of super sub)))
         super)))
 
 (defn dropr-while-matches
