@@ -25,149 +25,144 @@
       :refer [+ * -]])
   #?(:clj
   (:import
-    java.math.BigInteger
-    java.math.BigDecimal
-    clojure.lang.BigInt)))
+    (quantum.core Numeric)
+    (java.math BigInteger BigDecimal)
+    (clojure.lang BigInt Ratio))))
 
 (log/this-ns)
 
 ; Auto-unboxes; no boxed combinations necessary
 ; TODO right now: multiple typed arguments in |defnt|, even in protocols
+; TODO `==` from Numeric/equals
 
 ; ===== ADD ===== ;
 
-#?(:clj  (defalias +*-bin unchecked-add)
-        #_(defnt +*-bin "Lax |+|; continues on overflow/underflow"
-                   (^{:tag :first} [^double? x] x)
-           #?(:clj (^{:tag :auto-promote}
-                     [#{byte char short int long float double} #_(- prim? boolean) x
-                      #{byte char short int long float double} #_(- prim? boolean) y]
-                     (quantum.core.Numeric/add x y)))
-           #?(:clj (^BigInt  [^BigInt  x ^clojure.lang.BigInt  y]
-                     (.add x y)))
-           #?(:clj (^BigDecimal [^BigDecimal x ^BigDecimal y]
-                     (if (nil? *math-context*)
-                         (.add x y)
-                         (.add x y *math-context*))))
-           #?(:cljs ([x y] (TODO) (ntypes/-add x y))))
+(defn num-ex [] (throw (ArithmeticException. "Out of range")))
+
+#?(:clj #_(defalias +*-bin unchecked-add)
+        (defnt' +*-bin "Lax `+`. Continues on overflow/underflow."
+          ([#{byte char short int long float double} #_(- prim? boolean) x
+            #{byte char short int long float double} #_(- prim? boolean) y]
+            (Numeric/add x y))
+          (^BigInt     [^BigInt     x ^BigInt     y] (.add x y))
+          (^BigDecimal [^BigDecimal x ^BigDecimal y]
+            (if (nil? *math-context*)
+                (.add x y)
+                (.add x y *math-context*)))
+          ([#{byte char short int long float double Number} x] x)
+ #?(:cljs ([x y] (TODO) (ntypes/-add x y))))
    :cljs (defalias +*-bin unchecked-add))
 
-#?(:clj (variadic-proxy +* quantum.core.numeric.operators/+*-bin))
+#?(:clj (variadic-proxy +*  quantum.core.numeric.operators/+*-bin ))
+#?(:clj (variadic-proxy +*& quantum.core.numeric.operators/+*-bin&))
 
-#?(:clj (defalias +'-bin core/+')
-        #_(defnt' +'-bin "Strict |+|; throws exception on overflow/underflow"
-           ; TODO take out auto-quote generator
+#?(:clj #_(defalias +'-bin core/+')
+        (defnt' +'-bin "Strict `+`. Throws exception on overflow/underflow."
           (^int  ^:intrinsic [^int  x ^int  y] (Math/addExact x y))
           (^long ^:intrinsic [^long x ^long y] (Math/addExact x y))
-          (^long [^long x] ; TODO boxes value... how to fix?
-            (if (== x Long/MAX_VALUE)
-                (throw num-ex)
-                (+* x))))
+          (                  [#{byte char short int long float double Number} x] x))
    :cljs (defalias +'-bin core/+))
 
-#?(:clj (variadic-proxy +' quantum.core.numeric.operators/+'-bin))
+#?(:clj (variadic-proxy +'  quantum.core.numeric.operators/+'-bin ))
+#?(:clj (variadic-proxy +'& quantum.core.numeric.operators/+'-bin&))
 
 ; "Natural |+|; promotes on overflow/underflow"
-#?(:clj  (defalias +-bin core/+)
+#?(:clj  (defalias +-bin core/+) ; TODO port
    :cljs (defalias +-bin core/+))
 
-#?(:clj (variadic-proxy + quantum.core.numeric.operators/+-bin))
-
+#?(:clj (variadic-proxy +  quantum.core.numeric.operators/+-bin))
+#?(:clj (variadic-proxy +& quantum.core.numeric.operators/+-bin&))
 
 ; ===== SUBTRACT ===== ;
 
-(defalias -*-bin unchecked-subtract)
+#?(:clj (defnt' -*-bin "Lax `-`. Continues on overflow/underflow."
+          #?(:clj  ([#{byte char short int long float double} x]
+                     (Numeric/negate x))
+             :cljs (^first [^double? x] (TODO "fix") (ntypes/-negate x)))
+          ([#{byte char short int long float double} #_(- prim? boolean) x
+            #{byte char short int long float double} #_(- prim? boolean) y]
+            (Numeric/subtract x y))
+          (^BigInteger [^BigInteger x] (-> x .negate))
+          (^BigInt     [^BigInt     x]
+            (-> x ->big-integer -*-bin ->bigint)))
+   :cljs (defalias -*-bin unchecked-subtract))
 
-#_(defnt -*-bin "Lax |-|; continues on overflow/underflow"
-  #?(:clj  (^{:tag :first} [#{byte char short int long float double} x]
-             (quantum.core.Numeric/negate x))
-     :cljs (^{:tag :first} [^double? x] (TODO "fix") (ntypes/-negate x)))
-  #?(:clj (^{:tag :auto-promote} ; TODO should be :first?
-            [#{byte char short int long float double} #_(- prim? boolean) x
-             #{byte char short int long float double} #_(- prim? boolean) y]
-            (quantum.core.Numeric/subtract x y)))
-  #?(:clj (^java.math.BigInteger [^java.math.BigInteger x]
-            (-> x .negate)))
-  #?(:clj (^clojure.lang.BigInt  [^clojure.lang.BigInt  x]
-            (-> x ->big-integer -*-bin ->bigint))))
+#?(:clj (variadic-proxy -*  quantum.core.numeric.operators/-*-bin ))
+#?(:clj (variadic-proxy -*& quantum.core.numeric.operators/-*-bin&))
 
-#?(:clj (variadic-proxy -* quantum.core.numeric.operators/-*-bin))
-
-#?(:clj (defalias -'-bin core/-)
-        #_(defnt' -'-bin "Strict |-|; throws exception on overflow/underflow"
-            ; TODO take out auto-quote generator
-            (^int  ^:intrinsic [^int  x ^int  y] (Math/subtractExact x y))
-            (^long ^:intrinsic [^long x ^long y] (Math/subtractExact x y))
-            (^int  ^:intrinsic [^int  x] (Math/negateExact x))
-            (^long ^:intrinsic [^long x] (Math/negateExact x))
-            (^long [^long x] ; TODO boxes value... how to fix?
-              (if (== x Long/MIN_VALUE)
-                  (throw num-ex)
-                  (-* x))))
+#?(:clj #_(defalias -'-bin core/-)
+         (defnt' -'-bin "Strict `-`. Throws exception on overflow/underflow."
+           (^int  ^:intrinsic [^int  x ^int  y] (Math/subtractExact x y))
+           (^long ^:intrinsic [^long x ^long y] (Math/subtractExact x y))
+           (^int  ^:intrinsic [^int  x] (Math/negateExact x))
+           (^long ^:intrinsic [^long x] (Math/negateExact x))
+           (^byte  [^byte   x] (if (Numeric/eq x Byte/MIN_VALUE   ) (num-ex) (-* x)))
+           (^char  [^char   x] (if (Numeric/eq x 0                ) 0        (num-ex)))
+           (^short [^short  x] (if (Numeric/eq x Short/MIN_VALUE  ) (num-ex) (-* x)))
+           (^int   [^int    x] (if (Numeric/eq x Integer/MIN_VALUE) (num-ex) (-* x)))
+           (^long  [^long   x] (if (Numeric/eq x Long/MIN_VALUE   ) (num-ex) (-* x))))
    :cljs (defalias -'-bin core/-))
 
-#?(:clj (variadic-proxy -' quantum.core.numeric.operators/-'-bin))
+#?(:clj (variadic-proxy -'  quantum.core.numeric.operators/-'-bin ))
+#?(:clj (variadic-proxy -'& quantum.core.numeric.operators/-'-bin&))
 
 #?(:cljs (defn --bin- [x y] (core/- x y)))  ; TODO only to fix CLJS arithmetic warning here
 
-(defnt --bin "Natural |-|; promotes on overflow/underflow"
-  #?(:clj  (^{:tag :auto-promote} [^long x] ; TODO boxes value... how to fix?
-             (if (== x Long/MIN_VALUE)
-                 (-> x ->big-integer -* ->bigint)
-                 (-* x))))
-           ([#?(:clj x :cljs ^double? x) y] (#?(:clj core/- :cljs --bin-) x y)))
+(defnt --bin "Natural `-`. Promotes on overflow/underflow."
+  ([#?(:clj x :cljs ^double? x) y] (#?(:clj core/- :cljs --bin-) x y)))
 
-#?(:clj (variadic-proxy - quantum.core.numeric.operators/--bin))
+#?(:clj (variadic-proxy -  quantum.core.numeric.operators/--bin ))
+#?(:clj (variadic-proxy -& quantum.core.numeric.operators/--bin&))
 
 ; ===== MULTIPLY ===== ;
 
 ; (js/Math.imul x y) ; 32-bit int multiplication
 
-#?(:clj (defnt' **-bin "Lax |*|; continues on overflow/underflow"
-          (^{:tag :auto-promote}
-            [#{byte char short int long float double} #_(- prim? boolean) x
-             #{byte char short int long float double} #_(- prim? boolean) y]
-            (quantum.core.Numeric/multiply x y))
-          ([^clojure.lang.BigInt x ^clojure.lang.BigInt y]
-            (.multiply x y))
-          ([^java.math.BigDecimal x ^java.math.BigDecimal y]
+#?(:clj (defnt' **-bin "Lax `*`. Continues on overflow/underflow."
+          ([#{byte char short int long float double} #_(- prim? boolean) x
+            #{byte char short int long float double} #_(- prim? boolean) y]
+            (Numeric/multiply x y))
+          ([^BigInt x ^BigInt y] (.multiply x y))
+          ([^BigDecimal x ^BigDecimal y]
             (if (nil? *math-context*)
                 (.multiply x y)
                 (.multiply x y *math-context*))))
-   :cljs (defn **-bin "Lax |*|; continues on overflow/underflow"
+   :cljs (defn **-bin "Lax `*`. Continues on overflow/underflow."
            ([] 0)
            ([x] x)
            ([x y] (TODO "fix") (ntypes/-multiply x y))))
 
-#?(:clj (variadic-proxy ** quantum.core.numeric.operators/*-bin))
+#?(:clj (variadic-proxy **  quantum.core.numeric.operators/**-bin ))
+#?(:clj (variadic-proxy **& quantum.core.numeric.operators/**-bin&))
 
 #?(:cljs (defn *'-bin- [x y] (TODO))) ; TODO only to fix CLJS arithmetic warning here
 
-#?(:clj  (defnt' *'-bin "Strict |*|; throws exception on overflow/underflow"
+#?(:clj  (defnt' *'-bin "Strict `*`. Throws exception on overflow/underflow."
            (^int  ^:intrinsic [^int  x ^int  y] (Math/multiplyExact x y))
            (^long ^:intrinsic [^long x ^long y] (Math/multiplyExact x y)))
    :cljs (defnt  *'-bin
            ([x y] (*'-bin- x y))))
 
-#?(:clj (variadic-proxy *' quantum.core.numeric.operators/*'-bin))
+#?(:clj (variadic-proxy *'  quantum.core.numeric.operators/*'-bin ))
+#?(:clj (variadic-proxy *'& quantum.core.numeric.operators/*'-bin&))
 
 ; "Natural |*|; promotes on overflow/underflow"
 #?(:clj  (defalias *-bin core/*)
    :cljs (defalias *-bin core/*))
 
-#?(:clj (variadic-proxy * quantum.core.numeric.operators/*-bin))
+#?(:clj (variadic-proxy *  quantum.core.numeric.operators/*-bin ))
+#?(:clj (variadic-proxy *& quantum.core.numeric.operators/*-bin&))
 
 ; ===== DIVIDE ===== ;
 
 #?(:clj
-  (defnt' div*-bin-
-  "Lax |/|; continues on overflow/underflow.
-   TODO Doesn't preserve ratios."
-  (^double ; is it actually always double?
-    [#{byte char short int long float double} n
-     #{byte char short int long float double} d]
+(defnt' div*-bin-
+  "Lax |/|; continues on overflow/underflow."
+  {:todo #{"Doesn't preserve ratios"}}
+  ([#{byte char short int long float double} n
+    #{byte char short int long float double} d]
     (quantum.core.Numeric/divide n d))
-  (^Number [^java.math.BigInteger n ^java.math.BigInteger d]
+  (^Number [^BigInteger n ^BigInteger d]
     (when (.equals d BigInteger/ZERO)
       (throw (ArithmeticException. "Divide by zero")))
     (let [^BigInteger gcd (.gcd n d)]
@@ -210,7 +205,7 @@
 #?(:cljs (defn div*-bin- [x y] (core// x y)))  ; TODO only to fix CLJS arithmetic warning here
 
 ; TODO optimization: (/ x 4) = (& x 3)
-#?(:clj  (defntp div*-bin "Lax |/|. Continues on overflow/underflow."
+#?(:clj  (defntp div*-bin "Lax `/`. Continues on overflow/underflow."
            ([^byte   n d] (div*-bin-denom-byte-protocol   d n))
            ([^char   n d] (div*-bin-denom-char-protocol   d n))
            ([^short  n d] (div*-bin-denom-short-protocol  d n))
@@ -224,7 +219,7 @@
              (div*-bin- n d))
            ([^java.math.BigDecimal n ^java.math.BigDecimal d]
              (div*-bin- n d)))
-   :cljs (defnt div*-bin "Lax |/|. Continues on overflow/underflow."
+   :cljs (defnt div*-bin "Lax `/`. Continues on overflow/underflow."
            ([^ratio? x  ] (TODO "fix") (ntypes/-invert x))
            ([^ratio? x y]
              (TODO "fix")
@@ -252,8 +247,8 @@
 ;==================={   UNARY MATH OPERATORS   }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-#?(:clj (defnt' dec* "Unchecked |dec|. Doesn't throw on overflow/underflow."
-          (^{:tag :first} [#{byte char short long float double} x] (quantum.core.Numeric/dec x))
+#?(:clj (defnt' dec* "Lax `dec`. Continues on overflow/underflow."
+          ([#{byte char short long float double} x] (quantum.core.Numeric/dec x))
           ([^clojure.lang.BigInt x]
             (-> x ->big-integer (.subtract BigInteger/ONE) BigInt/fromBigInteger))
           ([^java.math.BigDecimal x]
@@ -282,11 +277,11 @@
            ([^double? x] (core/dec x))
            ([^bigint? x] (- x int/ONE))))
 
-#?(:clj  (defnt' inc* "Unchecked |inc|. Doesn't throw on overflow/underflow."
-           (^{:tag :first} [#{byte char short int long float double} x] (quantum.core.Numeric/inc x))
-           ([^clojure.lang.BigInt x]
+#?(:clj  (defnt' inc* "Lax `inc`. Continues on overflow/underflow."
+           ([#{byte char short int long float double} x] (quantum.core.Numeric/inc x))
+           ([^BigInt x]
              (-> x ->big-integer (.subtract BigInteger/ONE) BigInt/fromBigInteger))
-           ([^java.math.BigDecimal x]
+           ([^BigDecimal x]
              (if (nil? *math-context*)
                  (.add x BigDecimal/ONE)
                  (.add x BigDecimal/ONE *math-context*))))
@@ -313,21 +308,19 @@
    :cljs (defalias inc' inc          ))
 
 #?(:clj (defnt abs'
-          (^int               [^int    x] (Math/abs x))
-          (^long              [^long   x] (Math/abs x))
-          (^double            [^double x] (Math/abs x))
+          ([#{int long double} x] (Math/abs x))
           (^float ^:intrinsic [^float  x] (Math/abs x))
-          (^java.math.BigDecimal [^java.math.BigDecimal x]
+          (^BigDecimal [^BigDecimal x]
             (.abs x))
-          (^java.math.BigDecimal [^java.math.BigDecimal x math-context]
+          (^BigDecimal [^BigDecimal x math-context]
             (.abs x math-context))
-          (^java.math.BigInteger [^java.math.BigInteger x]
+          (^BigInteger [^BigInteger x]
             (.abs x))
-          (^clojure.lang.BigInt [^clojure.lang.BigInt x]
+          (^BigInt [^BigInt x]
             (if (nil? (.bipart x))
-                (clojure.lang.BigInt/fromLong       (abs' (.lpart  x)))
-                (clojure.lang.BigInt/fromBigInteger (abs' (.bipart x)))))
-          (^clojure.lang.Ratio [^ratio? x] ; TODO this might be an awful implementation
+                (BigInt/fromLong       (abs' (.lpart  x)))
+                (BigInt/fromBigInteger (abs' (.bipart x)))))
+          (^Ratio [^ratio? x] ; TODO this might be an awful implementation
             (/ (abs' (numerator   x))
                (abs' (denominator x)))))
    :cljs (defnt abs' ([x] (TODO "incomplete") (js/Math.abs x))))
