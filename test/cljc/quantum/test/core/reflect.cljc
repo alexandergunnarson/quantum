@@ -19,7 +19,5 @@
 (defn test:max-inputs
   [func num])
 
-(defn test:qualified-name 
+(defn test:qualified-name
   ([x]))
-
-(defn test:all-todos [])
