@@ -11,7 +11,7 @@
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
               flatten-1 lflatten-1 concatv nnil? nempty?
               map+ map lmap map-indexed kmap index-of index-of-pred
-              flatten-1 each popl popr getr butlast last drop ldrop
+              flatten-1 each popl popr slice butlast last drop ldrop
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
     [quantum.core.async       :as async
       :refer [go <! <!! >! put! timeout]]
@@ -196,7 +196,7 @@
                                        (map-indexed
                                          (fn [i elem]
                                            (lfor [[from to] (get measures-indices i)]
-                                             (-> (getr elem from to) str/trim (whenc empty? nil) f)))
+                                             (-> (slice elem from to) str/trim (whenc empty? nil) f)))
                                          x))
                                    measures
                                      (mapv zip (extract measures-exprs identity)
