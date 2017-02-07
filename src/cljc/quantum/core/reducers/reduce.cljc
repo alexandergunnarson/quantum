@@ -168,57 +168,8 @@
 (defn persistent-into [to from]
   (reduce* from conj-red to))
 
-(defnt joinl
-  "Join, left.
-   Like |into|, but handles kv sources,
-   and chooses the most efficient joining/combining operation possible
-   based on the input types."
-  {:attribution "Alex Gunnarson"
-   :todo ["Shorten this code using type differences and type unions with |editable?|"
-          "Handle arrays"
-          "Handle one-arg"
-          "Handle mutable collections"]}
-  ([to] to)
-  ([^reducer?       from] (joinl [] from))
-  ([^+vec?          to from] (if (vector?   from)
-                                 (catvec         to from)
-                                 (transient-into to from)))
-  ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
-                                          (seqspert.hash-set/sequential-splice-hash-sets to from)
-                                          (transient-into to from))
-                             :cljs (transient-into to from)))
-  ([^+sorted-set?   to from] (if (t/+set?           from)
-                                 (clojure.set/union to from)
-                                 (persistent-into   to from)))
-  ([^+hash-map?     to from] #?(:clj  (if (t/+hash-map? from)
-                                          (seqspert.hash-map/sequential-splice-hash-maps to from)
-                                          (transient-into to from))
-                                :cljs (transient-into to from)))
-  ([^+sorted-map?   to from] (persistent-into to from))
-  ([^string?        to from] (str #?(:clj  (reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
-                                     :cljs (reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
-  ([                to from] (if (nil? to) from (persistent-into to from))))
-
-#_(defn joinl
-  ([] nil)
-  ([to] to)
-  ([to from] (joinl* to from))
-  ([to from & froms]
-    (reduce joinl (joinl to from) froms)))
-
-(defnt joinl'
-  "Like |joinl|, but reduces into the empty version of the
-   collection passed."
-  ([^reducer?     from] (joinl' (empty (:coll from)) from))
-  ([              from] (joinl' (empty        from ) from))
-  ([^+list?    to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
-  ([           to from] (joinl to from)))
-
-#?(:clj (defalias join  joinl ))
-#?(:clj (defalias join' joinl'))
-
 (defn red-apply
-  "Applies `f` to `coll`, pairwise, using `reduce`."
+  "Applies ->`f` to ->`coll`, pairwise, using `reduce`."
   [f coll]
   (let [first? (volatile! true)]
     (reduce* coll

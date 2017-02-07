@@ -24,7 +24,7 @@
 
 (deftest test:red-fori
   (let [ret (ns/red-fori [elem [1 2 1 3 4 2]
-                          ret  {:a #{} :b [] :c i} i]
+                          ret  {:a #{} :b [] :c []} i]
               (-> ret (update :a conj elem)
                       (update :b conj elem)
                       (update :c conj i)))]
