@@ -154,26 +154,3 @@
           (throw (Exception. (str "Function needs at least " (apply min cargs) " inputs")))
           (apply max carr)))))
 
-#?(:clj
-(defnt qualified-name
-  {:todo ["Different ns"]}
-  ([^clojure.lang.Var x]
-    (str (-> x meta :ns ns-name name) "/"
-         (-> x meta :name name)))
-  ([^clojure.lang.Namespace x]
-    (-> x ns-name name))))
-
-#?(:clj
-(defn all-todos
-  {:todo ["Put this in quantum.core.ns"]}
-  []
-  (->> (all-ns)
-       (map (juxt (juxt identity)
-            (fn-> ns-name ns-interns vals)))
-       (apply concat) ; flatten-1
-       (apply concat)
-       (map (juxt identity (fn-> meta :todo)))
-       (remove (fn-> second empty?))
-       (into (sorted-map-by
-               (fn [a b] (compare (qualified-name a)
-                                  (qualified-name b))))))))

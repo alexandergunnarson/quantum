@@ -244,7 +244,7 @@
 (defnt' ->unsigned
   {:attribution  ["ztellman/primitive-math" "gloss.data.primitives"]
    :contributors {"Alex Gunnarson" "defnt-ed"}
-   :todo ["change to unchecked-bit-and after making sure it won't overflow"]}
+   :todo #{"change to unchecked-bit-and after making sure it won't overflow"}}
   (^short [^byte  x] (&& (->short* bytes2) x))
   (^int   [^short x] (&& (->int*   bytes4) x))
   (^long  [^int   x] (&& (->long*  bytes8) x))

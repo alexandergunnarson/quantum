@@ -125,8 +125,8 @@
   ([         x] (-> x arr/->bytes-protocol decode64))))
 
 #?(:clj
-(defnt ^Integer decode64-int
-  ([^bytes? x] (int (Base64/decodeInteger x)))
+(defnt ^int decode64-int
+  ([^bytes? x] (->int (Base64/decodeInteger x)))
   ([x] (decode64-int (arr/->bytes-protocol x)))))
 
 #?(:clj

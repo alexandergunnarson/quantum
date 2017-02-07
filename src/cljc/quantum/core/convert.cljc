@@ -26,15 +26,14 @@
                      [quantum.core.collections.core
                        :refer [lasti]]
                      [quantum.core.convert.core          :as conv]
-                     [quantum.core.convert.primitive     :as pconv
-                       :refer [->byte]]
+                     [quantum.core.convert.primitive     :as pconv]
                      [quantum.core.data.complex.json     :as json]
                      [quantum.core.macros                :as macros
                        :refer [defnt #?(:clj defnt')]]
                      [quantum.core.paths                 :as path]
                      [quantum.core.fn                    :as fn]
                      [quantum.core.vars                  :as var
-                       :refer [defalias]]
+                       :refer [defalias defaliases]]
                      [quantum.core.log                   :as log]
                      [quantum.core.type
                        :refer [static-cast]])
@@ -79,6 +78,19 @@
 ; ===================
 
 (log/this-ns)
+
+#?(:clj
+(defaliases pconv
+  ->boolean
+  ->byte* ->byte
+  ->char* ->char
+  ->short* ->short
+  ->int* ->int
+  ->long* ->long
+  ->float* ->float
+  ->double* ->double
+  ->boxed ->unboxed ->unsigned
+  ubyte->byte ushort->short uint->int ulong->long))
 
         (defalias utf8-string   conv/utf8-string  )
         (defalias base64-encode conv/base64-encode)
