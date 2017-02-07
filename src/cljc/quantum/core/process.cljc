@@ -23,6 +23,9 @@
                    ;quantum.core.data.queue.LinkedBlockingQueue
                    clojure.core.async.impl.channels.ManyToManyChannel)))
 
+; https://github.com/Raynes/conch
+; https://github.com/clojure/clojure/blob/master/src/clj/clojure/java/shell.clj
+
 ; #?(:clj
 ; (defn read-streams
 ;   "@output-streams are 'output' relative to the process.
