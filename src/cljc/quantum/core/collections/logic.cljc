@@ -2,14 +2,11 @@
   (:refer-clojure :exclude [reduce some not-any? every? not-every?])
   (:require
     [quantum.core.loops
-      :refer        [#?@(:clj [reduce])]
-      :refer-macros [          reduce]]
+      :refer [reduce]]
     [quantum.core.fn   :as fn
-      :refer        [#?@(:clj [rcomp])]
-      :refer-macros [          rcomp]]
+      :refer [rcomp]]
     [quantum.core.vars :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [defalias]]))
+      :refer [defalias]]))
 
 ; LOGICAL ;
 
@@ -37,3 +34,10 @@
 
 (defn apply-and [xs] (seq-and identity xs))
 (defn apply-or  [xs] (seq-or  identity xs))
+
+(defn seq-and-2
+  "`seq-and` for pairwise comparisons."
+  [pred xs]
+  (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs)))
+
+(defalias every?-2 seq-and-2)
