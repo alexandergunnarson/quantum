@@ -3,6 +3,13 @@
             (refresh))
 #_(load-file "./dev/cljc/quantum/dev.cljc")
 #?(:clj (require 'quantum.core.core))
+
+#?(:clj
+(do (require '[clojure.tools.namespace.repl :refer [refresh]])
+    (require 'quantum.core.meta.dev)
+    (quantum.core.meta.dev/enable-repl-utils!)
+    (refresh)))
+
 (ns quantum.dev
   (:refer-clojure :exclude [reduce for])
   (:require
