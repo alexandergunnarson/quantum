@@ -37,24 +37,18 @@
      conj
      conj! assoc! dissoc! disj!])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )        :as core]
+    [clojure.core                  :as core]
     [quantum.core.collections.core :as coll
-      :refer        [key val reverse
-                     #?@(:clj [count first rest getr last-index-of index-of lasti])]
-      :refer-macros [          count first rest getr last-index-of index-of lasti]]
+      :refer [key val reverse
+              count first rest slice last-index-of index-of lasti]]
     [quantum.core.reducers         :as red
-      :refer        [#?@(:clj [join])]
-      :refer-macros [          join]]
+      :refer [join]]
     [quantum.core.type             :as type
-      :refer        [#?@(:clj [should-transientize?])]
-      :refer-macros [          should-transientize?]]
+      :refer [should-transientize?]]
     [quantum.core.loops            :as loops
-      :refer        [#?@(:clj [for])]
-      :refer-macros [          for]]
+      :refer [for]]
     [quantum.core.vars             :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [defalias]]))
 
 ; ===== REPEAT =====
 
@@ -115,7 +109,7 @@
   ([]  (core/range))
   ([a] (core/range a))
   ([a b]
-    (if (neg? (- a b))
+    (if (neg? (- b a))
         (lrrange a b)
         (core/range a b))))
 
