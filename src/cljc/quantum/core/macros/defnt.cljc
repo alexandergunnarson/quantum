@@ -32,13 +32,22 @@
     [quantum.core.type.defs                  :as tdefs]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.vars                       :as var
-      :refer [defalias]]
-    [quantum.core.validate                   :as v
+      :refer [defalias replace-meta-from]]
+    [quantum.core.spec                       :as s
       :refer [validate]]))
 
-; TODO reorganize this namespace and move into other ones as necessary
-; TODO allow for ^:inline on certain `defnt` arities
-; TODO allow for use as higher-order function
+(def
+  ^{:todo {0 "Totally reorganize/cleanup this namespace and move into other ones as necessary"
+           1 {:desc     "Allow for ^:inline on certain `defnt` arities"
+              :priority 0.8}
+           2 {:desc     "Allow for use as higher-order function"
+              :priority 0.8}
+           3 "Document usage of `defnt`"
+           4 {:desc     "Multiple dispatch.
+                         As in Julia, 'When a function is applied to a particular tuple of args,
+                         the most specific method applicable to those arguments is applied.'"
+              :priority 0.7}}}
+  annotations nil)
 
 ; In using |defnt|, you should always prefer unboxed to boxed.
 ; The internal |reify| may differentiate unboxed and boxed, but the protocol won't
@@ -196,12 +205,12 @@
 
 (defn defnt-replace-kw
   "Replaces @kw with the appropriate hints/arglist"
-  [kw {:keys [type-hints type-arglist available-default-types hint inner-type-n]}]
+  [kw {:keys [type-hints type-arglist available-default-types hint elem-type-n]}]
   (condp = kw
     :first (->> type-arglist
                 (map (whenc1 (fn= :first) (first type-arglist))))
     :elem  (if (= hint :elem)
-               inner-type-n
+               elem-type-n
                hint)
     :else (do (assert (nnil? available-default-types))
               (->> type-hints
@@ -212,6 +221,45 @@
                            (whenc (get available-default-types n) empty?
                              (throw (->ex (str "Available default types for :else type hint are empty for position " n))))
                          :else type-hint)))))))
+
+(defn fn-expr->return-type
+  [{:keys [lang fn-sym fn-expr explicit-ret-type]}]
+  (validate fn-sym symbol?)
+  (let [non-recursive?      (->> fn-expr
+                                 (cbase/prewalk-find
+                                   #_(fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))) ; might not be a sym call — might be in a `->`
+                                   (fn-and symbol?
+                                           (fn-or (fn1 anap/symbol-eq? fn-sym)
+                                                  (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "-protocol")))))) ; protocol sym isn't defined yet either
+                                 first not)
+        ; _ (prl :user non-recursive? (quantum.core.print/pprint-hints fn-expr))
+        inferred-ret-type (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
+      #?(:clj  (let [info (ana/expr-info* fn-expr)]
+                 (when (contains? info :class)
+                   (if (-> info :class nil?)
+                       {:sym (symbol "nil")}
+                       {:sym (-> info :class (#(.getName ^Class %)) symbol)
+                        :class (:class info)})))
+         :cljs nil)) ; TODO CLJS
+        ; _ (prl :user explicit-ret-type inferred-ret-type arglist-hinted)
+        _ (validate nil
+            (s/constantly-or
+              (nil? explicit-ret-type)
+              (and explicit-ret-type (nil? inferred-ret-type))
+              (when (symbol? explicit-ret-type)
+                (= explicit-ret-type (:sym inferred-ret-type)))
+      #?(:clj (when (class? explicit-ret-type) ; e.g. can return explicit InputStream if BufferedInputStream inferred
+                (isa? (:class inferred-ret-type) explicit-ret-type)))
+      #?(:clj (when (symbol? explicit-ret-type)
+                (when-let [c (resolve explicit-ret-type)]
+                  (isa? (:class inferred-ret-type) c))))
+              (and (tcore/prim? explicit-ret-type)
+                   (tcore/prim? (:sym inferred-ret-type))
+                   (= explicit-ret-type (tdefs/max-type #{explicit-ret-type (:sym inferred-ret-type)}))))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
+        ret-type (or explicit-ret-type
+                     (when-let [c (:sym inferred-ret-type)] (and (not= c (symbol "nil")) c))
+                     (get trans/default-hint lang))]
+    ret-type))
 
 (defn defnt-gen-interface-expanded
   "Also used by CLJS, not because generating an interface is
@@ -235,9 +283,9 @@
                        assoc-arity-etc
                          (fn [hints]
                            (let [body         (list* 'do body)
-                                 inner-type-n (-> hints first tdefs/inner-type)
+                                 elem-type-n  (-> hints first tcore/->elem-type)
                                  hints-v (->> hints
-                                              (map (fn [hint] (defnt-replace-kw :elem (kmap hint inner-type-n))))
+                                              (map (fn [hint] (defnt-replace-kw :elem (kmap hint elem-type-n))))
                                               (into []))
                                  arglist-hinted (hint-arglist-with arglist hints-v)
                                  ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
@@ -257,26 +305,11 @@
                                                  (-> ret-type-0 (classes-for-type-predicate lang) first))
                                                (get-qualified-class-name lang ns-
                                                  ret-type-0)))
+                                 ; _ (prl :user (quantum.core.print/pprint-hints arity))
                                  ; TODO cache the result of postwalking the body like this, for protocol purposes
-                                 contextualized-body (delay (list* 'fn (proto/ensure-protocol-appropriate-arglist :clj arglist-hinted)
-                                                                       (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol)))
-                                 non-recursive?      (->> body
-                                                          (cbase/prewalk-find
-                                                            (fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))))
-                                                          first not)
-                                 ;_ (prl :user (quantum.core.print/pprint-hints contextualized-body))
-                                 inferred-ret-type (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
-                                                        #?(:clj  (some->> @contextualized-body ana/expr-info* :class (#(.getName ^Class %)) symbol)
-                                                           :cljs nil)) ; TODO CLJS
-                                 ;_ (prl :user explicit-ret-type inferred-ret-type arglist-hinted)
-                                 _ (assert (or (nil? explicit-ret-type)
-                                               (and explicit-ret-type (nil? inferred-ret-type))
-                                               (= explicit-ret-type inferred-ret-type)
-                                               (and (tcore/prim? explicit-ret-type)
-                                                    (tcore/prim? inferred-ret-type)
-                                                    (= explicit-ret-type (tdefs/max-type #{explicit-ret-type inferred-ret-type})))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
-                                           (kmap explicit-ret-type inferred-ret-type contextualized-body))
-                                 ret-type (or explicit-ret-type inferred-ret-type (get trans/default-hint lang))
+                                 contextualized-body (list* 'fn (proto/ensure-protocol-appropriate-arglist :clj arglist-hinted)
+                                                                (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol))
+                                 ret-type (fn-expr->return-type (assoc (kmap lang explicit-ret-type) :fn-sym sym :fn-expr contextualized-body))
                                  arity-hinted (assoc arity 0 arglist-hinted)]
                              [[method-name hints-v ret-type] (seq arity-hinted)]))]
                    (->> expanded-hints-list
@@ -351,7 +384,6 @@
                     (throw (->ex "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
 
-
 (defn defnt-gen-helper-macro
   "Generates the macro helper for |defnt|.
    A call to the |defnt| macro expands to this macro, which then expands, based
@@ -361,35 +393,41 @@
   [{:keys [genned-method-name
            genned-protocol-method-name-qualified
            reified-sym-qualified
+           strict-sym-postfix
            strict?
            relaxed?
            sym-with-meta
            lang]}]
   {:post [(log/ppr-hints :macro-expand "HELPER MACRO DEF" %)]}
    (let [args-sym        'args-sym
-         args-hinted-sym 'args-hinted-sym]
+         args-hinted-sym 'args-hinted-sym
+         gen (fn [strict-macro?]
+               (let [postfix (when strict-macro? (or strict-sym-postfix "&"))
+                     sym-with-meta' (replace-meta-from (symbol (str (name sym-with-meta) postfix)) sym-with-meta)]
+                `(defmacro ~sym-with-meta' [& ~args-sym]
+                   (let [~args-hinted-sym
+                           (quantum.core.macros.transform/try-hint-args ; TODO use expr-info to get better type resolution
+                             ~args-sym ~lang ~'&env)]
+                     (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta'
+                                           "|" ~args-hinted-sym
+                                           "|" '~genned-protocol-method-name-qualified
+                                           "|" '~genned-method-name)
+                     (if ~(when-not strict-macro?
+                           `(or (when-cljs ~'&env true)
+                                  (= ~lang :cljs)
+                                  ~relaxed?
+                                  (and (not ~strict?)
+                                       (quantum.core.macros.transform/any-hint-unresolved?
+                                         ~args-hinted-sym ~lang ~'&env))))
+                         (seq (concat (list '~genned-protocol-method-name-qualified)
+                                      ~args-hinted-sym))
+                         (seq (concat (list '.)
+                                      (list '~reified-sym-qualified)
+                                      (list '~genned-method-name)
+                                      ~args-hinted-sym)))))))]
      {:helper-macro-def
-       `(defmacro ~sym-with-meta [& ~args-sym]
-          (let [~args-hinted-sym
-                  (quantum.core.macros.transform/try-hint-args ; TODO use expr-info to get better type resolution
-                    ~args-sym ~lang ~'&env)]
-            (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta
-                                  "|" ~args-hinted-sym
-                                  "|" '~genned-protocol-method-name-qualified
-                                  "|" '~genned-method-name)
-            (if (or (when-cljs ~'&env true)
-                    (= ~lang :cljs)
-                    ~relaxed?
-                    (and (not ~strict?)
-                         (quantum.core.macros.transform/any-hint-unresolved?
-                           ~args-hinted-sym ~lang ~'&env)))
-                (seq (concat (list '~genned-protocol-method-name-qualified)
-                             ~args-hinted-sym))
-                (seq (concat (list '.)
-                             (list '~reified-sym-qualified)
-                             (list '~genned-method-name)
-                             ~args-hinted-sym)))))}))
-
+       `(do ~@[(when-not relaxed? (gen true))]
+            ~(gen false))}))
 
 (defn defnt-arglists-types
   {:out-like `{:arglists-types
@@ -486,7 +524,8 @@
           sym-with-meta (with-meta sym (merge {:doc doc-} meta- (-> sym meta (dissoc :tag))))
           tag           (get-qualified-class-name lang ns- (-> sym meta :tag))
           body          (mfn/optimize-defn-variant-body! body externs)
-          env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs tag)
+          strict-sym-postfix (-> sym-with-meta meta :strict-postfix)
+          env (-> (kmap sym strict? relaxed? sym-with-meta lang ns- body externs tag strict-sym-postfix)
                   (merge-call defnt-arities
                               defnt-arglists
                               defnt-gen-protocol-names
