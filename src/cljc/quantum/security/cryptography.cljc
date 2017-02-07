@@ -28,7 +28,8 @@
       :refer [defnt]]
     [quantum.core.nondeterministic :as rand]
     [quantum.core.numeric          :as num]
-    [quantum.core.convert          :as conv]
+    [quantum.core.convert          :as conv
+      :refer [->int]]
     [quantum.core.string           :as str]
     [quantum.core.spec             :as s
       :refer [validate]]
