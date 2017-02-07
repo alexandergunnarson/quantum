@@ -19,7 +19,7 @@
              [quantum.core.error
                :refer [->ex]]
              [quantum.core.fn            :as fn
-               :refer [fn-> fn1 rfn]]
+               :refer [fn-> fn1 rfn fn$]]
              [quantum.core.logic         :as logic
                :refer [fn-and whenc whenc1 ifn condf]]
              [quantum.core.loops         :as loops
@@ -44,17 +44,22 @@
              java.net.IDN
              java.util.regex.Pattern)))
 
-; TODO rename/move/delete
-#?(:clj (defn upper-first [s] (apply str (.toUpperCase (str (first s))) (rest s))))
+(def
+  ^{:todo
+      {0 "alias cuerdas.core and review the duplication of certain of these functions"}
+    :explorations
+      #{"https://github.com/expez/superstring"
+        "http://www.regular-expressions.info"}
+    :ideas
+      ["What about structural sharing with strings? Wouldn't there have to be some
+        sort of compact immutable bit map or something to diff it rather than just
+        making an entirely new string?"]}
+  annotations nil)
 
-; TO EXPLORE
-; - https://github.com/expez/superstring
-; ==================
-
-; http://www.regular-expressions.info
-; What about structural sharing with strings? Wouldn't there have to be some sort
-; of compact immutable bit map or something to diff it rather than just making
-; an entirely new string?
+#?(:clj
+(defn upper-first
+  {:todo {0 "rename/move/delete"}}
+  [s] (apply str (.toUpperCase (str (first s))) (rest s))))
 
 ; ===== CHARS =====
 
@@ -95,7 +100,7 @@
 (defnt numeric?
 #?(:clj
   ([^char?   c] (contains? num-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? num-chars     )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? num-chars) s))))
 
 (defnt numeric-readable?
 #?(:clj
@@ -105,7 +110,7 @@
 (defnt upper?
 #?(:clj
   ([^char?   c] (contains? upper-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? upper-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? upper-chars) s))))
 
 (defalias ->upper form/->upper)
 ; Converts string to all upper-case respecting
@@ -117,7 +122,7 @@
 (defnt lower?
 #?(:clj
   ([^char?   c] (contains? lower-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? lower-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? lower-chars) s))))
 
 (defalias ->lower form/->lower)
 ; Converts string to all lower-case respecting
@@ -129,12 +134,12 @@
 (defnt alpha?
 #?(:clj
   ([^char?   c] (contains? alpha-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? alpha-chars   )) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alpha-chars) s))))
 
 (defnt alphanum?
 #?(:clj
   ([^char?   c] (contains? alphanum-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? alphanum-chars)) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alphanum-chars) s))))
 
 (defnt letters?
   "Checks if string contains only letters.
@@ -149,14 +154,14 @@
 (defnt blank?
 #?(:clj
   ([^char?   c] (contains? whitespace-chars c)))
-  ([^string? s] (seq-and (extern (partial contains? whitespace-chars)) s)))
+  ([^string? s] (seq-and (fn1 contains? whitespace-chars) s)))
 
 (def whitespace? (fn-and nempty? blank?))
 
 (defnt line-terminator?
 #?(:clj
   ([^char?   c] (contains? line-terminator-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (extern (partial contains? line-terminator-chars)) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? line-terminator-chars) s))))
 
 (defalias capitalize form/capitalize)
 
@@ -401,23 +406,18 @@
 
 ; ===== PUNCTUATION =====
 
-(def quote-types #{"'" "\""})
+(def quote-types #{\' \"})
 
-(defn squote
-  "Wraps a given string in single quotes."
-  {:todo ["Protocolize"]}
-  [str-0]
-  (if (nil? str-0)
-      (str \' "nil" \')
-      (str \' str-0 \')))
+(defn wrap
+  "Wraps the string representation of ->`x` in the string representation of ->`to-wrap`."
+  [x to-wrap] (str to-wrap x to-wrap))
 
-(defn dquote
-  "Wraps a given string in double quotes."
-  {:todo ["Protocolize"]}
-  [str-0]
-  (if (nil? str-0)
-      (str \" "nil" \")
-      (str \" str-0 \")))
+(defn squote "Wraps the string representation of ->`x` in single quotes." [x] (wrap x \'))
+(defn dquote "Wraps the string representation of ->`x` in double quotes." [x] (wrap x \"))
+
+(defn paren   "Wraps the string representation of ->`x` in parentheses."  [x] (str \( x \)))
+
+(defn bracket "Wraps the string representation of ->`x` in brackets."     [x] (str \[ x \]))
 
 ; (defn dequote
 ;   {:in  "'Abcdef'"
@@ -429,15 +429,6 @@
 ;       (-> s popl popr) ; TODO this will be optimized away
 ;       s))
 
-(defn paren
-  "Wraps a given string in parentheses."
-  {:todo ["Protocolize"]}
-  [str-0]
-  (if (nil? str-0)
-      (str \( "nil" \))
-      (str \( str-0 \))))
-
-(defn bracket [s] (str \[ s \]))
 
 (defn sp
   "Like |str|, but adds spaces between the arguments."
