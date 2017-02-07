@@ -143,9 +143,15 @@
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
-#?(:clj (defmacro ifn [x pred tf ff] `(let [x# ~x] (if (~pred x#) (~tf x#) (~ff x#)))))
-#?(:clj (defmacro ifc [x pred t  f ] `(let [x# ~x] (if (~pred x#)  ~t       ~f     ))))
-#?(:clj (defmacro ifp [x pred tf ff] `(let [x# ~x] (if  ~pred     (~tf x#) (~ff x#)))))
+; TODO compress this?
+
+#?(:clj (defmacro ifn   [x pred tf ff] `(let [x# ~x] (if (~pred x#) (~tf x#) (~ff x#)))))
+#?(:clj (defmacro ifc   [x pred t  f ] `(let [x# ~x] (if (~pred x#)  ~t       ~f     ))))
+#?(:clj (defmacro ifp   [x pred tf ff] `(let [x# ~x] (if  ~pred     (~tf x#) (~ff x#)))))
+
+#?(:clj (defmacro ifn-> [x pred tf ff] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~tf) (-> x# ~ff)))))
+#?(:clj (defmacro ifc-> [x pred t  f ] `(let [x# ~x] (if (-> x# ~pred)  ~t       ~f     ))))
+#?(:clj (defmacro ifp-> [x pred tf ff] `(let [x# ~x] (if  ~pred        (-> x# ~tf) (-> x# ~ff)))))
 
 #?(:clj (defmacro ifn1 [x0 x1 x2] `(fn [arg#] (ifn arg# ~x0 ~x1 ~x2))))
 #?(:clj (defmacro ifp1 [x0 x1 x2] `(fn [arg#] (ifp arg# ~x0 ~x1 ~x2))))
@@ -153,23 +159,32 @@
 
 #?(:clj
 (defmacro whenf
-  "Analogous to ifn.
-   (whenf 1 nnil? inc) = (ifn 1 nnil? inc identity)
-   whenf : identity :: when : nil"
-  [obj pred true-fn]
-  `(let [obj-f# ~obj] (if (~pred obj-f#) (~true-fn obj-f#) obj-f#))))
+  "Analogous to `ifn`.
+   (whenf 1 nnil? inc)` = `(ifn 1 nnil? inc identity)`
+   `whenf` : `identity` :: `when` : `nil`"
+  [x pred tf] `(let [x# ~x] (if (~pred x#) (~tf x#) x#))))
+
+#?(:clj
+(defmacro whenf->
+  "Analogous to `ifn->`.
+   `(whenf-> 1 nnil? inc)` = `(ifn-> 1 nnil? inc identity)`
+   `whenf->` : `identity` :: `when` : `nil`"
+  [x pred texpr] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~texpr) x#))))
 
 #?(:clj
 (defmacro whenc
-  "`whenf` + `ifc`"
-  [obj pred true-expr]
-  `(let [obj-f# ~obj] (if (~pred obj-f#) ~true-expr obj-f#))))
+  "`whenf` + `ifc`" [x pred texpr] `(let [x# ~x] (if (~pred x#) ~texpr x#))))
+
+#?(:clj
+(defmacro whenc->
+  "`whenf->` + `ifc->`" [x pred-expr texpr] `(let [x# ~x] (if (-> x# ~pred-expr) ~texpr x#))))
 
 #?(:clj
 (defmacro whenp
-  "`whenf` + `ifp`"
-  [obj pred true-fn]
-  `(let [obj-f# ~obj] (if ~pred (~true-fn obj-f#) obj-f#))))
+  "`whenf` + `ifp`" [x pred tf] `(let [x# ~x] (if ~pred (~tf x#) x#))))
+
+(defmacro whenp->
+  "`whenf->` + `ifp->`" [x pred texpr] `(let [x# ~x] (if ~pred (-> x# ~texpr) x#)))
 
 #?(:clj (defmacro whenf1 [x0 x1] `(fn [arg#] (whenf arg# ~x0 ~x1))))
 #?(:clj (defmacro whenc1 [x0 x1] `(fn [arg#] (whenc arg# ~x0 ~x1))))
