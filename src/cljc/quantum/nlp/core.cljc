@@ -8,7 +8,7 @@
     [quantum.core.collections :as coll
       :refer [map+ remove+
               mutable setm!
-              kmap aget-in aget-in* ifor get reducei]]
+              kmap ifor get reducei]]
     [quantum.core.error
       :refer [->ex]]
     [quantum.core.numeric  :as num
