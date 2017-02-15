@@ -9,9 +9,9 @@
       :refer [kmap]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
-      :refer [fn$]]
+      :refer [fn$ fn1]]
     [quantum.core.macros.core      :as cmacros
-      :refer [if-cljs]]
+      :refer [case-env case-env*]]
     [quantum.core.log              :as log]
     [quantum.core.vars             :as var
       :refer [defalias]])
@@ -20,7 +20,7 @@
       :refer [with-log-errors]]))
 
 (defn generic-error [env]
-  (if-cljs env 'js/Error 'Throwable))
+  (case-env* env :clj 'Throwable :cljs 'js/Error))
 
 #?(:clj
 (defmacro catch-all
@@ -37,6 +37,7 @@
 
 
 (def error? (fn$ instance? #?(:clj Throwable :cljs js/Error)))
+(def ex-info? (fn$ instance? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)))
 
 (defrecord Err [type msg objs])
 
@@ -53,6 +54,14 @@
   ([type]          (ex-info (name type) (->err type type)))
   ([msg objs]      (ex-info (str msg)   (->err msg  msg objs)))
   ([type msg objs] (ex-info msg         (->err type msg objs))))
+
+(def throw-ex (comp (fn1 throw) ->ex))
+
+(defn ->ex-info
+  ([objs]     (ex-info "Exception" objs))
+  ([msg objs] (ex-info msg         objs)))
+
+(def throw-info (comp (fn1 throw) ->ex-info))
 
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
@@ -72,25 +81,6 @@
                      (assoc m :data (ex-data e))
                      m))
                {:ex-data e})))
-
-; NEED MORE MACRO EXPERIENCE TO DO THIS
-; (defmacro catch-or
-;   "Like /catch/, but catches multiple given exceptions in the same way."
-;   {:in "[[[:status 401] {:keys [status]}]
-;          [[:status 403] {:keys [status]}]
-;          [[:status 500] {:keys [status]}]]
-;         (handle-http-error status)"}
-;   [exception-keys-pairs func]
-;   (for [[exception-n# keys-n#] exception-keys-pairs]
-;      `(catch exception-n# keys-n# func)))
-
-; Set default exception handler
-; (defn init []
-;   (Thread/setDefaultUncaughtExceptionHandler
-;     (reify Thread$UncaughtExceptionHandler
-;       (uncaughtException [this thread throwable]
-;         (logging/error throwable "Uncaught Exception:")
-;         (.printStackTrace throwable)))))
 
 #?(:clj
 (defmacro throw-unless
@@ -131,7 +121,7 @@
    Useful for providing a default value in the case of errors."
   {:attribution "mikera.cljutils.error"}
   ([exp & alternatives]
-     (let [c (if-cljs &env 'js/Error 'Throwable)]
+     (let [c (case-env :clj 'Throwable :cljs 'js/Error)]
        (if-let [as (seq alternatives)]
          `(or (try ~exp (catch ~c t# (try-or ~@as))))
          exp)))))
@@ -145,10 +135,10 @@
             (fn [e]
               (.getMessage e))) => \"Error\""
   ([body]
-    (let [c (if-cljs &env :default 'Throwable)]
+    (let [c (case-env :clj 'Throwable :cljs :default)]
      `(try ~body (catch ~c ~'t ~'t))))
   ([body catch-val]
-    (let [c (if-cljs &env :default 'Throwable)]
+    (let [c (case-env :clj 'Throwable :cljs :default)]
      `(try ~body (catch ~c ~'t
                    (let [catch-val# ~catch-val]
                      (cond (fn? catch-val#)
@@ -157,7 +147,7 @@
 
 #?(:clj
 (defmacro ignore [& body]
-  (let [c (if-cljs &env :default 'Throwable)]
+  (let [c (case-env :clj 'Throwable :cljs :default)]
     `(try ~@body (catch ~c _# nil)))))
 
 #?(:clj
@@ -172,7 +162,7 @@
 
 #?(:clj
 (defmacro try-times [max-n sleep-millis & body]
-  (let [c (if-cljs &env 'js/Error 'Throwable)]
+  (let [c (case-env :clj 'Throwable :cljs 'js/Error)]
     `(let [max-n#        ~max-n
            sleep-millis# ~sleep-millis]
        (loop [n# 0 error-n# nil]
