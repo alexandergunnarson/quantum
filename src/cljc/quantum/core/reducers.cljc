@@ -27,7 +27,7 @@
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
-      :refer [defnt if-cljs]]
+      :refer [defnt case-env]]
     [quantum.core.numeric          :as num]
     [quantum.core.type             :as type
       :refer [instance+? array-list? lseq?]]
@@ -1037,7 +1037,7 @@
         quoted-sym          (symbol (str sym "'"))
         parallel-sym        (symbol (str "p" sym))
         parallel-quoted-sym (symbol (str "p" sym "'"))]
-    `(do (defalias ~lazy-sym ~(symbol (if-cljs &env "cljs.core" "clojure.core") (name sym)))
+    `(do (defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym)))
          (defalias ~(var/unqualify plus-sym) ~plus-sym)
          (defn ~sym
            ~(str "Like `core/" sym "`, but eager. Reduces into vector.")

@@ -13,7 +13,7 @@
     [quantum.core.vars        :as var
       :refer [defalias]]
     [quantum.core.macros.core :as cmacros
-      :refer [if-cljs]])
+      :refer [case-env]])
   (:require-macros
     [quantum.core.logic       :as self
       :refer [fn-not]]))
@@ -103,7 +103,7 @@
   {:attribution "Alex Gunnarson"}
   [obj & clauses]
   (let [gobj (gensym "obj__")
-        illegal-argument (if-cljs &env 'js/Error. 'IllegalArgumentException.)
+        illegal-argument (case-env :clj 'IllegalArgumentException. :cljs 'js/Error.)
         emit (fn emit [obj args]
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
@@ -127,7 +127,7 @@
   "Like |condf|, but each expr is essentially wrapped in a |constantly|."
   [obj & clauses]
   (let [gobj (gensym "obj__")
-        illegal-argument (if-cljs &env 'js/Error. 'IllegalArgumentException.)
+        illegal-argument (case-env :clj 'IllegalArgumentException. :cljs 'js/Error.)
         emit (fn emit [obj args]
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
@@ -183,8 +183,9 @@
 (defmacro whenp
   "`whenf` + `ifp`" [x pred tf] `(let [x# ~x] (if ~pred (~tf x#) x#))))
 
+#?(:clj
 (defmacro whenp->
-  "`whenf->` + `ifp->`" [x pred texpr] `(let [x# ~x] (if ~pred (-> x# ~texpr) x#)))
+  "`whenf->` + `ifp->`" [x pred texpr] `(let [x# ~x] (if ~pred (-> x# ~texpr) x#))))
 
 #?(:clj (defmacro whenf1 [x0 x1] `(fn [arg#] (whenf arg# ~x0 ~x1))))
 #?(:clj (defmacro whenc1 [x0 x1] `(fn [arg#] (whenc arg# ~x0 ~x1))))

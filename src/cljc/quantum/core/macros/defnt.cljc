@@ -19,7 +19,7 @@
     [quantum.core.logic                      :as logic
       :refer [fn= fn-not fn-and fn-or whenc whenf whenc1 ifn1 condf]]
     [quantum.core.macros.core                :as cmacros
-      :refer [when-cljs if-cljs]]
+      :refer [case-env case-env*]]
     [quantum.core.macros.fn                  :as mfn]
     [quantum.core.analyze.clojure.core       :as ana]
     [quantum.core.analyze.clojure.predicates :as anap
@@ -414,7 +414,7 @@
                                            "|" '~genned-protocol-method-name-qualified
                                            "|" '~genned-method-name)
                      (if ~(when-not strict-macro?
-                           `(or (when-cljs ~'&env true)
+                           `(or (case-env* ~'&env :cljs true)
                                   (= ~lang :cljs)
                                   ~relaxed?
                                   (and (not ~strict?)
@@ -556,7 +556,7 @@
   "|defn|, typed.
    Uses |gen-interface|, |reify|, and |defprotocol| under the hood."
   [sym & body]
-  (let [lang (if-cljs &env :cljs :clj)]
+  (let [lang (case-env :clj :clj :cljs :cljs)]
     (defnt*-helper nil lang *ns* sym nil nil nil body))))
 
 #?(:clj

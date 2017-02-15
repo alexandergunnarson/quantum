@@ -4,7 +4,7 @@
     [#?(:clj  clojure.core
         :cljs cljs.core   ) :as core]
     [quantum.core.macros.core
-      :refer [if-cljs]]
+      :refer [case-env]]
     [quantum.core.log
       :refer [prl]])
   #?(:cljs
@@ -270,4 +270,4 @@
   (defmacro defrecord+
     "Like `defrecord`, but handles namespaced keys as per CLJ-1938."
     [& args]
-    (if-cljs &env `(defrecord+:cljs ~@args) `(defrecord+:clj ~@args))))
+    (case-env :clj `(defrecord+:clj ~@args) :cljs `(defrecord+:cljs ~@args))))

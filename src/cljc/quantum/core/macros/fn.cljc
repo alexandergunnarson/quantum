@@ -14,7 +14,7 @@
     [quantum.core.logic               :as logic
       :refer [fn-or whenf1]]
     [quantum.core.macros.core         :as cmacros
-      :refer [if-cljs]]
+      :refer [case-env]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]))
 
@@ -113,12 +113,12 @@
                       'ret_genned123)))
               _ (log/ppr :macro-expand "FINAL ARGS TO |defn|:" args-f)
               instrumented-fn
-                (if-cljs &env
-                   fn-sym
-                  `(if (and ~suspendable?
-                         (System/getProperty "quantum.core.async:allow-suspendable?"))
-                     (pulsar/suspendable! ~fn-sym)
-                     ~fn-sym))
+                (case-env
+                  :clj  `(if (and ~suspendable?
+                                 (System/getProperty "quantum.core.async:allow-suspendable?"))
+                             (pulsar/suspendable! ~fn-sym)
+                             ~fn-sym)
+                  :cljs fn-sym)
               _ (log/ppr :macro-expand "INSTRUMENTED FN:" args-f)]
            `(do ~@(deref externs)
                 (let [;~sym-f (with-meta '~sym-f

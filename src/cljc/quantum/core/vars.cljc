@@ -3,7 +3,7 @@
   (:refer-clojure :exclude [defonce])
   (:require
     [quantum.core.macros.core :as cmacros
-      :refer [if-cljs when-cljs]])
+      :refer [case-env]])
   (:require-macros
     [quantum.core.vars        :as self]))
 
@@ -17,7 +17,7 @@
   {:attribution "clojure.contrib.def/defalias"
    :contributors ["Alex Gunnarson"]}
   ([name orig]
-     `(do (if ~(if-cljs &env true `(-> (var ~orig) .hasRoot))
+     `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)
               (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
                   ; for some reason, the :macro metadata doesn't really register unless you do it manually
                   (when (-> (var ~orig) meta :macro true?)

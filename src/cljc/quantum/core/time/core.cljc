@@ -18,7 +18,7 @@
     [quantum.core.logic             :as logic
       :refer [fn-or whenc]]
     [quantum.core.macros            :as macros
-      :refer [defnt if-cljs]]
+      :refer [defnt case-env]]
     [quantum.core.numeric           :as num]
     [quantum.core.collections       :as coll
       :refer [ifor]]
@@ -287,7 +287,7 @@
 (defmacro ->local-date
   "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
   (^{:doc "Obtain the current date in the system default timezone"}
-   [] (if-cljs &env `(js/JSJoda.LocalDate.now) `(LocalDate/now)))
+   [] (case-env :clj `(LocalDate/now) :cljs `(js/JSJoda.LocalDate.now)))
   ([x & args] `(->local-date* ~x ~@args))))
 
 
@@ -316,7 +316,7 @@
 (defmacro ->local-time
   "Coerces to a time without a time-zone in the ISO-8601 calendar system, such as ‘10:15:30’."
   ^{:doc "Obtain the current time in the system default timezone"}
-  ([] (if-cljs &env `(js/JSJoda.LocalTime.now) `(LocalTime/now)))
+  ([] (case-env :clj `(LocalTime/now) :cljs `(js/JSJoda.LocalTime.now)))
   ([x & args] `(->local-time* ~x ~@args))))
 
 (defnt ^{:tag #?(:clj LocalDateTime :cljs js/JSJoda.LocalDateTime)} ->local-date-time*
@@ -355,7 +355,7 @@
 (defmacro ->local-date-time
   "Coerces to a date and time without a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30.’."
   ^{:doc "Obtain the current date and time in the system default timezone"}
-  ([] (if-cljs &env `(js/JSJoda.LocalDateTime.now) `(LocalDateTime/now)))
+  ([] (case-env :clj `(LocalDateTime/now) :cljs `(js/JSJoda.LocalDateTime.now)))
   ([x & args] `(->local-date-time* ~x ~@args))))
 
 (defonce min-local-date-time
@@ -384,7 +384,7 @@
 (defmacro ->zoned-date-time
   "Coerces to a date and time with a time-zone in the ISO-8601 calendar system, such as ‘2007-12-03T10:15:30+01:00.’."
   ^{:doc "Obtain the current date and time in the system default timezone"}
-  ([] (if-cljs &env `(js/JSJoda.ZonedDateTime.now) `(ZonedDateTime/now)))
+  ([] (case-env :clj `(ZonedDateTime/now) :cljs `(js/JSJoda.ZonedDateTime.now)))
   ([x & args] `(->zoned-date-time* ~x ~@args))))
 
 #?(:clj

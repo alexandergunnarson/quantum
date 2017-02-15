@@ -9,7 +9,7 @@
     [quantum.core.error     :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
-      :refer [if-cljs]]
+      :refer [case-env]]
     [quantum.core.macros.deftype
       :refer [deftype-compatible]]
     [quantum.core.fn
@@ -253,7 +253,7 @@
                         {~'hash     ([_#] (.hashCode ~'v))
                          ~'equals   ~(std-equals sym other '=)}
                        ~'?HashEq
-                         {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
+                         {~'hash-eq ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
                        ~'?Deref
                          {~'deref   ([_#] ~'v)}
                        quantum.core.core/IValue
@@ -355,7 +355,7 @@
           k-gen                (gensym "k")
           v-gen                (gensym "v")
           create               (symbol (str "create-" sym))
-          invalid              (if-cljs &env :cljs.spec/invalid :clojure.spec/invalid)]
+          invalid              (case-env :cljs :cljs.spec/invalid :clojure.spec/invalid)]
      (prl ::debug invariant conformer req-ks un-ks all-mod-ks to-prepend)
      (let [code `(do (declare-spec ~sym-0)
           ~@to-prepend
@@ -393,18 +393,18 @@
              ~'?Sequential    true
              ; ?Cloneable     ([_] (#?(:clj .clone :cljs -clone) m))
              ~'?Counted
-               {~'count       ([_#] (~(if-cljs &env '-count '.count) ~'v))}
+               {~'count       ([_#] (~(case-env :clj '.count   :cljs '-count) ~'v))}
              ~'?Collection
-               {~'empty       ([_#] (~(if-cljs &env '-empty '.empty) ~'v))
+               {~'empty       ([_#] (~(case-env :clj '.empty   :cljs '-empty) ~'v))
                 ~'empty!      ([_#] (throw (UnsupportedOperationException.)))
-                ~'empty?      ([_#] (~(if-cljs &env nil '.isEmpty) ~'v))
-                ~'equals      ~(std-equals sym other (if-cljs &env '-equiv '.equiv))
+                ~'empty?      ([_#] (~(case-env :clj '.isEmpty :cljs nil    ) ~'v))
+                ~'equals      ~(std-equals sym other (case-env :clj '.equiv :cljs '-equiv))
                 ~'conj        ([_# [k0# v0#]]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
                                                  (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
-                                  (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
+                                  (-> (new ~sym (~(case-env :clj '.assoc :cljs '-assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
                                       ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))}
              ~'?Associative
@@ -413,7 +413,7 @@
                                                  (get ~un-ks-to-ks         k0#)
                                                  (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
-                                  (-> (new ~sym (~(if-cljs &env '-assoc '.assoc) ~'v ~k-gen ~v-gen))
+                                  (-> (new ~sym (~(case-env :clj '.assoc :cljs '-assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
                                       ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))
                 ~'assoc!      ([_# _# _#] (throw (UnsupportedOperationException.)))
@@ -424,7 +424,7 @@
                                              :cljs [contains? ~required-keys-record]) ~k-gen)
                                     (throw (->ex "Key is in ValidatedMap's required keys and cannot be dissoced"
                                                  {:class ~sym :k ~k-gen :keyspec ~spec-sym})))
-                                   (-> (new ~sym (~(if-cljs &env '-dissoc '.without) ~'v ~k-gen))
+                                   (-> (new ~sym (~(case-env :clj '.without :cljs '-dissoc) ~'v ~k-gen))
                                        ~(if-not conformer `identity* conformer-sym)
                                        ~(if-not invariant `identity* `(validate ~invariant-spec-name)))))
                 ~'dissoc!     ([_# _#] (throw (UnsupportedOperationException.)))
@@ -432,15 +432,15 @@
                 ~'vals        ([_#] (.values   ~'v))
                 ~'entries     ([_#] (.entrySet ~'v))}
              ~'?Lookup
-               {~'contains?   ([_# k#] (or (~(if-cljs &env nil '.containsKey) ~'v k#)
-                                           (~(if-cljs &env nil '.containsKey) ~'v (get ~un-ks-to-ks k#))))
-                ~'containsv?  ([_# v#] (~(if-cljs &env nil '.containsValue) ~'v v#))
+               {~'contains?   ([_# k#] (or (~(case-env :clj '.containsKey :cljs nil) ~'v k#)
+                                           (~(case-env :clj '.containsKey :cljs nil) ~'v (get ~un-ks-to-ks k#))))
+                ~'containsv?  ([_# v#] (~(case-env :clj '.containsValue :cljs nil) ~'v v#))
                 ; Currently fully unrestricted `get`s: all "fields"/key-value pairs are public.
                 ~'get        [([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
-                                (or (~(if-cljs &env '-lookup '.valAt) ~'v k#)
-                                    (~(if-cljs &env '-lookup '.valAt) ~'v (get ~un-ks-to-ks k#))))
-                              #_([_# k# else#] (~(if-cljs &env '-lookup '.valAt) ~'v k# else#))]
+                                (or (~(case-env :clj '.valAt :cljs '-lookup) ~'v k#)
+                                    (~(case-env :clj '.valAt :cljs '-lookup) ~'v (get ~un-ks-to-ks k#))))
+                              #_([_# k# else#] (~(case-env :clj '.valAt :cljs '-lookup) ~'v k# else#))]
                 ~'kw-get      ([this# k#]
                                 (reify clojure.lang.ILookupThunk
                                   (get [this# ~v-gen]
@@ -450,19 +450,19 @@
                                         this#))))
                 ~'get-entry   ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
-                                (~(if-cljs &env nil '.entryAt) ~'v k#))}
+                                (~(case-env :clj '.entryAt :cljs nil) ~'v k#))}
              ~'?Object
                {~'hash        ([_#] (.hashCode ~'v))
-                ~'equals      ~(std-equals sym other (if-cljs &env '.equiv '.equiv))}
+                ~'equals      ~(std-equals sym other (case-env :clj '.equiv :cljs '.equiv))}
              ~'?Iterable
-               {~'iterator    ([_#] (~(if-cljs &env '-iterator '.iterator) ~'v))}
+               {~'iterator    ([_#] (~(case-env :clj '.iterator :cljs '-iterator) ~'v))}
              ~'?Meta
                {~'meta        ([_#] (meta ~'v))
                 ~'with-meta   ([_# new-meta#] (new ~sym (with-meta ~'v new-meta#)))}
              ~'?Print
                {~'pr          ([_# w# opts#] (~'-pr-writer ~'v w# opts#))}
              ~'?HashEq
-               {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(if-cljs &env '-hash '.hashEq) ~'v))))}
+               {~'hash-eq     ([_#] (int (bit-xor ~type-hash (~(case-env :clj '.hashEq :cljs '-hash) ~'v))))}
              quantum.core.core/IValue
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
@@ -481,7 +481,7 @@
                             :req-all   ~required-keys-record
                             :un-all    ~un-keys-record
                             :un->      ~un-ks-to-ks}))
-          ~(if-cljs &env qualified-sym `(import (quote ~qualified-sym))))]
+          ~(case-env :clj `(import (quote ~qualified-sym)) :cljs qualified-sym))]
      (prl ::debug code)
      code)))))
 

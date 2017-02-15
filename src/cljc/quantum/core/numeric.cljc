@@ -23,8 +23,6 @@
       :refer [fn-and whenf1]]
     [quantum.core.macros               :as macros
       :refer [defnt #?@(:clj [defnt'])]]
-    [quantum.core.macros.core          :as cmacros
-      :refer [if-cljs]]
     [quantum.core.vars                 :as var
       :refer [defalias defaliases]]
     [quantum.core.numeric.convert   ]

@@ -13,8 +13,6 @@
     [quantum.core.error               :as err
       :refer [->ex]]
     [quantum.core.log                 :as log]
-    [quantum.core.macros.core         :as cmacros
-      :refer [if-cljs]]
     [quantum.core.macros              :as macros
       :refer [assert-args]]
     [quantum.core.reducers.reduce     :as red]

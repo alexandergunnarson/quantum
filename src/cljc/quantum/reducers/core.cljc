@@ -8,20 +8,18 @@
     [sparkling.destructuring  :as de]
     [sparkling.utils          :as u]])
     [quantum.core.logic
-      :refer        [#?@(:clj [fn-not fn-or])]
-      :refer-macros [          fn-not fn-or]]
+      :refer [fn-not fn-or]]
     [quantum.core.error :as err
       :refer [->ex TODO]]
     [quantum.core.macros.core
-      :refer        [#?@(:clj [if-cljs])]]
+      :refer [case-env]]
     [quantum.core.vars        :as var
-      :refer        [#?@(:clj [defalias defmalias])]
-      :refer-macros [defalias defmalias]]
+      :refer [defalias #?@(:clj [defmalias])]]
     [quantum.core.collections :as coll]
     [quantum.reducers.spark   :as spark+])
-#?(:cljs (:require-macros
-           [quantum.reducers.core
-             :refer [defreducer]]))
+  (:require-macros
+    [quantum.reducers.core    :as self
+      :refer [defreducer]])
 #?(:clj (:import (org.apache.spark.api.java JavaRDDLike)
                  (org.apache.spark.sql      Dataset))))
 
@@ -32,14 +30,14 @@
 (defmacro defreducer
   [name- rdd-fn dataset-fn]
   (let [core-sym (symbol "quantum.core.collections" (name name-))]
-    (if-cljs &env
-     `(defalias ~name- ~core-sym)
-     `(defn ~name- [f# x#]
-        (cond (rdd? x#)
-              (~rdd-fn f# x#)
-              (dataset? x#)
-              (~dataset-fn f# x#)
-              :else (~core-sym f# x#)))))))
+    (case-env
+      :clj `(defn ~name- [f# x#]
+              (cond (rdd? x#)
+                    (~rdd-fn f# x#)
+                    (dataset? x#)
+                    (~dataset-fn f# x#)
+                    :else (~core-sym f# x#)))
+     `(defalias ~name- ~core-sym)))))
 
 (defreducer map+      spark/map      spark+/map     )
 (defreducer filter+   spark/filter   spark+/filter  )

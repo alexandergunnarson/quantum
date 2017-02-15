@@ -5,7 +5,7 @@
     [quantum.core.collections.base
       :refer [update-first update-val ensure-set]]
     [quantum.core.macros.core
-      :refer [#?@(:clj [if-cljs])]]
+      :refer [case-env]]
     [quantum.core.vars :as var]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
@@ -227,7 +227,7 @@
           (@#'clojure.core/build-positional-factory gname classname fields))
        ~classname))))
 
-#?(:clj (defmacro deftype+ [& args] (apply (if-cljs &env deftype+:cljs deftype+:clj) &env args)))
+#?(:clj (defmacro deftype+ [& args] (apply (case-env :clj deftype+:clj :cljs deftype+:cljs) &env args)))
 
 #?(:clj
 (defmacro deftype-compatible
@@ -241,17 +241,17 @@
              {?Seqable
                {first ([this] (+ field1 1))}})}
   [sym arglist skel]
-  (let [lang (if-cljs &env :cljs :clj)
+  (let [lang (case-env :clj :clj :cljs :cljs)
         qualified-sym (var/qualify-class sym)
         code `(do (deftype+ ~sym ~arglist
                     ~@(apply concat (deftype-compatible-helper skel lang)))
                   ~(when (= lang :clj) `(import (quote ~qualified-sym))))] ; TODO doesn't this already happen?
-    (if-cljs &env
-      code
-      ; To avoid duplicate class errors
-      (try (eval code)
-        (catch Throwable t
-          (if (and (string? (.getMessage t))
-                   (-> t .getMessage (.contains "duplicate class definition")))
-              (println "WARNING: duplicate class definition for class" sym)
-              (throw t))))))))
+    (case-env
+            ; To avoid duplicate class errors
+      :clj  (try (eval code)
+              (catch Throwable t
+                (if (and (string? (.getMessage t))
+                         (-> t .getMessage (.contains "duplicate class definition")))
+                    (println "WARNING: duplicate class definition for class" sym)
+                    (throw t))))
+      :cljs code))))

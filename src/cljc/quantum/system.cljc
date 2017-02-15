@@ -7,8 +7,6 @@
                      [quantum.core.fn                  :as fn
                        :refer        [<- fn-> with-do]]
                      [quantum.core.log                 :as log]
-                     [quantum.core.macros.core         :as cmacros
-                       :refer        [if-cljs]]
                      [quantum.core.resources           :as res      ]
                      [quantum.core.async               :as async    ]
                      [quantum.core.collections         :as coll

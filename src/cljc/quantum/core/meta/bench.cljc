@@ -43,7 +43,7 @@
 ; FOR CLJS
 #?(:clj
 (defmacro profile [k & body]
-  ; TODO `if-cljs`
+  ; TODO `case-env`
   `(let [k# ~k]
      (.time js/console k#)
      (let [res# (do ~@body)]

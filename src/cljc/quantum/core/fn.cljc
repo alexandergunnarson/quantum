@@ -10,8 +10,8 @@
          [quantum.core.core        :as qcore  ]
          [quantum.core.data.map    :as map    ]
          [quantum.core.macros.core :as cmacros
-           :refer        [#?@(:clj [when-cljs compile-if])]
-           :refer-macros [when-cljs]]
+           :refer        [#?@(:clj [case-env compile-if])]
+           :refer-macros [case-env]]
          [quantum.core.vars        :as var
            :refer        [#?(:clj defalias)]
            :refer-macros [defalias]]
@@ -67,9 +67,9 @@
   "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
    Originally named |functionize| by mikera."
   ([macro-sym]
-    (when-cljs &env (throw (Exception. "|mfn| not supported for CLJS.")))
+    (case-env :cljs (throw (ex-info "`mfn` not supported for CLJS." {})))
    `(fn [& args#]
-      (qcore/js-println "WARNING: Runtime eval with |mfn| via" '~macro-sym)
+      (qcore/js-println "WARNING: Runtime eval with `mfn` via" '~macro-sym)
       (clojure.core/eval (cons '~macro-sym args#))))
   ([n macro-sym]
     (let [genned-arglist (->> (repeatedly gensym) (take n) (into []))]

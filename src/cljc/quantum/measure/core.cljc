@@ -13,7 +13,7 @@
       :refer [fn= whenc ifn]]
     [quantum.measure.reg                 ]
     [quantum.core.macros.core :as cmacros
-      :refer [if-cljs]]))
+      :refer [case-env*]]))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}
@@ -27,11 +27,11 @@
 ; {:metric-cables #{:length} ...}
 #?(:clj
 (defn defunits-of* [env unit-type std-unit unit-pairs emit-type]
-  (if-cljs env
-    (println "/* CLJS quantum.measure.* graph algorithm is broken — causes infinite loop. */")
+  (case-env* env
+    :cljs (println "/* CLJS quantum.measure.* graph algorithm is broken — causes infinite loop. */")
     (do (println "/* CLJ quantum.measure.* graph algorithm */")
         (throw-unless (contains? #{:map :code} emit-type) (->ex "Emit type not recognized" emit-type))
-        (let [num-cast (if-cljs env double identity)
+        (let [num-cast (case-env* env :clj identity :cljs double)
               units-graph
                 (->> (core/for [[unit [[rate conv-unit] & [aliases]]] unit-pairs]
                        (->> (core/for [alias aliases]

@@ -29,9 +29,9 @@
 
 (log/this-ns)
 
-#?(:clj (defalias env cmacros/env))
-#?(:clj (defalias when-cljs cmacros/when-cljs))
-#?(:clj (defalias if-cljs   cmacros/if-cljs  ))
+#?(:clj (defalias env       cmacros/env      ))
+#?(:clj (defalias case-env* cmacros/case-env*))
+#?(:clj (defalias case-env  cmacros/case-env ))
 
 #?(:clj
 (defmacro maptemplate
@@ -79,20 +79,17 @@
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
               `(do #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
-                (if-cljs ~'&env
-                  (list '~cljs-single-arg-fn-f ~x-sym)
-                  (list '~clj-single-arg-fn-f  ~x-sym)))
-              (if-cljs ~'&env
-                  (list '~cljs-single-arg-fn-f ~x-sym)
-                  (list '~clj-single-arg-fn-f  ~x-sym)))))
+                (case-env :clj  (list '~clj-single-arg-fn-f  ~x-sym)
+                          :cljs (list '~cljs-single-arg-fn-f ~x-sym)))
+              (case-env
+                :clj  (list '~clj-single-arg-fn-f  ~x-sym)
+                :cljs (list '~cljs-single-arg-fn-f ~x-sym)))))
           ([~x-sym ~y-sym]
              #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
-                (if-cljs ~'&env
-                  (list '~cljs-fn ~x-sym ~y-sym)
-                  (list '~clj-fn  ~x-sym ~y-sym)))
-             (if-cljs ~'&env
-               (list '~cljs-fn ~x-sym ~y-sym)
-               (list '~clj-fn  ~x-sym ~y-sym)))
+                (case-env :clj  (list '~clj-fn  ~x-sym ~y-sym)
+                          :cljs (list '~cljs-fn ~x-sym ~y-sym)))
+             (case-env :clj  (list '~clj-fn  ~x-sym ~y-sym)
+                       :cljs (list '~cljs-fn ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
              (list* '~name (list '~name x# y#) rest#)))))))
 
@@ -110,17 +107,15 @@
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              `(if-cljs ~'&env
-                 (list '~cljs-single-arg-fn-f ~x-sym)
-                 (list '~clj-single-arg-fn-f  ~x-sym))))
+              `(case-env* ~'&env :clj  (list '~clj-single-arg-fn-f  ~x-sym)
+                                 :cljs (list '~cljs-single-arg-fn-f ~x-sym))))
           ([~x-sym ~y-sym]
-             (if-cljs ~'&env
-               (list '~cljs-fn ~x-sym ~y-sym)
-               (list '~clj-fn  ~x-sym ~y-sym)))
+             (case-env* ~'&env :clj  (list '~clj-fn  ~x-sym ~y-sym)
+                               :cljs (list '~cljs-fn ~x-sym ~y-sym)))
           ([~x-sym ~y-sym ~'& ~rest-sym]
-             (if-cljs ~'&env
-               (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
-               (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
+             (case-env* ~'&env
+               :clj  (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
+               :cljs (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
 
 ; #?(:clj
 ; (defn param-arg-match

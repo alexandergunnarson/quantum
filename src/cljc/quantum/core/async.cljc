@@ -22,7 +22,7 @@
     [quantum.core.logic               :as logic
       :refer [fn-and fn-or fn-not condpc whenc]]
     [quantum.core.macros.core         :as cmacros
-      :refer [if-cljs]]
+      :refer [case-env]]
     [quantum.core.macros              :as macros
       :refer [defnt]]
     [quantum.core.system              :as sys]
@@ -60,7 +60,7 @@
   "Takes a value from a core.async channel, throwing the value if it
    is a js/Error or Throwable."
   [expr]
-  (let [err-class (if-cljs &env 'js/Error 'Throwable)]
+  (let [err-class (case-env :clj 'Throwable :cljs 'js/Error)]
    `(let [expr-result# (<! ~expr)]
       (if ;(quantum.core.type/error? expr-result#)
           (instance? ~err-class expr-result#)
@@ -141,7 +141,7 @@
 
 (defalias take! async/take!)
 
-#?(:clj (defmacro <! [& args] `(~(if-cljs &env 'cljs.core.async/<! 'clojure.core.async/<!) ~@args)))
+#?(:clj (defmacro <! [& args] `(~(case-env :cljs 'cljs.core.async/<! 'clojure.core.async/<!) ~@args)))
 
 (declare empty!)
 
@@ -258,9 +258,9 @@
    Never use |sleep| without marking the enclosing function |suspendable!| (and probably all other
    functions that call it...)."
   [millis]
-  (if-cljs &env
-    `(<! (timeout ~millis))
-    `(Thread/sleep ~millis)
+  (case-env
+    :clj  `(Thread/sleep ~millis)
+    :cljs `(<! (timeout ~millis))
     #_(if (Fiber/currentFiber)
           (Fiber/sleep  ~millis)
           (Strand/sleep ~millis)))))
@@ -315,7 +315,7 @@
 #?(:clj
 (defmacro wait-until
   ([pred]
-    (let [max-num (if-cljs &env 'js/Number.MAX_SAFE_INTEGER 'Long/MAX_VALUE)]
+    (let [max-num (case-env :clj 'Long/MAX_VALUE :cljs 'js/Number.MAX_SAFE_INTEGER)]
       `(wait-until ~max-num ~pred)))
   ([timeout pred]
    `(loop [timeout# ~timeout]

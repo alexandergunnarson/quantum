@@ -74,7 +74,7 @@
                        whenf1 ifn ifn1 condf
                        condf1 splice-or]]
              [quantum.core.macros                     :as macros
-               :refer [defnt if-cljs]]
+               :refer [defnt case-env]]
              [quantum.core.ns                         :as ns]
              [quantum.core.numeric                    :as num
                :refer [-]]
@@ -1632,10 +1632,10 @@
         (defnt mutable        "Creates a mutable reference to an Object."           [        x] (MutableReference. x))
 #?(:clj (defnt mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDouble.    x)))
 
-#?(:clj (defmacro setm!  "Set mutable" [x v] (if-cljs &env `(set! ~x ~v) `(setm!*  ~x ~v))))
-#?(:clj (defmacro setm!& "Set mutable" [x v] (if-cljs &env `(set! ~x ~v) `(setm!*& ~x ~v))))
-#?(:clj (defmacro getm   "Get mutable" [x  ] (if-cljs &env x             `(getm*   ~x))))
-#?(:clj (defmacro getm&  "Get mutable" [x  ] (if-cljs &env x             `(getm*&  ~x))))
+#?(:clj (defmacro setm!  "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*  ~x ~v))))
+#?(:clj (defmacro setm!& "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*& ~x ~v))))
+#?(:clj (defmacro getm   "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*   ~x))))
+#?(:clj (defmacro getm&  "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*&  ~x))))
 
 #?(:clj
 (defmacro getf
@@ -1643,8 +1643,8 @@
   [x field]
   (let [accessor (symbol
                    (str "."
-                     (if-cljs &env (str "-" (name field))
-                                   (str "get" (str/upper-first (name field))))))]
+                     (case-env :clj  (str "get" (str/upper-first (name field)))
+                               :cljs (str "-" (name field)))))]
     `(~accessor ~x))))
 
 #?(:clj
@@ -1653,10 +1653,10 @@
   [x field v]
   (let [accessor (symbol
                    (str "."
-                     (if-cljs &env (str "-" (name field))
-                                   (str "set" (str/upper-first (name field))))))]
-    (if-cljs &env `(set! (~accessor ~x) ~v)
-                  `(~accessor ~x ~v)))))
+                     (case-env :clj  (str "set" (str/upper-first (name field)))
+                               :cljs (str "-" (name field)))))]
+    (case-env :cljs `(set! (~accessor ~x) ~v)
+                    `(~accessor ~x ~v)))))
 
 ; ====== NUMERIC ======
 

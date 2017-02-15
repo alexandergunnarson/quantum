@@ -20,22 +20,38 @@
 
 (defn cljs-env?
   "Given an &env from a macro, tells whether it is expanding into CLJS."
+  {:from "https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"}
   [env]
   (boolean (:ns env)))
 
 #?(:clj
-(defmacro if-cljs
-  "Return @then if the macro is generating CLJS code and @else for CLJ code."
-  {:from "https://groups.google.com/d/msg/clojurescript/iBY5HaQda4A/w1lAQi9_AwsJ"}
-  ([env then else] `(if (cljs-env? ~env) ~then ~else))))
+(defmacro case-env*
+  "Conditionally compiles depending on the supplied environment (e.g. CLJ, CLJS, CLR)."
+  {:usage `(defmacro abcde [a]
+             (case-env* &env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))
+   :todo  {0 "Not sure how CLJ environment would be differentiated from others"}}
+  ([env])
+  ([env v] v)
+  ([env k v & kvs]
+    (let [accepted?
+           (case k
+             :clj  true ; TODO 0
+             :cljs (cljs-env? env)
+             :clr  (throw (ex-info "TODO: Conditional compilation for CLR not supported" {:platform :clr}))
+             (throw (ex-info "Conditional compilation for platform not supported" {:platform k})))]
+      (if accepted?
+          v
+          `(case-env* ~env ~@kvs))))))
 
 #?(:clj
-(defmacro when-cljs
-  "Return @then if the macro is generating CLJS code."
-  ([env then] `(when (cljs-env? ~env) ~then))))
+(defmacro case-env
+  "Conditionally compiles depending on the supplied environment (e.g. CLJ, CLJS, CLR)."
+  {:usage `(defmacro abcde [a]
+             (case-env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))}
+  ([& args] `(case-env* ~&env ~@args))))
 
 #?(:clj
-(defn core-symbol [env sym] (symbol (str (if-cljs env "cljs" "clojure") ".core") (name sym))))
+(defn core-symbol [env sym] (symbol (str (case-env :cljs "cljs" "clojure") ".core") (name sym))))
 
 #?(:clj
 (defmacro locals
@@ -48,7 +64,7 @@
             very large data structures"]}
   ([] `(locals ~&env)) ; #{:ns :context :locals :fn-scope :js-globals :line :column}
   ([env]
-    (let [getter (if-cljs env :locals identity)]
+    (let [getter (case-env :cljs :locals identity)]
       (->> env getter
            (red/map (fn [[sym _]] [`(quote ~sym) sym]))
            (into {}))))))
@@ -101,7 +117,7 @@
   "Expands to sym if it names a local in the current environment or
   nil otherwise"
   [sym]
-  (if (contains? (if-cljs &env (:locals &env) &env) sym) sym)))
+  (if (contains? (case-env :cljs (:locals &env) &env) sym) sym)))
 
 #?(:clj
 (defmacro compile-if
@@ -206,7 +222,7 @@
     (let [args-sym   (gensym "args")
           orig-sym-f (gensym "orig-sym")]
      `(defmacro ~name [& ~args-sym]
-        (let [~orig-sym-f (if-cljs ~'&env '~cljs-sym '~clj-sym)
+        (let [~orig-sym-f (case-env* ~'&env :clj '~clj-sym :cljs '~cljs-sym)
               _# (when (= ~orig-sym-f 'nil)
                    (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))]
           (cons ~orig-sym-f ~args-sym)))))))
