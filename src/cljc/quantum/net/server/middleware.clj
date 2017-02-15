@@ -27,6 +27,7 @@
             [ring.middleware.defaults   :as defaults]
             ; QUANTUM
             [quantum.core.string        :as str]
+            [quantum.core.error         :as err]
             [quantum.core.logic
               :refer [whenp fn-or]]
             [quantum.core.fn
@@ -36,7 +37,7 @@
             [quantum.core.log           :as log
               :refer [prl]]
             [quantum.core.print         :as pr
-              :refer [!]]
+              :refer [ppr-str]]
             [quantum.core.convert       :as conv]
             [quantum.core.async         :as async]))
 
@@ -107,25 +108,33 @@
     (when-let [response (handler request)]
       (resp/header response "Server" ""))))
 
-(defn wrap-handle-exception
-  [handler]
-  (fn handle-exception [request]
-    (try
-      (handler request)
-      (catch Throwable e
-        (log/ppr :warn "Error in HTTP handler:" e)
-        {:status 500
-         :headers {"Content-Type" "text/html"}
-         :body "<html><div>Something didn't go quite right.</div><i>HTTP error 500</div></html>"}))))
-
-(defn wrap-show-exception [handler k] ; TODO move?
-  (fn [req]
+(defn wrap-hide-exception [handler k gen-error]
+  (fn hide-exception [req]
     (try (handler req)
-         (catch Throwable e
-           (log/ppr k "Error in HTTP handler:" e)
-           {:status  500
-            :headers {"Content-Type" "application/json"}
-            :body    (conv/->json {:error (with-out-str (! e))})}))))
+      (catch Throwable e
+        (log/ppr k "Error in HTTP handler:" e)
+        {:status 500
+         :headers {"Content-Type" "application/json"}
+         :body (conv/->json {:error (gen-error e)})}))))
+
+(defn wrap-show-exception [handler k]
+  (fn show-exception [req]
+    (try (handler req)
+      (catch Throwable e
+        (log/ppr k "Error in HTTP handler:" e)
+        {:status  500
+         :headers {"Content-Type" "application/json"}
+         :body    (conv/->json {:error (ppr-str (merge {:message (.getMessage e)}
+                                                       (when (err/ex-info? e) {:data (ex-data e)})))})}))))
+
+(defn wrap-show-stacktrace [handler k] ; TODO move?
+  (fn show-stacktrace [req]
+    (try (handler req)
+      (catch Throwable e
+        (log/ppr k "Error in HTTP handler:" e)
+        {:status  500
+         :headers {"Content-Type" "application/json"}
+         :body    (conv/->json {:error (ppr-str e)})}))))
 
 ; ===== REQUEST CONTENT TYPE COERCION ===== ;
 ; TODO move this?
@@ -178,9 +187,7 @@
       (log/ppr ::debug "Initial Response" resp)
       resp)))
 
-; ===== MIDDLEWARE ===== ;
-
-(defn wrap-log-middleware [handler k]
+(defn wrap-logging [handler k]
   (fn [req] (log/ppr ::debug "In" k)
             (let [resp (handler req)]
               (log/ppr ::debug "Out" k)
@@ -208,7 +215,6 @@
           (assoc-session-token response request *anti-forgery-token*))))))
 
 (in-ns 'quantum.net.server.middleware)
-
 
 (defn wrap-middleware [routes & [opts]]
   (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
@@ -245,4 +251,4 @@
         wrap-gzip
         #_(friend/requires-scheme :https)
         wrap-in-logging
-        wrap-handle-exception)))
+        (wrap-hide-exception :warn (constantly "Internal")))))
