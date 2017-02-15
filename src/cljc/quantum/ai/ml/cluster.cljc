@@ -4,31 +4,24 @@
    similar in some sense. Clustering is a method of unsupervised learning."
   (:refer-clojure :exclude [reduce for count])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   )  :as core]
+    [clojure.core             :as core]
     [quantum.core.collections :as coll
-      :refer        [red-apply map+ vals+ filter+ filter-vals+ flatten-1+
-                     range+ ffilter
-                     #?@(:clj [for for+ reduce join kmap count])]
-      :refer-macros [          for for+ reduce join kmap count]]
-    [quantum.core.numeric :as cnum]
-    [quantum.core.log     :as log
-      :include-macros true]
-    [quantum.numeric.core :as num
-      :refer        [sum]]
+      :refer [red-apply map+ vals+ filter+ filter-vals+ flatten-1+
+              range+ ffilter for for+ reduce join kmap count]]
+    [quantum.core.numeric     :as cnum]
+    [quantum.core.log         :as log]
+    [quantum.numeric.core     :as num
+      :refer [sum]]
     [quantum.ai.ml.similarity
-      :refer        [dist]]
+      :refer [dist]]
     [quantum.core.fn :as fn
-      :refer        [#?@(:clj [<- fn-> fn->>])]
-      :refer-macros [          <- fn-> fn->>]]
+      :refer [<- fn-> fn->>]]
     [quantum.core.error
-      :refer        [->ex TODO]]
+      :refer [->ex TODO]]
     [quantum.core.logic
-      :refer        [#?@(:clj [condpc coll-or])]
-      :refer-macros [          condpc coll-or]]
+      :refer [condpc coll-or]]
     [quantum.core.vars        :as var
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]))
+      :refer [defalias]]))
 
 (log/this-ns)
 
