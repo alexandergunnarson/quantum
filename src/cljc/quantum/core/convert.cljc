@@ -37,6 +37,8 @@
                      [quantum.core.log                   :as log]
                      [quantum.core.type
                        :refer [static-cast]])
+  (:require-macros
+    [quantum.core.convert :as self])
   #?(:clj (:import
             [org.apache.commons.codec.binary Base64]
             [quantum.core.data.streams    ByteBufferInputStream]
