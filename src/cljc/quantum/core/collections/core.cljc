@@ -40,7 +40,7 @@
             [quantum.core.collections.logic
               :refer [seq-or]]
             [quantum.core.macros            :as macros
-              :refer [defnt #?(:clj defnt') if-cljs]]
+              :refer [defnt #?(:clj defnt') case-env]]
             [quantum.core.macros.optimization
               :refer [identity*]]
             [quantum.core.loops
@@ -85,6 +85,8 @@
     :cljs (:import
             goog.string.StringBuffer)))
 
+ (log/this-ns)
+
 ; FastUtil is the best
 ; http://java-performance.info/hashmap-overview-jdk-fastutil-goldman-sachs-hppc-koloboke-trove-january-2015/
 
@@ -96,7 +98,6 @@
 
 ; TODO implement all these using wagjo/data-cljs
 ; split-at [o index] - clojure.core/split-at
-; cat [o o2] - eager variant of clojure.core/concat
 ; splice [o index n val] - fast remove and insert in one go
 ; splice-arr [o index n val-arr] - fast remove and insert in one go
 ; insert-before [o index val] - insert one item inside coll
@@ -105,12 +106,6 @@
 ; remove-n [o index n] - remove n items starting at index pos
 ; rip [o index] - rips coll and returns [pre-coll item-at suf-coll]
 ; sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
-
-; mape-indexed [f o] - eager version of clojure.core/map-indexed
-; reduce-reverse [f init o] - like reduce but in reverse order
-; reduce2-reverse [f o] - like reduce but in reverse order
-; reduce-kv-reverse [f init o] - like reduce-kv but in reverse order
-; reduce2-kv-reverse [f o] - like reduce-kv but in reverse order
 
 ; Arbitrary.
 ; TODO test this on every permutation for inflection point.
@@ -288,8 +283,11 @@
 
 #?(:clj
 (defmacro gen-typed-array-defnts []
-  (if-cljs &env
-    `(do ~@(for [[k type-sym] (-> tdef/array-1d-types :cljs (core/dissoc :object))]
+  (case-env
+    :clj  `(do ~@(for [k (-> tdef/array-1d-types :clj (core/dissoc :object) keys)]
+              (let [fn-sym (symbol (str "->" (name k) "-array-clj"))]
+                `(defmacro ~fn-sym [& args#] (with-meta `(~~(symbol "core" (str (name k) "-array")) ~@args#) {:tag ~(str (name k) "s")})))))
+    :cljs `(do ~@(for [[k type-sym] (-> tdef/array-1d-types :cljs (core/dissoc :object))]
              (let [fn-sym (symbol (str "->" (name k) "-array-cljs"))]
                `(defnt ~fn-sym
                   ([#{~type-sym} x#] x#)
@@ -299,10 +297,7 @@
                         ; TODO compare `reducei` to `doseqi`
                         (reducei (fn [buf# elem# i#] (core/aset buf# i# elem#) buf#)
                                  (~fn-sym (count x#))
-                                 x#))))))
-    `(do ~@(for [k (-> tdef/array-1d-types :clj (core/dissoc :object) keys)]
-             (let [fn-sym (symbol (str "->" (name k) "-array-clj"))]
-               `(defmacro ~fn-sym [& args#] (with-meta `(~~(symbol "core" (str (name k) "-array")) ~@args#) {:tag ~(str (name k) "s")}))))))))
+                                 x#)))))))))
 
 (gen-typed-array-defnts)
 
@@ -502,12 +497,15 @@
 #?(:clj (defalias contains? containsk?))
 
 (defnt containsv?
-  ([^string?  coll elem]
-    (and (nnil? elem) (index-of coll elem)))
-  ([^pattern? coll elem]
-    (nnil? (re-find elem coll)))
-  ([          coll elem]
-    (seq-or (fn= elem) coll)))
+  ([^string?  x elem]
+    (and (nnil? elem) (index-of x elem)))
+  ([#{keyword? symbol?} x elem]
+    (or (some-> x name      (containsv? elem))
+        (some-> x namespace (containsv? elem))))
+  ([^pattern? x elem]
+    (nnil? (re-find elem x)))
+  ([          x elem]
+    (seq-or (fn= elem) x)))
 
 ; static Object getFrom(Object coll, Object key, Object notFound){
 ;   else if(coll instanceof Map) {
