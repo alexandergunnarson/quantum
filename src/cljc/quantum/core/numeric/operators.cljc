@@ -37,7 +37,7 @@
 
 ; ===== ADD ===== ;
 
-(defn num-ex [] (throw (ArithmeticException. "Out of range")))
+(defn num-ex [] (throw (#?(:clj ArithmeticException. :cljs js/Error.) "Out of range")))
 
 #?(:clj #_(defalias +*-bin unchecked-add)
         (defnt' +*-bin "Lax `+`. Continues on overflow/underflow."
