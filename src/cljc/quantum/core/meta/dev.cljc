@@ -27,10 +27,11 @@
   ([^clojure.lang.Namespace x]
     (-> x ns-name name))))
 
+#?(:clj
 (def todos-map
   (sorted-map-by
     (fn [a b] (compare (qualified-name a)
-                       (qualified-name b)))))
+                       (qualified-name b))))))
 
 #?(:clj
 (defn all-todos
