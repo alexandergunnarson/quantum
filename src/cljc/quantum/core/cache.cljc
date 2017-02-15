@@ -1,8 +1,7 @@
 (ns ; ^{:clojure.tools.namespace.repl/unload false} ; because of cache
   quantum.core.cache
            (:refer-clojure :exclude [memoize])
-           (:require [#?(:clj  clojure.core
-                         :cljs cljs.core   )  :as core]
+           (:require [clojure.core            :as core]
                      [quantum.core.error      :as err
                        :refer [->ex]                  ]
                      [quantum.core.fn         :as fn
@@ -13,7 +12,7 @@
                        :refer [defalias]]
              #?(:clj [taoensso.timbre.profiling :as p])
                      [quantum.core.macros.core  :as cmacros
-                       :refer [#?(:clj if-cljs)]])
+                       :refer [case-env]])
   (:require-macros [quantum.core.cache :as self])
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
@@ -62,19 +61,37 @@
                 (throw (->ex "No get-fn or assoc-fn defined for" m)))]
       {:m m
        :f (fn
-            ([                  ] (memoize-form m f get-fn assoc-fn first? n-args false                 ))
-            ([x                 ] (memoize-form m f get-fn assoc-fn first? n-args false x               ))
-            ([x y               ] (memoize-form m f get-fn assoc-fn first? n-args false x y             ))
-            ([x y z             ] (memoize-form m f get-fn assoc-fn first? n-args false x y z           ))
-            ([x y z w           ] (memoize-form m f get-fn assoc-fn first? n-args false x y z w         ))
-            ([x y z w u         ] (memoize-form m f get-fn assoc-fn first? n-args false x y z w u       ))
-            ([x y z w u v       ] (memoize-form m f get-fn assoc-fn first? n-args false x y z w u v     ))
-            ([x y z w u v & rest] (memoize-form m f get-fn assoc-fn first? n-args true  x y z w u v rest)))}))))
+            ([                      ] (memoize-form m f get-fn assoc-fn first? n-args false                     ))
+            ([a0                    ] (memoize-form m f get-fn assoc-fn first? n-args false a0                  ))
+            ([a0 a1                 ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1               ))
+            ([a0 a1 a2              ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1 a2            ))
+            ([a0 a1 a2 a3           ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1 a2 a3         ))
+            ([a0 a1 a2 a3 a4        ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1 a2 a3 a4      ))
+            ([a0 a1 a2 a3 a4 a5     ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1 a2 a3 a4 a5   ))
+            ([a0 a1 a2 a3 a4 a5 & as] (memoize-form m f get-fn assoc-fn first? n-args true  a0 a1 a2 a3 a4 a5 as)))}))))
 
 #?(:clj
 (defn memoize [& args] (:f (apply memoize* args))))
 
 #?(:cljs (defalias memoize core/memoize))
+
+(defn callable-times
+  "`f` is allowed to be called exactly `n` times.
+   On the `n`th call, its return value is cached."
+  {:attribution "Alex Gunnarson"}
+  [n f]
+  (assert (> n 0))
+  (let [cache (atom {:calls 0})]
+    (fn [& args]
+      (if-let [e (find @cache :ret)]
+        (val e)
+        (let [calls (:calls (swap! cache update :calls inc))]
+          ; Each potential thread is guaranteed to have different values of `calls`, and thus to take the correct respective branches
+          (cond (> calls n) ; Only reaches this if a potential race condition is created and avoided
+                (:ret @cache)
+                (= calls n)
+                (:ret (swap! cache assoc :ret (apply f args)))
+                :else (apply f args)))))))
 
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))
@@ -93,7 +110,7 @@
   (let [cache-sym      (symbol (str (name sym) "-cache"))
         sym-star       (symbol (str (name sym) "*"))]
     `(do (declare ~sym ~sym-star)
-         (~(if-cljs &env `defn `p/defnp) ~sym-star ~@args)
+         (~(case-env :cljs `defn `p/defnp) ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
              (swap! caches update (var ~sym) (whenc1 nil? cache-f#)) ; override cache only if not present
