@@ -10,6 +10,7 @@
             [quantum.core.lexical.core :as lex]
             [quantum.core.data.set     :as set
               :refer [sorted-set+]]
+            [quantum.core.collections.core :as ccoll]
             [quantum.core.collections  :as coll
               :refer [fori reduce nempty?
                       for join last lasti nth
@@ -178,7 +179,7 @@
        :cljs (if secure?
                  (-> (js/forge.random.getBytesSync size)
                      js/forge.util.binary.raw.decode
-                     arr/->byte-array)
+                     ccoll/->byte-array)
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
 #?(:clj
@@ -193,27 +194,27 @@
 ; TODO implement
 ; (defn rand-vec [...] ...)
 
-; ; TODO DEPS ONLY
-; #_(:clj
-; (defn ^String rand-string
-;   {:todo ["Performance of |rand-string| vs. |(String. rand-bytes)|"]}
-;   ([n] (rand-string n nil))
-;   ([n opts]
-;     (if (or (nil? opts)
-;             (and (map? opts)
-;                  (-> opts keys count (= 1))
-;                  (-> opts keys first (= :secure?))))
-;         (rand-chars-between (:secure? opts) n
-;           (core/int Character/MIN_VALUE)
-;           (core/int Character/MAX_VALUE))
-;         (let [opts-indexed (zipmap (coll/lrange) opts)
-;               sb (StringBuilder.)]
-;           (dotimes [i n]
-;             (let [generator-k (get opts-indexed
-;                                 (rand-int-between (:secure? opts) 0 (-> opts count dec)))
-;                   generator (get generators generator-k)]
-;               (.append sb (generator (whenc (:secure? opts) nil? false)))))
-;           (str sb))))))
+; TODO DEPS ONLY
+#_(:clj
+(defn ^String rand-string
+  {:todo ["Performance of |rand-string| vs. |(String. rand-bytes)|"]}
+  ([n] (rand-string n nil))
+  ([n opts]
+    (if (or (nil? opts)
+            (and (map? opts)
+                 (-> opts keys count (= 1))
+                 (-> opts keys first (= :secure?))))
+        (rand-chars-between (:secure? opts) n
+          (core/int Character/MIN_VALUE)
+          (core/int Character/MAX_VALUE))
+        (let [opts-indexed (zipmap (coll/lrange) opts)
+              sb (StringBuilder.)]
+          (dotimes [i n]
+            (let [generator-k (get opts-indexed
+                                (rand-int-between (:secure? opts) 0 (-> opts count dec)))
+                  generator (get generators generator-k)]
+              (.append sb (generator (whenc (:secure? opts) nil? false)))))
+          (str sb))))))
 
 #?(:clj
 (defn rand-graph
