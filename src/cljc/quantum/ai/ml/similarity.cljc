@@ -76,9 +76,9 @@
                   "|nth| -> |get|"
                   "removed unnecessary |persistent!| call"]}
    :original-source "https://en.wikibooks.org/wiki/Algorithm_Implementation/Strings/Levenshtein_distance#Clojure"
-   :todo ["A generalization of the Levenshtein
-           distance (Damerau-Levenshtein distance) allows the transposition of two
-           chars."]
+   :todo #{"A generalization of the Levenshtein
+            distance (Damerau-Levenshtein distance) allows the transposition of two
+            chars."}
    :implemented-by '{smile.math.distance.EditDistance "faster array impl, and has more functionality"}}
   (let [str1 (name str1)
         str2 (name str2)
