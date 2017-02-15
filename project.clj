@@ -84,6 +84,8 @@
          [org.bouncycastle/bcprov-jdk15on       "1.54"            ]
        ; ==== ERROR ====
          [alexandergunnarson/slingshot          "0.14"            ]
+         [bwo/conditions                        "0.1.0"
+           :exclusions [slingshot]]
        ; ==== GRAPH ====
          [aysylu/loom                           "0.6.0"           ]
        ; ==== IO ====
@@ -113,7 +115,7 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [net.mikera/core.matrix                "0.57.0"
            :exclusions [org.clojure/clojure]]
-         [quantum/java                          "1.3.3"           ]
+         [quantum/java                          "1.5.5"           ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
          [fipp                                  "0.6.6"
@@ -125,8 +127,8 @@
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====
-         [quantum/js-joda                       "1.3.0-0"         ]
-         [quantum/js-joda-timezone              "1.0.0-0"         ]
+         [quantum/js-joda                       "1.3.0-2"         ]
+         [quantum/js-joda-timezone              "1.0.0-2"         ]
        ; ==== VALIDATE ====
          [prismatic/schema                      "1.1.1"           ]
        ; ==== META ====
