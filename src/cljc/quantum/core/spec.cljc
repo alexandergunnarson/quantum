@@ -15,7 +15,7 @@
     [quantum.core.fn
       :refer [fn$]]
     [quantum.core.macros.core
-      :refer [if-cljs locals]]
+      :refer [case-env locals]]
     [quantum.core.vars :as var
       :refer [defalias defmalias]])
   (:require-macros
@@ -28,18 +28,18 @@
 
 (def spec-assertion-failed "Spec assertion failed")
 
-(defn validate* ; TODO handle errors
+(defn -validate-one ; TODO handle errors
   "Like |clojure(script).spec/assert*|, but adds a more detailed
    error message à la |taoensso.truss/have|. Also avoids printing
    the failed value to a string, which can be problematic with e.g.
    large collections or lazy seqs."
-  [spec x form locals ns-str ?line]
+  [spec x form locals ns-str ?line kind]
   (let [inst        #?(:clj  (java.util.Date.)
                        :cljs (js/Date.))
         explained   (s/explain-data* spec [] [] [] x)
         data        (ValidationError.
                       (::s/problems explained)
-                      :assertion-failed
+                      kind
                       (str ns-str ":" (core/or ?line "?"))
                       inst
                       form
@@ -48,37 +48,57 @@
                       (type x))]
     (throw (ex-info spec-assertion-failed data))))
 
+(def verbose? false) ; can be `with-redef`ed in tests
+
 #?(:clj
-(defmacro validate-one
-  {:todo {0 {:desc     "have a compile-time assert vs. a forced runtime assert"
+(defmacro validate-one*
+  {:todo {0 {:desc     "Optimize validation peformance"
              :priority 1}}}
-  [spec x]
-  (if-cljs &env
-   `(if cljs.spec/*compile-asserts* ; TODO should probably be outside quote like this
-        (if cljs.spec/*runtime-asserts*
-            (let [spec# ~spec x# ~x
-                  conformed# (cljs.spec/conform spec# x#)]
-              (if (= conformed# :cljs.spec/invalid)
-                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
-                  conformed#))
-           ~x)
-       ~x)
-    (if clojure.spec/*compile-asserts*
-       `(if (clojure.spec/check-asserts?) #_clojure.lang.RT/checkSpecAsserts
-            (let [spec# ~spec x# ~x
-                  conformed# (clojure.spec/conform spec# x#)]
-              (if (= conformed# :clojure.spec/invalid)
-                  (validate* spec# x# '(validate ~spec ~x) (locals ~&env) ~(str *ns*) ~(:line (meta &form)))
-                  conformed#))
-           ~x)
-        x))))
+  [opts spec x]
+  (let [error-kind (core/or (:type opts) :spec.validate/failed)]
+    (case-env
+     :cljs `(if (core/or ~(:runtime? opts) cljs.spec/*compile-asserts*) ; TODO should probably be outside quote like this
+                (if (core/or ~(:runtime? opts) cljs.spec/*runtime-asserts*)
+                    (let [spec# ~spec x# ~x
+                          conformed# (cljs.spec/conform spec# x#)]
+                      (if (= conformed# :cljs.spec/invalid)
+                          (if (core/and ~(:terse? opts) (not verbose?))
+                              (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
+                              (-validate-one spec# x# (list '~'validate '~x '~spec) (locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
+                          conformed#))
+                   ~x)
+               ~x)
+      (if (core/or (:runtime? opts) clojure.spec/*compile-asserts*)
+         `(if (core/or ~(:runtime? opts) (clojure.spec/check-asserts?))
+              (let [spec# ~spec x# ~x
+                    conformed# (clojure.spec/conform spec# x#)]
+                (if (= conformed# :clojure.spec/invalid)
+                    (if (core/and ~(:terse? opts) (not verbose?))
+                        (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
+                        (-validate-one spec# x# (list '~'validate '~x '~spec) (locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
+                    conformed#))
+             ~x)
+          x)))))
+
+#?(:clj
+(defmacro validate-one [spec x] `(validate-one* nil ~spec ~x)))
+
+#?(:clj
+(defmacro validate*
+  "Multiple validations performed.
+   Keys are values; vals are specs.
+   Useful for :pre checks.
+   `opts` is an additional argument."
+  [opts & args] (core/assert (-> args count even?))
+  `(do ~@(->> args (partition-all 2)
+                   (map (fn [[v spec]] `(validate-one* ~opts ~spec ~v)))))))
 
 #?(:clj
 (defmacro validate
   "Multiple validations performed.
    Keys are values; vals are specs.
    Useful for :pre checks."
-  [& args]
+  [& args] (core/assert (-> args count even?))
   `(do ~@(->> args (partition-all 2)
                    (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
@@ -187,7 +207,7 @@
    (s/or* even? #(< % 42))
    Returns a spec that returns the first matching pred's value."
   [& pred-forms]
-  (let [pf (mapv (if-cljs &env #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
+  (let [pf (mapv (case-env :cljs #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
                  pred-forms)]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
 
