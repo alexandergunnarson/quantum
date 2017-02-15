@@ -20,7 +20,7 @@
                        :refer [<- fn->]]
                      [quantum.core.log              :as log]
                      [quantum.core.logic            :as logic
-                       :refer [whenc]]
+                       :refer [whenc whenc->]]
                      [quantum.core.error
                        :refer [TODO]]
                      [quantum.core.loops            :as loops
@@ -190,7 +190,7 @@
   (           [^long?  x] (-> (ByteBuffer/allocate 8) (.putLong x) .array))
   (^{:cost 2} [^String s         ] (->bytes s nil))
   (^{:cost 2} [^String s encoding]
-    #?(:clj (let [^String encoding-f (whenc encoding (fn-> name+ nil?) "UTF-8")] ; TODO 0
+    #?(:clj (let [^String encoding-f (or (some-> encoding name) "UTF-8")] ; TODO 0
               (.getBytes s encoding-f))
        ; funcool/octet.spec.string
        :cljs (let [buff (js/ArrayBuffer. (count s))
