@@ -121,8 +121,7 @@
   {:todo ["Add support for java.util.Base64 MIME and URL decoders"]
    :performance "java.util.Base64 Found to be the fastest impl. according to
                  http://java-performance.info/base64-encoding-and-decoding-performance/"}
-  ([^bytes?  x] (.decode (java.util.Base64/getDecoder) x))
-  ([^string? x] (-> x (.getBytes StandardCharsets/ISO_8859_1) decode64))
+  ([#{bytes? string?} x] (.decode (java.util.Base64/getDecoder) x))
   ([         x] (-> x arr/->bytes-protocol decode64))))
 
 #?(:clj
@@ -131,12 +130,11 @@
   ([x] (decode64-int (arr/->bytes-protocol x)))))
 
 #?(:clj
-(defn ^"[B" decode [k obj]
-  (condp = k
-    :base32        (decode32 obj)
-    :base64        (decode64 obj)
-    :base64-string (let [^"[B" decoded (decode64 obj)]
-                     (String. decoded StandardCharsets/ISO_8859_1))
+(defn decode [k x]
+  (case k
+    :base32        (decode32 x)
+    :base64        (decode64 x)
+    :base64-string (-> x decode64 conv/->text)
     (throw (->ex "Unrecognized codec" k)))))
 
 #?(:cljs (defn decode [& args] (TODO)))
@@ -170,9 +168,7 @@
 (defnt ^String encode64-string
   #?(:cljs ([#{ubytes? bytes? objects?} x]
               (-> x arr/->ubyte-array js/forge.util.binary.base64.encode))) ; Google Closure's implementation didn't work
-  #?(:clj  ([x]
-             (let [encoded (encode64 x)]
-               (String. ^"[B" encoded StandardCharsets/ISO_8859_1)))))
+  #?(:clj  ([x] (-> x encode64 conv/->text))))
 
 (defn encode [k obj]
   (condp = k
@@ -269,7 +265,7 @@
       :scrypt}
     #_(into #{} (bt/available-hash-functions)))))
 
-(def hmac-key->impl-string
+(def hmac-key->algo-string
   {:md5-hmac     "HmacMD5"
    :sha-1-hmac   "HmacSHA1"
    :sha-224-hmac "HmacSHA224"
@@ -278,11 +274,11 @@
    :sha-512-hmac "HmacSHA512"})
 
 #?(:clj
-(defn hmac ^"[B" [impl message secret]
-  (validate impl hmac-key->impl-string
+(defn hmac ^"[B" [algo message secret]
+  (validate algo    hmac-key->impl-string
             message nnil?
             secret  nnil?)
-  (let [^String algo-str (hmac-key->impl-string impl)
+  (let [^String algo-str (hmac-key->algo-string algo)
         ^Mac algo-instance (Mac/getInstance algo-str)
         ^SecretKey secret-key (SecretKeySpec. (->bytes secret) algo-str)]
     (.init    algo-instance secret-key)
@@ -331,7 +327,7 @@
 
 (defn scrypt ; returns String in CLJ; returns promise in CLJS
   "OWASP: Use when resisting any and all hardware accelerated attacks is necessary but support isn't."
-  [^String s & [{:keys [cpu-cost ram-cost parallelism dk-length salt]}]]
+  [secret & [{:keys [cpu-cost ram-cost parallelism dk-length salt]}]]
   (let [log2-cpu-cost      (or cpu-cost 15)  ; 1 to 31
         exp-cpu-cost       (num/pow 2 log2-cpu-cost)
         ram-cost           (or ram-cost 8) ; block size
@@ -347,9 +343,9 @@
               (str "$s0$" params "$" (encode :base64-string salt)
                                  "$" (encode :base64-string derived))))
         derived
-          (do #?(:clj  (SCrypt/scrypt ^"[B" (.getBytes s "UTF-8")
+          (do #?(:clj  (SCrypt/scrypt ^"[B" (conv/->bytes secret)
                                       ^"[B" salt exp-cpu-cost  ram-cost parallelism derived-key-length)
-                 :cljs (js/ScryptAsync      s
+                 :cljs (js/ScryptAsync      secret
                                             salt log2-cpu-cost ram-cost             derived-key-length
                                             (fn [v] (->> v
                                                          derived-to-string
@@ -361,19 +357,6 @@
   (scrypt "password" {:cpu-cost 15 :ram-cost 8 :parallelism 1 :dk-length 32 :salt salt**})
   (scrypt "password" {:cpu-cost 15 :ram-cost 8 :parallelism 1 :dk-length 32 :salt salt**}))
 
-#_(defn check-pw [user-id pass'] ; "user-id$public-site-salt$hashed-pass-from-client"
-  (if-let [pass''-0 (db/q [:find ['?pass'' ...]
-                        :where ['?e :user/id   user-id]
-                               ['?e :user/pass '?pass'']])]
-    (let [salt''      (->salt pass''-0)
-          _           (assert (string? salt''))
-          pass''-test (scrypt pass' {:salt salt''})]
-      ; |public-site-salt| is a publicly known string (embedded into client app),
-      ; which is supposedly unique for the site (it is added as an additional precaution to
-      ; avoid pre-computation per-user attacks to work across different sites).
-      (secure= pass''-0 pass''-test))
-    false))
-
 ; http://ithare.com/client-plus-server-password-hashing-as-a-potential-way-to-improve-security-against-brute-force-attacks-without-overloading-server/
 
 #?(:clj
@@ -384,23 +367,23 @@
   ; Python, Ruby, JRuby, Haskell, Rust, Perl, Redis, etc have all switched to SipHash
   ; https://en.wikipedia.org/wiki/SipHash
   ([obj] (hash :murmur64 obj)) ; murmur64 is Clojure's implementation ; TODO look at clojure.lang.Murmur3.java
-  ([algo obj & [opts]]
+  ([algo x & [opts]]
     (case algo
-      :clojure      (core/hash obj) ; TODO check whether it does what is claimed
+      :clojure      (core/hash x) ; TODO check whether it does what is claimed
       (:md2 :md5 :sha-1 :sha-224 :sha-256 :sha-384 :sha-512)
-        (digest algo obj)
+        (digest algo x)
       (:md5-hmac :sha-1-hmac :sha-224-hmac
        :sha-256-hmac :sha-384-hmac :sha-512-hmac)
-        (hmac algo obj (:secret opts))
+        (hmac algo x (:secret opts))
       ;:sha3-512    (doto (SHA3Digest. 512)
       ;                   (.update (->bytes obj) 0 32)
       ;                   (.doFinal (->bytes obj) 0))
-      :pbkdf2 (pbkdf2 obj (:salt        opts)
-                          (:iterations  opts)
-                          (:key-length  opts))
-      :bcrypt (bcrypt obj (:work-factor opts))
-      :scrypt (scrypt obj opts)
-      (bt/hash obj algo opts)))))
+      :pbkdf2 (pbkdf2 x (:salt        opts)
+                        (:iterations  opts)
+                        (:key-length  opts))
+      :bcrypt (bcrypt x (:work-factor opts))
+      :scrypt (scrypt x opts)
+      (bt/hash x algo opts)))))
 
 ; ===== HASH COMPARE =====
 
@@ -422,18 +405,18 @@
 ; Not secure (?)
 #?(:clj (defalias hash= bt/hash=))
 
-; TODO test more
-#_(defn hash-match? [algo test encrypted]
-  (condp = algo
-    :pbkdf2
-      (if-not (map? encrypted)
+(defn hash-match? [algo test encrypted]
+  (case algo
+    #_:pbkdf2
+      #_(if-not (map? encrypted)
         (throw+ (Err. nil "Encrypted must be map." encrypted))
         (let [salt       (decode     :base64 (:salt       encrypted))
               iterations (decode-int :base64 (:iterations encrypted))]
           (secure= (:hashed encrypted)
                    (hash :pbkdf2 encrypted iterations salt))))
-    :bcrypt (BCrypt/checkpw   test encrypted)
-    :scrypt (SCryptUtil/check test encrypted)))
+              ; TODO test more
+    #?@(:clj [:bcrypt (BCrypt/checkpw   ^String test ^String encrypted)
+              :scrypt (SCryptUtil/check ^String test ^String encrypted)])))
 
 ; _______________________________________________________
 ; ========= (SYMMETRIC)   CIPHER   (ENCRYPTION) =========
@@ -444,7 +427,7 @@
   ([type key-] (encrypt-param* type key- true))
   ([type key- tweak]
     (let [encrypt-param
-            (condp = type
+            (case type
               :encrypt true
               :decrypt false
               (throw (->ex "Invalid encryption param" type)))
@@ -630,14 +613,14 @@
                   e (encrypt :aes "Hey! A message!" opts)]
               (decrypt :aes (:encrypted e) (merge opts e)))]}
   [algo obj & [{:keys [key tweak salt password]} :as opts]]
-  (condp = algo
+  (case algo
     :aes                (aes       obj :encrypt password opts)
     :threefish #?(:clj  (threefish obj :encrypt          opts)
                   :cljs (throw (->ex :unsupported "Threefish unsupported as of yet in CLJS.")))))
 
 (defn decrypt
   [algo obj & [{:keys [key tweak salt password]} :as opts]]
-  (condp = algo
+  (case algo
     :aes                (aes       obj :decrypt password opts)
     :threefish #?(:clj  (threefish obj :decrypt          opts)
                   :cljs (throw (->ex :unsupported "Threefish unsupported as of yet in CLJS.")))))
