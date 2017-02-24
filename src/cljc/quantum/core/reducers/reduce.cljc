@@ -116,7 +116,7 @@
                     ret
                     (recur (unchecked-inc i')
                            (f ret i'))))))
-        ([:obj    coll f init] (when (nnil? coll)
+        ([^default  coll f init] (when (nnil? coll)
                                  (#?(:clj  clojure.core.protocols/coll-reduce
                                      :cljs -reduce)
                                    coll f init))))

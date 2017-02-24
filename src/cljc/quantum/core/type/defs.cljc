@@ -706,9 +706,9 @@
    'm2m-chan?        m2m-chan-types
    'chan?            chan-types
    'comparable?      comparable-types
-   :any              {:clj  (set/union (:clj prim-types) #{'java.lang.Object})
+   'any?             {:clj  (set/union (:clj prim-types) #{'java.lang.Object})
                       :cljs '#{(quote default)}}
-   :obj              {:clj  '#{Object}
+   'default          {:clj  '#{Object}
                       :cljs '#{(quote default)}}})
 
 ; TODO make this extensible
