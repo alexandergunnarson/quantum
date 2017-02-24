@@ -18,7 +18,7 @@
     [quantum.core.error                      :as err
       :refer [->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
-      :refer [<- fn-> fn->> fn1]]
+      :refer [<- fn-> fn->> fn1 fn$]]
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic
@@ -41,6 +41,8 @@
       :refer [defalias replace-meta-from]]
     [quantum.core.spec                       :as s
       :refer [validate]]))
+
+(defonce warn-on-inexact-match? (atom false))
 
 (def
   ^{:todo {0 "Totally reorganize/cleanup this namespace and move into other ones as necessary"
@@ -513,6 +515,8 @@
                           (conj args' matched))))
                   [])))))
 
+
+
 #?(:clj
 (defn compare-specificity
   "Compare specificity of t0 to t1.
@@ -526,10 +530,12 @@
         (= (tcore/boxed->unboxed t0) t1)
         -1
         (= t0 (tcore/boxed->unboxed t1))
+        (or (tcore/primitive-array-type? t0) (tcore/primitive-array-type? t1))
+        nil ; we'll consider the two unrelated
         1
-        (.isAssignableFrom t0 t1)
+        (isa? t0 t1)
         -1
-        (.isAssignableFrom t1 t0)
+        (isa? t1 t0)
         1
         :else nil))) ; unrelated
 
@@ -545,18 +551,20 @@
                       t' (expr->hint:class (get match' i))]
                   (compare-specificity t t')))
             specificity-score (->> specificity-scores (remove nil?) (apply +))]
+            (log/ppr-hints :user (kmap specificity-score match match'))
         (cond (pos? specificity-score) [match]
               (neg? specificity-score) matches'
               :else (conj matches' match))))
     [(first matches)] (rest matches))))
 
 #?(:clj
-(defn match-args
-  ([classname method args] (match-args classname method args nil))
-  ([classname method args env]
+(defn args->matches
+  ([classname method args strict?] (args->matches classname method args strict? nil))
+  ([classname method args strict? env]
     (log/ppr-hints :macro-expand/params "Matching args" {:args args :class classname :method method})
-    (let [arity (count args)
-          class- (resolve classname)
+    (let [arity    (count args)
+          class-   (resolve classname)
+          _        (assert (some? class-) (kmap classname))
           argtypes (mapv (fn1 ana/typeof** env) args)
           possible-matches
             (->> class-
@@ -567,26 +575,48 @@
                  (map    (fn->> :parameter-types (try-params-match env args argtypes)))
                  (remove nil?))
           _ (log/ppr-hints :macro-expand/params "Possible matches:" possible-matches)
-          #_(assert (nempty? possible-matches) {:message "No match found for args"
-                                            :class   classname
-                                            :method  method
-                                            :args    args}) ; TODO let reflection happen? should configure this
-          most-specific-matches
-            (most-specific-arg-matches possible-matches)
-          _ (when (-> most-specific-matches count (> 1))
-              (log/ppr-hints :warn  ; TODO let reflection happen? should configure this
-                ; TODO line number etc.
-                #_err/throw-info "More than one matching method found for args; hint one or more args to fix this"
-                {:callsite [classname method
-                            {:symbolic args
-                             :types    argtypes}]
-                 :possible-matches possible-matches
-                 :most-specific-matches most-specific-matches}))
-          most-specific-match (first most-specific-matches)
-          _ (log/ppr-hints :macro-expand/params "Most specific match:" most-specific-match)]
-      (mapv ensure-embeddable-hint
-        (or most-specific-match ; for now, choose the first one that works; TODO change this
-            args)))))) ; reflection
+          most-specific-matches (most-specific-arg-matches possible-matches)
+          ; TODO derepeat
+          _ (if (and (or (-> most-specific-matches count (> 1))
+                         (-> most-specific-matches count (= 0)))
+                     (or strict? @warn-on-inexact-match?))
+                (log/ppr-hints :warn
+                  ; TODO line number etc.
+                  (if (-> most-specific-matches count (> 1))
+                     "More than one matching method found for args. Hint one or more args to fix this."
+                     "No method found for args. Falling back to reflection. Hint one or more args to fix this.")
+                  {:callsite [classname method
+                              {:symbolic args
+                               :types    argtypes}]
+                   :possible-matches possible-matches
+                   :most-specific-matches most-specific-matches})
+                (log/ppr-hints :macro-expand/params "Most specific matches:" most-specific-matches))]
+      (->> most-specific-matches
+           (mapv (fn$ mapv ensure-embeddable-hint)))))))
+
+#?(:clj
+(defn output-call-to-protocol-or-reify
+  ([{:keys [sym env reify-available? strict?
+            protocol-method
+            reify-name interface-name interface-method
+            args]}]
+    (if (not reify-available?)
+        ; Protocol dispatch
+        (if strict?
+            (err/throw-info "Conflicting `defnt` options: strict, but no reify available" {:defnt-sym sym})
+            (do (assert (symbol? protocol-method) (kmap protocol-method))
+                `(~protocol-method ~@args)))
+        ; Matches even when it has incomplete type information
+        (let [matches    (args->matches interface-name interface-method args strict? env)
+              best-match (or (first matches) args)]
+          (if (-> matches count (= 1))
+              `(. ~reify-name ~interface-method ~@best-match)
+                ; If no one specific match is found,
+              (if strict?
+                  ; and is strict, outputs warning and proceeds with the reify with the original args
+                  `(. ~reify-name ~interface-method ~@args)
+                  ; Otherwise, goes with the protocol, passing in the original args
+                  `(~protocol-method ~@args))))))))
 
 (defn defnt-gen-helper-macro
   "Generates the macro helper for |defnt|.
@@ -612,27 +642,35 @@
                      sym-with-meta' (replace-meta-from (symbol (str (name sym-with-meta) postfix)) sym-with-meta)]
                 `(defmacro ~sym-with-meta' [& ~args-sym]
                    (let [~args-hinted-sym
-                           (quantum.core.macros.transform/try-hint-args ; TODO use expr-info to get better type resolution
+                           (quantum.core.macros.transform/try-hint-args ; TODO remove this?
                              ~args-sym ~lang ~'&env)]
                      (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta'
                                            "|" ~args-hinted-sym
                                            "|" '~genned-protocol-method-name-qualified
                                            "|" '~genned-method-name)
-                     ; TODO match even for missing hints
                      (if ~(when-not strict-macro?
                            `(or (case-env* ~'&env :cljs true)
-                                  (= ~lang :cljs)
-                                  ~relaxed?
-                                  (and (not ~strict?)
-                                       (quantum.core.macros.transform/any-hint-unresolved?
-                                         ~args-hinted-sym ~lang ~'&env))))
-                         (seq (concat (list '~genned-protocol-method-name-qualified)
-                                      ~args-hinted-sym))
-                         (let [~args-matched-sym (match-args '~ns-qualified-interface-name '~genned-method-name ~args-hinted-sym ~'&env)]
-                           (seq (concat (list '.)
-                                        (list '~reified-sym-qualified)
-                                        (list '~genned-method-name)
-                                        ~args-matched-sym))))))))]
+                                (= ~lang :cljs)
+                                ~relaxed? ; TODO fix this?
+                                #_(quantum.core.macros.transform/any-hint-unresolved?
+                                  ~args-hinted-sym ~lang ~'&env)))
+                         (output-call-to-protocol-or-reify
+                           {:env              ~'&env
+                            :sym              '~sym-with-meta'
+                            :reify-available? false
+                            :protocol-method  '~genned-protocol-method-name-qualified
+                            :args              ~args-hinted-sym})
+                         ; Matches even when it has incomplete type information
+                         ; If more than one equally specific match is found, calls the protocol
+                         (output-call-to-protocol-or-reify
+                           {:env              ~'&env
+                            :sym              '~sym-with-meta'
+                            :reify-available? true
+                            :protocol-method  '~genned-protocol-method-name-qualified
+                            :reify-name       '~reified-sym-qualified
+                            :interface-name   '~ns-qualified-interface-name
+                            :interface-method '~genned-method-name
+                            :args              ~args-hinted-sym}))))))]
      {:helper-macro-def
        `(do ~@[(when-not relaxed? (gen true))]
             ~(gen false))}))
