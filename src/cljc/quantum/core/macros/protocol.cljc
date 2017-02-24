@@ -1,6 +1,6 @@
 (ns quantum.core.macros.protocol
   (:require
-    [quantum.core.analyze.clojure.predicates :as anap
+    [quantum.core.analyze.clojure.core       :as ana
       :refer [type-hint]]
     [quantum.core.analyze.clojure.transform
       :refer [unhint]]

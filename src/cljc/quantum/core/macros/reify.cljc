@@ -1,6 +1,6 @@
 (ns quantum.core.macros.reify
   (:require
-    [quantum.core.analyze.clojure.predicates :as anap
+    [quantum.core.analyze.clojure.core       :as ana
       :refer [type-hint]                                ]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set kmap nempty?]]

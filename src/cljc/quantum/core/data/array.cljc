@@ -67,7 +67,7 @@
 ; ----- BOOLEAN ARRAY ----- ;
 
 #?(:clj
-(defnt boolean-array [^integer? n]
+(defnt boolean-array [^int n]
   (if (> n Integer/MAX_VALUE)
       (it.unimi.dsi.fastutil.booleans.BooleanBigArrays/newBigArray 1)
       (core/boolean-array n))))
@@ -134,7 +134,7 @@
 ; ----- OBJECT ARRAY ----- ;
 
 ; TODO: Use a macro for this
-#?(:clj
+#_(:clj
   (defn object-array-of
     "Creates an object array with the specified values."
     {:attribution "mikera.cljutils.arrays"}
