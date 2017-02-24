@@ -70,7 +70,7 @@
     (defnt ^boolean ->boolean
       {:source "clojure.lang.RT.booleanCast"}
       ([^boolean x] x)
-      ([:else    x] (.booleanValue (not= x nil))))
+      ([#{byte char short int long float double Object}    x] (.booleanValue (not= x nil)))) ; TODO #{(- prim? boolean) Object}
    :cljs (defalias ->boolean core/boolean))
 ;_____________________________________________________________________
 ;==================={           BYTE           }======================
