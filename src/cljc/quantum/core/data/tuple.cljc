@@ -13,4 +13,4 @@
 
 #?(:clj
 (defmacro tuple [& vs] ; TODO CLJS
-  `(Tuple. (quantum.core.data.Array/newObjectArray ~@vs))))
+  `(Tuple. (quantum.core.data.Array/new1dObjectArray ~@vs))))
