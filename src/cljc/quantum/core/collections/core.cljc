@@ -381,12 +381,12 @@
 ; ===== COPY ===== ;
 
 (#?(:clj defnt' :cljs defnt) copy! ; shallow copy
-  (^<0> [^array? in ^int? in-pos :first out ^int? out-pos ^int? length]
+  (^<0> [^array? in ^int? in-pos :<0> out ^int? out-pos ^int? length]
     #?(:clj  (System/arraycopy in in-pos out out-pos length)
        :cljs (dotimes [i (- (.-length in) in-pos)]
                (core/aset out (+ i out-pos) (core/aget in i))))
     out)
-  (^<0> [^array? in :first out ^nat-int? length]
+  (^<0> [^array? in :<0> out ^nat-int? length]
     (copy! in 0 out 0 length)))
 
 #?(:clj (defalias shallow-copy! copy!))
@@ -557,6 +557,7 @@
            ([^seq?                           x            i if-not-found] (core/nth x i if-not-found))
            ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
   #?(:cljs ([^nil?                           x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                           x            i             ] (core/get x i nil         )))
   #?(:cljs ([^nil?                           x            i if-not-found] (core/get x i if-not-found)))
          #_([                                x            i             ] (core/get x i nil         ))
          #_([                                x            i if-not-found] (core/get x i if-not-found)))
@@ -646,8 +647,8 @@
 (defnt assoc!
   {:performance "|java.lang.reflect.Array/set| is 26 times faster
                   than 'normal' reflection"}
-  #?(:cljs (^<0> [^array?         x ^int i :elem v] (aset      x i v) x))
-  #?(:clj  (^<0> [^array?         x ^int i :elem v] (Array/set x v i)))
+  #?(:cljs (^<0> [^array?         x ^int i :<0>:1 v] (aset      x i v) x))
+  #?(:clj  (^<0> [^array?         x ^int i :<0>:1 v] (Array/set x v i)))
   #?(:clj  (^<0> [^list?          x ^int i       v] (.set x i v) x)) ; it may fail sometimes
            (^<0> [^transient?     coll      k       v] (core/assoc! coll k v))
            (     [^atom?          coll      k       v] (swap! coll assoc-protocol k v))
@@ -670,46 +671,46 @@
   "`assoc`, maybe mutable. General `assoc(!)`.
    If the value is mutable  , it will mutably   `assoc!`.
    If the value is immutable, it will immutably `assoc`."
-  (^<0> [^array?     x ^int k :<0>:elem v] (assoc! coll k v))
-  (^<0> [^transient? x      k           v] (assoc! coll k v))
-  (     [^atom?      x      k           v] (assoc! coll k v))
-  (     [            x      k           v] (assoc  coll k v)))
+  (^<0> [^array?     x ^int k :<0>:1 v] (assoc! x k v))
+  (^<0> [^transient? x      k        v] (assoc! x k v))
+  (     [^atom?      x      k        v] (assoc! x k v))
+  (     [            x      k        v] (assoc  x k v)))
 
 #?(:clj ; TODO macro to de-repetitivize
-(defnt assoc-in!*
+(defnt' assoc-in!*
   "get-in : get-in* :: assoc-in! : assoc-in!*"
-  ([#{array-1d? array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:elem v
+  ([#{array-1d? array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:1 v
     ^int i1]
     (Array/set x v i1))
-  ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:elem:1 v
+  ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:2 v
     ^int i1 ^int i2]
     (Array/set x v i1 i2))
-  #_([#{array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:elem:2 v
+  ([#{array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:3 v
     ^int i1 ^int i2 ^int i3]
     (Array/set x v i1 i2 i3))
-  #_([#{array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :elem v
+  ([#{array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:4 v
     ^int i1 ^int i2 ^int i3 ^int i4]
     (Array/set x v i1 i2 i3 i4))
-  #_([#{array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :elem v
+  ([#{array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:5 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5]
     (Array/set x v i1 i2 i3 i4 i5))
-  #_([#{array-6d? array-7d? array-8d? array-9d? array-10d?} x :elem v
+  ([#{array-6d? array-7d? array-8d? array-9d? array-10d?} x :<0>:6 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6]
     (Array/set x v i1 i2 i3 i4 i5 i6))
-  #_([#{array-7d? array-8d? array-9d? array-10d?} x :elem v
+  ([#{array-7d? array-8d? array-9d? array-10d?} x :<0>:7 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6 ^int i7]
     (Array/set x v i1 i2 i3 i4 i5 i6 i7))
-  #_([#{array-8d? array-9d? array-10d?} x :elem v
+  ([#{array-8d? array-9d? array-10d?} x :<0>:8 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6 ^int i7 ^int i8]
     (Array/set x v i1 i2 i3 i4 i5 i6 i7 i8))
-  #_([#{array-9d? array-10d?} x :elem v
+  ([#{array-9d? array-10d?} x :<0>:9 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6 ^int i7 ^int i8 ^int i9]
     (Array/set x v i1 i2 i3 i4 i5 i6 i7 i8 i9))
-  #_([#{array-10d?} x :elem v
+  ([#{array-10d?} x :<0>:10 v
     ^int i1 ^int i2 ^int i3 ^int i4 ^int i5
     ^int i6 ^int i7 ^int i8 ^int i9 ^int i10]
     (Array/set x v i1 i2 i3 i4 i5 i6 i7 i8 i9 i10))))
@@ -780,7 +781,7 @@
   #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]
                   :cljs [cljs.core/TransientVector])} x]
             (get x (lasti x))))
-          ([:else               x] (core/last x)))
+          #_([:else               x] (core/last x)))
 
 (defalias peek   last) ; TODO not always correct
 (defalias firstr last)
@@ -930,7 +931,7 @@
   ([^+sorted-map?   to from] (red/persistent-into to from))
   ([^string?        to from] (str #?(:clj  (red/reduce*-protocol from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
                                      :cljs (red/reduce*-protocol from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
-  (^<0> [^array-1d? a :first b] ; returns a new array
+  (^<0> [^array-1d? a :<0> b] ; returns a new array
     (if (identical? (class a) (class b))
         #?(:clj  (let [al  (count a)
                        bl  (count b)
