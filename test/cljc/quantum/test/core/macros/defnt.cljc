@@ -32,23 +32,63 @@
   ([pred lang])
   ([pred lang type-arglist]))
 
-(deftest test:?extract-special-defnt-keyword ; TODO derepeat
-  (is (= :else  (ns/?extract-special-defnt-keyword :else)))
-  (is (= :largest (ns/?extract-special-defnt-keyword :largest)))
-  (is (= nil (ns/?extract-special-defnt-keyword :nope)))
-  (is (= nil (ns/?extract-special-defnt-keyword "<0>")))
+(deftest test:defnt-keyword->positional-profundal ; TODO derepeat
+  (is (thrown? Throwable (ns/defnt-keyword->positional-profundal :else)))
+  (is (thrown? Throwable (ns/defnt-keyword->positional-profundal :nope<>)))
+  (is (=       nil       (ns/defnt-keyword->positional-profundal "<0>")))
   (testing "Positional"
-    (is (= [0 nil]  (ns/?extract-special-defnt-keyword :<0>)))
-    (is (= [0 nil]  (ns/?extract-special-defnt-keyword '<0>)))
-    (is (= nil      (ns/?extract-special-defnt-keyword :<01>)))
-    (is (= nil      (ns/?extract-special-defnt-keyword '<01>)))
-    (is (= [1 nil]  (ns/?extract-special-defnt-keyword '<1>)))
-    (is (= [89 nil] (ns/?extract-special-defnt-keyword '<89>))))
+    (is (=       [0 nil]   (ns/defnt-keyword->positional-profundal :<0>)))
+    (is (=       [0 nil]   (ns/defnt-keyword->positional-profundal '<0>)))
+    (is (thrown? Throwable (ns/defnt-keyword->positional-profundal :<01>)))
+    (is (=       nil       (ns/defnt-keyword->positional-profundal '<01>))) ; Assumes it's an actual type
+    (is (=       [1 nil]   (ns/defnt-keyword->positional-profundal '<1>)))
+    (is (=       [89 nil]  (ns/defnt-keyword->positional-profundal '<89>))))
   (testing "Elemental"
-    (is (= [0 1]   (ns/?extract-special-defnt-keyword :<0>:1)))
-    (is (= [0 0]   (ns/?extract-special-defnt-keyword :<0>:0)))
-    (is (= [93 27] (ns/?extract-special-defnt-keyword :<93>:27)))
-    (is (= nil     (ns/?extract-special-defnt-keyword :<93>:07)))))
+    (is (=       [0 1]     (ns/defnt-keyword->positional-profundal :<0>:1)))
+    (is (=       [0 0]     (ns/defnt-keyword->positional-profundal :<0>:0)))
+    (is (=       [93 27]   (ns/defnt-keyword->positional-profundal :<93>:27)))
+    (is (thrown? Throwable (ns/defnt-keyword->positional-profundal :<93>:07)))))
+
+(deftest test:positional-profundal->hint
+  (is (= 'String (ns/positional-profundal->hint
+                   :clj 0 nil '[a b c d] '[String :<0> "[D" :<2>:1])))
+  (is (= 'double (ns/positional-profundal->hint
+                   :clj 2 1 '[a b c d] '[String :<0> "[D" :<2>:1])))
+  (is (= :<2>:1  (ns/positional-profundal->hint
+                   :clj 3 nil '[a b c d] '[String :<0> "[D" :<2>:1]))))
+
+(deftest test:hints->with-replace-special-kws
+  (testing "Position+depth spec"
+    (is (= '[String String "[D" double]
+           (ns/hints->with-replace-special-kws
+             {:lang    :clj
+              :arglist '[a b c d]
+              :hints   '[String :<0> "[D" :<2>:1]}))))
+  (testing "CLJS throws on depth spec"
+    (is (thrown? Throwable
+          (ns/hints->with-replace-special-kws
+            {:lang    :cljs
+             :arglist '[a b c d]
+             :hints   '[String :<0> "[D" :<2>:1]}))))
+  (testing "Refs"
+    (testing "No cycles"
+      (is (= '["[D" "[D" "[D" double]
+             (ns/hints->with-replace-special-kws
+               {:lang    :clj
+                :arglist '[a b c d]
+                :hints   '["[D" :<0> :<1> :<2>:1]}))))
+    (testing "Self-reference"
+      (is (thrown? Throwable
+             (ns/hints->with-replace-special-kws
+               {:lang    :clj
+                :arglist '[a b c d]
+                :hints   '[:<0> :<0> "[D" :<2>:1]}))))
+    (testing "Currently doesn't handle forward references"
+      (is (thrown? Throwable
+             (ns/hints->with-replace-special-kws
+               {:lang    :clj
+                :arglist '[a b c d]
+                :hints   '[:<1> String "[D" :<2>:1]}))))))
 
 #?(:clj
 (deftest test:expand-classes-for-type-hint ; TODO :clj only for now
