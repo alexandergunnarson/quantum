@@ -90,7 +90,7 @@
       (is (= abc (->MyTypeOfValidatedMap {::a 1 ::b 1 ::c "2" ::d 3})))
       (is (not= abc {::a 1 ::b 1 ::c "2" ::d 3}))))))
 
-(ns/def-validated MyTypeOfValidatedValue ::f)
+(ns/def MyTypeOfValidatedValue ::f)
 
 (defnt trythis2 [^MyTypeOfValidatedValue x]
   (quantum.core.core/set x "abcdf"))
