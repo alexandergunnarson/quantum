@@ -131,7 +131,7 @@
 
 ; ================================================ TAKE ================================================
 ; ============ TAKE-LEFT ============
-(defn takel
+(defn takel ; TODO this is actually `takel'`
   {:tests '{(takel 2 "abcdefg")
             "ab"}}
   [i super]
