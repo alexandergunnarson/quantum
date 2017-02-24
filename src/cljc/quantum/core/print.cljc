@@ -99,8 +99,21 @@
     (print " "))
   (pprint-vector-0 x)))
 
+#?(:clj
+(defonce pprint-seq-0
+  (.getMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.ISeq)))
+
+#?(:clj
+(defn- pprint-seq [x]
+  (when-let [has-hint? (-> x meta (contains? :tag))]
+    (print "^")
+    (print (-> x meta :tag))
+    (print " "))
+  (pprint-seq-0 x)))
+
 #?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.Symbol pprint-symbol))
 #?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
+#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.ISeq pprint-seq))
 
 (defn pprint-hints [x]
   #?(:clj
