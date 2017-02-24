@@ -99,10 +99,10 @@
 
 #_"Creates a native-backed float vector from source."
 #?(:clj (defalias                                ->fvec           nat/sv ))
-#?(:clj (alter-meta! #'->fvec assoc :tag 'RealVector))
+#?(:clj (alter-meta! #'->fvec assoc :tag RealVector))
 #_"Creates a native-backed double vector from source."
 #?(:clj (defalias                                ->dvec           nat/dv ))
-#?(:clj (alter-meta! #'->dvec assoc :tag 'RealVector))
+#?(:clj (alter-meta! #'->dvec assoc :tag RealVector))
 #?(:clj (defalias                                ->cl-vec         cl/clv ))
 #?(:clj (defalias                                ->vec            fnum/create-vector)) ; TODO internal type dispatch can be improved
 
@@ -140,7 +140,7 @@
   "Sets the i-th entry of vector x,
    or ij-th entry of matrix m."
   {:implemented-by '#{smile.math.matrix.Matrix}}
-  #?(:clj (^double [^RealChangeable X ^double v ^long a        ] (real/entry! X a v  )))
+  #?(:clj (^double [^RealVector X ^double v ^long a        ] (real/entry! X a v  ))) ; TODO should be Realchangeable??
           (        [                X         v       a        ] (TODO))
   #?(:clj (^double [^RealMatrix     X ^double v ^long b ^long a] (real/entry! X a b v)))
           (        [                X         v       b       a] (TODO)))
@@ -268,7 +268,8 @@
 
 #_"Computes the dot product of vectors x and y."
 ; Also implemented in Breeze
-#?(:clj (defalias ^{:time-complexity 'n}         dot*             real/dot   ))
+#?(:clj (doto (defalias ^{:time-complexity 'n}         dot*             real/dot   )
+              (alter-meta! assoc :tag Double/TYPE)))
 
 #_"Computes the Euclidan (L2) norm of vector x."
 #?(:clj (defalias ^{:time-complexity 'n}         l2-norm          real/nrm2  ))
