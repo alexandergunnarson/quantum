@@ -108,6 +108,11 @@ I realize that this also is probably prohibitively expensive.
 
 At very least it would be nice to have "spec inference". I.e. know, via `fdef`, that a function meets a particular set of specs/characteristics and so any call to that function will necessarily comply with the type.
 
+## Best practices
+
+- Prefer primitives to boxed types whenever possible
+
 ## TODOs
 
-
+- Can't have primitives and boxed types in ambiguous positions
+- `(<= (byte 1) (Byte. (byte 1)))` -> `(<= (byte 1) (byte (Byte. (byte 1))))` to avoid ambiguity with `Comparable`
