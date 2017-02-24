@@ -9,7 +9,7 @@
       :refer [kmap]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
-      :refer [fn$ fn1]]
+      :refer [fn$ fn1 rcomp]]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env case-env*]]
     [quantum.core.log              :as log]
@@ -18,6 +18,8 @@
   (:require-macros
     [quantum.core.error            :as self
       :refer [with-log-errors]]))
+
+(def ^{:todo {0 "Finish up `conditions` fork"}} annotations nil)
 
 (defn generic-error [env]
   (case-env* env :clj 'Throwable :cljs 'js/Error))
@@ -55,13 +57,13 @@
   ([msg objs]      (ex-info (str msg)   (->err msg  msg objs)))
   ([type msg objs] (ex-info msg         (->err type msg objs))))
 
-(def throw-ex (comp (fn1 throw) ->ex))
+(def throw-ex (rcomp ->ex (fn1 throw)))
 
 (defn ->ex-info
   ([objs]     (ex-info "Exception" objs))
   ([msg objs] (ex-info msg         objs)))
 
-(def throw-info (comp (fn1 throw) ->ex-info))
+(def throw-info (rcomp ->ex-info (fn1 throw)))
 
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
@@ -100,7 +102,8 @@
 #?(:clj
 (defmacro throw-when
   [expr throw-content]
-  `(if-not ~expr ~expr (throw ~throw-content))))
+  `(let [expr# ~expr]
+     (if-not expr# expr# (throw ~throw-content)))))
 
 #?(:clj
 (defmacro with-catch
@@ -110,9 +113,8 @@
 
 #?(:clj
 (defmacro with-assert [expr pred err]
-  `(if (~pred ~expr)
-       ~expr
-       (throw ~err))))
+  `(let [expr# ~expr]
+     (if (~pred expr#) expr# (throw ~err)))))
 
 #?(:clj
 (defmacro try-or
