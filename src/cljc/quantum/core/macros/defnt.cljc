@@ -530,12 +530,12 @@
         (= (tcore/boxed->unboxed t0) t1)
         -1
         (= t0 (tcore/boxed->unboxed t1))
+        1
         (or (tcore/primitive-array-type? t0) (tcore/primitive-array-type? t1))
         nil ; we'll consider the two unrelated
-        1
-        (isa? t0 t1)
-        -1
         (isa? t1 t0)
+        -1
+        (isa? t0 t1)
         1
         :else nil))) ; unrelated
 
@@ -551,7 +551,7 @@
                       t' (expr->hint:class (get match' i))]
                   (compare-specificity t t')))
             specificity-score (->> specificity-scores (remove nil?) (apply +))]
-            (log/ppr-hints :user (kmap specificity-score match match'))
+        (log/ppr-hints :macro-expand/params (kmap specificity-score match match'))
         (cond (pos? specificity-score) [match]
               (neg? specificity-score) matches'
               :else (conj matches' match))))

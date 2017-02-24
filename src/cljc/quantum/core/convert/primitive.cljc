@@ -49,8 +49,7 @@
       ([^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
                                           :cljs (-> x int/fromString ->long)))
     #?(:clj
-      ([^string?                    x radix] (Long/parseLong x radix)))
-      ([                            x] (->long-protocol x)))
+      ([^string?                    x radix] (Long/parseLong x radix))))
    :cljs
      (defnt ->long
        ([^number?  x] (js/Math.trunc x))
