@@ -16,7 +16,7 @@
     :cljs-self-referencing? true}
   quantum.core.collections
            (:refer-clojure :exclude
-             [for doseq reduce set
+             [for doseq reduce set dotimes
               contains?
               repeat repeatedly
               interpose mapcat
@@ -93,7 +93,7 @@
                :refer [defalias defaliases]])
   (:require-macros
     [quantum.core.collections
-      :refer [for for* lfor doseq doseqi reduce reducei
+      :refer [for for* lfor doseq doseqi reduce reducei dotimes
               seq-loop
               count lasti
               subseq
@@ -139,6 +139,7 @@
 #?(:clj (defalias second          coll/second       ))
         (defalias third           coll/third        )
 #?(:clj (defalias last            coll/last         ))
+#?(:clj (defalias last&           coll/last&        ))
 ; ===== BULK RETRIEVAL ===== ;
 #?(:clj (defalias rest            coll/rest         ))
         (defalias lrest           c/rest            )
@@ -155,6 +156,7 @@
 #?(:clj (defalias dissoc!         coll/dissoc!      ))
         (defalias conj            coll/conj         )
 #?(:clj (defalias conj!           coll/conj!        ))
+#?(:clj (defalias conj?!          coll/conj?!       ))
 #?(:clj (defalias disj!           coll/disj!        ))
 #?(:clj (defalias update!         coll/update!      ))
 
@@ -275,6 +277,9 @@
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
+#?(:clj (defalias dotimes  loops/dotimes ))
+#?(:clj (defalias fortimes loops/fortimes))
+#?(:clj (defalias fortimes:objects loops/fortimes:objects))
 #?(:clj (defalias reduce   loops/reduce  ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reduce*  loops/reduce* ))
@@ -307,7 +312,7 @@
 ; ========================= GENERATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 (defaliases gen
-  repeat lrepeat #?(:clj repeatedly) lrepeatedly
+  repeat lrepeat repeatedly lrepeatedly
   range range+ lrange rrange lrrange)
 ; _______________________________________________________________
 ; ================== FULL-SEQUENCE TRANSFORMS ===================
