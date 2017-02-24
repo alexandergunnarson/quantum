@@ -14,12 +14,10 @@
       :refer [defalias defaliases]]
     [quantum.core.numeric.convert   ]
     [quantum.core.numeric.misc      ]
-    [quantum.core.numeric.operators    :as op
-      :include-macros true]
+    [quantum.core.numeric.operators    :as op]
     [quantum.core.numeric.predicates]
     [quantum.core.numeric.trig      ]
-    [quantum.core.numeric.truncate     :as trunc
-      :include-macros true]
+    [quantum.core.numeric.truncate     :as trunc]
     [quantum.core.numeric.types        :as ntypes])
   (:require-macros
     [quantum.core.numeric.strict-args :as self])
@@ -33,21 +31,24 @@
 ;_____________________________________________________________________
 ;==================={        OPERATORS         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
-#?(:clj (defalias +* op/+*&))
-#?(:clj (defalias +' op/+'&))
-#?(:clj (defalias +  op/+& ))
+#?(:clj (defalias +*   op/+*&))
+#?(:clj (defalias +'   op/+'&))
+#?(:clj (defalias +    op/+& ))
 
-#?(:clj (defalias -* op/-*&))
-#?(:clj (defalias -' op/-'&))
-#?(:clj (defalias -  op/-& ))
+#?(:clj (defalias -*   op/-*&))
+#?(:clj (defalias -'   op/-'&))
+#?(:clj (defalias -    op/-& ))
 
-#?(:clj (defalias ** op/**&))
-#?(:clj (defalias *' op/*'&))
-#?(:clj (defalias *  op/*& ))
+#?(:clj (defalias **   op/**&))
+#?(:clj (defalias *'   op/*'&))
+#?(:clj (defalias *    op/*& ))
+
+#?(:clj (defalias div* op/div*&))
+#?(:clj (defalias div' op/div'&))
+#?(:clj (defalias /    op/div& ))
 
 #_(defaliases quantum.core.numeric.operators
-  #?@(:clj [;div*$ div'$ div$
-            ;inc*$ #_inc' inc$
+  #?@(:clj [;inc*$ #_inc' inc$
             ;dec*$ #_dec' dec$
             ; abs'$ abs$
                  ])
