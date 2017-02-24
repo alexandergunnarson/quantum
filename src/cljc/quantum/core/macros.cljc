@@ -33,6 +33,8 @@
 #?(:clj (defalias case-env* cmacros/case-env*))
 #?(:clj (defalias case-env  cmacros/case-env ))
 
+#?(:clj (defalias syntax-quote cmacros/syntax-quote))
+
 #?(:clj
 (defmacro maptemplate
   [template-fn coll]
@@ -70,52 +72,63 @@
   "Creates left-associative variadic forms for any unary/binary operator."
   {:attribution  "ztellman/primitive-math"
    :contributors ["Alex Gunnarson"]}
-  ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
+  ([sym clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn clj-zero-arg-fn cljs-zero-arg-fn]]
      (let [x-sym   (gensym "x")
            y-sym   (gensym "y")
-           cljs-fn (or cljs-fn clj-fn)]
-       `(defmacro ~name
+           cljs-fn (or cljs-fn clj-fn)
+           qualified-sym (symbol (-> *ns* ns-name name) (name sym))]
+       `(defmacro ~sym
+          ([]
+           ~(let [clj-zero-arg-fn-f  (whenc clj-zero-arg-fn  nil? clj-fn )
+                  cljs-zero-arg-fn-f (whenc cljs-zero-arg-fn nil? cljs-fn)]
+             `(case-env
+                :clj  (list (syntax-quote ~clj-zero-arg-fn-f ))
+                :cljs (list (syntax-quote ~cljs-zero-arg-fn-f)))))
           ([~x-sym]
-            ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
-                   cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              `(do #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 1"
-                (case-env :clj  (list '~clj-single-arg-fn-f  ~x-sym)
-                          :cljs (list '~cljs-single-arg-fn-f ~x-sym)))
-              (case-env
-                :clj  (list '~clj-single-arg-fn-f  ~x-sym)
-                :cljs (list '~cljs-single-arg-fn-f ~x-sym)))))
+           ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
+                  cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
+             `(case-env
+                :clj  (list (syntax-quote ~clj-single-arg-fn-f ) ~x-sym)
+                :cljs (list (syntax-quote ~cljs-single-arg-fn-f) ~x-sym))))
           ([~x-sym ~y-sym]
              #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
                 (case-env :clj  (list '~clj-fn  ~x-sym ~y-sym)
                           :cljs (list '~cljs-fn ~x-sym ~y-sym)))
-             (case-env :clj  (list '~clj-fn  ~x-sym ~y-sym)
-                       :cljs (list '~cljs-fn ~x-sym ~y-sym)))
+             (case-env :clj  (list (syntax-quote ~clj-fn ) ~x-sym ~y-sym)
+                       :cljs (list (syntax-quote ~cljs-fn) ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
-             (list* '~name (list '~name x# y#) rest#)))))))
+             (list* '~qualified-sym (list '~qualified-sym x# y#) rest#)))))))
 
 #?(:clj
 (defmacro variadic-predicate-proxy
   "Turns variadic predicates into multiple pairwise comparisons."
   {:attribution  "ztellman/primitive-math"
    :contributors ["Alex Gunnarson"]}
-  ([name clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn]]
+  ([sym clj-fn & [cljs-fn clj-single-arg-fn cljs-single-arg-fn clj-zero-arg-fn cljs-zero-arg-fn]]
      (let [x-sym    (gensym "x"   )
            y-sym    (gensym "y"   )
            rest-sym (gensym "rest")
-           cljs-fn  (or cljs-fn clj-fn)]
-       `(defmacro ~name
+           cljs-fn  (or cljs-fn clj-fn)
+           qualified-sym (symbol (-> *ns* ns-name name) (name sym))]
+       `(defmacro ~sym
+          ([]
+           ~(let [clj-zero-arg-fn-f  (whenc clj-zero-arg-fn  nil? clj-fn )
+                  cljs-zero-arg-fn-f (whenc cljs-zero-arg-fn nil? cljs-fn)]
+             `(case-env
+                :clj  (list (syntax-quote ~clj-zero-arg-fn-f ))
+                :cljs (list (syntax-quote ~cljs-zero-arg-fn-f)))))
           ([~x-sym]
             ~(let [clj-single-arg-fn-f  (whenc clj-single-arg-fn  nil? clj-fn )
                    cljs-single-arg-fn-f (whenc cljs-single-arg-fn nil? cljs-fn)]
-              `(case-env* ~'&env :clj  (list '~clj-single-arg-fn-f  ~x-sym)
-                                 :cljs (list '~cljs-single-arg-fn-f ~x-sym))))
+              `(case-env :clj  (list (syntax-quote ~clj-single-arg-fn-f ) ~x-sym)
+                         :cljs (list (syntax-quote ~cljs-single-arg-fn-f) ~x-sym))))
           ([~x-sym ~y-sym]
-             (case-env* ~'&env :clj  (list '~clj-fn  ~x-sym ~y-sym)
-                               :cljs (list '~cljs-fn ~x-sym ~y-sym)))
+             (case-env :clj  (list (syntax-quote ~clj-fn ) ~x-sym ~y-sym)
+                       :cljs (list (syntax-quote ~cljs-fn) ~x-sym ~y-sym)))
           ([~x-sym ~y-sym ~'& ~rest-sym]
              (case-env* ~'&env
-               :clj  (list 'quantum.core.Numeric/and (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym))
-               :cljs (list 'and                      (list '~name ~x-sym ~y-sym) (list* '~name ~y-sym ~rest-sym)))))))))
+               :clj  (list 'quantum.core.Numeric/and (list '~qualified-sym ~x-sym ~y-sym) (list* '~qualified-sym ~y-sym ~rest-sym))
+               :cljs (list 'and                      (list '~qualified-sym ~x-sym ~y-sym) (list* '~qualified-sym ~y-sym ~rest-sym)))))))))
 
 ; #?(:clj
 ; (defn param-arg-match
