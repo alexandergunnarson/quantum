@@ -138,7 +138,7 @@
 
 ; ===== SYMBOLS =====
 
-(defn hint-meta [sym hint] (with-meta sym {:tag hint}))
+(defn hint-meta [sym hint] (vary-meta sym assoc :tag hint))
 
 ; ===== MACROEXPANSION ====
 
@@ -229,7 +229,7 @@
 
 ; ------------- SYNTAX QUOTE; QUOTE+ -------------
 
-#?(:clj (defmalias syntax-quote r/syntax-quote))
+#?(:clj (defmalias syntax-quote clojure.tools.reader/syntax-quote))
 
 #?(:clj
 (defmacro unquote-replacement
