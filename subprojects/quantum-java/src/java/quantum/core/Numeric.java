@@ -34,29 +34,29 @@ public class Numeric {
     public static byte  bitAnd (final byte   a, final byte   b) { return (byte) (a & b); }
     public static char  bitAnd (final byte   a, final char   b) { return (char) (a & b); }
     public static short bitAnd (final byte   a, final short  b) { return (short)(a & b); }
-    public static int   bitAnd (final byte   a, final int    b) { return         a & b; }
-    public static long  bitAnd (final byte   a, final long   b) { return         a & b; }
+    public static int   bitAnd (final byte   a, final int    b) { return         a & b ; }
+    public static long  bitAnd (final byte   a, final long   b) { return         a & b ; }
     public static char  bitAnd (final char   a, final byte   b) { return (char) (a & b); }
     public static char  bitAnd (final char   a, final char   b) { return (char) (a & b); }
     public static short bitAnd (final char   a, final short  b) { return (short)(a & b); }
-    public static int   bitAnd (final char   a, final int    b) { return         a & b; }
-    public static long  bitAnd (final char   a, final long   b) { return         a & b; }
+    public static int   bitAnd (final char   a, final int    b) { return         a & b ; }
+    public static long  bitAnd (final char   a, final long   b) { return         a & b ; }
     public static short bitAnd (final short  a, final byte   b) { return (short)(a & b); }
     public static short bitAnd (final short  a, final char   b) { return (short)(a & b); }
     public static short bitAnd (final short  a, final short  b) { return (short)(a & b); }
-    public static int   bitAnd (final short  a, final int    b) { return         a & b; }
-    public static long  bitAnd (final short  a, final long   b) { return         a & b; }
-    public static int   bitAnd (final int    a, final byte   b) { return         a & b; }
-    public static int   bitAnd (final int    a, final char   b) { return         a & b; }
-    public static int   bitAnd (final int    a, final short  b) { return         a & b; }
-    public static int   bitAnd (final int    a, final int    b) { return         a & b; }
-    public static long  bitAnd (final int    a, final long   b) { return         a & b; }
-    public static long  bitAnd (final long   a, final byte   b) { return         a & b; }
-    public static long  bitAnd (final long   a, final char   b) { return         a & b; }
-    public static long  bitAnd (final long   a, final short  b) { return         a & b; }
-    public static long  bitAnd (final long   a, final int    b) { return         a & b; }
-    public static long  bitAnd (final long   a, final long   b) { return         a & b; }
-    
+    public static int   bitAnd (final short  a, final int    b) { return         a & b ; }
+    public static long  bitAnd (final short  a, final long   b) { return         a & b ; }
+    public static int   bitAnd (final int    a, final byte   b) { return         a & b ; }
+    public static int   bitAnd (final int    a, final char   b) { return         a & b ; }
+    public static int   bitAnd (final int    a, final short  b) { return         a & b ; }
+    public static int   bitAnd (final int    a, final int    b) { return         a & b ; }
+    public static long  bitAnd (final int    a, final long   b) { return         a & b ; }
+    public static long  bitAnd (final long   a, final byte   b) { return         a & b ; }
+    public static long  bitAnd (final long   a, final char   b) { return         a & b ; }
+    public static long  bitAnd (final long   a, final short  b) { return         a & b ; }
+    public static long  bitAnd (final long   a, final int    b) { return         a & b ; }
+    public static long  bitAnd (final long   a, final long   b) { return         a & b ; }
+
     public static long  bitOr              (final long a, final long b) { return a |   b; } // Implicitly checked
     public static long  bitXor             (final long a, final long b) { return a ^   b; } // Implicitly checked
     public static long  bitNot             (final long a              ) { return ~a;      } // Implicitly checked
@@ -242,7 +242,7 @@ public class Numeric {
     public static boolean gt (final double a, final double b) { return a > b; }
 
     // ============================ GTE : >= ================================ //
-    
+
     public static boolean gte (final byte   a, final byte   b) { return a >= b; }
     public static boolean gte (final byte   a, final char   b) { return a >= b; }
     public static boolean gte (final byte   a, final short  b) { return a >= b; }
@@ -292,9 +292,9 @@ public class Numeric {
     public static boolean gte (final double a, final long   b) { return a >= b; }
     public static boolean gte (final double a, final float  b) { return a >= b; }
     public static boolean gte (final double a, final double b) { return a >= b; }
-    
+
     // ============================ EQ : == ================================ //
-    
+
     public static boolean eq  (final boolean a, final boolean b) { return a == b; }
     public static boolean eq  (final byte    a, final byte    b) { return a == b; }
     public static boolean eq  (final byte    a, final char    b) { return a == b; }
@@ -345,9 +345,9 @@ public class Numeric {
     public static boolean eq  (final double  a, final long    b) { return a == b; }
     public static boolean eq  (final double  a, final float   b) { return a == b; }
     public static boolean eq  (final double  a, final double  b) { return a == b; }
-    
+
     // ============================ NEQ : != ================================ //
-    
+
     public static boolean neq (final boolean a, final boolean b) { return a != b; }
     public static boolean neq (final byte    a, final byte    b) { return a != b; }
     public static boolean neq (final byte    a, final char    b) { return a != b; }
@@ -408,7 +408,7 @@ public class Numeric {
     public static long   inc (final long   a) { return a + 1L;     }
     public static float  inc (final float  a) { return a + 1.0f;   }
     public static double inc (final double a) { return a + 1.0d;   }
-     
+
     public static byte   dec (final byte   a) { return (byte )(a - byte1 ); }
     public static char   dec (final char   a) { return (char )(a - char1 ); }
     public static short  dec (final short  a) { return (short)(a - short1); }
@@ -418,7 +418,7 @@ public class Numeric {
     public static double dec (final double a) { return a - 1.0d;   }
 
     // ============================ ISZERO ================================ //
-  
+
     public static boolean isZero (final byte   a) { return a == byte0;  }
     public static boolean isZero (final char   a) { return a == char0;  }
     public static boolean isZero (final short  a) { return a == short0; }
@@ -446,7 +446,7 @@ public class Numeric {
     public static boolean isPos (final long   a) { return a > 0L;     } // Implicitly checked
     public static boolean isPos (final float  a) { return a > 0.0f;   } // Implicitly checked
     public static boolean isPos (final double a) { return a > 0.0d;   } // Implicitly checked
-  
+
     // ============================ ADD : + ================================ //
     // "Infectious": uses a promotion of the largest data type passed
     public static short  add (final byte   a, final byte   b) { return (short)(a + b); } // Implicitly checked
@@ -498,7 +498,7 @@ public class Numeric {
     public static double add (final double a, final long   b) { return         a + b;  }
     public static double add (final double a, final float  b) { return         a + b;  }
     public static double add (final double a, final double b) { return         a + b;  }
- 
+
     // ============================ SUBTRACT : - ================================ //
     // "Infectious": uses the largest data type passed
 
@@ -551,7 +551,7 @@ public class Numeric {
     public static double subtract (final double a, final long   b) { return         a - b;  }
     public static double subtract (final double a, final float  b) { return         a - b;  }
     public static double subtract (final double a, final double b) { return         a - b;  }
-    
+
     // ============================ NEGATE : - ================================ //
 
     public static byte   negate   (final byte   a) { return (byte )-a; }
@@ -570,7 +570,7 @@ public class Numeric {
     public static int    multiply (final byte   a, final short  b) { return a * b; } // Implicitly checked
     public static long   multiply (final byte   a, final int    b) { return a * b; } // Implicitly checked
     public static long   multiply (final byte   a, final long   b) { return a * b; } // ->BigInteger
-    public static double multiply (final byte   a, final float  b) { return a * b; } // 
+    public static double multiply (final byte   a, final float  b) { return a * b; } //
     public static double multiply (final byte   a, final double b) { return a * b; }
     public static long   multiply (final char   a, final byte   b) { return a * b; }
     public static long   multiply (final char   a, final char   b) { return a * b; }
@@ -614,7 +614,7 @@ public class Numeric {
     public static double multiply (final double a, final long   b) { return a * b; }
     public static double multiply (final double a, final float  b) { return a * b; }
     public static double multiply (final double a, final double b) { return a * b; }
- 
+
     // ============================ DIVIDE : / ================================ //
     // "Infectious": uses the largest data type passed
 
@@ -667,7 +667,7 @@ public class Numeric {
     public static double divide   (final double a, final long   b) { return a / b; }
     public static double divide   (final double a, final float  b) { return a / b; }
     public static double divide   (final double a, final double b) { return a / b; }
-    
+
     // ============================ MAX ================================ //
     // "Infectious": uses the largest data type passed
 
