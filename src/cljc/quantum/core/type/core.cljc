@@ -24,6 +24,8 @@
 
 (defs/def-types #?(:clj :clj :cljs :cljs))
 
+; TODO differentiate between unevaled and evaled (symbolic and literal)
+
 #?(:clj
 (def boxed-type-map
  '{boolean java.lang.Boolean
@@ -35,48 +37,43 @@
    int     java.lang.Integer
    float   java.lang.Float}))
 
-; (def ^:private convertible-primitives
-;   "If the argument is a primitive Class, returns a set of Classes
-;    to which the primitive Class can be casted"
-;   {Integer/TYPE   #{Integer Long/TYPE Long Short/TYPE Byte/TYPE Object Number}
-;    Float/TYPE     #{Float Double/TYPE Object Number}
-;    Double/TYPE    #{Double Float/TYPE Object Number}
-;    Long/TYPE      #{Long Integer/TYPE Short/TYPE Byte/TYPE Object Number}
-;    Character/TYPE #{Character Object}
-;    Short/TYPE     #{Short Object Number}
-;    Byte/TYPE      #{Byte Object Number}
-;    Boolean/TYPE   #{Boolean Object}
-;    Void/TYPE      #{Void}})
+#?(:clj
+(def boxed->unboxed
+  {Integer   Integer/TYPE
+   Long      Long/TYPE
+   Float     Float/TYPE
+   Short     Short/TYPE
+   Boolean   Boolean/TYPE
+   Byte      Byte/TYPE
+   Character Character/TYPE
+   Double    Double/TYPE
+   Void      Void/TYPE}))
 
-; (defn ^Class box
-;   "If the argument is a primitive Class, returns its boxed equivalent,
-;    otherwise returns the argument"
-;   [c]
-;   ({Integer/TYPE   Integer
-;     Float/TYPE     Float
-;     Double/TYPE    Double
-;     Long/TYPE      Long
-;     Character/TYPE Character
-;     Short/TYPE     Short
-;     Byte/TYPE      Byte
-;     Boolean/TYPE   Boolean
-;     Void/TYPE      Void}
-;    c c))
+#?(:clj
+(def unboxed->boxed
+  {Integer/TYPE   Integer
+   Long/TYPE      Long
+   Float/TYPE     Float
+   Short/TYPE     Short
+   Boolean/TYPE   Boolean
+   Byte/TYPE      Byte
+   Character/TYPE Character
+   Double/TYPE    Double
+   Void/TYPE      Void      }))
 
-; (defn ^Class unbox
-;   "If the argument is a Class with a primitive equivalent, returns that,
-;    otherwise returns the argument"
-;   [c]
-;   ({Integer   Integer/TYPE,
-;     Long      Long/TYPE,
-;     Float     Float/TYPE,
-;     Short     Short/TYPE,
-;     Boolean   Boolean/TYPE,
-;     Byte      Byte/TYPE,
-;     Character Character/TYPE,
-;     Double    Double/TYPE,
-;     Void      Void/TYPE}
-;    c c))
+#?(:clj
+(def unboxed->convertible
+  "If the argument is a primitive Class, returns a set of Classes
+   to which the primitive Class can be casted"
+  {Integer/TYPE   #{Integer Long/TYPE Long Short/TYPE Byte/TYPE Object Number}
+   Float/TYPE     #{Float Double/TYPE Object Number}
+   Double/TYPE    #{Double Float/TYPE Object Number}
+   Long/TYPE      #{Long Integer/TYPE Short/TYPE Byte/TYPE Object Number}
+   Character/TYPE #{Character Object}
+   Short/TYPE     #{Short Object Number}
+   Byte/TYPE      #{Byte Object Number}
+   Boolean/TYPE   #{Boolean Object}
+   Void/TYPE      #{Void}}))
 
 ; (defn numeric?
 ;   "Returns true if the given class is numeric"
@@ -167,3 +164,23 @@
      'int-array     (symbol "[I")
      'double-array  (symbol "[D")
      'object-array  (symbol "[Ljava.lang.Object;")}})
+
+(def return-types-map
+  {:clj (merge (:clj type-casts-map)
+          '{boolean java.lang.Boolean/TYPE
+            byte    java.lang.Byte/TYPE
+            char    java.lang.Character/TYPE
+            short   java.lang.Short/TYPE
+            int     java.lang.Integer/TYPE
+            long    java.lang.Long/TYPE
+            float   java.lang.Float/TYPE
+            double  java.lang.Double/TYPE})})
+
+(defn static-cast-code [class-sym expr]
+  (with-meta (list 'do expr) {:tag class-sym}))
+
+#?(:clj
+(defmacro static-cast
+  "Performs a static type cast"
+  [class-sym expr]
+  (static-cast-code class-sym expr)))
