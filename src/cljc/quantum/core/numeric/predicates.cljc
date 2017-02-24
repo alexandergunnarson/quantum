@@ -11,41 +11,44 @@
               :refer-macros [fn-and fn-not]]
             [quantum.core.macros
               :refer        [#?@(:clj [defnt defnt'])]
-              :refer-macros [defnt defntp]]))
+              :refer-macros [defnt defntp]])
+  #?(:clj (:import
+            [java.math BigInteger BigDecimal]
+            [clojure.lang Ratio BigInt]
+            [quantum.core Numeric])))
 
 #?(:clj  (defnt ^boolean neg?
-           ([#{byte char short int float double} x] (quantum.core.Numeric/isNeg x))
-           ([#{java.math.BigInteger
-               java.math.BigDecimal} x] (-> x .signum neg?))
-           ([^clojure.lang.Ratio     x] (-> x .numerator .signum neg?))
-           ([^clojure.lang.BigInt    x] (if (-> x .bipart         nil?)
-                                            (-> x .lpart          neg?)
-                                            (-> x .bipart .signum neg?))))
+           ([#{byte char short int float double} x] (Numeric/isNeg x))
+           ([#{BigInteger
+               BigDecimal} x] (-> x .signum neg?))
+           ([^Ratio     x] (-> x .numerator .signum neg?))
+           ([^BigInt    x] (if (-> x .bipart         nil?)
+                               (-> x .lpart          neg?)
+                               (-> x .bipart .signum neg?))))
    :cljs (defnt neg?
            ([^double? x] (core/neg? x))
            ([^bigint? x] (.isNegative x))))
 
 #?(:clj  (defnt ^boolean pos?
-           ([#{byte char short int float double} x] (quantum.core.Numeric/isPos x))
-           ([#{java.math.BigInteger
-               java.math.BigDecimal} x] (-> x .signum pos?))
-           ([^clojure.lang.Ratio     x] (-> x .numerator .signum pos?))
-           ([^clojure.lang.BigInt    x] (if (-> x .bipart         nil?)
-                                            (-> x .lpart          pos?)
-                                            (-> x .bipart .signum pos?))))
+           ([#{byte char short int float double} x] (Numeric/isPos x))
+           ([#{BigInteger
+               BigDecimal} x] (-> x .signum pos?))
+           ([^Ratio     x] (-> x .numerator .signum pos?))
+           ([^BigInt    x] (if (-> x .bipart         nil?)
+                               (-> x .lpart          pos?)
+                               (-> x .bipart .signum pos?))))
    :cljs (defnt pos?
            ([^double?                           x] (core/pos? x))
            ([^com.gfredericks.goog.math.Integer x] (not (.isNegative x)))))
 
 #?(:clj  (defnt ^boolean zero?
-           ([#{byte char short float double} x] (quantum.core.Numeric/isZero x))
-           ([#{long}                         x] (-> x int zero?))
-           ([^clojure.lang.Ratio     x] (-> x .numerator .signum zero?))
-           ([^clojure.lang.BigInt    x] (if (nil?  (.bipart x))
-                                            (zero? (.lpart  x))
-                                            (-> x .bipart .signum zero?)))
-           ([#{java.math.BigInteger
-               java.math.BigDecimal} x] (-> x .signum zero?)))
+           ([#{byte char short int long float double} x] (Numeric/isZero x))
+           ([^Ratio     x] (-> x .numerator .signum zero?))
+           ([^BigInt    x] (if (nil?  (.bipart x))
+                               (zero? (.lpart  x))
+                               (-> x .bipart .signum zero?)))
+           ([#{BigInteger
+               BigDecimal} x] (-> x .signum zero?)))
    :cljs (defnt zero?
            ([^double? x] (core/zero? x))
            ([^bigint? x] (.isZero x))))
