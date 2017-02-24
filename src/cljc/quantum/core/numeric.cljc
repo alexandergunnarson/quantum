@@ -197,14 +197,14 @@
 ;==================={        OPERATORS         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 (defaliases quantum.core.numeric.operators
-  #?@(:clj [+*   +'   +
-            -*   -'   -
-            **   *'   *
-            div* div' /
-            inc* #_inc' inc
-            dec* #_dec' dec
-                 abs' abs])
-            inc' dec')
+  #?@(:clj [+*   +*&   +'     +'&     +   +&
+            -*   -*&   -'     -'&     -   -&
+            **   **&   *'     *'&     *   *&
+            div* div*& div'   div'&   /   div&
+            inc* inc*& #_inc' #_inc'& inc #_inc&
+            dec* dec*& #_dec' #_dec'& dec #_dec&
+                       abs'   #_abs'&   abs #_abs&])
+  inc' dec')
 ;_____________________________________________________________________
 ;==================={        PREDICATES        }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -215,7 +215,7 @@
 ;==================={         TRUNCATE         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 (defaliases quantum.core.numeric.truncate
-  round #?@(:clj [rint round' ceil floor floor-div floor-mod]))
+  round #?@(:clj [rint round-double round-int ceil floor floor-div floor-mod]))
 ;_____________________________________________________________________
 ;==================={       MISCELLANEOUS      }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -281,8 +281,8 @@
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
 (defaliases quantum.core.numeric.exponents
-  pow- pow' pow pow* expm1* get-exp
-  sqrt cbrt cbrt* e-exp e-exp*
+  pow- pow' pow pow& pow* expm1* get-exp
+  sqrt √2 cbrt √3 cbrt* √3* e-exp e-exp*
   log-e log-e* log-2 log-10 log-10* log1p* log- log))
 
 ;_____________________________________________________________________
