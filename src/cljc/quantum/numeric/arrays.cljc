@@ -30,7 +30,7 @@
     [quantum.numeric.core                     :as num
       :refer [pi* sigma sq]]
     [quantum.core.macros
-      :refer [defnt]]
+      :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.spec                        :as s
@@ -268,8 +268,10 @@
 
 #_"Computes the dot product of vectors x and y."
 ; Also implemented in Breeze
-#?(:clj (doto (defalias ^{:time-complexity 'n}         dot*             real/dot   )
-              (alter-meta! assoc :tag Double/TYPE)))
+#?(:clj
+(defnt' ^double dot*
+  {:time-complexity 'n}
+  [^RealVector a ^RealVector b] (real/dot a b)))
 
 #_"Computes the Euclidan (L2) norm of vector x."
 #?(:clj (defalias ^{:time-complexity 'n}         l2-norm          real/nrm2  ))
