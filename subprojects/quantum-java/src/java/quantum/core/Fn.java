@@ -4,9 +4,15 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
+import java.util.Map;
+import java.util.IdentityHashMap;
+import clojure.lang.IFn;
+import sun.misc.Unsafe;
 
 public class Fn {
   public static MethodHandles.Lookup fnLookup = MethodHandles.lookup();
+  // public static Unsafe unsafe = () -> { Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe"); field.setAccessible(true); return (Unsafe)field.get(null); }();
 
   public static Object     invoke        (MethodHandle m                                                                                                                                  ) throws Throwable { return m.invoke(                                      ); }
   public static Object     invoke        (MethodHandle m,                     Object a0                                                                                                   ) throws Throwable { return m.invoke(a0                                    ); }
@@ -44,4 +50,21 @@ public class Fn {
   public static Object     invokeVirtual (Class        target, String method, Object a0, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8           ) throws Throwable { return fnLookup.findVirtual(target, method, MethodType.methodType(Object.class, a0 == null ? null : a0.getClass(), a1 == null ? null : a1.getClass(), a2 == null ? null : a2.getClass(), a3 == null ? null : a3.getClass(), a4 == null ? null : a4.getClass(), a5 == null ? null : a5.getClass(), a6 == null ? null : a6.getClass(), a7 == null ? null : a7.getClass(), a8 == null ? null : a8.getClass()                                   )); }
   public static Object     invokeVirtual (Class        target, String method, Object a0, Object a1, Object a2, Object a3, Object a4, Object a5, Object a6, Object a7, Object a8, Object a9) throws Throwable { return fnLookup.findVirtual(target, method, MethodType.methodType(Object.class, a0 == null ? null : a0.getClass(), a1 == null ? null : a1.getClass(), a2 == null ? null : a2.getClass(), a3 == null ? null : a3.getClass(), a4 == null ? null : a4.getClass(), a5 == null ? null : a5.getClass(), a6 == null ? null : a6.getClass(), a7 == null ? null : a7.getClass(), a8 == null ? null : a8.getClass(), a9 == null ? null : a9.getClass())); }
 
+  public static void dispatch1NoMatch (Object a0           ) { throw new IllegalArgumentException("No matching function for (" + a0 == null ? null : a0.getClass()                                            + ")"); }
+  public static void dispatch2NoMatch (Object a0, Object a1) { throw new IllegalArgumentException("No matching function for (" + a0 == null ? null : a0.getClass() + ", " + a1 == null ? null : a1.getClass() + ")"); }
+
+  // These are programmed to concretions (IdentityHashMap) instead of abstractions (Map) in order to avoid the virtual lookup
+  public static Object dispatch1 (IdentityHashMap<Class, IdentityHashMap<Class, IFn>> dispatch, Object a0) {
+    IFn f = (IFn)dispatch.get(a0 == null ? null : a0.getClass());
+    if (f == null) dispatch1NoMatch(a0);
+    return f.invoke(a0);
+  }
+
+  public static Object dispatch2 (IdentityHashMap<Class, IdentityHashMap<Class, IFn>> dispatch, Object a0, Object a1) {
+    IdentityHashMap m0 = (IdentityHashMap)dispatch.get(a0 == null ? null : a0.getClass());
+    if (m0 == null) dispatch2NoMatch(a0, a1);
+    IFn f = (IFn)m0.get(a1 == null ? null : a1.getClass());
+    if (f == null) dispatch2NoMatch(a0, a1);
+    return f.invoke(a0, a1);
+  }
 }
