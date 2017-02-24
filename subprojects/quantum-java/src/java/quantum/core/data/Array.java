@@ -1261,96 +1261,98 @@ public class Array {
 
   // ================================ NEW ND ARRAY ================================ //
 
-  public static     boolean[]                   newUninitializedNdBooleanArray (final int n) { return new boolean[n]                  ; }
-  public static     boolean[][]                 newUninitializedNdBooleanArray (final int n) { return new boolean[n][]                ; }
-  public static     boolean[][][]               newUninitializedNdBooleanArray (final int n) { return new boolean[n][][]              ; }
-  public static     boolean[][][][]             newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][]            ; }
-  public static     boolean[][][][][]           newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][]          ; }
-  public static     boolean[][][][][][]         newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][][]        ; }
-  public static     boolean[][][][][][][]       newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][][][]      ; }
-  public static     boolean[][][][][][][][]     newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][][][][]    ; }
-  public static     boolean[][][][][][][][][]   newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][][][][][]  ; }
-  public static     boolean[][][][][][][][][][] newUninitializedNdBooleanArray (final int n) { return new boolean[n][][][][][][][][][]; }
-  public static     byte   []                   newUninitializedNdByteArray    (final int n) { return new byte   [n]                  ; }
-  public static     byte   [][]                 newUninitializedNdByteArray    (final int n) { return new byte   [n][]                ; }
-  public static     byte   [][][]               newUninitializedNdByteArray    (final int n) { return new byte   [n][][]              ; }
-  public static     byte   [][][][]             newUninitializedNdByteArray    (final int n) { return new byte   [n][][][]            ; }
-  public static     byte   [][][][][]           newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][]          ; }
-  public static     byte   [][][][][][]         newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][][]        ; }
-  public static     byte   [][][][][][][]       newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][][][]      ; }
-  public static     byte   [][][][][][][][]     newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][][][][]    ; }
-  public static     byte   [][][][][][][][][]   newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][][][][][]  ; }
-  public static     byte   [][][][][][][][][][] newUninitializedNdByteArray    (final int n) { return new byte   [n][][][][][][][][][]; }
-  public static     char   []                   newUninitializedNdCharArray    (final int n) { return new char   [n]                  ; }
-  public static     char   [][]                 newUninitializedNdCharArray    (final int n) { return new char   [n][]                ; }
-  public static     char   [][][]               newUninitializedNdCharArray    (final int n) { return new char   [n][][]              ; }
-  public static     char   [][][][]             newUninitializedNdCharArray    (final int n) { return new char   [n][][][]            ; }
-  public static     char   [][][][][]           newUninitializedNdCharArray    (final int n) { return new char   [n][][][][]          ; }
-  public static     char   [][][][][][]         newUninitializedNdCharArray    (final int n) { return new char   [n][][][][][]        ; }
-  public static     char   [][][][][][][]       newUninitializedNdCharArray    (final int n) { return new char   [n][][][][][][]      ; }
-  public static     char   [][][][][][][][]     newUninitializedNdCharArray    (final int n) { return new char   [n][][][][][][][]    ; }
-  public static     char   [][][][][][][][][]   newUninitializedNdCharArray    (final int n) { return new char   [n][][][][][][][][]  ; }
-  public static     char   [][][][][][][][][][] newUninitializedNdCharArray    (final int n) { return new char   [n][][][][][][][][][]; }
-  public static     short  []                   newUninitializedNdShortArray   (final int n) { return new short  [n]                  ; }
-  public static     short  [][]                 newUninitializedNdShortArray   (final int n) { return new short  [n][]                ; }
-  public static     short  [][][]               newUninitializedNdShortArray   (final int n) { return new short  [n][][]              ; }
-  public static     short  [][][][]             newUninitializedNdShortArray   (final int n) { return new short  [n][][][]            ; }
-  public static     short  [][][][][]           newUninitializedNdShortArray   (final int n) { return new short  [n][][][][]          ; }
-  public static     short  [][][][][][]         newUninitializedNdShortArray   (final int n) { return new short  [n][][][][][]        ; }
-  public static     short  [][][][][][][]       newUninitializedNdShortArray   (final int n) { return new short  [n][][][][][][]      ; }
-  public static     short  [][][][][][][][]     newUninitializedNdShortArray   (final int n) { return new short  [n][][][][][][][]    ; }
-  public static     short  [][][][][][][][][]   newUninitializedNdShortArray   (final int n) { return new short  [n][][][][][][][][]  ; }
-  public static     short  [][][][][][][][][][] newUninitializedNdShortArray   (final int n) { return new short  [n][][][][][][][][][]; }
-  public static     int    []                   newUninitializedNdIntArray     (final int n) { return new int    [n]                  ; }
-  public static     int    [][]                 newUninitializedNdIntArray     (final int n) { return new int    [n][]                ; }
-  public static     int    [][][]               newUninitializedNdIntArray     (final int n) { return new int    [n][][]              ; }
-  public static     int    [][][][]             newUninitializedNdIntArray     (final int n) { return new int    [n][][][]            ; }
-  public static     int    [][][][][]           newUninitializedNdIntArray     (final int n) { return new int    [n][][][][]          ; }
-  public static     int    [][][][][][]         newUninitializedNdIntArray     (final int n) { return new int    [n][][][][][]        ; }
-  public static     int    [][][][][][][]       newUninitializedNdIntArray     (final int n) { return new int    [n][][][][][][]      ; }
-  public static     int    [][][][][][][][]     newUninitializedNdIntArray     (final int n) { return new int    [n][][][][][][][]    ; }
-  public static     int    [][][][][][][][][]   newUninitializedNdIntArray     (final int n) { return new int    [n][][][][][][][][]  ; }
-  public static     int    [][][][][][][][][][] newUninitializedNdIntArray     (final int n) { return new int    [n][][][][][][][][][]; }
-  public static     long   []                   newUninitializedNdLongArray    (final int n) { return new long   [n]                  ; }
-  public static     long   [][]                 newUninitializedNdLongArray    (final int n) { return new long   [n][]                ; }
-  public static     long   [][][]               newUninitializedNdLongArray    (final int n) { return new long   [n][][]              ; }
-  public static     long   [][][][]             newUninitializedNdLongArray    (final int n) { return new long   [n][][][]            ; }
-  public static     long   [][][][][]           newUninitializedNdLongArray    (final int n) { return new long   [n][][][][]          ; }
-  public static     long   [][][][][][]         newUninitializedNdLongArray    (final int n) { return new long   [n][][][][][]        ; }
-  public static     long   [][][][][][][]       newUninitializedNdLongArray    (final int n) { return new long   [n][][][][][][]      ; }
-  public static     long   [][][][][][][][]     newUninitializedNdLongArray    (final int n) { return new long   [n][][][][][][][]    ; }
-  public static     long   [][][][][][][][][]   newUninitializedNdLongArray    (final int n) { return new long   [n][][][][][][][][]  ; }
-  public static     long   [][][][][][][][][][] newUninitializedNdLongArray    (final int n) { return new long   [n][][][][][][][][][]; }
-  public static     float  []                   newUninitializedNdFloatArray   (final int n) { return new float  [n]                  ; }
-  public static     float  [][]                 newUninitializedNdFloatArray   (final int n) { return new float  [n][]                ; }
-  public static     float  [][][]               newUninitializedNdFloatArray   (final int n) { return new float  [n][][]              ; }
-  public static     float  [][][][]             newUninitializedNdFloatArray   (final int n) { return new float  [n][][][]            ; }
-  public static     float  [][][][][]           newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][]          ; }
-  public static     float  [][][][][][]         newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][][]        ; }
-  public static     float  [][][][][][][]       newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][][][]      ; }
-  public static     float  [][][][][][][][]     newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][][][][]    ; }
-  public static     float  [][][][][][][][][]   newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][][][][][]  ; }
-  public static     float  [][][][][][][][][][] newUninitializedNdFloatArray   (final int n) { return new float  [n][][][][][][][][][]; }
-  public static     double []                   newUninitializedNdDoubleArray  (final int n) { return new double [n]                  ; }
-  public static     double [][]                 newUninitializedNdDoubleArray  (final int n) { return new double [n][]                ; }
-  public static     double [][][]               newUninitializedNdDoubleArray  (final int n) { return new double [n][][]              ; }
-  public static     double [][][][]             newUninitializedNdDoubleArray  (final int n) { return new double [n][][][]            ; }
-  public static     double [][][][][]           newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][]          ; }
-  public static     double [][][][][][]         newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][][]        ; }
-  public static     double [][][][][][][]       newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][][][]      ; }
-  public static     double [][][][][][][][]     newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][][][][]    ; }
-  public static     double [][][][][][][][][]   newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][][][][][]  ; }
-  public static     double [][][][][][][][][][] newUninitializedNdDoubleArray  (final int n) { return new double [n][][][][][][][][][]; }
-  public static     Object []                   newUninitializedNdObjectArray  (final int n) { return new Object [n]                  ; }
-  public static     Object [][]                 newUninitializedNdObjectArray  (final int n) { return new Object [n][]                ; }
-  public static     Object [][][]               newUninitializedNdObjectArray  (final int n) { return new Object [n][][]              ; }
-  public static     Object [][][][]             newUninitializedNdObjectArray  (final int n) { return new Object [n][][][]            ; }
-  public static     Object [][][][][]           newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][]          ; }
-  public static     Object [][][][][][]         newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][][]        ; }
-  public static     Object [][][][][][][]       newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][][][]      ; }
-  public static     Object [][][][][][][][]     newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][][][][]    ; }
-  public static     Object [][][][][][][][][]   newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][][][][][]  ; }
-  public static     Object [][][][][][][][][][] newUninitializedNdObjectArray  (final int n) { return new Object [n][][][][][][][][][]; }
+  // TODO support partial initialization e.g. new boolean[2][3][][]
+
+  public static     boolean[]                   newUninitialized1dBooleanArray  (final int n) { return new boolean[n]                  ; }
+  public static     boolean[][]                 newUninitialized2dBooleanArray  (final int n) { return new boolean[n][]                ; }
+  public static     boolean[][][]               newUninitialized3dBooleanArray  (final int n) { return new boolean[n][][]              ; }
+  public static     boolean[][][][]             newUninitialized4dBooleanArray  (final int n) { return new boolean[n][][][]            ; }
+  public static     boolean[][][][][]           newUninitialized5dBooleanArray  (final int n) { return new boolean[n][][][][]          ; }
+  public static     boolean[][][][][][]         newUninitialized6dBooleanArray  (final int n) { return new boolean[n][][][][][]        ; }
+  public static     boolean[][][][][][][]       newUninitialized7dBooleanArray  (final int n) { return new boolean[n][][][][][][]      ; }
+  public static     boolean[][][][][][][][]     newUninitialized8dBooleanArray  (final int n) { return new boolean[n][][][][][][][]    ; }
+  public static     boolean[][][][][][][][][]   newUninitialized9dBooleanArray  (final int n) { return new boolean[n][][][][][][][][]  ; }
+  public static     boolean[][][][][][][][][][] newUninitialized10dBooleanArray (final int n) { return new boolean[n][][][][][][][][][]; }
+  public static     byte   []                   newUninitialized1dByteArray     (final int n) { return new byte   [n]                  ; }
+  public static     byte   [][]                 newUninitialized2dByteArray     (final int n) { return new byte   [n][]                ; }
+  public static     byte   [][][]               newUninitialized3dByteArray     (final int n) { return new byte   [n][][]              ; }
+  public static     byte   [][][][]             newUninitialized4dByteArray     (final int n) { return new byte   [n][][][]            ; }
+  public static     byte   [][][][][]           newUninitialized5dByteArray     (final int n) { return new byte   [n][][][][]          ; }
+  public static     byte   [][][][][][]         newUninitialized6dByteArray     (final int n) { return new byte   [n][][][][][]        ; }
+  public static     byte   [][][][][][][]       newUninitialized7dByteArray     (final int n) { return new byte   [n][][][][][][]      ; }
+  public static     byte   [][][][][][][][]     newUninitialized8dByteArray     (final int n) { return new byte   [n][][][][][][][]    ; }
+  public static     byte   [][][][][][][][][]   newUninitialized9dByteArray     (final int n) { return new byte   [n][][][][][][][][]  ; }
+  public static     byte   [][][][][][][][][][] newUninitialized10dByteArray    (final int n) { return new byte   [n][][][][][][][][][]; }
+  public static     char   []                   newUninitialized1dCharArray     (final int n) { return new char   [n]                  ; }
+  public static     char   [][]                 newUninitialized2dCharArray     (final int n) { return new char   [n][]                ; }
+  public static     char   [][][]               newUninitialized3dCharArray     (final int n) { return new char   [n][][]              ; }
+  public static     char   [][][][]             newUninitialized4dCharArray     (final int n) { return new char   [n][][][]            ; }
+  public static     char   [][][][][]           newUninitialized5dCharArray     (final int n) { return new char   [n][][][][]          ; }
+  public static     char   [][][][][][]         newUninitialized6dCharArray     (final int n) { return new char   [n][][][][][]        ; }
+  public static     char   [][][][][][][]       newUninitialized7dCharArray     (final int n) { return new char   [n][][][][][][]      ; }
+  public static     char   [][][][][][][][]     newUninitialized8dCharArray     (final int n) { return new char   [n][][][][][][][]    ; }
+  public static     char   [][][][][][][][][]   newUninitialized9dCharArray     (final int n) { return new char   [n][][][][][][][][]  ; }
+  public static     char   [][][][][][][][][][] newUninitialized10dCharArray    (final int n) { return new char   [n][][][][][][][][][]; }
+  public static     short  []                   newUninitialized1dShortArray    (final int n) { return new short  [n]                  ; }
+  public static     short  [][]                 newUninitialized2dShortArray    (final int n) { return new short  [n][]                ; }
+  public static     short  [][][]               newUninitialized3dShortArray    (final int n) { return new short  [n][][]              ; }
+  public static     short  [][][][]             newUninitialized4dShortArray    (final int n) { return new short  [n][][][]            ; }
+  public static     short  [][][][][]           newUninitialized5dShortArray    (final int n) { return new short  [n][][][][]          ; }
+  public static     short  [][][][][][]         newUninitialized6dShortArray    (final int n) { return new short  [n][][][][][]        ; }
+  public static     short  [][][][][][][]       newUninitialized7dShortArray    (final int n) { return new short  [n][][][][][][]      ; }
+  public static     short  [][][][][][][][]     newUninitialized8dShortArray    (final int n) { return new short  [n][][][][][][][]    ; }
+  public static     short  [][][][][][][][][]   newUninitialized9dShortArray    (final int n) { return new short  [n][][][][][][][][]  ; }
+  public static     short  [][][][][][][][][][] newUninitialized10dShortArray   (final int n) { return new short  [n][][][][][][][][][]; }
+  public static     int    []                   newUninitialized1dIntArray      (final int n) { return new int    [n]                  ; }
+  public static     int    [][]                 newUninitialized2dIntArray      (final int n) { return new int    [n][]                ; }
+  public static     int    [][][]               newUninitialized3dIntArray      (final int n) { return new int    [n][][]              ; }
+  public static     int    [][][][]             newUninitialized4dIntArray      (final int n) { return new int    [n][][][]            ; }
+  public static     int    [][][][][]           newUninitialized5dIntArray      (final int n) { return new int    [n][][][][]          ; }
+  public static     int    [][][][][][]         newUninitialized6dIntArray      (final int n) { return new int    [n][][][][][]        ; }
+  public static     int    [][][][][][][]       newUninitialized7dIntArray      (final int n) { return new int    [n][][][][][][]      ; }
+  public static     int    [][][][][][][][]     newUninitialized8dIntArray      (final int n) { return new int    [n][][][][][][][]    ; }
+  public static     int    [][][][][][][][][]   newUninitialized9dIntArray      (final int n) { return new int    [n][][][][][][][][]  ; }
+  public static     int    [][][][][][][][][][] newUninitialized10dIntArray     (final int n) { return new int    [n][][][][][][][][][]; }
+  public static     long   []                   newUninitialized1dLongArray     (final int n) { return new long   [n]                  ; }
+  public static     long   [][]                 newUninitialized2dLongArray     (final int n) { return new long   [n][]                ; }
+  public static     long   [][][]               newUninitialized3dLongArray     (final int n) { return new long   [n][][]              ; }
+  public static     long   [][][][]             newUninitialized4dLongArray     (final int n) { return new long   [n][][][]            ; }
+  public static     long   [][][][][]           newUninitialized5dLongArray     (final int n) { return new long   [n][][][][]          ; }
+  public static     long   [][][][][][]         newUninitialized6dLongArray     (final int n) { return new long   [n][][][][][]        ; }
+  public static     long   [][][][][][][]       newUninitialized7dLongArray     (final int n) { return new long   [n][][][][][][]      ; }
+  public static     long   [][][][][][][][]     newUninitialized8dLongArray     (final int n) { return new long   [n][][][][][][][]    ; }
+  public static     long   [][][][][][][][][]   newUninitialized9dLongArray     (final int n) { return new long   [n][][][][][][][][]  ; }
+  public static     long   [][][][][][][][][][] newUninitialized10dLongArray    (final int n) { return new long   [n][][][][][][][][][]; }
+  public static     float  []                   newUninitialized1dFloatArray    (final int n) { return new float  [n]                  ; }
+  public static     float  [][]                 newUninitialized2dFloatArray    (final int n) { return new float  [n][]                ; }
+  public static     float  [][][]               newUninitialized3dFloatArray    (final int n) { return new float  [n][][]              ; }
+  public static     float  [][][][]             newUninitialized4dFloatArray    (final int n) { return new float  [n][][][]            ; }
+  public static     float  [][][][][]           newUninitialized5dFloatArray    (final int n) { return new float  [n][][][][]          ; }
+  public static     float  [][][][][][]         newUninitialized6dFloatArray    (final int n) { return new float  [n][][][][][]        ; }
+  public static     float  [][][][][][][]       newUninitialized7dFloatArray    (final int n) { return new float  [n][][][][][][]      ; }
+  public static     float  [][][][][][][][]     newUninitialized8dFloatArray    (final int n) { return new float  [n][][][][][][][]    ; }
+  public static     float  [][][][][][][][][]   newUninitialized9dFloatArray    (final int n) { return new float  [n][][][][][][][][]  ; }
+  public static     float  [][][][][][][][][][] newUninitialized10dFloatArray   (final int n) { return new float  [n][][][][][][][][][]; }
+  public static     double []                   newUninitialized1dDoubleArray   (final int n) { return new double [n]                  ; }
+  public static     double [][]                 newUninitialized2dDoubleArray   (final int n) { return new double [n][]                ; }
+  public static     double [][][]               newUninitialized3dDoubleArray   (final int n) { return new double [n][][]              ; }
+  public static     double [][][][]             newUninitialized4dDoubleArray   (final int n) { return new double [n][][][]            ; }
+  public static     double [][][][][]           newUninitialized5dDoubleArray   (final int n) { return new double [n][][][][]          ; }
+  public static     double [][][][][][]         newUninitialized6dDoubleArray   (final int n) { return new double [n][][][][][]        ; }
+  public static     double [][][][][][][]       newUninitialized7dDoubleArray   (final int n) { return new double [n][][][][][][]      ; }
+  public static     double [][][][][][][][]     newUninitialized8dDoubleArray   (final int n) { return new double [n][][][][][][][]    ; }
+  public static     double [][][][][][][][][]   newUninitialized9dDoubleArray   (final int n) { return new double [n][][][][][][][][]  ; }
+  public static     double [][][][][][][][][][] newUninitialized10dDoubleArray  (final int n) { return new double [n][][][][][][][][][]; }
+  public static     Object []                   newUninitialized1dObjectArray   (final int n) { return new Object [n]                  ; }
+  public static     Object [][]                 newUninitialized2dObjectArray   (final int n) { return new Object [n][]                ; }
+  public static     Object [][][]               newUninitialized3dObjectArray   (final int n) { return new Object [n][][]              ; }
+  public static     Object [][][][]             newUninitialized4dObjectArray   (final int n) { return new Object [n][][][]            ; }
+  public static     Object [][][][][]           newUninitialized5dObjectArray   (final int n) { return new Object [n][][][][]          ; }
+  public static     Object [][][][][][]         newUninitialized6dObjectArray   (final int n) { return new Object [n][][][][][]        ; }
+  public static     Object [][][][][][][]       newUninitialized7dObjectArray   (final int n) { return new Object [n][][][][][][]      ; }
+  public static     Object [][][][][][][][]     newUninitialized8dObjectArray   (final int n) { return new Object [n][][][][][][][]    ; }
+  public static     Object [][][][][][][][][]   newUninitialized9dObjectArray   (final int n) { return new Object [n][][][][][][][][]  ; }
+  public static     Object [][][][][][][][][][] newUninitialized10dObjectArray  (final int n) { return new Object [n][][][][][][][][][]; }
 
   // ================================ NEW INITIALIZED ND ARRAY ================================ //
 

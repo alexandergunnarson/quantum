@@ -52,6 +52,7 @@
        ; ==== DATA ====
          [com.carrotsearch/hppc                 "0.7.1"           ] ; High performance primitive collections for Java
          [it.unimi.dsi/fastutil                 "7.0.12"          ]
+       #_[colt/colt                             "1.2.0"           ]
          [quantum/seqspert                      "1.7.0-alpha6.1.0"]
          [fast-zip                              "0.7.0"           ]
          ; VECTOR
@@ -115,7 +116,7 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [net.mikera/core.matrix                "0.57.0"
            :exclusions [org.clojure/clojure]]
-         [quantum/java                          "1.5.5"           ]
+         [quantum/java                          "1.6"             ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
          [fipp                                  "0.6.6"
