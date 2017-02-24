@@ -11,6 +11,8 @@
  #?(:clj  [clojure.core.async.impl.protocols]
     :cljs [cljs.core.async.impl.channels])
           [quantum.core.type.defs           :as defs]
+          [quantum.core.core
+            :refer [name+]]
           [quantum.core.fn
             :refer [<- fn->>]]
           [quantum.core.error               :as err
@@ -128,13 +130,27 @@
                                  (<- disj k)))))
            {}))))
 
-(defn ->elem-type-clj [x]
-  (when (and (or (string? x) (symbol? x))
-             (-> x name first (= \[)))
-    (or (defs/elem-types-clj x)
-        (if (-> x name second (= \L))
-            (->> x name rest rest drop-last (replace {\/ \.}) (apply str) symbol) ; Object array
-            (->> x name rest                                  (apply str) symbol))))) ; Primitive array
+(def java-array-type-regex #"(\[+)(?:(Z|S|B|C|I|J|F|D)|(?:L(.+);))") ; TODO create this regex dynamically
+
+#?(:clj
+(defn nth-elem-type:clj
+  "`x` must be Java array type (for now)"
+  [x n]
+  {:post [(or (string? %) (symbol? %))]}
+  (assert (or (string? x) (symbol? x) (class? x)) {:x x})
+  (let [s (name+ x)
+        [java-array-type? brackets ?primitive-type ?object-type]
+          (re-matches java-array-type-regex s)
+        array-depth (count brackets)]
+    (assert java-array-type? {:x x})
+    (assert (<= (count n) array-depth) {:msg         "Can't get an element deeper than array depth"
+                                        :requested-n n
+                                        :array-depth array-depth})
+    (if ?primitive-type
+        (if (= n array-depth)
+            (defs/elem-types-clj ?primitive-type)
+            (str (apply str (drop n brackets)) ?primitive-type))
+        (str (apply str (drop n brackets)) ?object-type ";")))))
 
 (def default-types (-> types-unevaled (get compiler-lang) :any))
 
