@@ -730,7 +730,7 @@
 
 #?(:clj
 (defnt ->write-channel
-  (^WritableByteChannel            [#{string? bytes?}     x] (-> x ->read-stream ->read-channel))
+  (^ReadableByteChannel            [#{string? bytes?}     x] (-> x ->read-stream ->read-channel))
   (^FileChannel         ^{:cost 0} [^File                 x] (->write-channel x nil))
   (^WritableByteChannel ^{:cost 0} [^File                 x opts]
     (.getChannel (FileOutputStream. x (boolean (or (:append? opts) true)))))
