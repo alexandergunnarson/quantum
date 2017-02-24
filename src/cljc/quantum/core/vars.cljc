@@ -19,9 +19,8 @@
   ([name orig]
      `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)
               (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
-                  ; for some reason, the :macro metadata doesn't really register unless you do it manually
-                  (when (-> (var ~orig) meta :macro true?)
-                    (alter-meta! #'~name assoc :macro true)))
+                  ; The below is apparently necessary
+                  (doto #'~name (alter-meta! merge (meta (var ~orig)))))
               (def ~name))
         (var ~name)))
   ([name orig doc]
