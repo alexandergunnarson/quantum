@@ -134,23 +134,25 @@
 
 #?(:clj
 (defn nth-elem-type:clj
-  "`x` must be Java array type (for now)"
+  "`x` must be Java array type (for now)
+   Returns a string or symbol"
   [x n]
-  {:post [(or (string? %) (symbol? %))]}
   (assert (or (string? x) (symbol? x) (class? x)) {:x x})
   (let [s (name+ x)
-        [java-array-type? brackets ?primitive-type ?object-type]
+        [java-array-type? brackets ?array-ident ?object-type]
           (re-matches java-array-type-regex s)
         array-depth (count brackets)]
     (assert java-array-type? {:x x})
-    (assert (<= (count n) array-depth) {:msg         "Can't get an element deeper than array depth"
-                                        :requested-n n
-                                        :array-depth array-depth})
-    (if ?primitive-type
+    (assert (<= n array-depth) {:msg         "Can't get an element deeper than array depth"
+                                :requested-n n
+                                :array-depth array-depth})
+    (if ?array-ident
         (if (= n array-depth)
-            (defs/elem-types-clj ?primitive-type)
-            (str (apply str (drop n brackets)) ?primitive-type))
-        (str (apply str (drop n brackets)) ?object-type ";")))))
+            (defs/array-ident->primitive-sym ?array-ident)
+            (str (apply str (drop n brackets)) ?array-ident))
+        (if (= n array-depth)
+            (symbol ?object-type)
+            (str (apply str (drop n brackets)) "L" ?object-type ";"))))))
 
 (def default-types (-> types-unevaled (get compiler-lang) :any))
 
