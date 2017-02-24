@@ -46,7 +46,7 @@
     [quantum.core.type             :as type
       :refer [should-transientize?]]
     [quantum.core.loops            :as loops
-      :refer [for]]
+      :refer [for fortimes]]
     [quantum.core.vars             :as var
       :refer [defalias]]))
 
@@ -54,43 +54,19 @@
 
 (declare range)
 
-(defn repeat
-  "Eager |repeat|."
-  ([n obj] (for [i (range n)] obj)))
-
 (defalias lrepeat core/repeat)
+
+(defn repeat
+  ([obj] (lrepeat obj))
+  ([n obj] (fortimes [i n] obj)))
 
 ; ===== REPEATEDLY ===== ;
 
-#?(:clj
-(defmacro ^:private repeatedly-into
-  {:todo ["Best to just inline this. Makes no sense to have a macro."]}
-  [coll n & body]
-  `(let [coll# ~coll
-         n#    ~n]
-     (if (should-transientize? coll#)
-         (loop [v# (transient coll#) idx# 0]
-           (if (>= idx# n#)
-               (persistent! v#)
-               (recur (conj! v# ~@body)
-                      (inc idx#))))
-         (loop [v#   coll# idx# 0]
-           (if (>= idx# n#)
-               v#
-               (recur (conj v# ~@body)
-                      (inc idx#))))))))
-
 (def lrepeatedly core/repeatedly)
 
-#?(:clj
-(defmacro repeatedly
-  "Like |clojure.core/.repeatedly| but (significantly) faster and returns a vector."
-  ; ([n f]
-  ;   `(repeatedly-into* [] ~n ~arg1 ~@body))
-  {:todo ["Makes no sense to have a macro. Just inline"
-          "Test performance assertions"]}
-  ([n arg1 & body]
-    `(repeatedly-into* [] ~n ~arg1 ~@body))))
+(defn repeatedly
+  ([f] (lrepeatedly f))
+  ([n f] (fortimes [i n] (f))))
 
 ; ===== RANGE ===== ;
 
