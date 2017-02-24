@@ -116,10 +116,10 @@
                     ret
                     (recur (unchecked-inc i')
                            (f ret i'))))))
-        ([:else    coll f init] (when (nnil? coll)
-                                  (#?(:clj  clojure.core.protocols/coll-reduce
-                                      :cljs -reduce)
-                                    coll f init))))
+        ([:obj    coll f init] (when (nnil? coll)
+                                 (#?(:clj  clojure.core.protocols/coll-reduce
+                                     :cljs -reduce)
+                                   coll f init))))
 
 #?(:clj
 (defmacro reduce
