@@ -9,6 +9,8 @@
     [quantum.core.data.map :as map
       :refer [map-entry]]
     [quantum.core.data.set :as set]
+    [quantum.core.data.tuple
+      #?@(:cljs [:refer [Tuple]])]
     [quantum.core.fn       :as fn
       :refer [fn->]]
     [quantum.core.logic    :as logic
@@ -17,7 +19,8 @@
     [quantum.core.type.defs :as self
       :refer [array-nd-types]])
   (:import
-    #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel]
+    #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel
+               quantum.core.data.tuple.Tuple]
         :cljs [goog.string.StringBuffer])))
 
 (defrecord Folder  [coll transform])
@@ -27,51 +30,58 @@
              In JavaScript, all numbers are 64-bit floating point numbers.
              This means you can't represent in JavaScript all the Java longs
              Max 'safe' int: (dec (Math/pow 2 53))"}
-  type-meta
+  primitive-type-meta
   {'boolean {:bits 1
              :min  0
              :max  1
-             #?@(:clj [:outer-type "[Z"
+             #?@(:clj [:array-ident "Z"
+                       :outer-type "[Z"
                        :boxed      'java.lang.Boolean
                        :unboxed    'Boolean/TYPE])}
    'short   {:bits 16
              :min -32768
              :max  32767
-             #?@(:clj [:outer-type "[S"
-                       :boxed      'java.lang.Short
-                       :unboxed    'Short/TYPE])}
+             #?@(:clj [:array-ident "S"
+                       :outer-type  "[S"
+                       :boxed       'java.lang.Short
+                       :unboxed     'Short/TYPE])}
    'byte    {:bits 8
              :min -128
              :max  127
-             #?@(:clj [:outer-type "[B"
-                       :boxed      'java.lang.Byte
-                       :unboxed    'Byte/TYPE])}
+             #?@(:clj [:array-ident "B"
+                       :outer-type  "[B"
+                       :boxed       'java.lang.Byte
+                       :unboxed     'Byte/TYPE])}
    'char    {:bits 16
              :min  0
              :max  65535
-             #?@(:clj [:outer-type "[C"
-                       :boxed      'java.lang.Character
-                       :unboxed    'Character/TYPE])}
+             #?@(:clj [:array-ident "C"
+                       :outer-type  "[C"
+                       :boxed       'java.lang.Character
+                       :unboxed     'Character/TYPE])}
    'int     {:bits 32
              :min -2147483648
              :max  2147483647
-             #?@(:clj [:outer-type "[I"
-                       :boxed      'java.lang.Integer
-                       :unboxed    'Integer/TYPE])}
+             #?@(:clj [:array-ident "I"
+                       :outer-type  "[I"
+                       :boxed       'java.lang.Integer
+                       :unboxed     'Integer/TYPE])}
    'long    {:bits 64
              :min -9223372036854775808
              :max  9223372036854775807
-             #?@(:clj [:outer-type "[J"
-                       :boxed      'java.lang.Long
-                       :unboxed    'Long/TYPE])}
+             #?@(:clj [:array-ident "J"
+                       :outer-type  "[J"
+                       :boxed       'java.lang.Long
+                       :unboxed     'Long/TYPE])}
    ; Technically with floating-point nums, "min" isn't the most negative;
    ; it's the smallest absolute
    'float   {:bits 32
              :min  1.4E-45
              :max  3.4028235E38
-             #?@(:clj [:outer-type "[F"
-                       :boxed      'java.lang.Float
-                       :unboxed    'Float/TYPE])}
+             #?@(:clj [:array-ident "F"
+                       :outer-type  "[F"
+                       :boxed       'java.lang.Float
+                       :unboxed     'Float/TYPE])}
    'double  {:bits 64
              ; Because:
              ; Double/MIN_VALUE        = 4.9E-324
@@ -79,12 +89,13 @@
              :min  #?(:clj  Double/MIN_VALUE
                       :cljs (.-MIN_VALUE js/Number))
              :max  1.7976931348623157E308 ; Max number in JS
-             #?@(:clj [:outer-type "[D"
-                       :boxed      'java.lang.Double
-                       :unboxed    'Double/TYPE])}})
+             #?@(:clj [:array-ident "D"
+                       :outer-type  "[D"
+                       :boxed       'java.lang.Double
+                       :unboxed     'Double/TYPE])}})
 
 (def elem-types-clj
-  (->> type-meta
+  (->> primitive-type-meta
        (map (fn [[k v]] [(:outer-type v) k]))
        (reduce
          (fn [m [k v]]
@@ -93,7 +104,7 @@
 
 #?(:clj
 (def boxed-types
-  (->> type-meta
+  (->> primitive-type-meta
        (map (fn [[k v]] [k (:boxed v)]))
        (into {}))))
 
@@ -102,10 +113,10 @@
   (zipmap (vals boxed-types) (keys boxed-types))))
 
 #?(:clj
-(def boxed->unboxed-types-evaled (->> type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
+(def boxed->unboxed-types-evaled (->> primitive-type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
 
 (def max-values
-  (->> type-meta
+  (->> primitive-type-meta
        (map (fn [[k v]] [k (:max v)]))
        (into {})))
 
@@ -201,7 +212,7 @@
 (def bigint-types         '{:clj  #{clojure.lang.BigInt java.math.BigInteger}
                             :cljs #{com.gfredericks.goog.math.Integer}})
 
-(def integer-types         (cond-union short-types int-types long-types bigint-types))
+(def integer-types         (cond-union unboxed-short-types unboxed-int-types unboxed-long-types bigint-types))
 
 ; ----- DECIMALS ----- ;
 
@@ -216,7 +227,7 @@
 
 (def bigdec-types         '{:clj #{java.math.BigDecimal}})
 
-(def decimal-types         (cond-union float-types double-types bigdec-types))
+(def decimal-types         (cond-union unboxed-float-types unboxed-double-types bigdec-types))
 
 ; ----- GENERAL ----- ;
 
@@ -235,7 +246,8 @@
 
 ; ===== TUPLES ===== ;
 
-(def tuple-types          '{:clj #{clojure.lang.Tuple}})
+(def tuple-types          `{:clj  #{Tuple} ; clojure.lang.Tuple was discontinued; we won't support it for now
+                            :cljs #{Tuple}})
 (def map-entry-types      '{:clj #{java.util.Map$Entry}})
 
 ; ===== SEQUENCES ===== ; Sequential (generally not efficient Lookup / RandomAccess)
@@ -385,8 +397,7 @@
 ; svec = "spliceable vector"
 (def svec-types           '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
                             :cljs #{clojure.core.rrb_vector.rrbt.Vector}})
-(def +vec-types            {:clj  '#{clojure.lang.IPersistentVector
-                                     clojure.lang.APersistentVector$RSeq}
+(def +vec-types            {:clj  '#{clojure.lang.IPersistentVector}
                             :cljs (set/union (:cljs svec-types)
                                              '#{cljs.core/PersistentVector
                                                 cljs.core/TransientVector})})
@@ -410,6 +421,10 @@
 
 (def prim-types primitive-unboxed-types)
 
+(def prim-comparable-types (cond-union unboxed-byte-types unboxed-char-types
+                             unboxed-short-types unboxed-int-types unboxed-long-types
+                             unboxed-float-types unboxed-double-types))
+
 ; Possibly can't check for boxedness in Java because it does auto-(un)boxing, but it's nice to have
 (def primitive-boxed-types (cond-union boxed-bool-types boxed-byte-types boxed-char-types
                              boxed-short-types boxed-int-types boxed-long-types
@@ -427,7 +442,8 @@
 
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.Indexed / cljs.core/IIndexed?
-(def indexed-types         (cond-union array-types string-types vec-types))
+(def indexed-types         (cond-union array-types string-types vec-types
+                             '{:clj #{clojure.lang.APersistentVector$RSeq}}))
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.Associative / cljs.core/IAssociative?
 (def associative-types     (cond-union map-types set-types indexed-types))
@@ -445,7 +461,7 @@
                                     cljs.core/TransientHashMap}})
 
 ; Collections that have Transient counterparts
-(def transientizable-types (cond-union tuple-types
+(def transientizable-types (cond-union #_core-tuple-types
                              '{:clj  #{clojure.lang.PersistentArrayMap
                                        clojure.lang.PersistentHashMap
                                        clojure.lang.PersistentHashSet
@@ -496,6 +512,9 @@
                             :cljs #{cljs.core.async.impl.channels/ManyToManyChannel
                                     #_"TODO more?"}})
 
+(def comparable-types      {:clj  (set/union '#{byte char short int long float double} '#{Comparable})
+                            :cljs (:cljs number-types)})
+
 ; ===== PREDICATES ===== ;
 
 (def types-0
@@ -503,6 +522,7 @@
 
    'primitive?       primitive-types
    'prim?            prim-types
+   'boxed?           primitive-boxed-types
    'integral?        integral-types
 
    'char?            char-types
@@ -515,21 +535,23 @@
    'nat-int?        `{:clj  #{~'int}
                       :cljs #{(type 123)}}
    'long?            long-types
+   '?long            boxed-long-types
    ; The closest thing to a native long the platform has
    'nat-long?       `{:clj  #{~'long}
                       :cljs #{(type 123)}}
    'float?           float-types
    'double?          double-types
+   '?double          boxed-double-types
 
    ; INTEGERS
 
    'integer?         integer-types
-
    'bigint?          bigint-types
 
    ; DECIMALS
 
    'decimal?         decimal-types
+   'bigdec?          bigdec-types
 
    ; NUMBERS
 
@@ -630,6 +652,7 @@
 
    'string?          string-types
    '!string?         !string-types
+   'char-seq?        {:clj '#{CharSequence}}
 
    'array-list?      array-list-types
 
@@ -639,6 +662,7 @@
    '+vector?         +vec-types
    'vec?             vec-types
    'vector?          vec-types
+   'tuple?           tuple-types
 
    ; QUEUES
 
@@ -666,7 +690,7 @@
                                        (get transientizable-types :cljs))}
    'pattern?         regex-types
    'regex?           regex-types
-   'reducer?        '{:clj #{#_clojure.core.protocols.CollReduce
+   'reducer?        '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
                              quantum.core.type.defs.Folder
                              quantum.core.type.defs.Reducer}
                       :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
@@ -678,6 +702,7 @@
    'atomic?          atomic-types
    'm2m-chan?        m2m-chan-types
    'chan?            chan-types
+   'comparable?      comparable-types
    :any              {:clj  (set/union (:clj prim-types) #{'java.lang.Object})
                       :cljs '#{(quote default)}}
    :obj              {:clj  '#{Object}
