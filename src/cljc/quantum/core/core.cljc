@@ -34,6 +34,8 @@
 (defn boolean? [x] #?(:clj  (instance? Boolean x)
                       :cljs (or (true? x) (false? x))))
 
+(defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
+
 #?(:clj  (defn seqable?
            "Returns true if (seq x) will succeed, false otherwise."
            {:from "clojure.contrib.core"}
