@@ -83,15 +83,16 @@
   (assert (> n 0))
   (let [cache (atom {:calls 0})]
     (fn [& args]
-      (if-let [e (find @cache :ret)]
-        (val e)
-        (let [calls (:calls (swap! cache update :calls inc))]
-          ; Each potential thread is guaranteed to have different values of `calls`, and thus to take the correct respective branches
-          (cond (> calls n) ; Only reaches this if a potential race condition is created and avoided
-                (:ret @cache)
-                (= calls n)
-                (:ret (swap! cache assoc :ret (apply f args)))
-                :else (apply f args)))))))
+      (loop []
+        (if-let [e (find @cache :ret)]
+          (val e)
+          (let [calls (:calls (swap! cache update :calls (fn [c] (inc (min c n)))))] ; to prevent overflow
+            ; Each potential thread is guaranteed to have different values of `calls` if <= n, and thus to take the correct respective branches
+            (cond (> calls n) ; Only reaches this if a potential race condition is created and avoided
+                  (recur)
+                  (= calls n)
+                  (:ret (swap! cache assoc :ret (apply f args)))
+                  :else (apply f args))))))))
 
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))
