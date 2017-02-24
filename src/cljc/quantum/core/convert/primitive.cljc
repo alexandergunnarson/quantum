@@ -14,6 +14,8 @@
     [quantum.core.convert.primitive])
   #?(:clj  (:import java.nio.ByteBuffer [quantum.core Numeric])))
 
+; TODO go back over these — there are inconsistencies
+
 ;_____________________________________________________________________
 ;==================={           LONG           }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -24,14 +26,13 @@
 #?(:clj
 (defnt ^long ->long*
   {:source "clojure.lang.RT.uncheckedLongCast"}
-  ([^Number    x] (.longValue x))
+  ([^Number x] (.longValue x))
   ([#{char} x] (Numeric/uncheckedLongCast x))
   ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedLongCast x))))
 
 #?(:clj
     (defnt ^long ->long
       {:source "clojure.lang.RT.longCast"}
-      ([#{Integer Long Byte Short} x] (.longValue x))
       ([^clojure.lang.BigInt x]
         (if (nil? (.bipart x))
             (.lpart x)
@@ -41,14 +42,12 @@
             (.longValue x)
             (long-out-of-range x)))
       ([^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
-      ([^Character                  x] (->long (.charValue       x)))
-      ([#{Double Float}             x] (->long (.doubleValue     x)))
       ([#{char byte short int long} x] (->long* x))
       ([#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
       ([#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
       ([#{boolean}                  x] (if x 1 0))
       ([^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
-                                                :cljs (-> x int/fromString ->long)))
+                                          :cljs (-> x int/fromString ->long)))
     #?(:clj
       ([^string?                    x radix] (Long/parseLong x radix)))
       ([                            x] (->long-protocol x)))
@@ -70,7 +69,6 @@
 #?(:clj
     (defnt ^boolean ->boolean
       {:source "clojure.lang.RT.booleanCast"}
-      ([^Boolean x] (.booleanValue x))
       ([^boolean x] x)
       ([:else    x] (.booleanValue (not= x nil))))
    :cljs (defalias ->boolean core/boolean))
@@ -81,14 +79,12 @@
     (defnt ^byte ->byte
       {:source "clojure.lang.RT.byteCast"}
       ([^byte                          x] x)
-      ([^Byte                          x] (.byteValue x))
       ([#{short int long float double} x] (clojure.lang.RT/byteCast x))
       ([#{boolean}                     x] (-> x ->long ->byte))
       ; TODO do other numbers
       ([                               x] (clojure.lang.RT/byteCast x)))
    :cljs (defalias ->byte core/byte))
 
-; Doesn't autocast
 #?(:clj
 (defnt ^byte ->byte*
   {:source "clojure.lang.RT.uncheckedByteCast"}
@@ -109,7 +105,6 @@
 #?(:clj
 (defnt ^char ->char*
   {:source "clojure.lang.RT.uncheckedCharCast"}
-  ([^Character x] (.charValue x))
   ([^Number    x] (->char* (.longValue x)))
   ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedCharCast x))
   ([^string?   x] (if (->> x .length (= 1))
@@ -127,7 +122,6 @@
 #?(:clj
     (defnt ^short ->short
       {:source "clojure.lang.RT.shortCast"}
-      ([^Short                   x] (.shortValue x))
       ([#{byte short}            x] (->short* x))
       ([#{int long float double} x] (clojure.lang.RT/shortCast x))
       ([^string?                 x] (-> x Short/parseShort ->short))
@@ -140,7 +134,6 @@
 (defnt ^int ->int*
   {:source "clojure.lang.RT.uncheckedIntCast"}
   ([^Number    x] (.intValue x))
-  ([^Character x] (->int* (->char (.charValue x))))
   ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedIntCast x))))
 
 ; (defnt' ->IntExact
@@ -149,13 +142,11 @@
 #?(:clj
     (defnt ^int ->int
       {:source "clojure.lang.RT.intCast"}
-      ([#{Integer}             x] (.intValue x))
       ([#{char byte short int} x] (->int* x))
       ([#{long double}         x] (clojure.lang.RT/intCast x))
       ([^float                 x] (Float/floatToRawIntBits x))
       ([^string?               x] (-> x #?(:clj Integer/parseInt :cljs js/parseInt) ->int))
-      ([^string?               x radix] (#?(:clj Integer/parseInt :cljs int/fromString) x radix))
-      ([:else                  x] (-> x ->long ->int)))
+      ([^string?               x radix] (#?(:clj Integer/parseInt :cljs int/fromString) x radix)))
    :cljs (defalias ->int core/int))
 
 ; js/Math.trunc for CLJS
@@ -168,21 +159,13 @@
   {:source "clojure.lang.RT/uncheckedFloatCast"}
   ([^Number                             x] (.floatValue x))
   ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedFloatCast x))
-  ([^string?                            x] (Float/parseFloat x)))) ; TODO unbox
+  ([^string?                            x] (Float/parseFloat x))))
 
-; ; TODO duplicate methods
-; (defnt ^float ->float
-;   {:source "clojure.lang.RT/floatCast"}
-;   ([^Float                   x] (.floatValue x))
-;   ([#{byte short float long} x] (->float* x))
-;   ([^int                     x] (Float/intBitsToFloat x)
-;   ([^string?                 x] (-> x ->Float ->float))
-;   ([:else]
-;     (let [n (->double x)]
-;       (if (or (< n (- Float/MAX_VALUE))
-;               (> n Float/MAX_VALUE))
-;           (throw (IllegalArgumentException. (str "Value out of range for float: " x)))
-;           n))))
+#?(:clj
+(defnt ^float ->float
+  {:source "clojure.lang.RT/floatCast"}
+  ([#{byte short int float long} x] (->float* x))
+  ([^string?                 x] (Float/parseFloat #_->float* x)))) ; TODO fix this
 
 ; round to float: (js.Math/fround x)
 
@@ -211,27 +194,25 @@
 
 #?(:clj
 (defnt' ->boxed
-  "These are all intrinsics."
-  (^Boolean   [^boolean x] (Boolean/valueOf   x))
-  (^Byte      [^byte    x] (Byte/valueOf      x))
-  (^Character [^char    x] (Character/valueOf x))
-  (^Short     [^short   x] (Short/valueOf     x))
-  (^Integer   [^int     x] (Integer/valueOf   x))
-  (^Long      [^long    x] (Long/valueOf      x))
-  (^Float     [^float   x] (Float/valueOf     x))
-  (^Double    [^double  x] (Double/valueOf    x))))
+  (^Boolean   ^:intrinsic [^boolean x] (Boolean/valueOf   x))
+  (^Byte      ^:intrinsic [^byte    x] (Byte/valueOf      x))
+  (^Character ^:intrinsic [^char    x] (Character/valueOf x))
+  (^Short     ^:intrinsic [^short   x] (Short/valueOf     x))
+  (^Integer   ^:intrinsic [^int     x] (Integer/valueOf   x))
+  (^Long      ^:intrinsic [^long    x] (Long/valueOf      x))
+  (^Float     ^:intrinsic [^float   x] (Float/valueOf     x))
+  (^Double    ^:intrinsic [^double  x] (Double/valueOf    x))))
 
 #?(:clj
 (defnt' ->unboxed
-  "These are all intrinsics."
-  (^boolean [^Boolean   x] (.booleanValue x))
-  (^byte    [^Byte      x] (.byteValue    x))
-  (^char    [^Character x] (.charValue    x))
-  (^short   [^Short     x] (.shortValue   x))
-  (^int     [^Integer   x] (.intValue     x))
-  (^long    [^Long      x] (.longValue    x))
-  (^float   [^Float     x] (.floatValue   x))
-  (^double  [^Double    x] (.doubleValue  x))))
+  (^boolean ^:intrinsic [^Boolean   x] (.booleanValue x))
+  (^byte    ^:intrinsic [^Byte      x] (.byteValue    x))
+  (^char    ^:intrinsic [^Character x] (.charValue    x))
+  (^short   ^:intrinsic [^Short     x] (.shortValue   x))
+  (^int     ^:intrinsic [^Integer   x] (.intValue     x))
+  (^long    ^:intrinsic [^Long      x] (.longValue    x))
+  (^float   ^:intrinsic [^Float     x] (.floatValue   x))
+  (^double  ^:intrinsic [^Double    x] (.doubleValue  x))))
 ;_____________________________________________________________________
 ;==================={         UNSIGNED         }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -245,11 +226,11 @@
   {:attribution  ["ztellman/primitive-math" "gloss.data.primitives"]
    :contributors {"Alex Gunnarson" "defnt-ed"}
    :todo #{"change to unchecked-bit-and after making sure it won't overflow"}}
-  (^short [^byte  x] (&& (->short* bytes2) x))
-  (^int   [^short x] (&& (->int*   bytes4) x))
-  (^long  [^int   x] (&& (->long*  bytes8) x))
-  (       [^long  x]
-    (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array)))))
+  ([^byte  x] (&& (->short* bytes2) x))
+  ([^short x] (&& (->int*   bytes4) x))
+  ([^int   x] (&& (->long*  bytes8) x))
+  ([^long  x]
+    (BigInteger. 1 (-> (ByteBuffer/allocate 8) (.putLong x) .array))))) ; TODO reflection
 
 #?(:clj
 (defn ubyte->byte
