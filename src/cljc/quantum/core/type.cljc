@@ -49,7 +49,8 @@
 
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 
-#?(:clj  (defnt' prim-long?    ([^long           x] true) ([:else x] false)))
+#?(:clj  (defnt' prim-long?    ([^long           x] true)
+                               ([#{boolean? byte? char? int? long? float? double? Object} x] false))) ; TODO #{(- prim? long) Object}
 
          (defnt integer?
            "Whether x is integer-like (primitive/boxed integer, BigInteger, etc.)."
@@ -109,7 +110,7 @@
 #?(:clj  (defnt file?          ([^file?          x] true) ([x] false)))
          (defnt pattern?       ([^pattern?       x] true) ([x] false))
          (defnt regex?         ([^regex?         x] true) ([x] false))
-         (defnt editable?      ([^editable?      x] true) ([#?(:cljs :else) x] false))
+         (defnt editable?      ([^editable?      x] true) ([#_(:cljs :else) x] false))
          (defnt transient?     ([^transient?     x] true) ([x] false))
          (defnt indexed?       ([^indexed?       x] true) ([x] false))
 
