@@ -1,21 +1,18 @@
 (ns quantum.test.core.macros.defnt
-  (:require [quantum.core.macros.defnt :as ns]
-            [quantum.core.log   :as log
-              :include-macros true]
-            [quantum.core.error :as err
-              :include-macros true]
-            [quantum.core.macros.protocol  :as proto]
-            [quantum.core.macros.reify     :as reify]
-            [quantum.core.macros.transform :as trans]
-            [quantum.core.macros.core
-              :refer [#?@(:clj [when-cljs if-cljs])]]
-            [#?(:clj clojure.test
-                :cljs cljs.test)
-              :refer        [#?@(:clj [deftest is testing])]
-              :refer-macros [deftest is testing]])
-  #?(:cljs (:require-macros
-             [quantum.test.core.macros.defnt
-               :refer [with-merge-test]]))
+  (:require
+    [quantum.core.macros.defnt :as ns]
+    [quantum.core.log   :as log]
+    [quantum.core.error :as err]
+    [quantum.core.macros.protocol  :as proto]
+    [quantum.core.macros.reify     :as reify]
+    [quantum.core.macros.transform :as trans]
+    [quantum.core.macros.core
+      :refer [case-env]]
+    [quantum.core.test
+      :refer [deftest is testing]])
+  (:require-macros
+    [quantum.test.core.macros.defnt
+      :refer [with-merge-test]])
   #?(:clj (:import java.util.concurrent.atomic.AtomicInteger)))
 
 (def data
@@ -149,11 +146,10 @@
 (defmacro with-merge-test [env sym expected]
   `(quantum.core.collections.base/merge-call ~env
      (fn [env#]
-       (~(if-cljs &env 'cljs.test/testing
-                       'clojure.test/testing) '~sym
+       (testing '~sym
          (let [ret# (~sym env#)]
            (log/ppr-hints :user ~(str "<< TESTING " (name sym) " >>") ret#)
-           (~(if-cljs &env 'cljs.test/is 'clojure.test/is) (= ret# ~expected))
+           (is (= ret# ~expected))
            ret#))))))
 
 #_(deftest integration:defnt
@@ -293,7 +289,7 @@
                 (with-merge-test reify-body
                   {:reify-body reify-body-result})
                 (with-merge-test reify-def
-                   {:reified-sym           
+                   {:reified-sym
                       'test-defnt-reified,
                     :reified-sym-qualified
                       ^user.TestDefntInterface 'user/test-defnt-reified,
