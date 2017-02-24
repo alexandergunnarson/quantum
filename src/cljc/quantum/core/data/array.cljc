@@ -245,7 +245,7 @@
 (defnt' ^boolean ==
   "Compares two arrays for equality."
   {:adapted-from "mikera.cljutils.bytes"}
-  ([^array? a :first b]
+  ([^array? a :<0> b]
     (java.util.Arrays/equals a b))))
 
 ; ===== GENERATION ===== ;
