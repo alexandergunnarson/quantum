@@ -7,6 +7,7 @@
 #?(:clj
     [clojure.jvm.tools.analyzer        :as tana])
     [quantum.core.analyze.clojure.core :as ana]
+    [quantum.core.core                 :as qcore]
     [quantum.core.fn                   :as fn
       :refer [fn$ <- fn-> fn->>]]
     [quantum.core.logic                :as logic
@@ -33,28 +34,18 @@
 ; SYMBOLS
 (defn name [x] (if (nil? x) nil (core/name x))) ; TODO move
 
-(defn type-hint "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
-  {:source "ztellman/riddley.compiler"} [x]
-  (when-let [tag (-> x meta :tag)]
-  (let [sym (symbol (cond (symbol? tag) (namespace tag)
-                          :else         nil)
-                    (if #?@(:clj  [(instance? Class tag) (.getName ^Class tag)]
-                            :cljs [true])
-                        (name tag)))]
-    sym)))
-
 ; TODO abstract platform-dependent member calls
 
 (defn symbol-eq? [s1 s2] (= (name s1) (name s2))) ; TODO this isn't right
 
 (defn metaclass    [sym]
-  (whenc (type-hint sym) (fn-> name empty?) nil))
+  (whenc (ana/type-hint:sym sym) (fn-> name empty?) nil))
 
 
 (defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))
 (defn auto-genned? [sym] (-> sym name (str-ends-with? "__auto__")))
 (def possible-type-predicate? (fn-or keyword? (fn-and symbol? (fn-> name (str-index-of "?") (not= -1)))))
-(def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword?))
+(def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? qcore/boolean? qcore/regex?))
 
 ;  ===== SCOPE =====
 (defn shadows-var? [bindings v]
