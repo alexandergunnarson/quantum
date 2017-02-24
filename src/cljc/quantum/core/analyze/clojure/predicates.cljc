@@ -44,7 +44,9 @@
 
 (defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))
 (defn auto-genned? [sym] (-> sym name (str-ends-with? "__auto__")))
-(def possible-type-predicate? (fn-or keyword? (fn-and symbol? (fn-> name (str-index-of "?") (not= -1)))))
+(def possible-type-predicate? (fn-or keyword?
+                                     (fn-and symbol? (fn-or (fn= 'default)
+                                                            (fn-> name (str-index-of "?") (not= -1))))))
 (def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? qcore/boolean? qcore/regex?))
 
 ;  ===== SCOPE =====
