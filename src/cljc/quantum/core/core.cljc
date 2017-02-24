@@ -159,10 +159,15 @@
           (.getName ^Class x)])
           :else (name x)))
 
-(defn simple-keyword?    [x] (and (symbol?  x) (not (namespace x))))
-(defn qualified-keyword? [x] (and (keyword? x)      (namespace x)))
-(defn simple-symbol?     [x] (and (symbol?  x) (not (namespace x))))
-(defn qualified-symbol?  [x] (and (keyword? x)      (namespace x)))
+(defn simple-keyword?    [x] (and (symbol?  x) (nil? (namespace x))))
+(defn qualified-keyword? [x] (and (keyword? x)       (namespace x)))
+(defn simple-symbol?     [x] (and (symbol?  x) (nil? (namespace x))))
+(defn qualified-symbol?  [x] (and (keyword? x)       (namespace x)))
+
+(defn str->integer [s]
+  (assert (string? s) {:s s})
+  #?(:clj  (Long/parseLong ^String s)
+     :cljs (js/parseInt            s)))
 
 ; Nested |let-mutable| :
     ; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
