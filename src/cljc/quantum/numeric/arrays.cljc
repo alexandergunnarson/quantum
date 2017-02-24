@@ -119,8 +119,6 @@
 
 ; ============ GET / SET ============ ;
 
-#?(:clj (alter-meta! #'real/entry assoc :tag 'double))
-
 (defnt get-in*
   "Returns the i-th entry of vector x,
    or ij-th entry of matrix m.
@@ -129,21 +127,19 @@
    numpy:  a[0,1]
    R:      a[1,2]"
   {:implemented-by '#{smile.math.matrix.Matrix}}
-  #?(:clj (^double [^RealVector X ^long a        ] (real/entry X a  )))
+  #?(:clj (^double [^RealVector X ^long a        ] (->double (real/entry X a  ))))
           (        [            X       a        ] (TODO))
-  #?(:clj (^double [^RealMatrix X ^long a ^long b] (real/entry X a b)))
+  #?(:clj (^double [^RealMatrix X ^long a ^long b] (->double (real/entry X a b))))
           (        [            X       a       b] (TODO)))
-
-#?(:clj (alter-meta! #'real/entry! assoc :tag 'double))
 
 (defnt set-in!*
   "Sets the i-th entry of vector x,
    or ij-th entry of matrix m."
   {:implemented-by '#{smile.math.matrix.Matrix}}
-  #?(:clj (^double [^RealVector X ^double v ^long a        ] (real/entry! X a v  ))) ; TODO should be Realchangeable??
-          (        [                X         v       a        ] (TODO))
-  #?(:clj (^double [^RealMatrix     X ^double v ^long b ^long a] (real/entry! X a b v)))
-          (        [                X         v       b       a] (TODO)))
+  #?(:clj ([^RealVector     X ^double v ^long a        ] ^RealVector (real/entry! X a v  ))) ; TODO should be RealChangeable??
+          ([                X         v       a        ] (TODO))
+  #?(:clj ([^RealMatrix     X ^double v ^long b ^long a] ^RealMatrix (real/entry! X a b v)))
+          ([                X         v       b       a] (TODO)))
 
 #_"Returns the BOXED i-th entry of vector x, or ij-th entry of matrix m."
 #?(:clj (defalias                                boxed-get-in*    fnum/entry ))
@@ -244,7 +240,7 @@
 ;; ============ OPERATIONS (BLAS) ============
 
 #_"Returns the dimension of the vector x."
-#?(:clj (defalias                                dim              fnum/dim      ))
+#?(:clj (defnt' ^long dim [^RealVector x] (fnum/dim x)))
 #_"Returns the total number of elements in all dimensions of a block x
   of (possibly strided) memory."
 #?(:clj (defalias                                ecount           fnum/ecount   ))
@@ -269,9 +265,7 @@
 #_"Computes the dot product of vectors x and y."
 ; Also implemented in Breeze
 #?(:clj
-(defnt' ^double dot*
-  {:time-complexity 'n}
-  [^RealVector a ^RealVector b] (real/dot a b)))
+(defnt' ^double dot* {:time-complexity 'n} [^RealVector a ^RealVector b] (real/dot a b)))
 
 #_"Computes the Euclidan (L2) norm of vector x."
 #?(:clj (defalias ^{:time-complexity 'n}         l2-norm          real/nrm2  ))
