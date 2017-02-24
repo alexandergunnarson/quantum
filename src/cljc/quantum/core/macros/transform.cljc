@@ -3,9 +3,10 @@
     [fast-zip.core                           :as zip]
     [clojure.walk
       :refer [postwalk]]
-    [quantum.core.analyze.clojure.core       :as ana]
-    [quantum.core.analyze.clojure.predicates :as anap
+ #?(:clj [clojure.jvm.tools.analyzer         :as clj-ana])
+    [quantum.core.analyze.clojure.core       :as ana
       :refer [type-hint]]
+    [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.analyze.clojure.transform
       :refer [unhint]]
     [quantum.core.macros.optimization        :as opt]
@@ -15,7 +16,7 @@
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
-      :refer [<- fn1 fn->]]
+      :refer [<- fn1 fn-> rcomp]]
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic
@@ -34,15 +35,17 @@
      type-hint
      (fn [sym]
        (when env
-         (log/ppr :macro-expand (str "TRYING TO RESOLVE HINT FOR SYM FROM &env " sym) env)
-         (log/pr  :macro-expand "SYM" sym "IN ENV?" (contains? env sym))
-         (log/pr  :macro-expand "ENV TYPE HINT" (-> env (find sym) first type-hint)))
+         (log/ppr :macro-expand/params (str "TRYING TO RESOLVE HINT FOR SYM FROM &env " sym) (keys env))
+         (log/pr  :macro-expand/params "SYM" sym "IN ENV?" (contains? env sym))
+         (log/pr  :macro-expand/params "ENV TYPE HINT" (-> env (find sym) first type-hint)))
        (-> env (find sym) first type-hint)))
    x))
 
 (defn any-hint-unresolved?
   ([args lang] (any-hint-unresolved? args lang nil))
   ([args lang env]
+    {:post [(log/ppr-hints :macro-expand/params "Any hint unresolved?"
+              {:unresolved? % :args args})]}
     (some (fn-not #(hint-resolved? % lang env)) args)))
 
 (defn hint-body-with-arglist
@@ -128,25 +131,35 @@
     5 clojure.lang.Tuple$T5
     6 clojure.lang.Tuple$T6})
 
+
 (defn try-hint-args
   {:todo ["Symbol resolution and hinting, etc."]}
   ([args lang] (try-hint-args args lang nil))
   ([args lang env]
+  {:post [(log/ppr-hints :macro-expand "ARGS HINTED" %)]}
     (for [arg args]
-      (cond
-        (seq? arg)
-          (if-let [hint (get-in [lang (first arg)] tcore/type-casts-map)]
-            (cmacros/hint-meta arg hint)
-            arg)
-        (vector? arg)
-          ; Otherwise the tag meta is assumed to be
-          ; clojure.lang.IPersistentVector, etc.
-          (cmacros/hint-meta (list `quantum.core.macros.optimization/identity* arg)
-            (or (get vec-classes-for-count (count arg))
-                (case lang
-                  :clj  'clojure.lang.PersistentVector
-                  :cljs 'cljs.core.PersistentVector)))
-        :else arg))))
+      #?(:clj  (if (or (anap/hinted-literal? arg) ; can't hint a literal
+                       (type-hint arg))
+                   arg
+                   (if-let [hint (ana/typeof* arg env)]
+                     (if (= hint Object) ; Object class
+                         arg ; ignore it for now
+                         (cmacros/hint-meta arg hint))
+                     arg))
+         :cljs (cond ; TODO use core analyzer
+                 (seq? arg)
+                   (if-let [hint (get-in [lang (first arg)] tcore/type-casts-map)]
+                     (cmacros/hint-meta arg hint)
+                     arg)
+                 (vector? arg)
+                   ; Otherwise the tag meta is assumed to be
+                   ; clojure.lang.IPersistentVector, etc.
+                   (cmacros/hint-meta (list `quantum.core.macros.optimization/identity* arg)
+                     (or (get vec-classes-for-count (count arg))
+                         (case lang
+                           :clj  'clojure.lang.PersistentVector
+                           :cljs 'cljs.core.PersistentVector)))
+                 :else arg)))))
 
 (defn gen-arglist
   {:in  '[abcde hru1 fhacbd]
