@@ -200,7 +200,7 @@
                         (path proj-path-f (up-dir-str this-dir) "resources"))}))
      :cljs (atom {})))
 
-(defnt #?(:clj ^String parse-dir :cljs parse-dir)
+(defnt #?(:clj parse-dir :cljs parse-dir)
   ([^+vec? keys-n]
     (reducei
       (fn [path-n key-n n]
