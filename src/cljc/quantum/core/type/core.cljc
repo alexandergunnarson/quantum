@@ -65,17 +65,12 @@
 
 #?(:clj
 (def unboxed->convertible
-  "If the argument is a primitive Class, returns a set of Classes
+  "If the argument is a primitive Class, returns a set of primitive Classes
    to which the primitive Class can be casted"
-  {Integer/TYPE   #{Integer Long/TYPE Long Short/TYPE Byte/TYPE Object Number}
-   Float/TYPE     #{Float Double/TYPE Object Number}
-   Double/TYPE    #{Double Float/TYPE Object Number}
-   Long/TYPE      #{Long Integer/TYPE Short/TYPE Byte/TYPE Object Number}
-   Character/TYPE #{Character Object}
-   Short/TYPE     #{Short Object Number}
-   Byte/TYPE      #{Byte Object Number}
-   Boolean/TYPE   #{Boolean Object}
-   Void/TYPE      #{Void}}))
+  {Integer/TYPE   #{Long/TYPE Short/TYPE Byte/TYPE}
+   Float/TYPE     #{Double/TYPE}
+   Double/TYPE    #{Float/TYPE}
+   Long/TYPE      #{Integer/TYPE Short/TYPE Byte/TYPE}}))
 
 ; (defn numeric?
 ;   "Returns true if the given class is numeric"
