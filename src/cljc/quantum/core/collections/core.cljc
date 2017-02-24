@@ -273,7 +273,7 @@
   #?(:clj  ([#{Collection Map} x] (.size x)))
   #?(:clj  ([^Counted    x] (.count x)))
   #?(:clj  ([^Map$Entry  x] (if (nil? x) 0 2))) ; TODO fix this potential null issue
-           ([            x] (core/count x))
+         #_(^int [            x] (core/count x))
            ([^reducer?   x] (reduce-count x)))
 
 (defnt empty?
@@ -344,16 +344,16 @@
              (^<0> [^objects?  x ^int n] (->object-array n))]))
 
 (defnt ->array
-  #?(:clj  (^boolean-array? [^boolean? t ^nat-long? ct] (->boolean-array ct)))
-  #?(:clj  (^byte-array?    [^byte?    t ^nat-long? ct] (->byte-array    ct)))
-  #?(:clj  (^char-array?    [^char?    t ^nat-long? ct] (->char-array    ct)))
-  #?(:clj  (^short-array?   [^short?   t ^nat-long? ct] (->short-array   ct)))
-  #?(:clj  (^int-array?     [^int?     t ^nat-long? ct] (->int-array     ct)))
-  #?(:clj  (^long-array?    [^long?    t ^nat-long? ct] (->long-array    ct)))
-  #?(:clj  (^float-array?   [^float?   t ^nat-long? ct] (->float-array   ct)))
-           (^double-array?  [^double?  t ^nat-long? ct] (->double-array  ct))
-  #?(:cljs (                [          x ^nat-long? ct] (->object-array  ct)))
-  #?(:clj  (                [^Class    c ^nat-long? ct] (make-array c    ct)))) ; object-array is subsumed into this
+  #?(:clj  (^boolean-array? [^boolean? t ^int ct] (->boolean-array ct)))
+  #?(:clj  (^byte-array?    [^byte?    t ^int ct] (->byte-array    ct)))
+  #?(:clj  (^char-array?    [^char?    t ^int ct] (->char-array    ct)))
+  #?(:clj  (^short-array?   [^short?   t ^int ct] (->short-array   ct)))
+  #?(:clj  (^int-array?     [^int?     t ^int ct] (->int-array     ct)))
+  #?(:clj  (^long-array?    [^long?    t ^int ct] (->long-array    ct)))
+  #?(:clj  (^float-array?   [^float?   t ^int ct] (->float-array   ct)))
+           (^double-array?  [^double?  t ^int ct] (->double-array  ct))
+  #?(:cljs (                [          x ^int ct] (->object-array  ct)))
+  #?(:clj  (                [^Class    c ^int ct] (make-array c    ct)))) ; object-array is subsumed into this
 
 (defnt empty
   {:todo #{"Most of this should be in some static map somewhere for efficiency"
@@ -373,20 +373,20 @@
            (^<0> [#{#?(:clj  IPersistentCollection
                        :cljs IEmptyableCollection)} x] (#?(:clj .empty :cljs -empty) x)))
 
-(defnt lasti
+(defnt ^long lasti
   "Last index of a coll."
-  (^int  [#{string? array?} x] (int (unchecked-dec (count x))))
-  (^long [                  x] (unchecked-dec (count-protocol x))))
+  ([#{string? array?} x] (unchecked-dec (count x)))
+  ([                  x] (unchecked-dec (count-protocol x))))
 
 ; ===== COPY ===== ;
 
 (#?(:clj defnt' :cljs defnt) copy! ; shallow copy
-  (^<0> [^array? in ^int? in-pos :<0> out ^int? out-pos ^int? length]
+  (^<0> [^array? in ^int in-pos :<0> out ^int out-pos ^int length]
     #?(:clj  (System/arraycopy in in-pos out out-pos length)
        :cljs (dotimes [i (- (.-length in) in-pos)]
                (core/aset out (+ i out-pos) (core/aget in i))))
     out)
-  (^<0> [^array? in :<0> out ^nat-int? length]
+  (^<0> [^array? in :<0> out ^int length]
     (copy! in 0 out 0 length)))
 
 #?(:clj (defalias shallow-copy! copy!))
