@@ -50,7 +50,7 @@
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 
 #?(:clj  (defnt' prim-long?    ([^long           x] true)
-                               ([#{boolean? byte? char? int? long? float? double? Object} x] false))) ; TODO #{(- prim? long) Object}
+                               ([#{boolean byte char int float double Object} x] false))) ; TODO #{(- prim? long) Object}
 
          (defnt integer?
            "Whether x is integer-like (primitive/boxed integer, BigInteger, etc.)."
