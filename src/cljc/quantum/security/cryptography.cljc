@@ -275,7 +275,7 @@
 
 #?(:clj
 (defn hmac ^"[B" [algo message secret]
-  (validate algo    hmac-key->impl-string
+  (validate algo    hmac-key->algo-string
             message nnil?
             secret  nnil?)
   (let [^String algo-str (hmac-key->algo-string algo)
