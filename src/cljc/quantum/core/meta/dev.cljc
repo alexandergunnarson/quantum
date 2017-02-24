@@ -76,7 +76,9 @@
       (catch-all
         (require '[clojure.repl         :refer [source find-doc doc]]
                  '[clojure.java.javadoc :refer [javadoc]]
-                 '[quantum.core.meta.dev :refer [all-todos all-todos-with-priority]])))
+                 '[quantum.core.meta.dev :refer [all-todos all-todos-with-priority]]
+                 '[quantum.core.macros :refer [macroexpand-all!]]
+                 '[quantum.core.analyze.clojure.core :refer [typeof*]])))
     (in-ns (ns-name ns-0))
     (clojure.main/repl
       :print  quantum.core.print/!
