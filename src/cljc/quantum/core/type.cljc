@@ -45,13 +45,7 @@
 
 (def types           tcore/types          )
 
-#?(:clj
-(defmacro static-cast
-  "Performs a static type cast"
-  {:attribution 'clisk.util}
-  [class-sym expr]
-  (let [sym (gensym "cast")]
-    `(let [~(with-meta sym {:tag class-sym}) ~expr] ~sym))))
+#?(:clj (defalias static-cast tcore/static-cast))
 
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 
