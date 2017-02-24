@@ -9,7 +9,7 @@
   (:require
     [clojure.core             :as core]
     [quantum.core.fn          :as fn
-      :refer [fn1 fn->]]
+      :refer [fn1 fn-> fn->>]]
     [quantum.core.vars        :as var
       :refer [defalias]]
     [quantum.core.macros.core :as cmacros
@@ -222,31 +222,48 @@
 ; ======== CONDITIONAL LET BINDINGS ========
 
 #?(:clj
-(defmacro if-let
- "An alternative to if-let where more bindings can be added"
- {:adapted-from "https://github.com/zcaudate/hara/blob/master/candidates/src/control.clj"}
-  ([bindings then]
-    `(if-let ~bindings ~then nil))
-  ([[bnd expr & more] then else]
-    `(let [temp# ~expr
-           ~bnd  temp#]
-       (if temp#
-           ~(if more
-               `(if-let [~@more] ~then ~else)
+(defmacro if-let-base
+  {:attribution "Alex Gunnarson"}
+  ([cond-sym bindings then]
+    `(if-let-base ~cond-sym ~bindings ~then nil))
+  ([cond-sym [bnd expr & more] then else]
+    `(let [temp# ~expr ~bnd temp#]
+       (~cond-sym temp#
+           ~(if (seq more)
+               `(if-let-base ~cond-sym [~@more] ~then ~else)
                then)
            ~else)))))
 
 #?(:clj
+(defmacro if-let
+  "Like `if-let`, but multiple bindings can be used."
+  [& xs] `(if-let-base if ~@xs)))
+
+#?(:clj
+(defmacro if-not-let
+  "if : if-let :: if-not : if-not-let. All conditions must be false."
+  [& xs] `(if-let-base if-not ~@xs)))
+
+#?(:clj
+(defmacro when-let-base
+  {:attribution "Alex Gunnarson"}
+  [cond-sym [bnd expr & more] & body]
+    `(let [temp# ~expr ~bnd  temp#]
+       (~cond-sym temp#
+         ~(if (seq more)
+              `(when-let-base ~cond-sym [~@more] ~@body)
+              `(do ~@body))))))
+
+#?(:clj
 (defmacro when-let
- "An alternative to when-let where more bindings can be added"
- {:attribution "Alex Gunnarson"}
-  ([[bnd expr & more] & body]
-    `(let [temp# ~expr
-           ~bnd  temp#]
-       (when temp#
-         ~(if more
-              `(when-let [~@more] ~@body)
-              `(do ~@body)))))))
+  "Like `when-let`, but multiple bindings can be used."
+  [& xs] `(if-let-base when ~@xs)))
+
+#?(:clj
+(defmacro when-not-let
+  "when : when-let :: when-not : when-not-let. All conditions must be false."
+  [& xs] `(when-let-base when-not ~@xs)))
+
 
 #?(:clj
 (defmacro cond-let
