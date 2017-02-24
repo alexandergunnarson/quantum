@@ -32,6 +32,24 @@
   ([pred lang])
   ([pred lang type-arglist]))
 
+(deftest test:?extract-special-defnt-keyword ; TODO derepeat
+  (is (= :else  (ns/?extract-special-defnt-keyword :else)))
+  (is (= :largest (ns/?extract-special-defnt-keyword :largest)))
+  (is (= nil (ns/?extract-special-defnt-keyword :nope)))
+  (is (= nil (ns/?extract-special-defnt-keyword "<0>")))
+  (testing "Positional"
+    (is (= [0 nil]  (ns/?extract-special-defnt-keyword :<0>)))
+    (is (= [0 nil]  (ns/?extract-special-defnt-keyword '<0>)))
+    (is (= nil      (ns/?extract-special-defnt-keyword :<01>)))
+    (is (= nil      (ns/?extract-special-defnt-keyword '<01>)))
+    (is (= [1 nil]  (ns/?extract-special-defnt-keyword '<1>)))
+    (is (= [89 nil] (ns/?extract-special-defnt-keyword '<89>))))
+  (testing "Elemental"
+    (is (= [0 1]   (ns/?extract-special-defnt-keyword :<0>:1)))
+    (is (= [0 0]   (ns/?extract-special-defnt-keyword :<0>:0)))
+    (is (= [93 27] (ns/?extract-special-defnt-keyword :<93>:27)))
+    (is (= nil     (ns/?extract-special-defnt-keyword :<93>:07)))))
+
 #?(:clj
 (deftest test:expand-classes-for-type-hint ; TODO :clj only for now
   (let [{:keys [ns- lang class-sym]} data]
