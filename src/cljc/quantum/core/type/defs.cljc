@@ -12,7 +12,7 @@
     [quantum.core.data.tuple
       #?@(:cljs [:refer [Tuple]])]
     [quantum.core.fn       :as fn
-      :refer [fn->]]
+      :refer [fn-> rcomp]]
     [quantum.core.logic    :as logic
       :refer [fn-and condf1]])
   (:require-macros
@@ -34,54 +34,54 @@
   {'boolean {:bits 1
              :min  0
              :max  1
-             #?@(:clj [:array-ident "Z"
-                       :outer-type "[Z"
-                       :boxed      'java.lang.Boolean
-                       :unboxed    'Boolean/TYPE])}
+   #?@(:clj [:array-ident "Z"
+             :outer-type "[Z"
+             :boxed      'java.lang.Boolean
+             :unboxed    'Boolean/TYPE])}
    'short   {:bits 16
              :min -32768
              :max  32767
-             #?@(:clj [:array-ident "S"
-                       :outer-type  "[S"
-                       :boxed       'java.lang.Short
-                       :unboxed     'Short/TYPE])}
+   #?@(:clj [:array-ident "S"
+             :outer-type  "[S"
+             :boxed       'java.lang.Short
+             :unboxed     'Short/TYPE])}
    'byte    {:bits 8
              :min -128
              :max  127
-             #?@(:clj [:array-ident "B"
-                       :outer-type  "[B"
-                       :boxed       'java.lang.Byte
-                       :unboxed     'Byte/TYPE])}
+   #?@(:clj [:array-ident "B"
+             :outer-type  "[B"
+             :boxed       'java.lang.Byte
+             :unboxed     'Byte/TYPE])}
    'char    {:bits 16
              :min  0
              :max  65535
-             #?@(:clj [:array-ident "C"
-                       :outer-type  "[C"
-                       :boxed       'java.lang.Character
-                       :unboxed     'Character/TYPE])}
+   #?@(:clj [:array-ident "C"
+             :outer-type  "[C"
+             :boxed       'java.lang.Character
+             :unboxed     'Character/TYPE])}
    'int     {:bits 32
              :min -2147483648
              :max  2147483647
-             #?@(:clj [:array-ident "I"
-                       :outer-type  "[I"
-                       :boxed       'java.lang.Integer
-                       :unboxed     'Integer/TYPE])}
+   #?@(:clj [:array-ident "I"
+             :outer-type  "[I"
+             :boxed       'java.lang.Integer
+             :unboxed     'Integer/TYPE])}
    'long    {:bits 64
              :min -9223372036854775808
              :max  9223372036854775807
-             #?@(:clj [:array-ident "J"
-                       :outer-type  "[J"
-                       :boxed       'java.lang.Long
-                       :unboxed     'Long/TYPE])}
+   #?@(:clj [:array-ident "J"
+             :outer-type  "[J"
+             :boxed       'java.lang.Long
+             :unboxed     'Long/TYPE])}
    ; Technically with floating-point nums, "min" isn't the most negative;
    ; it's the smallest absolute
    'float   {:bits 32
              :min  1.4E-45
              :max  3.4028235E38
-             #?@(:clj [:array-ident "F"
-                       :outer-type  "[F"
-                       :boxed       'java.lang.Float
-                       :unboxed     'Float/TYPE])}
+   #?@(:clj [:array-ident "F"
+             :outer-type  "[F"
+             :boxed       'java.lang.Float
+             :unboxed     'Float/TYPE])}
    'double  {:bits 64
              ; Because:
              ; Double/MIN_VALUE        = 4.9E-324
@@ -89,10 +89,13 @@
              :min  #?(:clj  Double/MIN_VALUE
                       :cljs (.-MIN_VALUE js/Number))
              :max  1.7976931348623157E308 ; Max number in JS
-             #?@(:clj [:array-ident "D"
-                       :outer-type  "[D"
-                       :boxed       'java.lang.Double
-                       :unboxed     'Double/TYPE])}})
+   #?@(:clj [:array-ident "D"
+             :outer-type  "[D"
+             :boxed       'java.lang.Double
+             :unboxed     'Double/TYPE])}})
+
+(def array-ident->primitive-sym
+  (->> primitive-type-meta (map (juxt (rcomp val :array-ident) key)) (into {})))
 
 (def elem-types-clj
   (->> primitive-type-meta
