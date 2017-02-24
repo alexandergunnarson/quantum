@@ -316,34 +316,25 @@
 ;        nil ~coll)
 ;      (persistent! ret#)))
 
+#?(:clj (defalias dotimes core/dotimes))
+
 #?(:clj
-(defmacro dotimes
-  "Hopefully an improvement on |dotimes|, via a few optimizations
-   like |(get _ 0)| instead of |first| and |let-mutable|."
-  {:performance
-    "For 1000000 loops: (dotimes [n 1000000] nil)
+(defmacro fortimes
+  "`dotimes` meets `for`"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [v# (transient [])]
+     (dotimes [~i ~n] (conj! v# (do ~@body)))
+     (persistent! v#))))
 
-     |clojure.core/dotimes| : 352 µs  — 374 µs  — 405 µs
-
-     Using |while| as loop  : 4.2 ms  — 6.5 ms  — 11.8 ms
-     - Macroexpansion for |while| loop was likely non-trivial?
-
-     This version           : 4.269954 ms — 4.601226 ms — 5.965863 ms ... strange...
-    "
-   :attribution "Alex Gunnarson"}
-  [bindings & body]
-  ; (assert-args
-  ;   (vector? bindings)       "a vector for its binding"
-  ;   (even? (count bindings)) "an even number of forms in binding vector")
-  (let [i (-> bindings (get 0))
-        n (-> bindings (get 1))]
-    `(let-mutable [n# (clojure.lang.RT/longCast ~n)
-                   ~i (clojure.lang.RT/longCast 0)]
-       (loop []
-         (when (< ~i n#)
-           ~@body
-           (set! ~i (unchecked-inc ~i))
-           (recur)))))))
+#?(:clj
+(defmacro fortimes:objects
+  "`dotimes` meets `for`, efficiently wrapped into an object array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (object-array ~n)]
+     (dotimes [~i n#] (aset v# ~i (do ~@body)))
+     v#)))
 
 #?(:clj
 (defmacro while-let
