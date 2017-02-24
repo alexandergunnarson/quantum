@@ -3,6 +3,11 @@
   quantum.core.macros.defnt
   (:refer-clojure :exclude [merge])
   (:require
+    [clojure.core                            :as core]
+    [quantum.core.analyze.clojure.transform
+      :refer [unhint]]
+    [quantum.core.core                       :as qcore
+      :refer [name+]]
     [quantum.core.collections.base           :as cbase
       :refer [merge-call update-first update-val ensure-set reducei kmap nempty? nnil?]]
     [quantum.core.data.map                   :as map
@@ -17,18 +22,19 @@
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic
-      :refer [fn= fn-not fn-and fn-or whenc whenf whenc1 ifn1 condf]]
+      :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let]]
     [quantum.core.macros.core                :as cmacros
-      :refer [case-env case-env*]]
+      :refer [case-env case-env* hint-meta]]
     [quantum.core.macros.fn                  :as mfn]
-    [quantum.core.analyze.clojure.core       :as ana]
-    [quantum.core.analyze.clojure.predicates :as anap
+    [quantum.core.analyze.clojure.core       :as ana
       :refer [type-hint]]
+    [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.macros.protocol            :as proto]
     [quantum.core.macros.reify               :as reify]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.numeric.combinatorics      :as combo]
     [quantum.core.print                      :as pr]
+    [quantum.core.string.regex               :as re]
     [quantum.core.type.defs                  :as tdefs]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.vars                       :as var
@@ -49,24 +55,34 @@
               :priority 0.7}}}
   annotations nil)
 
-; In using |defnt|, you should always prefer unboxed to boxed.
-; The internal |reify| may differentiate unboxed and boxed, but the protocol won't
+(def position-pattern (str "0|[1-9]" (re/nc "[0-9]*")))
+(def depth-pattern    (str   "[1-9]" (re/nc "[0-9]*")))
 
-(def special-defnt-keywords
-  '#{:first :else :elem})
+(def defnt-positional-regex
+  (let [position (re/c position-pattern)
+        depth    (re/c depth-pattern)]
+    (re-pattern (str "\\<" position "\\>"
+                     (re/? (re/nc ":" depth))))))
 
-(defn special-defnt-keyword? [x]
-  (contains? special-defnt-keywords x))
+(defn ?defnt-keyword->positional-profundal [x]
+  (when (and (or (keyword? x) (symbol? x)) (-> x namespace nil?))
+    (some->> x name (re-matches defnt-positional-regex) rest
+             (mapv (whenf1 string? qcore/str->integer)))))
+
+(defn defnt-keyword->positional-profundal [x]
+  (or (?defnt-keyword->positional-profundal x)
+      (when (keyword? x)
+        (err/throw-info "Invalid `defnt` special keyword" {:k x}))))
 
 (def qualified-class-name-map
   (->> (set/union tcore/primitive-types #?(:clj tcore/primitive-array-types))
        (repeat 2)
        (apply zipmap)))
 
-(defn get-qualified-class-name
+(defn get-qualified-class-name ; TODO replace with `resolve` or some such thing
   [lang ns- class-sym]
   #?(:clj  (if (= lang :clj)
-               (whenf class-sym (fn-not special-defnt-keyword?)
+               (whenf class-sym (fn-not ?defnt-keyword->positional-profundal)
                  (whenc1 symbol?
                    (if-let [qualified-class-name (get qualified-class-name-map class-sym)]
                      qualified-class-name
@@ -80,7 +96,7 @@
 (defn classes-for-type-predicate
   ([pred lang] (classes-for-type-predicate pred lang nil))
   ([pred lang type-arglist]
-  (throw-unless ((fn-or symbol? keyword? string?) pred) (->ex "Type predicate must be a symbol, keyword, or string."))
+  (throw-unless ((fn-or symbol? keyword? string?) pred) (->ex "Type predicate must be a symbol, keyword, or string." {:pred pred}))
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
       (->> tcore/types-unevaled
@@ -141,17 +157,21 @@
       (fn-> first seq?   ) (fn->> (mapv first))
       #(throw (->ex "Unexpected form when trying to parse arglists." %)))})
 
+(defn defnt-gen-protocol-name
+  [sym lang]
+  (with-meta
+    (if (= lang :clj)
+        (-> sym name (str "-protocol") symbol)
+        sym)
+    (meta sym)))
+
 (defn defnt-gen-protocol-names
   "Generates |defnt| protocol names"
   [{:keys [sym sym-with-meta strict? lang]}]
   (let [genned-protocol-name
           (when-not strict? (-> sym name cbase/camelcase (str "Protocol") munge symbol))
         genned-protocol-method-name
-          (with-meta
-            (if (= lang :clj)
-                (-> sym name (str "-protocol") symbol)
-                sym)
-            (meta sym-with-meta))
+          (defnt-gen-protocol-name sym-with-meta lang)
         genned-protocol-method-name-qualified
           (symbol (name (ns-name *ns*))
             (name genned-protocol-method-name))]
@@ -203,63 +223,89 @@
           gen-interface-code-header
           gen-interface-code-body-unexpanded)))
 
-(defn defnt-replace-kw
-  "Replaces @kw with the appropriate hints/arglist"
-  [kw {:keys [type-hints type-arglist available-default-types hint elem-type-n]}]
-  (condp = kw
-    :first (->> type-arglist
-                (map (whenc1 (fn= :first) (first type-arglist))))
-    :elem  (if (= hint :elem)
-               elem-type-n
-               hint)
-    :else (do (assert (nnil? available-default-types))
-              (->> type-hints
-                   (map-indexed
-                     (fn [n type-hint]
-                       (cond
-                         (= type-hint #{:else}); because expanded
-                           (whenc (get available-default-types n) empty?
-                             (throw (->ex (str "Available default types for :else type hint are empty for position " n))))
-                         :else type-hint)))))))
+(defn positional-profundal->hint [lang position depth arglist hints]
+  (if-not-let [hint (get hints position)] ; is already qualified
+    (throw (->ex "Position out of range for arglist" (kmap position depth arglist hints)))
+    (if-not depth
+      hint
+      (if (or #?(:cljs true) (= lang :cljs))
+          (throw (->ex "Depth specifications not supported for hints in CLJS (yet)" (kmap position depth arglist hints)))
+          #?(:clj (tcore/nth-elem-type:clj hint depth))))))
+
+(defn hints->with-replace-special-kws
+  "E.g. :<1>:4, :<0>, etc. -> a particular type"
+  {:todo "Handle forward references properly"}
+  [{:as env :keys [lang arglist hints]}]
+  {:post [(log/ppr-hints :macro-expand/params "Updated hints" {:new % :old hints})]}
+  (reducei
+    (fn [hints' hint i]
+      (assoc hints' i
+        (if-not-let [[position depth] (defnt-keyword->positional-profundal hint)]
+          hint
+          (cond (= position i)
+                (err/throw-info "Can't have a self-referring positional hint" (kmap position depth arglist hints))
+                (> position i)
+                (err/throw-info "(Currently) can't have a forward-referring positional hint" (kmap position depth arglist hints))
+                :else (positional-profundal->hint lang position depth arglist hints')))))
+    (vec hints)
+    hints))
+
+(defn >explicit-ret-type
+  "E.g. :<1>:4, :<0>, etc. -> a particular type"
+  [{:as env :keys [ns- lang arglist hints ret-type-0]}]
+  {:post [(log/ppr-hints :macro-expand/params "Explicit ret type" (kmap % hints))]}
+  ; [get-max-type (delay (tdefs/max-type hints))]  ; TODO maybe come back to this?
+   #_(:clj ; TODO maybe come back to this
+    [(= ret-type-0 'auto-promote)
+       (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
+    (if-not-let [[position depth] (defnt-keyword->positional-profundal ret-type-0)]
+      (if (nil? ret-type-0)
+          nil
+          (or (get-qualified-class-name lang ns- (-> ret-type-0 (classes-for-type-predicate lang) first))
+              (get-qualified-class-name lang ns- ret-type-0)))
+      (positional-profundal->hint lang position depth arglist hints)))
+
+(defn recursive?
+  [{:keys [ns- fn-sym fn-expr]}]
+  (let [ns-str (-> ns- ns-name name)]
+    (->> fn-expr
+         (cbase/prewalk-find
+           #_(fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))) ; might not be a sym call — might e.g. be in a `->`
+           (fn-and symbol?
+                   (fn-or #(= (namespace %) (namespace fn-sym))
+                          #(and (= (namespace %) ns-str)  (nil? (namespace fn-sym)))
+                          #(and (nil? (namespace fn-sym)) (= (namespace fn-sym) ns-str)))
+                   (fn-or (fn1 anap/symbol-eq? fn-sym)
+                          (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "-protocol")))))) ; protocol sym isn't defined yet either
+         first)))
 
 (defn fn-expr->return-type
-  [{:keys [lang fn-sym fn-expr explicit-ret-type]}]
+  [{:as args :keys [lang fn-sym expr explicit-ret-type]}]
   (validate fn-sym symbol?)
-  (let [non-recursive?      (->> fn-expr
-                                 (cbase/prewalk-find
-                                   #_(fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))) ; might not be a sym call — might be in a `->`
-                                   (fn-and symbol?
-                                           (fn-or (fn1 anap/symbol-eq? fn-sym)
-                                                  (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "-protocol")))))) ; protocol sym isn't defined yet either
-                                 first not)
-        ; _ (prl :user non-recursive? (quantum.core.print/pprint-hints fn-expr))
-        inferred-ret-type (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
-      #?(:clj  (when (= lang :clj)
-                 (let [info (ana/expr-info* fn-expr)]
-                   (when (contains? info :class)
-                     (if (-> info :class nil?)
-                         {:sym (symbol "nil")}
-                         {:sym (-> info :class (#(.getName ^Class %)) symbol)
-                          :class (:class info)}))))
-         :cljs nil)) ; TODO CLJS
-        ; _ (prl :user explicit-ret-type inferred-ret-type arglist-hinted)
+  (let [non-recursive?      (not (recursive? args))
+        explicit-ret-type   (ana/tag->class explicit-ret-type)
+        inferred-ret-type   (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
+                        #?(:clj  (when (= lang :clj) (ana/typeof** expr))
+                           :cljs nil)) ; TODO CLJS
+        _ (log/ppr-hints :macro-expand/params (kmap inferred-ret-type explicit-ret-type expr))
         _ (validate nil
             (s/constantly-or
+              ; Inferred overrides
               (nil? explicit-ret-type)
+              ; Explicit overrides
               (and explicit-ret-type (nil? inferred-ret-type))
-              (when (symbol? explicit-ret-type)
-                (= explicit-ret-type (:sym inferred-ret-type)))
-      #?(:clj (when (class? explicit-ret-type) ; e.g. can return explicit InputStream if BufferedInputStream inferred
-                (isa? (:class inferred-ret-type) explicit-ret-type)))
-      #?(:clj (when (symbol? explicit-ret-type)
-                (when-let [c (resolve explicit-ret-type)]
-                  (isa? (:class inferred-ret-type) c))))
-              (and (tcore/prim? explicit-ret-type)
-                   (tcore/prim? (:sym inferred-ret-type))
-                   (= explicit-ret-type (tdefs/max-type #{explicit-ret-type (:sym inferred-ret-type)}))))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
+              ; Exact match
+              (= explicit-ret-type inferred-ret-type)
+      #?(:clj (isa? inferred-ret-type explicit-ret-type))  ; e.g. can return explicit InputStream if BufferedInputStream inferred
+              (and (.isPrimitive ^Class explicit-ret-type)
+                   (.isPrimitive ^Class inferred-ret-type)
+                   (= (symbol (.getName ^Class explicit-ret-type))
+                      (tdefs/max-type #{(symbol (.getName ^Class explicit-ret-type))
+                                        (symbol (.getName ^Class inferred-ret-type))}))))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
         ret-type (or explicit-ret-type
-                     (when-let [c (:sym inferred-ret-type)] (and (not= c (symbol "nil")) c))
-                     (get trans/default-hint lang))]
+                     inferred-ret-type
+                     (get trans/default-hint lang))
+        _ (log/prl :macro-expand/params ret-type)]
     ret-type))
 
 (defn defnt-gen-interface-expanded
@@ -279,42 +325,26 @@
   {:gen-interface-code-body-expanded
     (->> gen-interface-code-body-unexpanded
          (mapv (fn [[[method-name hints ret-type-0] [arglist & body :as arity]]]
-                 (let [expanded-hints-list (->> (defnt-replace-kw :else (merge env {:type-hints hints}))
-                                                (apply combo/cartesian-product))
-                       assoc-arity-etc
+                 (let [assoc-arity-etc
                          (fn [hints]
-                           (let [body         (list* 'do body)
-                                 elem-type-n  (-> hints first tcore/->elem-type-clj) ; TODO make this more general
-                                 hints-v (->> hints
-                                              (map (fn [hint] (defnt-replace-kw :elem (kmap hint elem-type-n))))
-                                              (into []))
-                                 arglist-hinted (hint-arglist-with arglist hints-v)
+                           (let [body                (list* 'do body)
+                                 hints               (map (whenf1 string? symbol) hints)
+                                 hints               (hints->with-replace-special-kws (merge env (kmap arglist hints)))
+                                 arglist-hinted      (hint-arglist-with arglist hints)
                                  ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
-                                 get-max-type (delay (->> arglist-hinted (map type-hint) tdefs/max-type))
-                                 explicit-ret-type
-                                   (cond
-                                     (nil? ret-type-0)
-                                       ret-type-0
-                                     (= ret-type-0 'first)
-                                       (->> arglist-hinted first type-hint)
-                                     (= ret-type-0 'largest)
-                                       @get-max-type
-                                     #?@(:clj
-                                    [(= ret-type-0 'auto-promote)
-                                       (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
-                                     :else (or (get-qualified-class-name lang ns-
-                                                 (-> ret-type-0 (classes-for-type-predicate lang) first))
-                                               (get-qualified-class-name lang ns-
-                                                 ret-type-0)))
-                                 ; _ (prl :user (quantum.core.print/pprint-hints arity))
+                                 explicit-ret-type   (>explicit-ret-type (merge env (kmap ret-type-0 hints arglist)))
                                  ; TODO cache the result of postwalking the body like this, for protocol purposes
-                                 contextualized-body (list* 'fn (proto/ensure-protocol-appropriate-arglist :clj arglist-hinted)
+                                 contextualized-body (list* 'let ; an alternative to enclosing in function
+                                                                 (vec (interleave (mapv unhint arglist-hinted)
+                                                                                  (repeat (count arglist-hinted) (list `identity nil))))
                                                                 (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol))
-                                 ret-type (fn-expr->return-type (assoc (kmap lang explicit-ret-type) :fn-sym sym :fn-expr contextualized-body))
+                                 ret-type-input (assoc (kmap ns- lang explicit-ret-type) :fn-sym sym :expr contextualized-body)
+                                 _ (log/ppr-hints :macro-expand "COMPUTING RETURN TYPE FROM" ret-type-input)
+                                 ret-type (some-> (fn-expr->return-type ret-type-input) name+ symbol)
+                                 _ (log/ppr-hints :macro-expand/params "COMPUTED RETURN TYPE:" ret-type)
                                  arity-hinted (assoc arity 0 arglist-hinted)]
-                             [[method-name hints-v ret-type] (seq arity-hinted)]))]
-                   (->> expanded-hints-list
-                        (map #(defnt-replace-kw :first {:type-arglist %}))
+                             [[method-name hints ret-type] (seq arity-hinted)]))]
+                   (->> (apply combo/cartesian-product hints) ; expand the hints
                         (mapv assoc-arity-etc)))))
          (apply catvec))})
 
@@ -326,7 +356,7 @@
       (list (mapv first gen-interface-code-body-expanded)))})
 
 (defn defnt-positioned-types-for-arglist
-  {:todo "The shape of this (reducei) is probably useful and can be reused"}
+  {:todo "The shape of this (loop-reducei) is probably useful and can be reused"}
   [arglist types]
   (loop [i 0 arglist-n arglist types-n types]
     (let [type-n (first arglist-n)]
@@ -385,6 +415,179 @@
                     (throw (->ex "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
 
+; TODO Can run on other platforms but the behavior is language-specific
+#?(:clj
+(defn ->array-type-str
+  "Assumes `base-class-str` is already fully qualified if non-primitive."
+  {:example '{(->array-type-str "long" 4)
+              "[[[[J"}}
+  [base-class-str dimension]
+  (let [base-str (or (get-in tdefs/primitive-type-meta [(symbol base-class-str) :array-ident])
+                     (str "L" base-class-str ";"))]
+    (str (apply str (repeat dimension "[")) base-str))))
+
+; TODO Can run on other platforms but the behavior is language-specific
+#?(:clj
+(defn analyzer-type->class [sym]
+  (let [[array-type? base-class-str brackets] (re-matches #"([^<>]+)((?:<>)+)$" (name sym))]
+    (ana/tag->class
+      (if array-type?
+          (let [dimension (-> brackets count (/ 2))
+                class-str (->array-type-str base-class-str dimension)]
+            class-str) ; Array types are preserved as strings, not classes
+          (or (get-in tdefs/primitive-type-meta [sym :unboxed])
+               sym))))))
+
+; TODO move the below few fns
+
+#?(:clj (def not-matchable (Object.)))
+
+#?(:clj
+(defn hint-expr [expr hint]
+  (if (anap/hinted-literal? expr)
+      (tcore/static-cast-code hint expr)
+      (cmacros/hint-meta expr hint))))
+
+#?(:clj
+(defn hint-expr-unless-literal [expr hint]
+  (if (anap/hinted-literal? expr)
+      expr
+      (cmacros/hint-meta expr hint))))
+
+#?(:clj
+(defn ensure-embeddable-hint [expr]
+  (hint-expr-unless-literal expr (-> expr type-hint ana/->embeddable-hint))))
+
+#?(:clj
+(defn ^Class expr->hint:class [expr]
+  (if (anap/hinted-literal? expr)
+      (ana/fast-typeof* expr)
+      (ana/type-hint:class expr))))
+
+; TODO primitives and boxed type interconversion via tcore/unboxed->convertible
+#?(:clj
+(defn try-param-match [env arg actual-type expected-type]
+  (log/prl :macro-expand/params expected-type actual-type)
+  (if ; exact match
+      (= actual-type expected-type)
+      (hint-expr-unless-literal arg expected-type)
+      (cond (nil? actual-type)
+            (hint-expr arg expected-type) ; At least *try* to cast it
+            ; Array0 -> Array1 => <fail>
+            (.isArray ^Class expected-type)
+            not-matchable
+            ; Array -> Object || Array -> <any> => <fail>
+            (.isArray ^Class actual-type)
+            (if (= expected-type Object)
+                (hint-expr arg expected-type)
+                not-matchable)
+            ; box (primitive->boxed)
+            (let [boxed (tcore/unboxed->boxed actual-type)]
+              (and boxed
+                   (or (= boxed expected-type)
+                       (= expected-type Object))))
+            (let [c (tcore/unboxed->boxed actual-type)]
+              (hint-meta `(new ~(symbol (.getName ^Class c)) ~arg) c))
+            ; unbox (boxed->primitive)
+            (= (tcore/boxed->unboxed actual-type)
+               expected-type)
+            `(. ~arg ~(symbol (str (.getName ^Class (tcore/boxed->unboxed actual-type)) "Value"))) ; e.g. .longValue
+            ; upcast, e.g. Integer -> Number
+            (.isAssignableFrom ^Class expected-type ^Class actual-type)
+            (hint-expr arg expected-type)
+            ; downcast, e.g. Number -> Integer
+            (.isAssignableFrom ^Class actual-type ^Class expected-type)
+            (hint-expr arg expected-type)
+            :else not-matchable))))
+
+#?(:clj
+(defn try-params-match [env args argtypes types]
+  (let [class-syms (map analyzer-type->class types)]
+    (->> (interleave args class-syms)
+         (partition-all 2)
+         (reducei (fn [args' [arg expected-type] i]
+                    (let [actual-type (get argtypes i)
+                          matched (try-param-match env arg actual-type expected-type)]
+                      (if (= matched not-matchable)
+                          (reduced nil)
+                          (conj args' matched))))
+                  [])))))
+
+#?(:clj
+(defn compare-specificity
+  "Compare specificity of t0 to t1.
+   0 means they are equally specific.
+   -1 means t0 is less specific (more general) than t1.
+   1 means t0 is more specific (less general) than t1.
+   Unboxed primitives are considered to be more specific than boxed primitives."
+  [^Class t0 ^Class t1]
+  (cond (= t0 t1)
+        0
+        (= (tcore/boxed->unboxed t0) t1)
+        -1
+        (= t0 (tcore/boxed->unboxed t1))
+        1
+        (.isAssignableFrom t0 t1)
+        -1
+        (.isAssignableFrom t1 t0)
+        1
+        :else nil))) ; unrelated
+
+#?(:clj
+(defn most-specific-arg-matches
+  [matches]
+  (reduce
+    (fn [matches' match]
+      (let [match' (last matches')
+            specificity-scores
+              (for [i (range (count match))]
+                (let [t  (expr->hint:class (get match  i))
+                      t' (expr->hint:class (get match' i))]
+                  (compare-specificity t t')))
+            specificity-score (->> specificity-scores (remove nil?) (apply +))]
+        (cond (pos? specificity-score) [match]
+              (neg? specificity-score) matches'
+              :else (conj matches' match))))
+    [(first matches)] (rest matches))))
+
+#?(:clj
+(defn match-args
+  ([classname method args] (match-args classname method args nil))
+  ([classname method args env]
+    (log/ppr-hints :macro-expand/params "Matching args" {:args args :class classname :method method})
+    (let [arity (count args)
+          class- (resolve classname)
+          argtypes (mapv (fn1 ana/typeof** env) args)
+          possible-matches
+            (->> class-
+                 clojure.reflect/reflect
+                 :members
+                 (filter (fn->> :name (= method)))
+                 (filter (fn->> :parameter-types count (= arity)))
+                 (map    (fn->> :parameter-types (try-params-match env args argtypes)))
+                 (remove nil?))
+          _ (log/ppr-hints :macro-expand/params "Possible matches:" possible-matches)
+          #_(assert (nempty? possible-matches) {:message "No match found for args"
+                                            :class   classname
+                                            :method  method
+                                            :args    args}) ; TODO let reflection happen? should configure this
+          most-specific-matches
+            (most-specific-arg-matches possible-matches)
+          _ (when (-> most-specific-matches count (> 1))
+              (log/ppr-hints :warn  ; TODO let reflection happen? should configure this
+                ; TODO line number etc.
+                #_err/throw-info "More than one matching method found for args; hint one or more args to fix this"
+                {:callsite [classname method
+                            {:symbolic args
+                             :types    argtypes}]
+                 :possible-matches possible-matches
+                 :most-specific-matches most-specific-matches}))
+          most-specific-match (first most-specific-matches)
+          _ (log/ppr-hints :macro-expand/params "Most specific match:" most-specific-match)]
+      (mapv ensure-embeddable-hint
+        (or most-specific-match ; for now, choose the first one that works; TODO change this
+            args)))))) ; reflection
+
 (defn defnt-gen-helper-macro
   "Generates the macro helper for |defnt|.
    A call to the |defnt| macro expands to this macro, which then expands, based
@@ -393,6 +596,7 @@
            but the problem with trying to do inline is that inlines can't be variadic."]}
   [{:keys [genned-method-name
            genned-protocol-method-name-qualified
+           ns-qualified-interface-name
            reified-sym-qualified
            strict-sym-postfix
            strict?
@@ -402,6 +606,7 @@
   {:post [(log/ppr-hints :macro-expand "HELPER MACRO DEF" %)]}
    (let [args-sym        'args-sym
          args-hinted-sym 'args-hinted-sym
+         args-matched-sym 'args-matched-sym
          gen (fn [strict-macro?]
                (let [postfix (when strict-macro? (or strict-sym-postfix "&"))
                      sym-with-meta' (replace-meta-from (symbol (str (name sym-with-meta) postfix)) sym-with-meta)]
@@ -413,6 +618,7 @@
                                            "|" ~args-hinted-sym
                                            "|" '~genned-protocol-method-name-qualified
                                            "|" '~genned-method-name)
+                     ; TODO match even for missing hints
                      (if ~(when-not strict-macro?
                            `(or (case-env* ~'&env :cljs true)
                                   (= ~lang :cljs)
@@ -422,10 +628,11 @@
                                          ~args-hinted-sym ~lang ~'&env))))
                          (seq (concat (list '~genned-protocol-method-name-qualified)
                                       ~args-hinted-sym))
-                         (seq (concat (list '.)
-                                      (list '~reified-sym-qualified)
-                                      (list '~genned-method-name)
-                                      ~args-hinted-sym)))))))]
+                         (let [~args-matched-sym (match-args '~ns-qualified-interface-name '~genned-method-name ~args-hinted-sym ~'&env)]
+                           (seq (concat (list '.)
+                                        (list '~reified-sym-qualified)
+                                        (list '~genned-method-name)
+                                        ~args-matched-sym))))))))]
      {:helper-macro-def
        `(do ~@[(when-not relaxed? (gen true))]
             ~(gen false))}))
@@ -500,7 +707,7 @@
          (list `defalias primary-protocol-sym sym))
        (when-not strict?
          `(alter-meta! (var ~primary-protocol-sym)
-                       (fn [m#] (assoc m# :tag '~tag))))
+                       (fn [m#] (assoc m# :tag ~(ana/sanitize-tag lang tag)))))
        true])))
 
 #?(:clj
@@ -549,14 +756,13 @@
 
 (declare defnt*-helper)
 
-;#?(:clj (log/enable! :macro-expand))
-
 #?(:clj
 (defmacro defnt
   "|defn|, typed.
    Uses |gen-interface|, |reify|, and |defprotocol| under the hood."
   [sym & body]
   (let [lang (case-env :clj :clj :cljs :cljs)]
+    (eval `(declare ~(ana/sanitize-sym-tag lang sym) ~(ana/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper nil lang *ns* sym nil nil nil body))))
 
 #?(:clj
@@ -564,11 +770,15 @@
   "'Strict' |defnt|. I.e., generates only an interface and no protocol.
    Only for use with Clojure."
   [sym & body]
-  (defnt*-helper {:strict? true} :clj *ns* sym nil nil nil body)))
+  (let [lang :clj]
+    (eval `(declare ~(ana/sanitize-sym-tag lang sym))) ; To allow recursive analysis
+    (defnt*-helper {:strict? true} lang *ns* sym nil nil nil body))))
 
 #?(:clj
 (defmacro defntp
   "'Relaxed' |defnt|. I.e., generates only a protocol and no interface."
   [sym & body]
-  (defnt*-helper {:relaxed? true} :clj *ns* sym nil nil nil body)))
+  (let [lang :clj]
+    (eval `(declare ~(ana/sanitize-sym-tag lang sym) ~(ana/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
+    (defnt*-helper {:relaxed? true} lang *ns* sym nil nil nil body))))
 
