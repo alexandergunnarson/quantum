@@ -168,6 +168,10 @@
   #?(:clj  (contains? unboxed-type-map t)
      :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
 
+#?(:clj (defn primitive-array-type? [^Class c]
+          (and (.isArray c)
+               (-> c .getComponentType .isPrimitive))))
+
 (def type-casts-map
   {:clj
     {; Primitive casts are not hint-supported
