@@ -64,17 +64,23 @@
    :cljs (defnt sqrt
            ([^number? x] (js/Math.sqrt  x))))
 
+#?(:clj (defalias √2 sqrt))
+
 #?(:clj  (defnt' cbrt "cube root"
            (^double [^double x] (Math/cbrt x)))
    :cljs (defnt cbrt "cube root"
            ([^number? x] (js/Math.cbrt x))))
 
+#?(:clj (defalias √3 cbrt))
+
 #?(:clj
 (defnt cbrt*
-  "returns angle theta"
+  "cube root"
   {:performance ["6.2 times faster than java.lang.Math"
                  "Worst case 2E-14 difference"]}
   (^double [^double x] (FastMath/cbrt x))))
+
+#?(:clj (defalias √3* cbrt*))
 
 ; ===== CONVERSE EXPONENTS (LOGARITHMS) ===== ;
 
@@ -98,8 +104,10 @@
 
 (defalias ln log-e)
 
-#?(:clj  (defn log-2 [x] (TODO))
-   :cljs (defn log-2 [x] (js/Math.log2 x)))
+#?(:clj (def ^:const ^double ln-2 (ln 2)))
+
+#?(:clj  (defnt log-2 [^double x] (/ (ln x) ln-2))
+   :cljs (defnt log-2 [^number? x] (js/Math.log2 x)))
 
 #?(:clj
 (defnt' log-e*
