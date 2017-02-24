@@ -1,54 +1,65 @@
 (ns quantum.core.numeric.truncate
+  (:refer-clojure :exclude [<= >= pos?])
   (:require
-    [#?(:clj  clojure.core
-        :cljs cljs.core   ) :as core]
+    [clojure.core           :as core]
     [quantum.core.error     :as err
-      :refer        [TODO]          ]
+      :refer [TODO ->ex]]
     [quantum.core.macros
-      :refer        [#?@(:clj [defnt defnt'])]
-      :refer-macros [defnt]]
+      :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars      :as var
-      :refer        [#?@(:clj [defalias defaliases])]
-      :refer-macros [defalias defaliases]          ]
+      :refer [defalias defaliases]]
     [quantum.core.convert.primitive
-      :refer [#?@(:clj [->double])]]
+      :refer [#?@(:clj [->int ->double])]]
     [quantum.core.numeric.convert
-      :refer [#?@(:clj [->bigdec])]]))
+      :refer [->bigdec]]
+    [quantum.core.compare   :as comp
+      :refer [<= >=]]
+    [quantum.core.numeric.predicates
+      :refer [pos?]])
+  #?(:clj (:import java.math.BigDecimal clojure.lang.Ratio)))
 
 #?(:clj
 (defnt' rint "The double value that is closest in value to @x and is equal to a mathematical integer."
   (^double [^double x] (Math/rint x))))
 
-#?(:clj  (defnt round' "Rounds up in cases of ambiguity."
-           (^long                 [^double               x] (Math/round x))
-           (^long                 [^float                x] (Math/round x))
-           (^java.math.BigDecimal [^java.math.BigDecimal x math-context]
-             (.round x math-context))
-           (^long                 [#{long clojure.lang.Ratio} x]
-             (round' (->double x))) ; TODO use ->double
-           (^java.math.BigDecimal [#{long clojure.lang.Ratio} x math-context]
-             (round' (->bigdec x) math-context)))
-   :cljs (defn round' [x] (js/Math.round x)))
+#?(:clj (defalias round-double rint))
 
-#?(:clj (defn round
-          "Probably deprecated; use:
-           |(with-precision <decimal-places> (bigdec <number>))|"
-          {:todo ["Port to cljs"]}
-          [num-0 & {:keys [type to] :or {to 0}}]
-          (let [round-type
-                  (if (nil? type)
-                      (. BigDecimal ROUND_HALF_UP)
-                      (case type
-                        :unnecessary BigDecimal/ROUND_UNNECESSARY
-                        :ceiling     BigDecimal/ROUND_CEILING
-                        :up          BigDecimal/ROUND_UP
-                        :half-up     BigDecimal/ROUND_HALF_UP
-                        :half-even   BigDecimal/ROUND_HALF_DOWN
-                        :half-down   BigDecimal/ROUND_HALF_DOWN
-                        :down        BigDecimal/ROUND_DOWN
-                        :floor       BigDecimal/ROUND_FLOOR))]
-            (.setScale ^BigDecimal (bigdec num-0) ^Integer to round-type)))
-   :cljs (defalias round round')) ; TODO fix
+#?(:clj  (defnt round-int "Rounds up in cases of ambiguity."
+           {:todo {0 "longs and ratios should round conditionally, taking care of overflow"}}
+           (^long       [^double               x] (Math/round x))
+           (^long       [^float                x] (Math/round x))
+           (^BigDecimal [^BigDecimal x math-context]
+             (.round x math-context))
+           (^long       [#{long ratio?} x]
+             (round-int (->double x))) ; TODO 0
+           (^BigDecimal [#{long ratio?} x math-context]
+             (round-int (->bigdec x) math-context)))
+   :cljs (defn round-int [x] (js/Math.round x)))
+
+#?(:clj
+(defn ^Long/TYPE round-type->bigdec-round-type [round-type]
+  (case round-type
+    nil          BigDecimal/ROUND_HALF_UP
+    :unnecessary BigDecimal/ROUND_UNNECESSARY
+    :ceiling     BigDecimal/ROUND_CEILING
+    :up          BigDecimal/ROUND_UP
+    :half-up     BigDecimal/ROUND_HALF_UP
+    :half-even   BigDecimal/ROUND_HALF_DOWN
+    :half-down   BigDecimal/ROUND_HALF_DOWN
+    :down        BigDecimal/ROUND_DOWN
+    :floor       BigDecimal/ROUND_FLOOR
+    (throw (->ex "Invalid round type" {:round-type round-type})))))
+
+#?(:clj  (defnt' round
+           "Rounds `n` to `places`, the specified number of decimal places,
+            according to `round-type`."
+           {:todo #{"Port to CLJS"}}
+           ([^integer? n ^int places] n)
+           ([^integer? n ^int places round-type] n)
+           ([#{double ratio? bigdec?} n ^int places] (round n places nil))
+           ([#{double ratio? bigdec?} n ^int places round-type]
+             (.setScale (->bigdec n) places (round-type->bigdec-round-type round-type))))
+   :cljs (defalias round round-int)) ; TODO fix
 
 ; http://stackoverflow.com/questions/2808535/round-a-double-to-2-decimal-places
 #_(:clj
@@ -69,7 +80,7 @@
             (nearest 22 15)
             15}}
   [x n]
-  (-> x (/ n) round' (* n)))
+  (-> x (/ n) round-int (* n)))
 
 #?(:clj  (defnt ceil
            (^double [^double x] (Math/ceil x))
@@ -111,10 +122,18 @@
   "Round towards zero to an integral value."
   [x] (if (pos? x) (floor x) (ceil x)))
 
-(defn clamp
-  "Clamp v between [a, b]."
-  [a b v]
-  (cond
-    (<= v a) a
-    (>= v b) b
-    :else v))
+#?(:clj  (defnt' clamp
+           "Clamp v between [a, b]."
+           {:todo #{"`defnt'` -> `defnt`"}}
+           [^number? a ^number? b ^number? v]
+           (cond
+             (<= v a) a
+             (>= v b) b
+             :else v))
+   :cljs (defn clamp
+           "Clamp v between [a, b]."
+           [a b v]
+           (cond
+             (<= v a) a
+             (>= v b) b
+             :else v)))
