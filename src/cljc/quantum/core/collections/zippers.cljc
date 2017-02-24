@@ -107,10 +107,10 @@
              (replace-meta-from (core/reduce (fn [r x] (conj r (f x))) coll coll) coll)))
   #?(:clj  ([^record?    coll _ to-join]
              (replace-meta-from (core/reduce conj coll to-join) coll)))
-  #?(:clj  ([:else       x    f] x))
-  #?(:cljs ([:else       x    f]
+  #?(:clj  ([^default    x    f] x))
+  #?(:cljs ([^default    x    f]
              (if (coll? x) (replace-meta-from (join (empty x) (map f x)) x) x)))
-  #?(:cljs ([:else       x    _ to-join]
+  #?(:cljs ([^default    x    _ to-join]
              (if (coll? x) (replace-meta-from (join (empty x) to-join) x)))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     ZIPPERS     }=====================================================

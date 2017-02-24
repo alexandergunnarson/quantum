@@ -767,7 +767,7 @@
   #?(:clj ([^reducer?                      x] (dropr+ 1 x)))
           ; TODO reference to field pop on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^+vec?                         x] (if (empty? x) (#?(:clj .pop :cljs -pop) x) x))
-          ([:obj                           x] (core/butlast x)))
+          ([^default                       x] (core/butlast x)))
 
 (defalias pop  butlast) ; TODO not always correct
 (defalias popr butlast)
@@ -781,7 +781,7 @@
   #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]
                   :cljs [cljs.core/TransientVector])} x]
             (get x (lasti x))))
-          ([:obj                x] (core/last x)))
+          ([^default            x] (core/last x)))
 
 (defalias peek   last) ; TODO not always correct
 (defalias firstr last)
