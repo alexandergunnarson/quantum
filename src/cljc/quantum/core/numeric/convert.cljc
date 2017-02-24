@@ -16,6 +16,10 @@
     java.math.BigInteger
     clojure.lang.BigInt)))
 
+(defnt ->num
+  (^long [^boolean x] (if x 1 0))
+  ([#{number? byte char} x] x))
+
 #?(:clj (defalias ->big-integer ntypes/->big-integer))
 
 #?(:clj  (defnt' ^BigInt ->bigint
@@ -26,7 +30,7 @@
            ([#{double? Number} x] (-> x BigInteger/valueOf ->bigint)))
    :cljs (defalias ->bigint ntypes/->bigint))
 
-#?(:clj  (defalias ->bigdec core/bigdec)
+#?(:clj  (doto (defalias ->bigdec core/bigdec) (alter-meta! assoc :tag BigDecimal))
          #_(defnt' ^BigDecimal ->bigdec
            ([^java.math.BigDecimal x] x)
            ([^BigInt x]
