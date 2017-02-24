@@ -152,7 +152,12 @@
     ~@body
     expr#)))
 
-(defn name+ [x] (if (nil? x) x (name x)))
+(defn name+ [x]
+  (cond   (nil? x)
+          x
+#?@(:clj [(class? x)
+          (.getName ^Class x)])
+          :else (name x)))
 
 (defn simple-keyword?    [x] (and (symbol?  x) (not (namespace x))))
 (defn qualified-keyword? [x] (and (keyword? x)      (namespace x)))

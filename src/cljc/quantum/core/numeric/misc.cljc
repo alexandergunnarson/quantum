@@ -16,7 +16,7 @@
               :refer [neg? zero?]])
   #?(:clj (:import [net.jafama FastMath])))
 
-#?(:clj  (defmacro rem [n div] `(Numeric/rem ~n ~div))
+#?(:clj  (defmacro rem [n div] `(Numeric/rem ~n ~div)) ; TODO `defnt`
    :cljs (defnt rem
            ([^double? x n] (core/rem x n))
            ([^bigint? x n] (.modulo  x n))))

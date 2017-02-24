@@ -99,17 +99,17 @@
 
 (defnt numeric?
 #?(:clj
-  ([^char?   c] (contains? num-chars c)))
+  ([^char    c] (contains? num-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn$ contains? num-chars) s))))
 
 (defnt numeric-readable?
 #?(:clj
-  ([^char?   x] (numeric? x)))
+  ([^char    x] (numeric? x)))
   ([^string? x] (str+/numeric? x)))
 
 (defnt upper?
 #?(:clj
-  ([^char?   c] (contains? upper-chars c)))
+  ([^char    c] (contains? upper-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn$ contains? upper-chars) s))))
 
 (defalias ->upper form/->upper)
@@ -121,7 +121,7 @@
 
 (defnt lower?
 #?(:clj
-  ([^char?   c] (contains? lower-chars c)))
+  ([^char    c] (contains? lower-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn$ contains? lower-chars) s))))
 
 (defalias ->lower form/->lower)
@@ -133,12 +133,12 @@
 
 (defnt alpha?
 #?(:clj
-  ([^char?   c] (contains? alpha-chars c)))
+  ([^char    c] (contains? alpha-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alpha-chars) s))))
 
 (defnt alphanum?
 #?(:clj
-  ([^char?   c] (contains? alphanum-chars c)))
+  ([^char    c] (contains? alphanum-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alphanum-chars) s))))
 
 (defnt letters?
@@ -153,14 +153,14 @@
 
 (defnt blank?
 #?(:clj
-  ([^char?   c] (contains? whitespace-chars c)))
+  ([^char    c] (contains? whitespace-chars c)))
   ([^string? s] (seq-and (fn1 contains? whitespace-chars) s)))
 
 (def whitespace? (fn-and nempty? blank?))
 
 (defnt line-terminator?
 #?(:clj
-  ([^char?   c] (contains? line-terminator-chars c)))
+  ([^char    c] (contains? line-terminator-chars c)))
   ([^string? s] (and (nempty? s) (seq-and (fn1 contains? line-terminator-chars) s))))
 
 (defalias capitalize form/capitalize)
@@ -211,8 +211,8 @@
 (defnt split
   #?(:cljs ([^nil?             x sep  ] x))
   #?(:cljs ([^nil?             x sep n] x))
-           ([#{string? regex?} x sep  ] (split* sep x  ))
-           ([#{string? regex?} x sep n] (split* sep x n))
+           ([#{string? regex?} x sep  ] (split*-protocol sep x  )) ; TODO deprotocolize
+           ([#{string? regex?} x sep n] (split*-protocol sep x n)) ; TODO deprotocolize
    #?(:clj ([                  x sep  ] (if (nil? x) x (throw (->ex "`split` not supported for type" {:type (type x)})))))
    #?(:clj ([                  x sep n] (if (nil? x) x (throw (->ex "`split` not supported for type" {:type (type x)}))))))
 
@@ -382,7 +382,7 @@
 
 (defnt remove
   ([^string? str-0 to-remove]
-    (remove* to-remove str-0)))
+    (remove*-protocol to-remove str-0))) ; TODO deprotocolize
 
 (defn remove-from-end [^String string ^String end]
   (if (ends-with? string end)
