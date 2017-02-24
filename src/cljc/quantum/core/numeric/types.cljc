@@ -24,7 +24,7 @@
   ([^java.math.BigInteger x] x)
   ([^clojure.lang.BigInt     x] (.toBigInteger x))
   ([;#{(- number? BigInteger BigInt)} x
-    #{short int long Short Integer Long} x] ; TODO BigDecimal
+    #{short int long} x] ; TODO BigDecimal
     (-> x core/long (BigInteger/valueOf)))))
 
 (declare gcd)

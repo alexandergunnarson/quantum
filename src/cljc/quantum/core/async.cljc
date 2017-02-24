@@ -2,7 +2,7 @@
   ^{:doc "Asynchronous things."
     :attribution "Alex Gunnarson"}
   quantum.core.async
-  (:refer-clojure :exclude [promise realized? future])
+  (:refer-clojure :exclude [promise realized? future map])
   (:require
     [clojure.core                     :as core]
     [com.stuartsierra.component       :as component]
@@ -17,7 +17,7 @@
     [quantum.core.error               :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.collections         :as coll
-      :refer [nempty? seq-loop break nnil?]]
+      :refer [nempty? seq-loop break nnil? map]]
     [quantum.core.log                 :as log]
     [quantum.core.logic               :as logic
       :refer [fn-and fn-or fn-not condpc whenc]]
@@ -114,6 +114,8 @@
 (defalias promise-chan async/promise-chan)
 
 (defalias timeout async/timeout)
+
+#?(:clj (defalias thread async/thread))
 
 ;(defn current-strand [] (Strand/currentStrand))
 #?(:clj (defn current-strand [] (Thread/currentThread)))
@@ -304,6 +306,18 @@
       :casync  (if timeout
                    (async/alts!! chans timeout)
                    (async/alts!! chans))))))
+
+#?(:clj
+(defmacro seq<!
+  "Given `ports`, a seq, calls `<!` on each one in turn.
+   Lets each port initiate — if e.g. `go` blocks, will
+   initiate concurrently. Aggregates the results into a vector."
+  [ports]
+  `(let [ret# (transient [])]
+     (doseq [p# ~ports] (conj! ret# (<! p#)))
+     (persistent! ret#))))
+
+#?(:clj (defn seq<!! [ports] (map <!! ports)))
 
 ; Promise, delay, future
 ; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))
