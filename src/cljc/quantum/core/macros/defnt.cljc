@@ -22,7 +22,7 @@
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic
-      :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let]]
+      :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let cond-let]]
     [quantum.core.macros.core                :as cmacros
       :refer [case-env case-env* hint-meta]]
     [quantum.core.macros.fn                  :as mfn]
@@ -268,17 +268,18 @@
       (positional-profundal->hint lang position depth arglist hints)))
 
 (defn recursive?
-  [{:keys [ns- fn-sym fn-expr]}]
+  [{:keys [ns- fn-sym expr]}]
   (let [ns-str (-> ns- ns-name name)]
-    (->> fn-expr
+    (->> expr
          (cbase/prewalk-find
            #_(fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))) ; might not be a sym call — might e.g. be in a `->`
            (fn-and symbol?
                    (fn-or #(= (namespace %) (namespace fn-sym))
-                          #(and (= (namespace %) ns-str)  (nil? (namespace fn-sym)))
-                          #(and (nil? (namespace fn-sym)) (= (namespace fn-sym) ns-str)))
+                          #(and (= (namespace %) ns-str) (nil? (namespace fn-sym)))
+                          #(and (nil? (namespace %))     (= (namespace fn-sym) ns-str)))
                    (fn-or (fn1 anap/symbol-eq? fn-sym)
-                          (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "-protocol")))))) ; protocol sym isn't defined yet either
+                          (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "-protocol")))
+                          (fn1 anap/symbol-eq? (symbol (str (name fn-sym) "&")))))) ; neither is strict macro
          first)))
 
 (defn fn-expr->return-type
@@ -466,9 +467,10 @@
       (ana/fast-typeof* expr)
       (ana/type-hint:class expr))))
 
-; TODO primitives and boxed type interconversion via tcore/unboxed->convertible
 #?(:clj
-(defn try-param-match [env arg actual-type expected-type]
+(defn try-param-match
+  {:todo "Break this up"}
+  [env arg ^Class actual-type ^Class expected-type]
   (log/prl :macro-expand/params expected-type actual-type)
   (if ; exact match
       (= actual-type expected-type)
@@ -476,29 +478,38 @@
       (cond (nil? actual-type)
             (hint-expr arg expected-type) ; At least *try* to cast it
             ; Array0 -> Array1 => <fail>
-            (.isArray ^Class expected-type)
+            (.isArray expected-type)
             not-matchable
             ; Array -> Object || Array -> <any> => <fail>
-            (.isArray ^Class actual-type)
+            (.isArray actual-type)
             (if (= expected-type Object)
                 (hint-expr arg expected-type)
                 not-matchable)
-            ; box (primitive->boxed)
-            (let [boxed (tcore/unboxed->boxed actual-type)]
-              (and boxed
-                   (or (= boxed expected-type)
-                       (= expected-type Object))))
-            (let [c (tcore/unboxed->boxed actual-type)]
-              (hint-meta `(new ~(symbol (.getName ^Class c)) ~arg) c))
-            ; unbox (boxed->primitive)
-            (= (tcore/boxed->unboxed actual-type)
-               expected-type)
-            `(. ~arg ~(symbol (str (.getName ^Class (tcore/boxed->unboxed actual-type)) "Value"))) ; e.g. .longValue
+            (.isPrimitive actual-type)
+            (cond-let
+              [c (get-in tcore/unboxed->convertible [actual-type expected-type])]
+              ; cast unboxed primitive to compatible unboxed primitive via Clojure intrinsic
+              (hint-meta `(~(symbol "clojure.core" (.getName ^Class c)) ~arg) c)
+              [c (or (get-in tcore/unboxed->convertible [actual-type (tcore/unboxed->boxed expected-type)])
+                     (and (= expected-type Object) ; box in order to cast to Object
+                          (tcore/unboxed->boxed actual-type)))]
+              ; cast via boxing to compatible boxed primitive
+              (hint-meta `(new ~(symbol (.getName ^Class c)) ~arg) c)
+              not-matchable)
+            (tcore/boxed->unboxed actual-type)
+            (cond-let
+              [c (get-in tcore/unboxed->convertible [(tcore/boxed->unboxed actual-type) expected-type])]
+              ; cast boxed primitive to compatible unboxed primitive via Clojure intrinsic
+              (hint-meta `(~(symbol "clojure.core" (.getName ^Class c)) ~arg) c)
+              [c (get-in tcore/unboxed->convertible [(tcore/boxed->unboxed actual-type) (tcore/unboxed->boxed expected-type)])]
+              ; simple side-cast
+              (hint-expr arg expected-type)
+              not-matchable)
             ; upcast, e.g. Integer -> Number
-            (.isAssignableFrom ^Class expected-type ^Class actual-type)
+            (.isAssignableFrom expected-type actual-type)
             (hint-expr arg expected-type)
             ; downcast, e.g. Number -> Integer
-            (.isAssignableFrom ^Class actual-type ^Class expected-type)
+            (.isAssignableFrom actual-type expected-type)
             (hint-expr arg expected-type)
             :else not-matchable))))
 
@@ -527,6 +538,10 @@
   [^Class t0 ^Class t1]
   (cond (= t0 t1)
         0
+        (= t0 Object)
+        -1
+        (= t1 Object)
+        1
         (= (tcore/boxed->unboxed t0) t1)
         -1
         (= t0 (tcore/boxed->unboxed t1))
@@ -559,8 +574,8 @@
 
 #?(:clj
 (defn args->matches
-  ([classname method args strict?] (args->matches classname method args strict? nil))
-  ([classname method args strict? env]
+  ([sym classname method args strict?] (args->matches sym classname method args strict? nil))
+  ([sym classname method args strict? env]
     (log/ppr-hints :macro-expand/params "Matching args" {:args args :class classname :method method})
     (let [arity    (count args)
           class-   (resolve classname)
@@ -574,8 +589,10 @@
                  (filter (fn->> :parameter-types count (= arity)))
                  (map    (fn->> :parameter-types (try-params-match env args argtypes)))
                  (remove nil?))
-          _ (log/ppr-hints :macro-expand/params "Possible matches:" possible-matches)
-          most-specific-matches (most-specific-arg-matches possible-matches)
+          _ (log/ppr-hints :macro-expand/params "Possible matches:" (kmap sym args possible-matches))
+          most-specific-matches
+            (when-not (empty? possible-matches)
+              (most-specific-arg-matches possible-matches))
           ; TODO derepeat
           _ (if (and (or (-> most-specific-matches count (> 1))
                          (-> most-specific-matches count (= 0)))
@@ -590,7 +607,7 @@
                                :types    argtypes}]
                    :possible-matches possible-matches
                    :most-specific-matches most-specific-matches})
-                (log/ppr-hints :macro-expand/params "Most specific matches:" most-specific-matches))]
+                (log/ppr-hints :macro-expand/params "Most specific matches:" (kmap sym args most-specific-matches)))]
       (->> most-specific-matches
            (mapv (fn$ mapv ensure-embeddable-hint)))))))
 
@@ -607,7 +624,7 @@
             (do (assert (symbol? protocol-method) (kmap protocol-method))
                 `(~protocol-method ~@args)))
         ; Matches even when it has incomplete type information
-        (let [matches    (args->matches interface-name interface-method args strict? env)
+        (let [matches    (args->matches sym interface-name interface-method args strict? env)
               best-match (or (first matches) args)]
           (if (-> matches count (= 1))
               `(. ~reify-name ~interface-method ~@best-match)
@@ -644,10 +661,11 @@
                    (let [~args-hinted-sym
                            (quantum.core.macros.transform/try-hint-args ; TODO remove this?
                              ~args-sym ~lang ~'&env)]
-                     (log/pr :macro-expand "DEFNT HELPER MACRO" '~sym-with-meta'
-                                           "|" ~args-hinted-sym
-                                           "|" '~genned-protocol-method-name-qualified
-                                           "|" '~genned-method-name)
+                     (log/pr :macro-expand/defnt-helper
+                        "DEFNT HELPER MACRO" '~sym-with-meta'
+                                         "|"  ~args-hinted-sym
+                                         "|" '~genned-protocol-method-name-qualified
+                                         "|" '~genned-method-name)
                      (if ~(when-not strict-macro?
                            `(or (case-env* ~'&env :cljs true)
                                 (= ~lang :cljs)
@@ -666,7 +684,8 @@
                            {:env              ~'&env
                             :sym              '~sym-with-meta'
                             :reify-available? true
-                            :protocol-method  '~genned-protocol-method-name-qualified
+                            :strict?          ~strict-macro?
+                            :protocol-method  '~(when-not strict-macro? genned-protocol-method-name-qualified)
                             :reify-name       '~reified-sym-qualified
                             :interface-name   '~ns-qualified-interface-name
                             :interface-method '~genned-method-name
