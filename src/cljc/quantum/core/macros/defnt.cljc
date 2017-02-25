@@ -42,7 +42,8 @@
     [quantum.core.spec                       :as s
       :refer [validate]]))
 
-(defonce warn-on-inexact-match? (atom false))
+(defonce warn-on-strict-inexact-matches? (atom false))
+(defonce warn-on-all-inexact-matches? (atom false))
 
 (def
   ^{:todo {0 "Totally reorganize/cleanup this namespace and move into other ones as necessary"
@@ -596,7 +597,8 @@
           ; TODO derepeat
           _ (if (and (or (-> most-specific-matches count (> 1))
                          (-> most-specific-matches count (= 0)))
-                     (or strict? @warn-on-inexact-match?))
+                     (or (and strict? @warn-on-strict-inexact-matches?)
+                         @warn-on-all-inexact-matches?))
                 (log/ppr-hints :warn
                   ; TODO line number etc.
                   (if (-> most-specific-matches count (> 1))
@@ -663,10 +665,11 @@
                              ~args-sym ~lang ~'&env)]
                      (log/pr :macro-expand/defnt-helper
                         "DEFNT HELPER MACRO" '~sym-with-meta'
+                                         "|"  ~strict-macro?
                                          "|"  ~args-hinted-sym
                                          "|" '~genned-protocol-method-name-qualified
                                          "|" '~genned-method-name)
-                     (if ~(when-not strict-macro?
+                     (if ~(when-not (or strict-macro? strict?)
                            `(or (case-env* ~'&env :cljs true)
                                 (= ~lang :cljs)
                                 ~relaxed? ; TODO fix this?
@@ -684,8 +687,8 @@
                            {:env              ~'&env
                             :sym              '~sym-with-meta'
                             :reify-available? true
-                            :strict?          ~strict-macro?
-                            :protocol-method  '~(when-not strict-macro? genned-protocol-method-name-qualified)
+                            :strict?          ~(or strict? strict-macro?)
+                            :protocol-method  '~(when-not (or strict? strict-macro?) genned-protocol-method-name-qualified)
                             :reify-name       '~reified-sym-qualified
                             :interface-name   '~ns-qualified-interface-name
                             :interface-method '~genned-method-name
