@@ -71,7 +71,7 @@
        str))
 
 #?(:clj
-(defnt ^String path->file-name
+(defnt path->file-name
   ([^file?   f] (.getName f))
   ([^string? s] (coll/taker-until sys/separator nil s))))
 
