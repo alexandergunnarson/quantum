@@ -107,7 +107,7 @@
 ;         "DYLD_LIBRARY_
 
 
-(defnt #?(:clj ^String path->file-name :cljs path->file-name)
+(defnt path->file-name
   #?(:clj ([^file?   f] (.getName f)))
   ([^string? s] (coll/taker-until sys/separator nil s)))
 
