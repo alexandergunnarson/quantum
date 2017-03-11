@@ -99,7 +99,7 @@
 ;  (doseq [bin-name path paths]
 ;    (throw-unless (io/exists? path)
 ;      (Err. :binary-not-found "Binary not found at path."
-;        (kmap bin-name path))))))
+;        (kw-map bin-name path))))))
 
 ;#?(:clj
 ;(def user-env
@@ -217,7 +217,7 @@
   ([^string?  s] s)
   ([^keyword? k] (parse-dir [k]))
   #?(:clj ([^file?    x] (str x)))
-  ([          obj] (if (nil? obj)
+  ([^default  obj] (if (nil? obj)
                        ""
                        (throw (->ex :unimplemented nil
                                     {:obj obj :class (type obj)})))))

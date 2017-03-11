@@ -10,7 +10,7 @@
           [quantum.core.error             :as err
             :refer [->ex]]
           [quantum.core.collections       :as coll
-            :refer [map+ dropr in? kmap reduce nempty?]]
+            :refer [map+ dropr in? kw-map reduce nempty?]]
           [quantum.core.convert           :as conv
             :refer [->keyword]]
           [quantum.core.fn                :as fn

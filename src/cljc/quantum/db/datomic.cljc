@@ -16,7 +16,7 @@
     [quantum.db.datomic.schema        :as dbs]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
-      :refer [kmap containsv? nnil? nempty?]]
+      :refer [kw-map containsv? nnil? nempty?]]
     [quantum.core.error               :as err
       :refer [->ex try-times TODO]]
     [quantum.core.fn                  :as fn
@@ -123,7 +123,7 @@
             set-main-part? (validate (default set-main-part? false) (fn1 t/boolean?))
             _              (validate conn nil?)]
         (try
-          (log/pr ::debug "EPHEMERAL:" (kmap post schemas set-main-conn? reactive?))
+          (log/pr ::debug "EPHEMERAL:" (kw-map post schemas set-main-conn? reactive?))
           (let [; Maintain DB history.
                 history (when (pos? history-limit) (atom []))
                 default-schemas {:db/ident {:db/unique :db.unique/identity}}
@@ -200,7 +200,7 @@
                            (parse/output :java-properties internal-props-f {:no-quote? true})
                            {:method :print})))
         _ (when (map? internal-props) (write-props!))
-        _ (log/pr ::debug "Starting transactor..." (kmap datomic-path flags props-path-f resources-path))
+        _ (log/pr ::debug "Starting transactor..." (kw-map datomic-path flags props-path-f resources-path))
         proc (res/start!
                (proc/->proc (path/path "." "bin" "transactor")
                  (c/conj (or flags []) props-path-f)
@@ -285,7 +285,7 @@
         (let [txr-process-f
                 (when (and (:start? txr-props)
                            (not= type :mem))
-                  #?(:clj (start-transactor! (kmap type host port) txr-props)))
+                  #?(:clj (start-transactor! (kw-map type host port) txr-props)))
               connect (fn [] (log/pr ::debug "Trying to connect with" uri)
                              (let [conn-f (do #?(:clj (bdb/connect uri)))]
                                (log/pr ::debug "Connection successful.")
@@ -317,7 +317,7 @@
         (log/pr ::debug "Datomic database initialized.")
         (c/merge
           (c/assoc this :txr-process txr-process-f)
-          (kmap type uri name host port create-if-not-present? default-partition conn)))))
+          (kw-map type uri name host port create-if-not-present? default-partition conn)))))
     (stop [this]
       (when (and (t/atom? conn) (nnil? @conn))
         #?(:clj (bdb/release @conn))

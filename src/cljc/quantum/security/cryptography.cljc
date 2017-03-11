@@ -16,7 +16,7 @@
     [quantum.core.data.hex         :as hex]
     [quantum.core.data.set         :as set]
     [quantum.core.collections      :as coll
-      :refer [kmap nnil?]]
+      :refer [kw-map nnil?]]
     [quantum.core.error            :as err
       :refer [->ex throw-unless TODO]]
     [quantum.core.fn               :as fn
@@ -314,7 +314,7 @@
          salt (conv/->text salt)
          ;(->> iterations (encode :base64) ->str)
          ]
-     (kmap hashed salt iterations)))))
+     (kw-map hashed salt iterations)))))
 
 (declare pbkdf2)
 

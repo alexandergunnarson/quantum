@@ -5,7 +5,7 @@
     [quantum.core.fn
       :refer [fn1 fn-> fn$]]
     [quantum.core.collections   :as coll
-      :refer [nempty? kmap]]
+      :refer [nempty? kw-map]]
     [quantum.core.error         :as err
       :refer [catch-all]]
     [quantum.core.spec          :as s
@@ -72,7 +72,7 @@
                                          (dissoc now)))))
                   e (log/pr :warn e)))
               (log/pr ::debug "BusyWaitScheduler finished running."))]
-      (merge this (kmap queue interrupted? shut-down? busy-waiter))))
+      (merge this (kw-map queue interrupted? shut-down? busy-waiter))))
   (comp/stop [this]
     (reset! interrupted? true)
     (reset! shut-down?   true)

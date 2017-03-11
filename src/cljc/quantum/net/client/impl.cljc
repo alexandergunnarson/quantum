@@ -21,7 +21,7 @@
                       [quantum.core.logic           :as logic
                         :refer [fn-and whenf1]]
                       [quantum.core.collections     :as coll
-                        :refer [kmap containsv? nnil?]]
+                        :refer [kw-map containsv? nnil?]]
                       [quantum.core.async           :as async
                         :refer [go]]
                       [quantum.core.vars            :as var
@@ -52,7 +52,7 @@
   "Returns a batteries-included HTTP request function corresponding to the given
    core client. See |request|"
   [req]
-  (log/pr ::debug (kmap req))
+  (log/pr ::debug (kw-map req))
   (-> req
       http/wrap-accept
       http/wrap-form-params

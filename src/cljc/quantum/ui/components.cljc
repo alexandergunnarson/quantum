@@ -20,7 +20,7 @@
     [quantum.core.system :as sys
       :refer  [#?@(:cljs [ReactNative])]]
     [quantum.core.collections :as coll
-      :refer [for fori join kmap reduce
+      :refer [for fori join kw-map reduce
               map-vals+ ensurec merge-deep nnil?]]
     [quantum.core.async  :as async
       :refer [go]]
@@ -668,10 +668,10 @@
                                  row-index   (.-rowIndex props)
                                  on-mouse-over #(reset! selected-row-i row-index)]
                              (rx/as-element
-                               [fb-cell (merge (kmap on-mouse-over)
+                               [fb-cell (merge (kw-map on-mouse-over)
                                           (when cell-props-fn
                                             (cell-props-fn col-key row-index)))
-                                 [cell-component (kmap selected-row-i row-index font-size cell-width clamp-lines col-key data)]])))
+                                 [cell-component (kw-map selected-row-i row-index font-size cell-width clamp-lines col-key data)]])))
                  :width  (get @col-widths col-key)
                  ;:min-width (min std-col-width (js/Math.abs (- std-col-width 10)))
                  }]))]))))

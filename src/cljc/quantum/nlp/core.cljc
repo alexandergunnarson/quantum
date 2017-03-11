@@ -8,7 +8,7 @@
     [quantum.core.collections :as coll
       :refer [map+ remove+
               mutable setm!
-              kmap ifor get reducei]]
+              kw-map ifor get reducei]]
     [quantum.core.error
       :refer [->ex]]
     [quantum.core.numeric  :as num
@@ -47,7 +47,7 @@
                        #{\l}                      \4
                        #{\m \n}                   \5
                        #{\r}                      \6
-                       (throw (->ex "Not a soundex-able word" (kmap w))))))
+                       (throw (->ex "Not a soundex-able word" (kw-map w))))))
        (coll/distinct-by+ identity (fn [x y] (and (= x y) (str/numeric? x))))
        (remove+ (fn1 = \-))
        (reducei (fn [^StringBuilder s c i]

@@ -9,6 +9,7 @@
     [clojure.core               :as core]
     [quantum.core.fn            :as fn
       :refer [fn->]]
+    [quantum.core.core          :as qcore]
     [quantum.core.logic         :as logic
       :refer [condf1 fn-not]]
     [quantum.core.vars             :as var
@@ -104,13 +105,8 @@
 (defn update-val [[k v] f]
   [k (f v)])
 
-#?(:clj
-(defmacro kmap [& ks]
- `(zipmap (map keyword (quote ~ks)) (list ~@ks))))
-
-#?(:clj
-(defmacro eval-map [& ks]
- `(zipmap (quote ~ks) (list ~@ks))))
+#?(:clj (defmacro kw-map    [& ks] (qcore/quote-map-base hash-map (comp keyword str) ks)))
+#?(:clj (defmacro quote-map [& ks] (qcore/quote-map-base hash-map identity           ks)))
 
 ; ----- WALK ----- ;
 

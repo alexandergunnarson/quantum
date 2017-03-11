@@ -1,7 +1,7 @@
 (ns quantum.core.collections.logic
   (:refer-clojure :exclude [reduce some not-any? every? not-every?])
   (:require
-    [quantum.core.loops
+    [quantum.core.reducers.reduce
       :refer [reduce]]
     [quantum.core.fn   :as fn
       :refer [rcomp]]

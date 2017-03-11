@@ -7,7 +7,7 @@
             [taoensso.sente.server-adapters.aleph    :as a-aleph]])
             [clojure.core.async                      :as async]
             [quantum.core.collections                :as coll
-              :refer [kmap join remove-vals+ red-for break]]
+              :refer [kw-map join remove-vals+ red-for break]]
             [quantum.core.string                     :as str]
             [quantum.net.client.impl                 :as impl]
             [quantum.net.core                        :as net]
@@ -86,7 +86,7 @@
                              :middleware     (or middleware identity)
                              :csp-report-uri (when csp-report-handler
                                                (or csp-report-uri "/csp-report"))}
-                            (kmap
+                            (kw-map
                              key-password
                              trust-password
                              ssl-context

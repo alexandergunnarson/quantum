@@ -7,8 +7,8 @@
     [sparkling.core           :as spark]])
     [quantum.core.system      :as sys]
     [quantum.core.collections.base
-      :refer        [#?@(:clj [kmap])]
-      :refer-macros [          kmap]]
+      :refer        [#?@(:clj [kw-map])]
+      :refer-macros [          kw-map]]
     [quantum.core.macros
       #?@(:clj [:refer [compile-if]])]
     [quantum.core.error :as err
@@ -31,7 +31,7 @@
                     (doto ^SparkContext (.stop))
                     (.version))
         [major minor incremental] (str/split version #"\.")]
-    (kmap major minor incremental))))
+    (kw-map major minor incremental))))
 
 #?(:clj
 (compile-if (= (:major version) "2")
@@ -73,7 +73,7 @@
       (defn fold [f x] (TODO))
       (defn collect [^Dataset x] (.collect x)))
   (do (defn- requires-spark>=2 [& _]
-        (throw (->ex "Requires Spark >= 2.0" (kmap version))))
+        (throw (->ex "Requires Spark >= 2.0" (kw-map version))))
 
       (doseq [sym '#{map filter group-by take flat-map fold collect}]
         (intern *ns* sym requires-spark>=2)))))
