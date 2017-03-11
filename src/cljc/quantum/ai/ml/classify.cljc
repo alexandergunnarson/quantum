@@ -9,13 +9,12 @@
    [[taoensso.timbre.profiling        :as prof
       :refer [profile defnp p]]])
     [quantum.core.collections         :as coll
-      :refer [for for* fori lfor reduce join kmap
+      :refer [for for* fori lfor reduce join kw-map
               pjoin in? map+ vals+ filter+ partition-all+
               remove+ take+ map-vals+ filter-vals+
               flatten-1+ range+ ffilter
               reduce-count nnil?]]
     [quantum.core.numeric             :as num]
-    [quantum.numeric.arrays           :as a]
     [quantum.core.fn                  :as fn
       :refer [<- fn-> fn->>]]
     [quantum.core.cache               :as cache
