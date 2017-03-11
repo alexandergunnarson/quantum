@@ -149,15 +149,15 @@
 
 #?(:clj
 (defmacro array-nd-types [n]
-  `#{`(type (apply make-array Short/TYPE     (repeat ~~n 0)))
-     `(type (apply make-array Long/TYPE      (repeat ~~n 0)))
-     `(type (apply make-array Float/TYPE     (repeat ~~n 0)))
-     `(type (apply make-array Integer/TYPE   (repeat ~~n 0)))
-     `(type (apply make-array Double/TYPE    (repeat ~~n 0)))
-     `(type (apply make-array Boolean/TYPE   (repeat ~~n 0)))
-     `(type (apply make-array Byte/TYPE      (repeat ~~n 0)))
-     `(type (apply make-array Character/TYPE (repeat ~~n 0)))
-     `(type (apply make-array Object         (repeat ~~n 0)))}))
+  `{:boolean '~(symbol (str (apply str (repeat n \[)) "Z"))
+    :byte    '~(symbol (str (apply str (repeat n \[)) "B"))
+    :char    '~(symbol (str (apply str (repeat n \[)) "C"))
+    :short   '~(symbol (str (apply str (repeat n \[)) "S"))
+    :int     '~(symbol (str (apply str (repeat n \[)) "I"))
+    :long    '~(symbol (str (apply str (repeat n \[)) "J"))
+    :float   '~(symbol (str (apply str (repeat n \[)) "F"))
+    :double  '~(symbol (str (apply str (repeat n \[)) "D"))
+    :object  '~(symbol (str (apply str (repeat n \[)) "Ljava.lang.Object;"))}))
 
 (def primitive-type-map    {:clj {'(type (boolean-array [false])) (symbol "[Z")
                                   '(type (byte-array    0)      ) (symbol "[B")
@@ -344,7 +344,7 @@
 
 ; ===== ARRAYS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                      ; dense integer values), not extensible
-
+; TODO do e.g. {:clj {0 {:byte ...}}}
 (def array-1d-types       `{:clj  {:byte          (type (byte-array    0)      )
                                    :char          (type (char-array    "")     )
                                    :short         (type (short-array   0)      )
@@ -374,16 +374,16 @@
 (def array-8d-types        {:clj (array-nd-types 8 )})
 (def array-9d-types        {:clj (array-nd-types 9 )})
 (def array-10d-types       {:clj (array-nd-types 10)})
-(def array-types          (cond-union (->> array-1d-types (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                             array-2d-types
-                             array-3d-types
-                             array-4d-types
-                             array-5d-types
-                             array-6d-types
-                             array-7d-types
-                             array-8d-types
-                             array-9d-types
-                             array-10d-types))
+(def array-types           (cond-union (->> array-1d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-2d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-3d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-4d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-5d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-6d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-7d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-8d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-9d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-10d-types (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
 
 ; String: A special wrapper for char array where different encodings, etc. are possible
 
@@ -476,7 +476,8 @@
 
 ; ===== FUNCTIONS ===== ;
 
-(def fn-types             `{:clj #{clojure.lang.Fn} :cljs #{(type inc)}})
+(def fn-types             `{:clj #{clojure.lang.Fn}  :cljs #{(type inc)}})
+(def ifn-types            `{:clj #{clojure.lang.IFn} :cljs #{(type inc)}}) ; TODO keyword types?
 (def multimethod-types    '{:clj #{clojure.lang.MultiFn}})
 
 ; ===== MISCELLANEOUS ===== ;
@@ -639,18 +640,30 @@
    'doubles?         {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
    'objects?         {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
 
+   'doubles-2d?      {:clj #{(-> array-2d-types :clj :double )} :cljs #{(-> array-2d-types :cljs :double )}}
+   'objects-2d?      {:clj #{(-> array-2d-types :clj :object )} :cljs #{(-> array-2d-types :cljs :object )}}
+
    'array-1d?        {:clj  (->> array-1d-types :clj  vals set)
                       :cljs (->> array-1d-types :cljs vals set)}
 
-   'array-2d?        array-2d-types
-   'array-3d?        array-3d-types
-   'array-4d?        array-4d-types
-   'array-5d?        array-5d-types
-   'array-6d?        array-6d-types
-   'array-7d?        array-7d-types
-   'array-8d?        array-8d-types
-   'array-9d?        array-9d-types
-   'array-10d?       array-10d-types
+   'array-2d?        {:clj  (->> array-2d-types :clj  vals set)
+                      :cljs (->> array-2d-types :cljs vals set)}
+   'array-3d?        {:clj  (->> array-3d-types :clj  vals set)
+                      :cljs (->> array-3d-types :cljs vals set)}
+   'array-4d?        {:clj  (->> array-4d-types :clj  vals set)
+                      :cljs (->> array-4d-types :cljs vals set)}
+   'array-5d?        {:clj  (->> array-5d-types :clj  vals set)
+                      :cljs (->> array-5d-types :cljs vals set)}
+   'array-6d?        {:clj  (->> array-6d-types :clj  vals set)
+                      :cljs (->> array-6d-types :cljs vals set)}
+   'array-7d?        {:clj  (->> array-7d-types :clj  vals set)
+                      :cljs (->> array-7d-types :cljs vals set)}
+   'array-8d?        {:clj  (->> array-8d-types :clj  vals set)
+                      :cljs (->> array-8d-types :cljs vals set)}
+   'array-9d?        {:clj  (->> array-9d-types :clj  vals set)
+                      :cljs (->> array-9d-types :cljs vals set)}
+   'array-10d?       {:clj  (->> array-10d-types :clj  vals set)
+                      :cljs (->> array-10d-types :cljs vals set)}
    'array?           array-types
 
    'string?          string-types
@@ -675,6 +688,7 @@
    ; MISCELLANEOUS
 
    'fn?              fn-types
+   'ifn?             ifn-types
    'multimethod?     multimethod-types
    'nil?             '{:cljc #{nil}}
 
