@@ -10,7 +10,8 @@
             [clojure.data.avl     :as avl ]
   #?@(:clj [[clojure.data.int-map :as imap]
             [flatland.ordered.map :as omap]
-            [seqspert.hash-map            ]]))
+            [seqspert.hash-map            ]
+            [quantum.core.core    :as qcore]]))
   #?(:cljs
   (:require-macros
             [quantum.core.vars    :as var
@@ -25,6 +26,12 @@
 
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          #?(:clj omap/ordered-map :cljs array-map))
+
+#?(:clj
+(defmacro kw-omap
+  "Like `kw-map`, but preserves insertion order."
+  [& ks]
+  (qcore/quote-map-base om (comp keyword str) ks)))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)
@@ -44,6 +51,8 @@
 #?(:clj (def int-map       imap/int-map))
 
 ; TODO look at imap/merge
+
+; `(apply hash-map pairs)` <~> `lodash/fromPairs`
 
 (defn map-entry
   "A performant replacement for creating 2-tuples (vectors), e.g., as return values
