@@ -6,14 +6,13 @@
               first for last count join]]
     [quantum.core.fn
       :refer [fn1 fn$ fn-> <-]]
-    [quantum.core.log :as log]
-    [quantum.core.numeric       :as cnum
+    [quantum.core.log                        :as log]
+    [quantum.core.numeric                    :as cnum
       :refer [*+* *-* *** *div* mod
               abs sqrt pow e-exp floor log-e]]
-    [quantum.numeric.core       :as num
-      :refer [sum sq]]
-    [quantum.numeric.arrays     :as a]
-    [quantum.numeric.polynomial :as poly]
+    [quantum.numeric.core                    :as num
+      :refer [sum sq sigma]]
+    [quantum.numeric.polynomial              :as poly]
     [quantum.numeric.statistics.distribution :as dist]
     [quantum.core.vars
       :refer [defalias]]
@@ -32,9 +31,6 @@
 ; uncomplicate.bayadera.distributions
 ; [bigml/sampling "3.0"]
 ; ================================
-
-(defn pi* [xs step-fn] ; TODO move
-  (->> xs (map+ #(step-fn %)) num/product))
 
 (defn mean
   "Arithmetic mean"
@@ -75,6 +71,9 @@
   "Sum of the squares of each data point."
   [data] (->> data (map+ sq) sum))
 
+; AKA L2 difference
+(defn square-difference [a b] (sq (- a b)))
+
 (defn variance
   "Evaluates to the variance of a sample or population,
    depending on the optional `type` parameter
@@ -89,6 +88,27 @@
            (map+ (fn-> (*-* mean') sq))
            sum
            (<- (*div* (- ct diff)))))))
+
+(defn mse:predictor
+  "The mean squared error between a vector of predictions `p•` and observed values `o•`."
+  [p• o•]
+  (mean (arr/v-op+ square-difference p• o•)))
+
+(defalias mse:p•+o• mse:predictor)
+(defalias mean-square-error:predictor mse:predictor)
+
+(defn mse:estimator
+  "The MSE of an estimator with respect to an unknown parameter."
+  [estimator unknown] (TODO))
+
+(defalias mean-square-error:estimator mse:estimator)
+
+(defn mse:p•+o••
+  "The mean squared error between a vector of predictions `p•` and 2D vector of observed values `o••`."
+  [p• o••]
+  (->> o••
+       (map+ (fn [o•] (sum (arr/v-op+ square-difference p• o•))))
+       mean))
 
 (defn semivariance
   "Computes the semivariance of a set of values with respect to a given cutoff value."
@@ -238,7 +258,7 @@
   {:adapted-from 'criterium.stats
    :implemented-by '{smile.sampling.Bagging "Faster implementation using arrays"}}
   [data statistic size rng-factory]
-  (a/transpose
+  (arr/transpose
     (for [_ (range size)] (statistic (sort (join [] (sample+ data (rng-factory))))))))
 
 (defn bootstrap-estimate
@@ -356,7 +376,7 @@
 #_(defn jacknife
   "Jacknife statistics on data."
   [data statistic]
-  (a/transpose
+  (arr/transpose
     (map #(statistic (coll/ldrop-at %1 data)) (range (count data)))))
 
 
