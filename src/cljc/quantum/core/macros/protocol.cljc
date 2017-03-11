@@ -11,7 +11,7 @@
     [quantum.core.logic                      :as logic
       :refer [whenp]]
     [quantum.core.collections.base           :as cbase
-      :refer [kmap update-first update-val nempty? nnil? ensure-set]]
+      :refer [kw-map update-first update-val nempty? nnil? ensure-set]]
     [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 
@@ -26,22 +26,25 @@
     :cljs {boolean boolean}})
 
 (defn ensure-protocol-appropriate-type-hint
-  [arg lang i]
+  [arg lang i arglist-length]
   (let [unhinted (unhint    arg)
-        hint-0   (type-hint arg)
+        hint     (type-hint arg)
         ; hint-f   (get-in protocol-type-hint-map [lang hint])
         ]
-    (if (or (= hint-0 'Object)
-            (= hint-0 'java.lang.Object) ; The extra object hints mess things up
-            (-> protocol-type-hint-map (get lang) (get hint-0)))
-        unhinted ; just remove the hint — don't "upgrade" it
-        (cmacros/hint-meta arg hint-0))))
+    (if (or (= hint 'Object)
+            (= hint 'java.lang.Object) ; The extra object hints mess things up
+            (-> protocol-type-hint-map (get lang) (get hint))
+            (and (tcore/prim? hint)
+                 (and arglist-length ; TODO fix this — this is a hack to get around checking return types
+                      (> arglist-length 4)))) ; because fns taking primitives support only 4 or fewer args
+        unhinted ; just remove the hint for now — don't "upgrade" it
+        (cmacros/hint-meta arg hint))))
 
 (defn ensure-protocol-appropriate-arglist
   [lang arglist-0]
   (->> arglist-0
        (map-indexed
-         (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i)))
+         (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i (count arglist-0))))
        (into [])))
 
 (defn append-variant-identifier
@@ -82,13 +85,14 @@
           (->> protocol-def
                rest rest
                (map first))]
-    (kmap protocol-def genned-protocol-method-names)))
+    (kw-map protocol-def genned-protocol-method-names)))
 
 ; TODO hopefully get rid of this step
 ; TODO break it up
 
 (defn gen-extend-protocol-from-interface
-  {:todo #{"IMPORTANT: change `extend-protocol` to `extend-type` so that CLJS runs faster"}}
+  {:todo {0 {:msg "change `extend-protocol` to `extend-type` so that CLJS runs faster"
+             :priority 10}}}
   ; Original Interface:         ([#{number?} x #{number?} y #{char? Object} z] ~@body)
   ; Expanded Interface Arity 1: ([^long      x ^int       y ^char           z] ~@body)
   ; Protocol Arity 1:           ([^long      x ^Integer   y ^Character      z]
@@ -112,7 +116,7 @@
         body-mapped
           (->> body-filtered
                (map (fn [[arglist & body :as method]]
-                      (log/ppr-hints :macro-expand "IN BODY MAPPED" (kmap arglist body))
+                      (log/ppr-hints :macro-expand "IN BODY MAPPED" (kw-map arglist body))
                       (let [first-type         (-> arglist second type-hint)
                             first-type-unboxed (-> first-type tcore/->unboxed)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
@@ -124,14 +128,14 @@
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
-                                                  (ensure-protocol-appropriate-type-hint lang 0))
+                                                  (ensure-protocol-appropriate-type-hint lang 0 nil)) ; the arglist length doesn't matter
                                   arglist-f   (->> arglist rest (ensure-protocol-appropriate-arglist lang))
                                   arglist-f   (if return-type
                                                   arglist-f
                                                   (cmacros/hint-meta arglist-f return-type) )
                                   body-f      (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
-                              (log/ppr-hints :macro-expand "IN BODY AFTER MAPPED" (kmap boxed-first-type extension-f first-type))
+                              (log/ppr-hints :macro-expand "IN BODY AFTER MAPPED" (kw-map boxed-first-type extension-f first-type))
                               (if (or (= boxed-first-type 'Object)
                                       (= boxed-first-type 'java.lang.Object))
                                   (into ['nil (-> extension-f rest first)] extension-f)
