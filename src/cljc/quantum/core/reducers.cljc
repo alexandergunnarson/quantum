@@ -737,8 +737,8 @@
    `(folder ~(-> bindings butlast last)
       (let [~i* (~atomic-container -1)] ~(for+:gen-f f f-inner arities-2-3))))))
 
-#?(defmacro fori+  "Like `for+`, but indexed."               [& args] `(fori+* volatile! vswap! ~@args))
-#?(defmacro pfori+ "Like `for+`, but thread-safely indexed." [& args] `(fori+* atom       swap! ~@args))
+#?(:clj (defmacro fori+  "Like `for+`, but indexed."               [& args] `(fori+* volatile! vswap! ~@args)))
+#?(:clj (defmacro pfori+ "Like `for+`, but thread-safely indexed." [& args] `(fori+* atom       swap! ~@args)))
 
 ; <<<<------ ALREADY REDUCED ------>>>>
 #?(:clj
