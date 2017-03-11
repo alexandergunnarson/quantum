@@ -6,6 +6,8 @@
   (:require
 #_(:clj
     [co.paralleluniverse.pulsar.core  :as pulsar])
+    [quantum.core.collections.base
+      :refer [postwalk]]
     [quantum.core.error               :as err
       :refer [->ex]]
     [quantum.core.fn                  :as fn
@@ -50,7 +52,7 @@
   [body externs]
   (log/ppr-hints :macro-expand "ORIG BODY:" body)
   (->> body
-       (clojure.walk/postwalk
+       (postwalk
          (whenf1 extern?
            (fn [[extern-sym obj]]
              (let [sym (gensym "externed")]
@@ -90,7 +92,7 @@
               externs  (atom [])
               body-f   (if arglist (list (cons arglist body)) body)
               body-f   (->> body-f
-                            (clojure.walk/postwalk
+                            (postwalk
                               (whenf1 opt/extern?
                                 (fn [[extern-sym obj]]
                                   (let [sym (gensym "externed")]
