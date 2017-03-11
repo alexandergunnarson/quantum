@@ -1,5 +1,8 @@
 (ns quantum.test.core.compare
-  (:require [quantum.core.compare :as ns]))
+  (:require
+    [quantum.core.compare :as ns]
+    [quantum.core.test
+      :refer [deftest is testing]]))
 
 (defn test:=
   ([x])
