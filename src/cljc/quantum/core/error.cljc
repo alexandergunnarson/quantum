@@ -6,7 +6,7 @@
     [clojure.string                :as str]
     [slingshot.slingshot           :as try]
     [quantum.core.collections.base :as cbase
-      :refer [kmap]]
+      :refer [kw-map]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
       :refer [fn$ fn1 rcomp]]
@@ -112,9 +112,12 @@
   `(catch-all ~try-val e# (~handler e#))))
 
 #?(:clj
-(defmacro with-assert [expr pred err]
+(defmacro with-assert
+  ([expr pred]
+   `(with-assert ~expr ~pred (->ex "Assertion failed" '(~pred ~expr))))
+  ([expr pred err]
   `(let [expr# ~expr]
-     (if (~pred expr#) expr# (throw ~err)))))
+     (if (-> expr# ~pred) expr# (throw ~err))))))
 
 #?(:clj
 (defmacro try-or
