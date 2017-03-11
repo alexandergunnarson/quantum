@@ -109,6 +109,7 @@
 
 (defn transit->
   "Transit decode an object from @x."
+  ([x] (transit-> x :json))
   ([x type] (transit-> x type nil))
   ([x type opts]
     #?(:clj  (with-open [in (java.io.ByteArrayInputStream. (.getBytes ^String x))]
@@ -119,6 +120,7 @@
 
 (defn ->transit
   "Transit encode @x into a String."
+  ([x] (->transit x :json))
   ([x type] (->transit x type nil))
   ([x type opts]
     #?(:clj  (with-open [out (java.io.ByteArrayOutputStream.)]
@@ -274,8 +276,8 @@
 (defnt ->uuid*
   ([^string? id] (java.util.UUID/fromString        id))
   ([^bytes?  id] (java.util.UUID/nameUUIDFromBytes id))
-  ([^Long msb lsb]
-     (java.util.UUID. msb ^Long lsb))))
+  ([^long msb lsb]
+     (java.util.UUID. msb ^long lsb))))
 
 #?(:clj
 (defmacro ->uuid
@@ -691,7 +693,7 @@
 (defnt ->represent
   "Converts to a(n ostensibly) human-friendly String representation."
   ([^string? x] x)
-  ([^:obj    x] x))
+  ([^default x] x))
 
 #?(:clj
 (defnt ->charset
@@ -699,13 +701,13 @@
 
 (defnt ->name
   ([#{string? symbol? keyword?} x] (name x))
-  ([^:obj                       x] (str  x)))
+  ([^default                    x] (str  x)))
 
 (defnt ->symbol
           ([^string?          x] (symbol x))
   #?(:clj ([^clojure.lang.Var x] (symbol (str (ns-name (.ns x)))
                                          (str (.sym x)))))
-          ([^:obj x] (-> x ->name ->symbol)))
+          ([^default          x] (-> x ->name ->symbol)))
 
 ; Commented only until we decide forge is worth keeping
 #_(defnt ->hex
