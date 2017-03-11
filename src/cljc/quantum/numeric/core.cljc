@@ -1,7 +1,7 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
   (:refer-clojure :exclude
-    [reduce mod count *' +'])
+    [reduce mod count *' +' map])
   (:require
     [quantum.core.numeric      :as num
       :refer [*+* *-* *** *div* mod
@@ -12,11 +12,11 @@
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [fn-> <- fn& fn&2]]
+      :refer [fn-> <- fn$ fn& fn&2]]
     [quantum.core.log          :as log]
     [quantum.core.collections  :as coll
       :refer [map+ range+ filter+ mapcat+
-              reduce join count kmap]]
+              reduce join count kw-map map]]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.numeric.misc :as misc]))
@@ -81,24 +81,32 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(defn sum+count     [xs] ; TODO is this necessary?
+(defn sum+count     [xs]
   (reduce (fn [[sum ct] x] [(*+* sum x) (inc ct)]) [0 0] xs))
 
-(defn product+count [xs] ; TODO is this necessary?
+(defn product+count [xs]
   (reduce (fn [[sum ct] x] [(*** sum x) (inc ct)]) [1 0] xs))
 
-(def sum     #(reduce *+* %)) ; TODO use +* and +', differentiating sum* and sum'
-(def product #(reduce *** %)) ; TODO use ** and *', differentiating product* and product'
+(def sum     (fn$ reduce *+*)) ; TODO use +* and +', differentiating sum* and sum'
+(def product (fn$ reduce ***)) ; TODO use ** and *', differentiating product* and product'
 
-(defn sigma [set- step-fn]
-  (->> set- (map+ #(step-fn %)) sum))
+(defn sigma [xs step-fn] (->> xs (map+ step-fn) sum))
 
 #?(:clj (defalias ∑ sigma))
 
-(defn pi* [set- step-fn]
-  (->> set- (map+ #(step-fn %)) product))
+(defn pi* [xs step-fn] (->> xs (map+ step-fn) product))
 
 #?(:clj (defalias ∏ pi*))
+
+(defn normalize-sum-to
+  "Ensures that the sum of `xs` sums to `target-sum`, by
+   normalizing the values of `xs`."
+  [xs target-sum]
+  (let [[sum ct] (sum+count xs)
+        xs'      (->> xs (map #(- (* % (/ sum)) (/ (- 1 target-sum) ct))))
+        sum'     (reduce + xs')
+        xs''     (update xs' 0 #(+ % (- target-sum sum')))]
+    xs''))
 
 (defn factors
   "All factors of @n."
@@ -106,7 +114,7 @@
   (->> (range+ 1 (inc (sqrt n)))
        (filter+ #(zero? (rem n %)))
        (mapcat+ (fn [x] [x (num/div* n x)])) ; TODO have a choice of using unsafe div
-       (join #{})))
+       (join    #{})))
 
 (defn lfactors
   "All factors of @n, lazily computed."
