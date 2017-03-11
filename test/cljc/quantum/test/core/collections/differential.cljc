@@ -1,5 +1,8 @@
 (ns quantum.test.core.collections.differential
-  (:require [quantum.core.collections.differential :as ns]))
+  (:require
+    [quantum.core.collections.differential :as ns]
+    [quantum.core.test
+      :refer [deftest is testing]]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================
@@ -15,6 +18,14 @@
 (defn test:index-of-pred      [coll pred])
 
 (defn test:last-index-of-pred [coll pred])
+
+(deftest test:find-max
+  (is (= [3 6] (ns/find-max [0 2 1 6 -1 5])))
+  (is (= nil   (ns/find-max []))))
+
+(deftest test:index-of-max
+  (is (= 3     (ns/index-of-max [0 2 1 6 -1 5])))
+  (is (= nil   (ns/index-of-max [])))
 
 ; ================================================ TAKE ================================================
 ; ============ TAKE-LEFT ============
@@ -42,15 +53,15 @@
 (defn test:takel-until-inc
   ([sub super]))
 
-(defn test:takel-while-matches 
+(defn test:takel-while-matches
   [sub super])
 
-(defn test:takel-until-matches 
+(defn test:takel-until-matches
   [sub super])
 
 ; ============ TAKE-RIGHT ============
 
-(defn test:taker 
+(defn test:taker
   [i super])
 
 (defn test:takeri
@@ -73,10 +84,10 @@
 
 (defn test:dropl [n coll])
 
-(defn test:dropl-while-matches 
+(defn test:dropl-while-matches
   [sub super])
 
-(defn test:dropl-until-matches 
+(defn test:dropl-until-matches
   [sub super])
 
 ; DROPR
@@ -98,7 +109,7 @@
 (defn test:dropr-while-matches
   [sub super])
 
-(defn test:dropr-until-matches 
+(defn test:dropr-until-matches
   [sub super])
 
 (defn test:remove-surrounding
