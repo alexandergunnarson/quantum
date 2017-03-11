@@ -2,7 +2,7 @@
   ^{:doc "Functions centered around non-determinism (randomness)."
     :attribution "Alex Gunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle])
+  (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle count map partition])
   (:require
     #?(:clj [loom.gen                  :as g-gen])  ; for now
             [clojure.core              :as core]
@@ -12,15 +12,15 @@
               :refer [sorted-set+]]
             [quantum.core.collections.core :as ccoll]
             [quantum.core.collections  :as coll
-              :refer [fori reduce nempty?
-                      for join last lasti nth
-                      map+ map-vals+ map-indexed+
-                      indices+]]
+              :refer [fori reduce nempty? count
+                      for join last lasti nth partition-all+
+                      map+ map-vals+ map-indexed+ map
+                      indices+ kw-map copy slice]]
             [quantum.core.error        :as err
               :refer [->ex TODO throw-unless]]
             [quantum.core.macros       :as macros
               :refer [defnt]]
-            [quantum.core.type         :as type
+            [quantum.core.type         :as t
               :refer [regex?]]
             [quantum.core.logic        :as logic
               :refer [splice-or condf1]]
@@ -32,7 +32,7 @@
             [quantum.core.vars
               :refer [defalias]])
   (:import
-    #?@(:clj  [java.util.Random
+    #?@(:clj  [[java.util Random Collections Collection ArrayList]
                java.security.SecureRandom
                smile.math.random.UniversalGenerator
                java.nio.ByteBuffer
@@ -54,7 +54,7 @@
 #?(:clj (defonce ^SecureRandom secure-random-generator
           (SecureRandom/getInstance "SHA1PRNG")))
 
-(defn get-generator [secure?]
+(defn #?(:clj ^Random get-generator :cljs get-generator) [secure?]
   #?(:clj (if secure?
               secure-random-generator
               (java.util.concurrent.ThreadLocalRandom/current))
@@ -96,10 +96,10 @@
 
 ; TODO shorten all this repetitiveness by adding no-arg option to defnt
 
-(defn rand-int-between ; |rand-int| ?
+(defn rand-int-between
   ([        a b] (rand-int-between false a b))
   ([secure? a b]
-    #?(:clj (let [^Random generator (get-generator secure?)]
+    #?(:clj (let [generator (get-generator secure?)]
               (+ a (.nextInt generator (inc (- b a)))))
        :cljs (if secure?
                  (TODO) ; "CLJS does not yet support secure random numbers"
@@ -108,6 +108,19 @@
 (defn rand-int
   ([        b] (rand-int false b))
   ([secure? b] (rand-int-between secure? 0 b)))
+
+(defn rand-double-between
+  ([        a b] (rand-double-between false a b))
+  ([secure? a b]
+    #?(:clj (let [generator (get-generator secure?)]
+              (+ a (* (.nextDouble generator) (- b a))))
+       :cljs (if secure?
+                 (TODO) ; "CLJS does not yet support secure random numbers"
+                 (+ a (core/rand (inc (- b a))))))))
+
+(defn rand-double
+  ([        b] (rand-double false b))
+  ([secure? b] (rand-double-between secure? 0 b)))
 
 (defn rand-bits
   "Returns up to 32 random bits."
@@ -248,7 +261,7 @@
     (->ex "Cond takes an even number of forms"))
   (let [curr-p-sym   (gensym "curr-p")
         p-f-sym      (gensym "p-f") ; actual probability
-        partitioned  (partition 2 clauses)
+        partitioned  (core/partition 2 clauses)
         p-syms       (vec (repeatedly (count partitioned) #(gensym "p")))
         clauses-f    (fori [[_ form] partitioned i]
                        [(get p-syms i) form])
@@ -293,43 +306,52 @@
         0
         ps+fs))))
 
-(defalias shuffle core/shuffle)
+#?(:clj
+(defnt shuffle!
+  "Shuffles a collection in place."
+  {:todo #{"This will work for any mutable list — allow this"
+           "CLJS"}}
+  ([#{array? array-list?} x]
+    (shuffle! x (get-generator false)))
+  ([^array?        x ^Random r]
+    (loop [i (count x)]
+      (if (> i 1)
+          (do (arr/swap-at! x (dec i) (.nextInt r i))
+              (recur (dec i)))
+          x)))
+  ([#{array-list?} x ^Random r] (doto x (Collections/shuffle r)))))
 
-(defn split
-  "Randomly splits up a collection @coll according to the distributions @distrs-0 given,
+(defnt shuffle
+  "Shuffles a copy of a collection."
+  {:todo {0 "Allow all nd-arrays to be copied, thus enabling shuffling"}}
+           ([#{array-1d? #?(:clj Collection :cljs +vec?)} xs]
+             #?(:clj  (shuffle xs (get-generator false))
+                :cljs (core/shuffle xs)))
+  #?(:clj  ([^Collection xs ^Random r]
+             (-> xs (ArrayList.) (shuffle! r)
+                 (.toArray) clojure.lang.RT/vector))
+     :cljs ([+vec?       xs r] (TODO)))
+           ([^array-1d?   xs #?(:clj #{Random}) r] ; TODO 0
+             #?(:clj  (-> xs copy (shuffle! r))
+                :cljs (TODO))))
+
+(defn partition
+  "Randomly partitions up a collection @coll according to the distributions @distrs-0 given,
    using the supplied predicate @pred."
-  {:todo #{"clean up"}}
-  [coll & distrs-0]
-  (assert (nempty? distrs-0))
-  (let [coll        (vec coll) ; to be able to index
-        to-distr    (condf1 vector? (juxt second first)
-                            number? (juxt #(gensym (str "split-" %)) identity))
-        distrs      (->> distrs-0
-                         (map+ to-distr)
-                         (join {}))
-        total-p     (->> distrs vals (reduce + 0))
-        _ (assert (splice-or total-p = 1 1.0) #{total-p}) ; TODO =
-        ; probability-function pairs
-        chunk-sizes (coll/allocate-by-percentages (count coll) (vals distrs))
-        partitions  (zipmap (keys distrs) chunk-sizes)]
-    ; for chunks of size c, chooses random indices to belong to that category
-    ; TODO move
-    (->> partitions
-         (reduce
-           (rfn [[result remaining-indices] assigned-category chunk-size]
-             (reduce
-               (rfn [[result' remaining-indices'] _]
-                 (let [_        (assert (nempty? remaining-indices'))
-                       chosen-i (rand-nth remaining-indices')]
-                    [(update result' assigned-category conj! (get coll chosen-i))
-                     (disj remaining-indices' chosen-i)]))
-               [result remaining-indices]
-               chunk-size))
-           [(zipmap (keys distrs) (repeatedly #(transient [])))  ; to be able to do efficient nth and also disj ; TODO |indices|
-            (->> coll indices+ (join (sorted-set+)))])
-         first
-         (map-vals+ persistent!)
-         (join {}))))
+  {:usage `{(partition [0.5 0.1 0.2] [0 1 2 3 4 5 6 7])
+            [[2 7 6 1 5] [0] [4 3]]}}
+  ([distributions xs] (partition distributions (get-generator false) xs))
+  ([distributions rand-src xs]
+    (assert (t/sequential? distributions) (kw-map distributions))
+    (let [shuffled    (shuffle xs rand-src)
+          allocations (coll/allocate-by-percentages (count shuffled) distributions)]
+      (->> (reduce
+             (fn [[xs' i] n]
+               [(conj! xs' (slice shuffled i (+ i n)))
+                (+ i n)])
+             [(transient []) 0]
+             allocations)
+           first persistent!))))
 
 (defmulti
   ^{:doc "Generates a random object."}
@@ -420,12 +442,5 @@
 ;         permutate(x);
 
 ;         return x;
-;     }
-
-;     public void shuffle(Object[] x) {
-;         for (int i = 0; i < x.length; i++) {
-;             int j = i + nextInt(x.length - i);
-;             Math.swap(x, i, j);
-;         }
 ;     }
 ; }
