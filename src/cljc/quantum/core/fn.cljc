@@ -40,6 +40,8 @@
                [`([~@args' & xs#] (apply ~f-sym ~@args ~@args' xs#))])))))))
 
 #?(:clj (defmacro fn&  [f & args] `(fn&* nil ~f ~@args)))
+#?(:clj (defmacro fn&0 [f & args] `(fn&* 0   ~f ~@args)))
+#?(:clj (defmacro fn&1 [f & args] `(fn&* 1   ~f ~@args)))
 #?(:clj (defmacro fn&2 [f & args] `(fn&* 2   ~f ~@args)))
 #?(:clj (defmacro fn&3 [f & args] `(fn&* 3   ~f ~@args)))
 
@@ -182,7 +184,7 @@
   `(let [ret# ~expr] ~@exprs ret#)))
 
 #?(:clj
-(defmacro let-with-do
+(defmacro with-do-let
   "Like aprog1 or prog1-bind in Common Lisp."
   [[sym retn] & body]
   `(let [~sym ~retn] ~@body ~sym)))
@@ -321,7 +323,7 @@
 (defmacro rfn
   "Creates a reducer-safe function."
   [arglist & body]
-  (let [sym (gensym)]
+  (let [sym (gensym "rfn")]
     (case (count arglist)
           1 `(fn ~sym (~arglist ~@body)
                       ([k# v#] (~sym [k# v#])))
