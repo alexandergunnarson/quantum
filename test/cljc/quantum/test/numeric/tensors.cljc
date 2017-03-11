@@ -1,8 +1,8 @@
-(ns quantum.test.numeric.arrays
+(ns quantum.test.numeric.tensors
   (:require
     [quantum.core.test      :as test
       :refer [deftest is testing]]
-    [quantum.numeric.arrays :as ns]
+    [quantum.numeric.tensors :as ns]
     [quantum.core.collections :as coll
       :refer [map+ join]]))
 

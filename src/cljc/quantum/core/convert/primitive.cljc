@@ -46,14 +46,12 @@
       ([#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
       ([#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
       ([#{boolean}                  x] (if x 1 0))
-      ([^string?                    x] #?(:clj  (-> x Long/parseLong ->long)
-                                          :cljs (-> x int/fromString ->long)))
-    #?(:clj
-      ([^string?                    x radix] (Long/parseLong x radix))))
+      ([^string?                    x] (-> x Long/parseLong ->long))
+      ([^string?                    x radix] (Long/parseLong x radix)))
    :cljs
      (defnt ->long
        ([^number?  x] (js/Math.trunc x))
-       ([^string?  x] (js/parseInt   x))
+       ([^string?  x] (-> x int/fromString ->long))
        ([^boolean? x] (if x 1 0))))
 
 #?(:clj
@@ -69,7 +67,7 @@
     (defnt ^boolean ->boolean
       {:source "clojure.lang.RT.booleanCast"}
       ([^boolean x] x)
-      ([#{byte char short int long float double Object}    x] (.booleanValue (not= x nil)))) ; TODO #{(- prim? boolean) Object}
+      ([#{byte char short int long float double Object} x] (.booleanValue (not= x nil)))) ; TODO #{(- prim? boolean) Object}
    :cljs (defalias ->boolean core/boolean))
 ;_____________________________________________________________________
 ;==================={           BYTE           }======================

@@ -1,7 +1,8 @@
-(ns quantum.numeric.arrays
+(ns quantum.numeric.tensors
   "1D array: vector
    2D array: matrix
-   3D array: (no special name)"
+   3D array: (no special name)
+   ND array: tensor"
   (:refer-clojure :exclude
     [reduce max for count get subvec swap! first last empty])
   (:require
@@ -16,7 +17,7 @@
     [quantum.core.collections.core            :as ccoll]
     [quantum.core.collections                 :as c
       :refer [map+ range+ first nempty? red-for red-fori
-              for lfor reduce join count slice kmap]]
+              for lfor reduce join count slice kw-map]]
     [quantum.core.convert.primitive
       :refer [->int ->long ->double* ->double]]
     [quantum.core.compare
@@ -180,7 +181,7 @@
           (red-fori [row  x
                      ret' ret i]
             ; All rows must be same width
-            (assert (-> row c/count (= width)) (kmap row width i)) ; TODO cheap `validate`
+            (assert (-> row c/count (= width)) (kw-map row width i)) ; TODO cheap `validate`
             (red-fori [elem row _ nil j]
               (set-in!* ret' (->double elem) i j)))
           ret)))))
@@ -341,36 +342,43 @@
 ; TODO have reducers version of these?
 ; TODO use numeric core functions
 
-(defn v-op+ [op v1 v2]
-  (assert (= (count v1) (count v2))) ; TODO maybe use (map+ f v1 v2) ?
-  (->> (range+ 0 (count v1))
-       (map+ #(op (c/get v1 %) (c/get v2 %)))))
+(defn v-op+ [op v0 v1]
+  (assert (= (count v0) (count v1)) (kw-map v0 v1)) ; TODO maybe use (map+ f v1 v2) ?
+  (->> (range+ 0 (count v0))
+       (map+ #(op (c/get v0 %) (c/get v1 %)))))
 
 (defn v-+
   {:tests `{[[1 2 3] [4 5 6]]
             [-3 -3 -3]}}
-  [v1 v2]
-  (v-op+ - v1 v2))
+  [v0 v1]
+  (v-op+ - v0 v1))
 
 (defn v++
   {:tests `{[[1 2 3] [4 5 6]]
             [5 7 9]}}
-  [v1 v2]
-  (v-op+ + v1 v2))
+  [v0 v1]
+  (v-op+ + v0 v1))
 
 (defn v-div+
   {:tests `{[[1 2 3] [4 5 6]]
             [1/4 2/5 1/2]}}
-  [v1 v2] (v-op+ / v1 v2))
+  [v0 v1] (v-op+ / v0 v1))
 
 (defn v*+
   {:tests `{[[1 2 3] [4 5 6]]
             [4 10 2]}}
-  [v1 v2] (v-op+ * v1 v2))
+  [v0 v1] (v-op+ * v0 v1))
 
 (defn vsq+ [v] (v*+ v v))
 
-(defn dot [v1 v2] (num/sum (v*+ v1 v2)))
+(defn dot
+  "Dot product"
+  ([v0 v1] (num/sum (v*+ v0 v1)))
+  ([v0 v1 & vs]
+    (sigma (range+ 0 (c/count (c/first v0)))
+           (fn [i] (->> vs (map+ (fn1 c/get i)) num/product (* (c/get v0 i) (c/get v1 i)))))))
+
+#?(:clj (defalias • dot))
 
 (defn vsum [vs] (reduce v++ (first vs) (rest vs))) ; TODO optimize better
 

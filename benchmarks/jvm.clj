@@ -536,7 +536,7 @@
              +*-static-boxed-reified 1 2))
 
 #_"Resolved:
-- Protocols may be 7.2x slower but they're currently the only viable choice for multi-arg dispatch.
+- Protocols may be 7.2x slower in this case but they're currently the only viable choice for multi-arg dispatch.
 - Explore http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2007/n2216.pdf — perhaps a Clojure(Script)
   implementation might yield the same speed benefits — i.e. *no statistical difference in performance
   with direct dispatch*!
@@ -550,3 +550,44 @@
 ; "Elapsed time: 34638.789978 msecs" Dispatch, Dispatch Inlined
 ; "Elapsed time: 46755.719601 msecs" Protocol
 ; "Elapsed time: 68588.693153 msecs" Hash Dispatch
+
+; ===== SINGLE DISPATCH ===== ;
+; Takeaways: - quantum `get` is just as good as handwritten.
+;            - one protocol dispatch here is ~2x a direct call; often won't have to do N dispatches depending on type info known at compile time
+
+; 5.580126 ns
+(let [v [1 2 3 4 5]]
+  (complete-bench (.get v 3)))
+
+; 7.644827 ns ; will be same as direct dispatch when inlined
+(let [v [1 2 3 4 5]]
+  (complete-bench (quantum.core.collections.core/get v 3)))
+
+; 10.542661 ns
+(let [v [1 2 3 4 5]]
+  (complete-bench (clojure.core/get v 3)))
+
+; 10.686585 ns ; because it's on the fast track
+(let [v [1 2 3 4 5]]
+  (complete-bench (quantum.core.collections.core/get-protocol v 3)))
+
+
+; 7.438636 ns
+(let [v (long-array [1 2 3 4 5])]
+  (complete-bench (clojure.core/aget v 3)))
+
+; 7.649213 ns — statistically equivalent
+(let [v (long-array [1 2 3 4 5])]
+  (complete-bench (quantum.core.data.Array/get v 3)))
+
+; 8.691139 ns
+(let [v (long-array [1 2 3 4 5])]
+  (complete-bench (quantum.core.collections.core/get v 3)))
+
+; 15.832480 ns ; good performance, but not on the fast track
+(let [v (long-array [1 2 3 4 5])]
+  (complete-bench (quantum.core.collections.core/get-protocol v 3)))
+
+; 53.855997 ns ; semi-reflection going on here
+(let [v (long-array [1 2 3 4 5])]
+  (complete-bench (clojure.core/get v 3)))
