@@ -25,6 +25,8 @@
 
 (defonce registered-components (atom {}))
 
+(defn ->sentinel [] #?(:clj (Object.) :cljs #js {}))
+
 ; ===== TYPE PREDICATES =====
 
 (defn atom?    [x] (#?(:clj  instance?
@@ -68,7 +70,7 @@
         :cljs -deref) [this] (getter @x))))
 
 (defn cursor
-  {:todo ["@setter currently doesn't do anything"]}
+  {:todo #{"@setter currently doesn't do anything"}}
   [x getter & [setter]]
   (when-not (#?(:clj  instance?
                 :cljs satisfies?) IDeref x)
@@ -181,3 +183,9 @@
   (print "\n/* " )
   (apply println args)
   (println "*/"))
+
+(defn quote-map-base [make-map kw-modifier ks]
+  `(~make-map
+     ~@(->> ks
+            (map #(vector (list 'quote (kw-modifier %)) %))
+            (apply concat))))
