@@ -15,14 +15,14 @@
     [quantum.core.collections :as coll
       :refer [map+ remove+ red-apply range+
               mutable setm! assoc-in!
-              kmap get-in* ifor get reducei]]
+              kw-map get-in* ifor get reducei]]
     [quantum.core.error
       :refer [->ex TODO]]
     [quantum.core.numeric :as cnum
       :refer [+* inc* pow abs sqrt]]
     [quantum.numeric.core :as num
       :refer [sum sq]]
-    [quantum.numeric.arrays :as a]
+    [quantum.numeric.tensors :as tens]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.string :as str]))
@@ -142,12 +142,13 @@
    The (L1|Manhattan|sum of abs) norm of a vector.
 
    [a b]
-   The (L1|Manhattan|sum of abs) distance between two n-dimensional vectors."
+   The (L1|Manhattan|sum of abs) distance between two n-dimensional vectors.
+   Called `Manhattan distance` based on the gridlike street geography of Manhattan."
   {:implemented-by '{smile.math.distance.ManhattanDistance "faster array implementation"
                      smile.math.distance.SparseManhattanDistance "for sparse arrays"}}
   ([v] (->> v (map+ (fn1 abs)) sum))
   ^{:implemented-by '#{org.apache.commons.math3.ml.distance.ManhattanDistance}}
-  ([a b] (TODO)))
+  ([a b] (sum (tens/v-op+ #(abs (- %1 %2)) a b))))
 
 (defalias manhattan l-1)
 
@@ -169,7 +170,7 @@
 #_(defalias dist      l-2) ; TODO this is fine
 
 (defn cosine-similarity [a b]
-  (/ (a/dot a b)
+  (/ (tens/dot a b)
      (* (l-2 a) (l-2 b))))
 
 (defn dist* [v1 v2] ; TODO I assume this is L-2 between n-dimensional vectors
