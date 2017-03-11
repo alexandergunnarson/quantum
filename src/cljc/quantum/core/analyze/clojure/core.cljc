@@ -14,7 +14,9 @@
                      [quantum.core.type.core     :as tcore])
   #?(:cljs (:require-macros
                      [quantum.core.vars          :as var
-                       :refer [defalias]                  ])))
+                       :refer [defalias]                  ]))
+   #?(:clj (:import
+             (clojure.lang RT Compiler))))
 
 ; ===== TAGS / TYPE HINTS ===== ;
 
@@ -33,7 +35,7 @@
   (cond (or (nil? tag) (class? tag))
         tag
         (symbol? tag)
-        (eval (sanitize-tag :clj tag))
+        (ns-resolve *ns* (sanitize-tag :clj tag))
         (string? tag)
         (Class/forName tag)
         :else (throw (ex-info "Cannot convert tag to class" {:tag tag})))))
@@ -76,7 +78,7 @@
         {:op :local-binding
          :env (@#'ana/inherit-env init env)
          :sym (.sym lb)
-         :tag (or (.tag lb) (and (.hasJavaClass lb) (.getJavaClass lb)))
+         :tag (or (.tag lb) (when (.hasJavaClass lb) (.getJavaClass lb))) ; changed this
          :init init}
         (when (:children opt)
           {:children [[[:init] {}] ;optional
@@ -110,17 +112,42 @@
                 (into {}))}))
 
 #?(:clj
- (defn fast-typeof*
-  {:attribution 'clisk.util}
-  [expr]
-  (let [expr   (list 'fn [] expr)
-        fn-ast ^clojure.lang.Compiler$FnExpr
-               (clojure.lang.Compiler/analyze
-                clojure.lang.Compiler$C/EXPRESSION expr)
-        expr-ast ^clojure.lang.Compiler$BodyExpr
-                 (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
-    (when (.hasJavaClass expr-ast)
-      (.getJavaClass expr-ast)))))
+(defn jvm-typeof
+  ([expr] (jvm-typeof expr nil))
+  ([expr env]
+    (quantum.core.print/pprint-hints expr)
+    (with-bindings {Compiler/LOADER (RT/makeClassLoader)
+                    Compiler/METHOD nil
+                    Compiler/LOCAL_ENV env
+                    Compiler/LOOP_LOCALS nil
+                    Compiler/NEXT_LOCAL_NUM 0
+                    RT/CURRENT_NS @RT/CURRENT_NS
+                    RT/UNCHECKED_MATH @RT/UNCHECKED_MATH
+                    Compiler/LINE_BEFORE (int -1)
+                    Compiler/LINE_AFTER  (int -1)
+                    Compiler/COLUMN_BEFORE (int -1
+
+                      )
+                    Compiler/COLUMN_AFTER  (int -1)
+                    ;RT/WARN_ON_REFLECTION false
+                    RT/DATA_READERS @RT/DATA_READERS}
+      (let [expr   (list 'fn [] expr)
+            fn-ast ^clojure.lang.Compiler$FnExpr
+                   (clojure.lang.Compiler/analyze
+                    clojure.lang.Compiler$C/EXPRESSION expr)
+            expr-ast ^clojure.lang.Compiler$BodyExpr
+                     (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
+        (when (.hasJavaClass expr-ast)
+          (.getJavaClass expr-ast)))))))
+
+#?(:clj
+(defn jvm-typeof-respecting-hints
+  "Like `jvm-typeof` but respects type hints."
+  ([expr] (jvm-typeof-respecting-hints expr nil))
+  ([expr env]
+    (or (some-> expr type-hint tag->class) ; TODO don't assume CLJ
+        (jvm-typeof expr env)))))
+
 
 #?(:clj
 (defn typeof*
@@ -129,25 +156,11 @@
    return value of the expression.
    A `nil` result means that the return value is nil, or that no
    type information is available."
-  ([expr] (tag->class (:tag (clj-ana/analyze expr))))
-  ([expr env] (tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env)))))
+  ([expr         ] (tag->class (:tag (clj-ana/analyze expr))))
+  ([expr env     ] (tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env)))))
   ([expr env opts] (tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env) opts))))))
 
 #?(:clj
 (defmacro typeof
   "Compile-time `typeof*`"
   ([& args] (typeof* ~@args))))
-
-#?(:clj
-(defn typeof**
-  "Like `typeof` but respects type hints."
-  ([expr]
-    (or (some->> expr type-hint tag->class) ; TODO don't assume CLJ
-        (fast-typeof* expr)))
-  ([expr env]
-    (or (some->> expr type-hint tag->class) ; TODO don't assume CLJ
-        (let [tag (typeof* expr env)]
-          (if (= tag java.lang.Object) ; the class
-              ; TODO doesn't accept an env...
-              (fast-typeof* expr) ; because typeof* doesn't always get it right apparently: case in point `'(let [x (identity nil)] (-> (java.nio.ByteBuffer/allocate 8) (.putLong (long x)) .array))`
-              tag))))))
