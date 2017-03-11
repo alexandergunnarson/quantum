@@ -38,12 +38,13 @@
      boolean?])
   (:require
     [clojure.core                  :as core]
+    [quantum.core.compare          :as comp]
     [quantum.core.data.map         :as map
       :refer [split-at]]
     [quantum.core.data.vector      :as vec
       :refer [subsvec]]
     [quantum.core.collections.base :as base
-      :refer [kmap]]
+      :refer [kw-map]]
     [quantum.core.collections.core :as coll
       :refer [reverse key val first rest get slice count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
@@ -54,7 +55,7 @@
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.reducers         :as red
-      :refer [map+ reduce]]
+      :refer [map+ reduce indexed+]]
     [quantum.core.vars             :as var
       :refer [defalias]]
     [quantum.core.type             :as t]
@@ -81,9 +82,6 @@
 ; insert-before-arr [o index val] - insert array of items inside coll
 ; remove-at [o index] - remove one item from index pos
 ; remove-n [o index n] - remove n items starting at index pos
-; triml [o n] - trims n items from left
-; trimr [o n] - trims n items from right
-; trim [o nl nr] - trims nl items from left and nr items from right
 ; rip [o index] - rips coll and returns [pre-coll item-at suf-coll]
 ; sew [pre-coll item-arr suf-coll] - opposite of rip, but with arr
 (defn split [ind coll-0]
@@ -129,6 +127,27 @@
 (defn last-index-of-pred [coll pred]
   (->> coll (last-filteri pred) key))
 
+; TODO move these?
+; TODO implement `max` in terms of reduce generally?
+
+(defn find-max
+  {:example `{(find-max [0 2 1 6 -1 5])
+              [3 6]}}
+  [xs]
+  (->> xs
+       indexed+
+       (reduce (fn [[_ x :as i+x] [i' x' :as i+x']]
+                 (if (or (zero? i') (> x' x))
+                     i+x'
+                     i+x))
+               nil)))
+
+(defn index-of-max
+  {:example `{(index-of-max [0 2 1 6 -1 5])
+              3}}
+  [xs]
+  (first (find-max xs)))
+
 ; ================================================ TAKE ================================================
 ; ============ TAKE-LEFT ============
 (defn takel ; TODO this is actually `takel'`
@@ -157,7 +176,7 @@
             "cdefg"}}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil (kmap super sub))))]
+              (throw (->ex :out-of-bounds nil (kw-map super sub))))]
     (takel-fromi i super)))
 
 (def take-from takel-from)
@@ -175,7 +194,7 @@
             "efg"}}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil (kmap super sub))))
+              (throw (->ex :out-of-bounds nil (kw-map super sub))))
         i-f (+ i (lasti sub))]
     (takel-afteri i-f super)))
 
