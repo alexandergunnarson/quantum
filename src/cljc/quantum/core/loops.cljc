@@ -10,14 +10,15 @@
    [[proteus
       :refer [let-mutable]]])
     [quantum.core.core                :as qcore]
+    [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
       :refer [->ex]]
     [quantum.core.log                 :as log]
     [quantum.core.macros              :as macros
-      :refer [assert-args]]
+      :refer [assert-args defnt #?(:clj defnt')]]
     [quantum.core.reducers.reduce     :as red]
     [quantum.core.fn
-      :refer [rfn]]
+      :refer [rfn <-]]
     [quantum.core.macros.optimization :as opt]
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
@@ -65,7 +66,7 @@
         code `(reduce ~f-final ~ret-i ~coll)]
     code)))
 
-(defn reduce-2
+(defn reduce-pair
   "Like |reduce|, but reduces over two items in a collection at a time.
 
    Its function @func must take three arguments:
@@ -223,19 +224,13 @@
 
                  , where 'v' is a vectorized (range 1000000).
 
-                 22.5% faster!"
-   :todo ["Could be as simple as (->> coll (map+ f) (into ret))"]}
+                 22.5% faster!"}
   [ret bindings & body]
   (assert-args
-    (vector? bindings) "a vector for its binding")
-  `(let [coll# ~(last bindings)
-         [pre# conj# post#] (type/recommended-transient-fns coll#)]
-     (post#
-       (reduce
-         (fn [ret# ~@(butlast bindings)]
-           (conj# ret# (do ~@body)))
-         (pre# ~ret)
-         coll#)))))
+    (vector? bindings) "a vector for its bindings")
+  `(->> ~(last bindings)
+        (<- red/reducer (core/map (rfn [~@(butlast bindings)] ~@body))) ; bootstrapping `map+`
+        (c/join ~ret))))
 
 #?(:clj
 (defmacro for
@@ -328,24 +323,27 @@
      (persistent! v#))))
 
 #?(:clj
-(defmacro fortimes:objects
-  "`dotimes` meets `for`, efficiently wrapped into an object array"
-  [[i n & xs'] & body]
-  (assert (empty? xs'))
-  `(let [n# ~n v# (object-array ~n)]
-     (dotimes [~i n#] (aset v# ~i (do ~@body)))
-     v#)))
-
-#?(:clj
 (defmacro while-let
   "Repeatedly executes body while test expression is true, evaluating the body
    with binding-form bound to the value of test."
   {:source "markmandel/while-let"}
-  [[form test] & body]
-  `(loop [~form ~test]
-     (when ~form
-         ~@body
-         (recur ~test)))))
+  [[sym test] & body]
+  `(loop [~sym ~test]
+     (when ~sym
+       ~@body
+       (recur ~test)))))
+
+#?(:clj
+(defmacro while-let-pred
+  "Repeatedly executes `test` and `body` while `pred` is true of `test`, evaluating the body
+   with binding-form bound to the value of `test`."
+  {:source "markmandel/while-let"}
+  [[sym test pred] & body]
+  `(loop [~sym ~test]
+     (if ~pred
+         (do ~@body
+             (recur ~test))
+         ~sym))))
 
 (defn doeach
   "Like |run!|, but returns @coll.
@@ -365,3 +363,31 @@
   nil)
 
 #?(:clj (set! *unchecked-math* false))
+
+(defn reduce-2
+  "Reduces over two collections at a time."
+  [f init xs0 xs1]
+  (loop [ret init xs0' xs0 xs1' xs1]
+    (if (or (empty? xs0') (empty? xs1'))
+        ret
+        (recur (f ret (first xs0') (first xs1'))
+               (next xs0')
+               (next xs1')))))
+
+#?(:clj
+(defnt' reduce-2:indexed
+  "Reduces over two indexed collections at a time."
+  {:todo #{"Merge with `reduce-2`; collections"
+           "Lazily compile this:
+            8 primitive types + 1 Object type = 9
+            9 * 10 array depths = 90
+            90 + ~8 other indexed types = 98
+            98*98 = 9,604 possibilities
+            We don't want to compute this (the Cartesian product of all indexed types) up front!"}}
+  [^fn? f init #_indexed? #{array-1d? +vec?} xs0 #_indexed? #{array-1d? +vec?} xs1]
+  (let [ct0 (c/count xs0) ct1 (c/count xs1)]
+    (loop [ret init i 0]
+      (if (or (>= i ct0) (>= i ct1))
+          ret
+          (recur (f ret (c/get xs0 i) (c/get xs1 i))
+                 (unchecked-inc i)))))))
