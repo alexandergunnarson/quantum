@@ -115,7 +115,6 @@
 (defn jvm-typeof
   ([expr] (jvm-typeof expr nil))
   ([expr env]
-    (quantum.core.print/pprint-hints expr)
     (with-bindings {Compiler/LOADER (RT/makeClassLoader)
                     Compiler/METHOD nil
                     Compiler/LOCAL_ENV env
