@@ -21,6 +21,7 @@
               repeat repeatedly
               interpose mapcat
               reductions
+              group-by frequencies
               range
               map pmap map-indexed
               partition-all
@@ -40,7 +41,7 @@
               zipmap
               reverse
               conj
-              conj! assoc assoc! dissoc dissoc! disj!
+              conj! assoc assoc! assoc-in dissoc dissoc! disj!
               boolean?
               class
               -])
@@ -109,6 +110,7 @@
 
 ; KV ;
 
+; `reverse` <~> `lodash/reverse`
 (defaliases coll key val reverse)
 
 (#?(:clj definline :cljs defn) map-entry
@@ -129,24 +131,31 @@
 ; ====== COLLECTIONS ====== ;
 
 ; ===== SINGLETON RETRIEVAL ===== ;
+; `get` <~> `lodash/nth` ; TODO `nth` negative returns elem from the end
 #?(:clj (defalias get             coll/get          ))
 #?(:clj (defalias get&            coll/get&         ))
 #?(:clj (defalias nth             coll/nth          ))
 #?(:clj (defalias peek            coll/peek         ))
+; `first` <~> `lodash/head`
 #?(:clj (defalias first           coll/first        ))
 #?(:clj (defalias firstl          coll/firstl       ))
 #?(:clj (defalias firstr          coll/firstr       ))
 #?(:clj (defalias second          coll/second       ))
         (defalias third           coll/third        )
+; `last` <~> `lodash/last`
 #?(:clj (defalias last            coll/last         ))
 #?(:clj (defalias last&           coll/last&        ))
 ; ===== BULK RETRIEVAL ===== ;
+; `rest` <~> `lodash/tail`
 #?(:clj (defalias rest            coll/rest         ))
         (defalias lrest           c/rest            )
+; `butlast` <~> `lodash/initial`
 #?(:clj (defalias butlast         coll/butlast      ))
+; `slice` <~> `lodash/slice`
 #?(:clj (defalias slice           coll/slice        ))
         (defalias subseq          coll/subseq       )
         (defalias subseq-where    c/subseq          )
+#?(:clj (defalias copy            coll/copy         ))
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
 #?(:clj (defalias assoc!          coll/assoc!       ))
@@ -161,7 +170,7 @@
 #?(:clj (defalias update!         coll/update!      ))
 
         (defalias assoc-extend    soc/assoc-extend   )
-        (defalias assocs-in       soc/assocs-in      )
+        (defalias assoc-in        soc/assoc-in       )
         (defalias dissoc-in       soc/dissoc-in      )
         (defalias update-val      soc/update-val     )
         (defalias updates         soc/updates        )
@@ -177,13 +186,20 @@
 #?(:clj (defalias popr          coll/popr         ))
 ; ===== MODIFICATION ===== ;
 #?(:clj (defalias doto!         coll/doto!        ))
+#?(:clj (defalias copy!         coll/copy!        ))
 ; ===== CONTAINMENT PREDICATES ===== ;
 #?(:clj (defalias contains?     coll/contains?    ))
 #?(:clj (defalias containsk?    coll/containsk?   ))
 #?(:clj (defalias containsv?    coll/containsv?   ))
+; `index-of` <~> `lodash/indexOf`
+; TODO `sorted-index-of` <~> `lodash/sortedIndexOf`
 #?(:clj (defalias index-of      coll/index-of     ))
+; `last-index-of` <~> `lodash/lastIndexOf`
+; TODO `sorted-last-index-of` <~> `lodash/sortedLastIndexOf`
 #?(:clj (defalias last-index-of coll/last-index-of))
+; `index-of-pred` <~> `lodash/findIndex`
 #?(:clj (defalias index-of-pred      diff/index-of-pred     ))
+; `last-index-of-pred` <~> `lodash/findLastIndex`
 #?(:clj (defalias last-index-of-pred diff/last-index-of-pred))
 ; ===== SIZE + INDICES ===== ;
 #?(:clj (defalias empty?        coll/empty?       ))
@@ -217,15 +233,18 @@
           "Like into, but for mutable collections"
           [^transient? x coll] (loops/doseq [elem coll] (conj! x elem)) x)
 
+        ; `take` <~> `lodash/take`
         (defalias take                diff/takel              )
         (defalias take+               diff/take+              )
         (defalias ltake               diff/ltake              )
         (defalias takel               diff/takel              )
         (defalias takel+              take+                   )
+        ; `taker` <~> `lodash/takeRight`
         (defalias taker               diff/taker              )
 #?(:clj (defalias taker+              diff/taker+             ))
         (defalias take-nth+           diff/take-nth+          )
         (defalias takel-nth+          diff/takel-nth+         )
+        ; `take-while` <~> `lodash/takeWhile`
         (defalias take-while          diff/take-while         )
         (defalias take-while+         diff/take-while+        )
         (defalias take-after          diff/take-after         )
@@ -236,29 +255,39 @@
         (defalias take-until          diff/take-until         )
         (defalias takel-until-matches diff/takel-until-matches)
 #?(:clj (defalias taker-until         diff/taker-until        ))
+        ; TODO ; `taker-while` <~> `lodash/takeRightWhile`
 
+        ; `drop` <~> `lodash/drop`
         (defalias drop                diff/drop               )
         (defalias drop+               diff/drop+              )
         (defalias dropl               diff/dropl              )
         (defalias ldropl              diff/ldropl             )
         (defalias ldrop               diff/ldropl             )
+        ; `drop-while` <~> `lodash/dropWhile`
         (defalias drop-while+         red/drop-while+         )
+        ; `dropr` <~> `lodash/dropRight`
         (defalias dropr               diff/dropr              )
 #?(:clj (defalias dropr+              diff/dropr+             ))
         (defalias dropr-until         diff/dropr-until        )
+        ; `dropr-while` <~> `lodash/dropRightWhile`
         (defalias dropr-while         diff/dropr-while        )
         (defalias dropr-while-matches diff/dropr-while-matches)
         (defalias ldrop-at            diff/ldrop-at           )
 
         (defalias group-by+           red/group-by+           )
+        ; `flatten` <~> `lodash/flattenDeep`
         (defalias flatten+            red/flatten+            )
         (defalias flatten-1+          red/flatten-1+          )
         (def      lflatten-1          (partial apply concat)  )
+        ; `flatten-1` <~> `lodash/flatten`
         (def      flatten-1           (fn->> flatten-1+ join) )
+        ; TODO  `flatten-n` <~> `lodash/flattenDepth`
         (defalias iterate+            red/iterate+            )
         (defalias reduce-by+          red/reduce-by+          )
 
+        ; `distinct` <~> `lodash/uniq`
         (defalias distinct+           red/distinct+           )
+        ; `distinct-by` <~> `lodash/uniqBy`
         (defalias distinct-by+        red/distinct-by+        )
         (defalias ldistinct-by        mf/ldistinct-by         )
 #?(:clj (defalias ldistinct-by-java   mf/ldistinct-by-java    ))
@@ -270,6 +299,8 @@
         (defalias random-sample+      red/random-sample+      )
         (defalias sample+             red/sample+             )
         (defalias reduce-count        red/reduce-count        )
+        (defalias reduce-min-key      red/reduce-min-key      )
+        (defalias reduce-max-key      red/reduce-max-key      )
 
 #?(:clj (defalias ->array             coll/->array            ))
 #?(:clj (defalias ->arr               coll/->arr              ))
@@ -279,13 +310,15 @@
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 #?(:clj (defalias dotimes  loops/dotimes ))
 #?(:clj (defalias fortimes loops/fortimes))
-#?(:clj (defalias fortimes:objects loops/fortimes:objects))
+#_(:clj (defalias fortimes:objects loops/fortimes:objects))
 #?(:clj (defalias reduce   loops/reduce  ))
 #?(:clj (defalias reducei  loops/reducei ))
 #?(:clj (defalias reduce*  loops/reduce* ))
 #?(:clj (defalias red-for  loops/red-for ))
 #?(:clj (defalias red-fori loops/red-fori))
+        (defalias reduce-pair loops/reduce-pair)
         (defalias reduce-2 loops/reduce-2)
+#?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
 #?(:clj (defalias seq-loop loops/seq-loop))
 #?(:clj (defalias loopr    loops/seq-loop))
 #?(:clj (defalias ifor     loops/ifor    ))
@@ -293,6 +326,7 @@
 #?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
 #?(:clj (defalias for*     loops/for*    ))
 #?(:clj (defalias for+     red/for+      ))
+#?(:clj (defalias fori+    red/fori+     ))
 #?(:clj (defalias fori     loops/fori    ))
 #?(:clj (defalias fori*    loops/fori*   ))
 #?(:clj (defmacro lfor [& args] `(loops/lfor   ~@args)))
@@ -313,7 +347,8 @@
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 (defaliases gen
   repeat lrepeat repeatedly lrepeatedly
-  range range+ lrange rrange lrrange)
+  range range+ lrange rrange lrrange
+  #?(:clj !range:longs) #?(:clj !range:longs&))
 ; _______________________________________________________________
 ; ================== FULL-SEQUENCE TRANSFORMS ===================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -323,11 +358,14 @@
   map-keys map-keys' map-keys+ lmap-keys
   map-vals map-vals' map-vals+ lmap-vals
   #?@(:clj [pmap pmap' pmap-indexed pmap-indexed'])
+  ; `(filter identity xs)` <~> `lodash/compact`
   filter filter' filter+ lfilter
   filteri ffilter ffilteri last-filteri
   filter-keys filter-keys' filter-keys+ filter-keys
   filter-vals filter-vals' filter-vals+ filter-vals
   #?@(:clj [pfilter pfilter'])
+  ; `(remove! #{vs...} xs)` <~> `lodash/pullAll`
+  ; `(remove! pred xs)` <~> `lodash/remove`
   remove remove' remove+ lremove
   remove-keys remove-keys' remove-keys+ lremove-keys
   remove-vals remove-vals' remove-vals+ lremove-vals
@@ -351,7 +389,10 @@
             (reduce (fn [ret in] (conj! ret (f (last ret) in)))
                     (conj! (transient []) init)
                     coll)))
+        ; `partition-all` <~> `lodash/chunk`
+        ; TODO choose what structures to partition into
         (defeager partition-all   red/partition-all+ )
+        (defn each+ [f xs] (->> xs (map+ #(do (f %) %))))
 
 (defn gets [coll indices] (->> indices (map+ #(get coll %)) (join [])))
 ; _______________________________________________________________
@@ -485,16 +526,22 @@
   {:from "clojure.algo.monads"}
   [ss]
   (lazy-seq
-   (when-let [s (seq ss)]
-     (concat (first s) (lflatten (rest s))))))
+    (when-let [s (seq ss)]
+      (concat (first s) (lflatten (rest s))))))
 
+; TODO remove `concatv`
 (defalias concatv catvec)
-; TODO generalize concat
+; `concat` <~> `lodash/concat`
+; TODO `lconcat` -> `ljoin`
 (defalias lconcat c/concat)
 
+; `zip` <~> `lodash/zip`
+; TODO `zip-with` <~> `lodash/zipWith`
 (defn lzip [& args] (->> args (apply interleave) (lpartition-all (count args))))
 (defn zip  [& args] (->> args (apply interleave) (partition-all  (count args))))
 
+; `dezip` <~> `lodash/unzip`
+; TODO `dezip-with` <~> `lodash/unzipWith`
 (defn dezip
   "The inverse of zip. — Unravels a seq of m n-tuples into a
   n-tuple of seqs of length m.
@@ -575,11 +622,12 @@
 
 ; ----- MISCELLANEOUS ----- ;
 
-(defn abs-difference
-  "Returns the absolute difference between a and b.
-   That is, (a - b) union (b - a)."
-  {:out 'Set
-   :todo ["Probably a better name for this."]}
+; `symmetric-difference` <~> `lodash/xor`
+; TODO `symmetric-difference-by` <~> `lodash/xorBy`
+(defn symmetric-difference
+  "Returns the symmetric difference between a and b.
+   That is, (a - b) union (b - a).
+   AKA disjunctive union."
   [a b]
   (set/union
     (set/difference a b)
@@ -726,8 +774,9 @@
         [left]
         [left (takel-after-matches split-at-obj coll)])))
 
-#?(:clj (defalias kmap     base/kmap    ))
-#?(:clj (defalias eval-map base/eval-map))
+#?(:clj (defalias kw-map    base/kw-map   ))
+#?(:clj (defalias quote-map base/quote-map))
+#?(:clj (defalias kw-omap   map/kw-omap   ))
 
 (defn select
   "Applies a list of functions, @fns, separately to an object, @coll.
@@ -839,6 +888,9 @@
 ; TODO unify this
 
 #?(:clj (defalias get-in* coll/get-in*))
+#?(:clj (defalias get-in*& coll/get-in*&))
+#?(:clj (defalias assoc-in!* coll/assoc-in!*))
+#?(:clj (defalias assoc-in!*& coll/assoc-in!*&))
 
 (def get-in-f* #(get %1 %2))
 
@@ -943,6 +995,19 @@
            kfs)))
   ([coll k1 f1 & {:as kfs}]
     (select-as+ coll (assoc kfs k1 f1))))
+
+(defn group-by-into
+  "Like `group-by`, but you can choose what collection to group into."
+  [f init coll]
+  (persistent!*
+    (reduce
+      (fn [ret x]
+        (let [k (f x)]
+          (assoc?! ret k (conj (get ret k []) x))))
+      (transient!* init) coll)))
+
+(defn group-by [f coll] (group-by-into f {} coll))
+(defn group [coll] (group-by identity coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -976,21 +1041,15 @@
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
-; ; /partition-by/
-; ; splits the coll each time f returns a new value
-; ; (partition-by odd? [1 1 1 2 2 3 3])
-; ; => ((1 1 1) (2 2) (3 3)) /lseq/
-
-(defn red-frequencies
+(defn frequencies
   "Like `frequencies`, but uses reducers `reduce` and can choose
    what to reduce into."
-  ([x] (red-frequencies {} x))
+  ([x] (frequencies {} x))
   ([to x]
-  ; TODO ensure `to` is map
-  (persistent!*
-    (reduce (fn [counts x]
-              (assoc?! counts x (inc (or (get counts x) 0))))
-      (transient!* to) x))))
+    (persistent!*
+      (reduce (fn [counts x]
+                (assoc?! counts x (inc (or (get counts x) 0))))
+        (transient!* to) x))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
@@ -1138,7 +1197,7 @@
                         [(dec l) h]
                         [l       h])))
           (let [m (-> h (unchecked-subtract #_-* l) (bit-shift-right #_>> 1) (unchecked-add #_+* l))]
-            (if (c/< (get xs m) x) ; negative favors the left side in |compare|
+            (if (c/< (get xs m) x)
                 (recur (long (unchecked-inc #_inc* m)) (long h))
                 (recur (long l)        (long m))))))))
 ;___________________________________________________________________________________________________________________________________
@@ -1427,7 +1486,7 @@
 
 ; TODO: incorporate |split-at| into the quantum.core.collections/split-at protocol
 
-
+; `seq-ldifference` <~> `lodash/difference(By)?`
 (defn seq-ldifference
   "Like |set/difference| but for seqs.
    Returns what is in @l but not in @r
@@ -1609,6 +1668,26 @@
                                           :cljs js/Number.MIN_SAFE_INTEGER)]))]
     (subvec s from (inc to)))) ; TODO maybe use subseq instead of subvec?
 
+(defn seq->bitmap
+  "Given n unique values in a seq, transforms them into a bitmap."
+  {:example `{(seq->bitmap [:a :b :a :c :a :b])
+              {:positions {:a 0 :b 1 :c 0}
+               :bitmap    [[1.0 0.0 0.0]
+                           [0.0 1.0 0.0]
+                           [1.0 0.0 0.0]
+                           [0.0 0.0 1.0]
+                           [1.0 0.0 0.0]
+                           [0.0 1.0 0.0]]}}}
+  [xs]
+  (let [positions
+         (->> xs distinct+
+                 indexed+
+                 (map+ (fn-> rseq c/vec)) ; TODO not sure why just `rseq` won't work
+                 (join (map/sorted-map))) #_(join {}) ; TODO fix
+        base (repeat (count positions) 0.0)]
+    {:positions positions
+     :bitmap    (->> xs (map #(assoc base (get positions %) 1.0)))}))
+
 ; ===== MUTABILITY ===== ;
 
 (#?(:clj definterface :cljs defprotocol) IMutableReference
@@ -1680,7 +1759,7 @@
   [n percents]
   (let [_ (assert (->> percents (reduce + 0) (<- <= 1)))
         allocated (for [p percents]
-                    (long (num/ceil (* n p)))) ; TODO make not use long
+                    (long (num/ceil (double (* n p))))) ; TODO make not use long or double
         sorted (->> allocated
                     (map-indexed+ vector)
                     (join [])
