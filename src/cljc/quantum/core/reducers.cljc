@@ -15,6 +15,8 @@
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.collections.core :as ccoll]
+    [quantum.core.core
+      :refer [->sentinel]]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
@@ -27,7 +29,7 @@
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
-      :refer [defnt case-env]]
+      :refer [defnt case-env assert-args]]
     [quantum.core.numeric          :as num]
     [quantum.core.type             :as type
       :refer [instance+? array-list? lseq?]]
@@ -316,9 +318,22 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defn #_defcurried map+ [f coll] (folder coll (core/map f)))
+(defn map+ [f coll] (folder coll (core/map f)))
 
 (defn map-indexed+ [f coll] (folder coll (core/map-indexed f)))
+
+(defn pmap-indexed+
+  "Thread-safe `map-indexed+`.
+   Just `map-indexed+` with an `atom` instead of a `volatile`."
+  [f coll]
+  (folder coll
+    (fn [rf]
+      (let [i (atom -1)]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+           (rf result (f (swap! i inc) input))))))))
 
 (defn indexed+
   "Returns an ordered sequence of vectors `[index item]`, where item is a
@@ -326,6 +341,10 @@
   {:attribution "weavejester.medley"}
   [coll]
   (map-indexed+ vector coll))
+
+(defn pindexed+
+  "`map-indexed+` : `indexed+` :: `pmap-indexed+` : `pindexed+`"
+  [coll] (pmap-indexed+ vector coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          MAPCAT          }=====================================================
 ;=================================================={                          }=====================================================
@@ -476,11 +495,8 @@
 ;=================================================={                          }=====================================================
 (defalias take+ ccoll/take+)
 
-(defn #_defcurried take-while+
-  [pred coll] (reducer coll (core/take-while pred)))
-
-(defn take-nth+
-  [n coll] (reducer coll (core/take-nth n)))
+(defn take-while+ [pred coll] (reducer coll (core/take-while pred)))
+(defn take-nth+   [n    coll] (reducer coll (core/take-nth   n   )))
 
 #?(:clj (defalias taker+ ccoll/taker+))
 ;___________________________________________________________________________________________________________________________________
@@ -488,8 +504,7 @@
 ;=================================================={                          }=====================================================
 (defalias drop+ ccoll/drop+)
 
-(defn #_defcurried drop-while+
-  [pred coll] (reducer coll (core/drop-while pred)))
+(defn drop-while+ [pred coll] (reducer coll (core/drop-while pred)))
 
 #?(:clj (defalias dropr+ ccoll/dropr+))
 ;___________________________________________________________________________________________________________________________________
@@ -501,8 +516,7 @@
   /reduce/."
   {:attribution "parkour.reducers"}
   ([keyfn f coll]
-     (let #?(:clj  [sentinel (Object.)] ; instead of nil, because it's unique
-             :cljs [sentinel (array  )])
+     (let [sentinel (->sentinel)]
        (->> (mapcat+ identity [coll [sentinel]])
             (map-state
               (fn [[k acc] x]
@@ -544,8 +558,7 @@
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
   [f eq-f coll]
-  (let  #?(:clj  [sentinel (Object.)] ; instead of nil, because it's unique
-           :cljs [sentinel (array  )])
+  (let [sentinel (->sentinel)]
     (->> coll
          (map-state
            (fn [x x']
@@ -558,6 +571,20 @@
 (defn distinct+ [coll] (folder coll (core/distinct)))
 
 (defn replace+ [smap coll] (folder coll (core/replace smap)))
+
+(defn reduce-extremum-key
+  {:attribution "alexandergunnarson"}
+  [extremum-fn comp-fn xs]
+  (let [sentinel (->sentinel)]
+    (reduce
+      (fn [ret x] (if (identical? ret sentinel)
+                      x
+                      (extremum-fn comp-fn ret x)))
+      sentinel
+      xs)))
+
+(defn reduce-min-key [comp-fn xs] (reduce-extremum-key min-key comp-fn xs))
+(defn reduce-max-key [comp-fn xs] (reduce-extremum-key max-key comp-fn xs))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
@@ -665,43 +692,53 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
+(defn for+:gen-arities-2-3 [bindings kv-ct f-inner main-arity]
+  (cond
+     (= (count bindings) kv-ct)
+     `(~main-arity
+       ([ret# k# v#] (~f-inner ret# [k# v#])))
+     (= (count bindings) (inc kv-ct))
+     `(([ret# kv#] (~f-inner ret# (first kv#) (second kv#)))
+       ~main-arity)
+     :else (throw (->ex "Too many binding values for `for+`:" {:bindings bindings}))))
+
+(defn for+:gen-f [f f-inner arities-2-3]
+  `(fn [~f]
+     (fn ~f-inner
+       ([] (~f))
+       ~@arities-2-3)))
+
 #?(:clj
 (defmacro for+
-  "Reducer comprehension, behaves like \"for\" but yields a reducible/foldable collection.
-   Leverages kv-reduce when destructuring and iterating over a map."
-  {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"
+  "Reducer comprehension. Like `for` but yields a reducible/foldable collection."
+  {:origin      "Christophe Grand, https://gist.github.com/cgrand/5643767"
+   :adapted-by  "alexandergunnarson"
    :performance "51.454164 ms vs. 72.568330 ms for |doall| with normal (lazy) |for|"}
-  [seq-exprs body-expr]
-  (letfn [(emit-fn [form]
-          (fn [sub-expr [bind expr & mod-pairs]]
-            (let [foldable (not-any? (comp #{:while} first) mod-pairs)
-                  kv-able (and (vector? bind) (not-any? #{:as} bind)
-                            (every? #(and (symbol? %) (not= % '&)) (take 2 bind)))
-                  [kv-args kv-bind]
-                  (if kv-able
-                    [(take 2 (concat bind (repeat `_#)))
-                     (if (< 2 (count bind))
-                       [(subvec bind 2) nil]
-                       [])]
-                    `[[k# v#] [~bind [k# v#]]])
-                  combiner (if kv-able
-                             (if foldable `folder `reducer)
-                             (if foldable `folder `reducer)) ; (if foldable `r/folder `r/reducer)
-                  f   (gensym "f__")
-                  ret (gensym "ret__")
-                  body (quantum.core.macros/do-mod mod-pairs
-                         (form f ret sub-expr)
-                         :skip ret
-                         :stop `(reduced ~ret))]
-              `(~combiner ~expr
-                 (fn [~f]
-                   (fn
-                     ([] (~f))
-                     ([~ret ~bind] ~body)
-                     ([~ret ~@kv-args] (let ~kv-bind ~body))))))))]
-  (quantum.core.macros/emit-comprehension &form
-    {:emit-other (emit-fn (partial list `reduce)) :emit-inner (emit-fn list)}
-    seq-exprs body-expr))))
+  [bindings & body]
+  (assert-args (vector? bindings) "a vector for its bindings")
+  (let [f       (gensym "f")
+        f-inner (gensym "f-inner")
+        main-arity  `([ret# ~@(butlast bindings)] (~f ret# (do ~@body)))
+        arities-2-3 (for+:gen-arities-2-3 bindings 2 f-inner main-arity)]
+   `(folder ~(last bindings) ~(for+:gen-f f f-inner arities-2-3)))))
+
+#?(:clj
+(defmacro fori+*
+  [atomic-container atomic-mutator bindings & body]
+  (assert-args (vector? bindings) "a vector for its bindings")
+  (let [i*      (gensym "i*")
+        i       (last bindings)
+        f       (gensym "f")
+        f-inner (gensym "f-inner")
+        main-arity `([ret# ~@(-> bindings butlast butlast)]
+                      (let [~i (~atomic-mutator ~i* inc)]
+                        (~f ret# (do ~@body))))
+        arities-2-3 (for+:gen-arities-2-3 bindings 3 f-inner main-arity)]
+   `(folder ~(-> bindings butlast last)
+      (let [~i* (~atomic-container -1)] ~(for+:gen-f f f-inner arities-2-3))))))
+
+#?(defmacro fori+  "Like `for+`, but indexed."               [& args] `(fori+* volatile! vswap! ~@args))
+#?(defmacro pfori+ "Like `for+`, but thread-safely indexed." [& args] `(fori+* atom       swap! ~@args))
 
 ; <<<<------ ALREADY REDUCED ------>>>>
 #?(:clj
