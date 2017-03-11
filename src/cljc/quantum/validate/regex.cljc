@@ -1,16 +1,10 @@
 (ns quantum.validate.regex
-          (:require [#?(:clj  clojure.core
-                        :cljs cljs.core   )   :as core ]
+          (:require [clojure.core             :as core]
                     [quantum.core.collections :as coll
-                      :refer [#?@(:clj [fori seq-loop])
-                               ffilter break]          ]
+                      :refer [fori seq-loop
+                              ffilter break]]
                     [quantum.core.fn          :as fn
-                      :refer [#?@(:clj [fn->])]        ])
-  #?(:cljs (:require-macros
-                    [quantum.core.collections :as coll
-                      :refer [fori seq-loop]           ]
-                    [quantum.core.fn          :as fn
-                      :refer [fn->]                    ]))
+                      :refer [fn->]])
   #?(:clj  (:import java.util.regex.Matcher
                     java.util.regex.Pattern
                     java.net.IDN
