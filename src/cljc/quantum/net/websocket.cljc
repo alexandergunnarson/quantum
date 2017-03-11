@@ -6,6 +6,7 @@
             [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
             [quantum.core.core
               :refer [lens ?deref]]
+            [quantum.core.data.complex.json          :as json]
             [quantum.core.error                      :as err
               :refer [->ex try-times]]
             [quantum.core.fn                         :as fn
@@ -33,10 +34,10 @@
 
 #?(:clj
 (defmethod handle :default ; Fallback
-  [{:as ev-msg :keys [event id ?data ring-req ?reply-fn send-fn]}]
+  [{:as ev-msg :keys [event id client-id ?data ring-req ?reply-fn send-fn]}]
   (let [session (:session ring-req)
         uid     (:uid     session)]
-    (log/pr :debug "Unhandled event:" ev-msg "from" uid)
+    (log/ppr :debug (str "Unhandled event from " uid "(" client-id ")") ev-msg)
 
     (when ?reply-fn
       (log/pr :debug "Responding to callback")
@@ -96,6 +97,19 @@
           (when (nil? (apply put! args-f))
             (throw (->ex "WebSocket apparently not open for message")))))))
 
+(deftype JSONPacker []
+  taoensso.sente.interfaces/IPacker
+  (pack   [_ x] (json/->json x))
+  (unpack [_ s]
+    (let [unpacked (json/json-> s)]
+      (if (sequential? unpacked)
+          (if (-> unpacked first string?) ; assume it's an event ID
+              (vec (cons (-> unpacked first keyword) (rest unpacked)))
+              (vec unpacked))
+          unpacked))))
+
+(def json-packer (JSONPacker.))
+
 (defrecord
   ^{:doc "A WebSocket-channel abstraction of Sente's functionality.
 
@@ -113,7 +127,7 @@
             current browsers is RFC 6455 (supported by Firefox 11+, Chrome 16+,
             Safari 6, Opera 12.50, and IE10). Don't use previous versions."]}
   ChannelSocket
-  [endpoint host #?(:cljs port) chan chan-recv send-fn chan-state type packer
+  [endpoint #?(:cljs [port host]) chan chan-recv send-fn chan-state type packer
    stop-fn post-fn get-fn handler
    connected-uids]
   component/Lifecycle
@@ -123,7 +137,7 @@
             endpoint  (or endpoint "/chan")
             handler   (or handler  #'handle*)]
         (try
-          (log/prl ::debug "Starting channel-socket with:" endpoint host #?(:cljs port) type packer connected-uids)
+          (log/prl ::debug "Starting channel-socket with:" endpoint #?@(:cljs [host port]) type packer connected-uids)
           (validate endpoint string?)
           (validate handler  (s/or* fn?  (s/and var? (fn-> deref fn?))))
           (validate type     (s/or* nil? #{:auto :ajax :ws}))
@@ -131,8 +145,9 @@
                        (validate (:type server) #{:aleph :immutant}))
              :cljs (do (validate host string?) ; technically, valid hostname
                        (validate port integer?))) ; technically, valid port
-
-          (let [packer (or packer :edn)
+          (let [packer (case packer (nil :edn) :edn
+                                    :json      json-packer
+                                    packer) ; let Sente handle it, I say
                 {:keys [chsk ch-recv send-fn state] :as socket}
                  (ws/make-channel-socket!
                    #?(:clj (case (:type server)
