@@ -9,7 +9,7 @@
                      [quantum.net.http                     :as http]
                      [quantum.core.paths                   :as paths]
                      [quantum.core.collections             :as coll
-                       :refer [kmap join reduce map+ val assoc-if nnil?]]
+                       :refer [kw-map join reduce map+ val assoc-if nnil?]]
                      [quantum.core.error
                        :refer [TODO ->ex]]
                      [quantum.core.fn                      :as fn
@@ -43,7 +43,7 @@
   ([url-type k {:keys [append method query-params body multipart]
        :or {method :get
             query-params {}}}]
-   (log/pr ::debug "AMAZON REQUEST:" (kmap k url-type append method query-params method))
+   (log/pr ::debug "AMAZON REQUEST:" (kw-map k url-type append method query-params method))
     (#?(:clj  identity
         :cljs go)
       (-> {:url          (if append

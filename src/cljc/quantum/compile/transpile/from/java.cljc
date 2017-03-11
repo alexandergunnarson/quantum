@@ -7,7 +7,7 @@
     [quantum.core.collections.zippers        :as zip]
     [quantum.core.collections                :as coll
       :refer [postwalk prewalk zip-prewalk take-until update-last seq-nor
-              containsv? popl popr kmap nnil? nempty?]]
+              containsv? popl popr kw-map nnil? nempty?]]
     [quantum.core.convert                    :as conv
       :refer [->name]                                 ]
     [quantum.core.convert.primitive          :as pconv]

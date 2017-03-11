@@ -10,7 +10,7 @@
     [quantum.core.collections :as coll
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
               flatten-1 lflatten-1 concatv nnil? nempty?
-              map+ map lmap map-indexed kmap index-of index-of-pred
+              map+ map lmap map-indexed kw-map index-of index-of-pred
               flatten-1 each popl popr slice butlast last drop ldrop
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
     [quantum.core.async       :as async
@@ -220,7 +220,7 @@
                     measure-duration (-> music first count-this-measure)]
                 (doseq [line music]
                   (validate (count-this-measure line) (fn1 = measure-duration)))))]
-      (assoc (kmap music start-measure)
+      (assoc (kw-map music start-measure)
              :num-measures (- num-all-measures initial-measure-ct)))))
 
 (def articulations->articulation-name
@@ -336,7 +336,7 @@
                             nil       nil)
         pitch         (keyword (str note octave'))
         pitch-int     (delay (-> pitches (get pitch) (validate (fn1 t/integer?))))]
-    (kmap note note-duration duration relative-duration octave' pitch pitch-int modwheel chan velocity tie?)))
+    (kw-map note note-duration duration relative-duration octave' pitch pitch-int modwheel chan velocity tie?)))
 
 (defonce stop? (atom false))
 
@@ -388,11 +388,11 @@
   (red-for [note* measure
             {:keys [measure-ties measure-ops]} {:measure-ties bar-ties :measure-ops []}]
     (let [{:keys [note note-duration duration relative-duration octave' pitch-int modwheel chan velocity tie?] :as setup}
-          (set-up-measure note* (kmap octave instrument normal-chan base-duration))]
+          (set-up-measure note* (kw-map octave instrument normal-chan base-duration))]
       (if (= \- note) ; rest
           {:measure-ties bar-ties
            :measure-ops  (concatv measure-ops [[:wait chan duration]])}
-          (let [note-genned (gen-ops-for-note (assoc (kmap chan velocity duration tie? measure-ties scheduler) :pitch @pitch-int))
+          (let [note-genned (gen-ops-for-note (assoc (kw-map chan velocity duration tie? measure-ties scheduler) :pitch @pitch-int))
                 note-duration-difference-op ; E.g. for staccatos
                  (let [diff (- duration note-duration)]
                    (cond (zero? diff)
@@ -417,7 +417,7 @@
     (let [measure (-> line :measures (get i-measure))
           measure-genned
             (gen-ops-for-measure measure line
-              (assoc (kmap base-duration scheduler bar-ties)
+              (assoc (kw-map base-duration scheduler bar-ties)
                      :normal-chan (get normal-chans i-line)))]
       {:bar-ties (:measure-ties measure-genned) ; overwritten
        :bar-ops  (conj bar-ops (:measure-ops measure-genned))})))
@@ -428,7 +428,7 @@
   (:ops
     (red-for [i-measure (range start-measure num-measures)
               {:keys [ties ops]} {:ties {} :ops []}]
-      (let [line-genned (gen-ops-for-bar (kmap music base-duration scheduler normal-chans i-measure ties ops))]
+      (let [line-genned (gen-ops-for-bar (kw-map music base-duration scheduler normal-chans i-measure ties ops))]
         {:ties (:bar-ties line-genned) ; overwritten
          :ops  (conj ops (:bar-ops line-genned))}))))
 
@@ -452,7 +452,7 @@
   (swap! curr-times empty)
   (let [normal-chans (config-lines! music)
         scheduler    (-> @res/systems ::system :sys-map (get scheduler-type))
-        ops        (gen-ops (kmap music num-measures start-measure base-duration scheduler normal-chans))
+        ops        (gen-ops (kw-map music num-measures start-measure base-duration scheduler normal-chans))
         start-time (if scheduler-type
                        (long (+ (convert 0.5 :sec :nanos) (System/nanoTime))) ; give 0.5 sec to insert opcodes just in case ; TODO this is buggy
                        (-> ^CoreMidiReceiver @out .getMidiDevice .getMicrosecondPosition))

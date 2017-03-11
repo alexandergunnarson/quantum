@@ -11,7 +11,7 @@
     [quantum.core.macros                 :as macros
       :refer [#?(:clj defnt)]]
     [quantum.core.collections            :as core
-      :refer [#?(:clj kmap) in?]]
+      :refer [#?(:clj kw-map) in?]]
     [quantum.core.error                  :as err
       :refer [->ex #?(:clj throw-unless)]]))
 
@@ -69,7 +69,7 @@
         [:clj  :c-sharp]
         ; [:clj :cpp]
         })
-    (->ex :invalid "From-To language combination invalid" (kmap from to)))
+    (->ex :invalid "From-To language combination invalid" (kw-map from to)))
 
   (when (= [from to] [:clj :c-sharp])
     (log/pr :warn "Clojure -> C-Sharp transpiler is pre-alpha."))

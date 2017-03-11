@@ -4,7 +4,7 @@
     [quantum.core.analyze.clojure.predicates :as anap ]
     [quantum.core.data.map                   :as map  ]
     [quantum.core.collections                :as coll
-      :refer [containsv? kmap popr popl nempty? nnil? in? dropl]]
+      :refer [containsv? kw-map popr popl nempty? nnil? in? dropl]]
     [quantum.core.convert                    :as conv
       :refer [->name]]
     [quantum.core.error                      :as err
@@ -225,9 +225,9 @@
                    _ (println "EXPRS-T" exprs-t)
                     body     (butlast exprs-t)
                     ret-expr (last    exprs-t)
-                    _ (println (kmap ret-expr))
+                    _ (println (kw-map ret-expr))
                     ret-expr-final (add-return-statements ret-expr)
-                    _ (println (kmap ret-expr-final))]
+                    _ (println (kw-map ret-expr-final))]
                 (concat (list spec-sym)
                         (list pred)
                         body

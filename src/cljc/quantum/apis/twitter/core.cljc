@@ -36,7 +36,7 @@
   ([req]
     (request! (default-username) (default-app) req)) ; For experimentation purposes
   ([email app {:as request :keys [url method query-params timestamp]}]
-    (when (= url "https://api.twitter.com/1.1/statuses/user_timeline.json") (log/pr ::init-debug (kmap email app request)))
+    (when (= url "https://api.twitter.com/1.1/statuses/user_timeline.json") (log/pr ::init-debug (kw-map email app request)))
     (let [_ (assert (nnil? email) #{email})
           _ (assert (nnil? app  ) #{app  })
           api-key     (auth/datum :twitter email :apps app :api-key)
