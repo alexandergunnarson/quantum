@@ -56,7 +56,7 @@
     [quantum.core.type             :as type
       :refer [transient!* persistent!* transient? editable?]]
     [quantum.core.loops            :as loops
-      :refer [reduce-2 reduce]]))
+      :refer [reduce-pair reduce]]))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          ASSOC           }=====================================================
@@ -141,7 +141,7 @@
   {:attribution "Alex Gunnarson"
    :todo ["Probably updates and update are redundant"]}
   ([coll & kfs]
-    (reduce-2 ; TODO This is inefficient
+    (reduce-pair ; TODO This is inefficient
       (fn [ret k f] (update ret k f))
       coll
       kfs)))
@@ -196,7 +196,18 @@
         (apply f (get m k) args))))
 
 ;--------------------------------------------------{         ASSOC-IN         }-----------------------------------------------------
-(defn assoc-in [coll ks v] (update-in coll ks (constantly v)))
+
+(defn assoc-in
+  {:usage "(assocs-in ['file0' 'file1' 'file2']
+             [0] 'file10'
+             [1] 'file11'
+             [2] 'file12')"}
+  ([coll ks v] (update-in coll ks (constantly v)))
+  ([coll ks v & kvs]
+    (reduce-pair ; this is inefficient
+      (fn [ret k v] (assoc-in ret k v))
+      (assoc-in coll ks v)
+      kvs)))
 
 (defnt assoc-in!
   "Associates a value in a nested associative structure, where ks is a sequence of keys
@@ -206,17 +217,6 @@
   {:attribution "flatland.useful"}
   ([^atom? m ks obj] (swap! m assoc-in ks obj))
   ([m ks v] (update-in! m ks (constantly v))))
-
-(defn assocs-in
-  {:usage "(assocs-in ['file0' 'file1' 'file2']
-             [0] 'file10'
-             [1] 'file11'
-             [2] 'file12')"}
-  [coll & kvs]
-  (reduce-2 ; this is inefficient
-    (fn [ret k v] (assoc-in ret k v))
-    coll
-    kvs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================
@@ -244,7 +244,7 @@
               (assoc m k new-n))))
     m))
 
-(defn updates-in [coll & kfs] (reduce-2 update-in coll kfs)) ; TODO `reduce-2` is inefficient
+(defn updates-in [coll & kfs] (reduce-pair update-in coll kfs)) ; TODO `reduce-pair` is inefficient
 
 (defn re-assoc [coll k-0 k-f]
   (if (containsk? coll k-0)
@@ -253,7 +253,7 @@
          (dissoc k-0))
       coll))
 
-(defn re-assocs [coll & kfs] (reduce-2 re-assoc coll kfs)) ; TODO `reduce-2` is inefficient
+(defn re-assocs [coll & kfs] (reduce-pair re-assoc coll kfs)) ; TODO `reduce-pair` is inefficient
 
 (defn assoc-with
   "Like |merge-with| but for |assoc|."
