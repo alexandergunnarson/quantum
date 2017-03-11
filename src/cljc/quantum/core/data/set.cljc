@@ -20,6 +20,7 @@
 ; ============ STRUCTURES ============
 
 #?(:clj (defalias ordered-set  oset/ordered-set))
+#?(:clj (defalias oset         ordered-set))
 #?(:clj (defalias c-sorted-set ftree/counted-sorted-set)) ; sorted set that provides log-n nth
 (defalias sorted-set+    avl/sorted-set)
 (defalias sorted-set-by+ avl/sorted-set-by)
@@ -52,6 +53,9 @@
 
 ; ============ OPERATIONS ============
 
+; `union` <~> `lodash/union`
+; TODO `union-by` <~> `lodash/unionBy`
+; TODO `union-with` <~> `lodash/unionWith`
 ; TODO use |clojure.data.int-map/union, intersection, difference| for int sets and dense int sets
 ; Benchmark these
 #?(:clj
@@ -89,6 +93,9 @@
   ([s0 s1 & ss]
     (reduce punion (punion s0 s1) ss))))
 
+; `intersection` <~> `lodash/intersection`
+; TODO `intersection-by` <~> `lodash/intersectionBy`
+; TODO `intersection-with` <~> `lodash/intersectionWith`
 (defalias intersection set/intersection)
 
 (defalias difference   set/difference  )
