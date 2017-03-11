@@ -1,8 +1,6 @@
 (ns quantum.core.macros.transform
   (:require
     [fast-zip.core                           :as zip]
-    [clojure.walk
-      :refer [postwalk]]
  #?(:clj [clojure.jvm.tools.analyzer         :as clj-ana])
     [quantum.core.analyze.clojure.core       :as ana
       :refer [type-hint]]
@@ -12,7 +10,7 @@
     [quantum.core.macros.optimization        :as opt]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set
-              zip-reduce* default-zipper nnil?]]
+              zip-reduce* default-zipper nnil? postwalk]]
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
@@ -141,7 +139,7 @@
       #?(:clj  (if (or (anap/hinted-literal? arg) ; can't hint a literal
                        (type-hint arg))
                    arg
-                   (if-let [hint (ana/typeof* arg env)]
+                   (if-let [hint (ana/jvm-typeof arg env)]
                      (if (= hint Object) ; Object class
                          arg ; ignore it for now
                          (cmacros/hint-meta arg hint))
