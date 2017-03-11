@@ -3,7 +3,7 @@
   quantum.db.datomic.core
   (:refer-clojure :exclude
     [assoc assoc! dissoc dissoc! conj conj! disj disj!
-     update merge if-let for doseq nth])
+     update merge if-let for doseq nth filter])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -11,7 +11,7 @@
     [datascript.core            :as mdb]
     [com.stuartsierra.component :as component]
     [quantum.core.collections   :as coll
-      :refer [join for kmap nnil? nempty?
+      :refer [join for kw-map nnil? nempty?
               filter-vals+ remove-vals+ map+ remove+ remove' nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
@@ -189,6 +189,13 @@
 
 (defalias filtered? is-filtered)
 
+(defn filter
+  ([pred] (filter (->db) pred))
+  ([db pred]
+    (let [db (->db db)]
+      (cond           (mdb? db) (mdb/filter db pred)
+            #?@(:clj [(db?  db) (db/filter  db pred)])))))
+
 (defn with
   ([tx-data] (with (->db) tx-data))
   ([db tx-data]
@@ -242,7 +249,47 @@
 (defn ea->v [db e a] (first (q [:find ['?v] :where [e a '?v]] db)))
 (defn kq [k a] [:find ['?v] :where ['?e :db/key k] ['?e a '?v]])
 
-; ===== SCHEMAS =====
+; ===== DATOMS ===== ;
+
+(defn ->ident [db x]
+  (cond (mdb? db)
+        x
+        #?@(:clj [(db? db)
+                  (db/ident db x)])
+        :else (throw (ex-info "Unsupported db to look up ident" {:db db :ident x}))))
+
+; TODO `defnt` these
+(defn ->e [datom]
+  (if (vector? datom)
+      (get datom 0)
+      (:e datom)))
+
+(defn ->a [datom]
+  (if (vector? datom)
+      (get datom 1)
+      (:a datom)))
+
+(defn ->v [datom]
+  (if (vector? datom)
+      (get datom 2)
+      (:v datom)))
+
+(defn ->t [datom]
+  (if (vector? datom)
+      (get datom 3)
+      (:t datom)))
+
+(defn ident= [db attr-0 attr-1]
+  (let [attr-0 (->ident db attr-0)
+        attr-1 (->ident db attr-1)]
+    (= attr-0 attr-1)))
+
+(defn datom->seq [datom]
+  (if (vector? datom)
+      datom
+      [(->e datom) (->a datom) (->v datom) (->t datom)]))
+
+; ===== SCHEMAS ===== ;
 
 (def ^{:doc "See also Datomic's documentation."}
   allowed-types
@@ -308,6 +355,7 @@
          (<- db/tx-range nil nil)
          seq))))
 
+; TODO deprecate this in favor of `attributes`
 (defn schemas
   ([] (schemas (->db)))
   ([db]
@@ -385,26 +433,27 @@
           datascript? (or datascript? (mconn? conn-f))
           part-f      (when-not datascript?
                         (or part :db.part/db))
-          type        (name  (:datomic:schema/type   schema))
-          unique      (name+ (:datomic:schema/unique schema))]
+          type        (name  (:type   schema))
+          unique      (name+ (:unique schema))]
       ; Partitions are not supported in DataScript (yet)
       (when-not datascript? (validate part-f nnil?))
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
                                      (tempid conn-f part-f))
-            :db/ident              (:datomic:schema/ident schema)
+            :db/ident              (:ident schema)
             :db/valueType          (c/keyword "db.type"        type)
-            :db/cardinality        (c/keyword "db.cardinality" (name (:datomic:schema/cardinality schema)))
-            :db/doc                (:datomic:schema/doc        schema)
-            :db/fulltext           (when-let [v (:datomic:schema/full-text? schema)]
+            :db/cardinality        (c/keyword "db.cardinality" (name (:cardinality schema)))
+            :db/doc                (:doc        schema)
+            :db/fulltext           (when-let [v (:full-text? schema)]
                                      (validate type (fn1 = "string")) v)
             :db/unique             (when unique
                                      (validate type (fn1 not= "ref"))
                                      (c/keyword "db.unique" unique))
-            :db/isComponent        (when-let [v (:datomic:schema/component? schema)]
-                                     (validate type (fn1 = "ref")) v)
-            :db/index              (:datomic:schema/index?     schema)
+            :db/isComponent        (let [v (:component? schema)]
+                                     (when v (validate type (fn1 = "ref")))
+                                     v)
+            :db/index              (:index?     schema)
             :db.install/_attribute part-f
-            :db/noHistory          (:datomic:schema/no-history? schema)}
+            :db/noHistory          (:no-history? schema)}
            (filter-vals+ nnil?)
            (join {})
            (#(if (and datascript? ; DataScript only allows ref value-types
@@ -501,7 +550,10 @@
   [eid & kvs] (validated->txn (apply hash-map :db/id eid kvs)))
 
 (defn assoc! [& args]
-  (transact! [(apply assoc args)]))
+  (let [?conn (first args)]
+    (if ((fn-or #?(:clj conn?) mconn?) ?conn)
+        (transact! ?conn [(apply assoc (rest args))])
+        (transact! [(apply assoc args)]))))
 
 (defn dissoc
   "Transaction function which retracts the attributes (@kvs)
@@ -608,7 +660,7 @@
            1 [[] [] (nth prelists 0)]
            2 [(nth prelists 0) [] (nth prelists 1)]
            3 prelists
-           (throw (->ex "More vectors than [requires, imports, arglist] found for dbfn" (kmap args))))]
+           (throw (->ex "More vectors than [requires, imports, arglist] found for dbfn" (kw-map args))))]
     `(db/function
        '{:lang     :clojure
          :requires ~(into ['[datomic.api :as api]] requires)
@@ -826,7 +878,7 @@
 ;           schema-name (name      schema)
 ;           result (crypto/encrypt :aes val-
 ;                    {:password (System/getProperty (str "password:" schema-ns "/" schema-name))
-;                     :opts (kmap sensitivity)})]
+;                     :opts (kw-map sensitivity)})]
 ;       (if entity?
 ;           (let [{:keys [encrypted salt key]} result]
 ;             {schema             (->> encrypted (crypto/encode :base64-string))
@@ -855,7 +907,7 @@
 ;               {:key         key-
 ;                :salt        salt
 ;                :password    (System/getProperty (str "password:" schema-ns "/" schema-name))
-;                :opts (kmap sensitivity)})]
+;                :opts (kw-map sensitivity)})]
 ;       (if string-decode?
 ;           (String. result java.nio.charset.StandardCharsets/ISO_8859_1)
 ;           result))))
@@ -1223,7 +1275,7 @@
          {:successful? true
           :result (->> txn-data
                        (map (fn [^datomic.Datom x] (->> x .e (datomic.api/entity db-as-of-txn-time-t))))
-                       (filter filter-fn))})
+                       (coll/filter filter-fn))})
      (catch Throwable e
        (if-let [cause (-> e .getCause)
                 _ (instance? clojure.lang.ExceptionInfo cause)
@@ -1264,19 +1316,21 @@
 ;                               (fn->> (join {}))))))))
 
 
-; #_(defn rollback
-;   "Reassert retracted datoms and retract asserted datoms in a transaction,
-;   effectively \"undoing\" the transaction.
+#?(:clj
+(defn rollback!
+  "Reassert retracted datoms and retract asserted datoms in a transaction,
+  effectively \"undoing\" the transaction.
 
-;   WARNING: *very* naive function!"
-;   {:origin "Francis Avila"}
-;   [conn tx-id]
-;   (let [tx-log (-> @db/conn datomic.api/log
-;                    (datomic.api/tx-range tx-id nil) first) ; find the transaction
-;         tx-eid   (-> tx-log :t datomic.api/t->tx) ; get the transaction entity id
-;         newdata (->> tx-log :data  ; get the datoms from the transaction
-;                      (remove (fn-> :e (= tx-eid))) ; remove transaction-metadata datoms
-;                      ; invert the datoms add/retract state.
-;                      (map #(do [(if (:added %) :db/retract :db/add) (:e %) (:a %) (:v %)]))
-;                      reverse)] ; reverse order of inverted datoms.
-;     @(d/transact conn newdata)))
+  WARNING: *very* naive function!
+  TODO make `rollback` function which uses `with`"
+  {:origin "Francis Avila"}
+  [conn tx-id]
+  (let [tx-log (-> conn datomic.api/log
+                   (datomic.api/tx-range tx-id nil) first) ; find the transaction
+        tx-eid   (-> tx-log :t datomic.api/t->tx) ; get the transaction entity id
+        newdata (->> tx-log :data  ; get the datoms from the transaction
+                     (remove (fn-> :e (= tx-eid))) ; remove transaction-metadata datoms
+                     ; invert the datoms add/retract state.
+                     (map #(do [(if (:added %) :db/retract :db/add) (:e %) (:a %) (:v %)]))
+                     reverse)] ; reverse order of inverted datoms.
+    (transact! conn newdata))))
