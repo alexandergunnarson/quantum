@@ -40,7 +40,6 @@
                               :timezone (get props "user.timezone")
                               :country  (get props "user.country" )}
      :os                     {:arch                 (.getArch                os) ; same as "os.arch"
-                              :available-processors (.getAvailableProcessors os)
                               :name                 (.getName                os) ; same as "os.name"
                               :version              (.getVersion             os) ; same as "os.version"
                               :patch-level          (get props "sun.os.patch.level")}
@@ -64,10 +63,12 @@
                                     :url   (get props "java.vendor.url.bug")}}
      :net                    {:http-non-proxy-hosts (when-let [h (get props "http.nonProxyHosts")] (set (str/split h #"\|" )))
                               :ftp-non-proxy-hosts  (when-let [h (get props "ftp.nonProxyHosts" )] (set (str/split h #"\|" )))}
-     :machine                {:name             (.getName mx)
-                              :endianness       (get props "sun.cpu.endian")
-                              :list?            (get props "sun.cpu.isalist")
-                              :arch-data-model  (get props "sun.arch.data.model")}
+     :machine                {:name              (.getName mx)
+                              :endianness        (get props "sun.cpu.endian")
+                              :list?             (get props "sun.cpu.isalist")
+                              :arch-data-model   (get props "sun.arch.data.model")
+                              :total-ram-size:gb (-> (.getTotalPhysicalMemorySize os) (/ 1024 1024 1024) double) ; TODO this is particular to certain VMs? ; http://stackoverflow.com/questions/5512378/how-to-get-ram-size-and-size-of-hard-disk-using-java
+                              :cpu-cores         (.getAvailableProcessors os)} ; TODO this is more of a guess
      :runtime               {:name            (get props "java.runtime.name"   )
                              :runtime-version (get props "java.runtime.version") ; A more specific version like -b14
                              :version         (get props "java.version"        )
@@ -115,7 +116,7 @@
                    "Linux" :linux
                    :unknown))
      :clj
-      (let [os-0 (-> info :os :name str/->lower)]
+      (let [os-0 (some-> info :os :name str/->lower)]
         (condpc #(containsv? %1 %2) os-0
           "win"                       :windows
           "mac"                       :mac
