@@ -1,5 +1,19 @@
 (ns quantum.core.data.string
-  #?(:clj (:import com.carrotsearch.hppc.CharArrayDeque)))
+   (:import #?(:clj  com.carrotsearch.hppc.CharArrayDeque)
+            #?(:cljs goog.string.StringBuffer)))
+
+; TODO investigate http://ahmadsoft.org/ropes/ : A rope is a high performance replacement for Strings. The datastructure, described in detail in "Ropes: an Alternative to Strings", provides asymptotically better performance than both String and StringBuffer
+
+(defn !str
+  "Creates a mutable string."
+  []
+  #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
+
+#?(:clj
+(defn !sync-str
+  "Creates a synchronized mutable string."
+  []
+  (StringBuffer.)))
 
 ; What about structural sharing with strings?
 ; Wouldn't there have to be some sort of compact immutable bit
