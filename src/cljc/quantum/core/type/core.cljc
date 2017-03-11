@@ -164,7 +164,8 @@
      :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
 
 #?(:clj (defn primitive-array-type? [^Class c]
-          (and (.isArray c)
+          (and (class? c)
+               (.isArray c)
                (-> c .getComponentType .isPrimitive))))
 
 (def type-casts-map
@@ -193,8 +194,12 @@
             float   java.lang.Float/TYPE
             double  java.lang.Double/TYPE})})
 
-(defn static-cast-code [class-sym expr]
-  (with-meta (list 'do expr) {:tag class-sym}))
+(defn static-cast-code
+  "`(with-meta (list 'do expr) {:tag class-sym})` isn't enough"
+  [class-sym expr]
+  (let [cast-sym (gensym "cast-sym")]
+    ; `let*` to preserve metadata even when macroexpanding
+    (with-meta `(let* [~(with-meta cast-sym {:tag class-sym}) ~expr] ~cast-sym) {:tag class-sym})))
 
 #?(:clj
 (defmacro static-cast
