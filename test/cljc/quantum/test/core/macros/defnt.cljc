@@ -1,13 +1,17 @@
 (ns quantum.test.core.macros.defnt
   (:require
     [quantum.core.macros.defnt :as ns]
-    [quantum.core.log   :as log]
+    [quantum.core.log   :as log
+      :refer [prl]]
     [quantum.core.error :as err]
     [quantum.core.macros.protocol  :as proto]
     [quantum.core.macros.reify     :as reify]
     [quantum.core.macros.transform :as trans]
+    [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.macros.core
       :refer [case-env]]
+    [quantum.core.macros
+      :refer [macroexpand-all]]
     [quantum.core.test
       :refer [deftest is testing]])
   (:require-macros
@@ -15,11 +19,188 @@
       :refer [with-merge-test]])
   #?(:clj (:import java.util.concurrent.atomic.AtomicInteger)))
 
+; TODO look at this for type-checked Spec implementation: https://github.com/arohner/spectrum/blob/master/src/spectrum/conform.clj
+; TODO look at this thread for useful discussion on potential type systems in Clojure: https://groups.google.com/forum/#!topic/clojure/Dxk-rCVL5Ss
+; TODO look at HM impl : https://github.com/ericnormand/hindley-milner
+
+'(defmacro defnt+
+  "`defnt` enables gradual static typing of Clojure(Script) functions.
+    It may be seen as a high-performance marriage of core.typed and core.spec.
+
+    It provides more powerful and convenient functionality than core.typed:
+    - Allows for type-checking e.g. numbers which have specific values, sequence lengths, etc.
+    - Performs incremental, (relatively) fast type-checking
+    - Does not require all types to be annotated; any type / data shape may be checked only at runtime if desired
+    - Syntax is simpler and almost entirely core.spec-like, which lowers cognitive barriers to entry
+
+    Additionally, in leveraging core.spec, it inherits all its benefits: writing specs (type annotations)
+    yields automatic documentation and generative tests, etc.
+
+   `defnt` macro-generates three things:
+   1) A multiple-dispatch call site resolved at runtime, for all type overloads present
+      (Implementation: a multi-protocol. The performance advantage of this over other multiple-dispatch
+       techniques was empirically determined.)
+   2) A direct-dispatch call site resolved at compile time, for all non-variadic arities and overloads
+      which contain any non-default (non-`Object`, in CLJ's case) types
+      (Implementation:
+       In CL(J|R), a reify and corresponding functional interfaces.
+       In CLJS, a uniquely named, type-hinted function.)
+   3) A type-hinted `defn`:
+      For each arity of the `defnt`,
+        If type overloads are present,
+          Invokes the multiple-dispatch call site (1) with the provided arguments
+        Else
+          If the arity contains non-default types,
+            Invokes the direct-dispatch call site (2) with the provided arguments
+          Else
+            Executes the body right within that arity of the `defn`
+
+   If the generated `defn` (3) is called in a typed context (within `defnt`, `fnt`, or a `typed` scope),
+     If sufficient type information is deduced at compile time,
+       If the arity contains non-default types,
+         It picks the best method and calls the `reify` (2).
+       Else
+         The `defn` (3) will be called
+     Else
+       If the arity is known at compile time (a normal call, or `apply` with determinate argument length),
+         A) :
+         The `apply` call will be macro-removed
+         If the arity has multiple type overloads,
+           The multi-protocol (1) will be called
+         Else
+           If the arity contains non-default types,
+             The `reify` (2) will be called (TODO what about type resolution/matching ambiguity?)
+           Else
+             The `defn` (3) will be called
+         End
+       Else (`apply` with indeterminate argument length)
+         The `defn` is called, at which point it will dispatch accordingly
+       End
+     End
+   Else (No type information is gathered: the `defn` (3) is not called in a typed context)
+     The `defn` is called, at which point it will dispatch accordingly
+   End
+
+   Implementation notes:
+   - Each `defnt` definition caches type information in the macro language/sphere (e.g.
+     in CLJ, when compiling CLJS). Type hints are also applied wherever possible in order to aid interop
+     performance if direct access to the multi-protocol or `reify` is desired.
+
+   Options for each overload and argument:
+
+   Possible options:
+   - `:compile-time-ex?`   : When truthy, emits compile-time exception when specs are incompatible.
+   - `:runtime-ex?`        : When truthy, emits runtime exception when specs are incompatible.
+   - `:compile-time-warn?` : When truthy, emits compile-time warning (not exception) when specs are incompatible.
+   - `:runtime-warn?`      : When truthy, emits runtime warning (not exception) when specs are incompatible.
+   - `:no-check?`          : Doesn't check the type. Type will be used for documentation purposes only.
+   - `:inline?`            : When truthy, inlines the body of the overload in question when called in a
+                             typed context and compile-time type resolution is successful.
+   Default options:
+   - `:compile-time-ex?`
+   - `:runtime-ex?`
+   "
+  {:todo #{"Possibly type inference like Haskell? Not just on return values but on inputs too"}}
+  [sym arities]
+  )
+
+'(deftest defnt+:simple
+  (let [simple '(defnt+ simple [a even?] (+ a 5))
+        expanded (macroexpand-all simple)]
+    (eval expanded)
+    (testing "Full expansion"
+      (testing "CLJ"
+        (is (meta= (expand-all-arities-for-defnt+ simple {:lang :clj})
+              '(do (in-ns 'quantum.core.type.interfaces)
+                   (swap! interfaces update [Number quantum.test.core.macros.defnt.simple_COLON_a] (whenc1 nil? FnInterface0))
+                   (swap! interfaces update [Number Object] (whenc1 nil? FnInterface1))
+                   (definterface FnInterface0
+                     (^Number invoke [^quantum.test.core.macros.defnt.simple_COLON_a a0]))
+                   (definterface FnInterface1
+                     (^Number invoke [^Object a0]))
+                   (in-ns 'quantum.test.core.macros.defnt)
+                   (reify simple:__reify
+                     FnInterface0
+                     (^Number invoke [this ^quantum.test.core.macros.defnt.simple_COLON_a a0]
+                       (+ @a0 5))
+                     FnInterface1
+                     (^Number invoke [this ^Object a0]
+                       (. this invoke (->quantum.test.core.macros.defnt/simple:a a0))))))))
+      (testing "CLJS"
+        (is (meta= (expand-all-arities-for-defnt+ simple {:lang :cljs})
+              '(do (def simple:__overloads (js-obj))
+                   (aset simple:__overloads "fn0"
+                     (fn [a] (+ (.deref a) 5)))
+                   (aset simple:__overloads "fn1"
+                     (fn [a] (. simple:__overloads fn0 (->quantum.test.core.macros.defnt/simple:a a))))
+                   )))))
+    (testing "Macro-expansion"
+      (testing "Definition"
+        (is (= expanded
+               '(do (defn simple
+                      ([a]
+                        (validate a even?)
+                        (+ a 5)))))))
+      (testing "Valid types"
+        (testing "Type check (compile-time check)"
+          (is (= '(. ^Fn__number__even simple:__reify invoke 2)
+                 (macroexpand-all '(typed (simple 2))))))
+        (testing "No type check (runtime check)"
+          (is (= '(simple 2)
+                 (macroexpand-all '(simple 2))))))
+      (testing "Invalid types"
+        (testing "Type check (compile-time check)"
+          (is (error? (macroexpand-all '(typed (simple "asd")))))
+          (is (error? (macroexpand-all '(typed (simple 3))))))
+        (testing "No type check (runtime check)"
+          (is (= '(simple "asd")
+                 (macroexpand-all '(simple "asd"))))
+          (is (= '(simple 3)
+                 (macroexpand-all '(simple 3)))))))
+    (testing "Evaluation"
+      (testing "Valid types"
+        (testing "Type check (compile-time check)"
+          (is (= 6 (eval '(typed (simple 2))))))
+        (testing "No type check (runtime check)"
+          (is (= 6 (eval '(simple 2))))))
+      (testing "Invalid types"
+        (testing "Type check (compile-time check)"
+          (is (compile-error? (eval '(typed (simple "asd")))))
+          (is (compile-error? (eval '(typed (simple 3))))))
+        (testing "No type check (runtime check)"
+          (is (runtime-error? (eval '(simple "asd"))))
+          (is (runtime-error? (eval '(simple 3)))))))
+
+
+
+    (un-defnt+ simple))
+  (let [simple:opts '(defnt+ simple:opts
+                       ([a {:spec even? :opts #{:compile-time?}}]))]))
+
+(def defnt+:example
+  '(defnt+ example
+     ([a                   (s/and even? #(< 5 % 100))
+       b                   t/any
+       c                   ::number-between-6-and-20
+       {:as d :keys [e g]} (s/keys* :req-un [[:e t/boolean? true]
+                                             [:f t/number?]
+                                             [:g (s/or* t/number? t/sequential?)
+                                                 0]])]
+      {:pre  (< a @c))
+       :post (s/and (s/coll-of odd? :kind t/array?)
+                    #(= (first %) c))}
+      ...)
+     ([a string?
+       b (s/coll-of bigdec? :kind vector?)
+       c t/any
+       d t/any
+      ...)))
+
 (def data
-  {:ns- *ns*
-   :lang :clj
+  {:ns-       *ns*
+   :lang      :clj
    :class-sym 'AtomicInteger
-   :expanded 'java.util.concurrent.atomic.AtomicInteger})
+   :expanded  'java.util.concurrent.atomic.AtomicInteger})
 
 #?(:clj
 (deftest test:get-qualified-class-name ; TODO :clj only for now
@@ -91,47 +272,49 @@
                 :hints   '[:<1> String "[D" :<2>:1]}))))))
 
 #?(:clj
+(ns/defnt dummy-defnt
+  ([^objects?                      x ^int k v] 0)
+  ([^clojure.lang.PersistentVector x      k v] 1)
+  ([^default                       x      k v] 2)
+  ([                               x      k  ] 3)
+  ([^clojure.lang.PersistentVector x      k  ] 4)
+  ([                               x         ] 5)))
+
+(defn interface-call? [code] (-> code first (= '.)))
+(defn protocol-call? [code] (-> code first (= 'quantum.test.core.macros.defnt/dummy-defnt-protocol)))
+
+#?(:clj
+(deftest test:defnt:0
+  (testing "Specific match -> interface"
+    (let [code (macroexpand-all '(dummy-defnt (object-array 2) 4 (Object.)))]
+      (is (interface-call? code))
+      (is (= 0 (eval code)))))
+  (testing "Matches only a default method (not in interface) -> protocol"
+    (let [code (macroexpand-all '(dummy-defnt (Object.) 4 (Object.)))]
+      (is (protocol-call? code))
+      (is (= 2 (eval code)))))
+  (testing "Non-default `Object` method -> interface"
+    (let [code (macroexpand-all '(dummy-defnt (Object.)))]
+      (is (= '. (first code)))
+      (is (= nil #_"java.lang.Object" (-> code (nth 3) ana/type-hint)))
+      (is (= 5 (eval code)))))
+  (testing "Downcast on related"
+    (let [code (macroexpand-all '(dummy-defnt ^clojure.lang.IPersistentVector (vector) (long 4)))]
+      (is (= '. (first code)))
+      (is (= "clojure.lang.PersistentVector" (-> code (nth 3) ana/type-hint)))
+      (is (= 4 (eval code)))))
+  (testing "No downcast on Object"
+    (let [code (macroexpand-all '(dummy-defnt (vector) (long 4)))]
+      (is (= '. (first code)))
+      (is (= "java.lang.Object" (-> code (nth 3) ana/type-hint)))
+      (is (= 3 (eval code)))))))
+
+#?(:clj
 (deftest test:expand-classes-for-type-hint ; TODO :clj only for now
   (let [{:keys [ns- lang class-sym]} data]
     (is (= (ns/expand-classes-for-type-hint
              class-sym lang ns- [class-sym])
            #{(:expanded data)})))))
-
-(defn test:hint-arglist-with [arglist hints])
-
-(defn test:defnt-remove-hints [x])
-
-(defn test:defnt-arities
-  [body])
-
-(defn test:defnt-arglists
-  [body])
-
-(defn test:defnt-gen-protocol-names [{:keys [sym strict? lang]}])
-
-(defn test:defnt-gen-interface-unexpanded
-  [{:keys [sym arities arglists-types lang]}])
-
-(defn test:defnt-replace-kw
-  [kw {:keys [type-hints type-arglist available-default-types hint inner-type-n]}])
-
-(defn test:defnt-gen-interface-expanded
-  [{:keys [lang
-           gen-interface-code-body-unexpanded
-           available-default-types]
-    :as env}])
-
-(defn test:defnt-gen-interface-def
-  [{:keys [gen-interface-code-header gen-interface-code-body-expanded]}])
-
-(defn test:defnt-positioned-types-for-arglist
-  [arglist types])
-
-(defn test:defnt-types-for-arg-positions
-  [{:keys [lang arglists-types]}])
-
-(defn test:protocol-verify-arglists
-  [arglists lang])
 
 (deftest
   ^{:todo ["Add failure tests"]}
@@ -145,37 +328,6 @@
              [#{java.lang.Short java.lang.Integer java.math.BigInteger long short
                 int java.lang.Long clojure.lang.BigInt}]
              Object])))))
-
-(defn test:defnt-gen-helper-macro
-  [{:keys [genned-method-name
-           genned-protocol-method-name-qualified
-           reified-sym-qualified
-           strict?
-           relaxed?
-           sym-with-meta
-           args-sym
-           args-hinted-sym
-           lang]}])
-
-(defn test:defnt-gen-final-defnt-def
-  [{:keys [lang sym strict? externs genned-protocol-method-name
-           gen-interface-def helper-macro-interface-def
-           reify-def reified-sym
-           helper-macro-def
-           protocol-def extend-protocol-def]}])
-
-(defn test:defnt*-helper
-  ([opts lang ns- sym doc- meta- body [unk & rest-unk]])
-  ([opts lang ns- sym doc- meta- body]))
-
-(defn test:defnt
-  [sym & body])
-
-(defn test:defnt'
-  [sym & body])
-
-(defn test:defntp
-  [sym & body])
 
 ; Non |deftest| tests
 
