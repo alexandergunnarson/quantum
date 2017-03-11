@@ -1,7 +1,7 @@
 (ns quantum.core.data.validated
   (:require
     [clojure.core           :as core]
-    [clojure.set            :as set]
+    [quantum.core.data.set  :as set]
     [quantum.core.core
       :refer [qualified-keyword?]]
     [quantum.core.collections.base
@@ -132,8 +132,8 @@
                                     :many
                                     :one)
                    :doc         (-> sym meta :doc        )
-                   :component?  (and (-> sym meta :component?)
-                                     (= type :ref))
+                   :component?  (boolean (and (-> sym meta :component?)
+                                              (= type :ref)))
                    :index?      (-> sym meta :index?     )
                    :full-text?  (-> sym meta :full-text? )
                    :unique      (-> sym meta :unique     )
@@ -143,7 +143,7 @@
           (remove (fn [[k# v#]] (nil? v#)))
           (into {}))))
 
-(def allowed-keys #{:req :opt :req-un :opt-un :conformer})
+(def allowed-keys #{:req :opt :req-un :opt-un :conformer :invariant})
 
 (defn extract-inner-defs
   "Extracts inner `def`s from a `def-map` like:
@@ -174,7 +174,7 @@
   [spec parent-sym db-mode? kw-context ns-name-str]
   (validate (-> spec keys set) (fn1 set/subset? allowed-keys))
   (let [to-prepend (atom [])
-        inner-def? (fn-and seq? (fn-> first (= 'def)))
+        inner-def? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "def")))
         ; TODO do inner validated maps too, which can have infinitely nested ones
         extract-inner-def
           (fn [x]
@@ -445,8 +445,10 @@
                                 (reify clojure.lang.ILookupThunk
                                   (get [this# ~v-gen]
                                     (if (identical? (class ~v-gen) ~sym)
-                                        (or (.valAt ~(with-meta v-gen {:tag sym}) k#)
-                                            (.valAt ~(with-meta v-gen {:tag sym}) (get ~un-ks-to-ks k#)))
+                                        (let [v0# (.valAt ~(with-meta v-gen {:tag sym}) k#)]
+                                          (if (nil? v0#) ; really, it's if it's not found...
+                                              (.valAt ~(with-meta v-gen {:tag sym}) (get ~un-ks-to-ks k#))
+                                              v0#))
                                         this#))))
                 ~'get-entry   ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
