@@ -1,8 +1,9 @@
 (ns quantum.core.match
   (:refer-clojure :exclude [+ * cat])
   (:require
- #?(:clj
-     [net.cgrand.seqexp                :as se])
+ #?@(:clj
+    [[net.cgrand.seqexp                :as se]
+     [clojure.core.match               :as match]])
      [quantum.core.fn                  :as fn
        :refer [<- fn-> fn$]]
      [quantum.core.vars                :as var
@@ -79,3 +80,8 @@
 #?(:clj (defmacro re-match       [x preds] `(re-match-variant ~`re-match*       ~x ~preds)))
 #?(:clj (defmacro re-match-whole [x preds] `(re-match-variant ~`re-match-whole* ~x ~preds)))
 #?(:clj (defalias match re-match-whole))
+
+; TODO fix naming here
+#?(:clj
+ (defmacro core-match? [test-expr pred-clause]
+  `(match/match ~test-expr ~pred-clause true :else false)))
