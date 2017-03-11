@@ -42,6 +42,7 @@
 (log/this-ns)
 
 ; TODO look at http://fastutil.di.unimi.it to complete this namespace
+; TODO `fill!` <~> `Arrays/fill`, `lodash/fill`
 ; TODO move this to type
 (def package-class-map
   '{boolean Boolean
@@ -248,12 +249,10 @@
   ([^array? a :<0> b]
     (java.util.Arrays/equals a b))))
 
-; ===== GENERATION ===== ;
-
-#?(:clj ; TODO move ; TODO CLJS
-(defn array-list [& args]
-  (reduce (fn [ret elem] (.add ^ArrayList ret elem) ret)
-          (ArrayList.) args)))
+(defnt swap-at! [#{array? array-list?} x ^int i ^int j]
+  (let [tmp (get x i)]
+    (assoc! x i (get x j))
+    (assoc! x j tmp)))
 
 
 ; TODO Compress
