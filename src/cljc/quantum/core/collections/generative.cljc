@@ -43,10 +43,14 @@
               count first rest slice last-index-of index-of lasti]]
     [quantum.core.reducers         :as red
       :refer [join]]
+    [quantum.core.logic
+      :refer [whenc->]]
     [quantum.core.type             :as type
       :refer [should-transientize?]]
     [quantum.core.loops            :as loops
       :refer [for fortimes]]
+    [quantum.core.macros
+      :refer [defnt]]
     [quantum.core.vars             :as var
       :refer [defalias]]))
 
@@ -75,11 +79,11 @@
 (defn lrrange
   "Lazy reverse range."
   {:usage '(lrrange 0 5)
-   :out   '(5 4 3 2 1)}
+   :out   '(4 3 2 1 0)}
   ([]    (iterate core/dec 0))
   ([a]   (iterate core/dec a))
   ([a b]
-    (->> (iterate core/dec b) (core/take (- b (core/dec a))))))
+    (->> (iterate core/dec (core/dec b)) (core/take (- b a)))))
 
 (defn lrange
   ([]  (core/range))
@@ -106,3 +110,13 @@
     (if (neg? (- a b))
         (rrange a b))
         (->> (range+ a b) (join []))))
+
+#?(:clj
+(defnt !range:longs
+  {:todo #{"CLJS"}}
+  (^"[J" [^long b] (!range:longs 0 b)) ; TODO make hint unnecessary via recursive analysis
+  ([^long a ^long b]
+    (let [ct  (whenc-> (- b a) neg? 0)
+          ret (coll/->longs-nd ct)]
+      (dotimes [i ct] (coll/assoc! ret i (+ i a)))
+      ret))))

@@ -1,5 +1,8 @@
 (ns quantum.test.core.collections.generative
-  (:require [quantum.core.collections.generative :as ns]))
+  (:require
+    [quantum.core.collections.generative :as ns]
+    [quantum.core.test
+      :refer [deftest is testing]]))
 
 ; ===== REPEAT =====
 
@@ -38,3 +41,14 @@
   ([])
   ([a])
   ([a b]))
+
+#?(:clj
+(deftest test:!range:longs
+  (is (= (vec (ns/!range:longs  0   )) (range  0   )))
+  (is (= (vec (ns/!range:longs  1   )) (range  1   )))
+  (is (= (vec (ns/!range:longs  4   )) (range  4   )))
+  (is (= (vec (ns/!range:longs  0 5 )) (range  0 5 )))
+  (is (= (vec (ns/!range:longs -1 5 )) (range -1 5 )))
+  (is (= (vec (ns/!range:longs -12 5)) (range -12 5)))
+  (is (= (vec (ns/!range:longs -12 5)) (range -12 5)))
+  (is (= (vec (ns/!range:longs 5 -12)) (range 5 -12)))))
