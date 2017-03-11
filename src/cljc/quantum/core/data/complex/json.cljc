@@ -6,8 +6,7 @@
 #?(:clj
     [cheshire.core            :as json])
     [cognitect.transit        :as t]
-    [quantum.core.collections :as coll
-      :refer [nnil?]]
+    [quantum.core.collections :as coll]
     [quantum.core.fn          :as fn
       :refer [<- fn1]]
     [quantum.core.logic
@@ -26,7 +25,7 @@
      :cljs (when-not (empty? x)
              (->> x
                   (t/read (t/reader :json))
-                  (<- whenp (nnil? key-fn)
+                  (<- whenp (some? key-fn)
                       (fn1 coll/apply-to-keys key-fn)))))))
 
 (defn ->json
