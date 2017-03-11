@@ -25,48 +25,64 @@ Voila! No type hints needed anymore, and no performance hit or repetitive code w
 Another thing that would be nice is to marry `defnt` with `clojure.spec`.
 We want the specs to be reflected in the parameter declaration, type hints, and so on.
 
+We also want it to know about e.g., since a function returns `(< 5 x 100)`, then x must be not just a number, but *specifically* a number between 5 and 100, exclusive. Non-`Collection` datatypes are opaque and do not participate in this benefit (?).
+
+Actually, it would be nice to lazily compile only the needed overloads of `defnt`.
+If you use without wrapping in `fnt` or `defnt`, e.g. `(do ...)`, then the overload resolution is done via protocol dispatch.
+
+The protocol vs. interface dispatch should (configurably) emit a warning.
+
 ```clojure
-(defnt-spec perceptron
-  ([data   (s/and t/number? even?)
-    other1 t/any
-    other2 ::validated-deftype-1
-    opts   {:req-un [[bias?          t/boolean? true]
-                     [:learning-rate t/number?]
-                     [weights        (s/or* t/number? t/sequential?)
-                                     0]]}]
-   (s/and (s/coll-of (s/and odd?) :kind t/array?))
+(defnt-spec example
+  ([[a (s/and even? #(< 5 % 100))]
+    [b t/any]
+    [c ::number-between-6-and-20]
+    [d {:req-un [[e  t/boolean? true]
+                 [:f t/number?]
+                 [g  (s/or* t/number? t/sequential?)
+                     0]]}]]
+   {:pre  (< a @c))
+    :post (s/and (s/coll-of odd? :kind t/array?)
+                 #(= (first %) c))}
+   ...)
+  ([[a string?]
+    [b (s/coll-of bigdec? :kind vector?)]
+    [c t/any]
+    [d t/any]
    ...))
 
 ; expands to =>
 
-(def-validated ::perceptron:data   (s/and t/number? even?))
-(def-validated ::perceptron:other1 t/any)
-(def-validated ::perceptron:other2 ::validated-deftype-1)
-(def-validated-map ::perceptron:opts
-  :conformer (fn [m] (assoc-when-not-contains m :bias? true :weights 0))
-  :req-un [[:bias?         t/boolean?]
-           [:learning-rate t/number?]
-           [:weights       (s/or* t/number? t/sequential?)]])
-(def-validated ::perceptron:__ret
-  (s/and (s/coll-of (s/and odd?) :kind t/sequential?)))
+(dv/def ::example:a (s/and even? #(< 5 % 100)))
+(dv/def ::example:b t/any)
+(dv/def ::example:c ::number-between-6-and-20)
+(dv/def-map ::example:d
+  :conformer (fn [m#] (assoc-when-not-contains m# :e true :g 0))
+  :req-un [[:e t/boolean?]
+           [:f t/number?]
+           [:g (s/or* t/number? t/sequential?)]])
+(dv/def ::example:__ret
+  (s/and (s/coll-of odd? :kind t/array?)
+                 #(= (first %) (:c ...)))) ; TODO fix `...`
 
-(defnt perceptron
-  [^number? data other1 ^validated-deftype-1 other2 ^map? opts]
-  (let [_ (validate data   ::perceptron:data
-                    other1 ::perceptron:other1
-                    other2 ::perceptron:other2
-                    opts   ::perceptron:opts)
-        bias?   (:bias?   opts)
-        weights (:weights opts)
-        ret     (do ...)]
-    (validate ret ::perceptron:__ret)))
+-> TODO should it be:
+(defnt example
+  [^example:a a ^:example:b b ^example:c c ^example:d d]
+  (let [ret (do ...)]
+    (validate ret ::example:__ret)))
+-> OR
+(defnt example
+  [^number? a b ^number? c ^map? d]
+  (let [ret (do ...)]
+    (validate ret ::example:__ret)))
+-> ? The issue is one of performance. Maybe we don't want boxed values all over the place.
 
-(s/fdef perceptron
-  :args (s/cat :data   ::perceptron:data
-               :other1 ::perceptron:other1
-               :other2 ::perceptron:other2
-               :opts   ::perceptron:opts)
-  :fn   ::perceptron:__ret)
+(s/fdef example
+  :args (s/cat :a ::example:a
+               :b ::example:b
+               :c ::example:c
+               :d ::example:d)
+  :fn   ::example:__ret)
 ```
 
 ## `clojure.spec` + protocols/interfaces
@@ -111,8 +127,3 @@ At very least it would be nice to have "spec inference". I.e. know, via `fdef`, 
 ## Best practices
 
 - Prefer primitives to boxed types whenever possible
-
-## TODOs
-
-- Can't have primitives and boxed types in ambiguous positions
-- `(<= (byte 1) (Byte. (byte 1)))` -> `(<= (byte 1) (byte (Byte. (byte 1))))` to avoid ambiguity with `Comparable`
