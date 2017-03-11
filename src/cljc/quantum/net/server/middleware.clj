@@ -1,10 +1,11 @@
 (ns quantum.net.server.middleware
-  (:require [clj-uuid :as uuid     ]
-            [compojure.handler                                     ]
+  (:refer-clojure :exclude [assoc-in])
+  (:require [clj-uuid                                 :as secure-uuid]
+            [compojure.handler]
             ; MIDDLEWARE
-            [ring.util.anti-forgery                   :as af       ]
-            [ring.util.response                       :as resp     ]
-            [ring.middleware.x-headers                :as x        ]
+            [ring.util.anti-forgery                   :as af]
+            [ring.util.response                       :as resp]
+            [ring.middleware.x-headers                :as x]
             [ring.middleware.gzip               :refer [wrap-gzip]                 ]
             [ring.middleware.session            :refer [wrap-session]              ]
             [ring.middleware.flash              :refer [wrap-flash]                ]
@@ -31,9 +32,9 @@
             [quantum.core.logic
               :refer [whenp fn-or]]
             [quantum.core.fn
-              :refer [fn1 fn-> rcomp]]
+              :refer [fn$ fn1 fn-> rcomp]]
             [quantum.core.collections   :as coll
-              :refer [containsv? assocs-in flatten-1]]
+              :refer [containsv? assoc-in flatten-1]]
             [quantum.core.log           :as log
               :refer [prl]]
             [quantum.core.print         :as pr
@@ -47,6 +48,8 @@
   {"Access-Control-Allow-Origin"      "http://localhost:3450"
    "Access-Control-Allow-Credentials" "true" ; can't use boolean... don't know why... ; cannot use wildcard when allow-credentials is true
    "Access-Control-Allow-Headers"     "Content-Type, Accept, Access-Control-Allow-Credentials, Access-Control-Allow-Origin"})
+
+(defn websocket-request? [req] (= (get-in req [:headers "upgrade"]) "websocket"))
 
 #_(defn wrap-keywordify [f]
   (fn [req]
@@ -63,12 +66,12 @@
             (mergel (:headers resp) cors-headers)
             (:headers resp))))))
 
-(defn wrap-uid
-  [app]
-  (fn [req]
-    (if-not (get-in req [:session :uid])
-      (app (assoc-in req [:session :uid] (uuid/v1)))
-      (app req))))
+(defn wrap-uid-with
+  [handler f]
+  (fn uid-with [req]
+    (-> req
+        (update-in [:session :uid] #(or % (f req)))
+        handler)))
 
 (defn content-security-policy [report-uri & [{:keys [whitelist]}]]
   (str/sp "default-src https: wss: data: gap: " (apply str/sp whitelist) ";"
@@ -181,9 +184,9 @@
       resp)))
 
 (defn wrap-out-logging [handler]
-  (fn logging [request]
-    (log/ppr ::debug "Final Request" request)
-    (let [resp (handler request)]
+  (fn logging [req]
+    (log/ppr ::debug "Final Request" req)
+    (let [resp (handler req)]
       (log/ppr ::debug "Initial Response" resp)
       resp)))
 
@@ -216,6 +219,22 @@
 
 (in-ns 'quantum.net.server.middleware)
 
+(defn wrap-authenticate-ws-client-id
+  [handler authentication-fn]
+  (fn authenticate-ws-client-id [req]
+    (if (websocket-request? req)
+        (let [{:as auth :keys [client-id response]} (authentication-fn req)]
+          (cond response
+                response
+                client-id
+                (-> req
+                    (update :params #(merge % (dissoc auth :response))) ; TODO warn when overwriting
+                    handler)
+                :else {:status  403
+                       :headers {"Content-Type" "application/json"}
+                       :body    (conv/->json {:error "WebSocket authentication failed"})}))
+        (handler req))))
+
 (defn wrap-middleware [routes & [opts]]
   (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
     (-> routes
@@ -228,13 +247,13 @@
           (fn1 wrap-resource static-resources-path))
         (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
         (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
-        wrap-uid
+        (wrap-uid-with (fn [_] (secure-uuid/v1)))
         (whenp (-> opts :anti-forgery false? not)
           (fn1 wrap-anti-forgery (merge {:read-token (fn [req] (-> req :params :csrf-token))}
                                    (:anti-forgery opts))))
         ; NOTE: Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
         (defaults/wrap-defaults
-          (apply assocs-in defaults/secure-site-defaults
+          (apply assoc-in defaults/secure-site-defaults
             [:security :anti-forgery] false
             [:static   :resources   ] false ; This short-circuits the rest of the middleware when placed here
             [:static   :files       ] false
