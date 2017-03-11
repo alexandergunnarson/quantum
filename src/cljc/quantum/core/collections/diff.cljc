@@ -4,7 +4,7 @@
 ; COMMENTED OUT FOR NOW
 ; (defn diff-changes
 ;   "Finds changes in nested maps, does not consider new elements
-  
+
 ;   (diff-changes {:a 2} {:a 1})
 ;   => {[:a] 2}
 ;   (diff-changes {:a {:b 1 :c 2}} {:a {:b 1 :c 3}})
@@ -31,7 +31,7 @@
 
 ; (defn diff-new
 ;   "Finds new elements in nested maps, does not consider changes
-  
+
 ;   (diff-new {:a 2} {:a 1})
 ;   => {}
 ;   (diff-new {:a {:b 1}} {:a {:c 2}})
@@ -55,7 +55,7 @@
 
 ; (defn diff
 ;   "Finds the difference between two maps
-  
+
 ;   (diff {:a 2} {:a 1})
 ;   => {:+ {} :- {} :> {[:a] 2}}
 ;   (diff {:a {:b 1 :d 3}} {:a {:c 2 :d 4}} true)
@@ -81,9 +81,9 @@
 ;         :else v))
 
 ; (defn patch
-;   "Use the diff to convert one map to another in the forward 
+;   "Use the diff to convert one map to another in the forward
 ;   direction based upon changes between the two.
-  
+
 ;   (let [m1  {:a {:b 1 :d 3}}
 ;         m2  {:a {:c 2 :d 4}}
 ;         df  (diff m2 m1)]
@@ -102,9 +102,9 @@
 ;                     (keys (:- diff))))))
 
 ; (defn unpatch
-;   "Use the diff to convert one map to another in the reverse 
+;   "Use the diff to convert one map to another in the reverse
 ;   direction based upon changes between the two.
-  
+
 ;   (let [m1  {:a {:b 1 :d 3}}
 ;         m2  {:a {:c 2 :d 4}}
 ;         df  (diff m2 m1 true)]
@@ -172,12 +172,12 @@
           {:each [a b]})
 
         (and (map? a) (map? b))
-        (reduce-2 a b
+        (reduce-pair a b
           (fn [ret a-sub b-sub k] (assoc ret k (diff a-sub b-sub)))
           {} (keys a))
 
         (and (vector? a) (vector? b))
-        (reduce-2 a b
+        (reduce-pair a b
           (fn [ret a-sub b-sub _] (conj ret (diff a-sub b-sub)))
           [] (range 0 (count a)))
 
