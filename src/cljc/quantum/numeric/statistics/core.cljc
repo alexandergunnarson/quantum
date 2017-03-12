@@ -12,6 +12,7 @@
               abs sqrt pow e-exp floor log-e]]
     [quantum.numeric.core                    :as num
       :refer [sum sq sigma]]
+    [quantum.numeric.tensors                 :as tens]
     [quantum.numeric.polynomial              :as poly]
     [quantum.numeric.statistics.distribution :as dist]
     [quantum.core.vars
@@ -92,7 +93,7 @@
 (defn mse:predictor
   "The mean squared error between a vector of predictions `p•` and observed values `o•`."
   [p• o•]
-  (mean (arr/v-op+ square-difference p• o•)))
+  (mean (tens/v-op+ square-difference p• o•)))
 
 (defalias mse:p•+o• mse:predictor)
 (defalias mean-square-error:predictor mse:predictor)
@@ -107,7 +108,7 @@
   "The mean squared error between a vector of predictions `p•` and 2D vector of observed values `o••`."
   [p• o••]
   (->> o••
-       (map+ (fn [o•] (sum (arr/v-op+ square-difference p• o•))))
+       (map+ (fn [o•] (sum (tens/v-op+ square-difference p• o•))))
        mean))
 
 (defn semivariance
@@ -258,7 +259,7 @@
   {:adapted-from 'criterium.stats
    :implemented-by '{smile.sampling.Bagging "Faster implementation using arrays"}}
   [data statistic size rng-factory]
-  (arr/transpose
+  (tens/transpose
     (for [_ (range size)] (statistic (sort (join [] (sample+ data (rng-factory))))))))
 
 (defn bootstrap-estimate
@@ -376,7 +377,7 @@
 #_(defn jacknife
   "Jacknife statistics on data."
   [data statistic]
-  (arr/transpose
+  (tens/transpose
     (map #(statistic (coll/ldrop-at %1 data)) (range (count data)))))
 
 
