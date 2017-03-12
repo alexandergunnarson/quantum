@@ -553,35 +553,38 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn distinct-by+ ; 228.936664 ms (pretty much attains java speeds!!!)
+(defn distinct-by+:sorted ; 228.936664 ms (pretty much attains java speeds!!!)
   "Remove adjacent duplicate values of (@f x) for each x in @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
-  [f eq-f coll]
+  [f comp-fn xs]
   (let [sentinel (->sentinel)]
-    (->> coll
+    (->> xs
          (map-state
            (fn [x x']
              (let [xf  (whenf x  (fn-not (fn1 identical? sentinel)) f)
                    xf' (whenf x' (fn-not (fn1 identical? sentinel)) f)]
-               [x' (if (eq-f xf xf') sentinel x')]))
+               [x' (if (comp-fn xf xf') sentinel x')]))
            sentinel)
          (remove+ (partial identical? sentinel)))))
 
-(defn distinct+ [coll] (folder coll (core/distinct)))
+(defn distinct+ [xs] (folder xs (core/distinct)))
 
-(defn replace+ [smap coll] (folder coll (core/replace smap)))
+(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+))
+
+(defn replace+ [smap xs] (folder xs (core/replace smap)))
 
 (defn reduce-extremum-key
   {:attribution "alexandergunnarson"}
   [extremum-fn comp-fn xs]
-  (let [sentinel (->sentinel)]
-    (reduce
-      (fn [ret x] (if (identical? ret sentinel)
-                      x
-                      (extremum-fn comp-fn ret x)))
-      sentinel
-      xs)))
+  (let [sentinel (->sentinel)
+        ret (reduce
+              (fn [ret x] (if (identical? ret sentinel)
+                              x
+                              (extremum-fn comp-fn ret x)))
+              sentinel
+              xs)]
+    (if (identical? ret sentinel) nil ret)))
 
 (defn reduce-min-key [comp-fn xs] (reduce-extremum-key min-key comp-fn xs))
 (defn reduce-max-key [comp-fn xs] (reduce-extremum-key max-key comp-fn xs))
