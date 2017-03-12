@@ -73,6 +73,10 @@
   "Like `pr-str`, but pretty-prints."
   [x] (with-out-str (! x)))
 
+; Makes it so fipp doesn't print tagged literals for every record
+#_(quantum.core.vars/reset-var! #'fipp.ednize/record->tagged
+  (fn [x] (tagged-literal '... (into {} x))))
+
 #?(:clj (reset! debug/pretty-printer !))
 
 (def suppress (partial (constantly nil)))
