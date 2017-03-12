@@ -4,15 +4,21 @@
       :refer [deftest is ]]
     [quantum.core.collections :as ns]))
 
-(defn test:map-entry [a b])
+(deftest test:count=
+  (let [data [:a :b :c :d :e]]
+    (dotimes [i (count data)]
+      (is (ns/count= (take i data) i)))))
 
-(defn test:genkeyword
-  ([])
-  ([arg]))
+(deftest test:count<
+  (let [data [:a :b :c :d :e]]
+    (dotimes [i (count data)]
+      (is (ns/count< (take i data) (inc i))))))
 
-(defn test:wrap-delay [f])
-
-; ; ====== COLLECTIONS ======
+(deftest test:count<=
+  (let [data [:a :b :c :d :e]]
+    (dotimes [i (count data)]
+      (is (ns/count<= (take i data) (inc i)))
+      (is (ns/count<= (take i data) i)))))
 
 (deftest test:red-for
   (let [ret (ns/red-for [elem [1 2 1 3 4 2]
