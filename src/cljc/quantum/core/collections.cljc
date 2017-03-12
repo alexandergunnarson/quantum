@@ -207,30 +207,6 @@
 #?(:clj (defalias count&        coll/count&       ))
 #?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias lasti&        coll/lasti&       ))
-
-(defnt reduce-count-bounded
-  ([^default x n pred] ; TODO infer ; for this overload, reducible, non-counted
-    (let [ret (->> x (reduce (fn [ct' _] (if (<= n ct') (reduced false) (inc ct'))) 0))]
-      (if (false? ret) ret (pred ret n)))))
-
-(defnt count=*
-  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
-    (reduce-count-bounded x n =)))
-
-(defmacro count= [n x] `(count=* ~x ~n))
-
-(defnt count<*
-  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
-    (reduce-count-bounded x n <)))
-
-(defmacro count< [n x] `(count<* ~x ~n))
-
-(defnt count<=*
-  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
-    (reduce-count-bounded x n <=)))
-
-(defmacro count<= [n x] `(count<=* ~x ~n))
-
 ; ===== CREATION ===== ;
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias empty&        coll/empty&       ))
@@ -509,6 +485,30 @@
   ([arr]
     (let [dim (-> arr array->dimensionality)]
       (array->vector dim arr)))))
+
+(defnt reduce-count-bounded
+  ([^default x n pred] ; TODO infer ; for this overload, reducible, non-counted
+    (let [ret (->> x (reduce (fn [ct' _] (if (<= n ct') (reduced false) (inc ct'))) 0))]
+      (if (false? ret) ret (pred ret n)))))
+
+(defnt count=*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n =)))
+
+(defmacro count= [n x] `(count=* ~x ~n))
+
+(defnt count<*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n <)))
+
+(defmacro count< [n x] `(count<* ~x ~n))
+
+(defnt count<=*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n <=)))
+
+(defmacro count<= [n x] `(count<=* ~x ~n))
+
 
 (defnt padr
   "Pad, right."
