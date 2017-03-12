@@ -96,44 +96,41 @@
    Logs the printed result to the global log |log|."
   {:attribution "Alex Gunnarson"}
   [trace? pretty? print-fn pr-type args opts]
-    (when (or (get @levels pr-type)
-              #_(:cljs (= pr-type :macro-expand)))
-      (let [trace?  (or (:trace?  opts) trace? )
-            pretty? (or (:pretty? opts) pretty?)
-            stack   (or (:stack   opts) -1     )
-            timestamp? (:timestamp? opts)
-            curr-fn (when trace? (debug/this-fn-name stack))
-            args-f  (when args @args)
-            env-type-str
-              (when (get @levels :env)
-                (str (name qcore/lang) " »"))
-            out-str
-              (with-out-str
-                (when (= pr-type :macro-expand) (print "\n/* "))
-                #?(:clj
-                  (when timestamp?
-                    (let [timestamp
-                           (compile-if (do (Class/forName "java.time.format.DateTimeFormatter")
-                                           (Class/forName "java.time.LocalDateTime"))
-                             (.format
-                               (java.time.format.DateTimeFormatter/ofPattern
-                                 "MM-dd-yyyy HH:mm::ss")
-                               (java.time.LocalDateTime/now))
-                             nil)] ; TODO JDK < 8 timestamp
-                      (print (str "[" timestamp "] ")))))
-                (when trace?
-                  (print "[")
-                  (print #?(:clj (.getName (Thread/currentThread)))
-                         ":"
-                         curr-fn "»"
-                         (str pr-type "] ")))
-                (if (and pretty? (-> args-f first string?))
-                    (do (print (first args-f) " ")
-                        (println)
-                        (apply print-fn (rest args-f)))
-                    (do (when pretty? (println))
-                        (apply print-fn args-f)))
-                (when (= pr-type :macro-expand) (print " */\n")))]
+    (let [trace?  (or (:trace?  opts) trace? )
+          pretty? (or (:pretty? opts) pretty?)
+          stack   (or (:stack   opts) -1     )
+          timestamp? (:timestamp? opts)
+          curr-fn (when trace? (debug/this-fn-name stack))
+          env-type-str
+            (when (get @levels :env)
+              (str (name qcore/lang) " »"))
+          out-str
+            (with-out-str
+              (when (= pr-type :macro-expand) (print "\n/* "))
+              #?(:clj
+                (when timestamp?
+                  (let [timestamp
+                         (compile-if (do (Class/forName "java.time.format.DateTimeFormatter")
+                                         (Class/forName "java.time.LocalDateTime"))
+                           (.format
+                             (java.time.format.DateTimeFormatter/ofPattern
+                               "MM-dd-yyyy HH:mm::ss")
+                             (java.time.LocalDateTime/now))
+                           nil)] ; TODO JDK < 8 timestamp
+                    (print (str "[" timestamp "] ")))))
+              (when trace?
+                (print "[")
+                (print #?(:clj (.getName (Thread/currentThread)))
+                       ":"
+                       curr-fn "»"
+                       (str pr-type "] ")))
+              (if (and pretty? (-> args first string?))
+                  (do (print (first args) " ")
+                      (println)
+                      (apply print-fn (rest args)))
+                  (do (when pretty? (println))
+                      (apply print-fn args)))
+              (when (= pr-type :macro-expand) (print " */\n")))]
 
 #?(:clj  (doseq [out (@outs)] (binding [*out* out] (print out-str) (flush)))
    :cljs (let [console-print-fn
@@ -145,29 +142,29 @@
               "TIMESTAMP" #_(time/now)
               pr-type
               curr-fn
-              out-str)))))
-    true) ; for :post logging
+              out-str))))
+  args)
 
 ; TODO make these more efficient
 #?(:clj
 (defmacro pr [pr-type & args]
-  `(pr* true  false println ~pr-type (delay (list ~@args)) nil)))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false println         pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro pr-no-trace [pr-type & args]
-  `(pr* false false println ~pr-type (delay (list ~@args)) nil)))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* false false println         pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro pr-opts [pr-type opts & args]
-  `(pr* true false println ~pr-type (delay (list ~@args)) ~opts)))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false println         pr-type# [~@args] ~opts) true))))
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(pr* true  true  pr/!    ~pr-type (delay (list ~@args)) nil)))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/!            pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro ppr-hints [pr-type & args]
-  `(pr* true true  pr/pprint-hints ~pr-type (delay (list ~@args)) nil)))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/pprint-hints pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro prl
@@ -180,4 +177,4 @@
 
 #?(:clj
 (defmacro this-ns []
-  `(pr* true false println :ns (delay ['~(ns-name *ns*)]) nil)))
+  `(if (get @levels :ns) (pr* true false println :ns ['~(ns-name *ns*)] nil) true)))
