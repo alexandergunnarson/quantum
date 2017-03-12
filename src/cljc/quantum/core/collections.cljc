@@ -28,7 +28,6 @@
               remove filter
               take take-while
               drop  drop-while
-              subseq
               key val
               merge sorted-map sorted-map-by
               into
@@ -97,7 +96,7 @@
       :refer [for for* lfor doseq doseqi reduce reducei dotimes
               seq-loop
               count lasti
-              subseq
+              subview
               contains? containsk? containsv?
               index-of last-index-of
               first second rest last butlast get pop peek nth
@@ -153,8 +152,7 @@
 #?(:clj (defalias butlast         coll/butlast      ))
 ; `slice` <~> `lodash/slice`
 #?(:clj (defalias slice           coll/slice        ))
-        (defalias subseq          coll/subseq       )
-        (defalias subseq-where    c/subseq          )
+        (defalias subview         coll/subview      )
 #?(:clj (defalias copy            coll/copy         ))
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
@@ -209,6 +207,30 @@
 #?(:clj (defalias count&        coll/count&       ))
 #?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias lasti&        coll/lasti&       ))
+
+(defnt reduce-count-bounded
+  ([^default x n pred] ; TODO infer ; for this overload, reducible, non-counted
+    (let [ret (->> x (reduce (fn [ct' _] (if (<= n ct') (reduced false) (inc ct'))) 0))]
+      (if (false? ret) ret (pred ret n)))))
+
+(defnt count=*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n =)))
+
+(defmacro count= [n x] `(count=* ~x ~n))
+
+(defnt count<*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n <)))
+
+(defmacro count< [n x] `(count<* ~x ~n))
+
+(defnt count<=*
+  ([^default x n] ; TODO infer ; for this overload, reducible, non-counted
+    (reduce-count-bounded x n <=)))
+
+(defmacro count<= [n x] `(count<=* ~x ~n))
+
 ; ===== CREATION ===== ;
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias empty&        coll/empty&       ))
@@ -742,7 +764,7 @@
                matches')))))
 
 (defn indices+ [coll]
-  (range+ 0 (count coll)))
+  (->> coll (map-indexed+ (fn [i _] i))))
 
 ; ================================================ MERGE ================================================
 
@@ -876,9 +898,6 @@
           (dissoc k-0)))
     m-0
     rename-m))
-
-; ; for /subseq/, the coll must be a sorted collection (e.g., not a [], but rather a sorted-map or sorted-set)
-; ; test(s) one of <, <=, > or >=
 
 ; ; /nthrest/
 ; ; (nthrest (range 10) 4) => (4 5 6 7 8 9)
@@ -1531,7 +1550,7 @@
               (-> rec str)
               (-> rec class str))
         ^String class-name
-          (subseq class-name-0
+          (subview class-name-0
             (-> class-name-0 (last-index-of ".") inc)
             (-> class-name-0 count))
         map-constructor-fn
@@ -1649,14 +1668,14 @@
         :else  (recur (conj acc x) (next xs))))))
 
 
-(defn max-subseq
-  "The contiguous subsequence of maximum sum.
+(defn max-subview
+  "The contiguous subsequence of maximum asum.
    Uses Kadane's algorithm.
    A subsequence of length zero has sum zero."
    {:attribution "Alex Gunnarson"
     :todo  ["Extend to all comparables"
             "Handle all-negatives gracefully (see Wikipedia)"]
-    :tests `{(max-subseq [10 -5 15 -30 10 -5 40 10])
+    :tests `{(max-subview [10 -5 15 -30 10 -5 40 10])
              [10 -5 40 10]}}
   [s]
   (let [pos+       (fn [[fromi toi sum] [i x]]
@@ -1666,7 +1685,7 @@
                           (reduce (partial max-key (fn1 get 2))
                                   [0 0 #?(:clj  Long/MIN_VALUE
                                           :cljs js/Number.MIN_SAFE_INTEGER)]))]
-    (subvec s from (inc to)))) ; TODO maybe use subseq instead of subvec?
+    (subview s from (inc to))))
 
 (defn seq->bitmap
   "Given n unique values in a seq, transforms them into a bitmap."
