@@ -284,6 +284,7 @@
           ([#{array? ; TODO anything that `count` accepts
               string? !string? keyword? m2m-chan?
               +vec? tuple?}   x] (zero? (count x)))
+          ([^reducer?         x] (->> x (reduce (fn [_ _] (reduced false)) true)))
   #?(:clj ([#{Collection Map} x] (.isEmpty x)))
           ([^default          x] (core/empty? x)))
 
