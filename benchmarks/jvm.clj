@@ -3,7 +3,7 @@
     [quantum.core.macros.defnt
       :refer [defnt defnt' defntp]]
     [quantum.core.collections :as coll
-      :refer [reduce-2]]
+      :refer [reduce-pair]]
     [quantum.core.meta.bench
       :refer [bench complete-bench]]
     [quantum.core.type :as t
@@ -412,7 +412,7 @@
 
 (defn map!* [constructor & args]
   (assert (-> args count even?))
-  (reduce-2 (fn [ret k v] (.put ^Map ret k v) ret) (constructor) args))
+  (reduce-pair (fn [ret k v] (.put ^Map ret k v) ret) (constructor) args))
 
 (def hash-map! (partial map!* #(HashMap.)))
 
@@ -475,8 +475,15 @@
 (complete-bench (do (Numeric/add 1.0 3.0)
                     (Numeric/add 1   3  )))
 
+; 5.970614 ns
+; May currently have slightly worse performance since it isn't inlined, and is an instance instead of a static method
+(let [^quantum.test.benchmarks.jvm._PLUS__STAR_StaticInterface
+        +*-static-reified-direct @#'+*-static-reified] ; to get rid of var indirection, which can't be optimized away by the JVM because is marked as `volatile`
+  (complete-bench (do (. +*-static-reified-direct _PLUS__STAR_Static 1.0 3.0)
+                      (. +*-static-reified-direct _PLUS__STAR_Static 1   3  ))))
+
 ; 6.361026 ns
-; May initially have slightly worse performance since it isn't inlined by default
+; May currently have slightly worse performance since it isn't inlined, and is an instance instead of a static method
 (complete-bench (do (+*-static 1.0 3.0)
                     (+*-static 1   3  )))
 
