@@ -12,7 +12,7 @@
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [fn-> <- fn$ fn& fn&2]]
+      :refer [fn-> <- fnl fn& fn&2]]
     [quantum.core.log          :as log]
     [quantum.core.collections  :as coll
       :refer [map+ range+ filter+ mapcat+
@@ -87,8 +87,8 @@
 (defn product+count [xs]
   (reduce (fn [[sum ct] x] [(*** sum x) (inc ct)]) [1 0] xs))
 
-(def sum     (fn$ reduce *+*)) ; TODO use +* and +', differentiating sum* and sum'
-(def product (fn$ reduce ***)) ; TODO use ** and *', differentiating product* and product'
+(def sum     (fnl reduce *+*)) ; TODO use +* and +', differentiating sum* and sum'
+(def product (fnl reduce ***)) ; TODO use ** and *', differentiating product* and product'
 
 (defn sigma [xs step-fn] (->> xs (map+ step-fn) sum))
 

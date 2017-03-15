@@ -3,7 +3,7 @@
   (:require
     [com.stuartsierra.component :as comp]
     [quantum.core.fn
-      :refer [fn1 fn-> fn$]]
+      :refer [fn1 fn-> fnl]]
     [quantum.core.collections   :as coll
       :refer [nempty? kw-map]]
     [quantum.core.error         :as err
@@ -101,7 +101,7 @@
     (let [wait (max 0 ; Negative delay goes to 0
                     (- at (System/nanoTime)))
           scheduler* (-> scheduler :pool
-                         (validate (fn$ instance? ScheduledExecutorService)))]
+                         (validate (fnl instance? ScheduledExecutorService)))]
       (.schedule ^ScheduledExecutorService scheduler* ^Callable f
                  (long wait) (time/->timeunit :ns))))
   ([^BusyWaitScheduler scheduler at f]

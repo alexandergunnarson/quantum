@@ -13,7 +13,7 @@
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.fn
-                       :refer [fn$ with-do fn->]]
+                       :refer [fnl with-do fn->]]
                      [quantum.core.logic           :as logic
                        :refer [whenf whenf1 fn-not fn-or]]
                      [quantum.core.macros          :as macros

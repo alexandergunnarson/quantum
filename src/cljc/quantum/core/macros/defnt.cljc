@@ -19,7 +19,7 @@
     [quantum.core.error                      :as err
       :refer [->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
-      :refer [<- fn-> fn->> fn1 fn$]]
+      :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic

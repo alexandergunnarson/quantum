@@ -4,7 +4,7 @@
     [clojure.core.match
       :refer [match]]
     [quantum.core.fn
-      :refer [<- fn-> fn->> fn1 fn$]]
+      :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.logic
       :refer [fn-and whenc whenf whenf1 xor cond-let]]
     [quantum.core.collections :as coll

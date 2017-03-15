@@ -19,7 +19,7 @@
              [quantum.core.error
                :refer [->ex]]
              [quantum.core.fn            :as fn
-               :refer [fn-> fn1 rfn fn$]]
+               :refer [fn-> fn1 rfn fnl]]
              [quantum.core.logic         :as logic
                :refer [fn-and whenc whenc1 ifn condf]]
              [quantum.core.loops         :as loops
@@ -100,7 +100,7 @@
 (defnt numeric?
 #?(:clj
   ([^char    c] (contains? num-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? num-chars) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fnl contains? num-chars) s))))
 
 (defnt numeric-readable?
 #?(:clj
@@ -110,7 +110,7 @@
 (defnt upper?
 #?(:clj
   ([^char    c] (contains? upper-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? upper-chars) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fnl contains? upper-chars) s))))
 
 (defalias ->upper form/->upper)
 ; Converts string to all upper-case respecting
@@ -122,7 +122,7 @@
 (defnt lower?
 #?(:clj
   ([^char    c] (contains? lower-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn$ contains? lower-chars) s))))
+  ([^string? s] (and (nempty? s) (seq-and (fnl contains? lower-chars) s))))
 
 (defalias ->lower form/->lower)
 ; Converts string to all lower-case respecting

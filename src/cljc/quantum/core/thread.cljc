@@ -20,7 +20,7 @@
                       [quantum.core.error                      :as err
                         :refer [throw-unless ->ex]]
                       [quantum.core.fn                         :as fn
-                        :refer [<- fn-> fn1 rcomp call fn-nil fn$]]
+                        :refer [<- fn-> fn1 rcomp call fn-nil fnl]]
                       [quantum.core.log                        :as log]
                       [quantum.core.logic                      :as logic
                         :refer [fn-or fn-not fn= whenf whenp whenf1 ifn1]                                             ]
@@ -812,7 +812,7 @@
   (validate max-threads         (s/or* nil? integer?)
             max-work-queue-size (s/or* nil? integer?)
             name                (s/or* nil? string? )
-            threadpool          (s/or* nil? (fn$ instance? ThreadPoolExecutor))
+            threadpool          (s/or* nil? (fnl instance? ThreadPoolExecutor))
             f                   fn?
             logging-key         (s/or* nil? keyword?))
   (let [cache-f        (if (true? cache)
@@ -870,7 +870,7 @@
 (defn distribute!*
   {:usage '(distribute!* offer! (->distributor) [1 2 3 5 6] {:cache? true})}
   [enqueue-fn distributor & inputs]
-  (validate distributor (fn$ instance? Distributor))
+  (validate distributor (fnl instance? Distributor))
   (enqueue-fn (:work-queue distributor) [(time/now-instant) inputs])))
 
 #?(:clj (defn distribute!  [distributor & inputs] (apply distribute!* async/offer! distributor inputs)))

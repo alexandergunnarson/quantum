@@ -7,7 +7,7 @@
     [quantum.core.core
       :refer [?deref]]
     [quantum.core.fn
-      :refer [fn$]]
+      :refer [fnl]]
     [quantum.core.error      :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.spec       :as s
@@ -120,7 +120,7 @@
         (swap! conn (fn [db] ; TODO take this out of the swap, because we need side effects to be run no more than once
                       (let [r (transformer db k args)]
                         (log/pr ::debug "Pure transformer" k "applied")
-                        (validate r (fn$ instance? datascript.db.TxReport))
+                        (validate r (fnl instance? datascript.db.TxReport))
                         (reset! report r)
                         (:db-after r))))
         (log/pr ::debug "Transacted")

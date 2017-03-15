@@ -13,7 +13,7 @@
     [quantum.core.error :as err
       :refer [catch-all]]
     [quantum.core.fn
-      :refer [fn$]]
+      :refer [fnl]]
     [quantum.core.macros.core
       :refer [case-env locals]]
     [quantum.core.vars :as var

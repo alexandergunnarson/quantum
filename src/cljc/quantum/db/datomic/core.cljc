@@ -20,7 +20,7 @@
     [quantum.core.error         :as err
       :refer [->ex TODO]]
     [quantum.core.fn            :as fn
-      :refer [<- fn-> fn->> fn1 fn$ rfn with-do]]
+      :refer [<- fn-> fn->> fn1 fnl rfn with-do]]
     [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
       :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let condf1]]
@@ -64,11 +64,11 @@
 #?(:clj (def entity? (partial instance? datomic.query.EntityMap)))
 (defalias mentity? datascript.impl.entity/entity?)
 
-#?(:clj (def tempid? (fn$ instance? datomic.db.DbId          )))
-#?(:clj (def dbfn?   (fn$ instance? datomic.function.Function)))
+#?(:clj (def tempid? (fnl instance? datomic.db.DbId          )))
+#?(:clj (def dbfn?   (fnl instance? datomic.function.Function)))
 #?(:clj (def tempid-like? (fn-or tempid? c/integer?)))
 
-#?(:clj (def db?     (fn$ instance? datomic.db.Db)))
+#?(:clj (def db?     (fnl instance? datomic.db.Db)))
 
 (def ^{:doc "'mdb' because checks if it is an in-*mem*ory database."}
   mdb? (partial instance? datascript.db.DB))
@@ -313,15 +313,15 @@
 ; TODO
 ; :ref     (fn-or map? dbfn-call? identifier? lookup?) ; Can be any entity/record
 ; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
-; :uuid    (fn$ instance? db/SQUUID)
+; :uuid    (fnl instance? db/SQUUID)
 (dv/def -schema  (s/or* keyword? dbfn-call?)) ; TODO look over this more
 (dv/def -any     (constantly true))
 (dv/def -keyword (s/or* keyword? dbfn-call?))
 (dv/def -string  (s/or* string? dbfn-call?))
 (dv/def -boolean (s/or* (fn1 t/boolean?) dbfn-call?))
-(dv/def -long    (s/or* #?(:clj  (fn-or (fn$ instance? Long   )
-                                               (fn$ instance? Integer)
-                                               (fn$ instance? Short  )) #_long?
+(dv/def -long    (s/or* #?(:clj  (fn-or (fnl instance? Long   )
+                                               (fnl instance? Integer)
+                                               (fnl instance? Short  )) #_long?
                                   :cljs c/integer?) ; TODO CLJS |long?| ; TODO autocast from e.g. bigint if safe to do so
                                dbfn-call?))
 (dv/def -bigint  (s/or* (fn1 t/bigint?)
@@ -332,14 +332,14 @@
 (dv/def -double  (s/or* #?(:clj  (fn1 t/double?)
                                   :cljs number?)
                                dbfn-call?))
-(dv/def -bigdec  (s/or* #?(:clj  (fn$ instance? BigDecimal) #_bigdec?
+(dv/def -bigdec  (s/or* #?(:clj  (fnl instance? BigDecimal) #_bigdec?
                                   :cljs number?)
                                dbfn-call?)) ; TODO CLJS |bigdec?|
-(dv/def -instant (s/or* (fn$ instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
+(dv/def -instant (s/or* (fnl instance? #?(:clj java.util.Date :cljs js/Date  )) ; TODO time/->instant
                        #?(:clj (s/and string?        (s/conformer clojure.instant/read-instant-date)))
                                (s/and (fn1 t/integer?) (s/conformer #(#?(:clj java.util.Date. :cljs js/Date.) (->long %))))
                                dbfn-call?))
-(dv/def -uri     (s/or* (fn$ instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
+(dv/def -uri     (s/or* (fnl instance? #?(:clj java.net.URI   :cljs (TODO) #_paths/URI))
                                dbfn-call?))
 (dv/def -bytes   (s/or* (fn1 t/bytes?) dbfn-call?))
 

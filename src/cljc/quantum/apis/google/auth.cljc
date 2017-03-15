@@ -8,7 +8,7 @@
     [quantum.core.spec     :as s
       :refer [validate]]
     [quantum.core.fn
-      :refer [fn1 fn$]]
+      :refer [fn1 fnl]]
     [quantum.core.logic
       :refer [default]]
     [quantum.core.log      :as log
@@ -61,7 +61,7 @@
 ; TODO incomplete
 (defn oauth-params [{:keys [email scopes access-type]}]
   (let [auth-keys (auth/get :google)
-        _ (validate email (fn$ contains? auth-keys))
+        _ (validate email (fnl contains? auth-keys))
         _ (validate access-type (s/or* nil? access-types))
         access-type (or access-type :offline)]
     (map/om ; must be in this order

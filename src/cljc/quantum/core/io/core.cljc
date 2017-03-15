@@ -12,7 +12,7 @@
              [quantum.core.error         :as err
                :refer [->ex TODO throw-unless]]
              [quantum.core.fn            :as fn
-               :refer [firsta fn-> fn$ fn1]]
+               :refer [firsta fn-> fnl fn1]]
              [quantum.core.log           :as log]
              [quantum.core.logic         :as logic
                :refer [splice-or whenf whenf1 whenc condpc coll-or fn-not]]

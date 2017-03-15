@@ -32,7 +32,7 @@
             [quantum.core.logic
               :refer [whenp fn-or]]
             [quantum.core.fn
-              :refer [fn$ fn1 fn-> rcomp]]
+              :refer [fnl fn1 fn-> rcomp]]
             [quantum.core.collections   :as coll
               :refer [containsv? assoc-in flatten-1]]
             [quantum.core.log           :as log

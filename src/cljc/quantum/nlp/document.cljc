@@ -1,7 +1,7 @@
 (ns quantum.nlp.document
   (:require
     [quantum.core.fn
-      :refer [fn1 fn$ fn-> fn->> <- rcomp]]
+      :refer [fn1 fnl fn-> fn->> <- rcomp]]
     [quantum.core.logic
       :refer [ifn1 whenf1 whenf fn-not]]
     [quantum.core.string      :as str]

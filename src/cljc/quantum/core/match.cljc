@@ -5,7 +5,7 @@
     [[net.cgrand.seqexp                :as se]
      [clojure.core.match               :as match]])
      [quantum.core.fn                  :as fn
-       :refer [<- fn-> fn$]]
+       :refer [<- fn-> fnl]]
      [quantum.core.vars                :as var
        :refer [defalias]]
      [quantum.core.logic
@@ -22,7 +22,7 @@
 ; TODO fix the performance implications of multiple apply and varargs
 (defn wrap-eq [f]
   (fn [& args]
-    (apply f (map (whenf1 (fn-not (fn-or fn? (fn$ instance? net.cgrand.seqexp.Pattern)))
+    (apply f (map (whenf1 (fn-not (fn-or fn? (fnl instance? net.cgrand.seqexp.Pattern)))
                     (fn [x] #(= % x))) ; non-fns are wrapped in =
                   args))))
 
@@ -46,7 +46,7 @@
 (def defs
   (let [defs-syms '#{& ? | + * ?= ?! _}]
     (->> (zipmap defs-syms
-                 (mapv (fn$ var/qualify 'quantum.core.match) defs-syms))
+                 (mapv (fnl var/qualify 'quantum.core.match) defs-syms))
          (apply concat) vec)))
 
 #?(:clj
@@ -59,7 +59,7 @@
 (defn replace-cats [found-sym pattern]
   (let [cat? (fn-and seq? (fn-> first symbol?) (fn-> first name (= "&")))
         replace-inner-cats
-         (fn$ postwalk (whenf1 cat? (fn$ list 'partial `re-match-whole-with-found* found-sym)))]
+         (fnl postwalk (whenf1 cat? (fnl list 'partial `re-match-whole-with-found* found-sym)))]
     (if (cat? pattern)
         (list* (first pattern) (map replace-inner-cats (rest pattern)))
         (replace-inner-cats pattern))))

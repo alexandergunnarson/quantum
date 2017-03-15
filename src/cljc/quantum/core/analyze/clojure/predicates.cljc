@@ -9,7 +9,7 @@
     [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.core                 :as qcore]
     [quantum.core.fn                   :as fn
-      :refer [fn$ <- fn-> fn->>]]
+      :refer [fnl <- fn-> fn->>]]
     [quantum.core.logic                :as logic
       :refer [splice-or fn= fn-or fn-and fn-not whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
@@ -173,5 +173,5 @@
          char? list? vector? set?
          (fn-and map? (fn-not record?))
          nil?
-         #?@(:clj [(fn$ instance? clojure.lang.Cons   ) ; TODO maybe other things too
-                   (fn$ instance? clojure.lang.LazySeq)])))
+         #?@(:clj [(fnl instance? clojure.lang.Cons   ) ; TODO maybe other things too
+                   (fnl instance? clojure.lang.LazySeq)])))
