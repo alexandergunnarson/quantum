@@ -1,10 +1,9 @@
 (ns quantum.test.core.reducers
            (:require
-             [#?(:clj  clojure.test
-                 :cljs cljs.test)
-               :refer [#?@(:clj [deftest is])]
-               :refer-macros [deftest is]]
+             [quantum.core.test
+               :refer [deftest is testing]]
              [quantum.core.reducers :as ns]
+             [quantum.core.reducers.fold :as fold]
      #?(:clj [clojure.test.generative :refer [defspec]])
      #?(:clj [clojure.data.generators :as gen]))
   #?(:cljs (:require-macros
@@ -24,7 +23,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      LAZY REDUCERS       }=====================================================
 ;=================================================={                          }=====================================================
-(defn test:reverse-conses 
+(defn test:reverse-conses
   ([s tail] )
   ([s from-tail to-tail]))
 
@@ -115,6 +114,28 @@
   ([      end     ])
   ([start end     ])
   ([start end step]))
+
+(deftest test:repeat ; {:adapted-from "CLJ-994 (Jason Jackson)"}
+  ;; equivalent sequences.
+  (doseq [n [-1 0 1 10 100 1000]]
+    (is (= (ns/join [] (ns/repeat+ n \x))
+           (clojure.core/repeat n \x))))
+
+  ;; equivalent reductions.
+  (doseq [n [-1 0 1 10 100 1000]]
+    (is (= (ns/reduce + (ns/repeat+ n 1))
+           (ns/reduce + (clojure.core/repeat n 1)))))
+
+  ;; equivalent folds, group size=default
+  (doseq [n [-1 0 1 10 100 1000]]
+    (is (= (fold/fold + (ns/repeat+ n 1))
+           (ns/reduce + (clojure.core/repeat n 1)))))
+
+  ;; equivalent folds, group size=13
+  (doseq [n [-1 0 1 10 100 1000]]
+    (is (= (fold/fold 99 + + (ns/repeat+ n 1))
+           (ns/reduce + (clojure.core/repeat n 1))))))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
@@ -156,7 +177,7 @@
 (defn test:distinct+
   [coll])
 
- 
+
 (defn test:fold-frequencies
   [coll])
 
@@ -184,7 +205,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          ZIPVEC          }=====================================================
 ;=================================================={                          }=====================================================
-(defn test:zipvec+ 
+(defn test:zipvec+
   ([vec-0])
   ([vec-0 & vecs]))
 ;___________________________________________________________________________________________________________________________________
