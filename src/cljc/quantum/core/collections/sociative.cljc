@@ -54,7 +54,7 @@
     [quantum.core.reducers         :as red
       :refer [join partition-all+]]
     [quantum.core.type             :as type
-      :refer [transient!* persistent!* transient? editable?]]
+      :refer [?transient! ?persistent! transient? editable?]]
     [quantum.core.loops            :as loops
       :refer [reduce-pair reduce]]))
 
@@ -69,10 +69,10 @@
   (if (and (vector? coll-0)
            (number? k)
            (-> coll-0 count dec (< k)))
-      (persistent!*
+      (?persistent!
         (reduce
           (fn [coll-n _] (conj! coll-n nil)) ; extend-vec part
-          (transient!* coll-0)
+          (?transient! coll-0)
           (range (count coll-0) (inc k))))
       coll-0))
 
@@ -83,11 +83,11 @@
     (assoc (extend-coll-to coll-0 k) k v))
   ([coll-0 k v & kvs-0]
     (loop [kvs-n  kvs-0
-           coll-f (-> coll-0 transient!*
+           coll-f (-> coll-0 ?transient!
                       (extend-coll-to k)
                       (assoc?! k v))]
       (if (empty? kvs-n)
-          (persistent!* coll-f)
+          (?persistent! coll-f)
           (recur (-> kvs-n rest rest)
                  (let [k-n (first kvs-n)]
                    (-> coll-f (extend-coll-to k-n)
@@ -105,10 +105,12 @@
       (assoc-if m pred k v)
       (partition-all+ 2 kvs))))
 
-(defn assoc-when-none
+(defn assoc-default
   "assoc's @args to @m only when the respective keys are not present in @m."
-  [m & args]
-  (apply assoc-if m (fn [m' k _] (not (contains? m' k))) args))
+  ([m k v]
+    (assoc-if m (fn [m' k _] (not (contains? m' k))) k v))
+  ([m k v & kvs]
+    (apply assoc-if m (fn [m' k _] (not (contains? m' k))) kvs)))
 
 (defn update* [assoc*]
   (fn update*
