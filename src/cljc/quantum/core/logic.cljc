@@ -44,6 +44,21 @@
 #?(:clj (defmacro nor      [& args] `(not (or  ~@args))))
 #?(:clj (defmacro implies? [a b] `(if ~a ~b true)))
 
+; TODO maybe eliminate `volatile!`?
+#?(:clj
+(defmacro some-but-not-more-than-n
+  "`some-but-not-more-than-n` where `n`=1 is equivalent to
+   `(and (or ...) (not (and ...)))`. However, it performs
+   one O(n) check rather than two."
+  [n & args]
+  (assert (integer? n) {:n n})
+  `(let [and?# (volatile! true)]
+     (and (or ~@(take n args) (vreset! and?# false) ~@(drop n args))
+          (or (not @and?#) (not (and ~@(drop n args))))))))
+
+#?(:clj (defmacro exactly-1 [& args] `(some-but-not-more-than-n 1 ~@args)))
+; TODO `exactly-n`
+
 #?(:clj
 (defmacro fn-logic-base
   [oper & preds]
@@ -98,9 +113,26 @@
                (str "Value not booleanizable: " v)))))
 
 #?(:clj
+(defmacro cond*
+  "`cond` meets `case`.
+   Like `case`, takes test pairs with an optional trailing (unpaired) clause.
+   If all preds are compile-time constants, transforms into `case`.
+   Otherwise behaves more like `cond`, evaluating each test in order:
+     If a pred matches,
+       Returns the corresponding expression
+     Else
+       If there is a trailing (unpaired) clause,
+         That clause is returned, like the last arg to `case`.
+       Else
+         Throws an error that no clause matches, like `case`."
+  [& args]
+  (throw (ex-info "TODO" nil))))
+
+#?(:clj
 (defmacro condf
   "Like |cond|, with each expr as a function applied to the initial argument, @obj."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "Alex Gunnarson"
+   :todo        #{"Simplify"}}
   [obj & clauses]
   (let [gobj (gensym "obj__")
         illegal-argument (case-env :clj 'IllegalArgumentException. :cljs 'js/Error.)
@@ -145,13 +177,15 @@
 
 ; TODO compress this?
 
-#?(:clj (defmacro ifn   [x pred tf ff] `(let [x# ~x] (if (~pred x#) (~tf x#) (~ff x#)))))
-#?(:clj (defmacro ifc   [x pred t  f ] `(let [x# ~x] (if (~pred x#)  ~t       ~f     ))))
-#?(:clj (defmacro ifp   [x pred tf ff] `(let [x# ~x] (if  ~pred     (~tf x#) (~ff x#)))))
-
-#?(:clj (defmacro ifn-> [x pred tf ff] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~tf) (-> x# ~ff)))))
-#?(:clj (defmacro ifc-> [x pred t  f ] `(let [x# ~x] (if (-> x# ~pred)  ~t       ~f     ))))
-#?(:clj (defmacro ifp-> [x pred tf ff] `(let [x# ~x] (if  ~pred        (-> x# ~tf) (-> x# ~ff)))))
+#?(:clj (defmacro ifn    [x pred tf ff] `(let [x# ~x] (if (~pred x#)     (~tf x#)     (~ff x#)    ))))
+#?(:clj (defmacro ifn->  [x pred tf ff] `(let [x# ~x] (if (-> x# ~pred)  (->  x# ~tf) (->  x# ~ff)))))
+#?(:clj (defmacro ifn->> [x pred tf ff] `(let [x# ~x] (if (->> x# ~pred) (->> x# ~tf) (->> x# ~ff)))))
+#?(:clj (defmacro ifc    [x pred t  f ] `(let [x# ~x] (if (~pred x#)     ~t           ~f          ))))
+#?(:clj (defmacro ifc->  [x pred t  f ] `(let [x# ~x] (if (-> x# ~pred)  ~t           ~f          ))))
+#?(:clj (defmacro ifc->> [x pred t  f ] `(let [x# ~x] (if (->> x# ~pred) ~t           ~f          ))))
+#?(:clj (defmacro ifp    [x pred tf ff] `(let [x# ~x] (if ~pred          (~tf x#)     (~ff x#)    ))))
+#?(:clj (defmacro ifp->  [x pred tf ff] `(let [x# ~x] (if ~pred          (->  x# ~tf) (->  x# ~ff)))))
+#?(:clj (defmacro ifp->> [x pred tf ff] `(let [x# ~x] (if ~pred          (->> x# ~tf) (->> x# ~ff)))))
 
 #?(:clj (defmacro ifn1 [x0 x1 x2] `(fn [arg#] (ifn arg# ~x0 ~x1 ~x2))))
 #?(:clj (defmacro ifp1 [x0 x1 x2] `(fn [arg#] (ifp arg# ~x0 ~x1 ~x2))))
@@ -160,32 +194,30 @@
 #?(:clj
 (defmacro whenf
   "Analogous to `ifn`.
-   (whenf 1 nnil? inc)` = `(ifn 1 nnil? inc identity)`
+   (whenf 1 some? inc)` = `(ifn 1 some? inc identity)`
    `whenf` : `identity` :: `when` : `nil`"
   [x pred tf] `(let [x# ~x] (if (~pred x#) (~tf x#) x#))))
 
 #?(:clj
 (defmacro whenf->
   "Analogous to `ifn->`.
-   `(whenf-> 1 nnil? inc)` = `(ifn-> 1 nnil? inc identity)`
+   `(whenf-> 1 some? inc)` = `(ifn-> 1 some? inc identity)`
    `whenf->` : `identity` :: `when` : `nil`"
-  [x pred texpr] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~texpr) x#))))
+  [x pred & texprs] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~@texprs) x#))))
 
 #?(:clj
-(defmacro whenc
-  "`whenf` + `ifc`" [x pred texpr] `(let [x# ~x] (if (~pred x#) ~texpr x#))))
+(defmacro whenf->>
+  "Analogous to `ifn->>`.
+   `(whenf->> 1 some? inc)` = `(ifn->> 1 some? inc identity)`
+   `whenf->>` : `identity` :: `when` : `nil`"
+  [x pred & texprs] `(let [x# ~x] (if (->> x# ~pred) (->> x# ~@texprs) x#))))
 
-#?(:clj
-(defmacro whenc->
-  "`whenf->` + `ifc->`" [x pred-expr texpr] `(let [x# ~x] (if (-> x# ~pred-expr) ~texpr x#))))
-
-#?(:clj
-(defmacro whenp
-  "`whenf` + `ifp`" [x pred tf] `(let [x# ~x] (if ~pred (~tf x#) x#))))
-
-#?(:clj
-(defmacro whenp->
-  "`whenf->` + `ifp->`" [x pred texpr] `(let [x# ~x] (if ~pred (-> x# ~texpr) x#))))
+#?(:clj (defmacro whenc    "`whenf` + `ifc`"       [x pred      texpr ] `(let [x# ~x] (if (~pred x#) ~texpr x#))))
+#?(:clj (defmacro whenc->  "`whenf->` + `ifc->`"   [x pred-expr texpr ] `(let [x# ~x] (if (->  x# ~pred-expr) ~texpr x#))))
+#?(:clj (defmacro whenc->> "`whenf->>` + `ifc->>`" [x pred-expr texpr ] `(let [x# ~x] (if (->> x# ~pred-expr) ~texpr x#))))
+#?(:clj (defmacro whenp    "`whenf` + `ifp`"       [x pred      tf    ] `(let [x# ~x] (if ~pred (~tf x#)          x#))))
+#?(:clj (defmacro whenp->  "`whenf->` + `ifp->`"   [x pred    & texprs] `(let [x# ~x] (if ~pred (->  x# ~@texprs) x#))))
+#?(:clj (defmacro whenp->> "`whenf->>` + `ifp->>`" [x pred    & texprs] `(let [x# ~x] (if ~pred (->> x# ~@texprs) x#))))
 
 #?(:clj (defmacro whenf1 [x0 x1] `(fn [arg#] (whenf arg# ~x0 ~x1))))
 #?(:clj (defmacro whenc1 [x0 x1] `(fn [arg#] (whenc arg# ~x0 ~x1))))
