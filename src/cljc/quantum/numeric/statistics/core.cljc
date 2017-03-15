@@ -1,11 +1,14 @@
 (ns quantum.numeric.statistics.core
-  (:refer-clojure :exclude [for nth count take drop first last map mod])
+  (:refer-clojure :exclude
+    [for nth count take drop first last map mod frequencies])
   (:require
-    [quantum.core.collections
+    [quantum.core.data.map
+      :refer [!hash-map]]
+    [quantum.core.collections                :as coll
       :refer [nth take drop lasti map take+ map+
-              first for last count join]]
+              first for last count join frequencies]]
     [quantum.core.fn
-      :refer [fn1 fn$ fn-> <-]]
+      :refer [fn1 fnl fn-> <-]]
     [quantum.core.log                        :as log]
     [quantum.core.numeric                    :as cnum
       :refer [*+* *-* *** *div* mod
@@ -42,19 +45,21 @@
 (defalias arithmetic-mean mean)
 
 (defn geometric-mean
-  [xs]
+  "Computes the geometric mean of a reducible collection."
+  [xs] ; TODO xs is `reducible?`
   (let [[prod ct] (num/product+count xs)]
     (when (> ct 0) (pow prod (/ 1 ct)))))
 
 (defn moving-average+
   "Moving average of a vector for a given window"
-  {:todo ["Don't use laziness here"]}
-  [v window] (map+ mean (partition window 1 v)))
+  {:todo        #{"Use reducer instead of laziness here"}
+   :attribution "alexandergunnarson"}
+  [v window] (->> (partition window 1 v) (map+ mean)))
 
 ; For the moment we take the easy option of sorted samples
 ; TODO abstract this to partition-and-return-index
 (defn median
-  "Calculates the median of a sorted data set.
+  "Computes the median of a sorted data set.
    References: http://en.wikipedia.org/wiki/Median"
   {:adapted-from 'criterium.stats}
   [data]
@@ -68,9 +73,21 @@
          (take i data)
          (drop (inc i) data)])))
 
+(defn mode
+  "Computes the mode of a reducible collection.
+   If multiple elements occur with equal frequency,
+   one will be chosen."
+  {:attribution "alexandergunnarson"}
+  [xs] ; TODO xs is `reducible?`
+  (->> xs
+       (frequencies (!hash-map))
+       (coll/reduce-max-key val)
+       key))
+
 (defn sum-of-squares
-  "Sum of the squares of each data point."
-  [data] (->> data (map+ sq) sum))
+  "Computes the sum of the squares of each data point in
+   a reducible collection."
+  [data] (->> data (map+ sq) sum)) ; TODO xs is `reducible?`
 
 ; AKA L2 difference
 (defn square-difference [a b] (sq (- a b)))
@@ -250,7 +267,7 @@
   {:adapted-from 'criterium.stats}
   [x rng]
   (let [n (count x)]
-    (map+ (fn$ nth x) (sample-uniform+ n n rng))))
+    (map+ (fnl nth x) (sample-uniform+ n n rng))))
 
 (defn bootstrap-sample
   "Bootstrap sampling ('bagging') of a statistic, using resampling with replacement.
