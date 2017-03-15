@@ -34,7 +34,7 @@
     [quantum.core.reducers.reduce  :as red
       :refer [reduce]]
     [quantum.core.type             :as t
-      :refer [transient!* persistent!* lseq? editable? ->joinable]]
+      :refer [?transient! ?persistent! lseq? editable? ->joinable]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])])
   #?(:clj (:import [quantum.core.type.defs Reducer Folder])))
@@ -73,6 +73,13 @@
 #?(:cljs (defn fjfork   [task] task  ))
 #?(:cljs (defn fjjoin   [task] (task)))
 
+#?(:clj
+(defn fj-invoke-2-fns [f1 f2]
+  (fjinvoke
+   #(let [t2 (fjtask f2)]
+      (fjfork t2)
+      [(f1) (fjjoin t2)]))))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     FOLDING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
@@ -87,7 +94,7 @@
   halves will normally be of the same type as the parent collection, but
   anything foldable is sufficient.
 
-  Generalized from |foldvec| to work for anything you can split in half."
+  Generalized from `foldvec` to work for anything you can split in half."
   {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
   [halving-fn coll n combinef reducef]
   (let [size (count coll)]
@@ -213,18 +220,19 @@
 (def preduce fold)
 
 (defn pjoinl-fold
-  "|pjoinl| using |fold|."
+  "`pjoinl` using `fold`."
   [to from]
   (let [red-fn (if (editable? to) red/conj!-red red/conj-red)]
-    (fold (aritoid nil                             persistent!* #(joinl %1 %2))
-          (aritoid #(transient!* (t/->base to)) persistent!* red-fn red-fn)
+    (fold (aritoid nil                             (fn1 ?persistent!) #(joinl %1 %2))
+          (aritoid #(?transient! (t/->base to)) (fn1 ?persistent!) red-fn red-fn)
           from)))
 
 (defnt pjoinl*
   {:attribution "Alex Gunnarson"
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
-  ([to] to)
+  ([^default        to  ] to)
+  ([^reducer?       from] (joinl [] from))
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/parallel-splice-hash-sets to from)
                                           (pjoinl-fold to from))
@@ -233,14 +241,14 @@
                                           (seqspert.hash-map/parallel-splice-hash-maps to from)
                                           (pjoinl-fold to from))
                                 :cljs (pjoinl-fold to from)))
-  ([                to from] (if (nil? to) from (pjoinl-fold to from))))
+  ([^default        to from] (if (nil? to) from (pjoinl-fold to from))))
 
 (defn pjoinl
   "Parallel join, left.
-   Like |joinl|, but is parallel."
+   Like `joinl`, but is parallel."
   {:attribution "Alex Gunnarson"}
   ([] nil)
-  ([to] to)
+  ([to] (pjoinl* to))
   ([to from] (pjoinl* to from))
   ([to from & froms]
     (reduce #(pjoinl* %1 %2) (pjoinl* to from) froms)))
