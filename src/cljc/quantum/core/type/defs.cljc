@@ -6,6 +6,7 @@
     [clojure.core          :as core]
  #?(:cljs
     [com.gfredericks.goog.math.Integer])
+    [fast-zip.core]
     [quantum.core.data.map :as map
       :refer [map-entry]]
     [quantum.core.data.set :as set]
@@ -303,8 +304,10 @@
                             :cljs #{cljs.core/PersistentArrayMap
                                     cljs.core/TransientArrayMap}})
 (def +unsorted-map-types   (cond-union +hash-map-types +array-map-types))
+ ; TODO these are only the well-known unsorted map types
 (def unsorted-map-types    {:clj  (set/union (:clj +unsorted-map-types)
                                              '#{java.util.HashMap
+                                                java.util.IdentityHashMap
                                                 java.util.concurrent.ConcurrentHashMap})
                             :cljs (:cljs +unsorted-map-types)})
 (def +sorted-map-types    '{:clj  #{clojure.lang.PersistentTreeMap}
@@ -316,16 +319,23 @@
                                     clojure.lang.IPersistentMap}
                             :cljs (set/union (:cljs +unsorted-map-types)
                                              (:cljs +sorted-map-types))})
+; TODO these are only the well-known single-threaded mutable map types
+(def !map-types           '{:clj  #{java.util.HashMap
+                                    java.util.IdentityHashMap}
+                            :cljs #{goog.structs.Map}}) ; technically also `object`
+; TODO these are only the well-known multi-threaded mutable map types
+(def !!map-types          '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
 (def map-types             {:clj '#{clojure.lang.ITransientMap
                                     java.util.Map}
                             :cljs (:cljs +map-types)})
 
 ; ===== SETS ===== ; Associative; A special type of Map whose keys and vals are identical
 
-(def +unsorted-set-types  '{:clj  #{clojure.lang.PersistentHashSet
+(def +hash-set-types      '{:clj  #{clojure.lang.PersistentHashSet
                                     clojure.lang.PersistentHashSet$TransientHashSet}
                             :cljs #{cljs.core/PersistentHashSet
                                     cljs.core/TransientHashSet}})
+(def +unsorted-set-types   +hash-set-types) ; currently
 (def unsorted-set-types    {:clj  (set/union (:clj +unsorted-set-types)
                                              '#{java.util.HashSet})
                             :cljs (:cljs +unsorted-set-types)})
@@ -404,7 +414,8 @@
                             :cljs (set/union (:cljs svec-types)
                                              '#{cljs.core/PersistentVector
                                                 cljs.core/TransientVector})})
-(def vec-types             (cond-union array-list-types +vec-types))
+(def !vec-types            array-list-types)
+(def vec-types             (cond-union !vec-types +vec-types))
 
 ; ===== QUEUES ===== ;
 
@@ -456,6 +467,9 @@
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.ICollection / cljs.core/ICollection?
 (def coll-types            (cond-union sequential-types associative-types))
+
+(def sorted-types          {:clj '#{clojure.lang.Sorted java.util.SortedMap java.util.SortedSet}
+                            :cljs (:cljs (cond-union sorted-set-types sorted-map-types))}) ; TODO add in `cljs.core/ISorted
 
 (def transient-types      '{:clj  #{clojure.lang.ITransientCollection}
                             :cljs #{cljs.core/TransientVector
@@ -518,6 +532,33 @@
 
 (def comparable-types      {:clj  (set/union '#{byte char short int long float double} '#{Comparable})
                             :cljs (:cljs number-types)})
+
+(def record-types          '{:clj  #{clojure.lang.IRecord}
+                             #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
+
+(def reducer-types         '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
+                                    quantum.core.type.defs.Folder
+                                    quantum.core.type.defs.Reducer}
+                             :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
+                                     quantum.core.type.defs.Folder
+                                     quantum.core.type.defs.Reducer}})
+
+#_(def reducible-types       (cond-union
+                             array-types
+                             string-types
+                             record-types
+                             reducer-types
+                             chan-types
+                             {:cljs (:cljs +map-types)}
+                             {:cljs (:cljs +set-types)}
+                             integer-types
+                             {:clj  '#{clojure.lang.IReduce
+                                       clojure.lang.IReduceInit
+                                       clojure.lang.IKVReduce
+                                       #_clojure.core.protocols.CollReduce} ; no, in order to find most specific type
+                              #_:cljs #_'#{cljs.core/IReduce}}  ; because can't protocol-dispatch on protocols in CLJS
+                             {:clj  '#{fast_zip.core.ZipperLocation}
+                              :cljs '#{fast-zip.core/ZipperLocation}}))
 
 ; ===== PREDICATES ===== ;
 
@@ -599,8 +640,11 @@
    '+sorted-map?     +sorted-map-types
    'sorted-map?      sorted-map-types
    '+map?            +map-types
+   '!map?            !map-types
+   '!!map?           !!map-types
    'map?             map-types
 
+   '+hash-set?       +hash-set-types
    '+unsorted-set?   +unsorted-set-types
    'unsorted-set?    unsorted-set-types
    '+sorted-set?     +sorted-set-types
@@ -611,6 +655,8 @@
    ; INDEXED
 
    'indexed?         indexed-types
+
+   'sorted?          sorted-types
 
    'boolean-array?       {:clj #{(-> array-1d-types :clj :boolean)}}
    'byte-array?          {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
@@ -676,6 +722,8 @@
    'svector?         svec-types
    '+vec?            +vec-types
    '+vector?         +vec-types
+   '!vec?            !vec-types
+   '!vector?         !vec-types
    'vec?             vec-types
    'vector?          vec-types
    'tuple?           tuple-types
@@ -697,24 +745,19 @@
    'symbol?          '{:clj  #{clojure.lang.Symbol}
                        :cljs #{cljs.core/Symbol}}
 
-   'record?          '{:clj  #{clojure.lang.IRecord}
-                       :cljs #{cljs.core/IRecord}}
+   'record?          record-types
    'transient?       transient-types
    'transientizable? transientizable-types
    'editable?        {:clj  '#{clojure.lang.IEditableCollection}
-                      :cljs #_#{cljs.core/IEditableCollection} ; problems with this
+                      :cljs #_#{cljs.core/IEditableCollection} ; can't dispatch on a protocol
                             (set/union (get transientizable-types :cljc)
                                        (get transientizable-types :cljs))}
    'pattern?         regex-types
    'regex?           regex-types
-   'reducer?        '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
-                             quantum.core.type.defs.Folder
-                             quantum.core.type.defs.Reducer}
-                      :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
-                              quantum.core.type.defs.Folder
-                              quantum.core.type.defs.Reducer}}
+   'reducer?         reducer-types
+   ;'reducible?      reducible-types
    'file?            '{:clj  #{java.io.File}
-                       :cljs #{}} ; js/File isn't always available! Use an abstraction
+                       :cljs #{#_js/File}} ; isn't always available! Use an abstraction
    'atom?            atom-types
    'atomic?          atomic-types
    'm2m-chan?        m2m-chan-types
