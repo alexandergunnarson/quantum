@@ -13,7 +13,7 @@
     [quantum.core.macros.deftype
       :refer [deftype-compatible]]
     [quantum.core.fn
-      :refer [fn-> fn->> fn1 fn$ <-]]
+      :refer [fn-> fn->> fn1 fnl <-]]
     [quantum.core.logic
       :refer [fn= fn-and fn-or whenf1 whenf whenp default]]
     [quantum.core.log       :as log
@@ -33,6 +33,7 @@
 
 (s/defspec :db/id    core/integer?) ; TODO look over these more
 (s/defspec :db/ident keyword?) ; TODO look over these more
+(s/defspec :type/any (constantly true))
 
 ; TODO un-namespaced (req-un) should accept namespaced as well
 ; TODO Every entity can have an :db/ident or :db/conforms-to
