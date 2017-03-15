@@ -39,7 +39,7 @@
       :refer [folder coll-fold CollFold
               fjinvoke fjtask fjfork fjjoin]]
     [quantum.core.vars             :as var
-      :refer [defalias]])
+      :refer [defalias def-]])
   (:require-macros
     [quantum.core.reducers
       :refer [reduce join]]))
@@ -168,6 +168,7 @@
     ICounted
     (-count [this] (apply min (map count colls)))))
 
+(def- sentinel (->sentinel))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      LAZY REDUCERS       }=====================================================
 ;=================================================={                          }=====================================================
@@ -207,7 +208,7 @@
 
 #?(:clj
   (defmacro lseq->>
-    ^{:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
+    {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
     [s & forms]
     `(seq-seq (fn [n#] (->> n# ~@forms)) ~s)))
 
@@ -216,7 +217,7 @@
     "Returns a sequence on which seq can be called only once.
      Use when you don't want to keep the head of a lazy-seq while using reducers.
      Shouldn't be necessary with the fix starting around line 60."
-    ^{:attribution "Christophe Grand, http://stackoverflow.com/questions/22031829/tuning-clojure-reducers-library-performace"}
+    {:attribution "Christophe Grand, http://stackoverflow.com/questions/22031829/tuning-clojure-reducers-library-performace"}
     [coll]
     (let [a (atom coll)]
       (reify clojure.lang.Seqable ; ClojureScript has cljs.core.ISeqable but its method |seq| is private
@@ -267,34 +268,6 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
 ;=================================================={                          }=====================================================
-(deftype Cat [cnt left right]
-  #?@(:clj  [clojure.lang.Counted (count  [_] cnt)]
-      :cljs [cljs.core/ICounted   (-count [_] cnt)])
-
-  #?@(:clj  [clojure.lang.Seqable (seq  [_] (concat (seq left) (seq right)))]
-      :cljs [cljs.core/ISeqable   (-seq [_] (concat (seq left) (seq right)))])
-
-  #?(:clj  clojure.core.protocols/CollReduce
-     :cljs cljs.core/IReduce)
-    (#?(:clj coll-reduce :cljs -reduce) [this f1]
-      (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce) this f1 (f1)))
-    (#?(:clj coll-reduce :cljs -reduce) [_  f1 init]
-      (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce)
-       right f1
-       (#?(:clj clojure.core.protocols/coll-reduce :cljs reduce) left f1 init)))
-
-  CollFold
-    (coll-fold
-     [#?(:clj _ :cljs this) n combinef reducef]
-      #?(:cljs (red/reduce this reducef (reducef)) ; For ClojureScript, |fold| just falls back on reduce. No crazy async things.
-         :clj
-         (fjinvoke
-           (fn []
-             (let [rt (fjfork (fjtask #(coll-fold right n combinef reducef)))]
-               (combinef
-                (coll-fold left n combinef reducef)
-                (fjjoin rt))))))))
-
 (defn cat+
   ([] (throw (->ex :not-supported))) ; TODO fix this arity that CLJS is complaining about
   ([f] (core/cat f))
@@ -302,19 +275,17 @@
 
 (defn append!
   ".adds x to acc and returns acc"
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
+  {:adapted-from "clojure.core.reducers"}
   [acc x]
   #?(:clj  (doto ^java.util.Collection acc (.add  x))
      :cljs (doto acc (.push x))))
 
 (defn foldcat+
-  "Equivalent to (fold cat append! coll)"
-  {:added "1.5"
-   :attribution "clojure.core.reducers"
-   :performance "foldcat+ is faster than |into| a PersistentVector because it outputs ArrayLists"}
-  [coll]
-  (fold* cat+ append! coll))
+  "Equivalent to `(fold cat+ append! xs)`"
+  {:adapted-from "clojure.core.reducers"
+   :performance "`foldcat+` is faster than `into` a PersistentVector because it outputs ArrayLists"}
+  [xs]
+  (fold* cat+ append! xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
@@ -415,32 +386,84 @@
 
 (def flatten-1+ (fn->> (mapcat+ identity)))
 ;___________________________________________________________________________________________________________________________________
+;=================================================={          SOURCES         }=====================================================
+;=================================================={                          }=====================================================
+(def identity-rf (fn [rf] (aritoid rf rf rf)))
+;___________________________________________________________________________________________________________________________________
 ;=================================================={          REPEAT          }=====================================================
 ;=================================================={                          }=====================================================
+(declare repeatedly+)
 
+#?(:clj
+(defn fold-repeatedly
+  {:adapted-from "CLJ-994 (Jason Jackson)"}
+  [n f group-size combinef reducef]
+  (if (<= n group-size)
+      (reduce reducef (combinef) (repeatedly+ n f))
+      (let [left  (quot n 2)
+            right (- n left)
+            fc (fn [n] #(fold-repeatedly n f group-size combinef reducef))]
+        (apply combinef (fold/fj-invoke-2-fns (fc left) (fc right)))))))
+
+(defn repeatedly+
+  "Yields a reducible collection of infinite (or length n if supplied)
+   sequence of xs. If n is specified, then it is foldable."
+  {:adapted-from "CLJ-994 (Jason Jackson)"}
+  ([f]
+    (reducer
+      (reify
+        #?(:clj  clojure.core.protocols/CollReduce
+           :cljs cljs.core/IReduce)
+        (#?(:clj coll-reduce :cljs -reduce) [this f1]
+          (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
+        (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
+          (loop [ret init]
+            (if (reduced? ret)
+              @ret
+              (recur (f1 ret (f)))))))
+      identity-rf))
+  ([n f]
+    (folder
+      (reify
+        #?(:clj  clojure.core.protocols/CollReduce
+           :cljs cljs.core/IReduce)
+        (#?(:clj coll-reduce :cljs -reduce) [this f1]
+          (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
+        (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
+          (loop [ret init n n]
+            (cond (reduced? ret) @ret
+                  (<= n 0) ret
+                  :else (recur (f1 ret (f)) (dec n)))))
+        CollFold
+        (coll-fold [this group-size combinef reducef]
+          #?(:clj  (fold-repeatedly n f group-size combinef reducef)
+             :cljs (red/reduce this reducef (reducef)))))
+      identity-rf)))
+
+(defn repeat+
+  ([  x] (repeatedly+   (constantly x)))
+  ([n x] (repeatedly+ n (constantly x))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         ITERATE          }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried iterate+
+(defn iterate+
   "A reducible collection of [seed, (f seed), (f (f seed)), ...]"
-  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"
+  {:adapted-from "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"
    :performance "Untested"}
   [f seed]
-  (reify
-    #?(:clj  clojure.core.protocols/CollReduce
-       :cljs cljs.core/IReduce)
-      (#?(:clj coll-reduce :cljs -reduce) [this f1]
-        (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
-      (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
-        (loop [ret (f1 init seed) seed seed]
-          (if (reduced? ret)
-            @ret
-            (let [next-n (f seed)]
-              (recur (f1 ret next-n) next-n)))))
-    #?(:clj  clojure.lang.Seqable
-       :cljs cljs.core/ISeqable)
-      (#?(:clj seq :cljs -seq) [this]
-        (seq (iterate f seed)))))
+  (reducer
+    (reify
+     #?(:clj  clojure.core.protocols/CollReduce
+        :cljs cljs.core/IReduce)
+       (#?(:clj coll-reduce :cljs -reduce) [this f1]
+         (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
+       (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
+         (loop [ret (f1 init seed) seed seed]
+           (if (reduced? ret)
+             @ret
+             (let [next-n (f seed)]
+               (recur (f1 ret next-n) next-n))))))
+    identity-rf))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          RANGE           }=====================================================
 ;=================================================={                          }=====================================================
@@ -485,11 +508,11 @@
   "Returns a reducible collection of nums from start (inclusive) to end
   (exclusive), by step, where start defaults to 0, step to 1, and end
   to infinity."
-  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  ([              ] (iterate+ inc 0))
-  ([      end     ] (quantum.core.reducers/Range. 0     end 1))
-  ([start end     ] (quantum.core.reducers/Range. start end 1))
-  ([start end step] (quantum.core.reducers/Range. start end step)))
+  {:adapted-from "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
+  ([              ] (iterate+ #?(:clj inc' :cljs inc) 0))
+  ([      end     ] (folder (Range. 0     end 1   ) identity-rf))
+  ([start end     ] (folder (Range. start end 1   ) identity-rf))
+  ([start end step] (folder (Range. start end step) identity-rf)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
@@ -516,18 +539,17 @@
   /reduce/."
   {:attribution "parkour.reducers"}
   ([keyfn f coll]
-     (let [sentinel (->sentinel)]
-       (->> (mapcat+ identity [coll [sentinel]])
-            (map-state
-              (fn [[k acc] x]
-                (if (identical? sentinel x)
-                  [nil acc]
-                  (let [k' (keyfn x)]
-                    (if (or (= k k') (identical? sentinel k))
-                      [[k' (f acc x)] sentinel]
-                      [[k' (f (f) x)] acc]))))
-              [sentinel (f)])
-            (remove+ (partial identical? sentinel)))))
+    (->> (mapcat+ identity [coll [sentinel]])
+         (map-state
+           (fn [[k acc] x]
+             (if (identical? sentinel x)
+               [nil acc]
+               (let [k' (keyfn x)]
+                 (if (or (= k k') (identical? sentinel k))
+                   [[k' (f acc x)] sentinel]
+                   [[k' (f (f) x)] acc]))))
+           [sentinel (f)])
+         (remove+ (partial identical? sentinel))))
   ([keyfn f init coll]
      (let [f (fn ([] init) ([acc x] (f acc x)))]
        (reduce-by+ keyfn f coll))))
@@ -553,41 +575,77 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn distinct-by+:sorted ; 228.936664 ms (pretty much attains java speeds!!!)
+(defn dedupe+:sorted ; 228.936664 ms (pretty much attains java speeds!!!)
   "Remove adjacent duplicate values of (@f x) for each x in @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
   [f comp-fn xs]
-  (let [sentinel (->sentinel)]
-    (->> xs
-         (map-state
-           (fn [x x']
-             (let [xf  (whenf x  (fn-not (fn1 identical? sentinel)) f)
-                   xf' (whenf x' (fn-not (fn1 identical? sentinel)) f)]
-               [x' (if (comp-fn xf xf') sentinel x')]))
-           sentinel)
-         (remove+ (partial identical? sentinel)))))
+  (->> xs
+       (map-state
+         (fn [x x']
+           (let [xf  (whenf x  (fn-not (fn1 identical? sentinel)) f)
+                 xf' (whenf x' (fn-not (fn1 identical? sentinel)) f)]
+             [x' (if (comp-fn xf xf') sentinel x')]))
+         sentinel)
+       (remove+ (partial identical? sentinel))))
+
+(defn dedupe+ [xs] (folder xs (core/dedupe)))
+
+(defn pdedupe+
+  "Thread-safe `dedupe+`.
+   Just `dedupe+` with an `atom` instead of a `volatile`."
+  [f coll]
+  (folder coll
+    (fn [rf]
+      (let [pv (atom ::none)]
+        (fn
+          ([] (rf))
+          ([result] (rf result))
+          ([result input]
+            (let [prior @pv]
+              (reset! pv input)
+              (if (= prior input)
+                result
+                (rf result input)))))))))
 
 (defn distinct+ [xs] (folder xs (core/distinct)))
 
-(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+))
+(defn pdistinct+
+  "Thread-safe `distinct+`.
+   Just `distinct+` with an `atom` instead of a `volatile`."
+  {:todo #{"Test with `!!hash-set`"}}
+  [xs]
+  (fn [rf]
+    (let [seen (atom #{})]
+      (fn
+        ([] (rf))
+        ([result] (rf result))
+        ([result input]
+         (if (contains? @seen input)
+           result
+           (do (swap! seen conj input)
+               (rf result input))))))))
+
+(defn distinct-by+  [f xs] (->> xs (map+ f)  distinct+))
+(defn pdistinct-by+ [f xs] (->> xs (map+ f) pdistinct+))
 
 (defn replace+ [smap xs] (folder xs (core/replace smap)))
 
-(defn reduce-extremum-key
+(defn reduce-sentinel
+  "Calls `reduce` with a sentinel.
+   Useful for e.g. `max` and `min`."
   {:attribution "alexandergunnarson"}
-  [extremum-fn comp-fn xs]
-  (let [sentinel (->sentinel)
-        ret (reduce
-              (fn [ret x] (if (identical? ret sentinel)
-                              x
-                              (extremum-fn comp-fn ret x)))
+  [rf xs]
+  (let [ret (reduce
+              (fn [ret x] (if (identical? ret sentinel) x (rf ret x)))
               sentinel
               xs)]
     (if (identical? ret sentinel) nil ret)))
 
-(defn reduce-min-key [comp-fn xs] (reduce-extremum-key min-key comp-fn xs))
-(defn reduce-max-key [comp-fn xs] (reduce-extremum-key max-key comp-fn xs))
+(defn reduce-max-key [kfn xs] (reduce-sentinel (partial max-key kfn) xs))
+(defn reduce-min-key [kfn xs] (reduce-sentinel (partial min-key kfn) xs))
+(defn reduce-min     [    xs] (reduce-sentinel          min          xs))
+(defn reduce-max     [    xs] (reduce-sentinel          max          xs))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
@@ -713,7 +771,8 @@
 
 #?(:clj
 (defmacro for+
-  "Reducer comprehension. Like `for` but yields a reducible/foldable collection."
+  "Reducer comprehension. Like `for` but yields a reducible/foldable collection.
+   Essentially `map+` but written differently."
   {:origin      "Christophe Grand, https://gist.github.com/cgrand/5643767"
    :adapted-by  "alexandergunnarson"
    :performance "51.454164 ms vs. 72.568330 ms for |doall| with normal (lazy) |for|"}
