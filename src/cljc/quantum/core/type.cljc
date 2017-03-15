@@ -7,16 +7,16 @@
      double? decimal?
      nil? char? number? integer? float?
      sequential? indexed? list? coll?
-     symbol? keyword?
-     array?
-     record?
-     identity class])
+     symbol? keyword?, array?, record?, var?
+     identity
+     class type
+     ancestors descendants, supers bases, isa? instance?, derive underive])
   (:require
     [clojure.core                 :as core]
     [quantum.core.classes         :as classes]
     [quantum.core.core            :as qcore]
     [quantum.core.fn              :as fn
-      :refer [fn1 fn$ mfn fn->]]
+      :refer [fn1 fnl mfn fn->]]
     [quantum.core.logic           :as logic
       :refer [fn-and whenf1]]
     [quantum.core.data.vector     :as vec    ]
@@ -31,7 +31,22 @@
 
 ; TODO: Should include typecasting? (/cast/)
 
-(def class #?(:clj core/class :cljs type))
+; ===== HIERARCHY ===== ;
+
+#?(:clj (defalias ancestors   core/ancestors))
+#?(:clj (defalias descendants core/descendants))
+
+#?(:clj (defalias supers      core/supers   ))
+#?(:clj (defalias bases       core/bases    ))
+
+        (defalias isa?        core/isa?     )
+        (defalias instance?   core/instance?)
+
+#?(:clj (defalias derive      core/derive   ))
+#?(:clj (defalias underive    core/underive ))
+
+(def class #?(:clj core/class :cljs core/type))
+(defalias type core/type)
 
 #?(:clj (def instance+? instance?)
    :cljs
@@ -101,6 +116,8 @@
          (defnt set?           ([^set?           x] true) ([^default x] false))
 
          (defnt array-list?    ([^array-list?    x] true) ([^default x] false))
+         (defnt list?          ([^list?          x] true) ([^default x] false))
+         (defnt +list?         ([^+list?         x] true) ([^default x] false))
          (defnt +queue?        ([^+queue?        x] true) ([^default x] false))
          (defnt queue?         ([^queue?         x] true) ([^default x] false))
          (defnt lseq?          ([^lseq?          x] true) ([^default x] false))
@@ -119,6 +136,8 @@
          (def map-entry? #?(:clj  core/map-entry?
                             :cljs (fn-and vector? (fn-> count (= 2)))))
          (defalias atom? qcore/atom?)
+ #?(:clj (defalias var?  core/var?))
+         ; TODO `ref?`, `future?`
 
          (defn derefable? [obj]
            #?(:clj  (instance?  clojure.lang.IDeref obj)
@@ -138,9 +157,9 @@
   (java.lang.reflect.Modifier/isAbstract (.getModifiers class-))))
 
 
-#?(:clj (def multimethod? (fn$ instance? clojure.lang.MultiFn)))
-#?(:clj (def unbound?     (fn$ instance? clojure.lang.Var$Unbound)))
-#?(:clj (def thread?      (fn$ instance? Thread)))
+#?(:clj (def multimethod? (fnl instance? clojure.lang.MultiFn)))
+#?(:clj (def unbound?     (fnl instance? clojure.lang.Var$Unbound)))
+#?(:clj (def thread?      (fnl instance? Thread)))
 
 #?(:clj
 (defn protocol?
@@ -222,18 +241,8 @@
                           :cljs cljs.core.PersistentHashMap.EMPTY))
   ([^default        x] (empty x)))
 
-(def transient!*  (whenf1 editable?  transient))
-(def persistent!* (whenf1 transient? persistent!))
-
-(def transient-persistent-fns
-  {true  [transient      conj! persistent!     ]
-   false [core/identity  conj  core/identity   ]})
-
-(defn transient-fns [coll]
-  (get transient-persistent-fns (editable? coll)))
-
-(defn recommended-transient-fns [coll]
-  (get transient-persistent-fns (should-transientize? coll)))
+(defnt ?transient!  ([^editable?  x] (transient   x)) ([^default x] x))
+(defnt ?persistent! ([^transient? x] (persistent! x)) ([^default x] x))
 
 (defnt ->joinable
   ([#{+vec? +hash-map? +unsorted-set?} x] x)
