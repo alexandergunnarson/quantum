@@ -2,6 +2,7 @@
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
     :attribution "Alex Gunnarson"}
   quantum.core.error
+  (:refer-clojure :exclude [assert])
   (:require
     [clojure.string                :as str]
     [slingshot.slingshot           :as try]
@@ -9,7 +10,7 @@
       :refer [kw-map]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
-      :refer [fn$ fn1 rcomp]]
+      :refer [fnl fn1 rcomp]]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env case-env*]]
     [quantum.core.log              :as log]
@@ -17,7 +18,7 @@
       :refer [defalias]])
   (:require-macros
     [quantum.core.error            :as self
-      :refer [with-log-errors]]))
+      :refer [with-log-errors assert]]))
 
 (def ^{:todo {0 "Finish up `conditions` fork"}} annotations nil)
 
@@ -38,8 +39,8 @@
    `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
 
 
-(def error? (fn$ instance? #?(:clj Throwable :cljs js/Error)))
-(def ex-info? (fn$ instance? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)))
+(def error? (fnl instance? #?(:clj Throwable :cljs js/Error)))
+(def ex-info? (fnl instance? #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo)))
 
 (defrecord Err [type msg objs])
 
@@ -68,21 +69,15 @@
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
   [e]
-  #?(:clj (let [^Throwable e e
-                m {:name    (-> e class .getName)
-                   :message (-> e .getMessage)
-                   :trace   (-> e clj-stacktrace.repl/pst with-out-str str/split-lines)}]
-            (if (instance? clojure.lang.ExceptionInfo e)
-                (assoc m :data (ex-data e))
-                m))
-     :cljs (if (instance? js/Error e)
-               (let [m {:name nil
-                        :message (.-message e)
-                        :trace   (.-trace   e)}]
-                 (if (instance? cljs.core.ExceptionInfo e)
-                     (assoc m :data (ex-data e))
-                     m))
-               {:ex-data e})))
+  #?(:clj  (Throwable->map e)
+     :cljs (do (assert (instance? js/Error e) {:e e})
+               {:cause   nil
+                :via     [{:type    nil
+                           :message (.-message e)
+                           :at      nil
+                           :data    (when (instance? cljs.core.ExceptionInfo e)
+                                      (ex-data e))}]
+                :trace   (.-trace e)}))) ; TODO str->vec based on browser via goog.debug.*
 
 #?(:clj
 (defmacro throw-unless
@@ -110,6 +105,16 @@
   {:usage '(->> 0 (/ 1) (with-catch (constantly -1)))}
   [handler try-val]
   `(catch-all ~try-val e# (~handler e#))))
+
+#?(:clj
+(defmacro assert
+  "Like `assert` but never gets elided out."
+  ([expr] `(assert ~expr nil))
+  ([expr info]
+   `(let [expr# ~expr]
+      (if expr#
+          expr#
+          (throw (ex-info "Assertion failed" {:expr '~expr :info ~info})))))))
 
 #?(:clj
 (defmacro with-assert
