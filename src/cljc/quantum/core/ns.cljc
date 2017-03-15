@@ -2,9 +2,22 @@
   ^{:doc "Useful namespace and var-related functions."
     :attribution "Alex Gunnarson"}
   quantum.core.ns
+  (:refer-clojure :exclude
+    [all-ns in-ns create-ns, alias, require import use, loaded-libs])
   (:require
-    [clojure.set    :as set]
-    [clojure.string :as str]))
+    [clojure.core      :as core]
+    [clojure.set       :as set]
+    [clojure.string    :as str]
+    [quantum.core.vars :as var
+      :refer [defalias]]))
+
+#?(:clj (defalias all-ns      core/all-ns   ))
+#_(:clj (defalias in-ns       core/in-ns    ))
+#?(:clj (defalias create-ns   core/create-ns))
+#?(:clj (defalias alias       core/alias    ))
+#?(:clj (defalias require     core/require  ))
+#?(:clj (defalias import      core/import   ))
+#?(:clj (defalias use         core/use      ))
 
 #?(:clj
 (defmacro search-var
@@ -106,6 +119,8 @@
     (doseq [ns-sym ns-syms]
       (load-ns (str base-path "/" (str/replace (name ns-sym) "." "/") ".cljc") ; TODO path separator
                ns-sym)))))
+
+#?(:clj (defalias loaded-libs core/loaded-libs))
 
 #?(:clj
 (defmacro load-lib [lib]
