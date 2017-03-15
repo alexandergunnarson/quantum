@@ -1,4 +1,4 @@
-(ns quantum.ai.ml.cluster
+(ns quantum.ai.ml.clustering
   "Clustering analysis. Clustering is the assignment of a set of observations
    into subsets (called clusters) so that observations in the same cluster are
    similar in some sense. Clustering is a method of unsupervised learning."

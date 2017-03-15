@@ -1,4 +1,4 @@
-(ns quantum.ai.ml.classify
+(ns quantum.ai.ml.classification
   "In machine learning and pattern recognition, classification refers to an
    algorithmic procedure for assigning a given input object into one of a
    given number of categories."
@@ -32,7 +32,7 @@
     [quantum.numeric.core             :as num*
       :refer [pi* sigma sum]])
   (:require-macros
-    [quantum.ai.ml.classify
+    [quantum.ai.ml.classification
       :refer [N N*]]))
 
 (log/this-ns)
