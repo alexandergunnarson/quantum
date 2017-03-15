@@ -19,10 +19,13 @@
     [quantum.core.meta.debug  :as debug]
 #?(:clj [clojure.core.matrix.impl.pprint :as mpprint])
 #?(:clj
-    [fipp.edn                 :as pr] ; Fipp currently has strange execution problems in CLJS
+    [fipp.edn
+     #_fipp.clojure             :as pr] ; Fipp currently has strange execution problems in CLJS
    :cljs
     [cljs.pprint              :as pr
       :include-macros true])))
+
+; TODO it would be nice to be able to print functions prettily like #fn clojure.core/inc
 
 (defonce ^{:doc "A set of classes not to print"}
   blacklist (atom #{}))
@@ -55,15 +58,15 @@
                   (str "String is too long to print ("
                        (str (count obj) " elements")
                        ").")
-                  "|max-length| is set at" (str *print-length* ".")) ; TODO fix so ellipsize
+                  "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
               (contains? @blacklist (type obj))
                 (println
                   "Object's class"
                   (str (type obj) "(" ")")
                   "is blacklisted for printing.")
               :else
-                (#?(:clj  fipp.edn/pprint
-                    :cljs cljs.pprint/pprint) obj))
+                (#?(:clj  pr/pprint
+                    :cljs pr/pprint) obj))
             nil))))
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
