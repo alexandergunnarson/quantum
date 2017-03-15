@@ -117,6 +117,7 @@
 ;=================================================={                 }=====================================================
 
 (defalias node    zip/node   )
+(defalias root    zip/root   )
 
 (defn ?node [x] (if (instance? fast_zip.core.ZipperLocation x) (node x) x))
 
