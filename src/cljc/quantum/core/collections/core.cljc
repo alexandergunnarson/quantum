@@ -31,6 +31,8 @@
                       ->long*
                       ->float*
                       ->double*])]]
+            [quantum.core.data.string
+              :refer [!str]]
             [quantum.core.data.vector       :as vec
               :refer [catvec svector subsvec]]
             [quantum.core.error             :as err
@@ -432,6 +434,7 @@
 
 ; TODO `array?`
 (defnt copy ([^array-1d? in] #?(:clj (copy! in (empty in) (count in)) :cljs (.slice in))))
+(defalias clone copy)
 
 ; ===== SLICE ===== ;
 
@@ -443,8 +446,8 @@
   #?(:clj ([^array-list? x ^nat-long? a ^nat-long? b] (.subList     x a b)))
   #?(:clj ([^string?     x ^nat-long? a             ] (.subSequence x a (count x))))
   #?(:clj ([^string?     x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
-          ([^reducer?    x ^nat-long? a             ] (->> x (drop+ a)))
-          ([^reducer?    x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b))))
+          ([^reducer?    x ^nat-long? a             ] (->> x (drop+ a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^reducer?    x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
 
 (defnt slice
   "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
@@ -533,7 +536,7 @@
   #?(:clj  ([#{clojure.lang.Associative    java.util.Map} coll           k] (.containsKey   coll k)))
   #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} coll           k] (.contains      coll k)))
   #?(:cljs ([#{+set? +map?}                               coll           k] (core/contains? coll k))) ; TODO find out how to make faster
-           ([^:obj                                        coll           k]
+           ([^default                                     coll           k]
              (if (nil? coll)
                  false
                  (throw (->ex :not-supported
@@ -689,14 +692,15 @@
 (defnt assoc!
   {:performance "|java.lang.reflect.Array/set| is 26 times faster
                   than 'normal' reflection"}
-  #?(:cljs (^<0> [^array?         x ^int i :<0>:1 v] (aset      x i v) x))
-  #?(:clj  (^<0> [^array?         x ^int i :<0>:1 v] (Array/set x v i)))
-  #?(:clj  (^<0> [^list?          x ^int i       v] (.set x i v) x)) ; it may fail sometimes
-           (^<0> [^transient?     coll      k       v] (core/assoc! coll k v))
-           (     [^atom?          coll      k       v] (swap! coll assoc-protocol k v))
-  #?(:clj  (^<0> [                x ^int i       v]
+  #?(:cljs (^<0> [^array?         x ^int k :<0>:1 v] (aset      x k v) x))
+  #?(:clj  (^<0> [^array?         x ^int k :<0>:1 v] (Array/set x v k)))
+  #?(:clj  (^<0> [^list?          x ^int k        v] (.set x k v) x)) ; TODO it may fail sometimes
+  #?(:clj  (^<0> [#{!map? !!map?} x      k        v] (.put x k v) x))
+           (^<0> [^transient?     x      k        v] (core/assoc! x k v))
+           (     [^atom?          x      k        v] (swap! x assoc-protocol k v))
+  #?(:clj  (^<0> [                x ^int k        v]
              (if (t/array? x)
-                 (java.lang.reflect.Array/set x i v)
+                 (java.lang.reflect.Array/set x k v)
                  (throw (->ex :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
 
 (defnt assoc
@@ -712,15 +716,17 @@
   "`assoc`, maybe mutable. General `assoc(!)`.
    If the value is mutable  , it will mutably   `assoc!`.
    If the value is immutable, it will immutably `assoc`."
-  (^<0> [^array?     x ^int k :<0>:1 v] (assoc! x k v))
-  (^<0> [^transient? x      k        v] (assoc! x k v))
-  (     [^atom?      x      k        v] (assoc! x k v))
-  (     [#?(:clj #{clojure.lang.Associative}
-            :cljs #{+vec? +map? nil?}) x k v] (assoc x k v))
-  (     [^default    x      k        v]
-          (if (nil? x)
-              {k v}
-              (throw (->ex :not-supported "`assoc?!` not supported on this object" {:type (type x)})))))
+        (^<0> [^array?     x ^int k :<0>:1 v] (assoc! x k v))
+        (^<0> [^transient? x      k        v] (assoc! x k v))
+        (     [^atom?      x      k        v] (assoc! x k v))
+        (     [#?(:clj #{clojure.lang.Associative}
+                  :cljs #{+vec? +map? nil?}) x k v] (assoc x k v))
+              ; technically, `(- map? +map?)`
+#?(:clj (     [#{!map? !!map?} x  k        v] (assoc! x k v)))
+        (     [^default    x      k        v]
+                (if (nil? x)
+                    {k v}
+                    (throw (->ex :not-supported "`assoc?!` not supported on this object" {:type (type x)})))))
 
 #?(:clj ; TODO macro to de-repetitivize
 (defnt assoc-in!* ; can efficiently protocol dispatch just one one argument because the rest are all the same types anyway
@@ -770,7 +776,7 @@
            ([^+vec?                       coll i]
              (catvec (subvec coll 0 i) (subvec coll (inc (#?(:clj identity* :cljs long) i)) (count coll))))
   #?(:cljs ([^nil?                        coll x] nil))
-  #?(:clj  ([                             coll x]
+  #?(:clj  ([^default                     coll x]
              (if (nil? coll)
                  nil
                  (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type coll)}))))))
@@ -780,12 +786,15 @@
   ([^atom?      coll k  ] (swap! coll (fn&2 dissoc) k)))
 
 (defnt conj!
-  ([^transient? coll obj] (core/conj! coll obj))
-  ([^atom?      coll obj] (swap! coll core/conj obj)))
+  {:todo #{"Add more possibilities"}}
+  ([^transient?  x v] (core/conj! x v))
+  ([^atom?       x v] (swap! x core/conj v))
+  ([^array-list? x v] (doto x (#?(:clj .add :cljs .push) v)))
+  ([^!string?    x v] (.append x v)))
 
 (defnt disj!
-  ([^transient? coll obj] (core/disj! coll obj))
-  ([^atom?      coll obj] (swap! coll disj obj)))
+  ([^transient? x v] (core/disj! x v))
+  ([^atom?      x v] (swap! x disj v)))
 
 #?(:clj
 (defmacro update! [coll i f]
@@ -882,9 +891,8 @@
   "`conj`, maybe mutable. General `conj(!)`.
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
-  ([^transient? x v] (conj! x v))
-  ([^atom?      x v] (conj! x v))
-  ([            x v] (conj  x v)))
+  ([#{transient? atom? array-list? !string?} x v] (conj! x v)) ; TODO auto-determine
+  ([^default                                 x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
   ([^+vec? coll a    ] (core/conj a    ))
@@ -938,6 +946,41 @@
 (defn key ([kv] (when kv (key* kv))) ([k v] k))
 (defn val ([kv] (when kv (val* kv))) ([k v] v))
 
+; TODO CLJS
+; TODO fipp freaks out at this, but the implementation is fine
+#?(:clj
+(deftype IndexedListRSeq [^List xs ^int i ^clojure.lang.IPersistentMap meta] ; TODO also ensure it's RandomAccess
+  clojure.lang.Sequential
+  clojure.lang.Counted
+    (count    [this] (inc i))
+  clojure.lang.IndexedSeq
+    (index    [this] i)
+  #_clojure.lang.IObj
+  ; TODO "mismatched return type"; will fix later
+    #_(withMeta [this ^clojure.lang.IPersistentMap meta'] (tcore/static-cast clojure.lang.IObj (IndexedListRSeq1. xs i meta')))
+  clojure.lang.IMeta
+    (meta     [this] meta)
+  clojure.lang.Seqable
+    ; from ASeq
+    (seq      [this] this)
+  clojure.lang.ISeq
+    (first    [this] (.get xs i))
+    (next     [this]
+      (if (> i 0) (IndexedListRSeq. xs (dec i) meta) nil))
+    ; from ASeq
+    (more     [this]
+      (or (.next this) '()))
+    ; from ASeq
+    (cons     [this x] (clojure.lang.Cons. x this))
+  clojure.lang.IPersistentCollection
+    ; from ASeq
+    (empty    [this] '())))
+
+(defnt rseq
+  #?(:clj ([^!vec?                   x] (IndexedListRSeq. x (lasti x) nil))) ; technically (+ RandomAccess List)
+  #?(:clj ([^clojure.lang.Reversible x] (.rseq x)))
+          ([^default                 x] (core/rseq x)))
+
 (defnt reverse
   #_(^<0> [^array? x] ; TODO the code is good but it has a VerifyError
     (let [n   (count x)
@@ -960,17 +1003,17 @@
           "Handle arrays"
           "Handle one-arg"
           "Handle mutable collections"]}
-  ([^default        to  ] to)
-  ([^reducer?       from] (joinl [] from))
+  ([                   from] (joinl [] from))
+  ([^default        to from] (reduce conj?!-protocol to from))
   ([^+vec?          to from] (if (vector? from)
-                                 (catvec              to from)
+                                 (catvec to from)
                                  (red/transient-into to from)))
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/sequential-splice-hash-sets to from)
                                           (red/transient-into to from))
                              :cljs (red/transient-into to from)))
   ([^+sorted-set?   to from] (if (t/+set? from)
-                                 (clojure.set/union    to from)
+                                 (clojure.set/union to from)
                                  (red/persistent-into to from)))
   ([^+hash-map?     to from] #?(:clj  (if (t/+hash-map? from)
                                           (seqspert.hash-map/sequential-splice-hash-maps to from)
@@ -978,10 +1021,9 @@
                                 :cljs (red/transient-into to from)))
   ([^+sorted-map?   to from] (red/persistent-into to from))
   ([^+array-map?    to from] (red/transient-into to from))
-  ([^!string?       to from] (str #?(:clj  (red/reduce* from #(.append ^StringBuilder %1 %2) to)
-                                     :cljs (red/reduce* from #(.append ^StringBuffer  %1 %2) to))))
-  ([^string?        to from] (str #?(:clj  (red/reduce* from #(.append ^StringBuilder %1 %2) (StringBuilder. to))
-                                     :cljs (red/reduce* from #(.append ^StringBuffer  %1 %2) (StringBuffer.  to)))))
+  ([^!string?       to from] (str #?(:clj  (reduce #(conj! ^StringBuilder %1 %2) to from)
+                                     :cljs (reduce #(conj! ^StringBuffer  %1 %2) to from))))
+  ([^string?        to from] (joinl (!str to) from))
   (^<0> [^array-1d? a :<0> b] ; returns a new array
     (if (identical? (class a) (class b))
         #?(:clj  (let [al  (count a)
