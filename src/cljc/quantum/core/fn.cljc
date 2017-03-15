@@ -4,20 +4,21 @@
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.fn
-       (:refer-clojure :exclude [constantly])
+       (:refer-clojure :exclude
+        [constantly, as->])
        (:require
-         [clojure.walk                        ]
-         [quantum.core.core        :as qcore  ]
-         [quantum.core.data.map    :as map    ]
+         [clojure.core             :as core]
+         [clojure.walk]
+         [quantum.core.core        :as qcore]
          [quantum.core.macros.core :as cmacros
            :refer        [#?@(:clj [case-env compile-if])]
            :refer-macros [case-env]]
          [quantum.core.vars        :as var
-           :refer        [#?(:clj defalias)]
-           :refer-macros [defalias]]
+           :refer [defalias]]
  #?(:clj [clojure.pprint           :as pprint
-           :refer [pprint]                    ]))
- #?(:cljs (:require-macros [quantum.core.fn :as self])))
+           :refer [pprint]]))
+      (:require-macros
+        [quantum.core.fn :as self]))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -78,7 +79,9 @@
       `(fn ~genned-arglist
          (~macro-sym ~@genned-arglist))))))
 
-(def fn-nil (constantly nil))
+(def fn-nil   (fn' nil  ))
+(def fn-false (fn' false))
+(def fn-true  (fn' true ))
 
 (defn call
   "Call function `f` with (optional) arguments.
@@ -148,11 +151,54 @@
               (let [args (vec (repeatedly i #(gensym "x")))]
                 `(~args (~f-sym ~@args)))))))))
 
+
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
+
+#?(:clj
+(defmacro gen-fconj
+  "Generates the `fconj` function."
+  [max-args'-ct max-args-ct]
+ `(~'defn ~'fconj
+    "Appends the arguments to the parameters with which `f` will be called,
+     when `f` is called.
+     Does not use data structures unless variadic arity is called.
+
+     `(fn f [a b c] (g a b c inc))` <=> `(fconj g inc)`
+
+     ```
+     (let [g (fn [a b c d e] (+ a (d b) (e c)))]
+       ((fconj g inc -)
+        1 2 3))
+     -> (+ 1 (inc 2) (- 3)) -> 1
+     ```"
+    {:attribution "alexandergunnarson"}
+    ~@(let [all-args'     (->> (range max-args'-ct)
+                               (map (fn [i] (symbol (str "a" i "'")))))
+            &arg'         (symbol "as'")
+            all-args      (->> (range max-args-ct)
+                               (map (fn [i] (symbol (str "a" i)))))
+            &arg          (symbol "as")
+            f-sym         (symbol "f")]
+        (for [ct' (range max-args'-ct)]
+          (let [args' (take ct' all-args')
+                non-variadic?' (< ct' (dec max-args'-ct)) nv?' non-variadic?']
+           `(~(if nv?' `[~f-sym ~@args']
+                       `[~f-sym ~@args' ~'& ~&arg'])
+              (~'fn ~(gensym "fconj")
+              ~@(for [ct (range max-args-ct)]
+                  (let [args (take ct all-args)
+                        non-variadic? (< ct (dec max-args-ct)) nv? non-variadic?]
+                    (if nv?
+                       `([~@args] ~(if nv?' `(~f-sym ~@args ~@args')
+                                            `(apply ~f-sym ~@args ~@args' ~&arg')))
+                       `([~@all-args ~'& ~&arg] ~(if nv?' `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list ~@args')))
+                                                          `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list* ~@args' ~&arg'))))))))))))))))
+
+(gen-fconj 8 8)
 
 #?(:clj (defmacro fn0 [  & args] `(fn fn0# [f#  ] (f# ~@args))))
 #?(:clj (defmacro fn1 [f & args] `(fn fn1# [arg#] (~f arg# ~@args)))) ; analogous to ->
-#?(:clj (defmacro fn$ [f & args] `(fn fn$# [arg#] (~f ~@args arg#)))) ; analogous to ->>
+#?(:clj (defmacro fnl [f & args] `(fn fnl# [arg#] (~f ~@args arg#)))) ; analogous to ->>
 
 ; MWA: "Macro WorkAround"
 #?(:clj (defmacro MWA ([f] `(fn1 ~f)) ([n f] `(mfn ~n ~f))))
@@ -168,14 +214,14 @@
   "Equivalent to |(fn [x] (-> x ~@body))|"
   {:attribution "thebusby.bagotricks"}
   [& body]
-  `(fn [x#] (-> x# ~@body))))
+  `(fn fn-># [x#] (-> x# ~@body))))
 
 #?(:clj
 (defmacro fn->>
   "Equivalent to |(fn [x] (->> x ~@body))|"
   {:attribution "thebusby.bagotricks"}
   [& body]
-  `(fn [x#] (->> x# ~@body))))
+  `(fn fn->># [x#] (->> x# ~@body))))
 
 #?(:clj
 (defmacro with-do
@@ -300,6 +346,8 @@
         (^boolean test [this ^Object elem]
           (f elem))))
     (defn ->predicate [f] (throw (ex-info "java.util.function.Predicate not available: probably using JDK < 8" nil)))))
+
+#?(:clj (defalias as-> core/as->))
 
 ; ========= REDUCER PLUMBING ==========
 
