@@ -2,20 +2,23 @@
   ^{:doc "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
     :attribution "Alex Gunnarson"}
   quantum.core.data.map
-  (:refer-clojure :exclude [split-at merge sorted-map sorted-map-by])
+  (:refer-clojure :exclude
+    [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
   (:require [quantum.core.vars    :as var
               :refer [#?(:clj defalias)]  ]
-   #?(:clj  [clojure.core         :as core]
-      :cljs [cljs.core            :as core])
+            [clojure.core         :as core]
             [clojure.data.avl     :as avl ]
   #?@(:clj [[clojure.data.int-map :as imap]
             [flatland.ordered.map :as omap]
             [seqspert.hash-map            ]
+            [quantum.core.collections.base :as cbase
+              :refer [reduce-pair]]
             [quantum.core.core    :as qcore]]))
-  #?(:cljs
   (:require-macros
             [quantum.core.vars    :as var
-              :refer [defalias]           ])))
+              :refer [defalias]])
+  (:import #?(:clj  java.util.HashMap
+              :cljs goog.structs.Map)))
 
 ; TO EXPLORE
 ; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
@@ -48,7 +51,9 @@
                    (compare [(get m-0 k2) k2]
                             [(get m-0 k1) k1]))))
 
-#?(:clj (def int-map       imap/int-map))
+#?(:clj (def int-map       imap/int-map  ))
+#?(:clj (def array-map     core/array-map))
+#?(:clj (def hash-map      core/hash-map ))
 
 ; TODO look at imap/merge
 
@@ -123,3 +128,56 @@
   ([m0 m1 & ms]
     (reduce pmerge
       (pmerge m0 m1) ms))))
+
+(defn !hash-map
+  "Creates a single-threaded, mutable hash map.
+   On the JVM, this is a java.util.HashMap.
+
+   On JS, this is a goog.structs.Map."
+  {:todo #{"Compare performance on CLJS with ECMAScript 6 Map"}}
+  ([] #?(:clj (HashMap.) :cljs (Map.)))
+  ([k0 v0]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)))
+  ([k0 v0 k1 v1]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)))
+  ([k0 v0 k1 v1 k2 v2]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)))
+  ([k0 v0 k1 v1 k2 v2 k3 v3]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)))
+  ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)
+          (#?(:clj .put :cljs .set) k4 v4)))
+  ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4 k5 v5]
+    (doto #?(:clj (HashMap.) :cljs (Map.))
+          (#?(:clj .put :cljs .set) k0 v0)
+          (#?(:clj .put :cljs .set) k1 v1)
+          (#?(:clj .put :cljs .set) k2 v2)
+          (#?(:clj .put :cljs .set) k3 v3)
+          (#?(:clj .put :cljs .set) k4 v4)
+          (#?(:clj .put :cljs .set) k5 v5)))
+  ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4 k5 v5 k6 v6 & kvs]
+    (reduce-pair
+      (fn [#?(:clj ^HashMap m :cljs m) k v] (doto m (#?(:clj .put :cljs .set) k v)))
+      (doto #?(:clj (HashMap.) :cljs (Map.))
+            (#?(:clj .put :cljs .set) k0 v0)
+            (#?(:clj .put :cljs .set) k1 v1)
+            (#?(:clj .put :cljs .set) k2 v2)
+            (#?(:clj .put :cljs .set) k3 v3)
+            (#?(:clj .put :cljs .set) k4 v4)
+            (#?(:clj .put :cljs .set) k5 v5)
+            (#?(:clj .put :cljs .set) k6 v6))
+      kvs)))
