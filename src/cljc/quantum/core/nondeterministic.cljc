@@ -283,28 +283,27 @@
                     ~form])))))))
 
 (defn prob
-  "Probabilistically calls a function according to the probability-function pairs given.
-   When |check-sum?| is true, the sum of the probabilities are validated to be 1."
-  {:example `{(prob [[0.3 (constantly :red  )]
-                     [0.2 (constantly :blue )]
-                     [0.5 (constantly :green)]])
+  "Probabilistically returns an element according to the probability-element pairs
+   (pairs may compose anything reducible) given.
+   The sum of the probabilities must be 1."
+  {:example `{(prob [[(constantly :red  ) 0.3]
+                     [(constantly :blue ) 0.2]
+                     [(constantly :green) 0.5]])
               :red}} ; or :blue, or :green, depending
-  ([ps+fs] (prob ps+fs false false))
-  ([ps+fs check-sum? secure?]
-    (when secure? (TODO))
-    (when check-sum?
-      (throw-unless (->> ps+fs (map+ first) (reduce + 0) (= 1))
-        (->ex "Probabilities must sum to 1.")))
-    (let [p-f (rand)] ; TODO |secure?|
+  ([<x+p>•] (prob <x+p>• false))
+  ([<x+p>• secure?]
+    (throw-unless (->> <x+p>• (map+ second) (reduce + 0) (== 1))
+      (->ex "Probabilities must sum to 1." {:arg <x+p>•}))
+    (let [p-f (rand-double-between secure? 0 1)] ; the range of possible probabilities
       (reduce
-        (fn [p-accum [p f]]
+        (rfn [p-accum x p]
           (let [lower p-accum
                 upper (+ p-accum p)]
           (if (<= lower p-f upper)
-              (reduced (f))
+              (reduced x)
               upper)))
         0
-        ps+fs))))
+        <x+p>•))))
 
 #?(:clj
 (defnt shuffle!
