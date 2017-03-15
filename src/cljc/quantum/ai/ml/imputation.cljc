@@ -14,12 +14,41 @@
    over the original data without imputing it first. That was shown to yield
    better performance in cases where the missing data is structurally absent,
    rather than missing due to measurement noise."
+  (:refer-clojure :exclude
+    [for first count get])
   (:require
-    [quantum.core.error :as err
-      :refer [->ex TODO]]))
+    [quantum.core.fn
+      :refer [fn1]]
+    [quantum.core.error              :as err
+      :refer [->ex TODO]]
+    [quantum.core.collections        :as coll
+      :refer [for fori fortimes
+              first, count, map+, get]]
+    [quantum.numeric.statistics.core :as stat]))
 
-(defn average
-  "Impute missing values with the average of other attributes in the instance."
+(defn imputation-base
+  "Imputes missing values in a 2D tensor `x••` with the reduction function `rf`
+   of each column (could be mean, mode, etc.).
+   Assumes that the rows of `x••` are of equal size."
+  [x•• missing?-pred rf]
+  (let [mode• (fortimes [i:x (-> x•• first count)]
+                (delay (->> x•• (map+ (fn1 get i:x)) rf)))]
+    (for [x• x••]
+      (fori [x x• i:x]
+        (if (missing?-pred x) @(get mode• i:x) x)))))
+
+(defn mode
+  "Imputes missing values in a 2D tensor `x••` with the mode of each column.
+   Assumes that the rows of `x••` are of equal size."
+  [x•• missing?-pred] (imputation-base x•• missing?-pred stat/mode))
+
+(defn mean
+  "Imputes missing values in a 2D tensor `x••` with the mean of each column.
+   Assumes that the rows of `x••` are of equal size."
+  [x•• missing?-pred] (imputation-base x•• missing?-pred stat/mean))
+
+(defn mean:instance
+  "Impute missing values with the mean of other attributes in the instance."
   {:implemented-by '#{smile.imputation.AverageImputation}}
   [?] (TODO))
 
