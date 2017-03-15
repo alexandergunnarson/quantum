@@ -66,7 +66,7 @@
   ([env]
     (let [getter (case-env :cljs :locals identity)]
       (->> env getter
-           (red/map (fn [[sym _]] [`(quote ~sym) sym]))
+           (red/map (fn [[sym _]] (let [sym' (vary-meta sym dissoc :tag)] [`(quote ~sym') sym'])))
            (into {}))))))
 
 #?(:clj
