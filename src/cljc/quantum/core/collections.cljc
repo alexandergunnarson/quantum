@@ -24,6 +24,7 @@
               group-by frequencies
               range
               map pmap map-indexed
+              partition
               partition-all
               remove filter
               take take-while
@@ -38,7 +39,7 @@
               first second rest last butlast get nth pop peek
               select-keys get-in
               zipmap
-              reverse
+              reverse rseq
               conj
               conj! assoc assoc! assoc-in dissoc dissoc! disj!
               boolean?
@@ -47,10 +48,11 @@
            (:require
              [clojure.core                            :as c      ]
              [fast-zip.core                           :as zip    ]
-             [quantum.core.data.map                   :as map    ]
+             [quantum.core.data.map                   :as map
+               :refer [!hash-map]]
              [quantum.core.data.set                   :as set    ]
              [quantum.core.data.vector                :as vec
-               :refer [catvec subsvec]]
+               :refer [catvec subsvec !vector]]
              [quantum.core.collections.base           :as base   ]
              [quantum.core.collections.core           :as coll
                :include-macros true?                             ]
@@ -66,13 +68,13 @@
              [quantum.core.error                      :as err
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
-               :refer [rfn fn-nil juxt-kv withf->>
-                       rcomp <- fn-> fn->> fn1]]
+               :refer [rfn fn-nil juxt-kv withf->> firsta
+                       rcomp fconj <- fn-> fn->> fn1 fnl]]
              [quantum.core.log                        :as log]
              [quantum.core.logic                      :as logic
-               :refer [fn-not fn-or fn-and whenf
-                       whenf1 ifn ifn1 condf
-                       condf1 splice-or]]
+               :refer [fn-not fn-or fn-and,
+                       whenf whenf1, ifn ifn1, condf condf1
+                       splice-or]]
              [quantum.core.macros                     :as macros
                :refer [defnt case-env]]
              [quantum.core.ns                         :as ns]
@@ -83,7 +85,7 @@
              [quantum.core.string                     :as str    ]
              [quantum.core.string.format              :as sform  ]
              [quantum.core.type                       :as t
-               :refer [transient!* persistent!*
+               :refer [?transient! ?persistent!
                        lseq? transient? editable?
                        boolean? should-transientize?
                        class]]
@@ -110,7 +112,7 @@
 ; KV ;
 
 ; `reverse` <~> `lodash/reverse`
-(defaliases coll key val reverse)
+(defaliases coll key val reverse rseq)
 
 (#?(:clj definline :cljs defn) map-entry
   "Create a map entry from a and b. Equivalent to a cons cell."
@@ -172,7 +174,7 @@
         (defalias dissoc-in       soc/dissoc-in      )
         (defalias update-val      soc/update-val     )
         (defalias updates         soc/updates        )
-        (defalias assoc-when-none soc/assoc-when-none)
+        (defalias assoc-default   soc/assoc-default  )
         (defalias assoc-with      soc/assoc-with     )
         (defalias assoc-if        soc/assoc-if       )
 
@@ -297,7 +299,10 @@
         (defalias random-sample+      red/random-sample+      )
         (defalias sample+             red/sample+             )
         (defalias reduce-count        red/reduce-count        )
+        (defalias reduce-sentinel     red/reduce-sentinel     )
+        (defalias reduce-min          red/reduce-min          )
         (defalias reduce-min-key      red/reduce-min-key      )
+        (defalias reduce-max          red/reduce-max          )
         (defalias reduce-max-key      red/reduce-max-key      )
 
 #?(:clj (defalias ->array             coll/->array            ))
@@ -344,7 +349,7 @@
 ; ========================= GENERATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 (defaliases gen
-  repeat lrepeat repeatedly lrepeatedly
+  repeat lrepeat repeat+, repeatedly lrepeatedly repeatedly+
   range range+ lrange rrange lrrange
   #?(:clj !range:longs) #?(:clj !range:longs&))
 ; _______________________________________________________________
@@ -390,6 +395,7 @@
         ; `partition-all` <~> `lodash/chunk`
         ; TODO choose what structures to partition into
         (defeager partition-all   red/partition-all+ )
+        (defalias lpartition      c/partition        )
         (defn each+ [f xs] (->> xs (map+ #(do (f %) %))))
 
 (defn gets [coll indices] (->> indices (map+ #(get coll %)) (join [])))
@@ -402,6 +408,24 @@
        prewalk-replace postwalk-replace
        prewalk-find  #_"TODO postwalk-find"
   apply-to-keys)
+
+(defn comp-depth
+  "If there are no branches, the depth is 0."
+  ([<branch? <children tree compf]
+    (if (<branch? tree)
+        (comp-depth <branch? <children tree compf 1)
+        0))
+  ([<branch? <children tree compf depth]
+    (if (<branch? tree)
+        (->> tree <children
+             (map+ #(comp-depth <branch? <children % compf (inc depth)))
+             (reduce-sentinel compf)
+             (<- or depth))
+        depth)))
+
+(def max-depth (fconj comp-depth max))
+#_(def min-depth (fconj comp-depth min)) ; this is not useful
+
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -763,8 +787,7 @@
                match'
                matches')))))
 
-(defn indices+ [coll]
-  (->> coll (map-indexed+ (fn [i _] i))))
+(defn indices+ [xs] (->> xs (map-indexed+ firsta)))
 
 ; ================================================ MERGE ================================================
 
@@ -832,9 +855,7 @@
   [coll compare-fn]
   (loops/reducei
     (fn [ret elem n]
-      (if (= n 0)
-          elem
-          (compare-fn ret elem)))
+      (if (= n 0) elem (compare-fn ret elem)))
     nil
     coll))
 
@@ -1018,15 +1039,16 @@
 (defn group-by-into
   "Like `group-by`, but you can choose what collection to group into."
   [f init coll]
-  (persistent!*
-    (reduce
-      (fn [ret x]
-        (let [k (f x)]
-          (assoc?! ret k (conj (get ret k []) x))))
-      (transient!* init) coll)))
+  (->> coll
+       (reduce
+         (fn [ret x]
+           (let [k (f x)]
+             (assoc?! ret k (conj (get ret k []) x))))
+         (?transient! init))
+       ?persistent!))
 
-(defn group-by [f coll] (group-by-into f {} coll))
-(defn group [coll] (group-by identity coll))
+(defn group-by [f xs] (group-by-into f {} xs))
+(defn group    [  xs] (group-by identity xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -1065,10 +1087,15 @@
    what to reduce into."
   ([x] (frequencies {} x))
   ([to x]
-    (persistent!*
-      (reduce (fn [counts x]
+    (->> x
+         (reduce (fn [counts x]
                 (assoc?! counts x (inc (or (get counts x) 0))))
-        (transient!* to) x))))
+           (?transient! to))
+         ?persistent!)))
+
+(defnt probabilities+
+  ([ #_reducible? xs]
+    (let [ct (count xs)] (->> xs (frequencies (!hash-map)) (map-vals+ (fn1 / ct))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
@@ -1153,12 +1180,7 @@
   {:todo ["Only in more recent Java versions does Arrays/sort use
            Dual-Pivot Quicksort"
           "Can also sort a subarray"]}
-  ([#{bytes? shorts? chars? ints? longs? floats? doubles?} arr]
-    (doto arr (java.util.Arrays/sort)))
-  ([#{objects?} arr]
-    (doto arr (java.util.Arrays/sort ^java.util.Comparator compare)))
-  ([#{objects?} arr compare-fn]
-    (doto arr (java.util.Arrays/sort ^java.util.Comparator compare-fn)))))
+  ([x] (TODO))))
 
 #?(:clj
 (defnt shell-sort!
@@ -1188,6 +1210,36 @@
   (TODO)))
 
 #?(:clj
+ (defnt sort!*
+  "Uses whatever default sorting algorithm is available for the data
+   structure passed."
+  {:todo ["Only in more recent Java versions does Arrays/sort use
+           Dual-Pivot Quicksort"
+          "Can also sort a subarray"]}
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles?} x]
+    (doto x (java.util.Arrays/sort)))
+  ([#{objects? !vec?} x] (sort!* x compare))
+  ([#{!vec?}          x compf] (doto x (.sort ^java.util.Comparator compf)))
+  ([#{objects?}       x compf]
+    (doto x (java.util.Arrays/sort ^java.util.Comparator compf)))))
+
+#?(:clj (defmacro sort! [& args] `(sort!* ~(last args) ~@(butlast args))))
+
+#?(:clj
+ (defnt sort-by!*
+  "Uses whatever default sorting algorithm is available for the data
+   structure passed."
+  {:todo ["Only in more recent Java versions does Arrays/sort use
+           Dual-Pivot Quicksort"
+          "Can also sort a subarray"]}
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf] ; TODO infer
+    (sort-by!* x kf compare))
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf compf] ; TODO infer
+    (sort!* x (fn [x y] (.compare ^java.util.Comparator compf (kf x) (kf y)))))))
+
+#?(:clj (defmacro sort-by! [& args] `(sort-by!* ~(last args) ~@(butlast args))))
+
+#?(:clj
 (defnt p-tim-sort!
   "Parallel TimSort."
   {:todo ["Can also sort a subarray"]}
@@ -1199,6 +1251,13 @@
     (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare-fn)))))
 
 #?(:clj (defalias psort! p-tim-sort!))
+
+(defnt sorted
+  "Coerces `x` to a compatible sorted collection."
+  ([^sorted? x] x)
+  ([#_(- map? sorted?) #{+hash-map? +array-map?} x] (join (map/sorted-map) x))
+  ([#_(- set? sorted?) ^+hash-set? x] (join (sorted-set) x)))
+; TODO `sorted-by`
 
 (defn binary-search
   "Finds earliest occurrence of @x in @xs (a sorted List of numbers) using binary search."
@@ -1541,6 +1600,8 @@
 ;; reminiscent of clojure.core/{subseq,rsubseq}
 ; (doc avl/subrange)
 
+(defalias subset? set/subset?)
+
 #?(:clj
 (defn get-map-constructor
   "Gets a record's map-constructor function via its class name."
@@ -1668,6 +1729,56 @@
         :else  (recur (conj acc x) (next xs))))))
 
 
+
+(defn sliding-window+
+  "Creates a \"sliding window\" of window size `n` over a
+   reducible `xs`.
+   Useful for e.g. n-fold cross-validation."
+  {:attribution "Alex Gunnarson"
+   :todo        #{"Allow sliding window step to be customized"}}
+  [n xs] ; TODO xs must be `reducible?`
+  (let [xsv (join xs) ; for O(log(n)) splits instead of O(n)
+        ct  (count xsv)
+        _   (err/assert (<= n ct))
+        r   (rem ct n)]
+    (->> (iterate+ (fn1 + n) 0)
+         (take+    (+ (quot ct n)
+                      (if (zero? r) 0 1)))
+         (map+     (fn [i]
+                     (if (>= (+ i n) ct)
+                         [(slice xsv 0 i)
+                          (slice xsv i)
+                          []]
+                         [(slice xsv 0 i)
+                          (slice xsv i (+ i n))
+                          (slice xsv (+ i n))]))))))
+
+(defn sliding-window-splits+
+  "Creates \"sliding window splits\" of number of splits `n`,
+   over a reducible `xs`, keeping window size as constant as
+   possible.
+   Split 'leftovers' are reallocated at the end.
+   Useful for e.g. n-fold cross-validation."
+  {:attribution "Alex Gunnarson"
+   :todo        #{"Allow customized reallocation"}}
+  [n:split xs] ; TODO xs must be `reducible?`
+  (let [xsv      (join xs) ; for O(log(n)) splits instead of O(n)
+        ct       (count xsv)
+        _        (err/assert (<= n:split ct))
+        n:window (quot ct n:split)
+        n:extra  (rem ct n:split)
+        first-iter-of-extra (- n:split n:extra)]
+    (->> (iterate+ (fn1 + n:window) 0)
+         (take+    n:split)
+         (map+     (fn [i]
+                     (let [iter         (/ i n:window)
+                           extra?       (>= iter first-iter-of-extra)
+                           extra-offset (max 0 (- iter first-iter-of-extra))
+                           offset       (+ i n:window (if extra? 1 0))]
+                       [(slice xsv 0 (+ i extra-offset))
+                        (slice xsv (+ i extra-offset) (+ offset extra-offset))
+                        (slice xsv (+ offset extra-offset))]))))))
+
 (defn max-subview
   "The contiguous subsequence of maximum asum.
    Uses Kadane's algorithm.
@@ -1765,7 +1876,8 @@
 
 (defn allocate-by-percentages
   "Allocate @n into groups of @percents.
-   Overflow and underflow are applied to the greatest percentage.
+   Overflow and underflow are distributed over the groups with the highest
+   percentages, in descending order.
    Throws if is not able to partition."
   {:tests `{[1 [1 1]]
             :fail
@@ -1776,21 +1888,26 @@
             [3 [0.1 0.33]]
             [1 2]}}
   [n percents]
-  (let [_ (assert (->> percents (reduce + 0) (<- <= 1)))
+  (let [_ (err/assert (>= n (count percents)))
+        _ (err/assert (->> percents (reduce + 0) (<- <= 1)))
         allocated (for [p percents]
                     (long (num/ceil (double (* n p))))) ; TODO make not use long or double
         sorted (->> allocated
                     (map-indexed+ vector)
-                    (join [])
-                    (sort-by #(second %1)))
+                    (join (!vector))
+                    (sort-by! (fn1 second)))
         total  (->> allocated (reduce + 0))
-        *flow  (- total n)]
-    (cond (splice-or *flow = 0)
-          allocated
-          (splice-or *flow = 1 -1) ; TODO fix
-          (update allocated (-> sorted last first) (fn1 - *flow))
-          (-> *flow num/abs (> 1))
-          (throw (->ex "Tried to partition into too many groups. Overflow/underflow is" *flow)))))
+        *flow  (long (- total n))] ; over- or underflow
+    (case *flow
+      0
+      allocated
+      (let [sign (num/sign *flow)]
+        (red-for [[i:next-highest-percentage _] (rseq sorted)
+                  [allocated' *flow']           [allocated *flow]]
+          (if (zero? *flow')
+              (reduced allocated')
+              [(update allocated' i:next-highest-percentage (fn1 - sign))
+               (- *flow' sign)]))))))
 
 #?(:cljs
 (defn jsx->clj
