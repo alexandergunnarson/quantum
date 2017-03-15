@@ -1,18 +1,22 @@
 (ns quantum.core.reflect
-  #?(:clj (:require [clojure.jvm.tools.analyzer :as ana ]
+          (:refer-clojure :exclude
+            [bean])
+  #?(:clj (:require [clojure.core               :as core]
+                    [clojure.jvm.tools.analyzer :as ana ]
                     [clojure.reflect            :as refl]
                     [quantum.core.string.format :as strf]
                     [quantum.core.java          :as java]
                     [quantum.core.data.map      :as map ]
                     [quantum.core.collections   :as coll
-                      :refer [filter+ map+
-                              #?@(:clj [for* join])]   ]
+                      :refer [filter+ map+ for* join]]
                     [quantum.core.vars          :as var
-                      :refer [#?(:clj defmalias)]       ]
+                      :refer [defalias #?(:clj defmalias)]]
                     [quantum.core.fn            :as fn
-                      :refer [#?@(:clj [fn->])]         ]
+                      :refer [fn->]]
                     [quantum.core.macros        :as macros
-                      :refer [#?(:clj defnt)]           ])))
+                      :refer [defnt]])))
+
+#?(:clj (defalias bean core/bean))
 
 #?(:clj
 (defmalias
