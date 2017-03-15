@@ -1,7 +1,9 @@
 (ns quantum.core.vars
   "Var- and namespace-related functions."
-  (:refer-clojure :exclude [defonce])
+  (:refer-clojure :exclude
+    [defonce, intern, binding with-local-vars])
   (:require
+    [clojure.core             :as core]
     [quantum.core.macros.core :as cmacros
       :refer [case-env]])
   (:require-macros
@@ -25,6 +27,8 @@
         (var ~name)))
   ([name orig doc]
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))
+
+#?(:clj (defalias intern core/intern))
 
 #?(:clj
 (defmacro defaliases'
@@ -206,3 +210,8 @@
 
 (defn merge-meta-from   [to from] (update-meta to merge (meta from)))
 (defn replace-meta-from [to from] (with-meta to (meta from)))
+
+; ===== THREAD-LOCAL ===== ;
+
+#?(:clj (defalias binding         core/binding))
+#?(:clj (defalias with-local-vars core/with-local-vars))

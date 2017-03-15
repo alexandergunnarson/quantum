@@ -2,7 +2,9 @@
   ^{:doc "Asynchronous things."
     :attribution "Alex Gunnarson"}
   quantum.core.async
-  (:refer-clojure :exclude [promise realized? future map])
+  (:refer-clojure :exclude
+    [locking
+     promise realized? future map])
   (:require
     [clojure.core                     :as core]
     [com.stuartsierra.component       :as component]
@@ -27,7 +29,7 @@
       :refer [defnt]]
     [quantum.core.system              :as sys]
     [quantum.core.vars                :as var
-      :refer  [defalias defmalias]]
+      :refer [defalias defmalias]]
     [quantum.core.spec                :as s
       :refer [validate]])
   (:require-macros
@@ -45,6 +47,14 @@
     #_co.paralleluniverse.strands.Strand)))
 
 (log/this-ns)
+
+; ===== LOCKS AND SEMAPHORES ===== ;
+
+; `monitor-enter`, `monitor-exit`
+
+#?(:clj (defalias locking core/locking))
+
+; ===== CORE.ASYNC ETC. ===== ;
 
 ; Use optimal/maximum core async pool size
 
