@@ -12,7 +12,8 @@
     [clojure.core.rrb-vector.rrbt
       :refer [AsRRBT as-rrbt]]])
     [quantum.core.vars        :as var
-      :refer [defalias]]))
+      :refer [defalias]])
+  #?(:clj (:import java.util.ArrayList)))
 
 ; TO EXPLORE
 ; - michalmarczyk/devec: double-ended vector
@@ -25,7 +26,8 @@
 ; slice
 (defn catvec
   "|empty| checks to get around StackOverflowErrors inherent in |catvec|
-   (At least in Clojure version)"
+   (At least in Clojure version)
+   Assumes inputs are vectors."
   {:attribution "Alex Gunnarson"}
   ([] (svector))
   ([a] a)
@@ -33,9 +35,9 @@
     (if (empty? a)
         (if (empty? b)
             (svector)
-            (svec b))
+            b)
         (if (empty? b)
-            (svec a)
+            a
             (svec/catvec a b))))
   ([a b c]
     (catvec (catvec a b) c))
@@ -75,3 +77,58 @@
   svector-of svec/vector-of))
 
 ; TODO use |vec+/vec| to convert a vector to an RRBT vector. Benchmark this
+
+; TODO macro-generate this
+(defn !vector
+  "Creates a single-threaded, mutable vector.
+   On the JVM, this is a java.util.ArrayList.
+
+   On JS, this is a native array (which is really an array list under the hood)."
+  ([] #?(:clj (ArrayList.) :cljs #js []))
+  ([x0]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)))
+  ([x0 x1]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)
+          (#?(:clj .add :cljs .push) x1)))
+  ([x0 x1 x2]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)
+          (#?(:clj .add :cljs .push) x1)
+          (#?(:clj .add :cljs .push) x2)))
+  ([x0 x1 x2 x3]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)
+          (#?(:clj .add :cljs .push) x1)
+          (#?(:clj .add :cljs .push) x2)
+          (#?(:clj .add :cljs .push) x3)))
+  ([x0 x1 x2 x3 x4]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)
+          (#?(:clj .add :cljs .push) x1)
+          (#?(:clj .add :cljs .push) x2)
+          (#?(:clj .add :cljs .push) x3)
+          (#?(:clj .add :cljs .push) x4)))
+  ([x0 x1 x2 x3 x4 x5]
+    (doto #?(:clj (ArrayList.) :cljs #js [])
+          (#?(:clj .add :cljs .push) x0)
+          (#?(:clj .add :cljs .push) x1)
+          (#?(:clj .add :cljs .push) x2)
+          (#?(:clj .add :cljs .push) x3)
+          (#?(:clj .add :cljs .push) x4)
+          (#?(:clj .add :cljs .push) x5)))
+  ([x0 x1 x2 x3 x4 x5 x6 & xs]
+    (reduce
+      (fn [#?(:clj ^ArrayList xs :cljs xs) x] (doto xs (#?(:clj .add :cljs .push) x)))
+      (doto #?(:clj (ArrayList.) :cljs #js [])
+            (#?(:clj .add :cljs .push) x0)
+            (#?(:clj .add :cljs .push) x1)
+            (#?(:clj .add :cljs .push) x2)
+            (#?(:clj .add :cljs .push) x3)
+            (#?(:clj .add :cljs .push) x4)
+            (#?(:clj .add :cljs .push) x5)
+            (#?(:clj .add :cljs .push) x6))
+      xs)))
+
+(defalias !array-list !vector)
