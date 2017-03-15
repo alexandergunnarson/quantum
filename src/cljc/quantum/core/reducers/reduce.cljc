@@ -13,6 +13,7 @@
   (:require
     [clojure.core                  :as core]
     [clojure.core.async            :as async]
+    [fast-zip.core                 :as zip]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.data.vector      :as vec
@@ -36,8 +37,9 @@
     [quantum.core.reducers.reduce
       :refer [reduce]])
   (:import
-  #?(:clj  [quantum.core.type.defs Reducer Folder]
-     :cljs [goog.string StringBuffer])))
+  #?@(:clj  [[quantum.core.type.defs Reducer Folder]
+             quantum.core.data.Array]
+      :cljs [[goog.string StringBuffer]])))
 
 
 ; HEADLESS FIX
@@ -59,67 +61,119 @@
     {:attribution "Alex Gunnarson"
      :todo ["Check if this is really the case..."
             "Improve performance with chunking, etc."]}
-    [coll f init]
-    (loop [coll-n coll
-           ret    init]
-      (if (empty? coll-n)
-          ret
-          (recur (rest coll-n)
-                 (f ret (first coll-n)))))))
+    [xs f init]
+    (loop [xs (seq xs) v init]
+      (if xs
+          (let [ret (f v (first xs))]
+            (if (reduced? ret)
+                @ret
+                (recur (next xs) ret)))
+          v))))
 
 (defnt reduce*
-  {:attribution "Alex Gunnarson"
-   :todo        #{"Mutable collections, etc."
-                  "n-d arrays"}}
-        ([^fast_zip.core.ZipperLocation z f init]
-          (cbase/zip-reduce* f init z))
-        ([^array-1d? arr f init] ; Taken from `areduce`
-          #?(:clj  (let [ct (alength arr)]
-                     (loop  [i 0 ret init]
-                       (if (< i ct)
-                           (recur (unchecked-inc-int i) (f ret (aget arr i)))
-                           ret)))
-             :cljs (array-reduce arr f init)))
-        ([^string? s f init]
-          #?(:clj  (clojure.core.protocols/coll-reduce s f init)
-             :cljs (let [last-index (-> s count unchecked-dec long)]
-                     (cond
-                       (> last-index js/Number.MAX_SAFE_INTEGER)
-                         (throw (->ex "String too large to reduce over (at least, efficiently)."))
-                       (= last-index -1)
-                         (f init nil)
-                       :else
-                         (loop [n   (long 0)
-                                ret init]
-                           (if (> n last-index)
-                               ret
-                               (recur (unchecked-inc n)
-                                      (f ret (.charAt s n)))))))))
-#?(:clj ([^record? coll f init] (clojure.core.protocols/coll-reduce coll f init)))
-        ([^reducer? x f init]
-          (reduce* (:coll x) ((:transform x) f) init))
-        ([^chan?   x    f init] (async/reduce f init x))
-        ([^+map?   coll f init] (#_(:clj  clojure.core.protocols/kv-reduce
-                                    :cljs -kv-reduce) ; in order to use transducers...
-                                 #?(:clj  clojure.core.protocols/coll-reduce
-                                    :cljs -reduce-seq)
-                                  coll f init))
-        ([^+set?   coll f init] (#?(:clj  clojure.core.protocols/coll-reduce
-                                    :cljs -reduce-seq)
-                                  coll f init))
-        ([#{#?(:clj integer? :cljs double?)} i f init]
-          (if (< i 0)
-              init
-              (loop [i'  0
-                     ret init]
-                (if (= i' i)
-                    ret
-                    (recur (unchecked-inc i')
-                           (f ret i'))))))
-        ([^default  coll f init] (when (nnil? coll)
-                                 (#?(:clj  clojure.core.protocols/coll-reduce
-                                     :cljs -reduce)
-                                   coll f init))))
+  "Much of this content taken from clojure.core.protocols for inlining and
+   type-checking purposes."
+  {:attribution "Alex Gunnarson"}
+         ([^fast_zip.core.ZipperLocation z f init]
+           (loop [xs (zip/down z) v init]
+             (if (some? z)
+                 (let [ret (f v z)]
+                   (if (reduced? ret)
+                       @ret
+                       (recur (zip/right xs) ret)))
+                 v)))
+         ([^array? arr f init] ; Adapted from `areduce`
+           #?(:clj  (loop [i 0 v init]
+                      (if (< i (Array/count arr))
+                          (let [ret (f v (Array/get arr i))]
+                            (if (reduced? ret)
+                                @ret
+                                (recur (unchecked-inc i) ret)))
+                          v))
+              :cljs (array-reduce arr f init)))
+         ([^string? s f init]
+           (loop [i 0 v init]
+             (if (< i (#?(:clj .length :cljs .-length) s))
+                 (let [ret (f v (.charAt s i))]
+                   (if (reduced? ret)
+                       @ret
+                       (recur (unchecked-inc i) ret)))
+                 v)))
+#?(:clj  ([^clojure.lang.StringSeq xs f init]
+           (let [s (.s xs)]
+             (loop [i (.i xs) v init]
+               (if (< i (.length s))
+                   (let [ret (f v (.charAt s i))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur (unchecked-inc i) ret)))
+                   v)))))
+#?(:clj  ([#{clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
+             clojure.lang.LazySeq ; for range
+             clojure.lang.ASeq} xs f] ; aseqs are iterable, masking internal-reducers
+           (if-let [s (seq xs)]
+             (clojure.core.protocols/internal-reduce (next s) f (first s))
+             (f))))
+#?(:clj  ([#{clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
+             clojure.lang.LazySeq ; for range
+             clojure.lang.ASeq} xs f init]  ; aseqs are iterable, masking internal-reducers
+           (let [s (seq xs)]
+             (clojure.core.protocols/internal-reduce s f init))))
+         ([^reducer? x f]
+           (reduce* x f (f)))
+         ([^reducer? x f init]
+           (reduce* (:coll x) ((:transform x) f) init))
+         ([^chan?   x  f init] (async/reduce f init x))
+#?(:cljs ([^+map?   xs f init] (#_(:clj  clojure.core.protocols/kv-reduce
+                                   :cljs -kv-reduce) ; in order to use transducers...
+                                -reduce-seq xs f init)))
+#?(:cljs ([^+set?   xs f init] (-reduce-seq xs f init)))
+         ([#{#?(:clj integer? :cljs double?)} n f init]
+           (loop [i 0 v init]
+             (if (< i n)
+                 (let [ret (f v i)]
+                   (if (reduced? ret)
+                       @ret
+                       (recur (unchecked-inc i) ret)))
+                 v)))
+         ;; `iter-reduce`
+#?(:clj  ([#{clojure.lang.APersistentMap$KeySeq
+             clojure.lang.APersistentMap$ValSeq
+             Iterable} xs f]
+           (let [iter (.iterator xs)]
+             (if (.hasNext iter)
+                 (loop [ret (.next iter)]
+                   (if (.hasNext iter)
+                       (let [ret (f ret (.next iter))]
+                         (if (reduced? ret)
+                             @ret
+                             (recur ret)))
+                       ret))
+                 (f)))))
+         ;; `iter-reduce`
+#?(:clj  ([#{clojure.lang.APersistentMap$KeySeq
+             clojure.lang.APersistentMap$ValSeq
+             Iterable} xs f init]
+           (let [iter (.iterator xs)]
+             (loop [ret init]
+               (if (.hasNext iter)
+                   (let [ret (f ret (.next iter))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur ret)))
+                   ret)))))
+#?(:clj  ([^clojure.lang.IReduce     xs f     ] (.reduce   xs f)))
+#?(:clj  ([^clojure.lang.IKVReduce   xs f init] (.kvreduce xs f init)))
+#?(:clj  ([^clojure.lang.IReduceInit xs f init] (.reduce   xs f init)))
+         ([^default              xs f] (if (some? xs)
+                                           (#?(:clj  clojure.core.protocols/coll-reduce
+                                               :cljs -reduce) xs f)
+                                           (f)))
+         ([^default              xs f init]
+           (if (some? xs)
+               (#?(:clj  clojure.core.protocols/coll-reduce
+                   :cljs -reduce) xs f init)
+               init)))
 
 #?(:clj
 (defmacro reduce
@@ -133,7 +187,7 @@
    Equivalent to Scheme's `foldl`."
   {:attribution "Alex Gunnarson"
    :todo ["definline"]}
-  ([f coll]      `(reduce ~f (~f) ~coll))
+  ([f coll]      `(reduce* ~coll ~f))
   ([f init coll] `(reduce* ~coll ~f ~init))))
 
 ;___________________________________________________________________________________________________________________________________
@@ -146,8 +200,7 @@
   reducing fn."
   {:added "1.5"
    :attribution "clojure.core.reducers"}
-  ([coll transform]
-    (Reducer. coll transform)))
+  ([coll transform] (Reducer. coll transform)))
 
 (def reducer? #(instance? Reducer %))
 
