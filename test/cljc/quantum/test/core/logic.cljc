@@ -1,5 +1,17 @@
 (ns quantum.test.core.logic
-  (:require [quantum.core.logic :as ns]))
+  (:require
+    [quantum.core.numeric.combinatorics :as combo]
+    [quantum.core.logic :as ns]
+    [clojure.test       :as test
+      :refer [#?@(:clj [deftest is])]]))
+
+#?(:clj
+(deftest test:some-but-not-more-than-n
+  (doseq [n [1]] ; TODO test more
+    (doseq [args-n (range 5)]
+      (doseq [args (combo/selections #{true false} args-n)]
+        (is (= (boolean (eval `(ns/some-but-not-more-than-n ~n ~@args)))
+               (boolean (eval `(and (or ~@args) (not (and ~@args))))))))))))
 
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
