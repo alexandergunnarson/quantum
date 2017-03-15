@@ -45,11 +45,11 @@
     (and ((:eq funcs) (count set1) (count set2))
          (apply every? ((:fn funcs) set1 set2)))))
 
-; TODO probably a way to make this more terse, like a "define-vars" macro with intern or something
-(def subset?          #(xset? :sub          %1 %2))
-(def superset?        #(xset? :super        %1 %2))
-(def proper-subset?   #(xset? :proper-sub   %1 %2))
-(def proper-superset? #(xset? :proper-super %1 %2))
+#_(def subset?          #(xset? :sub          %1 %2))
+(defalias subset?          set/subset?)
+(def      superset?        #(xset? :super        %1 %2))
+(def      proper-subset?   #(xset? :proper-sub   %1 %2))
+(def      proper-superset? #(xset? :proper-super %1 %2))
 
 ; ============ OPERATIONS ============
 
