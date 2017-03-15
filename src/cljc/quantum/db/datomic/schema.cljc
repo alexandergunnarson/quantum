@@ -4,7 +4,7 @@
   (:require [datascript.core             :as ds]
     #?(:clj [datomic.api                 :as dat])
             [quantum.core.fn
-              :refer [fn->]]
+              :refer [fn-> fn']]
             [quantum.core.collections    :as coll
               :refer [dissoc-in merge-deep]]
             [quantum.core.data.set       :as set]
@@ -116,7 +116,7 @@
   "Mutably replaces schemas of the provided DataScript `conn`."
   [conn schemas]
     (assert (dbc/mconn? conn))
-    (swap! conn update-schemas (constantly schemas)))
+    (swap! conn update-schemas (fn' schemas)))
 
 (defn dissoc-schema!
   "Mutably dissociates a schema from `conn`."

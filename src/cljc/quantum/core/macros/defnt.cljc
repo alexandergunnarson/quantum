@@ -121,7 +121,7 @@
                      (map #(get-qualified-class-name lang ns- %))
                      (into #{}))
       string? (fn-> symbol hash-set)
-      ;nil?    (constantly #{'Object})
+      ;nil?    (fn' #{'Object})
       #(throw (->ex "Not a type hint." %)))))
 
 (defn hint-arglist-with

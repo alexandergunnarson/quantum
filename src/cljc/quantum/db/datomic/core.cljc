@@ -20,7 +20,7 @@
     [quantum.core.error         :as err
       :refer [->ex TODO]]
     [quantum.core.fn            :as fn
-      :refer [<- fn-> fn->> fn1 fnl rfn with-do]]
+      :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
     [quantum.core.log           :as log]
     [quantum.core.logic         :as logic
       :refer [fn-not fn-and fn-or whenf whenf1 ifn ifn1 if-let condf1]]
@@ -315,7 +315,7 @@
 ; TODO need to enforce SQUUID ; http://docs.datomic.com/javadoc/datomic/Peer.html#squuid()
 ; :uuid    (fnl instance? db/SQUUID)
 (dv/def -schema  (s/or* keyword? dbfn-call?)) ; TODO look over this more
-(dv/def -any     (constantly true))
+(dv/def -any     (fn' true))
 (dv/def -keyword (s/or* keyword? dbfn-call?))
 (dv/def -string  (s/or* string? dbfn-call?))
 (dv/def -boolean (s/or* (fn1 t/boolean?) dbfn-call?))
@@ -714,7 +714,7 @@
 ;                {:twitter/user.id twitter-id}))}
 ;   [^Database db data ->entity-fn & [post-fn-0]]
 ;   (when (nempty? data)
-;     (let [post-fn (or post-fn-0 (constantly nil))
+;     (let [post-fn (or post-fn-0 (fn' nil))
 ;           threads
 ;            (for [entities (->> data
 ;                                (partition-all recommended-txn-ct)

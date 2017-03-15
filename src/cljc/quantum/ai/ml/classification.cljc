@@ -16,7 +16,7 @@
               reduce-count nnil?]]
     [quantum.core.numeric             :as num]
     [quantum.core.fn                  :as fn
-      :refer [<- fn-> fn->>]]
+      :refer [<- fn-> fn->> fn']]
     [quantum.core.cache               :as cache
       :refer [defmemoized]]
     [quantum.core.error
@@ -160,7 +160,7 @@
                :c2 ...}}
   ([D] (->> D
             (filter+ (fn-and :document:class :document:words)) ; in case is nil
-            (map+ (juxt :document:class (fn->> Nt:w+d (map-vals+ (constantly 1)) (join {}))))
+            (map+ (juxt :document:class (fn->> Nt:w+d (map-vals+ (fn' 1)) (join {}))))
             (map+ vector)
             (reduce (fn [ret elem]
                       (merge-with

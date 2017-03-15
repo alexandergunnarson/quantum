@@ -145,7 +145,7 @@
               raw-response
               (-> raw-response :body
                   (json/parse-string keyword)
-                  (whenf (constantly (= func :query)) :items)))]
+                  (whenf (fn' (= func :query)) :items)))]
     (reset! last-response response)
     response))
 

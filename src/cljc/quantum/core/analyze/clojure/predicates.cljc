@@ -9,7 +9,7 @@
     [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.core                 :as qcore]
     [quantum.core.fn                   :as fn
-      :refer [fnl <- fn-> fn->>]]
+      :refer [fnl <- fn-> fn->> fn']]
     [quantum.core.logic                :as logic
       :refer [splice-or fn= fn-or fn-and fn-not whenc ifn ifn1]]
     [quantum.core.type.core            :as tcore]
@@ -60,7 +60,7 @@
 ; ===== ARGLISTS =====
 (def first-variadic? (fn-> first name (= "&")))
 (def variadic-arglist?
-  (fn-> butlast last (ifn nil? (constantly nil) name) (= "&")))
+  (fn-> butlast last (ifn nil? (fn' nil) name) (= "&")))
 (defn arity-type [arglist] (if (variadic-arglist? arglist) :variadic :fixed))
 (def arglist-arity (ifn1 variadic-arglist? (fn-> count dec) count))
 

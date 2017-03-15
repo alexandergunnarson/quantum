@@ -10,7 +10,7 @@
       :refer [kw-map]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
-      :refer [fnl fn1 rcomp]]
+      :refer [fnl fn1 rcomp fn']]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env case-env*]]
     [quantum.core.log              :as log]
@@ -102,7 +102,7 @@
 
 #?(:clj
 (defmacro with-catch
-  {:usage '(->> 0 (/ 1) (with-catch (constantly -1)))}
+  {:usage '(->> 0 (/ 1) (with-catch (fn' -1)))}
   [handler try-val]
   `(catch-all ~try-val e# (~handler e#))))
 

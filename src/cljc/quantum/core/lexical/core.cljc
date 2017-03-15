@@ -1,8 +1,10 @@
 (ns quantum.core.lexical.core
   (:require
     [quantum.core.data.set     :as set]
+    [quantum.core.fn
+      :refer [fn']]
     [quantum.core.error        :as err
-      :refer [->ex]                   ]))
+      :refer [->ex]]))
 
 ; ============ FROM re-rand.parser.tools ============
 ; Generic functions for creating a LL recursive descent parser.
@@ -156,12 +158,12 @@
         (= char "D") #(rnd-choice (invert digits))
         (= char "S") #(rnd-choice (invert whitespace))
         (= char "W") #(rnd-choice (invert alphanumeric))
-        :otherwise    (constantly char)))))
+        :otherwise    (fn' char)))))
 
 (def literal
   (attach
     (match #"[^\\{}.+*()\[\]^$]")
-    constantly))
+    fn'))
 
 (def any-char
   (attach

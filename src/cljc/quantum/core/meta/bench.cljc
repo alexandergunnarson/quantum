@@ -81,6 +81,6 @@
        (map (fn [ns-]
               (->> ns- ns-publics
                    (map (juxt key (fn-> val deref byte-size)))
-                   (map (juxt (constantly ns-) first second)))))
+                   (map (juxt (fn' ns-) first second)))))
        (apply concat)
        (sort-by #(get % 2)))))

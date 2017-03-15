@@ -69,7 +69,7 @@
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
                :refer [rfn fn-nil juxt-kv withf->> firsta
-                       rcomp fconj <- fn-> fn->> fn1 fnl]]
+                       rcomp fconj <- fn-> fn->> fn1 fnl fn']]
              [quantum.core.log                        :as log]
              [quantum.core.logic                      :as logic
                :refer [fn-not fn-or fn-and,
@@ -1323,7 +1323,7 @@
         (if (or (contains? entry :id)
                 (empty?    entry))
             vec-n
-            (let [id (-> ids deref first (ifn nil? (constantly 1) inc))]
+            (let [id (-> ids deref first (ifn nil? (fn' 1) inc))]
               (conj! ids id)
               (assoc vec-n n (assoc entry :id id)))))
       vec-0

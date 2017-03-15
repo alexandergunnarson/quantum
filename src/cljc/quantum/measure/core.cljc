@@ -8,7 +8,7 @@
     [quantum.core.graph       :as g
       :refer [#?@(:clj [->graph ->digraph ->weighted-digraph])]]
     [quantum.core.fn          :as fn
-      :refer [fn1]]
+      :refer [fn1 fn']]
     [quantum.core.logic       :as logic
       :refer [fn= whenc ifn]]
     [quantum.measure.reg                 ]
@@ -65,7 +65,7 @@
                        (zipmap ~nodes
                                (repeat (fn [node#] (ifn (core/get quantum.measure.reg/reg-units node#) identity
                                                       (fn1 core/conj ~unit-type-k)
-                                                      (constantly #{~unit-type-k}))))))))]
+                                                      (fn' #{~unit-type-k}))))))))]
                (condp = emit-type
                  :map
                    (list (list 'def 'conversion-map conversion-map))

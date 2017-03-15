@@ -15,7 +15,7 @@
     [quantum.core.error                :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [aritoid fn1 fn->]]
+      :refer [aritoid fn1 fn-> fn']]
     [quantum.core.log                  :as log]
     [quantum.core.collections.base
       :refer [nnil?]]
@@ -254,7 +254,7 @@
 ;================={   MORE COMPLEX OPERATIONS    }====================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 
-(def int-nil (whenf1 nil? (constantly 0)))
+(def int-nil (whenf1 nil? (fn' 0)))
 
 (defn evenly-divisible-by? [a b] (= 0 (rem a b))) ; TODO use ==
 

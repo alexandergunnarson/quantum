@@ -49,7 +49,8 @@
       :refer [reverse key val first rest get slice count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
       :refer [->ex]]
-    [quantum.core.fn               :as fn]
+    [quantum.core.fn               :as fn
+      :refer [fn']]
     [quantum.core.logic
       :refer [fn-not]]
     [quantum.core.macros           :as macros
@@ -239,7 +240,7 @@
   [sub super]
   (while-matches sub super (fn [_ x] (not x))
     (fn [_ match-length] (takel match-length super))
-    (constantly nil)))
+    (fn' nil)))
 
 (def take-while-matches takel-while-matches)
 
@@ -251,7 +252,7 @@
   [sub super]
   (while-matches sub super fn/firsta
     (fn [super-i _] (takel (- super-i (lasti sub)) super))
-    (constantly super)))
+    (fn' super)))
 
 (def take-until-matches takel-until-matches)
 
@@ -265,7 +266,7 @@
   [sub super]
   (while-matches sub super fn/firsta
     (fn [super-i _] (dropl (+ (count sub) (- super-i (lasti sub))) super))
-    (constantly super)))
+    (fn' super)))
 
 (def take-after-matches takel-after-matches)
 
@@ -345,7 +346,7 @@
   [sub super]
   (while-matches sub super (fn [_ x] (not x))
     (fn [_ match-length] (dropl match-length super))
-    (constantly nil)))
+    (fn' nil)))
 
 (def drop-while-matches dropl-while-matches)
 
@@ -355,7 +356,7 @@
   [sub super]
   (while-matches sub super fn/firsta
     (fn [super-i _] (dropl (- super-i (lasti sub)) super))
-    (constantly super)))
+    (fn' super)))
 
 (def drop-until-matches dropl-until-matches)
 
@@ -417,7 +418,7 @@
   [sub super]
   (while-matches (reverse sub) (reverse super) (fn [_ x] (not x))
     (fn [_ match-length] (dropr match-length super))
-    (constantly nil)))
+    (fn' nil)))
 
 (defn dropr-until-matches
   {:tests '{(dropr-until-matches  "--" "ab--sddasd-")
@@ -426,7 +427,7 @@
   [sub super]
   (while-matches (reverse sub) (reverse super) fn/firsta
     (fn [super-i _] (dropr (- super-i (lasti sub)) super))
-    (constantly super)))
+    (fn' super)))
 
 (def dropr-while-not-matches dropr-until-matches)
 

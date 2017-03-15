@@ -7,7 +7,7 @@
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
-      :refer [fn-> fn->>]]
+      :refer [fn-> fn->> fn']]
     [quantum.core.logic                      :as logic
       :refer [fn-or ifn1 condf1]]
     [quantum.core.vars                       :as var
@@ -28,7 +28,7 @@
              doall)
     when-statement?
       last
-    (constantly nil)))
+    (fn' nil)))
 ; TODO COMBINE THESE TWO VIA "UPDATE-N GET"
 ;;(defn map-conditional-branches [f x]
 ;;  (condf x

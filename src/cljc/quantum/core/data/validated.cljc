@@ -13,7 +13,7 @@
     [quantum.core.macros.deftype
       :refer [deftype-compatible]]
     [quantum.core.fn
-      :refer [fn-> fn->> fn1 fnl <-]]
+      :refer [fn-> fn->> fn1 fnl <- fn']]
     [quantum.core.logic
       :refer [fn= fn-and fn-or whenf1 whenf whenp default]]
     [quantum.core.log       :as log
@@ -33,7 +33,7 @@
 
 (s/defspec :db/id    core/integer?) ; TODO look over these more
 (s/defspec :db/ident keyword?) ; TODO look over these more
-(s/defspec :type/any (constantly true))
+(s/defspec :type/any (fn' true))
 
 ; TODO un-namespaced (req-un) should accept namespaced as well
 ; TODO Every entity can have an :db/ident or :db/conforms-to
@@ -119,7 +119,7 @@
                           (fn->> name rest (apply str) keyword db-value-types))))
          (fn-and seq? (fn-> first symbol?) (fn-> first name (= "and")) ; TODO really this should check for core.validate/and
            (fn->> rest (filter db-type) first db-type))
-         (constantly :ref)))
+         (fn' :ref)))
 
 (defn spec->schema
   {:todo #{"Enforce validators/specs using database transaction functions"}}
@@ -241,7 +241,7 @@
           kw-context    (keyword (namespace sym-0) (name sym-0))
           spec          (->> spec-0
                              (<- whenp db-mode? replace-value-types)
-                             (<- whenf (fn-and (constantly db-mode?)
+                             (<- whenf (fn-and (fn' db-mode?)
                                                keyword? (fn-> namespace nil?))
                                        (fn1 dbify-keyword ns-name-str)))
           spec-base     (gensym "spec-base")

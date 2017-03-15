@@ -189,7 +189,7 @@
 ;     keyword?        default-hint
 ;     set?            default-hint
 ;     map?            default-hint
-;     :else           (constantly (->ex "Don't know how to make hint from" x)))))
+;     :else           (fn' (->ex "Don't know how to make hint from" x)))))
 
 
 ; #?(:clj (defalias quote+ deps/quote+))

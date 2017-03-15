@@ -5,8 +5,8 @@
   (:refer-clojure :exclude [macroexpand-1])
           (:require   [quantum.core.data.map    :as map
                         :refer [map-entry]                         ]
-            #?(:clj   [quantum.core.macros.deftype
-                        :refer [deftype-compatible]                ])
+                      [quantum.core.macros.deftype
+                        :refer [deftype-compatible]                ]
                       [quantum.core.core
                         :refer [seq-equals]                        ]
                       [quantum.core.macros.core :as cmacros
@@ -15,13 +15,11 @@
                         :refer [defdigit make-digit delay-ft meter]])
            #?@(:cljs [[cljs.core
                         :refer [INext IEmptyableCollection IEquiv IAssociative]]])
+                      [quantum.core.fn          :as fn
+                        :refer [fn']]
                       [quantum.core.vars        :as var
-                        :refer [#?(:clj def-)]                  ])
+                        :refer [def-]])
   #?(:cljs(:require-macros
-                      [quantum.core.vars        :as var
-                        :refer [def-]                  ]
-                      [quantum.core.macros.deftype
-                        :refer [deftype-compatible]        ]
                       [quantum.core.data.finger-tree.macros
                         :refer [defdigit make-digit delay-ft meter]]))
   #?(:clj
@@ -422,7 +420,7 @@
                     ([this n]
                       (ft-split-at this n nil))]}})
 
-(def- measure-len (constantly 1))
+(def- measure-len (fn' 1))
 (def- len-meter (meter measure-len 0 +))
 (def empty-counted-double-list
   (CountedDoubleList. (EmptyTree. len-meter) nil))

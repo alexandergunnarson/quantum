@@ -32,7 +32,7 @@
             [quantum.core.logic
               :refer [whenp fn-or]]
             [quantum.core.fn
-              :refer [fnl fn1 fn-> rcomp]]
+              :refer [fnl fn1 fn-> rcomp fn']]
             [quantum.core.collections   :as coll
               :refer [containsv? assoc-in flatten-1]]
             [quantum.core.log           :as log
@@ -204,7 +204,7 @@
   {:arglists '([handler] [handler options])}
   [handler & [{:keys [read-token whitelisted?]
                :or   {read-token default-request-token
-                      whitelisted? (constantly false)}
+                      whitelisted? (fn [_] false)}
                :as   options}]]
   {:pre [(not (and (:error-response options)
                    (:error-handler options)))]}
@@ -270,4 +270,4 @@
         wrap-gzip
         #_(friend/requires-scheme :https)
         wrap-in-logging
-        (wrap-hide-exception :warn (constantly "Internal")))))
+        (wrap-hide-exception :warn (fn' "Internal")))))

@@ -686,9 +686,9 @@
     is called in a future. Short-circuits (cancelling the remaining
     futures) on first falsey value."
     {:attribution "Michal Marczyk - https://gist.github.com/michalmarczyk/5991353"
-     :tests '{(thread-and (constantly true) (constantly true))
+     :tests '{(thread-and (fn' true) (fn' true))
                 true
-              (thread-and (constantly true) (constantly false))
+              (thread-and (fn' true) (fn' false))
                 false
               (thread-and #(do (async/sleep 1000) :foo)
                           #(do (async/sleep 3000) :bar))
@@ -734,15 +734,15 @@
 ;         (swap! out-str conj
 ;           (str/subs+ baos-str-f
 ;                (whenf (+ 2 (last-index-of+ "\r\n" baos-str-f))
-;                  (fn= 1) (constantly 0)))))))) ; if it's the same, keep it
+;                  (fn= 1) (fn' 0)))))))) ; if it's the same, keep it
 ; (defmacro with-capture-sys-out [expr out-str & [millis n-times]]
 ;   `(let [baos# (java.io.ByteArrayOutputStream.)
 ;          ps#   (java.io.OutputStreamWriter. baos#)]
 ;     (binding [*out* ps#]
 ;       (deref (future ~expr)) ; will process in background
 ;       (do-every
-;         (whenf ~millis  nil? (constantly 500))
-;         (whenf ~n-times nil? (constantly 6))
+;         (whenf ~millis  nil? (fn' 500))
+;         (whenf ~n-times nil? (fn' 6))
 ;         #(update-out-str-with! ~out-str baos#)))))
 
 

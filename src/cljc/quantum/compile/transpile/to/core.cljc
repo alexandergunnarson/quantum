@@ -14,7 +14,7 @@
     [quantum.core.string                     :as str  ]
     [quantum.core.string.format              :as strf ]
     [quantum.core.fn                         :as fn
-      :refer [<- fn-> fn->> fn1]]
+      :refer [<- fn-> fn->> fn1 fn']]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-not fn-or fn-and whenf
               whenf1 whenc ifn condfc condpc coll-or]]
@@ -572,7 +572,7 @@
                      longest-key-length
                        (->> obj-map keys
                             (map (fn->> name symbol eval-form count))
-                            (<- ifn empty? (constantly 0) comp/greatest))
+                            (<- ifn empty? (fn' 0) comp/greatest))
                      ^String obj-map-contents
                        (let [prev-line (atom nil)]
                          (reduce

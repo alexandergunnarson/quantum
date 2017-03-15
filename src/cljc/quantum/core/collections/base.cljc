@@ -8,7 +8,7 @@
     [clojure.string             :as str]
     [clojure.core               :as core]
     [quantum.core.fn            :as fn
-      :refer [fn->]]
+      :refer [fn-> fn']]
     [quantum.core.core          :as qcore]
     [quantum.core.logic         :as logic
       :refer [condf1 fn-not]]
@@ -26,7 +26,7 @@
 (def ensure-set
   (condf1
     nil?
-      (constantly #{})
+      (fn' #{})
     (fn-not set?)
       hash-set
     identity))

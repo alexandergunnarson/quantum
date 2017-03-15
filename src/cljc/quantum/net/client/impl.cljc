@@ -17,7 +17,7 @@
                       [quantum.core.string          :as str]
                       [quantum.net.core             :as net]
                       [quantum.core.fn              :as fn
-                        :refer [fn-> fn1]]
+                        :refer [fn-> fn1 fn']]
                       [quantum.core.logic           :as logic
                         :refer [fn-and whenf1]]
                       [quantum.core.collections     :as coll
@@ -142,7 +142,7 @@
             (let [status-handler
                    (or (get handlers status)
                        (get handlers :default)
-                       (constantly
+                       (fn'
                          (do (log/pr :http/warn "unhandled HTTP status:" status) response)))
                   req-n+1
                     (assoc req

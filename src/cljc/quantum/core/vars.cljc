@@ -116,7 +116,7 @@
   [var-0 val-f]
   ;(.bindRoot #'clojure.core/ns ns+)
   ;(alter-meta! #'clojure.core/ns merge (meta #'ns+))
-  (alter-var-root var-0 (constantly val-f))))
+  (alter-var-root var-0 (fn [_] val-f))))
 
 ; CLJS compatible
 #?(:clj

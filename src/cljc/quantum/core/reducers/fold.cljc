@@ -26,7 +26,7 @@
     [quantum.core.error
       :refer [TODO]]
     [quantum.core.fn               :as fn
-      :refer [aritoid fn1 fn-> rcomp]]
+      :refer [aritoid fn1 fn-> rcomp fn']]
     [quantum.core.logic            :as logic
       :refer [fn-or fn-and whenf condf1]]
     [quantum.core.macros           :as macros
@@ -188,7 +188,7 @@
                  (fn-> folder->coll from-proc)
                counted?
                  from-proc
-               (constantly 512)))
+               (fn' 512)))
      :cljs count)) ; Because it's only single-threaded anyway...
 
 ;___________________________________________________________________________________________________________________________________

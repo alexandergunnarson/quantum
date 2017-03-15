@@ -11,7 +11,7 @@
       :refer [subscribe dispatch dispatch-sync reg-event reg-sub]]])
     [quantum.ui.revision :as rev]
     [quantum.core.fn     :as fn
-      :refer [fn-> fn->> <-]]
+      :refer [fn-> fn->> <- fn']]
     [quantum.core.logic
       :refer [whenf]]
     [quantum.core.error  :as err]
@@ -147,7 +147,7 @@
 (reg-event :recompute-blurs
   (fn [db _]
     (update db :blur-ids
-      (fn->> (map-vals+ (constantly true)) (join {}))))))
+      (fn->> (map-vals+ (fn' true)) (join {}))))))
 
 #?(:cljs
 (reg-sub :dynamic?

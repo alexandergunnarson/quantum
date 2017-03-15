@@ -286,9 +286,9 @@
   "Probabilistically returns an element according to the probability-element pairs
    (pairs may compose anything reducible) given.
    The sum of the probabilities must be 1."
-  {:example `{(prob [[(constantly :red  ) 0.3]
-                     [(constantly :blue ) 0.2]
-                     [(constantly :green) 0.5]])
+  {:example `{(prob [[(fn' :red  ) 0.3]
+                     [(fn' :blue ) 0.2]
+                     [(fn' :green) 0.5]])
               :red}} ; or :blue, or :green, depending
   ([<x+p>•] (prob <x+p>• false))
   ([<x+p>• secure?]

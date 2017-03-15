@@ -17,8 +17,8 @@
               (paren+
                 (sp+ (-> x first str) (rest x)))
             defn-statement?
-              (constantly nil)
-            (constantly nil))
+              (fn' nil)
+            (fn' nil))
           x)))) ; will get converted to a string anyway
 
 

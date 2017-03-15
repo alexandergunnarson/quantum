@@ -10,7 +10,7 @@
     [clojure.string           :as str]
     [quantum.core.core        :as qcore]
     [quantum.core.fn          :as fn
-      :refer [fn-> fn->>]]
+      :refer [fn-> fn->> fn']]
     [quantum.core.logic       :as logic
       :refer [condf]]
     [quantum.core.data.vector :as vec]  ; To work around CLJS non-spliceability of Tuples
@@ -82,7 +82,7 @@
 
 #?(:clj (reset! debug/pretty-printer !))
 
-(def suppress (partial (constantly nil)))
+(def suppress (partial (fn' nil)))
 
 (defn- pprint-symbol [x]
   (when-let [has-hint? (-> x meta (contains? :tag))]

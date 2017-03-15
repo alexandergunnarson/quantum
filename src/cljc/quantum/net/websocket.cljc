@@ -10,7 +10,7 @@
             [quantum.core.error                      :as err
               :refer [->ex try-times]]
             [quantum.core.fn                         :as fn
-              :refer [fn->]]
+              :refer [fn-> fn']]
             [quantum.core.log                        :as log]
             [quantum.core.async                      :as async
               :refer [promise-chan offer! go]]
@@ -170,7 +170,7 @@
                         :get-fn         (:ajax-get-or-ws-handshake-fn socket)
                         :connected-uids (:connected-uids              socket))]
             #?(:clj (alter-var-root (:routes-var server) ; TODO defnt |reset!|
-                      (constantly (router/make-routes (merge this' server {:ws-uri endpoint})))))
+                      (fn' (router/make-routes (merge this' server {:ws-uri endpoint})))))
             (log/pr ::debug "Channel-socket started.")
             this')
           (catch #?(:clj Throwable :cljs js/Error) e

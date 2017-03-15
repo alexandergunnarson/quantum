@@ -46,7 +46,7 @@
     [quantum.core.collections.generative
       :refer [range]]
     [quantum.core.fn               :as fn
-      :refer [rfn fn1 fn-> fn&2 fn&3]]
+      :refer [rfn fn1 fn-> fn&2 fn&3 fn']]
     [quantum.core.logic            :as logic
       :refer [fn-or whenf]]
     [quantum.core.macros           :as macros
@@ -204,7 +204,7 @@
              [0] 'file10'
              [1] 'file11'
              [2] 'file12')"}
-  ([coll ks v] (update-in coll ks (constantly v)))
+  ([coll ks v] (update-in coll ks (fn' v)))
   ([coll ks v & kvs]
     (reduce-pair ; this is inefficient
       (fn [ret k v] (assoc-in ret k v))
@@ -218,7 +218,7 @@
   be created."
   {:attribution "flatland.useful"}
   ([^atom? m ks obj] (swap! m assoc-in ks obj))
-  ([m ks v] (update-in! m ks (constantly v))))
+  ([m ks v] (update-in! m ks (fn' v))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================

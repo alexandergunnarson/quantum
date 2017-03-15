@@ -13,7 +13,7 @@
                      [quantum.core.error
                        :refer [TODO ->ex]]
                      [quantum.core.fn                      :as fn
-                       :refer [<- fn-> fn->> fn1]]
+                       :refer [<- fn-> fn->> fn1 fn']]
                      [quantum.core.logic                   :as logic
                        :refer [fn=]]
                      [quantum.core.log                     :as log
@@ -155,7 +155,7 @@
                       parent    (s/or* string? nil? (fn= :root)))
           meta- (-> {:kind (if (= type :folder) "FOLDER" "FILE")
                      :name node-name}
-                    (assoc-if (constantly (string? parent)) :parents [parent]))]
+                    (assoc-if (fn' (string? parent)) :parents [parent]))]
       (request! :content :nodes
         (-> {:method :post}
             (merge

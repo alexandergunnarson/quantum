@@ -5,9 +5,9 @@
 #_(defnt commit!*
   ([^quantum.ui.core.FXObservableAtom x states]
     (swap! states coll/updates-in+
-      [:last-modified :instant] (constantly (time/now))
-      [:last-modified :item   ] (constantly x)
-      [x :index ] (whenf1 nil? (constantly 0) (MWA inc))
+      [:last-modified :instant] (fn' (time/now))
+      [:last-modified :item   ] (fn' x)
+      [x :index ] (whenf1 nil? (fn' 0) (MWA inc))
       [x :states] (fn1 conj (-> x :immutable deref)))))
 
 #_(defn commit! [states x] (commit!* x states))
@@ -72,7 +72,7 @@
             false)
         (do (swap! states update x
               (fn [x-n] (update x-n :index (if full?
-                                               (constantly (lasti x-n))
+                                               (fn' (lasti x-n))
                                                (whenf1 (fn1 < (lasti x-n)) inc)))))
             (coordinate-state! states x)
             true))))
@@ -91,7 +91,7 @@
             false)
         (do (swap! states update x
               (fn [x-n] (update x-n :index (if full?
-                                               (constantly 0)
+                                               (fn' 0)
                                                (whenf1 (fn1 > 0) dec)))))
             (coordinate-state! states x)
             true))))

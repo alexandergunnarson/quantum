@@ -427,7 +427,7 @@
            (fn->> rest rest (cons 'println))
 
            (fn= '.equals)
-           (constantly '=)
+           (fn' '=)
 
            identity))
        clean-lets
