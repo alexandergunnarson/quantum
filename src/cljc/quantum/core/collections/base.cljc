@@ -32,11 +32,13 @@
     identity))
 
 (defn zip-reduce* [f init z]
-  (loop [z (zip/down z)
-         ret-n init]
-    (if (nil? z)
-        ret-n
-        (recur (zip/right z) (f ret-n z)))))
+  (loop [xs (zip/down z) v init]
+    (if (nil? xs)
+        v
+        (let [ret (f v xs)]
+          (if (reduced? ret)
+              @ret
+              (recur (zip/right xs) ret))))))
 
 (defn reducei [f init coll]
   (let [i (volatile! (long -1))]
@@ -49,6 +51,24 @@
             (f ret k v @i)))
       init
       coll)))
+
+(defn reduce-pair
+  "Like |reduce|, but reduces over two items in a collection at a time.
+
+   Its function @func must take three arguments:
+   1) The accumulated return value of the reduction function
+   2) The                next item in the collection being reduced over
+   3) The item after the next item in the collection being reduced over
+
+   Doesn't use `reduce`... so not as fast."
+  {:todo        ["Possibly find a better way to do it?"]
+   :attribution "Alex Gunnarson"}
+  [func init coll]
+  (loop [ret init coll-n coll]
+    (if (empty? coll-n)
+        ret
+        (recur (func ret (first coll-n) (second coll-n))
+               (-> coll-n rest rest)))))
 
 (defn merge-call
   "Useful when e.g. there's a long series of functions which return their

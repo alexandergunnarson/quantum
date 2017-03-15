@@ -10,6 +10,7 @@
    [[proteus
       :refer [let-mutable]]])
     [quantum.core.core                :as qcore]
+    [quantum.core.collections.base    :as cbase]
     [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
       :refer [->ex]]
@@ -66,23 +67,7 @@
         code `(reduce ~f-final ~ret-i ~coll)]
     code)))
 
-(defn reduce-pair
-  "Like |reduce|, but reduces over two items in a collection at a time.
-
-   Its function @func must take three arguments:
-   1) The accumulated return value of the reduction function
-   2) The                next item in the collection being reduced over
-   3) The item after the next item in the collection being reduced over
-
-   Doesn't use `reduce`... so not as fast."
-  {:todo        ["Possibly find a better way to do it?"]
-   :attribution "Alex Gunnarson"}
-  [func init coll]
-  (loop [ret init coll-n coll]
-    (if (empty? coll-n)
-        ret
-        (recur (func ret (first coll-n) (second coll-n))
-               (-> coll-n rest rest)))))
+(defalias reduce-pair cbase/reduce-pair)
 
 #?(:clj
 (defmacro reduce*
@@ -365,14 +350,20 @@
 #?(:clj (set! *unchecked-math* false))
 
 (defn reduce-2
-  "Reduces over two collections at a time."
-  [f init xs0 xs1]
-  (loop [ret init xs0' xs0 xs1' xs1]
-    (if (or (empty? xs0') (empty? xs1'))
-        ret
-        (recur (f ret (first xs0') (first xs1'))
-               (next xs0')
-               (next xs1')))))
+  "Reduces over two seqables at a time."
+  {:todo #{"`defnt` this and have it dispatch to e.g. reduce-2:indexed"}}
+  ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
+  ([f init xs0 xs1 assert-same-count?]
+    (loop [ret init xs0' xs0 xs1' xs1]
+      (if (or (empty? xs0') (empty? xs1'))
+          (do (when (and assert-same-count?
+                         (or (and (empty? xs0') (seq    xs1'))
+                             (and (seq    xs0') (empty? xs1'))))
+                (throw (->ex "Seqables are not the same count")))
+              ret)
+          (recur (f ret (first xs0') (first xs1'))
+                 (next xs0')
+                 (next xs1'))))))
 
 #?(:clj
 (defnt' reduce-2:indexed
