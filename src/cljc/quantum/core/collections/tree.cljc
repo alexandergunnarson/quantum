@@ -99,14 +99,14 @@
   (postwalk (whenf1 (fn1 in-k? smap) smap) form))
 
 (defn- walk-filter
-  "Like |filter|, but performs a |postwalk| on a treelike structure ->`tree`, putting in a new vector
-   only the elements for which ->`pred` is true."
+  "Like |filter|, but performs a `walk` on a treelike structure ->`tree`,
+   putting in a new vector only the elements for which ->`pred` is true."
   {:attribution "Alex Gunnarson"}
   [walk-fn pred tree]
   (let [results (transient [])]
     (walk-fn
       (whenf1 pred
-        (fn->> (withf->> #(conj! results %)))) ; keep it the same
+        #(do (conj! results %) %)) ; keep it the same
       tree)
     (persistent! results)))
 
@@ -148,14 +148,14 @@
 (defn zip-walk
   "|walk| for zippers.
    ->`inner` and ->`outer` must both return a non-zipper."
-  ([inner outer form] (zip/node (zip-walk inner outer nil (zip/zipper form))))
-  ([inner outer _ loc-0]
+  ([innerf outerf form] (zip/node (zip-walk innerf outerf nil (zip/zipper form))))
+  ([innerf outerf _ loc-0]
     (let [[i loc] (loop [i    0
                          loc  loc-0]
                     (if-let [loc' (if (zero? i)
                                       (zip/down  loc)
                                       (zip/right loc))]
-                      (let [innered (inner loc')
+                      (let [innered (innerf loc')
                             _ (assert (not (instance? fast_zip.core.ZipperLocation innered))
                                       {:innered innered
                                        :derefed (zip/node innered)
@@ -165,7 +165,7 @@
                                replaced))
                       [i loc]))
           loc' (if (> i 0) (zip/up loc) loc)
-          outered (outer loc')
+          outered (outerf loc')
           _ (assert (not (instance? fast_zip.core.ZipperLocation outered)) {:outered outered})
           ret (zip/replace loc' outered)
           _ (assert (instance? fast_zip.core.ZipperLocation ret) {:ret ret})]
@@ -175,7 +175,8 @@
   "|postwalk| with zippers.
    ->`f` must return a non-zipper."
   ([f form    ] (zip/?node (zip-postwalk f nil (zip/zipper form))))
-  ([f _    loc] (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
+  ([f _    loc]
+    (zip-walk (comp zip/node #(zip-postwalk f nil %)) f nil loc)))
 
 (defn zip-prewalk
   "|prewalk| with zippers.
