@@ -1,5 +1,10 @@
 (ns quantum.test.core.fn
-  (:require [quantum.core.fn :as ns]))
+  (:require
+    [#?(:clj  clojure.test
+        :cljs cljs.test)
+      :refer        [#?@(:clj [deftest is testing])]
+      :refer-macros [deftest is testing]]
+    [quantum.core.fn :as ns]))
 
 (defn test:mfn
   ([macro-sym])
@@ -23,6 +28,16 @@
   ([x y z]       )
   ([x y z & more]))
 
+(deftest test:fconj
+  (let [a 1 b 2 c 3]
+    (is (= (+ a (inc b) (- c))
+          (let [g (fn [a' b' c' d' e'] (+ a' (d' b') (e' c')))]
+            ((ns/fconj g inc -)
+             a b c))))
+    (is (= [1 2 3 4 5]
+           (let [g (fn [a' b' c' d' e'] [a' b' c' d' e'])]
+             ((ns/fconj g 4 5)
+              a b c))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  HIGHER-ORDER FUNCTIONS   }====================================================
 ;=================================================={                           }====================================================
@@ -39,11 +54,11 @@
   [op ctor])
 
 (defn aritoid
-  ([f0         ]) 
-  ([f0 f1      ]) 
-  ([f0 f1 f2   ]) 
+  ([f0         ])
+  ([f0 f1      ])
+  ([f0 f1 f2   ])
   ([f0 f1 f2 f3]))
-                
+
 (defn test:compr
   [& args])
 
