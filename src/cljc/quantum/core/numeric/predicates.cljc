@@ -18,7 +18,7 @@
             [quantum.core Numeric])))
 
 #?(:clj  (defnt ^boolean neg?
-           ([#{byte char short int float double} x] (Numeric/isNeg x))
+           ([#{byte char short int long float double} x] (Numeric/isNeg x))
            ([#{BigInteger
                BigDecimal} x] (-> x .signum neg?))
            ([^Ratio     x] (-> x .numerator .signum neg?))
@@ -30,7 +30,7 @@
            ([^bigint? x] (.isNegative x))))
 
 #?(:clj  (defnt ^boolean pos?
-           ([#{byte char short int float double} x] (Numeric/isPos x))
+           ([#{byte char short int long float double} x] (Numeric/isPos x))
            ([#{BigInteger
                BigDecimal} x] (-> x .signum pos?))
            ([^Ratio     x] (-> x .numerator .signum pos?))
