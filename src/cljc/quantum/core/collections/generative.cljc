@@ -54,15 +54,19 @@
     [quantum.core.vars             :as var
       :refer [defalias]]))
 
-; ===== REPEAT =====
+; TODO technically you can define `repeat` in terms of `repeatedly`; how to optimize though?
+
+; ===== REPEAT ===== ;
 
 (declare range)
 
 (defalias lrepeat core/repeat)
 
 (defn repeat
-  ([obj] (lrepeat obj))
-  ([n obj] (fortimes [i n] obj)))
+  ([x] (lrepeat x))
+  ([n x] (fortimes [i n] x)))
+
+(defalias repeat+ red/repeat+)
 
 ; ===== REPEATEDLY ===== ;
 
@@ -71,6 +75,8 @@
 (defn repeatedly
   ([f] (lrepeatedly f))
   ([n f] (fortimes [i n] (f))))
+
+(defalias repeatedly+ red/repeatedly+)
 
 ; ===== RANGE ===== ;
 
