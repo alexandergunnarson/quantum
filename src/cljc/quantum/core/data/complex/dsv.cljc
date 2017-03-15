@@ -1,4 +1,5 @@
-(ns quantum.core.data.complex.csv
+(ns quantum.core.data.complex.dsv
+  "Delimiter-separated values like CSV and TSV."
   #?(:clj (:require [clojure.data.csv :as csv])))
 
 #_(:clj ; TODO for now
@@ -12,7 +13,7 @@
       (cond
         as-vector?
           (->> block (into []))
-        as-lseq? 
+        as-lseq?
           block
         as-map?
           (->> rows
@@ -22,5 +23,5 @@
                       (assoc m (str/keywordize (get headers-f n)) datum))
                       {} row)))
                reducer-fn)
-        :else 
+        :else
           (throw+ (Err. :invalid-option nil opts)))))))
