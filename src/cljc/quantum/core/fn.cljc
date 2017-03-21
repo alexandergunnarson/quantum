@@ -2,21 +2,19 @@
   ^{:doc "Useful function-related functions (one could say 'metafunctions').
 
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.fn
        (:refer-clojure :exclude
         [constantly, as->])
        (:require
          [clojure.core             :as core]
          [clojure.walk]
-         [quantum.core.core        :as qcore]
-         [quantum.core.macros.core :as cmacros
-           :refer        [#?@(:clj [case-env compile-if])]
-           :refer-macros [case-env]]
          [quantum.core.vars        :as var
            :refer [defalias]]
- #?(:clj [clojure.pprint           :as pprint
-           :refer [pprint]]))
+         [quantum.core.core        :as qcore]
+         [quantum.core.macros.core :as cmacros
+           :refer [case-env #?@(:clj [compile-if])
+                   gen-args arity-builder max-positional-arity]])
       (:require-macros
         [quantum.core.fn :as self]))
 
@@ -46,29 +44,22 @@
 #?(:clj (defmacro fn&2 [f & args] `(fn&* 2   ~f ~@args)))
 #?(:clj (defmacro fn&3 [f & args] `(fn&* 3   ~f ~@args)))
 
-(defn constantly
-  {:from 'com.rpl.specter.impl}
-  [v]
-  (fn ([] v)
-      ([x0] v)
-      ([x0 x1] v)
-      ([x0 x1 x2] v)
-      ([x0 x1 x2 x3] v)
-      ([x0 x1 x2 x3 x4] v)
-      ([x0 x1 x2 x3 x4 x5] v)
-      ([x0 x1 x2 x3 x4 x5 x6] v)
-      ([x0 x1 x2 x3 x4 x5 x6 x7] v)
-      ([x0 x1 x2 x3 x4 x5 x6 x7 x8] v)
-      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9] v)
-      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10] v)
-      ([x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 x10 & r] v)))
+#?(:clj
+(defmacro gen-constantly []
+  (let [v-sym 'v]
+    `(defn ~'constantly
+       "Exactly the same as `core/constantly`, but uses efficient positional
+        arguments when possible rather than varargs every time."
+       [~v-sym]
+       (~'fn ~@(arity-builder (core/constantly v-sym) (core/constantly v-sym)))))))
 
+(gen-constantly)
 (defalias fn' constantly)
 
 #?(:clj
 (defmacro mfn
-  "|mfn| is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
-   Originally named |functionize| by mikera."
+  "`mfn` is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
+   Originally named `functionize` by mikera."
   ([macro-sym]
     (case-env :cljs (throw (ex-info "`mfn` not supported for CLJS." {})))
    `(fn [& args#]
@@ -79,35 +70,54 @@
       `(fn ~genned-arglist
          (~macro-sym ~@genned-arglist))))))
 
-(def fn-nil   (fn' nil  ))
-(def fn-false (fn' false))
-(def fn-true  (fn' true ))
+#?(:clj
+(defmacro gen-call []
+  `(~'defn ~'call
+     "Call function `f` with (optional) arguments.
+      Like clojure.core/apply, but doesn't expand/splice the last argument."
+     {:attribution "alexandergunnarson"}
+     ~@(arity-builder (fn [args] `(~@args))
+                      (fn [args vargs] `(apply ~@args ~vargs))
+                      1 18 (fn [i] (if (= i 1) "f" "x"))))))
 
-(defn call
-  "Call function `f` with (optional) arguments.
-   Like clojure.core/apply, but doesn't expand/splice the last argument."
-  {:attribution 'alexandergunnarson}
-  ([f]                    (f))
-  ([f x]                  (f x))
-  ([f x y]                (f x y))
-  ([f x y z]              (f x y z))
-  ([f x y z & more] (apply f x y z more)))
+(gen-call)
 
-(defn firsta
-  "Accepts any number of arguments and returns the first."
-  {:attribution "parkour.reducers"}
-  ([x]            x)
-  ([x y]          x)
-  ([x y z]        x)
-  ([x y z & more] x))
+; ----- NTHA ----- ;
 
-(defn seconda
-  "Accepts any number of arguments and returns the second."
-  {:attribution "parkour.reducers"}
-  ([x y]          y)
-  ([x y z]        y)
-  ([x y z & more] y))
+(defn gen-positional-ntha [position]
+  `(~'defn ~(symbol (str "ntha-" position))
+     ~(str "Accepts any number of arguments and returns the (n=" position ")th in O(1) time.")
+     ~@(arity-builder (fn [args] (nth args position))
+                      (fn [args vargs] (nth args position)) (inc position))))
 
+#?(:clj
+(defmacro gen-positional-nthas []
+  `(do ~@(for [i (range 0 (:clj max-positional-arity))] (gen-positional-ntha i)))))
+
+(gen-positional-nthas)
+
+(defn ntha-&
+  "Accepts any number of arguments and returns the nth, variadically, in O(n) time."
+  [n] (fn [& args] (nth args n)))
+
+(defalias firsta  ntha-0)
+(defalias seconda ntha-1)
+(defalias thirda  ntha-2)
+
+#?(:clj
+(defmacro gen-ntha []
+  (let [n-sym (gensym "n")]
+    `(~'defn ~'ntha
+       "Accepts any number of arguments and returns the nth.
+        If n <= 18, returns in O(1) time; otherwise, in O(n) time via varargs."
+       [~(with-meta n-sym {:tag 'long})]
+       (case ~n-sym
+         ~@(apply concat
+             (for [i (range 0 (:clj max-positional-arity))]
+               [i (symbol (str "ntha-" i))]))
+         (ntha-& ~n-sym))))))
+
+(gen-ntha)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  HIGHER-ORDER FUNCTIONS   }====================================================
 ;=================================================={                           }====================================================
@@ -128,7 +138,7 @@
   (do-curried name doc meta args body)))
 
 (defn zeroid
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [func base] ; is it more efficient to do it differently? ; probably not
   (fn ([]                                              base)
       ([arg1 arg2]                               (func arg1 arg2))
@@ -138,7 +148,7 @@
 #?(:clj
 (defmacro aritoid
   "Combines fns as arity-callers."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :equivalent `{(aritoid vector identity conj)
                  (fn ([]      (vector))
                      ([x0]    (identity x0))
@@ -150,7 +160,6 @@
       (fn ~@(for [[i f-sym] (map-indexed vector genned)]
               (let [args (vec (repeatedly i #(gensym "x")))]
                 `(~args (~f-sym ~@args)))))))))
-
 
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
 
@@ -213,44 +222,45 @@
 (defmacro fn->
   "Equivalent to |(fn [x] (-> x ~@body))|"
   {:attribution "thebusby.bagotricks"}
-  [& body]
-  `(fn fn-># [x#] (-> x# ~@body))))
+  [& body] `(fn fn-># [x#] (-> x# ~@body))))
 
 #?(:clj
 (defmacro fn->>
   "Equivalent to |(fn [x] (->> x ~@body))|"
   {:attribution "thebusby.bagotricks"}
-  [& body]
-  `(fn fn->># [x#] (->> x# ~@body))))
+  [& body] `(fn fn->># [x#] (->> x# ~@body))))
 
 #?(:clj
 (defmacro with-do
   "Like prog1 in Common Lisp, or a `(do)` that returns the first form."
-  [expr & exprs]
-  `(let [ret# ~expr] ~@exprs ret#)))
+  [expr & exprs] `(let [ret# ~expr] ~@exprs ret#)))
 
 #?(:clj
 (defmacro with-do-let
   "Like aprog1 or prog1-bind in Common Lisp."
-  [[sym retn] & body]
-  `(let [~sym ~retn] ~@body ~sym)))
+  [[sym retn] & body] `(let [~sym ~retn] ~@body ~sym)))
 
 
 ; TODO: deprecate these... likely they're not useful
-(defn call->   [arg & [func & args]] ((apply func args) arg))
-(defn call->>  [& [func & args]] ((apply func    (butlast args)) (last args)))
-
-; TODO: Find |<<-| to convert a -> to <<-
+(defn call->  [arg & [func & args]] ((apply func args) arg))
+(defn call->> [& [func & args]] ((apply func    (butlast args)) (last args)))
 
 #?(:clj
 (defmacro <-
   "Converts a ->> to a ->
-   (->> (range 10) (map inc) (<- doto prn) (reduce +))
    Note: syntax modified from original."
-   {:attribution "thebusby.bagotricks"}
+   {:attribution "thebusby.bagotricks"
+    :usage       `(->> (range 10) (map inc) (<- doto prn) (reduce +))}
   ([x] `(~x))
-  ([cmd & body]
-      `(~cmd ~(last body) ~@(butlast body)))))
+  ([op & body] `(~op ~(last body) ~@(butlast body)))))
+
+#?(:clj
+(defmacro <<-
+  "Converts a -> to a ->>"
+   {:attribution "alexandergunnarson"
+    :usage       `(-> 1 inc (/ 4) (<<- - 2))}
+  ([x] `(~x))
+  ([x op & body] `(~op ~@body ~x))))
 
 ; ---------------------------------------
 ; ================ JUXTS ================ (possibly deprecate these?)
@@ -288,6 +298,7 @@
    Requires an even number of arguments."
   [& args]
   (juxtm* hash-map    args))
+
 (defn juxt-sm
   "Like /juxt/, but applies a sorted-map+ instead of a vector.
    Requires an even number of arguments."
@@ -307,10 +318,6 @@
 
 ; ======== WITH =========
 
-; TODO: use whatever REPL's print fn is
-; (defn with-pr  [obj]      (do (#+clj  pprint
-;                                #+cljs println obj)
-;                               obj))
 #?(:clj
 (defmacro doto->>
   {:usage '(->> 1 inc (doto->> (println "ABC")))}
@@ -369,7 +376,7 @@
 
 #?(:clj
 (defmacro rfn
-  "Creates a reducer-safe function."
+  "Creates a reducer-safe function for use with `reduce` or `reduce-kv`."
   [arglist & body]
   (let [sym (gensym "rfn")]
     (case (count arglist)
