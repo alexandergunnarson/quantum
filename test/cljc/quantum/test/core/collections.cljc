@@ -1,8 +1,12 @@
 (ns quantum.test.core.collections
   (:require
     [quantum.core.test        :as test
-      :refer [deftest is ]]
-    [quantum.core.collections :as ns]))
+      :refer [deftest is testing]]
+    [quantum.core.collections :as ns]
+    [quantum.core.fn
+      :refer [fn->>]]
+    [quantum.core.logic
+      :refer [fn-or fn-and]]))
 
 (deftest test:count=
   (let [data [:a :b :c :d :e]]
@@ -37,6 +41,141 @@
     (is (= ret {:a #{1 2 3 4}
                 :b [1 2 1 3 4 2]
                 :c [0 1 2 3 4 5]}))))
+
+
+(deftest test:sliding-window+
+  (is (= [[[] [0 1] []]]
+         (->> [0 1            ] (ns/sliding-window+ 2) (ns/join []))))
+  (is (= [[[] [0 1] [2]]
+          [[0 1] [2] []]]
+         (->> [0 1 2          ] (ns/sliding-window+ 2) (ns/join []))))
+  (is (= [[[] [0 1] [2 4]]
+          [[0 1] [2 4] []]]
+         (->> [0 1 2 4        ] (ns/sliding-window+ 2) (ns/join []))))
+  (is (= [[[] [0 1] [2 3 4 5 6]]
+          [[0 1] [2 3] [4 5 6]]
+          [[0 1 2 3] [4 5] [6]]
+          [[0 1 2 3 4 5] [6] []]]
+         (->> [0 1 2 3 4 5 6  ] (ns/sliding-window+ 2) (ns/join []))))
+  (is (= [[[] [0 1] [2 3 4 5 6 7]]
+          [[0 1] [2 3] [4 5 6 7]]
+          [[0 1 2 3] [4 5] [6 7]]
+          [[0 1 2 3 4 5] [6 7] []]]
+         (->> [0 1 2 3 4 5 6 7] (ns/sliding-window+ 2) (ns/join []))))
+  (is (= [[[] [0 1 2] [3 4 5 6 7]]
+          [[0 1 2] [3 4 5] [6 7]]
+          [[0 1 2 3 4 5] [6 7] []]]
+         (->> [0 1 2 3 4 5 6 7] (ns/sliding-window+ 3) (ns/join [])))))
+
+(deftest test:sliding-window-splits+
+  (testing "indivisible"
+    (is (= [[[] [0 1] [2 3 4 5 6 7 8 9 10 11 12]]
+            [[0 1] [2 3] [4 5 6 7 8 9 10 11 12]]
+            [[0 1 2 3] [4 5 6] [7 8 9 10 11 12]]
+            [[0 1 2 3 4 5 6] [7 8 9] [10 11 12]]
+            [[0 1 2 3 4 5 6 7 8 9] [10 11 12] []]]
+           (->> [0 1 2 3 4 5 6 7 8 9 10 11 12] (ns/sliding-window-splits+ 5) (ns/join []))))
+    (is (= [[[] [0 1 2] [3 4 5 6 7 8 9 10 11 12]]
+            [[0 1 2] [3 4 5] [6 7 8 9 10 11 12]]
+            [[0 1 2 3 4 5] [6 7 8] [9 10 11 12]]
+            [[0 1 2 3 4 5 6 7 8] [9 10 11 12] []]]
+           (->> [0 1 2 3 4 5 6 7 8 9 10 11 12] (ns/sliding-window-splits+ 4) (ns/join [])))))
+  (testing "divisible"
+    (is (= [[[] [0 1 2] [3 4 5 6 7 8 9 10 11]]
+            [[0 1 2] [3 4 5] [6 7 8 9 10 11]]
+            [[0 1 2 3 4 5] [6 7 8] [9 10 11]]
+            [[0 1 2 3 4 5 6 7 8] [9 10 11] []]]
+           (->> [0 1 2 3 4 5 6 7 8 9 10 11] (ns/sliding-window-splits+ 4) (ns/join [])))))
+  (testing "small"
+    (testing "indivisible"
+      (is (= [[[] [0] [1 2 3 4]]
+              [[0] [1] [2 3 4]]
+              [[0 1] [2] [3 4]]
+              [[0 1 2] [3 4] []]]
+             (->> [0 1 2 3 4] (ns/sliding-window-splits+ 4) (ns/join []))))
+      (is (= [[[] [0] [1 2 3 4]]
+              [[0] [1 2] [3 4]]
+              [[0 1 2] [3 4] []]]
+             (->> [0 1 2 3 4] (ns/sliding-window-splits+ 3) (ns/join []))))
+      (is (= [[[] [0 1] [2 3 4]]
+              [[0 1] [2 3 4] []]]
+             (->> [0 1 2 3 4] (ns/sliding-window-splits+ 2) (ns/join []))))
+      (is (= [[[] [0 1 2 3 4] []]]
+             (->> [0 1 2 3 4] (ns/sliding-window-splits+ 1) (ns/join [])))))
+    (testing "divisible"
+      (is (= [[[] [0] [1 2 3]]
+              [[0] [1] [2 3]]
+              [[0 1] [2] [3]]
+              [[0 1 2] [3] []]]
+             (->> [0 1 2 3] (ns/sliding-window-splits+ 4) (ns/join []))))
+      (is (= [[[] [0] [1 2]]
+              [[0] [1] [2]]
+              [[0 1] [2] []]]
+             (->> [0 1 2] (ns/sliding-window-splits+ 3) (ns/join []))))
+      (is (= [[[] [0] [1]]
+              [[0] [1] []]]
+             (->> [0 1] (ns/sliding-window-splits+ 2) (ns/join []))))
+      (is (= [[[] [0] []]]
+             (->> [0] (ns/sliding-window-splits+ 1) (ns/join [])))))))
+
+; ======== TREE ========== ;
+
+(deftest test:max-depth
+  (testing "all"
+    (let [<branch?  :branch?
+          <children (fn->> ns/vals+ (ns/filter+ (fn-or :branch? :leaf?)))]
+      (is (= 0 (ns/max-depth <branch? <children
+                 {:a 1 :b 2
+                  :depth 1
+                  :c {:branch? true :d 4}})))
+      (is (= 1 (ns/max-depth <branch? <children
+                 {:branch? true :a 1 :b 2
+                  :depth   1})))
+      (is (= 2 (ns/max-depth <branch? <children
+                 {:branch? true :a 1 :b 2
+                  :depth   1
+                  :c {:branch? true
+                      :depth   2
+                      :d {:e 4 :f {:g 5}}}})))
+      (is (= 3 (ns/max-depth <branch? <children
+                 {:branch? true :a 1 :b 2
+                  :depth   1
+                  :c {:branch? true
+                      :depth   2
+                      :d {:e 4 :f {:g 5}}
+                      :h {:branch? true
+                          :depth   3
+                          :i {:j {:k 6}}}}})))
+      (is (= 4 (ns/max-depth <branch? <children
+                 {:branch? true :a 1 :b 2
+                  :depth   1
+                  :c {:branch? true
+                      :depth   2
+                      :d {:e 4 :f {:g 5}}
+                      :h {:branch? true
+                          :depth   3
+                          :i {:j {:k 6}}
+                          :l {:branch? true
+                              :depth   4} ; the last branch
+                          :q 9}}})))
+      (is (= 5 (ns/max-depth <branch? <children
+                 {:branch? true :a 1 :b 2
+                  :depth   1
+                  :c {:branch? true
+                      :depth   2
+                      :d {:e 4 :f {:g 5}}
+                      :h {:branch? true
+                          :depth   3
+                          :i {:j {:k 6}}
+                          :l {:branch? true
+                              :depth   4 ; the last branch
+                              :m {:leaf? true
+                                  :n 7
+                                  :depth 5
+                                  :o {:branch? true
+                                      :depth 7 ; but unreachable
+                                      :p 8}}}
+                          :q 9}}}))))))
 
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
@@ -347,8 +486,13 @@
 
 ; ====== NUMERIC ======
 
-(defn test:allocate-by-percentages
-  [n percents])
+(deftest test:allocate-by-percentages
+  (is (= [7 1 1 1]
+         (ns/allocate-by-percentages 10 [3/4 3/20 1/20 1/20])))
+  (is (= [8 1 1 1]
+         (ns/allocate-by-percentages 11 [3/4 3/20 1/20 1/20])))
+  (is (= [8 2 1 1]
+         (ns/allocate-by-percentages 12 [3/4 3/20 1/20 1/20]))))
 
 ; ===== LOGGING ===== ; (TODO MOVE)
 
