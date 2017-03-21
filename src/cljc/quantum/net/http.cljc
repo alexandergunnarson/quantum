@@ -17,11 +17,11 @@
             [quantum.core.error                      :as err]
             [quantum.core.spec                       :as s
               :refer [validate]]
-            [quantum.core.fn
+            [quantum.core.logic
               :refer [fn-nil]]
             [quantum.core.log                        :as log]
             [quantum.core.vars                       :as var
-              :refer [defalias]]))
+              :refer [defalias reset-var!]]))
 
 (def request! impl/request!)
 
@@ -102,8 +102,7 @@
                              epoll?))
                           (remove-vals+ nil?)
                           (join {}))
-                _ (alter-var-root routes-var ; TODO reset-var
-                    (constantly (router/make-routes (merge this opts))))
+                _ (reset-var! routes-var (router/make-routes (merge this opts)))
                 _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
                 server (case type
                          :aleph    (aleph/start-server routes-var opts)
