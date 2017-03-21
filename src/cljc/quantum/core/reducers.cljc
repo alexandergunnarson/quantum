@@ -25,14 +25,14 @@
       :refer [->ex]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
-              fn1 fn-> fn->> rcomp defcurried]]
+              fn1 fn-> fn->> fn' rcomp defcurried]]
     [quantum.core.logic            :as logic
-      :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
+      :refer [fn-not fn-or fn-and fn-nil fn-true whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
       :refer [defnt case-env assert-args]]
     [quantum.core.numeric          :as num]
     [quantum.core.type             :as type
-      :refer [instance+? array-list? lseq?]]
+      :refer [instance+? lseq?]]
     [quantum.core.reducers.reduce  :as red
       :refer [reducer first-non-nil-reducer]]
     [quantum.core.reducers.fold    :as fold
@@ -262,8 +262,8 @@
                  |count*| is 36.824665 ms - twice as fast!!"}
   [coll]
   (fold*
-    (aritoid (constantly 0) identity +)
-    (aritoid (constantly 0) identity (rcomp firsta inc))
+    (aritoid (fn' 0) identity +)
+    (aritoid (fn' 0) identity (rcomp firsta inc))
     coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
@@ -331,26 +331,32 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        REDUCTIONS        }=====================================================
 ;=================================================={                          }=====================================================
-; Unknown whether this is more efficient than simply reducing normally
-#_(defn reductions+
-  "Reducers version of /reductions/.
-   Returns a reducer of the intermediate values of the reduction (as per reduce) of coll by f.
-   "
-  {:attribution "parkour.reducers"
-   :usage '(join [] (reductions+ + [1 2 3]))
-   :out   '[1 3 6]}
-  ([f coll] (reductions+ f (f) coll))
-  ([f init coll]
-     (let #?(:clj  [sentinel (Object.)]) ; instead of nil, because it's unique
-          #?(:cljs [sentinel (array  )])
-       (->> (mapcat+ identity [coll [sentinel]])
-            (map-state
-              (fn [acc x]
-                (if (identical? sentinel x)
-                  [nil acc]
-                  (let [acc' (f acc x)]
-                    [acc' acc])))
-              init)))))
+(defn map-accum-transducer
+  {:attribution "alexandergunnarson"}
+  [f]
+  (fn [rf]
+    (fn
+      ([] (rf))
+      ([xs'] (rf xs'))
+      ([xs' x] (rf xs' (f xs' x))))))
+
+(defn map-accum+
+  "Like `map+`, but the accumulated reduction gets passed through as the
+   first argument to `f`, and the current element as the second argument."
+  [f xs] (folder xs (map-accum-transducer f)))
+
+#_(defn reductions-transducer ; TODO finish
+  {:attribution "alexandergunnarson"}
+  [f]
+  (fn [rf]
+    (fn
+      ([] (rf))
+      ([xs'] (rf xs'))
+      ([xs' x] (rf xs' (f xs' x))))))
+
+#_(defn reductions+ ; TODO finish
+  {:attribution "alexandergunnarson"}
+  [f xs] (folder xs (reductions-transducer f)))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FILTER, REMOVE      }=====================================================
 ;=================================================={                          }=====================================================
@@ -441,8 +447,8 @@
       identity-rf)))
 
 (defn repeat+
-  ([  x] (repeatedly+   (constantly x)))
-  ([n x] (repeatedly+ n (constantly x))))
+  ([  x] (repeatedly+   (fn' x)))
+  ([n x] (repeatedly+ n (fn' x))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         ITERATE          }=====================================================
 ;=================================================={                          }=====================================================
@@ -674,8 +680,8 @@
             2}}
   [pred coll]
   (fold*
-    (aritoid (constantly nil) identity first-non-nil-reducer)
-    (aritoid (constantly nil)
+    (aritoid fn-nil identity first-non-nil-reducer)
+    (aritoid fn-nil
              identity
              (fn [_ x] (when-let [v (pred x)] (reduced v))))
     coll))
@@ -689,7 +695,7 @@
             4}}
   [coll]
   (let [combiner+reducer
-         (aritoid (constantly nil) identity first-non-nil-reducer)]
+         (aritoid fn-nil identity first-non-nil-reducer)]
     (fold* combiner+reducer combiner+reducer coll)))
 
 (defn fold-extremum
@@ -707,7 +713,7 @@
                  (<= 0 (compare-fn x m)) x
                  true                    m))
         combiner+reducer
-          (aritoid (constantly nil) identity extremum-reducer)]
+          (aritoid fn-nil identity extremum-reducer)]
     (fold* combiner+reducer combiner+reducer coll)))
 
 (defn fold-min
@@ -732,7 +738,7 @@
             true}}
   [coll]
   (->> coll
-       (map+ (constantly true))
+       (map+ fn-true)
        (fold-some true?)
        boolean not))
 
@@ -808,7 +814,7 @@
   "|doseq| but based on reducers."
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"}
   [bindings & body]
- `(red/reduce (constantly nil) (for+ ~bindings (do ~@body)))))
+ `(red/reduce fn-nil (for+ ~bindings (do ~@body)))))
 
 (defcurried each ; like doseq
   "Applies f to each item in coll, returns nil"
