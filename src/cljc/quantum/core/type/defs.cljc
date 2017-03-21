@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Definitions for types."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.type.defs
   (:require
     [clojure.core          :as core]
@@ -21,8 +21,13 @@
       :refer [array-nd-types]])
   (:import
     #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel
+               com.google.common.util.concurrent.AtomicDouble
                quantum.core.data.tuple.Tuple]
-        :cljs [goog.string.StringBuffer])))
+        :cljs [goog.string.StringBuffer
+               goog.structs.Map
+               goog.structs.Set
+               goog.structs.AvlTree
+               goog.structs.Queue])))
 
 (defrecord Folder  [coll transform])
 (defrecord Reducer [coll transform])
@@ -271,7 +276,7 @@
 
 (def non-list-seq-types    (cond-union cons-types lseq-types misc-seq-types))
 
-; ----- LISTS ----- ; Not extremely different from Sequences
+; ----- LISTS ----- ; Not extremely different from Sequences ; TODO clean this up
 
 (def cdlist-types          {}
                         #_'{:clj  #{clojure.data.finger_tree.CountedDoubleList
@@ -285,6 +290,7 @@
                             :cljs (set/union (:cljs dlist-types)
                                              (:cljs cdlist-types)
                                              '#{cljs.core/List cljs.core/EmptyList})})
+(def !list-types          '{:clj  #{java.util.LinkedList}})
 (def list-types            {:clj  '#{java.util.List}
                             :cljs (:cljs +list-types)})
 
@@ -295,62 +301,109 @@
 
 ; ===== MAPS ===== ; Associative
 
-(def +hash-map-types      '{:clj  #{clojure.lang.PersistentHashMap
-                                    clojure.lang.PersistentHashMap$TransientHashMap}
-                            :cljs #{cljs.core/PersistentHashMap
-                                    cljs.core/TransientHashMap}})
-(def +array-map-types     '{:clj  #{clojure.lang.PersistentArrayMap
-                                    clojure.lang.PersistentArrayMap$TransientArrayMap}
-                            :cljs #{cljs.core/PersistentArrayMap
-                                    cljs.core/TransientArrayMap}})
-(def +unsorted-map-types   (cond-union +hash-map-types +array-map-types))
- ; TODO these are only the well-known unsorted map types
-(def unsorted-map-types    {:clj  (set/union (:clj +unsorted-map-types)
-                                             '#{java.util.HashMap
-                                                java.util.IdentityHashMap
-                                                java.util.concurrent.ConcurrentHashMap})
-                            :cljs (:cljs +unsorted-map-types)})
+(def +array-map-types     '{:clj  #{clojure.lang.PersistentArrayMap}
+                            :cljs #{cljs.core/PersistentArrayMap}})
+(def !+array-map-types    '{:clj  #{clojure.lang.PersistentArrayMap$TransientArrayMap}
+                            :cljs #{cljs.core/TransientArrayMap}})
+(def ?!+array-map-types    (cond-union !+array-map-types +array-map-types))
+(def !array-map-types      {})
+(def !!array-map-types     {})
+(def array-map-types       (cond-union ?!+array-map-types
+                                       !array-map-types !!array-map-types))
+
+(def +hash-map-types      '{:clj  #{clojure.lang.PersistentHashMap}
+                            :cljs #{cljs.core/PersistentHashMap}})
+(def !+hash-map-types     '{:clj  #{clojure.lang.PersistentHashMap$TransientHashMap}
+                            :cljs #{cljs.core/TransientHashMap}})
+(def ?!+hash-map-types     (cond-union  !+hash-map-types   +hash-map-types))
+(def !hash-map-types      '{:clj  #{java.util.HashMap
+                                    java.util.IdentityHashMap}
+                            :cljs #{goog.structs.Map}})
+(def !!hash-map-types     '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
+(def hash-map-types        (cond-union ?!+hash-map-types
+                                       !hash-map-types !!hash-map-types))
+
+(def +unsorted-map-types   (cond-union   +hash-map-types   +array-map-types))
+(def !+unsorted-map-types  (cond-union  !+hash-map-types  !+array-map-types))
+(def ?!+unsorted-map-types (cond-union ?!+hash-map-types ?!+array-map-types))
+(def !unsorted-map-types   !hash-map-types)
+(def !!unsorted-map-types  !!hash-map-types)
+(def unsorted-map-types    (cond-union ?!+unsorted-map-types
+                                       !unsorted-map-types !!unsorted-map-types))
+
 (def +sorted-map-types    '{:clj  #{clojure.lang.PersistentTreeMap}
                             :cljs #{cljs.core/PersistentTreeMap   }})
-(def sorted-map-types      {:clj  (set/union (:clj +sorted-map-types)
+(def !+sorted-map-types    {})
+(def ?!+sorted-map-types   (cond-union +sorted-map-types !+sorted-map-types))
+(def !sorted-map-types    '{:clj  #{java.util.TreeMap}
+                            :cljs #{goog.structs.AvlTree}})
+(def !!sorted-map-types    {})
+(def sorted-map-types      {:clj  (set/union (:clj ?!+sorted-map-types)
                                              '#{java.util.SortedMap})
-                            :cljs (:cljs +sorted-map-types)})
-(def +map-types            {:clj '#{clojure.lang.ITransientMap
-                                    clojure.lang.IPersistentMap}
+                            :cljs (set/union (:cljs +sorted-map-types)
+                                             (:cljs !sorted-map-types))})
+(def !+map-types           {:clj  '#{clojure.lang.ITransientMap}
+                            :cljs (set/union (:cljs !+unsorted-map-types))})
+(def +map-types            {:clj  '#{clojure.lang.IPersistentMap}
                             :cljs (set/union (:cljs +unsorted-map-types)
                                              (:cljs +sorted-map-types))})
-; TODO these are only the well-known single-threaded mutable map types
-(def !map-types           '{:clj  #{java.util.HashMap
-                                    java.util.IdentityHashMap}
-                            :cljs #{goog.structs.Map}}) ; technically also `object`
-; TODO these are only the well-known multi-threaded mutable map types
-(def !!map-types          '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
-(def map-types             {:clj '#{clojure.lang.ITransientMap
-                                    java.util.Map}
-                            :cljs (:cljs +map-types)})
+(def ?!+map-types          (cond-union !+map-types +map-types))
+; technically also `object` for CLJS
+(def !map-types            (cond-union !unsorted-map-types !sorted-map-types))
+(def !!map-types           (cond-union !!unsorted-map-types !!sorted-map-types))
+(def map-types             {:clj  (set/union (:clj !+map-types)
+                                    '#{; TODO IPersistentMap as well, yes, but all persistent Clojure maps implement java.util.Map
+                                       java.util.Map})
+                            :cljs (set/union (:cljs ?!+map-types)
+                                             (:cljs !map-types)
+                                             (:cljs !!map-types))})
 
 ; ===== SETS ===== ; Associative; A special type of Map whose keys and vals are identical
 
-(def +hash-set-types      '{:clj  #{clojure.lang.PersistentHashSet
-                                    clojure.lang.PersistentHashSet$TransientHashSet}
-                            :cljs #{cljs.core/PersistentHashSet
-                                    cljs.core/TransientHashSet}})
-(def +unsorted-set-types   +hash-set-types) ; currently
-(def unsorted-set-types    {:clj  (set/union (:clj +unsorted-set-types)
-                                             '#{java.util.HashSet})
-                            :cljs (:cljs +unsorted-set-types)})
+(def +hash-set-types      '{:clj  #{clojure.lang.PersistentHashSet}
+                            :cljs #{cljs.core/PersistentHashSet}})
+(def !+hash-set-types     '{:clj  #{clojure.lang.PersistentHashSet$TransientHashSet}
+                            :cljs #{cljs.core/TransientHashSet}})
+(def ?!+hash-set-types     (cond-union !+hash-set-types +hash-set-types))
+(def !hash-set-types      '{:clj  #{java.util.HashSet}
+                            :cljs #{goog.structs.Set}})
+(def !!hash-set-types      {}) ; technically you can make something from ConcurrentHashMap but...
+(def hash-set-types        (cond-union ?!+hash-set-types
+                             !hash-set-types !!hash-set-types))
+
+(def +unsorted-set-types     +hash-set-types)
+(def !+unsorted-set-types   !+hash-set-types)
+(def ?!+unsorted-set-types ?!+hash-set-types)
+(def !unsorted-set-types     !hash-set-types)
+(def !!unsorted-set-types   !!hash-set-types)
+(def unsorted-set-types       hash-set-types)
+
 (def +sorted-set-types    '{:clj  #{clojure.lang.PersistentTreeSet}
                             :cljs #{cljs.core/PersistentTreeSet   }})
+(def !+sorted-set-types    {})
+(def ?!+sorted-set-types   (cond-union +sorted-set-types !+sorted-set-types))
+(def !sorted-set-types    '{:clj  #{java.util.TreeSet}}) ; CLJS can have via AVLTree with same KVs
+(def !!sorted-set-types    {})
 (def sorted-set-types      {:clj  (set/union (:clj +sorted-set-types)
                                              '#{java.util.SortedSet})
-                            :cljs (:cljs +sorted-set-types)})
-(def +set-types            {:clj  '#{clojure.lang.ITransientSet
-                                     clojure.lang.IPersistentSet}
+                            :cljs (set/union (:cljs +sorted-set-types)
+                                             (:cljs !sorted-set-types)
+                                             (:cljs !!sorted-set-types))})
+
+(def !+set-types           {:clj  '#{clojure.lang.ITransientSet}
+                            :cljs (set/union (:cljs !+unsorted-set-types))})
+(def +set-types            {:clj '#{clojure.lang.IPersistentSet}
                             :cljs (set/union (:cljs +unsorted-set-types)
                                              (:cljs +sorted-set-types))})
-(def set-types             {:clj  '#{clojure.lang.ITransientSet
-                                     java.util.Set}
-                            :cljs (:cljs +set-types)})
+(def ?!+set-types          (cond-union !+set-types +set-types))
+(def !set-types            (cond-union !unsorted-set-types !sorted-set-types))
+(def !!set-types           (cond-union !!unsorted-set-types !!sorted-set-types))
+(def set-types             {:clj  (set/union (:clj !+set-types)
+                                    '#{; TODO IPersistentSet as well, yes, but all persistent Clojure sets implement java.util.Set
+                                       java.util.Set})
+                            :cljs (set/union (:cljs ?!+set-types)
+                                             (:cljs !set-types)
+                                             (:cljs !!set-types))})
 
 ; ===== ARRAYS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                      ; dense integer values), not extensible
@@ -405,25 +458,40 @@
 ; ===== VECTORS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                       ; dense integer values), extensible
 
-(def array-list-types     '{:clj  #{java.util.ArrayList java.util.Arrays$ArrayList}
-                            :cljs #{cljs.core.ArrayList                           }}                         )
+(def !array-list-types    '{:clj  #{java.util.ArrayList
+                                    java.util.Arrays$ArrayList} ; indexed and associative, but not extensible
+                            :cljs #{cljs.core.ArrayList}}) ; TODO what is this?
 ; svec = "spliceable vector"
 (def svec-types           '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
                             :cljs #{clojure.core.rrb_vector.rrbt.Vector}})
 (def +vec-types            {:clj  '#{clojure.lang.IPersistentVector}
                             :cljs (set/union (:cljs svec-types)
-                                             '#{cljs.core/PersistentVector
-                                                cljs.core/TransientVector})})
-(def !vec-types            array-list-types)
-(def vec-types             (cond-union !vec-types +vec-types))
+                                             '#{cljs.core/PersistentVector})})
+(def !+vec-types          '{:clj  #{clojure.lang.ITransientVector}
+                            :cljs #{cljs.core/TransientVector}})
+(def ?!+vec-types          (cond-union +vec-types !+vec-types))
+(def !vec-types           '{:clj  #{java.util.ArrayList}
+                            :cljs #{cljs.core.ArrayList}})
+                           ; java.util.Vector is deprecated, because you can
+                           ; just create a synchronized wrapper over an ArrayList
+                           ; via java.util.Collections
+(def !!vec-types           {})
+(def vec-types             (cond-union ?!+vec-types !vec-types !!vec-types))
 
-; ===== QUEUES ===== ;
+; ===== QUEUES ===== ; Particularly FIFO queues, as LIFO = stack = any vector
 
 (def +queue-types         '{:clj  #{clojure.lang.PersistentQueue}
                             :cljs #{cljs.core/PersistentQueue   }})
-(def queue-types           {:clj  (set/union (:clj +queue-types)
+(def !+queue-types         {})
+(def ?!+queue-types        (cond-union +queue-types !+queue-types))
+(def !queue-types         '{:clj  #{java.util.ArrayDeque} ; TODO *MANY* more here
+                            :cljs #{goog.structs.Queue}})
+(def !!queue-types         {}) ; TODO *MANY* more here
+(def queue-types           {:clj  (set/union (:clj ?!+queue-types)
                                              '#{java.util.Queue})
-                            :cljs (:cljs +queue-types)})
+                            :cljs (set/union (:cljs ?!+queue-types)
+                                             (:cljs !queue-types)
+                                             (:cljs !!queue-types))})
 
 ; ===== GENERIC ===== ;
 
@@ -520,7 +588,8 @@
                                        java.util.concurrent.atomic.AtomicInteger
                                        java.util.concurrent.atomic.AtomicLong
                                      #_java.util.concurrent.atomic.AtomicFloat
-                                     #_java.util.concurrent.atomic.AtomicDouble ; -> com.google.common.util.concurrent.AtomicDouble
+                                     #_java.util.concurrent.atomic.AtomicDouble
+                                       com.google.common.util.concurrent.AtomicDouble
                                      })})
 
 (def m2m-chan-types       '{:clj  #{clojure.core.async.impl.channels.ManyToManyChannel}
@@ -622,41 +691,100 @@
    'lseq?            lseq-types
    'non-list-seq?    non-list-seq-types
 
+   ; Denotes unindexed list particularly
    'dlist?           dlist-types
    'cdlist?          cdlist-types
    '+list?           +list-types
+   '!+list?          '!+list-types
+   '?!+list?         '?!+list-types
+   '!list?           '!list-types
+   '!!list?          '!!list-types
    'list?            list-types
 
    'seq?             seq-types
 
-   ; ASSOCIATIVE
+   ; ----- ASSOCIATIVE ----- ;
 
    'associative?     associative-types
 
+   ; MAP
+
    '+array-map?      +array-map-types
+   '!+array-map?     !+array-map-types
+   '?!+array-map?    ?!+array-map-types
+   '!array-map?      !array-map-types
+   '!!array-map?     !!array-map-types
+   'array-map?       array-map-types
+
    '+hash-map?       +hash-map-types
+   '!+hash-map?      !+hash-map-types
+   '?!+hash-map?     ?!+hash-map-types
+   '!hash-map?       !hash-map-types
+   '!!hash-map?      !!hash-map-types
+   'hash-map?        hash-map-types
+
    '+unsorted-map?   +unsorted-map-types
+   '!+unsorted-map?  !+unsorted-map-types
+   '?!+unsorted-map? ?!+unsorted-map-types
+   '!unsorted-map?   !unsorted-map-types
+   '!!unsorted-map?  !!unsorted-map-types
    'unsorted-map?    unsorted-map-types
+
    '+sorted-map?     +sorted-map-types
+   '!+sorted-map?    !+sorted-map-types
+   '?!+sorted-map?   ?!+sorted-map-types
+   '!sorted-map?     !sorted-map-types
+   '!!sorted-map?    !!sorted-map-types
    'sorted-map?      sorted-map-types
+
    '+map?            +map-types
+   '!+map?           !+map-types
+   '?!+map?          ?!+map-types
    '!map?            !map-types
    '!!map?           !!map-types
    'map?             map-types
 
+   ; SET
+
    '+hash-set?       +hash-set-types
+   '!+hash-set?      !+hash-set-types
+   '?!+hash-set?     ?!+hash-set-types
+   '!hash-set?       !hash-set-types
+   '!!hash-set?      !!hash-set-types
+   'hash-set?        hash-set-types
+
    '+unsorted-set?   +unsorted-set-types
+   '!+unsorted-set?  !+unsorted-set-types
+   '?!+unsorted-set? ?!+unsorted-set-types
+   '!unsorted-set?   !unsorted-set-types
+   '!!unsorted-set?  !!unsorted-set-types
    'unsorted-set?    unsorted-set-types
+
    '+sorted-set?     +sorted-set-types
+   '!+sorted-set?    !+sorted-set-types
+   '?!+sorted-set?   ?!+sorted-set-types
+   '!sorted-set?     !sorted-set-types
+   '!!sorted-set?    !!sorted-set-types
    'sorted-set?      sorted-set-types
+
    '+set?            +set-types
+   '!+set?           !+set-types
+   '?!+set?          ?!+set-types
+   '!set?            !set-types
+   '!!+set?          !!set-types
    'set?             set-types
 
    ; INDEXED
 
    'indexed?         indexed-types
 
+   ; SORTED
+
    'sorted?          sorted-types
+
+   ; ----- ASSOCIATIVE+INDEXED ----- ;
+
+   ; ARRAYS
 
    'boolean-array?       {:clj #{(-> array-1d-types :clj :boolean)}}
    'byte-array?          {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
@@ -712,25 +840,30 @@
                       :cljs (->> array-10d-types :cljs vals set)}
    'array?           array-types
 
+   ; VECTOR-LIKE OBJECTS
+
    'string?          string-types
    '!string?         !string-types
    'char-seq?        {:clj '#{CharSequence}}
 
-   'array-list?      array-list-types
+   '!array-list?     !array-list-types
 
    'svec?            svec-types
-   'svector?         svec-types
    '+vec?            +vec-types
-   '+vector?         +vec-types
+   '!+vec?           !+vec-types
+   '?!+vec?          ?!+vec-types
    '!vec?            !vec-types
-   '!vector?         !vec-types
+   '!!vec?           !!vec-types
    'vec?             vec-types
-   'vector?          vec-types
    'tuple?           tuple-types
 
    ; QUEUES
 
    '+queue?          +queue-types
+   '!+queue?         !+queue-types
+   '?!+queue?        ?!+queue-types
+   '!queue?          !queue-types
+   '!!queue?         !!queue-types
    'queue?           queue-types
 
    ; MISCELLANEOUS

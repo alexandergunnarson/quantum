@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Type-checking predicates, 'transientization' checks, class aliases, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.type
   (:refer-clojure :exclude
     [vector? map? set? associative? seq? seqable? string? fn? map-entry? boolean?
@@ -86,21 +86,28 @@
          (defnt bytes?         ([^bytes?         x] true) ([^default x] false))
          (defnt double-array?  ([^double-array?  x] true) ([^default x] false))
          (defnt doubles?       ([^doubles?       x] true) ([^default x] false))
- #?(:clj (defnt array-2d?      ([^array-2d?      x] true) ([^default x] false)))
+#?(:clj  (defnt array-2d?      ([^array-2d?      x] true) ([^default x] false)))
          (defnt array?
            ([^array? x] true)
            ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* possible array types in a `defnt`
                    :cljs (-> x core/array?))))
 
-         (defnt svector?       ([^svector?       x] true) ([^default x] false))
          (defnt svec?          ([^svec?          x] true) ([^default x] false))
-         (defnt +vector?       ([^+vector?       x] true) ([^default x] false))
          (defnt +vec?          ([^+vec?          x] true) ([^default x] false))
-         (defnt vector?        ([^vector?        x] true) ([^default x] false))
+         (defnt !+vec?         ([^!+vec?         x] true) ([^default x] false))
+         (defnt ?!+vec?        ([^?!+vec?        x] true) ([^default x] false))
          (defnt vec?           ([^vec?           x] true) ([^default x] false))
 
          (defnt +array-map?    ([^+array-map?    x] true) ([^default x] false))
+         (defnt !+array-map?   ([^!+array-map?   x] true) ([^default x] false))
+         (defnt ?!+array-map?  ([^?!+array-map?  x] true) ([^default x] false))
+
          (defnt +hash-map?     ([^+hash-map?     x] true) ([^default x] false))
+         (defnt !+hash-map?    ([^!+hash-map?    x] true) ([^default x] false))
+         (defnt ?!+hash-map?   ([^?!+hash-map?   x] true) ([^default x] false))
+         (defnt !hash-map?     ([^!hash-map?     x] true) ([^default x] false))
+#?(:clj  (defnt !!hash-map?    ([^!!hash-map?    x] true) ([^default x] false)))
+
          (defnt +unsorted-map? ([^+unsorted-map? x] true) ([^default x] false))
          (defnt unsorted-map?  ([^unsorted-map?  x] true) ([^default x] false))
          (defnt +sorted-map?   ([^+sorted-map?   x] true) ([^default x] false))
@@ -115,7 +122,7 @@
          (defnt +set?          ([^+set?          x] true) ([^default x] false))
          (defnt set?           ([^set?           x] true) ([^default x] false))
 
-         (defnt array-list?    ([^array-list?    x] true) ([^default x] false))
+         (defnt !array-list?   ([^!array-list?   x] true) ([^default x] false))
          (defnt list?          ([^list?          x] true) ([^default x] false))
          (defnt +list?         ([^+list?         x] true) ([^default x] false))
          (defnt +queue?        ([^+queue?        x] true) ([^default x] false))
@@ -136,7 +143,7 @@
          (def map-entry? #?(:clj  core/map-entry?
                             :cljs (fn-and vector? (fn-> count (= 2)))))
          (defalias atom? qcore/atom?)
- #?(:clj (defalias var?  core/var?))
+#?(:clj  (defalias var?  core/var?))
          ; TODO `ref?`, `future?`
 
          (defn derefable? [obj]
@@ -213,29 +220,29 @@
 (defnt identity
   "Type identity function."
   {:todo ["Fix so only immmutable data stuctures have immutable identity fns."]}
-  ([^+vector? x] vector  )
-  ([^+map?    x] hash-map)
-  ([^+set?    x] hash-set))
+  ([^+vec? x] vector  )
+  ([^+map? x] hash-map)
+  ([^+set? x] hash-set))
 
-(def +vector?-fn (fn1 +vector?))
-(def +set?-fn    (fn1 +set?   ))
-(def +map?-fn    (fn1 +map?   ))
+(def +vec?-fn (fn1 +vec?))
+(def +set?-fn (fn1 +set?))
+(def +map?-fn (fn1 +map?))
 
 (defnt ->pred
   "Gets the type predicate associated with the value passed."
-  ([^+vector? x] +vector?-fn)
-  ([^+set?    x] +set?-fn   )
-  ([^+map?    x] +map?-fn   ))
+  ([^+vec? x] +vec?-fn)
+  ([^+set? x] +set?-fn)
+  ([^+map? x] +map?-fn))
 
 (defnt ->literal
   "Gets the literal value associated with the value passed."
-  ([^+vector? x] [] )
-  ([^+set?    x] #{})
-  ([^+map?    x] {} ))
+  ([^+vec? x]  [])
+  ([^+set? x] #{})
+  ([^+map? x]  {}))
 
 (defnt ->base
   "Gets the base value associated with the value passed."
-  ([^+vector?       x] (vector  ))
+  ([^+vec?          x] (vector))
   ([^+unsorted-set? x] (hash-set))
   ([^+hash-map?     x] #?(:clj  clojure.lang.PersistentHashMap/EMPTY
                           :cljs cljs.core.PersistentHashMap.EMPTY))
