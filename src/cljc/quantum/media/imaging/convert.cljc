@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Image library. Conversion."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.media.imaging.convert
   (:require
     [quantum.core.process :as proc

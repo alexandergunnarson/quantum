@@ -1,10 +1,10 @@
 (ns
   ^{:doc "Authorization functions for Google. Sign in from
-          Google homepage, from authorized site portal, 
+          Google homepage, from authorized site portal,
           etc., given a username and password.
 
           May be expanded to other functions sometime."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.apis.google.core)
 
 ; =============== GOOGLE: GENERAL ===============

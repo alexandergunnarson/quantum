@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.differential
   (:refer-clojure :exclude
     [for doseq reduce
@@ -373,7 +373,7 @@
 #?(:clj (defalias dropr+ red/dropr+))
 
 (defn ldropr
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [n coll]
   (slice coll 0 (-> coll count long (- (long n)))))
 

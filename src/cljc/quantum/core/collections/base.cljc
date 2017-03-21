@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Base collections operations. Pre-generics."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.base
   (:refer-clojure :exclude [name])
   (:require
@@ -62,7 +62,7 @@
 
    Doesn't use `reduce`... so not as fast."
   {:todo        ["Possibly find a better way to do it?"]
-   :attribution "Alex Gunnarson"}
+   :attribution "alexandergunnarson"}
   [func init coll]
   (loop [ret init coll-n coll]
     (if (empty? coll-n)

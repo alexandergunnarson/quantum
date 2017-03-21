@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Namespace for creating/defining UI components, especially
           with |defcomponent|."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.ui.components
   (:refer-clojure :exclude [for reduce])
   (:require

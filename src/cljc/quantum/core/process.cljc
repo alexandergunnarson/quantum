@@ -2,7 +2,7 @@
   ^{:doc "A very experimental namespace based on using the shell,
           interacting with it, using common commands, etc., from
           within a REPL."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.process
            (:require [com.stuartsierra.component :as comp]
            #?@(:clj [[clojure.java.io            :as io]

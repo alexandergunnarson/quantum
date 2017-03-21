@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.zippers
   (:refer-clojure :exclude
     [for doseq reduce
@@ -143,7 +143,7 @@
 
 (defn zipper
   "General-purpose zipper."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [coll]
   (zip/zipper coll? seq #(walking %1 nil %2) coll))
 

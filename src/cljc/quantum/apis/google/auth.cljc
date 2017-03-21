@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Authorization functions for Google.
           General to all Google authentication/OAuth2 processes."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.apis.google.auth
   (:refer-clojure :exclude [empty?])
   (:require
@@ -198,7 +198,7 @@
 #_(defn ^String copy-auth-key!
   "Copies the auth key from the web page and saves it to a
    predetermined file."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [^WebDriver driver]
   (let [^RemoteWebElement auth-key-field
           (find-element driver (By/id "code"))
@@ -217,7 +217,7 @@
 
 #_(defn authentication-key
   "Retrieves the authentication key programmatically via PhantomJS."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Have option to use existing driver"
           "Programmatically determine account selection"]}
   ([access-type auth-url username password]

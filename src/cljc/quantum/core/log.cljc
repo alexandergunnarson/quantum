@@ -3,7 +3,7 @@
           prints only if the level is enabled, etc.
 
           By no means a full-fledged logging system, but useful nonetheless."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.log
   (:refer-clojure :exclude [pr seqable?])
   (:require
@@ -94,7 +94,7 @@
    is in the set of enabled print alert types, |levels|.
 
    Logs the printed result to the global log |log|."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [trace? pretty? print-fn pr-type args opts]
     (let [trace?  (or (:trace?  opts) trace? )
           pretty? (or (:pretty? opts) pretty?)

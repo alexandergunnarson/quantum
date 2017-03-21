@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful array functions. Array creation, joining, reversal, etc."
-    :attribution "Alex Gunnarson"
+    :attribution "alexandergunnarson"
     :todo ["Incorporate amap, areduce, etc."]}
   quantum.core.data.array
   (:refer-clojure :exclude
@@ -83,7 +83,7 @@
     byte-array+
     "Like /byte-array/ but allows for array initializers a la Java:
      byte[] arr = byte[]{12, 8, 10}"
-    {:attribution "Alex Gunnarson"
+    {:attribution "alexandergunnarson"
      :todo ["Make less repetitive via macro"]}
     ([size]
       (byte-array (long size)))
@@ -99,7 +99,7 @@
   (defn ^ints int-array+
     "Like /int-array/ but allows for array initializers a la Java:
      int[] arr = int[]{12, 8, 10}"
-    {:attribution "Alex Gunnarson"
+    {:attribution "alexandergunnarson"
      :todo ["Make less repetitive via macro"]}
     ([size]
       (core/int-array (long size)))
@@ -249,7 +249,7 @@
   ([^array? a :<0> b]
     (java.util.Arrays/equals a b))))
 
-(defnt swap-at! [#{array? array-list?} x ^int i ^int j]
+(defnt swap-at! [#{array? !array-list?} x ^int i ^int j]
   (let [tmp (get x i)]
     (assoc! x i (get x j))
     (assoc! x j tmp)))

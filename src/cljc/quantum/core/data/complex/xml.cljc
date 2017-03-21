@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful XML functions."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.complex.xml
   (:refer-clojure :exclude [reduce split])
   (:require

@@ -1,6 +1,6 @@
 (ns
   ^{:doc "System-level (environment) vars such as |os|."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.system
            (:require
      #?(:clj [environ.core

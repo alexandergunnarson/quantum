@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Asynchronous things."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.async
   (:refer-clojure :exclude
     [locking
@@ -300,7 +300,7 @@
 (defnt alts!!
   "Takes the first available value from a chan."
   {:todo #{"Implement timeout"}
-   :attribution "Alex Gunnarson"}
+   :attribution "alexandergunnarson"}
   ([^keyword? type chans]
     (alts!! type chans nil))
   #_([^coll? chans]

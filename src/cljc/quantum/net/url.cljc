@@ -5,7 +5,7 @@
           better library.
 
           Call this quantum.http.transcode"
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.net.url
   (:require
     [cuerdas.core             :as str+]

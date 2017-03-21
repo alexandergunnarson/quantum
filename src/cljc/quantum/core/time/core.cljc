@@ -2,7 +2,7 @@
   ^{:doc "An alias ns of the Java 8 Time package on CLJ, and JSJoda on CLJS.
           Also includes useful functions such as |beg-of-day|, |end-of-day|,
           |on?|, |for-days-between|, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.time.core
   (:refer-clojure :exclude
     [extend second - + < <= > >= format])

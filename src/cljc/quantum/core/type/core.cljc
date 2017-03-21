@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
           Also some plumbing macros for |for| loops and the like."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.type.core
   (:refer-clojure :exclude [class])
   (:require

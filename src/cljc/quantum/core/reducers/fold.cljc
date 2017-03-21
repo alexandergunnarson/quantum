@@ -228,7 +228,7 @@
           from)))
 
 (defnt pjoinl*
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([^default        to  ] to)
@@ -246,7 +246,7 @@
 (defn pjoinl
   "Parallel join, left.
    Like `joinl`, but is parallel."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([] nil)
   ([to] (pjoinl* to))
   ([to from] (pjoinl* to from))
@@ -262,7 +262,7 @@
 ; TODO move
 (defnt ->vec
   ([^+vec? x] x)
-  ([#{+map? +list? +set? array-list? Folder
+  ([#{+map? +list? +set? !array-list? Folder
       #?(:clj  clojure.core.protocols.CollReduce
          :cljs cljs.core/IReduce)} x] (joinl [] x))
   ([x] (if (nil? x) [] [x])))

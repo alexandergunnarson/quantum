@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful debug utils. Especially |trace|, |break|, |try-times|, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.meta.debug
            (:require [clojure.string           :as str  ]
              #?(:clj [clojure.stacktrace                ])

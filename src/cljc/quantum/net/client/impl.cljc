@@ -123,7 +123,7 @@
              :content
                (io/file
                  [:home "Collections" "Images" "Backgrounds" "3331-11.jpg"])}]})
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   [{:as req
     :keys [handlers log? log tries max-tries keys-fn raw? middleware]
     :or {as :auto

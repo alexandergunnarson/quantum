@@ -4,7 +4,7 @@
           or expression, blacklisted printable objects (so you don't
           have to wait while you accidentally print out an entire database),
           and so on."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.print
   (:require
     [clojure.string           :as str]

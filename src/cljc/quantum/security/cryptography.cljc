@@ -2,7 +2,7 @@
   ^{:doc "Cryptographic/encryption functions like hashing and digests.
 
           Possibly should just alias some better library for this."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.security.cryptography
   (:refer-clojure :exclude [hash])
   (:require

@@ -93,7 +93,7 @@
 (defmacro def-
   "Like |def| but adds the ^:private metadatum to the bound var.
    |def-| : |def| :: |defn-| : |defn|"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [sym v]
   `(doto (def ~sym ~v)
          (alter-meta! merge {:private true}))))
@@ -112,7 +112,7 @@
 #?(:clj
 (defn reset-var!
   "Like |reset!| but for vars."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [var-0 val-f]
   ;(.bindRoot #'clojure.core/ns ns+)
   ;(alter-meta! #'clojure.core/ns merge (meta #'ns+))
@@ -122,7 +122,7 @@
 #?(:clj
 (defn swap-var!
   "Like |swap!| but for vars."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([var-0 f]
   (do (alter-var-root var-0 f)
        var-0))
@@ -135,7 +135,7 @@
 #?(:clj
 (defn clear-vars!
   "Sets each var in ~@vars to nil."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [& vars]
   (doseq [v vars]
     (reset-var! v nil))))
@@ -181,7 +181,7 @@
 (defn defs
   "Defines a provided list of symbol-value pairs as vars in the
    current namespace."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :usage '(defs 'a 1 'b 2 'c 3)}
   [& {:as vars}]
   (doseq [[sym v] vars]
@@ -190,7 +190,7 @@
 #?(:clj
 (defn defs-
   "Like |defs|, but each var defined is private."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :usage '(defs-private 'a 1 'b 2 'c 3)}
   [& {:as vars}]
   (doseq [[sym v] vars]

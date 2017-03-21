@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Useful operations on byte arrays. Reverse, split, copy,
           to-hex, to-CString, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.bytes
   (:refer-clojure :exclude [reverse assoc!])
            (:require

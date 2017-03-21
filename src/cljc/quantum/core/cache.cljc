@@ -78,7 +78,7 @@
 (defn callable-times
   "`f` is allowed to be called exactly `n` times.
    On the `n`th call, its return value is cached."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [n f]
   (assert (> n 0))
   (let [cache (atom {:calls 0})]

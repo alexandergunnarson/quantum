@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.tree
   (:refer-clojure :exclude
     [for doseq reduce
@@ -101,7 +101,7 @@
 (defn- walk-filter
   "Like |filter|, but performs a `walk` on a treelike structure ->`tree`,
    putting in a new vector only the elements for which ->`pred` is true."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [walk-fn pred tree]
   (let [results (transient [])]
     (walk-fn
@@ -118,7 +118,7 @@
 ; ===== Transform nested maps =====
 
 (defn apply-to-keys
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([m] (apply-to-keys m identity))
   ([m f]
     (postwalk
@@ -127,19 +127,19 @@
 
 (defn keywordize-keys
   "Recursively transforms all map keys from strings to proper keywords."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [x]
   (apply-to-keys x (fn1 str/keywordize)))
 
 (defn keywordify-keys
   "Recursively transforms all map keys from strings to keywords."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [x]
   (apply-to-keys x (whenf1 string? keyword)))
 
 (defn stringify-keys
   "Recursively transforms all map keys from keywords to strings."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [x]
   (apply-to-keys x (whenf1 keyword? name)))
 

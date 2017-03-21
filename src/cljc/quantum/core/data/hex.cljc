@@ -1,6 +1,6 @@
 (ns
   ^{:doc "A hex string library."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.hex
            (:require [quantum.core.macros            :as macros
                        :refer [#?@(:clj [defnt])]                ]

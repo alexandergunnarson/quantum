@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.generative
   (:refer-clojure :exclude
     [boolean?

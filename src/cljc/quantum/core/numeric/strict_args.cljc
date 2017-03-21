@@ -3,7 +3,7 @@
   "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc.
    All vars in this namespace are strict-arg vars (i.e., are guaranteed
    not to rely on protocol dispatch.)"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?
      min max quot mod format

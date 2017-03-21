@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Useful looping constructs. Most of these, like |doseq| and |for|,
           are faster than their lazy clojure.core counterparts."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.loops
   (:refer-clojure :exclude [doseq for reduce dotimes])
   (:require
@@ -53,7 +53,7 @@
    Originally used a mutable counter on the inside just for fun...
    but the counter might be propagated via @f, so it's best to use
    an atomic value instead."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Make this an inline function, not a macro."]}
   [f ret-i coll & args]
   (let [f-final
@@ -119,7 +119,7 @@
      ~coll)))
 
 (defn while-recur
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [obj-0 pred func]
   (loop [obj obj-0]
       (if (not (pred obj))
@@ -129,7 +129,7 @@
 #?(:clj
 (defmacro dos
   "Same as |(apply (memfn do) <args>)|."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [args]
   `(do ~@args)))
 
@@ -137,7 +137,7 @@
 (defmacro doseq*
   "A lighter version of |doseq| based on |reduce|.
    Optimized for one destructured coll."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :see-also "Timothy Baldridge, http://dev.clojure.org/jira/browse/CLJ-1658"}
   [should-extern? bindings & body]
   (assert (vector? bindings) "`doseq` takes a vector for its bindings")
@@ -173,7 +173,7 @@
 #?(:clj
 (defmacro doseqi*
   "|doseq|, indexed. Starts index at 0."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [should-extern? [elem coll index-sym :as bindings] & body]
   (assert-args
     (vector? bindings)     "a vector for its binding"
@@ -203,7 +203,7 @@
   "A lighter, eager version of |for| based on |reduce|.
    Also accepts a collection into which to aggregate the results
    (i.e. doesn't default to a lazy seq or a vector, etc.)"
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :performance "    2.043435 ms (for+ [elem v] nil))
                  vs. 2.508727 ms (doall (for [elem v] nil))
 
@@ -221,7 +221,7 @@
 (defmacro for
   "A lighter, eager version of |for| based on |reduce|.
    Optimized for one coll."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :performance "    2.043435 ms (for+ [elem v] nil))
                  vs. 2.508727 ms (doall (for [elem v] nil))
 
@@ -234,7 +234,7 @@
 
 #?(:clj
 (defmacro fori*
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [ret bindings & body]
   (let [n-sym (last bindings)]
   `(let [n# (volatile! 0)]
@@ -247,7 +247,7 @@
 #?(:clj
 (defmacro fori
   "fori:for::reducei:reduce"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [bindings & body]
   `(fori* [] ~bindings ~@body)))
 
@@ -285,7 +285,7 @@
 ;   "A lighter, eager version of |for| based on |reduce|.
 ;    Optimized for one destructured coll.
 ;    Recognizes persistent vs. transient tradeoff."
-;   {:attribution "Alex Gunnarson"}
+;   {:attribution "alexandergunnarson"}
 ;   [[elem coll] & body]
 ;   `(let-mutable [ret# (transient [])]
 ;      (reduce ; would normally replace this with this namespace's |doseq|, but needed the |^:local| hint to be present

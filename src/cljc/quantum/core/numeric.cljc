@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful numeric functions. Floor, ceil, round, sin, abs, neg, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.numeric
   (:refer-clojure :exclude
     [* *' + +' - -' / < > <= >= == rem inc dec zero? neg? pos? pos-int?

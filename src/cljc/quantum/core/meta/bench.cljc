@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.meta.bench
   (:refer-clojure :exclude [val reduce])
   (:require

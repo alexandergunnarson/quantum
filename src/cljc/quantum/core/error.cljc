@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Error handling. Improved try/catch, and built-in error types for convenience's sake."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.error
   (:refer-clojure :exclude [assert])
   (:require
@@ -85,7 +85,7 @@
    @expr evaluates to false.
 
    Specifically for use with :pre and :post conditions."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([expr throw-content]
    `(let [expr# ~expr]
       (if expr# expr# (throw ~throw-content))))

@@ -3,7 +3,7 @@
 
           Mainly to style Hiccup-style components to use 'virtual'
           CSS instead of generating an external stylesheet."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.ui.style.css.core
            (:require [garden.color      :as color
                        :refer [color? #?(:cljs CSSColor)]]
@@ -225,7 +225,7 @@
    (for compatibility)."
   {:todo ["A rather large function which should be broken up
            into more modular pieces."]
-   :attribution "Alex Gunnarson"
+   :attribution "alexandergunnarson"
    :in  '{:width     2
           :font-size [["16px" "1px"] ["17px"]]
           :background
@@ -287,7 +287,7 @@
    < 0,3 | 0,1,2,3 div.pillar.upper.left"
   {:todo ["A rather large function which should be broken up
            into more modular pieces."]
-   :attribution "Alex Gunnarson"}
+   :attribution "alexandergunnarson"}
   [^Atom styles-calc ^Keyword tag]
   (let [^Map style-assembled
          (let [^Vec tags (-> tag name (str/split #"\."))]
@@ -327,7 +327,7 @@
    Adds @media style to <styles> tag in HTML.
 
    Likely not the best way to go about this."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   []
   (->> @styles-template
        (<- get :+media)

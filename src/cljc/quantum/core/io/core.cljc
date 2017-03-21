@@ -219,7 +219,7 @@
 
    In the case of CLJS, it gets it from local storage."
   {:todo        ["|path| is naive"]
-   :attribution "Alex Gunnarson"}
+   :attribution "alexandergunnarson"}
   ([unk] ; :string??
     (let [{:keys [type method path]
            :or   {method :unserialize} ; :uncompress is automatic

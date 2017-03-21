@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful binary operations."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.binary
   (:refer-clojure :exclude
     [unsigned-bit-shift-right bit-shift-left bit-shift-right

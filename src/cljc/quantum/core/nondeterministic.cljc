@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Functions centered around non-determinism (randomness)."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.nondeterministic
   (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle count map partition])
   (:require
@@ -310,7 +310,7 @@
   "Shuffles a collection in place."
   {:todo #{"This will work for any mutable list — allow this"
            "CLJS"}}
-  ([#{array? array-list?} x]
+  ([#{array? !array-list?} x]
     (shuffle! x (get-generator false)))
   ([^array?        x ^Random r]
     (loop [i (count x)]
@@ -318,7 +318,7 @@
           (do (arr/swap-at! x (dec i) (.nextInt r i))
               (recur (dec i)))
           x)))
-  ([#{array-list?} x ^Random r] (doto x (Collections/shuffle r)))))
+  ([#{!array-list?} x ^Random r] (doto x (Collections/shuffle r)))))
 
 (defnt shuffle
   "Shuffles a copy of a collection."

@@ -7,7 +7,7 @@
           the user's Google Drive, like DaisyDisk for Mac.
 
           Other applications pending."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.apis.google.drive.core
   #_(:require-quantum [:lib http auth])
   (:require

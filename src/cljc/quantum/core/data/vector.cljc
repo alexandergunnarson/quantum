@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Vector operations. Includes relaxed radix-balanced vectors (RRB vectors)
           my Michal Marczyk. Also includes |conjl| (for now)."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.vector
   (:require
     [clojure.core.rrb-vector  :as svec]
@@ -28,7 +28,7 @@
   "|empty| checks to get around StackOverflowErrors inherent in |catvec|
    (At least in Clojure version)
    Assumes inputs are vectors."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([] (svector))
   ([a] a)
   ([a b]
@@ -55,7 +55,7 @@
    (in contrast to clojure.core/subvec, which returns a reference to the input vector)
    clojure.core/subvec is a constant-time operation that prevents the underlying vector
    from becoming eligible for garbage collection"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [coll a b]
   (try (svec/subvec coll a b)
     (catch

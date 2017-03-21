@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Useful set-related functions. Includes a dispatch function, |xset?|,
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.set
            (:require [clojure.set              :as set  ]
                      [clojure.data.avl         :as avl  ]
@@ -33,7 +33,7 @@
 ; ============ PREDICATES ============
 
 (defn xset?
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["A cool idea... but improve performance"]}
   [fn-key set1 set2]
   (let [funcs

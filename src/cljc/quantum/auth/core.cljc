@@ -2,7 +2,7 @@
   ^{:doc "Auxiliary functions for authorization and key retrieval.
           Mainly interfaces with persistent storage where keys are
           stored."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.auth.core
   (:refer-clojure :exclude [get get-in assoc!])
   (:require [clojure.core             :as core]

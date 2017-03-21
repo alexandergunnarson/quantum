@@ -1,5 +1,5 @@
 (ns
-  ^{:attribution "Alex Gunnarson"
+  ^{:attribution "alexandergunnarson"
     :doc
       "Compression."
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
@@ -12,9 +12,9 @@
                 [byte-transforms               :as bt     ]])
                 [quantum.core.convert          :as convert]
                 [quantum.core.io.serialization :as io-ser ]
-                [quantum.core.collections      :as coll  
+                [quantum.core.collections      :as coll
                   :refer [#?(:clj join) map+ filter+ in-k?]]
-                [quantum.core.error            :as err 
+                [quantum.core.error            :as err
                   :refer [#?(:clj throw-when) ->ex]       ]
                 [quantum.core.logic            :as logic
                   :refer [#?@(:clj [condpc coll-or])]     ]
@@ -23,7 +23,7 @@
                   :refer [#?(:clj def-)]                  ])
     #?(:cljs (:require-macros
                 [quantum.core.convert          :as convert]
-                [quantum.core.error            :as err 
+                [quantum.core.error            :as err
                   :refer [throw-when]                     ]
                 [quantum.core.logic            :as logic
                   :refer [condpc coll-or]                 ]
@@ -82,7 +82,7 @@
 (def supported-formats
   (->> supported-compressors (map+ :name) (join #{})))
 
-(def supported-algorithms 
+(def supported-algorithms
   (join (->> supported-compressors (map+ :algorithm) (join #{}))
     (join #{} #?(:clj (bt/available-compressors)))))
 
@@ -90,7 +90,7 @@
   #{:fastest :smallest
     :speed :size})
 
-#?(:clj 
+#?(:clj
 (defn ^"[B" compress
   ([data] (compress data {:format :lz4}))
   ([data {:keys [format prefer] :as options}]
@@ -109,7 +109,7 @@
                                   :cljs (#(throw (->ex :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
 
 #?(:clj
-(defn decompress 
+(defn decompress
   {:todo ["Do automatically by type"]}
   ([x]           (decompress x :lz4))
   ([x algorithm] (decompress x algorithm nil))
@@ -121,7 +121,7 @@
 
 ; (defn make-zip-stream
 ;   "Create zip file(s) stream. You must provide a vector of the
-;   following form: 
+;   following form:
 ;   ```[[filename1 content1][filename2 content2]...]```.
 ;   You can provide either strings or byte-arrays as content.
 ;   The piped streams are used to create content on the fly, which means
@@ -140,7 +140,7 @@
 
 ; (defn zip
 ;   "Create zip file(s) on the fly. You must provide a vector of the
-;   following form: 
+;   following form:
 ;   ```[[filename1 content1][filename2 content2]...]```.
 ;   You can provide either strings or byte-arrays as content."
 ;   {:source "me.raynes/fs"}
@@ -195,7 +195,7 @@
 ; ; Compressing strings
 ; ; http://java-performance.info/string-packing-converting-characters-to-bytes/
 ; ; String, no compression 722.48 Mb
-; ; String, -XX:+UseCompressedStrings 645.47 Mb 
+; ; String, -XX:+UseCompressedStrings 645.47 Mb
 ; ; packed strings 268.46 Mb
 
 ; (def ^Charset US_ASCII (Charset/forName "US-ASCII"))
@@ -203,7 +203,7 @@
 ; (defn convert
 ;   "Optimizing a string object in terms of memory"
 ;   {:source "http://java-performance.info/string-packing-converting-characters-to-bytes/"}
-;   [^String s] 
+;   [^String s]
 ;   ; discard empty or too long strings as well as sings with '\0'
 ;   (if (or (nil? s) (empty? s) (-> s count (> 12))
 ;           (not= (.indexOf s (str (char 0))) -1))
@@ -221,4 +221,4 @@
 ;         (catch CharacterCodingException e
 ;           ; there are some chars not fitting to our encoding
 ;           s)))))
-;  
+;

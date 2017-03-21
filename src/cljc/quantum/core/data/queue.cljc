@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Incorporates the semi-obscure clojure.lang.PersistentQueue into the
           quantum library."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.queue)
 
 ; QUEUES

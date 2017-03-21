@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.sociative
   (:refer-clojure :exclude
     [for doseq reduce
@@ -63,7 +63,7 @@
 ;=================================================={ update(-in), assoc(-in)  }=====================================================
 (defn- extend-coll-to
   "Extends an associative structure (for now, only vector) to a given index."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :usage "USAGE: (extend-coll-to [1 2 3] 5) => [1 2 3 nil nil]"}
   [coll-0 k]
   (if (and (vector? coll-0)
@@ -140,7 +140,7 @@
   "For each key-function pair in @kfs,
    updates value in an associative data structure @coll associated with key
    by applying the function @f to the existing value."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Probably updates and update are redundant"]}
   ([coll & kfs]
     (reduce-pair ; TODO This is inefficient
@@ -149,7 +149,7 @@
       kfs)))
 
 (defn update-key
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :usage '(->> {:a 4 :b 12}
                 (map+ (update-key str)))}
   ([f]
@@ -160,7 +160,7 @@
         (map-entry (f k) v)))))
 
 (defn update-val
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :usage '(->> {:a 4 :b 12}
                 (map+ (update-val (fn1 / 2))))}
   ([f]

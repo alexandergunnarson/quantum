@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful string utils for formatting strings."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.string.encode
            (:require [#?(:clj  clojure.core
                          :cljs cljs.core   )  :as core    ]

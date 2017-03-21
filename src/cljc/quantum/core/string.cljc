@@ -5,7 +5,7 @@
           val (reading a number of a string), keyword+
           (for joining strings and keywords into one
           keyword), etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.string
            (:refer-clojure :exclude
              [reverse replace remove val re-find reduce])
@@ -190,7 +190,7 @@
 (defnt ->pattern
   ([^string? x] (re-pattern   x))
   ([^regex?  x] x)
-  ([^vector? x] (vec->pattern x)))
+  ([^vec?    x] (vec->pattern x)))
 
 #?(:clj
 (defnt contains-pattern?

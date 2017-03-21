@@ -1,6 +1,6 @@
 (ns
   ^{:doc "A simple JSON library which aliases cheshire.core."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.complex.json
   (:require
 #?(:clj

@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Complex thread management made simple.
           Aliases core.async for convenience."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.thread
             (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
             (:require [clojure.core                          :as core]
@@ -103,7 +103,7 @@
 #(:clj
   (defmacro thread+
     "Execute exprs in another thread and returns the thread."
-    ^{:attribution "Alex Gunnarson"}
+    ^{:attribution "alexandergunnarson"}
     [{:keys [id handlers]} expr & exprs]
     `(let [ns-0# *ns*
            pre#
@@ -174,7 +174,7 @@
 #?(:clj
 (defn close!
   "Closes a thread, possibly gracefully."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([thread-id] (close! thread-id nil)) ; don't force
   ([thread-id {:keys [force?] :as opts}]
     (if-not (contains? @reg thread-id)
@@ -583,7 +583,7 @@
 
 #_(:clj
 (defn promise-concur
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [method max-threads func list-0]
   (let [count- (count list-0)
         chunk-size
@@ -629,7 +629,7 @@
 
 #_(:clj
 (defn concur-go
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [method max-threads func list-0]
   (let [chans (promise-concur-go method max-threads func list-0)]
     (if (= method :for)

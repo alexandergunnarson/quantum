@@ -1,7 +1,7 @@
 (ns
   ^{:doc "A very rough and terribly incomplete mini-library
           for Selenium, especially PhantomJS."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.browser.core
           (:require
             [com.stuartsierra.component     :as comp ]
@@ -118,7 +118,7 @@
 
 #?(:clj
 (defnt write-page!
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([^org.openqa.selenium.WebDriver driver]
     (write-page! (.getPageSource driver) (str "Page " (time/now) ".html")))
   ([^string? page ^string? page-name]
@@ -140,7 +140,7 @@
 
 #?(:clj
 (defn wait-for-fn!
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Just a band-aid. Use a timeout channel for this."]}
   [f & fn-args]
   (validate (spec fn?) f) ; TODO no runtime spec
@@ -160,7 +160,7 @@
 
 #?(:clj
 (defn stale-elem?
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [^RemoteWebElement elem]
   (try
     (.findElementsById elem "bogus_elem")

@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Regex utils"
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.string.regex
   (:refer-clojure :exclude [conj! range])
   (:require

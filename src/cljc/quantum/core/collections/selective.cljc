@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.collections.selective
   (:refer-clojure :exclude
     [for doseq reduce
@@ -99,7 +99,7 @@
 ; (defn contains-or? [coll elems]
 ;   (apply-or (map (partial contains? coll) elems)))
 (defn get-keys
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [m obj]
   (persistent!
     (reduce
@@ -115,13 +115,13 @@
   [m obj] (-> m (get-keys obj) first))
 
 (defn vals+
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Compare performance with core functions"]}
   [m]
   (->> m (map+ val) (join [])))
 
 (defn keys+
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Compare performance with core functions"]}
   [m]
   (->> m (map+ key) (join [])))

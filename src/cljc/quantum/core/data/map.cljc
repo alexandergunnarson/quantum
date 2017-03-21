@@ -1,6 +1,6 @@
 (ns
   ^{:doc "Useful map functions. |map-entry|, a better merge, sorted-maps, etc."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.data.map
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
@@ -76,7 +76,7 @@
    (def m0 {})
    508.122831 ms (dotimes [n 1000000] (into m0 vs))
    310.335998 ms (dotimes [n 1000000] (into m0 ms))"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [k v]
   #?(:clj  (clojure.lang.MapEntry. k v)
      :cljs [k v]))
@@ -99,7 +99,7 @@
   398.815137 msecs (core/merge m1 m2)
   188.270844 msecs (seqspert.hash-map/sequential-splice-hash-maps m1 m2)
   25.401196  msecs (seqspert.hash-map/parallel-splice-hash-maps   m1 m2)))"
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :performance "782.922731 ms |merge+| vs. 1.133217 sec normal |merge|
                  on the CLJ version; 1.5 times faster!"}
   ([] (hash-map))

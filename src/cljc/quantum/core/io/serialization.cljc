@@ -1,10 +1,10 @@
 (ns
   ^{:doc
       "Serialization for any virtually data structure using taoensso.nippy.
-      
+
        Specifically provides support for custom record types, which nippy does
        not support very well."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.io.serialization
   (:refer-clojure :exclude [read])
   #?(:clj
@@ -15,7 +15,7 @@
               [quantum.core.collections   :as coll
                 :refer [#?@(:clj [lasti]) range+]  ]))
   #?(:clj
-     (:import 
+     (:import
         (java.io File FileNotFoundException PushbackReader
           FileReader DataInputStream DataOutputStream IOException
           FileOutputStream BufferedOutputStream BufferedInputStream
@@ -34,7 +34,7 @@
 
 (defn assoc-integral-values!
   "Read in integral values and assign to keys of record"
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [data-input integral-keys record-in]
   (reduce
     (fn [record-n integral-k]
@@ -51,7 +51,7 @@
    DEPRECATED. Does not work; blows the stack for some reason,
    possibly because the un-serializer recognizes it as simultaneously
    a hash-map and a record and gets stuck in an infinite loop."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [data-input record-in]
   (reduce
     (fn [record-n iteration]
@@ -68,7 +68,7 @@
     (range+ 0 (-> max-extra-keys (* 2) inc))))
 
 (defmacro extend-serialization-for-record!
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Likely inefficient"]
    :examples '[(extend-serialization-for-record! QBDBEntry    1)
                (extend-serialization-for-record! QuickBooksDB 2)]}
@@ -113,7 +113,7 @@
 ; 4. assoc-integral-values! and assoc-extra-kvs! should be end anyway
 
 (defn extend-serialization-for-records!
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Make this work later"]}
   [& records]
   (dotimes [n (lasti records)]

@@ -71,7 +71,7 @@
 
 
 (defn edit [str1 str2]
-  {:modified-by {"Alex Gunnarson"
+  {:modified-by {"alexandergunnarson"
                  ["removed boxed math"
                   "|nth| -> |get|"
                   "removed unnecessary |persistent!| call"]}
