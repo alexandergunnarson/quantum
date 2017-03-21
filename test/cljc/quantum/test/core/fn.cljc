@@ -6,27 +6,12 @@
       :refer-macros [deftest is testing]]
     [quantum.core.fn :as ns]))
 
-(defn test:mfn
-  ([macro-sym])
-  ([n macro-sym]))
-
-(defn test:call
-  ([f]             )
-  ([f x]           )
-  ([f x y]         )
-  ([f x y z]       )
-  ([f x y z & more]))
-
-(defn test:firsta
-  ([x]           )
-  ([x y]         )
-  ([x y z]       )
-  ([x y z & more]))
-
-(defn test:seconda
-  ([x y]         )
-  ([x y z]       )
-  ([x y z & more]))
+(deftest test:ntha
+  (is (= :a ((ns/ntha 0) :a :b :c :d :e)))
+  (is (= :b ((ns/ntha 1) :a :b :c :d :e)))
+  (is (= :c ((ns/ntha 2) :a :b :c :d :e)))
+  (is (= :d ((ns/ntha 3) :a :b :c :d :e)))
+  (is (= :e ((ns/ntha 4) :a :b :c :d :e))))
 
 (deftest test:fconj
   (let [a 1 b 2 c 3]
