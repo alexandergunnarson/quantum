@@ -58,7 +58,7 @@
   (defn- -reduce-seq
     "For some reason |reduce| is not implemented in ClojureScript for certain types.
      This is a |loop|-|recur| replacement for it."
-    {:attribution "Alex Gunnarson"
+    {:attribution "alexandergunnarson"
      :todo ["Check if this is really the case..."
             "Improve performance with chunking, etc."]}
     [xs f init]
@@ -73,7 +73,7 @@
 (defnt reduce*
   "Much of this content taken from clojure.core.protocols for inlining and
    type-checking purposes."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
          ([^fast_zip.core.ZipperLocation z f init]
            (loop [xs (zip/down z) v init]
              (if (some? z)
@@ -91,14 +91,24 @@
                                 (recur (unchecked-inc i) ret)))
                           v))
               :cljs (array-reduce arr f init)))
+         ([^!+vec? xs f init] ; because transient vectors aren't reducible
+           (let [ct (#?(:clj .count :cljs count) xs)] ; TODO fix for CLJS
+             (loop [i 0 v init]
+               (if (< i ct)
+                   (let [ret (f v (#?(:clj .valAt :cljs get) xs i))] ; TODO fix for CLJS
+                     (if (reduced? ret)
+                         @ret
+                         (recur (unchecked-inc i) ret)))
+                   v))))
          ([^string? s f init]
-           (loop [i 0 v init]
-             (if (< i (#?(:clj .length :cljs .-length) s))
-                 (let [ret (f v (.charAt s i))]
-                   (if (reduced? ret)
-                       @ret
-                       (recur (unchecked-inc i) ret)))
-                 v)))
+           (let [ct (#?(:clj .length :cljs .-length) s)]
+             (loop [i 0 v init]
+               (if (< i ct)
+                   (let [ret (f v (.charAt s i))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur (unchecked-inc i) ret)))
+                   v))))
 #?(:clj  ([^clojure.lang.StringSeq xs f init]
            (let [s (.s xs)]
              (loop [i (.i xs) v init]
@@ -185,7 +195,7 @@
    around to dispatch on type).
 
    Equivalent to Scheme's `foldl`."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["definline"]}
   ([f coll]      `(reduce* ~coll ~f))
   ([f init coll] `(reduce* ~coll ~f ~init))))
