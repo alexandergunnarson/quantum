@@ -18,7 +18,13 @@
     [quantum.core.macros.core         :as cmacros
       :refer [case-env]]
     [quantum.core.macros.optimization :as opt
-      :refer [extern?]]))
+      :refer [extern?]]
+    [quantum.core.vars
+      :refer [defalias]]))
+
+(defalias gen-args             cmacros/gen-args)
+(defalias arity-builder        cmacros/arity-builder)
+(defalias max-positional-arity cmacros/max-positional-arity)
 
 (defn defn-variant-organizer
   "Organizes the arguments for use for a |defn| variant.
@@ -149,7 +155,7 @@
 (defmacro defmethod+
   "Like |defmethod| but creates a named function called |this|
    for purposes of cross-arity recursion."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [sym type & arities]
   (let [sym* (with-meta sym {:tag "clojure.lang.MultiFn"})]
     `(.addMethod ^MultiFn ~sym* ~type

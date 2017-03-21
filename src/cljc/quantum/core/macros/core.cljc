@@ -215,7 +215,7 @@
    creates a ClojureScript (var) binding where a Clojure (macro) one is needed.
 
    Defaults to the same binding for both Clojure and ClojureScript."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Handle more platforms (if necessary)"]}
   ([name orig-sym] `(defmalias ~name ~orig-sym ~orig-sym))
   ([name clj-sym cljs-sym]
@@ -255,3 +255,24 @@
   [form]
  `(let [sym-map# (locals)]
     (unquote-replacement sym-map# '~form))))
+
+; ----- BUILDING FNS ----- ;
+
+(defn gen-args [min-n max-n s gensym?]
+  (->> (range min-n max-n) (map (fn [i] (symbol (str (if gensym? (gensym s) s) i))))))
+
+(defn arity-builder [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf]]
+  (let [mina (or min-positional-arity 0)
+        maxa (or max-positional-arity 18)
+        args (->> (range mina (+ mina maxa))
+                  (map-indexed (fn [iter i]
+                                 (-> (if sym-genf (sym-genf iter) "x")
+                                     gensym (str iter) symbol))))
+        variadic-arg (gensym "xs")]
+    `[~@(for [arity (range mina (inc maxa))]
+          (let [args:arity (take arity args)]
+            `([~@args:arity] ~(positionalf args:arity))))
+      ~@(when variadicf
+          [`([~@args ~'& ~variadic-arg] ~(variadicf args variadic-arg))])]))
+
+(def max-positional-arity {:clj 18 :cljs 18})
