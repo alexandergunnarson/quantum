@@ -1,14 +1,14 @@
 (ns quantum.parse.core
   (:refer-clojure :exclude [reduce])
   (:require
+    [quantum.core.data.string
+      :refer [!str]]
     [quantum.core.fn          :as fn
-      :refer        [firsta aritoid fn-nil
-                     #?@(:clj [rfn])]
-      :refer-macros [          rfn]]
+      :refer [firsta aritoid rfn]]
     [quantum.core.collections :as coll
-      :refer        [remove+ map+
-                     #?@(:clj [join reduce]) ]
-      :refer-macros [          join reduce]]
+      :refer [remove+ map+ join reduce conj!]]
+    [quantum.core.logic
+      :refer [fn-nil]]
     [instaparse.core          :as insta])
   #?(:cljs (:import goog.string.StringBuffer)))
 
@@ -84,10 +84,8 @@
        (map+ (rfn [k v] (str (name k) \=
                              (when-not no-quote? \") v
                              (when-not no-quote? \"))))
-       (reduce (rfn [#?(:clj  ^StringBuilder ret
-                        :cljs ^StringBuffer  ret) kv] ; TODO abstract this
-                 (.append ret \newline)
-                 (.append ret kv))
-         #?(:clj  (StringBuilder.)
-            :cljs (StringBuffer. )))
+       (reduce (rfn [ret kv] ; TODO abstract this
+                 (conj! ret \newline)
+                 (conj! ret kv))
+         (!str))
        str))
