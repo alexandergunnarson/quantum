@@ -1,19 +1,16 @@
 (ns quantum.media.imaging.ocr
-  (:require [quantum.core.paths       :as path]
-            [quantum.core.system      :as sys ]
-            [quantum.core.io          :as io  ]
-            [quantum.core.process
-              :refer [proc!]]
-            [quantum.core.fn
-                         :refer [#?@(:clj [fn->])]
-              #?@(:cljs [:refer-macros [fn->]])]
-            [quantum.core.logic
-                         :refer [#?@(:clj [ifn1])]
-              #?@(:cljs [:refer-macros [ifn1]])]
-            [quantum.core.collections :as coll
-                         :refer [#?@(:clj [join])
-                                 map+ filter+ flatten+]
-              #?@(:cljs [:refer-macros [join]])]))
+  (:require
+    [quantum.core.paths       :as path]
+    [quantum.core.system      :as sys ]
+    [quantum.core.io          :as io  ]
+    [quantum.core.process
+      :refer [proc!]]
+    [quantum.core.fn
+      :refer [fn-> fn']]
+    [quantum.core.logic
+      :refer [ifn1]]
+    [quantum.core.collections :as coll
+      :refer [join map+ filter+ flatten+]]))
 
 (def tesseract-help
   "INSTALLING
@@ -85,7 +82,7 @@
         args        (->> opts-f
                          (filter+ (fn-> key string?))
                          (map+ (fn [[opt v]]
-                                 (let [v-f ((ifn1 true? (constantly "T") str) v)]
+                                 (let [v-f ((ifn1 true? (fn' "T") str) v)]
                                    ["-c" (str opt "=" v-f)])))
                          flatten+
                          (join [image-file outbase "--tessdata-dir" (path/file-str data-dir) "-l" language]))]

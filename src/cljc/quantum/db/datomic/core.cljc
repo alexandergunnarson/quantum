@@ -619,7 +619,7 @@
   ([db part x]
     (let [{:keys [v has-dbfn-call?]} (transform-validated x)
           txn-op (whenf v (fn-not dbfn-call?)
-                   (fn1 coll/assoc-when-none :db/id (tempid db part)))]
+                   (fn1 coll/assoc-default :db/id (tempid db part)))]
       (if has-dbfn-call? (?wrap-transform [txn-op]) txn-op))))
 
 (defn conj!
