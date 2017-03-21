@@ -1,9 +1,12 @@
 (ns
   ^{:doc "Useful namespace and var-related functions."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.ns
   (:refer-clojure :exclude
-    [all-ns in-ns create-ns, alias, require import use, loaded-libs])
+    [ns in-ns all-ns create-ns the-ns find-ns ns-name ns-map
+     alias ns-aliases require import ns-imports use
+     ns-interns ns-publics refer ns-refers ns-unalias ns-unmap loaded-libs
+     remove-ns])
   (:require
     [clojure.core      :as core]
     [clojure.set       :as set]
@@ -11,20 +14,35 @@
     [quantum.core.vars :as var
       :refer [defalias]]))
 
-#?(:clj (defalias all-ns      core/all-ns   ))
-#_(:clj (defalias in-ns       core/in-ns    ))
-#?(:clj (defalias create-ns   core/create-ns))
-#?(:clj (defalias alias       core/alias    ))
-#?(:clj (defalias require     core/require  ))
-#?(:clj (defalias import      core/import   ))
-#?(:clj (defalias use         core/use      ))
+#?(:clj (defalias ns            core/ns           ))
+#?(:clj (defalias the-ns        core/the-ns       ))
+#?(:clj (defalias find-ns       core/find-ns      ))
+#?(:clj (defalias ns-name       core/ns-name      ))
+#?(:clj (defalias ns-map        core/ns-map       ))
+#?(:clj (defalias ns-unmap      core/ns-unmap     ))
+#_(:clj (defalias in-ns         core/in-ns        ))
+#?(:clj (defalias all-ns        core/all-ns       ))
+#?(:clj (defalias create-ns     core/create-ns    ))
+#?(:clj (defalias alias         core/alias        ))
+#?(:clj (defalias ns-unalias    core/ns-unalias   ))
+#?(:clj (defalias ns-aliases    core/ns-aliases   ))
+#?(:clj (defalias require       core/require      ))
+#?(:clj (defalias import        core/import       ))
+#?(:clj (defalias ns-imports    core/ns-imports   ))
+#?(:clj (defalias use           core/use          ))
+#?(:clj (defalias ns-interns    core/ns-interns   ))
+#?(:clj (defalias ns-publics    core/ns-publics   ))
+#?(:clj (defalias refer         core/refer        ))
+#?(:clj (defalias refer-clojure core/refer-clojure))
+#?(:clj (defalias ns-refers     core/ns-refers    ))
+#?(:clj (defalias remove-ns     core/remove-ns    ))
 
 #?(:clj
 (defmacro search-var
   "Searches for a var @var0 in the available namespaces."
   {:usage '(ns-find abc)
    :todo ["Make it better and filter out unnecessary results"]
-   :attribution "Alex Gunnarson"}
+   :attribution "alexandergunnarson"}
   [var0]
  `(->> (all-ns)
        (map ns-publics)
@@ -89,11 +107,11 @@
         all-methods   (-> the-class .getMethods statics)
         fields-to-do  (set/intersection all-fields  only)
         methods-to-do (set/intersection all-methods only)
-        make-sym (fn [string]
-                     (with-meta (symbol string) {:private true}))
-        import-field (fn [name]
-                         (list 'def (make-sym name)
-                               (list '. class (symbol name))))
+        make-sym      (fn [string]
+                          (with-meta (symbol string) {:private true}))
+        import-field  (fn [name]
+                          (list 'def (make-sym name)
+                                (list '. class (symbol name))))
         import-method (fn [name]
                           (list 'defmacro (make-sym name)
                                 '[& args]
