@@ -2,14 +2,14 @@
   ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
           ifn, whenf1, rcomp, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
-    :attribution "Alex Gunnarson"}
+    :attribution "alexandergunnarson"}
   quantum.core.logic
   (:refer-clojure :exclude
     [if-let when-let])
   (:require
     [clojure.core             :as core]
     [quantum.core.fn          :as fn
-      :refer [fn1 fn-> fn->>]]
+      :refer [fn1 fn-> fn->> fn']]
     [quantum.core.vars        :as var
       :refer [defalias]]
     [quantum.core.macros.core :as cmacros
@@ -75,6 +75,9 @@
 
 (defn fn=     [x] (fn [y] (=    x y)))
 (defn fn-not= [x] (fn [y] (not= x y)))
+(def fn-nil   (fn' nil  ))
+(def fn-false (fn' false))
+(def fn-true  (fn' true ))
 
 (def falsey? (some-fn false? nil?))
 (def truthy? (fn-not falsey?))
@@ -131,7 +134,7 @@
 #?(:clj
 (defmacro condf
   "Like |cond|, with each expr as a function applied to the initial argument, @obj."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo        #{"Simplify"}}
   [obj & clauses]
   (let [gobj (gensym "obj__")
@@ -156,7 +159,7 @@
 
 #?(:clj
 (defmacro condfc
-  "Like |condf|, but each expr is essentially wrapped in a |constantly|."
+  "Like |condf|, but each expr is essentially wrapped in a `constantly`."
   [obj & clauses]
   (let [gobj (gensym "obj__")
         illegal-argument (case-env :clj 'IllegalArgumentException. :cljs 'js/Error.)
@@ -255,7 +258,7 @@
 
 #?(:clj
 (defmacro if-let-base
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([cond-sym bindings then]
     `(if-let-base ~cond-sym ~bindings ~then nil))
   ([cond-sym [bnd expr & more] then else]
@@ -278,7 +281,7 @@
 
 #?(:clj
 (defmacro when-let-base
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [cond-sym [bnd expr & more] & body]
     `(let [temp# ~expr ~bnd  temp#]
        (~cond-sym temp#
@@ -300,7 +303,7 @@
 #?(:clj
 (defmacro cond-let
   "Transforms into a series of nested `if-let` statements."
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   ([] nil) ; no else
   ([else] else)
   ([bindings then & more]
