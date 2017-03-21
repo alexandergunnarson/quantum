@@ -12,7 +12,7 @@
 
        Many of them are aliased from other namespaces like
        quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "Alex Gunnarson"
+    :attribution "alexandergunnarson"
     :cljs-self-referencing? true}
   quantum.core.collections
            (:refer-clojure :exclude
@@ -68,11 +68,11 @@
              [quantum.core.error                      :as err
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
-               :refer [rfn fn-nil juxt-kv withf->> firsta
+               :refer [rfn juxt-kv withf->> firsta
                        rcomp fconj <- fn-> fn->> fn1 fnl fn']]
              [quantum.core.log                        :as log]
              [quantum.core.logic                      :as logic
-               :refer [fn-not fn-or fn-and,
+               :refer [fn-not fn-or fn-and, fn-nil
                        whenf whenf1, ifn ifn1, condf condf1
                        splice-or]]
              [quantum.core.macros                     :as macros
@@ -827,7 +827,7 @@
   "Applies a list of functions, @fns, separately to an object, @coll.
    A good use case is returning values from an associative structure with keys as @fns.
    Returns a vector of the results."
-  ^{:attribution "Alex Gunnarson"
+  ^{:attribution "alexandergunnarson"
     :usage "(select {:a 1 :b [3]} :a (rcomp :b 0)) => [1 3]"}
   [coll & fns]
   ((apply juxt fns) coll))
@@ -934,7 +934,7 @@
 
 (def get-in-f* #(get %1 %2))
 
-(defnt get-in
+(defnt get-in ; TODO use `get-in` logic from clojure/core
   ([^array? x ks] (apply coll/get-in*-protocol x ks))
   ([        x ks] (reduce get-in-f* x ks)))
 
@@ -1025,7 +1025,7 @@
 ;=================================================={                          }=====================================================
 (defn select-as+
   {:todo ["Name this function more appropriately"]
-   :attribution "Alex Gunnarson"
+   :attribution "alexandergunnarson"
    :out 'Map}
   ([coll kfs]
     (->> (loops/reduce
@@ -1053,7 +1053,7 @@
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
 (defn duplicates-by
-  {:attribution "Alex Gunnarson"}
+  {:attribution "alexandergunnarson"}
   [pred coll]
   (->> coll
        (group-by pred)  ; TODO use reducer group-by+
@@ -1100,7 +1100,7 @@
 ;=================================================={         GROUPING         }=====================================================
 ;=================================================={     group, aggregate     }=====================================================
 (defn group-merge-with-k+
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Can probably make the |merge| process parallel."]
    :in [":a"
         "(fn [k v1 v2] v1)"
@@ -1734,7 +1734,7 @@
   "Creates a \"sliding window\" of window size `n` over a
    reducible `xs`.
    Useful for e.g. n-fold cross-validation."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo        #{"Allow sliding window step to be customized"}}
   [n xs] ; TODO xs must be `reducible?`
   (let [xsv (join xs) ; for O(log(n)) splits instead of O(n)
@@ -1759,7 +1759,7 @@
    possible.
    Split 'leftovers' are reallocated at the end.
    Useful for e.g. n-fold cross-validation."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo        #{"Allow customized reallocation"}}
   [n:split xs] ; TODO xs must be `reducible?`
   (let [xsv      (join xs) ; for O(log(n)) splits instead of O(n)
@@ -1783,7 +1783,7 @@
   "The contiguous subsequence of maximum asum.
    Uses Kadane's algorithm.
    A subsequence of length zero has sum zero."
-   {:attribution "Alex Gunnarson"
+   {:attribution "alexandergunnarson"
     :todo  ["Extend to all comparables"
             "Handle all-negatives gracefully (see Wikipedia)"]
     :tests `{(max-subview [10 -5 15 -30 10 -5 40 10])

@@ -4,7 +4,7 @@
   quantum.core.collections.core
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
-     conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse
+     conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse rseq
      empty? empty class reduce swap! reset!
      #?@(:cljs [array])])
   (:require [clojure.core                   :as core
@@ -440,14 +440,14 @@
 
 (defnt subview
   "Returns a subview of ->`x`, [->`a` to ->`b`), in O(1) time."
-          ([^+vec?       x ^nat-long? a             ] (subvec       x a  ))
-          ([^+vec?       x ^nat-long? a ^nat-long? b] (subvec       x a b))
-  #?(:clj ([^array-list? x ^nat-long? a             ] (.subList     x a (count x))))
-  #?(:clj ([^array-list? x ^nat-long? a ^nat-long? b] (.subList     x a b)))
-  #?(:clj ([^string?     x ^nat-long? a             ] (.subSequence x a (count x))))
-  #?(:clj ([^string?     x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
-          ([^reducer?    x ^nat-long? a             ] (->> x (drop+ a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
-          ([^reducer?    x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^+vec?        x ^nat-long? a             ] (subvec       x a  ))
+          ([^+vec?        x ^nat-long? a ^nat-long? b] (subvec       x a b))
+  #?(:clj ([^!array-list? x ^nat-long? a             ] (.subList     x a (count x))))
+  #?(:clj ([^!array-list? x ^nat-long? a ^nat-long? b] (.subList     x a b)))
+  #?(:clj ([^string?      x ^nat-long? a             ] (.subSequence x a (count x))))
+  #?(:clj ([^string?      x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
+          ([^reducer?     x ^nat-long? a             ] (->> x (drop+ a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^reducer?     x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
 
 (defnt slice
   "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
@@ -580,13 +580,13 @@
   {:imported    "clojure.lang.RT/get"
    :todo        {0 "Need to excise non-O(1) `nth`"}
    :performance "(java.lang.reflect.Array/get coll n) is about 4 times faster than core/get"}
-  #?(:clj  ([^clojure.lang.ILookup           x            k             ] (.valAt x k)))
-  #?(:clj  ([^clojure.lang.ILookup           x            k if-not-found] (.valAt x k if-not-found)))
+  #?(:clj  ([^clojure.lang.ILookup            x            k             ] (.valAt x k)))
+  #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
   #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
-                                             x            k             ] (.get x k)))
-           ([^string?                        x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
-  #?(:clj  ([^array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
-           ([#{string? #?(:clj array-list?)} x ^nat-long? i             ] (get      x i nil))
+                                              x            k             ] (.get x k)))
+           ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
+  #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
+           ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
 
            ([^array-1d? x #?(:clj #{int}) i1]
             (#?(:clj  Array/get
@@ -594,18 +594,18 @@
            #?(:clj ([#{array-2d? array-3d? array-4d? array-5d? array-6d? array-7d? array-8d? array-9d? array-10d?} x
             ^int i1]
             (Array/get x i1)))
-           ([^tuple?                         x ^nat-long? i             ] (get (.-vs x) i))
-           ([^seq?                           x            i             ] (core/nth x i nil         ))
-           ([^seq?                           x            i if-not-found] (core/nth x i if-not-found))
+           ([^tuple?                          x ^nat-long? i             ] (get (.-vs x) i))
+           ([^seq?                            x            i             ] (core/nth x i nil         ))
+           ([^seq?                            x            i if-not-found] (core/nth x i if-not-found))
            ; TODO look at clojure.lang.RT/get for how to handle these edge cases efficiently
-  #?(:cljs ([^nil?                           x            i             ] (core/get x i nil         )))
-  #?(:cljs ([^nil?                           x            i             ] (core/get x i nil         )))
-  #?(:cljs ([^nil?                           x            i if-not-found] (core/get x i if-not-found)))
-           ([^default                        x            i             ]
+  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                            x            i             ] (core/get x i nil         )))
+  #?(:cljs ([^nil?                            x            i if-not-found] (core/get x i if-not-found)))
+           ([^default                         x            i             ]
               (if (nil? x)
                   nil
                   (throw (ex-info "`get` not supported on" {:type (type x)}))))
-         #_([                                x            i if-not-found] (core/get x i if-not-found)))
+         #_([                                 x            i if-not-found] (core/get x i if-not-found)))
 
 #?(:clj ; TODO macro to de-repetitivize
 (defnt get-in*
@@ -655,7 +655,7 @@
 (defnt nth
   ; TODO import clojure.lang.RT/nth
   ([#{+vec? seq?}    coll            i] (get coll i))
-  ([#{string? array-list?
+  ([#{string? !array-list?
       array? tuple?} coll ^nat-long? i] (get coll i))
   ([^reducer?        coll ^nat-long? i]
     (let [i' (volatile! 0)]
@@ -787,10 +787,10 @@
 
 (defnt conj!
   {:todo #{"Add more possibilities"}}
-  ([^transient?  x v] (core/conj! x v))
-  ([^atom?       x v] (swap! x core/conj v))
-  ([^array-list? x v] (doto x (#?(:clj .add :cljs .push) v)))
-  ([^!string?    x v] (.append x v)))
+  ([^transient?   x v] (core/conj! x v))
+  ([^atom?        x v] (swap! x core/conj v))
+  ([^!array-list? x v] (doto x (#?(:clj .add :cljs .push) v)))
+  ([^!string?     x v] (.append x v)))
 
 (defnt disj!
   ([^transient? x v] (core/disj! x v))
@@ -802,21 +802,21 @@
 
 (defnt first
   {:todo #{"Import core/first"}}
-  ([^array?                         x] (nth x 0))
-  ([#{string? #?(:clj array-list?)} x] (get x 0 nil))
-  ([#{symbol? keyword?}             x] (if (namespace x) (-> x namespace first) (-> x name first)))
-  ([^+vec?                          x] (nth x 0))
-  ([^reducer?                       x] (reduce (rfn [_ x'] (reduced x')) nil x))
-  ([^default                        x] (core/first x)))
+  ([^array?                          x] (nth x 0))
+  ([#{string? #?(:clj !array-list?)} x] (get x 0 nil))
+  ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace first) (-> x name first)))
+  ([^+vec?                           x] (nth x 0))
+  ([^reducer?                        x] (reduce (rfn [_ x'] (reduced x')) nil x))
+  ([^default                         x] (core/first x)))
 
 (defalias firstl first) ; TODO not always true
 
 (defnt second
   {:todo #{"Import core/second"}}
-  ([#{array? +vec? reducer?}        x] (nth x 1))
-  ([#{string? #?(:clj array-list?)} x] (#?(:clj get& :cljs get) x 1 nil))
-  ([#{symbol? keyword?}             x] (if (namespace x) (-> x namespace second) (-> x name second)))
-  ([^default                        x] (core/second x)))
+  ([#{array? +vec? reducer?}         x] (nth x 1))
+  ([#{string? #?(:clj !array-list?)} x] (#?(:clj get& :cljs get) x 1 nil))
+  ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace second) (-> x name second)))
+  ([^default                         x] (core/second x)))
 
 (defnt butlast
   {:todo ["Add support for CLJS IPersistentStack"]}
@@ -835,8 +835,7 @@
   #?(:clj ([^reducer?           x] (taker+ 1 x)))
           ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
           ([^+vec?              x] (#?(:clj .peek :cljs .-peek) x))
-  #?(:clj ([#{#?@(:clj  [array-list? clojure.lang.PersistentVector$TransientVector]
-                  :cljs [cljs.core/TransientVector])} x]
+  #?(:clj ([#{#?(:clj !array-list?) !+vec?} x]
             (get x (lasti x))))
           ([^default            x] (core/last x)))
 
@@ -891,8 +890,8 @@
   "`conj`, maybe mutable. General `conj(!)`.
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
-  ([#{transient? atom? array-list? !string?} x v] (conj! x v)) ; TODO auto-determine
-  ([^default                                 x v] (conj  x v))) ; TODO auto-determine
+  ([#{transient? atom? !array-list? !string?} x v] (conj! x v)) ; TODO auto-determine
+  ([^default                                  x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
   ([^+vec? coll a    ] (core/conj a    ))
@@ -998,7 +997,7 @@
    Like |into|, but handles kv sources,
    and chooses the most efficient joining/combining operation possible
    based on the input types."
-  {:attribution "Alex Gunnarson"
+  {:attribution "alexandergunnarson"
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"
           "Handle one-arg"
