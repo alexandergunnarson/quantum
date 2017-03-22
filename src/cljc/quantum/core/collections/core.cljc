@@ -14,7 +14,7 @@
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
             [quantum.core.collections.base
-              :refer [kw-map nempty? nnil? reducei]]
+              :refer [kw-map nempty? nnil?]]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte
@@ -49,7 +49,7 @@
             [quantum.core.macros.optimization
               :refer [identity*]]
             [quantum.core.reducers.reduce   :as red
-              :refer [reduce reducer]]
+              :refer [reduce reducei reducer]]
             [quantum.core.type              :as t
               :refer [class pattern?]]
             [quantum.core.type.defs         :as tdef]
@@ -122,6 +122,7 @@
 
 #?(:clj
 (defn dropr+ ; This is extremely slow by comparison. About twice as slow
+  ; TODO for O(1) reversible inputs, you can just do that with `drop+`
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
   [n coll]
    (reducer coll
@@ -142,6 +143,7 @@
 
 #?(:clj
 (defn taker+
+  ; TODO for O(1) reversible inputs, you can just do that with `take+`
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
   [n coll]
    (reify
@@ -378,6 +380,18 @@
 
 #?(:clj (gen-arr<>))
 
+; TODO generalize
+#?(:clj
+(defmacro gen-object<> []
+ `(defnt' ~'object<>
+    "Creates a 1-D object array"
+   ~@(for [arglength (range 1 11)]
+       (let [arglist (vec (repeatedly arglength gensym))]
+         `(~arglist
+            (. quantum.core.data.Array ~(symbol (str "new1dObjectArray")) ~@arglist)))))))
+
+#?(:clj (gen-object<>))
+
 #?(:clj
 (defmacro gen-array-nd []
   `(do ~@(for [kind '#{boolean byte char short int long float double object}]
@@ -419,7 +433,7 @@
 
 ; ===== COPY ===== ;
 
-(#?(:clj defnt' :cljs defnt) copy! ; shallow copy
+(defnt copy! ; shallow copy
   (^<0> [^array? in ^int in-pos :<0> out ^int out-pos ^int length]
     #?(:clj  (System/arraycopy in in-pos out out-pos length)
        :cljs (dotimes [i (- (.-length in) in-pos)]
@@ -690,15 +704,13 @@
 
 ; TODO assoc!, assoc-in! for files
 (defnt assoc!
-  {:performance "|java.lang.reflect.Array/set| is 26 times faster
-                  than 'normal' reflection"}
   #?(:cljs (^<0> [^array?         x ^int k :<0>:1 v] (aset      x k v) x))
   #?(:clj  (^<0> [^array?         x ^int k :<0>:1 v] (Array/set x v k)))
   #?(:clj  (^<0> [^list?          x ^int k        v] (.set x k v) x)) ; TODO it may fail sometimes
   #?(:clj  (^<0> [#{!map? !!map?} x      k        v] (.put x k v) x))
            (^<0> [^transient?     x      k        v] (core/assoc! x k v))
            (     [^atom?          x      k        v] (swap! x assoc-protocol k v))
-  #?(:clj  (^<0> [                x ^int k        v]
+  #?(:clj  (^<0> [^default        x ^int k        v]
              (if (t/array? x)
                  (java.lang.reflect.Array/set x k v)
                  (throw (->ex :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
@@ -802,10 +814,9 @@
 
 (defnt first
   {:todo #{"Import core/first"}}
-  ([^array?                          x] (nth x 0))
+  ([#{array? tuple? +vec?}           x] (nth x 0))
   ([#{string? #?(:clj !array-list?)} x] (get x 0 nil))
   ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace first) (-> x name first)))
-  ([^+vec?                           x] (nth x 0))
   ([^reducer?                        x] (reduce (rfn [_ x'] (reduced x')) nil x))
   ([^default                         x] (core/first x)))
 
@@ -813,7 +824,7 @@
 
 (defnt second
   {:todo #{"Import core/second"}}
-  ([#{array? +vec? reducer?}         x] (nth x 1))
+  ([#{array? tuple? +vec? reducer?}  x] (nth x 1))
   ([#{string? #?(:clj !array-list?)} x] (#?(:clj get& :cljs get) x 1 nil))
   ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace second) (-> x name second)))
   ([^default                         x] (core/second x)))
@@ -1003,7 +1014,7 @@
           "Handle one-arg"
           "Handle mutable collections"]}
   ([                   from] (joinl [] from))
-  ([^default        to from] (reduce conj?!-protocol to from))
+  ([^default        to from] (reduce conj to from))
   ([^+vec?          to from] (if (vector? from)
                                  (catvec to from)
                                  (red/transient-into to from)))
@@ -1020,21 +1031,27 @@
                                 :cljs (red/transient-into to from)))
   ([^+sorted-map?   to from] (red/persistent-into to from))
   ([^+array-map?    to from] (red/transient-into to from))
-  ([^!string?       to from] (str #?(:clj  (reduce #(conj! ^StringBuilder %1 %2) to from)
-                                     :cljs (reduce #(conj! ^StringBuffer  %1 %2) to from))))
   ([^string?        to from] (joinl (!str to) from))
-  (^<0> [^array-1d? a :<0> b] ; returns a new array
-    (if (identical? (class a) (class b))
-        #?(:clj  (let [al  (count a)
-                       bl  (count b)
-                       n   (+ al bl)
-                       ret (array-of-type a (int n))]
-                   (copy! a 0 ret 0  al)
-                   (copy! b 0 ret al bl)
-                   ret)
-           :cljs (.concat a b))
-        (TODO)))
-  #_([                to from] (if (nil? to) from (red/persistent-into to from))))
+  (^<0> [^array-1d? to from] ; returns a new array
+    (cond (identical? (class to) (class from)) ; TODO fix this
+          #?(:clj  (let [to-ct   (count to)
+                         from-ct (count from)
+                         n       (+ to-ct from-ct)
+                         ret     (array-of-type to (int n))]
+                     (copy! to   0 ret 0     to-ct)
+                     (copy! from 0 ret to-ct from-ct))
+             :cljs (.concat to from))
+          (t/counted? from)
+          (TODO) ; TODO this code is good; just need to eliminate reflection with `assoc!&`
+          #_(let [to-ct   (count to)
+                from-ct (count from)
+                n       (+ to-ct from-ct)
+                ret     (array-of-type to (int n))]
+            (copy! to 0 ret 0 to-ct)
+            (reducei (fn [_ x ^long i] (assoc!& to (+ i to-ct) x) nil) nil from)
+            ret)
+          ; Can `join` into array list and get array afterward
+          :else (TODO))))
 
 #_(defn joinl
   ([] nil)
@@ -1053,3 +1070,16 @@
 
 #?(:clj (defalias join  joinl ))
 #?(:clj (defalias join' joinl'))
+
+(defnt joinl!
+  "Like `joinl`, but mutates `to`."
+  ([^default        to from] (reduce conj!-protocol to from))
+  ([^!string?       to from] (str #?(:clj  (reduce #(conj! ^StringBuilder %1 %2) to from)
+                                     :cljs (reduce #(conj! ^StringBuffer  %1 %2) to from))))
+  (^<0> [^object-array? #_array-1d? to from] ; TODO
+    (if (identical? (class to) (class from)) ; TODO to support all 1D arrays, just need to eliminate reflection with `assoc!&`
+        #?(:clj  (copy! from 0 to 0 (count from))
+           :cljs (TODO))
+        (reducei (fn [_ x ^long i] (assoc!& to i x)) to from))))
+
+#?(:clj (defalias join! joinl!))
