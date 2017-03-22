@@ -1,10 +1,11 @@
 (ns
-  ^{:doc "Benchmarking utilities. Criterium is aliased and is especially useful."
+  ^{:doc "Benchmarking and profiling utilities. Criterium is aliased and is especially useful."
     :attribution "alexandergunnarson"}
-  quantum.core.meta.bench
+  quantum.core.meta.profile
   (:refer-clojure :exclude [val reduce])
   (:require
     #?(:clj [criterium.core         :as bench])
+            [taoensso.tufte         :as tufte]
             [quantum.core.string    :as str  ]
             [quantum.core.collections :as coll
               :refer [map+ remove+ join reduce val]]
@@ -40,16 +41,6 @@
          ret# ~expr]
      (/ (double (- (System/nanoTime) start#)) 1000000.0))))
 
-; FOR CLJS
-#?(:clj
-(defmacro profile [k & body]
-  ; TODO `case-env`
-  `(let [k# ~k]
-     (.time js/console k#)
-     (let [res# (do ~@body)]
-       (.timeEnd js/console k#)
-       res#))))
-
 #?(:clj (defalias bench bench/quick-bench))
 #?(:clj (defalias complete-bench bench/bench))
 
@@ -64,6 +55,13 @@
   (-> (ClassIntrospector.)
       (.introspect obj)
       (.getDeepSize))))
+
+#?(:clj (defalias p        tufte/p       ))
+#?(:clj (defmacro with-p [k body arg]
+          (list `p k `(~@body ~arg))))
+#?(:clj (defmacro profile  ([     body] `(      profile {}    ~body))
+                           ([opts body] `(tufte/profile ~opts ~body))))
+#?(:clj (defalias profiled tufte/profiled))
 
 #_(:clj
 (defn byte-size-range [obj]

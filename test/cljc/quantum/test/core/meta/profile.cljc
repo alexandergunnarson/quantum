@@ -1,5 +1,5 @@
-(ns quantum.test.core.meta.bench
-  (:require [quantum.core.meta.bench :as ns]))
+(ns quantum.test.core.meta.profile
+  (:require [quantum.core.meta.profile :as ns]))
 
 (defn test:num-from-timing [time-str])
 
