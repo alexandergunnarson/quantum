@@ -24,7 +24,7 @@
                :refer [path]]
              [quantum.core.resources     :as res]
              [quantum.core.type          :as type
-               :refer [svector?]]
+               :refer [svec?]]
              [quantum.core.vars          :as var
                :refer [defalias]]
              [quantum.core.spec          :as s
@@ -105,7 +105,7 @@
           (if (and (-> e :type (= clojure.core.rrb_vector.rrbt.Vector)) ; Because "unfreezable type: rrbt Vector"
                    (not unfreezable-caught?))
               (->> data
-                   (postwalk (whenf1 (fn1 svector?)
+                   (postwalk (whenf1 (fn1 svec?)
                                (partial core/into [])))
                    (#(assoc-serialized! path %
                        (assoc :unfreezable-caught? true))))
