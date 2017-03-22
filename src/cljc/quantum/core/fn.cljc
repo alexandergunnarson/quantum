@@ -61,10 +61,10 @@
   "`mfn` is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
    Originally named `functionize` by mikera."
   ([macro-sym]
-    (case-env :cljs (throw (ex-info "`mfn` not supported for CLJS." {})))
-   `(fn [& args#]
-      (qcore/js-println "WARNING: Runtime eval with `mfn` via" '~macro-sym)
-      (clojure.core/eval (cons '~macro-sym args#))))
+    (case-env :cljs (throw (ex-info "`mfn` not supported for CLJS." {}))
+      `(fn [& args#]
+         (qcore/js-println "WARNING: Runtime eval with `mfn` via" '~macro-sym)
+         (clojure.core/eval (cons '~macro-sym args#)))))
   ([n macro-sym]
     (let [genned-arglist (->> (repeatedly gensym) (take n) (into []))]
       `(fn ~genned-arglist
