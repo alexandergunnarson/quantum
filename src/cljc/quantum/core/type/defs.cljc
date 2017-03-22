@@ -534,6 +534,15 @@
 (def sequential-types      (cond-union seq-types list-types indexed-types))
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.ICollection / cljs.core/ICollection?
+(def counted-types         (cond-union array-types string-types
+                             {:clj  (set/union (:clj !vec-types) (:clj !!vec-types)
+                                               (:clj !map-types) (:clj !!map-types)
+                                               (:clj !set-types) (:clj !!set-types)
+                                               '#{clojure.lang.Counted})
+                              :cljs (set/union (:cljs vec-types)
+                                               (:cljs map-types)
+                                               (:cljs set-types))}))
+
 (def coll-types            (cond-union sequential-types associative-types))
 
 (def sorted-types          {:clj '#{clojure.lang.Sorted java.util.SortedMap java.util.SortedSet}
@@ -781,6 +790,10 @@
    ; SORTED
 
    'sorted?          sorted-types
+
+   ; COUNTED
+
+   'counted?         counted-types
 
    ; ----- ASSOCIATIVE+INDEXED ----- ;
 
