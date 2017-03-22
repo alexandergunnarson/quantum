@@ -80,7 +80,7 @@
 
 ; ===== RANGE ===== ;
 
-(#?(:clj defalias :cljs def) range+ red/range+)
+#?(:clj (defalias range+ red/range+))
 
 (defn lrrange
   "Lazy reverse range."

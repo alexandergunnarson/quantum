@@ -25,7 +25,7 @@
       :refer [->ex]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
-              fn1 fn-> fn->> fn' rcomp defcurried]]
+              fn1 fn-> fn->> fn' fn&2 rcomp defcurried]]
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and fn-nil fn-true whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
@@ -289,7 +289,19 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defn map+ [f coll] (folder coll (core/map f)))
+(defn map-transducer
+  [f]
+  (fn [rf]
+    (fn ; TODO auto-generate?
+      ([            ] (rf))
+      ([ret         ] (rf ret))
+      ([ret x0      ] (rf ret (f x0)))
+      ([ret x0 x1   ] (rf ret (f x0 x1)))
+      ([ret x0 x1 x2] (rf ret (f x0 x1 x2)))
+      ([ret x0 x1 x2 & xs]
+         (rf ret (apply f x0 x1 x2 xs))))))
+
+(defn map+ [f coll] (folder coll (map-transducer f)))
 
 (defn map-indexed+ [f coll] (folder coll (core/map-indexed f)))
 
@@ -506,19 +518,60 @@
                (quantum.core.reducers/Range. split end step)]))
           this n combinef reducef)))
 
+(deftype LongRange [^long start ^long end ^long step]
+  #?(:clj  clojure.lang.Counted
+     :cljs cljs.core/ICounted)
+    (#?(:clj count :cljs -count) [this]
+      (int (num/ceil (/ (- end start) step))))
+  #?(:clj  clojure.lang.Seqable
+     :cljs cljs.core/ISeqable)
+    (#?(:clj seq :cljs -seq) [this]
+      (seq (range start end step)))
+  #?(:clj  clojure.core.protocols/CollReduce
+     :cljs cljs.core/IReduce)
+    (#?(:clj coll-reduce :cljs -reduce) [this f1]
+      (#?(:clj clojure.core.protocols/coll-reduce :cljs -reduce) this f1 (f1)))
+    (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
+      (let [cmp (if (pos? step) < >)]
+        (loop [ret init i start]
+          (if (reduced? ret)
+            @ret
+            (if (cmp i end)
+              (recur (f1 ret i) (unchecked-add i step))
+              ret)))))
+  CollFold
+    (coll-fold [this n combinef reducef]
+      (fold/fold-by-halves
+        (fn [_ size] ;; the range passed is always just this Range
+            (let [split (-> (quot size 2)
+                            (* step)
+                            (+ start))]
+              [(quantum.core.reducers/LongRange. start split step)
+               (quantum.core.reducers/LongRange. split end step)]))
+          this n combinef reducef)))
+
 ; "Range and iterate shouldn't be novel in reducers, but just enhanced return values of core fns.
 ; Range and iterate are sources, not transformers, and only transformers
 ; (which must be different from their seq-based counterparts) must reside in reducers." - Rich Hickey
 
-(defn range+
+(defnt range+*
   "Returns a reducible collection of nums from start (inclusive) to end
   (exclusive), by step, where start defaults to 0, step to 1, and end
   to infinity."
   {:adapted-from "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  ([              ] (iterate+ #?(:clj inc' :cljs inc) 0))
-  ([      end     ] (folder (Range. 0     end 1   ) identity-rf))
-  ([start end     ] (folder (Range. start end 1   ) identity-rf))
-  ([start end step] (folder (Range. start end step) identity-rf)))
+  ([^default end                       ] (folder (Range.     0     end 1   ) identity-rf))
+  ([^long    end                       ] (folder (LongRange. 0     end 1   ) identity-rf))
+  ; TODO fix types here
+  ([^default start       end           ] (folder (Range.     start end 1   ) identity-rf))
+  ([^long    start ^long end           ] (folder (LongRange. start end 1   ) identity-rf))
+  ; TODO fix types here
+  ([^default start       end       step] (folder (Range.     start end step) identity-rf))
+  ([^long    start ^long end ^long step] (folder (LongRange. start end step) identity-rf)))
+
+#?(:clj
+(defmacro range+
+  ([] `(iterate+ ~(case-env :cljs `inc `inc') 0))
+  ([& args] `(range+* ~@args))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
@@ -648,10 +701,10 @@
               xs)]
     (if (identical? ret sentinel) nil ret)))
 
-(defn reduce-max-key [kfn xs] (reduce-sentinel (partial max-key kfn) xs))
-(defn reduce-min-key [kfn xs] (reduce-sentinel (partial min-key kfn) xs))
-(defn reduce-min     [    xs] (reduce-sentinel          min          xs))
-(defn reduce-max     [    xs] (reduce-sentinel          max          xs))
+(defn reduce-max-key [kfn xs] (reduce-sentinel (fn&2 max-key kfn) xs))
+(defn reduce-min-key [kfn xs] (reduce-sentinel (fn&2 min-key kfn) xs))
+(defn reduce-min     [    xs] (reduce-sentinel       min          xs))
+(defn reduce-max     [    xs] (reduce-sentinel       max          xs))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
