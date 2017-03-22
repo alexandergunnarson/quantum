@@ -163,3 +163,13 @@
 (defmacro typeof
   "Compile-time `typeof*`"
   ([& args] (typeof* ~@args))))
+
+#?(:clj
+(defmacro cast-depth [xs depth x]
+  (cmacros/case-env
+    :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs n x)))
+    :clj  (let [hint       (tag->class xs)
+                cast-class (tag->class (tcore/nth-elem-type:clj hint depth))]
+            (if (.isPrimitive ^Class cast-class)
+                `(~(symbol "clojure.core" (str cast-class)) ~x)
+                (tcore/static-cast-code (->embeddable-hint cast-class) x))))))
