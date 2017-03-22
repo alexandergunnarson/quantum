@@ -7,12 +7,13 @@
      double? decimal?
      nil? char? number? integer? float?
      sequential? indexed? list? coll?
-     symbol? keyword?, array?, record?, var?
+     symbol? keyword?, array?, record?, var?, counted?
      identity
      class type
      ancestors descendants, supers bases, isa? instance?, derive underive])
   (:require
     [clojure.core                 :as core]
+    [quantum.core.analyze.clojure.core :as ana]
     [quantum.core.classes         :as classes]
     [quantum.core.core            :as qcore]
     [quantum.core.fn              :as fn
@@ -61,6 +62,7 @@
 (def types           tcore/types          )
 
 #?(:clj (defalias static-cast tcore/static-cast))
+#?(:clj (defalias cast-depth  ana/cast-depth))
 
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 
@@ -129,6 +131,7 @@
          (defnt queue?         ([^queue?         x] true) ([^default x] false))
          (defnt lseq?          ([^lseq?          x] true) ([^default x] false))
          (defnt sequential?    ([^sequential?    x] true) ([^default x] false))
+         (defnt counted?       ([^counted?       x] true) ([^default x] false))
          (defalias seqable? qcore/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))
