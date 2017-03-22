@@ -18,6 +18,8 @@
               kw-map get-in* ifor get reducei]]
     [quantum.core.error
       :refer [->ex TODO]]
+    [quantum.core.macros
+      :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.numeric :as cnum
       :refer [+* inc* pow abs sqrt]]
     [quantum.numeric.core :as num
@@ -117,7 +119,7 @@
   {:implemented-by '{smile.math.distance.MinkowskiDistance "faster array implementation"
                      smile.math.distance.SparseMinkowskiDistance "for sparse arrays"}}
   ([v p]
-    (pow (sum (map+ (fn-> abs (pow p)) v)) (/ p)))
+    (->> v (map+ (fn-> abs (pow p))) sum (<- pow (/ p))))
   ([a b p] (TODO)))
 
 (defalias minkowski l-p)
@@ -152,35 +154,27 @@
 
 (defalias manhattan l-1)
 
-(defn l-2
-  "[v]
+(#?(:clj defnt' :cljs defnt) l-2
+  "[x•]
    The (L-2|Euclidean) norm of a vector.
 
-   [a b]
+   [x•0 x•1]
    The (L-2|Euclidean) distance between two n-dimensional vectors."
   {:implemented-by '{smile.math.distance.EuclideanDistance "faster array implementation"
                      smile.math.distance.SparseEuclideanDistance "for sparse arrays"
                      smile.math.matrix.SingularValueDecomposition "The largest singular value"}}
-  ([v] (->> v (map+ sq) sum sqrt))
+  ([#_indexed? #{array-1d? +vec?} x•]
+    (->> x• (map+ (fn1 sq)) sum sqrt))
   ^{:implemented-by '#{org.apache.commons.math3.ml.distance.EuclideanDistance}}
-  ([a b] (TODO)))
+  ([#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+    (->> (tens/v-op+ #(sq (- %1 %2)) x•0 x•1) sum sqrt)))
 
-(defalias euclidean l-2)
-(defalias vlength   l-2)
-#_(defalias dist      l-2) ; TODO this is fine
+#?(:clj (defalias euclidean l-2))
+(defn vlength [v] (l-2 v))
 
 (defn cosine-similarity [a b]
   (/ (tens/dot a b)
      (* (l-2 a) (l-2 b))))
-
-(defn dist* [v1 v2] ; TODO I assume this is L-2 between n-dimensional vectors
-  (assert (= (count v1) (count v2)))
-  (->> (range+ 0 (count v1))
-       (map+ #(- (get v1 %) (get v2 %)))
-       (map+ sq)
-       num/sum))
-
-(defn dist [v1 v2] (sqrt (dist* v1 v2)))
 
 (defn canberra
   "Calculates the Canberra distance between two n-dimensional vectors."
