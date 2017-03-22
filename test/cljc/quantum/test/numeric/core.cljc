@@ -21,10 +21,16 @@
   ([a b])
   ([a b & args]))
 
-(deftest normalize-sum-to
+(deftest test:normalize-sum-to
   (dotimes [i 100] ; doubles might be off by a little bit — TODO have tests for doubles
     (let [target-sum (rationalize (rand))]
       (is (= (->> (repeatedly (rand/rand-int-between 5 20) #(rationalize (rand)))
                   (<- ns/normalize-sum-to target-sum)
                   (apply +))
              target-sum)))))
+
+(deftest test:normalize
+  (is (= [-8/9 -1 -13/18 -17/18 -7/9 -5/6 13/18 -5/6 -7/9 1 -5/6]
+         (ns/normalize [0 -2 3 -1 2 1 29 1 2 34 1] -1 1)))
+  (is (= [1/18 0 5/36 1/36 1/9 1/12 31/36 1/12 1/9 1 1/12]
+         (ns/normalize [0 -2 3 -1 2 1 29 1 2 34 1]))))
