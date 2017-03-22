@@ -218,6 +218,7 @@
 
 ; ===== CONCATENATION ===== ;
 #?(:clj (defalias join          red/join          ))
+#?(:clj (defalias join!         coll/join!        ))
 #?(:clj (defalias joinl         red/join          ))
 #?(:clj (defalias join'         red/join'         ))
 #?(:clj (defalias joinl'        red/joinl'        ))
@@ -311,27 +312,28 @@
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-#?(:clj (defalias dotimes  loops/dotimes ))
-#?(:clj (defalias fortimes loops/fortimes))
+#?(:clj (defalias dotimes     loops/dotimes ))
+#?(:clj (defalias fortimes    loops/fortimes))
 #_(:clj (defalias fortimes:objects loops/fortimes:objects))
-#?(:clj (defalias reduce   loops/reduce  ))
-#?(:clj (defalias reducei  loops/reducei ))
-#?(:clj (defalias reduce*  loops/reduce* ))
-#?(:clj (defalias red-for  loops/red-for ))
-#?(:clj (defalias red-fori loops/red-fori))
+#?(:clj (defalias reduce      loops/reduce  ))
+#?(:clj (defalias reducei     loops/reducei ))
+#?(:clj (defalias reduce*     loops/reduce* ))
+#?(:clj (defalias red-for     loops/red-for ))
+#?(:clj (defalias red-fori    loops/red-fori))
         (defalias reduce-pair loops/reduce-pair)
-        (defalias reduce-2 loops/reduce-2)
+        (defalias reduce-2    loops/reduce-2 )
+        (defalias reducei-2   loops/reducei-2)
 #?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
-#?(:clj (defalias seq-loop loops/seq-loop))
-#?(:clj (defalias loopr    loops/seq-loop))
-#?(:clj (defalias ifor     loops/ifor    ))
+#?(:clj (defalias seq-loop    loops/seq-loop))
+#?(:clj (defalias loopr       loops/seq-loop))
+#?(:clj (defalias ifor        loops/ifor    ))
 ; ===== COLLECTION COMPREHENSION ===== ;
-#?(:clj (defalias for      loops/for     )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
-#?(:clj (defalias for*     loops/for*    ))
-#?(:clj (defalias for+     red/for+      ))
-#?(:clj (defalias fori+    red/fori+     ))
-#?(:clj (defalias fori     loops/fori    ))
-#?(:clj (defalias fori*    loops/fori*   ))
+#?(:clj (defalias for         loops/for     )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
+#?(:clj (defalias for*        loops/for*    ))
+#?(:clj (defalias for+        red/for+      ))
+#?(:clj (defalias fori+       red/fori+     ))
+#?(:clj (defalias fori        loops/fori    ))
+#?(:clj (defalias fori*       loops/fori*   ))
 #?(:clj (defmacro lfor [& args] `(loops/lfor   ~@args)))
 
 
@@ -350,7 +352,7 @@
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 (defaliases gen
   repeat lrepeat repeat+, repeatedly lrepeatedly repeatedly+
-  range range+ lrange rrange lrrange
+  range #?(:clj range+) lrange rrange lrrange
   #?(:clj !range:longs) #?(:clj !range:longs&))
 ; _______________________________________________________________
 ; ================== FULL-SEQUENCE TRANSFORMS ===================
@@ -1037,18 +1039,20 @@
     (select-as+ coll (assoc kfs k1 f1))))
 
 (defn group-by-into
-  "Like `group-by`, but you can choose what collection to group into."
-  [f init coll]
-  (->> coll
-       (reduce
-         (fn [ret x]
-           (let [k (f x)]
-             (assoc?! ret k (conj (get ret k []) x))))
-         (?transient! init))
-       ?persistent!))
+  "Like `group-by`, but you can choose what collection and subcollection to group into."
+  ([f init xs] (group-by-into f init vector xs))
+  ([f init gen-subinit xs]
+    (->> xs
+         (reduce
+           (fn [ret x]
+             (let [k (f x)]
+               (assoc?! ret k (conj?! (or (get ret k) (gen-subinit)) x))))
+           (?transient! init))
+         ?persistent!)))
 
-(defn group-by [f xs] (group-by-into f {} xs))
-(defn group    [  xs] (group-by identity xs))
+(defn group-by   [f      xs] (group-by-into f        {}   xs))
+(defn group-into [  init xs] (group-by-into identity init xs))
+(defn group      [       xs] (group-by-into identity {}   xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
@@ -1212,7 +1216,8 @@
 #?(:clj
  (defnt sort!*
   "Uses whatever default sorting algorithm is available for the data
-   structure passed."
+   structure passed.
+   Defaults to ascending sort."
   {:todo ["Only in more recent Java versions does Arrays/sort use
            Dual-Pivot Quicksort"
           "Can also sort a subarray"]}
@@ -1228,7 +1233,8 @@
 #?(:clj
  (defnt sort-by!*
   "Uses whatever default sorting algorithm is available for the data
-   structure passed."
+   structure passed.
+   Defaults to ascending sort."
   {:todo ["Only in more recent Java versions does Arrays/sort use
            Dual-Pivot Quicksort"
           "Can also sort a subarray"]}
@@ -1240,17 +1246,27 @@
 #?(:clj (defmacro sort-by! [& args] `(sort-by!* ~(last args) ~@(butlast args))))
 
 #?(:clj
-(defnt p-tim-sort!
-  "Parallel TimSort."
+(defnt psort!*
+  "Parallel TimSort in Java 8."
   {:todo ["Can also sort a subarray"]}
   ([#{bytes? shorts? chars? ints? longs? floats? doubles?} arr]
     (doto arr (java.util.Arrays/parallelSort)))
   ([#{objects?} arr]
     (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare)))
-  ([#{objects?} arr compare-fn]
-    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare-fn)))))
+  ([#{objects?} arr compf]
+    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compf)))))
 
-#?(:clj (defalias psort! p-tim-sort!))
+#?(:clj (defmacro psort! [& args] `(psort!* ~(last args) ~@(butlast args))))
+
+#?(:clj
+ (defnt psort-by!*
+  "Defaults to ascending sort."
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects?} x kf] ; TODO infer
+    (psort-by!* x kf compare))
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects?} x kf compf] ; TODO infer
+    (psort!* x (fn [x y] (.compare ^java.util.Comparator compf (kf x) (kf y)))))))
+
+#?(:clj (defmacro psort-by! [& args] `(psort-by!* ~(last args) ~@(butlast args))))
 
 (defnt sorted
   "Coerces `x` to a compatible sorted collection."
