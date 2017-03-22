@@ -25,7 +25,7 @@
     [quantum.core.numeric                     :as cnum
       :refer [sqrt]]
     [quantum.core.fn                          :as fn
-      :refer [fn1 <- fn-> fn->>]]
+      :refer [fn1 fn&2 <- fn-> fn->>]]
     [quantum.core.error                       :as err
       :refer [->ex TODO]]
     [quantum.numeric.core                     :as num
@@ -342,34 +342,30 @@
 ; TODO have reducers version of these?
 ; TODO use numeric core functions
 
-(defn v-op+ [op v0 v1]
-  (assert (= (count v0) (count v1)) (kw-map v0 v1)) ; TODO maybe use (map+ f v1 v2) ?
-  (->> (range+ 0 (count v0))
-       (map+ #(op (c/get v0 %) (c/get v1 %)))))
+(#?(:clj defnt' :cljs defnt) v-op+
+  [f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  (assert (= (count x•0) (count x•1)) (kw-map x•0 x•1)) ; TODO maybe use (map+ f v1 v2) ?
+  (->> (range+ 0 (count x•0))
+       (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i))))))
 
-(defn v-+
-  {:tests `{[[1 2 3] [4 5 6]]
-            [-3 -3 -3]}}
-  [v0 v1]
-  (v-op+ - v0 v1))
+(#?(:clj defnt' :cljs defnt) v-+
+  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  (v-op+ - x•0 x•1))
 
-(defn v++
-  {:tests `{[[1 2 3] [4 5 6]]
-            [5 7 9]}}
-  [v0 v1]
-  (v-op+ + v0 v1))
+(#?(:clj defnt' :cljs defnt) v++
+  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  (v-op+ + x•0 x•1))
 
-(defn v-div+
-  {:tests `{[[1 2 3] [4 5 6]]
-            [1/4 2/5 1/2]}}
-  [v0 v1] (v-op+ / v0 v1))
+(#?(:clj defnt' :cljs defnt) v-div+
+  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  (v-op+ / x•0 x•1))
 
-(defn v*+
-  {:tests `{[[1 2 3] [4 5 6]]
-            [4 10 2]}}
-  [v0 v1] (v-op+ * v0 v1))
+(#?(:clj defnt' :cljs defnt) v*+
+  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  (v-op+ * x•0 x•1))
 
-(defn vsq+ [v] (v*+ v v))
+(#?(:clj defnt' :cljs defnt) vsq+
+  [#_indexed? #{array-1d? +vec?} x•] (v*+ x• x•))
 
 (defn dot
   "Dot product"
@@ -380,7 +376,7 @@
 
 #?(:clj (defalias • dot))
 
-(defn vsum [vs] (reduce v++ (first vs) (rest vs))) ; TODO optimize better
+(defn vsum [vs] (reduce (fn&2 v++) (first vs) (rest vs))) ; TODO optimize better
 
 (defn centroid+ [vs]
   (->> vs vsum (map+ (fn1 / (count vs)))))
