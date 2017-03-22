@@ -37,7 +37,7 @@
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
        [org.clojure/tools.namespace             "0.2.11"          ]
-       [com.taoensso/encore                     "2.79.1"          ] ; To not break things
+       [com.taoensso/encore                     "2.85.0"          ] ; "2.79.1" To not break things
        ; ==== ASYNC ====
          [org.clojure/core.async                "0.2.391"         ]
          [servant                               "0.1.5"           ]
@@ -166,16 +166,18 @@
                       io.netty/netty
                       com.datomic/datomic-free]]
        [re-frame                                "0.8.0-alpha11"   ]
-     ; ==== HTML ====
+     ; ==== HTML ==== ;
        [hickory                                 "0.6.0"           ]
-     ; ==== INTEROP ====
+     ; ==== INTEROP ==== ;
        [org.python/jython-standalone            "2.5.3"
          :exclusions [jline]]
-     ; ==== LOGGING ====
+     ; ==== LOGGING ==== ;
        [org.slf4j/slf4j-log4j12                 "1.7.21"          ]
        [org.slf4j/jul-to-slf4j                  "1.7.21"          ]
        [org.slf4j/jcl-over-slf4j                "1.7.21"          ]
-     ; ==== UI ====
+     ; ==== PROFILING ==== ;
+       [com.taoensso/tufte                      "1.1.1"]
+     ; ==== UI ==== ;
        ; FORM
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ]
