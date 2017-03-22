@@ -10,20 +10,25 @@
 
 (defn test:v-op [op v1 v2])
 
-(defn test:v-
-  [v1 v2])
+(deftest test:v-+
+  (is (= [-3 -3 -3]
+         (join (ns/v-+ [1 2 3] [4 5 6])))))
 
-(defn test:v+
-  [v1 v2])
+(deftest test:v++
+  (is (= [5 7 9]
+         (join (ns/v++ [1 2 3] [4 5 6])))))
 
-(defn test:v-div
-  [v1 v2])
+(deftest test:v-div+
+  (is (= [1/4 2/5 1/2]
+         (join (ns/v-div+ [1 2 3] [4 5 6])))))
 
-(defn test:v*
-  [v1 v2])
+(deftest test:v*+
+  (is (= [4 10 18]
+         (join (ns/v*+ [1 2 3] [4 5 6])))))
 
-(defn test:vsq
-  [v])
+(deftest test:vsq+
+  (is (= [16 25 36]
+         (join (ns/vsq+ [4 5 6])))))
 
 (defn test:dot-product [v1 v2])
 
