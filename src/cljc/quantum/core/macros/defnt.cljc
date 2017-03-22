@@ -719,7 +719,7 @@
                                          "|" '~genned-protocol-method-name-qualified
                                          "|" '~genned-method-name)
                      (if ~(when-not (or strict-macro? strict?)
-                           `(or (case-env* ~'&env :cljs true)
+                           `(or (case-env* ~'&env :cljs true false)
                                 (= ~lang :cljs)
                                 ~relaxed? ; TODO fix this?
                                 #_(quantum.core.macros.transform/any-hint-unresolved?

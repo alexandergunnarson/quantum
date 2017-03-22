@@ -30,7 +30,8 @@
   {:usage `(defmacro abcde [a]
              (case-env* &env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))
    :todo  {0 "Not sure how CLJ environment would be differentiated from others"}}
-  ([env])
+  ([env]
+    (throw (ex-info "Compilation unhandled for environment" {:env env})))
   ([env v] v)
   ([env k v & kvs]
     (let [accepted?
