@@ -5,11 +5,13 @@
     [quantum.core.data.map
       :refer [!hash-map]]
     [quantum.core.collections                :as coll
-      :refer [nth take drop lasti map take+ map+
-              first for last count join frequencies]]
+      :refer [nth, lasti drop, take take+, map map+, filter+
+              first, for, last, count, join, frequencies]]
     [quantum.core.fn
-      :refer [fn1 fnl fn-> <-]]
+      :refer [fn1 fn&2 fnl fn-> <-]]
     [quantum.core.log                        :as log]
+    [quantum.core.macros
+      :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.numeric                    :as cnum
       :refer [*+* *-* *** *div* mod
               abs sqrt pow e-exp floor log-e]]
@@ -87,7 +89,7 @@
 (defn sum-of-squares
   "Computes the sum of the squares of each data point in
    a reducible collection."
-  [data] (->> data (map+ sq) sum)) ; TODO xs is `reducible?`
+  [data] (->> data (map+ (fn1 sq)) sum)) ; TODO xs is `reducible?`
 
 ; AKA L2 difference
 (defn square-difference [a b] (sq (- a b)))
@@ -100,16 +102,16 @@
   ([xs] (variance xs :sample))
   ([xs type]
     (let [[sum' ct] (num/sum+count xs)
-          mean'     (*div* sum' ct)
+          mean'     (/ sum' ct)
           diff      (case type :pop 0 :sample 1)] ; Bessel's correction
       (->> xs
-           (map+ (fn-> (*-* mean') sq))
+           (map+ (fn-> (- mean') sq))
            sum
-           (<- (*div* (- ct diff)))))))
+           (<- (/ (- ct diff)))))))
 
-(defn mse:predictor
+(#?(:clj defnt' :cljs defnt) mse:predictor
   "The mean squared error between a vector of predictions `p•` and observed values `o•`."
-  [p• o•]
+  [#_indexed? #{array-1d? +vec?} p• #_indexed? #{array-1d? +vec?} o•]
   (mean (tens/v-op+ square-difference p• o•)))
 
 (defalias mse:p•+o• mse:predictor)
@@ -121,12 +123,23 @@
 
 (defalias mean-square-error:estimator mse:estimator)
 
-(defn mse:p•+o••
+(#?(:clj defnt' :cljs defnt) mse:p•+o••
   "The mean squared error between a vector of predictions `p•` and 2D vector of observed values `o••`."
-  [p• o••]
+  [#_indexed? ^+vec? p• #_indexed? ^+vec? o••] ; TODO other indexed types
   (->> o••
-       (map+ (fn [o•] (sum (tens/v-op+ square-difference p• o•))))
+       (map+ (fn [o•] (sum (tens/v-op+ square-difference p• #?(:clj ^clojure.lang.IPersistentVector o• :cljs o•))))) ; TODO fix this
        mean))
+
+; TODO should be able to use custom predicate
+(#?(:clj defnt' :cljs defnt) accuracy
+  "The accuracy of a vector of predictions `p•` w.r.t. a vector of observed values `o•`."
+  [#_indexed? ^+vec? p• #_indexed? ^+vec? o•] ; TODO other indexed types
+  (let [ct (count p•)]
+    (->> (tens/v-op+ = p• o•)
+         #_(map+ = predictions actuals) ; TODO assert same count
+         (filter+ true?)
+         count
+         (<- / ct))))
 
 (defn semivariance
   "Computes the semivariance of a set of values with respect to a given cutoff value."
