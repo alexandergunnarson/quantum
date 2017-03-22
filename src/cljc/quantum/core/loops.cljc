@@ -43,29 +43,8 @@
   ([f ret coll]
    `(red/reduce ~f ~ret ~coll))))
 
-#?(:clj (defalias reduce red/reduce))
-
-#?(:clj
-(defmacro reducei
-   "`reduce`, indexed.
-
-   This is a macro to eliminate the wrapper function call.
-   Originally used a mutable counter on the inside just for fun...
-   but the counter might be propagated via @f, so it's best to use
-   an atomic value instead."
-  {:attribution "alexandergunnarson"
-   :todo ["Make this an inline function, not a macro."]}
-  [f ret-i coll & args]
-  (let [f-final
-         `(let [i# (volatile! (long -1))]
-            (fn ([ret# elem#]
-                  (vswap! i# quantum.core.core/unchecked-inc-long)
-                  (~f ret# elem# @i#))
-                ([ret# k# v#]
-                  (vswap! i# quantum.core.core/unchecked-inc-long)
-                  (~f ret# k# v# @i#))))
-        code `(reduce ~f-final ~ret-i ~coll)]
-    code)))
+#?(:clj (defalias reduce  red/reduce ))
+#?(:clj (defalias reducei red/reducei))
 
 (defalias reduce-pair cbase/reduce-pair)
 
@@ -355,15 +334,36 @@
   ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
   ([f init xs0 xs1 assert-same-count?]
     (loop [ret init xs0' xs0 xs1' xs1]
-      (if (or (empty? xs0') (empty? xs1'))
-          (do (when (and assert-same-count?
-                         (or (and (empty? xs0') (seq    xs1'))
-                             (and (seq    xs0') (empty? xs1'))))
-                (throw (->ex "Seqables are not the same count")))
-              ret)
-          (recur (f ret (first xs0') (first xs1'))
-                 (next xs0')
-                 (next xs1'))))))
+      (cond (reduced? ret)
+            @ret
+            (or (empty? xs0') (empty? xs1'))
+            (do (when (and assert-same-count?
+                           (or (and (empty? xs0') (seq    xs1'))
+                               (and (seq    xs0') (empty? xs1'))))
+                  (throw (->ex "Seqables are not the same count")))
+                ret)
+            :else (recur (f ret (first xs0') (first xs1'))
+                         (next xs0')
+                         (next xs1'))))))
+
+(defn reducei-2
+  "`reduce-2` + `reducei`"
+  {:todo #{"`defnt` this and have it dispatch to e.g. reducei-2:indexed"}}
+  ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
+  ([f init xs0 xs1 assert-same-count?]
+    (loop [ret init xs0' xs0 xs1' xs1 i 0]
+      (cond (reduced? ret)
+            @ret
+            (or (empty? xs0') (empty? xs1'))
+            (do (when (and assert-same-count?
+                           (or (and (empty? xs0') (seq    xs1'))
+                               (and (seq    xs0') (empty? xs1'))))
+                  (throw (->ex "Seqables are not the same count")))
+                ret)
+            :else (recur (f ret (first xs0') (first xs1') i)
+                         (next xs0')
+                         (next xs1')
+                         (unchecked-inc i))))))
 
 #?(:clj
 (defnt' reduce-2:indexed
@@ -378,7 +378,9 @@
   [^fn? f init #_indexed? #{array-1d? +vec?} xs0 #_indexed? #{array-1d? +vec?} xs1]
   (let [ct0 (c/count xs0) ct1 (c/count xs1)]
     (loop [ret init i 0]
-      (if (or (>= i ct0) (>= i ct1))
-          ret
-          (recur (f ret (c/get xs0 i) (c/get xs1 i))
-                 (unchecked-inc i)))))))
+      (cond (reduced? ret)
+            @ret
+            (or (>= i ct0) (>= i ct1))
+            ret
+            :else (recur (f ret (c/get xs0 i) (c/get xs1 i))
+                         (unchecked-inc i)))))))
