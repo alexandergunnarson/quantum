@@ -200,6 +200,29 @@
   ([f coll]      `(reduce* ~coll ~f))
   ([f init coll] `(reduce* ~coll ~f ~init))))
 
+
+#?(:clj
+(defmacro reducei
+   "`reduce`, indexed.
+
+   This is a macro to eliminate the wrapper function call.
+   Originally used a mutable counter on the inside just for fun...
+   but the counter might be propagated via @f, so it's best to use
+   an atomic value instead."
+  {:attribution "alexandergunnarson"
+   :todo ["Make this an inline function, not a macro."]}
+  [f ret-i coll & args]
+  (let [f-final
+         `(let [i# (volatile! (long -1))]
+            (fn ([ret# elem#]
+                  (vswap! i# quantum.core.core/unchecked-inc-long)
+                  (~f ret# elem# @i#))
+                ([ret# k# v#]
+                  (vswap! i# quantum.core.core/unchecked-inc-long)
+                  (~f ret# k# v# @i#))))
+        code `(reduce ~f-final ~ret-i ~coll)]
+    code)))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
