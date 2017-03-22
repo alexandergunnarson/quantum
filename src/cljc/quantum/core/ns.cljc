@@ -5,7 +5,7 @@
   (:refer-clojure :exclude
     [ns in-ns all-ns create-ns the-ns find-ns ns-name ns-map
      alias ns-aliases require import ns-imports use
-     ns-interns ns-publics refer ns-refers ns-unalias ns-unmap loaded-libs
+     ns-interns ns-publics refer ns-refers refer-clojure ns-unalias ns-unmap loaded-libs
      remove-ns])
   (:require
     [clojure.core      :as core]
