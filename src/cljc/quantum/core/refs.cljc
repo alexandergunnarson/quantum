@@ -44,7 +44,7 @@
 
 ; ===== VARS ===== ;
 
-#?(:clj (defalias var-set            core/var-set))
+#?(:clj (defalias var-set core/var-set))
 
 
 
