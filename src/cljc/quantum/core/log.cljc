@@ -178,3 +178,11 @@
 #?(:clj
 (defmacro this-ns []
   `(if (get @levels :ns) (pr* true false println :ns ['~(ns-name *ns*)] nil) true)))
+
+#?(:clj
+(defmacro with-prl
+  "For thread-last ->> usage"
+  ([expr] `(with-prl :user ~expr))
+  ([level expr]
+  `(let [expr# ~expr]
+     (do (ppr ~level {'~expr expr#}) expr#)))))
