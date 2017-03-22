@@ -197,3 +197,33 @@
 ; 387.023311 ns
 (let [v [1 2 3 4]]
   (bench (BLAS/scal 123 (DenseVector. ^doubles (into-array Double/TYPE v)))))
+
+
+
+
+
+
+(defrecord Record [a b])
+
+; Creation
+(let [a (Object.) b (Object.)]
+  ; 34.555691 µs
+  (profile/bench (dotimes [i 100000] (Record. a b)))
+  ; 348.640267 µs
+  (profile/bench (dotimes [i 100000] (tuple a b)))
+  ; 51.942270 µs
+  (profile/bench (dotimes [i 100000] (ccoll/arr<>& a b)))
+  ; 33.733348 µs
+  (profile/bench (dotimes [i 100000] (quantum.core.data.Array/new1dObjectArray a b))))
+
+; Access
+(let [a (Object.) b (Object.)
+      labeled (Record. a b)
+      *tuple  (tuple a b)
+      *arr    (ccoll/arr<> a b)]
+  ; 247.230171 µs
+  (profile/bench (dotimes [i 100000] (:a labeled)))
+  ; 1.623480 ms
+  (profile/bench (dotimes [i 100000] (ccoll/first& *tuple)))
+  ; 183.845885 µs
+  (profile/bench (dotimes [i 100000] (ccoll/first& *arr))))
