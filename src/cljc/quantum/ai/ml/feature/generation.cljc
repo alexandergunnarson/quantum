@@ -5,11 +5,20 @@
    supplied with the training instances.
    Feature normalization is bundled up into this namespace."
   (:require
-    [quantum.core.error :as err
+    [quantum.core.collections :as coll
+      :refer [indexed+ remove+ map+ join]]
+    [quantum.core.compare        :as comp]
+    [quantum.core.data.primitive :as prim]
+    [quantum.core.error          :as err
       :refer [->ex TODO]]
+    [quantum.core.fn
+      :refer [fn->> fn->]]
+    [quantum.core.log            :as log]
+    [quantum.core.macros
+      :refer [defnt]]
     [quantum.core.vars
       :refer [defalias]]
-    [quantum.core.log :as log]))
+    [quantum.numeric.core        :as numc]))
 
 (log/this-ns)
 
@@ -48,3 +57,24 @@
                       smile.feature.Nominal2Binary
                       smile.feature.Nominal2SparseBinary}}
   [?] (TODO))
+
+(defn normalize-into-matrix
+  "Takes an instance matrix `x••` and normalizes the non-nominal attributes
+   into a 2D array."
+  [x•• a•:x]
+  (numc/normalize-2d:column
+    (->> x•• coll/->array-nd)
+    (->> a•:x indexed+
+              (remove+ (fn-> second :type (= :nominal)))
+              (map+    first)
+              (join    #{}))))
+
+(defnt missing?
+  "Returns the representation for a missing value associated with the type
+   of the argument passed.
+   For nilable values (references), returns nil.
+   For non-nilable values (primitives), returns the max value of that primitive.
+   Note that for doubles and floats, where infinity or NaN could have been chosen,
+   the max value was preferred to maintain parity with other primitives."
+  ([#{byte char short int long float double} x] (= x (prim/->max-value x)))
+  ([^default                                 x] (nil? x)))
