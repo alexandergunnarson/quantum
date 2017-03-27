@@ -18,15 +18,18 @@
     [quantum.core.macros              :as macros
       :refer [assert-args defnt #?(:clj defnt')]]
     [quantum.core.reducers.reduce     :as red]
+    [quantum.core.reducers
+      :refer [map+]]
     [quantum.core.fn
-      :refer [rfn <-]]
+      :refer [rfn <- call]]
     [quantum.core.macros.optimization :as opt]
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
       :refer [defalias]])
   (:require-macros
     [quantum.core.loops               :as self
-      :refer [reduce reducei doseq]]))
+      :refer [reduce reducei doseq]])
+  #?(:clj (:import [quantum.core.data Array])))
 
 (log/this-ns)
 
@@ -177,24 +180,28 @@
   [bindings & body]
   `(doseqi* true ~bindings ~@body)))
 
-#?(:clj
-(defmacro for*
-  "A lighter, eager version of |for| based on |reduce|.
-   Also accepts a collection into which to aggregate the results
-   (i.e. doesn't default to a lazy seq or a vector, etc.)"
-  {:attribution "alexandergunnarson"
-   :performance "    2.043435 ms (for+ [elem v] nil))
-                 vs. 2.508727 ms (doall (for [elem v] nil))
-
-                 , where 'v' is a vectorized (range 1000000).
-
-                 22.5% faster!"}
-  [ret bindings & body]
+(defn for-join*
+  [joinf bindings & body]
   (assert-args
     (vector? bindings) "a vector for its bindings")
   `(->> ~(last bindings)
         (<- red/reducer (core/map (rfn [~@(butlast bindings)] ~@body))) ; bootstrapping `map+`
-        (c/join ~ret))))
+        ~joinf))
+
+#?(:clj
+(defmacro for-join
+  "A lighter, eager version of `core/for` based on `reduce`.
+   Also accepts a collection into which to aggregate the results
+   (i.e. doesn't default to a lazy seq or a vector, etc.)"
+  {:attribution "alexandergunnarson"}
+  [ret bindings & body]
+  (apply for-join* (list 'quantum.core.collections.core/join ret) bindings body)))
+
+#?(:clj
+(defmacro for-join!
+  {:attribution "alexandergunnarson"}
+  [ret bindings & body]
+  (apply for-join* (list 'quantum.core.collections.core/join! ret) bindings body)))
 
 #?(:clj
 (defmacro for
@@ -208,27 +215,46 @@
 
                  22.5% faster!"}
   [bindings & body]
-  `(for* [] ~bindings ~@body)))
-
+  `(for-join [] ~bindings ~@body)))
 
 #?(:clj
-(defmacro fori*
+(defmacro for'
+  "`for` : `for'` :: `join` : `join'`."
+  [bindings & body]
+  (apply for-join* (list 'quantum.core.collections.core/join') bindings body)))
+
+(defn fori-join*
   {:attribution "alexandergunnarson"}
-  [ret bindings & body]
-  (let [n-sym (last bindings)]
-  `(let [n# (volatile! 0)]
-     (for* ~ret ~(vec (butlast bindings))
-       (let [~n-sym (deref n#)
-             res# (do ~@body)]
-         (vswap! n# qcore/unchecked-inc-long)
-         res#))))))
+  [joinf bindings & body]
+  (let [n-sym  (last bindings)
+        *n-sym (gensym "volatile-n")]
+   `(let [~*n-sym (volatile! 0)]
+     ~(for-join* joinf (vec (butlast bindings))
+       `(let [~n-sym (deref ~*n-sym)
+              res#   (do ~@body)]
+          (vswap! ~*n-sym qcore/unchecked-inc-long)
+          res#)))))
+
+#?(:clj
+(defmacro fori-join [ret bindings & body]
+  (apply fori-join* (list 'quantum.core.collections.core/join ret) bindings body)))
+
+#?(:clj
+(defmacro fori-join! [ret bindings & body]
+  (apply fori-join* (list 'quantum.core.collections.core/join! ret) bindings body)))
 
 #?(:clj
 (defmacro fori
-  "fori:for::reducei:reduce"
+  "fori : for :: reducei : reduce"
   {:attribution "alexandergunnarson"}
   [bindings & body]
-  `(fori* [] ~bindings ~@body)))
+  `(fori-join [] ~bindings ~@body)))
+
+#?(:clj
+(defmacro fori'
+  "`fori'` : `for'` :: `fori` : `for`."
+  [bindings & body]
+  (apply fori-join* (list 'quantum.core.collections.core/join') bindings body)))
 
 #?(:clj
 (defmacro seq-loop
@@ -275,16 +301,75 @@
 ;        nil ~coll)
 ;      (persistent! ret#)))
 
-#?(:clj (defalias dotimes core/dotimes))
+#?(:clj (defalias dotimes-1 core/dotimes))
+
+#?(:clj (defmacro dotimes
+  "Like `dotimes`, but enables multiple bindings like `for` for
+   Cartesian-product effect."
+  [bindings & body]
+  (assert (vector? bindings))
+  (assert (-> bindings count even?))
+  (let [bindings' (->> bindings (partition-all 2) reverse)]
+    (reduce
+      (fn [code binding]
+        `(dotimes-1 ~(vec binding) ~code))
+      `(dotimes-1 ~(vec (first bindings')) ~@body)
+      (rest bindings')))))
 
 #?(:clj
-(defmacro fortimes
+(defmacro fortimes ; TODO replace the body of this with `reduce` once it becomes as efficient as `dotimes`
   "`dotimes` meets `for`"
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [v# (transient [])]
      (dotimes [~i ~n] (conj! v# (do ~@body)))
      (persistent! v#))))
+
+; TODO deduplicate all the `fortimes` array code
+#?(:clj
+(defmacro fortimes:objects
+  "`dotimes` meets `for`, efficiently wrapped into an object array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (Array/newUninitialized1dObjectArray n#)]
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
+     v#)))
+
+#?(:clj
+(defmacro fortimes:objects2
+  "`dotimes` meets `for`, efficiently wrapped into an object[][] array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (Array/newUninitialized2dObjectArray n#)]
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
+     v#)))
+
+#?(:clj
+(defmacro fortimes:doubles
+  "`dotimes` meets `for`, efficiently wrapped into an double array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (Array/newUninitialized1dDoubleArray n#)]
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
+     v#)))
+
+#?(:clj
+(defmacro fortimes:doubles2
+  "`dotimes` meets `for`, efficiently wrapped into an double[][] array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (Array/newUninitialized2dDoubleArray n#)]
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
+     v#)))
+
+#?(:clj
+(defmacro fortimes:doubles3
+  "`dotimes` meets `for`, efficiently wrapped into an double[][][] array"
+  [[i n & xs'] & body]
+  (assert (empty? xs'))
+  `(let [n# ~n v# (Array/newUninitialized2dDoubleArray n#)]
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
+     v#)))
 
 #?(:clj
 (defmacro while-let
@@ -384,3 +469,23 @@
             ret
             :else (recur (f ret (c/get xs0 i) (c/get xs1 i))
                          (unchecked-inc i)))))))
+
+(defnt reduce-multi:objects
+  "Reduces, mapping multiple reducing functions to multiple return values
+   of `reduce`.
+   Returns the aggregation of values as an object array."
+  [#{+vec? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
+  (reduce
+    (fn [^objects rets x]
+      (doseqi [f fs ^long i] (c/assoc! rets i (f (c/get rets i) x)))
+      rets)
+    (->> fs (map+ call) (c/join! (c/->objects-nd (c/count fs)))) ; TODO inefficient if `(count fs)` isn't known
+    xs))
+
+(defnt reduce-multi
+  "Reduces, mapping multiple reducing functions to multiple return values
+   of `reduce`."
+  {:usage `{(reduce-multi [+ *] (range 1 5))
+            [[10 24]]}}
+  [#{+vec? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
+  (vec (reduce-multi:objects fs xs))) ; TODO is this faster or is transient `assoc!` better?
