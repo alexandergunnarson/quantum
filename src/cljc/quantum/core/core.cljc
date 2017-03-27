@@ -26,6 +26,7 @@
 (defonce registered-components (atom {}))
 
 (defn ->sentinel [] #?(:clj (Object.) :cljs #js {}))
+(defn ->object   [] #?(:clj (Object.) :cljs #js {}))
 
 ; ===== TYPE PREDICATES =====
 
