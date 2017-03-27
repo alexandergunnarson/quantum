@@ -1,12 +1,13 @@
 (ns quantum.numeric.statistics.core
   (:refer-clojure :exclude
-    [for nth count take drop first last map mod frequencies])
+    [for nth count take drop first last map mod frequencies, reduce])
   (:require
     [quantum.core.data.map
       :refer [!hash-map]]
     [quantum.core.collections                :as coll
-      :refer [nth, lasti drop, take take+, map map+, filter+
-              first, for, last, count, join, frequencies]]
+      :refer [nth, lasti drop, take take+, map map+ map-vals+, filter+
+              first, for, last, count, join, frequencies
+              reduce reduce-multi]]
     [quantum.core.fn
       :refer [fn1 fn&2 fnl fn-> <-]]
     [quantum.core.log                        :as log]
@@ -42,7 +43,20 @@
   "Arithmetic mean"
   [xs]
   (let [[sum ct] (num/sum+count xs)]
-    (when (> ct 0) (*div* sum ct))))
+    (when (> ct 0) (/ sum ct))))
+
+(defnt mean-vals+
+  "Computes the mean of the (map) vals.
+   Expects a reducible containing mergeable maps."
+  ([^+vec? xs] ; TODO must be counted and reducible, containing mergeables
+    (let [ct (count xs)]
+      (->> xs
+           (reduce (partial merge-with +))
+           (map-vals+ (fn1 / ct)))))
+  ([^default xs] ; TODO must be non-counted and reducible, containing mergeables
+         ;; TODO use `reduce-multi:objects` and alt-destructuring
+    (let [[ct m] (->> xs (reduce-multi [coll/count:rfn (partial merge-with +)]))]
+      (->> m (map-vals+ (fn1 / ct))))))
 
 (defalias arithmetic-mean mean)
 
@@ -60,6 +74,9 @@
 
 ; For the moment we take the easy option of sorted samples
 ; TODO abstract this to partition-and-return-index
+; Methods for average O(n) median search in unsorted contexts exist, including introselect and Tibshirani's binmedian.
+; For large datasets, the median can be approximated in a single pass using Chamber's incremental quantile estimation.
+
 (defn median
   "Computes the median of a sorted data set.
    References: http://en.wikipedia.org/wiki/Median"
@@ -107,7 +124,7 @@
       (->> xs
            (map+ (fn-> (- mean') sq))
            sum
-           (<- (/ (- ct diff)))))))
+           (<- / (- ct diff))))))
 
 (#?(:clj defnt' :cljs defnt) mse:predictor
   "The mean squared error between a vector of predictions `p•` and observed values `o•`."
@@ -133,13 +150,15 @@
 ; TODO should be able to use custom predicate
 (#?(:clj defnt' :cljs defnt) accuracy
   "The accuracy of a vector of predictions `p•` w.r.t. a vector of observed values `o•`."
-  [#_indexed? ^+vec? p• #_indexed? ^+vec? o•] ; TODO other indexed types
-  (let [ct (count p•)]
-    (->> (tens/v-op+ = p• o•)
-         #_(map+ = predictions actuals) ; TODO assert same count
-         (filter+ true?)
-         count
-         (<- / ct))))
+  ([#_indexed? ^+vec? p• #_indexed? ^+vec? o•]
+    (accuracy p• o• =)) ; TODO other indexed types
+  ([#_indexed? ^+vec? p• #_indexed? ^+vec? o• compf]
+    (let [ct (count p•)] ; TODO allow for p• of unknown count via `reduce-multi` and `count:rfn`
+      (->> (tens/v-op+ compf p• o•)
+           #_(map+ = predictions actuals) ; TODO assert same count
+           (filter+ true?)
+           count
+           (<- / ct)))))
 
 (defn semivariance
   "Computes the semivariance of a set of values with respect to a given cutoff value."
