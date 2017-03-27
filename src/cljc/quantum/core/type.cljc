@@ -61,8 +61,8 @@
 
 (def types           tcore/types          )
 
-#?(:clj (defalias static-cast tcore/static-cast))
-#?(:clj (defalias cast-depth  ana/cast-depth))
+#?(:clj (defalias static-cast       tcore/static-cast))
+#?(:clj (defalias static-cast-depth ana/static-cast-depth))
 
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 
@@ -115,6 +115,7 @@
          (defnt +sorted-map?   ([^+sorted-map?   x] true) ([^default x] false))
          (defnt sorted-map?    ([^sorted-map?    x] true) ([^default x] false))
          (defnt +map?          ([^+map?          x] true) ([^default x] false))
+         (defnt !map?          ([^!map?          x] true) ([^default x] false))
          (defnt map?           ([^map?           x] true) ([^default x] false))
 
          (defnt +unsorted-set? ([^+unsorted-set? x] true) ([^default x] false))
@@ -132,6 +133,7 @@
          (defnt lseq?          ([^lseq?          x] true) ([^default x] false))
          (defnt sequential?    ([^sequential?    x] true) ([^default x] false))
          (defnt counted?       ([^counted?       x] true) ([^default x] false))
+         (defnt reducer?       ([^reducer?       x] true) ([^default x] false))
          (defalias seqable? qcore/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))

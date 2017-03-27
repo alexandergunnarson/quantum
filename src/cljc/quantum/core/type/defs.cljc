@@ -301,88 +301,137 @@
 
 ; ===== MAPS ===== ; Associative
 
-(def +array-map-types     '{:clj  #{clojure.lang.PersistentArrayMap}
-                            :cljs #{cljs.core/PersistentArrayMap}})
-(def !+array-map-types    '{:clj  #{clojure.lang.PersistentArrayMap$TransientArrayMap}
-                            :cljs #{cljs.core/TransientArrayMap}})
-(def ?!+array-map-types    (cond-union !+array-map-types +array-map-types))
-(def !array-map-types      {})
-(def !!array-map-types     {})
-(def array-map-types       (cond-union ?!+array-map-types
-                                       !array-map-types !!array-map-types))
+(def +array-map-types               '{:clj  #{clojure.lang.PersistentArrayMap}
+                                      :cljs #{cljs.core/PersistentArrayMap}})
+(def !+array-map-types              '{:clj  #{clojure.lang.PersistentArrayMap$TransientArrayMap}
+                                      :cljs #{cljs.core/TransientArrayMap}})
+(def ?!+array-map-types              (cond-union !+array-map-types +array-map-types))
+(def !array-map-types                {})
+(def !!array-map-types               {})
+(def array-map-types                 (cond-union ?!+array-map-types
+                                                 !array-map-types !!array-map-types))
 
-(def +hash-map-types      '{:clj  #{clojure.lang.PersistentHashMap}
-                            :cljs #{cljs.core/PersistentHashMap}})
-(def !+hash-map-types     '{:clj  #{clojure.lang.PersistentHashMap$TransientHashMap}
-                            :cljs #{cljs.core/TransientHashMap}})
-(def ?!+hash-map-types     (cond-union  !+hash-map-types   +hash-map-types))
-(def !hash-map-types      '{:clj  #{java.util.HashMap
-                                    java.util.IdentityHashMap}
-                            :cljs #{goog.structs.Map}})
-(def !!hash-map-types     '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
-(def hash-map-types        (cond-union ?!+hash-map-types
-                                       !hash-map-types !!hash-map-types))
+(def +hash-map-types                '{:clj  #{clojure.lang.PersistentHashMap}
+                                      :cljs #{cljs.core/PersistentHashMap}})
+(def !+hash-map-types               '{:clj  #{clojure.lang.PersistentHashMap$TransientHashMap}
+                                      :cljs #{cljs.core/TransientHashMap}})
+(def ?!+hash-map-types               (cond-union  !+hash-map-types   +hash-map-types))
+(def !hash-map-types:int->ref       '{:clj  #{it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap
+                                              it.unimi.dsi.fastutil.ints.Int2ReferenceOpenCustomHashMap}})
+(def !hash-map-types:long->ref      '{:clj  #{it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap
+                                              it.unimi.dsi.fastutil.longs.Long2ReferenceOpenCustomHashMap}})
+(def !hash-map-types:double->ref    '{:clj  #{it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenHashMap
+                                              it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenCustomHashMap}})
+(def !hash-map-types:ref->ref       '{:clj  #{java.util.HashMap
+                                              java.util.IdentityHashMap}
+                                      :cljs #{goog.structs.Map}})
+(def !hash-map-types                 (cond-union !hash-map-types:int->ref
+                                                 !hash-map-types:long->ref
+                                                 !hash-map-types:double->ref
+                                                 !hash-map-types:ref->ref))
+(def !!hash-map-types               '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
+(def hash-map-types                  (cond-union ?!+hash-map-types
+                                                 !hash-map-types !!hash-map-types))
 
-(def +unsorted-map-types   (cond-union   +hash-map-types   +array-map-types))
-(def !+unsorted-map-types  (cond-union  !+hash-map-types  !+array-map-types))
-(def ?!+unsorted-map-types (cond-union ?!+hash-map-types ?!+array-map-types))
-(def !unsorted-map-types   !hash-map-types)
-(def !!unsorted-map-types  !!hash-map-types)
-(def unsorted-map-types    (cond-union ?!+unsorted-map-types
-                                       !unsorted-map-types !!unsorted-map-types))
+(def +unsorted-map-types             (cond-union   +hash-map-types   +array-map-types))
+(def !+unsorted-map-types            (cond-union  !+hash-map-types  !+array-map-types))
+(def ?!+unsorted-map-types           (cond-union ?!+hash-map-types ?!+array-map-types))
+(def !unsorted-map-types:int->ref    !hash-map-types:int->ref)
+(def !unsorted-map-types:long->ref   !hash-map-types:long->ref)
+(def !unsorted-map-types:double->ref !hash-map-types:double->ref)
+(def !unsorted-map-types:ref->ref    !hash-map-types:ref->ref)
+(def !unsorted-map-types             !hash-map-types)
+(def !!unsorted-map-types            !!hash-map-types)
+(def unsorted-map-types              (cond-union ?!+unsorted-map-types
+                                                 !unsorted-map-types !!unsorted-map-types))
 
-(def +sorted-map-types    '{:clj  #{clojure.lang.PersistentTreeMap}
-                            :cljs #{cljs.core/PersistentTreeMap   }})
-(def !+sorted-map-types    {})
-(def ?!+sorted-map-types   (cond-union +sorted-map-types !+sorted-map-types))
-(def !sorted-map-types    '{:clj  #{java.util.TreeMap}
-                            :cljs #{goog.structs.AvlTree}})
-(def !!sorted-map-types    {})
-(def sorted-map-types      {:clj  (set/union (:clj ?!+sorted-map-types)
-                                             '#{java.util.SortedMap})
-                            :cljs (set/union (:cljs +sorted-map-types)
-                                             (:cljs !sorted-map-types))})
-(def !+map-types           {:clj  '#{clojure.lang.ITransientMap}
-                            :cljs (set/union (:cljs !+unsorted-map-types))})
-(def +map-types            {:clj  '#{clojure.lang.IPersistentMap}
-                            :cljs (set/union (:cljs +unsorted-map-types)
-                                             (:cljs +sorted-map-types))})
-(def ?!+map-types          (cond-union !+map-types +map-types))
+(def +sorted-map-types            '{:clj  #{clojure.lang.PersistentTreeMap}
+                                    :cljs #{cljs.core/PersistentTreeMap   }})
+(def !+sorted-map-types            {})
+(def ?!+sorted-map-types           (cond-union +sorted-map-types !+sorted-map-types))
+(def !sorted-map-types:int->ref    {})
+(def !sorted-map-types:long->ref   {})
+(def !sorted-map-types:double->ref {})
+(def !sorted-map-types:ref->ref   '{:clj  #{java.util.TreeMap}
+                                    :cljs #{goog.structs.AvlTree}})
+(def !sorted-map-types             (cond-union !sorted-map-types:int->ref
+                                               !sorted-map-types:long->ref
+                                               !sorted-map-types:double->ref
+                                               !sorted-map-types:ref->ref))
+(def !!sorted-map-types            {})
+(def sorted-map-types              {:clj  (set/union (:clj ?!+sorted-map-types)
+                                                     '#{java.util.SortedMap})
+                                    :cljs (set/union (:cljs +sorted-map-types)
+                                                     (:cljs !sorted-map-types))})
+(def !+map-types                   {:clj  '#{clojure.lang.ITransientMap}
+                                    :cljs (set/union (:cljs !+unsorted-map-types))})
+(def +map-types                    {:clj  '#{clojure.lang.IPersistentMap}
+                                    :cljs (set/union (:cljs +unsorted-map-types)
+                                                     (:cljs +sorted-map-types))})
+(def ?!+map-types                  (cond-union !+map-types +map-types))
+
+(def !map-types:int->ref           {:clj '#{it.unimi.dsi.fastutil.ints.Int2ReferenceMap}})
+(def !map-types:long->ref          {:clj '#{it.unimi.dsi.fastutil.longs.Long2ReferenceMap}})
+(def !map-types:double->ref        {:clj '#{it.unimi.dsi.fastutil.doubles.Double2ReferenceMap}})
 ; technically also `object` for CLJS
-(def !map-types            (cond-union !unsorted-map-types !sorted-map-types))
-(def !!map-types           (cond-union !!unsorted-map-types !!sorted-map-types))
-(def map-types             {:clj  (set/union (:clj !+map-types)
-                                    '#{; TODO IPersistentMap as well, yes, but all persistent Clojure maps implement java.util.Map
-                                       java.util.Map})
-                            :cljs (set/union (:cljs ?!+map-types)
-                                             (:cljs !map-types)
-                                             (:cljs !!map-types))})
+(def !map-types:ref->ref           (cond-union !unsorted-map-types:ref->ref
+                                               !sorted-map-types:ref->ref))
+(def !map-types                    (cond-union !unsorted-map-types !sorted-map-types))
+(def !!map-types                   (cond-union !!unsorted-map-types !!sorted-map-types))
+(def map-types                     {:clj  (set/union (:clj !+map-types)
+                                            '#{; TODO IPersistentMap as well, yes, but all persistent Clojure maps implement java.util.Map
+                                               java.util.Map})
+                                    :cljs (set/union (:cljs ?!+map-types)
+                                                     (:cljs !map-types)
+                                                     (:cljs !!map-types))})
 
 ; ===== SETS ===== ; Associative; A special type of Map whose keys and vals are identical
 
-(def +hash-set-types      '{:clj  #{clojure.lang.PersistentHashSet}
-                            :cljs #{cljs.core/PersistentHashSet}})
-(def !+hash-set-types     '{:clj  #{clojure.lang.PersistentHashSet$TransientHashSet}
-                            :cljs #{cljs.core/TransientHashSet}})
-(def ?!+hash-set-types     (cond-union !+hash-set-types +hash-set-types))
-(def !hash-set-types      '{:clj  #{java.util.HashSet}
-                            :cljs #{goog.structs.Set}})
-(def !!hash-set-types      {}) ; technically you can make something from ConcurrentHashMap but...
-(def hash-set-types        (cond-union ?!+hash-set-types
-                             !hash-set-types !!hash-set-types))
+(def +hash-set-types            '{:clj  #{clojure.lang.PersistentHashSet}
+                                  :cljs #{cljs.core/PersistentHashSet}})
+(def !+hash-set-types           '{:clj  #{clojure.lang.PersistentHashSet$TransientHashSet}
+                                  :cljs #{cljs.core/TransientHashSet}})
+(def ?!+hash-set-types           (cond-union !+hash-set-types +hash-set-types))
+(def !hash-set-types:int        '{:clj  #{it.unimi.dsi.fastutil.ints.IntOpenHashSet
+                                          it.unimi.dsi.fastutil.ints.IntOpenCustomHashSet}})
+(def !hash-set-types:long       '{:clj  #{it.unimi.dsi.fastutil.longs.LongOpenHashSet
+                                          it.unimi.dsi.fastutil.longs.LongOpenCustomHashSet}})
+(def !hash-set-types:double     '{:clj  #{it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet
+                                          it.unimi.dsi.fastutil.doubles.DoubleOpenCustomHashSet}})
+(def !hash-set-types:ref        '{:clj  #{java.util.HashSet
+                                          #_java.util.IdentityHashSet}
+                                  :cljs #{goog.structs.Set}})
+(def !hash-set-types             (cond-union !hash-set-types:int
+                                             !hash-set-types:long
+                                             !hash-set-types:double
+                                             !hash-set-types:ref))
+(def !!hash-set-types            {}) ; technically you can make something from ConcurrentHashMap but...
+(def hash-set-types              (cond-union ?!+hash-set-types
+                                   !hash-set-types !!hash-set-types))
 
-(def +unsorted-set-types     +hash-set-types)
-(def !+unsorted-set-types   !+hash-set-types)
-(def ?!+unsorted-set-types ?!+hash-set-types)
-(def !unsorted-set-types     !hash-set-types)
-(def !!unsorted-set-types   !!hash-set-types)
-(def unsorted-set-types       hash-set-types)
+(def +unsorted-set-types        +hash-set-types)
+(def !+unsorted-set-types      !+hash-set-types)
+(def ?!+unsorted-set-types    ?!+hash-set-types)
+(def !unsorted-set-types:int    !hash-set-types:int)
+(def !unsorted-set-types:long   !hash-set-types:long)
+(def !unsorted-set-types:double !hash-set-types:double)
+(def !unsorted-set-types:ref    !hash-set-types:ref)
+(def !unsorted-set-types        !hash-set-types)
+(def !!unsorted-set-types      !!hash-set-types)
+(def unsorted-set-types          hash-set-types)
 
-(def +sorted-set-types    '{:clj  #{clojure.lang.PersistentTreeSet}
-                            :cljs #{cljs.core/PersistentTreeSet   }})
-(def !+sorted-set-types    {})
-(def ?!+sorted-set-types   (cond-union +sorted-set-types !+sorted-set-types))
-(def !sorted-set-types    '{:clj  #{java.util.TreeSet}}) ; CLJS can have via AVLTree with same KVs
+(def +sorted-set-types          '{:clj  #{clojure.lang.PersistentTreeSet}
+                                  :cljs #{cljs.core/PersistentTreeSet   }})
+(def !+sorted-set-types          {})
+(def ?!+sorted-set-types         (cond-union +sorted-set-types !+sorted-set-types))
+(def !sorted-set-types:int         {})
+(def !sorted-set-types:long      {})
+(def !sorted-set-types:double    {})
+(def !sorted-set-types:ref      '{:clj  #{java.util.TreeSet}})  ; CLJS can have via AVLTree with same KVs
+(def !sorted-set-types           (cond-union !sorted-set-types:int
+                                             !sorted-set-types:long
+                                             !sorted-set-types:double
+                                             !sorted-set-types:ref))
 (def !!sorted-set-types    {})
 (def sorted-set-types      {:clj  (set/union (:clj +sorted-set-types)
                                              '#{java.util.SortedSet})
@@ -396,6 +445,11 @@
                             :cljs (set/union (:cljs +unsorted-set-types)
                                              (:cljs +sorted-set-types))})
 (def ?!+set-types          (cond-union !+set-types +set-types))
+(def !set-types:int        {:clj '#{it.unimi.dsi.fastutil.ints.IntSet}})
+(def !set-types:long       {:clj '#{it.unimi.dsi.fastutil.longs.LongSet}})
+(def !set-types:double     {:clj '#{it.unimi.dsi.fastutil.doubles.DoubleSet}})
+(def !set-types:ref        (cond-union !unsorted-set-types:ref
+                                       !sorted-set-types:ref))
 (def !set-types            (cond-union !unsorted-set-types !sorted-set-types))
 (def !!set-types           (cond-union !!unsorted-set-types !!sorted-set-types))
 (def set-types             {:clj  (set/union (:clj !+set-types)
@@ -428,6 +482,7 @@
                                    :float         js/Float32Array
                                    :double        js/Float64Array
                                    :object        (type (cljs.core/array))}})
+(def undistinguished-array-1d-types (->> array-1d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {})))
 (def array-2d-types        {:clj (array-nd-types 2 )})
 (def array-3d-types        {:clj (array-nd-types 3 )})
 (def array-4d-types        {:clj (array-nd-types 4 )})
@@ -460,7 +515,8 @@
 
 (def !array-list-types    '{:clj  #{java.util.ArrayList
                                     java.util.Arrays$ArrayList} ; indexed and associative, but not extensible
-                            :cljs #{cljs.core.ArrayList}}) ; TODO what is this?
+                            :cljs #_cljs.core.ArrayList ; not used
+                                  #{(type (cljs.core/array))}}) ; because supports .push etc.
 ; svec = "spliceable vector"
 (def svec-types           '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
                             :cljs #{clojure.core.rrb_vector.rrbt.Vector}})
@@ -471,7 +527,7 @@
                             :cljs #{cljs.core/TransientVector}})
 (def ?!+vec-types          (cond-union +vec-types !+vec-types))
 (def !vec-types           '{:clj  #{java.util.ArrayList}
-                            :cljs #{cljs.core.ArrayList}})
+                            :cljs #{(type (cljs.core/array))}}) ; because supports .push etc.
                            ; java.util.Vector is deprecated, because you can
                            ; just create a synchronized wrapper over an ArrayList
                            ; via java.util.Collections
@@ -638,162 +694,187 @@
                              {:clj  '#{fast_zip.core.ZipperLocation}
                               :cljs '#{fast-zip.core/ZipperLocation}}))
 
+(def booleans-2d-types {:clj #{(-> array-2d-types :clj :boolean)} :cljs #{(-> array-2d-types :cljs :boolean)}})
+(def bytes-2d-types    {:clj #{(-> array-2d-types :clj :byte   )} :cljs #{(-> array-2d-types :cljs :byte   )}})
+(def chars-2d-types    {:clj #{(-> array-2d-types :clj :char   )} :cljs #{(-> array-2d-types :cljs :char   )}})
+(def shorts-2d-types   {:clj #{(-> array-2d-types :clj :short  )} :cljs #{(-> array-2d-types :cljs :short  )}})
+(def ints-2d-types     {:clj #{(-> array-2d-types :clj :int    )} :cljs #{(-> array-2d-types :cljs :int    )}})
+(def longs-2d-types    {:clj #{(-> array-2d-types :clj :long   )} :cljs #{(-> array-2d-types :cljs :long   )}})
+(def floats-2d-types   {:clj #{(-> array-2d-types :clj :float  )} :cljs #{(-> array-2d-types :cljs :float  )}})
+(def doubles-2d-types  {:clj #{(-> array-2d-types :clj :double )} :cljs #{(-> array-2d-types :cljs :double )}})
+(def objects-2d-types  {:clj #{(-> array-2d-types :clj :object )} :cljs #{(-> array-2d-types :cljs :object )}})
+(def numeric-2d-types  (cond-union bytes-2d-types
+                                   chars-2d-types
+                                   shorts-2d-types
+                                   ints-2d-types
+                                   longs-2d-types
+                                   floats-2d-types
+                                   doubles-2d-types))
+
 ; ===== PREDICATES ===== ;
 
 (def types-0
   {; ----- PRIMITIVES ----- ;
 
-   'primitive?       primitive-types
-   'prim?            prim-types
-   'boxed?           primitive-boxed-types
-   'integral?        integral-types
+   'primitive?        primitive-types
+   'prim?             prim-types
+   'boxed?            primitive-boxed-types
+   'integral?         integral-types
 
-   'char?            char-types
-   'boolean?         bool-types
-   'bool?            bool-types
-   'byte?            byte-types
-   'short?           short-types
-   'int?             int-types
+   'char?             char-types
+   'boolean?          bool-types
+   'bool?             bool-types
+   'byte?             byte-types
+   'short?            short-types
+   'int?              int-types
    ; The closest thing to a native int the platform has
-   'nat-int?        `{:clj  #{~'int}
-                      :cljs #{(type 123)}}
-   'long?            long-types
-   '?long            boxed-long-types
+   'nat-int?         `{:clj  #{~'int}
+                       :cljs #{(type 123)}}
+   'long?             long-types
+   '?long             boxed-long-types
    ; The closest thing to a native long the platform has
-   'nat-long?       `{:clj  #{~'long}
-                      :cljs #{(type 123)}}
-   'float?           float-types
-   'double?          double-types
-   '?double          boxed-double-types
+   'nat-long?        `{:clj  #{~'long}
+                       :cljs #{(type 123)}}
+   'float?            float-types
+   'double?           double-types
+   '?double           boxed-double-types
 
    ; INTEGERS
 
-   'integer?         integer-types
-   'bigint?          bigint-types
+   'integer?          integer-types
+   'bigint?           bigint-types
 
    ; DECIMALS
 
-   'decimal?         decimal-types
-   'bigdec?          bigdec-types
+   'decimal?          decimal-types
+   'bigdec?           bigdec-types
 
    ; NUMBERS
 
-   'ratio?           ratio-types
+   'ratio?            ratio-types
 
-   'number?          number-types
-   'num?             number-types
+   'number?           number-types
+   'num?              number-types
    'pnumber?         `{:cljs #{(type 123)}}
    'pnum?            `{:cljs #{(type 123)}}
 
    ; ===== COLLECTIONS ===== ;
 
-   'coll?            coll-types
+   'coll?             coll-types
 
-   'map-entry?       map-entry-types
+   'map-entry?        map-entry-types
 
    ; SEQUENTIAL
 
-   'sequential?      sequential-types
+   'sequential?       sequential-types
 
-   'cons?            cons-types
-   'misc-seq?        misc-seq-types
-   'lseq?            lseq-types
-   'non-list-seq?    non-list-seq-types
+   'cons?             cons-types
+   'misc-seq?         misc-seq-types
+   'lseq?             lseq-types
+   'non-list-seq?     non-list-seq-types
 
    ; Denotes unindexed list particularly
-   'dlist?           dlist-types
-   'cdlist?          cdlist-types
-   '+list?           +list-types
-   '!+list?          '!+list-types
-   '?!+list?         '?!+list-types
-   '!list?           '!list-types
-   '!!list?          '!!list-types
-   'list?            list-types
+   'dlist?            dlist-types
+   'cdlist?           cdlist-types
+   '+list?            +list-types
+   '!+list?           '!+list-types
+   '?!+list?          '?!+list-types
+   '!list?            '!list-types
+   '!!list?           '!!list-types
+   'list?             list-types
 
-   'seq?             seq-types
+   'seq?              seq-types
 
    ; ----- ASSOCIATIVE ----- ;
 
-   'associative?     associative-types
+   'associative?      associative-types
 
    ; MAP
 
-   '+array-map?      +array-map-types
-   '!+array-map?     !+array-map-types
-   '?!+array-map?    ?!+array-map-types
-   '!array-map?      !array-map-types
-   '!!array-map?     !!array-map-types
-   'array-map?       array-map-types
+   '+array-map?       +array-map-types
+   '!+array-map?      !+array-map-types
+   '?!+array-map?     ?!+array-map-types
+   '!array-map?       !array-map-types
+   '!!array-map?      !!array-map-types
+   'array-map?        array-map-types
 
-   '+hash-map?       +hash-map-types
-   '!+hash-map?      !+hash-map-types
-   '?!+hash-map?     ?!+hash-map-types
-   '!hash-map?       !hash-map-types
-   '!!hash-map?      !!hash-map-types
-   'hash-map?        hash-map-types
+   '+hash-map?        +hash-map-types
+   '!+hash-map?       !+hash-map-types
+   '?!+hash-map?      ?!+hash-map-types
+   '!hash-map?        !hash-map-types
+   '!!hash-map?       !!hash-map-types
+   'hash-map?         hash-map-types
 
-   '+unsorted-map?   +unsorted-map-types
-   '!+unsorted-map?  !+unsorted-map-types
-   '?!+unsorted-map? ?!+unsorted-map-types
-   '!unsorted-map?   !unsorted-map-types
-   '!!unsorted-map?  !!unsorted-map-types
-   'unsorted-map?    unsorted-map-types
+   '+unsorted-map?    +unsorted-map-types
+   '!+unsorted-map?   !+unsorted-map-types
+   '?!+unsorted-map?  ?!+unsorted-map-types
+   '!unsorted-map?    !unsorted-map-types
+   '!!unsorted-map?   !!unsorted-map-types
+   'unsorted-map?     unsorted-map-types
 
-   '+sorted-map?     +sorted-map-types
-   '!+sorted-map?    !+sorted-map-types
-   '?!+sorted-map?   ?!+sorted-map-types
-   '!sorted-map?     !sorted-map-types
-   '!!sorted-map?    !!sorted-map-types
-   'sorted-map?      sorted-map-types
+   '+sorted-map?      +sorted-map-types
+   '!+sorted-map?     !+sorted-map-types
+   '?!+sorted-map?    ?!+sorted-map-types
+   '!sorted-map?      !sorted-map-types
+   '!!sorted-map?     !!sorted-map-types
+   'sorted-map?       sorted-map-types
 
-   '+map?            +map-types
-   '!+map?           !+map-types
-   '?!+map?          ?!+map-types
-   '!map?            !map-types
-   '!!map?           !!map-types
-   'map?             map-types
+   '+map?             +map-types
+   '!+map?            !+map-types
+   '?!+map?           ?!+map-types
+   '!map:int->ref?    !map-types:int->ref
+   '!map:long->ref?   !map-types:long->ref
+   '!map:double->ref? !map-types:double->ref
+   '!map:ref->ref?    !map-types:ref->ref
+   '!map?             !map-types
+   '!!map?            !!map-types
+   'map?              map-types
 
    ; SET
 
-   '+hash-set?       +hash-set-types
-   '!+hash-set?      !+hash-set-types
-   '?!+hash-set?     ?!+hash-set-types
-   '!hash-set?       !hash-set-types
-   '!!hash-set?      !!hash-set-types
-   'hash-set?        hash-set-types
+   '+hash-set?        +hash-set-types
+   '!+hash-set?       !+hash-set-types
+   '?!+hash-set?      ?!+hash-set-types
+   '!hash-set?        !hash-set-types
+   '!!hash-set?       !!hash-set-types
+   'hash-set?         hash-set-types
 
-   '+unsorted-set?   +unsorted-set-types
-   '!+unsorted-set?  !+unsorted-set-types
-   '?!+unsorted-set? ?!+unsorted-set-types
-   '!unsorted-set?   !unsorted-set-types
-   '!!unsorted-set?  !!unsorted-set-types
-   'unsorted-set?    unsorted-set-types
+   '+unsorted-set?    +unsorted-set-types
+   '!+unsorted-set?   !+unsorted-set-types
+   '?!+unsorted-set?  ?!+unsorted-set-types
+   '!unsorted-set?    !unsorted-set-types
+   '!!unsorted-set?   !!unsorted-set-types
+   'unsorted-set?     unsorted-set-types
 
-   '+sorted-set?     +sorted-set-types
-   '!+sorted-set?    !+sorted-set-types
-   '?!+sorted-set?   ?!+sorted-set-types
-   '!sorted-set?     !sorted-set-types
-   '!!sorted-set?    !!sorted-set-types
-   'sorted-set?      sorted-set-types
+   '+sorted-set?      +sorted-set-types
+   '!+sorted-set?     !+sorted-set-types
+   '?!+sorted-set?    ?!+sorted-set-types
+   '!sorted-set?      !sorted-set-types
+   '!!sorted-set?     !!sorted-set-types
+   'sorted-set?       sorted-set-types
 
-   '+set?            +set-types
-   '!+set?           !+set-types
-   '?!+set?          ?!+set-types
-   '!set?            !set-types
-   '!!+set?          !!set-types
-   'set?             set-types
+   '+set?             +set-types
+   '!+set?            !+set-types
+   '?!+set?           ?!+set-types
+   '!set:int?         !set-types:int
+   '!set:long?        !set-types:long
+   '!set:double?      !set-types:double
+   '!set:ref?         !set-types:ref
+   '!set?             !set-types
+   '!!+set?           !!set-types
+   'set?              set-types
 
    ; INDEXED
 
-   'indexed?         indexed-types
+   'indexed?          indexed-types
 
    ; SORTED
 
-   'sorted?          sorted-types
+   'sorted?           sorted-types
 
    ; COUNTED
 
-   'counted?         counted-types
+   'counted?          counted-types
 
    ; ----- ASSOCIATIVE+INDEXED ----- ;
 
@@ -827,12 +908,18 @@
    'doubles?         {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
    'objects?         {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
 
-   'doubles-2d?      {:clj #{(-> array-2d-types :clj :double )} :cljs #{(-> array-2d-types :cljs :double )}}
-   'objects-2d?      {:clj #{(-> array-2d-types :clj :object )} :cljs #{(-> array-2d-types :cljs :object )}}
-
    'array-1d?        {:clj  (->> array-1d-types :clj  vals set)
                       :cljs (->> array-1d-types :cljs vals set)}
-
+   'booleans-2d?     booleans-2d-types
+   'bytes-2d?        bytes-2d-types
+   'chars-2d?        chars-2d-types
+   'shorts-2d?       shorts-2d-types
+   'ints-2d?         ints-2d-types
+   'longs-2d?        longs-2d-types
+   'floats-2d?       floats-2d-types
+   'doubles-2d?      doubles-2d-types
+   'objects-2d?      objects-2d-types
+   'numeric-2d?      numeric-2d-types
    'array-2d?        {:clj  (->> array-2d-types :clj  vals set)
                       :cljs (->> array-2d-types :cljs vals set)}
    'array-3d?        {:clj  (->> array-3d-types :clj  vals set)
