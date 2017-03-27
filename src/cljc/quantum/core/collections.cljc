@@ -44,7 +44,7 @@
               conj! assoc assoc! assoc-in dissoc dissoc! disj!
               boolean?
               class
-              -])
+              ])
            (:require
              [clojure.core                            :as c      ]
              [fast-zip.core                           :as zip    ]
@@ -65,6 +65,8 @@
              [quantum.core.collections.tree           :as tree   ]
              [quantum.core.collections.zippers        :as qzip   ]
              [quantum.core.collections.logic          :as clog   ]
+             [quantum.core.core
+               :refer [->object]]
              [quantum.core.error                      :as err
                :refer [->ex TODO]]
              [quantum.core.fn                         :as fn
@@ -78,8 +80,7 @@
              [quantum.core.macros                     :as macros
                :refer [defnt case-env]]
              [quantum.core.ns                         :as ns]
-             [quantum.core.numeric                    :as num
-               :refer [-]]
+             [quantum.core.numeric                    :as num]
              [quantum.core.reducers                   :as red
                :refer [defeager]]
              [quantum.core.string                     :as str    ]
@@ -103,8 +104,73 @@
               index-of last-index-of
               first second rest last butlast get pop peek nth
               conjl conj! assoc assoc! assoc?! dissoc dissoc! disj!
-              map-entry join empty? empty update! empty? ->array]])
-  #?(:cljs (:import goog.string.StringBuffer)))
+              map-entry join empty? empty update! empty? elem->array]])
+  #?(:clj  (:import java.util.Comparator)
+     :cljs (:import goog.string.StringBuffer)))
+
+
+; ===== MUTABILITY ===== ;
+
+(#?(:clj definterface :cljs defprotocol) IMutableReference
+  (get [#?(:cljs this)])
+  (set [#?(:cljs this) x]))
+
+; TODO create for every primitive datatype as well
+(deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
+  IMutableReference
+  (get [this] val)
+  (set [this x] (set! val x) this)
+  #?(:clj  clojure.lang.IDeref
+     :cljs cljs.core/IDeref)
+  (#?(:clj deref :cljs -deref) [this] val))
+
+#?(:clj (definterface IMutableDouble (^double get []) (set [^double x])))
+
+#?(:clj
+(deftype MutableDouble [^:unsynchronized-mutable ^double val]
+  IMutableDouble      (^double get [this] val) (set [this ^double x] (set! val x))
+  clojure.lang.IDeref (deref [this] val)))
+
+#?(:clj (defnt setm!* ([#{IMutableReference IMutableDouble} x v] (.set x v) v)))
+#?(:clj (defnt getm*  ([#{IMutableReference IMutableDouble} x  ] (.get x))))
+
+        (defnt !ref*    "Creates a mutable reference to an Object."           [        x] (MutableReference. x))
+#?(:clj (defnt !double* "Creates a mutable reference to a primitive double."  [^double x] (MutableDouble.    x)))
+#?(:clj (defmacro !ref    ([ ] `(MutableReference. nil)) ([x] `(!ref*    ~x))))
+#?(:clj (defmacro !double ([ ] `(MutableDouble.    0.0)) ([x] `(!double* ~x))))
+
+#?(:clj (defmacro setm!  "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*  ~x ~v))))
+#?(:clj (defmacro setm!& "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*& ~x ~v))))
+#?(:clj (defmacro getm   "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*   ~x))))
+#?(:clj (defmacro getm&  "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*&  ~x))))
+
+#?(:clj
+(defmacro swapm! [*x0 *x1]
+  `(let [*x0# ~*x0 *x1# ~*x1
+         temp# (getm *x0#)]
+     (setm! *x0# (getm *x1#))
+     (setm! *x1# temp#))))
+
+#?(:clj
+(defmacro getf
+  "Get field"
+  [x field]
+  (let [accessor (symbol
+                   (str "."
+                     (case-env :clj  (str "get" (str/upper-first (name field)))
+                               :cljs (str "-" (name field)))))]
+    `(~accessor ~x))))
+
+#?(:clj
+(defmacro setf!
+  "Set field"
+  [x field v]
+  (let [accessor (symbol
+                   (str "."
+                     (case-env :clj  (str "set" (str/upper-first (name field)))
+                               :cljs (str "-" (name field)))))]
+    (case-env :cljs `(set! (~accessor ~x) ~v)
+                    `(~accessor ~x ~v)))))
 
 (defaliases clog
   seq-or some seq-nor not-any? seq-and every? seq-nand not-every? apply-and apply-or)
@@ -115,7 +181,7 @@
 (defaliases coll key val reverse rseq)
 
 (#?(:clj definline :cljs defn) map-entry
-  "Create a map entry from a and b. Equivalent to a cons cell."
+  "Creates a map entry from a and b."
   [a b]
   #?(:clj  (clojure.lang.MapEntry. a b)
      :cljs [a b]))
@@ -168,6 +234,7 @@
 #?(:clj (defalias conj?!          coll/conj?!       ))
 #?(:clj (defalias disj!           coll/disj!        ))
 #?(:clj (defalias update!         coll/update!      ))
+#?(:clj (defalias aswap!          coll/aswap!       ))
 
         (defalias assoc-extend    soc/assoc-extend   )
         (defalias assoc-in        soc/assoc-in       )
@@ -207,11 +274,13 @@
         (defalias nnil?         base/nnil?        )
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias count&        coll/count&       ))
+        (defalias count:rfn     coll/count:rfn)
 #?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias lasti&        coll/lasti&       ))
 ; ===== CREATION ===== ;
 #?(:clj (defalias empty         coll/empty        ))
 #?(:clj (defalias empty&        coll/empty&       ))
+#?(:clj (defalias blank         coll/blank        ))
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias array-of-type coll/array-of-type))
 #?(:clj (defalias ->vec         coll/->vec        ))
@@ -219,6 +288,7 @@
 ; ===== CONCATENATION ===== ;
 #?(:clj (defalias join          red/join          ))
 #?(:clj (defalias join!         coll/join!        ))
+#?(:clj (defalias join?!        coll/join?!       ))
 #?(:clj (defalias joinl         red/join          ))
 #?(:clj (defalias join'         red/join'         ))
 #?(:clj (defalias joinl'        red/joinl'        ))
@@ -306,38 +376,45 @@
         (defalias reduce-max          red/reduce-max          )
         (defalias reduce-max-key      red/reduce-max-key      )
 
+#?(:clj (defalias elem->array         coll/elem->array        ))
 #?(:clj (defalias ->array             coll/->array            ))
 #?(:clj (defalias ->arr               coll/->arr              ))
 
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-#?(:clj (defalias dotimes     loops/dotimes ))
-#?(:clj (defalias fortimes    loops/fortimes))
-#_(:clj (defalias fortimes:objects loops/fortimes:objects))
-#?(:clj (defalias reduce      loops/reduce  ))
-#?(:clj (defalias reducei     loops/reducei ))
-#?(:clj (defalias reduce*     loops/reduce* ))
-#?(:clj (defalias red-for     loops/red-for ))
-#?(:clj (defalias red-fori    loops/red-fori))
-        (defalias reduce-pair loops/reduce-pair)
-        (defalias reduce-2    loops/reduce-2 )
-        (defalias reducei-2   loops/reducei-2)
+#?(:clj (defalias dotimes           loops/dotimes          ))
+#?(:clj (defalias fortimes          loops/fortimes         ))
+#?(:clj (defalias fortimes:objects  loops/fortimes:objects ))
+#?(:clj (defalias fortimes:objects2 loops/fortimes:objects2))
+#?(:clj (defalias fortimes:doubles  loops/fortimes:doubles ))
+#?(:clj (defalias fortimes:doubles2 loops/fortimes:doubles2))
+#?(:clj (defalias fortimes:doubles3 loops/fortimes:doubles3))
+#?(:clj (defalias reduce       loops/reduce  ))
+#?(:clj (defalias reducei      loops/reducei ))
+#?(:clj (defalias reduce*      loops/reduce* ))
+#?(:clj (defalias reduce-multi loops/reduce-multi))
+#?(:clj (defalias red-for      loops/red-for ))
+#?(:clj (defalias red-fori     loops/red-fori))
+        (defalias reduce-pair  loops/reduce-pair)
+        (defalias reduce-2     loops/reduce-2 )
+        (defalias reducei-2    loops/reducei-2)
 #?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
-#?(:clj (defalias seq-loop    loops/seq-loop))
-#?(:clj (defalias loopr       loops/seq-loop))
-#?(:clj (defalias ifor        loops/ifor    ))
+#?(:clj (defalias seq-loop     loops/seq-loop))
+#?(:clj (defalias loopr        loops/seq-loop))
+#?(:clj (defalias ifor         loops/ifor    ))
 ; ===== COLLECTION COMPREHENSION ===== ;
-#?(:clj (defalias for         loops/for     )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
-#?(:clj (defalias for*        loops/for*    ))
-#?(:clj (defalias for+        red/for+      ))
-#?(:clj (defalias fori+       red/fori+     ))
-#?(:clj (defalias fori        loops/fori    ))
-#?(:clj (defalias fori*       loops/fori*   ))
+#?(:clj (defalias for-join     loops/for-join  ))
+#?(:clj (defalias for-join!    loops/for-join! ))
+#?(:clj (defalias for          loops/for       )) #?(:clj (alter-meta! (var for) c/assoc :macro true))
+#?(:clj (defalias for'         loops/for'      ))
+#?(:clj (defalias for+         red/for+        ))
+#?(:clj (defalias fori         loops/fori      ))
+#?(:clj (defalias fori'        loops/fori'     ))
+#?(:clj (defalias fori+        red/fori+       ))
+#?(:clj (defalias fori-join    loops/fori-join ))
+#?(:clj (defalias fori-join!   loops/fori-join!))
 #?(:clj (defmacro lfor [& args] `(loops/lfor   ~@args)))
-
-
-
 
 #?(:clj (defmacro doseq  [& args] `(loops/doseq  ~@args)))
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
@@ -400,7 +477,8 @@
         (defalias lpartition      c/partition        )
         (defn each+ [f xs] (->> xs (map+ #(do (f %) %))))
 
-(defn gets [coll indices] (->> indices (map+ #(get coll %)) (join [])))
+(defn gets+ [xs indices] (->> indices (map+ #(get xs %))))
+(defn gets  [xs indices] (->> (gets+ xs indices) (join [])))
 ; _______________________________________________________________
 ; ============================ TREE =============================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
@@ -434,29 +512,42 @@
         (defalias zipmap          c/zipmap           )
         (defalias merge           map/merge          )
 
-(defn ->multi-array
-  "Creates an n-dimensional array.
-   The outermost dims go first (e.g. height then width)."
-  {:performance "(->multi-array 1 [3000 3000])
-                 is 24 times faster than:
-                 (to-array-2d (repeat 3000 (repeat 3000 0)))"}
-  ([base-type dims]
-    (when-not (empty? dims)
-      (let [last-dim?  (-> dims count (= 1))
-            sub-arr-0  (when-not last-dim?
-                         (->multi-array base-type (rest dims))) ; recursion
-            sub-type   (if last-dim?
-                           base-type
-                           (class sub-arr-0))
-            super-dim  (first dims)
-            super-arr  (->array sub-type super-dim)]
-            (if last-dim?
-                super-arr
-                (do (assoc! super-arr 0 sub-arr-0)
-                    (dotimes [i (dec super-dim)]
-                      (let [sub-arr-n (->multi-array base-type (rest dims))]
-                        (assoc! super-arr (inc i) sub-arr-n)))
-                    super-arr))))))
+(defn into-nd-array ; TODO make an unchecked version
+  ([arr xs] (TODO))
+  ([arr xs dims] (into-nd-array arr xs dims []))
+  ([arr xs dims indices]
+    (err/assert (t/sequential? xs) {:type (type xs)})
+    (if (-> xs first sequential?)
+        (do (err/assert (= (count xs) (get dims (count indices))))
+            (reducei (fn [_ xs-inner i]
+                       (into-nd-array arr xs-inner dims (conj indices i)))
+                     arr
+                     xs))
+        (do (err/assert (= (count xs) (get dims (count indices))))
+            (reducei (fn [_ x i] (apply coll/assoc-in!*-protocol arr x (conj indices i))) arr xs)))))
+
+(defn seq->array-nd-of-dims
+  [xs elem dims]
+  (into-nd-array (apply coll/elem->array-protocol elem dims) xs dims))
+
+(defn seq->elem+dims
+  ([xs] (seq->elem+dims xs []))
+  ([xs dims]
+    (err/assert (t/sequential? xs) {:type (type xs)})
+    (if (-> xs first t/sequential?)
+        (seq->elem+dims (first xs) (conj dims (count xs)))
+        (let [types (->> xs (map+ type) (join #{}))
+              elem  (if (-> types count (not= 1))
+                        (->object)
+                        (first xs))]
+          {:elem elem :dims (conj dims (count xs))}))))
+
+(defn ->array-nd
+  "Creates an n-dimensional array from nested seqs."
+  ([xs] (->array-nd xs []))
+  ([xs dims]
+    (let [{:keys [elem dims]} (seq->elem+dims xs)]
+      (seq->array-nd-of-dims xs elem dims))))
 
 #?(:clj
 (defn array->dimensionality
@@ -479,7 +570,8 @@
 
 #?(:clj
 (defnt array->vector*
-  ([#{array-1d? Object} arr]
+  ([^objects? arr] (c/vec arr)) ; TODO faster?
+  ([#{booleans? bytes? chars? shorts? ints? longs? floats? doubles?} arr]
    (let [t  (array->array-manager-key (get arr 0))
          ^clojure.core.ArrayManager am (get array-managers t)
          ct (int (count arr))
@@ -1224,9 +1316,9 @@
   ([#{bytes? shorts? chars? ints? longs? floats? doubles?} x]
     (doto x (java.util.Arrays/sort)))
   ([#{objects? !vec?} x] (sort!* x compare))
-  ([#{!vec?}          x compf] (doto x (.sort ^java.util.Comparator compf)))
+  ([#{!vec?}          x compf] (doto x (.sort ^Comparator compf)))
   ([#{objects?}       x compf]
-    (doto x (java.util.Arrays/sort ^java.util.Comparator compf)))))
+    (doto x (java.util.Arrays/sort ^Comparator compf)))))
 
 #?(:clj (defmacro sort! [& args] `(sort!* ~(last args) ~@(butlast args))))
 
@@ -1241,7 +1333,7 @@
   ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf] ; TODO infer
     (sort-by!* x kf compare))
   ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf compf] ; TODO infer
-    (sort!* x (fn [x y] (.compare ^java.util.Comparator compf (kf x) (kf y)))))))
+    (sort!* x (fn [x y] (.compare ^Comparator compf (kf x) (kf y)))))))
 
 #?(:clj (defmacro sort-by! [& args] `(sort-by!* ~(last args) ~@(butlast args))))
 
@@ -1252,9 +1344,9 @@
   ([#{bytes? shorts? chars? ints? longs? floats? doubles?} arr]
     (doto arr (java.util.Arrays/parallelSort)))
   ([#{objects?} arr]
-    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compare)))
+    (doto arr (java.util.Arrays/parallelSort ^Comparator compare)))
   ([#{objects?} arr compf]
-    (doto arr (java.util.Arrays/parallelSort ^java.util.Comparator compf)))))
+    (doto arr (java.util.Arrays/parallelSort ^Comparator compf)))))
 
 #?(:clj (defmacro psort! [& args] `(psort!* ~(last args) ~@(butlast args))))
 
@@ -1264,7 +1356,7 @@
   ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects?} x kf] ; TODO infer
     (psort-by!* x kf compare))
   ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects?} x kf compf] ; TODO infer
-    (psort!* x (fn [x y] (.compare ^java.util.Comparator compf (kf x) (kf y)))))))
+    (psort!* x (fn [x y] (.compare ^Comparator compf (kf x) (kf y)))))))
 
 #?(:clj (defmacro psort-by! [& args] `(psort-by!* ~(last args) ~@(butlast args))))
 
@@ -1274,6 +1366,253 @@
   ([#_(- map? sorted?) #{+hash-map? +array-map?} x] (join (map/sorted-map) x))
   ([#_(- set? sorted?) ^+hash-set? x] (join (sorted-set) x)))
 ; TODO `sorted-by`
+
+; ===== SELECTION ===== ;
+
+(defnt ^long select!:quick:left ; takes 13 seconds to compile because of type checks
+  "A helper for `quick-select`. Also used by `intro-select`."
+  {:adapted-from 'org.apache.lucene.util.IntroSelector}
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+    (let [mid (unsigned-bit-shift-right #_>>> (+ from to) 1)
+          ; heuristic: we use the median of the values at from, to-1 and mid as a pivot
+          pivot (get xs from)
+          _     (when (> (#?(:clj .compare) compf pivot (get xs (dec to))) 0)
+                  (aswap! xs from (dec to)))
+          pivot (get xs (dec to))
+          pivot (if (> (#?(:clj .compare) compf pivot (get xs mid)) 0)
+                    (do (aswap! xs (dec to) mid)
+                        (let [pivot (get xs from)]
+                          (when (> (#?(:clj .compare) compf pivot (get xs (dec to))) 0)
+                            (aswap! xs from (dec to)))
+                          pivot))
+                    pivot)
+          pivot (get xs (dec to))
+          left  (long (loop [left  (inc from)
+                             right (- to 2)]
+                        (let [left  (long (loop [left left]
+                                            (if (> (#?(:clj .compare) compf pivot (get xs left)) 0)
+                                                (recur (inc left))
+                                                left)))
+                              right (long (loop [right right]
+                                            (if (and (< left right)
+                                                     (<= (#?(:clj .compare) compf pivot (get xs right)) 0))
+                                                (recur (dec right))
+                                                right)))]
+                          (if (< left right)
+                              (do (aswap! xs left right)
+                                  (recur left (dec right)))
+                              (do (aswap! xs left (dec to))
+                                  left)))))]
+      left)))
+
+(defnt select!:quick* ; takes 5 seconds to compile
+  "Also known as Hoare's selection algorithm.
+   Performs an in-place quick-select.
+   Prefer `intro-select` in all cases."
+  {:adapted-from 'org.apache.lucene.util.IntroSelector
+   :algorithm-attribution "Tony Hoare"
+   :complexity {:worst   "O(n^2)"
+                :average "O(n)"
+                :best    "O(n)"}}
+  ([^array? xs ^long k]
+    (select!:quick* xs k 0 (count xs)))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+    (select!:quick* xs k compf 0 (count xs)))
+  ([^array? xs ^long k ^long from ^long to] ; TODO infer
+    (select!:quick* xs k compare from to))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+    (assert (<= from k))
+    (assert (< k to))
+    (loop [from from to to]
+      (if (= 1 (- to from))
+          xs
+          (let [left (select!:quick:left xs k compf from to)]
+            (cond (= left k)
+                  xs
+                  (< left k)
+                  (recur (inc left) to  )
+                  true
+                  (recur from       left)))))))
+
+#?(:clj (defmacro select!:quick [& args] `(select!:quick* ~(last args) ~@(butlast args))))
+#?(:clj (defalias quick-select! select!:quick))
+
+(defnt select!:heap*
+  "nlog(n) worst case"
+  [xs ^long k ^long from ^long to]
+  (TODO)
+; new Sorter() {
+
+;   @Override
+;   protected void swap(int i, int j) {
+;     IntroSelector.this.swap(i, j);
+;   }
+
+;   @Override
+;   protected int compare(int i, int j) {
+;     return IntroSelector.this.compare(i, j);
+;   }
+
+;   public void sort(int from, int to) {
+;     heapSort(from, to);
+;   }
+; }.sort(from, to);
+)
+
+(defnt ^long median-5
+  "Returns the index of the median of a 5-element indexed collection.
+   This is the key to a fast median-of-medians selection algorithm."
+  {:adapted-from "http://moonflare.com/code/select/select.pdf"}
+  [^array? xs #?(:clj ^Comparator compf :cljs compf) ^long start ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4] ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
+  (setm! *x0 (get xs (+ start 0)))
+  (setm! *x1 (get xs (+ start 1)))
+  (setm! *x2 (get xs (+ start 2)))
+  (setm! *x3 (get xs (+ start 3)))
+  (setm! *x4 (get xs (+ start 4)))
+  (when (neg? (#?(:clj .compare) compf (getm *x1) (getm *x0)))
+    (swapm! *x0 *x1))
+  (when (neg? (#?(:clj .compare) compf (getm *x2) (getm *x0)))
+    (swapm! *x0 *x2))
+  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x0)))
+    (swapm! *x0 *x3))
+  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x0)))
+    (swapm! *x0 *x4))
+  (when (neg? (#?(:clj .compare) compf (getm *x2) (getm *x1)))
+    (swapm! *x1 *x2))
+  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x1)))
+    (swapm! *x1 *x3))
+  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x1)))
+    (swapm! *x1 *x4))
+  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x2)))
+    (swapm! *x2 *x3))
+  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x2)))
+    (swapm! *x2 *x4))
+  (let [x2 (getm *x2)]
+    (cond (= x2 (get xs (+ start 0))) 0
+          (= x2 (get xs (+ start 1))) 1
+          (= x2 (get xs (+ start 2))) 2
+          (= x2 (get xs (+ start 3))) 3
+          true                        4)))
+
+(defnt ^long select!:median-of-medians:partition!
+  "The same one used in quicksort, essentially as described
+   in Introduction to Algorithms." ; TODO this may be used in quick-select too...
+  {:adapted-from "http://moonflare.com/code/select/select.pdf"}
+  [^array? xs #?(:clj ^Comparator compf :cljs compf) ^long from ^long size ^long i:pivot]
+  (let [pivot (get xs (+ from i:pivot))
+        _ (aswap! xs (+ from i:pivot) (+ from (dec size)))
+        store-pos (long (loop [load-pos 0 store-pos 0]
+                          (if (< load-pos (dec size))
+                              (if (neg? (#?(:clj .compare) compf (get xs (+ from load-pos)) pivot))
+                                  (do (aswap! xs (+ from load-pos) (+ from store-pos))
+                                      (recur (inc load-pos) (inc store-pos)))
+                                  (recur (inc load-pos) store-pos))
+                              store-pos)))]
+    (aswap! xs (+ from store-pos) (dec size))
+    store-pos))
+
+(defnt ^:<0> select!:median-of-medians*
+  "Performs selection using the median of medians algorithm."
+  {:adapted-from "http://moonflare.com/code/select/select.pdf"
+   :complexity {:worst   "O(n)"
+                :average "O(n)"
+                :best    "O(n)"}}
+  ([^array? xs ^long k]
+    (select!:median-of-medians* xs k 0 (count xs)))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+    (select!:median-of-medians* xs k compf 0 (count xs)))
+  ([^array? xs ^long k ^long from ^long to]
+    (select!:median-of-medians* xs k compare from to))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+    (select!:median-of-medians* xs k compf from (- to from) (!ref) (!ref) (!ref) (!ref) (!ref)))
+  ([^array? xs ^long k-0 #?(:clj ^Comparator compf :cljs compf) ^long from-0 ^long size-0 ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4]  ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
+    (loop [k k-0 from from-0 size size-0]
+      (if (< size 5)
+          (do (dotimes [i size]
+                (ifor [j (inc i) (< j size) (inc j)]
+                  (when (neg? (#?(:clj .compare) compf (get xs (+ from j)) (get xs (+ from i))))
+                    (aswap! xs (+ from i) (+ from j)))))
+              xs)
+          (let [; checked
+                _ (loop [group-num 0 group from]
+                     (when (<= (* group-num 5) (- size 5))
+                       (do (aswap! xs (+ group (median-5 xs compf group *x0 *x1 *x2 *x3 *x4))
+                                      (+ from group-num))
+                           (recur (inc group-num) (+ group 5)))))
+                num-medians (unchecked-divide-int size 5)
+                ; Index of median of medians
+                i:MOM (unchecked-divide-int num-medians 2)
+                _ (select!:median-of-medians* xs i:MOM compf from num-medians *x0 *x1 *x2 *x3 *x4) ; TODO recursion
+                i':MOM (select!:median-of-medians:partition! xs compf from size i:MOM)]
+            ; checked
+            (if (not= k i':MOM)
+                (if (< k i':MOM)
+                    (recur k from i':MOM)
+                    (recur (dec (- k     i':MOM))
+                           (inc (+ from i':MOM))
+                           (dec (- size  i':MOM))))
+                xs))))))
+
+#?(:clj (defmacro select!:median-of-medians [& args] `(select!:median-of-medians* ~(last args) ~@(butlast args))))
+#?(:clj (defalias median-of-medians! select!:median-of-medians))
+
+(defnt ^:<0> select!:intro* ; Takes 5 seconds to compile
+  "Performs an in-place intro-select.
+   Arguably the best known selection algorithm, and the most performant.
+   Starts off by using quick-select, but as soon as it deviates from O(n) operations,
+   it defaults to using the median-of-medians algorithm, ensuring a worst-case
+   run-time of O(n)."
+  {:params-doc '{from "Inclusive" to "Exclusive"}
+   :adapted-from 'org.apache.lucene.util.IntroSelector
+   :algorithm-attribution "David Musser, 1997 (http://www.cs.rpi.edu/~musser/gp/introsort.ps)"
+   :complexity {:worst   "O(n)"
+                :average "O(n)"
+                :best    "O(n)"}}
+  ([^array? xs ^long k]
+    (select!:intro* xs k 0 (count xs)))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+    (select!:intro* xs k compf 0 (count xs)))
+  ([^array? xs ^long k ^long from ^long to] ; TODO infer
+    (select!:intro* xs k compare from to))
+  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+    (assert (<= from k))
+    (assert (< k to))
+    (let [max-iter (* 2 (num/integer-log (- to from) 2))]
+      (loop [from from to to max-iter max-iter]
+        (if (= 1 (- to from))
+            xs
+            (let [max-iter (dec max-iter)]
+              (if (< max-iter 0)
+                  (select!:median-of-medians* xs k compf from to)
+                  (let [left (select!:quick:left xs k compf from to)]
+                    (cond (= left k)
+                          xs
+                          (< left k)
+                          (recur (inc left) to   max-iter)
+                          true
+                          (recur from       left max-iter))))))))))
+
+#?(:clj (defmacro select!:intro [& args] `(select!:intro* ~(last args) ~@(butlast args))))
+#?(:clj (defalias intro-select! select!:intro))
+
+(defnt ^:<0> select-by!:intro* ; Takes 3 seconds to compile
+  "Defaults to ascending selection."
+  ([^array? xs ^long k kf]
+    (select-by!:intro* xs k kf 0 (count xs)))
+  ([^array? xs ^long k kf #?(:clj ^Comparator compf :cljs compf)]
+    (select-by!:intro* xs k kf compf 0 (count xs)))
+  ([^array? xs ^long k kf ^long from ^long to] ; TODO infer
+    (select-by!:intro* xs k kf compare from to))
+  ([^array? xs ^long k kf #?(:clj ^Comparator compf :cljs compf) ^long from ^long to] ; TODO infer
+    (select!:intro* xs k ^Comparator (fn [x y] (.compare compf (kf x) (kf y))) from to)))
+
+#?(:clj (defmacro select-by!:intro [& args] `(select-by!:intro* ~(last args) ~@(butlast args))))
+#?(:clj (defalias intro-select-by! select-by!:intro))
+
+#?(:clj (defalias select!    select!:intro   ))
+#?(:clj (defalias select-by! select-by!:intro))
+
+; ===== SEARCH ===== ;
 
 (defn binary-search
   "Finds earliest occurrence of @x in @xs (a sorted List of numbers) using binary search."
@@ -1834,60 +2173,6 @@
     {:positions positions
      :bitmap    (->> xs (map #(assoc base (get positions %) 1.0)))}))
 
-; ===== MUTABILITY ===== ;
-
-(#?(:clj definterface :cljs defprotocol) IMutableReference
-  (get [#?(:cljs this)])
-  (set [#?(:cljs this) x]))
-
-; TODO create for every primitive datatype as well
-(deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
-  IMutableReference
-  (get [this] val)
-  (set [this x] (set! val x) this)
-  #?(:clj  clojure.lang.IDeref
-     :cljs cljs.core/IDeref)
-  (#?(:clj deref :cljs -deref) [this] val))
-
-#?(:clj (definterface IMutableDouble (^double get []) (set [^double x])))
-
-#?(:clj
-(deftype MutableDouble [^:unsynchronized-mutable ^double val]
-  IMutableDouble      (^double get [this] val) (set [this ^double x] (set! val x))
-  clojure.lang.IDeref (deref [this] val)))
-
-#?(:clj (defnt setm!* ([#{IMutableReference IMutableDouble} x v] (.set x v) v)))
-#?(:clj (defnt getm*  ([#{IMutableReference IMutableDouble} x  ] (.get x))))
-
-        (defnt mutable        "Creates a mutable reference to an Object."           [        x] (MutableReference. x))
-#?(:clj (defnt mutable-double "Creates a mutable reference to a primitive double."  [^double x] (MutableDouble.    x)))
-
-#?(:clj (defmacro setm!  "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*  ~x ~v))))
-#?(:clj (defmacro setm!& "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*& ~x ~v))))
-#?(:clj (defmacro getm   "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*   ~x))))
-#?(:clj (defmacro getm&  "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*&  ~x))))
-
-#?(:clj
-(defmacro getf
-  "Get field"
-  [x field]
-  (let [accessor (symbol
-                   (str "."
-                     (case-env :clj  (str "get" (str/upper-first (name field)))
-                               :cljs (str "-" (name field)))))]
-    `(~accessor ~x))))
-
-#?(:clj
-(defmacro setf!
-  "Set field"
-  [x field v]
-  (let [accessor (symbol
-                   (str "."
-                     (case-env :clj  (str "set" (str/upper-first (name field)))
-                               :cljs (str "-" (name field)))))]
-    (case-env :cljs `(set! (~accessor ~x) ~v)
-                    `(~accessor ~x ~v)))))
-
 ; ====== NUMERIC ======
 
 (defn allocate-by-percentages
@@ -1910,7 +2195,7 @@
                     (long (num/ceil (double (* n p))))) ; TODO make not use long or double
         sorted (->> allocated
                     (map-indexed+ vector)
-                    (join (!vector))
+                    (join! (!vector))
                     (sort-by! (fn1 second)))
         total  (->> allocated (reduce + 0))
         *flow  (long (- total n))] ; over- or underflow
