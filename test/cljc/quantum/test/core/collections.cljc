@@ -2,11 +2,18 @@
   (:require
     [quantum.core.test        :as test
       :refer [deftest is testing]]
-    [quantum.core.collections :as ns]
+    [quantum.core.collections :as ns
+      :refer [!ref]]
+    [quantum.core.collections.core :as ccoll]
+    [quantum.core.error
+      :refer [TODO]]
     [quantum.core.fn
       :refer [fn->>]]
     [quantum.core.logic
-      :refer [fn-or fn-and]]))
+      :refer [fn-or fn-and whenf1]]
+    [quantum.core.type :as t]
+    [quantum.core.meta.profile
+      :refer [p profile]]))
 
 (deftest test:count=
   (let [data [:a :b :c :d :e]]
@@ -184,8 +191,19 @@
 ; _______________________________________________________________
 ; ========================== SOCIATIVE ==========================
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
-(defn test:->multi-array
-  ([base-type dims]))
+(deftest test:->array-nd
+  #?(:clj (let [vs [["[[D"   [[1.0 2.0 3.0]
+                              [4.0 5.0 6.0]]]
+                    ["[[J"   [[10  20  30]
+                              [40  50  60]]]
+                    ["[[[D" [[[1.0 2.0 3.0]
+                              [4.0 5.0 6.0]]]]
+                    ["[[[J" [[[10  20  30]
+                              [40  50  60]]]]]]
+            (doseq [[c v] vs]
+              (let [arr (ns/->array-nd v)]
+                (is (instance? (Class/forName c) arr))
+                (is (= v (ns/array->vector arr))))))))
 
 (defn test:array->dimensionality
   [arr])
@@ -381,6 +399,67 @@
 
 (defn test:lsort
   [elems])
+
+; ===== SELECTION ===== ;
+
+(deftest test:median-of-5
+  (let [x0 (!ref) x1 (!ref) x2 (!ref) x3 (!ref) x4 (!ref)]
+    (doseq [xsv (quantum.core.numeric.combinatorics/permutations [0 1 2 3 4])]
+      (is (= (ns/index-of xsv 2) (ns/median-5 (long-array xsv) < x0 x1 x2 x3 x4))))))
+
+
+; Selection's main purpose is to ensure that the top k items are there.
+; It does not currently ensure that those items are sorted. (TODO: FIX)
+
+(deftest test:intro-select!
+  ; Adapted from org.apache.lucene.util.TestIntroSelector
+  (let [do-profile
+          (fn []
+            (profile
+              (let [xs0 (object-array (repeatedly 10000 #(rand-int 100000)))
+                    xs1 (ns/copy xs0)
+                    xs2 (ns/copy xs0)
+                    xs3 (ns/copy xs0)
+                    k 4
+                    ret {:sort    (set (ns/ltake 4 (p :sort    (ns/sort!* xs0 >))))
+                         :quick   (set (ns/ltake 4 (p :quick   (ns/quick-select!* xs1 k ^java.util.Comparator >))))
+                         :intro   (set (ns/ltake 4 (p :intro   (ns/intro-select!* xs2 k ^java.util.Comparator >))))
+                         :medians (set (ns/ltake 4 (p :medians (ns/select:median-of-medians!* xs3 k ^java.util.Comparator >))))}]
+                (is (= (:sort ret) (:quick ret) (:intro ret) (:medians ret))))))
+        do-test
+          (fn [slow?]
+             (let [rand-int-between (fn [a b] (+ a (rand-int (inc (- b a)))))
+                   rand-bool (fn [] (let [n (rand-int-between 0 1)]
+                                      (if (= n 0) false true)))
+                   from (rand-int 5)
+                   to   (+ from (rand-int-between 1 10000))
+                   max' (if (rand-bool)
+                            (rand-int 100)
+                            (rand-int 100000))
+                   arr  (int-array (+ from to (rand-int 5)))
+                   _    (dotimes [i (ns/count arr)]
+                          (ns/assoc! arr i (rand-int-between 0 max')))
+                   k    (rand-int-between from (dec to))
+                   expected (doto (ns/copy arr) (java.util.Arrays/sort from to)) ; TODO CLJS
+                   actual   (ns/copy arr)]
+                (if slow?
+                    (p ::medians      (ns/select:median-of-medians! k from to actual))
+                    (p ::intro-select (ns/intro-select!             k from to actual)))
+                #_(is (= (ns/get expected k) ; TODO Assumes must be sorted
+                         (ns/get actual   k)))
+                (when-not (is (= (set (take k expected)) (set (take k actual))))
+                  (throw (ex-info "Will not continue" {})))
+                #_(dotimes [i (ns/count actual)] ; TODO Assumes must be sorted
+                  (cond (or (< i from) (>= i to))
+                          (assert (= (get arr i) (get actual i)))
+                        (<= i k)
+                          (assert (<= (get actual i) (get actual k)))
+                        :else
+                          (assert (>= (get actual i) (get actual k)))))))]
+    (do-profile)
+    ; TODO test more
+    #_(dotimes [i 10] (testing "with quick-select" (do-test false)))
+    #_(dotimes [i 1] (testing "with median-of-medians" (do-test true)))))
 
 (defn test:binary-search
   ([xs x])
