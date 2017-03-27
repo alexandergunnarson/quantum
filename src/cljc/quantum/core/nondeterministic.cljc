@@ -2,7 +2,11 @@
   ^{:doc "Functions centered around non-determinism (randomness)."
     :attribution "alexandergunnarson"}
   quantum.core.nondeterministic
-  (:refer-clojure :exclude [bytes reduce next for last nth rand-nth rand-int shuffle count map partition])
+  (:refer-clojure :exclude
+    [reduce next for last nth
+     int double conj!
+     shuffle count map get partition
+     bytes chars longs])
   (:require
     #?(:clj [loom.gen                  :as g-gen])  ; for now
             [clojure.core              :as core]
@@ -10,11 +14,14 @@
             [quantum.core.lexical.core :as lex]
             [quantum.core.data.set     :as set
               :refer [sorted-set+]]
+            [quantum.core.data.string
+              :refer [!str]]
             [quantum.core.collections.core :as ccoll]
             [quantum.core.collections  :as coll
-              :refer [fori reduce nempty? count
-                      for join last lasti nth partition-all+
-                      map+ map-vals+ map-indexed+ map
+              :refer [for fori, reduce reduce-2
+                      join last lasti partition-all+
+                      map map+ map-vals+ map-indexed+
+                      get, nempty? count conj!
                       indices+ kw-map copy slice]]
             [quantum.core.error        :as err
               :refer [->ex TODO throw-unless]]
@@ -27,7 +34,7 @@
             [quantum.core.log          :as log]
             [quantum.core.numeric      :as num]
             [quantum.core.fn           :as fn
-              :refer [<- rfn]]
+              :refer [<- rfn fn1]]
             [quantum.core.data.array   :as arr   ]
             [quantum.core.vars
               :refer [defalias]])
@@ -43,6 +50,7 @@
 
 ; TO EXPLORE
 ; - java.util.Random
+; TODO note that rand stuff in here is based on a uniform generator; sometimes one wants generators with a particular distribution
 ; =========================
 
 ; Affects KeyGenerator, KeyPairGenerator, KeyAgreement, and Signature.
@@ -61,7 +69,9 @@
      :cljs (TODO)))
 
 #?(:cljs
-(defn rand-prime [callback & web-workers?]
+(defn prime
+  "Yields a random prime."
+  [callback & web-workers?]
   (js/forge.prime.generateProbablePrime 1024
     #js {:algorithm "PRIMEINC"
          ; -1 means auto-optimiing
@@ -69,7 +79,9 @@
     (fn [err n] (callback (.toString n 16))))))
 
 #?(:clj
-(defn rand-buffer [^long n]
+(defn
+  "Yields a random buffer."
+  buffer [^long n]
   (let [b (ByteBuffer/allocate n)]
     (.nextBytes secure-random-generator (.array b))
     b)))
@@ -81,7 +93,7 @@
            #_(async-loop {:id :native-secure-random-seeder}
        []
        (let [native-inst (SecureRandom/getInstance "NativePRNG")
-             sleep-time  (* 10 (+ 50 (rand-int 5000)))
+             sleep-time  (* 10 (+ 50 (int 5000)))
              random-bytes  (byte-array 512)
              _ (.nextBytes ^Random native-inst random-bytes)]
          (.setSeed ^SecureRandom secure-random-generator ^"[B" random-bytes)
@@ -96,8 +108,9 @@
 
 ; TODO shorten all this repetitiveness by adding no-arg option to defnt
 
-(defn rand-int-between
-  ([        a b] (rand-int-between false a b))
+(defn int-between
+  "Yields a random int between a and b."
+  ([        a b] (int-between false a b))
   ([secure? a b]
     #?(:clj (let [generator (get-generator secure?)]
               (+ a (.nextInt generator (inc (- b a)))))
@@ -105,12 +118,14 @@
                  (TODO) ; "CLJS does not yet support secure random numbers"
                  (+ a (core/rand-int (inc (- b a))))))))
 
-(defn rand-int
-  ([        b] (rand-int false b))
-  ([secure? b] (rand-int-between secure? 0 b)))
+(defn int
+  "Yields a random int from 0 to b."
+  ([        b] (int false b))
+  ([secure? b] (int-between secure? 0 b)))
 
-(defn rand-double-between
-  ([        a b] (rand-double-between false a b))
+(defn double-between
+  "Yields a random double between a and b."
+  ([        a b] (double-between false a b))
   ([secure? a b]
     #?(:clj (let [generator (get-generator secure?)]
               (+ a (* (.nextDouble generator) (- b a))))
@@ -118,42 +133,43 @@
                  (TODO) ; "CLJS does not yet support secure random numbers"
                  (+ a (core/rand (inc (- b a))))))))
 
-(defn rand-double
-  ([        b] (rand-double false b))
-  ([secure? b] (rand-double-between secure? 0 b)))
+(defn double
+  "Yields a random double from 0 to b."
+  ([        b] (double false b))
+  ([secure? b] (double-between secure? 0 b)))
 
-(defn rand-bits
+(defn bits
   "Returns up to 32 random bits."
   [g] (TODO)
   ; return randInt(g) >>> (32 - numbits);
   )
 
-#_(defn rand-int
+#_(defn int
   [g] (TODO)
   ; return (int) Math.floor(Integer.MAX_VALUE * (2 * nextDouble() - 1.0));
   )
 
-#_(defn rand-long
+#_(defn long
   [g] (TODO)
   ; return (long) Math.floor(Long.MAX_VALUE * (2 * nextDouble() - 1.0));
   )
 
-(defn rand-gaussian
+(defn gaussian
   [g] (TODO)
   ; use java.util.Random's impl
   )
 
 
-(defn rand-char-between
-  ([        a b] (rand-char-between false a b))
-  ([secure? a b] (char (rand-int-between secure? a b))))
+(defn char-between
+  "Yields a random char between a and b."
+  ([        a b] (char-between false a b))
+  ([secure? a b] (core/char (int-between secure? a b))))
 
-(defn ^String rand-chars-between
-  ([n a b] (rand-chars-between false n a b))
+(defn ^String chars-between
+  ([n a b] (chars-between false n a b))
   ([secure? n a b]
-    (let [sb (#?(:clj StringBuilder. :cljs StringBuffer.))]
-      (dotimes [m n]
-        (.append sb (rand-char-between secure? a b)))
+    (let [sb (!str)]
+      (dotimes [m n] (conj! sb (char-between secure? a b)))
       (str sb))))
 
 #_(def generators
@@ -164,7 +180,7 @@
 ; TODO multiple types, as in regex
 ; TODO |rand-chars| where you can "harden" to a string or not. Also lazy version
 
-(defn rand-chars
+(defn chars
   "Returns a random string that matches the regular expression."
   {:inspiration-from "weavejester/re-rand"}
   ([x]
@@ -196,7 +212,7 @@
                  (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
 
 #?(:clj
-(defn rand-longs
+(defn longs
   {:todo ["Base off of random longs, for speed"
           "Lazy |repeatedly| version"]}
   ([size] (rand-longs false size))
@@ -230,7 +246,7 @@
           (str sb))))))
 
 #?(:clj
-(defn rand-graph
+(defn graph
   "Creates a random graph."
   [type & args]
   (condp = type
@@ -240,8 +256,8 @@
 
 ; OTHER MORE COMPLEX FUNCTIONS
 
-(defn rand-nth [coll]
-  (nth coll (rand-int-between 0 (lasti coll))))
+(defnt nth [#{array? !vec? default} coll]
+  (coll/nth coll (int-between 0 (lasti coll))))
 
 #?(:clj
 (defmacro cond-percent
@@ -351,6 +367,13 @@
              [(transient []) 0]
              allocations)
            first persistent!))))
+
+(defn partition-2 [ps xs0 xs1] ; TODO `partition-n`
+  (let [parted (->> (persistent! (reduce-2 #(conj! %1 [%2 %3]) (transient []) xs0 xs1)) ; TODO code pattern ; kind of like `v-op+`
+                    (partition ps))]
+    (->> parted
+         (map (juxt (map (fn1 get 0))
+                    (map (fn1 get 1)))))))
 
 (defmulti
   ^{:doc "Generates a random object."}
