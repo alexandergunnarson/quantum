@@ -1,6 +1,6 @@
 (ns quantum.core.compare
   (:refer-clojure :exclude
-    [= not= < > <= >= max min max-key min-key neg? pos? zero? - + inc compare])
+    [= not= < > <= >= max min max-key min-key neg? pos? zero? - -' + inc compare])
   (:require
     [clojure.core       :as core]
     [quantum.core.error :as err
@@ -10,12 +10,12 @@
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.numeric.operators  :as op
-      :refer [- + abs inc]]
+      :refer [- -' + abs inc div:natural]]
     [quantum.core.numeric.predicates :as pred
       :refer [neg? pos? zero?]]
     [quantum.core.numeric.convert
       :refer [->num ->num&]]
-    [quantum.core.convert.primitive :as pconv
+    [quantum.core.convert.primitive  :as pconv
       :refer [->boxed ->boolean ->long]]
     [quantum.core.numeric.types      :as ntypes])
   (:require-macros
@@ -400,4 +400,6 @@
   (and (core/>= n (- total tolerance))
        (core/<= n (+ total tolerance))))
 
-
+(defnt' within-percent-tolerance? [^number? actual ^number? expected percent-tolerance]
+  (core/< (div:natural (double (abs (core/- expected actual))) expected) ; TODO remove `double` cast!!!
+          percent-tolerance))
