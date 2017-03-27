@@ -55,12 +55,6 @@
     [quantum.core.vars             :as var
       :refer [defalias]]))
 
-(defcurried each ; like doseq
-  "Applies f to each item in coll, returns nil"
-  {:attribution "transduce.reducers"}
-  [f coll]
-  (reduce (fn [_ x] (f x) nil) nil coll))
-
 ; ============================ MAP ============================ ;
 
 (defeager map         red/map+)
