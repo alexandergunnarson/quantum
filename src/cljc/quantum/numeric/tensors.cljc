@@ -29,7 +29,7 @@
     [quantum.core.error                       :as err
       :refer [->ex TODO]]
     [quantum.numeric.core                     :as num
-      :refer [pi* sigma sq]]
+      :refer [pi* sigma sq sum]]
     [quantum.core.macros
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars
@@ -342,11 +342,15 @@
 ; TODO have reducers version of these?
 ; TODO use numeric core functions
 
-(#?(:clj defnt' :cljs defnt) v-op+
-  [f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
-  (assert (= (count x•0) (count x•1)) (kw-map x•0 x•1)) ; TODO maybe use (map+ f v1 v2) ?
-  (->> (range+ 0 (count x•0))
-       (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i))))))
+(defnt' v-op+
+  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+    (assert (= (count x•0) (count x•1)) (kw-map (count x•0) (count x•1))); TODO maybe use (map+ f v1 v2) ?
+    (->> (range+ 0 (count x•0))
+         (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i))))))
+  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
+    (assert (= (count x•0) (count x•1) (count x•2)) (kw-map (count x•0) (count x•1) (count x•2))) ; TODO maybe use (map+ f v1 v2) ?
+    (->> (range+ 0 (count x•0))
+         (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i) (c/get x•2 i)))))))
 
 (#?(:clj defnt' :cljs defnt) v-+
   [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
@@ -378,10 +382,16 @@
 
 (defn vsum [vs] (reduce (fn&2 v++) (first vs) (rest vs))) ; TODO optimize better
 
-(defn centroid+ [vs]
-  (->> vs vsum (map+ (fn1 / (count vs)))))
+(defn centroid+
+  "Also sometimes called the center of mass or barycenter"
+  ([v]
+    (->> v vsum (map+ (fn1 / (count v))))))
 
-(defalias vmean+ centroid+)
+(defn vmean+ [v] (centroid+ v))
+
+(defn centroid
+  ([x• & x•s] ; TODO find more performant way to do this
+    (apply map (fn [& xs] (/ (sum xs) (count xs))) x• x•s))) ; TODO sum count => mean
 
 #?(:clj
 (defn vector-map!
