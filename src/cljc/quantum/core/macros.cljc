@@ -257,3 +257,9 @@
 #?(:clj (defmalias compile-when quantum.core.macros.core/compile-when))
 #?(:clj (defmalias quote+       quantum.core.macros.core/quote+      ))
 #?(:clj (defmalias hint-meta    quantum.core.macros.core/hint-meta   ))
+
+#?(:clj
+(defmacro let-swap [x0 x1 & body]
+  (assert (symbol? x0))
+  (assert (symbol? x1))
+  `(let [temp# ~x0 ~x0 ~x1 ~x1 temp#] ~@body)))
