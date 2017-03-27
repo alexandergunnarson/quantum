@@ -8,11 +8,11 @@
                     [quantum.core.java          :as java]
                     [quantum.core.data.map      :as map ]
                     [quantum.core.collections   :as coll
-                      :refer [filter+ map+ for* join]]
+                      :refer [filter+ map+ for-join join]]
                     [quantum.core.vars          :as var
                       :refer [defalias #?(:clj defmalias)]]
                     [quantum.core.fn            :as fn
-                      :refer [fn->]]
+                      :refer [fn-> <-]]
                     [quantum.core.macros        :as macros
                       :refer [defnt]])))
 
@@ -37,7 +37,7 @@
                (filter+ (partial instance? clojure.reflect.Field))
                (map+ :name)
                (join []))]
-    (for* {} [name-n field-names]
+    (for-join {} [name-n field-names]
       [(-> name-n strf/->lisp-case keyword)
        (java/field obj (name name-n))]))))
 
@@ -66,11 +66,9 @@
             (fn ([x]) ([x y]))  [1 2]}
    :adapted "https://github.com/zcaudate/hara/blob/master/src/hara/function/args.clj"}
   [f]
-  (let [ms (filter (fn [^java.lang.reflect.Method mthd]
-                     (= "invoke" (.getName mthd)))
+  (let [ms (filter (fn [^java.lang.reflect.Method mthd] (= "invoke" (.getName mthd)))
                    (.getDeclaredMethods (class f)))
-        ps (map (fn [^java.lang.reflect.Method m]
-                  (.getParameterTypes m)) ms)]
+        ps (map (fn [^java.lang.reflect.Method m] (.getParameterTypes m)) ms)]
     (map count ps))))
 
 #?(:clj
@@ -80,6 +78,11 @@
 
 #?(:clj
 (defn invoke-private
+  ([^Class c ^String name- args]
+    (let [m (->> (.getDeclaredMethods c)
+                 ^java.lang.reflect.Method (coll/ffilter (fn [^java.lang.reflect.Method x] (= (.getName x) name-)))
+                 (<- doto (.setAccessible true)))]
+      (.invoke m nil (into-array Object args))))
   ([^Class c ^String name- params args]
     (invoke-private c name- params nil args))
   ([^Class c ^String name- params target args]
