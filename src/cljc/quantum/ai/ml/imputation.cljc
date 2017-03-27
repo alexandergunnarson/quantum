@@ -22,8 +22,8 @@
     [quantum.core.error              :as err
       :refer [->ex TODO]]
     [quantum.core.collections        :as coll
-      :refer [for fori fortimes
-              first, count, map+, get]]
+      :refer [for for', fori fori', fortimes fortimes:objects
+              first, count, map+, remove+, get]]
     [quantum.numeric.statistics.core :as stat]))
 
 (defn imputation-base
@@ -31,10 +31,10 @@
    of each column (could be mean, mode, etc.).
    Assumes that the rows of `x••` are of equal size."
   [x•• missing?-pred rf]
-  (let [mode• (fortimes [i:x (-> x•• first count)]
-                (delay (->> x•• (map+ (fn1 get i:x)) rf)))]
-    (for [x• x••]
-      (fori [x x• i:x]
+  (let [mode• (fortimes:objects [i:x (-> x•• first count)]
+                (delay (->> x•• (map+ (fn1 get i:x)) (remove+ missing?-pred) rf)))]
+    (for' [x• x••]
+      (fori' [x x• i:x]
         (if (missing?-pred x) @(get mode• i:x) x)))))
 
 (defn mode
