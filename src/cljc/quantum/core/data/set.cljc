@@ -15,7 +15,13 @@
                      [clojure.data.int-map     :as imap ]]))
   #?(:cljs (:require-macros
                      [quantum.core.vars        :as var
-                        :refer [defalias]               ])))
+                        :refer [defalias]               ]))
+           (:import
+           #?@(:clj  [java.util.HashSet
+                     [it.unimi.dsi.fastutil.ints    IntOpenHashSet]
+                     [it.unimi.dsi.fastutil.longs   LongOpenHashSet]
+                     [it.unimi.dsi.fastutil.doubles DoubleOpenHashSet]]
+               :cljs [goog.structs.Set])))
 
 ; ============ STRUCTURES ============
 
@@ -103,3 +109,62 @@
 (defn differencer [a b] (differencel b a))
 
 (defalias rename-keys  set/rename-keys )
+
+; TODO generate these functions via macros
+(defn #?(:clj ^HashSet !hash-set :cljs !hash-set)
+  "Creates a single-threaded, mutable hash set.
+   On the JVM, this is a java.util.HashSet.
+
+   On JS, this is a goog.structs.Set."
+  {:todo #{"Compare performance on CLJS with ECMAScript 6 Set"}}
+  ([] #?(:clj (HashSet.) :cljs (Set.)))
+  ([v0]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)))
+  ([v0 v1]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)
+          (.add v1)))
+  ([v0 v1 v2]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)
+          (.add v1)
+          (.add v2)))
+  ([v0 v1 v2 v3]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)
+          (.add v1)
+          (.add v2)
+          (.add v3)))
+  ([v0 v1 v2 v3 v4]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)
+          (.add v1)
+          (.add v2)
+          (.add v3)
+          (.add v4)))
+  ([v0 v1 v2 v3 v4 v5]
+    (doto #?(:clj (HashSet.) :cljs (Set.))
+          (.add v0)
+          (.add v1)
+          (.add v2)
+          (.add v3)
+          (.add v4)
+          (.add v5)))
+  ([v0 v1 v2 v3 v4 v5 v6 & vs]
+    (reduce
+      (fn [#?(:clj ^HashSet xs :cljs xs) v] (doto xs (.add v)))
+      (doto #?(:clj (HashSet.) :cljs (Set.))
+            (.add v0)
+            (.add v1)
+            (.add v2)
+            (.add v3)
+            (.add v4)
+            (.add v5)
+            (.add v6))
+      vs)))
+
+; TODO generate these functions via macros
+#?(:clj (defn ^IntOpenHashSet    !hash-set:int    [] (IntOpenHashSet.   )))
+#?(:clj (defn ^LongOpenHashSet   !hash-set:long   [] (LongOpenHashSet.  )))
+#?(:clj (defn ^DoubleOpenHashSet !hash-set:double [] (DoubleOpenHashSet.)))
