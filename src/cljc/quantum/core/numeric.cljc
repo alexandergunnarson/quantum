@@ -58,6 +58,7 @@
 ; - org.apache.commons.math3.util.Precision
 ;   - Probably not needed
 ; - Compare org.apache.commons.math3.util.FastMath to jafama
+; - https://github.com/apache/lucene-solr/blob/53981795fd73e85aae1892c3c72344af7c57083a/lucene/core/src/java/org/apache/lucene/util/MathUtil.java
 
 ; TODOS
 ; - Use sqrt like ratios
@@ -200,7 +201,7 @@
   #?@(:clj [+*   +*&   +'     +'&     +   +&
             -*   -*&   -'     -'&     -   -&
             **   **&   *'     *'&     *   *&
-            div* div*& div'   div'&   /   div&
+            div* div*& div'   div'&   /   div& div:natural
             inc* inc*& #_inc' #_inc'& inc #_inc&
             dec* dec*& #_dec' #_dec'& dec #_dec&
                        abs'   #_abs'&   abs #_abs&])
@@ -283,7 +284,7 @@
 (defaliases quantum.core.numeric.exponents
   pow- pow' pow pow& pow* expm1* get-exp
   sqrt √2 cbrt √3 cbrt* √3* e-exp e-exp*
-  log-e log-e* log-2 log-10 log-10* log1p* log- log))
+  log-e log-e* log-2 log-10 log-10* log1p* log- log integer-log))
 
 ;_____________________________________________________________________
 ;==============={        OTHER OPERATIONS          }==================

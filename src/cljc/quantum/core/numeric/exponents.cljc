@@ -11,7 +11,9 @@
     [quantum.core.numeric.operators
       :refer [+ * dec* div*]])
 #?(:clj
-  (:import [net.jafama FastMath])))
+  (:import
+    [quantum.core Numeric]
+    [net.jafama FastMath])))
 
 ; ===== EXPONENTS ===== ;
 
@@ -153,3 +155,15 @@
 ;     }
 ;     return r;
 ; }
+
+
+(defnt ^long integer-log
+  {:adapted-from 'apache.lucene.util.MathUtil}
+  [^long x ^long base]
+  (assert (> base 1))
+  (let [ret 0]
+    (loop [x x ret ret]
+      (if (>= x base)
+          (recur (#?(:clj unchecked-divide-int :cljs cljs.core//) x base) ; TODO need to handle `long` truncation via Numeric/divideTruncate ; truncation is acceptable
+                 (inc ret))
+          ret))))

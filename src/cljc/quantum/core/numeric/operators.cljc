@@ -212,6 +212,11 @@
 #?(:clj (variadic-proxy div& div-bin&))
 #?(:clj (defmalias / quantum.core.numeric.operators/div))
 
+(defnt' div:natural [^number? n ^number? denom]
+  (if (zero? denom)
+      (if (zero? n) 0 #?(:clj Double/POSITIVE_INFINITY :cljs js.Number/POSITIVE_INFINITY))
+      (/ n denom)))
+
 ;_____________________________________________________________________
 ;==================={   UNARY MATH OPERATORS   }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -279,6 +284,7 @@
 #?(:clj (defnt abs'
           ([#{int long double} x] (Math/abs x))
           (^float ^:intrinsic [^float  x] (Math/abs x))
+          ([#{byte char short} x] (if (Numeric/isNeg x) (-' x) x)) ; TODO abstract this
           (^BigDecimal [^BigDecimal x]
             (.abs x))
           (^BigDecimal [^BigDecimal x math-context]
