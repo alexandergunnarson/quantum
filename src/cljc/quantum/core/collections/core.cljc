@@ -83,7 +83,17 @@
  #?(:clj  (:import
             quantum.core.data.Array
             [clojure.lang IAtom Counted IPersistentCollection]
-            [java.util List Collection Map Map$Entry]
+            [java.util ArrayList List Collection Map Map$Entry]
+            [it.unimi.dsi.fastutil.booleans BooleanArrayList BooleanSet]
+            [it.unimi.dsi.fastutil.bytes    ByteArrayList    ByteSet]
+            [it.unimi.dsi.fastutil.chars    CharArrayList    CharSet]
+            [it.unimi.dsi.fastutil.shorts   ShortArrayList   ShortSet]
+            [it.unimi.dsi.fastutil.ints     IntArrayList     IntSet]
+            [it.unimi.dsi.fastutil.longs    LongArrayList    LongSet]
+            [it.unimi.dsi.fastutil.floats   FloatArrayList   FloatSet]
+            [it.unimi.dsi.fastutil.doubles  DoubleArrayList  DoubleSet]
+            [it.unimi.dsi.fastutil.objects  ObjectArrayList ]
+            ; TODO it.unimi.dsi.fastutil ReferenceArrayList ?
             [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong])
     :cljs (:import
             goog.string.StringBuffer)))
@@ -256,12 +266,12 @@
         clojure.lang.RT/EMPTY_ARRAY
         (throw (Util/runtimeException (str "Unable to convert: " (.getClass x) " to Object[]"))))))
 
+(defn count:rfn ([] 0) ([n' _] (inc n')))
+
 (defn reduce-count
-  {:attribution "parkour.reducers"
-   :performance "On non-counted collections, `count` is 71.542581 ms, whereas
+  {:performance "On non-counted collections, `count` is 71.542581 ms, whereas
                  `reduce-count` is 36.824665 ms - twice as fast"}
-  [coll]
-  (reduce (rcomp firsta inc) 0 coll))
+  [xs] (reduce count:rfn xs))
 
 (defnt ^long count
   "Incorporated `clojure.lang.RT/count` and `clojure.lang.RT/countFrom`"
@@ -354,16 +364,39 @@
              (^<0> [^objects?  x ^int n] (->object-array n))]))
 
 (defnt ->array
-  #?(:clj  (^boolean-array? [^boolean? t ^int ct] (->boolean-array ct)))
-  #?(:clj  (^byte-array?    [^byte?    t ^int ct] (->byte-array    ct)))
-  #?(:clj  (^char-array?    [^char?    t ^int ct] (->char-array    ct)))
-  #?(:clj  (^short-array?   [^short?   t ^int ct] (->short-array   ct)))
-  #?(:clj  (^int-array?     [^int?     t ^int ct] (->int-array     ct)))
-  #?(:clj  (^long-array?    [^long?    t ^int ct] (->long-array    ct)))
-  #?(:clj  (^float-array?   [^float?   t ^int ct] (->float-array   ct)))
-           (^double-array?  [^double?  t ^int ct] (->double-array  ct))
-  #?(:cljs (                [          x ^int ct] (->object-array  ct)))
-  #?(:clj  (                [^Class    c ^int ct] (make-array c    ct)))) ; object-array is subsumed into this
+          ([^array?                     x] x)
+          ([#{!array-list?
+              #?(:clj ObjectArrayList)} x] #?(:clj (.toArray x) :cljs x))  ; because in ClojureScript we're just using arrays anyway
+  #?(:clj ([^BooleanArrayList           x] (.toBooleanArray x)))
+  #?(:clj ([^ByteArrayList              x] (.toByteArray    x)))
+  #?(:clj ([^CharArrayList              x] (.toCharArray    x)))
+  #?(:clj ([^ShortArrayList             x] (.toShortArray   x)))
+  #?(:clj ([^IntArrayList               x] (.toIntArray     x)))
+  #?(:clj ([^LongArrayList              x] (.toLongArray    x)))
+  #?(:clj ([^FloatArrayList             x] (.toFloatArray   x)))
+  #?(:clj ([^DoubleArrayList            x] (.toDoubleArray  x))))
+
+(defnt ->array-list
+  ([#{!array-list?
+      #?@(:clj [BooleanArrayList
+                ByteArrayList
+                CharArrayList
+                ShortArrayList
+                IntArrayList
+                LongArrayList
+                FloatArrayList
+                DoubleArrayList
+                ObjectArrayList])} x] x)
+  ([^booleans? x] #?(:clj (BooleanArrayList. x) :cljs (TODO)))
+  ([^bytes?    x] #?(:clj (ByteArrayList.    x) :cljs (TODO)))
+  ([^chars?    x] #?(:clj (CharArrayList.    x) :cljs (TODO)))
+  ([^shorts?   x] #?(:clj (ShortArrayList.   x) :cljs (TODO)))
+  ([^ints?     x] #?(:clj (IntArrayList.     x) :cljs (TODO)))
+  ([^longs?    x] #?(:clj (LongArrayList.    x) :cljs (TODO)))
+  ([^floats?   x] #?(:clj (FloatArrayList.   x) :cljs (TODO)))
+  ([^doubles?  x] #?(:clj (DoubleArrayList.  x) :cljs (TODO)))
+  ([^objects?  x] #?(:clj (ObjectArrayList.  x) :cljs (TODO))))
+
 
 ; TODO: `newUninitialized<n>d<type>Array`
 
@@ -407,23 +440,60 @@
 
 #?(:clj (gen-array-nd))
 
+(defnt elem->array
+  #?(:clj  ([^boolean x ^long n0                  ] (->booleans-nd  n0      )))
+  #?(:clj  ([^boolean x ^long n0 ^long n1         ] (->booleans-nd  n0 n1   )))
+  #?(:clj  ([^boolean x ^long n0 ^long n1 ^long n2] (->booleans-nd  n0 n1 n2)))
+  #?(:clj  ([^byte    x ^long n0                  ] (->bytes-nd     n0      )))
+  #?(:clj  ([^byte    x ^long n0 ^long n1         ] (->bytes-nd     n0 n1   )))
+  #?(:clj  ([^byte    x ^long n0 ^long n1 ^long n2] (->bytes-nd     n0 n1 n2)))
+  #?(:clj  ([^char    x ^long n0                  ] (->chars-nd     n0      )))
+  #?(:clj  ([^char    x ^long n0 ^long n1         ] (->chars-nd     n0 n1   )))
+  #?(:clj  ([^char    x ^long n0 ^long n1 ^long n2] (->chars-nd     n0 n1 n2)))
+  #?(:clj  ([^short   x ^long n0                  ] (->shorts-nd    n0      )))
+  #?(:clj  ([^short   x ^long n0 ^long n1         ] (->shorts-nd    n0 n1   )))
+  #?(:clj  ([^short   x ^long n0 ^long n1 ^long n2] (->shorts-nd    n0 n1 n2)))
+  #?(:clj  ([^int     x ^long n0                  ] (->ints-nd      n0      )))
+  #?(:clj  ([^int     x ^long n0 ^long n1         ] (->ints-nd      n0 n1   )))
+  #?(:clj  ([^int     x ^long n0 ^long n1 ^long n2] (->ints-nd      n0 n1 n2)))
+  #?(:clj  ([^long    x ^long n0                  ] (->longs-nd     n0      )))
+  #?(:clj  ([^long    x ^long n0 ^long n1         ] (->longs-nd     n0 n1   )))
+  #?(:clj  ([^long    x ^long n0 ^long n1 ^long n2] (->longs-nd     n0 n1 n2)))
+  #?(:clj  ([^float   x ^long n0                  ] (->floats-nd    n0      )))
+  #?(:clj  ([^float   x ^long n0 ^long n1         ] (->floats-nd    n0 n1   )))
+  #?(:clj  ([^float   x ^long n0 ^long n1 ^long n2] (->floats-nd    n0 n1 n2)))
+  #?(:clj  ([^double  x ^long n0                  ] (->doubles-nd   n0      )))
+  #?(:cljs ([^double? x ^long n0                  ] (->double-array n0      )))
+  #?(:clj  ([^double  x ^long n0 ^long n1         ] (->doubles-nd   n0 n1   )))
+  #?(:clj  ([^double  x ^long n0 ^long n1 ^long n2] (->doubles-nd   n0 n1 n2)))
+           ([^default x ^long n0                  ] (->objects-nd   n0      ))
+  #?(:clj  ([^default x ^long n0 ^long n1         ] (->objects-nd   n0 n1   )))
+  #?(:clj  ([^default x ^long n0 ^long n1 ^long n2] (->objects-nd   n0 n1 n2))))
+
 (defnt empty
-  {:todo #{"Most of this should be in some static map somewhere for efficiency"
-           "implement core/empty"}}
-           (     [^boolean?  x] false         )
-  #?(:clj  (     [^char?     x] (->char   0)  ))
-  #?(:clj  (     [^byte?     x] (->byte   0)  ))
-  #?(:clj  (     [^short?    x] (->short  0)  ))
-  #?(:clj  (     [^int?      x] (->int    0)  ))
-  #?(:clj  (     [^long?     x] (->long   0)  ))
-  #?(:clj  (     [^float?    x] (->float  0)  ))
-  #?(:clj  (     [^double?   x] (->double 0)  ))
+  {:todo #{"implement core/empty"}}
+           (     [^boolean   x] false         )
+  #?(:clj  (     [^char      x] (->char   0)  ))
+  #?(:clj  (     [^byte      x] (->byte   0)  ))
+  #?(:clj  (     [^short     x] (->short  0)  ))
+  #?(:clj  (     [^int       x] (->int    0)  ))
+  #?(:clj  (     [^long      x] (->long   0)  ))
+  #?(:clj  (     [^float     x] (->float  0)  ))
+  #?(:clj  (     [^double    x] (->double 0)  ))
   #?(:cljs (^<0> [^pnum?     x] 0             ))
            (^<0> [^string?   x] ""            )
            ; TODO ^array?
-           (^<0> [^array-1d? x] (array-of-type x (count x))) ; TODO should it be `Array/cloneSizes`?
+           (^<0> [^array-1d? x] (array-of-type x 0)) ; TODO should it be `Array/cloneSizes`?
+  #?(:clj  (^<0> [^ArrayList x] (ArrayList.)))
            (^<0> [#{#?(:clj  IPersistentCollection
                        :cljs IEmptyableCollection)} x] (#?(:clj .empty :cljs -empty) x)))
+
+(defnt blank
+  "Like `empty`, but for e.g. arrays and similar indexed types, as well as strings,
+   creates a blank version. In the case of arrays, an initizalized array is created
+   containing whatever the default values are for that array — e.g. 0.0 or 0L and so on."
+  #?(:clj  (^<0> [^array?    x] (Array/cloneSizes x))
+     :cljs (^<0> [^array-1d? x] (array-of-type x (count x)))))
 
 (defnt ^long lasti
   "Last index of a coll."
@@ -447,7 +517,7 @@
 (defn deep-copy! [in out length] (TODO))
 
 ; TODO `array?`
-(defnt copy ([^array-1d? in] #?(:clj (copy! in (empty in) (count in)) :cljs (.slice in))))
+(defnt copy ([^array-1d? in] #?(:clj (copy! in (blank in) (count in)) :cljs (.slice in))))
 (defalias clone copy)
 
 ; ===== SLICE ===== ;
@@ -498,8 +568,9 @@
 
 (defnt index-of
   {:todo ["Add 3-arity for |index-of-from|"]}
-  ; Reflection warning - call to method indexOf on clojure.lang.IPersistentVector can't be resolved (no such method).
-  ;([^+vec?   coll elem] (let [i (.indexOf coll elem)] (if (= i -1) nil i)))
+  ([#_reducible? #{array? vec?} xs x]
+    (let [i (long (reduce (fn [i x'] (if (= x' x) (reduced i) (inc i))) 0 xs))] ; TODO infer type
+      (if (= i (count xs)) nil i)))
   ([^string? coll elem]
     (cond (string? elem)
           (let [i (.indexOf coll ^String elem)] (if (= i -1) nil i))
@@ -598,6 +669,9 @@
   #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
   #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
                                               x            k             ] (.get x k)))
+  #?(:clj  ([^!map:int->ref?                  x ^int       k             ] (.get x k)))
+  #?(:clj  ([^!map:long->ref?                 x ^long      k             ] (.get x k)))
+  #?(:clj  ([^!map:double->ref?               x ^double    k             ] (.get x k)))
            ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
   #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
            ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
@@ -669,7 +743,7 @@
 (defnt nth
   ; TODO import clojure.lang.RT/nth
   ([#{+vec? seq?}    coll            i] (get coll i))
-  ([#{string? !array-list?
+  ([#{string? #?(:clj !array-list?)
       array? tuple?} coll ^nat-long? i] (get coll i))
   ([^reducer?        coll ^nat-long? i]
     (let [i' (volatile! 0)]
@@ -704,13 +778,17 @@
 
 ; TODO assoc!, assoc-in! for files
 (defnt assoc!
-  #?(:cljs (^<0> [^array?         x ^int k :<0>:1 v] (aset      x k v) x))
-  #?(:clj  (^<0> [^array?         x ^int k :<0>:1 v] (Array/set x v k)))
-  #?(:clj  (^<0> [^list?          x ^int k        v] (.set x k v) x)) ; TODO it may fail sometimes
-  #?(:clj  (^<0> [#{!map? !!map?} x      k        v] (.put x k v) x))
-           (^<0> [^transient?     x      k        v] (core/assoc! x k v))
-           (     [^atom?          x      k        v] (swap! x assoc-protocol k v))
-  #?(:clj  (^<0> [^default        x ^int k        v]
+  #?(:cljs (^<0> [^array?                  x ^int    k :<0>:1 v] (aset      x k v) x))
+  #?(:clj  (^<0> [^array?                  x ^int    k :<0>:1 v] (Array/set x v k)))
+  #?(:clj  (^<0> [^list?                   x ^int    k        v] (.set x k v) x)) ; TODO it may fail sometimes
+  ;; TODO do type parameterization for maps and arraylists too
+  #?(:clj  (^<0> [#{!map:ref->ref? !!map?} x         k        v] (.put x k v) x))
+  #?(:clj  (^<0> [#{!map:int->ref?}        x ^int    k        v] (.put x k v) x))
+  #?(:clj  (^<0> [#{!map:long->ref?}       x ^long   k        v] (.put x k v) x))
+  #?(:clj  (^<0> [#{!map:double->ref?}     x ^double k        v] (.put x k v) x))
+           (^<0> [^transient?              x         k        v] (core/assoc! x k v))
+           (     [^atom?                   x         k        v] (swap! x assoc-protocol k v))
+  #?(:clj  (^<0> [^default                 x ^int    k        v]
              (if (t/array? x)
                  (java.lang.reflect.Array/set x k v)
                  (throw (->ex :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
@@ -799,10 +877,28 @@
 
 (defnt conj!
   {:todo #{"Add more possibilities"}}
-  ([^transient?   x v] (core/conj! x v))
-  ([^atom?        x v] (swap! x core/conj v))
-  ([^!array-list? x v] (doto x (#?(:clj .add :cljs .push) v)))
-  ([^!string?     x v] (.append x v)))
+          ([^transient?       x          v] (core/conj! x v))
+          ([^atom?            x          v] (swap! x core/conj v))
+          ([#{!array-list?
+              #?(:clj ObjectArrayList)} x v] (doto x (#?(:clj .add :cljs .push) v)))
+          ; TODO use typedefs for these
+  #?(:clj ([#{BooleanArrayList
+              BooleanSet}     x ^boolean v] (doto x (.add v))))
+  #?(:clj ([#{ByteArrayList
+              ByteSet}        x ^byte    v] (doto x (.add v))))
+  #?(:clj ([#{CharArrayList
+              CharSet}        x ^char    v] (doto x (.add v))))
+  #?(:clj ([#{ShortArrayList
+              ShortSet}       x ^short   v] (doto x (.add v))))
+  #?(:clj ([#{IntArrayList
+              IntSet}         x ^int     v] (doto x (.add v))))
+  #?(:clj ([#{LongArrayList
+              LongSet}        x ^long    v] (doto x (.add v))))
+  #?(:clj ([#{FloatArrayList
+              FloatSet}       x ^float   v] (doto x (.add v))))
+  #?(:clj ([#{DoubleArrayList
+              DoubleSet}      x ^double  v] (doto x (.add v))))
+          ([^!string?         x          v] (.append x v)))
 
 (defnt disj!
   ([^transient? x v] (core/disj! x v))
@@ -811,6 +907,11 @@
 #?(:clj
 (defmacro update! [coll i f]
   `(assoc! ~coll ~i (~f (get ~coll ~i)))))
+
+(defnt aswap! [^array? arr ^int i ^int j]
+   (let [tmp (get arr i)]
+     (assoc! arr i (get arr j))
+     (assoc! arr j tmp)))
 
 (defnt first
   {:todo #{"Import core/first"}}
@@ -901,8 +1002,8 @@
   "`conj`, maybe mutable. General `conj(!)`.
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
-  ([#{transient? atom? !array-list? !string?} x v] (conj! x v)) ; TODO auto-determine
-  ([^default                                  x v] (conj  x v))) ; TODO auto-determine
+  ([#{transient? atom? !vec? !string?} x v] (conj! x v)) ; TODO auto-determine
+  ([^default                           x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
   ([^+vec? coll a    ] (core/conj a    ))
@@ -1003,6 +1104,31 @@
 
 ; ===== JOIN ===== ;
 
+(defnt joinl-array-helper
+  ; TODO this can be removed once templated type hinting is done
+  ([^booleans? ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (boolean x))))
+  ([^bytes?    ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (byte    x))))
+  ([^chars?    ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (char    x))))
+  ([^shorts?   ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (short   x))))
+  ([^ints?     ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (int     x))))
+  ([^longs?    ret ^long to-ct] (fn [_ ^long    x ^long i] (assoc!& ret (+ i to-ct)          x )))
+  ([^floats?   ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct) (float   x))))
+  ([^doubles?  ret ^long to-ct] (fn [_ ^double  x ^long i] (assoc!& ret (+ i to-ct)          x )))
+  ([^objects?  ret ^long to-ct] (fn [_          x ^long i] (assoc!& ret (+ i to-ct)          x ))))
+
+(defnt joinl!
+  "Like `joinl`, but mutates `to`."
+        ([^default        to from] (reduce conj!-protocol to from))
+#_(:clj ([...])) ; TODO bulk add operations that are cheaper than using `reduce`, e.g. on fastutil collections
+        ([^!string?       to from] (str (reduce conj!-protocol to from)))
+        (^<0> [^object-array? #_array-1d? to from] ; TODO
+          (if (identical? (class to) (class from)) ; TODO to support all 1D arrays, just need to eliminate reflection with `assoc!&`
+              #?(:clj  (copy! from 0 to 0 (count from))
+                 :cljs (TODO))
+              (reducei (fn [_ x ^long i] (assoc!& to i x)) to from))))
+
+#?(:clj (defalias join! joinl!))
+
 (defnt joinl
   "Join, left.
    Like |into|, but handles kv sources,
@@ -1021,7 +1147,7 @@
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/sequential-splice-hash-sets to from)
                                           (red/transient-into to from))
-                             :cljs (red/transient-into to from)))
+                                :cljs (red/transient-into to from)))
   ([^+sorted-set?   to from] (if (t/+set? from)
                                  (clojure.set/union to from)
                                  (red/persistent-into to from)))
@@ -1032,26 +1158,26 @@
   ([^+sorted-map?   to from] (red/persistent-into to from))
   ([^+array-map?    to from] (red/transient-into to from))
   ([^string?        to from] (joinl (!str to) from))
-  (^<0> [^array-1d? to from] ; returns a new array
+  (^<0> [^array-1d? to from] ; TODO need to allow all array types
     (cond (identical? (class to) (class from)) ; TODO fix this
-          #?(:clj  (let [to-ct   (count to)
-                         from-ct (count from)
-                         n       (+ to-ct from-ct)
-                         ret     (array-of-type to (int n))]
-                     (copy! to   0 ret 0     to-ct)
-                     (copy! from 0 ret to-ct from-ct))
-             :cljs (.concat to from))
-          (t/counted? from)
-          (TODO) ; TODO this code is good; just need to eliminate reflection with `assoc!&`
-          #_(let [to-ct   (count to)
-                from-ct (count from)
-                n       (+ to-ct from-ct)
-                ret     (array-of-type to (int n))]
-            (copy! to 0 ret 0 to-ct)
-            (reducei (fn [_ x ^long i] (assoc!& to (+ i to-ct) x) nil) nil from)
-            ret)
-          ; Can `join` into array list and get array afterward
-          :else (TODO))))
+            #?(:clj  (let [to-ct   (count to)
+                           from-ct (count from)
+                           n       (+ to-ct from-ct)
+                           ret     (array-of-type to (int n))]
+                       (copy! to   0 ret 0     to-ct)
+                       (copy! from 0 ret to-ct from-ct))
+               :cljs (.concat to from))
+          (and (not (t/reducer? from)) (t/counted? from))
+            (let [to-ct   (count to)
+                  from-ct (count from)
+                  n       (+ to-ct from-ct)
+                  ret     (array-of-type to (int n))]
+              (copy! to 0 ret 0 to-ct)
+              (reducei (joinl-array-helper ret to-ct) ret from))
+          :else
+            (-> (->array-list to)
+                (join! from)
+                ->array))))
 
 #_(defn joinl
   ([] nil)
@@ -1060,26 +1186,36 @@
   ([to from & froms]
     (reduce joinl (joinl to from) froms)))
 
+#?(:clj (defalias join joinl))
+
+(defnt joinl?!
+  "`joinl`, maybe mutable. General `join(!)`.
+   If `to` is mutable  , it will mutably   `join!`.
+   If `to` is immutable, it will immutably `join`."
+  ([              from] (joinl [] from))
+  ([^default   to from] (reduce conj?!-protocol to from))
+  ([#{+vec? +unsorted-set?
+      +sorted-set? +hash-map?
+      +sorted-map? +array-map?
+      string?} to from] (joinl to from))
+  ;; TODO need to allow all array types
+  ([^array-1d? to from] (joinl! to from)))
+
+#?(:clj (defalias join?! joinl?!))
+
+(defnt joinl'-reducer
+  ([^reducer?  to   from] (joinl'-reducer (:coll from) from))
+  ([^array-1d? orig from] (joinl!  (blank orig) from))
+  ([^default   orig from] (joinl?! (empty orig) from)))
+
 (defnt joinl'
-  "Like `joinl`, but reduces into the empty version of the
+  "Like `joinl`, but reduces into an empty version of the
    collection passed."
-  ([^reducer?     from] (joinl' (empty (:coll from)) from))
-  ([^default      from] (joinl' (empty from) from))
-  ([^+list?    to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
-  ([^default   to from] (joinl to from)))
+  ([^reducer?  from] (joinl'-reducer (:coll from) from))
+  ;; TODO need to allow all array types
+  ([^array-1d? from] (joinl! (blank from) from))
+  ([^default   from] (joinl?! (empty from) from))
+  #_([^+list?    to from] (list* (concat to from))) ; To preserve order ; TODO test whether (reverse (join to from)) is faster
+  )
 
-#?(:clj (defalias join  joinl ))
 #?(:clj (defalias join' joinl'))
-
-(defnt joinl!
-  "Like `joinl`, but mutates `to`."
-  ([^default        to from] (reduce conj!-protocol to from))
-  ([^!string?       to from] (str #?(:clj  (reduce #(conj! ^StringBuilder %1 %2) to from)
-                                     :cljs (reduce #(conj! ^StringBuffer  %1 %2) to from))))
-  (^<0> [^object-array? #_array-1d? to from] ; TODO
-    (if (identical? (class to) (class from)) ; TODO to support all 1D arrays, just need to eliminate reflection with `assoc!&`
-        #?(:clj  (copy! from 0 to 0 (count from))
-           :cljs (TODO))
-        (reducei (fn [_ x ^long i] (assoc!& to i x)) to from))))
-
-#?(:clj (defalias join! joinl!))
