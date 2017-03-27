@@ -263,6 +263,8 @@
      [org.clojure/test.generative               "0.5.2"           ]
      [org.clojure/test.check                    "0.9.0"           ]
      [lein-doo                                  "0.1.7"           ]
+     ; HASHING
+     [info.debatty/java-lsh                     "0.10"            ]
      ; ==== MULTIPLE ====
      ; COMPRESSION, HASHING...
      [byte-transforms                           "0.1.4"
