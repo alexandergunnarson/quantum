@@ -1,7 +1,7 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
   (:refer-clojure :exclude
-    [reduce mod count *' +' map])
+    [reduce mod first, count, *' +', map, dotimes])
   (:require
     [quantum.core.numeric      :as num
       :refer [abs mod sqrt pow #?(:clj *') +' exactly]
@@ -9,13 +9,16 @@
     [quantum.core.data.binary  :as bin
       :refer [>>]]
     [quantum.core.collections  :as coll
-      :refer [map+ range+ filter+ mapcat+
-              reduce join join' count kw-map map]]
+      :refer [map map+, range+, filter+, mapcat+
+              reduce reduce-multi, join join'
+              for', dotimes, first, get-in* assoc-in!*
+              count kw-map, blank]]
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [fn-> <- fnl fn& fn&2]]
+      :refer [fn-> <- fn1 fnl fn& fn&2]]
     [quantum.core.log          :as log]
+    [quantum.core.type         :as t]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.macros
@@ -83,10 +86,10 @@
    :double-octave  (/ 4 1)})
 
 (defn sum+count     [xs]
-  (reduce (fn [[sum ct] x] [(+ sum x) (inc ct)]) [0 0] xs))
+  (reduce-multi [+ coll/count:rfn] xs))
 
 (defn product+count [xs]
-  (reduce (fn [[sum ct] x] [(* sum x) (inc ct)]) [1 0] xs))
+  (reduce-multi [* coll/count:rfn] xs))
 
 (def sum     (fnl reduce +))
 (def product (fnl reduce *))
@@ -248,3 +251,42 @@
           rng' (abs (- a b))
           min' (min a b)]
       (->> x• (map+ (fn-> (- min-) (/ rng) (* rng') (+ min'))) join))))
+
+(defnt normalize-2d:column
+  "Given `x••`, a 2D tensor of real values, computes a version of it
+   whose values are normalized by column between `a` and `b`.
+   That is, the min and max are calculated not by row, but by column."
+  {:todo       #{"`skip-cols` must be something for which `get` can return truthy or falsey"}
+   :params-doc '{skip-cols "Indices of columns for which to skip normalization"}}
+  ([#{numeric-2d? objects-2d?} x••] (normalize-2d:column x•• nil 0 1))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols] (normalize-2d:column x•• skip-cols 0 1))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols #_double a #_double b] ; TODO fix this because we're getting primitive type hint complaints!!
+    (let [x••'    (blank x••)
+          ct:rows (count x••')
+          ct:cols (-> x••' first count)
+          rng'    (abs (- a b))
+          min'    (min a b)]
+      (dotimes [i:col ct:cols]
+        (if (get skip-cols i:col)
+            (dotimes [i:row ct:rows]
+              (coll/assoc-in!*& x••' (coll/get-in*& x•• i:row i:col) i:row i:col))
+            (let [min:col (->> x•• (map+ (fn1 get i:col)) coll/reduce-min)
+                  max:col (->> x•• (map+ (fn1 get i:col)) coll/reduce-max)
+                  rng:col (abs (- min:col max:col))]
+              (dotimes [i:row ct:rows]
+                (coll/assoc-in!*& x••'
+                  (t/static-cast-depth x•• 2
+                    (-> (coll/get-in*& x•• i:row i:col)
+                        (- min:col) (/ rng:col) (* rng') (+ min')))
+                  i:row i:col)))))
+      x••')))
+
+; TODO:
+#_"Dividing by the range allows
+outliers (extreme values) to have a profound effect on the contribution of an attribute.
+In order to avoid outliers (be robust in their presence), it is common to divide by the
+standard deviation instead of range, or to “trim” the range by removing the highest and lowest
+few percent (e.g., 5%) of the data from consideration in defining the range. It is also possible to
+map any value outside this range to the minimum or maximum value to avoid normalized
+values outside the range 0..1. Domain knowledge can often be used to decide which method is
+most appropriate."
