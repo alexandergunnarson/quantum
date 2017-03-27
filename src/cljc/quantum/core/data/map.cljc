@@ -17,8 +17,11 @@
   (:require-macros
             [quantum.core.vars    :as var
               :refer [defalias]])
-  (:import #?(:clj  java.util.HashMap
-              :cljs goog.structs.Map)))
+  (:import #?@(:clj  [java.util.HashMap
+                      [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
+                      [it.unimi.dsi.fastutil.longs   Long2ReferenceOpenHashMap]
+                      [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]]
+               :cljs [goog.structs.Map])))
 
 ; TO EXPLORE
 ; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
@@ -129,7 +132,8 @@
     (reduce pmerge
       (pmerge m0 m1) ms))))
 
-(defn !hash-map
+; TODO generate these functions via macros
+(defn #?(:clj ^HashMap !hash-map :cljs !hash-map)
   "Creates a single-threaded, mutable hash map.
    On the JVM, this is a java.util.HashMap.
 
@@ -181,3 +185,13 @@
             (#?(:clj .put :cljs .set) k5 v5)
             (#?(:clj .put :cljs .set) k6 v6))
       kvs)))
+
+; TODO generate these functions via macros
+#?(:clj (defn ^Int2ReferenceOpenHashMap !hash-map:int->ref [] (Int2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map:int->object !hash-map:int->ref))
+
+#?(:clj (defn ^Long2ReferenceOpenHashMap !hash-map:long->ref [] (Long2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map:long->object !hash-map:long->ref))
+
+#?(:clj (defn ^Double2ReferenceOpenHashMap !hash-map:double->ref [] (Double2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map:double->object !hash-map:double->ref))
