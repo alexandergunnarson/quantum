@@ -35,7 +35,7 @@
   (cond (or (nil? tag) (class? tag))
         tag
         (symbol? tag)
-        (ns-resolve *ns* (sanitize-tag :clj tag))
+        (eval (sanitize-tag :clj tag)) ; `ns-resolve` doesn't resolve e.g. 'java.lang.Long/TYPE correctly
         (string? tag)
         (Class/forName tag)
         :else (throw (ex-info "Cannot convert tag to class" {:tag tag})))))
@@ -124,9 +124,7 @@
                     RT/UNCHECKED_MATH @RT/UNCHECKED_MATH
                     Compiler/LINE_BEFORE (int -1)
                     Compiler/LINE_AFTER  (int -1)
-                    Compiler/COLUMN_BEFORE (int -1
-
-                      )
+                    Compiler/COLUMN_BEFORE (int -1)
                     Compiler/COLUMN_AFTER  (int -1)
                     ;RT/WARN_ON_REFLECTION false
                     RT/DATA_READERS @RT/DATA_READERS}
@@ -162,13 +160,14 @@
 #?(:clj
 (defmacro typeof
   "Compile-time `typeof*`"
-  ([& args] (typeof* ~@args))))
+  ([& args] (apply typeof* args))))
 
 #?(:clj
-(defmacro cast-depth [xs depth x]
+(defmacro static-cast-depth [xs depth x]
   (cmacros/case-env
     :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs n x)))
-    :clj  (let [hint       (tag->class xs)
+    :clj  (let [hint       (jvm-typeof-respecting-hints xs &env)
+                _          (assert hint {:xs xs :hint hint})
                 cast-class (tag->class (tcore/nth-elem-type:clj hint depth))]
             (if (.isPrimitive ^Class cast-class)
                 `(~(symbol "clojure.core" (str cast-class)) ~x)
