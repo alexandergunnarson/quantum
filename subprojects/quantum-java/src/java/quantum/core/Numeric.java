@@ -617,6 +617,7 @@ public class Numeric {
 
     // ============================ DIVIDE : / ================================ //
     // "Infectious": uses the largest data type passed
+    // TODO need to deal with int truncation here... sometimes it's intentional...
 
     public static double divide   (final byte   a, final byte   b) { return a / b; }
     public static double divide   (final byte   a, final char   b) { return a / b; }
