@@ -23,7 +23,7 @@
 (def ^{:todo {0 "Finish up `conditions` fork"}} annotations nil)
 
 (defn generic-error [env]
-  (case-env* env :clj 'Throwable :cljs 'js/Error))
+  (case-env* env :clj 'java.lang.Throwable :cljs 'js/Error))
 
 #?(:clj
 (defmacro catch-all
@@ -169,27 +169,6 @@
 (defmacro assertf->> [f throw-obj arg]
   `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
        ~arg)))
-
-#?(:clj
-(defmacro try-times [max-n sleep-millis & body]
-  (let [c (case-env :clj 'Throwable :cljs 'js/Error)]
-    `(let [max-n#        ~max-n
-           sleep-millis# ~sleep-millis]
-       (loop [n# 0 error-n# nil]
-         (if (> n# max-n#)
-             (throw (->ex :max-tries-exceeded nil
-                          {:tries n# :last-error error-n#}))
-             (let [[error# result#]
-                     (try [nil (do ~@body)]
-                       (catch ~c e#
-                         (quantum.core.async/sleep sleep-millis#)
-                         [e# nil]))]
-               (if error#
-                   (recur (inc n#) error#)
-                   result#))))))))
-
-(defn tries-exceeded [tries & [state]]
-  (throw (->ex :max-tries-exceeded nil {:tries tries :state state})))
 
 #?(:clj (defalias try+   try/try+  ))
 #?(:clj (defalias throw+ try/throw+))

@@ -1,5 +1,6 @@
 (ns quantum.parse.core
-  (:refer-clojure :exclude [reduce])
+  (:refer-clojure :exclude
+    [conj! reduce])
   (:require
     [quantum.core.data.string
       :refer [!str]]

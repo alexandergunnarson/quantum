@@ -1,50 +1,51 @@
 (ns
-  ^{:doc "Asynchronous things."
+  ^{:doc "Asynchronous and thread-related functions."
     :attribution "alexandergunnarson"}
   quantum.core.async
   (:refer-clojure :exclude
     [locking
-     promise realized? future map])
+     promise deliver, delay force, realized? future map])
   (:require
-    [clojure.core                     :as core]
-    [com.stuartsierra.component       :as component]
-    [clojure.core.async               :as async]
+    [clojure.core                      :as core]
+    [com.stuartsierra.component        :as component]
+    [clojure.core.async                :as async]
     [clojure.core.async.impl.protocols :as asyncp]
 #?@(#_:clj
- #_[[co.paralleluniverse.pulsar.async :as async+]
-    [co.paralleluniverse.pulsar.core  :as pasync]]
-    :cljs
-   [[servant.core                     :as servant]])
-    [quantum.core.core                :as qcore]
-    [quantum.core.error               :as err
+ #_[[co.paralleluniverse.pulsar.async  :as async+]
+    [co.paralleluniverse.pulsar.core   :as pasync]])
+    [quantum.core.collections          :as coll
+      :refer [doseqi nempty? seq-loop break nnil? map]]
+    [quantum.core.core                 :as qcore
+      :refer [istr]]
+    [quantum.core.error                :as err
       :refer [->ex TODO catch-all]]
-    [quantum.core.collections         :as coll
-      :refer [nempty? seq-loop break nnil? map]]
-    [quantum.core.log                 :as log]
-    [quantum.core.logic               :as logic
+    [quantum.core.fn
+      :refer [fnl]]
+    [quantum.core.log                  :as log]
+    [quantum.core.logic                :as logic
       :refer [fn-and fn-or fn-not condpc whenc]]
-    [quantum.core.macros.core         :as cmacros
+    [quantum.core.macros.core          :as cmacros
       :refer [case-env]]
-    [quantum.core.macros              :as macros
+    [quantum.core.macros               :as macros
       :refer [defnt]]
-    [quantum.core.system              :as sys]
-    [quantum.core.vars                :as var
+    [quantum.core.system               :as sys]
+    [quantum.core.vars                 :as var
       :refer [defalias defmalias]]
-    [quantum.core.spec                :as s
+    [quantum.core.spec                 :as s
       :refer [validate]])
   (:require-macros
-    [servant.macros                   :as servant
-      :refer [defservantfn]                        ]
-    [cljs.core.async.macros           :as asyncm   ]
-    [quantum.core.async               :as self
+    [cljs.core.async.macros            :as asyncm]
+    [quantum.core.async                :as self
       :refer [go]])
 #?(:clj
   (:import
     clojure.core.async.impl.channels.ManyToManyChannel
-    (java.util.concurrent TimeUnit)
+    [java.util.concurrent Future FutureTask TimeUnit]
     quantum.core.data.queue.LinkedBlockingQueue
-    #_co.paralleluniverse.fibers.Fiber
-    #_co.paralleluniverse.strands.Strand)))
+    [co.paralleluniverse.strands.channels SendPort]
+    co.paralleluniverse.strands.channels.ReceivePort
+    co.paralleluniverse.fibers.Fiber
+    co.paralleluniverse.strands.Strand)))
 
 (log/this-ns)
 
@@ -70,17 +71,13 @@
   "Takes a value from a core.async channel, throwing the value if it
    is a js/Error or Throwable."
   [expr]
-  (let [err-class (case-env :clj 'Throwable :cljs 'js/Error)]
-   `(let [expr-result# (<! ~expr)]
-      (if ;(quantum.core.type/error? expr-result#)
-          (instance? ~err-class expr-result#)
-          (throw expr-result#)
-          expr-result#)))))
+ `(let [expr-result# (<! ~expr)]
+    (if (err/error? expr-result#)
+        (throw expr-result#)
+        expr-result#))))
 
 #?(:clj
-(defmacro try-go
-  [& body]
-  `(asyncm/go (catch-all (do ~@body) e# e#))))
+(defmacro try-go [& body] `(async (catch-all (do ~@body) e# e#))))
 
 (deftype QueueCloseRequest [])
 (deftype TerminationRequest [])
@@ -121,7 +118,18 @@
   ([arg0     ] (chan* arg0     ))
   ([arg0 arg1] (chan* arg0 arg1)))
 
+; ----- PROMISE ----- ;
+
 (defalias promise-chan async/promise-chan)
+; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))
+; CLJS doesn't have `promise` yet
+#?(:clj (defalias promise core/promise #_pasync/promise))
+#?(:clj (defalias deliver core/deliver))
+
+; ----- DELAY ----- ;
+
+(defalias delay core/delay)
+(defalias force core/force)
 
 (defalias timeout async/timeout)
 
@@ -149,11 +157,10 @@
 
 ;(defalias <!! take!!)
 
+        (defalias <!  async/<!)
 #?(:clj (defalias <!! async/<!!))
 
 (defalias take! async/take!)
-
-#?(:clj (defmacro <! [& args] `(~(case-env :cljs 'cljs.core.async/<! 'clojure.core.async/<!) ~@args)))
 
 (declare empty!)
 
@@ -161,7 +168,7 @@
 (defnt empty!
 #?(:clj
   ([^LinkedBlockingQueue q] (.clear q)))
-  ([^m2m-chan?           c] (throw (->ex :unimplemented)))))
+  ([^m2m-chan?           c] (TODO))))
 
 (defalias put! async/put!)
 
@@ -187,7 +194,7 @@
   ([^quantum.core.async.TerminationRequest obj] false)
   ([                    obj] (when (nnil? obj) true)))
 
-(def close-req? #(instance? QueueCloseRequest %))
+(def close-req? (fnl instance? QueueCloseRequest))
 
 (declare peek!!)
 
@@ -197,19 +204,19 @@
 #?@(:clj
  [([^LinkedBlockingQueue q]         (.blockingPeek q))
   ([^LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
-  ([^m2m-chan?           c] (throw (->ex :not-implemented "Not yet implemented." nil)))))
+  ([^m2m-chan?           c] (TODO))))
 
 (declare interrupt!)
 
 #?(:clj
 (defnt interrupt!
-  ([#{Thread}         x] (.interrupt x)) ; /join/ after interrupt doesn't work
-  ([#{Process java.util.concurrent.Future} x] nil))) ; .cancel?
+  ([#{Thread}         x] (.interrupt x)) ; `join` after interrupt doesn't work
+  ([#{Process Future} x] nil))) ; .cancel?
 
 #?(:clj
 (defnt interrupted?*
-  ([#{Thread #_co.paralleluniverse.strands.Strand}         x] (.isInterrupted x))
-  ([#{Process java.util.concurrent.Future} x] (throw (->ex :not-implemented "Not yet implemented." nil)))))
+  ([#{Thread Strand}  x] (.isInterrupted x))
+  ([#{Process Future} x] (TODO))))
 
 ;#?(:clj
 ;(defn interrupted?
@@ -218,35 +225,25 @@
 
 (declare interrupted?)
 
-(declare close!)
-
 #?(:clj
 (defnt close!
-  ([^Thread                      x] (.stop    x))
-  ([^Process                     x] (.destroy x))
-  ([#{java.util.concurrent.Future
-      java.util.concurrent.FutureTask} x] (.cancel x true))
-  ([                             x] (if (nil? x) true (throw :not-implemented)))
-  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.close x))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (asyncp/close! x))
-  ([^co.paralleluniverse.strands.channels.SendPort      x] (.close x))
-  ([^co.paralleluniverse.strands.channels.ReceivePort   x] (.close x))))
-
-(declare closed?)
+  ([^Thread              x] (.stop    x))
+  ([^Process             x] (.destroy x))
+  ([#{Future FutureTask} x] (.cancel x true))
+  ([^default             x] (if (nil? x) true (TODO)))
+  ([^ManyToManyChannel   x] (asyncp/close! x))
+  ([#{LinkedBlockingQueue ReceivePort SendPort} x] (.close x))))
 
 #?(:clj
 (defnt closed?
-  ([^Thread x] (not (.isAlive x)))
-  ([^Process x] (try (.exitValue x) true
-                   (catch IllegalThreadStateException _ false)))
-  ([#{java.util.concurrent.Future
-      java.util.concurrent.FutureTask
-      #_co.paralleluniverse.fibers.Fiber} x] (or (.isCancelled x) (.isDone x)))
-  ([^quantum.core.data.queue.LinkedBlockingQueue        x] (.isClosed x))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel x] (asyncp/closed? x))
-  #_([^co.paralleluniverse.strands.channels.ReceivePort   x] (.isClosed x))
-  ([^boolean? x] x)
-  ([x] (if (nil? x) true (throw (->ex :not-implemented))))))
+  ([^Thread                            x] (not (.isAlive x)))
+  ([^Process                           x] (try (.exitValue x) true
+                                            (catch IllegalThreadStateException _ false)))
+  ([#{Fiber Future FutureTask}         x] (or (.isCancelled x) (.isDone x)))
+  ([#{LinkedBlockingQueue ReceivePort} x] (.isClosed x))
+  ([^ManyToManyChannel                 x] (asyncp/closed? x))
+  ([^boolean                           x] x)
+  ([^default                           x] (if (nil? x) true (TODO)))))
 
 #?(:clj (def open? (fn-not closed?)))
 
@@ -255,29 +252,26 @@
   ([^clojure.lang.IPending x] (realized? x))
   #_([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
     (-> x .getQueueLength (> 0)))
-  ([#{java.util.concurrent.Future
-      java.util.concurrent.FutureTask
-      #_co.paralleluniverse.fibers.Fiber} x] (.isDone x))))
+  ([#{Future FutureTask Fiber} x] (.isDone x))))
 
 #?(:clj
-(defmacro sleep
-  "Macro because CLJS needs |<!| to be within a |go| block not
-   just in compiled form, but in uncompiled (syntactic) form.
-
-   Never use Thread/sleep in a go block. Use |(<! (timeout <msec>))|.
-   Never use Thread/sleep in a fiber or it will generate constant warnings.
-
-   Never use |sleep| without marking the enclosing function |suspendable!| (and probably all other
-   functions that call it...)."
+(defmacro wait!
+  "`wait` within a `go` block"
   [millis]
-  (case-env
-    :clj  `(Thread/sleep ~millis)
-    :cljs `(<! (timeout ~millis))
+  `(<! (timeout ~millis))
+  #_(case-env
+    :clj
     #_(if (Fiber/currentFiber)
           (Fiber/sleep  ~millis)
           (Strand/sleep ~millis)))))
 
+#?(:clj (defnt wait!! "Blocking wait" [^long millis] (Thread/sleep millis)))
+
 ; MORE COMPLEX OPERATIONS
+
+; ----- ALTS ----- ;
+
+(defalias alts! async/alts!)
 
 ; For some reason, having lots of threads with core.async/alts!! "clogs the tubes", as it were
 ; Possibly because of deadlocking?
@@ -291,10 +285,8 @@
                      (when (nempty? c)
                        (break [(take!! c) c]))))]
       (whenc result nil?
-        (do (sleep 5)
+        (do (wait!! 5)
             (recur)))))))
-
-(declare alts!!)
 
 #?(:clj
 (defnt alts!!
@@ -303,12 +295,12 @@
    :attribution "alexandergunnarson"}
   ([^keyword? type chans]
     (alts!! type chans nil))
-  #_([^coll? chans]
+  #_([^sequential? chans]
     (async+/alts!! chans))
-  #_([^coll? chans timeout]
+  #_([^sequential? chans timeout]
     (async+/alts!! chans timeout))
   ([^keyword? type chans timeout]
-    (condp = type
+    (case type
       ;:std     (if timeout
       ;             (async+/alts!! chans timeout)
       ;             (async+/alts!! chans))
@@ -316,6 +308,57 @@
       :casync  (if timeout
                    (async/alts!! chans timeout)
                    (async/alts!! chans))))))
+
+; ----- FUTURE ----- ;
+
+#?(:clj
+(defmacro future
+  "`future` for Clojure aliases `clojure.core/future`.
+
+   For ClojureScript, obviously there is no `cljs.core/future`, but this replicates some of the
+   behavior of `clojure.core/future`, with some differences:
+
+   Since the context of each of these 'threads'/web workers is totally separate from the main (UI)
+   thread, then messages passed back and forth will be all these threads know of each other.
+   This is why web-worker code that attempts to generate side-effects on application state doesn't
+   work or can produce strange effects.
+
+   However, web workers can produce side-effects on e.g. local browser cache or create HTTP requests."
+  [& body]
+  (case-env
+    :clj  `(clojure.core/future ~@body)
+    :cljs `(servant.core/servant-thread global-threadpool
+             servant.core/standard-message dispatch (fn [] ~@body)))))
+
+; TODO incorporate
+; future-call #'clojure.core/future-call,
+; future-cancel #'clojure.core/future-cancel,
+; future-cancelled? #'clojure.core/future-cancelled?,
+; future-done? #'clojure.core/future-done?,
+
+; ----- THREAD-LOCAL ----- ;
+
+#?(:clj
+(defn thread-local*
+  {:from "flatland.useful.utils"}
+  [init]
+  (let [generator (proxy [ThreadLocal] []
+                    (initialValue [] (init)))]
+    (reify clojure.lang.IDeref
+      (deref [this] (.get generator))))))
+
+#?(:clj
+(defmacro thread-local
+  "Takes a body of expressions, and returns a java.lang.ThreadLocal object.
+   (see http://download.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html).
+   To get the current value of the thread-local binding, you must deref (@) the
+   thread-local object. The body of expressions will be executed once per thread
+   and future derefs will be cached."
+  {:from "flatland.useful.utils"}
+  [& body]
+  `(thread-local* (fn [] ~@body))))
+
+; ----- MISC ----- ;
 
 #?(:clj
 (defmacro seq<!
@@ -329,43 +372,44 @@
 
 #?(:clj (defn seq<!! [ports] (map <!! ports)))
 
-; Promise, delay, future
-; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))
-; CLJS doesn't have |promise| yet
-#?(:clj (defalias promise core/promise #_pasync/promise))
-
 (defalias timeout async/timeout)
 
 #?(:clj
-(defmacro wait-until
-  ([pred]
+(defmacro wait-until*
+  "Waits until the value of `pred` becomes truthy."
+  ([sleepf pred]
     (let [max-num (case-env :clj 'Long/MAX_VALUE :cljs 'js/Number.MAX_SAFE_INTEGER)]
-      `(wait-until ~max-num ~pred)))
-  ([timeout pred]
+      `(wait-until* ~sleepf ~max-num ~pred)))
+  ([sleepf timeout pred]
    `(loop [timeout# ~timeout]
       (if (<= timeout# 0)
-          (throw (->ex :timeout (str/sp "Operation timed out after" ~timeout "milliseconds") ~timeout))
+          (throw (->ex :timeout ~(istr "Operation timed out after ~{timeout} milliseconds") ~timeout))
           (when-not ~pred
-            (sleep 10) ; Sleeping so as not to take up thread time
+            (~sleepf 10) ; Sleeping so as not to take up thread time
             (recur (- timeout# 11)))))))) ; Takes a tiny bit more time
 
-(defn concur
-  "Executes functions @fs concurrently, waiting on the slowest one to finish.
-   Returns a vector of the results.
+#?(:clj (defmacro wait-until!  [& args] `(wait-until* sleep!  ~@args)))
+#?(:clj (defmacro wait-until!! [& args] `(wait-until* sleep!! ~@args)))
 
-   Note: The example should only take 2 seconds, not 3."
-  {:usage '(concur #(do (println "A") (Thread/sleep 1000))
-                   #(do (println "B") (Thread/sleep 2000)))}
-  [& fs]
-  (->> fs
-       (mapv (fn [f] (go (f))))
-       (mapv #(#?(:clj  async/<!!
-                  :cljs async/<!) %))))
+#?(:clj
+(defmacro try-times* [waitf max-n wait-millis & body]
+ `(let [max-n#       ~max-n
+        wait-millis# ~wait-millis]
+    (loop [n# 0 error-n# nil]
+      (if (> n# max-n#)
+          (throw (->ex :max-tries-exceeded nil
+                       {:tries n# :last-error error-n#}))
+          (let [[error# result#]
+                  (try [nil (do ~@body)]
+                    (catch ~(err/generic-error &env) e#
+                      (~waitf wait-millis#)
+                      [e# nil]))]
+            (if error#
+                (recur (inc n#) error#)
+                result#)))))))
 
-
-
-
-#?(:cljs (def web-workers-set-up? (atom false)))
+#?(:clj (defmacro try-times!  [& args] `(try-times* wait!  ~@args)))
+#?(:clj (defmacro try-times!! [& args] `(try-times* wait!! ~@args)))
 
 (defn web-worker?
   "Checks whether the current thread is a WebWorker."
@@ -375,83 +419,19 @@
                 (-> js/window .-self .-document undefined?)
                 (or (nil? sys/os) (= sys/os "web")))))
 
-#?(:cljs (defalias bootstrap-worker servant.worker/bootstrap ))
-
-#?(:cljs
-(defrecord Threadpool [thread-ct threads script-src]
-  component/Lifecycle
-    (start [this]
-      ; Bootstrap the web workers if that hasn't been done already
-      (let [thread-ct (or thread-ct 2)]
-        (when (and (web-worker?)
-                   ((fn-and integer? pos?) thread-ct)
-                   (not @web-workers-set-up?))
-          (log/pr :user "Bootstrapping web workers")
-          ; Run the setup code for the web workers
-          (bootstrap-worker)
-          (reset! web-workers-set-up? true))
-
-        ; We need to make sure that only the main thread/script will spawn the servants.
-        (if (servant/webworker?)
-            this
-            (do (log/pr :debug "Spawning" thread-ct "-thread web-worker threadpool")
-                (validate script-src string?
-                          thread-ct  (s/and integer? pos?))
-                (assoc this
-                  ; Returns a buffered channel of web workers
-                  :threads (servant/spawn-servants thread-ct script-src))))))
-    (stop  [this]
-      (when threads
-        (log/pr :debug "Destroying" thread-ct "-thread web-worker threadpool")
-        (servant/kill-servants threads thread-ct))
-
-      this)))
-
-#?(:cljs
-(defn ->threadpool [{:keys [thread-ct script-src] :as opts}]
-  (assert ((fn-or nil? integer?) thread-ct) #{thread-ct})
-  (assert (string? script-src) #{script-src})
-
-  (when (pos? thread-ct)
-    (map->Threadpool opts))))
-
-#?(:cljs (swap! qcore/registered-components assoc ::threadpool
-            #(component/using (->threadpool %) [::log/log])))
-
-#?(:cljs (defservantfn dispatch "The global web worker dispatch fn" [f] (f)))
-
-#?(:clj
-(defmacro future
-  "|future| for ClojureScript. A little different, though, for the following reasons:
-
-   Since the context of each of these 'threads'/web workers is totally separate from the main (UI)
-   thread, then messages passed back and forth will be all these threads know of each other.
-   This is why web-worker code which attempts to generate side-effects on application state doesn't
-   work or can produce strange effects.
-
-   However, web workers can produce side-effects on e.g. local browser cache or create HTTP requests."
-  [& body]
-  `(servant.core/servant-thread global-threadpool
-     servant.core/standard-message dispatch (fn [] ~@body))))
-
-
-#?(:clj
-(defn thread-local*
-  {:from "flatland.useful.utils"}
-  [init]
-  (let [generator (proxy [ThreadLocal] []
-                    (initialValue [] (init)))]
-    (reify clojure.lang.IDeref
-      (deref [this]
-        (.get generator))))))
-
-#?(:clj
-(defmacro thread-local
-  "Takes a body of expressions, and returns a java.lang.ThreadLocal object.
-   (see http://download.oracle.com/javase/6/docs/api/java/lang/ThreadLocal.html).
-   To get the current value of the thread-local binding, you must deref (@) the
-   thread-local object. The body of expressions will be executed once per thread
-   and future derefs will be cached."
-  {:from "flatland.useful.utils"}
-  [& body]
-  `(thread-local* (fn [] ~@body))))
+#_(:clj
+(defn chunk-doseq
+  "Like `fold` but for `doseq`.
+   Also configurable by thread names and threadpool, etc."
+  [coll {:keys [total thread-count chunk-size threadpool thread-name chunk-fn] :as opts} f]
+  (let [total-f (or total (count coll))
+        chunks (coll/partition-all (or chunk-size
+                                       (/ total-f
+                                          (min total-f (or thread-count 10))))
+                 (if total (take total coll) coll))]
+    (doseqi [chunk chunks i]
+      (let [thread-id (keyword (str thread-name "-" i))]
+        (async (mergel {:id thread-id} opts)
+          ((or chunk-fn fn-nil) chunk i)
+          (doseqi [piece chunk n]
+            (f piece n chunk i chunks))))))))

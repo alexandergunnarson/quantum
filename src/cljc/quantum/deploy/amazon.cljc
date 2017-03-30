@@ -3,7 +3,7 @@
   #_(:require [quantum.core.reflect :refer [obj->map]]))
 
 ; TODO most of these functions are ambiguous as to whether they should go in
-; quantum.deploy.amazon or quantum.apis.amazon.aws.core    
+; quantum.deploy.amazon or quantum.apis.amazon.aws.core
 
 (def terminal     (atom nil))
 (def output-chan  (atom nil))
@@ -63,12 +63,12 @@
 
 #_(defn with-terminal
   {:todo ["Has the potential to get stuck in an infinite loop.
-           use |try-times| instead of |recur|."
+           use `try-times` instead of `recur`."
           "Allow multiple terminals (simultaneous SSHs)"]}
   [& commands]
   (when-not (reset! terminal (-> @thread/reg-threads :server-terminal :thread))
     (launch-terminal! true))
-  
+
   (doseq [command commands]
     (sh/input! :server-terminal command)))
 
@@ -113,11 +113,11 @@
   ; (command "sudo apt-get install leiningen") ; NO: gets Leiningen 1.7
   ; (wait-until-prompt 5000 "Do you want to continue?")
   ; (command "Y")
-  
+
   (command "mkdir ~/bin")
   (command "curl https://raw.githubusercontent.com/technomancy/leiningen/stable/bin/lein > ~/bin/lein")
   (command "chmod a+x ./bin/lein")
-  (command "sudo cp ~/bin/lein /bin/lein") ; Install globally 
+  (command "sudo cp ~/bin/lein /bin/lein") ; Install globally
   (wait-until-prompt 50000 (prompt)))
 
 #_(defn install-git! []
@@ -204,7 +204,7 @@
   "/Applications/VNC Viewer.app/Contents/MacOS/vncviewer")
 
 #_(defn launch-gui! [& [instance-name]]
-  
+
   ; SERVER-SIDE
   ; sudo service vncserver start
 
@@ -220,7 +220,7 @@
     []
     {:id :vnc-viewer :thread? true})
   ; Open VNC viewer and navigate to localhost:5901
-  ; It says the connection is not secure, but it is! 
+  ; It says the connection is not secure, but it is!
 )
 
 #_(defn add-gui-user! []

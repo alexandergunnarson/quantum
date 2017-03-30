@@ -8,7 +8,7 @@
               :refer [lens ?deref]]
             [quantum.core.data.complex.json          :as json]
             [quantum.core.error                      :as err
-              :refer [->ex try-times]]
+              :refer [->ex]]
             [quantum.core.fn                         :as fn
               :refer [fn-> fn']]
             [quantum.core.log                        :as log]
@@ -93,7 +93,7 @@
         args-f (cond (and times sleep) args
                      times             (cons ?sleep args)
                      :else             (concat (list ?times ?sleep) args))]
-    (go (try-times (or times 3) (or sleep 500)
+    (go (async/try-times! (or times 3) (or sleep 500)
           (when (nil? (apply put! args-f))
             (throw (->ex "WebSocket apparently not open for message")))))))
 
