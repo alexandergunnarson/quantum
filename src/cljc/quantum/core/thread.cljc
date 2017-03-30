@@ -247,17 +247,6 @@
 (def rejected-execution-handler
   (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f)))))
 
-#?(:clj
-(defonce threadpools
-  (atom {:core.async ^ThreadPoolExecutor (Executors/newFixedThreadPool
-                                           @@#'clojure.core.async.impl.exec.threadpool/pool-size
-                                           (clojure.core.async.impl.concurrent/counted-thread-factory "async-dispatch-%d" true))
-         ; ^clojure.core.async.impl.protocols.Executor @clojure.core.async.impl.dispatch/executor ; because it's a Delay
-         :future     ^ThreadPoolExecutor clojure.lang.Agent/soloExecutor
-         :agent      ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor
-         ; TODO commented temporarily
-         ;:async      ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
-         :reducers   ^ForkJoinPool       quantum.core.reducers.fold/pool})))
 
  #?(:clj
  (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)
@@ -265,22 +254,8 @@
      (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
        (@rejected-execution-handler f)))))
 
-#?(:clj
-(defnt set-max-threads!
-  [^java.util.concurrent.ThreadPoolExecutor threadpool-n n]
-  (doto threadpool-n
-    (.setCorePoolSize    n)
-    (.setMaximumPoolSize n))))
 
-#?(:clj
-(defn gen-threadpool [type num-threads & [name-]]
-  (condp = type
-    :fixed     (set-max-threads!
-                 (java.util.concurrent.Executors/newFixedThreadPool num-threads)
-                 num-threads)
-    :fork-join (co.paralleluniverse.fibers.FiberForkJoinScheduler.
-                 (or name- (name (gensym))) num-threads nil
-                 co.paralleluniverse.common.monitoring.MonitorType/JMX false))))
+
 
 #?(:clj
 (defn clear-work-queue! [^ThreadPoolExecutor threadpool-n]
@@ -463,10 +438,10 @@
 
 #?(:clj
 (defmacro async
-  "Creates a closeable thread or 'fiber'.
+  "Creates a closeable strand (could be a thread or fiber/go-block).
    Options:
-     :type #{:thread :fiber }
-     :ret  #{:chan   :future}
+     :type #{:thread :fiber }, default :fiber
+     :ret  #{:chan   :future}, default :chan
      :threadpool — #{^ForkJoinPool
                      ^ThreadPoolExecutor}
      :id
@@ -498,17 +473,18 @@
   [opts & body]
   `(let [opts# ~opts
          opts-f# (gen-async-opts opts# ~@body)]
-     (condp = (:type opts-f#)
-        #_:fiber
-          #_(async-fiber* opts-f# gen-async-fn (:body-fn opts-f#) opts-f#)
-        :thread ; TODO assumes ret is chan
-          (async-chan* opts-f#
-            (gen-async-fn (:body-fn opts-f#) opts-f#))))))
+     (case (:type opts-f#)
+       :fiber
+         (TODO)
+         #_(async-fiber* opts-f# gen-async-fn (:body-fn opts-f#) opts-f#)
+       :thread ; TODO assumes ret is chan
+         (async-chan* opts-f#
+           (gen-async-fn (:body-fn opts-f#) opts-f#))))))
 
 #?(:clj
 (defmacro async-loop
-  "Like |go-loop| but inherits the additional flexibility
-   that |async| provides."
+  "Like `go-loop` but inherits the additional flexibility
+   that `async` provides."
   [opts bindings & body]
   (let [close-reqs-f   (gensym)
         close-req-call (gensym)]
@@ -574,9 +550,6 @@
 #?(:clj (defn pause-thread-reaper!  [] (put!! thread-reaper-pause-requests true)))
 #?(:clj (defn resume-thread-reaper! [] (put!! thread-reaper-resume-requests true)))
 
-#_(defonce gc-worker
-  (async {:id :gc-collector}
-    (loop [] (System/gc) (async/sleep 60000))))
 
 ; ===============================================================
 ; ============ TO BE INVESTIGATED AT SOME LATER DATE ============
@@ -746,139 +719,3 @@
 ;         #(update-out-str-with! ~out-str baos#)))))
 
 
-
-
-; SHUT DOWN ALL FUTURES
-; ; DOESN'T ACTUALLY WORK
-; (import 'clojure.lang.Agent)
-; (import 'java.util.concurrent.Executors)
-; (defn close-all-futures! []
-;   (shutdown-agents)
-;   (.shutdownNow Agent/soloExecutor)
-;   (set! Agent/soloExecutor (Executors/newCachedThreadPool)))
-
-; INVESTIGATE AGENTS...
-
-
-
-#_(:clj
-(defn chunk-doseq
-  "Like |fold| but for |doseq|.
-   Also configurable by thread names and threadpool, etc."
-  [coll {:keys [total thread-count chunk-size threadpool thread-name chunk-fn] :as opts} f]
-  (let [total-f (or total (count coll))
-        chunks (coll/partition-all (or chunk-size
-                                       (/ total-f
-                                          (min total-f (or thread-count 10))))
-                 (if total (take total coll) coll))]
-    (doseqi [chunk chunks i]
-      (let [thread-id (keyword (str thread-name "-" i))]
-        (async (mergel {:id thread-id} opts)
-          ((or chunk-fn fn-nil) chunk i)
-          (doseqi [piece chunk n]
-            (f piece n chunk i chunks))))))))
-
-; ===== DISTRIBUTOR =====
-
-(defrecord Distributor
-  [name
-   work-queue
-   cache
-   max-threads
-   thread-registrar
-   threadpool
-   distributor-fn
-   interrupted?
-   logging-key
-   log]
-  component/Lifecycle (stop [this] (reset! interrupted? true) this))
-
-; TODO move
-#?(:clj
-(defnt shutdown!
-  [^java.util.concurrent.ThreadPoolExecutor x]
-  (.shutdownNow x)))
-
-#?(:clj
-(defn ->distributor
-  {:usage '(->distributor inc {:cache true
-                               :memoize-only-first-arg? true
-                               :max-threads 8 :name "distrib"})
-   :todo ["Add thread types options"
-          "Add validators to component atoms"
-          "Register distributor and ensure uniquity"]}
-  [f {:keys [cache memoize-only-first-arg? threadpool max-threads
-             max-work-queue-size name logging-key] :as opts}]
-  (validate max-threads         (s/or* nil? integer?)
-            max-work-queue-size (s/or* nil? integer?)
-            name                (s/or* nil? string? )
-            threadpool          (s/or* nil? (fnl instance? ThreadPoolExecutor))
-            f                   fn?
-            logging-key         (s/or* nil? keyword?))
-  (let [cache-f        (if (true? cache)
-                           (atom {})
-                           cache) ; TODO bounded or auto-invalidating cache?
-        log            (atom [])
-        distributor-fn (atom (if cache-f
-                                 (memoize f cache-f memoize-only-first-arg?) ; It doesn't cache errors, by default
-                                 f))
-        name-f         (or name (-> "distributor" gensym core/name keyword))
-        max-threads-f  (or max-threads (-> (Runtime/getRuntime) (.availableProcessors)))
-        thread-registrar (atom {})
-        work-queue     (if max-work-queue-size
-                          (chan (buffer max-work-queue-size))
-                          (chan)) ; Unbounded queues don't factor in to core.async
-        threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
-        threadpool-interrupted?
-          (doto (atom false)
-            (set-validator! #(boolean? %))
-            (add-watch :interrupt-monitor
-              (fn [_ _ _ newv]
-                (when (true? newv)
-                  (err/suppress (shutdown! @threadpool-f))))))
-        distributor-f  (Distributor.
-                         name-f
-                         work-queue
-                         cache-f
-                         max-threads-f
-                         thread-registrar
-                         threadpool-f
-                         distributor-fn
-                         threadpool-interrupted?
-                         logging-key
-                         log)]
-    (dotimes [i max-threads-f]
-      (let [thread-name  (keyword (str (core/name name-f) "-" i))
-            interrupted? (atom false)]
-        (assoc! thread-registrar thread-name {:interrupted? interrupted?})
-        (async-loop {:type       :thread
-                     :id         thread-name
-                     :threadpool @threadpool-f}
-          []
-          (logic/when-let
-            [[val- queue-]    (casync/alts!! [work-queue (casync/timeout 500)])
-             [timestamp work] val-]
-            (try (apply @distributor-fn work)
-              (catch Throwable e ; err/suppress doesn't yet work
-                (log/ppr logging-key e)
-                (conj! log [(time/now-instant) thread-name e])))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
-          (when-not (or @threadpool-interrupted? @interrupted?)
-            (recur)))))
-    distributor-f)))
-
-#?(:clj
-(defn distribute!*
-  {:usage '(distribute!* offer! (->distributor) [1 2 3 5 6] {:cache? true})}
-  [enqueue-fn distributor & inputs]
-  (validate distributor (fnl instance? Distributor))
-  (enqueue-fn (:work-queue distributor) [(time/now-instant) inputs])))
-
-#?(:clj (defn distribute!  [distributor & inputs] (apply distribute!* async/offer! distributor inputs)))
-#?(:clj (defn distribute>! [distributor & inputs] (apply distribute!* async/>!!    distributor inputs)))
-
-#?(:clj
-(defn distribute-all! [distributor inputs-set & [apply?]]
-  (for [inputs inputs-set]
-    (if apply?
-        (apply distribute! distributor inputs)
-        (distribute! distributor inputs)))))
