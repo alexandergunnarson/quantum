@@ -6,8 +6,8 @@
 
 (defn !str
   "Creates a mutable string."
-  []
-  #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
+  ([  ] #?(:clj (StringBuilder.   ) :cljs (StringBuffer.   )))
+  ([a0] #?(:clj (StringBuilder. a0) :cljs (StringBuffer. a0))))
 
 #?(:clj
 (defn !sync-str
