@@ -12,6 +12,7 @@
   (:refer-clojure :exclude [reduce into])
   (:require
     [clojure.core                  :as core]
+    [clojure.core.reducers         :as r]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.collections.core
@@ -26,7 +27,7 @@
     [quantum.core.error
       :refer [TODO]]
     [quantum.core.fn               :as fn
-      :refer [aritoid fn1 fn-> rcomp fn']]
+      :refer [aritoid fn1 fn-> rcomp fn' fnl]]
     [quantum.core.logic            :as logic
       :refer [fn-or fn-and whenf condf1]]
     [quantum.core.macros           :as macros
@@ -37,54 +38,56 @@
       :refer [?transient! ?persistent! lseq? editable? ->joinable]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])])
-  #?(:clj (:import [quantum.core.type.defs Reducer Folder])))
+  #?(:clj (:import [quantum.core.type.defs Reducer Folder]
+                   [clojure.core.reducers CollFold])))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        FORK/JOIN         }=====================================================
 ;=================================================={                          }=====================================================
 #?(:clj
-  (macros/compile-if
-   (Class/forName "java.util.concurrent.ForkJoinTask")
-   ; Running a JDK >= 7
-   (do
-     (def pool (delay (java.util.concurrent.ForkJoinPool.)))
-     (defn fjtask [^Callable f]
-       (java.util.concurrent.ForkJoinTask/adapt f))
-     (defn fjinvoke [f]
-       (if (java.util.concurrent.ForkJoinTask/inForkJoinPool)
-           (f)
-           (.invoke ^java.util.concurrent.ForkJoinPool @pool ^java.util.concurrent.ForkJoinTask (fjtask f))))
-     (defn fjfork [task] (.fork ^java.util.concurrent.ForkJoinTask task))
-     (defn fjjoin [task] (.join ^java.util.concurrent.ForkJoinTask task)))
-   ; Running a JDK < 7
-   (do
-     (def pool (delay (jsr166y.ForkJoinPool.)))
-     (defn fjtask [^Callable f]
-       (jsr166y.ForkJoinTask/adapt f))
-     (defn fjinvoke [f]
-       (if (jsr166y.ForkJoinTask/inForkJoinPool)
-           (f)
-           (.invoke ^jsr166y.ForkJoinPool @pool ^jsr166y.ForkJoinTask (fjtask f))))
-     (defn fjfork [task] (.fork ^jsr166y.ForkJoinTask task))
-     (defn fjjoin [task] (.join ^jsr166y.ForkJoinTask task)))))
-
-#?(:cljs (defn fjtask   [f]     f    ))
-#?(:cljs (defn fjinvoke [f]    (f)   ))
-#?(:cljs (defn fjfork   [task] task  ))
-#?(:cljs (defn fjjoin   [task] (task)))
+(doseq [v [#'r/fjfork #'r/fjinvoke #'r/fjjoin #'r/fjtask]]
+  (alter-meta! v assoc :private false)))
 
 #?(:clj
 (defn fj-invoke-2-fns [f1 f2]
-  (fjinvoke
-   #(let [t2 (fjtask f2)]
-      (fjfork t2)
-      [(f1) (fjjoin t2)]))))
+  (r/fjinvoke
+   #(let [t2 (r/fjtask f2)]
+      (r/fjfork t2)
+      [(f1) (r/fjjoin t2)]))))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     FOLDING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
-(defprotocol CollFold
-  (coll-fold [coll n combinef reducef]))
+(declare fold-by-halves)
+
+(defnt fold*
+  {:adapted-from 'clojure.core.reducers}
+  #?(:clj ([^+hash-map?              xs n combinef reducef]
+            (.fold xs n combinef reducef r/fjinvoke r/fjtask r/fjfork r/fjjoin)))
+          ([^clojure.data.avl.AVLMap xs n combinef reducef]
+            (fold-by-halves
+              (fn [xs' ^long ct]
+                (let [split-ind (quot ct 2)]
+                  (map/split-at split-ind xs')))
+              xs n combinef reducef))
+          ([^+vec?                   xs n combinef reducef]
+            (fold-by-halves
+              (fn [xs' ^long ct]
+                (let [split-ind (quot ct 2)]
+                  [(subvec xs' 0 split-ind) ; TODO test subvec against subsvec
+                   (subvec xs'   split-ind ct)]))
+              xs n combinef reducef))
+          ([^Folder                  xs n combinef reducef]
+            (fold* (.-prev xs) n combinef ((.-xf xs) reducef)))
+  #?(:clj ([^CollFold                xs n combinef reducef]
+            (r/coll-fold xs n combinef reducef)))
+          ([^default                 xs n combinef reducef]
+            (cond (nil? xs)
+                    (combinef)
+       #?@(:cljs [(satisfies? r/CollFold xs)
+                    (r/coll-fold xs n combinef reducef)])
+                  true
+                    (reduce reducef (combinef) xs)))) ; TODO CollFold needs to be looked at here
 
 (defn fold-by-halves
   "Folds the provided collection by halving it until it is smaller than the
@@ -106,77 +109,38 @@
       :else
         #?(:clj
             (let [[left right] (halving-fn coll size)
-                  child-fn (fn [child] #(coll-fold child n combinef reducef))]
-              (fjinvoke
+                  child-fn (fn [child] #(fold* child n combinef reducef))]
+              (r/fjinvoke
                #(let [f1 (child-fn left)
-                      t2 (fjtask (child-fn right))]
-                  (fjfork t2)
-                  (combinef (f1) (fjjoin t2)))))
+                      t2 (r/fjtask (child-fn right))]
+                  (r/fjfork t2)
+                  (combinef (f1) (r/fjjoin t2)))))
            :cljs
              (reduce reducef (combinef) coll)))))
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           FOLD           }=====================================================
 ;=================================================={           into           }=====================================================
-(extend-protocol CollFold ; clojure.core.reducers
-  #?@(:clj
-  [nil
-    (coll-fold [coll n combinef reducef]
-      (combinef))])
-  #?(:clj  Object
-     :cljs object)
-    (coll-fold [coll n combinef reducef]
-      (reduce reducef (combinef) coll))
-  #?(:clj  clojure.lang.IPersistentVector
-     :cljs cljs.core/PersistentVector)
-    (coll-fold [coll n combinef reducef]
-      (fold-by-halves
-        (fn [coll-0 ct]
-          (let [split-ind (quot ct 2)]
-            [(subsvec coll-0 0 split-ind) ; test subvec against subsvec
-             (subsvec coll-0   split-ind ct)]))
-          coll n combinef reducef))
-  #?@(:clj
-    [clojure.lang.PersistentHashMap
-      (coll-fold [coll n combinef reducef]
-        (.fold coll n combinef reducef fjinvoke fjtask fjfork fjjoin))])
-  clojure.data.avl.AVLMap
-    (coll-fold [coll n combinef reducef]
-      (fold-by-halves
-        (fn [coll-0 ct]
-          (let [split-ind (quot ct 2)]
-            (map/split-at split-ind coll-0)))
-          coll n combinef reducef))
-  Folder
-    (coll-fold [fldr n combine-fn reduce-fn]
-      (coll-fold (:coll fldr) n combine-fn ((:transform fldr) reduce-fn))))
 
 (defn folder
   "Given a foldable collection, and a transformation function transform,
   returns a foldable collection, where any supplied reducing
   fn will be transformed by transform. transform is a function of
-  reducing fn to reducing fn.
+  reducing fn to reducing fn."
+  ([xs xf]
+    (cond (instance? Reducer xs)
+            (Folder. (.-xs ^Reducer xs) xs xf)
+          (instance? Folder xs)
+            (Folder. (.-xs ^Folder  xs) xs xf)
+          true
+            (Folder. xs                 xs xf))))
 
-  Modifies reducers to not use Java methods but external extensions.
-  This is because the protocol methods is not a Java method of the reducer
-  object anymore and thus it can be reclaimed while the protocol method
-  is executing."
-  {:attribution "Christophe Grand - http://clj-me.cgrand.net/2013/09/11/macros-closures-and-unexpected-object-retention/"
-   :todo ["Possibly fix the CLJS version?"]}
-  ([coll transform]
-    (Folder. coll transform)))
+(def folder? (fnl instance? Folder))
 
-(def folder? #(instance? Folder %))
-
-(def transformer? (fn-or red/reducer? folder?))
-
-(defn folder->coll
+(defnt transformer->coll
   "Gets the original collection a folder was to reduce/fold over."
-  [coll-0]
-  (let [coll-n (volatile! (:coll coll-0))]
-    (while (red/reducer? @coll-n)
-      (vswap! coll-n :coll))
-    @coll-n))
+  ([^Folder  x] (.-xs x))
+  ([^Reducer x] (.-xs x)))
 
 (def ^{:doc "Given a collection, determines its appropriate chunk size."}
   ->chunk-size
@@ -184,12 +148,12 @@
                                  (quot (.. Runtime getRuntime availableProcessors))
                                  inc)]
              (condf1
-               (fn-and transformer? (fn-> folder->coll counted?))
-                 (fn-> folder->coll from-proc)
+               (fn-and t/transformer? (fn-> transformer->coll counted?))
+                 (fn-> transformer->coll from-proc)
                counted?
                  from-proc
                (fn' 512)))
-     :cljs count)) ; Because it's only single-threaded anyway...
+     :cljs count)) ; Because it's only single-threaded anyway... ; TODO but if we want to use webworkers this is not right
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           FOLD           }=====================================================
@@ -205,13 +169,14 @@
   arguments, (combinef) must produce its identity element.
   These operations may be performed in parallel, but the results will preserve order."
   {:added "1.5"
-   :attribution "clojure.core.reducers"
-   :contributors ["Alex Gunnarson"]}
-  ([             reduce-fn coll] (fold reduce-fn reduce-fn coll))
-  ([  combine-fn reduce-fn coll] (fold (->chunk-size coll) combine-fn reduce-fn coll))
-  ([n combine-fn reduce-fn coll]
+   :adapted-from "clojure.core.reducers"
+   :contributors ["Alex Gunnarson"]
+   :todo         #{"add support for customization of parallelism"}}
+  ([             reduce-fn xs] (fold reduce-fn reduce-fn xs))
+  ([  combine-fn reduce-fn xs] (fold (->chunk-size xs) combine-fn reduce-fn xs))
+  ([n combine-fn reduce-fn xs]
     (combine-fn ; single-arity combine-fn is the post-combine
-      (coll-fold coll n
+      (fold* xs n
         (aritoid reduce-fn nil
           (fn [a b] (combine-fn (reduce-fn a)
                                 (reduce-fn b)))) ; single-arity reduce-fn is the post-reduce
@@ -232,7 +197,7 @@
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([^default        to  ] to)
-  ([^reducer?       from] (joinl [] from))
+  ([^transformer?   from] (joinl [] from))
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/parallel-splice-hash-sets to from)
                                           (pjoinl-fold to from))
@@ -258,13 +223,5 @@
 (def pjoin pjoinl)
 
 (defn pjoin' [& args] (TODO))
-
-; TODO move
-(defnt ->vec
-  ([^+vec? x] x)
-  ([#{+map? +list? +set? !array-list? Folder
-      #?(:clj  clojure.core.protocols.CollReduce
-         :cljs cljs.core/IReduce)} x] (joinl [] x))
-  ([x] (if (nil? x) [] [x])))
 
 ; TODO use uncomplicate/clojurecl for lower-level parallel operations

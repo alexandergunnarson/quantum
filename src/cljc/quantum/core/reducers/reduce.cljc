@@ -25,6 +25,8 @@
     [quantum.core.data.map         :as map]
     [quantum.core.error            :as err
       :refer [->ex]]
+    [quantum.core.fn
+      :refer [fnl]]
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.type             :as t
@@ -129,10 +131,10 @@
              clojure.lang.ASeq} xs f init]  ; aseqs are iterable, masking internal-reducers
            (let [s (seq xs)]
              (clojure.core.protocols/internal-reduce s f init))))
-         ([^reducer? x f]
+         ([^transformer? x f]
            (reduce* x f (f)))
-         ([^reducer? x f init]
-           (reduce* (:coll x) ((:transform x) f) init))
+         ([^transformer? x f init]
+           (reduce* (.-prev x) ((.-xf x) f) init))
          ([^chan?   x  f init] (async/reduce f init x))
 #?(:cljs ([^+map?   xs f init] (#_(:clj  clojure.core.protocols/kv-reduce
                                    :cljs -kv-reduce) ; in order to use transducers...
@@ -233,9 +235,15 @@
   reducing fn."
   {:added "1.5"
    :attribution "clojure.core.reducers"}
-  ([coll transform] (Reducer. coll transform)))
+  ([xs xf]
+    (cond (instance? Reducer xs)
+            (Reducer. (.-xs ^Reducer xs) xs xf)
+          (instance? Folder xs)
+            (Reducer. (.-xs ^Folder  xs) xs xf)
+          true
+            (Reducer. xs                 xs xf))))
 
-(def reducer? #(instance? Reducer %))
+(def reducer? (fnl instance? Reducer))
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."

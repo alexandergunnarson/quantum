@@ -12,6 +12,7 @@
   (:refer-clojure :exclude [reduce Range ->Range])
   (:require
     [clojure.core                  :as core]
+    [clojure.core.reducers         :as r]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.collections.core :as ccoll]
@@ -36,13 +37,21 @@
     [quantum.core.reducers.reduce  :as red
       :refer [reducer first-non-nil-reducer]]
     [quantum.core.reducers.fold    :as fold
-      :refer [folder coll-fold CollFold
-              fjinvoke fjtask fjfork fjjoin]]
+      :refer [folder]]
     [quantum.core.vars             :as var
       :refer [defalias def-]])
   (:require-macros
     [quantum.core.reducers
       :refer [reduce join]]))
+
+(def sentinel (->sentinel))
+
+(defn transducer->reducer
+  "Converts a transducer into a reducer."
+  {:todo #{"More arity"}}
+  ([transducer xs a0        ] (reducer xs (      transducer a0)))
+  ([transducer xs a0 a1     ] (reducer xs (      transducer a0 a1)))
+  ([transducer xs a0 a1 & as] (reducer xs (apply transducer a0 a1 as))))
 
 #?(:clj (defalias join      ccoll/join     ))
 #?(:clj (defalias joinl'    ccoll/joinl'   ))
@@ -52,179 +61,6 @@
 #?(:clj (defalias reduce    red/reduce   ))
         (defalias fold*     fold/fold    ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
         (defalias red-apply red/red-apply)
-
-;___________________________________________________________________________________________________________________________________
-;=================================================={      MULTIREDUCIBLES     }=====================================================
-;=================================================={  with support for /fold/ }=====================================================
-; From wagjo, https://gist.github.com/wagjo/10017343 - Apr 7, 2014
-(comment
-  (def s1 "Hello World")
-  (def s2 "lllllllllll")
-  ;; create multireducible with zip
-  (seq (zip s1 s2))
-  ;; => ((\H \l) (\e \l) (\l \l) (\l \l) (\o \l) (\space \l) (\W \l) (\o \l) (\r \l) (\l \l) (\d \l))
-   ;; /indexed/ is an alias for (zip (range) coll)
-  (def indexed (partial zip (range))) ; my own code
-  (seq (indexed s1))
-  ;; => ((0 \H) (1 \e) (2 \l) (3 \l) (4 \o) (5 \space) (6 \W) (7 \o) (8 \r) (9 \l) (10 \d))
-
-  ;; you can have more than 2 collections in the multireducible
-  (reduce conj [] (indexed s1 s2))
-  ;; => [(0 \H \l) (1 \e \l) (2 \l \l) (3 \l \l) (4 \o \l) (5 \space \l) (6 \W \l) (7 \o \l) (8 \r \l) (9 \l \l) (10 \d \l)]
-
-  ;; reduce can work on tuples (as seen above), or can work on individual elements
-  (reduce conj [] (unpacked (indexed s1 s2)))
-  ;; => [0 \H \l 1 \e \l 2 \l \l 3 \l \l 4 \o \l 5 \space \l 6 \W \l 7 \o \l 8 \r \l 9 \l \l 10 \d \l]
-
-  ;; lets find index where both strings have same character
-  (let [s (unpacked (indexed s1 s2))
-        f (fn [index ch1 ch2] (when (= ch1 ch2) index))]
-    (into [] (keep f s)))
-  ;; => [2 3 9]
-
-  ;; some multireducibles also support folding, both with tuples and individual elements
-  (let [s (unpacked (indexed s1 s2))
-        combinef (fn ([] []) ([a b] [a b]))
-        reducef (fn [val index ch1 ch2] (if (= ch1 ch2) (conj val index) val))]
-    (fold+ 5 combinef reducef s))
-  ;; => [[2 3] [[] [9]]]
-
-  ;; maps can behave like multireducibles too
-  (reduce conj [] (unpacked {:foo 1 :bar 2 :baz 3}))
-  ;; => [:baz 3 :bar 2 :foo 1]
-
-  ;; and did I mention multireducibles are very fast?
-  (time (let [mr (indexed (range -1000000 1000000)
-                          (range 1000000 -1000000 -1))
-              f (fn [index v1 v2] (when (== v1 v2) index))]
-          (into [] (keep f (unpacked mr))))) ;; => [1000000] "Elapsed time: 356.012467 msecs" ; USE KEEP+
-   ;;* patch to clojure is needed to support this feature
-  ; from https://gist.github.com/wagjo/b687158ab0ff6aa8cb33 -  May 2, 2014
-  (defn fold-sectionable
-    "Perform fold on sectionable collection."
-    ([coll pool n combinef reducef reduce-mode]
-       (fold-sectionable coll pool n combinef reducef
-                         reduce-mode section)) ; SECTION???
-    ([coll pool n combinef reducef reduce-mode section]
-       (fold-sectionable coll pool n combinef reducef
-                         reduce-mode section count))
-    ([coll pool n combinef reducef reduce-mode section count]
-       (let [cnt    (count coll)
-             reduce (reduce-from-mode reduce-mode)
-             n (max 1 n)]
-         (cond
-          (empty? coll) (combinef)
-          (<= cnt n) (reduce reducef (combinef) coll)
-          :else
-          (let [split (quot cnt 2)
-                v1 (section coll 0 split)
-                v2 (section coll split cnt)
-                fc (fn [child]
-                     #(-fold child pool n combinef reducef
-                             reduce-mode))]
-            (invoke pool
-                    #(let [f1 (fc v1)
-                           t2 (fork (fc v2))]
-                       (combinef (f1) (join t2)))))))))
-
-  (deftype ZipIterator [^:unsynchronized-mutable iters]
-    IOpenAware
-    (-open? [this] (every? open? iters)) ; open?
-    IReference
-    (-deref [this] (apply tuple (map deref iters))) ; tuple
-    IIterator
-    (-next! [this] (set! iters (seq (map next! iters))) this)) ; next!
-
-  (deftype FoldableZip [colls]
-    IRed
-    (-reduce [this f init]
-      (loop [iters (seq (map iterator colls))
-             val init]
-        (if (every? open? iters)
-          (reduced-let [ret (f val (apply tuple (map deref iters)))]
-            (recur (seq (map next! iters)) ret))
-          val)))
-    IIterable
-    (-iterator [this]
-      (->ZipIterator (seq (map iterator colls))))
-    IUnpackedRed
-    (-reduce-unpacked [this f init]
-      (loop [iters (seq (map iterator colls))
-             val init]
-        (if (every? open? iters)
-          (reduced-let [ret (apply f val (map deref iters))]
-            (recur (seq (map next! iters)) ret))
-          val)))
-    IFoldable
-    (-fold [coll pool n combinef reducef reduce-mode]
-      (fold-sectionable coll pool n combinef reducef reduce-mode))
-    ISectionable
-    (-section [this new-begin new-end]
-      (let [l (count this)
-            new-end (prepare-ordered-section new-begin new-end l)]
-        (if (and (zero? new-begin) (== new-end l))
-          this
-          (->FoldableZip (map #(section % new-begin new-end) colls)))))
-    ICounted
-    (-count [this] (apply min (map count colls)))))
-
-(def- sentinel (->sentinel))
-;___________________________________________________________________________________________________________________________________
-;=================================================={      LAZY REDUCERS       }=====================================================
-;=================================================={                          }=====================================================
-; Sometimes in a seq pipeline, you know that some intermediate results are, well,
-; intermediate and as such don't need to be persistent but, on the whole, you still need the laziness.
-(defn- reverse-conses
-  {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
-  ([s tail]
-    (if (identical? (rest s) tail)
-      s
-      (reverse-conses s tail tail)))
-  ([s from-tail to-tail]
-    (loop [f s b to-tail]
-      (if (identical? f from-tail)
-        b
-        (recur (rest f) (cons (first f) b))))))
-
-#?(:clj
-  (defn seq-seq
-    {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"
-     :usage "(seq->> (range) (map+ str) (take+ 25) (drop+ 5))"
-     :out "(\"5\" \"6\" \"7\" \"8\" \"9\" \"10\" \"11\" \"12\" \"13\" \"14\" \"15\" \"16\"
-            \"17\" \"18\" \"19\" \"20\" \"21\" \"22\" \"23\" \"24\")"}
-    [f s]
-    (let [f1 (clojure.core/reduce #(cons %2 %1) nil ; Note that the captured function (f1) may be impure, so don't share it!
-                (f (reify clojure.core.protocols.CollReduce
-                     (#?(:clj coll-reduce :cljs -reduce) [this f1 init]
-                       f1))))]
-      ((fn this [s]
-         (lazy-seq
-           (when-let [s (seq s)]
-             (let [more (this (rest s))
-                   x (f1 more (first s))]
-               (if (reduced? x)
-                 (reverse-conses @x more nil)
-                 (reverse-conses x more)))))) s))))
-
-#?(:clj
-  (defmacro lseq->>
-    {:attribution "Christophe Grand, http://clj-me.cgrand.net/2013/02/11/from-lazy-seqs-to-reducers-and-back/"}
-    [s & forms]
-    `(seq-seq (fn [n#] (->> n# ~@forms)) ~s)))
-
-#?(:clj
-  (defn seq-once
-    "Returns a sequence on which seq can be called only once.
-     Use when you don't want to keep the head of a lazy-seq while using reducers.
-     Shouldn't be necessary with the fix starting around line 60."
-    {:attribution "Christophe Grand, http://stackoverflow.com/questions/22031829/tuning-clojure-reducers-library-performace"}
-    [coll]
-    (let [a (atom coll)]
-      (reify clojure.lang.Seqable ; ClojureScript has cljs.core.ISeqable but its method |seq| is private
-        (seq [_]
-          (let [coll @a]
-            (reset! a nil)
-            (seq coll)))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    transduce.reducers    }=====================================================
 ;=================================================={                          }=====================================================
@@ -243,23 +79,10 @@
             (reset! state state')
             (f1 acc x')))))))
 
-(defn- reduce-impl
-  "Creates an implementation of CollReduce using the given reducer.
-  The two-argument implementation of reduce will call f1 with no args
-  to get an init value, and then forward on to your three-argument version."
-  {:attribution "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  [reducer-n]
-  {#?(:clj  :coll-reduce
-      :cljs :-reduce)
-    (fn ([coll f1     ] (reducer-n coll f1 (f1)))
-        ([coll f1 init] (reducer-n coll f1 init)))})
-
 (defalias reduce-count ccoll/reduce-count)
 
 (defn fold-count
-  {:attribution "parkour.reducers"
-   :performance "On non-counted collections, |count| is 71.542581 ms, whereas
-                 |count*| is 36.824665 ms - twice as fast!!"}
+  {:attribution "parkour.reducers"}
   [coll]
   (fold*
     (aritoid (fn' 0) identity +)
@@ -372,12 +195,26 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FILTER, REMOVE      }=====================================================
 ;=================================================={                          }=====================================================
-(defn #_defcurried filter+
+(defn filter-transducer [pred]
+  (fn [rf]
+    (fn
+      ([] (rf))
+      ([ret] (rf ret))
+      ([ret x]
+         (if (pred x)
+             (rf ret x)
+             ret))
+      ([ret k v]
+         (if (pred k v)
+             (rf ret k v)
+             ret)))))
+
+(defn filter+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is truthy."
-  [pred coll] (folder coll (core/filter pred)))
+  [pred coll] (folder coll (filter-transducer pred)))
 
-(defn #_defcurried remove+
+(defn remove+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is falsey."
   [pred coll] (filter+ (complement pred) coll))
@@ -452,7 +289,7 @@
             (cond (reduced? ret) @ret
                   (<= n 0) ret
                   :else (recur (f1 ret (f)) (dec n)))))
-        CollFold
+        r/CollFold
         (coll-fold [this group-size combinef reducef]
           #?(:clj  (fold-repeatedly n f group-size combinef reducef)
              :cljs (red/reduce this reducef (reducef)))))
@@ -507,7 +344,7 @@
             (if (cmp i end)
               (recur (f1 ret i) (+ i step))
               ret)))))
-  CollFold
+  r/CollFold
     (coll-fold [this n combinef reducef]
       (fold/fold-by-halves
         (fn [_ size] ;; the range passed is always just this Range
@@ -539,7 +376,7 @@
             (if (cmp i end)
               (recur (f1 ret i) (unchecked-add i step))
               ret)))))
-  CollFold
+  r/CollFold
     (coll-fold [this n combinef reducef]
       (fold/fold-by-halves
         (fn [_ size] ;; the range passed is always just this Range
@@ -653,8 +490,8 @@
 (defn pdedupe+
   "Thread-safe `dedupe+`.
    Just `dedupe+` with an `atom` instead of a `volatile`."
-  [f coll]
-  (folder coll
+  [f xs]
+  (folder xs
     (fn [rf]
       (let [pv (atom ::none)]
         (fn
@@ -1140,7 +977,7 @@
   with other transformations at its level, but its internal folders are sealed
   and opaque."
   [fold-map folder]
-  (assert (not (folder? downstream)) "|fuse| is a terminal transform")
+  (assert (not (transformer? downstream)) "|fuse| is a terminal transform")
   (let [ks             (vec (keys fold-map))
         n              (count ks)
         folders        (mapv (comp compile-fold (partial get fold-map)) ks)
