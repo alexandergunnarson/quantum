@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [seqable? boolean? get set])
   (:require [clojure.core :as core
              #?@(:cljs [:refer [IDeref IAtom]])]
+            [cuerdas.core :as str+]
    #?(:clj  [environ.core :as env]))
   #?(:clj (:import [clojure.lang IDeref IAtom])))
 
@@ -60,15 +61,16 @@
 
 (defn ?deref [a] (if (nil? a) nil (deref a)))
 
-(defn lens [x getter]
-  (when-not (#?(:clj  instance?
-                :cljs satisfies?) IDeref x)
-    (throw (#?(:clj  IllegalArgumentException.
-               :cljs js/Error.)
-            "Argument to |lens| must be an IDeref")))
-  (reify IDeref
-    (#?(:clj  deref
-        :cljs -deref) [this] (getter @x))))
+(defn lens
+  ([x getter]
+    (if (#?(:clj  instance?
+            :cljs satisfies?) IDeref x)
+        (reify IDeref
+          (#?(:clj  deref
+              :cljs -deref) [this] (getter @x)))
+        (throw (#?(:clj  IllegalArgumentException.
+                   :cljs js/Error.)
+                "Argument to `lens` must be an IDeref")))))
 
 (defn cursor
   {:todo #{"@setter currently doesn't do anything"}}
@@ -190,3 +192,31 @@
      ~@(->> ks
             (map #(vector (list 'quote (kw-modifier %)) %))
             (apply concat))))
+
+#?(:clj
+(defmacro istr
+  "'Interpolated string.' Accepts one or more strings; emits a `str` invocation that
+  concatenates the string data and evaluated expressions contained
+  within that argument.  Evaluation is controlled using ~{} and ~()
+  forms. The former is used for simple value replacement using
+  clojure.core/str; the latter can be used to embed the results of
+  arbitrary function invocation into the produced string.
+  Examples:
+      user=> (def v 30.5)
+      #'user/v
+      user=> (istr \"This trial required ~{v}ml of solution.\")
+      \"This trial required 30.5ml of solution.\"
+      user=> (istr \"There are ~(int v) days in November.\")
+      \"There are 30 days in November.\"
+      user=> (def m {:a [1 2 3]})
+      #'user/m
+      user=> (istr \"The total for your order is $~(->> m :a (apply +)).\")
+      \"The total for your order is $6.\"
+      user=> (istr \"Just split a long interpolated string up into ~(-> m :a (get 0)), \"
+               \"~(-> m :a (get 1)), or even ~(-> m :a (get 2)) separate strings \"
+               \"if you don't want a << expression to end up being e.g. ~(* 4 (int v)) \"
+               \"columns wide.\")
+      \"Just split a long interpolated string up into 1, 2, or even 3 separate strings if you don't want a << expression to end up being e.g. 120 columns wide.\"
+  Note that quotes surrounding string literals within ~() forms must be
+  escaped."
+  [& args] `(str+/istr ~@args)))
