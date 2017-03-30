@@ -21,7 +21,7 @@
     [quantum.core.reducers
       :refer [map+]]
     [quantum.core.fn
-      :refer [rfn <- call]]
+      :refer [rfn <- call fn']]
     [quantum.core.macros.optimization :as opt]
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
@@ -393,6 +393,10 @@
          (do ~@body
              (recur ~test))
          ~sym))))
+
+(defn doreduce
+  "Performs a reduction for purposes of side effects."
+  [xs] (reduce (fn' nil) nil xs))
 
 (defn doeach
   "Like |run!|, but returns @coll.
