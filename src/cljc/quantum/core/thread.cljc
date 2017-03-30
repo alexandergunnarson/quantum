@@ -18,12 +18,12 @@
                       [quantum.core.async                      :as async
                         :refer [put!! chan buffer go]]
                       [quantum.core.error                      :as err
-                        :refer [throw-unless ->ex]]
+                        :refer [throw-unless ->ex TODO]]
                       [quantum.core.fn                         :as fn
-                        :refer [<- fn-> fn1 rcomp call fn-nil fnl]]
+                        :refer [<- fn-> fn1 rcomp call fnl]]
                       [quantum.core.log                        :as log]
                       [quantum.core.logic                      :as logic
-                        :refer [fn-or fn-not fn= whenf whenp whenf1 ifn1]                                             ]
+                        :refer [fn-or fn-not fn= fn-nil whenf whenp whenf1 ifn1]                                             ]
                       [quantum.core.macros                     :as macros
                         :refer [defnt]]
                       [quantum.core.spec                       :as s
@@ -95,46 +95,6 @@
                 (whenp parent (fn1 dissoc-in [parent :children id]))))
         (swap! reg-tree dissoc-in [parents id])))
       (log/pr ::warn "Attempted to deregister nonexistent thread:" id)))
-
-#?(:clj (def thread-num (.. Runtime getRuntime availableProcessors)))
-
-; Why you want to manage your threads when doing network-related things:
-; http://eng.climate.com/2014/02/25/claypoole-threadpool-tools-for-clojure/
-#(:clj
-  (defmacro thread+
-    "Execute exprs in another thread and returns the thread."
-    ^{:attribution "alexandergunnarson"}
-    [{:keys [id handlers]} expr & exprs]
-    `(let [ns-0# *ns*
-           pre#
-             (and
-               (with-throw
-                 (keyword? ~id)
-                 {:message "Thread-id must be a keyword."})
-               (with-throw
-                 ((fn-not core/contains?) @reg ~id)
-                 {:type    :key-exists
-                  :message (str "Thread id '" (name ~id) "' already exists.")}))
-           ^Atom result#
-             (atom {:completed false
-                    :result   nil})
-           ^Thread thread#
-             (Thread.
-               (fn []
-                 (try
-                   (swap! reg assoc-in [~id :state] :open)
-                   (binding [*ns* ns-0#]
-                     (swap! result# assoc :result
-                       (do ~expr ~@exprs))
-                     (swap! result# assoc :completed true))
-                   (finally
-                     (deregister-thread! ~id)
-                     (log/pr :user "Thread" ~id "finished running.")))))]
-       (.start thread#)
-       (swap! reg coll/assocs-in
-          [~id :thread] thread#
-          [~id :handlers] ~handlers)
-       result#)))
 
 ;#?(:clj
 ;(defn ^:private interrupt!* [thread thread-id interrupted force?]
@@ -244,25 +204,11 @@
 ; ASYNC
 
 #?(:clj
-(def rejected-execution-handler
-  (atom (fn [f] (log/pr ::debug "Function rejected for execution!" f)))))
-
-
- #?(:clj
- (.setRejectedExecutionHandler ^ThreadPoolExecutor (:core.async @threadpools)
-   (reify java.util.concurrent.RejectedExecutionHandler
-     (^void rejectedExecution [this ^Runnable f ^ThreadPoolExecutor executor]
-       (@rejected-execution-handler f)))))
-
-
-
-
-#?(:clj
 (defn clear-work-queue! [^ThreadPoolExecutor threadpool-n]
   (->> threadpool-n .getQueue (map #(.cancel ^Future % true)) dorun)
   (->> threadpool-n .purge)))
 
-#?(:clj
+#?(:clj  ; TODO need to move this into the threadpool logic
 (defn ^:internal closeably-execute [threadpool-n ^Runnable r {:keys [id] :as opts}]
   (when (register-thread! (merge opts {:thread false}))
     (try
@@ -279,16 +225,17 @@
 (defmacro ^:internal async-chan*
   [opts & body]
   `(let [c# (chan 1)
-         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)]
-     (closeably-execute
-       (or (:threadpool ~opts) (:core.async @threadpools))
-       (fn []
-         (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
-               state# (-> (f#)
-                          (ioc/aset-all! ioc/USER-START-IDX c#
-                                         ioc/BINDINGS-IDX captured-bindings#))]
-           (ioc/run-state-machine-wrapped state#)))
-       ~opts)
+         captured-bindings# (clojure.lang.Var/getThreadBindingFrame)
+         pool# (:threadpool ~opts)
+         f# (fn []
+              (let [f# ~(ioc/state-machine `(do ~@body) 1 (keys &env) ioc/async-custom-terminators)
+                    state# (-> (f#)
+                               (ioc/aset-all! ioc/USER-START-IDX c#
+                                              ioc/BINDINGS-IDX captured-bindings#))]
+                (ioc/run-state-machine-wrapped state#)))]
+     (if pool#
+         (closeably-execute pool# f# ~opts)
+         (clojure.core.async.impl.dispatch/run f#)) ; TODO with this option, need to ensure other stuff is done
      c#)))
 
 (defn gen-proc-id [id parent name-]
@@ -366,7 +313,7 @@
   (try (body-fn)
     (catch Throwable e
       ((or (-> opts :handlers :err/any.pre ) fn-nil))
-      (log/pr-opts :warn #{:thread?} "Exited with exception" e)
+      (log/ppr-opts :warn #{:thread?} "Exited with exception" e)
       ((or (-> opts :handlers :err/any.post) fn-nil)))
     (finally
       (log/pr-opts :quantum.core.thread/debug #{:thread?} "COMPLETED.")
@@ -426,7 +373,7 @@
                              (fn [] ~@body)
                              #_(pulsar/suspendable! (fn [] ~@body))
                              (fn [] ~@body))
-          ~opts-f    (coll/assocs-in          ~opts-f
+          ~opts-f    (coll/assoc-in           ~opts-f
                        [:close-reqs         ] ~close-reqs
                        [:id                 ] ~proc-id
                        [:handlers :close-req] ~close-req-call
@@ -491,7 +438,7 @@
    `(let [opts-f# ~opts
           ~close-reqs-f   (or (:close-reqs opts-f#) (async/chan :queue))
           ~close-req-call (wrap-delay (-> opts-f# :handlers :close-req))]
-      (async (coll/assocs-in ~opts
+      (async (coll/assoc-in ~opts
                 [:close-reqs         ] ~close-reqs-f
                 [:handlers :close-req] ~close-req-call)
         (try
