@@ -75,25 +75,6 @@
 
 #?(:cljs (defalias memoize core/memoize))
 
-(defn callable-times
-  "`f` is allowed to be called exactly `n` times.
-   On the `n`th call, its return value is cached."
-  {:attribution "alexandergunnarson"}
-  [n f]
-  (assert (> n 0))
-  (let [cache (atom {:calls 0})]
-    (fn [& args]
-      (loop []
-        (if-let [e (find @cache :ret)]
-          (val e)
-          (let [calls (:calls (swap! cache update :calls (fn [c] (inc (min c n)))))] ; to prevent overflow
-            ; Each potential thread is guaranteed to have different values of `calls` if <= n, and thus to take the correct respective branches
-            (cond (> calls n) ; Only reaches this if a potential race condition is created and avoided
-                  (recur)
-                  (= calls n)
-                  (:ret (swap! cache assoc :ret (apply f args)))
-                  :else (apply f args))))))))
-
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))
 
@@ -130,3 +111,22 @@
                             meta
                             (dissoc :line)
                             (dissoc :name)))))))))
+
+(defn callable-times
+  "`f` is allowed to be called exactly `n` times.
+   On the `n`th call, its return value is cached."
+  {:attribution "alexandergunnarson"}
+  [n f]
+  (assert (> n 0))
+  (let [cache (atom {:calls 0})]
+    (fn [& args]
+      (loop []
+        (if-let [e (find @cache :ret)]
+          (val e)
+          (let [calls (:calls (swap! cache update :calls (fn [c] (inc (min c n)))))] ; to prevent overflow
+            ; Each potential thread is guaranteed to have different values of `calls` if <= n, and thus to take the correct respective branches
+            (cond (> calls n) ; Only reaches this if a potential race condition is created and avoided
+                  (recur)
+                  (= calls n)
+                  (:ret (swap! cache assoc :ret (apply f args)))
+                  :else (apply f args))))))))
