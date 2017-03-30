@@ -1,7 +1,7 @@
 (ns quantum.validate.regex
           (:require [clojure.core             :as core]
                     [quantum.core.collections :as coll
-                      :refer [fori seq-loop
+                      :refer [fori red-for
                               ffilter break]]
                     [quantum.core.fn          :as fn
                       :refer [fn->]])
@@ -54,8 +54,8 @@
   {:contributors ["org.apache.commons.validator.routines.RegexValidator"]}
   [s patterns]
   (and (string? s)
-       (seq-loop [pattern patterns
-                  ret     nil]
+       (red-for [pattern patterns
+                 ret     nil]
          (let [^Matcher matcher (re-matcher pattern s)]
            (when (.matches matcher)
              (let [ct (.groupCount matcher)]

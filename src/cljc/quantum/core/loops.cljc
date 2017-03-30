@@ -257,25 +257,6 @@
   (apply fori-join* (list 'quantum.core.collections.core/join') bindings body)))
 
 #?(:clj
-(defmacro seq-loop
-  [bindings & exprs]
-  (condp = (count bindings)
-    4 (let [[elem-sym coll
-             ret-sym init] bindings]
-       `(reduce
-          (fn [~ret-sym ~elem-sym]
-            ~@exprs)
-          ~init
-          ~coll))
-    5 (let [[k-sym v-sym coll
-             ret-sym init] bindings]
-       `(reduce
-          (fn [~ret-sym ~k-sym ~v-sym]
-            ~@exprs)
-          ~init
-          ~coll)))))
-
-#?(:clj
 (defmacro ifor
   "Imperative |for| loop."
   {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}

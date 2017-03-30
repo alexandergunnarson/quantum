@@ -852,11 +852,11 @@
 ;              user-meta
 ;              twitter-key=>datomic-key)}
 ;   [pk-schema pk-val db-partition data translation-table & [handlers]]
-;   (seq-loop [k v data
-;              entity-n (->entity*
-;                         pk-schema pk-val
-;                         db-partition
-;                         {})]
+;   (red-for [k v data
+;             entity-n (->entity*
+;                        pk-schema pk-val
+;                        db-partition
+;                        {})]
 ;     (cond
 ;       (nil? v)
 ;         entity-n

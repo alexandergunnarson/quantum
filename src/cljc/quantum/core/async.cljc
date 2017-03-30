@@ -14,7 +14,7 @@
  #_[[co.paralleluniverse.pulsar.async  :as async+]
     [co.paralleluniverse.pulsar.core   :as pasync]])
     [quantum.core.collections          :as coll
-      :refer [doseqi nempty? seq-loop break nnil? map]]
+      :refer [doseqi nempty? red-for break nnil? map]]
     [quantum.core.core                 :as qcore
       :refer [istr]]
     [quantum.core.error                :as err
@@ -279,8 +279,8 @@
 #?(:clj
 (defn alts!!-queue [chans timeout] ; Unable to mark ^:suspendable because of synchronization
   (loop []
-    (let [result (seq-loop [c   chans
-                            ret nil]
+    (let [result (red-for [c   chans
+                           ret nil]
                    (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
                      (when (nempty? c)
                        (break [(take!! c) c]))))]

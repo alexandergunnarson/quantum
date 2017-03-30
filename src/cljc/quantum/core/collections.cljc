@@ -97,7 +97,6 @@
   (:require-macros
     [quantum.core.collections
       :refer [for for* lfor doseq doseqi reduce reducei dotimes
-              seq-loop
               count lasti
               subview
               contains? containsk? containsv?
@@ -400,8 +399,6 @@
         (defalias reduce-2     loops/reduce-2 )
         (defalias reducei-2    loops/reducei-2)
 #?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
-#?(:clj (defalias seq-loop     loops/seq-loop))
-#?(:clj (defalias loopr        loops/seq-loop))
 #?(:clj (defalias ifor         loops/ifor    ))
 ; ===== COLLECTION COMPREHENSION ===== ;
 #?(:clj (defalias for-join     loops/for-join  ))
@@ -1989,10 +1986,10 @@
   [table-0]
   (let [height-f (count (first table-0))
         width-f  (count table-0)
-        table-f  (seq-loop [row-i   (range height-f)
-                            table-n (transient [])]
-                   (let [row-f (seq-loop [col-i (range width-f)
-                                          row   (transient [])]
+        table-f  (red-for [row-i   (range height-f)
+                           table-n (transient [])]
+                   (let [row-f (red-for [col-i (range width-f)
+                                         row   (transient [])]
                                  (conj! row (-> table-0 (get col-i) (get row-i))))]
                      (conj! table-n (persistent! row-f))))]
     (persistent! table-f)))
