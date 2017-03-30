@@ -6,6 +6,7 @@
     [reduce next for last nth
      int double conj!
      shuffle count map get partition
+     byte  char  long
      bytes chars longs])
   (:require
     #?(:clj [loom.gen                  :as g-gen])  ; for now
@@ -30,7 +31,7 @@
             [quantum.core.type         :as t
               :refer [regex?]]
             [quantum.core.logic        :as logic
-              :refer [splice-or condf1]]
+              :refer [splice-or condf1 whenc default]]
             [quantum.core.log          :as log]
             [quantum.core.numeric      :as num]
             [quantum.core.fn           :as fn
@@ -79,9 +80,9 @@
     (fn [err n] (callback (.toString n 16))))))
 
 #?(:clj
-(defn
+(defn buffer
   "Yields a random buffer."
-  buffer [^long n]
+  [^long n]
   (let [b (ByteBuffer/allocate n)]
     (.nextBytes secure-random-generator (.array b))
     b)))
@@ -159,11 +160,24 @@
   ; use java.util.Random's impl
   )
 
+(defn char-kind->range [kind]
+  (case kind
+    :numeric [48 57   ]
+    :upper   [65 90   ]
+    :lower   [97 122  ]
+    :any     [0  65535]))
 
 (defn char-between
   "Yields a random char between a and b."
   ([        a b] (char-between false a b))
   ([secure? a b] (core/char (int-between secure? a b))))
+
+(defn char
+  ([] (char :any))
+  ([kind] (char kind false))
+  ([kind secure?]
+    (let [[a b] (char-kind->range kind)]
+      (char-between secure? a b))))
 
 (defn ^String chars-between
   ([n a b] (chars-between false n a b))
@@ -172,13 +186,8 @@
       (dotimes [m n] (conj! sb (char-between secure? a b)))
       (str sb))))
 
-#_(def generators
-  {:numeric rand-numeric
-   :upper   rand-upper
-   :lower   rand-lower})
-
 ; TODO multiple types, as in regex
-; TODO |rand-chars| where you can "harden" to a string or not. Also lazy version
+; TODO |chars| where you can "harden" to a string or not. Also lazy version
 
 (defn chars
   "Returns a random string that matches the regular expression."
@@ -188,18 +197,13 @@
     (let [[generator not-matched] (lex/pattern (str x))]
       (when (empty? not-matched)
         (lex/first-if-single (generator)))))
-  ([type n] (rand-chars type false n))
-  ([type secure? n]
-    (let [[a b]
-           (case type
-             :numeric [48 57   ]
-             :upper   [65 90   ]
-             :lower   [97 122  ]
-             :any     [0  65535])]
-      (rand-chars-between secure? n a b))))
+  ([kind n] (chars kind false n))
+  ([kind secure? n]
+    (let [[a b] (char-kind->range kind)]
+      (chars-between secure? n a b))))
 
-(defn rand-bytes ; [B for CLJ, Uint8Array for CLJS
-  ([size] (rand-bytes false size))
+(defn bytes ; [B for CLJ, Uint8Array for CLJS
+  ([size] (bytes false size))
   ([secure? size]
     #?(:clj  (let [^Random generator (get-generator secure?)
                    bytes-f (byte-array size)
@@ -215,7 +219,7 @@
 (defn longs
   {:todo ["Base off of random longs, for speed"
           "Lazy |repeatedly| version"]}
-  ([size] (rand-longs false size))
+  ([size] (longs false size))
   ([secure? size]
     ; * 8 because longs are 8 bytes
     (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
@@ -223,26 +227,25 @@
 ; TODO implement
 ; (defn rand-vec [...] ...)
 
-; TODO DEPS ONLY
-#_(:clj
-(defn ^String rand-string
-  {:todo ["Performance of |rand-string| vs. |(String. rand-bytes)|"]}
-  ([n] (rand-string n nil))
+; TODO CLJS
+#?(:clj
+(defn ^String string
+  {:todo ["Performance of `rand-string` vs. `(String. rand-bytes)`"]}
+  ([n] (string n nil))
   ([n opts]
     (if (or (nil? opts)
             (and (map? opts)
                  (-> opts keys count (= 1))
                  (-> opts keys first (= :secure?))))
-        (rand-chars-between (:secure? opts) n
+        (chars-between (:secure? opts) n
           (core/int Character/MIN_VALUE)
           (core/int Character/MAX_VALUE))
         (let [opts-indexed (zipmap (coll/lrange) opts)
               sb (StringBuilder.)]
           (dotimes [i n]
             (let [generator-k (get opts-indexed
-                                (rand-int-between (:secure? opts) 0 (-> opts count dec)))
-                  generator (get generators generator-k)]
-              (.append sb (generator (whenc (:secure? opts) nil? false)))))
+                                (int-between (:secure? opts) 0 (-> opts count dec)))]
+              (.append sb (char generator-k (default (:secure? opts) false)))))
           (str sb))))))
 
 #?(:clj
@@ -310,7 +313,7 @@
   ([<x+p>• secure?]
     (throw-unless (->> <x+p>• (map+ second) (reduce + 0) (== 1))
       (->ex "Probabilities must sum to 1." {:arg <x+p>•}))
-    (let [p-f (rand-double-between secure? 0 1)] ; the range of possible probabilities
+    (let [p-f (double-between secure? 0 1)] ; the range of possible probabilities
       (reduce
         (rfn [p-accum x p]
           (let [lower p-accum
