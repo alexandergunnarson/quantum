@@ -1,15 +1,20 @@
 (ns quantum.core.refs
   (:refer-clojure :exclude
     [deref
-     atom add-watch set-validator!
+     atom add-watch get-validator set-validator!
      agent agent-error await await-for
      alter io! sync dosync ensure ref-set error-handler error-mode set-error-mode!
        set-error-mode! set-agent-send-executor! set-agent-send-off-executor!
      var-set])
   (:require
     [clojure.core      :as core]
+    [quantum.core.core
+      :refer [atom?]]
+    [quantum.core.macros.core
+      :refer [case-env]]
     [quantum.core.vars
-      :refer [defalias]]))
+      :refer [defalias]])
+  #?(:clj (:import [clojure.lang IDeref IAtom])))
 
 (defalias deref     core/deref)
 
@@ -17,7 +22,17 @@
 
 (defalias atom           core/atom)
 (defalias add-watch      core/add-watch)
+(defalias get-validator  core/get-validator)
 (defalias set-validator! core/set-validator!)
+
+(defn ensure-validated-atom!
+  "Ensures that `x` is an atom having `validator`."
+  [x validator]
+  (if (atom? x)
+      (if (-> x get-validator (identical? validator))
+          x
+          (doto x (set-validator! validator)))
+      (doto (atom x) (set-validator! validator))))
 
 ; ===== AGENTS ===== ;
 
@@ -46,5 +61,12 @@
 
 #?(:clj (defalias var-set core/var-set))
 
+; ===== OTHER ===== ;
 
-
+#?(:clj
+(defmacro body-ref
+  "Creates a ref that re-evaluates `body` when derefed."
+  [& body]
+  `(reify IDeref
+    (~(case-env :clj  'deref
+                :cljs '-deref) [_] ~@body))))
