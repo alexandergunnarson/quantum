@@ -12,7 +12,7 @@
     [com.stuartsierra.component :as component]
     [quantum.core.collections   :as coll
       :refer [join for kw-map nnil? nempty?
-              filter-vals+ remove-vals+ map+ remove+ remove' nth
+              filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
@@ -454,8 +454,7 @@
             :db/index              (:index?     schema)
             :db.install/_attribute part-f
             :db/noHistory          (:no-history? schema)}
-           (filter-vals+ nnil?)
-           (join {})
+           (filter-vals' some?)
            (#(if (and datascript? ; DataScript only allows ref value-types
                       (-> % :db/valueType (not= :db.type/ref)))
                  (c/dissoc % :db/valueType)
