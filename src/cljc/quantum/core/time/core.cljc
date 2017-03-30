@@ -214,6 +214,8 @@
                     (#?(:clj ZonedDateTime/now   :cljs js/JSJoda.ZonedDateTime.now  ) x))
   (^{:doc "Obtain an instance of ZonedDateTime from an ISO8601 formatted text string"}
    [^string? x    ] (#?(:clj ZonedDateTime/parse :cljs js/JSJoda.ZonedDateTime.parse) x))
+  ; TODO CLJS
+#?(:clj ([^string? x ^DateTimeFormatter formatter] (ZonedDateTime/parse x formatter)))
   #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.ZonedDateTime.from)))
   (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, and minute value"}
    [#?(:cljs ^js/JSJoda.ZonedDateTime t
