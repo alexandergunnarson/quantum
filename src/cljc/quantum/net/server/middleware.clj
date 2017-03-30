@@ -30,7 +30,7 @@
             [quantum.core.string        :as str]
             [quantum.core.error         :as err]
             [quantum.core.logic
-              :refer [whenp fn-or]]
+              :refer [whenp whenp-> fn-or]]
             [quantum.core.fn
               :refer [fnl fn1 fn-> rcomp fn']]
             [quantum.core.collections   :as coll
@@ -247,7 +247,9 @@
           (fn1 wrap-resource static-resources-path))
         (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
         (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
-        (wrap-uid-with (fn [_] (secure-uuid/v1)))
+        (wrap-uid-with (or (:wrap-uid-with opts) (fn [_] (secure-uuid/v1))))
+        (whenp (:authenticate-ws-client-id opts)
+          (fn1 wrap-authenticate-ws-client-id (:authenticate-ws-client-id opts)))
         (whenp (-> opts :anti-forgery false? not)
           (fn1 wrap-anti-forgery (merge {:read-token (fn [req] (-> req :params :csrf-token))}
                                    (:anti-forgery opts))))
