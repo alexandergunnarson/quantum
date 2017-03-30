@@ -22,7 +22,7 @@
       :refer [defnt]]
     [quantum.core.reflect        :as refl]
     [quantum.core.refs           :as refs
-      :refer [body-ref]]
+      :refer [fref]]
     [quantum.core.spec           :as s
       :refer [validate]]
     [quantum.core.resources      :as res]
@@ -128,7 +128,7 @@
 #?(:cljs (defalias bootstrap-worker servant.worker/bootstrap))
 
 #?(:clj
-(defnt thread-factory [^string? name-]
+(defnt ^ThreadFactory thread-factory [^string? name-] ; TODO fix type hint to be automatic
   (let [ct (atom -1)]
     (reify ThreadFactory
       (^Thread newThread [this ^Runnable runnable]
@@ -143,6 +143,32 @@
                (.setAccessible true)))]
   (defn ^ForkJoinWorkerThread ->fork-join-worker-thread [^ForkJoinPool pool]
     (.invokeExact constructor pool))))
+
+#?(:clj
+(defnt ->fixed-pool [#{long int} num-threads ^string? name-base]
+  (ThreadPoolExecutor. num-threads num-threads
+    0 (time/->timeunit :ms)
+    (SynchronousQueue.)
+    (thread-factory (or name-base (str (gensym "fixed-pool")))))))
+
+#?(:clj
+(defnt ->fork-join-pool [^string? name-base]
+  (let [name-base' (or name-base (str (gensym "fork-join-pool")))]
+    (ForkJoinPool.
+      (min 0x7fff #_ForkJoinPool/MAX_CAP (.availableProcessors (Runtime/getRuntime)))
+      (let [ct (atom -1)]
+        (reify ForkJoinPool$ForkJoinWorkerThreadFactory
+          (^ForkJoinWorkerThread newThread [this ^ForkJoinPool pool]
+            (doto (->fork-join-worker-thread pool) ; TODO instrument so there is logging before and after
+                  (.setName (str name-base' ":" (swap! ct inc)))))))
+      nil false))))
+
+#?(:clj
+(defnt ->cached-pool [^string? name-base]
+  (ThreadPoolExecutor. 0 Integer/MAX_VALUE
+     60 (time/->timeunit :sec)
+     (SynchronousQueue.)
+     (thread-factory name-base))))
 
 #?(:clj
 (defrecord
@@ -168,22 +194,22 @@
     (start [this]
       (println "*threadpools" *threadpools)
       (let [default-core-threadpools
-              ; `body-ref` to ensure accurate reads if they ever change
+              ; `fref` to ensure accurate reads if they ever change
               {:clojure/agent
                  {:pool ; ThreadPoolExecutor
-                    (body-ref clojure.lang.Agent/pooledExecutor)
+                    (fref clojure.lang.Agent/pooledExecutor)
                   :queue
-                    (body-ref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
+                    (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
                :clojure/future
                  {:pool ; ThreadPoolExecutor
-                    (body-ref clojure.lang.Agent/soloExecutor)
+                    (fref clojure.lang.Agent/soloExecutor)
                   :queue
-                    (body-ref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
+                    (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
                :clojure/core.async
                  {} ; private via closure in `clojure.core.async.impl.exec.threadpool/thread-pool-executor`
                :clojure/reducers
                  {:pool
-                   (body-ref @@#'clojure.core.reducers/pool)}}
+                   (fref @@#'clojure.core.reducers/pool)}}
             core-threadpools
              (if replace-core-threadpools-opts
                  (let [wait-for-shutdown (:wait-for-shutdown replace-core-threadpools-opts)
@@ -196,12 +222,8 @@
                    (.shutdown agent-pool)
                    ; This has to be in place anyway in case `wait-for-shutdown` fails
                    (set! clojure.lang.Agent/pooledExecutor
-                     ; Fixed threadpool
-                     (let [num-threads (+ 2 (.availableProcessors (Runtime/getRuntime)))]
-                       (ThreadPoolExecutor. num-threads num-threads
-                         0 (time/->timeunit :ms)
-                         (LinkedBlockingQueue.)
-                         (thread-factory "quantum.core.async.pool:send-pool"))))
+                     (->fixed-pool (+ 2 (.availableProcessors (Runtime/getRuntime)))
+                                   "quantum.core.async.pool:send-pool"))
                    (when wait-for-shutdown
                      (.awaitTermination agent-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
                      (when-not (.isTerminated agent-pool)
@@ -211,11 +233,7 @@
                    (.shutdown future-pool)
                    ; This has to be in place anyway in case `wait-for-shutdown` fails
                    (set! clojure.lang.Agent/soloExecutor
-                     ; Cached threadpool
-                     (ThreadPoolExecutor. 0 Integer/MAX_VALUE
-                       60 (time/->timeunit :sec)
-                       (SynchronousQueue.)
-                       (thread-factory "quantum.core.async.pool:(send-off|future)-pool")))
+                     (->cached-pool "quantum.core.async.pool:(send-off|future)-pool"))
                    (when wait-for-shutdown
                      (.awaitTermination future-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
                      (when-not (.isTerminated future-pool)
@@ -229,25 +247,14 @@
                          !core-async-queue (SynchronousQueue.)
                          core-async-pool
                            ; Fixed threadpool
-                           (ThreadPoolExecutor. num-threads num-threads
-                             0 (time/->timeunit :ms)
-                             (SynchronousQueue.)
-                             (thread-factory "quantum.core.async.pool:core.async-pool"))]
+                           (->fixed-pool num-threads "quantum.core.async.pool:core.async-pool")]
                      (var/reset-var! #'clojure.core.async.impl.dispatch/executor
                        (delay (reify clojure.core.async.impl.protocols/Executor
                                 (clojure.core.async.impl.protocols/exec [this r]
-                                  (.execute core-async-pool ^Runnable r)))))
+                                  (.execute ^ThreadPoolExecutor core-async-pool ^Runnable r)))))
 
                      ; ----- REDUCERS POOL ----- ;
-                     (let [reducers-pool
-                            (ForkJoinPool.
-                              (min 0x7fff #_ForkJoinPool/MAX_CAP (.availableProcessors (Runtime/getRuntime)))
-                              (let [ct (atom -1)]
-                                (reify ForkJoinPool$ForkJoinWorkerThreadFactory
-                                  (^ForkJoinWorkerThread newThread [this ^ForkJoinPool pool]
-                                    (doto (->fork-join-worker-thread pool) ; TODO instrument so there is logging before and after
-                                          (.setName (str "quantum.core.async.pool:reducers-pool:" (swap! ct inc)))))))
-                              nil false)]
+                     (let [reducers-pool (->fork-join-pool "quantum.core.async.pool:reducers-pool")]
                        (var/reset-var! #'clojure.core.reducers/pool (delay reducers-pool))
                      ; TODO:
                      ; :fiber ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
@@ -258,6 +265,7 @@
                  default-core-threadpools)]
         (update this :*threadpools #(coll/doto! %1 %2) (fn [threadpools] (merge threadpools core-threadpools)))))
     (stop [this]
+      ; TODO need to custom-shutdown the pools
       (update this :*threadpools #(coll/doto! %1 %2) empty))))
 
 #?(:clj (defn validate-threadpools-map [x] (t/+map? x))) ; TODO more validation
@@ -277,13 +285,6 @@
        (join {})
        (<- coll/re-assoc :threadpool-manager-fields/*threadpools :*threadpools)
        map->ThreadpoolManager)))
-
-#?(:clj
-(defnt set-max-threads!
-  [^ThreadPoolExecutor threadpool-n n]
-  (doto threadpool-n
-    (.setCorePoolSize    n)
-    (.setMaximumPoolSize n))))
 
 #?(:clj (swap! qcore/registered-components assoc ::threadpool-manager
           #(comp/using (->threadpool-manager %) [::log/log])))
@@ -320,16 +321,15 @@
 #?(:cljs (defservantfn dispatch "The global web worker dispatch fn" [f] (f)))
 
 #?(:clj
-     (defn ->threadpool [type num-threads & [name-]]
+     (defn ->pool [type num-threads & [name-base]]
        (case type
-         :fixed            (-> (Executors/newFixedThreadPool num-threads)
-                               (set-max-threads! num-threads))
-         :fork-join        (TODO)
+         :fixed            (->fixed-pool num-threads name-base)
+         :fork-join        (->fork-join-pool name-base)
          :fork-join/fibers (co.paralleluniverse.fibers.FiberForkJoinScheduler.
-                             (or name- (name (gensym))) num-threads nil
+                             (or name-base (name (gensym))) num-threads nil
                              co.paralleluniverse.common.monitoring.MonitorType/JMX false)))
    :cljs
-     (defn ->threadpool [{:keys [thread-ct script-src] :as opts}]
+     (defn ->pool [{:keys [thread-ct script-src] :as opts}]
        (validate thread-ct (s/or* nil? t/integer?))
        (validate script-src string?)
        (when (pos? thread-ct) (map->Threadpool opts))))
