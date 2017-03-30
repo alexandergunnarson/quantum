@@ -19,7 +19,7 @@
             [quantum.core.fn
               :refer [fn-> juxtk]]
             [quantum.core.error             :as err
-              :refer [try+ try-times ->ex]]
+              :refer [try+ ->ex]]
             [quantum.core.collections :as coll
               :refer [join map+ nnil?]]
             [quantum.core.macros
@@ -188,11 +188,11 @@
     (assert (number? times      ))
     (assert (number? interval-ms))
 
-    (try+ (try-times times
+    (try+ (async/try-times!! times
             (try
               (.findElement driver elem)
               (catch NoSuchElementException e
-                (async/sleep interval-ms)
+                (async/wait!! interval-ms)
                 (throw e)))) ; throw to continue trying
       (catch [:type :max-tries-exceeded] {{:keys [last-error]} :objs :as e}
         (if (instance? NoSuchElementException last-error)

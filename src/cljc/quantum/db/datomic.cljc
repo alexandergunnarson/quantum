@@ -18,7 +18,7 @@
     [quantum.core.collections         :as coll
       :refer [kw-map containsv? nnil? nempty?]]
     [quantum.core.error               :as err
-      :refer [->ex try-times TODO]]
+      :refer [->ex TODO]]
     [quantum.core.fn                  :as fn
       :refer [fn1 fn->]]
     [quantum.core.log                 :as log
@@ -209,7 +209,7 @@
         _ (when kill-on-shutdown?
             (.addShutdownHook (Runtime/getRuntime)
               (Thread. #(res/stop! proc))))]
-    (async/sleep 5000)
+    (async/wait!! 5000)
     (log/pr ::debug "Done.")
     proc)))
 
@@ -296,7 +296,7 @@
                            (log/pr ::debug "Done."))
               _          (when create? (create-db!))
               conn-f  (try
-                        (try-times connection-retries 1000
+                        (async/try-times!! connection-retries 1000
                           (try (connect)
                             (catch #?(:clj Throwable :cljs js/Error) e
                               (log/pr :warn "Error while trying to connect:" e)
