@@ -1,7 +1,7 @@
 (ns ^{:doc "Convenience functions for creating a system and registering components
             according to Stuart Sierra's Component framework."}
   quantum.core.resources
-           (:require [com.stuartsierra.component   :as component]
+           (:require [com.stuartsierra.component   :as comp]
              #?(:clj [clojure.tools.namespace.repl :as repl
                        :refer [refresh refresh-all
                                set-refresh-dirs]                ])
@@ -9,13 +9,14 @@
                      [quantum.core.core            :as qcore]
                      [quantum.core.collections.base
                        :refer [nnil?]]
+                     [quantum.core.data.set        :as set]
                      [quantum.core.error           :as err
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.fn
-                       :refer [fnl with-do fn->]]
+                       :refer [fnl with-do fn-> <-]]
                      [quantum.core.logic           :as logic
-                       :refer [whenf whenf1 fn-not fn-or]]
+                       :refer [whenf whenf1 fn-not fn-or whenp->]]
                      [quantum.core.macros          :as macros
                        :refer [defnt]]
                      [quantum.core.async           :as async    ]
@@ -67,10 +68,10 @@
   #?@(:clj
  [([^org.openqa.selenium.WebDriver x] (.quit  x))
   ([^java.io.Closeable             x] (.close x))
-  ([^Lifecycle                     x] (component/stop x))]
+  ([^Lifecycle                     x] (comp/stop x))]
    :cljs
- [([x] (if (satisfies? component/Lifecycle x)
-           (component/stop x)
+ [([x] (if (satisfies? comp/Lifecycle x)
+           (comp/stop x)
            (throw (->ex "Cleanup not implemented for type" {:type (type x)}))))]))
 
 (defn with-cleanup [obj cleanup-seq]
@@ -86,17 +87,17 @@
             constructor fn?
             deps        (s/or* nil? (s/coll-of keyword? :distinct true)))
   (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
-  (swap! components assoc k (if deps (fn [config] (component/using (constructor config) deps))
+  (swap! components assoc k (if deps (fn [config] (comp/using (constructor config) deps))
                                      constructor))
   true)
 
 (defn start!
   ([] (start! (::global @systems)))
-  ([c] (component/start c)))
+  ([c] (comp/start c)))
 
 (defn stop!
   ([] (stop! (::global @systems)))
-  ([c] (component/stop c)))
+  ([c] (comp/stop c)))
 
 #?(:clj
 (defmacro with-resources
@@ -114,69 +115,150 @@
 
 #?(:clj (ns-unmap (ns-name *ns*) 'System))
 
-(defn- start-with-pred
-  "Starts a component and associates a started? key if it
-   successfully starts."
-  {:from "https://github.com/stuartsierra/component/pull/49/"}
-  [component]
-  (-> component start! (assoc :started? true)))
-
-(defn- stop-with-pred
-  "Stops a component and dissasociates a started? key if it
-   successfully stops."
-  {:from "https://github.com/stuartsierra/component/pull/49/"}
-  [component]
-  (-> component stop! (assoc :started? false)))
-
 (defn started?
-  "Determines if the component is in a started state."
+  "Determines if `component` is in a started state."
   {:from "https://github.com/stuartsierra/component/pull/49/"}
   [component]
   (boolean (:started? component)))
 
 (defn stopped?
-  "Determines if the given component is in a stopped state."
+  "Determines if `component` is in a stopped state."
   {:from "https://github.com/stuartsierra/component/pull/49/"}
   [component]
   (not (started? component)))
 
-(defn start-system!
-  "Recursively starts components in the system, in dependency order,
-  assoc'ing in their dependencies along the way. component-keys is a
-  collection of keys (order doesn't matter) in the system specifying
-  the components to start, defaults to all keys in the system. If
-  an exception is thrown, it'll tear down the system and ensure any
-  components that were started are stopped."
+(defn start-with-pred!
+  "Starts a component if not started, and associates a `:started?` key if it
+   successfully starts."
   {:from "https://github.com/stuartsierra/component/pull/49/"}
-  ([system]
-     (start-system! system (keys system)))
-  ([system component-keys]
-   (try
-     (component/update-system system component-keys start-with-pred)
-     (catch #?(:clj Throwable :cljs :default) e
-       (let [thrown-system (-> e ex-data :system)
-             started-keys (->> thrown-system
-                               (filter (fn [[k v]] (started? v)))
-                               (keys))]
-         (component/update-system-reverse thrown-system started-keys stop-with-pred))
-       (throw e)))))
+  [component]
+  (if (started? component)
+      component
+      (-> component start! (assoc :started? true))))
+
+(defn stop-with-pred!
+  "Stops a component if not stopped, and dissociates a `:started?` key if it
+   successfully stops."
+  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  [component]
+  (if (stopped? component)
+      component
+      (-> component start! (assoc :started? false))))
+
+(defn descendant-connections
+  [graph ks]
+  (loop [ks'  (set ks)
+         deps #{}]
+    (let [k' (first ks')]
+      (if (nil? k')
+          deps
+          (let [deps' (get graph k')]
+            (recur (-> ks' (set/union deps') (disj k'))
+                   (set/union deps deps')))))))
+
+(defn update-components-and-connections!
+  [system component-keys connection-k update-components? updatef]
+  (updatef system
+    (-> system
+        (comp/dependency-graph (keys system))
+        connection-k
+        (descendant-connections component-keys)
+        (whenp-> update-components? (set/union component-keys)))))
+
+(defn start-components!
+  "Recursively starts components in the system, in dependency order,
+   assoc'ing in their dependencies along the way. component-keys is a
+   collection of keys (order doesn't matter) in the system specifying
+   the components to start, defaults to all keys in the system. If
+   an exception is thrown, it'll tear down the system and ensure any
+   components that were started are stopped."
+  {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
+  [system component-keys]
+    (try
+       (comp/update-system system component-keys start-with-pred!)
+       (catch #?(:clj Throwable :cljs :default) e
+         (let [thrown-system (-> e ex-data :system)
+               started-keys  (->> thrown-system
+                                  (filter (fn [[k v]] (started? v)))
+                                  (keys))]
+           (comp/update-system-reverse thrown-system started-keys stop-with-pred!))
+         (throw e))))
+
+(defn start-dependencies!
+  "Starts the dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependencies false start-components!))
+
+(defn start-components-and-dependencies!
+  "Starts the components and dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependencies true start-components!))
+
+(defn start-dependents!
+  "Starts the dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependents false start-components!))
+
+(defn start-components-and-dependents!
+  "Starts the components and dependents of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependents true start-components!))
+
+(defn start-system!
+  "Runs `start-components-independently!` on all dependencies in the
+   system."
+  {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
+  ([system] (start-components! system (keys system))))
+
+(defn stop-components!
+  "Recursively stops components in the system, in reverse dependency
+   order. component-keys is a collection of keys (order doesn't matter)
+   in the system specifying the components to stop, defaults to all
+   keys in the system."
+  {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
+  [system component-keys]
+  (comp/update-system-reverse system component-keys stop-with-pred!))
+
+(defn stop-dependencies!
+  "Stops the dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependencies false stop-components!))
+
+(defn stop-components-and-dependencies!
+  "Stops the components and dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependencies true stop-components!))
+
+(defn stop-dependents!
+  "Stops the dependencies of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependents false stop-components!))
+
+(defn stop-components-and-dependents!
+  "Stops the components and dependents of the provided component keys."
+  [system component-keys]
+  (update-components-and-connections! system component-keys
+    :dependents true stop-components!))
 
 (defn stop-system!
-  "Recursively stops components in the system, in reverse dependency
-  order. component-keys is a collection of keys (order doesn't matter)
-  in the system specifying the components to stop, defaults to all
-  keys in the system."
-  {:from "https://github.com/stuartsierra/component/pull/49/"}
+  "Runs `stop-components-independently!` on all dependencies in the
+   system."
+  {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   ([system]
-   (stop-system! system (keys system)))
-  ([system component-keys]
-   (component/update-system-reverse system component-keys stop-with-pred)))
+   (stop-components! system (keys system))))
 
 (defprotocol ISystem
   (reload! [this] [this ns-]))
 
 (defrecord System [name config sys-map running?]
-  component/Lifecycle
+  comp/Lifecycle
     (start [this]
       (if running?
           (do (log/pr :warn "System" name "already running.")
@@ -215,7 +297,7 @@
 (defn default-make-system [config']
   (->> config' (map (fn [[k v]] [k (if-let [f (get @components k)] (f v) v)]))
        seq flatten
-       (apply component/system-map)))
+       (apply comp/system-map)))
 
 (defn register-system!
   "Registers a system with the global system registry."
