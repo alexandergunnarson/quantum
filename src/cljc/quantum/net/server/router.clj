@@ -22,7 +22,7 @@
     [quantum.core.log                 :as log]
     [quantum.core.resources           :as res]
     [quantum.core.paths               :as paths]
-    [quantum.core.core                :as qcore
+    [quantum.core.refs                :as refs
       :refer [lens]]
     [quantum.core.fn                  :as fn
       :refer [<- fn->]]))

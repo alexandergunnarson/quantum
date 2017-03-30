@@ -302,7 +302,7 @@
   May  2011 - LastPass uses 100,000 iterations of SHA-256 (source: LastPass)"
   {:info ["http://security.stackexchange.com/questions/3959/recommended-of-iterations-when-using-pkbdf2-sha256"]}
   ([^String s & [salt iterations key-length]]
-   (let [salt       (if (nnil? salt) (->bytes salt) (rand/rand-bytes true 128))
+   (let [salt       (if (nnil? salt) (->bytes salt) (rand/bytes true 128))
          iterations (or iterations 100000)
          k (PBEKeySpec. (.toCharArray s)
              salt iterations
@@ -332,7 +332,7 @@
         exp-cpu-cost       (num/pow 2 log2-cpu-cost)
         ram-cost           (or ram-cost 8) ; block size
         parallelism        (or parallelism 1) ; Cores
-        salt               (or salt (rand/rand-bytes true 16)) ; bytes
+        salt               (or salt (rand/bytes true 16)) ; bytes
         derived-key-length (or dk-length 32)
         #?@(:cljs [result (async/promise-chan)])
         derived-to-string
@@ -489,8 +489,8 @@
   (let [encrypt?   (encrypt-param* type key tweak)
         bits       (or bits 512)
         block-size (/ bits 8)
-        key-  (or key   (rand/rand-longs (-> bits (/ 8) (/ 8))))
-        tweak (or tweak (rand/rand-longs 2))
+        key-  (or key   (rand/longs (-> bits (/ 8) (/ 8))))
+        tweak (or tweak (rand/longs 2))
         engine (-> (ThreefishEngine. bits)
                    (doto
                      (.init encrypt? key- tweak))
@@ -545,7 +545,7 @@
                           salt-f  (or #?(:clj  salt
                                          :cljs (whenp salt base64->?
                                                  conv/base64->forge-bytes))
-                                      #?(:clj  (rand/rand-bytes true 128)
+                                      #?(:clj  (rand/bytes true 128)
                                          :cljs (js/forge.random.getBytesSync 128)))
                           keyspec (#?(:clj  PBEKeySpec.
                                       :cljs js/forge.pkcs5.pbkdf2)

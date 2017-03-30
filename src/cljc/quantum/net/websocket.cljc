@@ -4,7 +4,7 @@
   #?@(:clj [[immutant.web                            :as imm      ]
             [taoensso.sente.server-adapters.immutant :as a-imm    ]
             [taoensso.sente.server-adapters.aleph    :as a-aleph  ]])
-            [quantum.core.core
+            [quantum.core.refs
               :refer [lens ?deref]]
             [quantum.core.data.complex.json          :as json]
             [quantum.core.error                      :as err
