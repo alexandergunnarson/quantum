@@ -26,7 +26,7 @@
     [quantum.measure.convert        :as uconv
       :refer [convert]]
     [quantum.core.convert.primitive :as pconv
-      :refer [->long]]
+      :refer [->int ->long]]
     [quantum.core.vars              :as var
       :refer [defalias]])
   (:require-macros
@@ -36,7 +36,8 @@
   (:import
     [java.util Date Calendar]
     [java.util.concurrent TimeUnit]
-    [java.time Month LocalDate LocalTime LocalDateTime ZonedDateTime ZoneId ZoneOffset]
+    [java.time Month LocalDate LocalTime LocalDateTime ZonedDateTime ZoneId ZoneOffset
+               Period Duration]
     [java.time.format DateTimeFormatter]
     [java.time.temporal Temporal TemporalAccessor ChronoField])))
 
@@ -231,6 +232,51 @@
   ^{:doc "Obtain the current date and time in the system default timezone"}
   ([] (case-env :clj `(ZonedDateTime/now) :cljs `(js/JSJoda.ZonedDateTime.now)))
   ([x & args] `(->zoned-date-time* ~x ~@args))))
+
+; ===== DURATION ===== ;
+
+; TODO CLJS
+#?(:clj
+(defnt ^{:tag #?(:clj Period)} ->period*
+  ([y     ] (->period* y 0 0))
+  ([y mo  ] (->period* y mo 0))
+  ([y mo d]
+    (#?(:clj Period/of :cljs (TODO)) (->int y) (->int mo) (->int d)))))
+
+; TODO CLJS
+#?(:clj (defmacro ->period ([] (case-env :clj `Period/ZERO :cljs (TODO)))
+                           ([& args] `(->period* ~@args))))
+
+; TODO CLJS
+#?(:clj (defnt period? ([^Period x] true) ([^default x] false)))
+
+; TODO CLJS
+#?(:clj
+(defnt ^{:tag #?(:clj Duration)} ->duration*
+  ([d        ] (#?(:clj Duration/ofDays :cljs (TODO)) d))
+  ([d h      ] (.plus (->duration* d)
+                      (#?(:clj Duration/ofHours   :cljs (TODO)) (->long h))))
+  ([d h m    ] (.plus (->duration* d h)
+                      (#?(:clj Duration/ofMinutes :cljs (TODO)) (->long m))))
+  ([d h m s  ] (.plus (->duration* d h m)
+                      (#?(:clj Duration/ofSeconds :cljs (TODO)) (->long s))))
+  ([d h m s n] (.plus (->duration* d h m s)
+                      (#?(:clj Duration/ofNanos   :cljs (TODO)) (->long n))))))
+
+; TODO CLJS
+#?(:clj (defmacro ->duration ([] (case-env :clj `Duration/ZERO :cljs (TODO)))
+                             ([& args] `(->duration* ~@args))))
+
+; TODO CLJS
+#?(:clj (defnt duration? ([^Duration x] true) ([^default x] false)))
+
+; ===== TO TEMPORAL PORTION ===== ;
+
+; TODO CLJS
+#?(:clj
+(defnt ^long ->nanos [^Duration x] (.toNanos x))) ; todo make return type hint unnecessary
+
+; ===== MISCELLANEOUS ===== ;
 
 #?(:clj
 (defnt ^TimeUnit ->timeunit
