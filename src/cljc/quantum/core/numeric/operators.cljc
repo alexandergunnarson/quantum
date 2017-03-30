@@ -217,6 +217,8 @@
       (if (zero? n) 0 #?(:clj Double/POSITIVE_INFINITY :cljs js.Number/POSITIVE_INFINITY))
       (/ n denom)))
 
+; TODO integer division via div:int
+
 ;_____________________________________________________________________
 ;==================={   UNARY MATH OPERATORS   }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
