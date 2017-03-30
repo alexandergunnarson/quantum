@@ -14,9 +14,77 @@
       :refer [case-env]]
     [quantum.core.vars
       :refer [defalias]])
-  #?(:clj (:import [clojure.lang IDeref IAtom])))
+  #?(:clj (:import [clojure.lang IDeref IAtom IPending])))
 
 (defalias deref     core/deref)
+
+(defn ?deref [a] (if (nil? a) nil (deref a)))
+
+(defn lens
+  ([x getter]
+    (if (#?(:clj  instance?
+            :cljs satisfies?) IDeref x)
+        (reify IDeref
+          (#?(:clj  deref
+              :cljs -deref) [this] (getter @x)))
+        (throw (#?(:clj  IllegalArgumentException.
+                   :cljs js/Error.)
+                "Argument to `lens` must be an IDeref")))))
+
+(defn cursor ; TODO use `deftype-compatible`?
+  {:todo #{"@setter currently doesn't do anything"}}
+  [x getter & [setter]]
+  (when-not (#?(:clj  instance?
+                :cljs satisfies?) IDeref x)
+    (throw (#?(:clj  IllegalArgumentException.
+               :cljs js/Error.)
+            "Argument to |cursor| must be an IDeref")))
+  (reify
+    IDeref
+      (#?(:clj  deref
+          :cljs -deref) [this] (getter @x))
+    IAtom
+    #?@(:clj
+     [(swap [this f]
+        (swap! x f))
+      (swap [this f arg]
+        (swap! x f arg))
+      (swap [this f arg1 arg2]
+        (swap! x f arg1 arg2))
+      (swap [this f arg1 arg2 args]
+        (apply swap! x f arg1 arg2 args))
+      (compareAndSet [this oldv newv]
+        (compare-and-set! x oldv newv))
+      (reset [this newv]
+        (reset! x newv))]
+      :cljs
+   [cljs.core/IReset
+      (-reset! [this newv]
+        (reset! x newv))])
+    #?(:clj  clojure.lang.IRef
+       :cljs cljs.core/IWatchable)
+    #?(:cljs
+        (-notify-watches [this oldval newval]
+          (doseq [[key f] (.-watches x)]
+            (f key this oldval newval))
+          this))
+    #?(:clj
+        (getWatches [this]
+          (.getWatches ^clojure.lang.IRef x)))
+    #?(:clj
+        (setValidator [this f]
+          (set-validator! x f)))
+    #?(:clj
+        (getValidator [this]
+          (get-validator x)))
+      (#?(:clj  addWatch
+          :cljs -add-watch) [this k f]
+        (add-watch x k f)
+        this)
+      (#?(:clj  removeWatch
+          :cljs -remove-watch) [this k]
+        (remove-watch x k)
+        this)))
 
 ; ===== ATOMS ===== ;
 
@@ -64,9 +132,13 @@
 ; ===== OTHER ===== ;
 
 #?(:clj
-(defmacro body-ref
-  "Creates a ref that re-evaluates `body` when derefed."
+(defmacro fref
+  "Creates a ref that re-evaluates `body` when derefed, like an `fn`."
   [& body]
-  `(reify IDeref
+ `(reify
+    IPending
+    (~(case-env :clj 'isRealized
+                :cljs '-realized?) [_] false) ; in order to not print out `body` by default unless asked
+    IDeref
     (~(case-env :clj  'deref
                 :cljs '-deref) [_] ~@body))))
