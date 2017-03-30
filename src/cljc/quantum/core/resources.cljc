@@ -6,6 +6,8 @@
                        :refer [refresh refresh-all
                                set-refresh-dirs]                ])
                      [clojure.core.async           :as casync]
+                     [quantum.core.cache           :as cache
+                       :refer [callable-times]]
                      [quantum.core.core            :as qcore]
                      [quantum.core.collections.base
                        :refer [nnil?]]
@@ -14,7 +16,7 @@
                        :refer [->ex catch-all]]
                      [quantum.core.log             :as log      ]
                      [quantum.core.fn
-                       :refer [fnl with-do fn-> <-]]
+                       :refer [fn1 fnl with-do fn-> <-]]
                      [quantum.core.logic           :as logic
                        :refer [whenf whenf1 fn-not fn-or whenp->]]
                      [quantum.core.macros          :as macros
@@ -79,6 +81,7 @@
   obj)
 
 (defonce systems (atom nil)) ; TODO cache
+(def global-kw ::global)
 
 (defonce components qcore/registered-components) ; TODO cache
 
@@ -92,12 +95,22 @@
   true)
 
 (defn start!
-  ([] (start! (::global @systems)))
+  ([] (start! (get @systems global-kw)))
   ([c] (comp/start c)))
 
 (defn stop!
-  ([] (stop! (::global @systems)))
+  ([] (stop! (get @systems global-kw)))
   ([c] (comp/stop c)))
+
+(defn get-system
+  ([] (get-system global-kw))
+  ([k] (get @systems k)))
+
+(defn update-system!
+  {:usage `(res/update-system! (fn1 res/restart-components! [::log/log]))}
+  ([f] (update-system! global-kw f))
+                        ;; callable once because of `swap!` possibly running multiple times
+  ([k f] (swap! systems (callable-times 1 (fn1 update-in [k :sys-map] f)))))
 
 #?(:clj
 (defmacro with-resources
@@ -143,7 +156,7 @@
   [component]
   (if (stopped? component)
       component
-      (-> component start! (assoc :started? false))))
+      (-> component stop! (assoc :started? false))))
 
 (defn descendant-connections
   [graph ks]
@@ -169,8 +182,8 @@
   "Recursively starts components in the system, in dependency order,
    assoc'ing in their dependencies along the way. component-keys is a
    collection of keys (order doesn't matter) in the system specifying
-   the components to start, defaults to all keys in the system. If
-   an exception is thrown, it'll tear down the system and ensure any
+   the components to start.
+   If an exception is thrown, it'll tear down the system and ensure any
    components that were started are stopped."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   [system component-keys]
@@ -209,16 +222,17 @@
     :dependents true start-components!))
 
 (defn start-system!
-  "Runs `start-components-independently!` on all dependencies in the
+  "Runs `start-components!` on all dependencies in the
    system."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   ([system] (start-components! system (keys system))))
 
+; ----- STOP ----- ;
+
 (defn stop-components!
   "Recursively stops components in the system, in reverse dependency
    order. component-keys is a collection of keys (order doesn't matter)
-   in the system specifying the components to stop, defaults to all
-   keys in the system."
+   in the system specifying the components to stop."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   [system component-keys]
   (comp/update-system-reverse system component-keys stop-with-pred!))
@@ -248,11 +262,55 @@
     :dependents true stop-components!))
 
 (defn stop-system!
-  "Runs `stop-components-independently!` on all dependencies in the
+  "Runs `stop-components!` on all dependencies in the
    system."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
-  ([system]
-   (stop-components! system (keys system))))
+  [system] (stop-components! system (keys system)))
+
+; ----- RESTART ----- ;
+
+(defn restart-components!
+  "Recursively stops components in the system, in reverse dependency
+   order, then starts components in the system, in dependency order.
+   `component-keys` is a collection of keys (order doesn't matter)
+   in the system specifying the components to restart."
+  [system component-keys]
+  (-> system
+      (stop-components!  component-keys)
+      (start-components! component-keys)))
+
+(defn restart-dependencies!
+  "Restarts the dependencies of the provided component keys."
+  [system component-keys]
+  (-> system
+      (stop-dependencies!  component-keys)
+      (start-dependencies! component-keys)))
+
+(defn restart-components-and-dependencies!
+  "Restarts the components and dependencies of the provided component keys."
+  [system component-keys]
+  (-> system
+      (stop-components-and-dependencies!  component-keys)
+      (start-components-and-dependencies! component-keys)))
+
+(defn restart-dependents!
+  "Restarts the dependencies of the provided component keys."
+  [system component-keys]
+  (-> system
+      (stop-dependents!  component-keys)
+      (start-dependents! component-keys)))
+
+(defn restart-components-and-dependents!
+  "Restarts the components and dependents of the provided component keys."
+  [system component-keys]
+  (-> system
+      (stop-components-and-dependents!  component-keys)
+      (start-components-and-dependents! component-keys)))
+
+(defn restart-system!
+  "Runs `restart-components!` on all dependencies in the
+   system."
+  [system] (restart-components! system (keys system)))
 
 (defprotocol ISystem
   (reload! [this] [this ns-]))

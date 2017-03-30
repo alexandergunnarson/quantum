@@ -209,7 +209,7 @@
         _ (when kill-on-shutdown?
             (.addShutdownHook (Runtime/getRuntime)
               (Thread. #(res/stop! proc))))]
-    (async/wait!! 5000)
+    (async/wait!! 5000) ; TODO make this more reasonable
     (log/pr ::debug "Done.")
     proc)))
 
