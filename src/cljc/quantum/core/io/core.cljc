@@ -7,6 +7,7 @@
     #?(:clj  [taoensso.nippy             :as nippy])
     #?(:clj  [clojure.java.io            :as io])
     #?(:clj  [iota                       :as iota])
+             [quantum.core.async         :as async]
              [quantum.core.convert       :as conv
                :refer [->name]]
              [quantum.core.error         :as err
@@ -23,7 +24,7 @@
              [quantum.core.paths         :as p
                :refer [path]]
              [quantum.core.resources     :as res]
-             [quantum.core.type          :as type
+             [quantum.core.type          :as t
                :refer [svec?]]
              [quantum.core.vars          :as var
                :refer [defalias]]
@@ -31,9 +32,6 @@
                :refer [validate]]
              [quantum.core.macros        :as macros
                :refer [defnt]])
-  #?(:cljs (:require-macros
-             [cljs.core.async.macros
-               :refer [go]                             ]))
   #?(:clj  (:import
              (java.io File
                       InputStream OutputStream
@@ -152,7 +150,7 @@
     #?(:cljs (js/localStorage.setItem (apply quantum.core.paths/path path) (conv/->text data))
        :clj  (let [path-f (p/parse-dir path)]
                (validate path-f string?)
-               (err/try-times max-tries 500
+               (async/try-times!! max-tries 500
                  (try
                    (condpc = method
                      :print  (assoc-unserialized! :string path-f data)
@@ -202,11 +200,6 @@
 
 #?(:clj (def create-file! (fn-> io/as-file (.createNewFile))))
 
-; TODO replace
-#?(:clj
-(defn byte-array? [x]
-  (= (type x) (type (byte-array 0)))))
-
 (defmulti get* firsta)
 
 #?(:clj (defmethod get* :str-seq   [_ path] (iota/seq  path)))
@@ -241,7 +234,7 @@
                    ;(-> path-f io/reader csv/read-csv)
                    (whenf (with-open [read-file (io/input-stream path-f)] ; Clojure object
                           (nippy/thaw-from-in! (DataInputStream. read-file)))
-                     byte-array? nippy/thaw))
+                     (fn1 t/bytes?) nippy/thaw))
                nil (slurp path-f)
                (get* method path)))))))
 
