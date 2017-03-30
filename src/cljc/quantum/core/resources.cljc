@@ -104,7 +104,7 @@
 
 (defn get-system
   ([] (get-system global-kw))
-  ([k] (get @systems k)))
+  ([k] (:sys-map (get @systems k))))
 
 (defn update-system!
   {:usage `(res/update-system! (fn1 res/restart-components! [::log/log]))}
