@@ -133,7 +133,7 @@
          (defnt lseq?          ([^lseq?          x] true) ([^default x] false))
          (defnt sequential?    ([^sequential?    x] true) ([^default x] false))
          (defnt counted?       ([^counted?       x] true) ([^default x] false))
-         (defnt reducer?       ([^reducer?       x] true) ([^default x] false))
+         (defnt transformer?   ([^transformer?   x] true) ([^default x] false))
          (defalias seqable? qcore/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))

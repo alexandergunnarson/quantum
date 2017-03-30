@@ -29,8 +29,9 @@
                goog.structs.AvlTree
                goog.structs.Queue])))
 
-(defrecord Folder  [coll transform])
-(defrecord Reducer [coll transform])
+; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
+(deftype Folder  [xs prev xf])
+(deftype Reducer [xs prev xf])
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -670,7 +671,7 @@
 (def record-types          '{:clj  #{clojure.lang.IRecord}
                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
 
-(def reducer-types         '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
+(def transformer-types     '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
                                     quantum.core.type.defs.Folder
                                     quantum.core.type.defs.Reducer}
                              :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
@@ -987,7 +988,7 @@
                                        (get transientizable-types :cljs))}
    'pattern?         regex-types
    'regex?           regex-types
-   'reducer?         reducer-types
+   'transformer?     transformer-types
    ;'reducible?      reducible-types
    'file?            '{:clj  #{java.io.File}
                        :cljs #{#_js/File}} ; isn't always available! Use an abstraction
