@@ -244,6 +244,7 @@
         (defalias assoc-default   soc/assoc-default  )
         (defalias assoc-with      soc/assoc-with     )
         (defalias assoc-if        soc/assoc-if       )
+        (defalias re-assoc        soc/re-assoc       )
 
 ; ===== ENDIAN MODIFICATION ===== ;
 #?(:clj (defalias conjl         coll/conjl        ))
@@ -378,7 +379,6 @@
 
 #?(:clj (defalias elem->array         coll/elem->array        ))
 #?(:clj (defalias ->array             coll/->array            ))
-#?(:clj (defalias ->arr               coll/->arr              ))
 
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
