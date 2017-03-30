@@ -57,6 +57,21 @@
 (defalias fn' constantly)
 
 #?(:clj
+(defmacro fn'*:arities
+  [arities-ct & body]
+  (let [f (gensym "this")]
+   `(~'fn ~f ~@(arity-builder (fn [args] (println "Args" args) (if (empty? args)
+                                               `(do ~@body)
+                                               `(~f)))
+                              (fn' `(~f))
+                              0 arities-ct)))))
+
+#?(:clj
+(defmacro fn'*
+  "Like `fn'` but re-evaluates the body each time."
+  [& body] `(fn'*:arities 4 ~@body))) ; conservative to limit generated code size
+
+#?(:clj
 (defmacro mfn
   "`mfn` is short for 'macro-fn', just as 'jfn' is short for 'java-fn'.
    Originally named `functionize` by mikera."
