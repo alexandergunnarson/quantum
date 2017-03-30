@@ -1,5 +1,5 @@
 (ns
-  ^{:doc "Useful debug utils. Especially |trace|, |break|, |try-times|, etc."
+  ^{:doc "Useful debug utils. Especially `trace`, `break`, etc."
     :attribution "alexandergunnarson"}
   quantum.core.meta.debug
            (:require [clojure.string           :as str  ]
