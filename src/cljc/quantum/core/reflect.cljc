@@ -14,7 +14,10 @@
                     [quantum.core.fn            :as fn
                       :refer [fn-> <-]]
                     [quantum.core.macros        :as macros
-                      :refer [defnt]])))
+                      :refer [defnt]]))
+  #?(:clj (:import [java.lang.invoke MethodHandles MethodHandles$Lookup])))
+
+#?(:clj (def ^MethodHandles$Lookup lookup (MethodHandles/lookup)))
 
 #?(:clj (defalias bean core/bean))
 
