@@ -112,8 +112,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defn map-transducer
-  [f]
+(defn map:transducer [f]
   (fn [rf]
     (fn ; TODO auto-generate?
       ([            ] (rf))
@@ -124,9 +123,15 @@
       ([ret x0 x1 x2 & xs]
          (rf ret (apply f x0 x1 x2 xs))))))
 
-(defn map+ [f coll] (folder coll (map-transducer f)))
+(defn map+
+  ([f] (map:transducer f))
+  ([f coll] (folder coll (map:transducer f))))
 
-(defn map-indexed+ [f coll] (folder coll (core/map-indexed f)))
+(defn map-indexed:transducer [f] (core/map-indexed f))
+
+(defn map-indexed+
+  ([f] (map-indexed:transducer f))
+  ([f coll] (folder coll (map-indexed:transducer f))))
 
 (defn pmap-indexed+
   "Thread-safe `map-indexed+`.
