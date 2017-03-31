@@ -139,6 +139,7 @@
 (dv/def ^:db? schema/date        :time/instant)
 (dv/def ^:db? date/created       :time/instant)
 (dv/def ^:db? date/last-modified :time/instant)
+(dv/def ^:db? date/retrieved     :db/instant  )
 
 (dv/def ^:db?
   ^{:doc "For media tracks, date last played.
