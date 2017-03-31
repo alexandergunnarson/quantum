@@ -78,9 +78,9 @@
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))
 
-(defn init! [var-]
-  (when-let [f (get @init-cache-fns var-)]
-    (f)))
+(defn init!
+  ([var-]
+    (when-let [f (get @init-cache-fns var-)] (f))))
 
 (defn clear! [var-]
   (swap! (get @caches var-) empty)
