@@ -71,7 +71,6 @@
             [java.nio.channels.spi       AbstractSelectableChannel]
             [java.nio.file Path          Paths]
             [java.util                   Locale]
-            [javafx.collections          FXCollections]
             [java.sql                    Blob Clob])))
 
 ; TO EXPLORE
@@ -300,11 +299,6 @@
 (defnt ^java.nio.file.Path ->java-path
   ([^java.nio.file.Path x] x)
   ([                    x] (Paths/get ^URI (->uri x)))))
-
-#?(:clj
-(defnt ->observable ; O(1) ; TODO Reflection on clojure.lang.IndexedSeq
-  ([^+vec? v] (FXCollections/observableArrayList v))
-  ([^seq?  l] (FXCollections/observableArrayList l))))
 
 #?(:clj (defalias ->predicate fn/->predicate))
 
