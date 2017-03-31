@@ -41,7 +41,7 @@
               zipmap
               reverse rseq
               conj
-              conj! assoc assoc! assoc-in dissoc dissoc! disj!
+              conj! assoc assoc! assoc-in dissoc dissoc! disj! update
               boolean?
               class
               ])
@@ -81,6 +81,7 @@
                :refer [defnt case-env]]
              [quantum.core.ns                         :as ns]
              [quantum.core.numeric                    :as num]
+             [quantum.core.numeric.convert            :as nconv]
              [quantum.core.reducers                   :as red
                :refer [defeager]]
              [quantum.core.string                     :as str    ]
@@ -103,7 +104,7 @@
               index-of last-index-of
               first second rest last butlast get pop peek nth
               conjl conj! assoc assoc! assoc?! dissoc dissoc! disj!
-              map-entry join empty? empty update! empty? elem->array]])
+              map-entry join empty? empty update update! empty? elem->array]])
   #?(:clj  (:import java.util.Comparator)
      :cljs (:import goog.string.StringBuffer)))
 
@@ -235,16 +236,10 @@
 #?(:clj (defalias update!         coll/update!      ))
 #?(:clj (defalias aswap!          coll/aswap!       ))
 
-        (defalias assoc-extend    soc/assoc-extend   )
-        (defalias assoc-in        soc/assoc-in       )
-        (defalias dissoc-in       soc/dissoc-in      )
-        (defalias update-val      soc/update-val     )
-        (defalias update-when     soc/update-when    )
-        (defalias updates         soc/updates        )
-        (defalias assoc-default   soc/assoc-default  )
-        (defalias assoc-with      soc/assoc-with     )
-        (defalias assoc-if        soc/assoc-if       )
-        (defalias re-assoc        soc/re-assoc       )
+(defaliases soc
+  assoc-extend assoc-in  assoc-default assoc-with assoc-if re-assoc
+               dissoc-in
+  update update-val                               update-when updates        )
 
 ; ===== ENDIAN MODIFICATION ===== ;
 #?(:clj (defalias conjl         coll/conjl        ))
@@ -750,14 +745,6 @@
 
 (def frest (fn-> rest first))
 
-; ----- SPLIT ----- ;
-
-(def ^{:doc "split the given collection at the given index; similar to
-             clojure.core/split-at, but operates on and returns data.avl
-             collections"}
-  split-at clojure.data.avl/split-at)
-
-
 ; ----- MISCELLANEOUS ----- ;
 
 ; `symmetric-difference` <~> `lodash/xor`
@@ -892,24 +879,6 @@
 (defalias merge-keep-left mergel)
 (defn merger [a b] (merge a b))
 (defalias merge-keep-right merger)
-
-(defn split-remove
-  {:todo ["Slightly inefficient — two |index-of| implicit."]}
-  [split-at-obj coll]
-  (let [left  (take-until split-at-obj coll)] ; TODO need to make a non-predicate `take-until`
-    (if (= left coll)
-        [left]
-        [left (take-after split-at-obj coll)])))
-
-(defn split-remove-match
-  {:todo ["Slightly inefficient — two |index-of| implicit."]
-   :tests `{(split-remove-match "--" "ab--sddasd--")
-            ["ab" "sddasd--"]}}
-  [split-at-obj coll]
-  (let [left (takel-until-matches split-at-obj coll)]
-    (if (= left coll)
-        [left]
-        [left (takel-after-matches split-at-obj coll)])))
 
 #?(:clj (defalias kw-map    base/kw-map   ))
 #?(:clj (defalias quote-map base/quote-map))
@@ -1134,7 +1103,7 @@
   ([f init gen-subinit xs]
     (->> xs
          (reduce
-           (fn [ret x]
+           (rfn [ret x]
              (let [k (f x)]
                (assoc?! ret k (conj?! (or (get ret k) (gen-subinit)) x))))
            (?transient! init))
@@ -1143,6 +1112,41 @@
 (defn group-by   [f      xs] (group-by-into f        {}   xs))
 (defn group-into [  init xs] (group-by-into identity init xs))
 (defn group      [       xs] (group-by-into identity {}   xs))
+
+; ----- SPLIT ----- ;
+
+(def ^{:doc "split the given collection at the given index; similar to
+             clojure.core/split-at, but operates on and returns data.avl
+             collections"}
+  split-at clojure.data.avl/split-at)
+
+(defn split-by-pred-into
+  "Like `split-by-pred`, but you can choose what subcollection to split into."
+  ([pred gen-subinit xs]
+    (->> xs (group-by-into (rcomp pred nconv/->boolean-num) (object-array 2) (rcomp gen-subinit (fn1 ?transient!)))
+            (map (fn1 ?persistent!)))))
+
+(defn split-by-pred
+  "Splits `xs` into two groups: one which fails `pred` and one which satisfies it."
+  [pred xs] (split-by-pred-into pred vector xs))
+
+(defn split-remove
+  {:todo ["Slightly inefficient — two |index-of| implicit."]}
+  [split-at-obj coll]
+  (let [left  (take-until split-at-obj coll)] ; TODO need to make a non-predicate `take-until`
+    (if (= left coll)
+        [left]
+        [left (take-after split-at-obj coll)])))
+
+(defn split-remove-match
+  {:todo ["Slightly inefficient — two |index-of| implicit."]
+   :tests `{(split-remove-match "--" "ab--sddasd--")
+            ["ab" "sddasd--"]}}
+  [split-at-obj coll]
+  (let [left (takel-until-matches split-at-obj coll)]
+    (if (= left coll)
+        [left]
+        [left (takel-after-matches split-at-obj coll)])))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
