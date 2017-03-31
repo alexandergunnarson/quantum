@@ -2,8 +2,8 @@
   (:refer-clojure :exclude
     [deref
      atom add-watch get-validator set-validator!
-     agent agent-error await await-for
-     alter io! sync dosync ensure ref-set error-handler error-mode set-error-mode!
+     agent agent-error await await-for commute
+     alter io! sync dosync ensure ref-set error-handler error-mode set-error-handler!
        set-error-mode! set-agent-send-executor! set-agent-send-off-executor!
      var-set])
   (:require

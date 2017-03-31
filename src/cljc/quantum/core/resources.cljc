@@ -85,6 +85,31 @@
 
 (defonce components qcore/registered-components) ; TODO cache
 
+#?(:clj
+(defmacro defcomponent
+  "Creates a startable/stoppable component whose `start` and `stop`
+   functions are dynamically redefinable."
+  [name fields startf stopf]
+  (let [assert-valid-lifecyle-fn
+         #(assert (and (seq? %)
+                       (-> % first vector?)
+                       (-> % first count (= 1))) %)
+        _ (assert-valid-lifecyle-fn startf)
+        _ (assert-valid-lifecyle-fn stopf)
+        gen-lifecyle-fn
+          (fn [[params & body] suffix]
+           (let [sym (symbol (str name suffix))]
+             {:sym sym
+              :fn  `(defn ~sym [{:keys ~fields :as this#}]
+                      (let [~(first params) this#] ~@body))}))
+        startf-genned (gen-lifecyle-fn startf ":__start")
+        stopf-genned  (gen-lifecyle-fn stopf  ":__stop")]
+   `(do ~(:fn startf-genned)
+        ~(:fn stopf-genned)
+        (defrecord ~name ~fields
+          comp/Lifecycle (start [this#] (~(:sym startf-genned) this#))
+                         (stop  [this#] (~(:sym stopf-genned ) this#)))))))
+
 (defn register-component! [k constructor & [deps]]
   (validate k           qcore/qualified-keyword?
             constructor fn?
