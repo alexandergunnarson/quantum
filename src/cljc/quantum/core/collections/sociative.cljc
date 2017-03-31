@@ -112,8 +112,10 @@
   ([m k v & kvs]
     (apply assoc-if m (fn [m' k _] (not (contains? m' k))) kvs)))
 
+; TODO atomic update for e.g. ConcurrentHashMap
 (defn update* [assoc*]
-  (fn update*
+  (fn update*-gen
+    ([k f] (fn1 update*-gen k f))
     ([m k f]
       (assoc* m k (f (get m k))))
     ([m k f x]
@@ -143,10 +145,7 @@
   {:attribution "alexandergunnarson"
    :todo ["Probably updates and update are redundant"]}
   ([coll & kfs]
-    (reduce-pair ; TODO This is inefficient
-      (fn [ret k f] (update ret k f))
-      coll
-      kfs)))
+    (reduce-pair update coll kfs))) ; TODO This is inefficient
 
 (defn update-key
   {:attribution "alexandergunnarson"

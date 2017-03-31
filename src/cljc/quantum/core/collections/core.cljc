@@ -494,7 +494,8 @@
            (^<0> [^array-1d? x] (array-of-type x 0)) ; TODO should it be `Array/cloneSizes`?
   #?(:clj  (^<0> [^ArrayList x] (ArrayList.)))
            (^<0> [#{#?(:clj  IPersistentCollection
-                       :cljs IEmptyableCollection)} x] (#?(:clj .empty :cljs -empty) x)))
+                       :cljs IEmptyableCollection)} x] (#?(:clj .empty :cljs -empty) x))
+           (     [^default   x] (core/empty x)))
 
 (defnt blank
   "Like `empty`, but for e.g. arrays and similar indexed types, as well as strings,
