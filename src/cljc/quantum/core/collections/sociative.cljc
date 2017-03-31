@@ -248,14 +248,15 @@
 
 (defn updates-in [coll & kfs] (reduce-pair update-in coll kfs)) ; TODO `reduce-pair` is inefficient
 
-(defn re-assoc [coll k k']
-  (if (containsk? coll k)
-      (-> coll
-          (assoc  k' (get coll k))
-          (dissoc k))
-      coll))
-
-(defn re-assocs [coll & kfs] (reduce-pair re-assoc coll kfs)) ; TODO `reduce-pair` is inefficient
+(defn re-assoc
+  ([xs k k']
+    (if (containsk? xs k)
+        (-> xs
+            (assoc  k' (get xs k))
+            (dissoc k))
+        xs))
+  ([xs k k' & ks]
+    (reduce-pair re-assoc (re-assoc xs k k') ks))) ; TODO `reduce-pair` is inefficient
 
 (defn assoc-with
   "Like |merge-with| but for |assoc|."

@@ -239,6 +239,7 @@
         (defalias assoc-in        soc/assoc-in       )
         (defalias dissoc-in       soc/dissoc-in      )
         (defalias update-val      soc/update-val     )
+        (defalias update-when     soc/update-when    )
         (defalias updates         soc/updates        )
         (defalias assoc-default   soc/assoc-default  )
         (defalias assoc-with      soc/assoc-with     )
