@@ -16,7 +16,7 @@
                       [quantum.core.numeric                    :as num]
                       #?(:clj [clojure.core.async :as casync])
                       [quantum.core.async                      :as async
-                        :refer [put!! chan buffer go]]
+                        :refer [>!! chan buffer go]]
                       [quantum.core.error                      :as err
                         :refer [throw-unless ->ex TODO]]
                       [quantum.core.fn                         :as fn
@@ -184,7 +184,7 @@
   []
   (doseq [[k v] (->> @reg (remove (rcomp key (fn= :thread-reaper))) (into {}))]
     (when-let [close-reqs (:close-reqs v)]
-      (put!! close-reqs :req))
+      (>!! close-reqs :req))
     (when-let [thread- (:thread v)]
       (async/close! thread-)))))
 
@@ -460,8 +460,9 @@
 (defn reap-threads! []
   (doseq [id thread-meta @reg]
     (let [{:keys [thread state handlers]} thread-meta]
-      (when (or (async/closed? thread)
-                (= state :closed))
+      (when (and thread
+                 (or (async/closed? thread)
+                     (= state :closed)))
         (whenf (:closed handlers) nnil?
           (ifn1 delay? force call))
         (deregister-thread! id))))))
@@ -484,7 +485,7 @@
                 (do (async/empty! thread-reaper-pause-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
                     (swap! reg assoc-in [id :state] :paused)
-                    (async/take!! thread-reaper-resume-requests) ; blocking take
+                    (async/<!! thread-reaper-resume-requests)
                     (async/empty! thread-reaper-resume-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper resumed.")
                     (swap! reg assoc-in [id :state] :running)
@@ -494,8 +495,8 @@
                     (recur)))))
         #_(log/disable! :macro-expand)))))
 
-#?(:clj (defn pause-thread-reaper!  [] (put!! thread-reaper-pause-requests true)))
-#?(:clj (defn resume-thread-reaper! [] (put!! thread-reaper-resume-requests true)))
+#?(:clj (defn pause-thread-reaper!  [] (>!! thread-reaper-pause-requests true)))
+#?(:clj (defn resume-thread-reaper! [] (>!! thread-reaper-resume-requests true)))
 
 
 ; ===============================================================

@@ -1,6 +1,6 @@
 (ns quantum.core.async.pool
   (:refer-clojure :exclude
-    [for, update, assoc-in, key val])
+    [for, update, assoc-in, key val, when-let])
   (:require
     [clojure.core                :as core]
     [com.stuartsierra.component  :as comp]
@@ -12,7 +12,7 @@
     [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
-      :refer [<- fn1 fn-> fn->> fnl call with-do]]
+      :refer [<- fn1 fn& fnl, fn-> fn->, call with-do ]]
     [quantum.core.collections    :as coll
       :refer [for, nempty? kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]
@@ -20,7 +20,7 @@
       :refer [->ex catch-all TODO]]
     [quantum.core.log            :as log]
     [quantum.core.logic
-      :refer [fn-and default whenp1 whenf1 ifp1]]
+      :refer [fn-and default whenp1 whenf1 ifp1 when-let]]
     [quantum.core.macros         :as macros
       :refer [defnt]]
     [quantum.core.reflect        :as refl]
@@ -318,8 +318,8 @@
   ([this]
     (log/pr ::debug "Stopping ThreadpoolManager...")
     (with-do
-      (let [force? (-> config :shut-down-opts :force?)
-            shut-down-pools! (fn->> (map-vals' (update :pool (ifp1 force? shut-down-now! shut-down!))))]
+      (let [cancel? (-> config :shut-down-opts :cancel?)
+            shut-down-pools! (fn->> (map-vals' (update :pool (ifp1 cancel? shut-down-now! shut-down!))))]
         (-> this
             (updates :provided  (whenp1 (-> config :shut-down-opts :provided) shut-down-pools!)
                      :generated shut-down-pools!)))
@@ -332,7 +332,7 @@
   ; TODO deduplicate code
   :opt-un    [(def :this/replace-core-pools-opts
                 :opt-un [(def :this/wait-for-shutdown (fn1 time/duration?))])
-              (def :this/shut-down-opts (fn-> keys (set/subset? #{:provided :force?})))
+              (def :this/shut-down-opts (fn-> keys (set/subset? #{:provided :cancel?})))
               (def :this/pools          validate-pools-map)]))
 
 #?(:clj
@@ -388,7 +388,7 @@
        (when (pos? thread-ct) (map->Threadpool opts))))
 
 #?(:cljs (swap! qcore/registered-components assoc ::threadpool
-            #(comp/using (->threadpool %) [::log/log])))
+            #(comp/using (->pool %) [::log/log])))
 
 ; ===== DISTRIBUTOR ===== ;
 
@@ -434,14 +434,14 @@
         work-queue     (if max-work-queue-size
                           (async/chan (async/buffer max-work-queue-size))
                           (async/chan)) ; Unbounded queues don't factor in to core.async
-        threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
+        threadpool-f   (atom (or threadpool (->pool :fixed max-threads-f)))
         threadpool-interrupted?
           (doto (atom false)
-            (set-validator! #(boolean? %))
+            (set-validator! (fn1 t/boolean?))
             (add-watch :interrupt-monitor
               (fn [_ _ _ newv]
                 (when (true? newv)
-                  (catch-all (shutdown! @threadpool-f))))))
+                  (catch-all (shut-down! @threadpool-f))))))
         distributor-f  (Distributor.
                          name-f
                          work-queue
@@ -457,18 +457,20 @@
       (let [thread-name  (keyword (str (core/name name-f) "-" i))
             interrupted? (atom false)]
         (assoc! thread-registrar thread-name {:interrupted? interrupted?})
-        (async-loop {:type       :thread
+        ; TODO FIX
+        (TODO)
+        (loop #_async-loop #_{:type       :thread
                      :id         thread-name
                      :threadpool @threadpool-f}
           []
-          (logic/when-let
+          (when-let
             [[val- queue-]    (async/alts!! [work-queue (async/timeout 500)])
              [timestamp work] val-]
             (try
               (catch-all (apply @distributor-fn work)
                 e
                 (do (log/ppr logging-key e)
-                    (conj! log [(time/now-instant) thread-name e]))))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
+                    (conj! log [(time/now:epoch-millis) thread-name e]))))) ; 500 because it may be wise to be in parked rather than always checking for interrupt
           (when-not (or @threadpool-interrupted? @interrupted?)
             (recur)))))
     distributor-f)))
@@ -478,10 +480,10 @@
   {:usage '(distribute!* offer! (->distributor) [1 2 3 5 6] {:cache? true})}
   [enqueue-fn distributor & inputs]
   (validate distributor (fnl instance? Distributor))
-  (enqueue-fn (:work-queue distributor) [(time/now-instant) inputs])))
+  (enqueue-fn (:work-queue distributor) [(time/now:epoch-millis) inputs])))
 
-#?(:clj (defn distribute!  [distributor & inputs] (apply distribute!* async/offer! distributor inputs)))
-#?(:clj (defn distribute>! [distributor & inputs] (apply distribute!* async/>!!    distributor inputs)))
+#?(:clj (defn distribute!   [distributor & inputs] (apply distribute!* async/offer! distributor inputs)))
+#?(:clj (defn distribute>!! [distributor & inputs] (apply distribute!* async/>!!-protocol    distributor inputs)))
 
 #?(:clj
 (defn distribute-all! [distributor inputs-set & [apply?]]

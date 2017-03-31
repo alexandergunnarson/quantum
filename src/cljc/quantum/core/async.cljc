@@ -135,7 +135,7 @@
 (defnt <!! ; receive
   ([^LinkedBlockingQueue x  ] (.take x))
   ([^LinkedBlockingQueue x n] (.poll x n TimeUnit/MILLISECONDS))
-  ([^default             x  ] (<!! x))
+  ([^default             x  ] (async/<!! x))
   ([^default             x n] (first (async/alts!! [x (timeout n)])))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c))))
 
@@ -153,7 +153,7 @@
 #?(:clj
 (defnt >!! ; send
   ([^LinkedBlockingQueue x v] (.put x v))
-  ([^default             x v] (>!! x v))
+  ([^default             x v] (async/>!! x v))
   #_([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj))))
 
 (defnt message?
