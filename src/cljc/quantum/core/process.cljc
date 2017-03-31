@@ -287,7 +287,7 @@
   ^{:doc "|start| : Runs the process specified by @command, with the provided arguments
                     @args and options @opts."}
   Process
-  [process command env-vars dir pr-to-out?]
+  [process command env dir pr-to-out?]
   comp/Lifecycle
     (start [this]
       (let [pb (->> command
@@ -295,7 +295,7 @@
                     ^"[Ljava.lang.String;" into-array
                     (ProcessBuilder.))
             set-env-vars!
-              (doseq [[^String env-var ^String val-] env-vars]
+              (doseq [[^String env-var ^String val-] env]
                 (-> pb (.environment) (.put env-var val-)))
             _ (when dir (.directory pb (io/file dir)))
             redirect-method (if pr-to-out?
@@ -315,12 +315,12 @@
              ["./bin/transactor" "./config/samples/free-transactor-template.properties"]
              {:dir        "/home/datomic/"
               :pr-to-out? true
-              :env-vars   {"DATOMIC_HOME" "/home/datomic/"}})}
-  [command & [{:keys [env-vars dir pr-to-out?]
+              :env        {"DATOMIC_HOME" "/home/datomic/"}})}
+  [command & [{:keys [env dir pr-to-out?]
                :as opts}]]
-  (Process. nil command env-vars dir pr-to-out?)))
+  (Process. nil command env dir pr-to-out?)))
 
-(def proc! #?(:clj  (rcomp ->proc comp/start)
+(def proc! #?(:clj  (rcomp ->proc res/start!)
               :cljs (fn [& args] (throw (->ex :unimplemented)))))
 
 ; TODO CLJS
