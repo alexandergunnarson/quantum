@@ -58,20 +58,22 @@
 ; ===== CORE.ASYNC ETC. ===== ;
 
 #?(:clj (defmalias go    clojure.core.async/go cljs.core.async.macros/go))
-#?(:clj (defalias  async go))
+#_(:clj (defalias  async go)) ; TODO fix this
 
 #?(:clj
-(defmacro <?
+(defmacro <?*
   "Takes a value from a core.async channel, throwing the value if it
-   is a js/Error or Throwable."
-  [expr]
- `(let [expr-result# (<! ~expr)]
-    (if (err/error? expr-result#)
-        (throw expr-result#)
-        expr-result#))))
+   is an error."
+  [c takef]
+ `(let [result# (~takef ~c)]
+    (if (err/error? result#)
+        (throw result#)
+        result#))))
 
-#?(:clj
-(defmacro try-go [& body] `(async (catch-all (do ~@body) e# e#))))
+#?(:clj (defmacro <!?  [c] `(<?* ~c <!)))
+#?(:clj (defmacro <!!? [c] `(<?* ~c <!!)))
+
+#?(:clj (defmacro try-go [& body] `(go (catch-all (do ~@body) e# e#))))
 
 (deftype QueueCloseRequest [])
 (deftype TerminationRequest [])
@@ -82,15 +84,7 @@
 (defnt chan*
   "(chan (buffer n)) or (chan n) are the same as (channel n :block   ) or (channel n).
    (chan (dropping-buffer n))    is  the same as (channel n :drop    )
-   (chan (sliding-buffer n))     is  the same as (channel n :displace)
-
-   Promises can be implemented in terms of |chan|:
-
-   (let [a (promise)]
-     (deliver a 123))
-
-   (let [c (chan)]
-     (>! c 123)" ; But then close chan
+   (chan (sliding-buffer n))     is  the same as (channel n :displace)"
   ;([] (async+/chan)) ; can't have no-arg |defnt|
   ([#{#?(:clj integer? :cljs number?) #?(:clj clojure.core.async.impl.buffers.FixedBuffer)} n]
    (async/chan n)
@@ -113,14 +107,6 @@
   ([arg0     ] (chan* arg0     ))
   ([arg0 arg1] (chan* arg0 arg1)))
 
-; ----- PROMISE ----- ;
-
-(defalias promise-chan async/promise-chan)
-; co.paralleluniverse.strands.channels.QueueObjectChannel : (<! (go 1)) is similar to (deref (future 1))
-; CLJS doesn't have `promise` yet
-#?(:clj (defalias promise core/promise #_pasync/promise))
-#?(:clj (defalias deliver core/deliver))
-
 ; ----- DELAY ----- ;
 
 (defalias delay core/delay)
@@ -139,50 +125,36 @@
 ;(defalias sliding-buffer      #?(:clj async+/sliding-buffer      :cljs async/sliding-buffer     ))
 ;(defalias unblocking-buffer?  #?(:clj async+/unblocking-buffer?  :cljs async/unblocking-buffer? ))
 
-(declare take!!)
-
-; TODO FIX THIS
-#?(:clj (defnt take!! ; receive
-#?@(:clj
- [([^LinkedBlockingQueue q  ] (.take q))
-  ([^LinkedBlockingQueue q n] (.poll q n TimeUnit/MILLISECONDS))])
-  ([^m2m-chan?           c  ] (async/take! c identity))
-  ([^m2m-chan?           c n] (async/alts! [(async/timeout n) c]))
-  #_([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c))))
-
-;(defalias <!! take!!)
-
-        (defalias <!  async/<!)
-#?(:clj (defalias <!! async/<!!))
+(defalias poll! async/poll!)
 
 (defalias take! async/take!)
 
-(declare empty!)
+(defalias <! async/<!)
+
+#?(:clj
+(defnt <!! ; receive
+  ([^LinkedBlockingQueue x  ] (.take x))
+  ([^LinkedBlockingQueue x n] (.poll x n TimeUnit/MILLISECONDS))
+  ([^default             x  ] (<!! x))
+  ([^default             x n] (first (async/alts!! [x (timeout n)])))
+  #_([^co.paralleluniverse.strands.channels.ReceivePort   c  ] (async+/<! c))))
 
 #?(:clj
 (defnt empty!
-#?(:clj
-  ([^LinkedBlockingQueue q] (.clear q)))
-  ([^m2m-chan?           c] (TODO))))
-
-(defalias put! async/put!)
-
-(declare put!!)
-
-#?(:clj (defalias >!! async/>!!))
+  ([^LinkedBlockingQueue q] (.clear q))
+  ([^m2m-chan?           c] (TODO)))) ; `drain!` TODO
 
 (defalias offer! async/offer!)
 
-#?(:clj
-(defnt put!! ; send
-#?(:clj
-  ([^LinkedBlockingQueue x obj] (.put x obj)))
-  ([^m2m-chan?           x obj] (async/put! x obj))
-  #_([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj))))
-
-;(defalias >!! put!!)
+(defalias put! async/put!)
 
 (defalias >! async/>!)
+
+#?(:clj
+(defnt >!! ; send
+  ([^LinkedBlockingQueue x v] (.put x v))
+  ([^default             x v] (>!! x v))
+  #_([^co.paralleluniverse.strands.channels.ReceivePort   x obj] (async+/>! x obj))))
 
 (defnt message?
   ([^quantum.core.async.QueueCloseRequest  obj] false)
@@ -196,9 +168,8 @@
 #?(:clj
 (defnt peek!!
   "Blocking peek."
-#?@(:clj
- [([^LinkedBlockingQueue q]         (.blockingPeek q))
-  ([^LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))])
+  ([^LinkedBlockingQueue q]         (.blockingPeek q))
+  ([^LinkedBlockingQueue q timeout] (.blockingPeek q timeout (. TimeUnit MILLISECONDS)))
   ([^m2m-chan?           c] (TODO))))
 
 (declare interrupt!)
@@ -220,30 +191,28 @@
 
 (declare interrupted?)
 
-#?(:clj
+#?(:clj ; TODO CLJS
 (defnt close!
   ([^Thread              x] (.stop    x))
   ([^Process             x] (.destroy x))
   ([#{Future FutureTask} x] (.cancel x true))
-  ([^default             x] (if (nil? x) true (TODO)))
-  ([^ManyToManyChannel   x] (asyncp/close! x))
+  ([^default             x] (asyncp/close! x))
   ([#{LinkedBlockingQueue ReceivePort SendPort} x] (.close x))))
 
-#?(:clj
+#?(:clj ; TODO CLJS
 (defnt closed?
   ([^Thread                            x] (not (.isAlive x)))
   ([^Process                           x] (try (.exitValue x) true
                                             (catch IllegalThreadStateException _ false)))
   ([#{Fiber Future FutureTask}         x] (or (.isCancelled x) (.isDone x)))
   ([#{LinkedBlockingQueue ReceivePort} x] (.isClosed x))
-  ([^ManyToManyChannel                 x] (asyncp/closed? x))
   ([^boolean                           x] x)
-  ([^default                           x] (if (nil? x) true (TODO)))))
+  ([^default                           x] (asyncp/closed? x))))
 
-#?(:clj (def open? (fn-not closed?)))
+#?(:clj (def open? (fn-not closed?))) ; TODO CLJS
 
 #?(:clj
-(defnt realized?
+(defnt realized? ; TODO CLJS
   ([^clojure.lang.IPending x] (realized? x))
   #_([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
     (-> x .getQueueLength (> 0)))
@@ -278,7 +247,7 @@
                            ret nil]
                    (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
                      (when (nempty? c)
-                       (break [(take!! c) c]))))]
+                       (reduced [(<!! c) c]))))]
       (whenc result nil?
         (do (wait!! 5)
             (recur)))))))
@@ -288,6 +257,7 @@
   "Takes the first available value from a chan."
   {:todo #{"Implement timeout"}
    :attribution "alexandergunnarson"}
+  ([chans] (async/alts!! chans))
   ([^keyword? type chans]
     (alts!! type chans nil))
   #_([^sequential? chans]
@@ -430,3 +400,35 @@
           ((or chunk-fn fn-nil) chunk i)
           (doseqi [piece chunk n]
             (f piece n chunk i chunks))))))))
+
+; ----- PROMISE ----- ;
+
+; TODO CLJS
+(deftype Promise [c]
+  #?@(:clj [clojure.lang.IDeref
+              (deref [_] (<!! c))
+            clojure.lang.IBlockingDeref
+              (deref [_ timeout-ms timeout-val]
+                (let [[v _] (alts!! [c (timeout timeout-ms)])]
+                  (or v timeout-val)))])
+            clojure.lang.IPending
+              (isRealized [_] (some? (poll! c)))
+            clojure.lang.IFn ; deliver
+              (invoke [_ x] (offer! c x))
+            asyncp/ReadPort
+              (take! [_ handler] (asyncp/take! c handler))
+            asyncp/WritePort
+              (put! [_ x handler] (asyncp/put! c x handler))
+            asyncp/Channel
+              (close! [_] (asyncp/close! c))
+              (closed? [_] (asyncp/closed? c)))
+
+(defn promise
+  "A cross between a clojure `promise` and an `async/promise-chan`."
+  ([] (promise nil))
+  ([xf] (promise xf nil))
+  ([xf ex-handler] (Promise. (async/promise-chan xf ex-handler))))
+
+(def promise? (fnl instance? Promise)) ; TODO what about Clojure promises or JS built-in ones?
+
+(defnt deliver [^Promise p v] (>!! p v))
