@@ -9,16 +9,18 @@
 #?@(:clj
    [[datomic.api                :as db]])
     [datascript.core            :as mdb]
-    [com.stuartsierra.component :as component]
+    [com.stuartsierra.component :as comp]
     [quantum.core.collections   :as coll
       :refer [join for kw-map nnil? nempty?
               filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
+    [quantum.core.async         :as async
+      :refer [<! <!! >! >!!]]
     [quantum.core.data.set      :as set]
     [quantum.core.error         :as err
-      :refer [->ex TODO]]
+      :refer [->ex TODO catch-all]]
     [quantum.core.fn            :as fn
       :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
     [quantum.core.log           :as log]
@@ -703,31 +705,34 @@
   ^{:according-to "http://docs.datomic.com/best-practices.html#pipeline-transactions"}
   recommended-txn-ct 100)
 
-; #?(:clj
-; (defn batch-transact!
-;   "Submits transactions synchronously to the Datomic transactor
-;    in asynchronous batches of |recommended-txn-ct|."
-;   {:todo ["Handle errors better"]
-;    :usage '(batch-transact! db [9494911 1823883 28283819]
-;              (fn [twitter-id]
-;                {:twitter/user.id twitter-id}))}
-;   [^Database db data ->entity-fn & [post-fn-0]]
-;   (when (nempty? data)
-;     (let [post-fn (or post-fn-0 (fn' nil))
-;           threads
-;            (for [entities (->> data
-;                                (partition-all recommended-txn-ct)
-;                                (map (fn->> (map ->entity-fn)
-;                                            (remove nil?))))]
-;              (go (try+ (transact! entities)
-;                        (post-fn entities)
-;                    (catch Object e
-;                      (if ((fn-and map? (fn-> :db/error (= :db.error/unique-conflict)))
-;                            e)
-;                          (post-fn entities)
-;                          (throw+ (Err. nil "Cache failed for transaction"
-;                                        {:exception e :txn-entities entities})))))))]
-;       (->> threads (map (MWA async/<!!)) doall)))))
+#?(:clj
+(defn tx-pipeline!
+  "Transacts transaction data from from-ch. Returns a `reify` on which you can call
+   - `take!` to get the return channel which yields an error, t, or {:completed n}
+   - `close!` to terminate early.
+   Does not close `from-ch` when `to-ch` is closed.
+   The concurrency can be modified via the `conc` parameter."
+  {:inspired-by "http://docs.datomic.com/best-practices.html#pipeline-transactions"
+   :todo        #{"`go-loop` should use `async-loop`"}}
+  ([conn conc from-ch] (tx-pipeline! conn conc from-ch nil))
+  ([conn conc from-ch report-ch] (tx-pipeline! conn conc from-ch report-ch nil))
+  ([conn conc from-ch report-ch error-ch]
+    (let [report-ch-limited (async/chan recommended-txn-ct)
+          close-ch          (async/promise) ; TODO fix
+          transact-tx!
+            (fn [tx]
+              (catch-all @(db/transact-async conn tx)
+                e (when error-ch (do (>!! error-ch tx)) nil)))]
+      (when report-ch
+        (async/pipe report-ch-limited report-ch false))
+      (async/pipeline-blocking conc report-ch-limited (map+ transact-tx!) from-ch false)
+      (reify ; TODO `reify-compatible` ; TODO code pattern here
+        clojure.core.async.impl.protocols/Channel
+          (close!  [_        ] (async/close! report-ch-limited)
+                               (async/offer! close-ch true))
+          (closed? [_        ] (async/poll!  close-ch))
+        clojure.core.async.impl.protocols/ReadPort
+          (take!   [_ handler] (async/take!  close-ch handler)))))))
 
 ; ==== MORE COMPLEX OPERATIONS ====
 

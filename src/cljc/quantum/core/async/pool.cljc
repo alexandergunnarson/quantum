@@ -462,7 +462,7 @@
                      :threadpool @threadpool-f}
           []
           (logic/when-let
-            [[val- queue-]    (casync/alts!! [work-queue (casync/timeout 500)])
+            [[val- queue-]    (async/alts!! [work-queue (async/timeout 500)])
              [timestamp work] val-]
             (try
               (catch-all (apply @distributor-fn work)

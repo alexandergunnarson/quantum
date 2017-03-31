@@ -29,7 +29,7 @@
     [quantum.core.resources           :as res]
     [quantum.core.string              :as str]
     [quantum.core.async               :as async
-      :refer [go <?]]
+      :refer [go]]
     [quantum.core.type                :as t]
     [quantum.core.vars                :as var
       :refer [defalias defaliases]]

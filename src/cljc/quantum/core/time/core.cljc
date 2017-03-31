@@ -443,7 +443,6 @@
         (.get cal Calendar/SECOND     ))))
   ([^java.sql.Timestamp x] (-> x ->epoch-millis ->sql-time))))
 
-
 #?(:clj
 (defnt ^java.sql.Date ->sql-date
   ([^integer?           x] (java.sql.Date. x))
