@@ -86,6 +86,8 @@
     (-write writer "#inst ")
     (pr-writer (unparse (:date formatters) obj) writer opts)))
 
+
+
 #?(:clj (defn now:epoch-millis [] (System/currentTimeMillis)))
 
 ; #?(:clj (defn gmt-now   [] (OffsetDateTime/now (ZoneId/of "GMT"))))
@@ -105,17 +107,12 @@
 (declare ->local-date-time-protocol)
 
 #?(:clj
-(defnt ^java.time.Instant ->platform-instant
+(defnt ^java.time.Instant ->instant
   "Coerces to an instantaneous point on an imaginary timeline."
   ([#{long? bigint?} x] (-> x ->long (java.time.Instant/ofEpochMilli)))
-  ([x] (-> x ->epoch-millis-protocol ->platform-instant))))
+  ([x] (-> x ->epoch-millis-protocol ->instant))))
 
 ; ===== DATE ===== ;
-
-(defnt ->platform-date
-  "Returns a platform date (java.util.Date for Java, js/Date for JS)."
-  #?@(:clj  [(^java.util.Date [^java.time.Instant              t] (Date/from t))]
-      :cljs [(^js/Date        [                                x] (TODO))]))
 
 (defnt ^{:tag #?(:clj LocalDate :cljs js/JSJoda.LocalDate)} ->local-date*
   "Coerces to a date without a time-zone in the ISO-8601 calendar system, such as 2007-12-03."
@@ -234,6 +231,9 @@
   ^{:doc "Obtain the current date and time in the system default timezone"}
   ([] (case-env :clj `(ZonedDateTime/now) :cljs `(js/JSJoda.ZonedDateTime.now)))
   ([x & args] `(->zoned-date-time* ~x ~@args))))
+
+(defnt zoned-date-time?
+  ([#{#?(:clj ZonedDateTime :cljs js/JSJoda.ZonedDateTime)} x] true) ([^default x] false))
 
 ; ===== DURATION ===== ;
 
@@ -461,13 +461,20 @@
   ([^java.sql.Timestamp x] (-> x ->epoch-millis ->sql-date))))
 
 #?(:clj
-(defnt ^java.util.Date ->date
+(defnt ^java.util.Date ->platform-instant
+  "Returns a platform instant (java.util.Date for Java, js/Date for JS)."
   ([^long?              x] (java.util.Date. x))
   ([^string?            x] (-> (java.text.SimpleDateFormat. (:calendar formats)) (.parse x)))
   ([^java.util.Calendar x] (.getTime x))
   ; Technically Timestamp extends java.util.Date
-  ([#{java.sql.Timestamp java.sql.Date} x] (-> x ->epoch-millis ->date))))
+  ([#{java.sql.Timestamp java.sql.Date} x] (-> x ->epoch-millis ->platform-instant))
+  ([^java.time.Instant       x] (Date/from x))
+  ([^java.time.ZonedDateTime x]
+    (if (= (.getZone x) ZoneOffset/UTC)
+        (-> x ->epoch-millis ->platform-instant)
+        (throw (->ex "Refusing to lose time zone information to java.util.Date"))))))
 
+(^java.util.Date [^java.time.Instant              t] (Date/from t))
 #?(:clj
 (defnt ^java.sql.Timestamp ->timestamp
   ([^integer?             x] (java.sql.Timestamp. x))
