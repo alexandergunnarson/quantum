@@ -14,7 +14,7 @@
     [quantum.core.error            :as err
       :refer [->ex]]
     [quantum.core.fn
-      :refer [fn-> fn->>]]
+      :refer [fn-> fn->> fn1]]
     [quantum.core.nondeterministic :as rand]
     [quantum.core.string           :as str]
     [quantum.core.time.core        :as time]
@@ -83,7 +83,7 @@
 
 (def tweets->hashtags
   (fn->> (map+    (fn-> :entities :hashtags))
-         (remove+ empty?)
+         (remove+ (fn1 empty?))
          (map+    (fn->> (map (fn-> :text keyword))))
          flatten+
          (into #{})))
