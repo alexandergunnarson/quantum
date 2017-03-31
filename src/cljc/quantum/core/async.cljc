@@ -20,7 +20,7 @@
     [quantum.core.error                :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.fn
-      :refer [fnl]]
+      :refer [fnl fn1]]
     [quantum.core.log                  :as log]
     [quantum.core.logic                :as logic
       :refer [fn-and fn-or fn-not condpc whenc]]
@@ -335,7 +335,7 @@
      (doseq [p# ~ports] (conj! ret# (<! p#)))
      (persistent! ret#))))
 
-#?(:clj (defn seq<!! [ports] (map <!! ports)))
+#?(:clj (defn seq<!! [ports] (map (fn1 <!!) ports)))
 
 (defalias timeout async/timeout)
 
@@ -432,3 +432,18 @@
 (def promise? (fnl instance? Promise)) ; TODO what about Clojure promises or JS built-in ones?
 
 (defnt deliver [^Promise p v] (>!! p v))
+
+; ----- PIPING ----- ;
+
+(defalias pipe              async/pipe)
+(defalias pipe!             pipe)
+
+(defalias pipeline          async/pipeline)
+(defalias pipeline!         pipeline)
+(defalias pipeline!:compute pipeline)
+
+(defalias pipeline-async    async/pipeline-async)
+(defalias pipeline!:!       pipeline-async)
+
+(defalias pipeline-blocking async/pipeline-blocking)
+(defalias pipeline!:!!      pipeline-blocking)
