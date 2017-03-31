@@ -3,7 +3,10 @@
           my Michal Marczyk. Also includes |conjl| (for now)."
     :attribution "alexandergunnarson"}
   quantum.core.data.vector
+  (:refer-clojure :exclude
+    [vector])
   (:require
+    [clojure.core             :as core]
     [clojure.core.rrb-vector  :as svec]
 #?@(:clj
    [[clojure.core.rrb-vector.protocols
@@ -11,6 +14,8 @@
               PSpliceableVector splicev]]
     [clojure.core.rrb-vector.rrbt
       :refer [AsRRBT as-rrbt]]])
+    [quantum.core.fn
+      :refer [rcomp]]
     [quantum.core.vars        :as var
       :refer [defalias]])
   #?(:clj (:import java.util.ArrayList)))
@@ -18,6 +23,10 @@
 ; TO EXPLORE
 ; - michalmarczyk/devec: double-ended vector
 ; =======================================
+
+(defalias vector core/vector)
+(defalias +vector vector)
+(def !+vector (rcomp vector transient))
 
 ; svec = "spliceable vector"
 (defalias svec    svec/vec)
