@@ -20,6 +20,63 @@
 
 (defn ?deref [a] (if (nil? a) nil (deref a)))
 
+; ===== ATOMS ===== ;
+
+(defalias atom           core/atom)
+(defalias add-watch      core/add-watch)
+(defalias get-validator  core/get-validator)
+(defalias set-validator! core/set-validator!)
+
+(defn ensure-validated-atom!
+  "Ensures that `x` is an atom having `validator`."
+  [x validator]
+  (if (atom? x)
+      (if (-> x get-validator (identical? validator))
+          x
+          (doto x (set-validator! validator)))
+      (doto (atom x) (set-validator! validator))))
+
+; ===== AGENTS ===== ;
+
+#?(:clj (defalias agent       core/agent))
+#?(:clj (defalias agent-error core/agent-error))
+#?(:clj (defalias await       core/await))
+#?(:clj (defalias await-for   core/await-for))
+#?(:clj (defalias commute     core/commute))
+
+; ===== REFS ===== ;
+
+#?(:clj (defalias alter                        core/alter  ))
+#?(:clj (defalias io!                          core/io!    ))
+#?(:clj (defalias sync                         core/sync   ))
+#?(:clj (defalias dosync                       core/dosync ))
+#?(:clj (defalias ensure                       core/ensure ))
+#?(:clj (defalias ref-set                      core/ref-set))
+#?(:clj (defalias error-handler                core/error-handler))
+#?(:clj (defalias set-error-handler!           core/set-error-handler!))
+#?(:clj (defalias error-mode                   core/error-mode))
+#?(:clj (defalias set-error-mode!              core/set-error-mode!))
+#?(:clj (defalias set-agent-send-executor!     core/set-agent-send-executor!))
+#?(:clj (defalias set-agent-send-off-executor! core/set-agent-send-off-executor!))
+
+; ===== VARS ===== ;
+
+#?(:clj (defalias var-set core/var-set))
+
+; ===== OTHER ===== ;
+
+#?(:clj
+(defmacro fref
+  "Creates a ref that re-evaluates `body` when derefed, like an `fn`."
+  [& body]
+ `(reify
+    IPending
+    (~(case-env :clj 'isRealized
+                :cljs '-realized?) [_] false) ; in order to not print out `body` by default unless asked
+    IDeref
+    (~(case-env :clj  'deref
+                :cljs '-deref) [_] ~@body))))
+
 (defn lens
   ([x getter]
     (if (#?(:clj  instance?
@@ -85,60 +142,3 @@
           :cljs -remove-watch) [this k]
         (remove-watch x k)
         this)))
-
-; ===== ATOMS ===== ;
-
-(defalias atom           core/atom)
-(defalias add-watch      core/add-watch)
-(defalias get-validator  core/get-validator)
-(defalias set-validator! core/set-validator!)
-
-(defn ensure-validated-atom!
-  "Ensures that `x` is an atom having `validator`."
-  [x validator]
-  (if (atom? x)
-      (if (-> x get-validator (identical? validator))
-          x
-          (doto x (set-validator! validator)))
-      (doto (atom x) (set-validator! validator))))
-
-; ===== AGENTS ===== ;
-
-#?(:clj (defalias agent       core/agent))
-#?(:clj (defalias agent-error core/agent-error))
-#?(:clj (defalias await       core/await))
-#?(:clj (defalias await-for   core/await-for))
-#?(:clj (defalias commute     core/commute))
-
-; ===== REFS ===== ;
-
-#?(:clj (defalias alter                        core/alter  ))
-#?(:clj (defalias io!                          core/io!    ))
-#?(:clj (defalias sync                         core/sync   ))
-#?(:clj (defalias dosync                       core/dosync ))
-#?(:clj (defalias ensure                       core/ensure ))
-#?(:clj (defalias ref-set                      core/ref-set))
-#?(:clj (defalias error-handler                core/error-handler))
-#?(:clj (defalias set-error-handler!           core/set-error-handler!))
-#?(:clj (defalias error-mode                   core/error-mode))
-#?(:clj (defalias set-error-mode!              core/set-error-mode!))
-#?(:clj (defalias set-agent-send-executor!     core/set-agent-send-executor!))
-#?(:clj (defalias set-agent-send-off-executor! core/set-agent-send-off-executor!))
-
-; ===== VARS ===== ;
-
-#?(:clj (defalias var-set core/var-set))
-
-; ===== OTHER ===== ;
-
-#?(:clj
-(defmacro fref
-  "Creates a ref that re-evaluates `body` when derefed, like an `fn`."
-  [& body]
- `(reify
-    IPending
-    (~(case-env :clj 'isRealized
-                :cljs '-realized?) [_] false) ; in order to not print out `body` by default unless asked
-    IDeref
-    (~(case-env :clj  'deref
-                :cljs '-deref) [_] ~@body))))
