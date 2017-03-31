@@ -20,6 +20,8 @@
   (^long [^boolean x] (if x 1 0))
   ([#{number? byte char} x] x))
 
+(defn ->boolean-num [x] (if x 1 0))
+
 #?(:clj (defalias ->big-integer ntypes/->big-integer))
 
 #?(:clj  (defnt' ^BigInt ->bigint
