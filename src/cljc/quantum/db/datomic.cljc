@@ -16,7 +16,7 @@
     [quantum.db.datomic.schema        :as dbs]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
-      :refer [kw-map containsv? nnil? nempty?]]
+      :refer [kw-map containsv? nnil? nempty? join]]
     [quantum.core.error               :as err
       :refer [->ex TODO]]
     [quantum.core.fn                  :as fn
@@ -173,7 +173,7 @@
 #?(:clj
 (defn start-transactor!
   [{:keys [type host port]}
-   {:keys [kill-on-shutdown? datomic-path flags resources-path internal-props]
+   {:keys [kill-on-shutdown? datomic-path flags resources-path env internal-props]
     :as   txr-props}]
   (let [res          resources-path
         props-path-f (condf internal-props
@@ -201,11 +201,13 @@
                            {:method :print})))
         _ (when (map? internal-props) (write-props!))
         _ (log/pr ::debug "Starting transactor..." (kw-map datomic-path flags props-path-f resources-path))
-        proc (res/start!
-               (proc/->proc (path/path "." "bin" "transactor")
-                 (c/conj (or flags []) props-path-f)
-                 {:pr-to-out? true
-                  :dir        datomic-path}))
+        proc (proc/proc!
+               (-> [(path/path "." "bin" "transactor")]
+                   (join   (or flags []))
+                   (c/conj props-path-f))
+               {:pr-to-out? true
+                :dir        datomic-path
+                :env        env})
         _ (when kill-on-shutdown?
             (.addShutdownHook (Runtime/getRuntime)
               (Thread. #(res/stop! proc))))]
