@@ -9,6 +9,10 @@
                      [clojure.java.shell         :as shell]])
                      [quantum.core.error
                        :refer [->ex]]
+                     [quantum.core.fn
+                       :refer [rcomp]]
+                     [quantum.core.collections   :as coll
+                       :refer [join]]
                      [quantum.core.paths         :as paths]
                      [quantum.core.resources     :as res
                        :refer [closed?]]
@@ -283,10 +287,10 @@
   ^{:doc "|start| : Runs the process specified by @command, with the provided arguments
                     @args and options @opts."}
   Process
-  [process command args env-vars dir pr-to-out?]
+  [process command env-vars dir pr-to-out?]
   comp/Lifecycle
     (start [this]
-      (let [pb (->> (into [command] args)
+      (let [pb (->> command
                     (map str)
                     ^"[Ljava.lang.String;" into-array
                     (ProcessBuilder.))
@@ -302,22 +306,26 @@
             process (.start pb)]
         (assoc this :process process)))
     (stop [this]
-      (when process
-        (.destroy ^java.lang.Process process))
+      (when process (.destroy ^java.lang.Process process))
       this)))
 
 #?(:clj
 (defn ->proc
-  {:usage '(->proc "./bin/transactor"
-             ["./config/samples/free-transactor-template.properties"]
+  {:usage '(->proc
+             ["./bin/transactor" "./config/samples/free-transactor-template.properties"]
              {:dir        "/home/datomic/"
               :pr-to-out? true
               :env-vars   {"DATOMIC_HOME" "/home/datomic/"}})}
-  [command args & [{:keys [env-vars dir pr-to-out?]
-                    :as opts}]]
-  (Process. nil command args env-vars dir pr-to-out?)))
+  [command & [{:keys [env-vars dir pr-to-out?]
+               :as opts}]]
+  (Process. nil command env-vars dir pr-to-out?)))
 
-(def proc! #?(:clj  (comp comp/start ->proc)
+(def proc! #?(:clj  (rcomp ->proc comp/start)
               :cljs (fn [& args] (throw (->ex :unimplemented)))))
+
+; TODO CLJS
+#?(:clj
+(defn shell! [command & [opts]]
+  (proc! command (assoc opts :pr-to-out? true))))
 
 #?(:clj (defalias exec! shell/sh))
