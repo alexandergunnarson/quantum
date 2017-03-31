@@ -222,7 +222,7 @@
   ([size] (longs false size))
   ([secure? size]
     ; * 8 because longs are 8 bytes
-    (conv/bytes->longs (rand-bytes secure? (* 8 size))))))
+    (conv/bytes->longs (bytes secure? (* 8 size))))))
 
 ; TODO implement
 ; (defn rand-vec [...] ...)
@@ -230,7 +230,7 @@
 ; TODO CLJS
 #?(:clj
 (defn ^String string
-  {:todo ["Performance of `rand-string` vs. `(String. rand-bytes)`"]}
+  {:todo ["Performance of `rand/string` vs. `(String. rand/bytes)`"]}
   ([n] (string n nil))
   ([n opts]
     (if (or (nil? opts)
@@ -424,7 +424,7 @@
                                     (reify IRandomGenerator
                                       (next      [this]      (.nextDouble g))
                                       (impl      [this]      g)
-                                      (set-seed! [this seed] (.setSeed g (long seed)))))
+                                      (set-seed! [this seed] (.setSeed g (core/long seed)))))
                             :cljs (TODO))
     ; gaussian normalized random generator for scalars.
     :gaussian-normalized nil
