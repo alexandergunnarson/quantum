@@ -57,12 +57,6 @@
 
 ; ===== CORE.ASYNC ETC. ===== ;
 
-; Use optimal/maximum core async pool size
-
-#?(:clj (System/setProperty
-          "clojure.core.async.pool-size"
-          (str (.. Runtime getRuntime availableProcessors))))
-
 #?(:clj (defmalias go    clojure.core.async/go cljs.core.async.macros/go))
 #?(:clj (defalias  async go))
 
@@ -84,6 +78,7 @@
 
 (defalias buffer async/buffer)
 
+; TODO (SynchronousQueue.) <-> (chan)
 (defnt chan*
   "(chan (buffer n)) or (chan n) are the same as (channel n :block   ) or (channel n).
    (chan (dropping-buffer n))    is  the same as (channel n :drop    )
