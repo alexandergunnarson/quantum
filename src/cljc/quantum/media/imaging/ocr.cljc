@@ -86,6 +86,6 @@
                                    ["-c" (str opt "=" v-f)])))
                          flatten+
                          (join [image-file outbase "--tessdata-dir" (path/file-str data-dir) "-l" language]))]
-    (proc! "tesseract" args {:timeout timeout})))
+    (proc! (join ["tesseract"] args) {:timeout timeout})))
 
 

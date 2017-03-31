@@ -15,8 +15,9 @@
 
 (defn- convert!*
   [from-type from to-type to]
-    (proc! "convert"
-       [(str #_[from-type ":"] (-> from path/file-str))
+    (proc!
+       ["convert"
+        (str #_[from-type ":"] (-> from path/file-str))
         (str #_[to-type   ":"] (-> to   path/file-str))]
        {:dir (path/file-str [:resources "Images"])}))
 
