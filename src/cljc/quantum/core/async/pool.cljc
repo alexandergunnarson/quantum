@@ -1,6 +1,6 @@
 (ns quantum.core.async.pool
   (:refer-clojure :exclude
-    [for assoc-in])
+    [for, update, assoc-in, key val])
   (:require
     [clojure.core                :as core]
     [com.stuartsierra.component  :as comp]
@@ -9,16 +9,18 @@
     [quantum.core.async          :as async]
     [quantum.core.core           :as qcore]
     [quantum.core.data.map       :as map]
+    [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
-      :refer [<- fn1 fn-> fnl]]
+      :refer [<- fn1 fn-> fn->> fnl call with-do]]
     [quantum.core.collections    :as coll
-      :refer [for nempty? kw-map assoc-in join]]
+      :refer [for, nempty? kw-map, update, assoc-in, join, key val, updates
+              map-keys+, map-vals']]
     [quantum.core.error          :as err
       :refer [->ex catch-all TODO]]
     [quantum.core.log            :as log]
     [quantum.core.logic
-      :refer [fn-and default]]
+      :refer [fn-and default whenp1 whenf1 ifp1]]
     [quantum.core.macros         :as macros
       :refer [defnt]]
     [quantum.core.reflect        :as refl]
@@ -172,7 +174,38 @@
      (thread-factory name-base))))
 
 #?(:clj
-(defrecord
+(defnt shut-down!
+  "Allows previously submitted tasks to execute before terminating."
+  ([^ExecutorService   x] (.shutdown x))
+  ([^JavaScheduler     x] (-> x :pool shut-down!))
+  ([^BusyWaitScheduler x] (-> x :shut-down? (reset! true)))))
+
+#?(:clj
+(defnt shut-down-now!
+  "Prevents waiting tasks from starting and attempts to stop currently executing tasks."
+  ([^ExecutorService   x] (.shutdownNow x))))
+
+; SHUT DOWN ALL FUTURES
+; ; DOESN'T ACTUALLY WORK
+; (import 'clojure.lang.Agent)
+; (import 'java.util.concurrent.Executors)
+; (defn shut-down-all-futures! []
+;   (shutdown-agents)
+;   (.shutdownNow Agent/soloExecutor)
+;   (set! Agent/soloExecutor (Executors/newCachedThreadPool)))
+
+#?(:clj
+(defnt await-termination! ; TODO include timeouts
+  ([^ExecutorService   x] (shut-down! x) (.awaitTermination x Integer/MAX_VALUE (time/->timeunit :millis)))
+  ([^JavaScheduler     x] (shut-down! x) (-> x :pool await-termination!))
+  ([^BusyWaitScheduler x] (shut-down! x) @(:busy-waiter x))))
+
+#?(:clj
+(defnt await-termination-now! ; TODO include timeouts
+  ([^ExecutorService   x] (shut-down-now! x) (.awaitTermination x Integer/MAX_VALUE (time/->timeunit :millis)))))
+
+#?(:clj
+(res/defcomponent
   ^{:doc "Do not construct directly. Use `->threadpool-manager` instead.
           Attempts to manage all known threadpools. Should probably be a singleton
           but this is not currently enforced.
@@ -187,105 +220,124 @@
           reporting is not provided to potential replacement core threadpools.
 
           In summary, if you ask the ThreadpoolManager to manage threadpools, let it do its
-          job (at least when it comes to core threadpools)."
+          job (at least when it comes to core threadpools).
+
+          START:
+          Assumes that it is passed a \"blank slate\", or at least a stopped state.
+
+          STOP:
+          Only shuts down generated threadpools. Provided, non-core threadpools
+          will be shut down if `[:shut-down-opts :provided]` is true."
     :todo #{"Make more customizable in terms of the config of each core threadpool, if replaced"}}
   ThreadpoolManager
-  [replace-core-threadpools-opts *threadpools]
-  comp/Lifecycle
-    (start [this]
-      (println "*threadpools" *threadpools)
-      (let [default-core-threadpools
-              ; `fref` to ensure accurate reads if they ever change
-              {:clojure/agent
-                 {:pool ; ThreadPoolExecutor
-                    (fref clojure.lang.Agent/pooledExecutor)
-                  :queue
-                    (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
-               :clojure/future
-                 {:pool ; ThreadPoolExecutor
-                    (fref clojure.lang.Agent/soloExecutor)
-                  :queue
-                    (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
-               :clojure/core.async
-                 {} ; private via closure in `clojure.core.async.impl.exec.threadpool/thread-pool-executor`
-               :clojure/reducers
-                 {:pool
-                   (fref @@#'clojure.core.reducers/pool)}}
-            core-threadpools
-             (if replace-core-threadpools-opts
-                 (let [wait-for-shutdown (:wait-for-shutdown replace-core-threadpools-opts)
-                       ^ThreadPoolExecutor agent-pool  clojure.lang.Agent/pooledExecutor
-                       ^ThreadPoolExecutor future-pool clojure.lang.Agent/soloExecutor]
-                   ; There is always the possibility that the core threadpools could be
-                   ; tampered with in the meantime, but we ignore this and do not lock them
+  [config all core provided generated]
+  ([this]
+    (log/pr ::debug "Starting ThreadpoolManager...")
+    (let [{:keys [replace-core-pools-opts shut-down-opts pools]} config
+          default-core-pools
+          ; `fref` to ensure accurate reads if they ever change
+          {:clojure/agent
+             {:pool ; ThreadPoolExecutor
+                (fref clojure.lang.Agent/pooledExecutor)
+              :queue
+                (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
+           :clojure/future
+             {:pool ; ThreadPoolExecutor
+                (fref clojure.lang.Agent/soloExecutor)
+              :queue
+                (fref (.getQueue ^ThreadPoolExecutor clojure.lang.Agent/pooledExecutor))}
+           :clojure/core.async
+             {} ; private via closure in `clojure.core.async.impl.exec.threadpool/thread-pool-executor`
+           :clojure/reducers
+             {:pool
+               (fref @@#'clojure.core.reducers/pool)}}
+          core-pools
+           (if replace-core-pools-opts
+               (let [wait-for-shutdown (:wait-for-shutdown replace-core-pools-opts)
+                     ^ThreadPoolExecutor agent-pool  clojure.lang.Agent/pooledExecutor
+                     ^ThreadPoolExecutor future-pool clojure.lang.Agent/soloExecutor]
+                 ; There is always the possibility that the core threadpools could be
+                 ; tampered with in the meantime, but we ignore this and do not lock them
 
-                   ; ----- AGENT POOL ----- ;
-                   (.shutdown agent-pool)
-                   ; This has to be in place anyway in case `wait-for-shutdown` fails
-                   (set! clojure.lang.Agent/pooledExecutor
-                     (->fixed-pool (+ 2 (.availableProcessors (Runtime/getRuntime)))
-                                   "quantum.core.async.pool:send-pool"))
-                   (when wait-for-shutdown
-                     (.awaitTermination agent-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
-                     (when-not (.isTerminated agent-pool)
-                       (throw (->ex "Agent threadpool took too long to terminate"))) )
+                 ; ----- AGENT POOL ----- ;
+                 (.shutdown agent-pool)
+                 ; This has to be in place anyway in case `wait-for-shutdown` fails
+                 (set! clojure.lang.Agent/pooledExecutor
+                   (->fixed-pool (+ 2 (.availableProcessors (Runtime/getRuntime)))
+                                 "quantum.core.async.pool:send-pool"))
+                 (when wait-for-shutdown
+                   (.awaitTermination agent-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
+                   (when-not (.isTerminated agent-pool)
+                     (throw (->ex "Agent threadpool took too long to terminate"))) )
 
-                   ; ----- FUTURE POOL ----- ;
-                   (.shutdown future-pool)
-                   ; This has to be in place anyway in case `wait-for-shutdown` fails
-                   (set! clojure.lang.Agent/soloExecutor
-                     (->cached-pool "quantum.core.async.pool:(send-off|future)-pool"))
-                   (when wait-for-shutdown
-                     (.awaitTermination future-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
-                     (when-not (.isTerminated future-pool)
-                       (throw (->ex "Future threadpool took too long to terminate"))) )
+                 ; ----- FUTURE POOL ----- ;
+                 (.shutdown future-pool)
+                 ; This has to be in place anyway in case `wait-for-shutdown` fails
+                 (set! clojure.lang.Agent/soloExecutor
+                   (->cached-pool "quantum.core.async.pool:(send-off|future)-pool"))
+                 (when wait-for-shutdown
+                   (.awaitTermination future-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
+                   (when-not (.isTerminated future-pool)
+                     (throw (->ex "Future threadpool took too long to terminate"))) )
 
-                   ; ----- ASYNC POOL ----- ;
-                   ; We can't have reporting on any previous core.async interactions
-                   ; and we can't wait for it to shut down
-                   #_(.shutdown core-async-pool)
-                   (let [num-threads (long @@#'clojure.core.async.impl.exec.threadpool/pool-size)
-                         !core-async-queue (SynchronousQueue.)
-                         core-async-pool
-                           ; Fixed threadpool
-                           (->fixed-pool num-threads "quantum.core.async.pool:core.async-pool")]
-                     (var/reset-var! #'clojure.core.async.impl.dispatch/executor
-                       (delay (reify clojure.core.async.impl.protocols/Executor
-                                (clojure.core.async.impl.protocols/exec [this r]
-                                  (.execute ^ThreadPoolExecutor core-async-pool ^Runnable r)))))
+                 ; ----- ASYNC POOL ----- ;
+                 ; We can't have reporting on any previous core.async interactions
+                 ; and we can't wait for it to shut down
+                 #_(.shutdown core-async-pool)
+                 (let [num-threads (long @@#'clojure.core.async.impl.exec.threadpool/pool-size)
+                       !core-async-queue (SynchronousQueue.)
+                       core-async-pool
+                         ; Fixed threadpool
+                         (->fixed-pool num-threads "quantum.core.async.pool:core.async-pool")]
+                   (var/reset-var! #'clojure.core.async.impl.dispatch/executor
+                     (delay (reify clojure.core.async.impl.protocols/Executor
+                              (clojure.core.async.impl.protocols/exec [this r]
+                                (.execute ^ThreadPoolExecutor core-async-pool ^Runnable r)))))
 
-                     ; ----- REDUCERS POOL ----- ;
-                     (let [reducers-pool (->fork-join-pool "quantum.core.async.pool:reducers-pool")]
-                       (var/reset-var! #'clojure.core.reducers/pool (delay reducers-pool))
-                     ; TODO:
-                     ; :fiber ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
+                   ; ----- REDUCERS POOL ----- ;
+                   (let [reducers-pool (->fork-join-pool "quantum.core.async.pool:reducers-pool")]
+                     (var/reset-var! #'clojure.core.reducers/pool (delay reducers-pool))
+                   ; TODO:
+                   ; :fiber ^FiberScheduler     (DefaultFiberScheduler/getInstance) ; (-> _ .getExecutor) is ForkJoinPool / ExecutorService
 
-                     (-> default-core-threadpools
-                         (assoc-in [:clojure/core.async :pool ] core-async-pool
-                                   [:clojure/core.async :queue] !core-async-queue)))))
-                 default-core-threadpools)]
-        (update this :*threadpools #(coll/doto! %1 %2) (fn [threadpools] (merge threadpools core-threadpools)))))
-    (stop [this]
-      ; TODO need to custom-shutdown the pools
-      (update this :*threadpools #(coll/doto! %1 %2) empty))))
+                   (-> default-core-pools
+                       (assoc-in [:clojure/core.async :pool ] core-async-pool
+                                 [:clojure/core.async :queue] !core-async-queue)))))
+               default-core-pools)
+          [provided-pools generable-pools]
+            (->> pools (coll/split-by-pred-into (fn-> val :pool fn?) hash-map))
+          generated-pools
+            (->> generable-pools (map-vals' (update :pool call)))
+          this' (-> this
+                    (assoc :all       (merge provided-pools generated-pools core-pools)
+                           :core      core-pools
+                           :provided  provided-pools
+                           :generated generated-pools))]
+      (log/pr ::debug "Started ThreadpoolManager.")
+      this'))
+  ([this]
+    (log/pr ::debug "Stopping ThreadpoolManager...")
+    (with-do
+      (let [force? (-> config :shut-down-opts :force?)
+            shut-down-pools! (fn->> (map-vals' (update :pool (ifp1 force? shut-down-now! shut-down!))))]
+        (-> this
+            (updates :provided  (whenp1 (-> config :shut-down-opts :provided) shut-down-pools!)
+                     :generated shut-down-pools!)))
+      (log/pr ::debug "Stopped ThreadpoolManager...")))))
 
-#?(:clj (defn validate-threadpools-map [x] (t/+map? x))) ; TODO more validation
+#?(:clj (defn validate-pools-map [x] (t/+map? x))) ; TODO more validation
 
 #?(:clj
-(dv/def-map threadpool-manager-fields ; TODO merge with ThreadpoolManager
+(dv/def-map threadpool-manager:config ; TODO merge with ThreadpoolManager
   ; TODO deduplicate code
-  :conformer (fn [m] (update m :*threadpools (fn-> (default {}) (refs/ensure-validated-atom! validate-threadpools-map))))
-  :opt-un    [(def :this/replace-core-threadpools-opts
+  :opt-un    [(def :this/replace-core-pools-opts
                 :opt-un [(def :this/wait-for-shutdown (fn1 time/duration?))])
-              (def :this/*threadpools
-                (s/and atom? (fn-> get-validator (= validate-threadpools-map))))]))
+              (def :this/shut-down-opts (fn-> keys (set/subset? #{:provided :force?})))
+              (def :this/pools          validate-pools-map)]))
 
 #?(:clj
 (defn ->threadpool-manager [opts]
-  (->> (->threadpool-manager-fields opts)
-       (join {})
-       (<- coll/re-assoc :threadpool-manager-fields/*threadpools :*threadpools)
-       map->ThreadpoolManager)))
+  (map->ThreadpoolManager {:config (->threadpool-manager:config opts)})))
 
 #?(:clj (swap! qcore/registered-components assoc ::threadpool-manager
           #(comp/using (->threadpool-manager %) [::log/log])))
@@ -438,33 +490,3 @@
         (apply distribute! distributor inputs)
         (distribute! distributor inputs)))))
 
-#?(:clj
-(defnt shut-down!
-  "Allows previously submitted tasks to execute before terminating."
-  ([^ExecutorService   x] (.shutdown x))
-  ([^JavaScheduler     x] (-> x :pool shut-down!))
-  ([^BusyWaitScheduler x] (-> x :shut-down? (reset! true)))))
-
-#?(:clj
-(defnt shut-down-now!
-  "Prevents waiting tasks from starting and attempts to stop currently executing tasks."
-  ([^ExecutorService   x] (.shutdownNow x))))
-
-; SHUT DOWN ALL FUTURES
-; ; DOESN'T ACTUALLY WORK
-; (import 'clojure.lang.Agent)
-; (import 'java.util.concurrent.Executors)
-; (defn shut-down-all-futures! []
-;   (shutdown-agents)
-;   (.shutdownNow Agent/soloExecutor)
-;   (set! Agent/soloExecutor (Executors/newCachedThreadPool)))
-
-#?(:clj
-(defnt await-termination! ; TODO include timeouts
-  ([^ExecutorService   x] (shut-down! x) (.awaitTermination x Integer/MAX_VALUE (time/->timeunit :millis)))
-  ([^JavaScheduler     x] (shut-down! x) (-> x :pool await-termination!))
-  ([^BusyWaitScheduler x] (shut-down! x) @(:busy-waiter x))))
-
-#?(:clj
-(defnt await-termination-now! ; TODO include timeouts
-  ([^ExecutorService   x] (shut-down-now! x) (.awaitTermination x Integer/MAX_VALUE (time/->timeunit :millis)))))
