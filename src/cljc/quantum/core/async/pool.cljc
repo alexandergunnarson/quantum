@@ -2,6 +2,7 @@
   (:refer-clojure :exclude
     [for assoc-in])
   (:require
+    [clojure.core                :as core]
     [com.stuartsierra.component  :as comp]
 #?(:cljs
     [servant.core                :as servant])
@@ -379,8 +380,8 @@
         max-threads-f  (or max-threads (-> (Runtime/getRuntime) (.availableProcessors)))
         thread-registrar (atom {})
         work-queue     (if max-work-queue-size
-                          (chan (buffer max-work-queue-size))
-                          (chan)) ; Unbounded queues don't factor in to core.async
+                          (async/chan (async/buffer max-work-queue-size))
+                          (async/chan)) ; Unbounded queues don't factor in to core.async
         threadpool-f   (atom (or threadpool (gen-threadpool :fixed max-threads-f)))
         threadpool-interrupted?
           (doto (atom false)
