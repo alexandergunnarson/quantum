@@ -272,9 +272,9 @@
 (defmacro async-fiber*
   ; The -jdk8 specification is 3x slower — benchmarked using their benchmarker
   {:benchmarks
-    '{(dotimes [n 10000] (async {:id (gensym)} (async/sleep 2000) 123))
+    '{(dotimes [n 10000] (async {:id (gensym)} (async/wait!! 2000) 123))
         2064
-      (dotimes [n 10000] (async {:id (gensym)} (async/sleep 1000) 123))
+      (dotimes [n 10000] (async {:id (gensym)} (async/wait!! 1000) 123))
         1429
       (dotimes [n 10000] (async {:id (gensym)}                    123))
         1464}}
@@ -490,7 +490,7 @@
                     (swap! reg assoc-in [id :state] :running)
                     (recur))
                 (do (reap-threads!)
-                    (async/sleep 2000)
+                    (async/wait!! 2000)
                     (recur)))))
         #_(log/disable! :macro-expand)))))
 
