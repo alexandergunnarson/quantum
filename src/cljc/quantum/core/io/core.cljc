@@ -152,10 +152,10 @@
                (validate path-f string?)
                (async/try-times!! max-tries 500
                  (try
-                   (condpc = method
+                   (case method
                      :print  (assoc-unserialized! :string path-f data)
                      :pretty (clojure.pprint/pprint data (io/writer path-f)) ; is there a better way to do this?
-                     (coll-or :serialize :compress :binary)
+                     (:serialize :compress :binary)
                        (if (or ;(= method :binary)
                                (coll/contains? #{:csv :xls :xlsx :txt :binary} type))
                            (assoc-unserialized! (keyword type) path-f data)
@@ -225,10 +225,10 @@
                  ext (keyword (or type (p/file-ext path-f)))]
              (case method
                :unserialize
-                 (condpc = ext
-                   (coll-or :txt :xml)
+                 (case ext
+                   (:txt :xml)
                      (iota/vec path-f) ; default is FileVec
-                   (coll-or :xls :xlsx)
+                   (:xls :xlsx)
                      (io/input-stream path-f)
                    ;"csv"
                    ;(-> path-f io/reader csv/read-csv)
