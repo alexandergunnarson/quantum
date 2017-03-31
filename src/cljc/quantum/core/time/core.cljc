@@ -474,7 +474,6 @@
         (-> x ->epoch-millis ->platform-instant)
         (throw (->ex "Refusing to lose time zone information to java.util.Date"))))))
 
-(^java.util.Date [^java.time.Instant              t] (Date/from t))
 #?(:clj
 (defnt ^java.sql.Timestamp ->timestamp
   ([^integer?             x] (java.sql.Timestamp. x))
