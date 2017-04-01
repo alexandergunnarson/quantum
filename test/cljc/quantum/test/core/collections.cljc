@@ -300,13 +300,13 @@
 (defn test:split-remove
   [split-at-obj coll])
 
-(deftest test:split-by-pred-into
+(deftest test:split-into
   (is (= [{0 0, 2 -2, 4 -4} {1 -1, 3 -3}]
-         (ns/split-by-pred-into (fn-> ns/key odd?) hash-map {0 0 1 -1 2 -2 3 -3 4 -4}))))
+         (ns/split-into (fn-> ns/key odd?) hash-map {0 0 1 -1 2 -2 3 -3 4 -4}))))
 
 (deftest test:split-by-pred
   (is (= [[0 2 4 6] [1 3 5 7 7]]
-         (ns/split-by-pred odd? [0 1 2 3 4 5 6 7 7]))))
+         (ns/split odd? [0 1 2 3 4 5 6 7 7]))))
 
 (defn test:zipmap
   ([ks vs])
