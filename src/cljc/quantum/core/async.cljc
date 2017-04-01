@@ -57,7 +57,8 @@
 
 ; ===== CORE.ASYNC ETC. ===== ;
 
-#?(:clj (defmalias go    clojure.core.async/go cljs.core.async.macros/go))
+#?(:clj (defmalias go      clojure.core.async/go      cljs.core.async.macros/go))
+#?(:clj (defmalias go-loop clojure.core.async/go-loop cljs.core.async.macros/go-loop))
 #_(:clj (defalias  async go)) ; TODO fix this
 
 #?(:clj
@@ -433,17 +434,146 @@
 
 (defnt deliver [^Promise p v] (>!! p v))
 
+(defnt request-stop! [^Promise p] (offer! p true))
+
 ; ----- PIPING ----- ;
 
-(defalias pipe              async/pipe)
-(defalias pipe!             pipe)
+(defn pipe!*
+  "Like `pipe`, but returns the `go-loop` created by `pipe!` instead of the `to` chan,
+   and allows for arbitrary stopping of the pipe via the promise(-chan) that is returned."
+  ([from to       ] (pipe!* from to true))
+  ([from to close?]
+    (let [stop (promise)]
+      (go-loop []
+        (let [v (<! from)]
+          (if (or (nil? v) (and stop (some? (poll! stop))))
+              (when close? (async/close! to)) ; TODO issues with `async/close!` here
+              (when (>! to v)
+                (recur)))))
+      stop)))
 
-(defalias pipeline          async/pipeline)
-(defalias pipeline!         pipeline)
-(defalias pipeline!:compute pipeline)
+; TODO CLJS
+#?(:clj
+(defn pipeline!*
+  "Exactly the same as `pipeline` but the arguments are reordered in a more reasonable
+   way, must pass a kind `#{:!! :blocking :compute :! :async}`, and allows for arbitrary
+   stopping of the pipeline via the promise(-chan) that is returned.
 
-(defalias pipeline-async    async/pipeline-async)
-(defalias pipeline!:!       pipeline-async)
+   When stopped, will not continue to take from `from` chan, but will finish up
+   pending jobs before terminating."
+  ([kind conc from xf to                  ] (pipeline!* kind conc from xf to true))
+  ([kind conc from xf to close?           ] (pipeline!* kind conc from xf to close? nil))
+  ([kind conc from xf to close? ex-handler]
+     (assert (pos? conc))
+     (let [stop (promise)
+           ex-handler
+             (or ex-handler
+                 (fn [ex]
+                   (-> (Thread/currentThread)
+                       .getUncaughtExceptionHandler
+                       (.uncaughtException (Thread/currentThread) ex))
+                   nil))
+           jobs    (chan conc)
+           results (chan conc)
+           process (fn [[v p :as job]]
+                     (if (nil? job)
+                         (do (close! results) nil)
+                         (let [res (async/chan 1 xf ex-handler)] ; TODO async/chan -> chan
+                           (>!! res v)
+                           (close! res)
+                           (put! p res)
+                           true)))
+           async (fn [[v p :as job]]
+                   (if (nil? job)
+                       (do (close! results) nil)
+                       (let [res (chan 1)]
+                         (xf v res)
+                         (put! p res)
+                         true)))]
+       (dotimes [_ conc]
+         (case kind
+           (:!! :blocking) (thread
+                             (let [job (<!! jobs)]
+                               (when (process job)
+                                 (recur))))
+           :compute        (go-loop []
+                             (let [job (<! jobs)]
+                               (when (process job)
+                                 (recur))))
+           (:! :async)     (go-loop []
+                             (let [job (<! jobs)]
+                               (when (async job)
+                                 (recur))))))
+       (go-loop []
+         (let [v (<! from)]
+           (if (or (nil? v) (and stop (some? (poll! stop))))
+               (async/close! jobs) ; TODO fix this to use this ns/`close!`
+               (let [p (chan 1)]
+                 (>! jobs [v p])
+                 (>! results p)
+                 (recur)))))
+       (go-loop []
+         (let [p (<! results)]
+           (if (nil? p)
+               (when close? (async/close! to)) ; TODO fix this to use this ns/`close!`
+               (let [res (<! p)]
+                 (loop []
+                   (let [v (<! res)]
+                     (when (and (not (nil? v)) (>! to v))
+                       (recur))))
+                 (recur)))))
+       stop))))
 
-(defalias pipeline-blocking async/pipeline-blocking)
-(defalias pipeline!:!!      pipeline-blocking)
+; TODO CLJS
+#?(:clj
+(defn concur-each!*
+  "Concurrent processing of a source chan for side effects à la `each`.
+   Similar to `pipeline!*`, but does not offload the results of the concurrent
+   processing of the source chan onto a sink chan."
+  {:todo #{"Refactor code shared with `pipeline!*` into somewhere else"}}
+  ([kind conc from xf           ] (concur-each!* kind conc from xf nil))
+  ([kind conc from xf ex-handler]
+    (assert (pos? conc))
+    (let [stop (promise)
+          ex-handler
+            (or ex-handler
+                (fn [ex]
+                  (-> (Thread/currentThread)
+                      .getUncaughtExceptionHandler
+                      (.uncaughtException (Thread/currentThread) ex))
+                  nil))
+          jobs    (chan conc)
+          process (fn [[v p :as job]]
+                    (if (nil? job)
+                        nil
+                        (let [res (async/chan 1 xf ex-handler)]  ; TODO async/chan -> chan
+                          (>!! res v)
+                          (close! res)
+                          (put! p res)
+                          true)))
+          async   (fn [[v p :as job]]
+                    (if (nil? job)
+                        nil
+                        (let [res (chan 1)]
+                          (xf v res)
+                          (put! p res)
+                          true)))]
+      (dotimes [_ conc]
+        (case kind
+          (:!! :blocking) (thread
+                            (let [job (<!! jobs)]
+                              (when (process job) (recur))))
+          :compute        (go-loop []
+                            (let [job (<! jobs)]
+                              (when (process job) (recur))))
+          (:! :async)     (go-loop []
+                            (let [job (<! jobs)]
+                              (when (async job) (recur))))))
+      (go-loop []
+        (let [v (<! from)]
+          (if (or (nil? v) (and stop (some? (poll! stop))))
+              (async/close! jobs) ; TODO fix this to use this ns/`close!`
+              (let [p (chan 1)]
+                (>! jobs [v p])
+                (recur)))))
+      stop))))
