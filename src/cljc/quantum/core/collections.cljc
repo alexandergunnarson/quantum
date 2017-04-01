@@ -1120,15 +1120,7 @@
              collections"}
   split-at clojure.data.avl/split-at)
 
-(defn split-by-pred-into
-  "Like `split-by-pred`, but you can choose what subcollection to split into."
-  ([pred gen-subinit xs]
-    (->> xs (group-by-into (rcomp pred nconv/->boolean-num) (object-array 2) (rcomp gen-subinit (fn1 ?transient!)))
-            (map (fn1 ?persistent!)))))
 
-(defn split-by-pred
-  "Splits `xs` into two groups: one which fails `pred` and one which satisfies it."
-  [pred xs] (split-by-pred-into pred vector xs))
 
 (defn split-remove
   {:todo ["Slightly inefficient — two |index-of| implicit."]}
@@ -1137,7 +1129,16 @@
     (if (= left coll)
         [left]
         [left (take-after split-at-obj coll)])))
+(defn split-into
+  "Like `split`, but you can choose what subcollection to split into."
+  ([pred gen-subinit xs]
+    (->> xs (group-by-into (rcomp pred nconv/->boolean-num) (object-array 2) (rcomp gen-subinit (fn1 ?transient!)))
+            (map (fn1 ?persistent!)))))
 
+(defn split
+  "Splits `xs` into two groups:
+   the first, which fails `pred`, and the second, which satisfies it."
+  [pred xs] (split-into pred vector xs))
 (defn split-remove-match
   {:todo ["Slightly inefficient — two |index-of| implicit."]
    :tests `{(split-remove-match "--" "ab--sddasd--")
