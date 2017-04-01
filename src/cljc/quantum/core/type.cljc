@@ -142,6 +142,7 @@
          (defnt editable?      ([^editable?      x] true) ([^default x] false))
          (defnt transient?     ([^transient?     x] true) ([^default x] false))
          (defnt indexed?       ([^indexed?       x] true) ([^default x] false))
+         (defnt m2m-chan?      ([^m2m-chan?      x] true) ([^default x] false))
 
 ; #?(:cljs (defnt typed-array? ...))
 
