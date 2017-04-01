@@ -12,7 +12,7 @@
     [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
-      :refer [<- fn1 fn& fnl, fn-> fn->, call with-do ]]
+      :refer [<- fn1 fn& fnl, fn-> fn->>, call with-do]]
     [quantum.core.collections    :as coll
       :refer [for, nempty? kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]
@@ -305,7 +305,7 @@
                                  [:clojure/core.async :queue] !core-async-queue)))))
                default-core-pools)
           [provided-pools generable-pools]
-            (->> pools (coll/split-by-pred-into (fn-> val :pool fn?) hash-map))
+            (->> pools (coll/split-into (fn-> val :pool fn?) hash-map))
           generated-pools
             (->> generable-pools (map-vals' (update :pool call)))
           this' (-> this
