@@ -701,38 +701,32 @@
        (map val))))
 
 ; ==== TRANSACTIONS ====
-(def ^:const
-  ^{:according-to "http://docs.datomic.com/best-practices.html#pipeline-transactions"}
-  recommended-txn-ct 100)
 
 #?(:clj
 (defn tx-pipeline!
   "Transacts transaction data from from-ch. Returns a `reify` on which you can call
    - `take!` to get the return channel which yields an error, t, or {:completed n}
-   - `close!` to terminate early.
-   Does not close `from-ch` when `to-ch` is closed.
-   The concurrency can be modified via the `conc` parameter."
-  {:inspired-by "http://docs.datomic.com/best-practices.html#pipeline-transactions"
-   :todo        #{"`go-loop` should use `async-loop`"}}
+   - `offer!` to the resulting promise to terminate early.
+   The concurrency can be modified via the `conc` parameter.
+   This is a stoppable pipeline.
+   `xf` is a single-element transforming function that preprocesses, filters out, etc.
+   a transaction datum before being transacted.
+
+   Note that, from http://docs.datomic.com/capacity.html:
+   \"Pipelining 20 transactions at a time with 100 datoms per transaction is a good
+   starting point for efficient imports.\""
+  {:inspired-by "http://docs.datomic.com/best-practices.html#pipeline-transactions"}
   ([conn conc from-ch] (tx-pipeline! conn conc from-ch nil))
   ([conn conc from-ch report-ch] (tx-pipeline! conn conc from-ch report-ch nil))
-  ([conn conc from-ch report-ch error-ch]
-    (let [report-ch-limited (async/chan recommended-txn-ct)
-          close-ch          (async/promise) ; TODO fix
+  ([conn conc from-ch report-ch failures-ch xf]
+    (let [xf (or xf identity)
           transact-tx!
             (fn [tx]
-              (catch-all @(db/transact-async conn tx)
-                e (when error-ch (do (>!! error-ch tx)) nil)))]
-      (when report-ch
-        (async/pipe report-ch-limited report-ch false))
-      (async/pipeline-blocking conc report-ch-limited (map+ transact-tx!) from-ch false)
-      (reify ; TODO `reify-compatible` ; TODO code pattern here
-        clojure.core.async.impl.protocols/Channel
-          (close!  [_        ] (async/close! report-ch-limited)
-                               (async/offer! close-ch true))
-          (closed? [_        ] (async/poll!  close-ch))
-        clojure.core.async.impl.protocols/ReadPort
-          (take!   [_ handler] (async/take!  close-ch handler)))))))
+              (catch-all (xf @(db/transact-async conn tx))
+                e (when failures-ch (do (>!! failures-ch {:error e :failed tx})) nil)))]
+      (if report-ch
+          (async/pipeline!* :!! conc from-ch (map+ transact-tx!) report-ch false nil)
+          (async/concur-each!* :!! conc from-ch (map+ transact-tx!) nil))))))
 
 ; ==== MORE COMPLEX OPERATIONS ====
 
@@ -795,34 +789,6 @@
 ;     nil)
 ; )
 
-; ; http://docs.datomic.com/best-practices.html#pipeline-transactions
-; (def ^:const recommended-txn-ct 100)
-
-; (defn batch-transact!
-;   "Submits transactions synchronously to the Datomic transactor
-;    in asynchronous batches of |recommended-txn-ct|."
-;   {:todo ["Handle errors better"]
-;    :usage '(batch-transact! [9494911 1823883 28283819]
-;              (fn [twitter-id]
-;                {:twitter/user.id twitter-id}))}
-;   [^Database db data ->entity-fn & [post-fn-0]]
-;   (when (nempty? data)
-;     (let [post-fn (or post-fn-0 fn-nil)
-;           threads
-;            (for [entities (->> data
-;                                (partition-all recommended-txn-ct)
-;                                (map (fn->> (map+ ->entity-fn)
-;                                            (remove+ nil?)
-;                                            redv)))]
-;              (go (try+ (transact! entities)
-;                        (post-fn entities)
-;                    (catch Object e
-;                      (if ((fn-and map? (fn-> :db/error (= :db.error/unique-conflict)))
-;                            e)
-;                          (post-fn entities)
-;                          (throw+ (Err. nil "Cache failed for transaction"
-;                                        {:exception e :txn-entities entities})))))))]
-;       (->> threads (map (MWA clojure.core.async/<!!)) doall))))
 
 ; ; pk = primary-key
 ; (defn primary-key-in-db?
