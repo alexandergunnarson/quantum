@@ -345,6 +345,11 @@
                                dbfn-call?))
 (dv/def -bytes   (s/or* (fn1 t/bytes?) dbfn-call?))
 
+(dv/def db/txInstant ::-instant)
+
+(dv/def db/id    (s/or* ::-long tempid?)) ; TODO look over these more
+(dv/def db/ident ::-keyword) ; TODO look over these more
+
 ; ===== QUERIES =====
 
 #?(:clj
