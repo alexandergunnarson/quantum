@@ -205,15 +205,20 @@
   (when gc? (System/gc))
   ; Warning: inconsistent snapshots here
   (let [mem (java.lang.management.ManagementFactory/getMemoryMXBean)
+        os  (java.lang.management.ManagementFactory/getOperatingSystemMXBean)
         mb #(double (/ % 1024 1024))]
-    {:heap     (let [used    (-> mem .getHeapMemoryUsage .getUsed mb)
+    {:system   {:total (-> os (.getTotalPhysicalMemorySize) mb)
+                :used  (mb (- (.getTotalPhysicalMemorySize os)
+                              (.getFreePhysicalMemorySize  os)))
+                :free  (-> os .getFreePhysicalMemorySize mb)}
+     :heap     (let [used    (-> mem .getHeapMemoryUsage .getUsed mb)
                      max-mem (-> mem .getHeapMemoryUsage .getMax  mb)]
                  {:committed (-> mem .getHeapMemoryUsage .getCommitted mb)
                   :init      (-> mem .getHeapMemoryUsage .getInit      mb)
                   :used      used
                   :max       max-mem
                   :free      (- max-mem used)})
-     :off-heap (let [used    (-> mem .getNonHeapMemoryUsage .getUsed mb)
+     :non-heap (let [used    (-> mem .getNonHeapMemoryUsage .getUsed mb)
                      max-mem (-> mem .getNonHeapMemoryUsage .getMax  mb)]
                  {:committed (-> mem .getNonHeapMemoryUsage .getCommitted mb)
                   :init      (-> mem .getNonHeapMemoryUsage .getInit      mb)
@@ -244,6 +249,24 @@
     :else (log/pr :warn "don't know how to clear disk buffer cache for "
                 (.. System getProperties (getProperty "os.name"))))))
 
+#?(:clj
+(defn thread-stats
+  "Return stats about running and completed threads."
+  []
+  ; Warning: inconsistent snapshots here
+  (let [mgr (java.lang.management.ManagementFactory/getThreadMXBean)]
+    {:ct        (.getThreadCount mgr)
+     :daemon-ct (.getDaemonThreadCount mgr)
+     :started   (.getTotalStartedThreadCount mgr)})))
+
+#?(:clj
+(defn cpu-stats
+  "Return stats about CPU usage."
+  []
+  ; Warning: inconsistent snapshots here
+  (let [mgr (java.lang.management.ManagementFactory/getOperatingSystemMXBean)]
+    {:this   (.getProcessCpuLoad mgr)
+     :system (.getSystemCpuLoad  mgr)})))
 
 #?(:cljs
 (set! (-> js/console .-ignoredYellowBox)
