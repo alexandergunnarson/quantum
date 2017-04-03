@@ -200,7 +200,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FILTER, REMOVE      }=====================================================
 ;=================================================={                          }=====================================================
-(defn filter-transducer [pred]
+(defn filter:transducer [pred]
   (fn [rf]
     (fn
       ([] (rf))
@@ -217,12 +217,14 @@
 (defn filter+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is truthy."
-  [pred coll] (folder coll (filter-transducer pred)))
+  ([pred] (filter:transducer pred))
+  ([pred xs] (folder xs (filter:transducer pred))))
 
 (defn remove+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when (@pred <input>) is falsey."
-  [pred coll] (filter+ (complement pred) coll))
+  ([pred] (filter+ (complement pred)))
+  ([pred xs] (filter+ (complement pred) xs)))
 
 (defn keep+         [f coll] (folder coll (core/keep         f)))
 (defn keep-indexed+ [f coll] (folder coll (core/keep-indexed f)))
