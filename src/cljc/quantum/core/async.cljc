@@ -452,6 +452,11 @@
                 (recur)))))
       stop)))
 
+(defrecord
+  ^{:doc "`error`   : The actual error that was thrown
+          `failure` : The item that e.g. the pipeline was working on when the error occurred"}
+  PipelineFailure [error failed]) ; TODO use `ex-info` to capture this ?
+
 ; TODO CLJS
 #?(:clj
 (defn pipeline!*
