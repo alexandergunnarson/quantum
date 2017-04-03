@@ -246,8 +246,8 @@
 
 (def number-types          {:clj  (set/union
                                     (:clj (cond-union unboxed-short-types unboxed-int-types unboxed-long-types
-                                                      unboxed-float-types unboxed-double-types)
-                                          '#{java.lang.Number}))
+                                                      unboxed-float-types unboxed-double-types))
+                                    '#{java.lang.Number})
                             :cljs (:cljs (cond-union integer-types decimal-types ratio-types))})
 
 ; _______________________ ;
