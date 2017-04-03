@@ -31,8 +31,6 @@
     [quantum.core.data.validated :as self
       :refer [def-map]])))
 
-(s/defspec :db/id    core/integer?) ; TODO look over these more
-(s/defspec :db/ident keyword?) ; TODO look over these more
 (s/defspec :type/any (fn' true))
 
 ; TODO un-namespaced (req-un) should accept namespaced as well
@@ -326,14 +324,14 @@
           all-record-sym       (symbol (str (name sym) ":__all"))
           un-ks-to-ks          (symbol (str (name sym) ":__un->ks"))
           other                (gensym "other")
-          required-keys-record (with-meta (gensym "required-keys-record")
+          required-keys-record (with-meta (symbol (str (name sym) ":__required-keys-record"))
                                           {:tag qualified-record-sym})
-          un-keys-record       (gensym "un-keys-record"     )
-          all-mod-keys-record  (gensym "all-mod-keys-record")
-          all-keys-record      (gensym "all-keys-record"    )
+          un-keys-record       (symbol (str (name sym) ":__un-keys-record"     ))
+          all-mod-keys-record  (symbol (str (name sym) ":__all-mod-keys-record"))
+          all-keys-record      (symbol (str (name sym) ":__all-keys-record"    ))
           req-un'              (mapv #(keyword (name %)) req-un)
           opt-un'              (mapv #(keyword (name %)) opt-un)
-          special-ks           (when db-mode? #{:schema/type :db/id :db/ident})
+          special-ks           (when db-mode? #{:schema/type :db/id :db/ident :db/txInstant})
           req-ks               (concat req     req-un )
           opt-ks               (concat opt     opt-un )
           un-ks                (concat req-un' opt-un')
@@ -356,7 +354,10 @@
           k-gen                (gensym "k")
           v-gen                (gensym "v")
           create               (symbol (str "create-" sym))
-          invalid              (case-env :cljs :cljs.spec/invalid :clojure.spec/invalid)]
+          invalid              (case-env :cljs :cljs.spec/invalid :clojure.spec/invalid)
+          stored-record-sym    (if (-> sym-0 meta :no-hash-map?)
+                                   all-record-sym
+                                   req-record-sym)]
      (prl ::debug invariant conformer req-ks un-ks all-mod-ks to-prepend)
      (let [code `(do (declare-spec ~sym-0)
           ~@to-prepend
@@ -385,9 +386,9 @@
                       _# (s/validate (:db/id    m#) (s/or* nil? :db/id   ))
                       _# (s/validate (:db/ident m#) (s/or* nil? :db/ident))]
                   (s/validate (keys m#) (fn1 set/subset? ~all-keys-record))
-                  (~(symbol (str "map->" req-record-sym)) m#))))
+                  (~(symbol (str "map->" stored-record-sym)) m#))))
           (deftype-compatible ~(with-meta sym {:no-factory? true})
-            [~(with-meta 'v {:tag req-record-sym})]
+            [~(with-meta 'v {:tag stored-record-sym})]
             {~'?Seqable
               {~'seq          ([_#] (seq ~'v))}
              ~'?Record        true
