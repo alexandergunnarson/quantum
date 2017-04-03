@@ -55,6 +55,7 @@
                             [(get m-0 k1) k1]))))
 
 #?(:clj (def int-map       imap/int-map  ))
+#?(:clj (defalias hash-map:long->object int-map))
 #?(:clj (def array-map     core/array-map))
 #?(:clj (def hash-map      core/hash-map ))
 
