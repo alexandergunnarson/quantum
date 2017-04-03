@@ -23,7 +23,7 @@
       :refer [fnl fn1]]
     [quantum.core.log                  :as log]
     [quantum.core.logic                :as logic
-      :refer [fn-and fn-or fn-not condpc whenc]]
+      :refer [fn-and fn-or fn-not fn-nil condpc whenc]]
     [quantum.core.macros.core          :as cmacros
       :refer [case-env]]
     [quantum.core.macros               :as macros
@@ -113,7 +113,7 @@
 (defalias delay core/delay)
 (defalias force core/force)
 
-(defalias timeout async/timeout)
+(def timeout async/timeout) ; `defalias` here results in "java.lang.ClassCastException: clojure.lang.AFunction$1 cannot be cast to clojure.lang.IFn$LO"
 
 #?(:clj (defalias thread async/thread))
 
@@ -424,6 +424,10 @@
               (close! [_] (asyncp/close! c))
               (closed? [_] (asyncp/closed? c)))
 
+(defn readable-chan?  [x] (satisfies? asyncp/ReadPort x))
+(defn writeable-chan? [x] (satisfies? asyncp/WritePort x))
+(defn closeable-chan? [x] (satisfies? asyncp/Channel x))
+
 (defn promise
   "A cross between a clojure `promise` and an `async/promise-chan`."
   ([] (promise nil))
@@ -435,6 +439,7 @@
 (defnt deliver [^Promise p v] (>!! p v))
 
 (defnt request-stop! [^Promise p] (offer! p true))
+(defnt stop-requested? [^Promise p] (poll! p))
 
 ; ----- PIPING ----- ;
 
@@ -582,3 +587,92 @@
                 (>! jobs [v p])
                 (recur)))))
       stop))))
+
+(defn pipe-interruptibly<!
+  "Blocking-takes when `process` returns a channel."
+  [{:keys [from-ch to-ch stop-ch *running?
+           process
+           on-exited-via-exception
+           on-exited-via-stop
+           on-exited-normally]}]
+  (let [on-exited-normally' #(do (reset! *running? false)
+                                 ((or on-exited-normally fn-nil))
+                                 nil)
+        on-exited-via-stop' #(do (reset! *running? false)
+                                 ((or on-exited-via-stop fn-nil))
+                                 nil)
+        on-exited-via-exception' (fn [e] (reset! *running? false)
+                                         ((or on-exited-via-exception fn-nil) e)
+                                         nil)]
+    (go
+      (reset! *running? true)
+      (loop []
+        (let [[x ch] (catch-all (alts! [stop-ch from-ch])
+                       e (on-exited-via-exception' e))]
+          (cond (= ch stop-ch)
+                  (on-exited-via-stop')
+                (some? x)
+                  (when
+                    (catch-all
+                      (let [[ret ch'] (catch-all
+                                        (let [ret (process x)]
+                                          (if (readable-chan? ret)
+                                              (alts! [stop-ch ret])
+                                              [ret nil]))
+                                        e (on-exited-via-exception' e))]
+                        (cond (= ch' stop-ch)
+                                (on-exited-via-stop')
+                              (and (some? ret) to-ch)
+                                (do (put! to-ch ret) true)
+                              :else
+                                true))
+                      e (on-exited-via-exception' e))
+                    (recur))
+                :else
+                  (on-exited-normally')))))))
+
+#?(:clj
+(defn pipe-interruptibly<!!
+  "Like `pipe-interruptibly<!` but uses `thread` instead of `go`."
+  {:todo #{"Combine code with `pipe-interruptibly<!`"}}
+  [{:keys [from-ch to-ch stop-ch *running?
+           process
+           on-exited-via-exception
+           on-exited-via-stop
+           on-exited-normally]}]
+  (let [on-exited-normally' #(do (reset! *running? false)
+                                 ((or on-exited-normally fn-nil))
+                                 nil)
+        on-exited-via-stop' #(do (reset! *running? false)
+                                 ((or on-exited-via-stop fn-nil))
+                                 nil)
+        on-exited-via-exception' (fn [e] (reset! *running? false)
+                                         ((or on-exited-via-exception fn-nil) e)
+                                         nil)]
+    (thread
+      (reset! *running? true)
+      (loop []
+        (let [[x ch] (catch-all (alts!! [stop-ch from-ch])
+                       e (on-exited-via-exception' e))]
+          (cond (= ch stop-ch)
+                  (on-exited-via-stop')
+                (some? x)
+                  (when
+                    (catch-all
+                      (let [[ret ch'] (catch-all
+                                        (let [ret (process x)]
+                                          (if (readable-chan? ret)
+                                              (alts!! [stop-ch ret])
+                                              [ret nil]))
+                                        e (on-exited-via-exception' e))]
+                        (cond (= ch' stop-ch)
+                                (on-exited-via-stop')
+                              (and (some? ret) to-ch)
+                                (do (put! to-ch ret) true)
+                              :else
+                                true))
+                      e (on-exited-via-exception' e))
+                    (recur))
+                :else
+                  (on-exited-normally')))))))
+)
