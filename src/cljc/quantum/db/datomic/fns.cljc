@@ -18,22 +18,6 @@
 
     ; MACROS
 
-    (defn! conn apply-or
-      ^{:macro? true
-        :doc "Variadic |or|."}
-      [db args]
-      (loop [args-n args]
-        (if-let [arg (->> args-n first (api/invoke db :fn/eval db))]
-          arg
-          (recur (rest args-n)))))
-
-    (defn! conn or
-      ^{:macro? true
-        :doc "2-arity |or|."}
-      [db alt0 alt1]
-      (or (api/invoke db :fn/eval db alt0)
-          (api/invoke db :fn/eval db alt1)))
-
     (defn! conn validate
       ^{:macro? true
         :doc    "|eval|s @expr. If the result satisifies @pred, returns @expr.
