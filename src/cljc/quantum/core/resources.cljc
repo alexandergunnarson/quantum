@@ -149,6 +149,18 @@
            (catch-all (cleanup! resource#) e#
              (log/ppr :warn "Failed attempting to release resource" {:resource resource# :error e#}))))))))
 
+#?(:clj
+(defmacro with-log-start! [level & body]
+  `(let [level# ~level]
+     (log/pr level# "Starting...")
+     (with-do (do ~@body) (log/pr level# "Started.")))))
+
+#?(:clj
+(defmacro with-log-stop! [level & body]
+  `(let [level# ~level]
+     (log/pr level# "Stopping...")
+     (with-do (do ~@body) (log/pr level# "Stopped.")))))
+
 ; ======= SYSTEM ========
 
 #?(:clj (ns-unmap (ns-name *ns*) 'System))
@@ -410,7 +422,8 @@
                  (log/pr :user "System" name "started.")
                  (assoc this :sys-map sys-map' :running? true))
             (catch #?(:clj Throwable :cljs :default) t
-              (log/pr :warn "System" name "failed to start:" t #?(:cljs {:stack (.-stack t)}))
+              (log/ppr :warn (str "System " name " failed to start:") t)
+              #?(:cljs (log/pr :warn #?(:cljs {:stack (.-stack t)})))
               this))))
     (stop [this]
       (if (and sys-map running?)
