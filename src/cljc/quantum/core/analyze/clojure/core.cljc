@@ -115,27 +115,29 @@
 (defn jvm-typeof
   ([expr] (jvm-typeof expr nil))
   ([expr env]
-    (with-bindings {Compiler/LOADER (RT/makeClassLoader)
-                    Compiler/METHOD nil
-                    Compiler/LOCAL_ENV env
-                    Compiler/LOOP_LOCALS nil
-                    Compiler/NEXT_LOCAL_NUM 0
-                    RT/CURRENT_NS @RT/CURRENT_NS
-                    RT/UNCHECKED_MATH @RT/UNCHECKED_MATH
-                    Compiler/LINE_BEFORE (int -1)
-                    Compiler/LINE_AFTER  (int -1)
-                    Compiler/COLUMN_BEFORE (int -1)
-                    Compiler/COLUMN_AFTER  (int -1)
-                    ;RT/WARN_ON_REFLECTION false
-                    RT/DATA_READERS @RT/DATA_READERS}
-      (let [expr   (list 'fn [] expr)
-            fn-ast ^clojure.lang.Compiler$FnExpr
-                   (clojure.lang.Compiler/analyze
-                    clojure.lang.Compiler$C/EXPRESSION expr)
-            expr-ast ^clojure.lang.Compiler$BodyExpr
-                     (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
-        (when (.hasJavaClass expr-ast)
-          (.getJavaClass expr-ast)))))))
+    (try
+      (with-bindings {Compiler/LOADER (RT/makeClassLoader)
+                      Compiler/METHOD nil
+                      Compiler/LOCAL_ENV env
+                      Compiler/LOOP_LOCALS nil
+                      Compiler/NEXT_LOCAL_NUM 0
+                      RT/CURRENT_NS @RT/CURRENT_NS
+                      RT/UNCHECKED_MATH @RT/UNCHECKED_MATH
+                      Compiler/LINE_BEFORE (int -1)
+                      Compiler/LINE_AFTER  (int -1)
+                      Compiler/COLUMN_BEFORE (int -1)
+                      Compiler/COLUMN_AFTER  (int -1)
+                      ;RT/WARN_ON_REFLECTION false
+                      RT/DATA_READERS @RT/DATA_READERS}
+        (let [expr   (list 'fn [] expr)
+              fn-ast ^clojure.lang.Compiler$FnExpr
+                     (clojure.lang.Compiler/analyze
+                      clojure.lang.Compiler$C/EXPRESSION expr)
+              expr-ast ^clojure.lang.Compiler$BodyExpr
+                       (.body ^clojure.lang.Compiler$ObjMethod (first (.methods fn-ast)))]
+          (when (.hasJavaClass expr-ast)
+            (.getJavaClass expr-ast))))
+      #_(catch Throwable e nil))))) ; TODO fix in `go` block: `clojure.lang.Compiler$CompilerException: java.lang.ClassCastException: clojure.lang.PersistentArrayMap cannot be cast to clojure.lang.Compiler$LocalBinding, compiling:(null:7:31)`
 
 #?(:clj
 (defn jvm-typeof-respecting-hints
