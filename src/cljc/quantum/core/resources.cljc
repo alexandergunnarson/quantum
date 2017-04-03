@@ -112,7 +112,7 @@
 
 (defn register-component! [k constructor & [deps]]
   (validate k           qcore/qualified-keyword?
-            constructor fn?
+            constructor (s/or* fn? (s/and var? (fn-> deref fn?)))
             deps        (s/or* nil? (s/coll-of keyword? :distinct true)))
   (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
   (swap! components assoc k (if deps (fn [config] (comp/using (constructor config) deps))
