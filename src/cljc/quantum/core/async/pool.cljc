@@ -37,10 +37,10 @@
   #?(:clj
   (:import
     [java.util.concurrent
-      Executor ExecutorService ScheduledExecutorService ThreadPoolExecutor Executors
-      ForkJoinPool ForkJoinWorkerThread ForkJoinPool$ForkJoinWorkerThreadFactory
-      ThreadFactory
-      LinkedBlockingQueue SynchronousQueue]))
+       Executor ExecutorService ScheduledExecutorService ThreadPoolExecutor Executors
+       ForkJoinPool ForkJoinWorkerThread ForkJoinPool$ForkJoinWorkerThreadFactory
+       ThreadFactory
+       LinkedBlockingQueue SynchronousQueue]))
   (:require-macros
     [servant.macros              :as servant
       :refer [defservantfn]]))
@@ -389,6 +389,8 @@
 
 #?(:cljs (swap! qcore/registered-components assoc ::threadpool
             #(comp/using (->pool %) [::log/log])))
+
+#?(:clj (def pool? (fnl instance? ExecutorService)))
 
 ; ===== DISTRIBUTOR ===== ;
 
