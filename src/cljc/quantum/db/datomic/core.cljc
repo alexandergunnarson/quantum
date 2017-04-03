@@ -1,5 +1,4 @@
 (ns ^{:doc "The core Datomic (and friends, e.g. DataScript) namespace"}
-    ; ^{:clojure.tools.namespace.repl/unload false} ; because of db
   quantum.db.datomic.core
   (:refer-clojure :exclude
     [assoc assoc! dissoc dissoc! conj conj! disj disj!
@@ -12,7 +11,7 @@
     [com.stuartsierra.component :as comp]
     [quantum.core.collections   :as coll
       :refer [join for kw-map nnil? nempty?
-              filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
+              filter+ filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
       :refer [name+]]
@@ -41,7 +40,7 @@
     (:import
       datomic.Peer
       [datomic.peer LocalConnection Connection]
-      java.util.concurrent.ConcurrentHashMap)))
+      [java.util.concurrent ConcurrentHashMap])))
 
 #?(:clj (swap! pr/blacklist c/conj datomic.db.Db datascript.db.DB))
 
@@ -318,6 +317,7 @@
 ; :uuid    (fnl instance? db/SQUUID)
 (dv/def -schema  (s/or* keyword? dbfn-call?)) ; TODO look over this more
 (dv/def -any     (fn' true))
+(dv/def -ref     (s/or* :db/id :db/ident dbfn-call?)) ; TODO look over this more
 (dv/def -keyword (s/or* keyword? dbfn-call?))
 (dv/def -string  (s/or* string? dbfn-call?))
 (dv/def -boolean (s/or* (fn1 t/boolean?) dbfn-call?))
@@ -702,6 +702,23 @@
 
 ; ==== TRANSACTIONS ====
 
+; TODO move these?
+#?(:clj
+(defn error:txn-timed-out? [^Throwable x]
+  (or (-> x ex-data :db/error (= :db.error/transaction-timeout))
+      (and (.getCause x)
+           (recur (.getCause x))))))
+
+#?(:clj
+(defn error:txr-unavailable? [^Throwable x]
+  (or (-> x ex-data :db/error (= :db.error/transactor-unavailable))
+      (and (.getCause x)
+           (recur (.getCause x))))))
+
+#?(:clj
+(defn error:unique-conflict? [^Throwable x]
+  (-> x .getCause ex-data :db/error (= :db.error/unique-conflict))))
+
 #?(:clj
 (defn tx-pipeline!
   "Transacts transaction data from from-ch. Returns a `reify` on which you can call
@@ -716,17 +733,23 @@
    \"Pipelining 20 transactions at a time with 100 datoms per transaction is a good
    starting point for efficient imports.\""
   {:inspired-by "http://docs.datomic.com/best-practices.html#pipeline-transactions"}
-  ([conn conc from-ch] (tx-pipeline! conn conc from-ch nil))
-  ([conn conc from-ch report-ch] (tx-pipeline! conn conc from-ch report-ch nil))
-  ([conn conc from-ch report-ch failures-ch xf]
+  ([conn conc from-ch                                    ] (tx-pipeline! conn conc from-ch nil))
+  ([conn conc from-ch report-ch                          ] (tx-pipeline! conn conc from-ch report-ch nil))
+  ([conn conc from-ch report-ch failures-ch              ] (tx-pipeline! conn conc from-ch report-ch failures-ch identity))
+  ([conn conc from-ch report-ch failures-ch xf           ] (tx-pipeline! conn conc from-ch report-ch failures-ch xf nil))
+  ([conn conc from-ch report-ch failures-ch xf ex-handler] (tx-pipeline! conn conc from-ch report-ch failures-ch xf ex-handler false))
+  ([conn conc from-ch report-ch failures-ch xf ex-handler sync?]
     (let [xf (or xf identity)
           transact-tx!
             (fn [tx]
-              (catch-all (xf @(db/transact-async conn tx))
-                e (when failures-ch (do (>!! failures-ch {:error e :failed tx})) nil)))]
+              (catch-all @((if sync? db/transact db/transact-async) conn (xf tx))
+                e (if ex-handler
+                      (ex-handler e tx failures-ch)
+                      (when failures-ch (do (async/put! failures-ch (async/->PipelineFailure e tx))) nil))))
+          transact-txs! (comp (map+ transact-tx!) (remove+ nil?))]
       (if report-ch
-          (async/pipeline!* :!! conc from-ch (map+ transact-tx!) report-ch false nil)
-          (async/concur-each!* :!! conc from-ch (map+ transact-tx!) nil))))))
+          (async/pipeline!* :!! conc from-ch transact-txs! report-ch false nil)
+          (async/concur-each!* :!! conc from-ch transact-txs! nil))))))
 
 ; ==== MORE COMPLEX OPERATIONS ====
 
@@ -769,37 +792,6 @@
 ; (defn update! [id f-key & args]
 ;   (transact! (apply vector (c/keyword "fn" (name f-key)) id args)))
 
-; (defn+ entity-query [q]
-;   (->> (query q)
-;        (map+ (fn1 first))
-;        (map+ (extern (fn [id] [id (entity id)])))
-;        redm))
-
-; #_(do
-;   (query '[:find   ?entity
-;            :where [?entity :db/doc "hello world"]])
-;   (query '[:find ?c :where [?c :community/name]])
-
-;   ; Next, add a fact to the system.
-;   ; The following transaction will create a new entity with the doc string "hello world":
-
-;   (let [datom [:db/add (d/tempid :db.part/user)
-;                :db/doc "hello world"]]
-;     (transact! [datom])
-;     nil)
-; )
-
-
-; ; pk = primary-key
-; (defn primary-key-in-db?
-;   "Determines whether, e.g.,
-;    :twitter/user.id 8573181 exists in the database."
-;   [pk-schema pk-val]
-;   (nempty?
-;     (query [:find '?entity
-;             :where ['?entity pk-schema pk-val]]
-;            true)))
-
 ; (defn ->entity*
 ;   "Adds the entity if it its primary (unique) key is not present in the database.
 
@@ -839,105 +831,6 @@
 ;           (assoc entity-n datomic-key v)
 ;           entity-n))))
 
-; (defn ->encrypted
-;   ; TODO can't cache without system property set so throw error
-;   {:performance "Takes ~160 ms per encryption. Slowwww..."}
-;   ([schema val-] (->encrypted schema val- true (get crypto/sensitivity-map :password)))
-;   ([schema val- entity? sensitivity]
-;     (let [schema-ns   (namespace schema)
-;           schema-name (name      schema)
-;           result (crypto/encrypt :aes val-
-;                    {:password (System/getProperty (str "password:" schema-ns "/" schema-name))
-;                     :opts (kw-map sensitivity)})]
-;       (if entity?
-;           (let [{:keys [encrypted salt key]} result]
-;             {schema             (->> encrypted (crypto/encode :base64-string))
-;              (c/keyword schema-ns (str schema-name ".k1")) key
-;              (c/keyword schema-ns (str schema-name ".k2")) salt})
-;           result))))
-
-; (defn ->decrypted
-;   {:performance "Probably slow"}
-;   ([schema val-] (->decrypted schema val- true false (get crypto/sensitivity-map :password)))
-;   ([schema encrypted entity? string-decode? sensitivity]
-;     (let [schema-ns   (namespace schema)
-;           schema-name (name      schema)
-;           ;schema-key
-;           key- (if entity?
-;                    (get encrypted (c/keyword schema-ns (str schema-name ".k1")))
-;                    (:key encrypted))
-;           salt (if entity?
-;                    (get encrypted (c/keyword schema-ns (str schema-name ".k2")))
-;                    (:salt encrypted))
-;           ^"[B" result
-;             (crypto/decrypt :aes
-;               (->> encrypted
-;                    (<- get schema)
-;                    (crypto/decode :base64))
-;               {:key         key-
-;                :salt        salt
-;                :password    (System/getProperty (str "password:" schema-ns "/" schema-name))
-;                :opts (kw-map sensitivity)})]
-;       (if string-decode?
-;           (String. result java.nio.charset.StandardCharsets/ISO_8859_1)
-;           result))))
-
-; ; You can transact multiple values for a :db.cardinality/many attribute at one time using a set.
-
-
-; ; If an attributes points to another entity through a cardinality-many attribute, get will return a Set of entity instances. The following example returns all the entities that Jane likes:
-
-; ; // empty, given the example data
-; ; peopleJaneLikes = jane.get(":person/likes")
-; ; If you precede an attribute's local name with an underscore (_), get will navigate backwards, returning the Set of entities that point to the current entity. The following example returns all the entities who like Jane:
-; ;
-; ; // returns set containing John
-; ; peopleWhoLikeJane = jane.get(":person/_likes")
-
-
-; ; DOS AND DONT'S: http://martintrojer.github.io/clojure/2015/06/03/datomic-dos-and-donts/
-
-; ; DO
-
-; ; Keep metrics on your query times
-; ; Datomic lacks query planning. Queries that look harmless can be real hogs.
-; ; The solution is usually blindly swapping lines in your query until you get an order of magnitude speedup.
-
-; ; Always use memcached with Datomic
-; ; When new peers connect, a fair bit of data needs to be transferred to them.
-; ; If you don't use memcached this data needs to be queried from the store and will slow down the 'peer connect time' (among other things).
-
-; ; Give your peers nodes plenty of heap space
-
-; ; Datomic was designed with AWS/Dynamo in mind, use it
-; ; It will perform best with this backend.
-
-; ; Prefer dropping databases to excising data
-; ; If you want to keep logs, or other data with short lifespan in Datomic,
-; ; put them in a different database and rotate the databases on a daily / weekly basis.
-
-; ; Use migrators for your attributes, and consider squashing unused attributes before going to prod
-; ; Don't be afraid to rev the schemas, you will end up with quite a few unused attributes.
-; ; It's OK, but squash them before its too late.
-
-; ; Trigger transactor GCs periodically when load is low
-; ; If you are churning many datoms, the transactor is going have to GC. When this happens writes will be very slow.
-
-; ; Consider introducing a Datomic/peer tier in your infrastructure
-; ; Since Datomic's licensing is peer-count limited, you might have to start putting
-; ; your peers together in a Datomic-tier which the webserver nodes (etc) queries via the Datomic REST API.
-
-; ; DON'T
-; ; Don't put big strings into Datomic
-; ; If your strings are bigger than 1kb put them somewhere else (and keep a link to them in Datomic).
-; ; Datomic's storage model is optimized for small datoms, so if you put big stuff in there perf will drop dramatically.
-
-; ; Don't load huge datasets into Datomic. It will take forever, with plenty transactor GCs.
-; ; Keep an eye on the DynamoDB write throughput since it might bankrupt you.
-; ; Also, there is a limit to the number of datoms Datomic can handle.
-
-; ; Don't use Datomic for stuff it wasn't intended to do
-; ; Don't run your geospatial queries or query-with-aggregations in Datomic, it's OK to have multiple datastores in your system.
 
 ; (defn gen-cacher [thread-id cache-fn-var]
 ;   (async-loop {:id thread-id :type :thread} ; Spawn quickly, mainly not sleeping (hopefully)
@@ -1169,11 +1062,6 @@
 ; (defn ->hidden-key [k]
 ;   (c/keyword (namespace k)
 ;            (-> k name (str ".hidden?"))))
-
-; FOR DATASCRIPT:
-;Transactor functions can be called as [:db.fn/call f args] where f is a function reference and will take db as first argument (thx @thegeez)
-
-
 
 #_(:clj
 (defn txn-ids-affecting-eid
