@@ -174,6 +174,13 @@
       component
       (-> component start! (assoc :started? true))))
 
+(defn transform-and-start-with-pred! [component-keys]
+  (fn [k component]
+    (if (started? component)
+        component
+        (let [xf (get component-keys k)]
+          (-> component xf start! (assoc :started? true))))))
+
 (defn stop-with-pred!
   "Stops a component if not stopped, and dissociates a `:started?` key if it
    successfully stops."
@@ -182,6 +189,13 @@
   (if (stopped? component)
       component
       (-> component stop! (assoc :started? false))))
+
+(defn transform-and-stop-with-pred! [component-keys]
+  (fn [k component]
+  (if (stopped? component)
+      component
+      (let [xf (get component-keys k)]
+        (-> component xf stop! (assoc :started? false))))))
 
 (defn descendant-connections
   [graph ks]
@@ -203,24 +217,66 @@
         (descendant-connections component-keys)
         (whenp-> update-components? (set/union component-keys)))))
 
+(defn- try-action
+  "Like `component/try-action` but passes as the first argument to `f`
+   the key of the component being started."
+  [component system key f args]
+  (catch-all (apply f key component args)
+    e (throw (ex-info (str "Error in component " key
+                           " in system " (com.stuartsierra.component.platform/type-name system)
+                           " calling " f)
+                      {:reason     ::com.stuartsierra.component/component-function-threw-exception
+                       :function   f
+                       :system-key key
+                       :component component
+                       :system    system}
+                      e))))
+
+(defn update-system*
+  "Like `component/update-system` but passes as the first argument to `f`
+   the key of the component being started."
+  [post-topo-sort-fn system component-keys f args]
+  (let [graph (comp/dependency-graph system component-keys)]
+    (reduce (fn [system key]
+              (assoc system key
+                     (-> (@#'comp/get-component system key)
+                         (@#'comp/assoc-dependencies system)
+                         (try-action system key f args))))
+            system
+            (post-topo-sort-fn
+              (sort (com.stuartsierra.dependency/topo-comparator graph) component-keys)))))
+
+(defn update-system [system component-keys f & args]
+  (update-system* identity system component-keys f args))
+
+(defn update-system-reverse [system component-keys f & args]
+  (update-system* reverse system component-keys f args))
+
 (defn start-components!
   "Recursively starts components in the system, in dependency order,
    assoc'ing in their dependencies along the way. component-keys is a
    collection of keys (order doesn't matter) in the system specifying
    the components to start.
    If an exception is thrown, it'll tear down the system and ensure any
-   components that were started are stopped."
+   components that were started are stopped.
+
+   If `component-keys` is a map, then it will assume that its keys map
+   to functions which will update the respective components designated
+   by those keys before starting them (if they are already stopped)."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   [system component-keys]
-    (try
-       (comp/update-system system component-keys start-with-pred!)
-       (catch #?(:clj Throwable :cljs :default) e
-         (let [thrown-system (-> e ex-data :system)
-               started-keys  (->> thrown-system
-                                  (filter (fn [[k v]] (started? v)))
-                                  (keys))]
-           (comp/update-system-reverse thrown-system started-keys stop-with-pred!))
-         (throw e))))
+  (catch-all
+    (if (map? component-keys)
+        (update-system system (keys component-keys)
+          (transform-and-start-with-pred! component-keys))
+        (comp/update-system system component-keys start-with-pred!))
+    e
+    (let [thrown-system (-> e ex-data :system)
+          started-keys  (->> thrown-system
+                             (filter (fn [[k v]] (started? v)))
+                             (keys))]
+      (comp/update-system-reverse thrown-system started-keys stop-with-pred!)
+      (throw e))))
 
 (defn start-dependencies!
   "Starts the dependencies of the provided component keys."
@@ -260,7 +316,10 @@
    in the system specifying the components to stop."
   {:adapted-from "https://github.com/stuartsierra/component/pull/49/"}
   [system component-keys]
-  (comp/update-system-reverse system component-keys stop-with-pred!))
+  (if (map? component-keys)
+      (update-system-reverse system (keys component-keys)
+        (transform-and-stop-with-pred! component-keys))
+      (comp/update-system-reverse system component-keys stop-with-pred!)))
 
 (defn stop-dependencies!
   "Stops the dependencies of the provided component keys."
