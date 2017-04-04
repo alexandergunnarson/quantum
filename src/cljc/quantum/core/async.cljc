@@ -590,20 +590,24 @@
 
 (defn pipe-interruptibly<!
   "Blocking-takes when `process` returns a channel."
-  [{:keys [from-ch to-ch stop-ch *running?
-           process
+  [{:keys [from-ch to-ch failures-ch stop-ch *running?
+           processf
            on-exited-via-exception
            on-exited-via-stop
            on-exited-normally]}]
-  (let [on-exited-normally' #(do (reset! *running? false)
-                                 ((or on-exited-normally fn-nil))
-                                 nil)
-        on-exited-via-stop' #(do (reset! *running? false)
-                                 ((or on-exited-via-stop fn-nil))
-                                 nil)
+  (let [on-exited-normally'      #(do (reset! *running? false)
+                                      ((or on-exited-normally fn-nil))
+                                      nil)
+        on-exited-via-stop'      #(do (reset! *running? false)
+                                      ((or on-exited-via-stop fn-nil))
+                                      nil)
         on-exited-via-exception' (fn [e] (reset! *running? false)
                                          ((or on-exited-via-exception fn-nil) e)
-                                         nil)]
+                                         nil)
+        ; Catches issues with specifically the `processf` function
+        on-exception             (if failures-ch
+                                     (fn [e x] (put! failures-ch (PipelineFailure. e x)) nil)
+                                     (fn [e _] (on-exited-via-exception' e)))]
     (go
       (reset! *running? true)
       (loop []
@@ -614,12 +618,13 @@
                 (some? x)
                   (when
                     (catch-all
-                      (let [[ret ch'] (catch-all
-                                        (let [ret (process x)]
-                                          (if (readable-chan? ret)
-                                              (alts! [stop-ch ret])
-                                              [ret nil]))
-                                        e (on-exited-via-exception' e))]
+                      (let [[ret ch']
+                              (catch-all
+                                (let [ret (processf x)]
+                                  (if (readable-chan? ret)
+                                      (alts! [stop-ch ret])
+                                      [ret nil]))
+                                e (on-exception e x))]
                         (cond (= ch' stop-ch)
                                 (on-exited-via-stop')
                               (and (some? ret) to-ch)
@@ -635,20 +640,24 @@
 (defn pipe-interruptibly<!!
   "Like `pipe-interruptibly<!` but uses `thread` instead of `go`."
   {:todo #{"Combine code with `pipe-interruptibly<!`"}}
-  [{:keys [from-ch to-ch stop-ch *running?
-           process
+  [{:keys [from-ch to-ch failures-ch stop-ch *running?
+           processf
            on-exited-via-exception
            on-exited-via-stop
            on-exited-normally]}]
-  (let [on-exited-normally' #(do (reset! *running? false)
-                                 ((or on-exited-normally fn-nil))
-                                 nil)
-        on-exited-via-stop' #(do (reset! *running? false)
-                                 ((or on-exited-via-stop fn-nil))
-                                 nil)
+  (let [on-exited-normally'      #(do (reset! *running? false)
+                                      ((or on-exited-normally fn-nil))
+                                      nil)
+        on-exited-via-stop'      #(do (reset! *running? false)
+                                      ((or on-exited-via-stop fn-nil))
+                                      nil)
         on-exited-via-exception' (fn [e] (reset! *running? false)
                                          ((or on-exited-via-exception fn-nil) e)
-                                         nil)]
+                                         nil)
+        ; Catches issues with specifically the `processf` function
+        on-exception             (if failures-ch
+                                     (fn [e x] (put! failures-ch (PipelineFailure. e x)) nil)
+                                     (fn [e _] (on-exited-via-exception' e)))]
     (thread
       (reset! *running? true)
       (loop []
@@ -659,12 +668,13 @@
                 (some? x)
                   (when
                     (catch-all
-                      (let [[ret ch'] (catch-all
-                                        (let [ret (process x)]
-                                          (if (readable-chan? ret)
-                                              (alts!! [stop-ch ret])
-                                              [ret nil]))
-                                        e (on-exited-via-exception' e))]
+                      (let [[ret ch']
+                              (catch-all
+                                (let [ret (processf x)]
+                                  (if (readable-chan? ret)
+                                      (alts!! [stop-ch ret])
+                                      [ret nil]))
+                                e (on-exception e x))]
                         (cond (= ch' stop-ch)
                                 (on-exited-via-stop')
                               (and (some? ret) to-ch)
@@ -674,5 +684,4 @@
                       e (on-exited-via-exception' e))
                     (recur))
                 :else
-                  (on-exited-normally')))))))
-)
+                  (on-exited-normally'))))))))
