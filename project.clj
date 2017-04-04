@@ -62,7 +62,7 @@
          ; MAP / SET
          [org.flatland/ordered                  "1.5.3"           ]
          [org.clojure/data.avl                  "0.0.13"          ]
-         [org.clojure/data.int-map              "0.2.2"           ]
+         [org.clojure/data.int-map              "0.2.4"           ]
          ; ==== COMPLEX ====
            ; JSON
            [cheshire                            "5.6.1"           ] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
