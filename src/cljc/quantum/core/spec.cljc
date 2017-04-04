@@ -212,11 +212,27 @@
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
 
 #?(:clj
+(defmacro or*-forms
+  "Like `or*` but allows direct specification of the form to be used in `s/explain`
+   regardless of the code to be executed.
+   They are expected to be interleaved, quoted0 exec0 quoted1 exec1, etc."
+  [& pred-forms]
+  (let [partitioned       (partition-all 2 pred-forms)
+        _                 (core/assert (-> partitioned count even?))
+        pred-forms-quoted (map first  partitioned)
+        pred-forms-exec   (map second partitioned)
+        pf (mapv (case-env :cljs #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
+                 pred-forms-exec)]
+    `(or*-spec-impl '~pred-forms-quoted '~pf ~(vec pred-forms-exec) nil))))
+
+#?(:clj
 (defmacro constantly-or [& exprs]
   `(or* ~@(map #(list 'fn [(gensym "_")] %) exprs))))
 
 #?(:clj
 (defmacro set-of [spec]
   `(let [spec# ~spec]
-     (or* (and core/set? (coll-of spec#))
-          (coll-of spec# :distinct true :into #{})))))
+     (or*-forms (and core/set? (coll-of ~spec))
+                (and core/set? (coll-of spec#))
+                (coll-of ~spec :distinct true :into #{})
+                (coll-of spec# :distinct true :into #{})))))
