@@ -88,14 +88,16 @@
          flatten+
          (into #{})))
 
-(defn tweets [user-id auth & [{:keys [cursor parse? handlers keys-fn] :as opts}]]
+(defn tweets [user-id auth & [{:keys [cursor parse? handlers keys-fn include-user?] :as opts}]]
   (request! auth
     {:url    "https://api.twitter.com/1.1/statuses/user_timeline.json"
      :method :get
      :query-params
        {"user_id" user-id
         "count"   "200"
-        "cursor"  (or cursor "-1")} ; -1 is the start cursor
+        "cursor"  (or cursor "-1") ; -1 is the start cursor
+        "trim_user" (str (not include-user?))
+        "exclude_replies" "true"}
      :handlers handlers
      :parse?   parse?
      :keys-fn  keys-fn}))
@@ -173,19 +175,6 @@
     {:url          "https://api.twitter.com/1.1/statuses/update.json"
      :method       :post
      :query-params {"status" status}}))
-
-(defn tweets-by-user
-  ([user-id auth & [{:keys [parse? handlers keys-fn include-user?] :as opts}]]
-    (request! auth
-      {:url          "https://api.twitter.com/1.1/statuses/user_timeline.json"
-       :method       :get
-       :parse?       parse?
-       :keys-fn      keys-fn
-       :handlers     handlers
-       :query-params {"user_id" user-id
-                      "count" 200
-                      "trim_user" (str (not include-user?))
-                      "exclude_replies" "true"}})))
 
 ; HEADLESS BROWSER AUTOMATION
 
