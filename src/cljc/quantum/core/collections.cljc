@@ -1,5 +1,4 @@
-(ns
-  ^{:doc
+(ns ^{:doc
       "Various collections functions.
 
        Includes better versions of the following than clojure.core:
@@ -367,10 +366,6 @@
         (defalias sample+             red/sample+             )
         (defalias reduce-count        red/reduce-count        )
         (defalias reduce-sentinel     red/reduce-sentinel     )
-        (defalias reduce-min          red/reduce-min          )
-        (defalias reduce-min-key      red/reduce-min-key      )
-        (defalias reduce-max          red/reduce-max          )
-        (defalias reduce-max-key      red/reduce-max-key      )
 
 #?(:clj (defalias elem->array         coll/elem->array        ))
 #?(:clj (defalias ->array             coll/->array            ))
@@ -1188,7 +1183,7 @@
   ([to x]
     (->> x
          (reduce (fn [counts x]
-                (assoc?! counts x (inc (or (get counts x) 0))))
+                   (assoc?! counts x (inc (or (get counts x) 0))))
            (?transient! to))
          ?persistent!)))
 
