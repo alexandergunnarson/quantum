@@ -3,21 +3,22 @@
   (:refer-clojure :exclude
     [reduce mod first, count, *' +', map, dotimes])
   (:require
-    [quantum.core.numeric      :as num
-      :refer [abs mod sqrt pow #?(:clj *') +' exactly]
-      #?@(:cljs [:refer-macros [*']])]
-    [quantum.core.data.binary  :as bin
-      :refer [>>]]
     [quantum.core.collections  :as coll
       :refer [map map+, range+, filter+, mapcat+
               reduce reduce-multi, join join'
               for', dotimes, first, get-in* assoc-in!*
               count kw-map, blank]]
+    [quantum.core.compare      :as comp]
+    [quantum.core.data.binary  :as bin
+      :refer [>>]]
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
       :refer [fn-> <- fn1 fnl fn& fn&2]]
     [quantum.core.log          :as log]
+    [quantum.core.numeric      :as num
+      :refer [abs mod sqrt pow #?(:clj *') +' exactly]
+      #?@(:cljs [:refer-macros [*']])]
     [quantum.core.type         :as t]
     [quantum.core.vars
       :refer [defalias]]
@@ -245,8 +246,8 @@
    `a` defaults to 0 and `b` defaults to 1."
   ([x•] (normalize x• 0 1))
   ([x• a b]
-    (let [min- (coll/reduce-min x•)
-          max- (coll/reduce-max x•)
+    (let [min- (comp/reduce-min x•)
+          max- (comp/reduce-max x•)
           rng  (abs (- min- max-))
           rng' (abs (- a b))
           min' (min a b)]
@@ -270,8 +271,8 @@
         (if (get skip-cols i:col)
             (dotimes [i:row ct:rows]
               (coll/assoc-in!*& x••' (coll/get-in*& x•• i:row i:col) i:row i:col))
-            (let [min:col (->> x•• (map+ (fn1 get i:col)) coll/reduce-min)
-                  max:col (->> x•• (map+ (fn1 get i:col)) coll/reduce-max)
+            (let [min:col (->> x•• (map+ (fn1 get i:col)) comp/reduce-min)
+                  max:col (->> x•• (map+ (fn1 get i:col)) comp/reduce-max)
                   rng:col (abs (- min:col max:col))]
               (dotimes [i:row ct:rows]
                 (coll/assoc-in!*& x••'

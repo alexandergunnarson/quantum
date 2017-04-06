@@ -3,25 +3,29 @@
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "alexandergunnarson"}
   quantum.core.data.set
-           (:require [clojure.set              :as set  ]
-                     [clojure.data.avl         :as avl  ]
-                     [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]       ]
-                     [quantum.core.error       :as err
-                       :refer [->ex]                    ]
-           #?@(:clj [[clojure.data.finger-tree :as ftree]
-                     [flatland.ordered.set     :as oset ]
-                     [seqspert.hash-set                 ]
-                     [clojure.data.int-map     :as imap ]]))
-  #?(:cljs (:require-macros
-                     [quantum.core.vars        :as var
-                        :refer [defalias]               ]))
-           (:import
-           #?@(:clj  [java.util.HashSet
-                     [it.unimi.dsi.fastutil.ints    IntOpenHashSet]
-                     [it.unimi.dsi.fastutil.longs   LongOpenHashSet]
-                     [it.unimi.dsi.fastutil.doubles DoubleOpenHashSet]]
-               :cljs [goog.structs.Set])))
+  (:require
+    [clojure.set              :as set]
+    [clojure.data.avl         :as avl]
+    [quantum.core.vars        :as var
+      :refer [#?(:clj defalias)]]
+    [quantum.core.error       :as err
+      :refer [->ex TODO]]
+#?@(:clj
+   [[clojure.data.finger-tree :as ftree]
+    [flatland.ordered.set     :as oset ]
+    [seqspert.hash-set                 ]
+    [clojure.data.int-map     :as imap ]]))
+  (:require-macros
+    [quantum.core.vars        :as var
+       :refer [defalias]               ])
+  (:import
+#?@(:clj
+    [java.util.HashSet
+    [it.unimi.dsi.fastutil.ints    IntOpenHashSet]
+    [it.unimi.dsi.fastutil.longs   LongOpenHashSet]
+    [it.unimi.dsi.fastutil.doubles DoubleOpenHashSet]]
+    :cljs
+    [goog.structs.Set])))
 
 ; ============ STRUCTURES ============
 
@@ -35,6 +39,25 @@
 #?(:clj (defalias dense-int-set imap/dense-int-set))
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
+
+#?(:clj
+(defn !bit-set
+  "There is the java.util.BitSet implementation.
+   There is also net/openhft/chronicle/algo/bitset/ReusableBitSet:
+     - has a rigid `logicalSize`|capacity
+     - attempts to `get`, `set` or `clear` bits at indices
+       exceeding the size cause an `IndexOutOfBoundsException`"
+  [& args] (TODO)))
+
+#?(:clj
+(defn !bit-set-frame
+  {:see-also "net/openhft/chronicle/algo/bitset/SingleThreadedFlatBitSetFrame"}
+  [& args] (TODO)))
+
+#?(:clj
+(defn !!bit-set-frame
+  {:see-also "net/openhft/chronicle/algo/bitset/ConcurrentFlatBitSetFrame"}
+  [& args] (TODO)))
 
 ; ============ PREDICATES ============
 
