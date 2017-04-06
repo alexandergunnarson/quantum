@@ -53,6 +53,16 @@
 
 (log/this-ns)
 
+; TO INCORPORATE/LINK
+; net.openhft.hashing.LongHashFunction — includes lots of different static hash fns
+; net/openhft/chronicle/algo/hashing/XxHash_r39
+; net.openhft.hashing.XxHash
+; net/openhft/chronicle/algo/hashing/MurmurHash_3
+; net/openhft/chronicle/algo/hashing/CityHash_1_1
+; net/openhft/hashing/CityAndFarmHash_1_1
+; net.openhft.hashing.ModernHotSpotStringHash
+; net.openhft.hashing.MurmurHash_3
+
 ; TO EXPLORE
 ; - Compare Google Closure vs. Forge crypto implementations
 ; - michaelklishin/chash — Consistent Hashing Clojure Library
