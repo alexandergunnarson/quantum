@@ -736,7 +736,12 @@
 
    Note that, from http://docs.datomic.com/capacity.html:
    \"Pipelining 20 transactions at a time with 100 datoms per transaction is a good
-   starting point for efficient imports.\""
+   starting point for efficient imports.\"
+   However, as per Paul DeGrandis:
+   'The \"100 datoms\" rule of thumb applies to large-ish string data, not little datoms
+   like longs, keywords, or such. You can try very high numbers of datoms per transaction
+   (e.g. 50K, but no more than 100K). The real limiting factor is the byte size.'
+   The takeaway is, the optimal batch rate is best determined experimentally."
   {:inspired-by "http://docs.datomic.com/best-practices.html#pipeline-transactions"}
   ([conn conc from-ch                                    ] (tx-pipeline! conn conc from-ch nil))
   ([conn conc from-ch report-ch                          ] (tx-pipeline! conn conc from-ch report-ch nil))
