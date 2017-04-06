@@ -53,6 +53,7 @@
 
 ; `monitor-enter`, `monitor-exit`
 
+; TODO incorporate/link all locking strategies in `net.openhft.chronicle.algo.locks.*`
 #?(:clj (defalias locking core/locking))
 
 ; ===== CORE.ASYNC ETC. ===== ;
