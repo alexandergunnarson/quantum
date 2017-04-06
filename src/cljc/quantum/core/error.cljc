@@ -66,6 +66,9 @@
 
 (def throw-info (rcomp ->ex-info (fn1 throw)))
 
+(defn ?message [x] (when (error? x) #?(:clj (.getMessage ^Throwable x) :cljs (.-message x))))
+(defn ?ex-data [x] (when (ex-info? x) (ex-data x)))
+
 (defn ex->map
   "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
   [e]
@@ -75,8 +78,7 @@
                 :via     [{:type    nil
                            :message (.-message e)
                            :at      nil
-                           :data    (when (instance? cljs.core.ExceptionInfo e)
-                                      (ex-data e))}]
+                           :data    (?ex-data e)}]
                 :trace   (.-trace e)}))) ; TODO str->vec based on browser via goog.debug.*
 
 #?(:clj
