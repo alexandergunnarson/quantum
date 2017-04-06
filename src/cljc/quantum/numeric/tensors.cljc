@@ -352,6 +352,16 @@
     (->> (range+ 0 (count x•0))
          (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i) (c/get x•2 i)))))))
 
+(defnt' v-opi+
+  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+    (assert (= (count x•0) (count x•1)) (kw-map (count x•0) (count x•1))); TODO maybe use (map+ f v1 v2) ?
+    (->> (range+ 0 (count x•0))
+         (map+ (fn [^long i] (f i (c/get x•0 i) (c/get x•1 i))))))
+  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
+    (assert (= (count x•0) (count x•1) (count x•2)) (kw-map (count x•0) (count x•1) (count x•2))) ; TODO maybe use (map+ f v1 v2) ?
+    (->> (range+ 0 (count x•0))
+         (map+ (fn [^long i] (f i (c/get x•0 i) (c/get x•1 i) (c/get x•2 i)))))))
+
 (#?(:clj defnt' :cljs defnt) v-+
   [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
   (v-op+ - x•0 x•1))
