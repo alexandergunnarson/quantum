@@ -51,6 +51,8 @@
              (case-env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))}
   ([& args] `(case-env* ~&env ~@args))))
 
+#?(:clj (defmacro env-lang [] (case-env :clj :clj :cljs :cljs :clr :clr)))
+
 #?(:clj
 (defn core-symbol [env sym] (symbol (str (case-env :cljs "cljs" "clojure") ".core") (name sym))))
 

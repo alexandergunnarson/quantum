@@ -32,6 +32,7 @@
 #?(:clj (defalias env       cmacros/env      ))
 #?(:clj (defalias case-env* cmacros/case-env*))
 #?(:clj (defalias case-env  cmacros/case-env ))
+#?(:clj (defalias env-lang  cmacros/env-lang ))
 #?(:clj (defalias locals    cmacros/locals   ))
 
 #?(:clj (defalias syntax-quote cmacros/syntax-quote))
