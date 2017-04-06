@@ -1,3 +1,10 @@
+## memory
+
+https://github.com/druid-io/druid/issues/3892 (Move from `ByteBuffer` to `Memory`)
+- Yahoo's `Memory` submodule of `DataSketches` is faster than `ByteBuffer` (!)
+
+## quantum.net.http
+
 https://queue.acm.org/detail.cfm?id=3022184
 
 BBR is like TCP++
