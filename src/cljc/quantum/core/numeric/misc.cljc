@@ -1,5 +1,5 @@
 (ns quantum.core.numeric.misc
-          (:refer-clojure :exclude [quot rem mod neg? zero? <= -'])
+          (:refer-clojure :exclude [quot rem mod neg? zero? -'])
           (:require
             [clojure.core       :as core  ]
             [quantum.core.error :as err
@@ -8,8 +8,6 @@
               :refer [defnt #?@(:clj [defnt'])]]
             [quantum.core.vars
               :refer [defalias def-]]
-            [quantum.core.compare
-              :refer [<=]]
             [quantum.core.numeric.operators
               :refer [-' abs']]
             [quantum.core.numeric.predicates

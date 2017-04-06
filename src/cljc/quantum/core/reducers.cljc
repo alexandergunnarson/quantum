@@ -545,11 +545,6 @@
               xs)]
     (if (identical? ret sentinel) nil ret)))
 
-(defn reduce-max-key [kfn xs] (reduce-sentinel (fn&2 max-key kfn) xs))
-(defn reduce-min-key [kfn xs] (reduce-sentinel (fn&2 min-key kfn) xs))
-(defn reduce-min     [    xs] (reduce-sentinel       min          xs))
-(defn reduce-max     [    xs] (reduce-sentinel       max          xs))
-
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
    times those inputs appeared in the collection.

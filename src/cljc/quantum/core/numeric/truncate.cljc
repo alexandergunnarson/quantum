@@ -12,7 +12,7 @@
       :refer [#?@(:clj [->int ->double])]]
     [quantum.core.numeric.convert
       :refer [->bigdec]]
-    [quantum.core.compare   :as comp
+    [quantum.core.compare.core :as ccomp
       :refer [<= >=]]
     [quantum.core.numeric.predicates
       :refer [pos?]])
