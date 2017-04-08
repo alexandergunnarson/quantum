@@ -13,16 +13,32 @@
   (is (= :d ((ns/ntha 3) :a :b :c :d :e)))
   (is (= :e ((ns/ntha 4) :a :b :c :d :e))))
 
-(deftest test:fconj
+(deftest test:conja
   (let [a 1 b 2 c 3]
     (is (= (+ a (inc b) (- c))
-          (let [g (fn [a' b' c' d' e'] (+ a' (d' b') (e' c')))]
-            ((ns/fconj g inc -)
-             a b c))))
+           (let [g (fn [a' b' c' d' e'] (+ a' (d' b') (e' c')))]
+             ((ns/conja g inc -) a b c))))
     (is (= [1 2 3 4 5]
            (let [g (fn [a' b' c' d' e'] [a' b' c' d' e'])]
-             ((ns/fconj g 4 5)
-              a b c))))))
+             ((ns/conja g 4 5) a b c))))))
+
+(deftest test:reversed
+  (let [sub-reversed ((ns/reversed -) 0 1 2 3 4 5)]
+    (is (= sub-reversed
+           (apply - (reverse [0 1 2 3 4 5]))))
+    (is (not= sub-reversed (- 0 1 2 3 4 5)))))
+
+(deftest test:mapa
+  (is (= ((ns/mapa (fn [a b] {a b}) name (ns/rcomp name symbol)) :a :b)
+         {"a" 'b}))
+  (is (= ((ns/mapa + identity first) 6 [3 4])
+         9))
+  (testing "Extra fns are ignored"
+    (is (= ((ns/mapa + identity first dec) 6 [3 4])
+           9)))
+  (testing "Too-few fns are ignored"
+    (is (= ((ns/mapa + identity first dec) 6 [3 4] 2 7)
+           17))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  HIGHER-ORDER FUNCTIONS   }====================================================
 ;=================================================={                           }====================================================

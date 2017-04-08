@@ -1,40 +1,27 @@
 (ns quantum.test.core.reducers
+           (:refer-clojure :exclude
+             [transduce])
            (:require
              [quantum.core.test
                :refer [deftest is testing]]
              [quantum.core.reducers :as ns]
+             [quantum.core.fn
+               :refer [aritoid fn' firsta rcomp]]
              [quantum.core.reducers.fold :as fold]
+             [quantum.core.reducers.reduce :as red
+               :refer [transduce]]
      #?(:clj [clojure.test.generative :refer [defspec]])
      #?(:clj [clojure.data.generators :as gen]))
   #?(:cljs (:require-macros
              [quantum.test.core.reducers
                :refer [defequivtest]])))
 
-(comment
-  "How a reducer works:"
-  (->> coll (map+ inc) (map+ triple) (join []))
-  "Results in this reducer:"
-  (fn reducer [acc x]
-    (let [reducer1 (fn reducer [acc x]
-                     (conj acc (triple x)))]
-      (reducer1 acc (inc x))))
-  "Which is used as the reducing function to reduce into a vector.")
+(deftest multiplex
+  (let [sum:rf   +
+        count:rf (aritoid + identity (rcomp firsta inc))
+        mean:rf  (ns/multiplex / sum:rf count:rf)]
+    (is (= 67/7 (transduce mean:rf [5 8 2 19 30 1 2])))))
 
-;___________________________________________________________________________________________________________________________________
-;=================================================={      LAZY REDUCERS       }=====================================================
-;=================================================={                          }=====================================================
-(defn test:reverse-conses
-  ([s tail] )
-  ([s from-tail to-tail]))
-
-(defn test:seq-seq
-  [f s])
-
-(defn test:lseq->>
-  [s & forms])
-
-(defn test:seq-once
-  [coll])
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FUNCTIONEERING      }=====================================================
 ;=================================================={      incl. currying      }=====================================================

@@ -104,6 +104,8 @@
   [sym arities]
   )
 
+; TODO test (macroexpand '(refs/deref (refs/atom* 1))) — should all be `reify` calls but for some reason aren't...
+
 '(deftest defnt+:simple
   (let [simple '(defnt+ simple [a even?] (+ a 5))
         expanded (macroexpand-all simple)]
