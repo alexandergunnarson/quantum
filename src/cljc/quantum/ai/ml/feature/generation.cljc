@@ -4,15 +4,19 @@
    search for new features that describe the objects better than the attributes
    supplied with the training instances.
    Feature normalization is bundled up into this namespace."
+  (:refer-clojure :exclude
+    [count])
   (:require
-    [quantum.core.collections :as coll
-      :refer [indexed+ remove+ map+ join]]
+    [quantum.ai.ml.core          :as ml]
+    [quantum.core.collections    :as coll
+      :refer [indexed+, filter+, remove+, map+, join join!
+              ->objects count]]
     [quantum.core.compare        :as comp]
     [quantum.core.data.primitive :as prim]
     [quantum.core.error          :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [fn->> fn->]]
+      :refer [fn->> fn-> fn1]]
     [quantum.core.log            :as log]
     [quantum.core.macros
       :refer [defnt]]
@@ -58,17 +62,6 @@
                       smile.feature.Nominal2SparseBinary}}
   [?] (TODO))
 
-(defn normalize-into-matrix
-  "Takes an instance matrix `x••` and normalizes the non-nominal attributes
-   into a 2D array."
-  [x•• a•:x]
-  (numc/normalize-2d:column
-    (->> x•• coll/->array-nd)
-    (->> a•:x indexed+
-              (remove+ (fn-> second :type (= :nominal)))
-              (map+    first)
-              (join    #{}))))
-
 (defnt missing?
   "Returns the representation for a missing value associated with the type
    of the argument passed.
@@ -78,3 +71,18 @@
    the max value was preferred to maintain parity with other primitives."
   ([#{byte char short int long float double} x] (= x (prim/->max-value x)))
   ([^default                                 x] (nil? x)))
+
+(defn normalize-into-matrix
+  "Takes an instance matrix `x••` and normalizes the non-nominal, non-missing
+   attributes into a 2D array."
+  ([x•• a•:x] (normalize-into-matrix x•• a•:x (fn1 missing?)))
+  ([x•• a•:x missing?f]
+    (numc/normalize-2d:column
+      (->> x•• coll/->array-nd)
+      (->> a•:x indexed+
+                (filter+ (fn-> second ml/nominal?))
+                (map+    first)
+                (join    #{}))
+      missing?f
+      (->> a•:x (map+ :min) (join! (->objects (long (count a•:x))))) ; TODO uncast
+      (->> a•:x (map+ :max) (join! (->objects (long (count a•:x)))))))) ; TODO uncast
