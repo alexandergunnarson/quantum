@@ -19,8 +19,10 @@
               :refer [defalias]])
   (:import #?@(:clj  [java.util.HashMap
                       [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
-                      [it.unimi.dsi.fastutil.longs   Long2ReferenceOpenHashMap]
-                      [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]]
+                      [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
+                                                     Long2ReferenceOpenHashMap]
+                      [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
+                      [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
                :cljs [goog.structs.Map])))
 
 ; TO EXPLORE
@@ -55,7 +57,7 @@
                             [(get m-0 k1) k1]))))
 
 #?(:clj (def int-map       imap/int-map  ))
-#?(:clj (defalias hash-map:long->object int-map))
+#?(:clj (defalias hash-map:long->ref int-map))
 #?(:clj (def array-map     core/array-map))
 #?(:clj (def hash-map      core/hash-map ))
 
@@ -191,8 +193,54 @@
 #?(:clj (defn ^Int2ReferenceOpenHashMap !hash-map:int->ref [] (Int2ReferenceOpenHashMap.)))
 #?(:clj (defalias !hash-map:int->object !hash-map:int->ref))
 
+#?(:clj (defn ^Long2LongOpenHashMap !hash-map:long->long [] (Long2LongOpenHashMap.)))
+#?(:clj (defalias !hash-map:long !hash-map:long->long))
+
 #?(:clj (defn ^Long2ReferenceOpenHashMap !hash-map:long->ref [] (Long2ReferenceOpenHashMap.)))
 #?(:clj (defalias !hash-map:long->object !hash-map:long->ref))
 
 #?(:clj (defn ^Double2ReferenceOpenHashMap !hash-map:double->ref [] (Double2ReferenceOpenHashMap.)))
 #?(:clj (defalias !hash-map:double->object !hash-map:double->ref))
+
+#?(:clj (defn ^Reference2LongOpenHashMap !hash-map:ref->long [] (Reference2LongOpenHashMap.)))
+#?(:clj (defalias !hash-map:object->long !hash-map:ref->long))
+
+
+(defn bubble-max-key [k coll] ; TODO move
+  "Move a maximal element of coll according to fn k (which returns a number)
+   to the front of coll."
+  {:adapted-from 'clojure.set/bubble-max-key}
+  (let [max (apply max-key k coll)]
+    (cons max (remove #(identical? max %) coll))))
+
+; TODO abstract with set/difference and move
+(defn difference-by-key
+  ([m0] m0)
+  ([m0 m1] (if (< (count m0) (count m1))
+               (reduce-kv (fn [m' k v]
+                             (if (contains? m1 k)
+                                 (dissoc m' k)
+                                 m'))
+                 m0 m0)
+               (reduce dissoc m0 (keys m1))))
+  ([m0 m1 & ms]
+     (reduce difference-by-key m0 (conj ms m1))))
+
+; TODO abstract with set/union and move
+(defn union-by-key [a b] (merge a b))
+
+ ; TODO abstract with set/intersection and move
+(defn intersection-by-key
+  ([m0] m0)
+  ([m0 m1]
+     (if (< (count m1) (count m0))
+         (recur m1 m0)
+         (reduce-kv (fn [m' k v]
+                      (if (contains? m1 k)
+                          m'
+                          (dissoc m' k)))
+           m0 m0)))
+  ([m0 m1 & ms]
+     (let [bubbled-ms (bubble-max-key #(- (count %)) (conj ms m1 m0))]
+       (reduce intersection-by-key (first bubbled-ms) (rest bubbled-ms)))))
+
