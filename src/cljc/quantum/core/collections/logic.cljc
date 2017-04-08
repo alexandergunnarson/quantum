@@ -12,8 +12,9 @@
 
 (defn seq-or
   "∃: A faster version of |some| using |reduce| instead of |seq|."
-  [pred args]
-  (reduce (fn [_ arg] (and (pred arg) (reduced arg  ))) nil args))
+  ([xs] (seq-or identity xs))
+  ([pred xs]
+    (reduce (fn [_ x] (and (pred x) (reduced x))) nil xs)))
 
 (defalias some seq-or)
 
@@ -23,8 +24,9 @@
 
 (defn seq-and
   "∀: A faster version of |every?| using |reduce| instead of |seq|."
-  [pred args]
-  (reduce (fn [_ arg] (or  (pred arg) (reduced false))) nil args))
+  ([xs] (seq-and identity xs))
+  ([pred xs]
+    (reduce (fn [_ x] (or (pred x) (reduced false))) nil xs)))
 
 (defalias every? seq-and)
 
@@ -32,12 +34,12 @@
 
 (defalias not-every? seq-nand)
 
-(defn apply-and [xs] (seq-and identity xs))
-(defn apply-or  [xs] (seq-or  identity xs))
+(defn apply-and [xs] (seq-and xs))
+(defn apply-or  [xs] (seq-or  xs))
 
 (defn seq-and-2
   "`seq-and` for pairwise comparisons."
-  [pred xs]
-  (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs)))
+  ([pred xs]
+    (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs))))
 
 (defalias every?-2 seq-and-2)
