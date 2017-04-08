@@ -20,11 +20,9 @@
           [quantum.core.vars                :as var
             :refer [defalias]]))
 
-(def compiler-lang #?(:clj :clj :cljs :cljs))
-
 (def class #?(:clj clojure.core/class :cljs type))
 
-(defs/def-types #?(:clj :clj :cljs :cljs))
+(defs/def-types* quantum.core.core/lang)
 
 ; TODO differentiate between unevaled and evaled (symbolic and literal)
 
@@ -112,7 +110,7 @@
     :cljs #{ubytes ubytes-clamped ushorts uints bytes shorts       ints       floats doubles}})
 
 (def cljs-typed-array-convertible-classes
-  (let [cljs-typed-array-types (-> defs/array-1d-types :cljs (dissoc :object))
+  (let [cljs-typed-array-types (-> defs/array-1d-types* :cljs (dissoc :object))
         generalize-type (fn->> name str/lower-case (remove #{\u}))]
     (->> cljs-typed-array-types
          (reduce
@@ -149,7 +147,7 @@
             (symbol ?object-type)
             (str (apply str (drop n brackets)) "L" ?object-type ";"))))))
 
-(def default-types (-> types-unevaled (get compiler-lang) :any))
+(def default-types (-> types-unevaled (get quantum.core.core/lang) :any))
 
 (defn ->boxed   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
