@@ -212,12 +212,14 @@
 #?(:clj (variadic-proxy div& div-bin&))
 #?(:clj (defmalias / quantum.core.numeric.operators/div))
 
+#?(:clj
 (defnt' div:natural [^number? n ^number? denom]
   (if (zero? denom)
       (if (zero? n) 0 #?(:clj Double/POSITIVE_INFINITY :cljs js.Number/POSITIVE_INFINITY))
-      (/ n denom)))
+      (/ n denom))))
 
 ; TODO integer division via div:int
+; TODO div:nil which returns nil if dividing by 0
 
 ;_____________________________________________________________________
 ;==================={   UNARY MATH OPERATORS   }======================
