@@ -21,12 +21,6 @@
 
 #?(:clj (defalias bean core/bean))
 
-#?(:clj
-(defmalias
-  ^{:doc "Call a private field, must be known at compile time. Throws an error
-          if field is already publicly accessible."}
-  field ana/field))
-
 (def object-class=>record-class (atom {}))
 
 ; TODO use clojure.core/bean, because that's basically the same thing
@@ -75,19 +69,20 @@
     (map count ps))))
 
 #?(:clj
-(defn invoke [obj method & args]
-  (clojure.lang.Reflector/invokeInstanceMethod obj method
-    (into-array Object args))))
+(defn get-field [obj ^String field]
+  (-> (.getDeclaredField (class obj) field)
+      (doto (.setAccessible true))
+      (.get obj))))
 
 #?(:clj
-(defn invoke-private
+(defn invoke
   ([^Class c ^String name- args]
     (let [m (->> (.getDeclaredMethods c)
                  ^java.lang.reflect.Method (coll/ffilter (fn [^java.lang.reflect.Method x] (= (.getName x) name-)))
                  (<- doto (.setAccessible true)))]
       (.invoke m nil (into-array Object args))))
   ([^Class c ^String name- params args]
-    (invoke-private c name- params nil args))
+    (invoke c name- params nil args))
   ([^Class c ^String name- params target args]
     (let [m (doto (.getDeclaredMethod c name- (into-array Class params))
                   (.setAccessible true))]
