@@ -4,7 +4,7 @@
   (:require  [clojure.core           :as core]
              [clojure.core.reducers  :as red]
              [clojure.walk           :as walk
-               :refer [prewalk]]
+               :refer [prewalk postwalk]]
              [cljs.analyzer]
    #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
              [clojure.jvm.tools.analyzer]
@@ -264,14 +264,16 @@
 (defn gen-args [min-n max-n s gensym?]
   (->> (range min-n max-n) (map (fn [i] (symbol (str (if gensym? (gensym s) s) i))))))
 
-(defn arity-builder [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf]]
+(defn arity-builder [positionalf variadicf & [min-positional-arity max-positional-arity sym-genf no-gensym?]]
   (let [mina (or min-positional-arity 0)
         maxa (or max-positional-arity 18)
         args (->> (range mina (+ mina maxa))
                   (map-indexed (fn [iter i]
                                  (-> (if sym-genf (sym-genf iter) "x")
-                                     gensym (str iter) symbol))))
-        variadic-arg (gensym "xs")]
+                                     (cond-> (not no-gensym?) gensym)
+                                     (str iter)
+                                     symbol))))
+        variadic-arg (-> "xs" (cond-> (not no-gensym?) gensym) symbol)]
     `[~@(for [arity (range mina (inc maxa))]
           (let [args:arity (take arity args)]
             `([~@args:arity] ~(positionalf args:arity))))
@@ -279,3 +281,39 @@
           [`([~@args ~'& ~variadic-arg] ~(variadicf args variadic-arg))])]))
 
 (def max-positional-arity {:clj 18 :cljs 18})
+
+; ----- UNIFY GENSYMS ----- ;
+; Adapted from Potemkin for use with both CLJ and CLJS
+
+(def unified-gensym-regex #"([a-zA-Z0-9\-\'\*]+)#__\d+__auto__$")
+
+(def gensym-regex #"(_|[a-zA-Z0-9\-\'\*]+)#?_+(\d+_*#?)+(auto__)?$")
+
+(defn unified-gensym?
+  {:attribution 'potemkin.macros}
+  [s]
+  (and (symbol? s)
+       (re-find unified-gensym-regex (str s))))
+
+(defn gensym?
+  {:attribution 'potemkin.macros}
+  [s]
+  (and (symbol? s)
+       (re-find gensym-regex (str s))))
+
+(defn un-gensym
+  {:attribution 'potemkin.macros}
+  [s]
+  (second (re-find gensym-regex (str s))))
+
+(defn unify-gensyms
+  "All gensyms defined using two hash symbols are unified to the same
+   value, even if they were defined within different syntax-quote scopes."
+  {:attribution 'potemkin.macros}
+  [body]
+  (let [gensym* (memoize gensym)]
+    (postwalk
+      #(if (unified-gensym? %)
+         (symbol (str (gensym* (str (un-gensym %) "__")) "__auto__"))
+         %)
+      body)))
