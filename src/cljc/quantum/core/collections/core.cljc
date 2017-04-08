@@ -1,11 +1,10 @@
-(ns
-  ^{:doc "Retakes on core collections functions like `first`, `rest`,
-          `get`, `nth`, `last`, `index-of`, `slice` etc."}
-  quantum.core.collections.core
+(ns quantum.core.collections.core
+  "Retakes on core collections functions like `first`, `rest`,
+  `get`, `nth`, `last`, `index-of`, `slice` etc."
   (:refer-clojure :exclude
     [vector hash-map rest count first second butlast last aget get nth pop peek
      conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse rseq
-     empty? empty class reduce swap! reset!
+     empty? empty class reduce
      #?@(:cljs [array])])
   (:require [clojure.core                   :as core
              #?@(:cljs [:refer IEmptyableCollection])]
@@ -38,7 +37,7 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer [fn1 fn&2 rfn rcomp firsta fn-> <-]]
+              :refer [fn1 fn&2 rfn rcomp firsta fn-> <- aritoid]]
             [quantum.core.logic             :as logic
               :refer [fn= whenc whenf ifn1]]
             [quantum.core.collections.logic
@@ -51,7 +50,7 @@
             [quantum.core.reducers.reduce   :as red
               :refer [reduce reducei reducer]]
             [quantum.core.type              :as t
-              :refer [class pattern?]]
+              :refer [class regex?]]
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
@@ -94,8 +93,7 @@
             [it.unimi.dsi.fastutil.doubles  DoubleArrayList  DoubleSet]
             [it.unimi.dsi.fastutil.objects  ObjectArrayList ]
             ; TODO it.unimi.dsi.fastutil ReferenceArrayList ?
-            [java.util.concurrent.atomic AtomicReference AtomicBoolean AtomicInteger AtomicLong]
-            [com.google.common.util.concurrent AtomicDouble])
+            )
     :cljs (:import
             goog.string.StringBuffer)))
 
@@ -269,12 +267,12 @@
         clojure.lang.RT/EMPTY_ARRAY
         (throw (Util/runtimeException (str "Unable to convert: " (.getClass x) " to Object[]"))))))
 
-(defn count:rfn ([] 0) ([n' _] (inc n')))
+(def count:rf (aritoid + identity (rcomp firsta inc)))
 
 (defn reduce-count
   {:performance "On non-counted collections, `count` is 71.542581 ms, whereas
                  `reduce-count` is 36.824665 ms - twice as fast"}
-  [xs] (reduce count:rfn xs))
+  [xs] (reduce count:rf xs))
 
 (defnt ^long count
   "Incorporated `clojure.lang.RT/count` and `clojure.lang.RT/countFrom`"
@@ -313,9 +311,13 @@
   #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
   #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
                                               x            k             ] (.get x k)))
-  #?(:clj  ([^!map:int->ref?                  x ^int       k             ] (.get x k)))
-  #?(:clj  ([^!map:long->ref?                 x ^long      k             ] (.get x k)))
-  #?(:clj  ([^!map:double->ref?               x ^double    k             ] (.get x k)))
+  #?(:clj  ([#{!map:byte->any?}               x ^byte      k             ] (.get x k)))
+  #?(:clj  ([#{!map:char->any?}               x ^char      k             ] (.get x k)))
+  #?(:clj  ([#{!map:short->any?}              x ^short     k             ] (.get x k)))
+  #?(:clj  ([#{!map:int->any?}                x ^int       k             ] (.get x k)))
+  #?(:clj  ([#{!map:long->any?}               x ^long      k             ] (.get x k)))
+  #?(:clj  ([#{!map:float->ref?}              x ^float     k             ] (.get x k)))
+  #?(:clj  ([#{!map:double->ref?}             x ^double    k             ] (.get x k)))
            ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
   #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
            ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
@@ -339,24 +341,6 @@
                   (throw (ex-info "`get` not supported on" {:type (type x)}))))
          #_([                                 x            i if-not-found] (core/get x i if-not-found)))
 
-#?(:clj  (defnt swap!
-           ([^IAtom x f      ] (.swap x f      ))
-           ([^IAtom x f a0   ] (.swap x f a0   ))
-           ([^IAtom x f a0 a1] (.swap x f a0 a1)))
-   :cljs (defalias swap! core/swap!))
-
-#?(:clj (defmacro doto! [x & args] `(doto ~x (swap! ~@args))))
-
-#?(:clj  (defnt reset!
-           ([#{IAtom clojure.lang.Volatile} x          v] (.reset x v) v)
-           ([^AtomicReference               x          v] (.set   x v) v)
-           ([^AtomicBoolean                 x ^boolean v] (.set   x v) v)
-           ([^AtomicInteger                 x ^int     v] (.set   x v) v)
-           ([^AtomicLong                    x ^long    v] (.set   x v) v)
-           ([^AtomicDouble                  x ^double  v] (.set   x v) v))
-   :cljs (defalias reset! core/reset!))
-
-
 (declare assoc-protocol)
 
 ; TODO assoc!, assoc-in! for files
@@ -364,13 +348,9 @@
   #?(:cljs (^<0> [^array?                  x ^int    k :<0>:1 v] (aset      x k v) x))
   #?(:clj  (^<0> [^array?                  x ^int    k :<0>:1 v] (Array/set x v k)))
   #?(:clj  (^<0> [^list?                   x ^int    k        v] (.set x k v) x)) ; TODO it may fail sometimes
-  ;; TODO do type parameterization for maps and arraylists too
-  #?(:clj  (^<0> [#{!map:ref->ref? !!map?} x         k        v] (.put x k v) x))
-  #?(:clj  (^<0> [#{!map:int->ref?}        x ^int    k        v] (.put x k v) x))
-  #?(:clj  (^<0> [#{!map:long->ref?}       x ^long   k        v] (.put x k v) x))
-  #?(:clj  (^<0> [#{!map:double->ref?}     x ^double k        v] (.put x k v) x))
+  ;; TODO do type parameterization for maps and arraylists too in order to not box these args
+  #?(:clj  (^<0> [#{!map? !!map?}          x         k        v] (.put x k v) x))
            (^<0> [^transient?              x         k        v] (core/assoc! x k v))
-           (     [^atom?                   x         k        v] (swap! x assoc-protocol k v))
   #?(:clj  (^<0> [^default                 x ^int    k        v]
              (if (t/array? x)
                  (java.lang.reflect.Array/set x k v)
@@ -391,11 +371,11 @@
    If the value is immutable, it will immutably `assoc`."
         (^<0> [^array?     x ^int k :<0>:1 v] (assoc! x k v))
         (^<0> [^transient? x      k        v] (assoc! x k v))
-        (     [^atom?      x      k        v] (assoc! x k v))
         (     [#?(:clj #{clojure.lang.Associative}
                   :cljs #{+vec? +map? nil?}) x k v] (assoc x k v))
               ; technically, `(- map? +map?)`
-#?(:clj (     [#{!map? !!map?} x  k        v] (assoc! x k v)))
+              ;; TODO do type parameterization for maps and arraylists too in order to not box these args
+#?(:clj (     [#{!map? !!map?} x  k        v] (assoc! x k v))) ; TODO types
         (     [^default    x      k        v]
                 (if (nil? x)
                     {k v}
@@ -404,7 +384,7 @@
 ; ===== ARRAYS ===== ;
 
 (defn gen-array-converter [lang type-key type-unevaled]
-  (let [fn-sym (symbol (str "->" (name type-key) "-array-" (name lang)))]
+  (let [fn-sym (symbol (str "->" (name type-key) "s-" (name lang)))]
     (case lang
       :clj
         (let [type-key->pred-sym #(symbol (str (name %) "s?"))
@@ -417,9 +397,9 @@
             ; identity
             ([#{~type-sym} x#] x#)
             ; size
-            ([#{~'int} x#] (~(symbol "Array" (str "newUninitialized1d" capitalized-type-str "Array")) x#))
+            ([#{~'long} x#] (~(symbol "Array" (str "newUninitialized1d" capitalized-type-str "Array")) (int x#))) ; TODO uncast
             ; compatible arrays
-            ([~(->> tdef/array-1d-types :clj keys
+            ([~(->> tdef/array-1d-types* :clj keys
                     (map type-key->pred-sym)
                     set
                     (<- disj type-sym)) x#]
@@ -432,13 +412,13 @@
             ; TODO vector, etc. absorption of arrays, including typed vectors
             ; TODO type as `reducible?`
             ([#{~'default} x#]
-              (let [arr# (~fn-sym (int (count x#)))] ; TODO uncast
+              (let [arr# (~fn-sym (long (count x#)))] ; TODO uncast
                 (reducei (fn [_# elem# ^long i#] (assoc!& arr# i# (~elem-cast-sym elem#))) arr# x#)))))
       :cljs
         (let [type-sym type-unevaled
               array-compatible-types
                 (if (= type-key :object)
-                    (-> tdef/array-1d-types :cljs (core/dissoc :object) keys set (core/conj 'number?))
+                    (-> tdef/array-1d-types* :cljs (core/dissoc :object) keys set (core/conj 'number?))
                     (into (core/get tcore/cljs-typed-array-convertible-classes type-sym)
                           '#{objects? number?}))]
          `(defnt ~fn-sym
@@ -453,19 +433,23 @@
 #?(:clj
 (defmacro gen-array-converters []
   (let [lang (env-lang)]
-   `(do ~@(for [[type-key type-unevaled] (get tdef/array-1d-types lang)]
+   `(do ~@(for [[type-key type-unevaled] (get tdef/array-1d-types* lang)]
             (gen-array-converter lang type-key type-unevaled))
-        ~@(for [[type-key _] (merge (:clj  tdef/array-1d-types)
-                                    (:cljs tdef/array-1d-types))]
-            `(defmalias ~(symbol (str "->" (name type-key) "s"))
-                        ~(when (-> tdef/array-1d-types :clj  (get type-key))
-                           (symbol (str "->" (name type-key) "-array-clj")))
-                        ~(when (-> tdef/array-1d-types :cljs (get type-key))
-                           (symbol (str "->" (name type-key) "-array-cljs")))))))))
+        ~@(for [[type-key _] (merge (:clj  tdef/array-1d-types*)
+                                    (:cljs tdef/array-1d-types*))]
+            `(defmalias ~(if (= type-key :ubyte-clamped)
+                             '->ubytes-clamped
+                             (symbol (str "->" (name type-key) "s")))
+                        ~(when (-> tdef/array-1d-types* :clj  (get type-key))
+                           (symbol (str (ns-name *ns*)) (str "->" (name type-key) "s-clj")))
+                        ~(when (-> tdef/array-1d-types* :cljs (get type-key))
+                           (symbol (str (ns-name *ns*)) (if (= type-key :ubyte-clamped)
+                                                            "->ubytes-clamped-cljs"
+                                                            (str "->" (name type-key) "s-cljs"))))))))))
 
 (gen-array-converters)
 
-(defnt array-of-type ; TODO get this from `Arrays`
+(defnt array-of-type
   #?@(:clj  [(^<0> [^array?    x ^int n] (Array/arrayOfType x n))]
       :cljs [(^<0> [^bytes?    x ^int n] (->bytes   n))
              (^<0> [^ubytes?   x ^int n] (->ubytes  n))
@@ -496,7 +480,7 @@
 (defnt ^"[Ljava.lang.Object;" ->array:parallel
   ([^+vec? x] (seqspert.vector/vector-to-array x))))
 
-(defnt ->array-list
+(defnt ->!vector
   ([#{!array-list?
       #?@(:clj [BooleanArrayList
                 ByteArrayList
@@ -517,9 +501,11 @@
   ([^doubles?  x] #?(:clj (DoubleArrayList.  x) :cljs (TODO)))
   ([^objects?  x] #?(:clj (ObjectArrayList.  x) :cljs (TODO))))
 
+#?(:clj (defalias ->!array-list ->!vector))
+
 
 ; TODO: `newUninitialized<n>d<type>Array`
-
+; TODO boolean array doesn't work... ?
 #?(:clj
 (defmacro gen-arr<> []
  `(defnt' ~'arr<>
@@ -537,7 +523,7 @@
 #?(:clj
 (defmacro gen-object<> []
  `(defnt' ~'object<>
-    "Creates a 1-D object array"
+    "Creates a 1-D object array from the provided arguments"
    ~@(for [arglength (range 1 11)]
        (let [arglist (vec (repeatedly arglength gensym))]
          `(~arglist
@@ -560,7 +546,7 @@
 
 #?(:clj (gen-array-nd))
 
-(defnt elem->array
+(defnt elem->array ; TODO generate this
   #?(:clj  ([^boolean x ^long n0                  ] (->booleans-nd  n0      )))
   #?(:clj  ([^boolean x ^long n0 ^long n1         ] (->booleans-nd  n0 n1   )))
   #?(:clj  ([^boolean x ^long n0 ^long n1 ^long n2] (->booleans-nd  n0 n1 n2)))
@@ -603,7 +589,9 @@
   #?(:cljs (^<0> [^pnum?     x] 0             ))
            (^<0> [^string?   x] ""            )
            ; TODO ^array?
-           (^<0> [^array-1d? x] (array-of-type x 0)) ; TODO should it be `Array/cloneSizes`?
+           (^<0> [^array-1d? x] (array-of-type x 0))
+         #_(^<0> [^array-2d? x] (array-of-type x 0 0))
+         #_(^<0> [^array-3d? x] (array-of-type x 0 0 0))
   #?(:clj  (^<0> [^ArrayList x] (ArrayList.)))
            (^<0> [#{#?(:clj  IPersistentCollection
                        :cljs IEmptyableCollection)} x] (#?(:clj .empty :cljs -empty) x))
@@ -613,7 +601,7 @@
   "Like `empty`, but for e.g. arrays and similar indexed types, as well as strings,
    creates a blank version. In the case of arrays, an initizalized array is created
    containing whatever the default values are for that array — e.g. 0.0 or 0L and so on."
-  #?(:clj  (^<0> [^array?    x] (Array/cloneSizes x))
+  #?(:clj  (^<0> [^array?    x] (Array/cloneSizes x)) ; TODO move to Array/newInitializedArrayOfType
      :cljs (^<0> [^array-1d? x] (array-of-type x (count x)))))
 
 (defnt ^long lasti
@@ -695,7 +683,7 @@
   ([^string? coll elem]
     (cond (string? elem)
           (let [i (.indexOf coll ^String elem)] (if (= i -1) nil i))
-          (pattern? elem)
+          (regex? elem)
           #?(:clj  (let [^java.util.regex.Matcher matcher
                           (re-matcher elem coll)]
                      (when (.find matcher)
@@ -756,7 +744,7 @@
   ([#{keyword? symbol?} x elem]
     (or (some-> x name      (containsv? elem))
         (some-> x namespace (containsv? elem))))
-  ([^pattern? x elem]
+  ([^regex? x elem]
     (nnil? (re-find elem x)))
   ([          x elem]
     (seq-or (fn= elem) x)))
@@ -829,7 +817,7 @@
 
 (defnt nth
   ; TODO import clojure.lang.RT/nth
-  ([#{+vec? seq?}    xs            i] (get xs i))
+  ([#{?!+vec? seq?}  xs            i] (get xs i))
   ([#{string? #?(:clj !array-list?)
       array? tuple?} xs ^nat-long? i] (get xs i))
   ([^transformer?    xs ^nat-long? i]
@@ -839,7 +827,7 @@
                                 (do (vswap! i' inc)
                                     ret)))
         nil xs)))
-  ([xs i] (core/nth xs i))
+  ([^default xs i] (core/nth xs i))
   #_([#{clojure.data.avl.AVLSet
       clojure.data.avl.AVLMap
       java.util.Map
@@ -888,26 +876,25 @@
 
 (defnt dissoc
   {:imported "clojure.lang.RT/dissoc"}
-           ([^+map?                       coll k] (#?(:clj .without :cljs -dissoc ) coll k))
-           ([^+set?                       coll x] (#?(:clj .disjoin :cljs -disjoin) coll x))
-           ([^+vec?                       coll i]
-             (catvec (subvec coll 0 i) (subvec coll (inc (#?(:clj identity* :cljs long) i)) (count coll))))
-  #?(:cljs ([^nil?                        coll x] nil))
-  #?(:clj  ([^default                     coll x]
-             (if (nil? coll)
+           ([^+map?                       xs k] (#?(:clj .without :cljs -dissoc ) xs k))
+           ([^+set?                       xs x] (#?(:clj .disjoin :cljs -disjoin) xs x))
+           ([^+vec?                       xs i]
+             (catvec (subvec xs 0 i) (subvec xs (inc (#?(:clj identity* :cljs long) i)) (count xs))))
+  #?(:cljs ([^nil?                        xs x] nil))
+  #?(:clj  ([^default                     xs x]
+             (if (nil? xs)
                  nil
-                 (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type coll)}))))))
+                 (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type xs)}))))))
 
 (defnt dissoc!
-  ([^transient? coll k  ] (core/dissoc! coll k))
-  ([^atom?      coll k  ] (swap! coll (fn&2 dissoc) k)))
+  ([^transient? coll k  ] (core/dissoc! coll k)))
 
 (defnt conj!
-  {:todo #{"Add more possibilities"}}
+  {:todo #{"Add more possibilities like `!set`"}}
           ([^transient?       x          v] (core/conj! x v))
-          ([^atom?            x          v] (swap! x core/conj v))
           ([#{!array-list?
               #?(:clj ObjectArrayList)} x v] (doto x (#?(:clj .add :cljs .push) v)))
+          ([#{!set:ref?}      x          v] (doto x (.add v)))
           ; TODO use typedefs for these
   #?(:clj ([#{BooleanArrayList
               BooleanSet}     x ^boolean v] (doto x (.add v))))
@@ -928,8 +915,7 @@
           ([^!string?         x          v] (.append x v)))
 
 (defnt disj!
-  ([^transient? x v] (core/disj! x v))
-  ([^atom?      x v] (swap! x disj v)))
+  ([^transient? x v] (core/disj! x v)))
 
 #?(:clj
 (defmacro update! [coll i f]
@@ -942,7 +928,7 @@
 
 (defnt first
   {:todo #{"Import core/first"}}
-  ([#{array? tuple? +vec?}           x] (nth x 0))
+  ([#{array? tuple? ?!+vec?}         x] (nth x 0))
   ([#{string? #?(:clj !array-list?)} x] (get x 0 nil))
   ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace first) (-> x name first)))
   ([^transformer?                    x] (reduce (rfn [_ x'] (reduced x')) nil x))
@@ -952,10 +938,10 @@
 
 (defnt second
   {:todo #{"Import core/second"}}
-  ([#{array? tuple? +vec? transformer?} x] (nth x 1))
-  ([#{string? #?(:clj !array-list?)}    x] (#?(:clj get& :cljs get) x 1 nil))
-  ([#{symbol? keyword?}                 x] (if (namespace x) (-> x namespace second) (-> x name second)))
-  ([^default                            x] (core/second x)))
+  ([#{array? tuple? ?!+vec? transformer?} x] (nth x 1))
+  ([#{string? #?(:clj !array-list?)}      x] (#?(:clj get& :cljs get) x 1 nil))
+  ([#{symbol? keyword?}                   x] (if (namespace x) (-> x namespace second) (-> x name second)))
+  ([^default                              x] (core/second x)))
 
 (defnt butlast
   {:todo ["Add support for CLJS IPersistentStack"]}
@@ -1028,7 +1014,7 @@
   "`conj`, maybe mutable. General `conj(!)`.
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
-  ([#{transient? atom? !vec? !string?} x v] (conj! x v)) ; TODO auto-determine
+  ([#{transient? !vec? !string? !set?} x v] (conj! x v)) ; TODO auto-determine; also don't autobox primitives
   ([^default                           x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
@@ -1217,6 +1203,7 @@
 (defnt joinl!
   "Like `joinl`, but mutates `to`."
         ([^default        to from] (reduce conj!-protocol to from))
+        ([#{!map? !set?} to from] (reduce conj!-protocol to from)) ; TODO this can be much more efficient
 #_(:clj ([...])) ; TODO bulk add operations that are cheaper than using `reduce`, e.g. on fastutil collections
         ([^!string?       to from] (str (reduce conj!-protocol to from)))
         (^<0> [^object-array? #_array-1d? to from] ; TODO
@@ -1273,7 +1260,7 @@
               (copy! to 0 ret 0 to-ct)
               (reducei (joinl-array-helper ret to-ct) ret from))
           :else
-            (-> (->array-list to)
+            (-> (->!vector to)
                 (join! from)
                 ->array))))
 
@@ -1297,7 +1284,7 @@
       +sorted-map? +array-map?
       string?} to from] (joinl to from))
   ;; TODO need to allow all array types
-  ([^array-1d? to from] (joinl! to from)))
+  ([#{array-1d? !map? !set?} to from] (joinl! to from)))
 
 #?(:clj (defalias join?! joinl?!))
 
@@ -1312,3 +1299,6 @@
   )
 
 #?(:clj (defalias join' joinl'))
+
+(defnt ?transient!  ([^editable?  x] (transient   x)) ([^default x] x))
+(defnt ?persistent! ([^transient? x] (persistent! x)) ([^default x] x))
