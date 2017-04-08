@@ -196,7 +196,12 @@
   (doseq [[sym v] vars]
     (intern *ns* (-> sym (with-meta {:private true})) v))))
 
-(defn qualify [ns-sym sym] (symbol (name ns-sym) (name sym)))
+(defn qualify [?ns sym]
+  (let [ns-sym (do #?(:clj (if (instance? clojure.lang.Namespace ?ns)
+                               (ns-name ?ns)
+                               ?ns)
+                      :cljs ?ns))]
+    (symbol (name ns-sym) (name sym))))
 
 #?(:clj (defn qualify-class [sym] (symbol (str (munge (ns-name *ns*)) "." sym))))
 
