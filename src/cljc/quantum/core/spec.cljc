@@ -236,3 +236,8 @@
                 (and core/set? (coll-of spec#))
                 (coll-of ~spec :distinct true :into #{})
                 (coll-of spec# :distinct true :into #{})))))
+
+(defn validate:some? [x]
+  (if (nil? x)
+      (throw (ex-info "Value is not allowed to be nil but was"))
+      x))
