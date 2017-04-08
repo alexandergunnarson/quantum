@@ -709,7 +709,7 @@
 
 ; TODO move these?
 #?(:clj
-(defn error:txn-timed-out? [^Throwable x]
+(defn error:tx-timed-out? [^Throwable x]
   (or (-> x ex-data :db/error (= :db.error/transaction-timeout))
       (and (.getCause x)
            (recur (.getCause x))))))
@@ -758,7 +758,7 @@
                       (when failures-ch (do (async/put! failures-ch (async/->PipelineFailure e tx))) nil))))
           transact-txs! (comp (map+ transact-tx!) (remove+ nil?))]
       (if report-ch
-          (async/pipeline!* :!! conc from-ch transact-txs! report-ch false nil)
+          (async/pipeline!*    :!! conc from-ch transact-txs! report-ch false nil)
           (async/concur-each!* :!! conc from-ch transact-txs! nil))))))
 
 ; ==== MORE COMPLEX OPERATIONS ====
