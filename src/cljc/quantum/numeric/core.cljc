@@ -1,11 +1,11 @@
 (ns ^{:doc "Higher-order numeric operations such as sigma, sum, etc."}
   quantum.numeric.core
   (:refer-clojure :exclude
-    [reduce mod first, count, *' +', map, dotimes])
+    [reduce mod first, count, *' +', map, dotimes, transduce])
   (:require
     [quantum.core.collections  :as coll
-      :refer [map map+, range+, filter+, mapcat+
-              reduce reduce-multi, join join'
+      :refer [map map+, range+, filter+, remove+, mapcat+
+              transduce, reduce reduce-multi, join join'
               for', dotimes, first, get-in* assoc-in!*
               count kw-map, blank]]
     [quantum.core.compare      :as comp]
@@ -14,11 +14,13 @@
     [quantum.core.error        :as err
       :refer [->ex TODO]]
     [quantum.core.fn
-      :refer [fn-> <- fn1 fnl fn& fn&2]]
+      :refer [fn-> <- fn1 fnl fn& fn&2 fn']]
     [quantum.core.log          :as log]
     [quantum.core.numeric      :as num
       :refer [abs mod sqrt pow #?(:clj *') +' exactly]
       #?@(:cljs [:refer-macros [*']])]
+    [quantum.core.reducers
+      :refer [multiplex]]
     [quantum.core.type         :as t]
     [quantum.core.vars
       :refer [defalias]]
@@ -86,14 +88,17 @@
    :major-twelfth  (/ 3 1)
    :double-octave  (/ 4 1)})
 
-(defn sum+count     [xs]
-  (reduce-multi [+ coll/count:rfn] xs))
+(def sum:rf +)
+(def sum    (fnl transduce +))
 
-(defn product+count [xs]
-  (reduce-multi [* coll/count:rfn] xs))
+(def product:rf *)
+(def product    (fnl transduce *))
 
-(def sum     (fnl reduce +))
-(def product (fnl reduce *))
+(def <sum+count>:rf (multiplex vector sum:rf coll/count:rf))
+(def sum+count      (fnl transduce <sum+count>:rf))
+
+(def <product+count>:rf (multiplex vector product:rf coll/count:rf))
+(def product+count      (fnl transduce <product+count>:rf))
 
 (defn sigma [xs step-fn] (->> xs (map+ step-fn) sum))
 
@@ -259,9 +264,11 @@
    That is, the min and max are calculated not by row, but by column."
   {:todo       #{"`skip-cols` must be something for which `get` can return truthy or falsey"}
    :params-doc '{skip-cols "Indices of columns for which to skip normalization"}}
-  ([#{numeric-2d? objects-2d?} x••] (normalize-2d:column x•• nil 0 1))
-  ([#{numeric-2d? objects-2d?} x•• skip-cols] (normalize-2d:column x•• skip-cols 0 1))
-  ([#{numeric-2d? objects-2d?} x•• skip-cols #_double a #_double b] ; TODO fix this because we're getting primitive type hint complaints!!
+  ([#{numeric-2d? objects-2d?} x••                                        ] (normalize-2d:column x•• nil))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols                              ] (normalize-2d:column x•• skip-cols (fn' false)))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols skip-cell?f                  ] (normalize-2d:column x•• skip-cols skip-cell?f nil      nil))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols skip-cell?f col:min• col:max•] (normalize-2d:column x•• skip-cols skip-cell?f col:min• col:max• 0 1))
+  ([#{numeric-2d? objects-2d?} x•• skip-cols skip-cell?f col:min• col:max• #_double a #_double b] ; TODO fix this because we're getting primitive type hint complaints!!
     (let [x••'    (blank x••)
           ct:rows (count x••')
           ct:cols (-> x••' first count)
@@ -271,14 +278,18 @@
         (if (get skip-cols i:col)
             (dotimes [i:row ct:rows]
               (coll/assoc-in!*& x••' (coll/get-in*& x•• i:row i:col) i:row i:col))
-            (let [min:col (->> x•• (map+ (fn1 get i:col)) comp/reduce-min)
-                  max:col (->> x•• (map+ (fn1 get i:col)) comp/reduce-max)
+            (let [min:col (or (get col:min• i:col)
+                              (->> x•• (map+ (fn1 get i:col)) comp/reduce-min))
+                  max:col (or (get col:max• i:col)
+                              (->> x•• (map+ (fn1 get i:col)) comp/reduce-max))
                   rng:col (abs (- min:col max:col))]
               (dotimes [i:row ct:rows]
                 (coll/assoc-in!*& x••'
                   (t/static-cast-depth x•• 2
-                    (-> (coll/get-in*& x•• i:row i:col)
-                        (- min:col) (/ rng:col) (* rng') (+ min')))
+                    (let [cell (coll/get-in*& x•• i:row i:col)]
+                      (if (skip-cell?f cell)
+                          cell
+                          (-> cell (- min:col) (/ rng:col) (* rng') (+ min')))))
                   i:row i:col)))))
       x••')))
 
