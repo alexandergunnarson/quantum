@@ -331,6 +331,7 @@
 (defn comp>-temp  [x y] (core/>  (core/compare x y) 0))
 (defn comp>=-temp [x y] (core/>= (core/compare x y) 0))
 
+; TODO don't need to generate these once type inference is done
 ; `first-min-key` means `min-key`, but returns the first argument when comparison is ambiguous
 (gen-extremum-key-fn first-min-key           core/<=) ; TODO use comp/ version
 (gen-extremum-key-fn second-min-key          core/< ) ; TODO use comp/ version

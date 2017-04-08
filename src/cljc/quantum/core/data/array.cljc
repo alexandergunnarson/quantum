@@ -234,7 +234,7 @@
 (defnt ^"[J" bytes->longs
   ([^bytes? b]
     (let [longs-ct (-> b count (/ 8) num/ceil int)
-          longs-f  (ccoll/->long-array longs-ct)
+          longs-f  (ccoll/->longs longs-ct)
           ; Empty bytes are put at end
           buffer   (doto (ByteBuffer/allocate (* 8 longs-ct))
                          (.put b))]

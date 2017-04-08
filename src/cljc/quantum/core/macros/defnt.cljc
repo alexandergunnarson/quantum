@@ -264,7 +264,7 @@
   ; [get-max-type (delay (tdefs/max-type hints))]  ; TODO maybe come back to this?
    #_(:clj ; TODO maybe come back to this
     [(= ret-type-0 'auto-promote)
-       (or (get tdefs/promoted-types @get-max-type) @get-max-type)])
+       (or (get tdefs/promoted-types* @get-max-type) @get-max-type)])
     (if-not-let [[position depth] (defnt-keyword->positional-profundal ret-type-0)]
       (if (nil? ret-type-0)
           nil
