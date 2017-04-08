@@ -7,18 +7,22 @@
  #?(:cljs
     [com.gfredericks.goog.math.Integer])
     [fast-zip.core]
+    [clojure.string        :as str]
+    [quantum.core.collections.base :as cbase]
+    [quantum.core.classes  :as classes]
     [quantum.core.data.map :as map
       :refer [map-entry]]
     [quantum.core.data.set :as set]
     [quantum.core.data.tuple
       #?@(:cljs [:refer [Tuple]])]
     [quantum.core.fn       :as fn
-      :refer [fn-> rcomp]]
+      :refer [<- fn-> rcomp]]
     [quantum.core.logic    :as logic
-      :refer [fn-and condf1]])
+      :refer [fn-and condf1 fn=]]
+    [quantum.core.numeric.combinatorics :as combo])
   (:require-macros
     [quantum.core.type.defs :as self
-      :refer [array-nd-types]])
+      :refer [->array-nd-types*]])
   (:import
     #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble
@@ -113,14 +117,14 @@
          {})))
 
 #?(:clj
-(def boxed-types
+(def boxed-types*
   (->> primitive-type-meta
        (map (fn [[k v]] [k (:boxed v)]))
        (into {}))))
 
 #?(:clj
-(def unboxed-types
-  (zipmap (vals boxed-types) (keys boxed-types))))
+(def unboxed-types*
+  (zipmap (vals boxed-types*) (keys boxed-types*))))
 
 #?(:clj
 (def boxed->unboxed-types-evaled (->> primitive-type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
@@ -131,7 +135,7 @@
        (into {})))
 
 #?(:clj
-(def promoted-types
+(def promoted-types*
   {'short  'int
    'byte   'short ; Because char is unsigned
    'char   'int
@@ -150,12 +154,11 @@
 (defn- retrieve [lang-n sets] (->> sets (map lang-n) (remove empty?) (apply set/union)))
 
 (defn- cond-union [& sets]
-  {:cljc (retrieve :cljc sets)
-   :clj  (retrieve :clj  sets)
+  {:clj  (retrieve :clj sets)
    :cljs (retrieve :cljs sets)})
 
 #?(:clj
-(defmacro array-nd-types [n]
+(defmacro ->array-nd-types* [n]
   `{:boolean '~(symbol (str (apply str (repeat n \[)) "Z"))
     :byte    '~(symbol (str (apply str (repeat n \[)) "B"))
     :char    '~(symbol (str (apply str (repeat n \[)) "C"))
@@ -186,18 +189,29 @@
 ; ===== PRIMITIVES ===== ;
 ; •••••••••••••••••••••• ;
 
+(def nil-types            '{:clj #{nil} :cljs #{nil}})
+
 ; ===== NON-NUMERIC PRIMITIVES ===== ; ; TODO CLJS
 
 (def unboxed-bool-types    {:clj  '#{boolean}
                             :cljs `#{(type true)}})
+(def unboxed-boolean-types unboxed-bool-types)
 (def boxed-bool-types      {:clj  '#{java.lang.Boolean}
                             :cljs `#{(type true)}})
+(def boxed-boolean-types   boxed-bool-types)
+(def ?bool-types           boxed-bool-types)
+(def ?boolean-types        ?bool-types)
 (def bool-types            (cond-union unboxed-bool-types boxed-bool-types))
+(def boolean-types         bool-types)
+
 (def unboxed-byte-types   '{:clj  #{byte}})
 (def boxed-byte-types     '{:clj  #{java.lang.Byte}})
+(def ?byte-types           boxed-byte-types)
 (def byte-types            (cond-union unboxed-byte-types boxed-byte-types))
+
 (def unboxed-char-types   '{:clj  #{char}})
 (def boxed-char-types     '{:clj  #{java.lang.Character}})
+(def ?char-types           boxed-char-types)
 (def char-types            (cond-union unboxed-char-types boxed-char-types))
 
 ; ===== NUMBERS ===== ; ; TODO CLJS
@@ -206,7 +220,9 @@
 
 (def unboxed-short-types  '{:clj  #{short}})
 (def boxed-short-types    '{:clj  #{java.lang.Short}})
+(def ?short-types          boxed-short-types)
 (def short-types           (cond-union unboxed-short-types boxed-short-types))
+
 (def unboxed-int-types     {:clj  '#{int}
                              ; because the integral values representable by JS numbers are in the
                              ; range of Java ints, though technically one needs to ensure that
@@ -214,9 +230,12 @@
                             :cljs `#{(type 123)}})
 (def boxed-int-types       {:clj  '#{java.lang.Integer}
                             :cljs `#{(type 123)}})
+(def ?int-types            boxed-int-types)
 (def int-types             (cond-union unboxed-int-types boxed-int-types))
+
 (def unboxed-long-types   '{:clj  #{long}})
 (def boxed-long-types     '{:clj  #{java.lang.Long}})
+(def ?long-types           boxed-long-types)
 (def long-types            (cond-union unboxed-long-types boxed-long-types))
 
 (def bigint-types         '{:clj  #{clojure.lang.BigInt java.math.BigInteger}
@@ -228,11 +247,14 @@
 
 (def unboxed-float-types  '{:clj  #{float}})
 (def boxed-float-types    '{:clj  #{java.lang.Float}})
+(def ?float-types          boxed-float-types)
 (def float-types           (cond-union unboxed-float-types boxed-float-types))
+
 (def unboxed-double-types  {:clj  '#{double}
                             :cljs `#{(type 123)}})
 (def boxed-double-types    {:clj  '#{java.lang.Double}
                             :cljs `#{(type 123)}})
+(def ?double-types         boxed-double-types)
 (def double-types          (cond-union unboxed-double-types boxed-double-types))
 
 (def bigdec-types         '{:clj #{java.math.BigDecimal}})
@@ -249,6 +271,17 @@
                                                       unboxed-float-types unboxed-double-types))
                                     '#{java.lang.Number})
                             :cljs (:cljs (cond-union integer-types decimal-types ratio-types))})
+
+
+(def pnumber-types        `{:cljs #{(type 123)}})
+
+; The closest thing to a native int the platform has
+(def nat-int-types        `{:clj  #{~'int}
+                            :cljs #{(type 123)}})
+
+; The closest thing to a native long the platform has
+(def nat-long-types       `{:clj  #{~'long}
+                            :cljs #{(type 123)}})
 
 ; _______________________ ;
 ; ===== COLLECTIONS ===== ;
@@ -302,68 +335,179 @@
 
 ; ===== MAPS ===== ; Associative
 
-(def +array-map-types               '{:clj  #{clojure.lang.PersistentArrayMap}
-                                      :cljs #{cljs.core/PersistentArrayMap}})
-(def !+array-map-types              '{:clj  #{clojure.lang.PersistentArrayMap$TransientArrayMap}
-                                      :cljs #{cljs.core/TransientArrayMap}})
-(def ?!+array-map-types              (cond-union !+array-map-types +array-map-types))
-(def !array-map-types                {})
-(def !!array-map-types               {})
-(def array-map-types                 (cond-union ?!+array-map-types
-                                                 !array-map-types !!array-map-types))
+; ----- Generators ----- ;
 
-(def +hash-map-types                '{:clj  #{clojure.lang.PersistentHashMap}
-                                      :cljs #{cljs.core/PersistentHashMap}})
-(def !+hash-map-types               '{:clj  #{clojure.lang.PersistentHashMap$TransientHashMap}
-                                      :cljs #{cljs.core/TransientHashMap}})
-(def ?!+hash-map-types               (cond-union  !+hash-map-types   +hash-map-types))
-(def !hash-map-types:int->ref       '{:clj  #{it.unimi.dsi.fastutil.ints.Int2ReferenceOpenHashMap
-                                              it.unimi.dsi.fastutil.ints.Int2ReferenceOpenCustomHashMap}})
-(def !hash-map-types:long->ref      '{:clj  #{it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap
-                                              it.unimi.dsi.fastutil.longs.Long2ReferenceOpenCustomHashMap}})
-(def !hash-map-types:double->ref    '{:clj  #{it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenHashMap
-                                              it.unimi.dsi.fastutil.doubles.Double2ReferenceOpenCustomHashMap}})
-(def !hash-map-types:ref->ref       '{:clj  #{java.util.HashMap
-                                              java.util.IdentityHashMap}
-                                      :cljs #{goog.structs.Map}})
-(def !hash-map-types                 (cond-union !hash-map-types:int->ref
-                                                 !hash-map-types:long->ref
-                                                 !hash-map-types:double->ref
-                                                 !hash-map-types:ref->ref))
-(def !!hash-map-types               '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
-(def hash-map-types                  (cond-union ?!+hash-map-types
-                                                 !hash-map-types !!hash-map-types))
+(defn <fastutil-package [x]
+  (if (= x 'ref) "objects" (str (name x) "s")))
 
-(def +unsorted-map-types             (cond-union   +hash-map-types   +array-map-types))
-(def !+unsorted-map-types            (cond-union  !+hash-map-types  !+array-map-types))
-(def ?!+unsorted-map-types           (cond-union ?!+hash-map-types ?!+array-map-types))
-(def !unsorted-map-types:int->ref    !hash-map-types:int->ref)
-(def !unsorted-map-types:long->ref   !hash-map-types:long->ref)
-(def !unsorted-map-types:double->ref !hash-map-types:double->ref)
-(def !unsorted-map-types:ref->ref    !hash-map-types:ref->ref)
-(def !unsorted-map-types             !hash-map-types)
-(def !!unsorted-map-types            !!hash-map-types)
-(def unsorted-map-types              (cond-union ?!+unsorted-map-types
-                                                 !unsorted-map-types !!unsorted-map-types))
+(defn <fastutil-long-form [x]
+  (if (= x 'ref) "Reference" (-> x name str/capitalize)))
+
+(defn !map-type:gen [from to suffixes]
+  (let [fastutil-class-name-base
+          (str "it.unimi.dsi.fastutil." (<fastutil-package from)
+               "." (<fastutil-long-form from) "2" (<fastutil-long-form to))]
+   `{:clj '~(->> suffixes
+                 (map #(symbol (str fastutil-class-name-base %)))
+                 set)}))
+
+(defn !map-types*:gen [prefix genf ref->ref]
+  (let [?prefix      (when prefix (str prefix "-"))
+        base-types   (conj (keys primitive-type-meta) 'ref)
+        type-combos  (->> base-types
+                          (<- combo/selections 2)
+                          (remove (fn-> first (= 'boolean))))
+        gen-same-sym (fn [t]       (symbol (str "!" ?prefix "map:" t "-types")))
+        gen-map-sym  (fn [from to] (symbol (str "!" ?prefix "map:" from "->" to "-types")))
+        any-*-defs
+          (->> base-types
+               (map (fn [t]
+                      (let [any-key-sym (symbol (str "!" ?prefix "map:" "any" "->" t     "-types"))
+                            any-val-sym (symbol (str "!" ?prefix "map:" t     "->" "any" "-types"))
+                            cond-union:any
+                             (fn [pred] (list* 'cond-union
+                                          (->> type-combos (filter (fn-> pred (= t))) (map (partial apply gen-map-sym)))))]
+                        `(do (def ~any-key-sym ~(cond-union:any second))
+                             (def ~any-val-sym ~(cond-union:any first )))))))
+        sym=>code
+         (->> type-combos
+              (map (fn [[from to]]
+                     (let [body (genf from to)
+                           sym  (gen-map-sym from to)]
+                       [sym `(do (def ~sym ~body)
+                                 ~(when (= from to)
+                                    `(def ~(gen-same-sym from) ~sym)))])))
+              (into (map/om)))]
+    (concat (vals sym=>code)
+            [(let [ref->ref-sym (gen-map-sym 'ref 'ref)]
+               `(do (def ~ref->ref-sym ~ref->ref)
+                    (def ~(gen-same-sym 'ref) ~ref->ref-sym)))]
+            any-*-defs
+            [`(def ~(symbol (str "!" ?prefix "map-types")) (cond-union ~@(keys sym=>code)))])))
+
+#?(:clj
+(defmacro !hash-map-types:gen [ref->ref]
+  `(do ~@(!map-types*:gen "hash"
+           (fn [from to] (!map-type:gen from to #{"OpenHashMap" "OpenCustomHashMap"}))
+           ref->ref))))
+
+#?(:clj
+(defmacro !unsorted-map-types:gen []
+  `(do ~@(!map-types*:gen "unsorted"
+           (fn [from to] (symbol (str "!hash-map:" from "->" to "-types")))
+           '!hash-map:ref-types))))
+
+#?(:clj
+(defmacro !sorted-map-types:gen [ref->ref]
+  `(do ~@(!map-types*:gen "sorted" (fn [from to] {}) ref->ref))))
+
+#?(:clj
+(defmacro !map-types:gen []
+  ; technically also `object` for CLJS
+  `(do ~@(!map-types*:gen nil (fn [from to] (!map-type:gen from to #{"Map"}))
+           '(cond-union !unsorted-map:ref-types !sorted-map:ref-types)))))
+
+(defn !set-type:gen [t suffixes]
+  (let [fastutil-class-name-base
+          (str "it.unimi.dsi.fastutil." (<fastutil-package t) "." (<fastutil-long-form t))]
+   `{:clj '~(->> suffixes
+                 (map #(symbol (str fastutil-class-name-base %)))
+                 set)}))
+
+(defn !set-types*:gen [prefix genf ref-val]
+  (let [?prefix (when prefix (str prefix "-"))
+        sym=>code
+         (->> (conj (keys primitive-type-meta) 'ref)
+              (remove (fn= 'boolean))
+              (map (fn [t]
+                     (let [body (genf t)
+                           sym  (symbol (str "!" ?prefix "set:" t "-types"))]
+                       [sym `(def ~sym ~body)])))
+              (into (map/om)))]
+    (concat (vals sym=>code)
+            [`(def ~(symbol (str "!" ?prefix "set:ref-types")) ~ref-val)
+             `(def ~(symbol (str "!" ?prefix "set-types")) (cond-union ~@(keys sym=>code)))])))
+
+#?(:clj
+(defmacro !hash-set-types:gen [ref-val]
+  `(do ~@(!set-types*:gen "hash"
+           (fn [t] (!set-type:gen t #{"OpenHashSet" "OpenCustomHashSet"}))
+           ref-val))))
+
+#?(:clj
+(defmacro !unsorted-set-types:gen []
+  `(do ~@(!set-types*:gen "unsorted"
+           (fn [t] (symbol (str "!hash-set:" t "-types")))
+           '!hash-set:ref-types))))
+
+#?(:clj
+(defmacro !sorted-set-types:gen [ref-val]
+  `(do ~@(!set-types*:gen "sorted" (fn [t] {}) ref-val))))
+
+#?(:clj
+(defmacro !set-types:gen []
+  `(do ~@(!set-types*:gen nil (fn [t] (!set-type:gen t #{"Set"}))
+           '(cond-union !unsorted-set:ref-types !sorted-set:ref-types)))))
+
+; ----- ;
+
+(def +array-map-types             '{:clj  #{clojure.lang.PersistentArrayMap}
+                                    :cljs #{cljs.core/PersistentArrayMap}})
+(def !+array-map-types            '{:clj  #{clojure.lang.PersistentArrayMap$TransientArrayMap}
+                                    :cljs #{cljs.core/TransientArrayMap}})
+(def ?!+array-map-types            (cond-union !+array-map-types +array-map-types))
+(def !array-map-types              {})
+(def !!array-map-types             {})
+(def array-map-types               (cond-union ?!+array-map-types
+                                               !array-map-types !!array-map-types))
+
+(def +hash-map-types              '{:clj  #{clojure.lang.PersistentHashMap}
+                                    :cljs #{cljs.core/PersistentHashMap}})
+(def !+hash-map-types             '{:clj  #{clojure.lang.PersistentHashMap$TransientHashMap}
+                                    :cljs #{cljs.core/TransientHashMap}})
+(def ?!+hash-map-types             (cond-union !+hash-map-types +hash-map-types))
+
+(!hash-map-types:gen
+  '{:clj  #{java.util.HashMap
+            java.util.IdentityHashMap
+            it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenHashMap
+            it.unimi.dsi.fastutil.objects.Reference2ReferenceOpenCustomHashMap}
+    :cljs #{goog.structs.Map}})
+
+(def !!hash-map-types             '{:clj  #{java.util.concurrent.ConcurrentHashMap}})
+(def hash-map-types                (cond-union ?!+hash-map-types
+                                               !hash-map-types !!hash-map-types))
+
+(def +unsorted-map-types           (cond-union   +hash-map-types   +array-map-types))
+(def !+unsorted-map-types          (cond-union  !+hash-map-types  !+array-map-types))
+(def ?!+unsorted-map-types         (cond-union ?!+hash-map-types ?!+array-map-types))
+
+(!unsorted-map-types:gen)
+
+(def !!unsorted-map-types          !!hash-map-types)
+(def unsorted-map-types            (cond-union ?!+unsorted-map-types
+                                               !unsorted-map-types !!unsorted-map-types))
 
 (def +sorted-map-types            '{:clj  #{clojure.lang.PersistentTreeMap}
                                     :cljs #{cljs.core/PersistentTreeMap   }})
 (def !+sorted-map-types            {})
 (def ?!+sorted-map-types           (cond-union +sorted-map-types !+sorted-map-types))
-(def !sorted-map-types:int->ref    {})
-(def !sorted-map-types:long->ref   {})
-(def !sorted-map-types:double->ref {})
-(def !sorted-map-types:ref->ref   '{:clj  #{java.util.TreeMap}
-                                    :cljs #{goog.structs.AvlTree}})
-(def !sorted-map-types             (cond-union !sorted-map-types:int->ref
-                                               !sorted-map-types:long->ref
-                                               !sorted-map-types:double->ref
-                                               !sorted-map-types:ref->ref))
+
+(!sorted-map-types:gen
+ '{:clj  #{java.util.TreeMap}
+   :cljs #{goog.structs.AvlTree}})
+
 (def !!sorted-map-types            {})
 (def sorted-map-types              {:clj  (set/union (:clj ?!+sorted-map-types)
                                                      '#{java.util.SortedMap})
                                     :cljs (set/union (:cljs +sorted-map-types)
                                                      (:cljs !sorted-map-types))})
+
+(def !insertion-ordered-map-types    {:clj '#{java.util.LinkedHashMap}})
+(def +insertion-ordered-map-types    {:clj '#{flatland.ordered.map.OrderedMap}})
+(def insertion-ordered-map-types     (cond-union !insertion-ordered-map-types
+                                                 +insertion-ordered-map-types))
+
 (def !+map-types                   {:clj  '#{clojure.lang.ITransientMap}
                                     :cljs (set/union (:cljs !+unsorted-map-types))})
 (def +map-types                    {:clj  '#{clojure.lang.IPersistentMap}
@@ -371,16 +515,12 @@
                                                      (:cljs +sorted-map-types))})
 (def ?!+map-types                  (cond-union !+map-types +map-types))
 
-(def !map-types:int->ref           {:clj '#{it.unimi.dsi.fastutil.ints.Int2ReferenceMap}})
-(def !map-types:long->ref          {:clj '#{it.unimi.dsi.fastutil.longs.Long2ReferenceMap}})
-(def !map-types:double->ref        {:clj '#{it.unimi.dsi.fastutil.doubles.Double2ReferenceMap}})
-; technically also `object` for CLJS
-(def !map-types:ref->ref           (cond-union !unsorted-map-types:ref->ref
-                                               !sorted-map-types:ref->ref))
-(def !map-types                    (cond-union !unsorted-map-types !sorted-map-types))
+(!map-types:gen)
+
 (def !!map-types                   (cond-union !!unsorted-map-types !!sorted-map-types))
 (def map-types                     {:clj  (set/union (:clj !+map-types)
                                             '#{; TODO IPersistentMap as well, yes, but all persistent Clojure maps implement java.util.Map
+                                               ; TODO add typed maps into this definition once lazy compilation is in place
                                                java.util.Map})
                                     :cljs (set/union (:cljs ?!+map-types)
                                                      (:cljs !map-types)
@@ -393,19 +533,12 @@
 (def !+hash-set-types           '{:clj  #{clojure.lang.PersistentHashSet$TransientHashSet}
                                   :cljs #{cljs.core/TransientHashSet}})
 (def ?!+hash-set-types           (cond-union !+hash-set-types +hash-set-types))
-(def !hash-set-types:int        '{:clj  #{it.unimi.dsi.fastutil.ints.IntOpenHashSet
-                                          it.unimi.dsi.fastutil.ints.IntOpenCustomHashSet}})
-(def !hash-set-types:long       '{:clj  #{it.unimi.dsi.fastutil.longs.LongOpenHashSet
-                                          it.unimi.dsi.fastutil.longs.LongOpenCustomHashSet}})
-(def !hash-set-types:double     '{:clj  #{it.unimi.dsi.fastutil.doubles.DoubleOpenHashSet
-                                          it.unimi.dsi.fastutil.doubles.DoubleOpenCustomHashSet}})
-(def !hash-set-types:ref        '{:clj  #{java.util.HashSet
-                                          #_java.util.IdentityHashSet}
-                                  :cljs #{goog.structs.Set}})
-(def !hash-set-types             (cond-union !hash-set-types:int
-                                             !hash-set-types:long
-                                             !hash-set-types:double
-                                             !hash-set-types:ref))
+
+(!hash-set-types:gen
+  '{:clj  #{java.util.HashSet
+            #_java.util.IdentityHashSet}
+    :cljs #{goog.structs.Set}})
+
 (def !!hash-set-types            {}) ; technically you can make something from ConcurrentHashMap but...
 (def hash-set-types              (cond-union ?!+hash-set-types
                                    !hash-set-types !!hash-set-types))
@@ -413,11 +546,9 @@
 (def +unsorted-set-types        +hash-set-types)
 (def !+unsorted-set-types      !+hash-set-types)
 (def ?!+unsorted-set-types    ?!+hash-set-types)
-(def !unsorted-set-types:int    !hash-set-types:int)
-(def !unsorted-set-types:long   !hash-set-types:long)
-(def !unsorted-set-types:double !hash-set-types:double)
-(def !unsorted-set-types:ref    !hash-set-types:ref)
-(def !unsorted-set-types        !hash-set-types)
+
+(!unsorted-set-types:gen)
+
 (def !!unsorted-set-types      !!hash-set-types)
 (def unsorted-set-types          hash-set-types)
 
@@ -425,45 +556,45 @@
                                   :cljs #{cljs.core/PersistentTreeSet   }})
 (def !+sorted-set-types          {})
 (def ?!+sorted-set-types         (cond-union +sorted-set-types !+sorted-set-types))
-(def !sorted-set-types:int         {})
-(def !sorted-set-types:long      {})
-(def !sorted-set-types:double    {})
-(def !sorted-set-types:ref      '{:clj  #{java.util.TreeSet}})  ; CLJS can have via AVLTree with same KVs
-(def !sorted-set-types           (cond-union !sorted-set-types:int
-                                             !sorted-set-types:long
-                                             !sorted-set-types:double
-                                             !sorted-set-types:ref))
-(def !!sorted-set-types    {})
-(def sorted-set-types      {:clj  (set/union (:clj +sorted-set-types)
-                                             '#{java.util.SortedSet})
-                            :cljs (set/union (:cljs +sorted-set-types)
-                                             (:cljs !sorted-set-types)
-                                             (:cljs !!sorted-set-types))})
 
-(def !+set-types           {:clj  '#{clojure.lang.ITransientSet}
-                            :cljs (set/union (:cljs !+unsorted-set-types))})
-(def +set-types            {:clj '#{clojure.lang.IPersistentSet}
-                            :cljs (set/union (:cljs +unsorted-set-types)
-                                             (:cljs +sorted-set-types))})
-(def ?!+set-types          (cond-union !+set-types +set-types))
-(def !set-types:int        {:clj '#{it.unimi.dsi.fastutil.ints.IntSet}})
-(def !set-types:long       {:clj '#{it.unimi.dsi.fastutil.longs.LongSet}})
-(def !set-types:double     {:clj '#{it.unimi.dsi.fastutil.doubles.DoubleSet}})
-(def !set-types:ref        (cond-union !unsorted-set-types:ref
-                                       !sorted-set-types:ref))
-(def !set-types            (cond-union !unsorted-set-types !sorted-set-types))
-(def !!set-types           (cond-union !!unsorted-set-types !!sorted-set-types))
-(def set-types             {:clj  (set/union (:clj !+set-types)
-                                    '#{; TODO IPersistentSet as well, yes, but all persistent Clojure sets implement java.util.Set
-                                       java.util.Set})
-                            :cljs (set/union (:cljs ?!+set-types)
-                                             (:cljs !set-types)
-                                             (:cljs !!set-types))})
+(!sorted-set-types:gen
+  '{:clj #{java.util.TreeSet}}) ; CLJS can have via AVLTree with same KVs
+
+(def !!sorted-set-types          {})
+(def sorted-set-types            {:clj  (set/union (:clj +sorted-set-types)
+                                                   '#{java.util.SortedSet})
+                                  :cljs (set/union (:cljs +sorted-set-types)
+                                                   (:cljs !sorted-set-types)
+                                                   (:cljs !!sorted-set-types))})
+
+(def !+set-types                 {:clj  '#{clojure.lang.ITransientSet}
+                                  :cljs (set/union (:cljs !+unsorted-set-types))})
+(def +set-types                  {:clj '#{clojure.lang.IPersistentSet}
+                                  :cljs (set/union (:cljs +unsorted-set-types)
+                                                   (:cljs +sorted-set-types))})
+(def ?!+set-types                (cond-union !+set-types +set-types))
+
+(!set-types:gen)
+
+(def !set-types:int              {:clj '#{it.unimi.dsi.fastutil.ints.IntSet}})
+(def !set-types:long             {:clj '#{it.unimi.dsi.fastutil.longs.LongSet}})
+(def !set-types:double           {:clj '#{it.unimi.dsi.fastutil.doubles.DoubleSet}})
+(def !set-types:ref              (cond-union !unsorted-set:ref-types
+                                             !sorted-set:ref-types))
+(def !set-types                  (cond-union !unsorted-set-types
+                                             !sorted-set-types))
+(def !!set-types                 (cond-union !!unsorted-set-types !!sorted-set-types))
+(def set-types                   {:clj  (set/union (:clj !+set-types)
+                                          '#{; TODO IPersistentSet as well, yes, but all persistent Clojure sets implement java.util.Set
+                                             java.util.Set})
+                                  :cljs (set/union (:cljs ?!+set-types)
+                                                   (:cljs !set-types)
+                                                   (:cljs !!set-types))})
 
 ; ===== ARRAYS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                      ; dense integer values), not extensible
 ; TODO do e.g. {:clj {0 {:byte ...}}}
-(def array-1d-types       `{:clj  {:byte          (type (byte-array    0)      )
+(def array-1d-types*      `{:clj  {:byte          (type (byte-array    0)      )
                                    :char          (type (char-array    "")     )
                                    :short         (type (short-array   0)      )
                                    :long          (type (long-array    0)      )
@@ -483,26 +614,26 @@
                                    :float         js/Float32Array
                                    :double        js/Float64Array
                                    :object        (type (cljs.core/array))}})
-(def undistinguished-array-1d-types (->> array-1d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {})))
-(def array-2d-types        {:clj (array-nd-types 2 )})
-(def array-3d-types        {:clj (array-nd-types 3 )})
-(def array-4d-types        {:clj (array-nd-types 4 )})
-(def array-5d-types        {:clj (array-nd-types 5 )})
-(def array-6d-types        {:clj (array-nd-types 6 )})
-(def array-7d-types        {:clj (array-nd-types 7 )})
-(def array-8d-types        {:clj (array-nd-types 8 )})
-(def array-9d-types        {:clj (array-nd-types 9 )})
-(def array-10d-types       {:clj (array-nd-types 10)})
-(def array-types           (cond-union (->> array-1d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-2d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-3d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-4d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-5d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-6d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-7d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-8d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-9d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                       (->> array-10d-types (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
+(def undistinguished-array-1d-types (->> array-1d-types* (map (fn [[k v]] [k (-> v vals set)])) (into {})))
+(def array-2d-types*       {:clj (->array-nd-types* 2 )})
+(def array-3d-types*       {:clj (->array-nd-types* 3 )})
+(def array-4d-types*       {:clj (->array-nd-types* 4 )})
+(def array-5d-types*       {:clj (->array-nd-types* 5 )})
+(def array-6d-types*       {:clj (->array-nd-types* 6 )})
+(def array-7d-types*       {:clj (->array-nd-types* 7 )})
+(def array-8d-types*       {:clj (->array-nd-types* 8 )})
+(def array-9d-types*       {:clj (->array-nd-types* 9 )})
+(def array-10d-types*      {:clj (->array-nd-types* 10)})
+(def array-types           (cond-union (->> array-1d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-2d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-3d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-4d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-5d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-6d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-7d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-8d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-9d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                       (->> array-10d-types* (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
 
 ; String: A special wrapper for char array where different encodings, etc. are possible
 
@@ -510,6 +641,8 @@
 (def !string-types        '{:clj #{StringBuilder} :cljs #{goog.string.StringBuffer}})
 ; Immutable String
 (def string-types         `{:clj #{String} :cljs #{(type "")}})
+
+(def char-seq-types        {:clj '#{CharSequence}})
 
 ; ===== VECTORS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                       ; dense integer values), extensible
@@ -519,21 +652,24 @@
                             :cljs #_cljs.core.ArrayList ; not used
                                   #{(type (cljs.core/array))}}) ; because supports .push etc.
 ; svec = "spliceable vector"
-(def svec-types           '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
+(def svector-types        '{:clj  #{clojure.core.rrb_vector.rrbt.Vector}
                             :cljs #{clojure.core.rrb_vector.rrbt.Vector}})
-(def +vec-types            {:clj  '#{clojure.lang.IPersistentVector}
-                            :cljs (set/union (:cljs svec-types)
+(def +vector-types         {:clj  '#{clojure.lang.IPersistentVector}
+                            :cljs (set/union (:cljs svector-types)
                                              '#{cljs.core/PersistentVector})})
-(def !+vec-types          '{:clj  #{clojure.lang.ITransientVector}
+(def !+vector-types       '{:clj  #{clojure.lang.ITransientVector}
                             :cljs #{cljs.core/TransientVector}})
-(def ?!+vec-types          (cond-union +vec-types !+vec-types))
-(def !vec-types           '{:clj  #{java.util.ArrayList}
-                            :cljs #{(type (cljs.core/array))}}) ; because supports .push etc.
+(def ?!+vector-types       (cond-union +vector-types !+vector-types))
+(def !vector:long-types   '{:clj  #{it.unimi.dsi.fastutil.longs.LongArrayList}})
+(def !vector:ref-types    '{:clj  #{java.util.ArrayList}
+                            :cljs #{(type (cljs.core/array))}})  ; because supports .push etc.
+(def !vector-types         (cond-union !vector:long-types
+                                       !vector:ref-types))
                            ; java.util.Vector is deprecated, because you can
                            ; just create a synchronized wrapper over an ArrayList
                            ; via java.util.Collections
-(def !!vec-types           {})
-(def vec-types             (cond-union ?!+vec-types !vec-types !!vec-types))
+(def !!vector-types           {})
+(def vector-types             (cond-union ?!+vector-types !vector-types !!vector-types))
 
 ; ===== QUEUES ===== ; Particularly FIFO queues, as LIFO = stack = any vector
 
@@ -622,6 +758,10 @@
                                        cljs.core/PersistentHashSet
                                        cljs.core/PersistentVector}}))
 
+(def editable-types       {:clj  '#{clojure.lang.IEditableCollection}
+                           :cljs #_#{cljs.core/IEditableCollection} ; can't dispatch on a protocol
+                             (get transientizable-types :cljs)})
+
 ; ===== FUNCTIONS ===== ;
 
 (def fn-types             `{:clj #{clojure.lang.Fn}  :cljs #{(type inc)}})
@@ -665,6 +805,18 @@
                             :cljs #{cljs.core.async.impl.channels/ManyToManyChannel
                                     #_"TODO more?"}})
 
+(def keyword-types        '{:clj  #{clojure.lang.Keyword}
+                            :cljs #{cljs.core/Keyword}})
+
+(def symbol-types         '{:clj  #{clojure.lang.Symbol}
+                            :cljs #{cljs.core/Symbol}})
+
+(def file-types          '{:clj  #{java.io.File}
+                           :cljs #{#_js/File}}) ; isn't always available! Use an abstraction
+
+(def any-types            {:clj  (set/union (:clj prim-types) #{'java.lang.Object})
+                           :cljs '#{(quote default)}})
+
 (def comparable-types      {:clj  (set/union '#{byte char short int long float double} '#{Comparable})
                             :cljs (:cljs number-types)})
 
@@ -695,15 +847,40 @@
                              {:clj  '#{fast_zip.core.ZipperLocation}
                               :cljs '#{fast-zip.core/ZipperLocation}}))
 
-(def booleans-2d-types {:clj #{(-> array-2d-types :clj :boolean)} :cljs #{(-> array-2d-types :cljs :boolean)}})
-(def bytes-2d-types    {:clj #{(-> array-2d-types :clj :byte   )} :cljs #{(-> array-2d-types :cljs :byte   )}})
-(def chars-2d-types    {:clj #{(-> array-2d-types :clj :char   )} :cljs #{(-> array-2d-types :cljs :char   )}})
-(def shorts-2d-types   {:clj #{(-> array-2d-types :clj :short  )} :cljs #{(-> array-2d-types :cljs :short  )}})
-(def ints-2d-types     {:clj #{(-> array-2d-types :clj :int    )} :cljs #{(-> array-2d-types :cljs :int    )}})
-(def longs-2d-types    {:clj #{(-> array-2d-types :clj :long   )} :cljs #{(-> array-2d-types :cljs :long   )}})
-(def floats-2d-types   {:clj #{(-> array-2d-types :clj :float  )} :cljs #{(-> array-2d-types :cljs :float  )}})
-(def doubles-2d-types  {:clj #{(-> array-2d-types :clj :double )} :cljs #{(-> array-2d-types :cljs :double )}})
-(def objects-2d-types  {:clj #{(-> array-2d-types :clj :object )} :cljs #{(-> array-2d-types :cljs :object )}})
+(def booleans-types       {:clj #{(-> array-1d-types*  :clj  :boolean)}})
+(def bytes-types          {:clj #{(-> array-1d-types*  :clj  :byte   )} :cljs #{(-> array-1d-types* :cljs :byte   )}})
+(def ubytes-types         {                                             :cljs #{(-> array-1d-types* :cljs :ubyte  )}})
+(def ubytes-clamped-types {                                             :cljs #{(-> array-1d-types* :cljs :ubyte-clamped)}})
+(def chars-types          {:clj #{(-> array-1d-types*  :clj  :char   )} :cljs #{(-> array-1d-types* :cljs :char   )}})
+(def shorts-types         {:clj #{(-> array-1d-types*  :clj  :short  )} :cljs #{(-> array-1d-types* :cljs :short  )}})
+(def ushorts-types        {                                             :cljs #{(-> array-1d-types* :cljs :ushort )}})
+(def ints-types           {:clj #{(-> array-1d-types*  :clj  :int    )} :cljs #{(-> array-1d-types* :cljs :int    )}})
+(def uints-types          {                                             :cljs #{(-> array-1d-types* :cljs :uint  )}})
+(def longs-types          {:clj #{(-> array-1d-types*  :clj  :long   )} :cljs #{(-> array-1d-types* :cljs :long   )}})
+(def floats-types         {:clj #{(-> array-1d-types*  :clj  :float  )} :cljs #{(-> array-1d-types* :cljs :float  )}})
+(def doubles-types        {:clj #{(-> array-1d-types*  :clj  :double )} :cljs #{(-> array-1d-types* :cljs :double )}})
+(def objects-types        {:clj #{(-> array-1d-types*  :clj  :object )} :cljs #{(-> array-1d-types* :cljs :object )}})
+
+(def numeric-1d-types  (cond-union bytes-types
+                                   ubytes-types
+                                   ubytes-clamped-types
+                                   chars-types
+                                   shorts-types
+                                   ints-types
+                                   uints-types
+                                   longs-types
+                                   floats-types
+                                   doubles-types))
+
+(def booleans-2d-types {:clj #{(-> array-2d-types* :clj :boolean)} :cljs #{(-> array-2d-types* :cljs :boolean)}})
+(def bytes-2d-types    {:clj #{(-> array-2d-types* :clj :byte   )} :cljs #{(-> array-2d-types* :cljs :byte   )}})
+(def chars-2d-types    {:clj #{(-> array-2d-types* :clj :char   )} :cljs #{(-> array-2d-types* :cljs :char   )}})
+(def shorts-2d-types   {:clj #{(-> array-2d-types* :clj :short  )} :cljs #{(-> array-2d-types* :cljs :short  )}})
+(def ints-2d-types     {:clj #{(-> array-2d-types* :clj :int    )} :cljs #{(-> array-2d-types* :cljs :int    )}})
+(def longs-2d-types    {:clj #{(-> array-2d-types* :clj :long   )} :cljs #{(-> array-2d-types* :cljs :long   )}})
+(def floats-2d-types   {:clj #{(-> array-2d-types* :clj :float  )} :cljs #{(-> array-2d-types* :cljs :float  )}})
+(def doubles-2d-types  {:clj #{(-> array-2d-types* :clj :double )} :cljs #{(-> array-2d-types* :cljs :double )}})
+(def objects-2d-types  {:clj #{(-> array-2d-types* :clj :object )} :cljs #{(-> array-2d-types* :cljs :object )}})
 (def numeric-2d-types  (cond-union bytes-2d-types
                                    chars-2d-types
                                    shorts-2d-types
@@ -714,302 +891,61 @@
 
 ; ===== PREDICATES ===== ;
 
-(def types-0
-  {; ----- PRIMITIVES ----- ;
+(defmacro gen-<type-pred=>type> []
+  (->> (ns-interns *ns*)
+       keys
+       (filter (fn-> name (str/ends-with? "-types")))
+       (map    (fn [t] [(list 'quote (symbol (str/replace (name t) #"-types$" "?")))
+                        t]))
+       (into   {})))
 
-   'primitive?        primitive-types
-   'prim?             prim-types
-   'boxed?            primitive-boxed-types
-   'integral?         integral-types
+(def type-pred=>type
+  (merge (gen-<type-pred=>type>)
+    {'default              {:clj  '#{Object}
+                            :cljs '#{(quote default)}}
+     'boolean-array?       {:clj #{(-> array-1d-types*  :clj  :boolean)}}
+     'byte-array?          {:clj #{(-> array-1d-types*  :clj  :byte   )} :cljs #{(-> array-1d-types* :cljs :byte   )}}
+     'ubyte-array?         {                                             :cljs #{(-> array-1d-types* :cljs :ubyte  )}}
+     'ubyte-array-clamped? {                                             :cljs #{(-> array-1d-types* :cljs :ubyte-clamped)}}
+     'char-array?          {:clj #{(-> array-1d-types*  :clj  :char   )} :cljs #{(-> array-1d-types* :cljs :char   )}}
+     'short-array?         {:clj #{(-> array-1d-types*  :clj  :short  )} :cljs #{(-> array-1d-types* :cljs :short  )}}
+     'ushort-array?        {                                             :cljs #{(-> array-1d-types* :cljs :ushort )}}
+     'int-array?           {:clj #{(-> array-1d-types*  :clj  :int    )} :cljs #{(-> array-1d-types* :cljs :int    )}}
+     'uint-array?          {                                             :cljs #{(-> array-1d-types* :cljs :uint  )}}
+     'long-array?          {:clj #{(-> array-1d-types*  :clj  :long   )} :cljs #{(-> array-1d-types* :cljs :long   )}}
+     'float-array?         {:clj #{(-> array-1d-types*  :clj  :float  )} :cljs #{(-> array-1d-types* :cljs :float  )}}
+     'double-array?        {:clj #{(-> array-1d-types*  :clj  :double )} :cljs #{(-> array-1d-types* :cljs :double )}}
+     'object-array?        {:clj #{(-> array-1d-types*  :clj  :object )} :cljs #{(-> array-1d-types* :cljs :object )}}
 
-   'char?             char-types
-   'boolean?          bool-types
-   'bool?             bool-types
-   'byte?             byte-types
-   'short?            short-types
-   'int?              int-types
-   ; The closest thing to a native int the platform has
-   'nat-int?         `{:clj  #{~'int}
-                       :cljs #{(type 123)}}
-   'long?             long-types
-   '?long             boxed-long-types
-   ; The closest thing to a native long the platform has
-   'nat-long?        `{:clj  #{~'long}
-                       :cljs #{(type 123)}}
-   'float?            float-types
-   'double?           double-types
-   '?double           boxed-double-types
+     'array-1d?            {:clj  (->> array-1d-types*  :clj  vals set)
+                            :cljs (->> array-1d-types*  :cljs vals set)}
 
-   ; INTEGERS
-
-   'integer?          integer-types
-   'bigint?           bigint-types
-
-   ; DECIMALS
-
-   'decimal?          decimal-types
-   'bigdec?           bigdec-types
-
-   ; NUMBERS
-
-   'ratio?            ratio-types
-
-   'number?           number-types
-   'num?              number-types
-   'pnumber?         `{:cljs #{(type 123)}}
-   'pnum?            `{:cljs #{(type 123)}}
-
-   ; ===== COLLECTIONS ===== ;
-
-   'coll?             coll-types
-
-   'map-entry?        map-entry-types
-
-   ; SEQUENTIAL
-
-   'sequential?       sequential-types
-
-   'cons?             cons-types
-   'misc-seq?         misc-seq-types
-   'lseq?             lseq-types
-   'non-list-seq?     non-list-seq-types
-
-   ; Denotes unindexed list particularly
-   'dlist?            dlist-types
-   'cdlist?           cdlist-types
-   '+list?            +list-types
-   '!+list?           '!+list-types
-   '?!+list?          '?!+list-types
-   '!list?            '!list-types
-   '!!list?           '!!list-types
-   'list?             list-types
-
-   'seq?              seq-types
-
-   ; ----- ASSOCIATIVE ----- ;
-
-   'associative?      associative-types
-
-   ; MAP
-
-   '+array-map?       +array-map-types
-   '!+array-map?      !+array-map-types
-   '?!+array-map?     ?!+array-map-types
-   '!array-map?       !array-map-types
-   '!!array-map?      !!array-map-types
-   'array-map?        array-map-types
-
-   '+hash-map?        +hash-map-types
-   '!+hash-map?       !+hash-map-types
-   '?!+hash-map?      ?!+hash-map-types
-   '!hash-map?        !hash-map-types
-   '!!hash-map?       !!hash-map-types
-   'hash-map?         hash-map-types
-
-   '+unsorted-map?    +unsorted-map-types
-   '!+unsorted-map?   !+unsorted-map-types
-   '?!+unsorted-map?  ?!+unsorted-map-types
-   '!unsorted-map?    !unsorted-map-types
-   '!!unsorted-map?   !!unsorted-map-types
-   'unsorted-map?     unsorted-map-types
-
-   '+sorted-map?      +sorted-map-types
-   '!+sorted-map?     !+sorted-map-types
-   '?!+sorted-map?    ?!+sorted-map-types
-   '!sorted-map?      !sorted-map-types
-   '!!sorted-map?     !!sorted-map-types
-   'sorted-map?       sorted-map-types
-
-   '+map?             +map-types
-   '!+map?            !+map-types
-   '?!+map?           ?!+map-types
-   '!map:int->ref?    !map-types:int->ref
-   '!map:long->ref?   !map-types:long->ref
-   '!map:double->ref? !map-types:double->ref
-   '!map:ref->ref?    !map-types:ref->ref
-   '!map?             !map-types
-   '!!map?            !!map-types
-   'map?              map-types
-
-   ; SET
-
-   '+hash-set?        +hash-set-types
-   '!+hash-set?       !+hash-set-types
-   '?!+hash-set?      ?!+hash-set-types
-   '!hash-set?        !hash-set-types
-   '!!hash-set?       !!hash-set-types
-   'hash-set?         hash-set-types
-
-   '+unsorted-set?    +unsorted-set-types
-   '!+unsorted-set?   !+unsorted-set-types
-   '?!+unsorted-set?  ?!+unsorted-set-types
-   '!unsorted-set?    !unsorted-set-types
-   '!!unsorted-set?   !!unsorted-set-types
-   'unsorted-set?     unsorted-set-types
-
-   '+sorted-set?      +sorted-set-types
-   '!+sorted-set?     !+sorted-set-types
-   '?!+sorted-set?    ?!+sorted-set-types
-   '!sorted-set?      !sorted-set-types
-   '!!sorted-set?     !!sorted-set-types
-   'sorted-set?       sorted-set-types
-
-   '+set?             +set-types
-   '!+set?            !+set-types
-   '?!+set?           ?!+set-types
-   '!set:int?         !set-types:int
-   '!set:long?        !set-types:long
-   '!set:double?      !set-types:double
-   '!set:ref?         !set-types:ref
-   '!set?             !set-types
-   '!!+set?           !!set-types
-   'set?              set-types
-
-   ; INDEXED
-
-   'indexed?          indexed-types
-
-   ; SORTED
-
-   'sorted?           sorted-types
-
-   ; COUNTED
-
-   'counted?          counted-types
-
-   ; ----- ASSOCIATIVE+INDEXED ----- ;
-
-   ; ARRAYS
-
-   'boolean-array?       {:clj #{(-> array-1d-types :clj :boolean)}}
-   'byte-array?          {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
-   'ubyte-array?         {                                          :cljs #{(-> array-1d-types :cljs :ubyte  )}}
-   'ubyte-array-clamped? {                                          :cljs #{(-> array-1d-types :cljs :ubyte-clamped)}}
-   'char-array?          {:clj #{(-> array-1d-types :clj :char   )} :cljs #{(-> array-1d-types :cljs :char   )}}
-   'short-array?         {:clj #{(-> array-1d-types :clj :short  )} :cljs #{(-> array-1d-types :cljs :short  )}}
-   'ushort-array?        {                                          :cljs #{(-> array-1d-types :cljs :ushort )}}
-   'int-array?           {:clj #{(-> array-1d-types :clj :int    )} :cljs #{(-> array-1d-types :cljs :int    )}}
-   'uint-array?          {                                          :cljs #{(-> array-1d-types :cljs :uint  )}}
-   'long-array?          {:clj #{(-> array-1d-types :clj :long   )} :cljs #{(-> array-1d-types :cljs :long   )}}
-   'float-array?         {:clj #{(-> array-1d-types :clj :float  )} :cljs #{(-> array-1d-types :cljs :float  )}}
-   'double-array?        {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
-   'object-array?        {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
-
-   'booleans?        {:clj #{(-> array-1d-types :clj :boolean)}}
-   'bytes?           {:clj #{(-> array-1d-types :clj :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}}
-   'ubytes?          {                                          :cljs #{(-> array-1d-types :cljs :ubyte  )}}
-   'ubytes-clamped?  {                                          :cljs #{(-> array-1d-types :cljs :ubyte-clamped)}}
-   'chars?           {:clj #{(-> array-1d-types :clj :char   )} :cljs #{(-> array-1d-types :cljs :char   )}}
-   'shorts?          {:clj #{(-> array-1d-types :clj :short  )} :cljs #{(-> array-1d-types :cljs :short  )}}
-   'ushorts?         {                                          :cljs #{(-> array-1d-types :cljs :ushort )}}
-   'ints?            {:clj #{(-> array-1d-types :clj :int    )} :cljs #{(-> array-1d-types :cljs :int    )}}
-   'uints?           {                                          :cljs #{(-> array-1d-types :cljs :uint  )}}
-   'longs?           {:clj #{(-> array-1d-types :clj :long   )} :cljs #{(-> array-1d-types :cljs :long   )}}
-   'floats?          {:clj #{(-> array-1d-types :clj :float  )} :cljs #{(-> array-1d-types :cljs :float  )}}
-   'doubles?         {:clj #{(-> array-1d-types :clj :double )} :cljs #{(-> array-1d-types :cljs :double )}}
-   'objects?         {:clj #{(-> array-1d-types :clj :object )} :cljs #{(-> array-1d-types :cljs :object )}}
-
-   'array-1d?        {:clj  (->> array-1d-types :clj  vals set)
-                      :cljs (->> array-1d-types :cljs vals set)}
-   'booleans-2d?     booleans-2d-types
-   'bytes-2d?        bytes-2d-types
-   'chars-2d?        chars-2d-types
-   'shorts-2d?       shorts-2d-types
-   'ints-2d?         ints-2d-types
-   'longs-2d?        longs-2d-types
-   'floats-2d?       floats-2d-types
-   'doubles-2d?      doubles-2d-types
-   'objects-2d?      objects-2d-types
-   'numeric-2d?      numeric-2d-types
-   'array-2d?        {:clj  (->> array-2d-types :clj  vals set)
-                      :cljs (->> array-2d-types :cljs vals set)}
-   'array-3d?        {:clj  (->> array-3d-types :clj  vals set)
-                      :cljs (->> array-3d-types :cljs vals set)}
-   'array-4d?        {:clj  (->> array-4d-types :clj  vals set)
-                      :cljs (->> array-4d-types :cljs vals set)}
-   'array-5d?        {:clj  (->> array-5d-types :clj  vals set)
-                      :cljs (->> array-5d-types :cljs vals set)}
-   'array-6d?        {:clj  (->> array-6d-types :clj  vals set)
-                      :cljs (->> array-6d-types :cljs vals set)}
-   'array-7d?        {:clj  (->> array-7d-types :clj  vals set)
-                      :cljs (->> array-7d-types :cljs vals set)}
-   'array-8d?        {:clj  (->> array-8d-types :clj  vals set)
-                      :cljs (->> array-8d-types :cljs vals set)}
-   'array-9d?        {:clj  (->> array-9d-types :clj  vals set)
-                      :cljs (->> array-9d-types :cljs vals set)}
-   'array-10d?       {:clj  (->> array-10d-types :clj  vals set)
-                      :cljs (->> array-10d-types :cljs vals set)}
-   'array?           array-types
-
-   ; VECTOR-LIKE OBJECTS
-
-   'string?          string-types
-   '!string?         !string-types
-   'char-seq?        {:clj '#{CharSequence}}
-
-   '!array-list?     !array-list-types
-
-   'svec?            svec-types
-   '+vec?            +vec-types
-   '!+vec?           !+vec-types
-   '?!+vec?          ?!+vec-types
-   '!vec?            !vec-types
-   '!!vec?           !!vec-types
-   'vec?             vec-types
-   'tuple?           tuple-types
-
-   ; QUEUES
-
-   '+queue?          +queue-types
-   '!+queue?         !+queue-types
-   '?!+queue?        ?!+queue-types
-   '!queue?          !queue-types
-   '!!queue?         !!queue-types
-   'queue?           queue-types
-
-   ; MISCELLANEOUS
-
-   'fn?              fn-types
-   'ifn?             ifn-types
-   'multimethod?     multimethod-types
-   'nil?             '{:cljc #{nil}}
-
-   'keyword?         '{:clj  #{clojure.lang.Keyword}
-                       :cljs #{cljs.core/Keyword}}
-   'symbol?          '{:clj  #{clojure.lang.Symbol}
-                       :cljs #{cljs.core/Symbol}}
-
-   'record?          record-types
-   'transient?       transient-types
-   'transientizable? transientizable-types
-   'editable?        {:clj  '#{clojure.lang.IEditableCollection}
-                      :cljs #_#{cljs.core/IEditableCollection} ; can't dispatch on a protocol
-                            (set/union (get transientizable-types :cljc)
-                                       (get transientizable-types :cljs))}
-   'pattern?         regex-types
-   'regex?           regex-types
-   'transformer?     transformer-types
-   ;'reducible?      reducible-types
-   'file?            '{:clj  #{java.io.File}
-                       :cljs #{#_js/File}} ; isn't always available! Use an abstraction
-   'atom?            atom-types
-   'atomic?          atomic-types
-   'm2m-chan?        m2m-chan-types
-   'chan?            chan-types
-   'comparable?      comparable-types
-   'any?             {:clj  (set/union (:clj prim-types) #{'java.lang.Object})
-                      :cljs '#{(quote default)}}
-   'default          {:clj  '#{Object}
-                      :cljs '#{(quote default)}}})
+     'array-2d?            {:clj  (->> array-2d-types*  :clj  vals set)
+                            :cljs (->> array-2d-types*  :cljs vals set)}
+     'array-3d?            {:clj  (->> array-3d-types*  :clj  vals set)
+                            :cljs (->> array-3d-types*  :cljs vals set)}
+     'array-4d?            {:clj  (->> array-4d-types*  :clj  vals set)
+                            :cljs (->> array-4d-types*  :cljs vals set)}
+     'array-5d?            {:clj  (->> array-5d-types*  :clj  vals set)
+                            :cljs (->> array-5d-types*  :cljs vals set)}
+     'array-6d?            {:clj  (->> array-6d-types*  :clj  vals set)
+                            :cljs (->> array-6d-types*  :cljs vals set)}
+     'array-7d?            {:clj  (->> array-7d-types*  :clj  vals set)
+                            :cljs (->> array-7d-types*  :cljs vals set)}
+     'array-8d?            {:clj  (->> array-8d-types*  :clj  vals set)
+                            :cljs (->> array-8d-types*  :cljs vals set)}
+     'array-9d?            {:clj  (->> array-9d-types*  :clj  vals set)
+                            :cljs (->> array-9d-types*  :cljs vals set)}
+     'array-10d?           {:clj  (->> array-10d-types* :clj  vals set)
+                            :cljs (->> array-10d-types* :cljs vals set)}}))
 
 ; TODO make this extensible
 #?(:clj
-(defmacro def-types [lang]
+(defmacro def-types* [lang]
   (let [unevaled-fn
           (fn [lang-n]
-            (->> types-0
-                 (map (fn [[pred types-n]]
-                        (map-entry pred (set/union (:cljc types-n) (get types-n lang-n)))))
+            (->> type-pred=>type
+                 (map (fn [[pred types-n]] (map-entry pred (get types-n lang-n))))
                  (remove (fn-> val empty?))
                  (into {})))
         langs #{:clj :cljs}
