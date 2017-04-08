@@ -15,20 +15,22 @@
     [quantum.core.collections.core :as ccoll]
     [quantum.core.collections :as coll
       :refer [map+, filter+, remove+, red-apply, range+
-              !ref setm!, assoc-in!, count
+              assoc-in!, count
               kw-map, ifor, get get-in*, reducei]]
     [quantum.core.error
       :refer [->ex TODO]]
     [quantum.core.macros
       :refer [defnt #?@(:clj [defnt'])]]
-    [quantum.core.numeric :as cnum
+    [quantum.core.numeric    :as cnum
       :refer [+* inc* pow abs sqrt floor div:natural]]
-    [quantum.numeric.core :as num
+    [quantum.core.refs       :as refs
+      :refer [!ref setm!]]
+    [quantum.numeric.core    :as num
       :refer [sum sigma sq]]
     [quantum.numeric.tensors :as tens]
     [quantum.core.vars
       :refer [defalias]]
-    [quantum.core.string :as str])
+    [quantum.core.string     :as str])
   #?(:clj (:import [quantum.ai.ml.core Attribute])))
 
 (defn levenshtein-matrix
