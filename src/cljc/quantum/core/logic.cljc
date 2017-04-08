@@ -22,6 +22,15 @@
 ; |Switch| is implemented using an array and then points to the code.
 ; String |switch| is implemented using a map8
 
+; not     1 0     ; complement
+; and     0 0 0 1 ; conjunction
+; nand    1 1 1 0 ; Sheffer stroke
+; or      0 1 1 1 ; disjunction
+; nor     1 0 0 0 ; Peirce's arrow
+; xor     0 1 1 0
+; xnor    1 0 0 1
+; implies 1 1 0 1
+
 ;___________________________________________________________________________________________________________________________________
 ;==================================================={ BOOLEANS + CONDITIONALS }=====================================================
 ;==================================================={                         }=====================================================
@@ -43,6 +52,8 @@
 #?(:clj (defmacro nand     [& args] `(not (and ~@args))))
 #?(:clj (defmacro nor      [& args] `(not (or  ~@args))))
 #?(:clj (defmacro implies? [a b] `(if ~a ~b true)))
+
+; difference = (and a (not b))
 
 ; TODO maybe eliminate `volatile!`?
 #?(:clj
