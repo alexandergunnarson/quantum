@@ -18,7 +18,18 @@
       :refer [rcomp]]
     [quantum.core.vars        :as var
       :refer [defalias]])
-  #?(:clj (:import java.util.ArrayList)))
+#?(:clj
+  (:import
+    java.util.ArrayList
+    [it.unimi.dsi.fastutil.booleans BooleanArrayList]
+    [it.unimi.dsi.fastutil.bytes    ByteArrayList]
+    [it.unimi.dsi.fastutil.chars    CharArrayList]
+    [it.unimi.dsi.fastutil.shorts   ShortArrayList]
+    [it.unimi.dsi.fastutil.ints     IntArrayList]
+    [it.unimi.dsi.fastutil.longs    LongArrayList]
+    [it.unimi.dsi.fastutil.floats   FloatArrayList]
+    [it.unimi.dsi.fastutil.doubles  DoubleArrayList]
+    [it.unimi.dsi.fastutil.objects  ObjectArrayList])))
 
 ; TO EXPLORE
 ; - michalmarczyk/devec: double-ended vector
@@ -27,6 +38,11 @@
 (defalias vector core/vector)
 (defalias +vector vector)
 (def !+vector (rcomp vector transient))
+
+(defn !+vector:sized [n]
+  (let [xs (!+vector)]
+    (dotimes [i n] (conj! xs nil))
+    xs))
 
 ; svec = "spliceable vector"
 (defalias svec    svec/vec)
@@ -141,3 +157,15 @@
       xs)))
 
 (defalias !array-list !vector)
+
+#_BooleanArrayList
+#_ByteArrayList
+#_CharArrayList
+#_ShortArrayList
+#_IntArrayList
+#_LongArrayList
+#_FloatArrayList
+#_DoubleArrayList
+#_ObjectArrayList
+
+#?(:clj (defn ^LongArrayList !vector:long [] (LongArrayList.)))
