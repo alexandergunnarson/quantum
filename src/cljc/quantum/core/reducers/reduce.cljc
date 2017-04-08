@@ -9,7 +9,8 @@
       :author       "Rich Hickey"
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers.reduce
-  (:refer-clojure :exclude [reduce into])
+  (:refer-clojure :exclude
+    [reduce into, deref reset! transduce])
   (:require
     [clojure.core                  :as core]
     [clojure.core.async            :as async]
@@ -29,6 +30,8 @@
       :refer [fnl]]
     [quantum.core.macros           :as macros
       :refer [defnt]]
+    [quantum.core.refs             :as refs
+      :refer [deref !boolean reset!]]
     [quantum.core.type             :as t
       :refer [editable?]]
     [quantum.core.type.defs
@@ -202,7 +205,6 @@
   ([f coll]      `(reduce* ~coll ~f))
   ([f init coll] `(reduce* ~coll ~f ~init))))
 
-
 #?(:clj
 (defmacro reducei
    "`reduce`, indexed.
@@ -225,6 +227,14 @@
         code `(reduce ~f-final ~ret-i ~coll)]
     code)))
 
+#?(:clj
+; TODO unmacro — it's just a macro until type inference is ready
+(defmacro transduce
+  ([   f xs] `(transduce identity ~f      ~xs))
+  ([xf f xs] `(transduce ~xf      ~f (~f) ~xs))
+  ([xf f init xs]
+    `(let [f# (~xf ~f)]
+       (f# (reduce f# ~init ~xs))))))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
@@ -265,17 +275,16 @@
 (defn red-apply
   "Applies ->`f` to ->`coll`, pairwise, using `reduce`."
   [f coll]
-  (let [first? (volatile! true)]
+  (let [first? (!boolean true)]
     (reduce* coll
-             (fn [ret x]
-               (if @first?
-                   (do (vreset! first? false) (f x))
-                   (f ret x)))
-             nil)))
+      (fn [ret x]
+        (if (deref first?)
+            (do (reset! first? false) (f x))
+            (f ret x)))
+      nil)))
 
 (defn first-non-nil-reducer
   "A reducing function that simply returns the first non-nil element in the
   collection."
   {:source "tesser.utils"}
-  [_ x]
-  (when-not (nil? x) (reduced x)))
+  [_ x] (when-not (nil? x) (reduced x)))

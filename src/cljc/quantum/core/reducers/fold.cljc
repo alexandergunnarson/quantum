@@ -16,7 +16,7 @@
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.collections.core
-      :refer [joinl]]
+      :refer [joinl ?transient! ?persistent!]]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
@@ -35,7 +35,7 @@
     [quantum.core.reducers.reduce  :as red
       :refer [reduce]]
     [quantum.core.type             :as t
-      :refer [?transient! ?persistent! lseq? editable? ->joinable]]
+      :refer [lseq? editable? ->joinable]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Reducer Folder]])])
   #?(:clj (:import [quantum.core.type.defs Reducer Folder]
