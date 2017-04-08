@@ -1,13 +1,19 @@
 (ns quantum.numeric.statistics.core
   (:refer-clojure :exclude
-    [for nth count take drop first last map mod frequencies, reduce])
+    [for nth count take drop first last map mod frequencies
+     reduce, transduce])
   (:require
-    [quantum.core.data.map
-      :refer [!hash-map]]
     [quantum.core.collections                :as coll
       :refer [nth, lasti drop, take take+, map map+ map-vals+, filter+
-              first, for, last, count, join, frequencies
-              reduce reduce-multi]]
+              first, for, last, count:rf count, join, frequencies
+              reduce reduce-multi, transduce]]
+    [quantum.core.compare                    :as comp]
+    [quantum.core.data.map
+      :refer [!hash-map]]
+    [quantum.core.data.set
+      :refer [!hash-set]]
+    [quantum.core.data.vector
+      :refer [!vector]]
     [quantum.core.fn
       :refer [fn1 fn&2 fnl fn-> <-]]
     [quantum.core.log                        :as log]
@@ -16,8 +22,10 @@
     [quantum.core.numeric                    :as cnum
       :refer [*+* *-* *** *div* mod
               abs sqrt pow e-exp floor log-e]]
+    [quantum.core.reducers
+      :refer [multiplex]]
     [quantum.numeric.core                    :as num
-      :refer [sum sq sigma]]
+      :refer [sum sq sigma sum:rf]]
     [quantum.numeric.tensors                 :as tens]
     [quantum.numeric.polynomial              :as poly]
     [quantum.numeric.statistics.distribution :as dist]
@@ -39,23 +47,21 @@
 ; [bigml/sampling "3.0"]
 ; ================================
 
+(def mean:rf (multiplex (fn [s c] (when (pos? c) (/ s c))) sum:rf count:rf)) ; TODO use div:nil here
+
 (defn mean
   "Arithmetic mean"
-  [xs]
-  (let [[sum ct] (num/sum+count xs)]
-    (when (> ct 0) (/ sum ct))))
+  [xs] (transduce mean:rf xs))
 
 (defnt mean-vals+
   "Computes the mean of the (map) vals.
    Expects a reducible containing mergeable maps."
   ([^+vec? xs] ; TODO must be counted and reducible, containing mergeables
     (let [ct (count xs)]
-      (->> xs
-           (reduce (partial merge-with +))
-           (map-vals+ (fn1 / ct)))))
+      (->> xs (reduce (partial merge-with +)) (map-vals+ (fn1 / ct)))))
   ([^default xs] ; TODO must be non-counted and reducible, containing mergeables
-         ;; TODO use `reduce-multi:objects` and alt-destructuring
-    (let [[ct m] (->> xs (reduce-multi [coll/count:rfn (partial merge-with +)]))]
+         ;; TODO use alt-destructuring
+    (let [[ct m] (->> xs (transduce (multiplex vector count:rf (partial merge-with +))))]
       (->> m (map-vals+ (fn1 / ct))))))
 
 (defalias arithmetic-mean mean)
@@ -92,6 +98,18 @@
          (take i data)
          (drop (inc i) data)])))
 
+(defn modes+
+  "Computes the modes of a reducible collection.
+   Returns a (possibly singleton) reducible of the unique equally-most-commonly-occurring elements."
+  {:attribution "alexandergunnarson"}
+  [xs] ; TODO xs is `reducible?`
+  (->> xs
+       (frequencies (!hash-map))
+       (comp/reduce-max-keys-into !vector val) ; TODO this is possible to do this without allocating the intermediate collection
+       (map+ key)))
+
+(defn modes [xs] (->> xs modes+ (join #{})))
+
 (defn mode
   "Computes the mode of a reducible collection.
    If multiple elements occur with equal frequency,
@@ -100,8 +118,9 @@
   [xs] ; TODO xs is `reducible?`
   (->> xs
        (frequencies (!hash-map))
-       (coll/reduce-max-key val)
+       (comp/reduce-max-key val)
        key))
+
 
 (defn sum-of-squares
   "Computes the sum of the squares of each data point in
@@ -153,7 +172,7 @@
   ([#_indexed? ^+vec? p• #_indexed? ^+vec? o•]
     (accuracy p• o• =)) ; TODO other indexed types
   ([#_indexed? ^+vec? p• #_indexed? ^+vec? o• compf]
-    (let [ct (count p•)] ; TODO allow for p• of unknown count via `reduce-multi` and `count:rfn`
+    (let [ct (count p•)] ; TODO allow for p• of unknown count via `reduce-multi` and `count:rf`
       (->> (tens/v-op+ compf p• o•)
            #_(map+ = predictions actuals) ; TODO assert same count
            (filter+ true?)
