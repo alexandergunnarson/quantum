@@ -147,11 +147,11 @@
   (try
     (let [newenv (->> newenv
                       (map (fn [[^String k ^String v]]
-                             [(refl/invoke-private
+                             [(refl/invoke
                                 (Class/forName "java.lang.ProcessEnvironment$Variable")
                                 "valueOf"
                                 [String] [k])
-                              (refl/invoke-private
+                              (refl/invoke
                                 (Class/forName "java.lang.ProcessEnvironment$Value")
                                 "valueOf"
                                 [String] [v])]))

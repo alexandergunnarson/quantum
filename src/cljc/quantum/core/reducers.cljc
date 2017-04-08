@@ -9,13 +9,16 @@
       :author       "Rich Hickey"
       :contributors #{"Alan Malloy" "Alex Gunnarson" "Christophe Grand"}}
   quantum.core.reducers
-  (:refer-clojure :exclude [reduce Range ->Range])
+  (:refer-clojure :exclude
+    [reduce Range ->Range empty? deref reset!
+     contains?, assoc!, get, transduce])
   (:require
     [clojure.core                  :as core]
     [clojure.core.reducers         :as r]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
-    [quantum.core.collections.core :as ccoll]
+    [quantum.core.collections.core :as ccoll
+      :refer [empty? contains?, assoc!, get, ->objects]]
     [quantum.core.core
       :refer [->sentinel]]
     [quantum.core.data.map         :as map]
@@ -30,8 +33,13 @@
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and fn-nil fn-true whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
-      :refer [defnt case-env assert-args]]
+      :refer [defnt case-env assert-args env-lang]]
+    [quantum.core.macros.core
+      :refer [gen-args arity-builder max-positional-arity
+              unify-gensyms]]
     [quantum.core.numeric          :as num]
+    [quantum.core.refs             :as refs
+      :refer [#?(:clj !long) deref reset!]]
     [quantum.core.type             :as type
       :refer [instance+? lseq?]]
     [quantum.core.reducers.reduce  :as red
@@ -49,16 +57,67 @@
 (defn transducer->reducer
   "Converts a transducer into a reducer."
   {:todo #{"More arity"}}
-  ([transducer xs a0        ] (reducer xs (      transducer a0)))
-  ([transducer xs a0 a1     ] (reducer xs (      transducer a0 a1)))
-  ([transducer xs a0 a1 & as] (reducer xs (apply transducer a0 a1 as))))
+  ([xf xs           ] (reducer xs       (xf)))
+  ([xf xs a0        ] (reducer xs       (xf a0)))
+  ([xf xs a0 a1     ] (reducer xs       (xf a0 a1)))
+  ([xf xs a0 a1 & as] (reducer xs (apply xf a0 a1 as))))
 
-#?(:clj (defalias join      ccoll/join     ))
-#?(:clj (defalias joinl'    ccoll/joinl'   ))
-#?(:clj (defalias join'     ccoll/join'    ))
+(defn gen-multiplex* [lang]
+  `(~'defn ~'multiplex
+     "Multiplexes multiple reducing functions with the provided finishing fn `f`
+      which must accept as many arguments as reducing functions passed.
+      Must call the initializer (0-arity) in order to function properly, e.g. via
+      `transduce`.
+
+      Note that the example is just to capture the concept and does not accurately
+      reflect the source code."
+     {:attribution "alexandergunnarson"
+      :equivalent '~'{(multiplex-rfs /
+                        (aritoid (fn' 0) identity +                )   ; sum:rf
+                        (aritoid (fn' 0) identity (rcomp firsta inc))) ; count:rf
+                      (fn ([] [(f0) (f1)])
+                          ([[x0 x1]] (/ (f0 x0) (f1 x1))) ; to get the mean at the end
+                          ([[x0 x1] x'] [(f0 x0 x') (f1 x1 x')]))}}
+    ~@(let [!xs (with-meta (gensym "!xs") {:tag (case lang :clj "[Ljava.lang.Object;" :cljs nil)})]
+        (arity-builder (fn [args] (if (= 2 (count args))
+                                      (let [[f rf0] args] `(aritoid ~rf0 ~f ~rf0))
+                                      (let [[f & rfs] args rfs-i (map-indexed vector rfs)]
+                                        (unify-gensyms
+                                         `(fn ([] (let [~!xs (->objects ~(count rfs-i))]
+                                                   ~@(for [[i rf] rfs-i]
+                                                      `(assoc! ~!xs ~i (~rf)))))
+                                              ([~!xs] (~f ~@(for [[i rf] rfs-i] `(~rf (get ~!xs ~i)))))
+                                              ([~!xs x'##]
+                                                ~@(for [[i rf] rfs-i] `(assoc! ~!xs ~i (~rf (get ~!xs ~i) x'##)))))))))
+                       (fn [[f & rfs] rest-rfs]
+                         (unify-gensyms
+                          `(let [rfs-ct# (+ ~(count rfs) (count ~rest-rfs))
+                                 rfs##   (->objects rfs-ct#)
+                                 _#      (do ~@(for [[i rf] (map-indexed vector rfs)]
+                                                 `(assoc! rfs## ~i ~rf)))
+                                 _#      (dotimes [i# rfs-ct#] (assoc! rfs## i# (get ~rest-rfs i#)))]
+                             (fn ([        ] (let [!xs# (->objects rfs-ct#)]
+                                               (dotimes [i# rfs-ct#] (assoc! !xs# i# (get rfs## i#)))
+                                               !xs#))
+                                 ([~!xs    ] (dotimes [i# rfs-ct#]
+                                               (assoc! ~!xs i# ((get rfs## i#) (get ~!xs i#))))
+                                             (apply ~f ~!xs))
+                                 ([~!xs x'#] (dotimes [i# rfs-ct#]
+                                               (assoc! ~!xs i# ((get rfs## i#) (get ~!xs i#) x'#))))))))
+                       2 3
+                       (fn [i] (if (= i 0) "f" (str "rf" (dec i))))))))
+
+#?(:clj (defmacro gen-multiplex [] (gen-multiplex* (env-lang))))
+
+(gen-multiplex)
+
+#?(:clj (defalias join      ccoll/join   ))
+#?(:clj (defalias joinl'    ccoll/joinl' ))
+#?(:clj (defalias join'     ccoll/join'  ))
         (defalias pjoin     fold/pjoin   )
         (defalias pjoin'    fold/pjoin'  )
 #?(:clj (defalias reduce    red/reduce   ))
+#?(:clj (defalias transduce red/transduce))
         (defalias fold*     fold/fold    ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
         (defalias red-apply red/red-apply)
 ;___________________________________________________________________________________________________________________________________
@@ -83,11 +142,7 @@
 
 (defn fold-count
   {:attribution "parkour.reducers"}
-  [coll]
-  (fold*
-    (aritoid (fn' 0) identity +)
-    (aritoid (fn' 0) identity (rcomp firsta inc))
-    coll))
+  [xs] (fold* (aritoid + identity +) ccoll/count:rf xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
 ;=================================================={                          }=====================================================
@@ -133,7 +188,7 @@
   ([f] (map-indexed:transducer f))
   ([f coll] (folder coll (map-indexed:transducer f))))
 
-(defn pmap-indexed+
+#_(defn pmap-indexed+ ; `reduce` will only ever be single-threaded
   "Thread-safe `map-indexed+`.
    Just `map-indexed+` with an `atom` instead of a `volatile`."
   [f coll]
@@ -153,9 +208,6 @@
   [coll]
   (map-indexed+ vector coll))
 
-(defn pindexed+
-  "`map-indexed+` : `indexed+` :: `pmap-indexed+` : `pindexed+`"
-  [coll] (pmap-indexed+ vector coll))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          MAPCAT          }=====================================================
 ;=================================================={                          }=====================================================
@@ -458,7 +510,52 @@
        (reduce-by+ keyfn f coll))))
 
 (defn partition-by+  [f coll] (folder coll (core/partition-by  f)))
-(defn partition-all+ [n coll] (folder coll (core/partition-all n)))
+
+; TODO do `partition-all-into` just like `group-by-into`
+
+(defn partition-all:transducer [n] (core/partition-all n))
+
+(defn partition-all+
+  ([n] (partition-all:transducer n))
+  ([n coll] (folder coll (partition-all:transducer n))))
+
+#?(:clj
+(defn partition-all-timeout:transducer [^long n ^long timeout-ms]
+  (fn [rf]
+    (let [a (java.util.ArrayList. n)
+          *last-aggregated (refs/!long Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
+      (fn
+        ([] (rf))
+        ([result]
+           (let [result (if (empty? a)
+                            result
+                            (let [v (vec (.toArray a))]
+                              ;; clear first!
+                              (.clear a)
+                              (unreduced (rf result v))))]
+             (rf result)))
+        ([result input]
+           (.add a input)
+           (let [now    (System/currentTimeMillis)
+                 before (refs/deref *last-aggregated)]
+             (if (or (= n (.size a))
+                     (>= (- now before) timeout-ms))
+               (let [_ (refs/reset! *last-aggregated now)
+                     v (vec (.toArray a))]
+                 (.clear a)
+                 (rf result v))
+               result))))))))
+
+#?(:clj
+(defn partition-all-timeout+
+  "Partitions `xs` into chunks of `n`, unless the timer specified by `timeout-ms`
+   expires before there are at least `n` elements available, in which case a
+   partition smaller than `n` will happen and the timer will be reset, and so on.
+
+   Useful for `chan` when one might want to aggregate results into chunks of no
+   more than `n`, at least every `timeout-ms`."
+  ([n timeout-ms] (partition-all-timeout:transducer n timeout-ms))
+  ([n timeout-ms xs] (folder xs (partition-all-timeout:transducer n timeout-ms)))))
 
 (defn group-by+ ; Yes, but folds a lazy sequence... hmm...
   "Reducers version. Possibly slower than |core/group-by|.
@@ -494,7 +591,7 @@
 
 (defn dedupe+ [xs] (folder xs (core/dedupe)))
 
-(defn pdedupe+
+#_(defn pdedupe+ ; reduce will only ever be single-threaded
   "Thread-safe `dedupe+`.
    Just `dedupe+` with an `atom` instead of a `volatile`."
   [f xs]
@@ -511,26 +608,42 @@
                 result
                 (rf result input)))))))))
 
-(defn distinct+ [xs] (folder xs (core/distinct)))
+; TODO default to using a `HashSet` internally ? Other options?
 
-(defn pdistinct+
-  "Thread-safe `distinct+`.
-   Just `distinct+` with an `atom` instead of a `volatile`."
-  {:todo #{"Test with `!!hash-set`"}}
-  [xs]
-  (fn [rf]
-    (let [seen (atom #{})]
-      (fn
-        ([] (rf))
-        ([result] (rf result))
-        ([result input]
-         (if (contains? @seen input)
-           result
-           (do (swap! seen conj input)
-               (rf result input))))))))
+(defn distinct-storing:transducer
+  ([] (distinct-storing:transducer
+        (fn [] (refs/volatile #{}))))
+  ([genf]
+    (distinct-storing:transducer genf
+      (fn [seen x] (contains? @seen x))))
+  ([genf contains?f]
+    (distinct-storing:transducer genf contains?f
+      (fn [seen x] (vswap! seen conj x))))
+  ([genf contains?f conj!f]
+    (fn [rf]
+      (let [seen (genf)]
+        (fn ([] (rf))
+            ([ret] (rf ret))
+            ([ret x]
+             (if (contains?f seen x)
+                 ret
+                 (do (conj!f seen x)
+                     (rf ret x)))))))))
+
+(defn distinct-storing+
+  ([genf                  ] (distinct-storing:transducer genf))
+  ([genf contains?f       ] (distinct-storing:transducer genf contains?f))
+  ([genf contains?f conj!f] (distinct-storing:transducer genf contains?f conj!f))
+  ([genf contains?f conj!f xs] (folder xs (distinct-storing+ genf contains?f conj!f))))
+
+(defn distinct:transducer
+  ([] (distinct-storing:transducer)))
+
+(defn distinct+
+  ([] (distinct:transducer))
+  ([xs] (folder xs (distinct+))))
 
 (defn distinct-by+  [f xs] (->> xs (map+ f)  distinct+))
-(defn pdistinct-by+ [f xs] (->> xs (map+ f) pdistinct+))
 
 (defn replace+ [smap xs] (folder xs (core/replace smap)))
 
