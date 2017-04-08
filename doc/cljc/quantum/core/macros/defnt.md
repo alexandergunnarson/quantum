@@ -127,3 +127,24 @@ At very least it would be nice to have "spec inference". I.e. know, via `fdef`, 
 ## Best practices
 
 - Prefer primitives to boxed types whenever possible
+
+## TODO
+
+Look at:
+
+- implementation
+  - http://www.stroustrup.com/multimethods.pdf
+  - Fast associative structures
+    - http://preshing.com/20130605/the-worlds-simplest-lock-free-hash-table/
+      - for a super fast int->int ConcurrentHashMap equivalent
+    - Off-heap?
+  - Julia multiple dispatch implementation
+    - http://stackoverflow.com/questions/32144187/how-does-julia-implement-multimethods
+    - https://github.com/JuliaLang/julia/blob/master/src/gf.c
+- types
+  - Look at https://github.com/LuxLang/lux and https://github.com/jeaye/jank
+- ztellman/potemkin
+  - definterface+
+    Every method on a type must be defined within a protocol or an interface. The standard practice is to use defprotocol, but this imposes a certain overhead in both time and memory. Furthermore, protocols don't support primitive arguments. If you need the extensibility of protocols, then there isn't another option, but often interfaces suffice.
+    While definterface uses an entirely different convention than defprotocol, definterface+ uses the same convention, and automatically defines inline-able functions which call into the interface. Thus, any protocol which doesn't require the extensibility can be trivially turned into an interface, with all the inherent savings.
+
