@@ -42,7 +42,8 @@
     [quantum.core.data.vector      :as vec
       :refer [catvec]]
     [quantum.core.collections.core :as coll
-      :refer [first second rest get count conj! assoc dissoc assoc! assoc?! empty? contains? containsk?]]
+      :refer [first second rest get count conj! assoc dissoc assoc! assoc?! empty? contains? containsk?
+              ?transient! ?persistent!]]
     [quantum.core.collections.generative
       :refer [range]]
     [quantum.core.fn               :as fn
@@ -54,7 +55,7 @@
     [quantum.core.reducers         :as red
       :refer [join partition-all+]]
     [quantum.core.type             :as type
-      :refer [?transient! ?persistent! transient? editable?]]
+      :refer [transient? editable?]]
     [quantum.core.loops            :as loops
       :refer [reduce-pair reduce]]))
 
