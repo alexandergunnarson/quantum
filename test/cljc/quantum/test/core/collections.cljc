@@ -400,6 +400,10 @@
 
 (defn test:first-uniques-by+ [k coll])
 
+(deftest test:group-by-into
+  (is (= (ns/group-by-into {} first vector second [[0 1] [0 2] [1 3]])
+         {0 [1 2], 1 [3]})))
+
 ; ===== SORTING ===== ;
 
 (defn test:sort-parts

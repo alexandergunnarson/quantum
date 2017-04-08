@@ -1,99 +1,100 @@
-(ns ^{:doc
-      "Various collections functions.
+(ns quantum.core.collections
+  "Various collections functions.
 
-       Includes better versions of the following than clojure.core:
+   Includes better versions of the following than clojure.core:
 
-       for, doseq, repeat, repeatedly, range, merge,
-       count, vec, reduce, into, first, second, rest,
-       last, butlast, get, pop, peek ...
+   for, doseq, repeat, repeatedly, range, merge,
+   count, vec, reduce, into, first, second, rest,
+   last, butlast, get, pop, peek ...
 
-       and more.
+   and more.
 
-       Many of them are aliased from other namespaces like
-       quantum.core.collections.core, or quantum.core.reducers."
-    :attribution "alexandergunnarson"
-    :cljs-self-referencing? true}
-  quantum.core.collections
-           (:refer-clojure :exclude
-             [for doseq reduce set dotimes
-              contains?
-              repeat repeatedly
-              interpose mapcat
-              reductions
-              group-by frequencies
-              range
-              map pmap map-indexed
-              partition
-              partition-all
-              remove filter
-              take take-while
-              drop  drop-while
-              key val
-              merge sorted-map sorted-map-by
-              into
-              count
-              vec empty empty?
-              every? some not-every? not-any?
-              split-at
-              first second rest last butlast get nth pop peek
-              select-keys get-in
-              zipmap
-              reverse rseq
-              conj
-              conj! assoc assoc! assoc-in dissoc dissoc! disj! update
-              boolean?
-              class
-              ])
-           (:require
-             [clojure.core                            :as c      ]
-             [fast-zip.core                           :as zip    ]
-             [quantum.core.data.map                   :as map
-               :refer [!hash-map]]
-             [quantum.core.data.set                   :as set    ]
-             [quantum.core.data.vector                :as vec
-               :refer [catvec subsvec !vector]]
-             [quantum.core.collections.base           :as base   ]
-             [quantum.core.collections.core           :as coll
-               :include-macros true?                             ]
-             [quantum.core.collections.sociative      :as soc    ]
-             [quantum.core.collections.differential   :as diff
-               :include-macros true                              ]
-             [quantum.core.collections.generative     :as gen    ]
-             [quantum.core.collections.map-filter     :as mf     ]
-             [quantum.core.collections.selective      :as sel    ]
-             [quantum.core.collections.tree           :as tree   ]
-             [quantum.core.collections.zippers        :as qzip   ]
-             [quantum.core.collections.logic          :as clog   ]
-             [quantum.core.core
-               :refer [->object]]
-             [quantum.core.error                      :as err
-               :refer [->ex TODO]]
-             [quantum.core.fn                         :as fn
-               :refer [rfn juxt-kv withf->> firsta
-                       rcomp fconj <- fn-> fn->> fn1 fnl fn']]
-             [quantum.core.log                        :as log]
-             [quantum.core.logic                      :as logic
-               :refer [fn-not fn-or fn-and, fn-nil
-                       whenf whenf1, ifn ifn1, condf condf1
-                       splice-or]]
-             [quantum.core.macros                     :as macros
-               :refer [defnt case-env]]
-             [quantum.core.ns                         :as ns]
-             [quantum.core.numeric                    :as num]
-             [quantum.core.numeric.convert            :as nconv]
-             [quantum.core.reducers                   :as red
-               :refer [defeager]]
-             [quantum.core.string                     :as str    ]
-             [quantum.core.string.format              :as sform  ]
-             [quantum.core.type                       :as t
-               :refer [?transient! ?persistent!
-                       lseq? transient? editable?
-                       boolean? should-transientize?
-                       class]]
-             [quantum.core.analyze.clojure.predicates :as anap]
-             [quantum.core.loops                      :as loops]
-             [quantum.core.vars                       :as var
-               :refer [defalias defaliases]])
+   Many of them are aliased from other namespaces like
+   quantum.core.collections.core, or quantum.core.reducers."
+  (:refer-clojure :exclude
+    [for doseq reduce transduce dotimes
+     contains?
+     repeat repeatedly
+     interpose mapcat
+     reductions
+     group-by frequencies
+     range
+     set
+     map pmap map-indexed
+     partition
+     partition-all
+     remove filter
+     take take-while
+     drop  drop-while
+     key val
+     merge sorted-map sorted-map-by
+     into
+     count
+     vec empty empty?
+     every? some not-every? not-any?
+     split-at
+     first second rest last butlast get nth pop peek
+     select-keys get-in
+     zipmap
+     reverse rseq
+     conj
+     conj! assoc assoc! assoc-in dissoc dissoc! disj! update
+     boolean?
+     class
+     deref])
+  (:require
+    [clojure.core                            :as c      ]
+    [fast-zip.core                           :as zip    ]
+    [quantum.core.data.map                   :as map
+      :refer [!hash-map]]
+    [quantum.core.data.set                   :as set    ]
+    [quantum.core.data.string
+      :refer [!str]]
+    [quantum.core.data.vector                :as vec
+      :refer [catvec subsvec !vector]]
+    [quantum.core.collections.base           :as base   ]
+    [quantum.core.collections.core           :as coll]
+    [quantum.core.collections.sociative      :as soc    ]
+    [quantum.core.collections.differential   :as diff
+      :include-macros true                              ]
+    [quantum.core.collections.generative     :as gen    ]
+    [quantum.core.collections.map-filter     :as mf     ]
+    [quantum.core.collections.selective      :as sel    ]
+    [quantum.core.collections.tree           :as tree   ]
+    [quantum.core.collections.zippers        :as qzip   ]
+    [quantum.core.collections.logic          :as clog   ]
+    [quantum.core.core
+      :refer [->object]]
+    [quantum.core.error                      :as err
+      :refer [->ex TODO]]
+    [quantum.core.fn                         :as fn
+      :refer [rfn juxt-kv withf->> firsta aritoid
+              rcomp conja <- fn-> fn->> fn1 fnl fn' fn&2]]
+    [quantum.core.log                        :as log
+      :refer [prl!]]
+    [quantum.core.logic                      :as logic
+      :refer [fn-not fn-or fn-and, fn-nil
+              whenf whenf1, ifn ifn1, condf condf1
+              splice-or]]
+    [quantum.core.macros                     :as macros
+      :refer [defnt case-env]]
+    [quantum.core.ns                         :as ns]
+    [quantum.core.numeric                    :as num]
+    [quantum.core.numeric.convert            :as nconv]
+    [quantum.core.reducers                   :as red
+      :refer [defeager]]
+    [quantum.core.refs                       :as refs
+      :refer [setm! swapm! deref !ref]]
+    [quantum.core.string                     :as str    ]
+    [quantum.core.string.format              :as sform  ]
+    [quantum.core.type                       :as t
+      :refer [lseq? transient? editable?
+              boolean? should-transientize?
+              class]]
+    [quantum.core.analyze.clojure.predicates :as anap]
+    [quantum.core.loops                      :as loops]
+    [quantum.core.vars                       :as var
+      :refer [defalias defaliases]])
   (:require-macros
     [quantum.core.collections
       :refer [for for* lfor doseq doseqi reduce reducei dotimes
@@ -104,51 +105,8 @@
               first second rest last butlast get pop peek nth
               conjl conj! assoc assoc! assoc?! dissoc dissoc! disj!
               map-entry join empty? empty update update! empty? elem->array]])
-  #?(:clj  (:import java.util.Comparator)
+  #?(:clj  (:import java.util.Comparator quantum.core.refs.MutableReference)
      :cljs (:import goog.string.StringBuffer)))
-
-
-; ===== MUTABILITY ===== ;
-
-(#?(:clj definterface :cljs defprotocol) IMutableReference
-  (get [#?(:cljs this)])
-  (set [#?(:cljs this) x]))
-
-; TODO create for every primitive datatype as well
-(deftype MutableReference [#?(:clj ^:unsynchronized-mutable val :cljs ^:mutable val)]
-  IMutableReference
-  (get [this] val)
-  (set [this x] (set! val x) this)
-  #?(:clj  clojure.lang.IDeref
-     :cljs cljs.core/IDeref)
-  (#?(:clj deref :cljs -deref) [this] val))
-
-#?(:clj (definterface IMutableDouble (^double get []) (set [^double x])))
-
-#?(:clj
-(deftype MutableDouble [^:unsynchronized-mutable ^double val]
-  IMutableDouble      (^double get [this] val) (set [this ^double x] (set! val x))
-  clojure.lang.IDeref (deref [this] val)))
-
-#?(:clj (defnt setm!* ([#{IMutableReference IMutableDouble} x v] (.set x v) v)))
-#?(:clj (defnt getm*  ([#{IMutableReference IMutableDouble} x  ] (.get x))))
-
-        (defnt !ref*    "Creates a mutable reference to an Object."           [        x] (MutableReference. x))
-#?(:clj (defnt !double* "Creates a mutable reference to a primitive double."  [^double x] (MutableDouble.    x)))
-#?(:clj (defmacro !ref    ([ ] `(MutableReference. nil)) ([x] `(!ref*    ~x))))
-#?(:clj (defmacro !double ([ ] `(MutableDouble.    0.0)) ([x] `(!double* ~x))))
-
-#?(:clj (defmacro setm!  "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*  ~x ~v))))
-#?(:clj (defmacro setm!& "Set mutable" [x v] (case-env :cljs `(set! (.-val ~x) ~v) `(setm!*& ~x ~v))))
-#?(:clj (defmacro getm   "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*   ~x))))
-#?(:clj (defmacro getm&  "Get mutable" [x  ] (case-env :cljs `(.-val ~x)           `(getm*&  ~x))))
-
-#?(:clj
-(defmacro swapm! [*x0 *x1]
-  `(let [*x0# ~*x0 *x1# ~*x1
-         temp# (getm *x0#)]
-     (setm! *x0# (getm *x1#))
-     (setm! *x1# temp#))))
 
 #?(:clj
 (defmacro getf
@@ -247,7 +205,6 @@
 #?(:clj (defalias popl          coll/popl         ))
 #?(:clj (defalias popr          coll/popr         ))
 ; ===== MODIFICATION ===== ;
-#?(:clj (defalias doto!         coll/doto!        ))
 #?(:clj (defalias copy!         coll/copy!        ))
 ; ===== CONTAINMENT PREDICATES ===== ;
 #?(:clj (defalias contains?     coll/contains?    ))
@@ -267,9 +224,10 @@
 #?(:clj (defalias empty?        coll/empty?       ))
         (def      nempty?       (fn-not empty?)   )
         (defalias nnil?         base/nnil?        )
+        (defalias count:rf      coll/count:rf     )
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias count&        coll/count&       ))
-        (defalias count:rfn     coll/count:rfn)
+
 #?(:clj (defalias lasti         coll/lasti        ))
 #?(:clj (defalias lasti&        coll/lasti&       ))
 ; ===== CREATION ===== ;
@@ -279,6 +237,9 @@
 #?(:clj (defalias array         coll/array        ))
 #?(:clj (defalias array-of-type coll/array-of-type))
 #?(:clj (defalias ->vec         coll/->vec        ))
+
+#?(:clj (defalias ?transient!   coll/?transient!  ))
+#?(:clj (defalias ?persistent!  coll/?persistent! ))
 
 ; ===== CONCATENATION ===== ;
 #?(:clj (defalias join          red/join          ))
@@ -351,6 +312,7 @@
         (defalias iterate+            red/iterate+            )
         (defalias reduce-by+          red/reduce-by+          )
 
+        (defalias distinct-storing+   red/distinct-storing+   )
         ; `distinct` <~> `lodash/uniq`
         (defalias distinct+           red/distinct+           )
         ; `distinct-by` <~> `lodash/uniqBy`
@@ -367,8 +329,22 @@
         (defalias reduce-count        red/reduce-count        )
         (defalias reduce-sentinel     red/reduce-sentinel     )
 
-#?(:clj (defalias elem->array         coll/elem->array        ))
-#?(:clj (defalias ->array             coll/->array            ))
+#?(:clj (defaliases coll
+           elem->array
+           ->booleans
+           ->bytes
+           ->ubytes
+           ->ubytes-clamped
+           ->chars
+           ->shorts
+           ->ushorts
+           ->ints
+           ->uints
+           ->longs
+           ->floats
+           ->doubles
+           ->objects
+           ->array))
 
 ; _______________________________________________________________
 ; ============================ LOOPS ============================
@@ -380,6 +356,7 @@
 #?(:clj (defalias fortimes:doubles  loops/fortimes:doubles ))
 #?(:clj (defalias fortimes:doubles2 loops/fortimes:doubles2))
 #?(:clj (defalias fortimes:doubles3 loops/fortimes:doubles3))
+#?(:clj (defalias transduce    red/transduce ))
 #?(:clj (defalias reduce       loops/reduce  ))
 #?(:clj (defalias reducei      loops/reducei ))
 #?(:clj (defalias reduce*      loops/reduce* ))
@@ -408,9 +385,10 @@
 #?(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args)))
 #?(:clj (defalias until     loops/until   ))
 #?(:clj (defalias while-let loops/while-let))
-        (defalias doeach    loops/doeach)
-        (defalias each      loops/each)
-        (defalias eachi     loops/eachi)
+#?(:clj (defalias doeach    loops/doeach))
+#?(:clj (defalias each      loops/each))
+#?(:clj (defalias eachi     loops/eachi))
+#?(:clj (defalias doreduce  loops/doreduce))
         (defalias break     reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================
@@ -462,6 +440,7 @@
         ; `partition-all` <~> `lodash/chunk`
         ; TODO choose what structures to partition into
         (defeager partition-all   red/partition-all+ )
+        (defalias partition-all-timeout+ red/partition-all-timeout+)
         (defalias lpartition      c/partition        )
         (defn each+ [f xs] (->> xs (map+ #(do (f %) %))))
 
@@ -491,8 +470,8 @@
              (<- or depth))
         depth)))
 
-(def max-depth (fconj comp-depth max))
-#_(def min-depth (fconj comp-depth min)) ; this is not useful
+(def max-depth (conja comp-depth max))
+#_(def min-depth (conja comp-depth min)) ; this is not useful
 
 ; _______________________________________________________________
 ; ======================== COMBINATIVE ==========================
@@ -615,14 +594,17 @@
 
 (defmacro count<= [n x] `(count<=* ~x ~n))
 
+(defnt padr!
+  "Pad right, mutable."
+  ([^!string? x n    ] (padr! x n \space))
+  ([^!string? x n add]
+    (dotimes [_ (dec (- n (lasti x)))] (conj! x add))
+    x))
 
 (defnt padr
-  "Pad, right."
-  ([^!string? x i add]
-    (dotimes [i' (- i (lasti x))] (.append x add))
-    x)
-  ([^string? x i add]
-    (str (padr (#?(:clj StringBuilder. :cljs StringBuffer.) x) i add))))
+  "Pad right until length `n` is met."
+  ([^string? x n    ]      (padr        x  n \space))
+  ([^string? x n add] (str (padr! (!str x) n add))))
 
 (defn merge-with-set [m1 m2]
   (merge-with (fn [v1 v2] (if (set? v1)
@@ -739,19 +721,6 @@
         (persistent! ret)))))
 
 (def frest (fn-> rest first))
-
-; ----- MISCELLANEOUS ----- ;
-
-; `symmetric-difference` <~> `lodash/xor`
-; TODO `symmetric-difference-by` <~> `lodash/xorBy`
-(defn symmetric-difference
-  "Returns the symmetric difference between a and b.
-   That is, (a - b) union (b - a).
-   AKA disjunctive union."
-  [a b]
-  (set/union
-    (set/difference a b)
-    (set/difference b a)))
 
 ; ================================================ INDEX-OF ================================================
 (defn seq-contains?
@@ -1093,20 +1062,21 @@
     (select-as+ coll (assoc kfs k1 f1))))
 
 (defn group-by-into
-  "Like `group-by`, but you can choose what collection and subcollection to group into."
-  ([f init xs] (group-by-into f init vector xs))
-  ([f init gen-subinit xs]
+  "Like `group-by`, but you can choose what collection and subcollection to group into.
+   `tf` is a function that transforms the element of the reducible to be sub-collected."
+  ([init kf    xs] (group-by-into init kf (aritoid vector nil conj) xs))
+  ([init kf rf xs]
     (->> xs
          (reduce
            (rfn [ret x]
-             (let [k (f x)]
-               (assoc?! ret k (conj?! (or (get ret k) (gen-subinit)) x))))
+             (let [k (kf x)]
+               (assoc?! ret k (rf (or (get ret k) (rf)) x))))
            (?transient! init))
          ?persistent!)))
 
-(defn group-by   [f      xs] (group-by-into f        {}   xs))
-(defn group-into [  init xs] (group-by-into identity init xs))
-(defn group      [       xs] (group-by-into identity {}   xs))
+(defn group-by   [     kf xs] (group-by-into {}   kf     xs))
+(defn group-into [init    xs] (group-by-into init identity xs))
+(defn group      [        xs] (group-by-into {}   identity xs))
 
 ; ----- SPLIT ----- ;
 
@@ -1124,16 +1094,17 @@
     (if (= left coll)
         [left]
         [left (take-after split-at-obj coll)])))
+
 (defn split-into
   "Like `split`, but you can choose what subcollection to split into."
   ([pred gen-subinit xs]
-    (->> xs (group-by-into (rcomp pred nconv/->boolean-num) (object-array 2) (rcomp gen-subinit (fn1 ?transient!)))
-            (map (fn1 ?persistent!)))))
+    (->vec (group-by-into (->objects 2) (rcomp pred nconv/->boolean-num) (aritoid gen-subinit nil (fn&2 conj?!))))))
 
 (defn split
   "Splits `xs` into two groups:
    the first, which fails `pred`, and the second, which satisfies it."
   [pred xs] (split-into pred vector xs))
+
 (defn split-remove-match
   {:todo ["Slightly inefficient — two |index-of| implicit."]
    :tests `{(split-remove-match "--" "ab--sddasd--")
@@ -1467,25 +1438,25 @@
   (setm! *x2 (get xs (+ start 2)))
   (setm! *x3 (get xs (+ start 3)))
   (setm! *x4 (get xs (+ start 4)))
-  (when (neg? (#?(:clj .compare) compf (getm *x1) (getm *x0)))
+  (when (neg? (#?(:clj .compare) compf (deref *x1) (deref *x0)))
     (swapm! *x0 *x1))
-  (when (neg? (#?(:clj .compare) compf (getm *x2) (getm *x0)))
+  (when (neg? (#?(:clj .compare) compf (deref *x2) (deref *x0)))
     (swapm! *x0 *x2))
-  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x0)))
+  (when (neg? (#?(:clj .compare) compf (deref *x3) (deref *x0)))
     (swapm! *x0 *x3))
-  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x0)))
+  (when (neg? (#?(:clj .compare) compf (deref *x4) (deref *x0)))
     (swapm! *x0 *x4))
-  (when (neg? (#?(:clj .compare) compf (getm *x2) (getm *x1)))
+  (when (neg? (#?(:clj .compare) compf (deref *x2) (deref *x1)))
     (swapm! *x1 *x2))
-  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x1)))
+  (when (neg? (#?(:clj .compare) compf (deref *x3) (deref *x1)))
     (swapm! *x1 *x3))
-  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x1)))
+  (when (neg? (#?(:clj .compare) compf (deref *x4) (deref *x1)))
     (swapm! *x1 *x4))
-  (when (neg? (#?(:clj .compare) compf (getm *x3) (getm *x2)))
+  (when (neg? (#?(:clj .compare) compf (deref *x3) (deref *x2)))
     (swapm! *x2 *x3))
-  (when (neg? (#?(:clj .compare) compf (getm *x4) (getm *x2)))
+  (when (neg? (#?(:clj .compare) compf (deref *x4) (deref *x2)))
     (swapm! *x2 *x4))
-  (let [x2 (getm *x2)]
+  (let [x2 (deref *x2)]
     (cond (= x2 (get xs (+ start 0))) 0
           (= x2 (get xs (+ start 1))) 1
           (= x2 (get xs (+ start 2))) 2
