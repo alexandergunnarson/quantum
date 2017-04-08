@@ -4,7 +4,10 @@
   quantum.core.async
   (:refer-clojure :exclude
     [locking
-     promise deliver, delay force, realized? future map])
+     promise deliver, delay force, realized? future repeatedly count
+     reduce, for
+     conj!
+     map, map-indexed])
   (:require
     [clojure.core                      :as core]
     [com.stuartsierra.component        :as component]
@@ -14,9 +17,16 @@
  #_[[co.paralleluniverse.pulsar.async  :as async+]
     [co.paralleluniverse.pulsar.core   :as pasync]])
     [quantum.core.collections          :as coll
-      :refer [doseqi nempty? red-for break nnil? map]]
+      :refer [nempty? count red-for break nnil? repeatedly
+              reduce, #_->objects
+              doseqi, red-for, for
+              conj!
+              map, map-indexed map-indexed+
+              seq-and]]
     [quantum.core.core                 :as qcore
       :refer [istr]]
+    [quantum.core.data.vector          :as vec
+      :refer [!+vector:sized]]
     [quantum.core.error                :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.fn
@@ -28,6 +38,7 @@
       :refer [case-env]]
     [quantum.core.macros               :as macros
       :refer [defnt]]
+    [quantum.core.refs                 :as refs]
     [quantum.core.system               :as sys]
     [quantum.core.vars                 :as var
       :refer [defalias defmalias]]
@@ -94,7 +105,7 @@
   ([^keyword? type]
     (case type
       #_:std     #_(async+/chan)
-      :queue   #?(:clj (LinkedBlockingQueue.)
+      :queue   #?(:clj  (LinkedBlockingQueue.)
                   :cljs (TODO))
       :casync  (async/chan)))
   ([^keyword? type n]
@@ -215,10 +226,14 @@
 
 #?(:clj
 (defnt realized? ; TODO CLJS
-  ([^clojure.lang.IPending x] (realized? x))
+  ([^clojure.lang.IPending x] (.isRealized x))
   #_([^co.paralleluniverse.strands.channels.QueueObjectChannel x] ; The result of a Pulsar go-block
     (-> x .getQueueLength (> 0)))
   ([#{Future FutureTask Fiber} x] (.isDone x))))
+
+(defn ?offer!
+  "If offering nil, will close the channel."
+  [x v] (if (some? v) (offer! x v) (close! x)))
 
 #?(:clj
 (defmacro wait!
@@ -333,9 +348,9 @@
    Lets each port initiate — if e.g. `go` blocks, will
    initiate concurrently. Aggregates the results into a vector."
   [ports]
-  `(let [ret# (transient [])]
-     (doseq [p# ~ports] (conj! ret# (<! p#)))
-     (persistent! ret#))))
+  `(let [ret# (core/transient [])]
+     (core/doseq [p# ~ports] (core/conj! ret# (<! p#)))
+     (core/persistent! ret#))))
 
 #?(:clj (defn seq<!! [ports] (map (fn1 <!!) ports)))
 
@@ -414,9 +429,9 @@
                 (let [[v _] (alts!! [c (timeout timeout-ms)])]
                   (or v timeout-val)))])
             clojure.lang.IPending
-              (isRealized [_] (some? (poll! c)))
+              (isRealized [_] (some? (async/poll! c)))
             clojure.lang.IFn ; deliver
-              (invoke [_ x] (offer! c x))
+              (invoke [_ x] (async/offer! c x))
             asyncp/ReadPort
               (take! [_ handler] (asyncp/take! c handler))
             asyncp/WritePort
@@ -435,28 +450,98 @@
   ([xf] (promise xf nil))
   ([xf ex-handler] (Promise. (async/promise-chan xf ex-handler))))
 
-(def promise? (fnl instance? Promise)) ; TODO what about Clojure promises or JS built-in ones?
+(deftype MultiplexedPromise [cs] ; is a vector
+  #?@(:clj [clojure.lang.IDeref
+              (deref [_] (map deref cs))
+            clojure.lang.IBlockingDeref
+              (deref [_ timeout-ms timeout-val]
+                (map (fn1 deref timeout-ms timeout-val) cs))])
+            clojure.lang.IPending
+              (isRealized [_] (seq-and (fn1 realized?) cs))
+            clojure.lang.IFn ; deliver
+              (invoke [_ x] (map (fn [c] (c x)) cs))
+            asyncp/ReadPort
+              (take! [_ handler]
+                (let [promises (for [_ cs] (promise))
+                      _ (->> cs
+                             (map-indexed+
+                               (fn [i c]
+                                 (let [p      (get promises i)
+                                       polled (poll! c)]
+                                   (if (some? polled)
+                                       (offer! p polled)
+                                       (async/take! c (fn [resp] (?offer! p resp)))))))
+                             coll/doreduce)
+                      all-realized? (seq-and (fn1 realized?) promises)]
+                  (if all-realized?
+                      (refs/->derefable (map poll! promises))
+                      (do (go ((asyncp/commit handler) (seq<! promises)))  ; TODO reflection on .nth but .nth is not found in `macros/macroexpand-all` ...
+                          nil))))
+            asyncp/WritePort
+              (put! [_ x handler]
+                (let [promises (for [_ cs] (promise))
+                      all-puts-succeeeded?
+                        (->> cs
+                             (map-indexed+
+                               (fn [i c]
+                                 (async/put! c x (fn [resp] (?offer! (get promises i) resp)))))
+                             seq-and)]
+                  (go ((asyncp/commit handler) (seq<! promises))) ; TODO reflection on .nth but .nth is not found in `macros/macroexpand-all` ...
+                  (refs/->derefable all-puts-succeeeded?)))
+            asyncp/Channel
+              (close!  [_] (map asyncp/close!  cs))
+              (closed? [_] (map asyncp/closed? cs)))
 
-(defnt deliver [^Promise p v] (>!! p v))
+(defnt promise? ([#{Promise MultiplexedPromise} x] true) ([^default x] false)) ; TODO what about Clojure promises or JS built-in ones?
 
-(defnt request-stop! [^Promise p] (offer! p true))
-(defnt stop-requested? [^Promise p] (poll! p))
+(defnt deliver>!! [#{Promise MultiplexedPromise} p v] (>!! p v))
+
+(defnt delivered? [#{Promise MultiplexedPromise} p] (realized? p))
+
+(defnt request-stop!   [#{Promise MultiplexedPromise} p] (offer! p true))
+(defnt stop-requested? [#{Promise MultiplexedPromise} p] (realized? p)) ; TODO fix this
+(defnt stopping?       [#{Promise MultiplexedPromise} p] (and (realized? p) (not (closed? p))))
+(defnt stopped?        [#{Promise MultiplexedPromise} p] (and (realized? p) (closed? p)))
+
+(defnt <status:stop-ch [#{Promise MultiplexedPromise} p]
+  (if (realized? p)
+      (if (closed? p)
+          :stopped
+          :stopping)
+      (if (closed? p)
+          :stopped-without-request
+          :running)))
+
+(defnt mark-stopped!   [#{Promise MultiplexedPromise} p] (request-stop! p) (close! p))
+
+(defn multiplex-promises
+  "Multiplexes n promises such that whatever is done to the multiplexed promise is
+   done to all promises (`close!` closes both, a `put!` will go to both, etc.).
+   Reads come back as a vector of values taken from the promises in the order
+   passed to `multiplex-promises`."
+  ([p0] p0)
+  ([p0 p1] (MultiplexedPromise. [p0 p1]))
+  ([p0 p1 & ps] (MultiplexedPromise. (apply vector p0 p1 ps))))
 
 ; ----- PIPING ----- ;
 
 (defn pipe!*
-  "Like `pipe`, but returns the `go-loop` created by `pipe!` instead of the `to` chan,
-   and allows for arbitrary stopping of the pipe via the promise(-chan) that is returned."
+  "Like `pipe`, but instead of the `to` chan, returns a promise(-chan) by which the
+   pipe process can be stopped.
+   Like in other places, the `stop` chan is offered `true` and closed when the pipe
+   is closed."
   ([from to       ] (pipe!* from to true))
   ([from to close?]
-    (let [stop (promise)]
-      (go-loop []
-        (let [v (<! from)]
-          (if (or (nil? v) (and stop (some? (poll! stop))))
-              (when close? (async/close! to)) ; TODO issues with `async/close!` here
-              (when (>! to v)
-                (recur)))))
-      stop)))
+    (let [stop-ch (promise)]
+      (go (try
+            (loop []
+              (let [v (<! from)]
+                (if (or (nil? v) (and stop-ch (core/realized? #_delivered? stop-ch))) ; TODO issues here too
+                    (when close? (async/close! to)) ; TODO issues with `async/close!` here
+                    (when (>! to v)
+                      (recur)))))
+            (finally (mark-stopped!-protocol stop-ch)))) ; TODO deprotocolize
+      stop-ch)))
 
 (defrecord
   ^{:doc "`error`   : The actual error that was thrown
@@ -476,7 +561,7 @@
   ([kind conc from xf to close?           ] (pipeline!* kind conc from xf to close? nil))
   ([kind conc from xf to close? ex-handler]
      (assert (pos? conc))
-     (let [stop (promise)
+     (let [stop-ch (promise)
            ex-handler
              (or ex-handler
                  (fn [ex]
@@ -515,14 +600,14 @@
                              (let [job (<! jobs)]
                                (when (async job)
                                  (recur))))))
-       (go-loop []
-         (let [v (<! from)]
-           (if (or (nil? v) (and stop (some? (poll! stop))))
-               (async/close! jobs) ; TODO fix this to use this ns/`close!`
-               (let [p (chan 1)]
-                 (>! jobs [v p])
-                 (>! results p)
-                 (recur)))))
+       (go (loop []
+             (let [v (<! from)]
+               (if (or (nil? v) (and stop-ch (some? (poll! stop-ch))))
+                   (async/close! jobs) ; TODO fix this to use this ns/`close!`
+                   (let [p (chan 1)]
+                     (>! jobs [v p])
+                     (>! results p)
+                     (recur))))))
        (go-loop []
          (let [p (<! results)]
            (if (nil? p)
@@ -533,7 +618,7 @@
                      (when (and (not (nil? v)) (>! to v))
                        (recur))))
                  (recur)))))
-       stop))))
+       stop-ch))))
 
 ; TODO CLJS
 #?(:clj
@@ -545,7 +630,7 @@
   ([kind conc from xf           ] (concur-each!* kind conc from xf nil))
   ([kind conc from xf ex-handler]
     (assert (pos? conc))
-    (let [stop (promise)
+    (let [stop-ch (promise)
           ex-handler
             (or ex-handler
                 (fn [ex]
@@ -582,77 +667,77 @@
                               (when (async job) (recur))))))
       (go-loop []
         (let [v (<! from)]
-          (if (or (nil? v) (and stop (some? (poll! stop))))
+          (if (or (nil? v) (and stop-ch (some? (poll! stop-ch))))
               (async/close! jobs) ; TODO fix this to use this ns/`close!`
               (let [p (chan 1)]
                 (>! jobs [v p])
                 (recur)))))
-      stop))))
+      stop-ch))))
 
 (defn pipe-interruptibly<!
   "Blocking-takes when `process` returns a channel."
-  [{:keys [from-ch to-ch failures-ch stop-ch *running?
+  [{:keys [from-ch to-ch failures-ch stop-ch
            processf
            on-exited-via-exception
            on-exited-via-stop
            on-exited-normally]}]
-  (let [on-exited-normally'      #(do (reset! *running? false)
+  (let [stop-ch                  (or stop-ch (promise))
+        on-exited-normally'      #(do (mark-stopped! stop-ch)
                                       ((or on-exited-normally fn-nil))
                                       nil)
-        on-exited-via-stop'      #(do (reset! *running? false)
+        on-exited-via-stop'      #(do (mark-stopped! stop-ch)
                                       ((or on-exited-via-stop fn-nil))
                                       nil)
-        on-exited-via-exception' (fn [e] (reset! *running? false)
+        on-exited-via-exception' (fn [e] (mark-stopped! stop-ch)
                                          ((or on-exited-via-exception fn-nil) e)
                                          nil)
         ; Catches issues with specifically the `processf` function
         on-exception             (if failures-ch
                                      (fn [e x] (put! failures-ch (PipelineFailure. e x)) nil)
                                      (fn [e _] (on-exited-via-exception' e)))]
-    (go
-      (reset! *running? true)
-      (loop []
-        (let [[x ch] (catch-all (alts! [stop-ch from-ch])
-                       e (on-exited-via-exception' e))]
-          (cond (= ch stop-ch)
-                  (on-exited-via-stop')
-                (some? x)
-                  (when
-                    (catch-all
-                      (let [[ret ch']
-                              (catch-all
-                                (let [ret (processf x)]
-                                  (if (readable-chan? ret)
-                                      (alts! [stop-ch ret])
-                                      [ret nil]))
-                                e (on-exception e x))]
-                        (cond (= ch' stop-ch)
-                                (on-exited-via-stop')
-                              (and (some? ret) to-ch)
-                                (do (put! to-ch ret) true)
-                              :else
-                                true))
-                      e (on-exited-via-exception' e))
-                    (recur))
-                :else
-                  (on-exited-normally')))))))
+    (go (loop []
+          (let [[x ch] (catch-all (alts! [stop-ch from-ch])
+                         e (on-exited-via-exception' e))]
+            (cond (= ch stop-ch)
+                    (on-exited-via-stop')
+                  (some? x)
+                    (when
+                      (catch-all
+                        (let [[ret ch']
+                                (catch-all
+                                  (let [ret (processf x)]
+                                    (if (readable-chan? ret)
+                                        (alts! [stop-ch ret])
+                                        [ret nil]))
+                                  e (on-exception e x))]
+                          (cond (= ch' stop-ch)
+                                  (on-exited-via-stop')
+                                (and (some? ret) to-ch)
+                                  (do (put! to-ch ret) true)
+                                :else
+                                  true))
+                        e (on-exited-via-exception' e))
+                      (recur))
+                  :else
+                    (on-exited-normally')))))))
 
 #?(:clj
 (defn pipe-interruptibly<!!
   "Like `pipe-interruptibly<!` but uses `thread` instead of `go`."
   {:todo #{"Combine code with `pipe-interruptibly<!`"}}
-  [{:keys [from-ch to-ch failures-ch stop-ch *running?
+  [{:keys [from-ch to-ch failures-ch stop-ch
            processf
            on-exited-via-exception
            on-exited-via-stop
            on-exited-normally]}]
-  (let [on-exited-normally'      #(do (reset! *running? false)
+  (let [stop-ch                  (or stop-ch (promise))
+        on-exited-normally'      #(do (mark-stopped! stop-ch)
                                       ((or on-exited-normally fn-nil))
                                       nil)
-        on-exited-via-stop'      #(do (reset! *running? false)
+        on-exited-via-stop'      #(do (mark-stopped! stop-ch)
                                       ((or on-exited-via-stop fn-nil))
                                       nil)
-        on-exited-via-exception' (fn [e] (reset! *running? false)
+        on-exited-via-exception' (fn [e] (mark-stopped! stop-ch)
                                          ((or on-exited-via-exception fn-nil) e)
                                          nil)
         ; Catches issues with specifically the `processf` function
@@ -660,7 +745,6 @@
                                      (fn [e x] (put! failures-ch (PipelineFailure. e x)) nil)
                                      (fn [e _] (on-exited-via-exception' e)))]
     (thread
-      (reset! *running? true)
       (loop []
         (let [[x ch] (catch-all (alts!! [stop-ch from-ch])
                        e (on-exited-via-exception' e))]
@@ -685,4 +769,14 @@
                       e (on-exited-via-exception' e))
                     (recur))
                 :else
-                  (on-exited-normally'))))))))
+                  (on-exited-normally')))))
+    stop-ch)))
+
+#?(:clj
+(defmacro handle-timeout! [[v c timeout-ms] form & body]
+ `(let [timeout# (clojure.core.async/timeout ~timeout-ms) ; TODO use async/
+        [~v c-alt#] (alts! [~c timeout#])]
+    (~form (= c-alt# timeout#) ~@body))))
+
+#?(:clj (defmacro if-timeout!   [[v c timeout-ms] then else] `(handle-timeout! [~v ~c ~timeout-ms] if   ~then ~else)))
+#?(:clj (defmacro when-timeout! [[v c timeout-ms] & body]    `(handle-timeout! [~v ~c ~timeout-ms] when ~@body)))
