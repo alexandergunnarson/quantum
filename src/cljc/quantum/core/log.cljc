@@ -179,6 +179,8 @@
   `(let [level# ~level]
      (ppr level# ~(->> xs (map #(vector (list 'quote %) %)) (into {}))))))
 
+#?(:clj (defmacro prl! "For debugging." [& xs] `(prl :user ~@xs)))
+
 #?(:clj
 (defmacro this-ns []
   `(if (get @levels :ns) (pr* true false println :ns ['~(ns-name *ns*)] nil) true)))
