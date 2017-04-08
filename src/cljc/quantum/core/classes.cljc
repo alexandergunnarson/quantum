@@ -1,15 +1,49 @@
 (ns
-  ^{:doc "Some useful macros, like de-repetitivizing protocol extensions.
-          Also some plumbing macros for |for| loops and the like."
+  ^{:doc "Class-related functions."
     :attribution "alexandergunnarson"}
   quantum.core.classes
   (:refer-clojure :exclude [name])
-  (:require [quantum.core.collections.base :as cbase
-              :refer [name default-zipper camelcase ns-qualify
-                      comparators ensure-set]]
-            [quantum.core.classes.reg      :as class-reg]
-            [quantum.core.data.map         :as map      ]
-            [quantum.core.data.set         :as set      ]))
+  (:require
+    [quantum.core.data.set :as set])
+  #_(:require [quantum.core.classes.reg      :as class-reg]))
+
+#?(:clj (def ^:const parentmost-class java.lang.Object))
+
+#?(:clj (defn interface? [^Class c] (.isInterface c)))
+
+#?(:clj
+(defn class->parents [^Class c]
+  (if (or (nil? c) (= c parentmost-class))
+      #{}
+      (let [interfaces (.getInterfaces c)
+            s          (.getSuperclass c)]
+        (if (empty? interfaces)
+            (if s #{s} #{Object})
+            (->> interfaces
+                 (reduce conj! (transient (if s #{s} #{})))
+                 persistent!))))))
+
+#?(:clj
+(defn class->ancestors
+  [^Class c0]
+  (loop [ancestors' (class->parents c0) cs ancestors']
+    (if (empty? cs)
+        ancestors'
+        (let [c (first cs) bs (class->parents c)]
+          (recur (set/union ancestors' bs) (set/union (disj cs c) bs)))))))
+
+#?(:clj
+(defn class->ancestor-graph
+  "Given a class, returns a map in which it and all its ancestors will be the
+   keys and all their parents will be the values. Includes `java.lang.Object`."
+  [^Class c0]
+  (loop [graph (transient {c0 (class->parents c0)})
+         cs    (get graph c0)]
+    (if (empty? cs)
+        (persistent! graph)
+        (let [c (first cs) bs (class->parents c)]
+          (recur (assoc! graph c bs)
+                 (set/union (disj cs c) bs)))))))
 
 ; ; PACKAGE RESOLUTION
 ; ; clojure (class @clojure.lang.Compiler/LOADER)
@@ -109,21 +143,6 @@
 ;   "Subclass descendant nodes for class sym."
 ;   [class-sym]
 ;   (-> class-sym all-implementing-leaf-classes-entry first)))
-
-#?(:clj
-(defn ancestor-list
-  "Lists the direct ancestors of a class
-  (ancestor-list clojure.lang.PersistentHashMap)
-  => [clojure.lang.PersistentHashMap
-      clojure.lang.APersistentMap
-      clojure.lang.AFn
-      java.lang.Object]"
-  {:source "zcaudate/hara.class.inheritance"}
-  ([cls] (ancestor-list cls []))
-  ([^java.lang.Class cls output]
-     (if (nil? cls)
-       output
-       (recur (.getSuperclass cls) (conj output cls))))))
 
 ; #?(:clj
 ; (defn ancestor-tree
