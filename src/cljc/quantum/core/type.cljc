@@ -94,11 +94,12 @@
            ([x] #?(:clj  (-> x class .isArray) ; Have to use reflection here because we can't check *ALL* possible array types in a `defnt`
                    :cljs (-> x core/array?))))
 
-         (defnt svec?          ([^svec?          x] true) ([^default x] false))
-         (defnt +vec?          ([^+vec?          x] true) ([^default x] false))
-         (defnt !+vec?         ([^!+vec?         x] true) ([^default x] false))
-         (defnt ?!+vec?        ([^?!+vec?        x] true) ([^default x] false))
-         (defnt vec?           ([^vec?           x] true) ([^default x] false))
+         (defnt svector?       ([^svector?       x] true) ([^default x] false))
+         (defnt +vector?       ([^+vector?       x] true) ([^default x] false))
+         (defnt !+vector?      ([^!+vector?      x] true) ([^default x] false))
+         (defnt ?!+vector?     ([^?!+vector?     x] true) ([^default x] false))
+         (defnt !vector?       ([^!vector?       x] true) ([^default x] false))
+         (defnt vector?        ([^vector?        x] true) ([^default x] false))
 
          (defnt +array-map?    ([^+array-map?    x] true) ([^default x] false))
          (defnt !+array-map?   ([^!+array-map?   x] true) ([^default x] false))
@@ -114,9 +115,12 @@
          (defnt unsorted-map?  ([^unsorted-map?  x] true) ([^default x] false))
          (defnt +sorted-map?   ([^+sorted-map?   x] true) ([^default x] false))
          (defnt sorted-map?    ([^sorted-map?    x] true) ([^default x] false))
-         (defnt +map?          ([^+map?          x] true) ([^default x] false))
-         (defnt !map?          ([^!map?          x] true) ([^default x] false))
-         (defnt map?           ([^map?           x] true) ([^default x] false))
+         (defnt +insertion-ordered-map? ([^+insertion-ordered-map? x] true) ([^default x] false))
+         (defnt !insertion-ordered-map? ([^!insertion-ordered-map? x] true) ([^default x] false))
+         (defnt insertion-ordered-map?  ([^insertion-ordered-map?  x] true) ([^default x] false))
+         (defnt +map?                 ([^+map?                 x] true) ([^default x] false))
+         (defnt !map?                 ([^!map?                 x] true) ([^default x] false))
+         (defnt map?                  ([^map?                  x] true) ([^default x] false))
 
          (defnt +unsorted-set? ([^+unsorted-set? x] true) ([^default x] false))
          (defnt unsorted-set?  ([^unsorted-set?  x] true) ([^default x] false))
@@ -137,7 +141,6 @@
          (defalias seqable? qcore/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))
-         (defnt pattern?       ([^pattern?       x] true) ([^default x] false))
          (defnt regex?         ([^regex?         x] true) ([^default x] false))
          (defnt editable?      ([^editable?      x] true) ([^default x] false))
          (defnt transient?     ([^transient?     x] true) ([^default x] false))
@@ -194,8 +197,7 @@
 (defn enum?
   {:source "zcaudate/hara.object.enum"}
   [type]
-  (-> (classes/ancestor-list type)
-      (set)
+  (-> (classes/class->ancestors type)
       (get java.lang.Enum))))
 
 ; ; ======= TRANSIENTS =======
@@ -253,9 +255,6 @@
   ([^+hash-map?     x] #?(:clj  clojure.lang.PersistentHashMap/EMPTY
                           :cljs cljs.core.PersistentHashMap.EMPTY))
   ([^default        x] (empty x)))
-
-(defnt ?transient!  ([^editable?  x] (transient   x)) ([^default x] x))
-(defnt ?persistent! ([^transient? x] (persistent! x)) ([^default x] x))
 
 (defnt ->joinable
   ([#{+vec? +hash-map? +unsorted-set?} x] x)
