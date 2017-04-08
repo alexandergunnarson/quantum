@@ -3,13 +3,17 @@
           from which |subset|, |superset|, |proper-subset?|, and so on may be called."
     :attribution "alexandergunnarson"}
   quantum.core.data.set
+  (:refer-clojure :exclude
+    [+ - and or complement])
   (:require
+    [clojure.core             :as core]
     [clojure.set              :as set]
     [clojure.data.avl         :as avl]
     [quantum.core.vars        :as var
       :refer [#?(:clj defalias)]]
     [quantum.core.error       :as err
       :refer [->ex TODO]]
+    [quantum.core.fn          :as fn]
 #?@(:clj
    [[clojure.data.finger-tree :as ftree]
     [flatland.ordered.set     :as oset ]
@@ -29,14 +33,18 @@
 
 ; ============ STRUCTURES ============
 
-#?(:clj (defalias ordered-set  oset/ordered-set))
-#?(:clj (defalias oset         ordered-set))
-#?(:clj (defalias c-sorted-set ftree/counted-sorted-set)) ; sorted set that provides log-n nth
-(defalias sorted-set+    avl/sorted-set)
-(defalias sorted-set-by+ avl/sorted-set-by)
+#?(:clj (defalias ordered-set    oset/ordered-set))
+#?(:clj (defalias oset           ordered-set))
+#?(:clj (defalias c-sorted-set   ftree/counted-sorted-set)) ; sorted set that provides log-n nth
+        (defalias sorted-set+    avl/sorted-set)
+        (defalias sorted-set-by+ avl/sorted-set-by)
 
-#?(:clj (defalias int-set       imap/int-set))
-#?(:clj (defalias dense-int-set imap/dense-int-set))
+#?(:clj (defalias long-set            imap/int-set))
+#?(:clj (defalias set:long            long-set))
+#?(:clj (defalias hash-set:long       set:long))
+#?(:clj (defalias dense-long-set      imap/dense-int-set))
+#?(:clj (defalias set:long:dense      dense-long-set))
+#?(:clj (defalias hash-set:long:dense set:long:dense))
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 
@@ -71,8 +79,8 @@
            :super        {:eq >= :fn #(vector (partial contains? %1) %2)}
            :proper-sub   {:eq <  :fn #(vector %2 %1)}
            :proper-super {:eq >  :fn #(vector %1 %2)})]
-    (and ((:eq funcs) (count set1) (count set2))
-         (apply every? ((:fn funcs) set1 set2)))))
+    (core/and ((:eq funcs) (count set1) (count set2))
+              (apply every? ((:fn funcs) set1 set2)))))
 
 #_(def subset?          #(xset? :sub          %1 %2))
 (defalias subset?          set/subset?)
@@ -98,12 +106,15 @@
         ; To avoid NullPointerException
         (cond (nil? s0) s1
               (nil? s1) s0
-              (and (hash-set? s0) (hash-set? s1))
+              (core/and (hash-set? s0) (hash-set? s1))
               (seqspert.hash-set/sequential-splice-hash-sets s0 s1)
               :else (set/union s0 s1)))
       ([s0 s1 & ss]
         (reduce union (union s0 s1) ss)))
    :cljs (defalias union set/union))
+
+(defalias or union)
+(defalias +  union)
 
 #?(:clj
 (defn punion
@@ -115,7 +126,7 @@
   ([s0 s1]
     (cond (nil? s0) s1
           (nil? s1) s0
-          (and (hash-set? s0) (hash-set? s1))
+          (core/and (hash-set? s0) (hash-set? s1))
             (#?(:clj  seqspert.hash-set/parallel-splice-hash-sets
                 :cljs seqspert.hash-set/sequential-splice-hash-sets) s0 s1)
           :else (throw (->ex "Could not perform parallel union; can try sequential."))))
@@ -125,13 +136,29 @@
 ; `intersection` <~> `lodash/intersection`
 ; TODO `intersection-by` <~> `lodash/intersectionBy`
 ; TODO `intersection-with` <~> `lodash/intersectionWith`
-(defalias intersection set/intersection)
+(defalias intersection        set/intersection)
+(defalias and                 intersection    )
 
-(defalias difference   set/difference  )
-(defalias differencel  difference      )
-(defn differencer [a b] (differencel b a))
+; (and a (not b))
+(defalias difference          set/difference  )
+(defalias -                   difference      )
+(defalias relative-complement difference      )
+(defalias differencel         difference      )
 
-(defalias rename-keys  set/rename-keys )
+(def differencer (fn/reversed differencel))
+
+; `symmetric-difference` <~> `lodash/xor`
+; TODO `symmetric-difference-by` <~> `lodash/xorBy`
+(defn symmetric-difference
+  "Analogous to logical `xor`.
+   Returns the symmetric difference between a and b.
+   That is, (a - b) ∪ (b - a), or (a ∪ b) - (a ∩ b)
+   AKA disjunctive union."
+  [a b] (difference (union a b) (intersection a b))) ; perhaps the code is quicker to do in another way?
+
+(defalias xor symmetric-difference)
+
+(defalias rename-keys  set/rename-keys)
 
 ; TODO generate these functions via macros
 (defn #?(:clj ^HashSet !hash-set :cljs !hash-set)
