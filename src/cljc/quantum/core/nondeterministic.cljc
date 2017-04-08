@@ -259,8 +259,8 @@
 
 ; OTHER MORE COMPLEX FUNCTIONS
 
-(defnt nth [#{array? !vec? default} coll]
-  (coll/nth coll (int-between 0 (lasti coll))))
+(defnt nth [#{array? !vec? default} xs]
+  (coll/nth xs (core/long (int-between 0 (lasti xs)))))
 
 #?(:clj
 (defmacro cond-percent
