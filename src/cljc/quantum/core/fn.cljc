@@ -14,7 +14,7 @@
          [quantum.core.core        :as qcore]
          [quantum.core.macros.core :as cmacros
            :refer [case-env #?@(:clj [compile-if])
-                   gen-args arity-builder max-positional-arity]])
+                   gen-args arity-builder max-positional-arity unify-gensyms]])
       (:require-macros
         [quantum.core.fn :as self]))
 
@@ -133,6 +133,125 @@
          (ntha-& ~n-sym))))))
 
 (gen-ntha)
+
+#?(:clj
+(defmacro gen-conja
+  "Generates the `conja` function."
+  [max-args'-ct max-args-ct]
+ `(~'defn ~'conja
+    "`conj`es the arguments to the parameters with which `f` will be called,
+     when `f` is called.
+     Does not use data structures unless variadic arity is called.
+
+     `(fn f [a b c] (g a b c inc))` <=> `(fconj g inc)`
+
+     ```
+     (let [g (fn [a b c d e] (+ a (d b) (e c)))]
+       ((fconj g inc -)
+        1 2 3))
+     -> (+ 1 (inc 2) (- 3)) -> 1
+     ```"
+    {:attribution "alexandergunnarson"}
+    ; TODO use arity builder
+    ~@(let [all-args'     (->> (range max-args'-ct)
+                               (map (fn [i] (symbol (str "a" i "'")))))
+            &arg'         (symbol "as'")
+            all-args      (->> (range max-args-ct)
+                               (map (fn [i] (symbol (str "a" i)))))
+            &arg          (symbol "as")
+            f-sym         (symbol "f")]
+        (for [ct' (range max-args'-ct)]
+          (let [args' (take ct' all-args')
+                non-variadic?' (< ct' (dec max-args'-ct)) nv?' non-variadic?']
+           `(~(if nv?' `[~f-sym ~@args']
+                       `[~f-sym ~@args' ~'& ~&arg'])
+              (~'fn ~(gensym "fconj")
+              ~@(for [ct (range max-args-ct)]
+                  (let [args (take ct all-args)
+                        non-variadic? (< ct (dec max-args-ct)) nv? non-variadic?]
+                    (if nv?
+                       `([~@args] ~(if nv?' `(~f-sym ~@args ~@args')
+                                            `(apply ~f-sym ~@args ~@args' ~&arg')))
+                       `([~@all-args ~'& ~&arg] ~(if nv?' `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list ~@args')))
+                                                          `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list* ~@args' ~&arg'))))))))))))))))
+
+(gen-conja 8 8)
+
+#?(:clj
+(defmacro gen-reversed []
+  (unify-gensyms
+   `(~'defn ~'reversed
+      "Returns an fn that reverses the arguments of the function passed to `reversed`."
+      {:attribution "alexandergunnarson"}
+      [f##]
+      (fn ~@(arity-builder (fn [args] `(f## ~@(reverse args)))
+                           (fn [args vargs] `(apply f## (reverse ~vargs) ~@(reverse args)))
+                           0 18 (fn [_] "x")))))))
+
+(gen-reversed)
+
+#?(:clj
+(defmacro gen-mapa []
+  `(~'defn ~'mapa
+    "`map`s (i.e. calls) the passed functions on the arguments that will eventually be
+     passed to `f`.
+     The mapping functions will only be mapped to arguments that are actually passed.
+     Too few or too many arguments means that not all mapping functions will be called."
+    {:usage '{((mapa (fn [a b] {a b}) name (rcomp name symbol)) :a :b)
+              {"a" 'b}
+              ((mapa + identity first) 6 [3 4])
+              9}}
+    ~@(unify-gensyms
+        (let [take-drop
+               (fn [args fs]
+                 [(->> args (take (count fs))
+                            (map-indexed (fn [i a] `(~(nth fs i) ~a))))
+                  (->> args (drop (count fs)))])
+              apply-remaining-fs-to-varargs
+                (fn [args vargs fs & [fs&]]
+                  `(map-indexed
+                     (fn [vi## va##]
+                       (case (long vi##)
+                          ~@(->> fs (drop (count args))
+                                    (map-indexed (fn [i:f f] [i:f `(~f va##)]))
+                                    (apply concat))
+                          ~(if-not fs&
+                             `(do va##)
+                             `(let [i:fs&# (- vi## ~(- (count fs) (count args)))]
+                                (if (< i:fs&# (count ~fs&))
+                                    ((get ~fs& i:fs&#) va##)
+                                    va##)))))
+                     ~vargs))
+              handle-positionals
+                (fn [f fs]
+                  (fn [args] (let [[takes drops] (take-drop args fs)]
+                              `(~f ~@takes ~@drops))))
+              handle-varargs
+                (fn [f fs & [fs&]]
+                  (fn [args vargs]
+                    (let [[takes drops] (take-drop args fs)]
+                     `(apply ~f ~@takes ~@drops
+                                ~(if (<= (count fs) (count args))
+                                     vargs
+                                     (apply-remaining-fs-to-varargs args vargs fs fs&))))))]
+          (arity-builder
+            (fn [[f & fs]]
+              (if (empty? fs)
+                  f
+                  `(fn ~@(arity-builder
+                           (handle-positionals f fs)
+                           (handle-varargs     f fs)
+                           0 6))))
+            (fn [[f & fs] fs&]
+             `(fn ~@(arity-builder
+                      (handle-positionals f fs)
+                      (handle-varargs f fs fs&)
+                      0 6)))
+            1 6
+            (fn [i] (if (= i 0) "f-" (str "f" (dec i) "-")))))))))
+
+(gen-mapa)
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  HIGHER-ORDER FUNCTIONS   }====================================================
 ;=================================================={                           }====================================================
@@ -162,6 +281,7 @@
 
 #?(:clj
 (defmacro aritoid
+  ; TODO use `arity-builder`
   "Combines fns as arity-callers."
   {:attribution "alexandergunnarson"
    :equivalent `{(aritoid vector identity conj)
@@ -176,49 +296,8 @@
               (let [args (vec (repeatedly i #(gensym "x")))]
                 `(~args (~f-sym ~@args)))))))))
 
+; TODO demacro
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
-
-#?(:clj
-(defmacro gen-fconj
-  "Generates the `fconj` function."
-  [max-args'-ct max-args-ct]
- `(~'defn ~'fconj
-    "Appends the arguments to the parameters with which `f` will be called,
-     when `f` is called.
-     Does not use data structures unless variadic arity is called.
-
-     `(fn f [a b c] (g a b c inc))` <=> `(fconj g inc)`
-
-     ```
-     (let [g (fn [a b c d e] (+ a (d b) (e c)))]
-       ((fconj g inc -)
-        1 2 3))
-     -> (+ 1 (inc 2) (- 3)) -> 1
-     ```"
-    {:attribution "alexandergunnarson"}
-    ~@(let [all-args'     (->> (range max-args'-ct)
-                               (map (fn [i] (symbol (str "a" i "'")))))
-            &arg'         (symbol "as'")
-            all-args      (->> (range max-args-ct)
-                               (map (fn [i] (symbol (str "a" i)))))
-            &arg          (symbol "as")
-            f-sym         (symbol "f")]
-        (for [ct' (range max-args'-ct)]
-          (let [args' (take ct' all-args')
-                non-variadic?' (< ct' (dec max-args'-ct)) nv?' non-variadic?']
-           `(~(if nv?' `[~f-sym ~@args']
-                       `[~f-sym ~@args' ~'& ~&arg'])
-              (~'fn ~(gensym "fconj")
-              ~@(for [ct (range max-args-ct)]
-                  (let [args (take ct all-args)
-                        non-variadic? (< ct (dec max-args-ct)) nv? non-variadic?]
-                    (if nv?
-                       `([~@args] ~(if nv?' `(~f-sym ~@args ~@args')
-                                            `(apply ~f-sym ~@args ~@args' ~&arg')))
-                       `([~@all-args ~'& ~&arg] ~(if nv?' `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list ~@args')))
-                                                          `(apply ~f-sym (concat (list* ~@all-args ~&arg) (list* ~@args' ~&arg'))))))))))))))))
-
-(gen-fconj 8 8)
 
 #?(:clj (defmacro fn0 [  & args] `(fn fn0# [f#  ] (f# ~@args))))
 #?(:clj (defmacro fn1 [f & args] `(fn fn1# [arg#] (~f arg# ~@args)))) ; analogous to ->
