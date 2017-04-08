@@ -10,18 +10,25 @@
     [quantum.core.data.validated   :as dv]
     [quantum.core.fn
       :refer [fn1]]
+    [quantum.core.macros
+      :refer [defnt]]
     [quantum.core.type             :as t]))
 
 (dv/def instances (fn1 t/sequential?)) ; TODO better validation
 (dv/def targets   (fn1 t/sequential?)) ; TODO better validation
 
+; type may be #{:nominal :discrete :continuous}
+; `discrete?` is true for discrete-continuous, and for nominal
 (defrecord Attribute
   [name type ^boolean discrete?
    ^java.util.Map str->enum ^java.util.Map enum->str
-   ^long i ^double min ^double max])
+   ^long i min max])
 
-; type may be #{:nominal :discrete :continuous}
-; `discrete?` is true for discrete-continuous, and for nominal
+(def ->attribute map->Attribute)
+
+(defnt discrete?   [^Attribute x] (:discrete? x))
+(defnt continuous? [^Attribute x] (-> x :type (= :continuous)))
+(defnt nominal?    [^Attribute x] (-> x :type (= :nominal)))
 
 (defrecord Instance+Label [x• l])
 (defn ->x•+l [x• l] (Instance+Label. x• l))
