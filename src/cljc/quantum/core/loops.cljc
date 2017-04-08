@@ -21,7 +21,7 @@
     [quantum.core.reducers
       :refer [map+]]
     [quantum.core.fn
-      :refer [rfn <- call fn']]
+      :refer [rfn <- call fn' rcomp firsta seconda]]
     [quantum.core.macros.optimization :as opt]
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
@@ -111,9 +111,7 @@
 #?(:clj
 (defmacro dos
   "Same as |(apply (memfn do) <args>)|."
-  {:attribution "alexandergunnarson"}
-  [args]
-  `(do ~@args)))
+  [args] `(do ~@args)))
 
 #?(:clj
 (defmacro doseq*
@@ -153,32 +151,19 @@
   `(doseq* false ~bindings ~@body)))
 
 #?(:clj
-(defmacro doseqi*
-  "|doseq|, indexed. Starts index at 0."
-  {:attribution "alexandergunnarson"}
-  [should-extern? [elem coll index-sym :as bindings] & body]
-  (assert-args
-    (vector? bindings)     "a vector for its binding"
-    (= 3 (count bindings)) "three forms in binding vector")
-  (let [code `(let [i# (volatile! 0)]
-                (reduce
-                  (fn [_# ~elem]
-                    (let [~index-sym @i#] ~@body)
-                    (vswap! i# qcore/unchecked-inc-long)
-                    nil)
-                  nil ~coll))
-        _ (log/ppr ::macro-expand "DOSEQI CODE IS" code)]
-    code)))
-
-#?(:clj
-(defmacro doseqi-
-  [bindings & body]
-  `(doseqi* false ~bindings ~@body)))
-
-#?(:clj
 (defmacro doseqi
-  [bindings & body]
-  `(doseqi* true ~bindings ~@body)))
+  "`doseq`, indexed. Starts index at 0."
+  {:attribution "alexandergunnarson"}
+  [[elem xs index-sym :as bindings] & body]
+  `(let [i# (volatile! 0) xs# ~xs]
+     (reduce
+       (fn [_# ~elem]
+         (let [~index-sym @i#] ~@body)
+         (vswap! i# qcore/unchecked-inc-long)
+         nil)
+       nil
+       xs#)
+     xs#)))
 
 (defn for-join*
   [joinf bindings & body]
@@ -282,7 +267,19 @@
 ;        nil ~coll)
 ;      (persistent! ret#)))
 
-#?(:clj (defalias dotimes-1 core/dotimes))
+#?(:clj
+(defmacro dotimes-1
+  "Like `dotimes`, but returns the last thing done in the loop instead of always nil."
+  [bindings & body]
+  (let [i (first bindings)
+        n (second bindings)]
+    `(let [n# (long ~n)]
+       (when (> n# 0)
+         (loop [~i 0]
+           (let [ret# (do ~@body)]
+             (if (= ~i (unchecked-dec n#))
+                 ret#
+                 (recur (unchecked-inc ~i))))))))))
 
 #?(:clj (defmacro dotimes
   "Like `dotimes`, but enables multiple bindings like `for` for
@@ -303,8 +300,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [v# (transient [])]
-     (dotimes [~i ~n] (conj! v# (do ~@body)))
-     (persistent! v#))))
+     (persistent! (dotimes [~i ~n] (conj! v# (do ~@body)))))))
 
 ; TODO deduplicate all the `fortimes` array code
 #?(:clj
@@ -313,8 +309,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [n# ~n v# (Array/newUninitialized1dObjectArray n#)]
-     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
-     v#)))
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i)))))
 
 #?(:clj
 (defmacro fortimes:objects2
@@ -322,8 +317,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [n# ~n v# (Array/newUninitialized2dObjectArray n#)]
-     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
-     v#)))
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i)))))
 
 #?(:clj
 (defmacro fortimes:doubles
@@ -331,8 +325,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [n# ~n v# (Array/newUninitialized1dDoubleArray n#)]
-     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
-     v#)))
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i)))))
 
 #?(:clj
 (defmacro fortimes:doubles2
@@ -340,8 +333,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [n# ~n v# (Array/newUninitialized2dDoubleArray n#)]
-     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
-     v#)))
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i)))))
 
 #?(:clj
 (defmacro fortimes:doubles3
@@ -349,8 +341,7 @@
   [[i n & xs'] & body]
   (assert (empty? xs'))
   `(let [n# ~n v# (Array/newUninitialized2dDoubleArray n#)]
-     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i))
-     v#)))
+     (dotimes [~i n#] (c/assoc-in!*& v# (do ~@body) ~i)))))
 
 #?(:clj
 (defmacro while-let
@@ -375,26 +366,27 @@
              (recur ~test))
          ~sym))))
 
-(defn doreduce
-  "Performs a reduction for purposes of side effects."
-  [xs] (reduce (fn' nil) nil xs))
+#?(:clj
+(defmacro doreduce ; TODO demacro when type inference is done
+  "Performs a reduction for purposes of side effects.
+   Returns the last value passed into the reducing function."
+  [xs] `(reduce seconda nil ~xs)))
 
-(defn doeach
-  "Like |run!|, but returns @coll.
-   Like an in-place |doseq|."
-  [f coll] (doseq [x coll] (f x)) coll)
+#?(:clj
+(defmacro doeach ; TODO demacro when type inference is done
+  "Like `run!`, but returns ->`xs`.
+   Like an in-place `doseq`."
+  [f xs] `(let [f# ~f xs# ~xs] (doseq [x# xs#] (f# x#)) xs#)))
 
-(defn each
+#?(:clj
+(defmacro each ; TODO demacro when type inference is done
   "Same as |core/run!| but uses reducers' reduce"
-  [f coll]
-  (red/reduce #(f %2) nil coll)
-  nil)
+  [f xs] `(do (reduce (rcomp seconda ~f) nil ~xs) nil)))
 
-(defn eachi
+#?(:clj
+(defmacro eachi  ; TODO demacro when type inference is done
   "eachi : each :: fori : for"
-  [f coll]
-  (reducei (fn [_ x i] (f x i)) nil coll)
-  nil)
+  [f xs] `(let [f# ~f] (reducei (fn [_# x# i#] (f# x# i#)) nil ~xs) nil)))
 
 #?(:clj (set! *unchecked-math* false))
 
