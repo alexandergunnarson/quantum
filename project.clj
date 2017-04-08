@@ -120,7 +120,7 @@
          [quantum/java                          "1.6"             ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
-         [fipp                                  "0.6.6"
+         [fipp                                  "0.6.8"
            :exclusions [org.clojure/core.rrb-vector]]
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ]
