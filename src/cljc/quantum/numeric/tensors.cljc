@@ -4,7 +4,8 @@
    3D array: (no special name)
    ND array: tensor"
   (:refer-clojure :exclude
-    [reduce max for count get subvec swap! first last empty])
+    [max count get subvec swap! first last empty
+     for dotimes, reduce])
   (:require
 #?@(:clj
    [[uncomplicate.neanderthal
@@ -17,17 +18,19 @@
     [quantum.core.collections.core            :as ccoll]
     [quantum.core.collections                 :as c
       :refer [map+ range+ first nempty? red-for red-fori
-              for lfor reduce join count slice kw-map]]
-    [quantum.core.convert.primitive
-      :refer [->int ->long ->double* ->double]]
+              reduce join count slice kw-map
+              for lfor dotimes doreduce
+              ->objects]]
     [quantum.core.compare
       :refer [max]]
-    [quantum.core.numeric                     :as cnum
-      :refer [sqrt]]
-    [quantum.core.fn                          :as fn
-      :refer [fn1 fn&2 <- fn-> fn->>]]
+    [quantum.core.convert.primitive
+      :refer [->int ->long ->double* ->double]]
     [quantum.core.error                       :as err
       :refer [->ex TODO]]
+    [quantum.core.fn                          :as fn
+      :refer [fn1 fn&2 <- fn-> fn->>]]
+    [quantum.core.numeric                     :as cnum
+      :refer [sqrt]]
     [quantum.numeric.core                     :as num
       :refer [pi* sigma sq sum]]
     [quantum.core.macros
@@ -167,9 +170,8 @@
     (let [width  (-> x c/first ccoll/count& ->long) ; TODO fix where type hints aren't showing up
           height (c/count x)
           ret    (->dmatrix width height)]
-      (dotimes [i height]
-        (dotimes [j width]
-          (set-in!* ret (-> x (c/get-in* (int i) (int j)) ->double) i j))) ; TODO figure out why `->int` instead of `int` creates verifyerror
+      (dotimes [i height j width]
+        (set-in!* ret (-> x (c/get-in* (int i) (int j)) ->double) i j)) ; TODO figure out why `->int` instead of `int` creates verifyerror
       ret))
   ([^vec? x] ; TODO lists/seqs are okay too
     (if (c/empty? x)
@@ -390,6 +392,8 @@
 
 #?(:clj (defalias • dot))
 
+(defn column+ [i xs] (->> xs (map+ (fn1 c/get i))))
+
 (defn vsum [vs] (reduce (fn&2 v++) (first vs) (rest vs))) ; TODO optimize better
 
 (defn centroid+
@@ -399,9 +403,23 @@
 
 (defn vmean+ [v] (centroid+ v))
 
-(defn centroid
-  ([x• & x•s] ; TODO find more performant way to do this
-    (apply map (fn [& xs] (/ (sum xs) (count xs))) x• x•s))) ; TODO sum count => mean
+#?(:clj
+(defnt' vsum! [^numeric-1d? x•0 #{numeric-1d? +vec?} x•1]
+  (doreduce (v-opi+ (fn [i x0 x1] (c/assoc! x•0 i (cnum/+ x0 x1))) x•0 x•1)) ; TODO fix this ; TODO type inference
+  x•0))
+
+#_(defnt centroid*
+  "Handles heterogeneous and nominal attributes via `centroid:column-fn`."
+  ([#{array-2d?} x•• ^fn? centroid:column-fn]
+    (let [centroid-0 (->objects (count x••))]
+      (reduce (fn [^objects centroid' x•]
+                (dotimes [i x••])) centroid-0 (cons x• x•s)))))
+
+(defnt centroid
+  ([^numeric-2d? x••] (TODO)
+    #_(let [centroid-0 (c/blank (c/first x••))]
+      #_(reduce vsum! centroid-0 x••) ; the cleaner way
+      (dotimes [i (count x••)] (assoc-in!* x•• )))))
 
 #?(:clj
 (defn vector-map!
