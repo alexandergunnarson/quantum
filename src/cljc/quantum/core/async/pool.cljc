@@ -284,7 +284,8 @@
                  ; We can't have reporting on any previous core.async interactions
                  ; and we can't wait for it to shut down
                  #_(.shutdown core-async-pool)
-                 (let [num-threads (long @@#'clojure.core.async.impl.exec.threadpool/pool-size)
+                 (let [num-threads (or (-> replace-core-pools-opts :clojure:core:async :max-threads)
+                                       (long @@#'clojure.core.async.impl.exec.threadpool/pool-size))
                        !core-async-queue (SynchronousQueue.)
                        core-async-pool
                          ; Fixed threadpool
@@ -331,7 +332,9 @@
 (dv/def-map threadpool-manager:config ; TODO merge with ThreadpoolManager
   ; TODO deduplicate code
   :opt-un    [(def :this/replace-core-pools-opts
-                :opt-un [(def :this/wait-for-shutdown (fn1 time/duration?))])
+                :opt-un [(def :this/wait-for-shutdown (fn1 time/duration?))
+                         (def :this/clojure:core:async
+                           :opt-un [(def :this/max-threads (fn1 t/integer?))])])
               (def :this/shut-down-opts (fn-> keys (set/subset? #{:provided :cancel?})))
               (def :this/pools          validate-pools-map)]))
 
