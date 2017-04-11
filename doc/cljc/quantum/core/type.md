@@ -2,7 +2,7 @@
 
 ## Why give so many concrete typedefs in CLJS instead of abstract ones?
 
-The reason is because of CLJS. You can't extend protocols to other protocols.
+The reason is because in CLJS you can't extend protocols to other protocols.
 
 https://www.paren.com/posts/isomorphic-clojure-part-2-portable-code:
 > In ClojureScript, we can only extend to concrete types because ClojureScript lacks interfaces and protocols cannot be extended to other protocols.
