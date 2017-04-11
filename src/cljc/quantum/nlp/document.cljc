@@ -513,7 +513,7 @@
                                        concatted
                                        words)))))
                       vector))
-         r/flatten-1+
+         r/cat+
          (r/remove+ empty?)))
 
 (def doc->terms+

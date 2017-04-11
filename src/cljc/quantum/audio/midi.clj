@@ -1,5 +1,6 @@
 (ns quantum.audio.midi
-  (:refer-clojure :exclude [map map-indexed butlast last for partition-all reduce remove drop])
+  (:refer-clojure :exclude
+    [map map-indexed butlast last for partition-all reduce remove drop cat])
   (:require
     [clojure.core.match
       :refer [match]]
@@ -9,9 +10,9 @@
       :refer [fn-and whenc whenf whenf1 xor cond-let]]
     [quantum.core.collections :as coll
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
-              flatten-1 lflatten-1 concatv nnil? nempty?
+              cat lcat concatv nnil? nempty?
               map+ map lmap map-indexed kw-map index-of index-of-pred
-              flatten-1 each popl popr slice butlast last drop ldrop
+              cat each popl popr slice butlast last drop ldrop
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
     [quantum.core.async       :as async
       :refer [go <! <!! >! put! timeout]]
@@ -35,14 +36,6 @@
     (uk.co.xfactorylibrarians.coremidi4j
       CoreMidiDeviceProvider CoreMidiDeviceInfo CoreMidiNotification CoreMidiException
       CoreMidiDestination CoreMidiReceiver)))
-
-; TODO USE THIS:
-(quantum.core.meta.debug/print-pretty-exceptions!)
-(log/enable! ::debug)
-#_(clojure.main/repl
-    :print  quantum.core.print/!
-    :caught quantum.core.print/!)
-
 
 ; To be able to connect two applications over MIDI, virtual MIDI ports/buses are required using e.g. Audio MIDI Setup.
 ; In Audio Midi Setup application, Window > Show Midi Studio
@@ -125,7 +118,7 @@
 ; goes till c9
 (def pitches
   (zipmap
-    (lflatten-1
+    (lcat
       (lfor [octave (range 0 (inc 9))]
         (->> scale
              (map (fn [k] (keyword (str (name k) octave)))))))

@@ -60,7 +60,7 @@
                (if (set? vs)
                    (->> vs (map (partial map-entry k)))
                    vs)))
-       red/flatten-1+
+       red/cat+
        redv))
 
 ; ======== HELPER FUNCTIONS ========
@@ -204,7 +204,7 @@
 #_(defnt normalize-prop-v
   ([^keyword? v k] (name v))
   ([^number?  v k] (if (contains? px-props k) (px v) (str v)))
-  ([^+vec?    v k] (postwalk (fn1 normalize-prop-v k) v))
+  ([^+vector?    v k] (postwalk (fn1 normalize-prop-v k) v))
   ([:else     v k] (whenf v css-color? render-color)))
 
 #_(defn compatibilize

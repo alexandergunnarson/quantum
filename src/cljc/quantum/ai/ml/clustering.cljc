@@ -6,7 +6,7 @@
   (:require
     [clojure.core             :as core]
     [quantum.core.collections :as coll
-      :refer [red-apply map+ vals+ filter+ filter-vals+ flatten-1+
+      :refer [red-apply map+ vals+ filter+ filter-vals+ cat+
               range+ ffilter for for+ reduce join kw-map count]]
     [quantum.core.numeric     :as cnum]
     [quantum.core.log         :as log]

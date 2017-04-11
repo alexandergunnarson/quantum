@@ -190,7 +190,7 @@
 (defnt ->pattern
   ([^string? x] (re-pattern   x))
   ([^regex?  x] x)
-  ([^vec?    x] (vec->pattern x)))
+  ([^vector?    x] (vec->pattern x)))
 
 #?(:clj
 (defnt contains-pattern?

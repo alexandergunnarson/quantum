@@ -185,7 +185,7 @@
 (def apply-do-form
   (fn->> (map (partial do-form))
          (map rest) ; to get rid of |do|
-         coll/flatten-1  ; join |do|s
+         coll/lcat  ; join |do|s
          (cons 'do)))
 
 
@@ -718,7 +718,7 @@
             :else
               (apply fn-pos (eval-form first-0) rest-0))
           (apply fn-pos (eval-form 'list!) first-0 rest-0))))
-   ([^+vec? obj]
+   ([^+vector? obj]
      (log/pr :debug "IN VEC")
      (condp = *lang*
        :js   (apply fn-pos (eval-form 'pvec) obj)

@@ -54,13 +54,13 @@
         :else (coll/group-by+ f r))))
 
 #?(:clj
-    (defn flatten-1+ [r]
+    (defn cat+ [r]
       (cond (rdd? r)
             (spark/flat-map identity r)
             (dataset? r)
             (spark+/flat-map identity r)
-            :else (coll/flatten-1+ r)))
-   :cljs (defalias flatten-1+ coll/flatten-1+))
+            :else (coll/cat+ r)))
+   :cljs (defalias cat+ coll/cat+))
 
 (defn remove+ [f x] (filter+ (fn-not f) x))
 

@@ -12,7 +12,7 @@
       :refer [for for* fori lfor reduce join kw-map
               pjoin in? map+ vals+ filter+ partition-all+
               remove+ take+ map-vals+ filter-vals+
-              flatten-1+ range+ ffilter
+              cat+ range+ ffilter
               reduce-count nnil?]]
     [quantum.core.numeric             :as num]
     [quantum.core.fn                  :as fn

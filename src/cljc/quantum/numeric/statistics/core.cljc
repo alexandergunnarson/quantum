@@ -56,7 +56,7 @@
 (defnt mean-vals+
   "Computes the mean of the (map) vals.
    Expects a reducible containing mergeable maps."
-  ([^+vec? xs] ; TODO must be counted and reducible, containing mergeables
+  ([^+vector? xs] ; TODO must be counted and reducible, containing mergeables
     (let [ct (count xs)]
       (->> xs (reduce (partial merge-with +)) (map-vals+ (fn1 / ct)))))
   ([^default xs] ; TODO must be non-counted and reducible, containing mergeables
@@ -147,7 +147,7 @@
 
 (#?(:clj defnt' :cljs defnt) mse:predictor
   "The mean squared error between a vector of predictions `p•` and observed values `o•`."
-  [#_indexed? #{array-1d? +vec?} p• #_indexed? #{array-1d? +vec?} o•]
+  [#_indexed? #{array-1d? +vector?} p• #_indexed? #{array-1d? +vector?} o•]
   (mean (tens/v-op+ square-difference p• o•)))
 
 (defalias mse:p•+o• mse:predictor)
@@ -161,7 +161,7 @@
 
 (#?(:clj defnt' :cljs defnt) mse:p•+o••
   "The mean squared error between a vector of predictions `p•` and 2D vector of observed values `o••`."
-  [#_indexed? ^+vec? p• #_indexed? ^+vec? o••] ; TODO other indexed types
+  [#_indexed? ^+vector? p• #_indexed? ^+vector? o••] ; TODO other indexed types
   (->> o••
        (map+ (fn [o•] (sum (tens/v-op+ square-difference p• #?(:clj ^clojure.lang.IPersistentVector o• :cljs o•))))) ; TODO fix this
        mean))
@@ -169,9 +169,9 @@
 ; TODO should be able to use custom predicate
 (#?(:clj defnt' :cljs defnt) accuracy
   "The accuracy of a vector of predictions `p•` w.r.t. a vector of observed values `o•`."
-  ([#_indexed? ^+vec? p• #_indexed? ^+vec? o•]
+  ([#_indexed? ^+vector? p• #_indexed? ^+vector? o•]
     (accuracy p• o• =)) ; TODO other indexed types
-  ([#_indexed? ^+vec? p• #_indexed? ^+vec? o• compf]
+  ([#_indexed? ^+vector? p• #_indexed? ^+vector? o• compf]
     (let [ct (count p•)] ; TODO allow for p• of unknown count via `reduce-multi` and `count:rf`
       (->> (tens/v-op+ compf p• o•)
            #_(map+ = predictions actuals) ; TODO assert same count

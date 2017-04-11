@@ -228,35 +228,35 @@
 (defnt identity
   "Type identity function."
   {:todo ["Fix so only immmutable data stuctures have immutable identity fns."]}
-  ([^+vec? x] vector  )
-  ([^+map? x] hash-map)
-  ([^+set? x] hash-set))
+  ([^+vector? x] vector)
+  ([^+map?    x] hash-map)
+  ([^+set?    x] hash-set))
 
-(def +vec?-fn (fn1 +vec?))
-(def +set?-fn (fn1 +set?))
-(def +map?-fn (fn1 +map?))
+(def +vector?-fn (fn1 +vector?))
+(def +set?-fn    (fn1 +set?))
+(def +map?-fn    (fn1 +map?))
 
 (defnt ->pred
   "Gets the type predicate associated with the value passed."
-  ([^+vec? x] +vec?-fn)
-  ([^+set? x] +set?-fn)
-  ([^+map? x] +map?-fn))
+  ([^+vector? x] +vector?-fn)
+  ([^+set?    x] +set?-fn)
+  ([^+map?    x] +map?-fn))
 
 (defnt ->literal
   "Gets the literal value associated with the value passed."
-  ([^+vec? x]  [])
-  ([^+set? x] #{})
-  ([^+map? x]  {}))
+  ([^+vector? x]  [])
+  ([^+set?    x] #{})
+  ([^+map?    x]  {}))
 
 (defnt ->base
   "Gets the base value associated with the value passed."
-  ([^+vec?          x] (vector))
+  ([^+vector?       x] (vector))
   ([^+unsorted-set? x] (hash-set))
   ([^+hash-map?     x] #?(:clj  clojure.lang.PersistentHashMap/EMPTY
                           :cljs cljs.core.PersistentHashMap.EMPTY))
   ([^default        x] (empty x)))
 
 (defnt ->joinable
-  ([#{+vec? +hash-map? +unsorted-set?} x] x)
-  ([#{+array-map?}                     x] (into (->base x) x))
-  ([^default                           x] x))
+  ([#{+vector? +hash-map? +unsorted-set?} x] x)
+  ([#{+array-map?}                        x] (into (->base x) x))
+  ([^default                              x] x))

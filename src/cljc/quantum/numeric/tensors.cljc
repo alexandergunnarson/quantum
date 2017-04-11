@@ -173,7 +173,7 @@
       (dotimes [i height j width]
         (set-in!* ret (-> x (c/get-in* (int i) (int j)) ->double) i j)) ; TODO figure out why `->int` instead of `int` creates verifyerror
       ret))
-  ([^vec? x] ; TODO lists/seqs are okay too
+  ([^vector? x] ; TODO lists/seqs are okay too
     (if (c/empty? x)
         (->dmatrix 0 0)
         (let [_      (validate x (fn-> c/first t/sequential?))
@@ -227,7 +227,7 @@
 
 ; ============ PREDICATES ============
 
-#?(:clj (defalias                                vec?             fnum/vect?  ))
+#?(:clj (defalias                                vector?             fnum/vect?  ))
 #?(:clj (defalias                                matrix?          fnum/matrix?))
 
 #_"Check whether two objects that have some memory context are compatible."
@@ -345,43 +345,43 @@
 ; TODO use numeric core functions
 
 (defnt' v-op+
-  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  ([f #_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
     (assert (= (count x•0) (count x•1)) (kw-map (count x•0) (count x•1))); TODO maybe use (map+ f v1 v2) ?
     (->> (range+ 0 (count x•0))
          (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i))))))
-  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
+  ([f #_indexed? #{array-1d? +vector?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
     (assert (= (count x•0) (count x•1) (count x•2)) (kw-map (count x•0) (count x•1) (count x•2))) ; TODO maybe use (map+ f v1 v2) ?
     (->> (range+ 0 (count x•0))
          (map+ (fn [^long i] (f (c/get x•0 i) (c/get x•1 i) (c/get x•2 i)))))))
 
 (defnt' v-opi+
-  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  ([f #_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
     (assert (= (count x•0) (count x•1)) (kw-map (count x•0) (count x•1))); TODO maybe use (map+ f v1 v2) ?
     (->> (range+ 0 (count x•0))
          (map+ (fn [^long i] (f i (c/get x•0 i) (c/get x•1 i))))))
-  ([f #_indexed? #{array-1d? +vec?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
+  ([f #_indexed? #{array-1d? +vector?} x•0 #_indexed? ^:<0> x•1 #_indexed? ^:<0> x•2]
     (assert (= (count x•0) (count x•1) (count x•2)) (kw-map (count x•0) (count x•1) (count x•2))) ; TODO maybe use (map+ f v1 v2) ?
     (->> (range+ 0 (count x•0))
          (map+ (fn [^long i] (f i (c/get x•0 i) (c/get x•1 i) (c/get x•2 i)))))))
 
 (#?(:clj defnt' :cljs defnt) v-+
-  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  [#_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
   (v-op+ - x•0 x•1))
 
 (#?(:clj defnt' :cljs defnt) v++
-  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  [#_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
   (v-op+ + x•0 x•1))
 
 (#?(:clj defnt' :cljs defnt) v-div+
-  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  [#_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
   (v-op+ / x•0 x•1))
 
 (#?(:clj defnt' :cljs defnt) v*+
-  [#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  [#_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
   (v-op+ * x•0 x•1))
 
 (#?(:clj defnt' :cljs defnt) vsq+
-  [#_indexed? #{array-1d? +vec?} x•] (v*+ x• x•))
+  [#_indexed? #{array-1d? +vector?} x•] (v*+ x• x•))
 
 (defn dot
   "Dot product"
@@ -404,7 +404,7 @@
 (defn vmean+ [v] (centroid+ v))
 
 #?(:clj
-(defnt' vsum! [^numeric-1d? x•0 #{numeric-1d? +vec?} x•1]
+(defnt' vsum! [^numeric-1d? x•0 #{numeric-1d? +vector?} x•1]
   (doreduce (v-opi+ (fn [i x0 x1] (c/assoc! x•0 i (cnum/+ x0 x1))) x•0 x•1)) ; TODO fix this ; TODO type inference
   x•0))
 

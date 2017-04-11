@@ -89,7 +89,7 @@
       _
       (subsvec coll a b))))
 
-(def svec?
+(def svector?
   (partial instance?
     #?(:clj  clojure.core.rrb_vector.rrbt.Vector
        :cljs clojure.core.rrb-vector.rrbt.Vector)))

@@ -45,7 +45,7 @@
          true
       (catch SecurityException _ false)))
   ([^file?   dir] (->> dir str       readable?))
-  ([^+vec?   dir] (->> dir paths/parse-dir readable?))))
+  ([^+vector?   dir] (->> dir paths/parse-dir readable?))))
 
 #?(:clj
 (defnt writable?

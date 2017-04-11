@@ -1,5 +1,5 @@
 (ns quantum.net.server.middleware
-  (:refer-clojure :exclude [assoc-in])
+  (:refer-clojure :exclude [assoc-in cat])
   (:require [clj-uuid                                 :as secure-uuid]
             [compojure.handler]
             ; MIDDLEWARE
@@ -34,7 +34,7 @@
             [quantum.core.fn
               :refer [fnl fn1 fn-> rcomp fn']]
             [quantum.core.collections   :as coll
-              :refer [containsv? assoc-in flatten-1]]
+              :refer [containsv? assoc-in cat]]
             [quantum.core.log           :as log
               :refer [prl]]
             [quantum.core.print         :as pr
@@ -262,7 +262,7 @@
             (-> opts
                 :override-secure-site-defaults
                 (dissoc [:static :resources])
-                flatten-1)))
+                cat)))
         wrap-strictest-transport-security
         wrap-x-permitted-cross-domain-policies
         wrap-x-download-options

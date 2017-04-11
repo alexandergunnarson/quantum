@@ -11,7 +11,7 @@
       :refer [defnt]]
     [quantum.core.type :as t]
     [quantum.core.collections :as coll
-      :refer [map+ map-vals+ flatten-1+ nempty?
+      :refer [map+ map-vals+ cat+ nempty?
               filter+ filter-keys+ filter-vals+ remove+ keys+ join seq-and]]))
 
 (def
@@ -41,8 +41,8 @@
   (->> (all-ns)
        (map+     (juxt (juxt identity)
                        (fn-> ns-name ns-interns vals)))
-       flatten-1+
-       flatten-1+
+       cat+
+       cat+
        (map+    (juxt identity #(-> % meta :todo)))
        (remove+ (fn-> second empty?))
        (join    todos-map))))

@@ -84,9 +84,9 @@
     (replace-meta-from (map f coll) coll))
   ([#{cons? lseq? misc-seq? +queue?} coll _ to-join]
     (replace-meta-from (seq to-join) coll))
-  ([^svec? coll f        ]
+  ([^svector? coll f        ]
     (replace-meta-from (svec (mapv f coll)) coll))
-  ([^svec? coll _ to-join]
+  ([^svector? coll _ to-join]
     (replace-meta-from (svec to-join) coll))
   ; Persistent collections that don't support transients
   #?(:clj  ([#{clojure.lang.PersistentStructMap

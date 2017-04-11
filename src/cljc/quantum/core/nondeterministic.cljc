@@ -259,7 +259,7 @@
 
 ; OTHER MORE COMPLEX FUNCTIONS
 
-(defnt nth [#{array? !vec? default} xs]
+(defnt nth [#{array? !vector? default} xs]
   (coll/nth xs (core/long (int-between 0 (lasti xs)))))
 
 #?(:clj
@@ -342,13 +342,13 @@
 (defnt shuffle
   "Shuffles a copy of a collection."
   {:todo {0 "Allow all nd-arrays to be copied, thus enabling shuffling"}}
-           ([#{array-1d? #?(:clj Collection :cljs +vec?)} xs]
+           ([#{array-1d? #?(:clj Collection :cljs +vector?)} xs]
              #?(:clj  (shuffle xs (get-generator false))
                 :cljs (core/shuffle xs)))
   #?(:clj  ([^Collection xs ^Random r]
              (-> xs (ArrayList.) (shuffle! r)
                  (.toArray) clojure.lang.RT/vector))
-     :cljs ([+vec?       xs r] (TODO)))
+     :cljs ([+vector?       xs r] (TODO)))
            ([^array-1d?   xs #?(:clj #{Random}) r] ; TODO 0
              #?(:clj  (-> xs copy (shuffle! r))
                 :cljs (TODO))))
