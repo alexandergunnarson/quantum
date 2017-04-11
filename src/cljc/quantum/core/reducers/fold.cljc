@@ -37,8 +37,8 @@
     [quantum.core.type             :as t
       :refer [lseq? editable? ->joinable]]
     [quantum.core.type.defs
-      #?@(:cljs [:refer [Reducer Folder]])])
-  #?(:clj (:import [quantum.core.type.defs Reducer Folder]
+      #?@(:cljs [:refer [Transformer]])])
+  #?(:clj (:import [quantum.core.type.defs Transformer]
                    [clojure.core.reducers CollFold])))
 
 ;___________________________________________________________________________________________________________________________________
@@ -70,14 +70,14 @@
                 (let [split-ind (quot ct 2)]
                   (map/split-at split-ind xs')))
               xs n combinef reducef))
-          ([^+vec?                   xs n combinef reducef]
+          ([^+vector?                   xs n combinef reducef]
             (fold-by-halves
               (fn [xs' ^long ct]
                 (let [split-ind (quot ct 2)]
                   [(subvec xs' 0 split-ind) ; TODO test subvec against subsvec
                    (subvec xs'   split-ind ct)]))
               xs n combinef reducef))
-          ([^Folder                  xs n combinef reducef]
+          ([^transformer?            xs n combinef reducef]
             (fold* (.-prev xs) n combinef ((.-xf xs) reducef)))
   #?(:clj ([^CollFold                xs n combinef reducef]
             (r/coll-fold xs n combinef reducef)))
@@ -121,26 +121,9 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           FOLD           }=====================================================
 ;=================================================={           into           }=====================================================
-
-(defn folder
-  "Given a foldable collection, and a transformation function transform,
-  returns a foldable collection, where any supplied reducing
-  fn will be transformed by transform. transform is a function of
-  reducing fn to reducing fn."
-  ([xs xf]
-    (cond (instance? Reducer xs)
-            (Folder. (.-xs ^Reducer xs) xs xf)
-          (instance? Folder xs)
-            (Folder. (.-xs ^Folder  xs) xs xf)
-          true
-            (Folder. xs                 xs xf))))
-
-(def folder? (fnl instance? Folder))
-
 (defnt transformer->coll
-  "Gets the original collection a folder was to reduce/fold over."
-  ([^Folder  x] (.-xs x))
-  ([^Reducer x] (.-xs x)))
+  "Gets the original collection a transformer was to reduce/fold over."
+  ([^Transformer x] (.-xs x)))
 
 (def ^{:doc "Given a collection, determines its appropriate chunk size."}
   ->chunk-size
@@ -154,7 +137,6 @@
                  from-proc
                (fn' 512)))
      :cljs count)) ; Because it's only single-threaded anyway... ; TODO but if we want to use webworkers this is not right
-
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           FOLD           }=====================================================
 ;=================================================={         (PREDUCE)        }=====================================================
@@ -172,15 +154,13 @@
    :adapted-from "clojure.core.reducers"
    :contributors ["Alex Gunnarson"]
    :todo         #{"add support for customization of parallelism"}}
-  ([             reduce-fn xs] (fold reduce-fn reduce-fn xs))
-  ([  combine-fn reduce-fn xs] (fold (->chunk-size xs) combine-fn reduce-fn xs))
-  ([n combine-fn reduce-fn xs]
-    (combine-fn ; single-arity combine-fn is the post-combine
-      (fold* xs n
-        (aritoid reduce-fn nil
-          (fn [a b] (combine-fn (reduce-fn a)
-                                (reduce-fn b)))) ; single-arity reduce-fn is the post-reduce
-        reduce-fn))))
+  ([     rf xs] (fold rf rf xs))
+  ([  cf rf xs] (fold (->chunk-size xs) cf rf xs))
+  ([n cf rf xs]
+    (cf (fold* xs n
+          (aritoid rf nil
+            (fn [a b] (cf (rf a) (rf b))))
+          rf))))
 
 (def preduce fold)
 
@@ -197,7 +177,7 @@
    :todo ["Shorten this code using type differences and type unions with |editable?|"
           "Handle arrays"]}
   ([^default        to  ] to)
-  ([^transformer?   from] (joinl [] from))
+  ([^transformer?   from] (pjoinl-fold [] from))
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
                                           (seqspert.hash-set/parallel-splice-hash-sets to from)
                                           (pjoinl-fold to from))
@@ -212,11 +192,10 @@
   "Parallel join, left.
    Like `joinl`, but is parallel."
   {:attribution "alexandergunnarson"}
-  ([] nil)
-  ([to] (pjoinl* to))
+  ([]         nil)
+  ([to]      (pjoinl* to))
   ([to from] (pjoinl* to from))
-  ([to from & froms]
-    (reduce #(pjoinl* %1 %2) (pjoinl* to from) froms)))
+  ([to from & froms] (reduce #(pjoinl* %1 %2) (pjoinl* to from) froms)))
 
 ; TODO make pjoin actually parallel in CLJS via WebWorkers
 
