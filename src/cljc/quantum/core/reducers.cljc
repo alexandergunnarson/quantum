@@ -26,7 +26,7 @@
     [quantum.core.data.vector      :as vec
       :refer [catvec subsvec]]
     [quantum.core.error            :as err
-      :refer [->ex]]
+      :refer [->ex TODO]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
               fn1 fn-> fn->> fn' fn&2 rcomp defcurried]]
@@ -39,28 +39,38 @@
               unify-gensyms]]
     [quantum.core.numeric          :as num]
     [quantum.core.refs             :as refs
-      :refer [#?(:clj !long) deref reset!]]
+      :refer [! deref reset! volatile atom*]]
     [quantum.core.type             :as type
       :refer [instance+? lseq?]]
     [quantum.core.reducers.reduce  :as red
-      :refer [reducer first-non-nil-reducer]]
-    [quantum.core.reducers.fold    :as fold
-      :refer [folder]]
+      :refer [transformer]]
+    [quantum.core.reducers.fold    :as fold]
     [quantum.core.vars             :as var
       :refer [defalias def-]])
   (:require-macros
     [quantum.core.reducers
-      :refer [reduce join]]))
+      :refer [reduce join]])
+#?(:clj
+  (:import [java.util.concurrent.atomic AtomicLong]
+           [clojure.lang Volatile]
+           [quantum.core.refs IMutableLong])))
+
+; TODO investigate https://github.com/aphyr/tesser
+
+; TODO move and `fnt`
+(defn inc!          [^IMutableLong *i] (reset! *i (inc (deref *i))))
+(defn inc!:volatile [^Volatile     *i] (reset! *i (inc (deref *i))))
+(defn inc!:atom*    [^AtomicLong   *i] (.incrementAndGet *i))
 
 (def sentinel (->sentinel))
 
-(defn transducer->reducer
-  "Converts a transducer into a reducer."
-  {:todo #{"More arity"}}
-  ([xf xs           ] (reducer xs       (xf)))
-  ([xf xs a0        ] (reducer xs       (xf a0)))
-  ([xf xs a0 a1     ] (reducer xs       (xf a0 a1)))
-  ([xf xs a0 a1 & as] (reducer xs (apply xf a0 a1 as))))
+(defalias transducer->transformer red/transducer->transformer)
+
+(defn preserving-reduced [rf]
+  #(let [ret (rf %1 %2)]
+     (if (reduced? ret)
+         (reduced ret)
+         ret)))
 
 (defn gen-multiplex* [lang]
   `(~'defn ~'multiplex
@@ -70,11 +80,13 @@
       `transduce`.
 
       Note that the example is just to capture the concept and does not accurately
-      reflect the source code."
+      reflect the source code.
+
+      This function is not thread-safe."
      {:attribution "alexandergunnarson"
-      :equivalent '~'{(multiplex-rfs /
-                        (aritoid (fn' 0) identity +                )   ; sum:rf
-                        (aritoid (fn' 0) identity (rcomp firsta inc))) ; count:rf
+      :equivalent '~'{(!multiplex /
+                        (aritoid + identity +                )   ; sum:rf
+                        (aritoid + identity (rcomp firsta inc))) ; count:rf
                       (fn ([] [(f0) (f1)])
                           ([[x0 x1]] (/ (f0 x0) (f1 x1))) ; to get the mean at the end
                           ([[x0 x1] x'] [(f0 x0 x') (f1 x1 x')]))}}
@@ -119,7 +131,30 @@
 #?(:clj (defalias reduce    red/reduce   ))
 #?(:clj (defalias transduce red/transduce))
         (defalias fold*     fold/fold    ) ; "fold*" to avoid clash of namespace quantum.core.reducers.fold with var quantum.core.reducers/fold
-        (defalias red-apply red/red-apply)
+
+(defn red-apply
+  "Applies ->`f` to ->`xs`, pairwise, using `reduce`."
+  [f xs]
+  (let [ret (reduce
+              (fn [ret x]
+                (if (identical? ret sentinel) (f x) (f ret x)))
+              sentinel
+              xs)]
+    (if (identical? ret sentinel) nil ret)))
+
+(defn reduce-sentinel
+  "Calls `reduce` with a sentinel.
+   Useful for e.g. `max` and `min`."
+  {:attribution "alexandergunnarson"}
+  [rf xs]
+  (red-apply (aritoid nil identity rf) xs))
+
+(defn first-non-nil-reducer
+  "A reducing function that simply returns the first non-nil element in the
+  collection."
+  {:source "tesser.utils"}
+  [_ x] (when-not (nil? x) (reduced x)))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    transduce.reducers    }=====================================================
 ;=================================================={                          }=====================================================
@@ -127,14 +162,14 @@
   "Like map, but threads a state through the sequence of transformations.
   For each x in coll, f is applied to [state x] and should return [state' x'].
   The first invocation of f uses init as the state."
-  {:attribution "transduce.reducers"
-   :todo ["Test if volatiles will work."]}
-  [f init coll]
-  (reducer coll
+  {:attribution 'transduce.reducers
+   :todo        #{"Make a single-threaded version with mutable fields"}}
+  [f init xs]
+  (transformer xs
     (fn [f1]
       (let [state (atom init)]
         (fn [acc x]
-          (let [[state' x'] (f @state x)] ; How about using volatiles here?
+          (let [[state' x'] (f @state x)]
             (reset! state state')
             (f1 acc x')))))))
 
@@ -146,96 +181,89 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
 ;=================================================={                          }=====================================================
-(defn cat+
-  ([] (throw (->ex :not-supported))) ; TODO fix this arity that CLJS is complaining about
-  ([f] (core/cat f))
-  ([f coll] (folder coll (core/cat f))))
+(defn cat:transducer [rf]
+  (let [rrf (preserving-reduced rf)]
+    (fn
+      ([] (rf))
+      ([ret] (rf ret))
+      ([ret x] (reduce rrf ret x)))))
 
-(defn append!
-  ".adds x to acc and returns acc"
-  {:adapted-from "clojure.core.reducers"}
-  [acc x]
-  #?(:clj  (doto ^java.util.Collection acc (.add  x))
-     :cljs (doto acc (.push x))))
+(defn cat+ [xs] (transformer xs cat:transducer))
 
 (defn foldcat+
-  "Equivalent to `(fold cat+ append! xs)`"
-  {:adapted-from "clojure.core.reducers"
-   :performance "`foldcat+` is faster than `into` a PersistentVector because it outputs ArrayLists"}
-  [xs]
-  (fold* cat+ append! xs))
+  "Equivalent to `(fold cat+ conj! xs)`"
+  {:adapted-from "clojure.core.reducers"}
+  [xs] (fold* cat+ conj! xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
 (defn map:transducer [f]
   (fn [rf]
     (fn ; TODO auto-generate?
-      ([            ] (rf))
-      ([ret         ] (rf ret))
-      ([ret x0      ] (rf ret (f x0)))
-      ([ret x0 x1   ] (rf ret (f x0 x1)))
-      ([ret x0 x1 x2] (rf ret (f x0 x1 x2)))
-      ([ret x0 x1 x2 & xs]
-         (rf ret (apply f x0 x1 x2 xs))))))
+      ([]                  (rf))
+      ([ret]               (rf ret))
+      ([ret x0]            (rf ret       (f x0)))
+      ([ret x0 x1]         (rf ret       (f x0 x1)))
+      ([ret x0 x1 x2]      (rf ret       (f x0 x1 x2)))
+      ([ret x0 x1 x2 & xs] (rf ret (apply f x0 x1 x2 xs))))))
 
-(defn map+
-  ([f] (map:transducer f))
-  ([f coll] (folder coll (map:transducer f))))
+(def map+ (transducer->transformer map:transducer))
 
-(defn map-indexed:transducer [f] (core/map-indexed f))
+; ----- MAP-INDEXED ----- ;
 
-(defn map-indexed+
-  ([f] (map-indexed:transducer f))
-  ([f coll] (folder coll (map-indexed:transducer f))))
+(defn map-indexed:transducer-base
+  [f !box inc!f]
+  (fn [rf]
+    (let [*i (!box -1)]
+      (aritoid rf rf (fn [ret x] (rf ret (f (inc!f *i) x)))))))
 
-#_(defn pmap-indexed+ ; `reduce` will only ever be single-threaded
-  "Thread-safe `map-indexed+`.
-   Just `map-indexed+` with an `atom` instead of a `volatile`."
-  [f coll]
-  (folder coll
-    (fn [rf]
-      (let [i (atom -1)]
-        (fn
-          ([] (rf))
-          ([result] (rf result))
-          ([result input]
-           (rf result (f (swap! i inc) input))))))))
+(defn !map-indexed:transducer
+  "Like the transducer of `core/map-indexed`, but uses a mutable variable internally
+   instead of a `volatile`.
+   As the name suggests, this transducer is not thread-safe."
+  [f] (map-indexed:transducer-base f (fn [^long i] (! i)) inc!))
 
-(defn indexed+
-  "Returns an ordered sequence of vectors `[index item]`, where item is a
-  value in coll, and index its position starting from zero."
-  {:attribution "weavejester.medley"}
-  [coll]
-  (map-indexed+ vector coll))
+(def !map-indexed+ (transducer->transformer !map-indexed:transducer))
 
+(defn v!map-indexed:transducer
+  "Same as the transducer of `core/map-indexed`, but uses a typed volatile to avoid autoboxing."
+  [f] (map-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
+
+(def v!map-indexed+ (transducer->transformer v!map-indexed:transducer))
+
+(defn map-indexed:transducer
+  "Like the transducer of `core/map-indexed`, but uses an `AtomicLong` internally
+   instead of a `volatile`."
+  [f] (map-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
+
+(def map-indexed+ (transducer->transformer map-indexed:transducer))
+
+; TODO pmap-indexed+
+
+; ----- INDEXED ----- ;
+
+; TODO e.g. !indexed:objects+
+(defn !indexed+  [xs] (!map-indexed+  vector xs))
+(defn v!indexed+ [xs] (v!map-indexed+ vector xs))
+(defn indexed+   [xs] (map-indexed+   vector xs))
+
+; TODO pindexed+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          MAPCAT          }=====================================================
 ;=================================================={                          }=====================================================
-; mapcat: ([:a 1] [:b 2] [:c 3]) versus mapcat+: (:a 1 :b 2 :c 3) ; hmm...
-
-(defn #_defcurried mapcat+
-  "Applies f to every value in the reduction of coll, concatenating the result
-  colls of (f val). Foldable."
-  [f coll]
-  (folder coll (core/mapcat f)))
+(def mapcat+ (transducer->transformer core/mapcat))
 
 (defn concat+ [& args] (mapcat+ identity args))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        REDUCTIONS        }=====================================================
 ;=================================================={                          }=====================================================
-(defn map-accum-transducer
+(defn map-accum:transducer
   {:attribution "alexandergunnarson"}
-  [f]
-  (fn [rf]
-    (fn
-      ([] (rf))
-      ([xs'] (rf xs'))
-      ([xs' x] (rf xs' (f xs' x))))))
+  [f] (fn [rf] (aritoid rf rf (fn [ret x] (rf ret (f ret x))))))
 
-(defn map-accum+
-  "Like `map+`, but the accumulated reduction gets passed through as the
-   first argument to `f`, and the current element as the second argument."
-  [f xs] (folder xs (map-accum-transducer f)))
+(def ^{:doc "Like `map+`, but the accumulated reduction gets passed through as the
+            first argument to `f`, and the current element as the second argument."}
+  map-accum+ (transducer->transformer map-accum:transducer))
 
 #_(defn reductions-transducer ; TODO finish
   {:attribution "alexandergunnarson"}
@@ -254,51 +282,84 @@
 ;=================================================={                          }=====================================================
 (defn filter:transducer [pred]
   (fn [rf]
-    (fn
-      ([] (rf))
-      ([ret] (rf ret))
-      ([ret x]
-         (if (pred x)
-             (rf ret x)
-             ret))
-      ([ret k v]
-         (if (pred k v)
-             (rf ret k v)
-             ret)))))
+    (aritoid rf rf
+      (fn [ret x]   (if (pred x)   (rf ret x)   ret))
+      (fn [ret k v] (if (pred k v) (rf ret k v) ret)))))
 
-(defn filter+
-  "Returns a version of the folder which only passes on inputs to subsequent
-   transforms when (@pred <input>) is truthy."
-  ([pred] (filter:transducer pred))
-  ([pred xs] (folder xs (filter:transducer pred))))
+(def ^{:doc "Returns a version of the folder which only passes on inputs to subsequent
+             transforms when `(pred <input>)` is truthy."}
+  filter+ (transducer->transformer filter:transducer))
+
+; ----- FILTER-INDEXED ----- ;
+
+(defn filter-indexed:transducer-base
+  [pred !box inc!f]
+  (fn [rf]
+    (let [*i (!box -1)]
+      (aritoid rf rf (fn [ret x] (if (pred (inc!f *i) x) (rf ret x) ret))))))
+
+(defn !filter-indexed:transducer
+  [f] (filter-indexed:transducer-base f (fn [^long i] (! i)) inc!))
+
+(def ^{:doc "map+ : filter+ :: !map-indexed+ : !filter-indexed+"}
+  !filter-indexed+ (transducer->transformer !filter-indexed:transducer))
+
+(defn v!filter-indexed:transducer
+  [f] (filter-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
+
+(def ^{:doc "map+ : filter+ :: v!map-indexed+ : v!filter-indexed+"}
+  v!filter-indexed+ (transducer->transformer v!filter-indexed:transducer))
+
+(defn filter-indexed:transducer
+  [f] (filter-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
+
+(def filter-indexed+ (transducer->transformer filter-indexed:transducer))
+
+; TODO pfilter-indexed+
+
+; ----- REMOVE ----- ;
 
 (defn remove+
   "Returns a version of the folder which only passes on inputs to subsequent
-   transforms when (@pred <input>) is falsey."
-  ([pred] (filter+ (complement pred)))
-  ([pred xs] (filter+ (complement pred) xs)))
+   transforms when `(pred <input>)` is falsey."
+  ([pred]    (filter+ (fn-not pred)))
+  ([pred xs] (filter+ (fn-not pred) xs)))
 
-(defn keep+         [f coll] (folder coll (core/keep         f)))
-(defn keep-indexed+ [f coll] (folder coll (core/keep-indexed f)))
+; ----- REMOVE-INDEXED ----- ;
+
+(defn !remove-indexed+
+  "map+ : remove+ :: !map-indexed+ : !remove-indexed+"
+  ([pred]    (!filter-indexed+ (comp not pred))) ; TODO use `fn-not` here
+  ([pred xs] (!filter-indexed+ (comp not pred) xs))) ; TODO use `fn-not` here
+
+(defn v!remove-indexed+
+  "map+ : remove+ :: v!map-indexed+ : v!remove-indexed+"
+  ([pred]    (v!filter-indexed+ (comp not pred))) ; TODO use `fn-not` here
+  ([pred xs] (v!filter-indexed+ (comp not pred) xs))) ; TODO use `fn-not` here
+
+(defn remove-indexed+
+  "map+ : remove+ :: map-indexed+ : remove-indexed+"
+  ([pred]    (filter-indexed+ (comp not pred))) ; TODO use `fn-not` here
+  ([pred xs] (filter-indexed+ (comp not pred) xs))) ; TODO use `fn-not` here
+
+(def keep+         (transducer->transformer core/keep))
+(def v!keep-indexed+ (transducer->transformer core/keep-indexed)) ; TODO add non-volatile forms
+(defn keep-indexed+ [& args] (TODO))
+
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={         FLATTEN          }=====================================================
 ;=================================================={                          }=====================================================
-(defcurried flatten+
-  "Takes any nested combination of sequential things (lists, vectors,
-  etc.) and returns their contents as a single, flat foldable
-  collection."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
-  [coll]
-  (folder coll
-   (fn [reducer-]
-     (fn ([] (reducer-))
-         ([ret v]
-            (if (sequential? v)
-                (red/reduce reducer- ret (flatten+ v))
-                (reducer- ret v)))))))
+(declare flatten+)
 
-(def flatten-1+ (fn->> (mapcat+ identity)))
+(defn flatten:transducer []
+  (fn [rf]
+    (fn ([] (rf))
+        ([ret v]
+           (if (sequential? v) ; TODO use `t/sequential?` ?
+               (reduce rf ret (flatten+ v))
+               (rf ret v))))))
+
+(def flatten+ (transducer->transformer flatten:transducer))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          SOURCES         }=====================================================
 ;=================================================={                          }=====================================================
@@ -324,7 +385,7 @@
    sequence of xs. If n is specified, then it is foldable."
   {:adapted-from "CLJ-994 (Jason Jackson)"}
   ([f]
-    (reducer
+    (transformer
       (reify
         #?(:clj  clojure.core.protocols/CollReduce
            :cljs cljs.core/IReduce)
@@ -337,7 +398,7 @@
               (recur (f1 ret (f)))))))
       identity-rf))
   ([n f]
-    (folder
+    (transformer
       (reify
         #?(:clj  clojure.core.protocols/CollReduce
            :cljs cljs.core/IReduce)
@@ -365,7 +426,7 @@
   {:adapted-from "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"
    :performance "Untested"}
   [f seed]
-  (reducer
+  (transformer
     (reify
      #?(:clj  clojure.core.protocols/CollReduce
         :cljs cljs.core/IReduce)
@@ -431,10 +492,10 @@
       (let [cmp (if (pos? step) < >)]
         (loop [ret init i start]
           (if (reduced? ret)
-            @ret
-            (if (cmp i end)
-              (recur (f1 ret i) (unchecked-add i step))
-              ret)))))
+              @ret
+              (if (cmp i end)
+                (recur (f1 ret i) (unchecked-add i step))
+                ret)))))
   r/CollFold
     (coll-fold [this n combinef reducef]
       (fold/fold-by-halves
@@ -455,14 +516,14 @@
   (exclusive), by step, where start defaults to 0, step to 1, and end
   to infinity."
   {:adapted-from "Alan Malloy - http://dev.clojure.org/jira/browse/CLJ-993"}
-  ([^default end                       ] (folder (Range.     0     end 1   ) identity-rf))
-  ([^long    end                       ] (folder (LongRange. 0     end 1   ) identity-rf))
+  ([^default end                       ] (transformer (Range.     0     end 1   ) identity-rf))
+  ([^long    end                       ] (transformer (LongRange. 0     end 1   ) identity-rf))
   ; TODO fix types here
-  ([^default start       end           ] (folder (Range.     start end 1   ) identity-rf))
-  ([^long    start ^long end           ] (folder (LongRange. start end 1   ) identity-rf))
+  ([^default start       end           ] (transformer (Range.     start end 1   ) identity-rf))
+  ([^long    start ^long end           ] (transformer (LongRange. start end 1   ) identity-rf))
   ; TODO fix types here
-  ([^default start       end       step] (folder (Range.     start end step) identity-rf))
-  ([^long    start ^long end ^long step] (folder (LongRange. start end step) identity-rf)))
+  ([^default start       end       step] (transformer (Range.     start end step) identity-rf))
+  ([^long    start ^long end ^long step] (transformer (LongRange. start end step) identity-rf)))
 
 #?(:clj
 (defmacro range+
@@ -471,10 +532,12 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     TAKE, TAKE-WHILE     }=====================================================
 ;=================================================={                          }=====================================================
-(defalias take+ ccoll/take+)
+(defalias take+ ccoll/take+) ; TODO mark this as mutable
 
-(defn take-while+ [pred coll] (reducer coll (core/take-while pred)))
-(defn take-nth+   [n    coll] (reducer coll (core/take-nth   n   )))
+(def take-while+ (transducer->transformer core/take-while))
+
+(def v!take-nth+   (transducer->transformer core/take-nth)) ; TODO non-volatile forms
+(defn take-nth+ [& args] (TODO))
 
 #?(:clj (defalias taker+ ccoll/taker+))
 ;___________________________________________________________________________________________________________________________________
@@ -482,48 +545,44 @@
 ;=================================================={                          }=====================================================
 (defalias drop+ ccoll/drop+)
 
-(defn drop-while+ [pred coll] (reducer coll (core/drop-while pred)))
+(def drop-while+ (transducer->transformer core/drop-while))
 
 #?(:clj (defalias dropr+ ccoll/dropr+))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={     PARTITION, GROUP     }=====================================================
 ;=================================================={       incl. slice        }=====================================================
 (defn reduce-by+
-  "Partition `coll` with `keyfn` as per /partition-by/, then reduce
+  "Partition `coll` with `kf` as per `partition-by`, then reduce
   each partition with `f` and optional initial value `init` as per
-  /reduce/."
+  `reduce`."
   {:attribution "parkour.reducers"}
-  ([keyfn f coll]
-    (->> (mapcat+ identity [coll [sentinel]])
+  ([kf f xs]
+    (->> (mapcat+ identity [xs [sentinel]])
          (map-state
            (fn [[k acc] x]
              (if (identical? sentinel x)
                [nil acc]
-               (let [k' (keyfn x)]
+               (let [k' (kf x)]
                  (if (or (= k k') (identical? sentinel k))
                    [[k' (f acc x)] sentinel]
                    [[k' (f (f) x)] acc]))))
            [sentinel (f)])
          (remove+ (partial identical? sentinel))))
-  ([keyfn f init coll]
+  ([kf f init xs]
      (let [f (fn ([] init) ([acc x] (f acc x)))]
-       (reduce-by+ keyfn f coll))))
+       (reduce-by+ kf f xs))))
 
-(defn partition-by+  [f coll] (folder coll (core/partition-by  f)))
+(def partition-by+ (transducer->transformer core/partition-by))
 
 ; TODO do `partition-all-into` just like `group-by-into`
 
-(defn partition-all:transducer [n] (core/partition-all n))
-
-(defn partition-all+
-  ([n] (partition-all:transducer n))
-  ([n coll] (folder coll (partition-all:transducer n))))
+(def partition-all+ (transducer->transformer core/partition-all))
 
 #?(:clj
-(defn partition-all-timeout:transducer [^long n ^long timeout-ms]
+(defn !partition-all-timeout:transducer [^long n ^long timeout-ms]
   (fn [rf]
     (let [a (java.util.ArrayList. n)
-          *last-aggregated (refs/!long Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
+          *last-aggregated (! Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
       (fn
         ([] (rf))
         ([result]
@@ -537,25 +596,30 @@
         ([result input]
            (.add a input)
            (let [now    (System/currentTimeMillis)
-                 before (refs/deref *last-aggregated)]
+                 before (deref *last-aggregated)]
              (if (or (= n (.size a))
                      (>= (- now before) timeout-ms))
-               (let [_ (refs/reset! *last-aggregated now)
+               (let [_ (reset! *last-aggregated now)
                      v (vec (.toArray a))]
                  (.clear a)
                  (rf result v))
                result))))))))
 
+; TODO do non-single-threaded version
 #?(:clj
-(defn partition-all-timeout+
+(defn !partition-all-timeout+
   "Partitions `xs` into chunks of `n`, unless the timer specified by `timeout-ms`
    expires before there are at least `n` elements available, in which case a
    partition smaller than `n` will happen and the timer will be reset, and so on.
 
    Useful for `chan` when one might want to aggregate results into chunks of no
-   more than `n`, at least every `timeout-ms`."
-  ([n timeout-ms] (partition-all-timeout:transducer n timeout-ms))
-  ([n timeout-ms xs] (folder xs (partition-all-timeout:transducer n timeout-ms)))))
+   more than `n`, at least every `timeout-ms`.
+
+   This transformer is not thread-safe."
+  ([n timeout-ms] (!partition-all-timeout:transducer n timeout-ms))
+  ([n timeout-ms xs] (transformer xs (!partition-all-timeout:transducer n timeout-ms)))))
+
+(defn partition-all-timeout+ [& args] (TODO))
 
 (defn group-by+ ; Yes, but folds a lazy sequence... hmm...
   "Reducers version. Possibly slower than |core/group-by|.
@@ -575,7 +639,10 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn dedupe+:sorted ; 228.936664 ms (pretty much attains java speeds!!!)
+(def v!dedupe+ (transducer->transformer core/dedupe))
+
+; TODO compare this to clojure/core `dedupe`, and an impl of it using atoms
+(defn dedupe+
   "Remove adjacent duplicate values of (@f x) for each x in @coll.
    CAVEAT: Requires @coll to be sorted to work correctly."
   {:attribution "parkour.reducers"}
@@ -589,36 +656,18 @@
          sentinel)
        (remove+ (partial identical? sentinel))))
 
-(defn dedupe+ [xs] (folder xs (core/dedupe)))
-
-#_(defn pdedupe+ ; reduce will only ever be single-threaded
-  "Thread-safe `dedupe+`.
-   Just `dedupe+` with an `atom` instead of a `volatile`."
-  [f xs]
-  (folder xs
-    (fn [rf]
-      (let [pv (atom ::none)]
-        (fn
-          ([] (rf))
-          ([result] (rf result))
-          ([result input]
-            (let [prior @pv]
-              (reset! pv input)
-              (if (= prior input)
-                result
-                (rf result input)))))))))
-
 ; TODO default to using a `HashSet` internally ? Other options?
-
+; TODO do volatile and unsync-mutable versions
 (defn distinct-storing:transducer
+  "Like `core/distinct`, but you can choose what collection to store the distinct items in."
   ([] (distinct-storing:transducer
-        (fn [] (refs/volatile #{}))))
+        (fn [] (atom #{}))))
   ([genf]
     (distinct-storing:transducer genf
       (fn [seen x] (contains? @seen x))))
   ([genf contains?f]
     (distinct-storing:transducer genf contains?f
-      (fn [seen x] (vswap! seen conj x))))
+      (fn [seen x] (swap! seen conj x))))
   ([genf contains?f conj!f]
     (fn [rf]
       (let [seen (genf)]
@@ -634,29 +683,17 @@
   ([genf                  ] (distinct-storing:transducer genf))
   ([genf contains?f       ] (distinct-storing:transducer genf contains?f))
   ([genf contains?f conj!f] (distinct-storing:transducer genf contains?f conj!f))
-  ([genf contains?f conj!f xs] (folder xs (distinct-storing+ genf contains?f conj!f))))
+  ([genf contains?f conj!f xs] (transformer xs (distinct-storing+ genf contains?f conj!f))))
 
-(defn distinct:transducer
-  ([] (distinct-storing:transducer)))
+(defn distinct:transducer ([] (distinct-storing:transducer)))
 
 (defn distinct+
   ([] (distinct:transducer))
-  ([xs] (folder xs (distinct+))))
+  ([xs] (transformer xs (distinct+))))
 
-(defn distinct-by+  [f xs] (->> xs (map+ f)  distinct+))
+(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+))
 
-(defn replace+ [smap xs] (folder xs (core/replace smap)))
-
-(defn reduce-sentinel
-  "Calls `reduce` with a sentinel.
-   Useful for e.g. `max` and `min`."
-  {:attribution "alexandergunnarson"}
-  [rf xs]
-  (let [ret (reduce
-              (fn [ret x] (if (identical? ret sentinel) x (rf ret x)))
-              sentinel
-              xs)]
-    (if (identical? ret sentinel) nil ret)))
+(def replace+ (transducer->transformer core/replace))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
@@ -758,12 +795,15 @@
        (remove+ pred)
        fold-empty?))
 
-(defn interpose+ [sep coll] (folder coll (core/interpose sep)))
+(def interpose+ (transducer->transformer core/interpose))
 
 (defalias zipvec+ interpose+)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={ LOOPS / LIST COMPREHENS. }=====================================================
 ;=================================================={        for, doseq        }=====================================================
+; TODO all of `for+` can be reduced to `map+`
+; TODO all of `fori+` can be reduced to `map-indexed+`
+
 (defn for+:gen-arities-2-3 [bindings kv-ct f-inner main-arity]
   (cond
      (= (count bindings) kv-ct)
@@ -793,7 +833,7 @@
         f-inner (gensym "f-inner")
         main-arity  `([ret# ~@(butlast bindings)] (~f ret# (do ~@body)))
         arities-2-3 (for+:gen-arities-2-3 bindings 2 f-inner main-arity)]
-   `(folder ~(last bindings) ~(for+:gen-f f f-inner arities-2-3)))))
+   `(transformer ~(last bindings) ~(for+:gen-f f f-inner arities-2-3)))))
 
 #?(:clj
 (defmacro fori+*
@@ -807,29 +847,25 @@
                       (let [~i (~atomic-mutator ~i* inc)]
                         (~f ret# (do ~@body))))
         arities-2-3 (for+:gen-arities-2-3 bindings 3 f-inner main-arity)]
-   `(folder ~(-> bindings butlast last)
+   `(transformer ~(-> bindings butlast last)
       (let [~i* (~atomic-container -1)] ~(for+:gen-f f f-inner arities-2-3))))))
 
-#?(:clj (defmacro fori+  "Like `for+`, but indexed."               [& args] `(fori+* volatile! vswap! ~@args)))
-#?(:clj (defmacro pfori+ "Like `for+`, but thread-safely indexed." [& args] `(fori+* atom       swap! ~@args)))
+#?(:clj (defmacro !fori+ "Like `for+`, but indexed."               [& args] `(fori+* volatile! vswap! ~@args))) ; TODO use unsynchronized mutable counter
+#?(:clj (defmacro fori+  "Like `for+`, but thread-safely indexed." [& args] `(fori+* atom       swap! ~@args)))
+; TODO `pfor+`
 
-; <<<<------ ALREADY REDUCED ------>>>>
 #?(:clj
 (defmacro doseq+
   "|doseq| but based on reducers."
   {:attribution "Christophe Grand, https://gist.github.com/cgrand/5643767"}
   [bindings & body]
  `(red/reduce fn-nil (for+ ~bindings (do ~@body)))))
+; TODO `doseqi+`
+; TODO `pdoseqi+` etc
 
-(defcurried each ; like doseq
-  "Applies f to each item in coll, returns nil"
-  {:attribution "transduce.reducers"}
-  [f coll]
-  (red/reduce (fn [_ x] (f x) nil) nil coll))
+(def sample+ (transducer->transformer core/random-sample))
 
-(defn sample+ [prob coll] (folder coll (core/random-sample prob)))
-
-(defalias random-sample+ sample+)
+(defalias random-sample+ sample+) ; TODO allow to use a different source of randomness
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      TO INCORPORATE      }=====================================================
@@ -1143,11 +1179,13 @@
 
 #?(:clj
 (defmacro defeager [sym plus-sym]
-  (let [lazy-sym            (symbol (str "l" sym))
+  (let [lazy-sym            (when (resolve (symbol "clojure.core" (name sym)))
+                              (symbol (str "l" sym)))
         quoted-sym          (symbol (str sym "'"))
         parallel-sym        (symbol (str "p" sym))
         parallel-quoted-sym (symbol (str "p" sym "'"))]
-    `(do (defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym)))
+    `(do ~(when lazy-sym
+           `(defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
          (defalias ~(var/unqualify plus-sym) ~plus-sym)
          (defn ~sym
            ~(str "Like `core/" sym "`, but eager. Reduces into vector.")
