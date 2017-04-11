@@ -1,4 +1,23 @@
+# quantum.core.reducers
 
+https://groups.google.com/forum/#!topic/clojure/VQj0E9TJWYY
+
+
+When doing incrementing within a stateful `map-indexed` transducer and `fold` over (vec (range 0 100)):
+
+VOLATILE
+duplicates after a while and only gets to 84
+
+UNSYNC
+duplicates almost immediately and gets to 97
+
+ATOMIC
+no duplicates, and gets to 99
+
+Alex Miller:
+> While transducing processes may provide locking to cover the visibility of state updates in a stateful transducer, transducers should still use stateful constructs that ensure visibility (by using volatile, atoms, etc).
+> [core.async] operations are covered by the channel lock which should guarantee visibility. Transducers used within a go block (via something like transduce or into) occur eagerly and don't incur any switch in threads so just fall back to the same old expectations of single-threaded use and visibility.
+> Note that there are a couple of stateful transducers that use ArrayList (partition-by and partition-all). From my last conversation with Rich, he said those should really be changed to protect themselves better with volatile or something else. I thought I wrote up a ticket for this but looks like maybe I didn't, so I will take care of that.
 
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      MULTIREDUCIBLES     }=====================================================
