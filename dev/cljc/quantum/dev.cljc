@@ -4,6 +4,7 @@
 (do (require '[clojure.tools.namespace.repl :refer [refresh]])
     (require 'quantum.core.meta.dev)
     (quantum.core.meta.dev/enable-repl-utils!)
+    (quantum.core.meta.debug/print-pretty-exceptions!)
     (refresh)))
 
 (ns quantum.dev
