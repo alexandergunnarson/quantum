@@ -1,6 +1,6 @@
 # `defnt`
 
-`defnt` is a way of defining an efficiently-dispatched dynamic, type-checked function without resorting to using the un-function-like syntax of `defprotocol` and/or using the tedious `reify`. An example of it is the following:
+`defnt` is a way of defining an efficiently-dispatched dynamic, type-checked function without resorting to using the un-function-like syntax of `defprotocol` or `reify`. An example of it is the following:
 
 ```
 (defnt ^java.math.BigInteger ->big-integer
@@ -20,70 +20,33 @@ As another example, if three entirely unrelated objects all use `.quit` to free 
 Voila! No type hints needed anymore, and no performance hit or repetitive code with `cond` + `instance?` checks.
 
 
-## Spec'ed `defnt`s
+## Warnings
+- The protocol vs. interface dispatch should (configurably) emit a warning.
 
-Another thing that would be nice is to marry `defnt` with `clojure.spec`.
-We want the specs to be reflected in the parameter declaration, type hints, and so on.
-
-We also want it to know about e.g., since a function returns `(< 5 x 100)`, then x must be not just a number, but *specifically* a number between 5 and 100, exclusive. Non-`Collection` datatypes are opaque and do not participate in this benefit (?).
-
-Actually, it would be nice to lazily compile only the needed overloads of `defnt`.
-If you use without wrapping in `fnt` or `defnt`, e.g. `(do ...)`, then the overload resolution is done via protocol dispatch.
-
-The protocol vs. interface dispatch should (configurably) emit a warning.
-
-```clojure
-(defnt-spec example
-  ([[a (s/and even? #(< 5 % 100))]
-    [b t/any]
-    [c ::number-between-6-and-20]
-    [d {:req-un [[e  t/boolean? true]
-                 [:f t/number?]
-                 [g  (s/or* t/number? t/sequential?)
-                     0]]}]]
-   {:pre  (< a @c))
-    :post (s/and (s/coll-of odd? :kind t/array?)
-                 #(= (first %) c))}
-   ...)
-  ([[a string?]
-    [b (s/coll-of bigdec? :kind vector?)]
-    [c t/any]
-    [d t/any]
-   ...))
-
-; expands to =>
-
-(dv/def ::example:a (s/and even? #(< 5 % 100)))
-(dv/def ::example:b t/any)
-(dv/def ::example:c ::number-between-6-and-20)
-(dv/def-map ::example:d
-  :conformer (fn [m#] (assoc-when-not-contains m# :e true :g 0))
-  :req-un [[:e t/boolean?]
-           [:f t/number?]
-           [:g (s/or* t/number? t/sequential?)]])
-(dv/def ::example:__ret
-  (s/and (s/coll-of odd? :kind t/array?)
-                 #(= (first %) (:c ...)))) ; TODO fix `...`
-
--> TODO should it be:
-(defnt example
-  [^example:a a ^:example:b b ^example:c c ^example:d d]
-  (let [ret (do ...)]
-    (validate ret ::example:__ret)))
--> OR
-(defnt example
-  [^number? a b ^number? c ^map? d]
-  (let [ret (do ...)]
-    (validate ret ::example:__ret)))
--> ? The issue is one of performance. Maybe we don't want boxed values all over the place.
-
-(s/fdef example
-  :args (s/cat :a ::example:a
-               :b ::example:b
-               :c ::example:c
-               :d ::example:d)
-  :fn   ::example:__ret)
-```
+## Performance
+- It would be nice to lazily compile only the needed overloads of `defnt`.
+  *(make it work with lazy loading first, and **only then** handle eager loading)*
+  - If this happened in Clojure or ClojureScript:
+    - In loading a file or in REPL development,
+      - It would force a compile if the overload was known to be valid but wasn't compiled yet, *and* it was called outside of a function
+    - In AOT compilation (via `lein` for Clojure or Google Closure Compiler for ClojureScript),
+      - For Clojure,
+        -     If you could guarantee that the consumer of the AOT artifact had bytecode generation capability
+          AND If the consumer of the AOT artifact found some degree of non-AOT compilation acceptable,
+          - Lazy loading would be possible
+        - Otherwise,
+          - If you could guarantee that all code will be invoked only from certain entry points (e.g. `-main`) (note that non-bytecode generating, 'interpreting' `eval` is fine because it will be compiled),
+            - Lazy loading would still be possible, as all needed overloads would be compiled AOT
+          - Otherwise *all* valid overloads would need to be compiled (probably prohibitive)
+      - For ClojureScript,
+        -     If you could guarantee that `eval` was suddenly possible and performant with the Google Closure Compiler (big stretch here)
+          AND If the consumer of the AOT artifact found some degree of non-AOT compilation acceptable,
+          - Lazy loading would be possible
+        - Otherwise,
+          - If you could guarantee that all code will be invoked only from certain entry points (e.g. `-main`) (note that non-bytecode generating, 'interpreting' `eval` is fine because it will be compiled),
+            - Lazy loading would still be possible, as all needed overloads would be compiled AOT
+          - Otherwise *all* valid overloads would need to be compiled (probably prohibitive)
+  - Only reload (or invalidate the cache) for those signatures/bodies that did change.
 
 ## `clojure.spec` + protocols/interfaces
 
@@ -104,25 +67,6 @@ A goal might be to merge clojure.spec with protocols and interfaces like so:
 and have the compiler complain.
 I realize that this is probably prohibitively expensive, though.
 
-## Type inference
-
-```clojure
-  (expr-info '(let [a (Integer. 2) b (Double. 3)] a))
-; => {:class java.lang.Integer, :prim? false}
-  (expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a b)))
-; => nil
-;    But I'd like to have it infer the "LCD", namely, `(v/and number? (v/or* (fn= 2) (fn= 3)))`.
-
-I realize that this also is probably prohibitively expensive.
-
-  (expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a (int b))))
-; => nil (inferred `Integer` or `int`)
-
-  (expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a (Integer. b))))
-; => {:class java.lang.Integer, :prim? false}
-```
-
-At very least it would be nice to have "spec inference". I.e. know, via `fdef`, that a function meets a particular set of specs/characteristics and so any call to that function will necessarily comply with the type.
 
 ## Best practices
 
