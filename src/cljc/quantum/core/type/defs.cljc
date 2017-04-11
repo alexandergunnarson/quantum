@@ -34,8 +34,8 @@
                goog.structs.Queue])))
 
 ; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
-(deftype Folder  [xs prev xf])
-(deftype Reducer [xs prev xf])
+; A cross between a `reducer` and a `folder`
+(deftype Transformer [xs prev xf])
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.
@@ -717,7 +717,7 @@
 
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.Indexed / cljs.core/IIndexed?
-(def indexed-types         (cond-union array-types string-types vec-types
+(def indexed-types         (cond-union array-types string-types vector-types
                              '{:clj #{clojure.lang.APersistentVector$RSeq}}))
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.Associative / cljs.core/IAssociative?
@@ -728,11 +728,11 @@
                            ; TODO this might be ambiguous
                            ; TODO clojure.lang.ICollection / cljs.core/ICollection?
 (def counted-types         (cond-union array-types string-types
-                             {:clj  (set/union (:clj !vec-types) (:clj !!vec-types)
-                                               (:clj !map-types) (:clj !!map-types)
-                                               (:clj !set-types) (:clj !!set-types)
+                             {:clj  (set/union (:clj !vector-types) (:clj !!vector-types)
+                                               (:clj !map-types )   (:clj !!map-types)
+                                               (:clj !set-types )   (:clj !!set-types)
                                                '#{clojure.lang.Counted})
-                              :cljs (set/union (:cljs vec-types)
+                              :cljs (set/union (:cljs vector-types)
                                                (:cljs map-types)
                                                (:cljs set-types))}))
 
@@ -824,11 +824,9 @@
                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
 
 (def transformer-types     '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
-                                    quantum.core.type.defs.Folder
-                                    quantum.core.type.defs.Reducer}
-                             :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on interface
-                                     quantum.core.type.defs.Folder
-                                     quantum.core.type.defs.Reducer}})
+                                    quantum.core.type.defs.Transformer}
+                             :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on protocol
+                                     quantum.core.type.defs.Transformer}})
 
 #_(def reducible-types       (cond-union
                              array-types
