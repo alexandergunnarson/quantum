@@ -53,12 +53,13 @@
     [quantum.core.loops            :as loops
       :refer [reducei doseqi lfor]]
     [quantum.core.vars             :as var
-      :refer [defalias]]))
+      :refer [defalias defaliases]]))
 
 ; ============================ MAP ============================ ;
 
 (defeager map         red/map+)
-(defeager map-indexed red/map-indexed+)
+(defeager map-indexed red/map-indexed+) ; TODO rename `mapi` ? ; TODO use !map-indexed+ internally
+(defaliases red v!map-indexed+ !map-indexed+)
 
 (defn map-keys* [f-coll] (fn [f coll] (->> coll (f-coll (juxt (rcomp key f) val)))))
 (def  map-keys+ (map-keys* map+))
@@ -74,7 +75,9 @@
 
 ; ============================ FILTER ============================ ;
 
-(defeager filter red/filter+)
+(defeager filter         red/filter+)
+(defeager filter-indexed red/filter-indexed+) ; TODO use !filter-indexed+ internally
+(defaliases red v!filter-indexed+ !filter-indexed+)
 
 (defn ffilter
   "Returns only the first result of a |filter| operation."
@@ -88,26 +91,6 @@
    :out  [3 "4"]}
   [pred coll]
   (->> coll indexed+ (ffilter (rcomp val pred))))
-
-(defn filteri
-  {:todo ["Use reducers"]}
-  [pred coll]
-  (if (type/should-transientize? coll)
-      (persistent!
-        (loops/reducei
-          (fn [ret elem-n n]
-            (if (pred elem-n)
-                (conj! ret (map-entry n elem-n))
-                ret))
-          (transient [])
-          coll))
-      (loops/reducei
-        (fn [ret elem-n n]
-          (if (pred elem-n)
-              (conj ret (map-entry n elem-n))
-              ret))
-        []
-        coll)))
 
 (defnt ^clojure.lang.MapEntry last-filteri*
   {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
@@ -128,7 +111,9 @@
 #?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
    :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
 
-(defeager remove red/remove+)
+(defeager remove         red/remove+)
+(defeager remove-indexed red/remove-indexed+) ; TODO use !remove-indexed+ internally
+(defaliases red v!remove-indexed+ !remove-indexed+)
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
