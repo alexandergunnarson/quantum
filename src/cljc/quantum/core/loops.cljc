@@ -3,7 +3,8 @@
           are faster than their lazy clojure.core counterparts."
     :attribution "alexandergunnarson"}
   quantum.core.loops
-  (:refer-clojure :exclude [doseq for reduce dotimes])
+  (:refer-clojure :exclude
+    [doseq for reduce dotimes, deref reset!])
   (:require
     [clojure.core                     :as core]
 #?@(:clj
@@ -14,15 +15,17 @@
     [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
       :refer [->ex]]
+    [quantum.core.fn
+      :refer [rfn <- call fn' rcomp firsta seconda]]
     [quantum.core.log                 :as log]
     [quantum.core.macros              :as macros
       :refer [assert-args defnt #?(:clj defnt')]]
+    [quantum.core.macros.optimization :as opt]
     [quantum.core.reducers.reduce     :as red]
     [quantum.core.reducers
       :refer [map+]]
-    [quantum.core.fn
-      :refer [rfn <- call fn' rcomp firsta seconda]]
-    [quantum.core.macros.optimization :as opt]
+    [quantum.core.refs                :as refs
+      :refer [deref reset! !long]]
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
       :refer [defalias]])
@@ -152,15 +155,13 @@
 
 #?(:clj
 (defmacro doseqi
-  "`doseq`, indexed. Starts index at 0."
+  "`doseq`, indexed thread-unsafely. Starts index at 0."
   {:attribution "alexandergunnarson"}
   [[elem xs index-sym :as bindings] & body]
-  `(let [i# (volatile! 0) xs# ~xs]
+  `(let [*i# (!long -1) xs# ~xs]
      (reduce
        (fn [_# ~elem]
-         (let [~index-sym @i#] ~@body)
-         (vswap! i# qcore/unchecked-inc-long)
-         nil)
+         (let [~index-sym (reset! *i# (inc (deref *i#)))] ~@body))
        nil
        xs#)
      xs#)))
@@ -170,7 +171,7 @@
   (assert-args
     (vector? bindings) "a vector for its bindings")
   `(->> ~(last bindings)
-        (<- red/reducer (core/map (rfn [~@(butlast bindings)] ~@body))) ; bootstrapping `map+`
+        (<- red/transformer (core/map (rfn [~@(butlast bindings)] ~@body))) ; bootstrapping `map+`
         ~joinf))
 
 #?(:clj
@@ -212,12 +213,11 @@
   {:attribution "alexandergunnarson"}
   [joinf bindings & body]
   (let [n-sym  (last bindings)
-        *n-sym (gensym "volatile-n")]
-   `(let [~*n-sym (volatile! 0)]
+        *n-sym (gensym "mutable-n")]
+   `(let [~*n-sym (!long -1)]
      ~(for-join* joinf (vec (butlast bindings))
-       `(let [~n-sym (deref ~*n-sym)
+       `(let [~n-sym (reset! ~*n-sym (inc (deref ~*n-sym)))
               res#   (do ~@body)]
-          (vswap! ~*n-sym qcore/unchecked-inc-long)
           res#)))))
 
 #?(:clj
@@ -437,7 +437,7 @@
             90 + ~8 other indexed types = 98
             98*98 = 9,604 possibilities
             We don't want to compute this (the Cartesian product of all indexed types) up front!"}}
-  [^fn? f init #_indexed? #{array-1d? +vec?} xs0 #_indexed? #{array-1d? +vec?} xs1]
+  [^fn? f init #_indexed? #{array-1d? +vector?} xs0 #_indexed? #{array-1d? +vector?} xs1]
   (let [ct0 (c/count xs0) ct1 (c/count xs1)]
     (loop [ret init i 0]
       (cond (reduced? ret)
@@ -451,10 +451,10 @@
   "Reduces, mapping multiple reducing functions to multiple return values
    of `reduce`.
    Returns the aggregation of values as an object array."
-  [#{+vec? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
+  [#{+vector? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
   (reduce
     (fn [^objects rets x]
-      (doseqi [f fs ^long i] (c/assoc! rets i (f (c/get rets i) x)))
+      (doseqi [f fs i] (c/assoc! rets i (f (c/get rets i) x)))
       rets)
     (->> fs (map+ call) (c/join! (c/->objects-nd (c/count fs)))) ; TODO inefficient if `(count fs)` isn't known
     xs))
@@ -464,5 +464,5 @@
    of `reduce`."
   {:usage `{(reduce-multi [+ *] (range 1 5))
             [[10 24]]}}
-  [#{+vec? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
+  [#{+vector? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
   (vec (reduce-multi:objects fs xs))) ; TODO is this faster or is transient `assoc!` better?
