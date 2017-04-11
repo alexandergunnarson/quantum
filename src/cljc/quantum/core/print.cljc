@@ -32,7 +32,7 @@
 
 (defalias js-println qcore/js-println)
 
-(defn !
+(defn ppr
   "Fast pretty print using brandonbloom/fipp.
    At least 5 times faster than |clojure.pprint/pprint|.
    Prints no later than having consumed the bound amount of memory,
@@ -70,17 +70,17 @@
             nil))))
   ([obj & objs]
     (doseq [obj-n (cons obj objs)]
-      (! obj-n))))
+      (ppr obj-n))))
 
 (defn ppr-str
   "Like `pr-str`, but pretty-prints."
-  [x] (with-out-str (! x)))
+  [x] (with-out-str (ppr x)))
 
 ; Makes it so fipp doesn't print tagged literals for every record
 #_(quantum.core.vars/reset-var! #'fipp.ednize/record->tagged
   (fn [x] (tagged-literal '... (into {} x))))
 
-#?(:clj (reset! debug/pretty-printer !))
+#?(:clj (reset! debug/pretty-printer ppr))
 
 (def suppress (partial (fn' nil)))
 
@@ -127,7 +127,7 @@
       (clojure.pprint/with-pprint-dispatch clojure.pprint/simple-dispatch  ;;Make the dispatch to your print function
         (clojure.pprint/pprint x))
      :cljs
-      (! x)))
+      (ppr x)))
 
 #_"Pretty-prints an array. Returns a String containing the pretty-printed representation."
 #?(:clj (defalias pprint-arr mpprint/pm))
