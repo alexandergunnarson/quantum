@@ -160,11 +160,11 @@
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/!            pr-type# [~@args] nil  ) true))))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/ppr          pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro ppr-opts [pr-type opts & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false pr/!            pr-type# [~@args] ~opts) true))))
+  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false pr/ppr          pr-type# [~@args] ~opts) true))))
 
 #?(:clj
 (defmacro ppr-hints [pr-type & args]
