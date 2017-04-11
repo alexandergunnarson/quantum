@@ -15,7 +15,7 @@
     [quantum.core.error :as err
       :refer [TODO]]
     [quantum.core.macros
-      :refer [case-env defnt env-lang]]
+      :refer [case-env defnt #?(:clj defnt') env-lang]]
     [quantum.core.type  :as t]
     [quantum.core.type.defs :as tdefs]
     [quantum.core.vars  :as var
@@ -84,6 +84,19 @@
 (gen-primitive-mutables)
 
 ; ===== COMMON MUTATIVE OPERATIONS ===== ;
+
+#?(:clj
+(defnt' !
+  "Creates an unsynchronized mutable reference."
+  ([         x] (!ref     x))
+  ([^boolean x] (!boolean x))
+  ([^byte    x] (!byte    x))
+  ([^char    x] (!char    x))
+  ([^short   x] (!short   x))
+  ([^int     x] (!int     x))
+  ([^long    x] (!long    x))
+  ([^float   x] (!float   x))
+  ([^double  x] (!double  x))))
 
 #?(:clj
 (defnt setm!*
@@ -158,7 +171,7 @@
 #?(:clj
 (defnt atom*
   "Like `atom`, but lighter-weight in that it doesn't have e.g. `swap!`,
-   validation, etc."
+   validation, etc." ; TODO lighter-weight for other reasons?
   ([^boolean v] (AtomicBoolean.   v))
   ; AtomicByte
   ; AtomicChar
