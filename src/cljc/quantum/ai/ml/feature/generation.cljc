@@ -12,6 +12,8 @@
       :refer [indexed+, filter+, remove+, map+, join join!
               ->objects count]]
     [quantum.core.compare        :as comp]
+    [quantum.core.core
+      :refer [->object]]
     [quantum.core.data.primitive :as prim]
     [quantum.core.error          :as err
       :refer [->ex TODO]]
@@ -74,11 +76,12 @@
 
 (defn normalize-into-matrix
   "Takes an instance matrix `x••` and normalizes the non-nominal, non-missing
-   attributes into a 2D array."
+   attributes into a 2D object array."
   ([x•• a•:x] (normalize-into-matrix x•• a•:x (fn1 missing?)))
   ([x•• a•:x missing?f]
     (numc/normalize-2d:column
-      (->> x•• coll/->array-nd)
+      (coll/seq->array-nd-of-dims x•• (->object)
+        [(count x••) (count a•:x)])
       (->> a•:x indexed+
                 (filter+ (fn-> second ml/nominal?))
                 (map+    first)
