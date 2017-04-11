@@ -31,18 +31,18 @@
     [quantum.core.macros           :as macros
       :refer [defnt]]
     [quantum.core.refs             :as refs
-      :refer [deref !boolean reset!]]
+      :refer [deref !boolean !long ! reset!]]
     [quantum.core.type             :as t
       :refer [editable?]]
     [quantum.core.type.defs
-      #?@(:cljs [:refer [Reducer Folder]])]
+      #?@(:cljs [:refer [Transformer]])]
     [quantum.core.vars             :as var
       :refer [defalias]])
   (:require-macros
     [quantum.core.reducers.reduce
       :refer [reduce]])
   (:import
-  #?@(:clj  [[quantum.core.type.defs Reducer Folder]
+  #?@(:clj  [[quantum.core.type.defs Transformer]
              quantum.core.data.Array]
       :cljs [[goog.string StringBuffer]])))
 
@@ -96,7 +96,7 @@
                                 (recur (unchecked-inc i) ret)))
                           v))
               :cljs (array-reduce arr f init)))
-         ([^!+vec? xs f init] ; because transient vectors aren't reducible
+         ([^!+vector? xs f init] ; because transient vectors aren't reducible
            (let [ct (#?(:clj .count :cljs count) xs)] ; TODO fix for CLJS
              (loop [i 0 v init]
                (if (< i ct)
@@ -202,58 +202,60 @@
    Equivalent to Scheme's `foldl`."
   {:attribution "alexandergunnarson"
    :todo ["definline"]}
-  ([f coll]      `(reduce* ~coll ~f))
-  ([f init coll] `(reduce* ~coll ~f ~init))))
+  ([f xs]      `(reduce* ~xs ~f))
+  ([f init xs] `(reduce* ~xs ~f ~init))))
 
 #?(:clj
-(defmacro reducei
+(defmacro reducei ; TODO unmacro when type inference is available
    "`reduce`, indexed.
-
-   This is a macro to eliminate the wrapper function call.
-   Originally used a mutable counter on the inside just for fun...
-   but the counter might be propagated via @f, so it's best to use
-   an atomic value instead."
-  {:attribution "alexandergunnarson"
-   :todo ["Make this an inline function, not a macro."]}
-  [f ret-i coll & args]
-  (let [f-final
-         `(let [i# (volatile! (long -1))]
-            (fn ([ret# elem#]
-                  (vswap! i# quantum.core.core/unchecked-inc-long)
-                  (~f ret# elem# @i#))
-                ([ret# k# v#]
-                  (vswap! i# quantum.core.core/unchecked-inc-long)
-                  (~f ret# k# v# @i#))))
-        code `(reduce ~f-final ~ret-i ~coll)]
-    code)))
+    Uses an unsynchronized mutable counter internally, but this cannot cause race conditions."
+  {:attribution "alexandergunnarson"}
+  [f init xs]
+ `(let [f#  ~f
+        f'# (let [*i# (! -1)]
+              (fn ([ret# x#]
+                    (f# ret# x#    (reset! *i# (unchecked-inc (deref *i#))))) ; TODO use `inc*!`
+                  ([ret# k# v#]
+                    (f# ret# k# v# (reset! *i# (unchecked-inc (deref *i#)))))))]
+   (reduce f'# ~init ~xs))))
 
 #?(:clj
-; TODO unmacro — it's just a macro until type inference is ready
+; TODO unmacro when type inference is available
 (defmacro transduce
   ([   f xs] `(transduce identity ~f      ~xs))
   ([xf f xs] `(transduce ~xf      ~f (~f) ~xs))
   ([xf f init xs]
-    `(let [f# (~xf ~f)]
-       (f# (reduce f# ~init ~xs))))))
+    `(let [f'# (~xf ~f)]
+       (f'# (reduce f'# ~init ~xs))))))
+; TODO `transducei` ?
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
-(defn reducer
+(defn transformer
   "Given a reducible collection, and a transformation function transform,
   returns a reducible collection, where any supplied reducing
   fn will be transformed by transform. transform is a function of reducing fn to
   reducing fn."
-  {:added "1.5"
-   :attribution "clojure.core.reducers"}
   ([xs xf]
-    (cond (instance? Reducer xs)
-            (Reducer. (.-xs ^Reducer xs) xs xf)
-          (instance? Folder xs)
-            (Reducer. (.-xs ^Folder  xs) xs xf)
-          true
-            (Reducer. xs                 xs xf))))
+    (if (instance? Transformer xs)
+        (Transformer. (.-xs ^Transformer xs) xs xf)
+        (Transformer. xs                     xs xf))))
 
-(def reducer? (fnl instance? Reducer))
+(def transformer? (fnl instance? Transformer))
+
+(defn transducer->transformer
+  "Converts a transducer into a transformer."
+  {:todo #{"More arity"}}
+  ([xf              ]
+    ; TODO this is just (dropa 1 transducer->transformer)
+    (fn ([         xs] (transformer xs (xf)))
+        ([a0       xs] (transformer xs (xf a0)))
+        ([a0 a1    xs] (transformer xs (xf a0 a1)))
+        ([a0 a1 a2 xs] (transformer xs (xf a0 a1 a2)))))
+  ([xf xs]            (transformer xs       (xf)))
+  ([xf xs a0]         (transformer xs       (xf a0)))
+  ([xf xs a0 a1]      (transformer xs       (xf a0 a1)))
+  ([xf xs a0 a1 & as] (transformer xs (apply xf a0 a1 as))))
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."
@@ -271,20 +273,3 @@
 
 (defn persistent-into [to from]
   (reduce* from conj-red to))
-
-(defn red-apply
-  "Applies ->`f` to ->`coll`, pairwise, using `reduce`."
-  [f coll]
-  (let [first? (!boolean true)]
-    (reduce* coll
-      (fn [ret x]
-        (if (deref first?)
-            (do (reset! first? false) (f x))
-            (f ret x)))
-      nil)))
-
-(defn first-non-nil-reducer
-  "A reducing function that simply returns the first non-nil element in the
-  collection."
-  {:source "tesser.utils"}
-  [_ x] (when-not (nil? x) (reduced x)))
