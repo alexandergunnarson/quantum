@@ -178,9 +178,9 @@
 (gen-conja 8 8)
 
 #?(:clj
-(defmacro gen-reversed []
+(defmacro gen-reversea []
   (unify-gensyms
-   `(~'defn ~'reversed
+   `(~'defn ~'reversea
       "Returns an fn that reverses the arguments of the function passed to `reversed`."
       {:attribution "alexandergunnarson"}
       [f##]
@@ -188,7 +188,7 @@
                            (fn [args vargs] `(apply f## (reverse ~vargs) ~@(reverse args)))
                            0 18 (fn [_] "x")))))))
 
-(gen-reversed)
+(gen-reversea)
 
 #?(:clj
 (defmacro gen-mapa []

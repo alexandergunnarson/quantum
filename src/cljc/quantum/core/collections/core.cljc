@@ -642,7 +642,7 @@
   #?(:clj ([^string?      x ^nat-long? a             ] (.subSequence x a (count x))))
   #?(:clj ([^string?      x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
           ([^transformer? x ^nat-long? a             ] (->> x (drop+:transformer a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
-          ([^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+:transformer a) (take:transformer+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+:transformer a) (take+:transformer b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
 
 ; TODO mark transformer version not thread-safe
 (defnt take+*

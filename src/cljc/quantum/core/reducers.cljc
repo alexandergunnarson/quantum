@@ -207,7 +207,7 @@
       ([ret x0 x1 x2]      (rf ret       (f x0 x1 x2)))
       ([ret x0 x1 x2 & xs] (rf ret (apply f x0 x1 x2 xs))))))
 
-(def map+ (transducer->transformer map:transducer))
+(def map+ (transducer->transformer 1 map:transducer))
 
 ; ----- MAP-INDEXED ----- ;
 
@@ -223,20 +223,20 @@
    As the name suggests, this transducer is not thread-safe."
   [f] (map-indexed:transducer-base f (fn [^long i] (! i)) inc!))
 
-(def !map-indexed+ (transducer->transformer !map-indexed:transducer))
+(def !map-indexed+ (transducer->transformer 1 !map-indexed:transducer))
 
 (defn v!map-indexed:transducer
   "Same as the transducer of `core/map-indexed`, but uses a typed volatile to avoid autoboxing."
   [f] (map-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
 
-(def v!map-indexed+ (transducer->transformer v!map-indexed:transducer))
+(def v!map-indexed+ (transducer->transformer 1 v!map-indexed:transducer))
 
 (defn map-indexed:transducer
   "Like the transducer of `core/map-indexed`, but uses an `AtomicLong` internally
    instead of a `volatile`."
   [f] (map-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
 
-(def map-indexed+ (transducer->transformer map-indexed:transducer))
+(def map-indexed+ (transducer->transformer 1 map-indexed:transducer))
 
 ; TODO pmap-indexed+
 
@@ -251,7 +251,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          MAPCAT          }=====================================================
 ;=================================================={                          }=====================================================
-(def mapcat+ (transducer->transformer core/mapcat))
+(def mapcat+ (transducer->transformer 1 core/mapcat))
 
 (defn concat+ [& args] (mapcat+ identity args))
 ;___________________________________________________________________________________________________________________________________
@@ -263,7 +263,7 @@
 
 (def ^{:doc "Like `map+`, but the accumulated reduction gets passed through as the
             first argument to `f`, and the current element as the second argument."}
-  map-accum+ (transducer->transformer map-accum:transducer))
+  map-accum+ (transducer->transformer 1 map-accum:transducer))
 
 #_(defn reductions-transducer ; TODO finish
   {:attribution "alexandergunnarson"}
@@ -288,7 +288,7 @@
 
 (def ^{:doc "Returns a version of the folder which only passes on inputs to subsequent
              transforms when `(pred <input>)` is truthy."}
-  filter+ (transducer->transformer filter:transducer))
+  filter+ (transducer->transformer 1 filter:transducer))
 
 ; ----- FILTER-INDEXED ----- ;
 
@@ -302,18 +302,18 @@
   [f] (filter-indexed:transducer-base f (fn [^long i] (! i)) inc!))
 
 (def ^{:doc "map+ : filter+ :: !map-indexed+ : !filter-indexed+"}
-  !filter-indexed+ (transducer->transformer !filter-indexed:transducer))
+  !filter-indexed+ (transducer->transformer 1 !filter-indexed:transducer))
 
 (defn v!filter-indexed:transducer
   [f] (filter-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
 
 (def ^{:doc "map+ : filter+ :: v!map-indexed+ : v!filter-indexed+"}
-  v!filter-indexed+ (transducer->transformer v!filter-indexed:transducer))
+  v!filter-indexed+ (transducer->transformer 1 v!filter-indexed:transducer))
 
 (defn filter-indexed:transducer
   [f] (filter-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
 
-(def filter-indexed+ (transducer->transformer filter-indexed:transducer))
+(def filter-indexed+ (transducer->transformer 1 filter-indexed:transducer))
 
 ; TODO pfilter-indexed+
 
@@ -342,8 +342,8 @@
   ([pred]    (filter-indexed+ (comp not pred))) ; TODO use `fn-not` here
   ([pred xs] (filter-indexed+ (comp not pred) xs))) ; TODO use `fn-not` here
 
-(def keep+         (transducer->transformer core/keep))
-(def v!keep-indexed+ (transducer->transformer core/keep-indexed)) ; TODO add non-volatile forms
+(def keep+         (transducer->transformer 1 core/keep))
+(def v!keep-indexed+ (transducer->transformer 1 core/keep-indexed)) ; TODO add non-volatile forms
 (defn keep-indexed+ [& args] (TODO))
 
 ;___________________________________________________________________________________________________________________________________
@@ -359,7 +359,7 @@
                (reduce rf ret (flatten+ v))
                (rf ret v))))))
 
-(def flatten+ (transducer->transformer flatten:transducer))
+(def flatten+ (transducer->transformer 1 flatten:transducer))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          SOURCES         }=====================================================
 ;=================================================={                          }=====================================================
@@ -534,9 +534,9 @@
 ;=================================================={                          }=====================================================
 (defalias take+ ccoll/take+) ; TODO mark this as mutable
 
-(def take-while+ (transducer->transformer core/take-while))
+(def take-while+ (transducer->transformer 1 core/take-while))
 
-(def v!take-nth+   (transducer->transformer core/take-nth)) ; TODO non-volatile forms
+(def v!take-nth+   (transducer->transformer 1 core/take-nth)) ; TODO non-volatile forms
 (defn take-nth+ [& args] (TODO))
 
 #?(:clj (defalias taker+ ccoll/taker+))
@@ -545,7 +545,7 @@
 ;=================================================={                          }=====================================================
 (defalias drop+ ccoll/drop+)
 
-(def drop-while+ (transducer->transformer core/drop-while))
+(def drop-while+ (transducer->transformer 1 core/drop-while))
 
 #?(:clj (defalias dropr+ ccoll/dropr+))
 ;___________________________________________________________________________________________________________________________________
@@ -572,16 +572,16 @@
      (let [f (fn ([] init) ([acc x] (f acc x)))]
        (reduce-by+ kf f xs))))
 
-(def partition-by+ (transducer->transformer core/partition-by))
+(def partition-by+ (transducer->transformer 1 core/partition-by))
 
 ; TODO do `partition-all-into` just like `group-by-into`
 
-(def partition-all+ (transducer->transformer core/partition-all))
+(def partition-all+ (transducer->transformer 1 core/partition-all))
 
 #?(:clj
 (defn !partition-all-timeout:transducer [^long n ^long timeout-ms]
   (fn [rf]
-    (let [a (java.util.ArrayList. n)
+    (let [a                (java.util.ArrayList. n)
           *last-aggregated (! Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
       (fn
         ([] (rf))
@@ -607,17 +607,17 @@
 
 ; TODO do non-single-threaded version
 #?(:clj
-(defn !partition-all-timeout+
-  "Partitions `xs` into chunks of `n`, unless the timer specified by `timeout-ms`
-   expires before there are at least `n` elements available, in which case a
-   partition smaller than `n` will happen and the timer will be reset, and so on.
+(def
+  ^{:doc "Partitions `xs` into chunks of `n`, unless the timer specified by `timeout-ms`
+          expires before there are at least `n` elements available, in which case a
+          partition smaller than `n` will happen and the timer will be reset, and so on.
 
-   Useful for `chan` when one might want to aggregate results into chunks of no
-   more than `n`, at least every `timeout-ms`.
+          Useful for `chan` when one might want to aggregate results into chunks of no
+          more than `n`, at least every `timeout-ms`.
 
-   This transformer is not thread-safe."
-  ([n timeout-ms] (!partition-all-timeout:transducer n timeout-ms))
-  ([n timeout-ms xs] (transformer xs (!partition-all-timeout:transducer n timeout-ms)))))
+          This transformer is not thread-safe."}
+  !partition-all-timeout+
+  (transducer->transformer 2 !partition-all-timeout:transducer)))
 
 (defn partition-all-timeout+ [& args] (TODO))
 
@@ -639,7 +639,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(def v!dedupe+ (transducer->transformer core/dedupe))
+(def v!dedupe+ (transducer->transformer 0 core/dedupe))
 
 ; TODO compare this to clojure/core `dedupe`, and an impl of it using atoms
 (defn dedupe+
@@ -687,13 +687,11 @@
 
 (defn distinct:transducer ([] (distinct-storing:transducer)))
 
-(defn distinct+
-  ([] (distinct:transducer))
-  ([xs] (transformer xs (distinct+))))
+(def distinct+ (transducer->transformer 0 distinct:transducer))
 
 (defn distinct-by+ [f xs] (->> xs (map+ f) distinct+))
 
-(def replace+ (transducer->transformer core/replace))
+(def replace+ (transducer->transformer 1 core/replace))
 
 (defn fold-frequencies
   "Like clojure.core/frequencies, returns a map of inputs to the number of
@@ -795,7 +793,7 @@
        (remove+ pred)
        fold-empty?))
 
-(def interpose+ (transducer->transformer core/interpose))
+(def interpose+ (transducer->transformer 1 core/interpose))
 
 (defalias zipvec+ interpose+)
 ;___________________________________________________________________________________________________________________________________
@@ -863,7 +861,7 @@
 ; TODO `doseqi+`
 ; TODO `pdoseqi+` etc
 
-(def sample+ (transducer->transformer core/random-sample))
+(def sample+ (transducer->transformer 1 core/random-sample))
 
 (defalias random-sample+ sample+) ; TODO allow to use a different source of randomness
 

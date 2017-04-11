@@ -398,8 +398,8 @@
   :repl-options {:init (do (clojure.core/require 'quantum.core.print)
                            (require 'alembic.still)
                            (clojure.main/repl
-                             :print  quantum.core.print/!
-                             :caught quantum.core.print/!))}
+                             :print  quantum.core.print/ppr
+                             :caught quantum.core.print/ppr))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
   :java-agents [; This for HTTP/2 support

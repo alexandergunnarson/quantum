@@ -145,7 +145,7 @@
 (defalias relative-complement difference      )
 (defalias differencel         difference      )
 
-(def differencer (fn/reversed differencel))
+(def differencer (fn/reversea differencel))
 
 ; `symmetric-difference` <~> `lodash/xor`
 ; TODO `symmetric-difference-by` <~> `lodash/xorBy`

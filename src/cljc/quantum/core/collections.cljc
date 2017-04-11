@@ -441,7 +441,8 @@
         ; `partition-all` <~> `lodash/chunk`
         ; TODO choose what structures to partition into
         (defeager partition-all   red/partition-all+ )
-        (defalias partition-all-timeout+ red/partition-all-timeout+)
+        (defalias partition-all-timeout+  red/partition-all-timeout+)
+        (defalias !partition-all-timeout+ red/!partition-all-timeout+)
         (defalias lpartition      c/partition        )
         (defn each+ [f xs] (->> xs (map+ #(do (f %) %))))
 
@@ -1100,7 +1101,7 @@
 (defn split-into
   "Like `split`, but you can choose what subcollection to split into."
   ([pred gen-subinit xs]
-    (->vec (group-by-into (->objects 2) (rcomp pred nconv/->boolean-num) (aritoid gen-subinit nil (fn&2 conj?!))))))
+    (->vec (group-by-into (->objects 2) (rcomp pred nconv/->boolean-num) (aritoid gen-subinit nil (fn&2 conj?!)) xs))))
 
 (defn split
   "Splits `xs` into two groups:

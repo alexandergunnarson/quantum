@@ -246,16 +246,17 @@
 (defn transducer->transformer
   "Converts a transducer into a transformer."
   {:todo #{"More arity"}}
-  ([xf              ]
-    ; TODO this is just (dropa 1 transducer->transformer)
-    (fn ([         xs] (transformer xs (xf)))
-        ([a0       xs] (transformer xs (xf a0)))
-        ([a0 a1    xs] (transformer xs (xf a0 a1)))
-        ([a0 a1 a2 xs] (transformer xs (xf a0 a1 a2)))))
-  ([xf xs]            (transformer xs       (xf)))
-  ([xf xs a0]         (transformer xs       (xf a0)))
-  ([xf xs a0 a1]      (transformer xs       (xf a0 a1)))
-  ([xf xs a0 a1 & as] (transformer xs (apply xf a0 a1 as))))
+  ([^long n xf]
+    (case n
+          0 (fn ([]            (xf))
+                ([xs]          (transformer xs (xf))))
+          1 (fn ([a0]          (xf a0))
+                ([a0 xs]       (transformer xs (xf a0))))
+          2 (fn ([a0 a1]       (xf a0 a1))
+                ([a0 a1 xs]    (transformer xs (xf a0 a1))))
+          3 (fn ([a0 a1 a2]    (xf a0 a1 a2))
+                ([a0 a1 a2 xs] (transformer xs (xf a0 a1 a2))))
+          (throw (ex-info "Unhandled arity for transducer" nil)))))
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."
