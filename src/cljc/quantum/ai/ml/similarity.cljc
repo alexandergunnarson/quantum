@@ -13,10 +13,12 @@
     [quantum.core.fn
       :refer [<- fn1 fn->]]
     [quantum.core.collections.core :as ccoll]
-    [quantum.core.collections :as coll
+    [quantum.core.collections      :as coll
       :refer [map+, filter+, remove+, red-apply, range+
               assoc-in!, count
               kw-map, ifor, get get-in*, reducei]]
+    [quantum.core.compare          :as comp
+      :refer [reduce-min reduce-max]]
     [quantum.core.error
       :refer [->ex TODO]]
     [quantum.core.macros
@@ -187,10 +189,10 @@
   {:implemented-by '{smile.math.distance.EuclideanDistance "faster array implementation"
                      smile.math.distance.SparseEuclideanDistance "for sparse arrays"
                      smile.math.matrix.SingularValueDecomposition "The largest singular value"}}
-  ([#_indexed? #{array-1d? +vec?} x•]
+  ([#_indexed? #{array-1d? +vector?} x•]
     (->> x• (map+ (fn1 sq)) sum sqrt))
   ^{:implemented-by '#{org.apache.commons.math3.ml.distance.EuclideanDistance}}
-  ([#_indexed? #{array-1d? +vec?} x•0 #_indexed? #{array-1d? +vec?} x•1]
+  ([#_indexed? #{array-1d? +vector?} x•0 #_indexed? #{array-1d? +vector?} x•1]
     (->> (tens/v-op+ #(sq (- %1 %2)) x•0 x•1) sum sqrt)))
 
 #?(:clj (defalias euclidean l-2))
@@ -510,13 +512,68 @@
    :params-doc '{a• "Attributes which apply to both instances"
                  l◦ "Unique label values (i.e., all label classes).
                      Assumes only 1-element label vectors (only 1 label-attribute)."}}
-  ([#_indexed? #{doubles? +vec?} x•0
-    #_indexed? #{doubles? +vec?} x•1
-               #{objects? +vec?} a•
+  ([#_indexed? #{doubles? +vector?} x•0
+    #_indexed? #{doubles? +vector?} x•1
+               #{objects? +vector?} a•
     <x•+l>• l◦]
     (ivdm x•0 x•1 a• <x•+l>• l◦ (max 5 (count l◦))))
-  ([#_indexed? #{doubles? +vec?} x•0
-    #_indexed? #{doubles? +vec?} x•1
-               #{objects? +vec?} a•
+  ([#_indexed? #{doubles? +vector?} x•0
+    #_indexed? #{doubles? +vector?} x•1
+               #{objects? +vector?} a•
     <x•+l>• l◦ ^long s]
     (sqrt (sum (tens/v-op+ #(sq (ivdm:single <x•+l>• l◦ %1 %2 %3 s)) x•0 x•1 a•)))))
+
+
+
+(defn intracluster-distance:max
+  "A way to calculate the size or diameter of a cluster `c`: the maximum distance between
+   any two points in a cluster."
+  {:see "https://en.wikipedia.org/wiki/Dunn_index"
+   :params-doc '{c     "indexed reducible of instances"
+                 distf "calculates the distance between two instances"}}
+  [c distf]
+  (->> c coll/!combinations-2+ ; TODO just use combo/combinations ?
+         (map+ (fn [[x•0 x•1]] (distf x•0 x•1)))
+         reduce-max))
+
+; TODO intracluster-distance:mean-pairwise-distance (https://en.wikipedia.org/wiki/Dunn_index)
+; TODO intracluster-distance:distance-from-mean     (https://en.wikipedia.org/wiki/Dunn_index)
+
+(defn intercluster-distance:min
+  "The distance between two clusters as defined by the minimum distance between a point in one
+   and a point in the other."
+  {:params-doc '{c0    "a cluster (reducible of instances)"
+                 c1    "a cluster (reducible of instances)"
+                 distf "calculates the distance between two instances"}}
+  [c0 c1 distf]
+  ;; TODO more elegant way to write this
+  (->> c0
+       (map+ (fn [x•0] (->> c1 (map+ (fn [x•1] (distf x•0 x•1))) reduce-min)))
+       reduce-min))
+
+; TODO the following `intercluster-distance`s:
+; either the closest two data points,
+; one in each cluster,
+; or the farthest two,
+; or the distance between the centroids, etc.
+; these are called Dunn-like Indices.
+
+(defn compactness
+  "Measures the max intracluster distance, AKA cohesion."
+  {:params-doc '{c•                 "a clustering (indexed reducible of clusters)"
+                 distf              "calculates the distance between two instances"
+                 intracluster-distf "calculates the distance within a cluster;
+                                     must be something like `intracluster-distance:max`"}}
+  [c• distf intracluster-distf]
+  (->> c• (map+ (fn1 intracluster-distf distf)) reduce-max))
+
+(defn separability
+  "Measures the min intercluster distance."
+  {:params-doc '{c•                 "a clustering (indexed reducible of clusters)"
+                 distf              "calculates the distance between two instances"
+                 intercluster-distf "calculates the distance between two clusters;
+                                     must be something like `intercluster-distance:min`"}}
+  [c• distf intercluster-distf]
+    (->> c• coll/!combinations-2+
+            (map+ (fn [[c0 c1]] (intercluster-distf c0 c1 distf)))
+            reduce-min))
