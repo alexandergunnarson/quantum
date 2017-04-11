@@ -37,7 +37,7 @@
             [quantum.core.error             :as err
               :refer [->ex TODO]]
             [quantum.core.fn                :as fn
-              :refer [fn1 fn&2 rfn rcomp firsta fn-> <- aritoid]]
+              :refer [fn' fn1 fn&2 rfn rcomp firsta fn-> <- aritoid]]
             [quantum.core.logic             :as logic
               :refer [fn= whenc whenf ifn1]]
             [quantum.core.collections.logic
@@ -48,7 +48,7 @@
             [quantum.core.macros.optimization
               :refer [identity*]]
             [quantum.core.reducers.reduce   :as red
-              :refer [reduce reducei reducer]]
+              :refer [reduce reducei transformer]]
             [quantum.core.type              :as t
               :refer [class regex?]]
             [quantum.core.type.defs         :as tdef]
@@ -126,33 +126,27 @@
 ; https://github.com/JulesGosnell/seqspert
 ; Very useful sequence and data structure info.
 
-(defn #_defcurried drop+
-  [n coll] (reducer coll (core/drop n)))
-
 #?(:clj
 (defn dropr+ ; This is extremely slow by comparison. About twice as slow
   ; TODO for O(1) reversible inputs, you can just do that with `drop+`
+  ; TODO this is not suitable for `fold` contexts
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
-  [n coll]
-   (reducer coll
-     (fn [f1]
+  [n xs]
+   (transformer xs
+     (fn [rf]
        (let [buffer (java.util.ArrayDeque. (int n))]
-         (fn self
-           ([] (f1))
-           ([ret x]
-             (let [ret (if (= (.size buffer) n) ; because Java object
-                         (f1 ret (.pop buffer))
-                         ret)]
-               (.add buffer x)
-               ret))))))))
-
-(defn #_defcurried take+
-  [n coll] (reducer coll (core/take n)))
-
+         (fn ([] (rf))
+             ([ret x]
+               (let [ret (if (= (.size buffer) n) ; because Java object
+                             (rf ret (.pop buffer))
+                             ret)]
+                 (.add buffer x)
+                 ret))))))))
 
 #?(:clj
 (defn taker+
   ; TODO for O(1) reversible inputs, you can just do that with `take+`
+  ; TODO this is not suitable for `fold` contexts
   {:attribution "Christophe Grand - http://grokbase.com/t/gg/clojure/1388ev2krx/butlast-with-reducers"}
   [n coll]
   ; TODO use `reducer`
@@ -284,7 +278,7 @@
   #?(:clj  ([^char-seq?    x] (.length x)))
            ([^keyword?     x] (count ^String (name x)))
            ([^m2m-chan?    x] (count (#?(:clj .buf :cljs .-buf) x)))
-           ([^+vec?        x] (#?(:clj .count :cljs core/count) x))
+           ([^+vector?        x] (#?(:clj .count :cljs core/count) x))
   #?(:clj  ([#{Collection Map} x] (.size x)))
   #?(:clj  ([^Counted      x] (.count x)))
   #?(:clj  ([^Map$Entry    x] (if (nil? x) 0 2))) ; TODO fix this potential null issue
@@ -294,12 +288,14 @@
                                   (core/count x) ; TODO need to fix this so certain interfaces are preferred
                                 #_(throw (->ex "`count` not supported on type" {:type (type x)})))))
 
+; TODO `pcount`
+
 (defnt empty?
   {:todo #{"import clojure.lang.RT/seq"}}
           ([#{array? ; TODO anything that `count` accepts
               string? !string? keyword? m2m-chan?
-              +vec? tuple?}   x] (zero? (count x)))
-          ([^transformer?     x] (->> x (reduce (fn [_ _] (reduced false)) true)))
+              +vector? tuple?}   x] (zero? (count x)))
+          ([^transformer?     x] (->> x (reduce (fn' (reduced false)) true)))
   #?(:clj ([#{Collection Map} x] (.isEmpty x)))
           ([^default          x] (core/empty? x)))
 
@@ -359,7 +355,7 @@
 (defnt assoc
   {:imported "clojure.lang.RT/assoc"}
   #?(:clj  ([^clojure.lang.Associative x k v] (.assoc x k v)))
-  #?(:cljs ([#{+vec? +map?}            x k v] (cljs.core/-assoc x k v)))
+  #?(:cljs ([#{+vector? +map?}            x k v] (cljs.core/-assoc x k v)))
            ([^default                  x k v]
              (if (nil? x)
                  {k v}
@@ -372,7 +368,7 @@
         (^<0> [^array?     x ^int k :<0>:1 v] (assoc! x k v))
         (^<0> [^transient? x      k        v] (assoc! x k v))
         (     [#?(:clj #{clojure.lang.Associative}
-                  :cljs #{+vec? +map? nil?}) x k v] (assoc x k v))
+                  :cljs #{+vector? +map? nil?}) x k v] (assoc x k v))
               ; technically, `(- map? +map?)`
               ;; TODO do type parameterization for maps and arraylists too in order to not box these args
 #?(:clj (     [#{!map? !!map?} x  k        v] (assoc! x k v))) ; TODO types
@@ -464,7 +460,7 @@
 (defnt ->array
   {:todo {0 "import clojure.lang.RT/toArray"}}
           ([^array?                     x] x)
-          ([^+vec?                      x] (to-array x)) ; TODO 0 ; TODO typed arrays from typed vectors
+          ([^+vector?                      x] (to-array x)) ; TODO 0 ; TODO typed arrays from typed vectors
           ([#{!array-list?
               #?(:clj ObjectArrayList)} x] #?(:clj (.toArray x) :cljs x))  ; because in ClojureScript we're just using arrays anyway
   #?(:clj ([^BooleanArrayList           x] (.toBooleanArray x)))
@@ -478,7 +474,7 @@
 
 #?(:clj
 (defnt ^"[Ljava.lang.Object;" ->array:parallel
-  ([^+vec? x] (seqspert.vector/vector-to-array x))))
+  ([^+vector? x] (seqspert.vector/vector-to-array x))))
 
 (defnt ->!vector
   ([#{!array-list?
@@ -607,7 +603,7 @@
 (defnt ^long lasti
   "Last index of a coll."
   {:todo #{"Fix over-usage of `default` here"}}
-  ([#{string? array? vec?} x] (unchecked-dec (count x)))
+  ([#{string? array? vector?} x] (unchecked-dec (count x)))
   ([^default               x] (unchecked-dec (count x))))
 
 ; ===== COPY ===== ;
@@ -631,16 +627,36 @@
 
 ; ===== SLICE ===== ;
 
+; TODO mark not thread-safe
+(defn take+:transformer [n xs] (transformer xs (core/take n)))
+; TODO mark not thread-safe
+(defn drop+:transformer [n xs] (transformer xs (core/drop n)))
+
 (defnt subview
   "Returns a subview of ->`x`, [->`a` to ->`b`), in O(1) time."
-          ([^+vec?        x ^nat-long? a             ] (subvec       x a  ))
-          ([^+vec?        x ^nat-long? a ^nat-long? b] (subvec       x a b))
+  ; TODO make views for arrays
+          ([^+vector?     x ^nat-long? a             ] (subvec       x a  ))
+          ([^+vector?     x ^nat-long? a ^nat-long? b] (subvec       x a b))
   #?(:clj ([^!array-list? x ^nat-long? a             ] (.subList     x a (count x))))
   #?(:clj ([^!array-list? x ^nat-long? a ^nat-long? b] (.subList     x a b)))
   #?(:clj ([^string?      x ^nat-long? a             ] (.subSequence x a (count x))))
   #?(:clj ([^string?      x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
-          ([^transformer? x ^nat-long? a             ] (->> x (drop+ a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
-          ([^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^transformer? x ^nat-long? a             ] (->> x (drop+:transformer a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+:transformer a) (take:transformer+ b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+
+; TODO mark transformer version not thread-safe
+(defnt take+*
+  ([#{+vector? #?@(:clj [string? !array-list?])} xs n] (subview xs 0 n))
+  ([^default                                     xs n] (take+:transformer n xs)))
+
+#?(:clj (defmacro take+ [n xs] `(take+* ~xs ~n)))
+
+; TODO mark transformer version not thread-safe
+(defnt drop+*
+  ([#{+vector? #?@(:clj [string? !array-list?])} xs n] (subview xs n))
+  ([^default                                     xs n] (drop+:transformer n xs)))
+
+#?(:clj (defmacro drop+ [n xs] `(drop+* ~xs ~n)))
 
 (defnt slice
   "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
@@ -649,8 +665,8 @@
   (     [^string?      x ^nat-long? a             ] (.substring x a (count x)))
   (     [^string?      x ^nat-long? a ^nat-long? b] (.substring x a b))
   (     [^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))
-  (     [^+vec?        x ^nat-long? a             ] (subsvec x a (count x)))
-  (     [^+vec?        x ^nat-long? a ^nat-long? b] (subsvec x a b))
+  (     [^+vector?        x ^nat-long? a             ] (subsvec x a (count x)))
+  (     [^+vector?        x ^nat-long? a ^nat-long? b] (subsvec x a b))
   (^<0> [^array-1d?    x ^nat-long? a             ]
     (slice x a (count x)))
   (^<0> [^array-1d?    x ^nat-long? a ^nat-long? b]
@@ -669,7 +685,7 @@
   ([^symbol?      s ] (-> s name core/rest))
   ([^transformer? xs] (drop+ 1 xs))
   ([^string?      xs] (slice xs 1 (count xs)))
-  ([^+vec?        xs] (slice xs 1 (count xs)))
+  ([^+vector?        xs] (slice xs 1 (count xs)))
   ([^array-1d?    xs] (slice xs 1 (count xs)))
   ([^default      xs] (core/rest xs)))
 
@@ -677,7 +693,7 @@
 
 (defnt index-of
   {:todo ["Add 3-arity for |index-of-from|"]}
-  ([#_reducible? #{array? vec?} xs x]
+  ([#_reducible? #{array? vector?} xs x]
     (let [i (long (reduce (fn [i x'] (if (= x' x) (reduced i) (inc i))) 0 xs))] ; TODO infer type
       (if (= i (count xs)) nil i)))
   ([^string? coll elem]
@@ -716,7 +732,7 @@
 
 (defnt last-index-of
    ; Reflection warning - call to method lastIndexOf on clojure.lang.IPersistentVector can't be resolved (no such method).
-  ;([^+vec?   coll elem] (let [i (.lastIndexOf coll elem)] (if (= i -1) nil i)))
+  ;([^+vector?   coll elem] (let [i (.lastIndexOf coll elem)] (if (= i -1) nil i)))
   ([^string? coll elem]
     (cond (string? elem)
           (let [i (.lastIndexOf coll ^String elem)] (if (= i -1) nil i))
@@ -817,11 +833,11 @@
 
 (defnt nth
   ; TODO import clojure.lang.RT/nth
-  ([#{?!+vec? seq?}  xs            i] (get xs i))
+  ([#{?!+vector? seq?}  xs            i] (get xs i))
   ([#{string? #?(:clj !array-list?)
       array? tuple?} xs ^nat-long? i] (get xs i))
   ([^transformer?    xs ^nat-long? i]
-    (let [i' (volatile! 0)]
+    (let [i' (volatile! 0)] ; TODO this is not appropriate for `fold` contexts
       (reduce (rfn [ret x] (if (= @i' i)
                                 (reduced x)
                                 (do (vswap! i' inc)
@@ -878,7 +894,7 @@
   {:imported "clojure.lang.RT/dissoc"}
            ([^+map?                       xs k] (#?(:clj .without :cljs -dissoc ) xs k))
            ([^+set?                       xs x] (#?(:clj .disjoin :cljs -disjoin) xs x))
-           ([^+vec?                       xs i]
+           ([^+vector?                       xs i]
              (catvec (subvec xs 0 i) (subvec xs (inc (#?(:clj identity* :cljs long) i)) (count xs))))
   #?(:cljs ([^nil?                        xs x] nil))
   #?(:clj  ([^default                     xs x]
@@ -887,7 +903,7 @@
                  (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type xs)}))))))
 
 (defnt dissoc!
-  ([^transient? coll k  ] (core/dissoc! coll k)))
+  ([^transient? xs k] (core/dissoc! xs k)))
 
 (defnt conj!
   {:todo #{"Add more possibilities like `!set`"}}
@@ -928,7 +944,7 @@
 
 (defnt first
   {:todo #{"Import core/first"}}
-  ([#{array? tuple? ?!+vec?}         x] (nth x 0))
+  ([#{array? tuple? ?!+vector?}         x] (nth x 0))
   ([#{string? #?(:clj !array-list?)} x] (get x 0 nil))
   ([#{symbol? keyword?}              x] (if (namespace x) (-> x namespace first) (-> x name first)))
   ([^transformer?                    x] (reduce (rfn [_ x'] (reduced x')) nil x))
@@ -938,7 +954,7 @@
 
 (defnt second
   {:todo #{"Import core/second"}}
-  ([#{array? tuple? ?!+vec? transformer?} x] (nth x 1))
+  ([#{array? tuple? ?!+vector? transformer?} x] (nth x 1))
   ([#{string? #?(:clj !array-list?)}      x] (#?(:clj get& :cljs get) x 1 nil))
   ([#{symbol? keyword?}                   x] (if (namespace x) (-> x namespace second) (-> x name second)))
   ([^default                              x] (core/second x)))
@@ -948,7 +964,7 @@
           ([#{string? array-1d?}           x] (#?(:clj slice& :cljs slice) x 0 (#?(:clj lasti& :cljs lasti) x)))
   #?(:clj ([^transformer?                  x] (dropr+ 1 x)))
           ; TODO reference to field pop on clojure.lang.APersistentVector$RSeq can't be resolved.
-          ([^+vec?                         x] (if (empty? x) (#?(:clj .pop :cljs -pop) x) x))
+          ([^+vector?                         x] (if (empty? x) (#?(:clj .pop :cljs -pop) x) x))
           ([^default                       x] (core/butlast x)))
 
 (defalias pop  butlast) ; TODO not always correct
@@ -958,9 +974,8 @@
           ([#{string? array?}   x] (#?(:clj get& :cljs get) x (#?(:clj lasti& :cljs lasti) x)))
           ([#{symbol? keyword?} x] (-> x name last))
   #?(:clj ([^transformer?       x] (taker+ 1 x)))
-          ; TODO reference to field peek on clojure.lang.APersistentVector$RSeq can't be resolved.
-          ([^+vec?              x] (#?(:clj .peek :cljs .-peek) x))
-  #?(:clj ([#{#?(:clj !vec?) !+vec?} x] (get x (lasti x))))
+          ([^+vector?           x] (#?(:clj .peek :cljs .-peek) x))
+  #?(:clj ([#{#?(:clj !vector?) !+vector?} x] (get x (lasti x))))
           ([^default            x] (core/last x)))
 
 (defalias peek   last) ; TODO not always correct
@@ -985,20 +1000,20 @@
 ;--------------------------------------------------{           CONJL          }-----------------------------------------------------
 ; This will take AGES to compile if you try to allow primitives
 (defnt conjl
-  ([^seq?  coll a          ] (->> coll (cons a)                                             ))
-  ([^seq?  coll a b        ] (->> coll (cons b) (cons a)                                    ))
-  ([^seq?  coll a b c      ] (->> coll (cons c) (cons b) (cons a)                           ))
-  ([^seq?  coll a b c d    ] (->> coll (cons d) (cons c) (cons b) (cons a)                  ))
-  ([^seq?  coll a b c d e  ] (->> coll (cons e) (cons d) (cons c) (cons b) (cons a)         ))
-  ([^seq?  coll a b c d e f] (->> coll (cons f) (cons e) (cons d) (cons c) (cons b) (cons a)))
-  ([^+vec? coll a          ] (catvec (svector a          ) coll))
-  ([^+vec? coll a b        ] (catvec (svector a b        ) coll))
-  ([^+vec? coll a b c      ] (catvec (svector a b c      ) coll))
-  ([^+vec? coll a b c d    ] (catvec (svector a b c d    ) coll))
-  ([^+vec? coll a b c d e  ] (catvec (svector a b c d e  ) coll))
-  ([^+vec? coll a b c d e f] (catvec (svector a b c d e f) coll))
-  ([^+vec? coll a b c d e f & more]
-    (reduce (fn [ret elem] (conjl ret elem)) ; should just be |conjl|
+  ([^seq?     xs a          ] (->> xs (cons a)                                             ))
+  ([^seq?     xs a b        ] (->> xs (cons b) (cons a)                                    ))
+  ([^seq?     xs a b c      ] (->> xs (cons c) (cons b) (cons a)                           ))
+  ([^seq?     xs a b c d    ] (->> xs (cons d) (cons c) (cons b) (cons a)                  ))
+  ([^seq?     xs a b c d e  ] (->> xs (cons e) (cons d) (cons c) (cons b) (cons a)         ))
+  ([^seq?     xs a b c d e f] (->> xs (cons f) (cons e) (cons d) (cons c) (cons b) (cons a)))
+  ([^+vector? xs a          ] (catvec (svector a          ) xs))
+  ([^+vector? xs a b        ] (catvec (svector a b        ) xs))
+  ([^+vector? xs a b c      ] (catvec (svector a b c      ) xs))
+  ([^+vector? xs a b c d    ] (catvec (svector a b c d    ) xs))
+  ([^+vector? xs a b c d e  ] (catvec (svector a b c d e  ) xs))
+  ([^+vector? xs a b c d e f] (catvec (svector a b c d e f) xs))
+  ([^+vector? xs a b c d e f & more]
+    (reduce (fn&2 conjl)
       (svector a b c d e f) more)))
 
 ; TODO to finish from RT
@@ -1014,17 +1029,17 @@
   "`conj`, maybe mutable. General `conj(!)`.
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
-  ([#{transient? !vec? !string? !set?} x v] (conj! x v)) ; TODO auto-determine; also don't autobox primitives
+  ([#{transient? !vector? !string? !set?} x v] (conj! x v)) ; TODO auto-determine; also don't autobox primitives
   ([^default                           x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
-  ([^+vec? coll a    ] (core/conj a    ))
-  ([^+vec? coll a b  ] (core/conj a b  ))
-  ([^+vec? coll a b c] (core/conj a b c))
+  ([^+vector? xs a    ] (core/conj a    ))
+  ([^+vector? xs a b  ] (core/conj a b  ))
+  ([^+vector? xs a b c] (core/conj a b c))
   ;([coll a & args] (apply conj a args))
-  ([^seq?  coll a    ] (concat coll (list a    )))
-  ([^seq?  coll a b  ] (concat coll (list a b  )))
-  ([^seq?  coll a b c] (concat coll (list a b c)))
+  ([^seq?     xs a    ] (concat xs (list a    )))
+  ([^seq?     xs a b  ] (concat xs (list a b  )))
+  ([^seq?     xs a b c] (concat xs (list a b c)))
   ;([coll a & args] (concat coll (cons arg args)))
   )
 
@@ -1037,7 +1052,7 @@
 (defnt #?(:clj  ^clojure.lang.IPersistentVector ->vec
           :cljs ^cljs.core/PersistentVector    ->vec)
   "Like `vec`, but shares as much structure as possible."
-  ([^+vec?     x] x)
+  ([^+vector?  x] x)
   ([^array-1d? x] (#?(:clj  clojure.lang.LazilyPersistentVector/createOwning
                       :cljs vec) x)) ; TODO need to accommodate all primitive arrays too ; look at core.collections for this
   ([^default   x] (vec x))) ; TODO get rid of this with the below
@@ -1128,15 +1143,15 @@
 
 (defnt ^:private key*
   {:todo #{"Implement core/key"}}
-  #?@(:clj  [([^map-entry?     kv] (core/key kv))
-             ([^list?          kv] (handle-kv kv #(first kv)))]
-      :cljs [([#{+vec? array?} kv] (handle-kv kv #(first kv)))]))
+  #?@(:clj  [([^map-entry?        kv] (core/key kv))
+             ([^list?             kv] (handle-kv kv #(first kv)))]
+      :cljs [([#{+vector? array?} kv] (handle-kv kv #(first kv)))]))
 
 (defnt ^:private val*
   {:todo #{"Implement core/val"}}
-  #?@(:clj  [([^map-entry?     kv] (core/val kv))
-             ([^list?          kv] (handle-kv kv #(second kv)))]
-      :cljs [([#{+vec? array?} kv] (handle-kv kv #(second kv)))]))
+  #?@(:clj  [([^map-entry?        kv] (core/val kv))
+             ([^list?             kv] (handle-kv kv #(second kv)))]
+      :cljs [([#{+vector? array?} kv] (handle-kv kv #(second kv)))]))
 
 (defn key ([kv] (when kv (key* kv))) ([k v] k))
 (defn val ([kv] (when kv (val* kv))) ([k v] v))
@@ -1172,19 +1187,24 @@
     (empty    [this] '())))
 
 (defnt rseq
-  #?(:clj ([^!vec?                   x] (IndexedListRSeq. x (lasti x) nil))) ; technically (+ RandomAccess List)
+  #?(:clj ([^!vector?                x] (IndexedListRSeq. x (lasti x) nil))) ; technically (+ RandomAccess List)
   #?(:clj ([^clojure.lang.Reversible x] (.rseq x)))
           ([^default                 x] (core/rseq x)))
 
 (defnt reverse
-  #_(^<0> [^array? x] ; TODO the code is good but it has a VerifyError
+  (^<0> [^array-1d? x] ; TODO the code is good for `array?` too but it has a VerifyError
     (let [n   (count x)
           ret (empty x)]
       (dotimes [i n] (assoc! ret i (get x (- n (inc i)))))
       ret))
-  (^<0> [x] (if (reversible? x) (rseq x) (core/reverse x)))) ; TODO
+  (^<0> [^default x] (if (reversible? x) (rseq x) (core/reverse x)))) ; TODO
 
-#?(:cljs (defnt reverse! (^<0> [^array? x] (.reverse x))))
+(defnt reverse!
+  #?(:clj  (^<0> [^array-1d? x] ; TODO the code is good for `array?` too but it has a VerifyError
+             (let [n (count x)]
+               (dotimes [i n] (assoc! x i (get x (- n (inc i)))))
+               x)))
+  #?(:cljs (^<0> [^array? x] (.reverse x))))
 
 ; ===== JOIN ===== ;
 
@@ -1203,7 +1223,7 @@
 (defnt joinl!
   "Like `joinl`, but mutates `to`."
         ([^default        to from] (reduce conj!-protocol to from))
-        ([#{!map? !set?} to from] (reduce conj!-protocol to from)) ; TODO this can be much more efficient
+        ([#{!map? !set?}  to from] (reduce conj!-protocol to from)) ; TODO this can be much more efficient
 #_(:clj ([...])) ; TODO bulk add operations that are cheaper than using `reduce`, e.g. on fastutil collections
         ([^!string?       to from] (str (reduce conj!-protocol to from)))
         (^<0> [^object-array? #_array-1d? to from] ; TODO
@@ -1226,7 +1246,7 @@
           "Handle mutable collections"]}
   ([                   from] (joinl [] from))
   ([^default        to from] (reduce conj to from))
-  ([^+vec?          to from] (if (vector? from)
+  ([^+vector?       to from] (if (vector? from)
                                  (catvec to from)
                                  (red/transient-into to from)))
   ([^+unsorted-set? to from] #?(:clj  (if (t/+unsorted-set? from)
@@ -1279,7 +1299,7 @@
    If `to` is immutable, it will immutably `join`."
   ([              from] (joinl [] from))
   ([^default   to from] (reduce conj?!-protocol to from))
-  ([#{+vec? +unsorted-set?
+  ([#{+vector? +unsorted-set?
       +sorted-set? +hash-map?
       +sorted-map? +array-map?
       string?} to from] (joinl to from))
