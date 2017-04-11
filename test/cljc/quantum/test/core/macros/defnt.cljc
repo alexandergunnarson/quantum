@@ -23,6 +23,9 @@
 ; TODO look at this thread for useful discussion on potential type systems in Clojure: https://groups.google.com/forum/#!topic/clojure/Dxk-rCVL5Ss
 ; TODO look at HM impl : https://github.com/ericnormand/hindley-milner
 
+(defn <typed-interface []
+  `(definterface))
+
 '(defmacro defnt+
   "`defnt` enables gradual static typing of Clojure(Script) functions.
     It may be seen as a high-performance marriage of core.typed and core.spec.
@@ -85,6 +88,11 @@
    - Each `defnt` definition caches type information in the macro language/sphere (e.g.
      in CLJ, when compiling CLJS). Type hints are also applied wherever possible in order to aid interop
      performance if direct access to the multi-protocol or `reify` is desired.
+   - Let's say you write a `defnt` with a signature of [^indexed? ^indexed? ^indexed?]. This would
+     generate thousands of possibilities if eagerly loaded, but instead it is lazily loaded.
+   - Interfaces are never re-defined.
+   - Not only type, but value contracts are held up even when `eval` is used: outside of a `typed`
+     context, runtime spec checking is enforced.
 
    Options for each overload and argument:
 
