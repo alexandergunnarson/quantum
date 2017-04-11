@@ -15,7 +15,7 @@
     [for doseq reduce transduce dotimes
      contains?
      repeat repeatedly
-     interpose mapcat
+     interpose mapcat cat
      reductions
      group-by frequencies
      range
@@ -253,7 +253,6 @@
 ; ===== REDUCTION ===== ;
         (defalias red-apply     red/red-apply     )
         (defalias fold          red/fold*         )
-        (defalias cat+          red/cat+          )
         (defalias foldcat+      red/foldcat+      )
 
         (defnt into! ; TODO delete
@@ -304,10 +303,10 @@
         (defalias group-by+           red/group-by+           )
         ; `flatten` <~> `lodash/flattenDeep`
         (defalias flatten+            red/flatten+            )
-        (defalias flatten-1+          red/flatten-1+          )
-        (def      lflatten-1          (partial apply concat)  )
-        ; `flatten-1` <~> `lodash/flatten`
-        (def      flatten-1           (fn->> flatten-1+ join) )
+        (defalias cat+                red/cat+                )
+        (def      lcat                (partial apply concat)  )
+        ; `cat` <~> `lodash/flatten`
+        (def      cat                 (fn->> cat+ join)       )
         ; TODO  `flatten-n` <~> `lodash/flattenDepth`
         (defalias iterate+            red/iterate+            )
         (defalias reduce-by+          red/reduce-by+          )
@@ -402,19 +401,21 @@
 ; •••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••••
 (defaliases mf
   map map' map+ lmap
-  map-indexed map-indexed' map-indexed+ lmap-indexed
+  map-indexed map-indexed' map-indexed+ v!map-indexed+ !map-indexed+ lmap-indexed
   map-keys map-keys' map-keys+ lmap-keys
   map-vals map-vals' map-vals+ lmap-vals
   #?@(:clj [pmap pmap' pmap-indexed pmap-indexed'])
   ; `(filter identity xs)` <~> `lodash/compact`
   filter filter' filter+ lfilter
-  filteri ffilter ffilteri last-filteri
+  filter-indexed filter-indexed' filter-indexed+ v!filter-indexed+ !filter-indexed+
+  ffilter ffilteri last-filteri
   filter-keys filter-keys' filter-keys+ filter-keys
   filter-vals filter-vals' filter-vals+ filter-vals
   #?@(:clj [pfilter pfilter'])
   ; `(remove! #{vs...} xs)` <~> `lodash/pullAll`
   ; `(remove! pred xs)` <~> `lodash/remove`
   remove remove' remove+ lremove
+  remove-indexed remove-indexed' remove-indexed+ v!remove-indexed+ !remove-indexed+
   remove-keys remove-keys' remove-keys+ lremove-keys
   remove-vals remove-vals' remove-vals+ lremove-vals
   #?@(:clj [premove premove']))
@@ -511,8 +512,7 @@
 
 (defn ->array-nd
   "Creates an n-dimensional array from nested seqs."
-  ([xs] (->array-nd xs []))
-  ([xs dims]
+  ([xs]
     (let [{:keys [elem dims]} (seq->elem+dims xs)]
       (seq->array-nd-of-dims xs elem dims))))
 
@@ -570,6 +570,8 @@
   ([arr]
     (let [dim (-> arr array->dimensionality)]
       (array->vector dim arr)))))
+
+(defn indexed->map [xs] (->> xs indexed+ (join {})))
 
 (defnt reduce-count-bounded
   ([^default x n pred] ; TODO infer ; for this overload, reducible, non-counted
@@ -1147,7 +1149,7 @@
                 (lazy-seq (helper (keep next seqs))))))
     (keep seq colls))))
 
-(defn frequencies
+(defn frequencies ; TODO model after group-by
   "Like `frequencies`, but uses reducers `reduce` and can choose
    what to reduce into."
   ([x] (frequencies {} x))
@@ -1284,8 +1286,8 @@
           "Can also sort a subarray"]}
   ([#{bytes? shorts? chars? ints? longs? floats? doubles?} x]
     (doto x (java.util.Arrays/sort)))
-  ([#{objects? !vec?} x] (sort!* x compare))
-  ([#{!vec?}          x compf] (doto x (.sort ^Comparator compf)))
+  ([#{objects? !vector?} x] (sort!* x compare))
+  ([#{!vector?}          x compf] (doto x (.sort ^Comparator compf)))
   ([#{objects?}       x compf]
     (doto x (java.util.Arrays/sort ^Comparator compf)))))
 
@@ -1299,9 +1301,9 @@
   {:todo ["Only in more recent Java versions does Arrays/sort use
            Dual-Pivot Quicksort"
           "Can also sort a subarray"]}
-  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf] ; TODO infer
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vector?} x kf] ; TODO infer
     (sort-by!* x kf compare))
-  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vec?} x kf compf] ; TODO infer
+  ([#{bytes? shorts? chars? ints? longs? floats? doubles? objects? !vector?} x kf compf] ; TODO infer
     (sort!* x (fn [x y] (.compare ^Comparator compf (kf x) (kf y)))))))
 
 #?(:clj (defmacro sort-by! [& args] `(sort-by!* ~(last args) ~@(butlast args))))
@@ -1625,7 +1627,7 @@
       (concat (ltake n x) (list (f (get x n))) (nthnext x (inc n)))))
 
 (defnt update-nth
-  ([^+vec? x n f] (update x n f))
+  ([^+vector? x n f] (update x n f))
   #_([^cdlist? x n f] (if (= n (lasti x)) ; TODO ENABLE THIS
                         (conj (.pop x) (f (last x)))
                         (update-nth-list* x n f)))
@@ -1784,7 +1786,7 @@
     (persistent! copy)))
 
 (defnt ensurec*
-  ([#{+vec? +set? +map?} ensurer ensured]
+  ([#{+vector? +set? +map?} ensurer ensured]
     (cond ((t/->pred ensurer) ensured)
           ensured
           (nil? ensured)
@@ -2188,6 +2190,25 @@
        (if (fn? v)
            "<function>"
            v))])))
+
+(defn !combinations-2+
+  "Calculates the combination of the element at index 0 with the element at
+   index 1, and so on — one half of a symmetric matrix:
+     0 1 2 3
+   0   x x x
+   1     x x
+   2       x
+   3
+   and returns the results as a reducible of e.g.:
+   `[[0 1] [0 2] [0 3] [1 2] [1 3] [2 3]]`.
+   Does not calculate intermediate sequences.
+   `xs` must be reducible"
+  [xs]
+  (->> xs
+       (!map-indexed+
+         (fn [i x]
+           (->> xs (coll/drop+ (inc i)) (map+ (fn [x'] [x x']))))) ; TODO customize the pairs this gets output in ; TODO use !drop+
+       cat+))
 
 ; ===== LOGGING ===== ; (TODO MOVE)
 
