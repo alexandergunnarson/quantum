@@ -89,7 +89,7 @@
            :exclusions [slingshot]]
        ; ==== SYSTEM ====
        ; ==== GRAPH ====
-         [aysylu/loom                           "0.6.0"           ]
+         [aysylu/loom                           "1.0.0"           ]
        ; ==== IO ====
         ;[commons-io/commons-io                 "2.4"             ] ; writing byte arrays to file and such
          [com.taoensso/nippy                    "2.11.1"
