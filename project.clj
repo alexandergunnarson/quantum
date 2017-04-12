@@ -216,6 +216,7 @@
        [aleph                                   "0.4.3" ; but incompatible Netty dep with Spark 2.0.1
          :exclusions [primitive-math
                       io.netty/netty-all] #_"For Spark's sake"    ]
+       [manifold "0.1.6"] ; for Aleph's sake
        ; ==== AUTH ====
        [com.cemerick/friend                     "0.2.1"
          :exclusions [org.clojure/core.cache]                     ]
