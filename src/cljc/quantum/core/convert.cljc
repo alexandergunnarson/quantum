@@ -609,7 +609,7 @@
    :todo ["Test these against ->bytes"]}
            ([^string? x        ] x)
          #_([^string? x options] x)
-  #?(:clj  ([^{prim? Number}  x] (String/valueOf    x)))
+  #?(:clj  ([#{prim? Number}  x] (str x) #_(String/valueOf    x))) ; TODO fix
            ([^datascript.db.DB x] (dt/write-transit-str x))
            ; Commented only until we decide forge is worth keeping
   #_(:cljs ([^js/forge.util.ByteStringBuffer x] (.toString x "utf8")))
