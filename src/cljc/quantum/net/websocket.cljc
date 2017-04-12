@@ -1,4 +1,5 @@
 (ns quantum.net.websocket
+  (:refer-clojure :exclude [promise])
   (:require [com.stuartsierra.component              :as component]
             [taoensso.sente                          :as ws       ]
   #?@(:clj [[immutant.web                            :as imm      ]
@@ -13,7 +14,7 @@
               :refer [fn-> fn']]
             [quantum.core.log                        :as log]
             [quantum.core.async                      :as async
-              :refer [promise-chan offer! go]]
+              :refer [promise offer! go]]
             [quantum.core.spec                       :as s
               :refer [validate]]
             [quantum.core.resources                  :as res]
@@ -77,7 +78,7 @@
 (defn put-chan!
   #?(:cljs ([msg-pack] (put-chan! msg-pack nil)))
            ([#?(:clj uid) msg-pack #?(:cljs timeout)]
-             (let [ret (promise-chan)]
+             (let [ret (promise)]
                (put! #?(:clj uid) msg-pack
                  #?(:cljs (fn [resp] (offer! ret resp)))
                  #?(:cljs timeout))

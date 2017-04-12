@@ -145,7 +145,7 @@
       (assoc this
         :stop-fn nil))))
 
-#?(:clj (res/register-component! ::server map->Server [::log/log]))
+#?(:clj (res/register-component! ::server #'map->Server [::log/log]))
 
 ; UTILS
 

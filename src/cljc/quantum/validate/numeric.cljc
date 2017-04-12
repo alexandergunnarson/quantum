@@ -6,7 +6,7 @@
       :refer [!str]]
     [quantum.core.string.regex :as re]
     [quantum.core.collections  :as coll
-      :refer [red-for, join reduce, conj!, subview, map+, range+]]))
+      :refer [red-for, join join! reduce, conj!, subview, map+, range+]]))
 
 ; TODO move
 (def num-char->int {\0 0 \1 1 \2 2 \3 3 \4 4 \5 5 \6 6 \7 7 \8 8 \9 9})
@@ -33,16 +33,16 @@
               !s  (!str)
               _ (-> !s (conj! (re/nc "(?!0)\\d{1," (dec ct) "}")) (conj! "|"))]
           (->> (range+ ct)
-               (map+ (fn [i]
-                       ; TODO modularize these more; use mutable strings
-                       (if (zero? i)
-                           (str (re/range "1-" (max 1 (dec-integer-at n:str i))) "\\d" "{" (- ct i 1) "}")
-                           (str "|" (subview n:str 0 (dec i))
-                                    (re/range "0" "-" (if (= i (dec ct))
-                                                          (get n:str i)
-                                                          (dec-integer-at n:str i)))
-                                    "\\d" "{" (- ct i 1) "}"))))
-               (join !s)))))))
+               (map+   (fn [i]
+                         ; TODO modularize these more; use mutable strings
+                         (if (zero? i)
+                             (str (re/range "1-" (max 1 (dec-integer-at n:str i))) "\\d" "{" (- ct i 1) "}")
+                             (str "|" (subview n:str 0 (dec i))
+                                      (re/range "0" "-" (if (= i (dec ct))
+                                                            (get n:str i)
+                                                            (dec-integer-at n:str i)))
+                                      "\\d" "{" (- ct i 1) "}"))))
+               (join! !s)))))))
 
 (defn bit-range->pattern [abs-min abs-max]
   (str (re/bounded "-" abs-min)
