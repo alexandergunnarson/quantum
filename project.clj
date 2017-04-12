@@ -213,7 +213,7 @@
          :exclusions [clj-tuple
                       ch.qos.logback/logback-classic
                       org.jboss.logging/jboss-logging]  ]
-       [aleph                                   "0.4.1" ; but incompatible Netty dep with Spark 2.0.1
+       [aleph                                   "0.4.3" ; but incompatible Netty dep with Spark 2.0.1
          :exclusions [primitive-math
                       io.netty/netty-all] #_"For Spark's sake"    ]
        ; ==== AUTH ====
