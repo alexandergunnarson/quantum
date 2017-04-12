@@ -186,7 +186,8 @@
     (fn
       ([] (rf))
       ([ret] (rf ret))
-      ([ret x] (reduce rrf ret x)))))
+      ([ret x] (reduce rrf ret x))
+      ([ret k v] (reduce rrf ret [k v]))))) ; TODO is this arity right?
 
 (defn cat+ [xs] (transformer xs cat:transducer))
 
@@ -322,8 +323,8 @@
 (defn remove+
   "Returns a version of the folder which only passes on inputs to subsequent
    transforms when `(pred <input>)` is falsey."
-  ([pred]    (filter+ (fn-not pred)))
-  ([pred xs] (filter+ (fn-not pred) xs)))
+  ([pred]    (filter+ (complement pred))) ; TODO `fn-not`
+  ([pred xs] (filter+ (complement pred) xs))) ; TODO `fn-not`
 
 ; ----- REMOVE-INDEXED ----- ;
 
