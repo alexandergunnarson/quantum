@@ -2,9 +2,22 @@
   (:refer-clojure :exclude
     [+ zero? bit-and odd? even?])
   (:require
-    [clojure.core :as c])
+    [clojure.core          :as c]
+    [clojure.core.reducers :as r]
+    [clojure.core.specs    :as ss]
+    [quantum.core.collections.base
+      :refer [prewalk postwalk walk]]
+    [quantum.core.fn
+      :refer [<- aritoid]]
+    [quantum.core.log      :as log
+      :refer [prl!]]
+    [quantum.core.spec     :as s]
+    [quantum.core.vars     :as var
+      :refer [update-meta]])
   (:import
     [quantum.core Numeric]))
+
+;; TODO use https://github.com/clojure/core.typed/blob/master/module-rt/src/main/clojure/clojure/core/typed/
 
 ;; - `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
 ;; and overloads are resolved.
@@ -64,7 +77,7 @@
                              ...
                              [IPersistentVector long long]]
 
-; RESULT:
+; IF AN EAGER RESULT:
 
 ; +* 0 arity
 (definterface long•I (^long invoke []))
@@ -106,7 +119,150 @@
                   boolean•I•float  (^boolean invoke [this ^float  n] (Numeric/isZero n))
                   boolean•I•double (^boolean invoke [this ^double n] (Numeric/isZero n))))
 
-(.invoke ^boolean•I•long zero? 3)
+(defnt zero? [n ?] (Numeric/isZero n))
+
+(s/def ::arg-spec ; TODO expand; make typed destructuring available via ::ss/binding-form
+  (s/alt :infer     #{'?}
+         #_:something #_any?))
+
+(s/def ::speced-arg
+  (s/cat :arg-binding simple-symbol?
+         :arg-spec    ::arg-spec))
+
+(s/def ::arg-list
+  (s/and vector?
+    (s/cat :args    (s/* ::speced-arg)
+           :varargs (s/? (s/cat :amp #{'&} :form ::speced-arg)))))
+
+(s/def ::args+body
+  (s/cat :args ::arg-list
+         :body (s/alt :prepost+body (s/cat :prepost map?
+                                           :body (s/+ any?))
+                      :body (s/* any?))))
+
+(s/def ::fnt
+  (s/cat :name    simple-symbol? ; TODO validate metadata
+         :arities (s/alt :arity-1 ::args+body
+                         :arity-n (s/+ (s/spec ::args+body)))))
+
+(s/def ::defnt
+  (s/cat :name      simple-symbol? ; TODO validate metadata
+         :docstring (s/? string?)
+         :meta      (s/? map?)
+         :arities   (s/alt :arity-1 ::args+body
+                           :arity-n (s/cat :bodies (s/+ (s/spec ::args+body))
+                                           #_:attr   #_(s/? map?))))) ; TODO what the heck is :attr?)
+
+(defonce defnt-cache (atom {})) ; TODO For now — but maybe lock-free concurrent hash map to come
+
+(defn infer-arg-types
+  [arglist body]
+  (clojure.tools.analyzer.jvm/analyze body))
+
+; TODO move
+(defn into! [xs0 xs1] (reduce (fn [xs0' x] (conj! xs0' x)) xs0 xs1))
+
+; TODO move
+; TODO `prewalk-fold`
+(defn postwalk-fold
+  "Performs a fold-like operation on a tree.
+   May or may not be for side effects.
+   `branch?f` and `childrenf` are like `tree-seq`'s `branch?` and `children`.
+   `rf` and `cf` are like `fold`'s `rf` and `cf`. The elements fed into `rf` are the nodes."
+  {:attribution 'alexandergunnarson}
+  [rf cf branch?f childrenf root]
+  (let [walk (fn walk [node nodes]
+               (if (branch?f node)
+                   (rf (->> node childrenf (r/map #(rf (walk % (rf)))) (reduce cf nodes))
+                       node)
+                   nodes))]
+    (cf (walk root (cf)))))
+
+; TODO move
+; TODO `tree-sequence-prewalk`
+(defn tree-sequence-postwalk
+  "Walks the tree and outputs an eager sequence containing its nodes ordered from leaf to
+   branch (i.e. postorder).
+   `childrenf` may return a reducible of any type."
+  {:attribution 'alexandergunnarson}
+  [branch?f childrenf root]
+  (postwalk-fold (aritoid #(transient []) persistent! conj!)
+                 (aritoid #(transient []) persistent! into!)
+                 branch?f childrenf root))
+
+(defn ast->nodes-postorder
+  "Walks the ast and outputs an eager sequence containing its AST nodes ordered from leaf
+   to branch (i.e. postorder)."
+  [ast]
+  (tree-sequence-postwalk
+    :op
+    (fn [op] (->> op :children
+                  (r/mapcat #(let [children|op (get op %)]
+                               (if (sequential? children|op)
+                                   children|op
+                                   [children|op])))))
+    ast))
+
+(binding [*print-meta* true]
+  (let [ast (clojure.tools.analyzer.jvm/analyze
+              (list 'let [(update-meta 'n assoc :top-level? true) nil]
+                '(do (Numeric/isZero n) (zero? n))))
+        nodes-postorder (ast->nodes-postorder ast)]
+    #_(prl! ast)
+    #_(doseq [child nodes-postorder]
+      (quantum.core.print/ppr child)
+      (println "========================================")
+      (println "----------------------------------------")
+      (println "========================================"))
+    (doseq [{:as child :keys [op]} nodes-postorder]
+      (case op
+       #_"TODO:
+         - Search for the arg type to be inferred and infer from the env or from the static call / invocation site
+         - Try to update the atom containing its type information
+           - If the atom contains conflicting information with the deduced type, throw and say so
+       "
+        :static-call (prl! child)
+        :invoke      (prl! child)
+        ; TODO others?
+        nil))))
+
+(clojure.tools.analyzer.jvm/analyze
+  '(let [n nil] (zero? n)))
+
+(clojure.tools.analyzer.jvm/analyze
+  '(let [n nil] (Numeric/isZero n)))
+
+{:name zero?,
+ :arities [:arity-n
+           {:bodies [{:args {:args [{:arg-binding n,
+                                     :arg-spec [:infer ?]}]},
+                    :body [:body [(Numeric/isZero n)]]}]}]}
+
+(defn handle-conformed-defnt-args [args]
+  (let [bodies (case (-> args :arities first)
+                 :arity-1 [(-> args :arities second)]
+                 :arity-n (-> args :arities second :bodies))]
+    (doseq [{:keys [args body]} bodies]
+      (let [body (list* do body)]
+        ; TODO handle pre/post
+        (prl! body))
+      )))
+
+#?(:clj (defmacro fnt [& args]))
+
+#?(:clj
+(defmacro defnt [& args]
+  (let [args' (s/validate args ::defnt)
+        ; TODO handle meta, docstring, and name-meta
+        _     (handle-conformed-defnt-args args')
+        code  `(do (def ~(update-meta (:name args') assoc :typed? true)
+                        (fn [& args#]
+                          (throw (ex-info "Typed functions not yet supported outside of a typed context"
+                                          {:tried-to-call (list* '~(:name args') args#)})))))]
+    (binding [clojure.core/*print-meta* true] (prl! code))
+    nil)))
+(zero? 1)
+(defnt zero? ([n ?] (Numeric/isZero n)))
 
 (let [^boolean•I•double z zero?] (.invoke z 3.0)) ; it's just a simple reify
 
