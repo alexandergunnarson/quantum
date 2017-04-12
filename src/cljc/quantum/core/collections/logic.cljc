@@ -14,7 +14,8 @@
   "∃: A faster version of |some| using |reduce| instead of |seq|."
   ([xs] (seq-or identity xs))
   ([pred xs]
-    (reduce (fn [_ x] (and (pred x) (reduced x))) nil xs)))
+    (reduce (fn ([_ x] (and (pred x) (reduced x)))
+                ([_ k v] (and (pred k v) (reduced [k v])))) nil xs)))
 
 (defalias some seq-or)
 
@@ -26,7 +27,8 @@
   "∀: A faster version of |every?| using |reduce| instead of |seq|."
   ([xs] (seq-and identity xs))
   ([pred xs]
-    (reduce (fn [_ x] (or (pred x) (reduced false))) nil xs)))
+    (reduce (fn ([_ x] (or (pred x) (reduced false)))
+                ([_ k v] (or (pred k v) (reduced [k v])))) nil xs)))
 
 (defalias every? seq-and)
 
