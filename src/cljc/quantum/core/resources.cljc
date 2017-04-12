@@ -111,7 +111,7 @@
                          (stop  [this#] (~(:sym stopf-genned ) this#)))))))
 
 (defn register-component! [k constructor & [deps]]
-  (validate k           qcore/qualified-keyword?
+  (validate k           qualified-keyword?
             constructor (s/or* fn? (s/and var? (fn-> deref fn?)))
             deps        (s/or* nil? (s/coll-of keyword? :distinct true)))
   (when (contains? @components k) (log/pr :warn "Overwriting registered component" k))
@@ -444,7 +444,7 @@
 (defn ->system
   "Constructor for |System|."
   [name config make-system]
-  (validate name        qcore/qualified-keyword?
+  (validate name        qualified-keyword?
             config      map?
             make-system fn?)
   (System. name config (make-system config) false))

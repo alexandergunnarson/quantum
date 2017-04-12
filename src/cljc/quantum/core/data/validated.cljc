@@ -2,8 +2,6 @@
   (:require
     [clojure.core           :as core]
     [quantum.core.data.set  :as set]
-    [quantum.core.core
-      :refer [qualified-keyword?]]
     [quantum.core.collections.base
       :refer [nnil? nempty? postwalk]]
     [quantum.core.error     :as err
@@ -23,7 +21,7 @@
     [quantum.core.macros.optimization
       :refer [identity*]]
     [quantum.core.spec      :as s
-      :refer [validate defspec]]
+      :refer [validate]]
     [quantum.core.vars      :as var
       :refer [update-meta]])
   #?(:cljs
@@ -31,7 +29,7 @@
     [quantum.core.data.validated :as self
       :refer [def-map]])))
 
-(s/defspec :type/any (fn' true))
+(s/def :type/any (fn' true))
 
 ; TODO un-namespaced (req-un) should accept namespaced as well
 ; TODO Every entity can have an :db/ident or :db/conforms-to
@@ -223,7 +221,7 @@
 #?(:clj
 (defmacro declare-spec [sym]
   (let [{:keys [spec-name]} (sym->spec-name+sym sym (str (ns-name *ns*)))]
-    `(defspec ~spec-name (fn [x#] (TODO))))))
+    `(s/def ~spec-name (fn [x#] (TODO))))))
 
 #?(:clj
 (defmacro def
@@ -260,7 +258,7 @@
                           ~'set     ([_# v#] (new ~sym (-> v# ~(if-not conformer `identity* conformer-sym)
                                                            (s/validate ~spec-name))))}})
                     (def ~spec-base ~spec)
-                    (defspec ~spec-name
+                    (s/def ~spec-name
                       (s/conformer (fn [x#] (if (instance? ~sym x#)
                                                 x#
                                                 (-> x# ~(if-not conformer `identity* conformer-sym)
@@ -284,7 +282,7 @@
                  :db-invariant ([db m] m)
                  :conformer    (fn [m] (assoc m ::a 6))
                  :req [::a ::b ::c ::d] :opt [::e])
-               (defspec ::a number?) (defspec ::b number?) (defspec ::c number?) (defspec ::d number?)
+               (s/def ::a number?) (s/def ::b number?) (s/def ::c number?) (s/def ::d number?)
                (assoc (->my-type-of-validated-map {::a 2 ::b 1 ::c 3 ::d 4}) ::a 3))
    :todo {1 "Break this macro up"
           2 ".assoc may call .conj, in which case it's inefficient with double validation"
@@ -365,7 +363,7 @@
           (defrecord+ ~un-record-sym      ~un-ks-syms )
           (defrecord+ ~all-mod-record-sym ~all-mod-ks-syms)
           (defrecord+ ~all-record-sym     ~(into all-mod-ks-syms special-ks-syms))
-          ~(when invariant `(defspec ~invariant-spec-name ~invariant))
+          ~(when invariant `(s/def ~invariant-spec-name ~invariant))
           (def ~conformer-sym ~conformer)
           (def ~required-keys-record (~(symbol (str "map->" req-record-sym    )) ~(merge (zipmap req-ks     req-ks    ) (zipmap special-ks special-ks))))
           (def ~un-keys-record       (~(symbol (str "map->" un-record-sym     )) ~(zipmap un-ks      un-ks)))
@@ -471,14 +469,14 @@
                {~'get         ([_#] ~'v)
                 ~'set         ([_# v#] (if (instance? ~sym v#) v# (new ~sym (~create v#))))}})
           (defn ~constructor-sym [m#] (new ~qualified-sym (~create m#)))
-          (defspec ~spec-name (s/conformer
-                                (fn [x#] (cond (instance? ~qualified-sym x#)
-                                               x#
-                                               (dbfn-call? x#) ; TODO only if DB mode
-                                               x#
-                                               :else (new ~qualified-sym (~create x#))
-                                             #_(catch-all (new ~qualified-sym (~create x#))
-                                               e# ~invalid))))) ; TODO avoid semi-expensive try-catch here by using conformers all the way down the line
+          (s/def ~spec-name (s/conformer
+                              (fn [x#] (cond (instance? ~qualified-sym x#)
+                                             x#
+                                             (dbfn-call? x#) ; TODO only if DB mode
+                                             x#
+                                             :else (new ~qualified-sym (~create x#))
+                                           #_(catch-all (new ~qualified-sym (~create x#))
+                                             e# ~invalid))))) ; TODO avoid semi-expensive try-catch here by using conformers all the way down the line
           (swap! spec-infos assoc ~spec-name
             (map->SpecInfo {:conformer ~conformer-sym :invariant ~invariant
                             :schema    ~schema :constructor ~constructor-sym

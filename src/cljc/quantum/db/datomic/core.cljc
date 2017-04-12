@@ -35,7 +35,7 @@
       :refer [defalias]]
     [quantum.core.data.validated :as dv]
     [quantum.core.spec           :as s
-      :refer [validate defspec]])
+      :refer [validate]])
 #?(:clj
     (:import
       datomic.Peer
