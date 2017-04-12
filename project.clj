@@ -39,7 +39,7 @@
        [org.clojure/tools.namespace             "0.2.11"          ]
        [com.taoensso/encore                     "2.85.0"          ] ; "2.79.1" To not break things
        ; ==== ASYNC ====
-         [org.clojure/core.async                "0.2.391"         ]
+         [org.clojure/core.async                "0.3.442"         ]
          [servant                               "0.1.5"           ]
          [#_alexandergunnarson/co.paralleluniverse.pulsar co.paralleluniverse/pulsar #_"0.7.6.2" "0.7.6"
            :exclusions [org.slf4j/*
