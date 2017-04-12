@@ -22,8 +22,8 @@
 
 #?(:clj
 (defn- emit-defrecord+:clj
-  "Like `emit-defrecord`, but handles namespaced keys as per CLJ-1938."
   [tagname cname fields interfaces methods opts]
+  "Like `emit-defrecord`, but handles namespaced keys as per CLJ-1938."
   (let [classname (with-meta (symbol (str (namespace-munge *ns*) "." cname)) (meta cname))
         interfaces (vec interfaces)
         interface-set (set (map resolve interfaces))
@@ -32,8 +32,12 @@
         hinted-fields* (mapv ns-correct hinted-fields)
         fields (vec (map #(with-meta % nil) fields))
         base-fields fields
-        fields (conj fields '__meta '__extmap)
-        fields* (conj (mapv ns-correct base-fields) '__meta '__extmap)
+        fields (conj fields '__meta '__extmap
+                     '^:unsynchronized-mutable __hash
+                     '^:unsynchronized-mutable __hasheq)
+        fields* (conj hinted-fields* '__meta '__extmap
+                      ^:unsynchronized-mutable '__hash
+                      ^:unsynchronized-mutable '__hasheq)
         type-hash (hash classname)]
     (when (some #{:volatile-mutable :unsynchronized-mutable} (mapcat (comp keys meta) hinted-fields))
       (throw (IllegalArgumentException. ":volatile-mutable or :unsynchronized-mutable not supported for record fields")))
@@ -45,8 +49,18 @@
       (eqhash [[i m]]
         [(conj i 'clojure.lang.IHashEq)
          (conj m
-               `(hasheq [this#] (int (bit-xor ~type-hash (clojure.lang.APersistentMap/mapHasheq this#))))
-               `(hashCode [this#] (clojure.lang.APersistentMap/mapHash this#))
+               `(hasheq [this#] (let [hq# ~'__hasheq]
+                                  (if (zero? hq#)
+                                    (let [h# (int (bit-xor ~type-hash (clojure.lang.APersistentMap/mapHasheq this#)))]
+                                      (set! ~'__hasheq h#)
+                                      h#)
+                                    hq#)))
+               `(hashCode [this#] (let [hash# ~'__hash]
+                                    (if (zero? hash#)
+                                      (let [h# (clojure.lang.APersistentMap/mapHash this#)]
+                                        (set! ~'__hash h#)
+                                        h#)
+                                      hash#)))
                `(equals [this# ~gs] (clojure.lang.APersistentMap/mapEquals this# ~gs)))])
       (iobj [[i m]]
             [(conj i 'clojure.lang.IObj)
@@ -95,14 +109,14 @@
                    `(iterator [~gs]
                         (clojure.lang.RecordIterator. ~gs [~@(map keyword base-fields)] (clojure.lang.RT/iter ~'__extmap)))
                    `(assoc [this# k# ~gs]
-                     (case k# ; was condp identical?
+                     (case k# ; TODO use `condp identical?` again?
                        ~@(mapcat (fn [fld]
-                                   [(keyword fld) (list* `new tagname (replace {(ns-correct fld) gs} fields*))])
+                                   [(keyword fld) (list* `new tagname (replace {(ns-correct fld) gs} (remove '#{__hash __hasheq} fields*)))])
                                  base-fields)
-                       (new ~tagname ~@(remove '#{__extmap} fields*) (assoc ~'__extmap k# ~gs))))
+                       (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields*) (assoc ~'__extmap k# ~gs))))
                    `(without [this# k#] (if (contains? #{~@(map keyword base-fields)} k#)
                                             (dissoc (with-meta (into {} this#) ~'__meta) k#)
-                                            (new ~tagname ~@(remove '#{__extmap} fields*)
+                                            (new ~tagname ~@(remove '#{__extmap __hash __hasheq} fields*)
                                                  (not-empty (dissoc ~'__extmap k#))))))])
       (ijavamap [[i m]]
                 [(conj i 'java.util.Map 'java.io.Serializable)
@@ -121,7 +135,9 @@
       ]
      (let [[i m] (-> [interfaces methods] irecord eqhash iobj ilookup imap ijavamap)]
        `(deftype* ~(symbol (name (ns-name *ns*)) (name tagname)) ~classname
-          ~(conj hinted-fields* '__meta '__extmap)
+          ~(conj hinted-fields* '__meta '__extmap
+                 '^int ^:unsynchronized-mutable __hash
+                 '^int ^:unsynchronized-mutable __hasheq)
           :implements ~(vec i)
           ~@(mapcat identity opts)
           ~@m)))))))

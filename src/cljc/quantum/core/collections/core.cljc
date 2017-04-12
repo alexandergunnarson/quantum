@@ -1030,7 +1030,7 @@
    If the value is mutable  , it will mutably   `conj!`.
    If the value is immutable, it will immutably `conj`."
   ([#{transient? !vector? !string? !set?} x v] (conj! x v)) ; TODO auto-determine; also don't autobox primitives
-  ([^default                           x v] (conj  x v))) ; TODO auto-determine
+  ([^default                              x v] (conj  x v))) ; TODO auto-determine
 
 (defnt conjr
   ([^+vector? xs a    ] (core/conj a    ))
