@@ -30,8 +30,8 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.8.0"] ; 1.9.0-alpha* has some problems
-     [clojure-future-spec                       "1.9.0-alpha12-2"]
+    [[org.clojure/clojure                       "1.9.0-alpha15"] ; 1.9.0-alpha* has some problems
+     #_[clojure-future-spec                       "1.9.0-alpha12-2"]
      [org.clojure/clojurescript                 "1.9.293"]
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]

@@ -2,11 +2,24 @@
   (:refer-clojure :exclude [seqable? boolean? get set])
   (:require [clojure.core :as core
              #?@(:cljs [:refer [IDeref IAtom]])]
+            [clojure.spec :as s]
+    #?(:clj [clojure.core.specs :as ss])
             [cuerdas.core :as str+]
    #?(:clj  [environ.core :as env]))
   #?(:clj (:import [clojure.lang IDeref IAtom])))
 
 #?(:clj (do (in-ns 'clojure.core) (defn require-macros [& args]) (in-ns 'quantum.core.core)))
+
+#?(:clj
+(s/def ::ss/ns-clauses ; overwriting
+  (s/* (s/alt :refer-clojure  ::ss/ns-refer-clojure
+              :require        ::ss/ns-require
+              :import         ::ss/ns-import
+              :use            ::ss/ns-use
+              :refer          ::ss/ns-refer
+              :load           ::ss/ns-load
+              :gen-class      ::ss/ns-gen-class
+              :require-macros any?))))
 
 #?(:clj
 (defn pid []
@@ -95,11 +108,6 @@
 #?@(:clj [(class? x)
           (.getName ^Class x)])
           :else (name x)))
-
-(defn simple-keyword?    [x] (and (symbol?  x) (nil? (namespace x))))
-(defn qualified-keyword? [x] (and (keyword? x)       (namespace x)))
-(defn simple-symbol?     [x] (and (symbol?  x) (nil? (namespace x))))
-(defn qualified-symbol?  [x] (and (keyword? x)       (namespace x)))
 
 (defn str->integer [s]
   (assert (string? s) {:s s})
