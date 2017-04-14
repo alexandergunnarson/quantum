@@ -1,18 +1,17 @@
-(ns ; ^{:clojure.tools.namespace.repl/unload false} ; because of cache
-  quantum.core.cache
-           (:refer-clojure :exclude [memoize])
-           (:require [clojure.core            :as core]
-                     [quantum.core.error      :as err
-                       :refer [->ex]                  ]
-                     [quantum.core.fn         :as fn
-                       :refer [#?@(:clj [fn1])]]
-                     [quantum.core.logic
-                       :refer [whenc1]]
-                     [quantum.core.vars       :as var
-                       :refer [defalias]]
-             #?(:clj [taoensso.timbre.profiling :as p])
-                     [quantum.core.macros.core  :as cmacros
-                       :refer [case-env]])
+(ns quantum.core.cache
+  (:refer-clojure :exclude [memoize])
+  (:require [clojure.core            :as core]
+            [quantum.core.error      :as err
+              :refer [->ex]                  ]
+            [quantum.core.fn         :as fn
+              :refer [#?@(:clj [fn1])]]
+            [quantum.core.logic
+              :refer [whenc1]]
+            [quantum.core.vars       :as var
+              :refer [defalias]]
+    #?(:clj [taoensso.timbre.profiling :as p])
+            [quantum.core.macros.core  :as cmacros
+              :refer [case-env]])
   (:require-macros [quantum.core.cache :as self])
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
@@ -92,7 +91,7 @@
   (let [cache-sym      (symbol (str (name sym) "-cache"))
         sym-star       (symbol (str (name sym) "*"))]
     `(do (declare ~sym ~sym-star)
-         (~(case-env :cljs `defn `p/defnp) ~sym-star ~@args)
+         (defn ~sym-star ~@args)
          (defonce ~cache-sym
            (let [cache-f# (or (:cache ~opts) (atom {}))]
              (swap! caches update (var ~sym) (whenc1 nil? cache-f#)) ; override cache only if not present
