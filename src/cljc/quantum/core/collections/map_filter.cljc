@@ -61,13 +61,13 @@
 (defeager map-indexed red/map-indexed+) ; TODO rename `mapi` ? ; TODO use !map-indexed+ internally
 (defaliases red v!map-indexed+ !map-indexed+)
 
-(defn map-keys* [f-coll] (fn [f coll] (->> coll (f-coll (juxt (rcomp key f) val)))))
+(defn map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (rcomp key f) val)))))
 (def  map-keys+ (map-keys* map+))
 (def  map-keys' (map-keys* map'))
 (def  map-keys  (map-keys* map ))
 (def  lmap-keys (map-keys* lmap))
 
-(defn map-vals* [f-coll] (fn [f coll] (->> coll (f-coll (juxt key (rcomp val f))))))
+(defn map-vals* [f-xs] (fn [f xs] (->> xs (f-xs (juxt key (rcomp val f))))))
 (def  map-vals+ (map-vals* map+))
 (def  map-vals' (map-vals* map'))
 (def  map-vals  (map-vals* map ))
@@ -96,20 +96,20 @@
   {:todo ["Use a delayed reduction as the base!" "Allow parallelization"]
    :in   '[["a" "d" "t" "4" "4" "10"] (fn-eq? "4")]
    :out  [4 "4"]}
-  ([^indexed? coll pred]
-    (->> coll rseq (ffilteri pred)
-         (<- update 0 (partial - (lasti coll)))))
-  ([coll pred]
+  ([^indexed? xs pred]
+    (->> xs rseq (ffilteri pred)
+         (<- update 0 (partial - (lasti xs)))))
+  ([xs pred]
     (loops/reducei
       (fn [ret elem-n index-n]
         (if (pred elem-n)
             (map-entry index-n elem-n)
             ret))
       (map-entry nil nil)
-      coll)))
+      xs)))
 
-#?(:clj  (definline last-filteri [pred coll] `(last-filteri* ~coll ~pred))
-   :cljs (defn      last-filteri [pred coll]  (last-filteri*  coll  pred)))
+#?(:clj  (definline last-filteri [pred xs] `(last-filteri* ~xs ~pred))
+   :cljs (defn      last-filteri [pred xs]  (last-filteri*  xs  pred)))
 
 (defeager remove         red/remove+)
 (defeager remove-indexed red/remove-indexed+) ; TODO use !remove-indexed+ internally
@@ -118,25 +118,25 @@
 ;=================================================={  FILTER + REMOVE + KEEP  }=====================================================
 ;=================================================={                          }=====================================================
 ; TODO remove duplication
-(defn filter-keys* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp key pred)))))
+(defn filter-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp key pred)))))
 (def  filter-keys+ (filter-keys* filter+))
 (def  filter-keys' (filter-keys* filter'))
 (def  filter-keys  (filter-keys* filter ))
 (def  lfilter-keys (filter-keys* lfilter))
 
-(defn filter-vals* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp val pred)))))
+(defn filter-vals* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp val pred)))))
 (def  filter-vals+ (filter-vals* filter+))
 (def  filter-vals' (filter-vals* filter'))
 (def  filter-vals  (filter-vals* filter ))
 (def  lfilter-vals (filter-vals* lfilter))
 
-(defn remove-keys* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp key pred)))))
+(defn remove-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp key pred)))))
 (def  remove-keys+ (remove-keys* remove+))
 (def  remove-keys' (remove-keys* remove'))
 (def  remove-keys  (remove-keys* remove ))
 (def  lremove-keys (remove-keys* lremove))
 
-(defn remove-vals* [f-coll] (fn [pred coll] (->> coll (f-coll (rcomp val pred)))))
+(defn remove-vals* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp val pred)))))
 (def  remove-vals+ (remove-vals* remove+))
 (def  remove-vals' (remove-vals* remove'))
 (def  remove-vals  (remove-vals* remove ))
@@ -145,10 +145,10 @@
 ; Distinct can be seen as sort of a filter
 
 (defn ldistinct-by
-  "Returns a lazy sequence of the elements of coll, removing any elements that
+  "Returns a lazy sequence of the elements of `xs`, removing any elements that
   return duplicate values when passed to a function f."
   {:attribution "medley.core"}
-  [f coll]
+  [f xs]
   (let [step (fn step [xs seen]
                (lazy-seq
                 ((fn [[x :as xs] seen]
@@ -158,7 +158,7 @@
                          (recur (rest s) seen)
                          (cons x (step (rest s) (conj seen fx)))))))
                  xs seen)))]
-    (step coll #{})))
+    (step xs #{})))
 
 #?(:clj
 (defn ldistinct-by-java
