@@ -1,16 +1,26 @@
 (ns quantum.docs.core.defnt:examples
   (:refer-clojure :exclude
-    [+ zero? bit-and odd? even?])
+    [+ zero? bit-and odd? even? macroexpand-1])
   (:require
     [clojure.core          :as c]
     [clojure.core.reducers :as r]
     [clojure.core.specs    :as ss]
+    [clojure.set           :as set]
+    [quantum.core.cache    :as cache
+      :refer [defmemoized]]
     [quantum.core.collections.base
       :refer [prewalk postwalk walk]]
+    [quantum.core.error
+      :refer [TODO]]
     [quantum.core.fn
-      :refer [<- aritoid]]
+      :refer [aritoid fn1 fnl fn-> fn->> <-, rcomp
+              firsta seconda]]
     [quantum.core.log      :as log
       :refer [prl!]]
+    [quantum.core.logic
+      :refer [fn-and fn-or fn-not if-not-let]]
+    [quantum.core.macros
+      :refer [macroexpand-1]]
     [quantum.core.spec     :as s]
     [quantum.core.vars     :as var
       :refer [update-meta]])
@@ -27,10 +37,74 @@
 ;; - At some later date, the analyzer will do its best to infer types.
 ;; - Even if the `defnt` is redefined, you won't have interface problems.
 
+#_"
+What if, after traversing the AST for a little bit, it deduces that
+symbol `A` must be of type `T0`? Previously it thought `A` was `#{T0 T1}`, and
+disjunctions were created accordingly for several previous callsites. When this
+inference is arrived at, what should happen?
+A cascade of rule-based atoms with watches is appropriate. I.e., at each expression
+will be an atom (really, an unsynchronized mutable container with a watch) that
+listens for changes to the types/constraints of the expressions on which it depends.
+Atoms will only be re-used in more than one expression if they are symbols defined
+within the local scope (including free variables).
+"
+
+#_"
+Note that, for typed functions, they can have multiple possible output constraints
+('return types'). Sometimes it depends on the conditional structures; sometimes it
+depends on the constraints themselves.
+
+(defn [a] (if (pos? a) 'abc' 123))
+
+Input constraints:
+  {'a (constraints pos?)}
+Output constraints:
+(if (constraints pos?)
+    String ; won't keep track of e.g. the fact it only contains 'a', 'b', 'c' and what that entails
+    long)
+
+Example:
+
+(defnt [a ?]
+  (cond (pos? a)
+        123
+        (string? a)
+        'abd'))
+
+Input constraints:
+  (union (constraints pos?)
+         (constraints string?)) ; unreachable statement: error
+
+Example:
+
+(defnt [a ?]
+  (cond (pos? a)
+        123
+        (number? a)
+        'abd'))
+
+Input constraints:
+  (union (constraints pos?)
+         (constraints number?)) ; optimized away because it is a subset of previously calculated constraints
+Output constraints:
+  ...
+
+TO BE CONTINUED AFTER THE SEMESTER
+
+The point is, in order to handle constraints in the most convenient of ways,
+this must end up being a static analysis tool. Along the way, we can easily perform
+certain optimizations based on knowledge of these constraints. And it seems, at least,
+that the code-walking need only be incremental/one-pass (with the exception of the watchables
+updating).
+
+"
+
+; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
+
 ;; ----- Overload resolution -----
 
-(defspec primitive?         (t/or boolean? byte? char? int? long? float? double?))
-(defspec numeric-primitive? (t/- primitive? boolean?))
+(t/spec primitive?         (t/or boolean? byte? char? int? long? float? double?))
+(t/spec numeric-primitive? (t/- primitive? boolean?))
 
 (defnt +*
   "Lax `+`. Continues on overflow/underflow."
@@ -103,8 +177,6 @@
 ; `+*` 2-arity variadic
 ?
 
-; `zero?`
-; (->> (clojure.reflect/reflect quantum.core.Numeric) :members (filter #(= (:name %) 'isZero)) (clojure.pprint/print-table))
 (definterface boolean•I•byte   (^boolean invoke [^byte   a0]))
 (definterface boolean•I•char   (^boolean invoke [^char   a0]))
 (definterface boolean•I•int    (^boolean invoke [^int    a0]))
@@ -203,10 +275,335 @@
                                    [children|op])))))
     ast))
 
+; ===== REDUCERS ===== ;
+
+(defn transducer->reducer
+  "Converts a transducer into a reducer."
+  {:todo #{"More arity"}}
+  ([^long n xf]
+    (case n
+          0 (fn ([]            (xf))
+                ([xs]          (r/reducer xs (xf))))
+          1 (fn ([a0]          (xf a0))
+                ([a0 xs]       (r/reducer xs (xf a0))))
+          2 (fn ([a0 a1]       (xf a0 a1))
+                ([a0 a1 xs]    (r/reducer xs (xf a0 a1))))
+          3 (fn ([a0 a1 a2]    (xf a0 a1 a2))
+                ([a0 a1 a2 xs] (r/reducer xs (xf a0 a1 a2))))
+          (throw (ex-info "Unhandled arity for transducer" nil)))))
+
+(def  map+    (transducer->reducer 1 c/map))
+(def  map-indexed+    (transducer->reducer 1 c/map-indexed))
+(defn map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (rcomp key f) val)))))
+(def  map-keys+ (map-keys* map+))
+(defn map-vals* [f-xs] (fn [f xs] (->> xs (f-xs (juxt key (rcomp val f))))))
+(def  map-vals+ (map-vals* map+))
+
+(def filter+ (transducer->reducer 1 c/filter))
+(defn filter-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp key pred)))))
+(def  filter-keys+ (filter-keys* filter+))
+
+(def remove+ (transducer->reducer 1 c/remove))
+
+(def indexed+ (fn->> (map-indexed+ vector)))
+
+(def partition-all+ (transducer->reducer 1 c/partition-all))
+
+(def lasti (rcomp count dec))
+
+(defn join
+  ([from] (join [] from))
+  ([to from] (c/into to from)))
+
+(->typed #{'c}
+  '(let [a 2 b nil]
+     (+ (+ a b) c)))
+
+
+{'c}
+(let [a 2 b nil]
+  (+ (+ a b) c))
+
+(resolve 'do)
+
+(defn multiplex
+  ([completef rf0]
+    (fn ([]      (rf0))
+        ([x0]    (completef (rf0 x0)))
+        ([x0 x'] (rf0 x0 x'))))
+  ([completef rf0 rf1]
+    (fn ([]           [(rf0) (rf1)])
+        ([[x0 x1]]    (completef (rf0 x0) (rf1 x1)))
+        ([[x0 x1] x'] [(rf0 x0 x') (rf1 x1 x')]))))
+
+; ----- REFLECTION ----- ;
+
+(defrecord Method [^String name ^Class rtype ^"[Ljava.lang.Class;" argtypes ^clojure.lang.Keyword kind])
+
+(defn class->methods [^Class c]
+  (->> (.getMethods c)
+       (remove+   (fn [^java.lang.reflect.Method x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
+       (map+      (fn [^java.lang.reflect.Method x] (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
+                                                             (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                                                                 :static
+                                                                 :instance))))
+       (group-by  (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
+       (map-vals+ (fn->> (group-by (fn [^Method x] (count (.-argtypes x))))
+                         (map-vals+ (fn->> (group-by (fn [^Method x] (.-kind x)))))
+                         (join {})))
+       (join {})))
+
+(defmemoized class->methods:with-cache
+  {:memoize-only-first? true}
+  [c] (class->methods c))
+
+(defrecord Field [^String name ^Class type ^clojure.lang.Keyword kind])
+
+(defn class->fields [^Class c]
+  (->> (.getFields c)
+       (remove+   (fn [^java.lang.reflect.Field x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
+       (map+      (fn [^java.lang.reflect.Field x]
+                    [(.getName x)
+                     (Field. (.getName x) (.getType x)
+                       (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
+                           :static
+                           :instance))]))
+       (join {}))) ; TODO !hash-map
+
+(defmemoized class->fields:with-cache
+  {:memoize-only-first? true}
+  [c] (class->fields c))
+
+; ----- TYPED PART ----- ;
+
+(defonce typed-i (atom 0))
+
+(defn add-file-context [to from]
+  (let [from-meta (meta from)]
+    (update-meta to assoc :line (:line from-meta) :column (:column from-meta))))
+
+(defn persistent!-and-add-file-context [form ast-ret]
+  (update ast-ret :form (fn-> persistent! (add-file-context form))))
+
+(def special-symbols '#{let* deftype* do fn* def .}) ; TODO make more complete
+
+(defn ex! [msg data] (throw (ex-info msg (or data {}))))
+
+(deftype WatchableMutable
+  [^:unsynchronized-mutable v ^:unsynchronized-mutable ^clojure.lang.IFn watch]
+  clojure.lang.IDeref (deref       [this]      v)
+  clojure.lang.IRef   (addWatch    [this _ f]  (set! watch f  ) this)
+                      (removeWatch [this _]    (set! watch nil) this)
+  clojure.lang.IAtom  (reset       [this newv] (set! v newv)  v)
+                      (swap        [this f]
+                        (let [oldv v]
+                          (set! v (f v))
+                          (when (some? watch) (watch nil this oldv v))
+                          v)))
+
+(defrecord Expression
+  ^{:doc "`?types` is either a WatchableMutable<Set> or a Class.
+          `constraints` is optional."}
+  [env info form ?types constraints])
+
+#?(:clj
+(defmacro ->expr [m]
+  (let [vs (vals (map->Expression m))]
+    (when-not (= 5 (count vs)) (ex! "Expression constructor accepts 5 args; found" {:ct (count m) :map m}))
+    `(->Expression ~@vs))))
+
+(declare ->typed*)
+
+(defn handle-non-map-seqable
+  "Handle a non-map seqable."
+  {:params-doc
+    '{merge-types-fn "2-arity fn that merges two types (or sets of types).
+                      The first argument is the current deduced type of the
+                      overall expression; the second is the deduced type of
+                      the current subexpression."}}
+  [env info form empty-form merge-types-fn]
+  (->> form
+       (reduce (fn [{env' :env info' :info forms :form ?types :?types} form']
+                 (let [typed' (->typed* env' info' form')]
+                   (->expr {:env    env'
+                            :info   (:info typed')
+                            :form   (conj! forms (:form typed'))
+                            :?types (merge-types-fn ?types (:?types typed'))})))
+         (->expr {:env env :info info :form (transient empty-form)}))
+       (persistent!-and-add-file-context form)))
+
+(defn handle-map
+  {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
+            can start out with a guarantee of a certain type."}}
+  [env info form]
+  (->> form
+       (reduce-kv (fn [{env' :env info' :info forms :form} form'k form'v]
+                    (let [ast-ret-k (->typed* env' info'             form'k)
+                          ast-ret-v (->typed* env' (:info ast-ret-k) form'v)]
+                      (->expr {:env    env'
+                               :info   (:info ast-ret-v)
+                               :form   (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
+                               :?types nil}))) ; TODO fix; we want the types of the keys and vals to be deduced
+         (->expr {:env env :info info :form (transient {})}))
+       (persistent!-and-add-file-context form)))
+
+(defn handle-seq:do [env info body]
+  (let [;; only the type of the last subexpression ever matters, and is independent from the others
+        merge-types-fn seconda
+        expr (handle-non-map-seqable env info body [] merge-types-fn)]
+    (->expr {:env    env
+             :info   (:info expr)
+             :form   (cons `do (seq (:form expr)))
+             :?types (:?types expr)})))
+
+(defn handle-seq:let*:bindings [env info bindings]
+  (->> bindings
+       (partition-all+ 2)
+       (reduce (fn [{env' :env info' :info forms :form} [sym form]]
+                 (let [ast-ret (->typed* env' info' form)]
+                   (->expr {:env  (assoc env' sym {:msg "This is a sym" :sym sym})
+                            :info (:info ast-ret)
+                            :form (conj! (conj! bindings sym) (:form ast-ret))})))
+         (->expr {:env env :info info :form (transient [])}))
+       (persistent!-and-add-file-context bindings)))
+
+(defn handle-seq:let* [env info [bindings & body]]
+  (let [{env' :env info' :info bindings' :form}
+          (handle-seq:let*:bindings env info bindings)
+        {info'' :info body' :form ?types' :?types}
+          (handle-seq:do env' info' body)]
+    (->expr {:env env'
+             :info info''
+             :form   (list* 'let* bindings' (seq body'))
+             :?types ?types'})))
+
+(defn ?resolve-with-env [sym env]
+  (when-not (symbol? sym) (ex! "To be resolved, `form` must be a symbol; got" {:form sym}))
+  (let [local-info (get env sym)]
+    (if (some? local-info)
+        (TODO "Need to figure out what to do when resolving local vars")
+        (resolve sym))))
+
+(defn handle-seq:dot:field
+  [env info ^Class target target-form ^Field field field-form]
+  (->expr {:env    env
+           :info   info
+           :form   (list `. target-form field-form)
+           :?types (.-type field)}))
+
+#_{:?types {[#{int byte boolean} #{int boolean} int ...] boolean}}
+; OR
+; For `+`
+#_{int   {int    long
+          long   long
+          double double}
+   long  {double double}
+   float {short  double}
+   short {short  int}}
+
+; For `conj!`
+#_{ArrayList         {int    ArrayList}}
+
+(defn handle-seq:dot:methods:static
+  "A note will be made of what methods match the argument types.
+   If only one method is found, that is noted too. If no matching method is found, an
+   exception is thrown."
+  {:params-doc '{methods "A reducible of all static `Method`s with the given name,
+                          `method-form`, in the given class, `target`."}}
+  [env info ^Class target target-form methods method-form args]
+  (prl! env info target method-form (vec methods) args)
+  (->> methods (filter+ (fn [])))
+  ; arg0 (->typed* env info form) |
+  ; arg1 (->typed* env info form) | {:?types}
+
+  (TODO))
+
+(defn try-handle-seq:dot:methods:static
+  [env info target target-form method-form args ?field?]
+  (if-not-let [methods-for-name (-> target class->methods:with-cache (get (name method-form)))]
+    (if ?field?
+        (ex! "No such method or field in class" {:class target :method-or-field method-form})
+        (ex! "No such method in class"          {:class target :methods         method-form}))
+    (if-not-let [methods (get methods-for-name (count args))]
+      (ex! "Incorrect number of arguments for method"
+           {:class target :method method-form :possible-counts (set (keys methods-for-name))})
+      (handle-seq:dot:methods:static env info target target-form (:static methods) method-form args))))
+
+(defn handle-seq:dot [env info [target method|field & args]]
+  (let [target' (?resolve-with-env target env)]
+    (cond (class? target')
+            (if (empty? args)
+                (if-let [field (-> target class->fields:with-cache (get (name method|field)))]
+                  (handle-seq:dot:field env info target' target field method|field)
+                  (try-handle-seq:dot:methods:static env info target' target method|field args true))
+                (try-handle-seq:dot:methods:static env info target' target method|field args false))
+          (nil? target')
+            (ex! "Could not resolve target of dot operator" {:target target})
+          :else
+            ;; TODO: here use a similar thing as with static methods in terms of handling fields etc.
+            (ex! "Currently doesn't handle non-static calls (instance calls will be supported later).
+                  Expected target to be class or object in a dot form; got" {:target target'}))))
+
+(->typed #{'n}
+  '(Numeric/isZero n))
+
+(defn handle-seq [env info form]
+  (prl! form)
+  (let [[f & body] (macroexpand-1 form)]
+    (prl! f body (special-symbols f))
+    (if (special-symbols f)
+        (case f
+          do
+            (handle-seq:do   env info body)
+          let*
+            (handle-seq:let* env info body)
+          deftype*
+            (TODO)
+          fn*
+            (TODO)
+          def
+            (TODO)
+          .
+            (handle-seq:dot  env info body)
+          if
+            (TODO))
+        (if-let [f-resolved (resolve f)]
+          ; See note above on typed function return types
+          (TODO)
+          (ex! "Form should be a special symbol but isn't" {:form f})))))
+
+(defn ->typed* [env info form]
+  (when (> (swap! typed-i inc) 100) (throw (ex-info "Stack too deep" {:info info :form form})))
+  (cond (or (keyword? form)
+            (string? form)
+            (number? form))
+          (ASTRet. env info form)
+        (or (vector? form)
+            (set?    form))
+          (handle-non-map-seqable env info form (empty form))
+        (map? form)
+          (handle-map env info form)
+        (seq? form)
+          (handle-seq env info form)
+        :else
+          (throw (ex-info "Unrecognized form" {:form form}))))
+
+(defn ->typed [free-vars & body]
+  (reset! typed-i 0)
+  (->typed* {} {:free-vars free-vars} (cons `do body)))
+
+; To infer, you postwalk
+; To imply, you prewalk
+
+(let [a nil] (zero? a))
+
+; TODO do return type inference based on "unified" types
 (binding [*print-meta* true]
-  (let [ast (clojure.tools.analyzer.jvm/analyze
-              (list 'let [(update-meta 'n assoc :top-level? true) nil]
-                '(do (Numeric/isZero n) (zero? n))))
+  (let [position=>param {0 'n}
+        param=>position (set/map-invert position=>param)
+        ast (clojure.tools.analyzer.jvm/analyze
+              (list `let [(update-meta (get position=>param 0) assoc :top-level? true) nil 'a nil 'b nil]
+                `(do (Numeric/isZero ~'n) (zero? ~'n) (c/+ ~'a ~'b))))
         nodes-postorder (ast->nodes-postorder ast)]
     #_(prl! ast)
     #_(doseq [child nodes-postorder]
@@ -221,9 +618,42 @@
          - Try to update the atom containing its type information
            - If the atom contains conflicting information with the deduced type, throw and say so
        "
-        :static-call (prl! child)
+        :static-call (let [;; subset of `params-to-infer` that are available in the call
+                           param-ct (-> child :args count)
+                           position=>local-param-ast
+                             (->> child
+                                  :args
+                                  indexed+
+                                  (filter+ (fn-and (fn [[_ x]] (contains? param=>position (:form x)))
+                                                   (fn [[_ x]] (-> x :env :locals (get (:form x)) :name meta :top-level?))))
+                                  (join {}))
+                           no-types-to-infer-here (empty? position=>local-param-ast)]
+                       (prl! (->> position=>local-param-ast (map-vals+ (fn1 dissoc :env)) (join {})))
+                       (when-not no-types-to-infer-here
+                         (let [<ret-type+param-types>•
+                                (->> (clojure.reflect/reflect (:class child))
+                                     :members
+                                     (filter+ (fn-and (fn-> :name            (= (:method child)))
+                                                      (fn-> :parameter-types count (= param-ct))
+                                                      (fn-> :flags           (= #{:public :static}))))
+                                     (map+    (fn1 select-keys [:return-type :parameter-types]))
+                                     join)]
+                           (doseq [[position ast] position=>local-param-ast]
+                             (swap! (:atom ast) update :possible-types
+                               (fn [types]
+                                 (let [param-type=>ret-type
+                                        (->> <ret-type+param-types>•
+                                             (map+ (fn [m] [(get (:parameter-types m) position)
+                                                            (:return-type m)]))
+                                             (join {}))]
+                                   (if (nil? types)
+                                       (do (prl! param-type=>ret-type)
+                                           param-type=>ret-type)
+                                       (throw (ex-info "Possible types already here. Will handle later"
+                                                {:possible-types-prev         types
+                                                 :possible-types-to-intersect param-type=>ret-type}))))))))))
         :invoke      (prl! child)
-        ; TODO others?
+        ; TODO others, like calling maps or sets, etc.
         nil))))
 
 (clojure.tools.analyzer.jvm/analyze
@@ -243,7 +673,7 @@
                  :arity-1 [(-> args :arities second)]
                  :arity-n (-> args :arities second :bodies))]
     (doseq [{:keys [args body]} bodies]
-      (let [body (list* do body)]
+      (let [body (list* 'do body)]
         ; TODO handle pre/post
         (prl! body))
       )))
