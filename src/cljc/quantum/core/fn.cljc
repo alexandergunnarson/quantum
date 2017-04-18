@@ -292,9 +292,9 @@
   (let [genned  (repeatedly (count fs) #(gensym "f"))
         fs-syms (vec (interleave genned fs))]
    `(let ~fs-syms
-      (fn ~@(for [[i f-sym] (map-indexed vector genned)]
-              (let [args (vec (repeatedly i #(gensym "x")))]
-                `(~args (~f-sym ~@args)))))))))
+      (fn ~'aritoid ~@(for [[i f-sym] (map-indexed vector genned)]
+                        (let [args (vec (repeatedly i #(gensym "x")))]
+                         `(~args (~f-sym ~@args)))))))))
 
 ; TODO demacro
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))

@@ -4,7 +4,7 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.set
   (:refer-clojure :exclude
-    [+ - and or complement])
+    [+ - and or complement split-at])
   (:require
     [clojure.core             :as core]
     [clojure.set              :as set]
@@ -33,11 +33,16 @@
 
 ; ============ STRUCTURES ============
 
-#?(:clj (defalias ordered-set    oset/ordered-set))
-#?(:clj (defalias oset           ordered-set))
-#?(:clj (defalias c-sorted-set   ftree/counted-sorted-set)) ; sorted set that provides log-n nth
-        (defalias sorted-set+    avl/sorted-set)
-        (defalias sorted-set-by+ avl/sorted-set-by)
+#?(:clj (defalias ordered-set         oset/ordered-set))
+#?(:clj (defalias oset                ordered-set))
+#?(:clj (defalias c-sorted-set        ftree/counted-sorted-set)) ; sorted set that provides log-n nth
+        (defalias sorted-rank-set     avl/sorted-set   )
+        (defalias sorted-rank-set-by  avl/sorted-set-by)
+        (defalias nearest             avl/nearest      )
+        (defalias rank-of             avl/rank-of      )
+        (defalias subrange            avl/subrange     )
+        (defalias split-key           avl/split-key    )
+        (defalias split-at            avl/split-at     )
 
 #?(:clj (defalias long-set            imap/int-set))
 #?(:clj (defalias set:long            long-set))

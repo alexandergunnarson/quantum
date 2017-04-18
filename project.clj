@@ -30,7 +30,7 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.9.0-alpha15"] ; 1.9.0-alpha* has some problems
+    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha15"] ; 1.9.0-alpha* has some problems
      #_[clojure-future-spec                       "1.9.0-alpha12-2"]
      [org.clojure/clojurescript                 "1.9.293"]
      ; ==== CORE ====
@@ -259,6 +259,13 @@
      [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
      ; PDF
      [org.apache.pdfbox/pdfbox                  "2.0.3"           ]
+     ; OCR
+     [net.sourceforge.tess4j/tess4j             "3.3.1"
+       :exclusions [org.slf4j/slf4j-api
+                    org.slf4j/jul-to-slf4j
+                    org.slf4j/jcl-over-slf4j
+                    org.slf4j/log4j-over-slf4j
+                    ch.qos.logback/logback-classic]]
      ; AUDIO
      [uk.co.xfactory-librarians/coremidi4j      "0.9"             ] ; Improved MIDI
      ; TESTING
@@ -273,7 +280,11 @@
        :exclusions [org.xerial.snappy/snappy-java]]
      [net.jpountz.lz4/lz4                       "1.3"             ]
      [com.github.haifengl/smile-core            "1.2.0"           ]
-     ; ==== MAP-REDUCE ====
+     ; ===== NLP ===== ;
+     [edu.stanford.nlp/stanford-corenlp         "3.7.0"]
+     [edu.stanford.nlp/stanford-corenlp         "3.7.0"
+       :classifier models]
+     ; ===== MAP-REDUCE ===== ;
      [gorillalabs/sparkling                     "1.2.5"
        :exclusions [org.ow2.asm/*
                     com.esotericsoftware.reflectasm/reflectasm]]

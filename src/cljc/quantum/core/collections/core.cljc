@@ -907,6 +907,7 @@
 
 (defnt conj!
   {:todo #{"Add more possibilities like `!set`"}}
+          ([#{transient? !string? !set? !vector?} x] x)
           ([^transient?       x          v] (core/conj! x v))
           ([#{!array-list?
               #?(:clj ObjectArrayList)} x v] (doto x (#?(:clj .add :cljs .push) v)))
@@ -1226,11 +1227,12 @@
         ([#{!map? !set?}  to from] (reduce conj!-protocol to from)) ; TODO this can be much more efficient
 #_(:clj ([...])) ; TODO bulk add operations that are cheaper than using `reduce`, e.g. on fastutil collections
         ([^!string?       to from] (str (reduce conj!-protocol to from)))
-        (^<0> [^object-array? #_array-1d? to from] ; TODO
-          (if (identical? (class to) (class from)) ; TODO to support all 1D arrays, just need to eliminate reflection with `assoc!&`
+        (^<0> [^array-1d? to from] ; TODO support all arrays
+          (if (identical? (class to) (class from))
               #?(:clj  (copy! from 0 to 0 (count from))
                  :cljs (TODO))
-              (reducei (fn [_ x ^long i] (assoc!& to i x)) to from))))
+              (reducei (fn [_ x ^long i]
+                         (assoc!& to i (t/static-cast-depth to 1 x))) to from))))
 
 #?(:clj (defalias join! joinl!))
 

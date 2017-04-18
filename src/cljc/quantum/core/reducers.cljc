@@ -11,25 +11,28 @@
   quantum.core.reducers
   (:refer-clojure :exclude
     [reduce Range ->Range empty? deref reset!
-     contains?, assoc!, get, transduce])
+     contains?, assoc!, conj! get, transduce])
   (:require
     [clojure.core                  :as core]
     [clojure.core.reducers         :as r]
     [quantum.core.collections.base :as cbase
       :refer [nnil?]]
     [quantum.core.collections.core :as ccoll
-      :refer [empty? contains?, assoc!, get, ->objects]]
+      :refer [empty? contains?, assoc!, conj!, get, ->objects]]
     [quantum.core.core
       :refer [->sentinel]]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
-      :refer [catvec subsvec]]
+      :refer [catvec subsvec !vector]]
     [quantum.core.error            :as err
       :refer [->ex TODO]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
-              fn1 fn-> fn->> fn' fn&2 rcomp defcurried]]
+              fn1 fn-> fn->> fn' fn&2 rcomp defcurried
+              with-do]]
+    [quantum.core.log
+      :refer [prl!]]
     [quantum.core.logic            :as logic
       :refer [fn-not fn-or fn-and fn-nil fn-true whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
@@ -194,7 +197,7 @@
 (defn foldcat+
   "Equivalent to `(fold cat+ conj! xs)`"
   {:adapted-from "clojure.core.reducers"}
-  [xs] (fold* cat+ conj! xs))
+  [xs] (fold* cat+ (fn&2 conj!) xs))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
@@ -575,10 +578,61 @@
 
 (def partition-by+ (transducer->transformer 1 core/partition-by))
 
-; TODO do `partition-all-into` just like `group-by-into`
+; TODO conform to `group-by-into`
+; (group-by-into init kf (aritoid vector nil conj) xs)
 
-(def partition-all+ (transducer->transformer 1 core/partition-all))
+(defn !partition-into:transducer-base [all? ^long n combinef]
+  (fn [rf]
+    (let [!chunk-temp (combinef)] ; this could in theory be an atomic, in which case `empty?` and `count` would need to be adjusted
+      (fn
+        ([] (rf))
+        ([ret]
+          (rf (if (or (not all?) (empty? !chunk-temp))
+                  ret
+                  (let [chunk (combinef !chunk-temp)]
+                    (unreduced (rf ret chunk))))))
+        ([ret x]
+          (combinef !chunk-temp x)
+          (if (= n (count !chunk-temp))
+              (let [chunk (combinef !chunk-temp)]
+                (rf ret chunk))
+              ret))))))
 
+(defn !partition-?all:transducer [all? ^long n]
+  (!partition-into:transducer-base all? n
+    (fn ([] (java.util.ArrayList. n))
+        ([^java.util.ArrayList xs] (with-do (vec (.toArray xs)) (.clear xs)))
+        ([^java.util.ArrayList xs x] (conj! xs x)))))
+
+; ----- PARTITION(-INTO)? ----- ;
+
+(defn !partition-into:transducer [n genf combinef]
+  (!partition-into:transducer-base false n
+    (aritoid (fn [] (genf n)) combinef combinef)))
+
+(defn !partition:transducer [n] (!partition-?all:transducer false n))
+
+(def !partition+ (transducer->transformer 1 !partition:transducer))
+
+(defn partition+ [& args] (TODO))
+
+; ----- PARTITION-ALL(-INTO)? ----- ;
+
+(defn !partition-all-into:transducer [n genf combinef]
+  (!partition-into:transducer-base true n
+    (aritoid (fn [] (genf n)) combinef combinef)))
+
+(defn !partition-all:transducer [n] (!partition-?all:transducer true n))
+
+(def !partition-all-into+ (transducer->transformer 3 !partition-all-into:transducer))
+
+(defn partition-all-into+ [& args] (TODO))
+
+(def !partition-all+ (transducer->transformer 1 !partition-all:transducer))
+
+(defn partition-all+ [& args] (TODO))
+
+; TODO partition-all-into-timeout
 #?(:clj
 (defn !partition-all-timeout:transducer [^long n ^long timeout-ms]
   (fn [rf]
@@ -586,25 +640,24 @@
           *last-aggregated (! Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
       (fn
         ([] (rf))
-        ([result]
-           (let [result (if (empty? a)
-                            result
-                            (let [v (vec (.toArray a))]
-                              ;; clear first!
-                              (.clear a)
-                              (unreduced (rf result v))))]
-             (rf result)))
-        ([result input]
-           (.add a input)
-           (let [now    (System/currentTimeMillis)
-                 before (deref *last-aggregated)]
-             (if (or (= n (.size a))
-                     (>= (- now before) timeout-ms))
-               (let [_ (reset! *last-aggregated now)
-                     v (vec (.toArray a))]
-                 (.clear a)
-                 (rf result v))
-               result))))))))
+        ([ret]
+          (rf (if (empty? a)
+                  ret
+                  (let [v (vec (.toArray a))]
+                    ;; clear first!
+                    (.clear a)
+                    (unreduced (rf ret v))))))
+        ([ret x]
+          (conj! a x)
+          (let [now    (System/currentTimeMillis)
+                before (deref *last-aggregated)]
+            (if (or (= n (.size a))
+                    (>= (- now before) timeout-ms))
+              (let [_ (reset! *last-aggregated now)
+                    v (vec (.toArray a))]
+                (.clear a)
+                (rf ret v))
+              ret))))))))
 
 ; TODO do non-single-threaded version
 #?(:clj

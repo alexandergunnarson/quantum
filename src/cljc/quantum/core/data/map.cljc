@@ -33,7 +33,9 @@
 ; =======================
 
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
-(defalias om          #?(:clj omap/ordered-map :cljs array-map))
+(defalias om          ordered-map)
+
+#?(:clj (defn ^java.util.LinkedHashMap !ordered-map [] (java.util.LinkedHashMap.)))
 
 #?(:clj
 (defmacro kw-omap

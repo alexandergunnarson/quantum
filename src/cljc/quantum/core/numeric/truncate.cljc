@@ -50,6 +50,33 @@
     :floor       BigDecimal/ROUND_FLOOR
     (throw (->ex "Invalid round type" {:round-type round-type})))))
 
+#?(:clj
+(defn ^java.math.RoundingMode k->round-type [round-type]
+  (case round-type
+    :ceiling     java.math.RoundingMode/CEILING
+    :floor       java.math.RoundingMode/FLOOR
+    :half-up     java.math.RoundingMode/HALF_UP
+    :half-down   java.math.RoundingMode/HALF_DOWN
+    :half-even   java.math.RoundingMode/HALF_EVEN
+    :up          java.math.RoundingMode/UP
+    :down        java.math.RoundingMode/DOWN
+    :unnecessary java.math.RoundingMode/UNNECESSARY)))
+
+; TODO `defnt`
+(defn with-sig-figures
+  "Rounds a number (with either finite or infinite decimal expansion, if any decimal
+   part present) `n` to the specified (integer) number of significant figures, `sig`.
+   Defaults to half-up rounding, but uses the specified `rounding-mode` if provided.
+   Returns a `bigdec`."
+  ([^long sig n] (with-sig-figures sig n :half-up))
+  ([^long sig n rounding-mode]
+    (let [mc (java.math.MathContext. sig (k->round-type rounding-mode))]
+      (binding [*math-context* mc]
+        (+ 0M (if (or (double? n) (float? n))
+                  (bigdec n)
+                  n))))))
+
+
 #?(:clj  (defnt' round
            "Rounds `n` to `places`, the specified number of decimal places,
             according to `round-type`."

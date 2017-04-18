@@ -20,6 +20,10 @@
   #?(:clj  (Pattern/quote ^String s)
      :cljs (gstr/regExpEscape s)))
 
+#?(:clj
+(defn ->caseless-regex [^String s]
+  (Pattern/compile s (bit-or Pattern/CASE_INSENSITIVE Pattern/UNICODE_CASE))))
+
 ; http://stackoverflow.com/questions/22945910/what-regex-is-b-equivalent-to-and-is-there-a-way-to-deparse-it
 #_(= #"(?:(?<!\w)(?=\w)|(?<=\w)(?!\w))"
      #"\b")

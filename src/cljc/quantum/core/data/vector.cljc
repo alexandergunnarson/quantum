@@ -104,7 +104,7 @@
 ; TODO use |vec+/vec| to convert a vector to an RRBT vector. Benchmark this
 
 ; TODO macro-generate this
-(defn !vector
+(defn ^ArrayList !vector
   "Creates a single-threaded, mutable vector.
    On the JVM, this is a java.util.ArrayList.
 

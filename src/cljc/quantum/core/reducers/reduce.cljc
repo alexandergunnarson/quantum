@@ -135,9 +135,11 @@
            (let [s (seq xs)]
              (clojure.core.protocols/internal-reduce s f init))))
          ([^transformer? x f]
-           (reduce* x f (f)))
+           (let [rf ((.-xf x) f)]
+             (rf (reduce* (.-prev x) rf (rf)))))
          ([^transformer? x f init]
-           (reduce* (.-prev x) ((.-xf x) f) init))
+           (let [rf ((.-xf x) f)]
+             (rf (reduce* (.-prev x) rf init))))
          ([^chan?   x  f init] (async/reduce f init x))
 #?(:cljs ([^+map?   xs f init] (#_(:clj  clojure.core.protocols/kv-reduce
                                    :cljs -kv-reduce) ; in order to use transducers...
@@ -260,11 +262,13 @@
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."
+  ([ret] ret)
   ([ret x  ] (conj ret x))
   ([ret k v] (conj ret [k v])))
 
 (defn conj!-red
   "Like |conj!| but includes a 3-arity for |reduce-kv| purposes."
+  ([ret] ret)
   ([ret x  ] (conj! ret x))
   ([ret k v] (conj! ret [k v])))
 

@@ -59,6 +59,7 @@
   ([type msg objs] (ex-info msg         (->err type msg objs))))
 
 (def throw-ex (rcomp ->ex (fn1 throw)))
+(defalias ex! throw-ex)
 
 (defn ->ex-info
   ([objs]     (ex-info "Exception" objs))

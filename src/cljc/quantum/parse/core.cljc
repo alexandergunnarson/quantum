@@ -7,7 +7,7 @@
     [quantum.core.fn          :as fn
       :refer [firsta aritoid rfn]]
     [quantum.core.collections :as coll
-      :refer [remove+ map+ join reduce conj!]]
+      :refer [remove+ map+ join reduce transduce conj!]]
     [quantum.core.logic
       :refer [fn-nil]]
     [instaparse.core          :as insta])
@@ -80,13 +80,13 @@
               host=\"localhost\"
               other-prop=\"has a space\""}}
   [_ props & [{:keys [no-quote?] :as opts}]]
-  ; TODO syntactially validate prop key
+  ; TODO syntactically validate prop key
   (->> props
        (map+ (rfn [k v] (str (name k) \=
                              (when-not no-quote? \") v
                              (when-not no-quote? \"))))
-       (reduce (rfn [ret kv] ; TODO abstract this
-                 (conj! ret \newline)
-                 (conj! ret kv))
-         (!str))
-       str))
+       (transduce (fn ([] (!str))
+                      ([ret] (str ret))
+                      ([ret kv] ; TODO abstract this
+                        (conj! ret \newline)
+                        (conj! ret kv))))))

@@ -4,33 +4,27 @@
       "Compression."
     :todo ["Extend functionality to all compression formats: .zip, .gzip, .tar, .rar, etc."]}
   quantum.core.io.compress
-      (:refer-clojure :exclude [into])
+      (:refer-clojure :exclude
+        [into, conj! assoc!])
       (:require
       #?@(:clj [[clojure.java.io               :as clj-io ]
                 [taoensso.nippy                :as nippy  ]
                 [iota                          :as iota   ]
                 [byte-transforms               :as bt     ]])
-                [quantum.core.convert          :as convert]
                 [quantum.core.io.serialization :as io-ser ]
                 [quantum.core.collections      :as coll
-                  :refer [#?(:clj join) map+ filter+ in-k?]]
+                  :refer [join map+ filter+ in-k?, conj! assoc!]]
+                [quantum.core.convert          :as conv]
                 [quantum.core.error            :as err
-                  :refer [#?(:clj throw-when) ->ex]       ]
+                  :refer [throw-when ->ex]]
                 [quantum.core.logic            :as logic
-                  :refer [#?@(:clj [condpc coll-or])]     ]
+                  :refer [condpc coll-or]]
+                [quantum.core.resources        :as res]
+                [quantum.core.data.map         :as map
+                  :refer [!ordered-map]]
                 [quantum.core.data.set         :as set    ]
                 [quantum.core.vars             :as var
-                  :refer [#?(:clj def-)]                  ])
-    #?(:cljs (:require-macros
-                [quantum.core.convert          :as convert]
-                [quantum.core.error            :as err
-                  :refer [throw-when]                     ]
-                [quantum.core.logic            :as logic
-                  :refer [condpc coll-or]                 ]
-                [quantum.core.collections      :as coll
-                  :refer [join]                           ]
-                [quantum.core.vars             :as var
-                  :refer [def-]                           ]))
+                  :refer [def-]])
   #?(:clj
       (:import
         (net.jpountz.lz4 LZ4Factory LZ4Compressor)
@@ -165,6 +159,19 @@
 ;                :let [output-file (fs/file target (.getName entry))]]
 ;          (fs/mkdirs (fs/parent output-file))
 ;          (io/copy tin output-file)))))
+
+;; Sometimes `http://bugs.java.com/bugdatabase/view_bug.do?bug_id=4040920` will happen
+#?(:clj
+(defn unzip! [^java.io.InputStream in]
+  (res/with-resources
+    [zip      (java.util.zip.ZipInputStream.
+                (java.io.BufferedInputStream. #_conv/->buffered in))]
+    (loop [entry    (.getNextEntry zip)
+           !entries (!ordered-map)]
+      (if (nil? entry)
+          !entries
+          (let [!entries' (assoc! !entries (.getName entry) (conv/->bytes zip))]
+            (recur (.getNextEntry zip) !entries')))))))
 
 ; (defn gunzip
 ;   "Takes a path to a gzip file `source` and unzips it."

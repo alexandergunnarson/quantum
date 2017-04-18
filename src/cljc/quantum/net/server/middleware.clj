@@ -30,7 +30,7 @@
             [quantum.core.string        :as str]
             [quantum.core.error         :as err]
             [quantum.core.logic
-              :refer [whenp whenp-> fn-or]]
+              :refer [whenp whenp-> fn-or default]]
             [quantum.core.fn
               :refer [fnl fn1 fn-> rcomp fn']]
             [quantum.core.collections   :as coll
@@ -236,7 +236,11 @@
         (handler req))))
 
 (defn wrap-middleware [routes & [opts]]
-  (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))]
+  (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))
+        wrap-exception
+          (case (-> opts :exceptions (default :hide))
+            :hide (fn1 wrap-hide-exception :warn (fn' "Internal"))
+            :show (fn1 wrap-show-exception :warn))]
     (-> routes
         wrap-out-logging
         (whenp (:figwheel-ws opts)
@@ -257,6 +261,7 @@
         (defaults/wrap-defaults
           (apply assoc-in defaults/secure-site-defaults
             [:security :anti-forgery] false
+            [:params   :keywordize  ] true
             [:static   :resources   ] false ; This short-circuits the rest of the middleware when placed here
             [:static   :files       ] false
             (-> opts
@@ -272,4 +277,4 @@
         wrap-gzip
         #_(friend/requires-scheme :https)
         wrap-in-logging
-        (wrap-hide-exception :warn (fn' "Internal")))))
+        wrap-exception)))

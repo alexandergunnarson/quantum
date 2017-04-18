@@ -441,6 +441,7 @@
         ; `partition-all` <~> `lodash/chunk`
         ; TODO choose what structures to partition into
         (defeager partition-all   red/partition-all+ )
+        (defalias !partition-all-into+ red/!partition-all-into+)
         (defalias partition-all-timeout+  red/partition-all-timeout+)
         (defalias !partition-all-timeout+ red/!partition-all-timeout+)
         (defalias lpartition      c/partition        )
@@ -521,7 +522,7 @@
 (defn array->dimensionality
   "e.g. an array with the '[[[J' tag would be of 3 dimensionality."
   [arr] ; TODO ensure that it's an array
-  (->> arr type str (drop 6) (take-while (fn1 = \[)) count)))
+  (->> arr type str (drop+ 6) (take-while+ (fn1 = \[)) count)))
 
 #?(:clj
 (defnt array->array-manager-key
@@ -1156,10 +1157,11 @@
   ([x] (frequencies {} x))
   ([to x]
     (->> x
-         (reduce (fn [counts x]
-                   (assoc?! counts x (inc (or (get counts x) 0))))
-           (?transient! to))
-         ?persistent!)))
+         (transduce
+           (fn ([] (?transient! to))
+               ([ret] (?persistent! ret))
+               ([counts x]
+                 (assoc?! counts x (inc (or (get counts x) 0)))))))))
 
 (defnt probabilities+
   ([ #_reducible? xs]
