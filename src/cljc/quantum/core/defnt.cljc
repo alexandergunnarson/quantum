@@ -1,6 +1,6 @@
-(ns quantum.docs.core.defnt:examples
+(ns quantum.core.defnt
   (:refer-clojure :exclude
-    [+ zero? bit-and odd? even? macroexpand-1])
+    [+ zero? bit-and odd? even? macroexpand])
   (:require
     [clojure.core          :as c]
     [clojure.core.reducers :as r]
@@ -20,7 +20,7 @@
     [quantum.core.logic
       :refer [fn-and fn-or fn-not if-not-let]]
     [quantum.core.macros
-      :refer [macroexpand-1]]
+      :refer [macroexpand]]
     [quantum.core.spec     :as s]
     [quantum.core.vars     :as var
       :refer [update-meta]])
@@ -29,6 +29,7 @@
 
 ;; TODO use https://github.com/clojure/core.typed/blob/master/module-rt/src/main/clojure/clojure/core/typed/
 
+;; Apparently I independently came up with an algorithm that is essentially Hindley-Milner...
 ;; - `dotyped`, `defnt`, and `fnt` create typed contexts in which their internal forms are analyzed
 ;; and overloads are resolved.
 ;; - When a function with type overloads is referenced outside of a typed context, then the
@@ -38,15 +39,17 @@
 ;; - Even if the `defnt` is redefined, you won't have interface problems.
 
 #_"
-What if, after traversing the AST for a little bit, it deduces that
-symbol `A` must be of type `T0`? Previously it thought `A` was `#{T0 T1}`, and
-disjunctions were created accordingly for several previous callsites. When this
-inference is arrived at, what should happen?
+What if, after traversing the AST for a little bit, it deduces based on the usage of
+symbol `A` (e.g. within static methods, etc.) that it must be of type `T0`? Previously
+it thought `A` was `#{T0 T1}`, and disjunctions were created accordingly for several
+previous callsites. When this inference is arrived at, what should happen?
 A cascade of rule-based atoms with watches is appropriate. I.e., at each expression
 will be an atom (really, an unsynchronized mutable container with a watch) that
-listens for changes to the types/constraints of the expressions on which it depends.
-Atoms will only be re-used in more than one expression if they are symbols defined
-within the local scope (including free variables).
+listens for changes to the types/constraints of the expressions on which it depends,
+and the most appropriate overload will always be chosen based on the latest information.
+Atoms will only be re-used in more than one expression if they are locally-scoped symbols.
+Thus, the keys of the environment (these symbols) will only ever be modified when a new
+scope is introduced via `let` or `fn`, but the values may be mutated at any expression.
 "
 
 #_"
@@ -401,16 +404,34 @@ updating).
                           (when (some? watch) (watch nil this oldv v))
                           v)))
 
-(defrecord Expression
-  ^{:doc "`?types` is either a WatchableMutable<Set> or a Class.
-          `constraints` is optional."}
-  [env info form ?types constraints])
+(defn !ref
+  ([v]       (->WatchableMutable v nil))
+  ([v watch] (->WatchableMutable v watch)))
+
+(defrecord TypeInfo
+  ^{:doc "`types`       is a Set<Class> (same as `(apply set/union (vals fn-types))` when TypeInfo of a function call expression)
+          `fn-types`    is a Map<Class ... Set<Class>> (e.g. `{A {B {C #{A D B}}}}`)
+          `constraints` is an optional set of clojure.spec-like constraints.
+          `infer?`      denotes whether the type is open to be inferred (`true`) or is fixed (`false`)."}
+  [types fn-types constraints infer?])
 
 #?(:clj
-(defmacro ->expr [m]
-  (let [vs (vals (map->Expression m))]
-    (when-not (= 5 (count vs)) (ex! "Expression constructor accepts 5 args; found" {:ct (count m) :map m}))
-    `(->Expression ~@vs))))
+(defmacro ->type-info [m]
+  (let [vs (vals (map->TypeInfo m))]
+    (when-not (= 4 (count vs)) (ex! "TypeInfo constructor accepts ≤ 4 args; found" {:ct (count m) :map m}))
+    `(->TypeInfo ~@vs))))
+
+(defrecord ExpressionInfo
+  ^{:doc "`env`         is a map of local bindings: symbol to TypeInfo.
+          `form`        is the (unevaluated) form of the expression.
+          `type-info`   is a WatchableMutable<TypeInfo>."}
+  [env form type-info])
+
+#?(:clj
+(defmacro ->expr-info [m]
+  (let [vs (vals (map->ExpressionInfo m))]
+    (when-not (= 3 (count vs)) (ex! "ExpressionInfo constructor accepts ≤ 3 args; found" {:ct (count m) :map m}))
+    `(->ExpressionInfo ~@vs))))
 
 (declare ->typed*)
 
@@ -421,61 +442,58 @@ updating).
                       The first argument is the current deduced type of the
                       overall expression; the second is the deduced type of
                       the current subexpression."}}
-  [env info form empty-form merge-types-fn]
+  [env form empty-form rf]
   (->> form
-       (reduce (fn [{env' :env info' :info forms :form ?types :?types} form']
-                 (let [typed' (->typed* env' info' form')]
-                   (->expr {:env    env'
-                            :info   (:info typed')
-                            :form   (conj! forms (:form typed'))
-                            :?types (merge-types-fn ?types (:?types typed'))})))
-         (->expr {:env env :info info :form (transient empty-form)}))
+       (reduce (fn [accum form'] (rf accum (->typed* (:env accum) form')))
+         (->expr-info {:env env :form (transient empty-form)}))
        (persistent!-and-add-file-context form)))
 
 (defn handle-map
   {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
             can start out with a guarantee of a certain type."}}
-  [env info form]
+  [env form]
   (->> form
-       (reduce-kv (fn [{env' :env info' :info forms :form} form'k form'v]
-                    (let [ast-ret-k (->typed* env' info'             form'k)
-                          ast-ret-v (->typed* env' (:info ast-ret-k) form'v)]
-                      (->expr {:env    env'
-                               :info   (:info ast-ret-v)
-                               :form   (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
-                               :?types nil}))) ; TODO fix; we want the types of the keys and vals to be deduced
-         (->expr {:env env :info info :form (transient {})}))
+       (reduce-kv (fn [{env' :env forms :form} form'k form'v]
+                    (let [ast-ret-k (->typed* env' form'k)
+                          ast-ret-v (->typed* env' form'v)]
+                      (->expr-info {:env       env'
+                                    :form      (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
+                                    :type-info nil}))) ; TODO fix; we want the types of the keys and vals to be deduced
+         (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context form)))
 
-(defn handle-seq:do [env info body]
-  (let [;; only the type of the last subexpression ever matters, and is independent from the others
-        merge-types-fn seconda
-        expr (handle-non-map-seqable env info body [] merge-types-fn)]
-    (->expr {:env    env
-             :info   (:info expr)
-             :form   (cons `do (seq (:form expr)))
-             :?types (:?types expr)})))
+(defn handle-seq:do [env body]
+  (let [expr (handle-non-map-seqable env body []
+               (fn [accum expr]
+                ;; for types, only the last subexpression ever matters, as each is independent from the others
+                (assoc expr :form (conj! (:form accum) (:form expr))
+                            ;; but the env should be the same as whatever it was originally because no new scopes are created
+                            :env  (:env accum))))]
+    (->expr-info {:env       (:env expr)
+                  :form      (cons `do (:form expr))
+                  :type-info (:types expr)})))
 
-(defn handle-seq:let*:bindings [env info bindings]
+(defn handle-seq:let*:bindings [env bindings]
   (->> bindings
        (partition-all+ 2)
-       (reduce (fn [{env' :env info' :info forms :form} [sym form]]
-                 (let [ast-ret (->typed* env' info' form)]
-                   (->expr {:env  (assoc env' sym {:msg "This is a sym" :sym sym})
-                            :info (:info ast-ret)
-                            :form (conj! (conj! bindings sym) (:form ast-ret))})))
-         (->expr {:env env :info info :form (transient [])}))
+       (reduce (fn [{env' :env forms :form} [sym form]]
+                 (let [expr-ret (->typed* env' form)]
+                   (->expr-info
+                     {:env  (assoc env' sym (->type-info {:types       (:types       expr-ret) ; TODO should use type info or exprinfo?
+                                                          :constraints (:constraints expr-ret)
+                                                          :fn-types    (:fn-types    expr-ret)}))
+                      :form (conj! (conj! bindings sym) (:form expr-ret))})))
+         (->expr-info {:env env :form (transient [])}))
        (persistent!-and-add-file-context bindings)))
 
-(defn handle-seq:let* [env info [bindings & body]]
-  (let [{env' :env info' :info bindings' :form}
-          (handle-seq:let*:bindings env info bindings)
-        {info'' :info body' :form ?types' :?types}
-          (handle-seq:do env' info' body)]
-    (->expr {:env env'
-             :info info''
-             :form   (list* 'let* bindings' (seq body'))
-             :?types ?types'})))
+(defn handle-seq:let* [env [bindings & body]]
+  (let [{env' :env bindings' :form}
+          (handle-seq:let*:bindings env bindings)
+        {env'' :env body' :form type-info' :type-info}
+          (handle-seq:do env' body)]
+    (->expr-info {:env       env''
+                  :form      (list* 'let* bindings' (seq body'))
+                  :type-info type-info'})))
 
 (defn ?resolve-with-env [sym env]
   (when-not (symbol? sym) (ex! "To be resolved, `form` must be a symbol; got" {:form sym}))
@@ -485,11 +503,10 @@ updating).
         (resolve sym))))
 
 (defn handle-seq:dot:field
-  [env info ^Class target target-form ^Field field field-form]
-  (->expr {:env    env
-           :info   info
-           :form   (list `. target-form field-form)
-           :?types (.-type field)}))
+  [env ^Class target target-form ^Field field field-form]
+  (->expr-info {:env       env
+                :form      (list `. target-form field-form)
+                :type-info (!ref (->type-info {:types #{(.-type field)}}))}))
 
 #_{:?types {[#{int byte boolean} #{int boolean} int ...] boolean}}
 ; OR
@@ -503,6 +520,23 @@ updating).
 
 ; For `conj!`
 #_{ArrayList         {int    ArrayList}}
+; (rf accum (->typed* (:env accum) (:info accum) form'))
+; (reduce (fn [accum form'] (rf accum (->typed* (:env accum) form')))
+;          (->expr-info {:env env :form (transient empty-form)}))
+
+(defn fn-type-satisfies-expr?
+  "Yields whether a function type declaration `fn-type` satisfies the type of the given
+   expression info `expr`.
+   Yields `true` if the intersection of the set of possible argtypes of `f` with the
+   set of the possible types of the given arg index is non-empty. This does not imply
+   that these sets will actually be generated, but rather that their elements will be
+   checked until satisfied or not satisfied.
+
+   See the documentation for `defnt`, specifically the section entitled 'Matching
+   Functions with Arguments'."
+  [fn-type expr]
+  (prl! fn-type expr)
+  (TODO))
 
 (defn handle-seq:dot:methods:static
   "A note will be made of what methods match the argument types.
@@ -510,16 +544,29 @@ updating).
    exception is thrown."
   {:params-doc '{methods "A reducible of all static `Method`s with the given name,
                           `method-form`, in the given class, `target`."}}
-  [env info ^Class target target-form methods method-form args]
-  (prl! env info target method-form (vec methods) args)
-  (->> methods (filter+ (fn [])))
+  [env ^Class target target-form methods method-form args]
+  (prl! env target method-form (vec methods) args)
+  (let [rf (fn [expr arg-expr]
+             (prl! expr arg-expr)
+             (update expr :type-info
+               (fn-> (or (!ref (->type-info
+                                 {:types    nil ; delay calculating these until fn-types is done being calculated
+                                  :fn-types methods})))
+                     (swap!
+                       (fn1 update :fn-types
+                         (fn [fn-types]
+                           (->> fn-types
+                                (filter+ (fn1 fn-type-satisfies-expr? arg-expr))
+                                join)))))))
+        handled (handle-non-map-seqable env args [] rf)]
+    (prl! handled)
+    (TODO "calculate `:types` of `handled` based on `:fn-types`")
   ; arg0 (->typed* env info form) |
   ; arg1 (->typed* env info form) | {:?types}
-
-  (TODO))
+  (TODO)))
 
 (defn try-handle-seq:dot:methods:static
-  [env info target target-form method-form args ?field?]
+  [env target target-form method-form args ?field?]
   (if-not-let [methods-for-name (-> target class->methods:with-cache (get (name method-form)))]
     (if ?field?
         (ex! "No such method or field in class" {:class target :method-or-field method-form})
@@ -527,16 +574,16 @@ updating).
     (if-not-let [methods (get methods-for-name (count args))]
       (ex! "Incorrect number of arguments for method"
            {:class target :method method-form :possible-counts (set (keys methods-for-name))})
-      (handle-seq:dot:methods:static env info target target-form (:static methods) method-form args))))
+      (handle-seq:dot:methods:static env target target-form (:static methods) method-form args))))
 
-(defn handle-seq:dot [env info [target method|field & args]]
+(defn handle-seq:dot [env [target method|field & args]]
   (let [target' (?resolve-with-env target env)]
     (cond (class? target')
             (if (empty? args)
                 (if-let [field (-> target class->fields:with-cache (get (name method|field)))]
-                  (handle-seq:dot:field env info target' target field method|field)
-                  (try-handle-seq:dot:methods:static env info target' target method|field args true))
-                (try-handle-seq:dot:methods:static env info target' target method|field args false))
+                  (handle-seq:dot:field env target' target field method|field)
+                  (try-handle-seq:dot:methods:static env target' target method|field args true))
+                (try-handle-seq:dot:methods:static env target' target method|field args false))
           (nil? target')
             (ex! "Could not resolve target of dot operator" {:target target})
           :else
@@ -544,19 +591,18 @@ updating).
             (ex! "Currently doesn't handle non-static calls (instance calls will be supported later).
                   Expected target to be class or object in a dot form; got" {:target target'}))))
 
-(->typed #{'n}
-  '(Numeric/isZero n))
+(->typed {'n (!ref (->type-info {:infer? true}))} '(Numeric/isTrue (Numeric/isZero n)))
 
-(defn handle-seq [env info form]
+(defn handle-seq [env form]
   (prl! form)
-  (let [[f & body] (macroexpand-1 form)]
+  (let [[f & body] (macroexpand form)]
     (prl! f body (special-symbols f))
     (if (special-symbols f)
         (case f
           do
-            (handle-seq:do   env info body)
+            (handle-seq:do   env body)
           let*
-            (handle-seq:let* env info body)
+            (handle-seq:let* env body)
           deftype*
             (TODO)
           fn*
@@ -564,7 +610,7 @@ updating).
           def
             (TODO)
           .
-            (handle-seq:dot  env info body)
+            (handle-seq:dot  env body)
           if
             (TODO))
         (if-let [f-resolved (resolve f)]
@@ -572,25 +618,35 @@ updating).
           (TODO)
           (ex! "Form should be a special symbol but isn't" {:form f})))))
 
-(defn ->typed* [env info form]
-  (when (> (swap! typed-i inc) 100) (throw (ex-info "Stack too deep" {:info info :form form})))
+(defn handle-symbol [env form]
+  (if-let [type-info (get env form)]
+    (->expr-info {:env       env
+                  :form      form
+                  :type-info type-info})
+    (TODO "Need to know how to handle non-local symbol")))
+
+(defn ->typed* [env form]
+  (prl! env form)
+  (when (> (swap! typed-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
   (cond (or (keyword? form)
             (string? form)
             (number? form))
-          (ASTRet. env info form)
+          (->expr-info {:env env :type-info (->type-info {:types #{(type form)}})}) ; TODO `constraints`
         (or (vector? form)
             (set?    form))
-          (handle-non-map-seqable env info form (empty form))
+          (handle-non-map-seqable env form (empty form))
         (map? form)
-          (handle-map env info form)
+          (handle-map env form)
         (seq? form)
-          (handle-seq env info form)
+          (handle-seq env form)
+        (symbol? form)
+          (handle-symbol env form)
         :else
           (throw (ex-info "Unrecognized form" {:form form}))))
 
-(defn ->typed [free-vars & body]
+(defn ->typed [env & body]
   (reset! typed-i 0)
-  (->typed* {} {:free-vars free-vars} (cons `do body)))
+  (->typed* env (cons `do body)))
 
 ; To infer, you postwalk
 ; To imply, you prewalk
