@@ -1,4 +1,71 @@
-# `defnt`
+# `quantum.core.defnt`
+
+## Overload Resolution
+
+## Matching Functions with Arguments
+
+In the below notation, `&` represents a function-argument satisfiability predicate: `A & B` is true iff `a ⊇ b`, where `a ∈ A` and `b ∈ B`, for at least one `a` and one `b`.
+
+### Example 1
+
+The function `f`, described below, has two overloads: one which takes an `int` and produces an `int`, and another which takes a `long` and produces either a `boolean` or a `String`. In practice, because of specificity rules in force with respect to overload resolution (cf. [Overload Resolution]()), this means that numbers which fall in the range of an `int` return an `int`, and those which fall in the range of a `long` but outside that of an `int` (i.e. `(long - int)`) return a `boolean` or a `String`:
+
+```
+f : [#{int}]  -> #{short}
+  : [#{long}] -> #{boolean String}
+```
+
+The argument `x`, described below, might be a `boolean`, `int`, or `String`:
+
+```
+x = #{boolean int String}
+```
+
+The valid argument types of `(f x)`, then, are computed below:
+
+```
+(f x) :     (argtypes f)  &    (types [x])      ?
+      => ⸢ #{[#{int}]   ⸣    ⸢ #{[#{boolean}]  ⸣
+             [#{long}]}   &     [#{int}]        ?
+         ⸤              ⸥    ⸤   [#{String}]}  ⸥
+      => #{[#{int}]}                            ✓
+```
+
+The valid return types are thus easily found via a lookup:
+
+```
+#{#{short}}
+```
+
+A map can then be generated from argument types to return types:
+
+```
+{[#{int}] : #{short}}
+```
+
+### Example 2
+
+The below example uses the same notation, but this time uses 'free' constraints (i.e. ones not encapsulated in a type such as `PositiveLong` or `NumberLessThan12`). Employing such constraints is normally assumed to be beyond the capabilities of the sort of `∀` proof done by a type checker, and thus to fit exclusively within the scope of a merely `∃` "soft proof" performed by e.g. generative testing (`core.spec` being a prime example). The idea is to check as much as possible at compile time but leave the rest to generative tests and, as a last resort, runtime checks.
+
+```
+g : [#{long < 15}, #{int}] -> #{boolean}
+  : [#{String}]            -> #{String}
+y = #{int < 10, String}
+z = #{short >= 5, boolean}
+(g y z) :     (argtypes f)        &   (types [y z])              ?
+        => ⸢ #{[long < 15, int] ⸣    ⸢ #{[int < 10, short >= 5] ⸣
+               [String]}          &     [int < 10, boolean]
+                                        [String  , short >= 5]   ?
+           ⸤                    ⸥    ⸤   [String  , boolean]}   ⸥
+        => #{[long < 15, int]}    &   #{[int < 10, short >= 5]}  ?
+        => ; (long < 15) ⊇ int < 10   ✓
+           ; int         ⊇ short >= 5 ✓
+           #{[long < 15, int]}                                   ✓
+
+{[#{long < 15}, #{int}] : #{boolean}}
+```
+
+## OLD DOCUMENTATION: TODO EXCISE
 
 `defnt` is a way of defining an efficiently-dispatched dynamic, type-checked function without resorting to using the un-function-like syntax of `defprotocol` or `reify`. An example of it is the following:
 
