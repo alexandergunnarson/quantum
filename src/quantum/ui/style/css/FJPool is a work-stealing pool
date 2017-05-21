@@ -1,0 +1,229 @@
+Take a look at Claypoole. Example code:
+
+(require '[com.climate.claypoole :as cp])
+;; Run with a thread pool of 100 threads, meaning up to 100 HTTP calls
+;; will run simultaneously. with-shutdown! ensures the thread pool is
+;; closed afterwards.
+(cp/with-shutdown! [pool (cp/threadpool 100)
+  (cp/pmap pool get-json [url url2]))
+The reason you should prefer com.climate.claypoole/pmap over clojure.core/pmap in this case is that the latter sets the number of threads based on the number of CPUs, with no way of overriding. For networking and other I/O operations that aren't CPU bound, you typically want to set the number of threads based on the desired amount of I/O, not based on CPU capacity.
+
+Or use a non-blocking client like http-kit that doesn't require one thread per connection, as suggested by mikera.
+
+http://eng.climate.com/2014/02/25/claypoole-threadpool-tools-for-clojure/
+
+; TODO found a bug when determining return type when reify is the return val; we don't want the absolute type
+
+
+
+(defn ->vec
+  "`vec` is an O(n) operation because it *always* creates an entirely new vector.
+   By contrast, `->vec` ensures that vector coercion will always be an O(1) operation
+   when calling `->vec` on (transient or persistent) vectors."
+  [x]
+  (cond (vector? x)           x
+        (transient-vector? x) x
+        :else                 (vec x)))
+
+(defn view-rest
+  "Like `rest`, but instead of a seq, creates a view in O(1) time of whatever
+   collection is passed. Useful for e.g. calling `rest` on a vector but preserving
+   all of the vector's properties."
+  [xs]
+  (if (vector? xs)
+      (subvec xs 1)
+      (throw (ex-info "`view-rest` not supported on type" {:type (type xs)}))))
+
+
+(defprotocol InternalReduce
+  "Protocol for concrete seq types that can reduce themselves
+   faster than first/next recursion. Called by clojure.core/reduce."
+  (internal-reduce [seq f start]))
+
+(defn- naive-seq-reduce
+  "Reduces a seq, ignoring any opportunities to switch to a more
+  specialized implementation."
+  [s f val]
+  (loop [s (seq s)
+         val val]
+    (if s
+      (let [ret (f val (first s))]
+        (if (reduced? ret)
+          @ret
+          (recur (next s) ret)))
+      val)))
+
+(defn- interface-or-naive-reduce
+  "Reduces via IReduceInit if possible, else naively."
+  [coll f val]
+  (if (instance? clojure.lang.IReduceInit coll)
+    (.reduce ^clojure.lang.IReduceInit coll f val)
+    (naive-seq-reduce coll f val)))
+
+(extend-protocol InternalReduce
+  ;; handles vectors and ranges
+  clojure.lang.IChunkedSeq
+  (internal-reduce
+   [s f val]
+   (if-let [s (seq s)]
+     (if (chunked-seq? s)
+       (let [ret (.reduce (chunk-first s) f val)]
+         (if (reduced? ret)
+           @ret
+           (recur (chunk-next s)
+                  f
+                  ret)))
+       (interface-or-naive-reduce s f val))
+     val))
+
+
+  java.lang.Object
+  (internal-reduce
+   [s f val]
+   (loop [cls (class s)
+          s s
+          f f
+          val val]
+     (if-let [s (seq s)]
+       (if (identical? (class s) cls)
+         (let [ret (f val (first s))]
+                (if (reduced? ret)
+                  @ret
+                  (recur cls (next s) f ret)))
+         (interface-or-naive-reduce s f val))
+       val))))
+
+
+
+(defn num-integral-digits [^double n]
+  (-> n Math/abs Math/log10 inc int))
+
+(is (= 2 (num-integral-digits -31.848399183)))
+(is (= 1 (num-integral-digits -3.54983283781)))
+(is (= 0 (num-integral-digits 0.98372135)))
+
+
+; TODO incorporate
+(defmacro accum-for
+  "Like `for`, but exposes the reference to the accumulated (transient)
+   output to the body.
+
+   ```
+   (accum-for [x xs accum] &body)
+   ```
+   is equivalent to
+   ```
+   (persistent!
+      (reduce (fn [accum x] (conj! accum (do &body)))
+        (transient [])
+        xs))
+   ```"
+  [[x xs accum] & body]
+  `(persistent!
+     (reduce (fn [accum# ~x]
+               (let [~accum accum#] (conj! accum# (do ~@body))))
+       (transient [])
+       ~xs)))
+
+
+
+
+TODO
+type preds are defined on particular classes
+so for instance ReferenceOpenHashSet is a hash-set, random-access, mutable, etc.
+generate based on this
+
+We want to topo-sort the classes
+
+(loom.graph/digraph (classes/class->ancestor-graph clojure.lang.IPersistentVector))
+
+; We want the set of "lowest common denominators" as it were (not including `Object`)
+
+(map/intersection-by-key
+  (classes/class->ancestor-graph clojure.lang.IPersistentVector)
+  (classes/class->ancestor-graph clojure.lang.IPersistentList))
+
+(map/intersection-by-key
+  (classes/class->ancestor-graph java.util.List)
+  (classes/class->ancestor-graph clojure.lang.APersistentVector))
+
+None, already existing features are sufficient
+Zero runtime dependencies for projects using Koloboke Compile
+Lists
+Queues
+Concurrent maps/sets
+Concurrent Queues
+Insertion-ordered hash maps/sets
+LRU-ordered hash maps/sets
+Sorted maps/sets
+Array-based maps/sets (like Android's ArrayMap or fastutil's ArrayMaps)
+Enum maps/sets
+Maps with weak reference keys/values
+Mulitmaps (key -> many values)
+Real time hash maps/sets (low worst latency), a-la SmoothieMap
+Support for optimized Streams and Streams of primitives
+
+https://github.com/vigna/Sux4J — Succint data structures for Java
+
+
+
+
+This is possible witha  transducer
+
+(do (defn gen-comp-keys-into:xf
+  ; TODO use `reduce-multi` or `multiplex`
+  ([initf compf kf]
+    (fn [rf] (prl! rf)
+      (let [rfff (rfn [[ret best] x] (prl! "rfff" ret best x)
+               (if (identical? best red/sentinel)
+                   [(rf ret x) x]
+                   (let [vret (kf best) vx (kf x)]
+                     (cond (=     vret vx) [(rf ret x)     x]
+                           (compf vret vx) [ret                best]
+                           :else           [(rf (initf) x) x]))))]
+        (aritoid (fn [] (prl! "init") [(?transient! (initf)) red/sentinel])
+                 (fn [[ret _]] (prl! "finish") (?persistent! ret))
+                 rfff
+                 rfff)))))
+
+
+
+(->> (quantum.core.reducers.reduce/reducer [9 3 2 1 2 395 2 3 1 29 1 2 38]
+       (gen-comp-keys-into:xf vector core/> identity))
+     (red/map+ (fn [x] (prl! x) (inc x)))
+     (reduce conj! [(?transient! (vector)) red/sentinel])))
+
+
+
+(defn gen-predicate ; TODO move to pcc.numeric?
+  "Generates a predicate-like function which has pair and variable arities."
+  [pred]
+  (fn ([a b] (pred a b))
+      ([a b & more] (and (pred a b) (every-pair? pred more)))))
+
+(defn gen-operator ; TODO move to pcc.numeric?
+  "Generates an operator-like function which has zero (base), one (identity),
+   two (pair), and variable arities."
+  [f0 f1 f2]
+  (fn ([] (f0))
+      ([a] (f1 a))
+      ([a b] (f2 a b))
+      ([a b & more] (reduce f2 (f2 a b) more))))
+
+https://github.com/cognitect-labs/onto
+The core premise is that entities can be found to belong to one or more classes. This is different than OO design, where you prescribe class membership at creation time. Here an entity may gain or lose classes by virtue of properties and values that are attached to it.
+
+TODO look at AtomicLong.accumulateAndGet(long x, LongBinaryOperator accumulatorFunction)
+TODO revisit whether transformers are necessary compared with transducers
+
+The power offered by spec is probably better compared against dependent type systems like Idris. True static type systems run analysis at compile-time, but spec allows you to perform very complex checks because you have the power of full blown language.
+
+For example, with spec you can write a function spec that says "Union is a function that takes two hashsets. The return value of this function is a hashset that contains all the values found in the hashset arguments". That's impossible to statically check in most languages. Some languages like Idris approach this level of expressibility, but when they fall short, you're sunk. In spec you can always pop the escape hatch and write a custom predicate in Clojure code.
+
+So for me that's the tradeoff. I lose compile-time checking, but gain a *ton* of power. And since types exist at run-time we can do cool things like introspect them and generate data, documentation, better error messages, or even run logic over them to write a static type checker.
+
+
+
+http://www.kdgregory.com/?page=java.byteBuffer — useful reading about off-heap memory
+https://www.akkadia.org/drepper/cpumemory.pdf — what every programmer should know about memory
+https://mechanical-sympathy.blogspot.com/2012/10/compact-off-heap-structurestuples-in.html — compact off-heap structures and tuples

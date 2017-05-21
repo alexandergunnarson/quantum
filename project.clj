@@ -140,8 +140,8 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.2.0"           ]
          ; REPL
-         [figwheel                              "0.5.8"           ]
-         [figwheel-sidecar                      "0.5.8"           ]
+         [figwheel                              "0.5.10"          ]
+         [figwheel-sidecar                      "0.5.10"          ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====
@@ -337,7 +337,6 @@
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
      [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
   ;:npm {:dependencies [[js-joda "1.1.12"]]}
-  :injections [(require 'quantum.core.core)] ; To get around 'No such var: clojure.core/require-macros'
   :profiles
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
@@ -346,7 +345,7 @@
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.4" ]
-                    [lein-figwheel "0.5.8"
+                    [lein-figwheel "0.5.10"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
                                    org.clojure/core.async
@@ -402,13 +401,13 @@
                                     [:cljsbuild :builds :dev       :compiler :output-to ]
                                     [:cljsbuild :builds :min       :compiler :output-dir]
                                     [:cljsbuild :builds :min       :compiler :output-to ]]
-  :java-source-paths ["src/java"]
-  :source-paths      ["src/clj"
-                      "src/cljc"]
+  :source-paths ["src"]
   ;:resource-paths ["resources"] ; important for Figwheel
-  :test-paths     ["test/cljs" "test/clj" "test/cljc"]
-  :repl-options {:init (do (clojure.core/require 'quantum.core.print)
-                           (require 'alembic.still)
+  :test-paths     ["test"]
+  :repl-options {:init (do (clojure.core/require
+                             'quantum.core.print
+                             'quantum.core.print.prettier)
+                           (quantum.core.print.prettier/extend-pretty-printing!)
                            (clojure.main/repl
                              :print  quantum.core.print/ppr
                              :caught quantum.core.print/ppr))}
@@ -418,9 +417,7 @@
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
-      {:test {:source-paths ["src/cljs"  "src/cljc"
-                             "dev/cljs"  "dev/cljc"
-                             "test/cljs" "test/cljc"]
+      {:test {:source-paths ["src" "dev/cljs"  "dev/cljc"]
               :compiler     {:output-to            "dev-resources/public/js/test-compiled/quantum.js"
                              :output-dir           "dev-resources/public/js/test-compiled/out"
                              :optimizations        :whitespace
@@ -428,9 +425,7 @@
                              :asset-path           "js/test-compiled/out"
                              :cache-analysis       true}}
        :no-reload {:figwheel {:autoload false}
-                   :source-paths ["src/cljs"  "src/cljc"
-                                  "dev/cljs"  "dev/cljc"
-                                  "test/cljs" "test/cljc"]
+                   :source-paths ["src" "dev/cljs"  "dev/cljc"]
                    :compiler {:output-to            "dev-resources/public/js/nr-compiled/quantum.js"
                               :output-dir           "dev-resources/public/js/nr-compiled/out"
                               :optimizations        :none
@@ -440,9 +435,7 @@
                               :source-map-timestamp true
                               :cache-analysis       true}}
        :dev {:figwheel true
-             :source-paths ["src/cljs"  "src/cljc"
-                            "dev/cljs"  "dev/cljc"
-                            "test/cljs" "test/cljc"]
+             :source-paths ["src" "dev/cljs"  "dev/cljc"]
              :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
                         :output-dir           "dev-resources/public/js/compiled/out"
                         :optimizations        :none
@@ -451,7 +444,7 @@
                         :source-map           true
                         :source-map-timestamp true
                         :cache-analysis       true}}
-       :min {:source-paths ["src/cljc" "dev/cljc"]
+       :min {:source-paths ["src"]
              :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
                         :output-dir     "dev-resources/public/js/min-compiled/out"
                         :main           quantum.dev
