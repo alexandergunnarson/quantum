@@ -338,9 +338,9 @@
           (get-validator x)))
       (#?(:clj  addWatch
           :cljs -add-watch) [this k f]
-        (add-watch x k f)
+        (add-watch! x k f)
         this)
       (#?(:clj  removeWatch
           :cljs -remove-watch) [this k]
-        (remove-watch x k)
+        (remove-watch! x k)
         this)))
