@@ -354,7 +354,7 @@
         (when (and (web-worker?)
                    ((fn-and t/integer? pos?) thread-ct)
                    (not @web-workers-set-up?))
-          (log/pr :user "Bootstrapping web workers")
+          (log/pr :always "Bootstrapping web workers")
           ; Run the setup code for the web workers
           (bootstrap-worker)
           (reset! web-workers-set-up? true))

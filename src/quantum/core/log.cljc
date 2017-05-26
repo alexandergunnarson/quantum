@@ -43,9 +43,9 @@
 
 (defonce levels
   (atom (map->LoggingLevels
-          {:warn true
-           :user true
-           :ns   true})))
+          {:always true
+           :warn   true
+           :ns     true})))
 
 (defonce log (atom []))
 
@@ -179,7 +179,7 @@
   `(let [level# ~level]
      (ppr level# ~(->> xs (map #(vector (list 'quote %) %)) (into {}))))))
 
-#?(:clj (defmacro prl! "For debugging." [& xs] `(prl :user ~@xs)))
+#?(:clj (defmacro prl! "For debugging." [& xs] `(prl :always ~@xs)))
 
 #?(:clj
 (defmacro this-ns []
@@ -188,7 +188,7 @@
 #?(:clj
 (defmacro with-prl
   "For thread-last ->> usage"
-  ([expr] `(with-prl :user ~expr))
+  ([expr] `(with-prl :always ~expr))
   ([level expr]
   `(let [expr# ~expr]
      (do (ppr ~level {'~expr expr#}) expr#)))))

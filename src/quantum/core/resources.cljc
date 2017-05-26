@@ -417,9 +417,9 @@
       (if running?
           (do (log/pr :warn "System" name "already running.")
               this)
-          (try (log/pr :user "======== STARTING SYSTEM" name "========")
+          (try (log/pr :always "======== STARTING SYSTEM" name "========")
                (let [sys-map' (start-system! sys-map)]
-                 (log/pr :user "System" name "started.")
+                 (log/pr :always "System" name "started.")
                  (assoc this :sys-map sys-map' :running? true))
             (catch #?(:clj Throwable :cljs :default) t
               (log/ppr :warn (str "System " name " failed to start:") t)
@@ -427,9 +427,9 @@
               this))))
     (stop [this]
       (if (and sys-map running?)
-          (let [_ (log/pr :user "======== STOPPING SYSTEM" name "========")
+          (let [_ (log/pr :always "======== STOPPING SYSTEM" name "========")
                 sys-map' (stop-system! sys-map)]
-            (log/pr :user "System" name "stopped.")
+            (log/pr :always "System" name "stopped.")
             (assoc this :sys-map sys-map' :running? false))
           (do (log/pr :warn "System" name "cannot be stopped; system is not running.")
               this)))

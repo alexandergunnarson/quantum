@@ -60,7 +60,7 @@
           (-> balance-elem (.getAttribute "innerHTML")
               rest ; remove dollar sign
               str/val)]
-      (log/pr :user "==========" "Google Wallet balance is" (str balance ".") "==========")
+      (log/pr :always "==========" "Google Wallet balance is" (str balance ".") "==========")
       balance)
     (catch Object e
       (if (-> e :type (= :not-found))

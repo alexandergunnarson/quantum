@@ -35,26 +35,26 @@
 
 #_(defnt oreset!*
   ([^javafx.collections.transformation.FilteredList x-0 states x-f]
-    (log/pr :user 3)
+    (log/pr :always 3)
     (println "ORESET WITH NEW-X CLASS" (class x-f))
     (fx/run<!!
-      (log/pr :user 4)
+      (log/pr :always 4)
       (.clear (.getSource x-0))
       (.addAll (.getSource x-0) x-f)))
   ([^quantum.ui.core.FXObservableAtom x states commit? x-f]
-    (log/pr :user 5)
+    (log/pr :always 5)
     (oreset!* (:observable x) states x-f)
     (reset! (:immutable x) x-f)
     (when commit? (commit!* x states))
-    (log/pr :user 6)
+    (log/pr :always 6)
     x))
 
 #_(defn oreset! [states commit? x-0 x-f] (oreset!* x-0 states commit? x-f))
 
 #_(defn coordinate-state! [states x]
-  (log/pr :user 1)
+  (log/pr :always 1)
   (let [i (get-in @states [x :index])]
-    (log/pr :user 2)
+    (log/pr :always 2)
     (oreset! states false x (get-in @states [x :states i]))))
 
 ; TODO doesn't fully work

@@ -92,12 +92,12 @@
   [web-driver]
   comp/Lifecycle
   (start [this]
-    (log/pr :user "Starting headless browser...")
+    (log/pr :always "Starting headless browser...")
     (assoc this
       :web-driver (default-driver)))
   (stop [this]
     (when (:web-driver this)
-      (log/pr :user "Stopping headless browser...")
+      (log/pr :always "Stopping headless browser...")
       (-> this :web-driver res/cleanup!))
     (assoc this :web-driver nil))))
 

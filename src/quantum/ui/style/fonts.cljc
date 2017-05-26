@@ -254,7 +254,7 @@
     "Verdana-BoldItalic"
     "Verdana-Italic"
     "ZapfDingbatsITC"
-    "Zapfino"})    
+    "Zapfino"})
 
 (def families
   {:garamond       {:pref ["'EB Garamond'"     "Baskerville" "Georgia"   "Times" "serif"     ]}
@@ -296,23 +296,23 @@
 ;   (whenc font-0 (fn-not font-loaded?) font-alt))
 
 ; (defonce fonts
-;   (do (log/pr :user
+;   (do (log/pr :always
 ;         (str "Loading fonts from "
 ;           (io/path (:resources @io/dirs) "Fonts") "..."))
 ;       (load-font! "Myriad Pro/Light.ttf")
 ;       (load-font! "Myriad Pro/Regular.ttf")
 ;       (load-font! "Myriad Pro/Semibold.ttf")
 ;       (load-font! "Myriad Pro/LightSemiExt.ttf")
-;       (load-font! "Arno Pro/Regular.otf") 
+;       (load-font! "Arno Pro/Regular.otf")
 ;       (load-font! "Arno Pro/Bold.otf")
 ;       (load-font! "Arno Pro/Italic.otf")
-;       (load-font! "Gotham/Regular/Bold.otf") 
+;       (load-font! "Gotham/Regular/Bold.otf")
 ;       (load-font! "Gotham/Regular/Medium.otf")
 ;       (load-font! "Gotham/Regular/Book.otf")
 ;       (load-font! "Gotham/Regular/Light.otf")
 ;       (load-font! "Gotham/Regular/XLight.otf")
 ;       (atom
-;         {:myriad {:lt 
+;         {:myriad {:lt
 ;                     (font-or  "MyriadPro-Light"        "Myriad Pro Light"             )
 ;                   :reg
 ;                     (font-or  "MyriadPro-Regular"      "Myriad Pro"                   )

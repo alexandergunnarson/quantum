@@ -293,5 +293,5 @@
        slurp
        scala-parser
       #_(insta/transform
-  {:package (fn [& args] (log/ppr :user "package" args))
-   :symbol  (fn [& args] (log/ppr :user "symbol" args))})))
+  {:package (fn [& args] (log/ppr :always "package" args))
+   :symbol  (fn [& args] (log/ppr :always "symbol" args))})))
