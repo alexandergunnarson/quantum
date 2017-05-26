@@ -135,8 +135,8 @@
    "youth" "majesty"])
 
 (defn gen-haiku-name []
-  (str (get haiku-adjs  (rand/rand-int-between true 0 (lasti haiku-adjs )))
+  (str (get haiku-adjs  (rand/int-between true 0 (lasti haiku-adjs )))
        "-"
-       (get haiku-nouns (rand/rand-int-between true 0 (lasti haiku-nouns)))
+       (get haiku-nouns (rand/int-between true 0 (lasti haiku-nouns)))
        "-"
-       (rand/rand-int-between true 1000 9999)))
+       (rand/int-between true 1000 9999)))

@@ -7,7 +7,6 @@
       :refer [<- fn1]]
     [quantum.core.collections :as coll
       :refer [map+ remove+
-              mutable setm!
               kw-map ifor get reducei]]
     [quantum.core.error
       :refer [->ex]]

@@ -1,5 +1,7 @@
 (ns quantum.media.imaging.ocr
   (:require
+    [quantum.core.error       :as err
+      :refer [TODO]]
     [quantum.core.paths       :as path]
     [quantum.core.system      :as sys ]
     [quantum.core.io          :as io  ]

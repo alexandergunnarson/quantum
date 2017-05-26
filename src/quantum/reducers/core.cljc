@@ -17,9 +17,10 @@
       :refer [defalias #?@(:clj [defmalias])]]
     [quantum.core.collections :as coll]
     [quantum.reducers.spark   :as spark+])
+#?(:cljs
   (:require-macros
     [quantum.reducers.core    :as self
-      :refer [defreducer]])
+      :refer [defreducer]]))
 #?(:clj (:import (org.apache.spark.api.java JavaRDDLike)
                  (org.apache.spark.sql      Dataset))))
 
@@ -120,9 +121,9 @@
            (group-by+ identity)
            (map+      (fn [?] ...)
            (join to)))
-      (coll/red-frequencies to x))))
+      (coll/frequencies to x))))
 
-#?(:cljs (defn frequencies [to x] (coll/red-frequencies to x)))
+#?(:cljs (defn frequencies [to x] (coll/frequencies to x)))
 
 #?(:clj
 (defn sort-by+
