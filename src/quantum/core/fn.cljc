@@ -4,20 +4,22 @@
           Higher-order functions, currying, monoids, reverse comp, arrow macros, inner partials, juxts, etc."
     :attribution "alexandergunnarson"}
   quantum.core.fn
-       (:refer-clojure :exclude
-        [constantly, as->, trampoline])
-       (:require
-         [clojure.core             :as core]
-         [clojure.walk]
-         [quantum.core.vars        :as var
-           :refer [defalias]]
-         [quantum.core.core        :as qcore]
-         [quantum.core.macros.core :as cmacros
-           :refer [case-env #?@(:clj [compile-if])
-                   gen-args arity-builder max-positional-arity unify-gensyms]])
-      #?(:cljs
-      (:require-macros
-        [quantum.core.fn :as self])))
+  (:refer-clojure :exclude
+   [constantly, as->, trampoline])
+  (:require
+    [clojure.core             :as core]
+    [clojure.walk]
+    [quantum.core.vars        :as var
+      :refer [defalias]]
+    [quantum.core.core        :as qcore]
+    [quantum.core.macros.core :as cmacros
+      :refer [case-env #?@(:clj [compile-if])
+              gen-args arity-builder max-positional-arity unify-gensyms]])
+  #?(:cljs
+  (:require-macros
+    [quantum.core.fn :as self
+      :refer [gen-constantly gen-call gen-positional-nthas
+              gen-ntha gen-conja gen-reversea gen-mapa]])))
 
 ; To signal that it's a multi-return
 (deftype MultiRet [val])
@@ -61,11 +63,10 @@
 (defmacro fn'*:arities
   [arities-ct & body]
   (let [f (gensym "this")]
-   `(~'fn ~f ~@(arity-builder (fn [args] (println "Args" args) (if (empty? args)
-                                               `(do ~@body)
-                                               `(~f)))
-                              (fn' `(~f))
-                              0 arities-ct)))))
+   `(~'fn ~f ~@(arity-builder
+                 (fn [args] (if (empty? args) `(do ~@body) `(~f)))
+                 (fn' `(~f))
+                 0 arities-ct)))))
 
 #?(:clj
 (defmacro fn'*
