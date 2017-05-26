@@ -337,6 +337,7 @@
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
      [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
   ;:npm {:dependencies [[js-joda "1.1.12"]]}
+  :injections [(require '[clojure.tools.namespace.repl :refer [refresh]])]
   :profiles
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
