@@ -14,9 +14,10 @@
             [quantum.core.collections.base :as cbase
               :refer [reduce-pair]]
             [quantum.core.core    :as qcore]]))
+  #?(:cljs
   (:require-macros
             [quantum.core.vars    :as var
-              :refer [defalias]])
+              :refer [defalias]]))
   (:import #?@(:clj  [java.util.HashMap
                       [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
                       [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
@@ -32,6 +33,11 @@
 ;   - Alex Miller: "We have seen it and will probably investigate some of these ideas after 1.8."
 ; =======================
 
+#?(:clj (def int-map       imap/int-map  ))
+#?(:clj (defalias hash-map:long->ref int-map))
+(defalias array-map core/array-map)
+(defalias hash-map  core/hash-map )
+
 (defalias ordered-map #?(:clj omap/ordered-map :cljs array-map))
 (defalias om          ordered-map)
 
@@ -41,7 +47,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (qcore/quote-map-base om (comp keyword str) ks)))
+  (qcore/quote-map-base `om (comp keyword str) ks)))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)
@@ -57,11 +63,6 @@
   (sorted-map-by (fn [k1 k2]
                    (compare [(get m-0 k2) k2]
                             [(get m-0 k1) k1]))))
-
-#?(:clj (def int-map       imap/int-map  ))
-#?(:clj (defalias hash-map:long->ref int-map))
-#?(:clj (def array-map     core/array-map))
-#?(:clj (def hash-map      core/hash-map ))
 
 ; TODO look at imap/merge
 

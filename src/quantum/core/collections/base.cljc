@@ -13,7 +13,10 @@
     [quantum.core.logic         :as logic
       :refer [condf1 fn-not]]
     [quantum.core.vars             :as var
-      :refer [replace-meta-from]]))
+      :refer [replace-meta-from]])
+  #?(:cljs
+  (:require-macros
+    [quantum.core.collections.base :as self])))
 
 (defn name [x] (if (nil? x) "" (core/name x)))
 
@@ -125,8 +128,8 @@
 (defn update-val [[k v] f]
   [k (f v)])
 
-#?(:clj (defmacro kw-map    [& ks] (qcore/quote-map-base hash-map (comp keyword str) ks)))
-#?(:clj (defmacro quote-map [& ks] (qcore/quote-map-base hash-map identity           ks)))
+#?(:clj (defmacro kw-map    [& ks] (qcore/quote-map-base `hash-map (comp keyword str) ks)))
+#?(:clj (defmacro quote-map [& ks] (qcore/quote-map-base `hash-map identity           ks)))
 
 ; ----- WALK ----- ;
 
