@@ -45,14 +45,26 @@ can make do with one quantifier (`∃`, infinite  or `∀`) and one self-suffici
 
 A predicate `P` may be defined as a function from *all things* (the constituent elements of the set of all sets) to the truth value of whether a particular thing satisfies `P`. The ***extension*** of `P` may be defined as the set of all things for which `P` is true.
 
-The extension of the property of `being red-colored` is a subset of the extension of the property of `having a color`
-
-Properties are often compared to sets and sometimes even assimilated to them. Just as properties can have instances, sets can have members, and it is typically assumed that, given a property, there is a corresponding set, called the extension of the property, having as members exactly those things that exemplify the property. But it is important to note a fundamental difference between the two. Sets have clear-cut identity conditions: they are identical when they have exactly the same members. In contrast, the identity conditions of properties are a matter of dispute. Everyone who believes there are properties at all, however, agrees that numerically distinct properties can have exactly the same instances without being identical. Even if it turns out that exactly the same things exemplify a given shade of green and circularity, these two properties are still distinct. For these reasons sets are called extensional and properties are often said to be intensional entities. Precisely because of their intensional nature properties were dismissed by Quine (1956) as ‘creatures of darkness’ and just a few decades ago many philosophers concurred with him. But philosophers now widely invoke properties without guilt or shame.
 
 
-A type, both within the context of `defnt` as well as in set theory and mathematical logic, is equivalent to a property. A property, far from an ineffable thing, may be easily defined as a set to which an entity belongs; thus, to say that an entity `E` "has" a property `P` is equivalent to saying that `E` is a member of the set `P`. An apple is red, and so an apple is a member of the set of all red things. Likewise, a vector is sequential, and thus a vector is a member of the set of all sequential things.
+A ***type***, both within the context of `defnt` as well as in set theory and mathematical logic, may be equated to a ***property***. A property, far from an ineffable thing, may be easily defined by two constituents: first, its ***intension***, and second, its ***extension***. We encounter both intensionality and extensionality every day, but rarely attribute these technical terms to what we experience.
 
-In Clojure, the `PersistentVector` type is a superset of (or in object-oriented terms, subclass) of many other types, only a few of which include `Sequential`, `Counted`, `Indexed`, `APersistentVector`, and `Object`. That the first three are interfaces, the fourth is an abstract class, and the fifth is a concrete class are, with respect to `defnt`, largely irrelevant implementation details: rather, each of these things are to be considered "reified types", as they are each properties — *types* — encapsulated by a class that has been created — *reified* — in code.
+For instance, take the property of "triangleness". The *intension* of this property is, in rough terms, equivalent to its meaning or its definition. It includes properties like "having three sides", "having angles whose measures add up to exactly 180 degrees (in Euclidean geometry)", "being a shape", and so on. Intensions are composed of theoretically infinite properties that usually relate to one another in logical and set-theoretic ways. For instance, the property of "having three sides" logically entails the property of "being a shape" (but not vice versa): the intension of "having three sides" is a superset of the intension of "being a shape". Sometimes properties logically entail each other — for instance, the property of "having three sides" logically entails the property of "having angles whose measures add up to exactly 180 degrees", and vice versa. To those uninitiated to geometry, the two properties seem to be unrelated, but this bidirectional logical entailment means that these properties are actually ***co-intensional***: that is, they are perfectly synonomous; they mean the exact same thing.
+
+Suppose you were able to strip away all of the derived properties of "triangleness" down to a set of its fundamental properties. Then these properties would amount to the ***necessary*** properties of "triangleness": take even one of them away, and the resulting set of properties no longer describes a triangle.
+
+Now let's turn our attention to the *extension* of the property of "triangleness". Extensionality, rather than dealing with abstract meaning, deals in objects to which that meaning is applied. The extension of the property of triangleness amounts to the set of all triangles.
+
+Properties cannot be defined exclusively on their extension, for extensionality is contingent: properties may be co-extensional without being co-intensional. For instance, take two properties: "having a physical human brain" and "having a physical human heart". These properties are clearly not co-intensional; that is, while they both relate to the human body, they nonetheless mean two very different things. However, at least prior to the invention of the pacemaker (and speaking of only humans that were alive, so barring e.g. Aztec sacrifical ceremonies), these two properties were co-extensional: that is, everything that had a physical human brain also had a physical human heart.
+
+Intensionality and extensionality are, in one way, inversely related. More requirements ("intensors") result in fewer entities that meet those requirements ("extensors").
+
+
+To say that an entity `E` "has" a property `P` is equivalent to saying that `E` is a member of the set `P`. An apple is red, and so an apple is a member of the set of all red things. Likewise, a vector is sequential, and thus a vector is a member of the set of all sequential things.
+
+Let's take the example of the `PersistentVector` property (type) in Clojure. Its superproperties ("superclasses" in object-oriented terms) include `Sequential`, `Counted`, `Indexed`, `APersistentVector`, `Object`, and so on. There are more requirements ("necessary properties" or "intensors") for an object to qualify as a `PersistentVector` than for one to qualify as e.g. merely `Sequential`. More requirements result in fewer entities ("extensors") that meet those requirements. Thus, `PersistentVector` amounts to a superset of the intension of, and a subset of the extension of these superproperties.
+
+That the first three are interfaces, the fourth is an abstract class, and the fifth is a concrete class are, with respect to `defnt`, largely irrelevant implementation details: rather, each of these things are to be considered "reified types", as they are each properties — *types* — encapsulated by a class that has been created — *reified* — in code.
 
 ### Abstract Types vs. Reified Types
 
@@ -72,7 +84,7 @@ public class NumberLessThan7 {
 }
 ```
 
-Thus, any time we passed around a `NumberLessThan7`, we could rest assured that its field, `x`, would always have the property of being a number less than 7, i.e., that it would belong to the set `S`, and thus satisfy its corresponding defining predicate.
+Thus, any time we passed around a `NumberLessThan7`, we could rest assured that its field, `x`, would always have the property of being a number less than 7, i.e., that it would belong to the set `S`, and thus satisfy its corresponding defining predicate ("intensor").
 
 With `NumberLessThan7`, we have just created a reified type. The class `NumberLessThan7` is a reified version of the abstract type `S`.
 
@@ -80,7 +92,7 @@ Some reified types come pre-defined by and intrinsic to the virtual machine, eve
 
 ### Types As Minimal Sets
 
-Note that an object, though typed within the context of a code block as being of a particular class, may inherently belong to quite a number of property-sets. For example, by its nature, the number `1` may be considered an element of a number of types in Java, including `short`, `Short`, `int`, `Integer`, `long`, `Long`, `float`, `Float`, `double`, `Double`, `Comparable`, and `Object`. The type `short`, defined as `short = {x : x ϵ ℤ; -32,768 ≤ x ≤ 32,767}` contains the number `1`, regardless of its internal representation (bit-structure). Likewise, since `1` is an element of `double` (again regardless of its internal representation) which may be cast to `Double`, and `Double` is a superset (subclass) of `Comparable`. ... TODO
+Note that an object, though traditionally typed within the context of a code block as being of only one particular class, may inherently belong to quite a number of otherwise unrelated property-sets. For example, by its nature, the number `1` may be considered an element of the extensions of a number of types in Java, including `short`, `Short`, `int`, `Integer`, `long`, `Long`, `float`, `Float`, `double`, `Double`, `Comparable`, and `Object`. The type `short`, defined as `short = {x : x ϵ ℤ; -32,768 ≤ x ≤ 32,767}` contains the number `1`, regardless of its internal representation (bit-structure). Likewise, since `1` is an element of `double` (again regardless of its internal representation) which may be cast to `Double`, and `Double` is a superset (subclass) of `Comparable`. ... TODO
 
 The relations of subset and subclass (and their duals, superset and superclass) are deeply intertwined. The `Double` class implements the `Comparable` interface, which means that it is (in some sense) a subclass of `Comparable`. By definition, then, the set of all objects belonging to the type `Double` is a subset of the set of all objects belonging to the type `Comparable`: there are `Comparable`s that are not `Double`s. But it is worth noting that `Double`s provide more than `Comparable` requires: `Double`s are not only `Comparable`, but, being numbers, they may be mathematically manipulated in ways that not all `Comparable`s can. Thus, though the elements of `Double` are a subset of the elements of `Comparable`, the elements of `Double` belong in more sets. ... TODO
 
@@ -94,7 +106,7 @@ Static typing, then, is simply compile-time contract enforcement, and dynamic ty
 
 # Implementation
 
-For this task, it was necessary to create a type analysis tool that goes beyond the Hindley-Milner type system and allows expressions to belong not only to one single reified type, but to any number of abstract types. Only in this way was it possible to achieve both maximal expressivity and maximal performance.
+For this task, it was necessary to create a type analysis tool that goes beyond the Hindley-Milner type system and allows expressions to belong not only to one single reified type, but to any number of abstract types. Only in this way was it possible to achieve both maximal expressivity and maximal runtime performance.
 
 ## Overload Resolution
 
