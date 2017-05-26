@@ -14,9 +14,10 @@
       :refer [defalias]]
     [quantum.core.macros.core :as cmacros
       :refer [case-env]])
+  #?(:cljs
   (:require-macros
     [quantum.core.logic       :as self
-      :refer [fn-not]]))
+      :refer [fn-not]])))
 
 ; TODO: ; cond-not, for :pre
 ; |Switch| is implemented using an array and then points to the code.

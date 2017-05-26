@@ -1,6 +1,7 @@
 (ns quantum.core.data.tuple
+  #?(:cljs
   (:require-macros
-    [quantum.core.data.tuple :as self]))
+    [quantum.core.data.tuple :as self])))
 
 ; TODO (maybe): equality, etc.
 ; TODO CLJS

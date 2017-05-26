@@ -16,9 +16,10 @@
     [quantum.core.log              :as log]
     [quantum.core.vars             :as var
       :refer [defalias]])
+  #?(:cljs
   (:require-macros
     [quantum.core.error            :as self
-      :refer [with-log-errors assert]]))
+      :refer [with-log-errors assert]])))
 
 (def ^{:todo {0 "Finish up `conditions` fork"}} annotations nil)
 

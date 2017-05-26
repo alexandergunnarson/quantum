@@ -10,18 +10,15 @@
     [clojure.set              :as set]
     [clojure.data.avl         :as avl]
     [quantum.core.vars        :as var
-      :refer [#?(:clj defalias)]]
+      :refer [defalias]]
     [quantum.core.error       :as err
       :refer [->ex TODO]]
     [quantum.core.fn          :as fn]
 #?@(:clj
    [[clojure.data.finger-tree :as ftree]
-    [flatland.ordered.set     :as oset ]
-    [seqspert.hash-set                 ]
-    [clojure.data.int-map     :as imap ]]))
-  (:require-macros
-    [quantum.core.vars        :as var
-       :refer [defalias]               ])
+    [flatland.ordered.set     :as oset]
+    [seqspert.hash-set]
+    [clojure.data.int-map     :as imap]]))
   (:import
 #?@(:clj
     [java.util.HashSet

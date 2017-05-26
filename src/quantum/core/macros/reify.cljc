@@ -1,18 +1,18 @@
 (ns quantum.core.macros.reify
   (:require
-    [quantum.core.analyze.clojure.core       :as ana
-      :refer [type-hint]                                ]
-    [quantum.core.collections.base           :as cbase
+    [quantum.core.analyze.clojure.core :as ana
+      :refer [type-hint]]
+    [quantum.core.collections.base     :as cbase
       :refer [update-first update-val ensure-set kw-map nempty?]]
-    [quantum.core.error                      :as err
-      :refer [->ex]                                     ]
-    [quantum.core.fn                         :as fn
+    [quantum.core.error                :as err
+      :refer [->ex]]
+    [quantum.core.fn                   :as fn
       :refer [fn-> fn->> <-]]
-    [quantum.core.log                        :as log]
-    [quantum.core.logic                      :as logic
+    [quantum.core.log                  :as log]
+    [quantum.core.logic                :as logic
       :refer [whenc fn-and]]
-    [quantum.core.macros.core                :as cmacros]
-    [quantum.core.macros.transform           :as trans  ]))
+    [quantum.core.macros.core          :as cmacros]
+    [quantum.core.macros.transform     :as trans]))
 
 (defn gen-reify-def
   [{:keys [ns- sym ns-qualified-interface-name reify-body]}]
@@ -60,8 +60,8 @@
                (group-by val)
                (<- dissoc 1))
         _ (when (nempty? duplicate-methods)
-            (log/pr        :user "Duplicate methods for" sym ":")
-            (log/ppr-hints :user duplicate-methods)
+            (log/pr        :always "Duplicate methods for" sym ":")
+            (log/ppr-hints :always duplicate-methods)
             (throw (->ex "Duplicate methods")))]
     reify-body))
 

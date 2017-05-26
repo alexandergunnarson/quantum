@@ -12,7 +12,7 @@
     #?(:clj [taoensso.timbre.profiling :as p])
             [quantum.core.macros.core  :as cmacros
               :refer [case-env]])
-  (:require-macros [quantum.core.cache :as self])
+  #?(:cljs (:require-macros [quantum.core.cache :as self]))
   #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj

@@ -20,8 +20,9 @@
       :refer [case-env locals]]
     [quantum.core.vars :as var
       :refer [defalias defmalias]])
+  #?(:cljs
   (:require-macros
-    [quantum.core.spec :as self]))
+    [quantum.core.spec :as self])))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
 

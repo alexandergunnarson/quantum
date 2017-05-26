@@ -20,9 +20,19 @@
     [quantum.core.logic    :as logic
       :refer [fn-and condf1 fn=]]
     [quantum.core.numeric.combinatorics :as combo])
+  #?(:cljs
   (:require-macros
     [quantum.core.type.defs :as self
-      :refer [->array-nd-types*]])
+      :refer [->array-nd-types*
+              !hash-map-types:gen
+              !unsorted-map-types:gen
+              !sorted-map-types:gen
+              !map-types:gen
+              !hash-set-types:gen
+              !unsorted-set-types:gen
+              !sorted-set-types:gen
+              !set-types:gen
+              gen-<type-pred=>type>]]))
   (:import
     #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble
@@ -890,13 +900,14 @@
 
 ; ===== PREDICATES ===== ;
 
+#?(:clj
 (defmacro gen-<type-pred=>type> []
   (->> (ns-interns *ns*)
        keys
        (filter (fn-> name (str/ends-with? "-types")))
        (map    (fn [t] [(list 'quote (symbol (str/replace (name t) #"-types$" "?")))
                         t]))
-       (into   {})))
+       (into   {}))))
 
 (def type-pred=>type
   (merge (gen-<type-pred=>type>)

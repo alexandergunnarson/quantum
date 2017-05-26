@@ -24,8 +24,9 @@
     [quantum.core.print        :as pr]
     [quantum.core.vars         :as var
       :refer [defalias #?(:clj defmalias)]])
+  #?(:cljs
   (:require-macros
-    [quantum.core.macros       :as self]))
+    [quantum.core.macros       :as self])))
 
 (log/this-ns)
 
