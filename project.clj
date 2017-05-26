@@ -237,7 +237,7 @@
      [automat                                   "0.2.0"           ]
      ; ==== MATCH ====
      [org.clojure/core.match                    "0.3.0-alpha4"    ]
-     [net.cgrand/seqexp                         "0.6.0"]
+     [net.cgrand/seqexp                         "0.6.2"]
      ; ==== CODE TRANSFORMATION ====
        ; META (CODE)
        ;[repetition-hunter                      "1.0.0"           ]
