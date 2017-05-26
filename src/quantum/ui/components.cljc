@@ -28,9 +28,10 @@
       :refer [layout-x layout-y layout layout-perp
               layout-direction layout-fit autofit
               layout-wrap scaled]])
+#?(:cljs
   (:require-macros
     [reagent.ratom
-      :refer [reaction]]))
+      :refer [reaction]])))
 
 (log/this-ns)
 

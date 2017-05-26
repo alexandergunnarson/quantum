@@ -19,12 +19,26 @@
     [quantum.core.macros.core
       :refer [case-env locals]]
     [quantum.core.vars :as var
-      :refer [defalias defmalias]])
-  #?(:cljs
+      :refer [defalias defmalias]]
+  #?(:cljs [figwheel.client.utils])
+  #?(:cljs [figwheel.client.socket])
+  [#?(:clj org.httpkit.client :cljs cljs-http.client) :as http])
+#?(:cljs
   (:require-macros
     [quantum.core.spec :as self])))
 
 (s/check-asserts true) ; TODO put this somewhere like a component
+
+; #?(:clj (defmacro random [] (case-env :cljs :cljs :other)))
+; #?(:cljs (enable-console-print!))
+; #?(:cljs (set! figwheel.client.utils/*print-debug* true))
+; #?(:cljs (js/console.error "FROM js/console.error"))
+; #?(:cljs (figwheel.client.utils/debug-prn "FROM figwheel.client.utils/debug-prn"))
+; #?(:cljs (figwheel.client.utils/log :debug "FROM figwheel.client.utils/log"))
+; #?(:cljs (quantum.core.log/prl :warn "THIS IS CLJS ENV" (quantum.core.spec/random)))
+; #?(:cljs (figwheel.client.socket/send! "Sent this message!! :D"))
+; #?(:clj  (http/post "http://localhost:8081" {:body (str "This is a test body from " :clj)}))
+; #?(:cljs (http/post "http://localhost:8081" {:body (str "This is a test body from " :cljs)}))
 
 (defrecord ValidationError
   [problems failure at-line at-instant form locals invalidated invalidated-type])
@@ -246,5 +260,5 @@
 
 (defn validate:some? [x]
   (if (nil? x)
-      (throw (ex-info "Value is not allowed to be nil but was"))
+      (throw (ex-info "Value is not allowed to be nil but was" {}))
       x))

@@ -7,7 +7,7 @@
       :refer [case-env]]
     [quantum.core.log
       :refer [prl]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.macros.defrecord :as self])))
 

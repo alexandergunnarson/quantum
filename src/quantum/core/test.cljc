@@ -6,8 +6,9 @@
       :refer [ppr-str]]
     [quantum.core.vars
       :refer [#?(:clj defmalias)]])
+#?(:cljs
   (:require-macros
-    [quantum.core.test :as self]))
+    [quantum.core.test :as self])))
 
 ; TO EXPLORE
 ; - Generative testing

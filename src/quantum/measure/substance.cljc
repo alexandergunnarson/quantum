@@ -1,6 +1,6 @@
 (ns quantum.measure.substance
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 #_(defunits-of substance [:mol #{:moles}]
   ; The amount of substance of a system which contains as many

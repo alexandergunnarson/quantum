@@ -30,10 +30,12 @@
       :refer [reduce, transduce]]
     [quantum.core.vars
       :refer [defalias defaliases]])
-  (:require-macros
-    [quantum.core.compare
-      :refer [< > <= >=]])
-  #?(:clj (:import clojure.lang.BigInt quantum.core.Numeric)))
+#?(:cljs (:require-macros
+    [quantum.core.compare            :as self
+      :refer [< > <= >=]]))
+#?(:clj
+  (:import
+    clojure.lang.BigInt quantum.core.Numeric)))
 
 (defaliases ccomp
   compare

@@ -95,6 +95,7 @@
     [quantum.core.loops                      :as loops]
     [quantum.core.vars                       :as var
       :refer [defalias defaliases]])
+#?(:cljs
   (:require-macros
     [quantum.core.collections
       :refer [for for* lfor doseq doseqi reduce reducei dotimes
@@ -104,7 +105,7 @@
               index-of last-index-of
               first second rest last butlast get pop peek nth
               conjl conj! assoc assoc! assoc?! dissoc dissoc! disj!
-              map-entry join empty? empty update update! empty? elem->array]])
+              map-entry join empty? empty update update! empty? elem->array]]))
   #?(:clj  (:import java.util.Comparator quantum.core.refs.MutableReference)
      :cljs (:import goog.string.StringBuffer)))
 

@@ -31,9 +31,10 @@
     [quantum.core.log                 :as log]
     [quantum.numeric.core             :as num*
       :refer [pi* sigma sum]])
+#?(:cljs
   (:require-macros
     [quantum.ai.ml.classification
-      :refer [N N*]]))
+      :refer [N N*]])))
 
 (log/this-ns)
 

@@ -19,9 +19,10 @@
     [quantum.core.numeric.trig      ]
     [quantum.core.numeric.truncate     :as trunc]
     [quantum.core.numeric.types        :as ntypes])
+#?(:cljs
   (:require-macros
-    [quantum.core.numeric.strict-args :as self])
-  #?(:clj
+    [quantum.core.numeric.strict-args :as self]))
+#?(:clj
   (:import
     [java.nio ByteBuffer]
     [quantum.core Numeric] ; loops?

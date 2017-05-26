@@ -12,9 +12,10 @@
       :refer [->ex TODO catch-all]]
     [quantum.core.spec       :as s
       :refer [validate]])
+#?(:cljs
   (:require-macros
     [reagent.ratom
-      :refer [reaction]]))
+      :refer [reaction]])))
 
 (defn- do-when-global-mconn! [register-fn type k f]
   (let [watch (fn [_ _ _ conn]

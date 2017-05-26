@@ -26,9 +26,10 @@
     [quantum.core.type.core       :as tcore  ]
     [quantum.core.vars            :as var
       :refer [defalias]])
+#?(:cljs
   (:require-macros
-    [quantum.core.type
-      :refer [should-transientize? boolean?]]))
+    [quantum.core.type            :as self
+      :refer [should-transientize? boolean?]])))
 
 ; TODO: Should include typecasting? (/cast/)
 

@@ -29,9 +29,10 @@
     [quantum.core.type                :as type]
     [quantum.core.vars                :as var
       :refer [defalias]])
+#?(:cljs
   (:require-macros
     [quantum.core.loops               :as self
-      :refer [reduce reducei doseq]])
+      :refer [reduce reducei doseq]]))
   #?(:clj (:import [quantum.core.data Array])))
 
 (log/this-ns)

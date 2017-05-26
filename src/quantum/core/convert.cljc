@@ -1,77 +1,82 @@
 (ns quantum.core.convert ; perhaps coerce?
-           (:require [clojure.core                       :as core]
-                     [cognitect.transit                  :as t]
-             #?(:clj [clojure.tools.emitter.jvm])
-                     [clojure.tools.reader               :as r]
-                     [clojure.tools.reader.edn           :as r-edn]
-                     [clojure.core.async                 :as async]
-            #?(:cljs [cljs.reader                        :as core-r])
-            #?(:cljs [goog.crypt.base64                  :as base64])
-                     [datascript.transit                 :as dt]
-                     ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
-                   ; [gloss.core.formats                 :as gforms]
-           #?@(:clj [[clojure.java.io                    :as io]
-                     [manifold.stream                    :as s]
-                     [manifold.deferred                  :as d]
-                     [byte-streams                       :as streams]
-                     [byte-streams.graph                 :as g]
-                     [byte-streams.protocols             :as proto]
-                     [byte-streams.pushback-stream       :as ps]
-                     [byte-streams.char-sequence         :as cs]])
-                     [quantum.core.data.array            :as arr]
-                     [quantum.core.error                 :as err
-                       :refer [TODO]]
-                     [quantum.core.numeric               :as num]
-                     [quantum.core.string                :as str]
-                     [quantum.core.collections.core
-                       :refer [lasti]]
-                     [quantum.core.convert.core          :as conv]
-                     [quantum.core.convert.primitive     :as pconv]
-                     [quantum.core.data.complex.json     :as json]
-                     [quantum.core.macros                :as macros
-                       :refer [defnt #?(:clj defnt')]]
-                     [quantum.core.paths                 :as path]
-                     [quantum.core.fn                    :as fn]
-                     [quantum.core.vars                  :as var
-                       :refer [defalias defaliases]]
-                     [quantum.core.log                   :as log]
-                     [quantum.core.type
-                       :refer [static-cast]])
+  (:require
+    [clojure.core                       :as core]
+    [cognitect.transit                  :as t]
+ #?@(:clj
+   [[clojure.tools.emitter.jvm]
+    [clojure.java.io                    :as io]
+    [manifold.stream                    :as s]
+    [manifold.deferred                  :as d]
+    [byte-streams                       :as streams]
+    [byte-streams.graph                 :as g]
+    [byte-streams.protocols             :as proto]
+    [byte-streams.pushback-stream       :as ps]
+    [byte-streams.char-sequence         :as cs]]
+     :cljs
+   [[cljs.reader                        :as core-r]
+    [goog.crypt.base64                  :as base64]])
+    [clojure.tools.reader               :as r]
+    [clojure.tools.reader.edn           :as r-edn]
+    [clojure.core.async                 :as async]
+    [datascript.transit                 :as dt]
+    ; CompilerException java.lang.NoClassDefFoundError: IllegalName: compile__stub.gloss.data.bytes.core.gloss.data.bytes.core/MultiBufferSequence, compiling:(gloss/data/bytes/core.clj:78:1)
+  ; [gloss.core.formats                 :as gforms]
+    [quantum.core.data.array            :as arr]
+    [quantum.core.error                 :as err
+      :refer [TODO]]
+    [quantum.core.numeric               :as num]
+    [quantum.core.string                :as str]
+    [quantum.core.collections.core
+      :refer [lasti]]
+    [quantum.core.convert.core          :as conv]
+    [quantum.core.convert.primitive     :as pconv]
+    [quantum.core.data.complex.json     :as json]
+    [quantum.core.macros                :as macros
+      :refer [defnt #?(:clj defnt')]]
+    [quantum.core.paths                 :as path]
+    [quantum.core.fn                    :as fn]
+    [quantum.core.vars                  :as var
+      :refer [defalias defaliases]]
+    [quantum.core.log                   :as log]
+    [quantum.core.type
+      :refer [static-cast]])
+#?(:cljs
   (:require-macros
-    [quantum.core.convert :as self])
-  #?(:clj (:import
-            [org.apache.commons.codec.binary Base64]
-            [quantum.core.data.streams    ByteBufferInputStream]
-            [clojure.tools.reader.reader_types IPushbackReader]
-            [byte_streams.graph          Type]
-            [java.lang.reflect           Array]
-            [java.util.concurrent.atomic AtomicBoolean]
-            [java.net                    URI URL InetAddress]
-            ; http://java-performance.info/java-io-bytearrayoutputstream/ says:
-            ; Do not use ByteArrayOutputStream in performance critical code — it's synchronized
-            ; For performance critical code try to use ByteBuffer instead of ByteArrayOutputStream.
-            [java.io                     File
-                                         FileOutputStream FileInputStream
-                                         ByteArrayInputStream ByteArrayOutputStream
-                                         PipedOutputStream PipedInputStream
-                                         BufferedInputStream BufferedOutputStream
-                                         StringWriter
-                                         DataInputStream
-                                         InputStream OutputStream
-                                         ObjectInputStream ObjectOutputStream
-                                         IOException EOFException
-                                         RandomAccessFile
-                                         Reader BufferedReader InputStreamReader]
-            [java.nio                    ByteBuffer DirectByteBuffer CharBuffer]
-            [java.nio.charset            Charset]
-            [java.nio.channels           Channels
-                                         ReadableByteChannel WritableByteChannel
-                                         FileChannel FileChannel$MapMode
-                                         Pipe]
-            [java.nio.channels.spi       AbstractSelectableChannel]
-            [java.nio.file Path          Paths]
-            [java.util                   Locale]
-            [java.sql                    Blob Clob])))
+    [quantum.core.convert :as self]))
+#?(:clj
+  (:import
+    [org.apache.commons.codec.binary Base64]
+    [quantum.core.data.streams    ByteBufferInputStream]
+    [clojure.tools.reader.reader_types IPushbackReader]
+    [byte_streams.graph          Type]
+    [java.lang.reflect           Array]
+    [java.util.concurrent.atomic AtomicBoolean]
+    [java.net                    URI URL InetAddress]
+    ; http://java-performance.info/java-io-bytearrayoutputstream/ says:
+    ; Do not use ByteArrayOutputStream in performance critical code — it's synchronized
+    ; For performance critical code try to use ByteBuffer instead of ByteArrayOutputStream.
+    [java.io                     File
+                                 FileOutputStream FileInputStream
+                                 ByteArrayInputStream ByteArrayOutputStream
+                                 PipedOutputStream PipedInputStream
+                                 BufferedInputStream BufferedOutputStream
+                                 StringWriter
+                                 DataInputStream
+                                 InputStream OutputStream
+                                 ObjectInputStream ObjectOutputStream
+                                 IOException EOFException
+                                 RandomAccessFile
+                                 Reader BufferedReader InputStreamReader]
+    [java.nio                    ByteBuffer DirectByteBuffer CharBuffer]
+    [java.nio.charset            Charset]
+    [java.nio.channels           Channels
+                                 ReadableByteChannel WritableByteChannel
+                                 FileChannel FileChannel$MapMode
+                                 Pipe]
+    [java.nio.channels.spi       AbstractSelectableChannel]
+    [java.nio.file Path          Paths]
+    [java.util                   Locale]
+    [java.sql                    Blob Clob])))
 
 ; TO EXPLORE
 ; http://java-performance.info/various-methods-of-binary-serialization-in-java/

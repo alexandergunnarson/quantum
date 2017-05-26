@@ -1,19 +1,25 @@
 (ns quantum.core.cache
   (:refer-clojure :exclude [memoize])
-  (:require [clojure.core            :as core]
-            [quantum.core.error      :as err
-              :refer [->ex]                  ]
-            [quantum.core.fn         :as fn
-              :refer [#?@(:clj [fn1])]]
-            [quantum.core.logic
-              :refer [whenc1]]
-            [quantum.core.vars       :as var
-              :refer [defalias]]
-    #?(:clj [taoensso.timbre.profiling :as p])
-            [quantum.core.macros.core  :as cmacros
-              :refer [case-env]])
-  #?(:cljs (:require-macros [quantum.core.cache :as self]))
-  #?(:clj (:import java.util.concurrent.ConcurrentHashMap)))
+  (:require
+    [clojure.core              :as core]
+#?(:clj
+    [taoensso.timbre.profiling :as p])
+    [quantum.core.error        :as err
+      :refer [->ex]]
+    [quantum.core.fn           :as fn
+      :refer [#?@(:clj [fn1])]]
+    [quantum.core.logic
+      :refer [whenc1]]
+    [quantum.core.vars         :as var
+      :refer [defalias]]
+    [quantum.core.macros.core  :as cmacros
+      :refer [case-env]])
+#?(:cljs
+  (:require-macros
+    [quantum.core.cache :as self]))
+#?(:clj
+  (:import
+    java.util.concurrent.ConcurrentHashMap)))
 
 #?(:clj
 (defmacro memoize-form

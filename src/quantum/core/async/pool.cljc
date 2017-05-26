@@ -34,16 +34,17 @@
     [quantum.core.type           :as t
       :refer [atom?]]
     [quantum.core.vars           :as var])
-  #?(:clj
+#?(:cljs
+  (:require-macros
+    [servant.macros              :as servant
+      :refer [defservantfn]]))
+#?(:clj
   (:import
     [java.util.concurrent
        Executor ExecutorService ScheduledExecutorService ThreadPoolExecutor Executors
        ForkJoinPool ForkJoinWorkerThread ForkJoinPool$ForkJoinWorkerThreadFactory
        ThreadFactory
-       LinkedBlockingQueue SynchronousQueue]))
-  (:require-macros
-    [servant.macros              :as servant
-      :refer [defservantfn]]))
+       LinkedBlockingQueue SynchronousQueue])))
 
 ; ===== SCHEDULING ===== ;
 

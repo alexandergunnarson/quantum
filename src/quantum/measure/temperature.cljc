@@ -1,6 +1,6 @@
 (ns quantum.measure.temperature
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 #_(defunits-of temperature [:kelvin #{:K}]
   ;; 1|273.16 of the thermodynamic temperature of the triple

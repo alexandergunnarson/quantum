@@ -9,9 +9,10 @@
     [quantum.core.vars
       :refer        [defalias]]
     [quantum.core.numeric.types   :as ntypes])
+#?(:cljs
   (:require-macros
-    [quantum.core.numeric.convert :as self])
-  #?(:clj
+    [quantum.core.numeric.convert :as self]))
+#?(:clj
   (:import
     java.math.BigInteger
     clojure.lang.BigInt)))

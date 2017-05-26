@@ -4,27 +4,28 @@
   quantum.core.data.map
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
-  (:require [quantum.core.vars    :as var
-              :refer [#?(:clj defalias)]  ]
-            [clojure.core         :as core]
-            [clojure.data.avl     :as avl ]
-  #?@(:clj [[clojure.data.int-map :as imap]
-            [flatland.ordered.map :as omap]
-            [seqspert.hash-map            ]
-            [quantum.core.collections.base :as cbase
-              :refer [reduce-pair]]
-            [quantum.core.core    :as qcore]]))
-  #?(:cljs
-  (:require-macros
-            [quantum.core.vars    :as var
-              :refer [defalias]]))
-  (:import #?@(:clj  [java.util.HashMap
-                      [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
-                      [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
-                                                     Long2ReferenceOpenHashMap]
-                      [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
-                      [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
-               :cljs [goog.structs.Map])))
+  (:require
+    [quantum.core.vars    :as var
+     :refer [defalias]]
+    [clojure.core         :as core]
+    [clojure.data.avl     :as avl ]
+#?@(:clj
+   [[clojure.data.int-map :as imap]
+    [flatland.ordered.map :as omap]
+    [seqspert.hash-map            ]
+    [quantum.core.collections.base :as cbase
+      :refer [reduce-pair]]
+    [quantum.core.core    :as qcore]]))
+  (:import
+#?@(:clj
+    [java.util.HashMap
+     [it.unimi.dsi.fastutil.ints    Int2ReferenceOpenHashMap]
+     [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
+                                    Long2ReferenceOpenHashMap]
+     [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
+     [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
+    :cljs
+    [goog.structs.Map])))
 
 ; TO EXPLORE
 ; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections

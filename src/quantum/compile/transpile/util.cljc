@@ -1,16 +1,12 @@
 (ns quantum.compile.transpile.util
-           (:require [quantum.core.string      :as str  ]
-                     [quantum.core.collections :as coll
-                       :refer [dropr]                   ]
-                     [quantum.core.fn          :as fn
-                       :refer [#?@(:clj [<- fn1 fn->])] ]
-                     [quantum.core.logic       :as logic
-                       :refer [#?@(:clj [whenf fn-not])]])
-  #?(:cljs (:require-macros
-                     [quantum.core.fn          :as fn
-                       :refer [<- fn1 fn->]             ]
-                     [quantum.core.logic       :as logic
-                       :refer [whenf fn-not]            ])))
+  (:require
+    [quantum.core.string      :as str]
+    [quantum.core.collections :as coll
+      :refer [dropr]]
+    [quantum.core.fn          :as fn
+      :refer [<- fn1 fn->]]
+    [quantum.core.logic       :as logic
+      :refer [whenf fn-not]]))
 
 (defn ^String semicoloned
   {:in  '["package" "qjava.abc"]

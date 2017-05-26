@@ -81,5 +81,5 @@
                  '[quantum.core.analyze.clojure.core :refer [typeof*]])))
     (in-ns (ns-name ns-0))
     (clojure.main/repl
-      :print  quantum.core.print/!
-      :caught quantum.core.print/!))))
+      :print  quantum.core.print/ppr
+      :caught quantum.core.print/ppr))))

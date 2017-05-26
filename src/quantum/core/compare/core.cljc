@@ -20,10 +20,13 @@
     [quantum.core.convert.primitive  :as pconv
       :refer [->boxed ->boolean ->long]]
     [quantum.core.numeric.types      :as ntypes])
+#?(:cljs
   (:require-macros
-    [quantum.core.compare.core
-      :refer [< > <= >=]])
-  #?(:clj (:import clojure.lang.BigInt quantum.core.Numeric)))
+    [quantum.core.compare.core       :as self
+      :refer [< > <= >=]]))
+#?(:clj
+  (:import
+    clojure.lang.BigInt quantum.core.Numeric)))
 
 ; Some of the ideas here adapted from gfredericks/compare
 ; TODO include diffing

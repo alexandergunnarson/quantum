@@ -16,8 +16,9 @@
     [quantum.measure.time] ; Not too large
     [quantum.measure.volume]
     [quantum.measure.weight])
+#?(:cljs
   (:require-macros
-    [quantum.measure.convert :as self]))
+    [quantum.measure.convert :as self])))
 
 (defn assert-types [& type-pairs]
   (doseq [[unit unit-types] type-pairs]

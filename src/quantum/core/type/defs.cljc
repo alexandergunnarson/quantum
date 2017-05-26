@@ -20,7 +20,7 @@
     [quantum.core.logic    :as logic
       :refer [fn-and condf1 fn=]]
     [quantum.core.numeric.combinatorics :as combo])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.type.defs :as self
       :refer [->array-nd-types*

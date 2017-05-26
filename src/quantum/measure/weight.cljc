@@ -1,6 +1,6 @@
 (ns quantum.measure.weight
-  #?(:clj (:require [quantum.measure.core :refer [defunits-of]]))
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 #?(:clj (set! *unchecked-math* false))
 

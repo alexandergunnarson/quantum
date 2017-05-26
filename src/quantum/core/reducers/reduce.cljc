@@ -19,7 +19,7 @@
       :refer [nnil?]]
     [quantum.core.data.vector      :as vec
       :refer [catvec]]
-  #?@(:clj
+#?@(:clj
    [[seqspert.hash-set]
     [seqspert.hash-map]])
     [quantum.core.data.set         :as set]
@@ -38,9 +38,10 @@
       #?@(:cljs [:refer [Transformer]])]
     [quantum.core.vars             :as var
       :refer [defalias]])
+#?(:cljs
   (:require-macros
-    [quantum.core.reducers.reduce
-      :refer [reduce]])
+    [quantum.core.reducers.reduce  :as self
+      :refer [reduce]]))
   (:import
   #?@(:clj  [[quantum.core.type.defs Transformer]
              quantum.core.data.Array]

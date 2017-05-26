@@ -4,10 +4,11 @@
      conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse rseq
      empty? empty class reduce
      #?@(:cljs [array])])
-  (:require [clojure.core                   :as core
-             #?@(:cljs [:refer IEmptyableCollection])]
+  (:require
+            [clojure.core                   :as core
+             #?@(:cljs [:refer [IEmptyableCollection]])]
             [clojure.string                 :as str]
-    #?(:clj [seqspert.vector                            ])
+    #?(:clj [seqspert.vector])
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
             [quantum.core.collections.base
@@ -53,7 +54,7 @@
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
               :refer [defalias #?(:clj defmalias) def-]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.collections.core
       :refer [assoc gen-typed-array-defnts

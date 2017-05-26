@@ -50,9 +50,10 @@
     [quantum.core.reducers.fold    :as fold]
     [quantum.core.vars             :as var
       :refer [defalias def-]])
+#?(:cljs
   (:require-macros
     [quantum.core.reducers
-      :refer [reduce join]])
+      :refer [reduce join]]))
 #?(:clj
   (:import [java.util.concurrent.atomic AtomicLong]
            [clojure.lang Volatile]

@@ -1,20 +1,23 @@
 (ns ^{:doc "Persistent collections based on 2-3 finger trees."
       :author "Chris Houser"}
   quantum.core.data.finger-tree.macros
-  (:require [quantum.core.macros.deftype
-              :refer [pfn ?Seqable ?Counted ?Indexed ?Sequential ?Seq
-                      ?Stack ?Collection]]
-   #?(:cljs [cljs.core
-              :refer [ISeqable ISequential ISeq ISet ILookup
-                      IStack ICollection IAssociative
-                      ISorted IReversible IIndexed ICounted IHash
-                      INext IEmptyableCollection IEquiv
-                      IMeta IWithMeta]]))
-  ;#?(:cljs (:require-macros [quantum.core.cljs.deps.macros :refer [quote+]]))
-  #?(:clj  (:import (clojure.lang Seqable Sequential ISeq IPersistentSet ILookup
-                                  IPersistentStack IPersistentCollection Associative
-                                  Sorted Reversible Indexed Counted IHashEq
-                                  IObj))))
+  (:require
+    [quantum.core.macros.deftype
+      :refer [pfn ?Seqable ?Counted ?Indexed ?Sequential ?Seq
+              ?Stack ?Collection]]
+#?(:cljs
+    [cljs.core
+      :refer [ISeqable ISequential ISeq ISet ILookup
+              IStack ICollection IAssociative
+              ISorted IReversible IIndexed ICounted IHash
+              INext IEmptyableCollection IEquiv
+              IMeta IWithMeta]]))
+#?(:clj
+  (:import
+    (clojure.lang Seqable Sequential ISeq IPersistentSet ILookup
+                  IPersistentStack IPersistentCollection Associative
+                  Sorted Reversible Indexed Counted IHashEq
+                  IObj))))
 
 #?(:clj
 (defmacro defdigit

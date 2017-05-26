@@ -20,10 +20,11 @@
       :refer [numerator denominator]]
     [quantum.core.numeric.convert      :as conv
       :refer [->bigint #?@(:clj [->big-integer])]])
+#?(:cljs
   (:require-macros
     [quantum.core.numeric.operators    :as self
-      :refer [+ - *]])
-  #?(:clj
+      :refer [+ - *]]))
+#?(:clj
   (:import
     (quantum.core Numeric)
     (java.math BigInteger BigDecimal)

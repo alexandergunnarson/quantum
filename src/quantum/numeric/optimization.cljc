@@ -11,8 +11,9 @@
       :refer [repeat take+ filter+ for+ red-apply
               for reduce red-for join]]
     [quantum.core.log :as log])
+#?(:cljs
   (:require-macros
-    [quantum.numeric.optimization :as self]))
+    [quantum.numeric.optimization :as self])))
 
 ; TO EXPLORE
 ; - Mathematica

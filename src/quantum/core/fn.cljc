@@ -15,7 +15,7 @@
     [quantum.core.macros.core :as cmacros
       :refer [case-env #?@(:clj [compile-if])
               gen-args arity-builder max-positional-arity unify-gensyms]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.fn :as self
       :refer [gen-constantly gen-call gen-positional-nthas

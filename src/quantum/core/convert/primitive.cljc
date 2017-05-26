@@ -10,9 +10,13 @@
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars        :as var
       :refer [defalias]])
+#?(:cljs
   (:require-macros
-    [quantum.core.convert.primitive])
-  #?(:clj  (:import java.nio.ByteBuffer [quantum.core Numeric])))
+    [quantum.core.convert.primitive]))
+#?(:clj
+  (:import
+    java.nio.ByteBuffer
+    [quantum.core Numeric])))
 
 ; TODO go back over these — there are inconsistencies
 

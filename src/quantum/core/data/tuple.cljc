@@ -1,5 +1,5 @@
 (ns quantum.core.data.tuple
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.data.tuple :as self])))
 

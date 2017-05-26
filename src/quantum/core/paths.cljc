@@ -2,7 +2,7 @@
   "Paths-related things — resource locators. URIs, URLs, File, Path, directories, etc."
   (:refer-clojure :exclude [descendants contains?])
   (:require
-  #?(:clj
+#?(:clj
     [clojure.java.io          :as io])
     [quantum.core.collections :as coll
       :refer [slice index-of containsv? popr reducei dropr-until]]
@@ -18,10 +18,11 @@
     [quantum.core.vars        :as var
       :refer [defalias def-]]
     [quantum.core.string      :as str])
+#?(:cljs
   (:require-macros
     [quantum.core.paths
-      :refer [->file exists?]])
-  #?(:clj
+      :refer [->file exists?]]))
+#?(:clj
   (:import
     [java.io File]
     [java.nio.file Path Paths]

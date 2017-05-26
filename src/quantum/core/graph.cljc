@@ -1,24 +1,20 @@
 (ns ^{:doc "Graph operations."}
   quantum.core.graph
-             (:require
-               #?(:clj [loom.alg                 :as alg  ]) ; temporarily
-               #?(:clj [loom.graph               :as graph]) ; temporarily
-               #?(:clj [loom.alg-generic         :as galg ]) ; temporarily
-               #?(:clj [loom.label               :as label]) ; temporarily
-               #?(:clj [loom.attr                :as attr ]) ; temporarily
-               #?(:clj [loom.flow                :as flow ]) ; temporarily
-               #?(:clj [loom.io                  :as g.io ])
-                       [quantum.core.error       :as err
-                         :refer [->ex]                    ]
-                       [quantum.core.fn          :as fn
-                         :refer [#?@(:clj [rcomp])]       ]
-                       [quantum.core.vars        :as var
-                         :refer [#?(:clj defalias)]       ])
-    #?(:cljs (:require-macros
-                       [quantum.core.fn          :as fn
-                         :refer [rcomp]                   ]
-                       [quantum.core.vars        :as var
-                         :refer [defalias]                ])))
+  (:require
+#?@(:clj
+   [[loom.alg                 :as alg  ]   ; temporarily
+    [loom.graph               :as graph]   ; temporarily
+    [loom.alg-generic         :as galg ]   ; temporarily
+    [loom.label               :as label]   ; temporarily
+    [loom.attr                :as attr ]   ; temporarily
+    [loom.flow                :as flow ]   ; temporarily
+    [loom.io                  :as g.io ]]) ; temporarily
+    [quantum.core.error       :as err
+      :refer [->ex]]
+    [quantum.core.fn          :as fn
+      :refer [rcomp]]
+    [quantum.core.vars        :as var
+      :refer [defalias]]))
 
 ; TO EXPLORE
 ; - Mathematica

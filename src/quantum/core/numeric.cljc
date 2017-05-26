@@ -34,9 +34,10 @@
     [quantum.core.numeric.truncate     :as trunc
       :include-macros true]
     [quantum.core.numeric.types        :as ntypes])
+#?(:cljs
   (:require-macros
-    [quantum.core.numeric              :as self])
-  #?(:clj
+    [quantum.core.numeric              :as self]))
+#?(:clj
   (:import
     [java.nio ByteBuffer]
     [quantum.core Numeric] ; loops?

@@ -99,8 +99,8 @@
                (condpc = prefer
                  (coll-or :fastest :speed) :lz4
                  (coll-or :smallest :size) :zpaq))]
-      (-> data convert/->bytes #?(:clj  (bt/compress format-f options)
-                                  :cljs (#(throw (->ex :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
+      (-> data conv/->bytes #?(:clj  (bt/compress format-f options)
+                               :cljs (#(throw (->ex :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
 
 #?(:clj
 (defn decompress

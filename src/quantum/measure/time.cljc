@@ -1,6 +1,6 @@
 (ns quantum.measure.time
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 #?(:clj (set! *unchecked-math* false))
 
@@ -20,7 +20,7 @@
   :nanos         [[1/1000               :micros] nil #{:ns  :nanoseconds}]
   :micros        [[1/1000               :millis] nil #{:mcs :microseconds :µs}]
   :millis        [[1/1000               :sec   ] nil #{:ms  :milliseconds}]
-  ; Macroscopic               
+  ; Macroscopic
   :min           [[60                   :sec   ] #{:minutes} #{ :m}]
   :hrs           [[60                   :min   ] #{:hours}]
   :days          [[24                   :hrs   ] nil #{:d :julian-days}]

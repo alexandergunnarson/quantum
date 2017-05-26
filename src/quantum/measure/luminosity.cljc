@@ -1,6 +1,6 @@
 (ns quantum.measure.luminosity
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 ; Luminous intensity in a given direction of a source which
 ; emits monochromatic radiation at 540e12 Hz with radiant

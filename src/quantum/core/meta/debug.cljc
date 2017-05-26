@@ -2,19 +2,18 @@
   ^{:doc "Useful debug utils. Especially `trace`, `break`, etc."
     :attribution "alexandergunnarson"}
   quantum.core.meta.debug
-           (:require [clojure.string           :as str  ]
-             #?(:clj [clojure.stacktrace                ])
-             #?(:clj [clojure.repl                      ])
-             #?(:clj [debugger.core                     ])
-             #?(:clj [clj-stacktrace.repl      :as trace])
-             #?(:clj [fipp.edn                          ])
-                     [taoensso.timbre          :as timbre]
-                     [quantum.core.core        :as qcore]
-                     [quantum.core.vars        :as var
-                       :refer [#?(:clj defalias)]       ])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars        :as var
-                       :refer [defalias]                ])))
+  (:require
+    [clojure.string           :as str]
+#?@(:clj
+   [[clojure.stacktrace]
+    [clojure.repl]
+    [debugger.core]
+    [clj-stacktrace.repl      :as trace]
+    [fipp.edn]])
+    [taoensso.timbre          :as timbre]
+    [quantum.core.core        :as qcore]
+    [quantum.core.vars        :as var
+      :refer [defalias]]))
 
 ; ===== BREAKPOINTS =====
 

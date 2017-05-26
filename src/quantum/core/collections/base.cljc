@@ -14,7 +14,7 @@
       :refer [condf1 fn-not]]
     [quantum.core.vars             :as var
       :refer [replace-meta-from]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.collections.base :as self])))
 

@@ -1,13 +1,15 @@
 (ns quantum.db.subs
-          (:require
-            #?(:cljs [re-frame.core      :as re   
-                       :refer [subscribe dispatch]])
-                     [quantum.db.datomic :as db])
- #?(:cljs (:require-macros
-             [reagent.ratom    :as rx
-               :refer [reaction]]
-              [quantum.core.fn :as fn
-              :refer [<-]])))
+  (:require
+#?(:cljs
+    [re-frame.core      :as re
+      :refer [subscribe dispatch]])
+    [quantum.core.fn    :as fn
+      :refer [<-]]
+    [quantum.db.datomic :as db])
+#?(:cljs
+  (:require-macros
+    [reagent.ratom    :as rx
+      :refer [reaction]])))
 
 (def dom-id 0)
 
@@ -45,4 +47,4 @@
                   [:transact!
                     [(db/assoc dom-id k v)]])
                 @@db/conn*)})) ; TODO impure
-             
+

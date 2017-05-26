@@ -1,10 +1,8 @@
 (ns quantum.core.type.mime
-           (:refer-clojure :exclude [type])
-           (:require [quantum.core.logic :as logic
-                       :refer [#?@(:clj [condpc coll-or])]])
-  #?(:cljs (:require-macros
-                     [quantum.core.logic :as logic
-                       :refer [condpc coll-or]            ])))
+  (:refer-clojure :exclude [type])
+  (:require
+    [quantum.core.logic :as logic
+      :refer [condpc coll-or]]))
 
 #?(:cljs
 (defn type
@@ -29,5 +27,5 @@
       "89504e47" :image/png
       "47494638" :image/gif
       (coll-or "ffd8ffe0" "ffd8ffe1" "ffd8ffe2") :image/jpeg
-      (.-type file))) 
+      (.-type file)))
 ))

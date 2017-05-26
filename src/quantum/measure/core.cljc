@@ -13,7 +13,10 @@
       :refer [fn= whenc ifn]]
     [quantum.measure.reg                 ]
     [quantum.core.macros.core :as cmacros
-      :refer [case-env*]]))
+      :refer [case-env*]])
+#?(:cljs
+  (:require-macros
+    [quantum.measure.core     :as self])))
 
 (defn ->str
   {:todo ["MOVE TO CONVERT"]}

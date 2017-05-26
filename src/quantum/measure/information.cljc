@@ -1,12 +1,12 @@
 (ns quantum.measure.information
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 ; Basic unit of information (entropy).  The entropy in bits
 ; of a random variable over a finite alphabet is defined
 ; to be the sum of -p(i)*log2(p(i)) over the alphabet where
 ; p(i) is the probability that the random variable takes
-; on the value i. 
+; on the value i.
 
 (defunits-of information [:bits #{:b}]
   :nibble [[4    :bits ] #{:nybbles    :nybles             }]

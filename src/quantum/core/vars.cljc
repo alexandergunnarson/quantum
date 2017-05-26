@@ -6,7 +6,7 @@
     [clojure.core             :as c]
     [quantum.core.macros.core :as cmacros
       :refer [case-env]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.vars        :as self
       :refer [defalias]])))

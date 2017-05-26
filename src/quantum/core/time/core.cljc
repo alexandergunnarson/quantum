@@ -29,9 +29,10 @@
       :refer [->int ->long]]
     [quantum.core.vars              :as var
       :refer [defalias]])
+#?(:cljs
   (:require-macros
     [quantum.core.time.core         :as self
-      :refer [->local-date]])
+      :refer [->local-date]]))
 #?(:clj
   (:import
     [java.util Date Calendar]

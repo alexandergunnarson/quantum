@@ -23,9 +23,10 @@
     [quantum.core.time.core        :as time]
     [quantum.core.vars             :as var
       :refer [def- defalias]])
+#?(:cljs
   (:require-macros
-    [quantum.core.data.complex.xml :as self])
-  #?(:clj
+    [quantum.core.data.complex.xml :as self]))
+#?(:clj
   (:import
     [javax.xml.stream XMLInputFactory XMLEventReader]
     [javax.xml.stream.events XMLEvent Attribute

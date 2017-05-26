@@ -16,8 +16,9 @@
       :refer [defalias]]
     [quantum.core.error
       :refer [->ex]])
+#?(:cljs
   (:require-macros
-    [quantum.core.numeric.types :as self]))
+    [quantum.core.numeric.types :as self])))
 
 #?(:clj
 (defnt ^java.math.BigInteger ->big-integer

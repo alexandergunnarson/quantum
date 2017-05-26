@@ -1,8 +1,10 @@
 (ns quantum.validate.email
-          (:require
-            [quantum.core.string :as str]
-            [quantum.validate.domain])
-  #?(:clj (:import java.util.regex.Matcher)))
+  (:require
+    [quantum.core.string     :as str]
+    [quantum.validate.domain :as vdomain])
+#?(:clj
+  (:import
+    java.util.regex.Matcher)))
 
 (def email:special-chars     "\\p{Cntrl}\\(\\)<>@,;:'\\\\\\\"\\.\\[\\]")
 (def email:valid-chars       (str "[^\\s" email:special-chars "]"))
@@ -42,7 +44,7 @@
     ;     InetAddressValidator/getInstance.isValid(ipDomainMatcher.group(1));
     ; })
     ; Domain is symbolic name
-    (quantum.validate.domain/valid? domain allow-local?))))
+    (vdomain/valid? domain allow-local?))))
 
 #?(:clj
 (defn email?

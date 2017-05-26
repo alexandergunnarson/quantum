@@ -1,12 +1,10 @@
 (ns quantum.compile.core
-           (:require
-             #?(:clj [clojure.tools.analyzer.jvm     :as ana ])
-             #?(:clj [clojure.tools.emitter.jvm.emit :as emit])
-                     [quantum.core.vars              :as var
-                       :refer [#?@(:clj [defalias])]         ])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars              :as var
-                       :refer [defalias]                     ])))
+  (:require
+#?@(:clj
+   [[clojure.tools.analyzer.jvm     :as ana]
+    [clojure.tools.emitter.jvm.emit :as emit]])
+    [quantum.core.vars              :as var
+      :refer [defalias]]))
 
 ; TODO handle options-passing
 #?(:clj

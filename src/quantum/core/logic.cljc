@@ -14,7 +14,7 @@
       :refer [defalias]]
     [quantum.core.macros.core :as cmacros
       :refer [case-env]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.logic       :as self
       :refer [fn-not]])))

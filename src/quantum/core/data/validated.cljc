@@ -24,7 +24,7 @@
       :refer [validate]]
     [quantum.core.vars      :as var
       :refer [update-meta]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.data.validated :as self
       :refer [def-map]])))

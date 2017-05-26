@@ -44,10 +44,11 @@
       :refer [defalias defmalias]]
     [quantum.core.spec                 :as s
       :refer [validate]])
+#?(:cljs
   (:require-macros
     [cljs.core.async.macros            :as asyncm]
     [quantum.core.async                :as self
-      :refer [go]])
+      :refer [go]]))
 #?(:clj
   (:import
     clojure.core.async.impl.channels.ManyToManyChannel

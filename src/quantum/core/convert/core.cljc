@@ -1,22 +1,25 @@
 (ns quantum.core.convert.core
-           (:require
-             [cognitect.transit    :as t     ]
-             [datascript.transit   :as dt    ]
-             [datascript.core      :as mdb   ]
-             [clojure.string       :as str   ]
-             [quantum.core.fn      :as fn
-               :refer        [#?@(:clj [<-])]
-               :refer-macros [<-]]
-    #?(:cljs [cljs.reader
-               :refer [read-string]          ])
-    #?(:cljs [goog.crypt.base64    :as base64])
-             [quantum.core.error   :as err
-               :refer [->ex]                 ]
-             [quantum.core.numeric :as num   ])
-  #?(:cljs (:require-macros
-             [quantum.core.numeric :as num   ]))
-  #?(:clj  (:import (org.apache.commons.codec.binary Base64)
-                    clojure.lang.Var)))
+  (:require
+    [cognitect.transit    :as t]
+    [datascript.transit   :as dt]
+    [datascript.core      :as mdb]
+    [clojure.string       :as str]
+#?@(:cljs
+   [[cljs.reader
+      :refer [read-string]]
+    [goog.crypt.base64    :as base64]])
+    [quantum.core.fn      :as fn
+      :refer [<-]]
+    [quantum.core.error   :as err
+      :refer [->ex]]
+    [quantum.core.numeric :as num])
+#?(:cljs
+  (:require-macros
+    [quantum.core.numeric :as num]))
+#?(:clj
+  (:import
+    (org.apache.commons.codec.binary Base64)
+    clojure.lang.Var)))
 
 ; Two useful functions from NfWebCrypto for converting Uint8Arrays to Strings, and Strings to Uint8Arrays:
 ;     text2ua:function(s) {

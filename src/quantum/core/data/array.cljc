@@ -7,37 +7,42 @@
     [== reverse boolean-array byte-array char-array short-array
      int-array long-array float-array double-array
      empty count get doseq assoc!])
-           (:require [clojure.core                  :as core]
-             #?(:clj [loom.alg-generic              :as alg]) ; temporarily
-                     [quantum.core.collections.base :as cbase
-                       :refer [reducei]]
-                     [quantum.core.collections.core :as ccoll
-                       :refer [empty count get assoc!]]
-                     [quantum.core.type.core        :as tcore]
-                     [quantum.core.core             :as qcore
-                       :refer [name+]]
-                     [quantum.core.fn               :as fn
-                       :refer [<- fn->]]
-                     [quantum.core.log              :as log]
-                     [quantum.core.logic            :as logic
-                       :refer [whenc whenc->]]
-                     [quantum.core.error
-                       :refer [TODO]]
-                     [quantum.core.loops            :as loops
-                       :refer [doseqi doseq]]
-                     [quantum.core.macros           :as macros
-                       :refer [defnt defnt']]
-                     [quantum.core.compare :as comp]
-                     [quantum.core.numeric :as num]
-                     [quantum.core.type
-                       :refer [static-cast]]
-                     [quantum.core.vars             :as var
-                       :refer [defalias]])
-  #?(:cljs (:require-macros
-                     [quantum.core.data.array       :as self]))
-  #?(:clj  (:import  [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
-                     [java.nio ByteBuffer]
-                     java.util.ArrayList)))
+  (:require
+    [clojure.core                  :as core]
+#?(:clj
+    [loom.alg-generic              :as alg]) ; temporarily
+    [quantum.core.collections.base :as cbase
+      :refer [reducei]]
+    [quantum.core.collections.core :as ccoll
+      :refer [empty count get assoc!]]
+    [quantum.core.type.core        :as tcore]
+    [quantum.core.core             :as qcore
+      :refer [name+]]
+    [quantum.core.fn               :as fn
+      :refer [<- fn->]]
+    [quantum.core.log              :as log]
+    [quantum.core.logic            :as logic
+      :refer [whenc whenc->]]
+    [quantum.core.error
+      :refer [TODO]]
+    [quantum.core.loops            :as loops
+      :refer [doseqi doseq]]
+    [quantum.core.macros           :as macros
+      :refer [defnt defnt']]
+    [quantum.core.compare :as comp]
+    [quantum.core.numeric :as num]
+    [quantum.core.type
+      :refer [static-cast]]
+    [quantum.core.vars             :as var
+      :refer [defalias]])
+#?(:cljs
+  (:require-macros
+    [quantum.core.data.array       :as self]))
+#?(:clj
+  (:import
+    [java.io File FileInputStream BufferedInputStream InputStream ByteArrayOutputStream]
+    [java.nio ByteBuffer]
+    java.util.ArrayList)))
 
 (log/this-ns)
 

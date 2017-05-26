@@ -1,12 +1,12 @@
 (ns ^:skip-aot quantum.measure.length
-  (:require [quantum.measure.core #?@(:clj [:refer [defunits-of]])])
-  #?(:cljs (:require-macros [quantum.measure.core :refer [defunits-of]])))
+  (:require
+    [quantum.measure.core :refer [defunits-of]]))
 
 #?(:clj (set! *unchecked-math* false))
 
-; The meter is the length of the path travelled by light 
-; in vacuum during a time interval of 1/299,792,458 of a 
-; second. Originally meant to be 1e-7 of the length along 
+; The meter is the length of the path travelled by light
+; in vacuum during a time interval of 1/299,792,458 of a
+; second. Originally meant to be 1e-7 of the length along
 ; a meridian from the equator to a pole.
 #_(defunits-of length [:m #{:meter}] ; TODO "method code too large"
   ; Microscopic
@@ -18,12 +18,12 @@
   :cm       [[1/100      :m       ] #{:centimeters}]
   ; Macroscopic
   :km       [[1000       :m       ] #{:kilometers}]
-  
+
   ; Imperial units
 
   :inches   [[1/12       :feet    ] #{:in}]
   :feet     [[1/3        :yards   ] #{:ft}]
-  :yards    [[9144/10000 :m       ] #{:yds}] ; cf. the international yard and pound agreement of July 1959  
+  :yards    [[9144/10000 :m       ] #{:yds}] ; cf. the international yard and pound agreement of July 1959
   :rods     [[1/40       :furlongs] #{:perches :poles :lugs}]
   :furlongs [[1/8        :miles   ]] ; based on US survey foot
   :miles    [[1760       :yards   ]]
@@ -35,7 +35,7 @@
 
   :shackles-of-cable       [[25/2             :fathoms        ] #{:uk-royal-navy/shackles}]
   :shackles                [[15               :fathoms        ]]
-  
+
   :cables                  [[216000/1822831   :nautical-miles ] #{:cable-lengths}]
   :navy/cables             [[720              :survey-ft      ] #{:navy/cable-lengths}]
   :old-brit/cables         [[1/10             :old-brit/nautical-miles]]
@@ -50,7 +50,7 @@
   ; Survey units
 
   :data-miles       [[6000  :ft              ]]
-  
+
   :links/surveyors  [[1/100 :surveyors-chains] #{:links}]
   :surveyors-poles  [[1/4   :surveyors-chains]]
   :survey-ft        [[1/6   :fathoms         ]]

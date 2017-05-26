@@ -1,41 +1,46 @@
 (ns ^{:doc "Convenience functions for creating a system and registering components
             according to Stuart Sierra's Component framework."}
   quantum.core.resources
-           (:require [com.stuartsierra.component   :as comp]
-             #?(:clj [clojure.tools.namespace.repl :as repl
-                       :refer [refresh refresh-all
-                               set-refresh-dirs]                ])
-                     [clojure.core.async           :as casync]
-                     [quantum.core.cache           :as cache
-                       :refer [callable-times]]
-                     [quantum.core.core            :as qcore]
-                     [quantum.core.collections.base
-                       :refer [nnil?]]
-                     [quantum.core.data.set        :as set]
-                     [quantum.core.error           :as err
-                       :refer [->ex catch-all]]
-                     [quantum.core.log             :as log      ]
-                     [quantum.core.fn
-                       :refer [fn1 fnl with-do fn-> <-]]
-                     [quantum.core.logic           :as logic
-                       :refer [whenf whenf1 fn-not fn-or whenp->]]
-                     [quantum.core.macros          :as macros
-                       :refer [defnt]]
-                     [quantum.core.async           :as async    ]
-                     [quantum.core.type            :as type
-                       :refer [atom?]                           ]
-                     [quantum.core.spec            :as s
-                       :refer [validate]])
-           (:require-macros
-             [quantum.core.resources :as self])
-  #?(:clj  (:import org.openqa.selenium.WebDriver
-                    (java.lang ProcessBuilder Process StringBuffer)
-                    (java.io InputStream Reader Writer
-                      IOException)
-                    com.stuartsierra.component.Lifecycle
-                    (java.util.concurrent TimeUnit)
-                    ;quantum.core.data.queue.LinkedBlockingQueue
-                    clojure.core.async.impl.channels.ManyToManyChannel)))
+  (:require
+    [com.stuartsierra.component   :as comp]
+#?(:clj
+    [clojure.tools.namespace.repl :as repl
+      :refer [refresh refresh-all
+              set-refresh-dirs]                ])
+    [clojure.core.async           :as casync]
+    [quantum.core.cache           :as cache
+      :refer [callable-times]]
+    [quantum.core.core            :as qcore]
+    [quantum.core.collections.base
+      :refer [nnil?]]
+    [quantum.core.data.set        :as set]
+    [quantum.core.error           :as err
+      :refer [->ex catch-all]]
+    [quantum.core.log             :as log      ]
+    [quantum.core.fn
+      :refer [fn1 fnl with-do fn-> <-]]
+    [quantum.core.logic           :as logic
+      :refer [whenf whenf1 fn-not fn-or whenp->]]
+    [quantum.core.macros          :as macros
+      :refer [defnt]]
+    [quantum.core.async           :as async    ]
+    [quantum.core.type            :as type
+      :refer [atom?]                           ]
+    [quantum.core.spec            :as s
+      :refer [validate]])
+#?(:cljs
+  (:require-macros
+    [quantum.core.resources :as self]))
+#?(:clj
+  (:import
+    org.openqa.selenium.WebDriver
+    (java.lang ProcessBuilder Process StringBuffer)
+    (java.io InputStream Reader Writer
+      IOException)
+    com.stuartsierra.component.Lifecycle
+    (java.util.concurrent TimeUnit)
+    ;quantum.core.data.queue.LinkedBlockingQueue
+    clojure.core.async.impl.channels.ManyToManyChannel)))
 
 #?(:clj
 (defnt open?

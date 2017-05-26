@@ -1,29 +1,33 @@
 (ns quantum.apis.amazon.cloud-drive.core
-           (:refer-clojure :exclude [meta reduce val assoc!])
-           (:require [clojure.core.async                   :as async
-                       :refer [<!]]
-                     [quantum.auth.core                    :as auth]
-                     [quantum.core.convert                 :as conv]
-                     [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
-                     [quantum.core.string                  :as str]
-                     [quantum.net.http                     :as http]
-                     [quantum.core.paths                   :as paths]
-                     [quantum.core.collections             :as coll
-                       :refer [kw-map join reduce map+ val assoc-if nnil?]]
-                     [quantum.core.error
-                       :refer [TODO ->ex]]
-                     [quantum.core.fn                      :as fn
-                       :refer [<- fn-> fn->> fn1 fn']]
-                     [quantum.core.logic                   :as logic
-                       :refer [fn=]]
-                     [quantum.core.log                     :as log
-                       :include-macros true]
-                     [quantum.core.spec                    :as s
-                       :refer [validate]])
-  #?(:cljs (:require-macros
-                     [cljs.core.async.macros
-                       :refer [go]]))
-  #?(:clj  (:import  [java.nio.file Files Paths])))
+  (:refer-clojure :exclude [meta reduce val assoc!])
+  (:require
+    [clojure.core.async                   :as async
+      :refer [<!]]
+    [quantum.auth.core                    :as auth]
+    [quantum.core.convert                 :as conv]
+    [quantum.apis.amazon.cloud-drive.auth :as amz-auth]
+    [quantum.core.string                  :as str]
+    [quantum.net.http                     :as http]
+    [quantum.core.paths                   :as paths]
+    [quantum.core.collections             :as coll
+      :refer [kw-map join reduce map+ val assoc-if nnil?]]
+    [quantum.core.error
+      :refer [TODO ->ex]]
+    [quantum.core.fn                      :as fn
+      :refer [<- fn-> fn->> fn1 fn']]
+    [quantum.core.logic                   :as logic
+      :refer [fn=]]
+    [quantum.core.log                     :as log
+      :include-macros true]
+    [quantum.core.spec                    :as s
+      :refer [validate]])
+#?(:cljs
+  (:require-macros
+    [cljs.core.async.macros
+      :refer [go]]))
+#?(:clj
+  (:import
+    [java.nio.file Files Paths])))
 
 ; AMZ says: The response to the getEndpoint request for each customer should be cached for three to five days. You should not send a getEndpoint method request daily.
 ; (http/request! {:url "https://drive.amazonaws.com/drive/v1/account/endpoint" :oauth-token ...})

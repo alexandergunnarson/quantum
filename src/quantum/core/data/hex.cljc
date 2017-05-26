@@ -2,16 +2,12 @@
   ^{:doc "A hex string library."
     :attribution "alexandergunnarson"}
   quantum.core.data.hex
-           (:require [quantum.core.macros            :as macros
-                       :refer [#?@(:clj [defnt])]                ]
-                     [quantum.core.convert.primitive :as pconvert
-                       :refer [#?@(:clj [->int ->byte*])]]
-                     [quantum.core.string            :as str     ])
-  #?(:cljs (:require-macros
-                     [quantum.core.macros            :as macros
-                       :refer [defnt]                            ]
-                     [quantum.core.convert.primitive :as pconvert
-                       :refer [->int ->byte*]                    ])))
+  (:require
+    [quantum.core.macros            :as macros
+      :refer [defnt]]
+    [quantum.core.convert.primitive :as pconvert
+      :refer [->int ->byte*]]
+    [quantum.core.string            :as str]))
 
 (defnt ^String ->hex-string
   "Converts an an integer value to a hexadecimal string representing the unsigned value.
