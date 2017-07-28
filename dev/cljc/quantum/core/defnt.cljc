@@ -82,6 +82,9 @@ Input constraints:
 Output constraints:
   ...
 
+Unlike static languages, a `nil` value is not considered as having a type
+except that of nil.
+
 "
 
 (def ^:dynamic *conditional-branch-pruning?* true)
@@ -89,98 +92,6 @@ Output constraints:
 (def sentinel (->sentinel))
 
 ; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
-
-;; ----- Overload resolution -----
-
-(t/spec primitive?         (t/or boolean? byte? char? int? long? float? double?))
-(t/spec numeric-primitive? (t/- primitive? boolean?))
-
-(defnt +*
-  "Lax `+`. Continues on overflow/underflow."
-  ([] 0)
-  ;; Here `Number`, determined to be a class, is treated like an `instance?` predicate
-  ([a (t/or numeric-primitive? Number)] a)
-  ;; Note that you can envision any function arglist as an s/cat
-  ([a ?, b ?] ; ? is t/?, an alias for t/infer
-    (Numeric/add a b)) ; uses reflection to infer types
-  ;; Protocols cannot participate in variadic arities, but we can get around this
-  ;; TODO auto-gen extensions to variadic arities like [a b c], [a b c d], etc.
-  ([a ?, b ? & args ?] (apply +* (+* a b) args))) ; the `apply` used in a typed context uses `reduce` underneath the covers
-
-(defnt bit-and [n ?] (Numeric/bitAnd n))
-
-(defnt zero? [n ?] (Numeric/isZero n))
-
-(defnt even?
-  [n ?] (zero? (bit-and n 1)))
-
-(defnt +*-even
-  "Lax `+` on only even numbers."
-  [a even?, b even?] (+* a b))
-
-(defnt get-in*
-  ([x ? k0 ?]                                              (get x k0))
-  ([x ? k0 ? k1 ?]                                         (Array/get x k0 k1))
-  ([x ? k0 ? k1 ? k2 ?]                                    (Array/get x k0 k1 k2))
-  ([x ? k0 ? k1 ? k2 ? k3 ?]                               (Array/get x k0 k1 k2 k3))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ?]                          (Array/get x k0 k1 k2 k3 k4))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ? k5 ?]                     (Array/get x k0 k1 k2 k3 k4 k5))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ? k5 ? k6 ?]                (Array/get x k0 k1 k2 k3 k4 k5 k6))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ? k5 ? k6 ? k7 ?]           (Array/get x k0 k1 k2 k3 k4 k5 k6 k7))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ? k5 ? k6 ? k7 ? k8 ?]      (Array/get x k0 k1 k2 k3 k4 k5 k6 k7 k8))
-  ([x ? k0 ? k1 ? k2 ? k3 ? k4 ? k5 ? k6 ? k7 ? k8 ? k9 ?] (Array/get x k0 k1 k2 k3 k4 k5 k6 k7 k8 k9))
-  ([x ? k0 ? k1 ?]                                         (-> x (get k0) (get k1)))))
-
-(argtypes get-in*) #_"=>" #_[[booleans          int]
-                             [bytes             int]
-                             ...
-                             [IPersistentVector long]
-                             ...
-                             [ints              int int]
-                             ...
-                             [IPersistentVector long long]]
-
-; IF AN EAGER RESULT:
-
-; +* 0 arity
-(definterface long•I (^long invoke []))
-
-; `+*` 1 arity
-(definterface byte•I•byte     (^byte   invoke [^byte   a0]))
-(definterface char•I•char     (^char   invoke [^char   a0]))
-(definterface int•I•int       (^int    invoke [^int    a0]))
-(definterface long•I•long     (^long   invoke [^long   a0]))
-(definterface float•I•float   (^float  invoke [^float  a0]))
-(definterface double•I•double (^double invoke [^double a0]))
-
-; `+*` 2-arity
-(definterface byte•I•byte     (^byte   invoke [^byte   a0 ...]))
-(definterface char•I•char     (^char   invoke [^char   a0 ...]))
-(definterface int•I•int       (^int    invoke [^int    a0 ...]))
-(definterface long•I•long     (^long   invoke [^long   a0 ...]))
-(definterface float•I•float   (^float  invoke [^float  a0 ...]))
-(definterface double•I•double (^double invoke [^double a0 ...]))
-(definterface double•I•double (^double invoke [^double a0 ...]))
-...
-
-; `+*` 2-arity variadic
-?
-
-(definterface boolean•I•byte   (^boolean invoke [^byte   a0]))
-(definterface boolean•I•char   (^boolean invoke [^char   a0]))
-(definterface boolean•I•int    (^boolean invoke [^int    a0]))
-(definterface boolean•I•long   (^boolean invoke [^long   a0]))
-(definterface boolean•I•float  (^boolean invoke [^float  a0]))
-(definterface boolean•I•double (^boolean invoke [^double a0]))
-
-(def zero? (reify boolean•I•byte   (^boolean invoke [this ^byte   n] (Numeric/isZero n))
-                  boolean•I•char   (^boolean invoke [this ^char   n] (Numeric/isZero n))
-                  boolean•I•int    (^boolean invoke [this ^int    n] (Numeric/isZero n))
-                  boolean•I•long   (^boolean invoke [this ^long   n] (Numeric/isZero n))
-                  boolean•I•float  (^boolean invoke [this ^float  n] (Numeric/isZero n))
-                  boolean•I•double (^boolean invoke [this ^double n] (Numeric/isZero n))))
-
-(defnt zero? [n ?] (Numeric/isZero n))
 
 (s/def ::arg-spec ; TODO expand; make typed destructuring available via ::ss/binding-form
   (s/alt :infer     #{'?}
@@ -303,6 +214,14 @@ Output constraints:
 (defn join
   ([from] (join [] from))
   ([to from] (c/into to from)))
+
+(defn reducei
+  "`reduce`, indexed."
+  [f init xs]
+  (let [f' (let [*i (volatile! -1)]
+              (fn ([ret x]
+                    (f ret x (vreset! *i (unchecked-inc (long @*i)))))))]
+    (reduce f' init xs)))
 
 ; TODO move
 (defn every-val
@@ -486,7 +405,7 @@ Output constraints:
                       the current subexpression."}}
   [env form empty-form rf]
   (->> form
-       (reduce (fn [accum form'] (rf accum (->typed* (:env accum) form')))
+       (reducei (fn [accum form' i] (rf accum (->typed* (:env accum) form') i))
          (->expr-info {:env env :form (transient empty-form)}))
        (persistent!-and-add-file-context form)))
 
@@ -507,7 +426,7 @@ Output constraints:
 (defn handle-seq:do [env body]
   (prl! env body)
   (let [expr (handle-non-map-seqable env body []
-               (fn [accum expr]
+               (fn [accum expr _]
                  (prl! accum expr)
                  ;; for types, only the last subexpression ever matters, as each is independent from the others
                  (assoc expr :form (conj! (:form accum) (:form expr))
@@ -579,9 +498,15 @@ Output constraints:
 
    See the documentation for `defnt`, specifically the section entitled 'Matching
    Functions with Arguments'."
-  [fn-type expr]
-  (prl! fn-type expr)
-  (TODO))
+  [kind fn-type expr i:arg]
+  (prl! kind fn-type expr)
+  (case kind
+    :or
+      ; TODO it's not just reifieds here that need taking care of
+      ; TODO how to dedupe e.g. subclasses and superclasses?
+      (-> expr :type-info (swap! update :reifieds conj (-> fn-type :argtypes (get i:arg))))
+    :and
+      (TODO)))
 
 (defn handle-seq:dot:methods:static
   "A note will be made of what methods match the argument types.
@@ -591,7 +516,7 @@ Output constraints:
                           `method-form`, in the given class, `target`."}}
   [env ^Class target target-form methods method-form args]
   (prl! env target method-form (vec methods) args)
-  (let [rf (fn [expr arg-expr]
+  (let [rf (fn [expr arg-expr i:arg]
              (prl! expr arg-expr)
              (update expr :type-info
                (fn-> (or (!ref (->type-info
@@ -601,7 +526,7 @@ Output constraints:
                        (fn1 update :fn-types
                          (fn [fn-types]
                            (->> fn-types
-                                (filter+ (fn1 fn-type-satisfies-expr? arg-expr))
+                                (filter+ #(fn-type-satisfies-expr? :or % arg-expr i:arg))
                                 join)))))))
         handled (handle-non-map-seqable env args [] rf)]
     (prl! handled)
@@ -738,7 +663,8 @@ Output constraints:
 ; To infer, you postwalk
 ; To imply, you prewalk
 
-(let [a nil] (zero? a))
+'(let [a nil] (Numeric/isZero a))
+'(let [a nil] (zero? a))
 
 ; TODO do return type inference based on "unified" types
 (binding [*print-meta* true]
@@ -799,18 +725,6 @@ Output constraints:
         ; TODO others, like calling maps or sets, etc.
         nil))))
 
-(clojure.tools.analyzer.jvm/analyze
-  '(let [n nil] (zero? n)))
-
-(clojure.tools.analyzer.jvm/analyze
-  '(let [n nil] (Numeric/isZero n)))
-
-{:name zero?,
- :arities [:arity-n
-           {:bodies [{:args {:args [{:arg-binding n,
-                                     :arg-spec [:infer ?]}]},
-                    :body [:body [(Numeric/isZero n)]]}]}]}
-
 (defn handle-conformed-defnt-args [args]
   (let [bodies (case (-> args :arities first)
                  :arity-1 [(-> args :arities second)]
@@ -834,6 +748,7 @@ Output constraints:
                                           {:tried-to-call (list* '~(:name args') args#)})))))]
     (binding [clojure.core/*print-meta* true] (prl! code))
     nil)))
+
 (zero? 1)
 (defnt zero? ([n ?] (Numeric/isZero n)))
 
@@ -859,21 +774,21 @@ Output constraints:
 ;; able to be leveraged in computing the best overload with the least dynamic dispatch
 ;; possible.
 
-(defnt+ example
+(defnt example
   ([a (s/and even? #(< 5 % 100))
-    b t/any
+    b t/any?
     c ::number-between-6-and-20
     d {:req-un [e  (default t/boolean? true)
                 :f t/number?
-                g  (default (s/or* t/number? t/sequential?) 0)]}]
-   {:pre  (< a @c))
-    :post (s/and (s/coll-of odd? :kind t/array?)
-                 #(= (first %) c))}
+                g  (default (s/or t/number? t/sequential?) 0)]}
+    | (< a @c) ; pre
+    > (s/and (s/coll odd? :kind t/array?) ; post
+             #(= (first %) c))]
    ...)
   ([a string?
-    b (s/coll-of bigdec? :kind vector?)
-    c t/any
-    d t/any
+    b (s/coll bigdec? :kind vector?)
+    c t/any?
+    d t/any?
    ...))
 
 ;; expands to:
@@ -929,3 +844,144 @@ Output constraints:
 ;; At very least it would be nice to have "spec inference". I.e. know, via `fdef`, that a
 ;; function meets a particular set of specs/characteristics and so any call to that function
 ;; will necessarily comply with the type.
+
+;; ----- `->typed` tests ----- ;;
+
+(require '[quantum.core.test :refer [is=]])
+
+(let [gen-unbound
+        #(!ref (->type-info
+                 {:reifieds #{}
+                  :fn-types {}
+                  :infer? true}))
+      gen-expected
+        (fn [form env type-info]
+          (->expr-info
+           {:env  env
+            :form form
+            :type-info
+              (->type-info type-info)}))
+      boolean Boolean/TYPE
+      byte    Byte/TYPE
+      char    Character/TYPE
+      short   Short/TYPE
+      int     Integer/TYPE
+      long    Long/TYPE
+      float   Float/TYPE
+      double  Double/TYPE]
+  (let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(and:boolean a b)]
+    (is= (->typed env form)
+         (gen-expected form env
+           {:reifieds  #{boolean}
+            :abstracts #{...}
+            #_:conditionals
+              #_{boolean {boolean #{boolean}}}})))
+  (let [env  {'a (gen-unbound)}
+        form '(Numeric/isZero a)]
+    (is= (->typed env form)
+         (gen-expected form env
+           {:reifieds  #{...}
+            :abstracts #{...}
+            :conditionals  #_(if* )
+              {byte   #{boolean}
+               char   #{boolean}
+               short  #{boolean}
+               int    #{boolean}
+               long   #{boolean}
+               float  #{boolean}
+               double #{boolean}}
+            :infer? true})))
+  (let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(Numeric/bitAnd a b)]
+    (is= (->typed env form)
+         (gen-expected form
+           {'a (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :infer? true}))
+            'b (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :infer? true}))}
+           {:reifieds  #{byte char short int long}
+            :abstracts #{...}
+            :conditionals
+              {byte  {byte  #{byte }
+                      char  #{char }
+                      short #{short}
+                      int   #{int  }
+                      long  #{long }}
+               char  {byte  #{char }
+                      char  #{char }
+                      short #{short}
+                      int   #{int  }
+                      long  #{long }}
+               short {byte  #{short}
+                      char  #{short}
+                      short #{short}
+                      int   #{int  }
+                      long  #{long }}
+               int   {byte  #{int  }
+                      char  #{int  }
+                      short #{int  }
+                      int   #{int  }
+                      long  #{long }}
+               long  {byte  #{long }
+                      char  #{long }
+                      short #{long }
+                      int   #{long }
+                      long  #{long }}}})))
+  (let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(Numeric/negate (Numeric/bitAnd a b))]
+    (is= (->typed env form)
+         (gen-expected form
+           {'a (!ref (->type-info
+                       {:reifieds #{}
+                        :fn-types {}
+                        :infer? true}))
+            'b (!ref (->type-info
+                       {:reifieds #{}
+                        :fn-types {}
+                        :infer? true}))}
+           {:reifieds  #{byte char short int long}
+            :abstracts #{...}})))
+  (let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(negate:int|long (Numeric/bitAnd a b))]
+    ;; Because the only valid argtypes to `negate:int|long` are S = #{[int] [long]},
+    ;; `Numeric/bitAnd` must only accept argtypes that produce a subset of S
+    ;; The argtypes to `Numeric/bitAnd` that produce a subset of S are:
+    #_#{[byte  int]
+        [byte  long]
+        [char  int]
+        [char  long]
+        [short int]
+        [short long]
+        [int   byte]
+        [int   char]
+        [int   short]
+        [int   int]
+        [int   long]
+        [long  byte]
+        [long  char]
+        [long  short]
+        [long  int]
+        [long  long]}
+    ;; So `a`, then, can be:
+    #_#{byte char short int long}
+    ;; and likewise `b` can be:
+    #_#{byte char short int long}
+    (is= (->typed env form)
+         (gen-expected form
+           {'a (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :fn-types {}
+                        :infer? true}))
+            'b (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :fn-types {}
+                        :infer? true}))}
+           {:reifieds  #{int long}
+            :abstracts #{...}}))))
