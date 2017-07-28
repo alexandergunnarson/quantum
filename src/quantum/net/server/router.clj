@@ -9,8 +9,6 @@
     ; ROUTING
     [compojure.core                   :as route
       :refer [GET ANY POST defroutes]]
-    [compojure.route
-      :refer [not-found]]
     ; UTILS
     [com.stuartsierra.component       :as component]
     [quantum.net.server.middleware    :as mid]
@@ -78,13 +76,14 @@
   [{:keys [csp-report-uri csp-report-handler]}]
   [(POST csp-report-uri req csp-report-handler)])
 
+(defn not-found-resp [req]
+  {:status 404
+   :headers {"Content-Type" "text/html"}
+   :body   (when-not (= (:request-method req) :head)
+             "<h1>Page not found.<h1>")})
+
 (defn not-found-route
-  [opts]
-  (or (:not-found-handler opts)
-      (fn [req]
-        {:status 404
-         :body   (when-not (= (:request-method req) :head)
-                   "<h1>Page not found.<h1>")})))
+  [opts] (or (:not-found-handler opts) not-found-resp))
 
 (defn routes
   [{:keys [ws-uri csp-report-uri
