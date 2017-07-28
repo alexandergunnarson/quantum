@@ -59,13 +59,6 @@
              :outer-type "[Z"
              :boxed      'java.lang.Boolean
              :unboxed    'Boolean/TYPE])}
-   'short   {:bits 16
-             :min -32768
-             :max  32767
-   #?@(:clj [:array-ident "S"
-             :outer-type  "[S"
-             :boxed       'java.lang.Short
-             :unboxed     'Short/TYPE])}
    'byte    {:bits 8
              :min -128
              :max  127
@@ -73,6 +66,13 @@
              :outer-type  "[B"
              :boxed       'java.lang.Byte
              :unboxed     'Byte/TYPE])}
+   'short   {:bits 16
+             :min -32768
+             :max  32767
+   #?@(:clj [:array-ident "S"
+             :outer-type  "[S"
+             :boxed       'java.lang.Short
+             :unboxed     'Short/TYPE])}
    'char    {:bits 16
              :min  0
              :max  65535
