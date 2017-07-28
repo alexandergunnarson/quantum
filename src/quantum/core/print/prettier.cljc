@@ -71,6 +71,10 @@
     fipp.ednize/IOverride
     fipp.ednize/IEdn
       (-edn [this] (tagged-literal '*<><> (into [] this))))
+  (extend-type (Class/forName "[Ljava.lang.Class;")
+    fipp.ednize/IOverride
+    fipp.ednize/IEdn
+      (-edn [this] (tagged-literal 'class<> (vec this))))
 
   (extend-type java.util.HashMap
     fipp.ednize/IOverride
