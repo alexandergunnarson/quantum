@@ -317,7 +317,7 @@
  `(defn ~sym
     ([kf#] nil) ; TODO really, the min of whatever it is; maybe gen via `(kf)` ?
     ([kf# x#] x#)
-    ([kf# x# y#] (if (~base-sym (kf# x#) (kf# y#)) x# y#))
+    ([kf# x# y#] (if (~base-sym (kf# x#) (kf# y#)) x# y#)) ; TODO can terminate early here with e.g. <=, <, etc.
     ([kf# x# y# & more#]
       (reduce #(~sym kf# %1 %2) (~sym kf# x# y#) more#)))))
 

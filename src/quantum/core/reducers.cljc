@@ -744,7 +744,7 @@
 
 (def distinct+ (transducer->transformer 0 distinct:transducer))
 
-(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+))
+(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+)) ; TODO fix this... it's misleading
 
 (def replace+ (transducer->transformer 1 core/replace))
 
