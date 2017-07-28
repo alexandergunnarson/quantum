@@ -446,7 +446,7 @@
 (gen-array-converters)
 
 (defnt array-of-type
-  #?@(:clj  [(^<0> [^array?    x ^int n] (Array/arrayOfType x n))]
+  #?@(:clj  [(^<0> [^array?    x ^int n] (Array/newUninitializedArrayOfType x n))]
       :cljs [(^<0> [^bytes?    x ^int n] (->bytes   n))
              (^<0> [^ubytes?   x ^int n] (->ubytes  n))
              (^<0> [^shorts?   x ^int n] (->shorts  n))
@@ -595,9 +595,9 @@
 
 (defnt blank
   "Like `empty`, but for e.g. arrays and similar indexed types, as well as strings,
-   creates a blank version. In the case of arrays, an initizalized array is created
+   creates a blank version. In the case of arrays, an initialized array is created
    containing whatever the default values are for that array — e.g. 0.0 or 0L and so on."
-  #?(:clj  (^<0> [^array?    x] (Array/cloneSizes x)) ; TODO move to Array/newInitializedArrayOfType
+  #?(:clj  (^<0> [^array?    x] (Array/newInitializedArrayOfType x))
      :cljs (^<0> [^array-1d? x] (array-of-type x (count x)))))
 
 (defnt ^long lasti
@@ -665,8 +665,8 @@
   (     [^string?      x ^nat-long? a             ] (.substring x a (count x)))
   (     [^string?      x ^nat-long? a ^nat-long? b] (.substring x a b))
   (     [^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+ a) (take+ b)))
-  (     [^+vector?        x ^nat-long? a             ] (subsvec x a (count x)))
-  (     [^+vector?        x ^nat-long? a ^nat-long? b] (subsvec x a b))
+  (     [^+vector?     x ^nat-long? a             ] (subsvec x a (count x)))
+  (     [^+vector?     x ^nat-long? a ^nat-long? b] (subsvec x a b))
   (^<0> [^array-1d?    x ^nat-long? a             ]
     (slice x a (count x)))
   (^<0> [^array-1d?    x ^nat-long? a ^nat-long? b]
@@ -685,7 +685,7 @@
   ([^symbol?      s ] (-> s name core/rest))
   ([^transformer? xs] (drop+ 1 xs))
   ([^string?      xs] (slice xs 1 (count xs)))
-  ([^+vector?        xs] (slice xs 1 (count xs)))
+  ([^+vector?     xs] (slice xs 1 (count xs)))
   ([^array-1d?    xs] (slice xs 1 (count xs)))
   ([^default      xs] (core/rest xs)))
 

@@ -16,7 +16,7 @@
 #?(:clj
   (:import
     java.nio.ByteBuffer
-    [quantum.core Numeric])))
+    [quantum.core Numeric Primitive])))
 
 ; TODO go back over these — there are inconsistencies
 
@@ -31,8 +31,7 @@
 (defnt ^long ->long*
   {:source "clojure.lang.RT.uncheckedLongCast"}
   ([^Number x] (.longValue x))
-  ([#{char} x] (Numeric/uncheckedLongCast x))
-  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedLongCast x))))
+  ([#{byte char short int long float double} x] (Primitive/uncheckedLongCast x))))
 
 #?(:clj
     (defnt ^long ->long
@@ -90,7 +89,7 @@
 (defnt ^byte ->byte*
   {:source "clojure.lang.RT.uncheckedByteCast"}
   ([^Number x] (.byteValue x))
-  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedByteCast x))))
+  ([#{byte short int long float double} x] (Primitive/uncheckedByteCast x))))
 ;_____________________________________________________________________
 ;==================={           CHAR           }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
@@ -107,7 +106,7 @@
 (defnt ^char ->char*
   {:source "clojure.lang.RT.uncheckedCharCast"}
   ([^Number    x] (->char* (.longValue x)))
-  ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedCharCast x))
+  ([#{byte short char int long float double} x] (Primitive/uncheckedCharCast x))
   ([^string?   x] (if (->> x .length (= 1))
                       (.charAt x 0)
                       (throw (->ex "Cannot cast non-singleton string to char." x))))))
@@ -118,7 +117,7 @@
 (defnt ^short ->short*
   {:source "clojure.lang.RT.uncheckedShortCast"}
   ([^Number x] (.shortValue x))
-  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedShortCast x))))
+  ([#{byte short int long float double} x] (Primitive/uncheckedShortCast x))))
 
 #?(:clj
     (defnt ^short ->short
@@ -135,7 +134,7 @@
 (defnt ^int ->int*
   {:source "clojure.lang.RT.uncheckedIntCast"}
   ([^Number    x] (.intValue x))
-  ([#{byte short char int long float double} x] (clojure.lang.RT/uncheckedIntCast x))))
+  ([#{byte short char int long float double} x] (Primitive/uncheckedIntCast x))))
 
 ; (defnt' ->IntExact
 ;   (^int [^long x] (Math/toIntExact x)))
@@ -159,7 +158,7 @@
 (defnt ^float ->float*
   {:source "clojure.lang.RT/uncheckedFloatCast"}
   ([^Number                             x] (.floatValue x))
-  ([#{byte short int long float double} x] (clojure.lang.RT/uncheckedFloatCast x))
+  ([#{byte short int long float double} x] (Primitive/uncheckedFloatCast x))
   ([^string?                            x] (Float/parseFloat x))))
 
 #?(:clj
@@ -179,7 +178,7 @@
   {:source "clojure.lang.RT/uncheckedDoubleCast"}
   ([^Number                      x] (.doubleValue x))
   ([^double                      x] x)
-  ([#{byte short int long float} x] (clojure.lang.RT/uncheckedDoubleCast x))
+  ([#{byte short int long float} x] (Primitive/uncheckedDoubleCast x))
   ([                             x] (clojure.lang.RT/uncheckedDoubleCast x))))
 
 #?(:clj

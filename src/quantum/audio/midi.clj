@@ -29,8 +29,8 @@
     [quantum.measure.convert
       :refer [convert]]
     [quantum.core.type :as t]
-    [quantum.core.async.scheduling :as sched]
-    [quantum.db.datomic.core       :as dbc]) ; TODO just for the spec
+    [quantum.core.async.pool  :as pool]
+    [quantum.db.datomic.core  :as dbc]) ; TODO just for the spec
   (:import
     (javax.sound.midi MidiSystem MidiDevice MidiMessage ShortMessage MidiDevice$Info Receiver)
     (uk.co.xfactorylibrarians.coremidi4j
@@ -461,7 +461,7 @@
                 args (concat args [midi-timestamp])
                 std-op  (fn [f]
                           (if scheduler-type
-                              (sched/schedule! scheduler at-f (log-error #(apply f chan args)))
+                              (pool/schedule! scheduler at-f (log-error #(apply f chan args)))
                               (apply f chan args)))]
             (case opcode :on   (std-op on!)
                          :off  (std-op off!)
@@ -472,7 +472,7 @@
                                  (swap! at update i-line (fn [x] (+ (or x start-time) offset))))))))) ; wait?
     ; No more things allowed to be scheduled
     ; Wait for everything to play
-    (when scheduler-type (sched/await-termination! scheduler))
+    (when scheduler-type (pool/await-termination! scheduler))
     (log/pr ::debug "Terminated scheduler.")
     (release-all! (if scheduler-type 1000 0)) ; TODO fix the 1000
     (reset! stop? false)

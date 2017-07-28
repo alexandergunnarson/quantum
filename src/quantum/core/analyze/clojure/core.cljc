@@ -1,30 +1,32 @@
 (ns quantum.core.analyze.clojure.core
-           (:require
-            #?(:clj  [clojure.jvm.tools.analyzer :as ana  ])
-            #?(:clj  [clojure.tools.analyzer.jvm :as clj-ana]
-              ;:cljs [clojure.tools.analyzer.js           ]
-                     )
-                     [quantum.core.macros.core   :as cmacros]
-                     [quantum.core.vars          :as var
-                             :refer [#?@(:clj [defalias])]]
-                     [quantum.core.fn
-                       :refer [fn1 rcomp]]
-                     [quantum.core.logic
-                       :refer [whenf1 fn-not]]
-                     [quantum.core.type.core     :as tcore])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars          :as var
-                       :refer [defalias]                  ]))
-   #?(:clj (:import
-             (clojure.lang RT Compiler))))
+  (:require
+#?@(:clj
+   [[clojure.jvm.tools.analyzer :as ana]
+    [clojure.tools.analyzer.jvm :as clj-ana]])
+ #_(:cljs [clojure.tools.analyzer.js])
+    [quantum.core.collections.base :as cbase
+      :refer [kw-map]]
+    [quantum.core.error            :as err
+      :refer [ex!]]
+    [quantum.core.fn
+      :refer [fn1 rcomp]]
+    [quantum.core.logic
+      :refer [whenf1 fn-not]]
+    [quantum.core.macros.core   :as cmacros]
+    [quantum.core.type.core     :as tcore]
+    [quantum.core.vars          :as var
+      :refer [defalias]])
+#?(:clj
+  (:import
+    (clojure.lang RT Compiler))))
 
 ; ===== TAGS / TYPE HINTS ===== ;
 
 (defn type-hint [x] (-> x meta :tag))
 
-#?(:clj
 (defn sanitize-tag [lang tag]
-  (or (get-in tcore/return-types-map [lang tag]) tag)))
+  #?(:clj  (or (get-in tcore/return-types-map [lang tag]) tag)
+     :cljs (ex! "`sanitize-tag` not supported in CLJS")))
 
 #?(:clj
 (defn sanitize-sym-tag [lang sym]
@@ -52,17 +54,17 @@
                           (name tag)))]
       sym)))
 
-#?(:clj
 (defn ->embeddable-hint
   "The compiler ignores, at least in cases, hints that are not string or symbols,
    and does not allow primitive hints.
    This fn accommodates these requirements."
   [hint]
-  (if (class? hint)
-      (if (.isPrimitive ^Class hint)
-          nil
-          (.getName ^Class hint))
-      hint)))
+  #?(:clj (if (class? hint)
+              (if (.isPrimitive ^Class hint)
+                  nil
+                  (.getName ^Class hint))
+              hint)
+     :cljs hint))
 
 ; ===== ANALYSIS ===== ;
 
@@ -90,7 +92,7 @@
 (defmacro ast
   {:usage '(ast (let [a 1 b {:a a}] [(-> a (+ 4) (/ 5))]))}
   ([lang & args]
-    (condp = lang
+    (case lang
       :clj  `(cond
                true  (ana/ast     ~@args)
                :else (clojure.tools.analyzer.jvm/analyze ~@args))
@@ -167,7 +169,7 @@
 #?(:clj
 (defmacro static-cast-depth [xs depth x]
   (cmacros/case-env
-    :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs n x)))
+    :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs depth x)))
     :clj  (let [hint       (jvm-typeof-respecting-hints xs &env)
                 _          (assert hint {:xs xs :hint hint})
                 cast-class (tag->class (tcore/nth-elem-type:clj hint depth))]
