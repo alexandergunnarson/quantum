@@ -1,7 +1,7 @@
 (ns quantum.core.spec
   (:refer-clojure :exclude
-    [string? keyword? set? number? fn?
-     assert keys + * cat and or])
+    [string? keyword? set? number? fn? any?
+     assert keys + * cat and or constantly])
   (:require
     [clojure.core      :as core]
     [clojure.spec      :as s]
@@ -13,7 +13,7 @@
     [quantum.core.error :as err
       :refer [catch-all]]
     [quantum.core.fn
-      :refer [fnl]]
+      :refer [fnl constantly]]
     [quantum.core.logic
       :refer [fn-not]]
     [quantum.core.macros.core
@@ -251,7 +251,7 @@
   `(or* ~@(map #(list 'fn [(gensym "_")] %) exprs))))
 
 #?(:clj
-(defmacro set-of [spec]
+(defmacro set-of [spec] ; TODO fix this up...
   `(let [spec# ~spec]
      (or*-forms (and core/set? (coll-of ~spec))
                 (and core/set? (coll-of spec#))
@@ -262,3 +262,5 @@
   (if (nil? x)
       (throw (ex-info "Value is not allowed to be nil but was" {}))
       x))
+
+(def any? (constantly true))
