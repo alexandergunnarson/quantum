@@ -346,26 +346,20 @@
 
 #?(:clj
 (defmacro while-let
-  "Repeatedly executes body while test expression is true, evaluating the body
-   with binding-form bound to the value of test."
-  {:source "markmandel/while-let"}
-  [[sym test] & body]
-  `(loop [~sym ~test]
-     (when ~sym
-       ~@body
-       (recur ~test)))))
+  "Like `while`, but binds the test value as by `let`."
+  [[bind testv] & body]
+  `(loop [sym# ~testv]
+     (let [~bind sym#]
+       (when sym# ~@body (recur ~testv))))))
 
 #?(:clj
 (defmacro while-let-pred
-  "Repeatedly executes `test` and `body` while `pred` is true of `test`, evaluating the body
-   with binding-form bound to the value of `test`."
-  {:source "markmandel/while-let"}
-  [[sym test pred] & body]
-  `(loop [~sym ~test]
-     (if ~pred
-         (do ~@body
-             (recur ~test))
-         ~sym))))
+  "Like `while`, but binds the test value as by `let`.
+   Only executes if `pred` is true on the test value."
+  [[bind testv pred] & body]
+  `(loop [sym# ~testv]
+     (let [~bind sym#]
+       (when (~pred sym#) ~@body (recur ~testv))))))
 
 #?(:clj
 (defmacro doreduce ; TODO demacro when type inference is done
