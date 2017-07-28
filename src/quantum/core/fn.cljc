@@ -346,7 +346,7 @@
   "Converts a ->> to a ->
    Note: syntax modified from original."
    {:attribution "thebusby.bagotricks"
-    :usage       `(->> (range 10) (map inc) (<- doto prn) (reduce +))}
+    :usage       `(->> (range 10) (map inc) (<- doto println) (reduce +))}
   ([x] `(~x))
   ([op & body] `(~op ~(last body) ~@(butlast body)))))
 
