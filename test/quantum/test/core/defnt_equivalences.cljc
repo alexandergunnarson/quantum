@@ -10,16 +10,6 @@
 
 (instrument)
 
-(def object?   #(instance? #?(:clj Object :cljs js/Object) %))
-(def integer?  (s/or unboxed-byte? unboxed-short? unboxed-int? unboxed-long? bigint?))
-(def ?integer? (s/or nil? integer? boxed-byte? boxed-short? boxed-int? boxed-long?))
-(def decimal?  (s/or unboxed-float? unboxed-double? bigdec?))
-(def ?decimal? (s/or nil? decimal? boxed-float? boxed-double?))
-
-(def integer-value? (s/or integer? (s/and decimal? decimal-is-integer-value?)))
-
-(def any? (s/or nil? #?@(:clj  [boolean byte char short int long float double Object]
-                         :cljs [js/Boolean js/Number js/Object js/String js/Symbol])))
 
 (def *interfaces (atom {}))
 
@@ -27,6 +17,17 @@
            ([x string?] x)
   #?(:clj  ([x Named  ] (.getName x))
      :cljs ([x INamed ] (-name x)))) ; TODO fix
+
+(defnt ^:inline some?
+  ([x nil?] false)
+  ([x any?] true))
+
+(defnt ^:inline reduced?
+  ([x Reduced] true)
+  ([x any?   ] false))
+
+(defnt ^:inline identity ([x any?] x))
+
 
 (do
 ; direct dispatch interfaces (CLJ only)
@@ -55,8 +56,8 @@
                'java:lang:String•clojure:lang:Named #'name:java:lang:String•clojure:lang:Named))
    :cljs (do (defn name:string [^string x] x)
              (defn name:cljs:core:INamed [^cljs.core.INamed x] (-name x))
-             (aset name:overloads "name:string"           #'name:string)
-             (aset name:overloads "name:cljs:core:INamed" #'name:cljs:core:INamed)))
+             (set (.-name:string           name:overloads) #'name:string) ; TODO vars do nothing here
+             (set (.-name:cljs:core:INamed name:overloads) #'name:cljs:core:INamed)))
 
 ; indirect dispatch — invoked only if incomplete type information (incl. in untyped context)
 (do (defprotocol name:--protocol (name [a0]))
@@ -140,7 +141,7 @@
                :opts       (s/? ::expand-signatures:opts))
   :ret  ::signatures)
 
-(defn expand-signatures [signatures]
+(defn expand-signatures [signatures & [opts]]
   signatures)
 
 (instrument)
@@ -190,10 +191,10 @@
 ; (optional) function — only when the `defnt` has an arity with 0 arguments
 
 ; (optional) inline macros — invoked only if in a typed context and not used as a function
-(do #?(:clj (defmacro clj:name:java:lang:String  [a0] `(let [~'x ~a0] ~'x)))
-    #?(:clj (defmacro cljs:name:string [a0] `(let [~'x ~a0] ~'x)))
-    #?(:clj (defmacro clj:name:clojure:lang:Named   [a0] `(let [~'x ~a0] ~'(-name x))))
-    #?(:clj (defmacro cljs:name:cljs:core:INamed [a0] `(let [~'x ~a0] ~'(.getName x)))))
+(do #?(:clj (defmacro clj:name:java:lang:String   [a0] `(let [~'x ~a0] ~'x)))
+    #?(:clj (defmacro cljs:name:string            [a0] `(let [~'x ~a0] ~'x)))
+    #?(:clj (defmacro clj:name:clojure:lang:Named [a0] `(let [~'x ~a0] ~'(-name x))))
+    #?(:clj (defmacro cljs:name:cljs:core:INamed  [a0] `(let [~'x ~a0] ~'(.getName x)))))
 )
 
 ; ================================================ ;
@@ -202,19 +203,23 @@
 ;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
 ;; will error if not all return values can be safely converted to the return spec
 (defnt ->int* > int
-  ([x int] x)
-  ([x Number] (.intValue x))
-  ([x (s/or byte short char long float double)] (Primitive/uncheckedIntCast x))))
+  ([x (s/and primitive? (s/not boolean?))] (Primitive/uncheckedIntCast x))
+  ([x Number] (.intValue x))))
 
-; ================================================ ;
+; ----- INFERRED ----- ;
 
 #?(:clj
-;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
-;; will error if not all return values can be safely converted to the return spec
 (defnt ->int* > int
-  ([x int] x)
-  ([x Number] (.intValue x))
-  ([x (s/or byte short char long float double)] (Primitive/uncheckedIntCast x))))
+  ([x byte  ] (Primitive/uncheckedIntCast x))
+  ([x short ] (Primitive/uncheckedIntCast x))
+  ([x char  ] (Primitive/uncheckedIntCast x))
+  ([x int   ] (Primitive/uncheckedIntCast x))
+  ([x long  ] (Primitive/uncheckedIntCast x))
+  ([x float ] (Primitive/uncheckedIntCast x))
+  ([x double] (Primitive/uncheckedIntCast x))
+  ([x Number] (.intValue x))))
+
+; ----- IMPLEMENTATION ----- ;
 
 ; ================================================ ;
 
@@ -222,7 +227,7 @@
   ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
   ;; by default it's reasonably strict type checks (i.e. not allowing strange
   ;; byte manipulation)
-  ([x #?(:clj (? {:any-in-numeric-range? true}) :cljs any?)]
+  ([x #?(:clj (?* {:any-in-numeric-range? true}) :cljs any?)]
     #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))
 
 ; ----- INFERRED ----- ;
@@ -422,3 +427,148 @@ y -> String, Named
 #?(:clj (defmacro name:String•String [x] x))
 #?(:clj (defmacro name:String•Named [x] `(let [~'x ~x] (.getName x))))
 )
+
+; ================================================ ;
+
+(defnt count > integer?
+  ([xs array?   ] (Array/count xs))
+  ([xs string?  ] (#?(:clj .length :cljs .-length) xs))
+  ([xs !+vector?] (#?(:clj count :cljs (TODO)) xs)))
+
+(defnt get
+  ([xs array?   , k (s/-> integer? ?)] (Array/get xs k))
+  ([xs string?  , k (s/-> integer? ?)] (.charAt xs k))
+  ([xs !+vector?, k any?] #?(:clj (.valAt xs k) :cljs (TODO))))
+
+(defnt first
+  ([xs nil?] nil)
+  ([xs (s/and sequential? indexed?)] (get xs 0))
+  ([xs ISeq] (.first xs))
+  ([xs ?] (first (seq xs))))
+
+(defnt seq > (? ISeq)
+  "Taken from `clojure.lang.RT/seq`"
+  ([xs nil?] nil)
+  ([xs array?] (ArraySeq/createFromObject xs))
+  ([xs ASeq] xs)
+  ([xs (s/or LazySeq Seqable)] (.seq xs))
+  ([xs Iterable] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
+  ([xs CharSequence] (StringSeq/create xs))
+  ([xs Map] (seq (.entrySet xs))))
+
+(defnt next > (? ISeq)
+  "Taken from `clojure.lang.RT/next`"
+  ([xs nil?] nil)
+  ([xs ISeq] (.next xs))
+  ([xs ?] (next (seq xs))))
+
+(defnt reduce
+  "Much of this content taken from clojure.core.protocols for inlining and
+   type-checking purposes."
+  {:attribution "alexandergunnarson"}
+         ([f ?, init ?, z fast_zip.core.ZipperLocation]
+           (loop [xs (zip/down z) v init]
+             (if (some? z)
+                 (let [ret (f v z)]
+                   (if (reduced? ret)
+                       @ret
+                       (recur (zip/right xs) ret)))
+                 v)))
+         ; TODO look at CLJS `array-reduce`
+         ([f ?, init ?, xs (s/or array? string? !+vector?)] ; because transient vectors aren't reducible
+           (let [ct (count xs)]
+             (loop [i 0 v init]
+               (if (< i ct)
+                   (let [ret (f v (get xs i))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur (inc* i) ret)))
+                   v))))
+#?(:clj  ([f ?, init ?, xs clojure.lang.StringSeq]
+           (let [s (.s xs)]
+             (loop [i (.i xs) v init]
+               (if (< i (count s))
+                   (let [ret (f v (get s i))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur (inc* i) ret)))
+                   v)))))
+#?(:clj  ([f ?
+           xs (s/or clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
+                    clojure.lang.LazySeq ; for range
+                    clojure.lang.ASeq)] ; aseqs are iterable, masking internal-reducers
+           (if-let [s (seq xs)]
+             (clojure.core.protocols/internal-reduce (next s) f (first s))
+             (f))))
+#?(:clj  ([f ?, init ?
+           xs (s/or clojure.lang.PersistentVector ; vector's chunked seq is faster than its iter
+                    clojure.lang.LazySeq ; for range
+                    clojure.lang.ASeq)]  ; aseqs are iterable, masking internal-reducers
+           (let [s (seq xs)]
+             (clojure.core.protocols/internal-reduce s f init))))
+         ([x transformer?, f ?]
+           (let [rf ((.-xf x) f)]
+             (rf (reduce rf (rf) (.-prev x)))))
+         ([x transformer?, f ?, init ?]
+           (let [rf ((.-xf x) f)]
+             (rf (reduce rf init (.-prev x)))))
+         ([f ?, init ?, x chan?] (async/reduce f init x))
+#?(:cljs ([f ?, init ?, xs +map?] (#_(:clj  clojure.core.protocols/kv-reduce
+                                      :cljs -kv-reduce) ; in order to use transducers...
+                                -reduce-seq xs f init)))
+#?(:cljs ([f ?, init ?, xs +set?] (-reduce-seq xs f init)))
+         ([f ?, init ?, n #?(:clj integer? :cljs double?)]
+           (loop [i 0 v init]
+             (if (< i n)
+                 (let [ret (f v i)]
+                   (if (reduced? ret)
+                       @ret
+                       (recur (inc* i) ret))) ; TODO should only be unchecked if `n` is within unchecked range
+                 v)))
+         ;; `iter-reduce`
+#?(:clj  ([f ?
+           xs (s/or clojure.lang.APersistentMap$KeySeq
+                    clojure.lang.APersistentMap$ValSeq
+                    Iterable)]
+           (let [iter (.iterator xs)]
+             (if (.hasNext iter)
+                 (loop [ret (.next iter)]
+                   (if (.hasNext iter)
+                       (let [ret (f ret (.next iter))]
+                         (if (reduced? ret)
+                             @ret
+                             (recur ret)))
+                       ret))
+                 (f)))))
+         ;; `iter-reduce`
+#?(:clj  ([f ?, init ?
+           xs (s/or clojure.lang.APersistentMap$KeySeq
+                    clojure.lang.APersistentMap$ValSeq
+                    Iterable)]
+           (let [iter (.iterator xs)]
+             (loop [ret init]
+               (if (.hasNext iter)
+                   (let [ret (f ret (.next iter))]
+                     (if (reduced? ret)
+                         @ret
+                         (recur ret)))
+                   ret)))))
+#?(:clj  ([f ?,       xs clojure.lang.IReduce    ] (.reduce   xs f)))
+#?(:clj  ([f ?, init, xs clojure.lang.IKVReduce  ] (.kvreduce xs f init)))
+#?(:clj  ([f ?, init, xs clojure.lang.IReduceInit] (.reduce   xs f init)))
+         ([f ?, xs any?]
+           (if (some? xs)
+               (#?(:clj  clojure.core.protocols/coll-reduce
+                   :cljs -reduce) xs f)
+               (f)))
+         ([f ?, init ?, xs any?]
+           (if (some? xs)
+               (#?(:clj  clojure.core.protocols/coll-reduce
+                   :cljs -reduce) xs f init)
+               init)))
+
+(defnt transduce
+  ([     f ? xs ?] (transduce identity f     xs))
+  ([xf ? f ? xs ?] (transduce xf       f (f) xs))
+  ([xf ? f ? init ? xs ?]
+    (let [f' (xf f)] (f' (reduce f' init xs)))))
