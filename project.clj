@@ -18,15 +18,7 @@
   :url               "https://www.github.com/alexandergunnarson/quantum"
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
-  ; :signing          {:gpg-key "72F3C25A"}
-  #_:repositories #_{"repo-s3-releases" ; this has problems with lein-ancient
-                   {:url        "s3://repo.quantum/releases/"
-                    :username   :env/public-repo-s3-username
-                    :passphrase :env/public-repo-s3-password
-                    :checksum   :warn}}
   :plugins [[lein-environ  "1.0.3" ]
-            #_[lein-essthree "0.2.1" ; Conflicts with alembic.still
-              :exclusions [org.clojure/tools.reader]]
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
@@ -117,7 +109,7 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [net.mikera/core.matrix                "0.57.0"
            :exclusions [org.clojure/clojure]]
-         [quantum/java                          "1.6"             ]
+         [quantum/java                          "1.7"             ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
          [fipp                                  "0.6.8"
