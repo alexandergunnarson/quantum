@@ -16,7 +16,7 @@
     [quantum.core.log              :as log]
     [quantum.core.vars             :as var
       :refer [defalias]])
-  #?(:cljs
+#?(:cljs
   (:require-macros
     [quantum.core.error            :as self
       :refer [with-log-errors assert]])))
@@ -44,7 +44,19 @@
 (def ex-info-type #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo))
 (def ex-info? (fnl instance? ex-info-type))
 
-(defrecord Err [type msg objs])
+(defrecord Err [type msg objs]
+  #?@(:clj [Object
+  (toString [this]
+    (str (into {} this)))]))
+
+#?(:clj
+     (do (defmethod print-method Err [v ^java.io.Writer w]
+           (.write w (str v))))
+   :cljs
+ (extend-type Err
+   IPrintWithWriter
+     (-pr-writer [this writer _]
+       (write-all writer (into {} this)))))
 
 (defn ->err
   "Constructor for |Err|."
