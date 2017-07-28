@@ -780,6 +780,4 @@ public class Numeric {
     // ============================ REM ================================ //
 
     public static long   rem (final long   a, final long   b) { return a % b; }
-
-    public static long uncheckedLongCast (final char x) { return (long)x; }
 }
