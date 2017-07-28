@@ -511,10 +511,6 @@
 (complete-bench (do (+*-protocol-0 1.0 3.0)
                     (+*-protocol-0 1   3  )))
 
-; 48.844710 ns
-(complete-bench (do (dispatch 1.0 3.0)
-                    (dispatch 1   3  )))
-
 ; 40.611242 ns
 (complete-bench (do (dispatch-with-identity-map-mutable 1.0 3.0)
                     (dispatch-with-identity-map-mutable 1   3  )))
@@ -522,6 +518,10 @@
 ; 42.714549 ns
 (complete-bench (do (dispatch-with-map-mutable 1.0 3.0)
                     (dispatch-with-map-mutable 1   3  )))
+
+; 48.844710 ns
+(complete-bench (do (dispatch 1.0 3.0)
+                    (dispatch 1   3  )))
 
 ; 79.343540 ns
 #_(complete-bench (do (dispatch-with-int->object-map-mutable 1.0 3.0)
