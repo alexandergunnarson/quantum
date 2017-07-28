@@ -17,7 +17,7 @@
     [quantum.core.data.vector                :as vec
       :refer [catvec]]
     [quantum.core.error                      :as err
-      :refer [->ex throw-unless assertf->>]]
+      :refer [ex! ->ex throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.log                        :as log
@@ -291,7 +291,7 @@
   [{:as args :keys [lang fn-sym expr explicit-ret-type]}]
   (validate fn-sym symbol?)
   (let [non-recursive?      (not (recursive? args))
-        explicit-ret-type   (ana/tag->class explicit-ret-type)
+        explicit-ret-type   (#?(:clj ana/tag->class :cljs identity) explicit-ret-type)
         inferred-ret-type   (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
                         #?(:clj  (when (= lang :clj) (ana/jvm-typeof-respecting-hints expr))
                            :cljs nil)) ; TODO CLJS
@@ -460,11 +460,10 @@
 
 #?(:clj (def not-matchable (Object.)))
 
-#?(:clj
 (defn hint-expr-embeddably [expr hint]
   (if (symbol? expr)
       (hint-meta expr (ana/->embeddable-hint hint))
-      (tcore/static-cast-code (ana/->embeddable-hint hint) expr))))
+      (tcore/static-cast-code (ana/->embeddable-hint hint) expr)))
 
 #?(:clj
 (defn hint-expr-with-class [expr hint]
@@ -473,11 +472,10 @@
       expr
       (hint-meta expr hint))))
 
-#?(:clj
 (defn expr->with-embeddable-hints [expr]
   (if-let [hint (ana/type-hint expr)]
     (hint-expr-embeddably expr hint)
-    expr)))
+    expr))
 
 #?(:clj
 (defn ^Class expr->hint:class [expr]
@@ -621,47 +619,46 @@
   {:todo #{"finer-grained, faster, and more space-efficient memoization using Google Guava"}}
   [c] (class->public-methods:uncached c)))
 
-#?(:clj
 (defn args->matches
   ([sym classname method args strict?] (args->matches sym classname method args strict? nil))
   ([sym classname method args strict? env]
     (log/ppr-hints :macro-expand/params "Matching args" {:args args :class classname :method method})
-    (let [arity    (count args)
-          class-   (resolve classname)
-          _        (assert (some? class-) (kw-map classname))
-          method-name (name method)
-          argtypes (mapv #(ana/jvm-typeof-respecting-hints % env) args)
-          all-methods (class->public-methods class-)
-          _ (log/prl :macro-expand/params all-methods)
-          possible-matches
-            (->> all-methods
-                 (filter (fn->> :name (= method-name)))
-                 (filter (fn->> :parameter-types count (= arity)))
-                 (map    (fn->> :parameter-types (try-params-match env args argtypes)))
-                 (remove nil?))
-          _ (log/ppr-hints :macro-expand/params "Possible matches:" (kw-map sym args possible-matches))
-          most-specific-matches
-            (when-not (empty? possible-matches)
-              (most-specific-arg-matches possible-matches))
-          ; TODO derepeat
-          _ (if (and (or (-> most-specific-matches count (> 1))
-                         (-> most-specific-matches count (= 0)))
-                     (or (and strict? @warn-on-strict-inexact-matches?)
-                         @warn-on-all-inexact-matches?))
-                (log/ppr-hints :warn
-                  ; TODO line number etc.
-                  (if (-> most-specific-matches count (> 1))
-                     "More than one matching method found for args. Hint one or more args to fix this."
-                     "No method found for args. Falling back to reflection. Hint one or more args to fix this.")
-                  {:callsite [classname method
-                              {:symbolic args
-                               :types    argtypes}]
-                   :possible-matches possible-matches
-                   :most-specific-matches most-specific-matches})
-                (log/ppr-hints :macro-expand/params "Most specific matches:" (kw-map sym args most-specific-matches)))]
-      most-specific-matches))))
+    #?(:clj (let [arity    (count args)
+                  class-   (resolve classname)
+                  _        (assert (some? class-) (kw-map classname))
+                  method-name (name method)
+                  argtypes (mapv #(ana/jvm-typeof-respecting-hints % env) args)
+                  all-methods (class->public-methods class-)
+                  _ (log/prl :macro-expand/params all-methods)
+                  possible-matches
+                    (->> all-methods
+                         (filter (fn->> :name (= method-name)))
+                         (filter (fn->> :parameter-types count (= arity)))
+                         (map    (fn->> :parameter-types (try-params-match env args argtypes)))
+                         (remove nil?))
+                  _ (log/ppr-hints :macro-expand/params "Possible matches:" (kw-map sym args possible-matches))
+                  most-specific-matches
+                    (when-not (empty? possible-matches)
+                      (most-specific-arg-matches possible-matches))
+                  ; TODO derepeat
+                  _ (if (and (or (-> most-specific-matches count (> 1))
+                                 (-> most-specific-matches count (= 0)))
+                             (or (and strict? @warn-on-strict-inexact-matches?)
+                                 @warn-on-all-inexact-matches?))
+                        (log/ppr-hints :warn
+                          ; TODO line number etc.
+                          (if (-> most-specific-matches count (> 1))
+                             "More than one matching method found for args. Hint one or more args to fix this."
+                             "No method found for args. Falling back to reflection. Hint one or more args to fix this.")
+                          {:callsite [classname method
+                                      {:symbolic args
+                                       :types    argtypes}]
+                           :possible-matches possible-matches
+                           :most-specific-matches most-specific-matches})
+                        (log/ppr-hints :macro-expand/params "Most specific matches:" (kw-map sym args most-specific-matches)))]
+              most-specific-matches)
+       :cljs [])))
 
-#?(:clj
 (defn output-call-to-protocol-or-reify
   ([{:keys [sym env reify-available? strict?
             protocol-method
@@ -684,7 +681,7 @@
                   ; and is strict, outputs warning and proceeds with the reify with the original args
                   `(. ~reify-name ~interface-method ~@args)
                   ; Otherwise, goes with the protocol, passing in the original args
-                  `(~protocol-method ~@args))))))))
+                  `(~protocol-method ~@args)))))))
 
 (defn defnt-gen-helper-macro
   "Generates the macro helper for |defnt|.

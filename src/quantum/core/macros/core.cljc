@@ -1,20 +1,23 @@
 (ns quantum.core.macros.core
   "Macro-building helper functions."
   (:refer-clojure :exclude [macroexpand macroexpand-1])
-  (:require  [clojure.core           :as core]
-             [clojure.core.reducers  :as red]
-             [clojure.walk           :as walk
-               :refer [prewalk postwalk]]
-             [cljs.analyzer]
-   #?@(:clj [[clojure.jvm.tools.analyzer.hygienic]
-             [clojure.jvm.tools.analyzer]
-             [clojure.tools.analyzer.jvm]
-             [riddley.walk]
-             [clojure.tools.reader :as r]])
-             [quantum.core.core    :as qcore])
-  #?(:cljs (:require-macros
-             [quantum.core.macros.core :as self
-               :refer [env]])))
+  (:require
+    [clojure.core           :as core]
+    [clojure.core.reducers  :as red]
+    [clojure.walk           :as walk
+      :refer [prewalk postwalk]]
+    [cljs.analyzer]
+#?@(:clj
+   [[clojure.jvm.tools.analyzer.hygienic]
+    [clojure.jvm.tools.analyzer]
+    [clojure.tools.analyzer.jvm]
+    [riddley.walk]
+    [clojure.tools.reader :as r]])
+    [quantum.core.core    :as qcore])
+#?(:cljs
+  (:require-macros
+    [quantum.core.macros.core :as self
+      :refer [env]])))
 
 ; ===== ENVIRONMENT =====
 
@@ -24,6 +27,13 @@
   [env]
   (boolean (:ns env)))
 
+(defn case-env:matches? [env k]
+  (case k
+    :clj  true ; TODO 0
+    :cljs (cljs-env? env)
+    :clr  (throw (ex-info "TODO: Conditional compilation for CLR not supported" {:platform :clr}))
+    (throw (ex-info "Conditional compilation for platform not supported" {:platform k}))))
+
 #?(:clj
 (defmacro case-env*
   "Conditionally compiles depending on the supplied environment (e.g. CLJ, CLJS, CLR)."
@@ -31,30 +41,25 @@
              (case-env* &env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))
    :todo  {0 "Not sure how CLJ environment would be differentiated from others"}}
   ([env]
-    (throw (ex-info "Compilation unhandled for environment" {:env env})))
+    `(throw (ex-info "Compilation unhandled for environment" {:env ~env})))
   ([env v] v)
   ([env k v & kvs]
-    (let [accepted?
-           (case k
-             :clj  true ; TODO 0
-             :cljs (cljs-env? env)
-             :clr  (throw (ex-info "TODO: Conditional compilation for CLR not supported" {:platform :clr}))
-             (throw (ex-info "Conditional compilation for platform not supported" {:platform k})))]
-      (if accepted?
-          v
-          `(case-env* ~env ~@kvs))))))
+    `(let [env# ~env]
+       (if (case-env:matches? env# ~k)
+           ~v
+           (case-env* env# ~@kvs))))))
 
 #?(:clj
 (defmacro case-env
   "Conditionally compiles depending on the supplied environment (e.g. CLJ, CLJS, CLR)."
   {:usage `(defmacro abcde [a]
              (case-env :clj `(+ ~a 2) :cljs `(+ ~a 1) `(+ ~a 3)))}
-  ([& args] `(case-env* ~&env ~@args))))
+  ([& args] `(case-env* ~'&env ~@args))))
 
 #?(:clj (defmacro env-lang [] (case-env :clj :clj :cljs :cljs :clr :clr)))
 
 #?(:clj
-(defn core-symbol [env sym] (symbol (str (case-env :cljs "cljs" "clojure") ".core") (name sym))))
+(defn core-symbol [env sym] (symbol (str (case-env* env :cljs "cljs" "clojure") ".core") (name sym))))
 
 #?(:clj
 (defmacro locals
