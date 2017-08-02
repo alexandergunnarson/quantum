@@ -18,6 +18,8 @@
   :url               "https://www.github.com/alexandergunnarson/quantum"
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
+  :repositories [["Boundless" "http://repo.boundlessgeo.com/main/"]
+                 ["OSGeo"     "http://download.osgeo.org/webdav/geotools/"]]
   :plugins [[lein-environ  "1.0.3" ]
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
@@ -80,6 +82,11 @@
          [bwo/conditions                        "0.1.0"
            :exclusions [slingshot]]
        ; ==== SYSTEM ====
+       ; ==== GEO ====
+         [org.geotools/gt-geotiff               "17.2"            ]
+         [org.geotools/gt-referencing           "17.2"            ]
+         [org.geotools/gt2-epsg-hsql            "2.5-M1"
+           :exclusions [javax.units/jsr108]]
        ; ==== GRAPH ====
          [aysylu/loom                           "1.0.0"           ]
        ; ==== IO ====
@@ -245,7 +252,7 @@
      ; METADATA EXTRACTION/PARSING
      [org.apache.tika/tika-parsers              "1.13"
        :exclusions [org.apache.poi/poi org.apache.poi/poi-ooxml
-                    org.ow2.asm/*]]
+                    org.ow2.asm/* javax.measure/jsr-275]]
      ; DATAGRID
      [org.apache.poi/poi                        "3.14"            ]
      [org.apache.poi/poi-ooxml                  "3.14"            ] ; Conflicts with QB WebConnector stuff (?) as well as HTMLUnit (org.w3c.dom.ElementTraversal)
@@ -334,7 +341,43 @@
    {:dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
-          :jvm-opts       ["-Dquantum.core.log:out-file=./out.log"]
+          :jvm-opts
+            ["-Dquantum.core.log:out-file=./out.log"
+             ; ----- HEAP ----- ;
+             "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
+             "-XX:+UseParallelGC" ; https://www.voxxed.com/blog/2015/08/whats-fastest-garbage-collector-java-8-heavy-calculations/
+             "-XX:+UseCompressedOops"
+             "-XX:+UseSuperWord"
+             ; ----- JIT ----- ;
+             "-XX:+DoEscapeAnalysis"
+             "-XX:+Inline"
+             "-XX:+OptimizeStringConcat"
+             "-XX:MaxTrivialSize=12"
+             "-XX:MaxInlineSize=270"
+             "-XX:InlineSmallCode=2000"
+             ; ----- TELEMETRY ----- ;
+             "-XX:-OmitStackTraceInFastThrow"
+             ; ----- CRYPTOGRAPHY ----- ;
+             "-XX:+UseAES"
+             "-XX:+UseAESIntrinsics"
+             "-XX:+UseSHA"
+             "-XX:+UseSHA1Intrinsics"
+             "-XX:+UseSHA256Intrinsics"
+             "-XX:+UseSHA512Intrinsics"
+             ; ----- MEMORY ----- ;
+             ; JIT
+           #_"-XX:InitialCodeCacheSize=512M"
+           #_"-XX:ReservedCodeCacheSize=512M"
+             ; DIRECT MEMORY
+           #_"-XX:MaxDirectMemorySize=512M"
+             ; CLASS/METASPACE
+           #_"-XX:CompressedClassSpaceSize=128M"
+           #_"-XX:MetaspaceSize=1024M"
+             ; (and (> Xmx32G) (<= Xmx38G)) is worse performance: http://java-performance.com
+             "-Xms10G"
+             "-Xmx10G"
+             ; DATOMIC
+           #_"-Ddatomic.ObjectCacheMax=8G"]
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.4" ]
