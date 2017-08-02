@@ -89,13 +89,14 @@
                        (recur (zip/right xs) ret)))
                  v)))
          ([^array? arr f init] ; Adapted from `areduce`
-           #?(:clj  (loop [i 0 v init]
-                      (if (< i (Array/count arr))
-                          (let [ret (f v (Array/get arr i))]
-                            (if (reduced? ret)
-                                @ret
-                                (recur (unchecked-inc i) ret)))
-                          v))
+           #?(:clj  (let [ct (Array/count arr)]
+                      (loop [i 0 v init]
+                        (if (< i ct)
+                            (let [ret (f v (Array/get arr i))]
+                              (if (reduced? ret)
+                                  @ret
+                                  (recur (unchecked-inc i) ret)))
+                            v)))
               :cljs (array-reduce arr f init)))
          ([^!+vector? xs f init] ; because transient vectors aren't reducible
            (let [ct (#?(:clj .count :cljs count) xs)] ; TODO fix for CLJS
