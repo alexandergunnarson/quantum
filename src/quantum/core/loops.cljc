@@ -244,11 +244,23 @@
 
 #?(:clj
 (defmacro ifor
-  "Imperative |for| loop."
+  "Imperative `for` loop."
   {:usage '(ifor [n 0 (< n 100) (inc n)] (println n))}
   [[sym val-0 pred val-n+1] & body]
-  `(loop [~sym ~val-0]
-    (when ~pred ~@body (recur ~val-n+1)))))
+  `(loop [~sym ~val-0 ret# nil]
+    (if ~pred
+        (recur ~val-n+1 (do ~@body))
+        ret#))))
+
+#?(:clj
+(defmacro ifori
+  "Imperative `for` loop, indexed."
+  {:usage '(ifor [i n 0 (< n 100) (inc n)] (println i n))}
+  [[i-sym sym val-0 pred val-n+1] & body]
+  `(loop [~i-sym 0 ~sym ~val-0 ret# nil]
+    (if ~pred
+        (recur (unchecked-inc ~i-sym) ~val-n+1 (do ~@body))
+        ret#))))
 
 #?(:clj (defmacro lfor [& args] `(core/for ~@args)))
 

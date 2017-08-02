@@ -368,6 +368,7 @@
         (defalias reducei-2    loops/reducei-2)
 #?(:clj (defalias reduce-2:indexed loops/reduce-2:indexed))
 #?(:clj (defalias ifor         loops/ifor    ))
+#?(:clj (defalias ifori        loops/ifori   ))
 ; ===== COLLECTION COMPREHENSION ===== ;
 #?(:clj (defalias for-join     loops/for-join  ))
 #?(:clj (defalias for-join!    loops/for-join! ))
