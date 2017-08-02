@@ -1,10 +1,7 @@
 (ns quantum.core.macros.protocol
   (:require
-    [quantum.core.analyze.clojure.core       :as ana
-      :refer [type-hint]]
-    [quantum.core.analyze.clojure.transform
-      :refer [unhint]]
     [quantum.core.macros.transform           :as trans]
+    [quantum.core.macros.type-hint           :as th]
     [quantum.core.fn                         :as fn
       :refer [fn1 fn-> fn->>]]
     [quantum.core.log                        :as log]
@@ -12,7 +9,6 @@
       :refer [whenp]]
     [quantum.core.collections.base           :as cbase
       :refer [kw-map update-first update-val nempty? nnil? ensure-set]]
-    [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 
 (def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
@@ -27,8 +23,8 @@
 
 (defn ensure-protocol-appropriate-type-hint
   [arg lang i arglist-length]
-  (let [unhinted (unhint    arg)
-        hint     (type-hint arg)
+  (let [unhinted (th/un-type-hint arg)
+        hint     (th/type-hint arg)
         ; hint-f   (get-in protocol-type-hint-map [lang hint])
         ]
     (if (or (= hint 'Object)
@@ -38,7 +34,7 @@
                  (and arglist-length ; TODO fix this — this is a hack to get around checking return types
                       (> arglist-length 4)))) ; because fns taking primitives support only 4 or fewer args
         unhinted ; just remove the hint for now — don't "upgrade" it
-        (cmacros/hint-meta arg hint))))
+        (th/with-type-hint arg hint))))
 
 (defn ensure-protocol-appropriate-arglist
   [lang arglist-0]
@@ -110,21 +106,21 @@
   (let [body-sorted
           (->> reify-body rest rest
                (map (fn [[sym & body]]
-                      (-> body (update-first (fn1 cmacros/hint-meta (type-hint sym))))))) ; remove reify method names
+                      (-> body (update-first (fn1 th/with-type-hint (th/type-hint sym))))))) ; remove reify method names
         body-filtered body-sorted
         _ (log/ppr-hints :macro-expand-protocol "BODY SORTED" body-sorted)
         body-mapped
           (->> body-filtered
                (map (fn [[arglist & body :as method]]
                       (log/ppr-hints :macro-expand "IN BODY MAPPED" (kw-map arglist body))
-                      (let [first-type         (-> arglist second type-hint)
+                      (let [first-type         (-> arglist second th/type-hint)
                             first-type-unboxed (-> first-type tcore/->unboxed)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
                         (if ; Unboxed version of arity already exists? Skip generation of that type/arity
                             (and (tcore/boxed? first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
                             [] ; Empty so concat gets nothing
                             (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed))
-                                             ; (whenc (-> arglist second type-hint tcore/->boxed)
+                                             ; (whenc (-> arglist second th/type-hint tcore/->boxed)
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
@@ -132,7 +128,7 @@
                                   arglist-f   (->> arglist rest (ensure-protocol-appropriate-arglist lang))
                                   arglist-f   (if return-type
                                                   arglist-f
-                                                  (cmacros/hint-meta arglist-f return-type) )
+                                                  (th/with-type-hint arglist-f return-type) )
                                   body-f      (trans/hint-body-with-arglist body arglist lang :protocol)
                                   extension-f [boxed-first-type (cons genned-protocol-method-name (cons arglist-f body-f))]]
                               (log/ppr-hints :macro-expand "IN BODY AFTER MAPPED" (kw-map boxed-first-type extension-f first-type))

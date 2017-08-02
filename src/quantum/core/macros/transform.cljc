@@ -2,11 +2,9 @@
   (:require
     [fast-zip.core                           :as zip]
  #?(:clj [clojure.jvm.tools.analyzer         :as clj-ana])
-    [quantum.core.analyze.clojure.core       :as ana
-      :refer [type-hint]]
+    [quantum.core.analyze.clojure.core       :as ana]
     [quantum.core.analyze.clojure.predicates :as anap]
-    [quantum.core.analyze.clojure.transform
-      :refer [unhint]]
+    [quantum.core.macros.type-hint           :as th]
     [quantum.core.macros.optimization        :as opt]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set
@@ -19,7 +17,6 @@
       :refer [prl]]
     [quantum.core.logic                      :as logic
       :refer [fn-not fn-or fn-and whenc condf1]]
-    [quantum.core.macros.core                :as cmacros]
     [quantum.core.type.core                  :as tcore]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
@@ -30,13 +27,13 @@
   ((fn-or anap/hinted-literal?
      (fn1 anap/type-cast? lang)
      anap/constructor?
-     type-hint
+     th/type-hint
      (fn [sym]
        (when env
          (log/ppr :macro-expand/params (str "TRYING TO RESOLVE HINT FOR SYM FROM &env " sym) (keys env))
          (log/pr  :macro-expand/params "SYM" sym "IN ENV?" (contains? env sym))
-         (log/pr  :macro-expand/params "ENV TYPE HINT" (-> env (find sym) first type-hint)))
-       (-> env (find sym) first type-hint)))
+         (log/pr  :macro-expand/params "ENV TYPE HINT" (-> env (find sym) first th/type-hint)))
+       (-> env (find sym) first th/type-hint)))
    x))
 
 (defn any-hint-unresolved?
@@ -52,7 +49,7 @@
   ([body arglist lang] (hint-body-with-arglist body arglist lang nil))
   ([body arglist lang body-type]
   (let [arglist-map (->> arglist
-                         (map (fn [sym] [sym (type-hint sym)]))
+                         (map (fn [sym] [sym (th/type-hint sym)]))
                          (into {}))
         body-hinted
           (postwalk
@@ -64,7 +61,7 @@
                              (-> hint tcore/prim? not)  ; Because "Can't type hint a primitive local"
                              (-> hint (not= 'Object))
                              (-> hint (not= 'java.lang.Object))
-                             (-> sym type-hint not))
+                             (-> sym th/type-hint not))
                         hinted
                         sym)))
               anap/new-scope?
@@ -81,7 +78,7 @@
               (list
                 (list* 'let
                   (->> arglist ; to preserve order
-                       (map (juxt unhint type-hint))
+                       (map (juxt th/un-type-hint th/type-hint))
                        (filter (fn-> second tcore/prim?))
                        (map (fn [[sym hint]]
                               [sym (list hint sym)])) ; add primitive type cast in let-binding
@@ -116,7 +113,7 @@
 
 (defn extract-all-type-hints-from-arglist
   [lang sym {:keys [arglist body]}]
-  (let [return-type-0 (or (type-hint arglist) (type-hint sym) #_(-> body ana/expr-info :class) #_(get default-hint lang))
+  (let [return-type-0 (or (th/type-hint arglist) (th/type-hint sym) #_(-> body ana/expr-info :class) #_(get default-hint lang))
         type-hints (->> arglist (extract-type-hints-from-arglist lang))]
     (vector type-hints return-type-0)))
 
@@ -137,22 +134,22 @@
   {:post [(log/ppr-hints :macro-expand "ARGS HINTED" %)]}
     (for [arg args]
       #?(:clj  (if (or (anap/hinted-literal? arg) ; can't hint a literal
-                       (type-hint arg))
+                       (th/type-hint arg))
                    arg
                    (if-let [hint (ana/jvm-typeof arg env)]
                      (if (= hint Object) ; Object class
                          arg ; ignore it for now
-                         (cmacros/hint-meta arg hint))
+                         (th/with-type-hint arg hint))
                      arg))
          :cljs (cond ; TODO use core analyzer
                  (seq? arg)
                    (if-let [hint (get-in [lang (first arg)] tcore/type-casts-map)]
-                     (cmacros/hint-meta arg hint)
+                     (th/with-type-hint arg hint)
                      arg)
                  (vector? arg)
                    ; Otherwise the tag meta is assumed to be
                    ; clojure.lang.IPersistentVector, etc.
-                   (cmacros/hint-meta (list `quantum.core.macros.optimization/identity* arg)
+                   (th/with-type-hint (list `quantum.core.macros.optimization/identity* arg)
                      (or (get vec-classes-for-count (count arg))
                          (case lang
                            :clj  'clojure.lang.PersistentVector

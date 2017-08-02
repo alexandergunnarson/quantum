@@ -290,7 +290,7 @@
                    :cljs js/Error.)
                 "Argument to `lens` must be an IDeref")))))
 
-(defn cursor ; TODO use `deftype-compatible`?
+(defn cursor ; TODO use `deftype/deftype`?
   {:todo #{"@setter currently doesn't do anything"}}
   [x getter & [setter]]
   (when-not (#?(:clj  instance?

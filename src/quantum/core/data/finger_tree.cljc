@@ -6,8 +6,7 @@
   (:require
     [quantum.core.data.map    :as map
       :refer [map-entry]]
-    [quantum.core.macros.deftype
-      :refer [deftype-compatible]]
+    [quantum.core.macros.deftype :as deftype]
     [quantum.core.core
       :refer [seq-equals]]
     [quantum.core.macros.core :as cmacros
@@ -121,7 +120,7 @@
                    (conj (digit mfns (v i) (v (+ (int 1) i))
                                 (v (+ (int 2) i)))))))))))
 
-(deftype-compatible EmptyTree [meter-obj]
+(deftype/deftype EmptyTree [meter-obj]
   {?Seqable
      {seq ([_] nil)}
    ?Sequential true
@@ -166,7 +165,7 @@
 (defn split-tree [t p]
   (->> t getMeter idElem (split t p)))
 
-(deftype-compatible DelayedTree [tree-ref mval]
+(deftype/deftype DelayedTree [tree-ref mval]
   {?Seqable
      {seq         ([this] this)}
    ?Sequential true
@@ -221,7 +220,7 @@
   (assert (= (getMeter t1) (getMeter t2)) {t1 t2}) ; meters must be the same
   (app3 t1 nil t2))
 
-(deftype-compatible SingleTree [meter-obj x]
+(deftype/deftype SingleTree [meter-obj x]
   {?Seqable
      {seq    ([this] this)}
    ?Sequential true
@@ -268,7 +267,7 @@
           (measured m))
         (measured suf))))
 
-(deftype-compatible DeepTree [meter-obj pre mid suf mval]
+(deftype/deftype DeepTree [meter-obj pre mid suf mval]
   {?Seqable
     {seq     ([this] this)}
    ?Sequential true
@@ -343,7 +342,7 @@
                             (measured3 meter-obj pre m suf)
                             (op (measured pre) (measured suf))))))))
 
-(deftype-compatible CountedDoubleList [tree mdata]
+(deftype/deftype CountedDoubleList [tree mdata]
   {?Object
       {equals    ([_ x] (seq-equals tree x))
        hash      ([this] (hashcode (map identity this)))}

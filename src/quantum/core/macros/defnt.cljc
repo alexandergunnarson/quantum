@@ -2,8 +2,6 @@
   (:refer-clojure :exclude [merge])
   (:require
     [clojure.core                            :as core]
-    [quantum.core.analyze.clojure.transform
-      :refer [unhint]]
     [quantum.core.cache
       :refer [defmemoized]]
     [quantum.core.core                       :as qcore
@@ -25,14 +23,14 @@
     [quantum.core.logic                      :as logic
       :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let cond-let]]
     [quantum.core.macros.core                :as cmacros
-      :refer [case-env case-env* hint-meta]]
+      :refer [case-env case-env*]]
     [quantum.core.macros.fn                  :as mfn]
-    [quantum.core.analyze.clojure.core       :as ana
-      :refer [type-hint]]
+    [quantum.core.analyze.clojure.core       :as ana]
     [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.macros.protocol            :as proto]
     [quantum.core.macros.reify               :as reify]
     [quantum.core.macros.transform           :as trans]
+    [quantum.core.macros.type-hint           :as th]
     [quantum.core.numeric.combinatorics      :as combo]
     [quantum.core.print                      :as pr]
     [quantum.core.string.regex               :as re]
@@ -128,7 +126,7 @@
   [arglist hints]
   (reducei ; technically reduce-pair
     (fn [arglist-f arg i]
-      (conj arglist-f (cmacros/hint-meta arg (get hints i))))
+      (conj arglist-f (th/with-type-hint arg (get hints i))))
     []
     arglist))
 
@@ -170,7 +168,7 @@
     (meta sym)))
 
 (defn defnt-gen-protocol-names
-  "Generates |defnt| protocol names"
+  "Generates `defnt` protocol names"
   [{:keys [sym sym-with-meta strict? lang]}]
   (let [genned-protocol-name
           (when-not strict? (-> sym name cbase/camelcase (str "Protocol") munge symbol))
@@ -291,7 +289,7 @@
   [{:as args :keys [lang fn-sym expr explicit-ret-type]}]
   (validate fn-sym symbol?)
   (let [non-recursive?      (not (recursive? args))
-        explicit-ret-type   (#?(:clj ana/tag->class :cljs identity) explicit-ret-type)
+        explicit-ret-type   (#?(:clj th/tag->class :cljs identity) explicit-ret-type)
         inferred-ret-type   (and (or non-recursive? nil) ; TODO currently doesn't process recursive calls because while possible, it's a little more involved
                         #?(:clj  (when (= lang :clj) (ana/jvm-typeof-respecting-hints expr))
                            :cljs nil)) ; TODO CLJS
@@ -342,7 +340,7 @@
                                        explicit-ret-type   (>explicit-ret-type (merge env (kw-map ret-type-0 hints arglist)))
                                        ; TODO cache the result of postwalking the body like this, for protocol purposes
                                        contextualized-body (list* 'let ; an alternative to enclosing in function
-                                                                       (vec (interleave (mapv unhint arglist-hinted)
+                                                                       (vec (interleave (mapv th/un-type-hint arglist-hinted)
                                                                                         (repeat (count arglist-hinted) (list `identity nil))))
                                                                       (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol))
                                        ret-type-input (assoc (kw-map ns- lang explicit-ret-type) :fn-sym sym :expr contextualized-body)
@@ -448,7 +446,7 @@
   "Converts e.g. 'double<> -> (Class/forName \"[D\")"
   [sym]
   (let [[array-type? base-class-str brackets] (re-matches #"([^<>]+)((?:<>)+)$" (name sym))]
-    (ana/tag->class
+    (th/tag->class
       (if array-type?
           (let [dimension (-> brackets count (/ 2))
                 class-str (->array-type-str base-class-str dimension)]
@@ -462,18 +460,18 @@
 
 (defn hint-expr-embeddably [expr hint]
   (if (symbol? expr)
-      (hint-meta expr (ana/->embeddable-hint hint))
-      (tcore/static-cast-code (ana/->embeddable-hint hint) expr)))
+      (th/with-type-hint expr (th/->embeddable-hint hint))
+      (tcore/static-cast-code (th/->embeddable-hint hint) expr)))
 
 #?(:clj
 (defn hint-expr-with-class [expr hint]
   (assert (class? hint) hint)
   (if (anap/hinted-literal? expr)
       expr
-      (hint-meta expr hint))))
+      (th/with-type-hint expr hint))))
 
 (defn expr->with-embeddable-hints [expr]
-  (if-let [hint (ana/type-hint expr)]
+  (if-let [hint (th/type-hint expr)]
     (hint-expr-embeddably expr hint)
     expr))
 
@@ -481,7 +479,7 @@
 (defn ^Class expr->hint:class [expr]
   (if (anap/hinted-literal? expr)
       (ana/jvm-typeof expr)
-      (ana/type-hint:class expr))))
+      (th/type-hint:class expr))))
 
 #?(:clj
 (defn try-param-match
@@ -791,7 +789,7 @@
          (list `defalias primary-protocol-sym sym))
        (when-not strict?
          `(doto (var ~primary-protocol-sym)
-                (alter-meta! (fn [m#] (assoc m# :tag ~(ana/sanitize-tag lang tag))))))])))
+                (alter-meta! (fn [m#] (assoc m# :tag ~(th/sanitize-tag lang tag))))))])))
 
 #?(:clj
 (defn defnt*-helper
@@ -843,7 +841,7 @@
    Uses |gen-interface|, |reify|, and |defprotocol| under the hood."
   [sym & body]
   (let [lang (case-env :clj :clj :cljs :cljs)]
-    (eval `(declare ~(ana/sanitize-sym-tag lang sym) ~(ana/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
+    (eval `(declare ~(th/sanitize-sym-tag lang sym) ~(th/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper nil lang *ns* sym nil nil nil body))))
 
 #?(:clj
@@ -852,7 +850,7 @@
    Only for use with Clojure."
   [sym & body]
   (let [lang :clj]
-    (eval `(declare ~(ana/sanitize-sym-tag lang sym))) ; To allow recursive analysis
+    (eval `(declare ~(th/sanitize-sym-tag lang sym))) ; To allow recursive analysis
     (defnt*-helper {:strict? true} lang *ns* sym nil nil nil body))))
 
 #?(:clj
@@ -860,6 +858,6 @@
   "'Relaxed' |defnt|. I.e., generates only a protocol and no interface."
   [sym & body]
   (let [lang :clj]
-    (eval `(declare ~(ana/sanitize-sym-tag lang sym) ~(ana/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
+    (eval `(declare ~(th/sanitize-sym-tag lang sym) ~(th/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper {:relaxed? true} lang *ns* sym nil nil nil body))))
 

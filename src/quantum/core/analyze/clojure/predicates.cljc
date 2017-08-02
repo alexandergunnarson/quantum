@@ -12,6 +12,7 @@
       :refer [fnl <- fn-> fn->> fn']]
     [quantum.core.logic                :as logic
       :refer [splice-or fn= fn-or fn-and fn-not whenc ifn ifn1]]
+    [quantum.core.macros.type-hint     :as th]
     [quantum.core.type.core            :as tcore]
     [quantum.core.vars                 :as var
       :refer [defalias]]))
@@ -39,7 +40,7 @@
 (defn symbol-eq? [s1 s2] (= (name s1) (name s2))) ; TODO this isn't right
 
 (defn metaclass    [sym]
-  (whenc (ana/type-hint:sym sym) (fn-> name empty?) nil))
+  (whenc (th/type-hint:sym sym) (fn-> name empty?) nil))
 
 
 (defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))

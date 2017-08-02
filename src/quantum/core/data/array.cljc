@@ -29,8 +29,9 @@
       :refer [doseqi doseq]]
     [quantum.core.macros           :as macros
       :refer [defnt defnt']]
-    [quantum.core.compare :as comp]
-    [quantum.core.numeric :as num]
+    [quantum.core.macros.type-hint :as th]
+    [quantum.core.compare          :as comp]
+    [quantum.core.numeric          :as num]
     [quantum.core.type
       :refer [static-cast]]
     [quantum.core.vars             :as var
@@ -65,9 +66,9 @@
   []
   (for [[package class] package-class-map]
     (let [arr-sym (symbol (str (name package) "-array"))
-          fn-sym (-> arr-sym (macros/hint-meta (get tcore/type-casts-map arr-sym)))
+          fn-sym (-> arr-sym (th/with-type-hint (get tcore/type-casts-map arr-sym)))
           core-sym (symbol "clojure.core" (name fn-sym))
-          n-sym (-> 'n gensym (macros/hint-meta 'nat-int?))]
+          n-sym (-> 'n gensym (th/with-type-hint 'nat-int?))]
       `(defnt ~fn-sym ([~n-sym] (core-sym ~n-sym)))))))
 
 ; ----- BOOLEAN ARRAY ----- ;

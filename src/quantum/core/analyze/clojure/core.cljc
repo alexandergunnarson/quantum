@@ -12,59 +12,14 @@
       :refer [fn1 rcomp]]
     [quantum.core.logic
       :refer [whenf1 fn-not]]
-    [quantum.core.macros.core   :as cmacros]
-    [quantum.core.type.core     :as tcore]
-    [quantum.core.vars          :as var
+    [quantum.core.macros.core      :as cmacros]
+    [quantum.core.macros.type-hint :as th]
+    [quantum.core.type.core        :as tcore]
+    [quantum.core.vars             :as var
       :refer [defalias]])
 #?(:clj
   (:import
     (clojure.lang RT Compiler))))
-
-; ===== TAGS / TYPE HINTS ===== ;
-
-(defn type-hint [x] (-> x meta :tag))
-
-(defn sanitize-tag [lang tag]
-  #?(:clj  (or (get-in tcore/return-types-map [lang tag]) tag)
-     :cljs (ex! "`sanitize-tag` not supported in CLJS")))
-
-#?(:clj
-(defn sanitize-sym-tag [lang sym]
-  (cmacros/hint-meta sym (sanitize-tag lang (type-hint sym)))))
-
-#?(:clj
-(defn tag->class [tag]
-  (cond (or (nil? tag) (class? tag))
-        tag
-        (symbol? tag)
-        (eval (sanitize-tag :clj tag)) ; `ns-resolve` doesn't resolve e.g. 'java.lang.Long/TYPE correctly
-        (string? tag)
-        (Class/forName tag)
-        :else (throw (ex-info "Cannot convert tag to class" {:tag tag})))))
-
-#?(:clj (defn type-hint:class [x] (-> x type-hint tag->class)))
-
-(defn type-hint:sym "Returns a symbol representing the tagged class of the symbol, or |nil| if none exists."
-  {:source "ztellman/riddley.compiler"} [x]
-  (when-let [tag (-> x meta :tag)]
-    (let [sym (symbol (cond (symbol? tag) (namespace tag)
-                            :else         nil)
-                      (if #?@(:clj  [(instance? Class tag) (.getName ^Class tag)]
-                              :cljs [true])
-                          (name tag)))]
-      sym)))
-
-(defn ->embeddable-hint
-  "The compiler ignores, at least in cases, hints that are not string or symbols,
-   and does not allow primitive hints.
-   This fn accommodates these requirements."
-  [hint]
-  #?(:clj (if (class? hint)
-              (if (.isPrimitive ^Class hint)
-                  nil
-                  (.getName ^Class hint))
-              hint)
-     :cljs hint))
 
 ; ===== ANALYSIS ===== ;
 
@@ -146,7 +101,7 @@
   "Like `jvm-typeof` but respects type hints."
   ([expr] (jvm-typeof-respecting-hints expr nil))
   ([expr env]
-    (or (some-> expr type-hint tag->class) ; TODO don't assume CLJ
+    (or (some-> expr th/type-hint th/tag->class) ; TODO don't assume CLJ
         (jvm-typeof expr env)))))
 
 
@@ -157,9 +112,9 @@
    return value of the expression.
    A `nil` result means that the return value is nil, or that no
    type information is available."
-  ([expr         ] (tag->class (:tag (clj-ana/analyze expr))))
-  ([expr env     ] (tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env)))))
-  ([expr env opts] (tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env) opts))))))
+  ([expr         ] (th/tag->class (:tag (clj-ana/analyze expr))))
+  ([expr env     ] (th/tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env)))))
+  ([expr env opts] (th/tag->class (:tag (clj-ana/analyze expr (macro-env->ana-env env) opts))))))
 
 #?(:clj
 (defmacro typeof
@@ -172,7 +127,7 @@
     :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs depth x)))
     :clj  (let [hint       (jvm-typeof-respecting-hints xs &env)
                 _          (assert hint {:xs xs :hint hint})
-                cast-class (tag->class (tcore/nth-elem-type:clj hint depth))]
+                cast-class (th/tag->class (tcore/nth-elem-type:clj hint depth))]
             (if (.isPrimitive ^Class cast-class)
                 `(~(symbol "clojure.core" (str cast-class)) ~x)
-                (tcore/static-cast-code (->embeddable-hint cast-class) x))))))
+                (tcore/static-cast-code (th/->embeddable-hint cast-class) x))))))

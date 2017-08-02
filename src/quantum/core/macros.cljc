@@ -174,7 +174,7 @@
 
 ; #?(:clj (defalias hint-body-with-arglist deps/hint-body-with-arglist))
 
-; (def default-hint (fn1 hint-meta 'Object))
+; (def default-hint (fn1 th/with-type-hint 'Object))
 
 ; #?(:clj
 ; (defn default-hint-if-needed
@@ -184,7 +184,7 @@
 ;     (fn-or anap/hinted-literal?
 ;            (fn-and seq?
 ;              (fn-> first symbol?)
-;              (fn-> first resolve type-hint)))
+;              (fn-> first resolve th/type-hint)))
 ;                     identity
 ;     symbol?         (whenf1 (fn-> meta :tag nil?) default-hint)
 ;     seq?            default-hint
@@ -258,7 +258,6 @@
 #?(:clj (defmalias compile-if   quantum.core.macros.core/compile-if  ))
 #?(:clj (defmalias compile-when quantum.core.macros.core/compile-when))
 #?(:clj (defmalias quote+       quantum.core.macros.core/quote+      ))
-#?(:clj (defmalias hint-meta    quantum.core.macros.core/hint-meta   ))
 
 #?(:clj
 (defmacro let-swap [x0 x1 & body]

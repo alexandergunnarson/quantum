@@ -19,6 +19,10 @@
     [quantum.core.macros.core :as self
       :refer [env]])))
 
+(defmulti generate
+  "Generates code according to the first argument, `kind`."
+  (fn [kind _] kind))
+
 ; ===== ENVIRONMENT =====
 
 (defn cljs-env?
@@ -143,10 +147,6 @@
 
 #?(:clj
 (defmacro compile-when [pred then] `(compile-if ~pred ~then nil)))
-
-; ===== SYMBOLS =====
-
-(defn hint-meta [sym hint] (vary-meta sym assoc :tag hint))
 
 ; ===== MACROEXPANSION ====
 

@@ -8,8 +8,7 @@
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
       :refer [case-env]]
-    [quantum.core.macros.deftype
-      :refer [deftype-compatible]]
+    [quantum.core.macros.deftype :as deftype]
     [quantum.core.fn
       :refer [fn-> fn->> fn1 fnl <- fn']]
     [quantum.core.logic
@@ -246,7 +245,7 @@
           constructor-sym (symbol (str "->" sym))
           schema        (when db-mode? (spec->schema sym-0 spec))
           code `(do (def ~conformer-sym ~conformer)
-                    (deftype-compatible ~(with-meta sym {:no-factory? true}) ~'[v]
+                    (deftype/deftype ~(with-meta sym {:no-factory? true}) ~'[v]
                       {~'?Object
                         {~'hash     ([_#] (.hashCode ~'v))
                          ~'equals   ~(std-equals sym other '=)}
@@ -389,7 +388,7 @@
                       _# (s/validate (:db/ident m#) (s/or* nil? :db/ident))]
                   (s/validate (keys m#) (fn1 set/subset? ~all-keys-record))
                   (~(symbol (str "map->" stored-record-sym)) m#))))
-          (deftype-compatible ~(with-meta sym {:no-factory? true})
+          (deftype/deftype ~(with-meta sym {:no-factory? true})
             [~(with-meta 'v {:tag stored-record-sym})]
             {~'?Seqable
               {~'seq          ([_#] (seq ~'v))}
