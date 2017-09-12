@@ -33,7 +33,7 @@
 
 (defn case-env:matches? [env k]
   (case k
-    :clj  true ; TODO 0
+    :clj  (not (cljs-env? env)) ; TODO should make this branching
     :cljs (cljs-env? env)
     :clr  (throw (ex-info "TODO: Conditional compilation for CLR not supported" {:platform :clr}))
     (throw (ex-info "Conditional compilation for platform not supported" {:platform k}))))
@@ -263,6 +263,11 @@
   [form]
  `(let [sym-map# (locals)]
     (unquote-replacement sym-map# '~form))))
+
+#?(:clj
+(defn syntax-quoted:sym [sym]
+  (assert symbol?)
+  (-> sym (@#'clojure.tools.reader/syntax-quote*) second)))
 
 ; ----- BUILDING FNS ----- ;
 
