@@ -26,6 +26,11 @@
 (defn default-zipper [coll]
   (zip/zipper coll? seq (fn [_ c] c) coll))
 
+(defn ->keyword [x]
+  (cond (keyword? x) x
+        (symbol?  x) (keyword (namespace x) (name x))
+        :else        (-> x str keyword)))
+
 (def ensure-set
   (condf1
     nil?
@@ -128,8 +133,8 @@
 (defn update-val [[k v] f]
   [k (f v)])
 
-#?(:clj (defmacro kw-map    [& ks] (qcore/quote-map-base `hash-map (comp keyword str) ks)))
-#?(:clj (defmacro quote-map [& ks] (qcore/quote-map-base `hash-map identity           ks)))
+#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (qcore/quote-map-base ->keyword ks))))
+#?(:clj (defmacro quote-map [& ks] (list* `hash-map (qcore/quote-map-base identity  ks))))
 
 ; ----- WALK ----- ;
 
@@ -184,3 +189,9 @@
               (assoc m k new-n))))
     m))
 
+; TODO DELETE AFTER INCORPORATING REAL COLLECTIONS
+(defn dissoc-if
+  "Works like dissoc, but only dissociates when condition is true."
+  {:contributors '#{alexandergunnarson}}
+  ([m pred k]
+    (if (pred m k) (dissoc m k) m)))
