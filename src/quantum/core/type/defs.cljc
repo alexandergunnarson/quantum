@@ -870,6 +870,18 @@
 (def doubles-types        {:clj #{(-> array-1d-types*  :clj  :double )} :cljs #{(-> array-1d-types* :cljs :double )}})
 (def objects-types        {:clj #{(-> array-1d-types*  :clj  :object )} :cljs #{(-> array-1d-types* :cljs :object )}})
 
+(def objects-nd-types     {:clj  #{(-> array-1d-types*  :clj  :object )
+                                   (-> array-2d-types*  :clj  :object )
+                                   (-> array-3d-types*  :clj  :object )
+                                   (-> array-4d-types*  :clj  :object )
+                                   (-> array-5d-types*  :clj  :object )
+                                   (-> array-6d-types*  :clj  :object )
+                                   (-> array-7d-types*  :clj  :object )
+                                   (-> array-8d-types*  :clj  :object )
+                                   (-> array-9d-types*  :clj  :object )
+                                   (-> array-10d-types* :clj  :object ) }
+                           :cljs (:cljs objects-types)})
+
 (def numeric-1d-types  (cond-union bytes-types
                                    ubytes-types
                                    ubytes-clamped-types
@@ -926,6 +938,8 @@
      'float-array?         {:clj #{(-> array-1d-types*  :clj  :float  )} :cljs #{(-> array-1d-types* :cljs :float  )}}
      'double-array?        {:clj #{(-> array-1d-types*  :clj  :double )} :cljs #{(-> array-1d-types* :cljs :double )}}
      'object-array?        {:clj #{(-> array-1d-types*  :clj  :object )} :cljs #{(-> array-1d-types* :cljs :object )}}
+
+     #_'objects
 
      'array-1d?            {:clj  (->> array-1d-types*  :clj  vals set)
                             :cljs (->> array-1d-types*  :cljs vals set)}
