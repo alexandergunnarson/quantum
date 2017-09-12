@@ -1,4 +1,5 @@
 ; TODO lazy-load jars based on desired features (or optionally force load all)
+; ssh -t -t localhost; export COLUMNS=10000 && export TERM=screen.linux && screen -Dr quantum
 (defproject quantum/core
   ; Would move it outside of the project but might cause problems?
   (let [git-hash (let [{:keys [exit out]}
@@ -24,9 +25,8 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       #_"1.8.0" "1.9.0-alpha15"] ; 1.9.0-alpha* has some problems
-     #_[clojure-future-spec                       "1.9.0-alpha12-2"]
-     [org.clojure/clojurescript                 "1.9.293"]
+    [[org.clojure/clojure                       "1.9.0-alpha20"   ]
+     [org.clojure/clojurescript                 "1.9.908"]
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
        ; ==== NAMESPACE ====
