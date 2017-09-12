@@ -201,12 +201,12 @@
 
 ; ; ===== MACROEXPANSION =====
 
-#?(:clj (defalias macroexpand-1    cmacros/macroexpand-1                 ))
-#?(:clj (def      macroexpand-1!   (fn-> macroexpand-1   pr/pprint-hints)))
-#?(:clj (defalias macroexpand      cmacros/macroexpand                   ))
-#?(:clj (def      macroexpand!     (fn-> macroexpand     pr/pprint-hints)))
-#?(:clj (defalias macroexpand-all  cmacros/macroexpand-all               ))
-#?(:clj (def      macroexpand-all! (fn-> macroexpand-all pr/pprint-hints)))
+#?(:clj (defalias macroexpand-1    cmacros/macroexpand-1             ))
+#?(:clj (def      macroexpand-1!   (fn-> macroexpand-1   pr/ppr-hints)))
+#?(:clj (defalias macroexpand      cmacros/macroexpand               ))
+#?(:clj (def      macroexpand!     (fn-> macroexpand     pr/ppr-hints)))
+#?(:clj (defalias macroexpand-all  cmacros/macroexpand-all           ))
+#?(:clj (def      macroexpand-all! (fn-> macroexpand-all pr/ppr-hints)))
 
 #?(:clj
 (defmacro assert-args [fn-name & pairs]

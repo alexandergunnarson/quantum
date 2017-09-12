@@ -76,7 +76,12 @@
   "Like `pr-str`, but pretty-prints."
   [x] (with-out-str (ppr x)))
 
-; Makes it so fipp doesn't print tagged literals for every record
+(defn ppr-meta  [x] (binding [*print-meta* true] (ppr x)))
+
+;; TODO fix this
+(defn ppr-hints [x] (binding [*print-meta* true] (ppr x)))
+
+;; Makes it so fipp doesn't print tagged literals for every record
 #_(quantum.core.vars/reset-var! #'fipp.ednize/record->tagged
   (fn [x] (tagged-literal '... (into {} x))))
 
@@ -84,50 +89,5 @@
 
 (def suppress (partial (fn' nil)))
 
-(defn- pprint-symbol [x]
-  (when-let [has-hint? (-> x meta (contains? :tag))]
-    (print "^")
-    (print (-> x meta :tag))
-    (print " "))
-  (when-let [ns- (namespace x)]
-    (print ns-)
-    (print "/"))
-  (print (name x)))
-
-#?(:clj
-(defonce pprint-vector-0
-  (.getMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.APersistentVector)))
-
-#?(:clj
-(defn- pprint-vector [x]
-  (when-let [has-hint? (-> x meta (contains? :tag))]
-    (print "^")
-    (print (-> x meta :tag))
-    (print " "))
-  (pprint-vector-0 x)))
-
-#?(:clj
-(defonce pprint-seq-0
-  (.getMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.ISeq)))
-
-#?(:clj
-(defn- pprint-seq [x]
-  (when-let [has-hint? (-> x meta (contains? :tag))]
-    (print "^")
-    (print (-> x meta :tag))
-    (print " "))
-  (pprint-seq-0 x)))
-
-#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.Symbol pprint-symbol))
-#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.APersistentVector pprint-vector))
-#?(:clj (.addMethod ^clojure.lang.MultiFn clojure.pprint/simple-dispatch clojure.lang.ISeq pprint-seq))
-
-(defn pprint-hints [x]
-  #?(:clj
-      (clojure.pprint/with-pprint-dispatch clojure.pprint/simple-dispatch  ;;Make the dispatch to your print function
-        (clojure.pprint/pprint x))
-     :cljs
-      (ppr x)))
-
-#_"Pretty-prints an array. Returns a String containing the pretty-printed representation."
+;; Pretty-prints an array. Returns a String containing the pretty-printed representation.
 #?(:clj (defalias pprint-arr mpprint/pm))
