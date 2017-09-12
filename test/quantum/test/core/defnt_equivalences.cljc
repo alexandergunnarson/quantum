@@ -5,11 +5,7 @@
   (:import clojure.lang.Named))
 
 (require '[quantum.core.spec :as s]
-         '[quantum.core.fn :refer [fn->]]
-         '[clojure.spec.test :refer [instrument]])
-
-(instrument)
-
+         '[quantum.core.fn :refer [fn->]])
 
 (def *interfaces (atom {}))
 
@@ -466,6 +462,8 @@ y -> String, Named
   "Much of this content taken from clojure.core.protocols for inlining and
    type-checking purposes."
   {:attribution "alexandergunnarson"}
+         ([f ?                 xs nil?] (f))
+         ([f (fn-of 2), init ? xs nil?] init)
          ([f ?, init ?, z fast_zip.core.ZipperLocation]
            (loop [xs (zip/down z) v init]
              (if (some? z)
@@ -512,12 +510,12 @@ y -> String, Named
          ([x transformer?, f ?, init ?]
            (let [rf ((.-xf x) f)]
              (rf (reduce rf init (.-prev x)))))
-         ([f ?, init ?, x chan?] (async/reduce f init x))
+         ([f ?, init ?, x chan?] (async/reduce f init x)) ; TODO spec `async/reduce`
 #?(:cljs ([f ?, init ?, xs +map?] (#_(:clj  clojure.core.protocols/kv-reduce
                                       :cljs -kv-reduce) ; in order to use transducers...
                                 -reduce-seq xs f init)))
 #?(:cljs ([f ?, init ?, xs +set?] (-reduce-seq xs f init)))
-         ([f ?, init ?, n #?(:clj integer? :cljs double?)]
+         ([f ?, init ?, n numerically-int?]
            (loop [i 0 v init]
              (if (< i n)
                  (let [ret (f v i)]
@@ -556,16 +554,12 @@ y -> String, Named
 #?(:clj  ([f ?,       xs clojure.lang.IReduce    ] (.reduce   xs f)))
 #?(:clj  ([f ?, init, xs clojure.lang.IKVReduce  ] (.kvreduce xs f init)))
 #?(:clj  ([f ?, init, xs clojure.lang.IReduceInit] (.reduce   xs f init)))
-         ([f ?, xs any?]
-           (if (some? xs)
-               (#?(:clj  clojure.core.protocols/coll-reduce
-                   :cljs -reduce) xs f)
-               (f)))
-         ([f ?, init ?, xs any?]
-           (if (some? xs)
-               (#?(:clj  clojure.core.protocols/coll-reduce
-                   :cljs -reduce) xs f init)
-               init)))
+         ([f (fn-of 2), xs any?]
+           (#?(:clj  clojure.core.protocols/coll-reduce
+               :cljs -reduce) xs f))
+         ([f (fn-of 2), init ?, xs any?]
+           (#?(:clj  clojure.core.protocols/coll-reduce
+               :cljs -reduce) xs f init)))
 
 (defnt transduce
   ([     f ? xs ?] (transduce identity f     xs))
