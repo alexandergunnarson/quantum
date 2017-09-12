@@ -100,6 +100,9 @@
 
 #?(:clj (def ref-queue (get-static clojure.lang.DynamicClassLoader "rq")))
 
+(defn publics [x]
+  (->> x refl/reflect :members (filter (fn-> :flags :public))))
+
 #?(:clj
 (defn unload-class [name]
   (clojure.lang.Util/clearCache ref-queue class-cache)
