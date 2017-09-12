@@ -140,11 +140,13 @@
   "Applies ->`f` to ->`xs`, pairwise, using `reduce`."
   [f xs]
   (let [ret (reduce
-              (fn [ret x]
-                (if (identical? ret sentinel) (f x) (f ret x)))
+              (fn
+                ([ret] ret)
+                ([ret x]
+                  (if (identical? ret sentinel) (f x) (f ret x))))
               sentinel
               xs)]
-    (if (identical? ret sentinel) nil ret)))
+    (if (identical? ret sentinel) (f) ret)))
 
 (defn reduce-sentinel
   "Calls `reduce` with a sentinel.
@@ -694,7 +696,24 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(def v!dedupe+ (transducer->transformer 0 core/dedupe))
+(defn v!dedupe-by:transducer [kf]
+  (fn abcde [rf]
+    (let [*prior (volatile! ::none)]
+      (aritoid rf rf
+        (fn defgh [result input]
+          (let [prior  @*prior
+                input' (kf input)]
+            (vreset! *prior input')
+            (if (= prior input')
+                result
+                (rf result input))))))))
+
+(def v!dedupe-by+ (transducer->transformer 1 v!dedupe-by:transducer))
+
+(defn v!dedupe:transducer
+  [] (v!dedupe-by:transducer identity))
+
+(def v!dedupe+ (transducer->transformer 0 v!dedupe:transducer))
 
 ; TODO compare this to clojure/core `dedupe`, and an impl of it using atoms
 (defn dedupe+
@@ -713,38 +732,47 @@
 
 ; TODO default to using a `HashSet` internally ? Other options?
 ; TODO do volatile and unsync-mutable versions
-(defn distinct-storing:transducer
+(defn distinct-by-storing:transducer
   "Like `core/distinct`, but you can choose what collection to store the distinct items in."
-  ([] (distinct-storing:transducer
-        (fn [] (atom #{}))))
-  ([genf]
-    (distinct-storing:transducer genf
+  ([kf] (distinct-by-storing:transducer kf
+          (fn [] (atom #{}))))
+  ([kf genf]
+    (distinct-by-storing:transducer kf genf
       (fn [seen x] (contains? @seen x))))
-  ([genf contains?f]
-    (distinct-storing:transducer genf contains?f
+  ([kf genf contains?f]
+    (distinct-by-storing:transducer kf genf contains?f
       (fn [seen x] (swap! seen conj x))))
-  ([genf contains?f conj!f]
+  ([kf genf contains?f conj!f]
     (fn [rf]
       (let [seen (genf)]
         (fn ([] (rf))
             ([ret] (rf ret))
             ([ret x]
-             (if (contains?f seen x)
-                 ret
-                 (do (conj!f seen x)
-                     (rf ret x)))))))))
+             (let [x' (kf x)]
+               (if (contains?f seen x')
+                   ret
+                   (do (conj!f seen x')
+                       (rf ret x))))))))))
+
+(defn distinct-by-storing+
+  ([kf genf                  ] (distinct-by-storing:transducer kf genf))
+  ([kf genf contains?f       ] (distinct-by-storing:transducer kf genf contains?f))
+  ([kf genf contains?f conj!f] (distinct-by-storing:transducer kf genf contains?f conj!f))
+  ([kf genf contains?f conj!f xs] (transformer xs (distinct-by-storing+ kf genf contains?f conj!f))))
+
+(defn distinct-by:transducer [kf] (distinct-by-storing:transducer kf))
+
+(def distinct-by+ (transducer->transformer 1 distinct-by:transducer))
 
 (defn distinct-storing+
-  ([genf                  ] (distinct-storing:transducer genf))
-  ([genf contains?f       ] (distinct-storing:transducer genf contains?f))
-  ([genf contains?f conj!f] (distinct-storing:transducer genf contains?f conj!f))
+  ([genf                  ] (distinct-by-storing+ identity genf))
+  ([genf contains?f       ] (distinct-by-storing+ identity genf contains?f))
+  ([genf contains?f conj!f] (distinct-by-storing+ identity genf contains?f conj!f))
   ([genf contains?f conj!f xs] (transformer xs (distinct-storing+ genf contains?f conj!f))))
 
-(defn distinct:transducer ([] (distinct-storing:transducer)))
+(defn distinct:transducer [] (distinct-storing:transducer identity))
 
 (def distinct+ (transducer->transformer 0 distinct:transducer))
-
-(defn distinct-by+ [f xs] (->> xs (map+ f) distinct+)) ; TODO fix this... it's misleading
 
 (def replace+ (transducer->transformer 1 core/replace))
 
