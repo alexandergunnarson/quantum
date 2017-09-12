@@ -149,15 +149,15 @@
 
 (def default-types (-> types-unevaled (get quantum.core.core/lang) :any))
 
-(defn ->boxed   [t]
+(defn ->boxed:sym   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
      :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
 
-(defn ->unboxed [t]
+(defn ->unboxed:sym [t]
   #?(:clj  (if-let [unboxed (get unboxed-type-map t)] unboxed t)
      :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
 
-(defn boxed?    [t]
+(defn boxed?:sym    [t]
   #?(:clj  (contains? unboxed-type-map t)
      :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
 
