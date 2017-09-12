@@ -223,12 +223,12 @@
 ;=================================================={          DISSOC          }=====================================================
 ;=================================================={                          }=====================================================
 
-(defn dissocs [coll & ks]
-  (reduce (fn&2 dissoc) coll ks))
+(defn dissocs [m & ks]
+  (reduce (fn&2 dissoc) m ks))
 
-(defn dissoc-if [coll pred k] ; TODO make `dissoc-ifs`
-  (whenf coll (fn-> (get k) pred)
-    (fn1 dissoc k)))
+(defn dissoc-if [m pred k]
+  (let [v (get m k)]
+    (if (pred v) (dissoc m k) m))
 
 (defn dissoc-in
   "Dissociate a value in a nested assocative structure, identified by a sequence
