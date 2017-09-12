@@ -635,14 +635,23 @@
 (defnt subview
   "Returns a subview of ->`x`, [->`a` to ->`b`), in O(1) time."
   ; TODO make views for arrays
-          ([^+vector?     x ^nat-long? a             ] (subvec       x a  ))
-          ([^+vector?     x ^nat-long? a ^nat-long? b] (subvec       x a b))
-  #?(:clj ([^!array-list? x ^nat-long? a             ] (.subList     x a (count x))))
-  #?(:clj ([^!array-list? x ^nat-long? a ^nat-long? b] (.subList     x a b)))
-  #?(:clj ([^string?      x ^nat-long? a             ] (.subSequence x a (count x))))
-  #?(:clj ([^string?      x ^nat-long? a ^nat-long? b] (.subSequence x a b)))
-          ([^transformer? x ^nat-long? a             ] (->> x (drop+:transformer a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
-          ([^transformer? x ^nat-long? a ^nat-long? b] (->> x (drop+:transformer a) (take+:transformer b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^+vector?         xs ^nat-long? a             ] (subvec       xs a  ))
+          ([^+vector?         xs ^nat-long? a ^nat-long? b] (subvec       xs a b))
+  #?(:clj ([^!array-list?     xs ^nat-long? a             ] (.subList     xs a (count xs))))
+  #?(:clj ([^!array-list?     xs ^nat-long? a ^nat-long? b] (.subList     xs a b)))
+  #?(:clj ([^objects-nd? xs ^nat-long? a             ]))
+  #?(:clj ([^objects-nd? xs ^nat-long? a ^nat-long? b]))
+  #?(:clj ([^string?          xs ^nat-long? a             ] (.subSequence xs a (count xs))))
+  #?(:clj ([^string?          xs ^nat-long? a ^nat-long? b] (.subSequence xs a b)))
+          ([^transformer?     xs ^nat-long? a             ] (->> xs (drop+:transformer a))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+          ([^transformer?     xs ^nat-long? a ^nat-long? b] (->> xs (drop+:transformer a) (take+:transformer b)))) ; takes O(n) time but is amortized by the reduce operation anyway so we count as O(1)
+
+(defnt subview-range
+  "Returns a subview of ->`x`, [->`a` to (+ ->`a` ->`b`)), in O(1) time."
+  ([#{+vector? transformer? #?@(:clj [object-array-nd? !array-list? string?])} xs
+    ^nat-long? a] (subview xs a))
+  ([#{+vector? transformer? #?@(:clj [object-array-nd? !array-list? string?])} xs
+    ^nat-long? a ^nat-long? b] (subview xs a (+ a b))))
 
 ; TODO mark transformer version not thread-safe
 (defnt take+*
@@ -997,7 +1006,7 @@
 (defmacro update! [coll i f]
   `(assoc! ~coll ~i (~f (get ~coll ~i)))))
 
-(defnt aswap! [^array? arr ^int i ^int j]
+(defnt aswap! [#{array? !vector?} arr ^int i ^int j]
    (let [tmp (get arr i)]
      (assoc! arr i (get arr j))
      (assoc! arr j tmp)))
