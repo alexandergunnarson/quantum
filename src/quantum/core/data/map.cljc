@@ -23,9 +23,7 @@
      [it.unimi.dsi.fastutil.longs   Long2LongOpenHashMap
                                     Long2ReferenceOpenHashMap]
      [it.unimi.dsi.fastutil.doubles Double2ReferenceOpenHashMap]
-     [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]]
-    :cljs
-    [goog.structs.Map])))
+     [it.unimi.dsi.fastutil.objects Reference2LongOpenHashMap]])))
 
 ; TO EXPLORE
 ; - Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections
@@ -48,7 +46,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (qcore/quote-map-base `om (comp keyword str) ks)))
+  (list* `om (qcore/quote-map-base cbase/->keyword ks))))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)
@@ -144,36 +142,35 @@
   "Creates a single-threaded, mutable hash map.
    On the JVM, this is a java.util.HashMap.
 
-   On JS, this is a goog.structs.Map."
-  {:todo #{"Compare performance on CLJS with ECMAScript 6 Map"}}
-  ([] #?(:clj (HashMap.) :cljs (Map.)))
+   On JS, this is a `js/Map` (ECMAScript 6 Map)."
+  ([] #?(:clj (HashMap.) :cljs (js/Map.)))
   ([k0 v0]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)))
   ([k0 v0 k1 v1]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)))
   ([k0 v0 k1 v1 k2 v2]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)))
   ([k0 v0 k1 v1 k2 v2 k3 v3]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)))
   ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
           (#?(:clj .put :cljs .set) k3 v3)
           (#?(:clj .put :cljs .set) k4 v4)))
   ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4 k5 v5]
-    (doto #?(:clj (HashMap.) :cljs (Map.))
+    (doto #?(:clj (HashMap.) :cljs (js/Map.))
           (#?(:clj .put :cljs .set) k0 v0)
           (#?(:clj .put :cljs .set) k1 v1)
           (#?(:clj .put :cljs .set) k2 v2)
@@ -183,7 +180,7 @@
   ([k0 v0 k1 v1 k2 v2 k3 v3 k4 v4 k5 v5 k6 v6 & kvs]
     (reduce-pair
       (fn [#?(:clj ^HashMap m :cljs m) k v] (doto m (#?(:clj .put :cljs .set) k v)))
-      (doto #?(:clj (HashMap.) :cljs (Map.))
+      (doto #?(:clj (HashMap.) :cljs (js/Map.))
             (#?(:clj .put :cljs .set) k0 v0)
             (#?(:clj .put :cljs .set) k1 v1)
             (#?(:clj .put :cljs .set) k2 v2)
