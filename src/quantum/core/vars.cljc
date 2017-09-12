@@ -25,7 +25,6 @@
 (defn merge-meta-from   [to from] (update-meta to merge (meta from)))
 (defn replace-meta-from [to from] (with-meta to (meta from)))
 
-
 ; ===== DECLARATION ===== ;
 
 #?(:clj
