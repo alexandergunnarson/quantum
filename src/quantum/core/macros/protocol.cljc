@@ -11,36 +11,17 @@
       :refer [kw-map update-first update-val nempty? nnil? ensure-set]]
     [quantum.core.type.core                  :as tcore]))
 
-(def ^{:doc "Primitive type hints translated into protocol-safe type hints."}
-  protocol-type-hint-map
-  '{:clj  {boolean java.lang.Boolean
-           byte    long
-           char    java.lang.Character
-           short   long
-           int     long
-           float   double}
-    :cljs {boolean boolean}})
+(defn with-protocol-arglist-type-hint
+  [sym lang arglist-ct]
+  (th/with-fn-arglist-type-hint sym lang
+    (or arglist-ct 0) ; TODO fix — this is a hack to get around checking return types
+    false))
 
-(defn ensure-protocol-appropriate-type-hint
-  [arg lang i arglist-length]
-  (let [unhinted (th/un-type-hint arg)
-        hint     (th/type-hint arg)
-        ; hint-f   (get-in protocol-type-hint-map [lang hint])
-        ]
-    (if (or (= hint 'Object)
-            (= hint 'java.lang.Object) ; The extra object hints mess things up
-            (-> protocol-type-hint-map (get lang) (get hint))
-            (and (tcore/prim? hint)
-                 (and arglist-length ; TODO fix this — this is a hack to get around checking return types
-                      (> arglist-length 4)))) ; because fns taking primitives support only 4 or fewer args
-        unhinted ; just remove the hint for now — don't "upgrade" it
-        (th/with-type-hint arg hint))))
-
-(defn ensure-protocol-appropriate-arglist
+(defn with-protocol-appropriate-arglist
   [lang arglist-0]
   (->> arglist-0
        (map-indexed
-         (fn [i arg] (ensure-protocol-appropriate-type-hint arg lang i (count arglist-0))))
+         (fn [i arg] (with-protocol-arglist-type-hint arg lang (count arglist-0))))
        (into [])))
 
 (defn append-variant-identifier
@@ -114,18 +95,18 @@
                (map (fn [[arglist & body :as method]]
                       (log/ppr-hints :macro-expand "IN BODY MAPPED" (kw-map arglist body))
                       (let [first-type         (-> arglist second th/type-hint)
-                            first-type-unboxed (-> first-type tcore/->unboxed)
+                            first-type-unboxed (-> first-type tcore/->unboxed:sym)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
                         (if ; Unboxed version of arity already exists? Skip generation of that type/arity
-                            (and (tcore/boxed? first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
+                            (and (tcore/boxed?:sym first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
                             [] ; Empty so concat gets nothing
-                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed))
-                                             ; (whenc (-> arglist second th/type-hint tcore/->boxed)
+                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed:sym))
+                                             ; (whenc (-> arglist second th/type-hint tcore/->boxed:sym)
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
-                                                  (ensure-protocol-appropriate-type-hint lang 0 nil)) ; the arglist length doesn't matter
-                                  arglist-f   (->> arglist rest (ensure-protocol-appropriate-arglist lang))
+                                                  (th/with-protocol-arglist-type-hint lang nil)) ; the arglist length doesn't matter
+                                  arglist-f   (->> arglist rest (with-protocol-appropriate-arglist lang))
                                   arglist-f   (if return-type
                                                   arglist-f
                                                   (th/with-type-hint arglist-f return-type) )

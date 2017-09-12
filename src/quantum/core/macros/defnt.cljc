@@ -458,10 +458,10 @@
 
 #?(:clj (def not-matchable (Object.)))
 
-(defn hint-expr-embeddably [expr hint]
+(defn hint-expr-embeddably [expr tag]
   (if (symbol? expr)
-      (th/with-type-hint expr (th/->embeddable-hint hint))
-      (tcore/static-cast-code (th/->embeddable-hint hint) expr)))
+      (th/with-type-hint expr (th/->body-embeddable-tag tag))
+      (tcore/static-cast-code (th/->body-embeddable-tag tag) expr)))
 
 #?(:clj
 (defn hint-expr-with-class [expr hint]
@@ -841,7 +841,7 @@
    Uses |gen-interface|, |reify|, and |defprotocol| under the hood."
   [sym & body]
   (let [lang (case-env :clj :clj :cljs :cljs)]
-    (eval `(declare ~(th/sanitize-sym-tag lang sym) ~(th/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
+    (eval `(declare ~(th/with-sanitize-tag lang sym) ~(th/with-sanitize-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper nil lang *ns* sym nil nil nil body))))
 
 #?(:clj
@@ -850,7 +850,7 @@
    Only for use with Clojure."
   [sym & body]
   (let [lang :clj]
-    (eval `(declare ~(th/sanitize-sym-tag lang sym))) ; To allow recursive analysis
+    (eval `(declare ~(th/with-sanitize-tag lang sym))) ; To allow recursive analysis
     (defnt*-helper {:strict? true} lang *ns* sym nil nil nil body))))
 
 #?(:clj
@@ -858,6 +858,6 @@
   "'Relaxed' |defnt|. I.e., generates only a protocol and no interface."
   [sym & body]
   (let [lang :clj]
-    (eval `(declare ~(th/sanitize-sym-tag lang sym) ~(th/sanitize-sym-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
+    (eval `(declare ~(th/with-sanitize-tag lang sym) ~(th/with-sanitize-tag lang (defnt-gen-protocol-name sym lang)))) ; To allow recursive analysis
     (defnt*-helper {:relaxed? true} lang *ns* sym nil nil nil body))))
 
