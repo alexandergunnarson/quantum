@@ -17,7 +17,7 @@
   ([pred xs]
     (transduce (fn ([] true) ; vacuously true
                    ([ret] ret)
-                   ([_ x] (and (pred x) (reduced x)))
+                   ([_ x]   (and (pred x  ) (reduced x)))
                    ([_ k v] (and (pred k v) (reduced [k v])))) xs)))
 
 (defalias some seq-or)
@@ -32,7 +32,7 @@
   ([pred xs]
     (transduce (fn ([] true) ; vacuously true
                    ([ret] ret)
-                   ([_ x] (or (pred x) (reduced false)))
+                   ([_ x]   (or (pred x  ) (reduced false)))
                    ([_ k v] (or (pred k v) (reduced [k v])))) xs)))
 
 (defalias every? seq-and)
