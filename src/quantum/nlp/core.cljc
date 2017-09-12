@@ -47,7 +47,7 @@
                        #{\m \n}                   \5
                        #{\r}                      \6
                        (throw (->ex "Not a soundex-able word" (kw-map w))))))
-       (coll/distinct-by+ identity (fn [x y] (and (= x y) (str/numeric? x))))
+       (coll/distinct+ (fn [x y] (and (= x y) (str/numeric? x))))
        (remove+ (fn1 = \-))
        (reducei (fn [^StringBuilder s c i]
                   (when (= i 0)
