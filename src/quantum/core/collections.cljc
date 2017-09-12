@@ -100,7 +100,7 @@
     [quantum.core.collections
       :refer [for for* lfor doseq doseqi reduce reducei dotimes
               count lasti
-              subview
+              subview subview-range
               contains? containsk? containsv?
               index-of last-index-of
               first second rest last butlast get pop peek nth
@@ -179,6 +179,7 @@
 ; `slice` <~> `lodash/slice`
 #?(:clj (defalias slice           coll/slice        ))
         (defalias subview         coll/subview      )
+        (defalias subview-range   coll/subview-range)
 #?(:clj (defalias copy            coll/copy         ))
 ; ===== ASSOCIATIVE MODIFICATION ===== ;
 #?(:clj (defalias assoc           coll/assoc        ))
@@ -313,12 +314,17 @@
         (defalias reduce-by+          red/reduce-by+          )
 
         (defalias distinct-storing+   red/distinct-storing+   )
+        (defalias distinct-by-storing+ red/distinct-by-storing+)
         ; `distinct` <~> `lodash/uniq`
         (defalias distinct+           red/distinct+           )
         ; `distinct-by` <~> `lodash/uniqBy`
         (defalias distinct-by+        red/distinct-by+        )
         (defalias ldistinct-by        mf/ldistinct-by         )
 #?(:clj (defalias ldistinct-by-java   mf/ldistinct-by-java    ))
+        (defalias dedupe+             red/dedupe+             )
+      #_(defalias dedupe-by+          red/dedupe-by+          )
+        (defalias v!dedupe+           red/v!dedupe+           )
+        (defalias v!dedupe-by+        red/v!dedupe-by+        )
 
         (defalias replace+            red/replace+            )
         (defalias partition-by+       red/partition-by+       )
@@ -1348,7 +1354,7 @@
 (defnt ^long select!:quick:left ; takes 13 seconds to compile because of type checks
   "A helper for `quick-select`. Also used by `intro-select`."
   {:adapted-from 'org.apache.lucene.util.IntroSelector}
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
     (let [mid (unsigned-bit-shift-right #_>>> (+ from to) 1)
           ; heuristic: we use the median of the values at from, to-1 and mid as a pivot
           pivot (get xs from)
@@ -1390,13 +1396,13 @@
    :complexity {:worst   "O(n^2)"
                 :average "O(n)"
                 :best    "O(n)"}}
-  ([^array? xs ^long k]
+  ([#{array? !vector?} xs ^long k]
     (select!:quick* xs k 0 (count xs)))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf)]
     (select!:quick* xs k compf 0 (count xs)))
-  ([^array? xs ^long k ^long from ^long to] ; TODO infer
+  ([#{array? !vector?} xs ^long k ^long from ^long to] ; TODO infer
     (select!:quick* xs k compare from to))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
     (assert (<= from k))
     (assert (< k to))
     (loop [from from to to]
@@ -1439,7 +1445,7 @@
   "Returns the index of the median of a 5-element indexed collection.
    This is the key to a fast median-of-medians selection algorithm."
   {:adapted-from "http://moonflare.com/code/select/select.pdf"}
-  [^array? xs #?(:clj ^Comparator compf :cljs compf) ^long start ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4] ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
+  [#{array? !vector?} xs #?(:clj ^Comparator compf :cljs compf) ^long start ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4] ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
   (setm! *x0 (get xs (+ start 0)))
   (setm! *x1 (get xs (+ start 1)))
   (setm! *x2 (get xs (+ start 2)))
@@ -1474,7 +1480,7 @@
   "The same one used in quicksort, essentially as described
    in Introduction to Algorithms." ; TODO this may be used in quick-select too...
   {:adapted-from "http://moonflare.com/code/select/select.pdf"}
-  [^array? xs #?(:clj ^Comparator compf :cljs compf) ^long from ^long size ^long i:pivot]
+  [#{array? !vector?} xs #?(:clj ^Comparator compf :cljs compf) ^long from ^long size ^long i:pivot]
   (let [pivot (get xs (+ from i:pivot))
         _ (aswap! xs (+ from i:pivot) (+ from (dec size)))
         store-pos (long (loop [load-pos 0 store-pos 0]
@@ -1493,15 +1499,15 @@
    :complexity {:worst   "O(n)"
                 :average "O(n)"
                 :best    "O(n)"}}
-  ([^array? xs ^long k]
+  ([#{array? !vector?} xs ^long k]
     (select!:median-of-medians* xs k 0 (count xs)))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf)]
     (select!:median-of-medians* xs k compf 0 (count xs)))
-  ([^array? xs ^long k ^long from ^long to]
+  ([#{array? !vector?} xs ^long k ^long from ^long to]
     (select!:median-of-medians* xs k compare from to))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
     (select!:median-of-medians* xs k compf from (- to from) (!ref) (!ref) (!ref) (!ref) (!ref)))
-  ([^array? xs ^long k-0 #?(:clj ^Comparator compf :cljs compf) ^long from-0 ^long size-0 ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4]  ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
+  ([#{array? !vector?} xs ^long k-0 #?(:clj ^Comparator compf :cljs compf) ^long from-0 ^long size-0 ^MutableReference *x0 ^MutableReference *x1 ^MutableReference *x2 ^MutableReference *x3 ^MutableReference *x4]  ; TODO x0..5 are all mutable objects whose inner types must be the inner type of the array
     (loop [k k-0 from from-0 size size-0]
       (if (< size 5)
           (do (dotimes [i size]
@@ -1544,13 +1550,13 @@
    :complexity {:worst   "O(n)"
                 :average "O(n)"
                 :best    "O(n)"}}
-  ([^array? xs ^long k]
+  ([#{array? !vector?} xs ^long k]
     (select!:intro* xs k 0 (count xs)))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf)]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf)]
     (select!:intro* xs k compf 0 (count xs)))
-  ([^array? xs ^long k ^long from ^long to] ; TODO infer
+  ([#{array? !vector?} xs ^long k ^long from ^long to] ; TODO infer
     (select!:intro* xs k compare from to))
-  ([^array? xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
+  ([#{array? !vector?} xs ^long k #?(:clj ^Comparator compf :cljs compf) ^long from ^long to]
     (assert (<= from k))
     (assert (< k to))
     (let [max-iter (* 2 (num/integer-log (- to from) 2))]
@@ -1573,13 +1579,13 @@
 
 (defnt ^:<0> select-by!:intro* ; Takes 3 seconds to compile
   "Defaults to ascending selection."
-  ([^array? xs ^long k kf]
+  ([#{array? !vector?} xs ^long k kf]
     (select-by!:intro* xs k kf 0 (count xs)))
-  ([^array? xs ^long k kf #?(:clj ^Comparator compf :cljs compf)]
+  ([#{array? !vector?} xs ^long k kf #?(:clj ^Comparator compf :cljs compf)]
     (select-by!:intro* xs k kf compf 0 (count xs)))
-  ([^array? xs ^long k kf ^long from ^long to] ; TODO infer
+  ([#{array? !vector?} xs ^long k kf ^long from ^long to] ; TODO infer
     (select-by!:intro* xs k kf compare from to))
-  ([^array? xs ^long k kf #?(:clj ^Comparator compf :cljs compf) ^long from ^long to] ; TODO infer
+  ([#{array? !vector?} xs ^long k kf #?(:clj ^Comparator compf :cljs compf) ^long from ^long to] ; TODO infer
     (select!:intro* xs k ^Comparator (fn [x y] (.compare compf (kf x) (kf y))) from to)))
 
 #?(:clj (defmacro select-by!:intro [& args] `(select-by!:intro* ~(last args) ~@(butlast args))))
