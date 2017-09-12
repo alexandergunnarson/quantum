@@ -1,19 +1,20 @@
 (ns quantum.core.spec
   (:refer-clojure :exclude
     [string? keyword? set? number? fn? any?
-     assert keys + * cat and or constantly])
+     assert keys merge + * cat and or constantly])
   (:require
-    [clojure.core      :as core]
-    [clojure.spec      :as s]
-    [cljs.spec]
-    [#?(:clj  clojure.spec.gen
-        :cljs cljs.spec.impl.gen)  :as gen]
-    [quantum.core.collections.base
+    [clojure.core            :as core]
+    [clojure.spec.alpha      :as s]
+    [clojure.spec.test.alpha :as test]
+    [cljs.spec.alpha]
+    [clojure.spec.gen.alpha  :as gen]
+    [quantum.core.collections.base :as base
       :refer [nnil?]]
+    [quantum.core.core  :as qcore]
     [quantum.core.error :as err
       :refer [catch-all]]
     [quantum.core.fn
-      :refer [fnl constantly]]
+      :refer [fnl constantly with-do]]
     [quantum.core.logic
       :refer [fn-not]]
     [quantum.core.macros.core
@@ -74,22 +75,22 @@
   [opts spec x]
   (let [error-kind (core/or (:type opts) :spec.validate/failed)]
     (case-env
-     :cljs `(if (core/or ~(:runtime? opts) cljs.spec/*compile-asserts*) ; TODO should probably be outside quote like this
-                (if (core/or ~(:runtime? opts) cljs.spec/*runtime-asserts*)
+     :cljs `(if (core/or ~(:runtime? opts) cljs.spec.alpha/*compile-asserts*) ; TODO should probably be outside quote like this
+                (if (core/or ~(:runtime? opts) cljs.spec.alpha/*runtime-asserts*)
                     (let [spec# ~spec x# ~x
-                          conformed# (cljs.spec/conform spec# x#)]
-                      (if (= conformed# :cljs.spec/invalid)
+                          conformed# (cljs.spec.alpha/conform spec# x#)]
+                      (if (= conformed# :cljs.spec.alpha/invalid)
                           (if (core/and ~(:terse? opts) (not verbose?))
                               (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
                               (-validate-one spec# x# (list '~'validate '~x '~spec) (locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
                           conformed#))
                    ~x)
                ~x)
-      (if (core/or (:runtime? opts) clojure.spec/*compile-asserts*)
-         `(if (core/or ~(:runtime? opts) (clojure.spec/check-asserts?))
+      (if (core/or (:runtime? opts) clojure.spec.alpha/*compile-asserts*)
+         `(if (core/or ~(:runtime? opts) (clojure.spec.alpha/check-asserts?))
               (let [spec# ~spec x# ~x
-                    conformed# (clojure.spec/conform spec# x#)]
-                (if (= conformed# :clojure.spec/invalid)
+                    conformed# (clojure.spec.alpha/conform spec# x#)]
+                (if (= conformed# :clojure.spec.alpha/invalid)
                     (if (core/and ~(:terse? opts) (not verbose?))
                         (throw (ex-info spec-assertion-failed {:form (list '~'validate '~x '~spec) :type ~error-kind}))
                         (-validate-one spec# x# (list '~'validate '~x '~spec) (locals ~&env) ~(str *ns*) ~(:line (meta &form)) ~error-kind))
@@ -119,22 +120,42 @@
   `(do ~@(->> args (partition-all 2)
                    (map (fn [[v spec]] `(validate-one ~spec ~v)))))))
 
-#?(:clj (quantum.core.vars/defmalias spec      clojure.spec/spec      cljs.spec/spec     ))
-#?(:clj (quantum.core.vars/defmalias tuple     clojure.spec/tuple     cljs.spec/tuple    ))
-#?(:clj (quantum.core.vars/defmalias coll-of   clojure.spec/coll-of   cljs.spec/coll-of  ))
-#?(:clj (quantum.core.vars/defmalias def       clojure.spec/def       cljs.spec/def      ))
-#?(:clj (quantum.core.vars/defmalias fdef      clojure.spec/fdef     cljs.spec/fdef      ))
-#?(:clj (quantum.core.vars/defmalias keys      clojure.spec/keys      cljs.spec/keys     ))
-#?(:clj (quantum.core.vars/defmalias alt       clojure.spec/alt       cljs.spec/alt      ))
-#?(:clj (quantum.core.vars/defmalias cat       clojure.spec/cat       cljs.spec/cat      ))
-#?(:clj (quantum.core.vars/defmalias +         clojure.spec/+         cljs.spec/+        ))
-#?(:clj (quantum.core.vars/defmalias *         clojure.spec/*         cljs.spec/*        ))
-#?(:clj (quantum.core.vars/defmalias ?         clojure.spec/?         cljs.spec/?        ))
-#?(:clj (quantum.core.vars/defmalias and       clojure.spec/and       cljs.spec/and      ))
-#?(:clj (quantum.core.vars/defmalias or        clojure.spec/or        cljs.spec/or       ))
+#?(:clj (quantum.core.vars/defmalias tuple     clojure.spec.alpha/tuple     cljs.spec.alpha/tuple    ))
+#?(:clj (quantum.core.vars/defmalias coll-of   clojure.spec.alpha/coll-of   cljs.spec.alpha/coll-of  ))
+#?(:clj (quantum.core.vars/defmalias map-of    clojure.spec.alpha/map-of    cljs.spec.alpha/map-of   ))
+
+#?(:clj (quantum.core.vars/defmalias def       clojure.spec.alpha/def       cljs.spec.alpha/def      ))
+#?(:clj (quantum.core.vars/defmalias fdef      clojure.spec.alpha/fdef      cljs.spec.alpha/fdef     ))
+
+#?(:clj (quantum.core.vars/defmalias keys      clojure.spec.alpha/keys      cljs.spec.alpha/keys     ))
+#?(:clj (quantum.core.vars/defmalias keys*     clojure.spec.alpha/keys*     cljs.spec.alpha/keys*    ))
+#?(:clj (quantum.core.vars/defmalias merge     clojure.spec.alpha/merge     cljs.spec.alpha/merge    ))
+
+#?(:clj (quantum.core.vars/defmalias spec      clojure.spec.alpha/spec      cljs.spec.alpha/spec     ))
+#?(:clj (quantum.core.vars/defmalias +         clojure.spec.alpha/+         cljs.spec.alpha/+        ))
+#?(:clj (quantum.core.vars/defmalias *         clojure.spec.alpha/*         cljs.spec.alpha/*        ))
+#?(:clj (quantum.core.vars/defmalias ?         clojure.spec.alpha/?         cljs.spec.alpha/?        ))
+
+;; Note that `and` results in a spec, and as such creates a new regex context :/
+#?(:clj (quantum.core.vars/defmalias and       clojure.spec.alpha/and       cljs.spec.alpha/and      ))
+#?(:clj (quantum.core.vars/defmalias or        clojure.spec.alpha/or        cljs.spec.alpha/or       ))
+#?(:clj (quantum.core.vars/defmalias every     clojure.spec.alpha/every     cljs.spec.alpha/every    ))
+
 #?(:clj (defmacro nnil [& args] `(validate ~@(interleave args (repeat `nnil?)))))
-#?(:clj (quantum.core.vars/defmalias conformer clojure.spec/conformer cljs.spec/conformer))
+#?(:clj (quantum.core.vars/defmalias conformer clojure.spec.alpha/conformer cljs.spec.alpha/conformer))
 (defalias conform s/conform)
+(defalias explain s/explain)
+
+#?(:clj (quantum.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
+#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(qcore/quote-map-base base/->keyword args true))))
+
+#?(:clj (quantum.core.vars/defmalias alt clojure.spec.alpha/alt cljs.spec.alpha/alt))
+#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(qcore/quote-map-base base/->keyword args true))))
+
+#?(:clj
+(defmacro fdef! [sym & args]
+  `(with-do (~(case-env :clj 'clojure.spec.alpha/fdef :cljs 'cljs.spec.alpha/fdef) ~sym ~@args)
+     (when (s/check-asserts?) (test/instrument '~(var/qualify *ns* sym))))))
 
 #?(:clj
 (defmacro or-auto
@@ -228,7 +249,7 @@
    (s/or* even? #(< % 42))
    Returns a spec that returns the first matching pred's value."
   [& pred-forms]
-  (let [pf (mapv (case-env :cljs #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
+  (let [pf (mapv (case-env :cljs #(@#'cljs.spec.alpha/res &env %) @#'clojure.spec.alpha/res)
                  pred-forms)]
     `(or*-spec-impl '~pred-forms '~pf ~(vec pred-forms) nil))))
 
@@ -242,7 +263,7 @@
         _                 (core/assert (-> partitioned count even?))
         pred-forms-quoted (map first  partitioned)
         pred-forms-exec   (map second partitioned)
-        pf (mapv (case-env :cljs #(@#'cljs.spec/res &env %) @#'clojure.spec/res)
+        pf (mapv (case-env :cljs #(@#'cljs.spec.alpha/res &env %) @#'clojure.spec.alpha/res)
                  pred-forms-exec)]
     `(or*-spec-impl '~pred-forms-quoted '~pf ~(vec pred-forms-exec) nil))))
 
@@ -264,3 +285,25 @@
       x))
 
 (def any? (constantly true))
+
+
+
+#_(defmacro ->
+  ("Anything that is coercible to x"
+    [x]
+    ...)
+  ("Anything satisfying `from` that is coercible to `to`.
+    Will be coerced to `to`."
+    [from to]))
+
+#_(defmacro or)
+
+#_(defmacro and)
+
+#_(defmacro range-of)
+
+#_(defn instance? [])
+
+#_(defn ?
+  "'Maybe': nilable"
+  [x])
