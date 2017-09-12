@@ -353,7 +353,7 @@
           v-gen                (gensym "v")
           m-gen                (gensym "m")
           create               (symbol (str "create-" sym))
-          invalid              (case-env :cljs :cljs.spec/invalid :clojure.spec/invalid)
+          invalid              (case-env :cljs :cljs.spec.alpha/invalid :clojure.spec.alpha/invalid)
           stored-record-sym    (if (-> sym-0 meta :no-hash-map?)
                                    all-record-sym
                                    req-record-sym)]

@@ -130,4 +130,4 @@
                 cast-class (th/tag->class (tcore/nth-elem-type:clj hint depth))]
             (if (.isPrimitive ^Class cast-class)
                 `(~(symbol "clojure.core" (str cast-class)) ~x)
-                (tcore/static-cast-code (th/->embeddable-hint cast-class) x))))))
+                (tcore/static-cast-code (th/->body-embeddable-tag cast-class) x))))))
