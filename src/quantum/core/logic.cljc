@@ -295,7 +295,7 @@
 (defmacro when-let-base
   {:attribution "alexandergunnarson"}
   [cond-sym [bnd expr & more] & body]
-    `(let [temp# ~expr ~bnd  temp#]
+    `(let [temp# ~expr ~bnd temp#]
        (~cond-sym temp#
          ~(if (seq more)
               `(when-let-base ~cond-sym [~@more] ~@body)
