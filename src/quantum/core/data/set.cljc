@@ -4,7 +4,7 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.set
   (:refer-clojure :exclude
-    [+ - and or complement split-at hash-set])
+    [+ - and or not split-at hash-set])
   (:require
     [clojure.core             :as core]
     [clojure.set              :as set]
@@ -96,6 +96,8 @@
 (def      proper-superset? #(xset? :proper-super %1 %2))
 
 ; ============ OPERATIONS ============
+
+(defalias not complement)
 
 ; `union` <~> `lodash/union`
 ; TODO `union-by` <~> `lodash/unionBy`
