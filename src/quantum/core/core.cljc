@@ -1,11 +1,11 @@
 (ns quantum.core.core
   (:refer-clojure :exclude [seqable? boolean? get set])
-  (:require [clojure.core :as core
+  (:require [clojure.core             :as core
              #?@(:cljs [:refer [IDeref IAtom]])]
-            [clojure.spec :as s]
-    #?(:clj [clojure.core.specs :as ss])
-            [cuerdas.core :as str+]
-   #?(:clj  [environ.core :as env]))
+            [clojure.spec.alpha       :as s]
+    #?(:clj [clojure.core.specs.alpha :as ss])
+            [cuerdas.core             :as str+]
+   #?(:clj  [environ.core             :as env]))
   #?(:clj (:import [clojure.lang IDeref IAtom])))
 
 #?(:clj
@@ -116,11 +116,10 @@
   (apply println args)
   (println "*/"))
 
-(defn quote-map-base [make-map kw-modifier ks]
-  `(~make-map
-     ~@(->> ks
-            (map #(vector (list 'quote (kw-modifier %)) %))
-            (apply concat))))
+(defn quote-map-base [kw-modifier ks & [no-quote?]]
+  (->> ks
+       (map #(vector (cond->> (kw-modifier %) (not no-quote?) (list 'quote)) %))
+       (apply concat)))
 
 #?(:clj
 (defmacro istr
