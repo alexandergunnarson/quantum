@@ -14,7 +14,9 @@
       :refer [#?(:clj compile-if)]]
     [quantum.core.fn              :as fn]
     [quantum.core.meta.debug      :as debug]
-    [quantum.core.print           :as pr])
+    [quantum.core.print           :as pr]
+    [quantum.core.vars            :as var
+      :refer [defalias]])
 #?(:cljs
   (:require-macros
     [quantum.core.log :as self])))
@@ -41,13 +43,13 @@
   LoggingLevels
   [warn user alert info inspect debug macro-expand trace env])
 
-(defonce levels
+(defonce *levels
   (atom (map->LoggingLevels
           {:always true
            :warn   true
            :ns     true})))
 
-(defonce log (atom []))
+(defonce *log (atom []))
 
 (defrecord LogEntry
   [time-stamp ; ^DateTime
@@ -58,7 +60,7 @@
 (defn disable!
   {:in-types '{pr-type keyword?}}
   ([pr-type]
-    (swap! levels assoc pr-type false))
+    (swap! *levels assoc pr-type false))
   ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (disable! pr-type-n))))
@@ -66,7 +68,7 @@
 (defn enable!
   {:in-types '{pr-type keyword?}}
   ([pr-type]
-    (swap! levels assoc pr-type true))
+    (swap! *levels assoc pr-type true))
   ([pr-type & pr-types]
     (doseq [pr-type-n (conj pr-types pr-type)]
       (enable! pr-type-n))))
@@ -91,9 +93,9 @@
 
 (defn pr*
   "Prints to |System/out| if the print alert type @pr-type
-   is in the set of enabled print alert types, |levels|.
+   is in the set of enabled print alert types, `*levels`.
 
-   Logs the printed result to the global log |log|."
+   Logs the printed result to the global log `*log`."
   {:attribution "alexandergunnarson"}
   [trace? pretty? print-fn pr-type args opts]
     (let [trace?  (or (:trace?  opts) trace? )
@@ -102,7 +104,7 @@
           timestamp? (:timestamp? opts)
           curr-fn (when trace? (debug/this-fn-name stack))
           env-type-str
-            (when (get @levels :env)
+            (when (get @*levels :env)
               (str (name qcore/lang) " »"))
           out-str
             (with-out-str
@@ -137,38 +139,45 @@
                 (or (aget js/console (name pr-type)) println)]
            (console-print-fn out-str)))
         (when (:log? opts)
-          (swap! quantum.core.log/log conj
+          (swap! quantum.core.log/*log conj
             (LogEntry.
               "TIMESTAMP" #_(time/now)
               pr-type
               curr-fn
               out-str))))
-  args)
+    args)
 
 ; TODO make these more efficient
 #?(:clj
 (defmacro pr [pr-type & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false println         pr-type# [~@args] nil  ) true))))
+  `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* true  false println         pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro pr-no-trace [pr-type & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* false false println         pr-type# [~@args] nil  ) true))))
+  `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* false false println         pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro pr-opts [pr-type opts & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false println         pr-type# [~@args] ~opts) true))))
+  `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* true  false println         pr-type# [~@args] ~opts) true))))
 
 #?(:clj
 (defmacro ppr [pr-type & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/ppr          pr-type# [~@args] nil  ) true))))
+  `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* true  true  pr/ppr          pr-type# [~@args] nil  ) true))))
 
 #?(:clj
 (defmacro ppr-opts [pr-type opts & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  false pr/ppr          pr-type# [~@args] ~opts) true))))
+  `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* true  false pr/ppr          pr-type# [~@args] ~opts) true))))
 
 #?(:clj
-(defmacro ppr-hints [pr-type & args]
-  `(let [pr-type# ~pr-type] (if (get @levels pr-type#) (pr* true  true  pr/pprint-hints pr-type# [~@args] nil  ) true))))
+(defmacro ppr-meta [pr-type & args]
+  `(let [pr-type# ~pr-type]
+     (if (get @*levels pr-type#)
+         (binding [*print-meta* true]
+           (pr* true true pr/ppr pr-type# [~@args] nil))
+         true))))
+
+;; TODO this is not right
+#?(:clj (defalias ppr-hints ppr-meta))
 
 #?(:clj
 (defmacro prl
@@ -179,11 +188,19 @@
   `(let [level# ~level]
      (ppr level# ~(->> xs (map #(vector (list 'quote %) %)) (into {}))))))
 
-#?(:clj (defmacro prl! "For debugging." [& xs] `(prl :always ~@xs)))
+#?(:clj
+(defmacro prlm
+  "'Print labeled, with meta'."
+  [level & xs]
+  `(binding [*print-meta* true] (prl ~level ~@xs))))
+
+
+#?(:clj (defmacro prl!  "For debugging." [& xs] `(prl  :always ~@xs)))
+#?(:clj (defmacro prlm! "For debugging." [& xs] `(prlm :always ~@xs)))
 
 #?(:clj
 (defmacro this-ns []
-  `(if (get @levels :ns) (pr* true false println :ns ['~(ns-name *ns*)] nil) true)))
+  `(if (get @*levels :ns) (pr* true false println :ns ['~(ns-name *ns*)] nil) true)))
 
 #?(:clj
 (defmacro with-prl
