@@ -179,6 +179,8 @@
 ;; TODO this is not right
 #?(:clj (defalias ppr-hints ppr-meta))
 
+#?(:clj (defmacro ppr! "For debugging." [& xs] `(ppr :always ~@xs)))
+
 #?(:clj
 (defmacro prl
   "'Print labeled'.
