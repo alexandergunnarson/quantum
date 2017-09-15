@@ -3,8 +3,9 @@
     :attribution "alexandergunnarson"}
   quantum.core.data.complex.json
   (:require
-#?(:clj
-    [cheshire.core            :as json])
+#?@(:clj
+   [[cheshire.core            :as json]
+    [cheshire.parse           :as json:parse]])
     [cognitect.transit        :as t]
     [quantum.core.collections :as coll]
     [quantum.core.fn          :as fn
@@ -27,6 +28,17 @@
                   (t/read (t/reader :json))
                   (<- whenp (some? key-fn)
                       (fn1 coll/apply-to-keys key-fn)))))))
+
+(defn json->-with-start
+  "Decodes a JSON-encoded string `s` starting at index `start-i`, inclusive."
+  [^String s ^long start-i]
+  (when s
+    (json:parse/parse
+      (.createParser ^com.fasterxml.jackson.core.JsonFactory
+                     (or cheshire.factory/*json-factory*
+                         cheshire.factory/json-factory)
+                     (doto (java.io.StringReader. s) (.skip start-i)))
+      nil nil nil)))
 
 (defn ->json
   "JSON encode @x into a String."
