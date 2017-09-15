@@ -285,25 +285,3 @@
       x))
 
 (def any? (constantly true))
-
-
-
-#_(defmacro ->
-  ("Anything that is coercible to x"
-    [x]
-    ...)
-  ("Anything satisfying `from` that is coercible to `to`.
-    Will be coerced to `to`."
-    [from to]))
-
-#_(defmacro or)
-
-#_(defmacro and)
-
-#_(defmacro range-of)
-
-#_(defn instance? [])
-
-#_(defn ?
-  "'Maybe': nilable"
-  [x])
