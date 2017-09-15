@@ -1,5 +1,5 @@
 (ns quantum.core.untyped.reducers
-  (:refer-clojure :exclude [apply every? vec])
+  (:refer-clojure :exclude [apply every? vec ==])
   (:require
     [clojure.core          :as core]
     [clojure.core.reducers :as r]
@@ -7,7 +7,8 @@
       :refer [->sentinel]]
     [quantum.core.fn
       :refer [fn->> rcomp]]
-    [quantum.core.untyped.reducers.rfns :as rf]))
+    [quantum.core.untyped.compare :as comp
+      :refer [== not==]]))
 
 (defonce sentinel (->sentinel))
 
@@ -33,6 +34,7 @@
                 ([a0 a1 a2 xs] (r/reducer xs (xf a0 a1 a2))))
           (throw (ex-info "Unhandled arity for transducer" nil)))))
 
+(def  mapcat+ (transducer->reducer 1 core/mapcat))
 (def  map+    (transducer->reducer 1 core/map))
 (def  map-indexed+    (transducer->reducer 1 core/map-indexed))
 (defn map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (rcomp key f) val)))))
@@ -68,17 +70,6 @@
                     (f ret x (vreset! *i (unchecked-inc (long @*i)))))))]
     (reduce f' init xs)))
 
-(defn every-val
-  "Yields what every value in `xs` is equivalent to (via `=`), or the provided
-   `not-equivalent` value if they are not all equivalent."
-  [not-equivalent xs]
-  (reduce (fn [ret x]
-            (cond (identical? ret sentinel) x
-                  (not= x ret)              (reduced not-equivalent)
-                  :else                     ret))
-          sentinel
-          xs))
-
 (defn multiplex
   ([completef rf0]
     (fn ([]      (rf0))
@@ -89,20 +80,31 @@
         ([[x0 x1]]    (completef (rf0 x0) (rf1 x1)))
         ([[x0 x1] x'] [(rf0 x0 x') (rf1 x1 x')]))))
 
-(defn every?
-  "A faster version of `every?` using `reduce` instead of `seq`."
-  ([pred] #(every? pred %))
-  ([pred xs] (educe (rf/every? pred) xs)))
+(defn incremental-apply
+  "Applies ->`f` to reducible ->`xs`, incrementally, using `reduce`.
 
-(defn apply
-  "Applies ->`f` to ->`xs`, pairwise, using `reduce`."
+   Note that this is not the same as `apply`.
+   To behave like `apply`, one would have to keep track of all
+   values that come through the reduction function, which is equivalent
+   to `(->> xs join! core/apply)`.
+   It is also not the same as `reduce`, as `reduce` (without init) does
+   not consider the first element of a reducible separately.
+
+   `(apply             - [1])`     -> -1
+   `(reduce            - [1])`     ->  1 ; ignores
+   `(incremental-apply - [1])`     -> -1
+   `(apply             - [1 2 3])` -> -4
+   `(reduce            - [1 2 3])` -> -4 ; pairwise reduction
+   `(incremental-apply - [1 2 3])` -> -6 ; considers first element separately
+
+   And given `(defn counta [& args] (count args))`:
+
+   `(apply             counta [1 2 3 4 5 6])` ->  6
+   `(reduce            counta [1 2 3 4 5 6])` ->  2
+   `(incremental-apply counta [1 2 3 4 5 6])` ->  2"
   [f xs]
   (let [ret (reduce
-              (fn
-                ([ret] ret)
-                ([ret x]
-                  (if (identical? ret sentinel) (f x) (f ret x))))
+              (fn [ret x] (if (== ret sentinel) (f x) (f ret x)))
               sentinel
               xs)]
-    (if (identical? ret sentinel) (f) ret)))
-
+    (if (== ret sentinel) (f) ret)))
