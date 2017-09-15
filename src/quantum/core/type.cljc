@@ -128,6 +128,7 @@
          (defnt +sorted-set?   ([^+sorted-set?   x] true) ([^default x] false))
          (defnt sorted-set?    ([^sorted-set?    x] true) ([^default x] false))
          (defnt +set?          ([^+set?          x] true) ([^default x] false))
+         (defnt !set?          ([^!set?          x] true) ([^default x] false))
          (defnt set?           ([^set?           x] true) ([^default x] false))
 
          (defnt !array-list?   ([^!array-list?   x] true) ([^default x] false))
