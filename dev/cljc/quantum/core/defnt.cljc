@@ -3,7 +3,9 @@
     [+ zero? odd? even?
      bit-and
      every? vec
+     ==
      if-let when-let
+     assoc-in
      macroexpand])
   (:require
     [clojure.core             :as c]
@@ -17,10 +19,10 @@
     [quantum.core.error
       :refer [TODO]]
     [quantum.core.fn
-      :refer [aritoid fn1 fnl fn-> fn->> <-, rcomp
+      :refer [aritoid fn1 fnl fn', fn-> fn->> <-, rcomp
               firsta seconda]]
     [quantum.core.log       :as log
-      :refer [prl! prlm!]]
+      :refer [ppr! prl! prlm!]]
     [quantum.core.logic
       :refer [fn-and fn-or fn-not if-let if-not-let when-let]]
     [quantum.core.macros
@@ -30,10 +32,19 @@
     [quantum.core.spec      :as s]
     [quantum.core.specs     :as ss]
     [quantum.core.type.core :as tcore]
+    [quantum.core.untyped.analyze.ast :as ast]
+    [quantum.core.untyped.collections
+      :refer [assoc-in]]
+    [quantum.core.untyped.collections.logic :as c&
+      :refer [every?]]
     [quantum.core.untyped.collections.tree :as tree]
-    [quantum.core.untyped.reducers.rfns :as rf]
+    [quantum.core.untyped.compare  :as comp
+      :refer [==]]
     [quantum.core.untyped.reducers :as r
-      :refer [every? vec map+ join educe]]
+      :refer [vec map+ map-vals+ mapcat+ filter+ remove+ partition-all+
+              join reducei educe]]
+    [quantum.core.untyped.type :as t
+      :refer [?]]
     [quantum.core.vars      :as var
       :refer [update-meta]])
   (:import
@@ -95,8 +106,6 @@ Unlike most static languages, a `nil` value is not considered as having a type
 except that of nil.
 
 "
-
-(def ^:dynamic *conditional-branch-pruning?* true)
 
 ; TODO associative sequence over top of a vector (so it'll display like a seq but behave like a vec)
 
@@ -265,6 +274,10 @@ except that of nil.
     (c/+ f 1)))
 )
 
+; ----- TYPED PART ----- ;
+
+(do
+
 ;; NOTE: All this code can be defnt-ized after; this is just for bootstrapping purposes so performance isn't extremely important in most of these functions.
 
 (defonce defnt-cache (atom {})) ; TODO For now — but maybe lock-free concurrent hash map to come
@@ -328,11 +341,10 @@ except that of nil.
   {:memoize-only-first? true}
   [c] (class->fields c))
 
-; ----- TYPED PART ----- ;
 
-(do
+(def ^:dynamic *conditional-branch-pruning?* true)
 
-(defonce typed-i (atom 0))
+(defonce *analyze-i (atom 0))
 
 (defn add-file-context [to from]
   (let [from-meta (meta from)]
@@ -360,7 +372,7 @@ except that of nil.
                         (and (instance? WatchableMutable that)
                              (= v (.-v ^WatchableMutable that))))
   fipp.ednize/IOverride
-  fipp.ednize/IEdn    (-edn [this] (tagged-literal (symbol "!@ ") v)))
+  fipp.ednize/IEdn    (-edn [this] (tagged-literal (symbol "!@") v)))
 
 (defn !ref
   ([v]       (->WatchableMutable v nil))
@@ -407,7 +419,8 @@ except that of nil.
           `type-info`   is a WatchableMutable<TypeInfo>."}
   [env form type-info]
   fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "EXPR") (into (array-map) this))))
+  fipp.ednize/IEdn
+  (-edn [this] (tagged-literal (symbol "EXPR") (into (array-map) this))))
 
 #?(:clj
 (defmacro ->expr-info [m]
@@ -421,10 +434,6 @@ except that of nil.
   [form]
   (TODO "implement")
   nil)
-
-(defn most-primitive-class-of [x]
-  (let [c (class x)]
-    (or (tcore/boxed->unboxed c) c)))
 
 (defn reifieds-of
   "Analyzes and determines the minimal disjunctive set of reified type properties of the given form.
@@ -443,17 +452,17 @@ except that of nil.
   (when (-> expr :constraints some?)
     (TODO "Don't yet know how to handle constraints"))
   (if-let [classes (->> expr :type-info ?deref :reifieds (map truthy-type?) seq)]
-    (every-val ::unknown classes)
+    (c&/every-val ::unknown classes)
     ::unknown))
 
 (defn union:type-info [ti0 ti1]
   (prl! ti0 ti1)
   (TODO))
 
-(declare ->typed*)
+(declare analyze*)
 
-(defn handle-non-map-seqable
-  "Handle a non-map seqable."
+(defn analyze-non-map-seqable
+  "Analyzes a non-map seqable."
   {:params-doc
     '{merge-types-fn "2-arity fn that merges two types (or sets of types).
                       The first argument is the current deduced type of the
@@ -462,43 +471,51 @@ except that of nil.
   [env form empty-form rf]
   (prl! env form empty-form)
   (->> form
-       (reducei (fn [accum form' i] (rf accum (->typed* (:env accum) form') i))
+       (reducei (fn [accum form' i] (rf accum (analyze* (:env accum) form') i))
          (->expr-info {:env env :form (transient empty-form)}))
        (persistent!-and-add-file-context form)))
 
-(defn handle-map
+(defn analyze-map
   {:todo #{"If the map is bound to a variable, preserve type info for it such that lookups
             can start out with a guarantee of a certain type."}}
   [env form]
   (->> form
        (reduce-kv (fn [{env' :env forms :form} form'k form'v]
-                    (let [ast-ret-k (->typed* env' form'k)
-                          ast-ret-v (->typed* env' form'v)]
+                    (let [ast-ret-k (analyze* env' form'k)
+                          ast-ret-v (analyze* env' form'v)]
                       (->expr-info {:env       env'
                                     :form      (assoc! forms (:form ast-ret-k) (:form ast-ret-v))
                                     :type-info nil}))) ; TODO fix; we want the types of the keys and vals to be deduced
          (->expr-info {:env env :form (transient {})}))
        (persistent!-and-add-file-context form)))
 
-(defn handle-seq:do [env body]
+(defn analyze-seq:do [env form body]
   (prl! env body)
-  (let [expr (handle-non-map-seqable env body []
-               (fn [accum expr _]
-                 (prl! accum expr)
-                 ;; for types, only the last subexpression ever matters, as each is independent from the others
-                 (assoc expr :form (conj! (:form accum) (:form expr))
-                             ;; but the env should be the same as whatever it was originally because no new scopes are created
-                             :env  (:env accum))))]
-  (prl! expr)
-    (->expr-info {:env       (:env expr)
-                  :form      (cons `do (:form expr))
-                  :type-info (:type-info expr)})))
+  (if (empty? body)
+      (ast/do {:env  env
+               :form form
+               :body (r/vec body)
+               :spec t/nil?})
+      (let [_ (TODO "fix `do`")
+            expr (analyze-non-map-seqable env body []
+                   (fn [accum expr _]
+                     (prl! accum expr)
+                     ;; for types, only the last subexpression ever matters, as each is independent from the others
+                     (assoc expr :form (conj! (:form accum) (:form expr))
+                                 ;; but the env should be the same as whatever it was originally because no new scopes are created
+                                 :env  (:env accum))))]
+        (prl! expr)
+        (ast/do {:env  env
+                 :form form
+                 :body (r/vec body)
+                 :spec (:spec expr)}))))
 
-(defn handle-seq:let*:bindings [env bindings]
+(defn analyze-seq:let*:bindings [env bindings]
+  (TODO "`let*:bindings` analysis")
   (->> bindings
        (partition-all+ 2)
        (reduce (fn [{env' :env forms :form} [sym form]]
-                 (let [expr-ret (->typed* env' form)]
+                 (let [expr-ret (analyze* env' form)]
                    (->expr-info
                      {:env  (assoc env' sym (->type-info {:reifieds  (:reifieds  expr-ret) ; TODO should use type info or exprinfo?
                                                           :abstracts (:abstracts expr-ret)
@@ -507,11 +524,11 @@ except that of nil.
          (->expr-info {:env env :form (transient [])}))
        (persistent!-and-add-file-context bindings)))
 
-(defn handle-seq:let* [env [bindings & body]]
+(defn analyze-seq:let* [env [bindings & body]]
   (let [{env' :env bindings' :form}
-          (handle-seq:let*:bindings env bindings)
+          (analyze-seq:let*:bindings env bindings)
         {env'' :env body' :form type-info' :type-info}
-          (handle-seq:do env' body)]
+          (analyze-seq:do env' body)]
     (->expr-info {:env       env
                   :form      (list 'let* bindings' body')
                   :type-info type-info'})))
@@ -523,7 +540,7 @@ except that of nil.
         (TODO "Need to figure out what to do when resolving local vars")
         (resolve sym))))
 
-(defns handle-seq:dot:field
+(defns analyze-seq:dot:field
   [env _, target Class, target-form _, field Field, field-form _]
   (->expr-info {:env       env
                 :form      (list `. target-form field-form)
@@ -565,7 +582,7 @@ except that of nil.
     :and
       (TODO)))
 
-(defns handle-seq:dot:methods:static
+(defns analyze-seq:dot:methods:static
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
@@ -578,22 +595,26 @@ except that of nil.
              (update method-expr :type-info
                (fn-> (or (!ref (->type-info
                                  {:reifieds nil ; delay calculating these until fn-types is done being calculated
-                                  :fn-types methods})))
+                                  :fn-types methods
+                                  :infer?   false}))) ; TODO `:infer?` should be whether any of the expr's leaves are themselves needed inference
                      (swap!
                        (fn1 update :fn-types
                          (fn->> (filter+ #(fn-type-satisfies-expr? :or % arg-expr i:arg))
                                 join))))))
-        handled (-> (handle-non-map-seqable env args [] rf)
-                    (assoc :form form))
-        handled-with-return-type
-          (if (->> handled :type-info :fn-types (map+ :rtype) (r/apply rf/=)))]
-    (prl! handled)
+        analyzed (-> (analyze-non-map-seqable env args [] rf)
+                     (assoc :form form))
+        _ (prl! analyzed)
+        analyzed
+          (if (and (not (-> analyzed :type-info :fn-types empty?))
+                   (->> analyzed :type-info :fn-types (map+ :rtype) (c&/incremental-every? =)))
+              ;; If all return types are the same, mark as reified and non-inferable
+              (assoc-in analyzed
+                [:type-info :infer?]   false
+                [:type-info :reifieds] #{(-> analyzed :type-info :fn-types first :rtype)})
+              (TODO "Don't know how to handle divergent return types"))]
+    analyzed))
 
-    (TODO "calculate `:reifieds` of `handled` based on `:fn-types`")
-
-  (TODO)))
-
-(defn try-handle-seq:dot:methods:static
+(defn try-analyze-seq:dot:methods:static
   [env form target target-form method-form args ?field?]
   (if-not-let [methods-for-name (-> target class->methods:with-cache (get (name method-form)))]
     (if ?field?
@@ -602,16 +623,17 @@ except that of nil.
     (if-not-let [methods (get methods-for-name (count args))]
       (ex! "Incorrect number of arguments for method"
            {:class target :method method-form :possible-counts (set (keys methods-for-name))})
-      (handle-seq:dot:methods:static env form target target-form (:static methods) method-form args))))
+      (analyze-seq:dot:methods:static env form target target-form (:static methods) method-form args))))
 
-(defn handle-seq:dot [env form [target method|field & args]]
+(defn analyze-seq:dot [env form [target method|field & args]]
+  {:post [(prl! %)]}
   (let [target' (?resolve-with-env target env)]
     (cond (class? target')
             (if (empty? args)
                 (if-let [field (-> target class->fields:with-cache (get (name method|field)))]
-                  (handle-seq:dot:field env form target' target field method|field)
-                  (try-handle-seq:dot:methods:static env form target' target method|field args true))
-                (try-handle-seq:dot:methods:static env form target' target method|field args false))
+                  (analyze-seq:dot:field env form target' target field method|field)
+                  (try-analyze-seq:dot:methods:static env form target' target method|field args true))
+                (try-analyze-seq:dot:methods:static env form target' target method|field args false))
           (nil? target')
             (ex! "Could not resolve target of dot operator" {:target target})
           :else
@@ -619,26 +641,22 @@ except that of nil.
             (ex! "Currently doesn't handle non-static calls (instance calls will be supported later).
                   Expected target to be class or object in a dot form; got" {:target target'}))))
 
-(defn handle-nil [env form]
-  (->expr-info {:env       env
-                :form      form
-                :type-info (->type-info {:reifieds #{:nil}})}))
-
-(defn handle-seq:if
+(defn analyze-seq:if
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
    retained, but it will not be type-analyzed."
   [env form [pred true-form false-form :as body]]
+  {:post [(prl! %)]}
   (when (-> body count (not= 3))
     (ex! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body}))
-  (let [pred-expr  (->typed* env pred)
-        true-expr  (delay (->typed* env true-form))
-        false-expr (delay (->typed* env false-form))
+  (let [pred-expr  (analyze* env pred)
+        true-expr  (delay (analyze* env true-form))
+        false-expr (delay (analyze* env false-form))
         whole-expr
           (delay
-            (->expr-info
+            (do (TODO "fix `if` analysis")(->expr-info
               {:env       env
                :form      (list 'if pred (:form @true-expr) (:form @false-expr))
-               :type-info (union:type-info (:type-info @true-expr) (:type-info @false-expr))}))]
+               :type-info (union:type-info (:type-info @true-expr) (:type-info @false-expr))})))]
     (case (truthy-expr? pred-expr)
       ::unknown @whole-expr
       true      (-> @true-expr  (assoc :env env)
@@ -648,76 +666,93 @@ except that of nil.
                                 (cond-> (not *conditional-branch-pruning?*)
                                         (assoc :form (list 'if pred true-form          (:form @false-expr))))))))
 
-(defn handle-seq:quote [env form body]
-  (->expr-info
-    {:env       env
-     :form      form
-     :type-info (->type-info {:reifieds #{(type body)} :abstracts (abstracts-of body)})}))
+(defn analyze-seq:quote [env form body]
+  {:post [(prl! %)]}
+  (ast/quoted form (tcore/most-primitive-class-of body)))
 
-(defn handle-seq [env form]
+(defn analyze-seq*
+  "Analyze a seq after it has been macro-expanded.
+   The ->`form` is post- incremental macroexpansion."
+  [env [sym & body :as form]]
+  (ppr! {'expanded-form form})
+  (if (special-symbols sym)
+      (case sym
+        do
+          (analyze-seq:do    env form body)
+        let*
+          (analyze-seq:let*  env form body)
+        deftype*
+          (TODO "deftype*")
+        fn*
+          (TODO "fn*")
+        def
+          (TODO "def")
+        .
+          (analyze-seq:dot   env form body)
+        if
+          (analyze-seq:if    env form body)
+        quote
+          (analyze-seq:quote env form body))
+      (if-let [sym-resolved (resolve sym)]
+        ; See note above on typed function return types
+        (TODO)
+        (ex! "Form should be a special symbol but isn't" {:form sym}))))
+
+(defn analyze-seq [env form]
+  {:post [(prl! %)]}
   (prl! form)
-  (let [[f & body :as expanded-form] (macroexpand form)]
-    (prl! f body (special-symbols f))
-    (if (special-symbols f)
-        (case f
-          do
-            (if (nil? body)
-                (handle-nil env body)
-                (handle-seq:do env body))
-          let*
-            (handle-seq:let* env body)
-          deftype*
-            (TODO)
-          fn*
-            (TODO)
-          def
-            (TODO)
-          .
-            (handle-seq:dot   env expanded-form body)
-          if
-            (handle-seq:if    env expanded-form body)
-          quote
-            (handle-seq:quote env expanded-form body))
-        (if-let [f-resolved (resolve f)]
-          ; See note above on typed function return types
-          (TODO)
-          (ex! "Form should be a special symbol but isn't" {:form f})))))
+  (let [expanded-form (macroexpand form)]
+    (if (== form expanded-form)
+        (analyze-seq* env expanded-form)
+        (ast/macro-call form (analyze-seq* env expanded-form)))))
 
-(defn handle-symbol [env form]
-  (if-let [type-info (get env form)]
-    (->expr-info {:env       env
-                  :form      form
-                  :type-info type-info})
-    (TODO "Need to know how to handle non-local symbol")))
+(defn analyze-symbol [env form]
+  {:post [(prl! %)]}
+  (or (get env form)
+      (TODO "Need to know how to handle non-local symbol")))
 
-(defn ->typed* [env form]
+(defn literal? [form]
+  (or (keyword? form)
+      (string?  form)
+      (number?  form)
+      (nil?     form)))
+
+(defn analyze* [env form]
   (prl! env form)
-  (when (> (swap! typed-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
-  (cond (or (keyword? form)
-            (string?  form)
-            (number?  form))
-          (->expr-info {:env       env
-                        :form      form
-                        :type-info (->type-info {:reifieds #{(most-primitive-class-of form)}})}) ; TODO `constraints`
+  (when (> (swap! *analyze-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
+  (cond (literal? form)
+          (ast/literal form (tcore/most-primitive-class-of form))
         (or (vector? form)
             (set?    form))
-          (handle-non-map-seqable env form (empty form))
+          (analyze-non-map-seqable env form (empty form))
         (map? form)
-          (handle-map env form)
+          (analyze-map env form)
         (seq? form)
-          (handle-seq env form)
+          (analyze-seq env form)
         (symbol? form)
-          (handle-symbol env form)
-        (nil? form)
-          (handle-nil env form)
+          (analyze-symbol env form)
         :else
           (throw (ex-info "Unrecognized form" {:form form}))))
 
-(defn ->typed
-  ([body] (->typed {} body))
+(defn analyze
+  ([body] (analyze {} body))
   ([env body]
-    (reset! typed-i 0)
-    (->typed* env body)))
+    (reset! *analyze-i 0)
+    (analyze* env body)))
+
+(defn tests []
+  (testing "symbol"
+    (testing "unbound"
+      (is= (analyze {'c (ast/unbound 'c)} 'c)
+           (ast/unbound 'c))))
+  (testing "static call"
+    (testing "literal arguments"
+      (analyze '(Numeric/bitAnd 1 2)))))
+
+
+(let* [a 1 b (byte 2)]
+                a
+                (Numeric/add c (Numeric/bitAnd a b)))
 
 ; To infer, you postwalk
 ; To imply, you prewalk
@@ -727,25 +762,19 @@ except that of nil.
 ;;     if E has not reached stability (stability = only one reified, TODO what about abstracts?)
 ;;       E's type must itself be inferred
 
-(let [gen-unbound
+(defn test-it []
+  #_(let [gen-unbound
         #(!ref (->type-info
                  {:reifieds #{}
                   :infer? true}))
       gen-expected
-        (fn [form env type-info]
-          (->expr-info
+        (fn [env ast]
+          [env ast]
+          #_(->expr-info
             {:env  env
              :form form
              :type-info
-               (->type-info type-info)}))
-      boolean Boolean/TYPE
-      byte    Byte/TYPE
-      char    Character/TYPE
-      short   Short/TYPE
-      int     Integer/TYPE
-      long    Long/TYPE
-      float   Float/TYPE
-      double  Double/TYPE]
+               (->type-info type-info)}))]
   #_(let [env  {'a (gen-unbound)
               'b (gen-unbound)}
         form '(and:boolean a b)]
@@ -755,67 +784,64 @@ except that of nil.
             :abstracts #{#_...}
             #_:conditionals
               #_{boolean {boolean #{boolean}}}})))
-  (let [env  {'a (gen-unbound)}
+  #_(let [env  {'a (gen-unbound)}
         form '(Numeric/isZero a)]
-    (is= (->typed env form)
-         (gen-expected form
-           {'a (!ref (->type-info
-                       {:reifieds #{byte char short int long float double}
-                        :infer?   true}))}
-           {:reifieds #{boolean}
-            :infer?   false})))
+    (is= (-> (->typed env form)
+             (assoc-in [:type-info :fn-types] nil))
+         (gen-expected
+           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long t/float t/double)))}
+           (t/ast '(. Numeric isZero a) (t/fn' t/boolean)))))
   #_(let [env  {'a (gen-unbound)
               'b (gen-unbound)}
         form '(Numeric/bitAnd a b)]
-    (is= (->typed env form)
-         (gen-expected form
-           {'a (!ref (->type-info
-                       {:reifieds #{byte char short int long}
-                        :infer? true}))
-            'b (!ref (->type-info
-                       {:reifieds #{byte char short int long}
-                        :infer? true}))}
-           {:reifieds  #{byte char short int long}
-            :abstracts #{#_...}
-            :conditionals
-              {byte  {byte  #{byte }
-                      char  #{char }
-                      short #{short}
-                      int   #{int  }
-                      long  #{long }}
-               char  {byte  #{char }
-                      char  #{char }
-                      short #{short}
-                      int   #{int  }
-                      long  #{long }}
-               short {byte  #{short}
-                      char  #{short}
-                      short #{short}
-                      int   #{int  }
-                      long  #{long }}
-               int   {byte  #{int  }
-                      char  #{int  }
-                      short #{int  }
-                      int   #{int  }
-                      long  #{long }}
-               long  {byte  #{long }
-                      char  #{long }
-                      short #{long }
-                      int   #{long }
-                      long  #{long }}}})))
-  #_(let [env  {'a (gen-unbound)
+    (is= nil #_(->typed env form)
+         (gen-expected
+           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long)))
+            'b (!ref (t/ast 'b ? (t/or t/byte t/char t/short t/int t/long)))}
+           (t/ast '(. Numeric bitAnd a b)
+             ;; TODO make spec fns easily editable
+             (t/spec [[a0 a1]] ; input is sequence of arg-specs; return value is spec
+               (condp = a0
+                 ;; TODO use map lookup?
+                 t/byte  (condp = a1
+                           t/byte  t/byte
+                           t/char  t/char
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/char  (condp = a1
+                           t/byte  t/char
+                           t/char  t/char
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/short (condp = a1
+                           t/byte  t/short
+                           t/char  t/short
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/int   (condp = a1
+                           t/byte  t/int
+                           t/char  t/int
+                           t/short t/int
+                           t/int   t/int
+                           t/long  t/long)
+                 t/long  (condp = a1
+                           t/byte  t/long
+                           t/char  t/long
+                           t/short t/long
+                           t/int   t/long
+                           t/long  t/long)))))))
+
+  (let [env  {'a (gen-unbound)
               'b (gen-unbound)}
         form '(Numeric/negate (Numeric/bitAnd a b))]
-    (is= (->typed env form)
+    (is= #_(->typed env form)
          (gen-expected form
-           {'a (!ref (->type-info
-                       {:reifieds #{}
-                        :fn-types {}
-                        :infer? true}))
-            'b (!ref (->type-info
-                       {:reifieds #{}
-                        :fn-types {}
-                        :infer? true}))}
+           {'a (!ref (t/ast 'a ? ...))
+            'b (!ref (t/ast 'b ? ...))}
+           (t/ast '(. Numeric bitAnd a b))
            {:reifieds  #{byte char short int long}
             :abstracts #{...}})))
   #_(let [env  {'a (gen-unbound)
@@ -855,12 +881,15 @@ except that of nil.
                         :fn-types {}
                         :infer? true}))}
            {:reifieds  #{int long}
-            :abstracts #{...}}))))
+            :abstracts #{...}})))))
 
 
 
 )
 
+
+; TODO by default, :form+ is added, but have option to hide :form+ that are the same
+; TODO by default, :env is added, but have the option to hide it
 
 (->typed '{a nil}
   '(Numeric/isZero a))
@@ -1059,6 +1088,6 @@ except that of nil.
 
 ;; ----- `->typed` tests ----- ;;
 
-(require '[quantum.core.test :refer [is=]])
+(require '[quantum.core.test :refer [is= testing is]])
 
 
