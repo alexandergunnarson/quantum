@@ -15,7 +15,7 @@
     [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
       :refer [->ex]]
-    [quantum.core.fn
+    [quantum.core.fn                  :as fn
       :refer [rfn <- call fn' rcomp firsta seconda]]
     [quantum.core.log                 :as log]
     [quantum.core.macros              :as macros
@@ -377,7 +377,7 @@
 (defmacro doreduce ; TODO demacro when type inference is done
   "Performs a reduction for purposes of side effects.
    Returns the last value passed into the reducing function."
-  [xs] `(reduce seconda nil ~xs)))
+  [xs] `(reduce (fn/rf-fix seconda) nil ~xs)))
 
 #?(:clj
 (defmacro doeach ; TODO demacro when type inference is done
@@ -388,7 +388,7 @@
 #?(:clj
 (defmacro each ; TODO demacro when type inference is done
   "Same as |core/run!| but uses reducers' reduce"
-  [f xs] `(do (reduce (rcomp seconda ~f) nil ~xs) nil)))
+  [f xs] `(do (reduce (fn/rf-fix (rcomp seconda ~f)) nil ~xs) nil)))
 
 #?(:clj
 (defmacro eachi  ; TODO demacro when type inference is done

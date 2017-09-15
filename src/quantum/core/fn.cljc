@@ -298,6 +298,10 @@
                         (let [args (vec (repeatedly i #(gensym "x")))]
                          `(~args (~f-sym ~@args)))))))))
 
+(defn rf-fix
+  "TODO remove when you figure out transduce vs. reduce"
+  [f] (aritoid nil identity f))
+
 ; TODO demacro
 #?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
 
