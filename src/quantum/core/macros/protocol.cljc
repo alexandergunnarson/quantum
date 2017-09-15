@@ -105,7 +105,7 @@
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
-                                                  (th/with-protocol-arglist-type-hint lang nil)) ; the arglist length doesn't matter
+                                                  (with-protocol-arglist-type-hint lang nil)) ; the arglist length doesn't matter
                                   arglist-f   (->> arglist rest (with-protocol-appropriate-arglist lang))
                                   arglist-f   (if return-type
                                                   arglist-f
