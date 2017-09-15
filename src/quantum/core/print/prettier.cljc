@@ -2,7 +2,8 @@
   (:require
     [fipp.edn]
     [fipp.visit]
-    [fipp.ednize]))
+    [fipp.ednize]
+    [quantum.core.ns :as ns]))
 
 ; TODO get rid of this fipp boilerplate
 (in-ns 'fipp.ednize)
@@ -48,7 +49,14 @@
     (boolean? x) (visit-boolean visitor x)
     (string? x) (visit-string visitor x)
     (char? x) (visit-character visitor x)
-    (symbol? x) (visit-symbol visitor x)
+    (symbol? x)
+      ;; Collapses symbols
+      [:text (str (when-let [n (namespace x)]
+                    (str (if-let [alias- (do #?(:clj (quantum.core.ns/ns-name->alias *ns* (symbol n)) :cljs false))]
+                           (str "," alias-)
+                           n)
+                         "/")) (name x))]
+      #_(visit-symbol visitor x)
     (keyword? x) (visit-keyword visitor x)
     (number? x) (visit-number visitor x)
     (seq? x) (visit-seq visitor x)
