@@ -2,10 +2,12 @@
   (:require
     [clojure.test       :as test]
     [quantum.core.error :as err]
+    [quantum.core.fn    :as fn
+      :refer [fn->]]
     [quantum.core.print :as pr
       :refer [ppr-str]]
     [quantum.core.vars
-      :refer [#?(:clj defmalias)]])
+      :refer [#?(:clj defmalias) defalias]])
 #?(:cljs
   (:require-macros
     [quantum.core.test :as self])))
@@ -27,6 +29,11 @@
 #?(:clj (defmalias is      clojure.test/is      cljs.test/is     ))
 #?(:clj (defmalias deftest clojure.test/deftest cljs.test/deftest))
 #?(:clj (defmalias testing clojure.test/testing cljs.test/testing))
+#?(:clj (defalias test-ns test/test-ns))
+
+#?(:clj
+(defn test-nss-where [pred]
+  (->> (all-ns) (filter (fn/fn-> ns-name name pred)) (map test-ns) doall)))
 
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
 #?(:clj (defmacro throws [x] `(do (is (~'thrown? ~(err/generic-error &env) ~x)) true)))
