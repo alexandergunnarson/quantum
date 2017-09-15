@@ -47,6 +47,20 @@
 #?(:clj (defalias remove-ns      core/remove-ns    ))
 #?(:clj (defalias remove-ns!     remove-ns         ))
 
+#?(:clj (defn the-alias [alias-sym] (.lookupAlias *ns* alias-sym)))
+
+#?(:clj
+(defn ns->alias [ns- lookup-ns] ; TODO faster via caching
+  (->> ns- ns-aliases seq
+       (filter (fn [[alias- ns']] (= ns' lookup-ns)))
+       ffirst)))
+
+#?(:clj
+(defn ns-name->alias [ns- lookup-ns-name] ; TODO faster via caching
+  (->> ns- ns-aliases seq
+       (filter (fn [[alias- ns']] (= (ns-name ns') lookup-ns-name)))
+       ffirst)))
+
 #?(:clj
 (defn clear-ns-interns!
   "Clears a namespace of all vars, public and private, but does not
