@@ -33,7 +33,8 @@
    Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
   {:from 'taoensso.truss.impl/catching
    :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
-  ([try-expr                     ] `(catch-all ~try-expr ~'_ nil))
+  ([try-expr                     ] `(catch-all ~try-expr _# nil))
+  ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
   ([try-expr error-sym catch-expr]
    `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
   ([try-expr error-sym catch-expr finally-expr]
