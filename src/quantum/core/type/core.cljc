@@ -103,6 +103,11 @@
 #?(:clj  (def auto-unboxable? #(contains? primitive-boxed-types %))
    :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))
 
+#?(:clj
+(defn most-primitive-class-of [x]
+  (let [c (class x)]
+    (or (boxed->unboxed c) c))))
+
 ; ===== ARRAYS ===== ;
 
 (def primitive-array-types ; TODO get from type/defs
