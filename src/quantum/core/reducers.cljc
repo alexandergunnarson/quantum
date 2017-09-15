@@ -153,7 +153,7 @@
    Useful for e.g. `max` and `min`."
   {:attribution "alexandergunnarson"}
   [rf xs]
-  (red-apply (aritoid nil identity rf) xs))
+  (red-apply (aritoid (fn' nil) identity rf) xs))
 
 (defn first-non-nil-reducer
   "A reducing function that simply returns the first non-nil element in the
