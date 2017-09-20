@@ -1,12 +1,13 @@
 (ns quantum.core.defnt
   (:refer-clojure :exclude
-    [+ zero? odd? even?
+    [+ #_zero? odd? even?
      bit-and
      every? vec
      ==
      if-let when-let
      assoc-in
-     macroexpand])
+     macroexpand
+     get])
   (:require
     [clojure.core             :as c]
     [quantum.core.cache       :as cache
@@ -27,19 +28,21 @@
       :refer [fn-and fn-or fn-not if-let if-not-let when-let]]
     [quantum.core.macros
       :refer [macroexpand]]
-    [quantum.core.macros.core :as cmacros]
-    [quantum.core.macros.type-hint :as th]
-    [quantum.core.spec      :as s]
-    [quantum.core.specs     :as ss]
-    [quantum.core.type.core :as tcore]
-    [quantum.core.untyped.analyze.ast :as ast]
-    [quantum.core.untyped.collections
-      :refer [assoc-in]]
-    [quantum.core.untyped.collections.logic :as c&
+    [quantum.core.macros.core          :as cmacros]
+    [quantum.core.macros.type-hint     :as th]
+    [quantum.core.spec                 :as s]
+    [quantum.core.specs                :as ss]
+    [quantum.core.type.core            :as tcore]
+    [quantum.core.untyped.analyze.ast  :as ast]
+    [quantum.core.untyped.analyze.expr :as xp]
+    [quantum.core.untyped.collections  :as coll
+      :refer [assoc-in get]]
+    [quantum.core.untyped.collections.logic :as coll&
       :refer [every?]]
     [quantum.core.untyped.collections.tree :as tree]
     [quantum.core.untyped.compare  :as comp
       :refer [==]]
+    [quantum.core.untyped.loops    :as loops]
     [quantum.core.untyped.reducers :as r
       :refer [vec map+ map-vals+ mapcat+ filter+ remove+ partition-all+
               join reducei educe]]
@@ -562,25 +565,38 @@ except that of nil.
 ; (reduce (fn [accum form'] (rf accum (->typed* (:env accum) form')))
 ;          (->expr-info {:env env :form (transient empty-form)}))
 
-(defn fn-type-satisfies-expr?
-  "Yields whether a function type declaration `fn-type` satisfies the type of the given
-   expression info `expr`.
-   Yields `true` if the intersection of the set of possible argtypes of `f` with the
-   set of the possible types of the given arg index is non-empty. This does not imply
-   that these sets will actually be generated, but rather that their elements will be
-   checked until satisfied or not satisfied.
-
-   See the documentation for `defnt`, specifically the section entitled 'Matching
-   Functions with Arguments'."
-  [kind fn-type expr i:arg]
-  (prl! kind fn-type expr)
-  (case kind
-    :or
-      ;; TODO it's not just reifieds here that need taking care of
-      ;; TODO how to dedupe e.g. subclasses and superclasses?
-      (-> expr :type-info (swap! (fn1 update :reifieds conj (-> fn-type :argtypes (get i:arg)))))
-    :and
-      (TODO)))
+(defn methods->spec
+  "Creates a spec given ->`methods`."
+  [methods #_(t/seq method?)]
+  ;; TODO room for plenty of optimization here
+  (let [methods:by-ct (->> methods (group-by (fn-> :argtypes count)))
+        partition-deep
+          (fn partition-deep [spec methods' arglist-size i:arg depth]
+            (let [_ (when (> depth 3) (TODO))
+                  methods':by-class
+                    (->> methods'
+                         ;; TODO optimize further via `group-by-into`
+                         (group-by (fn-> :argtypes (get i:arg)))
+                         ;; classes will be sorted from most to least specific
+                         (sort-by first t/in>))]
+              (r/for [[c methods''] methods':by-class
+                      spec' spec]
+                (update spec' :clauses conj
+                  [(t/->spec c)
+                   (if (= (inc depth) arglist-size)
+                       ;; here, methods'' count will be = 1
+                       (-> methods'' first :rtype t/->spec)
+                       (partition-deep
+                         (xp/condpf-> t/>= (xp/get (inc i:arg)))
+                         methods''
+                         arglist-size
+                         (inc i:arg)
+                         (inc depth)))]))))]
+    (r/for [[ct methods'] methods:by-ct
+            spec (xp/casef count)]
+      (if (zero? ct)
+          (assoc-in spec [:cases 0]  (-> methods' first :rtype t/->spec))
+          (assoc-in spec [:cases ct] (partition-deep (xp/condpf-> t/>= (xp/get 0)) methods' ct 0 0))))))
 
 (defns analyze-seq:dot:methods:static
   "A note will be made of what methods match the argument types.
@@ -588,31 +604,36 @@ except that of nil.
    exception is thrown."
   {:params-doc '{methods "A reducible of all static `Method`s with the given name,
                           `method-form`, in the given class, `target`."}}
-  [env _, form _, target class?, target-form _, methods _, method-form _, args _]
-  (prl! env target method-form (vec methods) args)
-  (let [rf (fn [method-expr arg-expr i:arg]
-             (prl! method-expr arg-expr)
-             (update method-expr :type-info
-               (fn-> (or (!ref (->type-info
-                                 {:reifieds nil ; delay calculating these until fn-types is done being calculated
-                                  :fn-types methods
-                                  :infer?   false}))) ; TODO `:infer?` should be whether any of the expr's leaves are themselves needed inference
-                     (swap!
-                       (fn1 update :fn-types
-                         (fn->> (filter+ #(fn-type-satisfies-expr? :or % arg-expr i:arg))
-                                join))))))
-        analyzed (-> (analyze-non-map-seqable env args [] rf)
-                     (assoc :form form))
-        _ (prl! analyzed)
-        analyzed
-          (if (and (not (-> analyzed :type-info :fn-types empty?))
-                   (->> analyzed :type-info :fn-types (map+ :rtype) (c&/incremental-every? =)))
-              ;; If all return types are the same, mark as reified and non-inferable
-              (assoc-in analyzed
-                [:type-info :infer?]   false
-                [:type-info :reifieds] #{(-> analyzed :type-info :fn-types first :rtype)})
-              (TODO "Don't know how to handle divergent return types"))]
-    analyzed))
+  [env _, form _, target class?, target-form _, methods _, method-form _, arg-forms _]
+  ;; TODO cache spec by method
+  (prl! env target method-form (vec methods) arg-forms)
+  (let [;; TODO could use `analyze-non-map-seqable` instead of the `reduce` here
+        #_analyzed #_(-> (analyze-non-map-seqable env arg-forms [] rf)
+                         (assoc :form form))
+
+        static-call0
+          (ast/static-call
+            {:env  env
+             :form form
+             :f    (symbol (str target-form) (str method-form))
+             :args []
+             :spec (methods->spec methods)})
+        with-arg-nodes
+          (r/fori [arg-form    arg-forms
+                   static-call static-call0
+                   i:arg]
+            (prl! static-call arg-form)
+            (let [arg-node (analyze* env arg-form)]
+              (-> static-call
+                  (update :args conj arg-node)
+                  (update :spec
+                    (fn [spec]
+                      (if (zero? i:arg)
+                          (:spec arg-node)
+                          (t/and* spec (:spec arg-node))))))))
+        with-spec
+          (TODO "")]
+    with-spec))
 
 (defn try-analyze-seq:dot:methods:static
   [env form target target-form method-form args ?field?]
@@ -711,17 +732,11 @@ except that of nil.
   (or (get env form)
       (TODO "Need to know how to handle non-local symbol")))
 
-(defn literal? [form]
-  (or (keyword? form)
-      (string?  form)
-      (number?  form)
-      (nil?     form)))
-
 (defn analyze* [env form]
   (prl! env form)
   (when (> (swap! *analyze-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
-  (cond (literal? form)
-          (ast/literal form (tcore/most-primitive-class-of form))
+  (cond (t/literal? form)
+          (ast/literal form (-> form tcore/most-primitive-class-of t/->spec))
         (or (vector? form)
             (set?    form))
           (analyze-non-map-seqable env form (empty form))
