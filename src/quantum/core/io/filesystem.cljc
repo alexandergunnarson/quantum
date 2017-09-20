@@ -13,7 +13,7 @@
   "@event-kinds     StandardWatchEventKinds/ENTRY_MODIFY
    @event-modifiers SensitivityWatchEventModifier/HIGH"
   [{:as thread-opts :keys [close-reqs]} {:keys [event-kinds event-modifiers watch-files callback]}]
-  (with-throw (nnil? close-reqs) "Requires close reqs")
+  (with-throw (val? close-reqs) "Requires close reqs")
   (async thread-opts
     (with-resources
       [watch-service

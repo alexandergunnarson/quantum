@@ -13,8 +13,7 @@
   (:require
     [clojure.core                  :as core]
     [clojure.core.reducers         :as r]
-    [quantum.core.collections.base :as cbase
-      :refer [nnil?]]
+    [quantum.core.collections.base :as cbase]
     [quantum.core.collections.core
       :refer [joinl ?transient! ?persistent!]]
     [quantum.core.data.map         :as map]

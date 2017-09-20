@@ -9,17 +9,18 @@
        set-error-mode!
      var-set])
   (:require
-    [clojure.core       :as core]
-    [clojure.string     :as str]
+    [clojure.core           :as core]
+    [clojure.string         :as str]
     [quantum.core.core
       :refer [atom?]]
-    [quantum.core.error :as err
+    [quantum.core.error     :as err
       :refer [TODO]]
     [quantum.core.macros
       :refer [case-env defnt #?(:clj defnt') env-lang]]
-    [quantum.core.type  :as t]
+    [quantum.core.type      :as t
+      :refer [val?]]
     [quantum.core.type.defs :as tdefs]
-    [quantum.core.vars  :as var
+    [quantum.core.vars      :as var
       :refer [defalias]])
 #?(:clj
   (:import
@@ -144,7 +145,7 @@
                  timeout-val))))
    :cljs (defalias deref core/deref))
 
-(defn ?deref [a] (when (some? a) (deref a))) ; TODO type this
+(defn ?deref [a] (when (val? a) (deref a))) ; TODO type this
 
 (defn ->derefable [x]
   (if (t/derefable? x)

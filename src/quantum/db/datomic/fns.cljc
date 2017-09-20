@@ -14,7 +14,7 @@
     (defn! conn first  [db coll ] (first  coll))
     (defn! conn ffirst [db coll ] (ffirst coll))
     (defn! conn nil?   [db expr ] (nil? expr))
-    (defn! conn nnil?  [db expr ] (not (nil? expr)))
+    (defn! conn val?   [db expr ] (not (nil? expr)))
 
     ; MACROS
 
@@ -65,10 +65,10 @@
                :where [?e ?a ?v]]
         db a v))
 
-    (defn! conn lookup-nnil
+    (defn! conn lookup-not-nil
       [db a v]
       (api/invoke db :fn/eval db
-        `(:fn/validate :fn/nnil?
+        `(:fn/validate :fn/val?
            (:fn/lookup ~a ~v))))
 
     (defn! conn eval
@@ -83,7 +83,7 @@
                    (-> expr first keyword?)
                    (-> expr first namespace (= "fn")))
               (let [[f & args] expr
-                    macros #{:fn/if :fn/when :fn/validate :fn/or :fn/apply-or :fn/lookup-nnil}]
+                    macros #{:fn/if :fn/when :fn/validate :fn/or :fn/apply-or :fn/lookup-not-nil}]
                 (if (contains? macros f)
                     (apply datomic.api/invoke db f db args)
                     (apply datomic.api/invoke db f db

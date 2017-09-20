@@ -15,8 +15,7 @@
   (:require
     [clojure.core                  :as core]
     [clojure.core.reducers         :as r]
-    [quantum.core.collections.base :as cbase
-      :refer [nnil?]]
+    [quantum.core.collections.base :as cbase]
     [quantum.core.collections.core :as ccoll
       :refer [empty? contains?, assoc!, conj!, get, ->objects]]
     [quantum.core.core
@@ -48,6 +47,7 @@
     [quantum.core.reducers.reduce  :as red
       :refer [transformer]]
     [quantum.core.reducers.fold    :as fold]
+    [quantum.core.untyped.qualify  :as qual]
     [quantum.core.vars             :as var
       :refer [defalias def-]])
 #?(:cljs
@@ -1267,7 +1267,7 @@
         parallel-quoted-sym (symbol (str "p" sym "'"))]
     `(do ~(when lazy-sym
            `(defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
-         (defalias ~(var/unqualify plus-sym) ~plus-sym)
+         (defalias ~(qual/unqualify plus-sym) ~plus-sym)
          (defn ~sym
            ~(str "Like `core/" sym "`, but eager. Reduces into vector.")
            ([f#] (fn [coll#] (~sym f# coll#)))

@@ -94,8 +94,8 @@
 #?(:clj
 (defmacro defmemoized
   [sym opts & args]
-  (let [cache-sym      (symbol (str (name sym) "-cache"))
-        sym-star       (symbol (str (name sym) "*"))]
+  (let [cache-sym (symbol (str (name sym) "-cache"))
+        sym-star  (symbol (str (name sym) "*"))]
     `(do (declare ~sym ~sym-star)
          (defn ~sym-star ~@args)
          (defonce ~cache-sym

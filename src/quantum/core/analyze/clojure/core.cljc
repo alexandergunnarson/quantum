@@ -6,6 +6,8 @@
  #_(:cljs [clojure.tools.analyzer.js])
     [quantum.core.collections.base :as cbase
       :refer [kw-map]]
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.error            :as err
       :refer [ex!]]
     [quantum.core.fn

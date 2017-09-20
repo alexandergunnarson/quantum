@@ -4,7 +4,7 @@
     [quantum.core.analyze.clojure.predicates :as anap ]
     [quantum.core.data.map                   :as map  ]
     [quantum.core.collections                :as coll
-      :refer [containsv? kw-map popr popl nempty? nnil? in? dropl]]
+      :refer [containsv? kw-map popr popl nempty? in? dropl]]
     [quantum.core.convert                    :as conv
       :refer [->name]]
     [quantum.core.error                      :as err
@@ -20,7 +20,8 @@
               whenf1 whenc ifn condfc condpc coll-or]]
     [quantum.core.macros                     :as macros
       :refer [defnt]]
-    [quantum.core.type                       :as t]))
+    [quantum.core.type                       :as t
+      :refer [val?]]))
 
 ; special-symbol? is a clojure thing
 
@@ -310,7 +311,7 @@
          (eval-form (apply list 'defglobal sym form args)))
      'def*
        (fn def*-fn [[special-sym global? sym form & args]]
-         {:pre [(throw-unless (nnil? form) (str/sp "Cannot bind var" (str/squote sym) "to nothing"))
+         {:pre [(throw-unless (val? form) (str/sp "Cannot bind var" (str/squote sym) "to nothing"))
                 (-> args count (= 0))]}
          (when (-> reserved-syms (get *lang*) (contains? sym))
            (throw (->ex (str/sp "Symbol" (str/squote sym)

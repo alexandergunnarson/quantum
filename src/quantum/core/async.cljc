@@ -17,7 +17,7 @@
  #_[[co.paralleluniverse.pulsar.async  :as async+]
     [co.paralleluniverse.pulsar.core   :as pasync]])
     [quantum.core.collections          :as coll
-      :refer [nempty? count red-for break nnil? repeatedly
+      :refer [nempty? count red-for break repeatedly
               reduce, #_->objects
               doseqi, red-for, for
               conj!
@@ -39,11 +39,13 @@
     [quantum.core.macros               :as macros
       :refer [defnt]]
     [quantum.core.refs                 :as refs]
-    [quantum.core.system               :as sys]
-    [quantum.core.vars                 :as var
-      :refer [defalias defmalias]]
     [quantum.core.spec                 :as s
-      :refer [validate]])
+      :refer [validate]]
+    [quantum.core.system               :as sys]
+    [quantum.core.type           :as t
+      :refer [val?]]
+    [quantum.core.vars                 :as var
+      :refer [defalias defmalias]])
 #?(:cljs
   (:require-macros
     [cljs.core.async.macros            :as asyncm]
@@ -173,7 +175,7 @@
 (defnt message?
   ([^quantum.core.async.QueueCloseRequest  obj] false)
   ([^quantum.core.async.TerminationRequest obj] false)
-  ([                    obj] (when (nnil? obj) true)))
+  ([                    obj] (when (val? obj) true)))
 
 (def close-req? (fnl instance? QueueCloseRequest))
 
@@ -234,7 +236,7 @@
 
 (defn ?offer!
   "If offering nil, will close the channel."
-  [x v] (if (some? v) (offer! x v) (close! x)))
+  [x v] (if (val? v) (offer! x v) (close! x)))
 
 #?(:clj
 (defmacro wait!
@@ -430,7 +432,7 @@
                 (let [[v _] (alts!! [c (timeout timeout-ms)])]
                   (or v timeout-val)))])
             clojure.lang.IPending
-              (isRealized [_] (some? (async/poll! c)))
+              (isRealized [_] (val? (async/poll! c)))
             clojure.lang.IFn ; deliver
               (invoke [_ x] (async/offer! c x))
             asyncp/ReadPort
@@ -469,7 +471,7 @@
                                (fn [i c]
                                  (let [p      (get promises i)
                                        polled (poll! c)]
-                                   (if (some? polled)
+                                   (if (val? polled)
                                        (offer! p polled)
                                        (async/take! c (fn [resp] (?offer! p resp)))))))
                              coll/doreduce)
@@ -603,7 +605,7 @@
                                  (recur))))))
        (go (loop []
              (let [v (<! from)]
-               (if (or (nil? v) (and stop-ch (some? (poll! stop-ch))))
+               (if (or (nil? v) (and stop-ch (val? (poll! stop-ch))))
                    (async/close! jobs) ; TODO fix this to use this ns/`close!`
                    (let [p (chan 1)]
                      (>! jobs [v p])
@@ -668,7 +670,7 @@
                               (when (async job) (recur))))))
       (go-loop []
         (let [v (<! from)]
-          (if (or (nil? v) (and stop-ch (some? (poll! stop-ch))))
+          (if (or (nil? v) (and stop-ch (val? (poll! stop-ch))))
               (async/close! jobs) ; TODO fix this to use this ns/`close!`
               (let [p (chan 1)]
                 (>! jobs [v p])
@@ -701,7 +703,7 @@
                          e (on-exited-via-exception' e))]
             (cond (= ch stop-ch)
                     (on-exited-via-stop')
-                  (some? x)
+                  (val? x)
                     (when
                       (catch-all
                         (let [[ret ch']
@@ -713,7 +715,7 @@
                                   e (on-exception e x))]
                           (cond (= ch' stop-ch)
                                   (on-exited-via-stop')
-                                (and (some? ret) to-ch)
+                                (and (val? ret) to-ch)
                                   (do (put! to-ch ret) true)
                                 :else
                                   true))
@@ -751,7 +753,7 @@
                        e (on-exited-via-exception' e))]
           (cond (= ch stop-ch)
                   (on-exited-via-stop')
-                (some? x)
+                (val? x)
                   (when
                     (catch-all
                       (let [[ret ch']
@@ -763,7 +765,7 @@
                                 e (on-exception e x))]
                         (cond (= ch' stop-ch)
                                 (on-exited-via-stop')
-                              (and (some? ret) to-ch)
+                              (and (val? ret) to-ch)
                                 (do (put! to-ch ret) true)
                               :else
                                 true))

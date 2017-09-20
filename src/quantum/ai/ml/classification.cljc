@@ -13,7 +13,7 @@
               pjoin in? map+ vals+ filter+ partition-all+
               remove+ take+ map-vals+ filter-vals+
               cat+ range+ ffilter
-              reduce-count nnil?]]
+              reduce-count]]
     [quantum.core.numeric             :as num]
     [quantum.core.fn                  :as fn
       :refer [<- fn-> fn->> fn']]
@@ -21,14 +21,16 @@
       :refer [defmemoized]]
     [quantum.core.error
       :refer [->ex TODO]]
+    [quantum.core.log                 :as log]
     [quantum.core.logic
       :refer [coll-or condpc fn-and]]
     [quantum.core.nondeterministic    :as rand]
     [quantum.core.thread              :as thread
       :refer [async]]
+    [quantum.core.type                :as t
+      :refer [val?]]
     [quantum.core.vars                :as var
       :refer [defalias]]
-    [quantum.core.log                 :as log]
     [quantum.numeric.core             :as num*
       :refer [pi* sigma sum]])
 #?(:cljs
@@ -54,7 +56,7 @@
   (fn->> :document:words
          (remove+ (fn-> :word:indexed:word :word:stopword?))
          (map+    (fn-> :word:indexed:word :word:stem:porter #_:word:text     ))
-         (filter+ nnil?)))
+         (filter+ val?)))
 
 (defmemoized C {}
   "All the classes in doc collection ->`D`."

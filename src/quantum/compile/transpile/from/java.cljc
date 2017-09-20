@@ -7,7 +7,7 @@
     [quantum.core.collections.zippers        :as zip]
     [quantum.core.collections                :as coll
       :refer [postwalk prewalk zip-prewalk take-until update-last seq-nor
-              containsv? popl popr kw-map nnil? nempty?]]
+              containsv? popl popr kw-map nempty?]]
     [quantum.core.convert                    :as conv
       :refer [->name]                                 ]
     [quantum.core.convert.primitive          :as pconv]
@@ -19,6 +19,8 @@
       :refer [fn-> fn->> fn1 rcomp <-]]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
+    [quantum.core.type                       :as t
+      :refer [val?]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.match                      :as m
       :refer        [#?@(:clj [re-match re-match* re-match-whole])]])
@@ -268,7 +270,7 @@
     (apply concat (list 'case (parse* (.getSelector x)))
       (->> x .getEntries (map parse*))))
   ([^SwitchEntryStmt x]
-    (let [label (-> x .getLabel (whenf nnil? parse*))
+    (let [label (-> x .getLabel (whenf val? parse*))
           stmts (->> x .getStmts (map parse*) (cons 'do))]
     (if label
         [label stmts]

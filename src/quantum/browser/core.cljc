@@ -20,10 +20,12 @@
               :refer [fn-> juxtk]]
             [quantum.core.error             :as err
               :refer [try+ ->ex]]
-            [quantum.core.collections :as coll
-              :refer [join map+ nnil?]]
+            [quantum.core.collections       :as coll
+              :refer [join map+]]
             [quantum.core.macros
-              :refer [defnt]])
+              :refer [defnt]]
+            [quantum.core.type              :as t
+              :refer [val?]])
   #?(:clj (:import
            ;(com.teamdev.jxbrowser.chromium.javafx BrowserView)
            ;(com.teamdev.jxbrowser.chromium Browser)
@@ -183,8 +185,8 @@
   ([driver elem                  ] (find-element driver elem 2 100))
   ([^WebDriver driver ^org.openqa.selenium.By elem times interval-ms]
     ; TODO create some sort of contract system to make this less repetitive
-    (assert (nnil?   driver     ))
-    (assert (nnil?   elem       ))
+    (assert (val?   driver     ))
+    (assert (val?   elem       ))
     (assert (number? times      ))
     (assert (number? interval-ms))
 

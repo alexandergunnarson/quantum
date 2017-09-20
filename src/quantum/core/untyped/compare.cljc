@@ -8,3 +8,8 @@
 
 (defalias == identical?)
 (def not== (comp not identical?))
+
+(def class->comparator
+  {#?@(:clj
+        [Class (fn [^Class a ^Class b]
+                 (.compareTo (.getName a) (.getName b)))])})

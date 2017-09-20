@@ -21,7 +21,7 @@
                       [quantum.core.logic           :as logic
                         :refer [fn-and whenf1]]
                       [quantum.core.collections     :as coll
-                        :refer [kw-map containsv? nnil?]]
+                        :refer [kw-map containsv?]]
                       [quantum.core.async           :as async
                         :refer [go]]
                       [quantum.core.vars            :as var

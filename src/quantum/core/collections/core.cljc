@@ -12,7 +12,7 @@
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
             [quantum.core.collections.base
-              :refer [kw-map nempty? nnil?]]
+              :refer [kw-map nempty?]]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte
@@ -49,7 +49,7 @@
             [quantum.core.reducers.reduce   :as red
               :refer [reduce reducei transformer]]
             [quantum.core.type              :as t
-              :refer [class regex?]]
+              :refer [val? class regex?]]
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
@@ -765,12 +765,12 @@
 
 (defnt containsv?
   ([^string?  x elem]
-    (and (nnil? elem) (index-of x elem)))
+    (and (val? elem) (index-of x elem)))
   ([#{keyword? symbol?} x elem]
     (or (some-> x name      (containsv? elem))
         (some-> x namespace (containsv? elem))))
   ([^regex? x elem]
-    (nnil? (re-find elem x)))
+    (val? (re-find elem x)))
   ([          x elem]
     (seq-or (fn= elem) x)))
 

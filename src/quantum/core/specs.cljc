@@ -7,6 +7,8 @@
     [clojure.set       :as set]
     [quantum.core.collections.base
       :refer [dissoc-if]]
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.fn   :as fn
       :refer [fn1 fnl]]
     [quantum.core.spec :as s]))
@@ -106,7 +108,7 @@
          (-> % ::fn:name meta :doc)
          (-> % :pre-meta      :doc)
          (-> % :post-meta     :doc)]
-        (filter some?)
+        (filter val?)
         count
         ((fn [x] (<= x 1)))))
 

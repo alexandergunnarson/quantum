@@ -1,5 +1,5 @@
 (ns
-  ^{:doc "Logic-related functions. nnil?, nempty?, fn-not, fn-and, splice-or,
+  ^{:doc "Logic-related functions. fn-not, fn-and, splice-or,
           ifn, whenf1, rcomp, fn->, condpc, and the like. Extremely useful
           and used everywhere in the quantum library."
     :attribution "alexandergunnarson"}
@@ -10,10 +10,12 @@
     [clojure.core             :as core]
     [quantum.core.fn          :as fn
       :refer [fn1 fn-> fn->> fn']]
-    [quantum.core.vars        :as var
-      :refer [defalias]]
     [quantum.core.macros.core :as cmacros
-      :refer [case-env]])
+      :refer [case-env]]
+    [quantum.core.type           :as t
+      :refer [val?]]
+    [quantum.core.vars        :as var
+      :refer [defalias]])
 #?(:cljs
   (:require-macros
     [quantum.core.logic       :as self
@@ -209,21 +211,21 @@
 #?(:clj
 (defmacro whenf
   "Analogous to `ifn`.
-   (whenf 1 some? inc)` = `(ifn 1 some? inc identity)`
+   (whenf 1 val? inc)` = `(ifn 1 val? inc identity)`
    `whenf` : `identity` :: `when` : `nil`"
   [x pred tf] `(let [x# ~x] (if (~pred x#) (~tf x#) x#))))
 
 #?(:clj
 (defmacro whenf->
   "Analogous to `ifn->`.
-   `(whenf-> 1 some? inc)` = `(ifn-> 1 some? inc identity)`
+   `(whenf-> 1 val? inc)` = `(ifn-> 1 val? inc identity)`
    `whenf->` : `identity` :: `when` : `nil`"
   [x pred & texprs] `(let [x# ~x] (if (-> x# ~pred) (-> x# ~@texprs) x#))))
 
 #?(:clj
 (defmacro whenf->>
   "Analogous to `ifn->>`.
-   `(whenf->> 1 some? inc)` = `(ifn->> 1 some? inc identity)`
+   `(whenf->> 1 val? inc)` = `(ifn->> 1 val? inc identity)`
    `whenf->>` : `identity` :: `when` : `nil`"
   [x pred & texprs] `(let [x# ~x] (if (->> x# ~pred) (->> x# ~@texprs) x#))))
 

@@ -2,14 +2,14 @@
   (:require
     [clojure.string        :as str]
     [quantum.core.error    :as err]
-    [quantum.core.collections.base
-      :refer [nnil?]]
     [quantum.core.fn       :as fn
       :refer [fn->]]
     [quantum.core.logic    :as logic
       :refer [fn-and]]
     [quantum.core.spec     :as s
-      :refer [validate]]))
+      :refer [validate]]
+    [quantum.core.type     :as t
+      :refer [val?]]))
 
 #?(:cljs
 (defn add-link! [link]
@@ -34,7 +34,7 @@
 (defn replace-css-at! [id css-str]
   "Replaces CSS at a style node."
   (let [elem (.getElementById js/document id)
-        _ (validate elem (s/and nnil? (fn-> .-tagName str/lower-case (= "style"))))
+        _ (validate elem (s/and val? (fn-> .-tagName str/lower-case (= "style"))))
         text (.createTextNode js/document css-str)]
     (while (.-firstChild elem)
       (.removeChild elem (.-firstChild elem)))

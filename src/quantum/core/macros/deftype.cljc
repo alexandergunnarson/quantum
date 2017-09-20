@@ -6,12 +6,15 @@
     #?(:clj [clojure.core :as core])
     [quantum.core.collections.base :as cbase
       :refer [update-first update-val ensure-set kw-map]]
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.fn
       :refer [fn->]]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env]]
     [quantum.core.macros.definterface]
     [quantum.core.macros.type-hint :as th]
+    [quantum.core.untyped.qualify  :as qual]
     [quantum.core.vars             :as var]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
@@ -33,6 +36,7 @@
 (defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
 (defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
 (defn ?Deref         [lang] (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
+(defn ?Fn            [lang] (case lang :clj 'clojure.lang.IFn                   :cljs 'cljs.core/IFn         ))
 
 (defn pfn
   "Protocol fn"
@@ -188,6 +192,9 @@
       ?Deref
         `[~(?Deref lang)
           ~@(p-arity (pfn 'deref lang) (get impls 'deref))]
+      ?Fn
+        `[~(?Fn lang)
+          ~@(p-arity (pfn 'invoke lang) (get impls 'invoke))]
       ?HashEq
         nil
       `[~iname
@@ -293,14 +300,14 @@
       {:methods-spec methods-spec}
       (let [interface-sym
              (symbol (str "I" (name type-sym) "__GEN"))
-            qualified-interface-sym (var/qualify-class interface-sym)
+            qualified-interface-sym (qual/qualify:class interface-sym)
             methods
               (->> fields
                    (map (fn [field-sym]
                           [(?symbol->getter|setter qualified-interface-sym :get field-sym)
                            (?symbol->getter|setter qualified-interface-sym :set field-sym)]))
                    (apply concat)
-                   (filter some?))]
+                   (filter val?))]
         {:preamble
           (cmacros/generate ::core/definterface
             {:name    interface-sym
@@ -320,7 +327,7 @@
             &env type-sym fields
             (apply concat (deftype-helper methods-spec lang)))] ; in order to help `deftype` recognize that there is an interface, when there is one
     `(do ~deftype-code
-         ~(when (= lang :clj) `(import (quote ~(var/qualify-class type-sym)))))))) ; TODO doesn't this already happen?
+         ~(when (= lang :clj) `(import (quote ~(qual/qualify:class type-sym)))))))) ; TODO doesn't this already happen?
 
 #?(:clj
 (defmacro deftype

@@ -12,7 +12,7 @@
                       [com.stuartsierra.component              :as component]
                       [quantum.core.string                     :as str             ]
                       [quantum.core.collections                :as coll
-                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in nnil?]]
+                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in]]
                       [quantum.core.numeric                    :as num]
                       #?(:clj [clojure.core.async :as casync])
                       [quantum.core.async                      :as async
@@ -29,7 +29,7 @@
                       [quantum.core.spec                       :as s
                         :refer [validate]]
                       [quantum.core.type                       :as type
-                        :refer [boolean?]]
+                        :refer [boolean? val?]]
                       [quantum.core.time.core                  :as time]
                       [quantum.core.cache
                         :refer [memoize]])
@@ -483,7 +483,7 @@
       (when (and thread
                  (or (async/closed? thread)
                      (= state :closed)))
-        (whenf (:closed handlers) nnil?
+        (whenf (:closed handlers) val?
           (ifn1 delay? force call))
         (deregister-thread! id))))))
 

@@ -1,6 +1,8 @@
 (ns quantum.core.test
   (:require
     [clojure.test       :as test]
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.error :as err]
     [quantum.core.fn    :as fn
       :refer [fn->]]
@@ -71,7 +73,7 @@
         (try
           (println "=====" "Testing" test-sym "..." "=====" )
           (let [v (find-var test-sym)]
-            (assert (some? v) (str "Test sym not found: " test-sym))
+            (assert (val? v) (str "Test sym not found: " test-sym))
             (clojure.test/test-var v))
           (println "=====" "Done with" test-sym "=====" )
           (catch Throwable t

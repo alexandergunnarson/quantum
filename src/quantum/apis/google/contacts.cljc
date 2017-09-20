@@ -6,6 +6,8 @@
     [quantum.core.collections :as coll
                  :refer [#?@(:clj [assoc!])]
       #?@(:cljs [:refer-macros [assoc!]])]
+    [quantum.core.type        :as t
+      :refer [val?]]
     [quantum.apis.google.auth :as gauth]))
 
 #_(assoc! gauth/scopes :contacts
@@ -77,7 +79,7 @@
   (->> (retrieve-contacts-xml email)
        xml/lparse :content
        (filter (fn-> :tag (= :entry)))
-       (postwalk (ifn1 (fn-and keyword? (fn-> namespace nnil?))
+       (postwalk (ifn1 (fn-and keyword? (fn-> namespace val?))
                        (fn [k] (str (namespace k) ":" (name k))) ; If you don't do this, XML emission messes up: http://dev.clojure.org/jira/browse/DXML-15
                        f))))
 

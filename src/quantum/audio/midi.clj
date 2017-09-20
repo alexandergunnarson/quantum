@@ -10,7 +10,7 @@
       :refer [fn-and whenc whenf whenf1 xor cond-let]]
     [quantum.core.collections :as coll
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
-              cat lcat concatv nnil? nempty?
+              cat lcat concatv nempty?
               map+ map lmap map-indexed kw-map index-of index-of-pred
               cat each popl popr slice butlast last drop ldrop
               while-let lfor doseqi for fori red-for join reduce zip lzip]]
@@ -28,7 +28,8 @@
     [quantum.core.convert     :as conv]
     [quantum.measure.convert
       :refer [convert]]
-    [quantum.core.type :as t]
+    [quantum.core.type        :as t
+      :refer [val?]]
     [quantum.core.async.pool  :as pool]
     [quantum.db.datomic.core  :as dbc]) ; TODO just for the spec
   (:import
@@ -67,7 +68,7 @@
            (->> (working-devices)
                 (ffilter (fn-and #(instance? CoreMidiDestination %)
                                  #(-> ^MidiDevice % .getDeviceInfo .getName (= (str "CoreMIDI4J - " device-name))))))]
-      (assert (nnil? out-device))
+      (assert (val? out-device))
       (.getReceiver ^MidiDevice out-device))))
 
 (defn out-position [] (-> ^CoreMidiReceiver @out .getMidiDevice .getMicrosecondPosition))

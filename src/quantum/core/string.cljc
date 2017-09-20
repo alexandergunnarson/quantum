@@ -31,12 +31,13 @@
     [quantum.core.collections.logic
       :refer [seq-and]]
     [quantum.core.collections.base
-      :refer [nempty? nnil?]]
+      :refer [nempty?]]
     [quantum.core.string.format :as form]
     [quantum.core.string.regex  :as regex]
     [quantum.core.vars          :as var
       :refer [defalias]]
-    [quantum.core.type          :as t])
+    [quantum.core.type          :as t
+      :refer [val?]])
 #?(:cljs
   (:require-macros
     [quantum.core.string
@@ -428,8 +429,8 @@
 ;    :out "Abcdef"}
 ;   [s]
 ;   (if (and  (= (first s) (last s))
-;         (some? (partial starts-with? s) quote-types)
-;         (some? (partial ends-with?   s) quote-types))
+;         (val? (partial starts-with? s) quote-types)
+;         (val? (partial ends-with?   s) quote-types))
 ;       (-> s popl popr) ; TODO this will be optimized away
 ;       s))
 

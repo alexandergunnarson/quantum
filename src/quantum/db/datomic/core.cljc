@@ -10,7 +10,7 @@
     [datascript.core            :as mdb]
     [com.stuartsierra.component :as comp]
     [quantum.core.collections   :as coll
-      :refer [join for kw-map nnil? nempty?
+      :refer [join for kw-map val? nempty?
               filter+ filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
@@ -30,7 +30,8 @@
     [quantum.core.process       :as proc]
     [quantum.core.convert.primitive :as pconv
       :refer [->long]]
-    [quantum.core.type           :as t]
+    [quantum.core.type           :as t
+      :refer [val?]]
     [quantum.core.vars           :as var
       :refer [defalias]]
     [quantum.core.data.validated :as dv]
@@ -163,7 +164,7 @@
   ([part] (tempid (->db) part))
   ([db part]
     (let [db (->db db)]
-      (validate part nnil?)
+      (validate part val?)
       (cond            (mdb? db) (mdb/tempid part)
             #?@(:clj  [(db?  db) (db/tempid  part)])))))
 
@@ -443,7 +444,7 @@
           type        (name  (:type   schema))
           unique      (name+ (:unique schema))]
       ; Partitions are not supported in DataScript (yet)
-      (when-not datascript? (validate part-f nnil?))
+      (when-not datascript? (validate part-f val?))
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)
                                      (tempid conn-f part-f))
             :db/ident              (:ident schema)
@@ -461,7 +462,7 @@
             :db/index              (:index?     schema)
             :db.install/_attribute part-f
             :db/noHistory          (:no-history? schema)}
-           (filter-vals' some?)
+           (filter-vals' val?)
            (#(if (and datascript? ; DataScript only allows ref value-types
                       (-> % :db/valueType (not= :db.type/ref)))
                  (c/dissoc % :db/valueType)
@@ -837,7 +838,7 @@
 ;         ((get handlers k) data entity-n)
 ;       :else
 ;         (logic/if-let [datomic-key (get translation-table k)
-;                        valid?      (nnil? v)]
+;                        valid?      (val? v)]
 ;           (assoc entity-n datomic-key v)
 ;           entity-n))))
 

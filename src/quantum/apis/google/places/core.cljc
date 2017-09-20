@@ -111,7 +111,7 @@
    :info "https://developers.google.com/places/webservice/search"}
   [coord api-key & [{:keys [radius search-type place-types parse?]
                        :or {radius 50000}}]]
-  (assert (nnil? api-key))
+  (assert (val? api-key))
   (assert (in? search-type #{:fuzzy :exact}))
   (assert (and (<= radius 50000) (> radius 0)) #{radius})
 
@@ -122,7 +122,7 @@
                               "types"  (if place-types
                                            (str/join "|" place-types)
                                            (extern (str/join "|" valid-place-types)))})]
-   
+
     (http/request!
       {:url search-url
        :parse? parse?
@@ -130,7 +130,7 @@
          (mergel search-opts
            {"key"      api-key
             "location" location
-            ; Defines the distance (in meters) within which to return place results. 
+            ; Defines the distance (in meters) within which to return place results.
             })})))
 
 
@@ -332,7 +332,7 @@
 
 ; Search responses are returned in the format indicated by the output flag within the URL request's path.
 
-; The following example shows a Nearby Search response. A Text Search response is similar, except that it returns a formatted_address instead of a vicinity property. 
+; The following example shows a Nearby Search response. A Text Search response is similar, except that it returns a formatted_address instead of a vicinity property.
 
 ; JSONXML
 ; {

@@ -8,10 +8,10 @@
     [clojure.spec.test.alpha :as test]
     [cljs.spec.alpha]
     [clojure.spec.gen.alpha  :as gen]
-    [quantum.core.collections.base :as base
-      :refer [nnil?]]
-    [quantum.core.core  :as qcore]
-    [quantum.core.error :as err
+    [quantum.core.collections.base :as base]
+    [quantum.core.core       :as qcore
+      :refer [val?]]
+    [quantum.core.error      :as err
       :refer [catch-all]]
     [quantum.core.fn
       :refer [fnl constantly with-do]]
@@ -141,7 +141,6 @@
 #?(:clj (quantum.core.vars/defmalias or        clojure.spec.alpha/or        cljs.spec.alpha/or       ))
 #?(:clj (quantum.core.vars/defmalias every     clojure.spec.alpha/every     cljs.spec.alpha/every    ))
 
-#?(:clj (defmacro nnil [& args] `(validate ~@(interleave args (repeat `nnil?)))))
 #?(:clj (quantum.core.vars/defmalias conformer clojure.spec.alpha/conformer cljs.spec.alpha/conformer))
 (defalias conform s/conform)
 (defalias explain s/explain)
@@ -279,7 +278,7 @@
                 (coll-of ~spec :distinct true :into #{})
                 (coll-of spec# :distinct true :into #{})))))
 
-(defn validate:some? [x]
+(defn validate:val? [x]
   (if (nil? x)
       (throw (ex-info "Value is not allowed to be nil but was" {}))
       x))

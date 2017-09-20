@@ -8,7 +8,9 @@
     [quantum.core.macros.optimization        :as opt]
     [quantum.core.collections.base           :as cbase
       :refer [update-first update-val ensure-set
-              zip-reduce* default-zipper nnil? postwalk]]
+              zip-reduce* default-zipper postwalk]]
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.error                      :as err
       :refer [->ex]]
     [quantum.core.fn                         :as fn
@@ -97,7 +99,7 @@
       (let [type-hint-n
              (cond
                (-> z zip/node symbol?)
-                 (when-not ((fn-and nnil? (fn-or (fn-> zip/node set?)
+                 (when-not ((fn-and val? (fn-or (fn-> zip/node set?)
                                                  (fn-> zip/node keyword?)))
                             (-> z zip/left))
                    (whenc (-> z zip/node meta :tag) nil?

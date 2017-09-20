@@ -31,6 +31,8 @@
 
 ; ===== TYPE PREDICATES =====
 
+(def val? some?)
+
 (defn atom?      [x] (#?(:clj instance? :cljs satisfies?) IAtom x))
 
 (defn derefable? [x] (#?(:clj instance? :cljs satisfies?) IDeref x))
@@ -57,9 +59,13 @@
   #?(:clj  (instance? clojure.lang.IEditableCollection coll)
      :cljs (satisfies? cljs.core.IEditableCollection coll)))
 
+#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
+
 ; ===== REFS AND ATOMS =====
 
 (defn ?deref [x] (if (derefable? x) @x x))
+
+; ===== COLLECTIONS =====
 
 (defn seq-equals [a b]
   (boolean
@@ -71,6 +77,8 @@
             (nil? a)
             (when (= (first a) (first b))
               (recur (next a) (next b)))))))))
+
+(def has? (comp not empty?)) ; TODO fix this performance-wise
 
 ; ===== TYPE =====
 
@@ -120,6 +128,9 @@
   (->> ks
        (map #(vector (cond->> (kw-modifier %) (not no-quote?) (list 'quote)) %))
        (apply concat)))
+
+#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base ->keyword ks))))
+#?(:clj (defmacro quote-map [& ks] (list* `hash-map (quote-map-base identity  ks))))
 
 #?(:clj
 (defmacro istr

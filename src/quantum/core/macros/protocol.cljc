@@ -1,5 +1,7 @@
 (ns quantum.core.macros.protocol
   (:require
+    [quantum.core.core
+      :refer [val?]]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.macros.type-hint           :as th]
     [quantum.core.fn                         :as fn
@@ -8,7 +10,7 @@
     [quantum.core.logic                      :as logic
       :refer [whenp]]
     [quantum.core.collections.base           :as cbase
-      :refer [kw-map update-first update-val nempty? nnil? ensure-set]]
+      :refer [kw-map update-first update-val nempty? ensure-set]]
     [quantum.core.type.core                  :as tcore]))
 
 (defn with-protocol-arglist-type-hint
@@ -81,8 +83,8 @@
   [{:keys [genned-protocol-name genned-protocol-method-name
            reify-body lang first-types]}]
   (assert (nempty? reify-body))
-  (assert (nnil? genned-protocol-name))
-  (assert (nnil? genned-protocol-method-name))
+  (assert (val? genned-protocol-name))
+  (assert (val? genned-protocol-method-name))
 
   (let [body-sorted
           (->> reify-body rest rest

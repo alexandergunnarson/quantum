@@ -62,8 +62,10 @@
 
 (def types           tcore/types          )
 
-#?(:clj (defalias static-cast       tcore/static-cast))
-#?(:clj (defalias static-cast-depth ana/static-cast-depth))
+#?(:clj  (defalias static-cast       tcore/static-cast))
+#?(:clj  (defalias static-cast-depth ana/static-cast-depth))
+
+         (def val? some?)
 
          ; TODO for JS, primitives (function, array, number, string) aren't covered by these
 

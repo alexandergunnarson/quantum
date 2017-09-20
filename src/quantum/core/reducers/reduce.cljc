@@ -15,8 +15,7 @@
     [clojure.core                  :as core]
     [clojure.core.async            :as async]
     [fast-zip.core                 :as zip]
-    [quantum.core.collections.base :as cbase
-      :refer [nnil?]]
+    [quantum.core.collections.base :as cbase]
     [quantum.core.data.vector      :as vec
       :refer [catvec]]
 #?@(:clj
@@ -33,7 +32,7 @@
     [quantum.core.refs             :as refs
       :refer [deref !boolean !long ! reset!]]
     [quantum.core.type             :as t
-      :refer [editable?]]
+      :refer [editable? val?]]
     [quantum.core.type.defs
       #?@(:cljs [:refer [Transformer]])]
     [quantum.core.vars             :as var
@@ -82,7 +81,7 @@
   {:attribution "alexandergunnarson"}
          ([^fast_zip.core.ZipperLocation z f init]
            (loop [xs (zip/down z) v init]
-             (if (some? z)
+             (if (val? z)
                  (let [ret (f v z)]
                    (if (reduced? ret)
                        @ret
@@ -184,12 +183,12 @@
 #?(:clj  ([^clojure.lang.IReduce     xs f     ] (.reduce   xs f)))
 #?(:clj  ([^clojure.lang.IKVReduce   xs f init] (.kvreduce xs f init)))
 #?(:clj  ([^clojure.lang.IReduceInit xs f init] (.reduce   xs f init)))
-         ([^default              xs f] (if (some? xs)
+         ([^default              xs f] (if (val? xs)
                                            (#?(:clj  clojure.core.protocols/coll-reduce
                                                :cljs -reduce) xs f)
                                            (f)))
          ([^default              xs f init]
-           (if (some? xs)
+           (if (val? xs)
                (#?(:clj  clojure.core.protocols/coll-reduce
                    :cljs -reduce) xs f init)
                init)))

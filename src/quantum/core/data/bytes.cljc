@@ -12,10 +12,10 @@
                        :refer [assoc!]]
                      [quantum.core.data.binary :as bin
                        :refer [&& >>>]]
-                     [quantum.core.collections.base
-                       :refer [nnil?]]
                      [quantum.core.fn          :as fn
-                       :refer [fn1]])
+                       :refer [fn1]]
+                     [quantum.core.type           :as t
+                       :refer [val?]])
   #?(:clj  (:import  java.util.Arrays)))
 
 #?(:clj (set! *unchecked-math* true))
@@ -64,7 +64,7 @@
   "Convert a Java string to a CString (byte-array)."
   {:attribution "Alex Gunnarson, ported from a Java solution on StackOverflow."}
   [^String s]
-  (when (nnil? s)
+  (when (val? s)
     (let [^"[B" bytes  (.getBytes s)
           ^"[B" result (byte-array+ (-> bytes count inc))]
         (System/arraycopy

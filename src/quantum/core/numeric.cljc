@@ -17,8 +17,6 @@
     [quantum.core.fn
       :refer [aritoid fn1 fn-> fn']]
     [quantum.core.log                  :as log]
-    [quantum.core.collections.base
-      :refer [nnil?]]
     [quantum.core.logic                :as logic
       :refer [fn-and whenf1]]
     [quantum.core.macros               :as macros

@@ -14,14 +14,16 @@
       :refer [fn-> fn->> <- fn']]
     [quantum.core.logic
       :refer [whenf]]
-    [quantum.core.error  :as err]
-    [quantum.core.log    :as log]
     [quantum.db.datomic  :as db]
-    [quantum.core.system :as sys
-      :refer  [#?@(:cljs [ReactNative])]]
     [quantum.core.collections :as coll
       :refer [for fori join kw-map reduce
-              map-vals+ ensurec merge-deep nnil?]]
+              map-vals+ ensurec merge-deep val?]]
+    [quantum.core.error  :as err]
+    [quantum.core.log    :as log]
+    [quantum.core.system :as sys
+      :refer  [#?@(:cljs [ReactNative])]]
+    [quantum.core.type           :as t
+      :refer [val?]]
     [quantum.core.async  :as async
       :refer [go]]
     [quantum.ui.style.core
@@ -71,7 +73,7 @@
 
 #?(:cljs (defn rx-adapt [super sub]
            (when super
-             (whenf (aget super sub) nnil? rx/adapt-react-class))))
+             (whenf (aget super sub) val? rx/adapt-react-class))))
 
 #?(:cljs (def text                (rx-adapt ReactNative "Text" )))
 #?(:cljs (def view                (rx-adapt ReactNative "View" )))
@@ -617,8 +619,8 @@
 (defn fb-table-example
   [{:keys [data headers headers-widths
            style width height cell-props-fn fixed-header-key]}]
-  (assert (nnil? width ))
-  (assert (nnil? height))
+  (assert (val? width ))
+  (assert (val? height))
   (let [std-col-width (/ @width (count @headers))
         col-indices   (reaction (->> @headers ; TODO code pattern
                                      (map-indexed (fn [i x] [x i]))
@@ -703,8 +705,8 @@
          scrolling-deceleration 0.97
          scrolling-acceleration 0.13}}]
   (assert (atom? data  ))
-  (assert (nnil? width ))
-  (assert (nnil? height))
+  (assert (val? width ))
+  (assert (val? height))
   (assert (fn? row-render-fn))
   (let []
     (fn []
@@ -766,9 +768,9 @@
 (defn ellipsis [{:keys [clamp-lines font-size line-height width]
                  :as style}
                 content]
-  (assert (nnil? clamp-lines))
-  (assert (nnil? font-size  ))
-  (assert (nnil? width      ))
+  (assert (val? clamp-lines))
+  (assert (val? font-size  ))
+  (assert (val? width      ))
   (fn []
     [:div.ellipsis {:style (merge (style/ellipsis clamp-lines font-size line-height)
                                   (dissoc style

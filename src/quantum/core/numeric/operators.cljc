@@ -14,12 +14,14 @@
       :refer [#?(:clj core-symbol)]]
     [quantum.core.macros
       :refer [defnt defntp #?@(:clj [defnt' variadic-proxy])]]
-    [quantum.core.vars
-      :refer [defalias #?@(:clj [defmalias])]]
     [quantum.core.numeric.types        :as ntypes
       :refer [numerator denominator]]
     [quantum.core.numeric.convert      :as conv
-      :refer [->bigint #?@(:clj [->big-integer])]])
+      :refer [->bigint #?@(:clj [->big-integer])]]
+    [quantum.core.type           :as t
+      :refer [val?]]
+    [quantum.core.vars
+      :refer [defalias #?@(:clj [defmalias])]])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric.operators    :as self
@@ -337,4 +339,4 @@
        ([a# b# c#] (when (and a# b# c#) (~core-op a# b# c#)))
        ([a# b# c# & args#]
          (let [argsf# (conj args# c# b# a#)]
-           (when (every? some? argsf#) (reduce ~core-op argsf#))))))))
+           (when (every? val? argsf#) (reduce ~core-op argsf#))))))))

@@ -37,23 +37,23 @@
      conj! assoc! dissoc! disj!
      boolean?])
   (:require
-    [clojure.core                       :as core]
-    [quantum.core.collections.base      :as base]
-    [quantum.core.collections.core      :as coll
+    [clojure.core                          :as core]
+    [quantum.core.collections.core         :as coll
       :refer [first conj!]]
-    [quantum.core.collections.map-filter :as mf
+    [quantum.core.collections.map-filter   :as mf
       :refer [map-keys+]]
-    [quantum.core.collections.selective :as sel
+    [quantum.core.collections.selective    :as sel
       :refer [in-k?]]
-    [quantum.core.collections.zippers   :as zip
+    [quantum.core.collections.zippers      :as zip
       :refer [walking]]
-    [quantum.core.fn                    :as fn
+    [quantum.core.fn                       :as fn
       :refer [withf->> fn1 fn->>]]
     [quantum.core.logic
       :refer [whenf1]]
-    [quantum.core.reducers              :as red
+    [quantum.core.reducers                 :as red
       :refer [join]]
-    [quantum.core.string                :as str]
+    [quantum.core.string                   :as str]
+    [quantum.core.untyped.collections.tree :as tree]
     [quantum.core.vars
       :refer [defalias]]))
 ;___________________________________________________________________________________________________________________________________
@@ -113,7 +113,8 @@
 (def postwalk-filter (partial walk-filter postwalk))
 (def prewalk-filter  (partial walk-filter prewalk ))
 
-(defalias prewalk-find base/prewalk-find) ; TODO use the new `walk` for this
+(defalias prewalk-find  tree/prewalk-find ) ; TODO use the new `walk` for this
+(defalias postwalk-find tree/postwalk-find) ; TODO use the new `walk` for this
 
 ; ===== Transform nested maps =====
 

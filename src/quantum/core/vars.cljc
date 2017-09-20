@@ -2,14 +2,14 @@
   "Var- and namespace-related functions."
   (:refer-clojure :exclude
     [defonce, intern, binding with-local-vars, meta, reset-meta!])
-  (:require
-    [clojure.core             :as c]
-    [quantum.core.macros.core :as cmacros
-      :refer [case-env]])
+  (:require [clojure.core                 :as c]
+            [quantum.core.macros.core     :as cmacros
+              :refer [case-env]]
+    #?(:clj [quantum.core.ns              :as ns])
+            [quantum.core.untyped.qualify :as qual])
 #?(:cljs
   (:require-macros
-    [quantum.core.vars        :as self
-      :refer [defalias]])))
+    [quantum.core.vars :as this])))
 
 ; ===== META ===== ;
 
@@ -25,24 +25,9 @@
 (defn merge-meta-from   [to from] (update-meta to merge (meta from)))
 (defn replace-meta-from [to from] (with-meta to (meta from)))
 
-; ===== DECLARATION ===== ;
+; ===== DECLARATION/INTERNING ===== ;
 
-#?(:clj
-(defmacro defalias
-  "Defines an alias for a var: a new var with the same root binding (if
-  any) and similar metadata. The metadata of the alias is its initial
-  metadata (as provided by def) merged into the metadata of the original."
-  {:attribution "clojure.contrib.def/defalias"
-   :contributors ["Alex Gunnarson"]}
-  ([name orig]
-     `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)
-              (do (def ~name (with-meta (-> ~orig var deref) (meta (var ~orig))))
-                  ; The below is apparently necessary
-                  (doto #'~name (alter-meta! merge (meta (var ~orig)))))
-              (def ~name))
-        (var ~name)))
-  ([name orig doc]
-     (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))
+#?(:clj (cmacros/defalias defalias cmacros/defalias))
 
 #?(:clj (defalias intern c/intern))
 
@@ -63,15 +48,6 @@
     `(defaliases' ~ns-sym ~@names))))
 
 #?(:clj
-(defn var-name
-  "Get the namespace-qualified name of a var."
-  {:attribution "flatland.useful.ns"}
-  [v]
-  (apply symbol (map str ((juxt (comp ns-name :ns)
-                                :name)
-                          (meta v))))))
-
-#?(:clj
 (defn alias-var
   "Create a var with the supplied name in the current namespace, having the same
   metadata and root-binding as the supplied var."
@@ -81,7 +57,7 @@
     (with-meta sym
       (merge
         {:dont-test
-          (str "Alias of " (var-name var-0))}
+          (str "Alias of " (qual/var->name var-0))}
         (meta var-0)
         (meta sym)))
     (when (.hasRoot ^clojure.lang.Var var-0) [@var-0]))))
@@ -124,6 +100,7 @@
   (list* `defmacro (with-meta name (assoc (meta name) :private true)) decls)))
 
 ; ============ MANIPULATION + OTHER ============
+
 ; CLJS compatible only if you port |alter-var-root| as in-ns, def, in-ns
 #?(:clj
 (defn reset-var!
@@ -157,32 +134,6 @@
     (reset-var! v nil))))
 
 #?(:clj
- (defn var-name
-   "Get the namespace-qualified name of a var."
-   {:attribution "flatland.useful.ns"}
-   [v]
-   (apply symbol
-     (map str
-       ((juxt (comp ns-name :ns)
-              :name)
-              (meta v))))))
-
-#?(:clj
-(defn alias-var
-  "Create a var with the supplied name in the current namespace, having the same
-  metadata and root-binding as the supplied var."
-  {:attribution "flatland.useful.ns"}
-  [sym var-0]
-  (apply intern *ns*
-    (with-meta sym
-      (merge
-        {:dont-test
-          (str "Alias of " (var-name var-0))}
-        (meta var-0)
-        (meta sym)))
-    (when (.hasRoot ^clojure.lang.Var var-0) [@var-0]))))
-
-#?(:clj
 (defn alias-ns
   "Create vars in the current namespace to alias each of the public vars in
   the supplied namespace.
@@ -207,21 +158,10 @@
 (defn defs-
   "Like |defs|, but each var defined is private."
   {:attribution "alexandergunnarson"
-   :usage '(defs-private 'a 1 'b 2 'c 3)}
+   :usage '(defs- 'a 1 'b 2 'c 3)}
   [& {:as vars}]
   (doseq [[sym v] vars]
     (intern *ns* (-> sym (with-meta {:private true})) v))))
-
-(defn qualify [?ns sym]
-  (let [ns-sym (do #?(:clj (if (instance? clojure.lang.Namespace ?ns)
-                               (ns-name ?ns)
-                               ?ns)
-                      :cljs ?ns))]
-    (symbol (name ns-sym) (name sym))))
-
-#?(:clj (defn qualify-class [sym] (symbol (str (munge (ns-name *ns*)) "." sym))))
-
-(defn unqualify [sym] (-> sym name symbol))
 
 ; ===== THREAD-LOCAL ===== ;
 

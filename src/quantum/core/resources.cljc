@@ -11,8 +11,7 @@
     [quantum.core.cache           :as cache
       :refer [callable-times]]
     [quantum.core.core            :as qcore]
-    [quantum.core.collections.base
-      :refer [nnil?]]
+    [quantum.core.collections.base]
     [quantum.core.data.set        :as set]
     [quantum.core.error           :as err
       :refer [->ex catch-all]]
@@ -23,9 +22,9 @@
       :refer [whenf whenf1 fn-not fn-or whenp->]]
     [quantum.core.macros          :as macros
       :refer [defnt]]
-    [quantum.core.async           :as async    ]
+    [quantum.core.async           :as async]
     [quantum.core.type            :as type
-      :refer [atom?]                           ]
+      :refer [atom? val?]]
     [quantum.core.spec            :as s
       :refer [validate]])
 #?(:cljs
@@ -62,7 +61,7 @@
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (casync/close! obj))
   ([                     obj]
-    (when (nnil? obj) (throw (->ex :not-implemented))))))
+    (when (val? obj) (throw (->ex :not-implemented))))))
 
 #?(:cljs (declare close!))
 
@@ -469,15 +468,15 @@
     (with-do (swap! systems assoc k (->system k config make-system))
              (log/pr ::debug "Registered system."))))
 
-(defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 nnil? stop!)))
+(defn stop-registered-system! [system-kw] (swap! systems update system-kw (whenf1 val? stop!)))
 
-(defn deregister-system! [system-kw] (swap! systems (fn-> (update system-kw (whenf1 nnil? stop!)) (dissoc system-kw))))
+(defn deregister-system! [system-kw] (swap! systems (fn-> (update system-kw (whenf1 val? stop!)) (dissoc system-kw))))
 
 (defn default-main
   [system-kw re-register? config]
   (when-not (async/web-worker?)
     (let [system (get @systems system-kw)
-          system (whenf system nnil? stop!)
+          system (whenf system val? stop!)
           system (if (or re-register? (nil? system))
                      (get (register-system! system-kw config) system-kw)
                      system)

@@ -16,7 +16,7 @@
     [quantum.db.datomic.schema        :as dbs]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
-      :refer [kw-map containsv? nnil? nempty? join]]
+      :refer [kw-map containsv? nempty? join]]
     [quantum.core.error               :as err
       :refer [->ex TODO]]
     [quantum.core.fn                  :as fn
@@ -30,7 +30,8 @@
     [quantum.core.string              :as str]
     [quantum.core.async               :as async
       :refer [go]]
-    [quantum.core.type                :as t]
+    [quantum.core.type                :as t
+      :refer [val?]]
     [quantum.core.vars                :as var
       :refer [defalias defaliases]]
     [quantum.core.io.core             :as io]
@@ -342,7 +343,7 @@
           (c/assoc this :txr-process txr-process-f)
           (kw-map type uri name host port create-if-not-present? default-partition conn)))))
     (stop [this]
-      (when (and (t/atom? conn) (nnil? @conn))
+      (when (and (t/atom? conn) (val? @conn))
         #?(:clj (bdb/release @conn))
         (swap! conn* #(if (identical? % @conn) nil %))
         (reset! conn nil))

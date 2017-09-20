@@ -19,7 +19,7 @@
                :refer [splice-or whenf whenf1 whenc condpc coll-or fn-not]]
              [quantum.core.system        :as sys]
              [quantum.core.collections   :as coll
-               :refer [postwalk nnil? nempty?]]
+               :refer [postwalk nempty?]]
              [quantum.core.io.utils      :as u]
              [quantum.core.paths         :as p
                :refer [path]]

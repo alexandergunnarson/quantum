@@ -16,7 +16,7 @@
     [quantum.core.data.hex         :as hex]
     [quantum.core.data.set         :as set]
     [quantum.core.collections      :as coll
-      :refer [kw-map nnil?]]
+      :refer [kw-map]]
     [quantum.core.error            :as err
       :refer [->ex throw-unless TODO]]
     [quantum.core.fn               :as fn
@@ -33,6 +33,8 @@
     [quantum.core.string           :as str]
     [quantum.core.spec             :as s
       :refer [validate]]
+    [quantum.core.type           :as t
+      :refer [val?]]
     [quantum.core.vars             :as var
       :refer [defalias]])
 #?(:clj
@@ -286,8 +288,8 @@
 #?(:clj
 (defn hmac ^"[B" [algo message secret]
   (validate algo    hmac-key->algo-string
-            message nnil?
-            secret  nnil?)
+            message val?
+            secret  val?)
   (let [^String algo-str (hmac-key->algo-string algo)
         ^Mac algo-instance (Mac/getInstance algo-str)
         ^SecretKey secret-key (SecretKeySpec. (->bytes secret) algo-str)]
@@ -312,7 +314,7 @@
   May  2011 - LastPass uses 100,000 iterations of SHA-256 (source: LastPass)"
   {:info ["http://security.stackexchange.com/questions/3959/recommended-of-iterations-when-using-pkbdf2-sha256"]}
   ([^String s & [salt iterations key-length]]
-   (let [salt       (if (nnil? salt) (->bytes salt) (rand/bytes true 128))
+   (let [salt       (if (val? salt) (->bytes salt) (rand/bytes true 128))
          iterations (or iterations 100000)
          k (PBEKeySpec. (.toCharArray s)
              salt iterations

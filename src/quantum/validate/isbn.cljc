@@ -105,7 +105,7 @@
 ;    @param isbn10 The ISBN-10 code to convert
 ;    @return A converted ISBN-13 code or |nil| if the ISBN-10 code is not valid"
 ;   [^String isbn10]
-;   (when (nnil? isbn10)
+;   (when (val? isbn10)
 ;     (let [^String input (.trim isbn10)]
 ;       (when (not= (.length input) 10)
 ;         (throw
@@ -121,4 +121,4 @@
 ;           (catch CheckDigitException e
 ;             (throw
 ;               (IllegalArgumentException.
-;                 (str "Check digit error for '" input "' - " (.getMessage e)))))))))) 
+;                 (str "Check digit error for '" input "' - " (.getMessage e))))))))))

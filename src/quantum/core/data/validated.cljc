@@ -3,7 +3,7 @@
     [clojure.core           :as core]
     [quantum.core.data.set  :as set]
     [quantum.core.collections.base
-      :refer [nnil? nempty? postwalk]]
+      :refer [nempty? postwalk]]
     [quantum.core.error     :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
@@ -21,12 +21,20 @@
       :refer [identity*]]
     [quantum.core.spec      :as s
       :refer [validate]]
-    [quantum.core.vars      :as var
-      :refer [update-meta]])
+    [quantum.core.untyped.qualify :as qual])
 #?(:cljs
   (:require-macros
     [quantum.core.data.validated :as self
       :refer [def-map]])))
+
+;; IMPORTANT TODO
+;; Validated structures could turn off validation temporarily
+;; kind of like transients turn off persistence temporarily.
+;; Just as transients error when being modified in different
+;; threads, validated structures could change class when
+;; validation is turned off, and thus error when a spec is
+;; trying to check its structure. But it would still be very
+;; much open for modification, just faster.
 
 (s/def :type/any (fn' true))
 
@@ -314,9 +322,9 @@
       (concat req opt req-un opt-un) (s/coll-of qualified-keyword? :distinct true))
     (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 ns-name-str)
           schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4, #5
-          qualified-sym        (var/qualify-class sym)
+          qualified-sym        (qual/qualify:class sym)
           req-record-sym       (symbol (str (name sym) ":__required"))
-          qualified-record-sym (var/qualify-class req-record-sym)
+          qualified-record-sym (qual/qualify:class req-record-sym)
           un-record-sym        (symbol (str (name sym) ":__un"))
           all-mod-record-sym   (symbol (str (name sym) ":__all-mod"))
           all-record-sym       (symbol (str (name sym) ":__all"))

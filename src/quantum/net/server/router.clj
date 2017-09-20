@@ -15,8 +15,6 @@
     [quantum.core.spec                :as s
       :refer [validate]]
     [quantum.core.string              :as str]
-    [quantum.core.collections.base
-      :refer [nnil?]]
     [quantum.core.log                 :as log]
     [quantum.core.resources           :as res]
     [quantum.core.paths               :as paths]

@@ -11,7 +11,9 @@
     [quantum.core.fn          :as fn
       :refer [<- fn1]]
     [quantum.core.logic
-      :refer [whenp]]))
+      :refer [whenp]]
+    [quantum.core.type        :as t
+      :refer [val?]]))
 
 ; 2.888831 ms for Cheshire (on what?) vs. clojure.data.json : 7.036831 ms
 
@@ -26,7 +28,7 @@
      :cljs (when-not (empty? x)
              (->> x
                   (t/read (t/reader :json))
-                  (<- whenp (some? key-fn)
+                  (<- whenp (val? key-fn)
                       (fn1 coll/apply-to-keys key-fn)))))))
 
 (defn json->-with-start

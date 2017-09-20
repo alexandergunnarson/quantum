@@ -16,8 +16,6 @@
     [quantum.core.log          :as log]
     [quantum.core.logic        :as logic
       :refer [fn-and whenc whenf1]]
-    [quantum.core.collections.base
-      :refer [nnil?]]
     [quantum.core.macros.core  :as cmacros]
     [quantum.core.macros.defnt :as defnt]
     [quantum.core.macros.fn    :as mfn]

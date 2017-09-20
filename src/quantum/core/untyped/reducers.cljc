@@ -1,8 +1,9 @@
 (ns quantum.core.untyped.reducers
-  (:refer-clojure :exclude [apply every? vec ==])
+  (:refer-clojure :exclude [apply every? vec == for])
   (:require
-    [clojure.core          :as core]
-    [clojure.core.reducers :as r]
+    [clojure.core                 :as core]
+    [clojure.core.reducers        :as r]
+    [fast-zip.core                :as zip]
     [quantum.core.core
       :refer [->sentinel]]
     [quantum.core.fn
@@ -62,6 +63,15 @@
 
 (defn vec [xs] (join xs))
 
+(defn zip-reduce* [f init z]
+  (loop [xs (zip/down z) v init]
+    (if (nil? xs)
+        v
+        (let [ret (f v xs)]
+          (if (reduced? ret)
+              @ret
+              (recur (zip/right xs) ret))))))
+
 (defn reducei
   "`reduce`, indexed."
   [f init xs]
@@ -69,6 +79,24 @@
               (fn ([ret x]
                     (f ret x (vreset! *i (unchecked-inc (long @*i)))))))]
     (reduce f' init xs)))
+
+(defn reduce-pair
+  "Like |reduce|, but reduces over two items in a collection at a time.
+
+   Its function @func must take three arguments:
+   1) The accumulated return value of the reduction function
+   2) The                next item in the collection being reduced over
+   3) The item after the next item in the collection being reduced over
+
+   Doesn't use `reduce`... so not as fast."
+  {:todo        ["Possibly find a better way to do it?"]
+   :attribution 'alexandergunnarson}
+  [func init coll]
+  (loop [ret init coll-n coll]
+    (if (empty? coll-n)
+        ret
+        (recur (func ret (first coll-n) (second coll-n))
+               (-> coll-n rest rest)))))
 
 (defn multiplex
   ([completef rf0]
@@ -108,3 +136,23 @@
               sentinel
               xs)]
     (if (== ret sentinel) (f) ret)))
+
+;; ===== LOOPS ===== ;;
+
+#?(:clj
+(defmacro for
+  "See typed docs."
+  [[x-sym coll ret-sym init] & body]
+  `(reduce
+     (fn ~[ret-sym x-sym] ~@body)
+     ~init
+     ~coll)))
+
+#?(:clj
+(defmacro fori
+  "See typed docs."
+  [[x-sym coll ret-sym init i-sym] & body]
+  `(reducei
+     (fn f# (~[ret-sym x-sym i-sym] ~@body))
+     ~init
+     ~coll)))

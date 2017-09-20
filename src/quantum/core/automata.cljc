@@ -4,7 +4,7 @@
 ;   keyword? ([k] (if (-> k namespace (= "error"))
 ;                     k
 ;                     (keyword (str "error/"
-;                                (whenf (namespace k) nnil? (fn1 str "."))
+;                                (whenf (namespace k) val? (fn1 str "."))
 ;                                (name k)))))
 ;   nil?     ([k] nil))
 
@@ -12,7 +12,7 @@
 
 ; ; Add to quantum.core.state-machine
 ; (defn update-state! [state new-status & args]
-;   (with-throw (nnil? (:handlers @state)) "Handlers nil at update-state! How?")
+;   (with-throw (val? (:handlers @state)) "Handlers nil at update-state! How?")
 ;   (let [{:keys [handlers result-set result-id]} @state
 ;         get-ns-handler #(get handlers (keyword (namespace new-status) %))
 ;         state-handler
@@ -31,7 +31,7 @@
 ;   [{:keys [type url file id parent
 ;            handlers close-reqs state]
 ;     :as opts}]
-;   (with-throw (nnil? (:handlers @state)) "Handlers nil at download! How?")
+;   (with-throw (val? (:handlers @state)) "Handlers nil at download! How?")
 ;   (let [output-line (or (:output-line handlers) fn-nil)
 ;         handlers-f
 ;          (assoc (or handlers {})
@@ -53,7 +53,7 @@
 ; (def log-buffer!
 ;   (atom
 ;     (fn [state line stream-source]
-;       (with-throw (nnil? (:handlers @state)) "Handlers nil at log-buffer! How?")
+;       (with-throw (val? (:handlers @state)) "Handlers nil at log-buffer! How?")
 ;       (let [logged-buffer-get #(get-in @thread/reg-threads [(:id @state) :logged-buffer])
 ;             _ (when-not (logged-buffer-get)
 ;                 (swap! thread/reg-threads assoc-in
@@ -69,9 +69,9 @@
 ; (def output-line-handler
 ;   (atom
 ;     (fn [state line stream-source]
-;       (with-throw (nnil? (:handlers @state)) "Handlers nil at output-line-handler! How?")
+;       (with-throw (val? (:handlers @state)) "Handlers nil at output-line-handler! How?")
 ;       (@log-buffer! state line stream-source)
-;       (if (or (str/starts-with? line "frame=") (some? (partial contains? line) #{"Non-monotonous" "Queue input is backward"}))
+;       (if (or (str/starts-with? line "frame=") (val? (partial contains? line) #{"Non-monotonous" "Queue input is backward"}))
 ;           (log/pr-opts :unimportant #{:thread? :timestamp?} line)
 ;           (log/pr-opts :debug       #{:thread? :timestamp?} line))
 ;       (condpc contains? line
@@ -87,7 +87,7 @@
 ; (def output-timeout-handler
 ;   (atom
 ;     (fn [state sleep-time stream-source]
-;       (with-throw (nnil? (:handlers @state)) "Handlers nil at output-timeout-handler! How?")
+;       (with-throw (val? (:handlers @state)) "Handlers nil at output-timeout-handler! How?")
 ;       (when (= stream-source :err) ; because there's no input from :std anyway...
 ;         (log/pr-opts :warn #{:thread?} "Strange issue with not outputting info from process" sleep-time)
 ;         (let [timeout  1 ; 1 minute

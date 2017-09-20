@@ -17,9 +17,9 @@
               :refer [promise offer! go]]
             [quantum.core.spec                       :as s
               :refer [validate]]
+            [quantum.core.type           :as t
+              :refer [val?]]
             [quantum.core.resources                  :as res]
-            [quantum.core.collections.base
-              :refer [nnil?]]
     #?(:clj [quantum.net.server.router               :as router])))
 
 (defmulti handle :id) ; Dispatch on event-id
@@ -72,7 +72,7 @@
   #?(:cljs ([msg-pack callback] (put! msg-pack callback 200)))
            ([#?(:clj uid) msg-pack #?(:cljs callback) #?(:cljs timeout)]
              (let [f @send-msg!]
-               (assert (nnil? f))
+               (assert (val? f))
                (@send-msg! #?(:clj uid) msg-pack #?(:cljs timeout) #?(:cljs (or callback (fn [_]))))))) ; to ensure no auto-close
 
 (defn put-chan!
@@ -142,7 +142,7 @@
           (validate endpoint string?)
           (validate handler  (s/or* fn?  (s/and var? (fn-> deref fn?))))
           (validate type     (s/or* nil? #{:auto :ajax :ws}))
-          #?(:clj  (do (validate server nnil?)
+          #?(:clj  (do (validate server val?)
                        (validate (:type server) #{:aleph :immutant}))
              :cljs (do (validate host string?) ; technically, valid hostname
                        (validate port integer?))) ; technically, valid port

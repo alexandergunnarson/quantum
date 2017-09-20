@@ -8,10 +8,10 @@
      ns-interns ns-publics refer ns-refers refer-clojure ns-unalias ns-unmap loaded-libs
      remove-ns])
   (:require
-    [clojure.core      :as core]
-    [clojure.set       :as set]
-    [clojure.string    :as str]
-    [quantum.core.vars :as var
+    [clojure.core             :as core]
+    [clojure.set              :as set]
+    [clojure.string           :as str]
+    [quantum.core.macros.core :as cmacros
       :refer [defalias]]))
 
 #?(:clj (defalias ns             core/ns           ))
@@ -71,7 +71,7 @@
 
 #?(:clj
 (defmacro search-var
-  "Searches for a var @var0 in the available namespaces."
+  "Searches for a var ->`var0` in the available namespaces."
   {:usage '(ns-find abc)
    :todo ["Make it better and filter out unnecessary results"]
    :attribution "alexandergunnarson"}

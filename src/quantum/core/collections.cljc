@@ -88,7 +88,7 @@
     [quantum.core.string                     :as str    ]
     [quantum.core.string.format              :as sform  ]
     [quantum.core.type                       :as t
-      :refer [lseq? transient? editable?
+      :refer [val? lseq? transient? editable?
               boolean? should-transientize?
               class]]
     [quantum.core.analyze.clojure.predicates :as anap]
@@ -225,7 +225,6 @@
 ; ===== SIZE + INDICES ===== ;
 #?(:clj (defalias empty?        coll/empty?       ))
         (def      nempty?       (fn-not empty?)   )
-        (defalias nnil?         base/nnil?        )
         (defalias count:rf      coll/count:rf     )
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias count&        coll/count&       ))
@@ -464,7 +463,7 @@
   walk prewalk         postwalk
        prewalk-filter  postwalk-filter
        prewalk-replace postwalk-replace
-       prewalk-find  #_"TODO postwalk-find"
+       prewalk-find    postwalk-find
   apply-to-keys)
 
 (defn comp-depth
@@ -742,7 +741,7 @@
 
    A prime example would be substrings within strings."
   [super sub]
-  (nnil? (index-of super sub)))
+  (val? (index-of super sub)))
 
 (defn indices-of-elem
   {:todo #{"Make parallizeable"

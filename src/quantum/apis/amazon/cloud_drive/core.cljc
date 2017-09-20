@@ -10,7 +10,7 @@
     [quantum.net.http                     :as http]
     [quantum.core.paths                   :as paths]
     [quantum.core.collections             :as coll
-      :refer [kw-map join reduce map+ val assoc-if nnil?]]
+      :refer [kw-map join reduce map+ val assoc-if]]
     [quantum.core.error
       :refer [TODO ->ex]]
     [quantum.core.fn                      :as fn
@@ -20,7 +20,9 @@
     [quantum.core.log                     :as log
       :include-macros true]
     [quantum.core.spec                    :as s
-      :refer [validate]])
+      :refer [validate]]
+    [quantum.core.type                    :as t
+      :refer [val?]])
 #?(:cljs
   (:require-macros
     [cljs.core.async.macros
@@ -63,7 +65,7 @@
                      (assoc req :oauth-token
                        (auth/access-token :amazon :cloud-drive))))}
            :oauth-token (let [token (auth/access-token :amazon :cloud-drive)]
-                           (assert (nnil? token))
+                           (assert (val? token))
                            token)}
            (merge (when body      {:body      (conv/->json body)})
                   (when multipart {:multipart multipart}))

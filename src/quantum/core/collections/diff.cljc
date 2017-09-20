@@ -130,7 +130,7 @@
 ;   {:in '[data-actual updated
 ;          (fn-> :date time/->instant :nanos) > #{:date :amount}]}
 ;   [curr-v new-v new-selector comparator-n unique-selectors]
-;   (let [ecomparator         (with-assert (coll/extreme-comparator comparator-n) nnil?
+;   (let [ecomparator         (with-assert (coll/extreme-comparator comparator-n) val?
 ;                               (Err. nil "Extreme comparator for _ does not exist." comparator-n))
 ;         pivot               (->> curr-v (map new-selector) ecomparator)
 ;         curr-on-last-date   (->> curr-v (filter (fn-> new-selector (= pivot))))
