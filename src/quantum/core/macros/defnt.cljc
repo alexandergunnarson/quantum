@@ -5,10 +5,7 @@
     [quantum.core.cache
       :refer [defmemoized]]
     [quantum.core.core                       :as qcore
-      :refer [name+]]
-    [quantum.core.collections.base           :as cbase
-      :refer [merge-call update-first update-val ensure-set
-              reducei kw-map nempty? nnil?]]
+      :refer [val? kw-map]]
     [quantum.core.data.map                   :as map
       :refer [merge]]
     [quantum.core.data.set                   :as set]
@@ -36,6 +33,16 @@
     [quantum.core.string.regex               :as re]
     [quantum.core.type.defs                  :as tdefs]
     [quantum.core.type.core                  :as tcore]
+    [quantum.core.untyped.collections        :as ucoll
+      :refer [contains? merge-call update-first update-val]]
+    [quantum.core.untyped.collections.tree   :as utree]
+    [quantum.core.untyped.convert            :as uconv
+      :refer [->name]]
+    [quantum.core.untyped.qualify            :as qual]
+    [quantum.core.untyped.reducers
+      :refer [reducei]                       :as ured]
+    [quantum.core.untyped.string             :as ustr]
+    [quantum.core.untyped.type               :as t]
     [quantum.core.vars                       :as var
       :refer [defalias replace-meta-from]]
     [quantum.core.spec                       :as s
@@ -90,7 +97,7 @@
                      qualified-class-name
                      (let [class-name (or (ns-resolve ns- class-sym)
                                           (resolve (symbol (str (ns-name ns-) "." class-sym))))
-                           _ (assert (some? class-name) {:class class-sym :ns ns- :msg "Class not found for symbol in namespace"})]
+                           _ (assert (val? class-name) {:class class-sym :ns ns- :msg "Class not found for symbol in namespace"})]
                        (symbol (.getName ^Class class-name))))))
                class-sym)
      :cljs class-sym))
@@ -104,7 +111,7 @@
       (->> tcore/types-unevaled
            (<- get lang)
            (<- get pred)
-           (<- validate nempty?)
+           (<- validate contains?)
            (into []))
     :else [pred])))
 
@@ -171,7 +178,7 @@
   "Generates `defnt` protocol names"
   [{:keys [sym sym-with-meta strict? lang]}]
   (let [genned-protocol-name
-          (when-not strict? (-> sym name cbase/camelcase (str "Protocol") munge symbol))
+          (when-not strict? (-> sym name ustr/camelcase (str "Protocol") munge symbol))
         genned-protocol-method-name
           (defnt-gen-protocol-name sym-with-meta lang)
         genned-protocol-method-name-qualified
@@ -196,14 +203,14 @@
             [[^vector? x] (println "A vector!")]}}
   [{:keys [sym full-arities arglists-types lang ns-]}]
   {:post [(log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY UNEXP" %)]}
-  (assert (nempty? full-arities))
+  (assert (contains? full-arities))
   (let [genned-method-name
-          (-> sym name cbase/camelcase munge symbol)
+          (-> sym name ustr/camelcase munge symbol)
         genned-interface-name
-          (-> sym name cbase/camelcase (str "Interface") munge symbol)
+          (-> sym name ustr/camelcase (str "Interface") munge symbol)
         ns-qualified-interface-name
           (-> genned-interface-name
-              #?(:clj (cbase/ns-qualify (namespace-munge *ns*))))
+              #?(:clj (qual/qualify:dot (namespace-munge *ns*))))
         gen-interface-code-header
           (list 'gen-interface :name ns-qualified-interface-name :methods)
         gen-interface-code-body-unexpanded
@@ -221,7 +228,7 @@
                                  (meta type-arglist+return-type))))
                (<- zipmap full-arities))] ; TODO ensure unique, don't just assume
     (log/ppr-hints :macro-expand "gen-interface-code-body-unexpanded" gen-interface-code-body-unexpanded)
-    (assert (nempty? gen-interface-code-body-unexpanded))
+    (assert (contains? gen-interface-code-body-unexpanded))
     (kw-map genned-method-name
           genned-interface-name
           ns-qualified-interface-name
@@ -274,7 +281,7 @@
   [{:keys [ns- fn-sym expr]}]
   (let [ns-str (-> ns- ns-name name)]
     (->> expr
-         (cbase/prewalk-find
+         (utree/prewalk-find
            #_(fn-and anap/sym-call? (fn-> first (anap/symbol-eq? sym))) ; might not be a sym call — might e.g. be in a `->`
            (fn-and symbol?
                    (fn-or #(= (namespace %) (namespace fn-sym))
@@ -325,7 +332,7 @@
            gen-interface-code-body-unexpanded]
     :as env}]
   {:post [(log/ppr-hints :macro-expand "GEN INTERFACE CODE BODY EXP" (:gen-interface-code-body-expanded %))]}
-  (assert (nempty? gen-interface-code-body-unexpanded))
+  (assert (contains? gen-interface-code-body-unexpanded))
   (let [gen-interface-code-body-expanded
           (->> gen-interface-code-body-unexpanded
                (mapv (fn [[params-decl [arglist & body :as arity]]]
@@ -345,7 +352,7 @@
                                                                       (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol))
                                        ret-type-input (assoc (kw-map ns- lang explicit-ret-type) :fn-sym sym :expr contextualized-body)
                                        _ (log/ppr-hints :macro-expand "COMPUTING RETURN TYPE FROM" ret-type-input)
-                                       ret-type (some-> (fn-expr->return-type ret-type-input) name+ symbol)
+                                       ret-type (some-> (fn-expr->return-type ret-type-input) ->name symbol)
                                        _ (log/ppr-hints :macro-expand/params "COMPUTED RETURN TYPE:" ret-type)
                                        arity-hinted (assoc arity 0 arglist-hinted)]
                                    (with-meta [[method-name hints ret-type] (seq arity-hinted)]
@@ -419,7 +426,7 @@
   (let [cached-arglists (atom {})]
     (doseq [[method-sym arglist ret-type] arglists]
       (doseq [first-hint (first arglist)]
-        (when (nnil? first-hint)
+        (when (val? first-hint)
           (swap! cached-arglists update (count arglist)
             (fn [first-hints-set]
               (let [hints-set-ensured (ensure-set first-hints-set)]
@@ -546,32 +553,6 @@
                 []))))
 
 #?(:clj
-(defn compare-specificity
-  "Compare specificity of t0 to t1.
-   0 means they are equally specific.
-   -1 means t0 is less specific (more general) than t1.
-   1 means t0 is more specific (less general) than t1.
-   Unboxed primitives are considered to be more specific than boxed primitives."
-  [^Class t0 ^Class t1]
-  (cond (= t0 t1)
-        0
-        (= t0 Object)
-        -1
-        (= t1 Object)
-        1
-        (= (tcore/boxed->unboxed t0) t1)
-        -1
-        (= t0 (tcore/boxed->unboxed t1))
-        1
-        (or (tcore/primitive-array-type? t0) (tcore/primitive-array-type? t1))
-        nil ; we'll consider the two unrelated
-        (isa? t1 t0)
-        -1
-        (isa? t0 t1)
-        1
-        :else nil))) ; unrelated
-
-#?(:clj
 (defn most-specific-arg-matches
   [matches]
   (reduce
@@ -581,7 +562,7 @@
               (for [i (range (count match))]
                 (let [t  (expr->hint:class (get match  i))
                       t' (expr->hint:class (get match' i))]
-                  (compare-specificity t t')))
+                  (t/compare-classes t t')))
             specificity-score (->> specificity-scores (remove nil?) (apply +))]
         (log/ppr-hints :macro-expand/params (kw-map specificity-score match match'))
         (cond (pos? specificity-score) [match]
@@ -623,7 +604,7 @@
     (log/ppr-hints :macro-expand/params "Matching args" {:args args :class classname :method method})
     #?(:clj (let [arity    (count args)
                   class-   (resolve classname)
-                  _        (assert (some? class-) (kw-map classname))
+                  _        (assert (val? class-) (kw-map classname))
                   method-name (name method)
                   argtypes (mapv #(ana/jvm-typeof-respecting-hints % env) args)
                   all-methods (class->public-methods class-)
