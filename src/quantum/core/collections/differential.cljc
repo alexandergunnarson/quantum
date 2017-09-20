@@ -38,13 +38,13 @@
      boolean?])
   (:require
     [clojure.core                  :as core]
+    [quantum.core.core
+      :refer [kw-map]]
     [quantum.core.compare          :as comp]
     [quantum.core.data.map         :as map
       :refer [split-at]]
     [quantum.core.data.vector      :as vec
       :refer [subsvec]]
-    [quantum.core.collections.base :as base
-      :refer [kw-map]]
     [quantum.core.collections.core :as coll
       :refer [reverse key val first rest get slice count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err

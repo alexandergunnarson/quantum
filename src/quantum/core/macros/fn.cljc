@@ -6,8 +6,6 @@
   (:require
 #_(:clj
     [co.paralleluniverse.pulsar.core  :as pulsar])
-    [quantum.core.collections.base
-      :refer [postwalk]]
     [quantum.core.error               :as err
       :refer [->ex]]
     [quantum.core.fn                  :as fn
@@ -19,6 +17,8 @@
       :refer [case-env]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]
+    [quantum.core.untyped.collections.tree :as utree
+      :refer [postwalk]]
     [quantum.core.vars
       :refer [defalias]]))
 

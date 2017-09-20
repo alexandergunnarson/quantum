@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.core
-      :refer [val?]]
+      :refer [val? kw-map]]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.macros.type-hint           :as th]
     [quantum.core.fn                         :as fn
@@ -10,11 +10,9 @@
     [quantum.core.log                        :as log]
     [quantum.core.logic                      :as logic
       :refer [whenp]]
-    [quantum.core.collections.base           :as cbase
-      :refer [kw-map update-first update-val ensure-set]]
     [quantum.core.type.core                  :as tcore]
     [quantum.core.untyped.collections        :as ucoll
-      :refer [contains?]]))
+      :refer [contains? update-first]]))
 
 (defn with-protocol-arglist-type-hint
   [sym lang arglist-ct]

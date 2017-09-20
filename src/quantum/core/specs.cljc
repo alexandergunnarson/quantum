@@ -5,8 +5,6 @@
   (:require
     [clojure.core      :as core]
     [clojure.set       :as set]
-    [quantum.core.collections.base
-      :refer [dissoc-if]]
     [quantum.core.core
       :refer [val?]]
     [quantum.core.fn   :as fn

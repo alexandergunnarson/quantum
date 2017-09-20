@@ -11,7 +11,6 @@
    [[proteus
       :refer [let-mutable]]])
     [quantum.core.core                :as qcore]
-    [quantum.core.collections.base    :as cbase]
     [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
       :refer [->ex]]
@@ -27,6 +26,8 @@
     [quantum.core.refs                :as refs
       :refer [deref reset! !long]]
     [quantum.core.type                :as type]
+    [quantum.core.untyped.reducers    :as ured
+      :refer [reduce-pair]]
     [quantum.core.vars                :as var
       :refer [defalias]])
 #?(:cljs
@@ -53,7 +54,7 @@
 #?(:clj (defalias reduce  red/reduce ))
 #?(:clj (defalias reducei red/reducei))
 
-(defalias reduce-pair cbase/reduce-pair)
+(defalias reduce-pair ured/reduce-pair)
 
 #?(:clj
 (defmacro reduce*

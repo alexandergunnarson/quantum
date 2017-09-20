@@ -9,9 +9,9 @@
             [clojure.string                 :as str]
     #?(:clj [seqspert.vector])
     #?(:clj [clojure.core.async             :as casync])
-            [quantum.core.log               :as log]
-            [quantum.core.collections.base
+            [quantum.core.core
               :refer [kw-map]]
+            [quantum.core.log               :as log]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte

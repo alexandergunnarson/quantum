@@ -6,7 +6,7 @@
   (:require
     [clojure.string                :as str]
     [slingshot.slingshot           :as try]
-    [quantum.core.collections.base :as cbase
+    [quantum.core.core
       :refer [kw-map]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn

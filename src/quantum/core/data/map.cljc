@@ -5,17 +5,17 @@
   (:refer-clojure :exclude
     [split-at, merge, sorted-map sorted-map-by, array-map, hash-map])
   (:require
-    [quantum.core.vars    :as var
-     :refer [defalias]]
     [clojure.core         :as core]
     [clojure.data.avl     :as avl ]
 #?@(:clj
    [[clojure.data.int-map :as imap]
     [flatland.ordered.map :as omap]
-    [seqspert.hash-map            ]
-    [quantum.core.collections.base :as cbase
+    [seqspert.hash-map            ]])
+    [quantum.core.core    :as qcore]
+    [quantum.core.untyped.reducers
       :refer [reduce-pair]]
-    [quantum.core.core    :as qcore]]))
+    [quantum.core.vars    :as var
+     :refer [defalias]])
   (:import
 #?@(:clj
     [java.util.HashMap
@@ -46,7 +46,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (list* `om (qcore/quote-map-base cbase/->keyword ks))))
+  (list* `om (qcore/quote-map-base qcore/->keyword ks))))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)

@@ -15,7 +15,6 @@
   (:require
     [clojure.core                  :as core]
     [clojure.core.reducers         :as r]
-    [quantum.core.collections.base :as cbase]
     [quantum.core.collections.core :as ccoll
       :refer [empty? contains?, assoc!, conj!, get, ->objects]]
     [quantum.core.core

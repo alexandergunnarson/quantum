@@ -14,8 +14,7 @@
       :refer [join for kw-map val? contains?
               filter+ filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
-    [quantum.core.core          :as qcore
-      :refer [name+]]
+    [quantum.core.core          :as qcore]
     [quantum.core.async         :as async
       :refer [<! <!! >! >!!]]
     [quantum.core.data.set      :as set]
@@ -37,7 +36,9 @@
       :refer [defalias]]
     [quantum.core.data.validated :as dv]
     [quantum.core.spec           :as s
-      :refer [validate]])
+      :refer [validate]]
+    [quantum.core.untyped.convert
+      :refer [->name]])
 #?(:clj
     (:import
       datomic.Peer
@@ -442,8 +443,8 @@
           datascript? (or datascript? (mconn? conn-f))
           part-f      (when-not datascript?
                         (or part :db.part/db))
-          type        (name  (:type   schema))
-          unique      (name+ (:unique schema))]
+          type        (name   (:type   schema))
+          unique      (->name (:unique schema))]
       ; Partitions are not supported in DataScript (yet)
       (when-not datascript? (validate part-f val?))
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)

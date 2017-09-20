@@ -4,10 +4,8 @@
     [cljs.analyzer]
     [cljs.core #?@(:cljs [:as core])]
     #?(:clj [clojure.core :as core])
-    [quantum.core.collections.base :as cbase
-      :refer [update-first update-val ensure-set kw-map]]
     [quantum.core.core
-      :refer [val?]]
+      :refer [kw-map val?]]
     [quantum.core.fn
       :refer [fn->]]
     [quantum.core.macros.core      :as cmacros
@@ -15,6 +13,7 @@
     [quantum.core.macros.definterface]
     [quantum.core.macros.type-hint :as th]
     [quantum.core.untyped.qualify  :as qual]
+    [quantum.core.untyped.string   :as ustr]
     [quantum.core.vars             :as var]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
@@ -274,7 +273,7 @@
                        :get type-sym
                        :set qualified-interface-sym)
              :name   (-> (str (name prefix) "_" (name field-sym))
-                         (cbase/camelcase true)
+                         (ustr/camelcase true)
                          symbol)
              :inputs (case prefix
                        :get []

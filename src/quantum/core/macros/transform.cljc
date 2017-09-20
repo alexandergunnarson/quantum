@@ -6,9 +6,6 @@
     [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.macros.type-hint           :as th]
     [quantum.core.macros.optimization        :as opt]
-    [quantum.core.collections.base           :as cbase
-      :refer [update-first update-val ensure-set
-              zip-reduce* default-zipper postwalk]]
     [quantum.core.core
       :refer [val?]]
     [quantum.core.error                      :as err
@@ -19,7 +16,13 @@
       :refer [prl]]
     [quantum.core.logic                      :as logic
       :refer [fn-not fn-or fn-and whenc condf1]]
-    [quantum.core.type.core                  :as tcore]))
+    [quantum.core.type.core                  :as tcore]
+    [quantum.core.untyped.collections        :as ucoll
+      :refer [default-zipper]]
+    [quantum.core.untyped.collections.tree   :as utree
+      :refer [postwalk]]
+    [quantum.core.untyped.reducers           :as ured
+      :refer [zip-reduce*]]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 

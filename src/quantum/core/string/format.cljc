@@ -7,7 +7,6 @@
                     [cuerdas.core                  :as str+]
                     [clojure.string                :as str]
                     [clojure.core                  :as core]
-                    [quantum.core.collections.base :as cbase]
            #?(:cljs [goog.string                   :as gstr])
                     [quantum.core.fn               :as fn
                       :refer [fn->>]]

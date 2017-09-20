@@ -5,10 +5,9 @@
 #?@(:clj
    [[sparkling.conf           :as conf]
     [sparkling.core           :as spark]])
+    [quantum.core.core
+      :refer [kw-map]]
     [quantum.core.system      :as sys]
-    [quantum.core.collections.base
-      :refer        [#?@(:clj [kw-map])]
-      :refer-macros [          kw-map]]
     [quantum.core.macros
       #?@(:clj [:refer [compile-if]])]
     [quantum.core.error :as err

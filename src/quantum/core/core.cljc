@@ -99,13 +99,6 @@
     ~@body
     expr#)))
 
-(defn name+ [x]
-  (cond   (nil? x)
-          x
-#?@(:clj [(class? x)
-          (.getName ^Class x)])
-          :else (name x)))
-
 (defn str->integer [s]
   (assert (string? s) {:s s})
   #?(:clj  (Long/parseLong ^String s)

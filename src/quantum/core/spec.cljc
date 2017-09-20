@@ -8,7 +8,6 @@
     [clojure.spec.test.alpha :as test]
     [cljs.spec.alpha]
     [clojure.spec.gen.alpha  :as gen]
-    [quantum.core.collections.base :as base]
     [quantum.core.core       :as qcore
       :refer [val?]]
     [quantum.core.error      :as err
@@ -146,10 +145,10 @@
 (defalias explain s/explain)
 
 #?(:clj (quantum.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
-#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(qcore/quote-map-base base/->keyword args true))))
+#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(qcore/quote-map-base qcore/->keyword args true))))
 
 #?(:clj (quantum.core.vars/defmalias alt clojure.spec.alpha/alt cljs.spec.alpha/alt))
-#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(qcore/quote-map-base base/->keyword args true))))
+#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(qcore/quote-map-base qcore/->keyword args true))))
 
 #?(:clj
 (defmacro fdef! [sym & args]

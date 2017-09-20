@@ -11,13 +11,9 @@
     [clojure.core                  :as core]
 #?(:clj
     [loom.alg-generic              :as alg]) ; temporarily
-    [quantum.core.collections.base :as cbase
-      :refer [reducei]]
     [quantum.core.collections.core :as ccoll
       :refer [empty count get assoc!]]
     [quantum.core.type.core        :as tcore]
-    [quantum.core.core             :as qcore
-      :refer [name+]]
     [quantum.core.fn               :as fn
       :refer [<- fn->]]
     [quantum.core.log              :as log]

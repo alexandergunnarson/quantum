@@ -11,12 +11,12 @@
  #?(:clj  [clojure.core.async.impl.protocols]
     :cljs [cljs.core.async.impl.channels])
           [quantum.core.type.defs           :as defs]
-          [quantum.core.core
-            :refer [name+]]
           [quantum.core.fn
             :refer [<- fn->>]]
           [quantum.core.error               :as err
             :refer [->ex]]
+          [quantum.core.untyped.convert     :as uconv
+            :refer [->name]]
           [quantum.core.vars                :as var
             :refer [defalias]]))
 
@@ -136,7 +136,7 @@
    Returns a string or symbol"
   [x n]
   (assert (or (string? x) (symbol? x) (class? x)) {:x x})
-  (let [s (name+ x)
+  (let [s (->name x)
         [java-array-type? brackets ?array-ident ?object-type]
           (re-matches java-array-type-regex s)
         array-depth (count brackets)]

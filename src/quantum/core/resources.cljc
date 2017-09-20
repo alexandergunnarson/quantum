@@ -11,7 +11,6 @@
     [quantum.core.cache           :as cache
       :refer [callable-times]]
     [quantum.core.core            :as qcore]
-    [quantum.core.collections.base]
     [quantum.core.data.set        :as set]
     [quantum.core.error           :as err
       :refer [->ex catch-all]]

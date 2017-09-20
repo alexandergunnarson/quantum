@@ -1,7 +1,12 @@
 (ns quantum.core.untyped.collections
   (:refer-clojure :exclude
-    [assoc-in contains? flatten get])
-  (:require [clojure.core :as core]))
+    [assoc-in contains? get flatten])
+  (:require
+    [clojure.core :as core]
+    [quantum.core.fn :as fn
+      :refer [fn']]
+    [quantum.core.logic
+      :refer [condf1 fn-not]]))
 
 (defn contains?
   ([xs] (boolean (seq xs)))
@@ -101,3 +106,11 @@
                  (merge-call fn-that-uses-the-previous-results))}
   ([m f] (merge m (f m)))
   ([m f & fs] (reduce merge-call (merge-call m f) fs)))
+
+;; ===== COERCION ===== ;;
+
+(def ensure-set
+  (condf1
+    nil?          (fn' #{})
+    (fn-not set?) hash-set
+    identity))

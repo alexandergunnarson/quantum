@@ -8,7 +8,6 @@
     [com.gfredericks.goog.math.Integer])
     [fast-zip.core]
     [clojure.string        :as str]
-    [quantum.core.collections.base :as cbase]
     [quantum.core.classes  :as classes]
     [quantum.core.data.map :as map
       :refer [map-entry]]

@@ -44,7 +44,6 @@
       :refer [map-entry]]
     [quantum.core.data.vector      :as vec
       :refer [svec]]
-    [quantum.core.collections.base :as base]
     [quantum.core.collections.core :as coll
       :refer [key val first second conj conj! empty]]
     [quantum.core.fn               :as fn
@@ -53,6 +52,7 @@
       :refer [defnt]]
     [quantum.core.reducers         :as red
       :refer [join]]
+    [quantum.core.untyped.reducers :as ured]
     [quantum.core.vars             :as var
       :refer [replace-meta-from defalias] ]))
 
@@ -139,7 +139,7 @@
 (defn insert-left  [item loc] (zip/insert-left  loc item))
 (defn insert-right [item loc] (zip/insert-right loc item))
 
-(defalias zip-reduce* base/zip-reduce*)
+(defalias zip-reduce* ured/zip-reduce*)
 
 (defn zipper
   "General-purpose zipper."

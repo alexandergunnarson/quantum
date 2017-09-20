@@ -3,8 +3,6 @@
   (:require
     [clojure.core           :as core]
     [quantum.core.data.set  :as set]
-    [quantum.core.collections.base
-      :refer [postwalk]]
     [quantum.core.error     :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
@@ -24,6 +22,8 @@
       :refer [validate]]
     [quantum.core.untyped.collections :as ucoll
       :refer [contains?]]
+    [quantum.core.untyped.collections.tree :as utree
+      :refer [postwalk]]
     [quantum.core.untyped.qualify :as qual])
 #?(:cljs
   (:require-macros

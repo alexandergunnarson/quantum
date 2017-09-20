@@ -15,7 +15,6 @@
     [clojure.core                  :as core]
     [clojure.core.async            :as async]
     [fast-zip.core                 :as zip]
-    [quantum.core.collections.base :as cbase]
     [quantum.core.data.vector      :as vec
       :refer [catvec]]
 #?@(:clj
