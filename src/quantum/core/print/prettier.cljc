@@ -3,7 +3,8 @@
     [fipp.edn]
     [fipp.visit]
     [fipp.ednize]
-    [quantum.core.ns :as ns]))
+    [quantum.core.ns   :as ns]
+    [quantum.core.vars :as var]))
 
 ; TODO get rid of this fipp boilerplate
 (in-ns 'fipp.ednize)
@@ -40,6 +41,13 @@
   Iterable
     (iterator [this] (IntIndexedIterator. 0 (count xs) xs))))
 
+;; Collapses symbols
+(defn visit-symbol* [x]
+  [:text (var/collapse-symbol)])
+
+(defn visit-fn [visitor x]
+  [:group "#" "fn" " " (-> x var/fn->symbol visit-symbol*)])
+
 (defn visit*
   "Visits objects, ignoring metadata."
   [visitor x]
@@ -49,14 +57,7 @@
     (boolean? x) (visit-boolean visitor x)
     (string? x) (visit-string visitor x)
     (char? x) (visit-character visitor x)
-    (symbol? x)
-      ;; Collapses symbols
-      [:text (str (when-let [n (namespace x)]
-                    (str (if-let [alias- (do #?(:clj (quantum.core.ns/ns-name->alias *ns* (symbol n)) :cljs false))]
-                           (str "," alias-)
-                           n)
-                         "/")) (name x))]
-      #_(visit-symbol visitor x)
+    (symbol? x) (visit-symbol* x)
     (keyword? x) (visit-keyword visitor x)
     (number? x) (visit-number visitor x)
     (seq? x) (visit-seq visitor x)
@@ -67,6 +68,7 @@
     (tagged-literal? x) (visit-tagged visitor x)
     (var? x) (visit-var visitor x)
     (regexp? x) (visit-pattern visitor x)
+    (fn? x) (visit-fn visitor x)
     (transient-vector? x)
       [:group "#" (pr-str '!+)
         (when (and (:print-meta visitor) (meta (:form visitor))) " ")
