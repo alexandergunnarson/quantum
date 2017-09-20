@@ -4,7 +4,7 @@
   quantum.core.nondeterministic
   (:refer-clojure :exclude
     [reduce next for last nth
-     int double conj!
+     int double conj! contains?
      shuffle count map get partition
      byte  char  long
      bytes chars longs])
@@ -21,7 +21,7 @@
                       join last lasti partition-all+
                       map map+ map-vals+ map-indexed+
                       filter+
-                      get, nempty? count conj!
+                      get, contains? count conj!
                       indices+ kw-map copy slice]]
             [quantum.core.error        :as err
               :refer [->ex TODO throw-unless]]

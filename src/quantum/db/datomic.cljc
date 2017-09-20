@@ -2,7 +2,8 @@
   quantum.db.datomic
   (:refer-clojure :exclude
     [conj conj! disj disj!
-     assoc assoc! dissoc dissoc! update merge])
+     assoc assoc! dissoc dissoc! update merge
+     contains?])
   (:require
     [clojure.core                     :as c]
 #?@(:clj
@@ -16,7 +17,7 @@
     [quantum.db.datomic.schema        :as dbs]
     [com.stuartsierra.component       :as component]
     [quantum.core.collections         :as coll
-      :refer [kw-map containsv? nempty? join]]
+      :refer [kw-map containsv? contains? join]]
     [quantum.core.error               :as err
       :refer [->ex TODO]]
     [quantum.core.fn                  :as fn
@@ -271,8 +272,8 @@
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
       (let [type                   (validate (or type :free)                        #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
-            name                   (validate (or name "test")                       (s/and string? nempty?))
-            host                   (validate (or host "localhost")                  (s/and string? nempty?))
+            name                   (validate (or name "test")                       (s/and string? contains?))
+            host                   (validate (or host "localhost")                  (s/and string? contains?))
             port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
             create?                (validate (default create?                false) (fn1 t/boolean?))
             create-if-not-present? (validate (default create-if-not-present? true ) (fn1 t/boolean?))

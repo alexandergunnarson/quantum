@@ -455,7 +455,7 @@
 ;     (let [perm-set (set permissions)
 ;           f (file path)
 ;           flag (= op "+")
-;           user (not (empty? u))]
+;           user (contains? u)]
 ;       (when (perm-set \r) (.setReadable f flag user))
 ;       (when (perm-set \w) (.setWritable f flag user))
 ;       (when (perm-set \x) (.setExecutable f flag user)))

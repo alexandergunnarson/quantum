@@ -52,7 +52,6 @@
       :refer [!str]]
     [quantum.core.data.vector                :as vec
       :refer [catvec subsvec !vector]]
-    [quantum.core.collections.base           :as base   ]
     [quantum.core.collections.core           :as coll]
     [quantum.core.collections.sociative      :as soc    ]
     [quantum.core.collections.differential   :as diff
@@ -63,7 +62,7 @@
     [quantum.core.collections.tree           :as tree   ]
     [quantum.core.collections.zippers        :as qzip   ]
     [quantum.core.collections.logic          :as clog   ]
-    [quantum.core.core
+    [quantum.core.core                       :as qcore
       :refer [->object]]
     [quantum.core.error                      :as err
       :refer [->ex TODO]]
@@ -224,7 +223,7 @@
 #?(:clj (defalias last-index-of-pred diff/last-index-of-pred))
 ; ===== SIZE + INDICES ===== ;
 #?(:clj (defalias empty?        coll/empty?       ))
-        (def      nempty?       (fn-not empty?)   )
+
         (defalias count:rf      coll/count:rf     )
 #?(:clj (defalias count         coll/count        ))
 #?(:clj (defalias count&        coll/count&       ))
@@ -826,10 +825,10 @@
               match' (if match?
                          (conj match elem)
                          [])
-              end-match?   (and (nempty? match )
-                                (empty?  match'))
-              start-match? (and (empty?  match )
-                                (nempty? match'))
+              end-match?   (and (contains? match )
+                                (empty?    match'))
+              start-match? (and (empty?    match )
+                                (contains? match'))
               match-i'     (if start-match? i match-i)
               matches'
                 (if (and end-match? (> match-i -1))
@@ -855,9 +854,9 @@
 (defn merger [a b] (merge a b))
 (defalias merge-keep-right merger)
 
-#?(:clj (defalias kw-map    base/kw-map   ))
-#?(:clj (defalias quote-map base/quote-map))
-#?(:clj (defalias kw-omap   map/kw-omap   ))
+#?(:clj (defalias kw-map    qcore/kw-map   ))
+#?(:clj (defalias quote-map qcore/quote-map))
+#?(:clj (defalias kw-omap   map/kw-omap    ))
 
 (defn select
   "Applies a list of functions, @fns, separately to an object, @coll.
@@ -978,7 +977,7 @@
 
 (def single?
   "Does coll have only one element?"
-  (fn-and nempty? (fn-not next)))
+  (fn-and contains? (fn-not next)))
 
 ; ===== ZIPPERS ===== ;
 
@@ -1755,7 +1754,7 @@
   {:source "zcaudate/hara.data.path"}
   [m]
   (reduce-kv (fn [m k v]
-               (if (and (t/+hash-map? v) (not (empty? v)))
+               (if (and (t/+hash-map? v) (contains? v))
                  (update-in m (path/split k) nested/merge-nested (treeify-keys-nested v))
                  (assoc-in m (path/split k) v)))
              {}

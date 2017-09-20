@@ -2,7 +2,8 @@
   quantum.db.datomic.core
   (:refer-clojure :exclude
     [assoc assoc! dissoc dissoc! conj conj! disj disj!
-     update merge if-let for doseq nth filter])
+     update merge if-let for doseq nth filter
+     contains?])
   (:require
     [clojure.core               :as c]
 #?@(:clj
@@ -10,7 +11,7 @@
     [datascript.core            :as mdb]
     [com.stuartsierra.component :as comp]
     [quantum.core.collections   :as coll
-      :refer [join for kw-map val? nempty?
+      :refer [join for kw-map val? contains?
               filter+ filter-vals+ filter-vals', remove-vals+, map+, remove+ remove', nth
               group-by+ prewalk postwalk merge-deep dissoc-in doseq]]
     [quantum.core.core          :as qcore
@@ -774,7 +775,7 @@
     (let [history (-> db :ephemeral :history)
           conn    (-> db :ephemeral :conn   )]
       (validate history t/atom?)
-      (when (nempty? @history)
+      (when (contains? @history)
         (let [prev   (peek @history)
               before (:db-before prev)
               after  (:db-after  prev)
@@ -941,7 +942,7 @@
 ;                                                      (apply list '~'or
 ;                                                        (for [skip-key# skip-keys#] ; different symbols = OR
 ;                                                          ['~'?e skip-key#])))))]
-;                                      (nempty? eids#)))
+;                                      (contains? eids#)))
 ;                               (do (.putIfAbsent ^ConcurrentHashMap ~cache-sym from-val# :db)
 ;                                   :db)
 ;                               (let [; Multiple threads get the same result from the same delayed function
@@ -1006,7 +1007,7 @@
 ;                    ([[pk-val# to-val#]] ; to-val <-> entity-data
 ;                     (~entity-if-sym pk-val# to-val#))
 ;                    ([pk-val# to-val#]
-;                      (when (nempty? to-val#)
+;                      (when (contains? to-val#)
 ;                        (quantum.db.datomic/->entity
 ;                          pk#
 ;                          pk-val#

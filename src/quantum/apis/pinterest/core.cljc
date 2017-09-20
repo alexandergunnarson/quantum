@@ -13,7 +13,7 @@
   {:usage '(oauth-code (auth/datum :pinterest "my-app"))}
   [{:keys [username password] :as app-meta} & [scopes]]
   (with-resources [driver (web/default-driver)]
-    (let [url (url/map->url "https://api.pinterest.com/oauth/" 
+    (let [url (url/map->url "https://api.pinterest.com/oauth/"
                 {"response_type" "code"
                  "client_id"     (:id app-meta)
                  "state"         ""
@@ -29,7 +29,7 @@
       (web/send-keys! password-field password)
 
       (web/suppress-unsafe-eval (web/click-load! login-button))
-      
+
       (let [okay-button (web/find-element driver (By/xpath "//button[@type='submit']"))
             _ (web/click-load! okay-button)
             code (->> driver
@@ -42,7 +42,7 @@
   "Gets a Twitter OAuth token using the @app-meta provided."
   [{:keys [id secret] :as app-meta} & [scopes-0]]
   (assert (number? id) #{id})
-  (assert ((fn-and string? nempty?) secret) #{secret})
+  (assert ((fn-and string? contains?) secret) #{secret})
 
   (let [scopes (or scopes-0 #{"read_public" "write_public"})
         code (oauth-code app-meta scopes)
@@ -56,7 +56,7 @@
                    "client_secret" secret
                    "code"          code}})
         token (:access-token resp)]
-    (assert ((fn-and string? nempty?) token) #{token})
+    (assert ((fn-and string? contains?) token) #{token})
     token))
 
 #_(defn refresh-oauth-token! [{:keys [name] :as app-meta}]

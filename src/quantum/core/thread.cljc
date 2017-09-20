@@ -3,7 +3,7 @@
           Aliases core.async for convenience."
     :attribution "alexandergunnarson"}
   quantum.core.thread
-            (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! empty?])
+            (:refer-clojure :exclude [doseq boolean? memoize conj! assoc! contains? empty?])
             (:require [clojure.core                          :as core]
             #?@(:clj [[clojure.core.async.impl.ioc-macros      :as ioc             ]
                       [clojure.core.async.impl.exec.threadpool :as async-threadpool]
@@ -12,7 +12,7 @@
                       [com.stuartsierra.component              :as component]
                       [quantum.core.string                     :as str             ]
                       [quantum.core.collections                :as coll
-                        :refer [in? conj! assoc! empty? nempty? doseq dissoc-in]]
+                        :refer [in? conj! assoc! empty? contains? doseq dissoc-in]]
                       [quantum.core.numeric                    :as num]
                       #?(:clj [clojure.core.async :as casync])
                       [quantum.core.async                      :as async
@@ -163,7 +163,7 @@
   {:todo ["Make dependency graph" "Incorporate into thread-reaper"]}
   ([] (close-all! false))
   ([force?]
-    #_(identity ;while ((fn-and map? nempty?) @reg-tree)
+    #_(identity ;while ((fn-and map? contains?) @reg-tree)
       (postwalk
         (fn [id]
           (let [traversal-keys (get-in @reg-threads [id :parents])]
@@ -466,7 +466,7 @@
             (when (empty? ~close-reqs-f)
               (do ~@body)))
           (finally
-            (when (nempty? ~close-reqs-f)
+            (when (contains? ~close-reqs-f)
               (force ~close-req-call)))))))))
 
 #?(:clj
@@ -501,7 +501,7 @@
                         :closed    #(log/pr :debug "Thread-reaper has been closed.")
                         :type      :thread}}
             []
-            (if (nempty? thread-reaper-pause-requests)
+            (if (contains? thread-reaper-pause-requests)
                 (do (async/empty! thread-reaper-pause-requests)
                     (log/pr-opts :debug #{:thread?} "Thread reaper paused.")
                     (swap! reg assoc-in [id :state] :paused)

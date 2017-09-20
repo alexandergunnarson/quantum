@@ -2,6 +2,7 @@
   ^{:doc "Image library. Conversion."
     :attribution "alexandergunnarson"}
   quantum.media.imaging.convert
+  (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.process :as proc
       :refer [proc!]              ]
@@ -9,7 +10,7 @@
     [quantum.core.paths   :as path
       :include-macros true        ]
     [quantum.core.collections
-      :refer [nempty? in?]        ]))
+      :refer [contains? in?]        ]))
 
 (def supported-types #{:jpg :png :tiff :jpeg :gif :pdf})
 
@@ -29,8 +30,8 @@
         :out (path/file-str [:resources "images" "test-ocr-in.jpg"])})}
   ([{:keys [from from-type to to-type] :as opts}]
     (let [from (path/file-str from) to (path/file-str to)]
-      (assert (nempty? from))
-      (assert (nempty? to  ))
+      (assert (contains? from))
+      (assert (contains? to  ))
       (assert (path/exists? from))
       ;(with-throw (io/readable? from) "Insufficient permissions to read from-file.")
       ;(with-throw (io/writable? to  ) "Insufficient permissions to write to to-file.")

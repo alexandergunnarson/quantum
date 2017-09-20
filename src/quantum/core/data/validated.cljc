@@ -1,9 +1,10 @@
 (ns quantum.core.data.validated
+  (:refer-clojure :exclude [contains?])
   (:require
     [clojure.core           :as core]
     [quantum.core.data.set  :as set]
     [quantum.core.collections.base
-      :refer [nempty? postwalk]]
+      :refer [postwalk]]
     [quantum.core.error     :as err
       :refer [->ex TODO catch-all]]
     [quantum.core.macros.core
@@ -21,6 +22,8 @@
       :refer [identity*]]
     [quantum.core.spec      :as s
       :refer [validate]]
+    [quantum.core.untyped.collections :as ucoll
+      :refer [contains?]]
     [quantum.core.untyped.qualify :as qual])
 #?(:cljs
   (:require-macros
@@ -184,8 +187,8 @@
           (fn [x]
             (if (inner-def? x)
                 (let [[_ inner-name & inner-spec-args] x
-                      _ (validate inner-name keyword?
-                                  inner-spec-args nempty?)
+                      _ (validate inner-name      keyword?
+                                  inner-spec-args contains?)
                       inner-name (contextualize-keyword inner-name kw-context)
                       inner-name-sym
                         (with-meta (symbol (namespace inner-name) (name inner-name)) ; inherits :db? from parents

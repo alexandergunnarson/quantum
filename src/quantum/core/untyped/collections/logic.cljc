@@ -7,7 +7,7 @@
       :refer [->sentinel]]
     [quantum.core.fn   :as fn
       :refer [rcomp]]
-    [quantum.core.untyped.compare :as comp
+    [quantum.core.untyped.compare :as ucomp
       :refer [== not==]]
     [quantum.core.untyped.reducers
       :refer [educe]]

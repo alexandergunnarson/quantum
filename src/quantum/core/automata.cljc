@@ -128,8 +128,8 @@
 ;             :id       (:id       thread-opts)
 ;             :parent   (:id       parent-opts)
 ;             :handlers (:handlers thread-opts))
-;           (let [error-state? #(do (when (and (nempty? (:close-reqs parent-opts))
-;                                              (nempty? (:close-reqs thread-opts))
+;           (let [error-state? #(do (when (and (contains? (:close-reqs parent-opts))
+;                                              (contains? (:close-reqs thread-opts))
 ;                                              (not (-> @state :status namespace (= "error"))))
 ;                                     (update-state! state :error/close-req))
 ;                                   (-> @state :status namespace (= "error")))]
@@ -249,7 +249,7 @@
 ;         (async-loop
 ;           {:id :video-processor}
 ;           []
-;           (when (nempty? (available-videos))
+;           (when (contains? (available-videos))
 ;             (when (-> @workers count (< @process-limit))
 ;               (download-videos! (- @process-limit (count @workers))))
 ;             (async/sleep 500)  ; check every half second

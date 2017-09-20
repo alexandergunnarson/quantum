@@ -567,7 +567,7 @@
       (future
         (try
           (loop [s bufs]
-            (when (and (not (empty? s)) (.isOpen sink))
+            (when (and (contains? s) (.isOpen sink))
               (let [buf (.duplicate ^ByteBuffer (first s))]
                 (.write sink buf)
                 (recur (rest s)))))

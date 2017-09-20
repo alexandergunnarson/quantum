@@ -53,7 +53,7 @@
     [quantum.core.reducers                 :as red
       :refer [join]]
     [quantum.core.string                   :as str]
-    [quantum.core.untyped.collections.tree :as tree]
+    [quantum.core.untyped.collections.tree :as utree]
     [quantum.core.vars
       :refer [defalias]]))
 ;___________________________________________________________________________________________________________________________________
@@ -113,8 +113,8 @@
 (def postwalk-filter (partial walk-filter postwalk))
 (def prewalk-filter  (partial walk-filter prewalk ))
 
-(defalias prewalk-find  tree/prewalk-find ) ; TODO use the new `walk` for this
-(defalias postwalk-find tree/postwalk-find) ; TODO use the new `walk` for this
+(defalias prewalk-find  utree/prewalk-find ) ; TODO use the new `walk` for this
+(defalias postwalk-find utree/postwalk-find) ; TODO use the new `walk` for this
 
 ; ===== Transform nested maps =====
 

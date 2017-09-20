@@ -1,11 +1,12 @@
 (ns quantum.net.core
-  (:refer-clojure :exclude [when-let])
+  (:refer-clojure :exclude [when-let contains?])
   (:require
    #?(:cljs [goog.userAgent           :as agent])
    #?(:cljs [goog.Uri                 :as uri])
             [quantum.core.error       :as err
               :refer [->ex]]
-            [quantum.core.collections :as coll]
+            [quantum.core.collections :as coll
+              :refer [contains?]]
             [quantum.core.string      :as str]
             [quantum.core.convert     :as conv]
             [quantum.core.logic       :as logic
@@ -125,7 +126,7 @@
   "Format the Ring map as an url."
   {:from "r0man/noencore"}
   [m]
-  (if (not (empty? m))
+  (when-not (empty? m)
     (let [query-params (:query-params m)]
       (str (if (:scheme m)
              (str (name (:scheme m)) "://"))
@@ -136,7 +137,7 @@
              (if-not (= port (port-number (:scheme m)))
                (str ":" port)))
            (if (and (nil? (:uri m))
-                    (not (empty? query-params)))
+                    (contains? query-params))
              "/" (:uri m))
            (if-not (empty? query-params)
              (str "?" (format-query-params query-params)))

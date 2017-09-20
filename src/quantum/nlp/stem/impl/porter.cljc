@@ -1,16 +1,16 @@
 (ns ^{:original-java "Rajiv Yerra"}
   quantum.nlp.stem.impl.porter
-  (:refer-clojure :exclude [get count reduce when-let])
+  (:refer-clojure :exclude [get count contains? reduce when-let])
   (:require
     [quantum.core.logic           :as logic
       :refer [when-let]]
     [quantum.core.string          :as str  ]
     [quantum.core.collections     :as coll
-      :refer [in? dropr seq-or nempty? reduce get count]]
+      :refer [in? dropr seq-or contains? reduce get count]]
     [quantum.core.string.semantic :as sem]))
 
 (defn ends-with-doubled-consonant? [s]
-  (when (nempty? s)
+  (when (contains? s)
     (let [c (get s (-> s count (- 1)))]
       (and (= c (get s (-> s count (- 2))))
            (not (sem/contains-ext-vowel? (coll/taker 2 s)))))))
@@ -170,7 +170,7 @@
       s))
 
 (defn stem [s]
-  (assert (and (nempty? s) (str/alpha? s)) #{s})
+  (assert (and (contains? s) (str/alpha? s)) #{s})
   (-> s
       step1a
       step1a

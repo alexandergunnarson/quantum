@@ -4,7 +4,7 @@
    3D array: (no special name)
    ND array: tensor"
   (:refer-clojure :exclude
-    [max count get subvec swap! first last empty
+    [max count get subvec swap! first last empty contains?
      for dotimes, reduce])
   (:require
 #?@(:clj
@@ -17,7 +17,7 @@
     [clojure.core.matrix                      :as mat]
     [quantum.core.collections.core            :as ccoll]
     [quantum.core.collections                 :as c
-      :refer [map+ range+ first nempty? red-for red-fori
+      :refer [map+ range+ first contains? red-for red-fori
               reduce join count slice kw-map
               for lfor dotimes doreduce
               ->objects]]

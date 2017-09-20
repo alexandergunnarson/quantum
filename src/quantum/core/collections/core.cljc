@@ -4,15 +4,14 @@
      conj! conj assoc assoc! dissoc dissoc! disj! contains? key val reverse rseq
      empty? empty class reduce
      #?@(:cljs [array])])
-  (:require
-            [clojure.core                   :as core
+  (:require [clojure.core              :as core
              #?@(:cljs [:refer [IEmptyableCollection]])]
             [clojure.string                 :as str]
     #?(:clj [seqspert.vector])
     #?(:clj [clojure.core.async             :as casync])
             [quantum.core.log               :as log]
             [quantum.core.collections.base
-              :refer [kw-map nempty?]]
+              :refer [kw-map]]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
                       ->byte
@@ -751,28 +750,39 @@
 
 (defnt containsk?
   {:imported "clojure.lang.RT.contains"}
-           ([#{string? array?}                            coll ^nat-long? n] (and (>= n 0) (<  (count coll))))
-  #?(:clj  ([#{clojure.lang.Associative    java.util.Map} coll           k] (.containsKey   coll k)))
-  #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} coll           k] (.contains      coll k)))
-  #?(:cljs ([#{+set? +map?}                               coll           k] (core/contains? coll k))) ; TODO find out how to make faster
-           ([^default                                     coll           k]
-             (if (nil? coll)
+           ([#{string? array?}                            xs ^nat-long? n] (and (>= n 0) (< (count xs))))
+  #?(:clj  ([#{clojure.lang.Associative    java.util.Map} xs           k] (.containsKey   xs k)))
+  #?(:clj  ([#{clojure.lang.IPersistentSet java.util.Set} xs           k] (.contains      xs k)))
+  #?(:cljs ([#{+set? +map?}                               xs           k] (core/contains? xs k))) ; TODO find out how to make faster
+           ([^default                                     xs           k]
+             (if (nil? xs)
                  false
                  (throw (->ex :not-supported
-                          (str "contains? not supported on type: " (-> coll class)))))))
+                          (str "contains? not supported on type: " (class xs)))))))
 
-#?(:clj (defalias contains? containsk?))
+(defnt contains?
+  ([#{array? ; TODO anything that `empty?` accepts
+      string? !string? keyword? m2m-chan?
+      +vector? tuple? transformer?
+      #?@(:clj [Collection Map])} xs] (empty? xs))
+  ([^default                      xs] (empty? xs))
+  ([#{string? array?}             xs ^nat-long? n])
+  ([#{#?@(:clj  [clojure.lang.Associative    java.util.Map
+                 clojure.lang.IPersistentSet java.util.Set])
+          :cljs [+set? +map?]}    xs           k] (contains? xs k))
+  ([^default                      xs           k] (contains? xs k)))
 
 (defnt containsv?
-  ([^string?  x elem]
-    (and (val? elem) (index-of x elem)))
-  ([#{keyword? symbol?} x elem]
-    (or (some-> x name      (containsv? elem))
-        (some-> x namespace (containsv? elem))))
-  ([^regex? x elem]
-    (val? (re-find elem x)))
-  ([          x elem]
-    (seq-or (fn= elem) x)))
+          ([^string?  x elem]
+            (and (val? elem) (index-of x elem)))
+  #?(:clj ([#{clojure.lang.IPersistentSet java.util.Set} xs k] (.contains xs k)))
+          ([#{keyword? symbol?} x elem]
+            (or (some-> x name      (containsv? elem))
+                (some-> x namespace (containsv? elem))))
+          ([^regex? x elem]
+            (val? (re-find elem x)))
+          ([          x elem]
+            (seq-or (fn= elem) x)))
 
 ; static Object getFrom(Object coll, Object key, Object notFound){
 ;   else if(coll instanceof Map) {

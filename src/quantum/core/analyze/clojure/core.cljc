@@ -4,10 +4,8 @@
    [[clojure.jvm.tools.analyzer :as ana]
     [clojure.tools.analyzer.jvm :as clj-ana]])
  #_(:cljs [clojure.tools.analyzer.js])
-    [quantum.core.collections.base :as cbase
-      :refer [kw-map]]
     [quantum.core.core
-      :refer [val?]]
+      :refer [kw-map val?]]
     [quantum.core.error            :as err
       :refer [ex!]]
     [quantum.core.fn

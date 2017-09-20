@@ -1,4 +1,5 @@
 (ns quantum.core.meta.dev
+  (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.fn
       :refer [fn1 fn-> fn->>]]
@@ -11,7 +12,7 @@
       :refer [defnt]]
     [quantum.core.type :as t]
     [quantum.core.collections :as coll
-      :refer [map+ map-vals+ cat+ nempty?
+      :refer [map+ map-vals+ cat+ contains?
               filter+ filter-keys+ filter-vals+ remove+ keys+ join seq-and]]))
 
 (def
@@ -59,7 +60,7 @@
                                                   (fn1 contains? :priority)
                                                   (fn-> :priority pred)))
                             (join {})))
-       (filter-vals+ nempty?)
+       (filter-vals+ contains?)
        (join         todos-map))))
 
 #?(:clj

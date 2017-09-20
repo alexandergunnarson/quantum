@@ -2,8 +2,8 @@
   (:require
     [quantum.core.error   :as err
       :refer [->ex throw-unless]]
-    [quantum.core.collections.base
-      :refer [nempty?]]
+    [quantum.core.untyped.collections
+      :refer [contains?]]
     [quantum.measure.reg  :as mreg]
     [quantum.measure.core :as meas]
     [quantum.measure.angle]
@@ -22,7 +22,7 @@
 
 (defn assert-types [& type-pairs]
   (doseq [[unit unit-types] type-pairs]
-    (throw-unless (nempty? unit-types)        (->ex "Unit not found" unit))
+    (throw-unless (contains? unit-types)        (->ex "Unit not found" unit))
     (throw-unless (-> unit-types count (= 1)) (->ex "Ambiguous units found" unit-types))))
 
 #?(:clj

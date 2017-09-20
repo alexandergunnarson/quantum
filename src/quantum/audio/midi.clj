@@ -10,7 +10,7 @@
       :refer [fn-and whenc whenf whenf1 xor cond-let]]
     [quantum.core.collections :as coll
       :refer [ffilter filter+ remove+ remove partition-all+ keys+ partition-all lpartition-all
-              cat lcat concatv nempty?
+              cat lcat concatv
               map+ map lmap map-indexed kw-map index-of index-of-pred
               cat each popl popr slice butlast last drop ldrop
               while-let lfor doseqi for fori red-for join reduce zip lzip]]

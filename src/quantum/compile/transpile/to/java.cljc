@@ -34,5 +34,5 @@
 
 ; ; Should probably be recursive
 ; (defn java-parse [args]
-;   (if (nempty? args)
+;   (if (contains? args)
 ;       ))

@@ -6,7 +6,7 @@
     [locking
      promise deliver, delay force, realized? future repeatedly count
      reduce, for
-     conj!
+     conj!, contains?
      map, map-indexed])
   (:require
     [clojure.core                      :as core]
@@ -17,7 +17,7 @@
  #_[[co.paralleluniverse.pulsar.async  :as async+]
     [co.paralleluniverse.pulsar.core   :as pasync]])
     [quantum.core.collections          :as coll
-      :refer [nempty? count red-for break repeatedly
+      :refer [contains? count red-for break repeatedly
               reduce, #_->objects
               doseqi, red-for, for
               conj!
@@ -266,7 +266,7 @@
     (let [result (red-for [c   chans
                            ret nil]
                    (locking c ; Because it needs to have a consistent view of when it's empty and take accordingly
-                     (when (nempty? c)
+                     (when (contains? c)
                        (reduced [(<!! c) c]))))]
       (whenc result nil?
         (do (wait!! 5)

@@ -1,4 +1,5 @@
 (ns quantum.core.macros.protocol
+  (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.core
       :refer [val?]]
@@ -10,8 +11,10 @@
     [quantum.core.logic                      :as logic
       :refer [whenp]]
     [quantum.core.collections.base           :as cbase
-      :refer [kw-map update-first update-val nempty? ensure-set]]
-    [quantum.core.type.core                  :as tcore]))
+      :refer [kw-map update-first update-val ensure-set]]
+    [quantum.core.type.core                  :as tcore]
+    [quantum.core.untyped.collections        :as ucoll
+      :refer [contains?]]))
 
 (defn with-protocol-arglist-type-hint
   [sym lang arglist-ct]
@@ -82,7 +85,7 @@
   ; ((fn [^"[B" x ^long n] (clojure.lang.RT/aget x n)) my-byte-array abcde) => 0, no reflection
   [{:keys [genned-protocol-name genned-protocol-method-name
            reify-body lang first-types]}]
-  (assert (nempty? reify-body))
+  (assert (contains? reify-body))
   (assert (val? genned-protocol-name))
   (assert (val? genned-protocol-method-name))
 

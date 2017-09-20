@@ -1,7 +1,8 @@
 (ns quantum.core.macros.reify
+  (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.collections.base     :as cbase
-      :refer [update-first update-val ensure-set kw-map nempty?]]
+      :refer [update-first update-val ensure-set kw-map]]
     [quantum.core.error                :as err
       :refer [->ex]]
     [quantum.core.fn                   :as fn
@@ -10,7 +11,9 @@
     [quantum.core.logic                :as logic
       :refer [whenc fn-and]]
     [quantum.core.macros.transform     :as trans]
-    [quantum.core.macros.type-hint     :as th]))
+    [quantum.core.macros.type-hint     :as th]
+    [quantum.core.untyped.collections  :as ucoll
+      :refer [contains?]]))
 
 (defn gen-reify-def
   [{:keys [ns- sym ns-qualified-interface-name reify-body]}]
@@ -57,7 +60,7 @@
                (cbase/frequencies-by first)
                (group-by val)
                (<- dissoc 1))
-        _ (when (nempty? duplicate-methods)
+        _ (when (contains? duplicate-methods)
             (log/pr        :always "Duplicate methods for" sym ":")
             (log/ppr-hints :always duplicate-methods)
             (throw (->ex "Duplicate methods")))]

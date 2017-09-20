@@ -1,6 +1,6 @@
 (ns ^{:doc "Metadata extraction and parsing for files."}
   quantum.core.io.meta
-        (:refer-clojure :exclude [reduce])
+        (:refer-clojure :exclude [reduce contains?])
         (:require
           [quantum.core.io.utils          :as iou  ]
           [quantum.core.process           :as proc ]
@@ -10,7 +10,7 @@
           [quantum.core.error             :as err
             :refer [->ex]]
           [quantum.core.collections       :as coll
-            :refer [map+ dropr in? kw-map reduce nempty?]]
+            :refer [map+ dropr in? kw-map reduce contains?]]
           [quantum.core.convert           :as conv
             :refer [->keyword]]
           [quantum.core.fn                :as fn
@@ -72,7 +72,7 @@
   [file]
   (let [{:as result :keys [err out]} (proc/exec! "mediainfo" file)]
     (log/pr ::debug "Path:" file "Mediainfo result:" result)
-    (if (nempty? err)
+    (if (contains? err)
         (throw (->ex "Mediainfo error" {:mediainfo-message err})))
         (-> out parse-media-metadata))))
 

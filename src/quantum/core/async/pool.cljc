@@ -14,7 +14,7 @@
     [quantum.core.fn
       :refer [<- fn1 fn& fnl, fn-> fn->>, call with-do]]
     [quantum.core.collections    :as coll
-      :refer [for, nempty? kw-map, update, assoc-in, join, key val, updates
+      :refer [for, contains? kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]
     [quantum.core.error          :as err
       :refer [->ex catch-all TODO]]
@@ -85,7 +85,7 @@
                 (catch-all
                   (let [now                 (System/nanoTime)
                         [prevs [_ curr-fs]] (map/split-key now @queue)]
-                    (when (or (nempty? prevs) (nempty? curr-fs))
+                    (when (or (contains? prevs) (contains? curr-fs))
                       (doseq [[_ prev-fs] prevs]
                         (doseq [prev-f prev-fs] (prev-f)))
                       (when curr-fs

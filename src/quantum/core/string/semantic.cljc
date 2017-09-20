@@ -2,8 +2,6 @@
   (:require
     [clojure.set         :as set]
     [cuerdas.core        :as str+]
-    [quantum.core.collections.base
-      :refer [nempty?]]
     [quantum.core.macros :as macros
       :refer [defnt]]
     [quantum.core.vars   :as var

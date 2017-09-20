@@ -6,7 +6,7 @@
     [quantum.core.collections        :as coll
       :refer [map+ map-vals', !map-indexed+, !remove-indexed+, vals+
               join reduce, each+, get, indices+, cat+
-              nempty?, subset?, assoc-default, count]]
+              contains?, subset?, assoc-default, count]]
     [quantum.core.compare            :as comp
       :refer [reduce-min reduce-max]]
     [quantum.core.data.validated     :as dv]
@@ -40,7 +40,7 @@
   (->> xs
        (map+  (fn [[x•:train0 x•:validation x•:train1]]
                 {:train (join x•:train0 x•:train1) :validation x•:validation}))
-       (each+ (fn [{:keys [train validation]}] (err/assert (and (nempty? train) (nempty? validation)))))))
+       (each+ (fn [{:keys [train validation]}] (err/assert (and (contains? train) (contains? validation)))))))
 
 (defn accuracy:dataset+ [i• model {:keys [instances targets accuracyf]}]
   (->> i• (map+ (fn [i] (accuracyf (get instances i) (get targets i) model)))))

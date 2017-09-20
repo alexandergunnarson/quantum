@@ -27,11 +27,9 @@
     [quantum.core.macros        :as macros
       :refer [defnt defnt']]
     [quantum.core.collections.core
-      :refer [containsv?]]
+      :refer [contains? containsv?]]
     [quantum.core.collections.logic
       :refer [seq-and]]
-    [quantum.core.collections.base
-      :refer [nempty?]]
     [quantum.core.string.format :as form]
     [quantum.core.string.regex  :as regex]
     [quantum.core.vars          :as var
@@ -103,7 +101,7 @@
 (defnt numeric?
 #?(:clj
   ([^char    c] (contains? num-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fnl contains? num-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? num-chars) s))))
 
 (defnt numeric-readable?
 #?(:clj
@@ -113,7 +111,7 @@
 (defnt upper?
 #?(:clj
   ([^char    c] (contains? upper-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fnl contains? upper-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? upper-chars) s))))
 
 (defalias ->upper form/->upper)
 ; Converts string to all upper-case respecting
@@ -125,7 +123,7 @@
 (defnt lower?
 #?(:clj
   ([^char    c] (contains? lower-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fnl contains? lower-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? lower-chars) s))))
 
 (defalias ->lower form/->lower)
 ; Converts string to all lower-case respecting
@@ -137,12 +135,12 @@
 (defnt alpha?
 #?(:clj
   ([^char    c] (contains? alpha-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alpha-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fn1 contains? alpha-chars) s))))
 
 (defnt alphanum?
 #?(:clj
   ([^char    c] (contains? alphanum-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? alphanum-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fn1 contains? alphanum-chars) s))))
 
 (defnt letters?
   "Checks if string contains only letters.
@@ -159,12 +157,12 @@
   ([^char    c] (contains? whitespace-chars c)))
   ([^string? s] (seq-and (fn1 contains? whitespace-chars) s)))
 
-(def whitespace? (fn-and nempty? blank?))
+(def whitespace? (fn-and contains? blank?))
 
 (defnt line-terminator?
 #?(:clj
   ([^char    c] (contains? line-terminator-chars c)))
-  ([^string? s] (and (nempty? s) (seq-and (fn1 contains? line-terminator-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fn1 contains? line-terminator-chars) s))))
 
 (defalias capitalize form/capitalize)
 

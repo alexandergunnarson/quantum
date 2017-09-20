@@ -4,7 +4,7 @@
     [quantum.core.analyze.clojure.predicates :as anap ]
     [quantum.core.data.map                   :as map  ]
     [quantum.core.collections                :as coll
-      :refer [containsv? kw-map popr popl nempty? in? dropl]]
+      :refer [containsv? kw-map popr popl contains? in? dropl]]
     [quantum.core.convert                    :as conv
       :refer [->name]]
     [quantum.core.error                      :as err
@@ -407,9 +407,9 @@
                         finallys     (->> args (filter (fn-and seq? finally?)))
                         ^Fn do-eval  (fn->> apply-do-form eval-form)
                         try-str      (->> try-body do-eval (<- str "\n") (util/bracket "try"))
-                        catch-str    (when (nempty? catches)
+                        catch-str    (when (contains? catches)
                                        (->> catches first rest rest do-eval (<- str "\n") (util/bracket (str/sp "catch" (str/paren (-> catches first second str demunge-class))))))
-                        finally-str  (when (nempty? finallys)
+                        finally-str  (when (contains? finallys)
                                        (->> finallys first rest do-eval (<- str "\n") (util/bracket "finally")))]
                     (str/sp try-str catch-str finally-str)))]
            (condp = *lang*
@@ -461,11 +461,11 @@
                           _ (println "BLOCK EVALED IN DO" block-evaled)
                           ^String block
                             (->> block-evaled
-                                 (<- whenf (fn-and nempty?
+                                 (<- whenf (fn-and contains?
                                                    (fn-not (fn1 str/ends-with? "}")))
                                      util/scolon) ; Could be a macro, in which case it wouldn't show up in the .js file
-                                 (<- whenf nempty? (partial str spacing)))]
-                      (when (nempty? block) (reset! prev-block block))
+                                 (<- whenf contains? (partial str spacing)))]
+                      (when (contains? block) (reset! prev-block block))
                       block)))
                 (apply str))))
      'fn        (fn fn-fn     [[spec-sym unk & body]] (eval-form (apply list 'lambda    unk body)))

@@ -1,6 +1,11 @@
 (ns quantum.core.untyped.collections
-  (:refer-clojure :exclude [assoc-in flatten get])
+  (:refer-clojure :exclude
+    [assoc-in contains? flatten get])
   (:require [clojure.core :as core]))
+
+(defn contains?
+  ([xs] (boolean (seq xs)))
+  ([xs k] (core/contains? xs k)))
 
 ;; ===== SOCIATIVE ===== ;;
 

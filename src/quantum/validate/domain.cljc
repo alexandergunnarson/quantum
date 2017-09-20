@@ -1,7 +1,8 @@
 (ns quantum.validate.domain
+  (:refer-clojure :exclude [contains?])
   (:require [quantum.validate.regex     :as v.regex]
             [quantum.core.collections   :as coll
-              :refer [in? nempty?]]
+              :refer [in? contains?]]
             [quantum.core.string        :as str    ]
             [quantum.core.string.encode :as encode ])
   #?(:clj (:import java.util.regex.Matcher
@@ -1197,7 +1198,7 @@
          (if (> (count domain) 253)
              false
              (let [groups (v.regex/match domain domain-regex)]
-               (if (nempty? groups)
+               (if (contains? groups)
                    (valid-tld? (first groups))
                    (and allow-local? (v.regex/valid? domain hostname-regex)))))))))
 
