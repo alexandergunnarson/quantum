@@ -1,5 +1,7 @@
 # Naming conventions
 
+## Symbols
+
 - `->`+         : constructor
                 : 'convert to'
 - +`->`         : 'convert from'
@@ -25,3 +27,21 @@
 - +`>!`         : 'green-thread-blocking'
 - +`>!!`        : 'thread-blocking'
 - `i`(`:`|`-`)+ : 'index'
+
+## Comparison to Clojure in specific function naming
+
+`nil?`  -> `nil?`
+`some?` -> `val?`, because `nil` represents unvaluedness : `(when (val? x) ...)`
+
+`seq` (to convert to a sequence) -> `->seq`
+`seq` (to test non-emptiness)    -> `contains?` (1-arity) because if it contains anything at all, it's non-empty : `(when (contains? xs) ...)`
+`empty?`                         -> `empty?` (only of non-nil collections)
+
+`some`   -> `coll/or` , perhaps `seq-or`
+`every?` -> `coll/and`, perhaps `seq-and`
+
+*Logician George Boolos strongly urged that "contains" be used for membership only.*
+`contains?`                       -> `contains?` (including for non-associative structures)
+is subsequence within sequential  -> `subseq?`
+*Logician George Boolos strongly urged that "includes" be used for the subset relation only.*
+matches pattern within collection -> `includes?`
