@@ -20,30 +20,19 @@
 
 ;; ===== NODES ===== ;;
 
-(deftype Unbound [sym #_t/symbol?]
+(defrecord Unbound [sym #_t/symbol?]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `unbound sym))
-  Object
-    (equals [this that]
-      (or (== this that)
-          (and (instance? Unbound that)
-               (= sym (.-sym ^Unbound that))))))
+    (-edn [this] (list `unbound sym)))
 
 (defn unbound [sym] (Unbound. sym))
 
-(deftype Literal [form #_::t/literal, spec #_::t/spec]
+(defrecord Literal [form #_::t/literal, spec #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `literal form spec))
-  Object
-    (equals [this that]
-      (or (== this that)
-          (and (instance? Literal that)
-               (= form (.-form ^Literal that))
-               (= spec (.-spec ^Literal that))))))
+    (-edn [this] (list `literal form spec)))
 
 (defn literal
   ([form spec] (Literal. form spec)))
@@ -61,18 +50,12 @@
 
 ;; ===== SPECIAL CALLS ===== ;;
 
-(deftype Quoted
+(defrecord Quoted
   [form #_::t/form, spec #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `quoted form spec))
-  Object
-    (equals [this that]
-      (or (== this that)
-          (and (instance? Quoted that)
-               (= form (.-form ^Quoted that))
-               (= spec (.-spec ^Quoted that))))))
+    (-edn [this] (list `quoted form spec)))
 
 (defn quoted [form spec] (Quoted. form spec))
 
