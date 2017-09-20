@@ -1,11 +1,13 @@
 (ns quantum.test.core.defnt
   (:require
-    [quantum.core.test        :as test
-      :refer [deftest testing is is= throws]]
-    [quantum.core.defnt :as ns
-      :refer [->type-info ->expr-info !ref ->typed]]
     [quantum.core.core
-      :refer [istr]])
+      :refer [istr]]
+    [quantum.core.defnt        :as this
+      :refer [->type-info ->expr-info !ref ->typed]]
+    [quantum.core.test         :as test
+      :refer [deftest testing is is= throws]]
+    [quantum.core.untyped.analyze.expr :as xp]
+    [quantum.core.untyped.type :as t])
 #?(:clj
   (:import
     [clojure.lang Keyword Symbol]
@@ -71,7 +73,94 @@ z = #{short >= 5, boolean}
 (->typed {'n (!ref (->type-info {:infer? true}))}
   '(Numeric/isTrue (Numeric/isZero n)))
 
-(def ff ns/fn-type-satisfies-expr?)
+
+(deftest test:methods->spec
+  (testing "Class hierarchy"
+    (is=
+      (this/methods->spec
+        [{:rtype Object :argtypes [t/int t/char]}
+         {:rtype Object :argtypes [String]}
+         {:rtype Object :argtypes [CharSequence]}
+         {:rtype Object :argtypes [Object]}
+         {:rtype Object :argtypes [Comparable]}])
+      false))
+  (testing "Complex dispatch based off of `Numeric/bitAnd`"
+    (let [method-data
+           ]
+      (is=
+        (this/methods->spec
+          [{:rtype t/int   :argtypes [t/int   t/char]}
+           {:rtype t/int   :argtypes [t/int   t/byte]}
+           {:rtype t/int   :argtypes [t/int   t/short]}
+           {:rtype t/int   :argtypes [t/int   t/int]}
+           {:rtype t/long  :argtypes [t/short t/long]}
+           {:rtype t/int   :argtypes [t/short t/int]}
+           {:rtype t/short :argtypes [t/short t/short]}
+           {:rtype t/long  :argtypes [t/long  t/long]}
+           {:rtype t/long  :argtypes [t/long  t/int]}
+           {:rtype t/long  :argtypes [t/long  t/short]}
+           {:rtype t/long  :argtypes [t/long  t/char]}
+           {:rtype t/long  :argtypes [t/long  t/byte]}
+           {:rtype t/long  :argtypes [t/int   t/long]}
+           {:rtype t/char  :argtypes [t/char  t/byte]}
+           {:rtype t/long  :argtypes [t/byte  t/long]}
+           {:rtype t/int   :argtypes [t/byte  t/int]}
+           {:rtype t/short :argtypes [t/byte  t/short]}
+           {:rtype t/char  :argtypes [t/byte  t/char]}
+           {:rtype t/byte  :argtypes [t/byte  t/byte]}
+           {:rtype t/short :argtypes [t/short t/char]}
+           {:rtype t/short :argtypes [t/short t/byte]}
+           {:rtype t/long  :argtypes [t/char  t/long]}
+           {:rtype t/long  :argtypes [t/char  t/long t/long]}
+           {:rtype t/char  :argtypes [t/char  t/char]}
+           {:rtype t/short :argtypes [t/char  t/short]}
+           {:rtype t/int   :argtypes [t/char  t/int]}])
+        (xp/casef count
+          2 (xp/condpf-> t/>= (xp/get 0)
+              t/int
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/char  t/int
+                  t/byte  t/int
+                  t/short t/int
+                  t/int   t/int
+                  t/long  t/long)
+              t/short
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/long  t/long
+                  t/int   t/int
+                  t/short t/short
+                  t/char  t/short
+                  t/byte  t/short)
+              t/long
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/long  t/long
+                  t/int   t/long
+                  t/short t/long
+                  t/char  t/long
+                  t/byte  t/long)
+              t/char
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/byte  t/char
+                  t/long  t/long
+                  t/char  t/char
+                  t/short t/short
+                  t/int   t/int)
+              t/byte
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/long  t/long
+                  t/int   t/int
+                  t/short t/short
+                  t/char  t/char
+                  t/byte  t/byte))
+          3 (xp/condpf-> t/>= (xp/get 0)
+              t/char
+                (xp/condpf-> t/>= (xp/get 1)
+                  t/long
+                    (xp/condpf-> t/>= (xp/get 2)
+                      t/long t/long))))))))
+
+
+(def ff this/fn-type-satisfies-expr?)
 
 (deftest test:fn-type-satisfies-expr?
   (is= (ff )))
@@ -158,7 +247,7 @@ z = #{short >= 5, boolean}
             false-form [3]
             branch     [true false]]
       (testing (istr "conditional branch pruning = ~{pruning?}; form = ~{(list 'if true-form false-form)}; branch = ~{branch}")
-        (binding [ns/*conditional-branch-pruning?* pruning?]
+        (binding [this/*conditional-branch-pruning?* pruning?]
           (doseq [pred (get objects branch)]
             (is= (->typed (list 'if pred true-form false-form))
                  ((get-in ->typed:if:test-cases [pruning? true-form false-form branch])
@@ -167,18 +256,6 @@ z = #{short >= 5, boolean}
 
 
 ;; ----- Overload resolution -----
-
-(t/spec primitive?          (t/or boolean? byte? char? int? long? float? double?))
-(t/spec numeric-primitive?  (t/- primitive? boolean?))
-
-(t/spec numerically-byte?   (t/and integer? #(<= -128                 % 127)))
-(t/spec numerically-short?  (t/and integer? #(<= -32768               % 32767)))
-(t/spec numerically-char?   (t/and integer? #(<=  0                   % 65535)))
-(t/spec numerically-unsigned-short? numerically-char?)
-(t/spec numerically-int?    (t/and integer? #(<= -2147483648          % 2147483647)))
-(t/spec numerically-long?   (t/and integer? #(<= -9223372036854775808 % 9223372036854775807)))
-(t/spec numerically-float?  (t/and decimal? representable-by-float?))  ; because there are 'holes'
-(t/spec numerically-double? (t/and decimal? representable-by-double?)) ; because there are 'holes'
 
 ; TODO use logic programming and variable unification e.g. `?1` `?2` ?
 
@@ -291,122 +368,6 @@ z = #{short >= 5, boolean}
            ([x (s/or string? !array-list?), k ?                ] (get x k nil))
   #?(:cljs ([x array-1d?                  , k js-integer?      ] (core/aget x k)))
   #?(:clj  ([x ?                          , k ?                ] (Array/get x k))))
-
-(defnt reduce*
-  "Much of this content taken from clojure.core.protocols for inlining and
-   type-checking purposes."
-  {:attribution "alexandergunnarson"}
-         ([xs nil?, f ?] (f))
-         ([xs nil?, f (fn-of 2), init ?] init)
-         ([z fast_zip.core.ZipperLocation, f ?, init ?]
-           (loop [xs (zip/down z) v init]
-             (if (some? z)
-                 (let [ret (f v z)]
-                   (if (reduced? ret)
-                       @ret
-                       (recur (zip/right xs) ret)))
-                 v)))
-         ([arr array?, f ?, init ?] ; Adapted from `areduce`
-           #?(:clj  (loop [i 0 v init]
-                      (if (< i (Array/count arr))
-                          (let [ret (f v (Array/get arr i))]
-                            (if (reduced? ret)
-                                @ret
-                                (recur (unchecked-inc i) ret)))
-                          v))
-              :cljs (array-reduce arr f init)))
-         ([xs !+vector?, f ?, init ?] ; because transient vectors aren't reducible
-           (let [ct (#?(:clj .count :cljs count) xs)] ; TODO fix for CLJS
-             (loop [i 0 v init]
-               (if (< i ct)
-                   (let [ret (f v (#?(:clj .valAt :cljs get) xs i))] ; TODO fix for CLJS
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
-                   v))))
-         ([s string?, f ?, init ?]
-           (let [ct (#?(:clj .length :cljs .-length) s)]
-             (loop [i 0 v init]
-               (if (< i ct)
-                   (let [ret (f v (.charAt s i))]
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
-                   v))))
-#?(:clj  ([xs StringSeq, f ?, init ?]
-           (let [s (.s xs)]
-             (loop [i (.i xs) v init]
-               (if (< i (.length s))
-                   (let [ret (f v (.charAt s i))]
-                     (if (reduced? ret)
-                         @ret
-                         (recur (unchecked-inc i) ret)))
-                   v)))))
-#?(:clj  ([(s/or PersistentVector ; vector's chunked seq is faster than its iter
-                 LazySeq ; for range
-                 ASeq) xs f] ; aseqs are iterable, masking internal-reducers
-           (if-let [s (seq xs)]
-             (clojure.core.protocols/internal-reduce (next s) f (first s))
-             (f))))
-#?(:clj  ([xs (s/or PersistentVector ; vector's chunked seq is faster than its iter
-                    LazySeq ; for range
-                    ASeq)
-           f ?, init ?]  ; aseqs are iterable, masking internal-reducers
-           (let [s (seq xs)]
-             (clojure.core.protocols/internal-reduce s f init))))
-         ([x transformer?, f ?]
-           (let [rf ((.-xf x) f)]
-             (rf (reduce* (.-prev x) rf (rf)))))
-         ([x transformer?, f ?, init ?]
-           (let [rf ((.-xf x) f)]
-             (rf (reduce* (.-prev x) rf init))))
-         ([x  chan?, f ?, init ?] (async/reduce f init x)) ; TODO spec this
-#?(:cljs ([xs +map?, f ?, init ?] (#_(:clj  clojure.core.protocols/kv-reduce
-                                   :cljs -kv-reduce) ; in order to use transducers...
-                                -reduce-seq xs f init)))
-#?(:cljs ([xs +set?, f ?, init ?] (-reduce-seq xs f init)))
-         ([n integer?, f ?, init ?]
-           (loop [i 0 v init]
-             (if (< i n)
-                 (let [ret (f v i)]
-                   (if (reduced? ret)
-                       @ret
-                       (recur (unchecked-inc i) ret)))
-                 v)))
-         ;; `iter-reduce`
-#?(:clj  ([xs (s/or APersistentMap$KeySeq
-                    APersistentMap$ValSeq
-                    Iterable), f ?]
-           (let [iter (.iterator xs)]
-             (if (.hasNext iter)
-                 (loop [ret (.next iter)]
-                   (if (.hasNext iter)
-                       (let [ret (f ret (.next iter))]
-                         (if (reduced? ret)
-                             @ret
-                             (recur ret)))
-                       ret))
-                 (f)))))
-         ;; `iter-reduce`
-#?(:clj  ([xs (s/or APersistentMap$KeySeq
-                    APersistentMap$ValSeq
-                    Iterable), f ?, init ?]
-           (let [iter (.iterator xs)]
-             (loop [ret init]
-               (if (.hasNext iter)
-                   (let [ret (f ret (.next iter))]
-                     (if (reduced? ret)
-                         @ret
-                         (recur ret)))
-                   ret)))))
-#?(:clj  ([xs IReduce    , f ?        ] (.reduce   xs f)))
-#?(:clj  ([xs IKVReduce  , f ?, init ?] (.kvreduce xs f init)))
-#?(:clj  ([xs IReduceInit, f ?, init ?] (.reduce   xs f init)))
-         ([xs CollReduce , f ?] (#?(:clj  clojure.core.protocols/coll-reduce
-                                    :cljs -reduce) xs f))
-         ([xs CollReduce , f (fn-of 2), init ?]
-           (#?(:clj  clojure.core.protocols/coll-reduce
-               :cljs -reduce) xs f init)))
 
 (defnt transformer
   "Given a reducible collection, and a transformation function transform,
