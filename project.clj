@@ -116,10 +116,10 @@
          [org.clojure/math.combinatorics        "0.1.3"           ]
          [net.mikera/core.matrix                "0.57.0"
            :exclusions [org.clojure/clojure]]
-         [quantum/java                          "1.7"             ]
+         [quantum/java                          "1.8.1"           ]
          [uncomplicate/neanderthal              "0.8.0"           ] ; BLAS
        ; ==== PRINT ====
-         [fipp                                  "0.6.8"
+         [fipp                                  "0.6.10"
            :exclusions [org.clojure/core.rrb-vector]]
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.1"           ]
@@ -446,7 +446,7 @@
                            (quantum.core.print.prettier/extend-pretty-printing!)
                            (clojure.main/repl
                              :print  quantum.core.print/ppr
-                             :caught quantum.core.print/ppr))}
+                             :caught quantum.core.print/ppr-error))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
   :java-agents [; This for HTTP/2 support

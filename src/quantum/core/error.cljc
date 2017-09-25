@@ -4,6 +4,7 @@
   quantum.core.error
   (:refer-clojure :exclude [assert])
   (:require
+    [clojure.core                  :as core]
     [clojure.string                :as str]
     [slingshot.slingshot           :as try]
     [quantum.core.core
@@ -13,7 +14,6 @@
       :refer [fnl fn1 rcomp fn']]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env case-env*]]
-    [quantum.core.log              :as log]
     [quantum.core.vars             :as var
       :refer [defalias]])
 #?(:cljs
@@ -21,81 +21,114 @@
     [quantum.core.error            :as self
       :refer [with-log-errors assert]])))
 
-(def ^{:todo {0 "Finish up `conditions` fork"}} annotations nil)
+(def ^{:todo        {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}
+       :annotations nil)
+
+;; =================================================================
+
+;; ----- GENERIC ERROR ----- ;;
 
 (defn generic-error [env]
   (case-env* env :clj 'java.lang.Throwable :cljs 'js/Error))
 
-#?(:clj
-(defmacro catch-all
-  "Cross-platform try/catch/finally.
+(def generic-error-type #?(:clj Throwable :cljs js/Error))
+(def error? (fnl instance? generic-error-type))
+#?(:clj (defalias throwable? error?))
 
-   Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
-  {:from 'taoensso.truss.impl/catching
-   :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
-  ([try-expr                     ] `(catch-all ~try-expr _# nil))
-  ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
-  ([try-expr error-sym catch-expr]
-   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
-  ([try-expr error-sym catch-expr finally-expr]
-   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
+;; ----- EXCEPTION-INFO ----- ;;
 
-
-(def error? (fnl instance? #?(:clj Throwable :cljs js/Error)))
 (def ex-info-type #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo))
 (def ex-info? (fnl instance? ex-info-type))
 
-(defrecord Err [type msg objs]
-  #?@(:clj [Object
-  (toString [this]
-    (str (into {} this)))]))
+(defn ->ex-info
+  ([data]     (ex-info "Exception" data))
+  ([msg data] (ex-info msg         data)))
 
-#?(:clj
-     (do (defmethod print-method Err [v ^java.io.Writer w]
-           (.write w (str v))))
-   :cljs
- (extend-type Err
-   IPrintWithWriter
-     (-pr-writer [this writer _]
-       (write-all writer (into {} this)))))
-
-(defn ->err
-  "Constructor for |Err|."
-  ([type]          (if (map? type)
-                       (map->Err type)
-                       (Err. type nil nil)))
-  ([type msg]      (Err. type msg nil ))
-  ([type msg objs] (Err. type msg objs)))
-
+;; TODO replace with `->err`
 (defn ->ex
   "Creates an exception."
-  ([type]          (ex-info (name type) (->err type type)))
-  ([msg objs]      (ex-info (str msg)   (->err msg  msg objs)))
-  ([type msg objs] (ex-info msg         (->err type msg objs))))
+  ([type]          (ex-info (name type) {:type type}))
+  ([msg objs]      (ex-info (str msg)   {:type msg  :msg msg :objs objs}))
+  ([type msg objs] (ex-info msg         {:type type :msg msg :objs objs})))
 
-(def throw-ex (rcomp ->ex (fn1 throw)))
-(defalias ex! throw-ex)
+(def ex! (rcomp ->ex (fn1 throw)))
 
-(defn ->ex-info
-  ([objs]     (ex-info "Exception" objs))
-  ([msg objs] (ex-info msg         objs)))
+(defn ?message [x] (when (error? x) #?(:clj (.getLocalizedMessage ^Throwable x) :cljs (.-message x))))
+(def ?ex-data ex-data)
 
-(def throw-info (rcomp ->ex-info (fn1 throw)))
+;; ----- (RECORD-BASED) ERROR ----- ;;
 
-(defn ?message [x] (when (error? x) #?(:clj (.getMessage ^Throwable x) :cljs (.-message x))))
-(defn ?ex-data [x] (when (ex-info? x) (ex-data x)))
+#?(:clj  #_(defrecord Error [ident message data trace cause]) ; defined in Java as quantum.core.error.Error
+   :cljs (defrecord Error [ident message data trace cause]))
 
-(defn ex->map
-  "Transforms an exception into a map with the keys :name, :message, :trace, and :ex-data, if applicable."
-  [e]
-  #?(:clj  (Throwable->map e)
-     :cljs (do (assert (instance? js/Error e) {:e e})
-               {:cause   nil
-                :via     [{:type    nil
-                           :message (.-message e)
-                           :at      nil
-                           :data    (?ex-data e)}]
-                :trace   (.-trace e)}))) ; TODO str->vec based on browser via goog.debug.*
+(def error-map-type #?(:clj quantum.core.error.Error :cljs quantum.core.error/Error))
+(def error-map? (fnl instance? error-type))
+
+#?(:clj
+(defn >root-cause [x]
+  (core/assert (error? x))
+  (if-let [cause0 (.getCause ^Throwable x)]
+    (loop [cause cause0]
+      (if-let [cause' (.getCause cause)]
+        (recur cause')
+        cause))
+    x)))
+
+#?(:clj
+(defn >via [x]
+  (core/assert (error? x))
+  (loop [via [] ^Throwable t x]
+    (if t
+        (recur (conj via t) (.getCause t))
+        (when-not (empty? via) via)))))
+
+(defn >err
+  "Transforms `x` into an `Error`: a record with at least the keys #{:ident :message :data :trace :cause}.
+   In Clojure, similar to `Throwable->map`."
+  {:todo #{"Support `:via`?"}}
+  ([] #?(:clj  (quantum.core.error.Error. nil nil nil nil nil)
+         :cljs (>err (js/Error.))))
+  ([x]
+    (cond (error-map? x)
+            x
+          (map? x)
+            #?(:clj  (quantum.core.error.Error.
+                       (:ident x) (:message x) (:data x) (:trace x) (:cause x)
+                       (meta x) (dissoc x :ident :message :data :trace :cause))
+               :cljs (Error->map x))
+          (error? x)
+            #?(:clj  (let [^Throwable t x]
+                       (quantum.core.error.Error.
+                         nil (.getLocalizedMessage t) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
+                         (meta t)
+                         {:type (class t)}))
+               :cljs (with-meta
+                       (-> (quantum.core.error.Error. (.-name x) (.-message x) (?ex-data x) (.-stack x) (.-cause x))
+                           ;; other non-standard fields
+                           (cond-> (.-description  x) (assoc :description   (.-description  x))
+                                   (.-number       x) (assoc :number        (.-number       x))
+                                   (.-fileName     x) (assoc :file-name     (.-fileName     x))
+                                   (.-lineNumber   x) (assoc :line-number   (.-lineNumber   x))
+                                   (.-columnNumber x) (assoc :column-number (.-columnNumber x))))
+                       (meta x)))
+          (string? x)
+            (quantum.core.error.Error. nil x nil nil nil)
+          :else
+            (quantum.core.error.Error. nil nil x nil nil)))
+  ([a0 a1]
+    (if (string? a0)
+        (let [message a0 data a1]
+          (quantum.core.error.Error. nil message data nil nil))
+        (let [ident a0 data a1]
+          (quantum.core.error.Error. ident nil data nil nil))))
+  ([ident message data]
+    (quantum.core.error.Error. ident message data nil nil))
+  ([ident message data trace]
+    (quantum.core.error.Error. ident message data trace nil))
+  ([ident message data trace cause]
+    (quantum.core.error.Error. ident message data trace cause)))
+
+(def err! (rcomp >err (fn1 throw)))
 
 #?(:clj
 (defmacro throw-unless
@@ -117,6 +150,20 @@
   [expr throw-content]
   `(let [expr# ~expr]
      (if-not expr# expr# (throw ~throw-content)))))
+
+#?(:clj
+(defmacro catch-all
+  "Cross-platform try/catch/finally.
+
+   Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
+  {:from 'taoensso.truss.impl/catching
+   :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
+  ([try-expr                     ] `(catch-all ~try-expr _# nil))
+  ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
+  ([try-expr error-sym catch-expr]
+   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
+  ([try-expr error-sym catch-expr finally-expr]
+   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
 
 #?(:clj
 (defmacro with-catch
@@ -191,21 +238,9 @@
 #?(:clj (defalias try+   try/try+  ))
 #?(:clj (defalias throw+ try/throw+))
 
-#?(:clj (defmacro warn! [e] `(log/ppr :warn (ex->map ~e))))
-
 (defn todo ([]    (throw (->ex :todo "This feature has not yet been implemented." nil)))
            ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg) nil))))
 (defalias TODO todo)
 
-#?(:clj
-(defmacro with-log-errors [k & args] `(catch-all (do ~@args) e# (log/ppr ~k e#))))
-
-(defn wrap-log-errors [k f] ; TODO find a cleaner way to do this
-  (fn ([]                       (with-log-errors k (f)                           ))
-      ([a0]                     (with-log-errors k (f a0)                        ))
-      ([a0 a1]                  (with-log-errors k (f a0 a1)                     ))
-      ([a0 a1 a2]               (with-log-errors k (f a0 a1 a2)                  ))
-      ([a0 a1 a2 a3]            (with-log-errors k (f a0 a1 a2 a3)               ))
-      ([a0 a1 a2 a3 a4]         (with-log-errors k (f a0 a1 a2 a3 a4)            ))
-      ([a0 a1 a2 a3 a4 a5]      (with-log-errors k (f a0 a1 a2 a3 a4 a5)         ))
-      ([a0 a1 a2 a3 a4 a5 & as] (with-log-errors k (apply f a0 a1 a2 a3 a4 a5 as)))))
+(defn not-supported  [name- x] (->ex (str "`" name- "` not supported on") {:x (type x)}))
+(defn not-supported! [name- x] (throw (not-supported name- x)))

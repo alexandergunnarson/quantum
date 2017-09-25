@@ -780,4 +780,10 @@ public class Numeric {
     // ============================ REM ================================ //
 
     public static long   rem (final long   a, final long   b) { return a % b; }
+
+    // ============================ EVEN? ================================ //
+
+    public static boolean isEven (final long x) {
+        return isZero(bitAnd(x, 1));
+    }
 }
