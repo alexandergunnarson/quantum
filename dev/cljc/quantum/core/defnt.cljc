@@ -12,13 +12,11 @@
     [clojure.core             :as c]
     [quantum.core.cache       :as cache
       :refer [defmemoized]]
-    [quantum.core.collections.base
-      :refer [prewalk postwalk walk dissoc-if]]
     [quantum.core.core
       :refer [?deref ->sentinel]]
     [quantum.core.data.set    :as set]
     [quantum.core.error
-      :refer [TODO]]
+      :refer [TODO err!]]
     [quantum.core.fn
       :refer [aritoid fn1 fnl fn', fn-> fn->> <-, rcomp
               firsta seconda]]
@@ -35,11 +33,12 @@
     [quantum.core.type.core            :as tcore]
     [quantum.core.untyped.analyze.ast  :as ast]
     [quantum.core.untyped.analyze.expr :as xp]
-    [quantum.core.untyped.collections  :as coll
-      :refer [assoc-in get]]
-    [quantum.core.untyped.collections.logic :as coll&
+    [quantum.core.untyped.collections  :as ucoll
+      :refer [assoc-in dissoc-if get]]
+    [quantum.core.untyped.collections.logic :as ucoll&
       :refer [every?]]
-    [quantum.core.untyped.collections.tree :as tree]
+    [quantum.core.untyped.collections.tree :as tree
+      :refer [prewalk postwalk walk]]
     [quantum.core.untyped.compare  :as comp
       :refer [==]]
     [quantum.core.untyped.loops    :as loops]
@@ -358,8 +357,6 @@ except that of nil.
 
 (def special-symbols '#{let* deftype* do fn* def . if}) ; TODO make more complete
 
-(defns ex! [msg string?, data _] (throw (ex-info msg (or data {}))))
-
 (deftype WatchableMutable
   [^:unsynchronized-mutable v ^:unsynchronized-mutable ^clojure.lang.IFn watch]
   clojure.lang.IDeref (deref       [this]      v)
@@ -413,7 +410,7 @@ except that of nil.
       (update :infer?
         #(cond (boolean? %) %
                (nil? %)     false
-               :else        (ex! "`:infer?` must be boolean; got" {:x %})))
+               :else        (err! "`:infer?` must be boolean; got" {:x %})))
       map->TypeInfo)))
 
 (defrecord ExpressionInfo
@@ -428,7 +425,7 @@ except that of nil.
 #?(:clj
 (defmacro ->expr-info [m]
   (let [vs (vals (map->ExpressionInfo m))]
-    (when-not (= 3 (count vs)) (ex! "ExpressionInfo constructor accepts ≤ 3 args; found" {:ct (count m) :map m}))
+    (when-not (= 3 (count vs)) (err! "ExpressionInfo constructor accepts ≤ 3 args; found" {:ct (count m) :map m}))
     `(->ExpressionInfo ~@vs))))
 
 (defn abstracts-of
@@ -455,7 +452,7 @@ except that of nil.
   (when (-> expr :constraints some?)
     (TODO "Don't yet know how to handle constraints"))
   (if-let [classes (->> expr :type-info ?deref :reifieds (map truthy-type?) seq)]
-    (c&/every-val ::unknown classes)
+    (ucoll&/every-val ::unknown classes)
     ::unknown))
 
 (defn union:type-info [ti0 ti1]
@@ -606,11 +603,11 @@ except that of nil.
                           `method-form`, in the given class, `target`."}}
   [env _, form _, target class?, target-form _, methods _, method-form _, arg-forms _]
   ;; TODO cache spec by method
-  (prl! env target method-form (vec methods) arg-forms)
+  (prl! env target method-form #_(vec methods) arg-forms)
   (let [;; TODO could use `analyze-non-map-seqable` instead of the `reduce` here
         #_analyzed #_(-> (analyze-non-map-seqable env arg-forms [] rf)
                          (assoc :form form))
-
+        args-ct (count arg-forms)
         static-call0
           (ast/static-call
             {:env  env
@@ -618,32 +615,30 @@ except that of nil.
              :f    (symbol (str target-form) (str method-form))
              :args []
              :spec (methods->spec methods)})
-        with-arg-nodes
+        with-arg-specs
           (r/fori [arg-form    arg-forms
                    static-call static-call0
-                   i:arg]
+                   i|arg]
             (prl! static-call arg-form)
             (let [arg-node (analyze* env arg-form)]
-              (-> static-call
-                  (update :args conj arg-node)
-                  (update :spec
-                    (fn [spec]
-                      (if (zero? i:arg)
-                          (:spec arg-node)
-                          (t/and* spec (:spec arg-node))))))))
-        with-spec
-          (TODO "")]
-    with-spec))
+              ;; TODO can incrementally calculate return value, but possibly not worth it
+              (update static-call :args conj arg-node)))
+        with-ret-spec
+          (update with-arg-specs :spec
+            (fn [spec]
+              (spec (->> with-arg-specs :args (mapv :spec)))
+              #_(or (err! "Incompatible specs" {:spec0 spec :spec1 (:spec arg-node)}))))]
+    with-ret-spec))
 
 (defn try-analyze-seq:dot:methods:static
   [env form target target-form method-form args ?field?]
   (if-not-let [methods-for-name (-> target class->methods:with-cache (get (name method-form)))]
     (if ?field?
-        (ex! "No such method or field in class" {:class target :method-or-field method-form})
-        (ex! "No such method in class"          {:class target :methods         method-form}))
+        (err! "No such method or field in class" {:class target :method-or-field method-form})
+        (err! "No such method in class"          {:class target :methods         method-form}))
     (if-not-let [methods (get methods-for-name (count args))]
-      (ex! "Incorrect number of arguments for method"
-           {:class target :method method-form :possible-counts (set (keys methods-for-name))})
+      (err! "Incorrect number of arguments for method"
+            {:class target :method method-form :possible-counts (set (keys methods-for-name))})
       (analyze-seq:dot:methods:static env form target target-form (:static methods) method-form args))))
 
 (defn analyze-seq:dot [env form [target method|field & args]]
@@ -656,11 +651,11 @@ except that of nil.
                   (try-analyze-seq:dot:methods:static env form target' target method|field args true))
                 (try-analyze-seq:dot:methods:static env form target' target method|field args false))
           (nil? target')
-            (ex! "Could not resolve target of dot operator" {:target target})
+            (err! "Could not resolve target of dot operator" {:target target})
           :else
             ;; TODO: here use a similar thing as with static methods in terms of handling fields etc.
-            (ex! "Currently doesn't handle non-static calls (instance calls will be supported later).
-                  Expected target to be class or object in a dot form; got" {:target target'}))))
+            (err! "Currently doesn't handle non-static calls (instance calls will be supported later).
+                   Expected target to be class or object in a dot form; got" {:target target'}))))
 
 (defn analyze-seq:if
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
@@ -668,7 +663,7 @@ except that of nil.
   [env form [pred true-form false-form :as body]]
   {:post [(prl! %)]}
   (when (-> body count (not= 3))
-    (ex! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body}))
+    (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body}))
   (let [pred-expr  (analyze* env pred)
         true-expr  (delay (analyze* env true-form))
         false-expr (delay (analyze* env false-form))
@@ -717,7 +712,7 @@ except that of nil.
       (if-let [sym-resolved (resolve sym)]
         ; See note above on typed function return types
         (TODO)
-        (ex! "Form should be a special symbol but isn't" {:form sym}))))
+        (err! "Form should be a special symbol but isn't" {:form sym}))))
 
 (defn analyze-seq [env form]
   {:post [(prl! %)]}
@@ -725,7 +720,7 @@ except that of nil.
   (let [expanded-form (macroexpand form)]
     (if (== form expanded-form)
         (analyze-seq* env expanded-form)
-        (ast/macro-call form (analyze-seq* env expanded-form)))))
+        (ast/macro-call {:form form :expanded (analyze-seq* env expanded-form)}))))
 
 (defn analyze-symbol [env form]
   {:post [(prl! %)]}
@@ -735,7 +730,9 @@ except that of nil.
 (defn analyze* [env form]
   (prl! env form)
   (when (> (swap! *analyze-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
-  (cond (t/literal? form)
+  (cond (symbol? form)
+          (analyze-symbol env form)
+        (t/literal? form)
           (ast/literal form (-> form tcore/most-primitive-class-of t/->spec))
         (or (vector? form)
             (set?    form))
@@ -744,8 +741,6 @@ except that of nil.
           (analyze-map env form)
         (seq? form)
           (analyze-seq env form)
-        (symbol? form)
-          (analyze-symbol env form)
         :else
           (throw (ex-info "Unrecognized form" {:form form}))))
 
@@ -755,148 +750,8 @@ except that of nil.
     (reset! *analyze-i 0)
     (analyze* env body)))
 
-(defn tests []
-  (testing "symbol"
-    (testing "unbound"
-      (is= (analyze {'c (ast/unbound 'c)} 'c)
-           (ast/unbound 'c))))
-  (testing "static call"
-    (testing "literal arguments"
-      (analyze '(Numeric/bitAnd 1 2)))))
-
-
-(let* [a 1 b (byte 2)]
-                a
-                (Numeric/add c (Numeric/bitAnd a b)))
-
 ; To infer, you postwalk
 ; To imply, you prewalk
-
-;; For any unquoted seq-expression E that has at least one leaf:
-;;   if E is an expression whose type must be inferred:
-;;     if E has not reached stability (stability = only one reified, TODO what about abstracts?)
-;;       E's type must itself be inferred
-
-(defn test-it []
-  #_(let [gen-unbound
-        #(!ref (->type-info
-                 {:reifieds #{}
-                  :infer? true}))
-      gen-expected
-        (fn [env ast]
-          [env ast]
-          #_(->expr-info
-            {:env  env
-             :form form
-             :type-info
-               (->type-info type-info)}))]
-  #_(let [env  {'a (gen-unbound)
-              'b (gen-unbound)}
-        form '(and:boolean a b)]
-    (is= (->typed env form)
-         (gen-expected form env
-           {:reifieds  #{boolean}
-            :abstracts #{#_...}
-            #_:conditionals
-              #_{boolean {boolean #{boolean}}}})))
-  #_(let [env  {'a (gen-unbound)}
-        form '(Numeric/isZero a)]
-    (is= (-> (->typed env form)
-             (assoc-in [:type-info :fn-types] nil))
-         (gen-expected
-           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long t/float t/double)))}
-           (t/ast '(. Numeric isZero a) (t/fn' t/boolean)))))
-  #_(let [env  {'a (gen-unbound)
-              'b (gen-unbound)}
-        form '(Numeric/bitAnd a b)]
-    (is= nil #_(->typed env form)
-         (gen-expected
-           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long)))
-            'b (!ref (t/ast 'b ? (t/or t/byte t/char t/short t/int t/long)))}
-           (t/ast '(. Numeric bitAnd a b)
-             ;; TODO make spec fns easily editable
-             (t/spec [[a0 a1]] ; input is sequence of arg-specs; return value is spec
-               (condp = a0
-                 ;; TODO use map lookup?
-                 t/byte  (condp = a1
-                           t/byte  t/byte
-                           t/char  t/char
-                           t/short t/short
-                           t/int   t/int
-                           t/long  t/long)
-                 t/char  (condp = a1
-                           t/byte  t/char
-                           t/char  t/char
-                           t/short t/short
-                           t/int   t/int
-                           t/long  t/long)
-                 t/short (condp = a1
-                           t/byte  t/short
-                           t/char  t/short
-                           t/short t/short
-                           t/int   t/int
-                           t/long  t/long)
-                 t/int   (condp = a1
-                           t/byte  t/int
-                           t/char  t/int
-                           t/short t/int
-                           t/int   t/int
-                           t/long  t/long)
-                 t/long  (condp = a1
-                           t/byte  t/long
-                           t/char  t/long
-                           t/short t/long
-                           t/int   t/long
-                           t/long  t/long)))))))
-
-  (let [env  {'a (gen-unbound)
-              'b (gen-unbound)}
-        form '(Numeric/negate (Numeric/bitAnd a b))]
-    (is= #_(->typed env form)
-         (gen-expected form
-           {'a (!ref (t/ast 'a ? ...))
-            'b (!ref (t/ast 'b ? ...))}
-           (t/ast '(. Numeric bitAnd a b))
-           {:reifieds  #{byte char short int long}
-            :abstracts #{...}})))
-  #_(let [env  {'a (gen-unbound)
-              'b (gen-unbound)}
-        form '(negate:int|long (Numeric/bitAnd a b))]
-    ;; Because the only valid argtypes to `negate:int|long` are S = #{[int] [long]},
-    ;; `Numeric/bitAnd` must only accept argtypes that produce a subset of S
-    ;; The argtypes to `Numeric/bitAnd` that produce a subset of S are:
-    #_#{[byte  int]
-        [byte  long]
-        [char  int]
-        [char  long]
-        [short int]
-        [short long]
-        [int   byte]
-        [int   char]
-        [int   short]
-        [int   int]
-        [int   long]
-        [long  byte]
-        [long  char]
-        [long  short]
-        [long  int]
-        [long  long]}
-    ;; So `a`, then, can be:
-    #_#{byte char short int long}
-    ;; and likewise `b` can be:
-    #_#{byte char short int long}
-    (is= (->typed env form)
-         (gen-expected form
-           {'a (!ref (->type-info
-                       {:reifieds #{byte char short int long}
-                        :fn-types {}
-                        :infer? true}))
-            'b (!ref (->type-info
-                       {:reifieds #{byte char short int long}
-                        :fn-types {}
-                        :infer? true}))}
-           {:reifieds  #{int long}
-            :abstracts #{...}})))))
 
 
 

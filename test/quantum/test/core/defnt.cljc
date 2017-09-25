@@ -1,11 +1,17 @@
 (ns quantum.test.core.defnt
   (:require
+    [clojure.core :as core]
     [quantum.core.core
       :refer [istr]]
+    [quantum.core.fn :as fn
+      :refer [fn->]]
+    [quantum.core.logic
+      :refer [fn-and]]
     [quantum.core.defnt        :as this
-      :refer [->type-info ->expr-info !ref ->typed]]
+      :refer [->type-info ->expr-info !ref analyze]]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
+    [quantum.core.untyped.analyze.ast  :as ast]
     [quantum.core.untyped.analyze.expr :as xp]
     [quantum.core.untyped.type :as t])
 #?(:clj
@@ -69,12 +75,7 @@ z = #{short >= 5, boolean}
 {[#{long < 15}, #{int}] : #{boolean}}
 ```
 
-
-(->typed {'n (!ref (->type-info {:infer? true}))}
-  '(Numeric/isTrue (Numeric/isZero n)))
-
-
-(deftest test:methods->spec
+(deftest test|methods->spec
   (testing "Class hierarchy"
     (is=
       (this/methods->spec
@@ -83,89 +84,264 @@ z = #{short >= 5, boolean}
          {:rtype Object :argtypes [CharSequence]}
          {:rtype Object :argtypes [Object]}
          {:rtype Object :argtypes [Comparable]}])
-      false))
+      (xp/casef count
+        1 (xp/condpf-> t/in>= (xp/get 0)
+            t/string?     t/object?
+            t/char-seq?   t/object?
+            t/comparable? t/object?
+            t/object?     t/object?)
+        2 (xp/condpf-> t/in>= (xp/get 0)
+            t/int (xp/condpf-> t/in>= (xp/get 1)
+                    t/char t/object?)))))
   (testing "Complex dispatch based off of `Numeric/bitAnd`"
-    (let [method-data
-           ]
-      (is=
-        (this/methods->spec
-          [{:rtype t/int   :argtypes [t/int   t/char]}
-           {:rtype t/int   :argtypes [t/int   t/byte]}
-           {:rtype t/int   :argtypes [t/int   t/short]}
-           {:rtype t/int   :argtypes [t/int   t/int]}
-           {:rtype t/long  :argtypes [t/short t/long]}
-           {:rtype t/int   :argtypes [t/short t/int]}
-           {:rtype t/short :argtypes [t/short t/short]}
-           {:rtype t/long  :argtypes [t/long  t/long]}
-           {:rtype t/long  :argtypes [t/long  t/int]}
-           {:rtype t/long  :argtypes [t/long  t/short]}
-           {:rtype t/long  :argtypes [t/long  t/char]}
-           {:rtype t/long  :argtypes [t/long  t/byte]}
-           {:rtype t/long  :argtypes [t/int   t/long]}
-           {:rtype t/char  :argtypes [t/char  t/byte]}
-           {:rtype t/long  :argtypes [t/byte  t/long]}
-           {:rtype t/int   :argtypes [t/byte  t/int]}
-           {:rtype t/short :argtypes [t/byte  t/short]}
-           {:rtype t/char  :argtypes [t/byte  t/char]}
-           {:rtype t/byte  :argtypes [t/byte  t/byte]}
-           {:rtype t/short :argtypes [t/short t/char]}
-           {:rtype t/short :argtypes [t/short t/byte]}
-           {:rtype t/long  :argtypes [t/char  t/long]}
-           {:rtype t/long  :argtypes [t/char  t/long t/long]}
-           {:rtype t/char  :argtypes [t/char  t/char]}
-           {:rtype t/short :argtypes [t/char  t/short]}
-           {:rtype t/int   :argtypes [t/char  t/int]}])
-        (xp/casef count
-          2 (xp/condpf-> t/>= (xp/get 0)
-              t/int
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/char  t/int
-                  t/byte  t/int
-                  t/short t/int
-                  t/int   t/int
-                  t/long  t/long)
-              t/short
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/long  t/long
-                  t/int   t/int
-                  t/short t/short
-                  t/char  t/short
-                  t/byte  t/short)
-              t/long
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/long  t/long
-                  t/int   t/long
-                  t/short t/long
-                  t/char  t/long
-                  t/byte  t/long)
-              t/char
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/byte  t/char
-                  t/long  t/long
-                  t/char  t/char
-                  t/short t/short
-                  t/int   t/int)
-              t/byte
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/long  t/long
-                  t/int   t/int
-                  t/short t/short
-                  t/char  t/char
-                  t/byte  t/byte))
-          3 (xp/condpf-> t/>= (xp/get 0)
-              t/char
-                (xp/condpf-> t/>= (xp/get 1)
-                  t/long
-                    (xp/condpf-> t/>= (xp/get 2)
-                      t/long t/long))))))))
+    (is=
+      (this/methods->spec
+        [{:rtype t/int   :argtypes [t/int   t/char]}
+         {:rtype t/int   :argtypes [t/int   t/byte]}
+         {:rtype t/int   :argtypes [t/int   t/short]}
+         {:rtype t/int   :argtypes [t/int   t/int]}
+         {:rtype t/long  :argtypes [t/short t/long]}
+         {:rtype t/int   :argtypes [t/short t/int]}
+         {:rtype t/short :argtypes [t/short t/short]}
+         {:rtype t/long  :argtypes [t/long  t/long]}
+         {:rtype t/long  :argtypes [t/long  t/int]}
+         {:rtype t/long  :argtypes [t/long  t/short]}
+         {:rtype t/long  :argtypes [t/long  t/char]}
+         {:rtype t/long  :argtypes [t/long  t/byte]}
+         {:rtype t/long  :argtypes [t/int   t/long]}
+         {:rtype t/char  :argtypes [t/char  t/byte]}
+         {:rtype t/long  :argtypes [t/byte  t/long]}
+         {:rtype t/int   :argtypes [t/byte  t/int]}
+         {:rtype t/short :argtypes [t/byte  t/short]}
+         {:rtype t/char  :argtypes [t/byte  t/char]}
+         {:rtype t/byte  :argtypes [t/byte  t/byte]}
+         {:rtype t/short :argtypes [t/short t/char]}
+         {:rtype t/short :argtypes [t/short t/byte]}
+         {:rtype t/long  :argtypes [t/char  t/long]}
+         {:rtype t/long  :argtypes [t/char  t/long t/long]}
+         {:rtype t/char  :argtypes [t/char  t/char]}
+         {:rtype t/short :argtypes [t/char  t/short]}
+         {:rtype t/int   :argtypes [t/char  t/int]}])
+      (xp/casef count
+        2 (xp/condpf-> t/>= (xp/get 0)
+            t/int
+              (xp/condpf-> t/>= (xp/get 1)
+                t/char  t/int
+                t/byte  t/int
+                t/short t/int
+                t/int   t/int
+                t/long  t/long)
+            t/short
+              (xp/condpf-> t/>= (xp/get 1)
+                t/long  t/long
+                t/int   t/int
+                t/short t/short
+                t/char  t/short
+                t/byte  t/short)
+            t/long
+              (xp/condpf-> t/>= (xp/get 1)
+                t/long  t/long
+                t/int   t/long
+                t/short t/long
+                t/char  t/long
+                t/byte  t/long)
+            t/char
+              (xp/condpf-> t/>= (xp/get 1)
+                t/byte  t/char
+                t/long  t/long
+                t/char  t/char
+                t/short t/short
+                t/int   t/int)
+            t/byte
+              (xp/condpf-> t/>= (xp/get 1)
+                t/long  t/long
+                t/int   t/int
+                t/short t/short
+                t/char  t/char
+                t/byte  t/byte))
+        3 (xp/condpf-> t/>= (xp/get 0)
+            t/char
+              (xp/condpf-> t/>= (xp/get 1)
+                t/long
+                  (xp/condpf-> t/>= (xp/get 2)
+                    t/long t/long)))))))
 
+(deftest test|analyze
+  (testing "symbol"
+    (testing "unbound"
+      (is= (analyze {'c (ast/unbound 'c)} 'c)
+           (ast/unbound 'c))))
+  (testing "static call"
+    (testing "literal arguments"
+      (is= (analyze '(Numeric/bitAnd 1 2))
+           (ast/macro-call
+             {:form     '(Numeric/bitAnd 1 2),
+              :expanded (ast/static-call
+                          {:env  {}
+                           :form '(. Numeric bitAnd 1 2)
+                           :f    'Numeric/bitAnd
+                           :args [(ast/literal 1 t/long) (ast/literal 2 t/long)]
+                           :spec t/long})
+              :spec     t/long}))
+      (throws (analyze '(Numeric/bitAnd 1.0 2.0))
+        (fn-and (fn-> :message (= "No matching clause found"))
+                (fn-> :data    (= {:v t/double}))))
+      (throws (analyze '(Numeric/bitAnd 1.0 2))
+        (fn-and (fn-> :message (= "No matching clause found"))
+                (fn-> :data    (= {:v t/double}))))
+      (throws (analyze '(Numeric/bitAnd 1 2.0))
+        (fn-and (fn-> :message (= "No matching clause found"))
+                (fn-> :data    (= {:v t/double}))))
+      (is= (analyze '(byte 1))
+           (ast/macro-call
+             {:form     '(Numeric/bitAnd 1 2),
+              :expanded (ast/static-call
+                          {:env  {}
+                           :form '(. Numeric bitAnd 1 2)
+                           :f    'Numeric/bitAnd
+                           :args [(ast/literal 1 t/long) (ast/literal 2 t/long)]
+                           :spec t/long})
+              :spec     t/long})))))
+
+(->typed {'n (!ref (->type-info {:infer? true}))}
+  '(Numeric/isTrue (Numeric/isZero n)))
+
+
+(let* [a 1 b (byte 2)]
+                a
+                (Numeric/add c (Numeric/bitAnd a b)))
+
+;; For any unquoted seq-expression E that has at least one leaf:
+;;   if E is an expression whose type must be inferred:
+;;     if E has not reached stability (stability = only one reified, TODO what about abstracts?)
+;;       E's type must itself be inferred
+
+#_(let [gen-unbound
+        #(!ref (->type-info
+                 {:reifieds #{}
+                  :infer? true}))
+      gen-expected
+        (fn [env ast]
+          [env ast]
+          #_(->expr-info
+            {:env  env
+             :form form
+             :type-info
+               (->type-info type-info)}))]
+  #_(let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(and:boolean a b)]
+    (is= (->typed env form)
+         (gen-expected form env
+           {:reifieds  #{boolean}
+            :abstracts #{#_...}
+            #_:conditionals
+              #_{boolean {boolean #{boolean}}}})))
+  #_(let [env  {'a (gen-unbound)}
+        form '(Numeric/isZero a)]
+    (is= (-> (->typed env form)
+             (assoc-in [:type-info :fn-types] nil))
+         (gen-expected
+           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long t/float t/double)))}
+           (t/ast '(. Numeric isZero a) (t/fn' t/boolean)))))
+  #_(let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(Numeric/bitAnd a b)]
+    (is= nil #_(->typed env form)
+         (gen-expected
+           {'a (!ref (t/ast 'a ? (t/or t/byte t/char t/short t/int t/long)))
+            'b (!ref (t/ast 'b ? (t/or t/byte t/char t/short t/int t/long)))}
+           (t/ast '(. Numeric bitAnd a b)
+             ;; TODO make spec fns easily editable
+             (t/spec [[a0 a1]] ; input is sequence of arg-specs; return value is spec
+               (condp = a0
+                 ;; TODO use map lookup?
+                 t/byte  (condp = a1
+                           t/byte  t/byte
+                           t/char  t/char
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/char  (condp = a1
+                           t/byte  t/char
+                           t/char  t/char
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/short (condp = a1
+                           t/byte  t/short
+                           t/char  t/short
+                           t/short t/short
+                           t/int   t/int
+                           t/long  t/long)
+                 t/int   (condp = a1
+                           t/byte  t/int
+                           t/char  t/int
+                           t/short t/int
+                           t/int   t/int
+                           t/long  t/long)
+                 t/long  (condp = a1
+                           t/byte  t/long
+                           t/char  t/long
+                           t/short t/long
+                           t/int   t/long
+                           t/long  t/long)))))))
+
+  (let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(Numeric/negate (Numeric/bitAnd a b))]
+    (is= #_(->typed env form)
+         (gen-expected form
+           {'a (!ref (t/ast 'a ? ...))
+            'b (!ref (t/ast 'b ? ...))}
+           (t/ast '(. Numeric bitAnd a b))
+           {:reifieds  #{byte char short int long}
+            :abstracts #{...}})))
+  #_(let [env  {'a (gen-unbound)
+              'b (gen-unbound)}
+        form '(negate:int|long (Numeric/bitAnd a b))]
+    ;; Because the only valid argtypes to `negate:int|long` are S = #{[int] [long]},
+    ;; `Numeric/bitAnd` must only accept argtypes that produce a subset of S
+    ;; The argtypes to `Numeric/bitAnd` that produce a subset of S are:
+    #_#{[byte  int]
+        [byte  long]
+        [char  int]
+        [char  long]
+        [short int]
+        [short long]
+        [int   byte]
+        [int   char]
+        [int   short]
+        [int   int]
+        [int   long]
+        [long  byte]
+        [long  char]
+        [long  short]
+        [long  int]
+        [long  long]}
+    ;; So `a`, then, can be:
+    #_#{byte char short int long}
+    ;; and likewise `b` can be:
+    #_#{byte char short int long}
+    (is= (->typed env form)
+         (gen-expected form
+           {'a (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :fn-types {}
+                        :infer? true}))
+            'b (!ref (->type-info
+                       {:reifieds #{byte char short int long}
+                        :fn-types {}
+                        :infer? true}))}
+           {:reifieds  #{int long}
+            :abstracts #{...}}))))
 
 (def ff this/fn-type-satisfies-expr?)
 
-(deftest test:fn-type-satisfies-expr?
+(deftest test|fn-type-satisfies-expr?
   (is= (ff )))
 
-(defn test:->typed:literal-equivalence [f formf]
+(defn test|->typed|literal-equivalence [f formf]
   (testing "nil"
     (is= (f nil)
          (->expr-info {:env {} :form (formf nil)
@@ -192,23 +368,23 @@ z = #{short >= 5, boolean}
          (->expr-info {:env {} :form (formf :abc)
                        :type-info (->type-info {:reifieds #{Keyword}})}))))
 
-(deftest test:->typed:literals
-  (test:->typed:literal-equivalence ->typed identity))
+(deftest test|->typed|literals
+  (test|->typed|literal-equivalence ->typed identity))
 
-(deftest test:->typed:do
+(deftest test|->typed|do
   (testing "Base case"
     (is= (->typed '(do))
          (->expr-info {:env {} :form nil
                        :type-info (->type-info {:reifieds #{:nil}})})))
   (testing "Literals"
-    (test:->typed:literal-equivalence #(->typed (list 'do %)) #(list 'do %))))
+    (test|->typed|literal-equivalence #(->typed (list 'do %)) #(list 'do %))))
 
-(deftest test:->typed:let
+(deftest test|->typed|let
   (testing "Base case"
     (is= (->typed '(let []))
          (->expr-info {:env {} :form '(let* [] (do))})))
   (testing "Literals"
-    (test:->typed:literal-equivalence
+    (test|->typed|literal-equivalence
       #(->typed (list 'let* '[a nil] %))
       #(list 'let* '[a nil] (list 'do %))))
   )
@@ -236,7 +412,7 @@ z = #{short >= 5, boolean}
 (def falsey-objects [nil])
 (def objects {true truthy-objects false falsey-objects})
 
-(deftest test:->typed:if
+(deftest test|->typed|if
   (testing "Syntax"
     (throws (->typed '(if)))
     (throws (->typed '(if 1)))
@@ -250,7 +426,7 @@ z = #{short >= 5, boolean}
         (binding [this/*conditional-branch-pruning?* pruning?]
           (doseq [pred (get objects branch)]
             (is= (->typed (list 'if pred true-form false-form))
-                 ((get-in ->typed:if:test-cases [pruning? true-form false-form branch])
+                 ((get-in ->typed|if|test-cases [pruning? true-form false-form branch])
                   pred true-form false-form))))))))
 
 
@@ -301,12 +477,12 @@ z = #{short >= 5, boolean}
 
 ; ===== COLLECTIONS ===== ;
 
-(def count:rf (aritoid + identity (rcomp firsta inc)))
+(def count|rf (aritoid + identity (rcomp firsta inc)))
 
 (defn reduce-count
   {:performance "On non-counted collections, `count` is 71.542581 ms, whereas
                  `reduce-count` is 36.824665 ms - twice as fast"}
-  [xs] (reduce count:rf xs))
+  [xs] (reduce count|rf xs))
 
 (defnt ^:inline name
            ([x string?] x)
@@ -356,13 +532,13 @@ z = #{short >= 5, boolean}
            ([x nil?                       , k ?, if-not-found ?] nil)
   #?(:clj  ([x ILookup                    , k ?, if-not-found ?] (.valAt x k if-not-found)))
   #?(:clj  ([x (s/or Map IPersistentSet)  , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:byte->any?            , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:char->any?            , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:short->any?           , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:int->any?             , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:long->any?            , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:float->ref?           , k ?                ] (.get x k)))
-  #?(:clj  ([x !map:double->ref?          , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|byte->any?            , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|char->any?            , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|short->any?           , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|int->any?             , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|long->any?            , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|float->ref?           , k ?                ] (.get x k)))
+  #?(:clj  ([x !map|double->ref?          , k ?                ] (.get x k)))
            ([x string?                    , k ?, if-not-found ?] (if (>= k (count x)) if-not-found (.charAt x k)))
   #?(:clj  ([x !array-list?               , k ?, if-not-found ?] (if (>= k (count x)) if-not-found (.get    x k))))
            ([x (s/or string? !array-list?), k ?                ] (get x k nil))
