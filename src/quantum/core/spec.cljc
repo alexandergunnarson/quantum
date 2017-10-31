@@ -8,16 +8,19 @@
     [clojure.spec.test.alpha :as test]
     [cljs.spec.alpha]
     [clojure.spec.gen.alpha  :as gen]
+    [fipp.ednize]
     [quantum.core.core       :as qcore
       :refer [val?]]
     [quantum.core.error      :as err
-      :refer [catch-all]]
+      :refer [catch-all err!]]
     [quantum.core.fn
       :refer [fnl constantly with-do]]
     [quantum.core.logic
       :refer [fn-not]]
     [quantum.core.macros.core
       :refer [case-env locals]]
+    [quantum.core.untyped.convert :as uconv]
+    [quantum.core.untyped.qualify :as qual]
     [quantum.core.vars :as var
       :refer [defalias defmalias]]
   #?(:cljs [figwheel.client.utils])
@@ -41,7 +44,10 @@
 ; #?(:cljs (http/post "http://localhost:8081" {:body (str "This is a test body from " :cljs)}))
 
 (defrecord ValidationError
-  [problems failure at-line at-instant form locals invalidated invalidated-type])
+  [problems failure at-line at-instant form locals invalidated invalidated-type]
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (into {} this)))
 
 (def spec-assertion-failed "Spec assertion failed")
 
@@ -63,7 +69,7 @@
                       locals
                       x
                       (type x))]
-    (throw (ex-info spec-assertion-failed data))))
+    (err! spec-assertion-failed data)))
 
 (def verbose? false) ; can be `with-redef`ed in tests
 
@@ -145,15 +151,15 @@
 (defalias explain s/explain)
 
 #?(:clj (quantum.core.vars/defmalias cat clojure.spec.alpha/cat cljs.spec.alpha/cat))
-#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(qcore/quote-map-base qcore/->keyword args true))))
+#?(:clj (defmacro cat* "`or` :`or*` :: `cat` : `cat*`" [& args] `(cat ~@(qcore/quote-map-base uconv/>keyword args true))))
 
 #?(:clj (quantum.core.vars/defmalias alt clojure.spec.alpha/alt cljs.spec.alpha/alt))
-#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(qcore/quote-map-base qcore/->keyword args true))))
+#?(:clj (defmacro alt* "`or` :`or*` :: `alt` : `alt*`" [& args] `(alt ~@(qcore/quote-map-base uconv/>keyword args true))))
 
 #?(:clj
 (defmacro fdef! [sym & args]
   `(with-do (~(case-env :clj 'clojure.spec.alpha/fdef :cljs 'cljs.spec.alpha/fdef) ~sym ~@args)
-     (when (s/check-asserts?) (test/instrument '~(var/qualify *ns* sym))))))
+     (when (s/check-asserts?) (test/instrument '~(qual/qualify *ns* sym))))))
 
 #?(:clj
 (defmacro or-auto
