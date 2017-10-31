@@ -46,7 +46,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (list* `om (qcore/quote-map-base qcore/->keyword ks))))
+  (list* `om (qcore/quote-map-base qcore/>keyword ks))))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)
