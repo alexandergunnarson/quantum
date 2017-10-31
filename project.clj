@@ -338,7 +338,33 @@
   ;:npm {:dependencies [[js-joda "1.1.12"]]}
   :injections [(require '[clojure.tools.namespace.repl :refer [refresh]])]
   :profiles
-   {:dev {:resource-paths ["dev-resources"]
+   {:t2.small {:jvm-opts ^:replace
+                ; TODO automatically determine based on system/container specs
+                ["-Dquantum.core.log:out-file=./out.log"
+                 "-d64" "-server"
+                 ; ----- MEMORY ----- ;
+                 ; On-heap
+                 "-Xms768M" "-Xmx768M"
+                 ; Off-heap
+                 "-XX:InitialCodeCacheSize=72M"
+                 "-XX:ReservedCodeCacheSize=72M"
+                 #_"-XX:CompressedClassSpaceSize=200M" #_"64M is too little"
+                 "-XX:-UseCompressedClassPointers" ; or else java.lang.OutOfMemoryError: Metaspace
+                 "-XX:MaxDirectMemorySize=128M" #_"For e.g. off-heap `ByteBuffer`s"
+                 "-XX:MetaspaceSize=768M"
+                 "-XX:MaxMetaspaceSize=768M" #_"128M and 256M, and 512M (!) are too little"
+                 "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
+                 ; ----- MISCELLANEOUS ----- ;
+                 ; JIT
+                 "-XX:+DoEscapeAnalysis"
+                 ; Telemetry
+                 "-XX:-OmitStackTraceInFastThrow"
+                 ]
+                 ; Assuming 2048M total RAM for t2.small:
+                 #_"For OS:   312M
+                    For Java: offheap=((72M code)+(128M direct)+(1024M meta) = 968M) + onheap=(2048M-OS-offheap = 1024M) -> 768M"
+           }
+    :dev {:resource-paths ["dev-resources"]
           :source-paths   ["dev/cljc"]
           :dependencies   []
           :jvm-opts
