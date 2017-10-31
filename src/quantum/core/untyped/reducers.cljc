@@ -46,12 +46,16 @@
 (def filter+ (transducer->reducer 1 core/filter))
 (defn filter-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp key pred)))))
 (def  filter-keys+ (filter-keys* filter+))
+(defn filter-vals* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp val pred)))))
+(def  filter-vals+ (filter-vals* filter+))
 
 (def remove+ (transducer->reducer 1 core/remove))
 
 (def indexed+ (fn->> (map-indexed+ vector)))
 
 (def partition-all+ (transducer->reducer 1 core/partition-all))
+
+(def distinct+      (transducer->reducer 0 core/distinct))
 
 (def lasti (rcomp count dec))
 
