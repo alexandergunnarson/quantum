@@ -10,11 +10,11 @@
                        :refer [#?(:clj byte-array+)]]
                      [quantum.core.collections.core
                        :refer [assoc!]]
-                     [quantum.core.data.binary :as bin
+                     [quantum.core.data.bits   :as bit
                        :refer [&& >>>]]
                      [quantum.core.fn          :as fn
                        :refer [fn1]]
-                     [quantum.core.type           :as t
+                     [quantum.core.type        :as t
                        :refer [val?]])
   #?(:clj  (:import  java.util.Arrays)))
 
