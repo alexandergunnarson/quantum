@@ -175,13 +175,13 @@
             (log/pr ::debug "Channel-socket started.")
             this')
           (catch #?(:clj Throwable :cljs js/Error) e
-            (err/warn! e)
+            (log/pr :warn e)
             (@stop-fn-f)
             (throw e)))))
     (stop [this]
       (try (when stop-fn (stop-fn))
         (catch #?(:clj Throwable :cljs js/Error) e
-          (err/warn! e)))
+          (log/pr :warn e)))
       ; TODO should assoc other vals as nil?
       this))
 
