@@ -40,6 +40,14 @@
 (defn boolean? [x] #?(:clj  (instance? Boolean x)
                       :cljs (or (true? x) (false? x))))
 
+(defn lookup? [x]
+  #?(:clj  (instance? clojure.lang.ILookup x)
+     :cljs (satisfies? ILookup x)))
+
+#?(:clj
+(defn protocol? [x]
+  (and (lookup? x) (-> x (core/get :on-interface) class?))))
+
 (defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
 
 #?(:clj  (defn seqable?
@@ -122,12 +130,12 @@
        (map #(vector (cond->> (kw-modifier %) (not no-quote?) (list 'quote)) %))
        (apply concat)))
 
-(defn ->keyword [x]
+(defn >keyword [x]
   (cond (keyword? x) x
         (symbol?  x) (keyword (namespace x) (name x))
         :else        (-> x str keyword)))
 
-#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base ->keyword ks))))
+#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base >keyword ks))))
 #?(:clj (defmacro quote-map [& ks] (list* `hash-map (quote-map-base identity  ks))))
 
 #?(:clj
