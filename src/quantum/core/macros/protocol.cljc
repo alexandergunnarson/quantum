@@ -98,13 +98,13 @@
                (map (fn [[arglist & body :as method]]
                       (log/ppr-hints :macro-expand "IN BODY MAPPED" (kw-map arglist body))
                       (let [first-type         (-> arglist second th/type-hint)
-                            first-type-unboxed (-> first-type tcore/->unboxed:sym)
+                            first-type-unboxed (-> first-type tcore/->unboxed|sym)
                             unboxed-version-exists? (get-in first-types [first-type-unboxed (-> arglist count dec)])]
                         (if ; Unboxed version of arity already exists? Skip generation of that type/arity
-                            (and (tcore/boxed?:sym first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
+                            (and (tcore/boxed?|sym first-type) unboxed-version-exists?) ; |dec| because 'this' is the first arg
                             [] ; Empty so concat gets nothing
-                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed:sym))
-                                             ; (whenc (-> arglist second th/type-hint tcore/->boxed:sym)
+                            (let [boxed-first-type (-> first-type (whenp (= lang :clj) tcore/->boxed|sym))
+                                             ; (whenc (-> arglist second th/type-hint tcore/->boxed|sym)
                                              ;        (fn-> name (= "[Ljava.lang.Object;"))
                                              ;   '(Class/forName "[Ljava.lang.Object;"))
                                   return-type (-> arglist
