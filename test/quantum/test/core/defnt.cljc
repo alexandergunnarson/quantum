@@ -19,7 +19,6 @@
     [clojure.lang Keyword Symbol]
     [quantum.core Numeric])))
 
-
 ```
 f : [#{int}]  -> #{short}
   : [#{long}] -> #{boolean String}
@@ -79,92 +78,92 @@ z = #{short >= 5, boolean}
   (testing "Class hierarchy"
     (is=
       (this/methods->spec
-        [{:rtype Object :argtypes [t/int t/char]}
+        [{:rtype Object :argtypes [t/int? t/char?]}
          {:rtype Object :argtypes [String]}
          {:rtype Object :argtypes [CharSequence]}
          {:rtype Object :argtypes [Object]}
          {:rtype Object :argtypes [Comparable]}])
       (xp/casef count
-        1 (xp/condpf-> t/in>= (xp/get 0)
+        1 (xp/condpf-> t/<= (xp/get 0)
             t/string?     t/object?
             t/char-seq?   t/object?
             t/comparable? t/object?
             t/object?     t/object?)
-        2 (xp/condpf-> t/in>= (xp/get 0)
-            t/int (xp/condpf-> t/in>= (xp/get 1)
-                    t/char t/object?)))))
+        2 (xp/condpf-> t/<= (xp/get 0)
+            t/int? (xp/condpf-> t/<= (xp/get 1)
+                    t/char? t/object?)))))
   (testing "Complex dispatch based off of `Numeric/bitAnd`"
     (is=
       (this/methods->spec
-        [{:rtype t/int   :argtypes [t/int   t/char]}
-         {:rtype t/int   :argtypes [t/int   t/byte]}
-         {:rtype t/int   :argtypes [t/int   t/short]}
-         {:rtype t/int   :argtypes [t/int   t/int]}
-         {:rtype t/long  :argtypes [t/short t/long]}
-         {:rtype t/int   :argtypes [t/short t/int]}
-         {:rtype t/short :argtypes [t/short t/short]}
-         {:rtype t/long  :argtypes [t/long  t/long]}
-         {:rtype t/long  :argtypes [t/long  t/int]}
-         {:rtype t/long  :argtypes [t/long  t/short]}
-         {:rtype t/long  :argtypes [t/long  t/char]}
-         {:rtype t/long  :argtypes [t/long  t/byte]}
-         {:rtype t/long  :argtypes [t/int   t/long]}
-         {:rtype t/char  :argtypes [t/char  t/byte]}
-         {:rtype t/long  :argtypes [t/byte  t/long]}
-         {:rtype t/int   :argtypes [t/byte  t/int]}
-         {:rtype t/short :argtypes [t/byte  t/short]}
-         {:rtype t/char  :argtypes [t/byte  t/char]}
-         {:rtype t/byte  :argtypes [t/byte  t/byte]}
-         {:rtype t/short :argtypes [t/short t/char]}
-         {:rtype t/short :argtypes [t/short t/byte]}
-         {:rtype t/long  :argtypes [t/char  t/long]}
-         {:rtype t/long  :argtypes [t/char  t/long t/long]}
-         {:rtype t/char  :argtypes [t/char  t/char]}
-         {:rtype t/short :argtypes [t/char  t/short]}
-         {:rtype t/int   :argtypes [t/char  t/int]}])
+        [{:rtype t/int?   :argtypes [t/int?   t/char?]}
+         {:rtype t/int?   :argtypes [t/int?   t/byte?]}
+         {:rtype t/int?   :argtypes [t/int?   t/short?]}
+         {:rtype t/int?   :argtypes [t/int?   t/int?]}
+         {:rtype t/long?  :argtypes [t/short? t/long?]}
+         {:rtype t/int?   :argtypes [t/short? t/int?]}
+         {:rtype t/short? :argtypes [t/short? t/short?]}
+         {:rtype t/long?  :argtypes [t/long?  t/long?]}
+         {:rtype t/long?  :argtypes [t/long?  t/int?]}
+         {:rtype t/long?  :argtypes [t/long?  t/short?]}
+         {:rtype t/long?  :argtypes [t/long?  t/char?]}
+         {:rtype t/long?  :argtypes [t/long?  t/byte?]}
+         {:rtype t/long?  :argtypes [t/int?   t/long?]}
+         {:rtype t/char?  :argtypes [t/char?  t/byte?]}
+         {:rtype t/long?  :argtypes [t/byte?  t/long?]}
+         {:rtype t/int?   :argtypes [t/byte?  t/int?]}
+         {:rtype t/short? :argtypes [t/byte?  t/short?]}
+         {:rtype t/char?  :argtypes [t/byte?  t/char?]}
+         {:rtype t/byte?  :argtypes [t/byte?  t/byte?]}
+         {:rtype t/short? :argtypes [t/short? t/char?]}
+         {:rtype t/short? :argtypes [t/short? t/byte?]}
+         {:rtype t/long?  :argtypes [t/char?  t/long?]}
+         {:rtype t/long?  :argtypes [t/char?  t/long? t/long?]}
+         {:rtype t/char?  :argtypes [t/char?  t/char?]}
+         {:rtype t/short? :argtypes [t/char?  t/short?]}
+         {:rtype t/int?   :argtypes [t/char?  t/int?]}])
       (xp/casef count
-        2 (xp/condpf-> t/>= (xp/get 0)
-            t/int
-              (xp/condpf-> t/>= (xp/get 1)
-                t/char  t/int
-                t/byte  t/int
-                t/short t/int
-                t/int   t/int
-                t/long  t/long)
-            t/short
-              (xp/condpf-> t/>= (xp/get 1)
-                t/long  t/long
-                t/int   t/int
-                t/short t/short
-                t/char  t/short
-                t/byte  t/short)
-            t/long
-              (xp/condpf-> t/>= (xp/get 1)
-                t/long  t/long
-                t/int   t/long
-                t/short t/long
-                t/char  t/long
-                t/byte  t/long)
-            t/char
-              (xp/condpf-> t/>= (xp/get 1)
-                t/byte  t/char
-                t/long  t/long
-                t/char  t/char
-                t/short t/short
-                t/int   t/int)
-            t/byte
-              (xp/condpf-> t/>= (xp/get 1)
-                t/long  t/long
-                t/int   t/int
-                t/short t/short
-                t/char  t/char
-                t/byte  t/byte))
-        3 (xp/condpf-> t/>= (xp/get 0)
-            t/char
-              (xp/condpf-> t/>= (xp/get 1)
-                t/long
-                  (xp/condpf-> t/>= (xp/get 2)
-                    t/long t/long)))))))
+        2 (xp/condpf-> t/<= (xp/get 0)
+            t/int?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/char?  t/int?
+                t/byte?  t/int?
+                t/short? t/int?
+                t/int?   t/int?
+                t/long?  t/long?)
+            t/short?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/long?  t/long?
+                t/int?   t/int?
+                t/short? t/short?
+                t/char?  t/short?
+                t/byte?  t/short?)
+            t/long?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/long?  t/long?
+                t/int?   t/long?
+                t/short? t/long?
+                t/char?  t/long?
+                t/byte?  t/long?)
+            t/char?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/byte?  t/char?
+                t/long?  t/long?
+                t/char?  t/char?
+                t/short? t/short?
+                t/int?   t/int?)
+            t/byte?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/long?  t/long?
+                t/int?   t/int?
+                t/short? t/short?
+                t/char?  t/char?
+                t/byte?  t/byte?))
+        3 (xp/condpf-> t/<= (xp/get 0)
+            t/char?
+              (xp/condpf-> t/<= (xp/get 1)
+                t/long?
+                  (xp/condpf-> t/<= (xp/get 2)
+                    t/long? t/long?)))))))
 
 (deftest test|analyze
   (testing "symbol"
@@ -180,28 +179,37 @@ z = #{short >= 5, boolean}
                           {:env  {}
                            :form '(. Numeric bitAnd 1 2)
                            :f    'Numeric/bitAnd
-                           :args [(ast/literal 1 t/long) (ast/literal 2 t/long)]
-                           :spec t/long})
-              :spec     t/long}))
+                           :args [(ast/literal 1 (t/value 1)) (ast/literal 2 (t/value 2))]
+                           :spec t/long?}) ;; TODO more specific than this?
+              :spec     t/long?})) ;; TODO more specific than this?
       (throws (analyze '(Numeric/bitAnd 1.0 2.0))
         (fn-and (fn-> :message (= "No matching clause found"))
-                (fn-> :data    (= {:v t/double}))))
+                (fn-> :data    (= {:v (t/value 1.0)}))))
       (throws (analyze '(Numeric/bitAnd 1.0 2))
         (fn-and (fn-> :message (= "No matching clause found"))
-                (fn-> :data    (= {:v t/double}))))
+                (fn-> :data    (= {:v (t/value 1.0)}))))
       (throws (analyze '(Numeric/bitAnd 1 2.0))
         (fn-and (fn-> :message (= "No matching clause found"))
-                (fn-> :data    (= {:v t/double}))))
+                (fn-> :data    (= {:v (t/value 2.0)}))))
+      (throws (analyze '(Numeric/bitAnd "" 2.0))
+        (fn-and (fn-> :message (= "No matching clause found"))
+                (fn-> :data    (= {:v (t/value "")}))))
+      (throws (analyze '(Numeric/bitAnd nil 2.0))
+        (fn-and (fn-> :message (= "No matching clause found"))
+                (fn-> :data    (= {:v t/nil?}))))
+
       (is= (analyze '(byte 1))
            (ast/macro-call
-             {:form     '(Numeric/bitAnd 1 2),
+             {:form '(byte 1)
               :expanded (ast/static-call
                           {:env  {}
-                           :form '(. Numeric bitAnd 1 2)
-                           :f    'Numeric/bitAnd
-                           :args [(ast/literal 1 t/long) (ast/literal 2 t/long)]
-                           :spec t/long})
-              :spec     t/long})))))
+                           :form '(. clojure.lang.RT (uncheckedByteCast 1))
+                           :f    'clojure.lang.RT/uncheckedByteCast
+                           :args [(ast/literal 1 t/long?)]
+                           :spec t/byte?})
+              :spec t/byte?}))
+      (throws (analyze '(byte "")) ; TODO fix
+        (fn-> :message (= "Spec assertion failed"))))))
 
 (->typed {'n (!ref (->type-info {:infer? true}))}
   '(Numeric/isTrue (Numeric/isZero n)))
