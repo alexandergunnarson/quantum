@@ -1,7 +1,7 @@
 (ns
-  ^{:doc "Useful binary operations."
+  ^{:doc "Useful bit/binary operations."
     :attribution "alexandergunnarson"}
-  quantum.core.data.binary
+  quantum.core.data.bits
   (:refer-clojure :exclude
     [unsigned-bit-shift-right bit-shift-left bit-shift-right
      bit-or bit-and bit-xor bit-not])
@@ -18,7 +18,7 @@
 #?(:clj
 (doseq [sym '[reverse
               true? false? nil?]]
-  (ns-unmap 'quantum.core.data.binary sym)))
+  (ns-unmap 'quantum.core.data.bits sym)))
 
 ; TODO
 ; bit-clear
@@ -66,7 +66,7 @@
 (defalias | bit-or)
 (defalias bit-xor core/bit-xor)
 
-; ===== SHIFTS =====
+;; ===== SHIFTS ===== ;;
 
 #?(:clj (defalias bit-shift-left core/bit-shift-left)
      #_(defmacro bit-shift-left  [n bits]
@@ -89,6 +89,23 @@
 
 (defalias >>> unsigned-bit-shift-right)
 
+;; ===== ROTATIONS ===== ;;
+
+(defn int-rotate-left
+  {:from "http://hg.openjdk.java.net/jdk7u/jdk7u6/jdk/file/8c2c5d63a17e/src/share/classes/java/lang/Integer.java"}
+  [x n]
+  (bit-or
+    (bit-shift-left x n)
+    (unsigned-bit-shift-right x (- n))))
+
+(defn bit-count
+  "Counts the number of bits set in n"
+  {:from 'cljs.core}
+  [v]
+  (let [v (- v (bit-and (bit-shift-right v 1) 0x55555555))
+        v (+ (bit-and v 0x33333333) (bit-and (bit-shift-right v 2) 0x33333333))]
+    (bit-shift-right (* (bit-and (+ v (bit-shift-right v 4)) 0xF0F0F0F) 0x1010101) 24)))
+
 (declare bits)
 
 (defalias ? core/bit-test)
@@ -105,6 +122,8 @@
   {:adapted-from 'gloss.data.primitives}
   [x n]
   (mapv #(if (pos? (&& (<< 1 %) x)) 1 0) (range n)))
+
+(bits 1 64)
 
 (defn truncate
   "Truncates x to the specified number of bits."
