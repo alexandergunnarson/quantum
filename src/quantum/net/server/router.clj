@@ -45,13 +45,16 @@
 
 #_(bidi.ring/make-handler (create-api))
 
+(defn- add-wildcard [^String path]
+  (str path (if (.endsWith path "/") "*" "/*")))
+
 (defn resources
   "A route for serving resources on the classpath. Accepts the following keys:
     :root       - the root prefix path of the resources, defaults to 'public'
     :mime-types - an optional map of file extensions to mime types
    (This is an improved version of Compojure's |resources| fn.)"
   [path & [options]]
-  (GET (@#'compojure.route/add-wildcard path) {{resource-path :*} :route-params :as req}
+  (GET (add-wildcard path) {{resource-path :*} :route-params :as req}
     (let [root (get options :root "public")
           body (->> resource-path
                     (<- str/remove "..") ; to prevent insecure access
