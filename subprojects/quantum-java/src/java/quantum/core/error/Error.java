@@ -41,7 +41,7 @@ public class Error
      , java.util.Map
      , java.io.Serializable {
     static {
-      call("clojure.core/prefer-method", var("clojure.core/print-method"), clojure.lang.IRecord, Throwable);
+      call("clojure.core/prefer-method", var("clojure.core/print-method"), clojure.lang.IRecord.class, java.lang.Throwable.class);
     }
 
     public         final Object  ident;
