@@ -2,7 +2,7 @@
   ^{:doc "Regex utils"
     :attribution "alexandergunnarson"}
   quantum.core.string.regex
-  (:refer-clojure :exclude [conj! range])
+  (:refer-clojure :exclude [conj! range concat find])
   (:require
     #?(:cljs [goog.string    :as gstr])
              [clojure.string :as str]
@@ -41,6 +41,8 @@
 (defn ?   "Denotes optionality."                   [x] (str x "?"))
 (defn !?  "Denotes mutable optionality."           [x] (conjr!* x "?"))
 
+(defn concat [& xs] (->> xs (map str) (map nc) (apply str)))
+
 (defn bounded "Surrounds with start and end bounds." [& xs]
   (str "^" (apply nc xs) "$"))
 
@@ -48,6 +50,7 @@
   (-> x (conjl!* "^") (conjr!* "$")))
 
 (defn range "Char range" [& xs] (str "[" (apply str xs) "]"))
+(defn not-range "Not- char range" [& xs] (str "[^" (apply str xs) "]"))
 
 (defn alts
   "Creates a regex alts-group, each element of which is a non-capturing group.
@@ -55,3 +58,7 @@
    `((?:a)|(?:b)|...)`"
   [& xs]
   (str "(" (->> xs (map nc) (str/join "|")) ")"))
+
+(def pattern re-pattern)
+(def find    re-find)
+(def matches re-matches)
