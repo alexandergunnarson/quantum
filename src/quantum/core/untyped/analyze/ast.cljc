@@ -13,20 +13,21 @@
 
 ;; ===== CONSTITUENT SPECS ===== ;;
 
-(definterface INode)
+(definterface INode
+  (getSpec []))
 
 #_(t/def ::node (t/isa? INode))
 #_(t/def ::env  (t/map-of t/symbol? ::node))
 
 ;; ===== NODES ===== ;;
 
-(defrecord Unbound [sym #_t/symbol?]
+(defrecord Unbound [sym #_t/symbol? spec #_(t/= t/?)]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `unbound sym)))
 
-(defn unbound [sym] (Unbound. sym))
+(defn unbound [sym] (Unbound. sym t/?))
 
 (defrecord Literal [form #_::t/literal, spec #_::t/spec]
   INode
@@ -86,13 +87,14 @@
 
 (defrecord MacroCall
   [form     #_::t/form
-   expanded #_::node]
+   expanded #_::node
+   spec     #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `macro-call (into (array-map) this))))
 
-(defn macro-call [m] (map->MacroCall m))
+(defn macro-call [m] (-> m map->MacroCall (assoc :spec (-> m :expanded :spec))))
 
 ;; ===== RUNTIME CALLS ===== ;;
 
