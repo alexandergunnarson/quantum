@@ -228,7 +228,7 @@
 
 (defn dissoc-if [m pred k]
   (let [v (get m k)]
-    (if (pred v) (dissoc m k) m))
+    (if (pred v) (dissoc m k) m)))
 
 (defn dissoc-in
   "Dissociate a value in a nested assocative structure, identified by a sequence
