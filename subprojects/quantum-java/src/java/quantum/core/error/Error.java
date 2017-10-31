@@ -40,9 +40,9 @@ public class Error
      , IPersistentMap
      , java.util.Map
      , java.io.Serializable {
-    static {
-      call("clojure.core/prefer-method", var("clojure.core/print-method"), clojure.lang.IRecord.class, java.lang.Throwable.class);
-    }
+    // static {
+    //   call("clojure.core/prefer-method", var("clojure.core/print-method"), clojure.lang.IRecord.class, java.lang.Throwable.class);
+    // }
 
     public         final Object  ident;
     private static final Keyword ident_kw   = keyword("ident");
