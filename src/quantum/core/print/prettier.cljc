@@ -3,17 +3,23 @@
     [fipp.edn]
     [fipp.visit]
     [fipp.ednize]
-    [quantum.core.ns   :as ns]
-    [quantum.core.vars :as var]))
+    [quantum.core.fn              :as fn
+      :refer [rcomp]]
+    [quantum.core.print           :as pr]
+    [quantum.core.ns              :as ns]
+    [quantum.core.untyped.convert :as uconv]
+    [quantum.core.untyped.qualify :as qual]
+    [quantum.core.vars            :as var]))
 
-; TODO get rid of this fipp boilerplate
-(in-ns 'fipp.ednize)
+#?(:clj
+(defmethod print-method fipp.ednize.IEdn [^fipp.ednize.IEdn v ^java.io.Writer w]
+  (print-method (._edn v) w)))
 
-(defprotocol IOverride
-  "Mark object as preferring its custom IEdn behavior.")
-
-(defn override? [x]
-  (satisfies? IOverride x))
+#?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IRecord))
+#?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.IPersistentMap))
+#?(:clj (prefer-method print-method fipp.ednize.IEdn java.util.Map))
+#?(:clj (prefer-method print-method fipp.ednize.IEdn clojure.lang.ISeq))
+#?(:clj (prefer-method print-method clojure.lang.IRecord Throwable))
 
 (in-ns 'fipp.visit)
 
@@ -43,16 +49,19 @@
 
 ;; Collapses symbols
 (defn visit-symbol* [x]
-  [:text (var/collapse-symbol)])
+  [:text (quantum.core.untyped.qualify/collapse-symbol
+           x (not @quantum.core.print/*print-as-code?))])
 
 (defn visit-fn [visitor x]
-  [:group "#" "fn" " " (-> x var/fn->symbol visit-symbol*)])
+  [:group "#" "fn" " " (-> x quantum.core.untyped.convert/>symbol visit-symbol*)])
 
 (defn visit*
   "Visits objects, ignoring metadata."
   [visitor x]
   (cond
     (nil? x) (visit-nil visitor)
+    (quantum.core.print/group? x)
+      (fipp.edn/pretty-coll visitor "" (.-xs ^quantum.core.print.Group x) :line "" visit)
     (fipp.ednize/override? x) (visit-unknown visitor x)
     (boolean? x) (visit-boolean visitor x)
     (string? x) (visit-string visitor x)
@@ -148,4 +157,12 @@
     fipp.ednize/IOverride
     fipp.ednize/IEdn
       (-edn [this] (tagged-literal '!! (into {} this)))) ; TODO ->map
+  (extend-type quantum.core.error.Error
+    fipp.ednize/IOverride
+    fipp.ednize/IEdn
+      (-edn [this] (tagged-literal 'err (into {} this))))
+  (extend-type (Class/forName "[Ljava.lang.StackTraceElement;")
+    fipp.ednize/IOverride
+    fipp.ednize/IEdn
+      (-edn [this] (mapv (rcomp StackTraceElement->vec str symbol) this)))
   )
