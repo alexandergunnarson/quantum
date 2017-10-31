@@ -360,6 +360,7 @@
 (defn flatten:transducer []
   (fn [rf]
     (fn ([] (rf))
+        ([ret] ret)
         ([ret v]
            (if (sequential? v) ; TODO use `t/sequential?` ?
                (reduce rf ret (flatten+ v))
@@ -769,7 +770,7 @@
   ([genf contains?f conj!f] (distinct-by-storing+ identity genf contains?f conj!f))
   ([genf contains?f conj!f xs] (transformer xs (distinct-storing+ genf contains?f conj!f))))
 
-(defn distinct:transducer [] (distinct-storing:transducer identity))
+(defn distinct:transducer [] (distinct-by-storing:transducer identity))
 
 (def distinct+ (transducer->transformer 0 distinct:transducer))
 
