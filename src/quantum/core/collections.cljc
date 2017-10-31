@@ -87,7 +87,7 @@
     [quantum.core.string                     :as str    ]
     [quantum.core.string.format              :as sform  ]
     [quantum.core.type                       :as t
-      :refer [val? lseq? transient? editable?
+      :refer [lseq? transient? editable?
               boolean? should-transientize?
               class]]
     [quantum.core.analyze.clojure.predicates :as anap]
@@ -107,6 +107,8 @@
               map-entry join empty? empty update update! empty? elem->array]]))
   #?(:clj  (:import java.util.Comparator quantum.core.refs.MutableReference)
      :cljs (:import goog.string.StringBuffer)))
+
+(defalias val? quantum.core.type/val?)
 
 #?(:clj
 (defmacro getf
