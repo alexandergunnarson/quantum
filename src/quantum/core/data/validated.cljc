@@ -325,9 +325,9 @@
       (concat req opt req-un opt-un) (s/coll-of qualified-keyword? :distinct true))
     (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 ns-name-str)
           schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4, #5
-          qualified-sym        (qual/qualify:class sym)
+          qualified-sym        (qual/qualify|class sym)
           req-record-sym       (symbol (str (name sym) ":__required"))
-          qualified-record-sym (qual/qualify:class req-record-sym)
+          qualified-record-sym (qual/qualify|class req-record-sym)
           un-record-sym        (symbol (str (name sym) ":__un"))
           all-mod-record-sym   (symbol (str (name sym) ":__all-mod"))
           all-record-sym       (symbol (str (name sym) ":__all"))
@@ -464,7 +464,7 @@
                                               (.valAt ~(with-meta v-gen {:tag sym}) (get ~un-ks-to-ks k#))
                                               v0#))
                                         this#))))
-                ~'get-entry   ([_# k#]
+                ~'find        ([_# k#]
                                 #_(enforce-get ~empty-record ~sym ~spec-sym k#)
                                 (~(case-env :clj '.entryAt :cljs nil) ~'v k#))}
              ~'?Object

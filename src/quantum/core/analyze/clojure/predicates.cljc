@@ -40,7 +40,7 @@
 (defn symbol-eq? [s1 s2] (= (name s1) (name s2))) ; TODO this isn't right
 
 (defn metaclass    [sym]
-  (whenc (th/type-hint:sym sym) (fn-> name empty?) nil))
+  (whenc (th/type-hint|sym sym) (fn-> name empty?) nil))
 
 
 (defn qualified?   [sym] (-> sym str (str-index-of "/") (not= -1)))

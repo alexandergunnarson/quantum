@@ -218,8 +218,8 @@
 (defmacro defmalias
   "Defines an cross-platform alias for a macro.
 
-   In Clojure one can use |defalias| for this purpose without a problem, but
-   in ClojureScript macros can't be used in a |defalias| context because |defalias|
+   In Clojure one can use `defalias` for this purpose without a problem, but
+   in ClojureScript macros can't be used in a `defalias` context because `defalias`
    creates a ClojureScript (var) binding where a Clojure (macro) one is needed.
 
    Defaults to the same binding for both Clojure and ClojureScript."
@@ -265,7 +265,7 @@
     (unquote-replacement sym-map# '~form))))
 
 #?(:clj
-(defn syntax-quoted:sym [sym]
+(defn syntax-quoted|sym [sym]
   (assert symbol?)
   (-> sym (@#'clojure.tools.reader/syntax-quote*) second)))
 
