@@ -2,7 +2,8 @@
   (:refer-clojure :exclude
     [assoc-in contains? get flatten])
   (:require
-    [clojure.core :as core]
+    [clojure.core    :as core]
+    [fast-zip.core   :as zip]
     [quantum.core.fn :as fn
       :refer [fn']]
     [quantum.core.logic
@@ -13,6 +14,11 @@
   ([xs k] (core/contains? xs k)))
 
 ;; ===== SOCIATIVE ===== ;;
+
+(defn get
+  ([  k]      (fn [x] (core/get x k)))
+  ([x k]      (core/get x k))
+  ([x k else] (core/get x k else)))
 
 ;; ----- UPDATE ----- ;;
 
@@ -57,18 +63,13 @@
 
 ;; ===== GENERAL ===== ;;
 
-(defn get
-  ([  k]      (fn [x] (core/get x k)))
-  ([x k]      (core/get x k))
-  ([x k else] (core/get x k else)))
-
 (defn flatten
   ([] core/flatten)
   ([xs] (core/flatten xs))
-  ([xs n]
+  ([n xs]
     (if (<= n 0)
         xs
-        (recur (apply concat xs) (dec n)))))
+        (recur (dec n) (apply concat xs)))))
 
 (defn frequencies-by
   "Like |frequencies| crossed with |group-by|."
