@@ -7,21 +7,22 @@
             [taoensso.sente.server-adapters.aleph    :as a-aleph]])
             [clojure.core.async                      :as async]
             [quantum.core.collections                :as coll
-              :refer [kw-map join remove-vals+ red-for break]]
-            [quantum.core.string                     :as str]
-            [quantum.net.client.impl                 :as impl]
-            [quantum.net.core                        :as net]
-            [quantum.core.resources                  :as res]
-            [quantum.core.paths                      :as path]
-    #?(:clj [quantum.net.server.router               :as router])
+              :refer [kw-map join filter-keys' remove-vals+ red-for break]]
             [quantum.core.error                      :as err]
-            [quantum.core.spec                       :as s
-              :refer [validate]]
+            [quantum.core.log                        :as log]
             [quantum.core.logic
               :refer [fn-nil]]
-            [quantum.core.log                        :as log]
+            [quantum.core.paths                      :as path]
+            [quantum.core.process                    :as proc]
+            [quantum.core.resources                  :as res]
+            [quantum.core.spec                       :as s
+              :refer [validate]]
+            [quantum.core.string                     :as str]
             [quantum.core.vars                       :as var
-              :refer [defalias reset-var!]]))
+              :refer [defalias reset-var!]]
+            [quantum.net.client.impl                 :as impl]
+            [quantum.net.core                        :as net]
+    #?(:clj [quantum.net.server.router               :as router])))
 
 (def request! impl/request!)
 
@@ -75,7 +76,7 @@
                             {:host           (or host "0.0.0.0")
                              :port           port
                              :ssl-port       (when-not (= type :aleph) ; SSL port ignored for Aleph
-                                               (or ssl-port 443))
+                                               ssl-port)
                              :http2?         (if (false? http2?) false true)
                              :keystore       key-store-path
                              :truststore     trust-store-path
@@ -103,10 +104,11 @@
                           (remove-vals+ nil?)
                           (join {}))
                 _ (reset-var! routes-var (router/make-routes (merge this opts)))
-                _ (log/ppr :debug "Launching server with options:" (assoc opts :type type))
+                _ (log/ppr ::debug "Launching server with options:" (assoc opts :type type))
                 server (case type
                          :aleph    (aleph/start-server routes-var opts)
-                         :immutant (imm/run            routes-var opts)
+                         :immutant (let [allowed-keys #{:ajp-port :auto-start :buffer-size :buffers-per-region :client-auth :configuration :contexts :direct-buffers? :dispatch? :filter-map :host :http2? :io-threads :key-managers :key-password :keystore :path :port :servlet-name :ssl-context :ssl-port :static-dir :trust-managers :trust-password :truststore :virtual-host :worker-threads}]
+                                     (imm/run routes-var (->> opts (filter-keys' allowed-keys))))
                          ;:http-kit (http-kit/run-server routes opts)
                          )
                 _ (reset! stop-fn-f
@@ -116,7 +118,7 @@
                       :immutant #(do (when server
                                        (imm/stop server)))
                       :http-kit server))]
-            (log/pr :debug "Server launched.")
+            (log/pr ::debug "Server launched.")
             (merge this
               {:ran     server
                :server  (condp = type
@@ -130,7 +132,7 @@
                :stop-fn @stop-fn-f}
               opts))
         (catch Throwable e
-          (err/warn! e)
+          (log/pr :warn e)
           (@stop-fn-f)
           (throw e)))))
     (stop [this]
@@ -141,7 +143,7 @@
             :immutant (stop-fn)
             :http-kit (stop-fn :timeout (or stop-timeout 100))))
         (catch Throwable e
-          (err/warn! e)))
+          (log/pr :warn e)))
       (assoc this
         :stop-fn nil))))
 
@@ -239,3 +241,17 @@
               (catch js/Error e
                 (async/put! c false)
                 c)))))
+
+;; ===== SSL ===== ;;
+
+(defn renew-letsencrypt-cert!
+  "Renews a letsencrypt HTTPS certificate.
+   Returns a future."
+  [http-root-path domain & [opts]]
+  (when (:kill? opts)
+    @(proc/proc! ["killall" "letsencrypt"]))
+  (proc/proc!
+    ["letsencrypt" "certonly" "--webroot" "-w" "./" "-d" domain
+     "--agree-tos" "--keep-until-expiring"]
+    (merge {:dir http-root-path}
+           (dissoc opts :kill?))))
