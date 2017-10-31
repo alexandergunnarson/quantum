@@ -89,8 +89,7 @@
 (defaliases pconv
   ->boolean
   ->byte* ->byte
-  ->char* ->char
-  ->short* ->short
+  ->char* ->short
   ->int* ->int
   ->long* ->long
   ->float* ->float
