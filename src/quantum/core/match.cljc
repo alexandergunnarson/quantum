@@ -6,6 +6,7 @@
      [clojure.core.match               :as match]])
      [quantum.core.fn                  :as fn
        :refer [<- fn-> fnl]]
+     [quantum.core.untyped.qualify     :as qual]
      [quantum.core.vars                :as var
        :refer [defalias]]
      [quantum.core.logic
@@ -46,7 +47,7 @@
 (def defs
   (let [defs-syms '#{& ? | + * ?= ?! _}]
     (->> (zipmap defs-syms
-                 (mapv (fnl var/qualify 'quantum.core.match) defs-syms))
+                 (mapv (fnl qual/qualify 'quantum.core.match) defs-syms))
          (apply concat) vec)))
 
 #?(:clj
