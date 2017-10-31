@@ -1,5 +1,5 @@
 (ns quantum.core.macros.defnt
-  (:refer-clojure :exclude [merge])
+  (:refer-clojure :exclude [contains? merge])
   (:require
     [clojure.core                            :as core]
     [quantum.core.cache
@@ -12,7 +12,7 @@
     [quantum.core.data.vector                :as vec
       :refer [catvec]]
     [quantum.core.error                      :as err
-      :refer [ex! ->ex throw-unless assertf->>]]
+      :refer [ex! ->ex err! throw-unless assertf->>]]
     [quantum.core.fn                         :as fn
       :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.log                        :as log
@@ -37,7 +37,7 @@
       :refer [contains? merge-call update-first update-val]]
     [quantum.core.untyped.collections.tree   :as utree]
     [quantum.core.untyped.convert            :as uconv
-      :refer [->name]]
+      :refer [>name]]
     [quantum.core.untyped.qualify            :as qual]
     [quantum.core.untyped.reducers
       :refer [reducei]                       :as ured]
@@ -81,7 +81,7 @@
 (defn defnt-keyword->positional-profundal [x]
   (or (?defnt-keyword->positional-profundal x)
       (when (keyword? x)
-        (err/throw-info "Invalid `defnt` special keyword" {:k x}))))
+        (err! "Invalid `defnt` special keyword" {:k x}))))
 
 (def qualified-class-name-map
   (->> (set/union tcore/primitive-types #?(:clj tcore/primitive-array-types))
@@ -210,7 +210,7 @@
           (-> sym name ustr/camelcase (str "Interface") munge symbol)
         ns-qualified-interface-name
           (-> genned-interface-name
-              #?(:clj (qual/qualify:dot (namespace-munge *ns*))))
+              #?(:clj (qual/qualify|dot (namespace-munge *ns*))))
         gen-interface-code-header
           (list 'gen-interface :name ns-qualified-interface-name :methods)
         gen-interface-code-body-unexpanded
@@ -242,7 +242,7 @@
       hint
       (if (or #?(:cljs true) (= lang :cljs))
           (throw (->ex "Depth specifications not supported for hints in CLJS (yet)" (kw-map position depth arglist hints)))
-          #?(:clj (tcore/nth-elem-type:clj hint depth))))))
+          #?(:clj (tcore/nth-elem-type|clj hint depth))))))
 
 (defn hints->with-replace-special-kws
   "E.g. :<1>:4, :<0>, etc. -> a particular type"
@@ -255,9 +255,9 @@
         (if-not-let [[position depth] (defnt-keyword->positional-profundal hint)]
           hint
           (cond (= position i)
-                (err/throw-info "Can't have a self-referring positional hint" (kw-map position depth arglist hints))
+                (err! "Can't have a self-referring positional hint" (kw-map position depth arglist hints))
                 (> position i)
-                (err/throw-info "(Currently) can't have a forward-referring positional hint" (kw-map position depth arglist hints))
+                (err! "(Currently) can't have a forward-referring positional hint" (kw-map position depth arglist hints))
                 :else (positional-profundal->hint lang position depth arglist hints')))))
     (vec hints)
     hints))
@@ -352,7 +352,7 @@
                                                                       (trans/hint-body-with-arglist [body] arglist-hinted :clj :protocol))
                                        ret-type-input (assoc (kw-map ns- lang explicit-ret-type) :fn-sym sym :expr contextualized-body)
                                        _ (log/ppr-hints :macro-expand "COMPUTING RETURN TYPE FROM" ret-type-input)
-                                       ret-type (some-> (fn-expr->return-type ret-type-input) ->name symbol)
+                                       ret-type (some-> (fn-expr->return-type ret-type-input) >name symbol)
                                        _ (log/ppr-hints :macro-expand/params "COMPUTED RETURN TYPE:" ret-type)
                                        arity-hinted (assoc arity 0 arglist-hinted)]
                                    (with-meta [[method-name hints ret-type] (seq arity-hinted)]
@@ -384,7 +384,7 @@
           (recur (inc i) (rest arglist-n)
                  (update types-n i
                    (fn [type-map]
-                     (let [new-map (zipmap (ensure-set type-n) (repeat #{(count arglist)}))]
+                     (let [new-map (zipmap (ucoll/ensure-set type-n) (repeat #{(count arglist)}))]
                      (if (nil? type-map)
                          new-map
                          (merge-with set/union type-map new-map))))))))))
@@ -429,7 +429,7 @@
         (when (val? first-hint)
           (swap! cached-arglists update (count arglist)
             (fn [first-hints-set]
-              (let [hints-set-ensured (ensure-set first-hints-set)]
+              (let [hints-set-ensured (ucoll/ensure-set first-hints-set)]
                 (if (contains? hints-set-ensured first-hint)
                     (throw (->ex "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
@@ -486,7 +486,7 @@
 (defn ^Class expr->hint:class [expr]
   (if (anap/hinted-literal? expr)
       (ana/jvm-typeof expr)
-      (th/type-hint:class expr))))
+      (th/type-hint|class expr))))
 
 #?(:clj
 (defn try-param-match
@@ -558,15 +558,15 @@
   (reduce
     (fn [matches' match]
       (let [match' (last matches')
-            specificity-scores
+            generality-scores
               (for [i (range (count match))]
                 (let [t  (expr->hint:class (get match  i))
                       t' (expr->hint:class (get match' i))]
-                  (t/compare-classes t t')))
-            specificity-score (->> specificity-scores (remove nil?) (apply +))]
-        (log/ppr-hints :macro-expand/params (kw-map specificity-score match match'))
-        (cond (pos? specificity-score) [match]
-              (neg? specificity-score) matches'
+                  (t/compare|class|class t t')))
+            generality-score (->> generality-scores (remove nil?) (apply +))]
+        (log/ppr-hints :macro-expand/params (kw-map generality-score match match'))
+        (cond (neg? generality-score) [match]
+              (pos? generality-score) matches'
               :else (conj matches' match))))
     [(first matches)] (rest matches))))
 
@@ -646,7 +646,7 @@
     (if (not reify-available?)
         ; Protocol dispatch
         (if strict?
-            (err/throw-info "Conflicting `defnt` options: strict, but no reify available" {:defnt-sym sym})
+            (err! "Conflicting `defnt` options: strict, but no reify available" {:defnt-sym sym})
             (do (assert (symbol? protocol-method) (kw-map protocol-method))
                 `(~protocol-method ~@args)))
         ; Matches even when it has incomplete type information
