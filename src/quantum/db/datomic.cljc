@@ -272,8 +272,8 @@
     (start [this]
       (log/pr ::debug "Starting Datomic database...")
       (let [type                   (validate (or type :free)                        #{:free :http :dynamo :mem}) ; TODO for now; how does :dev differ?
-            name                   (validate (or name "test")                       (s/and string? contains?))
-            host                   (validate (or host "localhost")                  (s/and string? contains?))
+            name                   (validate (or name "test")                       (s/and string? (fn1 contains?)))
+            host                   (validate (or host "localhost")                  (s/and string? (fn1 contains?)))
             port                   (validate (or port 4334)                         integer?) ; TODO `net/valid-port?`
             create?                (validate (default create?                false) (fn1 t/boolean?))
             create-if-not-present? (validate (default create-if-not-present? true ) (fn1 t/boolean?))
