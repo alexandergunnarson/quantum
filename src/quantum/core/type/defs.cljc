@@ -33,7 +33,7 @@
               !set-types:gen
               gen-<type-pred=>type>]]))
   (:import
-    #?@(:clj  [clojure.core.async.impl.channels.ManyToManyChannel
+    #?@(:clj  [; clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble
                quantum.core.data.tuple.Tuple]
         :cljs [goog.string.StringBuffer

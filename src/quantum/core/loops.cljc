@@ -26,8 +26,7 @@
     [quantum.core.refs                :as refs
       :refer [deref reset! !long]]
     [quantum.core.type                :as type]
-    [quantum.core.untyped.reducers    :as ured
-      :refer [reduce-pair]]
+    [quantum.core.untyped.reducers    :as ured]
     [quantum.core.vars                :as var
       :refer [defalias]])
 #?(:cljs

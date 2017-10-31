@@ -30,15 +30,14 @@
     [quantum.core.process       :as proc]
     [quantum.core.convert.primitive :as pconv
       :refer [->long]]
-    [quantum.core.type           :as t
-      :refer [val?]]
     [quantum.core.vars           :as var
       :refer [defalias]]
     [quantum.core.data.validated :as dv]
     [quantum.core.spec           :as s
       :refer [validate]]
+    [quantum.core.type           :as t]
     [quantum.core.untyped.convert
-      :refer [->name]])
+      :refer [>name]])
 #?(:clj
     (:import
       datomic.Peer
@@ -444,7 +443,7 @@
           part-f      (when-not datascript?
                         (or part :db.part/db))
           type        (name   (:type   schema))
-          unique      (->name (:unique schema))]
+          unique      (>name (:unique schema))]
       ; Partitions are not supported in DataScript (yet)
       (when-not datascript? (validate part-f val?))
       (->> {:db/id                 (when-not ((fn-or mconn? nil?) conn-f)

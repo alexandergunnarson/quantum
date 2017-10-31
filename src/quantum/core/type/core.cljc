@@ -16,7 +16,7 @@
           [quantum.core.error               :as err
             :refer [->ex]]
           [quantum.core.untyped.convert     :as uconv
-            :refer [->name]]
+            :refer [>name]]
           [quantum.core.vars                :as var
             :refer [defalias]]))
 
@@ -101,7 +101,7 @@
 (def prim?      #(contains? prim-types %))
 (def primitive? #(contains? primitive-types %))
 #?(:clj  (def auto-unboxable? #(contains? primitive-boxed-types %))
-   :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "|auto-unboxable?| not supported by CLJS"))))
+   :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "`auto-unboxable?` not supported by CLJS"))))
 
 #?(:clj
 (defn most-primitive-class-of [x]
@@ -131,12 +131,12 @@
 (def java-array-type-regex #"(\[+)(?:(Z|S|B|C|I|J|F|D)|(?:L(.+);))") ; TODO create this regex dynamically
 
 #?(:clj
-(defn nth-elem-type:clj
+(defn nth-elem-type|clj
   "`x` must be Java array type (for now)
    Returns a string or symbol"
   [x n]
   (assert (or (string? x) (symbol? x) (class? x)) {:x x})
-  (let [s (->name x)
+  (let [s (>name x)
         [java-array-type? brackets ?array-ident ?object-type]
           (re-matches java-array-type-regex s)
         array-depth (count brackets)]
@@ -154,15 +154,15 @@
 
 (def default-types (-> types-unevaled (get quantum.core.core/lang) :any))
 
-(defn ->boxed:sym   [t]
+(defn ->boxed|sym   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
      :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
 
-(defn ->unboxed:sym [t]
+(defn ->unboxed|sym [t]
   #?(:clj  (if-let [unboxed (get unboxed-type-map t)] unboxed t)
      :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
 
-(defn boxed?:sym    [t]
+(defn boxed?|sym    [t]
   #?(:clj  (contains? unboxed-type-map t)
      :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
 

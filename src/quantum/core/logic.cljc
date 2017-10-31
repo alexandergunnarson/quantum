@@ -12,8 +12,6 @@
       :refer [fn1 fn-> fn->> fn']]
     [quantum.core.macros.core :as cmacros
       :refer [case-env]]
-    [quantum.core.type           :as t
-      :refer [val?]]
     [quantum.core.vars        :as var
       :refer [defalias]])
 #?(:cljs
