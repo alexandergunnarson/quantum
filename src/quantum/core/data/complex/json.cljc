@@ -6,7 +6,7 @@
 #?@(:clj
    [[cheshire.core            :as json]
     [cheshire.parse           :as json:parse]])
-    [cognitect.transit        :as t]
+    [cognitect.transit        :as transit]
     [quantum.core.collections :as coll]
     [quantum.core.fn          :as fn
       :refer [<- fn1]]
@@ -27,7 +27,7 @@
   #?(:clj  (json/parse-string x (or key-fn keyword))
      :cljs (when-not (empty? x)
              (->> x
-                  (t/read (t/reader :json))
+                  (transit/read (transit/reader :json))
                   (<- whenp (val? key-fn)
                       (fn1 coll/apply-to-keys key-fn)))))))
 
@@ -44,10 +44,7 @@
 
 (defn ->json
   "JSON encode @x into a String."
-  {:performance "Source: http://swannodette.github.io/2014/07/26/transit--clojurescript/
-                 The performance [with transit-cljs] is 20-30X faster than
-                 combining JSON.parse with cljs.core/js->clj."}
   ([x] (->json x nil))
   ([x opts]
     #?(:clj  (json/generate-string x opts)
-       :cljs (t/write (t/writer :json-verbose) x))))
+       :cljs (-> x clj->js js/JSON.stringify))))
