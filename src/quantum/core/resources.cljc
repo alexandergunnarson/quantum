@@ -240,11 +240,11 @@
     e (throw (ex-info (str "Error in component " key
                            " in system " (com.stuartsierra.component.platform/type-name system)
                            " calling " f)
-                      {:reason     ::com.stuartsierra.component/component-function-threw-exception
+                      {:reason     ::comp/component-function-threw-exception
                        :function   f
                        :system-key key
-                       :component component
-                       :system    system}
+                       :component  component
+                       :system     system}
                       e))))
 
 (defn update-system*
