@@ -320,8 +320,15 @@
                :as opts}]]
   (Process. nil command env dir pr-to-out?)))
 
-(def proc! #?(:clj  (rcomp ->proc res/start!)
-              :cljs (fn [& args] (throw (->ex :unimplemented)))))
+(defn proc! [command & [{:as opts :keys [wait #_t/integer?]}]]
+  #?(:clj  (let [^java.lang.Process proc (-> (->proc command opts) res/start! :process)
+                 *proc (future (.waitFor proc))]
+             (if wait
+                 (let [ret (deref *proc wait ::timeout)]
+                   (when (= ret ::timeout) (.destroyForcibly proc))
+                   ret)
+                 *proc))
+     :cljs (throw (->ex :unimplemented))))
 
 ; TODO CLJS
 #?(:clj
