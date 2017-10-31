@@ -57,7 +57,7 @@
     (with-meta sym
       (merge
         {:dont-test
-          (str "Alias of " (qual/var->name var-0))}
+          (str "Alias of " (-> var-0 meta :name))}
         (meta var-0)
         (meta sym)))
     (when (.hasRoot ^clojure.lang.Var var-0) [@var-0]))))
