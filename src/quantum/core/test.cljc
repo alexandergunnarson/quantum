@@ -38,7 +38,12 @@
   (->> (all-ns) (filter (fn/fn-> ns-name name pred)) (map test-ns) doall)))
 
 #?(:clj (defmacro is= [& args] `(is (= ~@args))))
-#?(:clj (defmacro throws [x] `(do (is (~'thrown? ~(err/generic-error &env) ~x)) true)))
+#?(:clj (defmacro throws
+          ([x] `(do (is (~'thrown? ~(err/generic-error &env) ~x)) true))
+          ([expr err-pred]
+            `(try ~expr
+                  (is (throws '~err-pred))
+               (catch ~(err/generic-error &env) e# (is (~err-pred e#)))))))
 
 ; Makes test failures and errors print prettily
 ; TODO CLJS
