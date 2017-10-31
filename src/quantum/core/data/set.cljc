@@ -30,7 +30,7 @@
 
 ; ============ STRUCTURES ============
 
-#?(:clj (defalias ordered-set         oset/ordered-set))
+#?(:clj (defalias ordered-set         oset/ordered-set)) ; insertion-ordered set
 #?(:clj (defalias oset                ordered-set))
 #?(:clj (defalias c-sorted-set        ftree/counted-sorted-set)) ; sorted set that provides log-n nth
         (defalias sorted-rank-set     avl/sorted-set   )
