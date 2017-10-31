@@ -804,7 +804,8 @@
       "java.lang.Integer"   numerically-int?
       "java.lang.Long"      numerically-long?
       "java.lang.Float"     numerically-float?
-      "java.lang.Double"    numerically-double?
+      ;; TODO fix
+      ;;"java.lang.Double"    numerically-double?
       (err! "Could not find numerical range spec for class" {:c c}))))
 
 #?(:clj  (-def char-seq?       java.lang.CharSequence))
