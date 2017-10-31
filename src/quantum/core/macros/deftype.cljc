@@ -18,24 +18,25 @@
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
 
-(defn ?Object        [lang] (case lang :clj 'Object                             :cljs 'Object                ))
-(defn ?Seqable       [lang] (case lang :clj 'clojure.lang.Seqable               :cljs 'cljs.core/ISeqable    ))
-(defn ?Counted       [lang] (case lang :clj 'clojure.lang.Counted               :cljs 'cljs.core/ICounted    ))
-(defn ?Indexed       [lang] (case lang :clj 'clojure.lang.Indexed               :cljs 'cljs.core/IIndexed    ))
-(defn ?Sequential    [lang] (case lang :clj 'clojure.lang.Sequential            :cljs 'cljs.core/ISequential ))
-(defn ?Seq           [lang] (case lang :clj 'clojure.lang.ISeq                  :cljs 'cljs.core/ISeq        ))
-(defn ?Stack         [lang] (case lang :clj 'clojure.lang.IPersistentStack      :cljs 'cljs.core/IStack      ))
-(defn ?Collection    [lang] (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))
-(defn ?Reversible    [lang] (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
 (defn ?Associative   [lang] (case lang :clj 'clojure.lang.Associative           :cljs 'cljs.core/IAssociative))
-(defn ?MutableMap    [lang] (case lang :clj 'java.util.Map nil))
-(defn ?Map           [lang] (case lang :clj 'clojure.lang.IPersistentMap        :cljs 'cljs.core/IMap        ))
-(defn ?Lookup        [lang] (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
-(defn ?HashEq        [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
-(defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
-(defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
+(defn ?Collection    [lang] (case lang :clj 'clojure.lang.IPersistentCollection :cljs 'cljs.core/ICollection ))
+(defn ?Comparable    [lang] (case lang :clj 'java.lang.Comparable               :cljs 'cljs.core/IComparable ))
+(defn ?Counted       [lang] (case lang :clj 'clojure.lang.Counted               :cljs 'cljs.core/ICounted    ))
 (defn ?Deref         [lang] (case lang :clj 'clojure.lang.IDeref                :cljs 'cljs.core/IDeref      ))
 (defn ?Fn            [lang] (case lang :clj 'clojure.lang.IFn                   :cljs 'cljs.core/IFn         ))
+(defn ?HashEq        [lang] (case lang :clj 'clojure.lang.IHashEq               :cljs 'cljs.core/IHash       ))
+(defn ?Indexed       [lang] (case lang :clj 'clojure.lang.Indexed               :cljs 'cljs.core/IIndexed    ))
+(defn ?Iterable      [lang] (case lang :clj 'java.lang.Iterable                 :cljs 'cljs.core/IIterable   ))
+(defn ?Lookup        [lang] (case lang :clj 'clojure.lang.ILookup               :cljs 'cljs.core/ILookup     ))
+(defn ?Map           [lang] (case lang :clj 'clojure.lang.IPersistentMap        :cljs 'cljs.core/IMap        ))
+(defn ?MutableMap    [lang] (case lang :clj 'java.util.Map                      nil))
+(defn ?Object        [lang] (case lang :clj 'java.lang.Object                   :cljs 'Object                ))
+(defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
+(defn ?Reversible    [lang] (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
+(defn ?Seq           [lang] (case lang :clj 'clojure.lang.ISeq                  :cljs 'cljs.core/ISeq        ))
+(defn ?Seqable       [lang] (case lang :clj 'clojure.lang.Seqable               :cljs 'cljs.core/ISeqable    ))
+(defn ?Sequential    [lang] (case lang :clj 'clojure.lang.Sequential            :cljs 'cljs.core/ISequential ))
+(defn ?Stack         [lang] (case lang :clj 'clojure.lang.IPersistentStack      :cljs 'cljs.core/IStack      ))
 
 (defn pfn
   "Protocol fn"
@@ -67,6 +68,9 @@
   [methods-spec lang]
   (for [[iname impls] methods-spec]
     (case iname
+      ?Comparable
+        `[~(?Comparable lang)
+          ~@(p-arity (case lang :clj 'compareTo :cljs '-compare) (get impls 'compare))]
       ?Seqable
         `[~(?Seqable lang)
           ~@(p-arity (pfn 'seq lang) (get impls 'seq))]
@@ -113,13 +117,8 @@
             `[~(?Object lang)
                ~@(p-arity 'equiv    (get impls 'equals))])
       ?Hash
-        (case lang
-          :clj
-            `[~(?HashEq lang)
-               ~@(p-arity 'hashEq     (get-in methods-spec '[?HashEq hash-eq]))]
-          :cljs
-            `[~(?HashEq lang)
-               ~@(p-arity '-hash      (get-in methods-spec '[?HashEq hash-eq]))])
+        `[~(?HashEq lang)
+          ~@(p-arity (case lang :clj 'hashEq :cljs '-hash) (get impls 'hash-eq))]
       ?Meta
         (case lang
           :clj
@@ -163,7 +162,7 @@
           ~@(p-arity (pfn 'assoc  lang) (get impls 'assoc    ))
           ~@(case lang
               :clj  `[  ~@(p-arity 'containsKey (get-in methods-spec '[?Lookup      contains?]))
-                        ~@(p-arity 'entryAt     (get-in methods-spec '[?Lookup      get-entry]))
+                        ~@(p-arity 'entryAt     (get-in methods-spec '[?Lookup      find]))
                       ~(?Map lang)
                         ~@(p-arity 'without     (get impls 'dissoc   ))
                       ~'java.util.Map
@@ -299,7 +298,7 @@
       {:methods-spec methods-spec}
       (let [interface-sym
              (symbol (str "I" (name type-sym) "__GEN"))
-            qualified-interface-sym (qual/qualify:class interface-sym)
+            qualified-interface-sym (qual/qualify|class interface-sym)
             methods
               (->> fields
                    (map (fn [field-sym]
@@ -326,7 +325,7 @@
             &env type-sym fields
             (apply concat (deftype-helper methods-spec lang)))] ; in order to help `deftype` recognize that there is an interface, when there is one
     `(do ~deftype-code
-         ~(when (= lang :clj) `(import (quote ~(qual/qualify:class type-sym)))))))) ; TODO doesn't this already happen?
+         ~(when (= lang :clj) `(import (quote ~(qual/qualify|class type-sym)))))))) ; TODO doesn't this already happen?
 
 #?(:clj
 (defmacro deftype
