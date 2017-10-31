@@ -647,9 +647,9 @@
 
 (defnt subview-range
   "Returns a subview of ->`x`, [->`a` to (+ ->`a` ->`b`)), in O(1) time."
-  ([#{+vector? transformer? #?@(:clj [object-array-nd? !array-list? string?])} xs
+  ([#{+vector? transformer? #?@(:clj [#_object-array-nd? !array-list? string?])} xs
     ^nat-long? a] (subview xs a))
-  ([#{+vector? transformer? #?@(:clj [object-array-nd? !array-list? string?])} xs
+  ([#{+vector? transformer? #?@(:clj [#_object-array-nd? !array-list? string?])} xs
     ^nat-long? a ^nat-long? b] (subview xs a (+ a b))))
 
 ; TODO mark transformer version not thread-safe
@@ -768,8 +768,8 @@
   ([^default                      xs] (empty? xs))
   ([#{string? array?}             xs ^nat-long? n])
   ([#{#?@(:clj  [clojure.lang.Associative    java.util.Map
-                 clojure.lang.IPersistentSet java.util.Set])
-          :cljs [+set? +map?]}    xs           k] (contains? xs k))
+                 clojure.lang.IPersistentSet java.util.Set]
+          :cljs [+set? +map?])}   xs           k] (contains? xs k))
   ([^default                      xs           k] (contains? xs k)))
 
 (defnt containsv?
