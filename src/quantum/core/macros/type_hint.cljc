@@ -48,9 +48,9 @@
 #?(:clj (defn class->str [^Class c] (.getName c)))
 #?(:clj (defn class->symbol [^Class c] (-> c class->str symbol)))
 
-#?(:clj (defn type-hint:class [x] (-> x type-hint tag->class)))
+#?(:clj (defn type-hint|class [x] (-> x type-hint tag->class)))
 
-(defn type-hint:sym
+(defn type-hint|sym
   "Returns a symbol representing the tagged class of the symbol, or
    `nil` if none exists."
   {:source "ztellman/riddley.compiler"}
@@ -68,7 +68,7 @@
          '[boolean byte char short int float])})
 
 #?(:clj
-(defn class->instance?-safe-tag:sym
+(defn class->instance?-safe-tag|sym
   "Coerces `Class` `c` to a symbol for safe use with `instance?`."
   [^Class c]
   (-> c
@@ -93,7 +93,7 @@
                          variadic?
                          ;; "fns taking primitives support only 4 or fewer args"
                          (> arglist-length 4)))
-                  (-> tag tcore/->boxed:sym name)
+                  (-> tag tcore/->boxed|sym name)
                 (symbol? tag)
                   (str tag)
                 :else
