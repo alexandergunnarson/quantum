@@ -21,8 +21,8 @@
     [quantum.core.error            :as self
       :refer [with-log-errors assert]])))
 
-(def ^{:todo        {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}
-       :annotations nil)
+(def ^{:todo {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}}
+  annotations)
 
 ;; =================================================================
 
@@ -62,7 +62,7 @@
    :cljs (defrecord Error [ident message data trace cause]))
 
 (def error-map-type #?(:clj quantum.core.error.Error :cljs quantum.core.error/Error))
-(def error-map? (fnl instance? error-type))
+(def error-map? (fnl instance? error-map-type))
 
 #?(:clj
 (defn >root-cause [x]
@@ -153,7 +153,7 @@
 
 #?(:clj
 (defmacro catch-all
-  "Cross-platform try/catch/finally.
+  "Cross-platform try/catch/finally for catching all exceptions.
 
    Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
   {:from 'taoensso.truss.impl/catching
