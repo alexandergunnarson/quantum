@@ -12,6 +12,7 @@
       :refer [seqable?]]
     [quantum.core.macros.core     :as cmacros
       :refer [#?(:clj compile-if)]]
+    [quantum.core.error           :as err]
     [quantum.core.fn              :as fn]
     [quantum.core.meta.debug      :as debug]
     [quantum.core.print           :as pr]
@@ -24,7 +25,8 @@
 #?(:cljs (enable-console-print!))
 
 (defonce outs
-  (atom #?(:clj  (if-let [out-path (System/getProperty "quantum.core.log:out-file")]
+  (atom #?(:clj  (if-let [out-path (or (System/getProperty "quantum.core.log:out-file")
+                                       (System/getProperty "quantum.core.log|out-file"))]
                      (let [_   (binding [*out* *err*] (println "Logging to" out-path))
                            fos (-> out-path
                                    (java.io.FileOutputStream.  )
@@ -152,6 +154,8 @@
 (defmacro pr [pr-type & args]
   `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* true  false println         pr-type# [~@args] nil  ) true))))
 
+#?(:clj (defmacro pr! [& xs] `(pr :always ~@xs)))
+
 #?(:clj
 (defmacro pr-no-trace [pr-type & args]
   `(let [pr-type# ~pr-type] (if (get @*levels pr-type#) (pr* false false println         pr-type# [~@args] nil  ) true))))
@@ -211,3 +215,18 @@
   ([level expr]
   `(let [expr# ~expr]
      (do (ppr ~level {'~expr expr#}) expr#)))))
+
+#?(:clj (defmacro warn! [e] `(ppr :warn (err/>err ~e))))
+
+#?(:clj
+(defmacro with-log-errors [k & args] `(err/catch-all (do ~@args) e# (ppr ~k e#))))
+
+(defn wrap-log-errors [k f] ; TODO find a cleaner way to do this
+  (fn ([]                       (with-log-errors k (f)                           ))
+      ([a0]                     (with-log-errors k (f a0)                        ))
+      ([a0 a1]                  (with-log-errors k (f a0 a1)                     ))
+      ([a0 a1 a2]               (with-log-errors k (f a0 a1 a2)                  ))
+      ([a0 a1 a2 a3]            (with-log-errors k (f a0 a1 a2 a3)               ))
+      ([a0 a1 a2 a3 a4]         (with-log-errors k (f a0 a1 a2 a3 a4)            ))
+      ([a0 a1 a2 a3 a4 a5]      (with-log-errors k (f a0 a1 a2 a3 a4 a5)         ))
+      ([a0 a1 a2 a3 a4 a5 & as] (with-log-errors k (apply f a0 a1 a2 a3 a4 a5 as)))))
