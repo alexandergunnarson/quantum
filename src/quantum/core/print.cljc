@@ -9,11 +9,17 @@
   (:require
     [clojure.string           :as str]
     [quantum.core.core        :as qcore]
+    [quantum.core.error       :as err
+      :refer [>err]]
     [quantum.core.fn          :as fn
       :refer [fn-> fn->> fn']]
     [quantum.core.logic       :as logic
       :refer [condf]]
     [quantum.core.data.vector :as vec]  ; To work around CLJS non-spliceability of Tuples
+    [quantum.core.untyped.reducers :as r
+      :refer [filter-vals+]]
+    [quantum.core.untyped.convert :as uconv
+      :refer [>symbol]]
     [quantum.core.vars        :as var
       :refer [defalias]]
     [quantum.core.meta.debug  :as debug]
@@ -38,39 +44,26 @@
    Prints no later than having consumed the bound amount of memory,
    so you see your first few lines of output instantaneously."
   ([] (println))
-  ([obj]
+  ([x]
     (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
-      (if (instance? #?(:clj Throwable :cljs js/Error) obj)
-          #?(:clj  (debug/trace obj)
-             :cljs (let [obj' (if (instance? ExceptionInfo obj)
-                                  {:type    'cljs.core/ExceptionInfo
-                                   :stack   (-> obj .-stack str/split-lines)
-                                   :message (.-message obj)
-                                   :data    (ex-data obj)}
-                                  {:type    'js/Error
-                                   :stack   (-> obj .-stack str/split-lines)
-                                   :message (.-message obj)})]
-                     (cljs.pprint/pprint obj')))
-          (do
-            (cond
-              (and (string? obj) (> (count obj) *print-length*))
-                (println
-                  (str "String is too long to print ("
-                       (str (count obj) " elements")
-                       ").")
-                  "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
-              (contains? @blacklist (type obj))
-                (println
-                  "Object's class"
-                  (str (type obj) "(" ")")
-                  "is blacklisted for printing.")
-              :else
-                (#?(:clj  pr/pprint
-                    :cljs pr/pprint) obj))
-            nil))))
-  ([obj & objs]
-    (doseq [obj-n (cons obj objs)]
-      (ppr obj-n))))
+      (do (cond
+            (and (string? x) (> (count x) *print-length*))
+              (println
+                (str "String is too long to print ("
+                     (str (count x) " elements")
+                     ").")
+                "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
+            (contains? @blacklist (type x))
+              (println
+                "Object's class"
+                (str (type x) "(" ")")
+                "is blacklisted for printing.")
+            :else
+              (#?(:clj  pr/pprint
+                  :cljs pr/pprint) x))
+          nil)))
+  ([x & xs]
+    (doseq [x' (cons x xs)] (ppr x'))))
 
 (defn ppr-str
   "Like `pr-str`, but pretty-prints."
@@ -80,6 +73,21 @@
 
 ;; TODO fix this
 (defn ppr-hints [x] (binding [*print-meta* true] (ppr x)))
+
+(defn ppr-error [x]
+  #?(:clj (do (println "EXCEPTION TRACE + MESSAGE:")
+              (print (io.aviso.exception/format-exception x {:properties false}))
+              (let [e (>err x)
+                    e (or (:cause e) e)]
+                (println "--------------------")
+                (when-let [e' (->> (dissoc e :trace :cause :message :type)
+                                   (filter-vals+ some?)
+                                   (into (array-map))
+                                   not-empty)]
+                  (println "EXCEPTION DATA:")
+                  (ppr e')))) ; TODO fix so it doesn't print "empty: false"
+
+     :cljs (ppr x)))
 
 ;; Makes it so fipp doesn't print tagged literals for every record
 #_(quantum.core.vars/reset-var! #'fipp.ednize/record->tagged
@@ -91,3 +99,15 @@
 
 ;; Pretty-prints an array. Returns a String containing the pretty-printed representation.
 #?(:clj (defalias pprint-arr mpprint/pm))
+
+(defonce ^{:doc "Flag for printing out expressions as a developer would see them in source code"}
+  *print-as-code? (atom false))
+
+(defn expr->code [x] (cond-> x (fn? x) >symbol))
+
+(deftype ^{:doc "Defines a print group."} Group [xs])
+
+(defn >group
+  ([xs] (Group. xs))
+  ([x & args] (Group. (cons x args))))
+(defn group? [x] (instance? Group x))
