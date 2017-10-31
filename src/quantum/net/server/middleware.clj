@@ -4,6 +4,7 @@
             [compojure.handler]
             ; MIDDLEWARE
             [ring.util.anti-forgery                   :as af]
+            [ring.util.request                        :as req]
             [ring.util.response                       :as resp]
             [ring.middleware.x-headers                :as x]
             [ring.middleware.gzip               :refer [wrap-gzip]                 ]
@@ -22,9 +23,8 @@
             [ring.middleware.resource           :refer [wrap-resource]             ]
             [ring.middleware.absolute-redirects :refer [wrap-absolute-redirects]   ]
             [ring.middleware.proxy-headers      :refer [wrap-forwarded-remote-addr]]
-            [ring.middleware.ssl                :refer [wrap-ssl-redirect
-                                                        wrap-hsts
-                                                        wrap-forwarded-scheme  ]]
+            [ring.middleware.ssl                :as ssl :refer [wrap-hsts
+                                                                wrap-forwarded-scheme]]
             [ring.middleware.defaults   :as defaults]
             ; QUANTUM
             [quantum.core.string        :as str]
@@ -36,7 +36,7 @@
             [quantum.core.collections   :as coll
               :refer [containsv? assoc-in cat]]
             [quantum.core.log           :as log
-              :refer [prl]]
+              :refer [prl prl!]]
             [quantum.core.print         :as pr
               :refer [ppr-str]]
             [quantum.core.convert       :as conv]
@@ -67,11 +67,12 @@
             (:headers resp))))))
 
 (defn wrap-uid-with
-  [handler f]
-  (fn uid-with [req]
-    (-> req
-        (update-in [:session :uid] #(or % (f req)))
-        handler)))
+  ([handler] (fn [_] (secure-uuid/v1)))
+  ([handler f]
+    (fn uid-with [req]
+      (-> req
+          (update-in [:session :uid] #(or % (f req)))
+          handler))))
 
 (defn content-security-policy [report-uri & [{:keys [whitelist]}]]
   (str/sp "default-src https: wss: data: gap: " (apply str/sp whitelist) ";"
@@ -97,13 +98,6 @@
   (fn [request]
     (when-let [response (handler request)]
       (resp/header response "X-Download-Options" "noopen"))))
-
-(defn wrap-strictest-transport-security
-  {:doc "Considered the 'most secure' STS setting"}
-  [handler]
-  (fn [request]
-    (when-let [response (handler request)]
-      (resp/header response "Strict-Transport-Security" "max-age=10886400; includeSubDomains; preload"))))
 
 (defn wrap-hide-server
   [handler]
@@ -200,6 +194,12 @@
 ; It allows for a whitelist of endpoints even when anti-forgery validation fails
 (in-ns 'ring.middleware.anti-forgery)
 
+(defn- default-request-token [request]
+  (or (-> request :params :csrf-token)
+      (-> request form-params (get "__anti-forgery-token"))
+      (-> request :headers (get "x-csrf-token"))
+      (-> request :headers (get "x-xsrf-token"))))
+
 (defn wrap-anti-forgery
   {:arglists '([handler] [handler options])}
   [handler & [{:keys [read-token whitelisted?]
@@ -235,42 +235,95 @@
                        :body    (conv/->json {:error "WebSocket authentication failed"})}))
         (handler req))))
 
-(defn wrap-middleware [routes & [opts]]
-  (let [static-resources-path (-> opts :override-secure-site-defaults (get [:static :resources]))
+(def wrap @#'defaults/wrap)
+
+(defn- wrap-multi [handler middleware args] ; TODO this is now in ring defaults so require it
+  (wrap handler
+     (fn [handler args]
+       (if (coll? args)
+         (reduce middleware handler args)
+         (middleware handler args)))
+     args))
+
+(def wrap-xss-protection @#'defaults/wrap-xss-protection)
+
+(defn ssl-redirect-response ; TODO this is now in ssl/
+  "Given a HTTP request, return a redirect response to the equivalent HTTPS URL.
+   See: wrap-ssl-redirect."
+  {:adapted-from "commit 79df5d9 of ring-clojure/ring-ssl"}
+  [request options]
+  (-> (resp/redirect (@#'ssl/https-url (req/request-url request) (:ssl-port options)))
+      (resp/status   (if (@#'ssl/get-request? request) 301 307))))
+
+(defn wrap-ssl-redirect
+  "Middleware that redirects any HTTP request to the equivalent HTTPS URL.
+
+   Accepts the following options:
+   :ssl-port     — the SSL port to use for redirects, defaults to 443
+   :whitelisted? — fn returning whether the request is whitelisted to bypass HTTPS"
+  {:adapted-from "commit 79df5d9 of ring-clojure/ring-ssl"}
+  ([handler] (wrap-ssl-redirect handler {}))
+  ([handler {:as   options
+             :keys [whitelisted?]
+             :or   {whitelisted? (fn [_] false)}}]
+   (fn
+     ([request]
+       (if (or (= (:scheme request) :https)
+               (whitelisted? request))
+           (handler request)
+           (ssl-redirect-response request options)))
+     ([request respond raise]
+       (if (or (= (:scheme request) :https)
+               (whitelisted? request))
+         (handler request respond raise)
+         (respond (ssl-redirect-response request options)))))))
+
+(defn wrap-middleware [routes & [config]]
+  (let [config (coll/merge-deep
+                 (assoc defaults/secure-site-defaults ; we encourage sites to be secure by default
+                        :wrap-uid-with true
+                        :exceptions    :hide)
+                 config)
+        ;; TODO move `wrap-exception`
         wrap-exception
-          (case (-> opts :exceptions (default :hide))
+          (case (:exceptions config)
             :hide (fn1 wrap-hide-exception :warn (fn' "Internal"))
             :show (fn1 wrap-show-exception :warn))]
     (-> routes
         wrap-out-logging
-        (whenp (:figwheel-ws opts)
+        (whenp (:figwheel-ws config)
           (fn1 (do (require '[quantum.net.server.middleware.figwheel])
                    (eval 'quantum.net.server.middleware.figwheel/wrap-figwheel-websocket))
-               (:figwheel-ws opts)))
-        (whenp static-resources-path
-          (fn1 wrap-resource static-resources-path))
-        (whenp (:resp-content-type opts) wrap-coerce-response-content-type)
-        (whenp (:req-content-type  opts) wrap-coerce-request-content-type )
-        (wrap-uid-with (or (:wrap-uid-with opts) (fn [_] (secure-uuid/v1))))
-        (whenp (:authenticate-ws-client-id opts)
-          (fn1 wrap-authenticate-ws-client-id (:authenticate-ws-client-id opts)))
-        (whenp (-> opts :anti-forgery false? not)
-          (fn1 wrap-anti-forgery (merge {:read-token (fn [req] (-> req :params :csrf-token))}
-                                   (:anti-forgery opts))))
-        ; NOTE: Sente requires the Ring |wrap-params| + |wrap-keyword-params| middleware to work.
-        (defaults/wrap-defaults
-          (apply assoc-in defaults/secure-site-defaults
-            [:security :anti-forgery] false
-            [:params   :keywordize  ] true
-            [:static   :resources   ] false ; This short-circuits the rest of the middleware when placed here
-            [:static   :files       ] false
-            (-> opts
-                :override-secure-site-defaults
-                (dissoc [:static :resources])
-                cat)))
-        wrap-strictest-transport-security
+               (:figwheel-ws config)))
+        (wrap-multi wrap-resource                     (get-in config [:static    :resources             ] false))
+        (wrap-multi wrap-file                         (get-in config [:static    :files                 ] false))
+        (wrap       wrap-coerce-response-content-type (get-in config [:resp-content-type                ] false))
+        (wrap       wrap-coerce-request-content-type  (get-in config [:req-content-type                 ] false))
+        (wrap       wrap-uid-with                     (get-in config [:session   :wrap-uid-with         ] false))
+        (wrap       wrap-authenticate-ws-client-id    (get-in config [:ws        :auth-ws-client-id     ] false))
+        (wrap       wrap-anti-forgery                 (get-in config [:security  :anti-forgery          ] false))
+        (wrap       wrap-flash                        (get-in config [:session   :flash                 ] false))
+        (wrap       wrap-session                      (get-in config [:session                          ] false))
+        ;; Sente requires this to work
+        (wrap       wrap-keyword-params               (get-in config [:params    :keywordize            ] false))
+        (wrap       wrap-nested-params                (get-in config [:params    :nested                ] false))
+        (wrap       wrap-multipart-params             (get-in config [:params    :multipart             ] false))
+        ;; Sente requires this to work
+        (wrap       wrap-params                       (get-in config [:params    :urlencoded            ] false))
+        (wrap       wrap-cookies                      (get-in config [:cookies                          ] false))
+        (wrap       wrap-absolute-redirects           (get-in config [:responses :absolute-redirects    ] false))
+        (wrap       wrap-content-type                 (get-in config [:responses :content-types         ] false))
+        (wrap       wrap-default-charset              (get-in config [:responses :default-charset       ] false))
+        (wrap       wrap-not-modified                 (get-in config [:responses :not-modified-responses] false))
+        (wrap       wrap-xss-protection               (get-in config [:security  :xss-protection        ] false))
+        (wrap       x/wrap-frame-options              (get-in config [:security  :frame-options         ] false))
+        (wrap       x/wrap-content-type-options       (get-in config [:security  :content-type-options  ] false))
         wrap-x-permitted-cross-domain-policies
         wrap-x-download-options
+        (wrap       wrap-hsts                         (get-in config [:security  :hsts                  ] false))
+        (wrap       wrap-ssl-redirect                 (get-in config [:security  :ssl-redirect          ] false))
+        (wrap       wrap-forwarded-scheme             (boolean (get-in config [:proxy] true)))
+        (wrap       wrap-forwarded-remote-addr        (boolean (get-in config [:proxy] true)))
         wrap-hide-server
         #_(friend/authenticate {:credential-fn #(creds/bcrypt-credential-fn users %)
                               :workflows [(workflows/interactive-form)]})
