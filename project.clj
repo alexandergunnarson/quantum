@@ -203,7 +203,7 @@
        [org.apache.httpcomponents/httpmime      "4.5.2"
          :exclusions [commons-codec]                              ]
        ; ==== ROUTING ====
-       [compojure                               "1.5.0"
+       [compojure                               "1.6.0"
          :exclusions [org.eclipse.jetty/jetty-server
                       org.eclipse.jetty/jetty-servlet
                       javax.servlet/servlet-api]]
