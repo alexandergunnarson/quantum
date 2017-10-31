@@ -25,7 +25,7 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.9.0-alpha20"   ]
+    [[org.clojure/clojure                       "1.9.0-beta1"     ]
      [org.clojure/clojurescript                 "1.9.908"]
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
@@ -446,7 +446,9 @@
                            (quantum.core.print.prettier/extend-pretty-printing!)
                            (clojure.main/repl
                              :print  quantum.core.print/ppr
-                             :caught quantum.core.print/ppr-error))}
+                             :caught quantum.core.print/ppr-error)
+                           (require '[quantum.core.log :refer [prl!]])
+                           (reset! quantum.core.print/*print-as-code? true))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
   :java-agents [; This for HTTP/2 support
