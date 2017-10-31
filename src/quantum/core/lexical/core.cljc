@@ -1,9 +1,10 @@
 (ns quantum.core.lexical.core
+  (:refer-clojure :exclude [or not])
   (:require
-    [quantum.core.data.set     :as set]
+    [quantum.core.data.set :as set]
     [quantum.core.fn
       :refer [fn']]
-    [quantum.core.error        :as err
+    [quantum.core.error    :as err
       :refer [->ex]]))
 
 ; ============ FROM re-rand.parser.tools ============
@@ -48,7 +49,7 @@
       [[] src]
       rules)))
 
-(defn choice
+(defn or
   "Create a new rule by returning the first rule that matches."
   [& rules]
   (fn [src]
@@ -75,7 +76,7 @@
 ; Rules to parse a regular expression into a series of string generating
 ; functions.
 
-(defn rnd-choice
+(defn rand-or
   [coll]
   (let [v (vec coll)]
     (v (rand-int (count v)))))
@@ -84,7 +85,7 @@
   [n f]
   (take n (repeatedly f)))
 
-(defn rnd-seq
+(defn rand-seq
   [f min max]
   (take-fn (+ (rand-int (- (inc max) min)) min) f))
 
@@ -118,7 +119,7 @@
     alphanumeric
     "_-/+*=%()[]{}!?:;,. \t\n"))
 
-(defn invert
+(defn not
   "Return a set of characters that do not contain any of chars."
   [chars]
   (set/difference (set valid-any-chars) (set chars)))
@@ -152,12 +153,12 @@
     (match #"\\(.)")
     (fn [[_ char]]
       (cond
-        (= char "d") #(rnd-choice digits)
-        (= char "s") #(rnd-choice whitespace)
-        (= char "w") #(rnd-choice alphanumeric)
-        (= char "D") #(rnd-choice (invert digits))
-        (= char "S") #(rnd-choice (invert whitespace))
-        (= char "W") #(rnd-choice (invert alphanumeric))
+        (= char "d") #(rand-or digits)
+        (= char "s") #(rand-or whitespace)
+        (= char "w") #(rand-or alphanumeric)
+        (= char "D") #(rand-or (not digits))
+        (= char "S") #(rand-or (not whitespace))
+        (= char "W") #(rand-or (not alphanumeric))
         :otherwise    (fn' char)))))
 
 (def literal
@@ -168,7 +169,7 @@
 (def any-char
   (attach
     (match #"\.")
-    (fn [_] #(rnd-choice valid-any-chars))))
+    (fn [_] #(rand-or valid-any-chars))))
 
 (def sequence-of-chars-regex #"((\\.|[^\^\-\[\]\\])+)([^-]|$)")
 
@@ -190,7 +191,7 @@
   [char-groups invert?]
   (let [chars (apply concat char-groups)]
     (if invert?
-      (invert chars)
+      (not chars)
       chars)))
 
 (def char-class
@@ -198,11 +199,11 @@
     (series
       (match #"\[")
       (match #"\^?")
-      (many (choice sequence-of-chars range-of-chars))
+      (many (or sequence-of-chars range-of-chars))
       (match #"\]"))
     (fn [[_ invert? char-groups _]]
       (let [chars (get-char-list char-groups (seq invert?))]
-        #(rnd-choice chars)))))
+        #(rand-or chars)))))
 
 (declare pattern)
 
@@ -217,11 +218,11 @@
          (apply vector (first s) s)))))
 
 (def single
-  (choice escaped
-          sub-pattern
-          any-char
-          char-class
-          literal))
+  (or escaped
+      sub-pattern
+      any-char
+      char-class
+      literal))
 
 (defn combine-many
   [tokens]
@@ -230,17 +231,17 @@
 (def zero-or-more
   (attach
     (series single (match #"\*"))
-    (fn [[f _]] #(combine-many (rnd-seq f 0 repeat-limit)))))
+    (fn [[f _]] #(combine-many (rand-seq f 0 repeat-limit)))))
 
 (def one-or-more
   (attach
     (series single (match #"\+"))
-    (fn [[f _]] #(combine-many (rnd-seq f 1 repeat-limit)))))
+    (fn [[f _]] #(combine-many (rand-seq f 1 repeat-limit)))))
 
 (def zero-or-one
   (attach
     (series single (match #"\?"))
-    (fn [[f _]] #(combine-many (rnd-seq f 0 1)))))
+    (fn [[f _]] #(combine-many (rand-seq f 0 1)))))
 
 (def exactly-n
   (attach
@@ -252,16 +253,16 @@
   (attach
     (series single (match #"\{(\d+),\s*(\d+)\}"))
     (fn [[f [_ n m]]]
-      #(combine-many (rnd-seq f (parse-int n) (parse-int m))))))
+      #(combine-many (rand-seq f (parse-int n) (parse-int m))))))
 
 (def pattern
   (attach
     (many
-      (choice zero-or-more
-              one-or-more
-              zero-or-one
-              exactly-n
-              between-n-and-m
-              single))
+      (or zero-or-more
+          one-or-more
+          zero-or-one
+          exactly-n
+          between-n-and-m
+          single))
     (fn [fs]
       #(combine-groups into (map (fn [f] (f)) fs)))))
