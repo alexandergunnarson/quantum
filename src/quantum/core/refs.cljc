@@ -20,6 +20,7 @@
     [quantum.core.type      :as t
       :refer [val?]]
     [quantum.core.type.defs :as tdefs]
+    [quantum.core.untyped.qualify :as qual]
     [quantum.core.vars      :as var
       :refer [defalias]])
 #?(:clj
@@ -76,7 +77,7 @@
           [~(with-meta 'x {:tag kind})] (new ~deftype-sym ~'x))
         (defmacro  ~(symbol (str "!" kind))
           ([ ]            `(new ~'~deftype-sym (~'~kind 0)))
-          ([~macro-param] `(~'~(var/qualify *ns* defnt-sym) ~~macro-param))))))
+          ([~macro-param] `(~'~(qual/qualify *ns* defnt-sym) ~~macro-param))))))
 
 #?(:clj
 (defmacro gen-primitive-mutables []
