@@ -2,7 +2,7 @@
   (:require
   #_(:cljs [com.gfredericks.goog.math.Integer :as int])
     [clojure.core             :as core]
-    [quantum.core.data.binary :as bin
+    [quantum.core.data.bits   :as bits
       :refer [&&]]
     [quantum.core.error       :as err
       :refer [->ex]]
