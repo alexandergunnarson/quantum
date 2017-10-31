@@ -15,11 +15,11 @@
   "Like `clojure.walk`, but ensures preservation of metadata."
   [inner outer form]
   (cond
-              (list?      form) (outer (replace-meta-from (apply list (map inner form))                    form))
-    #?@(:clj [(map-entry? form) (outer (replace-meta-from (vec        (map inner form))                    form))])
-              (seq?       form) (outer (replace-meta-from (doall      (map inner form))                    form))
-              (record?    form) (outer (replace-meta-from (reduce (fn [r x] (conj r (inner x))) form form) form))
-              (coll?      form) (outer (replace-meta-from (into (empty form) (map inner form))             form))
+              (list?      form) (outer (var/replace-meta-from (apply list (map inner form))                    form))
+    #?@(:clj [(map-entry? form) (outer (var/replace-meta-from (vec        (map inner form))                    form))])
+              (seq?       form) (outer (var/replace-meta-from (doall      (map inner form))                    form))
+              (record?    form) (outer (var/replace-meta-from (reduce (fn [r x] (conj r (inner x))) form form) form))
+              (coll?      form) (outer (var/replace-meta-from (into (empty form) (map inner form))             form))
               :else (outer form)))
 
 (defn postwalk [f form] (walk (partial postwalk f) f form))
