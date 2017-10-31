@@ -84,3 +84,27 @@
       (conjl! sb arg)
       (when (< n (-> args count dec))
         (conjl! sb " "))))))
+
+#?(:clj
+(deftype StringWithMeta [^String s ^clojure.lang.IPersistentMap _meta]
+  clojure.lang.IObj
+    (meta        [this]       _meta)
+    (withMeta    [this meta'] (StringWithMeta. s meta'))
+  CharSequence
+    (charAt      [this i]     (get s i))
+    (length      [this]       (count s))
+    (subSequence [this a b]   (.subSequence s a b))
+  Object
+    (toString    [this]       s)
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] s)))
+
+#?(:clj
+(defmethod print-method StringWithMeta [^StringWithMeta x ^java.io.Writer w]
+  (print-method (.toString x) w)))
+
+#?(:clj
+(defn string-with-meta
+  ([s] #?(:clj (StringWithMeta. s nil) :cljs s))
+  ([s meta'] #?(:clj (StringWithMeta. s meta') :cljs (with-meta s new-meta)))))
