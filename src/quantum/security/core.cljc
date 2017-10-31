@@ -6,8 +6,7 @@
            [javax.net.ssl TrustManagerFactory KeyManagerFactory]
            [io.netty.handler.ssl SslProvider SslContextBuilder])))
 
-; Disabling developer tools (e.g. console) doesn't matter. This doesn't protect against hackers.
-
+;; Disabling developer tools (e.g. console) doesn't matter. This doesn't protect against hackers.
 
 #?(:clj
 (defn trust-manager-factory
