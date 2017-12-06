@@ -1,3 +1,6 @@
+; TODO `:infer?` should be whether any of the expr's leaves are themselves needed inference
+
+
 The purpose of the `defnt` type analyzer is to do just that — analyze types and infer ones to the maximum extent possible. Other code analysis may be done later.
 
 ## Rationale
@@ -312,32 +315,32 @@ To create a `spec` for a an AST function call node, we need to return a spec des
 
 ```clojure
 (t/spec [[t0 t1]]
-  (condp t/<= t0
-    t/byte  (condp t/<= t1
+  (condp t/>= t0
+    t/byte  (condp t/>= t1
               t/byte  t/byte
               t/char  t/char
               t/short t/short
               t/int   t/int
               t/long  t/long)
-    t/char  (condp t/<= t1
+    t/char  (condp t/>= t1
               t/byte  t/char
               t/char  t/char
               t/short t/short
               t/int   t/int
               t/long  t/long)
-    t/short (condp t/<= t1
+    t/short (condp t/>= t1
               t/byte  t/short
               t/char  t/short
               t/short t/short
               t/int   t/int
               t/long  t/long)
-    t/int   (condp t/<= t1
+    t/int   (condp t/>= t1
               t/byte  t/int
               t/char  t/int
               t/short t/int
               t/int   t/int
               t/long  t/long)
-    t/long  (condp t/<= t1
+    t/long  (condp t/>= t1
               t/byte  t/long
               t/char  t/long
               t/short t/long
@@ -349,7 +352,7 @@ To create a `spec` for a an AST function call node, we need to return a spec des
 
 This doesn't look fundamentally different from the information we got via reflection; mainly, things have just been shifted around. The conditional branches embodied by the `condp` calls encode the various argument-type combinations of `Numeric/bitAnd`, and at the leaves of the conditional statements are its possible return types.
 
-The immediately strangest thing here is that we don't use `condp =` but rather *`condp t/<=`*. This seems unintuitive at first glance. How is a spec *less than or equal to* another spec, let alone a special kind of *`t/`* less-than-or-equal-to? The idea is that we don't always need arg specs to match a function or method's "spec" signature exactly; we just need to make sure the arg specs are *at least as specific* as what the function or method requires. This is a principle from the Design by Contract paradigm, one also featured in `clojure.spec`. For instance, the first argument to `bitAnd` could be a `t/byte`, but it could just as well be a `(t/and t/byte #(> % 3))`. In other words, the set of possible values of the arguments need only be a (lax) subset of the values the function accepts, not only an identical set.
+The immediately strangest thing here is that we don't use `condp =` but rather *`condp t/>=`*. This seems unintuitive at first glance. How is a spec *greater than or equal to* another spec, let alone a special kind of *`t/`* greater-than-or-equal-to? The idea is that we don't always need arg specs to match a function or method's "spec" signature exactly; we just need to make sure the (intension of the) arg specs are *at least as specific* as what the function or method requires. This is a principle from the Design by Contract paradigm, one also featured in `clojure.spec`. For instance, the first argument to `bitAnd` could be a `t/byte`, but it could just as well be a `(t/and t/byte #(> % 3))`. In other words, the set of possible values of the arguments need only be a (lax) subset of the values the function accepts, not only an identical set.
 
 Another seemingly strange thing is that we use `t/byte` instead of `byte`. This is because `byte` (like other classes) isn't a spec, and we need to 1) dispatch on what we're receiving as input, namely specs, not a class; and 2) return a spec, not a class.
 
@@ -378,32 +381,32 @@ Let's add what we just defined to our `static-call` node:
               :form 'b
               :spec t/byte})]
    :spec  (t/spec [[t0 t1]]
-            (condp t/<= t0
-              t/byte  (condp t/<= t1
+            (condp t/>= t0
+              t/byte  (condp t/>= t1
                         t/byte  t/byte
                         t/char  t/char
                         t/short t/short
                         t/int   t/int
                         t/long  t/long)
-              t/char  (condp t/<= t1
+              t/char  (condp t/>= t1
                         t/byte  t/char
                         t/char  t/char
                         t/short t/short
                         t/int   t/int
                         t/long  t/long)
-              t/short (condp t/<= t1
+              t/short (condp t/>= t1
                         t/byte  t/short
                         t/char  t/short
                         t/short t/short
                         t/int   t/int
                         t/long  t/long)
-              t/int   (condp t/<= t1
+              t/int   (condp t/>= t1
                         t/byte  t/int
                         t/char  t/int
                         t/short t/int
                         t/int   t/int
                         t/long  t/long)
-              t/long  (condp t/<= t1
+              t/long  (condp t/>= t1
                         t/byte  t/long
                         t/char  t/long
                         t/short t/long
@@ -504,20 +507,20 @@ Then, as before, we create the `spec` for the `static-call` node we're working o
 
 ```clojure
 (t/spec [[t0 t1]]
-  (condp t/<= t0
-    t/byte   (condp t/<= t1
+  (condp t/>= t0
+    t/byte   (condp t/>= t1
                t/byte   t/short
                t/char   t/int
                t/short  t/int
                t/int    t/long
                t/long   t/long)
-    t/char   (condp t/<= t1
+    t/char   (condp t/>= t1
                t/byte   t/int
                t/char   t/int
                t/short  t/int
                t/int    t/long
                t/long   t/long)
-    t/short  (condp t/<= t1
+    t/short  (condp t/>= t1
                t/byte   t/int
                t/char   t/int
                t/short  t/int
@@ -525,7 +528,7 @@ Then, as before, we create the `spec` for the `static-call` node we're working o
                t/long   t/long
                t/float  t/double
                t/double t/double)
-    t/int    (condp t/<= t1
+    t/int    (condp t/>= t1
                t/byte   t/long
                t/char   t/long
                t/short  t/long
@@ -533,7 +536,7 @@ Then, as before, we create the `spec` for the `static-call` node we're working o
                t/long   t/long
                t/float  t/double
                t/double t/double)
-    t/long   (condp t/<= t1
+    t/long   (condp t/>= t1
                t/byte   t/long
                t/char   t/long
                t/short  t/long
@@ -541,7 +544,7 @@ Then, as before, we create the `spec` for the `static-call` node we're working o
                t/long   t/long
                t/float  t/double
                t/double t/double)
-    t/float  (condp t/<= t1
+    t/float  (condp t/>= t1
                t/byte   t/double
                t/char   t/double
                t/short  t/double
@@ -549,7 +552,7 @@ Then, as before, we create the `spec` for the `static-call` node we're working o
                t/long   t/double
                t/float  t/double
                t/double t/double)
-    t/double (condp t/<= t1
+    t/double (condp t/>= t1
                t/byte   t/double
                t/char   t/double
                t/short  t/double
@@ -566,7 +569,7 @@ Whew! Now for the fun part, where we get to deduce more types. Let's plug in the
 ... Well, almost. At least through branch pruning we can isolate the return spec to a leaf in the following conditional branch:
 
 ```clojure
-(condp t/<= t1
+(condp t/>= t1
   t/byte   t/long
   t/char   t/long
   t/short  t/long
@@ -576,7 +579,7 @@ Whew! Now for the fun part, where we get to deduce more types. Let's plug in the
   t/double t/double)
 ```
 
-But what do we do from here? We could call it good and just say "it's either a `t/long` or a `t/double`", representing it more formally as `(t/or t/long t/double)`. But still, won't `t/?` fail? Luckily, the answer is no. The `t/<` operator saves the day: `(t/<= t/? <spec>)` will always be true, since `t/?` is analogous in some sense to the empty set. So really, if we run our `t/?` spec through all branches in the `condp` above, it results in a `spec` of exactly what we intuitively arrived at: `(t/or t/long t/double)`.
+But what do we do from here? We could call it good and just say "it's either a `t/long` or a `t/double`", representing it more formally as `(t/or t/long t/double)`. But still, won't `t/?` fail? Luckily, the answer is no. The `t/<` operator saves the day: `(t/>= t/? <spec>)` will always be true, since `t/?` is analogous in some sense to the empty set. So really, if we run our `t/?` spec through all branches in the `condp` above, it results in a `spec` of exactly what we intuitively arrived at: `(t/or t/long t/double)`.
 
 Here is where we can touch on a critical feature of the type analyzer: deducing types in one AST node can result in further deductions (or a failure) in other AST nodes. Just as we used the specs of the args of `Numeric/add` to further specify its return spec, we use the deduced return spec of `Numeric/add` to further specify the specs of its arguments that need inference, namely the second argument, `c`. **The spec of `c` is the union (`t/or`) of all valid return specs of the current AST node (all reachable conditional leaves given the argument specs).** This yields `(t/or t/byte t/char t/short t/int t/long t/float t/double)`.
 
