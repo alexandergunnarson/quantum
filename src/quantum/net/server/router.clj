@@ -15,7 +15,8 @@
     [quantum.core.spec                :as s
       :refer [validate]]
     [quantum.core.string              :as str]
-    [quantum.core.log                 :as log]
+    [quantum.core.log                 :as log
+      :refer [prl!]]
     [quantum.core.resources           :as res]
     [quantum.core.paths               :as paths]
     [quantum.core.refs                :as refs
@@ -48,6 +49,13 @@
 (defn- add-wildcard [^String path]
   (str path (if (.endsWith path "/") "*" "/*")))
 
+(defn resource [root path]
+  (prl! root path)
+  (->> path
+       (<- str/remove "..") ; to prevent insecure access
+       ^String (paths/url-path root)
+       (java.io.FileInputStream.)))
+
 (defn resources
   "A route for serving resources on the classpath. Accepts the following keys:
     :root       - the root prefix path of the resources, defaults to 'public'
@@ -55,12 +63,8 @@
    (This is an improved version of Compojure's |resources| fn.)"
   [path & [options]]
   (GET (add-wildcard path) {{resource-path :*} :route-params :as req}
-    (let [root (get options :root "public")
-          body (->> resource-path
-                    (<- str/remove "..") ; to prevent insecure access
-                    ^String (paths/url-path root)
-                    (java.io.FileInputStream.))]
-      {:body body} ; TODO add content-type
+    (let [root (get options :root "public")]
+      {:body (resource root resource-path)} ; TODO add content-type
       #_(add-mime-type resource-path options))))
 
 ; ROUTES PRESETS
@@ -87,15 +91,14 @@
   [opts] (or (:not-found-handler opts) not-found-resp))
 
 (defn routes
-  [{:keys [ws-uri csp-report-uri
-           root-path serve-files routes-fn]
+  [{:keys [ws-uri csp-report-uri root-path routes-fn]
     :as opts}]
   (validate routes-fn (s/or* fn? var?))
   (concat (when ws-uri (ws-routes opts))
           (routes-fn opts)
           (when csp-report-uri (csp-report-route opts))
-          (when serve-files
-            [(resources "/" {:root root-path})]) ; static files
+          (when root-path
+            [(resources "/" {:root root-path})])
           [(not-found-route opts)]))
 
 (defn make-routes

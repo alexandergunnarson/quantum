@@ -1,5 +1,15 @@
 (ns quantum.location.core
-  (:require [quantum.net.http :as http]))
+  (:require
+    [quantum.core.convert       :as conv]
+    [quantum.core.error         :as err
+      :refer [err!]]
+    [quantum.core.fn            :as fn
+      :refer [fn->]]
+    [quantum.core.spec          :as s
+      :refer [validate]]
+    [quantum.core.string.format :as strf]
+    [quantum.core.time.core     :as time]
+    [quantum.net.http           :as http]))
 
 ; TO EXPLORE
 ; - http://developer.factual.com for Factual (Geo, etc.) API
@@ -13,6 +23,30 @@
   #{:ak :al :ar :az :ca :co :ct :de :fl :ga :hi :ia :id :il :in :ks :ky :la
     :ma :md :me :mi :mn :mo :ms :mt :nc :nd :ne :nh :nj :nm :nv :ny
     :oh :ok :or :pa :ri :sc :sd :tn :tx :ut :va :vt :wa :wi :wv :wy})
+
+(s/def ::latitude  double?)
+(s/def ::longitude double?)
+
+(defn location->time-zone-info
+  [arg api-key]
+  (validate api-key string?)
+  (let [{:keys [latitude longitude epoch-millis]}
+          (validate arg (s/keys :req-un [::latitude ::longitude] :opt-un [::time/epoch-millis]))
+        {:keys [status body] :as resp}
+          (http/request!
+            {:url (str "https://maps.googleapis.com/maps/api/timezone/json"
+                       ;; TODO we wouldn't have to do this custom munging if the comma separation were
+                       ;; supported in our HTTP client
+                       "?"     "location"  "=" latitude "," longitude
+                           "&" "timestamp" "=" (or epoch-millis 0)
+                           "&" "key"       "=" api-key)})]
+    (if (= status 200)
+        (conv/json-> body (fn-> strf/->lisp-case keyword))
+        (err! "Error in HTTP request" resp))))
+
+(defn location->time-zone-id
+  [arg api-key]
+  (:time-zone-id (location->time-zone-info arg api-key)))
 
 ; (defrecord Location [city state])
 

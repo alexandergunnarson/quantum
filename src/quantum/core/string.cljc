@@ -135,12 +135,12 @@
 (defnt alpha?
 #?(:clj
   ([^char    c] (contains? alpha-chars c)))
-  ([^string? s] (and (contains? s) (seq-and (fn1 contains? alpha-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? alpha-chars) s))))
 
 (defnt alphanum?
 #?(:clj
   ([^char    c] (contains? alphanum-chars c)))
-  ([^string? s] (and (contains? s) (seq-and (fn1 contains? alphanum-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? alphanum-chars) s))))
 
 (defnt letters?
   "Checks if string contains only letters.
@@ -155,14 +155,14 @@
 (defnt blank?
 #?(:clj
   ([^char    c] (contains? whitespace-chars c)))
-  ([^string? s] (seq-and (fn1 contains? whitespace-chars) s)))
+  ([^string? s] (seq-and (fnl contains? whitespace-chars) s)))
 
 (def whitespace? (fn-and contains? blank?))
 
 (defnt line-terminator?
 #?(:clj
   ([^char    c] (contains? line-terminator-chars c)))
-  ([^string? s] (and (contains? s) (seq-and (fn1 contains? line-terminator-chars) s))))
+  ([^string? s] (and (contains? s) (seq-and (fnl contains? line-terminator-chars) s))))
 
 (defalias capitalize form/capitalize)
 

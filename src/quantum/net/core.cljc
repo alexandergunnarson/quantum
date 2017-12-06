@@ -128,20 +128,21 @@
   [m]
   (when-not (empty? m)
     (let [query-params (:query-params m)]
-      (str (if (:scheme m)
+      (str (when (:scheme m)
              (str (name (:scheme m)) "://"))
            (let [{:keys [user password]} m]
-             (if user (str (if user user) (if password (str ":" password)) "@")))
+             (when user (str (if user user) (if password (str ":" password)) "@")))
            (:server-name m)
-           (if-let [port (:server-port m)]
-             (if-not (= port (port-number (:scheme m)))
+           (when-let [port (:server-port m)]
+             (when-not (= port (port-number (:scheme m)))
                (str ":" port)))
-           (if (and (nil? (:uri m))
+           (if (and (nil? (or (:url m) (:uri m)))
                     (contains? query-params))
-             "/" (:uri m))
-           (if-not (empty? query-params)
+               "/"
+               (or (:url m) (:uri m)))
+           (when-not (empty? query-params)
              (str "?" (format-query-params query-params)))
-           (if-not (str/blank? (:fragment m))
+           (when-not ((fn-or nil? str/blank?) (:fragment m))
              (str "#" (:fragment m)))))))
 
 #_(:clj
@@ -205,10 +206,6 @@
                     (str/join "&"))]
     (if-not (str/blank? params)
       params)))
-
-
-
-
 
  ; Success (2xx)
  ; Redirection (3xx)

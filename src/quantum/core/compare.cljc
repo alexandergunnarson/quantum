@@ -140,6 +140,30 @@
       (fn ([] nil) ([a b] (if (neg? (comparator a b)) b a)))
       coll)))
 
+(defn unsorted-by
+  "Returns which elements are unsorted, as by `kf` and `comparef`."
+  {:example '{(unsorted-by identity core/< [0 1 2 3 6 3 7])
+              [[5 3]]}}
+  ([kf xs] (unsorted-by kf core/compare xs))
+  ([kf comparef xs]
+    (let [xs'      (transient [])
+          comparef (ccomp/fn->comparator comparef)]
+      (red/reducei-sentinel
+        (fn [a b i]
+          (when-not (neg? (#?@(:clj  [.compare ^java.util.Comparator comparef]
+                         :cljs [comparef])
+                     (kf a) (kf b)))
+            (conj! xs' [i b]))
+          b) xs)
+      (persistent! xs'))))
+
+(defn unsorted
+  "Returns which elements are unsorted, as by `comparef`."
+  {:example '{(unsorted core/< [0 1 2 3 6 3 7])
+              [[5 3]]}}
+  ([xs] (unsorted-by identity xs))
+  ([comparef xs] (unsorted-by identity comparef xs)))
+
 #?(:clj
 (defmacro min-or [a b else]
  `(let [a# ~a b# ~b]

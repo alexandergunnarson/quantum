@@ -3,6 +3,7 @@
             [quantum.core.core            :as qcore
               :refer [namespace?]]
             [quantum.core.error           :as err]
+            [quantum.core.fn              :as fn]
             [quantum.core.untyped.qualify :as qual
               :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
             [quantum.core.vars            :as var
@@ -25,6 +26,8 @@
                             :cljs (when-not (-> x .-name str/blank?)
                                     (-> x .-name demunge-str demunged->name)))
           :else          (err/not-supported! `>name x)))
+
+(def >?name (fn/? >name))
 
 (defn >?namespace
   "Computes the nilable namespace (the string identifier-qualifier) of `x`."

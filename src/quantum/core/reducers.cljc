@@ -147,12 +147,30 @@
               xs)]
     (if (identical? ret sentinel) (f) ret)))
 
+(defn red-apply-i
+  "Applies ->`f` to ->`xs`, pairwise, using `reducei`."
+  [f xs]
+  (let [ret (red/reducei
+              (fn
+                ([ret] ret)
+                ([ret x i]
+                  (if (identical? ret sentinel) (f x) (f ret x i))))
+              sentinel
+              xs)]
+    (if (identical? ret sentinel) (f) ret)))
+
 (defn reduce-sentinel
   "Calls `reduce` with a sentinel.
    Useful for e.g. `max` and `min`."
   {:attribution "alexandergunnarson"}
   [rf xs]
   (red-apply (aritoid (fn' nil) identity rf) xs))
+
+(defn reducei-sentinel
+  "Calls `reducei` with a sentinel."
+  {:attribution "alexandergunnarson"}
+  [rf xs]
+  (red-apply-i (aritoid (fn' nil) identity nil rf) xs))
 
 (defn first-non-nil-reducer
   "A reducing function that simply returns the first non-nil element in the

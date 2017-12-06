@@ -8,7 +8,7 @@
     [quantum.core.logic
       :refer [fn-and]]
     [quantum.core.defnt        :as this
-      :refer [->type-info ->expr-info !ref analyze]]
+      :refer [->type-info ->expr-info !ref analyze defnt]]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.core.untyped.analyze.ast  :as ast]
@@ -18,61 +18,6 @@
   (:import
     [clojure.lang Keyword Symbol]
     [quantum.core Numeric])))
-
-```
-f : [#{int}]  -> #{short}
-  : [#{long}] -> #{boolean String}
-```
-
-The argument `x`, described below, might be a `boolean`, `int`, or `String`:
-
-```
-x = #{boolean int String}
-```
-
-The valid argument types of `(f x)`, then, are computed below:
-
-```
-(f x) :     (argtypes f)  &    (types [x])      ?
-      => ⸢ #{[#{int}]   ⸣    ⸢ #{[#{boolean}]  ⸣
-             [#{long}]}   &     [#{int}]        ?
-         ⸤              ⸥    ⸤   [#{String}]}  ⸥
-      => #{[#{int}]}                            ✓
-```
-
-The valid return types are thus easily found via a lookup:
-
-```
-#{#{short}}
-```
-
-A map can then be generated from argument types to return types:
-
-```
-{[#{int}] : #{short}}
-```
-
-### Example 2
-
-The below example uses the same notation, but this time uses 'free' constraints (i.e. ones not encapsulated in a type such as `PositiveLong` or `NumberLessThan12`). Employing such constraints is normally assumed to be beyond the capabilities of the sort of `∀` proof done by a type checker, and thus to fit exclusively within the scope of a merely `∃` "soft proof" performed by e.g. generative testing (`core.spec` being a prime example). The idea is to check as much as possible at compile time but leave the rest to generative tests and, as a last resort, runtime checks.
-
-```
-g : [#{long < 15}, #{int}] -> #{boolean}
-  : [#{String}]            -> #{String}
-y = #{int < 10, String}
-z = #{short >= 5, boolean}
-(g y z) :     (argtypes f)        &   (types [y z])              ?
-        => ⸢ #{[long < 15, int] ⸣    ⸢ #{[int < 10, short >= 5] ⸣
-               [String]}          &     [int < 10, boolean]
-                                        [String  , short >= 5]   ?
-           ⸤                    ⸥    ⸤   [String  , boolean]}   ⸥
-        => #{[long < 15, int]}    &   #{[int < 10, short >= 5]}  ?
-        => ; (long < 15) ⊇ int < 10   ✓
-           ; int         ⊇ short >= 5 ✓
-           #{[long < 15, int]}                                   ✓
-
-{[#{long < 15}, #{int}] : #{boolean}}
-```
 
 (deftest test|methods->spec
   (testing "Class hierarchy"
@@ -165,6 +110,23 @@ z = #{short >= 5, boolean}
                   (xp/condpf-> t/<= (xp/get 2)
                     t/long? t/long?)))))))
 
+(deftest test|analyze-seq|do
+  (is= (analyze '(do))
+       (ast/do {:env  {}
+                :form '(do)
+                :body []
+                :spec t/nil?}))
+  (is= (analyze '(do 1))
+       (ast/do {:env  {}
+                :form '(do 1)
+                :body [1]
+                :spec (t/value 1)}))
+  (is= (analyze '(do 1 "a"))
+       (ast/do {:env  {}
+                :form '(do 1 "a")
+                :body [1 "a"]
+                :spec (t/value "a")})))
+
 (deftest test|analyze
   (testing "symbol"
     (testing "unbound"
@@ -179,7 +141,8 @@ z = #{short >= 5, boolean}
                           {:env  {}
                            :form '(. Numeric bitAnd 1 2)
                            :f    'Numeric/bitAnd
-                           :args [(ast/literal 1 (t/value 1)) (ast/literal 2 (t/value 2))]
+                           :args [(ast/literal 1 (t/value 1))
+                                  (ast/literal 2 (t/value 2))]
                            :spec t/long?}) ;; TODO more specific than this?
               :spec     t/long?})) ;; TODO more specific than this?
       (throws (analyze '(Numeric/bitAnd 1.0 2.0))
@@ -209,11 +172,10 @@ z = #{short >= 5, boolean}
                            :spec t/byte?})
               :spec t/byte?}))
       (throws (analyze '(byte "")) ; TODO fix
-        (fn-> :message (= "Spec assertion failed"))))))
-
-(->typed {'n (!ref (->type-info {:infer? true}))}
-  '(Numeric/isTrue (Numeric/isZero n)))
-
+        (fn-> :message (= "Spec assertion failed"))))
+    (testing "unbound arguments"
+      (analyze {'a (ast/unbound 'a)}
+        '(Numeric/isZero a)))))
 
 (let* [a 1 b (byte 2)]
                 a
@@ -613,6 +575,8 @@ z = #{short >= 5, boolean}
                              ...
                              [IPersistentVector long long]]
 
+(defonce *interfaces (atom {}))
+
 ; IF AN EAGER RESULT:
 
 ; +* 0 arity
@@ -640,11 +604,17 @@ z = #{short >= 5, boolean}
 ?
 
 (definterface boolean•I•byte   (^boolean invoke [^byte   a0]))
+(or (get @*interfaces 'boolean•I•byte) (swap! *interfaces assoc 'boolean•I•byte boolean•I•byte))
 (definterface boolean•I•char   (^boolean invoke [^char   a0]))
+(or (get @*interfaces 'boolean•I•char) (swap! *interfaces assoc 'boolean•I•char boolean•I•char))
 (definterface boolean•I•int    (^boolean invoke [^int    a0]))
+(swap! *interfaces assoc 'boolean•I•byte boolean•I•byte)
 (definterface boolean•I•long   (^boolean invoke [^long   a0]))
+(swap! *interfaces assoc 'boolean•I•byte boolean•I•byte)
 (definterface boolean•I•float  (^boolean invoke [^float  a0]))
+(swap! *interfaces assoc 'boolean•I•byte boolean•I•byte)
 (definterface boolean•I•double (^boolean invoke [^double a0]))
+(swap! *interfaces assoc 'boolean•I•byte boolean•I•byte)
 
 (def zero? (reify boolean•I•byte   (^boolean invoke [this ^byte   n] (Numeric/isZero n))
                   boolean•I•char   (^boolean invoke [this ^char   n] (Numeric/isZero n))
@@ -654,5 +624,111 @@ z = #{short >= 5, boolean}
                   boolean•I•double (^boolean invoke [this ^double n] (Numeric/isZero n))))
 
 (defnt zero? [n ?] (Numeric/isZero n))
+
+
+
+
+
+
+
+(defnt zero? ([n long] (Numeric/isZero n)))
+
+(defn zero?)
+
+(defnt zero? ([n ?] (Numeric/isZero n)))
+(zero? 1)
+
+(let [^boolean•I•double z zero?] (.invoke z 3.0)) ; it's just a simple reify
+
+#_(defnt even?
+  [n ?] (zero? (bit-and n 1)))
+#_=>
+(def even? (reify ))
+
+; Normally `zero?` when passed e.g. as a higher-order function might be like
+
+;; ----- Spec'ed `defnt+`s -----
+
+;; One thing that would be nice is to marry `defnt` with `clojure.spec`.
+;; We want the specs to be reflected in the parameter declaration, type hints, and so on.
+;;
+;; We also want it to know about e.g., since a function returns `(< 5 x 100)`, then x must
+;; be not just a number, but *specifically* a number between 5 and 100, exclusive.
+;; Non-`Collection` datatypes are opaque and do not participate in this benefit (?).
+;;
+;; core.spec functions like `s/or`, `s/and`, `s/coll-of`, and certain type predicates are
+;; able to be leveraged in computing the best overload with the least dynamic dispatch
+;; possible.
+
+(defnt example
+  ([a (s/and even? #(< 5 % 100))
+    b t/any?
+    c ::number-between-6-and-20
+    d {:req-un [e  (default t/boolean? true)
+                :f t/number?
+                g  (default (s/or t/number? t/sequential?) 0)]}
+    | (< a @c) ; pre
+    > (s/and (s/coll odd? :kind t/array?) ; post
+             #(= (first %) c))]
+   ...)
+  ([a string?
+    b (s/coll bigdec? :kind vector?)
+    c t/any?
+    d t/any?
+   ...))
+
+;; expands to:
+
+(dv/def ::example:a (s/and even? #(< 5 % 100)))
+(dv/def ::example:b t/any)
+(dv/def ::example:c ::number-between-6-and-20)
+(dv/def-map ::example:d
+  :conformer (fn [m#] (assoc-when-not-contains m# :e true :g 0))
+  :req-un [[:e t/boolean?]
+           [:f t/number?]
+           [:g (s/or* t/number? t/sequential?)]])
+(dv/def ::example|__ret
+  (s/and (s/coll-of odd? :kind t/array?)
+                 #(= (first %) (:c ...)))) ; TODO fix `...`
+
+;; -> TODO should it be:
+(defnt example
+  [^example:a a ^:example|b b ^example|c c ^example|d d]
+  (let [ret (do ...)]
+    (validate ret ::example|__ret)))
+;; -> OR
+(defnt example
+  [^number? a b ^number? c ^map? d]
+  (let [ret (do ...)]
+    (validate ret ::example|__ret)))
+;; ? The issue is one of performance. Maybe we don't want boxed values all over the place.
+
+(s/fdef example
+  :args (s/cat :a ::example|a
+               :b ::example|b
+               :c ::example|c
+               :d ::example|d)
+  :fn   ::example|__ret)
+
+
+;; ----- TYPE INFERENCE ----- ;;
+
+(expr-info '(let [a (Integer. 2) b (Double. 3)] a))
+; => {:class java.lang.Integer, :prim? false}
+(expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a b)))
+; => nil
+;    But I'd like to have it infer the "LCD", namely, `(v/and number? (v/or* (fn= 2) (fn= 3)))`.
+
+;; I realize that this also is probably prohibitively expensive.
+
+(expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a (int b))))
+; => nil (inferred `Integer` or `int`)
+
+(expr-info '(let [a (Integer. 2) b (Double. 3)] (if false a (Integer. b))))
+; => {:class java.lang.Integer, :prim? false}
+
+;; At very least it would be nice to have "spec inference". I.e. know, via `fdef`, that a
+;; function meets a particular set of specs/characteristics and so any call to that function
+;; will necessarily comply with the type.
 
 

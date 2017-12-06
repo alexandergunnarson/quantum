@@ -12,8 +12,12 @@
 #?@(:cljs
    [[cljsjs.js-joda]
     [cljsjs.js-joda-timezone]]) ; For IANA timezone support
+    [quantum.core.collections       :as coll
+      :refer [ifor]]
+    [quantum.core.convert.primitive :as pconv
+      :refer [->int ->long]]
     [quantum.core.error             :as err
-      :refer [->ex TODO throw-unless]]
+      :refer [->ex TODO throw-unless err!]]
     [quantum.core.fn                :as fn
       :refer [fn1 <-]]
     [quantum.core.logic             :as logic
@@ -21,14 +25,11 @@
     [quantum.core.macros            :as macros
       :refer [defnt case-env]]
     [quantum.core.numeric           :as num]
-    [quantum.core.collections       :as coll
-      :refer [ifor]]
-    [quantum.measure.convert        :as uconv
-      :refer [convert]]
-    [quantum.core.convert.primitive :as pconv
-      :refer [->int ->long]]
+    [quantum.core.spec              :as s]
     [quantum.core.vars              :as var
-      :refer [defalias]])
+      :refer [defalias]]
+    [quantum.measure.convert        :as uconv
+      :refer [convert]])
 #?(:cljs
   (:require-macros
     [quantum.core.time.core         :as self
@@ -52,6 +53,8 @@
                   :priority 0.5}
                1 "Go through rest of JSJoda"}}
   annotations nil)
+
+(s/def ::epoch-millis integer?) ; TODO technically, range-of-long?
 
 #?(:cljs
 (extend-type js/JSJoda.LocalDate
@@ -87,7 +90,31 @@
     (-write writer "#inst ")
     (pr-writer (unparse (:date formatters) obj) writer opts)))
 
+#?(:clj
+(def formats ; TODO map->record?
+  {:rfc                  DateTimeFormatter/RFC_1123_DATE_TIME ; "EEE, dd MMM yyyy HH:mm:ss zzz"
+   :iso-offset-date-time DateTimeFormatter/ISO_OFFSET_DATE_TIME
+   :windows              "E, dd MMM yyyy HH:mm:ss O"
+   :calendar             "EEE MMM dd HH:mm:ss.SSS z yyyy"
+   :friendly             "MMM dd, yyyy h:mm:ss a"
+   :jdbc-date            "yyyy-MM-dd"
+   :jdbc-time            "HH:mm:ss"
+   :exif                 "yyyy:MM:dd HH:mm:ss"
+   :offset-date-time     "yyyy-MM-dd HH:mm:ss xxx"}))
 
+#(:clj
+(defnt ^DateTimeFormatter ->formatter
+  ([^DateTimeFormatter x] x)
+  ([^string?           x] (DateTimeFormatter/ofPattern x))
+  ([^keyword?          k]
+    (-> (get formats k)
+        (or (err! "Format not found" k))
+        ->formatter))))
+
+#?(:clj
+(defnt ^ZoneId ->zone-id
+  ([^string? x] (ZoneId/of x))
+  ([^ZoneId  x] x)))
 
 #?(:clj (defn now:epoch-millis [] (System/currentTimeMillis)))
 
@@ -95,7 +122,8 @@
 ; #?(:clj (defn now-local [] (LocalDateTime/now)))
 
 (defnt ^long ->epoch-millis
-  #?@(:clj  [([^java.time.Instant       x] (-> x (.toEpochMilli)))
+  #?@(:clj  [([^long                    x] x)
+             ([^java.time.Instant       x] (-> x (.toEpochMilli)))
              ([^java.util.Date          x] (-> x (.getTime)     ))
              ([^java.time.LocalDate     x] (-> x (.toEpochDay ) (convert :days  :millis) ->long))
              ([^java.time.LocalDateTime x] (-> x (.toInstant ZoneOffset/UTC) ->epoch-millis))
@@ -170,14 +198,7 @@
                     (#?(:clj LocalDateTime/now   :cljs js/JSJoda.LocalDateTime.now  ) x))
   (^{:doc "Obtain an instance of LocalDateTime from an ISO8601 formatted text string"}
    [^string? x    ] (#?(:clj LocalDateTime/parse :cljs js/JSJoda.LocalDateTime.parse) x))
-  #?(:clj  ([^string? s k]
-             (let [^String pattern
-                    (case k
-                      :http "EEE, dd MMM yyyy HH:mm:ss zzz"
-                      k)]
-               (-> (java.time.format.DateTimeFormatter/ofPattern pattern)
-                   (.parse s)
-                   (LocalDateTime/from)))))
+  #?(:clj  ([^string? s format] (-> format ->formatter (.parse s) (LocalDateTime/from))))
   #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.LocalDateTime.from)))
   (^{:doc "Obtain an instance of LocalDateTime from a year, month, day, hour, and minute value"}
    [#?(:cljs ^number? y
@@ -213,18 +234,18 @@
   (^{:doc "Obtain an instance of ZonedDateTime from an ISO8601 formatted text string"}
    [^string? x    ] (#?(:clj ZonedDateTime/parse :cljs js/JSJoda.ZonedDateTime.parse) x))
   ; TODO CLJS
-#?(:clj ([^string? x ^DateTimeFormatter formatter] (ZonedDateTime/parse x formatter)))
+#?(:clj ([^string? x formatter] (ZonedDateTime/parse x (->formatter formatter))))
   #?(:cljs ([^js/Date x] (-> x js/JSJoda.nativeJs js/JSJoda.ZonedDateTime.from)))
   (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, and minute value"}
    [#?(:cljs ^js/JSJoda.ZonedDateTime t
        :clj  ^LocalDateTime           t) zone]
   (#?(:clj ZonedDateTime/of :cljs js/JSJoda.ZonedDateTime.of)
-      t zone))
+      t (->zone-id zone)))
   (^{:doc "Obtain an instance of ZonedDateTime from a year, month, day, hour, minute, second, and nano value"}
    [#?(:cljs ^number? y
        :clj           y) mo d h m s n zone]
     (#?(:clj ZonedDateTime/of :cljs js/JSJoda.ZonedDateTime.of)
-      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) zone)))
+      (->long y) (->long mo) (->long d) (->long h) (->long m) (->long s) (->long n) (->zone-id zone))))
 
 #?(:clj
 (defmacro ->zoned-date-time
@@ -235,6 +256,10 @@
 
 (defnt zoned-date-time?
   ([#{#?(:clj ZonedDateTime :cljs js/JSJoda.ZonedDateTime)} x] true) ([^default x] false))
+
+#?(:clj
+(defnt ^ZonedDateTime with-zone
+  #?(:clj ([^ZonedDateTime t zone] (.withZoneSameInstant t (->zone-id zone))))) )
 
 ; ===== DURATION ===== ;
 
@@ -304,25 +329,10 @@
 (defn now-formatted [date-format])
 
 #?(:clj
-(def formats ; TODO map->record
-  {:rfc       DateTimeFormatter/RFC_1123_DATE_TIME
-   :windows   (DateTimeFormatter/ofPattern "E, dd MMM yyyy HH:mm:ss O")
-   :calendar  "EEE MMM dd HH:mm:ss.SSS z yyyy"
-   :friendly  "MMM dd, yyyy h:mm:ss a"
-   :jdbc-date "yyyy-MM-dd"
-   :jdbc-time "HH:mm:ss"}))
-
-#?(:clj
 (defnt ->string*
-  ([^string?           formatting date]
-    (.format (DateTimeFormatter/ofPattern formatting) ^java.time.LocalDateTime (->local-date-time date)))
-  ([^java.time.format.DateTimeFormatter formatting date]
-    (.format formatting ^java.time.LocalDateTime (->local-date-time date)))
-  ([^keyword?          formatting date]
-            (let [^DateTimeFormatter formatter
-                    (or (get formats formatting)
-                        (throw (Exception. "Formatter not found")))]
-              (.format formatter ^java.time.LocalDateTime (->local-date-time date))))))
+  ([^string?           formatting date] (.format (->formatter formatting) date))
+  ([^DateTimeFormatter formatting date] (.format formatting date))
+  ([^keyword?          formatting date] (.format (->formatter formatting) date))))
 
 
 (defn ->string

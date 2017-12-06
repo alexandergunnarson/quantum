@@ -3,49 +3,168 @@
           Has some interesting ideas, but is old and needs re-implementation,
           or at least a lot of code examining and rewriting.
 
-          Has a |drive-map| function which maps in parallel go-blocks
+          Has a `drive-map` function which maps in parallel go-blocks
           the user's Google Drive, like DaisyDisk for Mac.
 
           Other applications pending."
     :attribution "alexandergunnarson"}
   quantum.apis.google.drive.core
-  #_(:require-quantum [:lib http auth])
   (:require
+    [quantum.core.collections :as coll
+      :refer [join]]
+    [quantum.core.data.set    :as set]
+    [quantum.core.error       :as err
+      :refer [err!]]
+    [quantum.core.fn          :as fn
+      :refer [fn1 fn& mapa fn->]]
+    [quantum.core.log         :as log]
+    [quantum.core.paths       :as path]
+    [quantum.core.spec        :as s
+      :refer [validate]]
     [quantum.core.type        :as t]
+    [quantum.core.vars        :as var]
     [quantum.apis.google.auth :as gauth]))
-;___________________________________________________________________________________________________________________________________
-;======================================================{     UNIVERSAL      }=======================================================
-;======================================================{                    }=======================================================
+
+;; ----- URIS ----- ;;
+
 (def drive-files-uri  "https://www.googleapis.com/drive/v2/files/")
 (def drive-upload-uri "https://www.googleapis.com/upload/drive/v2/files/")
 #_(def api-auth (:api-auth gauth/urls))
 
-; Full list of scopes for the google drive api: https://developers.google.com/drive/scopes.
-#_(assoc! gauth/scopes :drive
-  {; Full, permissive scope to access all of a user's files.
-   :all                (io/path api-auth "drive")
-   ; Per-file access to files created or opened by the app
-   :file               (io/path api-auth "drive.file")
-   :read-only          (io/path api-auth "drive.readonly")
-   :read-only-metadata (io/path api-auth "drive.readonly.metadata")
-   :apps-read-only     (io/path api-auth "drive.apps.readonly")
-    ; Special scope used to let users approve installation of an app
-   :install            (io/path api-auth "drive.install")
-   ; Allows access to the Application Data folder
-   :app-data           (io/path api-auth "drive.appdata")
-   ; Allows access to Apps Script files
-   :scripts            (io/path api-auth "drive.scripts")})
+;; ----- SCOPES ----- ;;
+;; Info gathered from https://developers.google.com/drive/scopes
 
-;___________________________________________________________________________________________________________________________________
-;================================================={      USING ONLY CLJ-HTTP      }=================================================
-;================================================={                               }=================================================
-; https://developers.google.com/drive/v2/reference/files/
-#_(def last-response (atom nil))
+(def api-auth "https://www.googleapis.com/auth/")
 
-; With updates that use the HTTP PUT verb, the request fails if you
-; don't supply required parameters, and it clears previously set
-; data if you don't supply optional parameters.
-; It's much safer to use patch for this reason.
+(var/def scope|drive
+  "Full, permissive scope to access all of a user's files, excluding the Application
+   Data folder. Request this scope only when it is strictly necessary."
+  (path/url-path api-auth "drive"))
+
+(var/def scope|drive|readonly
+  "Allows read-only access to file metadata and file content."
+  (path/url-path api-auth "drive.readonly"))
+
+(var/def scope|drive|appfolder
+  "Allows access to the Application Data folder."
+  (path/url-path api-auth "drive.appfolder"))
+
+(var/def scope|drive|file
+  "Per-file access to files created or opened by the app. File authorization is granted
+   on a per-user basis and is revoked when the user deauthorizes the app."
+  (path/url-path api-auth "drive.file"))
+
+(var/def scope|drive|install
+  "Special scope used to let users approve installation of an app."
+  (path/url-path api-auth "drive.install"))
+
+(var/def scope|drive|metadata
+  "Allows read-write access to file metadata (excluding downloadUrl and thumbnail), but
+   does not allow any access to read, download, write or upload file content. Does not
+   support file creation, trashing or deletion. Also does not allow changing folders or
+   sharing in order to prevent access escalation."
+  (path/url-path api-auth "drive.metadata"))
+
+(var/def scope|drive|metadata|readonly
+  "Allows read-only access to file metadata (excluding downloadUrl and thumbnail), but
+   does not allow any access to read or download file content."
+  (path/url-path api-auth "drive.metadata.readonly"))
+
+(var/def scope|drive|photos|readonly
+  "Allows read-only access to all photos. The spaces parameter must be set to photos."
+  (path/url-path api-auth "drive.photos.readonly"))
+
+(var/def scope|drive|scripts
+  "Allows access to Apps Script files."
+  (path/url-path api-auth "drive.scripts"))
+
+(swap! gauth/*scopes assoc :drive
+  {:all                scope|drive
+   :read-only          scope|drive|readonly
+   :app-folder         scope|drive|appfolder
+   :file               scope|drive|file
+   :install            scope|drive|install
+   :metadata           scope|drive|metadata
+   :metadata|read-only scope|drive|metadata|readonly
+   :scripts            scope|drive|scripts})
+
+;; ----- RESOURCE TYPE: FILES ----- ;;
+
+(defn request [kind & [data :as args]]
+  (-> (case kind
+        ;; Gets a file's metadata by ID.
+        :meta
+          (let [file-id (validate data string?)]
+            {:method :get :url (path/url-path drive-files-uri file-id)})
+        ;; Lists the user's files.
+        :list
+          {:method :get :url drive-files-uri}
+        :children
+          (let [folder-id (validate data string?)]
+            {:method :get :url (path/url-path drive-files-uri folder-id "children")})
+        :update ; like Clojure `merge`
+          (let [{:keys [file-id updated-data]} (validate args (s/cat :file-id string? :updated-data map?))]
+            {:method  :patch
+             :url     (path/url-path drive-files-uri file-id)
+             :headers {"Content-Type" "application/json"}
+             :body    (conv/->json updated-data)}))
+      (assoc :oauth-token access-token)))
+
+(defn- handle-request! [req]
+  (let [resp (-> req
+                 http/request!
+                 :body
+                 conv/json->)]
+    (if (contains? resp :error)
+        (err! "Error in Google Drive HTTP request" (:error resp))
+        resp)))
+
+(defn request! [& args]
+  (loop [items []
+         resp  (-> (apply request args)
+                   handle-request!)]
+    (if-let [next-page-token (:nextPageToken resp)]
+      (do (log/pr ::debug "Found" (count items) "items so far")
+          (validate (:items resp) vector?)
+          (recur (join items (:items resp))
+                 (-> (apply request args)
+                     (update :query-params assoc :pageToken next-page-token)
+                     handle-request!)))
+      (if (:items resp)
+          (join items (:items resp))
+          resp))))
+
+(defonce *folder-id->child-ids (atom {}))
+(defonce *file-id->meta (atom {}))
+
+(defn get-children!|async [folder-id]
+  (future (swap! *folder-id->child-ids assoc folder-id
+            (->> (request! :children folder-id)
+                 (coll/map+ :id)
+                 (join #{})))
+          (log/pr ::debug "===== Done getting children of" folder-id "=====")))
+
+(defn cached-ids->meta!|async []
+  (future (let [folder-id->child-ids @*folder-id->child-ids
+                ids (join (-> folder-id->child-ids keys set)
+                          (->> folder-id->child-ids vals (reduce (fn [a b] (join a b)))))
+                cached-ids (-> @*file-id->meta keys set)
+                need-ids (set/- ids cached-ids)]
+            (doseq [id need-ids]
+              (log/pr ::debug "Getting metadata for" id)
+              (swap! *file-id->meta assoc id (request! :meta id))))
+          (log/pr ::debug "===== Done caching metadata =====")))
+
+(defn file|id->name [file-id]
+  (get-in @*file-id->meta [file-id :title]))
+
+(defn folder-name->child-names [& [with-ids?]]
+  (->> @*folder-id->child-ids
+       (coll/map+
+         (coll/mapfn [(if with-ids? (juxt identity file|id->name) file|id->name)
+                      (coll/map' (if with-ids? (juxt identity file|id->name) file|id->name))]))
+       (join {})))
+
 ;___________________________________________________________________________________________________________________________________
 ;================================================={              LOG              }=================================================
 ;================================================={                               }=================================================

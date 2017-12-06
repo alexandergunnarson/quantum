@@ -764,13 +764,16 @@
   ([#{array? ; TODO anything that `empty?` accepts
       string? !string? keyword? m2m-chan?
       +vector? tuple? transformer?
-      #?@(:clj [Collection Map])} xs] (empty? xs))
+      #?@(:clj  [Collection #_Map
+                 clojure.lang.Associative    java.util.Map
+                 clojure.lang.IPersistentSet java.util.Set]
+          :cljs [+set? +map?])} xs] (empty? xs))
   ([^default                      xs] (empty? xs))
   ([#{string? array?}             xs ^nat-long? n])
   ([#{#?@(:clj  [clojure.lang.Associative    java.util.Map
                  clojure.lang.IPersistentSet java.util.Set]
-          :cljs [+set? +map?])}   xs           k] (contains? xs k))
-  ([^default                      xs           k] (contains? xs k)))
+          :cljs [+set? +map?])}   xs           k] (containsk? xs k))
+  ([^default                      xs           k] (containsk? xs k)))
 
 (defnt containsv?
           ([^string?  x elem]

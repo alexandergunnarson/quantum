@@ -75,6 +75,7 @@
       (cond-> (.isPrimitive c) tcore/unboxed->boxed)
       class->symbol)))
 
+#?(:clj
 (defn ->fn-arglist-tag
   "`arglist-length` is count of positional (non-variadic) args"
   [tag lang arglist-length variadic?]
@@ -97,14 +98,15 @@
                 (symbol? tag)
                   (str tag)
                 :else
-                  tag))))
+                  tag)))))
 
+#?(:clj
 (defn with-fn-arglist-type-hint
   "Ensures `sym` has a type hint appropriate for an `fn` arglist."
   [sym lang arglist-length variadic?]
   (if-let [tag (->fn-arglist-tag (type-hint sym) lang arglist-length variadic?)]
     (with-type-hint sym tag)
-    (un-type-hint sym)))
+    (un-type-hint sym))))
 
 (defn ->body-embeddable-tag
   "Returns a tag embeddable in an `fn` body (or implicit `fn` body

@@ -11,7 +11,7 @@
   (cond #?@(:clj  [(or (double? x) (float? x))
                      (let [x (double x)]
                        (and (not (Double/isNaN x)) (not (Double/isInfinite x)) (= x (Math/rint x))))
-                   (bigdec? x)
+                   (instance? java.math.BigDecimal x)
                      (let [^BigDecimal x x]
                        (or (zero? (.signum x))
                            (-> x (.scale) (<= 0))

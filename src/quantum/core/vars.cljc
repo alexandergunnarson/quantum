@@ -167,3 +167,13 @@
 
 #?(:clj (defalias binding         c/binding))
 #?(:clj (defalias with-local-vars c/with-local-vars))
+
+#?(:clj
+(defmacro def
+  ([sym]              `(~'def ~sym))
+  ([sym v]            `(~'def ~sym ~v))
+  ([sym doc-or-meta v]
+    (if (string? doc-or-meta)
+        `(~'def ~(with-meta sym {:doc doc-or-meta}) ~v)
+        `(~'def ~(with-meta sym doc-or-meta) ~v)))
+  ([sym -doc -meta v] `(~'def ~(with-meta sym (merge -meta {:doc -doc})) ~v))))

@@ -42,6 +42,10 @@
 
 ; ===== `compare` ===== ;
 
+(defn fn->comparator [f]
+  #?(:clj  (cast java.util.Comparator f)
+     :cljs (core/fn->comparator f)))
+
 #?(:clj
 (defnt' ^int compare-1d-arrays-lexicographically ; TODO reflection
   "Arrays are not `Comparable`, so we need a custom

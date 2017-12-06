@@ -396,6 +396,7 @@
 #?(:clj (defalias each      loops/each))
 #?(:clj (defalias eachi     loops/eachi))
 #?(:clj (defalias doreduce  loops/doreduce))
+        (defalias mapfn     loops/mapfn)
         (defalias break     reduced)
 ; _______________________________________________________________
 ; ========================= GENERATIVE ==========================

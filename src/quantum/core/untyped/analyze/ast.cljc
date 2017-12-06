@@ -3,7 +3,8 @@
    No actual analysis is done here."
   (:refer-clojure :exclude
     [symbol Symbol
-     ==])
+     ==
+     unbound?])
   (:require
     [quantum.core.untyped.compare :as comp
       :refer [==]]
@@ -25,9 +26,11 @@
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `unbound sym)))
+    (-edn [this] (list `unbound sym spec)))
 
-(defn unbound [sym] (Unbound. sym t/?))
+(defn unbound [sym spec] (Unbound. sym spec))
+
+(defn unbound? [x] (instance? Unbound x))
 
 (defrecord Literal [form #_::t/literal, spec #_::t/spec]
   INode

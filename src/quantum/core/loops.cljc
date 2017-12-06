@@ -473,3 +473,9 @@
             [[10 24]]}}
   [#{+vector? objects?} fs xs] ; TODO fs can be any 1D-indexed, and xs must be reducible ; TODO infer this
   (vec (reduce-multi:objects fs xs))) ; TODO is this faster or is transient `assoc!` better?
+
+(defn mapfn
+  ([fs] (fn [xs] (mapfn xs fs)))
+  ([xs fs]
+    (fori [x xs i]
+      ((or (get fs i) identity) x))))

@@ -70,6 +70,7 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
    ?Fn                   {invoke  ([_ x] (c/= x v))}
+   ?Object               {equals  ([this that] (c/= v (.-v ^ValueSpec that)))}
    ?Comparable           {compare ([this that]
                                     (if-not (instance? ValueSpec that)
                                       (err! "Cannot compare with non-ValueSpec")
@@ -117,9 +118,9 @@
 
 (declare nil?)
 
-(defn ^PSpec ->spec
+(defn ^PSpec >spec
   "Coerces ->`x` to a spec, recording its ->`name-sym` if provided."
-  ([x] (->spec x nil))
+  ([x] (>spec x nil))
   ([x name-sym]
     (assert (c/or (c/nil? name-sym) (c/symbol? name-sym)))
     (cond (satisfies? PSpec x)
@@ -150,12 +151,12 @@
           (qcore/protocol? x)
             (ProtocolSpec. nil x name-sym)
           :else
-            (ValueSpec. x))))
+            (value x))))
 
 ;; ===== DEFINITION ===== ;;
 
-(defmacro def [sym specable]
-  `(~'def ~sym (->spec ~specable '~(qual/qualify sym))))
+(defmacro define [sym specable]
+  `(~'def ~sym (>spec ~specable '~(qual/qualify sym))))
 
 (defn undef [reg sym]
   (if-let [spec (get reg sym)]
@@ -168,9 +169,9 @@
 (defn undef! [sym] (swap! *spec-registry undef sym))
 
 (defmacro defalias [sym spec]
-  `(~'def ~sym (->spec ~spec)))
+  `(~'def ~sym (>spec ~spec)))
 
-(var/defalias -def def)
+(var/defalias -def define)
 
 (-def spec? PSpec)
 
@@ -269,9 +270,9 @@
 (defn create-logical-spec
   [construct-fn arg args compare-fn]
   (if (empty? args)
-      (->spec arg)
+      (>spec arg)
       (let [;; simplification via identity
-            simp|identity (->> (cons arg args) (map+ ->spec) distinct+)
+            simp|identity (->> (cons arg args) (map+ >spec) distinct+)
             ;; simplification via intension comparison
             args' (->> simp|identity
                        (reduce
@@ -306,7 +307,8 @@
 
 (defn and
   "Sequential/ordered `and`.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs."
+   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
+   Yields error if provided with incompatible specs (ones whose logical intersection is empty)."
   [arg & args]
   (create-logical-spec ->AndSpec arg args c/neg?))
 
@@ -338,7 +340,7 @@
    Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
    Effectively computes the intersection of the intension of the ->`args`."
   [arg & args]
-  (let [specs (->> (cons arg args) (r/map+ ->spec) (r/incremental-apply intersection|spec))]
+  (let [specs (->> (cons arg args) (r/map+ >spec) (r/incremental-apply intersection|spec))]
     (if (coll? specs) ; technically, `unkeyed?`
         (UnorderedAndSpec. specs)
         specs)))
@@ -399,7 +401,7 @@
      {-edn ([this] (list `not spec))}
    ?Fn {invoke ([_ x] (spec x))}})
 
-(defn not [x] (NotSpec. (->spec x)))
+(defn not [x] (NotSpec. (>spec x)))
 
 #?(:clj
 (defmacro spec
@@ -431,19 +433,33 @@
 
 (-def nil? (value nil))
 
-(dt/deftype MaybeSpec [spec #_t/spec?]
+(dt/deftype MaybeSpec [meta #_(t/? ::meta) spec #_t/spec?]
   {PSpec nil
    ?Fn {invoke ([this x] (c/or (c/nil? x) (spec x)))}
+   ?Meta {meta      ([this] meta)
+          with-meta ([this meta'] (MaybeSpec. meta' spec))}
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] (list `? spec))}})
 
-(defn ?
-  "`?` as-is (uncalled) denotes type inference should be performed.
+;; This sadly gets a java.lang.AbstractMethodError when one tries to do as simple as:
+;; `(def ? (InferSpec. nil))`
+;; `(def abcde (? 1))
+(dt/deftype InferSpec [meta #_(t/? ::meta)]
+  {PSpec nil
+   ?Fn {invoke (([this x] (MaybeSpec. nil (>spec x)))
+                ([this spec x] (c/or (c/nil? x) (spec x))))}
+   ?Meta {meta      ([this] meta)
+          with-meta ([this meta'] (InferSpec. meta'))}
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn
+     {-edn ([this] `?)}})
 
+(defn ?
+  "Denotes type inference should be performed.
    Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
    Arity 2: Computes whether `x` is nil or satisfies `spec`."
-  ([x] (MaybeSpec. (->spec x)))
+  ([x] (MaybeSpec. nil (>spec x)))
   ([spec x] (c/or (c/nil? x) (spec x))))
 
 (def- compare|dispatch
@@ -530,8 +546,20 @@
         e+e (fn [s0 s1] (if (c/= s0 s1) 0 nil))
         incomparable (fn [s0 s1] nil)
   ]
-    {ValueSpec
-       {ValueSpec        (fn [s0 s1] (catch-all
+    {InferSpec
+       {InferSpec        (fn/fn' 0)
+        ValueSpec        (fn/fn' 1)
+        ClassSpec        (fn/fn' 1)
+        ProtocolSpec     (fn/fn' 1)
+        MaybeSpec        (fn/fn' 1)
+        OrSpec           (fn/fn' 1)
+        UnorderedOrSpec  (fn/fn' 1)
+        AndSpec          (fn/fn' 1)
+        UnorderedAndSpec (fn/fn' 1)
+        Expression       (fn/fn' 1)}
+     ValueSpec
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (fn [s0 s1] (catch-all
                                        (unum/signum|long (c/compare s0 s1))
                                        nil))
         ClassSpec        v+c
@@ -543,7 +571,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ClassSpec
-       {ValueSpec        (with-invert-comparison v+c)
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (with-invert-comparison v+c)
         ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -553,7 +582,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ProtocolSpec
-       {ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -563,7 +593,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      MaybeSpec
-       {ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -573,7 +604,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      OrSpec
-       {ValueSpec        (with-invert-comparison v+o)
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (with-invert-comparison v+o)
         ClassSpec        (with-invert-comparison c+o)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -583,7 +615,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedOrSpec
-       {ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -593,7 +626,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      AndSpec
-       {ValueSpec        (with-invert-comparison v+a)
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (with-invert-comparison v+a)
         ClassSpec        (with-invert-comparison c+a)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -603,7 +637,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedAndSpec
-       {ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         MaybeSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -613,7 +648,8 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      Expression
-       {ValueSpec        incomparable
+       {InferSpec        (fn/fn' -1)
+        ValueSpec        incomparable
         ClassSpec        incomparable
         ProtocolSpec     incomparable
         MaybeSpec        incomparable
@@ -815,6 +851,6 @@
          (-def symbol?         #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol))
 #?(:clj  (-def tagged-literal? clojure.lang.TaggedLiteral))
 
-         (-def literal?        (or nil? symbol? keyword? string? long? double? tagged-literal?))
+         (-def literal?        (or nil? boolean? symbol? keyword? string? long? double? tagged-literal?))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
 )

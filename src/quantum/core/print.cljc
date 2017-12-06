@@ -10,7 +10,7 @@
     [clojure.string           :as str]
     [quantum.core.core        :as qcore]
     [quantum.core.error       :as err
-      :refer [>err]]
+      :refer [>err error?]]
     [quantum.core.fn          :as fn
       :refer [fn-> fn->> fn']]
     [quantum.core.logic       :as logic
@@ -47,6 +47,8 @@
   ([x]
     (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
       (do (cond
+            (error? x)
+              (pr/pprint (>err x))
             (and (string? x) (> (count x) *print-length*))
               (println
                 (str "String is too long to print ("

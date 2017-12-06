@@ -18,8 +18,7 @@
       :refer [defalias]])
 #?(:cljs
   (:require-macros
-    [quantum.core.error            :as self
-      :refer [with-log-errors assert]])))
+    [quantum.core.error            :as self])))
 
 (def ^{:todo {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}}
   annotations)

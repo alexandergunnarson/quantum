@@ -84,8 +84,8 @@
 ;       redm)))
 
 (defn path
-  "Joins string paths (URLs, file paths, etc.)
-  ensuring correct separator interposition."
+  "Joins system-specific string paths (file paths, etc.)
+   ensuring correct separator interposition."
   {:usage '(path "foo/" "/bar" "baz/" "/qux/")
    :todo ["Configuration for system separator vs. 'standard' separator etc."]}
   [& parts]

@@ -33,12 +33,12 @@
    :api-auth           "https://www.googleapis.com/auth/"})
 
 ; The keys of this atom will be all of Google's services supported by the Quantum API
-(defonce scopes
+(defonce *scopes
   (atom {:general
           {:email   (url-path (:api-auth urls) "userinfo.email")
            :profile (url-path (:api-auth urls) "userinfo.profile")}}))
 
-(swap! scopes assoc :gmail
+(swap! *scopes assoc :gmail
   {:read-only "https://www.googleapis.com/auth/gmail.readonly"})
 
 (def access-types #{:online :offline})
@@ -51,7 +51,7 @@
       (let [space* (when (> i 0) " ") ; join spaces
             ns-   (-> scope-key namespace keyword)
             name- (-> scope-key name keyword)
-            scope (get-in @scopes [ns- name-])]
+            scope (get-in @*scopes [ns- name-])]
         (validate scope string?)
         (str s space* scope)))
     ""
@@ -74,28 +74,27 @@
 #_(defn oauth-url [opts]
   (url/map->url (:oauth urls) (oauth-params opts)))
 
-(defn oauth-page [opts]
-  (http/request!
-    {:url (:oauth urls)
-     :query-params (oauth-params opts)}))
+(defn oauth-page|request [opts]
+  {:url          (:oauth urls)
+   :query-params (oauth-params opts)})
 
-(defn authenticate
+(defn authenticate|request
   #_(set! js/location.hostname (let [{:keys [url query-params] :as url*} (authenticate ...)]
                                  (url/map->url url query-params)))
-  {:usage `(authenticate {:email        "anemail@gmail.com"
-                          :client-id    "3832713he.apps.googleusercontent.com"
-                          :redirect-uri "https://example.com"
-                          :scopes       #{:gmail/read-only}})}
+  {:usage `(authenticate|request
+             {:email        "anemail@gmail.com"
+              :client-id    "3832713he.apps.googleusercontent.com"
+              :redirect-uri "https://example.com"
+              :scopes       #{:gmail/read-only}})}
   [{:keys [email client-id redirect-uri scopes include-granted-scopes?]}]
-  (identity #_http/request!
-    {:url (:oauth urls)
-     :query-params (map/om
-                     "response_type" "token"
-                     "client_id"     client-id
-                     "redirect_uri"  redirect-uri
-                     "scope"         (scopes-string scopes)
-                     "login_hint"    email
-                     "include_granted_scopes" (default include-granted-scopes? true))}))
+  {:url          (:oauth urls)
+   :query-params (map/om
+                   "response_type"          "token"
+                   "client_id"              client-id
+                   "redirect_uri"           redirect-uri
+                   "scope"                  (scopes-string scopes)
+                   "login_hint"             email
+                   "include_granted_scopes" (default include-granted-scopes? true))})
 
 ; ===== LOGIN =====
 
@@ -287,7 +286,7 @@
       access-token-retrieved)))
 
 #_(defn ^String access-token-refresh! [email service]
-  (let [^Map    auth-keys (auth/auth-keys :google)
+  (let [auth-keys (auth/auth-keys :google)
         resp (http/request!
                {:method :post
                 :url    (:oauth-access-token urls)
