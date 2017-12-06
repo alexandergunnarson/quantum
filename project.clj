@@ -25,7 +25,7 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.9.0-beta1"     ]
+    [[org.clojure/clojure                       "1.9.0-RC1"     ]
      [org.clojure/clojurescript                 "1.9.908"]
      ; ==== CORE ====
        [proteus                                 "0.1.6"           ]
@@ -139,8 +139,8 @@
          [clj-stacktrace                        "0.2.8"           ]
          [debugger                              "0.2.0"           ]
          ; REPL
-         [figwheel                              "0.5.10"          ]
-         [figwheel-sidecar                      "0.5.10"          ]
+         [figwheel                              "0.5.14"          ]
+         [figwheel-sidecar                      "0.5.14"          ]
          #_[binaryage/devtools                  "0.5.2"           ]
          [environ  "1.0.3"  ]
      ; ==== DB ====
