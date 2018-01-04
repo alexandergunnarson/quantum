@@ -25,16 +25,16 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.9.0-RC1"     ]
-     [org.clojure/clojurescript                 "1.9.908"]
+    [[org.clojure/clojure                       "1.9.0"]
+     [org.clojure/clojurescript                 "1.9.946"]
      ; ==== CORE ====
-       [proteus                                 "0.1.6"           ]
+       [proteus                                 "0.1.6"]
        ; ==== NAMESPACE ====
-       [org.clojure/tools.namespace             "0.2.11"          ]
-       [com.taoensso/encore                     "2.85.0"          ] ; "2.79.1" To not break things
+       [org.clojure/tools.namespace             "0.2.11"]
+       [com.taoensso/encore                     "2.85.0"] ; "2.79.1" To not break things
        ; ==== ASYNC ====
-         [org.clojure/core.async                "0.3.442"         ]
-         [servant                               "0.1.5"           ]
+         [org.clojure/core.async                "0.3.465"]
+         [servant                               "0.1.5"]
          [#_alexandergunnarson/co.paralleluniverse.pulsar co.paralleluniverse/pulsar #_"0.7.6.2" "0.7.6"
            :exclusions [org.slf4j/*
                         potemkin
