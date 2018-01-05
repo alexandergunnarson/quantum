@@ -26,16 +26,16 @@
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
   :dependencies
-    [[org.clojure/clojure                       "1.9.0-RC1"     ]
-     [org.clojure/clojurescript                 "1.9.908"]
+    [[org.clojure/clojure                       "1.9.0"]
+     [org.clojure/clojurescript                 "1.9.946"]
      ; ==== CORE ====
-       [proteus                                 "0.1.6"           ]
+       [proteus                                 "0.1.6"]
        ; ==== NAMESPACE ====
-       [org.clojure/tools.namespace             "0.2.11"          ]
-       [com.taoensso/encore                     "2.85.0"          ] ; "2.79.1" To not break things
+       [org.clojure/tools.namespace             "0.2.11"]
+       [com.taoensso/encore                     "2.93.0"]
        ; ==== ASYNC ====
-         [org.clojure/core.async                "0.3.442"         ]
-         [servant                               "0.1.5"           ]
+         [org.clojure/core.async                "0.3.465"]
+         [servant                               "0.1.5"]
          [#_alexandergunnarson/co.paralleluniverse.pulsar co.paralleluniverse/pulsar #_"0.7.6.2" "0.7.6"
            :exclusions [org.slf4j/*
                         potemkin
@@ -51,27 +51,27 @@
          [quantum/seqspert                      "1.7.0-alpha6.1.0"]
          [fast-zip                              "0.7.0"           ]
          ; VECTOR
-       #_[org.clojure/core.rrb-vector           "0.0.11"          ]
-         [quantum/org.clojure.core.rrb-vector   "0.0.12"          ]
-         [org.clojure/data.finger-tree          "0.0.2"           ]
+       #_[org.clojure/core.rrb-vector           "0.0.11"]
+         [quantum/org.clojure.core.rrb-vector   "0.0.12"]
+         [org.clojure/data.finger-tree          "0.0.2"]
          ; MAP / SET
-         [org.flatland/ordered                  "1.5.3"           ]
-         [org.clojure/data.avl                  "0.0.13"          ]
-         [org.clojure/data.int-map              "0.2.4"           ]
+         [org.flatland/ordered                  "1.5.3"]
+         [org.clojure/data.avl                  "0.0.13"]
+         [org.clojure/data.int-map              "0.2.4"]
          ; ==== COMPLEX ====
            ; JSON
-           [cheshire                            "5.6.1"           ] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
+           [cheshire                            "5.6.1"] ; for oauth-clj; uses Jackson 2.3.1 ; JSON parsing
            ; CSV
-           [org.clojure/data.csv                "0.1.3"           ]
+           [org.clojure/data.csv                "0.1.3"]
            ; XML
            [org.clojure/data.xml                "0.0.8"
-             :exclusions [org.clojure/clojure]                    ]
+             :exclusions [org.clojure/clojure]]
 
        ; ==== COLLECTIONS ====
          [diffit                                "1.0.0"]
        ; ==== CONVERT ====
-         [byte-streams                          "0.2.2"           ]
-         [org.clojure/tools.reader              "1.0.0-beta3"     ]
+         [byte-streams                          "0.2.2"]
+         [org.clojure/tools.reader              "1.1.1"]
          #_[gloss                               "0.2.5"           ]
        ; ==== CRYPTOGRAPHY ====
          [com.lambdaworks/scrypt                "1.4.0"           ]
@@ -91,7 +91,6 @@
        ; ==== GRAPH ====
          [aysylu/loom                           "1.0.0"           ]
        ; ==== IO ====
-        ;[commons-io/commons-io                 "2.4"             ] ; writing byte arrays to file and such
          [com.taoensso/nippy                    "2.11.1"
            :exclusions [org.clojure/tools.reader
                         org.clojure/clojure
@@ -108,7 +107,7 @@
        #_[org.reflections/reflections           "0.9.10"          ]
          [com.carrotsearch/java-sizeof          "0.0.5"           ] ; Get size of Java Objects
        ; ==== MACROS ====
-         [riddley                               "0.1.12"          ]
+         [riddley                               "0.1.14"]
          #_[potemkin                            "0.3.11"
            :exclusions [riddley]                                  ]
        ; ==== NUMERIC ====
@@ -123,7 +122,7 @@
          [fipp                                  "0.6.10"
            :exclusions [org.clojure/core.rrb-vector]]
        ; ==== RESOURCES ====
-         [com.stuartsierra/component            "0.3.1"           ]
+         [com.stuartsierra/component            "0.3.2"           ]
        ; ==== STRING ====
          [funcool/cuerdas                       "2.0.1"           ]
          ; REGEX
@@ -191,18 +190,14 @@
        [com.lucasbradstreet/cljs-uuid-utils     "1.0.2"           ]
        [danlentz/clj-uuid                       "0.1.6"           ]
      ; ==== HTTP ====
-       [com.taoensso/sente                      "1.11.0"             ; WebSockets
-         :exclusions [com.taoensso/encore]                        ]
+       [com.taoensso/sente                      "1.11.0"]             ; WebSockets
        [cljs-http                               "0.1.41"
          :exclusions [com.cognitect/transit-cljs]]
-       [less-awful-ssl                          "1.0.1"           ]
-       [http-kit                                "2.1.19"
-         :exclusions [org.clojure/clojure]                        ]
-       [org.apache.httpcomponents/httpcore      "4.4.4"           ]
-       [org.apache.httpcomponents/httpclient    "4.5.2"
-         :exclusions [commons-codec]                              ]
-       [org.apache.httpcomponents/httpmime      "4.5.2"
-         :exclusions [commons-codec]                              ]
+       [less-awful-ssl                          "1.0.1"]
+       [http-kit                                "2.2.0"]
+       [org.apache.httpcomponents/httpcore      "4.4.4"]
+       [org.apache.httpcomponents/httpclient    "4.5.2"]
+       [org.apache.httpcomponents/httpmime      "4.5.2"]
        ; ==== ROUTING ====
        [compojure                               "1.6.0"
          :exclusions [org.eclipse.jetty/jetty-server
@@ -226,7 +221,6 @@
      ; WEB
      [com.github.detro/phantomjsdriver          "1.2.0"
        :exclusions [xml-apis
-                    commons-codec
                     io.netty/netty]]
      ; ==== APIS ==== ;
      [com.amazonaws/aws-java-sdk                "1.11.32"
@@ -306,13 +300,25 @@
                       org.codehaus.janino/commons-compiler
                       io.netty/netty]]
      ; ==== DEPENDENCY-CONFLICTED ====
+     ; (various)
+     [org.clojure/data.priority-map            "0.0.7"]
+     [commons-io/commons-io                    "2.6"]
+     [org.apache.commons/commons-lang3         "3.7"]
+     [commons-net/commons-net                  "3.6"]
+     [com.google.protobuf/protobuf-java        "3.5.1"]
+     ; org.clojure/clojurescript
+     ; co.paralleluniverse/quasar-core
+     [com.google.guava/guava                   "23.6-jre"]
+     ; hickory
+     ; org.apache.tika/tika-parsers
+     [org.jsoup/jsoup                          "1.11.2"]
      ; quantum/datomic-pro
      ; spark
      [org.codehaus.janino/commons-compiler-jdk "2.7.4" #_"2.6.1"]
      ; byte-transforms
      ; spark
      [org.xerial.snappy/snappy-java            "1.1.1.7"]
-     ; many
+     ; (various)
      [potemkin                                 "0.4.3"]
      ; aleph
      ; org.apache.spark/spark-core_2.10
