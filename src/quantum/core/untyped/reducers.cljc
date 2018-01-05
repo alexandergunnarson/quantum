@@ -4,12 +4,12 @@
     [clojure.core                 :as core]
     [clojure.core.reducers        :as r]
     [fast-zip.core                :as zip]
-    [quantum.core.core
-      :refer [->sentinel]]
     [quantum.core.fn
       :refer [fn->> rcomp]]
     [quantum.core.untyped.compare :as comp
-      :refer [== not==]]))
+      :refer [== not==]]
+    [quantum.core.untyped.core
+      :refer [->sentinel]]))
 
 (defonce sentinel (->sentinel))
 

@@ -91,6 +91,14 @@
               (transient {}) coll))]
     frequencies-f))
 
+(def lmap map)
+(def lmap-indexed map-indexed)
+(defn lindexed [xs] (lmap-indexed vector xs))
+
+(def lfilter filter)
+
+(defn lflatten-1 [xs] (apply concat xs))
+
 ;; ===== ZIPPER ===== ;;
 
 (defn default-zipper [coll]

@@ -2,7 +2,7 @@
   "Facilities for creating AST nodes (for now, just for Clojure).
    No actual analysis is done here."
   (:refer-clojure :exclude
-    [symbol Symbol
+    [symbol Symbol symbol?
      ==
      unbound?])
   (:require
@@ -15,53 +15,63 @@
 ;; ===== CONSTITUENT SPECS ===== ;;
 
 (definterface INode
+  (getForm [])
   (getSpec []))
+
+(defn node? [x] (instance? INode x))
 
 #_(t/def ::node (t/isa? INode))
 #_(t/def ::env  (t/map-of t/symbol? ::node))
 
 ;; ===== NODES ===== ;;
 
-(defrecord Unbound [sym #_t/symbol? spec #_(t/= t/?)]
+(defrecord Unbound [env #_::env, form #_t/symbol?, minimum-spec #_t/spec?, spec #_t/spec?] ;; TODO `spec` should be `t/deducible-spec?`
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `unbound sym spec)))
+    (-edn [this] (list `unbound form {:minimum minimum-spec :deduced spec})))
 
-(defn unbound [sym spec] (Unbound. sym spec))
+(defn unbound
+  ([form spec] (unbound nil form spec))
+  ([env form spec] (Unbound. env form spec spec))) ; TODO should wrap second `spec` in `t/deducible`
 
 (defn unbound? [x] (instance? Unbound x))
 
-(defrecord Literal [form #_::t/literal, spec #_::t/spec]
+(defrecord Literal [env #_::env, form #_::t/literal, spec #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `literal form spec)))
 
 (defn literal
-  ([form spec] (Literal. form spec)))
+  ([form spec] (literal nil form spec))
+  ([env form spec] (Literal. env form spec)))
 
 (defrecord Symbol
   [env  #_::env
-   form #_::t/form
+   form #_t/symbol?
    spec #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `symbol (into (array-map) this))))
 
-(defn symbol [m] (map->Symbol m))
+(defn symbol
+  ([form spec] (symbol nil form spec))
+  ([env form spec] (Symbol. env form spec)))
+
+(defn symbol? [x] (instance? Symbol x))
 
 ;; ===== SPECIAL CALLS ===== ;;
 
 (defrecord Quoted
-  [form #_::t/form, spec #_::t/spec]
+  [env #_::env, form #_::t/form, spec #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `quoted form spec)))
 
-(defn quoted [form spec] (Quoted. form spec))
+(defn quoted [form spec] (Quoted. nil form spec))
 
 (defrecord Let*
   [env      #_::env
@@ -89,7 +99,8 @@
 (defn do [m] (map->Let* m))
 
 (defrecord MacroCall
-  [form     #_::t/form
+  [env      #_::env
+   form     #_::t/form
    expanded #_::node
    spec     #_::t/spec]
   INode
@@ -101,17 +112,31 @@
 
 ;; ===== RUNTIME CALLS ===== ;;
 
-(defrecord StaticCall
-  [env  #_::env
-   form #_::t/form
-   f    #_t/qualified-symbol?
-   args #_(t/and t/sequential? t/indexed? (t/every? ::node))
-   spec #_::t/spec]
+(defrecord FieldAccess
+  [env    #_::env
+   form   #_::t/form
+   target #_::node
+   field  #_t/unqualified-symbol?
+   spec   #_::t/spec]
   INode
   fipp.ednize/IOverride
   fipp.ednize/IEdn
-    (-edn [this] (list `static-call (into (array-map) this))))
+    (-edn [this] (list `field-access (into (array-map) this))))
 
-(defn static-call [m] (map->StaticCall m))
+(defn field-access [m] (map->FieldAccess m))
+
+(defrecord MethodCall
+  [env    #_::env
+   form   #_::t/form
+   target #_::node
+   method #_::t/unqualified-symbol?
+   args   #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   spec   #_::t/spec]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `method-call (into (array-map) this))))
+
+(defn method-call [m] (map->MethodCall m))
 
 )

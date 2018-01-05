@@ -1,9 +1,9 @@
 (ns quantum.core.untyped.convert
   (:require [clojure.string               :as str]
-            [quantum.core.core            :as qcore
-              :refer [namespace?]]
             [quantum.core.error           :as err]
             [quantum.core.fn              :as fn]
+            [quantum.core.untyped.core    :as qcore
+              :refer [namespace?]]
             [quantum.core.untyped.qualify :as qual
               :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
             [quantum.core.vars            :as var

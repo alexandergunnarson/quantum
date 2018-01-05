@@ -3,8 +3,6 @@
     [flatten get ==])
   (:require
     [clojure.core                     :as core]
-    [quantum.core.cache               :as cache
-      :refer [defmemoized]]
     [quantum.core.error               :as err
       :refer [err!]]
     [quantum.core.macros.deftype      :as dt]
@@ -185,7 +183,7 @@
      {-edn ([this] (tagged-literal 'expr code))}})
 
 #?(:clj
-(defmacro >expr [expr-] `(Expression. '~expr- ~expr-)))
+(defmacro >expr [expr-] `(quantum.core.untyped.analyze.expr.Expression. '~expr- ~expr-)))
 
 (defn expr? [x] (instance? Expression x))
 
