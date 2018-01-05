@@ -30,13 +30,13 @@
          {:rtype Object :argtypes [Comparable]}])
       (xp/casef count
         1 (xp/condpf-> t/<= (xp/get 0)
-            t/string?     t/object?
-            t/char-seq?   t/object?
-            t/comparable? t/object?
-            t/object?     t/object?)
+            (t/? t/string?)     (t/? t/object?)
+            (t/? t/char-seq?)   (t/? t/object?)
+            (t/? t/comparable?) (t/? t/object?)
+            (t/? t/object?)     (t/? t/object?))
         2 (xp/condpf-> t/<= (xp/get 0)
             t/int? (xp/condpf-> t/<= (xp/get 1)
-                    t/char? t/object?)))))
+                    t/char? (t/? t/object?))))))
   (testing "Complex dispatch based off of `Numeric/bitAnd`"
     (is=
       (this/methods->spec
@@ -137,13 +137,14 @@
       (is= (analyze '(Numeric/bitAnd 1 2))
            (ast/macro-call
              {:form     '(Numeric/bitAnd 1 2),
-              :expanded (ast/static-call
-                          {:env  {}
-                           :form '(. Numeric bitAnd 1 2)
-                           :f    'Numeric/bitAnd
-                           :args [(ast/literal 1 (t/value 1))
-                                  (ast/literal 2 (t/value 2))]
-                           :spec t/long?}) ;; TODO more specific than this?
+              :expanded (ast/method-call
+                          {:env    {}
+                           :form   '(. Numeric bitAnd 1 2)
+                           :target (ast/symbol 'Numeric t/class?)
+                           :method 'bitAnd
+                           :args   [(ast/literal 1 (t/value 1))
+                                    (ast/literal 2 (t/value 2))]
+                           :spec   t/long?}) ;; TODO more specific than this?
               :spec     t/long?})) ;; TODO more specific than this?
       (throws (analyze '(Numeric/bitAnd 1.0 2.0))
         (fn-and (fn-> :message (= "No matching clause found"))
@@ -164,12 +165,13 @@
       (is= (analyze '(byte 1))
            (ast/macro-call
              {:form '(byte 1)
-              :expanded (ast/static-call
-                          {:env  {}
-                           :form '(. clojure.lang.RT (uncheckedByteCast 1))
-                           :f    'clojure.lang.RT/uncheckedByteCast
-                           :args [(ast/literal 1 t/long?)]
-                           :spec t/byte?})
+              :expanded (ast/method-call
+                          {:env    {}
+                           :form   '(. clojure.lang.RT (uncheckedByteCast 1))
+                           :target (ast/symbol 'clojure.lang.RT t/class?)
+                           :method 'uncheckedByteCast
+                           :args   [(ast/literal 1 t/long?)]
+                           :spec   t/byte?})
               :spec t/byte?}))
       (throws (analyze '(byte "")) ; TODO fix
         (fn-> :message (= "Spec assertion failed"))))

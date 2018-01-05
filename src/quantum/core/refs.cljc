@@ -11,8 +11,6 @@
   (:require
     [clojure.core           :as core]
     [clojure.string         :as str]
-    [quantum.core.core
-      :refer [atom?]]
     [quantum.core.error     :as err
       :refer [TODO]]
     [quantum.core.macros
@@ -21,6 +19,8 @@
       :refer [val?]]
     [quantum.core.type.defs :as tdefs]
     [quantum.core.untyped.qualify :as qual]
+    [quantum.core.untyped.refs
+      :refer [atom?]]
     [quantum.core.vars      :as var
       :refer [defalias]])
 #?(:clj

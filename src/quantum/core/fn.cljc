@@ -18,7 +18,7 @@
 #?(:cljs
   (:require-macros
     [quantum.core.fn :as self
-      :refer [gen-constantly gen-call gen-positional-nthas
+      :refer [aritoid gen-constantly gen-call gen-positional-nthas
               gen-ntha gen-conja gen-reversea gen-mapa]])))
 
 ; To signal that it's a multi-return

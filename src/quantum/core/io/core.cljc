@@ -235,7 +235,6 @@
                    (whenf (with-open [read-file (io/input-stream path-f)] ; Clojure object
                           (nippy/thaw-from-in! (DataInputStream. read-file)))
                      (fn1 t/bytes?) nippy/thaw))
-               nil (slurp path-f)
                (get* method path)))))))
 
 (defmulti persist! firsta)

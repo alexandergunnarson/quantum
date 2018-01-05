@@ -24,6 +24,7 @@
     [quantum.core.macros          :as macros
       :refer [defnt #?(:clj defnt')]]
     [quantum.core.type.core       :as tcore  ]
+    [quantum.core.untyped.refs    :as uref]
     [quantum.core.vars            :as var
       :refer [defalias]])
 #?(:cljs
@@ -155,7 +156,7 @@
 
          (def map-entry? #?(:clj  core/map-entry?
                             :cljs (fn-and vector? (fn-> count (= 2)))))
-         (defalias atom? qcore/atom?)
+         (defalias atom? uref/atom?)
 #?(:clj  (defalias var?  core/var?))
          ; TODO `ref?`, `future?`
 

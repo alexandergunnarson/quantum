@@ -46,7 +46,7 @@
 
 #?(:clj
 (defn memoize*
-  "A faster, customizable version of |core/memoize|."
+  "A faster, customizable version of `core/memoize`."
   {:attribution ["Alex Gunnarson"]
    :todo ["Take out repetitiveness via macro"]}
   ([f] (memoize* f nil))

@@ -467,8 +467,8 @@
 
 (defn hint-expr-embeddably [expr tag]
   (if (symbol? expr)
-      (th/with-type-hint expr (th/->body-embeddable-tag tag))
-      (tcore/static-cast-code (th/->body-embeddable-tag tag) expr)))
+      (th/with-type-hint expr (th/>body-embeddable-tag tag))
+      (tcore/static-cast-code (th/>body-embeddable-tag tag) expr)))
 
 #?(:clj
 (defn hint-expr-with-class [expr hint]

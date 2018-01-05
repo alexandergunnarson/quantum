@@ -5,10 +5,14 @@
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
-      :refer [->type-info ->expr-info analyze defnt *fn->spec]]
+      :refer [->type-info ->expr-info analyze
+              defnt fnt|code *fn->spec]]
+    [quantum.core.macros
+      :refer [macroexpand-all]]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
-    [quantum.core.untyped.type :as t])
+    [quantum.core.untyped.type :as t
+      :refer [?]])
   (:import clojure.lang.Named
            clojure.lang.Reduced))
 
@@ -16,38 +20,19 @@
          '[quantum.core.fn :refer [fn->]])
 
 ;; Preference mechanisms in protocols: https://groups.google.com/forum/#!topic/clojure-dev/-zoLA78--Mo
+;; - Summary: always make it explicit!
 
-(defonce *interfaces (atom {}))
-
-;; Putting here because this code would be evaluated within the macro without being
-;; output as code
-;; In a real-world situation, these interfaces might already have been created,
-;; and otherwise would be created on demand
-#?(:clj
-(do (definterface boolean>boolean (^boolean          invoke [^boolean          a0]))
-    (definterface byte>boolean    (^boolean          invoke [^byte             a0]))
-    (definterface byte>byte       (^byte             invoke [^byte             a0]))
-    (definterface short>boolean   (^boolean          invoke [^short            a0]))
-    (definterface short>short     (^short            invoke [^short            a0]))
-    (definterface char>boolean    (^boolean          invoke [^char             a0]))
-    (definterface char>char       (^char             invoke [^char             a0]))
-    (definterface int>boolean     (^boolean          invoke [^int              a0]))
-    (definterface int>int         (^int              invoke [^int              a0]))
-    (definterface long>boolean    (^boolean          invoke [^long             a0]))
-    (definterface long>long       (^long             invoke [^long             a0]))
-    (definterface float>boolean   (^boolean          invoke [^float            a0]))
-    (definterface float>float     (^float            invoke [^float            a0]))
-    (definterface double>boolean  (^boolean          invoke [^double           a0]))
-    (definterface double>double   (^double           invoke [^double           a0]))
-    (definterface Object>boolean  (^boolean          invoke [^java.lang.Object a0]))
-    (definterface Object>Object   (^java.lang.Object invoke [^java.lang.Object a0]))))
+(macroexpand '
+  (defnt pid > (? t/string?) []
+     (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+          (.getName))))
 
 ;; =====|=====|=====|=====|===== ;;
 
 ;; ----- implementation ----- ;;
 
-(macroexpand
-  '(defnt identity|gen|uninlined ([x t/any?] x)))
+(macroexpand '
+  (defnt identity|gen|uninlined ([x t/any?] x)))
 
 ;; ----- expanded code ----- ;;
 
@@ -58,6 +43,7 @@
      ~(case-env
                    ;; Because for `any?` it includes primitives as well
         :clj  `(do ;; Direct dispatch
+                   ;; One reify per overload
                    (def identity|gen|uninlined|__0 ; `t/any?`
                      (reify boolean>boolean (^boolean          invoke [_ ^boolean          ~'x] x)
                             byte>byte       (^byte             invoke [_ ^byte             ~'x] x)
@@ -72,9 +58,9 @@
                    ;; in this case no protocol is necessary because it boxes arguments anyway
                    ;; TODO avoid var indirection by making and using static fields
                    (defn identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 x)))
-        :cljs ;; Direct dispatch will be approached later
-              ;; Dynamic dispatch same as Clojure in this case
-              `(defn identity|gen|uninlined [~'x] ~'x)))
+        :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
+              ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
+              `(defn identity|gen|uninlined [~'x] x)))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -90,10 +76,16 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(defnt #_:inline name|gen ; TODO don't ignore `:inline`
-           ([x string?] x)
+(defnt #_:inline name|gen > t/string? ; TODO don't ignore `:inline`
+           ([x t/string?] x)
   #?(:clj  ([x Named  ] (.getName x))
      :cljs ([x INamed ] (-name x)))) ; TODO fix
+
+(macroexpand '
+  (defnt name|gen > t/string? ; TODO don't ignore `:inline`
+           ([x t/string?] x)
+  #?(:clj  ([x Named  ] (.getName x))
+     :cljs ([x INamed ] (-name x)))))
 
 ;; ----- expanded code ----- ;;
 
@@ -119,8 +111,7 @@
                      ;; this is part of the protocol because even though `Named` is an interface,
                      ;; `String` is final, so they're mutually exclusive
                      clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
-        :cljs `(do ;; No protocol because all possible input classes are either built-ins (`string`)
-                   ;; or protocols (`INamed`)
+        :cljs `(do ;; No protocol in ClojureScript
                    (defn name|gen [~'x]
                      (cond* (string? x)           x
                             (satisfies? INamed x) (-name x)
@@ -158,9 +149,7 @@
                    (defn some?|gen [~'x]
                      (cond* (nil? x) (.invoke some?|gen|__0 x)
                             (.invoke some?|gen|__1 x))))
-        :cljs `(do ;; No protocol because all possible input classes are built-ins (`nil` and `default`)
-                   ;; or protocols (`INamed`)
-                   (defn some?|gen [~'x]
+        :cljs `(do (defn some?|gen [~'x]
                      (cond* (nil? x) false
                             true)))))
 
@@ -196,8 +185,7 @@
                    (defn reduced?|gen [~'x]
                      (cond* (instance? Reduced x) (.invoke reduced?|gen|__0 x)
                             (.invoke reduced?|gen|__1 x))))
-        :cljs `(do ;; No protocol because just one class; TODO evaluate whether this is better performance-wise? probably is
-                   (defn reduced?|gen [~'x]
+        :cljs `(do (defn reduced?|gen [~'x]
                      (cond* (instance? Reduced x) true false)))))
 
 ;; =====|=====|=====|=====|===== ;;
@@ -240,8 +228,7 @@
                      java.lang.Object  (>boolean|gen [x]
                                          (cond* (nil? x) (.invoke >boolean|gen|__1 x)
                                                 (.invoke >boolean|gen|__2 x)))))
-        :cljs `(do ;; No protocol because all possible input classes are built-ins (`boolean`, `nil`)
-                   (defn >boolean|gen [~'x]
+        :cljs `(do (defn >boolean|gen [~'x]
                      (cond* (boolean? x) x
                             (nil?     x) false
                             true)))))
@@ -851,3 +838,41 @@
                  (s/fnt [x ?] (< x 0.1)))
            (t/or string? !string?))
    y ?] (str x (name y))) ; uses the above-defined `name`
+
+
+;; ===== CLOJURESCRIPT ===== ;;
+
+;; In order for specs to be enforceable at compile time, they must be able to be executed by the compilation
+;; language. The case of one language compiled in a different one (e.g. ClojureScript in Clojure/Java) is
+;; thus problematic.
+
+;; For instance, this is only able to be checked in CLJS, because `js-object?` is not implemented in CLJ:
+(defnt abcde1
+  [x #?(:clj string? :cljs js-object?)] ...)
+
+;; This could be checked in CLJ, but it would be an error to do so:
+(defn my-spec [x] #?(:clj (check-this) :cljs (check-that)))
+
+(defnt abcde2
+  [x my-spec] ...)
+
+;; So what is the solution? The solution is to forgo some functionality in ClojureScript and instead rely
+;; fundamentally on the aggregative relationships among predicates created using the `defnt` spec system.
+
+;; For instance:
+
+(defnt abcde1 [x (t/pc :clj string? :cljs js-object?)] ...)
+
+;; Or:
+
+(t/def abcde1|x? :clj string? :cljs js-object?)
+
+(defnt abcde1 [x abcde1|x?] ...)
+
+;; Because the spec was registered using the `defnt` spec system, the quoted forms can be analyzed and
+;; at least some things can be deduced.
+
+;; In this case, the spec of `x` is deducible: `abcde1|x?` (`js-object?` deeper down). The return spec
+;; is also deducible as being the return spec of `abcde1`:
+
+(defnt abcde2 [x ?] (abcde1 x))

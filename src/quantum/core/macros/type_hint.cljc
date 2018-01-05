@@ -108,18 +108,28 @@
     (with-type-hint sym tag)
     (un-type-hint sym))))
 
-(defn ->body-embeddable-tag
-  "Returns a tag embeddable in an `fn` body (or implicit `fn` body
+(defn >body-embeddable-tag
+  "Outputs a tag embeddable in an `fn` body (or implicit `fn` body
    when e.g. an expression outside of an `fn` body)
 
    The compiler ignores, at least in certain cases when not in arglists,
    etc., hints that are not strings or symbols, and does not allow
-   primitive hints.
-   This fn accommodates these requirements."
+   primitive hints. This fn accommodates these requirements."
   [tag]
   #?(:clj (if (class? tag)
               (if (.isPrimitive ^Class tag)
                   nil
                   (.getName ^Class tag))
               tag)
+     :cljs tag))
+
+(defn >arglist-embeddable-tag
+  "Outputs a tag embeddable in an (unrestricted, i.e. non-`fn`) arglist.
+
+   The compiler seems to ignore hints that are not strings or symbols, and
+   does not allow primitive hints. This fn accommodates these requirements."
+  [tag #_(t/or string? class? symbol?)]
+  #?(:clj  (if (class? tag)
+               (.getName ^Class tag)
+               tag)
      :cljs tag))

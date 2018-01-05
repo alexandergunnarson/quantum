@@ -93,7 +93,7 @@
       (testing "∅"
         (is= nil (t/compare (t/value "a") t/byte?))))
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec"
       (testing "<"
         ;;    #{"a"} ∅ t/byte?
@@ -164,7 +164,7 @@
           (is= nil (t/compare t/char-seq? t/comparable?))
           (is= nil (t/compare t/comparable? t/char-seq?)))))
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec"
       ;; #{(⊂ | =) ∅} -> ⊂
       ;; #{(⊃ ?) ∅} -> ∅
@@ -200,16 +200,16 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec"))
-  (testing "MaybeSpec"
+  (testing "NilableSpec"
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -218,7 +218,7 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec"
       ;; (let [l <all -1 on left-compare?>
       ;;       r <all -1 on right-compare?>]
@@ -359,7 +359,7 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -368,7 +368,7 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -377,7 +377,7 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ MaybeSpec")
+    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")

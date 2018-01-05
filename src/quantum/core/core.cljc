@@ -1,12 +1,12 @@
 (ns quantum.core.core
   (:refer-clojure :exclude [seqable? boolean? get set])
-  (:require [clojure.core             :as core
+  (:require [clojure.core              :as core
              #?@(:cljs [:refer [IDeref IAtom]])]
-            [clojure.spec.alpha       :as s]
-    #?(:clj [clojure.core.specs.alpha :as ss])
-            [cuerdas.core             :as str+]
-   #?(:clj  [environ.core             :as env]))
-  #?(:clj (:import [clojure.lang IDeref IAtom])))
+            [clojure.spec.alpha        :as s]
+    #?(:clj [clojure.core.specs.alpha  :as ss])
+            [cuerdas.core              :as str+]
+   #?(:clj  [environ.core              :as env])
+            [quantum.core.untyped.core :as qcore]))
 
 #?(:clj
 (defn pid []
@@ -29,50 +29,6 @@
 (defn ->sentinel [] #?(:clj (Object.) :cljs #js {}))
 (defn ->object   [] #?(:clj (Object.) :cljs #js {}))
 
-; ===== TYPE PREDICATES =====
-
-(def val? some?)
-
-(defn atom?      [x] (#?(:clj instance? :cljs satisfies?) IAtom x))
-
-(defn derefable? [x] (#?(:clj instance? :cljs satisfies?) IDeref x))
-
-(defn boolean? [x] #?(:clj  (instance? Boolean x)
-                      :cljs (or (true? x) (false? x))))
-
-(defn lookup? [x]
-  #?(:clj  (instance? clojure.lang.ILookup x)
-     :cljs (satisfies? ILookup x)))
-
-#?(:clj
-(defn protocol? [x]
-  (and (lookup? x) (-> x (core/get :on-interface) class?))))
-
-(defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
-
-#?(:clj  (defn seqable?
-           "Returns true if (seq x) will succeed, false otherwise."
-           {:from "clojure.contrib.core"}
-           [x]
-           (or (seq? x)
-               (instance? clojure.lang.Seqable x)
-               (nil? x)
-               (instance? Iterable x)
-               (-> x class .isArray)
-               (string? x)
-               (instance? java.util.Map x)))
-   :cljs (def seqable? core/seqable?))
-
-(defn editable? [coll]
-  #?(:clj  (instance? clojure.lang.IEditableCollection coll)
-     :cljs (satisfies? cljs.core.IEditableCollection coll)))
-
-#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
-
-; ===== REFS AND ATOMS =====
-
-(defn ?deref [x] (if (derefable? x) @x x))
-
 ; ===== COLLECTIONS =====
 
 (defn seq-equals [a b]
@@ -87,6 +43,13 @@
               (recur (next a) (next b)))))))))
 
 (def has? (comp not empty?)) ; TODO fix this performance-wise
+
+; ===== PREDICATES ===== ;
+
+(def val?     qcore/val?)
+(def boolean? qcore/boolean?)
+(def seqable? qcore/seqable?)
+(def regex?   qcore/regex?)
 
 ; ===== TYPE =====
 
@@ -138,30 +101,4 @@
 #?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base >keyword ks))))
 #?(:clj (defmacro quote-map [& ks] (list* `hash-map (quote-map-base identity  ks))))
 
-#?(:clj
-(defmacro istr
-  "'Interpolated string.' Accepts one or more strings; emits a `str` invocation that
-  concatenates the string data and evaluated expressions contained
-  within that argument.  Evaluation is controlled using ~{} and ~()
-  forms. The former is used for simple value replacement using
-  clojure.core/str; the latter can be used to embed the results of
-  arbitrary function invocation into the produced string.
-  Examples:
-      user=> (def v 30.5)
-      #'user/v
-      user=> (istr \"This trial required ~{v}ml of solution.\")
-      \"This trial required 30.5ml of solution.\"
-      user=> (istr \"There are ~(int v) days in November.\")
-      \"There are 30 days in November.\"
-      user=> (def m {:a [1 2 3]})
-      #'user/m
-      user=> (istr \"The total for your order is $~(->> m :a (apply +)).\")
-      \"The total for your order is $6.\"
-      user=> (istr \"Just split a long interpolated string up into ~(-> m :a (get 0)), \"
-               \"~(-> m :a (get 1)), or even ~(-> m :a (get 2)) separate strings \"
-               \"if you don't want a << expression to end up being e.g. ~(* 4 (int v)) \"
-               \"columns wide.\")
-      \"Just split a long interpolated string up into 1, 2, or even 3 separate strings if you don't want a << expression to end up being e.g. 120 columns wide.\"
-  Note that quotes surrounding string literals within ~() forms must be
-  escaped."
-  [& args] `(str+/istr ~@args)))
+#?(:clj (defmacro istr [& args] `(qcore/istr ~@args)))

@@ -1632,6 +1632,14 @@
             {1 #{:a :b} 2 #{:c}}}}
   [m] (reduce (rfn [ret k v] (update ret v #(conj (ensurec % #{}) k))) {} m))
 
+(defn invert-set-vals
+  "E.g. {a #{b c d}} -> {b a, c a, d a}"
+  [xs]
+  (reduce (rfn [xs' k vs]
+            (reduce (fn [xs'' v] (assoc xs'' v k)) xs' vs))
+    {}
+    xs))
+
 (defn- update-nth-list*
   [x n f]
   (if (= n 0)

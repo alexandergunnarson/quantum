@@ -57,7 +57,7 @@
 
 ;; ----- (RECORD-BASED) ERROR ----- ;;
 
-#?(:clj  #_(defrecord Error [ident message data trace cause]) ; defined in Java as quantum.core.error.Error
+#?(#_:clj  #_(defrecord Error [ident message data trace cause]) ; defined in Java as quantum.core.error.Error
    :cljs (defrecord Error [ident message data trace cause]))
 
 (def error-map-type #?(:clj quantum.core.error.Error :cljs quantum.core.error/Error))

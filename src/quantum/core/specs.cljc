@@ -129,20 +129,20 @@
 (s/def ::fn|postchecks
   (s/and (s/conformer
            (fn [v]
-             (let [[arities-k arities-v] (get v :arities)
-                   arities
-                    (-> (case arities-k
-                          :arity-1 {:arities [arities-v]}
-                          :arity-n arities-v)
-                        (update :arities
+             (let [[overloads-k overloads-v] (get v :overloads)
+                   overloads
+                    (-> (case overloads-k
+                          :overload-1 {:overloads [overloads-v]}
+                          :overload-n overloads-v)
+                        (update :overloads
                           (fnl mapv
                             (fn1 update :body
                               (fn [[k v]]
                                 (case k
                                   :body         {:body v}
                                   :prepost+body v))))))]
-               (assoc v :post-meta (:post-meta arities)
-                        :arities   (:arities   arities)))))
+               (assoc v :post-meta (:post-meta overloads)
+                        :overloads (:overloads overloads)))))
          ::fn|unique-doc
          ::fn|unique-meta
          ;; TODO validate metadata like return value etc.
@@ -150,9 +150,9 @@
 
 (s/def ::fn
   (s/and (s/spec
-           (s/cat ::fn|name (s/? ::fn|name)
-                  :arities  (s/alt :arity-1 ::fn|arglist+body
-                                   :arity-n (s/cat :arities (s/+ (s/spec ::fn|arglist+body))))))
+           (s/cat ::fn|name  (s/? ::fn|name)
+                  :overloads (s/alt :overload-1 ::fn|arglist+body
+                                    :overload-n (s/cat :overloads (s/+ (s/spec ::fn|arglist+body))))))
          ::fn|postchecks))
 
 (s/def ::defn
@@ -161,9 +161,9 @@
       (s/cat ::fn|name   ::fn|name
              ::docstring (s/? ::docstring)
              :pre-meta   (s/? ::meta)
-             :arities    (s/alt :arity-1 ::fn|arglist+body
-                                :arity-n (s/cat :arities   (s/+ (s/spec ::fn|arglist+body))
-                                                :post-meta (s/? ::meta)))))
+             :overloads  (s/alt :overload-1 ::fn|arglist+body
+                                :overload-n (s/cat :overloads   (s/+ (s/spec ::fn|arglist+body))
+                                                   :post-meta (s/? ::meta)))))
     ::fn|postchecks))
 
 (s/fdef core/defn  :args ::defn :ret any?)
@@ -308,3 +308,20 @@
                :exclude (s/cat :op (quotable #{:exclude}) :arg (quotable ::exclude))
                :only    (s/cat :op (quotable #{:only})    :arg (quotable ::only))
                :rename  (s/cat :op (quotable #{:rename})  :arg (quotable ::rename)))))
+
+;; ----- INTERFACE ----- ;;
+
+(s/def ::code any?) ; TODO must be embeddable
+
+(s/def :interface/name simple-symbol?)
+
+;; ----- REIFY ----- ;;
+
+(s/def :reify/method-name     simple-symbol?)
+
+(s/def :reify|arglist/arg-sym simple-symbol?) ; technically, can be tagged with only particular tags
+(s/def :reify/arglist         (s/and vector? (s/+ :reify|arglist/arg-sym)))
+
+(s/def :reify|overload/ret-class-sym simple-symbol?) ; technically, one resolvable to a class
+
+(s/def :reify|overload/body (s/* ::code))

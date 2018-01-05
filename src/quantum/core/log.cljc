@@ -9,7 +9,7 @@
   (:require
     [com.stuartsierra.component   :as component]
     [quantum.core.core            :as qcore
-      :refer [seqable?]]
+    :refer [seqable?]]
     [quantum.core.macros.core     :as cmacros
       :refer [#?(:clj compile-if)]]
     [quantum.core.error           :as err]

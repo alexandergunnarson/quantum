@@ -32,11 +32,13 @@
 (defn ?MutableMap    [lang] (case lang :clj 'java.util.Map                      nil))
 (defn ?Object        [lang] (case lang :clj 'java.lang.Object                   :cljs 'Object                ))
 (defn ?Record        [lang] (case lang :clj 'clojure.lang.IRecord               :cljs 'cljs.core/IRecord     ))
+(defn ?Reset         [lang] (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/IReset      ))
 (defn ?Reversible    [lang] (case lang :clj 'clojure.lang.Reversible            :cljs 'cljs.core/IReversible ))
 (defn ?Seq           [lang] (case lang :clj 'clojure.lang.ISeq                  :cljs 'cljs.core/ISeq        ))
 (defn ?Seqable       [lang] (case lang :clj 'clojure.lang.Seqable               :cljs 'cljs.core/ISeqable    ))
 (defn ?Sequential    [lang] (case lang :clj 'clojure.lang.Sequential            :cljs 'cljs.core/ISequential ))
 (defn ?Stack         [lang] (case lang :clj 'clojure.lang.IPersistentStack      :cljs 'cljs.core/IStack      ))
+(defn ?Swap          [lang] (case lang :clj 'clojure.lang.IAtom                 :cljs 'cljs.core/ISwap       ))
 
 (defn pfn
   "Protocol fn"
@@ -190,6 +192,16 @@
       ?Deref
         `[~(?Deref lang)
           ~@(p-arity (pfn 'deref lang) (get impls 'deref))]
+      ?Atom
+        (case lang
+          :clj  `[clojure.lang.IAtom
+                  ~@(p-arity (pfn 'swap          lang) (get impls 'swap!))
+                  ~@(p-arity (pfn 'compareAndSet lang) (get impls 'compare-and-set!))
+                  ~@(p-arity (pfn 'reset         lang) (get impls 'reset!))]
+          :cljs `[cljs.core/IReset
+                  ~@(p-arity (pfn 'reset!        lang) (get impls 'reset!))
+                  cljs.core/ISwap
+                  ~@(p-arity (pfn 'swap!         lang) (get impls 'swap!))])
       ?Fn
         `[~(?Fn lang)
           ~@(p-arity (pfn 'invoke lang) (get impls 'invoke))]
