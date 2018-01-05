@@ -36,7 +36,7 @@ pom.xml.asc
 
 # MAC
 
-.DS_Store
+*.DS_Store
 .lein-repl-history
 
 *.class
