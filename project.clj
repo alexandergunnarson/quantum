@@ -19,8 +19,9 @@
   :url               "https://www.github.com/alexandergunnarson/quantum"
   :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
                       :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
-  :repositories [["Boundless" "http://repo.boundlessgeo.com/main/"]
-                 ["OSGeo"     "http://download.osgeo.org/webdav/geotools/"]]
+  #_:repositories #_[["Boundless" "http://repo.boundlessgeo.com/main/"]
+                     ["OSGeo"     "http://download.osgeo.org/webdav/geotools/"]]
+  :env {:print-pid? "true"}
   :plugins [[lein-environ  "1.0.3" ]
             ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
             #_[lein-npm      "0.6.2"]]
@@ -83,9 +84,9 @@
            :exclusions [slingshot]]
        ; ==== SYSTEM ====
        ; ==== GEO ====
-         [org.geotools/gt-geotiff               "17.2"            ]
-         [org.geotools/gt-referencing           "17.2"            ]
-         [org.geotools/gt2-epsg-hsql            "2.5-M1"
+       #_[org.geotools/gt-geotiff               "17.2"            ]
+       #_[org.geotools/gt-referencing           "17.2"            ]
+       #_[org.geotools/gt2-epsg-hsql            "2.5-M1"
            :exclusions [javax.units/jsr108]]
        ; ==== GRAPH ====
          [aysylu/loom                           "1.0.0"           ]
@@ -334,7 +335,9 @@
      ; co.paralleluniverse/pulsar
      ; gorillalabs/sparkling
      [com.esotericsoftware/reflectasm          "1.11.3"  ] ; >= org.ow2.asm/all 4.2 needed by org.clojure/tools.emitter.jvm
-     [jline                                    "2.12.1"  ]] ; Even though 3.0.0 is available
+     [jline                                    "2.12.1"  ] ; Even though 3.0.0 is available
+     [com.google.guava/guava                   "23.5-jre"]
+     [com.google.protobuf/protobuf-java        "3.5.0"]]
   ;:npm {:dependencies [[js-joda "1.1.12"]]}
   :injections [(require '[clojure.tools.namespace.repl :refer [refresh]])]
   :profiles
@@ -365,7 +368,7 @@
                     For Java: offheap=((72M code)+(128M direct)+(1024M meta) = 968M) + onheap=(2048M-OS-offheap = 1024M) -> 768M"
            }
     :dev {:resource-paths ["dev-resources"]
-          :source-paths   ["dev/cljc"]
+          :source-paths   ["dev"]
           :dependencies   []
           :jvm-opts
             ["-Dquantum.core.log:out-file=./out.log"
@@ -407,7 +410,7 @@
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.4" ]
-                    [lein-figwheel "0.5.10"
+                    [lein-figwheel                     "0.5.14"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
                                    org.clojure/core.async
@@ -464,56 +467,66 @@
                                     [:cljsbuild :builds :min       :compiler :output-dir]
                                     [:cljsbuild :builds :min       :compiler :output-to ]]
   :source-paths ["src"]
-  ;:resource-paths ["resources"] ; important for Figwheel
-  :test-paths     ["test"]
+  :test-paths   ["test"]
   :repl-options {:init (do (clojure.core/require
                              'quantum.core.print
                              'quantum.core.print.prettier)
                            (quantum.core.print.prettier/extend-pretty-printing!)
+                           (require '[quantum.core.log :refer [prl!]])
+                           (reset! quantum.core.print/*print-as-code? true)
                            (clojure.main/repl
                              :print  quantum.core.print/ppr
-                             :caught quantum.core.print/ppr-error)
-                           (require '[quantum.core.log :refer [prl!]])
-                           (reset! quantum.core.print/*print-as-code? true))}
+                             :caught quantum.core.print/ppr-error))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
   :java-agents [; This for HTTP/2 support
                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
   :cljsbuild
     {:builds
-      {:test {:source-paths ["src" "dev/cljs"  "dev/cljc"]
-              :compiler     {:output-to            "dev-resources/public/js/test-compiled/quantum.js"
-                             :output-dir           "dev-resources/public/js/test-compiled/out"
+      {:test {:source-paths ["src" "dev"]
+              :compiler     {:output-to            "dev-resources/public/js/compiled/test/quantum.js"
+                             :output-dir           "dev-resources/public/js/compiled/test/out"
                              :optimizations        :whitespace
                              :main                 quantum.test
-                             :asset-path           "js/test-compiled/out"
+                             :asset-path           "js/compiled/test/out"
                              :cache-analysis       true}}
        :no-reload {:figwheel {:autoload false}
-                   :source-paths ["src" "dev/cljs"  "dev/cljc"]
-                   :compiler {:output-to            "dev-resources/public/js/nr-compiled/quantum.js"
-                              :output-dir           "dev-resources/public/js/nr-compiled/out"
+                   :source-paths ["src" "dev"]
+                   :compiler {:output-to            "dev-resources/public/js/compiled/no-reload/quantum.js"
+                              :output-dir           "dev-resources/public/js/compiled/no-reload/out"
                               :optimizations        :none
                               :main                 quantum.dev
-                              :asset-path           "js/nr-compiled/out"
+                              :asset-path           "js/compiled/no-reload/out"
                               :source-map           true
                               :source-map-timestamp true
                               :cache-analysis       true}}
        :dev {:figwheel true
-             :source-paths ["src" "dev/cljs"  "dev/cljc"]
-             :compiler {:output-to            "dev-resources/public/js/compiled/quantum.js"
-                        :output-dir           "dev-resources/public/js/compiled/out"
+             :source-paths ["src" "dev"]
+             :compiler {:output-to            "dev-resources/public/js/compiled/dev/quantum.js"
+                        :output-dir           "dev-resources/public/js/compiled/dev/out"
                         :optimizations        :none
                         :main                 quantum.dev
-                        :asset-path           "js/compiled/out"
+                        :asset-path           "js/compiled/dev/out"
                         :source-map           true
                         :source-map-timestamp true
                         :cache-analysis       true}}
+       :dev-basic
+         {:figwheel     true
+          :source-paths ["src" "dev"]
+          :compiler     {:output-to            "dev-resources/public/js/compiled/dev-basic/quantum.js"
+                         :output-dir           "dev-resources/public/js/compiled/dev-basic/out"
+                         :optimizations        :none
+                         :main                 quantum.dev-basic
+                         :asset-path           "js/compiled/dev-basic/out"
+                         :source-map           true
+                         :source-map-timestamp true
+                         :cache-analysis       true}}
        :min {:source-paths ["src"]
-             :compiler {:output-to      "dev-resources/public/js/min-compiled/quantum.js"
-                        :output-dir     "dev-resources/public/js/min-compiled/out"
+             :compiler {:output-to      "dev-resources/public/js/compiled/min/quantum.js"
+                        :output-dir     "dev-resources/public/js/compiled/min/out"
                         :main           quantum.dev
                         :optimizations  :advanced
-                        :asset-path     "js/min-compiled/out"
+                        :asset-path     "js/compiled/min/out"
                         :pretty-print   false
                         ;:parallel-build true
                         }}}}
