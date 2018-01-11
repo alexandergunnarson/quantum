@@ -5,8 +5,7 @@
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
-      :refer [->type-info ->expr-info analyze
-              defnt fnt|code *fn->spec]]
+      :refer [analyze defnt fnt|code *fn->spec]]
     [quantum.core.macros
       :refer [macroexpand-all]]
     [quantum.core.test         :as test

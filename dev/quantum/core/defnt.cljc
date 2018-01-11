@@ -307,11 +307,8 @@ except that of nil.
     3 4)
   ([f long]
     (c/+ f 1)))
-)
 
 ; ----- TYPED PART ----- ;
-
-(do
 
 ;; NOTE: All this code can be defnt-ized after; this is just for bootstrapping purposes so performance isn't extremely important in most of these functions.
 
@@ -902,7 +899,7 @@ except that of nil.
                           (map-vals+ :spec)
                           join (apply concat))
         variadic-overload (->> overloads-data (lfilter :variadic?) first)
-        register-spec
+        register-spec ; specifically, the input spec
           (unify-gensyms
            `(swap! *fn->spec assoc '~(qualify fn|name)
               (xp/>expr

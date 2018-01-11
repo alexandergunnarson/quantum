@@ -8,7 +8,7 @@
     [quantum.core.logic
       :refer [fn-and]]
     [quantum.core.defnt        :as this
-      :refer [->type-info ->expr-info !ref analyze defnt]]
+      :refer [!ref analyze defnt]]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.core.untyped.analyze.ast  :as ast]
