@@ -37,7 +37,7 @@
 
 `(do (swap! *fn->spec assoc `identity|gen|uninlined
        (xp/>expr
-         (fn [x] (case (count x) 1 (fn-> first t/->spec))) ))
+         (fn [x] (case (count x) 1 (fn-> first t/->spec)))))
 
      ~(case-env
                    ;; Because for `any?` it includes primitives as well
