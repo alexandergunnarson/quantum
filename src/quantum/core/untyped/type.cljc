@@ -40,6 +40,8 @@
       :refer [map+ filter+ remove+ distinct+ join]]
     [quantum.core.untyped.refs
       :refer [?deref]]
+    [quantum.core.untyped.vars
+      :refer [update-meta]]
     [quantum.core.vars                 :as var
       :refer [def-]])
   #?(:clj (:import quantum.core.untyped.analyze.expr.Expression)))
@@ -189,6 +191,11 @@
 (var/defalias -def define)
 
 (-def spec? PSpec)
+
+(defn ! [spec]
+  (if (spec? spec)
+      (update-meta spec assoc :runtime? true)
+      (err! "Input must be spec" spec)))
 
 (dt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
   {PSpec                 nil

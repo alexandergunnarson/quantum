@@ -12,15 +12,16 @@
       :refer [macroexpand-all case-env env-lang quote+]]
     [quantum.core.macros.type-hint
       :refer [tag]]
+    [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.core.untyped.analyze.expr :as xp]
     [quantum.core.untyped.collections.diff :as diff
       :refer [diff]]
     [quantum.core.untyped.core :as ucore
-      :refer [metable? seq=]]
+      :refer [code=]]
     [quantum.core.untyped.type :as t
-      :refer [?]])
+      :refer [? !]])
   (:import clojure.lang.Named
            clojure.lang.Reduced
            quantum.core.data.Array
@@ -28,22 +29,6 @@
 
 (require '[quantum.core.spec :as s]
          '[quantum.core.fn :refer [fn->]])
-
-;; TODO move
-(defn code=
-  "Ensures that two pieces of code are equivalent.
-   This means ensuring that seqs, vectors, and maps are only allowed to be compared with
-   each other, and that metadata is equivalent."
-  [code0 code1]
-  (if (metable? code0)
-      (and (metable? code1)
-           (= (meta code0) (meta code1))
-           (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
-                 (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
-                 (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
-                 :else           (= code0 code1)))
-      (and (not (metable? code1))
-           (= code0 code1))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -103,7 +88,7 @@
                                 Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)))
                        ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
                        ;; in this case no protocol is necessary because it boxes arguments anyway
-                       ;; TODO avoid var indirection by making and using static fields
+                       ;; Var indirection may be avoided by making and using static fields via the Clojure 1.8 flag
                        (defn ~'identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 ~'x))))
           :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
                 ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
@@ -129,46 +114,49 @@
 ;; TODO don't ignore `:inline`
 ;; TODO `.getName` returns `(? string?)` so we need to add an assertion to guarantee
 (macroexpand '
-(defnt #_:inline name|gen > t/string?
-           ([x t/string?] x)
-  #?(:clj  ([x Named  ] (.getName x))
-     :cljs ([x INamed ] (-name x))))
-) ; TODO fix
-
-(macroexpand '
- )
-
-))
+(defnt #_:inline name|gen
+           ([x t/string? > t/string?    ] x)
+  #?(:clj  ([x Named     > (! t/string?)] (.getName x))
+     :cljs ([x INamed    > (! t/string?)] (-name x))))
+)
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'name|gen
-       (xp/casef count
-         1 (xp/condpf-> t/<= (xp/get 0)
-             t/string? (fn-> t/->spec) ; TODO fix this
-             ~(case-env :clj `Named :cljs `INamed) t/string?)))
+($ (do (swap! *fn->spec assoc #'name|gen
+         (xp/casef count
+           1 (xp/condpf-> t/<= (xp/get 0)
+               t/string? (fn-> t/->spec) ; TODO fix this
+               ~(case (env-lang) :clj `Named :cljs `INamed) t/string?)))
 
-     ~(case-env
-        :clj  `(do ;; Only direct dispatch for primitives or for Object, not for subclasses of Object
-                   ;; Return value can be primitive; in this case it's not
-                   ;; The macro in a typed context will find the appropriate dispatch at compile time
-                   (def name|gen|__0 ; `string?`
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] x)))
-                   (def name|gen|__1 ; `Named`
-                     (reify Object>Object (^java.lang.Object invoke [_# ^java.lang.Object ~'x] (.getName ^Named x))))
+       ~(case (env-lang)
+          :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of Object
+                       ;; Return value can be primitive; in this case it's not
+                       ;; The macro in a typed context will find the appropriate dispatch at compile time
+                       (def ~'name|gen|__0
+                         (reify java|lang|String>java|lang|String
+                           (~(tag "java.lang.String"   'invoke) [~'_ ~(tag "java.lang.String"   'x)] ~'x)))
+                       (def ~'name|gen|__1
+                         (reify clojure|lang|Named>java|lang|String
+                           (~(tag "clojure.lang.Named" 'invoke) [~'_ ~(tag "clojure.lang.Named" 'x)]
+                             (let [~'out (.getName ~'x)]
+                               (s/validate ~'out t/string?)))))
 
-                   (defprotocol name|gen__Protocol
-                     (name|gen [~'x]))
-                   (extend-protocol name|gen__Protocol
-                     java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
-                     ;; this is part of the protocol because even though `Named` is an interface,
-                     ;; `String` is final, so they're mutually exclusive
-                     clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
-        :cljs `(do ;; No protocol in ClojureScript
-                   (defn name|gen [~'x]
-                     (cond* (string? x)           x
-                            (satisfies? INamed x) (-name x)
-                            (err! "Not supported for type" {:fn `name|gen :type (type x)}))))))
+                       ;; This protocol is so suffixed because of the position of the argument on which
+                       ;; it dispatches
+                       (defprotocol name|gen__Protocol__0
+                         (name|gen [~'x]))
+                       (extend-protocol name|gen__Protocol__0
+                         java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
+                         ;; this is part of the protocol because even though `Named` is an interface,
+                         ;; `String` is final, so they're mutually exclusive
+                         clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x)))))
+          :cljs ($ (do ;; No protocol in ClojureScript
+                       (defn name|gen [~'x]
+                         (cond* (string? x)           x
+                                (satisfies? INamed x) (-name x)
+                                (err! "Not supported for type" {:fn `name|gen :type (type x)}))))))))
+
+))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -181,32 +169,32 @@
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'some?|gen
-       (xp/casef c/count
-         1 (xp/condpf-> t/<= (xp/get 0)
-             t/nil? (t/value false)
-             t/any? (t/value true ))))
+($ (do (swap! fn->spec assoc #'some?|gen
+         (xp/casef c/count
+           1 (xp/condpf-> t/<= (xp/get 0)
+               t/nil? (t/value false)
+               t/any? (t/value true ))))
 
-     ~(case-env
-        :clj  `(do (def some?|gen|__0 ; `nil?`
-                     (reify Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
-                   (def some?|gen|__1 ; `t/any?`
-                     (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] true)
-                            byte>boolean    (^boolean invoke [_# ^byte             ~'x] true)
-                            short>boolean   (^boolean invoke [_# ^short            ~'x] true)
-                            char>boolean    (^boolean invoke [_# ^char             ~'x] true)
-                            int>boolean     (^boolean invoke [_# ^int              ~'x] true)
-                            long>boolean    (^boolean invoke [_# ^long             ~'x] true)
-                            float>boolean   (^boolean invoke [_# ^float            ~'x] true)
-                            double>boolean  (^boolean invoke [_# ^double           ~'x] true)
-                            Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
-                   ;; Dynamic dispatch
-                   (defn some?|gen [~'x]
-                     (cond* (nil? x) (.invoke some?|gen|__0 x)
-                            (.invoke some?|gen|__1 x))))
-        :cljs `(do (defn some?|gen [~'x]
-                     (cond* (nil? x) false
-                            true)))))
+       ~(case (env-lang)
+          :clj  ($ (do (def some?|gen|__0 ; `nil?`
+                         (reify Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
+                       (def some?|gen|__1 ; `t/any?`
+                         (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] true)
+                                byte>boolean    (^boolean invoke [_# ^byte             ~'x] true)
+                                short>boolean   (^boolean invoke [_# ^short            ~'x] true)
+                                char>boolean    (^boolean invoke [_# ^char             ~'x] true)
+                                int>boolean     (^boolean invoke [_# ^int              ~'x] true)
+                                long>boolean    (^boolean invoke [_# ^long             ~'x] true)
+                                float>boolean   (^boolean invoke [_# ^float            ~'x] true)
+                                double>boolean  (^boolean invoke [_# ^double           ~'x] true)
+                                Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
+                       ;; Dynamic dispatch
+                       (defn some?|gen [~'x]
+                         (cond* (nil? x) (.invoke some?|gen|__0 x)
+                                (.invoke some?|gen|__1 x)))))
+          :cljs `(do (defn some?|gen [~'x]
+                       (cond* (nil? x) false
+                              true))))))
 
 ;; =====|=====|=====|=====|===== ;;
 

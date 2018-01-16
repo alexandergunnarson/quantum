@@ -1,6 +1,6 @@
 (ns quantum.core.untyped.collections
   (:refer-clojure :exclude
-    [assoc-in contains? get flatten])
+    [assoc-in contains? distinct? get flatten])
   (:require
     [clojure.core    :as core]
     [fast-zip.core   :as zip]
@@ -27,6 +27,13 @@
 (defn update-val [[k v] f] [k (f v)])
 
 ;; ----- *SOC ----- ;;
+
+(defn dissoc*
+  "Like `dissoc`, but returns `nil` when `dissoc` has caused the map to become empty."
+  [m k]
+  (let [m' (dissoc m k)]
+    (when-not (empty? m')
+      m')))
 
 (defn dissoc-if
   "Like `dissoc`, but only dissociates when condition is true."
@@ -98,6 +105,17 @@
 (def lfilter filter)
 
 (defn lflatten-1 [xs] (apply concat xs))
+
+(defn distinct?
+  "Like `clojure.core/distinct?` except operates on reducibles."
+  [xs]
+  (boolean
+    (reduce (fn [distincts x]
+              (if (contains? distincts x)
+                  (reduced false)
+                  (conj distincts x)))
+            #{}
+            xs)))
 
 ;; ===== ZIPPER ===== ;;
 

@@ -34,9 +34,9 @@
     [quantum.core.untyped.analyze.expr :as xp]
     [quantum.core.untyped.analyze.rewrite :as ana-rw]
     [quantum.core.untyped.collections  :as ucoll
-      :refer [assoc-in dissoc-if get lmap lfilter lindexed lflatten-1]]
+      :refer [assoc-in dissoc-if dissoc* get lmap lfilter lindexed lflatten-1]]
     [quantum.core.untyped.collections.logic :as ucoll&
-      :refer [every?]]
+      :refer [every? seq-or]]
     [quantum.core.untyped.collections.tree :as tree
       :refer [prewalk postwalk walk]]
     [quantum.core.untyped.compare  :as comp
@@ -125,7 +125,13 @@
          (s/conformer
            #(cond-> % (contains? % :varargs) (update :varargs ::fnt|speced-arg)
                       (contains? % :pre    ) (update :pre     ::spec)
-                      (contains? % :post   ) (update :post    ::spec)))))
+                      (contains? % :post   ) (update :post    ::spec)))
+         (fn [{:keys [args varargs]}]
+           ;; so `env` in `fnt` can work properly in the analysis
+           ;; TODO need to adjust for destructuring
+           (ucoll/distinct?
+             (concat (lmap :arg-binding args)
+                     [(:arg-binding varargs)])))))
 
 (s/def ::fnt|body (s/alt :body (s/* s/any?)))
 
@@ -743,19 +749,33 @@
                    :reify/arglist-code
                    :reify|overload/body-codelist]))
 
+(s/def :protocol/overload
+  (s/keys :req-un [:protocol|overload/name    #_simple-symbol?
+                   :protocol|overload/arglist #_(t/vector-of simple-symbol?)]))
+
 #?(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
 (defn spec>most-primitive-class [spec]
-  (let [class-data (t/spec>class spec)]
-    (cond (-> class-data :class class? not)
+  (let [{:as class-data c :class} (t/spec>class spec)]
+    (cond (-> c class? not)
             (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
                   {:spec spec :class-data class-data})
           (-> class-data :nilable? not)
-            (-> class-data :class tcore/boxed->unboxed)
-          :else (:class class-data))))
+            (or (tcore/boxed->unboxed c) c)
+          :else c)))
+
+(defn >with-post-spec
+  [body post-spec]
+  `(let [~'out ~body]
+     (s/validate ~'out ~(update-meta post-spec dissoc* :runtime?))))
+
+(defn ?wrap-do [codelist]
+  (if (-> codelist count (< 2))
+      (first codelist)
+      (list* 'do codelist)))
 
 #?(:clj ; really, reserve for metalanguage
 (defn fnt|overload-data->overload #_> #_::fnt|overload
@@ -777,8 +797,6 @@
                               ;; TODO this validation is purely temporary until destructuring is supported
                               (s/validate (:arg-binding varargs) simple-symbol?))
             arg-bindings (mapv :arg-binding args)
-            ;; so `env` can work properly in the analysis
-            _ (s/validate arg-bindings distinct?)
             arg-specs-initial
               (->> args
                    (mapv (fn [{[kind spec] ::fnt|arg-spec :keys [arg-binding]}]
@@ -801,21 +819,31 @@
                     lang
                     (count args)
                     varargs)))
+            _ (when pre-form (TODO "Need to handle pre"))
             post-spec (when post-form (-> post-form eval t/>spec))
-            _ (when (and post-spec (not (t/<= (:spec body) post-spec)))
-                (err! "Body does not match output spec" {:body body :output-spec post-spec}))
-            validations (when pre-form (TODO "Need to handle pre"))
-              #_(->> [(when post-form {:post [post-form]})
-                    (when pre-form (list 'assert pre-form))]
-                   (lfilter some?))]
+            post-spec|runtime? (-> post-spec meta :runtime?)
+            out-spec (if post-spec
+                         (if post-spec|runtime?
+                             (case (t/compare post-spec (:spec body))
+                               -1 post-spec
+                                1 (:spec body)
+                                0 post-spec
+                                nil (err! "Body and output spec are unrelated" {:body body :output-spec post-spec}))
+                             (if (t/<= (:spec body) post-spec)
+                                 (:spec body)
+                                 (err! "Body does not match output spec" {:body body :output-spec post-spec})))
+                         (:spec body))
+            body-codelist
+              (cond-> (:body body)
+                post-spec|runtime? (-> ?wrap-do (>with-post-spec post-spec) vector))]
         {:arg-classes                 arg-classes
          :arg-specs                   arg-specs
          :arglist-code|fn|hinted      (cond-> (->> arg-bindings (map-indexed hint-arg|fn) vec)
                                               varargs-binding (conj '& varargs-binding)) ; TODO use ``
          :arglist-code|reify|unhinted (cond-> arg-bindings varargs-binding (conj varargs-binding))
-         :body-codelist               (concat validations (:body body))
+         :body-codelist               body-codelist
          :positional-args-ct          (count args)
-         :spec                        (:spec body)
+         :spec                        out-spec
          ;; when present, varargs are considered to be of class Object
          :variadic?                   (boolean varargs)}))))
 
@@ -901,6 +929,46 @@
                                 ~arglist-code ~@body-codelist)]))
                      lflatten-1))))))
 
+(defn >extend-protocol|code [{:keys [protocol|name]}]
+  `(extend-protocol ~protocol|name))
+
+(defn >defprotocol|code
+  [{:keys [name      #_:protocol/name
+           overloads #_(t/seqable-of :protocol/overload)]}] ; TODO ensure that overload names do not shadow each other
+  `(defprotocol ~name
+     ~@(->> overloads
+            (sort-by (fn-> :arglist count))
+            (sort-by :name)
+            (lmap (fn [{:keys [name arglist]}]
+                    `(~name ~arglist))))))
+
+(defn fnt|overloads>protocol
+  [{:keys [overloads #_(t/seq-of :fnt/overload)
+           fn|name   #_::ss/fn|name]}]
+  (when (->> overloads (seq-or (fn-> :arg-classes count (> 1))))
+    (TODO "Don't yet handle protocol creation for arglist counts of > 1"))
+  (let [grouped (->> overloads (group-by (fn-> :arg-classes count)))]
+    (->> grouped
+         ))
+  (let [all-arg-classes (->> overloads (mapv :arg-classes))
+        protocol|name (str fn|name "|" "gen__Protocol__" )
+        extend-protocols (for []
+                           (>extend-protocol|code (kw-map protocol|name)))]
+    {:defprotocol      (>defprotocol|code {:name      protocol|name
+                                           :overloads []})
+     :extend-protocols extend-protocols
+     :defn             defn-definition}))
+
+;; This protocol is so suffixed because of the position of the argument on which
+                       ;; it dispatches
+                       (defprotocol name|gen__Protocol__0
+                         (name|gen [~'x]))
+                       (extend-protocol name|gen__Protocol__0
+                         java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
+                         ;; this is part of the protocol because even though `Named` is an interface,
+                         ;; `String` is final, so they're mutually exclusive
+                         clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
+
 (defn gen-register-spec
   "Registers in the map of qualified symbol to input spec, to output spec
 
@@ -924,27 +992,32 @@
         _ (prl! args')
         inline?
           (s/validate (-> fn|name c/meta :inline) (t/? t/boolean?))
-          _ (prl! inline?)
+        _ (prl! inline?)
         fn|name (if inline?
                     (do (log/pr :warn "requested `:inline`; ignoring until feature is implemented")
                         (update-meta fn|name dissoc :inline))
                     fn|name)
-        overloads-data (->> overloads (mapv #(fnt|overload-data->overload % {:lang lang})))
+        overloads (->> overloads (mapv #(fnt|overload-data->overload % {:lang lang})))
         ;; only one variadic arg allowed
-        _ (s/validate overloads-data (fn->> (lfilter :variadic?) count (<- <= 1)))
-        arg-ct->spec (->> overloads-data
+        _ (s/validate overloads (fn->> (lfilter :variadic?) count (<- <= 1)))
+        arg-ct->spec (->> overloads
                           (remove+   :variadic?)
                           (group-by  :positional-args-ct)
                           (map-vals+ :spec)
                           join (apply concat))
-        variadic-overload (->> overloads-data (lfilter :variadic?) first)
+        variadic-overload (->> overloads (lfilter :variadic?) first)
         register-spec (gen-register-spec (kw-map fn|name arg-ct->spec variadic-overload))
         direct-dispatch-codelist
           (case lang
-            :clj  (for [[i overload] (lindexed overloads-data)]
+            :clj  (for [[i overload] (lindexed overloads)]
                     (fnt|overload>reify (kw-map overload i fn|name)))
             :cljs (TODO))
-        dynamic-dispatch-codelist []
+        dynamic-dispatch-codelist
+          (case lang
+            :clj  (let [protocol (fnt|overloads>protocol {:overloads overloads :fn|name fn|name})]
+                    `[~(:defprotocol protocol)
+                      ~@(:extend-protocols protocol)])
+            :cljs (TODO))
         base-fn-codelist []
         fn-codelist
           (case lang
@@ -952,14 +1025,14 @@
                     ~@dynamic-dispatch-codelist
                     ~@base-fn-codelist]
             :cljs (TODO))
-        overloads (->> overloads-data (mapv :code))
+        overloads|code (->> overloads (mapv :code))
         _ (prl! overloads)
         code (case kind
                :fn   (list* 'fn (concat
                                   (if (contains? args' ::ss/fn|name)
                                       [fn|name]
                                       [])
-                                  [overloads]))
+                                  [overloads|code]))
                :defn `(~'do ~register-spec
                             ~@fn-codelist))]
     code))

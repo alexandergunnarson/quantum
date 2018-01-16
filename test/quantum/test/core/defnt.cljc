@@ -9,15 +9,40 @@
       :refer [fn-and]]
     [quantum.core.defnt        :as this
       :refer [!ref analyze defnt]]
+    [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.core.untyped.analyze.ast  :as ast]
     [quantum.core.untyped.analyze.expr :as xp]
+    [quantum.core.untyped.core
+      :refer [code=]]
     [quantum.core.untyped.type :as t])
 #?(:clj
   (:import
     [clojure.lang Keyword Symbol]
     [quantum.core Numeric])))
+
+(def test-data|abc
+  `(defnt ~'abc []))
+
+(this/fnt|overload-data->overload {:lang :clj}
+  (s/validate (rest test-data|abc) ::this/defnt)
+  test-data|abc)
+
+(deftest fnt|overloads>protocol
+  (testing
+    (is (code=
+          (fnt|overloads>protocol
+            {:fn|name   'abc
+             :overloads
+               })
+          {:defprotocol
+             `(defprotocol ~'abc|gen__Protocol__
+                ())
+           :extend-protocols
+
+           :defn
+             }))))
 
 (deftest test|methods->spec
   (testing "Class hierarchy"
