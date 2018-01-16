@@ -14,6 +14,8 @@
       x
       (update-meta x assoc :tag tag)))
 
+(defn tag [tag- x] (with-type-hint x tag-))
+
 (defn un-type-hint [x] (update-meta x dissoc :tag))
 
 (defn sanitize-tag [lang tag]
@@ -89,7 +91,7 @@
                     (= tag 'java.lang.Object))
                   nil
                 (and (= lang :clj)
-                     (tcore/prim? tag)
+                     (tcore/prim|unevaled? tag)
                      (or ;; "fns taking primitives cannot be variadic"
                          variadic?
                          ;; "fns taking primitives support only 4 or fewer args"

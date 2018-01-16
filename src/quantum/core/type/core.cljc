@@ -10,7 +10,7 @@
  #?(:clj  [clojure.tools.analyzer.jvm.utils :as ana])
  #?(:clj  [clojure.core.async.impl.protocols]
     :cljs [cljs.core.async.impl.channels])
-          [quantum.core.type.defs           :as defs]
+          [quantum.core.type.defs           :as def]
           [quantum.core.fn
             :refer [<- fn->>]]
           [quantum.core.error               :as err
@@ -21,10 +21,6 @@
             :refer [defalias]]))
 
 (def class #?(:clj clojure.core/class :cljs type))
-
-(defs/def-types* quantum.core.core/lang)
-
-; TODO differentiate between unevaled and evaled (symbolic and literal)
 
 #?(:clj
 (def boxed-type-map
@@ -70,21 +66,21 @@
    Double/TYPE  #{Double/TYPE  Float/TYPE}
    Long/TYPE    #{Long/TYPE    Integer/TYPE Short/TYPE Byte/TYPE}}))
 
-; (defn numeric?
-;   "Returns true if the given class is numeric"
-;   [c]
-;   (when c
-;     (.isAssignableFrom Number (box c))))
+;; (defn numeric?
+;;   "Returns true if the given class is numeric"
+;;   [c]
+;;   (when c
+;;     (.isAssignableFrom Number (box c))))
 
-; (def wider-than
-;   "If the argument is a numeric primitive Class, returns a set of primitive Classes
-;    that are narrower than the given one"
-;   {Long/TYPE    #{Integer/TYPE Short/TYPE Byte/TYPE}
-;    Integer/TYPE #{Short/TYPE Byte/TYPE}
-;    Float/TYPE   #{Integer/TYPE Short/TYPE Byte/TYPE Long/TYPE}
-;    Double/TYPE  #{Integer/TYPE Short/TYPE Byte/TYPE Long/TYPE Float/TYPE}
-;    Short/TYPE   #{Byte/TYPE}
-;    Byte/TYPE    #{}})
+;; (def wider-than
+;;   "If the argument is a numeric primitive Class, returns a set of primitive Classes
+;;    that are narrower than the given one"
+;;   {Long/TYPE    #{Integer/TYPE Short/TYPE Byte/TYPE}
+;;    Integer/TYPE #{Short/TYPE Byte/TYPE}
+;;    Float/TYPE   #{Integer/TYPE Short/TYPE Byte/TYPE Long/TYPE}
+;;    Double/TYPE  #{Integer/TYPE Short/TYPE Byte/TYPE Long/TYPE Float/TYPE}
+;;    Short/TYPE   #{Byte/TYPE}
+;;    Byte/TYPE    #{}})
 
 #?(:clj
 ; Returns true if it's possible to convert from c1 to c2
@@ -94,14 +90,17 @@
 (def unboxed-type-map
   (zipmap (vals boxed-type-map) (keys boxed-type-map))))
 
-(def prim-types      (-> types-unevaled :clj (get 'prim?)))
-(def primitive-types (-> types-unevaled :clj (get 'primitive?)))
-(def primitive-boxed-types (set/difference primitive-types prim-types))
+(def prim-types                     (-> def/types               (get 'prim?)))
+(def prim-types|unevaled            (-> def/types|unevaled :clj (get 'prim?)))
+(def primitive-types                (-> def/types               (get 'primitive?)))
+(def primitive-types|unevaled       (-> def/types|unevaled :clj (get 'primitive?)))
+(def primitive-boxed-types          (-> def/types               (get 'primitive-boxed?)))
+(def primitive-boxed-types|unevaled (-> def/types|unevaled :clj (get 'primitive-boxed?)))
 
-(def prim?      #(contains? prim-types %))
-(def primitive? #(contains? primitive-types %))
-#?(:clj  (def auto-unboxable? #(contains? primitive-boxed-types %))
-   :cljs (defn auto-unboxable? [x] (throw (->ex :unsupported "`auto-unboxable?` not supported by CLJS"))))
+(def prim|unevaled?      #(contains? prim-types|unevaled %))
+(def primitive|unevaled? #(contains? primitive-types|unevaled %))
+#?(:clj  (def  auto-unboxable|unevaled? #(contains? primitive-boxed-types|unevaled %))
+   :cljs (defn auto-unboxable|unevaled? [x] (throw (->ex :unsupported "`auto-unboxable?` not supported by CLJS"))))
 
 #?(:clj
 (defn most-primitive-class-of [x]
@@ -209,3 +208,14 @@
   "Performs a static type cast"
   [class-sym expr]
   (static-cast-code class-sym expr)))
+
+#?(:clj
+(defn class>prim-subclasses
+  {:examples '{(class>prim-subclasses Number)
+               #{def/long def/int def/short def/byte def/float def/double}}}
+  [^Class c]
+  (let [boxed-types (get def/types 'primitive-boxed?)]
+    (->> boxed-types
+         (filter #(isa? % c))
+         (map boxed->unboxed)
+         set))))

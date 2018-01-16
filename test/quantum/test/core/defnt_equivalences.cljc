@@ -6,66 +6,115 @@
     [clojure.core              :as c]
     [quantum.core.defnt
       :refer [analyze defnt fnt|code *fn->spec]]
+    [quantum.core.macros.core
+      :refer [$]]
     [quantum.core.macros
-      :refer [macroexpand-all]]
+      :refer [macroexpand-all case-env env-lang quote+]]
+    [quantum.core.macros.type-hint
+      :refer [tag]]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
+    [quantum.core.untyped.analyze.expr :as xp]
+    [quantum.core.untyped.collections.diff :as diff
+      :refer [diff]]
+    [quantum.core.untyped.core :as ucore
+      :refer [metable? seq=]]
     [quantum.core.untyped.type :as t
       :refer [?]])
   (:import clojure.lang.Named
-           clojure.lang.Reduced))
+           clojure.lang.Reduced
+           quantum.core.data.Array
+           quantum.core.Primitive))
 
 (require '[quantum.core.spec :as s]
          '[quantum.core.fn :refer [fn->]])
 
-;; Preference mechanisms in protocols: https://groups.google.com/forum/#!topic/clojure-dev/-zoLA78--Mo
-;; - Summary: always make it explicit!
+;; TODO move
+(defn code=
+  "Ensures that two pieces of code are equivalent.
+   This means ensuring that seqs, vectors, and maps are only allowed to be compared with
+   each other, and that metadata is equivalent."
+  [code0 code1]
+  (if (metable? code0)
+      (and (metable? code1)
+           (= (meta code0) (meta code1))
+           (cond (seq?    code0) (and (seq?    code1) (seq=      code0       code1  code=))
+                 (vector? code0) (and (vector? code1) (seq= (seq code0) (seq code1) code=))
+                 (map?    code0) (and (map?    code1) (seq= (seq code0) (seq code1) code=))
+                 :else           (= code0 code1)))
+      (and (not (metable? code1))
+           (= code0 code1))))
+
+;; =====|=====|=====|=====|===== ;;
+
+(is (code=
+
+;; ----- implementation ----- ;;
 
 (macroexpand '
   (defnt pid > (? t/string?) []
      (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
           (.getName))))
 
+;; ----- expanded code ----- ;;
+
+($ (do (swap! *fn->spec assoc `pid
+         (xp/>expr
+           (fn [args##]
+             (case (count args##) 0 nil))))
+       (def ~'pid|__0
+         (reify >java|lang|String
+           (~(tag "java.lang.String" 'invoke) [~'_]
+             (~'->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+                    (.getName)))))))
+
+))
+
 ;; =====|=====|=====|=====|===== ;;
+
+(is (code=
 
 ;; ----- implementation ----- ;;
 
+;; TODO it needs to vary return classes of the overloads with the input
 (macroexpand '
-  (defnt identity|gen|uninlined ([x t/any?] x)))
+(defnt identity|gen|uninlined ([x t/any?] x))
+)
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! *fn->spec assoc `identity|gen|uninlined
-       (xp/>expr
-         (fn [x] (case (count x) 1 (fn-> first t/->spec)))))
+($ (do #_(swap! *fn->spec assoc `identity|gen|uninlined
+         (xp/>expr
+           (fn [args##] (case (count args##) 1 nil #_(fn-> first t/->spec)))))
 
-     ~(case-env
-                   ;; Because for `any?` it includes primitives as well
-        :clj  `(do ;; Direct dispatch
-                   ;; One reify per overload
-                   (def identity|gen|uninlined|__0 ; `t/any?`
-                     (reify boolean>boolean (^boolean          invoke [_ ^boolean          ~'x] x)
-                            byte>byte       (^byte             invoke [_ ^byte             ~'x] x)
-                            short>short     (^short            invoke [_ ^short            ~'x] x)
-                            char>char       (^char             invoke [_ ^char             ~'x] x)
-                            int>int         (^int              invoke [_ ^int              ~'x] x)
-                            long>long       (^long             invoke [_ ^long             ~'x] x)
-                            float>float     (^float            invoke [_ ^float            ~'x] x)
-                            double>double   (^double           invoke [_ ^double           ~'x] x)
-                            Object>Object   (^java.lang.Object invoke [_ ^java.lang.Object ~'x] x)))
-                   ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
-                   ;; in this case no protocol is necessary because it boxes arguments anyway
-                   ;; TODO avoid var indirection by making and using static fields
-                   (defn identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 x)))
-        :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
-              ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
-              `(defn identity|gen|uninlined [~'x] x)))
+       ~(case (env-lang)
+                     ;; Because for `any?` it includes primitives as well
+          :clj  ($ (do ;; Direct dispatch
+                       ;; One reify per overload
+                       (def ~'identity|gen|uninlined|__0 ; `t/any?`
+                         (reify boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
+                                byte>byte       (~(tag "byte"             'invoke) [~'_ ~(tag "byte"             'x)] ~'x)
+                                short>short     (~(tag "short"            'invoke) [~'_ ~(tag "short"            'x)] ~'x)
+                                char>char       (~(tag "char"             'invoke) [~'_ ~(tag "char"             'x)] ~'x)
+                                int>int         (~(tag "int"              'invoke) [~'_ ~(tag "int"              'x)] ~'x)
+                                long>long       (~(tag "long"             'invoke) [~'_ ~(tag "long"             'x)] ~'x)
+                                float>float     (~(tag "float"            'invoke) [~'_ ~(tag "float"            'x)] ~'x)
+                                double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)
+                                Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)))
+                       ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
+                       ;; in this case no protocol is necessary because it boxes arguments anyway
+                       ;; TODO avoid var indirection by making and using static fields
+                       (defn ~'identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 ~'x))))
+          :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
+                ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
+                ($ (defn ~'identity|gen|uninlined [~'x] ~'x))))))
+
+)
 
 ;; =====|=====|=====|=====|===== ;;
 
-(defnt ^:inline identity|gen ([x t/any?] x))
-
 ;; TODO will deal with `inline` later
+(defnt ^:inline identity|gen ([x t/any?] x))
 
 ;; ----- test ----- ;;
 
@@ -75,16 +124,21 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(defnt #_:inline name|gen > t/string? ; TODO don't ignore `:inline`
+(is (code=
+
+;; TODO don't ignore `:inline`
+;; TODO `.getName` returns `(? string?)` so we need to add an assertion to guarantee
+(macroexpand '
+(defnt #_:inline name|gen > t/string?
            ([x t/string?] x)
   #?(:clj  ([x Named  ] (.getName x))
-     :cljs ([x INamed ] (-name x)))) ; TODO fix
+     :cljs ([x INamed ] (-name x))))
+) ; TODO fix
 
 (macroexpand '
-  (defnt name|gen > t/string? ; TODO don't ignore `:inline`
-           ([x t/string?] x)
-  #?(:clj  ([x Named  ] (.getName x))
-     :cljs ([x INamed ] (-name x)))))
+ )
+
+))
 
 ;; ----- expanded code ----- ;;
 
@@ -119,9 +173,11 @@
 ;; =====|=====|=====|=====|===== ;;
 
 ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
+(macroexpand '
 (defnt #_:inline some?|gen
-  ([x nil?  ] false)
+  ([x t/nil?] false)
   ([x t/any?] true))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -155,9 +211,11 @@
 ;; =====|=====|=====|=====|===== ;;
 
 ;; Perhaps silly in ClojureScript, but avoids boxing in Clojure
+(macroexpand '
 (defnt #_:inline reduced?|gen
   ([x Reduced] true)
-  ([x any?   ] false))
+  ([x t/any? ] false))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -189,11 +247,12 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
-(macroexpand
-  '(defnt #_:inline >boolean
-     ([x boolean?] x)
-     ([x nil?    ] false)
-     ([x t/any?  ] true)))
+(macroexpand '
+(defnt #_:inline >boolean
+   ([x t/boolean?] x)
+   ([x t/nil?    ] false)
+   ([x t/any?    ] true))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -238,7 +297,7 @@
 ;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
 ;; will error if not all return values can be safely converted to the return spec
 (defnt #_:inline >int* > int
-  ([x (s/and primitive? (s/not boolean?)) #_?] (Primitive/uncheckedIntCast x))
+  ([x (t/and t/primitive? (t/not t/boolean?)) #_?] (Primitive/uncheckedIntCast x))
   ([x Number] (.intValue x))))
 
 ;; ----- expanded code ----- ;;
@@ -321,9 +380,11 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt #_:inline >|gen
-  #?(:clj  ([a ?       b ?      ] (Numeric/gt  a b))
-     :cljs ([a double? b double?] (cljs.core/> a b))))
+  #?(:clj  ([a ?         b ?        ] (quantum.core.Numeric/gt a b))
+     :cljs ([a t/double? b t/double?] (cljs.core/> a b))))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -454,10 +515,12 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt #_:inline str
            ([] "")
-           ([x nil?] "")
-  #?(:clj  ([x Object] (.toString x)) ; could have inferred but there may be other objects who have overridden .toString
+           ([x t/nil?] "")
+           ;; could have inferred but there may be other objects who have overridden .toString
+  #?(:clj  ([x Object] (.toString x))
            ;; Can't infer that it returns a string (without a pre-constructed list of built-in functions)
            ;; As such, must explicitly mark
      :cljs ([x t/any? > (t/assume string?)] (.join #js [x] "")))
@@ -466,6 +529,7 @@
              (let [sb (!str (str x))]
                (doseq [x' xs] (.append sb (str x'))) ; TODO is `doseq` the right approach?
                (.toString sb))))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -507,10 +571,12 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt #_:inline count
-  ([xs #?(:clj ? :cljs array?) #?@(:cljs [> int?])] (#?(:clj Array/count :cljs .-length) xs))
-  ([xs string?                 #?@(:cljs [> int?])] (#?(:clj .length     :cljs .-length) xs))
-  ([xs !+vector?               #?@(:cljs [> int?])] (#?(:clj count       :cljs (do (TODO) 0)) xs)))
+  ([xs #?(:clj ? :cljs array?) #?@(:cljs [> t/int?])] (#?(:clj Array/count :cljs .-length) xs))
+  ([xs t/string?               #?@(:cljs [> t/int?])] (#?(:clj .length     :cljs .-length) xs))
+  ([xs !+vector?               #?@(:cljs [> t/int?])] (#?(:clj count       :cljs (do (TODO) 0)) xs)))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -532,9 +598,9 @@
 ;; =====|=====|=====|=====|===== ;;
 
 (defnt #_:inline get
-  ([xs array?   , k (s/-> integer? ?)] (#?(:clj Array/get :cljs aget) xs k))
-  ([xs string?  , k (s/-> integer? ?)] (.charAt xs k))
-  ([xs !+vector?, k any?] #?(:clj (.valAt xs k) :cljs (TODO))))
+  ([xs t/array? , k (t/-> integer? ?)] (#?(:clj Array/get :cljs aget) xs k))
+  ([xs t/string?, k (t/-> integer? ?)] (.charAt xs k))
+  ([xs !+vector?, k t/any?] #?(:clj (.valAt xs k) :cljs (TODO))))
 
 ;; ----- expanded code ----- ;;
 
@@ -542,15 +608,17 @@
 
 ; TODO CLJS version will come after
 #?(:clj
-(defnt seq|gen > (? ISeq)
+(macroexpand '
+(defnt seq|gen > (t/? ISeq)
   "Taken from `clojure.lang.RT/seq`"
-  ([xs nil?                  ] nil)
-  ([xs array?                ] (ArraySeq/createFromObject xs))
+  ([xs t/nil?                ] nil)
+  ([xs t/array?              ] (ArraySeq/createFromObject xs))
   ([xs ASeq                  ] xs)
   ([xs (t/or LazySeq Seqable)] (.seq xs))
   ([xs Iterable              ] (clojure.lang.RT/chunkIteratorSeq (.iterator xs)))
   ([xs CharSequence          ] (StringSeq/create xs))
   ([xs Map                   ] (seq|gen (.entrySet xs)))))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -608,11 +676,13 @@
 ;; =====|=====|=====|=====|===== ;;
 
 #?(:clj
+(macroexpand '
 (defnt first|gen
-  ([xs nil?                        ] nil)
+  ([xs t/nil?                      ] nil)
   ([xs (t/and sequential? indexed?)] (get|gen xs 0))
   ([xs ISeq                        ] (.first xs))
   ([xs ?                           ] (first|gen (seq|gen xs)))))
+)
 
 #?(:clj
 `(do (swap! fn->spec assoc #'seq|gen
@@ -637,11 +707,13 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt next|gen > (? ISeq)
   "Taken from `clojure.lang.RT/next`"
-  ([xs nil?] nil)
-  ([xs ISeq] (.next xs))
-  ([xs ?   ] (next|gen (seq|gen xs))))
+  ([xs t/nil?] nil)
+  ([xs ISeq  ] (.next xs))
+  ([xs ?     ] (next|gen (seq|gen xs))))
+)
 
 ;; ----- expanded code ----- ;;
 

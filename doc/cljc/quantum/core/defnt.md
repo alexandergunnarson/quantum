@@ -186,3 +186,45 @@ z = #{short >= 5, boolean}
 What if, after traversing the AST for a little bit, the type resolver deduces based on the usage of symbol `A` (e.g. within static methods, etc.) that it must be of type `T0`? Previously it thought `A` was `#{T0 T1}`, and disjunctions were created accordingly for several previous callsites. When this inference is arrived at, what should happen?
 
 Perhaps a cascade of rule-based atoms with watches is appropriate. I.e., at each expression will be an atom (really, an unsynchronized mutable container with a watch) that listens for changes to the types/constraints of the expressions on which it depends, and the most appropriate overload will always be chosen based on the latest information. Atoms will only be re-used in more than one expression if they are locally-scoped symbols. Thus, the keys of the environment (these symbols) will only ever be modified when a new scope is introduced via `let` or `fn`, but the values may be mutated at any expression.
+
+## Multiple output constraints
+
+Typed functions can have multiple possible output constraint ('return types'). Sometimes it depends on the conditional structures; sometimes it depends on the constraints themselves.
+
+`(defn [a] (if (pos? a) 'abc' 123))`
+
+Input constraints:
+  {'a (constraints pos?)}
+Output constraints:
+(if (constraints pos?)
+    String ; won't keep track of e.g. the fact it only contains 'a', 'b', 'c' and what that entails
+    long)
+
+Example:
+
+(defnt [a ?]
+  (cond (pos? a)
+        123
+        (string? a)
+        'abd'))
+
+Input constraints:
+  (union (constraints pos?)
+         (constraints string?)) ; unreachable statement: error
+
+Example:
+
+(defnt [a ?]
+  (cond (pos? a)
+        123
+        (number? a)
+        'abd'))
+
+Input constraints:
+  (union (constraints pos?)
+         (constraints number?)) ; optimized away because it is a subset of previously calculated constraints
+Output constraints:
+  ...
+
+Unlike most static languages, a `nil` value is not considered as having a type
+except that of nil.

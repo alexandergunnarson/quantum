@@ -416,7 +416,7 @@
 
 (deftest test:median-of-5
   (let [x0 (!ref) x1 (!ref) x2 (!ref) x3 (!ref) x4 (!ref)]
-    (doseq [xsv (quantum.core.numeric.combinatorics/permutations [0 1 2 3 4])]
+    (doseq [xsv (quantum.core.untyped.numeric.combinatorics/permutations [0 1 2 3 4])]
       (is (= (ns/index-of xsv 2) (ns/median-5 (long-array xsv) < x0 x1 x2 x3 x4))))))
 
 

@@ -1,6 +1,6 @@
 (ns quantum.test.core.logic
   (:require
-    [quantum.core.numeric.combinatorics :as combo]
+    [quantum.core.untyped.numeric.combinatorics :as combo]
     [quantum.core.logic :as ns]
     [quantum.core.test  :as test
       :refer [deftest is]]))

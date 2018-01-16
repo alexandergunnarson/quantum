@@ -54,6 +54,22 @@
 
 #?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
 
+#?(:clj (defn metable? [x] (instance? clojure.lang.IMeta x)))
+
+; ===== COLLECTIONS =====
+
+(defn seq=
+  ([a b] (seq= a b =))
+  ([a b eq-f]
+  (boolean
+    (when (or (sequential? b) #?(:clj  (instance? java.util.List b)
+                                 :cljs (list? b)))
+      (loop [a (seq a) b (seq b)]
+        (when (= (nil? a) (nil? b))
+          (or (nil? a)
+              (when (eq-f (first a) (first b))
+                (recur (next a) (next b))))))))))
+
 #?(:clj
 (defmacro istr
   "'Interpolated string.' Accepts one or more strings; emits a `str` invocation that

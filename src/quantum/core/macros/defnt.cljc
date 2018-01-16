@@ -1,51 +1,51 @@
 (ns quantum.core.macros.defnt
   (:refer-clojure :exclude [contains? merge])
   (:require
-    [clojure.core                            :as core]
+    [clojure.core                               :as core]
     [quantum.core.cache
       :refer [defmemoized]]
-    [quantum.core.core                       :as qcore
+    [quantum.core.core                          :as qcore
       :refer [val? kw-map]]
-    [quantum.core.data.map                   :as map
+    [quantum.core.data.map                      :as map
       :refer [merge]]
-    [quantum.core.data.set                   :as set]
-    [quantum.core.data.vector                :as vec
+    [quantum.core.data.set                      :as set]
+    [quantum.core.data.vector                   :as vec
       :refer [catvec]]
-    [quantum.core.error                      :as err
+    [quantum.core.error                         :as err
       :refer [ex! ->ex err! throw-unless assertf->>]]
-    [quantum.core.fn                         :as fn
+    [quantum.core.fn                            :as fn
       :refer [<- fn-> fn->> fn1 fnl]]
-    [quantum.core.log                        :as log
+    [quantum.core.log                           :as log
       :refer [prl]]
-    [quantum.core.logic                      :as logic
+    [quantum.core.logic                         :as logic
       :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let cond-let]]
-    [quantum.core.macros.core                :as cmacros
+    [quantum.core.macros.core                   :as cmacros
       :refer [case-env case-env*]]
-    [quantum.core.macros.fn                  :as mfn]
-    [quantum.core.analyze.clojure.core       :as ana]
-    [quantum.core.analyze.clojure.predicates :as anap]
-    [quantum.core.macros.protocol            :as proto]
-    [quantum.core.macros.reify               :as reify]
-    [quantum.core.macros.transform           :as trans]
-    [quantum.core.macros.type-hint           :as th]
-    [quantum.core.numeric.combinatorics      :as combo]
-    [quantum.core.print                      :as pr]
-    [quantum.core.string.regex               :as re]
-    [quantum.core.type.defs                  :as tdefs]
-    [quantum.core.type.core                  :as tcore]
-    [quantum.core.untyped.collections        :as ucoll
+    [quantum.core.macros.fn                     :as mfn]
+    [quantum.core.analyze.clojure.core          :as ana]
+    [quantum.core.analyze.clojure.predicates    :as anap]
+    [quantum.core.macros.protocol               :as proto]
+    [quantum.core.macros.reify                  :as reify]
+    [quantum.core.macros.transform              :as trans]
+    [quantum.core.macros.type-hint              :as th]
+    [quantum.core.print                         :as pr]
+    [quantum.core.string.regex                  :as re]
+    [quantum.core.type.defs                     :as tdefs]
+    [quantum.core.type.core                     :as tcore]
+    [quantum.core.untyped.collections           :as ucoll
       :refer [contains? merge-call update-first update-val]]
-    [quantum.core.untyped.collections.tree   :as utree]
-    [quantum.core.untyped.convert            :as uconv
+    [quantum.core.untyped.collections.tree      :as utree]
+    [quantum.core.untyped.convert               :as uconv
       :refer [>name]]
-    [quantum.core.untyped.qualify            :as qual]
+    [quantum.core.untyped.numeric.combinatorics :as combo]
+    [quantum.core.untyped.qualify               :as qual]
     [quantum.core.untyped.reducers
-      :refer [reducei]                       :as ured]
-    [quantum.core.untyped.string             :as ustr]
-    [quantum.core.untyped.type               :as t]
-    [quantum.core.vars                       :as var
+      :refer [reducei]                          :as ured]
+    [quantum.core.untyped.string                :as ustr]
+    [quantum.core.untyped.type                  :as t]
+    [quantum.core.vars                          :as var
       :refer [defalias replace-meta-from]]
-    [quantum.core.spec                       :as s
+    [quantum.core.spec                          :as s
       :refer [validate]]))
 
 (defonce warn-on-strict-inexact-matches? (atom false))
@@ -84,7 +84,7 @@
         (err! "Invalid `defnt` special keyword" {:k x}))))
 
 (def qualified-class-name-map
-  (->> (set/union tcore/primitive-types #?(:clj tcore/primitive-array-types))
+  (->> (set/union tcore/primitive-types|unevaled #?(:clj tcore/primitive-array-types))
        (repeat 2)
        (apply zipmap)))
 

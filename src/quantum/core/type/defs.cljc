@@ -2,6 +2,7 @@
   ^{:doc "Definitions for types."
     :attribution "alexandergunnarson"}
   quantum.core.type.defs
+  (:refer-clojure :exclude [boolean byte char short int long float double])
   (:require
     [clojure.core          :as core]
  #?(:cljs
@@ -18,7 +19,9 @@
       :refer [<- fn-> rcomp]]
     [quantum.core.logic    :as logic
       :refer [fn-and condf1 fn=]]
-    [quantum.core.numeric.combinatorics :as combo])
+    [quantum.core.macros.core
+      :refer [env-lang]]
+    [quantum.core.untyped.numeric.combinatorics :as combo])
 #?(:cljs
   (:require-macros
     [quantum.core.type.defs :as self
@@ -41,6 +44,15 @@
                goog.structs.Set
                goog.structs.AvlTree
                goog.structs.Queue])))
+
+#?(:clj (def boolean Boolean/TYPE))
+#?(:clj (def byte    Byte/TYPE))
+#?(:clj (def char    Character/TYPE))
+#?(:clj (def short   Short/TYPE))
+#?(:clj (def int     Integer/TYPE))
+#?(:clj (def long    Long/TYPE))
+#?(:clj (def float   Float/TYPE))
+#?(:clj (def double  Double/TYPE))
 
 ; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
 ; A cross between a `reducer` and a `folder`
@@ -962,42 +974,45 @@
      'array-10d?           {:clj  (->> array-10d-types* :clj  vals set)
                             :cljs (->> array-10d-types* :cljs vals set)}}))
 
-; TODO make this extensible
+; TODO make all this extensible
+
+(defn- unevaled-fn [lang]
+  (->> type-pred=>type
+       (map (fn [[pred types-n]] (map-entry pred (get types-n lang))))
+       (remove (fn-> val empty?))
+       (into {})))
+
 #?(:clj
-(defmacro def-types* [lang]
-  (let [unevaled-fn
-          (fn [lang-n]
-            (->> type-pred=>type
-                 (map (fn [[pred types-n]] (map-entry pred (get types-n lang-n))))
-                 (remove (fn-> val empty?))
-                 (into {})))
-        langs #{:clj :cljs}
-        unevaled
-          (->> langs
-               (map unevaled-fn)
-               (zipmap langs)
-               (map (fn [[lang-n type-map-n]]
-                      (map-entry lang-n
-                        (->> type-map-n
-                             (map (fn [[pred-n types-n]]
-                                    (map-entry pred-n
-                                      (->> types-n
-                                           (map (condf1
-                                                  (fn-and seq? (fn-> first name (= "type")))
-                                                    (fn [obj]
-                                                      (condp = lang-n
-                                                        :clj  (-> obj eval class->str symbol)
-                                                        :cljs (get-in primitive-type-map [lang-n obj])
-                                                        obj))
-                                                  (fn-and seq? (fn-> first name (= "quote")))
-                                                    second
-                                                  identity))
-                                           (into #{})))))
-                             (into {})))))
-               (into {}))
-        lang-unevaled (unevaled-fn lang)
-        code  `(do ~(list 'def 'types-unevaled `'~unevaled)
-                   ~(list 'def 'types
-                     `(zipmap    (keys '~lang-unevaled)
-                              [~@(vals   lang-unevaled)])))]
-    code)))
+(defmacro gen-types|unevaled []
+  (let [langs #{:clj :cljs}
+        #_code  #_`(do ~(list 'def 'types-unevaled `'~unevaled))]
+    `'~(->> langs
+            (map unevaled-fn)
+            (zipmap langs)
+            (map (fn [[lang-n type-map-n]]
+                   (map-entry lang-n
+                     (->> type-map-n
+                          (map (fn [[pred-n types-n]]
+                                 (map-entry pred-n
+                                   (->> types-n
+                                        (map (condf1
+                                               (fn-and seq? (fn-> first name (= "type")))
+                                                 (fn [obj]
+                                                   (condp = lang-n
+                                                     :clj  (-> obj eval class->str symbol)
+                                                     :cljs (get-in primitive-type-map [lang-n obj])
+                                                     obj))
+                                               (fn-and seq? (fn-> first name (= "quote")))
+                                                 second
+                                               identity))
+                                        (into #{})))))
+                          (into {})))))
+            (into {})))))
+
+(defmacro gen-types []
+  (let [lang-unevaled (unevaled-fn (env-lang))]
+    `(zipmap '[~@(keys lang-unevaled)]
+              [~@(vals lang-unevaled)])))
+
+(def types|unevaled (gen-types|unevaled))
+(def types          (gen-types))

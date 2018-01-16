@@ -20,7 +20,7 @@
 (defn test:cursor
   [x getter & [setter]])
 
-(defn test:seq-equals [a b])
+(defn test:seq= [a b])
 
 ; ===== TYPE =====
 

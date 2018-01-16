@@ -479,9 +479,11 @@
                              'quantum.core.print.prettier)
                            (quantum.core.print.prettier/extend-pretty-printing!)
                            (require '[quantum.core.log :refer [prl!]])
-                           (reset! quantum.core.print/*print-as-code? true)
                            (clojure.main/repl
-                             :print  quantum.core.print/ppr
+                             :print  #(binding [*print-meta* true
+                                                quantum.core.print/*collapse-symbols?* true
+                                                quantum.core.print/*print-as-code?* true]
+                                        (quantum.core.print/ppr %))
                              :caught quantum.core.print/ppr-error))}
   :global-vars {*warn-on-reflection* true
                 *unchecked-math*     :warn-on-boxed}
