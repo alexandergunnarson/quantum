@@ -14,6 +14,7 @@
     [quantum.core.error       :as err
       :refer [->ex TODO]]
     [quantum.core.fn          :as fn]
+    [quantum.core.untyped.data.set :as uset]
 #?@(:clj
    [[clojure.data.finger-tree :as ftree]
     [flatland.ordered.set     :as oset]
@@ -49,7 +50,7 @@
 #?(:clj (defalias set:long:dense      dense-long-set))
 #?(:clj (defalias hash-set:long:dense set:long:dense))
 
-#?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
+#?(:clj (defalias hash-set? uset/hash-set?))
 
 (defn ->set
   "Like `clojure.core/set`"
@@ -104,24 +105,7 @@
 ; TODO `union-with` <~> `lodash/unionWith`
 ; TODO use |clojure.data.int-map/union, intersection, difference| for int sets and dense int sets
 ; Benchmark these
-#?(:clj
-    (defn union
-      "337.050528 msecs (core/union s1 s2)
-       158.255666 msecs (seqspert.hash-set/sequential-splice-hash-sets s1 s2)))
-       This is superseded by quantum.core.reducers.reduce/join."
-      ([] (hash-set))
-      ([s0] s0)
-      ([s0 s1]
-        ; To avoid NullPointerException
-        (cond (nil? s0) s1
-              (nil? s1) s0
-              (core/and (hash-set? s0) (hash-set? s1))
-              (seqspert.hash-set/sequential-splice-hash-sets s0 s1)
-              :else (set/union s0 s1)))
-      ([s0 s1 & ss]
-        (reduce union (union s0 s1) ss)))
-   :cljs (defalias union set/union))
-
+(defalias union uset/union)
 (defalias or union)
 (defalias +  union)
 

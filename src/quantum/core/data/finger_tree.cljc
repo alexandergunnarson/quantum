@@ -8,7 +8,7 @@
       :refer [map-entry]]
     [quantum.core.macros.deftype :as deftype]
     [quantum.core.core
-      :refer [seq-equals]]
+      :refer [seq=]]
     [quantum.core.macros.core :as cmacros
       :refer [macroexpand-1]]
 #?@(:clj
@@ -344,7 +344,7 @@
 
 (deftype/deftype CountedDoubleList [tree mdata]
   {?Object
-      {equals    ([_ x] (seq-equals tree x))
+      {equals    ([_ x] (seq= tree x))
        hash      ([this] (hashcode (map identity this)))}
    ?HashEq
       {hash-eq   ([this] (hash-ordered this))}
@@ -367,7 +367,7 @@
       {count ([_]    (measured tree))}
    ?Collection
       {empty ([_]    (CountedDoubleList. (empty tree) mdata))
-       equiv ([_ x] (seq-equals tree x)) ; TBD
+       equiv ([_ x] (seq= tree x)) ; TBD
        conj  ([_ x] (CountedDoubleList. (conj tree x) mdata))}
    ?Associative
       {assoc       ([this k v]

@@ -7,7 +7,7 @@
     [quantum.core.fn    :as fn
       :refer [fn->]]
     [quantum.core.print :as pr
-      :refer [ppr-str]]
+      :refer [ppr-meta]]
     [quantum.core.vars
       :refer [#?(:clj defmalias) defalias]])
 #?(:cljs
@@ -54,8 +54,8 @@
     (println "\nFAIL in" (test/testing-vars-str m))
     (when (seq test/*testing-contexts*) (println (test/testing-contexts-str)))
     (when-let [message (:message m)] (println message))
-    (println "expected:" (ppr-str (:expected m)))
-    (println "  actual:" (ppr-str (:actual m))))))
+    (println "expected:" (with-out-str (ppr-meta (:expected m))))
+    (println "  actual:" (with-out-str (ppr-meta (:actual m)))))))
 
 #?(:clj
 (defmethod test/report :error [m]
@@ -64,9 +64,9 @@
    (println "\nERROR in" (test/testing-vars-str m))
    (when (seq test/*testing-contexts*) (println (test/testing-contexts-str)))
    (when-let [message (:message m)] (println message))
-   (println "expected:" (ppr-str (:expected m)))
+   (println "expected:" (with-out-str (ppr-meta (:expected m))))
    (print "  actual: ")
-   (println (ppr-str (:actual m))))))
+   (println (with-out-str (ppr-meta (:actual m)))))))
 
 #?(:clj
 (defn test-syms!

@@ -1,5 +1,6 @@
 (ns quantum.core.collections.diff
-  (:require [quantum.core.collections.inner :as inner]))
+  (:require
+    #_[quantum.core.collections.inner :as inner]))
 
 ; COMMENTED OUT FOR NOW
 ; (defn diff-changes

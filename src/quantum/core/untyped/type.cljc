@@ -585,6 +585,10 @@
                       (if (c/nil? ret') (reduced nil) ret')))
                   nil
                   specs)))
+        c+n (fn [s0 s1]
+              (case (compare s0 (nilable-spec>inner-spec s1))
+                (0 -1) -1
+                nil))
         o+o (fn [^OrSpec s0 ^OrSpec s1]
               (let [;; every element in s0 an extensional strict subset of s1
                     l (->> s0 .-args (map+ (fn1 compare s1)) (seq-and (fn1 c/= -1)))
@@ -629,7 +633,7 @@
         ValueSpec        (with-invert-comparison v+c)
         ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+        NilableSpec      c+n
         OrSpec           c+o
         UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         AndSpec          c+a
@@ -649,7 +653,7 @@
      NilableSpec
        {InferSpec        (fn/fn' -1)
         ValueSpec        (with-invert-comparison v+n)
-        ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+        ClassSpec        (with-invert-comparison c+n)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         NilableSpec      (fn [s0 s1] (compare (nilable-spec>inner-spec s0) (nilable-spec>inner-spec s1)))
         OrSpec           (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))

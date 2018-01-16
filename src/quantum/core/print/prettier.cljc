@@ -47,10 +47,10 @@
   Iterable
     (iterator [this] (IntIndexedIterator. 0 (count xs) xs))))
 
-;; Collapses symbols
 (defn visit-symbol* [x]
-  [:text (quantum.core.untyped.qualify/collapse-symbol
-           x (not @quantum.core.print/*print-as-code?))])
+  [:text (cond-> x
+           quantum.core.print/*collapse-symbols?*
+             (quantum.core.untyped.qualify/collapse-symbol (not quantum.core.print/*print-as-code?*)))])
 
 (defn visit-fn [visitor x]
   [:group "#" "fn" " " (-> x quantum.core.untyped.convert/>symbol visit-symbol*)])

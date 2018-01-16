@@ -2,9 +2,9 @@
   "Macro-building helper functions."
   (:refer-clojure :exclude [macroexpand macroexpand-1])
   (:require
-    [clojure.core           :as core]
-    [clojure.core.reducers  :as red]
-    [clojure.walk           :as walk
+    [clojure.core                          :as core]
+    [quantum.core.untyped.reducers         :as r]
+    [quantum.core.untyped.collections.tree :as tree
       :refer [prewalk postwalk]]
     [cljs.analyzer]
 #?@(:clj
@@ -12,7 +12,7 @@
     [clojure.jvm.tools.analyzer]
     [clojure.tools.analyzer.jvm]
     [riddley.walk]
-    [clojure.tools.reader :as r]])
+    [clojure.tools.reader :as read]])
     [quantum.core.core    :as qcore])
 #?(:cljs
   (:require-macros
@@ -78,7 +78,7 @@
   ([env]
     (let [getter (case-env :cljs :locals identity)]
       (->> env getter
-           (red/map (fn [[sym _]] (let [sym' (vary-meta sym dissoc :tag)] [`(quote ~sym') sym'])))
+           (r/map (fn [[sym _]] (let [sym' (vary-meta sym dissoc :tag)] [`(quote ~sym') sym'])))
            (into {}))))))
 
 #?(:clj
@@ -240,29 +240,33 @@
 #?(:clj (defmalias syntax-quote clojure.tools.reader/syntax-quote))
 
 #?(:clj
-(defmacro unquote-replacement
-  "Replaces all duple-lists: (clojure.core/unquote ___) with the unquoted version of the inner content."
+(defn unquote-replacement
+  "Replaces each instance of `(clojure.core/unquote <whatever>)` in `quoted-form` with
+   the unquoted version of its inner content."
+  {:examples '{(unquote-replacement {'a 3} '(+ 1 ~a))
+               '(+ 1 3)}}
   [sym-map quoted-form]
-  `(prewalk
-     (fn [obj#]
-       (if (and (seq? obj#)
-                (-> obj# count   (= 2))
-                (-> obj# (nth 0) (= 'clojure.core/unquote)))
-           (if (contains? ~sym-map (-> obj# (nth 1)))
-               (get ~sym-map (-> obj# (nth 1)))
-               (throw (ex-info "Symbol does not evaluate to anything" (-> obj# (nth 1)))))
-           obj#))
-     ~quoted-form)))
+  (println "sym-map" sym-map)
+  (println "quoted-form" quoted-form)
+  (prewalk
+    (fn [x]
+      (if (and (seq? x)
+               (-> x count   (= 2))
+               (-> x (nth 0) (= 'clojure.core/unquote)))
+          (if (contains? sym-map (nth x 1))
+              (get sym-map (nth x 1))
+              (eval (nth x 1)))
+          x))
+    quoted-form)))
 
 #?(:clj
 (defmacro quote+
   "Normal quoting with unquoting that works as in |syntax-quote|."
-  {:in '[(let [a 1]
-           (for [b 2] (inc ~a)))]
-   :out '(for [a 1] (inc 1))}
+  {:examples '{(let [a 1]
+                 (quote+ (for [b 2] (inc ~a))))
+               '(for [a 1] (inc 1))}}
   [form]
- `(let [sym-map# (locals)]
-    (unquote-replacement sym-map# '~form))))
+  `(unquote-replacement (locals) '~form)))
 
 #?(:clj
 (defn syntax-quoted|sym [sym]
@@ -320,17 +324,36 @@
   [s]
   (second (re-find gensym-regex (str s))))
 
+(def ^:dynamic *reproducible-gensym* nil)
+
+(defn reproducible-gensym|generator []
+  (let [*counter (atom -1)]
+    (memoize #(symbol (str % (swap! *counter inc))))))
+
 (defn unify-gensyms
   "All gensyms defined using two hash symbols are unified to the same
    value, even if they were defined within different syntax-quote scopes."
-  {:attribution 'potemkin.macros}
+  {:attribution  'potemkin.macros
+   :contributors ["Alex Gunnarson"]}
+  ([body] (unify-gensyms body false))
+  ([body reproducible-gensyms?]
+    (let [gensym* (or *reproducible-gensym*
+                      (memoize (if reproducible-gensyms?
+                                   (reproducible-gensym|generator)
+                                   gensym)))]
+      (postwalk
+        #(if (unified-gensym? %)
+             (symbol (str (gensym* (str (un-gensym %) "__")) (when-not reproducible-gensyms? "__auto__")))
+             %)
+        body))))
+
+#?(:clj
+(defmacro $
+  "Reproducibly, unifiedly syntax quote without messing up the format as a literal
+   syntax quote might do."
   [body]
-  (let [gensym* (memoize gensym)]
-    (postwalk
-      #(if (unified-gensym? %)
-         (symbol (str (gensym* (str (un-gensym %) "__")) "__auto__"))
-         %)
-      body)))
+  `(binding [*reproducible-gensym* (reproducible-gensym|generator)]
+     (unify-gensyms (syntax-quote ~body) true))))
 
 ; ===== VARS ===== ;
 
@@ -339,7 +362,7 @@
   "Defines an alias for a var: a new var with the same root binding (if
   any) and similar metadata. The metadata of the alias is its initial
   metadata (as provided by def) merged into the metadata of the original."
-  {:attribution "clojure.contrib.def/defalias"
+  {:attribution  'clojure.contrib.def/defalias
    :contributors ["Alex Gunnarson"]}
   ([name orig]
      `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)

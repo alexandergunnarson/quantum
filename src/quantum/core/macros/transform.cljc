@@ -63,7 +63,7 @@
                 (fn [sym]
                   (let [[hinted hint] (find arglist-map sym)]
                     (if (and hinted
-                             (-> hint tcore/prim? not)  ; Because "Can't type hint a primitive local"
+                             (-> hint tcore/prim|unevaled? not)  ; Because "Can't type hint a primitive local"
                              (-> hint (not= 'Object))
                              (-> hint (not= 'java.lang.Object))
                              (-> sym th/type-hint not))

@@ -29,18 +29,7 @@
 (defn ->sentinel [] #?(:clj (Object.) :cljs #js {}))
 (defn ->object   [] #?(:clj (Object.) :cljs #js {}))
 
-; ===== COLLECTIONS =====
-
-(defn seq-equals [a b]
-  (boolean
-    (when (or (sequential? b) #?(:clj  (instance? java.util.List b)
-                                 :cljs (list? b)))
-      (loop [a (seq a) b (seq b)]
-        (when (= (nil? a) (nil? b))
-          (or
-            (nil? a)
-            (when (= (first a) (first b))
-              (recur (next a) (next b)))))))))
+(def seq= qcore/seq=)
 
 (def has? (comp not empty?)) ; TODO fix this performance-wise
 

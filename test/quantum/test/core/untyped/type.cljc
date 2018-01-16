@@ -164,7 +164,15 @@
           (is= nil (t/compare t/char-seq? t/comparable?))
           (is= nil (t/compare t/comparable? t/char-seq?)))))
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
+    (testing "+ NilableSpec"
+      (testing "Nilabled is ="
+        (is= -1  (t/compare t/long?   (t/? t/long?))))
+      (testing "Nilabled is ⊃"
+        (is= -1  (t/compare t/long?   (t/? t/object?))))
+      (testing "Nilabled is ⊂"
+        (is= nil (t/compare t/object? (t/? t/long?))))
+      (testing "Nilabled is ∅"
+        (is= nil (t/compare t/long?   (t/? t/string?)))))
     (testing "+ OrSpec"
       ;; #{(⊂ | =) ∅} -> ⊂
       ;; #{(⊃ ?) ∅} -> ∅

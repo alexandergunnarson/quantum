@@ -102,8 +102,12 @@
 ;; Pretty-prints an array. Returns a String containing the pretty-printed representation.
 #?(:clj (defalias pprint-arr mpprint/pm))
 
-(defonce ^{:doc "Flag for printing out expressions as a developer would see them in source code"}
-  *print-as-code? (atom false))
+(def ^:dynamic ^{:doc "Flag for namespace-'collapsing' symbols"}
+  *collapse-symbols?* false)
+
+(def ^:dynamic
+  ^{:doc "Flag for printing out expressions as a developer would see them in source code"}
+  *print-as-code?* false)
 
 (defn expr->code [x] (cond-> x (fn? x) >symbol))
 
