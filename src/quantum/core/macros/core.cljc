@@ -3,9 +3,9 @@
   (:refer-clojure :exclude [macroexpand macroexpand-1])
   (:require
     [clojure.core                          :as core]
-    [quantum.core.untyped.reducers         :as r]
     [quantum.core.untyped.collections.tree :as tree
       :refer [prewalk postwalk]]
+    [quantum.core.untyped.reducers         :as r]
     [cljs.analyzer]
 #?@(:clj
    [[clojure.jvm.tools.analyzer.hygienic]
@@ -87,7 +87,7 @@
   []
   `(identity
      '~(->> &env
-            (clojure.walk/postwalk
+            (postwalk
               (fn [x#] (cond (instance? clojure.lang.Compiler$LocalBinding x#)
                              (.name ^clojure.lang.Compiler$LocalBinding x#)
                              (nil? x#)
@@ -176,7 +176,7 @@
              (#{'fn 'fn* 'cljs.core/fn} (first form)))
       form
       (let [expanded (if (seq? form) (cljs-macroexpand form env-) form)]
-        (walk/walk #(cljs-macroexpand-all % env-) identity expanded)))))
+        (tree/walk #(cljs-macroexpand-all % env-) identity expanded)))))
 
 #?(:clj
     (defn macroexpand-all

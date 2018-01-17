@@ -4,8 +4,6 @@
     [clojure.core                 :as core]
     [clojure.core.reducers        :as r]
     [fast-zip.core                :as zip]
-    [quantum.core.fn
-      :refer [fn->> rcomp]]
     [quantum.core.untyped.compare :as comp
       :refer [== not==]]
     [quantum.core.untyped.core
@@ -38,26 +36,26 @@
 (def  mapcat+ (transducer->reducer 1 core/mapcat))
 (def  map+    (transducer->reducer 1 core/map))
 (def  map-indexed+    (transducer->reducer 1 core/map-indexed))
-(defn map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (rcomp key f) val)))))
+(defn map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (comp f key) val)))))
 (def  map-keys+ (map-keys* map+))
-(defn map-vals* [f-xs] (fn [f xs] (->> xs (f-xs (juxt key (rcomp val f))))))
+(defn map-vals* [f-xs] (fn [f xs] (->> xs (f-xs (juxt key (comp f val))))))
 (def  map-vals+ (map-vals* map+))
 
 (def filter+ (transducer->reducer 1 core/filter))
-(defn filter-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp key pred)))))
+(defn filter-keys* [f-xs] (fn [pred xs] (->> xs (f-xs (comp pred key)))))
 (def  filter-keys+ (filter-keys* filter+))
-(defn filter-vals* [f-xs] (fn [pred xs] (->> xs (f-xs (rcomp val pred)))))
+(defn filter-vals* [f-xs] (fn [pred xs] (->> xs (f-xs (comp pred val)))))
 (def  filter-vals+ (filter-vals* filter+))
 
 (def remove+ (transducer->reducer 1 core/remove))
 
-(def indexed+ (fn->> (map-indexed+ vector)))
+(def indexed+ #(->> % (map-indexed+ vector)))
 
 (def partition-all+ (transducer->reducer 1 core/partition-all))
 
 (def distinct+      (transducer->reducer 0 core/distinct))
 
-(def lasti (rcomp count dec))
+(def lasti (comp dec count))
 
 (defn join
   ([from] (if (vector? from) from (join [] from)))

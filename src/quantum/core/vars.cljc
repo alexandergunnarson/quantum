@@ -6,7 +6,8 @@
             [quantum.core.macros.core     :as cmacros
               :refer [case-env]]
     #?(:clj [quantum.core.ns              :as ns])
-            [quantum.core.untyped.qualify :as qual])
+            [quantum.core.untyped.qualify :as qual]
+            [quantum.core.untyped.vars    :as uvar])
 #?(:cljs
   (:require-macros
     [quantum.core.vars :as this])))
@@ -22,8 +23,8 @@
   "See also `cljs.tools.reader/merge-meta`."
   [x m] (update-meta x merge m))
 
-(defn merge-meta-from   [to from] (update-meta to merge (meta from)))
-(defn replace-meta-from [to from] (with-meta to (meta from)))
+(def merge-meta-from   uvar/merge-meta-from)
+(def replace-meta-from uvar/replace-meta-from)
 
 ; ===== DECLARATION/INTERNING ===== ;
 

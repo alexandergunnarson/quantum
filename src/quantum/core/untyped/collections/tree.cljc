@@ -1,13 +1,8 @@
 (ns quantum.core.untyped.collections.tree
   (:require
-    [quantum.core.error :as err
-      :refer [TODO]]
-    [quantum.core.fn
-      :refer [aritoid]]
     [quantum.core.untyped.reducers
       :refer [map+ into!]]
-    [quantum.core.vars :as var
-      :refer [defalias]]))
+    [quantum.core.untyped.vars :as var]))
 
 ; ----- WALK ----- ;
 
@@ -49,8 +44,8 @@
    `childrenf` must return a reducible."
   {:attribution 'alexandergunnarson}
   [branch?f childrenf root]
-  (postwalk-fold (aritoid #(transient []) persistent! conj!)
-                 (aritoid #(transient []) persistent! into!)
+  (postwalk-fold (fn ([] (transient [])) ([x] (persistent! x)) ([xs x] (conj! xs x)))
+                 (fn ([] (transient [])) ([x] (persistent! x)) ([a  b] (into! a  b)))
                  branch?f childrenf root))
 
 (defn prewalk-find
@@ -72,4 +67,4 @@
 
 (defn postwalk-find
   [pred coll]
-  (TODO))
+  (throw (ex-info "TODO" {})))
