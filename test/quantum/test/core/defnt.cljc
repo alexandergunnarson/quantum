@@ -9,9 +9,14 @@
       :refer [fn-and]]
     [quantum.core.defnt        :as this
       :refer [!ref analyze defnt]]
+    [quantum.core.macros.core
+      :refer [$]]
+    [quantum.core.macros.type-hint :as th
+      :refer [tag]]
     [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
+    [quantum.core.type.defs    :as tdef]
     [quantum.core.untyped.analyze.ast  :as ast]
     [quantum.core.untyped.analyze.expr :as xp]
     [quantum.core.untyped.core
@@ -22,27 +27,262 @@
     [clojure.lang Keyword Symbol]
     [quantum.core Numeric])))
 
-(def test-data|abc
+;; # args | ret | ? arg specs (delimited by `,`)
+;; abstract > concrete > concrete
+(def t0>  java.io.OutputStream)
+(def t0   java.io.FilterOutputStream)
+(def t0<  java.io.PrintStream)
+;; Object > interface > concrete final
+(def t1>  java.lang.Object)
+(def t1   java.lang.CharSequence)
+(def t1<  java.lang.String)
+;; Object > abstract > concrete final dual as primitive
+(def t2>  java.lang.Object)
+(def t2   java.lang.Number)
+(def t2<  java.lang.Long)
+(def t2<p tdef/long)
+
+(def >tag th/class->str)
+
+;; arity 0
+(def defnt|code|0
   `(defnt ~'abc []))
 
-(this/fnt|overload-data->overload {:lang :clj}
-  (s/validate (rest test-data|abc) ::this/defnt)
-  test-data|abc)
+;; arity 1: empty input, nil return
+(def defnt|code|1
+  `(defnt ~'abc [~'a ~'_]))
+
+;; arity 1: nil return
+(def defnt|code|2
+  `(defnt ~'abc [~'a t0]))
+
+;; arity 1
+(def defnt|code|3
+  `(defnt ~'abc [~'a t0] ~'a))
+
+;; arity 2
+(def defnt|code|5
+  `(defnt ~'abc [~'a t0 ~'b t0] ~'a))
+
+;; dispatch classes =; arity 1; arg 0 -> error: ambiguous dispatch
+(def defnt|code|class|=|1|0
+  `(defnt ~'abc
+     ([~'a t0] ~'a)
+     ([~'b t0] ~'b)))
+
+;; dispatch classes !=; arity 1; arg 0
+(def defnt|code|class|!=|1|0
+  `(defnt ~'abc
+     ([~'a t0  ] ~'a)
+     ([~'b t2<p] ~'b)))
+
+;; dispatch classes =; arity 2; arg 0
+(def defnt|code|class|=|2|0
+  `(defnt ~'abc
+     ([~'a t0 ~'b t0  ] ~'a)
+     ([~'c t0 ~'d t2<p] ~'c)))
+
+;; dispatch classes =; arity 2; arg 1
+(def defnt|code|class|=|2|1
+  `(defnt ~'abc
+     ([~'a t0   ~'b t0] ~'a)
+     ([~'c t2<p ~'d t0] ~'c)))
+
+;; next dispatch class >; arity 2; arg 0
+(def defnt|code|class|>|2|0
+  `(defnt ~'abc
+     ([~'a t0  ~'b t0] ~'a)
+     ([~'c t0> ~'d t0] ~'c)))
+
+;; next dispatch class <; arity 2; arg 0
+;; -> error: specs must be monotonically increasing in terms of t/compare
+(def defnt|code|class|<|2|0
+  `(defnt ~'abc
+     ([~'a t0  ~'b t0] ~'a)
+     ([~'c t0< ~'d t0] ~'c)))
+
+;; dispatch differs by spec <, not class; arity 1; arg 0
+(def defnt|code|spec|<|1|0
+  `(defnt ~'abc
+     ([~'a t0] ~'a)
+     ([~'b (t/and t0 (fn-> count (= 1)))] ~'b)))
+
+;; dispatch differs by spec <, not class; arity 2; arg 0
+(def defnt|code|spec|<|2|0
+  `(defnt ~'abc
+     ([~'a t0
+       ~'b t0] ~'a)
+     ([~'c (t/and t0 (fn-> count (= 1)))
+       ~'d t0] ~'c)))
+
+;; arity 2; -> error: ambiguous dispatch
+(def defnt|code|...
+  `(defnt ~'abc
+     ([~'a t0 ~'b t0] ~'a)
+     ([~'c t0 ~'d t0] ~'c)))
+
+;; concrete and primitive mix
+(def defnt|code|7
+  `(defnt ~'abc
+     ([~'a t0   ~'b t0  ] ~'a)
+     ([~'c t2<p ~'d t2<p] ~'c)))
+
+(defn defnt|code>overloads [code lang]
+  (->> (s/validate (rest code) ::this/defnt)
+       :overloads
+       (mapv #(this/fnt|overload-data>overload % {:lang lang}))))
+
+(def defnt|code>overloads|ret|3
+  [{:arg-classes                 [t0]
+    :arg-specs                   [(t/isa? t0)]
+    :arglist-code|fn|hinted      [(tag (>tag t0) 'a)]
+    :arglist-code|reify|unhinted ['a]
+    :body-codelist               ['a]
+    :positional-args-ct          1
+    :spec                        (t/isa? t0)
+    :variadic?                   false}])
+
+(def defnt|code>overloads|ret|5
+  [{:arg-classes                 [t0 t0]
+    :arg-specs                   [(t/isa? t0) (t/isa? t0)]
+    :arglist-code|fn|hinted      [(tag (>tag t0) 'a) (tag (>tag t0) 'b)]
+    :arglist-code|reify|unhinted ['a 'b]
+    :body-codelist               ['a]
+    :positional-args-ct          2
+    :spec                        (t/isa? t0)
+    :variadic?                   false}])
+
+(deftest fnt|overload-data>overload
+  (is (code= (defnt|code>overloads defnt|code|0 :clj)
+             [{:arg-classes                 []
+               :arg-specs                   []
+               :arglist-code|fn|hinted      []
+               :arglist-code|reify|unhinted []
+               :body-codelist               []
+               :positional-args-ct          0
+               :spec                        (t/value nil)
+               :variadic?                   false}]))
+  (is (code= (defnt|code>overloads defnt|code|1 :clj)
+             [{:arg-classes                 [java.lang.Object]
+               :arg-specs                   [(t/? t/object?)]
+               :arglist-code|fn|hinted      [(tag "java.lang.Object" 'a)]
+               :arglist-code|reify|unhinted ['a]
+               :body-codelist               []
+               :positional-args-ct          1
+               :spec                        (t/value nil)
+               :variadic?                   false}]))
+  (is (code= (defnt|code>overloads defnt|code|2 :clj)
+             [{:arg-classes                 [t0]
+               :arg-specs                   [(t/isa? t0)]
+               :arglist-code|fn|hinted      [(tag (>tag t0) 'a)]
+               :arglist-code|reify|unhinted ['a]
+               :body-codelist               []
+               :positional-args-ct          1
+               :spec                        (t/value nil)
+               :variadic?                   false}]))
+  (is (code= (defnt|code>overloads defnt|code|3 :clj)
+             defnt|code>overloads|ret|3))
+  (is (code= (defnt|code>overloads defnt|code|class|!=|1|0 :clj)
+             [(first defnt|code>overloads|ret|3)
+              {:arg-classes                 [t2<p]
+               :arg-specs                   [(t/isa? t2<)]
+               :arglist-code|fn|hinted      [(tag (>tag t2<p) 'b)]
+               :arglist-code|reify|unhinted ['b]
+               :body-codelist               ['b]
+               :positional-args-ct          1
+               :spec                        (t/isa? t2<)
+               :variadic?                   false}]))
+  (is (code= (defnt|code>overloads defnt|code|5 :clj)
+             defnt|code>overloads|ret|5))
+  (is (code= (defnt|code>overloads defnt|code|7 :clj)
+             [(first defnt|code>overloads|ret|5)
+              {:arg-classes                 [t2<p t2<p]
+               :arg-specs                   [(t/isa? t2<) (t/isa? t2<)]
+               :arglist-code|fn|hinted      [(tag (>tag t2<p) 'c) (tag (>tag t2<p) 'd)]
+               :arglist-code|reify|unhinted ['c 'd]
+               :body-codelist               ['c]
+               :positional-args-ct          2
+               :spec                        (t/isa? t2<)
+               :variadic?                   false}]))
+  (is (code= (defnt|code>overloads defnt|code|class|=|2|0 :clj)
+             [(first defnt|code>overloads|ret|5)
+              {:arg-classes                 [t0 t2<p]
+               :arg-specs                   [(t/isa? t0) (t/isa? t2<)]
+               :arglist-code|fn|hinted      [(tag (>tag t0) 'c) (tag (>tag t2<p) 'd)]
+               :arglist-code|reify|unhinted ['c 'd]
+               :body-codelist               ['c]
+               :positional-args-ct          2
+               :spec                        (t/isa? t0)
+               :variadic?                   false}])))
+
+(defn defnt|code>protocol [fn|name code lang]
+  (this/fnt|overloads>protocol
+    {:fn|name fn|name :overloads (defnt|code>overloads code lang)}))
 
 (deftest fnt|overloads>protocol
-  (testing
-    (is (code=
-          (fnt|overloads>protocol
-            {:fn|name   'abc
-             :overloads
-               })
-          {:defprotocol
-             `(defprotocol ~'abc|gen__Protocol__
-                ())
-           :extend-protocols
-
-           :defn
-             }))))
+  (is (code= (defnt|code>protocols 'abc defnt|code|0 :clj)
+        [{:defprotocol      nil
+          :extend-protocols nil
+          :defn             ($ (defn ~'abc [] (.invoke ~'abc|__0)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|1 :clj)
+        [{:defprotocol      nil
+          :extend-protocols nil
+          :defn             ($ (defn ~'abc [~(tag "java.lang.Object" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|2 :clj)
+        [{:defprotocol      nil
+          :extend-protocols nil
+          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|3 :clj)
+        [{:defprotocol      nil
+          :extend-protocols nil
+          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|class|!=|1|0 :clj)
+        [{:defprotocol
+            ($ (defprotocol ~'abc__Protocol__0
+                 (~'abc [~'x0])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc
+                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0))
+                  java.lang.Long   (~'abc [~(tag "long"             'x0)] (.invoke ~'abc|__1 ~'x0))))]
+          :defn nil}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|5 :clj)
+        [{:defprotocol      nil
+          :extend-protocols nil
+          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)
+                                            ~(tag "java.lang.String" 'x1)]
+                                 (.invoke ~'abc|__0 ~'x0 ~'x1)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|7 :clj)
+        [{:defprotocol
+            ($ (defprotocol ~'abc|__Protocol
+                 (~'abc [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc
+                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0) ~(tag "java.lang.String" 'x1)]
+                                     (.invoke ~'abc|__0 ~'x0 ~'x1))
+                  java.lang.Long   (~'abc [~(tag "long"             'x0) ~(tag "long"             'x1)]
+                                     (.invoke ~'abc|__1 ~'x0 ~'x1))))]
+          :defn nil}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|class|=|2|0 :clj)
+        [{:defprotocol
+            ($ (defprotocol ~'abc|__Protocol__java|lang|String
+                 (~'abc|__protofn__java|lang|String [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol__java|lang|String
+                  java.lang.String (~'abc|__protofn__java|lang|String
+                                     [~(tag "java.lang.String" 'x1) ~(tag "java.lang.String" 'x0)]
+                                       (.invoke ~'abc|__0 ~'x0 ~'x1))
+                  java.lang.Long   (~'abc|__protofn__java|lang|String
+                                     [~(tag "long"             'x1) ~(tag "java.lang.String" 'x0)]
+                                       (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+          :defn nil}
+         {:defprotocol
+            ($ (defprotocol ~'abc|__Protocol
+                 (~'abc [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc
+                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0) ~'x1]
+                                     (~'abc|__protofn__java|lang|String ~'x1 ~'x0))))]
+          :defn nil}])))
 
 (deftest test|methods->spec
   (testing "Class hierarchy"

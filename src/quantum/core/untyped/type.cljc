@@ -71,7 +71,10 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
    ?Fn                   {invoke  ([_ x] (c/= x v))}
-   ?Object               {equals  ([this that] (c/= v (.-v ^ValueSpec that)))}
+   ?Object               {equals  ([this that]
+                                    (c/or (identical? this that)
+                                          (c/and (instance? ValueSpec that)
+                                                 (c/= v (.-v ^ValueSpec that)))))}
    ?Comparable           {compare ([this that]
                                     (if-not (instance? ValueSpec that)
                                       (err! "Cannot compare with non-ValueSpec")
@@ -96,9 +99,13 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] (c/or name (list `isa? c)))}
-   ?Fn   {invoke    ([_ x] (instance? c x))}
-   ?Meta {meta      ([this] meta)
-          with-meta ([this meta'] (ClassSpec. meta' c name))}})
+   ?Fn     {invoke    ([_ x] (instance? c x))}
+   ?Meta   {meta      ([this] meta)
+            with-meta ([this meta'] (ClassSpec. meta' c name))}
+   ?Object {equals    ([this that]
+                        (c/or (identical? this that)
+                              (c/and (instance? ClassSpec that)
+                                     (c/= c (.-c ^ClassSpec that)))))}})
 
 (defn class-spec? [x] (instance? ClassSpec x))
 
@@ -485,9 +492,13 @@
 
 (dt/deftype NilableSpec [meta #_(t/? ::meta) spec #_t/spec?]
   {PSpec nil
-   ?Fn {invoke ([this x] (c/or (c/nil? x) (spec x)))}
-   ?Meta {meta      ([this] meta)
-          with-meta ([this meta'] (NilableSpec. meta' spec))}
+   ?Fn     {invoke    ([this x] (c/or (c/nil? x) (spec x)))}
+   ?Meta   {meta      ([this] meta)
+            with-meta ([this meta'] (NilableSpec. meta' spec))}
+   ?Object {equals    ([this that]
+                        (c/or (identical? this that)
+                              (c/and (instance? NilableSpec that)
+                                     (c/= spec (.-spec ^NilableSpec that)))))}
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] (list `? spec))}})

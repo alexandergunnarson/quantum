@@ -205,7 +205,7 @@
 (defn fns|code [kind lang args]
   (let [{:keys [::ss/fn|name overloads ::ss/meta] :as args'}
           (s/validate args (case kind :defn ::defns|code :fn ::fns|code))
-        overload-data->overload
+        overload-data>overload
           (fn [{{:keys [args varargs pre post]} ::fnt|arglist
                 body :body}]
             (let [arg-spec->validation
@@ -245,7 +245,7 @@
                           (when pre (list 'assert pre))]
                          (lfilter some?))]
               (list* arglist' (concat validations body))))
-        overloads (mapv overload-data->overload overloads)
+        overloads (mapv overload-data>overload overloads)
         code (case kind
                :fn   (list* 'fn (concat
                                   (if (contains? args' ::ss/fn|name)
@@ -778,7 +778,7 @@
       (list* 'do codelist)))
 
 #?(:clj ; really, reserve for metalanguage
-(defn fnt|overload-data->overload #_> #_::fnt|overload
+(defn fnt|overload-data>overload #_> #_::fnt|overload
   "Rather than rigging together something in which either:
    1) the Clojure compiler will try to cross its fingers and evaluate code meant to be evaluated in ClojureScript
    2) we use a CLJS-in-CLJS compiler and alienate the mainstream CLJS-in-CLJ (cljsbuild) workflow, which includes
@@ -942,6 +942,8 @@
             (lmap (fn [{:keys [name arglist]}]
                     `(~name ~arglist))))))
 
+(defn fnt|overloads>protocols [])
+
 (defn fnt|overloads>protocol
   [{:keys [overloads #_(t/seq-of :fnt/overload)
            fn|name   #_::ss/fn|name]}]
@@ -951,7 +953,7 @@
     (->> grouped
          ))
   (let [all-arg-classes (->> overloads (mapv :arg-classes))
-        protocol|name (str fn|name "|" "gen__Protocol__" )
+        protocol|name (str fn|name "__Protocol__" )
         extend-protocols (for []
                            (>extend-protocol|code (kw-map protocol|name)))]
     {:defprotocol      (>defprotocol|code {:name      protocol|name
@@ -997,7 +999,7 @@
                     (do (log/pr :warn "requested `:inline`; ignoring until feature is implemented")
                         (update-meta fn|name dissoc :inline))
                     fn|name)
-        overloads (->> overloads (mapv #(fnt|overload-data->overload % {:lang lang})))
+        overloads (->> overloads (mapv #(fnt|overload-data>overload % {:lang lang})))
         ;; only one variadic arg allowed
         _ (s/validate overloads (fn->> (lfilter :variadic?) count (<- <= 1)))
         arg-ct->spec (->> overloads
