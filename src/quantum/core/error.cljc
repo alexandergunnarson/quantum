@@ -221,8 +221,7 @@
 
 #?(:clj
 (defmacro ignore [& body]
-  (let [c (case-env :clj 'Throwable :cljs :default)]
-    `(try ~@body (catch ~c _# nil)))))
+  `(try ~@body (catch ~(generic-error &env) _# nil))))
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]

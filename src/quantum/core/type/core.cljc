@@ -114,7 +114,7 @@
     :cljs #{ubytes ubytes-clamped ushorts uints bytes shorts       ints       floats doubles}})
 
 (def cljs-typed-array-convertible-classes
-  (let [cljs-typed-array-types (-> defs/array-1d-types* :cljs (dissoc :object))
+  (let [cljs-typed-array-types (-> def/array-1d-types* :cljs (dissoc :object))
         generalize-type (fn->> name str/lower-case (remove #{\u}))]
     (->> cljs-typed-array-types
          (reduce
@@ -145,13 +145,13 @@
                                 :array-depth array-depth})
     (if ?array-ident
         (if (= n array-depth)
-            (defs/array-ident->primitive-sym ?array-ident)
+            (def/array-ident->primitive-sym ?array-ident)
             (str (apply str (drop n brackets)) ?array-ident))
         (if (= n array-depth)
             (symbol ?object-type)
             (str (apply str (drop n brackets)) "L" ?object-type ";"))))))
 
-(def default-types (-> types-unevaled (get quantum.core.core/lang) :any))
+(def default-types (-> def/types|unevaled (get quantum.core.core/lang) :any))
 
 (defn ->boxed|sym   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)

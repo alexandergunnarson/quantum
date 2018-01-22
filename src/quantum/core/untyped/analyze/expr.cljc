@@ -64,7 +64,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this]
-      (if @pr/*print-as-code?
+      (if pr/*print-as-code?*
           (list* `casef (pr/expr->code f) (map pr/>group cases))
           (list* `casef f cases))))
 
@@ -89,7 +89,7 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this]
-      (if @pr/*print-as-code?
+      (if pr/*print-as-code?*
           (list* `condpf->
             (pr/expr->code pred)
             (pr/expr->code f)

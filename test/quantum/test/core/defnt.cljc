@@ -49,19 +49,19 @@
   `(defnt ~'abc []))
 
 ;; arity 1: empty input, nil return
-(def defnt|code|1
+(def defnt|code|1|empty
   `(defnt ~'abc [~'a ~'_]))
 
 ;; arity 1: nil return
-(def defnt|code|2
+(def defnt|code|1|nil
   `(defnt ~'abc [~'a t0]))
 
 ;; arity 1
-(def defnt|code|3
+(def defnt|code|1
   `(defnt ~'abc [~'a t0] ~'a))
 
 ;; arity 2
-(def defnt|code|5
+(def defnt|code|2
   `(defnt ~'abc [~'a t0 ~'b t0] ~'a))
 
 ;; dispatch classes =; arity 1; arg 0 -> error: ambiguous dispatch
@@ -95,7 +95,8 @@
      ([~'c t0> ~'d t0] ~'c)))
 
 ;; next dispatch class <; arity 2; arg 0
-;; -> error: specs must be monotonically increasing in terms of t/compare
+;; -> error: specs in the same arity and position must be ordered in monotonically
+;;           increasing order in terms of `t/compare`
 (def defnt|code|class|<|2|0
   `(defnt ~'abc
      ([~'a t0  ~'b t0] ~'a)
@@ -122,7 +123,7 @@
      ([~'c t0 ~'d t0] ~'c)))
 
 ;; concrete and primitive mix
-(def defnt|code|7
+(def defnt|code|concrete+primitive
   `(defnt ~'abc
      ([~'a t0   ~'b t0  ] ~'a)
      ([~'c t2<p ~'d t2<p] ~'c)))
@@ -132,7 +133,7 @@
        :overloads
        (mapv #(this/fnt|overload-data>overload % {:lang lang}))))
 
-(def defnt|code>overloads|ret|3
+(def defnt|code>overloads|ret|1
   [{:arg-classes                 [t0]
     :arg-specs                   [(t/isa? t0)]
     :arglist-code|fn|hinted      [(tag (>tag t0) 'a)]
@@ -142,7 +143,7 @@
     :spec                        (t/isa? t0)
     :variadic?                   false}])
 
-(def defnt|code>overloads|ret|5
+(def defnt|code>overloads|ret|2
   [{:arg-classes                 [t0 t0]
     :arg-specs                   [(t/isa? t0) (t/isa? t0)]
     :arglist-code|fn|hinted      [(tag (>tag t0) 'a) (tag (>tag t0) 'b)]
@@ -162,7 +163,7 @@
                :positional-args-ct          0
                :spec                        (t/value nil)
                :variadic?                   false}]))
-  (is (code= (defnt|code>overloads defnt|code|1 :clj)
+  (is (code= (defnt|code>overloads defnt|code|1|empty :clj)
              [{:arg-classes                 [java.lang.Object]
                :arg-specs                   [(t/? t/object?)]
                :arglist-code|fn|hinted      [(tag "java.lang.Object" 'a)]
@@ -171,7 +172,7 @@
                :positional-args-ct          1
                :spec                        (t/value nil)
                :variadic?                   false}]))
-  (is (code= (defnt|code>overloads defnt|code|2 :clj)
+  (is (code= (defnt|code>overloads defnt|code|1|nil :clj)
              [{:arg-classes                 [t0]
                :arg-specs                   [(t/isa? t0)]
                :arglist-code|fn|hinted      [(tag (>tag t0) 'a)]
@@ -180,10 +181,10 @@
                :positional-args-ct          1
                :spec                        (t/value nil)
                :variadic?                   false}]))
-  (is (code= (defnt|code>overloads defnt|code|3 :clj)
-             defnt|code>overloads|ret|3))
+  (is (code= (defnt|code>overloads defnt|code|1 :clj)
+             defnt|code>overloads|ret|1))
   (is (code= (defnt|code>overloads defnt|code|class|!=|1|0 :clj)
-             [(first defnt|code>overloads|ret|3)
+             [(first defnt|code>overloads|ret|1)
               {:arg-classes                 [t2<p]
                :arg-specs                   [(t/isa? t2<)]
                :arglist-code|fn|hinted      [(tag (>tag t2<p) 'b)]
@@ -192,10 +193,10 @@
                :positional-args-ct          1
                :spec                        (t/isa? t2<)
                :variadic?                   false}]))
-  (is (code= (defnt|code>overloads defnt|code|5 :clj)
-             defnt|code>overloads|ret|5))
-  (is (code= (defnt|code>overloads defnt|code|7 :clj)
-             [(first defnt|code>overloads|ret|5)
+  (is (code= (defnt|code>overloads defnt|code|2 :clj)
+             defnt|code>overloads|ret|2))
+  (is (code= (defnt|code>overloads defnt|code|concrete+primitive :clj)
+             [(first defnt|code>overloads|ret|2)
               {:arg-classes                 [t2<p t2<p]
                :arg-specs                   [(t/isa? t2<) (t/isa? t2<)]
                :arglist-code|fn|hinted      [(tag (>tag t2<p) 'c) (tag (>tag t2<p) 'd)]
@@ -205,7 +206,7 @@
                :spec                        (t/isa? t2<)
                :variadic?                   false}]))
   (is (code= (defnt|code>overloads defnt|code|class|=|2|0 :clj)
-             [(first defnt|code>overloads|ret|5)
+             [(first defnt|code>overloads|ret|2)
               {:arg-classes                 [t0 t2<p]
                :arg-specs                   [(t/isa? t0) (t/isa? t2<)]
                :arglist-code|fn|hinted      [(tag (>tag t0) 'c) (tag (>tag t2<p) 'd)]
@@ -215,8 +216,8 @@
                :spec                        (t/isa? t0)
                :variadic?                   false}])))
 
-(defn defnt|code>protocol [fn|name code lang]
-  (this/fnt|overloads>protocol
+(defn defnt|code>protocols [fn|name code lang]
+  (this/fnt|overloads>protocols
     {:fn|name fn|name :overloads (defnt|code>overloads code lang)}))
 
 (deftest fnt|overloads>protocol
@@ -224,64 +225,104 @@
         [{:defprotocol      nil
           :extend-protocols nil
           :defn             ($ (defn ~'abc [] (.invoke ~'abc|__0)))}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|1 :clj)
+  (is (code= (defnt|code>protocols 'abc defnt|code|1|empty :clj)
         [{:defprotocol      nil
           :extend-protocols nil
           :defn             ($ (defn ~'abc [~(tag "java.lang.Object" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|2 :clj)
+  (is (code= (defnt|code>protocols 'abc defnt|code|1|nil :clj)
         [{:defprotocol      nil
           :extend-protocols nil
-          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|3 :clj)
+          :defn             ($ (defn ~'abc [~(tag (>tag t0) 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
+  (is (code= (defnt|code>protocols 'abc defnt|code|1 :clj)
         [{:defprotocol      nil
           :extend-protocols nil
-          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
+          :defn             ($ (defn ~'abc [~(tag (>tag t0) 'x0)] (.invoke ~'abc|__0 ~'x0)))}]))
   (is (code= (defnt|code>protocols 'abc defnt|code|class|!=|1|0 :clj)
         [{:defprotocol
             ($ (defprotocol ~'abc__Protocol__0
                  (~'abc [~'x0])))
           :extend-protocols
             [($ (extend-protocol ~'abc
-                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0)] (.invoke ~'abc|__0 ~'x0))
-                  java.lang.Long   (~'abc [~(tag "long"             'x0)] (.invoke ~'abc|__1 ~'x0))))]
+                  java.io.FilterOutputStream (~'abc [~(tag "java.io.FilterOutputStream" 'x0)] (.invoke ~'abc|__0 ~'x0))
+                  java.lang.Long             (~'abc [~(tag "long"                       'x0)] (.invoke ~'abc|__1 ~'x0))))]
           :defn nil}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|5 :clj)
+  (is (code= (defnt|code>protocols 'abc defnt|code|2 :clj)
         [{:defprotocol      nil
           :extend-protocols nil
-          :defn             ($ (defn ~'abc [~(tag "java.lang.String" 'x0)
-                                            ~(tag "java.lang.String" 'x1)]
+          :defn             ($ (defn ~'abc [~(tag (>tag t0) 'x0)
+                                            ~(tag (>tag t0) 'x1)]
                                  (.invoke ~'abc|__0 ~'x0 ~'x1)))}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|7 :clj)
+  (is (code= (defnt|code>protocols 'abc (do defnt|code|concrete+primitive) :clj)
         [{:defprotocol
             ($ (defprotocol ~'abc|__Protocol
                  (~'abc [~'x0 ~'x1])))
           :extend-protocols
             [($ (extend-protocol ~'abc
-                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0) ~(tag "java.lang.String" 'x1)]
-                                     (.invoke ~'abc|__0 ~'x0 ~'x1))
-                  java.lang.Long   (~'abc [~(tag "long"             'x0) ~(tag "long"             'x1)]
-                                     (.invoke ~'abc|__1 ~'x0 ~'x1))))]
+                  java.io.FilterOutputStream
+                    (~'abc [~(tag "java.io.FilterOutputStream" 'x0) ~(tag "java.io.FilterOutputStream" 'x1)]
+                      (.invoke ~'abc|__0 ~'x0 ~'x1))
+                  java.lang.Long
+                    (~'abc [~(tag "long"                       'x0) ~(tag "long"                       'x1)]
+                      (.invoke ~'abc|__1 ~'x0 ~'x1))))]
           :defn nil}]))
-  (is (code= (defnt|code>protocols 'abc defnt|code|class|=|2|0 :clj)
+  (is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|0) :clj)
         [{:defprotocol
-            ($ (defprotocol ~'abc|__Protocol__java|lang|String
-                 (~'abc|__protofn__java|lang|String [~'x0 ~'x1])))
+            ($ (defprotocol ~'abc|__Protocol__java|io|FilterOutputStream
+                 (~'abc|__protofn__java|io|FilterOutputStream [~'x0 ~'x1])))
           :extend-protocols
-            [($ (extend-protocol ~'abc|__Protocol__java|lang|String
-                  java.lang.String (~'abc|__protofn__java|lang|String
-                                     [~(tag "java.lang.String" 'x1) ~(tag "java.lang.String" 'x0)]
-                                       (.invoke ~'abc|__0 ~'x0 ~'x1))
-                  java.lang.Long   (~'abc|__protofn__java|lang|String
-                                     [~(tag "long"             'x1) ~(tag "java.lang.String" 'x0)]
-                                       (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+            [($ (extend-protocol ~'abc|__Protocol__java|io|FilterOutputStream
+                  java.io.FilterOutputStream
+                    (~'abc|__protofn__java|io|FilterOutputStream
+                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "java.io.FilterOutputStream" 'x0)]
+                        (.invoke ~'abc|__0 ~'x0 ~'x1))
+                  java.lang.Long
+                    (~'abc|__protofn__java|io|FilterOutputStream
+                      [~(tag "long"                       'x1) ~(tag "java.io.FilterOutputStream" 'x0)]
+                        (.invoke ~'abc|__1 ~'x0 ~'x1))))]
           :defn nil}
          {:defprotocol
             ($ (defprotocol ~'abc|__Protocol
                  (~'abc [~'x0 ~'x1])))
           :extend-protocols
             [($ (extend-protocol ~'abc
-                  java.lang.String (~'abc [~(tag "java.lang.String" 'x0) ~'x1]
-                                     (~'abc|__protofn__java|lang|String ~'x1 ~'x0))))]
+                  java.io.FilterOutputStream
+                    (~'abc [~(tag "java.io.FilterOutputStream" 'x0) ~'x1]
+                      (~'abc|__protofn__java|io|FilterOutputStream ~'x1 ~'x0))))]
+          :defn nil}]))
+  (is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
+        [{:defprotocol
+            ($ (defprotocol ~'abc|__Protocol__java|io|FilterOutputStream
+                 (~'abc|__protofn__java|io|FilterOutputStream [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol__java|io|FilterOutputStream
+                  java.io.FilterOutputStream
+                    (~'abc|__protofn__java|io|FilterOutputStream
+                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "java.io.FilterOutputStream" 'x0)]
+                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+          :defn nil}
+         {:defprotocol
+            ($ (defprotocol ~'abc|__Protocol__long
+                 (~'abc|__protofn__long [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol__long
+                  java.io.FilterOutputStream
+                    (~'abc|__protofn__long
+                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "long" 'x0)]
+                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+          :defn nil}
+         {:defprotocol
+            ($ (defprotocol ~'abc|__Protocol
+                 (~'abc [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol
+                  java.io.FilterOutputStream
+                    (~'abc
+                      [~(tag "java.io.FilterOutputStream" 'x0) ~'x1]
+                        (~'abc|__protofn__java|io|FilterOutputStream ~'x1 ~'x0))
+                  java.lang.Long
+                    (~'abc
+                      [~(tag "long"                       'x0) ~'x1]
+                        (~'abc|__protofn__long ~'x1 ~'x0))))]
           :defn nil}])))
 
 (deftest test|methods->spec

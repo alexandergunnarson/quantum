@@ -1,4 +1,5 @@
 (ns quantum.core.untyped.collections.diff
+  (:refer-clojure :exclude [seqable?])
   (:require
     [clojure.string     :as str]
     [diffit.map         :as mdiff]

@@ -77,7 +77,7 @@
 (def sym-call? (fn-and seq? (fn-> first symbol?)))
 (defalias s-expr? sym-call?)
 
-(def primitive-cast? (fn-and sym-call? (fn-> first name symbol tcore/prim?)))
+(def primitive-cast? (fn-and sym-call? (fn-> first name symbol tcore/prim|unevaled?)))
 
 (defn type-cast? [obj lang]
   (or (primitive-cast? obj)

@@ -84,7 +84,7 @@
                 (list* 'let
                   (->> arglist ; to preserve order
                        (map (juxt th/un-type-hint th/type-hint))
-                       (filter (fn-> second tcore/prim?))
+                       (filter (fn-> second tcore/prim|unevaled?))
                        (map (fn [[sym hint]]
                               [sym (list hint sym)])) ; add primitive type cast in let-binding
                        (apply concat)

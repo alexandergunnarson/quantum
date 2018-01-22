@@ -30,7 +30,7 @@
     [quantum.core.macros.type-hint              :as th]
     [quantum.core.print                         :as pr]
     [quantum.core.string.regex                  :as re]
-    [quantum.core.type.defs                     :as tdefs]
+    [quantum.core.type.defs                     :as tdef]
     [quantum.core.type.core                     :as tcore]
     [quantum.core.untyped.collections           :as ucoll
       :refer [contains? merge-call update-first update-val]]
@@ -108,7 +108,7 @@
   (throw-unless ((fn-or symbol? keyword? string?) pred) (->ex "Type predicate must be a symbol, keyword, or string." {:pred pred}))
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
-      (->> tcore/types-unevaled
+      (->> tdef/types|unevaled
            (<- get lang)
            (<- get pred)
            (<- validate contains?)
@@ -266,10 +266,10 @@
   "E.g. :<1>:4, :<0>, etc. -> a particular type"
   [{:as env :keys [ns- lang arglist hints ret-type-0]}]
   {:post [(log/ppr-hints :macro-expand/params "Explicit ret type" (kw-map % hints))]}
-  ; [get-max-type (delay (tdefs/max-type hints))]  ; TODO maybe come back to this?
+  ; [get-max-type (delay (tdef/max-type hints))]  ; TODO maybe come back to this?
    #_(:clj ; TODO maybe come back to this
     [(= ret-type-0 'auto-promote)
-       (or (get tdefs/promoted-types* @get-max-type) @get-max-type)])
+       (or (get tdef/promoted-types* @get-max-type) @get-max-type)])
     (if-not-let [[position depth] (defnt-keyword->positional-profundal ret-type-0)]
       (if (nil? ret-type-0)
           nil
@@ -313,8 +313,8 @@
               (and (.isPrimitive ^Class explicit-ret-type)
                    (.isPrimitive ^Class inferred-ret-type)
                    (= (symbol (.getName ^Class explicit-ret-type))
-                      (tdefs/max-type #{(symbol (.getName ^Class explicit-ret-type))
-                                        (symbol (.getName ^Class inferred-ret-type))}))))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
+                      (tdef/max-type #{(symbol (.getName ^Class explicit-ret-type))
+                                       (symbol (.getName ^Class inferred-ret-type))}))))) ; e.g. explicit long cast is permitted if int was inferred ; TODO simplify this code to e.g. `safe-castable?`
         ret-type (or explicit-ret-type
                      inferred-ret-type
                      (get trans/default-hint lang))
@@ -442,7 +442,7 @@
   {:example '{(->array-type-str "long" 4)
               "[[[[J"}}
   [base-class-str dimension]
-  (let [base-str (or (get-in tdefs/primitive-type-meta [(symbol base-class-str) :array-ident])
+  (let [base-str (or (get-in tdef/primitive-type-meta [(symbol base-class-str) :array-ident])
                      (str "L" base-class-str ";"))]
     (str (apply str (repeat dimension "[")) base-str))))
 
@@ -458,7 +458,7 @@
           (let [dimension (-> brackets count (/ 2))
                 class-str (->array-type-str base-class-str dimension)]
             class-str) ; Array types are preserved as strings, not classes
-          (or (get-in tdefs/primitive-type-meta [sym :unboxed])
+          (or (get-in tdef/primitive-type-meta [sym :unboxed])
                sym))))))
 
 ; TODO move the below few fns

@@ -942,18 +942,59 @@
             (lmap (fn [{:keys [name arglist]}]
                     `(~name ~arglist))))))
 
-(defn fnt|overloads>protocols [])
+(defn fnt|overloads>protocol [])
 
-(defn fnt|overloads>protocol
-  [{:keys [overloads #_(t/seq-of :fnt/overload)
+
+(is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
+        [{:defprotocol
+            ($ (defprotocol ~'abc|__Protocol__java|io|FilterOutputStream
+                 (~'abc|__protofn__java|io|FilterOutputStream [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol__java|io|FilterOutputStream
+                  java.io.FilterOutputStream
+                    (~'abc|__protofn__java|io|FilterOutputStream
+                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "java.io.FilterOutputStream" 'x0)]
+                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+          :defn nil}
+         {:defprotocol
+            ($ (defprotocol ~'abc|__Protocol__long
+                 (~'abc|__protofn__long [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol__long
+                  java.io.FilterOutputStream
+                    (~'abc|__protofn__long
+                      [~(tag "java.io.FilterOutputStream" 'x1) ~(tag "long" 'x0)]
+                        (.invoke ~'abc|__0 ~'x0 ~'x1))))]
+          :defn nil}
+         {:defprotocol
+            ($ (defprotocol ~'abc|__Protocol
+                 (~'abc [~'x0 ~'x1])))
+          :extend-protocols
+            [($ (extend-protocol ~'abc|__Protocol
+                  java.io.FilterOutputStream
+                    (~'abc
+                      [~(tag "java.io.FilterOutputStream" 'x0) ~'x1]
+                        (~'abc|__protofn__java|io|FilterOutputStream ~'x1 ~'x0))
+                  java.lang.Long
+                    (~'abc
+                      [~(tag "long"                       'x0) ~'x1]
+                        (~'abc|__protofn__long ~'x1 ~'x0))))]
+          :defn nil}]))
+(defn fnt|overloads>protocols
+  [{:keys [overloads #_(t/and t/indexed? (t/seq-of :fnt/overload))
            fn|name   #_::ss/fn|name]}]
-  (when (->> overloads (seq-or (fn-> :arg-classes count (> 1))))
-    (TODO "Don't yet handle protocol creation for arglist counts of > 1"))
-  (let [grouped (->> overloads (group-by (fn-> :arg-classes count)))]
-    (->> grouped
-         ))
-  (let [all-arg-classes (->> overloads (mapv :arg-classes))
-        protocol|name (str fn|name "__Protocol__" )
+  (when (->> overloads (seq-or (fn-> :positional-args-ct (> 2))))
+    (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
+  (when (->> overloads (seq-or :variadic?))
+    (TODO "Doesn't yet handle protocol creation for variadic overloads"))
+  (let [grouped (->> overloads lindexed (group-by (fn-> second :positional-args-ct)))]
+    (doseq [[ct [i overload]] grouped]
+      ;; TODO make sure that specs in the same arity and position are ordered in
+      ;; monotonically increasing order in terms of `t/compare`
+
+      ))
+  (let [all-arg-classes  (->> overloads (mapv :arg-classes))
+        protocol|name    (str fn|name "__Protocol__" )
         extend-protocols (for []
                            (>extend-protocol|code (kw-map protocol|name)))]
     {:defprotocol      (>defprotocol|code {:name      protocol|name
