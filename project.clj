@@ -159,7 +159,7 @@
        [datascript                              "0.15.5"          ]
        [datascript-transit                      "0.2.0"
          :exclusions [com.cognitect/transit-cljs]                 ]
-       [posh                                    "0.5.5"           ]
+       [posh                                    "0.5.6"           ]
        [quantum/datsync                         "0.0.1-4-11-2016"
          :exclusions [org.slf4j/slf4j-nop
                       org.clojure/core.match
@@ -181,7 +181,7 @@
        ; FORM
        [fx-clj                                  "0.2.0-alpha1"
          :exclusions [potemkin]                                   ]
-       [reagent                                 "0.6.0-rc"
+       [reagent                                 "0.7.0"
          :exclusions [org.json/json]                              ]
        ;[domina                                 "1.0.3"           ] ; DOM manipulation
        ; STYLE

@@ -69,7 +69,7 @@
 (defn alert [title]
   (if (= sys/os "web")
       (go (js/alert title)) ; even this totally stops everything
-      (.alert (.-Alert @ReactNative) title))))
+      (.alert (.-Alert ReactNative) title))))
 
 #?(:cljs (defn rx-adapt [super sub]
            (when super

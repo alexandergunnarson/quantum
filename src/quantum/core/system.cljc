@@ -110,11 +110,11 @@
   #?(:cljs (if ReactNative
                (-> ReactNative .-Platform .-OS)
                (condp #(containsv? %1 %2) (.-appVersion js/navigator)
-                   "Win"   :windows
-                   "MacOS" :mac
-                   "X11"   :unix
-                   "Linux" :linux
-                   :unknown))
+                 "Win"   :windows
+                 "MacOS" :mac
+                 "X11"   :unix
+                 "Linux" :linux
+                 :unknown))
      :clj
       (let [os-0 (some-> info :os :name str/->lower)]
         (condpc #(containsv? %1 %2) os-0
@@ -268,9 +268,13 @@
     {:this   (.getProcessCpuLoad mgr)
      :system (.getSystemCpuLoad  mgr)})))
 
+;;;; React specific ;;;;
+
 #?(:cljs
 (set! (-> js/console .-ignoredYellowBox)
   #js ["You are manually calling a React.PropTypes validation function for the"]))
+
+;;;; React Native specific ;;;;
 
 #?(:cljs (def app-registry (when ReactNative (.-AppRegistry  ReactNative))))
 
