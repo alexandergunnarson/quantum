@@ -5,7 +5,7 @@
     [quantum.core.cache
       :refer [defmemoized]]
     [quantum.core.core                          :as qcore
-      :refer [val? kw-map]]
+      :refer [kw-map]]
     [quantum.core.data.map                      :as map
       :refer [merge]]
     [quantum.core.data.set                      :as set]
@@ -43,6 +43,8 @@
       :refer [reducei]                          :as ured]
     [quantum.untyped.core.string                :as ustr]
     [quantum.untyped.core.type                  :as t]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]
     [quantum.core.vars                          :as var
       :refer [defalias replace-meta-from]]
     [quantum.core.spec                          :as s

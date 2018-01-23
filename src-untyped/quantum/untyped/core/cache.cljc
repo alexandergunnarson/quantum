@@ -58,14 +58,14 @@
           n-args memoize-first-n-args
           {:keys [get-fn assoc-fn]}
             (cond
-                        (derefable? m)
+                        (derefable? *m)
                           {:get-fn   (or get-fn-0   (fn [*m1 k1   ] (get @*m1 k1)))
                            :assoc-fn (or assoc-fn-0 (fn [*m1 k1 v1] (swap! *m1 assoc k1 @v1)))} ; undelays it because usually that's what is wanted
-              #?@(:clj [(instance? ConcurrentHashMap   m)
+              #?@(:clj [(instance? ConcurrentHashMap   *m)
                           {:get-fn   (or get-fn-0   (fn [m1  k1   ] (.get         ^ConcurrentHashMap m1 k1   )))
                            :assoc-fn (or assoc-fn-0 (fn [m1  k1 v1] (.putIfAbsent ^ConcurrentHashMap m1 k1 v1)))}])
                         :else
-                          (err! "No get-fn or assoc-fn defined for" m))]
+                          (err! "No get-fn or assoc-fn defined for" *m))]
       {:m *m
        :f (fn
             ([                      ] (memoize-form *m f get-fn assoc-fn first? n-args false                     ))
