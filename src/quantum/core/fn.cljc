@@ -15,6 +15,7 @@
     [quantum.untyped.core.form   :as uform
       :refer [arity-builder gen-args max-positional-arity unify-gensyms]]
     [quantum.untyped.core.fn     :as u]
+    [quantum.untyped.core.print  :as upr]
     [quantum.untyped.core.vars   :as uvar
       :refer [defalias defaliases]])
 #?(:cljs
@@ -52,7 +53,7 @@
   ([macro-sym]
     (case-env :cljs (throw (ex-info "`mfn` not supported for CLJS." {}))
       `(fn [& args#]
-         (qcore/js-println "WARNING: Runtime eval with `mfn` via" '~macro-sym)
+         (upr/js-println "WARNING: Runtime eval with `mfn` via" '~macro-sym)
          (clojure.core/eval (cons '~macro-sym args#)))))
   ([n macro-sym]
     (let [genned-arglist (->> (repeatedly gensym) (take n) (into []))]
@@ -92,9 +93,6 @@
 (defalias firsta  ntha-0)
 (defalias seconda ntha-1)
 (defalias thirda  ntha-2)
-
-(defn ? [f]
-  (fn ? [x] (if (nil? x) nil (f x))))
 
 #?(:clj
 (defmacro gen-ntha []
@@ -419,3 +417,7 @@
           (throw (ex-info "Illegal arglist count passed to rfn" {:arglist arglist}))))))
 
 (defalias trampoline core/trampoline)
+
+;; ===== Miscellaneous ===== ;;
+
+(defalias u/?)

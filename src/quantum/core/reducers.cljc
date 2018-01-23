@@ -18,7 +18,7 @@
     [quantum.core.collections.core :as ccoll
       :refer [empty? contains?, assoc!, conj!, get, ->objects]]
     [quantum.core.core
-      :refer [->sentinel]]
+      :refer [>sentinel]]
     [quantum.core.data.map         :as map]
     [quantum.core.data.set         :as set]
     [quantum.core.data.vector      :as vec
@@ -66,7 +66,7 @@
 (defn inc!:volatile [^Volatile     *i] (reset! *i (inc (deref *i))))
 (defn inc!:atom*    [^AtomicLong   *i] (.incrementAndGet *i))
 
-(def sentinel (->sentinel))
+(defonce sentinel (>sentinel))
 
 (defalias transducer->transformer red/transducer->transformer)
 

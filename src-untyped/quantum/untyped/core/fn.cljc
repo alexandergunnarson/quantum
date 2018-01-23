@@ -127,3 +127,8 @@
 (def fn-nil   (fn' nil  ))
 (def fn-false (fn' false))
 (def fn-true  (fn' true ))
+
+;; ===== Miscellaneous ===== ;;
+
+(defn ? [f]
+  (fn ? [x] (if (nil? x) nil (f x))))

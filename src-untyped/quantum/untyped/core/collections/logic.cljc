@@ -8,7 +8,7 @@
     [quantum.untyped.core.compare :as ucomp
       :refer [== not==]]
     [quantum.untyped.core.core
-      :refer [->sentinel]]
+      :refer [>sentinel]]
     [quantum.untyped.core.reducers
       :refer [educe]]
     [quantum.core.vars :as var
@@ -87,8 +87,8 @@
 
 
 
-(defonce init-sentinel   (->sentinel))
-(defonce failed-sentinel (->sentinel))
+(defonce init-sentinel   (>sentinel))
+(defonce failed-sentinel (>sentinel))
 
 (defn incremental-every?
   "Similarly to `incremental-apply`, applies binary comparator ->`pred`

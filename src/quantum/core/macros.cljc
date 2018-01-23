@@ -16,31 +16,22 @@
     [quantum.core.log          :as log]
     [quantum.core.logic        :as logic
       :refer [fn-and whenc whenf1]]
-    [quantum.core.macros.core  :as cmacros]
     [quantum.core.macros.defnt :as defnt]
     [quantum.core.macros.fn    :as mfn]
     [quantum.core.print        :as pr]
     [quantum.core.vars         :as var
-      :refer [defalias #?(:clj defmalias)]])
+      :refer [defalias defaliases #?(:clj defmalias)]]
+    [quantum.untyped.core.form.evaluate :as ufeval]
+    [quantum.untyped.core.form.generate :as ufgen])
 #?(:cljs
   (:require-macros
     [quantum.core.macros       :as self])))
 
 (log/this-ns)
 
-#?(:clj (defalias env       cmacros/env      ))
-#?(:clj (defalias case-env* cmacros/case-env*))
-#?(:clj (defalias case-env  cmacros/case-env ))
-#?(:clj (defalias env-lang  cmacros/env-lang ))
-#?(:clj (defalias locals    cmacros/locals   ))
+#?(:clj (defaliases ufeval env case-env* case-env env-lang locals))
 
-#?(:clj (defalias syntax-quote cmacros/syntax-quote))
-
-#?(:clj
-(defmacro maptemplate
-  [template-fn coll]
-  (quantum.core.print/js-println "WARNING: Runtime eval in |maptemplate|")
-  `(do ~@(map `~#((eval template-fn) %) coll))))
+#?(:clj (defalias ufgen/syntax-quote))
 
 (defn let-alias* [bindings body]
   (cons 'do
@@ -92,9 +83,6 @@
                 :clj  (list (syntax-quote ~clj-single-arg-fn-f ) ~x-sym)
                 :cljs (list (syntax-quote ~cljs-single-arg-fn-f) ~x-sym))))
           ([~x-sym ~y-sym]
-             #_(quantum.core.print/js-println "VARIADIC PROXY RESULT 2"
-                (case-env :clj  (list '~clj-fn  ~x-sym ~y-sym)
-                          :cljs (list '~cljs-fn ~x-sym ~y-sym)))
              (case-env :clj  (list (syntax-quote ~clj-fn ) ~x-sym ~y-sym)
                        :cljs (list (syntax-quote ~cljs-fn) ~x-sym ~y-sym)))
           ([x# y# ~'& rest#]
@@ -199,11 +187,11 @@
 
 ; ; ===== MACROEXPANSION =====
 
-#?(:clj (defalias macroexpand-1    cmacros/macroexpand-1             ))
+#?(:clj (defalias macroexpand-1    ufeval/macroexpand-1             ))
 #?(:clj (def      macroexpand-1!   (fn-> macroexpand-1   pr/ppr-hints)))
-#?(:clj (defalias macroexpand      cmacros/macroexpand               ))
+#?(:clj (defalias macroexpand      ufeval/macroexpand               ))
 #?(:clj (def      macroexpand!     (fn-> macroexpand     pr/ppr-hints)))
-#?(:clj (defalias macroexpand-all  cmacros/macroexpand-all           ))
+#?(:clj (defalias macroexpand-all  ufeval/macroexpand-all           ))
 #?(:clj (def      macroexpand-all! (fn-> macroexpand-all pr/ppr-hints)))
 
 #?(:clj

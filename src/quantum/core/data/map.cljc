@@ -11,11 +11,12 @@
    [[clojure.data.int-map :as imap]
     [flatland.ordered.map :as omap]
     [seqspert.hash-map            ]])
-    [quantum.core.core    :as qcore]
-    [quantum.untyped.core.reducers
-      :refer [reduce-pair]]
     [quantum.core.vars    :as var
-     :refer [defalias]])
+     :refer [defalias]]
+    [quantum.untyped.core.convert  :as uconv]
+    [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.reducers :as ur
+      :refer [reduce-pair]])
   (:import
 #?@(:clj
     [java.util.HashMap
@@ -46,7 +47,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (list* `om (qcore/quote-map-base qcore/>keyword ks))))
+  (list* `om (ucore/quote-map-base uconv/>keyword ks))))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)

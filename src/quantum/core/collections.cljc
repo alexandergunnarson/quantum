@@ -63,7 +63,7 @@
     [quantum.core.collections.zippers        :as qzip   ]
     [quantum.core.collections.logic          :as clog   ]
     [quantum.core.core                       :as qcore
-      :refer [->object]]
+      :refer [>object]]
     [quantum.core.error                      :as err
       :refer [->ex TODO]]
     [quantum.core.fn                         :as fn
@@ -517,7 +517,7 @@
         (seq->elem+dims (first xs) (conj dims (count xs)))
         (let [types (->> xs (map+ type) (join #{}))
               elem  (if (-> types count (not= 1))
-                        (->object)
+                        (>object)
                         (first xs))]
           {:elem elem :dims (conj dims (count xs))}))))
 

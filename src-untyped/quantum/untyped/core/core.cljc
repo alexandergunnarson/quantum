@@ -1,9 +1,38 @@
 (ns quantum.untyped.core.core
-  (:refer-clojure :exclude [seqable? boolean?])
   (:require
-    [cuerdas.core :as str+]))
+#?@(:clj
+   [[environ.core                         :as env]])
+    [cuerdas.core                         :as str+]
+    [quantum.untyped.core.type.predicates :as utpred
+      :refer [with-metable? metable?]]))
 
-(defn ->sentinel [] #?(:clj (Object.) :cljs #js {}))
+;; ===== Environment ===== ;;
+
+(def lang #?(:clj :clj :cljs :cljs))
+
+#?(:clj
+(defn pid []
+  (->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
+       (.getName))))
+
+#?(:clj
+(binding [*out* *err*]
+  (when (:print-pid?          env/env) (println "PID:" (pid)))
+  (when (:print-java-version? env/env) (println "Java version:" (System/getProperty "java.version")))
+  (flush)))
+
+;; ===== Compilation ===== ;;
+
+(defonce externs? (atom true))
+
+;; ===== quantum.core.system ===== ;;
+
+(defonce *registered-components (atom {}))
+
+;; ===== Miscellaneous ===== ;;
+
+(defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
+(def >object >sentinel)
 
 (defn quote-map-base [kw-modifier ks & [no-quote?]]
   (->> ks
@@ -15,49 +44,8 @@
         (symbol?  x) (keyword (namespace x) (name x))
         :else        (-> x str keyword)))
 
-#?(:clj (defmacro kw-map [& ks] (list* `hash-map (quote-map-base >keyword ks))))
-
-; ===== TYPE PREDICATES =====
-
-#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
-
-(def val? some?)
-
-(defn boolean? [x] #?(:clj  (instance? Boolean x)
-                      :cljs (or (true? x) (false? x))))
-
-(defn lookup? [x]
-  #?(:clj  (instance? clojure.lang.ILookup x)
-     :cljs (satisfies? ILookup x)))
-
-#?(:clj
-(defn protocol? [x]
-  (and (lookup? x) (-> x (get :on-interface) class?))))
-
-(defn regex? [x] (instance? #?(:clj java.util.regex.Pattern :cljs js/RegExp) x))
-
-#?(:clj  (defn seqable?
-           "Returns true if (seq x) will succeed, false otherwise."
-           {:from "clojure.contrib.core"}
-           [x]
-           (or (seq? x)
-               (instance? clojure.lang.Seqable x)
-               (nil? x)
-               (instance? Iterable x)
-               (-> x class .isArray)
-               (string? x)
-               (instance? java.util.Map x)))
-   :cljs (def seqable? core/seqable?))
-
-(defn editable? [coll]
-  #?(:clj  (instance?  clojure.lang.IEditableCollection coll)
-     :cljs (satisfies? cljs.core.IEditableCollection    coll)))
-
-#?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
-
-(defn metable? [x]
-  #?(:clj  (instance?  clojure.lang.IMeta x)
-     :cljs (satisfies? cljs.core/IMeta    x)))
+#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base >keyword ks))))
+#?(:clj (defmacro quote-map [& ks] (list* `hash-map (quote-map-base identity ks))))
 
 ; ===== COLLECTIONS =====
 
@@ -173,7 +161,7 @@
      `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)
               (do (def ~name
                     (let [derefed# (-> ~orig var deref)]
-                      (if (metable? derefed#)
+                      (if (with-metable? derefed#)
                           (with-meta derefed# (meta (var ~orig)))
                           derefed#)))
                   ; The below is apparently necessary

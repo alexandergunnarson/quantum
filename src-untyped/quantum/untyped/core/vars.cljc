@@ -1,6 +1,7 @@
 (ns quantum.untyped.core.vars
   (:refer-clojure :exclude [defonce])
   (:require
+    [clojure.core                :as core]
     [quantum.untyped.core.core   :as ucore]
     [quantum.untyped.core.form   :as uform]
     [quantum.untyped.core.form.evaluate
@@ -20,7 +21,7 @@
    map for name symbol."
   [name & sigs]
   (let [[name [expr]] (uform/name-with-attrs name sigs)]
-    `(c/defonce ~name ~expr))))
+    `(core/defonce ~name ~expr))))
 
 #?(:clj
 (defmacro def-

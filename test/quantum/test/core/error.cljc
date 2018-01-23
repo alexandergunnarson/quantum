@@ -41,15 +41,8 @@
 
 (defn test:validate [pred expr])
 
-(defn test:try-or 
+(defn test:try-or
   ([exp & alternatives]))
-
-(deftest test:suppress
-  (is (instance? #?(:clj Exception :cljs js/Error)
-        (ns/suppress (throw (#?(:clj Exception. :cljs js/Error.))))))
-  (is (= "abcde" (ns/suppress "abcde")))
-  (is (= "abcde" (ns/suppress (throw (ns/->ex :abcde)) "abcde")))
-  (is (= "abcde" (ns/suppress (throw (ns/->ex :abcde)) (fn [_] "abcde")))))
 
 (defn test:assertf-> [f arg throw-obj])
 

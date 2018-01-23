@@ -1,18 +1,19 @@
 (ns quantum.untyped.core.convert
   (:require
     [clojure.string               :as str]
-    [quantum.core.error           :as err]
-    [quantum.core.fn              :as fn]
-    [quantum.core.vars            :as var
-      :refer [defalias]]
-    [quantum.untyped.core.core    :as qcore
-      :refer [namespace?]]
+    [quantum.untyped.core.core    :as qcore]
+    [quantum.untyped.core.error   :as err]
+    [quantum.untyped.core.fn      :as fn]
     [quantum.untyped.core.qualify :as qual
-      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]])
+      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
+    [quantum.untyped.core.type.predicates
+      :refer [namespace?]]
+    [quantum.untyped.core.vars    :as var
+      :refer [defalias]])
   #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
 
-(defn demunged->namespace [^String s] (subs s 0 (.lastIndexOf s "/")))
-(defn demunged->name      [^String s] (subs s (inc (.lastIndexOf s "/"))))
+(defn demunged>namespace [^String s] (subs s 0 (.lastIndexOf s "/")))
+(defn demunged>name      [^String s] (subs s (inc (.lastIndexOf s "/"))))
 
 (defn >name
   "Computes the name (the unqualified string identifier) of `x`."
@@ -23,9 +24,9 @@
           (namespace? x) (-> x ns-name name)
           (var?       x) (-> x meta :name)])
           (fn?        x) #?(:clj  (or (some-> (-> x meta :name) >name)
-                                      (-> x class .getName clojure.lang.Compiler/demunge demunged->name))
+                                      (-> x class .getName clojure.lang.Compiler/demunge demunged>name))
                             :cljs (when-not (-> x .-name str/blank?)
-                                    (-> x .-name demunge-str demunged->name)))
+                                    (-> x .-name demunge-str demunged>name)))
           :else          (err/not-supported! `>name x)))
 
 (def >?name (fn/? >name))
@@ -40,9 +41,9 @@
               (namespace? x)) nil
 #?@(:clj [(var?           x)  (-> x meta :ns >name)])
           (fn?            x)  #?(:clj  (or (some-> (-> x meta :ns) >name)
-                                           (-> x class .getName clojure.lang.Compiler/demunge demunged->namespace))
+                                           (-> x class .getName clojure.lang.Compiler/demunge demunged>namespace))
                                  :cljs (when-not (-> x .-name str/blank?)
-                                         (-> x .-name demunge-str demunged->namespace)))
+                                         (-> x .-name demunge-str demunged>namespace)))
           :else               (err/not-supported! `>?namespace x)))
 
 (defn >delim-ident

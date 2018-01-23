@@ -43,8 +43,9 @@
     [quantum.untyped.core.convert  :as conv
       :refer [>symbol >name]]
     [quantum.untyped.core.core
-      :refer [->sentinel kw-map istr]]
+      :refer [kw-map istr]]
     [quantum.untyped.core.data.set :as set]
+    [quantum.untyped.core.form.generate :as ufgen]
     [quantum.untyped.core.loops    :as loops
       :refer [reduce-2]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
@@ -757,11 +758,6 @@
   `(let [~'out ~body]
      (s/validate ~'out ~(update-meta post-spec dissoc* :runtime?))))
 
-(defn ?wrap-do [codelist]
-  (if (-> codelist count (< 2))
-      (first codelist)
-      (list* 'do codelist)))
-
 #?(:clj ; really, reserve for metalanguage
 (defn fnt|overload-data>overload #_> #_::fnt|overload
   "Rather than rigging together something in which either:
@@ -820,7 +816,7 @@
                          (:spec body))
             body-codelist
               (cond-> (:body body)
-                post-spec|runtime? (-> ?wrap-do (>with-post-spec post-spec) vector))]
+                post-spec|runtime? (-> ufgen/?wrap-do (>with-post-spec post-spec) vector))]
         {:arg-classes                 arg-classes
          :arg-specs                   arg-specs
          :arglist-code|fn|hinted      (cond-> (->> arg-bindings (map-indexed hint-arg|fn) vec)

@@ -2,11 +2,11 @@
   "Functions related to qualification (name, namespace, etc.) and unqualification
    of nameables."
   (:require
-    [clojure.string            :as str]
+    [clojure.string  :as str]
     [fipp.ednize]
-    [quantum.untyped.core.core :as qcore
+    [quantum.untyped.core.type.predicates
       :refer [namespace?]]
-    [quantum.core.ns           :as ns]))
+    [quantum.core.ns :as ns]))
 
 (defn named? [x] (instance? #?(:clj clojure.lang.Named :cljs cljs.core/INamed) x))
 

@@ -1,6 +1,6 @@
 (ns quantum.test.core.log
   (:require [quantum.core.log :as ns]))
- 
+
 (defn test:disable!
   ([pr-type])
   ([pr-type & pr-types]))
@@ -9,7 +9,7 @@
   ([pr-type])
   ([pr-type & pr-types]))
 
-(defn test:->log-initializer [{:keys [levels] :as opts}])
+(defn test:>log-initializer [{:keys [levels] :as opts}])
 
 (defn test:pr*
   [trace? pretty? print-fn pr-type args opts])

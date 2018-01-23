@@ -7,14 +7,16 @@
     [quantum.untyped.core.compare :as comp
       :refer [== not==]]
     [quantum.untyped.core.core
-      :refer [->sentinel seqable?]]
+      :refer [>sentinel]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.qualify :as qual]
+    [quantum.untyped.core.type.predicates
+      :refer [seqable?]]
     [quantum.untyped.core.vars    :as uvar
       :refer [defalias]]))
 
-(defonce sentinel (->sentinel))
+(defonce sentinel (>sentinel))
 
 ;; ===== Transformer and transducer conversion ===== ;;
 

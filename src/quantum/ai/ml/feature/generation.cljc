@@ -13,7 +13,7 @@
               ->objects count]]
     [quantum.core.compare        :as comp]
     [quantum.core.core
-      :refer [->object]]
+      :refer [>object]]
     [quantum.core.data.primitive :as prim]
     [quantum.core.error          :as err
       :refer [->ex TODO]]
@@ -80,7 +80,7 @@
   ([x•• a•:x] (normalize-into-matrix x•• a•:x (fn1 missing?)))
   ([x•• a•:x missing?f]
     (numc/normalize-2d:column
-      (coll/seq->array-nd-of-dims x•• (->object)
+      (coll/seq->array-nd-of-dims x•• (>object)
         [(count x••) (count a•:x)])
       (->> a•:x indexed+
                 (filter+ (fn-> second ml/nominal?))

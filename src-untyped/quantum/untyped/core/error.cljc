@@ -1,14 +1,15 @@
 (ns quantum.untyped.core.error
   (:require
-    [clojure.core :as core]
+    [clojure.core        :as core]
+    [slingshot.slingshot :as try]
     [quantum.untyped.core.fn
       :refer [fn1 fnl rcomp]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
     [quantum.untyped.core.vars
-      :refer [defalias defmacro-]]))
+      :refer [defalias defaliases defmacro-]]))
 
-;; ===== Generic error types ===== ;;
+;; ===== Error type: generic ===== ;;
 
 (def generic-error-type #?(:clj Throwable :cljs js/Error))
 
@@ -18,32 +19,19 @@
 (def error? (fnl instance? generic-error-type))
 #?(:clj (defalias throwable? error?))
 
-;; ===== Error information extraction ===== ;;
+;; ===== Error type: built-in exception info ===== ;;
 
-(defn ?message [x]
-  (when (error? x) #?(:clj (.getLocalizedMessage ^Throwable x) :cljs (.-message x))))
+(def ex-info-type #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo))
 
-(def ?ex-data ex-data)
+(def ex-info? (fnl instance? ex-info-type))
 
-#?(:clj
-(defn >root-cause [x]
-  (core/assert (error? x))
-  (if-let [cause0 (.getCause ^Throwable x)]
-    (loop [cause cause0]
-      (if-let [cause' (.getCause cause)]
-        (recur cause')
-        cause))
-    x)))
+(defn >ex-info
+  ([data]     (ex-info "Exception" data))
+  ([msg data] (ex-info msg         data)))
 
-#?(:clj
-(defn >via [x]
-  (core/assert (error? x))
-  (loop [via [] ^Throwable t x]
-    (if t
-        (recur (conj via t) (.getCause t))
-        (when-not (empty? via) via)))))
+(def ex-info! (rcomp >ex-info (fn1 throw)))
 
-;; ===== Error `defrecord`/map ===== ;;
+;; ===== Error type: `defrecord`/map ===== ;;
 
 #?(#_:clj #_(defrecord Error [ident message data trace cause]) ; defined in Java as `quantum.core.error.Error`
      :cljs  (defrecord Error [ident message data trace cause]))
@@ -56,6 +44,8 @@
 (defmacro- err-constructor [& args]
   `(~(case-env :clj  'quantum.core.error.Error.
                :cljs 'quantum.untyped.core.error.Error.) ~@args)))
+
+(declare ?ex-data)
 
 (defn >err
   "Transforms `x` into an `Error`: a record with at least the keys #{:ident :message :data :trace :cause}.
@@ -105,6 +95,51 @@
 
 (def err! (rcomp >err (fn1 throw)))
 
+;; ===== Error information extraction ===== ;;
+
+(defn ?message [x]
+  (when (error? x) #?(:clj (.getLocalizedMessage ^Throwable x) :cljs (.-message x))))
+
+(def ?ex-data ex-data)
+
+#?(:clj
+(defn >root-cause [x]
+  (core/assert (error? x))
+  (if-let [cause0 (.getCause ^Throwable x)]
+    (loop [cause cause0]
+      (if-let [cause' (.getCause cause)]
+        (recur cause')
+        cause))
+    x)))
+
+#?(:clj
+(defn >via [x]
+  (core/assert (error? x))
+  (loop [via [] ^Throwable t x]
+    (if t
+        (recur (conj via t) (.getCause t))
+        (when-not (empty? via) via)))))
+
+;; ===== Error manipulation ===== ;;
+
+#?(:clj
+(defmacro catch-all
+  "Cross-platform try/catch/finally for catching all exceptions.
+
+   Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
+  {:from 'taoensso.truss.impl/catching
+   :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
+  ([try-expr                     ] `(catch-all ~try-expr _# nil))
+  ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
+  ([try-expr error-sym catch-expr]
+   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr)))
+  ([try-expr error-sym catch-expr finally-expr]
+   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
+
+#?(:clj
+(defmacro ignore [& body]
+  `(try ~@body (catch ~(env>generic-error &env) _# nil))))
+
 ;; ===== Specific error types ===== ;;
 
 (defn todo
@@ -114,3 +149,7 @@
 
 (defn not-supported  [name- x] (>err (str "`" name- "` not supported on") {:x (type x)}))
 (defn not-supported! [name- x] (throw (not-supported name- x)))
+
+;; ===== Improved error handling ===== ;;
+
+#?(:clj (defaliases try try+ throw+))

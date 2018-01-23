@@ -25,6 +25,8 @@
 
 (do
 
+(defn expr>code [x] (cond-> x (fn? x) >symbol))
+
 (definterface IExpr)
 
 (defprotocol PExpr
@@ -65,7 +67,7 @@
   fipp.ednize/IEdn
     (-edn [this]
       (if pr/*print-as-code?*
-          (list* `casef (pr/expr->code f) (map pr/>group cases))
+          (list* `casef (expr>code f) (map pr/>group cases))
           (list* `casef f cases))))
 
 (defn casef [f & cases]
@@ -91,8 +93,8 @@
     (-edn [this]
       (if pr/*print-as-code?*
           (list* `condpf->
-            (pr/expr->code pred)
-            (pr/expr->code f)
+            (expr>code pred)
+            (expr>code f)
             (map pr/>group clauses))
           (list* `condpf-> pred f clauses))))
 

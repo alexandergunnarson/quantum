@@ -657,8 +657,8 @@
 ;   (->> args
 ;        (interpose #(async/sleep millis))
 ;        (map+ fold+)
-;        fold+
-;        pr/suppress))
+;        fold+))
+;
 ; (defn+ do-every ^:suspendable [millis n func]
 ;   (dotimes [_ n] (func) (async/sleep millis)))
 

@@ -6,9 +6,6 @@
   (:require
     [clojure.core                  :as core]
     [clojure.string                :as str]
-    [slingshot.slingshot           :as try]
-    [quantum.core.core
-      :refer [kw-map]]
     [quantum.core.data.map         :as map]
     [quantum.core.fn
       :refer [fnl fn1 rcomp fn']]
@@ -16,45 +13,42 @@
       :refer [case-env case-env*]]
     [quantum.untyped.core.vars
       :refer [defalias defaliases]]
-    [quantum.untyped.core.error    :as u])
-#?(:cljs
-  (:require-macros
-    [quantum.core.error            :as self])))
+    [quantum.untyped.core.error    :as u]))
 
 (def ^{:todo {0 "Finish up `conditions` fork" 1 "look at cljs.stacktrace / clojure.stacktrace"}}
   annotations)
 
 ;; =================================================================
 
-;; ===== Generic error types ===== ;;
+;; ===== Error type: generic ===== ;;
 
 (defaliases u generic-error-type env>generic-error error? #?(:clj throwable?))
 
-;; ----- EXCEPTION-INFO ----- ;;
+;; ===== Error type: built-in exception info ===== ;;
 
-(def ex-info-type #?(:clj clojure.lang.ExceptionInfo :cljs cljs.core/ExceptionInfo))
-(def ex-info? (fnl instance? ex-info-type))
+(defaliases u ex-info-type ex-info? >ex-info ex-info!)
 
-(defn ->ex-info
-  ([data]     (ex-info "Exception" data))
-  ([msg data] (ex-info msg         data)))
+;; ===== Error type: `defrecord`/map ===== ;;
 
-;; TODO replace with `->err`
-(defn ->ex
-  "Creates an exception."
-  ([type]          (ex-info (name type) {:type type}))
-  ([msg objs]      (ex-info (str msg)   {:type msg  :msg msg :objs objs}))
-  ([type msg objs] (ex-info msg         {:type type :msg msg :objs objs})))
-
-(def ex! (rcomp ->ex (fn1 throw)))
+(defaliases u error-map-type error-map? >err err!)
 
 ;; ===== Error information extraction ===== ;;
 
 (defaliases u ?message ?ex-data #?@(:clj [>root-cause >via]))
 
-;; ===== Error `defrecord`/map ===== ;;
+;; ===== Error manipulation ===== ;;
 
-(defaliases u error-map-type error-map? >err err!)
+#?(:clj (defaliases u catch-all ignore))
+
+;; ===== Specific error types ===== ;;
+
+(defaliases u todo TODO not-supported not-supported!)
+
+;; ===== Improved error handling ===== ;;
+
+#?(:clj (defaliases u try+ throw+))
+
+;; ===== TODO Dubious usefulness ===== ;;
 
 #?(:clj
 (defmacro throw-unless
@@ -76,20 +70,6 @@
   [expr throw-content]
   `(let [expr# ~expr]
      (if-not expr# expr# (throw ~throw-content)))))
-
-#?(:clj
-(defmacro catch-all
-  "Cross-platform try/catch/finally for catching all exceptions.
-
-   Uses `js/Error` instead of `:default` as temporary workaround for http://goo.gl/UW7773."
-  {:from 'taoensso.truss.impl/catching
-   :see  ["http://dev.clojure.org/jira/browse/CLJ-1293"]}
-  ([try-expr                     ] `(catch-all ~try-expr _# nil))
-  ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
-  ([try-expr error-sym catch-expr]
-   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr)))
-  ([try-expr error-sym catch-expr finally-expr]
-   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
 
 #?(:clj
 (defmacro with-catch
@@ -128,29 +108,6 @@
          exp)))))
 
 #?(:clj
-(defmacro suppress
-  "Suppresses any errors thrown in the body.
-  (suppress (error \"Error\")) => <Exception>
-  (suppress (error \"Error\") :error) => :error
-  (suppress (error \"Error\")
-            (fn [e]
-              (.getMessage e))) => \"Error\""
-  ([body]
-    (let [c (case-env :clj 'Throwable :cljs :default)]
-     `(try ~body (catch ~c ~'t ~'t))))
-  ([body catch-val]
-    (let [c (case-env :clj 'Throwable :cljs :default)]
-     `(try ~body (catch ~c ~'t
-                   (let [catch-val# ~catch-val]
-                     (cond (fn? catch-val#)
-                           (catch-val# ~'t)
-                           :else catch-val#))))))))
-
-#?(:clj
-(defmacro ignore [& body]
-  `(try ~@body (catch ~(env>generic-error &env) _# nil))))
-
-#?(:clj
 (defmacro assertf-> [f arg throw-obj]
   `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
        ~arg)))
@@ -160,9 +117,9 @@
   `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
        ~arg)))
 
-#?(:clj (defalias try+   try/try+  ))
-#?(:clj (defalias throw+ try/throw+))
-
-;; ===== Specific error types ===== ;;
-
-(defaliases u todo TODO not-supported not-supported!)
+;; TODO replace with `>err`
+(defn ->ex
+  "Creates an exception."
+  ([type]          (ex-info (name type) {:type type}))
+  ([msg objs]      (ex-info (str msg)   {:type msg  :msg msg :objs objs}))
+  ([type msg objs] (ex-info msg         {:type type :msg msg :objs objs})))

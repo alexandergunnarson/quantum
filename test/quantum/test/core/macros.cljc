@@ -1,9 +1,6 @@
 (ns quantum.test.core.macros
   (:require [quantum.core.macros :as ns]))
 
-(defn test:maptemplate
-  [template-fn coll])
-
 (defn test:let-alias* [bindings body])
 
 (defn test:let-alias
