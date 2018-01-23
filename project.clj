@@ -159,7 +159,8 @@
        [datascript                              "0.15.5"          ]
        [datascript-transit                      "0.2.0"
          :exclusions [com.cognitect/transit-cljs]                 ]
-       [posh                                    "0.5.6"           ]
+       [quantum/posh                            "0.5.7"]
+       [quantum/re-posh                         "0.1.6"]
        [quantum/datsync                         "0.0.1-4-11-2016"
          :exclusions [org.slf4j/slf4j-nop
                       org.clojure/core.match
@@ -415,7 +416,7 @@
            #_"-Ddatomic.ObjectCacheMax=8G"]
           :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
-                    [lein-cljsbuild                    "1.1.4" ]
+                    [lein-cljsbuild                    "1.1.7" ]
                     [lein-figwheel                     "0.5.14"
                       :exclusions [org.clojure/clojure
                                    org.clojure/clojurescript
@@ -448,19 +449,15 @@
                                            "deploy" "clojars"]
             "deploy-test-dev"        ["do" "clean,"
                                            "cljsbuild" "once" "dev"]
-            "cljs:autobuilder"       ["do" "clean,"
-                                           "with-profile" "+dev"
-                                           "figwheel" "dev"]
-            "cljs:debug:autobuilder" ["do" "clean,"
-                                           "cljsbuild" "auto" "no-reload"]
-            "test:clj"               ["with-profile" "+test"
-                                      "test"]
-            "test:cljs"              ["with-profile" "+test"
-                                      "doo" "phantom" "test" "once"]
-            "clj:autotester"         ["do" "clean,"
-                                           "test-refresh"]
+            "cljs|autobuilder"       ["with-profile" "+dev" "figwheel" "dev"]
+            "cljs|debug|autobuilder" ["cljsbuild" "auto" "no-reload"]
+            "test|clj"               ["with-profile" "+test"
+                                        "test"]
+            "test|cljs"              ["with-profile" "+test"
+                                        "doo" "phantom" "test" "once"]
+            "clj|autotester"         ["test-refresh"]
             "count-loc"              ["vanity"]
-            "clj:fast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
+            "clj|fast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
   :auto-clean  false
   :target-path "target"
   :clean-targets ^{:protect false} [:target-path
@@ -472,7 +469,7 @@
                                     [:cljsbuild :builds :dev       :compiler :output-to ]
                                     [:cljsbuild :builds :min       :compiler :output-dir]
                                     [:cljsbuild :builds :min       :compiler :output-to ]]
-  :source-paths ["src"]
+  :source-paths ["src" "src-untyped"]
   :test-paths   ["test"]
   :repl-options {:init (do (clojure.core/require
                              'quantum.core.print

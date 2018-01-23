@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.type
+(ns quantum.untyped.core.type
   "Essentially, set-theoretic definitions and operations on types."
   (:refer-clojure :exclude
     [< <= = >= > == compare
@@ -22,29 +22,29 @@
     [quantum.core.macros.deftype       :as dt]
     [quantum.core.print                :as pr]
     [quantum.core.type.core            :as tcore]
-    [quantum.core.untyped.analyze.expr :as xp
+    [quantum.untyped.core.analyze.expr :as xp
       :refer [>expr]]
-    [quantum.core.untyped.collections  :as ucoll
+    [quantum.untyped.core.collections  :as ucoll
       :refer [assoc-in dissoc-in]]
-    [quantum.core.untyped.collections.logic
+    [quantum.untyped.core.collections.logic
       :refer [seq-and]]
-    [quantum.core.untyped.compare      :as ucomp
+    [quantum.untyped.core.compare      :as ucomp
       :refer [== not==]]
-    [quantum.core.untyped.convert      :as uconv
+    [quantum.untyped.core.convert      :as uconv
       :refer [>symbol]]
-    [quantum.core.untyped.core         :as qcore]
-    [quantum.core.untyped.data.bits    :as ubit]
-    [quantum.core.untyped.numeric      :as unum]
-    [quantum.core.untyped.qualify      :as qual]
-    [quantum.core.untyped.reducers     :as r
+    [quantum.untyped.core.core         :as qcore]
+    [quantum.untyped.core.data.bits    :as ubit]
+    [quantum.untyped.core.numeric      :as unum]
+    [quantum.untyped.core.qualify      :as qual]
+    [quantum.untyped.core.reducers     :as r
       :refer [map+ filter+ remove+ distinct+ join]]
-    [quantum.core.untyped.refs
+    [quantum.untyped.core.refs
       :refer [?deref]]
-    [quantum.core.untyped.vars
+    [quantum.untyped.core.vars
       :refer [update-meta]]
     [quantum.core.vars                 :as var
       :refer [def-]])
-  #?(:clj (:import quantum.core.untyped.analyze.expr.Expression)))
+  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression)))
 
 #_(defmacro ->
   ("Anything that is coercible to x"

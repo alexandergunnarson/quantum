@@ -7,7 +7,7 @@
     [quantum.core.log             :as log]
     [quantum.core.logic           :as logic
       :refer [fn-and]]
-    [quantum.core.untyped.qualify :as qual]
+    [quantum.untyped.core.qualify :as qual]
     [quantum.core.vars            :as var]))
 
 ; ===== EXTERN =====

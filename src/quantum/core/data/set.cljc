@@ -14,7 +14,7 @@
     [quantum.core.error       :as err
       :refer [->ex TODO]]
     [quantum.core.fn          :as fn]
-    [quantum.core.untyped.data.set :as uset]
+    [quantum.untyped.core.data.set :as uset]
 #?@(:clj
    [[clojure.data.finger-tree :as ftree]
     [flatland.ordered.set     :as oset]

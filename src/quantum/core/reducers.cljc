@@ -46,7 +46,8 @@
     [quantum.core.reducers.reduce  :as red
       :refer [transformer]]
     [quantum.core.reducers.fold    :as fold]
-    [quantum.core.untyped.qualify  :as qual]
+    [quantum.untyped.core.qualify  :as qual]
+    [quantum.untyped.core.reducers :as ur]
     [quantum.core.vars             :as var
       :refer [defalias def-]])
 #?(:cljs
@@ -1276,29 +1277,4 @@
 
 ; TODO completing, transduce, eduction, sequence
 
-#?(:clj
-(defmacro defeager [sym plus-sym]
-  (let [lazy-sym            (when (resolve (symbol "clojure.core" (name sym)))
-                              (symbol (str "l" sym)))
-        quoted-sym          (symbol (str sym "'"))
-        parallel-sym        (symbol (str "p" sym))
-        parallel-quoted-sym (symbol (str "p" sym "'"))]
-    `(do ~(when lazy-sym
-           `(defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
-         (defalias ~(qual/unqualify plus-sym) ~plus-sym)
-         (defn ~sym
-           ~(str "Like `core/" sym "`, but eager. Reduces into vector.")
-           ([f#] (fn [coll#] (~sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) join)))
-         (defn ~quoted-sym
-           ~(str "Like `" sym "`, but reduces into the empty version of the collection which was passed to it.")
-           ([f#] (fn [coll#] (~quoted-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) join')))
-         (defn ~parallel-sym
-           ~(str "Like `core/" sym "`, but eager and parallelized. Folds into vector.")
-           ([f#] (fn [coll#] (~parallel-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) pjoin)))
-         (defn ~parallel-quoted-sym
-           ~(str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")
-           ([f#] (fn [coll#] (~parallel-quoted-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))
+(defalias defeager ur/defeager)

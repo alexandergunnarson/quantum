@@ -11,7 +11,7 @@
     [quantum.core.logic                      :as logic
       :refer [whenp]]
     [quantum.core.type.core                  :as tcore]
-    [quantum.core.untyped.collections        :as ucoll
+    [quantum.untyped.core.collections        :as ucoll
       :refer [contains? update-first]]))
 
 (defn with-protocol-arglist-type-hint

@@ -7,11 +7,11 @@
       :refer [fn-> fn1]]
     [quantum.core.test                 :as test
       :refer [deftest testing is is= throws]]
-    [quantum.core.untyped.analyze.ast  :as ast]
-    [quantum.core.untyped.analyze.expr :as xp
+    [quantum.untyped.core.analyze.ast  :as ast]
+    [quantum.untyped.core.analyze.expr :as xp
       :refer [>expr]]
-    [quantum.core.untyped.numeric      :as unum]
-    [quantum.core.untyped.type         :as t]))
+    [quantum.untyped.core.numeric      :as unum]
+    [quantum.untyped.core.type         :as t]))
 
 (is= -1 (t/compare (t/value 1) t/numerically-byte?))
 

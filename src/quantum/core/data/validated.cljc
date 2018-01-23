@@ -20,11 +20,11 @@
       :refer [identity*]]
     [quantum.core.spec      :as s
       :refer [validate]]
-    [quantum.core.untyped.collections :as ucoll
+    [quantum.untyped.core.collections :as ucoll
       :refer [contains?]]
-    [quantum.core.untyped.collections.tree :as utree
+    [quantum.untyped.core.collections.tree :as utree
       :refer [postwalk]]
-    [quantum.core.untyped.qualify :as qual])
+    [quantum.untyped.core.qualify :as qual])
 #?(:cljs
   (:require-macros
     [quantum.core.data.validated :as self

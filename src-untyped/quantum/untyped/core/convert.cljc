@@ -1,14 +1,15 @@
-(ns quantum.core.untyped.convert
-  (:require [clojure.string               :as str]
-            [quantum.core.error           :as err]
-            [quantum.core.fn              :as fn]
-            [quantum.core.untyped.core    :as qcore
-              :refer [namespace?]]
-            [quantum.core.untyped.qualify :as qual
-              :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
-            [quantum.core.vars            :as var
-              :refer [defalias]])
-  #?(:clj (:import quantum.core.untyped.qualify.DelimitedIdent)))
+(ns quantum.untyped.core.convert
+  (:require
+    [clojure.string               :as str]
+    [quantum.core.error           :as err]
+    [quantum.core.fn              :as fn]
+    [quantum.core.vars            :as var
+      :refer [defalias]]
+    [quantum.untyped.core.core    :as qcore
+      :refer [namespace?]]
+    [quantum.untyped.core.qualify :as qual
+      :refer [#?(:cljs DelimitedIdent) delim-ident? named?]])
+  #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
 
 (defn demunged->namespace [^String s] (subs s 0 (.lastIndexOf s "/")))
 (defn demunged->name      [^String s] (subs s (inc (.lastIndexOf s "/"))))

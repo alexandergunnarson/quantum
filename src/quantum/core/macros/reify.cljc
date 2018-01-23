@@ -12,7 +12,7 @@
       :refer [whenc fn-and]]
     [quantum.core.macros.transform     :as trans]
     [quantum.core.macros.type-hint     :as th]
-    [quantum.core.untyped.collections  :as ucoll
+    [quantum.untyped.core.collections  :as ucoll
       :refer [contains? update-first]]))
 
 (defn gen-reify-def

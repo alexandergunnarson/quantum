@@ -53,7 +53,7 @@
     [quantum.core.reducers                 :as red
       :refer [join]]
     [quantum.core.string                   :as str]
-    [quantum.core.untyped.collections.tree :as utree]
+    [quantum.untyped.core.collections.tree :as utree]
     [quantum.core.vars
       :refer [defalias]]))
 ;___________________________________________________________________________________________________________________________________

@@ -32,17 +32,17 @@
     [quantum.core.string.regex                  :as re]
     [quantum.core.type.defs                     :as tdef]
     [quantum.core.type.core                     :as tcore]
-    [quantum.core.untyped.collections           :as ucoll
+    [quantum.untyped.core.collections           :as ucoll
       :refer [contains? merge-call update-first update-val]]
-    [quantum.core.untyped.collections.tree      :as utree]
-    [quantum.core.untyped.convert               :as uconv
+    [quantum.untyped.core.collections.tree      :as utree]
+    [quantum.untyped.core.convert               :as uconv
       :refer [>name]]
-    [quantum.core.untyped.numeric.combinatorics :as combo]
-    [quantum.core.untyped.qualify               :as qual]
-    [quantum.core.untyped.reducers
+    [quantum.untyped.core.numeric.combinatorics :as combo]
+    [quantum.untyped.core.qualify               :as qual]
+    [quantum.untyped.core.reducers
       :refer [reducei]                          :as ured]
-    [quantum.core.untyped.string                :as ustr]
-    [quantum.core.untyped.type                  :as t]
+    [quantum.untyped.core.string                :as ustr]
+    [quantum.untyped.core.type                  :as t]
     [quantum.core.vars                          :as var
       :refer [defalias replace-meta-from]]
     [quantum.core.spec                          :as s

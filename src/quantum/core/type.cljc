@@ -24,7 +24,7 @@
     [quantum.core.macros          :as macros
       :refer [defnt #?(:clj defnt')]]
     [quantum.core.type.core       :as tcore  ]
-    [quantum.core.untyped.refs    :as uref]
+    [quantum.untyped.core.refs    :as uref]
     [quantum.core.vars            :as var
       :refer [defalias]])
 #?(:cljs
@@ -60,8 +60,6 @@
          (instance? c x)
          (catch js/TypeError _
            (try (satisfies? c x))))))
-
-(def types           tcore/types          )
 
 #?(:clj  (defalias static-cast       tcore/static-cast))
 #?(:clj  (defalias static-cast-depth ana/static-cast-depth))

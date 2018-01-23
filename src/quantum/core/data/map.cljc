@@ -12,7 +12,7 @@
     [flatland.ordered.map :as omap]
     [seqspert.hash-map            ]])
     [quantum.core.core    :as qcore]
-    [quantum.core.untyped.reducers
+    [quantum.untyped.core.reducers
       :refer [reduce-pair]]
     [quantum.core.vars    :as var
      :refer [defalias]])

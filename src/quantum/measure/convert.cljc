@@ -2,7 +2,7 @@
   (:require
     [quantum.core.error   :as err
       :refer [->ex throw-unless]]
-    [quantum.core.untyped.collections
+    [quantum.untyped.core.collections
       :refer [contains?]]
     [quantum.measure.reg  :as mreg]
     [quantum.measure.core :as meas]

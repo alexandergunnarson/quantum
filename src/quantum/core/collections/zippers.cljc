@@ -52,7 +52,7 @@
       :refer [defnt]]
     [quantum.core.reducers         :as red
       :refer [join]]
-    [quantum.core.untyped.reducers :as ured]
+    [quantum.untyped.core.reducers :as ured]
     [quantum.core.vars             :as var
       :refer [replace-meta-from defalias] ]))
 

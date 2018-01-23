@@ -1,10 +1,11 @@
-(ns quantum.core.untyped.data.set
+(ns quantum.untyped.core.data.set
   (:refer-clojure :exclude [not])
   (:require
+#?@(:clj
+   [[flatland.ordered.set     :as oset]
+    [seqspert.hash-set]])
     [clojure.core             :as core]
-    [clojure.set              :as set]
-    [flatland.ordered.set     :as oset]
-    #?@(:clj [[seqspert.hash-set]])))
+    [clojure.set              :as set]))
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 
@@ -29,4 +30,4 @@
               :else (set/union s0 s1)))
       ([s0 s1 & ss]
         (reduce union (union s0 s1) ss)))
-   :cljs (defalias union set/union))
+   :cljs (def union set/union))

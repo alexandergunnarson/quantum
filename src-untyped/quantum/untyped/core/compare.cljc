@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.compare
+(ns quantum.untyped.core.compare
   (:refer-clojure :exclude [==]))
 
 (def == identical?)

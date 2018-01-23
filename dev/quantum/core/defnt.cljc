@@ -6,10 +6,9 @@
      ==
      if-let when-let
      assoc-in
-     macroexpand
-     get map filter])
+     macroexpand])
   (:require
-    [clojure.core                      :as c]
+    [clojure.core                      :as core]
     [clojure.string                    :as str]
     [quantum.core.error                :as err
       :refer [TODO err!]]
@@ -30,39 +29,40 @@
     [quantum.core.specs                :as ss]
     [quantum.core.type.core            :as tcore]
     [quantum.core.type.defs            :as tdef]
-    [quantum.core.untyped.analyze.ast  :as ast]
-    [quantum.core.untyped.analyze.expr :as xp]
-    [quantum.core.untyped.analyze.rewrite :as ana-rw]
-    [quantum.core.untyped.collections  :as ucoll
-      :refer [assoc-in dissoc-if dissoc* get lmap lfilter lindexed lflatten-1]]
-    [quantum.core.untyped.collections.logic :as ucoll&
+    [quantum.untyped.core.analyze.ast  :as ast]
+    [quantum.untyped.core.analyze.expr :as xp]
+    [quantum.untyped.core.analyze.rewrite :as ana-rw]
+    [quantum.untyped.core.collections  :as c
+      :refer [assoc-in dissoc-if dissoc* lflatten-1 subview]]
+    [quantum.untyped.core.collections.logic :as ucoll&
       :refer [every? seq-or]]
-    [quantum.core.untyped.collections.tree :as tree
+    [quantum.untyped.core.collections.tree :as tree
       :refer [prewalk postwalk walk]]
-    [quantum.core.untyped.compare  :as comp
+    [quantum.untyped.core.compare  :as comp
       :refer [==]]
-    [quantum.core.untyped.convert  :as conv
+    [quantum.untyped.core.convert  :as conv
       :refer [>symbol >name]]
-    [quantum.core.untyped.core
+    [quantum.untyped.core.core
       :refer [->sentinel kw-map istr]]
-    [quantum.core.untyped.data.set :as set]
-    [quantum.core.untyped.loops    :as loops]
-    [quantum.core.untyped.numeric.combinatorics :as combo]
-    [quantum.core.untyped.qualify  :as qual :refer [qualify]]
-    [quantum.core.untyped.reducers :as r
+    [quantum.untyped.core.data.set :as set]
+    [quantum.untyped.core.loops    :as loops
+      :refer [reduce-2]]
+    [quantum.untyped.core.numeric.combinatorics :as combo]
+    [quantum.untyped.core.qualify  :as qual :refer [qualify]]
+    [quantum.untyped.core.reducers :as r
       :refer [vec map+ map-vals+ mapcat+ filter+ remove+ partition-all+
               join reducei educe]]
-    [quantum.core.untyped.refs     :as ref
+    [quantum.untyped.core.refs     :as ref
       :refer [?deref]]
-    [quantum.core.untyped.type     :as t
+    [quantum.untyped.core.type     :as t
       :refer [?]]
-    [quantum.core.untyped.vars     :as var
+    [quantum.untyped.core.vars     :as var
       :refer [update-meta]]
     [quantum.format.clojure.core ; TODO temporary
       :refer [reformat-string]])
   (:import
     [quantum.core Numeric]
-    [quantum.core.untyped.type ClassSpec]))
+    [quantum.untyped.core.type ClassSpec]))
 
 ;; TODO move
 (defn ppr-code [code]
@@ -130,7 +130,7 @@
            ;; so `env` in `fnt` can work properly in the analysis
            ;; TODO need to adjust for destructuring
            (ucoll/distinct?
-             (concat (lmap :arg-binding args)
+             (concat (c/lmap :arg-binding args)
                      [(:arg-binding varargs)])))))
 
 (s/def ::fnt|body (s/alt :body (s/* s/any?)))
@@ -179,72 +179,63 @@
 
 (s/def ::defns|code ::defnt)
 
-(defonce *pred->class (atom {}))
-
-#?(:clj
-(defn pred->class [lang pred]
-  (assert (symbol? pred))
-  (get-in @*pred->class [(cmacros/syntax-quoted|sym pred) lang])))
-
-#?(:clj
-(defn def-pred->class [pred|sym c-clj c-cljs]
-  (assert (symbol? pred|sym))
-  (assert (or c-clj c-cljs))
-  (assert (or (symbol? c-clj)  (nil? c-clj)))
-  (assert (or (symbol? c-cljs) (nil? c-cljs)))
-  (swap! *pred->class assoc
-    (cmacros/syntax-quoted|sym pred|sym)
-    {:clj  (cmacros/syntax-quoted|sym c-clj)
-     :cljs c-cljs})))
-
-#?(:clj (def-pred->class 'class?  'Class                       nil))
-#?(:clj (def-pred->class 'string? 'String                      'js/String))
-#?(:clj (def-pred->class 'map?    'clojure.lang.IPersistentMap nil))
-#?(:clj (def-pred->class 'set?    'clojure.lang.IPersistentSet nil))
+(defn spec>most-primitive-class [spec & [throw?]]
+  (let [{:as class-data c :class} (t/spec>class spec)]
+    (cond (-> c class? not)
+            (when throw?
+              (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
+                    {:spec spec :class-data class-data}))
+          (-> class-data :nilable? not)
+            (or (tcore/boxed->unboxed c) c)
+          :else c)))
 
 (defn fns|code [kind lang args]
+  (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
   (let [{:keys [::ss/fn|name overloads ::ss/meta] :as args'}
           (s/validate args (case kind :defn ::defns|code :fn ::fns|code))
         overload-data>overload
           (fn [{{:keys [args varargs pre post]} ::fnt|arglist
                 body :body}]
-            (let [arg-spec->validation
+            (let [spec-code>?class
+                    (fn [spec] (some-> spec eval t/>spec spec>most-primitive-class))
+                  arg-spec>validation
                     (fn [{[k spec] ::fnt|arg-spec :keys [arg-binding]}]
                       ;; TODO this validation is purely temporary until destructuring is supported
                       (s/validate arg-binding simple-symbol?)
                       (case k
                         :any   nil
-                        :infer (do (log/pr :warn "Spec inference not yet supported in `defns`. Ignoring request to infer" arg-binding)
+                        :infer (do (log/pr :warn "Spec inference not yet supported in `defns`. Ignoring request to infer" (str "`" arg-binding "`"))
                                    nil)
-                        :spec  (if-let [c|sym (or (some-> spec th/?tag->class th/class->instance?-safe-tag|sym)
-                                                  (and (symbol? spec) (pred->class lang spec)))]
+                        :spec  (if-let [c|sym (do #?(:clj  (some-> spec spec-code>?class th/class->instance?-safe-tag|sym)
+                                                     ;; TODO for now CLJS only does `validate` which is more expensive
+                                                     :cljs spec))]
                                  (list `instance? c|sym arg-binding)
                                  (list `s/validate arg-binding spec))))
                   spec-validations
-                    (concat (lmap arg-spec->validation args)
-                            (some-> varargs arg-spec->validation))
+                    (concat (c/lmap arg-spec>validation args)
+                            (some-> varargs arg-spec>validation))
                   ;; TODO if an arg has been primitive-type-hinted in the `fn` arglist, then no need to do an `instance?` check
                   ?hint-arg
                     (fn [{[k spec] ::fnt|arg-spec :keys [arg-binding]}]
-                      (if (not= k :spec)
-                          arg-binding
-                          #_th/->fn-arglist-tag
-                          arg-binding ; TODO remove reflection by re-enabling the following:
-                          #_(th/with-type-hint arg-binding
-                            (if-let [c (th/?tag->class spec)]
-                              ( c lang (count args) varargs)
-                              (and (symbol? spec) (pred->class lang spec))))))
+                      #?(:clj
+                          (if (not= k :spec)
+                              arg-binding
+                              (-> arg-binding
+                                  (th/with-type-hint (some-> spec spec-code>?class))
+                                  (th/with-fn-arglist-type-hint lang (count args) varargs)))
+                        :cljs arg-binding))
                   arglist'
                     (->> args
-                         (map+ ?hint-arg)
-                         join
+                         (c/map ?hint-arg)
                          (<- cond-> varargs (conj '& (?hint-arg varargs))))
+                  pre-validations
+                    (vec (concat (some->> spec-validations (c/lfilter some?))
+                                 (when pre (list 'assert pre))))
                   validations
-                    (->> [(when post {:post [(list post (symbol "%"))]})
-                          (some->> spec-validations (lfilter some?) seq (list* 'do))
-                          (when pre (list 'assert pre))]
-                         (lfilter some?))]
-              (list* arglist' (concat validations body))))
+                    (->> {:post (when post [(list post (symbol "%"))])
+                          :pre  (when (seq pre-validations) pre-validations)}
+                         (c/remove-vals' empty?))]
+              (list* arglist' (concat (when (seq validations) [validations]) body))))
         overloads (mapv overload-data>overload overloads)
         code (case kind
                :fn   (list* 'fn (concat
@@ -272,12 +263,13 @@
   (fns|code :defn (cmacros/env-lang) args))
 
 (defns abcde ""
-  ([a ? b _ > integer?] {:pre 1} 1 2)
-  ([c string?, d StringBuilder & e _ > number?]
+  ([a ? b _ > t/integer?] {:pre 1} 1 2)
+  ([c t/string?, d StringBuilder & e _ > t/number?]
     (.substring c 0 1)
+    (.append d 1)
     3 4)
-  ([f long]
-    (c/+ f 1)))
+  ([f t/long?]
+    (core/+ f 1)))
 
 ; ----- TYPED PART ----- ;
 
@@ -291,11 +283,13 @@
 
 ; ----- REFLECTION ----- ;
 
+#?(:clj
 (defrecord Method [^String name ^Class rtype ^"[Ljava.lang.Class;" argtypes ^clojure.lang.Keyword kind]
   fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "M") (into (array-map) this))))
+  fipp.ednize/IEdn (-edn [this] (tagged-literal (symbol "M") (into (array-map) this)))))
 
-(defns class->methods [c class?]
+#?(:clj
+(defns class->methods [c t/class?]
   (->> (.getMethods c)
        (remove+   (fn [^java.lang.reflect.Method x] (java.lang.reflect.Modifier/isPrivate (.getModifiers x))))
        (map+      (fn [^java.lang.reflect.Method x] (Method. (.getName x) (.getReturnType x) (.getParameterTypes x)
@@ -306,7 +300,7 @@
        (map-vals+ (fn->> (group-by (fn [^Method x] (count (.-argtypes x))))
                          (map-vals+ (fn->> (group-by (fn [^Method x] (.-kind x)))))
                          (join {})))
-       (join {})))
+       (join {}))))
 
 (defonce class->methods|with-cache
   (memoize (fn [c] (class->methods c))))
@@ -455,8 +449,8 @@
                   :type-info type-info'})))
 
 (defns ?resolve-with-env
-  [sym symbol?, env _]
-  (let [local (get env sym)]
+  [sym t/symbol?, env _]
+  (let [local (c/get env sym)]
     (if (some? local)
         (if (ast/unbound? local)
             local
@@ -485,7 +479,7 @@
                   methods'|by-class
                     (->> methods'
                          ;; TODO optimize further via `group-by-into`
-                         (group-by (fn-> :argtypes (get i|arg)))
+                         (group-by (fn-> :argtypes (c/get i|arg)))
                          ;; classes will be sorted from most to least specific
                          (sort-by (fn-> first t/>spec) t/<))]
               (r/for [[c methods''] methods'|by-class
@@ -543,18 +537,18 @@
                           `method-form`, in the given `target`'s class."}}
   [env form target target-class static? #_t/boolean? method-form #_t/unqualified-symbol? args-forms]
   ;; TODO cache spec by method
-  (if-not-let [methods-for-name (-> target-class class->methods|with-cache (get (name method-form)))]
+  (if-not-let [methods-for-name (-> target-class class->methods|with-cache (c/get (name method-form)))]
     (if (empty? args-forms)
         (err! "No such method or field in class" {:class target-class :method-or-field method-form})
         (err! "No such method in class"          {:class target-class :methods         method-form}))
-    (if-not-let [methods-for-count (get methods-for-name (count args-forms))]
+    (if-not-let [methods-for-count (c/get methods-for-name (c/count args-forms))]
       (err! "Incorrect number of arguments for method"
             {:class target-class :method method-form :possible-counts (set (keys methods-for-name))})
       (let [static?>kind (fn [static?] (if static? :static :instance))]
-        (if-not-let [methods (get methods-for-count (static?>kind static?))]
+        (if-not-let [methods (c/get methods-for-count (static?>kind static?))]
           (err! (istr "Method found for arg-count, but was ~(static?>kind (not static?)), not ~(static?>kind static?)")
                 {:class target-class :method method-form :args args-forms})
-          (let [args-ct (count args-forms)
+          (let [args-ct (c/count args-forms)
                 call (ast/method-call
                        {:env    env
                         :form   form
@@ -614,7 +608,7 @@
           ;; to `NullPointerException` at runtime rather than create a potentially more helpful custom
           ;; exception
           (if-let [field (and (empty? args-forms)
-                              (-> target-class class->fields|with-cache (get (name method-or-field))))]
+                              (-> target-class class->fields|with-cache (c/get (name method-or-field))))]
             (analyze-seq|dot|field-access env form target method-or-field field)
             (analyze-seq|dot|method-call env form target target-class (boolean ?target-static-class-map)
               method-or-field args-forms))))))
@@ -758,15 +752,6 @@
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
 
-(defn spec>most-primitive-class [spec]
-  (let [{:as class-data c :class} (t/spec>class spec)]
-    (cond (-> c class? not)
-            (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
-                  {:spec spec :class-data class-data})
-          (-> class-data :nilable? not)
-            (or (tcore/boxed->unboxed c) c)
-          :else c)))
-
 (defn >with-post-spec
   [body post-spec]
   `(let [~'out ~body]
@@ -808,16 +793,16 @@
             body-form|wrapped-do (list* 'do body-form)
             body (analyze env body-form|wrapped-do)
             env' (:env body)
-            arg-specs (->> arg-bindings (mapv #(:spec (get env' %))))
+            arg-specs (->> arg-bindings (mapv #(:spec (c/get env' %))))
             _ (prl! body)
-            arg-classes (->> arg-specs (mapv spec>most-primitive-class))
+            arg-classes (->> arg-specs (mapv #(spec>most-primitive-class % true)))
             hint-arg|fn
               (fn [i arg-binding]
                 (th/with-type-hint arg-binding
                   (th/->fn-arglist-tag
-                    (get arg-classes i)
+                    (c/get arg-classes i)
                     lang
-                    (count args)
+                    (c/count args)
                     varargs)))
             _ (when pre-form (TODO "Need to handle pre"))
             post-spec (when post-form (-> post-form eval t/>spec))
@@ -875,12 +860,12 @@
         interface
           (-> *interfaces
               (swap! update interface-k #(or % (fnt-overload>interface primitivized-arg-classes out-class)))
-              (get interface-k))
+              (c/get interface-k))
         arglist-code
           (vec (concat ['_]
                  (doto (->> arglist-code|reify|unhinted
                       (map-indexed
-                        (fn [i arg] (th/with-type-hint arg (-> primitivized-arg-classes (doto pr/ppr-meta) (get i) (doto pr/ppr-meta) th/>arglist-embeddable-tag)))))
+                        (fn [i arg] (th/with-type-hint arg (-> primitivized-arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) th/>arglist-embeddable-tag)))))
                  pr/ppr-meta)))]
     {:arglist-code  arglist-code
      :body-codelist body-codelist
@@ -911,22 +896,22 @@
                       ;; we don't need to vary the output class if there are multiple output possibilities
                       java.lang.Object)]
     (->> arg-classes
-         (lmap (fn [arg-class] (->> arg-class tcore/class>prim-subclasses
-                                    (set/union #{arg-class})
-                                    (sort-by sort-guide))))
+         (c/lmap (fn [arg-class] (->> arg-class tcore/class>prim-subclasses
+                                     (set/union #{arg-class})
+                                     (sort-by sort-guide))))
          (apply combo/cartesian-product)
-         (lmap (fn [primitivized-arg-classes]
-                 (>reify-overload out-class (vec primitivized-arg-classes) overload)))))))
+         (c/lmap (fn [primitivized-arg-classes]
+                   (>reify-overload out-class (vec primitivized-arg-classes) overload)))))))
 
 #?(:clj
 (defn fnt|overload>reify [{:keys [overload #_:fnt/overload, i #_integer?, fn|name #_::ss/fn|name]}]
   (let [reify-overloads (fnt-overload>reify-overloads overload)]
     `(~'def ~(>symbol (str fn|name "|__" i))
        (reify ~@(->> reify-overloads
-                     (lmap (fn [{:keys [interface out-class method-sym arglist-code body-codelist]} #_::reify|overload]
-                             [(-> interface >name >symbol)
-                              `(~(th/with-type-hint method-sym (th/>arglist-embeddable-tag out-class))
-                                ~arglist-code ~@body-codelist)]))
+                     (c/lmap (fn [{:keys [interface out-class method-sym arglist-code body-codelist]} #_::reify|overload]
+                               [(-> interface >name >symbol)
+                                `(~(th/with-type-hint method-sym (th/>arglist-embeddable-tag out-class))
+                                  ~arglist-code ~@body-codelist)]))
                      lflatten-1))))))
 
 (defn >extend-protocol|code [{:keys [protocol|name]}]
@@ -939,11 +924,10 @@
      ~@(->> overloads
             (sort-by (fn-> :arglist count))
             (sort-by :name)
-            (lmap (fn [{:keys [name arglist]}]
-                    `(~name ~arglist))))))
+            (c/lmap (fn [{:keys [name arglist]}]
+                      `(~name ~arglist))))))
 
 (defn fnt|overloads>protocol [])
-
 
 (is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
         [{:defprotocol
@@ -980,6 +964,73 @@
                       [~(tag "long"                       'x0) ~'x1]
                         (~'abc|__protofn__long ~'x1 ~'x0))))]
           :defn nil}]))
+
+
+
+(defonce *class>shorthand-tag|cache (atom {:latest "a"}))
+
+;; dynamic for testing purposes
+(def ^:dynamic **class>shorthand-tag|cache* *class>shorthand-tag|cache)
+
+(def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+(combo/cartesian-product allowed-shorthand-tag-chars
+                         allowed-shorthand-tag-chars)
+
+(def all-shorthand-tags
+  (->> (apply concat
+           (for [n (c/unchunk (range 64))] ; for now
+             (do (println "n" n)
+             (apply combo/cartesian-product (repeat n allowed-shorthand-tag-chars)))))
+       (c/lmap #(apply str %))
+       c/unchunk
+       first
+       type
+       println)
+  1)
+
+(defns next-shorthand-tag [tag (t/and t/string? #_#"a-zA-Z")]
+  (let [c (c/last tag)]
+    (if (= c \Z)
+        (str tag \a)
+        (let [c' (if (= c \z)
+                     \A
+                     (-> c int inc char))]
+          (if (-> tag count (= 1))
+              (str c')
+              (str (c/subview-or-slice tag 0 (-> tag count dec)) c'))))))
+
+(defns class>shorthand-tag [c t/class?]
+  (or (c/get @**class>shorthand-tag|cache* c)
+      (do (swap! **class>shorthand-tag|cache*
+             (fn [{:as m :keys [latest]}]
+               (let [tag (next-shorthand-tag latest)]
+                 (assoc m :latest tag c tag))))
+          (recur c))))
+
+(defn assert-monotonically-increasing-specs!
+  "Asserts that each spec in an overload of the same arity and arg-position
+   are in monotonically increasing order in terms of `t/compare`."
+  [overloads|grouped-by-arity]
+  (doseq [[arity-ct overloads] overloads|grouped-by-arity]
+    (reduce
+      (fn [prev-overload [i|overload overload]]
+        (when prev-overload
+          (reduce-2
+            (fn [_ arg|spec|prev [i|arg arg|spec]]
+              (when (= (t/compare arg|spec arg|spec|prev) -1)
+                ;; TODO provide code context, line number, etc.
+                (err! (istr "At overload ~{i|overload}, arg ~{i|arg}: spec is not in monotonically increasing order in terms of `t/compare`")
+                      {:overload      overload
+                       :prev-overload prev-overload
+                       :prev-spec     arg|spec|prev
+                       :spec          arg|spec})))
+            (:arg-specs prev-overload)
+            (c/lindexed (:arg-specs overload))))
+        overload)
+      nil
+      overloads)))
+
 (defn fnt|overloads>protocols
   [{:keys [overloads #_(t/and t/indexed? (t/seq-of :fnt/overload))
            fn|name   #_::ss/fn|name]}]
@@ -987,12 +1038,8 @@
     (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
   (when (->> overloads (seq-or :variadic?))
     (TODO "Doesn't yet handle protocol creation for variadic overloads"))
-  (let [grouped (->> overloads lindexed (group-by (fn-> second :positional-args-ct)))]
-    (doseq [[ct [i overload]] grouped]
-      ;; TODO make sure that specs in the same arity and position are ordered in
-      ;; monotonically increasing order in terms of `t/compare`
-
-      ))
+  (let [overloads|grouped-by-arity (->> overloads c/indexed+ (group-by (fn-> second :positional-args-ct)))]
+    (assert-monotonically-increasing-specs! overloads|grouped-by-arity))
   (let [all-arg-classes  (->> overloads (mapv :arg-classes))
         protocol|name    (str fn|name "__Protocol__" )
         extend-protocols (for []
@@ -1034,7 +1081,7 @@
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
         _ (prl! args')
         inline?
-          (s/validate (-> fn|name c/meta :inline) (t/? t/boolean?))
+          (s/validate (-> fn|name core/meta :inline) (t/? t/boolean?))
         _ (prl! inline?)
         fn|name (if inline?
                     (do (log/pr :warn "requested `:inline`; ignoring until feature is implemented")
@@ -1042,17 +1089,17 @@
                     fn|name)
         overloads (->> overloads (mapv #(fnt|overload-data>overload % {:lang lang})))
         ;; only one variadic arg allowed
-        _ (s/validate overloads (fn->> (lfilter :variadic?) count (<- <= 1)))
+        _ (s/validate overloads (fn->> (c/lfilter :variadic?) count (<- <= 1)))
         arg-ct->spec (->> overloads
                           (remove+   :variadic?)
                           (group-by  :positional-args-ct)
                           (map-vals+ :spec)
                           join (apply concat))
-        variadic-overload (->> overloads (lfilter :variadic?) first)
+        variadic-overload (->> overloads (c/lfilter :variadic?) first)
         register-spec (gen-register-spec (kw-map fn|name arg-ct->spec variadic-overload))
         direct-dispatch-codelist
           (case lang
-            :clj  (for [[i overload] (lindexed overloads)]
+            :clj  (for [[i overload] (c/lindexed overloads)]
                     (fnt|overload>reify (kw-map overload i fn|name)))
             :cljs (TODO))
         dynamic-dispatch-codelist

@@ -8,10 +8,10 @@
      ns-interns ns-publics refer ns-refers refer-clojure ns-unalias ns-unmap loaded-libs
      remove-ns])
   (:require
-    [clojure.core             :as core]
-    [clojure.set              :as set]
-    [clojure.string           :as str]
-    [quantum.core.macros.core :as cmacros
+    [clojure.core              :as core]
+    [clojure.set               :as set]
+    [clojure.string            :as str]
+    [quantum.untyped.core.vars :as uvar
       :refer [defalias]]))
 
 #?(:clj (defalias ns             core/ns           ))

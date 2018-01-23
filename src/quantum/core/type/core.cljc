@@ -15,7 +15,7 @@
             :refer [<- fn->>]]
           [quantum.core.error               :as err
             :refer [->ex]]
-          [quantum.core.untyped.convert     :as uconv
+          [quantum.untyped.core.convert     :as uconv
             :refer [>name]]
           [quantum.core.vars                :as var
             :refer [defalias]]))

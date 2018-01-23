@@ -1,27 +1,16 @@
-(ns quantum.core.untyped.collections.tree
+(ns quantum.untyped.core.collections.tree
   (:require
-    [quantum.core.untyped.reducers
-      :refer [map+ into!]]
-    [quantum.core.untyped.vars :as var]))
+    [quantum.untyped.core.collections :as ucoll]
+    [quantum.untyped.core.core        :as ucore]
+    [quantum.untyped.core.reducers    :as ur]))
 
 ; ----- WALK ----- ;
 
-(defn walk
-  "Like `clojure.walk`, but ensures preservation of metadata."
-  [inner outer form]
-  (cond
-              (list?      form) (outer (var/replace-meta-from (apply list (map inner form))                    form))
-    #?@(:clj [(map-entry? form) (outer (var/replace-meta-from (vec        (map inner form))                    form))])
-              (seq?       form) (outer (var/replace-meta-from (doall      (map inner form))                    form))
-              (record?    form) (outer (var/replace-meta-from (reduce (fn [r x] (conj r (inner x))) form form) form))
-              (coll?      form) (outer (var/replace-meta-from (into (empty form) (map inner form))             form))
-              :else (outer form)))
+(def walk     ucore/walk)
+(def postwalk ucore/postwalk)
+(def prewalk  ucore/prewalk)
 
-(defn postwalk [f form] (walk (partial postwalk f) f form))
-(defn prewalk  [f form] (walk (partial prewalk  f) identity (f form)))
-
-; TODO move
-; TODO `prewalk-fold`
+;; TODO `prewalk-fold`
 (defn postwalk-fold
   "Performs a fold-like operation on a tree.
    May or may not be for side effects.
@@ -31,21 +20,20 @@
   [rf cf branch?f childrenf root]
   (let [walk (fn walk [node nodes]
                (if (branch?f node)
-                   (rf (->> node childrenf (map+ #(rf (walk % (rf)))) (reduce cf nodes))
+                   (rf (->> node childrenf (ucoll/map+ #(rf (walk % (rf)))) (reduce cf nodes))
                        node)
                    nodes))]
     (cf (walk root (cf)))))
 
-; TODO move
-; TODO `tree-sequence-prewalk`
+;; TODO `tree-sequence-prewalk`
 (defn tree-sequence-postwalk
   "Walks the tree and outputs an eager sequence containing its nodes ordered from leaf to
    branch (i.e. postorder).
    `childrenf` must return a reducible."
   {:attribution 'alexandergunnarson}
   [branch?f childrenf root]
-  (postwalk-fold (fn ([] (transient [])) ([x] (persistent! x)) ([xs x] (conj! xs x)))
-                 (fn ([] (transient [])) ([x] (persistent! x)) ([a  b] (into! a  b)))
+  (postwalk-fold (fn ([] (transient [])) ([x] (persistent! x)) ([xs x] (conj!    xs x)))
+                 (fn ([] (transient [])) ([x] (persistent! x)) ([a  b] (ur/into! a  b)))
                  branch?f childrenf root))
 
 (defn prewalk-find

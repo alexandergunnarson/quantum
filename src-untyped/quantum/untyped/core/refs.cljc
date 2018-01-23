@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.refs
+(ns quantum.untyped.core.refs
   #?(:clj (:import [clojure.lang IDeref IAtom])))
 
 (defn atom?      [x] (#?(:clj instance? :cljs satisfies?) IAtom x))

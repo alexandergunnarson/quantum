@@ -12,10 +12,11 @@
     [quantum.core.data.map         :as map]
     [quantum.core.fn
       :refer [fnl fn1 rcomp fn']]
-    [quantum.core.macros.core      :as cmacros
+    [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
-    [quantum.core.vars             :as var
-      :refer [defalias]])
+    [quantum.untyped.core.vars
+      :refer [defalias defaliases]]
+    [quantum.untyped.core.error    :as u])
 #?(:cljs
   (:require-macros
     [quantum.core.error            :as self])))
@@ -25,14 +26,9 @@
 
 ;; =================================================================
 
-;; ----- GENERIC ERROR ----- ;;
+;; ===== Generic error types ===== ;;
 
-(defn generic-error [env]
-  (case-env* env :clj 'java.lang.Throwable :cljs 'js/Error))
-
-(def generic-error-type #?(:clj Throwable :cljs js/Error))
-(def error? (fnl instance? generic-error-type))
-#?(:clj (defalias throwable? error?))
+(defaliases u generic-error-type env>generic-error error? #?(:clj throwable?))
 
 ;; ----- EXCEPTION-INFO ----- ;;
 
@@ -52,82 +48,13 @@
 
 (def ex! (rcomp ->ex (fn1 throw)))
 
-(defn ?message [x] (when (error? x) #?(:clj (.getLocalizedMessage ^Throwable x) :cljs (.-message x))))
-(def ?ex-data ex-data)
+;; ===== Error information extraction ===== ;;
 
-;; ----- (RECORD-BASED) ERROR ----- ;;
+(defaliases u ?message ?ex-data #?@(:clj [>root-cause >via]))
 
-#?(#_:clj  #_(defrecord Error [ident message data trace cause]) ; defined in Java as quantum.core.error.Error
-   :cljs (defrecord Error [ident message data trace cause]))
+;; ===== Error `defrecord`/map ===== ;;
 
-(def error-map-type #?(:clj quantum.core.error.Error :cljs quantum.core.error/Error))
-(def error-map? (fnl instance? error-map-type))
-
-#?(:clj
-(defn >root-cause [x]
-  (core/assert (error? x))
-  (if-let [cause0 (.getCause ^Throwable x)]
-    (loop [cause cause0]
-      (if-let [cause' (.getCause cause)]
-        (recur cause')
-        cause))
-    x)))
-
-#?(:clj
-(defn >via [x]
-  (core/assert (error? x))
-  (loop [via [] ^Throwable t x]
-    (if t
-        (recur (conj via t) (.getCause t))
-        (when-not (empty? via) via)))))
-
-(defn >err
-  "Transforms `x` into an `Error`: a record with at least the keys #{:ident :message :data :trace :cause}.
-   In Clojure, similar to `Throwable->map`."
-  {:todo #{"Support `:via`?"}}
-  ([] #?(:clj  (quantum.core.error.Error. nil nil nil nil nil)
-         :cljs (>err (js/Error.))))
-  ([x]
-    (cond (error-map? x)
-            x
-          (map? x)
-            #?(:clj  (quantum.core.error.Error.
-                       (:ident x) (:message x) (:data x) (:trace x) (:cause x)
-                       (meta x) (dissoc x :ident :message :data :trace :cause))
-               :cljs (Error->map x))
-          (error? x)
-            #?(:clj  (let [^Throwable t x]
-                       (quantum.core.error.Error.
-                         nil (.getLocalizedMessage t) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
-                         (meta t)
-                         {:type (class t)}))
-               :cljs (with-meta
-                       (-> (quantum.core.error.Error. (.-name x) (.-message x) (?ex-data x) (.-stack x) (.-cause x))
-                           ;; other non-standard fields
-                           (cond-> (.-description  x) (assoc :description   (.-description  x))
-                                   (.-number       x) (assoc :number        (.-number       x))
-                                   (.-fileName     x) (assoc :file-name     (.-fileName     x))
-                                   (.-lineNumber   x) (assoc :line-number   (.-lineNumber   x))
-                                   (.-columnNumber x) (assoc :column-number (.-columnNumber x))))
-                       (meta x)))
-          (string? x)
-            (quantum.core.error.Error. nil x nil nil nil)
-          :else
-            (quantum.core.error.Error. nil nil x nil nil)))
-  ([a0 a1]
-    (if (string? a0)
-        (let [message a0 data a1]
-          (quantum.core.error.Error. nil message data nil nil))
-        (let [ident a0 data a1]
-          (quantum.core.error.Error. ident nil data nil nil))))
-  ([ident message data]
-    (quantum.core.error.Error. ident message data nil nil))
-  ([ident message data trace]
-    (quantum.core.error.Error. ident message data trace nil))
-  ([ident message data trace cause]
-    (quantum.core.error.Error. ident message data trace cause)))
-
-(def err! (rcomp >err (fn1 throw)))
+(defaliases u error-map-type error-map? >err err!)
 
 #?(:clj
 (defmacro throw-unless
@@ -160,9 +87,9 @@
   ([try-expr                     ] `(catch-all ~try-expr _# nil))
   ([try-expr           catch-expr] `(catch-all ~try-expr _# ~catch-expr))
   ([try-expr error-sym catch-expr]
-   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr)))
+   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr)))
   ([try-expr error-sym catch-expr finally-expr]
-   `(try ~try-expr (catch ~(generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
+   `(try ~try-expr (catch ~(env>generic-error &env) ~error-sym ~catch-expr) (finally ~finally-expr)))))
 
 #?(:clj
 (defmacro with-catch
@@ -221,7 +148,7 @@
 
 #?(:clj
 (defmacro ignore [& body]
-  `(try ~@body (catch ~(generic-error &env) _# nil))))
+  `(try ~@body (catch ~(env>generic-error &env) _# nil))))
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]
@@ -236,9 +163,6 @@
 #?(:clj (defalias try+   try/try+  ))
 #?(:clj (defalias throw+ try/throw+))
 
-(defn todo ([]    (throw (->ex :todo "This feature has not yet been implemented." nil)))
-           ([msg] (throw (->ex :todo (str "This feature has not yet been implemented: " msg) nil))))
-(defalias TODO todo)
+;; ===== Specific error types ===== ;;
 
-(defn not-supported  [name- x] (->ex (str "`" name- "` not supported on") {:x (type x)}))
-(defn not-supported! [name- x] (throw (not-supported name- x)))
+(defaliases u todo TODO not-supported not-supported!)

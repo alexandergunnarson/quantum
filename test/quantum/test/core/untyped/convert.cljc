@@ -1,11 +1,11 @@
-(ns quantum.test.core.untyped.convert
+(ns quantum.test.untyped.core.convert
   (:require
     [quantum.core.test            :as test
       :refer [deftest testing is is= throws]]
-    [quantum.core.untyped.convert :as this]
-    [quantum.core.untyped.qualify
+    [quantum.untyped.core.convert :as this]
+    [quantum.untyped.core.qualify
       #?@(:cljs [:refer [Ident]])])
-  #?(:clj (:import quantum.core.untyped.qualify.Ident)))
+  #?(:clj (:import quantum.untyped.core.qualify.Ident)))
 
 (deftest test|>ident
   (is= (this/>ident "a|b|c|d")                    (Ident. ["a" "b" "c" "d"]))

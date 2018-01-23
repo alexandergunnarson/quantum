@@ -17,7 +17,7 @@
       :refer [case-env]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]
-    [quantum.core.untyped.collections.tree :as utree
+    [quantum.untyped.core.collections.tree :as utree
       :refer [postwalk]]
     [quantum.core.vars
       :refer [defalias]]))

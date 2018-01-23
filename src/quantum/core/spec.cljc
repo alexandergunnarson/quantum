@@ -19,8 +19,8 @@
       :refer [fn-not]]
     [quantum.core.macros.core
       :refer [case-env locals]]
-    [quantum.core.untyped.convert :as uconv]
-    [quantum.core.untyped.qualify :as qual]
+    [quantum.untyped.core.convert :as uconv]
+    [quantum.untyped.core.qualify :as qual]
     [quantum.core.vars :as var
       :refer [defalias defmalias]]
   #?(:cljs [figwheel.client.utils])

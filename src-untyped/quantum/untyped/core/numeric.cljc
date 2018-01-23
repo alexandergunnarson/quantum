@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.numeric
+(ns quantum.untyped.core.numeric
   (:require
     [quantum.core.error :as err])
   #?(:clj (:import java.lang.Math java.math.BigDecimal)))

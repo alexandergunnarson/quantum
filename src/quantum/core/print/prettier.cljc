@@ -7,8 +7,8 @@
       :refer [rcomp]]
     [quantum.core.print           :as pr]
     [quantum.core.ns              :as ns]
-    [quantum.core.untyped.convert :as uconv]
-    [quantum.core.untyped.qualify :as qual]
+    [quantum.untyped.core.convert :as uconv]
+    [quantum.untyped.core.qualify :as qual]
     [quantum.core.vars            :as var]))
 
 #?(:clj
@@ -50,10 +50,10 @@
 (defn visit-symbol* [x]
   [:text (cond-> x
            quantum.core.print/*collapse-symbols?*
-             (quantum.core.untyped.qualify/collapse-symbol (not quantum.core.print/*print-as-code?*)))])
+             (quantum.untyped.core.qualify/collapse-symbol (not quantum.core.print/*print-as-code?*)))])
 
 (defn visit-fn [visitor x]
-  [:group "#" "fn" " " (-> x quantum.core.untyped.convert/>symbol visit-symbol*)])
+  [:group "#" "fn" " " (-> x quantum.untyped.core.convert/>symbol visit-symbol*)])
 
 (defn visit*
   "Visits objects, ignoring metadata."
@@ -83,6 +83,12 @@
         (when (and (:print-meta visitor) (meta (:form visitor))) " ")
         (visit-vector visitor (IntIndexedIterable. x))]
     :else (visit-unknown visitor x)))
+
+(defn visit [visitor x]
+  (let [m (meta x)]
+    (if (and m (not (var? x)))
+        (visit-meta visitor m x)
+        (visit* visitor x))))
 
 (in-ns 'quantum.core.print.prettier)
 

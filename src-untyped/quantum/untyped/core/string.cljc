@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.string
+(ns quantum.untyped.core.string
   (:require
     [clojure.string  :as str]
     [quantum.core.fn :as fn

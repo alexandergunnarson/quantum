@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.analyze.expr
+(ns quantum.untyped.core.analyze.expr
   (:refer-clojure :exclude
     [flatten get ==])
   (:require
@@ -11,16 +11,16 @@
     [quantum.core.specs               :as ss]
     [quantum.core.vars                :as var
       :refer [defalias]]
-    [quantum.core.untyped.collections :as coll
+    [quantum.untyped.core.collections :as coll
       :refer [flatten]]
-    [quantum.core.untyped.collections.logic
+    [quantum.untyped.core.collections.logic
       :refer [seq-or]]
-    [quantum.core.untyped.compare     :as comp
+    [quantum.untyped.core.compare     :as comp
       :refer [== not==]]
-    [quantum.core.untyped.convert     :as uconv
+    [quantum.untyped.core.convert     :as uconv
       :refer [>symbol]]
-    [quantum.core.untyped.qualify     :as qual]
-    [quantum.core.untyped.reducers    :as r
+    [quantum.untyped.core.qualify     :as qual]
+    [quantum.untyped.core.reducers    :as r
       :refer [partition-all+ join]]))
 
 (do
@@ -183,7 +183,7 @@
      {-edn ([this] (tagged-literal 'expr code))}})
 
 #?(:clj
-(defmacro >expr [expr-] `(quantum.core.untyped.analyze.expr.Expression. '~expr- ~expr-)))
+(defmacro >expr [expr-] `(quantum.untyped.core.analyze.expr.Expression. '~expr- ~expr-)))
 
 (defn expr? [x] (instance? Expression x))
 

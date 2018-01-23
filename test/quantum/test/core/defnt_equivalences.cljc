@@ -15,12 +15,12 @@
     [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
-    [quantum.core.untyped.analyze.expr :as xp]
-    [quantum.core.untyped.collections.diff :as diff
+    [quantum.untyped.core.analyze.expr :as xp]
+    [quantum.untyped.core.collections.diff :as diff
       :refer [diff]]
-    [quantum.core.untyped.core :as ucore
+    [quantum.untyped.core.core :as ucore
       :refer [code=]]
-    [quantum.core.untyped.type :as t
+    [quantum.untyped.core.type :as t
       :refer [? !]])
   (:import clojure.lang.Named
            clojure.lang.Reduced

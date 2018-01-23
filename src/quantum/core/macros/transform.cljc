@@ -17,11 +17,11 @@
     [quantum.core.logic                      :as logic
       :refer [fn-not fn-or fn-and whenc condf1]]
     [quantum.core.type.core                  :as tcore]
-    [quantum.core.untyped.collections        :as ucoll
+    [quantum.untyped.core.collections        :as ucoll
       :refer [default-zipper]]
-    [quantum.core.untyped.collections.tree   :as utree
+    [quantum.untyped.core.collections.tree   :as utree
       :refer [postwalk]]
-    [quantum.core.untyped.reducers           :as ured
+    [quantum.untyped.core.reducers           :as ured
       :refer [zip-reduce*]]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?

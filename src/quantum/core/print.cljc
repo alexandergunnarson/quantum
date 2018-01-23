@@ -16,9 +16,9 @@
     [quantum.core.logic       :as logic
       :refer [condf]]
     [quantum.core.data.vector :as vec]  ; To work around CLJS non-spliceability of Tuples
-    [quantum.core.untyped.reducers :as r
+    [quantum.untyped.core.reducers :as r
       :refer [filter-vals+]]
-    [quantum.core.untyped.convert :as uconv
+    [quantum.untyped.core.convert :as uconv
       :refer [>symbol]]
     [quantum.core.vars        :as var
       :refer [defalias]]

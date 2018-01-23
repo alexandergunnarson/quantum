@@ -3,11 +3,11 @@
   (:refer-clojure :exclude
     [defonce, intern, binding with-local-vars, meta, reset-meta!])
   (:require [clojure.core                 :as c]
-            [quantum.core.macros.core     :as cmacros
-              :refer [case-env]]
     #?(:clj [quantum.core.ns              :as ns])
-            [quantum.core.untyped.qualify :as qual]
-            [quantum.core.untyped.vars    :as uvar])
+            [quantum.untyped.core.form.evaluate
+              :refer [case-env]]
+            [quantum.untyped.core.qualify :as qual]
+            [quantum.untyped.core.vars    :as uvar])
 #?(:cljs
   (:require-macros
     [quantum.core.vars :as this])))
@@ -28,25 +28,10 @@
 
 ; ===== DECLARATION/INTERNING ===== ;
 
-#?(:clj (cmacros/defalias defalias cmacros/defalias))
+#?(:clj (uvar/defalias defalias uvar/defalias))
 
 #?(:clj (defalias intern c/intern))
-
-#?(:clj
-(defmacro defaliases'
-  "|defalias|es multiple vars @names in the given namespace @ns."
-  [ns- & names]
-  `(do ~@(for [name- names]
-           `(defalias ~name- ~(symbol (name ns-) (name name-)))))))
-
-#?(:clj
-(defmacro defaliases
-  "|defalias|es multiple vars @names in the given namespace alias @alias."
-  [alias- & names]
-  (let [ns-sym (if-let [resolved (get (ns-aliases *ns*) alias-)]
-                 (ns-name resolved)
-                 alias-)]
-    `(defaliases' ~ns-sym ~@names))))
+#?(:clj (uvar/defaliases uvar defaliases defaliases'))
 
 #?(:clj
 (defn alias-var
@@ -72,34 +57,9 @@
 
   #_(:clj (defmacro doseqi [& args] `(loops/doseqi ~@args))))
 
-#?(:clj (quantum.core.macros.core/defmalias defmalias quantum.core.macros.core/defmalias))
+#?(:clj (quantum.untyped.core.vars/defmalias defmalias quantum.untyped.core.vars/defmalias))
 
-#?(:clj
-(defmacro defonce
-  "Like `clojure.core/defonce` but supports optional docstring and attributes
-   map for name symbol."
-  [name & sigs]
-  (let [[name [expr]] (cmacros/name-with-attrs name sigs)]
-    `(c/defonce ~name ~expr))))
-
-#?(:clj
-(defmacro def-
-  "Like `def` but adds the ^:private metadatum to the bound var.
-   `def-` : `def` :: `defn-` : `defn`"
-  {:attribution "alexandergunnarson"}
-  [sym v]
-  `(doto (def ~sym ~v)
-         (alter-meta! merge {:private true}))))
-
-#?(:clj
-(defmacro defmacro-
-  "Same as defmacro but yields a private definition"
-  {:note "This used to be in clojure.contrib.def (by Steve Gilardi),
-          which has not been migrated to the new contrib collection."
-   :from "clojure.algo.generic.math-functions"}
-  [name & decls]
-  (list* `defmacro (with-meta name (assoc (meta name) :private true)) decls)))
-
+#?(:clj (defaliases uvar defonce def- defmacro-))
 ; ============ MANIPULATION + OTHER ============
 
 ; CLJS compatible only if you port |alter-var-root| as in-ns, def, in-ns

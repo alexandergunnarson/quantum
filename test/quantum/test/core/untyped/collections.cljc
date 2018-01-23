@@ -1,8 +1,8 @@
-(ns quantum.test.core.untyped.collections
+(ns quantum.test.untyped.core.collections
   (:require
     [quantum.core.test
       :refer [deftest is is= testing]]
-    [quantum.core.untyped.collections :as this]))
+    [quantum.untyped.core.collections :as this]))
 
 (deftest test:flatten
   (is= (this/flatten [[0 1] [2 3 4]] 0)

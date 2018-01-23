@@ -1,7 +1,7 @@
 (ns
   ^{:doc "Useful bit/binary operations."
     :attribution "alexandergunnarson"}
-  quantum.core.untyped.data.bits
+  quantum.untyped.core.data.bits
   (:refer-clojure :exclude [not and or reverse contains? empty conj disj])
   (:require
     [quantum.core.vars   :as var

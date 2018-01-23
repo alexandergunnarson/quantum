@@ -18,8 +18,8 @@
     [quantum.core.type      :as t
       :refer [val?]]
     [quantum.core.type.defs :as tdefs]
-    [quantum.core.untyped.qualify :as qual]
-    [quantum.core.untyped.refs
+    [quantum.untyped.core.qualify :as qual]
+    [quantum.untyped.core.refs
       :refer [atom?]]
     [quantum.core.vars      :as var
       :refer [defalias]])

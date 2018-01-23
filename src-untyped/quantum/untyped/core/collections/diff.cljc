@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.collections.diff
+(ns quantum.untyped.core.collections.diff
   (:refer-clojure :exclude [seqable?])
   (:require
     [clojure.string     :as str]
@@ -6,7 +6,7 @@
     [diffit.vec         :as vdiff]
     [quantum.core.error :as err
       :refer [err!]]
-    [quantum.core.untyped.core
+    [quantum.untyped.core.core
       :refer [kw-map istr seqable?]]))
 
 (defn diff [a b]

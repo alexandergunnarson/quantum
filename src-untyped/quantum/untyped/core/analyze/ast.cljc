@@ -1,4 +1,4 @@
-(ns quantum.core.untyped.analyze.ast
+(ns quantum.untyped.core.analyze.ast
   "Facilities for creating AST nodes (for now, just for Clojure).
    No actual analysis is done here."
   (:refer-clojure :exclude
@@ -6,9 +6,9 @@
      ==
      unbound?])
   (:require
-    [quantum.core.untyped.compare :as comp
+    [quantum.untyped.core.compare :as comp
       :refer [==]]
-    [quantum.core.untyped.type    :as t]))
+    [quantum.untyped.core.type    :as t]))
 
 (do
 

@@ -6,7 +6,7 @@
      [clojure.core.match               :as match]])
      [quantum.core.fn                  :as fn
        :refer [<- fn-> fnl]]
-     [quantum.core.untyped.qualify     :as qual]
+     [quantum.untyped.core.qualify     :as qual]
      [quantum.core.vars                :as var
        :refer [defalias]]
      [quantum.core.logic

@@ -1,10 +1,10 @@
-(ns quantum.core.untyped.qualify
+(ns quantum.untyped.core.qualify
   "Functions related to qualification (name, namespace, etc.) and unqualification
    of nameables."
   (:require
     [clojure.string            :as str]
     [fipp.ednize]
-    [quantum.core.untyped.core :as qcore
+    [quantum.untyped.core.core :as qcore
       :refer [namespace?]]
     [quantum.core.ns           :as ns]))
 

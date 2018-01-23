@@ -1,15 +1,15 @@
-(ns quantum.core.untyped.collections.logic
+(ns quantum.untyped.core.collections.logic
   (:refer-clojure :exclude
     [== every? not-any? not-every? some])
   (:require
     [clojure.core      :as core]
     [quantum.core.fn   :as fn
       :refer [rcomp]]
-    [quantum.core.untyped.compare :as ucomp
+    [quantum.untyped.core.compare :as ucomp
       :refer [== not==]]
-    [quantum.core.untyped.core
+    [quantum.untyped.core.core
       :refer [->sentinel]]
-    [quantum.core.untyped.reducers
+    [quantum.untyped.core.reducers
       :refer [educe]]
     [quantum.core.vars :as var
       :refer [defalias]]))

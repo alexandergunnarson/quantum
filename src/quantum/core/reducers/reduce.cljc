@@ -35,7 +35,8 @@
     [quantum.core.type.defs
       #?@(:cljs [:refer [Transformer]])]
     [quantum.core.vars             :as var
-      :refer [defalias]])
+      :refer [defalias]]
+    [quantum.untyped.core.reducers :as ur])
 #?(:cljs
   (:require-macros
     [quantum.core.reducers.reduce  :as self
@@ -233,32 +234,9 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
-(defn transformer
-  "Given a reducible collection, and a transformation function transform,
-  returns a reducible collection, where any supplied reducing
-  fn will be transformed by transform. transform is a function of reducing fn to
-  reducing fn."
-  ([xs xf]
-    (if (instance? Transformer xs)
-        (Transformer. (.-xs ^Transformer xs) xs xf)
-        (Transformer. xs                     xs xf))))
-
-(def transformer? (fnl instance? Transformer))
-
-(defn transducer->transformer
-  "Converts a transducer into a transformer."
-  {:todo #{"More arity"}}
-  ([^long n xf]
-    (case n
-          0 (fn ([]            (xf))
-                ([xs]          (transformer xs (xf))))
-          1 (fn ([a0]          (xf a0))
-                ([a0 xs]       (transformer xs (xf a0))))
-          2 (fn ([a0 a1]       (xf a0 a1))
-                ([a0 a1 xs]    (transformer xs (xf a0 a1))))
-          3 (fn ([a0 a1 a2]    (xf a0 a1 a2))
-                ([a0 a1 a2 xs] (transformer xs (xf a0 a1 a2))))
-          (throw (ex-info "Unhandled arity for transducer" nil)))))
+(defalias transformer  ur/transformer)
+(defalias transformer? ur/transformer?)
+(defalias transformer? ur/transducer->transformer)
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."

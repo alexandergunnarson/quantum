@@ -20,7 +20,8 @@
       :refer [defalias]])
 #?(:cljs
   (:require-macros
-    [quantum.core.log :as self])))
+    [quantum.core.log :as self
+      :refer [with-log-errors]])))
 
 #?(:cljs (enable-console-print!))
 

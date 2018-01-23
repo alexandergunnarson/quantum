@@ -3,8 +3,11 @@
       :doc "Efficient, functional algorithms for generating lazy
             sequences for common combinatorial functions. (See the source code
             for a longer description.)"}
-  quantum.core.untyped.numeric.combinatorics
-  (:refer-clojure :exclude [update]))
+  quantum.untyped.core.numeric.combinatorics
+  (:refer-clojure :exclude [update])
+  (:require
+    [quantum.untyped.core.collections
+      :refer [unchunk]]))
 
 ; TO EXPLORE
 ; - Mathematica
@@ -200,20 +203,6 @@ Most of these algorithms are derived from algorithms found in Knuth's wonderful 
                                         (list (seq items))
                                         (map #(map v-items %) (index-combinations t cnt))),
               :else (multi-comb items t))))))
-
-(defn- unchunk ; TODO move
-  "Given a sequence that may have chunks, return a sequence that is 1-at-a-time
-   lazy with no chunks. Chunks are good for efficiency when the data items are
-   small, but when being processed via map, for example, a reference is kept to
-   every function result in the chunk until the entire chunk has been processed,
-   which increases the amount of memory in use that cannot be garbage
-   collected."
-  {:author "Mark Engelberg"
-   :from "clojure.math.combinatorics"}
-  [s]
-  (lazy-seq
-    (when (seq s)
-      (cons (first s) (unchunk (rest s))))))
 
 (defn subsets
   "All the subsets of items"

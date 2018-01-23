@@ -5,73 +5,45 @@
     :attribution "alexandergunnarson"}
   quantum.core.fn
   (:refer-clojure :exclude
-   [constantly, as->, trampoline])
+   [comp constantly, as->, trampoline])
   (:require
-    [clojure.core             :as core]
+    [clojure.core                :as core]
     [clojure.walk]
-    [quantum.core.vars        :as var
-      :refer [defalias]]
-    [quantum.core.core        :as qcore]
-    [quantum.core.macros.core :as cmacros
-      :refer [case-env #?@(:clj [compile-if])
-              gen-args arity-builder max-positional-arity unify-gensyms]])
+    [quantum.core.core           :as qcore]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env compile-if]]
+    [quantum.untyped.core.form   :as uform
+      :refer [arity-builder gen-args max-positional-arity unify-gensyms]]
+    [quantum.untyped.core.fn     :as u]
+    [quantum.untyped.core.vars   :as uvar
+      :refer [defalias defaliases]])
 #?(:cljs
   (:require-macros
     [quantum.core.fn :as self
       :refer [aritoid gen-constantly gen-call gen-positional-nthas
               gen-ntha gen-conja gen-reversea gen-mapa]])))
 
-; To signal that it's a multi-return
-(deftype MultiRet [val])
+;; ===== `fn<i>`: Positional functions ===== ;;
 
-#?(:clj (defalias jfn memfn))
+#?(:clj (defaliases u fn0 fn1 fnl))
 
-#?(:clj
-(defmacro fn&* [arity f & args]
-  (let [f-sym (gensym) ct (count args)
-        macro? (-> f resolve meta :macro)]
-    `(let [~f-sym ~(when-not macro? f)]
-     (fn ~@(for [i (range (if arity arity       0 )
-                          (if arity (inc arity) 10))]
-             (let [args' (vec (repeatedly i #(gensym)))]
-               `(~args' (~(if macro? f f-sym) ~@args ~@args'))))
-         ; Add variadic arity if macro
-         ~@(when (and (not macro?)
-                      (nil? arity))
-             (let [args' (vec (repeatedly (+ ct 10) #(gensym)))]
-               [`([~@args' & xs#] (apply ~f-sym ~@args ~@args' xs#))])))))))
+;; ===== `fn&`: Partial functions ===== ;;
 
-#?(:clj (defmacro fn&  [f & args] `(fn&* nil ~f ~@args)))
-#?(:clj (defmacro fn&0 [f & args] `(fn&* 0   ~f ~@args)))
-#?(:clj (defmacro fn&1 [f & args] `(fn&* 1   ~f ~@args)))
-#?(:clj (defmacro fn&2 [f & args] `(fn&* 2   ~f ~@args)))
-#?(:clj (defmacro fn&3 [f & args] `(fn&* 3   ~f ~@args)))
+#?(:clj (defaliases u fn&* fn&0 fn&1 fn&2))
 
-#?(:clj
-(defmacro gen-constantly []
-  (let [v-sym 'v]
-    `(defn ~'constantly
-       "Exactly the same as `core/constantly`, but uses efficient positional
-        arguments when possible rather than varargs every time."
-       [~v-sym]
-       (~'fn ~@(arity-builder (core/constantly v-sym) (core/constantly v-sym)))))))
+;; ===== `fn'`: Fixed/constant functions ===== ;;
 
-(gen-constantly)
-(defalias fn' constantly)
+(defaliases u fn' constantly #?@(:clj [fn'*|arities fn'*]))
 
-#?(:clj
-(defmacro fn'*:arities
-  [arities-ct & body]
-  (let [f (gensym "this")]
-   `(~'fn ~f ~@(arity-builder
-                 (fn [args] (if (empty? args) `(do ~@body) `(~f)))
-                 (fn' `(~f))
-                 0 arities-ct)))))
+;; ===== `comp`: Compositional functions ===== ;;
 
-#?(:clj
-(defmacro fn'*
-  "Like `fn'` but re-evaluates the body each time."
-  [& body] `(fn'*:arities 4 ~@body))) ; conservative to limit generated code size
+(defaliases u comp #?(:clj rcomp))
+
+;; ===== Common fixed-function values ===== ;;
+
+(defaliases u fn-nil fn-false fn-true)
+
+#?(:clj (defalias jfn memfn)) ; `Java fn`
 
 #?(:clj
 (defmacro mfn
@@ -283,33 +255,11 @@
       ([arg1 arg2 arg3]                    (func (func arg1 arg2) arg3))
       ([arg1 arg2 arg3 & args] (apply func (func (func arg1 arg2) arg3) args))))
 
-#?(:clj
-(defmacro aritoid
-  ; TODO use `arity-builder`
-  "Combines fns as arity-callers."
-  {:attribution "alexandergunnarson"
-   :equivalent `{(aritoid vector identity conj)
-                 (fn ([]      (vector))
-                     ([x0]    (identity x0))
-                     ([x0 x1] (conj x0 x1)))}}
-  [& fs]
-  (let [genned  (repeatedly (count fs) #(gensym "f"))
-        fs-syms (vec (interleave genned fs))]
-   `(let ~fs-syms
-      (fn ~'aritoid ~@(for [[i f-sym] (map-indexed vector genned)]
-                        (let [args (vec (repeatedly i #(gensym "x")))]
-                         `(~args (~f-sym ~@args)))))))))
+#?(:clj (defalias u/aritoid))
 
 (defn rf-fix
   "TODO remove when you figure out transduce vs. reduce"
   [f] (aritoid nil identity f))
-
-; TODO demacro
-#?(:clj (defmacro rcomp [& args] `(comp ~@(reverse args))))
-
-#?(:clj (defmacro fn0 [  & args] `(fn fn0# [f#  ] (f# ~@args))))
-#?(:clj (defmacro fn1 [f & args] `(fn fn1# [arg#] (~f arg# ~@args)))) ; analogous to ->
-#?(:clj (defmacro fnl [f & args] `(fn fnl# [arg#] (~f ~@args arg#)))) ; analogous to ->>
 
 ; MWA: "Macro WorkAround"
 #?(:clj (defmacro MWA ([f] `(fn1 ~f)) ([n f] `(mfn ~n ~f))))
@@ -320,17 +270,11 @@
       ([a b  ] #(pred % a b))
       ([a b c] #(pred % a b c))))
 
-#?(:clj
-(defmacro fn->
-  "Equivalent to |(fn [x] (-> x ~@body))|"
-  {:attribution "thebusby.bagotricks"}
-  [& body] `(fn fn-># [x#] (-> x# ~@body))))
+;; ===== Arrow macros and functions ===== ;;
 
-#?(:clj
-(defmacro fn->>
-  "Equivalent to |(fn [x] (->> x ~@body))|"
-  {:attribution "thebusby.bagotricks"}
-  [& body] `(fn fn->># [x#] (->> x# ~@body))))
+#?(:clj (defaliases u <- <<- fn-> fn->>))
+
+;; ===== ... ===== ;;
 
 #?(:clj
 (defmacro with-do
@@ -346,23 +290,6 @@
 ; TODO: deprecate these... likely they're not useful
 (defn call->  [arg & [func & args]] ((apply func args) arg))
 (defn call->> [& [func & args]] ((apply func    (butlast args)) (last args)))
-
-#?(:clj
-(defmacro <-
-  "Converts a ->> to a ->
-   Note: syntax modified from original."
-   {:attribution "thebusby.bagotricks"
-    :usage       `(->> (range 10) (map inc) (<- doto println) (reduce +))}
-  ([x] `(~x))
-  ([op & body] `(~op ~(last body) ~@(butlast body)))))
-
-#?(:clj
-(defmacro <<-
-  "Converts a -> to a ->>"
-   {:attribution "alexandergunnarson"
-    :usage       `(-> 1 inc (/ 4) (<<- - 2))}
-  ([x] `(~x))
-  ([x op & body] `(~op ~@body ~x))))
 
 ; ---------------------------------------
 ; ================ JUXTS ================ (possibly deprecate these?)
@@ -449,12 +376,12 @@
   obj)
 
 #?(:clj
-  (compile-if (Class/forName "java.util.function.Predicate")
-    (defn ->predicate [f]
-      (reify java.util.function.Predicate
-        (^boolean test [this ^Object elem]
-          (f elem))))
-    (defn ->predicate [f] (throw (ex-info "java.util.function.Predicate not available: probably using JDK < 8" nil)))))
+(compile-if (Class/forName "java.util.function.Predicate")
+  (defn ->predicate [f]
+    (reify java.util.function.Predicate
+      (^boolean test [this ^Object elem]
+        (f elem))))
+  (defn ->predicate [f] (throw (ex-info "java.util.function.Predicate not available: probably using JDK < 8" nil)))))
 
 #?(:clj (defalias as-> core/as->))
 

@@ -17,11 +17,11 @@
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
     [quantum.core.type.defs    :as tdef]
-    [quantum.core.untyped.analyze.ast  :as ast]
-    [quantum.core.untyped.analyze.expr :as xp]
-    [quantum.core.untyped.core
+    [quantum.untyped.core.analyze.ast  :as ast]
+    [quantum.untyped.core.analyze.expr :as xp]
+    [quantum.untyped.core.core
       :refer [code=]]
-    [quantum.core.untyped.type :as t])
+    [quantum.untyped.core.type :as t])
 #?(:clj
   (:import
     [clojure.lang Keyword Symbol]
@@ -29,18 +29,18 @@
 
 ;; # args | ret | ? arg specs (delimited by `,`)
 ;; abstract > concrete > concrete
-(def t0>  java.io.OutputStream)
-(def t0   java.io.FilterOutputStream)
-(def t0<  java.io.PrintStream)
+#?(:clj (def t0>  java.io.OutputStream))
+#?(:clj (def t0   java.io.FilterOutputStream))
+#?(:clj (def t0<  java.io.PrintStream))
 ;; Object > interface > concrete final
-(def t1>  java.lang.Object)
-(def t1   java.lang.CharSequence)
-(def t1<  java.lang.String)
+#?(:clj (def t1>  java.lang.Object))
+#?(:clj (def t1   java.lang.CharSequence))
+#?(:clj (def t1<  java.lang.String))
 ;; Object > abstract > concrete final dual as primitive
-(def t2>  java.lang.Object)
-(def t2   java.lang.Number)
-(def t2<  java.lang.Long)
-(def t2<p tdef/long)
+#?(:clj (def t2>  java.lang.Object))
+#?(:clj (def t2   java.lang.Number))
+#?(:clj (def t2<  java.lang.Long))
+#?(:clj (def t2<p tdef/long))
 
 (def >tag th/class->str)
 

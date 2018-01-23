@@ -75,10 +75,7 @@
             ([a0 a1 a2 a3 a4 a5     ] (memoize-form m f get-fn assoc-fn first? n-args false a0 a1 a2 a3 a4 a5   ))
             ([a0 a1 a2 a3 a4 a5 & as] (memoize-form m f get-fn assoc-fn first? n-args true  a0 a1 a2 a3 a4 a5 as)))}))))
 
-#?(:clj
-(defn memoize [& args] (:f (apply memoize* args))))
-
-#?(:cljs (defalias memoize core/memoize))
+(defn memoize [& args] (:f (apply memoize* args)))
 
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))

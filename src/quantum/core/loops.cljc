@@ -26,7 +26,7 @@
     [quantum.core.refs                :as refs
       :refer [deref reset! !long]]
     [quantum.core.type                :as type]
-    [quantum.core.untyped.reducers    :as ured]
+    [quantum.untyped.core.reducers    :as ured]
     [quantum.core.vars                :as var
       :refer [defalias]])
 #?(:cljs
@@ -400,6 +400,7 @@
 (defn reduce-2
   "Reduces over two seqables at a time."
   {:todo #{"`defnt` this and have it dispatch to e.g. reduce-2:indexed"}}
+  ([f xs0 xs1] (reduce-2 f nil xs0 xs1))
   ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
   ([f init xs0 xs1 assert-same-count?]
     (loop [ret init xs0' xs0 xs1' xs1]
@@ -418,6 +419,7 @@
 (defn reducei-2
   "`reduce-2` + `reducei`"
   {:todo #{"`defnt` this and have it dispatch to e.g. reducei-2:indexed"}}
+  ([f xs0 xs1] (reduce-2 f nil xs0 xs1))
   ([f init xs0 xs1] (reduce-2 f init xs0 xs1 false))
   ([f init xs0 xs1 assert-same-count?]
     (loop [ret init xs0' xs0 xs1' xs1 i 0]

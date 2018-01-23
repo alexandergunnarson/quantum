@@ -668,7 +668,7 @@
 
 (defnt slice
   "Makes a subcopy of ->`x`, [->`a`, ->`b`), in the most efficient way possible.
-   Differs from `subseq` in that it does not simply return a view in O(1) time.
+   Differs from `subview` in that it does not simply return a view in O(1) time.
    Some copies are more efficient than others — some might be O(N); others O(log(N))."
   (     [^string?      x ^nat-long? a             ] (.substring x a (count x)))
   (     [^string?      x ^nat-long? a ^nat-long? b] (.substring x a b))

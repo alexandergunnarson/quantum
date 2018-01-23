@@ -6,7 +6,7 @@
     #?(:clj [clojure.core.specs.alpha  :as ss])
             [cuerdas.core              :as str+]
    #?(:clj  [environ.core              :as env])
-            [quantum.core.untyped.core :as qcore]))
+            [quantum.untyped.core.core :as qcore]))
 
 #?(:clj
 (defn pid []

@@ -19,9 +19,9 @@
       :refer [<- fn-> rcomp]]
     [quantum.core.logic    :as logic
       :refer [fn-and condf1 fn=]]
-    [quantum.core.macros.core
+    [quantum.untyped.core.macros.core
       :refer [env-lang]]
-    [quantum.core.untyped.numeric.combinatorics :as combo])
+    [quantum.untyped.core.numeric.combinatorics :as combo])
 #?(:cljs
   (:require-macros
     [quantum.core.type.defs :as self
@@ -53,10 +53,6 @@
 #?(:clj (def long    Long/TYPE))
 #?(:clj (def float   Float/TYPE))
 #?(:clj (def double  Double/TYPE))
-
-; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
-; A cross between a `reducer` and a `folder`
-(deftype Transformer [xs prev xf])
 
 (def ^{:doc "Could do <Class>/MAX_VALUE for the maxes in Java but JS doesn't like it of course
              In JavaScript, all numbers are 64-bit floating point numbers.

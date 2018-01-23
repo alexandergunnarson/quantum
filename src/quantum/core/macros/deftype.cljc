@@ -12,8 +12,8 @@
       :refer [case-env]]
     [quantum.core.macros.definterface]
     [quantum.core.macros.type-hint :as th]
-    [quantum.core.untyped.qualify  :as qual]
-    [quantum.core.untyped.string   :as ustr]
+    [quantum.untyped.core.qualify  :as qual]
+    [quantum.untyped.core.string   :as ustr]
     [quantum.core.vars             :as var]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
