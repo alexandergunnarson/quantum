@@ -12,7 +12,7 @@
       :refer [->name]                                 ]
     [quantum.core.convert.primitive          :as pconv]
     [quantum.core.error                      :as err
-      :refer [->ex]                                   ]
+      :refer [>ex-info]                                   ]
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
@@ -145,7 +145,7 @@
 (defn parse-operator [x]
   (if-let [oper (->> x str (get operators))]
     oper
-    (throw (->ex (str "Operator not found") {:operator x})))))
+    (throw (>ex-info (str "Operator not found") {:operator x})))))
 
 #?(:clj
 (defn parse-conditional [x]
@@ -153,12 +153,12 @@
         raw-then (condp instance? x
                    ConditionalExpr (.getThenExpr ^ConditionalExpr x)
                    IfStmt          (.getThenStmt ^IfStmt x)
-                   (throw (->ex "Conditional exception" nil)))
+                   (throw (>ex-info "Conditional exception" nil)))
         then (-> raw-then parse* remove-do-when-possible)]
     (if-let [else (condp instance? x
                     ConditionalExpr (.getElseExpr ^ConditionalExpr x)
                     IfStmt          (.getElseStmt ^IfStmt x)
-                    (throw (->ex "Conditional exception" nil)))]
+                    (throw (>ex-info "Conditional exception" nil)))]
       (concat (list 'if) (list pred) then (-> else parse* remove-do-when-possible))
       (apply list 'when pred then)))))
 
@@ -293,7 +293,7 @@
       (conj (-> x .getVariable parse* second popr) (-> x .getIterable parse*))
       (-> x .getBody parse* implicit-do)))
   ([^ExplicitConstructorInvocationStmt x]
-    (throw (->ex "unsupported" {:x x}))
+    (throw (>ex-info "unsupported" {:x x}))
     ["EXPLICIT CONSTRUCTOR" (str x)])
   ; EXPRESSIONS
   ([^NameExpr x]
@@ -312,7 +312,7 @@
   ([^ThisExpr x]
     'this)
   ([^SuperExpr x]
-    (throw (->ex "unsupported" {:x x}))
+    (throw (>ex-info "unsupported" {:x x}))
     ["SUPER" (str x)])
   ([^EnclosedExpr x] ; Parenthesis-enclosed
     (list 'do (-> x .getInner parse*)))

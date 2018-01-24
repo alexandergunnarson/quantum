@@ -24,7 +24,7 @@
                       get, contains? count conj!
                       indices+ kw-map copy slice]]
             [quantum.core.error        :as err
-              :refer [->ex TODO throw-unless]]
+              :refer [>ex-info TODO throw-unless]]
             [quantum.core.macros       :as macros
               :refer [defnt]]
             [quantum.core.type         :as t
@@ -212,7 +212,7 @@
                  (-> (js/forge.random.getBytesSync size)
                      js/forge.util.binary.raw.decode
                      ccoll/->byte-array)
-                 (throw (->ex :illegal-argument "Insecure random generator not supported."))))))
+                 (throw (>ex-info :illegal-argument "Insecure random generator not supported."))))))
 
 #?(:clj
 (defn longs
@@ -278,7 +278,7 @@
     :contributors ["Alex Gunnarson"]}
   [& clauses]
   (throw-unless (-> clauses count even?)
-    (->ex "Cond takes an even number of forms"))
+    (>ex-info "Cond takes an even number of forms"))
   (let [curr-p-sym   (gensym "curr-p")
         p-f-sym      (gensym "p-f") ; actual probability
         partitioned  (core/partition 2 clauses)
@@ -292,7 +292,7 @@
                            [(get p-syms i) p])))]
     `(let ~let-bindings
        (throw-unless (= 100 (+ ~@p-syms))
-         (->ex "Percent-probabilities must sum to 100."))
+         (>ex-info "Percent-probabilities must sum to 100."))
        (cond ~@(apply concat
                  (for [[p-sym form] clauses-f]
                   `[(let [lower# (deref ~curr-p-sym)
@@ -313,7 +313,7 @@
   ([<x+p>•] (prob <x+p>• false))
   ([<x+p>• secure?]
     (throw-unless (->> <x+p>• (map+ second) (reduce + 0) (== 1))
-      (->ex "Probabilities must sum to 1." {:arg <x+p>•}))
+      (>ex-info "Probabilities must sum to 1." {:arg <x+p>•}))
     (let [p-f (double-between secure? 0 1)] ; the range of possible probabilities
       (reduce
         (rfn [p-accum x p]

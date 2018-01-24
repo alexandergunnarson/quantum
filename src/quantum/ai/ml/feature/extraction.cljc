@@ -7,7 +7,7 @@
    dimensionality reduction techniques also exist."
   (:require
     [quantum.core.error :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.log :as log]))

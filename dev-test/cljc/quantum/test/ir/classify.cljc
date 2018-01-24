@@ -15,7 +15,7 @@
                :refer [#?(:clj defmemoized)]
                #?@(:cljs [:refer-macros  [defmemoized]])]
              [quantum.core.error
-               :refer [->ex]]
+               :refer [>ex-info]]
              [quantum.core.logic
                :refer [coll-or #?@(:clj [condpc])]
                #?@(:clj [:refer-macros [condpc]])]

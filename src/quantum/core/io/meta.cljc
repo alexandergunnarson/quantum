@@ -8,7 +8,7 @@
           [quantum.core.log               :as log  ]
           [quantum.core.paths             :as paths]
           [quantum.core.error             :as err
-            :refer [->ex]]
+            :refer [>ex-info]]
           [quantum.core.collections       :as coll
             :refer [map+ dropr in? kw-map reduce contains?]]
           [quantum.core.convert           :as conv
@@ -73,7 +73,7 @@
   (let [{:as result :keys [err out]} (proc/exec! "mediainfo" file)]
     (log/pr ::debug "Path:" file "Mediainfo result:" result)
     (if (contains? err)
-        (throw (->ex "Mediainfo error" {:mediainfo-message err})))
+        (throw (>ex-info "Mediainfo error" {:mediainfo-message err})))
         (-> out parse-media-metadata))))
 
 (def media-exts #{:mp4})

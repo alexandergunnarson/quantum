@@ -46,7 +46,7 @@
     [quantum.core.collections.core :as coll
       :refer [reverse key val first rest get slice count lasti index-of last-index-of empty?]]
     [quantum.core.error            :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn               :as fn
       :refer [fn']]
     [quantum.core.logic
@@ -177,7 +177,7 @@
             "cdefg"}}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil (kw-map super sub))))]
+              (throw (>ex-info :out-of-bounds nil (kw-map super sub))))]
     (takel-fromi i super)))
 
 (def take-from takel-from)
@@ -195,7 +195,7 @@
             "efg"}}
   [sub super]
   (let [i (or (index-of super sub)
-              (throw (->ex :out-of-bounds nil (kw-map super sub))))
+              (throw (>ex-info :out-of-bounds nil (kw-map super sub))))
         i-f (+ i (lasti sub))]
     (takel-afteri i-f super)))
 

@@ -4,7 +4,7 @@
    #?(:cljs [goog.userAgent           :as agent])
    #?(:cljs [goog.Uri                 :as uri])
             [quantum.core.error       :as err
-              :refer [->ex]]
+              :refer [>ex-info]]
             [quantum.core.collections :as coll
               :refer [contains?]]
             [quantum.core.string      :as str]
@@ -21,7 +21,7 @@
 
 (defn user-agent
   "Returns the user agent."
-  [] #?(:clj  (throw (->ex :not-implemented))
+  [] #?(:clj  (throw (>ex-info :not-implemented))
         :cljs (agent/getUserAgentString)))
 
 ; TODO user agent can be spoofed
@@ -74,13 +74,13 @@
     (condp = mime-type
       :json "application/json"
       :jpeg "image/jpeg"
-      (throw (->ex :illegal-argument "Unknown mime type" mime-type)))))
+      (throw (>ex-info :illegal-argument "Unknown mime type" mime-type)))))
 
 (defn ^String normalize-encoding-type [encoding]
   (whenc encoding (fn-not (fn-or string? nil?))
     (condp = encoding
       :utf-8 "UTF-8"
-      (throw (->ex :illegal-argument "Unknown encoding type" encoding)))))
+      (throw (>ex-info :illegal-argument "Unknown encoding type" encoding)))))
 
 (defn normalize-content
   "Transforms @content to the appropriate format of @mime-type."

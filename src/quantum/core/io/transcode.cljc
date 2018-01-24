@@ -1,12 +1,12 @@
 (ns quantum.core.io.transcode)
 
-; TODO the logic in here is good, but it requires the |sh| dep which is at the moment incomplete/broken  
+; TODO the logic in here is good, but it requires the |sh| dep which is at the moment incomplete/broken
 
 (comment "https://trac.ffmpeg.org/wiki/Encode/AAC
 ​Advanced Audio Coding (AAC) is the successor format to MP3.
 It is defined in MPEG-4 part 3 (ISO/IEC 14496-3).
 It is often used within an MP4 container format;
-for music the .m4a extension is customarily used. 
+for music the .m4a extension is customarily used.
 
 
 https://trac.ffmpeg.org/wiki/Encode/HighQualityAudio
@@ -60,7 +60,7 @@ AAC encoder available with ffmpeg")
                  "-c:a"]
                  audio-args
                  [(io/file-str out)])]
-      (sh/run-process! 
+      (sh/run-process!
         (:ffmpeg paths/paths)
         args
         opts)))))
@@ -73,7 +73,7 @@ AAC encoder available with ffmpeg")
               :unix
                 ["-codec:a" "libfaac"]
               :windows
-                ["-codec:a" "aac" 
+                ["-codec:a" "aac"
                  "-strict"  "experimental"])
           args-0
            ["-i" (io/file-str in-path)
@@ -99,7 +99,7 @@ AAC encoder available with ffmpeg")
           "-vn"
           "-acodec" "'copy'"
           (io/file-str out)]]
-      (sh/run-process! 
+      (sh/run-process!
         (:ffmpeg paths/paths)
         args
         opts)))))
@@ -112,11 +112,11 @@ AAC encoder available with ffmpeg")
    Returns value in milliseconds."
   [^String url]
   (let [buffer (StringBuffer. 400)
-        _ (sh/run-process! "ffprobe" 
+        _ (sh/run-process! "ffprobe"
             ["-show_entries" "format=duration"
              "-of" "default=noprint_wrappers=1:nokey=1"
              url]
             {:write-streams? true :std-buffer buffer})
         n (-> buffer str str/val)]
-  (throw-unless (number? n) (->ex :not-a-number "Duration is not a number!" n)) 
+  (throw-unless (number? n) (>ex-info :not-a-number "Duration is not a number!" n))
   (-> n (* 1000)))))

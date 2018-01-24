@@ -15,7 +15,7 @@
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
     [quantum.core.error
-      :refer [->ex TODO]]))
+      :refer [>ex-info TODO]]))
 
 (log/this-ns)
 

@@ -20,7 +20,7 @@
     [quantum.core.compare          :as comp
       :refer [reduce-min reduce-max]]
     [quantum.core.error
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.macros
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.numeric    :as cnum

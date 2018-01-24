@@ -20,7 +20,7 @@
     [quantum.core.fn
       :refer [fn1]]
     [quantum.core.error              :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.collections        :as coll
       :refer [for for', fori fori', fortimes fortimes:objects
               first, count, map+, remove+, get]]

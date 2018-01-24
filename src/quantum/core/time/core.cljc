@@ -17,7 +17,7 @@
     [quantum.core.convert.primitive :as pconv
       :refer [->int ->long]]
     [quantum.core.error             :as err
-      :refer [->ex TODO throw-unless err!]]
+      :refer [>ex-info TODO throw-unless err!]]
     [quantum.core.fn                :as fn
       :refer [fn1 <-]]
     [quantum.core.logic             :as logic
@@ -482,7 +482,7 @@
   ([^java.time.ZonedDateTime x]
     (if (= (.getZone x) ZoneOffset/UTC)
         (-> x ->epoch-millis ->platform-instant)
-        (throw (->ex "Refusing to lose time zone information to java.util.Date"))))))
+        (throw (>ex-info "Refusing to lose time zone information to java.util.Date"))))))
 
 #?(:clj
 (defnt ^java.sql.Timestamp ->timestamp

@@ -5,7 +5,7 @@
     [quantum.core.fn
       :refer [fn']]
     [quantum.core.error    :as err
-      :refer [->ex]]))
+      :refer [>ex-info]]))
 
 ; ============ FROM re-rand.parser.tools ============
 ; Generic functions for creating a LL recursive descent parser.
@@ -20,7 +20,7 @@
              [(re-groups m)
               (.substring src (.end m))]))
        :cljs
-         (throw (->ex :not-implemented)))))
+         (throw (>ex-info :not-implemented)))))
 
 (defn observe
   "Creates a rule, but doesn't reduce the source if it matches."

@@ -3,7 +3,7 @@
   (:require
     [clojure.core           :as core]
     [quantum.core.error     :as err
-      :refer [TODO ->ex]]
+      :refer [TODO >ex-info]]
     [quantum.core.macros
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars      :as var
@@ -48,7 +48,7 @@
     :half-down   BigDecimal/ROUND_HALF_DOWN
     :down        BigDecimal/ROUND_DOWN
     :floor       BigDecimal/ROUND_FLOOR
-    (throw (->ex "Invalid round type" {:round-type round-type})))))
+    (throw (>ex-info "Invalid round type" {:round-type round-type})))))
 
 #?(:clj
 (defn ^java.math.RoundingMode k->round-type [round-type]
@@ -91,7 +91,7 @@
 ; http://stackoverflow.com/questions/2808535/round-a-double-to-2-decimal-places
 #_(:clj
 (defn ^double round [^double value ^long places]
-  (when (neg? places) (throw (->ex "|places| must be positive" places)))
+  (when (neg? places) (throw (>ex-info "|places| must be positive" places)))
 
   (-> value
       (java.math.BigDecimal.)

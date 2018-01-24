@@ -9,7 +9,7 @@
     [quantum.core.collections      :as coll
       :refer [lasti map+ partition-all+ join reduce unique-conj]]
     [quantum.core.error            :as err
-      :refer [->ex TODO catch-all]]
+      :refer [>ex-info TODO catch-all]]
     [quantum.core.fn               :as fn
       :refer [fn->]]
     [quantum.core.log              :as log

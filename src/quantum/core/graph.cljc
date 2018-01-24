@@ -10,7 +10,7 @@
     [loom.flow                :as flow ]   ; temporarily
     [loom.io                  :as g.io ]]) ; temporarily
     [quantum.core.error       :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn          :as fn
       :refer [rcomp]]
     [quantum.core.vars        :as var
@@ -259,7 +259,7 @@
   {:todo "Make this better. Inverse of complex functions"}
   [f]
   (or (get inverse-map f)
-      (throw (->ex :undefined "Inverse not defined for function" f))))
+      (throw (>ex-info :undefined "Inverse not defined for function" f))))
 
 (def base-map
   {+ 0
@@ -269,7 +269,7 @@
 
 (defn base [f]
   (or (get base-map f)
-      (throw (->ex :undefined "Base not defined for function" f))))
+      (throw (>ex-info :undefined "Base not defined for function" f))))
 
 ; alg.generic
 #?(:clj (in-ns 'loom.alg-generic))

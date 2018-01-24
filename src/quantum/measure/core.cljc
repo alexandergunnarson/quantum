@@ -2,7 +2,7 @@
   (:require
     [clojure.core             :as core    ]
     [quantum.core.error       :as err
-      :refer [->ex throw-unless]]
+      :refer [>ex-info throw-unless]]
     [quantum.core.numeric     :as num     ]
     [quantum.core.string      :as str     ]
     [quantum.core.graph       :as g
@@ -33,7 +33,7 @@
   (case-env* env
     :cljs (println "/* CLJS quantum.measure.* graph algorithm is broken — causes infinite loop. */")
     (do (println "/* CLJ quantum.measure.* graph algorithm */")
-        (throw-unless (contains? #{:map :code} emit-type) (->ex "Emit type not recognized" emit-type))
+        (throw-unless (contains? #{:map :code} emit-type) (>ex-info "Emit type not recognized" emit-type))
         (let [num-cast (case-env* env :clj identity :cljs double)
               units-graph
                 (->> (core/for [[unit [[rate conv-unit] & [aliases]]] unit-pairs]

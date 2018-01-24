@@ -32,7 +32,7 @@
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.error
-      :refer [->ex TODO]]))
+      :refer [>ex-info TODO]]))
 
 (log/this-ns)
 
@@ -514,7 +514,7 @@
              (drop-while #(< (second %) random-percent))
              first
              first)
-        (throw (->ex "element distribution requires percent clauses sum to 100")))))
+        (throw (>ex-info "element distribution requires percent clauses sum to 100")))))
 
 (defn probability? [p] (<= 0 p 1))
 

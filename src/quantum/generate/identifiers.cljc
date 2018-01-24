@@ -7,7 +7,7 @@
     [proteus
       :refer [let-mutable]   ])
     [quantum.core.error :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.numeric :as num]
     [quantum.core.fn
       :refer [<- fn->>]]
@@ -93,11 +93,11 @@
       (>= b ct)
         (recur x a (dec ct))
       (>= a ct)
-        (throw (->ex "Out of bounds"))
+        (throw (>ex-info "Out of bounds"))
       (< a 0)
         (recur x 0 b)
       (< b 0)
-        (throw (->ex "Out of bounds"))
+        (throw (>ex-info "Out of bounds"))
       :else (slice x a (inc b)))))
 
 

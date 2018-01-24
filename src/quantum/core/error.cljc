@@ -90,7 +90,7 @@
 #?(:clj
 (defmacro with-assert
   ([expr pred]
-   `(with-assert ~expr ~pred (->ex "Assertion failed" '(~pred ~expr))))
+   `(with-assert ~expr ~pred (>ex-info "Assertion failed" '(~pred ~expr))))
   ([expr pred err]
   `(let [expr# ~expr]
      (if (-> expr# ~pred) expr# (throw ~err))))))
@@ -109,12 +109,12 @@
 
 #?(:clj
 (defmacro assertf-> [f arg throw-obj]
-  `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
+  `(do (throw-unless (~f ~arg) (>ex-info nil ~throw-obj ['~f ~arg]))
        ~arg)))
 
 #?(:clj
 (defmacro assertf->> [f throw-obj arg]
-  `(do (throw-unless (~f ~arg) (->ex nil ~throw-obj ['~f ~arg]))
+  `(do (throw-unless (~f ~arg) (>ex-info nil ~throw-obj ['~f ~arg]))
        ~arg)))
 
 ;; TODO replace with `>err`

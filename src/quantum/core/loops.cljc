@@ -13,7 +13,7 @@
     [quantum.core.core                :as qcore]
     [quantum.core.collections.core    :as c]
     [quantum.core.error               :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                  :as fn
       :refer [rfn <- call fn' rcomp firsta seconda]]
     [quantum.core.log                 :as log]
@@ -142,7 +142,7 @@
                  nil)
            nil
            ~coll))
-    (throw (->ex (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
+    (throw (>ex-info (str "|doseq| takes either 2 or 3 args in bindings. Received " (count bindings)))))))
 
 #?(:clj
 (defmacro doseq-
@@ -410,7 +410,7 @@
             (do (when (and assert-same-count?
                            (or (and (empty? xs0') (seq    xs1'))
                                (and (seq    xs0') (empty? xs1'))))
-                  (throw (->ex "Seqables are not the same count")))
+                  (throw (>ex-info "Seqables are not the same count")))
                 ret)
             :else (recur (f ret (first xs0') (first xs1'))
                          (next xs0')
@@ -429,7 +429,7 @@
             (do (when (and assert-same-count?
                            (or (and (empty? xs0') (seq    xs1'))
                                (and (seq    xs0') (empty? xs1'))))
-                  (throw (->ex "Seqables are not the same count")))
+                  (throw (>ex-info "Seqables are not the same count")))
                 ret)
             :else (recur (f ret (first xs0') (first xs1') i)
                          (next xs0')

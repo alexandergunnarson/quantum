@@ -4,7 +4,7 @@
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]
     [quantum.core.error
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.ai.ml.feature.extraction :as extract]
     [quantum.core.log :as log
       :include-macros true]))

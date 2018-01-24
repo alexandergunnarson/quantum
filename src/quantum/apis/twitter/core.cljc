@@ -12,7 +12,7 @@
     [quantum.core.data.string
       :refer [!str]]
     [quantum.core.error            :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn
       :refer [fn-> fn->> fn1]]
     [quantum.core.nondeterministic :as rand]
@@ -158,7 +158,7 @@
 
 (defn user:ids->metadata [user-ids auth & [{:keys [cursor parse? handlers keys-fn] :as opts}]]
   (when-not (-> user-ids count (<= 100))
-    (throw (->ex "> 100 user-ids are allowed in a single request to |user:ids->metadata|. Found:" (count user-ids))))
+    (throw (>ex-info "> 100 user-ids are allowed in a single request to |user:ids->metadata|. Found:" (count user-ids))))
   ; You are strongly encouraged to use a POST for larger requests.
   (request! auth
     {:url      "https://api.twitter.com/1.1/users/lookup.json"

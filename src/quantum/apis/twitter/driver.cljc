@@ -21,5 +21,5 @@
     (if (err/suppress
           (web/find-element driver
             (By/xpath "//p[contains(., 'The email and password do not match.')]")))
-        (throw (->ex :login-invalid "Login for twitter failed for username" username))
+        (throw (>ex-info :login-invalid "Login for twitter failed for username" username))
         true))))

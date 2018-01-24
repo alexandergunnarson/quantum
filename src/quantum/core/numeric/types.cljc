@@ -15,7 +15,7 @@
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.error
-      :refer [->ex]])
+      :refer [>ex-info]])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric.types :as self])))
@@ -190,10 +190,10 @@
                          (->> r-str rest (apply str))))
         [integral-str decimal-str :as split] (str/split r-str #"\.")
         _ (when (-> split count (> 2))
-            (throw (->ex "Number cannot have more than one decimal point" {:num r-str})))
+            (throw (>ex-info "Number cannot have more than one decimal point" {:num r-str})))
         _ (doseq [s split]
             (when-not (every? #{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} s)
-              (throw (->ex "Number must have only numeric characters" {:num s}))))
+              (throw (>ex-info "Number must have only numeric characters" {:num s}))))
         integral (read-string integral-str)
         decimal  (read-string decimal-str)
         scale    (if decimal

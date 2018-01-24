@@ -5,7 +5,7 @@
     [quantum.core.data.bits   :as bits
       :refer [&&]]
     [quantum.core.error       :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.macros      :as macros
       :refer [defnt #?@(:clj [defnt'])]]
     [quantum.core.vars        :as var
@@ -25,7 +25,7 @@
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°
 #?(:clj
 (defmacro long-out-of-range [x]
-  `(throw (->ex :illegal-argument (str "Value out of range for long: " ~x)))))
+  `(throw (>ex-info :illegal-argument (str "Value out of range for long: " ~x)))))
 
 #?(:clj
 (defnt ^long ->long*
@@ -61,7 +61,7 @@
 (defmacro cast-via-long [class- x]
   `(let [n# (->long ~x)]
      (if (or (< n# ~(list '. class- 'MIN_VALUE)) (> n# ~(list '. class- 'MAX_VALUE)))
-         (throw (->ex :illegal-argument (str ~(str "value out of range for " (name class-) ": ") ~x)))
+         (throw (>ex-info :illegal-argument (str ~(str "value out of range for " (name class-) ": ") ~x)))
          n#))))
 ;_____________________________________________________________________
 ;==================={          BOOLEAN         }======================
@@ -109,7 +109,7 @@
   ([#{byte short char int long float double} x] (Primitive/uncheckedCharCast x))
   ([^string?   x] (if (->> x .length (= 1))
                       (.charAt x 0)
-                      (throw (->ex "Cannot cast non-singleton string to char." x))))))
+                      (throw (>ex-info "Cannot cast non-singleton string to char." x))))))
 ;_____________________________________________________________________
 ;==================={           SHORT          }======================
 ;°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°°

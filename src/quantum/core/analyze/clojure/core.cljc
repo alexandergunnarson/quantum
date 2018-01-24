@@ -4,8 +4,6 @@
    [[clojure.jvm.tools.analyzer :as ana]
     [clojure.tools.analyzer.jvm :as clj-ana]])
  #_(:cljs [clojure.tools.analyzer.js])
-    [quantum.core.error            :as err
-      :refer [ex!]]
     [quantum.core.fn
       :refer [fn1 rcomp]]
     [quantum.core.logic

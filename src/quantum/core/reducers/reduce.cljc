@@ -23,7 +23,7 @@
     [quantum.core.data.set         :as set]
     [quantum.core.data.map         :as map]
     [quantum.core.error            :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn
       :refer [fnl]]
     [quantum.core.macros           :as macros

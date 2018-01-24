@@ -18,7 +18,7 @@
     [quantum.core.collections             :as coll
       :refer [join]]
     [quantum.core.error                   :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                      :as fn
       :refer [<- fn1]]
     [quantum.core.convert                 :as conv]

@@ -11,7 +11,7 @@
     [quantum.core.fn      :as fn
       :refer [<-]]
     [quantum.core.error   :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.numeric :as num])
 #?(:cljs
   (:require-macros

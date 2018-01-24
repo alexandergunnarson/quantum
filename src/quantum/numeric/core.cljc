@@ -12,7 +12,7 @@
     [quantum.core.data.binary  :as bin
       :refer [>>]]
     [quantum.core.error        :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn
       :refer [fn-> <- fn1 fnl fn& fn&2 fn']]
     [quantum.core.log          :as log]

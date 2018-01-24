@@ -10,7 +10,7 @@
       :refer [fn-and]]
     [quantum.core.string            :as str]
     [quantum.core.error             :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.data.validated    :as dv
       :refer [declare-spec]]
     [quantum.core.spec              :as s]

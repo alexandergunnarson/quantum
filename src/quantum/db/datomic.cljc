@@ -19,7 +19,7 @@
     [quantum.core.collections         :as coll
       :refer [kw-map containsv? contains? join]]
     [quantum.core.error               :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn                  :as fn
       :refer [fn1 fn->]]
     [quantum.core.log                 :as log
@@ -184,7 +184,7 @@
                                            (fn [_]
                                              (path/path resources-path
                                                (str (-> "generated" gensym name) ".properties"))))
-                            #(throw (->ex "Invalid transactor props" %)))
+                            #(throw (>ex-info "Invalid transactor props" %)))
         write-props! (fn write-props! []
                        (let [internal-props-f
                               (c/merge {:protocol               (name type)
@@ -374,7 +374,7 @@
    {:keys [schema]     :as opts        }]
   #?(:cljs
     (when (-> db meta :listeners (c/get persist-key))
-      (throw (->ex :duplicate-persisters
+      (throw (>ex-info :duplicate-persisters
                    "Cannot have multiple ClojureScript Persisters for DataScript database"))))
     ; restoring once persisted DB on page load
     (or (when-let [stored (io/get (->name persist-key))]

@@ -19,7 +19,7 @@
             [quantum.core.fn
               :refer [fn-> juxtk]]
             [quantum.core.error             :as err
-              :refer [try+ ->ex]]
+              :refer [try+ >ex-info]]
             [quantum.core.collections       :as coll
               :refer [join map+]]
             [quantum.core.macros
@@ -154,7 +154,7 @@
         f-true?
           nil
         (>= timer timeout)
-          (throw (->ex :timeout
+          (throw (>ex-info :timeout
                        (str/sp "Timeout set at" (str 5000 ".") "Wait exceeded for function.")
                        f))
         :else

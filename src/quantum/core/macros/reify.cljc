@@ -2,7 +2,7 @@
   (:refer-clojure :exclude [contains?])
   (:require
     [quantum.core.error                :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                   :as fn
       :refer [fn-> fn->> <-]]
     [quantum.core.log                  :as log]
@@ -63,7 +63,7 @@
         _ (when (contains? duplicate-methods)
             (log/pr        :always "Duplicate methods for" sym ":")
             (log/ppr-hints :always duplicate-methods)
-            (throw (->ex "Duplicate methods")))]
+            (throw (>ex-info "Duplicate methods")))]
     reify-body))
 
 (defn gen-reify-body

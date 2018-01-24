@@ -18,7 +18,7 @@
     [quantum.core.collections      :as coll
       :refer [kw-map]]
     [quantum.core.error            :as err
-      :refer [->ex throw-unless TODO]]
+      :refer [>ex-info throw-unless TODO]]
     [quantum.core.fn               :as fn
       :refer [fn-> <-]]
     [quantum.core.log :as log]
@@ -92,7 +92,7 @@
 
 #?(:cljs
 (defn forge-unsupported! []
-  (throw (->ex :not-implemented
+  (throw (>ex-info :not-implemented
                "Supported by Forge but no interface in ClojureScript"
                type))))
 
@@ -124,7 +124,7 @@
 #?(:clj
 (defnt ^"[B" decode32
   ([^integer? x]
-    (throw (->ex :not-implemented "Decode32 not implemented for |integer|" x)))
+    (throw (>ex-info :not-implemented "Decode32 not implemented for |integer|" x)))
   ([^bytes? x] (.decode (Base32.) x))
   ([x] (decode32 (arr/->bytes-protocol x)))))
 
@@ -147,7 +147,7 @@
     :base32        (decode32 x)
     :base64        (decode64 x)
     :base64-string (-> x decode64 conv/->text)
-    (throw (->ex "Unrecognized codec" k)))))
+    (throw (>ex-info "Unrecognized codec" k)))))
 
 #?(:cljs (defn decode [& args] (TODO)))
 
@@ -155,14 +155,14 @@
 (defn ^"[B" decode-int [k obj]
   (condp = k
     :base64 (decode64-int obj)
-    (throw (->ex "Unrecognized codec" k)))))
+    (throw (>ex-info "Unrecognized codec" k)))))
 
 ; (:clj (defalias decode bt/decode))
 
 #?(:clj
 (defnt ^"[B" encode32
   ([^integer? x]
-    (throw (->ex :not-implemented "Encode32 not implemented for |integer|" x)))
+    (throw (>ex-info :not-implemented "Encode32 not implemented for |integer|" x)))
   ([^bytes? x] (.encode (Base32.) x))
   ([x] (encode32 (arr/->bytes-protocol x)))))
 
@@ -188,7 +188,7 @@
       [:base32        (encode32 obj)
        :base64        (encode64 obj)])
        :base64-string (encode64-string obj)
-       (throw (->ex "Unrecognized codec" k))))
+       (throw (>ex-info "Unrecognized codec" k))))
 
 ; __________________________________________
 ; =========== HASH / MSG DIGEST ============
@@ -203,7 +203,7 @@
     :SHA-512  (forge-unsupported!)
     :MD5      (forge-unsupported!)
     :HMAC     (forge-unsupported!)
-    (->ex :not-implemented nil type))))
+    (>ex-info :not-implemented nil type))))
 
 ; ===== DIGEST =====
 
@@ -443,10 +443,10 @@
             (case type
               :encrypt true
               :decrypt false
-              (throw (->ex "Invalid encryption param" type)))
+              (throw (>ex-info "Invalid encryption param" type)))
           _ (when (= type :decrypt)
               (throw-unless (and key- tweak)
-                (->ex "Missing required parameters:" {:key key- :tweak tweak})))]
+                (>ex-info "Missing required parameters:" {:key key- :tweak tweak})))]
       encrypt-param)))
 
 (def sensitivity-map
@@ -487,7 +487,7 @@
     :PKCS#10  (forge-unsupported!)
     :PKCS#12  (forge-unsupported!)
     :ASN.1    (forge-unsupported!)
-    :else (->ex :not-implemented nil type))))
+    :else (>ex-info :not-implemented nil type))))
 
 #?(:clj
 (defn threefish
@@ -629,12 +629,12 @@
   (case algo
     :aes                (aes       obj :encrypt password opts)
     :threefish #?(:clj  (threefish obj :encrypt          opts)
-                  :cljs (throw (->ex :unsupported "Threefish unsupported as of yet in CLJS.")))))
+                  :cljs (throw (>ex-info :unsupported "Threefish unsupported as of yet in CLJS.")))))
 
 (defn decrypt
   [algo obj & [{:keys [key tweak salt password]} :as opts]]
   (case algo
     :aes                (aes       obj :decrypt password opts)
     :threefish #?(:clj  (threefish obj :decrypt          opts)
-                  :cljs (throw (->ex :unsupported "Threefish unsupported as of yet in CLJS.")))))
+                  :cljs (throw (>ex-info :unsupported "Threefish unsupported as of yet in CLJS.")))))
 

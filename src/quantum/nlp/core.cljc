@@ -9,7 +9,7 @@
       :refer [map+ remove+
               kw-map ifor get reducei]]
     [quantum.core.error
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.numeric  :as num
       :refer [+* inc*]]
     [quantum.core.string   :as str]
@@ -46,7 +46,7 @@
                        #{\l}                      \4
                        #{\m \n}                   \5
                        #{\r}                      \6
-                       (throw (->ex "Not a soundex-able word" (kw-map w))))))
+                       (throw (>ex-info "Not a soundex-able word" (kw-map w))))))
        (coll/distinct+ (fn [x y] (and (= x y) (str/numeric? x))))
        (remove+ (fn1 = \-))
        (reducei (fn [^StringBuilder s c i]

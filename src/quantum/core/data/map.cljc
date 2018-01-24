@@ -14,8 +14,7 @@
     [quantum.core.vars    :as var
      :refer [defalias]]
     [quantum.untyped.core.convert  :as uconv]
-    [quantum.untyped.core.data
-      :refer [kw-map]]
+    [quantum.untyped.core.data     :as udata]
     [quantum.untyped.core.reducers :as ur
       :refer [reduce-pair]])
   (:import

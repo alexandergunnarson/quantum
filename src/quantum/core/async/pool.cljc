@@ -17,7 +17,7 @@
       :refer [for, contains? kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]
     [quantum.core.error          :as err
-      :refer [->ex catch-all TODO]]
+      :refer [>ex-info catch-all TODO]]
     [quantum.core.log            :as log]
     [quantum.core.logic
       :refer [fn-and default whenp1 whenf1 ifp1 when-let]]
@@ -269,7 +269,7 @@
                  (when wait-for-shutdown
                    (.awaitTermination agent-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
                    (when-not (.isTerminated agent-pool)
-                     (throw (->ex "Agent threadpool took too long to terminate"))) )
+                     (throw (>ex-info "Agent threadpool took too long to terminate"))) )
 
                  ; ----- FUTURE POOL ----- ;
                  (.shutdown future-pool)
@@ -279,7 +279,7 @@
                  (when wait-for-shutdown
                    (.awaitTermination future-pool (long (/ (time/->nanos wait-for-shutdown) 2)) (time/->timeunit :ns)) ; TODO use div:int
                    (when-not (.isTerminated future-pool)
-                     (throw (->ex "Future threadpool took too long to terminate"))) )
+                     (throw (>ex-info "Future threadpool took too long to terminate"))) )
 
                  ; ----- ASYNC POOL ----- ;
                  ; We can't have reporting on any previous core.async interactions

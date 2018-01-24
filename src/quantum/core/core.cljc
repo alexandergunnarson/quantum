@@ -44,10 +44,5 @@
     ~@body
     expr#)))
 
-(defn str->integer [s]
-  (assert (string? s) {:s s})
-  #?(:clj  (Long/parseLong ^String s)
-     :cljs (js/parseInt            s)))
-
 ;; Nested |let-mutable| :
    ;; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L

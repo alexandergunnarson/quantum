@@ -26,7 +26,7 @@
     [quantum.core.convert.primitive
       :refer [->int ->long ->double* ->double]]
     [quantum.core.error                       :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn                          :as fn
       :refer [fn1 fn&2 <- fn-> fn->>]]
     [quantum.core.numeric                     :as cnum

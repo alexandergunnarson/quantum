@@ -3,7 +3,7 @@
    for finding closest points in metric spaces."
   (:require
     [quantum.core.error :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.vars
       :refer        [#?@(:clj [defalias])]
       :refer-macros [          defalias]]

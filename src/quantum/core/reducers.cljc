@@ -24,7 +24,7 @@
     [quantum.core.data.vector      :as vec
       :refer [catvec subsvec !vector]]
     [quantum.core.error            :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
               fn1 fn-> fn->> fn' fn&2 rcomp defcurried
@@ -912,7 +912,7 @@
      (= (count bindings) (inc kv-ct))
      `(([ret# kv#] (~f-inner ret# (first kv#) (second kv#)))
        ~main-arity)
-     :else (throw (->ex "Too many binding values for `for+`:" {:bindings bindings}))))
+     :else (throw (>ex-info "Too many binding values for `for+`:" {:bindings bindings}))))
 
 (defn for+:gen-f [f f-inner arities-2-3]
   `(fn [~f]

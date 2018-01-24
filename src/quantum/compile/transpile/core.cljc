@@ -13,7 +13,7 @@
     [quantum.core.collections            :as core
       :refer [#?(:clj kw-map) in?]]
     [quantum.core.error                  :as err
-      :refer [->ex #?(:clj throw-unless)]]))
+      :refer [>ex-info #?(:clj throw-unless)]]))
 
 #?(:clj
 (defnt ^String transpile-from*
@@ -69,7 +69,7 @@
         [:clj  :c-sharp]
         ; [:clj :cpp]
         })
-    (->ex :invalid "From-To language combination invalid" (kw-map from to)))
+    (>ex-info :invalid "From-To language combination invalid" (kw-map from to)))
 
   (when (= [from to] [:clj :c-sharp])
     (log/pr :warn "Clojure -> C-Sharp transpiler is pre-alpha."))

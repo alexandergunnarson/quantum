@@ -18,7 +18,7 @@
                       [quantum.core.async                      :as async
                         :refer [>!! chan buffer go]]
                       [quantum.core.error                      :as err
-                        :refer [throw-unless ->ex TODO]]
+                        :refer [throw-unless >ex-info TODO]]
                       [quantum.core.fn                         :as fn
                         :refer [<- fn-> fn1 rcomp call fnl]]
                       [quantum.core.log                        :as log]
@@ -58,7 +58,7 @@
 (defn add-child-proc! [parent id] ; really should lock reg-threads and reg
   {:pre [(throw-unless
            (contains? @reg parent)
-           (->ex "Parent thread does not exist." parent))]}
+           (>ex-info "Parent thread does not exist." parent))]}
   (log/pr ::debug "Adding child proc" id "to parent" parent)
   ; Add to tree
   #_(let [reg-view      @reg
@@ -364,10 +364,10 @@
           id#              (:id          ~opts-f)
           type#        (or (:type        ~opts-f) #_:fiber :thread) ; Heavyweightness should be explicit
           _#           (throw-unless (in? type# #{#_:fiber :thread})
-                         (->ex ":type must be in #{:fiber :thread}" type#))
+                         (>ex-info ":type must be in #{:fiber :thread}" type#))
           ret#         (or (:ret         ~opts-f) :chan)
           _#           (throw-unless (in? ret# #{:chan :future})
-                         (->ex ":ret must be in #{:chan :future}" ret#))
+                         (>ex-info ":ret must be in #{:chan :future}" ret#))
           parent#          (:parent      ~opts-f)
           name#            (:name        ~opts-f)
           cleanup-seq#     (:cleanup-seq ~opts-f)
@@ -474,7 +474,7 @@
   "To chain subprocesses together on the same thread.
    To track progress, etc. on phases of completion."
   [universal-opts thread-chain-template]
-  (throw (->ex :not-implemented))))
+  (throw (>ex-info :not-implemented))))
 
 #?(:clj
 (defn reap-threads! []

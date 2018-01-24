@@ -7,7 +7,7 @@
             [quantum.core.collections    :as coll
               :refer [kw-map]]
             [quantum.core.error          :as err
-              :refer [->ex]]
+              :refer [>ex-info]]
             [quantum.core.fn             :as fn
               :refer [fn1]]
             [quantum.core.system         :as sys]
@@ -63,7 +63,7 @@
            (assert (.mkdir ^File dir) #{dir})
         (catch Throwable t
           (throw
-            (->ex :mkdir "The directory could not be created." (kw-map t dir)))))))))
+            (>ex-info :mkdir "The directory could not be created." (kw-map t dir)))))))))
 
 (defn num-to-sortable-str [num-0]
   (ifn num-0 (fn-and (fn-not neg?) (fn1 < 10))

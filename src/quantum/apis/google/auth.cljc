@@ -20,7 +20,7 @@
     [quantum.auth.core     :as auth]
     [quantum.core.data.map :as map ]
     [quantum.core.error    :as err
-      :refer [->ex]                ]
+      :refer [>ex-info]                ]
     [quantum.core.collections :as coll
       :refer [reducei empty?]]
     [quantum.core.paths
@@ -104,7 +104,7 @@
   (send-keys! elem s))
 
 (defn login-challenged-err [& [msg objs]]
-  (->ex :web/login-challenged
+  (>ex-info :web/login-challenged
     (or msg "Login challenged. Google asks you to 'verify it's you'.") objs))
 
 #_(defn respond-to-challenge-question
@@ -133,10 +133,10 @@
     ;(log/pr :auth "Username" username)
     ;(log/pr :auth "Password" password)
     (let [check-recovery     #(when (err/suppress (find-element driver (By/id "goToRecovery")))
-                                (throw (->ex :web/login-failed "Google says: 'Sorry, something went wrong with signing in to your account. Try again later or go to recovery for help.'" nil)))
+                                (throw (>ex-info :web/login-failed "Google says: 'Sorry, something went wrong with signing in to your account. Try again later or go to recovery for help.'" nil)))
           check-challenge    #(err/suppress (find-element driver (By/id "login-challenge-heading")))
           check-unable       #(when (err/suppress (find-element driver (By/xpath "//h1[@class='redtext' and contains(., 'Sorry, we') and contains(., 'process your request right now')]")))
-                                (throw (->ex :web/login-failed "Google says: 'Sorry, we can't process your request right now (for security reasons)'. Possible too many failed logins." nil)))
+                                (throw (>ex-info :web/login-failed "Google says: 'Sorry, we can't process your request right now (for security reasons)'. Possible too many failed logins." nil)))
           check-email-first  (err/suppress (find-element driver (By/id "next")))
           fill-username! (fn [] (-> driver
                                     (find-element (By/id "Email"))

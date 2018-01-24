@@ -65,7 +65,7 @@
     [quantum.core.core                       :as qcore
       :refer [>object]]
     [quantum.core.error                      :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn                         :as fn
       :refer [rfn juxt-kv withf->> firsta aritoid
               rcomp conja <- fn-> fn->> fn1 fnl fn' fn&2]]
@@ -702,7 +702,7 @@
 (def unique-conj
   (rfn [ret k v]
     (if (contains? ret k)
-        (throw (->ex "Duplicate key not allowed" {:k k}))
+        (throw (>ex-info "Duplicate key not allowed" {:k k}))
         (assoc ret k v))))
 
 (defn butlast+last

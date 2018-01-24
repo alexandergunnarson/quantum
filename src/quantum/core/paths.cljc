@@ -7,7 +7,7 @@
     [quantum.core.collections :as coll
       :refer [slice index-of containsv? popr reducei dropr-until]]
     [quantum.core.error       :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn          :as fn
       :refer [<- fn-> fn->> fn1 mfn]]
     [quantum.core.logic       :as logic
@@ -124,7 +124,7 @@
 ;         (.substring ^String x
 ;           (inc (.indexOf ^String x ".")))
 ;         (nil? x) nil
-;         :else (throw (->ex :no-matching-expr "Unknown type" (class x))))))
+;         :else (throw (>ex-info :no-matching-expr "Unknown type" (class x))))))
 
 #?(:clj (defalias file-ext extension))
 
@@ -173,7 +173,7 @@
        (<- whenf (fn1 str/ends-with? sys/separator) popr)
        (dropr-until sys/separator)
        (<- whenc empty?
-         (throw (->ex :err/io "Directory does not have a parent directory:" dir)))))
+         (throw (>ex-info :err/io "Directory does not have a parent directory:" dir)))))
 
 (def dirs
   #?(:clj
@@ -220,7 +220,7 @@
   #?(:clj ([^file?    x] (str x)))
   ([^default  obj] (if (nil? obj)
                        ""
-                       (throw (->ex :unimplemented nil
+                       (throw (>ex-info :unimplemented nil
                                     {:obj obj :class (type obj)})))))
 
 ; (defn parse-dir [x]

@@ -16,7 +16,7 @@
                   :refer [join map+ filter+ in-k?, conj! assoc!]]
                 [quantum.core.convert          :as conv]
                 [quantum.core.error            :as err
-                  :refer [throw-when ->ex]]
+                  :refer [throw-when >ex-info]]
                 [quantum.core.logic            :as logic
                   :refer [condpc coll-or]]
                 [quantum.core.resources        :as res]
@@ -100,7 +100,7 @@
                  (coll-or :fastest :speed) :lz4
                  (coll-or :smallest :size) :zpaq))]
       (-> data conv/->bytes #?(:clj  (bt/compress format-f options)
-                               :cljs (#(throw (->ex :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
+                               :cljs (#(throw (>ex-info :unsupported "Compression not yet supported for CLJS." {:arg %})))))))))
 
 #?(:clj
 (defn decompress

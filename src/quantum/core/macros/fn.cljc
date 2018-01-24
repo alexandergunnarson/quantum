@@ -7,7 +7,7 @@
 #_(:clj
     [co.paralleluniverse.pulsar.core  :as pulsar])
     [quantum.core.error               :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                  :as fn
       :refer [doto->>]]
     [quantum.core.log                 :as log]
@@ -69,7 +69,7 @@
 #?(:clj
 (defmacro fn+*
   ([sym doc- meta- arglist body [unk & rest-unk]]
-    (throw (->ex "Should not use |fn+*| yet"))
+    (throw (>ex-info "Should not use |fn+*| yet"))
     (if unk
         (cond
           (string? unk)
@@ -81,7 +81,7 @@
           (list?   unk)
             `(fn+* ~sym ~doc- ~meta- nil      ~(cons unk rest-unk) nil      )
           :else
-            `(throw (->ex :illegal-argument "Invalid arguments to |fn+|. " ~unk)))
+            `(throw (>ex-info :illegal-argument "Invalid arguments to |fn+|. " ~unk)))
         (let [_        (log/ppr-hints :macro-expand "ORIG BODY:" body)
               ret-type (->> sym meta :tag)
               suspendable?   (->> sym meta :suspendable)

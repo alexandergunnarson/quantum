@@ -9,7 +9,7 @@
     [quantum.core.fn
       :refer [fnl]]
     [quantum.core.error      :as err
-      :refer [->ex TODO catch-all]]
+      :refer [>ex-info TODO catch-all]]
     [quantum.core.spec       :as s
       :refer [validate]])
 #?(:cljs
@@ -104,7 +104,7 @@
     (log/pr ::debug "sub" k)
     (if-let [subscriber (-> conn meta :subs ?deref (get k))]
       (subscriber k args opts)
-      (throw (->ex :no-subscription-found {:k k}))))))
+      (throw (>ex-info :no-subscription-found {:k k}))))))
 
 (defn transform!*
   "Applies the pure transformer pointed to by ->`k` to the database, with
@@ -128,7 +128,7 @@
         (doseq [[_ callback] (-> conn meta :listeners deref)]
           (callback @report))
         @report)
-      (throw (->ex :no-transformer-found {:k k})))))
+      (throw (>ex-info :no-transformer-found {:k k})))))
 
 #?(:cljs
 (defn transform!

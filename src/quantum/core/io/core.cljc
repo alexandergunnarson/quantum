@@ -11,7 +11,7 @@
              [quantum.core.convert       :as conv
                :refer [->name]]
              [quantum.core.error         :as err
-               :refer [->ex TODO throw-unless]]
+               :refer [>ex-info TODO throw-unless]]
              [quantum.core.fn            :as fn
                :refer [firsta fn-> fnl fn1]]
              [quantum.core.log           :as log]
@@ -160,7 +160,7 @@
                                (coll/contains? #{:csv :xls :xlsx :txt :binary} type))
                            (assoc-unserialized! (keyword type) path-f data)
                            (assoc-serialized!   path-f data method))
-                     (throw (->ex :illegal-arg "Unknown write method requested." method)))
+                     (throw (>ex-info :illegal-arg "Unknown write method requested." method)))
                    [true]
                    (catch FileNotFoundException e
                      (u/create-dir! (-> path-f p/up-dir)) ; TODO need to do this recursively, and only as an option
@@ -219,7 +219,7 @@
            :as opts}
           (cond (string? unk) {:path unk}
                 (map?    unk) unk
-                :else         (throw (->ex :unknown-argument nil unk)))]
+                :else         (throw (>ex-info :unknown-argument nil unk)))]
   #?(:cljs (js/localStorage.getItem path)
      :clj  (let [^String path-f (-> path p/parse-dir (whenc empty? nil))
                  ext (keyword (or type (p/file-ext path-f)))]

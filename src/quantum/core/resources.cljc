@@ -13,7 +13,7 @@
     [quantum.core.core            :as qcore]
     [quantum.core.data.set        :as set]
     [quantum.core.error           :as err
-      :refer [->ex catch-all]]
+      :refer [>ex-info catch-all]]
     [quantum.core.log             :as log      ]
     [quantum.core.fn
       :refer [fn1 fnl with-do fn-> <-]]
@@ -47,7 +47,7 @@
     (try (.available stream) true
       (catch IOException _ false)))
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/closed? obj)))
-  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw (->ex :not-implemented)))))
+  ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (throw (>ex-info :not-implemented)))))
 
 #?(:cljs (declare open?))
 
@@ -60,7 +60,7 @@
   ([^quantum.core.data.queue.LinkedBlockingQueue obj] (async/close! obj))])
   ([^clojure.core.async.impl.channels.ManyToManyChannel   obj] (casync/close! obj))
   ([                     obj]
-    (when (val? obj) (throw (->ex :not-implemented))))))
+    (when (val? obj) (throw (>ex-info :not-implemented))))))
 
 #?(:cljs (declare close!))
 
@@ -77,7 +77,7 @@
    :cljs
  [([x] (if (satisfies? comp/Lifecycle x)
            (comp/stop x)
-           (throw (->ex "Cleanup not implemented for type" {:type (type x)}))))]))
+           (throw (>ex-info "Cleanup not implemented for type" {:type (type x)}))))]))
 
 (defn with-cleanup [obj cleanup-seq]
   (swap! cleanup-seq conj #(close! obj))

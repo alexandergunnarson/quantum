@@ -19,7 +19,7 @@
       :refer [<! <!! >! >!!]]
     [quantum.core.data.set      :as set]
     [quantum.core.error         :as err
-      :refer [->ex TODO catch-all]]
+      :refer [>ex-info TODO catch-all]]
     [quantum.core.fn            :as fn
       :refer [<- fn-> fn->> fn1 fnl fn' rfn with-do]]
     [quantum.core.log           :as log]
@@ -58,9 +58,9 @@
 
 (defn unhandled-type [type obj]
   (case type
-    :conn   (->ex :unhandled-predicate "Object is not mconn, conn, or db" obj)
-    :db     (->ex :unhandled-predicate "Object is not mdb or db"          obj)
-    :entity (->ex :unhandled-predicate "Object is not mentity or entity"  obj)))
+    :conn   (>ex-info :unhandled-predicate "Object is not mconn, conn, or db" obj)
+    :db     (>ex-info :unhandled-predicate "Object is not mdb or db"          obj)
+    :entity (>ex-info :unhandled-predicate "Object is not mentity or entity"  obj)))
 
 ; PREDICATES
 
@@ -106,7 +106,7 @@
                          :v     (:v     d)
                          :tx    (:tx    d)
                          :added (:added d)})))
-      (throw (->ex :not-supported "Not supported for" db))))
+      (throw (>ex-info :not-supported "Not supported for" db))))
 
 (defn history->seq
   "Assumes @history is a seq of DataScript DBs."
@@ -130,7 +130,7 @@
            (mconn? arg) @arg
  #?@(:clj [(conn?  arg) (db/db arg)])
           :else
-            (throw (->ex "Object cannot be transformed into database" arg)))))
+            (throw (>ex-info "Object cannot be transformed into database" arg)))))
 
 (defn touch [entity]
   (cond           (mentity? entity) (mdb/touch entity)
@@ -381,7 +381,7 @@
        db)))
 
 (defn partitions-ex []
-  (->ex :not-supported
+  (>ex-info :not-supported
         (str "|partitions| not supported for DataScript. "
              "DataScript does not have partitions.")))
 
@@ -502,7 +502,7 @@
                       #(case (value-type %)
                          :db.type/ref (->> % qcore/get (remove-vals+ nil?) ; Because can't assert nil in DB
                                                        (join {}))
-                         nil (throw (->ex "Object's schema not found in registry" {:object % :type (c/type %)}))
+                         nil (throw (>ex-info "Object's schema not found in registry" {:object % :type (c/type %)}))
                          (qcore/get %))
                       dbfn-call?
                       #(with-do % (reset! has-dbfn-call? true))
@@ -668,7 +668,7 @@
            1 [[] [] (nth prelists 0)]
            2 [(nth prelists 0) [] (nth prelists 1)]
            3 prelists
-           (throw (->ex "More vectors than [requires, imports, arglist] found for dbfn" (kw-map args))))]
+           (throw (>ex-info "More vectors than [requires, imports, arglist] found for dbfn" (kw-map args))))]
     `(db/function
        '{:lang     :clojure
          :requires ~(into ['[datomic.api :as api]] requires)

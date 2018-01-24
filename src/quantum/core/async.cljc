@@ -28,7 +28,7 @@
     [quantum.core.data.vector          :as vec
       :refer [!+vector:sized]]
     [quantum.core.error                :as err
-      :refer [->ex TODO catch-all]]
+      :refer [>ex-info TODO catch-all]]
     [quantum.core.fn
       :refer [fnl fn1]]
     [quantum.core.log                  :as log]
@@ -368,7 +368,7 @@
   ([sleepf timeout pred]
    `(loop [timeout# ~timeout]
       (if (<= timeout# 0)
-          (throw (->ex :timeout ~(istr "Operation timed out after ~{timeout} milliseconds") ~timeout))
+          (throw (>ex-info :timeout ~(istr "Operation timed out after ~{timeout} milliseconds") ~timeout))
           (when-not ~pred
             (~sleepf 10) ; Sleeping so as not to take up thread time
             (recur (- timeout# 11)))))))) ; Takes a tiny bit more time
@@ -382,7 +382,7 @@
         wait-millis# ~wait-millis]
     (loop [n# 0 error-n# nil]
       (if (> n# max-n#)
-          (throw (->ex :max-tries-exceeded nil
+          (throw (>ex-info :max-tries-exceeded nil
                        {:tries n# :last-error error-n#}))
           (let [[error# result#]
                   (try [nil (do ~@body)]

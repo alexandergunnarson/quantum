@@ -31,7 +31,7 @@
             [quantum.core.data.vector       :as vec
               :refer [catvec svector subsvec]]
             [quantum.core.error             :as err
-              :refer [->ex TODO]]
+              :refer [>ex-info TODO]]
             [quantum.core.fn                :as fn
               :refer [fn' fn1 fn&2 rfn rcomp firsta fn-> <- aritoid]]
             [quantum.core.logic             :as logic
@@ -285,7 +285,7 @@
            ([^default      x] (if (nil? x)
                                   0
                                   (core/count x) ; TODO need to fix this so certain interfaces are preferred
-                                #_(throw (->ex "`count` not supported on type" {:type (type x)})))))
+                                #_(throw (>ex-info "`count` not supported on type" {:type (type x)})))))
 
 ; TODO `pcount`
 
@@ -349,7 +349,7 @@
   #?(:clj  (^<0> [^default                 x ^int    k        v]
              (if (t/array? x)
                  (java.lang.reflect.Array/set x k v)
-                 (throw (->ex :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
+                 (throw (>ex-info :not-supported "`assoc!` not supported on this object" {:type (type x)}))))))
 
 (defnt assoc
   {:imported "clojure.lang.RT/assoc"}
@@ -358,7 +358,7 @@
            ([^default                  x k v]
              (if (nil? x)
                  {k v}
-                 (throw (->ex :not-supported "`assoc` not supported on this object" {:type (type x)})))))
+                 (throw (>ex-info :not-supported "`assoc` not supported on this object" {:type (type x)})))))
 
 (defnt assoc?!
   "`assoc`, maybe mutable. General `assoc(!)`.
@@ -374,7 +374,7 @@
         (     [^default    x      k        v]
                 (if (nil? x)
                     {k v}
-                    (throw (->ex :not-supported "`assoc?!` not supported on this object" {:type (type x)})))))
+                    (throw (>ex-info :not-supported "`assoc?!` not supported on this object" {:type (type x)})))))
 
 ; ===== ARRAYS ===== ;
 
@@ -712,10 +712,10 @@
                           (re-matcher elem coll)]
                      (when (.find matcher)
                        (.start matcher)))
-             :cljs (throw (->ex :unimplemented
+             :cljs (throw (>ex-info :unimplemented
                                 (str "|index-of| not implemented for " (class coll) " on " (class elem))
                                 (kw-map coll elem))))
-          :else (throw (->ex :unimplemented
+          :else (throw (>ex-info :unimplemented
                              (str "|last-index-of| not implemented for String on" (class elem))
                              (kw-map coll elem))))))
 
@@ -744,7 +744,7 @@
   ([^string? coll elem]
     (cond (string? elem)
           (let [i (.lastIndexOf coll ^String elem)] (if (= i -1) nil i))
-          :else (throw (->ex :unimplemented
+          :else (throw (>ex-info :unimplemented
                              (str "|last-index-of| not implemented for String on" (class elem))
                              (kw-map coll elem))))))
 
@@ -757,7 +757,7 @@
            ([^default                                     xs           k]
              (if (nil? xs)
                  false
-                 (throw (->ex :not-supported
+                 (throw (>ex-info :not-supported
                           (str "contains? not supported on type: " (class xs)))))))
 
 (defnt contains?
@@ -922,7 +922,7 @@
   #?(:clj  ([^default                     xs x]
              (if (nil? xs)
                  nil
-                 (throw (->ex :not-supported "`dissoc` not supported on this object" {:type (type xs)}))))))
+                 (throw (>ex-info :not-supported "`dissoc` not supported on this object" {:type (type xs)}))))))
 
 (defnt dissoc!
   ([^transient? xs k] (core/dissoc! xs k)))
@@ -1165,7 +1165,7 @@
   [kv f]
   (if (-> kv count (= 2))
       (f)
-      (throw (->ex :not-supported "`key/val` not supported on collections of count != 2"
+      (throw (>ex-info :not-supported "`key/val` not supported on collections of count != 2"
                    {:coll kv :ct (count kv)}))))
 
 (defnt ^:private key*

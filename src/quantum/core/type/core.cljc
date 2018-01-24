@@ -14,7 +14,7 @@
           [quantum.core.fn
             :refer [<- fn->>]]
           [quantum.core.error               :as err
-            :refer [->ex]]
+            :refer [>ex-info]]
           [quantum.untyped.core.convert     :as uconv
             :refer [>name]]
           [quantum.core.vars                :as var
@@ -100,7 +100,7 @@
 (def prim|unevaled?      #(contains? prim-types|unevaled %))
 (def primitive|unevaled? #(contains? primitive-types|unevaled %))
 #?(:clj  (def  auto-unboxable|unevaled? #(contains? primitive-boxed-types|unevaled %))
-   :cljs (defn auto-unboxable|unevaled? [x] (throw (->ex :unsupported "`auto-unboxable?` not supported by CLJS"))))
+   :cljs (defn auto-unboxable|unevaled? [x] (throw (>ex-info :unsupported "`auto-unboxable?` not supported by CLJS"))))
 
 #?(:clj
 (defn most-primitive-class-of [x]
@@ -155,15 +155,15 @@
 
 (defn ->boxed|sym   [t]
   #?(:clj  (if-let [boxed   (get boxed-type-map   t)] boxed   t)
-     :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
+     :cljs (throw (>ex-info :unsupported "|->boxed| not supported by CLJS"))))
 
 (defn ->unboxed|sym [t]
   #?(:clj  (if-let [unboxed (get unboxed-type-map t)] unboxed t)
-     :cljs (throw (->ex :unsupported "|->boxed| not supported by CLJS"))))
+     :cljs (throw (>ex-info :unsupported "|->boxed| not supported by CLJS"))))
 
 (defn boxed?|sym    [t]
   #?(:clj  (contains? unboxed-type-map t)
-     :cljs (throw (->ex :unsupported "|boxed?| not supported by CLJS"))))
+     :cljs (throw (>ex-info :unsupported "|boxed?| not supported by CLJS"))))
 
 #?(:clj (defn primitive-array-type? [^Class c]
           (and (class? c)

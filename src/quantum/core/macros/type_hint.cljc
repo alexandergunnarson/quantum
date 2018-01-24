@@ -1,7 +1,7 @@
 (ns quantum.core.macros.type-hint
   (:require
     [quantum.core.error       :as err
-      :refer [ex!]]
+      :refer [ex-info!]]
     [quantum.core.macros.core :as cmacros]
     [quantum.core.type.core   :as tcore]
     [quantum.core.vars        :as var
@@ -20,7 +20,7 @@
 
 (defn sanitize-tag [lang tag]
   #?(:clj  (or (get-in tcore/return-types-map [lang tag]) tag)
-     :cljs (ex! "`sanitize-tag` not supported in CLJS")))
+     :cljs (ex-info! "`sanitize-tag` not supported in CLJS")))
 
 #?(:clj
 (defn with-sanitize-tag [lang sym]

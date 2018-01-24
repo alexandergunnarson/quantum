@@ -46,7 +46,7 @@
         timestamp-0  (.lastModified file-0)
         sleep-delay  (or (:delay opts) 100)]
     (if (io/directory? file-0)
-        (throw (->ex :not-implemented "Directory parsing not yet implemented." file))
+        (throw (>ex-info :not-implemented "Directory parsing not yet implemented." file))
         (async-loop thread-opts
           [prev-timestamp timestamp-0]
           (let [^File file-n  (-> @file convert/->file)

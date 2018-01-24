@@ -8,7 +8,7 @@
            #?@(:clj [[clojure.java.io            :as io]
                      [clojure.java.shell         :as shell]])
                      [quantum.core.error
-                       :refer [->ex]]
+                       :refer [>ex-info]]
                      [quantum.core.fn
                        :refer [rcomp]]
                      [quantum.core.collections   :as coll
@@ -328,7 +328,7 @@
                    (when (= ret ::timeout) (.destroyForcibly proc))
                    ret)
                  *proc))
-     :cljs (throw (->ex :unimplemented))))
+     :cljs (throw (>ex-info :unimplemented))))
 
 ; TODO CLJS
 #?(:clj

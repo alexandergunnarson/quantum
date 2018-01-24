@@ -16,7 +16,7 @@
       :refer [>object]]
     [quantum.core.data.primitive :as prim]
     [quantum.core.error          :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.fn
       :refer [fn->> fn-> fn1]]
     [quantum.core.log            :as log]

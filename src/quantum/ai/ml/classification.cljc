@@ -20,7 +20,7 @@
     [quantum.core.cache               :as cache
       :refer [defmemoized]]
     [quantum.core.error
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.log                 :as log]
     [quantum.core.logic
       :refer [coll-or condpc fn-and]]
@@ -48,7 +48,7 @@
   (cond (> i 1) (reduce (fn [ret _] (* ret x)) x (dec i))
         (= i 1) x
         (= i 0) 1
-        (< i 0) (throw (->ex "Not handled"))))
+        (< i 0) (throw (>ex-info "Not handled"))))
 
 (def ^:dynamic *exact?* true)
 
@@ -98,7 +98,7 @@
         '[c]   `(N:c   ~D ~@pred-vals)
         '[w]   `(N:w   ~D ~@pred-vals)
         '[ŵ]   `(N:w   ~D ~@pred-vals nil)
-        (throw (->ex "No matching predicate pairs:" pred-syms)))))))
+        (throw (>ex-info "No matching predicate pairs:" pred-syms)))))))
 
 #?(:clj
 (defmacro N [D & args] ; TODO code pattern
@@ -118,7 +118,7 @@
             frequencies))
   (^{:doc "the number of documents in doc collection ->`D` labeled as ->`c`"}
    [D c] (or ((Nd:c D) c)
-             (throw (->ex "Class does not exist in doc collection" c)))))
+             (throw (>ex-info "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:c {}
   "Total number of occurrences of words in doc collection ->`D` of class ->`c`."
@@ -129,7 +129,7 @@
             (map+ vector)
             (reduce (partial merge-with +) {})))
   ([D c] (or ((Nt:c D) c)
-             (throw (->ex "Class does not exist in doc collection" c)))))
+             (throw (>ex-info "Class does not exist in doc collection" c)))))
 
 (defmemoized Nt:w+d {}
   "word ->`w` :: Number of occurrences of ->`w` in document ->`d`"
@@ -149,7 +149,7 @@
             (reduce (partial merge-with +) {})))
   (^{:doc "The number of documents in corpus ->`C` in which ->`w` occurs"}
    [D w] (or ((Nd:w D) w)
-             (throw (->ex "Word does not exist" w))))
+             (throw (>ex-info "Word does not exist" w))))
   (^{:doc "The number of documents in corpus ->`C` in which ->`w` does not occur"}
    [D ŵ _] (- (N D) (Nd:w D ŵ))))
 

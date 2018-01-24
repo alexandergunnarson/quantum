@@ -3,7 +3,7 @@
    features for building robust learning models."
   (:require
     [quantum.core.error :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.vars
       :refer [defalias]]
     [quantum.core.log :as log]))

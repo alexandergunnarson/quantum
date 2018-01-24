@@ -10,7 +10,7 @@
     [quantum.core.data.vector                   :as vec
       :refer [catvec]]
     [quantum.core.error                         :as err
-      :refer [ex! ->ex err! throw-unless assertf->>]]
+      :refer [>ex-info err! throw-unless assertf->>]]
     [quantum.core.fn                            :as fn
       :refer [<- fn-> fn->> fn1 fnl]]
     [quantum.core.log                           :as log
@@ -107,7 +107,7 @@
 (defn classes-for-type-predicate
   ([pred lang] (classes-for-type-predicate pred lang nil))
   ([pred lang type-arglist]
-  (throw-unless ((fn-or symbol? keyword? string?) pred) (->ex "Type predicate must be a symbol, keyword, or string." {:pred pred}))
+  (throw-unless ((fn-or symbol? keyword? string?) pred) (>ex-info "Type predicate must be a symbol, keyword, or string." {:pred pred}))
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
       (->> tdef/types|unevaled
@@ -129,7 +129,7 @@
                      (into #{}))
       string? (fn-> symbol hash-set)
       ;nil?    (fn' #{'Object})
-      #(throw (->ex "Not a type hint." %)))))
+      #(throw (>ex-info "Not a type hint." %)))))
 
 (defn hint-arglist-with
   [arglist hints]
@@ -151,13 +151,13 @@
      (condf body
        (fn-> first vector?) (fn->> defnt-remove-hints vector)
        (fn-> first seq?   ) (fn->> (mapv defnt-remove-hints))
-       #(throw (->ex "Unexpected form when trying to parse arities." %)))
+       #(throw (>ex-info "Unexpected form when trying to parse arities." %)))
    :arities
      (let [split-arity (fn [body'] {:arglist (first body') :body (list* 'do (rest body'))})]
        (condf body
          (fn-> first vector?) (fn->> split-arity vector)
          (fn-> first seq?   ) (fn->> (mapv (fn-> split-arity)))
-         #(throw (->ex "Unexpected form when trying to parse arglists." %))))})
+         #(throw (>ex-info "Unexpected form when trying to parse arglists." %))))})
 
 (defn defnt-arglists
   {:out '[[^string? x] [^vector? x]]}
@@ -166,7 +166,7 @@
     (condf body
       (fn-> first vector?) (fn->> first vector)
       (fn-> first seq?   ) (fn->> (mapv first))
-      #(throw (->ex "Unexpected form when trying to parse arglists." %)))})
+      #(throw (>ex-info "Unexpected form when trying to parse arglists." %)))})
 
 (defn defnt-gen-protocol-name
   [sym lang]
@@ -239,11 +239,11 @@
 
 (defn positional-profundal->hint [lang position depth arglist hints]
   (if-not-let [hint (get hints position)] ; is already qualified
-    (throw (->ex "Position out of range for arglist" (kw-map position depth arglist hints)))
+    (throw (>ex-info "Position out of range for arglist" (kw-map position depth arglist hints)))
     (if-not depth
       hint
       (if (or #?(:cljs true) (= lang :cljs))
-          (throw (->ex "Depth specifications not supported for hints in CLJS (yet)" (kw-map position depth arglist hints)))
+          (throw (>ex-info "Depth specifications not supported for hints in CLJS (yet)" (kw-map position depth arglist hints)))
           #?(:clj (tcore/nth-elem-type|clj hint depth))))))
 
 (defn hints->with-replace-special-kws
@@ -433,7 +433,7 @@
             (fn [first-hints-set]
               (let [hints-set-ensured (ucoll/ensure-set first-hints-set)]
                 (if (contains? hints-set-ensured first-hint)
-                    (throw (->ex "Not allowed same arity and same first hint:" arglist))
+                    (throw (>ex-info "Not allowed same arity and same first hint:" arglist))
                     (conj hints-set-ensured first-hint))))))))))
 
 ; TODO Can run on other platforms but the behavior is language/platform-specific

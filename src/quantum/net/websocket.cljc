@@ -9,7 +9,7 @@
               :refer [lens ?deref]]
             [quantum.core.data.complex.json          :as json]
             [quantum.core.error                      :as err
-              :refer [->ex]]
+              :refer [>ex-info]]
             [quantum.core.fn                         :as fn
               :refer [fn-> fn']]
             [quantum.core.log                        :as log]
@@ -96,7 +96,7 @@
                      :else             (concat (list ?times ?sleep) args))]
     (go (async/try-times! (or times 3) (or sleep 500)
           (when (nil? (apply put! args-f))
-            (throw (->ex "WebSocket apparently not open for message")))))))
+            (throw (>ex-info "WebSocket apparently not open for message")))))))
 
 (deftype JSONPacker []
   taoensso.sente.interfaces/IPacker

@@ -24,7 +24,7 @@
                     :headers {"Cookie" (->> (web/get-cookies driver) cook/encode-cookies)}
                      #_:query-params #_{"queryNew" "" "offset" "0" "filterType" "cash" "comparableType" "8"}})
             _ (with-throw (-> resp :opts :url (= url))
-                (->ex :err/url "Didn't get to the right url" url))
+                (>ex-info :err/url "Didn't get to the right url" url))
             csv (:body resp)]
         csv)
       (finally (.quit driver)))))

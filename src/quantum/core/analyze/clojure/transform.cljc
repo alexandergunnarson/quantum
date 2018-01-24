@@ -5,7 +5,7 @@
     [quantum.core.analyze.clojure.predicates
       :refer [if-statement? cond-statement? when-statement?]]
     [quantum.core.error                      :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                         :as fn
       :refer [fn-> fn->> fn']]
     [quantum.core.logic                      :as logic
@@ -67,7 +67,7 @@
                                                    true)
                                    (= firstb :as) (pb ret (second bs) gvec)
                                    :else (if seen-rest?
-                                           (throw (->ex "Unsupported binding form, only :as can follow & parameter"))
+                                           (throw (>ex-info "Unsupported binding form, only :as can follow & parameter"))
                                            (recur (pb ret firstb (core/list `nth gvec n nil))
                                                   (core/inc n)
                                                   (next bs)
@@ -105,10 +105,10 @@
                       (core/keyword? b) (-> bvec (conj (symbol (name b))) (conj v))
                       (vector? b) (pvec bvec b v)
                       (map? b) (pmap bvec b v)
-                      :else (throw (->ex (core/str "Unsupported binding form: " b))))))
+                      :else (throw (>ex-info (core/str "Unsupported binding form: " b))))))
          process-entry (fn [bvec b] (pb bvec (first b) (second b)))]
         (if (every? core/symbol? (map first bents))
           bindings
           (if-let [kwbs (seq (filter #(core/keyword? (first %)) bents))]
-            (throw (->ex :unsupported (core/str "Unsupported binding key:") (ffirst kwbs)))
+            (throw (>ex-info :unsupported (core/str "Unsupported binding key:") (ffirst kwbs)))
             (reduce process-entry [] bents))))))

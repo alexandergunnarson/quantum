@@ -10,7 +10,7 @@
     [quantum.core.logic
       :refer [fn-not fn-or]]
     [quantum.core.error :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.macros.core
       :refer [case-env]]
     [quantum.core.vars        :as var

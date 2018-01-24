@@ -17,7 +17,7 @@
     [quantum.core.data.map      :as map]
     [quantum.core.data.set      :as set]
     [quantum.core.error
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn            :as fn
       :refer [fn-> fn1 rfn fnl]]
     [quantum.core.logic         :as logic
@@ -206,16 +206,16 @@
            ([^string? sep x n] (str/split x (re-pattern (regex/escape sep)) n))
            ([^regex?  sep x  ] (str/split x sep  ))
            ([^regex?  sep x n] (str/split x sep n))
-   #?(:clj ([^default sep x  ] (if (nil? sep) x (throw (->ex "`split*` not supported for type" {:type (type sep)})))))
-   #?(:clj ([^default sep x n] (if (nil? sep) x (throw (->ex "`split*` not supported for type" {:type (type sep)}))))))
+   #?(:clj ([^default sep x  ] (if (nil? sep) x (throw (>ex-info "`split*` not supported for type" {:type (type sep)})))))
+   #?(:clj ([^default sep x n] (if (nil? sep) x (throw (>ex-info "`split*` not supported for type" {:type (type sep)}))))))
 
 (defnt split
   #?(:cljs ([^nil?             x sep  ] x))
   #?(:cljs ([^nil?             x sep n] x))
            ([#{string? regex?} x sep  ] (split*-protocol sep x  )) ; TODO deprotocolize
            ([#{string? regex?} x sep n] (split*-protocol sep x n)) ; TODO deprotocolize
-   #?(:clj ([^default          x sep  ] (if (nil? x) x (throw (->ex "`split` not supported for type" {:type (type x)})))))
-   #?(:clj ([^default          x sep n] (if (nil? x) x (throw (->ex "`split` not supported for type" {:type (type x)}))))))
+   #?(:clj ([^default          x sep  ] (if (nil? x) x (throw (>ex-info "`split` not supported for type" {:type (type x)})))))
+   #?(:clj ([^default          x sep n] (if (nil? x) x (throw (>ex-info "`split` not supported for type" {:type (type x)}))))))
 
 (defn split-by-regex
   "Split the string `s` by the regex `pattern`."

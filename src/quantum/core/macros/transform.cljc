@@ -9,7 +9,7 @@
     [quantum.core.core
       :refer [val?]]
     [quantum.core.error                      :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn                         :as fn
       :refer [<- fn1 fn-> rcomp]]
     [quantum.core.log                        :as log
@@ -74,7 +74,7 @@
                   (if-let [sym (->> arglist-map keys
                                     (filter (partial anap/shadows-var? (second scope)))
                                     first)]
-                    (throw (->ex :unsupported "Arglist in |let| shadows hinted arg." sym))
+                    (throw (>ex-info :unsupported "Arglist in |let| shadows hinted arg." sym))
                     scope))
               identity)
             body)

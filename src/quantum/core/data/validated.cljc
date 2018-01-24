@@ -4,7 +4,7 @@
     [clojure.core           :as core]
     [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
-      :refer [->ex TODO catch-all]]
+      :refer [>ex-info TODO catch-all]]
     [quantum.core.macros.core
       :refer [case-env]]
     [quantum.core.macros.deftype :as deftype]
@@ -56,7 +56,7 @@
 (defn enforce-get [base-record c ks k]
   (when-not (#?@(:clj  [.containsKey ^java.util.Map base-record]
                  :cljs [contains? base-record]) k)
-    (throw (->ex "Key is not present in ValidatedMap's spec" {:class c :k k :keyspec ks}))))
+    (throw (>ex-info "Key is not present in ValidatedMap's spec" {:class c :k k :keyspec ks}))))
 
 #?(:clj
 (defn hash-classname [cname]
@@ -416,7 +416,7 @@
                 ~'conj        ([_# [k0# v0#]]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
-                                                 (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
+                                                 (throw (>ex-info "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(case-env :clj '.assoc :cljs '-assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
@@ -425,7 +425,7 @@
                {~'assoc       ([_# k0# v0#]
                                 (let [~k-gen (or (get ~all-mod-keys-record k0#)
                                                  (get ~un-ks-to-ks         k0#)
-                                                 (throw (->ex "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
+                                                 (throw (>ex-info "Key not in validated map spec" {:k k0# :class '~qualified-record-sym})))
                                       ~v-gen (validate v0# ~k-gen)]
                                   (-> (new ~sym (~(case-env :clj '.assoc :cljs '-assoc) ~'v ~k-gen ~v-gen))
                                       ~(if-not conformer `identity* conformer-sym)
@@ -436,7 +436,7 @@
                                 (let [~k-gen k0#]
                                   (when (#?@(:clj  [.containsKey ~required-keys-record]
                                              :cljs [contains? ~required-keys-record]) ~k-gen)
-                                    (throw (->ex "Key is in ValidatedMap's required keys and cannot be dissoced"
+                                    (throw (>ex-info "Key is in ValidatedMap's required keys and cannot be dissoced"
                                                  {:class ~sym :k ~k-gen :keyspec ~spec-sym})))
                                    (-> (new ~sym (~(case-env :clj '.without :cljs '-dissoc) ~'v ~k-gen))
                                        ~(if-not conformer `identity* conformer-sym)

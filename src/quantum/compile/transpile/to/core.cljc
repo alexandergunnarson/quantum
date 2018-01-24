@@ -8,7 +8,7 @@
     [quantum.core.convert                    :as conv
       :refer [->name]]
     [quantum.core.error                      :as err
-      :refer [throw-unless ->ex]]
+      :refer [throw-unless >ex-info]]
     [quantum.core.log                        :as log  ]
     [quantum.core.compare                    :as comp ]
     [quantum.core.string                     :as str  ]
@@ -314,7 +314,7 @@
          {:pre [(throw-unless (val? form) (str/sp "Cannot bind var" (str/squote sym) "to nothing"))
                 (-> args count (= 0))]}
          (when (-> reserved-syms (get *lang*) (contains? sym))
-           (throw (->ex (str/sp "Symbol" (str/squote sym)
+           (throw (>ex-info (str/sp "Symbol" (str/squote sym)
                           "is a reserved symbol and cannot be redefined."))))
          (let [_ (log/pr :debug "META FOR SYM" sym "IS" (meta sym))
                form-scoped (->> form (scope-if-needed))
@@ -358,7 +358,7 @@
        (fn quote-fn [[special-sym & args]]
          (if (and (coll/single? args) (-> args first symbol?))
              (eval-form (first args))
-             (throw (->ex "Quote not supported yet."))))
+             (throw (>ex-info "Quote not supported yet."))))
      'when
        (fn when-fn [[special-sym pred & args]]
          (let [
@@ -433,7 +433,7 @@
                    :java ":"
                    :cs   "in"
                    :js   "in"
-                   (throw (->ex (str/sp "No doseq in-token recognized for language:" *lang*))))
+                   (throw (>ex-info (str/sp "No doseq in-token recognized for language:" *lang*))))
                ; (elem-class super)
                var-decl (or (anap/metaclass sub)
                             (-> sub meta :t)
@@ -569,7 +569,7 @@
                          (and (= 1 arg-ct) (nil? arg-0))
                            {}
                          :else
-                           (throw (->ex "Invalid number of arguments to JavaScript object.")))
+                           (throw (>ex-info "Invalid number of arguments to JavaScript object.")))
                      longest-key-length
                        (->> obj-map keys
                             (map (fn->> name symbol eval-form count))
@@ -732,7 +732,7 @@
      (if (anap/qualified? obj)
          (do (log/pr :debug "QUALIFIED SYMBOL:" (str obj))
              (if (->> obj str (filter (fn= \/)) count (<- > 1))
-               (throw (->ex (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
+               (throw (>ex-info (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
                (->> obj str (<- str/replace backslash-regex ".") symbol eval-form)))
          (->> obj str replace-specials)))
    ([^string? obj] (str \" obj \"))
@@ -744,7 +744,7 @@
    ([:else obj]
      (if (nil? obj)
          "null"
-         (throw (->ex (type obj) "Unrecognized form" {:obj obj})))))
+         (throw (>ex-info (type obj) "Unrecognized form" {:obj obj})))))
 
 (defn ^String eval-form [obj]
   (println "Evaluating" obj "class" (type obj))

@@ -9,7 +9,7 @@
     [quantum.core.macros
       #?@(:clj [:refer [compile-if]])]
     [quantum.core.error :as err
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.untyped.core.data
       :refer [kw-map]])
   #?(:clj (:import (org.apache.spark          SparkContext)
@@ -72,7 +72,7 @@
       (defn fold [f x] (TODO))
       (defn collect [^Dataset x] (.collect x)))
   (do (defn- requires-spark>=2 [& _]
-        (throw (->ex "Requires Spark >= 2.0" (kw-map version))))
+        (throw (>ex-info "Requires Spark >= 2.0" (kw-map version))))
 
       (doseq [sym '#{map filter group-by take flat-map fold collect}]
         (intern *ns* sym requires-spark>=2)))))

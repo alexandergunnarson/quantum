@@ -12,7 +12,7 @@
     [quantum.core.collections             :as coll
       :refer [kw-map join reduce map+ val assoc-if]]
     [quantum.core.error
-      :refer [TODO ->ex]]
+      :refer [TODO >ex-info]]
     [quantum.core.fn                      :as fn
       :refer [<- fn-> fn->> fn1 fn']]
     [quantum.core.logic                   :as logic

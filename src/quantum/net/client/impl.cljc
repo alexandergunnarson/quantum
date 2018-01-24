@@ -12,7 +12,7 @@
                         :refer [base64-encode ->json json->
                                 ->transit transit->]]
                       [quantum.core.error           :as err
-                        :refer [->ex]]
+                        :refer [>ex-info]]
                       [quantum.core.log             :as log]
                       [quantum.core.string          :as str]
                       [quantum.net.core             :as net]
@@ -108,8 +108,8 @@
          :url         "https://www.googleapis.com/upload/drive/v2/files"
          :oauth-token (access-key :drive :offline)
          :parse?   true
-         :handlers {:default (fn [req resp] (throw (->ex :http "HTTP exception" (:status response))))
-                    404      (fn [req resp] (throw (->ex :http "404 exception")))
+         :handlers {:default (fn [req resp] (throw (>ex-info :http "HTTP exception" (:status response))))
+                    404      (fn [req resp] (throw (>ex-info :http "404 exception")))
                     401      (fn [req resp]
                                (refresh-access!)
                                (http/request! (assoc req :new-access-key 123)))}
@@ -132,7 +132,7 @@
          tries     0}}]
   (log/ppr :http req)
   (if (= tries max-tries)
-      (throw (->ex :error/http
+      (throw (>ex-info :error/http
                    (str "HTTP exception, status " (:status req) ". Maximum tries (3) exceeded.")
                    {:status (:status req)}))
       (let [response        @(http/request (dissoc req :status :log))

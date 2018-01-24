@@ -10,7 +10,7 @@
       :refer [postwalk]]
     [clojure.core              :as core]
     [quantum.core.error        :as err
-      :refer [->ex]]
+      :refer [>ex-info]]
     [quantum.core.fn           :as fn
       :refer [fn->]]
     [quantum.core.log          :as log]
@@ -57,7 +57,7 @@
 (defn qualify [x]
   (if-let [resolved (resolve x)]
     (-> resolved var->symbol)
-    (throw (->ex :sym-not-found (str "Symbol not able to be resolved: " x) x)))))
+    (throw (>ex-info :sym-not-found (str "Symbol not able to be resolved: " x) x)))))
 
 #?(:clj
 (defmacro variadic-proxy
@@ -177,7 +177,7 @@
 ;     keyword?        default-hint
 ;     set?            default-hint
 ;     map?            default-hint
-;     :else           (fn' (->ex "Don't know how to make hint from" x)))))
+;     :else           (fn' (>ex-info "Don't know how to make hint from" x)))))
 
 
 ; #?(:clj (defalias quote+ deps/quote+))
@@ -197,7 +197,7 @@
 #?(:clj
 (defmacro assert-args [fn-name & pairs]
   `(do (when-not ~(first pairs)
-         (throw (->ex :illegal-argument
+         (throw (>ex-info :illegal-argument
                   ~(str fn-name " requires " (second pairs)))))
      ~(let [more (nnext pairs)]
         (when more
@@ -219,7 +219,7 @@
     (reduce emit-other (emit-inner body-expr inner-group) other-groups)))
 
 (defn do-mod [mod-pairs cont & {:keys [skip stop]}]
-  (let [err (fn [& msg] (throw (->ex (apply str msg))))]
+  (let [err (fn [& msg] (throw (>ex-info (apply str msg))))]
     (reduce
       (fn [cont [k v]]
         (cond

@@ -17,7 +17,7 @@
     [quantum.core.fn :as fn
       :refer [<- fn-> fn->>]]
     [quantum.core.error
-      :refer [->ex TODO]]
+      :refer [>ex-info TODO]]
     [quantum.core.logic
       :refer [condpc coll-or]]
     [quantum.core.vars        :as var
