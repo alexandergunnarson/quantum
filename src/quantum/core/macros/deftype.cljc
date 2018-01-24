@@ -4,17 +4,19 @@
     [cljs.analyzer]
     [cljs.core #?@(:cljs [:as core])]
     #?(:clj [clojure.core :as core])
-    [quantum.core.core
-      :refer [kw-map val?]]
     [quantum.core.fn
       :refer [fn->]]
     [quantum.core.macros.core      :as cmacros
       :refer [case-env]]
     [quantum.core.macros.definterface]
     [quantum.core.macros.type-hint :as th]
+    [quantum.core.vars             :as var]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
     [quantum.untyped.core.qualify  :as qual]
     [quantum.untyped.core.string   :as ustr]
-    [quantum.core.vars             :as var]))
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]))
 
 ; ===== |PROTOCOL|S & |REIFY|S =====
 

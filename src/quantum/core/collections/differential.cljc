@@ -38,8 +38,6 @@
      boolean?])
   (:require
     [clojure.core                  :as core]
-    [quantum.core.core
-      :refer [kw-map]]
     [quantum.core.compare          :as comp]
     [quantum.core.data.map         :as map
       :refer [split-at]]
@@ -61,7 +59,9 @@
       :refer [defalias]]
     [quantum.core.type             :as t]
     [quantum.core.collections.map-filter
-      :refer        [ffilteri last-filteri]]))
+      :refer        [ffilteri last-filteri]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={  DIFFERENTIAL OPERATIONS }=====================================================
 ;=================================================={     take, drop, split    }=====================================================

@@ -1,8 +1,6 @@
 (ns quantum.core.macros.reify
   (:refer-clojure :exclude [contains?])
   (:require
-    [quantum.core.core
-      :refer [kw-map]]
     [quantum.core.error                :as err
       :refer [->ex]]
     [quantum.core.fn                   :as fn
@@ -13,7 +11,9 @@
     [quantum.core.macros.transform     :as trans]
     [quantum.core.macros.type-hint     :as th]
     [quantum.untyped.core.collections  :as ucoll
-      :refer [contains? update-first]]))
+      :refer [contains? update-first]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]))
 
 (defn gen-reify-def
   [{:keys [ns- sym ns-qualified-interface-name reify-body]}]

@@ -4,8 +4,6 @@
    [[clojure.jvm.tools.analyzer :as ana]
     [clojure.tools.analyzer.jvm :as clj-ana]])
  #_(:cljs [clojure.tools.analyzer.js])
-    [quantum.core.core
-      :refer [kw-map val?]]
     [quantum.core.error            :as err
       :refer [ex!]]
     [quantum.core.fn
@@ -16,7 +14,11 @@
     [quantum.core.macros.type-hint :as th]
     [quantum.core.type.core        :as tcore]
     [quantum.core.vars             :as var
-      :refer [defalias]])
+      :refer [defalias]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]])
 #?(:clj
   (:import
     (clojure.lang RT Compiler))))

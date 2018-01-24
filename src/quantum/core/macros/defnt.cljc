@@ -4,8 +4,6 @@
     [clojure.core                               :as core]
     [quantum.core.cache
       :refer [defmemoized]]
-    [quantum.core.core                          :as qcore
-      :refer [kw-map]]
     [quantum.core.data.map                      :as map
       :refer [merge]]
     [quantum.core.data.set                      :as set]
@@ -36,7 +34,9 @@
       :refer [contains? merge-call update-first update-val]]
     [quantum.untyped.core.collections.tree      :as utree]
     [quantum.untyped.core.convert               :as uconv
-      :refer [>name]]
+      :refer [>integer >name]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
     [quantum.untyped.core.qualify               :as qual]
     [quantum.untyped.core.reducers
@@ -78,7 +78,7 @@
 (defn ?defnt-keyword->positional-profundal [x]
   (when (and (or (keyword? x) (symbol? x)) (-> x namespace nil?))
     (some->> x name (re-matches defnt-positional-regex) rest
-             (mapv (whenf1 string? qcore/str->integer)))))
+             (mapv (whenf1 string? >integer)))))
 
 (defn defnt-keyword->positional-profundal [x]
   (or (?defnt-keyword->positional-profundal x)

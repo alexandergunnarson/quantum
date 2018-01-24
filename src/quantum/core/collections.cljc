@@ -93,7 +93,8 @@
     [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.loops                      :as loops]
     [quantum.core.vars                       :as var
-      :refer [defalias defaliases]])
+      :refer [defalias defaliases]]
+    [quantum.untyped.core.data               :as udata])
 #?(:cljs
   (:require-macros
     [quantum.core.collections
@@ -857,8 +858,8 @@
 (defn merger [a b] (merge a b))
 (defalias merge-keep-right merger)
 
-#?(:clj (defalias kw-map    qcore/kw-map   ))
-#?(:clj (defalias quote-map qcore/quote-map))
+#?(:clj (defalias kw-map    udata/kw-map   ))
+#?(:clj (defalias quote-map udata/quote-map))
 #?(:clj (defalias kw-omap   map/kw-omap    ))
 
 (defn select

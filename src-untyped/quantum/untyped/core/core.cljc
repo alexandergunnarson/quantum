@@ -34,19 +34,6 @@
 (defn >sentinel [] #?(:clj (Object.) :cljs #js {}))
 (def >object >sentinel)
 
-(defn quote-map-base [kw-modifier ks & [no-quote?]]
-  (->> ks
-       (map #(vector (cond->> (kw-modifier %) (not no-quote?) (list 'quote)) %))
-       (apply concat)))
-
-(defn >keyword [x]
-  (cond (keyword? x) x
-        (symbol?  x) (keyword (namespace x) (name x))
-        :else        (-> x str keyword)))
-
-#?(:clj (defmacro kw-map    [& ks] (list* `hash-map (quote-map-base >keyword ks))))
-#?(:clj (defmacro quote-map [& ks] (list* `hash-map (quote-map-base identity ks))))
-
 ; ===== COLLECTIONS =====
 
 (defn seq=

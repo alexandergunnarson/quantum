@@ -9,8 +9,6 @@
             [clojure.string                 :as str]
     #?(:clj [seqspert.vector])
     #?(:clj [clojure.core.async             :as casync])
-            [quantum.core.core
-              :refer [kw-map]]
             [quantum.core.log               :as log]
             [quantum.core.convert.primitive :as pconvert
               :refer [->boolean
@@ -52,7 +50,9 @@
             [quantum.core.type.defs         :as tdef]
             [quantum.core.type.core         :as tcore]
             [quantum.core.vars              :as var
-              :refer [defalias #?(:clj defmalias) def-]])
+              :refer [defalias #?(:clj defmalias) def-]]
+            [quantum.untyped.core.data
+              :refer [kw-map]])
 #?(:cljs
   (:require-macros
     [quantum.core.collections.core

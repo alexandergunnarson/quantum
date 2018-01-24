@@ -5,13 +5,13 @@
 #?@(:clj
    [[sparkling.conf           :as conf]
     [sparkling.core           :as spark]])
-    [quantum.core.core
-      :refer [kw-map]]
     [quantum.core.system      :as sys]
     [quantum.core.macros
       #?@(:clj [:refer [compile-if]])]
     [quantum.core.error :as err
-      :refer [->ex TODO]])
+      :refer [->ex TODO]]
+    [quantum.untyped.core.data
+      :refer [kw-map]])
   #?(:clj (:import (org.apache.spark          SparkContext)
                    (org.apache.spark.api.java JavaRDDLike)
                    (org.apache.spark.sql      Dataset Encoder Encoders)

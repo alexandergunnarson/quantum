@@ -14,7 +14,8 @@
     [quantum.core.vars    :as var
      :refer [defalias]]
     [quantum.untyped.core.convert  :as uconv]
-    [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
     [quantum.untyped.core.reducers :as ur
       :refer [reduce-pair]])
   (:import
@@ -47,7 +48,7 @@
 (defmacro kw-omap
   "Like `kw-map`, but preserves insertion order."
   [& ks]
-  (list* `om (ucore/quote-map-base uconv/>keyword ks))))
+  (list* `om (udata/quote-map-base uconv/>keyword ks))))
 
 (defalias sorted-map         core/sorted-map   )
 (defalias sorted-map-by      core/sorted-map-by)

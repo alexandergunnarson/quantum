@@ -1,8 +1,6 @@
 (ns quantum.core.macros.protocol
   (:refer-clojure :exclude [contains?])
   (:require
-    [quantum.core.core
-      :refer [val? kw-map]]
     [quantum.core.macros.transform           :as trans]
     [quantum.core.macros.type-hint           :as th]
     [quantum.core.fn                         :as fn
@@ -12,7 +10,11 @@
       :refer [whenp]]
     [quantum.core.type.core                  :as tcore]
     [quantum.untyped.core.collections        :as ucoll
-      :refer [contains? update-first]]))
+      :refer [contains? update-first]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]))
 
 (defn with-protocol-arglist-type-hint
   [sym lang arglist-ct]

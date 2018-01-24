@@ -7,9 +7,7 @@
     [quantum.untyped.core.qualify :as qual
       :refer [#?(:cljs DelimitedIdent) delim-ident? named?]]
     [quantum.untyped.core.type.predicates
-      :refer [namespace?]]
-    [quantum.untyped.core.vars    :as var
-      :refer [defalias]])
+      :refer [namespace?]])
   #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
 
 (defn demunged>namespace [^String s] (subs s 0 (.lastIndexOf s "/")))
@@ -68,7 +66,10 @@
           (nil?         x)  (err/not-supported! `>delim-ident x)
           :else             (-> x str recur)))
 
-(defalias >keyword qcore/>keyword)
+(defn >keyword [x]
+  (cond (keyword? x) x
+        (symbol?  x) (keyword (namespace x) (name x))
+        :else        (-> x str keyword)))
 
 (defn >symbol
   "Converts `x` to a symbol (possibly qualified, meta-able identifier)."
@@ -82,3 +83,11 @@
                             :cljs (when-not (-> x .-name str/blank?)
                                     (-> x .-name demunge-str recur)))
           :else          (-> x str recur)))
+
+(defn >integer [x]
+  (cond (integer? x)
+          x
+        (string? x)
+          #?(:clj  (Long/parseLong ^String x)
+             :cljs (js/parseInt            x))
+        :else (err/not-supported! `>integer x)))
