@@ -12,7 +12,7 @@
     [quantum.core.logic       :as logic
       :refer [fn= whenc ifn]]
     [quantum.measure.reg                 ]
-    [quantum.core.macros.core :as cmacros
+    [quantum.untyped.core.form.evaluate
       :refer [case-env*]])
 #?(:cljs
   (:require-macros

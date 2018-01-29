@@ -19,7 +19,7 @@
       :refer [<- fn-> rcomp]]
     [quantum.core.logic    :as logic
       :refer [fn-and condf1 fn=]]
-    [quantum.untyped.core.macros.core
+    [quantum.untyped.core.form.evaluate
       :refer [env-lang]]
     [quantum.untyped.core.numeric.combinatorics :as combo])
 #?(:cljs
@@ -842,9 +842,9 @@
                              #_:cljs #_#{cljs.core/IRecord}}) ; because can't protocol-dispatch on protocols in CLJS
 
 (def transformer-types     '{:clj #{#_clojure.core.protocols.CollReduce ; no, in order to find most specific type
-                                    quantum.core.type.defs.Transformer}
+                                    quantum.untyped.core.reducers.Transformer}
                              :cljs #{#_cljs.core/IReduce ; CLJS problems with dispatching on protocol
-                                     quantum.core.type.defs.Transformer}})
+                                     quantum.untyped.core.reducers.Transformer}})
 
 #_(def reducible-types       (cond-union
                              array-types

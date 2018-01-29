@@ -17,8 +17,6 @@
       :refer [prl]]
     [quantum.core.logic                         :as logic
       :refer [fn= fn-not fn-and fn-or whenc whenf whenf1 whenc1 ifn1 condf if-not-let cond-let]]
-    [quantum.core.macros.core                   :as cmacros
-      :refer [case-env case-env*]]
     [quantum.core.macros.fn                     :as mfn]
     [quantum.core.analyze.clojure.core          :as ana]
     [quantum.core.analyze.clojure.predicates    :as anap]
@@ -30,6 +28,10 @@
     [quantum.core.string.regex                  :as re]
     [quantum.core.type.defs                     :as tdef]
     [quantum.core.type.core                     :as tcore]
+    [quantum.core.spec                          :as s
+      :refer [validate]]
+    [quantum.core.vars                          :as var
+      :refer [defalias replace-meta-from]]
     [quantum.untyped.core.collections           :as ucoll
       :refer [contains? merge-call update-first update-val]]
     [quantum.untyped.core.collections.tree      :as utree]
@@ -37,6 +39,8 @@
       :refer [>integer >name]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env case-env*]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
     [quantum.untyped.core.qualify               :as qual]
     [quantum.untyped.core.reducers
@@ -44,11 +48,7 @@
     [quantum.untyped.core.string                :as ustr]
     [quantum.untyped.core.type                  :as t]
     [quantum.untyped.core.type.predicates
-      :refer [val?]]
-    [quantum.core.vars                          :as var
-      :refer [defalias replace-meta-from]]
-    [quantum.core.spec                          :as s
-      :refer [validate]]))
+      :refer [val?]]))
 
 (defonce warn-on-strict-inexact-matches? (atom false))
 (defonce warn-on-all-inexact-matches? (atom false))

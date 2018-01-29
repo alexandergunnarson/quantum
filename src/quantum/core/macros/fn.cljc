@@ -13,18 +13,19 @@
     [quantum.core.log                 :as log]
     [quantum.core.logic               :as logic
       :refer [fn-or whenf1]]
-    [quantum.core.macros.core         :as cmacros
-      :refer [case-env]]
     [quantum.core.macros.optimization :as opt
       :refer [extern?]]
     [quantum.untyped.core.collections.tree :as utree
       :refer [postwalk]]
     [quantum.core.vars
-      :refer [defalias]]))
+      :refer [defalias]]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env]]
+    [quantum.untyped.core.form.generate :as ufgen]))
 
-(defalias gen-args             cmacros/gen-args)
-(defalias arity-builder        cmacros/arity-builder)
-(defalias max-positional-arity cmacros/max-positional-arity)
+(defalias gen-args             ufgen/gen-args)
+(defalias arity-builder        ufgen/arity-builder)
+(defalias max-positional-arity ufgen/max-positional-arity)
 
 (defn defn-variant-organizer
   "Organizes the arguments for use for a |defn| variant.

@@ -6,8 +6,9 @@
     #?(:clj [clojure.core :as core])
     [quantum.core.fn
       :refer [fn->]]
-    [quantum.core.macros.core      :as cmacros
+    [quantum.untyped.core.form.evaluate
       :refer [case-env]]
+    [quantum.untyped.core.form.generate :as ufgen]
     [quantum.core.macros.definterface]
     [quantum.core.macros.type-hint :as th]
     [quantum.core.vars             :as var]
@@ -258,14 +259,14 @@
         :inputs (vector-of (tuple param-symbol? type-symbol?)) ; these are 'extra' inputs *plus* the leading `this` input
         :body   code?)
 
-(defmethod cmacros/generate ::core/deftype:method
+(defmethod ufgen/generate ::core/deftype:method
   [_ {:keys [ret name inputs body]}]
   (list (th/with-type-hint name ret)
         (->> (cons ['this nil] inputs)
              (mapv (fn [[sym hint]] (th/with-type-hint sym hint))))
         body))
 
-(defmethod cmacros/generate ::deftype:method
+(defmethod ufgen/generate ::deftype:method
   [_ {:keys [ret name inputs body]}]
   {name
     (list (th/with-type-hint
@@ -296,9 +297,9 @@
                        :set `(do (set! ~field-sym ~input-sym)
                                  ~'this))}]
       {::deftype:method
-         (cmacros/generate ::deftype:method methods-spec)
+         (ufgen/generate ::deftype:method methods-spec)
        ::core/definterface:method
-         (cmacros/generate ::core/definterface:method methods-spec)})))
+         (ufgen/generate ::core/definterface:method methods-spec)})))
 
 #?(:clj
 (defn apply-getters+setters
@@ -321,7 +322,7 @@
                    (apply concat)
                    (filter val?))]
         {:preamble
-          (cmacros/generate ::core/definterface
+          (ufgen/generate ::core/definterface
             {:name    interface-sym
              :methods (map ::core/definterface:method methods)})
          :methods-spec
@@ -329,7 +330,7 @@
              {interface-sym (->> methods (map ::deftype:method) (reduce merge))})}))))
 
 #?(:clj
-(defmethod cmacros/generate ::deftype ; WARNING: actually evals interface code when requested ; TODO fix this
+(defmethod ufgen/generate ::deftype ; WARNING: actually evals interface code when requested ; TODO fix this
   [_ {:keys [&env lang type-sym fields methods-spec]}]
   (let [{:keys [preamble methods-spec]}
           (apply-getters+setters lang type-sym fields methods-spec)
@@ -357,7 +358,7 @@
                {first ([this] (+ field1 1))}})}
   [type-sym fields & [methods-spec]]
   (let [lang (case-env :clj :clj :cljs :cljs)
-        code (cmacros/generate ::deftype
+        code (ufgen/generate ::deftype
                (kw-map &env lang type-sym fields methods-spec))]
     (case-env
             ; To avoid duplicate class errors

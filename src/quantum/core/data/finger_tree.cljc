@@ -9,8 +9,6 @@
     [quantum.core.macros.deftype :as deftype]
     [quantum.core.core
       :refer [seq=]]
-    [quantum.core.macros.core :as cmacros
-      :refer [macroexpand-1]]
 #?@(:clj
    [[quantum.core.data.finger-tree.macros
       :refer [defdigit make-digit delay-ft meter]]]

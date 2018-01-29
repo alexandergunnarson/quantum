@@ -34,8 +34,6 @@
     [quantum.core.log                  :as log]
     [quantum.core.logic                :as logic
       :refer [fn-and fn-or fn-not fn-nil condpc whenc]]
-    [quantum.core.macros.core          :as cmacros
-      :refer [case-env]]
     [quantum.core.macros               :as macros
       :refer [defnt]]
     [quantum.core.refs                 :as refs]
@@ -45,7 +43,9 @@
     [quantum.core.type           :as t
       :refer [val?]]
     [quantum.core.vars                 :as var
-      :refer [defalias defmalias]])
+      :refer [defalias defmalias]]
+    [quantum.untyped.core.form.evaluate :as ufeval
+      :refer [case-env]])
 #?(:cljs
   (:require-macros
     [cljs.core.async.macros            :as asyncm]

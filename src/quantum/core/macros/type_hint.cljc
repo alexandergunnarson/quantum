@@ -2,7 +2,6 @@
   (:require
     [quantum.core.error       :as err
       :refer [ex-info!]]
-    [quantum.core.macros.core :as cmacros]
     [quantum.core.type.core   :as tcore]
     [quantum.core.vars        :as var
       :refer [update-meta]]))

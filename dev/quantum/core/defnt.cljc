@@ -21,8 +21,6 @@
       :refer [fn-and fn-or fn-not if-let if-not-let when-let]]
     [quantum.core.macros
       :refer [macroexpand]]
-    [quantum.core.macros.core          :as cmacros
-      :refer [unify-gensyms]]
     [quantum.core.macros.type-hint     :as th]
     [quantum.core.print                :as pr]
     [quantum.core.spec                 :as s]
@@ -45,6 +43,9 @@
     [quantum.untyped.core.core
       :refer [kw-map istr]]
     [quantum.untyped.core.data.set :as set]
+    [quantum.untyped.core.form          :as uform
+      :refer [unify-gensyms]]
+    [quantum.untyped.core.form.evaluate :as ufeval]
     [quantum.untyped.core.form.generate :as ufgen]
     [quantum.untyped.core.loops    :as loops
       :refer [reduce-2]]
@@ -253,7 +254,7 @@
    Also does not currently handle spec checks in
    destructuring contexts yet."
   [& args]
-  (fns|code :fn (cmacros/env-lang) args))
+  (fns|code :fn (ufeval/env-lang) args))
 
 (defmacro defns
   "Like `defnt`, but relies on runtime spec checks.
@@ -261,7 +262,7 @@
    Also does not currently handle spec checks in
    destructuring contexts yet."
   [& args]
-  (fns|code :defn (cmacros/env-lang) args))
+  (fns|code :defn (ufeval/env-lang) args))
 
 (defns abcde ""
   ([a ? b _ > t/integer?] {:pre 1} 1 2)
@@ -843,7 +844,7 @@
 (defn fnt-overload>interface [args-classes out-class]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
         hinted-method-sym (th/with-type-hint fnt-method-sym (th/>arglist-embeddable-tag out-class))
-        interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(cmacros/gen-args (count args-classes))))]
+        interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(uform/gen-args (count args-classes))))]
     (log/pr ::debug "Creating interface" interface-sym "...")
     (eval interface-code)))
 
@@ -1124,9 +1125,9 @@
     code))
 
 (defmacro fnt [& args]
-  (fnt|code :fn (cmacros/env-lang) args))
+  (fnt|code :fn (ufeval/env-lang) args))
 
 (defmacro defnt [& args]
-  (fnt|code :defn (cmacros/env-lang) args))
+  (fnt|code :defn (ufeval/env-lang) args))
 
 )

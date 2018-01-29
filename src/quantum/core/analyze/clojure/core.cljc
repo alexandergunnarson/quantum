@@ -8,13 +8,13 @@
       :refer [fn1 rcomp]]
     [quantum.core.logic
       :refer [whenf1 fn-not]]
-    [quantum.core.macros.core      :as cmacros]
     [quantum.core.macros.type-hint :as th]
     [quantum.core.type.core        :as tcore]
     [quantum.core.vars             :as var
       :refer [defalias]]
     [quantum.untyped.core.data
       :refer [kw-map]]
+    [quantum.untyped.form.evaluate  :as ufeval]
     [quantum.untyped.core.type.predicates
       :refer [val?]])
 #?(:clj
@@ -123,7 +123,7 @@
 
 #?(:clj
 (defmacro static-cast-depth [xs depth x]
-  (cmacros/case-env
+  (ufeval/case-env
     :cljs (throw (ex-info "Depth casting not supported for hints in CLJS (yet)" (kw-map xs depth x)))
     :clj  (let [hint       (jvm-typeof-respecting-hints xs &env)
                 _          (assert hint {:xs xs :hint hint})
