@@ -4,6 +4,8 @@
     [quantum.untyped.core.core        :as ucore]
     [quantum.untyped.core.reducers    :as ur]))
 
+(ucore/log-this-ns)
+
 ; ----- WALK ----- ;
 
 (def walk     ucore/walk)

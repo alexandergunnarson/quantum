@@ -8,7 +8,10 @@
   (:require
     [quantum.untyped.core.compare :as comp
       :refer [==]]
+    [quantum.untyped.core.core    :as ucore]
     [quantum.untyped.core.type    :as t]))
+
+(ucore/log-this-ns)
 
 (do
 

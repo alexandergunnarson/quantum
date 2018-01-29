@@ -1,13 +1,20 @@
 (ns quantum.untyped.core.error
   (:require
-    [clojure.core        :as core]
-    [slingshot.slingshot :as try]
+    [clojure.core              :as core]
+    [slingshot.slingshot       :as try]
+    [quantum.untyped.core.core :as ucore]
     [quantum.untyped.core.fn
       :refer [fn1 fnl rcomp]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
     [quantum.untyped.core.vars
-      :refer [defalias defaliases defmacro-]]))
+      :refer [defalias defaliases defmacro-]])
+#?(:cljs
+  (:require-macros
+    [quantum.untyped.core.error :as self
+      :refer [err-constructor]])))
+
+(ucore/log-this-ns)
 
 ;; ===== Error type: generic ===== ;;
 
@@ -60,7 +67,7 @@
             #?(:clj  (err-constructor
                        (:ident x) (:message x) (:data x) (:trace x) (:cause x)
                        (meta x) (dissoc x :ident :message :data :trace :cause))
-               :cljs (Error->map x))
+               :cljs (map->Error x))
           (error? x)
             #?(:clj  (let [^Throwable t x]
                        (err-constructor

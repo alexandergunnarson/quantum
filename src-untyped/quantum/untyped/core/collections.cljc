@@ -5,6 +5,7 @@
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
+    [quantum.untyped.core.core     :as ucore]
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
@@ -13,6 +14,8 @@
       :refer [condf1 fn-not]]
     [quantum.untyped.core.reducers :as ur
       :refer [defeager transducer->transformer]]))
+
+(ucore/log-this-ns)
 
 ;; ===== SOCIATIVE ===== ;;
 
@@ -127,11 +130,9 @@
 
 (def map+ (transducer->transformer 1 core/map))
 (defeager map map+)
-(def lmap map)
 
 (def map-indexed+ (transducer->transformer 1 core/map-indexed))
 (defeager map-indexed map-indexed+)
-(def lmap-indexed map-indexed)
 
 (def indexed+ #(->> % (map-indexed+ vector)))
 (defn lindexed [xs] (lmap-indexed vector xs))
@@ -150,11 +151,9 @@
 
 (def filter+ (transducer->transformer 1 core/filter))
 (defeager filter filter+)
-(def lfilter core/filter)
 
 (def remove+ (transducer->transformer 1 core/remove))
 (defeager remove remove+)
-(def lremove core/remove)
 
 (defn- pred-keys [f-xs] (fn [pred xs] (->> xs (f-xs (comp pred key)))))
 (def      filter-keys+ (pred-keys filter+))

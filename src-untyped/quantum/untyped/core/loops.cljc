@@ -1,6 +1,9 @@
 (ns quantum.untyped.core.loops
   (:require
+    [quantum.untyped.core.core     :as ucore]
     [quantum.untyped.core.reducers :as r]))
+
+(ucore/log-this-ns)
 
 (defn reduce-2
   "Reduces over two seqables at a time."

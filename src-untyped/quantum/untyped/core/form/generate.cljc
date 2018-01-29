@@ -1,5 +1,9 @@
 (ns quantum.untyped.core.form.generate
-  "For code generation.")
+  "For code generation."
+  (:require
+    [quantum.untyped.core.core :as ucore]))
+
+(ucore/log-this-ns)
 
 (defmulti generate
   "Generates code according to the first argument, `kind`."

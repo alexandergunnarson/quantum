@@ -13,14 +13,7 @@
      assoc-in])
   (:require
     [clojure.core                      :as c]
-    [quantum.core.error                :as err
-      :refer [err! TODO catch-all]]
-    [quantum.core.fn                   :as fn
-      :refer [fn1 rcomp <- fn->]]
-    [quantum.core.logic
-      :refer [fn-and]]
     [quantum.core.macros.deftype       :as dt]
-    [quantum.core.print                :as pr]
     [quantum.core.type.core            :as tcore]
     [quantum.untyped.core.analyze.expr :as xp
       :refer [>expr]]
@@ -32,19 +25,26 @@
       :refer [== not==]]
     [quantum.untyped.core.convert      :as uconv
       :refer [>symbol]]
-    [quantum.untyped.core.core         :as qcore]
+    [quantum.untyped.core.core         :as ucore]
     [quantum.untyped.core.data.bits    :as ubit]
+    [quantum.untyped.core.error        :as uerr
+      :refer [err! TODO catch-all]]
+    [quantum.untyped.core.fn           :as ufn
+      :refer [fn1 fn' rcomp <- fn->]]
+    [quantum.untyped.core.logic
+      :refer [fn-and]]
     [quantum.untyped.core.numeric      :as unum]
+    [quantum.untyped.core.print        :as upr]
     [quantum.untyped.core.qualify      :as qual]
-    [quantum.untyped.core.reducers     :as r
+    [quantum.untyped.core.reducers     :as ur
       :refer [map+ filter+ remove+ distinct+ join]]
     [quantum.untyped.core.refs
       :refer [?deref]]
     [quantum.untyped.core.vars
-      :refer [update-meta]]
-    [quantum.core.vars                 :as var
-      :refer [def-]])
+      :refer [def- update-meta]])
   #?(:clj (:import quantum.untyped.core.analyze.expr.Expression)))
+
+(ucore/log-this-ns)
 
 #_(defmacro ->
   ("Anything that is coercible to x"
@@ -195,7 +195,7 @@
 (defmacro defalias [sym spec]
   `(~'def ~sym (>spec ~spec)))
 
-(var/defalias -def define)
+(uvar/defalias -def define)
 
 (-def spec? PSpec)
 
@@ -390,7 +390,7 @@
    Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
    Effectively computes the intersection of the intension of the ->`args`."
   [arg & args]
-  (let [specs (->> (cons arg args) (r/map+ >spec) (r/incremental-apply intersection|spec))]
+  (let [specs (->> (cons arg args) (ur/map+ >spec) (ur/incremental-apply intersection|spec))]
     (if (coll? specs) ; technically, `unkeyed?`
         (UnorderedAndSpec. specs)
         specs)))
@@ -477,7 +477,7 @@
 
 #?(:clj
 (defmacro fn' [x]
-  `(let [x# ~x] (FnConstantlySpec. nil (fn/fn' x#) x#))))
+  `(let [x# ~x] (FnConstantlySpec. nil (ufn/fn' x#) x#))))
 
 (defn unkeyed
   "Creates an unkeyed collection spec, in which the collection may
@@ -623,18 +623,18 @@
         incomparable (fn [s0 s1] nil)
   ]
     {InferSpec
-       {InferSpec        (fn/fn' 0)
-        ValueSpec        (fn/fn' 1)
-        ClassSpec        (fn/fn' 1)
-        ProtocolSpec     (fn/fn' 1)
-        NilableSpec      (fn/fn' 1)
-        OrSpec           (fn/fn' 1)
-        UnorderedOrSpec  (fn/fn' 1)
-        AndSpec          (fn/fn' 1)
-        UnorderedAndSpec (fn/fn' 1)
-        Expression       (fn/fn' 1)}
+       {InferSpec        (fn' 0)
+        ValueSpec        (fn' 1)
+        ClassSpec        (fn' 1)
+        ProtocolSpec     (fn' 1)
+        NilableSpec      (fn' 1)
+        OrSpec           (fn' 1)
+        UnorderedOrSpec  (fn' 1)
+        AndSpec          (fn' 1)
+        UnorderedAndSpec (fn' 1)
+        Expression       (fn' 1)}
      ValueSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (fn [s0 s1] (catch-all
                                        (unum/signum|long (c/compare s0 s1))
                                        nil))
@@ -647,7 +647,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ClassSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (with-invert-comparison v+c)
         ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -658,7 +658,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ProtocolSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -669,7 +669,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      NilableSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (with-invert-comparison v+n)
         ClassSpec        (with-invert-comparison c+n)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -680,7 +680,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      OrSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (with-invert-comparison v+o)
         ClassSpec        (with-invert-comparison c+o)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -691,7 +691,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedOrSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -702,7 +702,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      AndSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (with-invert-comparison v+a)
         ClassSpec        (with-invert-comparison c+a)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -713,7 +713,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedAndSpec
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -724,7 +724,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      Expression
-       {InferSpec        (fn/fn' -1)
+       {InferSpec        (fn' -1)
         ValueSpec        incomparable
         ClassSpec        incomparable
         ProtocolSpec     incomparable

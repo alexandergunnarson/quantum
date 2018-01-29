@@ -2,12 +2,19 @@
   (:refer-clojure :exclude [comp constantly])
   (:require
     [clojure.core                :as core]
+    [quantum.untyped.core.core   :as ucore]
     [quantum.untyped.core.form.evaluate
       :refer [case-env compile-if]]
     [quantum.untyped.core.form   :as uform
       :refer [arity-builder gen-args max-positional-arity unify-gensyms]]
     [quantum.untyped.core.vars   :as uvar
-      :refer [defalias defmacro-]]))
+      :refer [defalias defmacro-]])
+#?(:cljs
+  (:require-macros
+    [quantum.untyped.core.fn :as self
+      :refer [fn'|generate]])))
+
+(ucore/log-this-ns)
 
 ;; ===== `fn<i>`: Positional functions ===== ;;
 

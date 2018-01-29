@@ -1,5 +1,9 @@
 (ns quantum.untyped.core.refs
+  (:require
+    [quantum.untyped.core.core :as ucore])
   #?(:clj (:import [clojure.lang IDeref IAtom])))
+
+(ucore/log-this-ns)
 
 (defn atom?      [x] (#?(:clj instance? :cljs satisfies?) IAtom x))
 

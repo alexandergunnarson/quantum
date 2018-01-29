@@ -7,7 +7,10 @@
   (:refer-clojure :exclude [update])
   (:require
     [quantum.untyped.core.collections
-      :refer [unchunk]]))
+      :refer [unchunk]]
+    [quantum.untyped.core.core :as ucore]))
+
+(ucore/log-this-ns)
 
 ; TO EXPLORE
 ; - Mathematica

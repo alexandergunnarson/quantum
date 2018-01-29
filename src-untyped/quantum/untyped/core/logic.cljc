@@ -4,10 +4,13 @@
      if-let when-let])
   (:require
     [clojure.core              :as core]
+    [quantum.untyped.core.core :as ucore]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.vars :as uvar
       :refer [defalias defmacro-]]))
+
+(ucore/log-this-ns)
 
 #?(:clj (defmacro default [v else] `(let [v# ~v] (if (nil? v#) ~else v#))))
 

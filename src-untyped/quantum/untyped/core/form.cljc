@@ -5,6 +5,8 @@
     [quantum.untyped.core.form.evaluate :as ueval
       :refer [case-env*]]))
 
+(ucore/log-this-ns)
+
 (defn core-symbol [env sym] (symbol (str (case-env* env :cljs "cljs" "clojure") ".core") (name sym)))
 
 ;; TODO move this code generation code to a different namespace

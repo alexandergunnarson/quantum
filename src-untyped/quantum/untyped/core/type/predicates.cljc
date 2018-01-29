@@ -1,7 +1,12 @@
 (ns quantum.untyped.core.type.predicates
   "For type predicates that are not yet turned into specs.
    TODO excise and place in `quantum.untyped.core.type`."
-  (:refer-clojure :exclude [boolean? seqable?]))
+  (:refer-clojure :exclude [boolean? seqable?])
+  (:require
+    [clojure.core :as core]
+    #_[quantum.untyped.core.core :as ucore]))
+
+#_(ucore/log-this-ns)
 
 #?(:clj (defn namespace? [x] (instance? clojure.lang.Namespace x)))
 
