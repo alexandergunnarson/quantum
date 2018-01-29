@@ -1,6 +1,9 @@
 (ns quantum.untyped.core.system
   (:require
+    [quantum.untyped.core.core  :as ucore]
     [quantum.untyped.core.error :as err]))
+
+(ucore/log-this-ns)
 
 #?(:cljs
 (def ReactNative

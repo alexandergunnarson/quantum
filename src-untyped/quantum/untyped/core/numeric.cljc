@@ -1,7 +1,10 @@
 (ns quantum.untyped.core.numeric
   (:require
-    [quantum.core.error :as err])
+    [quantum.untyped.core.core  :as ucore]
+    [quantum.untyped.core.error :as err])
   #?(:clj (:import java.lang.Math java.math.BigDecimal)))
+
+(ucore/log-this-ns)
 
 #?(:clj
 (defn integer-value?

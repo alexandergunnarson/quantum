@@ -6,7 +6,7 @@
     [fast-zip.core                :as zip]
     [quantum.untyped.core.compare :as comp
       :refer [== not==]]
-    [quantum.untyped.core.core
+    [quantum.untyped.core.core    :as ucore
       :refer [>sentinel]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
@@ -15,6 +15,8 @@
       :refer [seqable?]]
     [quantum.untyped.core.vars    :as uvar
       :refer [defalias]]))
+
+(ucore/log-this-ns)
 
 (defonce sentinel (>sentinel))
 

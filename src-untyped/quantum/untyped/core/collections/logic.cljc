@@ -7,12 +7,14 @@
       :refer [rcomp]]
     [quantum.untyped.core.compare :as ucomp
       :refer [== not==]]
-    [quantum.untyped.core.core
+    [quantum.untyped.core.core    :as ucore
       :refer [>sentinel]]
     [quantum.untyped.core.reducers
       :refer [educe]]
     [quantum.core.vars :as var
       :refer [defalias]]))
+
+(ucore/log-this-ns)
 
 ;; `seq-or`
 

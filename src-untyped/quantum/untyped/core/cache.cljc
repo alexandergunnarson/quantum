@@ -2,6 +2,7 @@
   (:refer-clojure :exclude
     [memoize])
   (:require
+    [quantum.untyped.core.core            :as ucore]
     [quantum.untyped.core.error           :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn              :as ufn
@@ -18,6 +19,8 @@
 #?(:clj
   (:import
     java.util.concurrent.ConcurrentHashMap)))
+
+(ucore/log-this-ns)
 
 (defonce caches         (atom {}))
 (defonce init-cache-fns (atom {}))

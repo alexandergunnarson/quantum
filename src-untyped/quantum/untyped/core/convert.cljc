@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.convert
   (:require
     [clojure.string               :as str]
-    [quantum.untyped.core.core    :as qcore]
+    [quantum.untyped.core.core    :as ucore]
     [quantum.untyped.core.error   :as err]
     [quantum.untyped.core.fn      :as fn]
     [quantum.untyped.core.qualify :as qual
@@ -9,6 +9,8 @@
     [quantum.untyped.core.type.predicates
       :refer [namespace?]])
   #?(:clj (:import quantum.untyped.core.qualify.DelimitedIdent)))
+
+(ucore/log-this-ns)
 
 (defn demunged>namespace [^String s] (subs s 0 (.lastIndexOf s "/")))
 (defn demunged>name      [^String s] (subs s (inc (.lastIndexOf s "/"))))

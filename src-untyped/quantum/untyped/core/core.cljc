@@ -189,3 +189,38 @@
 
 (defn postwalk [f form] (walk (partial postwalk f) f form))
 (defn prewalk  [f form] (walk (partial prewalk  f) identity (f form)))
+
+;; From `quantum.untyped.core.log` — used to log namespaces
+
+#?(:cljs (enable-console-print!))
+
+(defrecord
+  ^{:doc "This is a record and not a map because it's quicker
+          to check the default levels (member access: O(1)) than
+          it would be with a hash-map (O(log32(n)))."}
+  LoggingLevels
+  [warn user alert info inspect debug macro-expand trace env])
+
+(defonce *log-levels
+  (atom (map->LoggingLevels
+          (zipmap #{:always :error :warn :ns} (repeat true)))))
+
+(defonce *outs
+  (atom #?(:clj  (if-let [out-path (or (System/getProperty "quantum.core.log:out-file")
+                                       (System/getProperty "quantum.core.log|out-file"))]
+                     (let [_   (binding [*out* *err*] (println "Logging to" out-path))
+                           fos (-> out-path
+                                   (java.io.FileOutputStream.  )
+                                   (java.io.OutputStreamWriter.)
+                                   (java.io.BufferedWriter.    ))]
+                       (fn [] [*err* fos]))
+                     (fn [] [*err*])) ; in order to not print to file
+           :cljs (fn [] [*out*]))))
+
+(defn- print-to-outs! [x]
+  (doseq [out (@*outs)] (binding [*out* out] (println x) (flush)))
+  x)
+
+#?(:clj
+(defmacro log-this-ns []
+  `(if (get @*levels :ns) (print-to-outs! '~(ns-name *ns*)) true)))

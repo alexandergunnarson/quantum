@@ -1,7 +1,10 @@
 (ns quantum.untyped.core.data
   (:require
     [quantum.untyped.core.convert :as uconv
-      :refer [>keyword]]))
+      :refer [>keyword]]
+    [quantum.untyped.core.core    :as ucore]))
+
+(ucore/log-this-ns)
 
 (defn quote-map-base [kw-modifier ks & [no-quote?]]
   (->> ks

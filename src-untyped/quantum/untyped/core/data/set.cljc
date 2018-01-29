@@ -2,10 +2,13 @@
   (:refer-clojure :exclude [not])
   (:require
 #?@(:clj
-   [[flatland.ordered.set     :as oset]
+   [[flatland.ordered.set      :as oset]
     [seqspert.hash-set]])
-    [clojure.core             :as core]
-    [clojure.set              :as set]))
+    [clojure.core              :as core]
+    [clojure.set               :as set]
+    [quantum.untyped.core.core :as ucore]))
+
+(ucore/log-this-ns)
 
 #?(:clj (def hash-set? (partial instance? clojure.lang.PersistentHashSet)))
 

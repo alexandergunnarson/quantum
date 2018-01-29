@@ -4,9 +4,12 @@
   quantum.untyped.core.data.bits
   (:refer-clojure :exclude [not and or reverse contains? empty conj disj])
   (:require
-    [quantum.core.vars   :as var
-      :refer [defalias]])
+    [quantum.core.vars         :as var
+      :refer [defalias]]
+    [quantum.untyped.core.core :as ucore])
   #?(:clj (:import quantum.core.Numeric)))
+
+(ucore/log-this-ns)
 
 (defalias not       bit-not)
 (defalias and       bit-and)

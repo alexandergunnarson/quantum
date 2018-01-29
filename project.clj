@@ -124,7 +124,7 @@
        ; ==== RESOURCES ====
          [com.stuartsierra/component            "0.3.2"           ]
        ; ==== STRING ====
-         [funcool/cuerdas                       "2.0.1"           ]
+         [funcool/cuerdas                       "2.0.5"           ]
          ; REGEX
          [frak                                  "0.1.6"           ]
        ; ==== TIME ====

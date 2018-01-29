@@ -7,6 +7,8 @@
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]))
 
+(ucore/log-this-ns)
+
 ;; ===== Metadata ===== ;;
 
 (def update-meta       ucore/update-meta)

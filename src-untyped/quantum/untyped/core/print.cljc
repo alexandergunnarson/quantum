@@ -8,6 +8,8 @@
     [quantum.untyped.core.vars        :as uvar
       :refer [defalias]]))
 
+(ucore/log-this-ns)
+
 ;; ===== Data and dynamic bindings ===== ;;
 
 (uvar/defonce *blacklist "A set of classes not to print" (atom #{}))

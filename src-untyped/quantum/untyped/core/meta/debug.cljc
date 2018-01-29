@@ -2,9 +2,12 @@
   (:require
 #?@(:clj
    [[debugger.core]])
-    [clojure.string :as str]
+    [clojure.string            :as str]
     [fipp.edn]
-    [taoensso.timbre]))
+    [taoensso.timbre]
+    [quantum.untyped.core.core :as ucore]))
+
+(ucore/log-this-ns)
 
 ;; ===== Breakpointing ===== ;;
 

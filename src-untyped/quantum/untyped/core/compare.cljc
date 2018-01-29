@@ -1,5 +1,9 @@
 (ns quantum.untyped.core.compare
-  (:refer-clojure :exclude [==]))
+  (:refer-clojure :exclude [==])
+  (:require
+    [quantum.untyped.core.core :as ucore]))
+
+(ucore/log-this-ns)
 
 (def == identical?)
 (def not== (comp not identical?))

@@ -19,9 +19,12 @@
       :refer [== not==]]
     [quantum.untyped.core.convert     :as uconv
       :refer [>symbol]]
+    [quantum.untyped.core.core        :as ucore]
     [quantum.untyped.core.qualify     :as qual]
     [quantum.untyped.core.reducers    :as r
       :refer [partition-all+ join]]))
+
+(ucore/log-this-ns)
 
 (do
 
