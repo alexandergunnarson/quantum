@@ -11,8 +11,8 @@
       :refer [defaliases]]))
 
 (defaliases u
-  class
-  #?@(:clj [boxed-type-map boxed->unboxed unboxed->boxed unboxed->convertible
+  class boxed-type-map
+  #?@(:clj [boxed->unboxed unboxed->boxed unboxed->convertible
             convertible? unboxed-type-map])
   prim-types            prim-types|unevaled      prim|unevaled?
   primitive-types       primitive-types|unevaled primitive|unevaled?

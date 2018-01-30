@@ -12,7 +12,7 @@
     [quantum.untyped.core.log    :as log]
     [quantum.untyped.core.system :as sys
       :refer  [#?@(:cljs [ReactNative])]]
-    [quantum.untyped.core.type   :as t
+    [quantum.untyped.core.type.predicates
       :refer [val?]]))
 
 #?(:cljs

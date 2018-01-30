@@ -6,7 +6,6 @@
 
 (ucore/log-this-ns)
 
-#?(:clj
 (defn integer-value?
   {:adapted-from '#{com.google.common.math.DoubleMath/isMathematicalInteger
                     "https://stackoverflow.com/questions/1078953/check-if-bigdecimal-is-integer-value"}}
@@ -25,7 +24,7 @@
                      false]
             :cljs [(number? x)
                      (js/Number.isInteger x)])
-        :else (err/not-supported! `integer-value? x))))
+        :else (err/not-supported! `integer-value? x)))
 
 (defn signum|long
   [^long x]

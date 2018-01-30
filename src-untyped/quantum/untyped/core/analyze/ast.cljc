@@ -2,7 +2,7 @@
   "Facilities for creating AST nodes (for now, just for Clojure).
    No actual analysis is done here."
   (:refer-clojure :exclude
-    [symbol Symbol symbol?
+    [symbol Symbol #?(:cljs ->Symbol) symbol?
      ==
      unbound?])
   (:require
@@ -17,9 +17,9 @@
 
 ;; ===== CONSTITUENT SPECS ===== ;;
 
-(definterface INode
-  (getForm [])
-  (getSpec []))
+(#?(:clj definterface :cljs defprotocol) INode
+  (getForm [#?(:cljs this)])
+  (getSpec [#?(:cljs this)]))
 
 (defn node? [x] (instance? INode x))
 

@@ -19,7 +19,7 @@
 #?(:cljs
   (:require-macros
     [quantum.untyped.core.log           :as self
-      :refer [with-log-errors]])))
+      :refer [-gen-from-levels with-log-errors]])))
 
 (ucore/log-this-ns)
 

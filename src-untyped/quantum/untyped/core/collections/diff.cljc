@@ -1,13 +1,18 @@
 (ns quantum.untyped.core.collections.diff
-  (:refer-clojure :exclude [seqable?])
+  (:refer-clojure :exclude
+    [seqable?])
   (:require
     [clojure.string            :as str]
     [diffit.map                :as mdiff]
     [diffit.vec                :as vdiff]
     [quantum.untyped.core.core :as ucore
-      :refer [kw-map istr seqable?]]
+      :refer [istr]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
     [quantum.untyped.core.error
-      :refer [err!]]))
+      :refer [err!]]
+    [quantum.untyped.core.type.predicates
+      :refer [seqable?]]))
 
 (ucore/log-this-ns)
 

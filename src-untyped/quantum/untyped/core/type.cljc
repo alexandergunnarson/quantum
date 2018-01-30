@@ -6,7 +6,7 @@
      boolean  byte  char  short  int  long  float  double
      boolean? byte? char? short? int? long? float? double?
      isa?
-     nil? any? class? tagged-literal?
+     nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      keyword? string? symbol?
      meta
@@ -14,7 +14,7 @@
   (:require
     [clojure.core                               :as c]
     [quantum.untyped.core.analyze.expr          :as xp
-      :refer [>expr]]
+      :refer [>expr #?(:cljs Expression)]]
     [quantum.untyped.core.collections           :as ucoll
       :refer [assoc-in dissoc-in
               map+ filter+ remove+ distinct+ ]]
@@ -28,8 +28,8 @@
     [quantum.untyped.core.data.bits             :as ubit]
     [quantum.untyped.core.error                 :as uerr
       :refer [err! TODO catch-all]]
-    [quantum.untyped.core.fn
-      :refer [fn1 fn' rcomp <- fn->]]
+    [quantum.untyped.core.fn                    :as ufn
+      :refer [fn1 rcomp <- fn->]]
     [quantum.untyped.core.form.generate.deftype :as udt]
     [quantum.untyped.core.logic
       :refer [fn-and]]
@@ -41,9 +41,14 @@
     [quantum.untyped.core.refs
       :refer [?deref]]
     [quantum.untyped.core.type.core             :as utcore]
-    [quantum.untyped.core.vars
+    [quantum.untyped.core.type.predicates       :as utpred]
+    [quantum.untyped.core.vars                  :as uvar
       :refer [def- update-meta]])
-  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression)))
+  #?(:clj (:import quantum.untyped.core.analyze.expr.Expression))
+#?(:cljs
+  (:require-macros
+    [quantum.untyped.core.type :as self
+      :refer [-def]])))
 
 (ucore/log-this-ns)
 
@@ -60,6 +65,7 @@
 #_(defn instance? [])
 
 (do
+
 (defonce *spec-registry (atom {}))
 (swap! *spec-registry empty)
 
@@ -128,18 +134,19 @@
           with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
 
 (defn isa? [c]
-  (assert (c/class? c))
+  #?(:clj (assert (c/class? c))) ; TODO CLJS
   (ClassSpec. nil c nil))
 
+#?(:clj
 (defn isa|protocol? [c]
   #_(assert (protocol? c))
-  (ProtocolSpec. nil c nil))
+  (ProtocolSpec. nil c nil)))
 
 ;; ===== CREATION ===== ;;
 
 (defonce *spec-registry (atom {}))
 
-(extend-protocol PSpec Expression)
+#?(:clj (extend-protocol PSpec Expression))
 
 (declare nil?)
 
@@ -148,55 +155,58 @@
   ([x] (>spec x nil))
   ([x name-sym]
     (assert (c/or (c/nil? name-sym) (c/symbol? name-sym)))
-    (cond (satisfies? PSpec x)
-            x ; TODO should add in its name?
-          (c/class? x)
-            (let [x (c/or (tcore/unboxed->boxed x) x)
-                  reg (if (c/nil? name-sym)
-                          @*spec-registry
-                          (swap! *spec-registry
-                            (fn [reg]
-                              (if-let [spec (get reg name-sym)]
-                                (if (c/= (.-name ^ClassSpec spec) name-sym)
-                                    reg
-                                    (err! "Class already registered with spec; must first undef" {:class x :spec-name name-sym}))
-                                (let [spec (ClassSpec. nil x name-sym)]
-                                  (assoc-in reg [name-sym]    spec
-                                                [:by-class x] spec))))))]
-              (c/or (get-in reg [:by-class x])
-                    (ClassSpec. nil ^Class x name-sym)))
-          (c/fn? x)
-            (let [sym (c/or name-sym (>symbol x))
-                  _ (when-not name-sym
-                      (let [resolved (?deref (ns-resolve *ns* sym))]
-                        (assert (== resolved x) {:x x :sym sym :resolved resolved})))]
-              (Expression. sym x))
-          (c/nil? x)
-            nil?
-          (qcore/protocol? x)
-            (ProtocolSpec. nil x name-sym)
-          :else
-            (value x))))
+    #?(:clj
+        (cond (satisfies? PSpec x)
+                x ; TODO should add in its name?
+              (c/class? x)
+                (let [x (c/or #?(:clj (utcore/unboxed->boxed x)) x)
+                      reg (if (c/nil? name-sym)
+                              @*spec-registry
+                              (swap! *spec-registry
+                                (fn [reg]
+                                  (if-let [spec (get reg name-sym)]
+                                    (if (c/= (.-name ^ClassSpec spec) name-sym)
+                                        reg
+                                        (err! "Class already registered with spec; must first undef" {:class x :spec-name name-sym}))
+                                    (let [spec (ClassSpec. nil x name-sym)]
+                                      (assoc-in reg [name-sym]    spec
+                                                    [:by-class x] spec))))))]
+                  (c/or (get-in reg [:by-class x])
+                        (ClassSpec. nil ^Class x name-sym)))
+              (c/fn? x)
+                (let [sym (c/or name-sym (>symbol x))
+                      _ (when-not name-sym
+                          (let [resolved (?deref (ns-resolve *ns* sym))]
+                            (assert (== resolved x) {:x x :sym sym :resolved resolved})))]
+                  (Expression. sym x))
+              (c/nil? x)
+                nil?
+              (utpred/protocol? x)
+                (ProtocolSpec. nil x name-sym)
+              :else
+                (value x))
+       :cljs nil)))
 
 ;; ===== DEFINITION ===== ;;
 
+#?(:clj
 (defmacro define [sym specable]
-  `(~'def ~sym (>spec ~specable '~(qual/qualify sym))))
+  `(~'def ~sym (>spec ~specable '~(qual/qualify sym)))))
 
 (defn undef [reg sym]
   (if-let [spec (get reg sym)]
     (let [reg' (dissoc reg sym)]
       (if (instance? ClassSpec spec)
           (dissoc-in reg' [:by-class (.-c ^ClassSpec spec)])))
-    reg)
-  )
+    reg))
 
 (defn undef! [sym] (swap! *spec-registry undef sym))
 
+#?(:clj
 (defmacro defalias [sym spec]
-  `(~'def ~sym (>spec ~spec)))
+  `(~'def ~sym (>spec ~spec))))
 
-(uvar/defalias -def define)
+#?(:clj (uvar/defalias -def define))
 
 (-def spec? PSpec)
 
@@ -226,7 +236,6 @@
       (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
         [Long Number]))
 
-#?(:clj
 (defn compare|class|class
   "Compare extension (generality|specificity) of ->`c0` to ->`c1`.
    `0`  means they are equally general/specific:
@@ -240,23 +249,17 @@
          the extension of ->`c0` is neither a subset nor a superset of that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
   [^Class c0 ^Class c1]
-  (cond (== c0 c1)
-        0
-        (== c0 Object)
-        1
-        (== c1 Object)
-        -1
-        (== (tcore/boxed->unboxed c0) c1)
-        1
-        (== c0 (tcore/boxed->unboxed c1))
-        -1
-        (c/or (tcore/primitive-array-type? c0) (tcore/primitive-array-type? c1))
-        nil ; we'll consider the two unrelated
-        (.isAssignableFrom c0 c1)
-        1
-        (.isAssignableFrom c1 c0)
-        -1
-        :else nil))) ; unrelated
+  #?(:clj (cond (== c0 c1)                               0
+                (== c0 Object)                           1
+                (== c1 Object)                          -1
+                (== (utcore/boxed->unboxed c0) c1)       1
+                (== c0 (utcore/boxed->unboxed c1))      -1
+                (c/or (utcore/primitive-array-type? c0)
+                      (utcore/primitive-array-type? c1)) nil ; we'll consider the two unrelated
+                (.isAssignableFrom c0 c1)                1
+                (.isAssignableFrom c1 c0)               -1
+                :else                                    nil) ; unrelated
+     :cljs nil))
 
 ;; ===== EXTENSIONALITY COMPARISON ===== ;;
 
@@ -275,9 +278,9 @@
   [s0 s1]
   (assert (spec? s0) {:s0 s0})
   (assert (spec? s1) {:s1 s1})
-  (let [dispatched (-> compare|dispatch (get (class s0)) (get (class s1)))]
+  (let [dispatched (-> compare|dispatch (get (type s0)) (get (type s1)))]
     (if (c/nil? dispatched)
-        (err! "Specs not handled" {:s0 s0 :s1 s1})
+        (err! (str "Specs not handled: " {:s0 s0 :s1 s1}) {:s0 s0 :s1 s1})
         (dispatched s0 s1))))
 
 #_(compare (numerically byte?) byte?) ; -> 1
@@ -320,19 +323,21 @@
             ;; simplification via intension comparison
             args' (->> simp|identity
                        (reduce
-                         (fn [args' s]
-                           (let [with-comparisons
-                                   (->> args'
-                                        (map+    (juxt identity #(compare s %)))
-                                        ;; remove all args for which `s` has a <compare-fn> intension
-                                        (remove+ (rcomp second (fn-and c/some? compare-fn)))
-                                        join)]
-                             (if (c/or ;; at least one arg with a <compare-fn> intension than `s`
-                                       (c/< (count with-comparisons) (count args'))
-                                       ;; `s` is incomparable to all args
-                                       (->> with-comparisons (seq-and (fn-> second c/nil?))))
-                                 (->> with-comparisons (mapv first) (<- conj s))
-                                 args')))
+                         (fn
+                           ([x] x)
+                           ([args' s]
+                             (let [with-comparisons
+                                     (->> args'
+                                          (map+    (juxt identity #(compare s %)))
+                                          ;; remove all args for which `s` has a <compare-fn> intension
+                                          (remove+ (rcomp second (fn-and c/some? compare-fn)))
+                                          join)]
+                               (if (c/or ;; at least one arg with a <compare-fn> intension than `s`
+                                         (c/< (count with-comparisons) (count args'))
+                                         ;; `s` is incomparable to all args
+                                         (->> with-comparisons (seq-and (fn-> second c/nil?))))
+                                   (->> with-comparisons (mapv first) (<- conj s))
+                                   args'))))
                          []))]
         (if (-> args' count (c/= 1))
             (first args')
@@ -391,7 +396,7 @@
    Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
    Effectively computes the intersection of the intension of the ->`args`."
   [arg & args]
-  (let [specs (->> (cons arg args) (ur/map+ >spec) (ur/incremental-apply intersection|spec))]
+  (let [specs (->> (cons arg args) (map+ >spec) (ur/incremental-apply intersection|spec))]
     (if (coll? specs) ; technically, `unkeyed?`
         (UnorderedAndSpec. specs)
         specs)))
@@ -478,7 +483,7 @@
 
 #?(:clj
 (defmacro fn' [x]
-  `(let [x# ~x] (FnConstantlySpec. nil (fn' x#) x#))))
+  `(let [x# ~x] (FnConstantlySpec. nil (ufn/fn' x#) x#))))
 
 (defn unkeyed
   "Creates an unkeyed collection spec, in which the collection may
@@ -624,18 +629,18 @@
         incomparable (fn [s0 s1] nil)
   ]
     {InferSpec
-       {InferSpec        (fn' 0)
-        ValueSpec        (fn' 1)
-        ClassSpec        (fn' 1)
-        ProtocolSpec     (fn' 1)
-        NilableSpec      (fn' 1)
-        OrSpec           (fn' 1)
-        UnorderedOrSpec  (fn' 1)
-        AndSpec          (fn' 1)
-        UnorderedAndSpec (fn' 1)
-        Expression       (fn' 1)}
+       {InferSpec        (ufn/fn' 0)
+        ValueSpec        (ufn/fn' 1)
+        ClassSpec        (ufn/fn' 1)
+        ProtocolSpec     (ufn/fn' 1)
+        NilableSpec      (ufn/fn' 1)
+        OrSpec           (ufn/fn' 1)
+        UnorderedOrSpec  (ufn/fn' 1)
+        AndSpec          (ufn/fn' 1)
+        UnorderedAndSpec (ufn/fn' 1)
+        Expression       (ufn/fn' 1)}
      ValueSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (fn [s0 s1] (catch-all
                                        (unum/signum|long (c/compare s0 s1))
                                        nil))
@@ -648,7 +653,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ClassSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (with-invert-comparison v+c)
         ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -659,7 +664,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      ProtocolSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -670,7 +675,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      NilableSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (with-invert-comparison v+n)
         ClassSpec        (with-invert-comparison c+n)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -681,7 +686,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      OrSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (with-invert-comparison v+o)
         ClassSpec        (with-invert-comparison c+o)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -692,7 +697,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedOrSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -703,7 +708,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      AndSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (with-invert-comparison v+a)
         ClassSpec        (with-invert-comparison c+a)
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -714,7 +719,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      UnorderedAndSpec
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
@@ -725,7 +730,7 @@
         UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
         Expression       incomparable}
      Expression
-       {InferSpec        (fn' -1)
+       {InferSpec        (ufn/fn' -1)
         ValueSpec        incomparable
         ClassSpec        incomparable
         ProtocolSpec     incomparable
@@ -859,7 +864,7 @@
           {:class (class-spec>class spec) :nilable? spec-nilable?}
         (value-spec? spec)
           (let [v (value-spec>value spec)]
-            {:class (class v) :nilable? spec-nilable?})
+            {:class (type v) :nilable? spec-nilable?})
         (c/and (nilable-spec? spec) (c/not spec-nilable?))
           (recur (nilable-spec>inner-spec spec) true)
         :else
@@ -893,14 +898,16 @@
    if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
   [spec] (-spec>classes spec #{}))
 
+#?(:clj
 (defn- -spec>?class-value [spec spec-nilable?]
   (cond (value-spec? spec)
           (let [v (value-spec>value spec)]
             (when (c/class? v) {:class v :nilable? spec-nilable?}))
         (c/and (nilable-spec? spec) (c/not spec-nilable?))
           (recur (nilable-spec>inner-spec spec) true)
-        :else nil))
+        :else nil)))
 
+#?(:clj
 (defn spec>?class-value
   "Outputs the single class value embodied by ->`spec`.
    Differs from `spec>class` in that if a spec is a extensionally equal of the *value* of a class,
@@ -910,7 +917,7 @@
    an extensional subset of the set of all objects conforming to a class, outputs nil."
   {:examples `{(spec>?class-value (value String)) {:class String :nilable? false}
                (spec>?class-value (isa? String))  nil}}
-  [spec] (-spec>?class-value spec false))
+  [spec] (-spec>?class-value spec false)))
 
 ;; ===== GENERAL ===== ;;
 
@@ -922,17 +929,17 @@
 
 #?(:clj  (-def class?                      (isa? java.lang.Class)))
 #?(:clj  (-def primitive-class?            (fn [x] (c/and (class? x) (.isPrimitive ^Class x)))))
-#?(:clj  (-def protocol?                   (>expr (fn/fn-> :on-interface class?))))
+#?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== NUMBERS ===== ;;
 
          (-def bigint?                     (or #?@(:clj  [clojure.lang.BigInt java.math.BigInteger]
                                                    :cljs [com.gfredericks.goog.math.Integer])))
-         (-def integer?                    (or byte? short? int? long? bigint?))
+         (-def integer?                    (or #?@(:clj [byte? short? int? long?]) bigint?))
 
 #?(:clj  (-def bigdec?                     java.math.BigDecimal)) ; TODO CLJS may have this
 
-         (-def decimal?                    (or float? double? bigdec?))
+         (-def decimal?                    (or #?@(:clj [float?]) double? #?(:clj bigdec?)))
 
          (-def ratio?                      #?(:clj  clojure.lang.Ratio
                                               :cljs quantum.core.numeric.types.Ratio)) ; TODO add this CLJS entry to the predicate after the fact
@@ -956,7 +963,7 @@
          (-def numerically-long?           (and integer-value? (>expr (fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
          (-def numerically-float?          (and number?
                                                 (>expr (fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
-                                                (>expr (fn [x] (-> x clojure.lang.RT/floatCast (c/== x))))))
+                                                (>expr (fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
        #_(-def numerically-double?         (and number?
                                                 (>expr (fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
                                                 (>expr (fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
@@ -985,6 +992,6 @@
          (-def symbol?         #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol))
 #?(:clj  (-def tagged-literal? clojure.lang.TaggedLiteral))
 
-         (-def literal?        (or nil? boolean? symbol? keyword? string? long? double? tagged-literal?))
+         (-def literal?        (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
 )

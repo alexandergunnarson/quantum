@@ -15,7 +15,8 @@
       :refer [defmacro-]])
 #?(:cljs
   (:require-macros
-    [quantum.untyped.core.cache           :as self]))
+    [quantum.untyped.core.cache           :as self
+      :refer [memoize-form]]))
 #?(:clj
   (:import
     java.util.concurrent.ConcurrentHashMap)))
@@ -54,7 +55,8 @@
   "A faster, customizable version of `clojure.core/memoize`."
   {:attribution ["Alex Gunnarson"]
    :todo ["Take out repetitiveness via macro"]}
-  ([f] (memoize* f nil))
+  ([f]     (memoize* f nil))
+  ([f *m0] (memoize* f *m0 nil))
   ([f *m0 {:as opts :keys [memoize-only-first-arg? get-fn-0 assoc-fn-0 memoize-first-n-args]}]
     (let [*m (or *m0 #?(:clj (ConcurrentHashMap.) :cljs (atom nil)))
           first? memoize-only-first-arg?

@@ -26,7 +26,7 @@
     [quantum.untyped.core.numeric.combinatorics :as combo])
 #?(:cljs
   (:require-macros
-    [quantum.core.type.defs :as self
+    [quantum.untyped.core.type.defs :as self
       :refer [->array-nd-types*
               !hash-map-types:gen
               !unsorted-map-types:gen
@@ -36,7 +36,8 @@
               !unsorted-set-types:gen
               !sorted-set-types:gen
               !set-types:gen
-              gen-<type-pred=>type>]]))
+              gen-<type-pred=>type>
+              gen-types gen-types|unevaled]]))
   (:import
     #?@(:clj  [; clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble

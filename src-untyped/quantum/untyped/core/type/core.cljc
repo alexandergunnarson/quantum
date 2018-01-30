@@ -22,7 +22,6 @@
 
 (def class #?(:clj clojure.core/class :cljs type))
 
-#?(:clj
 (def boxed-type-map
  '{boolean java.lang.Boolean
    byte    java.lang.Byte
@@ -31,7 +30,7 @@
    double  java.lang.Double
    short   java.lang.Short
    int     java.lang.Integer
-   float   java.lang.Float}))
+   float   java.lang.Float})
 
 #?(:clj
 (def boxed->unboxed

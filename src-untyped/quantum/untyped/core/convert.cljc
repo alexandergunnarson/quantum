@@ -37,8 +37,8 @@
   (cond   (named?         x)  (namespace x)
           (or (nil?       x)
               (string?    x)
-              (class?     x)
-              (namespace? x)) nil
+      #?(:clj (class?     x))
+      #?(:clj (namespace? x))) nil
 #?@(:clj [(var?           x)  (-> x meta :ns >name)])
           (fn?            x)  #?(:clj  (or (some-> (-> x meta :ns) >name)
                                            (-> x class .getName clojure.lang.Compiler/demunge demunged>namespace))

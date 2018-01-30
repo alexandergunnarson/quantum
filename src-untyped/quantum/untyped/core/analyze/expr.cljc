@@ -14,7 +14,7 @@
       :refer [>symbol]]
     [quantum.untyped.core.core                  :as ucore]
     [quantum.untyped.core.error                 :as uerr
-      :refer [err!]]
+      :refer [err! TODO]]
     [quantum.untyped.core.print                 :as upr]
     [quantum.untyped.core.qualify               :as uqual]
     [quantum.untyped.core.reducers              :as ur
@@ -28,7 +28,7 @@
 
 (defn expr>code [x] (cond-> x (fn? x) >symbol))
 
-(definterface IExpr)
+(#?(:clj definterface :cljs defprotocol) IExpr)
 
 (defprotocol PExpr
   (>code       [this])
@@ -36,7 +36,7 @@
   (update-code [this f])
   (>evaled     [this]))
 
-(definterface ICall)
+(#?(:clj definterface :cljs defprotocol) ICall)
 
 (defn icall? [x] (instance? ICall x))
 
@@ -58,8 +58,8 @@
 (defrecord Expr|casef
   [f #_t/fn?, cases #_t/+map?]
   IExpr ICall
-  clojure.lang.IFn
-    (invoke [_ x]
+  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
+    (#?(:clj invoke :cljs -invoke) [_ x]
       (let [dispatch (f x)]
         (if-let [[_ then] (find cases dispatch)]
           (if (icall? then) (then x) then)
@@ -77,8 +77,8 @@
 (defrecord Expr|condpf->
   [pred #_t/fn?, f #_t/fn?, clauses #_(t/and* t/sequential? t/indexed?)]
   IExpr ICall
-  clojure.lang.IFn
-    (invoke [_ x]
+  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
+    (#?(:clj invoke :cljs -invoke) [_ x]
       (let [v (f x)]
         (if-let [[_ then :as matching-clause]
                    (seq-or (fn [clause]
@@ -104,8 +104,8 @@
 
 (defrecord Expr|get [k]
   IExpr
-  clojure.lang.IFn
-    (invoke [this m] (core/get m k))
+  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
+    (#?(:clj invoke :cljs -invoke) [this m] (core/get m k))
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (list `get k)))
@@ -114,10 +114,10 @@
 
 (defrecord Expr|fn [name arities]
   IExpr
-  clojure.lang.IFn
-    (invoke [this]       ((get arities 0)))
-    (invoke [this a0]    ((get arities 1) a0))
-    (invoke [this a0 a1] ((get arities 2) a0 a1))
+  #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)
+    (#?(:clj invoke :cljs -invoke) [this]       ((core/get arities 0)))
+    (#?(:clj invoke :cljs -invoke) [this a0]    ((core/get arities 1) a0))
+    (#?(:clj invoke :cljs -invoke) [this a0 a1] ((core/get arities 2) a0 a1))
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this] (concat [`fn] (when name [name]) arities)))
@@ -145,7 +145,7 @@
   {;; expression-like
    IExpr        nil
    PExpr        {>code       ([this]         code)
-                 with-code   ([this code']   (Expression. code' (eval code')))
+                 with-code   ([this code']   (Expression. code' (#?(:clj eval :cljs (TODO "eval not supported")) code')))
                  update-code ([this f]       (with-code this (f code)))
                  >evaled     ([this]         evaled)}
    ;; `code`-like
@@ -153,21 +153,22 @@
                  dissoc      ([this k]       (with-code this (dissoc code k)))
                  keys        ([this]         (with-code this (keys      code)))
                  vals        ([this]         (with-code this (vals      code)))
-                 contains?   ([this]         (with-code this (contains? code)))
+                 contains?   ([this]         (contains? code))
                  find        (([this k]      (with-code this (find      code)))
                               ([this k else] (with-code this (find      code else))))}
    ?Collection  {empty       ([this]         (with-code this (empty     code)))
                  conj        ([this x]       (with-code this (conj      code x)))
-                 empty?      ([this]         (with-code this (empty?    code)))
+                 empty?      ([this]         (empty?    code))
                  equals      ([this that]    (or (== this that)
-                                                 (let [^Expression that that]
-                                                   (= evaled (.-evaled that))
-                                                   (= code   (.-code   that)))))}
-   ?Counted     {count       ([this]         (with-code this (count     code)))}
+                                                 (and (instance? Expression that)
+                                                      (let [^Expression that that]
+                                                        (= evaled (.-evaled that))
+                                                        (= code   (.-code   that))))))}
+   ?Counted     {count       ([this]         (count     code))}
    ?Indexed     {nth         ([this i]       (with-code this (nth       code i)))}
    ?Lookup      {get         (([this k]      (with-code this (core/get  code k)))
                             #_([this k else] (with-code this (core/get  code k else))))} ; TODO make it work
-   ?Meta        {meta        ([this]         (with-code this (meta  code)))
+   ?Meta        {meta        ([this]         (meta  code))
                  with-meta   ([this meta']   (Expression. (with-meta code meta') evaled))}
    ?Reversible  {rseq        ([this]         (with-code this (rseq  code)))}
    ?Seq         {first       ([this]         (with-code this (first code)))
@@ -188,6 +189,6 @@
 #?(:clj
 (defmacro >expr [expr-] `(quantum.untyped.core.analyze.expr.Expression. '~expr- ~expr-)))
 
-(defn expr? [x] (instance? Expression x))
+#?(:clj (defn expr? [x] (instance? Expression x)))
 
 )

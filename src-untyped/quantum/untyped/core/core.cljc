@@ -17,8 +17,8 @@
 
 #?(:clj
 (binding [*out* *err*]
-  (when (:print-pid?          env/env) (println "PID:" (pid)))
-  (when (:print-java-version? env/env) (println "Java version:" (System/getProperty "java.version")))
+  (when-not (= (:print-pid?          env/env) "false") (println "PID:" (pid)))
+  (when-not (= (:print-java-version? env/env) "false") (println "Java version:" (System/getProperty "java.version")))
   (flush)))
 
 ;; ===== Compilation ===== ;;
@@ -218,7 +218,7 @@
            :cljs (fn [] [*out*]))))
 
 (defn print-ns-name-to-outs! [ns-name-]
-  (doseq [out (@*outs)] (binding [*out* out] (println "Loading namespace" ns-name-) (flush)))
+  (doseq [out (@*outs)] (binding [*out* out] (println lang ":" "loading namespace" ns-name-) (flush)))
   ns-name-)
 
 #?(:clj
