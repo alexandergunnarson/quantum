@@ -1,11 +1,12 @@
 (ns quantum.untyped.core.vars
   (:refer-clojure :exclude [defonce])
   (:require
-    [clojure.core                :as core]
-    [quantum.untyped.core.core   :as ucore]
-    [quantum.untyped.core.form   :as uform]
+    [clojure.core                       :as core]
+    [quantum.untyped.core.core          :as ucore]
+    [quantum.untyped.core.form          :as uform]
     [quantum.untyped.core.form.evaluate
-      :refer [case-env case-env*]]))
+      :refer [case-env case-env*]]
+    [quantum.untyped.core.form.generate :as ufgen]))
 
 (ucore/log-this-ns)
 
@@ -22,7 +23,7 @@
   "Like `clojure.core/defonce` but supports optional docstring and attributes
    map for name symbol."
   [name & sigs]
-  (let [[name [expr]] (uform/name-with-attrs name sigs)]
+  (let [[name [expr]] (ufgen/name-with-attrs name sigs)]
     `(core/defonce ~name ~expr))))
 
 #?(:clj

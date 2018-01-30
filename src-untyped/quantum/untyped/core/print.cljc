@@ -1,5 +1,7 @@
 (ns quantum.untyped.core.print
   (:require
+#?@(:clj
+   [[io.aviso.exception]])
     [fipp.edn                         :as fipp]
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.core        :as ucore]

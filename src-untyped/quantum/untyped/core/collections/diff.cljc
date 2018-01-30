@@ -4,10 +4,10 @@
     [clojure.string            :as str]
     [diffit.map                :as mdiff]
     [diffit.vec                :as vdiff]
-    [quantum.core.error        :as err
-      :refer [err!]]
     [quantum.untyped.core.core :as ucore
-      :refer [kw-map istr seqable?]]))
+      :refer [kw-map istr seqable?]]
+    [quantum.untyped.core.error
+      :refer [err!]]))
 
 (ucore/log-this-ns)
 

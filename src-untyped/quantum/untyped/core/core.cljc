@@ -217,10 +217,10 @@
                      (fn [] [*err*])) ; in order to not print to file
            :cljs (fn [] [*out*]))))
 
-(defn- print-to-outs! [x]
-  (doseq [out (@*outs)] (binding [*out* out] (println x) (flush)))
-  x)
+(defn print-ns-name-to-outs! [ns-name-]
+  (doseq [out (@*outs)] (binding [*out* out] (println "Loading namespace" ns-name-) (flush)))
+  ns-name-)
 
 #?(:clj
 (defmacro log-this-ns []
-  `(if (get @*levels :ns) (print-to-outs! '~(ns-name *ns*)) true)))
+  `(if (get @*log-levels :ns) (print-ns-name-to-outs! '~(ns-name *ns*)) true)))

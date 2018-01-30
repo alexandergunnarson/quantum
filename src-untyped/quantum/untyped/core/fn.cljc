@@ -5,9 +5,9 @@
     [quantum.untyped.core.core   :as ucore]
     [quantum.untyped.core.form.evaluate
       :refer [case-env compile-if]]
-    [quantum.untyped.core.form   :as uform
+    [quantum.untyped.core.form.generate
       :refer [arity-builder gen-args max-positional-arity unify-gensyms]]
-    [quantum.untyped.core.vars   :as uvar
+    [quantum.untyped.core.vars
       :refer [defalias defmacro-]])
 #?(:cljs
   (:require-macros

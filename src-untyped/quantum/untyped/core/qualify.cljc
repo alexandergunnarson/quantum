@@ -5,9 +5,9 @@
     [clojure.string            :as str]
     [fipp.ednize]
     [quantum.untyped.core.core :as ucore]
+    [quantum.untyped.core.ns   :as uns]
     [quantum.untyped.core.type.predicates
-      :refer [namespace?]]
-    [quantum.core.ns           :as ns]))
+      :refer [namespace?]]))
 
 (ucore/log-this-ns)
 
@@ -39,7 +39,7 @@
     (symbol
       (when-let [n (namespace sym)]
         (when-not (= n (-> *ns* ns-name name))
-          (if-let [alias- (do #?(:clj (ns/ns-name->alias *ns* (symbol n)) :cljs false))]
+          (if-let [alias- (do #?(:clj (uns/ns-name>alias *ns* (symbol n)) :cljs false))]
             (str alias- (when extra-slash? "/"))
             n)))
       (name sym)))))

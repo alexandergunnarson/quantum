@@ -3,15 +3,15 @@
     [== every? not-any? not-every? some])
   (:require
     [clojure.core      :as core]
-    [quantum.core.fn   :as fn
-      :refer [rcomp]]
     [quantum.untyped.core.compare :as ucomp
       :refer [== not==]]
     [quantum.untyped.core.core    :as ucore
       :refer [>sentinel]]
+    [quantum.untyped.core.fn
+      :refer [rcomp]]
     [quantum.untyped.core.reducers
       :refer [educe]]
-    [quantum.core.vars :as var
+    [quantum.untyped.core.vars
       :refer [defalias]]))
 
 (ucore/log-this-ns)

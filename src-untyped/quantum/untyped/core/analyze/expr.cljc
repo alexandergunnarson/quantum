@@ -2,27 +2,25 @@
   (:refer-clojure :exclude
     [flatten get ==])
   (:require
-    [clojure.core                     :as core]
-    [quantum.core.error               :as err
-      :refer [err!]]
-    [quantum.core.macros.deftype      :as dt]
-    [quantum.core.print               :as pr]
-    [quantum.core.spec                :as s]
-    [quantum.core.specs               :as ss]
-    [quantum.core.vars                :as var
-      :refer [defalias]]
-    [quantum.untyped.core.collections :as coll
-      :refer [flatten]]
+    [clojure.core                               :as core]
+    [quantum.untyped.core.form.generate.deftype :as udt]
+    [quantum.untyped.core.collections
+      :refer [flatten partition-all+]]
     [quantum.untyped.core.collections.logic
       :refer [seq-or]]
-    [quantum.untyped.core.compare     :as comp
+    [quantum.untyped.core.compare
       :refer [== not==]]
-    [quantum.untyped.core.convert     :as uconv
+    [quantum.untyped.core.convert               :as uconv
       :refer [>symbol]]
-    [quantum.untyped.core.core        :as ucore]
-    [quantum.untyped.core.qualify     :as qual]
-    [quantum.untyped.core.reducers    :as r
-      :refer [partition-all+ join]]))
+    [quantum.untyped.core.core                  :as ucore]
+    [quantum.untyped.core.error                 :as uerr
+      :refer [err!]]
+    [quantum.untyped.core.print                 :as upr]
+    [quantum.untyped.core.qualify               :as uqual]
+    [quantum.untyped.core.reducers              :as ur
+      :refer [join]]
+    [quantum.untyped.core.vars
+      :refer [defalias]]))
 
 (ucore/log-this-ns)
 
@@ -44,7 +42,7 @@
 
 #?(:clj
 (defmacro def [sym x]
-  `(def ~sym (NamedExpr. '~(qual/qualify sym) ~x))))
+  `(def ~sym (NamedExpr. '~(uqual/qualify sym) ~x))))
 
 #?(:clj (defalias -def def))
 
@@ -69,8 +67,8 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this]
-      (if pr/*print-as-code?*
-          (list* `casef (expr>code f) (map pr/>group cases))
+      (if upr/*print-as-code?*
+          (list* `casef (expr>code f) (map upr/>group cases))
           (list* `casef f cases))))
 
 (defn casef [f & cases]
@@ -94,11 +92,11 @@
   fipp.ednize/IOverride
   fipp.ednize/IEdn
     (-edn [this]
-      (if pr/*print-as-code?*
+      (if upr/*print-as-code?*
           (list* `condpf->
             (expr>code pred)
             (expr>code f)
-            (map pr/>group clauses))
+            (map upr/>group clauses))
           (list* `condpf-> pred f clauses))))
 
 (defn condpf-> [pred f & clauses]
@@ -124,7 +122,7 @@
   fipp.ednize/IEdn
     (-edn [this] (concat [`fn] (when name [name]) arities)))
 
-(dt/deftype
+(udt/deftype
   ^{:doc "All possible behaviors of `code` are inherited except function-callability, which
           is used for calling the evaled code itself.
           A code form may consist of any of the following, recursively:

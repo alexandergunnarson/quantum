@@ -12,34 +12,35 @@
      meta
      assoc-in])
   (:require
-    [clojure.core                      :as c]
-    [quantum.core.macros.deftype       :as dt]
-    [quantum.core.type.core            :as tcore]
-    [quantum.untyped.core.analyze.expr :as xp
+    [clojure.core                               :as c]
+    [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr]]
-    [quantum.untyped.core.collections  :as ucoll
-      :refer [assoc-in dissoc-in]]
+    [quantum.untyped.core.collections           :as ucoll
+      :refer [assoc-in dissoc-in
+              map+ filter+ remove+ distinct+ ]]
     [quantum.untyped.core.collections.logic
       :refer [seq-and]]
-    [quantum.untyped.core.compare      :as ucomp
+    [quantum.untyped.core.compare               :as ucomp
       :refer [== not==]]
-    [quantum.untyped.core.convert      :as uconv
+    [quantum.untyped.core.convert               :as uconv
       :refer [>symbol]]
-    [quantum.untyped.core.core         :as ucore]
-    [quantum.untyped.core.data.bits    :as ubit]
-    [quantum.untyped.core.error        :as uerr
+    [quantum.untyped.core.core                  :as ucore]
+    [quantum.untyped.core.data.bits             :as ubit]
+    [quantum.untyped.core.error                 :as uerr
       :refer [err! TODO catch-all]]
-    [quantum.untyped.core.fn           :as ufn
+    [quantum.untyped.core.fn
       :refer [fn1 fn' rcomp <- fn->]]
+    [quantum.untyped.core.form.generate.deftype :as udt]
     [quantum.untyped.core.logic
       :refer [fn-and]]
-    [quantum.untyped.core.numeric      :as unum]
-    [quantum.untyped.core.print        :as upr]
-    [quantum.untyped.core.qualify      :as qual]
-    [quantum.untyped.core.reducers     :as ur
-      :refer [map+ filter+ remove+ distinct+ join]]
+    [quantum.untyped.core.numeric               :as unum]
+    [quantum.untyped.core.print                 :as upr]
+    [quantum.untyped.core.qualify               :as qual]
+    [quantum.untyped.core.reducers              :as ur
+      :refer [join]]
     [quantum.untyped.core.refs
       :refer [?deref]]
+    [quantum.untyped.core.type.core             :as utcore]
     [quantum.untyped.core.vars
       :refer [def- update-meta]])
   #?(:clj (:import quantum.untyped.core.analyze.expr.Expression)))
@@ -66,7 +67,7 @@
 
 (defprotocol PSpec)
 
-(dt/deftype ValueSpec [v]
+(udt/deftype ValueSpec [v]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
@@ -91,7 +92,7 @@
 
 ;; -----
 
-(dt/deftype ClassSpec
+(udt/deftype ClassSpec
   [meta     #_(t/? ::meta)
    ^Class c #_t/class?
    name     #_(t/? t/symbol?)]
@@ -114,7 +115,7 @@
       (.-c ^ClassSpec spec)
       (err! "Cannot cast to ClassSpec" {:x spec})))
 
-(dt/deftype ProtocolSpec
+(udt/deftype ProtocolSpec
   [meta #_(t/? ::meta)
    p    #_t/protocol?
    name #_(t/? t/symbol?)]
@@ -204,7 +205,7 @@
       (update-meta spec assoc :runtime? true)
       (err! "Input must be spec" spec)))
 
-(dt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
+(udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] (list `deducible @*spec))}
@@ -339,7 +340,7 @@
 
 ;; ===== AND ===== ;;
 
-(dt/deftype AndSpec [args #_(t/and t/indexed? (t/seq spec?))]
+(udt/deftype AndSpec [args #_(t/and t/indexed? (t/seq spec?))]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
@@ -397,7 +398,7 @@
 
 ;; ===== OR ===== ;;
 
-(dt/deftype OrSpec [args #_(t/and t/indexed? (t/seq spec?))]
+(udt/deftype OrSpec [args #_(t/and t/indexed? (t/seq spec?))]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
@@ -451,7 +452,7 @@
 
 ;; ===== OR ===== ;;
 
-(dt/deftype NotSpec [spec #_t/spec?]
+(udt/deftype NotSpec [spec #_t/spec?]
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
@@ -477,7 +478,7 @@
 
 #?(:clj
 (defmacro fn' [x]
-  `(let [x# ~x] (FnConstantlySpec. nil (ufn/fn' x#) x#))))
+  `(let [x# ~x] (FnConstantlySpec. nil (fn' x#) x#))))
 
 (defn unkeyed
   "Creates an unkeyed collection spec, in which the collection may
@@ -490,7 +491,7 @@
 
 (-def nil? (value nil))
 
-(dt/deftype NilableSpec [meta #_(t/? ::meta) spec #_t/spec?]
+(udt/deftype NilableSpec [meta #_(t/? ::meta) spec #_t/spec?]
   {PSpec nil
    ?Fn     {invoke    ([this x] (c/or (c/nil? x) (spec x)))}
    ?Meta   {meta      ([this] meta)
@@ -513,7 +514,7 @@
 ;; This sadly gets a java.lang.AbstractMethodError when one tries to do as simple as:
 ;; `(def ? (InferSpec. nil))`
 ;; `(def abcde (? 1))
-(dt/deftype InferSpec [meta #_(t/? ::meta)]
+(udt/deftype InferSpec [meta #_(t/? ::meta)]
   {PSpec nil
    ?Fn {invoke (([this x] (NilableSpec. nil (>spec x)))
                 ([this spec x] (c/or (c/nil? x) (spec x))))}
