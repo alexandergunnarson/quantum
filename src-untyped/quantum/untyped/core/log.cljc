@@ -27,7 +27,8 @@
 
 ;; ===== Data ===== ;;
 
-(defonce *levels ucore/*log-levels)
+(defalias *levels ucore/*log-levels)
+(defalias *outs   ucore/*outs)
 
 (defonce *log (atom []))
 
