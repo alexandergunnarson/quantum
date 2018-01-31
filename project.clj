@@ -165,10 +165,11 @@
          :exclusions [org.slf4j/slf4j-nop
                       org.clojure/core.match
                       io.netty/netty
-                      com.datomic/datomic-free]]
-       [re-frame                                "0.8.0-alpha11"   ]
+                      com.datomic/datomic-free
+                      posh]]
+       [re-frame                                "0.9.4"]
      ; ==== HTML ==== ;
-       [hickory                                 "0.6.0"           ]
+       [hickory                                 "0.6.0"]
      ; ==== INTEROP ==== ;
        [org.python/jython-standalone            "2.5.3"
          :exclusions [jline]]
