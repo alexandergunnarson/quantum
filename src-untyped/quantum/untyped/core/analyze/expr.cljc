@@ -3,7 +3,7 @@
     [flatten get ==])
   (:require
     [clojure.core                               :as core]
-    [quantum.untyped.core.form.generate.deftype :as udt]
+    [quantum.untyped.core.form.generate.deftype :as udt #?@(:cljs [:include-macros true])] ; should be obvious but oh well
     [quantum.untyped.core.collections
       :refer [flatten partition-all+]]
     [quantum.untyped.core.collections.logic

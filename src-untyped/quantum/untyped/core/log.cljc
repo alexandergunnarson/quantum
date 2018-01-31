@@ -12,6 +12,7 @@
     [quantum.untyped.core.form.generate :as ufgen]
     [quantum.untyped.core.meta.debug    :as udebug]
     [quantum.untyped.core.print         :as upr]
+    [quantum.untyped.core.qualify       :as uqual]
     [quantum.untyped.core.type.predicates
       :refer [seqable?]]
     [quantum.untyped.core.vars
@@ -117,15 +118,16 @@
   `(let [pr-type# ~pr-type]
      (if (get @*levels pr-type#)
          (binding [*print-meta* ~print-meta?]
-           (pr* ~trace? ~pretty? ~print-fn pr-type# ~opts [~@args]))
+           (pr* ~trace? ~pretty? ~print-fn pr-type# [~@args] ~opts))
          true))))
 
 #?(:clj
 (defmacro -def-with-always [sym & args]
-  (let [args-sym (gensym "args")]
+  (let [args-sym (gensym "args")
+        macro-sym (uqual/qualify sym)]
     `(do (defmacro ~sym ~@args)
          (defmacro ~(symbol (str (name sym) "!")) [& ~args-sym]
-         `(~'~sym :always ~@~args-sym))))))
+          `(~'~macro-sym :always ~@~args-sym))))))
 
 #?(:clj (-def-with-always pr          [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* true  false println)))
 #?(:clj (-def-with-always pr-no-trace [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* false false println)))

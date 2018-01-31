@@ -11,6 +11,7 @@
     :cljs
    [[com.gfredericks.goog.math.Integer]])
     [clojure.core                               :as core]
+    [clojure.core.rrb-vector.rrbt]
     [clojure.string                             :as str]
     [quantum.untyped.core.data.map              :as umap
       :refer [map-entry]]
@@ -27,7 +28,8 @@
 #?(:cljs
   (:require-macros
     [quantum.untyped.core.type.defs :as self
-      :refer [->array-nd-types*
+      :refer [gen-types gen-types|unevaled
+              ->array-nd-types*
               !hash-map-types:gen
               !unsorted-map-types:gen
               !sorted-map-types:gen
@@ -36,8 +38,7 @@
               !unsorted-set-types:gen
               !sorted-set-types:gen
               !set-types:gen
-              gen-<type-pred=>type>
-              gen-types gen-types|unevaled]]))
+              gen-<type-pred=>type>]]))
   (:import
     #?@(:clj  [; clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble

@@ -11,7 +11,7 @@
     [quantum.untyped.core.fn       :as ufn
       :refer [fn']]
     [quantum.untyped.core.logic
-      :refer [condf1 fn-not]]
+      #?(:clj :refer :cljs :refer-macros) [condf1 fn-not]] ; no idea why this is required currently :/
     [quantum.untyped.core.reducers :as ur
       :refer [defeager transducer->transformer]]))
 
