@@ -129,6 +129,18 @@
   {:attribution "thebusby.bagotricks"}
   [& body] `(fn fn->># [x#] (->> x# ~@body))))
 
+;; ===== For side effects ===== ;;
+
+#?(:clj
+(defmacro with-do
+  "Like prog1 in Common Lisp, or a `(do)` that returns the first form."
+  [expr & exprs] `(let [ret# ~expr] ~@exprs ret#)))
+
+#?(:clj
+(defmacro with-do-let
+  "Like aprog1 or prog1-bind in Common Lisp."
+  [[sym retn] & body] `(let [~sym ~retn] ~@body ~sym)))
+
 ;; ===== Common fixed-function values ===== ;;
 
 (def fn-nil   (fn' nil  ))

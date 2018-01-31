@@ -32,7 +32,25 @@
 #?(:cljs (def touchable-highlight (rx-adapt ReactNative "TouchableHighlight")))
 #?(:cljs (def accordion           (when-not (= sys/os "web")
                                     (err/ignore (rx/adapt-react-class (js/require "react-native-accordion"))))))
-#?(:cljs (def text-input          (rx-adapt ReactNative "TextInput")))
+#?(:cljs (def text-input*         (rx-adapt ReactNative "TextInput")))
+
+#?(:cljs
+(def text-input
+     (if (= sys/os "web")
+         (fn text-input [props]
+           (let [props' props
+                 props' (case (:auto-complete props)
+                          true  (assoc props' :auto-complete "on")
+                          false (assoc props' :auto-complete "off")
+                          props')
+                 ;; a shim for one aspect of https://github.com/necolas/react-native-web/issues/501
+                 props' (if (and (val? (:auto-correct props))
+                                 (nil? (:spell-check props)))
+                            (assoc props' :spell-check (:auto-correct props))
+                            props')]
+             [text-input* props']))
+         text-input*)))
+
 #?(:cljs (def modal               (when-not (= sys/os "web")
                                     (rx-adapt ReactNative "Modal"))))
 #?(:cljs (def scroll-view         (rx-adapt ReactNative "ScrollView")))

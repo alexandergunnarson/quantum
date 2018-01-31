@@ -41,8 +41,7 @@
         (when-not (= n (-> *ns* ns-name name))
           (if-let [alias- (do #?(:clj (uns/ns-name>alias *ns* (symbol n)) :cljs false))]
             (str alias- (when extra-slash? "/"))
-            n)))
-      (name sym)))))
+            n)))      (name sym)))))
 
 ;; ===== IDENTS ===== ;;
 

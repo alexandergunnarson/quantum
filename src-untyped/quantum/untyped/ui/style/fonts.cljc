@@ -253,7 +253,8 @@
 
 (def families
   {:garamond       {:pref ["'EB Garamond'"     "Baskerville" "Georgia"   "Times" "serif"     ]}
-   :gotham         {:regular "Gotham-Book"}
+   :gotham         {:regular "Gotham-Book"
+                    :rounded "Gotham Rounded"}
    :optima         {:pref ["'Optima'"          "Segoe"       "Calibri"   "Arial" "sans-serif"]}
    :firasans       {:pref ["'Fira Sans'"                     "Calibri"   "Arial" "sans-serif"]}
    :sourcecode-pro {:pref ["'Source Code Pro'"                                   "monospace" ]}
@@ -269,5 +270,5 @@
 (defn link   [k] (get-in families [k :link]))
 
 (defn font
-  ([k] (get-in families [k :regular]))
-  ([k & ks] (get-in families (apply vector k ks))))
+  ([k] (-> families (get k) :regular))
+  ([k & ks] (-> families (get k) (get-in ks))))

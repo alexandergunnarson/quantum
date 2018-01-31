@@ -272,18 +272,11 @@
 
 #?(:clj (defaliases u <- <<- fn-> fn->>))
 
+;; ===== For side effects ===== ;;
+
+#?(:clj (defaliases u with-do with-do-let))
+
 ;; ===== ... ===== ;;
-
-#?(:clj
-(defmacro with-do
-  "Like prog1 in Common Lisp, or a `(do)` that returns the first form."
-  [expr & exprs] `(let [ret# ~expr] ~@exprs ret#)))
-
-#?(:clj
-(defmacro with-do-let
-  "Like aprog1 or prog1-bind in Common Lisp."
-  [[sym retn] & body] `(let [~sym ~retn] ~@body ~sym)))
-
 
 ; TODO: deprecate these... likely they're not useful
 (defn call->  [arg & [func & args]] ((apply func args) arg))
