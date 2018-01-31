@@ -61,3 +61,9 @@
 #?(:cljs (def audio (when (= sys/os "web") :audio)))
 
 #?(:cljs (def list-view-data-source (err/ignore (-> ReactNative .-ListView .-DataSource))))
+
+#?(:cljs
+(def ReactVirtualized
+  (sys/>module nil ["react-virtualized"])))
+
+#?(:cljs (def react-grid (rx-adapt ReactVirtualized "Grid")))
