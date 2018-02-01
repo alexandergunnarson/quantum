@@ -11,7 +11,9 @@
 
 (ucore/log-this-ns)
 
-(defn named? [x] (instance? #?(:clj clojure.lang.Named :cljs cljs.core/INamed) x))
+(defn named? [x]
+  #?(:clj  (instance?   clojure.lang.Named x)
+     :cljs (implements? cljs.core/INamed   x)))
 
 (defn ?ns->name [?ns]
   (name #?(:clj (if (namespace? ?ns)

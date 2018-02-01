@@ -1,12 +1,13 @@
 (ns quantum.untyped.core.error
   (:require
-    [clojure.core              :as core]
-    [slingshot.slingshot       :as try]
-    [quantum.untyped.core.core :as ucore]
+    [clojure.core               :as core]
+    [slingshot.slingshot        :as try]
+    [quantum.untyped.core.core  :as ucore]
     [quantum.untyped.core.fn
       :refer [fn1 fnl rcomp]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
+    [quantum.untyped.core.print :as upr]
     [quantum.untyped.core.vars
       :refer [defalias defaliases defmacro-]])
 #?(:cljs
@@ -15,6 +16,16 @@
       :refer [err-constructor]])))
 
 (ucore/log-this-ns)
+
+;; ===== Config ===== ;;
+
+(defonce *pr-data-to-str? (atom #?(:clj false :cljs (boolean js/goog.DEBUG))))
+
+(defn- msg+data>msg [msg data]
+  (if @*pr-data-to-str?
+      (str "Message: " msg "\n"
+           "Data:\n"   (upr/ppr-str data))
+      msg))
 
 ;; ===== Error type: generic ===== ;;
 
@@ -33,8 +44,8 @@
 (def ex-info? (fnl instance? ex-info-type))
 
 (defn >ex-info
-  ([data]     (ex-info "Exception" data))
-  ([msg data] (ex-info msg         data)))
+  ([data] (>ex-info "Exception" data))
+  ([msg data] (ex-info (msg+data>msg msg data) data)))
 
 (def ex-info! (rcomp >ex-info (fn1 throw)))
 
@@ -65,17 +76,17 @@
             x
           (map? x)
             #?(:clj  (err-constructor
-                       (:ident x) (:message x) (:data x) (:trace x) (:cause x)
+                       (:ident x) (msg+data>msg (:message x) (:data x)) (:data x) (:trace x) (:cause x)
                        (meta x) (dissoc x :ident :message :data :trace :cause))
-               :cljs (map->Error x))
+               :cljs (-> x map->Error (assoc :message (msg+data>msg (:message x) (:data x)))))
           (error? x)
             #?(:clj  (let [^Throwable t x]
                        (err-constructor
-                         nil (.getLocalizedMessage t) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
+                         nil (msg+data>msg (.getLocalizedMessage t) (?ex-data t)) (?ex-data t) (.getStackTrace t) (some-> (.getCause t) >err)
                          (meta t)
                          {:type (class t)}))
                :cljs (with-meta
-                       (-> (err-constructor (.-name x) (.-message x) (?ex-data x) (.-stack x) (.-cause x))
+                       (-> (err-constructor (.-name x) (msg+data>msg (.-message x) (?ex-data x)) (?ex-data x) (.-stack x) (.-cause x))
                            ;; other non-standard fields
                            (cond-> (.-description  x) (assoc :description   (.-description  x))
                                    (.-number       x) (assoc :number        (.-number       x))
@@ -84,21 +95,21 @@
                                    (.-columnNumber x) (assoc :column-number (.-columnNumber x))))
                        (meta x)))
           (string? x)
-            (err-constructor nil x nil nil nil)
+            (>err nil x nil nil nil)
           :else
-            (err-constructor nil nil x nil nil)))
+            (>err nil nil x nil nil)))
   ([a0 a1]
     (if (string? a0)
         (let [message a0 data a1]
-          (err-constructor nil message data nil nil))
+          (>err nil message data nil nil))
         (let [ident a0 data a1]
-          (err-constructor ident nil data nil nil))))
+          (>err ident nil data nil nil))))
   ([ident message data]
-    (err-constructor ident message data nil nil))
+    (>err ident message data nil nil))
   ([ident message data trace]
-    (err-constructor ident message data trace nil))
+    (>err ident message data trace nil))
   ([ident message data trace cause]
-    (err-constructor ident message data trace cause)))
+    (err-constructor ident (msg+data>msg message data) data trace cause)))
 
 (def err! (rcomp >err (fn1 throw)))
 

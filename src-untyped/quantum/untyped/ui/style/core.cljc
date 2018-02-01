@@ -2,7 +2,14 @@
   ^{:doc "UI style functions"}
   quantum.untyped.ui.style.core
   (:require
-    [quantum.untyped.core.system :as sys]))
+    [clojure.string                   :as str]
+    [quantum.untyped.core.collections :as uc]
+    [quantum.untyped.core.convert
+      :refer [>?name]]
+    [quantum.untyped.core.core        :as ucore]
+    [quantum.untyped.core.system      :as usys]))
+
+(ucore/log-this-ns)
 
 ; Flex helpers
 (def layout-x         :row)
@@ -18,8 +25,11 @@
   {:iphone-6 0.58})
 
 (def scaling-factor
-  (case sys/os
+  (case usys/os
     "ios" (:iphone-6 scaling-factors)
     1))
 
 (defn scaled [x] (* x scaling-factor))
+
+(defn >class [& classes]
+  (->> classes (uc/lmap >?name) (str/join " ")))
