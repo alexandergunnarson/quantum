@@ -14,7 +14,7 @@
 
 (defaliases uns
   ns the-ns find-ns ns-name ns-map
-  ns-map ns-unmap!
+  ns-map ns-unmap ns-unmap!
   in-ns all-ns
   create-ns create-ns!
   alias alias!
