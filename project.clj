@@ -167,7 +167,7 @@
                       io.netty/netty
                       com.datomic/datomic-free
                       posh]]
-       [re-frame                                "0.9.4"]
+       [re-frame                                "0.10.4"]
      ; ==== HTML ==== ;
        [hickory                                 "0.6.0"]
      ; ==== INTEROP ==== ;
