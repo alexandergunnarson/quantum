@@ -22,7 +22,7 @@
           (string?    x) x
 #?@(:clj [(class?     x) (.getName ^Class x)
           (namespace? x) (-> x ns-name name)
-          (var?       x) (-> x meta :name)])
+          (var?       x) (-> x meta :name name)])
           (fn?        x) #?(:clj  (or (some-> (-> x meta :name) >name)
                                       (-> x class .getName clojure.lang.Compiler/demunge demunged>name))
                             :cljs (when-not (-> x .-name str/blank?)
@@ -78,7 +78,8 @@
   [x]
   (cond   (symbol?    x) x
           (string?    x) (symbol x)
-#?@(:clj [(namespace? x) (ns-name x)])
+#?@(:clj [(var?       x) (symbol (>?namespace x) (>name x))
+          (namespace? x) (ns-name x)])
           (fn? x)        #?(:clj  (or (when-let [ns- (-> x meta :ns)]
                                         (symbol (>name ns-) (-> x meta :name >name)))
                                       (-> x class .getName clojure.lang.Compiler/demunge recur))
