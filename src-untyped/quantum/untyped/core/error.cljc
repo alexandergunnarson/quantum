@@ -1,14 +1,14 @@
 (ns quantum.untyped.core.error
   (:require
     [clojure.core               :as core]
+    [fipp.edn                   :as fipp]
     [slingshot.slingshot        :as try]
     [quantum.untyped.core.core  :as ucore]
     [quantum.untyped.core.fn
       :refer [fn1 fnl rcomp]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
-    [quantum.untyped.core.print :as upr]
-    [quantum.untyped.core.vars
+    [quantum.untyped.core.vars  :as uvar
       :refer [defalias defaliases defmacro-]])
 #?(:cljs
   (:require-macros
@@ -19,12 +19,49 @@
 
 ;; ===== Config ===== ;;
 
-(defonce *pr-data-to-str? (atom #?(:clj false :cljs (boolean js/goog.DEBUG))))
+(uvar/defonce *print-blacklist "A set of classes not to print" (atom #{}))
+
+(declare error? >err)
+
+(defn ppr
+  "Fast pretty print using brandonbloom/fipp.
+   At least 5 times faster than `clojure.pprint/pprint`.
+   Prints no later than having consumed the bound amount of memory,
+   so you see your first few lines of output instantaneously."
+  ([] (println))
+  ([x]
+    (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
+      (do (cond
+            (error? x)
+              (fipp/pprint (>err x))
+            (and (string? x) (> (count x) *print-length*))
+              (println
+                (str "String is too long to print ("
+                     (str (count x) " elements")
+                     ").")
+                "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
+            (contains? @*print-blacklist (type x))
+              (println
+                "Object's class"
+                (str (type x) "(" ")")
+                "is blacklisted for printing.")
+            :else
+              (fipp/pprint x))
+          nil)))
+  ([x & xs]
+    (doseq [x' (cons x xs)] (ppr x'))))
+
+(defn ppr-str
+  "Like `pr-str`, but pretty-prints."
+  [x] (with-out-str (ppr x)))
+
+(defonce *pr-data-to-str?
+  (atom #?(:clj false :cljs (boolean js/goog.DEBUG))))
 
 (defn- msg+data>msg [msg data]
   (if @*pr-data-to-str?
       (str "Message: " msg "\n"
-           "Data:\n"   (upr/ppr-str data))
+           "Data:\n"   (ppr-str data))
       msg))
 
 ;; ===== Error type: generic ===== ;;

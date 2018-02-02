@@ -2,11 +2,10 @@
   (:require
 #?@(:clj
    [[io.aviso.exception]])
-    [fipp.edn                         :as fipp]
     [quantum.untyped.core.collections :as uc]
     [quantum.untyped.core.core        :as ucore]
     [quantum.untyped.core.error       :as uerr
-      :refer [error? >err]]
+      :refer [>err]]
     [quantum.untyped.core.vars        :as uvar
       :refer [defalias]]))
 
@@ -14,7 +13,7 @@
 
 ;; ===== Data and dynamic bindings ===== ;;
 
-(uvar/defonce *blacklist "A set of classes not to print" (atom #{}))
+(defalias *blacklist uerr/*print-blacklist)
 
 (def ^:dynamic ^{:doc "Flag for namespace-'collapsing' symbols"}
   *collapse-symbols?* false)
@@ -32,33 +31,7 @@
 
 ;; ===== `ppr` ===== ;;
 
-(defn ppr
-  "Fast pretty print using brandonbloom/fipp.
-   At least 5 times faster than `clojure.pprint/pprint`.
-   Prints no later than having consumed the bound amount of memory,
-   so you see your first few lines of output instantaneously."
-  ([] (println))
-  ([x]
-    (binding [*print-length* (or *print-length* 1000)] ; A reasonable default
-      (do (cond
-            (error? x)
-              (fipp/pprint (>err x))
-            (and (string? x) (> (count x) *print-length*))
-              (println
-                (str "String is too long to print ("
-                     (str (count x) " elements")
-                     ").")
-                "`*print-length*` is set at" (str *print-length* ".")) ; TODO fix so ellipsize
-            (contains? @*blacklist (type x))
-              (println
-                "Object's class"
-                (str (type x) "(" ")")
-                "is blacklisted for printing.")
-            :else
-              (fipp/pprint x))
-          nil)))
-  ([x & xs]
-    (doseq [x' (cons x xs)] (ppr x'))))
+(defalias uerr/ppr)
 
 ;; ===== `ppr` varieties ===== ;;
 
@@ -80,9 +53,7 @@
 
      :cljs (ppr x)))
 
-(defn ppr-str
-  "Like `pr-str`, but pretty-prints."
-  [x] (with-out-str (ppr x)))
+(defalias uerr/ppr-str)
 
 ;; ===== Print groups ===== ;;
 
