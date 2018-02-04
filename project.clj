@@ -1,34 +1,27 @@
-; TODO lazy-load jars based on desired features (or optionally force load all)
-; ssh -t -t localhost; export COLUMNS=10000 && export TERM=screen.linux && screen -Dr quantum
-(defproject quantum/core
-  ; Would move it outside of the project but might cause problems?
-  (let [git-hash (let [{:keys [exit out]}
-                         (clojure.java.shell/sh
-                           "git" "rev-parse" "--short" "HEAD")]
-                   (when (= exit 0)
-                     (subs out 0 (-> out count dec))))
-        version (str "0.3.0-" (or git-hash "UNKNOWN"))]
-    version)
-  :description      "Some quanta of computational abstraction, assembled."
-  :jvm-opts ^:replace
-    ["-XX:-OmitStackTraceInFastThrow"
-     "-d64" "-server"]
-  :aot [sparkling.serialization sparkling.destructuring]
-  :jar-name          "quantum-dep.jar"
-  :uberjar-name      "quantum.jar"
-  :url               "https://www.github.com/alexandergunnarson/quantum"
-  :license           {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
-                      :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
-  #_:repositories #_[["Boundless" "http://repo.boundlessgeo.com/main/"]
+;; TODO lazy-load jars based on desired features (or optionally force load all)
+;; ssh -t -t localhost; export COLUMNS=10000 && export TERM=screen.linux && screen -Dr quantum
+
+(load-file "project-base.clj")
+(require '[quantum.meta.project-base :as base])
+
+(base/defproject
+  {:name        'quantum/core
+   :version     (base/>git-hash ".")
+   :description "Some quanta of computational abstraction, assembled."
+   :url         "https://www.github.com/alexandergunnarson/quantum"
+   ;; ===== ENVIRONMENT ===== ;;
+   :env          {:print-pid? true}
+   :aot          '[sparkling.serialization sparkling.destructuring]
+   :jar-name     "quantum-dep.jar"
+   :uberjar-name "quantum.jar"
+   :license      {:name "Creative Commons Attribution-ShareAlike 3.0 US (CC-SA) license"
+                  :url "https://creativecommons.org/licenses/by-sa/3.0/us/"}
+
+ #_:repositories #_'[["Boundless" "http://repo.boundlessgeo.com/main/"]
                      ["OSGeo"     "http://download.osgeo.org/webdav/geotools/"]]
-  :env {:print-pid? "true"}
-  :plugins [[lein-environ  "1.0.3" ]
-            ; e.g. `generate-extern -f js-joda.js -o js-joda.externs.js -n JSJoda`
-            #_[lein-npm      "0.6.2"]]
-  :dependencies
-    [[org.clojure/clojure                       "1.9.0"]
-     [org.clojure/clojurescript                 "1.9.946"]
-     ; ==== CORE ====
+   :plugins      '[[lein-environ  "1.0.3"]]
+   :dependencies
+    '[; ==== CORE ====
        [proteus                                 "0.1.6"]
        ; ==== NAMESPACE ====
        [org.clojure/tools.namespace             "0.2.11"]
@@ -346,76 +339,72 @@
      [jline                                    "2.12.1"  ] ; Even though 3.0.0 is available
      [com.google.guava/guava                   "23.5-jre"]
      [com.google.protobuf/protobuf-java        "3.5.0"]]
-  ;:npm {:dependencies [[js-joda "1.1.12"]]}
-  :injections [(require '[clojure.tools.namespace.repl :refer [refresh]])]
-  :profiles
-   {:t2.small {:jvm-opts ^:replace
-                ; TODO automatically determine based on system/container specs
-                ["-Dquantum.core.log:out-file=./out.log"
-                 "-d64" "-server"
-                 ; ----- MEMORY ----- ;
-                 ; On-heap
-                 "-Xms768M" "-Xmx768M"
-                 ; Off-heap
-                 "-XX:InitialCodeCacheSize=72M"
-                 "-XX:ReservedCodeCacheSize=72M"
-                 #_"-XX:CompressedClassSpaceSize=200M" #_"64M is too little"
-                 "-XX:-UseCompressedClassPointers" ; or else java.lang.OutOfMemoryError: Metaspace
-                 "-XX:MaxDirectMemorySize=128M" #_"For e.g. off-heap `ByteBuffer`s"
-                 "-XX:MetaspaceSize=768M"
-                 "-XX:MaxMetaspaceSize=768M" #_"128M and 256M, and 512M (!) are too little"
-                 "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
-                 ; ----- MISCELLANEOUS ----- ;
-                 ; JIT
-                 "-XX:+DoEscapeAnalysis"
-                 ; Telemetry
-                 "-XX:-OmitStackTraceInFastThrow"
-                 ]
-                 ; Assuming 2048M total RAM for t2.small:
-                 #_"For OS:   312M
-                    For Java: offheap=((72M code)+(128M direct)+(1024M meta) = 968M) + onheap=(2048M-OS-offheap = 1024M) -> 768M"
-           }
-    :dev {:resource-paths ["dev-resources"]
-          :source-paths   ["dev"]
-          :dependencies   []
-          :jvm-opts
-            ["-Dquantum.core.log:out-file=./out.log"
-             ; ----- HEAP ----- ;
-             "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
-             "-XX:+UseParallelGC" ; https://www.voxxed.com/blog/2015/08/whats-fastest-garbage-collector-java-8-heavy-calculations/
-             "-XX:+UseCompressedOops"
-             "-XX:+UseSuperWord"
-             ; ----- JIT ----- ;
-             "-XX:+DoEscapeAnalysis"
-             "-XX:+Inline"
-             "-XX:+OptimizeStringConcat"
-             "-XX:MaxTrivialSize=12"
-             "-XX:MaxInlineSize=270"
-             "-XX:InlineSmallCode=2000"
-             ; ----- TELEMETRY ----- ;
-             "-XX:-OmitStackTraceInFastThrow"
-             ; ----- CRYPTOGRAPHY ----- ;
-             "-XX:+UseAES"
-             "-XX:+UseAESIntrinsics"
-             "-XX:+UseSHA"
-             "-XX:+UseSHA1Intrinsics"
-             "-XX:+UseSHA256Intrinsics"
-             "-XX:+UseSHA512Intrinsics"
-             ; ----- MEMORY ----- ;
-             ; JIT
-           #_"-XX:InitialCodeCacheSize=512M"
-           #_"-XX:ReservedCodeCacheSize=512M"
-             ; DIRECT MEMORY
-           #_"-XX:MaxDirectMemorySize=512M"
-             ; CLASS/METASPACE
-           #_"-XX:CompressedClassSpaceSize=128M"
-           #_"-XX:MetaspaceSize=1024M"
-             ; (and (> Xmx32G) (<= Xmx38G)) is worse performance: http://java-performance.com
-             "-Xms10G"
-             "-Xmx10G"
-             ; DATOMIC
-           #_"-Ddatomic.ObjectCacheMax=8G"]
-          :plugins [[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
+   :profiles
+     {:t2.small {:jvm-opts ^:replace
+                  ; TODO automatically determine based on system/container specs
+                  ["-Dquantum.core.log:out-file=./out.log"
+                   "-d64" "-server"
+                   ; ----- MEMORY ----- ;
+                   ; On-heap
+                   "-Xms768M" "-Xmx768M"
+                   ; Off-heap
+                   "-XX:InitialCodeCacheSize=72M"
+                   "-XX:ReservedCodeCacheSize=72M"
+                   #_"-XX:CompressedClassSpaceSize=200M" #_"64M is too little"
+                   "-XX:-UseCompressedClassPointers" ; or else java.lang.OutOfMemoryError: Metaspace
+                   "-XX:MaxDirectMemorySize=128M" #_"For e.g. off-heap `ByteBuffer`s"
+                   "-XX:MetaspaceSize=768M"
+                   "-XX:MaxMetaspaceSize=768M" #_"128M and 256M, and 512M (!) are too little"
+                   "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
+                   ; ----- MISCELLANEOUS ----- ;
+                   ; JIT
+                   "-XX:+DoEscapeAnalysis"
+                   ; Telemetry
+                   "-XX:-OmitStackTraceInFastThrow"
+                   ]
+                   ; Assuming 2048M total RAM for t2.small:
+                   #_"For OS:   312M
+                      For Java: offheap=((72M code)+(128M direct)+(1024M meta) = 968M) + onheap=(2048M-OS-offheap = 1024M) -> 768M"
+             }}
+   :dev {:resource-paths ["dev-resources"]
+         :jvm-opts
+           ["-Dquantum.core.log:out-file=./out.log"
+            ; ----- HEAP ----- ;
+            "-XX:+CMSClassUnloadingEnabled" #_"A must for Clojure if using runtime `eval`"
+            "-XX:+UseParallelGC" ; https://www.voxxed.com/blog/2015/08/whats-fastest-garbage-collector-java-8-heavy-calculations/
+            "-XX:+UseCompressedOops"
+            "-XX:+UseSuperWord"
+            ; ----- JIT ----- ;
+            "-XX:+DoEscapeAnalysis"
+            "-XX:+Inline"
+            "-XX:+OptimizeStringConcat"
+            "-XX:MaxTrivialSize=12"
+            "-XX:MaxInlineSize=270"
+            "-XX:InlineSmallCode=2000"
+            ; ----- TELEMETRY ----- ;
+            "-XX:-OmitStackTraceInFastThrow"
+            ; ----- CRYPTOGRAPHY ----- ;
+            "-XX:+UseAES"
+            "-XX:+UseAESIntrinsics"
+            "-XX:+UseSHA"
+            "-XX:+UseSHA1Intrinsics"
+            "-XX:+UseSHA256Intrinsics"
+            "-XX:+UseSHA512Intrinsics"
+            ; ----- MEMORY ----- ;
+            ; JIT
+          #_"-XX:InitialCodeCacheSize=512M"
+          #_"-XX:ReservedCodeCacheSize=512M"
+            ; DIRECT MEMORY
+          #_"-XX:MaxDirectMemorySize=512M"
+            ; CLASS/METASPACE
+          #_"-XX:CompressedClassSpaceSize=128M"
+          #_"-XX:MetaspaceSize=1024M"
+            ; (and (> Xmx32G) (<= Xmx38G)) is worse performance: http://java-performance.com
+            "-Xms10G"
+            "-Xmx10G"
+            ; DATOMIC
+          #_"-Ddatomic.ObjectCacheMax=8G"]
+         :plugins '[[com.jakemccrary/lein-test-refresh "0.16.0"] ; CLJ  test
                     [lein-doo                          "0.1.7" ] ; CLJS test
                     [lein-cljsbuild                    "1.1.7" ]
                     [lein-figwheel                     "0.5.14"
@@ -432,36 +421,35 @@
                     [lein-ancient                      "0.6.10"
                       :exclusions [com.amazonaws/aws-java-sdk-s3]]
                     [lein-nodisassemble "0.1.3"]]}
-    :fibers
-       {:java-agents [[co.paralleluniverse/quasar-core "0.7.6"]]}
-    :auto-instrument
-       {:jvm-opts ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
-        :java-agents [[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}
-    :test {:jvm-opts ["-Xms4g"
-                      "-Xmx4g"
-                      "-XX:+UseSuperWord"
-                      "-XX:+Inline"
-                      "-XX:+UseCompressedOops"]}}
-  :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
-            "deploy-dev"             ["do" "clean,"
-                                           "install"]
-            "deploy-prod"            ["do" "clean,"
-                                           "install,"
-                                           "deploy" "clojars"]
-            "deploy-test-dev"        ["do" "clean,"
-                                           "cljsbuild" "once" "dev"]
-            "cljs|autobuilder"       ["with-profile" "+dev" "figwheel" "dev"]
-            "cljs|debug|autobuilder" ["cljsbuild" "auto" "no-reload"]
-            "test|clj"               ["with-profile" "+test"
-                                        "test"]
-            "test|cljs"              ["with-profile" "+test"
-                                        "doo" "phantom" "test" "once"]
-            "clj|autotester"         ["test-refresh"]
-            "count-loc"              ["vanity"]
-            "clj|fast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
-  :auto-clean  false
-  :target-path "target"
-  :clean-targets ^{:protect false} [:target-path
+   :fibers
+      {:java-agents '[[co.paralleluniverse/quasar-core "0.7.6"]]}
+   :auto-instrument
+      {:jvm-opts ["-Dco.paralleluniverse.pulsar.instrument.auto=all"]
+       :java-agents '[[co.paralleluniverse/quasar-core "0.7.6" :options "m"]]}
+   :test {:jvm-opts ["-Xms4g"
+                     "-Xmx4g"
+                     "-XX:+UseSuperWord"
+                     "-XX:+Inline"
+                     "-XX:+UseCompressedOops"]}
+   :aliases {"all"                    ["with-profile" "dev:dev,1.5:dev,1.7"]
+             "deploy-dev"             ["do" "clean,"
+                                            "install"]
+             "deploy-prod"            ["do" "clean,"
+                                            "install,"
+                                            "deploy" "clojars"]
+             "deploy-test-dev"        ["do" "clean,"
+                                            "cljsbuild" "once" "dev"]
+             "cljs|autobuilder"       ["with-profile" "+dev" "figwheel" "dev"]
+             "cljs|debug|autobuilder" ["cljsbuild" "auto" "no-reload"]
+             "test|clj"               ["with-profile" "+test"
+                                         "test"]
+             "test|cljs"              ["with-profile" "+test"
+                                         "doo" "phantom" "test" "once"]
+             "clj|autotester"         ["test-refresh"]
+             "count-loc"              ["vanity"]
+             "clj|fast-repl"          ["trampoline" "run" "-m" "clojure.main"]}
+
+   :clean-targets ^{:protect false} [:target-path
                                     [:cljsbuild :builds :test      :compiler :output-dir]
                                     [:cljsbuild :builds :test      :compiler :output-to ]
                                     [:cljsbuild :builds :no-reload :compiler :output-dir]
@@ -470,72 +458,69 @@
                                     [:cljsbuild :builds :dev       :compiler :output-to ]
                                     [:cljsbuild :builds :min       :compiler :output-dir]
                                     [:cljsbuild :builds :min       :compiler :output-to ]]
-  :source-paths ["src" "src-untyped"]
-  :test-paths   ["test"]
-  :repl-options {:init (do (clojure.core/require
-                             'quantum.core.print
-                             'quantum.core.print.prettier)
-                           (quantum.core.print.prettier/extend-pretty-printing!)
-                           (require '[quantum.core.log :refer [prl!]])
-                           (clojure.main/repl
-                             :print  #(binding [*print-meta* true
-                                                quantum.core.print/*collapse-symbols?* true
-                                                quantum.core.print/*print-as-code?* true]
-                                        (quantum.core.print/ppr %))
-                             :caught quantum.core.print/ppr-error))}
-  :global-vars {*warn-on-reflection* true
-                *unchecked-math*     :warn-on-boxed}
-  :java-agents [; This for HTTP/2 support
-                #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
-  :cljsbuild
-    {:builds
-      {:test {:source-paths ["src" "dev"]
-              :compiler     {:output-to            "dev-resources/public/js/compiled/test/quantum.js"
-                             :output-dir           "dev-resources/public/js/compiled/test/out"
-                             :optimizations        :whitespace
-                             :main                 quantum.test
-                             :asset-path           "js/compiled/test/out"
-                             :cache-analysis       true}}
-       :no-reload {:figwheel {:autoload false}
-                   :source-paths ["src" "dev"]
-                   :compiler {:output-to            "dev-resources/public/js/compiled/no-reload/quantum.js"
-                              :output-dir           "dev-resources/public/js/compiled/no-reload/out"
-                              :optimizations        :none
-                              :main                 quantum.dev
-                              :asset-path           "js/compiled/no-reload/out"
-                              :source-map           true
-                              :source-map-timestamp true
+   :source-paths ["src-untyped"]
+   :repl-options {:init '(do (clojure.core/require
+                               'quantum.core.print
+                               'quantum.core.print.prettier)
+                             (quantum.core.print.prettier/extend-pretty-printing!)
+                             (require '[quantum.core.log :refer [prl!]])
+                             (clojure.main/repl
+                               :print  #(binding [*print-meta* true
+                                                  quantum.core.print/*collapse-symbols?* true
+                                                  quantum.core.print/*print-as-code?* true]
+                                          (quantum.core.print/ppr %))
+                               :caught quantum.core.print/ppr-error))}
+   :java-agents [; This for HTTP/2 support
+                 #_[kr.motd.javaagent/jetty-alpn-agent "1.0.1.Final"]]
+   :cljsbuild
+     {:builds
+       {:test {:source-paths ["src" "dev"]
+               :compiler     {:output-to            "dev-resources/public/js/compiled/test/quantum.js"
+                              :output-dir           "dev-resources/public/js/compiled/test/out"
+                              :optimizations        :whitespace
+                              :main                 'quantum.test
+                              :asset-path           "js/compiled/test/out"
                               :cache-analysis       true}}
-       :dev {:figwheel true
-             :source-paths ["src" "dev"]
-             :compiler {:output-to            "dev-resources/public/js/compiled/dev/quantum.js"
-                        :output-dir           "dev-resources/public/js/compiled/dev/out"
-                        :optimizations        :none
-                        :main                 quantum.dev
-                        :asset-path           "js/compiled/dev/out"
-                        :source-map           true
-                        :source-map-timestamp true
-                        :cache-analysis       true}}
-       :dev-basic
-         {:figwheel     true
-          :source-paths ["src" "dev"]
-          :compiler     {:output-to            "dev-resources/public/js/compiled/dev-basic/quantum.js"
-                         :output-dir           "dev-resources/public/js/compiled/dev-basic/out"
+        :no-reload {:figwheel {:autoload false}
+                    :source-paths ["src" "dev"]
+                    :compiler {:output-to            "dev-resources/public/js/compiled/no-reload/quantum.js"
+                               :output-dir           "dev-resources/public/js/compiled/no-reload/out"
+                               :optimizations        :none
+                               :main                 'quantum.dev
+                               :asset-path           "js/compiled/no-reload/out"
+                               :source-map           true
+                               :source-map-timestamp true
+                               :cache-analysis       true}}
+        :dev {:figwheel true
+              :source-paths ["src" "dev"]
+              :compiler {:output-to            "dev-resources/public/js/compiled/dev/quantum.js"
+                         :output-dir           "dev-resources/public/js/compiled/dev/out"
                          :optimizations        :none
-                         :main                 quantum.dev-basic
-                         :asset-path           "js/compiled/dev-basic/out"
+                         :main                 'quantum.dev
+                         :asset-path           "js/compiled/dev/out"
                          :source-map           true
                          :source-map-timestamp true
                          :cache-analysis       true}}
-       :min {:source-paths ["src"]
-             :compiler {:output-to      "dev-resources/public/js/compiled/min/quantum.js"
-                        :output-dir     "dev-resources/public/js/compiled/min/out"
-                        :main           quantum.dev
-                        :optimizations  :advanced
-                        :asset-path     "js/compiled/min/out"
-                        :pretty-print   false
-                        ;:parallel-build true
-                        }}}}
-  :figwheel {:http-server-root "public" ; default and assumes "resources"
-             :server-port      3450
-             :css-dirs         ["dev-resources/public/css"]})
+        :dev-basic
+          {:figwheel     true
+           :source-paths ["src" "dev"]
+           :compiler     {:output-to            "dev-resources/public/js/compiled/dev-basic/quantum.js"
+                          :output-dir           "dev-resources/public/js/compiled/dev-basic/out"
+                          :optimizations        :none
+                          :main                 'quantum.dev-basic
+                          :asset-path           "js/compiled/dev-basic/out"
+                          :source-map           true
+                          :source-map-timestamp true
+                          :cache-analysis       true}}
+        :min {:source-paths ["src"]
+              :compiler {:output-to      "dev-resources/public/js/compiled/min/quantum.js"
+                         :output-dir     "dev-resources/public/js/compiled/min/out"
+                         :main           'quantum.dev
+                         :optimizations  :advanced
+                         :asset-path     "js/compiled/min/out"
+                         :pretty-print   false
+                         ;:parallel-build true
+                         }}}}
+   :figwheel {:http-server-root "public" ; default and assumes "resources"
+              :server-port      3450
+              :css-dirs         ["dev-resources/public/css"]}})
