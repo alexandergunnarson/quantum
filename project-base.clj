@@ -404,44 +404,56 @@
   "Note that for Figwheel to work, no character in the build IDs can necessitate an
    URL escape character."
   [kind project-config opts source-paths artifact-base-name]
-  (let [server-root-path "resources/server-root"
-        react-native?    (-> opts :features :react-native)
+  (let [react-native?    (-> opts :features :react-native)
         quantum?         (-> project-config :name (= 'quantum/core))
         id>config
           (fn [id #_string?, id-base id-suffix]
-            (let [;; relative to `server-root-path`
-                  asset-path (str "generated" "/" (name kind) "/" id "/" "js")
+            (let [;; TODO these paths are temporary for React Native!!
+                  server-root-path (case id-base (:ios :android) "target" "resources/server-root")
+                  ;; relative to `server-root-path`
+                  asset-path (if (and (#{:ios :android} id-base)
+                                      (= id-suffix :quantum-dynamic-source-untyped))
+                                 (name id-base)
+                               (str "generated" "/" (name kind) "/" id "/" "js"))
                   output-dir (str server-root-path "/" asset-path)]
               (cond->
                 {:source-paths
-                  (into source-paths
-                    (case id-suffix
-                      :quantum-dynamic-source
-                        [(:typed          quantum-source-paths)
-                         (:untyped        quantum-source-paths)
-                         (:posh           quantum-source-paths)]
-                      :quantum-dynamic-source-untyped
-                        [(:untyped        quantum-source-paths)
-                         (:posh           quantum-source-paths)]
-                      :re-frame-trace
-                        (cond->
-                          [(:posh           quantum-source-paths)
-                           (if quantum?
-                               "./src-re-frame-trace"
-                               (:re-frame-trace quantum-source-paths))]
-                          (not quantum?) (conj (:untyped quantum-source-paths)))
-                      nil))
+                  (vec
+                    (concat source-paths
+                      (case id-suffix
+                        :quantum-dynamic-source
+                          [(:typed   quantum-source-paths)
+                           (:untyped quantum-source-paths)
+                           (:posh    quantum-source-paths)]
+                        :quantum-dynamic-source-untyped
+                          [(:untyped quantum-source-paths)
+                           (:posh    quantum-source-paths)]
+                        :re-frame-trace
+                          (cond->
+                            [(:posh  quantum-source-paths)
+                             (if quantum?
+                                 "./src-re-frame-trace"
+                                 (:re-frame-trace quantum-source-paths))]
+                            (not quantum?) (conj (:untyped quantum-source-paths)))
+                        nil)
+                      (case id-base
+                        (:ios :android) [(str "env" "/" (name kind))]
+                        nil)))
                  :compiler
                    (cond->
                      (merge
-                       {:main          (str artifact-base-name "." (case kind :prod "system" (name kind)))
+                       {:main          (case id-base (:ios :android)
+                                         (str "env." (name id-base) ".main")
+                                         (str artifact-base-name "." (case kind :prod "system" (name kind))))
                         :asset-path    asset-path
                         :output-dir    output-dir
                         :output-to     (str output-dir "/" "main.js")
                         :optimizations
-                          (case :dev      :none
-                                :prod     :advanced #_"`:simple` might be required for React Native?"
-                                :test     :whitespace)}
+                          (case kind
+                            :dev  :none
+                            :prod :advanced #_"`:simple` might be required for React Native?"
+                            :test :whitespace
+                            :none)}
                        (case id-suffix
                          :re-frame-trace {:preloads '[day8.re-frame.trace.preload]}
                          nil)
@@ -805,7 +817,6 @@
                {:builds (>cljsbuild-builds :dev project-config opts ["src" "src-dev"] artifact-base-name)}
              :figwheel
                {:http-server-root "server-root" ; assumes "resources" is prepended
-                :server-port      3450
                 :css-dirs         ["resources/server-root/css"]}}
           :frontend|dev|re-frame-trace
             {:source-paths [(:re-frame-trace quantum-source-paths)]
