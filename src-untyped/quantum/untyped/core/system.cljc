@@ -24,7 +24,7 @@
       (if dependencies
           (some #(aget dependencies %) package-names)
           (when js-require
-            (some js-require package-names))))))
+            (err/ignore (some js-require package-names)))))))
 
 #?(:cljs
 (def ReactNative
