@@ -409,12 +409,15 @@
         id>config
           (fn [id #_string?, id-base id-suffix]
             (let [;; TODO these paths are temporary for React Native!!
-                  server-root-path (case id-base (:ios :android) "target" "resources/server-root")
+                  server-root-path "resources/server-root"
                   ;; relative to `server-root-path`
-                  asset-path (if (and (#{:ios :android} id-base)
-                                      (= id-suffix :quantum-dynamic-source-untyped))
-                                 (name id-base)
-                               (str "generated" "/" (name kind) "/" id "/" "js"))
+                  asset-path (str "generated"
+                                  "/" (name kind)
+                                  "/" (if (and (#{:ios :android} id-base)
+                                               (= id-suffix :quantum-dynamic-source-untyped))
+                                          (name id-base)
+                                          id)
+                                  "/" "js")
                   output-dir (str server-root-path "/" asset-path)]
               (cond->
                 {:source-paths
@@ -435,19 +438,14 @@
                                  "./src-re-frame-trace"
                                  (:re-frame-trace quantum-source-paths))]
                             (not quantum?) (conj (:untyped quantum-source-paths)))
-                        nil)
-                      (case id-base
-                        (:ios :android) [(str "env" "/" (name kind))]
                         nil)))
                  :compiler
                    (cond->
                      (merge
-                       {:main          (case id-base (:ios :android)
-                                         (str "env." (name id-base) ".main")
-                                         (str artifact-base-name "." (case kind :prod "system" (name kind))))
-                        :asset-path    asset-path
-                        :output-dir    output-dir
-                        :output-to     (str output-dir "/" "main.js")
+                       {:main       (str artifact-base-name "." (case kind :prod "system" (name kind)))
+                        :asset-path asset-path
+                        :output-dir output-dir
+                        :output-to  (str output-dir "/" "main.js")
                         :optimizations
                           (case kind
                             :dev  :none
@@ -817,6 +815,7 @@
                {:builds (>cljsbuild-builds :dev project-config opts ["src" "src-dev"] artifact-base-name)}
              :figwheel
                {:http-server-root "server-root" ; assumes "resources" is prepended
+                :server-port      3450
                 :css-dirs         ["resources/server-root/css"]}}
           :frontend|dev|re-frame-trace
             {:source-paths [(:re-frame-trace quantum-source-paths)]
