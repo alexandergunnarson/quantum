@@ -859,7 +859,7 @@
                :aot (:aot base-config|quantum)})
           :quantum|dynamic-source
             (when-not quantum?
-              {:source-paths quantum-source-paths})
+              {:source-paths (vals quantum-source-paths)})
           :quantum|dynamic-source|untyped
             (when-not quantum?
               {:source-paths [(:untyped quantum-source-paths) (:posh quantum-source-paths)]})
