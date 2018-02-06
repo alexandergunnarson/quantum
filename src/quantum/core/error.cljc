@@ -23,7 +23,7 @@
 
 ;; ===== Config ===== ;;
 
-(defaliase u/*pr-data-to-str?)
+(defalias u/*pr-data-to-str?)
 
 ;; ===== Error type: generic ===== ;;
 

@@ -2,20 +2,21 @@
   quantum.core.analyze.clojure.predicates
   (:refer-clojure :exclude [name])
   (:require
-    [clojure.core                      :as core]
-    [clojure.string                    :as str]
+    [clojure.core                         :as core]
+    [clojure.string                       :as str]
 #?(:clj
-    [clojure.jvm.tools.analyzer        :as tana])
-    [quantum.core.analyze.clojure.core :as ana]
-    [quantum.core.core                 :as qcore]
-    [quantum.core.fn                   :as fn
+    [clojure.jvm.tools.analyzer           :as tana])
+    [quantum.core.analyze.clojure.core    :as ana]
+    [quantum.core.core                    :as qcore]
+    [quantum.core.fn                      :as fn
       :refer [fnl <- fn-> fn->> fn']]
-    [quantum.core.logic                :as logic
+    [quantum.core.logic                   :as logic
       :refer [splice-or fn= fn-or fn-and fn-not whenc ifn ifn1]]
-    [quantum.core.macros.type-hint     :as th]
-    [quantum.core.type.core            :as tcore]
-    [quantum.core.vars                 :as var
-      :refer [defalias]]))
+    [quantum.core.macros.type-hint        :as th]
+    [quantum.core.type.core               :as tcore]
+    [quantum.core.vars                    :as var
+      :refer [defalias]]
+    [quantum.untyped.core.type.predicates :as utpred]))
 
 (defn safe-mapcat
   "Like |mapcat|, but works if the returned values aren't sequences."
@@ -48,7 +49,7 @@
 (def possible-type-predicate? (fn-or keyword?
                                      (fn-and symbol? (fn-or (fn= 'default)
                                                             (fn-> name (str-index-of "?") (not= -1))))))
-(def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? qcore/boolean? qcore/regex?))
+(def hinted-literal?          (fn-or #?(:clj char?) number? string? vector? map? nil? keyword? utpred/boolean? utpred/regex?))
 
 ;  ===== SCOPE =====
 (defn shadows-var? [bindings v]

@@ -6,8 +6,6 @@
     [quantum.core.analyze.clojure.predicates :as anap]
     [quantum.core.macros.type-hint           :as th]
     [quantum.core.macros.optimization        :as opt]
-    [quantum.core.core
-      :refer [val?]]
     [quantum.core.error                      :as err
       :refer [>ex-info]]
     [quantum.core.fn                         :as fn
@@ -22,7 +20,9 @@
     [quantum.untyped.core.collections.tree   :as utree
       :refer [postwalk]]
     [quantum.untyped.core.reducers           :as ured
-      :refer [zip-reduce*]]))
+      :refer [zip-reduce*]]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]))
 
 ; TODO should move (some of) these functions to core.analyze.clojure/transform?
 

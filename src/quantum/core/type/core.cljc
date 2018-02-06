@@ -7,7 +7,7 @@
     [class])
   (:require
     [quantum.untyped.core.type.core :as u]
-    [quanutm.untyped.core.vars
+    [quantum.untyped.core.vars
       :refer [defaliases]]))
 
 (defaliases u

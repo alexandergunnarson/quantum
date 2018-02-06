@@ -14,7 +14,7 @@
       :refer [defalias]]
     [quantum.untyped.core.data
       :refer [kw-map]]
-    [quantum.untyped.form.evaluate  :as ufeval]
+    [quantum.untyped.core.form.evaluate :as ufeval]
     [quantum.untyped.core.type.predicates
       :refer [val?]])
 #?(:clj
