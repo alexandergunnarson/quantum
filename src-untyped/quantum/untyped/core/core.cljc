@@ -135,6 +135,18 @@
 (defn merge-meta-from   [to from] (update-meta to merge (meta from)))
 (defn replace-meta-from [to from] (with-meta to (meta from)))
 
+#?(:clj (defn defalias* [^clojure.lang.Var orig-var ns-name- var-name]
+  (let [;; to avoid warnings
+        var-name' (with-meta var-name (-> orig-var meta (select-keys [:dynamic])))
+        ^clojure.lang.Var var-
+          (if (.hasRoot orig-var)
+              (intern ns-name- var-name' @orig-var)
+              (intern ns-name- var-name'))]
+    ;; because this doesn't always get set correctly
+    (cond-> var-
+      (.isDynamic orig-var)
+      (doto (.setDynamic))))))
+
 #?(:clj
 (defmacro defalias
   "Defines an alias for a var: a new var with the same root binding (if
@@ -146,9 +158,7 @@
     `(defalias ~(symbol (name orig)) ~orig))
   ([name orig]
     `(doto ~(case-env
-               :clj  `(intern '~(ns-name *ns*)
-                              (with-meta '~name (-> ~orig var meta (select-keys [:dynamic]))) ; to avoid warnings
-                              (-> ~orig var deref))
+               :clj  `(defalias* (var ~orig) '~(ns-name *ns*) '~name)
                :cljs `(def ~name (-> ~orig var deref)))
             (alter-meta! merge (meta (var ~orig)))))
   ([name orig doc]
