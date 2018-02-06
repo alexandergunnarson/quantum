@@ -70,7 +70,7 @@
 
 (defn >keyword [x]
   (cond (keyword? x) x
-        (symbol?  x) (keyword (namespace x) (name x))
+        (symbol?  x) (keyword (>?namespace x) (>name x))
         :else        (-> x str keyword)))
 
 (defn >symbol
@@ -78,8 +78,9 @@
   [x]
   (cond   (symbol?    x) x
           (string?    x) (symbol x)
-#?@(:clj [(var?       x) (symbol (>?namespace x) (>name x))
-          (namespace? x) (ns-name x)])
+          (or (keyword? x) #?(:clj (var? x)))
+            (symbol (>?namespace x) (>name x))
+#?@(:clj [(namespace? x) (ns-name x)])
           (fn? x)        #?(:clj  (or (when-let [ns- (-> x meta :ns)]
                                         (symbol (>name ns-) (-> x meta :name >name)))
                                       (-> x class .getName clojure.lang.Compiler/demunge recur))
