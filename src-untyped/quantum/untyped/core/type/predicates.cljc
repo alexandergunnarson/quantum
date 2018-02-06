@@ -55,3 +55,5 @@
 (defn derefable? [x]
   #?(:clj  (instance?  clojure.lang.IDeref x)
      :cljs (satisfies? cljs.core/IDeref    x)))
+
+(defn defined? [x] (not (undefined? x)))
