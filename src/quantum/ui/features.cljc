@@ -5,69 +5,12 @@
     [quantum.core.data.map :as map
       :refer [map-entry]            ]
     [quantum.core.logic    :as logic
-      :refer [whenc fn=]]))
+      :refer [whenc fn=]]
+    [quantum.core.vars
+      :refer [defaliases]]
+    [quantum.untyped.ui.features :as u]))
 
-#?(:cljs
-(defn flex-test [elem flex-name]
-  (-> elem .-style .-display (set! ""))
-  (-> elem .-style .-display (set! flex-name))
-  (-> elem .-style .-display (not= ""))))
-
-#?(:cljs
-(defn web-worker-test []
-  (not (undefined? js/Worker))))
-
-(defn feature-test []
-  #?(:clj {:chrome true} ; Because JavaFX will use Chromium via JXBrowser?
-     :cljs
-      (let [div (.createElement js/document "div")]
-        (->> {:chrome  "flex"
-              :safari  "-webkit-flex"
-              :safari- "-webkit-box" ; (Older)
-              :ie      "-ms-flexbox"}
-             (map (fn [browser s] (map-entry (whenc browser (fn= :safari-) :safari) (flex-test div s))))
-             (into {})))))
-
-#?(:cljs
-(defn determine-browser
-  {:from "http://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser"
-   :contributors {"Alex Gunnarson" "Ported to CLJC"}}
-  []
-  (let [opera? (or (.-opera js/window)
-                   (-> js/navigator .-userAgent (.indexOf " OPR/") (>= 0)))]
-    (cond
-      ; Opera 8.0+ (UA detection to detect Blink/v8-powered Opera)
-      opera?
-      :opera
-      ;  Chrome 1+
-      (and (.-chrome js/window)
-           (not opera?))
-      :chrome
-      ; Firefox 1.0+
-      (try (when js/InstallTrigger true)
-        (catch js/Error e false))
-      :firefox
-      ; At least Safari 3+: "[object HTMLElementConstructor]"
-      (-> js/Object .-prototype .-toString
-          (.call (.-HTMLElement js/window))
-          (.indexOf "Constructor")
-          (> 0))
-      :safari
-      ; At least IE6
-      (.-documentMode js/document)
-      :ie))))
-
-#?(:cljs (def browser (delay (determine-browser))))
-
-#?(:cljs
-(def ^{:doc "Determines whether the device is 'touchable'"
-       :from "pukhalski/tap"} touchable?
-  (delay (and (or (.-propertyIsEnumerable js/window  )
-                  (.-hasOwnProperty       js/document))
-              (or (.propertyIsEnumerable  js/window   "ontouchstart")
-                  (.hasOwnProperty        js/document "ontouchstart")
-                  (.hasOwnProperty        js/window   "ontouchstart"))))))
-
+#?(:cljs (defaliases u flex-test feature-test))
 
 #?(:cljs
 (def touch-events
@@ -121,8 +64,9 @@
 
 ; END EVENT UTILS
 
-(def options {:eventName       "tap"
-              :fingerMaxOffset 11})
+(def options
+  {:eventName       "tap"
+   :fingerMaxOffset 11})
 
 (def coords (atom {}))
 (declare deviceEvents)
@@ -204,19 +148,3 @@
 ;     utils.attachEvent(document.documentElement, 'click', handlers.click))
 
 ; (attachEvent js/window "load" init)
-
-;; ## Polyfills
-
-#?(:cljs
-(def request-animation-frame
-  (or
-   (.-requestAnimationFrame       js/window)
-   (.-webkitRequestAnimationFrame js/window)
-   (.-mozRequestAnimationFrame    js/window)
-   (.-msRequestAnimationFrame     js/window)
-   (.-oRequestAnimationFrame      js/window)
-   (let [t0 (.getTime (js/Date.))]
-     (fn [f]
-       (js/setTimeout
-        #(f (- (.getTime (js/Date.)) t0))
-        16.66666))))))

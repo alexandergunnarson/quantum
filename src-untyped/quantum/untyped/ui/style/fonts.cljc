@@ -1,4 +1,15 @@
-(ns quantum.untyped.ui.style.fonts)
+(ns quantum.untyped.ui.style.fonts
+  (:require
+    [quantum.untyped.core.core        :as ucore]
+    [quantum.untyped.core.error
+      :refer [err! TODO]]
+    [quantum.untyped.core.system      :as usys]
+    [quantum.untyped.core.type.predicates
+      #?@(:cljs [:refer [defined?]])]
+    [quantum.untyped.ui.style.css     :as ucss]
+    [quantum.untyped.ui.style.css.dom :as ucss-dom]))
+
+(ucore/log-this-ns)
 
 (def ^{:from "http://stackoverflow.com/questions/33320664/which-fonts-are-available-in-ios-9"}
   ios-default-fonts
@@ -272,3 +283,46 @@
 (defn font
   ([k] (-> families (get k) :regular))
   ([k & ks] (-> families (get k) (get-in ks))))
+
+#?(:cljs
+(def ^{:doc "`FontFace` is a newer technology (no IE/Edge/Android, Chrome (2013), Safari
+             incl. iOS (late 2016))"}
+  supports-dynamic-font-face? (defined? (.-FontFace usys/global))))
+
+#?(:cljs
+(defn load-font-by-css-src!
+  "Warning: CSS injection possible with this function."
+  [font-name css-src]
+  (if-let [>font-face (.-FontFace usys/global)]
+    ;; The third argument for the FontFace constructor is supposed to be optional
+    ;; but some browsers (Chrome 35 and 36, Opera 22 and 23) throw an error if omitted.
+    (doto (new >font-face font-name css-src #js{}) (.load))
+    ;; TODO assumes that `@font-face` is supported
+    (ucss-dom/append-css!
+      (str "@font-face { font-family: '" font-name "'; src: " css-src "}")))))
+
+;; TODO https://stackoverflow.com/questions/33638879/detect-woff-support-with-javascript
+;; Most browsers do support it but still
+#?(:cljs (def supports-woff? true))
+
+#?(:cljs
+(def
+  ^{:doc          "WOFF2 is a newer technology (no IE, Edge (late 2016), Firefox (2015),
+                   Chrome (2014), Safari (late 2016) post-El-Capitan, iOS (2016), no Android)"
+    :adapted-from "https://www.filamentgroup.com/lab/font-loading.html"}
+  supports-woff2?
+  (and supports-dynamic-font-face?
+       (-> (load-font-by-url! "t" "url(data:application/font-woff2,) format(woff2)")
+           .-status
+           (= "loading")))))
+
+#?(:cljs
+(defn load-font!
+  ([font-name] (TODO "Load from LocalStorage"))
+  ([font-name css-src-coercible] (load-font-by-css-src! font-name (ucss/>css-src css-src-coercible)))
+  ([font-name, mime-type #_keyword?, base64-string]
+    (if (and (= mime-type :application/font-woff2)
+             (not supports-woff2?))
+        (err! "WOFF2 format not supported")
+        (let [css-src (str "url(data:" (-> mime-type >symbol str) ";charset=utf-8;base64," base64-string ")")] ; TODO append e.g. ' format(woff2)'?
+          (load-font-by-css-src! font-name css-src))))))

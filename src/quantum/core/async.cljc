@@ -45,7 +45,9 @@
     [quantum.core.vars                 :as var
       :refer [defalias defmalias]]
     [quantum.untyped.core.form.evaluate :as ufeval
-      :refer [case-env]])
+      :refer [case-env]]
+    [quantum.untyped.core.type.predicates
+      #?@(:cljs [:refer [defined?]])])
 #?(:cljs
   (:require-macros
     [cljs.core.async.macros            :as asyncm]
@@ -396,12 +398,15 @@
 #?(:clj (defmacro try-times!  [& args] `(try-times* wait!  ~@args)))
 #?(:clj (defmacro try-times!! [& args] `(try-times* wait!! ~@args)))
 
+#?(:cljs
+(def supports-web-workers? (defined? (.-Worker usys/global))))
+
 (defn web-worker?
   "Checks whether the current thread is a WebWorker."
   []
   #?(:clj  false
-     :cljs (and (-> js/window .-self)
-                (-> js/window .-self .-document undefined?)
+     :cljs (and (-> sys/global .-self)
+                (-> sys/global .-self .-document undefined?)
                 (or (nil? sys/os) (= sys/os "web")))))
 
 #_(:clj
@@ -783,3 +788,17 @@
 
 #?(:clj (defmacro if-timeout!   [[v c timeout-ms] then else] `(handle-timeout! [~v ~c ~timeout-ms] if   ~then ~else)))
 #?(:clj (defmacro when-timeout! [[v c timeout-ms] & body]    `(handle-timeout! [~v ~c ~timeout-ms] when ~@body)))
+
+#?(:cljs
+(def request-animation-frame
+  (or
+   (.-requestAnimationFrame       sys/global)
+   (.-webkitRequestAnimationFrame sys/global)
+   (.-mozRequestAnimationFrame    sys/global)
+   (.-msRequestAnimationFrame     sys/global)
+   (.-oRequestAnimationFrame      sys/global)
+   (let [t0 (.getTime (js/Date.))]
+     (fn [f]
+       (js/setTimeout
+        #(f (- (.getTime (js/Date.)) t0))
+        16.66666))))))
