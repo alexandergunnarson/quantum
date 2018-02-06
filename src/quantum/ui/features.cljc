@@ -2,10 +2,6 @@
       :todo ["Possibly rename 'quantum.ui.platform'?"]}
   quantum.ui.features
   (:require
-    [quantum.core.data.map :as map
-      :refer [map-entry]            ]
-    [quantum.core.logic    :as logic
-      :refer [whenc fn=]]
     [quantum.core.vars
       :refer [defaliases]]
     [quantum.untyped.ui.features :as u]))

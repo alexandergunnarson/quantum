@@ -146,9 +146,10 @@
     `(defalias ~(symbol (name orig)) ~orig))
   ([name orig]
     `(doto ~(case-env
-               :clj  `(intern *ns* (with-meta '~name (-> ~orig var meta (select-keys [:dynamic]))) ; to avoid warnings
-                                   (-> ~orig var deref))
-               :cljs `(def name (-> ~orig var deref)))
+               :clj  `(intern '~(ns-name *ns*)
+                              (with-meta '~name (-> ~orig var meta (select-keys [:dynamic]))) ; to avoid warnings
+                              (-> ~orig var deref))
+               :cljs `(def ~name (-> ~orig var deref)))
             (alter-meta! merge (meta (var ~orig)))))
   ([name orig doc]
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))

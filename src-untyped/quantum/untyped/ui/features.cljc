@@ -1,6 +1,10 @@
 (ns quantum.untyped.ui.features
   (:require
-    [quantum.untyped.core.core   :as ucore]
+    [quantum.untyped.core.core     :as ucore]
+    [quantum.untyped.core.data.map
+      :refer [map-entry]]
+    [quantum.untyped.core.logic
+      :refer [whenc fn=]]
     [quantum.untyped.core.system :as usys]
     [quantum.untyped.core.type.predicates
       #?@(:cljs [:refer [defined?]])]))

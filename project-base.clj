@@ -800,19 +800,22 @@
             {:jvm-opts (>jvm-opts :test)}
           :prod
             {:jvm-opts (>jvm-opts :prod)}
-          :backend {:env {:print-pid? true}}
+          :backend
+            {:source-paths ["src-backend"]
+             :env          {:print-pid? true}}
           :backend|dev
             {:plugins '[[lein-nodisassemble "0.1.3"]]}
           :backend|prod {}
           :backend|test
             {:plugins '[[com.jakemccrary/lein-test-refresh "0.16.0"]]}
           :frontend
-            {:plugins '[[lein-cljsbuild "1.1.7"
+            {:source-paths ["src-frontend"]
+             :plugins '[[lein-cljsbuild "1.1.7"
                           :exclusions [org.clojure/clojure org.clojure/clojurescript]]]}
           :frontend|dev
             {:plugins '[[lein-figwheel "0.5.14"]]
              :cljsbuild
-               {:builds (>cljsbuild-builds :dev project-config opts ["src" "src-dev"] artifact-base-name)}
+               {:builds (>cljsbuild-builds :dev project-config opts ["src" "src-frontend" "src-dev"] artifact-base-name)}
              :figwheel
                {:http-server-root "server-root" ; assumes "resources" is prepended
                 :server-port      3450
@@ -825,10 +828,10 @@
                              [cljsjs/create-react-class "15.6.2-0"]]}
           :frontend|prod
             {:dependencies (when react-native? '[[react-native-externs "0.1.0"]]) ; technically only used by :advanced profile
-             :cljsbuild    {:builds (>cljsbuild-builds :prod project-config opts ["src"] artifact-base-name)}}
+             :cljsbuild    {:builds (>cljsbuild-builds :prod project-config opts ["src" "src-frontend"] artifact-base-name)}}
           :frontend|test
             {:plugins '[[lein-doo "0.1.7"]]
-             :cljsbuild {:builds (>cljsbuild-builds :test project-config opts ["src"] artifact-base-name)}}
+             :cljsbuild {:builds (>cljsbuild-builds :test project-config opts ["src" "src-frontend"] artifact-base-name)}}
           :quantum|static-deps
             (when-not quantum?
               {:dependencies [['quantum/core #_"LATEST" latest-stable-quantum-version]]})
