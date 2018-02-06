@@ -145,16 +145,11 @@
   ([orig]
     `(defalias ~(symbol (name orig)) ~orig))
   ([name orig]
-     `(do (if ~(case-env :clj `(-> (var ~orig) .hasRoot) :cljs true)
-              (do (def ~name
-                    (let [derefed# (-> ~orig var deref)]
-                      (if (with-metable? derefed#)
-                          (with-meta derefed# (meta (var ~orig)))
-                          derefed#)))
-                  ; The below is apparently necessary
-                  (doto #'~name (alter-meta! merge (meta (var ~orig)))))
-              (def ~name))
-        (var ~name)))
+    `(doto ~(case-env
+               :clj  `(intern *ns* (with-meta '~name (-> ~orig var meta (select-keys [:dynamic]))) ; to avoid warnings
+                                   (-> ~orig var deref))
+               :cljs `(def name (-> ~orig var deref)))
+            (alter-meta! merge (meta (var ~orig)))))
   ([name orig doc]
      (list `defalias (with-meta name (assoc (meta name) :doc doc)) orig))))
 
