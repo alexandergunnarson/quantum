@@ -130,13 +130,13 @@
           `(~'~macro-sym :always ~@~args-sym))))))
 
 #?(:clj (-def-with-always pr          [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* true  false println)))
+#?(:clj (-def-with-always ppr         [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* true  true  upr/ppr)))
 #?(:clj (-def-with-always pr-no-trace [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* false false println)))
 #?(:clj (-def-with-always pr-opts     [pr-type opts & args] `(-pr-base ~pr-type ~opts ~args *print-meta* true  false println)))
-#?(:clj (-def-with-always ppr         [pr-type      & args] `(-pr-base ~pr-type nil   ~args *print-meta* true  true  upr/ppr)))
+#?(:clj (-def-with-always ppr-opts    [pr-type opts & args] `(-pr-base ~pr-type ~opts ~args *print-meta* true  false upr/ppr)))
 #?(:clj (-def-with-always ppr-meta    [pr-type      & args] `(-pr-base ~pr-type nil   ~args true         true  true  upr/ppr)))
 #?(:clj (defalias ppr-hints  ppr-meta )) ; TODO this is not right
 #?(:clj (defalias ppr-hints! ppr-meta!)) ; TODO this is not right
-#?(:clj (-def-with-always ppr-opts    [pr-type opts & args] `(-pr-base ~pr-type ~opts ~args *print-meta* true  false upr/ppr)))
 
 #?(:clj
 (-def-with-always prl

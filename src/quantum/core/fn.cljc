@@ -12,7 +12,7 @@
     [quantum.core.core           :as qcore]
     [quantum.untyped.core.form.evaluate
       :refer [case-env compile-if]]
-    [quantum.untyped.core.form   :as uform
+    [quantum.untyped.core.form.generate
       :refer [arity-builder gen-args max-positional-arity unify-gensyms]]
     [quantum.untyped.core.fn     :as u]
     [quantum.untyped.core.print  :as upr]

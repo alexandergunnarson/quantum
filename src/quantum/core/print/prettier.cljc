@@ -61,7 +61,7 @@
   (cond
     (nil? x) (visit-nil visitor)
     (quantum.core.print/group? x)
-      (fipp.edn/pretty-coll visitor "" (.-xs ^quantum.core.print.Group x) :line "" visit)
+      (fipp.edn/pretty-coll visitor "" (.-xs ^quantum.untyped.core.print.Group x) :line "" visit)
     (fipp.ednize/override? x) (visit-unknown visitor x)
     (boolean? x) (visit-boolean visitor x)
     (string? x) (visit-string visitor x)

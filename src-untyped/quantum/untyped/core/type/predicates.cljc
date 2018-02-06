@@ -56,4 +56,4 @@
   #?(:clj  (instance?  clojure.lang.IDeref x)
      :cljs (satisfies? cljs.core/IDeref    x)))
 
-(defn defined? [x] (not (undefined? x)))
+#?(:cljs (defn defined? [x] (not (undefined? x))))
