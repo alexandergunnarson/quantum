@@ -124,7 +124,7 @@
 #?(:clj
 (defnt ^"[B" decode32
   ([^integer? x]
-    (throw (>ex-info :not-implemented "Decode32 not implemented for |integer|" x)))
+    (throw (>ex-info :not-implemented "Decode32 not implemented for `integer`" x)))
   ([^bytes? x] (.decode (Base32.) x))
   ([x] (decode32 (arr/->bytes-protocol x)))))
 
