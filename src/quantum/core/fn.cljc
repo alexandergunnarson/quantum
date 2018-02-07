@@ -30,7 +30,7 @@
 
 ;; ===== `fn&`: Partial functions ===== ;;
 
-#?(:clj (defaliases u fn&* fn&0 fn&1 fn&2))
+#?(:clj (defaliases u fn&* fn&0 fn&1 fn&2 fn&3))
 
 ;; ===== `fn'`: Fixed/constant functions ===== ;;
 

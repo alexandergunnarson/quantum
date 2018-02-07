@@ -68,11 +68,11 @@
       :refer [>ex-info TODO]]
     [quantum.core.fn                         :as fn
       :refer [rfn juxt-kv withf->> firsta aritoid
-              rcomp conja <- fn-> fn->> fn1 fnl fn' fn&2]]
+              rcomp conja <- fn-> fn->> fn1 fnl fn' fn&2 fn-nil]]
     [quantum.core.log                        :as log
       :refer [prl!]]
     [quantum.core.logic                      :as logic
-      :refer [fn-not fn-or fn-and, fn-nil
+      :refer [fn-not fn-or fn-and,
               whenf whenf1, ifn ifn1, condf condf1
               splice-or]]
     [quantum.core.macros                     :as macros
