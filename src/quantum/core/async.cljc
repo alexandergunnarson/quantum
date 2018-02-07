@@ -23,17 +23,15 @@
               conj!
               map, map-indexed map-indexed+
               seq-and]]
-    [quantum.core.core                 :as qcore
-      :refer [istr]]
     [quantum.core.data.vector          :as vec
       :refer [!+vector:sized]]
     [quantum.core.error                :as err
       :refer [>ex-info TODO catch-all]]
     [quantum.core.fn
-      :refer [fnl fn1]]
+      :refer [fnl fn1 fn-nil]]
     [quantum.core.log                  :as log]
     [quantum.core.logic                :as logic
-      :refer [fn-and fn-or fn-not fn-nil condpc whenc]]
+      :refer [fn-and fn-or fn-not condpc whenc]]
     [quantum.core.macros               :as macros
       :refer [defnt]]
     [quantum.core.refs                 :as refs]
@@ -46,6 +44,8 @@
       :refer [defalias defmalias]]
     [quantum.untyped.core.form.evaluate :as ufeval
       :refer [case-env]]
+    [quantum.untyped.core.string
+      :refer [istr]]
     [quantum.untyped.core.type.predicates
       #?@(:cljs [:refer [defined?]])])
 #?(:cljs
@@ -388,7 +388,7 @@
                        {:tries n# :last-error error-n#}))
           (let [[error# result#]
                   (try [nil (do ~@body)]
-                    (catch ~(err/generic-error &env) e#
+                    (catch ~(err/env>generic-error &env) e#
                       (~waitf wait-millis#)
                       [e# nil]))]
             (if error#

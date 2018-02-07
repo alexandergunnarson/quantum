@@ -3,7 +3,9 @@
     [clojure.string            :as str]
     [quantum.untyped.core.core :as ucore]
     [quantum.untyped.core.fn   :as fn
-      :refer [fn->]]))
+      :refer [fn->]]
+    [quantum.untyped.core.vars
+      :refer [defalias]]))
 
 (ucore/log-this-ns)
 
@@ -17,3 +19,5 @@
       (#(if (not method?)
            (apply str (-> % first str/upper-case) (rest %))
            %))))
+
+#?(:clj (defalias ucore/istr))

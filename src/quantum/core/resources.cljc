@@ -86,7 +86,7 @@
 (defonce systems (atom nil)) ; TODO cache
 (def global-kw ::global)
 
-(defonce components qcore/registered-components) ; TODO cache
+(defonce components qcore/*registered-components) ; TODO cache
 
 #?(:clj
 (defmacro defcomponent
