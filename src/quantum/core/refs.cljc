@@ -82,7 +82,7 @@
 #?(:clj
 (defmacro gen-primitive-mutables []
   (when (= :clj (env-lang))
-    `(do ~@(for [kind (:clj tdefs/prim-types)] (gen-primitive-mutable kind))))))
+    `(do ~@(for [kind (get-in tdefs/types|unevaled [:clj 'prim?])] (gen-primitive-mutable kind))))))
 
 (gen-primitive-mutables)
 

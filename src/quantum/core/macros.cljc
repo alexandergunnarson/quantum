@@ -21,8 +21,8 @@
     [quantum.core.print        :as pr]
     [quantum.core.vars         :as var
       :refer [defalias defaliases #?(:clj defmalias)]]
-    [quantum.untyped.core.form.evaluate :as ufeval]
-    [quantum.untyped.core.form.generate :as ufgen])
+    [quantum.untyped.core.form          :as uform]
+    [quantum.untyped.core.form.evaluate :as ufeval])
 #?(:cljs
   (:require-macros
     [quantum.core.macros       :as self])))
@@ -31,7 +31,7 @@
 
 #?(:clj (defaliases ufeval env case-env* case-env env-lang locals))
 
-#?(:clj (defalias ufgen/syntax-quote))
+#?(:clj (defalias uform/syntax-quote))
 
 (defn let-alias* [bindings body]
   (cons 'do

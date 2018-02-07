@@ -42,7 +42,7 @@
     [quantum.core.reducers.reduce  :as self
       :refer [reduce]]))
   (:import
-  #?@(:clj  [[quantum.core.type.defs Transformer]
+  #?@(:clj  [[quantum.untyped.core.reducers Transformer]
              quantum.core.data.Array]
       :cljs [[goog.string StringBuffer]])))
 

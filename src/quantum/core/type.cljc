@@ -7,26 +7,26 @@
      double? decimal?
      nil? char? number? integer? float?
      sequential? indexed? list? coll?
-     symbol? keyword?, array?, record?, var?, counted?
+     symbol? keyword?, array?, record?, var?, counted?, bytes?
      identity
      class type
      ancestors descendants, supers bases, isa? instance?, derive underive])
   (:require
-    [clojure.core                 :as core]
-    [quantum.core.analyze.clojure.core :as ana]
-    [quantum.core.classes         :as classes]
-    [quantum.core.core            :as qcore]
-    [quantum.core.fn              :as fn
+    [clojure.core                         :as core]
+    [quantum.core.analyze.clojure.core    :as ana]
+    [quantum.core.classes                 :as classes]
+    [quantum.core.data.vector             :as vec]
+    [quantum.core.fn                      :as fn
       :refer [fn1 fnl mfn fn->]]
-    [quantum.core.logic           :as logic
+    [quantum.core.logic                   :as logic
       :refer [fn-and whenf1]]
-    [quantum.core.data.vector     :as vec    ]
-    [quantum.core.macros          :as macros
+    [quantum.core.macros                  :as macros
       :refer [defnt #?(:clj defnt')]]
-    [quantum.core.type.core       :as tcore  ]
-    [quantum.untyped.core.refs    :as uref]
-    [quantum.core.vars            :as var
-      :refer [defalias]])
+    [quantum.core.type.core               :as tcore]
+    [quantum.core.vars                    :as var
+      :refer [defalias]]
+    [quantum.untyped.core.refs            :as uref]
+    [quantum.untyped.core.type.predicates :as utpred])
 #?(:cljs
   (:require-macros
     [quantum.core.type            :as self
@@ -141,7 +141,7 @@
          (defnt sequential?    ([^sequential?    x] true) ([^default x] false))
          (defnt counted?       ([^counted?       x] true) ([^default x] false))
          (defnt transformer?   ([^transformer?   x] true) ([^default x] false))
-         (defalias seqable? qcore/seqable?)
+         (defalias seqable? utpred/seqable?)
 
 #?(:clj  (defnt file?          ([^file?          x] true) ([^default x] false)))
          (defnt regex?         ([^regex?         x] true) ([^default x] false))

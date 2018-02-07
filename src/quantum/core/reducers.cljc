@@ -27,17 +27,15 @@
       :refer [>ex-info TODO]]
     [quantum.core.fn               :as fn
       :refer [call firsta aritoid
+              fn-nil fn-true
               fn1 fn-> fn->> fn' fn&2 rcomp defcurried
               with-do]]
     [quantum.core.log
       :refer [prl!]]
     [quantum.core.logic            :as logic
-      :refer [fn-not fn-or fn-and fn-nil fn-true whenf whenf1 ifn condf condf1]]
+      :refer [fn-not fn-or fn-and whenf whenf1 ifn condf condf1]]
     [quantum.core.macros           :as macros
       :refer [defnt case-env assert-args env-lang]]
-    [quantum.core.macros.core
-      :refer [gen-args arity-builder max-positional-arity
-              unify-gensyms]]
     [quantum.core.numeric          :as num]
     [quantum.core.refs             :as refs
       :refer [! deref reset! volatile atom*]]
@@ -46,10 +44,13 @@
     [quantum.core.reducers.reduce  :as red
       :refer [transformer]]
     [quantum.core.reducers.fold    :as fold]
+    [quantum.core.vars             :as var
+      :refer [defalias def-]]
     [quantum.untyped.core.qualify  :as qual]
     [quantum.untyped.core.reducers :as ur]
-    [quantum.core.vars             :as var
-      :refer [defalias def-]])
+    [quantum.untyped.core.form.generate
+      :refer [gen-args arity-builder max-positional-arity
+              unify-gensyms]])
 #?(:cljs
   (:require-macros
     [quantum.core.reducers

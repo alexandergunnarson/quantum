@@ -10,8 +10,6 @@
     [quantum.core.error                :as err
       :refer [TODO]]
     [quantum.core.log                  :as log]
-    [quantum.core.macros.core
-      :refer [#?(:clj core-symbol)]]
     [quantum.core.macros
       :refer [defnt defntp #?@(:clj [defnt' variadic-proxy])]]
     [quantum.core.numeric.types        :as ntypes
@@ -21,7 +19,9 @@
     [quantum.core.type           :as t
       :refer [val?]]
     [quantum.core.vars
-      :refer [defalias #?@(:clj [defmalias])]])
+      :refer [defalias #?@(:clj [defmalias])]]
+    [quantum.untyped.core.form
+      :refer [#?(:clj core-symbol)]])
 #?(:cljs
   (:require-macros
     [quantum.core.numeric.operators    :as self
