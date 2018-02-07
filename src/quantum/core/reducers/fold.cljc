@@ -34,9 +34,9 @@
       :refer [reduce]]
     [quantum.core.type             :as t
       :refer [lseq? editable? ->joinable]]
-    [quantum.core.type.defs
+    [quantum.untyped.core.reducers
       #?@(:cljs [:refer [Transformer]])])
-  #?(:clj (:import [quantum.core.type.defs Transformer]
+  #?(:clj (:import [quantum.untyped.core.reducers Transformer]
                    [clojure.core.reducers CollFold])))
 
 ;___________________________________________________________________________________________________________________________________

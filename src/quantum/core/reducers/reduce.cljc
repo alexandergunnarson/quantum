@@ -35,7 +35,7 @@
     [quantum.core.type.defs
       #?@(:cljs [:refer [Transformer]])]
     [quantum.core.vars             :as var
-      :refer [defalias]]
+      :refer [defalias defaliases]]
     [quantum.untyped.core.reducers :as ur])
 #?(:cljs
   (:require-macros
@@ -234,9 +234,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={    REDUCING FUNCTIONS    }=====================================================
 ;=================================================={       (Generalized)      }=====================================================
-(defalias transformer  ur/transformer)
-(defalias transformer? ur/transformer?)
-(defalias transformer? ur/transducer->transformer)
+(defaliases ur transformer transformer? transducer->transformer)
 
 (defn conj-red
   "Like |conj| but includes a 3-arity for |reduce-kv| purposes."

@@ -13,7 +13,7 @@
     [quantum.core.convert.primitive    :as pconvert
       :refer [#?(:clj ->long)]]
     [quantum.core.error                :as err
-      :refer [>ex-info TODO]]
+      :refer [>err err! TODO]]
     [quantum.core.fn
       :refer [aritoid fn1 fn-> fn']]
     [quantum.core.log                  :as log]
@@ -181,7 +181,7 @@
   ([form1 form2 & more]
      (cons 'do (map type-convert-form (list* form1 form2 more))))))
 
-(def num-ex (>ex-info :overflow "Numeric overflow"))
+(def num-ex (>err :overflow "Numeric overflow"))
 
 ; ===== NON-TRANSFORMATIVE OPERATIONS ===== ;
 
@@ -312,7 +312,7 @@
                ~@body)
       :nils  (binding [*+* nils+  *-* nils-  *** nils*  *div* nils-div ]
                ~@body)
-      (throw (>ex-info "Numeric operation not recognized" {:op k#}))))))
+      (err! "Numeric operation not recognized" {:op k#})))))
 
 (defn whole-number? [n]
   (= n (trunc/floor n))) ; TODO use ==
@@ -347,7 +347,7 @@
           complex functions"}
   [f]
   (or (get inverse-map f)
-      (throw (>ex-info :undefined "|inverse| not defined for function" f))))
+      (err! :undefined "|inverse| not defined for function" f)))
 
 (def ^{:doc "Base values for operators." :const true}
   base-map
@@ -366,7 +366,7 @@
             (base *) 1}}
   [f]
   (or (get base-map f)
-      (throw (>ex-info :undefined "|base| not defined for function" f))))
+      (err! :undefined "|base| not defined for function" f)))
 
 (defn range?
   {:tests `{((range? 1 4) 3)
@@ -391,7 +391,7 @@
     :dollar
       (->> n display-num (str "$"))
     ;:accounting
-    (throw (>ex-info "Unrecognized format" type))))
+    (err! "Unrecognized format" type)))
 
 (defn percentage-of [of total-n]
   (-> of (op// total-n) double (c/* 100) display-num (str "%"))) ; TODO use *-2
