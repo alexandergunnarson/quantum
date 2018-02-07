@@ -44,7 +44,7 @@
       [datomic.peer LocalConnection Connection]
       [java.util.concurrent ConcurrentHashMap])))
 
-#?(:clj (swap! pr/blacklist c/conj datomic.db.Db datascript.db.DB))
+#?(:clj (swap! pr/*blacklist c/conj datomic.db.Db datascript.db.DB))
 
 ; GLOBALS
 

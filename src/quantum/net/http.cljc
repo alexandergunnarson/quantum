@@ -9,9 +9,9 @@
             [quantum.core.collections                :as coll
               :refer [kw-map join filter-keys' remove-vals+ red-for break]]
             [quantum.core.error                      :as err]
-            [quantum.core.log                        :as log]
-            [quantum.core.logic
+            [quantum.core.fn
               :refer [fn-nil]]
+            [quantum.core.log                        :as log]
             [quantum.core.paths                      :as path]
             [quantum.core.process                    :as proc]
             [quantum.core.resources                  :as res]

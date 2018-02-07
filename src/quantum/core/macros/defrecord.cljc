@@ -3,10 +3,10 @@
     #?(:clj [cljs.core])
     [#?(:clj  clojure.core
         :cljs cljs.core   ) :as core]
-    [quantum.core.macros.core
-      :refer [case-env]]
     [quantum.core.log
-      :refer [prl]])
+      :refer [prl]]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env]])
 #?(:cljs
   (:require-macros
     [quantum.core.macros.defrecord :as self])))

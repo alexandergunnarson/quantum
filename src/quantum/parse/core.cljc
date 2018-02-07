@@ -2,15 +2,13 @@
   (:refer-clojure :exclude
     [conj! reduce])
   (:require
+    [instaparse.core          :as insta]
+    [quantum.core.collections :as coll
+      :refer [remove+ map+ join reduce transduce conj!]]
     [quantum.core.data.string
       :refer [!str]]
     [quantum.core.fn          :as fn
-      :refer [firsta aritoid rfn]]
-    [quantum.core.collections :as coll
-      :refer [remove+ map+ join reduce transduce conj!]]
-    [quantum.core.logic
-      :refer [fn-nil]]
-    [instaparse.core          :as insta])
+      :refer [firsta aritoid rfn fn-nil]])
   #?(:cljs (:import goog.string.StringBuffer)))
 
 (def std-defs ; newline to facilitate concatenation

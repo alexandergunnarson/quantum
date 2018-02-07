@@ -5,8 +5,6 @@
     [quantum.core.data.set  :as set]
     [quantum.core.error     :as err
       :refer [>ex-info TODO catch-all]]
-    [quantum.core.macros.core
-      :refer [case-env]]
     [quantum.core.macros.deftype :as deftype]
     [quantum.core.fn
       :refer [fn-> fn->> fn1 fnl <- fn']]
@@ -24,7 +22,9 @@
       :refer [contains?]]
     [quantum.untyped.core.collections.tree :as utree
       :refer [postwalk]]
-    [quantum.untyped.core.qualify :as qual])
+    [quantum.untyped.core.qualify :as uqual]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env]])
 #?(:cljs
   (:require-macros
     [quantum.core.data.validated :as self
@@ -325,9 +325,9 @@
       (concat req opt req-un opt-un) (s/coll-of qualified-keyword? :distinct true))
     (let [{:keys [spec-name sym]} (sym->spec-name+sym sym-0 ns-name-str)
           schema               (when db-mode? (spec->schema sym-0 nil)) ; TODO #4, #5
-          qualified-sym        (qual/qualify|class sym)
+          qualified-sym        (uqual/qualify|class sym)
           req-record-sym       (symbol (str (name sym) ":__required"))
-          qualified-record-sym (qual/qualify|class req-record-sym)
+          qualified-record-sym (uqual/qualify|class req-record-sym)
           un-record-sym        (symbol (str (name sym) ":__un"))
           all-mod-record-sym   (symbol (str (name sym) ":__all-mod"))
           all-record-sym       (symbol (str (name sym) ":__all"))
