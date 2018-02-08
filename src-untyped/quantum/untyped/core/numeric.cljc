@@ -31,3 +31,5 @@
   (if (zero? x)
       x
       (bit-or 1 (bit-shift-right x 63))))
+
+#?(:cljs (def abs js/Math.abs))

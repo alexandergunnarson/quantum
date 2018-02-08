@@ -16,7 +16,7 @@
       :refer [defnt]]
     [quantum.core.system      :as sys]
     [quantum.core.vars        :as var
-      :refer [defalias def-]]
+      :refer [defalias defaliases def-]]
     [quantum.core.string      :as str])
 #?(:cljs
   (:require-macros
@@ -83,17 +83,7 @@
 ;       (map-vals+ (fn1 io/file-str))
 ;       redm)))
 
-(defn path
-  "Joins system-specific string paths (file paths, etc.)
-   ensuring correct separator interposition."
-  {:usage '(path "foo/" "/bar" "baz/" "/qux/")
-   :todo ["Configuration for system separator vs. 'standard' separator etc."]}
-  [& parts]
-  (apply str/join-once sys/separator parts))
-
-(defn url-path
-  [& parts]
-  (apply str/join-once "/" parts))
+(defaliases u path url-path)
 
 ;#?(:clj
 ;(defn validate-paths []

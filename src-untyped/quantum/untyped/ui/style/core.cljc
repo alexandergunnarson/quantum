@@ -16,6 +16,8 @@
 (def layout-y         :column)
 (def layout           :justify-content)
 (def layout-perp      :align-items)
+(def layout-start     :flex-start)
+(def layout-end       :flex-end)
 (def layout-wrap      :flex-wrap)
 (def layout-direction :flex-direction)
 (def layout-fit       :flex)

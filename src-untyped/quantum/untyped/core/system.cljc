@@ -1,7 +1,11 @@
 (ns quantum.untyped.core.system
   (:require
-    [quantum.untyped.core.core  :as ucore]
-    [quantum.untyped.core.error :as err]))
+    [quantum.untyped.core.collections   :as ucoll]
+    [quantum.untyped.core.core          :as ucore]
+    [quantum.untyped.core.error         :as err]
+    [quantum.untyped.core.logic
+      :refer [condpc coll-or]]
+    [quantum.untyped.core.string.format :as ustr|form]))
 
 (ucore/log-this-ns)
 
@@ -36,26 +40,26 @@
     :contributors {"Alex Gunnarson" "Ported to CLJC"}}
   browser
   (delay
-    (when (.-window usys/global)
+    (when (.-window global)
       (cond
         ; Opera 8.0+ (UA detection to detect Blink/v8-powered Opera)
-        (or (.-opera usys/global)
-            (some-> usys/global .-navigator .-userAgent (.indexOf " OPR/") (>= 0)))
+        (or (.-opera global)
+            (some-> global .-navigator .-userAgent (.indexOf " OPR/") (>= 0)))
         :opera
         ;  Chrome 1+
-        (.-chrome usys/global)
+        (.-chrome global)
         :chrome
         ; Firefox 1.0+
-        (.-InstallTrigger usys/global)
+        (.-InstallTrigger global)
         :firefox
         ; At least Safari 3+: "[object HTMLElementConstructor]"
         (-> js/Object .-prototype .-toString
-            (.call (.-HTMLElement usys/global))
+            (.call (.-HTMLElement global))
             (.indexOf "Constructor")
             (> 0))
         :safari
         ; At least IE6
-        (-> usys/global .-document .-documentMode)
+        (-> global .-document .-documentMode)
         :ie
         :else :unknown)))))
 
@@ -66,16 +70,33 @@
 (def os ; TODO: make less naive
   #?(:cljs (if ReactNative
                (-> ReactNative .-Platform .-OS)
-               :unknown)
-     :clj  :unknown))
+               (condp #(ucoll/containsv? %1 %2) (.-appVersion js/navigator)
+                 "Win"   :windows
+                 "MacOS" :mac
+                 "X11"   :unix
+                 "Linux" :linux
+                 :unknown))
+     :clj
+      (let [os-0 (some-> info :os :name ustr|form/>lower)]
+        (condpc #(ucoll/containsv? %1 %2) os-0
+          "win"                       :windows
+          "mac"                       :mac
+          (coll-or "nix" "nux" "aix") :unix
+          "sunos"                     :solaris))))
 
-;; ----- React specific ----- ;;
+;; ----- OS-specific ----- ;;
+
+(def separator
+  #?(:cljs (condp = os :windows "\\" "/") ; TODO make less naive
+     :clj  (str (java.io.File/separatorChar)))) ; string because it's useful in certain functions that way
+
+;; ----- React-specific ----- ;;
 
 #?(:cljs
 (set! (-> js/console .-ignoredYellowBox)
   #js ["You are manually calling a React.PropTypes validation function for the"]))
 
-;; ----- React Native specific ----- ;;
+;; ----- React-Native-specific ----- ;;
 
 #?(:cljs (def app-registry (when ReactNative (.-AppRegistry  ReactNative))))
 #?(:cljs (def AsyncStorage (when ReactNative (.-AsyncStorage ReactNative))))
@@ -86,8 +107,8 @@
 #?(:cljs
 (def ^{:doc "Determines whether the device is 'touchable'"
        :adapted-from 'pukhalski/tap} touchable?
-  (delay (or (and (.-propertyIsEnumerable usys/global)
-                  (.propertyIsEnumerable  usys/global   "ontouchstart"))
-             (and (-> usys/global .-document .-hasOwnProperty)
-                  (or (.hasOwnProperty (.-document usys/global) "ontouchstart")
-                      (.hasOwnProperty usys/global              "ontouchstart")))))))
+  (delay (or (and (.-propertyIsEnumerable global)
+                  (.propertyIsEnumerable  global   "ontouchstart"))
+             (and (-> global .-document .-hasOwnProperty)
+                  (or (.hasOwnProperty (.-document global) "ontouchstart")
+                      (.hasOwnProperty global              "ontouchstart")))))))

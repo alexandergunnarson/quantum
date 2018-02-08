@@ -104,26 +104,7 @@
 
 #?(:cljs (defalias u/ReactNative))
 
-(def os ; TODO: make less naive
-  #?(:cljs (if ReactNative
-               (-> ReactNative .-Platform .-OS)
-               (condp #(containsv? %1 %2) (.-appVersion js/navigator)
-                 "Win"   :windows
-                 "MacOS" :mac
-                 "X11"   :unix
-                 "Linux" :linux
-                 :unknown))
-     :clj
-      (let [os-0 (some-> info :os :name str/->lower)]
-        (condpc #(containsv? %1 %2) os-0
-          "win"                       :windows
-          "mac"                       :mac
-          (coll-or "nix" "nux" "aix") :unix
-          "sunos"                     :solaris))))
-
-(def separator
-  #?(:cljs (condp = os :windows "\\" "/") ; TODO make less naive
-     :clj  (str (File/separatorChar)))) ; string because it's useful in certain functions that way
+(defaliases u os separator)
 
 (def os-sep-esc
   (condp = os

@@ -13,7 +13,9 @@
     [quantum.untyped.core.logic
       #?(:clj :refer :cljs :refer-macros) [condf1 fn-not]] ; no idea why this is required currently :/
     [quantum.untyped.core.reducers :as ur
-      :refer [defeager transducer->transformer]]))
+      :refer [defeager transducer->transformer]]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]))
 
 (ucore/log-this-ns)
 
@@ -72,6 +74,30 @@
               (assoc m k new-n))))
     m))
 
+(defn merge-deep-with
+  "Like `merge-with` but merges maps recursively, applying the given fn
+  only when there's a non-map at a particular level.
+
+  (merge-deep-with + {:a {:b {:c 1 :d {:x 1 :y 2}} :e 3} :f 4}
+                    {:a {:b {:c 2 :d {:z 9} :z 3} :e 100}})
+  => {:a {:b {:z 3, :c 3, :d {:z 9, :x 1, :y 2}}, :e 103}, :f 4}"
+  {:attribution "clojure.contrib.map-utils via taoensso.encore"}
+  [f & maps]
+  (apply
+    (fn merge* [& maps]
+      (if (every? map? maps)
+          (apply merge-with merge* maps)
+          (apply f maps)))
+    maps))
+
+(def merge-deep
+  (partial merge-deep-with
+    (fn ([x]   (second x))
+        ([x y] y))))
+
+(defn merge-at [k m & ms]
+  (reduce (fn [m' m-next] (update m k merge (get m-next k))) m ms))
+
 
 ;; TODO move to type predicates
 (defn array? [x]
@@ -99,6 +125,18 @@
   ([xs k] (core/contains? xs k)))
 
 ;; ===== ... ==== ;;
+
+(defn index-of
+  ([xs elem]
+    (cond (and (string? xs) (string? elem))
+          (let [i (.indexOf ^String xs ^String elem)] (if (= i -1) nil i))
+          :else (uerr/not-supported! `index-of xs))))
+
+(defn containsv?
+  ([x elem]
+    (cond (string? x)
+          (and (val? elem) (index-of x elem))
+          :else (uerr/not-supported! `containsv? x))))
 
 (defn subview
   "Returns a subview of ->`xs`, [->`a` to ->`b`), in O(1) time."

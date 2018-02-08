@@ -10,7 +10,10 @@
             [quantum.core.string      :as str]
             [quantum.core.convert     :as conv]
             [quantum.core.logic       :as logic
-              :refer [when-let fn-not fn-or whenc]])
+              :refer [when-let fn-not fn-or whenc]]
+            [quantum.core.vars
+              :refer [defaliases]]
+            [quantum.untyped.net.core :as u])
   #?(:clj
   (:import  (java.net URLEncoder URLDecoder))))
 
@@ -93,16 +96,7 @@
 
 ; ===== URL =====
 
-(defn url-encode
-  "Returns `s` as an URL encoded string."
-  [s & [encoding]]
-  (when s
-    #?(:clj (-> (URLEncoder/encode (str s) (or encoding "UTF-8"))
-                (str/replace "%7E" "~")
-                (str/replace "*" "%2A")
-                (str/replace "+" "%20"))
-       :cljs (-> (js/encodeURIComponent (str s))
-                 (str/replace "*" "%2A")))))
+(defaliases u url-encode url-decode)
 
 ; ;; Credits: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent
 ; ;; TODO: Fix it in cemerick.url. (RM 2015-07-02)
@@ -112,13 +106,6 @@
 ;                         (str \% (-> c (.charCodeAt 0) (.toString 16)))
 ;                         c))
 ;               (cemerick.url /url-encode s))))
-
-(defn url-decode
-  "Returns `s` as an URL decoded string."
-  [s & [encoding]]
-  (when s
-    #?(:clj (URLDecoder/decode s (or encoding "UTF-8"))
-       :cljs (js/decodeURIComponent s))))
 
 (declare format-query-params parse-query-params)
 

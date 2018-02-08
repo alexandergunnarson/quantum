@@ -119,6 +119,34 @@
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
+(def is? #(%1 %2)) ; for use with condp
+
+#?(:clj
+(defmacro condpc
+  "`condp` for colls."
+  {:usage "(condpc = 1 (coll-or 2 3) (println '2 or 3!')"}
+  [pred expr & clauses]
+  (let [gpred (gensym "pred__")
+        gexpr (gensym "expr__")
+        emit (fn emit [pred expr args]
+               (let [[[a b c :as clause] more]
+                       (split-at (if (= :>> (second args)) 3 2) args)
+                       n (count clause)]
+                 (cond
+                   (= 0 n) nil ; No matching clause `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
+                   (= 1 n) a
+                   (= 2 n) `(if (if (fn? ~a)
+                                    (~a ~pred ~expr)
+                                    (~pred ~expr ~a))
+                                ~b
+                                ~(emit pred expr more))
+                   :else `(clojure.core/if-let [p# (~pred ~a ~expr)]
+                            (~c p#)
+                            ~(emit pred expr more)))))]
+  `(let [~gpred ~pred
+         ~gexpr ~expr]
+       ~(emit gpred gexpr clauses)))))
+
 ;; ===== `if(n|c|p)` ===== ;;
 
 ;; TODO compress this?
@@ -170,3 +198,21 @@
 #?(:clj (defmacro whenp->> "`whenf->>` + `ifp->>`" [x pred    & texprs] `(let [x# ~x] (if ~pred (->> x# ~@texprs) x#))))
 #?(:clj (defmacro whenp1                           [x0 x1]              `(fn [arg#] (whenp arg# ~x0 ~x1))))
 
+;; ===== `coll-(or|and)` ===== ;;
+
+#?(:clj
+(defmacro coll-base [logical-op & elems]
+  (let [bin-pred (gensym)
+        obj      (gensym)]
+   `(fn [~bin-pred ~obj]
+      (~logical-op
+        ~@(for [elem elems]
+            `(~bin-pred ~obj ~elem)))))))
+
+#?(:clj
+(defmacro coll-or [& elems] `(coll-base or ~@elems)))
+
+#?(:clj
+(defmacro coll-and
+  {:usage "((coll-and 1 2 3) < 0) => true (0 is less than 1, 2, and 3)"}
+  [& elems] `(coll-base and ~@elems)))

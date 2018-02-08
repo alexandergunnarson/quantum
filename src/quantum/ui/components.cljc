@@ -78,6 +78,9 @@
 #?(:cljs (def text                (rx-adapt ReactNative "Text" )))
 #?(:cljs (def view                (rx-adapt ReactNative "View" )))
 #?(:cljs (def image               (rx-adapt ReactNative "Image")))
+
+
+
 ; var CacheImage = require('@remobile/react-native-cache-image'); doesn't work on web ; better to have something else
 #?(:cljs (def touchable-highlight (rx-adapt ReactNative "TouchableHighlight")))
 #?(:cljs (def accordion           (when-not (= sys/os "web")
