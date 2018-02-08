@@ -35,9 +35,9 @@
   [str-0 & [method?]]
   (-> str-0
       (str/replace #"[-_](\w)"
-        (fn-> second ustr|form/>upper-case))
+        (fn-> second str/upper-case))
       (#(if (not method?)
-           (apply str (-> % first ustr|form/>upper-case) (rest %))
+           (apply str (-> % first str/upper-case) (rest %))
            %))))
 
 #?(:clj (defalias ucore/istr))

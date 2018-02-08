@@ -17,7 +17,8 @@
     [quantum.core.system      :as sys]
     [quantum.core.vars        :as var
       :refer [defalias defaliases def-]]
-    [quantum.core.string      :as str])
+    [quantum.core.string      :as str]
+    [quantum.untyped.core.paths :as u])
 #?(:cljs
   (:require-macros
     [quantum.core.paths

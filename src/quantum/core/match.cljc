@@ -13,7 +13,7 @@
        :refer [fn-not fn-and fn-or whenf1 condf1]]
      [quantum.core.collections         :as coll
        :refer [postwalk map-vals+ join]]
-     [quantum.core.macros.core
+     [quantum.core.macros
        :refer [macroexpand-all]]
      [quantum.core.collections.tree    :as tree]
      [quantum.core.collections.zippers :as zip]))

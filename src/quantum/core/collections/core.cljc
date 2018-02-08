@@ -767,8 +767,8 @@
       #?@(:clj  [Collection #_Map
                  clojure.lang.Associative    java.util.Map
                  clojure.lang.IPersistentSet java.util.Set]
-          :cljs [+set? +map?])} xs] (empty? xs))
-  ([^default                      xs] (empty? xs))
+          :cljs [+set? +map?])} xs] (not (empty? xs)))
+  ([^default                      xs] (not (empty? xs)))
   ([#{string? array?}             xs ^nat-long? n])
   ([#{#?@(:clj  [clojure.lang.Associative    java.util.Map
                  clojure.lang.IPersistentSet java.util.Set]

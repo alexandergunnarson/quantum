@@ -82,7 +82,7 @@
 
 (defn >ex-info
   ([data] (>ex-info "Exception" data))
-  ([msg data] (ex-info (msg+data>msg msg data) data)))
+  ([msg data] (ex-info (msg+data>msg msg data) (or data {}))))
 
 (def ex-info! (rcomp >ex-info (fn1 throw)))
 
