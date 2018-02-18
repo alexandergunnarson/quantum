@@ -8,6 +8,8 @@
       :refer [== not==]]
     [quantum.untyped.core.core    :as ucore
       :refer [>sentinel]]
+    [quantum.untyped.core.error
+      :refer [err!]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env]]
     [quantum.untyped.core.qualify :as qual]
@@ -51,15 +53,15 @@
   {:todo #{"More arity"}}
   ([^long n xf tf]
     (case n
-          0 (fn ([]            (xf))
+          0 (fn ([]                   (xf))
                 ([xs]          (tf xs (xf))))
-          1 (fn ([a0]          (xf a0))
+          1 (fn ([a0]                 (xf a0))
                 ([a0 xs]       (tf xs (xf a0))))
-          2 (fn ([a0 a1]       (xf a0 a1))
+          2 (fn ([a0 a1]              (xf a0 a1))
                 ([a0 a1 xs]    (tf xs (xf a0 a1))))
-          3 (fn ([a0 a1 a2]    (xf a0 a1 a2))
+          3 (fn ([a0 a1 a2]           (xf a0 a1 a2))
                 ([a0 a1 a2 xs] (tf xs (xf a0 a1 a2))))
-          (throw (ex-info "Unhandled arity for transducer" nil)))))
+          (err! "Unhandled arity for transducer"))))
 
 (defn transducer->transformer
   "Converts a transducer into a transformer."
