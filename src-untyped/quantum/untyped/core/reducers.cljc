@@ -22,16 +22,18 @@
 
 ;; ===== Transformer and transducer conversion ===== ;;
 
+(declare educe)
+
+(defprotocol PEduceInit (-educe-init [this f init]))
+
 ;; TODO `xs` will hold on to heads of seqs while stepping through; see also http://dev.clojure.org/jira/browse/CLJ-1793
 ;; A cross between a `reducer` and a `folder`
 (deftype Transformer [xs prev xf]
   #?(:clj clojure.lang.IReduce :cljs cljs.core/IReduce)
-    (#?(:clj reduce :cljs -reduce) [this f]
-      (let [rf (xf f)]
-        (rf (core/reduce rf (rf) prev))))
-    (#?(:clj reduce :cljs -reduce) [this f init]
-      (let [rf (xf f)]
-        (rf (core/reduce rf init prev)))))
+    (#?(:clj reduce :cljs -reduce) [this f     ] (core/reduce (xf f)      prev))
+    (#?(:clj reduce :cljs -reduce) [this f init] (core/reduce (xf f) init prev))
+  PEduceInit
+    (-educe-init                   [this f init] (educe       (xf f) init prev)))
 
 (defn transformer
   "Given a reducible collection, and a transformation function transform,
@@ -69,16 +71,28 @@
 
 ;; ===== Reduction functions ===== ;;
 
-(def ^{:doc "A marriage of `transduce` and `reduce`.
-             Like `reduce`, does not have a notion of a transforming function
-             (unlike `transduce`). Like `transduce`, uses the seed (0-arity) and
-             completing (1-arity) arities of the reducing function when performing
-             a reduction (unlike `reduce`)."}
-  educe (partial transduce identity))
+(defn educe
+  "A marriage of `transduce` and `reduce`.
+   Like `reduce`, does not have a notion of a transforming function
+   (unlike `transduce`). Like `transduce`, uses the seed (0-arity) and
+   completing (1-arity) arities of the reducing function when performing
+   a reduction (unlike `reduce`)."
+  ([f xs] (educe f (f) xs))
+  ([f init xs]
+    (let [ret (if (satisfies? PEduceInit xs)
+                  (-educe-init xs f init)
+                  (reduce f init xs))]
+      (f ret))))
 
 (defn join
+  "Like `into`, but internally uses `educe`, and creates as little data
+   as possible."
+  ([] [])
   ([from] (if (vector? from) from (join [] from)))
-  ([to from] (core/into to from)))
+  ([to from]
+     (if (instance? clojure.lang.IEditableCollection to)
+         (with-meta (persistent! (educe conj! (transient to) from)) (meta to))
+         (educe conj to from))))
 
 (defn join'
   "Like `joinl`, but reduces into an empty version of the collection passed."
@@ -87,7 +101,7 @@
     (transformer? xs)
       (join (empty (.-xs ^Transformer xs)) xs)
     (seq? (empty xs)) ; `conj`es on left, not right
-      (core/into (empty xs) (reverse xs))
+      (join (empty xs) (reverse xs))
     :else
       (join (empty xs) xs)))
 
@@ -122,7 +136,7 @@
            ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))
 
 
-(defn into! [xs0 xs1] (reduce (fn [xs0' x] (conj! xs0' x)) xs0 xs1))
+(defn join! [xs0 xs1] (educe conj! xs0 xs1))
 
 (defn zip-reduce* [f init z]
   (loop [xs (zip/down z) v init]
