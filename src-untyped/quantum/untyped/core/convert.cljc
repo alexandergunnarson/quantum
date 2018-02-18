@@ -93,3 +93,7 @@
         (string?  x) #?(:clj  (Long/parseLong ^String x)
                         :cljs (js/parseInt            x))
         :else        (uerr/not-supported! `>integer x)))
+
+(defn >uuid []
+  #?(:clj  (java.util.UUID/randomUUID)
+     :cljs (cljs.core/random-uuid)))
