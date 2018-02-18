@@ -1,15 +1,15 @@
 (ns quantum.core.test
   (:require
     [clojure.test       :as test]
-    [quantum.core.core
-      :refer [val?]]
     [quantum.core.error :as err]
     [quantum.core.fn    :as fn
       :refer [fn->]]
     [quantum.core.print :as pr
       :refer [ppr-meta]]
     [quantum.core.vars
-      :refer [#?(:clj defmalias) defalias]])
+      :refer [#?(:clj defmalias) defalias]]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]])
 #?(:cljs
   (:require-macros
     [quantum.core.test :as self])))

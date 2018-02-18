@@ -6,8 +6,6 @@
     [clojure.core              :as c]
     [quantum.core.defnt
       :refer [analyze defnt fnt|code *fn->spec]]
-    [quantum.core.macros.core
-      :refer [$]]
     [quantum.core.macros
       :refer [macroexpand-all case-env env-lang quote+]]
     [quantum.core.macros.type-hint
@@ -20,6 +18,8 @@
       :refer [diff]]
     [quantum.untyped.core.core :as ucore
       :refer [code=]]
+    [quantum.untyped.core.form
+      :refer [$]]
     [quantum.untyped.core.type :as t
       :refer [? !]])
   (:import clojure.lang.Named

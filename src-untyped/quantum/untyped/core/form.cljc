@@ -2,8 +2,9 @@
   (:require
     [quantum.untyped.core.core          :as ucore
       :refer [defalias]]
-    [quantum.untyped.core.form.evaluate :as ueval
-      :refer [case-env*]]))
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env*]]
+    [quantum.untyped.core.form.generate :as ufgen]))
 
 (ucore/log-this-ns)
 
@@ -49,5 +50,5 @@
   "Reproducibly, unifiedly syntax quote without messing up the format as a literal
    syntax quote might do."
   [body]
-  `(binding [*reproducible-gensym* (reproducible-gensym|generator)]
-     (unify-gensyms (syntax-quote ~body) true))))
+  `(binding [ufgen/*reproducible-gensym* (ufgen/reproducible-gensym|generator)]
+     (ufgen/unify-gensyms (syntax-quote ~body) true))))
