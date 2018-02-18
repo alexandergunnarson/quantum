@@ -30,7 +30,7 @@
 ;; TODO possibly move JS feature detection here?
 ;; ================================
 
-#?(:cljs (defalias u/ReactNative))
+#?(:cljs (defalias u/react-native))
 
 (defaliases u info os separator)
 

@@ -1,13 +1,8 @@
 (ns quantum.ui.style.color
-           (:require [clojure.string    :as str]
-                     [garden.color      :as color 
-                       :refer [color? #?(:cljs CSSColor)]]
-                     [quantum.core.vars :as var 
-                       :refer [#?(:clj defalias)]        ])
-  #?(:cljs (:require-macros
-                     [quantum.core.vars :as var 
-                       :refer [defalias]                 ]))
-  #?(:clj  (:import  garden.color.CSSColor)))
+  (:require
+    [quantum.core.vars              :as var
+      :refer [defaliases]]
+    [quantum.ui.untyped.style.color :as u]))
 
 ;(defnt ->color*
 ;  ([^garden.color.CSSColor c]
@@ -164,24 +159,7 @@
           :yellow-green           "#9acd32"}
         (map (fn [[k v]] [k (color/as-rgb v)]))
         (into {}))))
- 
+
 (defn color [k] (get @colors k))
 
-(defn css-color? [obj] (instance? CSSColor obj))
-
-(defn ->rgba [c]
-  (-> c color/as-rgb (assoc :alpha (:alpha c))))
-
-(defn ->hsla [c]
-  (-> c color/as-hsl (assoc :alpha (:alpha c))))
-
-(defn render-color [c] ; ->str
-  (if (:alpha c)
-      (let [{:keys [red green blue alpha]} (->rgba c)]
-        (str "rgba(" (str/join "," [red green blue (or alpha 1)]) ")"))
-      (color/as-hex c)))
-
-(defalias darken color/darken)
-(defalias lighten color/lighten)
-
-(defn ->hex [c] (-> c ->hsla color/as-hex))
+(defaliases u css-color? >rgba >hsla >hex render-color darken lighten )

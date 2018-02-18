@@ -69,7 +69,7 @@
         :else :unknown)))))
 
 #?(:cljs
-(def ReactNative
+(def react-native
   (>module "ReactNative" ["react-native" "react-native-web"]))) ; https://github.com/necolas/react-native-web
 
 #?(:clj
@@ -146,8 +146,8 @@
 
 
 (def os ; TODO: make less naive
-  #?(:cljs (if ReactNative
-               (-> ReactNative .-Platform .-OS)
+  #?(:cljs (if react-native
+               (-> react-native .-Platform .-OS)
                (condp #(ucoll/containsv? %1 %2) (.-appVersion js/navigator)
                  "Win"   :windows
                  "MacOS" :mac
@@ -176,9 +176,9 @@
 
 ;; ----- React-Native-specific ----- ;;
 
-#?(:cljs (def app-registry (when ReactNative (.-AppRegistry  ReactNative))))
-#?(:cljs (def AsyncStorage (when ReactNative (.-AsyncStorage ReactNative))))
-#?(:cljs (def StatusBar    (when ReactNative (.-StatusBar    ReactNative))))
+#?(:cljs (def app-registry (some-> react-native .-AppRegistry )))
+#?(:cljs (def AsyncStorage (some-> react-native .-AsyncStorage)))
+#?(:cljs (def StatusBar    (some-> react-native .-StatusBar   )))
 
 ;; ----- Features ----- ;;
 

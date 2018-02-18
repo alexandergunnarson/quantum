@@ -39,7 +39,10 @@
       :refer [defalias defaliases]]
     [quantum.core.log                   :as log]
     [quantum.core.type
-      :refer [static-cast]])
+      :refer [static-cast]]
+    [quantum.untyped.core.convert       :as u]
+    [quantum.untyped.core.form.evaluate
+      :refer [case-env]])
 #?(:cljs
   (:require-macros
     [quantum.core.convert :as self]))
@@ -288,7 +291,7 @@
             in protocol __GT_uuidProtocol must take at least one arg'"
   [& args]
   (if (empty? args)
-      `(java.util.UUID/randomUUID)
+      `(u/>uuid)
       `(->uuid* ~@args))))
 
 #?(:clj (defalias ->file path/->file))

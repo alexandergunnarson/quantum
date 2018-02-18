@@ -262,27 +262,20 @@
     "ZapfDingbatsITC"
     "Zapfino"})
 
-(def families
-  {:garamond       {:pref ["'EB Garamond'"     "Baskerville" "Georgia"   "Times" "serif"     ]}
-   :gotham         {:regular "Gotham-Book"
-                    :rounded "Gotham Rounded"}
-   :optima         {:pref ["'Optima'"          "Segoe"       "Calibri"   "Arial" "sans-serif"]}
-   :firasans       {:pref ["'Fira Sans'"                     "Calibri"   "Arial" "sans-serif"]}
-   :sourcecode-pro {:pref ["'Source Code Pro'"                                   "monospace" ]}
-   :helvetica-neue {:pref ["'Helvetica Neue'"                "Helvetica" "Arial" "sans-serif"]}
-   :lato           {:link "https://fonts.googleapis.com/css?family=Lato:100"
-                    :pref ["'Lato'"                          "Helvetica" "Arial" "sans-serif"]}
-   :open-sans      {:link "https://fonts.googleapis.com/css?family=Open+Sans:400,300,300italic,400italic,600,600italic,700,700italic"
-                    :pref ["'Open Sans'"                     "Helvetica" "Arial" "sans-serif"]}
-   :montserrat     {:link "https://fonts.googleapis.com/css?family=Montserrat:400,700"
-                    :pref ["'Montserrat'"      "Gotham"      "Helvetica" "Arial" "sans-serif"]}})
+(def fonts
+  {:circular
+     {:light           "CircularStd-Book"
+      :medium          "CircularStd-Book"
+      :medium-contrast "CircularStd-Black"
+      :semibold        "CircularStd-Medium"}
+   :metropolis
+     {:light           "Metropolis-Light"
+      :regular         "Metropolis-Regular"
+      :medium          "Metropolis-Medium"
+      :medium-contrast "Metropolis-Medium"
+      :semibold        "Metropolis-SemiBold"}})
 
-(defn family [k] (get-in families [k :pref]))
-(defn link   [k] (get-in families [k :link]))
-
-(defn font
-  ([k] (-> families (get k) :regular))
-  ([k & ks] (-> families (get k) (get-in ks))))
+(defn >font [family-name weight-name] (-> fonts (get family-name) (get weight-name)))
 
 #?(:cljs
 (def ^{:doc "`FontFace` is a newer technology (no IE/Edge/Android, Chrome (2013), Safari
@@ -305,7 +298,8 @@
 ;; Most browsers do support it but still
 #?(:cljs (def supports-woff? true))
 
-#?(:cljs
+;; TODO just need to add in `load-font-by-url!`
+#_(:cljs
 (def
   ^{:doc          "WOFF2 is a newer technology (no IE, Edge (late 2016), Firefox (2015),
                    Chrome (2014), Safari (late 2016) post-El-Capitan, iOS (2016), no Android)"
@@ -316,7 +310,8 @@
            .-status
            (= "loading")))))
 
-#?(:cljs
+;; TODO just need `supports-woff2?`
+#_(:cljs
 (defn load-font!
   ([font-name] (TODO "Load from LocalStorage"))
   ([font-name css-src-coercible] (load-font-by-css-src! font-name (ucss/>css-src css-src-coercible)))

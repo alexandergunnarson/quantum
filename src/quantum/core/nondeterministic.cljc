@@ -37,7 +37,8 @@
               :refer [<- rfn fn1]]
             [quantum.core.data.array   :as arr   ]
             [quantum.core.vars
-              :refer [defalias]])
+              :refer [defalias defaliases]]
+            [quantum.untyped.core.nondeterministic :as u])
   (:import
     #?@(:clj  [[java.util Random Collections Collection ArrayList]
                java.security.SecureRandom
@@ -59,14 +60,7 @@
 ; From Java 7 prefer java.util.concurrent.ThreadLocalRandom to java.util.Random in all
 ; circumstances - it is backwards compatible with existing code, but uses cheaper
 ; operations internally.
-#?(:clj (defonce ^SecureRandom secure-random-generator
-          (SecureRandom/getInstance "SHA1PRNG")))
-
-(defn #?(:clj ^Random get-generator :cljs get-generator) [secure?]
-  #?(:clj (if secure?
-              secure-random-generator
-              (java.util.concurrent.ThreadLocalRandom/current))
-     :cljs (TODO)))
+(defaliases u secure-random-generator get-generator)
 
 #?(:cljs
 (defn prime
