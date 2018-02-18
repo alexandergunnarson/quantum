@@ -32,6 +32,15 @@
 
 (defn update-val [[k v] f] [k (f v)])
 
+(defn updates
+  "For each key-function pair in @kfs,
+   updates value in an associative data structure @coll associated with key
+   by applying the function @f to the existing value."
+  {:attribution "alexandergunnarson"
+   :todo ["Probably updates and update are redundant"]}
+  ([coll & kfs]
+    (ur/reduce-pair update coll kfs))) ; TODO This is inefficient
+
 ;; ----- *SOC ----- ;;
 
 (defn dissoc*
@@ -73,6 +82,20 @@
               (dissoc m k)
               (assoc m k new-n))))
     m))
+
+(defn select
+  ([x k] {k (get x k)})
+  ([x k & ks]
+    (reduce
+      (fn [ret k'] (assoc ret k' (get x k')))
+      (select x k) ks)))
+
+(defn select-in
+  ([x ks] (assoc-in {} ks (get-in x ks)))
+  ([x ks & kss]
+    (reduce
+      (fn [ret ks'] (assoc-in ret ks' (get-in x ks')))
+      (select-in x ks) kss)))
 
 (defn merge-deep-with
   "Like `merge-with` but merges maps recursively, applying the given fn
