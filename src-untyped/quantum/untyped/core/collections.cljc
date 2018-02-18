@@ -1,6 +1,6 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in contains? distinct? get filter flatten last map map-indexed
+    [#?(:cljs array?) assoc-in contains? count distinct? get group-by filter flatten last map map-indexed
      mapcat pmap remove vec])
   (:require
     [clojure.core                  :as core]
@@ -9,15 +9,17 @@
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
-      :refer [fn']]
+      :refer [fn' aritoid]]
     [quantum.untyped.core.logic
       #?(:clj :refer :cljs :refer-macros) [condf1 fn-not]] ; no idea why this is required currently :/
     [quantum.untyped.core.reducers :as ur
-      :refer [defeager transducer->transformer]]
+      :refer [defeager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
       :refer [val?]]))
 
 (ucore/log-this-ns)
+
+(def count core/count)
 
 ;; ===== SOCIATIVE ===== ;;
 
@@ -62,9 +64,9 @@
   ([  ks v] (fn [x] (core/assoc-in x ks v)))
   ([x ks v] (core/assoc-in x ks v))
   ([x ks v & ks-vs]
-    (reduce (fn [x' [ks' v']] (assoc-in x' ks' v'))
-            (assoc-in x ks v)
-            (partition-all 2 ks-vs))))
+    (educe (fn [x' [ks' v']] (assoc-in x' ks' v'))
+           (assoc-in x ks v)
+           (partition-all 2 ks-vs))))
 
 (defn dissoc-in
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -119,7 +121,7 @@
         ([x y] y))))
 
 (defn merge-at [k m & ms]
-  (reduce (fn [m' m-next] (update m k merge (get m-next k))) m ms))
+  (educe (fn [m' m-next] (update m k merge (get m-next k))) m ms))
 
 
 ;; TODO move to type predicates
@@ -185,6 +187,10 @@
     (if (or (vector? xs) (string? xs)) ; `subviewable?`
         (subview xs a b)
         (slice a b))))
+
+;; NOTE: The below functions, built on transducers, inasmuch as they require a 0- or 1-arity
+;; reducing function to behave correctly (e.g. `partition-all+`), are unsafe for use with
+;; core/reduce. Prefer `educe` instead.
 
 (def mapcat+ (transducer->transformer 1 core/mapcat))
 (defeager mapcat mapcat+)
@@ -253,13 +259,13 @@
         (recur (dec n) (apply concat xs)))))
 
 (defn frequencies-by
-  "Like |frequencies| crossed with |group-by|."
+  "Like `frequencies` crossed with `group-by`."
   {:in  '[second [[1 2 3] [4 2 6] [5 2 7]]]
    :out '{[1 2 3] 3, [4 2 6] 3, [5 2 7] 3}}
   [f coll]
   (let [frequencies-0
          (persistent!
-           (reduce
+           (educe
              (fn [counts x]
                (let [gotten (f x)
                      freq   (inc (get counts gotten 0))]
@@ -267,24 +273,33 @@
              (transient {}) coll))
         frequencies-f
           (persistent!
-            (reduce
+            (educe
               (fn [ret elem] (assoc! ret elem (get frequencies-0 (f elem))))
               (transient {}) coll))]
     frequencies-f))
 
+(defn group-by
+  "Like `group-by` but uses `educe` internally"
+  [f coll]
+  (->> coll
+       (educe (fn [ret x]
+                (let [k (f x)]
+                  (assoc! ret k (conj (get ret k []) x))))
+              (transient {}))
+       persistent!))
 
-(defn lflatten-1 [xs] (apply concat xs))
+(defn lcat [xs] (apply concat xs))
 
 (defn distinct?
   "Like `clojure.core/distinct?` except operates on reducibles."
   [xs]
-  (boolean
-    (reduce (fn [distincts x]
-              (if (contains? distincts x)
-                  (reduced false)
-                  (conj distincts x)))
-            #{}
-            xs)))
+  (->> xs
+       (educe (aritoid (fn' #{}) identity
+                (fn [distincts x]
+                  (if (contains? distincts x)
+                      (reduced false)
+                      (conj distincts x)))))
+       boolean))
 
 ;; ===== ZIPPER ===== ;;
 
@@ -301,7 +316,7 @@
                  (merge-call my-associng-fn)
                  (merge-call fn-that-uses-the-previous-results))}
   ([m f] (merge m (f m)))
-  ([m f & fs] (reduce merge-call (merge-call m f) fs)))
+  ([m f & fs] (educe merge-call (merge-call m f) fs)))
 
 (defn unchunk
   "Given a sequence that may have chunks, return a sequence that is 1-at-a-time

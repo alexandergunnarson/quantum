@@ -1,17 +1,18 @@
 (ns ^{:doc "Code formatting. Taken shamelessly from cljfmt.core."}
   quantum.format.clojure.core
-  (:require [clojure.zip        :as zip]
-            [rewrite-clj.parser :as p]
-            [rewrite-clj.node   :as n]
-            [rewrite-clj.zip    :as z]
-            [quantum.core.core
-              :refer [regex?]]
-            [quantum.core.fn    :as fn
-              :refer [rcomp fn-> fn->> fn1]]
-            [quantum.core.logic
-              :refer [fn-and fn-not fn-or whenf1]]
-            [quantum.core.vars  :as var
-              :refer [def-]]))
+  (:require
+    [clojure.zip        :as zip]
+    [rewrite-clj.parser :as p]
+    [rewrite-clj.node   :as n]
+    [rewrite-clj.zip    :as z]
+    [quantum.core.fn    :as fn
+      :refer [rcomp fn-> fn->> fn1]]
+    [quantum.core.logic
+      :refer [fn-and fn-not fn-or whenf1]]
+    [quantum.core.vars  :as var
+      :refer [def-]]
+    [quantum.untyped.core.type.predicates
+      :refer [regex?]]))
 
 ;(java/load-deps '[rewrite-clj "0.4.12"])
 

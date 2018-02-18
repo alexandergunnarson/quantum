@@ -5,11 +5,11 @@
   (:require
     [clojure.core      :as core]
     [clojure.set       :as set]
-    [quantum.core.core
-      :refer [val?]]
     [quantum.core.fn   :as fn
       :refer [fn1 fnl]]
-    [quantum.core.spec :as s]))
+    [quantum.core.spec :as s]
+    [quantum.untyped.core.type.predicates
+      :refer [val?]]))
 
 ;;;; GENERAL
 

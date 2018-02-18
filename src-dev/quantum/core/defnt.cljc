@@ -31,8 +31,9 @@
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.analyze.rewrite :as ana-rw]
     [quantum.untyped.core.collections  :as c
-      :refer [assoc-in dissoc-if dissoc* lflatten-1 subview]]
-    [quantum.untyped.core.collections.logic :as ucoll&
+      :refer [assoc-in dissoc-if dissoc* lcat subview vec
+              lmap map+ map-vals+ mapcat+ filter+ remove+ partition-all+]]
+    [quantum.untyped.core.collections.logic :as uc&
       :refer [every? seq-or]]
     [quantum.untyped.core.collections.tree :as tree
       :refer [prewalk postwalk walk]]
@@ -41,19 +42,20 @@
     [quantum.untyped.core.convert  :as conv
       :refer [>symbol >name]]
     [quantum.untyped.core.core
-      :refer [kw-map istr]]
+      :refer [istr]]
+    [quantum.untyped.core.data
+      :refer [kw-map]]
     [quantum.untyped.core.data.set :as set]
-    [quantum.untyped.core.form          :as uform
-      :refer [unify-gensyms]]
+    [quantum.untyped.core.form          :as uform]
     [quantum.untyped.core.form.evaluate :as ufeval]
-    [quantum.untyped.core.form.generate :as ufgen]
+    [quantum.untyped.core.form.generate :as ufgen
+      :refer [unify-gensyms]]
     [quantum.untyped.core.loops    :as loops
       :refer [reduce-2]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
     [quantum.untyped.core.qualify  :as qual :refer [qualify]]
     [quantum.untyped.core.reducers :as r
-      :refer [vec map+ map-vals+ mapcat+ filter+ remove+ partition-all+
-              join reducei educe]]
+      :refer [join reducei educe]]
     [quantum.untyped.core.refs     :as ref
       :refer [?deref]]
     [quantum.untyped.core.type     :as t
@@ -131,7 +133,7 @@
          (fn [{:keys [args varargs]}]
            ;; so `env` in `fnt` can work properly in the analysis
            ;; TODO need to adjust for destructuring
-           (ucoll/distinct?
+           (c/distinct?
              (concat (c/lmap :arg-binding args)
                      [(:arg-binding varargs)])))))
 
@@ -298,10 +300,10 @@
                                                              (if (java.lang.reflect.Modifier/isStatic (.getModifiers x))
                                                                  :static
                                                                  :instance))))
-       (group-by  (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
-       (map-vals+ (fn->> (group-by (fn [^Method x] (count (.-argtypes x))))
-                         (map-vals+ (fn->> (group-by (fn [^Method x] (.-kind x)))))
-                         (join {})))
+       (c/group-by (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
+       (map-vals+  (fn->> (c/group-by (fn [^Method x] (count (.-argtypes x))))
+                          (map-vals+ (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
+                          (join {})))
        (join {}))))
 
 (defonce class->methods|with-cache
@@ -370,7 +372,7 @@
   (when (-> expr :constraints some?)
     (TODO "Don't yet know how to handle constraints"))
   (if-let [classes (->> expr :type-info ?deref :reifieds (lmap truthy-type?) seq)]
-    (ucoll&/every-val ::unknown classes)
+    (uc&/every-val ::unknown classes)
     ::unknown))
 
 (defn union|type-info [ti0 ti1]
@@ -413,7 +415,7 @@
   (if (empty? body)
       (ast/do {:env  env
                :form form
-               :body (r/vec body)
+               :body (c/vec body)
                :spec t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
@@ -423,7 +425,7 @@
                                  :env  (:env accum))))]
         (ast/do {:env  env
                  :form form
-                 :body (r/vec body)
+                 :body (c/vec body)
                  :spec (:spec expr)}))))
 
 (defn analyze-seq|let*|bindings [env bindings]
@@ -749,7 +751,7 @@
   (s/keys :req-un [:protocol|overload/name    #_simple-symbol?
                    :protocol|overload/arglist #_(t/vector-of simple-symbol?)]))
 
-#?(:clj
+#_(:clj
 (defn fnt|arg->class [lang {:as arg [k spec] ::fnt|arg-spec :keys [arg-binding]}]
   (cond (not= k :spec) java.lang.Object; default class
         (symbol? spec) (pred->class lang spec))))
@@ -844,7 +846,7 @@
 (defn fnt-overload>interface [args-classes out-class]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
         hinted-method-sym (th/with-type-hint fnt-method-sym (th/>arglist-embeddable-tag out-class))
-        interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(uform/gen-args (count args-classes))))]
+        interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(ufgen/gen-args (count args-classes))))]
     (log/pr ::debug "Creating interface" interface-sym "...")
     (eval interface-code)))
 
@@ -909,7 +911,7 @@
                                [(-> interface >name >symbol)
                                 `(~(th/with-type-hint method-sym (th/>arglist-embeddable-tag out-class))
                                   ~arglist-code ~@body-codelist)]))
-                     lflatten-1))))))
+                     lcat))))))
 
 (defn >extend-protocol|code [{:keys [protocol|name]}]
   `(extend-protocol ~protocol|name))
@@ -924,9 +926,9 @@
             (c/lmap (fn [{:keys [name arglist]}]
                       `(~name ~arglist))))))
 
-(defn fnt|overloads>protocol [])
+(defn fnt|overloads>protocol [overloads])
 
-(is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
+#_(is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
         [{:defprotocol
             ($ (defprotocol ~'abc|__Protocol__java|io|FilterOutputStream
                  (~'abc|__protofn__java|io|FilterOutputStream [~'x0 ~'x1])))
@@ -962,55 +964,35 @@
                         (~'abc|__protofn__long ~'x1 ~'x0))))]
           :defn nil}]))
 
+(def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
+(defn >all-shorthand-tags []
+  (->> (apply concat
+         (for [n (c/unchunk (range 1 (inc 64)))] ; just up to length 64 for now
+           (apply combo/cartesian-product (repeat n allowed-shorthand-tag-chars))))
+       (c/lmap #(apply str %))
+       c/unchunk))
 
-(defonce *class>shorthand-tag|cache (atom {:latest "a"}))
+(defonce *class>shorthand-tag|cache
+  (atom {:remaining (>all-shorthand-tags)}))
 
 ;; dynamic for testing purposes
 (def ^:dynamic **class>shorthand-tag|cache* *class>shorthand-tag|cache)
 
-(def allowed-shorthand-tag-chars "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-
-(combo/cartesian-product allowed-shorthand-tag-chars
-                         allowed-shorthand-tag-chars)
-
-(def all-shorthand-tags
-  (->> (apply concat
-           (for [n (c/unchunk (range 64))] ; for now
-             (do (println "n" n)
-             (apply combo/cartesian-product (repeat n allowed-shorthand-tag-chars)))))
-       (c/lmap #(apply str %))
-       c/unchunk
-       first
-       type
-       println)
-  1)
-
-(defns next-shorthand-tag [tag (t/and t/string? #_#"a-zA-Z")]
-  (let [c (c/last tag)]
-    (if (= c \Z)
-        (str tag \a)
-        (let [c' (if (= c \z)
-                     \A
-                     (-> c int inc char))]
-          (if (-> tag count (= 1))
-              (str c')
-              (str (c/subview-or-slice tag 0 (-> tag count dec)) c'))))))
-
 (defns class>shorthand-tag [c t/class?]
   (or (c/get @**class>shorthand-tag|cache* c)
-      (do (swap! **class>shorthand-tag|cache*
-             (fn [{:as m :keys [latest]}]
-               (let [tag (next-shorthand-tag latest)]
-                 (assoc m :latest tag c tag))))
-          (recur c))))
+      (-> (swap! **class>shorthand-tag|cache*
+            (fn [{:as m :keys [remaining]}]
+              (assoc m c          (first remaining)
+                       :remaining (next  remaining))))
+          (get c))))
 
 (defn assert-monotonically-increasing-specs!
   "Asserts that each spec in an overload of the same arity and arg-position
    are in monotonically increasing order in terms of `t/compare`."
   [overloads|grouped-by-arity]
   (doseq [[arity-ct overloads] overloads|grouped-by-arity]
-    (reduce
+    (educe
       (fn [prev-overload [i|overload overload]]
         (when prev-overload
           (reduce-2
@@ -1074,6 +1056,7 @@
     true))
 
 (defn fnt|code [kind lang args]
+  (prl! kind lang args)
   (let [{:keys [::ss/fn|name overloads ::ss/meta] :as args'}
           (s/validate args (case kind :defn ::defnt :fn ::fnt))
         _ (prl! args')
@@ -1108,9 +1091,10 @@
         base-fn-codelist []
         fn-codelist
           (case lang
-            :clj  `[~@direct-dispatch-codelist
-                    ~@dynamic-dispatch-codelist
-                    ~@base-fn-codelist]
+            :clj  (->> `[~@direct-dispatch-codelist
+                         ~@dynamic-dispatch-codelist
+                         ~@base-fn-codelist]
+                        (remove nil?))
             :cljs (TODO))
         overloads|code (->> overloads (mapv :code))
         _ (prl! overloads)
