@@ -35,7 +35,7 @@
   {:attribution 'alexandergunnarson}
   [branch?f childrenf root]
   (postwalk-fold (fn ([] (transient [])) ([x] (persistent! x)) ([xs x] (conj!    xs x)))
-                 (fn ([] (transient [])) ([x] (persistent! x)) ([a  b] (ur/into! a  b)))
+                 (fn ([] (transient [])) ([x] (persistent! x)) ([a  b] (ur/join! a  b)))
                  branch?f childrenf root))
 
 (defn prewalk-find

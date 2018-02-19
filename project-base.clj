@@ -397,6 +397,7 @@
                    'quantum.core.print.prettier)
                  (quantum.core.print.prettier/extend-pretty-printing!)
                  (require '[quantum.core.log :refer [prl!]])
+                 (reset! quantum.core.error/*pr-data-to-str? true)
                  (clojure.main/repl
                    :print  #(binding [*print-meta* true
                                       quantum.core.print/*collapse-symbols?* true

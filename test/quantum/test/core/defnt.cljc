@@ -1,16 +1,12 @@
 (ns quantum.test.core.defnt
   (:require
     [clojure.core :as core]
-    [quantum.core.core
-      :refer [istr]]
     [quantum.core.fn :as fn
       :refer [fn->]]
     [quantum.core.logic
       :refer [fn-and]]
     [quantum.core.defnt        :as this
       :refer [!ref analyze defnt]]
-    [quantum.core.macros.core
-      :refer [$]]
     [quantum.core.macros.type-hint :as th
       :refer [tag]]
     [quantum.core.spec         :as s]
@@ -19,8 +15,12 @@
     [quantum.core.type.defs    :as tdef]
     [quantum.untyped.core.analyze.ast  :as ast]
     [quantum.untyped.core.analyze.expr :as xp]
+    [quantum.untyped.core.form
+      :refer [$]]
     [quantum.untyped.core.core
       :refer [code=]]
+    [quantum.untyped.core.string
+      :refer [istr]]
     [quantum.untyped.core.type :as t])
 #?(:clj
   (:import
@@ -488,6 +488,26 @@
 (let* [a 1 b (byte 2)]
                 a
                 (Numeric/add c (Numeric/bitAnd a b)))
+
+(deftest fnt|overload-data>overload-group
+  (is= (this/fnt|overload-data>overload-group
+         {::this/fnt|arglist
+            {:pre nil :post nil
+             :args [{:arg-binding 'x
+                     ::this/fnt|arg-spec [:spec 't/string?]}] :varargs nil}
+          :body []}
+         {:lang :clj})
+       {:unprimitivized
+         {:arglist-code|reify|unhinted '[x]
+          :arg-classes                 [java.lang.String]
+          :arglist-code|fn|hinted      [(with-meta 'x {:tag "java.lang.String"})],
+          :body-form                   nil
+          :positional-args-ct          1
+          :variadic?                   false
+          :arg-specs                   [t/string?]
+          :out-spec                    (t/value nil)
+          :out-class                   java.lang.Object}
+        :primitivized nil}))
 
 ;; For any unquoted seq-expression E that has at least one leaf:
 ;;   if E is an expression whose type must be inferred:

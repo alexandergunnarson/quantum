@@ -68,3 +68,16 @@
               _# (when (= ~orig-sym-f 'nil)
                    (throw (IllegalArgumentException. (str "Macro '" '~name "' not defined."))))]
           (cons ~orig-sym-f ~args-sym)))))))
+
+
+#?(:clj
+(defmacro def
+  "Like `clojure.core/def`, but allows for docstring and metadata placement
+   like `defn`."
+  ([sym]   `(~'def ~sym))
+  ([sym v] `(~'def ~sym ~v))
+  ([sym doc-or-meta v]
+    (if (string? doc-or-meta)
+        `(quantum.untyped.core.vars/def ~sym ~doc-or-meta nil          ~v)
+        `(quantum.untyped.core.vars/def ~sym nil          ~doc-or-meta ~v)))
+  ([sym -doc -meta v] `(~'def ~(with-meta sym (assoc -meta :doc -doc)) ~v))))

@@ -1,7 +1,8 @@
 (ns quantum.untyped.core.type.predicates
   "For type predicates that are not yet turned into specs.
    TODO excise and place in `quantum.untyped.core.type`."
-  (:refer-clojure :exclude [boolean? seqable?])
+  (:refer-clojure :exclude
+    [array? boolean? seqable?])
   (:require
     [clojure.core :as core]
     #_[quantum.untyped.core.core :as ucore]))
@@ -57,3 +58,8 @@
      :cljs (satisfies? cljs.core/IDeref    x)))
 
 #?(:cljs (defn defined? [x] (not (undefined? x))))
+
+;; TODO move to type predicates
+(defn array? [x]
+  #?(:clj  (-> x class .isArray) ; must be reflective
+     :cljs (core/array? x)))

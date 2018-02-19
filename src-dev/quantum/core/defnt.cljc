@@ -2,10 +2,7 @@
   (:refer-clojure :exclude
     [+ #_zero? odd? even?
      bit-and
-     every? vec
      ==
-     if-let when-let
-     assoc-in
      macroexpand])
   (:require
     [clojure.core                      :as core]
@@ -17,8 +14,8 @@
               firsta seconda]]
     [quantum.core.log                  :as log
       :refer [ppr! prl! prlm!]]
-    [quantum.core.logic
-      :refer [fn-and fn-or fn-not if-let if-not-let when-let]]
+    [quantum.core.logic                :as l
+      :refer [fn-and fn-or fn-not ifs if-not-let]]
     [quantum.core.macros
       :refer [macroexpand]]
     [quantum.core.macros.type-hint     :as th]
@@ -31,10 +28,10 @@
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.analyze.rewrite :as ana-rw]
     [quantum.untyped.core.collections  :as c
-      :refer [assoc-in dissoc-if dissoc* lcat subview vec
+      :refer [dissoc-if dissoc* lcat subview >vec
               lmap map+ map-vals+ mapcat+ filter+ remove+ partition-all+]]
-    [quantum.untyped.core.collections.logic :as uc&
-      :refer [every? seq-or]]
+    [quantum.untyped.core.collections.logic :as ucl
+      :refer [seq-and seq-or]]
     [quantum.untyped.core.collections.tree :as tree
       :refer [prewalk postwalk walk]]
     [quantum.untyped.core.compare  :as comp
@@ -151,9 +148,9 @@
     (fn [f]
       (-> f (update :overloads
               (fnl mapv (fn [overload] (let [overload' (update overload :body :body)]
-                                         (if-let [output-spec (-> f :output-spec ::spec)]
+                                         (l/if-let [output-spec (-> f :output-spec ::spec)]
                                            (do (s/validate (-> overload' ::fnt|arglist :post) nil?)
-                                               (assoc-in overload' [::fnt|arglist :post] output-spec))
+                                               (c/assoc-in overload' [::fnt|arglist :post] output-spec))
                                            overload')))))
             (dissoc :output-spec)))))
 
@@ -185,13 +182,13 @@
 
 (defn spec>most-primitive-class [spec & [throw?]]
   (let [{:as class-data c :class} (t/spec>class spec)]
-    (cond (-> c class? not)
-            (when throw?
-              (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
-                    {:spec spec :class-data class-data}))
-          (-> class-data :nilable? not)
-            (or (tcore/boxed->unboxed c) c)
-          :else c)))
+    (ifs (-> c class? not)
+           (when throw?
+             (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
+                   {:spec spec :class-data class-data}))
+         (-> class-data :nilable? not)
+           (or (tcore/boxed->unboxed c) c)
+         c)))
 
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
@@ -233,8 +230,8 @@
                          (c/map ?hint-arg)
                          (<- cond-> varargs (conj '& (?hint-arg varargs))))
                   pre-validations
-                    (vec (concat (some->> spec-validations (c/lfilter some?))
-                                 (when pre (list 'assert pre))))
+                    (>vec (concat (some->> spec-validations (c/lfilter some?))
+                                  (when pre (list 'assert pre))))
                   validations
                     (->> {:post (when post [(list post (symbol "%"))])
                           :pre  (when (seq pre-validations) pre-validations)}
@@ -302,7 +299,7 @@
                                                                  :instance))))
        (c/group-by (fn [^Method x] (.-name x))) ; TODO all of these need to be into !vector and !hash-map
        (map-vals+  (fn->> (c/group-by (fn [^Method x] (count (.-argtypes x))))
-                          (map-vals+ (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
+                          (map-vals+  (fn->> (c/group-by (fn [^Method x] (.-kind x)))))
                           (join {})))
        (join {}))))
 
@@ -372,7 +369,7 @@
   (when (-> expr :constraints some?)
     (TODO "Don't yet know how to handle constraints"))
   (if-let [classes (->> expr :type-info ?deref :reifieds (lmap truthy-type?) seq)]
-    (uc&/every-val ::unknown classes)
+    (ucl/every-val ::unknown classes)
     ::unknown))
 
 (defn union|type-info [ti0 ti1]
@@ -415,7 +412,7 @@
   (if (empty? body)
       (ast/do {:env  env
                :form form
-               :body (c/vec body)
+               :body (>vec body)
                :spec t/nil?})
       (let [expr (analyze-non-map-seqable env body []
                    (fn [accum expr _]
@@ -425,7 +422,7 @@
                                  :env  (:env accum))))]
         (ast/do {:env  env
                  :form form
-                 :body (c/vec body)
+                 :body (>vec body)
                  :spec (:spec expr)}))))
 
 (defn analyze-seq|let*|bindings [env bindings]
@@ -468,22 +465,22 @@
   [methods #_(t/seq method?)]
   ;; TODO room for plenty of optimization here
   (let [methods|by-ct (->> methods
-                           (group-by (fn-> :argtypes count))
+                           (c/group-by (fn-> :argtypes count))
                            (sort-by first <))
         ;; non-primitive classes in Java aren't guaranteed to be non-null
         >class-spec (fn [x]
-                      (cond (class? x)
-                              (-> x t/>spec (cond-> (not (t/primitive-class? x)) t/?))
-                            (t/spec? x)
-                              x
-                            :else (err/not-supported! `>class-spec x)))
+                      (ifs (class? x)
+                             (-> x t/>spec (cond-> (not (t/primitive-class? x)) t/?))
+                           (t/spec? x)
+                             x
+                           (err/not-supported! `>class-spec x)))
         partition-deep
           (fn partition-deep [spec methods' arglist-size i|arg depth]
             (let [_ (when (> depth 3) (TODO))
                   methods'|by-class
                     (->> methods'
                          ;; TODO optimize further via `group-by-into`
-                         (group-by (fn-> :argtypes (c/get i|arg)))
+                         (c/group-by (fn-> :argtypes (c/get i|arg)))
                          ;; classes will be sorted from most to least specific
                          (sort-by (fn-> first t/>spec) t/<))]
               (r/for [[c methods''] methods'|by-class
@@ -502,8 +499,8 @@
     (r/for [[ct methods'] methods|by-ct
             spec (xp/casef count)]
       (if (zero? ct)
-          (assoc-in spec [:cases 0]  (-> methods' first :rtype >class-spec))
-          (assoc-in spec [:cases ct] (partition-deep (xp/condpf-> t/<= (xp/get 0)) methods' ct 0 0))))))
+          (c/assoc-in spec [:cases 0]  (-> methods' first :rtype >class-spec))
+          (c/assoc-in spec [:cases ct] (partition-deep (xp/condpf-> t/<= (xp/get 0)) methods' ct 0 0))))))
 
 #?(:clj
 (defns ?cast-call->spec
@@ -689,29 +686,27 @@
     (if-not resolved
       (err! "Could not resolve symbol" {:sym form})
       (ast/symbol env form
-        (cond (ast/node? resolved)
-                (:spec resolved)
-              (or (t/literal? resolved) (t/class? resolved))
-                (t/value resolved)
-              :else
-                (err! "Unsure of what to do in this case" (kw-map env form resolved)))))))
+        (ifs (ast/node? resolved)
+               (:spec resolved)
+             (or (t/literal? resolved) (t/class? resolved))
+               (t/value resolved)
+             (err! "Unsure of what to do in this case" (kw-map env form resolved)))))))
 
 (defn analyze* [env form]
   (prl! env form)
   (when (> (swap! *analyze-i inc) 100) (throw (ex-info "Stack too deep" {:form form})))
-  (cond (symbol? form)
-          (analyze-symbol env form)
-        (t/literal? form)
-          (ast/literal env form (t/>spec form))
-        (or (vector? form)
-            (set?    form))
-          (analyze-non-map-seqable env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
-        (map? form)
-          (analyze-map env form)
-        (seq? form)
-          (analyze-seq env form)
-        :else
-          (throw (ex-info "Unrecognized form" {:form form}))))
+  (ifs (symbol? form)
+         (analyze-symbol env form)
+       (t/literal? form)
+         (ast/literal env form (t/>spec form))
+       (or (vector? form)
+           (set?    form))
+         (analyze-non-map-seqable env form (empty form) (fn stop [& [a b :as args]] (prl! args) (err! "STOP")))
+       (map? form)
+         (analyze-map env form)
+       (seq? form)
+         (analyze-seq env form)
+       (throw (ex-info "Unrecognized form" {:form form}))))
 
 (defn analyze
   ([body] (analyze {} body))
@@ -731,13 +726,14 @@
 
 #_(s/def :fnt|overload/body-codelist (t/seq-of ::ss/code))
 (s/def :fnt/overload
-  (s/keys :req-un [:fnt|overload/arg-classes
+  (s/keys :req-un [:fnt|overload/arg-classes ; (t/vector-of t/class?)
                    :fnt|overload/arg-specs
                    :fnt|overload/arglist-code|fn|hinted
                    :fnt|overload/arglist-code|reify|unhinted
-                   :fnt|overload/body-codelist
+                   :fnt|overload/body-form
                    :fnt|overload/positional-args-ct
-                   :fnt|overload/spec
+                   :fnt|overload/out-spec
+                   :fnt|overload/out-class
                    :fnt|overload/variadic?]))
 
 (s/def ::reify|overload
@@ -745,7 +741,7 @@
                    :reify|overload/out-class
                    :reify/method-sym
                    :reify/arglist-code
-                   :reify|overload/body-codelist]))
+                   :reify|overload/body-form]))
 
 (s/def :protocol/overload
   (s/keys :req-un [:protocol|overload/name    #_simple-symbol?
@@ -761,8 +757,36 @@
   `(let [~'out ~body]
      (s/validate ~'out ~(update-meta post-spec dissoc* :runtime?))))
 
+#?(:clj
+(defn out-spec>out-class [out-spec]
+  (let [out-class-data (t/spec>class out-spec)
+        out-class
+          (if (-> out-class-data :class class?)
+              (let [c (:class out-class-data)]
+                (if (:nilable? out-class-data)
+                    c
+                    (or (tcore/boxed->unboxed c) c)))
+              ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
+              java.lang.Object)]
+    out-class)))
+
+#?(:clj
+(defn arg-specs>arg-classes [arg-specs]
+  (c/map #(spec>most-primitive-class % true) arg-specs)))
+
+#?(:clj
+(defn arg-specs>arg-classes-seq|primitivized [arg-specs]
+  (->> arg-specs
+       arg-specs>arg-classes
+       (c/lmap #(->> % tcore/class>prim-subclasses
+                       (set/union #{(or (tcore/boxed->unboxed %) %)})
+                       ;; for purposes of cleanliness and reproducibility
+                       (sort-by sort-guide)))
+       (apply combo/cartesian-product)
+       (c/lmap >vec))))
+
 #?(:clj ; really, reserve for metalanguage
-(defn fnt|overload-data>overload #_> #_::fnt|overload
+(defn fnt|overload-data>overload-group
   "Rather than rigging together something in which either:
    1) the Clojure compiler will try to cross its fingers and evaluate code meant to be evaluated in ClojureScript
    2) we use a CLJS-in-CLJS compiler and alienate the mainstream CLJS-in-CLJ (cljsbuild) workflow, which includes
@@ -772,64 +796,74 @@
    we decide instead to evaluate specs in languages in which the metalanguage (compiler language) is the same as
    the object language (e.g. Clojure), and symbolically analyze specs in the rest (e.g. vanilla ClojureScript),
    deferring code analyzed as functions to be enforced at runtime."
-  [{{:keys [args varargs] pre-form :pre post-form :post} ::fnt|arglist body-form :body}
+  [{:as in {:keys [args varargs] pre-form :pre post-form :post} ::fnt|arglist body-codelist|pre-analyze :body}
    {:as opts :keys [lang symbolic-analysis?]}]
-  (prl! args body-form)
   (if symbolic-analysis?
       (err! "Symbolic analysis not supported yet")
-      (let [varargs-binding (when varargs
+      (let [_ (when pre-form (TODO "Need to handle pre"))
+            varargs-binding (when varargs
                               ;; TODO this validation is purely temporary until destructuring is supported
                               (s/validate (:arg-binding varargs) simple-symbol?))
             arg-bindings (mapv :arg-binding args)
-            arg-specs-initial
+            ;; TODO this validation is purely temporary until destructuring is supported
+            _ (s/validate arg-bindings (fnl fn-and simple-symbol?))
+            arg-specs|pre-analyze|base
               (->> args
-                   (mapv (fn [{[kind spec] ::fnt|arg-spec :keys [arg-binding]}]
-                           ;; TODO this validation is purely temporary until destructuring is supported
-                           (s/validate arg-binding simple-symbol?)
-                           (ast/unbound nil arg-binding
-                             (case kind :any t/any? :infer t/? :spec (-> spec eval t/>spec))))))
-            env (zipmap arg-bindings arg-specs-initial)
-            body-form|wrapped-do (list* 'do body-form)
-            body (analyze env body-form|wrapped-do)
-            env' (:env body)
-            arg-specs (->> arg-bindings (mapv #(:spec (c/get env' %))))
-            _ (prl! body)
-            arg-classes (->> arg-specs (mapv #(spec>most-primitive-class % true)))
-            hint-arg|fn
-              (fn [i arg-binding]
-                (th/with-type-hint arg-binding
-                  (th/->fn-arglist-tag
-                    (c/get arg-classes i)
-                    lang
-                    (c/count args)
-                    varargs)))
-            _ (when pre-form (TODO "Need to handle pre"))
-            post-spec (when post-form (-> post-form eval t/>spec))
-            post-spec|runtime? (-> post-spec meta :runtime?)
-            out-spec (if post-spec
-                         (if post-spec|runtime?
-                             (case (t/compare post-spec (:spec body))
-                               -1 post-spec
-                                1 (:spec body)
-                                0 post-spec
-                                nil (err! "Body and output spec are unrelated" {:body body :output-spec post-spec}))
-                             (if (t/<= (:spec body) post-spec)
-                                 (:spec body)
-                                 (err! "Body does not match output spec" {:body body :output-spec post-spec})))
-                         (:spec body))
-            body-codelist
-              (cond-> (:body body)
-                post-spec|runtime? (-> ufgen/?wrap-do (>with-post-spec post-spec) vector))]
-        {:arg-classes                 arg-classes
-         :arg-specs                   arg-specs
-         :arglist-code|fn|hinted      (cond-> (->> arg-bindings (map-indexed hint-arg|fn) vec)
-                                              varargs-binding (conj '& varargs-binding)) ; TODO use ``
-         :arglist-code|reify|unhinted (cond-> arg-bindings varargs-binding (conj varargs-binding))
-         :body-codelist               body-codelist
-         :positional-args-ct          (count args)
-         :spec                        out-spec
-         ;; when present, varargs are considered to be of class Object
-         :variadic?                   (boolean varargs)}))))
+                   (mapv (fn [{[kind spec] ::fnt|arg-spec}]
+                           (case kind :any   t/any?
+                                      :infer t/?
+                                      :spec  (-> spec eval t/>spec)))))
+            arg-classes-seq|pre-analyze (arg-specs>arg-classes-seq|primitivized arg-specs|pre-analyze|base)
+            [unprimitivized & primitivized]
+             (->> arg-classes-seq|pre-analyze
+                  (mapv (fn [arg-classes|pre-analyze]
+                          (let [arg-specs|pre-analyze
+                                  (c/mergev-with
+                                    (fn [_ spec c #_t/class?]
+                                      (cond-> spec (t/primitive-class? c) (t/and c)))
+                                    arg-specs|pre-analyze|base arg-classes|pre-analyze)
+                                env       (->> (zipmap arg-bindings arg-specs|pre-analyze)
+                                               (c/map' (fn [[arg-binding arg-spec]]
+                                                         [arg-binding (ast/unbound nil arg-binding arg-spec)])))
+                                analyzed  (analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
+                                arg-specs (->> arg-bindings (mapv #(:spec (c/get (:env analyzed) %))))
+                                arg-classes (arg-specs>arg-classes arg-specs)
+                                hint-arg|fn
+                                  (fn [i arg-binding]
+                                    (th/with-type-hint arg-binding
+                                      (th/->fn-arglist-tag
+                                        (c/get arg-classes i)
+                                        lang
+                                        (c/count args)
+                                        varargs)))
+                                post-spec (when post-form (-> post-form eval t/>spec))
+                                post-spec|runtime? (-> post-spec meta :runtime?)
+                                out-spec (if post-spec
+                                             (if post-spec|runtime?
+                                                 (case (t/compare post-spec (:spec analyzed))
+                                                   -1 post-spec
+                                                    1 (:spec analyzed)
+                                                    0 post-spec
+                                                    nil (err! "Body and output spec are unrelated" {:body analyzed :output-spec post-spec}))
+                                                 (if (t/<= (:spec analyzed) post-spec)
+                                                     (:spec analyzed)
+                                                     (err! "Body does not match output spec" {:body analyzed :output-spec post-spec})))
+                                             (:spec analyzed))
+                                body-form
+                                  (cond-> (:form analyzed) post-spec|runtime? (>with-post-spec post-spec))]
+                              {:arg-classes                 arg-classes
+                               :arg-specs                   arg-specs
+                               :arglist-code|fn|hinted      (cond-> (->> arg-bindings (c/map-indexed hint-arg|fn))
+                                                                    varargs-binding (conj '& varargs-binding)) ; TODO use ``
+                               :arglist-code|reify|unhinted (cond-> arg-bindings varargs-binding (conj varargs-binding))
+                               :body-form                   body-form
+                               :positional-args-ct          (count args)
+                               :out-spec                    out-spec
+                               :out-class                   (out-spec>out-class out-spec)
+                               ;; when present, varargs are considered to be of class Object
+                               :variadic?                   (boolean varargs)}))))]
+        {:unprimitivized unprimitivized
+         :primitivized   primitivized}))))
 
 (def fnt-method-sym 'invoke)
 
@@ -851,66 +885,48 @@
     (eval interface-code)))
 
 #?(:clj
-(defn >reify-overload #_> #_(seq-of ::reify|overload)
-  [out-class primitivized-arg-classes
-   {:as overload #_:fnt/overload :keys [arglist-code|reify|unhinted body-codelist]}]
-  (s/validate primitivized-arg-classes vector?)
-  (let [interface-k {:out out-class :in primitivized-arg-classes}
+(defn fnt|overload>reify-overload #_> #_(seq-of ::reify|overload)
+  [{:as overload #_:fnt/overload :keys [arg-classes arglist-code|reify|unhinted body-form out-class]}]
+  (let [interface-k {:out out-class :in arg-classes}
         interface
           (-> *interfaces
-              (swap! update interface-k #(or % (fnt-overload>interface primitivized-arg-classes out-class)))
+              (swap! update interface-k #(or % (fnt-overload>interface arg-classes out-class)))
               (c/get interface-k))
         arglist-code
-          (vec (concat ['_]
-                 (doto (->> arglist-code|reify|unhinted
-                      (map-indexed
-                        (fn [i arg] (th/with-type-hint arg (-> primitivized-arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) th/>arglist-embeddable-tag)))))
-                 pr/ppr-meta)))]
+          (>vec (concat ['_]
+                  (doto (->> arglist-code|reify|unhinted
+                       (map-indexed
+                         (fn [i arg] (th/with-type-hint arg (-> arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) th/>arglist-embeddable-tag)))))
+                  pr/ppr-meta)))]
     {:arglist-code  arglist-code
-     :body-codelist body-codelist
+     :body-form     body-form
      :interface     interface
      :method-sym    fnt-method-sym
      :out-class     out-class})))
 
 #?(:clj
-(def sort-guide
-  {tdef/boolean 0
-   tdef/byte    1
-   tdef/short   2
-   tdef/char    3
-   tdef/int     4
-   tdef/long    5
-   tdef/float   6
-   tdef/double  7
-   Object       8}))
+(var/def sort-guide "for use in sorting"
+  {Object       0
+   tdef/boolean 1
+   tdef/byte    2
+   tdef/short   3
+   tdef/char    4
+   tdef/int     5
+   tdef/long    6
+   tdef/float   7
+   tdef/double  8}))
 
 #?(:clj
-(defn fnt-overload>reify-overloads #_> #_(seq-of ::reify|overload)
-  [{:as overload #_:fnt/overload :keys [arg-classes spec]}]
-  {:pre  [(prlm! overload)]
-   :post [(prlm! %)]}
-  (let [out-class-data (t/spec>class spec)
-        out-class (if (-> out-class-data :class class?)
-                      (:class out-class-data)
-                      ;; we don't need to vary the output class if there are multiple output possibilities
-                      java.lang.Object)]
-    (->> arg-classes
-         (c/lmap (fn [arg-class] (->> arg-class tcore/class>prim-subclasses
-                                     (set/union #{arg-class})
-                                     (sort-by sort-guide))))
-         (apply combo/cartesian-product)
-         (c/lmap (fn [primitivized-arg-classes]
-                   (>reify-overload out-class (vec primitivized-arg-classes) overload)))))))
-
-#?(:clj
-(defn fnt|overload>reify [{:keys [overload #_:fnt/overload, i #_integer?, fn|name #_::ss/fn|name]}]
-  (let [reify-overloads (fnt-overload>reify-overloads overload)]
+(defn fnt|overload-group>reify [{:keys [overload-group #_:fnt/overload-group, i #_integer?, fn|name #_::ss/fn|name]}]
+  (let [reify-overloads (->> (cons (:unprimitivized overload-group)
+                                   (:primitivized   overload-group))
+                             (c/map fnt|overload>reify-overload))]
     `(~'def ~(>symbol (str fn|name "|__" i))
        (reify ~@(->> reify-overloads
-                     (c/lmap (fn [{:keys [interface out-class method-sym arglist-code body-codelist]} #_::reify|overload]
+                     (c/lmap (fn [{:keys [interface out-class method-sym arglist-code body-form]} #_::reify|overload]
                                [(-> interface >name >symbol)
                                 `(~(th/with-type-hint method-sym (th/>arglist-embeddable-tag out-class))
-                                  ~arglist-code ~@body-codelist)]))
+                                  ~arglist-code ~body-form)]))
                      lcat))))))
 
 (defn >extend-protocol|code [{:keys [protocol|name]}]
@@ -926,7 +942,7 @@
             (c/lmap (fn [{:keys [name arglist]}]
                       `(~name ~arglist))))))
 
-(defn fnt|overloads>protocol [overloads])
+(defn fnt|overload-groups>protocol [_])
 
 #_(is (code= (defnt|code>protocols 'abc (do defnt|code|class|=|2|1) :clj)
         [{:defprotocol
@@ -1017,26 +1033,26 @@
     (TODO "Doesn't yet handle protocol creation for arglist counts of > 2"))
   (when (->> overloads (seq-or :variadic?))
     (TODO "Doesn't yet handle protocol creation for variadic overloads"))
-  (let [overloads|grouped-by-arity (->> overloads c/indexed+ (group-by (fn-> second :positional-args-ct)))]
+  (let [overloads|grouped-by-arity (->> overloads c/indexed+ (c/group-by (fn-> second :positional-args-ct)))]
     (assert-monotonically-increasing-specs! overloads|grouped-by-arity))
   (let [all-arg-classes  (->> overloads (mapv :arg-classes))
         protocol|name    (str fn|name "__Protocol__" )
-        extend-protocols (for []
+        extend-protocols nil #_(for []
                            (>extend-protocol|code (kw-map protocol|name)))]
     {:defprotocol      (>defprotocol|code {:name      protocol|name
                                            :overloads []})
      :extend-protocols extend-protocols
-     :defn             defn-definition}))
+     :defn             nil #_defn-definition}))
 
 ;; This protocol is so suffixed because of the position of the argument on which
                        ;; it dispatches
-                       (defprotocol name|gen__Protocol__0
-                         (name|gen [~'x]))
-                       (extend-protocol name|gen__Protocol__0
-                         java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
-                         ;; this is part of the protocol because even though `Named` is an interface,
-                         ;; `String` is final, so they're mutually exclusive
-                         clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
+#_(do (defprotocol name|gen__Protocol__0
+  (name|gen [~'x]))
+(extend-protocol name|gen__Protocol__0
+  java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
+  ;; this is part of the protocol because even though `Named` is an interface,
+  ;; `String` is final, so they're mutually exclusive
+  clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x))))
 
 (defn gen-register-spec
   "Registers in the map of qualified symbol to input spec, to output spec
@@ -1051,7 +1067,7 @@
         (fn [args##] (case (count args##) ~@arg-ct->spec
                       ~@(when variadic-overload
                           [`(if (>= (count args##) (:positional-args-ct variadic-overload))
-                                (:spec variadic-overload)
+                                (:out-spec variadic-overload)
                                 (err! "Arg count not enough for variadic overload"))])))))
     true))
 
@@ -1067,24 +1083,25 @@
                     (do (log/pr :warn "requested `:inline`; ignoring until feature is implemented")
                         (update-meta fn|name dissoc :inline))
                     fn|name)
-        overloads (->> overloads (mapv #(fnt|overload-data>overload % {:lang lang})))
+        fnt|overload-groups (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
         ;; only one variadic arg allowed
-        _ (s/validate overloads (fn->> (c/lfilter :variadic?) count (<- <= 1)))
-        arg-ct->spec (->> overloads
-                          (remove+   :variadic?)
-                          (group-by  :positional-args-ct)
-                          (map-vals+ :spec)
+        _ (s/validate fnt|overload-groups (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- <= 1)))
+        arg-ct->spec (->> fnt|overload-groups
+                          (c/map+     :unprimitivized)
+                          (remove+    :variadic?)
+                          (c/group-by :positional-args-ct)
+                          (map-vals+  :out-spec)
                           join (apply concat))
-        variadic-overload (->> overloads (c/lfilter :variadic?) first)
+        variadic-overload (->> fnt|overload-groups (c/lmap :unprimitivized) (c/lfilter :variadic?) first)
         register-spec (gen-register-spec (kw-map fn|name arg-ct->spec variadic-overload))
         direct-dispatch-codelist
           (case lang
-            :clj  (for [[i overload] (c/lindexed overloads)]
-                    (fnt|overload>reify (kw-map overload i fn|name)))
+            :clj  (for [[i fnt|overload-group] (c/lindexed fnt|overload-groups)]
+                    (fnt|overload-group>reify (assoc (kw-map i fn|name) :overload-group fnt|overload-group)))
             :cljs (TODO))
         dynamic-dispatch-codelist
           (case lang
-            :clj  (let [protocol (fnt|overloads>protocol {:overloads overloads :fn|name fn|name})]
+            :clj  (let [protocol (fnt|overload-groups>protocol {:overload-groups fnt|overload-groups :fn|name fn|name})]
                     `[~(:defprotocol protocol)
                       ~@(:extend-protocols protocol)])
             :cljs (TODO))
@@ -1096,7 +1113,7 @@
                          ~@base-fn-codelist]
                         (remove nil?))
             :cljs (TODO))
-        overloads|code (->> overloads (mapv :code))
+        overloads|code (->> fnt|overload-groups (c/map+ :unprimitivized) (c/map :code))
         _ (prl! overloads)
         code (case kind
                :fn   (list* 'fn (concat

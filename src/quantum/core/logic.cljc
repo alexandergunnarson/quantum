@@ -5,7 +5,7 @@
     :attribution "alexandergunnarson"}
   quantum.core.logic
   (:refer-clojure :exclude
-    [= and not or
+    [= and not or ifs
      if-let when-let])
   (:require
     [clojure.core                :as core]
@@ -116,7 +116,7 @@
 
 ;; ===== `cond(f|c|p)` ===== ;;
 
-#?(:clj (defaliases u condf condf1 condf& condfc is? condpc))
+#?(:clj (defaliases u ifs condf condf1 condf& condfc is? condpc))
 
 ;; ===== `if(n|c|p)` ===== ;;
 

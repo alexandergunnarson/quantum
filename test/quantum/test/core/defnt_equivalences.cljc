@@ -20,6 +20,8 @@
       :refer [code=]]
     [quantum.untyped.core.form
       :refer [$]]
+    [quantum.untyped.core.logic
+      :refer [ifs]]
     [quantum.untyped.core.type :as t
       :refer [? !]])
   (:import clojure.lang.Named
@@ -61,14 +63,13 @@
 
 ;; ----- implementation ----- ;;
 
-;; TODO it needs to vary return classes of the overloads with the input
 (macroexpand '
 (defnt identity|gen|uninlined ([x t/any?] x))
 )
 
 ;; ----- expanded code ----- ;;
 
-($ (do #_(swap! *fn->spec assoc `identity|gen|uninlined
+($ (do (swap! *fn->spec assoc `identity|gen|uninlined
          (xp/>expr
            (fn [args##] (case (count args##) 1 nil #_(fn-> first t/->spec)))))
 
@@ -77,15 +78,16 @@
           :clj  ($ (do ;; Direct dispatch
                        ;; One reify per overload
                        (def ~'identity|gen|uninlined|__0 ; `t/any?`
-                         (reify boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
+                         (reify java|lang|Object>java|lang|Object
+                                                (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)
+                                boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
                                 byte>byte       (~(tag "byte"             'invoke) [~'_ ~(tag "byte"             'x)] ~'x)
                                 short>short     (~(tag "short"            'invoke) [~'_ ~(tag "short"            'x)] ~'x)
                                 char>char       (~(tag "char"             'invoke) [~'_ ~(tag "char"             'x)] ~'x)
                                 int>int         (~(tag "int"              'invoke) [~'_ ~(tag "int"              'x)] ~'x)
                                 long>long       (~(tag "long"             'invoke) [~'_ ~(tag "long"             'x)] ~'x)
                                 float>float     (~(tag "float"            'invoke) [~'_ ~(tag "float"            'x)] ~'x)
-                                double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)
-                                Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)))
+                                double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)))
                        ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
                        ;; in this case no protocol is necessary because it boxes arguments anyway
                        ;; Var indirection may be avoided by making and using static fields via the Clojure 1.8 flag
@@ -134,10 +136,10 @@
                        ;; The macro in a typed context will find the appropriate dispatch at compile time
                        (def ~'name|gen|__0
                          (reify java|lang|String>java|lang|String
-                           (~(tag "java.lang.String"   'invoke) [~'_ ~(tag "java.lang.String"   'x)] ~'x)))
+                           (~(tag "java.lang.String" 'invoke) [~'_ ~(tag "java.lang.String"   'x)] ~'x)))
                        (def ~'name|gen|__1
                          (reify clojure|lang|Named>java|lang|String
-                           (~(tag "clojure.lang.Named" 'invoke) [~'_ ~(tag "clojure.lang.Named" 'x)]
+                           (~(tag "java.lang.String" 'invoke) [~'_ ~(tag "clojure.lang.Named" 'x)]
                              (let [~'out (.getName ~'x)]
                                (s/validate ~'out t/string?)))))
 
@@ -150,11 +152,12 @@
                          ;; this is part of the protocol because even though `Named` is an interface,
                          ;; `String` is final, so they're mutually exclusive
                          clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x)))))
-          :cljs ($ (do ;; No protocol in ClojureScript
+          :cljs ($ (do ;; No protocol in ClojureScript; consider adding this if a performance increase is
+                       ;; demonstrated when using a protocol
                        (defn name|gen [~'x]
-                         (cond* (string? x)           x
-                                (satisfies? INamed x) (-name x)
-                                (err! "Not supported for type" {:fn `name|gen :type (type x)}))))))))
+                         (ifs (string? x)           x
+                              (satisfies? INamed x) (-name x)
+                              (err! "Not supported for type" {:fn `name|gen :type (type x)}))))))))
 
 ))
 
@@ -190,11 +193,11 @@
                                 Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
                        ;; Dynamic dispatch
                        (defn some?|gen [~'x]
-                         (cond* (nil? x) (.invoke some?|gen|__0 x)
-                                (.invoke some?|gen|__1 x)))))
+                         (ifs (nil? x) (.invoke some?|gen|__0 x)
+                              (.invoke some?|gen|__1 x)))))
           :cljs `(do (defn some?|gen [~'x]
-                       (cond* (nil? x) false
-                              true))))))
+                       (ifs (nil? x) false
+                            true))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -228,10 +231,10 @@
                             Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
                    ;; No protocol because just one class; TODO evaluate whether this is better performance-wise? probably is
                    (defn reduced?|gen [~'x]
-                     (cond* (instance? Reduced x) (.invoke reduced?|gen|__0 x)
-                            (.invoke reduced?|gen|__1 x))))
+                     (ifs (instance? Reduced x) (.invoke reduced?|gen|__0 x)
+                          (.invoke reduced?|gen|__1 x))))
         :cljs `(do (defn reduced?|gen [~'x]
-                     (cond* (instance? Reduced x) true false)))))
+                     (ifs (instance? Reduced x) true false)))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -272,12 +275,12 @@
                    (extend-protocol >boolean|gen__Protocol
                      java.lang.Boolean (>boolean|gen [^java.lang.Boolean x] (.invoke >boolean|gen|__0 x))
                      java.lang.Object  (>boolean|gen [x]
-                                         (cond* (nil? x) (.invoke >boolean|gen|__1 x)
-                                                (.invoke >boolean|gen|__2 x)))))
+                                         (ifs (nil? x) (.invoke >boolean|gen|__1 x)
+                                              (.invoke >boolean|gen|__2 x)))))
         :cljs `(do (defn >boolean|gen [~'x]
-                     (cond* (boolean? x) x
-                            (nil?     x) false
-                            true)))))
+                     (ifs (boolean? x) x
+                          (nil?     x) false
+                          true)))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -495,11 +498,11 @@
                      ...))
         :cljs `(do (defn >|gen
                      ([a0 a1]
-                       (cond* (double? a0)
-                                (cond* (double? a1)
-                                         (let [a a0 b a1] (cljs.core/> a b))
-                                       (unsupported! `>|gen [a0 a1]))
-                              (unsupported! `>|gen [a0 a1])))))))
+                       (ifs (double? a0)
+                              (ifs (double? a1)
+                                     (let [a a0 b a1] (cljs.core/> a b))
+                                   (unsupported! `>|gen [a0 a1]))
+                            (unsupported! `>|gen [a0 a1])))))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -541,8 +544,8 @@
                    ;; No protocol needed because overloads of protocolizable arity (n>=1, not variadic) do not vary by class
                    (defn str|gen
                      ([  ] (.invoke !str|gen|__0))
-                     ([a0] (cond* (nil? x) (.invoke !str|gen|__1)
-                                  (.invoke !str|gen|__2 a0)))
+                     ([a0] (ifs (nil? x) (.invoke !str|gen|__1)
+                                (.invoke !str|gen|__2 a0)))
                      ([x & xs]
                        (let [sb (!str (str x))]
                          (doseq [x' xs] (.append sb (str x'))) ; TODO is `doseq` the right approach?
@@ -550,8 +553,8 @@
         :cljs `(do ;; No protocol needed because overloads of protocolizable arity (n>=1, not variadic) do not vary by class
                    (defn str|gen
                      ([  ] "")
-                     ([a0] (cond* (nil? x) ""
-                                  (.join #js [x] "")))
+                     ([a0] (ifs (nil? x) ""
+                                (.join #js [x] "")))
                      ([x & xs]
                        (let [sb (!str (str x))]
                          (doseq [x' xs] (.append sb (str x'))) ; TODO is `doseq` the right approach?
@@ -652,13 +655,13 @@
                      Object  (seq|gen [a0]
                                ;; these are sequential dispatch because none of these are concrete or abstract classes
                                ;; (most are interfaces etc.)
-                               (cond* (nil? a0)                   (.invoke seq|gen|__0 a0)
-                                      (instance? ASeq         a0) (.invoke seq|gen|__2 a0)
-                                      (instance? Seqable      a0) (.invoke seq|gen|__3__1 a0)
-                                      (instance? Iterable     a0) (.invoke seq|gen|__4 a0)
-                                      (instance? CharSequence a0) (.invoke seq|gen|__5 a0)
-                                      (instance? Map          a0) (.invoke seq|gen|__6 a0)
-                                      (unsupported! `seq|gen a0)))))
+                               (ifs (nil? a0)                   (.invoke seq|gen|__0 a0)
+                                    (instance? ASeq         a0) (.invoke seq|gen|__2 a0)
+                                    (instance? Seqable      a0) (.invoke seq|gen|__3__1 a0)
+                                    (instance? Iterable     a0) (.invoke seq|gen|__4 a0)
+                                    (instance? CharSequence a0) (.invoke seq|gen|__5 a0)
+                                    (instance? Map          a0) (.invoke seq|gen|__6 a0)
+                                    (unsupported! `seq|gen a0)))))
         :cljs `(do ...))))
 
 ;; =====|=====|=====|=====|===== ;;

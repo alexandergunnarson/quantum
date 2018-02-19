@@ -73,6 +73,21 @@
 ;; ===== `cond(f|c|p)` ===== ;;
 
 #?(:clj
+(defmacro ifs
+  "Like `clojure.core/cond`, but accepts an uneven number of arguments, in which case
+   the last functions as the default branch. If no default branch is supplied, an
+   exception branch will be emitted."
+  ([then-expr] then-expr)
+  ([cond-expr then-expr]
+    `(if ~cond-expr
+         ~then-expr
+         (throw (ex-info "`cond`: No matching clause" {}))))
+  ([cond-expr then-expr & clauses]
+    `(if ~cond-expr
+         ~then-expr
+         (ifs ~@clauses)))))
+
+#?(:clj
 (defmacro condf
   "Like `cond`, with each expr as a function applied to the initial argument, ->`obj`."
   {:attribution "alexandergunnarson"
@@ -84,14 +99,14 @@
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
                      n (count clause)]
-                 (cond
+                 (ifs
                    (= 0 n) `(throw (~illegal-argument
                                      (str "No matching clause for " ~obj)))
                    (= 1 n) `(~a ~obj)
                    (= 2 n) `(if (~a ~obj)
                                 (~b ~obj)
                                 ~(emit obj more))
-                   :else   (emit obj more))))]
+                   (emit obj more))))]
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
@@ -108,14 +123,14 @@
                (let [[[a b c :as clause] more]
                        (split-at 2 args)
                      n (count clause)]
-                 (cond
+                 (ifs
                    (= 0 n) `(throw (~illegal-argument (str "No matching clause for " ~obj)))
                    (= 1 n) `(~a ~obj)
                    (= 2 n) `(if (or ~(= a :else)
                                     (~a ~obj))
                                 ~b ; As in, this expression is not used as a function taking @obj as an argument
                                 ~(emit obj more))
-                   :else   (emit obj more))))]
+                   (emit obj more))))]
   `(let [~gobj ~obj]
        ~(emit gobj clauses)))))
 
@@ -132,7 +147,7 @@
                (let [[[a b c :as clause] more]
                        (split-at (if (= :>> (second args)) 3 2) args)
                        n (count clause)]
-                 (cond
+                 (ifs
                    (= 0 n) nil ; No matching clause `(throw (IllegalArgumentException. (str "No matching clause: " ~expr)))
                    (= 1 n) a
                    (= 2 n) `(if (if (fn? ~a)
@@ -140,9 +155,9 @@
                                     (~pred ~expr ~a))
                                 ~b
                                 ~(emit pred expr more))
-                   :else `(clojure.core/if-let [p# (~pred ~a ~expr)]
-                            (~c p#)
-                            ~(emit pred expr more)))))]
+                   `(clojure.core/if-let [p# (~pred ~a ~expr)]
+                      (~c p#)
+                      ~(emit pred expr more)))))]
   `(let [~gpred ~pred
          ~gexpr ~expr]
        ~(emit gpred gexpr clauses)))))

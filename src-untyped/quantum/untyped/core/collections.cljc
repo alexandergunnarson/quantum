@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in contains? count distinct? get group-by filter flatten last map map-indexed
-     mapcat pmap remove vec])
+     mapcat pmap remove])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -9,9 +9,9 @@
     [quantum.untyped.core.error    :as uerr
       :refer [err!]]
     [quantum.untyped.core.fn       :as ufn
-      :refer [fn' aritoid]]
+      :refer [ntha fn' aritoid]]
     [quantum.untyped.core.logic
-      #?(:clj :refer :cljs :refer-macros) [condf1 fn-not]] ; no idea why this is required currently :/
+      #?(:clj :refer :cljs :refer-macros) [ifs condf1 fn-not]] ; no idea why this is required currently :/
     [quantum.untyped.core.reducers :as ur
       :refer [defeager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
@@ -20,6 +20,7 @@
 (ucore/log-this-ns)
 
 (def count core/count)
+(def lrange core/range)
 
 ;; ===== SOCIATIVE ===== ;;
 
@@ -38,8 +39,6 @@
   "For each key-function pair in @kfs,
    updates value in an associative data structure @coll associated with key
    by applying the function @f to the existing value."
-  {:attribution "alexandergunnarson"
-   :todo ["Probably updates and update are redundant"]}
   ([coll & kfs]
     (ur/reduce-pair update coll kfs))) ; TODO This is inefficient
 
@@ -59,14 +58,18 @@
 
 ;; ----- *SOC-IN ----- ;;
 
+(declare partition-all+)
+
 (defn assoc-in
   "Like `assoc-in`, but allows multiple k-v pair arguments like `assoc`."
   ([  ks v] (fn [x] (core/assoc-in x ks v)))
   ([x ks v] (core/assoc-in x ks v))
   ([x ks v & ks-vs]
-    (educe (fn [x' [ks' v']] (assoc-in x' ks' v'))
-           (assoc-in x ks v)
-           (partition-all 2 ks-vs))))
+    (->> ks-vs
+         (partition-all+ 2)
+         (educe
+           (aritoid nil identity (fn [x' [ks' v']] (assoc-in x' ks' v')))
+           (assoc-in x ks v)))))
 
 (defn dissoc-in
   "Dissociate a value in a nested assocative structure, identified by a sequence
@@ -123,11 +126,30 @@
 (defn merge-at [k m & ms]
   (educe (fn [m' m-next] (update m k merge (get m-next k))) m ms))
 
+(defn mergev-with
+  "Like `merge-with`, but merges elements of successive vectors at the same indices,
+   `conj`ing when the element is not present.
+   `f`: takes three inputs, `i`, `v0`, `v1`"
+  [f & xss]
+  (reduce
+    (fn [xs' xs]
+      (ifs (empty? xs') xs
+           (empty? xs ) xs'
+           (reduce
+             (fn [xs'' ^long i|xs]
+               (if (>= i|xs (count xs''))
+                   (conj xs'' (get xs i|xs))
+                   (let [v|xs'' (get xs'' i|xs)
+                         v|xs   (get xs   i|xs)]
+                     (if (not= v|xs'' v|xs)
+                         (assoc xs'' i|xs (f i|xs v|xs'' v|xs))
+                         xs''))))
+             xs'
+             (lrange (count xs)))))
+    []
+    xss))
 
-;; TODO move to type predicates
-(defn array? [x]
-  #?(:clj  (-> x class .isArray) ; must be reflective
-     :cljs (core/array? x)))
+(def mergev (partial mergev-with (fn [i v0 v1] v1)))
 
 ;; ===== Sequential ==== ;;
 
@@ -240,7 +262,7 @@
 
 ;; ===== COERCIVE ===== ;;
 
-(defn vec [xs] (ur/join xs))
+(defn >vec [xs] (ur/join xs))
 
 (def ensure-set
   (condf1
@@ -282,10 +304,10 @@
   "Like `group-by` but uses `educe` internally"
   [f coll]
   (->> coll
-       (educe (fn [ret x]
-                (let [k (f x)]
-                  (assoc! ret k (conj (get ret k []) x))))
-              (transient {}))
+       (educe (aritoid (fn' (transient {})) identity
+                (fn [ret x]
+                  (let [k (f x)]
+                    (assoc! ret k (conj (get ret k []) x))))))
        persistent!))
 
 (defn lcat [xs] (apply concat xs))

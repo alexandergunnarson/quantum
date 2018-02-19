@@ -7,7 +7,7 @@
             [quantum.untyped.core.form.evaluate
               :refer [case-env]]
             [quantum.untyped.core.qualify :as qual]
-            [quantum.untyped.core.vars    :as uvar])
+            [quantum.untyped.core.vars    :as u])
 #?(:cljs
   (:require-macros
     [quantum.core.vars :as this])))
@@ -23,15 +23,15 @@
   "See also `cljs.tools.reader/merge-meta`."
   [x m] (update-meta x merge m))
 
-(def merge-meta-from   uvar/merge-meta-from)
-(def replace-meta-from uvar/replace-meta-from)
+(def merge-meta-from   u/merge-meta-from)
+(def replace-meta-from u/replace-meta-from)
 
 ; ===== DECLARATION/INTERNING ===== ;
 
-#?(:clj (uvar/defalias defalias uvar/defalias))
+#?(:clj (u/defalias u/defalias))
 
 #?(:clj (defalias intern c/intern))
-#?(:clj (uvar/defaliases uvar defaliases defaliases'))
+#?(:clj (u/defaliases u defaliases defaliases'))
 
 #?(:clj
 (defn alias-var
@@ -129,12 +129,4 @@
 #?(:clj (defalias binding         c/binding))
 #?(:clj (defalias with-local-vars c/with-local-vars))
 
-#?(:clj
-(defmacro def
-  ([sym]              `(~'def ~sym))
-  ([sym v]            `(~'def ~sym ~v))
-  ([sym doc-or-meta v]
-    (if (string? doc-or-meta)
-        `(~'def ~(with-meta sym {:doc doc-or-meta}) ~v)
-        `(~'def ~(with-meta sym doc-or-meta) ~v)))
-  ([sym -doc -meta v] `(~'def ~(with-meta sym (merge -meta {:doc -doc})) ~v))))
+#?(:clj (defalias u/def))

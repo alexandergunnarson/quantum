@@ -147,6 +147,45 @@
 (def fn-false (fn' false))
 (def fn-true  (fn' true ))
 
+;; ===== Argument-updating fns ===== ;;
+
+; ----- NTHA ----- ;
+
+(defn gen-positional-ntha [position]
+  `(~'defn ~(symbol (str "ntha-" position))
+     ~(str "Accepts any number of arguments and returns the (n=" position ")th in O(1) time.")
+     ~@(arity-builder (fn [args] (nth args position))
+                      (fn [args vargs] (nth args position)) (inc position))))
+
+#?(:clj
+(defmacro gen-positional-nthas []
+  `(do ~@(for [i (range 0 (:clj max-positional-arity))] (gen-positional-ntha i)))))
+
+(gen-positional-nthas)
+
+(defn ntha-&
+  "Accepts any number of arguments and returns the nth, variadically, in O(n) time."
+  [n] (fn [& args] (nth args n)))
+
+(defalias firsta  ntha-0)
+(defalias seconda ntha-1)
+(defalias thirda  ntha-2)
+
+#?(:clj
+(defmacro gen-ntha []
+  (let [n-sym (gensym "n")]
+    `(~'defn ~'ntha
+       "Accepts any number of arguments and returns the nth.
+        If n <= 18, returns in O(1) time; otherwise, in O(n) time via varargs."
+       [~(with-meta n-sym {:tag 'long})]
+       (case ~n-sym
+         ~@(apply concat
+             (for [i (range 0 (:clj max-positional-arity))]
+               [i (symbol (str "ntha-" i))]))
+         (ntha-& ~n-sym))))))
+
+(gen-ntha)
+
 ;; ===== Miscellaneous ===== ;;
 
 (defn ? [f]
