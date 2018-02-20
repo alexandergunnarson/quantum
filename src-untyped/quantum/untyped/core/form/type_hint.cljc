@@ -1,8 +1,11 @@
 (ns quantum.untyped.core.form.type-hint
   (:require
+    [quantum.untyped.core.collections :as uc]
+    [quantum.untyped.core.convert
+      :refer [>name]]
     [quantum.untyped.core.error
-      :refer [ex-info!]]
-    [quantum.untyped.core.type.core :as utcore]
+      :refer [err!]]
+    [quantum.untyped.core.type.core   :as utcore]
     [quantum.untyped.core.vars
       :refer [update-meta]]))
 
@@ -19,7 +22,7 @@
 
 (defn sanitize-tag [lang tag]
   #?(:clj  (or (get-in utcore/return-types-map [lang tag]) tag)
-     :cljs (ex-info! "`sanitize-tag` not supported in CLJS")))
+     :cljs (err! "`sanitize-tag` not supported in CLJS")))
 
 #?(:clj
 (defn with-sanitize-tag [lang sym]
@@ -44,7 +47,7 @@
   (if (nil? tag)
       nil
       (or (?tag->class tag)
-          (throw (ex-info "Cannot convert tag to class" {:tag tag}))))))
+          (err! "Cannot convert tag to class" {:tag tag})))))
 
 #?(:clj (defn class->str [^Class c] (.getName c)))
 #?(:clj (defn class->symbol [^Class c] (-> c class->str symbol)))
@@ -77,7 +80,7 @@
       class->symbol)))
 
 #?(:clj
-(defn ->fn-arglist-tag
+(defn >fn-arglist-tag
   "`arglist-length` is count of positional (non-variadic) args"
   [tag lang arglist-length variadic?]
   (if (class? tag)
@@ -105,7 +108,7 @@
 (defn with-fn-arglist-type-hint
   "Ensures `sym` has a type hint appropriate for an `fn` arglist."
   [sym lang arglist-length variadic?]
-  (if-let [tag (->fn-arglist-tag (type-hint sym) lang arglist-length variadic?)]
+  (if-let [tag (>fn-arglist-tag (type-hint sym) lang arglist-length variadic?)]
     (with-type-hint sym tag)
     (un-type-hint sym))))
 
@@ -134,3 +137,35 @@
                (.getName ^Class tag)
                tag)
      :cljs tag))
+
+(defn static-cast|code
+  "`(with-meta (list 'do expr) {:tag class-sym})` isn't enough"
+  [class-sym expr]
+  (let [cast-sym (gensym "cast-sym")]
+    ; `let*` to preserve metadata even when macroexpanding
+    (tag class-sym `(let* [~(tag class-sym cast-sym) ~expr] ~cast-sym))))
+
+#?(:clj
+(defmacro static-cast
+  "Performs a static type cast"
+  [class-sym expr]
+  (static-cast|code class-sym expr)))
+
+(defn primitive-cast|code [form c #_t/class?]
+  (list (symbol "clojure.core" (>name c)) form))
+
+(defn cast-bindings|code
+  "Given a map of bindings to class, casts those bindings to their associated classes via
+   a `let` statement."
+  [form binding->class #_(t/map-of binding-symbol? t/class?)]
+  (if (empty? binding->class)
+      form
+      (list 'let*
+        (->> binding->class
+             (uc/map+ (fn [[binding-sym c]]
+                        [(with-type-hint binding-sym (>body-embeddable-tag c))
+                         (if #?(:clj (.isPrimitive ^Class c) :cljs false)
+                             (primitive-cast|code binding-sym c)
+                             binding-sym)]))
+             uc/cat)
+        form)))

@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
-    [#?(:cljs array?) assoc-in contains? count distinct? get group-by filter flatten last map map-indexed
-     mapcat pmap remove])
+    [#?(:cljs array?) assoc-in cat contains? count distinct distinct? get group-by filter
+     flatten last map map-indexed mapcat partition-all pmap remove])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -12,8 +12,10 @@
       :refer [ntha fn' aritoid]]
     [quantum.untyped.core.logic
       #?(:clj :refer :cljs :refer-macros) [ifs condf1 fn-not]] ; no idea why this is required currently :/
+    [quantum.untyped.core.loops
+      :refer [reduce-2]]
     [quantum.untyped.core.reducers :as ur
-      :refer [defeager transducer->transformer educe]]
+      :refer [defeager def-transducer>eager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
       :refer [val?]]))
 
@@ -151,6 +153,10 @@
 
 (def mergev (partial mergev-with (fn [i v0 v1] v1)))
 
+(defn zipmap-into [x ks vs] (reduce-2 assoc x ks vs true))
+
+(defn zipmap [ks vs] (zipmap-into {} ks vs))
+
 ;; ===== Sequential ==== ;;
 
 (defn lasti
@@ -214,17 +220,9 @@
 ;; reducing function to behave correctly (e.g. `partition-all+`), are unsafe for use with
 ;; core/reduce. Prefer `educe` instead.
 
-(def mapcat+ (transducer->transformer 1 core/mapcat))
-(defeager mapcat mapcat+)
-
-(def map+ (transducer->transformer 1 core/map))
-(defeager map map+)
-
-(def map-indexed+ (transducer->transformer 1 core/map-indexed))
-(defeager map-indexed map-indexed+)
-
-(def indexed+ #(->> % (map-indexed+ vector)))
-(defn lindexed [xs] (lmap-indexed vector xs))
+(def-transducer>eager map         core/map         1)
+(def-transducer>eager map-indexed core/map-indexed 1)
+(def-transducer>eager mapcat      core/mapcat      1)
 
 (defn- map-keys* [f-xs] (fn [f xs] (->> xs (f-xs (juxt (comp f key) val)))))
 (def  map-keys+ (map-keys* map+))
@@ -238,27 +236,27 @@
 (def  map-vals  (map-vals* map ))
 (def  lmap-vals (map-vals* lmap))
 
-(def filter+ (transducer->transformer 1 core/filter))
-(defeager filter filter+)
-
-(def remove+ (transducer->transformer 1 core/remove))
-(defeager remove remove+)
+(def-transducer>eager filter core/filter 1)
+(def-transducer>eager remove core/remove 1)
 
 (defn- pred-keys [f-xs] (fn [pred xs] (->> xs (f-xs (comp pred key)))))
 (def      filter-keys+ (pred-keys filter+))
-(defeager filter-keys  filter-keys+)
+(defeager filter-keys  filter-keys+ 1)
 (def      remove-keys+ (pred-keys remove+))
-(defeager remove-keys  remove-keys+)
+(defeager remove-keys  remove-keys+ 1)
 
 (defn- pred-vals [f-xs] (fn [pred xs] (->> xs (f-xs (comp pred val)))))
 (def      filter-vals+ (pred-vals filter+))
-(defeager filter-vals  filter-vals+)
+(defeager filter-vals  filter-vals+ 1)
 (def      remove-vals+ (pred-vals remove+))
-(defeager remove-vals  remove-vals+)
+(defeager remove-vals  remove-vals+ 1)
 
-(def partition-all+ (transducer->transformer 1 core/partition-all))
+(defn indexed+ [xs] (map-indexed+ vector xs))
+(defn lindexed [xs] (lmap-indexed vector xs))
+(defeager indexed indexed+ 0)
 
-(def distinct+      (transducer->transformer 0 core/distinct))
+(def-transducer>eager partition-all core/partition-all 1)
+(def-transducer>eager distinct      core/distinct      0)
 
 ;; ===== COERCIVE ===== ;;
 
@@ -272,13 +270,26 @@
 
 ;; ===== GENERAL ===== ;;
 
+(defn cat|transducer
+  "Like `clojure.core/cat` but uses `educe` internally."
+  []
+  (fn [rf]
+    (let [rrf (ur/preserving-reduced rf)]
+      (fn ([] (rf))
+          ([result] (rf result))
+          ([result input] (educe rrf result input))))))
+
+(defn lcat [xs] (apply concat xs))
+
+(def-transducer>eager cat cat|transducer 0 lcat)
+
 (defn flatten
   ([] core/flatten)
   ([xs] (core/flatten xs))
   ([n xs]
     (if (<= n 0)
         xs
-        (recur (dec n) (apply concat xs)))))
+        (recur (dec n) (lcat xs)))))
 
 (defn frequencies-by
   "Like `frequencies` crossed with `group-by`."

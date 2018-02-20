@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.type
   "Essentially, set-theoretic definitions and operations on types."
   (:refer-clojure :exclude
-    [< <= = >= > == compare
+    [< <= = not= >= > == compare
      and or not
      boolean  byte  char  short  int  long  float  double
      boolean? byte? char? short? int? long? float? double?
@@ -32,12 +32,12 @@
       :refer [fn1 rcomp <- fn->]]
     [quantum.untyped.core.form.generate.deftype :as udt]
     [quantum.untyped.core.logic
-      :refer [fn-and]]
+      :refer [fn-and ifs]]
     [quantum.untyped.core.numeric               :as unum]
     [quantum.untyped.core.print                 :as upr]
     [quantum.untyped.core.qualify               :as qual]
     [quantum.untyped.core.reducers              :as ur
-      :refer [join]]
+      :refer [educe join]]
     [quantum.untyped.core.refs
       :refer [?deref]]
     [quantum.untyped.core.type.core             :as utcore]
@@ -79,13 +79,9 @@
    fipp.ednize/IEdn      {-edn    ([this] (list `value v))}
    ?Fn                   {invoke  ([_ x] (c/= x v))}
    ?Object               {equals  ([this that]
-                                    (c/or (identical? this that)
+                                    (c/or (== this that)
                                           (c/and (instance? ValueSpec that)
-                                                 (c/= v (.-v ^ValueSpec that)))))}
-   ?Comparable           {compare ([this that]
-                                    (if-not (instance? ValueSpec that)
-                                      (err! "Cannot compare with non-ValueSpec")
-                                      (c/compare v (.-v ^ValueSpec that))))}})
+                                                 (c/= v (.-v ^ValueSpec that)))))}})
 
 (defn value [v] (ValueSpec. v))
 
@@ -110,7 +106,7 @@
    ?Meta   {meta      ([this] meta)
             with-meta ([this meta'] (ClassSpec. meta' c name))}
    ?Object {equals    ([this that]
-                        (c/or (identical? this that)
+                        (c/or (== this that)
                               (c/and (instance? ClassSpec that)
                                      (c/= c (.-c ^ClassSpec that)))))}})
 
@@ -127,11 +123,17 @@
    name #_(t/? t/symbol?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (c/or name (list `isa|protocol? p)))}
-   ?Fn   {invoke    ([_ x] (satisfies? p x))}
-   ?Meta {meta      ([this] meta)
-          with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
+   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa|protocol? p)))}
+   ?Fn                   {invoke    ([_ x] (satisfies? p x))}
+   ?Meta                 {meta      ([this] meta)
+                          with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
+
+(defn protocol-spec? [x] (instance? ProtocolSpec x))
+
+(defn protocol-spec>protocol [spec]
+  (if (protocol-spec? spec)
+      (.-p ^ProtocolSpec spec)
+      (err! "Cannot cast to ProtocolSpec" {:x spec})))
 
 (defn isa? [c]
   #?(:clj (assert (c/class? c))) ; TODO CLJS
@@ -304,6 +306,10 @@
   "Computes whether the extension of spec ->`s0` is equal to that of ->`s1`."
   [s0 s1] (boolean-compare c/= s0 s1))
 
+(defn not=
+  "Computes whether the extension of spec ->`s0` is not equal to that of ->`s1`."
+  [s0 s1] (c/not (= s0 s1)))
+
 (defn >=
   "Computes whether the extension of spec ->`s0` is a (lax) superset of that of ->`s1`."
   [s0 s1] (boolean-compare c/>= s0 s1))
@@ -314,15 +320,22 @@
 
 ;; ===== LOGICAL ===== ;;
 
-(defn create-logical-spec
-  [construct-fn arg args compare-fn]
+(defprotocol PLogicalComplement
+  (>logical-complement [this]
+    "Returns the content inside a `t/not` applied to the `args` of an n-ary logical
+     spec (e.g. `or`, `and`). Stored in such specs to more easily compare them with
+     `not` specs.
+     E.g. `(>logical-complement (and a b))` -> `(or  (not a) (not b))`
+          `(>logical-complement (or  a b))` -> `(and (not a) (not b))`."))
+
+(defn- create-logical-spec [construct-fn arg args compare-fn]
   (if (empty? args)
       (>spec arg)
       (let [;; simplification via identity
             simp|identity (->> (cons arg args) (map+ >spec) distinct+)
             ;; simplification via intension comparison
             args' (->> simp|identity
-                       (reduce
+                       (educe
                          (fn
                            ([x] x)
                            ([args' s]
@@ -341,18 +354,23 @@
                          []))]
         (if (-> args' count (c/= 1))
             (first args')
-            (construct-fn args')))))
+            (construct-fn args' (atom nil))))))
 
 ;; ===== AND ===== ;;
 
-(udt/deftype AndSpec [args #_(t/and t/indexed? (t/seq spec?))]
+(udt/deftype AndSpec [args #_(t/and t/indexed? (t/seq spec?)) *logical-complement]
   {PSpec                 nil
+   PLogicalComplement    {>logical-complement
+                           ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (list* `and args))}
-   ?Fn {invoke ([_ x] (reduce (fn [_ pred] (c/or (pred x) (reduced false)))
-                        true ; vacuously
-                        args))}})
+   fipp.ednize/IEdn      {-edn ([this] (list* `and args))}
+   ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (c/or (pred x) (reduced false)))
+                                          true ; vacuously
+                                          args))}
+   ?Object               {equals ([this that]
+                                   (c/or (== this that)
+                                         (c/and (instance? AndSpec that)
+                                                (c/= args (.-args ^AndSpec that)))))}})
 
 (defn and-spec? [x] (instance? AndSpec x))
 
@@ -368,8 +386,7 @@
   [arg & args]
   (create-logical-spec ->AndSpec arg args c/neg?))
 
-(deftype
-  UnorderedAndSpec [args #_(t/unkeyed spec?)]
+(deftype UnorderedAndSpec [args #_(t/unkeyed spec?)]
   PSpec
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (list* `and* args)))
@@ -403,14 +420,19 @@
 
 ;; ===== OR ===== ;;
 
-(udt/deftype OrSpec [args #_(t/and t/indexed? (t/seq spec?))]
+(udt/deftype OrSpec [args #_(t/and t/indexed? (t/seq spec?)) *logical-complement]
   {PSpec                 nil
+   PLogicalComplement    {>logical-complement
+                           ([this] (c/or @*logical-complement (reset! *logical-complement (not this))))}
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (list* `or args))}
-   ?Fn {invoke ([_ x] (reduce (fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
-                        true ; vacuously
-                        args))}})
+   fipp.ednize/IEdn      {-edn ([this] (list* `or args))}
+   ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
+                                          true ; vacuously
+                                          args))}
+   ?Object               {equals ([this that]
+                                   (c/or (== this that)
+                                         (c/and (instance? OrSpec that)
+                                                (c/= args (.-args ^OrSpec that)))))}})
 
 (defn or-spec? [x] (instance? OrSpec x))
 
@@ -425,8 +447,7 @@
   [arg & args]
   (create-logical-spec ->OrSpec arg args c/pos?))
 
-(deftype
-  UnorderedOrSpec [args #_(t/unkeyed spec?)]
+(deftype UnorderedOrSpec [args #_(t/unkeyed spec?)]
   PSpec
   fipp.ednize/IOverride
   fipp.ednize/IEdn (-edn [this] (list* `or* args)))
@@ -460,11 +481,30 @@
 (udt/deftype NotSpec [spec #_t/spec?]
   {PSpec                 nil
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (list `not spec))}
-   ?Fn {invoke ([_ x] (spec x))}})
+   fipp.ednize/IEdn      {-edn   ([this] (list `not spec))}
+   ?Fn                   {invoke ([_ x] (spec x))}
+   ?Object               {equals ([this that]
+                                   (c/or (== this that)
+                                         (c/and (instance? NotSpec that)
+                                                (c/= spec (.-spec ^NotSpec that)))))}})
 
-(defn not [x] (NotSpec. (>spec x)))
+(defn not-spec? [x] (instance? NotSpec x))
+
+(defn not-spec>inner-spec [spec]
+  (if (instance? NotSpec spec)
+      (.-spec ^NotSpec spec)
+      (err! "Cannot cast to NotSpec" {:x spec})))
+
+(defn not [spec]
+  (assert (spec? spec))
+  (ifs (= spec universal-set) null-set
+       (= spec null-set)      universal-set
+       (not-spec? spec)       (not-spec>inner-spec spec)
+       ;; DeMorgan's Law
+       (or-spec?  spec)       (->> spec or-spec>args  (ucoll/lmap not) (apply and))
+       ;; DeMorgan's Law
+       (and-spec? spec)       (->> spec and-spec>args (ucoll/lmap not) (apply or ))
+       (NotSpec. spec)))
 
 #?(:clj
 (defmacro spec
@@ -496,250 +536,368 @@
 
 (-def nil? (value nil))
 
-(udt/deftype NilableSpec [meta #_(t/? ::meta) spec #_t/spec?]
-  {PSpec nil
-   ?Fn     {invoke    ([this x] (c/or (c/nil? x) (spec x)))}
-   ?Meta   {meta      ([this] meta)
-            with-meta ([this meta'] (NilableSpec. meta' spec))}
-   ?Object {equals    ([this that]
-                        (c/or (identical? this that)
-                              (c/and (instance? NilableSpec that)
-                                     (c/= spec (.-spec ^NilableSpec that)))))}
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn
-     {-edn ([this] (list `? spec))}})
+(defn ?
+  "Denotes type inference should be performed.
+   Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
+   Arity 2: Computes whether `x` is nil or satisfies `spec`."
+  ([x] (assert (spec? x))
+       (or nil? x))
+  ([spec x] (c/or (c/nil? x) (spec x))))
 
-(defn nilable-spec? [x] (instance? NilableSpec x))
-
-(defn nilable-spec>inner-spec [spec]
-  (if (instance? NilableSpec spec)
-      (.-spec ^NilableSpec spec)
-      (err! "Cannot cast to NilableSpec" {:x spec})))
 
 ;; This sadly gets a java.lang.AbstractMethodError when one tries to do as simple as:
 ;; `(def ? (InferSpec. nil))`
 ;; `(def abcde (? 1))
 (udt/deftype InferSpec [meta #_(t/? ::meta)]
   {PSpec nil
-   ?Fn {invoke (([this x] (NilableSpec. nil (>spec x)))
-                ([this spec x] (c/or (c/nil? x) (spec x))))}
+   ?Fn {invoke (([this x] (? x))
+                ([this spec x] (? spec x)))}
    ?Meta {meta      ([this] meta)
           with-meta ([this meta'] (InferSpec. meta'))}
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] `?)}})
 
-(defn ?
-  "Denotes type inference should be performed.
-   Arity 1: Computes a spec denoting a nilable value satisfying `spec`.
-   Arity 2: Computes whether `x` is nil or satisfies `spec`."
-  ([x] (NilableSpec. nil (>spec x)))
-  ([spec x] (c/or (c/nil? x) (spec x))))
+#?(:clj (def universal-class java.lang.Object))
+
+(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} NullSetSpec []
+  {PSpec                 nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn      {-edn ([this] `∅)}})
+
+(def null-set (NullSetSpec.))
+
+(udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
+  {PSpec                 nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn      {-edn ([this] `U)}})
+
+;; The set of all sets that do not include themselves (including the null set)
+(def universal-set (UniversalSetSpec.))
+
+(defn- compare|value+value
+  "What we'd really like is to have a different version of .equals or .equiv
+   like .equivBehavior in which it returns whether any behavior is different
+   whatsoever between two objects. For instance, `[52]` behaves differently from
+   `(list 52)` because `(get [52] 0)` -> `52` while `(get (list 52) 0)` -> `nil`.
+
+   The issue with this is that yes, one could implement a `strict=` that tries to
+   emulate this behavior, but even though it is implementable for 'transparent'
+   objects such as collections, it is not for 'opaque' objects, which would
+   potentially have to have custom equality behavior per class. So we will simply
+   reluctantly accept whatever `=` tells us as well as the fallout that results.
+   Thus, `(t/or (t/value []) (t/value (list)))` will result in `(t/value [])`,
+   which is not ideal but both feasible and better than the alternative."
+  [s0 s1]
+  (if (c/= (value-spec>value s0)
+           (value-spec>value s1))
+      0
+      nil))
+
+(defn- compare|value+class [s0 s1]
+  (let [v (value-spec>value s0)
+        c (class-spec>class s1)]
+    (if (instance? c v)
+        ;; e.g. asking how the set containing only the string "abc"
+        ;; relates to the set of all strings (the class String)
+        -1 ; the extension is a strict subset
+        ;; e.g. asking how the set containing only the string "abc"
+        ;; relates the set of all bytes (the class Byte)
+        nil)))
+
+(defn- compare|value+protocol [s0 s1]
+  (let [v (value-spec>value       s0)
+        p (protocol-spec>protocol s1)]
+    (if (satisfies? p v) -1 nil)))
+
+(defn- compare|value+or* [s0 ^OrSpec s1]
+  (let [specs (.-args s1)]
+    (reduce
+       (fn [ret s]
+         (let [ret' (compare s0 s)] ; `1` will never happen
+           (if (c/or (c/= ret' -1)
+                     (c/and (c/= ret' nil) (c/= ret 0  ))
+                     (c/and (c/= ret' 0  ) (c/= ret nil)))
+               ;; because the extension of `s1` only gets bigger
+               (reduced -1)
+               ret)))
+       nil
+       specs)))
+
+(defn compare|value+or [s0 s1] (@#'compare|value+or* s0 s1))
+
+(defn- compare|value+and [s0 s1]
+  (let [specs (.-args ^AndSpec s1)]
+    (reduce
+       (fn [ret s]
+         (let [ret' (compare s0 s)] ; `-1` will never happen
+           (case ret'
+             nil (reduced ret')
+             ret')))
+       nil
+       specs)))
+
+(defn- compare|class+or
+  "#{(⊂ | =) ∅} -> ⊂
+   #{(⊃ ?) ∅} -> ∅
+   Otherwise whatever it is"
+  [s0 s1]
+  (let [specs (.-args ^OrSpec s1)]
+    (first
+      (reduce
+        (fn [[ret found] s]
+          (let [ret'   (compare s0 s)
+                found' (ubit/conj found (case ret' -1 0, 0 1, 1 2, nil 3))]
+            (case (c/long found')
+              (9 #_<+! 10 #_=+!) (reduced [-1  nil])
+              (12 #_>+!)         (reduced [nil nil])
+              [ret' found'])))
+        [nil ubit/empty]
+        specs))))
+
+(defn- compare|class+and
+  "Any ∅ -> ∅
+   Otherwise whatever it is"
+  [s0 s1]
+  (let [specs (.-args ^AndSpec s1)]
+    (reduce
+      (fn [ret s]
+        (let [ret' (compare s0 s)]
+          (if (c/nil? ret') (reduced nil) ret')))
+      nil
+      specs)))
+
+(defn- compare|not+universal [s0 s1]
+  (let [s0|inner (not-spec>inner-spec s0)]
+    (ifs (= s0|inner universal-set) -1
+         (= s0|inner null-set)       0
+         (compare s0|inner s1))))
+
+(defn- compare|not+null [s0 s1]
+  (let [s0|inner (not-spec>inner-spec s0)]
+    (ifs (= s0|inner universal-set) 0
+         (= s0|inner null-set)      1
+         nil)))
+
+(defn- compare|not+value [s0 s1]
+  (let [s0|inner (not-spec>inner-spec s0)]
+    (ifs (= s0|inner universal-set) nil
+         (= s0|inner null-set)      1
+         (err! "TODO: NotSpec combination not yet supported with ValueSpec" {:s0 s0 :s1 s1}))))
+
+(defn- compare|not+class [s0 s1]
+  (let [s0|inner (not-spec>inner-spec s0)]
+    (ifs (= s0|inner universal-set) nil
+         (= s0|inner null-set)      1
+         (c/and (c/= -1 (compare (not-spec>inner-spec s0) s1))
+                #?(:clj  (-> s1 class-spec>class (c/= universal-class))
+                         ;; CLJS does not have a universal class
+                   :cljs false))
+           -1
+         nil)))
+
+(defn- compare|not+protocol [s0 s1]
+  (let [s0|inner (not-spec>inner-spec s0)]
+    (ifs (= s0|inner universal-set) nil
+         (= s0|inner null-set)      1
+         nil)))
+
+(defn- compare|not+not [s0 s1]
+  (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1)))
+
+(defn- compare|not+or [s0 s1]
+  (compare (not-spec>inner-spec s0) (>logical-complement s1)))
+
+(defn- compare|not+and [s0 s1]
+  (compare (not-spec>inner-spec s0) (>logical-complement s1)))
+
+(defn- compare|or+or [^OrSpec s0 ^OrSpec s1]
+  (let [;; every element in s0 an extensional strict subset of s1
+        l (->> s0 .-args (map+ (fn1 compare s1)) (seq-and (fn1 c/= -1)))
+        ;; every element in s1 an extensional strict subset of s0
+        r (->> s1 .-args (map+ (fn1 compare s0)) (seq-and (fn1 c/= -1)))]
+    (if l
+        (if r 0 -1)
+        (if r 1 nil))))
+
+(defn- compare|or+and [^OrSpec s0 ^AndSpec s1]
+  (let [;; every element in s1 an extensional strict subset of s0
+        r (->> s1 .-args (map+ (fn1 compare s0)) (seq-and (fn1 c/= -1)))]
+    (if r 1 nil)))
+
+(defn- compare|expr+expr [s0 s1] (if (c/= s0 s1) 0 nil))
 
 (def- compare|dispatch
-  (let [with-invert-comparison
-          (fn [f] (fn [s0 s1] (ucomp/invert (f s1 s0))))
-        v+c (fn [s0 s1]
-              (let [v (.-v ^ValueSpec s0)
-                    c (.-c ^ClassSpec s1)]
-                (if (instance? c v)
-                    ;; e.g. asking how the set containing only the string "abc"
-                    ;; relates to the set of all strings (the class String)
-                    -1 ; the extension is a strict subset
-                    ;; e.g. asking how the set containing only the string "abc"
-                    ;; relates the set of all bytes (the class Byte)
-                    nil))) ; neither subset nor superset
-        v+o (fn [s0 s1]
-              (let [specs (.-args ^OrSpec s1)]
-                (reduce
-                   (fn [ret s]
-                     (let [ret' (compare s0 s)]
-                       (case ret'
-                         nil ret
-                         -1  (reduced ret') ; because the extension of `s1` only gets bigger
-                         ret')))
-                   nil
-                   specs)))
-        v+a (fn [s0 s1]
-              (let [specs (.-args ^AndSpec s1)]
-                (reduce
-                   (fn [ret s]
-                     (let [ret' (compare s0 s)]
-                       (case ret'
-                         nil (reduced ret')
-                         1   (reduced ret') ; because the extension of `s1` only gets smaller
-                         ret')))
-                   nil
-                   specs)))
-        v+n (fn [s0 s1]
-              (if (-> s0 value-spec>value nil?)
-                  -1
-                  (err! "TODO dispatch" {:s0 s0 :s1 s1})))
-        <ident  0 ; -1
-        =ident  1 ; 0
-        >ident  2 ; 1
-        !ident  3 ; nil
-        <+!     (-> ubit/empty (ubit/conj <ident) (ubit/conj !ident)) ; 9
-        >+!     (-> ubit/empty (ubit/conj >ident) (ubit/conj !ident)) ; 12
-        =+!     (-> ubit/empty (ubit/conj =ident) (ubit/conj !ident)) ; 10
-
-        ;; #{(⊂ | =) ∅} -> ⊂
-        ;; #{(⊃ ?) ∅} -> ∅
-        ;; Otherwise whatever it is
-        c+o (fn [s0 s1]
-              (let [specs (.-args ^OrSpec s1)]
-                (first
-                  (reduce
-                    (fn [[ret found] s]
-                      (let [ret'   (compare s0 s)
-                            found' (ubit/conj found (case ret' -1 0, 0 1, 1 2, nil 3))]
-                        (case (c/long found')
-                          (9 #_<+! 10 #_=+!) (reduced [-1  nil])
-                          (12 #_>+!)         (reduced [nil nil])
-                          [ret' found'])))
-                    [nil ubit/empty]
-                    specs))))
-        ;; Any ∅ -> ∅
-        ;; Otherwise whatever it is
-        c+a (fn [s0 s1]
-              (let [specs (.-args ^AndSpec s1)]
-                (reduce
-                  (fn [ret s]
-                    (let [ret' (compare s0 s)]
-                      (if (c/nil? ret') (reduced nil) ret')))
-                  nil
-                  specs)))
-        c+n (fn [s0 s1]
-              (case (compare s0 (nilable-spec>inner-spec s1))
-                (0 -1) -1
-                nil))
-        o+o (fn [^OrSpec s0 ^OrSpec s1]
-              (let [;; every element in s0 an extensional strict subset of s1
-                    l (->> s0 .-args (map+ (fn1 compare s1)) (seq-and (fn1 c/= -1)))
-                    ;; every element in s1 an extensional strict subset of s0
-                    r (->> s1 .-args (map+ (fn1 compare s0)) (seq-and (fn1 c/= -1)))]
-                (if l
-                    (if r 0 -1)
-                    (if r 1 nil))))
-        o+a (fn [^OrSpec s0 ^AndSpec s1]
-              (let [;; every element in s1 an extensional strict subset of s0
-                    r (->> s1 .-args (map+ (fn1 compare s0)) (seq-and (fn1 c/= -1)))]
-                (if r 1 nil)))
-        e+e (fn [s0 s1] (if (c/= s0 s1) 0 nil))
+  (let [with-invert-comparison (fn [f] (fn [s0 s1] (ucomp/invert (f s1 s0))))
+        <ident       0 ; -1
+        =ident       1 ;  0
+        >ident       2 ;  1
+        !ident       3 ; nil
+        <+!          (-> ubit/empty (ubit/conj <ident) (ubit/conj !ident)) ; 9
+        >+!          (-> ubit/empty (ubit/conj >ident) (ubit/conj !ident)) ; 12
+        =+!          (-> ubit/empty (ubit/conj =ident) (ubit/conj !ident)) ; 10
+        subset       (fn [s0 s1] -1)
+        equal        (fn [s0 s1]  0)
+        superset     (fn [s0 s1]  1)
         incomparable (fn [s0 s1] nil)
-  ]
-    {InferSpec
-       {InferSpec        (ufn/fn' 0)
-        ValueSpec        (ufn/fn' 1)
-        ClassSpec        (ufn/fn' 1)
-        ProtocolSpec     (ufn/fn' 1)
-        NilableSpec      (ufn/fn' 1)
-        OrSpec           (ufn/fn' 1)
-        UnorderedOrSpec  (ufn/fn' 1)
-        AndSpec          (ufn/fn' 1)
-        UnorderedAndSpec (ufn/fn' 1)
-        Expression       (ufn/fn' 1)}
+        todo         (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
+                                                        :s1 s1 :s1|type (type s1)}))]
+    {UniversalSetSpec
+       {UniversalSetSpec equal
+        NullSetSpec      superset
+        InferSpec        todo
+        ValueSpec        superset
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          (with-invert-comparison compare|not+universal)
+        OrSpec           superset
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
+        Expression       todo}
+     NullSetSpec
+       {UniversalSetSpec subset
+        NullSetSpec      equal
+        InferSpec        todo
+        ValueSpec        incomparable
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          (with-invert-comparison compare|not+null)
+        OrSpec           incomparable
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
+        Expression       todo}
+     InferSpec
+       {UniversalSetSpec todo
+        NullSetSpec      todo
+        InferSpec        equal
+        ValueSpec        superset
+        ClassSpec        superset
+        ProtocolSpec     superset
+        NotSpec          superset
+        OrSpec           superset
+        UnorderedOrSpec  superset
+        AndSpec          superset
+        UnorderedAndSpec superset
+        Expression       superset}
      ValueSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (fn [s0 s1] (catch-all
-                                       (unum/signum|long (c/compare s0 s1))
-                                       nil))
-        ClassSpec        v+c
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      v+n
-        OrSpec           v+o
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          v+a
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec subset
+        NullSetSpec      superset
+        InferSpec        subset
+        ValueSpec        compare|value+value
+        ClassSpec        compare|value+class
+        ProtocolSpec     compare|value+protocol
+        NotSpec          (with-invert-comparison compare|not+value)
+        OrSpec           compare|value+or
+        UnorderedOrSpec  todo
+        AndSpec          compare|value+and
+        UnorderedAndSpec todo
         Expression       incomparable}
      ClassSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (with-invert-comparison v+c)
+       {UniversalSetSpec subset
+        NullSetSpec      superset
+        InferSpec        subset
+        ValueSpec        (with-invert-comparison compare|value+class)
         ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      c+n
-        OrSpec           c+o
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          c+a
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+        ProtocolSpec     todo
+        NotSpec          (with-invert-comparison compare|not+class)
+        OrSpec           compare|class+or
+        UnorderedOrSpec  todo
+        AndSpec          compare|class+and
+        UnorderedAndSpec todo
         Expression       incomparable}
      ProtocolSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        OrSpec           (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec subset
+        NullSetSpec      superset
+        InferSpec        subset
+        ValueSpec        (with-invert-comparison compare|value+protocol)
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          (with-invert-comparison compare|not+protocol)
+        OrSpec           todo
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
         Expression       incomparable}
-     NilableSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (with-invert-comparison v+n)
-        ClassSpec        (with-invert-comparison c+n)
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (compare (nilable-spec>inner-spec s0) (nilable-spec>inner-spec s1)))
-        OrSpec           (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+     NotSpec
+       {UniversalSetSpec compare|not+universal
+        NullSetSpec      compare|not+null
+        InferSpec        subset
+        ValueSpec        compare|not+value
+        ClassSpec        compare|not+class
+        ProtocolSpec     compare|not+protocol
+        NotSpec          compare|not+not
+        OrSpec           compare|not+or
+        UnorderedOrSpec  todo
+        AndSpec          compare|not+and
+        UnorderedAndSpec todo
         Expression       incomparable}
      OrSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (with-invert-comparison v+o)
-        ClassSpec        (with-invert-comparison c+o)
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        OrSpec           o+o
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          o+a
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec subset
+        NullSetSpec      incomparable
+        InferSpec        subset
+        ValueSpec        (with-invert-comparison compare|value+or)
+        ClassSpec        (with-invert-comparison compare|class+or)
+        ProtocolSpec     todo
+        NotSpec          (with-invert-comparison compare|not+or)
+        OrSpec           compare|or+or
+        UnorderedOrSpec  todo
+        AndSpec          compare|or+and
+        UnorderedAndSpec todo
         Expression       incomparable}
      UnorderedOrSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        OrSpec           (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec todo
+        NullSetSpec      todo
+        InferSpec        subset
+        ValueSpec        todo
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          todo
+        OrSpec           todo
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
         Expression       incomparable}
      AndSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (with-invert-comparison v+a)
-        ClassSpec        (with-invert-comparison c+a)
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        OrSpec           (with-invert-comparison o+a)
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec subset
+        NullSetSpec      incomparable
+        InferSpec        subset
+        ValueSpec        (with-invert-comparison compare|value+and)
+        ClassSpec        (with-invert-comparison compare|class+and)
+        ProtocolSpec     todo
+        NotSpec          todo
+        OrSpec           (with-invert-comparison compare|or+and)
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
         Expression       incomparable}
      UnorderedAndSpec
-       {InferSpec        (ufn/fn' -1)
-        ValueSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ClassSpec        (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        ProtocolSpec     (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        NilableSpec      (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        OrSpec           (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedOrSpec  (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        AndSpec          (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
-        UnorderedAndSpec (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s1 s1}))
+       {UniversalSetSpec todo
+        NullSetSpec      todo
+        InferSpec        subset
+        ValueSpec        todo
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          todo
+        OrSpec           todo
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
         Expression       incomparable}
      Expression
-       {InferSpec        (ufn/fn' -1)
+       {UniversalSetSpec todo
+        NullSetSpec      todo
+        InferSpec        subset
         ValueSpec        incomparable
         ClassSpec        incomparable
         ProtocolSpec     incomparable
-        NilableSpec      incomparable
+        NotSpec          incomparable
         OrSpec           incomparable
         UnorderedOrSpec  incomparable
         AndSpec          incomparable
         UnorderedAndSpec incomparable
-        Expression       e+e}}))
+        Expression       compare|expr+expr}}))
 
 ;; ===== PRIMITIVES ===== ;;
 
@@ -859,14 +1017,43 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (map+ :unboxed) (join #{}))))
 
+(defn- -spec>classes [spec classes]
+  (cond (class-spec? spec)
+          (conj classes (class-spec>class spec))
+        (value-spec? spec)
+          (conj classes (value-spec>value spec))
+        (and-spec? spec)
+          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
+            classes (and-spec>args spec))
+        (or-spec? spec)
+          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
+            classes (or-spec>args spec))
+        :else
+          (err! "Not sure how to handle spec" spec)))
+
+(defn spec>classes
+  "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
+   if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
+  [spec] (-spec>classes spec #{}))
+
 (defn- -spec>class [spec spec-nilable?]
   (cond (class-spec? spec)
           {:class (class-spec>class spec) :nilable? spec-nilable?}
         (value-spec? spec)
           (let [v (value-spec>value spec)]
-            {:class (type v) :nilable? spec-nilable?})
-        (c/and (nilable-spec? spec) (c/not spec-nilable?))
-          (recur (nilable-spec>inner-spec spec) true)
+            {:class (type v) :nilable? (c/nil? v)})
+        (c/or (and-spec? spec) (or-spec? spec))
+          (let [classes (spec>classes spec)
+                nilable? (contains? classes nil)]
+            (if nilable?
+                {:nilable? true
+                 :class    (ifs (-> classes count (c/= 1)) nil
+                                (-> classes count (c/= 2)) (-> classes (disj nil) seq first)
+                                (TODO "Need to handle possibly-related classes" classes))}
+                {:nilable? false
+                 :class    (if (-> classes count (c/= 1))
+                               (-> classes seq first)
+                               (TODO "Need to handle possibly-related classes" classes))}))
         :else
           (err! "Don't know how to handle spec" spec)))
 
@@ -877,35 +1064,12 @@
    Outputs `{:class ::multiple :nilable? nil      }` if the spec embodies multiple classes."
   [spec] (-spec>class spec false))
 
-(defn- -spec>classes [spec classes]
-  (cond (class-spec? spec)
-          (conj classes (class-spec>class spec))
-        (value-spec? spec)
-          (conj classes (value-spec>value spec))
-        (nilable-spec? spec)
-          (recur (nilable-spec>inner-spec spec) classes)
-        (and-spec? spec)
-          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
-            classes (and-spec>args spec))
-        (or-spec? spec)
-          (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
-            classes (or-spec>args spec))
-        :else
-          (err! "Not sure how to handle spec")))
-
-(defn spec>classes
-  "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
-   if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
-  [spec] (-spec>classes spec #{}))
-
 #?(:clj
 (defn- -spec>?class-value [spec spec-nilable?]
-  (cond (value-spec? spec)
-          (let [v (value-spec>value spec)]
-            (when (c/class? v) {:class v :nilable? spec-nilable?}))
-        (c/and (nilable-spec? spec) (c/not spec-nilable?))
-          (recur (nilable-spec>inner-spec spec) true)
-        :else nil)))
+  (if (value-spec? spec)
+      (let [v (value-spec>value spec)]
+        (when (c/class? v) {:class v :nilable? spec-nilable?}))
+      nil)))
 
 #?(:clj
 (defn spec>?class-value
@@ -928,7 +1092,7 @@
 ;; ===== META ===== ;;
 
 #?(:clj  (-def class?                      (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class?            (fn [x] (c/and (class? x) (.isPrimitive ^Class x)))))
+#?(:clj  (-def primitive-class?            (fn [x] (c/and (class? x) (.isPrimitive ^Class x) (not== Void/TYPE x)))))
 #?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== NUMBERS ===== ;;
@@ -994,4 +1158,5 @@
 
          (-def literal?        (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
+
 )

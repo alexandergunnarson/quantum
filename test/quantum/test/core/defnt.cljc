@@ -7,8 +7,7 @@
       :refer [fn-and]]
     [quantum.core.defnt        :as this
       :refer [!ref analyze defnt]]
-    [quantum.core.macros.type-hint :as th
-      :refer [tag]]
+    [quantum.core.macros.type-hint :as th]
     [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
@@ -17,6 +16,8 @@
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.form
       :refer [$]]
+    [quantum.untyped.core.form.type-hint
+      :refer [tag]]
     [quantum.untyped.core.core
       :refer [code=]]
     [quantum.untyped.core.string
@@ -499,9 +500,9 @@
          {:lang :clj})
        {:unprimitivized
          {:arglist-code|reify|unhinted '[x]
-          :arg-classes                 [java.lang.String]
-          :arglist-code|fn|hinted      [(with-meta 'x {:tag "java.lang.String"})],
-          :body-form                   nil
+          :arg-classes                 [java.lang.Object]
+          :arglist-code|fn|hinted      [(tag "java.lang.Object" 'x)],
+          :body-form                   ($ (let* [~(tag "java.lang.String" 'x) ~'x] nil))
           :positional-args-ct          1
           :variadic?                   false
           :arg-specs                   [t/string?]

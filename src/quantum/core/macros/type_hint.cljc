@@ -10,5 +10,5 @@
   #?@(:clj [?symbol->class ?tag->class tag->class class->str class->symbol])
   #?(:clj type-hint|class) type-hint|sym
   fn-safe-type-hints-map
-  #?@(:clj [class->instance?-safe-tag|sym ->fn-arglist-tag with-fn-arglist-type-hint])
+  #?@(:clj [class->instance?-safe-tag|sym >fn-arglist-tag with-fn-arglist-type-hint])
   >body-embeddable-tag >arglist-embeddable-tag)

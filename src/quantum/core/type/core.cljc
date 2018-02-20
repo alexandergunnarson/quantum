@@ -26,4 +26,4 @@
   #?@(:clj [nth-elem-type|clj primitive-array-type?])
   default-types type-casts-map return-types-map
   ->boxed|sym ->unboxed|sym boxed?|sym
-  static-cast-code #?@(:clj [static-cast class>prim-subclasses]))
+  #?@(:clj [class>prim-subclasses]))

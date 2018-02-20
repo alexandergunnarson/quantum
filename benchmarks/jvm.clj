@@ -6,7 +6,7 @@
       :refer [reduce-pair]]
     [quantum.core.meta.bench
       :refer [bench complete-bench]]
-    [quantum.core.type :as t
+    [quantum.untyped.core.form.type-hint
       :refer [static-cast]])
   (:import
     [quantum.core Numeric Fn]

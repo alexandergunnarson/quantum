@@ -8,8 +8,6 @@
       :refer [analyze defnt fnt|code *fn->spec]]
     [quantum.core.macros
       :refer [macroexpand-all case-env env-lang quote+]]
-    [quantum.core.macros.type-hint
-      :refer [tag]]
     [quantum.core.spec         :as s]
     [quantum.core.test         :as test
       :refer [deftest testing is is= throws]]
@@ -20,6 +18,8 @@
       :refer [code=]]
     [quantum.untyped.core.form
       :refer [$]]
+    [quantum.untyped.core.form.type-hint
+      :refer [tag]]
     [quantum.untyped.core.logic
       :refer [ifs]]
     [quantum.untyped.core.type :as t
@@ -50,8 +50,8 @@
            (fn [args##]
              (case (count args##) 0 nil))))
        (def ~'pid|__0
-         (reify >java|lang|String
-           (~(tag "java.lang.String" 'invoke) [~'_]
+         (reify >Object
+           (~(tag "java.lang.Object" 'invoke) [~'_]
              (~'->> (java.lang.management.ManagementFactory/getRuntimeMXBean)
                     (.getName)))))))
 
@@ -73,28 +73,28 @@
          (xp/>expr
            (fn [args##] (case (count args##) 1 nil #_(fn-> first t/->spec)))))
 
-       ~(case (env-lang)
-                     ;; Because for `any?` it includes primitives as well
-          :clj  ($ (do ;; Direct dispatch
-                       ;; One reify per overload
-                       (def ~'identity|gen|uninlined|__0 ; `t/any?`
-                         (reify java|lang|Object>java|lang|Object
-                                                (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)
-                                boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
-                                byte>byte       (~(tag "byte"             'invoke) [~'_ ~(tag "byte"             'x)] ~'x)
-                                short>short     (~(tag "short"            'invoke) [~'_ ~(tag "short"            'x)] ~'x)
-                                char>char       (~(tag "char"             'invoke) [~'_ ~(tag "char"             'x)] ~'x)
-                                int>int         (~(tag "int"              'invoke) [~'_ ~(tag "int"              'x)] ~'x)
-                                long>long       (~(tag "long"             'invoke) [~'_ ~(tag "long"             'x)] ~'x)
-                                float>float     (~(tag "float"            'invoke) [~'_ ~(tag "float"            'x)] ~'x)
-                                double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)))
-                       ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
-                       ;; in this case no protocol is necessary because it boxes arguments anyway
-                       ;; Var indirection may be avoided by making and using static fields via the Clojure 1.8 flag
-                       (defn ~'identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 ~'x))))
-          :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
-                ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
-                ($ (defn ~'identity|gen|uninlined [~'x] ~'x))))))
+       ~@(case (env-lang)
+                      ;; Because for `any?` it includes primitives as well
+           :clj  ($ [;; Direct dispatch
+                     ;; One reify per overload
+                     (def ~'identity|gen|uninlined|__0 ; `t/any?`
+                       (reify
+                         Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)
+                         boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
+                         byte>byte       (~(tag "byte"             'invoke) [~'_ ~(tag "byte"             'x)] ~'x)
+                         short>short     (~(tag "short"            'invoke) [~'_ ~(tag "short"            'x)] ~'x)
+                         char>char       (~(tag "char"             'invoke) [~'_ ~(tag "char"             'x)] ~'x)
+                         int>int         (~(tag "int"              'invoke) [~'_ ~(tag "int"              'x)] ~'x)
+                         long>long       (~(tag "long"             'invoke) [~'_ ~(tag "long"             'x)] ~'x)
+                         float>float     (~(tag "float"            'invoke) [~'_ ~(tag "float"            'x)] ~'x)
+                         double>double   (~(tag "double"           'invoke) [~'_ ~(tag "double"           'x)] ~'x)))
+                     ;; Dynamic dispatch (invoked only if incomplete type information (incl. in untyped context))
+                     ;; in this case no protocol is necessary because it boxes arguments anyway
+                     ;; Var indirection may be avoided by making and using static fields via the Clojure 1.8 flag
+                     (defn ~'identity|gen|uninlined [~'x] (.invoke identity|gen|uninlined|__0 ~'x))])
+           :cljs ;; Direct dispatch will be simple functions, not `reify`s; not necessary here
+                 ;; Dynamic dispatch will be approached later; not clear yet whether there is a huge savings
+                 ($ [(defn ~'identity|gen|uninlined [~'x] ~'x)])))))
 
 )
 
@@ -130,34 +130,37 @@
                t/string? (fn-> t/->spec) ; TODO fix this
                ~(case (env-lang) :clj `Named :cljs `INamed) t/string?)))
 
-       ~(case (env-lang)
-          :clj  ($ (do ;; Only direct dispatch for primitives or for Object, not for subclasses of Object
-                       ;; Return value can be primitive; in this case it's not
-                       ;; The macro in a typed context will find the appropriate dispatch at compile time
-                       (def ~'name|gen|__0
-                         (reify java|lang|String>java|lang|String
-                           (~(tag "java.lang.String" 'invoke) [~'_ ~(tag "java.lang.String"   'x)] ~'x)))
-                       (def ~'name|gen|__1
-                         (reify clojure|lang|Named>java|lang|String
-                           (~(tag "java.lang.String" 'invoke) [~'_ ~(tag "clojure.lang.Named" 'x)]
+       ~@(case (env-lang)
+           :clj  ($ [;; Only direct dispatch for primitives or for Object, not for subclasses of Object
+                     ;; Return value can be primitive; in this case it's not
+                     ;; The macro in a typed context will find the appropriate dispatch at compile time
+                     (def ~'name|gen|__0
+                       (reify Object>Object
+                         (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
+                           (let* [~(tag "java.lang.String" 'x) ~'x]
+                             ~'x))))
+                     (def ~'name|gen|__1
+                       (reify Object>Object
+                         (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
+                           (let* [~(tag "clojure.lang.Named" 'x) ~'x]
                              (let [~'out (.getName ~'x)]
-                               (s/validate ~'out t/string?)))))
+                               (s/validate ~'out t/string?))))))
 
-                       ;; This protocol is so suffixed because of the position of the argument on which
-                       ;; it dispatches
-                       (defprotocol name|gen__Protocol__0
-                         (name|gen [~'x]))
-                       (extend-protocol name|gen__Protocol__0
-                         java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
-                         ;; this is part of the protocol because even though `Named` is an interface,
-                         ;; `String` is final, so they're mutually exclusive
-                         clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x)))))
-          :cljs ($ (do ;; No protocol in ClojureScript; consider adding this if a performance increase is
-                       ;; demonstrated when using a protocol
-                       (defn name|gen [~'x]
-                         (ifs (string? x)           x
-                              (satisfies? INamed x) (-name x)
-                              (err! "Not supported for type" {:fn `name|gen :type (type x)}))))))))
+                     ;; This protocol is so suffixed because of the position of the argument on which
+                     ;; it dispatches
+                     (defprotocol name|gen__Protocol__0
+                       (name|gen [~'x]))
+                     (extend-protocol name|gen__Protocol__0
+                       java.lang.String   (name|gen [x] (.invoke name|gen|__0 x))
+                       ;; this is part of the protocol because even though `Named` is an interface,
+                       ;; `String` is final, so they're mutually exclusive
+                       clojure.lang.Named (name|gen [x] (.invoke name|gen|__1 x)))])
+           :cljs ($ [;; No protocol in ClojureScript; consider adding this if a performance increase is
+                     ;; demonstrated when using a protocol
+                     (defn name|gen [~'x]
+                       (ifs (string? x)           x
+                            (satisfies? INamed x) (-name x)
+                            (err! "Not supported for type" {:fn `name|gen :type (type x)})))]))))
 
 ))
 
@@ -178,26 +181,28 @@
                t/nil? (t/value false)
                t/any? (t/value true ))))
 
-       ~(case (env-lang)
-          :clj  ($ (do (def some?|gen|__0 ; `nil?`
-                         (reify Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
-                       (def some?|gen|__1 ; `t/any?`
-                         (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] true)
-                                byte>boolean    (^boolean invoke [_# ^byte             ~'x] true)
-                                short>boolean   (^boolean invoke [_# ^short            ~'x] true)
-                                char>boolean    (^boolean invoke [_# ^char             ~'x] true)
-                                int>boolean     (^boolean invoke [_# ^int              ~'x] true)
-                                long>boolean    (^boolean invoke [_# ^long             ~'x] true)
-                                float>boolean   (^boolean invoke [_# ^float            ~'x] true)
-                                double>boolean  (^boolean invoke [_# ^double           ~'x] true)
-                                Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
-                       ;; Dynamic dispatch
-                       (defn some?|gen [~'x]
-                         (ifs (nil? x) (.invoke some?|gen|__0 x)
-                              (.invoke some?|gen|__1 x)))))
-          :cljs `(do (defn some?|gen [~'x]
+       ~@(case (env-lang)
+           :clj  ($ [(def some?|gen|__0 ; `nil?`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
+                     (def some?|gen|__1 ; `t/any?`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
+                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
+                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
+                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
+                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
+                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
+                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
+                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
+                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
+                     ;; Dynamic dispatch
+                     (defn some?|gen [~'x]
+                       (ifs (nil? x) (.invoke some?|gen|__0 x)
+                            (.invoke some?|gen|__1 x)))])
+           :cljs ($ [(defn some?|gen [~'x]
                        (ifs (nil? x) false
-                            true))))))
+                            true))]))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -210,31 +215,35 @@
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'reduced?|gen
-       (xp/casef c/count
-         1 (xp/condpf-> t/<= (xp/get 0)
-             t/reduced? (t/value true)
-             t/any?     (t/value false))))
+($ (do (swap! fn->spec assoc #'reduced?|gen
+         (xp/casef c/count
+           1 (xp/condpf-> t/<= (xp/get 0)
+               t/reduced? (t/value true)
+               t/any?     (t/value false))))
 
-     ~(case-env
-        :clj  `(do (def reduced?|gen|__0 ; `Reduced`
-                     (reify Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
-                   (def reduced?|gen|__1 ; `t/any?`
-                     (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] false)
-                            byte>boolean    (^boolean invoke [_# ^byte             ~'x] false)
-                            short>boolean   (^boolean invoke [_# ^short            ~'x] false)
-                            char>boolean    (^boolean invoke [_# ^char             ~'x] false)
-                            int>boolean     (^boolean invoke [_# ^int              ~'x] false)
-                            long>boolean    (^boolean invoke [_# ^long             ~'x] false)
-                            float>boolean   (^boolean invoke [_# ^float            ~'x] false)
-                            double>boolean  (^boolean invoke [_# ^double           ~'x] false)
-                            Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
-                   ;; No protocol because just one class; TODO evaluate whether this is better performance-wise? probably is
-                   (defn reduced?|gen [~'x]
-                     (ifs (instance? Reduced x) (.invoke reduced?|gen|__0 x)
-                          (.invoke reduced?|gen|__1 x))))
-        :cljs `(do (defn reduced?|gen [~'x]
-                     (ifs (instance? Reduced x) true false)))))
+       ~@(case (env-lang)
+           :clj  ($ [(def reduced?|gen|__0 ; `Reduced`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
+                                           (let* [~(tag "clojure.lang.Reduced" 'x) ~'x]
+                                             true))))
+                     (def reduced?|gen|__1 ; `t/any?`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)
+                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] false)
+                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] false)
+                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] false)
+                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] false)
+                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] false)
+                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] false)
+                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] false)
+                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] false)))
+                     ;; No protocol because just one class; TODO evaluate whether this is better performance-wise? probably is
+                     (defn reduced?|gen [~'x]
+                       (ifs (instance? Reduced x) (.invoke reduced?|gen|__0 x)
+                            (.invoke reduced?|gen|__1 x)))])
+           :cljs ($ [(defn reduced?|gen [~'x]
+                       (ifs (instance? Reduced x) true false))]))))
 
 ;; =====|=====|=====|=====|===== ;;
 
@@ -247,49 +256,53 @@
 
 ;; ----- expanded code ----- ;;
 
-`(do (swap! fn->spec assoc #'>boolean|gen
-       (xp/casef c/count
-         1 (xp/condpf-> t/<= (xp/get 0)
-             t/boolean? (fn-> t/->spec) ; TODO fix this
-             t/nil?     (t/value false)
-             t/any?     (t/value true ))))
+($ (do (swap! fn->spec assoc #'>boolean|gen
+         (xp/casef c/count
+           1 (xp/condpf-> t/<= (xp/get 0)
+               t/boolean? (fn-> t/->spec) ; TODO fix this
+               t/nil?     (t/value false)
+               t/any?     (t/value true ))))
 
-     ~(case-env
-        :clj  `(do (def >boolean|gen|__0 ; `Reduced`
-                     (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] x)))
-                   (def >boolean|gen|__1 ; `nil?`
-                     (reify Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] false)))
-                   (def >boolean|gen|__2 ; `t/any?`
-                     (reify boolean>boolean (^boolean invoke [_# ^boolean          ~'x] true)
-                            byte>boolean    (^boolean invoke [_# ^byte             ~'x] true)
-                            short>boolean   (^boolean invoke [_# ^short            ~'x] true)
-                            char>boolean    (^boolean invoke [_# ^char             ~'x] true)
-                            int>boolean     (^boolean invoke [_# ^int              ~'x] true)
-                            long>boolean    (^boolean invoke [_# ^long             ~'x] true)
-                            float>boolean   (^boolean invoke [_# ^float            ~'x] true)
-                            double>boolean  (^boolean invoke [_# ^double           ~'x] true)
-                            Object>boolean  (^boolean invoke [_# ^java.lang.Object ~'x] true)))
+       ~@(case (env-lang)
+           :clj  ($ [(def >boolean|gen|__0 ; `boolean`
+                       (reify
+                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] x)))
+                     (def >boolean|gen|__1 ; `nil?`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
+                     (def >boolean|gen|__2 ; `t/any?`
+                       (reify
+                         Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
+                         boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
+                         byte>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "byte"             'x)] true)
+                         short>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "short"            'x)] true)
+                         char>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "char"             'x)] true)
+                         int>boolean     (~(tag "boolean" 'invoke) [~'_ ~(tag "int"              'x)] true)
+                         long>boolean    (~(tag "boolean" 'invoke) [~'_ ~(tag "long"             'x)] true)
+                         float>boolean   (~(tag "boolean" 'invoke) [~'_ ~(tag "float"            'x)] true)
+                         double>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "double"           'x)] true)))
 
-                   (defprotocol >boolean|gen__Protocol
-                     (>boolean|gen [~'x]))
-                   (extend-protocol >boolean|gen__Protocol
-                     java.lang.Boolean (>boolean|gen [^java.lang.Boolean x] (.invoke >boolean|gen|__0 x))
-                     java.lang.Object  (>boolean|gen [x]
-                                         (ifs (nil? x) (.invoke >boolean|gen|__1 x)
-                                              (.invoke >boolean|gen|__2 x)))))
-        :cljs `(do (defn >boolean|gen [~'x]
-                     (ifs (boolean? x) x
-                          (nil?     x) false
-                          true)))))
+                     (defprotocol >boolean|gen__Protocol
+                       (>boolean|gen [~'x]))
+                     (extend-protocol >boolean|gen__Protocol
+                       java.lang.Boolean (>boolean|gen [^java.lang.Boolean x] (.invoke >boolean|gen|__0 x))
+                       java.lang.Object  (>boolean|gen [x]
+                                           (ifs (nil? x) (.invoke >boolean|gen|__1 x)
+                                                (.invoke >boolean|gen|__2 x))))])
+           :cljs ($ [(defn >boolean|gen [~'x]
+                       (ifs (boolean? x) x
+                            (nil?     x) false
+                            true))]))))
 
 ;; =====|=====|=====|=====|===== ;;
 
-#?(:clj
 ;; auto-upcasts to long or double (because 64-bit) unless you tell it otherwise
 ;; will error if not all return values can be safely converted to the return spec
+(macroexpand '
 (defnt #_:inline >int* > int
   ([x (t/and t/primitive? (t/not t/boolean?)) #_?] (Primitive/uncheckedIntCast x))
-  ([x Number] (.intValue x))))
+  ([x Number] (.intValue x)))
+)
 
 ;; ----- expanded code ----- ;;
 
@@ -300,32 +313,34 @@
              (s/and primitive? (s/not boolean?)) t/int?
              Number                              t/int?)))
 
-     ~(case-env
-        :clj  `(do (def >int*|gen|__0 ; `(s/and primitive? (s/not boolean?))`
-                     (reify byte>int   (^int invoke [_# ^byte             ~'x] (Primitive/uncheckedIntCast x))
-                            short>int  (^int invoke [_# ^short            ~'x] (Primitive/uncheckedIntCast x))
-                            char>int   (^int invoke [_# ^char             ~'x] (Primitive/uncheckedIntCast x))
-                            int>int    (^int invoke [_# ^int              ~'x] (Primitive/uncheckedIntCast x))
-                            long>int   (^int invoke [_# ^long             ~'x] (Primitive/uncheckedIntCast x))
-                            float>int  (^int invoke [_# ^float            ~'x] (Primitive/uncheckedIntCast x))
-                            double>int (^int invoke [_# ^double           ~'x] (Primitive/uncheckedIntCast x))))
-                   (def >int*|gen|__1 ; `Number`
-                     (reify Object>int (^int invoke [_# ^java.lang.Object ~'x] (.intValue ^Number x))))
+     ~@(case (env-lang)
+         :clj ($ [(def >int*|gen|__0 ; `(s/and primitive? (s/not boolean?))`
+                    (reify byte>int   (~(tag "int" 'invoke) [~'_ ~(tag "byte"             'x)] (Primitive/uncheckedIntCast x))
+                           short>int  (~(tag "int" 'invoke) [~'_ ~(tag "short"            'x)] (Primitive/uncheckedIntCast x))
+                           char>int   (~(tag "int" 'invoke) [~'_ ~(tag "char"             'x)] (Primitive/uncheckedIntCast x))
+                           int>int    (~(tag "int" 'invoke) [~'_ ~(tag "int"              'x)] (Primitive/uncheckedIntCast x))
+                           long>int   (~(tag "int" 'invoke) [~'_ ~(tag "long"             'x)] (Primitive/uncheckedIntCast x))
+                           float>int  (~(tag "int" 'invoke) [~'_ ~(tag "float"            'x)] (Primitive/uncheckedIntCast x))
+                           double>int (~(tag "int" 'invoke) [~'_ ~(tag "double"           'x)] (Primitive/uncheckedIntCast x))))
+                  (def >int*|gen|__1 ; `Number`
+                    (reify Object>int (~(tag "int" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
+                      (let* [~(tag "java.lang.Number" 'x) ~'x] (.intValue x)))))
 
-                   (defprotocol >int*|gen__Protocol
-                     (>int*|gen [~'x]))
-                   (extend-protocol >int*|gen__Protocol
-                     java.lang.Byte      (>int*|gen [^java.lang.Byte      x] (.invoke >int*|gen|__0 x))
-                     java.lang.Short     (>int*|gen [^java.lang.Short     x] (.invoke >int*|gen|__0 x))
-                     java.lang.Character (>int*|gen [^java.lang.Character x] (.invoke >int*|gen|__0 x))
-                     java.lang.Integer   (>int*|gen [^java.lang.Integer   x] (.invoke >int*|gen|__0 x))
-                     java.lang.Long      (>int*|gen [^java.lang.Long      x] (.invoke >int*|gen|__0 x))
-                     java.lang.Float     (>int*|gen [^java.lang.Float     x] (.invoke >int*|gen|__0 x))
-                     java.lang.Double    (>int*|gen [^java.lang.Double    x] (.invoke >int*|gen|__0 x))
-                     java.lang.Number    (>int*|gen [                     x] (.invoke >int*|gen|__1 x)))))))
+                  (defprotocol >int*|gen__Protocol
+                    (>int*|gen [~'x]))
+                  (extend-protocol >int*|gen__Protocol
+                    java.lang.Byte      (>int*|gen [~(tag "java.lang.Byte"      x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Short     (>int*|gen [~(tag "java.lang.Short"     x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Character (>int*|gen [~(tag "java.lang.Character" x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Integer   (>int*|gen [~(tag "java.lang.Integer"   x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Long      (>int*|gen [~(tag "java.lang.Long"      x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Float     (>int*|gen [~(tag "java.lang.Float"     x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Double    (>int*|gen [~(tag "java.lang.Double"    x)] (.invoke >int*|gen|__0 x))
+                    java.lang.Number    (>int*|gen [~(tag "java.lang.Object"    x)] (.invoke >int*|gen|__1 x)))]))))
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt !str
   ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
   ;; `?*` means infer with opts
@@ -337,6 +352,7 @@
   ;;   so it does not allow e.g. short strings convertible to an arbitrary `int` representation.
   ([x #?(:clj (?* {:any-in-numeric-range? true}) :cljs t/any?)] ; TODO unknown if `t/any?` is really allowed here
     #?(:clj (StringBuilder. x) :cljs (StringBuffer. x))))
+)
 
 ;; ----- expanded code ----- ;;
 

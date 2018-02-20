@@ -71,11 +71,7 @@
 
 (defalias transducer->transformer red/transducer->transformer)
 
-(defn preserving-reduced [rf]
-  #(let [ret (rf %1 %2)]
-     (if (reduced? ret)
-         (reduced ret)
-         ret)))
+(defalias ur/preserving-reduced)
 
 (defn gen-multiplex* [lang]
   `(~'defn ~'multiplex

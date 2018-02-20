@@ -1,7 +1,8 @@
 (ns quantum.untyped.core.compare
   (:refer-clojure :exclude [==])
   (:require
-    [quantum.untyped.core.core :as ucore]))
+    [quantum.untyped.core.core :as ucore
+      :refer [defaliases]]))
 
 (ucore/log-this-ns)
 
@@ -19,3 +20,5 @@
      0    c
     -1    1
      1   -1))
+
+(defaliases ucore seq= code=)

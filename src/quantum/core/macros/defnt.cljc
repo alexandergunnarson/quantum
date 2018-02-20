@@ -41,6 +41,7 @@
       :refer [kw-map]]
     [quantum.untyped.core.form.evaluate
       :refer [case-env case-env*]]
+    [quantum.untyped.core.form.type-hint        :as ufth]
     [quantum.untyped.core.numeric.combinatorics :as combo]
     [quantum.untyped.core.qualify               :as qual]
     [quantum.untyped.core.reducers
@@ -469,8 +470,8 @@
 
 (defn hint-expr-embeddably [expr tag]
   (if (symbol? expr)
-      (th/with-type-hint expr (th/>body-embeddable-tag tag))
-      (tcore/static-cast-code (th/>body-embeddable-tag tag) expr)))
+      (th/with-type-hint expr  (th/>body-embeddable-tag tag))
+      (ufth/static-cast|code (th/>body-embeddable-tag tag) expr)))
 
 #?(:clj
 (defn hint-expr-with-class [expr hint]

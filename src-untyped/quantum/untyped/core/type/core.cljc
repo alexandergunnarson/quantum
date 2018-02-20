@@ -2,6 +2,7 @@
   (:refer-clojure :exclude
     [class])
   (:require
+    [clojure.core.reducers            :as r]
     [clojure.set                      :as set]
     [clojure.string                   :as str]
 #?@(:clj
@@ -195,19 +196,6 @@
             float   java.lang.Float/TYPE
             double  java.lang.Double/TYPE})})
 
-(defn static-cast-code
-  "`(with-meta (list 'do expr) {:tag class-sym})` isn't enough"
-  [class-sym expr]
-  (let [cast-sym (gensym "cast-sym")]
-    ; `let*` to preserve metadata even when macroexpanding
-    (with-meta `(let* [~(with-meta cast-sym {:tag class-sym}) ~expr] ~cast-sym) {:tag class-sym})))
-
-#?(:clj
-(defmacro static-cast
-  "Performs a static type cast"
-  [class-sym expr]
-  (static-cast-code class-sym expr)))
-
 #?(:clj
 (defn class>prim-subclasses
   {:examples '{(class>prim-subclasses Number)
@@ -215,6 +203,6 @@
   [^Class c]
   (let [boxed-types (get utdef/types 'primitive-boxed?)]
     (->> boxed-types
-         (filter #(isa? % c))
-         (map boxed->unboxed)
+         (r/filter #(isa? % c))
+         (r/map boxed->unboxed)
          set))))

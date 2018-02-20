@@ -403,7 +403,7 @@
                                       quantum.core.print/*collapse-symbols?* true
                                       quantum.core.print/*print-as-code?* true]
                               (quantum.core.print/ppr %))
-                   :caught quantum.core.print/ppr-error))}})
+                   :caught #'quantum.core.print/ppr-error))}})
 
 (defn >cljsbuild-builds
   "Note that for Figwheel to work, no character in the build IDs can necessitate an

@@ -50,39 +50,84 @@
 (gen-interface :name t.∅1)
 (gen-interface :name t.∅2)
 
-(def a+b⊂  (t/isa? t.a+b⊂))
-(def a⊂0   (t/isa? t.a⊂0))
-(def a⊂1   (t/isa? t.a⊂1))
-(def b⊂0   (t/isa? t.b⊂0))
-(def b⊂1   (t/isa? t.b⊂1))
-(def a     (t/isa? t.a))
-(def b     (t/isa? t.b))
-(def a+b⊃  (t/isa? t.a+b⊃))
-(def a⊃0   (t/isa? t.a⊃0))
-(def a⊃1   (t/isa? t.a⊃1))
-(def b⊃0   (t/isa? t.b⊃0))
-(def b⊃1   (t/isa? t.b⊃1))
-; ∅ : a (possibly empty) intersect that is neither a subset nor superset
-(def ∅0   (t/isa? t.∅0))
-(def ∅1   (t/isa? t.∅1))
-(def ∅2   (t/isa? t.∅2))
+(do (def a+b⊂  (t/isa? t.a+b⊂))
+    (def a⊂0   (t/isa? t.a⊂0))
+    (def a⊂1   (t/isa? t.a⊂1))
+    (def b⊂0   (t/isa? t.b⊂0))
+    (def b⊂1   (t/isa? t.b⊂1))
+    (def a     (t/isa? t.a))
+    (def b     (t/isa? t.b))
+    (def a+b⊃  (t/isa? t.a+b⊃))
+    (def a⊃0   (t/isa? t.a⊃0))
+    (def a⊃1   (t/isa? t.a⊃1))
+    (def b⊃0   (t/isa? t.b⊃0))
+    (def b⊃1   (t/isa? t.b⊃1))
+    ; ∅ : a (possibly empty) intersect that is neither a subset nor superset
+    (def ∅0    (t/isa? t.∅0))
+    (def ∅1    (t/isa? t.∅1))
+    (def ∅2    (t/isa? t.∅2))
+    (def U     (t/isa? t/universal-class)))
 
 ;; TESTS ;;
 
 (deftest test|in|compare
+  (testing "UniversalSetSpec"
+    (testing "+ UniversalSetSpec"
+      (is= 0  (t/compare t/universal-set t/universal-set)))
+    (testing "+ NullSetSpec"
+      (is= 1  (t/compare t/universal-set t/null-set)))
+    (testing "+ InferSpec")
+    (testing "+ ValueSpec"
+      (is= 1  (t/compare t/universal-set (t/value 0))))
+    (testing "+ ClassSpec")
+    (testing "+ ProtocolSpec")
+    (testing "+ NilableSpec")
+    (testing "+ NotSpec")
+    (testing "+ OrSpec")
+    (testing "+ UnorderedOrSpec")
+    (testing "+ AndSpec")
+    (testing "+ UnorderedAndSpec")
+    (testing "+ Expression"))
+  (testing "NullSetSpec"
+    (testing "+ UniversalSetSpec"
+      (is=  0  (t/compare t/null-set t/null-set)))
+    (testing "+ NullSetSpec"
+      (is= -1  (t/compare t/null-set t/universal-set)))
+    (testing "+ InferSpec")
+    (testing "+ ValueSpec"
+      (is= nil (t/compare t/null-set (t/value 0))))
+    (testing "+ ClassSpec")
+    (testing "+ ProtocolSpec")
+    (testing "+ NilableSpec")
+    (testing "+ NotSpec")
+    (testing "+ OrSpec")
+    (testing "+ UnorderedOrSpec")
+    (testing "+ AndSpec")
+    (testing "+ UnorderedAndSpec")
+    (testing "+ Expression"))
+  (testing "InferSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec"))
   (testing "ValueSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec"
       (testing "="
-        (is=  0  (t/compare (t/value 1) (t/value 1)))
-        (is=  0  (t/compare (t/value "a") (t/value "a"))))
-      (testing "<"
-        (is= -1  (t/compare (t/value 1) (t/value 2)))
-        (is= -1  (t/compare (t/value "a") (t/value "b"))))
-      (testing ">"
-        (is=  1  (t/compare (t/value 2) (t/value 1)))
-        (is=  1  (t/compare (t/value "b") (t/value "a"))))
+        (is= 0 (t/compare (t/value 1  ) (t/value 1  )))
+        (is= 0 (t/compare (t/value "a") (t/value "a")))
+        (testing "`core/compare` -> -1"
+          (is= nil (t/compare (t/value 1  ) (t/value 2  )))
+          (is= nil (t/compare (t/value "a") (t/value "b"))))
+        (testing "`core/compare` -> 1"
+          (is= nil (t/compare (t/value 2  ) (t/value 1  )))
+          (is= nil (t/compare (t/value "b") (t/value "a")))))
+      (testing "=, non-strict"
+        (is= 0 (t/compare (t/value (vector)         ) (t/value (list)          )))
+        (is= 0 (t/compare (t/value (vector (vector))) (t/value (vector (list)))))
+        (is= 0 (t/compare (t/value (hash-map)       ) (t/value (sorted-map)    ))))
       (testing "∅"
-        (is= nil (t/compare (t/value 1) (t/value "a")))))
+        (is= nil (t/compare (t/value 1  ) (t/value "a")))
+        (is= nil (t/compare (t/value nil) (t/value "a")))))
     (testing "+ ClassSpec"
       (testing "<"
         (testing "Class equality"
@@ -120,6 +165,8 @@
         (is= nil (t/compare (t/value "a") (t/and t/byte? t/long?)))))
     (testing "+ UnorderedAndSpec"))
   (testing "ClassSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec"
       (testing ">"
         (testing "Class equality"
@@ -222,7 +269,56 @@
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec"))
+  (testing "NotSpec"
+    (testing "+ UniversalSetSpec"
+      (is= -1  (t/compare (t/not t/universal-set) t/universal-set))  ; inner =
+      (is=  0  (t/compare (t/not t/null-set)      t/universal-set))) ; inner ⊂
+    (testing "+ NullSetSpec"
+      (is=  0  (t/compare (t/not t/universal-set) t/null-set))       ; inner ⊃
+      (is=  1  (t/compare (t/not t/null-set)      t/null-set)))      ; inner =
+    (testing "+ ValueSpec"
+      (is= nil (t/compare (t/not t/universal-set) (t/value 1)))      ; inner ⊃
+      (is=  1  (t/compare (t/not t/null-set)      (t/value 1))))     ; inner ∅
+    (testing "+ ClassSpec"
+      (is= nil (t/compare (t/not a  ) a  ))  ; inner =
+      (is= nil (t/compare (t/not a  ) a⊃0))  ; inner ⊃
+      (is= nil (t/compare (t/not a  ) a⊂0))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (t/not a  ) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (t/not a  ) U  ))  ; inner ⊂
+      (is= nil (t/compare (t/not a⊃0) a  ))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (t/not a⊃0) a⊂0))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (t/not a⊃0) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (t/not a⊃0) U  ))  ; inner ⊂
+      (is= nil (t/compare (t/not a⊂0) a  ))  ; inner ⊃
+      (is= nil (t/compare (t/not a⊂0) a⊃0))  ; inner ⊃
+      (is= nil (t/compare (t/not a⊂0) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (t/not a⊂0) U  ))  ; inner ⊂
+      (is= nil (t/compare (t/not ∅0 ) a  ))  ; inner ∅
+      (is= nil (t/compare (t/not ∅0 ) a⊃0))  ; inner ∅
+      (is= nil (t/compare (t/not ∅0 ) a⊂0))  ; inner ∅
+      (is= -1  (t/compare (t/not ∅0 ) U  ))) ; inner ⊂
+    (testing "+ ProtocolSpec")
+    (testing "+ NilableSpec")
+    (testing "+ NotSpec"
+      (is=  0  (t/compare (t/not t/universal-set) (t/not t/universal-set)))
+      (is=  0  (t/compare (t/not t/null-set)      (t/not t/null-set)))
+      (is=  0  (t/compare (t/not a)               (t/not a)))
+      (is= nil (t/compare (t/not a)               (t/not b)))
+      (is= nil (t/compare (t/not b)               (t/not a)))
+      (is= -1  (t/compare (t/not a)               (t/not a⊂0)))
+      (is=  1  (t/compare (t/not a)               (t/not a⊃0))))
+    (testing "+ OrSpec"
+      (is= nil (t/compare (t/not t/universal-set) (t/or ∅0 ∅1)))
+      (is=  1  (t/compare (t/not t/null-set)      (t/or ∅0 ∅1)))
+      (is= nil (t/compare (t/not ∅0)              (t/or ∅0 ∅1)))
+      (is= nil (t/compare (t/not ∅1)              (t/or ∅0 ∅1))))
+    (testing "+ UnorderedOrSpec")
+    (testing "+ AndSpec")
+    (testing "+ UnorderedAndSpec")
+    (testing "+ Expression"))
   (testing "OrSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
@@ -311,8 +407,12 @@
       (testing "#{⊂+ ∅+} -> ⊂")
       (testing "#{= ∅+} -> ⊂")
       (testing "#{⊃+ ∅+} -> ∅"))
-    (testing "+ UnorderedOrSpec")
+    (testing "+ UnorderedOrSpec"
+      (testing "+ UniversalSetSpec")
+      (testing "+ NullSetSpec"))
     (testing "+ AndSpec"
+      (testing "+ UniversalSetSpec")
+      (testing "+ NullSetSpec")
       ;; (if <all -1 on right-compare?> 1 nil)
       ;;
       ;; Comparison annotations achieved by first comparing each element of the first/left
@@ -364,6 +464,8 @@
           (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊃ a⊃0 a⊃1 ∅0 ∅1))))))
     (testing "+ UnorderedAndSpec"))
   (testing "UnorderedOrSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
@@ -373,6 +475,8 @@
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec"))
   (testing "AndSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
@@ -382,6 +486,8 @@
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec"))
   (testing "UnorderedAndSpec"
+    (testing "+ UniversalSetSpec")
+    (testing "+ NullSetSpec")
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
@@ -449,7 +555,33 @@
       (is= (t/union|spec t/long? t/int?)
            #{t/long? t/int?}))))
 
+(deftest test|not
+  (testing "simplification"
+    (testing "universal/null set"
+      (is= (t/not t/universal-set)
+           t/null-set)
+      (is= (t/not t/null-set)
+           t/universal-set))
+    (testing "DeMorgan's Law"
+      (is= (t/not (t/or  (t/value 1)         (t/value 2)))
+           (t/and (t/not (t/value 1)) (t/not (t/value 2))))
+      (is= (t/not (t/and (t/value 1)         (t/value 2)))
+           (t/or  (t/not (t/value 1)) (t/not (t/value 2))))
+      (is= (t/not (t/or  (t/not a) (t/not b)))
+           (t/and               a         b))
+      (is= (t/not (t/and (t/not a) (t/not b)))
+           (t/or                a         b)))))
+
 (deftest test|or
+  (testing "equality"
+    (is= (t/or a b) (t/or a b))
+    (is= -1  (t/compare t/nil?      (t/or t/nil? t/string?)))
+    (is= -1  (t/compare (t/value 1) (t/or (t/value 1) (t/value 2))))
+    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 1))))
+    (is= nil (t/compare (t/value 3) (t/or (t/value 1) (t/value 2))))
+    (is= -1  (t/compare (t/value 1) (t/or (t/value 1) (t/value 2) (t/value 3))))
+    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 1) (t/value 3))))
+    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 3) (t/value 1)))))
   (testing "simplification"
     (testing "via single-arg"
       (is= (t/or t/long?)
@@ -474,10 +606,12 @@
            [a+b⊂ a⊂0 ∅0 ∅1]))
     (testing "#{⊂+ =+ ⊃+ ∅+} -> #{⊂+ ∅+}"
       (is= (.-args (t/or a+b⊂ a⊂0 a a+b⊃ a⊃0 ∅0 ∅1))
-           [a+b⊂ a⊂0 ∅0 ∅1])))
+           [a+b⊂ a⊂0 ∅0 ∅1]))))
 
 (deftest test|and
-  ;; TODO return `(constantly false)` when impossible intersection
+  (testing "equality"
+    (is= (t/and a b) (t/and a b)))
+  ;; TODO return `t/null-set` when impossible intersection
   (testing "simplification"
     (testing "via single-arg"
       (is= (t/and t/long?)

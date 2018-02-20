@@ -14,7 +14,8 @@
       :refer [defalias]]
     [quantum.untyped.core.data
       :refer [kw-map]]
-    [quantum.untyped.core.form.evaluate :as ufeval]
+    [quantum.untyped.core.form.evaluate  :as ufeval]
+    [quantum.untyped.core.form.type-hint :as ufth]
     [quantum.untyped.core.type.predicates
       :refer [val?]])
 #?(:clj
@@ -129,5 +130,5 @@
                 _          (assert hint {:xs xs :hint hint})
                 cast-class (th/tag->class (tcore/nth-elem-type|clj hint depth))]
             (if (.isPrimitive ^Class cast-class)
-                `(~(symbol "clojure.core" (str cast-class)) ~x)
-                (tcore/static-cast-code (th/>body-embeddable-tag cast-class) x))))))
+                (ufth/primitive-cast|code x cast-class)
+                (ufth/static-cast|code (th/>body-embeddable-tag cast-class) x))))))

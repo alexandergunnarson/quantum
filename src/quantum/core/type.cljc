@@ -61,7 +61,6 @@
          (catch js/TypeError _
            (try (satisfies? c x))))))
 
-#?(:clj  (defalias static-cast       tcore/static-cast))
 #?(:clj  (defalias static-cast-depth ana/static-cast-depth))
 
          (def val? some?)

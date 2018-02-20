@@ -38,11 +38,11 @@
     [quantum.core.vars                  :as var
       :refer [defalias defaliases]]
     [quantum.core.log                   :as log]
-    [quantum.core.type
-      :refer [static-cast]]
     [quantum.untyped.core.convert       :as u]
     [quantum.untyped.core.form.evaluate
-      :refer [case-env]])
+      :refer [case-env]]
+    [quantum.untyped.core.form.type-hint
+      :refer [static-cast]])
 #?(:cljs
   (:require-macros
     [quantum.core.convert :as self]))

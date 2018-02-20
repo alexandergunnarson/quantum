@@ -1194,7 +1194,7 @@
     (index    [this] i)
   #_clojure.lang.IObj
   ; TODO "mismatched return type"; will fix later
-    #_(withMeta [this ^clojure.lang.IPersistentMap meta'] (tcore/static-cast clojure.lang.IObj (IndexedListRSeq1. xs i meta')))
+    #_(withMeta [this ^clojure.lang.IPersistentMap meta'] (ufgent/static-cast clojure.lang.IObj (IndexedListRSeq1. xs i meta')))
   clojure.lang.IMeta
     (meta     [this] meta)
   clojure.lang.Seqable

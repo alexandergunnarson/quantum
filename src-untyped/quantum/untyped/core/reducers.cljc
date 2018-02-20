@@ -71,6 +71,16 @@
   "Converts a transducer into a reducer."
   [^long n xf] (transducer> n xf r/reducer))
 
+;; ===== Utils ===== ;;
+
+(defn preserving-reduced [rf]
+  (fn ([ret] ret)
+      ([ret x]
+        (let [ret (rf ret x)]
+          (if (reduced? ret)
+            (reduced ret)
+            ret)))))
+
 ;; ===== Reduction functions ===== ;;
 
 (defn educe
@@ -110,33 +120,33 @@
 ;; for purposes of `defeager`
 (declare pjoin pjoin')
 
-#?(:clj
-(defmacro defeager [sym plus-sym]
-  (let [lazy-sym            (when (resolve (symbol "clojure.core" (name sym)))
-                              (symbol (str "l" sym)))
-        quoted-sym          (symbol (str sym "'"))
-        parallel-sym        (symbol (str "p" sym))
-        parallel-quoted-sym (symbol (str "p" sym "'"))]
-    `(do ~(when lazy-sym
-           `(defalias ~lazy-sym ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
-         (defalias ~(qual/unqualify plus-sym) ~plus-sym)
-         (defn ~sym
-           ~(str "Like `core/" sym "`, but eager. Reduces into vector.")
-           ([f#] (fn [coll#] (~sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) join)))
-         (defn ~quoted-sym
-           ~(str "Like `" sym "`, but reduces into the empty version of the collection which was passed to it.")
-           ([f#] (fn [coll#] (~quoted-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) join')))
-         (defn ~parallel-sym
-           ~(str "Like `core/" sym "`, but eager and parallelized. Folds into vector.")
-           ([f#] (fn [coll#] (~parallel-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) pjoin)))
-         (defn ~parallel-quoted-sym
-           ~(str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")
-           ([f#] (fn [coll#] (~parallel-quoted-sym f# coll#)))
-           ([f# coll#] (->> coll# (~plus-sym f#) pjoin')))))))
+(defn- >eager|code [sym plus-sym join-sym max-args docstring]
+  (list* 'defn sym docstring
+    (case (long max-args)
+      0 `[([]        (fn [xs#] (~sym    xs#)))
+          ([    xs#] (->> xs# (~plus-sym    ) ~join-sym))]
+      1 `[([a0#]     (fn [xs#] (~sym a0# xs#)))
+          ([a0# xs#] (->> xs# (~plus-sym a0#) ~join-sym))])))
 
+#?(:clj
+(defmacro defeager [sym plus-sym max-args & [lazy-sym]]
+  `(do ~(when (and (not lazy-sym) (resolve (symbol "clojure.core" (name sym))))
+          `(defalias ~(symbol (str "l" sym)) ~(symbol (case-env :cljs "cljs.core" "clojure.core") (name sym))))
+       (defalias ~(qual/unqualify plus-sym) ~plus-sym)
+       ~(>eager|code sym                        plus-sym `join   max-args
+          (str "Like `core/" sym "`, but eager. Reduces into vector."))
+       ~(>eager|code (symbol (str sym "'"))     plus-sym `join'  max-args
+          (str "Like `" sym "`, but reduces into the empty version of the collection which was passed to it."))
+       ~(>eager|code (symbol (str "p" sym))     plus-sym `pjoin  max-args
+          (str "Like `core/" sym "`, but eager and parallelized. Folds into vector."))
+       ~(>eager|code (symbol (str "p" sym "'")) plus-sym `pjoin' max-args
+          (str "Like `" sym "`, but parallel-folds into the empty version of the collection which was passed to it.")))))
+
+#?(:clj
+(defmacro def-transducer>eager [eager-sym transducer-sym max-args & [lazy-sym]]
+  (let [plus-sym (symbol (str eager-sym "+"))]
+    `(do (def ~plus-sym (transducer->transformer ~max-args ~transducer-sym))
+         (defeager ~eager-sym ~plus-sym ~max-args ~lazy-sym)))))
 
 (defn join! [xs0 xs1] (educe conj! xs0 xs1))
 

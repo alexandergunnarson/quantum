@@ -28,8 +28,6 @@
     [quantum.core.macros.type-hint :as th]
     [quantum.core.compare          :as comp]
     [quantum.core.numeric          :as num]
-    [quantum.core.type
-      :refer [static-cast]]
     [quantum.core.vars             :as var
       :refer [defalias]])
 #?(:cljs

@@ -43,7 +43,7 @@
     (when (or (sequential? b) #?(:clj  (instance? java.util.List b)
                                  :cljs (list? b)))
       (loop [a (seq a) b (seq b)]
-        (when (= (nil? a) (nil? b))
+        (when (identical? (nil? a) (nil? b))
           (or (nil? a)
               (when (eq-f (first a) (first b))
                 (recur (next a) (next b))))))))))
