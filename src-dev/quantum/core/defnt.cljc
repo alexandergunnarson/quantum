@@ -230,7 +230,7 @@
                         :any   nil
                         :infer (do (log/pr :warn "Spec inference not yet supported in `defns`. Ignoring request to infer" (str "`" arg-binding "`"))
                                    nil)
-                        :spec  (if-let [c|sym (do #?(:clj  (some-> spec spec-code>?class th/class->instance?-safe-tag|sym)
+                        :spec  (if-let [c|sym (do #?(:clj  (some-> spec spec-code>?class ufth/class->instance?-safe-tag|sym)
                                                      ;; TODO for now CLJS only does `validate` which is more expensive
                                                      :cljs spec))]
                                  (list `instance? c|sym arg-binding)
@@ -245,8 +245,8 @@
                           (if (not= k :spec)
                               arg-binding
                               (-> arg-binding
-                                  (th/with-type-hint (some-> spec spec-code>?class))
-                                  (th/with-fn-arglist-type-hint lang (count args) varargs)))
+                                  (ufth/with-type-hint (some-> spec spec-code>?class))
+                                  (ufth/with-fn-arglist-type-hint lang (count args) varargs)))
                         :cljs arg-binding))
                   arglist'
                     (->> args
@@ -787,6 +787,18 @@
      (s/validate ~'out ~(update-meta post-spec dissoc* :runtime?))))
 
 #?(:clj
+(var/def sort-guide "for use in sorting"
+  {Object       0
+   tdef/boolean 1
+   tdef/byte    2
+   tdef/short   3
+   tdef/char    4
+   tdef/int     5
+   tdef/long    6
+   tdef/float   7
+   tdef/double  8}))
+
+#?(:clj
 (defn arg-specs>arg-classes-seq|primitivized [arg-specs]
   (->> arg-specs
        (c/lmap (fn [spec]
@@ -909,7 +921,7 @@
 
 (defn fnt-overload>interface [args-classes out-class]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
-        hinted-method-sym (th/with-type-hint fnt-method-sym (th/>arglist-embeddable-tag out-class))
+        hinted-method-sym (ufth/with-type-hint fnt-method-sym (ufth/>arglist-embeddable-tag out-class))
         interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(ufgen/gen-args (count args-classes))))]
     (log/pr ::debug "Creating interface" interface-sym "...")
     (eval interface-code)))
@@ -927,25 +939,13 @@
           (>vec (concat ['_]
                   (doto (->> arglist-code|reify|unhinted
                        (map-indexed
-                         (fn [i arg] (th/with-type-hint arg (-> arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) th/>arglist-embeddable-tag)))))
+                         (fn [i arg] (ufth/with-type-hint arg (-> arg-classes (doto pr/ppr-meta) (c/get i) (doto pr/ppr-meta) ufth/>arglist-embeddable-tag)))))
                   pr/ppr-meta)))]
     {:arglist-code  arglist-code
      :body-form     body-form
      :interface     interface
      :method-sym    fnt-method-sym
      :out-class     out-class})))
-
-#?(:clj
-(var/def sort-guide "for use in sorting"
-  {Object       0
-   tdef/boolean 1
-   tdef/byte    2
-   tdef/short   3
-   tdef/char    4
-   tdef/int     5
-   tdef/long    6
-   tdef/float   7
-   tdef/double  8}))
 
 #?(:clj
 (defn fnt|overload-group>reify [{:keys [overload-group #_:fnt/overload-group, i #_integer?, fn|name #_::ss/fn|name]}]
@@ -956,7 +956,7 @@
        (reify ~@(->> reify-overloads
                      (c/lmap (fn [{:keys [interface out-class method-sym arglist-code body-form]} #_::reify|overload]
                                [(-> interface >name >symbol)
-                                `(~(th/with-type-hint method-sym (th/>arglist-embeddable-tag out-class))
+                                `(~(ufth/with-type-hint method-sym (ufth/>arglist-embeddable-tag out-class))
                                   ~arglist-code ~body-form)]))
                      lcat))))))
 

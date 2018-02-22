@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.collections
   (:refer-clojure :exclude
     [#?(:cljs array?) assoc-in cat contains? count distinct distinct? get group-by filter
-     flatten last map map-indexed mapcat partition-all pmap remove])
+     flatten last map map-indexed mapcat partition-all pmap remove zipmap])
   (:require
     [clojure.core                  :as core]
     [fast-zip.core                 :as zip]
@@ -17,7 +17,7 @@
     [quantum.untyped.core.reducers :as ur
       :refer [defeager def-transducer>eager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+      :refer [array? val?]]))
 
 (ucore/log-this-ns)
 

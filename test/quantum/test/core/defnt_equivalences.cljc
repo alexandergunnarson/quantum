@@ -1,7 +1,7 @@
 ;; See https://jsperf.com/js-property-access-comparison — all property accesses (at least of length 1) seem to be equal
 
 (ns quantum.core.test.defnt-equivalences
-  (:refer-clojure :exclude [name])
+  (:refer-clojure :exclude [name *])
   (:require
     [clojure.core              :as c]
     [quantum.core.defnt
@@ -23,7 +23,7 @@
     [quantum.untyped.core.logic
       :refer [ifs]]
     [quantum.untyped.core.type :as t
-      :refer [? !]])
+      :refer [? *]])
   (:import clojure.lang.Named
            clojure.lang.Reduced
            clojure.lang.ISeq
@@ -122,8 +122,8 @@
 (macroexpand '
 (defnt #_:inline name|gen
            ([x t/string? > t/string?    ] x)
-  #?(:clj  ([x Named     > (! t/string?)] (.getName x))
-     :cljs ([x INamed    > (! t/string?)] (-name x))))
+  #?(:clj  ([x Named     > (* t/string?)] (.getName x))
+     :cljs ([x INamed    > (* t/string?)] (-name x))))
 )
 
 ;; ----- expanded code ----- ;;

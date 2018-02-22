@@ -1,7 +1,7 @@
 (ns quantum.untyped.core.type
   "Essentially, set-theoretic definitions and operations on types."
   (:refer-clojure :exclude
-    [< <= = not= >= > == compare
+    [< <= = not= >= > == compare *
      and or not
      boolean  byte  char  short  int  long  float  double
      boolean? byte? char? short? int? long? float? double?
@@ -14,6 +14,7 @@
     [clojure.core                               :as c]
     [quantum.untyped.core.analyze.expr          :as xp
       :refer [>expr #?(:cljs Expression)]]
+    [quantum.untyped.core.classes               :as uclass]
     [quantum.untyped.core.collections           :as uc]
     [quantum.untyped.core.collections.logic
       :refer [seq-and seq-or]]
@@ -80,7 +81,9 @@
                                           (c/and (instance? ValueSpec that)
                                                  (c/= v (.-v ^ValueSpec that)))))}})
 
-(defn value [v] (ValueSpec. v))
+(defn value
+  "Creates a spec whose extension is the singleton set containing only the value `v`."
+  [v] (ValueSpec. v))
 
 (defn value-spec? [x] (instance? ValueSpec x))
 
@@ -132,14 +135,13 @@
       (.-p ^ProtocolSpec spec)
       (err! "Cannot cast to ProtocolSpec" {:x spec})))
 
-(defn isa? [c]
-  #?(:clj (assert (c/class? c))) ; TODO CLJS
-  (ClassSpec. nil c nil))
+(defn isa?|protocol [p]
+  (assert (utpred/protocol? p))
+  (ProtocolSpec. nil p nil))
 
-#?(:clj
-(defn isa|protocol? [c]
-  #_(assert (protocol? c))
-  (ProtocolSpec. nil c nil)))
+(defn isa? [x]
+  (ifs #?@(:clj [(class? x) (ClassSpec. nil x nil)])
+       (utpred/protocol? x) (isa?|protocol x)))
 
 ;; ===== CREATION ===== ;;
 
@@ -210,7 +212,7 @@
 
 (-def spec? PSpec)
 
-(defn ! [spec]
+(defn * [spec]
   (if (spec? spec)
       (update-meta spec assoc :runtime? true)
       (err! "Input must be spec" spec)))
@@ -252,19 +254,22 @@
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
   [^Class c0 ^Class c1]
-  #?(:clj (ifs (== c0 c1)                                  0
-               (== c0 Object)                              1
-               (== c1 Object)                             -1
-               (== (utcore/boxed->unboxed c0) c1)          1
-               (== c0 (utcore/boxed->unboxed c1))         -1
+  #?(:clj (ifs (== c0 c1)                                0
+               (== c0 Object)                            1
+               (== c1 Object)                           -1
+               (== (utcore/boxed->unboxed c0) c1)        1
+               (== c0 (utcore/boxed->unboxed c1))       -1
                ;; we'll consider the two unrelated
                ;; TODO this uses reflection so each class comparison is slowish
                (c/or (utcore/primitive-array-type? c0)
-                     (utcore/primitive-array-type? c1))   nil
-               (.isAssignableFrom c0 c1)                   1
-               (.isAssignableFrom c1 c0)                  -1
+                     (utcore/primitive-array-type? c1)) nil
+               (.isAssignableFrom c0 c1)                 1
+               (.isAssignableFrom c1 c0)                -1
                ;; multiple inheritance of interfaces
-               (c/or (.isInterface c0) (.isInterface c1))  2
+               (c/or (c/and (uclass/interface? c0)
+                            (c/not (uclass/final? c1)))
+                     (c/and (uclass/interface? c1)
+                            (c/not (uclass/final? c0)))) 2
                nil)
      :cljs (TODO)))
 
@@ -275,9 +280,9 @@
 (defn compare
   ;; TODO optimize the `recur`s here as they re-take old code paths
   "Returns the value of the comparison of the extensions of ->`s0` and ->`s1`.
-   `-1`   means (ex ->`s0`) ⊂                             (ex ->`s1`)
-    `0`   means (ex ->`s0`) =                             (ex ->`s1`)
-    `1`   means (ex ->`s0`) ⊃                             (ex ->`s1`)
+   `-1`   means (ex ->`s0`) ⊂                                 (ex ->`s1`)
+    `0`   means (ex ->`s0`) =                                 (ex ->`s1`)
+    `1`   means (ex ->`s0`) ⊃                                 (ex ->`s1`)
     `2`   means (ex ->`s0`) shares other intersect w.r.t. (∩) (ex ->`s1`)
     `nil` means (ex ->`s0`) disjoint               w.r.t. (∅) (ex ->`s1`)
 
@@ -312,8 +317,9 @@
   [s0 s1] (c/nil? (compare s0 s1)))
 
 (defn ><
-  "Computes whether the intersect of the extensions of spec ->`s0` and ->`s1` is non-empty,
-   but neither ->`s0` nor ->`s1` share a subset/equality/superset relationship."
+  "Computes whether it is the case that the intersect of the extensions of spec ->`s0`
+   and ->`s1` is non-empty, and neither ->`s0` nor ->`s1` share a subset/equality/superset
+   relationship."
   [s0 s1] (c/= (compare s0 s1) 2))
 
 (defn >=
@@ -324,6 +330,13 @@
   "Computes whether the extension of spec ->`s0` is a strict superset of that of ->`s1`."
   [s0 s1] (c/= (compare s0 s1) 1))
 
+(defn inverse [comparison]
+  (case comparison
+    -1   1
+     0   0
+     1  -1
+    nil nil))
+
 ;; ===== LOGICAL ===== ;;
 
 (defprotocol PLogicalComplement
@@ -333,6 +346,25 @@
      `not` specs.
      E.g. `(>logical-complement (and a b))` -> `(or  (not a) (not b))`
           `(>logical-complement (or  a b))` -> `(and (not a) (not b))`."))
+
+#?(:clj (def universal-class java.lang.Object))
+
+(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} NullSetSpec []
+  {PSpec                 nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn      {-edn ([this] `∅)}})
+
+(def null-set (NullSetSpec.))
+
+(udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
+  {PSpec                 nil
+   fipp.ednize/IOverride nil
+   fipp.ednize/IEdn      {-edn ([this] `U)}})
+
+;; The set of all sets that do not include themselves (including the null set)
+(def universal-set (UniversalSetSpec.))
+
+(declare not not-spec? not-spec>inner-spec)
 
 (defn- create-logical-spec
   [kind #_#{:or :and} construct-fn spec-pred spec>args args #_(fn-> count (> 1)) comparison-denotes-redundancy?]
@@ -363,7 +395,8 @@
                                             ;; remove all args whose extensions are redundant w.r.t. `s`
                                             (uc/remove+ (rcomp second comparison-denotes-redundancy?))
                                             join)]
-                                 (prl! args' s without-redundant-args)
+                                 (prl! kind args' s without-redundant-args
+                                       (->> without-redundant-args (uc/map+ second) (seq-or c/nil?)))
                                  (ifs
                                    (c/and (c/= kind :and)
                                           (c/or ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
@@ -379,12 +412,19 @@
                                                                  (fn [s'] (c/and (not-spec? s') (c/= s (not-spec>inner-spec s')))))))))
                                    (reduced [null-set])
 
-                                   (c/or
+                                   ;; `s` is `><` (for `or`, or `<>`) w.r.t. to all other args
+                                   (->> without-redundant-args
+                                        (uc/map+ second)
+                                        (seq-and (if (c/= kind :and)
+                                                     (fn1 c/= 2)
+                                                     (fn1 case (2 nil) true false))))
+                                   (->> without-redundant-args (uc/map first) (<- conj s))
+                                   #_(c/or
                                      ;; at least one arg has an extension that is redundant w.r.t. `s`
                                      (c/< (count without-redundant-args) (count args'))
                                      ;; `or`; `s` is `<>` or `><` w.r.t. to all other args
                                      (c/and (c/= kind :or) (->> without-redundant-args (uc/map+ second) (seq-and (fn1 case (2 nil) true false)))))
-                                   (->> without-redundant-args (uc/map first) (<- conj s))
+                                   #_(->> without-redundant-args (uc/map first) (<- conj s))
 
                                    args')))))
                      []))]
@@ -422,6 +462,8 @@
    Yields error if provided with specs for which `<>` is true."
   [arg & args]
   (create-logical-spec :and ->AndSpec and-spec? and-spec>args (cons arg args) (fn1 c/= -1)))
+
+(uvar/defalias & and)
 
 (deftype UnorderedAndSpec [args #_(t/unkeyed spec?)]
   PSpec
@@ -484,6 +526,8 @@
   [arg & args]
   (create-logical-spec :or ->OrSpec or-spec? or-spec>args (cons arg args) (fn1 c/= 1)))
 
+(uvar/defalias | or)
+
 (deftype UnorderedOrSpec [args #_(t/unkeyed spec?)]
   PSpec
   fipp.ednize/IOverride
@@ -542,6 +586,8 @@
        (and-spec? spec)       (->> spec and-spec>args (uc/lmap not) (apply or ))
        (NotSpec. spec)))
 
+(uvar/defalias ! not)
+
 #?(:clj
 (defmacro spec
   "Creates a spec function"
@@ -592,23 +638,6 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] `?)}})
-
-#?(:clj (def universal-class java.lang.Object))
-
-(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} NullSetSpec []
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] `∅)}})
-
-(def null-set (NullSetSpec.))
-
-(udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
-  {PSpec                 nil
-   fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn ([this] `U)}})
-
-;; The set of all sets that do not include themselves (including the null set)
-(def universal-set (UniversalSetSpec.))
 
 (defn- compare|value+value
   "What we'd really like is to have a different version of .equals or .equiv
@@ -677,16 +706,16 @@
    #{(⊃ ?) ∅} -> ∅
    Otherwise whatever it is"
   [s0 s1]
-  (let [<ident  0 ; -1
-        =ident  1 ;  0
-        >ident  2 ;  1
-        ><ident 3 ;  2
-        <>ident 4 ; nil
-        ;; <+!  (-> ubit/empty (ubit/conj <ident) (ubit/conj <>ident)) ; 17
-        ;; =+!  (-> ubit/empty (ubit/conj =ident) (ubit/conj <>ident)) ; 18
-        ;; >+!  (-> ubit/empty (ubit/conj >ident) (ubit/conj <>ident)) ; 20
-        ;; ><+!
-        ;; <>+!
+  (let [<ident  0
+        =ident  1
+        >ident  2
+        ><ident 3
+        <>ident 4
+        ;; <+!  (-> ubit/empty (ubit/conj <ident ) (ubit/conj <>ident)) ; 17
+        ;; =+!  (-> ubit/empty (ubit/conj =ident ) (ubit/conj <>ident)) ; 18
+        ;; >+!  (-> ubit/empty (ubit/conj >ident ) (ubit/conj <>ident)) ; 20
+        ;; ><+! (-> ubit/empty (ubit/conj ><ident) (ubit/conj <>ident)) ; 24
+        ;; <>+! (-> ubit/empty (ubit/conj <>ident))                     ; 16
         specs (.-args ^OrSpec s1)]
     (first
       (reduce
@@ -696,11 +725,11 @@
                          (case ret' -1  <ident
                                      0  =ident
                                      1  >ident
-                                     2  (TODO)
+                                     2  ><ident
                                     nil <>ident))]
             (case (c/long found')
-              (17 #_<+! 18 #_=+!) (reduced [-1  nil])
-              (20 #_>+!)          (reduced [nil nil])
+              (17 #_<+! 18 #_=+!)  (reduced [-1 nil])
+              (20 #_>+! 24 #_><+!) (reduced [ 2 nil])
               [ret' found'])))
         [nil ubit/empty]
         specs))))
@@ -740,13 +769,16 @@
 
 (defn- compare|not+class [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
-    (ifs (= s0|inner universal-set) nil
-         (= s0|inner null-set)      1
-         (c/and (c/= -1 (compare (not-spec>inner-spec s0) s1))
-                #?(:clj  (-> s1 class-spec>class (c/= universal-class))
-                         ;; CLJS does not have a universal class
-                   :cljs false))
-           -1
+    (ifs (= s0|inner universal-set)
+           nil
+         (= s0|inner null-set)
+           1
+         (< s0|inner s1)
+           (if #?(:clj  (-> s1 class-spec>class (c/= universal-class))
+                        ;; CLJS does not have a universal class
+                  :cljs false)
+               -1
+                2)
          nil)))
 
 (defn- compare|not+protocol [s0 s1]
@@ -792,7 +824,7 @@
         InferSpec        todo
         ValueSpec        fn>
         ClassSpec        todo
-        ProtocolSpec     todo
+        ProtocolSpec     fn>
         NotSpec          (with-invert-comparison compare|not+universal)
         OrSpec           fn>
         UnorderedOrSpec  todo
@@ -805,7 +837,7 @@
         InferSpec        todo
         ValueSpec        fn<>
         ClassSpec        todo
-        ProtocolSpec     todo
+        ProtocolSpec     fn<>
         NotSpec          (with-invert-comparison compare|not+null)
         OrSpec           fn<>
         UnorderedOrSpec  todo
@@ -853,7 +885,7 @@
         Expression       fn<>}
      ProtocolSpec
        {UniversalSetSpec fn<
-        NullSetSpec      fn>
+        NullSetSpec      fn<>
         InferSpec        fn<
         ValueSpec        (with-invert-comparison compare|value+protocol)
         ClassSpec        todo
@@ -1131,12 +1163,13 @@
 
          (-def object?                     #?(:clj java.lang.Object :cljs js/Object))
 
+         (-def val?                        (not nil?))
          (-def any?                        (? (or object? #?@(:cljs [js/String js/Symbol]))))
 
 ;; ===== META ===== ;;
 
 #?(:clj  (-def class?                      (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class?            (fn [x] (c/and (class? x) (.isPrimitive ^Class x) (not== Void/TYPE x)))))
+#?(:clj  (-def primitive-class?            (fn [x] (c/and (uclass/primitive? x) (not== Void/TYPE x)))))
 #?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== NUMBERS ===== ;;
@@ -1201,6 +1234,13 @@
 #?(:clj  (-def tagged-literal? clojure.lang.TaggedLiteral))
 
          (-def literal?        (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
+#?(:clj  (-def array-list?     java.util.ArrayList))
+#?(:clj  (-def java-coll?      java.util.Collection))
+#?(:clj  (-def java-set?       java.util.Set))
+#?(:clj  (-def thread?         java.lang.Thread))
+#?(:clj  (-def throwable?      java.lang.Throwable))
+#?(:clj  (-def comparable?     java.lang.Comparable))
+#?(:clj  (-def iterable?       java.lang.Iterable))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
 
 )

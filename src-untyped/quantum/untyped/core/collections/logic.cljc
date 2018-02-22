@@ -18,16 +18,16 @@
 
 ;; `seq-or`
 
-(defn seq-or|rf
+(defn seq-or|rf #_> #_boolean?
   ([] (seq-or|rf identity))
   ([pred]
     (fn ([]      false)
         ([ret]   ret)
-        ([_ x]   (and (pred x)   (reduced x)))
-        ([_ k v] (and (pred k v) (reduced [k v]))))))
+        ([_ x]   (and (pred x)   (reduced true)))
+        ([_ k v] (and (pred k v) (reduced true))))))
 
 (defn seq-or
-  "∃: A faster version of `some` using `reduce` instead of `seq`."
+  "∃: A faster version of `some` using `educe` instead of `seq`."
   ([xs] (educe (seq-or|rf) xs))
   ([pred xs] (educe (seq-or|rf pred) xs)))
 
@@ -49,16 +49,16 @@
 
 ;; `seq-and`
 
-(defn seq-and|rf
+(defn seq-and|rf #_> #_boolean?
   ([] (seq-and|rf identity))
   ([pred]
     (fn ([]      true) ; vacuously
         ([ret]   ret)
         ([_ x]   (or (pred x)   (reduced false)))
-        ([_ k v] (or (pred k v) (reduced [k v]))))))
+        ([_ k v] (or (pred k v) (reduced false))))))
 
 (defn seq-and
-  "∀: A faster version of `every?` using `reduce` instead of `seq`."
+  "∀: A faster version of `every?` using `educe` instead of `seq`."
   ([xs] (educe (seq-and|rf) xs))
   ([pred xs] (educe (seq-and|rf pred) xs)))
 
@@ -106,7 +106,7 @@
     (not== ret failed-sentinel)))
 
 (defn every-val
-  "Yields what every value in `xs` is equivalent to (via `=`), or the provided
+  "Computes what every value in `xs` is equivalent to (via `=`), or the provided
    `not-equivalent` value if they are not all equivalent."
   [not-equivalent xs]
   (reduce (fn [ret x]

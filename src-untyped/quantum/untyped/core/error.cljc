@@ -15,6 +15,8 @@
     [quantum.untyped.core.error :as self
       :refer [err-constructor]])))
 
+#?(:clj (do (ns-unmap *ns* 'Error) (import quantum.core.error.Error)))
+
 (ucore/log-this-ns)
 
 ;; ===== Config ===== ;;

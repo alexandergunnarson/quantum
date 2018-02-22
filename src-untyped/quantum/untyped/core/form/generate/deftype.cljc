@@ -2,6 +2,7 @@
   (:refer-clojure :exclude [deftype])
   (:require
     [cljs.analyzer]
+    [cljs.core]
     [clojure.core                        :as core]
     [quantum.untyped.core.data
       :refer [kw-map]]

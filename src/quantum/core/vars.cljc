@@ -59,7 +59,7 @@
 
 #?(:clj (quantum.untyped.core.vars/defmalias defmalias quantum.untyped.core.vars/defmalias))
 
-#?(:clj (defaliases uvar defonce def- defmacro-))
+#?(:clj (defaliases u defonce def- defmacro-))
 ; ============ MANIPULATION + OTHER ============
 
 ; CLJS compatible only if you port |alter-var-root| as in-ns, def, in-ns

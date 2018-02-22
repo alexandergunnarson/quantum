@@ -392,11 +392,12 @@
    :aot '[sparkling.serialization sparkling.destructuring]
    ;; ===== REPL ===== ;;
    :repl-options
-     {:init '(do (clojure.core/require
+     {:init '(do (require
+                   'quantum.core.error
                    'quantum.core.print
-                   'quantum.core.print.prettier)
+                   'quantum.core.print.prettier
+                   '[quantum.core.log :refer [prl!]])
                  (quantum.core.print.prettier/extend-pretty-printing!)
-                 (require '[quantum.core.log :refer [prl!]])
                  (reset! quantum.core.error/*pr-data-to-str? true)
                  (clojure.main/repl
                    :print  #(binding [*print-meta* true
