@@ -18,20 +18,20 @@
 
 ;; `seq-or`
 
-(defn seq-or:rf
-  ([] (seq-or:rf identity))
+(defn seq-or|rf
+  ([] (seq-or|rf identity))
   ([pred]
-    (fn ([]      true) ; vacuously
+    (fn ([]      false)
         ([ret]   ret)
         ([_ x]   (and (pred x)   (reduced x)))
         ([_ k v] (and (pred k v) (reduced [k v]))))))
 
 (defn seq-or
   "∃: A faster version of `some` using `reduce` instead of `seq`."
-  ([xs] (educe (seq-or:rf) xs))
-  ([pred xs] (educe (seq-or:rf pred) xs)))
+  ([xs] (educe (seq-or|rf) xs))
+  ([pred xs] (educe (seq-or|rf pred) xs)))
 
-(defalias some:rf seq-or:rf)
+(defalias some|rf seq-or|rf)
 
 (defalias some seq-or)
 
@@ -39,9 +39,9 @@
 
 ;; `seq-nor`
 
-#_(def seq-nor:rf ...)
+#_(def seq-nor|rf ...)
 
-#_(defalias not-any?:rf seq-nor:rf)
+#_(defalias not-any?|rf seq-nor|rf)
 
 (def seq-nor (rcomp seq-or not))
 
@@ -49,8 +49,8 @@
 
 ;; `seq-and`
 
-(defn seq-and:rf
-  ([] (seq-and:rf identity))
+(defn seq-and|rf
+  ([] (seq-and|rf identity))
   ([pred]
     (fn ([]      true) ; vacuously
         ([ret]   ret)
@@ -59,10 +59,10 @@
 
 (defn seq-and
   "∀: A faster version of `every?` using `reduce` instead of `seq`."
-  ([xs] (educe (seq-and:rf) xs))
-  ([pred xs] (educe (seq-and:rf pred) xs)))
+  ([xs] (educe (seq-and|rf) xs))
+  ([pred xs] (educe (seq-and|rf pred) xs)))
 
-(defalias every?:rf seq-and:rf)
+(defalias every?|rf seq-and|rf)
 
 (defalias every? seq-and)
 
@@ -79,11 +79,11 @@
 
 ;; `seq-nand`
 
-#_(def seq-nand:rf ...)
+#_(def seq-nand|rf ...)
 
 (def seq-nand (rcomp seq-and not))
 
-#_(defalias not-every?:rf seq-nand:rf)
+#_(defalias not-every?|rf seq-nand|rf)
 
 (defalias not-every? seq-nand)
 

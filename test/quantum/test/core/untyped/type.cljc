@@ -13,12 +13,16 @@
     [quantum.untyped.core.numeric      :as unum]
     [quantum.untyped.core.type         :as t]))
 
+(def & t/and)
+(def | t/or)
+(def ! t/not)
+
 (is= -1 (t/compare (t/value 1) t/numerically-byte?))
 
-(is= (t/and t/long? (>expr (fn1 = 1)))
+(is= (& t/long? (>expr (fn1 = 1)))
      (t/value 1))
 
-(is= (t/and (t/value 1) (>expr unum/integer-value?))
+(is= (& (t/value 1) (>expr unum/integer-value?))
      (t/value 1))
 
 (t/compare (t/value 1) (>expr unum/integer-value?))
@@ -78,10 +82,11 @@
       (is= 1  (t/compare t/universal-set t/null-set)))
     (testing "+ InferSpec")
     (testing "+ ValueSpec"
+      (is= 1  (t/compare t/universal-set (t/value t/universal-set)))
+      (is= 1  (t/compare t/universal-set (t/value t/null-set)))
       (is= 1  (t/compare t/universal-set (t/value 0))))
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ NotSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
@@ -90,15 +95,14 @@
     (testing "+ Expression"))
   (testing "NullSetSpec"
     (testing "+ UniversalSetSpec"
-      (is=  0  (t/compare t/null-set t/null-set)))
-    (testing "+ NullSetSpec"
       (is= -1  (t/compare t/null-set t/universal-set)))
+    (testing "+ NullSetSpec"
+      (is=  0  (t/compare t/null-set t/null-set)))
     (testing "+ InferSpec")
     (testing "+ ValueSpec"
       (is= nil (t/compare t/null-set (t/value 0))))
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ NotSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
@@ -109,8 +113,12 @@
     (testing "+ UniversalSetSpec")
     (testing "+ NullSetSpec"))
   (testing "ValueSpec"
-    (testing "+ UniversalSetSpec")
-    (testing "+ NullSetSpec")
+    (testing "+ UniversalSetSpec"
+      (is= -1  (t/compare (t/value t/universal-set) t/universal-set))
+      (is= -1  (t/compare (t/value 1) t/universal-set)))
+    (testing "+ NullSetSpec"
+      (is= nil (t/compare (t/value t/null-set) t/null-set))
+      (is= nil (t/compare (t/value 1) t/null-set)))
     (testing "+ ValueSpec"
       (testing "="
         (is= 0 (t/compare (t/value 1  ) (t/value 1  )))
@@ -138,31 +146,30 @@
       (testing "∅"
         (is= nil (t/compare (t/value "a") t/byte?))))
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec"
       (testing "<"
         ;;    #{"a"} ∅ t/byte?
         ;;    #{"a"} ⊂ t/string?
         ;; -> #{"a"} ⊂ (t/byte? ∪ t/string?)
-        (is= -1  (t/compare (t/value "a") (t/or t/byte? t/string?))))
+        (is= -1  (t/compare (t/value "a") (| t/byte? t/string?))))
       (testing "∅"
         ;;    #{"a"} ∅ t/byte?
         ;;    #{"a"} ∅ t/long?
         ;; -> #{"a"} ∅ (t/byte? ∪ t/long?)
-        (is= nil (t/compare (t/value "a") (t/or t/byte? t/long?)))))
+        (is= nil (t/compare (t/value "a") (| t/byte? t/long?)))))
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec"
       (testing "in>"
-        (is= nil (t/compare (t/value "a") (t/and t/string? ...))))
+        (is= nil (t/compare (t/value "a") (& t/string? ...))))
       (testing "in: disjoint"
         ;;    #{"a"} ∅ t/byte?
         ;;    #{"a"} ⊂ t/char-seq?
         ;; -> #{"a"} ∅ (t/byte? ∩ t/char-seq?)
-        (is= nil (t/compare (t/value "a") (t/and t/byte? t/char-seq?)))
+        (is= nil (t/compare (t/value "a") (& t/byte? t/char-seq?)))
         ;;    #{"a"} ∅ t/byte?
         ;;    #{"a"} ∅ t/long?
         ;; -> #{"a"} ∅ (t/byte? ∩ t/long?)
-        (is= nil (t/compare (t/value "a") (t/and t/byte? t/long?)))))
+        (is= nil (t/compare (t/value "a") (& t/byte? t/long?)))))
     (testing "+ UnorderedAndSpec"))
   (testing "ClassSpec"
     (testing "+ UniversalSetSpec")
@@ -211,107 +218,96 @@
           (is= nil (t/compare t/char-seq? t/comparable?))
           (is= nil (t/compare t/comparable? t/char-seq?)))))
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec"
-      (testing "Nilabled is ="
-        (is= -1  (t/compare t/long?   (t/? t/long?))))
-      (testing "Nilabled is ⊃"
-        (is= -1  (t/compare t/long?   (t/? t/object?))))
-      (testing "Nilabled is ⊂"
-        (is= nil (t/compare t/object? (t/? t/long?))))
-      (testing "Nilabled is ∅"
-        (is= nil (t/compare t/long?   (t/? t/string?)))))
     (testing "+ OrSpec"
       ;; #{(⊂ | =) ∅} -> ⊂
       ;; #{(⊃ ?) ∅} -> ∅
       ;; Otherwise whatever it is
       (testing "#{⊂+} -> ⊂"
-        (is= -1  (t/compare a (t/or a+b⊂ a⊂0 a⊂1))))
+        (is= -1  (t/compare a (| a+b⊂ a⊂0 a⊂1))))
       (testing "#{∅+} -> ∅"
-        (is= nil (t/compare a (t/or ∅0 ∅1))))
+        (is= nil (t/compare a (| ∅0 ∅1))))
       (testing "#{⊂+ ∅+} -> ⊂"
-        (is= -1  (t/compare a (t/or a+b⊂ a⊂0 ∅0 ∅1))))
+        (is= -1  (t/compare a (| a+b⊂ a⊂0 ∅0 ∅1))))
       (testing "#{=+ ∅+} -> ⊂"
-        (is= -1  (t/compare a (t/or a ∅0 ∅1))))
+        (is= -1  (t/compare a (| a ∅0 ∅1))))
       (testing "#{⊃+ ∅+} -> ∅"
-        (is= nil (t/compare a (t/or a+b⊃ a⊃0 ∅0 ∅1)))))
+        (is= nil (t/compare a (| a+b⊃ a⊃0 ∅0 ∅1))))
+      (testing "Nilable"
+        (testing "Nilabled is ="
+          (is= -1  (t/compare t/long?   (t/? t/long?))))
+        (testing "Nilabled is ⊃"
+          (is= -1  (t/compare t/long?   (t/? t/object?))))
+        (testing "Nilabled is ⊂"
+          (is=  2  (t/compare t/object? (t/? t/long?)))) ; TODO fix impl
+        (testing "Nilabled is ∅"
+          (is= nil (t/compare t/long?   (t/? t/string?))))))
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec"
       ;; Any ∅ -> ∅
       ;; Otherwise whatever it is
       (testing "#{⊂+} -> ⊂"
-        (is= -1  (t/compare a (t/and a+b⊂ a⊂0 a⊂1))))
+        (is= -1  (t/compare a (& a+b⊂ a⊂0 a⊂1))))
       (testing "#{⊃+} -> ⊃"
-        (is=  1  (t/compare a (t/and a+b⊃ a⊃0 a⊃1))))
+        (is=  1  (t/compare a (& a+b⊃ a⊃0 a⊃1))))
       (testing "#{∅+} -> ∅"
-        (is= nil (t/compare a (t/and ∅0 ∅1))))
+        (is= nil (t/compare a (& ∅0 ∅1))))
       (testing "#{⊂+ ∅+} -> ∅"
-        (is= nil (t/compare a (t/and a+b⊂ a⊂0 a⊂1 ∅0 ∅1))))
+        (is= nil (t/compare a (& a+b⊂ a⊂0 a⊂1 ∅0 ∅1)))) ; TODO fix impl
       (testing "#{=+ ∅+} -> ∅"
-        (is= nil (t/compare a (t/and a ∅0 ∅1))))
+        (is= nil (t/compare a (& a ∅0 ∅1)))) ; TODO fix impl
       (testing "#{⊃+ ∅+} -> ∅"
-        (is= nil (t/compare a (t/and a+b⊃ a⊃0 ∅0 ∅1)))))
+        (is= nil (t/compare a (& a+b⊃ a⊃0 ∅0 ∅1))))) ; TODO fix impl
     (testing "+ UnorderedAndSpec"))
   (testing "ProtocolSpec"
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
-    (testing "+ OrSpec")
-    (testing "+ UnorderedOrSpec")
-    (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec"))
-  (testing "NilableSpec"
-    (testing "+ ValueSpec")
-    (testing "+ ClassSpec")
-    (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec"))
   (testing "NotSpec"
     (testing "+ UniversalSetSpec"
-      (is= -1  (t/compare (t/not t/universal-set) t/universal-set))  ; inner =
-      (is=  0  (t/compare (t/not t/null-set)      t/universal-set))) ; inner ⊂
+      (is= -1  (t/compare (! t/universal-set) t/universal-set))  ; inner =
+      (is=  0  (t/compare (! t/null-set)      t/universal-set))) ; inner ⊂
     (testing "+ NullSetSpec"
-      (is=  0  (t/compare (t/not t/universal-set) t/null-set))       ; inner ⊃
-      (is=  1  (t/compare (t/not t/null-set)      t/null-set)))      ; inner =
+      (is=  0  (t/compare (! t/universal-set) t/null-set))       ; inner ⊃
+      (is=  1  (t/compare (! t/null-set)      t/null-set)))      ; inner =
     (testing "+ ValueSpec"
-      (is= nil (t/compare (t/not t/universal-set) (t/value 1)))      ; inner ⊃
-      (is=  1  (t/compare (t/not t/null-set)      (t/value 1))))     ; inner ∅
+      (is= nil (t/compare (! t/universal-set) (t/value 1)))      ; inner ⊃
+      (is=  1  (t/compare (! t/null-set)      (t/value 1))))     ; inner ∅
     (testing "+ ClassSpec"
-      (is= nil (t/compare (t/not a  ) a  ))  ; inner =
-      (is= nil (t/compare (t/not a  ) a⊃0))  ; inner ⊃
-      (is= nil (t/compare (t/not a  ) a⊂0))  ; inner ⊂ ; intersect
-      (is= nil (t/compare (t/not a  ) ∅0 ))  ; inner ∅
-      (is= -1  (t/compare (t/not a  ) U  ))  ; inner ⊂
-      (is= nil (t/compare (t/not a⊃0) a  ))  ; inner ⊂ ; intersect
-      (is= nil (t/compare (t/not a⊃0) a⊂0))  ; inner ⊂ ; intersect
-      (is= nil (t/compare (t/not a⊃0) ∅0 ))  ; inner ∅
-      (is= -1  (t/compare (t/not a⊃0) U  ))  ; inner ⊂
-      (is= nil (t/compare (t/not a⊂0) a  ))  ; inner ⊃
-      (is= nil (t/compare (t/not a⊂0) a⊃0))  ; inner ⊃
-      (is= nil (t/compare (t/not a⊂0) ∅0 ))  ; inner ∅
-      (is= -1  (t/compare (t/not a⊂0) U  ))  ; inner ⊂
-      (is= nil (t/compare (t/not ∅0 ) a  ))  ; inner ∅
-      (is= nil (t/compare (t/not ∅0 ) a⊃0))  ; inner ∅
-      (is= nil (t/compare (t/not ∅0 ) a⊂0))  ; inner ∅
-      (is= -1  (t/compare (t/not ∅0 ) U  ))) ; inner ⊂
+      (is= nil (t/compare (! a  ) a  ))  ; inner =
+      (is= nil (t/compare (! a  ) a⊃0))  ; inner ⊃
+      (is= nil (t/compare (! a  ) a⊂0))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (! a  ) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (! a  ) U  ))  ; inner ⊂
+      (is= nil (t/compare (! a⊃0) a  ))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (! a⊃0) a⊂0))  ; inner ⊂ ; intersect
+      (is= nil (t/compare (! a⊃0) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (! a⊃0) U  ))  ; inner ⊂
+      (is= nil (t/compare (! a⊂0) a  ))  ; inner ⊃
+      (is= nil (t/compare (! a⊂0) a⊃0))  ; inner ⊃
+      (is= nil (t/compare (! a⊂0) ∅0 ))  ; inner ∅
+      (is= -1  (t/compare (! a⊂0) U  ))  ; inner ⊂
+      (is= nil (t/compare (! ∅0 ) a  ))  ; inner ∅
+      (is= nil (t/compare (! ∅0 ) a⊃0))  ; inner ∅
+      (is= nil (t/compare (! ∅0 ) a⊂0))  ; inner ∅
+      (is= -1  (t/compare (! ∅0 ) U  ))) ; inner ⊂
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ NotSpec"
-      (is=  0  (t/compare (t/not t/universal-set) (t/not t/universal-set)))
-      (is=  0  (t/compare (t/not t/null-set)      (t/not t/null-set)))
-      (is=  0  (t/compare (t/not a)               (t/not a)))
-      (is= nil (t/compare (t/not a)               (t/not b)))
-      (is= nil (t/compare (t/not b)               (t/not a)))
-      (is= -1  (t/compare (t/not a)               (t/not a⊂0)))
-      (is=  1  (t/compare (t/not a)               (t/not a⊃0))))
+      (is=  0  (t/compare (! t/universal-set) (! t/universal-set)))
+      (is=  0  (t/compare (! t/null-set)      (! t/null-set)))
+      (is=  0  (t/compare (! a)               (! a)))
+      (is= nil (t/compare (! a)               (! b)))
+      (is= nil (t/compare (! b)               (! a)))
+      (is= -1  (t/compare (! a)               (! a⊂0)))
+      (is=  1  (t/compare (! a)               (! a⊃0))))
     (testing "+ OrSpec"
-      (is= nil (t/compare (t/not t/universal-set) (t/or ∅0 ∅1)))
-      (is=  1  (t/compare (t/not t/null-set)      (t/or ∅0 ∅1)))
-      (is= nil (t/compare (t/not ∅0)              (t/or ∅0 ∅1)))
-      (is= nil (t/compare (t/not ∅1)              (t/or ∅0 ∅1))))
+      (is= nil (t/compare (! t/universal-set) (| ∅0 ∅1)))
+      (is=  1  (t/compare (! t/null-set)      (| ∅0 ∅1)))
+      (is= nil (t/compare (! ∅0)              (| ∅0 ∅1)))
+      (is= nil (t/compare (! ∅1)              (| ∅0 ∅1))))
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
     (testing "+ UnorderedAndSpec")
@@ -322,7 +318,6 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec"
       ;; (let [l <all -1 on left-compare?>
       ;;       r <all -1 on right-compare?>]
@@ -336,70 +331,70 @@
       (testing "#{= ⊂+} -> #{⊂+}"
         (testing "+ #{⊂+}"
           ;; comparisons: [-1, -1], [-1, -1]
-          (is=  0  (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊂ a⊂0)))
+          (is=  0  (t/compare (| a a+b⊂ a⊂0)     (| a+b⊂ a⊂0)))
           ;; comparisons: [-1, -1, nil], [-1, -1]
-          (is=  1  (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊂ a⊂0)))
+          (is=  1  (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊂ a⊂0)))
           ;; comparisons: [-1, -1], [-1, -1, nil]
-          (is= -1  (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊂ a⊂0 a⊂1)))
+          (is= -1  (t/compare (| a a+b⊂ a⊂0)     (| a+b⊂ a⊂0 a⊂1)))
           ;; comparisons: [-1, -1, -1], [-1, -1, -1]
-          (is=  0  (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊂ a⊂0 a⊂1))))
+          (is=  0  (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊂ a⊂0 a⊂1))))
         (testing "+ #{∅+}"
           ;; comparisons: [nil, nil, nil], [nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or ∅0 ∅1))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| ∅0 ∅1))))
         (testing "+ #{⊂+ ∅+}"
           ;; comparisons: [-1, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊂         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a+b⊂         ∅0 ∅1)))
           ;; comparisons: [-1, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊂         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊂         ∅0 ∅1)))
           ;; comparisons: [-1, -1], [-1, -1, nil, nil]
-          (is= -1  (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊂ a⊂0     ∅0 ∅1)))
+          (is= -1  (t/compare (| a a+b⊂ a⊂0)     (| a+b⊂ a⊂0     ∅0 ∅1)))
           ;; comparisons: [-1, -1, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊂ a⊂0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊂ a⊂0     ∅0 ∅1)))
           ;; comparisons: [-1, -1], [-1, -1, nil, nil, nil]
-          (is= -1  (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊂ a⊂0 a⊂1 ∅0 ∅1)))
+          (is= -1  (t/compare (| a a+b⊂ a⊂0)     (| a+b⊂ a⊂0 a⊂1 ∅0 ∅1)))
           ;; comparisons: [-1, -1, 1], [-1, -1, -1, nil, nil]
-          (is= -1  (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊂ a⊂0 a⊂1 ∅0 ∅1))))
+          (is= -1  (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊂ a⊂0 a⊂1 ∅0 ∅1))))
         (testing "+ #{= ∅+}"
           ;; comparisons: [nil, nil], [-1, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a ∅0)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a ∅0)))
           ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a ∅0 ∅1))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a ∅0 ∅1))))
         (testing "+ #{⊃+ ∅+}"
           ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊃         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a+b⊃         ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊃         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊃         ∅0 ∅1)))
           ;; comparisons: [nil, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊃ a⊃0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a+b⊃ a⊃0     ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, -1, nil nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊃ a⊃0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊃ a⊃0     ∅0 ∅1)))
           ;; comparisons: [nil, nil], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/or a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (| a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/or a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (| a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))))
       (testing "#{= ∅+}"
         (testing "+ #{⊂+}"
           ;; comparisons: [-1, nil], [nil, nil]
-          (is= nil (t/compare (t/or a ∅0)           (t/or a+b⊂ a⊂0)))
+          (is= nil (t/compare (| a ∅0)           (| a+b⊂ a⊂0)))
           ;; comparisons: [-1, nil, nil], [nil, nil]
-          (is= nil (t/compare (t/or a ∅0 ∅1)        (t/or a+b⊂ a⊂0)))
+          (is= nil (t/compare (| a ∅0 ∅1)        (| a+b⊂ a⊂0)))
           ;; comparisons: [-1, nil], [nil, nil, nil]
-          (is= nil (t/compare (t/or a ∅0)           (t/or a+b⊂ a⊂0 a⊂1)))
+          (is= nil (t/compare (| a ∅0)           (| a+b⊂ a⊂0 a⊂1)))
           ;; comparisons: [-1, nil, nil], [nil, nil, nil]
-          (is= nil (t/compare (t/or a ∅0 ∅1)        (t/or a+b⊂ a⊂0 a⊂1))))
+          (is= nil (t/compare (| a ∅0 ∅1)        (| a+b⊂ a⊂0 a⊂1))))
         (testing "+ #{∅+}"
           ;; comparisons: [nil, -1], [-1, nil]
-          (is= nil (t/compare (t/or a ∅0)     (t/or ∅0 ∅1)))
+          (is= nil (t/compare (| a ∅0)     (| ∅0 ∅1)))
           ;; comparisons: [nil, -1, -1], [-1, -1]
-          (is=  1  (t/compare (t/or a ∅0 ∅1)  (t/or ∅0 ∅1)))
+          (is=  1  (t/compare (| a ∅0 ∅1)  (| ∅0 ∅1)))
           ;; comparisons: [nil, nil], [nil, nil]
-          (is= nil (t/compare (t/or a ∅2)     (t/or ∅0 ∅1)))
+          (is= nil (t/compare (| a ∅2)     (| ∅0 ∅1)))
           ;; comparisons: [nil, nil, -1], [nil, -1]
-          (is= nil (t/compare (t/or a ∅2 ∅1)  (t/or ∅0 ∅1)))
+          (is= nil (t/compare (| a ∅2 ∅1)  (| ∅0 ∅1)))
           ;; comparisons: [nil, nil], [nil, nil]
-          (is= nil (t/compare (t/or a ∅0)     (t/or ∅1 ∅2)))
+          (is= nil (t/compare (| a ∅0)     (| ∅1 ∅2)))
           ;; comparisons: [nil, nil, -1], [-1, nil]
-          (is= nil (t/compare (t/or a ∅0 ∅1)  (t/or ∅1 ∅2))))
+          (is= nil (t/compare (| a ∅0 ∅1)  (| ∅1 ∅2))))
         (testing "+ #{⊂+ ∅+}")  ;; TODO flesh out (?)
         (testing "+ #{= ∅+}")   ;; TODO flesh out (?)
         (testing "+ #{⊃+ ∅+}")) ;; TODO flesh out (?)
@@ -410,6 +405,7 @@
     (testing "+ UnorderedOrSpec"
       (testing "+ UniversalSetSpec")
       (testing "+ NullSetSpec"))
+    ;; TODO fix impls
     (testing "+ AndSpec"
       (testing "+ UniversalSetSpec")
       (testing "+ NullSetSpec")
@@ -421,47 +417,47 @@
       (testing "#{= ⊂+} -> #{⊂+}"
         (testing "+ #{⊂+}"
           ;; comparisons: [-1, -1], [-1, -1]
-          (is=  1  (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊂ a⊂0)))
+          (is=  1  (t/compare (| a a+b⊂ a⊂0)     (& a+b⊂ a⊂0)))
           ;; comparisons: [-1, -1, nil], [-1, -1]
-          (is=  1  (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊂ a⊂0)))
+          (is=  1  (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊂ a⊂0)))
           ;; comparisons: [-1, -1], [-1, -1, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊂ a⊂0 a⊂1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊂ a⊂0 a⊂1)))
           ;; comparisons: [-1, -1, -1], [-1, -1, -1]
-          (is=  1  (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊂ a⊂0 a⊂1))))
+          (is=  1  (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊂ a⊂0 a⊂1))))
         (testing "+ #{∅+}"
           ;; comparisons: [nil, nil, nil], [nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and ∅0 ∅1))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& ∅0 ∅1))))
         (testing "+ #{⊂+ ∅+}"
           ;; comparisons: [-1, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)    (t/and a+b⊂         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)    (& a+b⊂         ∅0 ∅1)))
           ;; comparisons: [-1, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊂         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊂         ∅0 ∅1)))
           ;; comparisons: [-1, -1], [-1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊂ a⊂0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊂ a⊂0     ∅0 ∅1)))
           ;; comparisons: [-1, -1, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊂ a⊂0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊂ a⊂0     ∅0 ∅1)))
           ;; comparisons: [-1, -1], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊂ a⊂0 a⊂1 ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊂ a⊂0 a⊂1 ∅0 ∅1)))
           ;; comparisons: [-1, -1, -], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊂ a⊂0 a⊂1 ∅0 ∅1))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊂ a⊂0 a⊂1 ∅0 ∅1))))
         (testing "+ #{= ∅+}"
           ;; comparisons: [nil, nil], [-1, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a ∅0)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a ∅0)))
           ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a ∅0 ∅1))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a ∅0 ∅1))))
         (testing "+ #{⊃+ ∅+}"
           ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊃         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊃         ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊃         ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊃         ∅0 ∅1)))
           ;; comparisons: [nil, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊃ a⊃0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊃ a⊃0     ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, -1, nil nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊃ a⊃0     ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊃ a⊃0     ∅0 ∅1)))
           ;; comparisons: [nil, nil], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0)     (t/and a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))
+          (is= nil (t/compare (| a a+b⊂ a⊂0)     (& a+b⊃ a⊃0 a⊃1 ∅0 ∅1)))
           ;; comparisons: [nil, nil, nil], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (t/or a a+b⊂ a⊂0 a⊂1) (t/and a+b⊃ a⊃0 a⊃1 ∅0 ∅1))))))
+          (is= nil (t/compare (| a a+b⊂ a⊂0 a⊂1) (& a+b⊃ a⊃0 a⊃1 ∅0 ∅1))))))
     (testing "+ UnorderedAndSpec"))
   (testing "UnorderedOrSpec"
     (testing "+ UniversalSetSpec")
@@ -469,7 +465,6 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -480,7 +475,6 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -491,7 +485,6 @@
     (testing "+ ValueSpec")
     (testing "+ ClassSpec")
     (testing "+ ProtocolSpec")
-    (testing "+ NilableSpec")
     (testing "+ OrSpec")
     (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
@@ -558,99 +551,168 @@
 (deftest test|not
   (testing "simplification"
     (testing "universal/null set"
-      (is= (t/not t/universal-set)
+      (is= (! t/universal-set)
            t/null-set)
-      (is= (t/not t/null-set)
+      (is= (! t/null-set)
            t/universal-set))
     (testing "DeMorgan's Law"
-      (is= (t/not (t/or  (t/value 1)         (t/value 2)))
-           (t/and (t/not (t/value 1)) (t/not (t/value 2))))
-      (is= (t/not (t/and (t/value 1)         (t/value 2)))
-           (t/or  (t/not (t/value 1)) (t/not (t/value 2))))
-      (is= (t/not (t/or  (t/not a) (t/not b)))
-           (t/and               a         b))
-      (is= (t/not (t/and (t/not a) (t/not b)))
-           (t/or                a         b)))))
+      (is= (! (| (t/value 1)     (t/value 2)))
+           (& (! (t/value 1)) (! (t/value 2))))
+      (is= (! (& (t/value 1)     (t/value 2)))
+           (| (! (t/value 1)) (! (t/value 2))))
+      (is= (! (| (! a) (! b)))
+           (&       a     b))
+      (is= (! (& (! a) (! b)))
+           (|       a     b)))))
 
 (deftest test|or
   (testing "equality"
-    (is= (t/or a b) (t/or a b))
-    (is= -1  (t/compare t/nil?      (t/or t/nil? t/string?)))
-    (is= -1  (t/compare (t/value 1) (t/or (t/value 1) (t/value 2))))
-    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 1))))
-    (is= nil (t/compare (t/value 3) (t/or (t/value 1) (t/value 2))))
-    (is= -1  (t/compare (t/value 1) (t/or (t/value 1) (t/value 2) (t/value 3))))
-    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 1) (t/value 3))))
-    (is= -1  (t/compare (t/value 1) (t/or (t/value 2) (t/value 3) (t/value 1)))))
+    (is= (| a b) (| a b))
+    (is= -1  (t/compare t/nil?      (| t/nil? t/string?)))
+    (is= -1  (t/compare (t/value 1) (| (t/value 1) (t/value 2))))
+    (is= -1  (t/compare (t/value 1) (| (t/value 2) (t/value 1))))
+    (is= nil (t/compare (t/value 3) (| (t/value 1) (t/value 2))))
+    (is= -1  (t/compare (t/value 1) (| (t/value 1) (t/value 2) (t/value 3))))
+    (is= -1  (t/compare (t/value 1) (| (t/value 2) (t/value 1) (t/value 3))))
+    (is= -1  (t/compare (t/value 1) (| (t/value 2) (t/value 3) (t/value 1)))))
   (testing "simplification"
     (testing "via single-arg"
-      (is= (t/or t/long?)
-           t/long?))
+      (is= (| a)
+           a))
     (testing "via identity"
-      (is= (t/or t/long? t/long?)
-           t/long?))
+      (is= (| a a)
+           a)
+      (is= (| (| a a) a)
+           a)
+      (is= (| a (| a a))
+           a)
+      (is= (| (| a b) (| b a))
+           (| a b))
+      (is= (| (| a b ∅0) (| a ∅0 b))
+           (| a b ∅0)))
+    (testing "nested `or` is expanded"
+      (is= (| (| a b) (| ∅0 ∅1))
+           (| a b ∅0 ∅1))
+      (is= (| (| a b) (| ∅0 ∅1))
+           (| a b ∅0 ∅1)))
     (testing "nested"
-      (is= (t/or (t/or t/long? t/long?) t/long?)
-           t/long?))
+      ;; TODO this is failing with (| (| t/string? t/double?) t/char-seq?)
+      (is= (t/or-spec>args (| (| t/string? t/double?)
+                              t/char-seq?))
+           [t/char-seq? t/double?])
+      (is= (t/or-spec>args (| (| t/string? t/double?)
+                              (| t/double? t/char-seq?)))
+           [t/double? t/char-seq?])
+      (is= (t/or-spec>args (| (| t/string? t/double?)
+                              (| t/char-seq? t/number?)))
+           [t/char-seq? t/number?]))
     (testing "#{⊂+ =} -> #{⊂+}"
-      (is= (.-args (t/or a+b⊂ a⊂0 a))
+      (is= (t/or-spec>args (| a+b⊂ a⊂0 a))
            [a+b⊂ a⊂0]))
     (testing "#{⊂+ ⊃+} -> #{⊂+}"
-      (is= (.-args (t/or a+b⊂ a⊂0 a+b⊃ a⊃0))
+      (is= (t/or-spec>args (| a+b⊂ a⊂0 a+b⊃ a⊃0))
            [a+b⊂ a⊂0]))
     (testing "#{⊃+ =} -> #{=}"
-      (is= (t/or a+b⊃ a⊃0 a)
+      (is= (| a+b⊃ a⊃0 a)
            a))
     (testing "#{⊂+ ⊃+ ∅+} -> #{⊂+ ∅+}"
-      (is= (.-args (t/or a+b⊂ a⊂0 a+b⊃ a⊃0 ∅0 ∅1))
+      (is= (t/or-spec>args (| a+b⊂ a⊂0 a+b⊃ a⊃0 ∅0 ∅1))
            [a+b⊂ a⊂0 ∅0 ∅1]))
     (testing "#{⊂+ =+ ⊃+ ∅+} -> #{⊂+ ∅+}"
-      (is= (.-args (t/or a+b⊂ a⊂0 a a+b⊃ a⊃0 ∅0 ∅1))
+      (is= (t/or-spec>args (| a+b⊂ a⊂0 a a+b⊃ a⊃0 ∅0 ∅1))
            [a+b⊂ a⊂0 ∅0 ∅1]))))
 
 (deftest test|and
   (testing "equality"
-    (is= (t/and a b) (t/and a b)))
+    (is= (& a b) (& a b)))
+  (testing "null set / universal set"
+    (is= (& t/universal-set t/universal-set)
+         t/universal-set)
+    (is= (& t/universal-set t/null-set)
+         t/null-set)
+    (is= (& t/null-set t/universal-set)
+         t/null-set)
+    (is= (& t/universal-set t/null-set t/universal-set)
+         t/null-set)
+    (is= (& t/universal-set t/string?)
+         t/string?)
+    (is= (& t/universal-set t/char-seq? t/string?)
+         t/string?)
+    (is= (& t/universal-set t/string? t/char-seq?)
+         t/string?)
+    (is= (& t/null-set t/string?)
+         t/null-set)
+    (is= (& t/null-set t/char-seq? t/string?)
+         t/null-set)
+    (is= (& t/null-set t/string? t/char-seq?)
+         t/null-set))
   ;; TODO return `t/null-set` when impossible intersection
   (testing "simplification"
     (testing "via single-arg"
-      (is= (t/and t/long?)
-           t/long?))
+      (is= (& a)
+           a))
     (testing "via identity"
-      (is= (t/and t/long? t/long?)
-           t/long?))
-    (testing "nested"
-      (is= (t/and (t/and t/long? t/long?) t/long?)
-           t/long?)
-      (is= (.-args (t/or (t/or t/string? t/double?)
-                         (t/or t/double? t/string?)))
-           [t/string? t/double?])
-      (is= (.-args (t/or (t/or t/string? t/double?)
-                         t/double?))
-           [t/string? t/double?])
-      ;; TODO this is failing with (t/or (t/or t/string? t/double?) t/char-seq?)
-      (is= (.-args (t/or (t/or t/string? t/double?)
-                         t/char-seq?))
-           [t/char-seq? t/double?])
-      (is= (.-args (t/or (t/or t/string? t/double?)
-                         (t/or t/double? t/char-seq?)))
-           [t/double? t/char-seq?])
-      (is= (.-args (t/or (t/or t/string? t/double?)
-                         (t/or t/char-seq? t/number?)))
-           [t/char-seq? t/number?]))
+      (is= (& a a)
+           a)
+      (is= (& (& a a) a)
+           a)
+      (is= (& a (& a a))
+           a)
+      (is= (& (| a b) (| b a))
+           (| a b))
+      (is= (& (| a b ∅0) (| a ∅0 b))
+           (| a b ∅0)))
+    (testing ""
+      (is= (t/and-spec>args (& a b))
+           [a b]))
+    (testing "null-set"
+      (is= (& t/string? t/byte?)
+           t/null-set)
+      (is= (& a ∅0)
+           t/null-set)
+      (is= (& a ∅0 ∅1)
+           t/null-set))
+    (testing "nested `and` is expanded"
+      (is= (& (& a b) (& ∅0 ∅1))
+           (& a b ∅0 ∅1))
+      (is= (& (& a b) (& ∅0 ∅1))
+           (& a b ∅0 ∅1)))
+    (testing "and + not"
+      (is= (& a (! a))
+           t/null-set)
+      (is= (& (! a) a b)
+           t/null-set)
+      (is= (& a (! a) b)
+           t/null-set)
+      (is= (& a b (! a))
+           t/null-set)
+      (is= (& (| a b) (! a))
+           b)
+      (is= (& (! a) (| a b))
+           b)
+      (is= (& (| a b) (! b) (| b a))
+           b)
+      (is= (& (| a b) (! b) (| ∅0 b))
+           t/null-set)
+      (is= (& t/primitive? (! t/boolean?))
+           (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)))
     (testing "#{⊂+ =} -> #{=}"
-
-      (is= (t/and a+b⊂ a⊂0 a)
+      (is= (& a+b⊂ a⊂0 a)
            a))
     (testing "#{⊃+ =+} -> #{⊃+}"
-      (is= (.-args (t/and a+b⊃ a⊃0 a))
+      (is= (t/and-spec>args (& a+b⊃ a⊃0 a))
            [a+b⊃ a⊃0]))
     (testing "#{⊂+ ⊃+} -> #{⊃+}"
-      (is= (.-args (t/and a+b⊂ a⊂0 a+b⊃ a⊃0))
+      (is= (t/and-spec>args (& a+b⊂ a⊂0 a+b⊃ a⊃0))
            [a+b⊃ a⊃0]))
     (testing "#{⊂+ ⊃+ ∅+} -> #{⊃+ ∅+}"
-      (is= (.-args (t/and a+b⊂ a⊂0 a+b⊃ a⊃0 ∅0 ∅1))
+      (is= (t/and-spec>args (& a+b⊂ a⊂0 a+b⊃ a⊃0 ∅0 ∅1))
            [a+b⊃ a⊃0 ∅0 ∅1]))
     (testing "#{⊂+ =+ ⊃+ ∅+} -> #{⊃+ ∅+}"
-      (is= (.-args (t/and a+b⊂ a⊂0 a a+b⊃ a⊃0 ∅0 ∅1))
+      (is= (t/and-spec>args (& a+b⊂ a⊂0 a a+b⊃ a⊃0 ∅0 ∅1))
            [a+b⊃ a⊃0 ∅0 ∅1]))))
+
+(deftest test|=
+  (is (t/= (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+           (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+                  (! t/boolean?)))))

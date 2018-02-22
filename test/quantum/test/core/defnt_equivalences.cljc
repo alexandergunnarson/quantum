@@ -26,6 +26,10 @@
       :refer [? !]])
   (:import clojure.lang.Named
            clojure.lang.Reduced
+           clojure.lang.ISeq
+           clojure.lang.ASeq
+           clojure.lang.LazySeq
+           clojure.lang.Seqable
            quantum.core.data.Array
            quantum.core.Primitive))
 
@@ -77,7 +81,7 @@
                       ;; Because for `any?` it includes primitives as well
            :clj  ($ [;; Direct dispatch
                      ;; One reify per overload
-                     (def ~'identity|gen|uninlined|__0 ; `t/any?`
+                     (def ~'identity|gen|uninlined|__0 ; `[x t/any?]`
                        (reify
                          Object>Object   (~(tag "java.lang.Object" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] ~'x)
                          boolean>boolean (~(tag "boolean"          'invoke) [~'_ ~(tag "boolean"          'x)] ~'x)
@@ -182,10 +186,10 @@
                t/any? (t/value true ))))
 
        ~@(case (env-lang)
-           :clj  ($ [(def some?|gen|__0 ; `nil?`
+           :clj  ($ [(def some?|gen|__0 ; `[x t/nil?]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
-                     (def some?|gen|__1 ; `t/any?`
+                     (def some?|gen|__1 ; `[x t/any?]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
                          boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
@@ -222,12 +226,12 @@
                t/any?     (t/value false))))
 
        ~@(case (env-lang)
-           :clj  ($ [(def reduced?|gen|__0 ; `Reduced`
+           :clj  ($ [(def reduced?|gen|__0 ; `[x Reduced]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)]
                                            (let* [~(tag "clojure.lang.Reduced" 'x) ~'x]
                                              true))))
-                     (def reduced?|gen|__1 ; `t/any?`
+                     (def reduced?|gen|__1 ; `[x t/any?]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)
                          boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] false)
@@ -264,13 +268,13 @@
                t/any?     (t/value true ))))
 
        ~@(case (env-lang)
-           :clj  ($ [(def >boolean|gen|__0 ; `boolean`
+           :clj  ($ [(def >boolean|gen|__0 ; `[x t/boolean?]`
                        (reify
                          boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] x)))
-                     (def >boolean|gen|__1 ; `nil?`
+                     (def >boolean|gen|__1 ; `[x t/nil?]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] false)))
-                     (def >boolean|gen|__2 ; `t/any?`
+                     (def >boolean|gen|__2 ; `[x t/any?]`
                        (reify
                          Object>boolean  (~(tag "boolean" 'invoke) [~'_ ~(tag "java.lang.Object" 'x)] true)
                          boolean>boolean (~(tag "boolean" 'invoke) [~'_ ~(tag "boolean"          'x)] true)
@@ -604,11 +608,12 @@
 
 ;; =====|=====|=====|=====|===== ;;
 
+(macroexpand '
 (defnt #_:inline get
   ([xs t/array? , k (t/-> integer? ?)] (#?(:clj Array/get :cljs aget) xs k))
   ([xs t/string?, k (t/-> integer? ?)] (.charAt xs k))
   ([xs !+vector?, k t/any?] #?(:clj (.valAt xs k) :cljs (TODO))))
-
+)
 ;; ----- expanded code ----- ;;
 
 ;; =====|=====|=====|=====|===== ;;
@@ -616,8 +621,9 @@
 ; TODO CLJS version will come after
 #?(:clj
 (macroexpand '
-(defnt seq|gen > (t/? ISeq)
+(defnt seq|gen
   "Taken from `clojure.lang.RT/seq`"
+  > (t/? ISeq)
   ([xs t/nil?                ] nil)
   ([xs t/array?              ] (ArraySeq/createFromObject xs))
   ([xs ASeq                  ] xs)

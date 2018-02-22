@@ -174,7 +174,7 @@
 ;; ===== Keyed ==== ;;
 
 (defn contains?
-  ([xs] (boolean (seq xs)))
+  ([xs] (not (empty? xs)))
   ([xs k] (core/contains? xs k)))
 
 ;; ===== ... ==== ;;

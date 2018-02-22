@@ -25,8 +25,6 @@
 
 (defaliases u >sentinel >object)
 
-(def has? (comp not empty?)) ; TODO fix this performance-wise
-
 (def unchecked-inc-long
   #?(:clj  (fn [^long x] (unchecked-inc x))
      :cljs inc))
