@@ -332,10 +332,9 @@
 
 (defn inverse [comparison]
   (case comparison
-    -1   1
-     0   0
-     1  -1
-    nil nil))
+    -1        1
+     1       -1
+    (0 2 nil) comparison))
 
 ;; ===== LOGICAL ===== ;;
 
@@ -835,11 +834,11 @@
        {UniversalSetSpec fn<
         NullSetSpec      fn=
         InferSpec        todo
-        ValueSpec        fn<>
+        ValueSpec        fn<
         ClassSpec        todo
-        ProtocolSpec     fn<>
+        ProtocolSpec     fn<
         NotSpec          (with-invert-comparison compare|not+null)
-        OrSpec           fn<>
+        OrSpec           fn<
         UnorderedOrSpec  todo
         AndSpec          todo
         UnorderedAndSpec todo
@@ -859,7 +858,7 @@
         Expression       fn>}
      ValueSpec
        {UniversalSetSpec fn<
-        NullSetSpec      fn<>
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        compare|value+value
         ClassSpec        compare|value+class
@@ -885,11 +884,14 @@
         Expression       fn<>}
      ProtocolSpec
        {UniversalSetSpec fn<
-        NullSetSpec      fn<>
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        (with-invert-comparison compare|value+protocol)
         ClassSpec        todo
-        ProtocolSpec     todo
+        ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
+                                                     (protocol-spec>protocol s1))
+                                         0
+                                         nil))
         NotSpec          (with-invert-comparison compare|not+protocol)
         OrSpec           todo
         UnorderedOrSpec  todo
@@ -911,7 +913,7 @@
         Expression       fn<>}
      OrSpec
        {UniversalSetSpec fn<
-        NullSetSpec      fn<>
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        (with-invert-comparison compare|value+or)
         ClassSpec        (with-invert-comparison compare|class+or)
@@ -923,8 +925,8 @@
         UnorderedAndSpec todo
         Expression       fn<>}
      UnorderedOrSpec
-       {UniversalSetSpec todo
-        NullSetSpec      todo
+       {UniversalSetSpec fn<
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        todo
         ClassSpec        todo
@@ -937,7 +939,7 @@
         Expression       fn<>}
      AndSpec
        {UniversalSetSpec fn<
-        NullSetSpec      fn<>
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        (with-invert-comparison compare|value+and)
         ClassSpec        (with-invert-comparison compare|class+and)
@@ -949,8 +951,8 @@
         UnorderedAndSpec todo
         Expression       fn<>}
      UnorderedAndSpec
-       {UniversalSetSpec todo
-        NullSetSpec      todo
+       {UniversalSetSpec fn<
+        NullSetSpec      fn>
         InferSpec        fn<
         ValueSpec        todo
         ClassSpec        todo
@@ -964,15 +966,15 @@
      Expression
        {UniversalSetSpec todo
         NullSetSpec      todo
-        InferSpec        fn<
-        ValueSpec        fn<>
-        ClassSpec        fn<>
-        ProtocolSpec     fn<>
-        NotSpec          fn<>
-        OrSpec           fn<>
-        UnorderedOrSpec  fn<>
-        AndSpec          fn<>
-        UnorderedAndSpec fn<>
+        InferSpec        todo
+        ValueSpec        todo
+        ClassSpec        todo
+        ProtocolSpec     todo
+        NotSpec          todo
+        OrSpec           todo
+        UnorderedOrSpec  todo
+        AndSpec          todo
+        UnorderedAndSpec todo
         Expression       compare|expr+expr}}))
 
 ;; ===== PRIMITIVES ===== ;;
