@@ -238,7 +238,7 @@
       (coll&/incremental-every? (aritoid nil (constantly true) t/in>)
         [Long Number]))
 
-(defn compare|class|class
+(defn compare|class|class*
   "Compare extension (generality|specificity) of ->`c0` to ->`c1`.
    `0`  means they are equally general/specific:
      - ✓ `(t/= c0 c1)`    : the extension of ->`c0` is equal to             that of ->`c1`.
@@ -456,45 +456,13 @@
       (err! "Cannot cast to AndSpec" x)))
 
 (defn and
-  "Sequential/ordered `and`.
+  "Sequential/ordered `and`. Analogous to `set/intersection`.
    Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
-   Yields error if provided with specs for which `<>` is true."
+   Effectively computes the intersection of the extension of the ->`args`."
   [arg & args]
   (create-logical-spec :and ->AndSpec and-spec? and-spec>args (cons arg args) (fn1 c/= -1)))
 
 (uvar/defalias & and)
-
-(deftype UnorderedAndSpec [args #_(t/unkeyed spec?)]
-  PSpec
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (list* `and* args)))
-
-(defn intersection|spec
-  ([a] a)
-  ([a b]
-    (assert (spec? a) (spec? b))
-    (if (c/= a b)
-        a
-        (case (compare a b)
-          ;; technically, choose the simpler one, but these will all be simplified anyway
-          -1  a
-           0  a
-           2  (TODO)
-          ;; intersection of unrelated specs is `nil`
-          nil nil
-           b))))
-
-(defn and*
-  "Unordered `and`. Analogous to `set/intersection`, not `core/and`:
-   rather than ensuring specific conditional application of specs, `and*` merely
-   ensures all specs are met in *some* order.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
-   Effectively computes the intersection of the intension of the ->`args`."
-  [arg & args]
-  (let [specs (->> (cons arg args) (uc/map+ >spec) (ur/incremental-apply intersection|spec))]
-    (if (coll? specs) ; technically, `unkeyed?`
-        (UnorderedAndSpec. specs)
-        specs)))
 
 ;; ===== OR ===== ;;
 
@@ -520,40 +488,13 @@
       (err! "Cannot cast to OrSpec" x)))
 
 (defn or
-  "Sequential/ordered `or`.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs."
+  "Sequential/ordered `or`. Analogous to `set/union`.
+   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
+   Effectively computes the union of the extension of the ->`args`."
   [arg & args]
   (create-logical-spec :or ->OrSpec or-spec? or-spec>args (cons arg args) (fn1 c/= 1)))
 
 (uvar/defalias | or)
-
-(deftype UnorderedOrSpec [args #_(t/unkeyed spec?)]
-  PSpec
-  fipp.ednize/IOverride
-  fipp.ednize/IEdn (-edn [this] (list* `or* args)))
-
-(defn union|spec
-  ([a] a)
-  ([a b]
-    (assert (spec? a) (spec? b))
-    (if (c/= a b)
-        a
-        (case (compare a b)
-          ;; technically, choose the simpler one, but these will all be simplified anyway
-          -1  b
-           0  a
-           2  (TODO)
-          nil #{a b}
-           a))))
-
-(defn or*
-  "Unordered `or`. Analogous to `set/union`, not `core/or`:
-   rather than ensuring specific conditional application of specs, `or*` merely
-   ensures at least one spec is met in *some* order.
-   Applies as much 'compression'/deduplication/simplification as possible to the supplied specs.
-   Effectively computes the union of the intension of the ->`args`."
-  [arg & args]
-  (TODO "or*"))
 
 ;; ===== OR ===== ;;
 
@@ -748,11 +689,11 @@
       nil
       specs)))
 
-(defn- compare|not+universal [s0 s1]
-  (let [s0|inner (not-spec>inner-spec s0)]
-    (ifs (= s0|inner universal-set) -1
-         (= s0|inner null-set)       0
-         (compare s0|inner s1))))
+(defn- compare|universal+not [s0 s1]
+  (let [s1|inner (not-spec>inner-spec s1)]
+    (ifs (= s1|inner universal-set) 1
+         (= s1|inner null-set)      0
+         (compare s0 s1|inner))))
 
 (defn- compare|not+null [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
@@ -760,11 +701,11 @@
          (= s0|inner null-set)      1
          nil)))
 
-(defn- compare|not+value [s0 s1]
-  (let [s0|inner (not-spec>inner-spec s0)]
-    (ifs (= s0|inner universal-set) nil
-         (= s0|inner null-set)      1
-         (err! "TODO: NotSpec combination not yet supported with ValueSpec" {:s0 s0 :s1 s1}))))
+(defn- compare|value+not [s0 s1]
+  (let [s1|inner (not-spec>inner-spec s1)]
+    (ifs (= s1|inner universal-set) nil
+         (= s1|inner null-set)      -1
+         (err! "TODO: ValueSpec not yet supported with NotSpec combination" {:s0 s0 :s1 s1}))))
 
 (defn- compare|not+class [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
@@ -809,172 +750,136 @@
 (defn- compare|expr+expr [s0 s1] (if (c/= s0 s1) 0 nil))
 
 (def- compare|dispatch
-  (let [with-invert-comparison (fn [f] (fn [s0 s1] (ucomp/invert (f s1 s0))))
-        fn<  (fn [s0 s1] -1)
-        fn=  (fn [s0 s1]  0)
-        fn>  (fn [s0 s1]  1)
-        fn>< (fn [s0 s1]  2)
-        fn<> (fn [s0 s1] nil)
+  (let [fn< (ufn/fn' -1) fn= (ufn/fn' 0) fn> (ufn/fn' 1) fn>< (ufn/fn' 2) fn<> (ufn/fn' nil)
+        inverted (fn [f] (fn [s0 s1] (inverse (f s1 s0))))
         todo (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
-                                                :s1 s1 :s1|type (type s1)}))]
+                                                :s1 s1 :s1|type (type s1)}))
+        compare|universal+x     fn>
+        compare|universal+null  fn>
+        compare|universal+infer todo
+        compare|universal+or    fn>
+        compare|universal+and   todo
+        compare|universal+expr  todo
+        compare|null+x          fn<
+        compare|null+infer      todo
+        compare|null+or         fn<
+        compare|null+and        todo
+        compare|null+expr       todo
+        compare|value+expr      fn<>]
     {UniversalSetSpec
        {UniversalSetSpec fn=
-        NullSetSpec      fn>
-        InferSpec        todo
-        ValueSpec        fn>
-        ClassSpec        todo
-        ProtocolSpec     fn>
-        NotSpec          (with-invert-comparison compare|not+universal)
-        OrSpec           fn>
-        UnorderedOrSpec  todo
-        AndSpec          todo
-        UnorderedAndSpec todo
-        Expression       todo}
+        NullSetSpec      compare|universal+null
+        InferSpec        compare|universal+infer
+        ValueSpec        compare|universal+x
+        ClassSpec        compare|universal+x
+        ProtocolSpec     compare|universal+x
+        NotSpec          compare|universal+not
+        OrSpec           compare|universal+or
+        AndSpec          compare|universal+and
+        Expression       compare|universal+expr}
      NullSetSpec
-       {UniversalSetSpec fn<
+       {UniversalSetSpec (inverted compare|universal+null)
         NullSetSpec      fn=
-        InferSpec        todo
-        ValueSpec        fn<
-        ClassSpec        todo
-        ProtocolSpec     fn<
-        NotSpec          (with-invert-comparison compare|not+null)
-        OrSpec           fn<
-        UnorderedOrSpec  todo
-        AndSpec          todo
-        UnorderedAndSpec todo
-        Expression       todo}
+        InferSpec        compare|null+infer
+        ValueSpec        compare|null+x
+        ClassSpec        compare|null+x
+        ProtocolSpec     compare|null+x
+        NotSpec          (inverted compare|not+null)
+        OrSpec           compare|null+or
+        AndSpec          compare|null+and
+        Expression       compare|null+expr}
+     ;; TODO review this
      InferSpec
-       {UniversalSetSpec todo
-        NullSetSpec      todo
-        InferSpec        fn=
-        ValueSpec        fn>
-        ClassSpec        fn>
-        ProtocolSpec     fn>
-        NotSpec          fn>
-        OrSpec           fn>
-        UnorderedOrSpec  fn>
-        AndSpec          fn>
-        UnorderedAndSpec fn>
-        Expression       fn>}
+       {UniversalSetSpec (inverted compare|universal+infer)
+        NullSetSpec      (inverted compare|null+infer)
+        InferSpec        todo #_fn=
+        ValueSpec        todo #_fn>
+        ClassSpec        todo #_fn>
+        ProtocolSpec     todo #_fn>
+        NotSpec          todo #_fn>
+        OrSpec           todo #_fn>
+        AndSpec          todo #_fn>
+        Expression       todo #_fn>}
      ValueSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
+       {UniversalSetSpec (inverted compare|universal+x)
+        NullSetSpec      (inverted compare|null+x)
+        InferSpec        todo
         ValueSpec        compare|value+value
         ClassSpec        compare|value+class
         ProtocolSpec     compare|value+protocol
-        NotSpec          (with-invert-comparison compare|not+value)
+        NotSpec          compare|value+not
         OrSpec           compare|value+or
-        UnorderedOrSpec  todo
         AndSpec          compare|value+and
-        UnorderedAndSpec todo
-        Expression       fn<>}
+        Expression       compare|value+expr}
      ClassSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
-        ValueSpec        (with-invert-comparison compare|value+class)
-        ClassSpec        (fn [s0 s1] (compare|class|class (.-c ^ClassSpec s0) (.-c ^ClassSpec s1)))
+       {UniversalSetSpec (inverted compare|universal+x)
+        NullSetSpec      (inverted compare|null+x)
+        InferSpec        todo
+        ValueSpec        (inverted compare|value+class)
+        ClassSpec        (fn [s0 s1] (compare|class|class* (class-spec>class s0) (class-spec>class s1)))
         ProtocolSpec     todo
-        NotSpec          (with-invert-comparison compare|not+class)
+        NotSpec          (inverted compare|not+class)
         OrSpec           compare|class+or
-        UnorderedOrSpec  todo
         AndSpec          compare|class+and
-        UnorderedAndSpec todo
         Expression       fn<>}
      ProtocolSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
+       {UniversalSetSpec (inverted compare|universal+x)
+        NullSetSpec      (inverted compare|null+x)
         InferSpec        fn<
-        ValueSpec        (with-invert-comparison compare|value+protocol)
+        ValueSpec        (inverted compare|value+protocol)
         ClassSpec        todo
         ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
                                                      (protocol-spec>protocol s1))
                                          0
                                          nil))
-        NotSpec          (with-invert-comparison compare|not+protocol)
+        NotSpec          (inverted compare|not+protocol)
         OrSpec           todo
-        UnorderedOrSpec  todo
         AndSpec          todo
-        UnorderedAndSpec todo
         Expression       fn<>}
      NotSpec
-       {UniversalSetSpec compare|not+universal
+       {UniversalSetSpec (inverted compare|universal+not)
         NullSetSpec      compare|not+null
-        InferSpec        fn<
-        ValueSpec        compare|not+value
+        InferSpec        todo
+        ValueSpec        (inverted compare|value+not)
         ClassSpec        compare|not+class
         ProtocolSpec     compare|not+protocol
         NotSpec          compare|not+not
         OrSpec           compare|not+or
-        UnorderedOrSpec  todo
         AndSpec          compare|not+and
-        UnorderedAndSpec todo
         Expression       fn<>}
      OrSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
-        ValueSpec        (with-invert-comparison compare|value+or)
-        ClassSpec        (with-invert-comparison compare|class+or)
+       {UniversalSetSpec (inverted compare|universal+or)
+        NullSetSpec      (inverted compare|null+or)
+        InferSpec        todo
+        ValueSpec        (inverted compare|value+or)
+        ClassSpec        (inverted compare|class+or)
         ProtocolSpec     todo
-        NotSpec          (with-invert-comparison compare|not+or)
+        NotSpec          (inverted compare|not+or)
         OrSpec           compare|or+or
-        UnorderedOrSpec  todo
         AndSpec          compare|or+and
-        UnorderedAndSpec todo
-        Expression       fn<>}
-     UnorderedOrSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
-        ValueSpec        todo
-        ClassSpec        todo
-        ProtocolSpec     todo
-        NotSpec          todo
-        OrSpec           todo
-        UnorderedOrSpec  todo
-        AndSpec          todo
-        UnorderedAndSpec todo
         Expression       fn<>}
      AndSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
-        ValueSpec        (with-invert-comparison compare|value+and)
-        ClassSpec        (with-invert-comparison compare|class+and)
-        ProtocolSpec     todo
-        NotSpec          todo
-        OrSpec           (with-invert-comparison compare|or+and)
-        UnorderedOrSpec  todo
-        AndSpec          todo
-        UnorderedAndSpec todo
-        Expression       fn<>}
-     UnorderedAndSpec
-       {UniversalSetSpec fn<
-        NullSetSpec      fn>
-        InferSpec        fn<
-        ValueSpec        todo
-        ClassSpec        todo
-        ProtocolSpec     todo
-        NotSpec          todo
-        OrSpec           todo
-        UnorderedOrSpec  todo
-        AndSpec          todo
-        UnorderedAndSpec todo
-        Expression       fn<>}
-     Expression
-       {UniversalSetSpec todo
-        NullSetSpec      todo
+       {UniversalSetSpec (inverted compare|universal+and)
+        NullSetSpec      (inverted compare|null+and)
         InferSpec        todo
-        ValueSpec        todo
+        ValueSpec        (inverted compare|value+and)
+        ClassSpec        (inverted compare|class+and)
+        ProtocolSpec     todo
+        NotSpec          todo
+        OrSpec           (inverted compare|or+and)
+        AndSpec          todo
+        Expression       fn<>}
+     ;; TODO review this
+     Expression
+       {UniversalSetSpec (inverted compare|universal+expr)
+        NullSetSpec      (inverted compare|null+expr)
+        InferSpec        todo
+        ValueSpec        (inverted compare|value+expr)
         ClassSpec        todo
         ProtocolSpec     todo
         NotSpec          todo
         OrSpec           todo
-        UnorderedOrSpec  todo
         AndSpec          todo
-        UnorderedAndSpec todo
         Expression       compare|expr+expr}}))
 
 ;; ===== PRIMITIVES ===== ;;

@@ -151,9 +151,7 @@
       (test-symmetric -1  (! t/universal-set) t/universal-set)  ; inner =
       (test-symmetric  0  (! t/null-set)      t/universal-set)) ; inner <
     (testing "+ OrSpec")
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec")
     (testing "+ Expression"))
   (testing "NullSetSpec"
     (testing "+ NullSetSpec"
@@ -167,12 +165,10 @@
       (doseq [spec protocol-specs]
         (test-symmetric -1 t/null-set spec)))
     (testing "+ NotSpec"
-      (test-symmetric  0  (! t/universal-set) t/null-set)  ; inner >
-      (test-symmetric  1  (! t/null-set)      t/null-set)) ; inner =
+      (test-symmetric 0 (! t/universal-set) t/null-set)  ; inner >
+      (test-symmetric 1 (! t/null-set)      t/null-set)) ; inner =
     (testing "+ OrSpec")
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec")
     (testing "+ Expression"))
   (testing "InferSpec"
     (testing "+ InferSpec")
@@ -181,9 +177,7 @@
     (testing "+ ProtocolSpec")
     (testing "+ NotSpec")
     (testing "+ OrSpec")
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec")
     (testing "+ Expression"))
   (testing "ValueSpec"
     (testing "+ ValueSpec"
@@ -242,7 +236,6 @@
         ;;    #{"a"} <> t/long?
         ;; -> #{"a"} <> (t/byte? ∪ t/long?)
         (is= nil (t/compare (t/value "a") (| t/byte? t/long?)))))
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec"
       #_(testing ">" ; TODO fix test
         (is= nil (t/compare (t/value "a") (& t/string? ...))))
@@ -260,8 +253,7 @@
         ;;    #{"a"} <> t/array-list?
         ;;    #{"a"} <> t/?
         ;; -> #{"a"} <> (t/array-list? ∩ t/long?)
-        (is= nil (t/compare (t/value "a") (& t/array-list? t/java-set?)))))
-    (testing "+ UnorderedAndSpec"))
+        (is= nil (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
   (testing "ClassSpec"
     (testing "+ ClassSpec"
       (testing "Boxed Primitive + Boxed Primitive"
@@ -357,7 +349,6 @@
           (is=  2  (t/compare t/iterable? (t/? t/comparable?))))
         (testing "<> nilabled"
           (is= nil (t/compare t/long?     (t/? t/string?))))))
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec"
       ;; Any ∅ -> ∅
       ;; Otherwise whatever it is
@@ -380,16 +371,13 @@
       (testing "#{>+ ><+} -> ><"
         (test-symmetric  2  i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
       (testing "#{>+ <>+} -> <>"
-        (test-symmetric nil a   (& <a0 ><0 ><1)))) ; TODO fix test
-    (testing "+ UnorderedAndSpec"))
+        (test-symmetric nil a   (& <a0 ><0 ><1))))) ; TODO fix test
   (testing "ProtocolSpec"
     (testing "+ ProtocolSpec"
       (is=  0  (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolAll)))
       (is= nil (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolNone))))
     (testing "+ OrSpec")
-    (testing "+ UnorderedOrSpec")
-    (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec"))
+    (testing "+ AndSpec"))
   (testing "NotSpec"
     (testing "+ NotSpec"
       (is=  0  (t/compare (! t/universal-set) (! t/universal-set)))
@@ -403,12 +391,12 @@
     (testing "+ OrSpec"
       (test-symmetric -1  (! t/universal-set) (| ><0 ><1))
       (test-symmetric  1  (! t/null-set)      (| ><0 ><1))
+      (test-symmetric  1  (! t/null-set)      (| ><0 ><1))
       (test-symmetric nil (! ><0)             (| ><0 ><1)) ; TODO fix test
       (test-symmetric nil (! ><1)             (| ><0 ><1))) ; TODO fix test
-    (testing "+ UnorderedOrSpec")
     (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec")
     (testing "+ Expression"))
+  ;; TODO fix tests
   (testing "OrSpec"
     (testing "+ OrSpec"
       ;; (let [l <all -1 on left-compare?>
@@ -494,15 +482,9 @@
       (testing "#{<+ ∅+} -> <")
       (testing "#{= ∅+} -> <")
       (testing "#{>+ ∅+} -> ∅"))
-    (testing "+ UnorderedOrSpec"
-      (testing "+ UnorderedOrSpec")
-      (testing "+ AndSpec")
-      (testing "+ UnorderedAndSpec")
-      (testing "+ Expression"))
-    ;; TODO fix impls
+    ;; TODO fix tests
     (testing "+ AndSpec"
       (testing "+ AndSpec")
-      (testing "+ UnorderedAndSpec")
       (testing "+ Expression")
       ;; (if <all -1 on right-compare?> 1 nil)
       ;;
@@ -553,73 +535,8 @@
           (is= nil (t/compare (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1)))
           ;; comparisons: [nil, nil, nil], [-1, -1, -1, nil, nil]
           (is= nil (t/compare (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))))
-  (testing "UnorderedOrSpec"
-    (testing "+ UnorderedOrSpec")
-    (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec"))
   (testing "AndSpec"
-    (testing "+ AndSpec")
-    (testing "+ UnorderedAndSpec"))
-  (testing "UnorderedAndSpec"
-    (testing "+ UnorderedAndSpec")))
-
-(deftest test|intersection|spec
-  (testing "equality"
-    (is= (t/intersection|spec t/long? t/long?)
-         t/long?))
-  (testing "specificity"
-    (testing "Primitive + Reference"
-      (is= (t/intersection|spec t/object? t/int?)
-           t/int?)
-      (is= (t/intersection|spec t/int? t/object?)
-           t/int?))
-    (testing "Reference + Reference"
-      (is= (t/intersection|spec t/object? t/string?)
-           t/string?)
-      (is= (t/intersection|spec t/string? t/object?)
-           t/string?))
-    (testing "Reference + Interface"
-      (is= (t/intersection|spec t/char-seq? t/string?)
-           t/string?)
-      (is= (t/intersection|spec t/string? t/char-seq?)
-           t/string?)
-      (is= (t/intersection|spec t/char-seq? t/object?)
-           t/char-seq?)
-      (is= (t/intersection|spec t/object? t/char-seq?)
-           t/char-seq?)))
-  (testing "disjointness"
-    (testing "Primitive + Primitive"
-      (is= (t/intersection|spec t/long? t/int?)
-           nil))))
-
-(deftest test|union|spec
-  (testing "equality"
-    (is= (t/union|spec t/long? t/long?)
-         t/long?))
-  (testing "specificity"
-    (testing "Primitive + Reference"
-      (is= (t/union|spec t/object? t/int?)
-           t/object?)
-      (is= (t/union|spec t/int? t/object?)
-           t/object?))
-    (testing "Reference + Reference"
-      (is= (t/union|spec t/object? t/string?)
-           t/object?)
-      (is= (t/union|spec t/string? t/object?)
-           t/object?))
-    (testing "Reference + Interface"
-      (is= (t/union|spec t/char-seq? t/string?)
-           t/char-seq?)
-      (is= (t/union|spec t/string? t/char-seq?)
-           t/char-seq?)
-      (is= (t/union|spec t/char-seq? t/object?)
-           t/object?)
-      (is= (t/union|spec t/object? t/char-seq?)
-           t/object?)))
-  (testing "disjointness"
-    (testing "Primitive + Primitive"
-      (is= (t/union|spec t/long? t/int?)
-           #{t/long? t/int?}))))
+    (testing "+ AndSpec")))
 
 (deftest test|not
   (testing "simplification"
