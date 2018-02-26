@@ -250,7 +250,7 @@
      - ✓ `(t/>< c0 c1)`   : the intersect of the extensions of ->`c0` and ->`c1` is non-empty,
                              but neither ->`c0` nor ->`c1` share a subset/equality/superset
                              relationship.
-   `nil` means their generality/specificity is incomparable:
+   `3`  means their generality/specificity is incomparable:
      - ✓ `(t/<> c0 c1)`   : the extension of ->`c0` is disjoint w.r.t. to that of ->`c1`.
    Unboxed primitives are considered to be less general (more specific) than boxed primitives."
   [^Class c0 ^Class c1]
@@ -262,7 +262,7 @@
                ;; we'll consider the two unrelated
                ;; TODO this uses reflection so each class comparison is slowish
                (c/or (utcore/primitive-array-type? c0)
-                     (utcore/primitive-array-type? c1)) nil
+                     (utcore/primitive-array-type? c1))  3
                (.isAssignableFrom c0 c1)                 1
                (.isAssignableFrom c1 c0)                -1
                ;; multiple inheritance of interfaces
@@ -270,7 +270,7 @@
                             (c/not (uclass/final? c1)))
                      (c/and (uclass/interface? c1)
                             (c/not (uclass/final? c0)))) 2
-               nil)
+               3)
      :cljs (TODO)))
 
 ;; ===== EXTENSIONALITY COMPARISON ===== ;;
@@ -280,11 +280,11 @@
 (defn compare
   ;; TODO optimize the `recur`s here as they re-take old code paths
   "Returns the value of the comparison of the extensions of ->`s0` and ->`s1`.
-   `-1`   means (ex ->`s0`) ⊂                                 (ex ->`s1`)
-    `0`   means (ex ->`s0`) =                                 (ex ->`s1`)
-    `1`   means (ex ->`s0`) ⊃                                 (ex ->`s1`)
-    `2`   means (ex ->`s0`) shares other intersect w.r.t. (∩) (ex ->`s1`)
-    `nil` means (ex ->`s0`) disjoint               w.r.t. (∅) (ex ->`s1`)
+   `-1` means (ex ->`s0`) ⊂                                 (ex ->`s1`)
+    `0` means (ex ->`s0`) =                                 (ex ->`s1`)
+    `1` means (ex ->`s0`) ⊃                                 (ex ->`s1`)
+    `2` means (ex ->`s0`) shares other intersect w.r.t. (∩) (ex ->`s1`)
+    `3` means (ex ->`s0`) disjoint               w.r.t. (∅) (ex ->`s1`)
 
    Does not compare cardinalities or other relations of sets, but rather only sub/superset
    relations."
@@ -312,16 +312,6 @@
   "Computes whether the extension of spec ->`s0` is not equal to that of ->`s1`."
   [s0 s1] (c/not (= s0 s1)))
 
-(defn <>
-  "Computes whether the respective extensions of specs ->`s0` and ->`s1` are disjoint."
-  [s0 s1] (c/nil? (compare s0 s1)))
-
-(defn ><
-  "Computes whether it is the case that the intersect of the extensions of spec ->`s0`
-   and ->`s1` is non-empty, and neither ->`s0` nor ->`s1` share a subset/equality/superset
-   relationship."
-  [s0 s1] (c/= (compare s0 s1) 2))
-
 (defn >=
   "Computes whether the extension of spec ->`s0` is a (lax) superset of that of ->`s1`."
   [s0 s1] (let [ret (compare s0 s1)] (c/or (c/= ret 1) (c/= ret 0))))
@@ -330,11 +320,21 @@
   "Computes whether the extension of spec ->`s0` is a strict superset of that of ->`s1`."
   [s0 s1] (c/= (compare s0 s1) 1))
 
+(defn ><
+  "Computes whether it is the case that the intersect of the extensions of spec ->`s0`
+   and ->`s1` is non-empty, and neither ->`s0` nor ->`s1` share a subset/equality/superset
+   relationship."
+  [s0 s1] (c/= (compare s0 s1) 2))
+
+(defn <>
+  "Computes whether the respective extensions of specs ->`s0` and ->`s1` are disjoint."
+  [s0 s1] (c/= (compare s0 s1) 3))
+
 (defn inverse [comparison]
   (case comparison
-    -1        1
-     1       -1
-    (0 2 nil) comparison))
+    -1       1
+     1      -1
+    (0 2 3) comparison))
 
 ;; ===== LOGICAL ===== ;;
 
@@ -395,12 +395,12 @@
                                             (uc/remove+ (rcomp second comparison-denotes-redundancy?))
                                             join)]
                                  (prl! kind args' s without-redundant-args
-                                       (->> without-redundant-args (uc/map+ second) (seq-or c/nil?)))
+                                       (->> without-redundant-args (uc/map+ second) (seq-or (fn1 c/= 3))))
                                  (ifs
                                    (c/and (c/= kind :and)
                                           (c/or ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
                                                 ;                at least one other arg
-                                                (->> without-redundant-args (uc/map+ second) (seq-or c/nil?))
+                                                (->> without-redundant-args (uc/map+ second) (seq-or (fn1 c/= 3)))
                                                 ;; Contradiction/null-set: (& A (! A))
                                                 (->> without-redundant-args
                                                      (uc/map+ first)
@@ -416,13 +416,13 @@
                                         (uc/map+ second)
                                         (seq-and (if (c/= kind :and)
                                                      (fn1 c/= 2)
-                                                     (fn1 case (2 nil) true false))))
+                                                     (fn1 case (2 3) true false))))
                                    (->> without-redundant-args (uc/map first) (<- conj s))
                                    #_(c/or
                                      ;; at least one arg has an extension that is redundant w.r.t. `s`
                                      (c/< (count without-redundant-args) (count args'))
                                      ;; `or`; `s` is `<>` or `><` w.r.t. to all other args
-                                     (c/and (c/= kind :or) (->> without-redundant-args (uc/map+ second) (seq-and (fn1 case (2 nil) true false)))))
+                                     (c/and (c/= kind :or) (->> without-redundant-args (uc/map+ second) (seq-and (fn1 case (2 3) true false)))))
                                    #_(->> without-redundant-args (uc/map first) (<- conj s))
 
                                    args')))))
@@ -596,7 +596,7 @@
   (if (c/= (value-spec>value s0)
            (value-spec>value s1))
       0
-      nil))
+      3))
 
 (defn- compare|value+class [s0 s1]
   (let [v (value-spec>value s0)
@@ -607,12 +607,12 @@
         -1 ; the extension is a strict subset
         ;; e.g. asking how the set containing only the string "abc"
         ;; relates the set of all bytes (the class Byte)
-        nil)))
+        3)))
 
 (defn- compare|value+protocol [s0 s1]
   (let [v (value-spec>value       s0)
         p (protocol-spec>protocol s1)]
-    (if (satisfies? p v) -1 nil)))
+    (if (satisfies? p v) -1 3)))
 
 (defn- compare|value+or [s0 ^OrSpec s1]
   (let [specs (.-args s1)]
@@ -621,12 +621,12 @@
          (let [ret' (compare s0 s)] ; `1` will never happen
            (when (c/= ret' 2) (TODO))
            (if (c/or (c/= ret' -1)
-                     (c/and (c/= ret' nil) (c/= ret 0  ))
-                     (c/and (c/= ret' 0  ) (c/= ret nil)))
+                     (c/and (c/= ret' 3) (c/= ret 0))
+                     (c/and (c/= ret' 0) (c/= ret 3)))
                ;; because the extension of `s1` only gets bigger
                (reduced -1)
                ret)))
-       nil
+       3
        specs)))
 
 (defn- compare|value+and [s0 s1]
@@ -635,43 +635,39 @@
        (fn [ret s]
          (let [ret' (compare s0 s)] ; `-1` will never happen
            (case ret'
-             nil (reduced ret')
-             2   (TODO)
+             3 (reduced ret')
+             2 (TODO)
              ret')))
-       nil
+       3
        specs)))
+
+(def ^:const <ident  0)
+(def ^:const =ident  1)
+(def ^:const >ident  2)
+(def ^:const ><ident 3)
+(def ^:const <>ident 4)
 
 (defn- compare|class+or
   "#{(⊂ | =) ∅} -> ⊂
    #{(⊃ ?) ∅} -> ∅
    Otherwise whatever it is"
   [s0 s1]
-  (let [<ident  0
-        =ident  1
-        >ident  2
-        ><ident 3
-        <>ident 4
-        ;; <+!  (-> ubit/empty (ubit/conj <ident ) (ubit/conj <>ident)) ; 17
-        ;; =+!  (-> ubit/empty (ubit/conj =ident ) (ubit/conj <>ident)) ; 18
-        ;; >+!  (-> ubit/empty (ubit/conj >ident ) (ubit/conj <>ident)) ; 20
-        ;; ><+! (-> ubit/empty (ubit/conj ><ident) (ubit/conj <>ident)) ; 24
-        ;; <>+! (-> ubit/empty (ubit/conj <>ident))                     ; 16
-        specs (.-args ^OrSpec s1)]
+  (let [specs (.-args ^OrSpec s1)]
     (first
       (reduce
         (fn [[ret found] s]
           (let [ret'   (compare s0 s)
-                found' (ubit/conj found
-                         (case ret' -1  <ident
-                                     0  =ident
-                                     1  >ident
-                                     2  ><ident
-                                    nil <>ident))]
-            (case (c/long found')
-              (17 #_<+! 18 #_=+!)  (reduced [-1 nil])
-              (20 #_>+! 24 #_><+!) (reduced [ 2 nil])
-              [ret' found'])))
-        [nil ubit/empty]
+                found' (-> found (ubit/conj ret') c/long)]
+                (prl! ret' found')
+            (ifs (c/or (ubit/contains? found' <ident)
+                       (ubit/contains? found' =ident))
+                 (reduced [-1 nil])
+
+                 (ubit/contains? found' >ident)
+                 (reduced [2 nil])
+
+                 [ret' found'])))
+        [3 ubit/empty]
         specs))))
 
 (defn- compare|class+and
@@ -683,10 +679,10 @@
       (fn [ret s]
         (let [ret' (compare s0 s)]
           (case ret'
-                nil (reduced nil)
-                2   (TODO)
+                3 (reduced 3)
+                2 (TODO)
                 ret')))
-      nil
+      3
       specs)))
 
 (defn- compare|universal+not [s0 s1]
@@ -699,18 +695,18 @@
   (let [s0|inner (not-spec>inner-spec s0)]
     (ifs (= s0|inner universal-set) 0
          (= s0|inner null-set)      1
-         nil)))
+         3)))
 
 (defn- compare|value+not [s0 s1]
   (let [s1|inner (not-spec>inner-spec s1)]
-    (ifs (= s1|inner universal-set) nil
+    (ifs (= s1|inner universal-set)  3
          (= s1|inner null-set)      -1
          (err! "TODO: ValueSpec not yet supported with NotSpec combination" {:s0 s0 :s1 s1}))))
 
 (defn- compare|not+class [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
     (ifs (= s0|inner universal-set)
-           nil
+           3
          (= s0|inner null-set)
            1
          (< s0|inner s1)
@@ -719,13 +715,13 @@
                   :cljs false)
                -1
                 2)
-         nil)))
+         3)))
 
 (defn- compare|not+protocol [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
-    (ifs (= s0|inner universal-set) nil
+    (ifs (= s0|inner universal-set) 3
          (= s0|inner null-set)      1
-         nil)))
+         3)))
 
 (defn- compare|not+not [s0 s1]
   (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1)))
@@ -739,18 +735,21 @@
 (defn- compare|or+or [^OrSpec s0 ^OrSpec s1]
   (let [l (->> s0 .-args (seq-and (fn1 < s1)))
         r (->> s1 .-args (seq-and (fn1 < s0)))]
+        (prl! s0 s1
+              (->> s0 .-args (map (fn1 compare s1)))
+              (->> s1 .-args (map (fn1 compare s0))))
     (if l
         (if r 0 -1)
-        (if r 1 nil))))
+        (if r 1  3))))
 
 (defn- compare|or+and [^OrSpec s0 ^AndSpec s1]
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
-    (if r 1 nil)))
+    (if r 1 3)))
 
-(defn- compare|expr+expr [s0 s1] (if (c/= s0 s1) 0 nil))
+(defn- compare|expr+expr [s0 s1] (if (c/= s0 s1) 0 3))
 
 (def- compare|dispatch
-  (let [fn< (ufn/fn' -1) fn= (ufn/fn' 0) fn> (ufn/fn' 1) fn>< (ufn/fn' 2) fn<> (ufn/fn' nil)
+  (let [fn< (ufn/fn' -1) fn= (ufn/fn' 0) fn> (ufn/fn' 1) fn>< (ufn/fn' 2) fn<> (ufn/fn' 3)
         inverted (fn [f] (fn [s0 s1] (inverse (f s1 s0))))
         todo (fn [s0 s1] (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
                                                 :s1 s1 :s1|type (type s1)}))
@@ -831,7 +830,7 @@
         ProtocolSpec     (fn [s0 s1] (if (identical? (protocol-spec>protocol s0)
                                                      (protocol-spec>protocol s1))
                                          0
-                                         nil))
+                                         3))
         NotSpec          (inverted compare|not+protocol)
         OrSpec           todo
         AndSpec          todo

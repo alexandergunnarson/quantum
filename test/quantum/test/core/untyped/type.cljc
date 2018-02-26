@@ -190,10 +190,10 @@
         (test-symmetric 0 (t/value (vector (vector))) (t/value (vector (list))))
         (test-symmetric 0 (t/value (hash-map)       ) (t/value (sorted-map)    )))
       (testing "<>"
-        (test-symmetric nil (t/value 1  ) (t/value 2  ))
-        (test-symmetric nil (t/value "a") (t/value "b"))
-        (test-symmetric nil (t/value 1  ) (t/value "a"))
-        (test-symmetric nil (t/value nil) (t/value "a"))))
+        (test-symmetric 3 (t/value 1  ) (t/value 2  ))
+        (test-symmetric 3 (t/value "a") (t/value "b"))
+        (test-symmetric 3 (t/value 1  ) (t/value "a"))
+        (test-symmetric 3 (t/value nil) (t/value "a"))))
     (testing "+ ClassSpec"
       (testing "<"
         (testing "Class equality"
@@ -202,26 +202,26 @@
           (test-symmetric -1 (t/value "a") t/char-seq?)
           (test-symmetric -1 (t/value "a") t/object?)))
       (testing "<>"
-        (test-symmetric nil (t/value "a") t/byte?)))
+        (test-symmetric 3 (t/value "a") t/byte?)))
     (testing "+ ProtocolSpec"
       (let [values #{t/universal-set t/null-set nil {} 1 "" AProtocolAll
                      quantum.test.core.untyped.type.AProtocolAll}]
         (doseq [v values]
-          (test-symmetric -1  (t/value v) (t/isa? AProtocolAll)))
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolAll)))
         (doseq [v [""]]
-          (test-symmetric -1  (t/value v) (t/isa? AProtocolString)))
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolString)))
         (doseq [v (disj values "")]
-          (test-symmetric nil (t/value v) (t/isa? AProtocolString)))
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolString)))
         (doseq [v (disj values nil)]
-          (test-symmetric -1  (t/value v) (t/isa? AProtocolNonNil)))
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolNonNil)))
         (doseq [v [nil]]
-          (test-symmetric nil (t/value v) (t/isa? AProtocolNonNil)))
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolNonNil)))
         (doseq [v [nil]]
-          (test-symmetric -1  (t/value v) (t/isa? AProtocolOnlyNil)))
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolOnlyNil)))
         (doseq [v (disj values nil)]
-          (test-symmetric nil (t/value v) (t/isa? AProtocolOnlyNil)))
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolOnlyNil)))
         (doseq [v values]
-          (test-symmetric nil (t/value v) (t/isa? AProtocolNone)))))
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolNone)))))
     (testing "+ NotSpec"
       (test-symmetric -1 (! t/universal-set) (t/value 1))  ; inner >
       (test-symmetric  1 (! t/null-set)      (t/value 1))) ; inner <
@@ -230,170 +230,170 @@
         ;;    #{"a"} <> t/byte?
         ;;    #{"a"} <  t/string?
         ;; -> #{"a"} <  (t/byte? ∪ t/string?)
-        (is= -1  (t/compare (t/value "a") (| t/byte? t/string?))))
+        (is= -1 (t/compare (t/value "a") (| t/byte? t/string?))))
       (testing "<>"
         ;;    #{"a"} <> t/byte?
         ;;    #{"a"} <> t/long?
         ;; -> #{"a"} <> (t/byte? ∪ t/long?)
-        (is= nil (t/compare (t/value "a") (| t/byte? t/long?)))))
+        (is= 3 (t/compare (t/value "a") (| t/byte? t/long?)))))
     (testing "+ AndSpec"
       #_(testing ">" ; TODO fix test
-        (is= nil (t/compare (t/value "a") (& t/string? ...))))
+        (is= 3 (t/compare (t/value "a") (& t/string? ...))))
       (testing "<"
         ;;    #{"a"} < t/comparable?
         ;;    #{"a"} < t/char-seq?
         ;; -> #{"a"} < (t/comparable? ∩ t/char-seq?)
-        (is= -1  (t/compare (t/value "a") (& t/comparable? t/char-seq?))))
+        (is= -1 (t/compare (t/value "a") (& t/comparable? t/char-seq?))))
       (testing "><"
         ;;    #{"a"} <> t/array-list?
         ;;    #{"a"} <  t/char-seq?
         ;; -> #{"a"} >< (t/array-list? ∩ t/char-seq?)
-        (is=  2  (t/compare (t/value "a") (& t/array-list? t/char-seq?)))) ; TODO fix impl
+        (is=  2 (t/compare (t/value "a") (& t/array-list? t/char-seq?)))) ; TODO fix impl
       (testing "<>"
         ;;    #{"a"} <> t/array-list?
         ;;    #{"a"} <> t/?
         ;; -> #{"a"} <> (t/array-list? ∩ t/long?)
-        (is= nil (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
+        (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
   (testing "ClassSpec"
     (testing "+ ClassSpec"
       (testing "Boxed Primitive + Boxed Primitive"
         (is= 0 (t/compare t/long? t/long?))
-        (test-symmetric nil t/long? t/int?))
+        (test-symmetric 3 t/long? t/int?))
       (testing "Boxed Primitive + Final Concrete"
-        (test-symmetric nil t/long? t/string?))
+        (test-symmetric 3 t/long? t/string?))
       (testing "Boxed Primitive + Extensible Concrete"
         (testing "< , >"
           (test-symmetric -1  t/long? t/object?))
         (testing "<>"
-          (test-symmetric nil t/long? t/thread?)))
+          (test-symmetric 3 t/long? t/thread?)))
       (testing "Boxed Primitive + Abstract"
-        (test-symmetric nil t/long? (t/isa? java.util.AbstractCollection)))
+        (test-symmetric 3 t/long? (t/isa? java.util.AbstractCollection)))
       (testing "Boxed Primitive + Interface"
-        (test-symmetric nil t/long? t/char-seq?))
+        (test-symmetric 3 t/long? t/char-seq?))
       (testing "Final Concrete + Final Concrete"
         (is= 0 (t/compare t/string? t/string?)))
       (testing "Final Concrete + Extensible Concrete"
         (testing "< , >"
-          (test-symmetric -1  t/string? t/object?))
+          (test-symmetric -1 t/string? t/object?))
         (testing "<>"
-          (test-symmetric nil t/string? t/array-list?)))
+          (test-symmetric  3 t/string? t/array-list?)))
       (testing "Final Concrete + Abstract")
       (testing "Final Concrete + Interface"
         (testing "< , >"
-          (test-symmetric -1  t/string? t/comparable?))
+          (test-symmetric -1 t/string? t/comparable?))
         (testing "<>"
-          (test-symmetric nil t/string? t/java-coll?)))
+          (test-symmetric  3 t/string? t/java-coll?)))
       (testing "Extensible Concrete + Extensible Concrete"
         (is= 0 (t/compare t/object? t/object?))
         (testing "< , >"
-          (test-symmetric -1  t/array-list? t/object?))
+          (test-symmetric -1 t/array-list? t/object?))
         (testing "<>"
-          (test-symmetric nil t/array-list? t/thread?)))
+          (test-symmetric  3 t/array-list? t/thread?)))
       (testing "Extensible Concrete + Abstract"
         (testing "< , >"
-          (test-symmetric -1  (t/isa? java.util.AbstractCollection) t/object?)
-          (test-symmetric -1  t/array-list? (t/isa? java.util.AbstractCollection)))
+          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/object?)
+          (test-symmetric -1 t/array-list? (t/isa? java.util.AbstractCollection)))
         (testing "<>"
-          (test-symmetric nil t/thread? (t/isa? java.util.AbstractCollection))
-          (test-symmetric nil (t/isa? java.util.AbstractCollection) t/thread?)))
+          (test-symmetric  3 t/thread? (t/isa? java.util.AbstractCollection))
+          (test-symmetric  3 (t/isa? java.util.AbstractCollection) t/thread?)))
       (testing "Extensible Concrete + Interface"
         (test-symmetric 2 t/array-list? t/char-seq?))
       (testing "Abstract + Abstract"
         (is=  0  (t/compare (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection)))
         (testing "< , >"
-          (test-symmetric -1  (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
+          (test-symmetric -1 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
         (testing "<>"
-          (test-symmetric nil (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
+          (test-symmetric  3 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
       (testing "Abstract + Interface"
         (testing "< , >"
-          (test-symmetric -1  (t/isa? java.util.AbstractCollection) t/java-coll?))
+          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/java-coll?))
         (testing "><"
-          (test-symmetric  2  (t/isa? java.util.AbstractCollection) t/comparable?)))
+          (test-symmetric  2 (t/isa? java.util.AbstractCollection) t/comparable?)))
       (testing "Interface + Interface"
         (testing "< , >"
-          (test-symmetric -1  t/java-coll? t/iterable?))
+          (test-symmetric -1 t/java-coll? t/iterable?))
         (testing "><"
-          (test-symmetric  2  t/char-seq?  t/comparable?))))
+          (test-symmetric  2 t/char-seq?  t/comparable?))))
     (testing "+ ProtocolSpec")
     (testing "+ OrSpec"
-      ;; #{(< | =) ><}  -> ><
-      ;; #{(< | =) <>}  -> <
-      ;; #{> (<> | ><)} -> ><
+      ;; #{(< | =), (? *)    } -> <
+      ;; #{>      , (<> | ><)} -> ><
       ;; Otherwise whatever it is
       (testing "#{<+} -> <"
-        (is= -1  (t/compare i|<a0 (| i|>a+b i|>a0 i|>a1))))
+        (is= -1 (t/compare i|<a0 (| i|>a+b i|>a0 i|>a1))))
       (testing "#{><+} -> ><"
-        (is=  2  (t/compare i|a   (| i|><0 i|><1))))
+        (is=  2 (t/compare i|a   (| i|><0 i|><1))))
       (testing "#{<>+} -> <>"
-        (is= nil (t/compare a     (| ><0 ><1))))
-      (testing "#{<+ ><+} -> ><"
-        (is=  2  (t/compare i|a   (| i|>a+b i|>a0 i|><0 i|><1))))
+        (is=  3 (t/compare a     (| ><0 ><1))))
+      (testing "#{<+ ><+} -> <"
+        (is= -1 (t/compare i|a   (| i|>a+b i|>a0 i|><0 i|><1)))
+        (is= -1 (t/compare i|>a0 (| i|>a+b i|>a0)))) ; TODO fix impl
       (testing "#{<+ <>+} -> <"
-        (is= -1  (t/compare a     (| >a ><0 ><1))))
+        (is= -1 (t/compare a     (| >a ><0 ><1))))
       (testing "#{=+ ><+} -> ><"
-        (is=  2  (t/compare i|a   (| i|a i|><0 i|><1))))
+        (is=  2 (t/compare i|a   (| i|a i|><0 i|><1))))
       (testing "#{=+ <>+} -> <"
-        (is= -1  (t/compare a     (| a ><0 ><1))))
+        (is= -1 (t/compare a     (| a ><0 ><1))))
       (testing "#{>+ ><+} -> ><"
-        (is=  2  (t/compare i|a   (| i|<a+b i|<a0 i|><0 i|><1))))
+        (is=  2 (t/compare i|a   (| i|<a+b i|<a0 i|><0 i|><1))))
       (testing "#{>+ <>+} -> ><"
-        (is=  2  (t/compare a     (| <a0 ><0 ><1))))
+        (is=  2 (t/compare a     (| <a0 ><0 ><1))))
       (testing "Nilable"
         (testing "= nilabled"
-          (is= -1  (t/compare t/long?     (t/? t/long?))))
+          (is= -1 (t/compare t/long?     (t/? t/long?))))
         (testing "< nilabled"
-          (is= -1  (t/compare t/long?     (t/? t/object?))))
+          (is= -1 (t/compare t/long?     (t/? t/object?))))
         (testing "> nilabled"
-          (is=  2  (t/compare t/object?   (t/? t/long?))))
+          (is=  2 (t/compare t/object?   (t/? t/long?))))
         (testing ">< nilabled"
-          (is=  2  (t/compare t/iterable? (t/? t/comparable?))))
+          (is=  2 (t/compare t/iterable? (t/? t/comparable?))))
         (testing "<> nilabled"
-          (is= nil (t/compare t/long?     (t/? t/string?))))))
+          (is=  3(t/compare t/long?     (t/? t/string?))))))
     (testing "+ AndSpec"
       ;; Any ∅ -> ∅
       ;; Otherwise whatever it is
       (testing "#{<+} -> <"
-        (test-symmetric -1  i|a (& i|>a+b i|>a0 i|>a1)))
+        (test-symmetric -1 i|a (& i|>a+b i|>a0 i|>a1)))
       (testing "#{>+} -> >"
-        (test-symmetric  1  i|a (& i|<a+b i|<a0 i|<a1)))
+        (test-symmetric  1 i|a (& i|<a+b i|<a0 i|<a1)))
       (testing "#{><+} -> ><"
-        (test-symmetric  2  i|a (& i|><0 i|><1))) ; TODO fix impl
+        (test-symmetric  2 i|a (& i|><0 i|><1))) ; TODO fix impl
       (testing "#{<>+} -> <>"
-        (test-symmetric nil a   (& ><0 ><1))) ; TODO fix test
+        (test-symmetric  3 a   (& ><0 ><1))) ; TODO fix test
       (testing "#{<+ ><+} -> ><"
-        (test-symmetric  2  a   (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))) ; TODO fix impl
+        (test-symmetric  2 a   (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))) ; TODO fix impl
       (testing "#{<+ <>+} -> <>"
-        (test-symmetric nil a   (& >a ><0 ><1))) ; TODO fix test
+        (test-symmetric  3 a   (& >a ><0 ><1))) ; TODO fix test
       (testing "#{=+ ><+} -> ><"
-        (test-symmetric  2  i|a (& i|a i|><0 i|><1))) ; TODO fix impl
+        (test-symmetric  2 i|a (& i|a i|><0 i|><1))) ; TODO fix impl
       (testing "#{=+ <>+} -> <>"
-        (test-symmetric nil a   (& a ><0 ><1))) ; TODO fix test
+        (test-symmetric  3 a   (& a ><0 ><1))) ; TODO fix test
       (testing "#{>+ ><+} -> ><"
-        (test-symmetric  2  i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
+        (test-symmetric  2 i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
       (testing "#{>+ <>+} -> <>"
-        (test-symmetric nil a   (& <a0 ><0 ><1))))) ; TODO fix test
+        (test-symmetric  3 a   (& <a0 ><0 ><1))))) ; TODO fix test
   (testing "ProtocolSpec"
     (testing "+ ProtocolSpec"
-      (is=  0  (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolAll)))
-      (is= nil (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolNone))))
+      (is=  0 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolAll)))
+      (is=  3 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolNone))))
     (testing "+ OrSpec")
     (testing "+ AndSpec"))
   (testing "NotSpec"
     (testing "+ NotSpec"
-      (is=  0  (t/compare (! t/universal-set) (! t/universal-set)))
-      (is=  0  (t/compare (! t/null-set)      (! t/null-set)))
-      (is=  0  (t/compare (! a)               (! a)))
-      (test-symmetric nil (! a)               (! b))
-      (test-symmetric  2  (! i|a)             (! i|b))
-      (test-symmetric nil (! t/string?)       (! t/byte?))
-      (test-symmetric -1  (! a)               (! >a))
-      (test-symmetric  1  (! a)               (! <a0)))
+      (is=  0 (t/compare (! t/universal-set) (! t/universal-set)))
+      (is=  0 (t/compare (! t/null-set)      (! t/null-set)))
+      (is=  0 (t/compare (! a)               (! a)))
+      (test-symmetric  3 (! a)               (! b))
+      (test-symmetric  2 (! i|a)             (! i|b))
+      (test-symmetric  3 (! t/string?)       (! t/byte?))
+      (test-symmetric -1 (! a)               (! >a))
+      (test-symmetric  1 (! a)               (! <a0)))
     (testing "+ OrSpec"
-      (test-symmetric -1  (! t/universal-set) (| ><0 ><1))
-      (test-symmetric  1  (! t/null-set)      (| ><0 ><1))
-      (test-symmetric  1  (! t/null-set)      (| ><0 ><1))
-      (test-symmetric nil (! ><0)             (| ><0 ><1)) ; TODO fix test
-      (test-symmetric nil (! ><1)             (| ><0 ><1))) ; TODO fix test
+      (test-symmetric -1 (! t/universal-set) (| ><0 ><1))
+      (test-symmetric  1 (! t/null-set)      (| ><0 ><1))
+      (test-symmetric  1 (! t/null-set)      (| ><0 ><1))
+      (test-symmetric  3 (! ><0)             (| ><0 ><1)) ; TODO fix test
+      (test-symmetric  3 (! ><1)             (| ><0 ><1))) ; TODO fix test
     (testing "+ AndSpec")
     (testing "+ Expression"))
   ;; TODO fix tests
@@ -403,7 +403,7 @@
       ;;       r <all -1 on right-compare?>]
       ;;   (if l
       ;;       (if r 0 -1)
-      ;;       (if r 1 nil)))
+      ;;       (if r 1  3)))
       ;;
       ;; Comparison annotations achieved by first comparing each element of the first/left
       ;; to the entire second/right, then comparing each element of the second/right to the
@@ -411,70 +411,70 @@
       (testing "#{= <+} -> #{<+}"
         (testing "+ #{<+}"
           ;; comparisons: [-1, -1], [-1, -1]
-          (is=  0  (t/compare (| a >a+b >a0)     (| >a+b >a0)))
-          ;; comparisons: [-1, -1, nil], [-1, -1]
-          (is=  1  (t/compare (| a >a+b >a0 >a1) (| >a+b >a0)))
-          ;; comparisons: [-1, -1], [-1, -1, nil]
-          (is= -1  (t/compare (| a >a+b >a0)     (| >a+b >a0 >a1)))
+          (is=  0 (t/compare (| i|a i|>a+b i|>a0)       (| i|>a+b i|>a0)))
+          ;; comparisons: [-1, -1, 3], [-1, -1]
+          (is=  1 (t/compare (| i|a i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0)))
+          ;; comparisons: [-1, -1], [-1, -1, 3]
+          (is= -1 (t/compare (| a >a+b >a0)     (| >a+b >a0 >a1)))
           ;; comparisons: [-1, -1, -1], [-1, -1, -1]
-          (is=  0  (t/compare (| a >a+b >a0 >a1) (| >a+b >a0 >a1))))
+          (is=  0 (t/compare (| a >a+b >a0 >a1) (| >a+b >a0 >a1))))
         (testing "+ #{∅+}"
-          ;; comparisons: [nil, nil, nil], [nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| ><0 ><1))))
+          ;; comparisons: [3, 3, 3], [3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| ><0 ><1))))
         (testing "+ #{<+ ∅+}"
-          ;; comparisons: [-1, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| >a+b         ><0 ><1)))
-          ;; comparisons: [-1, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (| >a+b         ><0 ><1)))
-          ;; comparisons: [-1, -1], [-1, -1, nil, nil]
-          (is= -1  (t/compare (| a >a+b >a0)     (| >a+b >a0     ><0 ><1)))
-          ;; comparisons: [-1, -1, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (| >a+b >a0     ><0 ><1)))
-          ;; comparisons: [-1, -1], [-1, -1, nil, nil, nil]
-          (is= -1  (t/compare (| a >a+b >a0)     (| >a+b >a0 >a1 ><0 ><1)))
-          ;; comparisons: [-1, -1, 1], [-1, -1, -1, nil, nil]
-          (is= -1  (t/compare (| a >a+b >a0 >a1) (| >a+b >a0 >a1 ><0 ><1))))
+          ;; comparisons: [-1, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| >a+b         ><0 ><1)))
+          ;; comparisons: [-1, 3, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (| >a+b         ><0 ><1)))
+          ;; comparisons: [-1, -1], [-1, -1, 3, 3]
+          (is= -1 (t/compare (| a >a+b >a0)     (| >a+b >a0     ><0 ><1)))
+          ;; comparisons: [-1, -1, 3], [-1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (| >a+b >a0     ><0 ><1)))
+          ;; comparisons: [-1, -1], [-1, -1, 3, 3, 3]
+          (is= -1 (t/compare (| a >a+b >a0)     (| >a+b >a0 >a1 ><0 ><1)))
+          ;; comparisons: [-1, -1, 1], [-1, -1, -1, 3, 3]
+          (is= -1 (t/compare (| a >a+b >a0 >a1) (| >a+b >a0 >a1 ><0 ><1))))
         (testing "+ #{= ∅+}"
-          ;; comparisons: [nil, nil], [-1, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| a ><0)))
-          ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| a ><0 ><1))))
+          ;; comparisons: [3, 3], [-1, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| a ><0)))
+          ;; comparisons: [3, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| a ><0 ><1))))
         (testing "+ #{>+ ∅+}"
-          ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| <a+b         ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (| <a+b         ><0 ><1)))
-          ;; comparisons: [nil, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| <a+b <a0     ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, -1, nil nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (| <a+b <a0     ><0 ><1)))
-          ;; comparisons: [nil, nil], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (| <a+b <a0 <a1 ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (| <a+b <a0 <a1 ><0 ><1)))))
+          ;; comparisons: [3, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| <a+b         ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (| <a+b         ><0 ><1)))
+          ;; comparisons: [3, 3], [-1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| <a+b <a0     ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, -1, 3 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (| <a+b <a0     ><0 ><1)))
+          ;; comparisons: [3, 3], [-1, -1, 3, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (| <a+b <a0 <a1 ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, -1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (| <a+b <a0 <a1 ><0 ><1)))))
       (testing "#{= ∅+}"
         (testing "+ #{<+}"
-          ;; comparisons: [-1, nil], [nil, nil]
-          (is= nil (t/compare (| a ><0)           (| >a+b >a0)))
-          ;; comparisons: [-1, nil, nil], [nil, nil]
-          (is= nil (t/compare (| a ><0 ><1)        (| >a+b >a0)))
-          ;; comparisons: [-1, nil], [nil, nil, nil]
-          (is= nil (t/compare (| a ><0)           (| >a+b >a0 >a1)))
-          ;; comparisons: [-1, nil, nil], [nil, nil, nil]
-          (is= nil (t/compare (| a ><0 ><1)        (| >a+b >a0 >a1))))
+          ;; comparisons: [-1, 3], [3, 3]
+          (is=  3 (t/compare (| a ><0)           (| >a+b >a0)))
+          ;; comparisons: [-1, 3, 3], [3, 3]
+          (is=  3 (t/compare (| a ><0 ><1)        (| >a+b >a0)))
+          ;; comparisons: [-1, 3], [3, 3, 3]
+          (is=  3 (t/compare (| a ><0)           (| >a+b >a0 >a1)))
+          ;; comparisons: [-1, 3, 3], [3, 3, 3]
+          (is=  3 (t/compare (| a ><0 ><1)        (| >a+b >a0 >a1))))
         (testing "+ #{∅+}"
-          ;; comparisons: [nil, -1], [-1, nil]
-          (is= nil (t/compare (| a ><0)     (| ><0 ><1)))
-          ;; comparisons: [nil, -1, -1], [-1, -1]
-          (is=  1  (t/compare (| a ><0 ><1)  (| ><0 ><1)))
-          ;; comparisons: [nil, nil], [nil, nil]
-          (is= nil (t/compare (| a ><2)     (| ><0 ><1)))
-          ;; comparisons: [nil, nil, -1], [nil, -1]
-          (is= nil (t/compare (| a ><2 ><1)  (| ><0 ><1)))
-          ;; comparisons: [nil, nil], [nil, nil]
-          (is= nil (t/compare (| a ><0)     (| ><1 ><2)))
-          ;; comparisons: [nil, nil, -1], [-1, nil]
-          (is= nil (t/compare (| a ><0 ><1)  (| ><1 ><2))))
+          ;; comparisons: [3, -1], [-1, 3]
+          (is=  3 (t/compare (| a ><0)     (| ><0 ><1)))
+          ;; comparisons: [3, -1, -1], [-1, -1]
+          (is=  1 (t/compare (| a ><0 ><1)  (| ><0 ><1)))
+          ;; comparisons: [3, 3], [3, 3]
+          (is=  3 (t/compare (| a ><2)     (| ><0 ><1)))
+          ;; comparisons: [3, 3, -1], [3, -1]
+          (is=  3 (t/compare (| a ><2 ><1)  (| ><0 ><1)))
+          ;; comparisons: [3, 3], [3, 3]
+          (is=  3 (t/compare (| a ><0)     (| ><1 ><2)))
+          ;; comparisons: [3, 3, -1], [-1, 3]
+          (is=  3 (t/compare (| a ><0 ><1)  (| ><1 ><2))))
         (testing "+ #{<+ ∅+}")  ;; TODO flesh out (?)
         (testing "+ #{= ∅+}")   ;; TODO flesh out (?)
         (testing "+ #{>+ ∅+}")) ;; TODO flesh out (?)
@@ -486,7 +486,7 @@
     (testing "+ AndSpec"
       (testing "+ AndSpec")
       (testing "+ Expression")
-      ;; (if <all -1 on right-compare?> 1 nil)
+      ;; (if <all -1 on right-compare?> 1 3)
       ;;
       ;; Comparison annotations achieved by first comparing each element of the first/left
       ;; to the entire second/right, then comparing each element of the second/right to the
@@ -494,47 +494,47 @@
       (testing "#{= <+} -> #{<+}"
         (testing "+ #{<+}"
           ;; comparisons: [-1, -1], [-1, -1]
-          (is=  1  (t/compare (| a >a+b >a0)     (& >a+b >a0)))
-          ;; comparisons: [-1, -1, nil], [-1, -1]
-          (is=  1  (t/compare (| a >a+b >a0 >a1) (& >a+b >a0)))
-          ;; comparisons: [-1, -1], [-1, -1, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& >a+b >a0 >a1)))
+          (is=  1 (t/compare (| a >a+b >a0)     (& >a+b >a0)))
+          ;; comparisons: [-1, -1, 3], [-1, -1]
+          (is=  1 (t/compare (| a >a+b >a0 >a1) (& >a+b >a0)))
+          ;; comparisons: [-1, -1], [-1, -1, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (& >a+b >a0 >a1)))
           ;; comparisons: [-1, -1, -1], [-1, -1, -1]
-          (is=  1  (t/compare (| a >a+b >a0 >a1) (& >a+b >a0 >a1))))
+          (is=  1 (t/compare (| a >a+b >a0 >a1) (& >a+b >a0 >a1))))
         (testing "+ #{∅+}"
-          ;; comparisons: [nil, nil, nil], [nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& ><0 ><1))))
+          ;; comparisons: [3, 3, 3], [3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (& ><0 ><1))))
         (testing "+ #{<+ ∅+}"
-          ;; comparisons: [-1, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)    (& >a+b         ><0 ><1)))
-          ;; comparisons: [-1, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& >a+b         ><0 ><1)))
-          ;; comparisons: [-1, -1], [-1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& >a+b >a0     ><0 ><1)))
-          ;; comparisons: [-1, -1, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& >a+b >a0     ><0 ><1)))
-          ;; comparisons: [-1, -1], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& >a+b >a0 >a1 ><0 ><1)))
-          ;; comparisons: [-1, -1, -], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& >a+b >a0 >a1 ><0 ><1))))
+          ;; comparisons: [-1, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)    (& >a+b         ><0 ><1)))
+          ;; comparisons: [-1, 3, 3], [-1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (& >a+b         ><0 ><1)))
+          ;; comparisons: [-1, -1], [-1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (& >a+b >a0     ><0 ><1)))
+          ;; comparisons: [-1, -1, 3], [-1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (& >a+b >a0     ><0 ><1)))
+          ;; comparisons: [-1, -1], [-1, -1, 3, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0)     (& >a+b >a0 >a1 ><0 ><1)))
+          ;; comparisons: [-1, -1, -], [-1, -1, -1, 3, 3]
+          (is=  3 (t/compare (| a >a+b >a0 >a1) (& >a+b >a0 >a1 ><0 ><1))))
         (testing "+ #{= ∅+}"
-          ;; comparisons: [nil, nil], [-1, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& a ><0)))
-          ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& a ><0 ><1))))
+          ;; comparisons: [3, 3], [-1, 3]
+          (is= 3 (t/compare (| a >a+b >a0)     (& a ><0)))
+          ;; comparisons: [3, 3], [-1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0)     (& a ><0 ><1))))
         (testing "+ #{>+ ∅+}"
-          ;; comparisons: [nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& <a+b         ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& <a+b         ><0 ><1)))
-          ;; comparisons: [nil, nil], [-1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& <a+b <a0     ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, -1, nil nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& <a+b <a0     ><0 ><1)))
-          ;; comparisons: [nil, nil], [-1, -1, nil, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1)))
-          ;; comparisons: [nil, nil, nil], [-1, -1, -1, nil, nil]
-          (is= nil (t/compare (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))))
+          ;; comparisons: [3, 3], [-1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0)     (& <a+b         ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0 >a1) (& <a+b         ><0 ><1)))
+          ;; comparisons: [3, 3], [-1, -1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0)     (& <a+b <a0     ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, -1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0 >a1) (& <a+b <a0     ><0 ><1)))
+          ;; comparisons: [3, 3], [-1, -1, 3, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1)))
+          ;; comparisons: [3, 3, 3], [-1, -1, -1, 3, 3]
+          (is= 3 (t/compare (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))))
   (testing "AndSpec"
     (testing "+ AndSpec")))
 
@@ -559,14 +559,14 @@
 (deftest test|or
   (testing "equality"
     (is= (| a b) (| a b))
-    (is=  0  (t/compare (| a b)     (| a b)))
-    (test-symmetric -1  t/nil?      (| t/nil? t/string?))
-    (test-symmetric -1  (t/value 1) (| (t/value 1) (t/value 2)))
-    (test-symmetric -1  (t/value 1) (| (t/value 2) (t/value 1)))
-    (test-symmetric nil (t/value 3) (| (t/value 1) (t/value 2)))
-    (test-symmetric -1  (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
-    (test-symmetric -1  (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
-    (test-symmetric -1  (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))
+    (is=  0 (t/compare (| a b)     (| a b)))
+    (test-symmetric -1 t/nil?      (| t/nil? t/string?))
+    (test-symmetric -1 (t/value 1) (| (t/value 1) (t/value 2)))
+    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 1)))
+    (test-symmetric  3 (t/value 3) (| (t/value 1) (t/value 2)))
+    (test-symmetric -1 (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
+    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
+    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))
   (testing "simplification"
     (testing "via single-arg"
       (is= (| a)
