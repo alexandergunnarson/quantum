@@ -348,7 +348,7 @@
         (testing ">< nilabled"
           (is=  2 (t/compare t/iterable? (t/? t/comparable?))))
         (testing "<> nilabled"
-          (is=  3(t/compare t/long?     (t/? t/string?))))))
+          (is=  3 (t/compare t/long?     (t/? t/string?))))))
     (testing "+ AndSpec"
       ;; Any ∅ -> ∅
       ;; Otherwise whatever it is
@@ -652,7 +652,6 @@
          t/null-set)
     (is= (& t/null-set t/string? t/char-seq?)
          t/null-set))
-  ;; TODO return `t/null-set` when impossible intersection
   (testing "simplification"
     (testing "via single-arg"
       (is= (& a)
