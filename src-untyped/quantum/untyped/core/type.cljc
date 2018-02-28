@@ -398,18 +398,20 @@
                                        (->> without-redundant-args (uc/map+ second) (seq-or (fn1 c/= 3))))
                                  (ifs
                                    (c/and (c/= kind :and)
-                                          (c/or ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
-                                                ;                at least one other arg
-                                                (->> without-redundant-args (uc/map+ second) (seq-or (fn1 c/= 3)))
-                                                ;; Contradiction/null-set: (& A (! A))
-                                                (->> without-redundant-args
-                                                     (uc/map+ first)
-                                                     (seq-or (if (not-spec? s)
-                                                                 ;; compare not-spec to all others
-                                                                 (fn1 c/= (not-spec>inner-spec s))
-                                                                 ;; compare spec to all not-specs
-                                                                 (fn [s'] (c/and (not-spec? s') (c/= s (not-spec>inner-spec s')))))))))
-                                   (reduced [null-set])
+                                          (->> without-redundant-args
+                                               (reduce (fn [ret [c' s']]
+                                                         (if        ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
+                                                                    ;;               at least one other arg
+                                                              (c/or (c/= c' 3)
+                                                                    ;; Contradiction/null-set: (& A (! A))
+                                                                    (if (not-spec? s)
+                                                                        ;; compare not-spec to all others
+                                                                        (= (not-spec>inner-spec s) s')
+                                                                        ;; compare spec to all not-specs
+                                                                        (c/and (not-spec? s') (= s (not-spec>inner-spec s')))))
+                                                              (reduced [null-set])
+
+                                                              )))))
 
                                    ;; `s` is `><` (for `or`, or `<>`) w.r.t. to all other args
                                    (->> without-redundant-args
@@ -443,7 +445,8 @@
    ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (c/or (pred x) (reduced false)))
                                           true ; vacuously
                                           args))}
-   ?Object               {equals ([this that]
+   ?Object               ;; Tests for structural equivalence
+                         {equals ([this that]
                                    (c/or (== this that)
                                          (c/and (instance? AndSpec that)
                                                 (c/= args (.-args ^AndSpec that)))))}})
@@ -475,7 +478,8 @@
    ?Fn                   {invoke ([_ x] (reduce (fn [_ pred] (let [p (pred x)] (c/and p (reduced p))))
                                           true ; vacuously
                                           args))}
-   ?Object               {equals ([this that]
+   ?Object               ;; Tests for structural equivalence
+                         {equals ([this that]
                                    (c/or (== this that)
                                          (c/and (instance? OrSpec that)
                                                 (c/= args (.-args ^OrSpec that)))))}})
@@ -503,7 +507,8 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn   ([this] (list `not spec))}
    ?Fn                   {invoke ([_ x] (spec x))}
-   ?Object               {equals ([this that]
+   ?Object               ;; Tests for structural equivalence
+                         {equals ([this that]
                                    (c/or (== this that)
                                          (c/and (instance? NotSpec that)
                                                 (c/= spec (.-spec ^NotSpec that)))))}})
