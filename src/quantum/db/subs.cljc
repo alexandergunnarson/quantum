@@ -32,7 +32,7 @@
             (->> dom-id
                  db/entity
                  (into {})
-                 (<- get k))))}))
+                 (<- (get k)))))}))
 
 #?(:cljs
 (def handlers

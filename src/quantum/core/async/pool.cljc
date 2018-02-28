@@ -12,7 +12,7 @@
     [quantum.core.data.set       :as set]
     [quantum.core.data.validated :as dv]
     [quantum.core.fn
-      :refer [<- fn1 fn& fnl, fn-> fn->>, call with-do]]
+      :refer [fn1 fn& fnl, fn-> fn->>, call with-do]]
     [quantum.core.collections    :as coll
       :refer [for, contains? kw-map, update, assoc-in, join, key val, updates
               map-keys+, map-vals']]

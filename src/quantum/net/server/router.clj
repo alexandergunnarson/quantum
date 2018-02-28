@@ -52,7 +52,7 @@
 (defn resource [root path]
   (prl! root path)
   (->> path
-       (<- str/remove "..") ; to prevent insecure access
+       (<- (str/remove "..")) ; to prevent insecure access
        ^String (paths/url-path root)
        (java.io.FileInputStream.)))
 

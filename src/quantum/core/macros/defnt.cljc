@@ -112,9 +112,9 @@
   (cond
     (and (symbol? pred) (anap/possible-type-predicate? pred))
       (->> tdef/types|unevaled
-           (<- get lang)
-           (<- get pred)
-           (<- validate contains?)
+           (<- (get lang))
+           (<- (get pred))
+           (<- (validate contains?))
            (into []))
     :else [pred])))
 
@@ -142,7 +142,7 @@
 
 (def defnt-remove-hints
   (fn->> (into [])
-         (<- update 0 (fn->> (filter symbol?) (into [])))))
+         (<- (update 0 (fn->> (filter symbol?) (into []))))))
 
 (defn defnt-arities
   {:out '[[[^string? x] (println "A string!")]
@@ -229,7 +229,7 @@
                (map (fn [type-arglist+return-type]
                       (with-meta (into [genned-method-name] type-arglist+return-type) ; To preserve `^:default` or `^:nil?`
                                  (meta type-arglist+return-type))))
-               (<- zipmap full-arities))] ; TODO ensure unique, don't just assume
+               (<- (zipmap full-arities)))] ; TODO ensure unique, don't just assume
     (log/ppr-hints :macro-expand "gen-interface-code-body-unexpanded" gen-interface-code-body-unexpanded)
     (assert (contains? gen-interface-code-body-unexpanded))
     (kw-map genned-method-name

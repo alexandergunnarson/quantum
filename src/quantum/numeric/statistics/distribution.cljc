@@ -1,19 +1,15 @@
 (ns quantum.numeric.statistics.distribution
   (:require
-    [quantum.core.log :as log
-      :include-macros true]
+    [quantum.core.log           :as log]
     [quantum.core.numeric       :as cnum
-      :refer        [*+* *-* *** *div* mod
-                     #?@(:clj [abs sqrt pow e-exp floor log-e])]
-      :refer-macros [          abs sqrt pow e-exp floor log-e]]
+      :refer [*+* *-* *** *div* mod
+              abs sqrt pow e-exp floor log-e]]
     [quantum.core.collections   :as coll
-      :refer        [map+]]
+      :refer [map+]]
     [quantum.core.fn
-      :refer        [#?@(:clj [<- fn1 fn->])]
-      :refer-macros [          <- fn1 fn->]]
+      :refer [fn1 fn->]]
     [quantum.core.vars
-      :refer        [#?@(:clj [defalias])]
-      :refer-macros [          defalias]]
+      :refer [defalias]]
     [quantum.core.error
       :refer [>ex-info TODO]]))
 

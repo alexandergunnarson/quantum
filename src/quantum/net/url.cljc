@@ -102,7 +102,7 @@
               params))]
     (->> str-params
          (#(if decode? (decode :xml %) %))
-         (<- str/split #"&")
+         (<- (str/split #"&"))
          decode-if-necessary
          (map+
            (fn [param]
@@ -114,7 +114,7 @@
   [^String embedded-url]
   (->> embedded-url
        (decode :xml)
-       (<- url-params->map true)))
+       (<- (url-params->map true))))
 
 (defn url->map [url]
   (let [[url str-params]

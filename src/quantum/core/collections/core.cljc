@@ -33,7 +33,7 @@
             [quantum.core.error             :as err
               :refer [>ex-info TODO]]
             [quantum.core.fn                :as fn
-              :refer [fn' fn1 fn&2 rfn rcomp firsta fn-> <- aritoid]]
+              :refer [fn' fn1 fn&2 rfn rcomp firsta fn-> aritoid]]
             [quantum.core.logic             :as logic
               :refer [fn= whenc whenf ifn1]]
             [quantum.core.collections.logic
@@ -397,7 +397,7 @@
             ([~(->> tdef/array-1d-types* :clj keys
                     (map type-key->pred-sym)
                     set
-                    (<- disj type-sym)) x#]
+                    (<- (disj type-sym))) x#]
               (let [ct# (count x#) arr# (~fn-sym ct#)]
                 (dotimes [i# ct#] (assoc! arr# i# (get x# i#)))
                 arr#))

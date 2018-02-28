@@ -16,7 +16,7 @@
     [quantum.core.macros                     :as macros
       :refer [#?(:clj defnt)]                         ]
     [quantum.core.fn                         :as fn
-      :refer [fn-> fn->> fn1 rcomp <-]]
+      :refer [fn-> fn->> fn1 rcomp]]
     [quantum.core.logic                      :as logic
       :refer [fn= fn-or fn-and whenf whenf1 ifn1 condf1 if-let cond-let]]
     [quantum.core.type                       :as t

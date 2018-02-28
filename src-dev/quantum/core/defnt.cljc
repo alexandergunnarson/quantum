@@ -251,7 +251,7 @@
                   arglist'
                     (->> args
                          (c/map ?hint-arg)
-                         (<- cond-> varargs (conj '& (?hint-arg varargs))))
+                         (<- (cond-> varargs (conj '& (?hint-arg varargs)))))
                   pre-validations
                     (>vec (concat (some->> spec-validations (c/lfilter some?))
                                   (when pre (list 'assert pre))))
@@ -1116,7 +1116,7 @@
                     fn|name)
         fnt|overload-groups (->> overloads (mapv #(fnt|overload-data>overload-group % {:lang lang})))
         ;; only one variadic arg allowed
-        _ (s/validate fnt|overload-groups (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- <= 1)))
+        _ (s/validate fnt|overload-groups (fn->> (c/lmap :unprimitivized) (c/lfilter :variadic?) count (<- (<= 1))))
         arg-ct->spec (->> fnt|overload-groups
                           (c/map+     :unprimitivized)
                           (remove+    :variadic?)

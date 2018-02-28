@@ -361,7 +361,7 @@
   ([conn]
     (->> conn
          db/log
-         (<- db/tx-range nil nil)
+         (<- (db/tx-range nil nil))
          seq))))
 
 ; TODO deprecate this in favor of `attributes`
@@ -534,8 +534,8 @@
                         (->> m
                              (remove-vals+ nil?)
                              (join {})
-                             (<- c/assoc :db/id id)
-                             (<- c/conj! txn-components))
+                             (<- (c/assoc :db/id id))
+                             (<- (c/conj! txn-components)))
                         id)))))
           :db/id
           (tempid part))))
@@ -794,7 +794,7 @@
 ;   "Returns all Datomic database transactions in the log."
 ;   [^Database db]
 ;   (->> (:conn db) db/log
-;        (<- db/tx-range nil nil)
+;        (<- (db/tx-range nil nil))
 ;        seq))
 
 ; (defn dissoc+
@@ -1176,14 +1176,14 @@
 ;          (fn [tx]
 ;            {:before (->> tx :db/id datomic.api/tx->t dec
 ;                          (datomic.api/as-of (db*))
-;                          (<- datomic.api/entity eid))
+;                          (<- (datomic.api/entity eid)))
 ;             :after  (->> tx :db/id
 ;                          (datomic.api/as-of (db*))
-;                          (<- datomic.api/entity eid))}))
+;                          (<- (datomic.api/entity eid)))}))
 ;        (join [])
-;        (<- whenp show-entity-maps?
-;            (fn->> (postwalk (whenf1 (partial instance? datomic.query.EntityMap)
-;                               (fn->> (join {}))))))))
+;        (<- (whenp show-entity-maps?
+;              (fn->> (postwalk (whenf1 (partial instance? datomic.query.EntityMap)
+;                                 (fn->> (join {})))))))))
 
 
 #?(:clj

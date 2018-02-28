@@ -376,7 +376,7 @@
   (let [?prefix      (when prefix (str prefix "-"))
         base-types   (conj (keys primitive-type-meta) 'ref)
         type-combos  (->> base-types
-                          (<- combo/selections 2)
+                          (<- (combo/selections 2))
                           (remove (fn-> first (= 'boolean))))
         gen-same-sym (fn [t]       (symbol (str "!" ?prefix "map:" t "-types")))
         gen-map-sym  (fn [from to] (symbol (str "!" ?prefix "map:" from "->" to "-types")))

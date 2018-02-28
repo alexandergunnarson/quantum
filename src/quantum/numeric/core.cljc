@@ -14,7 +14,7 @@
     [quantum.core.error        :as err
       :refer [>ex-info TODO]]
     [quantum.core.fn
-      :refer [fn-> <- fn1 fnl fn& fn&2 fn']]
+      :refer [fn-> fn1 fnl fn& fn&2 fn']]
     [quantum.core.log          :as log]
     [quantum.core.numeric      :as num
       :refer [abs mod sqrt pow #?(:clj *') +' exactly]

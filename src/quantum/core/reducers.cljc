@@ -86,8 +86,8 @@
       This function is not thread-safe."
      {:attribution "alexandergunnarson"
       :equivalent '~'{(!multiplex /
-                        (aritoid + identity +                )   ; sum:rf
-                        (aritoid + identity (rcomp firsta inc))) ; count:rf
+                        (aritoid + identity +                )   ; sum|rf
+                        (aritoid + identity (rcomp firsta inc))) ; count|rf
                       (fn ([] [(f0) (f1)])
                           ([[x0 x1]] (/ (f0 x0) (f1 x1))) ; to get the mean at the end
                           ([[x0 x1] x'] [(f0 x0 x') (f1 x1 x')]))}}

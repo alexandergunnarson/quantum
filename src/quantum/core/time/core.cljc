@@ -19,7 +19,7 @@
     [quantum.core.error             :as err
       :refer [>ex-info TODO throw-unless err!]]
     [quantum.core.fn                :as fn
-      :refer [fn1 <-]]
+      :refer [fn1]]
     [quantum.core.logic             :as logic
       :refer [fn-or whenc]]
     [quantum.core.macros            :as macros

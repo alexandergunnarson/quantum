@@ -73,10 +73,10 @@
            matched# (~f (let ~defs ~(replace-cats found expanded)) ~x)
            merged#  (merge @~found matched#)]
        (->> merged#
-            (<- dissoc :rest :match)
+            (<- (dissoc :rest :match))
             (map-vals+ first)
             (join {})
-            (<- merge (select-keys merged# [:rest :match])))))))
+            (<- (merge (select-keys merged# [:rest :match]))))))))
 
 #?(:clj (defmacro re-match       [x preds] `(re-match-variant ~`re-match*       ~x ~preds)))
 #?(:clj (defmacro re-match-whole [x preds] `(re-match-variant ~`re-match-whole* ~x ~preds)))

@@ -223,8 +223,10 @@
         (doseq [v values]
           (test-symmetric  3 (t/value v) (t/isa? AProtocolNone)))))
     (testing "+ NotSpec"
-      (test-symmetric -1 (! t/universal-set) (t/value 1))  ; inner >
-      (test-symmetric  1 (! t/null-set)      (t/value 1))) ; inner <
+      (test-symmetric  1 (t/value 1)  (! t/universal-set)) ; inner <
+      (test-symmetric -1 (t/value 1)  (! t/null-set)     ) ; inner >
+      (test-symmetric  3 (t/value 1)  (! (t/value 2)))
+      (test-symmetric  3 (t/value "") (! t/string?)))
     (testing "+ OrSpec"
       (testing "<"
         ;;    #{"a"} <> t/byte?
@@ -383,11 +385,13 @@
       (is=  0 (t/compare (! t/universal-set) (! t/universal-set)))
       (is=  0 (t/compare (! t/null-set)      (! t/null-set)))
       (is=  0 (t/compare (! a)               (! a)))
-      (test-symmetric  3 (! a)               (! b))
+      (test-symmetric  2 (! a)               (! b))
       (test-symmetric  2 (! i|a)             (! i|b))
-      (test-symmetric  3 (! t/string?)       (! t/byte?))
-      (test-symmetric -1 (! a)               (! >a))
-      (test-symmetric  1 (! a)               (! <a0)))
+      (test-symmetric  2 (! t/string?)       (! t/byte?))
+      (test-symmetric  1 (! a)               (! >a))
+      (test-symmetric -1 (! a)               (! <a0))
+      (test-symmetric  0 (! (t/value 1)) (! (t/value 1)))
+      (test-symmetric  2 (! (t/value 1)) (! (t/value 2))))
     (testing "+ OrSpec"
       (test-symmetric -1 (! t/universal-set) (| ><0 ><1))
       (test-symmetric  1 (! t/null-set)      (| ><0 ><1))
@@ -545,16 +549,15 @@
            t/null-set)
       (is= (! t/null-set)
            t/universal-set))
-    ;; TODO fix impl
     (testing "DeMorgan's Law"
       (is= (! (| (t/value 1)     (t/value 2)))
            (& (! (t/value 1)) (! (t/value 2))))
-      (is= (! (& (t/value 1)     (t/value 2)))
+      (is= (! (& (t/value 1)     (t/value 2))) ; TODO fix test
            (| (! (t/value 1)) (! (t/value 2))))
-      (is= (! (| (! a) (! b)))
-           (&       a     b))
-      (is= (! (& (! a) (! b)))
-           (|       a     b)))))
+      (is= (! (| (! i|a) (! i|b)))
+           (&       i|a     i|b))
+      (is= (! (& (! i|a) (! i|b))) ; TODO fix impl
+           (|       i|a     i|b)))))
 
 (deftest test|or
   (testing "equality"
@@ -629,8 +632,8 @@
 
 (deftest test|and
   (testing "equality"
-    (is= (& a b) (& a b))
-    (is= 0 (t/compare (& a b) (& a b))))
+    (is= (& i|a i|b) (& i|a i|b))
+    (is= 0 (t/compare (& i|a i|b) (& i|a i|b)))) ; TODO impl
   (testing "null set / universal set"
     (is= (& t/universal-set t/universal-set)
          t/universal-set)
@@ -728,9 +731,11 @@
 
 (deftest test|=
   ;; TODO fix impl
-  (is (t/= (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-           (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
-              (! t/boolean?))))
+  (test-symmetric 0
+    (| t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+    (& (| t/boolean? t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)
+       (! t/boolean?)))
+  (test-symmetric 0 t/any? t/universal-set)
   (testing "universal class(-set) identity"
     (is (not= t/val? (& t/any? t/val?)))
     ;; TODO fix impl

@@ -79,7 +79,7 @@
   ([^Class c ^String name- args]
     (let [m (->> (.getDeclaredMethods c)
                  ^java.lang.reflect.Method (coll/ffilter (fn [^java.lang.reflect.Method x] (= (.getName x) name-)))
-                 (<- doto (.setAccessible true)))]
+                 (<- (doto (.setAccessible true))))]
       (.invoke m nil (into-array Object args))))
   ([^Class c ^String name- params args]
     (invoke c name- params nil args))

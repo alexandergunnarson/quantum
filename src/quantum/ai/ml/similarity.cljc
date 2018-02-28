@@ -127,7 +127,7 @@
   {:implemented-by '{smile.math.distance.MinkowskiDistance "faster array implementation"
                      smile.math.distance.SparseMinkowskiDistance "for sparse arrays"}}
   ([v p]
-    (->> v (map+ (fn-> abs (pow p))) sum (<- pow (/ p))))
+    (->> v (map+ (fn-> abs (pow p))) sum (<- (pow (/ p)))))
   ([a b p] (TODO)))
 
 (defalias minkowski l-p)

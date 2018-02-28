@@ -88,17 +88,17 @@
                      (fnl coll/sliding-window+ (* training-ratio (count instances))))] ; each split must be of that ratio
       (->> instances
            indices+
-           (<- whenp->> shuffle?
-               (join (!vector))
-               rand/shuffle!)
+           (<- (whenp->> shuffle?
+                 (join (!vector))
+                 rand/shuffle!))
            splitf
            ->n-fold-splits+
            (map+ (accuracy:train-validation-split+ args'))
-           (<- whenp->> (not verbose?)
-               (map+     (fnl map-vals' stat/mean))
-               ; compute means on each value
-               (reduce   (fn [[ct m'] m] [(inc ct) (merge-with num/nils+ m' m)]) [0 nil])
-               ((fn [[ct m]] (->> m (map-vals' (fn1 num/nils-div ct))))))))))
+           (<- (whenp->> (not verbose?)
+                 (map+     (fnl map-vals' stat/mean))
+                 ; compute means on each value
+                 (reduce   (fn [[ct m'] m] [(inc ct) (merge-with num/nils+ m' m)]) [0 nil])
+                 ((fn [[ct m]] (->> m (map-vals' (fn1 num/nils-div ct)))))))))))
 
 (defn silhouette
   "An effective and popular cluster validity metric that seeks to find a balance between

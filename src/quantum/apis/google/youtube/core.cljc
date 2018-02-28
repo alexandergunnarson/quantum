@@ -29,7 +29,7 @@
 #_(defn list-channels []
   (-> (http/request!
         {:url "https://www.googleapis.com/youtube/v3/channels"
-         :handlers {401 
+         :handlers {401
                     (fn [req resp]
                       (gauth/access-token-refresh! :youtube)
                       (http/request!
@@ -53,7 +53,7 @@
 ;              :oauth-token  (access-token)}]
 ;     (->> (http/request! req)
 ;          :body
-;          (<- json/parse-string str/keywordize)
+;          (<- (json/parse-string str/keywordize))
 ;          (get-all-pages req))))
 
 

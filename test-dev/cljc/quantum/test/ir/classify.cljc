@@ -10,7 +10,7 @@
              [quantum.core.numeric :as num]
              [quantum.numeric.vectors :as v]
              [quantum.core.fn :as fn
-               :refer [<- fn-> fn->>]]
+               :refer [fn-> fn->>]]
              [quantum.core.cache
                :refer [#?(:clj defmemoized)]
                #?@(:cljs [:refer-macros  [defmemoized]])]

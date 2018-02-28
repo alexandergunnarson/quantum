@@ -59,7 +59,7 @@
                                   (mapv (fn-> th/type-hint (whenc nil? trans/default-hint)))))))
                (ucoll/frequencies-by first)
                (group-by val)
-               (<- dissoc 1))
+               (<- (dissoc 1)))
         _ (when (contains? duplicate-methods)
             (log/pr        :always "Duplicate methods for" sym ":")
             (log/ppr-hints :always duplicate-methods)

@@ -475,7 +475,7 @@
   (delay
     (->> (http/request! {:url "https://raw.githubusercontent.com/dwyl/english-words/master/words3.txt"})
          :body
-         (<- str/split #"\s")
+         (<- (str/split #"\s"))
          (map+ (fn-> str/->lower keyword))
          (join #{}))))
 
@@ -490,8 +490,8 @@
     post    (s/or* nil? fn?))
   (->> doc-str
        ; Normalize
-       (<- str/replace undesirables-regex " ") ; How to do this distributively?
-       (<- str/split #" ") ; How to do this distributively?
+       (<- (str/replace undesirables-regex " ")) ; How to do this distributively?
+       (<- (str/split #" ")) ; How to do this distributively?
        (r/remove+   empty?)
        ((or post identity))
        (r/map+      (fn1 str/->lower))
@@ -505,13 +505,13 @@
   (fn->> (r/map+    (ifn1 (fn1 containsv? "-")
                       (fn->> (coll/remove-surrounding "-")
                              str
-                             (<- str/split #"\-")
-                             (<- whenf (partial every? (fn1 in? @dictionary))
-                               (fn [words]
-                                 (let [concatted (apply str words)]
-                                   (if (in? concatted @dictionary)
-                                       concatted
-                                       words)))))
+                             (<- (str/split #"\-"))
+                             (<- (whenf (partial every? (fn1 in? @dictionary))
+                                   (fn [words]
+                                     (let [concatted (apply str words)]
+                                       (if (in? concatted @dictionary)
+                                           concatted
+                                           words))))))
                       vector))
          r/cat+
          (r/remove+ empty?)))

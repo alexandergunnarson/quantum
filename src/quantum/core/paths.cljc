@@ -161,10 +161,10 @@
 
 (defn up-dir-str [dir]
   (->> dir
-       (<- whenf (fn1 str/ends-with? sys/separator) popr)
+       (<- (whenf (fn1 str/ends-with? sys/separator) popr))
        (dropr-until sys/separator)
-       (<- whenc empty?
-         (throw (>ex-info :err/io "Directory does not have a parent directory:" dir)))))
+       (<- (whenc empty?
+             (throw (>ex-info :err/io "Directory does not have a parent directory:" dir))))))
 
 (def dirs
   #?(:clj

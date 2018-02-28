@@ -15,7 +15,7 @@
     [quantum.ai.ml.similarity
       :refer [dist]]
     [quantum.core.fn :as fn
-      :refer [<- fn-> fn->>]]
+      :refer [fn-> fn->>]]
     [quantum.core.error
       :refer [>ex-info TODO]]
     [quantum.core.logic

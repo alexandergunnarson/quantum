@@ -193,7 +193,7 @@
   "A working version of |close-all|."
   []
   (->> @reg
-       (<- dissoc :thread-reaper)
+       (<- (dissoc :thread-reaper))
        (map (fn-> val :thread async/close!))
        dorun)))
 

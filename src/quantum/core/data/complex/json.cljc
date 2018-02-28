@@ -28,8 +28,8 @@
      :cljs (when-not (empty? x)
              (->> x
                   (transit/read (transit/reader :json))
-                  (<- whenp (val? key-fn)
-                      (fn1 coll/apply-to-keys key-fn)))))))
+                  (<- (whenp (val? key-fn)
+                        (fn1 coll/apply-to-keys key-fn))))))))
 
 (defn json->-with-start
   "Decodes a JSON-encoded string `s` starting at index `start-i`, inclusive."

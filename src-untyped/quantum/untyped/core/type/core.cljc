@@ -124,7 +124,7 @@
                                  (filter (fn [[type-sym1 _]] (-> type-sym1 generalize-type (= type-sym'))))
                                  (map    val)
                                  set
-                                 (<- disj k)))))
+                                 (<- (disj k))))))
            {}))))
 
 (def java-array-type-regex #"(\[+)(?:(Z|S|B|C|I|J|F|D)|(?:L(.+);))") ; TODO create this regex dynamically

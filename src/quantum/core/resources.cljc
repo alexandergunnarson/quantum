@@ -16,7 +16,7 @@
       :refer [>ex-info catch-all]]
     [quantum.core.log             :as log      ]
     [quantum.core.fn
-      :refer [fn1 fnl with-do fn-> <-]]
+      :refer [fn1 fnl with-do fn->]]
     [quantum.core.logic           :as logic
       :refer [whenf whenf1 fn-not fn-or whenp->]]
     [quantum.core.macros          :as macros

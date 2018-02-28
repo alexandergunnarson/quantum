@@ -43,7 +43,7 @@
                               #(or (get account-remap %) %)) ))
                identity)]
       (->> csv
-           (<- csv/parse #{:as-map? :reducer?})
+           (<- (csv/parse #{:as-map? :reducer?}))
            (map+ (fn1 update :amount               (fn-> str/val rationalize)))
            (map+ (fn1 update :transaction-type     keyword))
            (map+ (fn1 update :date                 (fn-> (time/parse "M/dd/yyyy")

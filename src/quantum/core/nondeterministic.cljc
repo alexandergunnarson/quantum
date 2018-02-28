@@ -34,7 +34,7 @@
             [quantum.core.log          :as log]
             [quantum.core.numeric      :as num]
             [quantum.core.fn           :as fn
-              :refer [<- rfn fn1]]
+              :refer [rfn fn1]]
             [quantum.core.data.array   :as arr   ]
             [quantum.core.vars
               :refer [defalias defaliases]]

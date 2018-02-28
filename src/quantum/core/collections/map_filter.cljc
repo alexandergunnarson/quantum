@@ -98,7 +98,7 @@
    :out  [4 "4"]}
   ([^indexed? xs pred]
     (->> xs rseq (ffilteri pred)
-         (<- update 0 (partial - (lasti xs)))))
+         (<- (update 0 (partial - (lasti xs))))))
   ([xs pred]
     (loops/reducei
       (fn [ret elem-n index-n]

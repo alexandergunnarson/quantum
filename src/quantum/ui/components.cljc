@@ -11,7 +11,7 @@
       :refer [subscribe dispatch dispatch-sync reg-event reg-sub]]])
     [quantum.ui.revision :as rev]
     [quantum.core.fn     :as fn
-      :refer [fn-> fn->> <- fn']]
+      :refer [fn-> fn->> fn']]
     [quantum.core.logic
       :refer [whenf]]
     [quantum.db.datomic  :as db]

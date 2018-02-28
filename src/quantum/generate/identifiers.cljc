@@ -10,7 +10,7 @@
       :refer [>ex-info]]
     [quantum.core.numeric :as num]
     [quantum.core.fn
-      :refer [<- fn->>]]
+      :refer [fn->>]]
     [quantum.core.collections :as coll
       :refer [lfor for slice lasti join #?(:clj array)]]
     [quantum.core.nondeterministic :as rand]))

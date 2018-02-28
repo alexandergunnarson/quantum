@@ -76,6 +76,6 @@
   "Returns @s as a Base64 decoded string."
   [^String s]
   (when s
-    #?(:clj (->> s (<- .getBytes java.nio.charset.StandardCharsets/ISO_8859_1)
+    #?(:clj (->> s (<- (.getBytes java.nio.charset.StandardCharsets/ISO_8859_1))
                    (.decode (java.util.Base64/getDecoder)))
        :cljs (base64/decodeString s false))))

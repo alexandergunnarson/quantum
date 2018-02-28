@@ -45,7 +45,7 @@
   [meta-]
   (let [section (volatile! nil)]
     (->> meta-
-         (<- str/split #"\n")
+         (<- (str/split #"\n"))
          (map+ (partial coll/split-remove-match ": "))
          (reduce
            (fn [ret v-0]

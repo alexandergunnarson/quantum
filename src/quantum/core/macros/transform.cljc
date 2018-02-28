@@ -9,7 +9,7 @@
     [quantum.core.error                      :as err
       :refer [>ex-info]]
     [quantum.core.fn                         :as fn
-      :refer [<- fn1 fn-> rcomp]]
+      :refer [fn1 fn-> rcomp]]
     [quantum.core.log                        :as log
       :refer [prl]]
     [quantum.core.logic                      :as logic

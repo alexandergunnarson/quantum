@@ -364,7 +364,7 @@
          (let [
                standard #(let [pred-str (str/sp "if" (str/paren (eval-form pred)))]
                            (->> args (cons 'do) eval-form
-                                (<- str "\n")
+                                (<- (str "\n"))
                                 (util/bracket pred-str)))]
            (condp = *lang*
              :js   (standard)
@@ -380,8 +380,8 @@
                 (fn []
                   (let [pred-str (str/sp "if" (str/paren (eval-form pred)))
                         ^Fn do-eval (fn->> do-form eval-form)
-                        expr-t-str (->> expr-t do-eval (<- str "\n") (util/bracket pred-str))
-                        expr-f-str (->> expr-f do-eval (<- str "\n") (util/bracket "else"))]
+                        expr-t-str (->> expr-t do-eval (<- (str "\n")) (util/bracket pred-str))
+                        expr-f-str (->> expr-f do-eval (<- (str "\n")) (util/bracket "else"))]
                     (str/sp expr-t-str expr-f-str)))]
            (condp = *lang*
              :js   (default-fn)
@@ -406,11 +406,11 @@
                         catches      (->> args (filter (fn-and seq? catch?)))
                         finallys     (->> args (filter (fn-and seq? finally?)))
                         ^Fn do-eval  (fn->> apply-do-form eval-form)
-                        try-str      (->> try-body do-eval (<- str "\n") (util/bracket "try"))
+                        try-str      (->> try-body do-eval (<- (str "\n")) (util/bracket "try"))
                         catch-str    (when (contains? catches)
-                                       (->> catches first rest rest do-eval (<- str "\n") (util/bracket (str/sp "catch" (str/paren (-> catches first second str demunge-class))))))
+                                       (->> catches first rest rest do-eval (<- (str "\n")) (util/bracket (str/sp "catch" (str/paren (-> catches first second str demunge-class))))))
                         finally-str  (when (contains? finallys)
-                                       (->> finallys first rest do-eval (<- str "\n") (util/bracket "finally")))]
+                                       (->> finallys first rest do-eval (<- (str "\n")) (util/bracket "finally")))]
                     (str/sp try-str catch-str finally-str)))]
            (condp = *lang*
              :js   (default-fn)
@@ -461,10 +461,10 @@
                           _ (println "BLOCK EVALED IN DO" block-evaled)
                           ^String block
                             (->> block-evaled
-                                 (<- whenf (fn-and contains?
-                                                   (fn-not (fn1 str/ends-with? "}")))
-                                     util/scolon) ; Could be a macro, in which case it wouldn't show up in the .js file
-                                 (<- whenf contains? (partial str spacing)))]
+                                 (<- (whenf (fn-and contains?
+                                                    (fn-not (fn1 str/ends-with? "}")))
+                                       util/scolon)) ; Could be a macro, in which case it wouldn't show up in the .js file
+                                 (<- (whenf contains? (partial str spacing))))]
                       (when (contains? block) (reset! prev-block block))
                       block)))
                 (apply str))))
@@ -573,7 +573,7 @@
                      longest-key-length
                        (->> obj-map keys
                             (map (fn->> name symbol eval-form count))
-                            (<- ifn empty? (fn' 0) comp/greatest))
+                            (<- (ifn empty? (fn' 0) comp/greatest)))
                      ^String obj-map-contents
                        (let [prev-line (atom nil)]
                          (reduce
@@ -731,9 +731,9 @@
      (log/pr :debug "IN SYM WITH" (str obj))
      (if (anap/qualified? obj)
          (do (log/pr :debug "QUALIFIED SYMBOL:" (str obj))
-             (if (->> obj str (filter (fn= \/)) count (<- > 1))
+             (if (->> obj str (filter (fn= \/)) count (<- (> 1)))
                (throw (>ex-info (str "Qualified symbol" (-> obj str str/squote) "cannot have more than one namespace.")))
-               (->> obj str (<- str/replace backslash-regex ".") symbol eval-form)))
+               (->> obj str (<- (str/replace backslash-regex ".")) symbol eval-form)))
          (->> obj str replace-specials)))
    ([^string? obj] (str \" obj \"))
    #?(:clj ([^char? obj] (str \' obj \')))

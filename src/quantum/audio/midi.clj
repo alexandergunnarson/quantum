@@ -156,7 +156,7 @@
   [s]
   (validate s string?)
   (let [lines-then-measures
-          (->> s (<- str/split #"\n")
+          (->> s (<- (str/split #"\n"))
                  (remove+ empty?)
                  (map+    (fn-> str/trim (str/split #"\|") popl))
                  join)
@@ -208,7 +208,7 @@
                      join)
           _ (dotimes [i-measure num-all-measures]
               (let [count-this-measure (fn [line]
-                                         (->> line :measures (<- get i-measure)
+                                         (->> line :measures (<- (get i-measure))
                                               (map+ (fn-> second :relative-duration))
                                               (reduce +)))
                     measure-duration (-> music first count-this-measure)]
@@ -484,7 +484,7 @@
 
 (defn join-staves [& staves]
   (->> staves
-       (map (fn->> (<- str/split #"\n")
+       (map (fn->> (<- (str/split #"\n"))
                    (map+ str/trim)
                    (map+ (fn1 popl))
                    join))

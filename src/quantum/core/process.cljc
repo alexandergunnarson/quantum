@@ -174,7 +174,7 @@
 ;         entire-process
 ;          (fn []
 ;            (let [pb (->> args
-;                          (<- conjl command)
+;                          (<- (conjl command))
 ;                          (map str)
 ;                          into-array
 ;                          (ProcessBuilder.))

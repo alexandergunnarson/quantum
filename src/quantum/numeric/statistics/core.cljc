@@ -143,7 +143,7 @@
       (->> xs
            (map+ (fn-> (- mean') sq))
            sum
-           (<- / (- ct diff))))))
+           (<- (/ (- ct diff)))))))
 
 (#?(:clj defnt' :cljs defnt) mse:predictor
   "The mean squared error between a vector of predictions `p•` and observed values `o•`."
@@ -177,7 +177,7 @@
            #_(map+ = predictions actuals) ; TODO assert same count
            (filter+ true?)
            count
-           (<- / ct)))))
+           (<- (/ ct))))))
 
 (defn semivariance
   "Computes the semivariance of a set of values with respect to a given cutoff value."

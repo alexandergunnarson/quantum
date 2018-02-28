@@ -77,13 +77,13 @@
       :cljs go)
     (->> (request! :meta :account/usage)
          #?(:cljs <!) :body
-         (<- select-keys [:other :doc :photo :video])
+         (<- (select-keys [:other :doc :photo :video]))
          (map+ val)
          (map+ :total)
          (map+ :bytes)
          (join [])
          (reduce + 0)
-         #_(<- uconv/convert :bytes :gigabytes)
+         #_(<- (uconv/convert :bytes :gigabytes))
          #_(:clj double))))
 
 ; (defn upload! []

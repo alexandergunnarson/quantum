@@ -321,7 +321,7 @@
              (or key-length 192))
          hashed
            (->> (SecretKeyFactory/getInstance "PBKDF2WithHmacSHA1")
-                (<- .generateSecret k)
+                (<- (.generateSecret k))
                 (.getEncoded))
          salt (conv/->text salt)
          ;(->> iterations (encode :base64) ->str)

@@ -28,7 +28,7 @@
     [quantum.core.error                       :as err
       :refer [>ex-info TODO]]
     [quantum.core.fn                          :as fn
-      :refer [fn1 fn&2 <- fn-> fn->>]]
+      :refer [fn1 fn&2 fn-> fn->>]]
     [quantum.core.numeric                     :as cnum
       :refer [sqrt]]
     [quantum.numeric.core                     :as num

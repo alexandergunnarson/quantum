@@ -102,20 +102,12 @@
 
 #?(:clj
 (defmacro <-
-  "Converts a ->> to a ->
-   Note: syntax modified from original."
-   {:attribution "thebusby.bagotricks"
-    :usage       `(->> (range 10) (map inc) (<- doto println) (reduce +))}
-  ([x] `(~x))
-  ([op & body] `(~op ~(last body) ~@(butlast body)))))
+  "Converts a ->> to a ->"
+   {:inspiration "thebusby.bagotricks"
+    :usage       `(->> (range 10) (map inc) (<- (doto println) distinct) (reduce +))}
+  [& args] `(-> ~(last args) ~@(butlast args))))
 
-#?(:clj
-(defmacro <<-
-  "Converts a -> to a ->>"
-   {:attribution "alexandergunnarson"
-    :usage       `(-> 1 inc (/ 4) (<<- - 2))}
-  ([x] `(~x))
-  ([x op & body] `(~op ~@body ~x))))
+#?(:clj (defalias <<- ->>))
 
 #?(:clj
 (defmacro fn->

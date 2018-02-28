@@ -87,7 +87,7 @@ AAC encoder available with ffmpeg")
          args
          (->> {:print-output :ffmpeg-convert}
               (merge-keep-left opts)
-              (<- assoc :read-streams? true))))))
+              (<- (assoc :read-streams? true)))))))
 
 
 #_(:clj

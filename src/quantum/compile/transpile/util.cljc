@@ -26,7 +26,7 @@
 (def indentation (->> (repeat *indent-num* \space) (apply str)))
 
 (defn indent [s]
-  (->> s (str indentation) (<- str/replace #"\n" (str "\n" indentation))))
+  (->> s (str indentation) (<- (str/replace #"\n" (str "\n" indentation)))))
 
 (defn bracket
   {:in '["class ABC" "println()"]

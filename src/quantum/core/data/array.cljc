@@ -15,7 +15,7 @@
       :refer [empty count get assoc!]]
     [quantum.core.type.core        :as tcore]
     [quantum.core.fn               :as fn
-      :refer [<- fn->]]
+      :refer [fn->]]
     [quantum.core.log              :as log]
     [quantum.core.logic            :as logic
       :refer [whenc whenc->]]

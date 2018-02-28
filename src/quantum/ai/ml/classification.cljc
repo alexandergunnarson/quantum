@@ -16,7 +16,7 @@
               reduce-count]]
     [quantum.core.numeric             :as num]
     [quantum.core.fn                  :as fn
-      :refer [<- fn-> fn->> fn']]
+      :refer [fn-> fn->> fn']]
     [quantum.core.cache               :as cache
       :refer [defmemoized]]
     [quantum.core.error

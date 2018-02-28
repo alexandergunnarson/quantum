@@ -42,12 +42,12 @@
                     (->> @arities-for-type#
                          (filter (fn-> val (= :variadic)))
                          first
-                         (<- whenf nnil? key))
+                         (<- (whenf nnil? key)))
                   curr-variadic-arity#
                     (->> @genned-arities#
                          (filter (fn-> val keys first (= :variadic)))
                          first
-                         (<- whenf nnil? key))]
+                         (<- (whenf nnil? key)))]
               (when (contains? @arities-for-type# arity-n#)
                 (throw+ {:msg (str "Cannot define more than one version of the same arity "
                                    "(" arity-n# ")"
@@ -175,7 +175,7 @@
          (apply merge {})
          register-ns
          oeval
-         ;(<- str "\n")
+         ;(<- (str "\n"))
          )))
 
 (defn array?  [obj] (= obj/constructor Array))

@@ -48,7 +48,7 @@
 ;             :print-output :ffmpeg
 ;             :handlers     handlers-f}
 ;            (merge-keep-left (dissoc opts :handlers))
-;            (<- assoc :read-streams? true :close-reqs close-reqs)))))
+;            (<- (assoc :read-streams? true :close-reqs close-reqs))))))
 
 ; (def log-buffer!
 ;   (atom

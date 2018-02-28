@@ -480,7 +480,7 @@
         (->> tree <children
              (map+ #(comp-depth <branch? <children % compf (inc depth)))
              (reduce-sentinel compf)
-             (<- or depth))
+             (<- (or depth)))
         depth)))
 
 (def max-depth (conja comp-depth max))
@@ -2182,7 +2182,7 @@
             [1 2]}}
   [n percents]
   (let [_ (err/assert (>= n (count percents)))
-        _ (err/assert (->> percents (reduce + 0) (<- <= 1)))
+        _ (err/assert (->> percents (reduce + 0) (<- (<= 1))))
         allocated (for [p percents]
                     (long (num/ceil (double (* n p))))) ; TODO make not use long or double
         sorted (->> allocated

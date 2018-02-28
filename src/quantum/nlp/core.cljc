@@ -57,7 +57,7 @@
                         :else (.append s c)))
                 #?(:clj  (StringBuilder.)
                    :cljs (StringBuffer.)))
-       (<- coll/padr 3 \0)
+       (<- (coll/padr 3 \0))
        str
        keyword))
 

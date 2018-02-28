@@ -172,7 +172,7 @@
   (assert-args
     (vector? bindings) "a vector for its bindings")
   `(->> ~(last bindings)
-        (<- red/transformer (core/map (rfn [~@(butlast bindings)] ~@body))) ; bootstrapping `map+`
+        (<- (red/transformer (core/map (rfn [~@(butlast bindings)] ~@body)))) ; bootstrapping `map+`
         ~joinf))
 
 #?(:clj

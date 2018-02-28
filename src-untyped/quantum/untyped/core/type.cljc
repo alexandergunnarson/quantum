@@ -30,7 +30,7 @@
       :refer [fn1 rcomp <- fn->]]
     [quantum.untyped.core.form.generate.deftype :as udt]
     [quantum.untyped.core.logic
-      :refer [fn-and ifs]]
+      :refer [fn-and ifs whenp->]]
     [quantum.untyped.core.numeric               :as unum]
     [quantum.untyped.core.print                 :as upr]
     [quantum.untyped.core.qualify               :as qual]
@@ -140,8 +140,8 @@
   (ProtocolSpec. nil p nil))
 
 (defn isa? [x]
-  (ifs #?@(:clj [(class? x) (ClassSpec. nil x nil)])
-       (utpred/protocol? x) (isa?|protocol x)))
+  (ifs #?@(:clj [(c/class? x) (ClassSpec. nil x nil)])
+       (utpred/protocol? x)   (isa?|protocol x)))
 
 ;; ===== CREATION ===== ;;
 
@@ -384,50 +384,45 @@
                    (educe
                      (fn ([args'] args')
                          ([args' s]
+                           (prl! kind args' s)
                            (if (empty? args')
                                (conj args' s)
-                               ;; TODO rework this part; we want we want to make sure the args are as orthogonal/simplified as
-                               ;; possible
                                (let [without-redundant-args
                                        (->> args'
                                             (uc/map+    (juxt identity #(compare s %)))
                                             ;; remove all args whose extensions are redundant w.r.t. `s`
                                             (uc/remove+ (rcomp second comparison-denotes-redundancy?))
                                             join)]
-                                 (prl! kind args' s without-redundant-args
+                                 (prl! without-redundant-args
                                        (->> without-redundant-args (uc/map+ second) (seq-or (fn1 c/= 3))))
-                                 (ifs
-                                   (c/and (c/= kind :and)
-                                          (->> without-redundant-args
-                                               (reduce (fn [ret [c' s']]
-                                                         (if        ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
-                                                                    ;;               at least one other arg
-                                                              (c/or (c/= c' 3)
-                                                                    ;; Contradiction/null-set: (& A (! A))
-                                                                    (if (not-spec? s)
-                                                                        ;; compare not-spec to all others
-                                                                        (= (not-spec>inner-spec s) s')
-                                                                        ;; compare spec to all not-specs
-                                                                        (c/and (not-spec? s') (= s (not-spec>inner-spec s')))))
-                                                              (reduced [null-set])
+                                   (case kind
+                                     :and (let [[conj-s? specs]
+                                                 (->> without-redundant-args
+                                                      (reduce (fn [[conj-s? specs] [s' c']]
+                                                                (prl! s' c')
+                                                                (ifs       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
+                                                                           ;;               at least one other arg
+                                                                     (c/or (c/= c' 3)
+                                                                           ;; Contradiction/null-set: (& A (! A))
+                                                                           (if (not-spec? s)
+                                                                               ;; compare not-spec to all others
+                                                                               (= (not-spec>inner-spec s) s')
+                                                                               ;; compare spec to all not-specs
+                                                                               (c/and (not-spec? s') (= s (not-spec>inner-spec s')))))
+                                                                     (reduced [false [null-set]])
+                                                                     ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
+                                                                     (c/not= c' 2)
+                                                                     [false   (conj specs s')]
 
-                                                              )))))
-
-                                   ;; `s` is `><` (for `or`, or `<>`) w.r.t. to all other args
-                                   (->> without-redundant-args
-                                        (uc/map+ second)
-                                        (seq-and (if (c/= kind :and)
-                                                     (fn1 c/= 2)
-                                                     (fn1 case (2 3) true false))))
-                                   (->> without-redundant-args (uc/map first) (<- conj s))
-                                   #_(c/or
-                                     ;; at least one arg has an extension that is redundant w.r.t. `s`
-                                     (c/< (count without-redundant-args) (count args'))
-                                     ;; `or`; `s` is `<>` or `><` w.r.t. to all other args
-                                     (c/and (c/= kind :or) (->> without-redundant-args (uc/map+ second) (seq-and (fn1 case (2 3) true false)))))
-                                   #_(->> without-redundant-args (uc/map first) (<- conj s))
-
-                                   args')))))
+                                                                     [conj-s? (conj specs s')]))
+                                                              [true []]))]
+                                            (whenp-> specs conj-s? (conj s)))
+                                     :or  (if ;; `s` is `><` or `<>` w.r.t. to all other args
+                                              (->> without-redundant-args
+                                                   (uc/map+ second)
+                                                   (seq-and (fn1 case (2 3) true false)))
+                                              (->> without-redundant-args (uc/map first) (<- (conj s)))
+                                              args'))))))
                      []))]
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
@@ -706,7 +701,9 @@
   (let [s1|inner (not-spec>inner-spec s1)]
     (ifs (= s1|inner universal-set)  3
          (= s1|inner null-set)      -1
-         (err! "TODO: ValueSpec not yet supported with NotSpec combination" {:s0 s0 :s1 s1}))))
+         ;; nothing is ever < ValueSpec, so the inner of s1 is never < s0,
+         ;; so the comparison will never be 2
+         3)))
 
 (defn- compare|not+class [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
@@ -729,7 +726,13 @@
          3)))
 
 (defn- compare|not+not [s0 s1]
-  (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1)))
+  (let [c (compare (not-spec>inner-spec s0) (not-spec>inner-spec s1))]
+    (case c
+      0  0
+     -1  1
+      1 -1
+      2  2
+      3  2)))
 
 (defn- compare|not+or [s0 s1]
   (compare (not-spec>inner-spec s0) (>logical-complement s1)))
@@ -750,6 +753,9 @@
 (defn- compare|or+and [^OrSpec s0 ^AndSpec s1]
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
     (if r 1 3)))
+
+(defn- compare|and+and [^AndSpec s0 ^AndSpec s1]
+  (TODO))
 
 (defn- compare|expr+expr [s0 s1] (if (c/= s0 s1) 0 3))
 
@@ -871,7 +877,7 @@
         ProtocolSpec     todo
         NotSpec          todo
         OrSpec           (inverted compare|or+and)
-        AndSpec          todo
+        AndSpec          compare|and+and
         Expression       fn<>}
      ;; TODO review this
      Expression
@@ -1103,26 +1109,26 @@
 
 ;; ----- NUMBER LIKENESSES ----- ;;
 
-         (-def integer-value?              (or integer? (and decimal? (>expr unum/integer-value?))))
+       #_(-def integer-value?              (or integer? (and decimal? (>expr unum/integer-value?))))
 
        #_(-def numeric-primitive?          (and primitive? (not boolean?)))
 
-         (-def numerically-byte?           (and integer-value? (>expr (fn [x] (c/<= -128                 x 127)))))
-         (-def numerically-short?          (and integer-value? (>expr (fn [x] (c/<= -32768               x 32767)))))
-         (-def numerically-char?           (and integer-value? (>expr (fn [x] (c/<=  0                   x 65535)))))
-         (-def numerically-unsigned-short? numerically-char?)
-         (-def numerically-int?            (and integer-value? (>expr (fn [x] (c/<= -2147483648          x 2147483647)))))
-         (-def numerically-long?           (and integer-value? (>expr (fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
-         (-def numerically-float?          (and number?
+       #_(-def numerically-byte?           (and integer-value? (>expr (fn [x] (c/<= -128                 x 127)))))
+       #_(-def numerically-short?          (and integer-value? (>expr (fn [x] (c/<= -32768               x 32767)))))
+       #_(-def numerically-char?           (and integer-value? (>expr (fn [x] (c/<=  0                   x 65535)))))
+       #_(-def numerically-unsigned-short? numerically-char?)
+       #_(-def numerically-int?            (and integer-value? (>expr (fn [x] (c/<= -2147483648          x 2147483647)))))
+       #_(-def numerically-long?           (and integer-value? (>expr (fn [x] (c/<= -9223372036854775808 x 9223372036854775807)))))
+       #_(-def numerically-float?          (and number?
                                                 (>expr (fn [x] (c/<= -3.4028235E38 x 3.4028235E38)))
                                                 (>expr (fn [x] (-> x #?(:clj clojure.lang.RT/floatCast :cljs c/float) (c/== x))))))
        #_(-def numerically-double?         (and number?
                                                 (>expr (fn [x] (c/<= -1.7976931348623157E308 x 1.7976931348623157E308)))
                                                 (>expr (fn [x] (-> x clojure.lang.RT/doubleCast (c/== x))))))
 
-         (-def int-like?                   (and integer-value? numerically-int?))
+       #_(-def int-like?                   (and integer-value? numerically-int?))
 
-(defn numerically
+#_(defn numerically
   [spec]
   (assert (instance? ClassSpec spec))
   (let [c (.-c ^ClassSpec spec)]
