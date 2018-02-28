@@ -393,6 +393,7 @@
    ;; ===== REPL ===== ;;
    :repl-options
      {:init '(do (require
+                   '[no.disassemble :refer [disassemble]]
                    'quantum.core.error
                    'quantum.core.print
                    'quantum.core.print.prettier
@@ -801,7 +802,8 @@
          {:dev
             {:jvm-opts       (into ["-Dquantum.core.system|profile=dev"] (>jvm-opts :dev))
              :resource-paths ["resources-dev"]
-             :source-paths   ["src-dev"]}
+             :source-paths   ["src-dev"]
+             :plugins        '[[lein-nodisassemble "0.1.3"]]}
           :test
             {:jvm-opts (>jvm-opts :test)}
           :prod
@@ -810,7 +812,7 @@
             {:source-paths ["src-backend"]
              :env          {:print-pid? true}}
           :backend|dev
-            {:plugins '[[lein-nodisassemble "0.1.3"]]}
+            {}
           :backend|prod {}
           :backend|test
             {:plugins '[[com.jakemccrary/lein-test-refresh "0.16.0"]]}
