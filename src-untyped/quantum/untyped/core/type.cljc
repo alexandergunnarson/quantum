@@ -379,7 +379,7 @@
                (educe
                  (fn ([accum] accum)
                      ([{:as accum :keys [conj-s? prefer-orig-args? s' specs]} [s* c*]]
-                       (prl! conj-s? prefer-orig-args? s' specs s* c*)
+                       (prl! kind conj-s? prefer-orig-args? s' specs s* c*)
                        (case kind
                          :and (if       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
                                         ;;               at least one other arg
@@ -397,17 +397,23 @@
                                                          (c/not= c* 2)
                                                          false
                                                          conj-s?)
-                                            ;; TODO this same logic might extend to `:or` as well?
-                                            s*' (if (not-spec? s')
-                                                    (- s* (not s'))
-                                                    s*)]
-                                        (assoc accum :conj-s? conj-s?' :specs (conj specs s*')))))
+                                            ;; TODO might similar logic extend to `:or` as well?
+                                            ss* (if (not-spec? s')
+                                                    (let [diff (- s* (not s'))]
+                                                      (if (and-spec? diff)
+                                                          ;; preserve inner expansion
+                                                          (and-spec>args diff)
+                                                          [diff]))
+                                                    [s*])]
+                                        (assoc accum :conj-s? conj-s?' :specs (into specs ss*)))))
                          :or  (if-not
                                 ;; `s` must be either `><` or `<>` w.r.t. to all other args
                                 (case c* (2 3) true false)
                                 (reduced (assoc accum :prefer-orig-args? true))
                                 (assoc accum :specs (conj specs s*))))))
-                 {:conj-s?           true
+                 {:conj-s?           ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
+                                     ;; applied by being `-` from all args, not by being `conj`ed
+                                     (c/not (c/and (c/= kind :and) (not-spec? s)))
                   :prefer-orig-args? false
                   :s'                s
                   :specs             []}))]
@@ -434,7 +440,7 @@
                    (educe
                      (fn ([args'] args')
                          ([args' s]
-                           (prl! "ABC" kind args' s)
+                           (prl! kind args' s)
                            (if (empty? args')
                                (conj args' s)
                                (create-logical-spec|inner args' s kind comparison-denotes-redundancy?))))
@@ -556,19 +562,23 @@
   (prl! s0 s1)
   (let [c (compare s0 s1)]
     (case c
-       0 null-set
-      -1 null-set
-       3 s0
+      (0 -1) null-set
+       3     s0
       (1 2)
-      (let [c0 (c/class s0) c1 (c/class s1)]
-        ;; TODO add dispatch?
-        (condp == c0
-          OrSpec (condp == c1
-                   ClassSpec (let [args (->> s0 or-spec>args (uc/remove (fn1 = s1)))]
-                               (case (count args)
-                                 0 null-set
-                                 1 (first args)
-                                 (OrSpec. args (atom nil))))))))))
+        (let [c0 (c/class s0) c1 (c/class s1)]
+          ;; TODO add dispatch?
+          (condp == c0
+            NotSpec (condp == (-> s0 not-spec>inner-spec c/class)
+                      ClassSpec (condp == c1
+                                  ClassSpec (AndSpec. [s0 (not s1)] (atom nil)))
+                      ValueSpec (condp == c1
+                                  ValueSpec (AndSpec. [s0 (not s1)] (atom nil))))
+            OrSpec  (condp == c1
+                      ClassSpec (let [args (->> s0 or-spec>args (uc/remove (fn1 = s1)))]
+                                  (case (count args)
+                                    0 null-set
+                                    1 (first args)
+                                    (OrSpec. args (atom nil))))))))))
 
 #?(:clj
 (defmacro spec

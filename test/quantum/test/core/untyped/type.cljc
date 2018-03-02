@@ -193,16 +193,40 @@
     (testing "+ Expression")
     (testing "+ ProtocolSpec")
     (testing "+ ClassSpec"
-      (test-symmetric  2 Uc  (! a))
-      (test-symmetric  3 a   (! a))
-      (test-symmetric  2 a   (! <a0))
-      (test-symmetric  3 a   (! >a))
-      (test-symmetric -1 a   (! b))
-      (test-symmetric  3 <a0 (! a))
-      (test-symmetric  3 <a0 (! >a))
-      (test-symmetric  2 >a  (! a))
-      (test-symmetric  2 >a  (! <a0))
-      (test-symmetric  2 i|a (! i|b)))
+      (test-symmetric  3 (!     a)     a) ; inner =
+      (test-symmetric  3 (!   i|a)   i|a) ; inner =
+      (test-symmetric  3 (!     a)   <a0) ; inner >
+      (test-symmetric  3 (!   i|a) i|<a0) ; inner >
+      (test-symmetric  2 (!     a)    >a) ; inner <
+      (test-symmetric  2 (!   i|a) i|>a0) ; inner ><
+      (test-symmetric  1 (!   a  )   ><0) ; inner <>
+      (test-symmetric  2 (!   i|a) i|><0) ; inner ><
+      (test-symmetric  2 (!     a)    Uc) ; inner <
+      (test-symmetric  2 (!   i|a)    Uc) ; inner <
+      (test-symmetric  2 (!   <a0)     a) ; inner <
+      (test-symmetric  2 (! i|<a0)   i|a) ; inner <
+      (test-symmetric  2 (!   <a0)    >a) ; inner <
+      (test-symmetric  2 (! i|<a0) i|>a0) ; inner <
+      (test-symmetric  1 (!   <a0)   ><0) ; inner <>
+      (test-symmetric  2 (! i|<a0) i|><0) ; inner ><
+      (test-symmetric  2 (!   <a0)    Uc) ; inner <
+      (test-symmetric  2 (! i|<a0)    Uc) ; inner <
+      (test-symmetric  3 (!    >a)     a) ; inner >
+      (test-symmetric  3 (! i|>a0)   i|a) ; inner >
+      (test-symmetric  3 (!    >a)   <a0) ; inner >
+      (test-symmetric  3 (! i|>a0) i|<a0) ; inner >
+      (test-symmetric  1 (!    >a)   ><0) ; inner <>
+      (test-symmetric  2 (! i|>a0) i|><0) ; inner ><
+      (test-symmetric  2 (!    >a)    Uc) ; inner <
+      (test-symmetric  2 (! i|>a0)    Uc) ; inner <
+      (test-symmetric  1 (!   ><0)     a) ; inner <>
+      (test-symmetric  2 (! i|><0)   i|a) ; inner ><
+      (test-symmetric  1 (!   ><0)   <a0) ; inner <>
+      (test-symmetric  2 (! i|><0) i|<a0) ; inner ><
+      (test-symmetric  1 (!   ><0)    >a) ; inner <>
+      (test-symmetric  2 (! i|><0) i|>a0) ; inner ><
+      (test-symmetric  2 (!   ><0)    Uc) ; inner <
+      (test-symmetric  2 (! i|><0)    Uc)) ; inner <
     (testing "+ ValueSpec"
       (test-symmetric -1 (t/value 1)  (! (t/value 2)))
       (test-symmetric  3 (t/value "") (! t/string?))))
@@ -382,16 +406,27 @@
         (testing "<> nilabled"
           (is=  3 (t/compare t/long?     (t/? t/string?))))))
     (testing "+ ValueSpec"
-      (testing "<"
-        ;;    #{"a"} <> t/byte?
-        ;;    #{"a"} <  t/string?
-        ;; -> #{"a"} <  (t/byte? ∪ t/string?)
-        (is= -1 (t/compare (t/value "a") (| t/byte? t/string?))))
-      (testing "<>"
-        ;;    #{"a"} <> t/byte?
-        ;;    #{"a"} <> t/long?
-        ;; -> #{"a"} <> (t/byte? ∪ t/long?)
-        (is= 3 (t/compare (t/value "a") (| t/byte? t/long?))))))
+      (testing "arg <"
+        (testing "+ arg <")
+        (testing "+ arg =")
+        (testing "+ arg >")
+        (testing "+ arg ><")
+        (testing "+ arg <>"
+          (test-symmetric -1 (t/value "a") (| t/string? t/byte?))
+          (test-symmetric -1 (t/value 1)   (| (t/value 1) (t/value 2)))
+          (test-symmetric -1 (t/value 1)   (| (t/value 2) (t/value 1)))
+          (testing "+ arg <>"
+            (test-symmetric -1 (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
+            (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
+            (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))))
+      (testing "arg ="
+        (testing "+ arg <>"
+          (test-symmetric -1 t/nil?      (| t/nil? t/string?))))
+      (testing "arg <>"
+        (testing "+ arg <>"
+          (test-symmetric  3 (t/value "a") (| t/byte? t/long?))
+          (test-symmetric  3 (t/value 3)   (| (t/value 1) (t/value 2)))))))
+  ;; TODO fix impl
   (testing "AndSpec"
     (testing "+ AndSpec")
     (testing "+ InferSpec")
@@ -421,23 +456,29 @@
       (testing "#{>+ <>+} -> <>"
         (test-symmetric  3 a   (& <a0 ><0 ><1)))) ; TODO fix test
     (testing "+ ValueSpec"
-      #_(testing ">" ; TODO fix test
-        (is= 3 (t/compare (t/value "a") (& t/string? ...))))
-      (testing "<"
-        ;;    #{"a"} < t/comparable?
-        ;;    #{"a"} < t/char-seq?
-        ;; -> #{"a"} < (t/comparable? ∩ t/char-seq?)
-        (is= -1 (t/compare (t/value "a") (& t/comparable? t/char-seq?))))
-      (testing "><"
-        ;;    #{"a"} <> t/array-list?
-        ;;    #{"a"} <  t/char-seq?
-        ;; -> #{"a"} >< (t/array-list? ∩ t/char-seq?)
-        (is=  2 (t/compare (t/value "a") (& t/array-list? t/char-seq?)))) ; TODO fix impl
-      (testing "<>"
-        ;;    #{"a"} <> t/array-list?
-        ;;    #{"a"} <> t/?
-        ;; -> #{"a"} <> (t/array-list? ∩ t/long?)
-        (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
+      (testing "arg <"
+        (testing "+ arg <"
+          (test-symmetric -1 (t/value "a") (& t/char-seq? t/comparable?)))
+        (testing "+ arg =")
+        #_(testing "+ arg >") ; not possible for `ValueSpec`
+        #_(testing "+ arg ><") ; not possible for `ValueSpec`
+        (testing "+ arg <>"
+          (test-symmetric  3 (t/value "a") (& t/char-seq? t/array-list?))))
+      (testing "arg ="
+      #_(testing "+ arg =") ; deduplicated already
+        (testing "+ arg >")
+      #_(testing "+ arg ><") ; not possible for `ValueSpec`
+        (testing "+ arg <>"))
+      (testing "arg >"
+        (testing "+ arg >"
+          (test-symmetric -1 (t/value "a") (& t/char-seq? t/comparable?)))
+      #_(testing "+ arg ><") ; not possible for `ValueSpec`
+        (testing "+ arg <>"
+          (test-symmetric  3 (t/value "a") (& t/char-seq? t/java-set?))))
+    #_(testing "arg ><") ; not possible for `ValueSpec`
+      (testing "arg <>"
+        (testing "+ arg <>"
+          (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?)))))))
   (testing "InferSpec"
     (testing "+ InferSpec")
     (testing "+ Expression")
@@ -490,7 +531,7 @@
       (testing "Boxed Primitive + Interface"
         (test-symmetric 3 t/long? t/char-seq?))
       (testing "Final Concrete + Final Concrete"
-        (is= 0 (t/compare t/string? t/string?)))
+        (test-symmetric 0 t/string? t/string?))
       (testing "Final Concrete + Extensible Concrete"
         (testing "< , >"
           (test-symmetric -1 t/string? t/object?))
@@ -503,7 +544,7 @@
         (testing "<>"
           (test-symmetric  3 t/string? t/java-coll?)))
       (testing "Extensible Concrete + Extensible Concrete"
-        (is= 0 (t/compare t/object? t/object?))
+        (test-symmetric 0 t/object? t/object?)
         (testing "< , >"
           (test-symmetric -1 t/array-list? t/object?))
         (testing "<>"
@@ -518,7 +559,7 @@
       (testing "Extensible Concrete + Interface"
         (test-symmetric 2 t/array-list? t/char-seq?))
       (testing "Abstract + Abstract"
-        (is=  0  (t/compare (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection)))
+        (test-symmetric 0 (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection))
         (testing "< , >"
           (test-symmetric -1 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
         (testing "<>"
@@ -600,15 +641,7 @@
 
 (deftest test|or
   (testing "equality"
-    (is= (| a b) (| a b))
-    (is=  0 (t/compare (| a b)     (| a b)))
-    (test-symmetric -1 t/nil?      (| t/nil? t/string?))
-    (test-symmetric -1 (t/value 1) (| (t/value 1) (t/value 2)))
-    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 1)))
-    (test-symmetric  3 (t/value 3) (| (t/value 1) (t/value 2)))
-    (test-symmetric -1 (t/value 1) (| (t/value 1) (t/value 2) (t/value 3)))
-    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 1) (t/value 3)))
-    (test-symmetric -1 (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))
+    (is= (| a b) (| a b)))
   (testing "simplification"
     (testing "via single-arg"
       (is= (| a)
