@@ -630,11 +630,11 @@
 
 ;; ===== Comparison ===== ;;
 
-(def ^:const <ident  0)
-(def ^:const =ident  1)
-(def ^:const >ident  2)
-(def ^:const ><ident 3)
-(def ^:const <>ident 4)
+(def ^:const <ident  -1)
+(def ^:const =ident   0)
+(def ^:const >ident   1)
+(def ^:const ><ident  2)
+(def ^:const <>ident  3)
 
 (def- fn<  (ufn/fn' -1))
 (def- fn=  (ufn/fn'  0))
@@ -657,7 +657,7 @@
          (compare s0 s1|inner))))
 
 (def- compare|universal+or       fn>)
-(def- compare|universal+and      compare|todo)
+(def- compare|universal+and      fn>)
 (def- compare|universal+infer    compare|todo)
 (def- compare|universal+expr     compare|todo)
 (def- compare|universal+protocol fn>)
@@ -673,7 +673,7 @@
         -1)))
 
 (def- compare|null+or            fn<)
-(def- compare|null+and           compare|todo)
+(def- compare|null+and           fn<)
 (def- compare|null+infer         compare|todo)
 (def- compare|null+expr          compare|todo)
 (def- compare|null+protocol      fn<)
@@ -736,18 +736,13 @@
     (if r 1 3)))
 
 ;; TODO transition to `compare|or+class` when stable
-(defn- compare|class+or
-  "#{(⊂ | =) ∅} -> ⊂
-   #{(⊃ ?) ∅} -> ∅
-   Otherwise whatever it is"
-  [s0 s1]
-  (let [specs (.-args ^OrSpec s1)]
+(defn- compare|class+or [s0 ^OrSpec s1]
+  (let [specs (.-args s1)]
     (first
       (reduce
         (fn [[ret found] s]
           (let [ret'   (compare s0 s)
                 found' (-> found (ubit/conj ret') c/long)]
-                (prl! ret' found')
             (ifs (c/or (ubit/contains? found' <ident)
                        (ubit/contains? found' =ident))
                  (reduced [-1 nil])
@@ -780,34 +775,40 @@
 (defn- compare|and+and [^AndSpec s0 ^AndSpec s1]
   (TODO))
 
-;; TODO transition to `compare|and+class` when stable
-(defn- compare|class+and
-  "Any ∅ -> ∅
-   Otherwise whatever it is"
-  [s0 s1]
-  (let [specs (.-args ^AndSpec s1)]
+(defn- compare|class+and [s0 ^AndSpec s1]
+  (let [specs (.-args s1)]
+    (first
+      (reduce
+        (fn [[ret found] s]
+          (let [c (compare s0 s)]
+            (if (c/= c 0)
+                (reduced [1 nil])
+                (let [found' (-> found (ubit/conj c) c/long)
+                      ret'   (ifs (ubit/contains? found' ><ident)
+                                  (if (c/= found' (-> (ubit/conj ><ident) (ubit/conj <>ident)))
+                                      3
+                                      2)
+
+                                  (ubit/contains? found' <>ident)
+                                  (ifs (ubit/contains? found' <ident) 3
+                                       (ubit/contains? found' >ident) 1
+                                       c)
+
+                                  c)]
+                  [ret' found']))))
+        [3 ubit/empty]
+        specs))))
+
+(defn- compare|value+and [s0 ^AndSpec s1]
+  (let [specs (.-args s1)]
     (reduce
       (fn [ret s]
         (let [ret' (compare s0 s)]
-          (case ret'
-                3 (reduced 3)
-                2 (TODO)
-                ret')))
+          (if (c/= ret' 3)
+              (reduced 3)
+              ret')))
       3
       specs)))
-
-;; TODO transition to `compare|and+value` when stable
-(defn- compare|value+and [s0 s1]
-  (let [specs (.-args ^AndSpec s1)]
-    (reduce
-       (fn [ret s]
-         (let [ret' (compare s0 s)] ; `-1` will never happen
-           (case ret'
-             3 (reduced ret')
-             2 (TODO)
-             ret')))
-       3
-       specs)))
 
 ;; ----- InferSpec ----- ;;
 

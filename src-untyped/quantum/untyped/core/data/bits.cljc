@@ -18,9 +18,15 @@
 (defalias xor       bit-xor)
 (defalias not!      bit-flip)
 (defalias disj      bit-clear)
-(defalias conj      bit-set)
-(defalias contains? bit-test)
+
 (def ^:const empty 0)
+
+(defn conj
+  ([] empty)
+  ([v] (conj empty v))
+  ([xs v] (bit-set xs v)))
+
+(defalias contains? bit-test)
 
 ;; ===== SHIFTS ===== ;;
 

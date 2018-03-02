@@ -426,59 +426,93 @@
         (testing "+ arg <>"
           (test-symmetric  3 (t/value "a") (| t/byte? t/long?))
           (test-symmetric  3 (t/value 3)   (| (t/value 1) (t/value 2)))))))
-  ;; TODO fix impl
+  ;; TODO fix impl and go over tests
   (testing "AndSpec"
     (testing "+ AndSpec")
     (testing "+ InferSpec")
     (testing "+ Expression")
     (testing "+ ProtocolSpec")
     (testing "+ ClassSpec"
-      ;; Any ∅ -> ∅
-      ;; Otherwise whatever it is
-      (testing "#{<+} -> <"
-        (test-symmetric -1 i|a (& i|>a+b i|>a0 i|>a1)))
-      (testing "#{>+} -> >"
-        (test-symmetric  1 i|a (& i|<a+b i|<a0 i|<a1)))
-      (testing "#{><+} -> ><"
-        (test-symmetric  2 i|a (& i|><0 i|><1))) ; TODO fix impl
-      (testing "#{<>+} -> <>"
-        (test-symmetric  3 a   (& ><0 ><1))) ; TODO fix test
-      (testing "#{<+ ><+} -> ><"
-        (test-symmetric  2 a   (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))) ; TODO fix impl
-      (testing "#{<+ <>+} -> <>"
-        (test-symmetric  3 a   (& >a ><0 ><1))) ; TODO fix test
-      (testing "#{=+ ><+} -> ><"
-        (test-symmetric  2 i|a (& i|a i|><0 i|><1))) ; TODO fix impl
-      (testing "#{=+ <>+} -> <>"
-        (test-symmetric  3 a   (& a ><0 ><1))) ; TODO fix test
-      (testing "#{>+ ><+} -> ><"
-        (test-symmetric  2 i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
-      (testing "#{>+ <>+} -> <>"
-        (test-symmetric  3 a   (& <a0 ><0 ><1)))) ; TODO fix test
+      (testing "#{<}"
+        (testing "Boxed Primitive"
+          (test-symmetric -1 t/byte?       (& t/number?   t/comparable?)))
+        (testing "Final Concrete"
+          (test-symmetric -1 t/string?     (& t/char-seq? t/comparable?)))
+        (testing "Extensible Concrete"
+          (test-symmetric -1 t/array-list? (& t/iterable? (t/isa? java.util.RandomAccess))))
+        (testing "Abstract"
+          (test-symmetric -1 (t/isa? java.util.AbstractMap$SimpleEntry) (& (t/isa? java.util.Map$Entry) (t/isa? java.io.Serializable))))
+        (testing "Interface"
+          (test-symmetric -1 i|a           (& i|>a0 i|>a1))))
+    #_(testing "#{< =}")         ; not possible for `AndSpec`
+    #_(testing "#{< = >}")       ; not possible for `AndSpec`
+    #_(testing "#{< = > ><}")    ; not possible for `AndSpec`
+    #_(testing "#{< = > >< <>}") ; not possible for `AndSpec`
+    #_(testing "#{< >}")         ; not possible for `AndSpec`
+    #_(testing "#{< > ><}")      ; not possible for `AndSpec`
+    #_(testing "#{< > >< <>}")   ; not possible for `AndSpec`
+      (testing "#{< ><}"
+        (test-symmetric  2 i|a           (& i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+      (testing "#{< >< <>}"
+        (test-symmetric  2 t/java-set?   (& t/java-coll? t/char-seq? (t/isa? java.nio.ByteBuffer))))
+      (testing "#{< <>}"
+        (test-symmetric  3 t/string?     (& t/char-seq? t/java-set?)))
+    #_(testing "#{= >}")       ; not possible for `AndSpec`
+    #_(testing "#{= > ><}")    ; not possible for `AndSpec`
+    #_(testing "#{= > >< <>}") ; not possible for `AndSpec`
+      (testing "#{= ><}"
+        (test-symmetric  1 i|a           (& i|a i|><0 i|><1))
+        (test-symmetric  1 t/char-seq?   (& t/char-seq?   t/java-set?)))
+      (testing "#{= >< <>}"
+        (test-symmetric  1 t/char-seq?   (& t/char-seq?   t/java-set? t/array-list?)))
+      (testing "#{= <>}"
+        (test-symmetric  1 t/array-list? (& t/array-list? t/java-set?)))
+      (testing "#{>}"
+        (test-symmetric  1 i|a           (& i|<a+b i|<a0 i|<a1)))
+      (testing "#{> ><}"
+        (test-symmetric  2 i|a           (& i|<a+b i|<a0 i|><0 i|><1))
+        (test-symmetric  2 t/array-list? (& (t/isa? javax.management.AttributeList) t/java-set?))
+        (test-symmetric  2 t/comparable? (& (t/isa? java.nio.ByteBuffer) t/java-set?)))
+      (testing "#{> >< <>}"
+        (test-symmetric  2 i|a           (& i|<a0 i|><0 t/array-list?)))
+      (testing "#{> <>}") ; <- comparison should be 1
+      (testing "#{><}"
+        (test-symmetric  2 i|a           (& i|><0 i|><1))
+        (test-symmetric  2 t/char-seq?   (& t/java-set? t/array-list?)))
+      (testing "#{>< <>}") ; <- comparison should be 3
+      (testing "#{<>}"
+        (test-symmetric  3 t/string?     (& t/array-list? t/java-set?))))
     (testing "+ ValueSpec"
-      (testing "arg <"
-        (testing "+ arg <"
-          (test-symmetric -1 (t/value "a") (& t/char-seq? t/comparable?)))
-        (testing "+ arg =")
-        #_(testing "+ arg >") ; not possible for `ValueSpec`
-        #_(testing "+ arg ><") ; not possible for `ValueSpec`
-        (testing "+ arg <>"
-          (test-symmetric  3 (t/value "a") (& t/char-seq? t/array-list?))))
-      (testing "arg ="
-      #_(testing "+ arg =") ; deduplicated already
-        (testing "+ arg >")
-      #_(testing "+ arg ><") ; not possible for `ValueSpec`
-        (testing "+ arg <>"))
-      (testing "arg >"
-        (testing "+ arg >"
-          (test-symmetric -1 (t/value "a") (& t/char-seq? t/comparable?)))
-      #_(testing "+ arg ><") ; not possible for `ValueSpec`
-        (testing "+ arg <>"
-          (test-symmetric  3 (t/value "a") (& t/char-seq? t/java-set?))))
-    #_(testing "arg ><") ; not possible for `ValueSpec`
-      (testing "arg <>"
-        (testing "+ arg <>"
-          (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?)))))))
+      (testing "#{<}"
+        (test-symmetric -1 (t/value "a") (& t/char-seq? t/comparable?)))
+    #_(testing "#{< =}")         ; not possible for `AndSpec`
+    #_(testing "#{< >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{< =}")         ; not possible for `AndSpec`
+    #_(testing "#{< = >}")       ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{< = > ><}")    ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< = > >< <>}") ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< >}")         ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{< > ><}")      ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< > >< <>}")   ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{< ><}")        ; `><` not possible for `ValueSpec`
+    #_(testing "#{< >< <>}")     ; `><` not possible for `ValueSpec`
+      (testing "#{< <>}"
+        (test-symmetric  3 (t/value "a") (& t/char-seq? t/array-list?))
+        (test-symmetric  3 (t/value "a") (& t/char-seq? t/java-set?)))
+    #_(testing "#{= >}")       ; not possible for `AndSpec`; `>` not possible for `ValueSpec`
+    #_(testing "#{= > ><}")    ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{= > >< <>}") ; not possible for `AndSpec`; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{= ><}")      ; `><` not possible for `ValueSpec`
+    #_(testing "#{= >< <>}")   ; `><` not possible for `ValueSpec`
+      (testing "#{= <>}")
+    #_(testing "#{>}")         ; `>` not possible for `ValueSpec`
+    #_(testing "#{> ><}")      ; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{> >< <>}")   ; `>` and `><` not possible for `ValueSpec`
+    #_(testing "#{> <>}")      ; `>` not possible for `ValueSpec`
+    #_(testing "#{><}")        ; `><` not possible for `ValueSpec`
+    #_(testing "#{>< <>}")     ; `><` not possible for `ValueSpec`
+      (testing "#{<>}"
+        (test-symmetric  3 (t/value "a") (& t/array-list? t/java-set?)))))
   (testing "InferSpec"
     (testing "+ InferSpec")
     (testing "+ Expression")
@@ -612,13 +646,13 @@
       (is= (! t/val|by-class?)
            t/nil?))
     (testing "DeMorgan's Law"
-      (is= (! (| (t/value 1)     (t/value 2)))
-           (& (! (t/value 1)) (! (t/value 2))))
-      (is= (! (& (t/value 1)     (t/value 2))) ; TODO fix test
-           (| (! (t/value 1)) (! (t/value 2))))
+      (is= (! (| i|a i|b))
+           (& (! i|a) (! i|b)))
+      (is= (! (& i|a i|b))
+           (| (! i|a) (! i|b)))
       (is= (! (| (! i|a) (! i|b)))
            (&       i|a     i|b))
-      (is= (! (& (! i|a) (! i|b))) ; TODO fix impl
+      (is= (! (& (! i|a) (! i|b)))
            (|       i|a     i|b)))))
 
 (deftest test|-
