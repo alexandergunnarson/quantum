@@ -807,7 +807,7 @@
                        [java.lang.Object]
                        (->> c tcore/class>prim-subclasses
                               (set/union #{(class>simplest-class c)})
-                              ;; for purposes of cleanliness and reproducibility
+                              ;; for purposes of cleanliness and reproducibility in tests
                               (sort-by sort-guide))))))
        (apply combo/cartesian-product)
        (c/lmap >vec))))

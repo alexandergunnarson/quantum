@@ -85,7 +85,7 @@
     (def ><1 t/short?)
     (def ><2 t/long?))
 
-(def U (t/isa? t/universal-class))
+(def Uc (t/isa? t/universal-class))
 
 ;; ----- Example protocols ----- ;;
 
@@ -132,274 +132,80 @@
 (deftest test|in|compare
   (testing "UniversalSetSpec"
     (testing "+ UniversalSetSpec"
-      (is= 0  (t/compare t/universal-set t/universal-set)))
+      (is=  0 (t/compare t/universal-set t/universal-set)))
     (testing "+ NullSetSpec"
       (test-symmetric 1 t/universal-set t/null-set))
+    (testing "+ NotSpec"
+      (test-symmetric -1 (! t/universal-set) t/universal-set)  ; inner =
+      (test-symmetric  0 (! t/null-set)      t/universal-set)) ; inner <
+    (testing "+ OrSpec"
+      (test-symmetric  1 t/universal-set (| ><0 ><1)))
+    (testing "+ AndSpec")
     (testing "+ InferSpec")
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec"
+      (doseq [spec protocol-specs]
+        (is=  1 (t/compare t/universal-set spec))
+        (is= -1 (t/compare spec t/universal-set))))
+    (testing "+ ClassSpec")
     (testing "+ ValueSpec"
       (doseq [spec [(t/value t/universal-set)
                     (t/value t/null-set)
                     (t/value 0)
                     (t/value nil)]]
-        (is= 1 (t/compare t/universal-set spec))))
-    (testing "+ ClassSpec")
-    (testing "+ ProtocolSpec"
-      (doseq [spec protocol-specs]
-        (is=  1 (t/compare t/universal-set spec))
-        (is= -1 (t/compare spec t/universal-set))))
-    (testing "+ NotSpec"
-      (test-symmetric -1  (! t/universal-set) t/universal-set)  ; inner =
-      (test-symmetric  0  (! t/null-set)      t/universal-set)) ; inner <
-    (testing "+ OrSpec")
-    (testing "+ AndSpec")
-    (testing "+ Expression"))
+        (is= 1 (t/compare t/universal-set spec)))))
+  ;; The null set is considered to always (vacuously) be a subset of any set
   (testing "NullSetSpec"
     (testing "+ NullSetSpec"
-      (is= 0 (t/compare t/null-set t/null-set)))
+      (is=  0 (t/compare t/null-set t/null-set)))
+    (testing "+ NotSpec"
+      (testing "Inner ClassSpec"
+        (is= -1 (t/compare t/null-set (! a))))
+      (testing "Inner ValueSpec"
+        (is= -1 (t/compare t/null-set (! (t/value 1))))))
+    (testing "+ OrSpec"
+      (test-symmetric -1 t/null-set (| ><0 ><1)))
+    (testing "+ AndSpec")
     (testing "+ InferSpec")
-    (testing "+ ValueSpec"
-      (test-symmetric -1 t/null-set (t/value t/null-set))
-      (test-symmetric -1 t/null-set (t/value 0)))
-    (testing "+ ClassSpec")
+    (testing "+ Expression")
     (testing "+ ProtocolSpec"
       (doseq [spec protocol-specs]
         (test-symmetric -1 t/null-set spec)))
-    (testing "+ NotSpec"
-      (test-symmetric 0 (! t/universal-set) t/null-set)  ; inner >
-      (test-symmetric 1 (! t/null-set)      t/null-set)) ; inner =
-    (testing "+ OrSpec")
-    (testing "+ AndSpec")
-    (testing "+ Expression"))
-  (testing "InferSpec"
-    (testing "+ InferSpec")
-    (testing "+ ValueSpec")
     (testing "+ ClassSpec")
-    (testing "+ ProtocolSpec")
-    (testing "+ NotSpec")
-    (testing "+ OrSpec")
-    (testing "+ AndSpec")
-    (testing "+ Expression"))
-  (testing "ValueSpec"
     (testing "+ ValueSpec"
-      (testing "="
-        (is= 0 (t/compare (t/value nil) (t/value nil)))
-        (is= 0 (t/compare (t/value 1  ) (t/value 1  )))
-        (is= 0 (t/compare (t/value "a") (t/value "a"))))
-      (testing "=, non-strict"
-        (test-symmetric 0 (t/value (vector)         ) (t/value (list)          ))
-        (test-symmetric 0 (t/value (vector (vector))) (t/value (vector (list))))
-        (test-symmetric 0 (t/value (hash-map)       ) (t/value (sorted-map)    )))
-      (testing "<>"
-        (test-symmetric 3 (t/value 1  ) (t/value 2  ))
-        (test-symmetric 3 (t/value "a") (t/value "b"))
-        (test-symmetric 3 (t/value 1  ) (t/value "a"))
-        (test-symmetric 3 (t/value nil) (t/value "a"))))
-    (testing "+ ClassSpec"
-      (testing "<"
-        (testing "Class equality"
-          (test-symmetric -1 (t/value "a") t/string?))
-        (testing "Class inheritance"
-          (test-symmetric -1 (t/value "a") t/char-seq?)
-          (test-symmetric -1 (t/value "a") t/object?)))
-      (testing "<>"
-        (test-symmetric 3 (t/value "a") t/byte?)))
-    (testing "+ ProtocolSpec"
-      (let [values #{t/universal-set t/null-set nil {} 1 "" AProtocolAll
-                     quantum.test.core.untyped.type.AProtocolAll}]
-        (doseq [v values]
-          (test-symmetric -1 (t/value v) (t/isa? AProtocolAll)))
-        (doseq [v [""]]
-          (test-symmetric -1 (t/value v) (t/isa? AProtocolString)))
-        (doseq [v (disj values "")]
-          (test-symmetric  3 (t/value v) (t/isa? AProtocolString)))
-        (doseq [v (disj values nil)]
-          (test-symmetric -1 (t/value v) (t/isa? AProtocolNonNil)))
-        (doseq [v [nil]]
-          (test-symmetric  3 (t/value v) (t/isa? AProtocolNonNil)))
-        (doseq [v [nil]]
-          (test-symmetric -1 (t/value v) (t/isa? AProtocolOnlyNil)))
-        (doseq [v (disj values nil)]
-          (test-symmetric  3 (t/value v) (t/isa? AProtocolOnlyNil)))
-        (doseq [v values]
-          (test-symmetric  3 (t/value v) (t/isa? AProtocolNone)))))
-    (testing "+ NotSpec"
-      (test-symmetric  1 (t/value 1)  (! t/universal-set)) ; inner <
-      (test-symmetric -1 (t/value 1)  (! t/null-set)     ) ; inner >
-      (test-symmetric  3 (t/value 1)  (! (t/value 2)))
-      (test-symmetric  3 (t/value "") (! t/string?)))
-    (testing "+ OrSpec"
-      (testing "<"
-        ;;    #{"a"} <> t/byte?
-        ;;    #{"a"} <  t/string?
-        ;; -> #{"a"} <  (t/byte? ∪ t/string?)
-        (is= -1 (t/compare (t/value "a") (| t/byte? t/string?))))
-      (testing "<>"
-        ;;    #{"a"} <> t/byte?
-        ;;    #{"a"} <> t/long?
-        ;; -> #{"a"} <> (t/byte? ∪ t/long?)
-        (is= 3 (t/compare (t/value "a") (| t/byte? t/long?)))))
-    (testing "+ AndSpec"
-      #_(testing ">" ; TODO fix test
-        (is= 3 (t/compare (t/value "a") (& t/string? ...))))
-      (testing "<"
-        ;;    #{"a"} < t/comparable?
-        ;;    #{"a"} < t/char-seq?
-        ;; -> #{"a"} < (t/comparable? ∩ t/char-seq?)
-        (is= -1 (t/compare (t/value "a") (& t/comparable? t/char-seq?))))
-      (testing "><"
-        ;;    #{"a"} <> t/array-list?
-        ;;    #{"a"} <  t/char-seq?
-        ;; -> #{"a"} >< (t/array-list? ∩ t/char-seq?)
-        (is=  2 (t/compare (t/value "a") (& t/array-list? t/char-seq?)))) ; TODO fix impl
-      (testing "<>"
-        ;;    #{"a"} <> t/array-list?
-        ;;    #{"a"} <> t/?
-        ;; -> #{"a"} <> (t/array-list? ∩ t/long?)
-        (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
-  (testing "ClassSpec"
-    (testing "+ ClassSpec"
-      (testing "Boxed Primitive + Boxed Primitive"
-        (is= 0 (t/compare t/long? t/long?))
-        (test-symmetric 3 t/long? t/int?))
-      (testing "Boxed Primitive + Final Concrete"
-        (test-symmetric 3 t/long? t/string?))
-      (testing "Boxed Primitive + Extensible Concrete"
-        (testing "< , >"
-          (test-symmetric -1  t/long? t/object?))
-        (testing "<>"
-          (test-symmetric 3 t/long? t/thread?)))
-      (testing "Boxed Primitive + Abstract"
-        (test-symmetric 3 t/long? (t/isa? java.util.AbstractCollection)))
-      (testing "Boxed Primitive + Interface"
-        (test-symmetric 3 t/long? t/char-seq?))
-      (testing "Final Concrete + Final Concrete"
-        (is= 0 (t/compare t/string? t/string?)))
-      (testing "Final Concrete + Extensible Concrete"
-        (testing "< , >"
-          (test-symmetric -1 t/string? t/object?))
-        (testing "<>"
-          (test-symmetric  3 t/string? t/array-list?)))
-      (testing "Final Concrete + Abstract")
-      (testing "Final Concrete + Interface"
-        (testing "< , >"
-          (test-symmetric -1 t/string? t/comparable?))
-        (testing "<>"
-          (test-symmetric  3 t/string? t/java-coll?)))
-      (testing "Extensible Concrete + Extensible Concrete"
-        (is= 0 (t/compare t/object? t/object?))
-        (testing "< , >"
-          (test-symmetric -1 t/array-list? t/object?))
-        (testing "<>"
-          (test-symmetric  3 t/array-list? t/thread?)))
-      (testing "Extensible Concrete + Abstract"
-        (testing "< , >"
-          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/object?)
-          (test-symmetric -1 t/array-list? (t/isa? java.util.AbstractCollection)))
-        (testing "<>"
-          (test-symmetric  3 t/thread? (t/isa? java.util.AbstractCollection))
-          (test-symmetric  3 (t/isa? java.util.AbstractCollection) t/thread?)))
-      (testing "Extensible Concrete + Interface"
-        (test-symmetric 2 t/array-list? t/char-seq?))
-      (testing "Abstract + Abstract"
-        (is=  0  (t/compare (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection)))
-        (testing "< , >"
-          (test-symmetric -1 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
-        (testing "<>"
-          (test-symmetric  3 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
-      (testing "Abstract + Interface"
-        (testing "< , >"
-          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/java-coll?))
-        (testing "><"
-          (test-symmetric  2 (t/isa? java.util.AbstractCollection) t/comparable?)))
-      (testing "Interface + Interface"
-        (testing "< , >"
-          (test-symmetric -1 t/java-coll? t/iterable?))
-        (testing "><"
-          (test-symmetric  2 t/char-seq?  t/comparable?))))
-    (testing "+ ProtocolSpec")
-    (testing "+ OrSpec"
-      ;; #{(< | =), (? *)    } -> <
-      ;; #{>      , (<> | ><)} -> ><
-      ;; Otherwise whatever it is
-      (testing "#{<+} -> <"
-        (is= -1 (t/compare i|<a0 (| i|>a+b i|>a0 i|>a1))))
-      (testing "#{><+} -> ><"
-        (is=  2 (t/compare i|a   (| i|><0 i|><1))))
-      (testing "#{<>+} -> <>"
-        (is=  3 (t/compare a     (| ><0 ><1))))
-      (testing "#{<+ ><+} -> <"
-        (is= -1 (t/compare i|a   (| i|>a+b i|>a0 i|><0 i|><1)))
-        (is= -1 (t/compare i|>a0 (| i|>a+b i|>a0)))) ; TODO fix impl
-      (testing "#{<+ <>+} -> <"
-        (is= -1 (t/compare a     (| >a ><0 ><1))))
-      (testing "#{=+ ><+} -> ><"
-        (is=  2 (t/compare i|a   (| i|a i|><0 i|><1))))
-      (testing "#{=+ <>+} -> <"
-        (is= -1 (t/compare a     (| a ><0 ><1))))
-      (testing "#{>+ ><+} -> ><"
-        (is=  2 (t/compare i|a   (| i|<a+b i|<a0 i|><0 i|><1))))
-      (testing "#{>+ <>+} -> ><"
-        (is=  2 (t/compare a     (| <a0 ><0 ><1))))
-      (testing "Nilable"
-        (testing "= nilabled"
-          (is= -1 (t/compare t/long?     (t/? t/long?))))
-        (testing "< nilabled"
-          (is= -1 (t/compare t/long?     (t/? t/object?))))
-        (testing "> nilabled"
-          (is=  2 (t/compare t/object?   (t/? t/long?))))
-        (testing ">< nilabled"
-          (is=  2 (t/compare t/iterable? (t/? t/comparable?))))
-        (testing "<> nilabled"
-          (is=  3 (t/compare t/long?     (t/? t/string?))))))
-    (testing "+ AndSpec"
-      ;; Any ∅ -> ∅
-      ;; Otherwise whatever it is
-      (testing "#{<+} -> <"
-        (test-symmetric -1 i|a (& i|>a+b i|>a0 i|>a1)))
-      (testing "#{>+} -> >"
-        (test-symmetric  1 i|a (& i|<a+b i|<a0 i|<a1)))
-      (testing "#{><+} -> ><"
-        (test-symmetric  2 i|a (& i|><0 i|><1))) ; TODO fix impl
-      (testing "#{<>+} -> <>"
-        (test-symmetric  3 a   (& ><0 ><1))) ; TODO fix test
-      (testing "#{<+ ><+} -> ><"
-        (test-symmetric  2 a   (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))) ; TODO fix impl
-      (testing "#{<+ <>+} -> <>"
-        (test-symmetric  3 a   (& >a ><0 ><1))) ; TODO fix test
-      (testing "#{=+ ><+} -> ><"
-        (test-symmetric  2 i|a (& i|a i|><0 i|><1))) ; TODO fix impl
-      (testing "#{=+ <>+} -> <>"
-        (test-symmetric  3 a   (& a ><0 ><1))) ; TODO fix test
-      (testing "#{>+ ><+} -> ><"
-        (test-symmetric  2 i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
-      (testing "#{>+ <>+} -> <>"
-        (test-symmetric  3 a   (& <a0 ><0 ><1))))) ; TODO fix test
-  (testing "ProtocolSpec"
-    (testing "+ ProtocolSpec"
-      (is=  0 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolAll)))
-      (is=  3 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolNone))))
-    (testing "+ OrSpec")
-    (testing "+ AndSpec"))
+      (test-symmetric -1 t/null-set (t/value t/null-set))
+      (test-symmetric -1 t/null-set (t/value 0))))
   (testing "NotSpec"
     (testing "+ NotSpec"
-      (is=  0 (t/compare (! t/universal-set) (! t/universal-set)))
-      (is=  0 (t/compare (! t/null-set)      (! t/null-set)))
-      (is=  0 (t/compare (! a)               (! a)))
-      (test-symmetric  2 (! a)               (! b))
-      (test-symmetric  2 (! i|a)             (! i|b))
-      (test-symmetric  2 (! t/string?)       (! t/byte?))
-      (test-symmetric  1 (! a)               (! >a))
-      (test-symmetric -1 (! a)               (! <a0))
+      (is=  0 (t/compare (! a)           (! a)))
+      (test-symmetric  2 (! a)           (! b))
+      (test-symmetric  2 (! i|a)         (! i|b))
+      (test-symmetric  2 (! t/string?)   (! t/byte?))
+      (test-symmetric  1 (! a)           (! >a))
+      (test-symmetric -1 (! a)           (! <a0))
       (test-symmetric  0 (! (t/value 1)) (! (t/value 1)))
       (test-symmetric  2 (! (t/value 1)) (! (t/value 2))))
     (testing "+ OrSpec"
-      (test-symmetric -1 (! t/universal-set) (| ><0 ><1))
-      (test-symmetric  1 (! t/null-set)      (| ><0 ><1))
-      (test-symmetric  1 (! t/null-set)      (| ><0 ><1))
-      (test-symmetric  3 (! ><0)             (| ><0 ><1)) ; TODO fix test
-      (test-symmetric  3 (! ><1)             (| ><0 ><1))) ; TODO fix test
+      (test-symmetric  2 (! ><0) (| ><0 ><1))  ; TODO fix impl
+      (test-symmetric  2 (! ><1) (| ><0 ><1))) ; TODO fix impl
     (testing "+ AndSpec")
-    (testing "+ Expression"))
+    (testing "+ InferSpec")
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec")
+    (testing "+ ClassSpec"
+      (test-symmetric  2 Uc  (! a))
+      (test-symmetric  3 a   (! a))
+      (test-symmetric  2 a   (! <a0))
+      (test-symmetric  3 a   (! >a))
+      (test-symmetric -1 a   (! b))
+      (test-symmetric  3 <a0 (! a))
+      (test-symmetric  3 <a0 (! >a))
+      (test-symmetric  2 >a  (! a))
+      (test-symmetric  2 >a  (! <a0))
+      (test-symmetric  2 i|a (! i|b)))
+    (testing "+ ValueSpec"
+      (test-symmetric -1 (t/value 1)  (! (t/value 2)))
+      (test-symmetric  3 (t/value "") (! t/string?))))
   ;; TODO fix tests
   (testing "OrSpec"
     (testing "+ OrSpec"
@@ -488,8 +294,6 @@
       (testing "#{>+ ∅+} -> ∅"))
     ;; TODO fix tests
     (testing "+ AndSpec"
-      (testing "+ AndSpec")
-      (testing "+ Expression")
       ;; (if <all -1 on right-compare?> 1 3)
       ;;
       ;; Comparison annotations achieved by first comparing each element of the first/left
@@ -538,9 +342,221 @@
           ;; comparisons: [3, 3], [-1, -1, 3, 3, 3]
           (is= 3 (t/compare (| a >a+b >a0)     (& <a+b <a0 <a1 ><0 ><1)))
           ;; comparisons: [3, 3, 3], [-1, -1, -1, 3, 3]
-          (is= 3 (t/compare (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1)))))))
+          (is= 3 (t/compare (| a >a+b >a0 >a1) (& <a+b <a0 <a1 ><0 ><1))))))
+    (testing "+ InferSpec")
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec")
+    ;; TODO fix impl
+    (testing "+ ClassSpec"
+      ;; #{(< | =), (? *)    } -> <
+      ;; #{>      , (<> | ><)} -> ><
+      ;; Otherwise whatever it is
+      (testing "#{<+} -> <"
+        (is= -1 (t/compare i|<a0 (| i|>a+b i|>a0 i|>a1))))
+      (testing "#{><+} -> ><"
+        (is=  2 (t/compare i|a   (| i|><0 i|><1))))
+      (testing "#{<>+} -> <>"
+        (is=  3 (t/compare a     (| ><0 ><1))))
+      (testing "#{<+ ><+} -> <"
+        (is= -1 (t/compare i|a   (| i|>a+b i|>a0 i|><0 i|><1)))
+        (is= -1 (t/compare i|>a0 (| i|>a+b i|>a0)))) ; TODO fix impl
+      (testing "#{<+ <>+} -> <"
+        (is= -1 (t/compare a     (| >a ><0 ><1))))
+      (testing "#{=+ ><+} -> ><"
+        (is=  2 (t/compare i|a   (| i|a i|><0 i|><1))))
+      (testing "#{=+ <>+} -> <"
+        (is= -1 (t/compare a     (| a ><0 ><1))))
+      (testing "#{>+ ><+} -> ><"
+        (is=  2 (t/compare i|a   (| i|<a+b i|<a0 i|><0 i|><1))))
+      (testing "#{>+ <>+} -> ><"
+        (is=  2 (t/compare a     (| <a0 ><0 ><1))))
+      (testing "Nilable"
+        (testing "= nilabled"
+          (is= -1 (t/compare t/long?     (t/? t/long?))))
+        (testing "< nilabled"
+          (is= -1 (t/compare t/long?     (t/? t/object?))))
+        (testing "> nilabled"
+          (is=  2 (t/compare t/object?   (t/? t/long?))))
+        (testing ">< nilabled"
+          (is=  2 (t/compare t/iterable? (t/? t/comparable?))))
+        (testing "<> nilabled"
+          (is=  3 (t/compare t/long?     (t/? t/string?))))))
+    (testing "+ ValueSpec"
+      (testing "<"
+        ;;    #{"a"} <> t/byte?
+        ;;    #{"a"} <  t/string?
+        ;; -> #{"a"} <  (t/byte? ∪ t/string?)
+        (is= -1 (t/compare (t/value "a") (| t/byte? t/string?))))
+      (testing "<>"
+        ;;    #{"a"} <> t/byte?
+        ;;    #{"a"} <> t/long?
+        ;; -> #{"a"} <> (t/byte? ∪ t/long?)
+        (is= 3 (t/compare (t/value "a") (| t/byte? t/long?))))))
   (testing "AndSpec"
-    (testing "+ AndSpec")))
+    (testing "+ AndSpec")
+    (testing "+ InferSpec")
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec")
+    (testing "+ ClassSpec"
+      ;; Any ∅ -> ∅
+      ;; Otherwise whatever it is
+      (testing "#{<+} -> <"
+        (test-symmetric -1 i|a (& i|>a+b i|>a0 i|>a1)))
+      (testing "#{>+} -> >"
+        (test-symmetric  1 i|a (& i|<a+b i|<a0 i|<a1)))
+      (testing "#{><+} -> ><"
+        (test-symmetric  2 i|a (& i|><0 i|><1))) ; TODO fix impl
+      (testing "#{<>+} -> <>"
+        (test-symmetric  3 a   (& ><0 ><1))) ; TODO fix test
+      (testing "#{<+ ><+} -> ><"
+        (test-symmetric  2 a   (& i|>a+b i|>a0 i|>a1 i|><0 i|><1))) ; TODO fix impl
+      (testing "#{<+ <>+} -> <>"
+        (test-symmetric  3 a   (& >a ><0 ><1))) ; TODO fix test
+      (testing "#{=+ ><+} -> ><"
+        (test-symmetric  2 i|a (& i|a i|><0 i|><1))) ; TODO fix impl
+      (testing "#{=+ <>+} -> <>"
+        (test-symmetric  3 a   (& a ><0 ><1))) ; TODO fix test
+      (testing "#{>+ ><+} -> ><"
+        (test-symmetric  2 i|a (& i|<a+b i|<a0 i|><0 i|><1))) ; TODO fix impl
+      (testing "#{>+ <>+} -> <>"
+        (test-symmetric  3 a   (& <a0 ><0 ><1)))) ; TODO fix test
+    (testing "+ ValueSpec"
+      #_(testing ">" ; TODO fix test
+        (is= 3 (t/compare (t/value "a") (& t/string? ...))))
+      (testing "<"
+        ;;    #{"a"} < t/comparable?
+        ;;    #{"a"} < t/char-seq?
+        ;; -> #{"a"} < (t/comparable? ∩ t/char-seq?)
+        (is= -1 (t/compare (t/value "a") (& t/comparable? t/char-seq?))))
+      (testing "><"
+        ;;    #{"a"} <> t/array-list?
+        ;;    #{"a"} <  t/char-seq?
+        ;; -> #{"a"} >< (t/array-list? ∩ t/char-seq?)
+        (is=  2 (t/compare (t/value "a") (& t/array-list? t/char-seq?)))) ; TODO fix impl
+      (testing "<>"
+        ;;    #{"a"} <> t/array-list?
+        ;;    #{"a"} <> t/?
+        ;; -> #{"a"} <> (t/array-list? ∩ t/long?)
+        (is=  3 (t/compare (t/value "a") (& t/array-list? t/java-set?))))))
+  (testing "InferSpec"
+    (testing "+ InferSpec")
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec")
+    (testing "+ ClassSpec")
+    (testing "+ ValueSpec"))
+  (testing "Expression"
+    (testing "+ Expression")
+    (testing "+ ProtocolSpec")
+    (testing "+ ClassSpec")
+    (testing "+ ValueSpec"))
+  (testing "ProtocolSpec"
+    (testing "+ ProtocolSpec"
+      (is=  0 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolAll)))
+      (is=  3 (t/compare (t/isa? AProtocolAll) (t/isa? AProtocolNone))))
+    (testing "+ ClassSpec")
+    (testing "+ ValueSpec"
+      (let [values #{t/universal-set t/null-set nil {} 1 "" AProtocolAll
+                     quantum.test.core.untyped.type.AProtocolAll}]
+        (doseq [v values]
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolAll)))
+        (doseq [v [""]]
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolString)))
+        (doseq [v (disj values "")]
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolString)))
+        (doseq [v (disj values nil)]
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolNonNil)))
+        (doseq [v [nil]]
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolNonNil)))
+        (doseq [v [nil]]
+          (test-symmetric -1 (t/value v) (t/isa? AProtocolOnlyNil)))
+        (doseq [v (disj values nil)]
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolOnlyNil)))
+        (doseq [v values]
+          (test-symmetric  3 (t/value v) (t/isa? AProtocolNone))))))
+  (testing "ClassSpec"
+    (testing "+ ClassSpec"
+      (testing "Boxed Primitive + Boxed Primitive"
+        (is= 0 (t/compare t/long? t/long?))
+        (test-symmetric 3 t/long? t/int?))
+      (testing "Boxed Primitive + Final Concrete"
+        (test-symmetric 3 t/long? t/string?))
+      (testing "Boxed Primitive + Extensible Concrete"
+        (testing "< , >"
+          (test-symmetric -1  t/long? t/object?))
+        (testing "<>"
+          (test-symmetric 3 t/long? t/thread?)))
+      (testing "Boxed Primitive + Abstract"
+        (test-symmetric 3 t/long? (t/isa? java.util.AbstractCollection)))
+      (testing "Boxed Primitive + Interface"
+        (test-symmetric 3 t/long? t/char-seq?))
+      (testing "Final Concrete + Final Concrete"
+        (is= 0 (t/compare t/string? t/string?)))
+      (testing "Final Concrete + Extensible Concrete"
+        (testing "< , >"
+          (test-symmetric -1 t/string? t/object?))
+        (testing "<>"
+          (test-symmetric  3 t/string? t/array-list?)))
+      (testing "Final Concrete + Abstract")
+      (testing "Final Concrete + Interface"
+        (testing "< , >"
+          (test-symmetric -1 t/string? t/comparable?))
+        (testing "<>"
+          (test-symmetric  3 t/string? t/java-coll?)))
+      (testing "Extensible Concrete + Extensible Concrete"
+        (is= 0 (t/compare t/object? t/object?))
+        (testing "< , >"
+          (test-symmetric -1 t/array-list? t/object?))
+        (testing "<>"
+          (test-symmetric  3 t/array-list? t/thread?)))
+      (testing "Extensible Concrete + Abstract"
+        (testing "< , >"
+          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/object?)
+          (test-symmetric -1 t/array-list? (t/isa? java.util.AbstractCollection)))
+        (testing "<>"
+          (test-symmetric  3 t/thread? (t/isa? java.util.AbstractCollection))
+          (test-symmetric  3 (t/isa? java.util.AbstractCollection) t/thread?)))
+      (testing "Extensible Concrete + Interface"
+        (test-symmetric 2 t/array-list? t/char-seq?))
+      (testing "Abstract + Abstract"
+        (is=  0  (t/compare (t/isa? java.util.AbstractCollection) (t/isa? java.util.AbstractCollection)))
+        (testing "< , >"
+          (test-symmetric -1 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractCollection)))
+        (testing "<>"
+          (test-symmetric  3 (t/isa? java.util.AbstractList) (t/isa? java.util.AbstractQueue))))
+      (testing "Abstract + Interface"
+        (testing "< , >"
+          (test-symmetric -1 (t/isa? java.util.AbstractCollection) t/java-coll?))
+        (testing "><"
+          (test-symmetric  2 (t/isa? java.util.AbstractCollection) t/comparable?)))
+      (testing "Interface + Interface"
+        (testing "< , >"
+          (test-symmetric -1 t/java-coll? t/iterable?))
+        (testing "><"
+          (test-symmetric  2 t/char-seq?  t/comparable?))))
+    (testing "+ ValueSpec"
+      (testing "<"
+        (testing "Class equality"
+          (test-symmetric -1 (t/value "a") t/string?))
+        (testing "Class inheritance"
+          (test-symmetric -1 (t/value "a") t/char-seq?)
+          (test-symmetric -1 (t/value "a") t/object?)))
+      (testing "<>"
+        (test-symmetric 3 (t/value "a") t/byte?))))
+  (testing "ValueSpec"
+    (testing "+ ValueSpec"
+      (testing "="
+        (is= 0 (t/compare (t/value nil) (t/value nil)))
+        (is= 0 (t/compare (t/value 1  ) (t/value 1  )))
+        (is= 0 (t/compare (t/value "a") (t/value "a"))))
+      (testing "=, non-strict"
+        (test-symmetric 0 (t/value (vector)         ) (t/value (list)          ))
+        (test-symmetric 0 (t/value (vector (vector))) (t/value (vector (list))))
+        (test-symmetric 0 (t/value (hash-map)       ) (t/value (sorted-map)    )))
+      (testing "<>"
+        (test-symmetric 3 (t/value 1  ) (t/value 2  ))
+        (test-symmetric 3 (t/value "a") (t/value "b"))
+        (test-symmetric 3 (t/value 1  ) (t/value "a"))
+        (test-symmetric 3 (t/value nil) (t/value "a"))))))
 
 (deftest test|not
   (testing "simplification"
@@ -549,6 +565,11 @@
            t/null-set)
       (is= (! t/null-set)
            t/universal-set))
+    (testing "universal class-set"
+      (is= (! t/val?)
+           t/nil?)
+      (is= (! t/val|by-class?)
+           t/nil?))
     (testing "DeMorgan's Law"
       (is= (! (| (t/value 1)     (t/value 2)))
            (& (! (t/value 1)) (! (t/value 2))))
@@ -558,6 +579,24 @@
            (&       i|a     i|b))
       (is= (! (& (! i|a) (! i|b))) ; TODO fix impl
            (|       i|a     i|b)))))
+
+(deftest test|-
+  (testing "="
+    (is= (t/- a a)
+         t/null-set))
+  (testing "<"
+    (is= (t/- a >a)
+         t/null-set))
+  (testing "<>"
+    (is= (t/- a b)
+         a))
+  (testing ">"
+    (is= (t/- (| a b) a)
+         b)
+    (is= (t/- (| a b t/long?) a)
+         (| b t/long?)))
+  (testing "><"
+    ))
 
 (deftest test|or
   (testing "equality"
@@ -632,8 +671,7 @@
 
 (deftest test|and
   (testing "equality"
-    (is= (& i|a i|b) (& i|a i|b))
-    (is= 0 (t/compare (& i|a i|b) (& i|a i|b)))) ; TODO impl
+    (is= (& i|a i|b) (& i|a i|b)))
   (testing "null set / universal set"
     (is= (& t/universal-set t/universal-set)
          t/universal-set)
