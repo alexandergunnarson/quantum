@@ -353,7 +353,7 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] `∅)}})
 
-(def null-set (NullSetSpec.))
+(def empty-set (NullSetSpec.))
 
 (udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
   {PSpec                 nil
@@ -365,64 +365,67 @@
 
 (declare not not-spec? not-spec>inner-spec -)
 
-(defn- create-logical-spec|inner [args' s kind comparison-denotes-redundancy?]
+(defn- create-logical-spec|inner [args' s kind comparison-denotes-supersession?]
   (prl! "")
-  (let [without-redundant-args
+  (let [without-superseded-args
           (->> args'
                (uc/map+    (juxt identity #(compare s %)))
                ;; remove all args whose extensions are superseded by `s`
-               (uc/remove+ (rcomp second comparison-denotes-redundancy?))
+               (uc/remove+ (fn-> second comparison-denotes-supersession?))
                join) ; TODO elide `join`
-        _ (prl! without-redundant-args)
-        {:keys [conj-s? prefer-orig-args? s' specs]}
-          (->> without-redundant-args
-               (educe
-                 (fn ([accum] accum)
-                     ([{:as accum :keys [conj-s? prefer-orig-args? s' specs]} [s* c*]]
-                       (prl! kind conj-s? prefer-orig-args? s' specs s* c*)
-                       (case kind
-                         :and (if       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
-                                        ;;               at least one other arg
-                                  (c/or (c/= c* 3)
-                                        ;; Contradiction/null-set: (& A (! A))
-                                        (if (not-spec? s')
-                                            ;; compare not-spec to all others
-                                            (= (not-spec>inner-spec s') s*)
-                                            ;; compare spec to all not-specs
-                                            (c/and (not-spec? s*) (= s' (not-spec>inner-spec s*)))))
-                                  (do (println "BRANCH 1")
-                                      (reduced (assoc accum :conj-s? false :specs [null-set])))
-                                  (do (println "BRANCH 2")
-                                      (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
-                                                         (c/not= c* 2)
-                                                         false
-                                                         conj-s?)
-                                            ;; TODO might similar logic extend to `:or` as well?
-                                            ss* (if (not-spec? s')
-                                                    (let [diff (- s* (not s'))]
-                                                      (if (and-spec? diff)
-                                                          ;; preserve inner expansion
-                                                          (and-spec>args diff)
-                                                          [diff]))
-                                                    [s*])]
-                                        (assoc accum :conj-s? conj-s?' :specs (into specs ss*)))))
-                         :or  (if-not
-                                ;; `s` must be either `><` or `<>` w.r.t. to all other args
-                                (case c* (2 3) true false)
-                                (reduced (assoc accum :prefer-orig-args? true))
-                                (assoc accum :specs (conj specs s*))))))
-                 {:conj-s?           ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
-                                     ;; applied by being `-` from all args, not by being `conj`ed
-                                     (c/not (c/and (c/= kind :and) (not-spec? s)))
-                  :prefer-orig-args? false
-                  :s'                s
-                  :specs             []}))]
-    (if prefer-orig-args?
-        args'
-        (whenp-> specs conj-s? (conj s')))))
+        _ (prl! without-superseded-args)
+        s-redundant? (->> without-superseded-args (seq-or (fn-> second (c/= 0))))]
+    (ifs s-redundant?                     args'
+         (empty? without-superseded-args) [s]
+         (let [{:keys [conj-s? prefer-orig-args? s' specs]}
+               (->> without-superseded-args
+                    (educe
+                      (fn ([accum] accum)
+                          ([{:as accum :keys [conj-s? prefer-orig-args? s' specs]} [s* c*]]
+                            (prl! kind conj-s? prefer-orig-args? s' specs s* c*)
+                            (case kind
+                              :and (if       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
+                                             ;;               at least one other arg
+                                       (c/or (c/= c* 3)
+                                             ;; Contradiction/empty-set: (& A (! A))
+                                             (if (not-spec? s')
+                                                 ;; compare not-spec to all others
+                                                 (= (not-spec>inner-spec s') s*)
+                                                 ;; compare spec to all not-specs
+                                                 (c/and (not-spec? s*) (= s' (not-spec>inner-spec s*)))))
+                                       (do (println "BRANCH 1")
+                                           (reduced (assoc accum :conj-s? false :specs [empty-set])))
+                                       (do (println "BRANCH 2")
+                                           (let [conj-s?' (if ;; `s` must be `><` w.r.t. to all other args if it is to be `conj`ed
+                                                              (c/not= c* 2)
+                                                              false
+                                                              conj-s?)
+                                                 ;; TODO might similar logic extend to `:or` as well?
+                                                 ss* (if (not-spec? s')
+                                                         (let [diff (- s* (not s'))]
+                                                           (if (and-spec? diff)
+                                                               ;; preserve inner expansion
+                                                               (and-spec>args diff)
+                                                               [diff]))
+                                                         [s*])]
+                                             (assoc accum :conj-s? conj-s?' :specs (into specs ss*)))))
+                              :or  (if-not
+                                     ;; `s` must be either `><` or `<>` w.r.t. to all other args
+                                     (case c* (2 3) true false)
+                                     (reduced (assoc accum :prefer-orig-args? true))
+                                     (assoc accum :specs (conj specs s*))))))
+                      {:conj-s?            ;; If `s` is a `NotSpec`, and kind is `:and`, then it will be
+                                           ;; applied by being `-` from all args, not by being `conj`ed
+                                           (c/not (c/and (c/= kind :and) (not-spec? s)))
+                       :prefer-orig-args? false
+                       :s'                s
+                       :specs             []}))]
+           (if prefer-orig-args?
+               args'
+               (whenp-> specs conj-s? (conj s'))))))))
 
 (defn- create-logical-spec
-  [kind #_#{:or :and} construct-fn spec-pred spec>args args #_(fn-> count (> 1)) comparison-denotes-redundancy?]
+  [kind #_#{:or :and} construct-fn spec-pred spec>args args #_(fn-> count (> 1)) comparison-denotes-supersession?]
   (if (-> args count (c/= 1))
       (first args)
       (let [;; simplification via inner expansion ; `(| (| a b) c)` -> `(| a b c)`
@@ -443,7 +446,7 @@
                            (prl! kind args' s)
                            (if (empty? args')
                                (conj args' s)
-                               (create-logical-spec|inner args' s kind comparison-denotes-redundancy?))))
+                               (create-logical-spec|inner args' s kind comparison-denotes-supersession?))))
                      []))]
         (assert (-> simplified count (c/>= 1))) ; for internal implementation correctness
         (if (-> simplified count (c/= 1))
@@ -540,8 +543,8 @@
 
 (defn not [spec]
   (assert (spec? spec))
-  (ifs (= spec universal-set) null-set
-       (= spec null-set)      universal-set
+  (ifs (= spec universal-set) empty-set
+       (= spec empty-set)      universal-set
        (= spec val|by-class?) nil?
        (not-spec? spec)       (not-spec>inner-spec spec)
        ;; DeMorgan's Law
@@ -553,7 +556,7 @@
 (uvar/defalias ! not)
 
 (defn -
-  "Computes the difference of `s0` from `s1`.
+  "Computes the difference of `s0` from `s1` (& A (! B))
    If `s0` =       `s1`, `∅`
    If `s0` <       `s1`, `∅`
    If `s0` <>      `s1`, `s0`
@@ -562,7 +565,7 @@
   (prl! s0 s1)
   (let [c (compare s0 s1)]
     (case c
-      (0 -1) null-set
+      (0 -1) empty-set
        3     s0
       (1 2)
         (let [c0 (c/class s0) c1 (c/class s1)]
@@ -576,7 +579,7 @@
             OrSpec  (condp == c1
                       ClassSpec (let [args (->> s0 or-spec>args (uc/remove (fn1 = s1)))]
                                   (case (count args)
-                                    0 null-set
+                                    0 empty-set
                                     1 (first args)
                                     (OrSpec. args (atom nil))))))))))
 
@@ -653,7 +656,7 @@
 (defn- compare|universal+not [s0 s1]
   (let [s1|inner (not-spec>inner-spec s1)]
     (ifs (= s1|inner universal-set) 1
-         (= s1|inner null-set)      0
+         (= s1|inner empty-set)      0
          (compare s0 s1|inner))))
 
 (def- compare|universal+or       fn>)
@@ -699,11 +702,11 @@
 
 (defn- compare|not+protocol [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner null-set) 1 3)))
+    (if (= s0|inner empty-set) 1 3)))
 
 (defn- compare|not+class [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner null-set)
+    (if (= s0|inner empty-set)
         1
         (case (compare s0|inner s1)
           ( 1 0) 3
@@ -712,7 +715,7 @@
 
 (defn- compare|not+value [s0 s1]
   (let [s0|inner (not-spec>inner-spec s0)]
-    (if (= s0|inner null-set)
+    (if (= s0|inner empty-set)
         1
         ;; nothing is ever < ValueSpec (and therefore never ><)
         (case (compare s0|inner s1)
@@ -721,15 +724,17 @@
 
 ;; ----- OrSpec ----- ;;
 
+;; TODO performance can be improved here by doing fewer comparisons
 (defn- compare|or+or [^OrSpec s0 ^OrSpec s1]
   (let [l (->> s0 .-args (seq-and (fn1 < s1)))
         r (->> s1 .-args (seq-and (fn1 < s0)))]
-        (prl! s0 s1
-              (->> s0 .-args (map (fn1 compare s1)))
-              (->> s1 .-args (map (fn1 compare s0))))
     (if l
         (if r 0 -1)
-        (if r 1  3))))
+        (if r
+            1
+            (if (->> s0 .-args (seq-and (fn1 <> s1)))
+                3
+                2)))))
 
 (defn- compare|or+and [^OrSpec s0 ^AndSpec s1]
   (let [r (->> s1 .-args (seq-and (fn1 < s0)))]
@@ -983,7 +988,7 @@
          (-def val?          (not nil?))
          (-def val|by-class? (or object? #?@(:cljs [js/String js/Symbol])))
 
-         (-def none?         null-set)
+         (-def none?         empty-set)
          (-def any?          universal-set)
 
 ;; ===== PRIMITIVES ===== ;;
