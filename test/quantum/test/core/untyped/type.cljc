@@ -17,6 +17,12 @@
     [quantum.untyped.core.type         :as t
       :refer [& | !]]))
 
+(defmacro test-comparisons>comparisons [[_ _ a b]]
+  `[[~@(for [a* (rest a)]
+         `(t/compare ~a* ~b))]
+    [~@(for [b* (rest b)]
+         `(t/compare ~b* ~a))]])
+
 (is= -1 (t/compare (t/value 1) t/numerically-byte?))
 
 (is= (& t/long? (>expr (fn1 = 1)))
@@ -261,93 +267,85 @@
       ;; to the entire second/right, then comparing each element of the second/right to the
       ;; entire first/left
       (testing "#{<}, #{<}"
-        ;; comparisons:        < <                    < <
-        (test-comparison  0 (| a b)                (| a b))
-        ;; comparisons:        <      <               <      <
-        (test-comparison  0 (| i|>a+b i|>a0)       (| i|>a+b i|>a0)))
+        ;; comparisons:        < <                        < <
+        (test-comparison  0 (| a b)                    (| a b))
+        ;; comparisons:            <      <               <      <
+        (test-comparison  0 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0)))
       (testing "#{<}, #{<, ><}"
-        ;; comparisons:        <      <               <      <     ><    ><
-        (test-comparison -1 (| i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
-        ;; comparisons:        <      <               <      <     ><    ><    ><
-        (test-comparison -1 (| i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
-        ;; comparisons:        <      <     <         <      <     <     ><    ><
-        (test-comparison -1 (| i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
+        ;; comparisons:            <      <               <      <     ><    ><
+        (test-comparison -1 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|><0 i|><1))
+        ;; comparisons:            <      <               <      <     ><    ><    ><
+        (test-comparison -1 (|     i|>a+b i|>a0)       (| i|>a+b i|>a0 i|>a1 i|><0 i|><1))
+        ;; comparisons:            <      <     <         <      <     <     ><    ><
+        (test-comparison -1 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0 i|>a1 i|><0 i|><1)))
       (testing "#{<, ><}, #{<}"
-        ;; comparisons:        <      <     ><        <      <
-        (test-comparison  1 (| i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0)))
+        ;; comparisons:            <      <     ><        <      <
+        (test-comparison  1 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0))
+        ;; comparisons:        ><  <     <                <     <
+        (test-comparison  1 (| i|a i|><0 i|><1)        (| i|><0 i|><1)))
       (testing "#{<, ><}, #{<, ><}"
-        ;; comparisons:        <      ><              <                  ><
-        (test-comparison  2 (| i|>a+b i|>a0)       (| i|>a+b             i|><0))
-        ;; comparisons:        <      ><    ><        <                  ><    ><
-        (test-comparison  2 (| i|>a+b i|>a0 i|>a1) (| i|>a+b             i|><0 i|><1))
-        ;; comparisons:        <      <     ><        <      <           ><    ><
-        (test-comparison  3 (| i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0       i|><0 i|><1)))
+        ;; comparisons:            <      ><              <                  ><
+        (test-comparison  2 (|     i|>a+b i|>a0)       (| i|>a+b             i|><0))
+        ;; comparisons:            <      ><    ><        <                  ><    ><
+        (test-comparison  2 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b             i|><0 i|><1))
+        ;; comparisons:            <      <     ><        <      <           ><    ><
+        (test-comparison  2 (|     i|>a+b i|>a0 i|>a1) (| i|>a+b i|>a0       i|><0 i|><1))
+        ;; comparisons:        <   <      ><              <                  ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|a                i|><0))
+        ;; comparisons:        <   ><     ><              <                  ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|a                i|><0 i|><1))
+        ;; comparisons:        ><  <                                         <     ><
+        (test-comparison  2 (| i|a i|><0)              (|                    i|><0 i|><1))
+        ;; comparisons:        ><        <     ><                                  ><    <
+        (test-comparison  2 (| i|a       i|><1 i|><2)  (|                    i|><0 i|><1))
+        ;; comparisons:        ><  ><    <                                         <     ><
+        (test-comparison  2 (| i|a i|><0 i|><1)        (|                          i|><1 i|><2)))
+      (testing "#{<, ><}, #{><}"
+        ;; comparisons:        <   ><                     ><     ><
+        (test-comparison  2 (| i|a i|><0)              (| i|>a+b i|>a0))
+        ;; comparisons:        <   ><    ><               ><     ><
+        (test-comparison  2 (| i|a i|><0 i|><1)        (| i|>a+b i|>a0))
+        ;; comparisons:        <   ><                     ><     ><    ><
+        (test-comparison  2 (| i|a i|><0)              (| i|>a+b i|>a0 i|>a1))
+        ;; comparisons:        <   ><    ><               ><     ><    ><
+        (test-comparison  2 (| i|a i|><0 i|><1)        (| i|>a+b i|>a0 i|>a1)))
+      (testing "#{<, <>}, #{<, <>}"
+        ;; comparisons:        <  <>                      <      <>
+        (test-comparison  2 (| a  b)                   (| a      ><1))
+        ;; comparisons:        <> <                       <      <>
+        (test-comparison  2 (| a  b)                   (| b      ><1)))
       (testing "#{<, <>}, #{><, <>}"
-        ;; comparisons:        <, <>                  >< <>  <>
-        (test-comparison  2 (| a  b)               (| >a ><0 ><1)))
+        ;; comparisons:        <, <>                      >< <>  <>
+        (test-comparison  2 (| a  b)                   (| >a ><0 ><1)))
+      (testing "#{><}, #{<, ><}"
+        ;; comparisons:        ><  ><     ><              <                  ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b             i|><0 i|><1))
+        ;; comparisons:        ><  ><     ><    ><        <                  ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b             i|><0 i|><1))
+        ;; comparisons:        ><  ><     ><              <      <           ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0       i|><0 i|><1))
+        ;; comparisons:        ><  ><     ><    ><        <      <           ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0       i|><0 i|><1))
+        ;; comparisons:        ><  ><     ><              <      <     <     ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0)       (| i|<a+b i|<a0 i|<a1 i|><0 i|><1))
+        ;; comparisons:        ><  ><     ><    ><        <      <     <     ><    ><
+        (test-comparison  2 (| i|a i|>a+b i|>a0 i|>a1) (| i|<a+b i|<a0 i|<a1 i|><0 i|><1)))
+      (testing "#{><}, #{><}"
+        ;; comparisons:        ><  ><                                        ><    ><
+        (test-comparison  2 (| i|a i|><2)              (|                    i|><0 i|><1))
+        ;; comparisons:        ><  ><                                              ><    ><
+        (test-comparison  2 (| i|a i|><0)              (|                          i|><1 i|><2)))
       (testing "#{<>}, #{<>}"
-        ;; comparisons:        <> <>                     <>  <>
-        (test-comparison  3 (| a  b)               (|    ><0 ><1))
-
-
-        ;; TODO finish these up and the below ones
-        (testing "+ #{= ∅+}"
-          ;; comparisons: [3, 3], [-1, 3]
-          (test-comparison  3 (| a >a+b >a0)     (| a ><0))
-          ;; comparisons: [3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (| a ><0 ><1)))
-        (testing "+ #{>+ ∅+}"
-          ;; comparisons: [3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (| <a+b         ><0 ><1))
-          ;; comparisons: [3, 3, 3], [-1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (| <a+b         ><0 ><1))
-          ;; comparisons: [3, 3], [-1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (| <a+b <a0     ><0 ><1))
-          ;; comparisons: [3, 3, 3], [-1, -1, 3 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (| <a+b <a0     ><0 ><1))
-          ;; comparisons: [3, 3], [-1, -1, 3, 3, 3]
-          (test-comparison  3 (| a >a+b >a0)     (| <a+b <a0 <a1 ><0 ><1))
-          ;; comparisons: [3, 3, 3], [-1, -1, -1, 3, 3]
-          (test-comparison  3 (| a >a+b >a0 >a1) (| <a+b <a0 <a1 ><0 ><1))))
-      (testing "#{= ∅+}"
-        (testing "+ #{<+}"
-          ;; comparisons: [-1, 3], [3, 3]
-          (test-comparison  3 (| a ><0)           (| >a+b >a0))
-          ;; comparisons: [-1, 3, 3], [3, 3]
-          (test-comparison  3 (| a ><0 ><1)        (| >a+b >a0))
-          ;; comparisons: [-1, 3], [3, 3, 3]
-          (test-comparison  3 (| a ><0)           (| >a+b >a0 >a1))
-          ;; comparisons: [-1, 3, 3], [3, 3, 3]
-          (test-comparison  3 (| a ><0 ><1)        (| >a+b >a0 >a1)))
-        (testing "+ #{∅+}"
-          ;; comparisons: [3, -1], [-1, 3]
-          (test-comparison  3 (| a ><0)     (| ><0 ><1))
-          ;; comparisons: [3, -1, -1], [-1, -1]
-          (test-comparison  1 (| a ><0 ><1)  (| ><0 ><1))
-          ;; comparisons: [3, 3], [3, 3]
-          (test-comparison  3 (| a ><2)     (| ><0 ><1))
-          ;; comparisons: [3, 3, -1], [3, -1]
-          (test-comparison  3 (| a ><2 ><1)  (| ><0 ><1))
-          ;; comparisons: [3, 3], [3, 3]
-          (test-comparison  3 (| a ><0)     (| ><1 ><2))
-          ;; comparisons: [3, 3, -1], [-1, 3]
-          (test-comparison  3 (| a ><0 ><1)  (| ><1 ><2)))
-        (testing "+ #{<+ ∅+}")  ;; TODO flesh out (?)
-        (testing "+ #{= ∅+}")   ;; TODO flesh out (?)
-        (testing "+ #{>+ ∅+}")) ;; TODO flesh out (?)
-
-      (testing "#{<+ ∅+} -> <")
-      (testing "#{= ∅+} -> <")
-      (testing "#{>+ ∅+} -> ∅"))
+        ;; comparisons:        <> <>                         <>  <>
+        (test-comparison  3 (| a  b)                   (|    ><0 ><1))))
     ;; TODO fix tests/impl
     (testing "+ AndSpec"
-      ;; (if <all -1 on right-compare?> 1 3)
-      ;;
       ;; Comparison annotations achieved by first comparing each element of the first/left
       ;; to the entire second/right, then comparing each element of the second/right to the
       ;; entire first/left
       (testing "#{= <+} -> #{<+}"
         (testing "+ #{<+}"
+          test-comparisons>comparisons
           ;; comparisons: [-1, -1], [-1, -1]
           (test-comparison  1 (| a >a+b >a0)     (& >a+b >a0))
           ;; comparisons: [-1, -1, 3], [-1, -1]
@@ -395,9 +393,6 @@
     (testing "+ ProtocolSpec")
     ;; TODO fix impl
     (testing "+ ClassSpec"
-      ;; #{(< | =), (? *)    } -> <
-      ;; #{>      , (<> | ><)} -> ><
-      ;; Otherwise whatever it is
       (testing "#{<+} -> <"
         (test-comparison -1 i|<a0 (| i|>a+b i|>a0 i|>a1)))
       (testing "#{><+} -> ><"
@@ -444,7 +439,7 @@
             (test-comparison -1 (t/value 1) (| (t/value 2) (t/value 3) (t/value 1))))))
       (testing "arg ="
         (testing "+ arg <>"
-          (test-comparison -1 t/nil?      (| t/nil? t/string?))))
+          (test-comparison -1 t/nil?        (| t/nil? t/string?))))
       (testing "arg <>"
         (testing "+ arg <>"
           (test-comparison  3 (t/value "a") (| t/byte? t/long?))

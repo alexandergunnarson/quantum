@@ -348,19 +348,19 @@
 
 (-def spec? PSpec)
 
-(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} NullSetSpec []
+(udt/deftype ^{:doc "Equivalent to `(constantly false)`"} EmptySetSpec []
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] `∅)}})
 
-(def empty-set (NullSetSpec.))
+(def empty-set (EmptySetSpec.))
 
 (udt/deftype ^{:doc "Equivalent to `(constantly true)`"} UniversalSetSpec []
   {PSpec                 nil
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn      {-edn ([this] `U)}})
 
-;; The set of all sets that do not include themselves (including the null set)
+;; The set of all sets that do not include themselves (including the empty set)
 (def universal-set (UniversalSetSpec.))
 
 (declare not not-spec? not-spec>inner-spec -)
@@ -422,7 +422,7 @@
                        :specs             []}))]
            (if prefer-orig-args?
                args'
-               (whenp-> specs conj-s? (conj s'))))))))
+               (whenp-> specs conj-s? (conj s')))))))
 
 (defn- create-logical-spec
   [kind #_#{:or :and} construct-fn spec-pred spec>args args #_(fn-> count (> 1)) comparison-denotes-supersession?]
@@ -544,7 +544,7 @@
 (defn not [spec]
   (assert (spec? spec))
   (ifs (= spec universal-set) empty-set
-       (= spec empty-set)      universal-set
+       (= spec empty-set)     universal-set
        (= spec val|by-class?) nil?
        (not-spec? spec)       (not-spec>inner-spec spec)
        ;; DeMorgan's Law
@@ -649,14 +649,14 @@
   (err! "TODO dispatch" {:s0 s0 :s0|type (type s0)
                          :s1 s1 :s1|type (type s1)}))
 
-;; ----- UniversalSpec ----- ;;
+;; ----- UniversalSet ----- ;;
 
-(def- compare|universal+null     fn>)
+(def- compare|universal+empty    fn>)
 
 (defn- compare|universal+not [s0 s1]
   (let [s1|inner (not-spec>inner-spec s1)]
     (ifs (= s1|inner universal-set) 1
-         (= s1|inner empty-set)      0
+         (= s1|inner empty-set)     0
          (compare s0 s1|inner))))
 
 (def- compare|universal+or       fn>)
@@ -667,21 +667,21 @@
 (def- compare|universal+class    fn>)
 (def- compare|universal+value    fn>)
 
-;; ----- NullSpec ----- ;;
+;; ----- EmptySet ----- ;;
 
-(defn- compare|null+not [s0 s1]
+(defn- compare|empty+not [s0 s1]
   (let [s1|inner (not-spec>inner-spec s1)]
     (if (= s1|inner universal-set)
          0
         -1)))
 
-(def- compare|null+or            fn<)
-(def- compare|null+and           fn<)
-(def- compare|null+infer         compare|todo)
-(def- compare|null+expr          compare|todo)
-(def- compare|null+protocol      fn<)
-(def- compare|null+class         fn<)
-(def- compare|null+value         fn<)
+(def- compare|empty+or            fn<)
+(def- compare|empty+and           fn<)
+(def- compare|empty+infer         compare|todo)
+(def- compare|empty+expr          compare|todo)
+(def- compare|empty+protocol      fn<)
+(def- compare|empty+class         fn<)
+(def- compare|empty+value         fn<)
 
 ;; ----- NotSpec ----- ;;
 
@@ -865,7 +865,7 @@
   (let [inverted (fn [f] (fn [s0 s1] (inverse (f s1 s0))))]
     {UniversalSetSpec
        {UniversalSetSpec fn=
-        NullSetSpec      compare|universal+null
+        EmptySetSpec     compare|universal+empty
         NotSpec          compare|universal+not
         OrSpec           compare|universal+or
         AndSpec          compare|universal+and
@@ -874,20 +874,20 @@
         ProtocolSpec     compare|universal+protocol
         ClassSpec        compare|universal+class
         ValueSpec        compare|universal+value}
-     NullSetSpec
-       {UniversalSetSpec (inverted compare|universal+null)
-        NullSetSpec      fn=
-        NotSpec          compare|null+not
-        OrSpec           compare|null+or
-        AndSpec          compare|null+and
-        InferSpec        compare|null+infer
-        Expression       compare|null+expr
-        ProtocolSpec     compare|null+protocol
-        ClassSpec        compare|null+class
-        ValueSpec        compare|null+value}
+     EmptySetSpec
+       {UniversalSetSpec (inverted compare|universal+empty)
+        EmptySetSpec     fn=
+        NotSpec          compare|empty+not
+        OrSpec           compare|empty+or
+        AndSpec          compare|empty+and
+        InferSpec        compare|empty+infer
+        Expression       compare|empty+expr
+        ProtocolSpec     compare|empty+protocol
+        ClassSpec        compare|empty+class
+        ValueSpec        compare|empty+value}
      NotSpec
        {UniversalSetSpec (inverted compare|universal+not)
-        NullSetSpec      (inverted compare|null+not)
+        EmptySetSpec     (inverted compare|empty+not)
         NotSpec          compare|not+not
         OrSpec           compare|not+or
         AndSpec          compare|not+and
@@ -898,7 +898,7 @@
         ValueSpec        compare|not+value}
      OrSpec
        {UniversalSetSpec (inverted compare|universal+or)
-        NullSetSpec      (inverted compare|null+or)
+        EmptySetSpec     (inverted compare|empty+or)
         NotSpec          (inverted compare|not+or)
         OrSpec           compare|or+or
         AndSpec          compare|or+and
@@ -909,7 +909,7 @@
         ValueSpec        (inverted compare|value+or)}
      AndSpec
        {UniversalSetSpec (inverted compare|universal+and)
-        NullSetSpec      (inverted compare|null+and)
+        EmptySetSpec     (inverted compare|empty+and)
         NotSpec          compare|todo
         OrSpec           (inverted compare|or+and)
         AndSpec          compare|and+and
@@ -921,7 +921,7 @@
      ;; TODO review this
      InferSpec
        {UniversalSetSpec (inverted compare|universal+infer)
-        NullSetSpec      (inverted compare|null+infer)
+        EmptySetSpec     (inverted compare|empty+infer)
         NotSpec          compare|todo #_fn>
         OrSpec           compare|todo #_fn>
         AndSpec          compare|todo #_fn>
@@ -933,7 +933,7 @@
      ;; TODO review this
      Expression
        {UniversalSetSpec (inverted compare|universal+expr)
-        NullSetSpec      (inverted compare|null+expr)
+        EmptySetSpec     (inverted compare|empty+expr)
         NotSpec          compare|todo
         OrSpec           compare|todo
         AndSpec          compare|todo
@@ -944,7 +944,7 @@
         ValueSpec        compare|expr+value}
      ProtocolSpec
        {UniversalSetSpec (inverted compare|universal+protocol)
-        NullSetSpec      (inverted compare|null+protocol)
+        EmptySetSpec     (inverted compare|empty+protocol)
         NotSpec          (inverted compare|not+protocol)
         OrSpec           compare|todo
         AndSpec          compare|todo
@@ -958,7 +958,7 @@
         ValueSpec        (inverted compare|value+protocol)}
      ClassSpec
        {UniversalSetSpec (inverted compare|universal+class)
-        NullSetSpec      (inverted compare|null+class)
+        EmptySetSpec     (inverted compare|empty+class)
         NotSpec          (inverted compare|not+class)
         OrSpec           compare|class+or
         AndSpec          compare|class+and
@@ -969,7 +969,7 @@
         ValueSpec        compare|class+value}
      ValueSpec
        {UniversalSetSpec (inverted compare|universal+value)
-        NullSetSpec      (inverted compare|null+value)
+        EmptySetSpec     (inverted compare|empty+value)
         NotSpec          (inverted compare|not+value)
         OrSpec           compare|value+or
         AndSpec          compare|value+and
@@ -984,37 +984,37 @@
 ;; ===== GENERAL ===== ;;
 
          (-def nil?          (value nil))
-         (-def object?       #?(:clj java.lang.Object :cljs js/Object))
-         (-def val?          (not nil?))
+         (-def object?       (isa? #?(:clj java.lang.Object :cljs js/Object)))
          (-def val|by-class? (or object? #?@(:cljs [js/String js/Symbol])))
+         (-def val?          (not nil?))
 
          (-def none?         empty-set)
          (-def any?          universal-set)
 
 ;; ===== PRIMITIVES ===== ;;
 
-         (-def                       boolean?  #?(:clj Boolean :cljs js/Boolean))
+         (-def                       boolean?  (isa? #?(:clj Boolean :cljs js/Boolean)))
          (-def                       ?boolean? (? boolean?))
 
-#?(:clj  (-def                       byte?     Byte))
+#?(:clj  (-def                       byte?     (isa? Byte)))
 #?(:clj  (-def                       ?byte?    (? byte?)))
 
-#?(:clj  (-def                       char?     Character))
+#?(:clj  (-def                       char?     (isa? Character)))
 #?(:clj  (-def                       ?char?    (? char?)))
 
-#?(:clj  (-def                       short?    Short))
+#?(:clj  (-def                       short?    (isa? Short)))
 #?(:clj  (-def                       ?short?   (? short?)))
 
-#?(:clj  (-def                       int?      Integer))
+#?(:clj  (-def                       int?      (isa? Integer)))
 #?(:clj  (-def                       ?int?     (? int?)))
 
-#?(:clj  (-def                       long?     Long))
+#?(:clj  (-def                       long?     (isa? Long)))
 #?(:clj  (-def                       ?long?    (? long?)))
 
-#?(:clj  (-def                       float?    Float))
+#?(:clj  (-def                       float?    (isa? Float)))
 #?(:clj  (-def                       ?float?   (? float?)))
 
-         (-def                       double?   #?(:clj Double :cljs js/Number))
+         (-def                       double?   (isa? #?(:clj Double :cljs js/Number)))
          (-def                       ?double?  (? double?))
 
          (-def primitive?            (or boolean? #?@(:clj [byte? char? short? int? long? float?]) double?))
