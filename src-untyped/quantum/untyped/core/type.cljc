@@ -363,17 +363,17 @@
 ;; The set of all sets that do not include themselves (including the empty set)
 (def universal-set (UniversalSetSpec.))
 
-(declare not not-spec? not-spec>inner-spec -)
+(declare not not-spec? not-spec>inner-spec - and-spec? and-spec>args val|by-class?)
 
 (defn- create-logical-spec|inner [args' s kind comparison-denotes-supersession?]
-  (prl! "")
+  #_(prl! "")
   (let [without-superseded-args
           (->> args'
                (uc/map+    (juxt identity #(compare s %)))
                ;; remove all args whose extensions are superseded by `s`
                (uc/remove+ (fn-> second comparison-denotes-supersession?))
                join) ; TODO elide `join`
-        _ (prl! without-superseded-args)
+        ;_ (prl! without-superseded-args)
         s-redundant? (->> without-superseded-args (seq-or (fn-> second (c/= 0))))]
     (ifs s-redundant?                     args'
          (empty? without-superseded-args) [s]
@@ -382,7 +382,7 @@
                     (educe
                       (fn ([accum] accum)
                           ([{:as accum :keys [conj-s? prefer-orig-args? s' specs]} [s* c*]]
-                            (prl! kind conj-s? prefer-orig-args? s' specs s* c*)
+                            #_(prl! kind conj-s? prefer-orig-args? s' specs s* c*)
                             (case kind
                               :and (if       ;; Disjointness: the extension of this arg is disjoint w.r.t. that of
                                              ;;               at least one other arg
@@ -443,7 +443,7 @@
                    (educe
                      (fn ([args'] args')
                          ([args' s]
-                           (prl! kind args' s)
+                           #_(prl! kind args' s)
                            (if (empty? args')
                                (conj args' s)
                                (create-logical-spec|inner args' s kind comparison-denotes-supersession?))))
@@ -562,7 +562,7 @@
    If `s0` <>      `s1`, `s0`
    If `s0` > | ><  `s1`, `s0` with all elements of `s1` removed"
   [s0 #_spec? s1 #_spec?]
-  (prl! s0 s1)
+  #_(prl! s0 s1)
   (let [c (compare s0 s1)]
     (case c
       (0 -1) empty-set

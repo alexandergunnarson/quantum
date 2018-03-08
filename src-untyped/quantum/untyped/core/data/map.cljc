@@ -34,7 +34,7 @@
 ;; =======================
 
 #?(:clj (def int-map       imap/int-map  ))
-#?(:clj (defalias hash-map:long->ref int-map))
+#?(:clj (defalias hash-map|long->ref int-map))
 (defalias array-map core/array-map)
 (defalias hash-map  core/hash-map )
 
@@ -193,20 +193,20 @@
       kvs)))
 
 ; TODO generate these functions via macros
-#?(:clj (defn ^Int2ReferenceOpenHashMap !hash-map:int->ref [] (Int2ReferenceOpenHashMap.)))
-#?(:clj (defalias !hash-map:int->object !hash-map:int->ref))
+#?(:clj (defn ^Int2ReferenceOpenHashMap !hash-map|int->ref [] (Int2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map|int->object !hash-map|int->ref))
 
-#?(:clj (defn ^Long2LongOpenHashMap !hash-map:long->long [] (Long2LongOpenHashMap.)))
-#?(:clj (defalias !hash-map:long !hash-map:long->long))
+#?(:clj (defn ^Long2LongOpenHashMap !hash-map|long->long [] (Long2LongOpenHashMap.)))
+#?(:clj (defalias !hash-map|long !hash-map|long->long))
 
-#?(:clj (defn ^Long2ReferenceOpenHashMap !hash-map:long->ref [] (Long2ReferenceOpenHashMap.)))
-#?(:clj (defalias !hash-map:long->object !hash-map:long->ref))
+#?(:clj (defn ^Long2ReferenceOpenHashMap !hash-map|long->ref [] (Long2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map|long->object !hash-map|long->ref))
 
-#?(:clj (defn ^Double2ReferenceOpenHashMap !hash-map:double->ref [] (Double2ReferenceOpenHashMap.)))
-#?(:clj (defalias !hash-map:double->object !hash-map:double->ref))
+#?(:clj (defn ^Double2ReferenceOpenHashMap !hash-map|double->ref [] (Double2ReferenceOpenHashMap.)))
+#?(:clj (defalias !hash-map|double->object !hash-map|double->ref))
 
-#?(:clj (defn ^Reference2LongOpenHashMap !hash-map:ref->long [] (Reference2LongOpenHashMap.)))
-#?(:clj (defalias !hash-map:object->long !hash-map:ref->long))
+#?(:clj (defn ^Reference2LongOpenHashMap !hash-map|ref->long [] (Reference2LongOpenHashMap.)))
+#?(:clj (defalias !hash-map|object->long !hash-map|ref->long))
 
 
 (defn bubble-max-key [k coll] ; TODO move

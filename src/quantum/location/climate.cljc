@@ -21,7 +21,7 @@
     [quantum.core.convert        :as conv]
     [quantum.core.data.primitive :as prim]
     [quantum.core.data.set
-      :refer [!hash-set:double]]
+      :refer [!hash-set|double]]
     [quantum.core.data.vector
       :refer [!vector]]
     [quantum.core.fn             :as fn
@@ -177,7 +177,7 @@
          (filter+ val?)
          #_(distinct-by-storing+ ; TODO really, we may want to exclude extremely similar points
            (fn [^objects xs] (second xs))
-           (fn [] (!hash-set:double))
+           (fn [] (!hash-set|double))
            (fn [^DoubleOpenHashSet seen ^double x] (contains? seen x))
            (fn [^DoubleOpenHashSet seen ^double x] (conj! seen x)))
          )))

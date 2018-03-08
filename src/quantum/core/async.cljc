@@ -24,7 +24,7 @@
               map, map-indexed map-indexed+
               seq-and]]
     [quantum.core.data.vector          :as vec
-      :refer [!+vector:sized]]
+      :refer [!+vector|sized]]
     [quantum.core.error                :as err
       :refer [>ex-info TODO catch-all]]
     [quantum.core.fn

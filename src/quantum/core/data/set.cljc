@@ -43,12 +43,12 @@
         (defalias split-at            avl/split-at     )
 
 #?(:clj (defalias long-set            imap/int-set))
-#?(:clj (defalias set:long            long-set))
+#?(:clj (defalias set|long            long-set))
         (defalias hash-set            core/hash-set)
-#?(:clj (defalias hash-set:long       set:long))
+#?(:clj (defalias hash-set|long       set|long))
 #?(:clj (defalias dense-long-set      imap/dense-int-set))
-#?(:clj (defalias set:long:dense      dense-long-set))
-#?(:clj (defalias hash-set:long:dense set:long:dense))
+#?(:clj (defalias set|long|dense      dense-long-set))
+#?(:clj (defalias hash-set|long|dense set|long|dense))
 
 #?(:clj (defalias hash-set? uset/hash-set?))
 
@@ -208,6 +208,6 @@
       vs)))
 
 ; TODO generate these functions via macros
-#?(:clj (defn ^IntOpenHashSet    !hash-set:int    [] (IntOpenHashSet.   )))
-#?(:clj (defn ^LongOpenHashSet   !hash-set:long   [] (LongOpenHashSet.  )))
-#?(:clj (defn ^DoubleOpenHashSet !hash-set:double [] (DoubleOpenHashSet.)))
+#?(:clj (defn ^IntOpenHashSet    !hash-set|int    [] (IntOpenHashSet.   )))
+#?(:clj (defn ^LongOpenHashSet   !hash-set|long   [] (LongOpenHashSet.  )))
+#?(:clj (defn ^DoubleOpenHashSet !hash-set|double [] (DoubleOpenHashSet.)))

@@ -12,7 +12,7 @@
 
 ; ===== SUBSET SELECTION ===== ;
 
-(defn subset:genetic
+(defn subset|genetic
   "Genetic-algorithm-based feature selection. This method finds many (random)
    subsets of variables of expected classification power using a genetic
    algorithm. The \"fitness\" of each subset of variables is determined by its
@@ -25,14 +25,14 @@
 
 ; ===== FEATURE RANKING ===== ;
 
-(defn rank:signal-noise-ratio
+(defn rank|signal-noise-ratio
   "The signal-to-noise (S2N) metric ratio is a univariate feature ranking metric,
    which can be used as a feature selection criterion for binary classification
    problems."
   {:implemented-by '#{smile.feature.SignalNoiseRatio}}
   [?] (TODO))
 
-(defn rank:sum-squares-ratio
+(defn rank|sum-squares-ratio
   "The ratio of between-groups to within-groups sum of squares is a univariate
    feature ranking metric which can be used as a feature selection criterion
    for multi-class classification problems."

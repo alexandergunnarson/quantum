@@ -62,20 +62,18 @@
 #?(:clj (defaliases u defonce def- defmacro-))
 ; ============ MANIPULATION + OTHER ============
 
-; CLJS compatible only if you port |alter-var-root| as in-ns, def, in-ns
 #?(:clj
 (defn reset-var!
-  "Like |reset!| but for vars."
+  "Like `reset!` but for vars."
   {:attribution "alexandergunnarson"}
   [var-0 val-f]
   ;(.bindRoot #'clojure.core/ns ns+)
   ;(alter-meta! #'clojure.core/ns merge (meta #'ns+))
   (alter-var-root var-0 (fn [_] val-f))))
 
-; CLJS compatible
 #?(:clj
-(defn swap-var!
-  "Like |swap!| but for vars."
+(defn update-var!
+  "Non-atomic var update"
   {:attribution "alexandergunnarson"}
   ([var-0 f]
   (do (alter-var-root var-0 f)
@@ -91,8 +89,7 @@
   "Sets each var in ~@vars to nil."
   {:attribution "alexandergunnarson"}
   [& vars]
-  (doseq [v vars]
-    (reset-var! v nil))))
+  (doseq [v vars] (reset-var! v nil))))
 
 #?(:clj
 (defn alias-ns

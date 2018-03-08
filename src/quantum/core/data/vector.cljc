@@ -39,7 +39,7 @@
 (defalias +vector vector)
 (def !+vector (rcomp vector transient))
 
-(defn !+vector:sized [n]
+(defn !+vector|sized [n]
   (let [xs (!+vector)]
     (dotimes [i n] (conj! xs nil))
     xs))
@@ -168,4 +168,4 @@
 #_DoubleArrayList
 #_ObjectArrayList
 
-#?(:clj (defn ^LongArrayList !vector:long [] (LongArrayList.)))
+#?(:clj (defn ^LongArrayList !vector|long [] (LongArrayList.)))

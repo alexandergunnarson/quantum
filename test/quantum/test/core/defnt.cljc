@@ -869,7 +869,7 @@
                 ([a0 a1 a2 xs] (transformer xs (xf a0 a1 a2))))
           (throw (ex-info "Unhandled arity for transducer" nil)))))
 
-(defnt map:transducer [f ?]
+(defnt map|transducer [f ?]
   ; TODO what does this actually entail? should it be that it errors on `f`s that don't implement *all* possible arities?
   (fnt [rf ?]
     (fn ; TODO auto-generate? ; TODO `fnt` ?
@@ -880,7 +880,7 @@
       ([ret x0 x1 x2]      (rf ret       (f x0 x1 x2)))
       ([ret x0 x1 x2 & xs] (rf ret (apply f x0 x1 x2 xs))))))
 
-(def map+ (transducer->transformer 1 map:transducer))
+(def map+ (transducer->transformer 1 map|transducer))
 
 (defnt get-in*
   ([x ? k0 ?]                                              (get x k0))

@@ -202,7 +202,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           CAT            }=====================================================
 ;=================================================={                          }=====================================================
-(defn cat:transducer [rf]
+(defn cat|transducer [rf]
   (let [rrf (preserving-reduced rf)]
     (fn
       ([] (rf))
@@ -210,7 +210,7 @@
       ([ret x] (reduce rrf ret x))
       ([ret k v] (reduce rrf ret [k v]))))) ; TODO is this arity right?
 
-(defn cat+ [xs] (transformer xs cat:transducer))
+(defn cat+ [xs] (transformer xs cat|transducer))
 
 (defn foldcat+
   "Equivalent to `(fold cat+ conj! xs)`"
@@ -219,7 +219,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={           MAP            }=====================================================
 ;=================================================={                          }=====================================================
-(defn map:transducer [f]
+(defn map|transducer [f]
   (fn [rf]
     (fn ; TODO auto-generate?
       ([]                  (rf))
@@ -229,36 +229,36 @@
       ([ret x0 x1 x2]      (rf ret       (f x0 x1 x2)))
       ([ret x0 x1 x2 & xs] (rf ret (apply f x0 x1 x2 xs))))))
 
-(def map+ (transducer->transformer 1 map:transducer))
+(def map+ (transducer->transformer 1 map|transducer))
 
 ; ----- MAP-INDEXED ----- ;
 
-(defn map-indexed:transducer-base
+(defn map-indexed|transducer-base
   [f !box inc!f]
   (fn [rf]
     (let [*i (!box -1)]
       (aritoid rf rf (fn [ret x] (rf ret (f (inc!f *i) x)))))))
 
-(defn !map-indexed:transducer
+(defn !map-indexed|transducer
   "Like the transducer of `core/map-indexed`, but uses a mutable variable internally
    instead of a `volatile`.
    As the name suggests, this transducer is not thread-safe."
-  [f] (map-indexed:transducer-base f (fn [^long i] (! i)) inc!))
+  [f] (map-indexed|transducer-base f (fn [^long i] (! i)) inc!))
 
-(def !map-indexed+ (transducer->transformer 1 !map-indexed:transducer))
+(def !map-indexed+ (transducer->transformer 1 !map-indexed|transducer))
 
-(defn v!map-indexed:transducer
+(defn v!map-indexed|transducer
   "Same as the transducer of `core/map-indexed`, but uses a typed volatile to avoid autoboxing."
-  [f] (map-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
+  [f] (map-indexed|transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
 
-(def v!map-indexed+ (transducer->transformer 1 v!map-indexed:transducer))
+(def v!map-indexed+ (transducer->transformer 1 v!map-indexed|transducer))
 
-(defn map-indexed:transducer
+(defn map-indexed|transducer
   "Like the transducer of `core/map-indexed`, but uses an `AtomicLong` internally
    instead of a `volatile`."
-  [f] (map-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
+  [f] (map-indexed|transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
 
-(def map-indexed+ (transducer->transformer 1 map-indexed:transducer))
+(def map-indexed+ (transducer->transformer 1 map-indexed|transducer))
 
 ; TODO pmap-indexed+
 
@@ -279,13 +279,13 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={        REDUCTIONS        }=====================================================
 ;=================================================={                          }=====================================================
-(defn map-accum:transducer
+(defn map-accum|transducer
   {:attribution "alexandergunnarson"}
   [f] (fn [rf] (aritoid rf rf (fn [ret x] (rf ret (f ret x))))))
 
 (def ^{:doc "Like `map+`, but the accumulated reduction gets passed through as the
             first argument to `f`, and the current element as the second argument."}
-  map-accum+ (transducer->transformer 1 map-accum:transducer))
+  map-accum+ (transducer->transformer 1 map-accum|transducer))
 
 #_(defn reductions-transducer ; TODO finish
   {:attribution "alexandergunnarson"}
@@ -302,7 +302,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={      FILTER, REMOVE      }=====================================================
 ;=================================================={                          }=====================================================
-(defn filter:transducer [pred]
+(defn filter|transducer [pred]
   (fn [rf]
     (aritoid rf rf
       (fn [ret x]   (if (pred x)   (rf ret x)   ret))
@@ -310,32 +310,32 @@
 
 (def ^{:doc "Returns a version of the folder which only passes on inputs to subsequent
              transforms when `(pred <input>)` is truthy."}
-  filter+ (transducer->transformer 1 filter:transducer))
+  filter+ (transducer->transformer 1 filter|transducer))
 
 ; ----- FILTER-INDEXED ----- ;
 
-(defn filter-indexed:transducer-base
+(defn filter-indexed|transducer-base
   [pred !box inc!f]
   (fn [rf]
     (let [*i (!box -1)]
       (aritoid rf rf (fn [ret x] (if (pred (inc!f *i) x) (rf ret x) ret))))))
 
-(defn !filter-indexed:transducer
-  [f] (filter-indexed:transducer-base f (fn [^long i] (! i)) inc!))
+(defn !filter-indexed|transducer
+  [f] (filter-indexed|transducer-base f (fn [^long i] (! i)) inc!))
 
 (def ^{:doc "map+ : filter+ :: !map-indexed+ : !filter-indexed+"}
-  !filter-indexed+ (transducer->transformer 1 !filter-indexed:transducer))
+  !filter-indexed+ (transducer->transformer 1 !filter-indexed|transducer))
 
-(defn v!filter-indexed:transducer
-  [f] (filter-indexed:transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
+(defn v!filter-indexed|transducer
+  [f] (filter-indexed|transducer-base f (fn [^long i] (volatile i)) inc!:volatile)) ; TODO use typed volatile
 
 (def ^{:doc "map+ : filter+ :: v!map-indexed+ : v!filter-indexed+"}
-  v!filter-indexed+ (transducer->transformer 1 v!filter-indexed:transducer))
+  v!filter-indexed+ (transducer->transformer 1 v!filter-indexed|transducer))
 
-(defn filter-indexed:transducer
-  [f] (filter-indexed:transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
+(defn filter-indexed|transducer
+  [f] (filter-indexed|transducer-base f (fn [^long i] (atom* i)) inc!:atom*))
 
-(def filter-indexed+ (transducer->transformer 1 filter-indexed:transducer))
+(def filter-indexed+ (transducer->transformer 1 filter-indexed|transducer))
 
 ; TODO pfilter-indexed+
 
@@ -373,7 +373,7 @@
 ;=================================================={                          }=====================================================
 (declare flatten+)
 
-(defn flatten:transducer []
+(defn flatten|transducer []
   (fn [rf]
     (fn ([] (rf))
         ([ret] ret)
@@ -382,7 +382,7 @@
                (reduce rf ret (flatten+ v))
                (rf ret v))))))
 
-(def flatten+ (transducer->transformer 0 flatten:transducer))
+(def flatten+ (transducer->transformer 0 flatten|transducer))
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={          SOURCES         }=====================================================
 ;=================================================={                          }=====================================================
@@ -600,7 +600,7 @@
 ; TODO conform to `group-by-into`
 ; (group-by-into init kf (aritoid vector nil conj) xs)
 
-(defn !partition-into:transducer-base [all? ^long n combinef]
+(defn !partition-into|transducer-base [all? ^long n combinef]
   (fn [rf]
     (let [!chunk-temp (combinef)] ; this could in theory be an atomic, in which case `empty?` and `count` would need to be adjusted
       (fn
@@ -617,43 +617,43 @@
                 (rf ret chunk))
               ret))))))
 
-(defn !partition-?all:transducer [all? ^long n]
-  (!partition-into:transducer-base all? n
+(defn !partition-?all|transducer [all? ^long n]
+  (!partition-into|transducer-base all? n
     (fn ([] (java.util.ArrayList. n))
         ([^java.util.ArrayList xs] (with-do (vec (.toArray xs)) (.clear xs)))
         ([^java.util.ArrayList xs x] (conj! xs x)))))
 
 ; ----- PARTITION(-INTO)? ----- ;
 
-(defn !partition-into:transducer [n genf combinef]
-  (!partition-into:transducer-base false n
+(defn !partition-into|transducer [n genf combinef]
+  (!partition-into|transducer-base false n
     (aritoid (fn [] (genf n)) combinef combinef)))
 
-(defn !partition:transducer [n] (!partition-?all:transducer false n))
+(defn !partition|transducer [n] (!partition-?all|transducer false n))
 
-(def !partition+ (transducer->transformer 1 !partition:transducer))
+(def !partition+ (transducer->transformer 1 !partition|transducer))
 
 (defn partition+ [& args] (TODO))
 
 ; ----- PARTITION-ALL(-INTO)? ----- ;
 
-(defn !partition-all-into:transducer [n genf combinef]
-  (!partition-into:transducer-base true n
+(defn !partition-all-into|transducer [n genf combinef]
+  (!partition-into|transducer-base true n
     (aritoid (fn [] (genf n)) combinef combinef)))
 
-(defn !partition-all:transducer [n] (!partition-?all:transducer true n))
+(defn !partition-all|transducer [n] (!partition-?all|transducer true n))
 
-(def !partition-all-into+ (transducer->transformer 3 !partition-all-into:transducer))
+(def !partition-all-into+ (transducer->transformer 3 !partition-all-into|transducer))
 
 (defn partition-all-into+ [& args] (TODO))
 
-(def !partition-all+ (transducer->transformer 1 !partition-all:transducer))
+(def !partition-all+ (transducer->transformer 1 !partition-all|transducer))
 
 (defn partition-all+ [& args] (TODO))
 
 ; TODO partition-all-into-timeout
 #?(:clj
-(defn !partition-all-timeout:transducer [^long n ^long timeout-ms]
+(defn !partition-all-timeout|transducer [^long n ^long timeout-ms]
   (fn [rf]
     (let [a                (java.util.ArrayList. n)
           *last-aggregated (! Long/MAX_VALUE)] ; to ensure that aggregation doesn't happen immediately
@@ -690,7 +690,7 @@
 
           This transformer is not thread-safe."}
   !partition-all-timeout+
-  (transducer->transformer 2 !partition-all-timeout:transducer)))
+  (transducer->transformer 2 !partition-all-timeout|transducer)))
 
 (defn partition-all-timeout+ [& args] (TODO))
 
@@ -712,7 +712,7 @@
 ;___________________________________________________________________________________________________________________________________
 ;=================================================={   DISTINCT, INTERLEAVE   }=====================================================
 ;=================================================={  interpose, frequencies  }=====================================================
-(defn v!dedupe-by:transducer [kf]
+(defn v!dedupe-by|transducer [kf]
   (fn abcde [rf]
     (let [*prior (volatile! ::none)]
       (aritoid rf rf
@@ -724,12 +724,12 @@
                 result
                 (rf result input))))))))
 
-(def v!dedupe-by+ (transducer->transformer 1 v!dedupe-by:transducer))
+(def v!dedupe-by+ (transducer->transformer 1 v!dedupe-by|transducer))
 
-(defn v!dedupe:transducer
-  [] (v!dedupe-by:transducer identity))
+(defn v!dedupe|transducer
+  [] (v!dedupe-by|transducer identity))
 
-(def v!dedupe+ (transducer->transformer 0 v!dedupe:transducer))
+(def v!dedupe+ (transducer->transformer 0 v!dedupe|transducer))
 
 ; TODO compare this to clojure/core `dedupe`, and an impl of it using atoms
 (defn dedupe+
@@ -748,15 +748,15 @@
 
 ; TODO default to using a `HashSet` internally ? Other options?
 ; TODO do volatile and unsync-mutable versions
-(defn distinct-by-storing:transducer
+(defn distinct-by-storing|transducer
   "Like `core/distinct`, but you can choose what collection to store the distinct items in."
-  ([kf] (distinct-by-storing:transducer kf
+  ([kf] (distinct-by-storing|transducer kf
           (fn [] (atom #{}))))
   ([kf genf]
-    (distinct-by-storing:transducer kf genf
+    (distinct-by-storing|transducer kf genf
       (fn [seen x] (contains? @seen x))))
   ([kf genf contains?f]
-    (distinct-by-storing:transducer kf genf contains?f
+    (distinct-by-storing|transducer kf genf contains?f
       (fn [seen x] (swap! seen conj x))))
   ([kf genf contains?f conj!f]
     (fn [rf]
@@ -771,14 +771,14 @@
                        (rf ret x))))))))))
 
 (defn distinct-by-storing+
-  ([kf genf                  ] (distinct-by-storing:transducer kf genf))
-  ([kf genf contains?f       ] (distinct-by-storing:transducer kf genf contains?f))
-  ([kf genf contains?f conj!f] (distinct-by-storing:transducer kf genf contains?f conj!f))
+  ([kf genf                  ] (distinct-by-storing|transducer kf genf))
+  ([kf genf contains?f       ] (distinct-by-storing|transducer kf genf contains?f))
+  ([kf genf contains?f conj!f] (distinct-by-storing|transducer kf genf contains?f conj!f))
   ([kf genf contains?f conj!f xs] (transformer xs (distinct-by-storing+ kf genf contains?f conj!f))))
 
-(defn distinct-by:transducer [kf] (distinct-by-storing:transducer kf))
+(defn distinct-by|transducer [kf] (distinct-by-storing|transducer kf))
 
-(def distinct-by+ (transducer->transformer 1 distinct-by:transducer))
+(def distinct-by+ (transducer->transformer 1 distinct-by|transducer))
 
 (defn distinct-storing+
   ([genf                  ] (distinct-by-storing+ identity genf))
@@ -786,9 +786,9 @@
   ([genf contains?f conj!f] (distinct-by-storing+ identity genf contains?f conj!f))
   ([genf contains?f conj!f xs] (transformer xs (distinct-storing+ genf contains?f conj!f))))
 
-(defn distinct:transducer [] (distinct-by-storing:transducer identity))
+(defn distinct|transducer [] (distinct-by-storing|transducer identity))
 
-(def distinct+ (transducer->transformer 0 distinct:transducer))
+(def distinct+ (transducer->transformer 0 distinct|transducer))
 
 (def replace+ (transducer->transformer 1 core/replace))
 

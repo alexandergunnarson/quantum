@@ -34,7 +34,7 @@
 (defn test:reset-var!
   [var-0 val-f])
 
-(defn test:swap-var!
+(defn test:update-var!
   ([var-0 f])
   ([var-0 f & args]))
 

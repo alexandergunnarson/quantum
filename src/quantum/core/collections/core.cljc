@@ -306,13 +306,13 @@
   #?(:clj  ([^clojure.lang.ILookup            x            k if-not-found] (.valAt x k if-not-found)))
   #?(:clj  ([#{java.util.Map clojure.lang.IPersistentSet}
                                               x            k             ] (.get x k)))
-  #?(:clj  ([#{!map:byte->any?}               x ^byte      k             ] (.get x k)))
-  #?(:clj  ([#{!map:char->any?}               x ^char      k             ] (.get x k)))
-  #?(:clj  ([#{!map:short->any?}              x ^short     k             ] (.get x k)))
-  #?(:clj  ([#{!map:int->any?}                x ^int       k             ] (.get x k)))
-  #?(:clj  ([#{!map:long->any?}               x ^long      k             ] (.get x k)))
-  #?(:clj  ([#{!map:float->ref?}              x ^float     k             ] (.get x k)))
-  #?(:clj  ([#{!map:double->ref?}             x ^double    k             ] (.get x k)))
+  #?(:clj  ([#{!map|byte->any?}               x ^byte      k             ] (.get x k)))
+  #?(:clj  ([#{!map|char->any?}               x ^char      k             ] (.get x k)))
+  #?(:clj  ([#{!map|short->any?}              x ^short     k             ] (.get x k)))
+  #?(:clj  ([#{!map|int->any?}                x ^int       k             ] (.get x k)))
+  #?(:clj  ([#{!map|long->any?}               x ^long      k             ] (.get x k)))
+  #?(:clj  ([#{!map|float->ref?}              x ^float     k             ] (.get x k)))
+  #?(:clj  ([#{!map|double->ref?}             x ^double    k             ] (.get x k)))
            ([^string?                         x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.charAt x i)))
   #?(:clj  ([^!array-list?                    x ^nat-long? i if-not-found] (if (>= i (count x)) if-not-found (.get    x i))))
            ([#{string? #?(:clj !array-list?)} x ^nat-long? i             ] (get      x i nil))
@@ -992,7 +992,7 @@
           ; TODO fix
           ([#{it.unimi.dsi.fastutil.longs.Long2ReferenceOpenHashMap} x
             kv] (doto x (.put (long (first kv)) (second kv))))
-          ([#{!set:ref?}      x          v] (doto x (.add v)))
+          ([#{!set|ref?}      x          v] (doto x (.add v)))
           ; TODO use typedefs for these
   #?(:clj ([#{BooleanArrayList
               BooleanSet}     x ^boolean v] (doto x (.add v))))

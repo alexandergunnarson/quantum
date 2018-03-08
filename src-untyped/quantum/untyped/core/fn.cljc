@@ -12,7 +12,7 @@
 #?(:cljs
   (:require-macros
     [quantum.untyped.core.fn :as self
-      :refer [fn'|generate]])))
+      :refer [fn'|generate gen-positional-nthas gen-ntha]])))
 
 (ucore/log-this-ns)
 
