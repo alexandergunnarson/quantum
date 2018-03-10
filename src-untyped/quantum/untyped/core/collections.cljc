@@ -126,7 +126,7 @@
         ([x y] y))))
 
 (defn merge-at [k m & ms]
-  (educe (fn [m' m-next] (update m k merge (get m-next k))) m ms))
+  (educe (aritoid nil identity (fn [m' m-next] (update m k merge (get m-next k)))) m ms))
 
 (defn mergev-with
   "Like `merge-with`, but merges elements of successive vectors at the same indices,
@@ -297,29 +297,28 @@
    :out '{[1 2 3] 3, [4 2 6] 3, [5 2 7] 3}}
   [f coll]
   (let [frequencies-0
-         (persistent!
-           (educe
+         (educe
+           (aritoid nil persistent!
              (fn [counts x]
                (let [gotten (f x)
                      freq   (inc (get counts gotten 0))]
-                 (assoc! counts gotten freq)))
-             (transient {}) coll))
+                 (assoc! counts gotten freq))))
+           (transient {}) coll)
         frequencies-f
-          (persistent!
-            (educe
-              (fn [ret elem] (assoc! ret elem (get frequencies-0 (f elem))))
-              (transient {}) coll))]
+          (educe
+            (aritoid nil persistent!
+              (fn [ret elem] (assoc! ret elem (get frequencies-0 (f elem)))))
+            (transient {}) coll)]
     frequencies-f))
 
 (defn group-by
   "Like `group-by` but uses `educe` internally"
   [f coll]
-  (->> coll
-       (educe (aritoid (fn' (transient {})) identity
-                (fn [ret x]
-                  (let [k (f x)]
-                    (assoc! ret k (conj (get ret k []) x))))))
-       persistent!))
+  (educe (aritoid (fn' (transient {})) persistent!
+           (fn [ret x]
+             (let [k (f x)]
+               (assoc! ret k (conj (get ret k []) x)))))
+         coll))
 
 (defn lcat [xs] (apply concat xs))
 
@@ -348,6 +347,7 @@
                  (merge-call #(assoc % :a 1))
                  (merge-call my-associng-fn)
                  (merge-call fn-that-uses-the-previous-results))}
+  ([m] m)
   ([m f] (merge m (f m)))
   ([m f & fs] (educe merge-call (merge-call m f) fs)))
 

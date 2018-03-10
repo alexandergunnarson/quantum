@@ -1,0 +1,811 @@
+#
+# A fatal error has been detected by the Java Runtime Environment:
+#
+#  Internal Error (signature.cpp:120), pid=65691, tid=0x0000000000001b03
+#  Error: ShouldNotReachHere()
+#
+# JRE version: Java(TM) SE Runtime Environment (8.0_102-b14) (build 1.8.0_102-b14)
+# Java VM: Java HotSpot(TM) 64-Bit Server VM (25.102-b14 mixed mode bsd-amd64 compressed oops)
+# Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+#
+# If you would like to submit a bug report, please visit:
+#   http://bugreport.java.com/bugreport/crash.jsp
+#
+
+---------------  T H R E A D  ---------------
+
+Current thread (0x00007fe51f802800):  JavaThread "main" [_thread_in_vm, id=6915, stack(0x000070000fd2e000,0x000070000fe2e000)]
+
+Stack: [0x000070000fd2e000,0x000070000fe2e000],  sp=0x000070000fe20620,  free space=969k
+Native frames: (J=compiled Java code, j=interpreted, Vv=VM code, C=native code)
+V  [libjvm.dylib+0x5afd6a]  VMError::report_and_die()+0x3f8
+V  [libjvm.dylib+0x1e7afb]  report_vm_error(char const*, int, char const*, char const*)+0x54
+V  [libjvm.dylib+0x4ffe35]  SignatureIterator::parse_type()+0x20f
+V  [libjvm.dylib+0x5000bb]  SignatureIterator::iterate_returntype()+0x61
+V  [libjvm.dylib+0x18535a]  ClassFileParser::parse_method(bool, AccessFlags*, Thread*)+0x165a
+V  [libjvm.dylib+0x185ede]  ClassFileParser::parse_methods(bool, AccessFlags*, bool*, bool*, Thread*)+0x112
+V  [libjvm.dylib+0x188970]  ClassFileParser::parseClassFile(Symbol*, ClassLoaderData*, Handle, KlassHandle, GrowableArray<Handle>*, TempNewSymbol&, bool, Thread*)+0xbdc
+V  [libjvm.dylib+0x53a8af]  SystemDictionary::resolve_from_stream(Symbol*, Handle, Handle, ClassFileStream*, bool, Thread*)+0xff
+V  [libjvm.dylib+0x34fc26]  jvm_define_class_common(JNIEnv_*, char const*, _jobject*, signed char const*, int, _jobject*, char const*, unsigned char, Thread*)+0x23a
+V  [libjvm.dylib+0x34fdba]  JVM_DefineClassWithSource+0x77
+C  [libjava.dylib+0x2e0f]  Java_java_lang_ClassLoader_defineClass1+0x142
+J 567  java.lang.ClassLoader.defineClass1(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class; (0 bytes) @ 0x00000001152ec74b [0x00000001152ec640+0x10b]
+J 6056 C2 java.lang.ClassLoader.defineClass(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class; (43 bytes) @ 0x00000001166a1d84 [0x00000001166a1200+0xb84]
+J 2169 C1 clojure.lang.DynamicClassLoader.defineClass(Ljava/lang/String;[BLjava/lang/Object;)Ljava/lang/Class; (43 bytes) @ 0x000000011590276c [0x0000000115902520+0x24c]
+j  clojure.core$gen_interface.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object;+151
+j  clojure.core$gen_interface.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+12
+J 6372 C2 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x0000000115d4d41c [0x0000000115d490e0+0x433c]
+J 5008 C2 clojure.lang.Compiler.macroexpand1(Ljava/lang/Object;)Ljava/lang/Object; (343 bytes) @ 0x0000000115fe1d60 [0x0000000115fe08a0+0x14c0]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0218 [0x00000001165af640+0xbd8]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 6409 C1 clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (16 bytes) @ 0x0000000115a61b4c [0x0000000115a617c0+0x38c]
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+174
+j  quantum.core.refs$eval48055$loading__6434__auto____48056.invoke()Ljava/lang/Object;+92
+j  quantum.core.refs$eval48055.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.refs$eval48055.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 6409 C1 clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (16 bytes) @ 0x0000000115a61b4c [0x0000000115a617c0+0x38c]
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+293
+j  quantum.core.reducers.reduce$eval48049$loading__6434__auto____48050.invoke()Ljava/lang/Object;+113
+j  quantum.core.reducers.reduce$eval48049.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.reducers.reduce$eval48049.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+12
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 3668 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (186 bytes) @ 0x0000000115346a74 [0x00000001153467a0+0x2d4]
+j  quantum.core.collections.logic$eval48041$loading__6434__auto____48042.invoke()Ljava/lang/Object;+74
+j  quantum.core.collections.logic$eval48041.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.collections.logic$eval48041.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+...<more frames>...
+
+Java frames: (J=compiled Java code, j=interpreted, Vv=VM code)
+J 567  java.lang.ClassLoader.defineClass1(Ljava/lang/String;[BIILjava/security/ProtectionDomain;Ljava/lang/String;)Ljava/lang/Class; (0 bytes) @ 0x00000001152ec6d1 [0x00000001152ec640+0x91]
+J 6056 C2 java.lang.ClassLoader.defineClass(Ljava/lang/String;[BIILjava/security/ProtectionDomain;)Ljava/lang/Class; (43 bytes) @ 0x00000001166a1d84 [0x00000001166a1200+0xb84]
+J 2169 C1 clojure.lang.DynamicClassLoader.defineClass(Ljava/lang/String;[BLjava/lang/Object;)Ljava/lang/Class; (43 bytes) @ 0x000000011590276c [0x0000000115902520+0x24c]
+j  clojure.core$gen_interface.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object;+151
+j  clojure.core$gen_interface.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+12
+J 6372 C2 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x0000000115d4d41c [0x0000000115d490e0+0x433c]
+J 5008 C2 clojure.lang.Compiler.macroexpand1(Ljava/lang/Object;)Ljava/lang/Object; (343 bytes) @ 0x0000000115fe1d60 [0x0000000115fe08a0+0x14c0]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0218 [0x00000001165af640+0xbd8]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 6409 C1 clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (16 bytes) @ 0x0000000115a61b4c [0x0000000115a617c0+0x38c]
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+174
+j  quantum.core.refs$eval48055$loading__6434__auto____48056.invoke()Ljava/lang/Object;+92
+j  quantum.core.refs$eval48055.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.refs$eval48055.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 6409 C1 clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (16 bytes) @ 0x0000000115a61b4c [0x0000000115a617c0+0x38c]
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+293
+j  quantum.core.reducers.reduce$eval48049$loading__6434__auto____48050.invoke()Ljava/lang/Object;+113
+j  quantum.core.reducers.reduce$eval48049.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.reducers.reduce$eval48049.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 5952 C1 clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object; (1057 bytes) @ 0x0000000116671a24 [0x000000011666c6c0+0x5364]
+J 5951 C1 clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x000000011664edf4 [0x000000011664ec80+0x174]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+12
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 3668 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (186 bytes) @ 0x0000000115346a74 [0x00000001153467a0+0x2d4]
+j  quantum.core.collections.logic$eval48041$loading__6434__auto____48042.invoke()Ljava/lang/Object;+74
+j  quantum.core.collections.logic$eval48041.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.collections.logic$eval48041.invoke()Ljava/lang/Object;+0
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0988 [0x00000001165af640+0x1348]
+J 5802 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001165b0468 [0x00000001165af640+0xe28]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+J 5942 C1 clojure.lang.RT.load(Ljava/lang/String;Z)V (342 bytes) @ 0x000000011666089c [0x000000011665b9c0+0x4edc]
+J 5678 C1 clojure.core$load$fn__6548.invoke()Ljava/lang/Object; (38 bytes) @ 0x000000011644efa4 [0x000000011644ed20+0x284]
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+J 5675 C1 clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object; (10 bytes) @ 0x00000001164535b4 [0x0000000116453440+0x174]
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+J 5762 C1 clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (107 bytes) @ 0x00000001164dd32c [0x00000001164dd060+0x2cc]
+J 5761 C1 clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (13 bytes) @ 0x00000001164db3c4 [0x00000001164db340+0x84]
+J 5938 C1 clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object; (70 bytes) @ 0x00000001166491ac [0x0000000116648f80+0x22c]
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+693
+j  clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+12
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+363
+j  quantum.core.collections.core$eval35744$loading__6434__auto____35745.invoke()Ljava/lang/Object;+135
+j  quantum.core.collections.core$eval35744.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.collections.core$eval35744.invoke()Ljava/lang/Object;+0
+J 5523 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001163e5e24 [0x00000001163e4b40+0x12e4]
+J 5523 C2 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001163e591c [0x00000001163e4b40+0xddc]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;)V+3
+j  clojure.lang.RT.load(Ljava/lang/String;Z)V+282
+j  clojure.lang.RT.load(Ljava/lang/String;)V+2
+j  clojure.core$load$fn__6548.invoke()Ljava/lang/Object;+17
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+j  clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+j  clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+13
+j  clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+9
+j  clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object;+19
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+195
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+693
+j  clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 4643 C2 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x0000000115d0784c [0x0000000115d04040+0x380c]
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+12
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+363
+j  quantum.core.collections$eval24623$loading__6434__auto____24624.invoke()Ljava/lang/Object;+215
+j  quantum.core.collections$eval24623.invokeStatic()Ljava/lang/Object;+10
+j  quantum.core.collections$eval24623.invoke()Ljava/lang/Object;+0
+J 2117 C1 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001158db1ac [0x00000001158d5ca0+0x550c]
+J 2117 C1 clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object; (393 bytes) @ 0x00000001158dbf2c [0x00000001158d5ca0+0x628c]
+J 4554 C1 clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object; (498 bytes) @ 0x0000000116162534 [0x0000000116160ba0+0x1994]
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;Z)V+53
+j  clojure.lang.RT.loadResourceScript(Ljava/lang/Class;Ljava/lang/String;)V+3
+j  clojure.lang.RT.load(Ljava/lang/String;Z)V+282
+j  clojure.lang.RT.load(Ljava/lang/String;)V+2
+j  clojure.core$load$fn__6548.invoke()Ljava/lang/Object;+17
+j  clojure.core$load.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+531
+j  clojure.core$load.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 3757 C2 clojure.lang.RestFn.invoke(Ljava/lang/Object;)Ljava/lang/Object; (73 bytes) @ 0x00000001156727c0 [0x00000001156725e0+0x1e0]
+j  clojure.core$load_one.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+13
+j  clojure.core$load_one.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+9
+j  clojure.core$load_lib$fn__6493.invoke()Ljava/lang/Object;+19
+J 4703 C1 clojure.core$load_lib.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Lclojure/lang/ISeq;)Ljava/lang/Object; (1214 bytes) @ 0x000000011592fbdc [0x000000011592e320+0x18bc]
+J 4432 C1 clojure.core$load_lib.doInvoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (16 bytes) @ 0x00000001160a59f4 [0x00000001160a5940+0xb4]
+J 4643 C2 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x0000000115d079ac [0x0000000115d04040+0x396c]
+J 4477 C2 clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; (24 bytes) @ 0x00000001154251dc [0x00000001154250a0+0x13c]
+j  clojure.core$load_libs.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+693
+j  clojure.core$load_libs.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+J 1076 C1 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x00000001154ab85c [0x00000001154973a0+0x144bc]
+j  clojure.core$apply.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+18
+j  clojure.core$require.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+12
+j  clojure.core$require.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+361
+j  quantum.net.http$eval170$loading__6434__auto____171.invoke()Ljava/lang/Object;+119
+j  quantum.net.http$eval170.invokeStatic()Ljava/lang/Object;+10
+j  quantum.net.http$eval170.invoke()Ljava/lang/Object;+0
+j  clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object;+322
+j  clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object;+188
+j  clojure.lang.Compiler.eval(Ljava/lang/Object;)Ljava/lang/Object;+2
+j  clojure.core$eval.invokeStatic(Ljava/lang/Object;)Ljava/lang/Object;+3
+j  clojure.core$eval.invoke(Ljava/lang/Object;)Ljava/lang/Object;+3
+j  clojure.main$repl$read_eval_print__8572$fn__8575.invoke()Ljava/lang/Object;+11
+j  clojure.main$repl$read_eval_print__8572.invoke()Ljava/lang/Object;+178
+j  clojure.main$repl$fn__8581.invoke()Ljava/lang/Object;+7
+j  clojure.main$repl.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+639
+j  clojure.main$repl_opt.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+118
+j  clojure.main$main.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+259
+j  clojure.main$main.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.invoke()Ljava/lang/Object;+26
+J 573 C1 clojure.lang.AFn.applyToHelper(Lclojure/lang/IFn;Lclojure/lang/ISeq;)Ljava/lang/Object; (3238 bytes) @ 0x000000011530bd24 [0x00000001152f6840+0x154e4]
+J 1076 C1 clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; (3076 bytes) @ 0x00000001154ab8dc [0x00000001154973a0+0x1453c]
+j  clojure.lang.Var.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+5
+j  clojure.main.main([Ljava/lang/String;)V+17
+v  ~StubRoutines::call_stub
+j  sun.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+0
+j  sun.reflect.NativeMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+100
+j  sun.reflect.DelegatingMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+6
+j  java.lang.reflect.Method.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+56
+j  clojure.lang.Reflector.invokeMatchingMethod(Ljava/lang/String;Ljava/util/List;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+243
+j  clojure.lang.Reflector.invokeStaticMethod(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;+28
+v  ~StubRoutines::call_stub
+j  sun.reflect.NativeMethodAccessorImpl.invoke0(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+0
+j  sun.reflect.NativeMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+100
+j  sun.reflect.DelegatingMethodAccessorImpl.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+6
+j  java.lang.reflect.Method.invoke(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+56
+j  clojure.lang.Reflector.invokeMatchingMethod(Ljava/lang/String;Ljava/util/List;Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;+243
+j  clojure.lang.Reflector.invokeStaticMethod(Ljava/lang/Class;Ljava/lang/String;[Ljava/lang/Object;)Ljava/lang/Object;+28
+j  user$eval153.invokeStatic()Ljava/lang/Object;+202
+j  user$eval153.invoke()Ljava/lang/Object;+0
+j  clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object;+322
+j  clojure.lang.Compiler.eval(Ljava/lang/Object;Z)Ljava/lang/Object;+208
+j  clojure.lang.Compiler.load(Ljava/io/Reader;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;+354
+j  clojure.lang.Compiler.loadFile(Ljava/lang/String;)Ljava/lang/Object;+42
+j  clojure.main$load_script.invokeStatic(Ljava/lang/Object;)Ljava/lang/Object;+67
+j  clojure.main$init_opt.invokeStatic(Ljava/lang/Object;)Ljava/lang/Object;+3
+j  clojure.main$init_opt.invoke(Ljava/lang/Object;)Ljava/lang/Object;+3
+j  clojure.main$initialize.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+110
+j  clojure.main$null_opt.invokeStatic(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+305
+j  clojure.main$null_opt.invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.main$main.invokeStatic(Lclojure/lang/ISeq;)Ljava/lang/Object;+248
+j  clojure.main$main.doInvoke(Ljava/lang/Object;)Ljava/lang/Object;+6
+j  clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+136
+j  clojure.lang.Var.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object;+5
+j  clojure.main.main([Ljava/lang/String;)V+17
+v  ~StubRoutines::call_stub
+
+---------------  P R O C E S S  ---------------
+
+Java Threads: ( => current thread )
+  0x00007fe51f7f7800 JavaThread "dirigiste-pool-controller-0" daemon [_thread_blocked, id=20227, stack(0x0000700010d5e000,0x0000700010e5e000)]
+  0x00007fe51f784800 JavaThread "manifold-pool-1-1" daemon [_thread_blocked, id=19715, stack(0x0000700010c5b000,0x0000700010d5b000)]
+  0x00007fe52581f800 JavaThread "dirigiste-executor-controller-0" daemon [_thread_blocked, id=4875, stack(0x0000700010b58000,0x0000700010c58000)]
+  0x00007fe5220ac800 JavaThread "clojure.core.async.timers/timeout-daemon" daemon [_thread_blocked, id=4359, stack(0x000070000fba5000,0x000070000fca5000)]
+  0x00007fe520031000 JavaThread "Service Thread" daemon [_thread_blocked, id=18435, stack(0x0000700010952000,0x0000700010a52000)]
+  0x00007fe51f854800 JavaThread "C1 CompilerThread2" daemon [_thread_blocked, id=17923, stack(0x000070001084f000,0x000070001094f000)]
+  0x00007fe520030800 JavaThread "C2 CompilerThread1" daemon [_thread_in_native, id=17411, stack(0x000070001074c000,0x000070001084c000)]
+  0x00007fe52002f000 JavaThread "C2 CompilerThread0" daemon [_thread_in_native, id=16899, stack(0x0000700010649000,0x0000700010749000)]
+  0x00007fe520040800 JavaThread "Signal Dispatcher" daemon [_thread_blocked, id=16395, stack(0x0000700010546000,0x0000700010646000)]
+  0x00007fe51f841000 JavaThread "Finalizer" daemon [_thread_blocked, id=13059, stack(0x0000700010443000,0x0000700010543000)]
+  0x00007fe51f811800 JavaThread "Reference Handler" daemon [_thread_blocked, id=12547, stack(0x0000700010340000,0x0000700010440000)]
+=>0x00007fe51f802800 JavaThread "main" [_thread_in_vm, id=6915, stack(0x000070000fd2e000,0x000070000fe2e000)]
+
+Other Threads:
+  0x00007fe520840000 VMThread [stack: 0x000070001023d000,0x000070001033d000] [id=12035]
+  0x00007fe520841000 WatcherThread [stack: 0x0000700010a55000,0x0000700010b55000] [id=18947]
+
+VM state:not at safepoint (normal execution)
+
+VM Mutex/Monitor currently owned by a thread: None
+
+Heap:
+ PSYoungGen      total 1128448K, used 482096K [0x000000076ab00000, 0x00000007c0000000, 0x00000007c0000000)
+  eden space 1113088K, 41% used [0x000000076ab00000,0x00000007872ccbe8,0x00000007aea00000)
+  from space 15360K, 99% used [0x00000007aea00000,0x00000007af8ff4a8,0x00000007af900000)
+  to   space 18944K, 0% used [0x00000007bed80000,0x00000007bed80000,0x00000007c0000000)
+ ParOldGen       total 199168K, used 41769K [0x00000006c0000000, 0x00000006cc280000, 0x000000076ab00000)
+  object space 199168K, 20% used [0x00000006c0000000,0x00000006c28ca4b8,0x00000006cc280000)
+ Metaspace       used 103723K, capacity 155752K, committed 155952K, reserved 1157120K
+  class space    used 30037K, capacity 48585K, committed 48688K, reserved 1048576K
+
+Card table byte_map: [0x000000010e961000,0x000000010f162000] byte_map_base: 0x000000010b361000
+
+Marking Bits: (ParMarkBitMap*) 0x000000010deefd20
+ Begin Bits: [0x0000000124049000, 0x0000000128049000)
+ End Bits:   [0x0000000128049000, 0x000000012c049000)
+
+Polling page: 0x000000010cd55000
+
+CodeCache: size=245760Kb used=23102Kb max_used=23559Kb free=222657Kb
+ bounds [0x0000000115049000, 0x0000000116779000, 0x0000000124049000]
+ total_blobs=5189 nmethods=4703 adapters=396
+ compilation: enabled
+
+Compilation events (10 events):
+Event: 58.669 Thread 0x00007fe51f854800 nmethod 6438 0x000000011594e310 code [0x000000011594e700, 0x00000001159518b8]
+Event: 58.768 Thread 0x00007fe51f854800 6440       3       java.lang.StringBuilder::getChars (10 bytes)
+Event: 58.769 Thread 0x00007fe51f854800 nmethod 6440 0x0000000115f137d0 code [0x0000000115f13940, 0x0000000115f13ac8]
+Event: 58.769 Thread 0x00007fe51f854800 6441       3       java.lang.AbstractStringBuilder::getChars (64 bytes)
+Event: 58.769 Thread 0x00007fe51f854800 nmethod 6441 0x0000000115f12e50 code [0x0000000115f13020, 0x0000000115f13578]
+Event: 58.813 Thread 0x00007fe51f854800 6442       3       quantum.core.analyze.clojure.core$jvm_typeof_respecting_hints::invoke (10 bytes)
+Event: 58.813 Thread 0x00007fe51f854800 nmethod 6442 0x000000011594df90 code [0x000000011594e100, 0x000000011594e288]
+Event: 58.813 Thread 0x00007fe51f854800 6443       3       quantum.core.analyze.clojure.core$jvm_typeof_respecting_hints::invokeStatic (103 bytes)
+Event: 58.815 Thread 0x00007fe51f854800 nmethod 6443 0x0000000115c64050 code [0x0000000115c64240, 0x0000000115c64da8]
+Event: 58.815 Thread 0x00007fe51f854800 6444       3       clojure.core$isa_QMARK_$fn__6367::invoke (65 bytes)
+
+GC Heap History (10 events):
+Event: 28.571 GC heap before
+{Heap before GC invocations=15 (full 3):
+ PSYoungGen      total 588288K, used 577024K [0x000000076ab00000, 0x000000079e080000, 0x00000007c0000000)
+  eden space 577024K, 100% used [0x000000076ab00000,0x000000078de80000,0x000000078de80000)
+  from space 11264K, 0% used [0x000000078de80000,0x000000078de80000,0x000000078e980000)
+  to   space 12800K, 0% used [0x000000079d400000,0x000000079d400000,0x000000079e080000)
+ ParOldGen       total 155136K, used 24929K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 16% used [0x00000006c0000000,0x00000006c18585b8,0x00000006c9780000)
+ Metaspace       used 54627K, capacity 77024K, committed 77360K, reserved 1103872K
+  class space    used 15101K, capacity 22750K, committed 22832K, reserved 1048576K
+Event: 28.592 GC heap after
+Heap after GC invocations=15 (full 3):
+ PSYoungGen      total 824320K, used 9361K [0x000000076ab00000, 0x000000079df00000, 0x00000007c0000000)
+  eden space 813056K, 0% used [0x000000076ab00000,0x000000076ab00000,0x000000079c500000)
+  from space 11264K, 83% used [0x000000079d400000,0x000000079dd245d8,0x000000079df00000)
+  to   space 13312K, 0% used [0x000000079c500000,0x000000079c500000,0x000000079d200000)
+ ParOldGen       total 155136K, used 24937K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 16% used [0x00000006c0000000,0x00000006c185a5b8,0x00000006c9780000)
+ Metaspace       used 54627K, capacity 77024K, committed 77360K, reserved 1103872K
+  class space    used 15101K, capacity 22750K, committed 22832K, reserved 1048576K
+}
+Event: 37.133 GC heap before
+{Heap before GC invocations=16 (full 3):
+ PSYoungGen      total 824320K, used 822417K [0x000000076ab00000, 0x000000079df00000, 0x00000007c0000000)
+  eden space 813056K, 100% used [0x000000076ab00000,0x000000079c500000,0x000000079c500000)
+  from space 11264K, 83% used [0x000000079d400000,0x000000079dd245d8,0x000000079df00000)
+  to   space 13312K, 0% used [0x000000079c500000,0x000000079c500000,0x000000079d200000)
+ ParOldGen       total 155136K, used 24937K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 16% used [0x00000006c0000000,0x00000006c185a5b8,0x00000006c9780000)
+ Metaspace       used 67199K, capacity 97378K, committed 97584K, reserved 1116160K
+  class space    used 19128K, capacity 30448K, committed 30512K, reserved 1048576K
+Event: 37.158 GC heap after
+Heap after GC invocations=16 (full 3):
+ PSYoungGen      total 826368K, used 13280K [0x000000076ab00000, 0x00000007b0b00000, 0x00000007c0000000)
+  eden space 813056K, 0% used [0x000000076ab00000,0x000000076ab00000,0x000000079c500000)
+  from space 13312K, 99% used [0x000000079c500000,0x000000079d1f80e0,0x000000079d200000)
+  to   space 15872K, 0% used [0x00000007afb80000,0x00000007afb80000,0x00000007b0b00000)
+ ParOldGen       total 155136K, used 28120K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 18% used [0x00000006c0000000,0x00000006c1b761f8,0x00000006c9780000)
+ Metaspace       used 67199K, capacity 97378K, committed 97584K, reserved 1116160K
+  class space    used 19128K, capacity 30448K, committed 30512K, reserved 1048576K
+}
+Event: 37.631 GC heap before
+{Heap before GC invocations=17 (full 3):
+ PSYoungGen      total 826368K, used 69237K [0x000000076ab00000, 0x00000007b0b00000, 0x00000007c0000000)
+  eden space 813056K, 6% used [0x000000076ab00000,0x000000076e1a55a0,0x000000079c500000)
+  from space 13312K, 99% used [0x000000079c500000,0x000000079d1f80e0,0x000000079d200000)
+  to   space 15872K, 0% used [0x00000007afb80000,0x00000007afb80000,0x00000007b0b00000)
+ ParOldGen       total 155136K, used 28120K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 18% used [0x00000006c0000000,0x00000006c1b761f8,0x00000006c9780000)
+ Metaspace       used 68112K, capacity 98478K, committed 98600K, reserved 1118208K
+  class space    used 19362K, capacity 30768K, committed 30768K, reserved 1048576K
+Event: 37.648 GC heap after
+Heap after GC invocations=17 (full 3):
+ PSYoungGen      total 1125888K, used 8430K [0x000000076ab00000, 0x00000007b0800000, 0x00000007c0000000)
+  eden space 1113088K, 0% used [0x000000076ab00000,0x000000076ab00000,0x00000007aea00000)
+  from space 12800K, 65% used [0x00000007afb80000,0x00000007b03bbb28,0x00000007b0800000)
+  to   space 15360K, 0% used [0x00000007aea00000,0x00000007aea00000,0x00000007af900000)
+ ParOldGen       total 155136K, used 33784K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 21% used [0x00000006c0000000,0x00000006c20fe208,0x00000006c9780000)
+ Metaspace       used 68112K, capacity 98478K, committed 98600K, reserved 1118208K
+  class space    used 19362K, capacity 30768K, committed 30768K, reserved 1048576K
+}
+Event: 37.648 GC heap before
+{Heap before GC invocations=18 (full 4):
+ PSYoungGen      total 1125888K, used 8430K [0x000000076ab00000, 0x00000007b0800000, 0x00000007c0000000)
+  eden space 1113088K, 0% used [0x000000076ab00000,0x000000076ab00000,0x00000007aea00000)
+  from space 12800K, 65% used [0x00000007afb80000,0x00000007b03bbb28,0x00000007b0800000)
+  to   space 15360K, 0% used [0x00000007aea00000,0x00000007aea00000,0x00000007af900000)
+ ParOldGen       total 155136K, used 33784K [0x00000006c0000000, 0x00000006c9780000, 0x000000076ab00000)
+  object space 155136K, 21% used [0x00000006c0000000,0x00000006c20fe208,0x00000006c9780000)
+ Metaspace       used 68112K, capacity 98478K, committed 98600K, reserved 1118208K
+  class space    used 19362K, capacity 30768K, committed 30768K, reserved 1048576K
+Event: 37.866 GC heap after
+Heap after GC invocations=18 (full 4):
+ PSYoungGen      total 1125888K, used 0K [0x000000076ab00000, 0x00000007b0800000, 0x00000007c0000000)
+  eden space 1113088K, 0% used [0x000000076ab00000,0x000000076ab00000,0x00000007aea00000)
+  from space 12800K, 0% used [0x00000007afb80000,0x00000007afb80000,0x00000007b0800000)
+  to   space 15360K, 0% used [0x00000007aea00000,0x00000007aea00000,0x00000007af900000)
+ ParOldGen       total 199168K, used 38047K [0x00000006c0000000, 0x00000006cc280000, 0x000000076ab00000)
+  object space 199168K, 19% used [0x00000006c0000000,0x00000006c2527ea0,0x00000006cc280000)
+ Metaspace       used 68109K, capacity 98472K, committed 98600K, reserved 1118208K
+  class space    used 19361K, capacity 30766K, committed 30768K, reserved 1048576K
+}
+Event: 52.597 GC heap before
+{Heap before GC invocations=19 (full 4):
+ PSYoungGen      total 1125888K, used 1113088K [0x000000076ab00000, 0x00000007b0800000, 0x00000007c0000000)
+  eden space 1113088K, 100% used [0x000000076ab00000,0x00000007aea00000,0x00000007aea00000)
+  from space 12800K, 0% used [0x00000007afb80000,0x00000007afb80000,0x00000007b0800000)
+  to   space 15360K, 0% used [0x00000007aea00000,0x00000007aea00000,0x00000007af900000)
+ ParOldGen       total 199168K, used 38047K [0x00000006c0000000, 0x00000006cc280000, 0x000000076ab00000)
+  object space 199168K, 19% used [0x00000006c0000000,0x00000006c2527ea0,0x00000006cc280000)
+ Metaspace       used 93976K, capacity 138566K, committed 138800K, reserved 1144832K
+  class space    used 26653K, capacity 42791K, committed 42800K, reserved 1048576K
+Event: 52.665 GC heap after
+Heap after GC invocations=19 (full 4):
+ PSYoungGen      total 1128448K, used 15357K [0x000000076ab00000, 0x00000007c0000000, 0x00000007c0000000)
+  eden space 1113088K, 0% used [0x000000076ab00000,0x000000076ab00000,0x00000007aea00000)
+  from space 15360K, 99% used [0x00000007aea00000,0x00000007af8ff4a8,0x00000007af900000)
+  to   space 18944K, 0% used [0x00000007bed80000,0x00000007bed80000,0x00000007c0000000)
+ ParOldGen       total 199168K, used 41769K [0x00000006c0000000, 0x00000006cc280000, 0x000000076ab00000)
+  object space 199168K, 20% used [0x00000006c0000000,0x00000006c28ca4b8,0x00000006cc280000)
+ Metaspace       used 93976K, capacity 138566K, committed 138800K, reserved 1144832K
+  class space    used 26653K, capacity 42791K, committed 42800K, reserved 1048576K
+}
+
+Deoptimization events (10 events):
+Event: 56.425 Thread 0x00007fe51f802800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x0000000116522d0c method=clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; @ 387
+Event: 56.427 Thread 0x00007fe51f802800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x0000000115b4c910 method=clojure.core$map$fn__5587.invoke()Ljava/lang/Object; @ 100
+Event: 56.599 Thread 0x00007fe51f802800 Uncommon trap: reason=unstable_if action=reinterpret pc=0x0000000115d8095c method=clojure.asm.Type.getType(Ljava/lang/Class;)Lclojure/asm/Type; @ 66
+Event: 56.609 Thread 0x00007fe51f802800 Uncommon trap: reason=unstable_if action=reinterpret pc=0x00000001166a8158 method=clojure.lang.Compiler$HostExpr.emitBoxReturn(Lclojure/lang/Compiler$ObjExpr;Lclojure/asm/commons/GeneratorAdapter;Ljava/lang/Class;)V @ 142
+Event: 56.621 Thread 0x00007fe51f802800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x0000000115b4c910 method=clojure.core$map$fn__5587.invoke()Ljava/lang/Object; @ 100
+Event: 56.840 Thread 0x00007fe51f802800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x0000000115b4c910 method=clojure.core$map$fn__5587.invoke()Ljava/lang/Object; @ 100
+Event: 57.526 Thread 0x00007fe51f802800 Uncommon trap: reason=null_check action=make_not_entrant pc=0x0000000115ae169c method=clojure.lang.Compiler.subsumes([Ljava/lang/Class;[Ljava/lang/Class;)Z @ 46
+Event: 57.892 Thread 0x00007fe51f802800 Uncommon trap: reason=bimorphic action=maybe_recompile pc=0x0000000116522d0c method=clojure.lang.RestFn.applyTo(Lclojure/lang/ISeq;)Ljava/lang/Object; @ 387
+Event: 57.955 Thread 0x00007fe51f802800 Uncommon trap: reason=unstable_if action=reinterpret pc=0x00000001153d02e4 method=clojure.lang.Compiler$InstanceMethodExpr.<init>(Ljava/lang/String;IILclojure/lang/Symbol;Lclojure/lang/Compiler$Expr;Ljava/lang/String;Lclojure/lang/IPersistentVector;Z)V @ 
+Event: 57.970 Thread 0x00007fe51f802800 Uncommon trap: reason=null_check action=make_not_entrant pc=0x0000000115ed243c method=clojure.lang.BitmapIndexedNodeAndBitmapIndexedNodeSplicer.splice(ILclojure/lang/Counts;ZILjava/lang/Object;Ljava/lang/Object;ZILjava/lang/Object;Ljava/lang/Object;)Lcloj
+
+Internal exceptions (10 events):
+Event: 37.205 Thread 0x00007fe51f802800 Exception <a 'java/security/PrivilegedActionException'> (0x000000076b3f2170) thrown at [/Users/java_re/workspace/8-2-build-macosx-x86_64/jdk8u102/7268/hotspot/src/share/vm/prims/jvm.cpp, line 1386]
+Event: 37.235 Thread 0x00007fe51f802800 Exception <a 'java/security/PrivilegedActionException'> (0x000000076b659290) thrown at [/Users/java_re/workspace/8-2-build-macosx-x86_64/jdk8u102/7268/hotspot/src/share/vm/prims/jvm.cpp, line 1386]
+Event: 37.235 Thread 0x00007fe51f802800 Exception <a 'java/security/PrivilegedActionException'> (0x000000076b65a998) thrown at [/Users/java_re/workspace/8-2-build-macosx-x86_64/jdk8u102/7268/hotspot/src/share/vm/prims/jvm.cpp, line 1386]
+Event: 37.236 Thread 0x00007fe51f802800 Exception <a 'java/security/PrivilegedActionException'> (0x000000076b6806f8) thrown at [/Users/java_re/workspace/8-2-build-macosx-x86_64/jdk8u102/7268/hotspot/src/share/vm/prims/jvm.cpp, line 1386]
+Event: 37.236 Thread 0x00007fe51f802800 Exception <a 'java/security/PrivilegedActionException'> (0x000000076b681e00) thrown at [/Users/java_re/workspace/8-2-build-macosx-x86_64/jdk8u102/7268/hotspot/src/share/vm/prims/jvm.cpp, line 1386]
+Event: 40.501 Thread 0x00007fe51f802800 Implicit null exception at 0x000000011564d78c to 0x000000011564da55
+Event: 40.754 Thread 0x00007fe51f802800 Implicit null exception at 0x000000011516e21d to 0x000000011516e4f8
+Event: 45.271 Thread 0x00007fe51f802800 Implicit null exception at 0x00000001163e5c64 to 0x00000001163eb4ed
+Event: 50.415 Thread 0x00007fe51f802800 Implicit null exception at 0x0000000115276f7c to 0x00000001152771ad
+Event: 57.970 Thread 0x00007fe51f802800 Implicit null exception at 0x0000000115ed02cf to 0x0000000115ed23cd
+
+Events (10 events):
+Event: 58.049 loading class quantum/core/reducers/reduce__init
+Event: 58.049 loading class quantum/core/reducers/reduce__init done
+Event: 58.062 loading class quantum/core/refs__init
+Event: 58.062 loading class quantum/core/refs__init done
+Event: 58.072 Thread 0x00007fe51f802800 DEOPT PACKING pc=0x000000011642d9be sp=0x000070000fe22bc0
+Event: 58.072 Thread 0x00007fe51f802800 DEOPT UNPACKING pc=0x0000000115090633 sp=0x000070000fe22ae8 mode 0
+Event: 58.075 loading class quantum/core/type__init
+Event: 58.075 loading class quantum/core/type__init done
+Event: 58.100 loading class quantum/core/classes__init
+Event: 58.100 loading class quantum/core/classes__init done
+
+
+Dynamic libraries:
+0x0000000012481000 	/System/Library/Frameworks/Cocoa.framework/Versions/A/Cocoa
+0x0000000012481000 	/System/Library/Frameworks/Security.framework/Versions/A/Security
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices
+0x0000000012481000 	/usr/lib/libz.1.dylib
+0x0000000012481000 	/usr/lib/libSystem.B.dylib
+0x0000000012481000 	/usr/lib/libobjc.A.dylib
+0x0000000012481000 	/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+0x0000000012481000 	/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation
+0x0000000012481000 	/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit
+0x0000000012481000 	/System/Library/Frameworks/CoreData.framework/Versions/A/CoreData
+0x0000000012481000 	/System/Library/PrivateFrameworks/RemoteViewServices.framework/Versions/A/RemoteViewServices
+0x0000000012481000 	/System/Library/PrivateFrameworks/UIFoundation.framework/Versions/A/UIFoundation
+0x0000000012481000 	/System/Library/PrivateFrameworks/DFRFoundation.framework/Versions/A/DFRFoundation
+0x0000000012481000 	/System/Library/Frameworks/Metal.framework/Versions/A/Metal
+0x0000000012481000 	/System/Library/PrivateFrameworks/DesktopServicesPriv.framework/Versions/A/DesktopServicesPriv
+0x0000000012481000 	/usr/lib/libenergytrace.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight
+0x0000000012481000 	/System/Library/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics
+0x0000000012481000 	/usr/lib/libScreenReader.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate
+0x0000000012481000 	/System/Library/Frameworks/IOSurface.framework/Versions/A/IOSurface
+0x0000000012481000 	/System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox
+0x0000000012481000 	/System/Library/Frameworks/AudioUnit.framework/Versions/A/AudioUnit
+0x0000000012481000 	/System/Library/PrivateFrameworks/DataDetectorsCore.framework/Versions/A/DataDetectorsCore
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox
+0x0000000012481000 	/usr/lib/libicucore.A.dylib
+0x0000000012481000 	/System/Library/Frameworks/QuartzCore.framework/Versions/A/QuartzCore
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/SpeechRecognition.framework/Versions/A/SpeechRecognition
+0x0000000012481000 	/usr/lib/libauto.dylib
+0x0000000012481000 	/usr/lib/libxml2.2.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/CoreUI.framework/Versions/A/CoreUI
+0x0000000012481000 	/System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio
+0x0000000012481000 	/System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration
+0x0000000012481000 	/usr/lib/liblangid.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/MultitouchSupport.framework/Versions/A/MultitouchSupport
+0x0000000012481000 	/System/Library/Frameworks/IOKit.framework/Versions/A/IOKit
+0x0000000012481000 	/usr/lib/libDiagnosticMessagesClient.dylib
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices
+0x0000000012481000 	/System/Library/PrivateFrameworks/PerformanceAnalysis.framework/Versions/A/PerformanceAnalysis
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL
+0x0000000012481000 	/System/Library/Frameworks/ColorSync.framework/Versions/A/ColorSync
+0x0000000012481000 	/System/Library/Frameworks/CoreImage.framework/Versions/A/CoreImage
+0x0000000012481000 	/System/Library/Frameworks/CoreText.framework/Versions/A/CoreText
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/ImageIO
+0x0000000012481000 	/System/Library/PrivateFrameworks/Backup.framework/Versions/A/Backup
+0x0000000012481000 	/usr/lib/libarchive.2.dylib
+0x0000000012481000 	/System/Library/Frameworks/CFNetwork.framework/Versions/A/CFNetwork
+0x0000000012481000 	/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration
+0x0000000012481000 	/usr/lib/libCRFSuite.dylib
+0x0000000012481000 	/usr/lib/libc++.1.dylib
+0x0000000012481000 	/usr/lib/libc++abi.dylib
+0x0000000012481000 	/usr/lib/system/libcache.dylib
+0x0000000012481000 	/usr/lib/system/libcommonCrypto.dylib
+0x0000000012481000 	/usr/lib/system/libcompiler_rt.dylib
+0x0000000012481000 	/usr/lib/system/libcopyfile.dylib
+0x0000000012481000 	/usr/lib/system/libcorecrypto.dylib
+0x0000000012481000 	/usr/lib/system/libdispatch.dylib
+0x0000000012481000 	/usr/lib/system/libdyld.dylib
+0x0000000012481000 	/usr/lib/system/libkeymgr.dylib
+0x0000000012481000 	/usr/lib/system/liblaunch.dylib
+0x0000000012481000 	/usr/lib/system/libmacho.dylib
+0x0000000012481000 	/usr/lib/system/libquarantine.dylib
+0x0000000012481000 	/usr/lib/system/libremovefile.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_asl.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_blocks.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_c.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_configuration.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_coreservices.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_darwin.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_dnssd.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_info.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_m.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_malloc.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_network.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_networkextension.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_notify.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_sandbox.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_secinit.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_kernel.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_platform.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_pthread.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_symptoms.dylib
+0x0000000012481000 	/usr/lib/system/libsystem_trace.dylib
+0x0000000012481000 	/usr/lib/system/libunwind.dylib
+0x0000000012481000 	/usr/lib/system/libxpc.dylib
+0x0000000012481000 	/usr/lib/closure/libclosured.dylib
+0x0000000012481000 	/usr/lib/libbsm.0.dylib
+0x0000000012481000 	/usr/lib/system/libkxld.dylib
+0x0000000012481000 	/usr/lib/libOpenScriptingUtil.dylib
+0x0000000012481000 	/usr/lib/libcoretls.dylib
+0x0000000012481000 	/usr/lib/libcoretls_cfhelpers.dylib
+0x0000000012481000 	/usr/lib/libpam.2.dylib
+0x0000000012481000 	/usr/lib/libsqlite3.dylib
+0x0000000012481000 	/usr/lib/libxar.1.dylib
+0x0000000012481000 	/usr/lib/libbz2.1.0.dylib
+0x0000000012481000 	/usr/lib/liblzma.5.dylib
+0x0000000012481000 	/usr/lib/libnetwork.dylib
+0x0000000012481000 	/usr/lib/libapple_nghttp2.dylib
+0x0000000012481000 	/usr/lib/libpcap.A.dylib
+0x0000000012481000 	/usr/lib/libboringssl.dylib
+0x0000000012481000 	/usr/lib/libusrtcp.dylib
+0x0000000012481000 	/usr/lib/libapple_crypto.dylib
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/FSEvents.framework/Versions/A/FSEvents
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/CarbonCore.framework/Versions/A/CarbonCore
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Metadata
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/OSServices.framework/Versions/A/OSServices
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/SearchKit.framework/Versions/A/SearchKit
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/AE.framework/Versions/A/AE
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/LaunchServices
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/DictionaryServices.framework/Versions/A/DictionaryServices
+0x0000000012481000 	/System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/SharedFileList.framework/Versions/A/SharedFileList
+0x0000000012481000 	/System/Library/Frameworks/NetFS.framework/Versions/A/NetFS
+0x0000000012481000 	/System/Library/PrivateFrameworks/NetAuth.framework/Versions/A/NetAuth
+0x0000000012481000 	/System/Library/PrivateFrameworks/login.framework/Versions/A/Frameworks/loginsupport.framework/Versions/A/loginsupport
+0x0000000012481000 	/System/Library/PrivateFrameworks/TCC.framework/Versions/A/TCC
+0x0000000012481000 	/usr/lib/libmecabra.dylib
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ATS.framework/Versions/A/ATS
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ColorSyncLegacy.framework/Versions/A/ColorSyncLegacy
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/HIServices.framework/Versions/A/HIServices
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/LangAnalysis.framework/Versions/A/LangAnalysis
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/PrintCore.framework/Versions/A/PrintCore
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/QD.framework/Versions/A/QD
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/SpeechSynthesis.framework/Versions/A/SpeechSynthesis
+0x0000000012481000 	/System/Library/Frameworks/CoreDisplay.framework/Versions/A/CoreDisplay
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vImage.framework/Versions/A/vImage
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/vecLib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvDSP.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBNNS.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libQuadrature.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvMisc.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLAPACK.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLinearAlgebra.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libSparse.dylib
+0x0000000012481000 	/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libSparseBLAS.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/IOAccelerator.framework/Versions/A/IOAccelerator
+0x0000000012481000 	/System/Library/PrivateFrameworks/IOPresentment.framework/Versions/A/IOPresentment
+0x0000000012481000 	/System/Library/PrivateFrameworks/DSExternalDisplay.framework/Versions/A/DSExternalDisplay
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCoreFSCache.dylib
+0x0000000012481000 	/System/Library/Frameworks/CoreVideo.framework/Versions/A/CoreVideo
+0x0000000012481000 	/System/Library/PrivateFrameworks/GraphVisualizer.framework/Versions/A/GraphVisualizer
+0x0000000012481000 	/System/Library/Frameworks/MetalPerformanceShaders.framework/Versions/A/MetalPerformanceShaders
+0x0000000012481000 	/usr/lib/libFosl_dynamic.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/FaceCore.framework/Versions/A/FaceCore
+0x0000000012481000 	/System/Library/Frameworks/OpenCL.framework/Versions/A/OpenCL
+0x0000000012481000 	/usr/lib/libcompression.dylib
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ATS.framework/Versions/A/Resources/libFontParser.dylib
+0x0000000012481000 	/System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ATS.framework/Versions/A/Resources/libFontRegistry.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libJPEG.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libTIFF.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libPng.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libGIF.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libJP2.dylib
+0x0000000012481000 	/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libRadiance.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/AppleJPEG.framework/Versions/A/AppleJPEG
+0x0000000012481000 	/System/Library/PrivateFrameworks/MetalTools.framework/Versions/A/MetalTools
+0x0000000012481000 	/System/Library/Frameworks/MetalPerformanceShaders.framework/Frameworks/MPSCore.framework/Versions/A/MPSCore
+0x0000000012481000 	/System/Library/Frameworks/MetalPerformanceShaders.framework/Frameworks/MPSImage.framework/Versions/A/MPSImage
+0x0000000012481000 	/System/Library/Frameworks/MetalPerformanceShaders.framework/Frameworks/MPSMatrix.framework/Versions/A/MPSMatrix
+0x0000000012481000 	/System/Library/Frameworks/MetalPerformanceShaders.framework/Frameworks/MPSNeuralNetwork.framework/Versions/A/MPSNeuralNetwork
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLU.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGFXShared.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLImage.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCVMSPluginSupport.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libCoreVMClient.dylib
+0x0000000012481000 	/usr/lib/libcups.2.dylib
+0x0000000012481000 	/System/Library/Frameworks/Kerberos.framework/Versions/A/Kerberos
+0x0000000012481000 	/System/Library/Frameworks/GSS.framework/Versions/A/GSS
+0x0000000012481000 	/usr/lib/libresolv.9.dylib
+0x0000000012481000 	/usr/lib/libiconv.2.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/Heimdal.framework/Versions/A/Heimdal
+0x0000000012481000 	/usr/lib/libheimdal-asn1.dylib
+0x0000000012481000 	/System/Library/Frameworks/OpenDirectory.framework/Versions/A/OpenDirectory
+0x0000000012481000 	/System/Library/PrivateFrameworks/CommonAuth.framework/Versions/A/CommonAuth
+0x0000000012481000 	/System/Library/Frameworks/OpenDirectory.framework/Versions/A/Frameworks/CFOpenDirectory.framework/Versions/A/CFOpenDirectory
+0x0000000012481000 	/System/Library/Frameworks/SecurityFoundation.framework/Versions/A/SecurityFoundation
+0x0000000012481000 	/System/Library/PrivateFrameworks/APFS.framework/Versions/A/APFS
+0x0000000012481000 	/usr/lib/libutil.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/AppleSauce.framework/Versions/A/AppleSauce
+0x0000000012481000 	/System/Library/PrivateFrameworks/LinguisticData.framework/Versions/A/LinguisticData
+0x0000000012481000 	/usr/lib/libmarisa.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/Lexicon.framework/Versions/A/Lexicon
+0x0000000012481000 	/usr/lib/libChineseTokenizer.dylib
+0x0000000012481000 	/usr/lib/libcmph.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/LanguageModeling.framework/Versions/A/LanguageModeling
+0x0000000012481000 	/System/Library/PrivateFrameworks/CoreEmoji.framework/Versions/A/CoreEmoji
+0x0000000012481000 	/System/Library/Frameworks/ServiceManagement.framework/Versions/A/ServiceManagement
+0x0000000012481000 	/System/Library/PrivateFrameworks/BackgroundTaskManagement.framework/Versions/A/BackgroundTaskManagement
+0x0000000012481000 	/usr/lib/libxslt.1.dylib
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Ink.framework/Versions/A/Ink
+0x0000000012481000 	/System/Library/PrivateFrameworks/TextureIO.framework/Versions/A/TextureIO
+0x0000000012481000 	/usr/lib/libate.dylib
+0x0000000012481000 	/System/Library/PrivateFrameworks/CrashReporterSupport.framework/Versions/A/CrashReporterSupport
+0x0000000012481000 	/System/Library/PrivateFrameworks/Sharing.framework/Versions/A/Sharing
+0x0000000012481000 	/System/Library/PrivateFrameworks/IconServices.framework/Versions/A/IconServices
+0x0000000012481000 	/System/Library/PrivateFrameworks/ProtocolBuffer.framework/Versions/A/ProtocolBuffer
+0x0000000012481000 	/System/Library/PrivateFrameworks/Apple80211.framework/Versions/A/Apple80211
+0x0000000012481000 	/System/Library/Frameworks/CoreWLAN.framework/Versions/A/CoreWLAN
+0x0000000012481000 	/System/Library/PrivateFrameworks/CoreUtils.framework/Versions/A/CoreUtils
+0x0000000012481000 	/System/Library/Frameworks/IOBluetooth.framework/Versions/A/IOBluetooth
+0x0000000012481000 	/System/Library/PrivateFrameworks/CoreWiFi.framework/Versions/A/CoreWiFi
+0x0000000012481000 	/System/Library/Frameworks/CoreBluetooth.framework/Versions/A/CoreBluetooth
+0x0000000012481000 	/System/Library/PrivateFrameworks/SignpostNotification.framework/Versions/A/SignpostNotification
+0x0000000012481000 	/System/Library/PrivateFrameworks/DebugSymbols.framework/Versions/A/DebugSymbols
+0x0000000012481000 	/System/Library/PrivateFrameworks/CoreSymbolication.framework/Versions/A/CoreSymbolication
+0x0000000012481000 	/System/Library/PrivateFrameworks/Symbolication.framework/Versions/A/Symbolication
+0x0000000012481000 	/System/Library/PrivateFrameworks/AppleFSCompression.framework/Versions/A/AppleFSCompression
+0x0000000012481000 	/System/Library/PrivateFrameworks/SpeechRecognitionCore.framework/Versions/A/SpeechRecognitionCore
+0x000000010d600000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/server/libjvm.dylib
+0x0000000012481000 	/usr/lib/libstdc++.6.0.9.dylib
+0x000000010cd12000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/libverify.dylib
+0x000000010cd20000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/libjava.dylib
+0x000000010cd9f000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/libzip.dylib
+0x0000000012481000 	/System/Library/Frameworks/JavaVM.framework/Versions/A/Frameworks/JavaRuntimeSupport.framework/Versions/A/JavaRuntimeSupport
+0x0000000012481000 	/System/Library/Frameworks/JavaVM.framework/Versions/A/Frameworks/JavaNativeFoundation.framework/Versions/A/JavaNativeFoundation
+0x0000000012481000 	/System/Library/Frameworks/JavaVM.framework/Versions/A/JavaVM
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Carbon
+0x0000000012481000 	/System/Library/PrivateFrameworks/JavaLaunching.framework/Versions/A/JavaLaunching
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/CommonPanels.framework/Versions/A/CommonPanels
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Help.framework/Versions/A/Help
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/ImageCapture.framework/Versions/A/ImageCapture
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/OpenScripting.framework/Versions/A/OpenScripting
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Print.framework/Versions/A/Print
+0x0000000012481000 	/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/SecurityHI.framework/Versions/A/SecurityHI
+0x00000001134f9000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/libmanagement.dylib
+0x0000000113507000 	/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home/jre/lib/libnet.dylib
+
+VM Arguments:
+jvm_args: -Dfile.encoding=UTF-8 -Djava.util.logging.config.file=logging.properties -Dquantum.core.cryptography:secure-PRNG=true -Dclojure.compile.path=/Users/alex.gunnarson/code/quantum/target/classes -Dcore.version=c303f6bf -Dclojure.debug=false 
+java_command: clojure.main -i /private/var/folders/j_/cbs74b711d1bls4ghtnk572w0000gp/T/form-init8451978232571656791.clj
+java_class_path (initial): /Users/alex.gunnarson/code/quantum/test:/Users/alex.gunnarson/code/quantum/src:/Users/alex.gunnarson/code/quantum/src-untyped:/Users/alex.gunnarson/code/quantum/resources:/Users/alex.gunnarson/code/quantum/target/classes:/Users/alex.gunnarson/.m2/repository/net/java/dev/jna/platform/3.4.0/platform-3.4.0.jar:/Users/alex.gunnarson/.m2/repository/org/apache/commons/commons-math3/3.6.1/commons-math3-3.6.1.jar:/Users/alex.gunnarson/.m2/repository/lein-doo/lein-doo/0.1.7/lein-doo-0.1.7.jar:/Users/alex.gunnarson/.m2/repository/commons-beanutils/commons-beanutils-core/1.8.0/commons-beanutils-core-1.8.0.jar:/Users/alex.gunnarson/.m2/repository/org/scala-lang/scala-reflect/2.11.7/scala-reflect-2.11.7.jar:/Users/alex.gunnarson/.m2/repository/com/amazonaws/aws-java-sdk-ssm/1.11.32/aws-java-sdk-ssm-1.11.32.jar:/Users/alex.gunnarson/.m2/repository/com/datomic/datomic-lucene-core/3.3.0/datomic-lucene-core-3.3.0.jar:/Users/alex.gunnarson/.m2/repository/org/clojure/math.combinatorics/0.1.3/math.combinatorics-0.1.3.jar:/Users/alex.gunnarson/.m2/repository/com/github/fommil/netlib/native_ref-java/1.1/native_ref-java-1.1.jar:/Users/alex.gunnarson/.m2/repository/org/apache/activemq/artemis-commons/1.4.0/artemis-commons-1.4.0.jar:/Users/alex.gunnarson/.m2/repository/org/apache/parquet/parquet-encoding/1.7.0/parquet-encoding-1.7.0.jar:/Users/alex.gunnarson/.m2/repository/edu/ucar/udunits/4.5.5/udunits-4.5.5.jar:/Users/alex.gunnarson/.m2/repository/org/apache/lucene/lucene-sandbox/4.10.3/lucene-sandbox-4.10.3.jar:/Users/alex.gunnarson/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-jobclient/2.2.0/hadoop-mapreduce-client-jobclient-2.2.0.jar:/Users/alex.gunnarson/.m2/repository/edu/stanford/nlp/stanford-corenlp/3.7.0/stanford-corenlp-3.7.0.jar:/Users/alex.gunnarson/.m2/repository/org/apache/hadoop/hadoop-yarn-api/2.2.0/hadoop-yarn-api-2.2.0.jar:/Users/alex.gunnarson/.m2/repository/com/rometools/rome/1.5.1/rome-1.5.1.jar:/Users/alex.gunnarson/.m2/reposit
+Launcher Type: SUN_STANDARD
+
+Environment Variables:
+JAVA_HOME=/Library/Java/JavaVirtualMachines/jdk1.8.0_102.jdk/Contents/Home
+PATH=/Users/alex.gunnarson/anaconda/bin:/Library/Frameworks/Python.framework/Versions/3.5/bin:/Users/alex.gunnarson/.rbenv/shims:/Users/alex.gunnarson/.rbenv/bin:/Users/alex.gunnarson/.rvm/gems/ruby-2.1.1/bin:/Users/alex.gunnarson/.rvm/gems/ruby-2.1.1@global/bin:/Users/alex.gunnarson/.rvm/rubies/ruby-2.1.1/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/MacGPG2/bin:/usr/local/munki:/Library/Frameworks/Mono.framework/Versions/Current/Commands:/Users/alex.gunnarson/anaconda/bin:/Library/Frameworks/Python.framework/Versions/3.5/bin:/Users/alex.gunnarson/.rbenv/shims:/Users/alex.gunnarson/.rbenv/bin:/Users/alex.gunnarson/.rvm/gems/ruby-2.1.1/bin:/Users/alex.gunnarson/.rvm/gems/ruby-2.1.1@global/bin:/Users/alex.gunnarson/.rvm/rubies/ruby-2.1.1/bin:/Users/alex.gunnarson/.rvm/bin:/Users/alex.gunnarson/.rvm/bin:/usr/local/bin:/Users/alex.gunnarson/.rvm/bin
+SHELL=/bin/bash
+
+Signal Handlers:
+SIGSEGV: [libjvm.dylib+0x5b0579], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_ONSTACK|SA_RESTART|SA_SIGINFO
+SIGBUS: [libjvm.dylib+0x5b0579], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGFPE: [libjvm.dylib+0x4874e4], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGPIPE: [libjvm.dylib+0x4874e4], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGXFSZ: [libjvm.dylib+0x4874e4], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGILL: [libjvm.dylib+0x4874e4], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGUSR1: SIG_DFL, sa_mask[0]=11011111011111100000000111000110, sa_flags=none
+SIGUSR2: [libjvm.dylib+0x487002], sa_mask[0]=00000000000000000000000000000000, sa_flags=SA_RESTART|SA_SIGINFO
+SIGHUP: [libjvm.dylib+0x4855d9], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGINT: [libjvm.dylib+0x4855d9], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGTERM: [libjvm.dylib+0x4855d9], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+SIGQUIT: [libjvm.dylib+0x4855d9], sa_mask[0]=11111111011111110111111111111111, sa_flags=SA_RESTART|SA_SIGINFO
+
+
+---------------  S Y S T E M  ---------------
+
+OS:Bsduname:Darwin 17.2.0 Darwin Kernel Version 17.2.0: Fri Sep 29 18:27:05 PDT 2017; root:xnu-4570.20.62~3/RELEASE_X86_64 x86_64
+rlimit: STACK 8192k, CORE 0k, NPROC 1418, NOFILE 10240, AS infinity
+load average:5.64 3.81 3.61
+
+CPU:total 4 (2 cores per cpu, 2 threads per core) family 6 model 61 stepping 4, cmov, cx8, fxsr, mmx, sse, sse2, sse3, ssse3, sse4.1, sse4.2, popcnt, avx, avx2, aes, clmul, erms, 3dnowpref, lzcnt, ht, tsc, tscinvbit, bmi1, bmi2, adx
+
+Memory: 4k page, physical 16777216k(48064k free)
+
+/proc/meminfo:
+
+
+vm_info: Java HotSpot(TM) 64-Bit Server VM (25.102-b14) for bsd-amd64 JRE (1.8.0_102-b14), built on Jun 22 2016 11:42:36 by "java_re" with gcc 4.2.1 (Based on Apple Inc. build 5658) (LLVM build 2336.11.00)
+
+time: Fri Mar  9 23:36:12 2018
+elapsed time: 58 seconds (0d 0h 0m 58s)
+

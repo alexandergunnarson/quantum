@@ -565,7 +565,7 @@
               (for [i (range (count match))]
                 (let [t  (expr->hint:class (get match  i))
                       t' (expr->hint:class (get match' i))]
-                  (t/compare|class|class t t')))
+                  (t/compare|class|class* t t')))
             generality-score (->> generality-scores (remove nil?) (apply +))]
         (log/ppr-hints :macro-expand/params (kw-map generality-score match match'))
         (cond (neg? generality-score) [match]
