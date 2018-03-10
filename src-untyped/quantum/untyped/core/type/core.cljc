@@ -114,7 +114,7 @@
     :cljs #{ubytes ubytes-clamped ushorts uints bytes shorts       ints       floats doubles}})
 
 (def cljs-typed-array-convertible-classes
-  (let [cljs-typed-array-types (-> utdef/array-1d-types* :cljs (dissoc :object))
+  (let [cljs-typed-array-types (-> utdef/array-1d-types :cljs (dissoc :object))
         generalize-type (fn->> name str/lower-case (remove #{\u}))]
     (->> cljs-typed-array-types
          (reduce

@@ -33,7 +33,7 @@
             [quantum.core.error             :as err
               :refer [>ex-info TODO]]
             [quantum.core.fn                :as fn
-              :refer [fn' fn1 fn&2 rfn rcomp firsta fn-> aritoid]]
+              :refer [<- fn' fn1 fn&2 rfn rcomp firsta fn-> aritoid]]
             [quantum.core.logic             :as logic
               :refer [fn= whenc whenf ifn1]]
             [quantum.core.collections.logic
@@ -394,7 +394,7 @@
             ; size
             ([#{~'long} x#] (~(symbol "Array" (str "newUninitialized1d" capitalized-type-str "Array")) (int x#))) ; TODO uncast
             ; compatible arrays
-            ([~(->> tdef/array-1d-types* :clj keys
+            ([~(->> tdef/array-1d-types :clj keys
                     (map type-key->pred-sym)
                     set
                     (<- (disj type-sym))) x#]
@@ -413,7 +413,7 @@
         (let [type-sym type-unevaled
               array-compatible-types
                 (if (= type-key :object)
-                    (-> tdef/array-1d-types* :cljs (core/dissoc :object) keys set (core/conj 'number?))
+                    (-> tdef/array-1d-types :cljs (core/dissoc :object) keys set (core/conj 'number?))
                     (into (core/get tcore/cljs-typed-array-convertible-classes type-sym)
                           '#{objects? number?}))]
          `(defnt ~fn-sym
@@ -428,16 +428,16 @@
 #?(:clj
 (defmacro gen-array-converters []
   (let [lang (env-lang)]
-   `(do ~@(for [[type-key type-unevaled] (get tdef/array-1d-types* lang)]
+   `(do ~@(for [[type-key type-unevaled] (get tdef/array-1d-types lang)]
             (gen-array-converter lang type-key type-unevaled))
-        ~@(for [[type-key _] (merge (:clj  tdef/array-1d-types*)
-                                    (:cljs tdef/array-1d-types*))]
+        ~@(for [[type-key _] (merge (:clj  tdef/array-1d-types)
+                                    (:cljs tdef/array-1d-types))]
             `(defmalias ~(if (= type-key :ubyte-clamped)
                              '->ubytes-clamped
                              (symbol (str "->" (name type-key) "s")))
-                        ~(when (-> tdef/array-1d-types* :clj  (get type-key))
+                        ~(when (-> tdef/array-1d-types :clj  (get type-key))
                            (symbol (str (ns-name *ns*)) (str "->" (name type-key) "s-clj")))
-                        ~(when (-> tdef/array-1d-types* :cljs (get type-key))
+                        ~(when (-> tdef/array-1d-types :cljs (get type-key))
                            (symbol (str (ns-name *ns*)) (if (= type-key :ubyte-clamped)
                                                             "->ubytes-clamped-cljs"
                                                             (str "->" (name type-key) "s-cljs"))))))))))

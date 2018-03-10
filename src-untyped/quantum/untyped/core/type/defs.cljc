@@ -25,10 +25,6 @@
     [quantum.untyped.core.logic
       :refer [fn-and fn= condf1]]
     [quantum.untyped.core.numeric.combinatorics :as combo])
-#?(:cljs
-  (:require-macros
-    [quantum.untyped.core.type.defs :as self
-      :refer [->array-nd-types*]]))
   (:import
     #?@(:clj  [#_clojure.core.async.impl.channels.ManyToManyChannel
                com.google.common.util.concurrent.AtomicDouble
@@ -130,14 +126,14 @@
          {})))
 
 #?(:clj
-(def boxed-types*
+(def boxed-types
   (->> primitive-type-meta
        (map (fn [[k v]] [k (:boxed v)]))
        (into {}))))
 
 #?(:clj
-(def unboxed-types*
-  (zipmap (vals boxed-types*) (keys boxed-types*))))
+(def unboxed-types
+  (zipmap (vals boxed-types) (keys boxed-types))))
 
 #?(:clj
 (def boxed->unboxed-types-evaled (->> primitive-type-meta vals (map (juxt :boxed :unboxed)) (into {}) eval)))
@@ -148,7 +144,7 @@
        (into {})))
 
 #?(:clj
-(def promoted-types*
+(def promoted-types
   {'short  'int
    'byte   'short ; Because char is unsigned
    'char   'int
@@ -165,25 +161,24 @@
 
 #?(:clj (def class->str (fn-> str (.substring 6))))
 
-#?(:clj
-(defmacro ->array-nd-types* [n]
-  `{:boolean '~(symbol (str (apply str (repeat n \[)) "Z"))
-    :byte    '~(symbol (str (apply str (repeat n \[)) "B"))
-    :char    '~(symbol (str (apply str (repeat n \[)) "C"))
-    :short   '~(symbol (str (apply str (repeat n \[)) "S"))
-    :int     '~(symbol (str (apply str (repeat n \[)) "I"))
-    :long    '~(symbol (str (apply str (repeat n \[)) "J"))
-    :float   '~(symbol (str (apply str (repeat n \[)) "F"))
-    :double  '~(symbol (str (apply str (repeat n \[)) "D"))
-    :object  '~(symbol (str (apply str (repeat n \[)) "Ljava.lang.Object;"))}))
+(defn >array-nd-types [n]
+  {:boolean (symbol (str (apply str (repeat n \[)) "Z"))
+   :byte    (symbol (str (apply str (repeat n \[)) "B"))
+   :char    (symbol (str (apply str (repeat n \[)) "C"))
+   :short   (symbol (str (apply str (repeat n \[)) "S"))
+   :int     (symbol (str (apply str (repeat n \[)) "I"))
+   :long    (symbol (str (apply str (repeat n \[)) "J"))
+   :float   (symbol (str (apply str (repeat n \[)) "F"))
+   :double  (symbol (str (apply str (repeat n \[)) "D"))
+   :object  (symbol (str (apply str (repeat n \[)) "Ljava.lang.Object;"))})
 
 #_(t/def ::lang->type (t/map-of t/keyword? (t/set-of symbol?)))
 
 ;; Mainly for CLJ use within macros for doing type-related things with CLJS
-(def *types|unevaled (atom {}))
+(defonce *types|unevaled (atom {}))
 
 ;; Empty in CLJS, but may be used later so not excising
-(def *types          (atom {}))
+(defonce *types          (atom {}))
 
 (defn reg-pred! [pred-sym #_t/symbol? data|unevaled #_::lang->type]
    (swap! *types|unevaled
@@ -316,8 +311,8 @@
 
 ; ===== TUPLES ===== ;
 
-(reg-pred! 'tuple?          '{:clj  #{Tuple} ; clojure.lang.Tuple was discontinued; we won't support it for now
-                              :cljs #{Tuple}})
+(reg-pred! 'tuple?          '{:clj  #{quantum.untyped.core.data.tuple.Tuple} ; clojure.lang.Tuple was discontinued; we won't support it for now
+                              :cljs #{quantum.untyped.core.data.tuple.Tuple}})
 (reg-pred! 'map-entry?      '{:clj #{java.util.Map$Entry}})
 
 ; ===== SEQUENCES ===== ; Sequential (generally not efficient Lookup / RandomAccess)
@@ -458,13 +453,13 @@
                ;; No `boolean` sets exist in fastutil, for obvious reasons
                (remove (fn= 'boolean))
                (map (fn [t]
-                      (let [pred-sym   (symbol (str "!" ?prefix "set|" t "-types"))
+                      (let [pred-sym   (symbol (str "!" ?prefix "set|" t "?"))
                             lang->type (>lang->type t)]
                         [pred-sym lang->type])))
                (into (om)))]
     (assoc pred->lang->type|base
-           (symbol (str "!" ?prefix "set|ref-types")) lang->type|ref
-           (symbol (str "!" ?prefix "set-types"))     (apply types-union (vals pred->lang->type|base)))))
+           (symbol (str "!" ?prefix "set|ref?")) lang->type|ref
+           (symbol (str "!" ?prefix "set?"))     (apply types-union (vals pred->lang->type|base)))))
 
 (defn- >pred->lang->type|!hash-set [lang->type|ref]
   (>pred->lang->type|!set|base "hash"
@@ -474,7 +469,7 @@
 ;; TODO this is dependent on state of `*types|unevaled`
 (defn- >pred->lang->type|!unsorted-set []
   (>pred->lang->type|!set|base "unsorted"
-    (fn [t] (preds>types (symbol (str "!hash-set|" t "-types"))))
+    (fn [t] (preds>types (symbol (str "!hash-set|" t "?"))))
     (preds>types '!hash-set|ref?)))
 
 (defn- >pred->lang->type|!sorted-set [lang->type|ref]
@@ -619,46 +614,48 @@
 ; ===== ARRAYS ===== ; Sequential, Associative (specifically, whose keys are sequential,
                      ; dense integer values), not extensible
 ; TODO do e.g. {:clj {0 {:byte ...}}}
-(def array-1d-types*      '{:clj  {:boolean       (symbol "[Z")
-                                   :byte          (symbol "[B")
-                                   :char          (symbol "[C")
-                                   :short         (symbol "[S")
-                                   :long          (symbol "[J")
-                                   :float         (symbol "[F")
-                                   :int           (symbol "[I")
-                                   :double        (symbol "[D")
-                                   :object        (symbol "[Ljava.lang.Object;")}
-                            :cljs {:byte          js/Int8Array
-                                   :ubyte         js/Uint8Array
-                                   :ubyte-clamped js/Uint8ClampedArray
-                                   :char          js/Uint16Array ; kind of
-                                   :ushort        js/Uint16Array
-                                   :short         js/Int16Array
-                                   :int           js/Int32Array
-                                   :uint          js/Uint32Array
-                                   :float         js/Float32Array
-                                   :double        js/Float64Array
-                                   :object        js/Array}})
-(reg-pred! 'undistinguished-array-1d? (->> array-1d-types* (map (fn [[k v]] [k (-> v vals set)])) (into {})))
-(def array-2d-types*       {:clj (->array-nd-types* 2 )})
-(def array-3d-types*       {:clj (->array-nd-types* 3 )})
-(def array-4d-types*       {:clj (->array-nd-types* 4 )})
-(def array-5d-types*       {:clj (->array-nd-types* 5 )})
-(def array-6d-types*       {:clj (->array-nd-types* 6 )})
-(def array-7d-types*       {:clj (->array-nd-types* 7 )})
-(def array-8d-types*       {:clj (->array-nd-types* 8 )})
-(def array-9d-types*       {:clj (->array-nd-types* 9 )})
-(def array-10d-types*      {:clj (->array-nd-types* 10)})
-(reg-pred! 'array?         (preds>types (->> array-1d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-2d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-3d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-4d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-5d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-6d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-7d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-8d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-9d-types*  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
-                                        (->> array-10d-types* (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
+(def array-1d-types        {:clj   {:boolean       (symbol "[Z")
+                                    :byte          (symbol "[B")
+                                    :char          (symbol "[C")
+                                    :short         (symbol "[S")
+                                    :long          (symbol "[J")
+                                    :float         (symbol "[F")
+                                    :int           (symbol "[I")
+                                    :double        (symbol "[D")
+                                    :object        (symbol "[Ljava.lang.Object;")}
+                            :cljs '{:byte          js/Int8Array
+                                    :ubyte         js/Uint8Array
+                                    :ubyte-clamped js/Uint8ClampedArray
+                                    :char          js/Uint16Array ; kind of
+                                    :ushort        js/Uint16Array
+                                    :short         js/Int16Array
+                                    :int           js/Int32Array
+                                    :uint          js/Uint32Array
+                                    :float         js/Float32Array
+                                    :double        js/Float64Array
+                                    :object        js/Array}})
+
+(reg-pred! 'undistinguished-array-1d? (->> array-1d-types (map (fn [[k v]] [k (-> v vals set)])) (into {})))
+
+(def array-2d-types        {:clj (>array-nd-types 2 )})
+(def array-3d-types        {:clj (>array-nd-types 3 )})
+(def array-4d-types        {:clj (>array-nd-types 4 )})
+(def array-5d-types        {:clj (>array-nd-types 5 )})
+(def array-6d-types        {:clj (>array-nd-types 6 )})
+(def array-7d-types        {:clj (>array-nd-types 7 )})
+(def array-8d-types        {:clj (>array-nd-types 8 )})
+(def array-9d-types        {:clj (>array-nd-types 9 )})
+(def array-10d-types       {:clj (>array-nd-types 10)})
+(reg-pred! 'array?         (types-union (->> array-1d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-2d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-3d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-4d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-5d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-6d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-7d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-8d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-9d-types  (map (fn [[k v]] [k (-> v vals set)])) (into {}))
+                                        (->> array-10d-types (map (fn [[k v]] [k (-> v vals set)])) (into {}))))
 
 ; String: A special wrapper for char array where different encodings, etc. are possible
 
@@ -867,35 +864,35 @@
                                   {:clj  '#{fast_zip.core.ZipperLocation}
                                   :cljs '#{fast-zip.core/ZipperLocation}}))
 
-(reg-pred! 'booleans?       {:clj #{(-> array-1d-types*  :clj  :boolean)}})
+(reg-pred! 'booleans?       {:clj #{(-> array-1d-types  :clj  :boolean)}})
 (reg-pred! 'boolean-array?  (preds>types 'booleans?))
-(reg-pred! 'bytes?          {:clj #{(-> array-1d-types*  :clj  :byte   )} :cljs #{(-> array-1d-types* :cljs :byte   )}})
+(reg-pred! 'bytes?          {:clj #{(-> array-1d-types  :clj  :byte   )} :cljs #{(-> array-1d-types :cljs :byte   )}})
 (reg-pred! 'byte-array?     (preds>types 'bytes?))
-(reg-pred! 'ubytes?         {                                             :cljs #{(-> array-1d-types* :cljs :ubyte  )}})
+(reg-pred! 'ubytes?         {                                            :cljs #{(-> array-1d-types :cljs :ubyte  )}})
 (reg-pred! 'ubyte-array?    (preds>types 'ubytes?))
-(reg-pred! 'ubytes-clamped? {                                             :cljs #{(-> array-1d-types* :cljs :ubyte-clamped)}})
+(reg-pred! 'ubytes-clamped? {                                            :cljs #{(-> array-1d-types :cljs :ubyte-clamped)}})
 (reg-pred! 'ubyte-array-clamped? (preds>types 'ubytes-clamped?))
-(reg-pred! 'chars?          {:clj #{(-> array-1d-types*  :clj  :char   )} :cljs #{(-> array-1d-types* :cljs :char   )}})
+(reg-pred! 'chars?          {:clj #{(-> array-1d-types  :clj  :char   )} :cljs #{(-> array-1d-types :cljs :char   )}})
 (reg-pred! 'char-array?     (preds>types 'chars?))
-(reg-pred! 'shorts?         {:clj #{(-> array-1d-types*  :clj  :short  )} :cljs #{(-> array-1d-types* :cljs :short  )}})
+(reg-pred! 'shorts?         {:clj #{(-> array-1d-types  :clj  :short  )} :cljs #{(-> array-1d-types :cljs :short  )}})
 (reg-pred! 'short-array?    (preds>types 'shorts?))
-(reg-pred! 'ushorts?        {                                             :cljs #{(-> array-1d-types* :cljs :ushort )}})
+(reg-pred! 'ushorts?        {                                            :cljs #{(-> array-1d-types :cljs :ushort )}})
 (reg-pred! 'ushort-array?   (preds>types 'ushorts?))
-(reg-pred! 'ints?           {:clj #{(-> array-1d-types*  :clj  :int    )} :cljs #{(-> array-1d-types* :cljs :int    )}})
+(reg-pred! 'ints?           {:clj #{(-> array-1d-types  :clj  :int    )} :cljs #{(-> array-1d-types :cljs :int    )}})
 (reg-pred! 'int-array?      (preds>types 'ints?))
-(reg-pred! 'uints?          {                                             :cljs #{(-> array-1d-types* :cljs :uint  )}})
+(reg-pred! 'uints?          {                                            :cljs #{(-> array-1d-types :cljs :uint  )}})
 (reg-pred! 'uint-array?     (preds>types 'uints?))
-(reg-pred! 'longs?          {:clj #{(-> array-1d-types*  :clj  :long   )} :cljs #{(-> array-1d-types* :cljs :long   )}})
+(reg-pred! 'longs?          {:clj #{(-> array-1d-types  :clj  :long   )} :cljs #{(-> array-1d-types :cljs :long   )}})
 (reg-pred! 'long-array?     (preds>types 'longs?))
-(reg-pred! 'floats?         {:clj #{(-> array-1d-types*  :clj  :float  )} :cljs #{(-> array-1d-types* :cljs :float  )}})
+(reg-pred! 'floats?         {:clj #{(-> array-1d-types  :clj  :float  )} :cljs #{(-> array-1d-types :cljs :float  )}})
 (reg-pred! 'float-array?    (preds>types 'floats?))
-(reg-pred! 'doubles?        {:clj #{(-> array-1d-types*  :clj  :double )} :cljs #{(-> array-1d-types* :cljs :double )}})
+(reg-pred! 'doubles?        {:clj #{(-> array-1d-types  :clj  :double )} :cljs #{(-> array-1d-types :cljs :double )}})
 (reg-pred! 'double-array?   (preds>types 'doubles?))
-(reg-pred! 'objects?        {:clj #{(-> array-1d-types*  :clj  :object )} :cljs #{(-> array-1d-types* :cljs :object )}})
+(reg-pred! 'objects?        {:clj #{(-> array-1d-types  :clj  :object )} :cljs #{(-> array-1d-types :cljs :object )}})
 (reg-pred! 'object-array?   (preds>types 'objects?))
 
-(reg-pred! 'array-1d?       {:clj  (->> array-1d-types*  :clj  vals set)
-                             :cljs (->> array-1d-types*  :cljs vals set)})
+(reg-pred! 'array-1d?       {:clj  (->> array-1d-types  :clj  vals set)
+                             :cljs (->> array-1d-types  :cljs vals set)})
 
 
 (reg-pred! 'numeric-1d?     (preds>types 'bytes? 'ubytes? 'ubytes-clamped?
@@ -903,18 +900,18 @@
                                          'shorts? 'ints? 'uints? 'longs?
                                          'floats? 'doubles?))
 
-(reg-pred! 'booleans-2d?    {:clj #{(-> array-2d-types* :clj :boolean)} :cljs #{(-> array-2d-types* :cljs :boolean)}})
-(reg-pred! 'bytes-2d?       {:clj #{(-> array-2d-types* :clj :byte   )} :cljs #{(-> array-2d-types* :cljs :byte   )}})
-(reg-pred! 'chars-2d?       {:clj #{(-> array-2d-types* :clj :char   )} :cljs #{(-> array-2d-types* :cljs :char   )}})
-(reg-pred! 'shorts-2d?      {:clj #{(-> array-2d-types* :clj :short  )} :cljs #{(-> array-2d-types* :cljs :short  )}})
-(reg-pred! 'ints-2d?        {:clj #{(-> array-2d-types* :clj :int    )} :cljs #{(-> array-2d-types* :cljs :int    )}})
-(reg-pred! 'longs-2d?       {:clj #{(-> array-2d-types* :clj :long   )} :cljs #{(-> array-2d-types* :cljs :long   )}})
-(reg-pred! 'floats-2d?      {:clj #{(-> array-2d-types* :clj :float  )} :cljs #{(-> array-2d-types* :cljs :float  )}})
-(reg-pred! 'doubles-2d?     {:clj #{(-> array-2d-types* :clj :double )} :cljs #{(-> array-2d-types* :cljs :double )}})
-(reg-pred! 'objects-2d?     {:clj #{(-> array-2d-types* :clj :object )} :cljs #{(-> array-2d-types* :cljs :object )}})
+(reg-pred! 'booleans-2d?    {:clj #{(-> array-2d-types  :clj :boolean)} :cljs #{(-> array-2d-types :cljs :boolean)}})
+(reg-pred! 'bytes-2d?       {:clj #{(-> array-2d-types  :clj :byte   )} :cljs #{(-> array-2d-types :cljs :byte   )}})
+(reg-pred! 'chars-2d?       {:clj #{(-> array-2d-types  :clj :char   )} :cljs #{(-> array-2d-types :cljs :char   )}})
+(reg-pred! 'shorts-2d?      {:clj #{(-> array-2d-types  :clj :short  )} :cljs #{(-> array-2d-types :cljs :short  )}})
+(reg-pred! 'ints-2d?        {:clj #{(-> array-2d-types  :clj :int    )} :cljs #{(-> array-2d-types :cljs :int    )}})
+(reg-pred! 'longs-2d?       {:clj #{(-> array-2d-types  :clj :long   )} :cljs #{(-> array-2d-types :cljs :long   )}})
+(reg-pred! 'floats-2d?      {:clj #{(-> array-2d-types  :clj :float  )} :cljs #{(-> array-2d-types :cljs :float  )}})
+(reg-pred! 'doubles-2d?     {:clj #{(-> array-2d-types  :clj :double )} :cljs #{(-> array-2d-types :cljs :double )}})
+(reg-pred! 'objects-2d?     {:clj #{(-> array-2d-types  :clj :object )} :cljs #{(-> array-2d-types :cljs :object )}})
 
-(reg-pred! 'array-2d?       {:clj  (->> array-2d-types*  :clj  vals set)
-                             :cljs (->> array-2d-types*  :cljs vals set)})
+(reg-pred! 'array-2d?       {:clj  (->> array-2d-types  :clj  vals set)
+                             :cljs (->> array-2d-types  :cljs vals set)})
 
 (reg-pred! 'numeric-2d?     (preds>types 'bytes-2d?
                                          'chars-2d?
@@ -924,33 +921,33 @@
                                          'floats-2d?
                                          'doubles-2d?))
 
-(reg-pred! 'array-3d?       {:clj  (->> array-3d-types*  :clj  vals set)
-                             :cljs (->> array-3d-types*  :cljs vals set)})
-(reg-pred! 'array-4d?       {:clj  (->> array-4d-types*  :clj  vals set)
-                             :cljs (->> array-4d-types*  :cljs vals set)})
-(reg-pred! 'array-5d?       {:clj  (->> array-5d-types*  :clj  vals set)
-                             :cljs (->> array-5d-types*  :cljs vals set)})
-(reg-pred! 'array-6d?       {:clj  (->> array-6d-types*  :clj  vals set)
-                             :cljs (->> array-6d-types*  :cljs vals set)})
-(reg-pred! 'array-7d?       {:clj  (->> array-7d-types*  :clj  vals set)
-                             :cljs (->> array-7d-types*  :cljs vals set)})
-(reg-pred! 'array-8d?       {:clj  (->> array-8d-types*  :clj  vals set)
-                             :cljs (->> array-8d-types*  :cljs vals set)})
-(reg-pred! 'array-9d?       {:clj  (->> array-9d-types*  :clj  vals set)
-                             :cljs (->> array-9d-types*  :cljs vals set)})
-(reg-pred! 'array-10d?      {:clj  (->> array-10d-types* :clj  vals set)
-                             :cljs (->> array-10d-types* :cljs vals set)})
+(reg-pred! 'array-3d?       {:clj  (->> array-3d-types   :clj  vals set)
+                             :cljs (->> array-3d-types   :cljs vals set)})
+(reg-pred! 'array-4d?       {:clj  (->> array-4d-types   :clj  vals set)
+                             :cljs (->> array-4d-types   :cljs vals set)})
+(reg-pred! 'array-5d?       {:clj  (->> array-5d-types   :clj  vals set)
+                             :cljs (->> array-5d-types   :cljs vals set)})
+(reg-pred! 'array-6d?       {:clj  (->> array-6d-types   :clj  vals set)
+                             :cljs (->> array-6d-types   :cljs vals set)})
+(reg-pred! 'array-7d?       {:clj  (->> array-7d-types   :clj  vals set)
+                             :cljs (->> array-7d-types   :cljs vals set)})
+(reg-pred! 'array-8d?       {:clj  (->> array-8d-types   :clj  vals set)
+                             :cljs (->> array-8d-types   :cljs vals set)})
+(reg-pred! 'array-9d?       {:clj  (->> array-9d-types   :clj  vals set)
+                             :cljs (->> array-9d-types   :cljs vals set)})
+(reg-pred! 'array-10d?      {:clj  (->> array-10d-types  :clj  vals set)
+                             :cljs (->> array-10d-types  :cljs vals set)})
 
-(reg-pred! 'objects-nd?     {:clj  #{(-> array-1d-types*  :clj  :object )
-                                     (-> array-2d-types*  :clj  :object )
-                                     (-> array-3d-types*  :clj  :object )
-                                     (-> array-4d-types*  :clj  :object )
-                                     (-> array-5d-types*  :clj  :object )
-                                     (-> array-6d-types*  :clj  :object )
-                                     (-> array-7d-types*  :clj  :object )
-                                     (-> array-8d-types*  :clj  :object )
-                                     (-> array-9d-types*  :clj  :object )
-                                     (-> array-10d-types* :clj  :object ) }
+(reg-pred! 'objects-nd?     {:clj  #{(-> array-1d-types  :clj  :object )
+                                     (-> array-2d-types  :clj  :object )
+                                     (-> array-3d-types  :clj  :object )
+                                     (-> array-4d-types  :clj  :object )
+                                     (-> array-5d-types  :clj  :object )
+                                     (-> array-6d-types  :clj  :object )
+                                     (-> array-7d-types  :clj  :object )
+                                     (-> array-8d-types  :clj  :object )
+                                     (-> array-9d-types  :clj  :object )
+                                     (-> array-10d-types :clj  :object ) }
                              :cljs (:cljs (preds>types 'objects?))})
 
 ;; ===== Predicates ===== ;;

@@ -16,5 +16,5 @@
   array-ident->primitive-sym
   elem-types-clj
   max-values max-type
-  #?@(:clj [boxed-types* unboxed-types* boxed->unboxed-types-evaled promoted-types* array-1d-types* class->str])
+  #?@(:clj [boxed-types unboxed-types boxed->unboxed-types-evaled promoted-types array-1d-types class->str])
   types|unevaled types)
