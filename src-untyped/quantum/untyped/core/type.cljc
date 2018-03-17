@@ -9,6 +9,7 @@
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      keyword? string? symbol?
+     true? false?
      meta ref])
   (:require
     [clojure.core                               :as c]
@@ -1141,7 +1142,7 @@
         :else
           (err! "Not sure how to handle spec" spec)))
 
-(defn spec>classes #_> set?
+(defn spec>classes #_> #_set?
   "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
    if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
   [spec] (-spec>classes spec #{}))
@@ -1239,6 +1240,9 @@
 #?(:clj  (-def throwable?      java.lang.Throwable))
 #?(:clj  (-def comparable?     java.lang.Comparable))
 #?(:clj  (-def iterable?       java.lang.Iterable))
+
+         (-def true?           (value true))
+         (-def false?          (value false))
 #_(t/def ::form    (t/or ::literal t/list? t/vector? ...))
 
 )

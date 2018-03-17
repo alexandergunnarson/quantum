@@ -13,7 +13,7 @@
       :refer [aritoid fn1 fnl fn', fn-> fn->> <-, rcomp
               firsta seconda]]
     [quantum.core.log                  :as log
-      :refer [ppr! prl! prlm!]]
+      :refer [ppr! ppr prl! prlm!]]
     [quantum.core.logic                :as l
       :refer [fn= fn-and fn-or fn-not ifs if-not-let]]
     [quantum.core.macros
@@ -342,7 +342,7 @@
                            :instance))]))
        (join {}))) ; TODO !hash-map
 
-(defonce class->fields|with-cache
+(def class->fields|with-cache
   (memoize (fn [c] (class->fields c))))
 
 (def ^:dynamic *conditional-branch-pruning?* true)
@@ -356,7 +356,7 @@
 (defn persistent!-and-add-file-context [form ast-ret]
   (update ast-ret :form (fn-> persistent! (add-file-context form))))
 
-(def special-symbols '#{do let* deftype* fn* def . if quote new}) ; TODO make more complete
+(def special-symbols '#{do let* deftype* fn* def . if quote new throw}) ; TODO make more complete
 
 (deftype WatchableMutable
   [^:unsynchronized-mutable v ^:unsynchronized-mutable ^clojure.lang.IFn watch]
@@ -378,24 +378,6 @@
 (defn !ref
   ([v]       (->WatchableMutable v nil))
   ([v watch] (->WatchableMutable v watch)))
-
-(defn truthy-type? [t]
-  (when (#{Boolean Boolean/TYPE} t)
-    (TODO "Don't yet known how to handle booleans"))
-  (if (= t :nil)
-      false
-      true))
-
-(defn truthy-expr? [expr]
-  (when (-> expr :constraints some?)
-    (TODO "Don't yet know how to handle constraints"))
-  (if-let [classes (->> expr :type-info ?deref :reifieds (lmap truthy-type?) seq)]
-    (ucl/every-val ::unknown classes)
-    ::unknown))
-
-(defn union|type-info [ti0 ti1]
-  (prl! ti0 ti1)
-  (TODO))
 
 (declare analyze*)
 
@@ -601,13 +583,13 @@
             with-ret-spec))))))
 
 (defns analyze-seq|dot|field-access
-  [env _, form _, target _, field-form _ #_t/unqualified-symbol?, field java.lang.reflect.Field]
+  [env _, form _, target _, field-form _ #_t/unqualified-symbol?, field Field]
   (ast/field-access
     {:env    env
      :form   form
      :target target
      :field  field-form
-     :spec   (-> field .getType t/>spec)}))
+     :spec   (-> field :type t/>spec)}))
 
 (defn classes>class
   "Ensure that given a set of classes, that set consists of at most a class C and nil.
@@ -646,39 +628,76 @@
             (analyze-seq|dot|method-call env form target target-class (boolean ?target-static-class-map)
               method-or-field args-forms))))))
 
+;; TODO move this
+(defn truthy-expr? [{:as expr :keys [spec]}]
+  (ifs (or (t/= spec t/nil?)
+           (t/= spec t/false?)) false
+       (or (t/> spec t/nil?)
+           (t/> spec t/false?)) nil ; representing "unknown"
+       true))
+
 (defn analyze-seq|if
   "If `*conditional-branch-pruning?*` is falsey, the dead branch's original form will be
    retained, but it will not be type-analyzed."
-  [env form [pred true-form false-form :as body]]
+  [env form [pred-form true-form false-form :as body]]
   {:post [(prl! %)]}
-  (when (-> body count (not= 3))
-    (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body}))
-  (let [pred-expr  (analyze* env pred)
-        true-expr  (delay (analyze* env true-form))
-        false-expr (delay (analyze* env false-form))
-        whole-expr
-          (delay
-            (do (TODO "fix `if` analysis")
-                #_(->expr-info
-                  {:env       env
-                   :form      (list 'if pred (:form @true-expr) (:form @false-expr))
-                   :type-info (union|type-info (:type-info @true-expr) (:type-info @false-expr))})))]
-    (case (truthy-expr? pred-expr)
-      ::unknown @whole-expr
-      true      (-> @true-expr  (assoc :env env)
-                                (cond-> (not *conditional-branch-pruning?*)
-                                        (assoc :form (list 'if pred (:form @true-expr) false-form))))
-      false     (-> @false-expr (assoc :env env)
-                                (cond-> (not *conditional-branch-pruning?*)
-                                        (assoc :form (list 'if pred true-form          (:form @false-expr))))))))
+  (if (-> body count (not= 3))
+      (err! "`if` accepts exactly 3 arguments: one predicate test and two branches; received" {:body body})
+      (let [pred-expr  (analyze* env pred-form)
+            true-expr  (delay (analyze* env true-form))
+            false-expr (delay (analyze* env false-form))
+            whole-expr
+              (delay
+                (ast/if-expr
+                  {:env        env
+                   :form       (list 'if (:form pred-expr) (:form @true-expr) (:form @false-expr))
+                   :pred-expr  pred-expr
+                   :true-expr  @true-expr
+                   :false-expr @false-expr
+                   :spec       (apply t/or (->> [(:spec @true-expr) (:spec @false-expr)] (remove nil?)))}))]
+        (case (truthy-expr? pred-expr)
+          true      (do (ppr ::warn "Predicate in `if` expression is always true" {:pred pred-form})
+                        (-> @true-expr  (assoc :env env)
+                                        (cond-> (not *conditional-branch-pruning?*)
+                                                (assoc :form (list 'if pred-form (:form @true-expr) false-form)))))
+          false     (do (ppr ::warn "Predicate in `if` expression is always false" {:pred pred-form})
+                        (-> @false-expr (assoc :env env)
+                                        (cond-> (not *conditional-branch-pruning?*)
+                                                (assoc :form (list 'if pred-form true-form          (:form @false-expr))))))
+          nil       @whole-expr))))
 
 (defn analyze-seq|quote [env form body]
   {:post [(prl! %)]}
   (ast/quoted env form (tcore/most-primitive-class-of body)))
 
-(defn analyze-seq|new [env form body]
+(defn analyze-seq|new [env form [c|form #_class? & args :as body]]
   {:pre [(prl! env form body)]}
-  (TODO "Don't know how to handle"))
+  (let [c|analyzed (analyze* env c|form)]
+    (if-not (and (-> c|analyzed :spec t/value-spec?)
+                 (-> c|analyzed :spec t/value-spec>value class?))
+            (err! "Supplied non-class to `new` expression" {:x c|form})
+            (let [c             (-> c|analyzed :spec t/value-spec>value)
+                  args|analyzed (mapv (fn [arg] (analyze* env arg)) args)]
+              (ast/new-expr {:env   env
+                             :form  (list* 'new c|form (map :form args|analyzed))
+                             :class c
+                             :args  args|analyzed
+                             :spec  (t/isa? c)})))))
+
+(defn analyze-seq|throw [env form [arg :as body]]
+  {:pre [(prl! env form body)]}
+  (if (-> body count (not= 1))
+      (err! "Must supply exactly one input to `throw`; supplied" {:body body})
+      (let [arg|analyzed (analyze* env arg)]
+        ;; TODO this is not quite true for CLJS but it's nice at least
+        (if-not (-> arg|analyzed :spec (t/<= t/throwable?))
+          (err! "`throw` requires a throwable; received" {:arg arg :spec (:spec arg|analyzed)})
+          (ast/throw-expr {:env  env
+                           :form (list 'throw (:form arg|analyzed))
+                           :arg  arg|analyzed
+                           ;; `nil` because nothing is actually returned
+                           ;; TODO This needs to be handled in other analysis places
+                           :spec nil})))))
 
 (defn analyze-seq*
   "Analyze a seq after it has been macro-expanded.
@@ -687,24 +706,16 @@
   (ppr! {'expanded-form form})
   (if (special-symbols sym)
       (case sym
-        do
-          (analyze-seq|do    env form body)
-        let*
-          (analyze-seq|let*  env form body)
-        deftype*
-          (TODO "deftype*")
-        fn*
-          (TODO "fn*")
-        def
-          (TODO "def")
-        .
-          (analyze-seq|dot   env form body)
-        if
-          (analyze-seq|if    env form body)
-        quote
-          (analyze-seq|quote env form body)
-        new
-          (analyze-seq|new   env form body))
+        do       (analyze-seq|do    env form body)
+        let*     (analyze-seq|let*  env form body)
+        deftype* (TODO "deftype*")
+        fn*      (TODO "fn*")
+        def      (TODO "def")
+        .        (analyze-seq|dot   env form body)
+        if       (analyze-seq|if    env form body)
+        quote    (analyze-seq|quote env form body)
+        new      (analyze-seq|new   env form body)
+        throw    (analyze-seq|throw env form body))
       (if-let [sym-resolved (resolve sym)]
         ; See note above on typed function return types
         (TODO)

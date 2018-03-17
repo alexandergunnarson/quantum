@@ -416,12 +416,12 @@
   ([x (t/isa? clojure.lang.BigInt)]
     (if (nil? (.bipart x))
         (.lpart x)
-        (long-out-of-range x)))
+        (throw (Exception. "Long out of range"))))
   ([x (t/isa? java.math.BigInteger)]
     (if (< (.bitLength x) 64)
         (.longValue x)
-        (long-out-of-range x)))
-  ([x t/ratio?] (->long (.bigIntegerValue x)))
+        (throw (Exception. "Long out of range"))))
+  ([x t/ratio?] (>long (.bigIntegerValue x)))
   ([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
   ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
   ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix

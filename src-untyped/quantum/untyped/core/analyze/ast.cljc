@@ -113,6 +113,20 @@
 
 (defn macro-call [m] (-> m map->MacroCall (assoc :spec (-> m :expanded :spec))))
 
+(defrecord IfExpr
+  [env        #_::env
+   form       #_::t/form
+   pred-expr  #_::node
+   true-expr  #_::node
+   false-expr #_::node
+   spec       #_::t/spec]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `if-expr (into (array-map) this))))
+
+(defn if-expr [m] (map->IfExpr m))
+
 ;; ===== RUNTIME CALLS ===== ;;
 
 (defrecord FieldAccess
@@ -141,5 +155,30 @@
     (-edn [this] (list `method-call (into (array-map) this))))
 
 (defn method-call [m] (map->MethodCall m))
+
+(defrecord NewExpr
+  [env   #_::env
+   form  #_::t/form
+   class #_t/class?
+   args  #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   spec  #_::t/spec]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `new-expr (into (array-map) this))))
+
+(defn new-expr [m] (map->NewExpr m))
+
+(defrecord ThrowExpr
+  [env  #_::env
+   form #_::t/form
+   arg  #_::node
+   spec #_t/nil?]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `throw-expr (into (array-map) this))))
+
+(defn throw-expr [m] (map->ThrowExpr m))
 
 )
