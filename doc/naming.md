@@ -3,11 +3,15 @@
 ## Symbols
 
 - `->`+         : constructor
-                : 'convert to'
-- +`->`         : 'convert from'
-- `a=>b`        : map from `a` to `b`
+                : 'convert to' ; TODO phase out
+; `>`+          : 'convert to'
+- +`->`         : 'convert from' ; TODO phase out
+- +`>`          : 'convert from'
+- <A>`=>`<B>    : map from <A> to <B> ; TODO phase out
+- <A>`->`<B>    : map from <A> to <B>
 - `<`+          : calculate/compute (of functions) — as if to "take off the chan" of computed vals
-- <A>`:`<B>     : specificity relationship; <A> of type <B>
+- <A>`:`<B>     : specificity relationship; <A> of type <B> ; TODO phase out
+- <A>`|`<B>     : specificity relationship; <A> of type <B>
 - +`?`          : predicate
 - `?`+          : 'maybe' — if null, return null, otherwise do something
 - +`*`          : 'variant' — as ambiguous as it sounds ; TODO phase out
