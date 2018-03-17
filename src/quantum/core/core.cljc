@@ -29,6 +29,8 @@
   #?(:clj  (fn [^long x] (unchecked-inc x))
      :cljs inc))
 
+;; ===== Mutability/Effects ===== ;;
+
 (defprotocol IValue
   (get [this])
   (set [this newv]))
@@ -36,11 +38,8 @@
 #?(:clj
 (defmacro with
   "Evaluates @expr, then @body, then returns @expr.
-   For side effects."
+   For (side) effects."
   [expr & body]
   `(let [expr# ~expr]
     ~@body
     expr#)))
-
-;; Nested |let-mutable| :
-   ;; ClassCastException java.lang.Long cannot be cast to proteus.Containers$L
