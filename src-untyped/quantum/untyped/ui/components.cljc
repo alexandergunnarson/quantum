@@ -5,19 +5,29 @@
   (:refer-clojure :exclude [for reduce])
   (:require
   #?@(:cljs
-   [[reagent.core                :as rx]
+   [[reagent.core                  :as rx]
     [reagent.impl.component
       :refer [react-class?]]
     [reagent.interop
-      :refer [$ $!]]
-    [re-frame.core               :as re]])
-    [quantum.untyped.core.log    :as log]
-    [quantum.untyped.core.system :as usys
+      :refer [$ $!]]])
+    [quantum.untyped.core.log      :as log]
+    [quantum.untyped.core.system   :as usys
       :refer  [#?@(:cljs [react-native])]]
     [quantum.untyped.core.type.predicates
-      :refer [val?]]))
+      :refer [val?]]
+    [quantum.untyped.reactive.core :as re]))
+
+(def id :testID) ; because camelCase is a little ugly in Clojure :)
 
 ;; ----- Local state ----- ;;
+
+(defn update-local-state
+  ([db ident f]
+    (update-in db [:local-state ident] f))
+  ([db ident f & args]
+    (apply update-in db [:local-state ident] f args)))
+
+(defn >local-state [db ident] (-> db :local-state (get ident)))
 
 #?(:cljs (re/reg-sub :local-state get-in))
 
@@ -26,7 +36,7 @@
   (fn [db msg] (assoc-in db (butlast msg) (last msg)))))
 
 #?(:cljs
-(re/reg-event-db ::gc-local-state
+(re/reg-event-db ::gc-local-state false
   (fn [db [_ ident]] (update db :local-state dissoc ident))))
 
 #?(:cljs
@@ -46,11 +56,11 @@
                             (this-as c
                               (when-not (nil? orig-component-will-unmount)
                                 (.call orig-component-will-unmount c))
-                              (re/dispatch-sync [::gc-local-state ident])))))))
+                              (re/event! [::gc-local-state ident])))))))
               (rx/create-class
                 {:render component-ret
                  :component-will-unmount
-                  (fn [_] (re/dispatch-sync [::gc-local-state ident]))}))))
+                  (fn [_] (re/event-sync! [::gc-local-state ident]))}))))
       (with-meta (meta component-f))
       (doto ($! :name (.-name component-f))))))
 

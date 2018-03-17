@@ -1,5 +1,5 @@
 (ns quantum.untyped.ui.dom
-  #?(:cljs (:require [re-frame.core :as re])))
+  #?(:cljs (:require [quantum.untyped.reactive.core :as re])))
 
 #?(:cljs
 (defn append-element! [parent #_dom-element? tag #_t/string? id #_t/string?]
@@ -13,6 +13,14 @@
   (when-let [node (.getElementById js/document id)]
     (.removeChild parent node))
   (append-element! parent tag id)))
+
+#?(:cljs
+(defn test-id>element [id]
+  (let [nodes (js/Array.from (js/document.querySelectorAll (str "[data-testid='" id "']")))
+        _ (assert (-> nodes count (> 1) not))]
+    (when-let [node (first nodes)]
+      #js {:id   (.getAttribute node "data-testid")
+           :node node}))))
 
 #?(:cljs
 (defn viewport-w []

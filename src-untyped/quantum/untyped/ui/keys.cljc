@@ -3,7 +3,7 @@
     [clojure.set :as set]))
 
 (def ^{:doc "From https://www.w3.org/TR/uievents-key/#named-key-attribute-values, accessed 2/1/2018"}
-  key-ident>label
+  key-ident->label
   {;; Special keys
    "Unidentified"              :unidentified
    ;; Modifier keys
@@ -306,4 +306,8 @@
    "Wink"                      :wink
    "ZoomToggle"                :zoom-toggle})
 
-(def label>key-ident (set/map-invert key-ident>label))
+(defn key-ident>label [ident] (get key-ident->label ident ident))
+
+(def label->key-ident (set/map-invert key-ident->label))
+
+(defn label>key-ident [label] (get label->key-ident label label))
