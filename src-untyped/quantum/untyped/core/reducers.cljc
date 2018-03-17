@@ -91,10 +91,9 @@
    a reduction (unlike `reduce`)."
   ([f xs] (educe f (f) xs))
   ([f init xs]
-    (let [ret (if (satisfies? PEduceInit xs)
-                  (-educe-init xs f init)
-                  (reduce f init xs))]
-      (f ret))))
+    (if (satisfies? PEduceInit xs)
+        (-educe-init xs f init)
+        (f (reduce f init xs)))))
 
 (defn join
   "Like `into`, but internally uses `educe`, and creates as little data

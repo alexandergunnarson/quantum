@@ -63,3 +63,7 @@
 (defn array? [x]
   #?(:clj  (-> x class .isArray) ; must be reflective
      :cljs (core/array? x)))
+
+(defn transient? [x]
+  #?(:clj  (instance?  clojure.lang.ITransientCollection x)
+     :cljs (satisfies? cljs.core/ITransientCollection    x)))

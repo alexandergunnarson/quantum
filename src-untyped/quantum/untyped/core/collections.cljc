@@ -17,12 +17,15 @@
     [quantum.untyped.core.reducers :as ur
       :refer [defeager def-transducer>eager transducer->transformer educe]]
     [quantum.untyped.core.type.predicates
-      :refer [array? val?]]))
+      :refer [array? val? transient?]]))
 
 (ucore/log-this-ns)
 
 (def count core/count)
 (def lrange core/range)
+
+(defn ?persistent! [x]
+  (if (transient? x) (persistent! x) x))
 
 ;; ===== SOCIATIVE ===== ;;
 
@@ -298,17 +301,17 @@
   [f coll]
   (let [frequencies-0
          (educe
-           (aritoid nil persistent!
+           (aritoid (fn' (transient {})) persistent!
              (fn [counts x]
                (let [gotten (f x)
                      freq   (inc (get counts gotten 0))]
                  (assoc! counts gotten freq))))
-           (transient {}) coll)
+           coll)
         frequencies-f
           (educe
-            (aritoid nil persistent!
+            (aritoid (fn' (transient {})) persistent!
               (fn [ret elem] (assoc! ret elem (get frequencies-0 (f elem)))))
-            (transient {}) coll)]
+             coll)]
     frequencies-f))
 
 (defn group-by
@@ -326,11 +329,11 @@
   "Like `clojure.core/distinct?` except operates on reducibles."
   [xs]
   (->> xs
-       (educe (aritoid (fn' #{}) identity
+       (educe (aritoid (fn' (transient #{})) ?persistent!
                 (fn [distincts x]
                   (if (contains? distincts x)
                       (reduced false)
-                      (conj distincts x)))))
+                      (conj! distincts x)))))
        boolean))
 
 ;; ===== ZIPPER ===== ;;
