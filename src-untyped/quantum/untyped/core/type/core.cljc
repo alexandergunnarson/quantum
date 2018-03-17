@@ -201,7 +201,7 @@
   {:examples '{(class>prim-subclasses Number)
                #{utdef/long utdef/int utdef/short utdef/byte utdef/float utdef/double}}}
   [^Class c]
-  (let [boxed-types (get utdef/types 'primitive-boxed?)]
+  (let [boxed-types (get-in utdef/types [:clj 'primitive-boxed?])]
     (->> boxed-types
          (r/filter #(isa? % c))
          (r/map boxed->unboxed)

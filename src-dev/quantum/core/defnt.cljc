@@ -185,33 +185,32 @@
 (defn class>simplest-class
   "This ensures that special overloads are not created for non-primitive subclasses
    of java.lang.Object (e.g. String, etc.)."
-  [c #_(t/? t/class?)]
+  [c #_t/class?]
   (if (t/primitive-class? c)
       c
       (or (tcore/boxed->unboxed c) java.lang.Object))))
 
 #?(:clj
-(defn class-data>most-primitive-class
-  "Assumes class is not `::t/multiple`"
-  [{:keys [nilable?] c :class}]
+(defn class>most-primitive-class
+  [c #_t/class? nilable?]
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defn spec>most-primitive-class [spec & [throw?]]
-  (let [{:as class-data c :class} (t/spec>class spec)]
-    (if (= c ::t/multiple)
-        (if throw?
-            (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
-                  {:spec spec :class-data class-data})
-            c)
-        (class-data>most-primitive-class class-data)))))
+(defn spec>most-primitive-class [spec #_t/spec?]
+  (let [cs (t/spec>classes spec) cs' (disj cs nil)]
+    (if (-> cs' count (> 1))
+        (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
+              {:spec spec :classes cs})
+        (class>most-primitive-class (first cs') (contains? cs nil))))))
 
 #?(:clj
-(defn out-spec>class [spec]
-  (let [{:as class-data c :class} (t/spec>class spec)]
-    (ifs ;; NOTE: we don't need to vary the output class if there are multiple output possibilities
-         (= c ::t/multiple) java.lang.Object
-         (-> class-data class-data>most-primitive-class class>simplest-class)))))
+(defn out-spec>class [spec #_t/spec?]
+  (let [cs (t/spec>classes spec) cs' (disj cs nil)]
+    (if (-> cs' count (not= 1))
+        ;; NOTE: we don't need to vary the output class if there are multiple output possibilities or just nil
+        java.lang.Object
+        (-> (class>most-primitive-class (first cs') (contains? cs nil))
+            class>simplest-class)))))
 
 (defn fns|code [kind lang args]
   (assert (= lang #?(:clj :clj :cljs :cljs)) lang)
@@ -221,7 +220,7 @@
           (fn [{{:keys [args varargs pre post]} ::fnt|arglist
                 body :body}]
             (let [spec-code>?class
-                    (fn [spec] (some-> spec eval t/>spec (spec>most-primitive-class true)))
+                    (fn [spec] (some-> spec eval t/>spec spec>most-primitive-class))
                   arg-spec>validation
                     (fn [{[k spec] ::fnt|arg-spec :keys [arg-binding]}]
                       ;; TODO this validation is purely temporary until destructuring is supported
@@ -613,6 +612,15 @@
      :field  field-form
      :spec   (-> field .getType t/>spec)}))
 
+(defn classes>class
+  "Ensure that given a set of classes, that set consists of at most a class C and nil.
+   If so, returns C. Otherwise, throws."
+  [cs #_(set-of class?)]
+  (let [cs' (disj cs nil)]
+    (if (-> cs' count (= 1))
+        (first cs')
+        (err! "Found more than one class" cs))))
+
 ;; TODO spec these arguments; e.g. check that ?method||field, if present, is an unqualified symbol
 (defn analyze-seq|dot [env form [target-form ?method-or-field & ?args]]
   {:pre  [(prl! env form target-form ?method-or-field ?args)]
@@ -626,8 +634,10 @@
               ;; necessarily rely on all e.g. "@nonNull" annotations
               {:as ?target-static-class-map target-static-class :class target-static-class-nilable? :nilable?}
                 (-> target :spec t/spec>?class-value)
-              {target-class :class target-class-nilable? :nilable?}
-                (or ?target-static-class-map (-> target :spec t/spec>class))]
+              target-classes
+                (or ?target-static-class-map (-> target :spec t/spec>classes))
+              target-class-nilable? (contains? target-classes nil)
+              target-class (classes>class target-classes)]
           ;; TODO determine how to handle `target-class-nilable?`; for now we will just let it slip through
           ;; to `NullPointerException` at runtime rather than create a potentially more helpful custom
           ;; exception
@@ -802,7 +812,7 @@
 (defn arg-specs>arg-classes-seq|primitivized [arg-specs]
   (->> arg-specs
        (c/lmap (fn [spec]
-                 (let [c (spec>most-primitive-class spec true)]
+                 (let [c (spec>most-primitive-class spec)]
                    (if (nil? c)
                        [java.lang.Object]
                        (->> c tcore/class>prim-subclasses
@@ -826,7 +836,7 @@
                                    [arg-binding (ast/unbound nil arg-binding arg-spec)])))
         analyzed    (analyze env (ufgen/?wrap-do body-codelist|pre-analyze))
         arg-specs   (->> arg-bindings (mapv #(:spec (c/get (:env analyzed) %))))
-        arg-classes (->> arg-specs (c/map (fn1 spec>most-primitive-class true)))
+        arg-classes (->> arg-specs (c/map spec>most-primitive-class))
         arg-classes|simplest (->> arg-classes (c/map class>simplest-class))
         hint-arg|fn (fn [i arg-binding]
                       (ufth/with-type-hint arg-binding

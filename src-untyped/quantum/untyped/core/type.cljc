@@ -1114,6 +1114,11 @@
           (conj classes (class-spec>class spec))
         (value-spec? spec)
           (conj classes (value-spec>value spec))
+        (c/= spec universal-set)
+          #?(:clj  #{nil java.lang.Object}
+             :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
+        (c/= spec empty-set)
+          #{}
         (and-spec? spec)
           (reduce (fn [classes' spec'] (-spec>classes spec' classes'))
             classes (and-spec>args spec))
@@ -1123,42 +1128,10 @@
         :else
           (err! "Not sure how to handle spec" spec)))
 
-(defn spec>classes
+(defn spec>classes #_> set?
   "Outputs the set of all the classes ->`spec` can embody according to its various conditional branches,
    if any. Ignores nils, treating in Clojure simply as a `java.lang.Object`."
   [spec] (-spec>classes spec #{}))
-
-(defn- -spec>class [spec spec-nilable?]
-  (cond (class-spec? spec)
-          {:class (class-spec>class spec) :nilable? spec-nilable?}
-        (value-spec? spec)
-          (let [v (value-spec>value spec)]
-            {:class (type v) :nilable? (c/nil? v)})
-        (c/= spec universal-set)
-          {:class   #?(:clj  java.lang.Object
-                       :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
-           :nilable? true}
-        (c/or (and-spec? spec) (or-spec? spec))
-          (let [classes (spec>classes spec)
-                nilable? (contains? classes nil)]
-            (if nilable?
-                {:nilable? true
-                 :class    (ifs (-> classes count (c/= 1)) nil
-                                (-> classes count (c/= 2)) (-> classes (disj nil) seq first)
-                                (TODO "Need to handle possibly-related classes" classes))}
-                {:nilable? false
-                 :class    (if (-> classes count (c/= 1))
-                               (-> classes seq first)
-                               (TODO "Need to handle possibly-related classes" classes))}))
-        :else
-          (err! "Don't know how to handle spec" spec)))
-
-(defn spec>class
-  "Outputs the single class embodied by ->`spec`.
-   Outputs `{:class <class>    :nilable? <nilable>}` if the spec embodies only one (possibly nilable) class.
-   Outputs `{:class nil        :nilable? true     }` if the spec embodies the value `nil`.
-   Outputs `{:class ::multiple :nilable? nil      }` if the spec embodies multiple classes."
-  [spec] (-spec>class spec false))
 
 #?(:clj
 (defn- -spec>?class-value [spec spec-nilable?]
@@ -1170,8 +1143,7 @@
 #?(:clj
 (defn spec>?class-value
   "Outputs the single class value embodied by ->`spec`.
-   Differs from `spec>class` in that if a spec is a extensionally equal of the *value* of a class,
-   outputs that class.
+   If a spec is extensionally equal the *value* of a class, outputs that class.
 
    However, if a spec does not embody the value of a class but rather merely embodies (as all specs)
    an extensional subset of the set of all objects conforming to a class, outputs nil."

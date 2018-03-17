@@ -65,6 +65,10 @@
 
 (is (code=
 
+(macroexpand '
+(defnt identity|gen|uninlined ([x _] x))
+)
+
 ;; ----- implementation ----- ;;
 
 (macroexpand '
