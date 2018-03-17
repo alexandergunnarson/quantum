@@ -578,7 +578,7 @@
                             (ret-spec arg-specs)))))
                 ?cast-spec (?cast-call->spec target-class method-form)
                 _ (when ?cast-spec
-                    (err! "TODO cast spec")
+                    (ppr :warn "Not yet able to statically validate whether primitive cast will succeed at runtime" {:form form})
                     #_(s/validate (-> with-ret-spec :args first :spec) #(t/>= % (t/numerically ?cast-spec))))]
             with-ret-spec))))))
 
@@ -656,11 +656,11 @@
                    :false-expr @false-expr
                    :spec       (apply t/or (->> [(:spec @true-expr) (:spec @false-expr)] (remove nil?)))}))]
         (case (truthy-expr? pred-expr)
-          true      (do (ppr ::warn "Predicate in `if` expression is always true" {:pred pred-form})
+          true      (do (ppr :warn "Predicate in `if` expression is always true" {:pred pred-form})
                         (-> @true-expr  (assoc :env env)
                                         (cond-> (not *conditional-branch-pruning?*)
                                                 (assoc :form (list 'if pred-form (:form @true-expr) false-form)))))
-          false     (do (ppr ::warn "Predicate in `if` expression is always false" {:pred pred-form})
+          false     (do (ppr :warn "Predicate in `if` expression is always false" {:pred pred-form})
                         (-> @false-expr (assoc :env env)
                                         (cond-> (not *conditional-branch-pruning?*)
                                                 (assoc :form (list 'if pred-form true-form          (:form @false-expr))))))
@@ -703,7 +703,6 @@
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
   [env [sym & body :as form]]
-  (ppr! {'expanded-form form})
   (if (special-symbols sym)
       (case sym
         do       (analyze-seq|do    env form body)

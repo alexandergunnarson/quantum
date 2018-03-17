@@ -421,12 +421,15 @@
     (if (< (.bitLength x) 64)
         (.longValue x)
         (throw (Exception. "Long out of range"))))
-  ([x t/ratio?] (>long (.bigIntegerValue x)))
-  ([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
+  ;; TODO handle recursion
+  #_([x t/ratio?] (>long (.bigIntegerValue x)))
+  ;; TODO handle calling of other `defnt`s
+  #_([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
   ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
   ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix
   ([x t/boolean?] (if x 1 0))
-  ([x t/string?] (-> x Long/parseLong >long))
+  ;; TODO handle recursion
+  #_([x t/string?] (-> x Long/parseLong >long))
   ([x t/string?, radix t/int?] (Long/parseLong x radix))))
 
 ;; ----- expanded code ----- ;;

@@ -95,7 +95,7 @@
     (def ><1  t/short?)
     (def ><2  t/long?))
 
-(def Uc (t/isa? t/universal-class))
+(def Uc (t/isa? java.lang.Object))
 
 ;; ----- Example protocols ----- ;;
 
