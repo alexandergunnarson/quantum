@@ -31,7 +31,7 @@
   "Creates a socket on the first available port, starting at port 49152 (the minimum recommended
    available port, according to https://en.wikipedia.org/wiki/Ephemeral_port)."
   []
-  (let [; According to https://en.wikipedia.org/wiki/Ephemeral_port
+  (let [;; According to https://en.wikipedia.org/wiki/Ephemeral_port
         min-recommended-available-port 49152
         max-recommended-available-port 65535]
     (red-for [port min-recommended-available-port
