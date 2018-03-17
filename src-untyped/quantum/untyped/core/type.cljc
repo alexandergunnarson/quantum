@@ -9,7 +9,7 @@
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
      keyword? string? symbol?
-     meta])
+     meta ref])
   (:require
     [clojure.core                               :as c]
     [quantum.untyped.core.analyze.expr          :as xp
@@ -212,9 +212,20 @@
 
 (-def spec? PSpec)
 
-(defn * [spec]
+(defn *
+  "Denote on a spec that it must be enforced at runtime.
+   For use with `defnt`."
+  [spec]
   (if (spec? spec)
       (update-meta spec assoc :runtime? true)
+      (err! "Input must be spec" spec)))
+
+(defn ref
+  "Denote on a spec that it must not be expanded to use primitive values.
+   For use with `defnt`."
+  [spec]
+  (if (spec? spec)
+      (update-meta spec assoc :ref? true)
       (err! "Input must be spec" spec)))
 
 (udt/deftype DeducibleSpec [*spec #_(t/atom-of t/spec?)]
@@ -630,6 +641,8 @@
    fipp.ednize/IOverride nil
    fipp.ednize/IEdn
      {-edn ([this] `?)}})
+
+(defn infer? [x] (instance? InferSpec x))
 
 ;; ===== Comparison ===== ;;
 
@@ -1109,7 +1122,7 @@
 
 #?(:clj (def primitive-classes (->> unboxed-symbol->type-meta vals (uc/map+ :unboxed) (join #{}))))
 
-(defn- -spec>classes [spec classes]
+(defn- -spec>classes [spec #_t/spec? classes #_set?] #_> set?
   (cond (class-spec? spec)
           (conj classes (class-spec>class spec))
         (value-spec? spec)

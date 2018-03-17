@@ -5,6 +5,10 @@
       :refer [>name]]
     [quantum.untyped.core.error
       :refer [err!]]
+    [quantum.untyped.core.logic
+      :refer [ifs]]
+    [quantum.untyped.core.loops
+      :refer [reduce-2]]
     [quantum.untyped.core.type.core   :as utcore]
     [quantum.untyped.core.vars
       :refer [update-meta]]))
@@ -132,11 +136,19 @@
 
    The compiler seems to ignore hints that are not strings or symbols, and
    does not allow primitive hints. This fn accommodates these requirements."
-  [tag #_(t/or string? class? symbol?)]
-  #?(:clj  (if (class? tag)
-               (.getName ^Class tag)
-               tag)
-     :cljs tag))
+  [tag #_(t/or string? symbol? class?)]
+  (ifs           (or (string? tag) (symbol? tag))  tag
+       #?@(:clj [(class?  tag)                     (.getName ^Class tag)])))
+
+#?(:clj
+(defn >interface-method-tag
+  "Outputs a tag usable as an interface method return type or arg type.
+   For primitive classes, the method must be tagged with the class itself (not a string etc.).
+   For all other classes, `>arglist-embeddable-tag` will suffice."
+  [tag #_(t/or string? symbol? class?)]
+  (if (and (class? tag) (.isPrimitive ^Class tag))
+      tag
+      (>arglist-embeddable-tag tag))))
 
 (defn static-cast|code
   "`(with-meta (list 'do expr) {:tag class-sym})` isn't enough"
@@ -169,3 +181,9 @@
                              binding-sym)]))
              uc/cat)
         form)))
+
+(defn hint-arglist-with
+  [arglist #_seqable? hints #_seqable?]
+  (reduce-2 (fn [arglist' arg hint]
+              (conj arglist' (with-type-hint arg hint)))
+            [] arglist hints))

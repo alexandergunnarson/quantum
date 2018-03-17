@@ -16,9 +16,9 @@
 
 (ucore/log-this-ns)
 
-;; `seq-or`
+;; ----- `seq-or` ----- ;;
 
-(defn seq-or|rf #_> #_boolean?
+(defn seq-or|rf
   ([] (seq-or|rf identity))
   ([pred]
     (fn ([]      false)
@@ -26,7 +26,7 @@
         ([_ x]   (and (pred x)   (reduced true)))
         ([_ k v] (and (pred k v) (reduced true))))))
 
-(defn seq-or
+(defn seq-or #_> #_boolean?
   "∃: A faster version of `some` using `educe` instead of `seq`."
   ([xs] (educe (seq-or|rf) xs))
   ([pred xs] (educe (seq-or|rf pred) xs)))
@@ -35,9 +35,7 @@
 
 (defalias some seq-or)
 
-(defn apply-or [xs] (seq-or xs))
-
-;; `seq-nor`
+;; ----- `seq-nor` ----- ;;
 
 #_(def seq-nor|rf ...)
 
@@ -47,9 +45,9 @@
 
 (defalias not-any? seq-nor)
 
-;; `seq-and`
+;; ----- `seq-and` ----- ;;
 
-(defn seq-and|rf #_> #_boolean?
+(defn seq-and|rf
   ([] (seq-and|rf identity))
   ([pred]
     (fn ([]      true) ; vacuously
@@ -57,7 +55,7 @@
         ([_ x]   (or (pred x)   (reduced false)))
         ([_ k v] (or (pred k v) (reduced false))))))
 
-(defn seq-and
+(defn seq-and #_> #_boolean?
   "∀: A faster version of `every?` using `educe` instead of `seq`."
   ([xs] (educe (seq-and|rf) xs))
   ([pred xs] (educe (seq-and|rf pred) xs)))
@@ -66,18 +64,16 @@
 
 (defalias every? seq-and)
 
-(defn apply-and [xs] (seq-and xs))
-
-;; `seq-and-2`
+;; ----- `seq-and-2` ----- ;;
 
 (defn seq-and-2
   "`seq-and` for pairwise comparisons."
-  ([pred xs]
+  ([pred xs #_seqable?]
     (reduce (fn [a b] (or (pred a b) (reduced false))) (first xs) (rest xs))))
 
 (defalias every?-2 seq-and-2)
 
-;; `seq-nand`
+;; ----- `seq-nand` ----- ;;
 
 #_(def seq-nand|rf ...)
 

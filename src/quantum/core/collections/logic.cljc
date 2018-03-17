@@ -39,9 +39,6 @@
 
 (defalias not-every? seq-nand)
 
-(defn apply-and [xs] (seq-and xs))
-(defn apply-or  [xs] (seq-or  xs))
-
 (defn seq-and-2
   "`seq-and` for pairwise comparisons."
   ([pred xs]

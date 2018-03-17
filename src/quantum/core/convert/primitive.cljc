@@ -1,15 +1,16 @@
 (ns quantum.core.convert.primitive
   (:require
-  #_(:cljs [com.gfredericks.goog.math.Integer :as int])
-    [clojure.core             :as core]
-    [quantum.core.data.bits   :as bits
+  #?(:cljs [com.gfredericks.goog.math.Integer :as int])
+    [clojure.core              :as core]
+    [quantum.core.data.bits    :as bits
       :refer [&&]]
-    [quantum.core.error       :as err
+    [quantum.core.error        :as err
       :refer [>ex-info]]
-    [quantum.core.macros      :as macros
-      :refer [defnt #?@(:clj [defnt'])]]
-    [quantum.core.vars        :as var
-      :refer [defalias]])
+    [quantum.core.defnt        :as macros
+      :refer [defnt]]
+    [quantum.core.vars         :as var
+      :refer [defalias]]
+    [quantum.untyped.core.type :as t])
 #?(:cljs
   (:require-macros
     [quantum.core.convert.primitive]))
@@ -28,34 +29,37 @@
   `(throw (>ex-info :illegal-argument (str "Value out of range for long: " ~x)))))
 
 #?(:clj
-(defnt ^long ->long*
+(defnt >long*
   {:source "clojure.lang.RT.uncheckedLongCast"}
-  ([^Number x] (.longValue x))
-  ([#{byte char short int long float double} x] (Primitive/uncheckedLongCast x))))
+  > t/long?
+  ([x (t/or t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)]
+    (Primitive/uncheckedLongCast x))
+  ([x (t/ref (t/isa? Number))] (.longValue x)))))
 
 #?(:clj
-    (defnt ^long ->long
-      {:source "clojure.lang.RT.longCast"}
-      ([^clojure.lang.BigInt x]
-        (if (nil? (.bipart x))
-            (.lpart x)
-            (long-out-of-range x)))
-      ([^java.math.BigInteger x]
-        (if (< (.bitLength x) 64)
-            (.longValue x)
-            (long-out-of-range x)))
-      ([^clojure.lang.Ratio         x] (->long (.bigIntegerValue x)))
-      ([#{char byte short int long} x] (->long* x))
-      ([#{float}                    x] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
-      ([#{double}                   x] (clojure.lang.RT/longCast x)) ; TODO fix
-      ([#{boolean}                  x] (if x 1 0))
-      ([^string?                    x] (-> x Long/parseLong ->long))
-      ([^string?                    x radix] (Long/parseLong x radix)))
+     (defnt >long
+       {:source "clojure.lang.RT.longCast"}
+       > t/long?
+       ([x (t/isa? clojure.lang.BigInt)]
+         (if (nil? (.bipart x))
+             (.lpart x)
+             (long-out-of-range x)))
+       ([x (t/isa? java.math.BigInteger)]
+         (if (< (.bitLength x) 64)
+             (.longValue x)
+             (long-out-of-range x)))
+       ([x t/ratio?] (->long (.bigIntegerValue x)))
+       ([x (t/or t/char? t/byte? t/short? t/int? t/long?)] (>long* x))
+       ([x t/float?] (clojure.lang.RT/longCast x)) ; Because primitive casting in Clojure is not supported ; TODO fix
+       ([x t/double?] (clojure.lang.RT/longCast x)) ; TODO fix
+       ([x t/boolean?] (if x 1 0))
+       ([x t/string?] (-> x Long/parseLong >long))
+       ([x t/string?, radix t/int?] (Long/parseLong x radix)))
    :cljs
-     (defnt ->long
-       ([^number?  x] (js/Math.trunc x))
-       ([^string?  x] (-> x int/fromString ->long))
-       ([^boolean? x] (if x 1 0))))
+     (defnt >long > (t/range-of t/long?)
+       ([x t/double?]  (js/Math.trunc x))
+       ([x t/string?]  (-> x int/fromString >long))
+       ([x t/boolean?] (if x 1 0))))
 
 #?(:clj
 (defmacro cast-via-long [class- x]

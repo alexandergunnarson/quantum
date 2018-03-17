@@ -132,14 +132,6 @@
       ;nil?    (fn' #{'Object})
       #(throw (>ex-info "Not a type hint." %)))))
 
-(defn hint-arglist-with
-  [arglist hints]
-  (reducei ; technically reduce-pair
-    (fn [arglist-f arg i]
-      (conj arglist-f (th/with-type-hint arg (get hints i))))
-    []
-    arglist))
-
 (def defnt-remove-hints
   (fn->> (into [])
          (<- (update 0 (fn->> (filter symbol?) (into []))))))
@@ -345,7 +337,7 @@
                                  (let [body                (list* 'do body)
                                        hints               (map (whenf1 string? symbol) hints)
                                        hints               (hints->with-replace-special-kws (merge env (kw-map arglist hints)))
-                                       arglist-hinted      (hint-arglist-with arglist hints)
+                                       arglist-hinted      (ufth/hint-arglist-with arglist hints)
                                        ;_ (log/ppr-hints :macro-expand "TYPE HINTS FOR ARGLIST" (->> arglist-hinted (map type-hint)))
                                        explicit-ret-type   (>explicit-ret-type (merge env (kw-map ret-type-0 hints arglist)))
                                        ; TODO cache the result of postwalking the body like this, for protocol purposes

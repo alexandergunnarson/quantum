@@ -44,10 +44,6 @@
 
 (defn test:every? [pred args])
 
-(defn test:apply-and [arg-list])
-
-(defn test:apply-or  [arg-list])
-
 (defn test:dor [& args])
 
 (defn test:fn-logic-base

@@ -265,6 +265,8 @@
 
 (defn >vec [xs] (ur/join xs))
 
+(defn >set [xs] (if (set? xs) xs (ur/join #{} xs)))
+
 (def ensure-set
   (condf1
     nil?          (fn' #{})

@@ -52,7 +52,8 @@
             [quantum.core.vars              :as var
               :refer [defalias #?(:clj defmalias) def-]]
             [quantum.untyped.core.data
-              :refer [kw-map]])
+              :refer [kw-map]]
+            [quantum.untyped.core.form.type-hint :as ufth])
 #?(:cljs
   (:require-macros
     [quantum.core.collections.core
@@ -509,7 +510,7 @@
           kind      '#{boolean byte char short int long float double Object}]
       (let [arglist (vec (repeatedly arglength gensym))
             hints   (vec (repeat     arglength kind  ))]
-        `(~(defnt/hint-arglist-with arglist hints)
+        `(~(ufth/hint-arglist-with arglist hints)
            (. quantum.core.data.Array ~(symbol (str "new1dArray")) ~@arglist)))))))
 
 #?(:clj (gen-arr<>))
@@ -534,7 +535,7 @@
              ~@(for [dim (range 1 11)]
                  (let [arglist (vec (repeatedly dim gensym))
                        hints   (apply core/vector 'long (repeat (dec dim) 'int))] ; first one should be long for protocol dispatch purposes
-                   `(~(defnt/hint-arglist-with arglist hints)
+                   `(~(ufth/hint-arglist-with arglist hints)
                       (. quantum.core.data.Array
                          ~(symbol (str "newInitializedNd" (str/capitalize kind) "Array"))
                          ~@arglist)))))))))

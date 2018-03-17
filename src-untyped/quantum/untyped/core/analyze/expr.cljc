@@ -81,12 +81,12 @@
     (#?(:clj invoke :cljs -invoke) [_ x]
       (let [v (f x)]
         (if-let [[_ then :as matching-clause]
-                   (seq-or (fn [clause]
-                      (if (-> clause count (= 1))
-                          clause
-                          (let [[condition then] clause]
-                            (when (pred v condition)
-                              clause)))) clauses)]
+                   (->> clauses
+                        (filter (fn [clause]
+                                  (or (-> clause count (= 1))
+                                      (let [[condition then] clause]
+                                        (pred v condition)))))
+                        first)]
           (if (icall? then) (then x) then)
           (err! "No matching clause found" {:v v}))))
   fipp.ednize/IOverride

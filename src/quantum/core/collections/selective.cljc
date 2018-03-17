@@ -97,7 +97,7 @@
 
 ; ; index-of-from [o val index-from] - index-of, starting at index-from
 ; (defn contains-or? [coll elems]
-;   (apply-or (map (partial contains? coll) elems)))
+;   (seq-or (map (partial contains? coll) elems)))
 (defn get-keys
   {:attribution "alexandergunnarson"}
   [m obj]

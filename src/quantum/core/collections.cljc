@@ -133,7 +133,7 @@
                     `(~accessor ~x ~v)))))
 
 (defaliases clog
-  seq-or some seq-nor not-any? seq-and every? seq-nand not-every? apply-and apply-or)
+  seq-or some seq-nor not-any? seq-and every? seq-nand not-every?)
 
 ; KV ;
 
@@ -1007,7 +1007,7 @@
     :todo ["Make it not output HashMaps but preserve records"]
     :contributors ["Alex Gunnarson"]}
   [f & maps]
-  (when (apply-or maps)
+  (when (seq-or maps)
     (let [merge-entry
            (fn [m e]
              (let [k (key e) v (val e)]

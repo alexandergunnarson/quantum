@@ -27,7 +27,7 @@
     [quantum.untyped.core.analyze.expr :as xp]
     [quantum.untyped.core.analyze.rewrite :as ana-rw]
     [quantum.untyped.core.collections  :as c
-      :refer [dissoc-if dissoc* lcat subview >vec
+      :refer [dissoc-if dissoc* lcat subview >vec >set
               lmap map+ map-vals+ mapcat+ filter+ remove+ partition-all+]]
     [quantum.untyped.core.collections.logic :as ucl
       :refer [seq-and seq-or]]
@@ -196,12 +196,11 @@
   (if nilable? c (or (tcore/boxed->unboxed c) c))))
 
 #?(:clj
-(defn spec>most-primitive-class [spec #_t/spec?]
-  (let [cs (t/spec>classes spec) cs' (disj cs nil)]
-    (if (-> cs' count (> 1))
-        (err! "Found multiple classes corresponding to spec; don't know how to handle yet"
-              {:spec spec :classes cs})
-        (class>most-primitive-class (first cs') (contains? cs nil))))))
+(defn spec>most-primitive-classes [spec #_t/spec?] #_> #_(set-of (? class?))
+  (let [cs (t/spec>classes spec) nilable? (contains? cs nil)]
+    (->> cs
+         (c/map+ #(class>most-primitive-class % nilable?))
+         (join #{})))))
 
 #?(:clj
 (defn out-spec>class [spec #_t/spec?]
@@ -556,9 +555,7 @@
   "A note will be made of what methods match the argument types.
    If only one method is found, that is noted too. If no matching method is found, an
    exception is thrown."
-  {:params-doc '{methods "A reducible of all static/instance `Method`s with the given name,
-                          `method-form`, in the given `target`'s class."}}
-  [env form target target-class static? #_t/boolean? method-form #_t/unqualified-symbol? args-forms]
+  [env form target target-class #_class? static? #_boolean? method-form #_unqualified-symbol? args-forms #_(seq-of form?)]
   ;; TODO cache spec by method
   (if-not-let [methods-for-name (-> target-class class->methods|with-cache (c/get (name method-form)))]
     (if (empty? args-forms)
@@ -591,11 +588,11 @@
                   (update with-arg-specs :spec
                     (fn [ret-spec]
                       (let [arg-specs (->> with-arg-specs :args (mapv :spec))]
-                        (if (seq arg-specs)
-                            (do (err! "TODO arg spec")
-                                #_(if (t/infer? arg-spec)
-                                      (swap! arg-spec t/and (get ret-spec i))
-                                      ((get ret-spec i) arg-spec)))
+                        (if (seq-or t/infer? arg-specs)
+                            (err! "TODO arg spec" (kw-map arg-specs ret-spec (ret-spec arg-specs)))
+                            #_(if (t/infer? arg-spec)
+                                  (swap! arg-spec t/and (get ret-spec i))
+                                  ((get ret-spec i) arg-spec))
                             (ret-spec arg-specs)))))
                 ?cast-spec (?cast-call->spec target-class method-form)
                 _ (when ?cast-spec
@@ -604,7 +601,7 @@
             with-ret-spec))))))
 
 (defns analyze-seq|dot|field-access
-  [env _, form _, target _, field-form _ #_t/unqualified-symbol?, field Field]
+  [env _, form _, target _, field-form _ #_t/unqualified-symbol?, field java.lang.reflect.Field]
   (ast/field-access
     {:env    env
      :form   form
@@ -635,7 +632,9 @@
               {:as ?target-static-class-map target-static-class :class target-static-class-nilable? :nilable?}
                 (-> target :spec t/spec>?class-value)
               target-classes
-                (or ?target-static-class-map (-> target :spec t/spec>classes))
+                (if ?target-static-class-map
+                    (cond-> #{target-static-class} target-static-class-nilable? (conj nil))
+                    (-> target :spec t/spec>classes))
               target-class-nilable? (contains? target-classes nil)
               target-class (classes>class target-classes)]
           ;; TODO determine how to handle `target-class-nilable?`; for now we will just let it slip through
@@ -797,7 +796,7 @@
      (s/validate ~'out ~(update-meta post-spec dissoc* :runtime?))))
 
 #?(:clj
-(var/def sort-guide "for use in sorting"
+(var/def sort-guide "for use in arity sorting, in increasing conceptual size"
   {Object       0
    tdef/boolean 1
    tdef/byte    2
@@ -809,16 +808,20 @@
    tdef/double  8}))
 
 #?(:clj
-(defn arg-specs>arg-classes-seq|primitivized [arg-specs]
+(defn arg-specs>arg-classes-seq|primitivized
+  [arg-specs #_(t/seq-of t/spec?)] #_> #_(t/seq-of (t/vec-of t/class?))
   (->> arg-specs
        (c/lmap (fn [spec]
-                 (let [c (spec>most-primitive-class spec)]
-                   (if (nil? c)
-                       [java.lang.Object]
-                       (->> c tcore/class>prim-subclasses
-                              (set/union #{(class>simplest-class c)})
-                              ;; for purposes of cleanliness and reproducibility in tests
-                              (sort-by sort-guide))))))
+                 (if (-> spec meta :ref?)
+                     (-> spec t/spec>classes (disj nil) seq)
+                     (let [cs (spec>most-primitive-classes spec)]
+
+                       (let [base-classes (->> cs (c/map+ class>simplest-class) >set)
+                             base-classes (cond-> base-classes (contains? cs nil) (conj java.lang.Object))]
+                         (->> cs (c/map+ tcore/class>prim-subclasses)
+                                 (educe (aritoid nil identity set/union) base-classes)
+                                 ;; for purposes of cleanliness and reproducibility in tests
+                                 (sort-by sort-guide)))))))
        (apply combo/cartesian-product)
        (c/lmap >vec))))
 
@@ -931,10 +934,11 @@
 
 (defn fnt-overload>interface [args-classes out-class]
   (let [interface-sym     (fnt-overload>interface-sym args-classes out-class)
-        hinted-method-sym (ufth/with-type-hint fnt-method-sym (ufth/>arglist-embeddable-tag out-class))
-        interface-code    `(~'definterface ~interface-sym (~hinted-method-sym ~(ufgen/gen-args (count args-classes))))]
-    (log/pr ::debug "Creating interface" interface-sym "...")
-    (eval interface-code)))
+        hinted-method-sym (ufth/with-type-hint fnt-method-sym (ufth/>interface-method-tag out-class))
+        hinted-args       (ufth/hint-arglist-with
+                            (ufgen/gen-args (count args-classes))
+                            (map ufth/>interface-method-tag args-classes))]
+    `(~'definterface ~interface-sym (~hinted-method-sym ~hinted-args))))
 
 #?(:clj
 (defn fnt|overload>reify-overload #_> #_(seq-of ::reify|overload)
@@ -943,7 +947,7 @@
   (let [interface-k {:out out-class :in arg-classes}
         interface
           (-> *interfaces
-              (swap! update interface-k #(or % (fnt-overload>interface arg-classes out-class)))
+              (swap! update interface-k #(or % (eval (fnt-overload>interface arg-classes out-class))))
               (c/get interface-k))
         arglist-code
           (>vec (concat ['_]
@@ -1162,7 +1166,7 @@
                                       [fn|name]
                                       [])
                                   [overloads|code]))
-               :defn `(~'do ~register-spec
+               :defn `(~'do #_~register-spec ; elide for now
                             ~@fn-codelist))]
     code))
 
