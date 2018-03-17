@@ -5,11 +5,12 @@
 - `->`+         : constructor
                 : 'convert to'
 - +`->`         : 'convert from'
+- `a=>b`        : map from `a` to `b`
 - `<`+          : calculate/compute (of functions) — as if to "take off the chan" of computed vals
 - <A>`:`<B>     : specificity relationship; <A> of type <B>
 - +`?`          : predicate
 - `?`+          : 'maybe' — if null, return null, otherwise do something
-- +`*`          : 'variant' — as ambiguous as it sounds
+- +`*`          : 'variant' — as ambiguous as it sounds ; TODO phase out
                 : 'relaxed' — in the context of numerics
 - +`'`          : 'strict' — esp. if numeric
                 : 'prime'/'next'

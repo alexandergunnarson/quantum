@@ -1134,6 +1134,10 @@
         (value-spec? spec)
           (let [v (value-spec>value spec)]
             {:class (type v) :nilable? (c/nil? v)})
+        (c/= spec universal-set)
+          {:class   #?(:clj  java.lang.Object
+                       :cljs (TODO "Not sure what to do in the case of universal CLJS set"))
+           :nilable? true}
         (c/or (and-spec? spec) (or-spec? spec))
           (let [classes (spec>classes spec)
                 nilable? (contains? classes nil)]

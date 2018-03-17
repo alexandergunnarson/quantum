@@ -345,6 +345,18 @@
 ;; =====|=====|=====|=====|===== ;;
 
 (macroexpand '
+(defnt >long*
+  {:source "clojure.lang.RT.uncheckedLongCast"}
+  > t/long?
+  ([x (t/isa? Number)] (.longValue x))
+  ([x (t/or t/byte? t/char? t/short? t/int? t/long? t/float? t/double?)]
+    (Primitive/uncheckedLongCast x))))
+
+;; ----- expanded code ----- ;;
+
+;; =====|=====|=====|=====|===== ;;
+
+(macroexpand '
 (defnt !str
   ([] #?(:clj (StringBuilder.) :cljs (StringBuffer.)))
   ;; `?*` means infer with opts

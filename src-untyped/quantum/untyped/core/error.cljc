@@ -200,8 +200,9 @@
 ;; ===== Specific error types ===== ;;
 
 (defn todo
-  ([]    (err! :todo "This feature has not yet been implemented." nil))
-  ([msg] (err! :todo (str "This feature has not yet been implemented: " msg) nil)))
+  ([]         (err! :todo "This feature has not yet been implemented." nil))
+  ([msg]      (todo msg nil))
+  ([msg data] (err! :todo (str "This feature has not yet been implemented: " msg) data)))
 (defalias TODO todo)
 
 (defn not-supported  [name- x] (>err (str "`" name- "` not supported on") {:x (type x)}))

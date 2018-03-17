@@ -205,4 +205,4 @@
     (->> boxed-types
          (r/filter #(isa? % c))
          (r/map boxed->unboxed)
-         set))))
+         (into #{})))))
