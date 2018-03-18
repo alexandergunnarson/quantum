@@ -8,8 +8,8 @@
      isa?
      nil? any? class? tagged-literal? #?(:cljs object?)
      number? decimal? bigdec? integer? ratio?
-     keyword? string? symbol?
-     true? false?
+     true? false? keyword? string? symbol?
+     fn? ifn?
      meta ref])
   (:require
     [clojure.core                               :as c]
@@ -124,7 +124,7 @@
    name #_(t/? t/symbol?)]
   {PSpec                 nil
    fipp.ednize/IOverride nil
-   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa|protocol? p)))}
+   fipp.ednize/IEdn      {-edn      ([this] (c/or name (list `isa|protocol? (:on p))))}
    ?Fn                   {invoke    ([_ x] (satisfies? p x))}
    ?Meta                 {meta      ([this] meta)
                           with-meta ([this meta'] (ProtocolSpec. meta' p name))}})
@@ -191,9 +191,16 @@
 
 ;; ===== DEFINITION ===== ;;
 
+(defn register-spec! [sym spec]
+  (assert (satisfies? PSpec spec) spec)
+  (TODO))
+
 #?(:clj
-(defmacro define [sym specable]
-  `(~'def ~sym (>spec ~specable '~(qual/qualify sym)))))
+(defmacro define [sym spec]
+  `(~'def ~sym (let [spec# ~spec]
+                 (assert (satisfies? PSpec spec#) spec#)
+                 #_(register-spec! '~(qual/qualify sym) spec#)
+                 spec#))))
 
 (defn undef [reg sym]
   (if-let [spec (get reg sym)]
@@ -205,13 +212,13 @@
 
 (defn undef! [sym] (swap! *spec-registry undef sym))
 
-#?(:clj
+#_(:clj
 (defmacro defalias [sym spec]
   `(~'def ~sym (>spec ~spec))))
 
 #?(:clj (uvar/defalias -def define))
 
-(-def spec? PSpec)
+(-def spec? (isa?|protocol PSpec))
 
 (defn *
   "Denote on a spec that it must be enforced at runtime.
@@ -357,8 +364,6 @@
      `not` specs.
      E.g. `(>logical-complement (and a b))` -> `(or  (not a) (not b))`
           `(>logical-complement (or  a b))` -> `(and (not a) (not b))`."))
-
-(-def spec? PSpec)
 
 (udt/deftype ^{:doc "Equivalent to `(constantly false)`"} EmptySetSpec []
   {PSpec                 nil
@@ -956,7 +961,7 @@
         InferSpec        compare|todo
         Expression       compare|expr+expr
         ProtocolSpec     compare|todo
-        ClassSpec        compare|todo
+        ClassSpec        fn<> ; TODO not entirely true
         ValueSpec        compare|expr+value}
      ProtocolSpec
        {UniversalSetSpec (inverted compare|universal+protocol)
@@ -995,13 +1000,11 @@
         ClassSpec        (inverted compare|class+value)
         ValueSpec        compare|value+value}}))
 
-
-
 ;; ===== GENERAL ===== ;;
 
          (-def nil?          (value nil))
          (-def object?       (isa? #?(:clj java.lang.Object :cljs js/Object)))
-         (-def val|by-class? (or object? #?@(:cljs [js/String js/Symbol])))
+         (-def val|by-class? (or object? #?@(:cljs [(isa? js/String) (isa? js/Symbol)])))
          (-def val?          (not nil?))
 
          (-def none?         empty-set)
@@ -1170,25 +1173,25 @@
 ;; ===== META ===== ;;
 
 #?(:clj  (-def class?                      (isa? java.lang.Class)))
-#?(:clj  (-def primitive-class?            (fn [x] (c/and (uclass/primitive? x) (not== Void/TYPE x)))))
+#?(:clj  (-def primitive-class?            (>expr (fn [x] (c/and (uclass/primitive? x) (not== Void/TYPE x))))))
 #?(:clj  (-def protocol?                   (>expr (ufn/fn-> :on-interface class?))))
 
 ;; ===== NUMBERS ===== ;;
 
-         (-def bigint?                     (or #?@(:clj  [clojure.lang.BigInt java.math.BigInteger]
-                                                   :cljs [com.gfredericks.goog.math.Integer])))
+         (-def bigint?                     (or #?@(:clj  [(isa? clojure.lang.BigInt) (isa? java.math.BigInteger)]
+                                                   :cljs [(isa? com.gfredericks.goog.math.Integer)])))
          (-def integer?                    (or #?@(:clj [byte? short? int? long?]) bigint?))
 
-#?(:clj  (-def bigdec?                     java.math.BigDecimal)) ; TODO CLJS may have this
+#?(:clj  (-def bigdec?                     (isa? java.math.BigDecimal))) ; TODO CLJS may have this
 
          (-def decimal?                    (or #?@(:clj [float?]) double? #?(:clj bigdec?)))
 
-         (-def ratio?                      #?(:clj  clojure.lang.Ratio
-                                              :cljs quantum.core.numeric.types.Ratio)) ; TODO add this CLJS entry to the predicate after the fact
+         (-def ratio?                      (isa? #?(:clj  clojure.lang.Ratio
+                                                    :cljs quantum.core.numeric.types.Ratio))) ; TODO add this CLJS entry to the predicate after the fact
 
 #?(:clj  (-def primitive-number?           (or short? int? long? float? double?)))
 
-         (-def number?                     (or #?@(:clj  [Number]
+         (-def number?                     (or #?@(:clj  [(isa? Number)]
                                                    :cljs [integer? decimal? ratio?])))
 
 ;; ----- NUMBER LIKENESSES ----- ;;
@@ -1227,21 +1230,35 @@
       ;;"java.lang.Double"    numerically-double?
       (err! "Could not find numerical range spec for class" {:c c}))))
 
-#?(:clj  (-def char-seq?       java.lang.CharSequence))
-#?(:clj  (-def comparable?     java.lang.Comparable))
-         (-def string?         #?(:clj java.lang.String     :cljs js/String))
-         (-def keyword?        #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword))
-         (-def symbol?         #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol))
-#?(:clj  (-def tagged-literal? clojure.lang.TaggedLiteral))
+#?(:clj  (-def char-seq?       (isa? java.lang.CharSequence)))
+#?(:clj  (-def comparable?     (isa? java.lang.Comparable)))
+         (-def string?         (isa? #?(:clj java.lang.String     :cljs js/String)))
+         (-def keyword?        (isa? #?(:clj clojure.lang.Keyword :cljs cljs.core/Keyword)))
+         (-def symbol?         (isa? #?(:clj clojure.lang.Symbol  :cljs cljs.core/Symbol)))
+#?(:clj  (-def tagged-literal? (isa? clojure.lang.TaggedLiteral)))
 
          (-def literal?        (or nil? boolean? symbol? keyword? string? #?(:clj long?) double? #?(:clj tagged-literal?)))
-#?(:clj  (-def array-list?     java.util.ArrayList))
-#?(:clj  (-def java-coll?      java.util.Collection))
-#?(:clj  (-def java-set?       java.util.Set))
-#?(:clj  (-def thread?         java.lang.Thread))
-#?(:clj  (-def throwable?      java.lang.Throwable))
-#?(:clj  (-def comparable?     java.lang.Comparable))
-#?(:clj  (-def iterable?       java.lang.Iterable))
+
+         (-def +map?           #?(:clj  (isa?          clojure.lang.IPersistentMap)
+                                  :cljs (isa?|protocol cljs.core/IMap)))
+         (-def +vector?        #?(:clj  (isa?          clojure.lang.IPersistentVector)
+                                  :cljs (isa?|protocol cljs.core/IVector)))
+         (-def +set?           #?(:clj  (isa?          clojure.lang.IPersistentSet)
+                                  :cljs (isa?|protocol cljs.core/ISet)))
+
+#?(:clj  (-def array-list?     (isa? java.util.ArrayList)))
+#?(:clj  (-def java-coll?      (isa? java.util.Collection)))
+#?(:clj  (-def java-set?       (isa? java.util.Set)))
+#?(:clj  (-def thread?         (isa? java.lang.Thread)))
+#?(:clj  (-def throwable?      (isa? java.lang.Throwable)))
+#?(:clj  (-def comparable?     (isa? java.lang.Comparable)))
+#?(:clj  (-def iterable?       (isa? java.lang.Iterable)))
+
+         (-def fn?             (isa? #?(:clj clojure.lang.Fn  :cljs js/Function)))
+         (-def ifn?            (isa? #?(:clj clojure.lang.IFn :cljs cljs.core/IFn)))
+         (-def fnt?            (and fn? (>expr (fn-> c/meta :spec))))
+         ;; I.e., can you call/invoke it by being in functor position (first element of an unquoted list)?
+         (-def callable?       (or ifn? fnt?))
 
          (-def true?           (value true))
          (-def false?          (value false))

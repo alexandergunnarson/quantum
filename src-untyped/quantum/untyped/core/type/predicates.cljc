@@ -67,3 +67,5 @@
 (defn transient? [x]
   #?(:clj  (instance?  clojure.lang.ITransientCollection x)
      :cljs (satisfies? cljs.core/ITransientCollection    x)))
+
+#?(:clj (defn unbound? [x] (instance? clojure.lang.Var$Unbound x)))

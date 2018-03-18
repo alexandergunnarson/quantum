@@ -41,24 +41,25 @@
       :refer [istr]]
     [quantum.untyped.core.data
       :refer [kw-map]]
-    [quantum.untyped.core.data.map :as map]
-    [quantum.untyped.core.data.set :as set]
-    [quantum.untyped.core.form           :as uform]
-    [quantum.untyped.core.form.evaluate  :as ufeval]
-    [quantum.untyped.core.form.generate  :as ufgen
+    [quantum.untyped.core.data.map        :as map]
+    [quantum.untyped.core.data.set        :as set]
+    [quantum.untyped.core.form            :as uform]
+    [quantum.untyped.core.form.evaluate   :as ufeval]
+    [quantum.untyped.core.form.generate   :as ufgen
       :refer [unify-gensyms]]
-    [quantum.untyped.core.form.type-hint :as ufth]
-    [quantum.untyped.core.loops          :as loops
+    [quantum.untyped.core.form.type-hint  :as ufth]
+    [quantum.untyped.core.loops           :as loops
       :refer [reduce-2]]
     [quantum.untyped.core.numeric.combinatorics :as combo]
-    [quantum.untyped.core.qualify        :as qual :refer [qualify]]
-    [quantum.untyped.core.reducers       :as r
+    [quantum.untyped.core.qualify         :as qual :refer [qualify]]
+    [quantum.untyped.core.reducers        :as r
       :refer [join reducei educe]]
-    [quantum.untyped.core.refs           :as ref
+    [quantum.untyped.core.refs            :as ref
       :refer [?deref]]
-    [quantum.untyped.core.type           :as t
+    [quantum.untyped.core.type            :as t
       :refer [?]]
-    [quantum.untyped.core.vars           :as var
+    [quantum.untyped.core.type.predicates :as utpred]
+    [quantum.untyped.core.vars            :as var
       :refer [update-meta]]
     [quantum.format.clojure.core ; TODO temporary
       :refer [reformat-string]])
@@ -677,7 +678,7 @@
                  (-> c|analyzed :spec t/value-spec>value class?))
             (err! "Supplied non-class to `new` expression" {:x c|form})
             (let [c             (-> c|analyzed :spec t/value-spec>value)
-                  args|analyzed (mapv (fn [arg] (analyze* env arg)) args)]
+                  args|analyzed (mapv #(analyze* env %) args)]
               (ast/new-expr {:env   env
                              :form  (list* 'new c|form (map :form args|analyzed))
                              :class c
@@ -702,23 +703,54 @@
 (defn analyze-seq*
   "Analyze a seq after it has been macro-expanded.
    The ->`form` is post- incremental macroexpansion."
-  [env [sym & body :as form]]
-  (if (special-symbols sym)
-      (case sym
-        do       (analyze-seq|do    env form body)
-        let*     (analyze-seq|let*  env form body)
-        deftype* (TODO "deftype*")
-        fn*      (TODO "fn*")
-        def      (TODO "def")
-        .        (analyze-seq|dot   env form body)
-        if       (analyze-seq|if    env form body)
-        quote    (analyze-seq|quote env form body)
-        new      (analyze-seq|new   env form body)
-        throw    (analyze-seq|throw env form body))
-      (if-let [sym-resolved (resolve sym)]
-        ; See note above on typed function return types
-        (TODO)
-        (err! "Form should be a special symbol but isn't" {:form sym}))))
+  [env [caller|form & body :as form]]
+  (ifs (special-symbols caller|form)
+       (case caller|form
+         do       (analyze-seq|do    env form body)
+         let*     (analyze-seq|let*  env form body)
+         deftype* (TODO "deftype*")
+         fn*      (TODO "fn*")
+         def      (TODO "def")
+         .        (analyze-seq|dot   env form body)
+         if       (analyze-seq|if    env form body)
+         quote    (analyze-seq|quote env form body)
+         new      (analyze-seq|new   env form body)
+         throw    (analyze-seq|throw env form body))
+       ;; TODO support recursion
+       (let [caller|expr (analyze* env caller|form)
+             caller|spec (:spec caller|expr)
+             args-ct     (count body)]
+         (case (t/compare spec t/callable?)
+           (1 2)  (err! "It is not known whether expression be called" {:expr caller|expr})
+           3      (err! "Expression cannot be called" {:expr caller|expr})
+           (-1 0) (let [assert-valid-args-ct
+                               ;; For keywords or persistent maps, must be exactly one or two args
+                          (ifs (or (t/<= caller|spec t/keyword?) (t/<= caller|spec t/+map?))
+                               (when-not (or (= args-ct 1) (= args-ct 2))
+                                 (err! "Keywords and persistent maps must be provided with exactly one or two args when calling them"
+                                       {:args-ct args-ct :caller caller|expr}))
+                               ;; For persistent vectors or sets, must be exactly one arg
+                               (or (t/<= caller|spec t/+vector?) (t/<= caller|spec t/+set?))
+                               (when-not (= args-ct 1)
+                                 (err! "Persistent vectors and persistent sets must be provided with exactly one arg when calling them"
+                                       {:args-ct args-ct :caller caller|expr}))
+                               ;; For spec'ed fns, depends on the spec
+                               (t/<= caller|spec t/fnt?)
+                               (TODO "Don't know how to handle spec'ed fns yet" {:caller caller|expr})
+                               ;; For non-speced fns, unknown; we will have to risk runtime exception
+                               ;; because we can't necessarily rely on metadata to tell us the whole truth
+                               (t/<= caller|spec t/fn?)
+                               nil
+                               ;; If it's ifn but not fn, we might have missed something in this dispatch so for now we throw
+                               (err! "Don't know how how to handle non-fn ifn" {:caller caller|expr}))]
+                    ;; TODO incrementally check by analyzing each arg in `reduce` and pruning branches of what the
+                    ;; spec could be, and throwing if it's found something that's an impossible combination
+                    (ast/call-expr
+                      {:env    env
+                       :form   form
+                       :caller caller|expr
+                       :args   args|analyzed
+                       :spec   ...}))))))
 
 (defn analyze-seq [env form]
   {:post [(prl! %)]}
@@ -738,7 +770,13 @@
                (:spec resolved)
              (or (t/literal? resolved) (t/class? resolved))
                (t/value resolved)
-             (err! "Unsure of what to do in this case" (kw-map env form resolved)))))))
+             (var? resolved)
+               (or (-> resolved meta :spec)
+                   (t/value @resolved))
+             (utpred/unbound? resolved)
+               ;; Because the var could be anything and cannot have metadata (spec or otherwise)
+               t/any?
+             (TODO "Unsure of what to do in this case" (kw-map env form resolved)))))))
 
 (defn analyze* [env form]
   (prl! env form)

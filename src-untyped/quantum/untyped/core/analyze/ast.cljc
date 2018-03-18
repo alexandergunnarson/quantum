@@ -147,7 +147,7 @@
    form   #_::t/form
    target #_::node
    method #_::t/unqualified-symbol?
-   args   #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
    spec   #_::t/spec]
   INode
   fipp.ednize/IOverride
@@ -156,11 +156,24 @@
 
 (defn method-call [m] (map->MethodCall m))
 
+(defrecord CallExpr ; by a `t/callable?`
+  [env    #_::env
+   form   #_::t/form
+   caller #_::node
+   args   #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
+   spec   #_::t/spec]
+  INode
+  fipp.ednize/IOverride
+  fipp.ednize/IEdn
+    (-edn [this] (list `call-expr (into (array-map) this))))
+
+(defn call-expr [m] (map->CallExpr m))
+
 (defrecord NewExpr
   [env   #_::env
    form  #_::t/form
    class #_t/class?
-   args  #_(t/and t/sequential? t/indexed? (t/every? ::node))
+   args  #_(t/and t/sequential? t/indexed? (t/seq-and ::node))
    spec  #_::t/spec]
   INode
   fipp.ednize/IOverride
